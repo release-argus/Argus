@@ -46,7 +46,8 @@ type Interface interface {
 	// ServiceURL returns the Service URL for the Lookup.
 	ServiceURL(ignoreWebURL bool) string
 
-	// Helpers.
+	// Helpers:
+
 	// GetType returns the Lookup type.
 	GetType() string
 	// GetStatus returns the Lookup's status.

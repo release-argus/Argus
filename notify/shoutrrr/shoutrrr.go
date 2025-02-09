@@ -314,7 +314,7 @@ func (s *Shoutrrr) BuildURL() (url string) {
 		port := s.GetURLField("port")
 		path := s.GetURLField("path")
 
-		// Add the json payload vars, custom headers, and query vars to the url.
+		// Add the JSON payload vars, custom headers, and query vars to the url.
 		var urlParamsBuilder strings.Builder
 		// Separate vars to preserve order.
 		jsonMaps := []string{"custom_headers", "json_payload_vars", "query_vars"}
@@ -363,7 +363,7 @@ func jsonMapToString(param string, prefix string) string {
 		return ""
 	}
 
-	// Convert the json string to a map.
+	// Convert the JSON string to a map.
 	var jsonMap map[string]string
 	err := json.Unmarshal([]byte(param), &jsonMap)
 	if err != nil {

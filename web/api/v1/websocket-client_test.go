@@ -204,7 +204,7 @@ func TestClient_writePump(t *testing.T) {
 				^ERROR:.*Unknown TYPE.*
 				.*INVALID.*`),
 		},
-		"invalid json": {
+		"invalid JSON": {
 			messages: []string{
 				`{"invalid`,
 			},
@@ -305,7 +305,7 @@ func TestClient_readPump(t *testing.T) {
 				`{"version":1,"type":"test","page":"home"}`,
 			},
 		},
-		"invalid json message": {
+		"invalid JSON message": {
 			messages: []string{`{"invalid`},
 			stdoutRegex: test.TrimYAML(`
 				^DEBUG:.*READ.*

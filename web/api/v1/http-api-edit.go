@@ -82,23 +82,16 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 		api.Config.HardDefaults.Service.LatestVersion.Options)
 
 	// Extract the desired lookup type.
-	var temp struct {
-		Type string `yaml:"type" json:"type"`
-	}
-	if err := util.UnmarshalConfig(
-		"json", overrides,
-		&temp); err != nil {
-		err = fmt.Errorf("invalid JSON: %w", err)
-		logutil.Log.Error(err, logFrom, true)
+	lookupType, err := extractLookupType(overrides, logFrom)
+	if err != nil {
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Create the LatestVersionLookup.
 	lv, err := latestver.New(
-		temp.Type,
-		"json", util.DereferenceOrDefault(
-			getParam(&queryParams, "overrides")),
+		lookupType,
+		"json", overrides,
 		options,
 		&svcStatus,
 		&api.Config.Defaults.Service.LatestVersion, &api.Config.HardDefaults.Service.LatestVersion)
@@ -173,8 +166,16 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 		api.Config.Defaults.Service.LatestVersion.Options,
 		api.Config.HardDefaults.Service.LatestVersion.Options)
 
+	// Extract the desired lookup type.
+	lookupType, err := extractLookupType(overrides, logFrom)
+	if err != nil {
+		failRequest(&w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	// Create the DeployedVersionLookup.
 	dvl, err := deployedver.New(
+		lookupType,
 		"json", overrides,
 		options,
 		&svcStatus,
@@ -192,9 +193,9 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	}
 
 	// Query the DeployedVersionLookup.
-	version, err := dvl.Refresh(
-		&logFrom.Primary,
-		nil, nil)
+	version, err := deployedver.Refresh(
+		dvl,
+		"", nil)
 	if err != nil {
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
@@ -303,7 +304,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 
 	// Parameters.
 	var (
-		overrides          = getParam(&queryParams, "overrides")
+		overrides          = util.DereferenceOrDefault(getParam(&queryParams, "overrides"))
 		semanticVersioning = getParam(&queryParams, "semantic_versioning")
 	)
 
@@ -311,6 +312,13 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 	dvl := api.Config.Service[targetService].DeployedVersionLookup
 	// Must create the DeployedVersionLookup if it doesn't exist.
 	if dvl == nil {
+		// Extract the desired lookup type.
+		lookupType, err := extractLookupType(overrides, logFrom)
+		if err != nil {
+			failRequest(&w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		// Status
 		svcStatus := status.Status{}
 		svcStatus.Init(
@@ -318,27 +326,18 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 			&logFrom.Primary, nil,
 			nil)
 
-		var err error
-		dvl, err = deployedver.New(
-			"json", util.DereferenceOrDefault(overrides),
+		dvl, _ = deployedver.New(
+			lookupType,
+			"json", "{}",
 			&api.Config.Service[targetService].Options,
 			&svcStatus,
-			&api.Config.Service[targetService].Defaults.DeployedVersionLookup, &api.Config.Service[targetService].HardDefaults.DeployedVersionLookup)
-		if err == nil {
-			err = dvl.CheckValues("")
-		}
-		if err != nil {
-			logutil.Log.Error(err, logFrom, true)
-			failRequest(&w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		// nil the overrides so that we don't apply them again in the Refresh.
-		overrides = nil
+			&api.Config.Service[targetService].Defaults.DeployedVersionLookup,
+			&api.Config.Service[targetService].HardDefaults.DeployedVersionLookup) //nolint:errcheck // empty JSON.
 	}
 
 	// Query the DeployedVersionLookup.
-	version, err := dvl.Refresh(
-		&targetService,
+	version, err := deployedver.Refresh(
+		dvl,
 		overrides,
 		semanticVersioning)
 	if err != nil {
@@ -351,6 +350,24 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 		Version: version,
 		Date:    time.Now().UTC(),
 	}, logFrom)
+}
+
+// extractLookupType extracts the desired `type` from the provided JSON.
+func extractLookupType(overrides string, logFrom logutil.LogFrom) (string, error) {
+	// Extract the desired lookup type.
+	var temp struct {
+		Type string `yaml:"type" json:"type"`
+	}
+
+	if err := util.UnmarshalConfig(
+		"json", overrides,
+		&temp); err != nil {
+		err = fmt.Errorf("invalid JSON: %w", err)
+		logutil.Log.Error(err, logFrom, true)
+		return "", err
+	}
+
+	return temp.Type, nil
 }
 
 // httpServiceDetail handles sending details about a Service.

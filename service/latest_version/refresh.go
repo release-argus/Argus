@@ -121,10 +121,10 @@ func applyOverridesJSON(
 		}
 	}
 
-	// Apply the new semantic_versioning json value.
+	// Apply the new semantic_versioning JSON value.
 	if semanticVerDiff {
 		semanticVersioningRoot := util.CopyPointer(lookup.GetOptions().SemanticVersioning)
-		// Apply the new semantic_versioning json value.
+		// Apply the new semantic_versioning JSON value.
 		if err := json.Unmarshal([]byte(*semanticVersioning), &semanticVersioningRoot); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal latestver.Lookup.SemanticVersioning: %w", err)
 		}

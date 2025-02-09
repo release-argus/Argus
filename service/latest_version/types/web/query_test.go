@@ -323,7 +323,7 @@ func TestQuery(t *testing.T) {
 		},
 		"query that gets a non-semantic version": {
 			overrides: test.TrimYAML(`
-				url: https://valid.release-argus.io/plain
+				url: ` + test.LookupPlain["url_valid"] + `
 				url_commands:
 					- type: regex
 					  regex: ver[0-9.]+
@@ -333,7 +333,7 @@ func TestQuery(t *testing.T) {
 		},
 		"query on self-signed https works when allowed": {
 			overrides: test.TrimYAML(`
-				url: https://invalid.release-argus.io/plain
+				url: ` + test.LookupPlain["url_invalid"] + `
 				url_commands:
 					- type: regex
 					  regex: ver([0-9.]+)
@@ -344,7 +344,7 @@ func TestQuery(t *testing.T) {
 		},
 		"query on self-signed https fails when not allowed": {
 			overrides: test.TrimYAML(`
-				url: https://invalid.release-argus.io/plain
+				url: ` + test.LookupPlain["url_invalid"] + `
 				url_commands:
 					- type: regex
 					  regex: ver([0-9.]+)

@@ -107,7 +107,7 @@ func testService(id string, semVer bool) *service.Service {
 	lv, _ := latestver.New(
 		"url",
 		"yaml", test.TrimYAML(`
-			url: https://invalid.release-argus.io/plain
+			url: `+test.LookupPlain["url_invalid"]+`
 			url_commands:
 				- type: regex
 					regex: '`+lvRegex+`'
@@ -122,9 +122,10 @@ func testService(id string, semVer bool) *service.Service {
 		dvJSON = "foo.bar.version"
 	}
 	dv, _ := deployedver.New(
+		"url",
 		"yaml", test.TrimYAML(`
 			method: GET
-			url: https://invalid.release-argus.io/json
+			url: `+test.LookupJSON["url_invalid"]+`
 			json: `+dvJSON+`
 			allow_invalid_certs: true
 		`),

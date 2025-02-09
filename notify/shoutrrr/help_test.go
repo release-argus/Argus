@@ -38,7 +38,7 @@ func TestMain(m *testing.M) {
 }
 
 func testDefaults(failing bool, selfSignedCert bool) *Defaults {
-	url := "valid.release-argus.io"
+	url := test.ValidCertNoProtocol
 	if selfSignedCert {
 		url = strings.Replace(url, "valid", "invalid", 1)
 	}
@@ -58,7 +58,7 @@ func testDefaults(failing bool, selfSignedCert bool) *Defaults {
 }
 
 func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
-	url := "valid.release-argus.io"
+	url := test.ValidCertNoProtocol
 	if selfSignedCert {
 		url = strings.Replace(url, "valid", "invalid", 1)
 	}

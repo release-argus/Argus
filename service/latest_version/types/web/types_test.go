@@ -34,13 +34,13 @@ func TestNew(t *testing.T) {
 		data   string
 	}
 
-	// GIVEN a YAML string
+	// GIVEN a YAML string.
 	tests := map[string]struct {
 		args    args
 		wantStr string
 		wantErr bool
 	}{
-		"Valid YAML": {
+		"valid YAML": {
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -54,7 +54,7 @@ func TestNew(t *testing.T) {
 					`)},
 			wantErr: false,
 		},
-		"Valid YAML with unmapped vars": {
+		"valid YAML with unmapped vars": {
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -79,7 +79,7 @@ func TestNew(t *testing.T) {
 						`),
 			wantErr: false,
 		},
-		"Valid YAML with Require.Docker": {
+		"valid YAML with Require.Docker": {
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -91,7 +91,7 @@ func TestNew(t *testing.T) {
 					`)},
 			wantErr: false,
 		},
-		"Invalid YAML": {
+		"invalid YAML": {
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -136,7 +136,7 @@ func TestNew(t *testing.T) {
 				allow_invalid_certs: true
 			`),
 		},
-		"Invalid format": {
+		"invalid format": {
 			args: args{
 				format: "xml",
 				data: `
@@ -155,14 +155,14 @@ func TestNew(t *testing.T) {
 			hardDefaults := &base.Defaults{}
 			hardDefaults.Default()
 
-			// WHEN New is called with it
+			// WHEN New is called with it.
 			lookup, err := New(
 				tc.args.format, tc.args.data,
 				&options,
 				status,
 				defaults, hardDefaults)
 
-			// THEN any error is expected
+			// THEN any error is expected.
 			if err != nil || tc.wantErr {
 				if err == nil {
 					t.Error("web.Lookup.New() expected error, got nil")
@@ -172,34 +172,34 @@ func TestNew(t *testing.T) {
 				}
 				return
 			}
-			// AND the lookup is created as expected
+			// AND the Lookup is created as expected.
 			wantStr := "type: url\n" + util.ValueOrValue(tc.wantStr, tc.args.data)
 			gotStr := lookup.String(lookup, "")
 			if gotStr != wantStr {
 				t.Errorf("web.Lookup.String() = %q, want %q",
 					gotStr, wantStr)
 			}
-			// AND the defaults are set as expected
+			// AND the Defaults are set as expected.
 			if lookup.Defaults != defaults {
 				t.Errorf("web.Lookup.Defaults not set\nwant: %v\ngot:  %v",
 					lookup.Defaults, defaults)
 			}
-			// AND the hard defaults are set as expected
+			// AND the HardDefaults are set as expected.
 			if lookup.HardDefaults != hardDefaults {
 				t.Errorf("web.Lookup.HardDefaults not set\nwant: %v\ngot:  %v",
 					lookup.HardDefaults, hardDefaults)
 			}
-			// AND the status is set as expected
+			// AND the Status is set as expected.
 			if lookup.Status != status {
 				t.Errorf("web.Lookup.Status not set\nwant: %v\ngot:  %v",
 					lookup.Status, status)
 			}
-			// AND the options are set as expected
+			// AND the Options are set as expected.
 			if lookup.Options != &options {
 				t.Errorf("web.Lookup.Options not set\nwant: %v\ngot:  %v",
 					lookup.Options, &options)
 			}
-			// AND the require is given the correct defaults
+			// AND the Require is given the correct defaults.
 			if lookup.Require != nil && lookup.Require.Docker != nil {
 				if lookup.Require.Docker.Defaults != &defaults.Require.Docker {
 					t.Errorf("web.Lookup.Require.Docker.Defaults not set\nwant: %v\ngot:  %v",
@@ -211,13 +211,13 @@ func TestNew(t *testing.T) {
 }
 
 func TestLookup_UnmarshalJSON(t *testing.T) {
-	// GIVEN a JSON string to unmarshal
+	// GIVEN a JSON string to unmarshal.
 	tests := map[string]struct {
 		data    string
 		want    string
 		wantErr bool
 	}{
-		"Valid JSON": {
+		"valid JSON": {
 			data: test.TrimJSON(`{
 				"url": "https://example.com",
 				"allow_invalid_certs": true,
@@ -239,11 +239,11 @@ func TestLookup_UnmarshalJSON(t *testing.T) {
 			`),
 			wantErr: false,
 		},
-		"Invalid JSON": {
+		"invalid JSON": {
 			data:    `{"url": "https://example.com`,
 			wantErr: true,
 		},
-		"Empty JSON": {
+		"empty JSON": {
 			data:    `{}`,
 			want:    "type: url\n",
 			wantErr: false,
@@ -256,17 +256,17 @@ func TestLookup_UnmarshalJSON(t *testing.T) {
 
 			var lookup Lookup
 
-			// WHEN UnmarshalJSON is called with it
+			// WHEN UnmarshalJSON is called with it.
 			err := lookup.UnmarshalJSON([]byte(tc.data))
 
-			// THEN any error is expected
+			// THEN any error is expected.
 			if (err != nil) != tc.wantErr {
 				t.Errorf("web.Lookup.UnmarshalJSON() error = %v, wantErr %v",
 					err, tc.wantErr)
 				return
 			}
 			gotStr := lookup.String(&lookup, "")
-			// AND the Lookup isn't created if it errored
+			// AND the Lookup isn't created if it errored.
 			if tc.wantErr {
 				if gotStr != "{}\n" {
 					t.Errorf("web.Lookup.UnmarshalJSON() expected nil, got value=%q",
@@ -274,7 +274,7 @@ func TestLookup_UnmarshalJSON(t *testing.T) {
 				}
 				return
 			}
-			// AND the lookup is created if expected
+			// AND the lookup is created if expected.
 			if gotStr != tc.want {
 				t.Errorf("web.Lookup didn't Unmarshal as expected\n%q\ngot:\n%q",
 					tc.want, gotStr)
@@ -284,13 +284,13 @@ func TestLookup_UnmarshalJSON(t *testing.T) {
 }
 
 func TestLookup_UnmarshalYAML(t *testing.T) {
-	// GIVEN a YAML string to unmarshal
+	// GIVEN a YAML string to unmarshal.
 	tests := map[string]struct {
 		data    string
 		want    string
 		wantErr bool
 	}{
-		"Valid YAML": {
+		"valid YAML": {
 			data: test.TrimYAML(`
 				url: https://example.com
 				allow_invalid_certs: true
@@ -312,13 +312,13 @@ func TestLookup_UnmarshalYAML(t *testing.T) {
 			`),
 			wantErr: false,
 		},
-		"Invalid YAML": {
+		"invalid YAML": {
 			data: test.TrimYAML(`
 				url: [https://example.com]
 			`),
 			wantErr: true,
 		},
-		"Empty YAML": {
+		"empty YAML": {
 			data:    `{}`,
 			want:    "type: url\n",
 			wantErr: false,
@@ -329,7 +329,7 @@ func TestLookup_UnmarshalYAML(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// Convert the YAML string to a yaml.Node
+			// Convert the YAML string to a yaml.Node.
 			var node yaml.Node
 			if err := yaml.Unmarshal([]byte(tc.data), &node); err != nil {
 				t.Fatalf("failed to unmarshal yaml: %v",
@@ -337,17 +337,17 @@ func TestLookup_UnmarshalYAML(t *testing.T) {
 			}
 			var lookup Lookup
 
-			// WHEN UnmarshalYAML is called with it
+			// WHEN UnmarshalYAML is called with it.
 			err := lookup.UnmarshalYAML(&node)
 
-			// THEN any error is expected
+			// THEN any error is expected.
 			if (err != nil) != tc.wantErr {
 				t.Errorf("web.Lookup.UnmarshalYAML() error = %v, wantErr %v",
 					err, tc.wantErr)
 				return
 			}
 			gotStr := lookup.String(&lookup, "")
-			// AND the Lookup isn't created if it errored
+			// AND the Lookup isn't created if it errored.
 			if tc.wantErr {
 				if gotStr != "{}\n" {
 					t.Errorf("web.Lookup.UnmarshalYAML() expected nil, got value=%q",
@@ -355,7 +355,7 @@ func TestLookup_UnmarshalYAML(t *testing.T) {
 				}
 				return
 			}
-			// AND the lookup is created if expected
+			// AND the lookup is created if expected.
 			if gotStr != tc.want {
 				t.Errorf("web.Lookup didn't Unmarshal as expected\n%q\ngot:\n%q",
 					tc.want, gotStr)

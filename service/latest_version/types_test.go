@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	// GIVEN a set of args
+	// GIVEN a set of args.
 	type args struct {
 		lType                  string
 		overrides              interface{}
@@ -135,7 +135,7 @@ func TestNew(t *testing.T) {
 				defaults:     &base.Defaults{},
 				hardDefaults: &base.Defaults{},
 			},
-			errRegex: `^type: "foo" <invalid> .*$`,
+			errRegex: `type: "foo" <invalid> .*$`,
 		},
 		"GitHub - invalid configData type": {
 			args: args{
@@ -169,7 +169,7 @@ func TestNew(t *testing.T) {
 				tc.args.overrides = test.TrimYAML(overrides)
 			}
 
-			// WHEN New is called with the args
+			// WHEN New is called with the args.
 			got, err := New(
 				tc.args.lType,
 				"yaml", tc.args.overrides,
@@ -180,7 +180,7 @@ func TestNew(t *testing.T) {
 				nil,
 				tc.args.defaults, tc.args.hardDefaults)
 
-			// THEN any error is as expected
+			// THEN any error is as expected.
 			if err != nil {
 				if !util.RegexCheck(tc.errRegex, err.Error()) {
 					t.Errorf("New() error mismatch\n%q\ngot:  %q",
@@ -188,13 +188,13 @@ func TestNew(t *testing.T) {
 				}
 				return
 			}
-			// THEN the correct type is returned
+			// THEN the correct type is returned.
 			if getType(got) != tc.args.lType {
 				t.Fatalf("New() Type mismatch\nwant: %q\ngot:  %T",
 					tc.args.lType, got)
 			}
 
-			// AND the variables are set correctly
+			// AND the variables are set correctly.
 			gotYAML := util.ToYAMLString(got, "")
 			if gotYAML != tc.wantYAML {
 				t.Errorf("YAML mismatch\nwant: %q\ngot:  %q",
@@ -213,7 +213,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestCopy(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		lookup   Lookup
 		wantYAML string
@@ -264,10 +264,10 @@ func TestCopy(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Copy is called
+			// WHEN Copy is called.
 			got := Copy(tc.lookup)
 
-			// THEN the variables are copied over
+			// THEN the variables are copied over.
 			gotYAML := util.ToYAMLString(got, "")
 			wantYAML := util.ToYAMLString(tc.lookup, "")
 			if gotYAML != wantYAML {
@@ -275,7 +275,7 @@ func TestCopy(t *testing.T) {
 					wantYAML, gotYAML)
 			}
 			if tc.lookup == nil {
-				return // No further checks
+				return // No further checks.
 			}
 
 			if got.GetOptions() == tc.lookup.GetOptions() {
@@ -305,7 +305,7 @@ func TestChangeType(t *testing.T) {
 		overrides string
 	}
 
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		args     args
 		wantYAML string
@@ -458,7 +458,7 @@ func TestChangeType(t *testing.T) {
 				}),
 				newType: "foo",
 			},
-			errRegex: `^type: \"foo\" <invalid>.*$`,
+			errRegex: `type: "foo" <invalid>.*$`,
 			wantYAML: "",
 		},
 		"invalid YAML": {
@@ -491,21 +491,20 @@ func TestChangeType(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ChangeType is called
+			// WHEN ChangeType is called.
 			gotLookup, err := ChangeType(
 				tc.args.newType,
 				tc.args.lookup,
 				tc.args.overrides)
 
-			// THEN the correct type is returned
+			// THEN the correct type is returned.
 			if gotLookup == nil {
-				// Unknown type
+				// Unknown type.
 				if tc.errRegex != "" {
 					if !util.RegexCheck(tc.errRegex, err.Error()) {
 						t.Errorf("error mismatch\nwant: %q\ngot:  %q",
 							tc.errRegex, err)
 					}
-					// return // Got expected error
 				} else {
 					t.Errorf("ChangeType() gave nil latestver.Lookup, expected type %q\nerr=%c",
 						tc.args.newType, err)
@@ -518,7 +517,7 @@ func TestChangeType(t *testing.T) {
 					tc.args.newType, gotType)
 			}
 
-			// AND the variables are copied over
+			// AND the variables are copied over.
 			gotYAML := util.ToYAMLString(gotLookup, "")
 			tc.wantYAML = test.TrimYAML(tc.wantYAML)
 			if gotYAML != tc.wantYAML {
@@ -610,10 +609,10 @@ func TestUnmarshalJSON(t *testing.T) {
 				tc.wantJSON = &tc.jsonStr
 			}
 
-			// WHEN unmarshal is called
+			// WHEN UnmarshalJSON is called.
 			lookupJSON, errJSON := UnmarshalJSON([]byte(tc.jsonStr))
 
-			// THEN any error is as expected
+			// THEN any error is as expected.
 			eJSON := util.ErrorToString(errJSON)
 			if !util.RegexCheck(tc.errRegex, eJSON) {
 				t.Errorf("error mismatch on JSON unmarshal of latestver.Lookup:\n%q\ngot:\n%q",
@@ -622,7 +621,7 @@ func TestUnmarshalJSON(t *testing.T) {
 			if tc.errRegex != "^$" {
 				return
 			}
-			// AND the Lookup is unmarshalled as expected
+			// AND the Lookup is unmarshalled as expected.
 			gotFromJSON := util.ToJSONString(lookupJSON)
 			if *tc.wantJSON != gotFromJSON {
 				t.Errorf("latestver.Lookup.String() mismatch on JSON unmarshal\n%q\ngot:\n%q",
@@ -690,10 +689,10 @@ func TestUnmarshalYAML(t *testing.T) {
 				tc.wantYAML = &tc.yamlStr
 			}
 
-			// WHEN unmarshal is called
+			// WHEN UnmarshalYAML is called.
 			lookupYAML, errYAML := UnmarshalYAML([]byte(tc.yamlStr))
 
-			// THEN any error is as expected
+			// THEN any error is as expected.
 			eYAML := util.ErrorToString(errYAML)
 			if !util.RegexCheck(tc.errRegex, eYAML) {
 				t.Errorf("error mismatch on YAML unmarshal of latestver.Lookup:\n%q\ngot:  %q",
@@ -702,7 +701,7 @@ func TestUnmarshalYAML(t *testing.T) {
 			if tc.errRegex != "^$" {
 				return
 			}
-			// AND the Lookup is unmarshalled as expected
+			// AND the Lookup is unmarshalled as expected.
 			gotFromYAML := lookupYAML.String(lookupYAML, "")
 			if *tc.wantYAML != gotFromYAML {
 				t.Errorf("latestver.Lookup.String() mismatch on YAML unmarshal\n%q\ngot:  %q",
@@ -718,7 +717,7 @@ func TestUnmarshal(t *testing.T) {
 		wantType     string
 		errRegex     string
 	}{
-		"Valid JSON - GitHub": {
+		"valid JSON - GitHub": {
 			data: test.TrimJSON(`{
 				"type": "github",
 				"url": "release-argus/Argus"
@@ -726,7 +725,7 @@ func TestUnmarshal(t *testing.T) {
 			format:   "json",
 			wantType: "github",
 		},
-		"Valid JSON - URL": {
+		"valid JSON - URL": {
 			data: test.TrimJSON(`{
 				"type": "url",
 				"url": "https://example.com"
@@ -734,7 +733,7 @@ func TestUnmarshal(t *testing.T) {
 			format:   "json",
 			wantType: "url",
 		},
-		"Valid YAML - GitHub": {
+		"valid YAML - GitHub": {
 			data: test.TrimYAML(`
 				type: github
 				url: release-argus/Argus
@@ -742,7 +741,7 @@ func TestUnmarshal(t *testing.T) {
 			format:   "yaml",
 			wantType: "github",
 		},
-		"Valid YAML - URL": {
+		"valid YAML - URL": {
 			data: test.TrimYAML(`
 				type: url
 				url: https://example.com
@@ -750,12 +749,12 @@ func TestUnmarshal(t *testing.T) {
 			format:   "yaml",
 			wantType: "url",
 		},
-		"Invalid format": {
+		"invalid format": {
 			data:     `{"type": "github"}`,
 			format:   "xml",
 			errRegex: `unknown format: "xml"`,
 		},
-		"Unknown type": {
+		"unknown type": {
 			data: test.TrimJSON(`{
 				"type": "unknown",
 				"url": "https://example.com"
@@ -765,7 +764,7 @@ func TestUnmarshal(t *testing.T) {
 			^failed to unmarshal latestver.Lookup:
 			type: "unknown" <invalid>.*$`),
 		},
-		"Invalid JSON": {
+		"invalid JSON": {
 			data: test.TrimYAML(`{
 				"type": "github",
 				"url": release-argus/Argus
@@ -775,7 +774,7 @@ func TestUnmarshal(t *testing.T) {
 				^failed to unmarshal latestver.Lookup:
 				invalid character.*$`),
 		},
-		"Invalid YAML": {
+		"invalid YAML": {
 			data: test.TrimYAML(`
 				type: github
 				url: release-argus/Argus
@@ -786,7 +785,7 @@ func TestUnmarshal(t *testing.T) {
 				^failed to unmarshal latestver.Lookup:
 				yaml: .*$`),
 		},
-		"Invalid GitHub": {
+		"invalid GitHub": {
 			data: test.TrimYAML(`
 				type: github
 				url:
@@ -804,10 +803,10 @@ func TestUnmarshal(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN unmarshal is called
+			// WHEN unmarshal is called.
 			got, err := unmarshal([]byte(tc.data), tc.format)
 
-			// THEN any error is as expected
+			// THEN any error is as expected.
 			if err != nil {
 				if !util.RegexCheck(tc.errRegex, err.Error()) {
 					t.Errorf("unmarshal() error mismatch\nwant: %q\ngot:  %q",
@@ -816,7 +815,7 @@ func TestUnmarshal(t *testing.T) {
 				return
 			}
 
-			// AND the correct type is returned
+			// AND the correct type is returned.
 			if got.GetType() != tc.wantType {
 				t.Errorf("unmarshal() type mismatch\nwant: %q\ngot:  %q",
 					tc.wantType, got.GetType())

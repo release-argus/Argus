@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,9 +41,9 @@ func TestDefaults(t *testing.T) {
 			if tc.failing {
 				wantToken = "invalid"
 			}
-			wantHost := "valid.release-argus.io"
+			wantHost := test.ValidCertNoProtocol
 			if tc.selfSignedCert {
-				wantHost = "invalid.release-argus.io"
+				wantHost = test.InvalidCertNoProtocol
 			}
 
 			// WHEN Defaults is called
@@ -82,9 +82,9 @@ func TestShoutrrr(t *testing.T) {
 			if tc.failing {
 				wantToken = "invalid"
 			}
-			wantHost := "valid.release-argus.io"
+			wantHost := test.ValidCertNoProtocol
 			if tc.selfSignedCert {
-				wantHost = "invalid.release-argus.io"
+				wantHost = test.InvalidCertNoProtocol
 			}
 
 			// WHEN Shoutrrr is called

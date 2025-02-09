@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -239,6 +239,40 @@ func (f *Fails) String(prefix string) string {
 
 	result := builder.String()
 	return result
+}
+
+// Copy copies the contents of another Fails into this one.
+func (f *Fails) Copy(from *Fails) {
+	// Command.
+	f.Command.mutex.Lock()
+	defer from.Command.mutex.RUnlock()
+	from.Command.mutex.RLock()
+	defer f.Command.mutex.Unlock()
+
+	f.Command.fails = make([]*bool, len(from.Command.fails))
+	copy(f.Command.fails, from.Command.fails)
+
+	// Shoutrrr.
+	f.Shoutrrr.mutex.Lock()
+	defer f.Shoutrrr.mutex.Unlock()
+	from.Shoutrrr.mutex.RLock()
+	defer from.Shoutrrr.mutex.RUnlock()
+
+	f.Shoutrrr.fails = make(map[string]*bool, len(from.Shoutrrr.fails))
+	for key, fail := range from.Shoutrrr.fails {
+		f.Shoutrrr.fails[key] = fail
+	}
+
+	// WebHook.
+	f.WebHook.mutex.Lock()
+	defer f.WebHook.mutex.Unlock()
+	from.WebHook.mutex.RLock()
+	defer from.WebHook.mutex.RUnlock()
+
+	f.WebHook.fails = make(map[string]*bool, len(from.WebHook.fails))
+	for key, fail := range from.WebHook.fails {
+		f.WebHook.fails[key] = fail
+	}
 }
 
 // resetFails resets the state of the Command, Shoutrrr, and WebHook fails.

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package deployedver provides the deployed_version lookup.
-package deployedver
+// Package web provides a web-based lookup type.
+package web
 
 import (
 	"errors"
@@ -27,33 +27,29 @@ import (
 
 // CheckValues validates the fields of the Lookup struct.
 func (l *Lookup) CheckValues(prefix string) error {
-	if l == nil {
-		return nil
-	}
-
 	var errs []error
-	// Method
+	// Method.
 	l.Method = strings.ToUpper(l.Method)
 	if l.Method == "" {
 		l.Method = http.MethodGet
-	} else if !util.Contains(supportedTypes, l.Method) {
+	} else if !util.Contains(supportedMethods, l.Method) {
 		errs = append(errs,
 			fmt.Errorf("%smethod: %q <invalid> (only [%s] are allowed)",
-				prefix, l.Method, strings.Join(supportedTypes, ", ")))
+				prefix, l.Method, strings.Join(supportedMethods, ", ")))
 	}
 	// Body unused in GET, ensure it is empty.
 	if l.Method == http.MethodGet {
 		l.Body = ""
 	}
 
-	// URL
+	// URL.
 	if l.URL == "" && l.Defaults != nil {
 		errs = append(errs,
 			fmt.Errorf("%surl: <required> (URL to get the deployed_version is required)",
 				prefix))
 	}
 
-	// JSON
+	// JSON.
 	if l.JSON != "" {
 		_, err := util.ParseKeys(l.JSON)
 		if err != nil {
@@ -63,7 +59,7 @@ func (l *Lookup) CheckValues(prefix string) error {
 		}
 	}
 
-	// RegEx
+	// RegEx.
 	if l.Regex != "" {
 		_, err := regexp.Compile(l.Regex)
 		if err != nil {

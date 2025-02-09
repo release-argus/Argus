@@ -14,13 +14,14 @@
 
 //go:build unit
 
-package deployedver
+package web
 
 import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
+	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
@@ -35,13 +36,9 @@ func TestLookup_Metrics(t *testing.T) {
 		wantMetrics bool
 	}{
 		"non-nil": {
-			lookup:      testLookup(),
+			lookup:      testLookup(false),
 			serviceID:   "TestLookup_Metrics",
 			wantMetrics: true,
-		},
-		"nil": {
-			lookup:      nil,
-			wantMetrics: false,
 		},
 	}
 
@@ -52,7 +49,7 @@ func TestLookup_Metrics(t *testing.T) {
 			// WHEN the Prometheus metrics are initialised with initMetrics.
 			hadC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 			hadG := testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
-			tc.lookup.InitMetrics()
+			tc.lookup.InitMetrics(tc.lookup)
 
 			// THEN they can be collected.
 			// counters:
@@ -77,7 +74,7 @@ func TestLookup_Metrics(t *testing.T) {
 			}
 			// But can be added.
 			if tc.lookup != nil {
-				tc.lookup.queryMetrics(false)
+				tc.lookup.QueryMetrics(tc.lookup, nil)
 			}
 			gotG = testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
 			wantG = 1
@@ -90,7 +87,7 @@ func TestLookup_Metrics(t *testing.T) {
 			}
 
 			// AND they can be deleted.
-			tc.lookup.DeleteMetrics()
+			tc.lookup.DeleteMetrics(tc.lookup)
 			// counters:
 			gotC = testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 			if gotC != hadC {
@@ -109,9 +106,9 @@ func TestLookup_Metrics(t *testing.T) {
 
 func TestLookup_Init(t *testing.T) {
 	// GIVEN a Lookup and vars for the Init.
-	lookup := testLookup()
-	defaults := &Defaults{}
-	hardDefaults := &Defaults{}
+	lookup := testLookup(false)
+	defaults := &base.Defaults{}
+	hardDefaults := &base.Defaults{}
 	status := status.Status{ServiceID: test.StringPtr("TestInit")}
 	var options opt.Options
 
@@ -122,30 +119,24 @@ func TestLookup_Init(t *testing.T) {
 		defaults, hardDefaults)
 
 	// THEN pointers to those vars are handed out to the Lookup:
-	// 	defaults
+	// 	Defaults.
 	if lookup.Defaults != defaults {
 		t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 			defaults, lookup.Defaults)
 	}
-	// 	hardDefaults
+	// 	HardDefaults.
 	if lookup.HardDefaults != hardDefaults {
 		t.Errorf("HardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 			hardDefaults, lookup.HardDefaults)
 	}
-	// 	status
+	// 	Status.
 	if lookup.Status != &status {
 		t.Errorf("Status was not handed to the Lookup correctly\n want: %v\ngot:  %v",
 			&status, lookup.Status)
 	}
-	// 	options
+	// 	Options.
 	if lookup.Options != &options {
 		t.Errorf("Options were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 			&options, lookup.Options)
 	}
-
-	var nilLookup *Lookup
-	nilLookup.Init(
-		&options,
-		&status,
-		defaults, hardDefaults)
 }

@@ -12,69 +12,77 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package deployedver provides the deployed_version lookup.
-package deployedver
+// Package base provides the base struct for deployed_version lookups.
+package base
 
 import (
-	opt "github.com/release-argus/Argus/service/option"
-	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Init will initialise the Service metric.
-func (l *Lookup) Init(
-	options *opt.Options,
-	status *status.Status,
-	defaults, hardDefaults *Defaults,
-) {
-	if l == nil {
-		return
-	}
-
-	l.HardDefaults = hardDefaults
-	l.Defaults = defaults
-	l.Status = status
-	l.Options = options
-}
-
 // InitMetrics for this Lookup.
-func (l *Lookup) InitMetrics() {
-	if l == nil {
-		return
-	}
+func (l *Lookup) InitMetrics(parentLookup Interface) {
+	lookupType := parentLookup.GetType()
+
 	// ############
 	// # Counters #
 	// ############
 	metric.InitPrometheusCounter(metric.DeployedVersionQueryResultTotal,
 		*l.Status.ServiceID,
 		"",
-		"",
+		lookupType,
 		"SUCCESS")
 	metric.InitPrometheusCounter(metric.DeployedVersionQueryResultTotal,
 		*l.Status.ServiceID,
 		"",
-		"",
+		lookupType,
 		"FAIL")
 }
 
 // DeleteMetrics for this Lookup.
-func (l *Lookup) DeleteMetrics() {
-	if l == nil {
-		return
-	}
+func (l *Lookup) DeleteMetrics(parentLookup Interface) {
+	lookupType := parentLookup.GetType()
 
 	// Liveness.
 	metric.DeletePrometheusGauge(metric.DeployedVersionQueryResultLast,
-		*l.Status.ServiceID, "")
+		*l.Status.ServiceID,
+		lookupType,
+	)
 	// Counters.
 	metric.DeletePrometheusCounter(metric.DeployedVersionQueryResultTotal,
 		*l.Status.ServiceID,
 		"",
-		"",
+		lookupType,
 		"SUCCESS")
 	metric.DeletePrometheusCounter(metric.DeployedVersionQueryResultTotal,
 		*l.Status.ServiceID,
 		"",
-		"",
+		lookupType,
 		"FAIL")
+}
+
+// QueryMetrics sets the Prometheus metrics for the DeployedVersion query.
+func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
+	// If it failed.
+	if err != nil {
+		// Increase failure count.
+		metric.IncPrometheusCounter(metric.DeployedVersionQueryResultTotal,
+			l.GetServiceID(),
+			"",
+			parentLookup.GetType(),
+			"FAIL")
+		// Set liveness.
+		metric.SetPrometheusGauge(metric.DeployedVersionQueryResultLast,
+			l.GetServiceID(), parentLookup.GetType(),
+			0)
+		// If it succeeded.
+	} else {
+		metric.IncPrometheusCounter(metric.DeployedVersionQueryResultTotal,
+			l.GetServiceID(),
+			"",
+			parentLookup.GetType(),
+			"SUCCESS")
+		metric.SetPrometheusGauge(metric.DeployedVersionQueryResultLast,
+			l.GetServiceID(), parentLookup.GetType(),
+			1)
+	}
 }

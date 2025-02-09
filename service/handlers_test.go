@@ -23,6 +23,7 @@ import (
 
 	"github.com/release-argus/Argus/command"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/webhook"
 	webhook_test "github.com/release-argus/Argus/webhook/test"
@@ -1021,7 +1022,7 @@ func TestService_UpdatedVersion(t *testing.T) {
 		webhooks              webhook.Slice
 		webhookFails          map[string]*bool
 		latestIsDeployed      bool
-		deployedVersion       *deployedver.Lookup
+		deployedVersion       deployedver.Lookup
 		approvedBecomesLatest bool
 		deployedBecomesLatest bool
 		wantAnnounces         int
@@ -1112,7 +1113,7 @@ func TestService_UpdatedVersion(t *testing.T) {
 			webhooks: webhook.Slice{
 				"0": {},
 				"1": {}},
-			deployedVersion: &deployedver.Lookup{},
+			deployedVersion: &deployedver_base.Lookup{},
 			commandFails: []*bool{
 				test.BoolPtr(false), test.BoolPtr(false)},
 			webhookFails: map[string]*bool{
@@ -1122,7 +1123,7 @@ func TestService_UpdatedVersion(t *testing.T) {
 		"deployedVersionLookup with no commands/webhooks doesn't announce or update deployed_version/approved_version": {
 			wantAnnounces:         0,
 			deployedBecomesLatest: false,
-			deployedVersion:       &deployedver.Lookup{},
+			deployedVersion:       &deployedver_base.Lookup{},
 		},
 	}
 

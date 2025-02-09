@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -252,7 +252,7 @@ func setMapFields(field reflect.Value, envKey string, envVars []string) error {
 	return nil
 }
 
-// convertToEnvErrors converts the yaml struct errors to environment variable errors.
+// convertToEnvErrors converts the YAML struct errors to environment variable errors.
 func convertToEnvErrors(errs error) error {
 	if errs == nil {
 		return nil

@@ -71,15 +71,15 @@ func ServiceTest(flag *string, cfg *config.Config) {
 
 	// DeployedVersionLookup.
 	if service.DeployedVersionLookup != nil {
-		version, err := service.DeployedVersionLookup.Query(false, logFrom)
-		logutil.Log.Info(
-			fmt.Sprintf(
-				"Deployed version - %q",
-				version,
-			),
-			logFrom,
-			err == nil,
-		)
+		if err := service.DeployedVersionLookup.Query(false, logFrom); err == nil {
+			logutil.Log.Info(
+				fmt.Sprintf(
+					"Deployed version - %q",
+					service.Status.DeployedVersion()),
+				logFrom,
+				true,
+			)
+		}
 	}
 
 	if !logutil.Log.Testing {

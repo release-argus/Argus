@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 
 // Defaults returns a shoutrrr.Defaults instance for testing.
 func Defaults(failing bool, selfSignedCert bool) *shoutrrr.Defaults {
-	url := "valid.release-argus.io"
+	url := test.ValidCertNoProtocol
 	if selfSignedCert {
 		url = strings.Replace(url, "valid", "invalid", 1)
 	}
@@ -46,7 +46,7 @@ func Defaults(failing bool, selfSignedCert bool) *shoutrrr.Defaults {
 
 // Shoutrrr returns a shoutrrr instance for testing.
 func Shoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
-	url := "valid.release-argus.io"
+	url := test.ValidCertNoProtocol
 	if selfSignedCert {
 		url = strings.Replace(url, "valid", "invalid", 1)
 	}

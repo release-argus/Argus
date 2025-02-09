@@ -28,7 +28,7 @@ import (
 
 // Lookup is the base struct for a Lookup.
 type Lookup struct {
-	Type        string                 `yaml:"type,omitempty" json:"type,omitempty"`                 // "github" | "web".
+	Type        string                 `yaml:"type,omitempty" json:"type,omitempty"`                 // "github" | "url".
 	URL         string                 `yaml:"url,omitempty" json:"url,omitempty"`                   // "owner/repo" or "https://github.com/owner/repo".
 	URLCommands filter.URLCommandSlice `yaml:"url_commands,omitempty" json:"url_commands,omitempty"` // Commands to filter the release from the URL request.
 	Require     *filter.Require        `yaml:"require,omitempty" json:"require,omitempty"`           // Options to require before considering a release valid.
@@ -67,7 +67,7 @@ func (l *Lookup) Init(
 	}
 }
 
-// IsEqual will return whether this lookup is the same as `other` (excluding status).
+// IsEqual will return whether `this` lookup is the same as `other` (excluding status).
 func (l *Lookup) IsEqual(this, other Interface) bool {
 	if other == nil || l == nil {
 		// Equal if both are nil.

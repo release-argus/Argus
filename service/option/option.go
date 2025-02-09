@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
+
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // Base is the base struct for Options.
@@ -47,10 +50,10 @@ func NewDefaults(
 
 // Default sets this Defaults to the default values.
 func (od *Defaults) Default() {
-	// interval
+	// interval.
 	od.Interval = "10m"
 
-	// semantic_versioning
+	// semantic_versioning.
 	semanticVersioning := true
 	od.SemanticVersioning = &semanticVersioning
 }
@@ -125,6 +128,19 @@ func (o *Options) GetSemanticVersioning() bool {
 		o.HardDefaults.SemanticVersioning)
 }
 
+// VerifySemanticVersioning returns an error if the version is not following Semantic Versioning.
+func (o *Options) VerifySemanticVersioning(version string, logFrom logutil.LogFrom) (*semver.Version, error) {
+	semanticVersion, err := semver.NewVersion(version)
+	if err != nil {
+		err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
+			version)
+		logutil.Log.Error(err, logFrom, true)
+		return nil, err
+	}
+
+	return semanticVersion, nil
+}
+
 // GetIntervalPointer returns a pointer to the interval between queries on latest/deployed version.
 func (o *Options) GetIntervalPointer() *string {
 	if o.Interval != "" {
@@ -144,7 +160,7 @@ func (o *Options) GetIntervalDuration() time.Duration {
 
 // CheckValues validates the fields of the Base struct.
 func (b *Base) CheckValues(prefix string) error {
-	// Interval
+	// interval.
 	if b.Interval != "" {
 		// Treat integers as seconds by default.
 		if _, err := strconv.Atoi(b.Interval); err == nil {

@@ -21,17 +21,18 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	dvweb "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
-	"github.com/release-argus/Argus/service/latest_version/types/web"
+	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
 	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
 
 //
-// Defaults
+// Defaults.
 //
 
 // convertAndCensorDefaults converts Defaults to API Type and censor secrets.
@@ -62,7 +63,7 @@ func convertAndCensorDefaults(input *config.Defaults) *apitype.Defaults {
 }
 
 //
-// Service
+// Service.
 //
 
 // convertAndCensorService converts Service to API type, censoring any secrets.
@@ -73,28 +74,28 @@ func convertAndCensorService(service *service.Service) *apitype.Service {
 
 	apiService := apitype.Service{}
 
-	// Name
+	// Name.
 	if service.MarshalName() {
 		apiService.Name = service.Name
 	}
-	// Comment
+	// Comment.
 	apiService.Comment = service.Comment
 
-	// Options
+	// Options.
 	apiService.Options = &apitype.ServiceOptions{
 		Active:             service.Options.Active,
 		Interval:           service.Options.Interval,
 		SemanticVersioning: service.Options.SemanticVersioning}
 
-	// LatestVersion
+	// LatestVersion.
 	apiService.LatestVersion = convertAndCensorLatestVersion(service.LatestVersion)
-	// DeployedVersionLookup
+	// DeployedVersionLookup.
 	apiService.DeployedVersionLookup = convertAndCensorDeployedVersionLookup(service.DeployedVersionLookup)
-	// Notify
+	// Notify.
 	apiService.Notify = convertAndCensorNotifySlice(&service.Notify)
-	// Command
+	// Command.
 	apiService.Command = convertCommandSlice(&service.Command)
-	// WebHook
+	// WebHook.
 	apiService.WebHook = convertAndCensorWebHookSlice(&service.WebHook)
 
 	apiService.Dashboard = &apitype.DashboardOptions{
@@ -108,7 +109,7 @@ func convertAndCensorService(service *service.Service) *apitype.Service {
 }
 
 //
-// Latest Version
+// Latest Version.
 //
 
 // convertAndCensorLatestVersion converts Lookup to API Type, censoring any secrets.
@@ -126,7 +127,7 @@ func convertAndCensorLatestVersion(lv latestver.Lookup) *apitype.LatestVersion {
 			UsePreRelease: v.UsePreRelease,
 			URLCommands:   convertURLCommandSlice(&v.URLCommands),
 			Require:       convertAndCensorLatestVersionRequire(v.Require)}
-	case *web.Lookup:
+	case *lvweb.Lookup:
 		return &apitype.LatestVersion{
 			Type:              v.Type,
 			URL:               v.URL,
@@ -148,20 +149,20 @@ func convertAndCensorLatestVersionRequireDefaults(require *filter.RequireDefault
 		Docker: apitype.RequireDockerCheckDefaults{
 			Type: require.Docker.Type}}
 
-	// Docker
-	//   GHCR
+	// Docker:
+	//   GHCR.
 	if require.Docker.RegistryGHCR != nil {
 		apiRequire.Docker.GHCR = &apitype.RequireDockerCheckRegistryDefaults{
 			Token: util.ValueUnlessDefault(require.Docker.RegistryGHCR.Token, util.SecretValue)}
 	}
-	//   Docker Hub
+	//   Docker Hub.
 	if require.Docker.RegistryHub != nil {
 		apiRequire.Docker.Hub = &apitype.RequireDockerCheckRegistryDefaultsWithUsername{
 			Username: require.Docker.RegistryHub.Username,
 			RequireDockerCheckRegistryDefaults: apitype.RequireDockerCheckRegistryDefaults{
 				Token: util.ValueUnlessDefault(require.Docker.RegistryHub.Token, util.SecretValue)}}
 	}
-	//   Quay
+	//   Quay.
 	if require.Docker.RegistryQuay != nil {
 		apiRequire.Docker.Quay = &apitype.RequireDockerCheckRegistryDefaults{
 			Token: util.ValueUnlessDefault(require.Docker.RegistryQuay.Token, util.SecretValue)}
@@ -176,7 +177,7 @@ func convertAndCensorLatestVersionRequire(require *filter.Require) *apitype.Late
 		return nil
 	}
 
-	// Docker
+	// Docker.
 	var docker *apitype.RequireDockerCheck
 	if require.Docker != nil {
 		docker = &apitype.RequireDockerCheck{
@@ -187,7 +188,7 @@ func convertAndCensorLatestVersionRequire(require *filter.Require) *apitype.Late
 			Token:    util.ValueUnlessDefault(require.Docker.Token, util.SecretValue)}
 	}
 
-	// Require
+	// Require.
 	apiRequire := apitype.LatestVersionRequire{
 		Command:      require.Command,
 		Docker:       docker,
@@ -219,45 +220,48 @@ func convertURLCommandSlice(commands *filter.URLCommandSlice) *apitype.URLComman
 }
 
 //
-// Deployed Version
+// Deployed Version.
 //
 
 // convertAndCensorDeployedVersionLookup converts Lookup to API Type, censoring any secrets.
-func convertAndCensorDeployedVersionLookup(dvl *deployedver.Lookup) *apitype.DeployedVersionLookup {
+func convertAndCensorDeployedVersionLookup(dvl deployedver.Lookup) *apitype.DeployedVersionLookup {
 	if dvl == nil {
 		return nil
 	}
 
-	apiDVL := apitype.DeployedVersionLookup{
-		Method:            dvl.Method,
-		URL:               dvl.URL,
-		AllowInvalidCerts: dvl.AllowInvalidCerts,
-		Headers:           nil,
-		Body:              dvl.Body,
-		JSON:              dvl.JSON,
-		Regex:             dvl.Regex,
-		RegexTemplate:     dvl.RegexTemplate}
+	if dvl, ok := dvl.(*dvweb.Lookup); ok {
+		apiDVL := apitype.DeployedVersionLookup{
+			Method:            dvl.Method,
+			URL:               dvl.URL,
+			AllowInvalidCerts: dvl.AllowInvalidCerts,
+			Headers:           nil,
+			Body:              dvl.Body,
+			JSON:              dvl.JSON,
+			Regex:             dvl.Regex,
+			RegexTemplate:     dvl.RegexTemplate}
 
-	// Basic auth
-	if dvl.BasicAuth != nil {
-		apiDVL.BasicAuth = &apitype.BasicAuth{
-			Username: dvl.BasicAuth.Username,
-			Password: util.SecretValue}
+		// Basic auth.
+		if dvl.BasicAuth != nil {
+			apiDVL.BasicAuth = &apitype.BasicAuth{
+				Username: dvl.BasicAuth.Username,
+				Password: util.SecretValue}
+		}
+
+		// Headers.
+		apiDVL.Headers = make([]apitype.Header, len(dvl.Headers))
+		for i := range dvl.Headers {
+			apiDVL.Headers[i] = apitype.Header{
+				Key:   dvl.Headers[i].Key,
+				Value: util.SecretValue}
+		}
+
+		return &apiDVL
 	}
-
-	// Headers
-	apiDVL.Headers = make([]apitype.Header, len(dvl.Headers))
-	for i := range dvl.Headers {
-		apiDVL.Headers[i] = apitype.Header{
-			Key:   dvl.Headers[i].Key,
-			Value: util.SecretValue}
-	}
-
-	return &apiDVL
+	return nil
 }
 
 //
-// Notify
+// Notify.
 //
 
 // convertAndCensorNotifySliceDefaults converts Slice to NotifySlice, censoring any secrets.
@@ -305,7 +309,7 @@ func convertAndCensorNotifySlice(input *shoutrrr.Slice) *apitype.NotifySlice {
 }
 
 //
-// Command
+// Command.
 //
 
 // convertCommandSlice converts Slice to API type.
@@ -323,7 +327,7 @@ func convertCommandSlice(commands *command.Slice) *apitype.CommandSlice {
 }
 
 //
-// WebHook
+// WebHook.
 //
 
 // convertWebHookHeaders converts WebHook Headers to API type.

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
@@ -298,7 +299,7 @@ func TestService_CheckValues(t *testing.T) {
 		svc              *Service
 		options          opt.Options
 		latestVersion    latestver.Lookup
-		deployedVersion  *deployedver.Lookup
+		deployedVersion  deployedver.Lookup
 		commands         command.Slice
 		webhooks         webhook.Slice
 		notifies         shoutrrr.Slice
@@ -360,7 +361,7 @@ func TestService_CheckValues(t *testing.T) {
 					nil,
 					nil, nil)
 			}),
-			deployedVersion: &deployedver.Lookup{
+			deployedVersion: &dv_web.Lookup{
 				Regex: `[0-`},
 			errRegex: test.TrimYAML(`
 				^options:
@@ -384,7 +385,7 @@ func TestService_CheckValues(t *testing.T) {
 					nil,
 					nil, nil)
 			}),
-			deployedVersion: &deployedver.Lookup{
+			deployedVersion: &dv_web.Lookup{
 				Regex: `[0-`},
 			notifies: shoutrrr.Slice{
 				"foo": shoutrrr.New(
@@ -419,7 +420,7 @@ func TestService_CheckValues(t *testing.T) {
 					nil,
 					nil, nil)
 			}),
-			deployedVersion: &deployedver.Lookup{
+			deployedVersion: &dv_web.Lookup{
 				Regex: `[0-`},
 			notifies: shoutrrr.Slice{
 				"foo": shoutrrr.New(
@@ -458,7 +459,7 @@ func TestService_CheckValues(t *testing.T) {
 					nil,
 					nil, nil)
 			}),
-			deployedVersion: &deployedver.Lookup{
+			deployedVersion: &dv_web.Lookup{
 				Regex: `[0-`},
 			commands: command.Slice{{
 				"bash", "update.sh", "{{ version }"}},
@@ -510,8 +511,9 @@ func TestService_CheckValues(t *testing.T) {
 					nil,
 					nil, nil)
 			}),
-			deployedVersion: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+			deployedVersion: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 				return deployedver.New(
+					"url",
 					"yaml", test.TrimYAML(`
 						url: https://example.com
 					`),

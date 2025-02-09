@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 )
 
 func TestFailsBase_Init(t *testing.T) {
-	// GIVEN a Fails
+	// GIVEN a Fails.
 	tests := map[string]struct {
 		size int
 	}{
@@ -43,12 +43,12 @@ func TestFailsBase_Init(t *testing.T) {
 			var failsShoutrrr FailsShoutrrr
 			var failsWebHook FailsWebHook
 
-			// WHEN we Init
+			// WHEN we Init.
 			failsCommand.Init(tc.size)
 			failsShoutrrr.Init(tc.size)
 			failsWebHook.Init(tc.size)
 
-			// THEN the size of the map is as expected
+			// THEN the size of the map is as expected.
 			if len(failsCommand.fails) != tc.size {
 				t.Errorf("FailsCommand - want: %d, got: %d",
 					tc.size, len(failsCommand.fails))
@@ -66,7 +66,7 @@ func TestFailsBase_Init(t *testing.T) {
 }
 
 func TestFailsBase_SetAndGet(t *testing.T) {
-	// GIVEN a Fails
+	// GIVEN a Fails.
 	tests := map[string]struct {
 		size       int
 		setAtArray map[int]*bool
@@ -102,7 +102,7 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 			failsShoutrrr.Init(tc.size)
 			var failsWebHook FailsWebHook
 			failsWebHook.Init(tc.size)
-			// ensure they are empty
+			// Ensure they are empty.
 			for i := range tc.setAtArray {
 				got := failsCommand.Get(i)
 				if got != nil {
@@ -120,7 +120,7 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 				}
 			}
 
-			// WHEN we Set
+			// WHEN we Set.
 			for i, v := range tc.setAtArray {
 				failsCommand.Set(i, *v)
 			}
@@ -129,7 +129,7 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 				failsWebHook.Set(k, v)
 			}
 
-			// THEN the values can be retrieved with Get
+			// THEN the values can be retrieved with Get.
 			for i, v := range tc.setAtArray {
 				got := failsCommand.Get(i)
 				if got == nil {
@@ -160,7 +160,7 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 }
 
 func TestFailsBase_AllPassed(t *testing.T) {
-	// GIVEN a Fails
+	// GIVEN a Fails.
 	tests := map[string]struct {
 		fails map[int]*bool
 		want  bool
@@ -218,12 +218,12 @@ func TestFailsBase_AllPassed(t *testing.T) {
 				failsWebHook.Set(iStr, v)
 			}
 
-			// WHEN we call AllPassed
+			// WHEN we call AllPassed.
 			gotC := failsCommand.AllPassed()
 			gotS := failsShoutrrr.AllPassed()
 			gotWH := failsWebHook.AllPassed()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if gotC != tc.want {
 				t.Errorf("FailsCommand - want: %v, got: %v", tc.want, gotC)
 			}
@@ -238,7 +238,7 @@ func TestFailsBase_AllPassed(t *testing.T) {
 }
 
 func TestFailsBase_Reset(t *testing.T) {
-	// GIVEN a Fails
+	// GIVEN a Fails.
 	tests := map[string]struct {
 		fails map[int]*bool
 	}{
@@ -290,12 +290,12 @@ func TestFailsBase_Reset(t *testing.T) {
 				failsWebHook.Set(iStr, v)
 			}
 
-			// WHEN we call Reset
+			// WHEN we call Reset.
 			failsCommand.Reset()
 			failsShoutrrr.Reset()
 			failsWebHook.Reset()
 
-			// THEN all the indices are reset to nil
+			// THEN all the indices are reset to nil.
 			for i := range tc.fails {
 				got := failsCommand.Get(i)
 				if got != nil {
@@ -316,7 +316,7 @@ func TestFailsBase_Reset(t *testing.T) {
 }
 
 func TestFailsBase_Length(t *testing.T) {
-	// GIVEN a Fails
+	// GIVEN a Fails.
 	tests := map[string]struct {
 		size       int
 		setAtArray map[int]*bool
@@ -361,7 +361,7 @@ func TestFailsBase_Length(t *testing.T) {
 			failsShoutrrr.Init(tc.size)
 			var failsWebHook FailsWebHook
 			failsWebHook.Init(tc.size)
-			// Set the values
+			// Set the values.
 			for i, v := range tc.setAtArray {
 				if v != nil {
 					failsCommand.Set(i, *v)
@@ -372,12 +372,12 @@ func TestFailsBase_Length(t *testing.T) {
 				failsWebHook.Set(k, v)
 			}
 
-			// WHEN we call Length
+			// WHEN we call Length.
 			lengthC := failsCommand.Length()
 			lengthS := failsShoutrrr.Length()
 			lengthWH := failsWebHook.Length()
 
-			// THEN the lengths are returned correctly
+			// THEN the lengths of the maps are returned.
 			if lengthC != tc.size {
 				t.Errorf("FailsCommand - want: %v, got: %v",
 					tc.size, lengthC)
@@ -395,7 +395,7 @@ func TestFailsBase_Length(t *testing.T) {
 }
 
 func TestFails_String(t *testing.T) {
-	// GIVEN a Fails
+	// GIVEN a Fails.
 	tests := map[string]struct {
 		commandFails                []*bool
 		shoutrrrFails, webhookFails map[string]*bool
@@ -542,13 +542,157 @@ func TestFails_String(t *testing.T) {
 				fails.WebHook.Set(k, v)
 			}
 
-			// WHEN the Fails is stringified with String
+			// WHEN the Fails are stringified with String.
 			got := fails.String("")
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.want {
 				t.Errorf("Fails.String() mismatch\n%q\ngot:\n%q",
 					tc.want, got)
+			}
+		})
+	}
+}
+
+func TestFails_Copy(t *testing.T) {
+	// GIVEN a fails to copy from and a fails to copy to.
+	tests := map[string]struct {
+		fromCommandFails, toCommandFails   []*bool
+		fromShoutrrrFails, toShoutrrrFails map[string]*bool
+		fromWebHookFails, toWebHookFails   map[string]*bool
+	}{
+		"copy empty fails": {
+			fromCommandFails:  []*bool{},
+			toCommandFails:    []*bool{},
+			fromShoutrrrFails: map[string]*bool{},
+			toShoutrrrFails:   map[string]*bool{},
+			fromWebHookFails:  map[string]*bool{},
+			toWebHookFails:    map[string]*bool{},
+		},
+		"copy non-empty fails": {
+			fromCommandFails: []*bool{
+				nil, test.BoolPtr(false), test.BoolPtr(true)},
+			toCommandFails: []*bool{
+				test.BoolPtr(true), nil, test.BoolPtr(false)},
+			fromShoutrrrFails: map[string]*bool{
+				"foo": test.BoolPtr(false), "bar": test.BoolPtr(true)},
+			toShoutrrrFails: map[string]*bool{
+				"baz": test.BoolPtr(true)},
+			fromWebHookFails: map[string]*bool{
+				"foo": test.BoolPtr(true), "bar": test.BoolPtr(false)},
+			toWebHookFails: map[string]*bool{
+				"baz": test.BoolPtr(false)},
+		},
+		"copy to smaller fails": {
+			fromCommandFails: []*bool{
+				nil, test.BoolPtr(false), test.BoolPtr(true)},
+			toCommandFails: []*bool{
+				test.BoolPtr(true), nil},
+			fromShoutrrrFails: map[string]*bool{
+				"foo": test.BoolPtr(false), "bar": test.BoolPtr(true)},
+			toShoutrrrFails: map[string]*bool{
+				"baz": test.BoolPtr(true)},
+			fromWebHookFails: map[string]*bool{
+				"foo": test.BoolPtr(true), "bar": test.BoolPtr(false)},
+			toWebHookFails: map[string]*bool{
+				"baz": test.BoolPtr(false)},
+		},
+		"copy to larger fails": {
+			fromCommandFails: []*bool{
+				nil, test.BoolPtr(false), test.BoolPtr(true)},
+			toCommandFails: []*bool{
+				test.BoolPtr(true), nil, test.BoolPtr(false), nil},
+			fromShoutrrrFails: map[string]*bool{
+				"foo": test.BoolPtr(false), "bar": test.BoolPtr(true)},
+			toShoutrrrFails: map[string]*bool{
+				"baz": test.BoolPtr(true), "bosh": nil},
+			fromWebHookFails: map[string]*bool{
+				"foo": test.BoolPtr(true), "bar": test.BoolPtr(false)},
+			toWebHookFails: map[string]*bool{
+				"baz": test.BoolPtr(false), "bosh": nil},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// fails to copy from.
+			from := Fails{}
+			from.Command.Init(len(tc.fromCommandFails))
+			for k, v := range tc.fromCommandFails {
+				if v != nil {
+					from.Command.Set(k, *v)
+				}
+			}
+			from.Shoutrrr.Init(len(tc.fromShoutrrrFails))
+			for k, v := range tc.fromShoutrrrFails {
+				from.Shoutrrr.Set(k, v)
+			}
+			from.WebHook.Init(len(tc.fromWebHookFails))
+			for k, v := range tc.fromWebHookFails {
+				from.WebHook.Set(k, v)
+			}
+
+			// fails to copy to.
+			to := Fails{}
+			to.Command.Init(len(tc.toCommandFails))
+			for k, v := range tc.toCommandFails {
+				if v != nil {
+					to.Command.Set(k, *v)
+				}
+			}
+			to.Shoutrrr.Init(len(tc.toShoutrrrFails))
+			for k, v := range tc.toShoutrrrFails {
+				to.Shoutrrr.Set(k, v)
+			}
+			to.WebHook.Init(len(tc.toWebHookFails))
+			for k, v := range tc.toWebHookFails {
+				to.WebHook.Set(k, v)
+			}
+
+			// WHEN we call Copy.
+			to.Copy(&from)
+
+			// THEN the values are copied correctly.
+			// Command.
+			if len(to.Command.fails) > len(from.Command.fails) {
+				t.Errorf("Command - want: %d, got: %d",
+					len(tc.fromCommandFails), len(tc.toCommandFails))
+			}
+			for k, v := range tc.fromCommandFails {
+				fromStr := test.StringifyPtr(v)
+				gotStr := test.StringifyPtr(to.Command.Get(k))
+				if fromStr != gotStr {
+					t.Errorf("Command - want: %s, got: %s",
+						fromStr, gotStr)
+				}
+			}
+			// Shoutrrr.
+			if len(to.Shoutrrr.fails) > len(from.Shoutrrr.fails) {
+				t.Errorf("Shoutrrr - want: %d, got: %d",
+					len(tc.fromShoutrrrFails), len(tc.toShoutrrrFails))
+			}
+			for k, v := range tc.fromShoutrrrFails {
+				fromStr := test.StringifyPtr(v)
+				gotStr := test.StringifyPtr(to.Shoutrrr.Get(k))
+				if fromStr != gotStr {
+					t.Errorf("Shoutrrr - want: %s, got: %s",
+						fromStr, gotStr)
+				}
+			}
+			// WebHook.
+			if len(to.WebHook.fails) > len(from.WebHook.fails) {
+				t.Errorf("WebHook - want: %d, got: %d",
+					len(tc.fromWebHookFails), len(tc.toWebHookFails))
+			}
+			for k, v := range tc.fromWebHookFails {
+				fromStr := test.StringifyPtr(v)
+				gotStr := test.StringifyPtr(to.WebHook.Get(k))
+				if fromStr != gotStr {
+					t.Errorf("WebHook - want: %s, got: %s",
+						fromStr, gotStr)
+				}
 			}
 		})
 	}

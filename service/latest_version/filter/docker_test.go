@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import (
 )
 
 func TestDockerCheck_GetTag(t *testing.T) {
-	// GIVEN a DockerCheck and a version
+	// GIVEN a DockerCheck and a version.
 	tests := map[string]struct {
 		dockerCheck *DockerCheck
 		version     string
@@ -50,10 +50,10 @@ func TestDockerCheck_GetTag(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN GetTag is called on it
+			// WHEN GetTag is called on it.
 			got := tc.dockerCheck.GetTag(tc.version)
 
-			// THEN the expected Tag is returned
+			// THEN the expected Tag is returned.
 			if got != tc.want {
 				t.Errorf("want: %q\ngot:  %q",
 					tc.want, got)
@@ -63,7 +63,7 @@ func TestDockerCheck_GetTag(t *testing.T) {
 }
 
 func TestDockerCheck_getQueryToken(t *testing.T) {
-	// GIVEN a DockerCheck
+	// GIVEN a DockerCheck.
 	tests := map[string]struct {
 		dockerCheck    *DockerCheck
 		hadQueryToken  string
@@ -190,10 +190,10 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 			}
 			tc.dockerCheck.queryToken = tc.hadQueryToken
 
-			// WHEN getQueryToken is called on it
+			// WHEN getQueryToken is called on it.
 			queryToken, err := tc.dockerCheck.getQueryToken()
 
-			// THEN the err is what we expect and a queryToken is retrieved when expected
+			// THEN the err is what we expect and a queryToken is retrieved when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
@@ -203,18 +203,18 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 				return
 			}
 			if tc.errRegex == "^$" {
-				// didn't want a queryToken
+				// Do not want a queryToken.
 				if tc.noToken {
 					if queryToken != "" {
 						t.Errorf("didn't expect a queryToken. Got %q",
 							queryToken)
 					}
-					// didn't get a queryToken
+					// Did not get a queryToken.
 				} else if queryToken == "" {
 					t.Error("didn't get any queryToken")
 				}
 			}
-			// AND the query token is what we expect
+			// AND the query token is what we expect.
 			if tc.wantQueryToken != nil &&
 				*tc.wantQueryToken != queryToken {
 				t.Errorf("want queryToken %q, not %q",
@@ -225,7 +225,7 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 }
 
 func TestDockerCheckDefaults_getQueryToken(t *testing.T) {
-	// GIVEN a DockerCheckDefaults
+	// GIVEN a DockerCheckDefaults.
 	tests := map[string]struct {
 		dockerCheckDefaults *DockerCheckDefaults
 		wantToken           string
@@ -361,16 +361,16 @@ func TestDockerCheckDefaults_getQueryToken(t *testing.T) {
 				}
 			}
 
-			// WHEN getQueryToken is called on it
+			// WHEN getQueryToken is called on it.
 			queryToken, validUntil := tc.dockerCheckDefaults.getQueryToken(
 				tc.dockerCheckDefaults.GetType())
 
-			// THEN the query token is what we expect
+			// THEN the query token is what we expect.
 			if tc.wantToken != queryToken {
 				t.Errorf("want queryToken %q, not %q",
 					tc.wantToken, queryToken)
 			}
-			// AND the validUntil is what we expect
+			// AND the validUntil is what we expect.
 			if tc.wantValidUntil != validUntil {
 				t.Errorf("want validUntil %q, not %q",
 					tc.wantValidUntil, validUntil)
@@ -380,7 +380,7 @@ func TestDockerCheckDefaults_getQueryToken(t *testing.T) {
 }
 
 func TestDockerCheck_SetQueryToken(t *testing.T) {
-	// GIVEN a DockerCheck and a value to set the queryToken/validUntil to
+	// GIVEN a DockerCheck and a value to set the queryToken/validUntil to.
 	queryToken := "something"
 	validUntil := time.Date(2000, 1, 1, 3, 5, 5, 0, time.UTC)
 	tests := map[string]struct {
@@ -511,12 +511,12 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 				tc.dockerCheck.Defaults.RegistryGHCR.Token = *tc.defaultTokenGHCR
 			}
 
-			// WHEN SetQueryToken is called on it
+			// WHEN SetQueryToken is called on it.
 			tc.dockerCheck.SetQueryToken(
 				tc.setForToken,
 				queryToken, validUntil)
 
-			// THEN the query token is what we expect
+			// THEN the query token is what we expect.
 			if hadNil {
 				if tc.dockerCheck != nil {
 					t.Errorf("want nil dockerCheck, not %v", tc.dockerCheck)
@@ -602,7 +602,7 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 }
 
 func TestDockerCheck_ClearQueryToken(t *testing.T) {
-	// GIVEN a DockerCheck
+	// GIVEN a DockerCheck.
 	tests := map[string]struct {
 		dockerCheck *DockerCheck
 	}{
@@ -622,10 +622,10 @@ func TestDockerCheck_ClearQueryToken(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ClearQueryToken is called on it
+			// WHEN ClearQueryToken is called on it.
 			tc.dockerCheck.ClearQueryToken()
 
-			// THEN the queryToken is cleared
+			// THEN the queryToken is cleared.
 			if tc.dockerCheck != nil && tc.dockerCheck.queryToken != "" {
 				t.Errorf("expected queryToken to be cleared, but got %q", tc.dockerCheck.queryToken)
 			}
@@ -634,7 +634,7 @@ func TestDockerCheck_ClearQueryToken(t *testing.T) {
 }
 
 func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
-	// GIVEN a DockerCheckDefaults and a value to set the queryToken/validUntil to
+	// GIVEN a DockerCheckDefaults and a value to set the queryToken/validUntil to.
 	queryToken := "something"
 	validUntil := time.Date(2000, 1, 1, 3, 0, 5, 0, time.UTC)
 	tests := map[string]struct {
@@ -783,20 +783,20 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 				tc.dockerCheckDefaults.defaults.RegistryGHCR.Token = *tc.ghcrDefaultToken
 			}
 
-			// WHEN setQueryToken is called on it
+			// WHEN setQueryToken is called on it.
 			tc.dockerCheckDefaults.setQueryToken(
 				tc.setForType, tc.setForToken,
 				queryToken, validUntil)
 
-			// THEN the query token isn't set if the DockerCheckDefaults was nil
+			// THEN the query token isn't set if the DockerCheckDefaults was nil.
 			if hadNil {
 				if tc.dockerCheckDefaults != nil {
 					t.Error("didn't expect DockerCheckDefaults to be initialised")
 				}
 				return
 			}
-			// THEN the query token is set in the correct main if the Token matched
-			// GHCR
+			// THEN the query token is set in the correct main if the Token matched.
+			// GHCR.
 			if tc.changeMain &&
 				tc.setForType == "ghcr" {
 				if tc.dockerCheckDefaults.RegistryGHCR.queryToken != queryToken {
@@ -817,7 +817,7 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 						tc.dockerCheckDefaults.RegistryGHCR.validUntil)
 				}
 			}
-			// Hub
+			// Hub.
 			if tc.changeMain &&
 				tc.setForType == "hub" {
 				if tc.dockerCheckDefaults.RegistryHub.queryToken != queryToken {
@@ -838,7 +838,7 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 						tc.dockerCheckDefaults.RegistryHub.validUntil)
 				}
 			}
-			// Quay
+			// Quay.
 			if tc.changeMain &&
 				tc.setForType == "quay" {
 				if tc.dockerCheckDefaults.RegistryQuay.queryToken != queryToken {
@@ -860,7 +860,7 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 				}
 			}
 
-			// AND the defaults aren't initialised if they were nil
+			// AND the defaults aren't initialised if they were nil.
 			if hadNilDefaults {
 				if tc.dockerCheckDefaults.defaults != nil {
 					t.Error("didn't expect defaults to be initialised")
@@ -868,8 +868,8 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 				return
 			}
 
-			// AND it's set in the defaults if the Token didn't match any in the main and does in the defaults
-			// GHCR
+			// AND it's set in the defaults if the Token didn't match any in the main and does in the defaults.
+			// GHCR.
 			if tc.changeDefaults &&
 				tc.setForType == "ghcr" {
 				if tc.dockerCheckDefaults.defaults.RegistryGHCR.queryToken != queryToken {
@@ -890,7 +890,7 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 						tc.dockerCheckDefaults.defaults.RegistryGHCR.validUntil)
 				}
 			}
-			// Hub
+			// Hub.
 			if tc.changeDefaults &&
 				tc.setForType == "hub" {
 				if tc.dockerCheckDefaults.defaults.RegistryHub.queryToken != queryToken {
@@ -911,7 +911,7 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 						tc.dockerCheckDefaults.defaults.RegistryHub.validUntil)
 				}
 			}
-			// Quay
+			// Quay.
 			if tc.changeDefaults &&
 				tc.setForType == "quay" {
 				if tc.dockerCheckDefaults.defaults.RegistryQuay.queryToken != queryToken {
@@ -937,7 +937,7 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 }
 
 func TestDockerCheck_getValidToken(t *testing.T) {
-	// GIVEN a DockerCheck
+	// GIVEN a DockerCheck.
 	tests := map[string]struct {
 		dockerCheck *DockerCheck
 		want        string
@@ -1017,10 +1017,10 @@ func TestDockerCheck_getValidToken(t *testing.T) {
 				}
 			}
 
-			// WHEN getValidToken is called on it
+			// WHEN getValidToken is called on it.
 			got := tc.dockerCheck.getValidToken()
 
-			// THEN the token is what we expect
+			// THEN the token is what we expect.
 			if tc.want != got {
 				t.Errorf("want %q, not %q",
 					tc.want, got)
@@ -1030,7 +1030,7 @@ func TestDockerCheck_getValidToken(t *testing.T) {
 }
 
 func TestDockerCheck_CopyQueryToken(t *testing.T) {
-	// GIVEN a DockerCheck
+	// GIVEN a DockerCheck.
 	tests := map[string]struct {
 		dockerCheck *DockerCheck
 
@@ -1056,10 +1056,10 @@ func TestDockerCheck_CopyQueryToken(t *testing.T) {
 				tc.dockerCheck.validUntil = tc.startValidUntil
 			}
 
-			// WHEN CopyQueryToken is called on it
+			// WHEN CopyQueryToken is called on it.
 			gotQueryToken, gotValidUntil := tc.dockerCheck.CopyQueryToken()
 
-			// THEN the token is what we expect
+			// THEN the token is what we expect.
 			if tc.wantQueryToken != gotQueryToken {
 				t.Errorf("want %q, not %q",
 					tc.wantQueryToken, gotQueryToken)
@@ -1073,7 +1073,7 @@ func TestDockerCheck_CopyQueryToken(t *testing.T) {
 }
 
 func TestDockerCheck_getUsername(t *testing.T) {
-	// GIVEN a DockerCheck
+	// GIVEN a DockerCheck.
 	tests := map[string]struct {
 		env         map[string]string
 		dockerCheck *DockerCheck
@@ -1179,10 +1179,10 @@ func TestDockerCheck_getUsername(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
-			// WHEN getUsername is called on it
+			// WHEN getUsername is called on it.
 			got := tc.dockerCheck.getUsername()
 
-			// THEN the username is what we expect
+			// THEN the username is what we expect.
 			if tc.want != got {
 				t.Errorf("want %q, not %q",
 					tc.want, got)
@@ -1192,7 +1192,7 @@ func TestDockerCheck_getUsername(t *testing.T) {
 }
 
 func TestDockerCheckDefaults_getUsername(t *testing.T) {
-	// GIVEN a DockerCheckDefaults
+	// GIVEN a DockerCheckDefaults.
 	tests := map[string]struct {
 		env                 map[string]string
 		dockerCheckDefaults *DockerCheckDefaults
@@ -1326,10 +1326,10 @@ func TestDockerCheckDefaults_getUsername(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
-			// WHEN getUsername is called on it
+			// WHEN getUsername is called on it.
 			got := tc.dockerCheckDefaults.getUsername()
 
-			// THEN the username is what we expect
+			// THEN the username is what we expect.
 			if tc.want != got {
 				t.Errorf("want %q, not %q",
 					tc.want, got)
@@ -1339,7 +1339,7 @@ func TestDockerCheckDefaults_getUsername(t *testing.T) {
 }
 
 func TestDockerCheckDefaults_SetDefaults(t *testing.T) {
-	// GIVEN a DockerCheck and a set of defaults
+	// GIVEN a DockerCheck and a set of defaults.
 	definedDefaults := &DockerCheckDefaults{}
 	tests := map[string]struct {
 		base, defaults, want *DockerCheckDefaults
@@ -1361,10 +1361,10 @@ func TestDockerCheckDefaults_SetDefaults(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN SetDefaults is called on it
+			// WHEN SetDefaults is called on it.
 			tc.base.SetDefaults(tc.defaults)
 
-			// THEN the defaults are what we expect
+			// THEN the defaults are what we expect.
 			if tc.want == nil {
 				if tc.base != nil && tc.base.defaults != nil {
 					t.Errorf("want nil, not %v",
@@ -1381,7 +1381,7 @@ func TestDockerCheckDefaults_SetDefaults(t *testing.T) {
 }
 
 func TestDockerCheckDefaults_Default(t *testing.T) {
-	// GIVEN a DockerCheckDefaults
+	// GIVEN a DockerCheckDefaults.
 	tests := map[string]struct {
 		dockerCheckDefaults *DockerCheckDefaults
 	}{
@@ -1400,12 +1400,12 @@ func TestDockerCheckDefaults_Default(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Default is called on it
+			// WHEN Default is called on it.
 			if tc.dockerCheckDefaults != nil {
 				tc.dockerCheckDefaults.Default()
 			}
 
-			// THEN the Type is set to the default value
+			// THEN the Type is set to the default value.
 			wantType := "hub"
 			if tc.dockerCheckDefaults != nil && tc.dockerCheckDefaults.Type != wantType {
 				t.Errorf("filter.DockerCheckDefaults.Default() Type mismatch\n%q\nnot: %q",
@@ -1416,7 +1416,7 @@ func TestDockerCheckDefaults_Default(t *testing.T) {
 }
 
 func TestDockerCheck_CheckToken(t *testing.T) {
-	// GIVEN a DockerCheck
+	// GIVEN a DockerCheck.
 	tests := map[string]struct {
 		dockerCheck    *DockerCheck
 		onlyIfEnvToken bool
@@ -1509,10 +1509,10 @@ func TestDockerCheck_CheckToken(t *testing.T) {
 				t.Skip("ENV VAR undefined")
 			}
 
-			// WHEN checkToken is called on it
+			// WHEN checkToken is called on it.
 			err := tc.dockerCheck.checkToken()
 
-			// THEN the err is what we expect
+			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
@@ -1523,7 +1523,7 @@ func TestDockerCheck_CheckToken(t *testing.T) {
 }
 
 func TestRequire_DockerTagCheck(t *testing.T) {
-	// GIVEN a Require
+	// GIVEN a Require.
 	tests := map[string]struct {
 		dockerCheck    *DockerCheck
 		onlyIfEnvToken bool
@@ -1661,10 +1661,10 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 			}
 			require := Require{Docker: tc.dockerCheck}
 
-			// WHEN DockerTagCheck is called on it
+			// WHEN DockerTagCheck is called on it.
 			err := require.DockerTagCheck("0.9.0")
 
-			// THEN the err is what we expect
+			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
@@ -1675,7 +1675,7 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 }
 
 func TestDockerCheck_RefreshDockerHubToken(t *testing.T) {
-	// GIVEN a Require
+	// GIVEN a Require.
 	tests := map[string]struct {
 		dockerCheck    *DockerCheck
 		onlyIfEnvToken bool
@@ -1720,10 +1720,10 @@ func TestDockerCheck_RefreshDockerHubToken(t *testing.T) {
 				t.Skip("ENV VAR undefined")
 			}
 
-			// WHEN refreshDockerHubToken is called on it
+			// WHEN refreshDockerHubToken is called on it.
 			err := tc.dockerCheck.refreshDockerHubToken()
 
-			// THEN the err is what we expect
+			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
@@ -1734,7 +1734,7 @@ func TestDockerCheck_RefreshDockerHubToken(t *testing.T) {
 }
 
 func TestDockerCheckDefaults_CheckValues(t *testing.T) {
-	// GIVEN a DockerCheck
+	// GIVEN a DockerCheck.
 	tests := map[string]struct {
 		dockerCheck *DockerCheckDefaults
 		errRegex    string
@@ -1773,10 +1773,10 @@ func TestDockerCheckDefaults_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CheckValues is called on it
+			// WHEN CheckValues is called on it.
 			err := tc.dockerCheck.CheckValues("-")
 
-			// THEN the err is what we expect
+			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
@@ -1787,7 +1787,7 @@ func TestDockerCheckDefaults_CheckValues(t *testing.T) {
 }
 
 func TestDockerCheck_CheckValues(t *testing.T) {
-	// GIVEN a DockerCheck
+	// GIVEN a DockerCheck.
 	tests := map[string]struct {
 		dockerCheck *DockerCheck
 		wantImage   string
@@ -1841,7 +1841,7 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				"", "", "", time.Now(),
 				&DockerCheckDefaults{Type: "hub"}),
 		},
-		"invalid type from defaults": { // defaults are validated separately
+		"invalid type from defaults": { // Defaults are validated separately.
 			errRegex: `^$`,
 			dockerCheck: NewDockerCheck(
 				"",
@@ -1850,7 +1850,7 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				"", "", "", time.Now(),
 				&DockerCheckDefaults{Type: "foo"}),
 		},
-		"no type from defaults": { // defaults are validated separately
+		"no type from defaults": { // Defaults are validated separately.
 			errRegex: `^type: .*<required>.*$`,
 			dockerCheck: NewDockerCheck(
 				"",
@@ -1914,10 +1914,10 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CheckValues is called on it
+			// WHEN CheckValues is called on it.
 			err := tc.dockerCheck.CheckValues("")
 
-			// THEN the err is what we expect
+			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
@@ -1932,7 +1932,7 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 }
 
 func TestDockerCheckDefaults_GetType(t *testing.T) {
-	// GIVEN a DockerCheckDefaults
+	// GIVEN a DockerCheckDefaults.
 	tests := map[string]struct {
 		defaults *DockerCheckDefaults
 		want     string
@@ -1968,10 +1968,10 @@ func TestDockerCheckDefaults_GetType(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN GetType is called on it
+			// WHEN GetType is called on it.
 			got := tc.defaults.GetType()
 
-			// THEN the result is what we expect
+			// THEN the result is what we expect.
 			if got != tc.want {
 				t.Fatalf("expected %q, got: %q", tc.want, got)
 			}
@@ -1980,7 +1980,7 @@ func TestDockerCheckDefaults_GetType(t *testing.T) {
 }
 
 func TestDockerCheck_GetType(t *testing.T) {
-	// GIVEN a DockerCheck
+	// GIVEN a DockerCheck.
 	tests := map[string]struct {
 		dockerCheck *DockerCheck
 		want        string
@@ -2017,10 +2017,10 @@ func TestDockerCheck_GetType(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN GetType is called on it
+			// WHEN GetType is called on it.
 			got := tc.dockerCheck.GetType()
 
-			// THEN the result is what we expect
+			// THEN the result is what we expect.
 			if got != tc.want {
 				t.Fatalf("expected %q, got: %q", tc.want, got)
 			}
@@ -2029,7 +2029,7 @@ func TestDockerCheck_GetType(t *testing.T) {
 }
 
 func TestDockerCheckDefaults_getToken(t *testing.T) {
-	// GIVEN a DockerCheckDefaults
+	// GIVEN a DockerCheckDefaults.
 	tests := map[string]struct {
 		env      map[string]string
 		defaults *DockerCheckDefaults
@@ -2165,10 +2165,10 @@ func TestDockerCheckDefaults_getToken(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
-			// WHEN getToken is called on it
+			// WHEN getToken is called on it.
 			got := tc.defaults.getToken(tc.seekType)
 
-			// THEN the result is what we expect
+			// THEN the result is what we expect.
 			if got != tc.want {
 				t.Fatalf("expected %q, got: %q", tc.want, got)
 			}
@@ -2177,7 +2177,7 @@ func TestDockerCheckDefaults_getToken(t *testing.T) {
 }
 
 func TestDockerCheck_getToken(t *testing.T) {
-	// GIVEN a DockerCheck
+	// GIVEN a DockerCheck.
 	tests := map[string]struct {
 		env         map[string]string
 		dockerCheck *DockerCheck
@@ -2290,10 +2290,10 @@ func TestDockerCheck_getToken(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
-			// WHEN getToken is called on it
+			// WHEN getToken is called on it.
 			got := tc.dockerCheck.getToken()
 
-			// THEN the result is what we expect
+			// THEN the result is what we expect.
 			if got != tc.want {
 				t.Fatalf("expected %q, got: %q", tc.want, got)
 			}
@@ -2302,7 +2302,7 @@ func TestDockerCheck_getToken(t *testing.T) {
 }
 
 func TestDockerCheckHub_Print(t *testing.T) {
-	// GIVEN a DockerCheckHub
+	// GIVEN a DockerCheckHub.
 	tests := map[string]struct {
 		dockerCheckHub *DockerCheckHub
 		want           string
@@ -2334,7 +2334,7 @@ func TestDockerCheckHub_Print(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// different prefixes
+			// Different prefixes.
 			prefixes := []string{"", " ", "  ", "    ", "- "}
 			for _, prefix := range prefixes {
 				want := strings.TrimPrefix(tc.want, "\n")
@@ -2345,10 +2345,10 @@ func TestDockerCheckHub_Print(t *testing.T) {
 					want += "\n"
 				}
 
-				// WHEN String is called
+				// WHEN String is called.
 				got := tc.dockerCheckHub.String(prefix)
 
-				// THEN the result is what we expect
+				// THEN the result is what we expect.
 				if got != want {
 					t.Fatalf("(prefix=%q), want:\n%q\ngot\n%q",
 						prefix, want, got)
@@ -2359,7 +2359,7 @@ func TestDockerCheckHub_Print(t *testing.T) {
 }
 
 func TestDockerCheckDefaults_Print(t *testing.T) {
-	// GIVEN a DockerCheckDefaults
+	// GIVEN a DockerCheckDefaults.
 	tests := map[string]struct {
 		dockerCheckDefaults *DockerCheckDefaults
 		want                string
@@ -2410,7 +2410,7 @@ func TestDockerCheckDefaults_Print(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// different prefixes
+			// Different prefixes.
 			prefixes := []string{"", " ", "  ", "    ", "- "}
 			for _, prefix := range prefixes {
 				want := strings.TrimPrefix(tc.want, "\n")
@@ -2421,10 +2421,10 @@ func TestDockerCheckDefaults_Print(t *testing.T) {
 					want += "\n"
 				}
 
-				// WHEN String is called
+				// WHEN String is called.
 				got := tc.dockerCheckDefaults.String(prefix)
 
-				// THEN the result is what we expect
+				// THEN the result is what we expect.
 				if got != want {
 					t.Fatalf("(prefix=%q), expected\n%q\ngot:\n%q",
 						prefix, want, got)
@@ -2435,7 +2435,7 @@ func TestDockerCheckDefaults_Print(t *testing.T) {
 }
 
 func TestDockerCheck_String(t *testing.T) {
-	// GIVEN a DockerCheck
+	// GIVEN a DockerCheck.
 	tests := map[string]struct {
 		docker *DockerCheck
 		want   string
@@ -2464,7 +2464,7 @@ func TestDockerCheck_String(t *testing.T) {
 				image: release-argus/argus
 				tag: '{{ version }}'`),
 		},
-		"quotes otherwise invalid yaml strings": {
+		"quotes otherwise invalid YAML strings": {
 			docker: NewDockerCheck(
 				"", "", "",
 				">123",
@@ -2478,7 +2478,7 @@ func TestDockerCheck_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// different prefixes
+			// Different prefixes.
 			prefixes := []string{"", " ", "  ", "    ", "- "}
 			for _, prefix := range prefixes {
 				want := strings.TrimPrefix(tc.want, "\n")
@@ -2489,10 +2489,10 @@ func TestDockerCheck_String(t *testing.T) {
 					want += "\n"
 				}
 
-				// WHEN the DockerCheck is stringified with String
+				// WHEN the DockerCheck is stringified with String.
 				got := tc.docker.String(prefix)
 
-				// THEN the result is as expected
+				// THEN the result is as expected.
 				if got != want {
 					t.Errorf("(prefix=%q) got:\n%q\nwant:\n%q",
 						prefix, got, want)

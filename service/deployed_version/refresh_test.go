@@ -20,15 +20,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/service/deployed_version/types/web"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
-func TestLookup_Refresh(t *testing.T) {
-	testL := testLookup()
-	testVersion, _ := testL.Query(true, logutil.LogFrom{Primary: "TestLookup_Refresh"})
+func TestRefresh(t *testing.T) {
+	testL := testLookup("url", false)
+	testL.Query(true, logutil.LogFrom{Primary: "TestLookup_Refresh"})
+	testVersion := testL.GetStatus().DeployedVersion()
 	if testVersion == "" {
 		t.Fatalf("test version is empty")
 	}
@@ -44,48 +46,59 @@ func TestLookup_Refresh(t *testing.T) {
 		version            versions
 	}
 
-	// GIVEN a Lookup and various json strings to override parts of it
+	// GIVEN a Lookup and various JSON strings to override parts of it.
 	tests := map[string]struct {
-		isNil    bool
 		args     args
+		previous Lookup
 		errRegex string
 		want     string
 		announce int
 	}{
 		"nil Lookup": {
-			isNil:    true,
 			errRegex: `lookup is nil`,
 		},
 		"Change of URL": {
 			args: args{
-				overrides: test.StringPtr(test.TrimJSON(`{
-					"url": "https://valid.release-argus.io/json"
-				}`))},
+				overrides: test.StringPtr(
+					test.TrimJSON(`{
+						"url": "` + test.LookupJSON["url_valid"] + `"
+					}`)),
+			},
+			previous: testLookup("url", false),
 			errRegex: `^$`,
 			want:     testVersion,
 		},
 		"Removal of URL": {
 			args: args{
-				overrides: test.StringPtr(test.TrimJSON(`{
-					"url": ""
-				}`))},
+				overrides: test.StringPtr(
+					test.TrimJSON(`{
+						"url": ""
+					}`)),
+			},
+			previous: testLookup("url", false),
 			errRegex: `url: <required>`,
 			want:     "",
 		},
 		"Change of a few vars": {
 			args: args{
-				overrides: test.StringPtr(test.TrimJSON(`{
-					"json": "otherVersion"
-				}`)),
-				semanticVersioning: test.StringPtr("false")},
+				overrides: test.StringPtr(
+					test.TrimJSON(`{
+						"json": "otherVersion"
+					}`)),
+				semanticVersioning: test.StringPtr("false"),
+			},
+			previous: testLookup("url", false),
 			errRegex: `^$`,
 			want:     testVersion + "-beta",
 		},
 		"Change of vars that fail Query": {
 			args: args{
-				overrides: test.StringPtr(test.TrimJSON(`{
-					"allow_invalid_certs": false
-				}`))},
+				overrides: test.StringPtr(
+					test.TrimJSON(`{
+						"allow_invalid_certs": false
+					}`)),
+			},
+			previous: testLookup("url", false),
 			errRegex: `x509 \(certificate invalid\)`,
 		},
 		"Refresh new version": {
@@ -93,7 +106,9 @@ func TestLookup_Refresh(t *testing.T) {
 				version: versions{
 					latestVersion:            testVersion,
 					deployedVersion:          "0.0.0",
-					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339)}},
+					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339)},
+			},
+			previous: testLookup("url", false),
 			errRegex: `^$`,
 			want:     testVersion,
 			announce: 1,
@@ -103,7 +118,9 @@ func TestLookup_Refresh(t *testing.T) {
 				version: versions{
 					latestVersion:            "0.0.0",
 					deployedVersion:          "0.0.0",
-					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339)}},
+					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339)},
+			},
+			previous: testLookup("url", false),
 			errRegex: `^$`,
 			want:     testVersion,
 			announce: 2,
@@ -114,73 +131,83 @@ func TestLookup_Refresh(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup()
-
-			// Copy the starting status
-			announceChannel := make(chan []byte, 4)
-			svcStatus := status.New(
-				&announceChannel, nil, nil,
-				"",
-				tc.args.version.deployedVersion, tc.args.version.deployedVersionTimestamp,
-				tc.args.version.latestVersion, "",
-				"")
-			svcStatus.ServiceID = test.StringPtr("TestLookup_Refresh - " + name)
-			lookup.Status = svcStatus
-			previousStatus := lookup.Status.Copy()
-			serviceID := lookup.Status.ServiceID
-			if tc.isNil {
-				lookup = nil
+			// Status we will be working with.
+			var targetStatus *status.Status
+			switch l := tc.previous.(type) {
+			case *web.Lookup:
+				targetStatus = l.Status
 			}
 
-			// WHEN we call Refresh
-			got, err := lookup.Refresh(
-				serviceID,
-				tc.args.overrides,
+			// Copy the starting Status.
+			var previousStatus *status.Status
+			if tc.previous != nil {
+				targetStatus.Init(
+					0, 0, 0,
+					&name, nil,
+					nil)
+				// Set the latest version.
+				if tc.args.version.latestVersion != "" {
+					targetStatus.SetLatestVersion(
+						tc.args.version.latestVersion, "",
+						false)
+				}
+				if tc.args.version.deployedVersion != "" {
+					targetStatus.SetDeployedVersion(
+						tc.args.version.deployedVersion, tc.args.version.deployedVersionTimestamp,
+						false)
+				}
+				previousStatus = targetStatus.Copy()
+			}
+
+			// WHEN we call Refresh.
+			got, err := Refresh(
+				tc.previous,
+				util.DereferenceOrDefault(tc.args.overrides),
 				tc.args.semanticVersioning)
 
-			// THEN we get an error if expected
+			// THEN we get an error if expected.
 			if tc.errRegex != "" || err != nil {
 				e := util.ErrorToString(err)
 				if !util.RegexCheck(tc.errRegex, e) {
 					t.Fatalf("want match for %q\nnot: %q",
 						tc.errRegex, e)
 				}
-				if tc.isNil {
+				if tc.previous == nil {
 					return
 				}
 			}
-			// AND announce is only true when expected
-			gotAnnounces := len(*lookup.Status.AnnounceChannel)
+			// AND announce is only true when expected.
+			gotAnnounces := len(*targetStatus.AnnounceChannel)
 			if tc.announce != gotAnnounces {
 				t.Errorf("announce count mismatch\n want %d, got %d",
 					tc.announce, gotAnnounces)
 			}
-			// AND we get the expected result otherwise
+			// AND we get the expected result otherwise.
 			if tc.want != got {
 				t.Errorf("version mismatch\nwant: %q\ngot:  %q",
 					tc.want, got)
 			}
-			// AND the timestamp only changes if the version changed
-			// and the possible query-changing overrides are nil
+			// AND the timestamp only changes if the version changed,
+			// and the possible query-changing overrides are nil.
 			if tc.args.overrides == nil && tc.args.semanticVersioning == nil {
-				// If the version changed
-				if previousStatus.DeployedVersion() != lookup.Status.DeployedVersion() {
-					// then so should the timestamp
-					if previousStatus.DeployedVersionTimestamp() == lookup.Status.DeployedVersionTimestamp() {
+				// If the version changed.
+				if previousStatus.DeployedVersion() != targetStatus.DeployedVersion() {
+					// then so should the timestamp.
+					if previousStatus.DeployedVersionTimestamp() == targetStatus.DeployedVersionTimestamp() {
 						t.Errorf("expected deployed_version_timestamp to change\nfrom: %q\ngot:  %q",
-							previousStatus.DeployedVersionTimestamp(), lookup.Status.DeployedVersionTimestamp())
+							previousStatus.DeployedVersionTimestamp(), targetStatus.DeployedVersionTimestamp())
 					}
-					// otherwise, the timestamp should remain unchanged
-				} else if previousStatus.DeployedVersionTimestamp() != lookup.Status.DeployedVersionTimestamp() {
+					// otherwise, the timestamp should remain unchanged.
+				} else if previousStatus.DeployedVersionTimestamp() != targetStatus.DeployedVersionTimestamp() {
 					t.Errorf("expected deployed_version_timestamp to\nremain: %q\ngot:    %q",
-						previousStatus.DeployedVersionTimestamp(), lookup.Status.DeployedVersionTimestamp())
+						previousStatus.DeployedVersionTimestamp(), targetStatus.DeployedVersionTimestamp())
 				}
-				// If the overrides are not nil
+				// If the overrides are not nil.
 			} else {
-				// The timestamp shouldn't change
-				if previousStatus.DeployedVersionTimestamp() != lookup.Status.DeployedVersionTimestamp() {
+				// The timestamp shouldn't change.
+				if previousStatus.DeployedVersionTimestamp() != targetStatus.DeployedVersionTimestamp() {
 					t.Errorf("expected timestamp %q but got %q",
-						previousStatus.DeployedVersionTimestamp(), lookup.Status.DeployedVersionTimestamp())
+						previousStatus.DeployedVersionTimestamp(), targetStatus.DeployedVersionTimestamp())
 				}
 			}
 		})
@@ -189,7 +216,7 @@ func TestLookup_Refresh(t *testing.T) {
 
 func TestApplyOverridesJSON(t *testing.T) {
 	type args struct {
-		lookup             *Lookup
+		lookup             Lookup
 		overrides          *string
 		semanticVerDiff    bool
 		semanticVersioning *string
@@ -201,7 +228,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 	}{
 		"no overrides, no semantic versioning change": {
 			args: args{
-				lookup:             testLookup(),
+				lookup:             testLookup("url", false),
 				overrides:          nil,
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
@@ -210,17 +237,17 @@ func TestApplyOverridesJSON(t *testing.T) {
 		},
 		"invalid semantic versioning JSON": {
 			args: args{
-				lookup:             testLookup(),
+				lookup:             testLookup("url", false),
 				overrides:          nil,
 				semanticVerDiff:    true,
 				semanticVersioning: test.StringPtr("invalid"),
 			},
 			wantErr:  true,
-			errRegex: `failed to unmarshal semantic_versioning`,
+			errRegex: `failed to unmarshal deployedver\.Lookup\.SemanticVersioning`,
 		},
 		"valid semantic versioning change": {
 			args: args{
-				lookup:             testLookup(),
+				lookup:             testLookup("url", false),
 				overrides:          nil,
 				semanticVerDiff:    true,
 				semanticVersioning: test.StringPtr("true"),
@@ -229,10 +256,11 @@ func TestApplyOverridesJSON(t *testing.T) {
 		},
 		"valid overrides JSON": {
 			args: args{
-				lookup: testLookup(),
-				overrides: test.StringPtr(test.TrimJSON(`{
-					"url": "https://valid.release-argus.io/json"
-				}`)),
+				lookup: testLookup("url", false),
+				overrides: test.StringPtr(
+					test.TrimJSON(`{
+						"url": "` + test.LookupJSON["url_valid"] + `"
+					}`)),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
@@ -240,22 +268,37 @@ func TestApplyOverridesJSON(t *testing.T) {
 		},
 		"invalid overrides JSON": {
 			args: args{
-				lookup: testLookup(),
-				overrides: test.StringPtr(test.TrimJSON(`{
-					"url": "
-				}`)),
+				lookup: testLookup("url", false),
+				overrides: test.StringPtr(
+					test.TrimJSON(`{
+						"url": "
+					}`)),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
 			wantErr:  true,
-			errRegex: `failed to unmarshal deployed_version`,
+			errRegex: `failed to unmarshal deployedver.Lookup`,
 		},
-		"overrides that make CheckValues fail": {
+		"overrides in invalid format for url": {
 			args: args{
-				lookup: testLookup(),
-				overrides: test.StringPtr(test.TrimJSON(`{
-					"url": ""
-				}`)),
+				lookup: testLookup("url", false),
+				overrides: test.StringPtr(
+					test.TrimJSON(`{
+						"url": [""]
+					}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			wantErr:  true,
+			errRegex: `^failed to unmarshal deployedver.Lookup`,
+		},
+		"overrides that fail CheckValues": {
+			args: args{
+				lookup: testLookup("url", false),
+				overrides: test.StringPtr(
+					test.TrimJSON(`{
+						"url": ""
+					}`)),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
@@ -270,7 +313,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 
 			got, err := applyOverridesJSON(
 				tc.args.lookup,
-				tc.args.overrides,
+				util.DereferenceOrDefault(tc.args.overrides),
 				tc.args.semanticVerDiff,
 				tc.args.semanticVersioning)
 

@@ -23,6 +23,7 @@ import (
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
@@ -98,7 +99,7 @@ func testService(t *testing.T, id string, sType string) *Service {
 	svc.DeployedVersionLookup.Init(
 		&svc.Options,
 		&svc.Status,
-		&deployedver.Defaults{}, &hardDefaults.DeployedVersionLookup)
+		&deployedver_base.Defaults{}, &hardDefaults.DeployedVersionLookup)
 
 	// Check the values.
 	err := svc.LatestVersion.CheckValues("")
@@ -150,7 +151,7 @@ func testLatestVersionWeb(t *testing.T, fail bool) latestver_base.Interface {
 	lv, _ := latestver.New(
 		"url",
 		"yaml", test.TrimYAML(`
-				url: https://invalid.release-argus.io/plain
+				url: `+test.LookupPlain["url_invalid"]+`
 				allow_invalid_certs: `+fmt.Sprint(!fail)+`
 				url_commands:
 					- type: regex
@@ -194,28 +195,41 @@ func testLatestVersion(t *testing.T, lvType string, fail bool) (lv latestver.Loo
 	return lv
 }
 
-func testDeployedVersionLookup(t *testing.T, fail bool) *deployedver.Lookup {
-	hardDefaults := deployedver.Defaults{}
+func testDeployedVersionWeb(t *testing.T, fail bool) deployedver_base.Interface {
+	hardDefaults := deployedver_base.Defaults{}
 	hardDefaults.Default()
 
-	dv := test.IgnoreError(t, func() (*deployedver.Lookup, error) {
-		return deployedver.New(
-			"yaml", test.TrimYAML(`
+	dv, _ := deployedver.New(
+		"url",
+		"yaml", test.TrimYAML(`
 				method: GET
-				url: https://invalid.release-argus.io/json
+				url: `+test.LookupJSON["url_invalid"]+`
 				allow_invalid_certs: `+fmt.Sprint(!fail)+`
 				json: version
+				regex: '(\d+)\.(\d+)\.(\d+)'
+				regex_template: 1.$1.$1
 			`),
-			testOptions(),
-			testStatus(),
-			&deployedver.Defaults{}, &hardDefaults)
-	})
+		testOptions(),
+		testStatus(),
+		&deployedver_base.Defaults{}, &hardDefaults)
 
 	// Check the values.
 	err := dv.CheckValues("")
 	if err != nil {
-		t.Fatalf("testDeployedVersionLookup(), CheckValues() error: %v", err)
+		t.Fatalf("testDeployedVersionWeb(), CheckValues() error: %v", err)
 	}
+
+	return dv
+}
+
+func testDeployedVersionLookup(t *testing.T, fail bool) deployedver.Lookup {
+	dv := testDeployedVersionWeb(t, fail)
+
+	dv.Init(
+		dv.GetOptions(),
+		dv.GetStatus(),
+		dv.GetDefaults(), dv.GetHardDefaults())
+	dv.GetStatus().ServiceID = test.StringPtr("TEST_DV")
 
 	return dv
 }

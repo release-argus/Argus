@@ -36,7 +36,7 @@ import (
 )
 
 func TestServiceTest(t *testing.T) {
-	// GIVEN a Config with a Service
+	// GIVEN a Config with a Service.
 	tests := map[string]struct {
 		flag                    string
 		slice                   service.Slice
@@ -139,7 +139,7 @@ func TestServiceTest(t *testing.T) {
 		},
 		"service with deployed version lookup": {
 			flag:        "argus",
-			stdoutRegex: test.StringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			stdoutRegex: test.StringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s.*Updated to.*\s.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
@@ -156,11 +156,12 @@ func TestServiceTest(t *testing.T) {
 							nil,
 							nil, nil)
 					}),
-					DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 						return deployedver.New(
+							"url",
 							"yaml", test.TrimYAML(`
 								method: GET
-								url: https://valid.release-argus.io/json
+								url: `+test.LookupJSON["url_valid"]+`
 								json: foo.bar.version
 							`),
 							opt.New(
@@ -177,7 +178,7 @@ func TestServiceTest(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			if tc.panicRegex != nil {
@@ -186,7 +187,7 @@ func TestServiceTest(t *testing.T) {
 					r := recover()
 					releaseStdout()
 
-					// Check the panic message
+					// Check the panic message.
 					rStr := fmt.Sprint(r)
 					if !util.RegexCheck(*tc.panicRegex, rStr) {
 						t.Errorf("expected a panic that matched %q\ngot: %q",
@@ -202,12 +203,12 @@ func TestServiceTest(t *testing.T) {
 					&service.Defaults{}, &hardDefaults.Service,
 					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &hardDefaults.Notify,
 					&webhook.SliceDefaults{}, &webhook.Defaults{}, &hardDefaults.WebHook)
-				// will do a call for latest_version* and one for deployed_version*
+				// will do a call for latest_version* and one for deployed_version*.
 				dbChannel := make(chan dbtype.Message, 4)
 				tc.slice[tc.flag].Status.DatabaseChannel = &dbChannel
 			}
 
-			// WHEN ServiceTest is called with the test Config
+			// WHEN ServiceTest is called with the test Config.
 			order := []string{}
 			for i := range tc.slice {
 				order = append(order, i)
@@ -218,7 +219,7 @@ func TestServiceTest(t *testing.T) {
 			}
 			ServiceTest(&tc.flag, &cfg)
 
-			// THEN we get the expected stdout
+			// THEN we get the expected stdout.
 			stdout := releaseStdout()
 			if tc.stdoutRegex != nil {
 				if !util.RegexCheck(*tc.stdoutRegex, stdout) {

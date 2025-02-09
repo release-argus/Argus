@@ -17,6 +17,7 @@
 package latestver
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -42,7 +43,7 @@ func TestLookup_Refresh(t *testing.T) {
 		semanticVersioning *string
 	}
 
-	// GIVEN a Lookup and a possible yaml string to override parts of it
+	// GIVEN a Lookup and a possible YAML string to override parts of it.
 	tests := map[string]struct {
 		args          args
 		latestVersion string
@@ -58,8 +59,8 @@ func TestLookup_Refresh(t *testing.T) {
 			args: args{
 				overrides: test.StringPtr(
 					test.TrimJSON(`{
-						"url": "https://valid.release-argus.io/plain"
-				}`)),
+						"url": "` + test.LookupPlain["url_valid"] + `"
+					}`)),
 			},
 			previous: testLookup("url", true),
 			errRegex: `^$`,
@@ -124,7 +125,7 @@ func TestLookup_Refresh(t *testing.T) {
 				overrides: test.StringPtr(
 					test.TrimYAML(`{
 						"type": "url",
-						"url": "https://valid.release-argus.io/plain",
+						"url": "` + test.LookupPlain["url_valid"] + `",
 						"url_commands": [
 							{"type": "regex", "regex": "ver([0-9.]+)"}
 						]
@@ -143,7 +144,7 @@ func TestLookup_Refresh(t *testing.T) {
 				}`),
 				semanticVersioning: test.StringPtr("false")},
 			latestVersion: "0.0.0",
-			errRegex:      `^type: "unknown" <invalid>.*$`,
+			errRegex:      `type: "unknown" <invalid>.*$`,
 			announce:      false,
 		},
 	}
@@ -152,7 +153,7 @@ func TestLookup_Refresh(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// status we'll be working with
+			// Status we will be working with.
 			var targetStatus *status.Status
 			switch l := tc.previous.(type) {
 			case *github.Lookup:
@@ -161,27 +162,27 @@ func TestLookup_Refresh(t *testing.T) {
 				targetStatus = l.Status
 			}
 
-			// Copy the starting status
+			// Copy the starting Status.
 			var previousStatus *status.Status
 			if tc.previous != nil {
 				targetStatus.Init(
 					0, 0, 0,
 					&name, nil,
 					nil)
-				// Set the latest version
+				// Set the latest version.
 				if tc.latestVersion != "" {
 					targetStatus.SetLatestVersion(tc.latestVersion, "", false)
 				}
 				previousStatus = targetStatus.Copy()
 			}
 
-			// WHEN we call Refresh
+			// WHEN we call Refresh.
 			got, gotAnnounce, err := Refresh(
 				tc.previous,
 				tc.args.overrides,
 				tc.args.semanticVersioning)
 
-			// THEN we get an error if expected
+			// THEN we get an error if expected.
 			if tc.errRegex != "" || err != nil {
 				e := util.ErrorToString(err)
 				if !util.RegexCheck(tc.errRegex, e) {
@@ -190,32 +191,32 @@ func TestLookup_Refresh(t *testing.T) {
 				}
 				return
 			}
-			// AND announce is only true when expected
+			// AND announce is only true when expected.
 			if tc.announce != gotAnnounce {
 				t.Errorf("expected announce of %t, not %t",
 					tc.announce, gotAnnounce)
 			}
-			// AND we get the expected result otherwise
+			// AND we get the expected result otherwise.
 			if tc.want != got {
 				t.Errorf("expected version %q, not %q", tc.want, got)
 			}
-			// AND the timestamp only changes if the version changed
+			// AND the timestamp only changes if the version changed.
 			if previousStatus.LatestVersionTimestamp() != "" {
-				// If the possible query-changing overrides are nil
+				// If the possible query-changing overrides are nil.
 				if tc.args.overrides == nil && tc.args.semanticVersioning == nil {
-					// The timestamp should change only if the version changed
+					// The timestamp should change only if the version changed.
 					if previousStatus.LatestVersion() != targetStatus.LatestVersion() &&
 						previousStatus.LatestVersionTimestamp() == targetStatus.LatestVersionTimestamp() {
 						t.Errorf("expected timestamp to change from %q, but got %q",
 							previousStatus.LatestVersionTimestamp(), targetStatus.LatestVersionTimestamp())
-						// The timestamp shouldn't change as the version didn't change
+						// The timestamp shouldn't change as the version didn't change.
 					} else if previousStatus.LatestVersionTimestamp() != targetStatus.LatestVersionTimestamp() {
 						t.Errorf("expected timestamp %q but got %q",
 							previousStatus.LatestVersionTimestamp(), targetStatus.LatestVersionTimestamp())
 					}
-					// If the overrides are not nil
+					// If the overrides are not nil.
 				} else {
-					// The timestamp shouldn't change
+					// The timestamp shouldn't change.
 					if previousStatus.LatestVersionTimestamp() != targetStatus.LatestVersionTimestamp() {
 						t.Errorf("expected timestamp %q but got %q",
 							previousStatus.LatestVersionTimestamp(), targetStatus.LatestVersionTimestamp())
@@ -228,7 +229,7 @@ func TestLookup_Refresh(t *testing.T) {
 
 func TestApplyOverridesJSON(t *testing.T) {
 	tLookup := testLookup("url", false)
-	// GIVEN a Lookup and a possible json string to override parts of it
+	// GIVEN a Lookup and a possible JSON string to override parts of it.
 	type args struct {
 		lookup             Lookup
 		overrides          *string
@@ -277,14 +278,14 @@ func TestApplyOverridesJSON(t *testing.T) {
 			args: args{
 				lookup: tLookup,
 				overrides: test.StringPtr(test.TrimJSON(`{
-					"url": "https://valid.release-argus.io/json"
+					"url": "` + test.LookupJSON["url_valid"] + `"
 				}`)),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
 			wantStr: test.TrimYAML(`
 				type: url
-				url: https://valid.release-argus.io/json
+				url: ` + test.LookupJSON["url_valid"] + `
 				url_commands:
 					- type: regex
 						regex: ver([0-9.]+)
@@ -360,7 +361,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVersioning: nil,
 			},
 			wantErr:  true,
-			errRegex: `^type: "newType" <invalid> \(expected one of \[github, url\]\)$`,
+			errRegex: `\stype: "newType" <invalid> \(expected one of \[github, url\]\)$`,
 		},
 		"inherit Require.Docker.* - same Lookup.type": {
 			args: args{
@@ -379,7 +380,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			wantRequireInherit: true,
 			wantStr: test.TrimYAML(`
 				type: url
-				url: https://invalid.release-argus.io/plain
+				url: ` + test.LookupPlain["url_invalid"] + `
 				url_commands:
 					- type: regex
 						regex: ver([0-9.]+)
@@ -413,7 +414,13 @@ func TestApplyOverridesJSON(t *testing.T) {
 			wantRequireInherit: true,
 			wantStr: test.TrimYAML(`
 				type: github
-				url: invalid.release-argus.io/plain
+				url: ` +
+				strings.Join(
+					strings.Split(
+						strings.Split(
+							test.LookupPlain["url_invalid"], "://")[1],
+						"/")[strings.Count(test.LookupPlain["url_invalid"], "/")-3:],
+					"/") + `
 				url_commands:
 					- type: regex
 						regex: ver([0-9.]+)
@@ -449,7 +456,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			wantRequireInherit: false,
 			wantStr: test.TrimYAML(`
 				type: url
-				url: https://invalid.release-argus.io/plain
+				url: ` + test.LookupPlain["url_invalid"] + `
 				url_commands:
 					- type: regex
 						regex: ver([0-9.]+)
@@ -487,7 +494,13 @@ func TestApplyOverridesJSON(t *testing.T) {
 			wantRequireInherit: false,
 			wantStr: test.TrimYAML(`
 				type: github
-				url: invalid.release-argus.io/plain
+				url: ` +
+				strings.Join(
+					strings.Split(
+						strings.Split(
+							test.LookupPlain["url_invalid"], "://")[1],
+						"/")[strings.Count(test.LookupPlain["url_invalid"], "/")-3:],
+					"/") + `
 				url_commands:
 					- type: regex
 						regex: ver([0-9.]+)
@@ -515,21 +528,21 @@ func TestApplyOverridesJSON(t *testing.T) {
 				}
 			}
 
-			// WHEN we call applyOverridesJSON
+			// WHEN we call applyOverridesJSON.
 			got, err := applyOverridesJSON(
 				tc.args.lookup,
 				tc.args.overrides,
 				tc.args.semanticVerDiff,
 				tc.args.semanticVersioning)
 
-			// THEN we get an error matching the format expected
+			// THEN we get an error matching the format expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("applyOverridesJSON() error mismatch\n%q\ngot:\n%q",
 					tc.errRegex, e)
 			}
 			if !tc.wantErr {
-				// AND the result is as expected
+				// AND the result is as expected.
 				if got == nil {
 					t.Errorf("applyOverridesJSON() got: nil, want: non-nil\n%s",
 						e)
@@ -540,7 +553,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 					t.Errorf("applyOverridesJSON() got:\n%q\nwant:\n%q",
 						gotStr, tc.wantStr)
 				}
-				// AND Require.Docker.* is inherited when expected
+				// AND Require.Docker.* is inherited when expected.
 				gotRequire := got.GetRequire()
 				if tc.wantRequireInherit {
 					if gotRequire == nil || gotRequire.Docker == nil {

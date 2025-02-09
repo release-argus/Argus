@@ -38,7 +38,7 @@ type Lookup interface {
 func New(
 	lType string,
 	configFormat string,
-	configData interface{}, // []byte | string | *yaml.Node.
+	configData interface{}, // []byte | string | *yaml.Node | json.RawMessage.
 	options *opt.Options,
 	status *status.Status,
 	defaults, hardDefaults *base.Defaults,
@@ -61,8 +61,14 @@ func New(
 			defaults,
 			hardDefaults)
 	}
-	return nil, fmt.Errorf("type: %q <invalid> (expected one of [%s])",
-		lType, strings.Join(PossibleTypes, ", "))
+
+	// No/invalid type.
+	errorMsg := "<required>"
+	if lType != "" {
+		errorMsg = fmt.Sprintf("%q <invalid>", lType)
+	}
+	return nil, fmt.Errorf("failed to unmarshal latestver.Lookup:\ntype: %s (expected one of [%s])",
+		errorMsg, strings.Join(PossibleTypes, ", "))
 }
 
 // Copy returns a copy of the Lookup.
@@ -160,7 +166,8 @@ func unmarshal(data []byte, format string) (Lookup, error) {
 		err = fmt.Errorf("unknown format: %q", format)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal latestver.Lookup:\n%w", err)
+		return nil, fmt.Errorf("failed to unmarshal latestver.Lookup:\n%s",
+			strings.TrimPrefix(err.Error(), "json: "))
 	}
 
 	// -- Dynamic LatestVersion type --

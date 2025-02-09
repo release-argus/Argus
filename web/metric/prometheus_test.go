@@ -37,8 +37,8 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 			ordering: []int{0, 1, 2}},
 		"DeployedVersionQueryResultTotal": {
 			metric:   DeployedVersionQueryResultTotal,
-			args:     []string{"ID", "", "", "RESULT"},
-			ordering: []int{0, 1}},
+			args:     []string{"ID", "", "TYPE", "RESULT"},
+			ordering: []int{0, 1, 2}},
 		"CommandResultTotal": {
 			metric:   CommandResultTotal,
 			args:     []string{"COMMAND_ID", "SERVICE_ID", "", "RESULT"},
@@ -93,7 +93,6 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 			var wantValue float64
 			var gotValue float64
 			gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(args...))
-			// }
 			if gotValue != wantValue {
 				t.Errorf("has been initialised but got %f, expecting %f",
 					gotValue, wantValue)
@@ -141,7 +140,7 @@ func TestPrometheusGaugeVec(t *testing.T) {
 			args:   []string{"SERVICE_ID", "TYPE"}},
 		"DeployedVersionQueryResultLast": {
 			metric: DeployedVersionQueryResultLast,
-			args:   []string{"SERVICE_ID", ""}},
+			args:   []string{"SERVICE_ID", "TYPE"}},
 		"LatestVersionIsDeployed": {
 			metric: LatestVersionIsDeployed,
 			args:   []string{"SERVICE_ID", ""}},

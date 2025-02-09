@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,11 +28,13 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
+	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
-	"github.com/release-argus/Argus/service/latest_version/types/github"
-	"github.com/release-argus/Argus/service/latest_version/types/web"
+	lv_github "github.com/release-argus/Argus/service/latest_version/types/github"
+	lv_web "github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
@@ -42,11 +44,11 @@ import (
 )
 
 //
-// Defaults
+// Defaults.
 //
 
 func TestConvertAndCensorDefaults(t *testing.T) {
-	// GIVEN a config.Defaults
+	// GIVEN a config.Defaults.
 	tests := map[string]struct {
 		input *config.Defaults
 		want  *apitype.Defaults
@@ -60,7 +62,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 				Service: service.Defaults{
 					Options:               opt.Defaults{},
 					LatestVersion:         latestver_base.Defaults{},
-					DeployedVersionLookup: deployedver.Defaults{},
+					DeployedVersionLookup: deployedver_base.Defaults{},
 					Dashboard:             service.DashboardOptionsDefaults{}},
 			},
 			want: &apitype.Defaults{
@@ -85,7 +87,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 								"usernameHub",
 								"tokenQuay",
 								nil)}},
-					DeployedVersionLookup: deployedver.Defaults{},
+					DeployedVersionLookup: deployedver_base.Defaults{},
 					Dashboard:             service.DashboardOptionsDefaults{}},
 			},
 			want: &apitype.Defaults{
@@ -114,10 +116,10 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorDefaults is called
+			// WHEN convertAndCensorDefaults is called.
 			got := convertAndCensorDefaults(tc.input)
 
-			// THEN the result should be as expected
+			// THEN the result should be as expected.
 			if tc.want.String() != got.String() {
 				t.Errorf("want\n%q\ngot\n%q",
 					tc.want.String(), got.String())
@@ -127,11 +129,11 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 }
 
 //
-// Service
+// Service.
 //
 
 func TestConvertAndCensorService(t *testing.T) {
-	// GIVEN a service.Service
+	// GIVEN a service.Service.
 	tests := map[string]struct {
 		input *service.Service
 		want  *apitype.Service
@@ -182,8 +184,9 @@ func TestConvertAndCensorService(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							allow_invalid_certs: true
 						`),
@@ -257,10 +260,10 @@ func TestConvertAndCensorService(t *testing.T) {
 				json.Unmarshal(serviceJSON, tc.input)
 			}
 
-			// WHEN convertAndCensorService is called
+			// WHEN convertAndCensorService is called.
 			got := convertAndCensorService(tc.input)
 
-			// THEN the result should be as expected
+			// THEN the result should be as expected.
 			if tc.want.String() != got.String() {
 				t.Errorf("want\n%q\ngot\n%q",
 					tc.want.String(), got.String())
@@ -270,11 +273,11 @@ func TestConvertAndCensorService(t *testing.T) {
 }
 
 //
-// Latest Version
+// Latest Version.
 //
 
 func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
-	// GIVEN a filter.RequireDefaults
+	// GIVEN a filter.RequireDefaults.
 	tests := map[string]struct {
 		input *filter.RequireDefaults
 		want  *apitype.LatestVersionRequireDefaults
@@ -368,10 +371,10 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorLatestVersionRequireDefaults is called
+			// WHEN convertAndCensorLatestVersionRequireDefaults is called.
 			got := convertAndCensorLatestVersionRequireDefaults(tc.input)
 
-			// THEN the result should be as expected
+			// THEN the result should be as expected.
 			if tc.want.String() != got.String() {
 				t.Errorf("want\n%q\ngot\n%q",
 					tc.want.String(), got.String())
@@ -381,7 +384,7 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 }
 
 func TestConvertAndCensorLatestVersion(t *testing.T) {
-	// GIVEN a latestver.Lookup
+	// GIVEN a latestver.Lookup.
 	tests := map[string]struct {
 		input latestver.Lookup
 		want  string
@@ -391,7 +394,7 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 			want:  "",
 		},
 		"github - bare": {
-			input: &github.Lookup{},
+			input: &lv_github.Lookup{},
 			want:  `{"url_commands":[]}`,
 		},
 		"github - filled": {
@@ -434,7 +437,7 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 			}`),
 		},
 		"url - bare": {
-			input: &web.Lookup{},
+			input: &lv_web.Lookup{},
 			want:  `{"url_commands":[]}`,
 		},
 		"url - filled": {
@@ -493,10 +496,10 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorLatestVersion is called
+			// WHEN convertAndCensorLatestVersion is called.
 			got := convertAndCensorLatestVersion(tc.input)
 
-			// THEN the result should be as expected
+			// THEN the result should be as expected.
 			if tc.want != got.String() {
 				t.Errorf("want\n%q\ngot\n%q",
 					tc.want, got.String())
@@ -506,7 +509,7 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 }
 
 func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
-	// GIVEN a filter.Require
+	// GIVEN a filter.Require.
 	tests := map[string]struct {
 		input *filter.Require
 		want  *apitype.LatestVersionRequire
@@ -590,10 +593,10 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorLatestVersionRequire is called
+			// WHEN convertAndCensorLatestVersionRequire is called.
 			got := convertAndCensorLatestVersionRequire(tc.input)
 
-			// THEN the result should be as expected
+			// THEN the result should be as expected.
 			if tc.want.String() != got.String() {
 				t.Errorf("want\n%q\ngot\n%q",
 					tc.want.String(), got.String())
@@ -603,7 +606,7 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 }
 
 func TestConvertURLCommandSlice(t *testing.T) {
-	// GIVEN a URL Command slice
+	// GIVEN a URL Command slice.
 	tests := map[string]struct {
 		slice *filter.URLCommandSlice
 		want  *apitype.URLCommandSlice
@@ -650,10 +653,10 @@ func TestConvertURLCommandSlice(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertURLCommandSlice is called on it
+			// WHEN convertURLCommandSlice is called on it.
 			got := convertURLCommandSlice(tc.slice)
 
-			// THEN the WebHookSlice is converted correctly
+			// THEN the WebHookSlice is converted correctly.
 			if got.String() != tc.want.String() {
 				t.Errorf("want: %q, got: %q",
 					tc.want.String(), got.String())
@@ -663,13 +666,13 @@ func TestConvertURLCommandSlice(t *testing.T) {
 }
 
 //
-// Deployed Version
+// Deployed Version.
 //
 
 func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
-	// GIVEN a DeployedVersionLookup
+	// GIVEN a DeployedVersionLookup.
 	tests := map[string]struct {
-		dvl                                       *deployedver.Lookup
+		dvl                                       deployedver.Lookup
 		dvlStatus                                 *status.Status
 		approvedVersion                           string
 		deployedVersion, deployedVersionTimestamp string
@@ -684,11 +687,11 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			want: nil,
 		},
 		"empty": {
-			dvl:  &deployedver.Lookup{},
+			dvl:  &dv_web.Lookup{},
 			want: &apitype.DeployedVersionLookup{},
 		},
 		"minimal": {
-			dvl: &deployedver.Lookup{
+			dvl: &dv_web.Lookup{
 				URL:  "https://example.com",
 				JSON: "version"},
 			want: &apitype.DeployedVersionLookup{
@@ -696,9 +699,9 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				JSON: "version"},
 		},
 		"censor basic_auth.password": {
-			dvl: &deployedver.Lookup{
+			dvl: &dv_web.Lookup{
 				URL: "https://example.com",
-				BasicAuth: &deployedver.BasicAuth{
+				BasicAuth: &dv_web.BasicAuth{
 					Username: "alan",
 					Password: "pass123"}},
 			want: &apitype.DeployedVersionLookup{
@@ -708,9 +711,9 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 					Password: util.SecretValue}},
 		},
 		"censor headers": {
-			dvl: &deployedver.Lookup{
+			dvl: &dv_web.Lookup{
 				URL: "https://example.com",
-				Headers: []deployedver.Header{
+				Headers: []dv_web.Header{
 					{Key: "X-Test-0", Value: "foo"},
 					{Key: "X-Test-1", Value: "bar"}}},
 			want: &apitype.DeployedVersionLookup{
@@ -723,8 +726,9 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 		"full": {
 			regexMissesContent: 1,
 			regexMissesVersion: 3,
-			dvl: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+			dvl: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 				return deployedver.New(
+					"url",
 					"yaml", test.TrimYAML(`
 						method: POST
 						url: https://release-argus.io
@@ -746,7 +750,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 						test.BoolPtr(true), "10m", test.BoolPtr(true),
 						&opt.Defaults{}, &opt.Defaults{}),
 					&status.Status{},
-					&deployedver.Defaults{}, &deployedver.Defaults{})
+					&deployedver_base.Defaults{}, &deployedver_base.Defaults{})
 			}),
 			dvlStatus: &status.Status{
 				Fails:     status.Fails{},
@@ -767,6 +771,10 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				Regex:         `([0-9]+\.[0-9]+\.[0-9]+)`,
 				RegexTemplate: "$1.$2.$3"},
 		},
+		"unknown type": {
+			dvl:  &deployedver_base.Lookup{},
+			want: nil,
+		},
 	}
 
 	for name, tc := range tests {
@@ -774,25 +782,34 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			t.Parallel()
 
 			if tc.dvl != nil {
-				if tc.approvedVersion != "" {
-					tc.dvl.Status.SetApprovedVersion("1.2.3", false)
-					tc.dvl.Status.SetDeployedVersion("1.2.3", "", false)
-					tc.dvl.Status.SetLatestVersion("1.2.3", time.Now().Format(time.RFC3339), false)
-					tc.dvl.Status.SetLastQueried(time.Now().Format(time.RFC3339))
+				var dvStatus *status.Status
+				if dv, ok := tc.dvl.(*dv_web.Lookup); ok {
+					dvStatus = dv.Status
 				}
-				tc.dvl.Status = tc.dvlStatus
+
+				if tc.approvedVersion != "" {
+					dvStatus.SetApprovedVersion("1.2.3", false)
+					dvStatus.SetDeployedVersion("1.2.3", "", false)
+					dvStatus.SetLatestVersion("1.2.3", time.Now().Format(time.RFC3339), false)
+					dvStatus.SetLastQueried(time.Now().Format(time.RFC3339))
+				}
+				if tc.dvlStatus != nil {
+					dvStatus.Fails.Copy(&tc.dvlStatus.Fails)
+					dvStatus.ServiceID = tc.dvlStatus.ServiceID
+					dvStatus.WebURL = tc.dvlStatus.WebURL
+				}
 				for i := 0; i < tc.regexMissesContent; i++ {
-					tc.dvl.Status.RegexMissContent()
+					dvStatus.RegexMissContent()
 				}
 				for i := 0; i < tc.regexMissesVersion; i++ {
-					tc.dvl.Status.RegexMissVersion()
+					dvStatus.RegexMissVersion()
 				}
 			}
 
-			// WHEN convertAndCensorDeployedVersionLookup is called on it
+			// WHEN convertAndCensorDeployedVersionLookup is called on it.
 			got := convertAndCensorDeployedVersionLookup(tc.dvl)
 
-			// THEN the WebHookSlice is converted correctly
+			// THEN the WebHookSlice is converted correctly.
 			if got.String() != tc.want.String() {
 				t.Errorf("want:\n%q\ngot:\n%q",
 					tc.want.String(), got.String())
@@ -802,11 +819,11 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 }
 
 //
-// Notify
+// Notify.
 //
 
 func TestConvertAndCensorNotifySliceDefaults(t *testing.T) {
-	// GIVEN a shoutrrr.SliceDefaults
+	// GIVEN a shoutrrr.SliceDefaults.
 	tests := map[string]struct {
 		input *shoutrrr.SliceDefaults
 		want  *apitype.NotifySlice
@@ -883,10 +900,10 @@ func TestConvertAndCensorNotifySliceDefaults(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorNotifySliceDefaults is called
+			// WHEN convertAndCensorNotifySliceDefaults is called.
 			got := convertAndCensorNotifySliceDefaults(tc.input)
 
-			// THEN the result should be as expected
+			// THEN the result should be as expected.
 			if tc.want.String() != got.String() {
 				t.Errorf("want\n%q\ngot\n%q",
 					tc.want.String(), got.String())
@@ -896,7 +913,7 @@ func TestConvertAndCensorNotifySliceDefaults(t *testing.T) {
 }
 
 func TestConvertAndCensorNotifySlice(t *testing.T) {
-	// GIVEN a shoutrrr.Slice
+	// GIVEN a shoutrrr.Slice.
 	tests := map[string]struct {
 		input *shoutrrr.Slice
 		want  *apitype.NotifySlice
@@ -979,10 +996,10 @@ func TestConvertAndCensorNotifySlice(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorNotifySlice is called
+			// WHEN convertAndCensorNotifySlice is called.
 			got := convertAndCensorNotifySlice(tc.input)
 
-			// THEN the result should be as expected
+			// THEN the result should be as expected.
 			if tc.want.String() != got.String() {
 				t.Errorf("want\n%q\ngot\n%q",
 					tc.want.String(), got.String())
@@ -992,11 +1009,11 @@ func TestConvertAndCensorNotifySlice(t *testing.T) {
 }
 
 //
-// Command
+// Command.
 //
 
 func TestConvertCommandSlice(t *testing.T) {
-	// GIVEN a Command slice
+	// GIVEN a Command slice.
 	tests := map[string]struct {
 		slice *command.Slice
 		want  *apitype.CommandSlice
@@ -1029,26 +1046,26 @@ func TestConvertCommandSlice(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertCommandSlice is called on it
+			// WHEN convertCommandSlice is called on it.
 			got := convertCommandSlice(tc.slice)
 
-			// THEN the CommandSlice is converted correctly
-			if got == tc.want { // both nil
+			// THEN the CommandSlice is converted correctly.
+			if got == tc.want { // both nil.
 				return
 			}
-			// check number of commands
+			// check number of commands.
 			if len(*got) != len(*tc.want) {
 				t.Errorf("want:\n%v\ngot:\n%v",
 					tc.want, got)
 				return
 			}
 			for cI := range *got {
-				// check number of args
+				// check number of args.
 				if len((*got)[cI]) != len((*tc.want)[cI]) {
 					t.Errorf("want:\n%v\ngot:\n%v",
 						tc.want, got)
 				}
-				// check args
+				// check args.
 				for aI := range (*got)[cI] {
 					if (*got)[cI][aI] != (*tc.want)[cI][aI] {
 						t.Errorf("want:\n%v\ngot:\n%v",
@@ -1061,11 +1078,11 @@ func TestConvertCommandSlice(t *testing.T) {
 }
 
 //
-// WebHook
+// WebHook.
 //
 
 func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
-	// GIVEN a webhook.SliceDefaults
+	// GIVEN a webhook.SliceDefaults.
 	tests := map[string]struct {
 		input *webhook.SliceDefaults
 		want  *apitype.WebHookSlice
@@ -1137,10 +1154,10 @@ func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorWebHookSliceDefaults is called
+			// WHEN convertAndCensorWebHookSliceDefaults is called.
 			got := convertAndCensorWebHookSliceDefaults(tc.input)
 
-			// THEN the result should be as expected
+			// THEN the result should be as expected.
 			if tc.want.String() != got.String() {
 				t.Errorf("want\n%q\ngot\n%q",
 					tc.want.String(), got.String())
@@ -1150,7 +1167,7 @@ func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
 }
 
 func TestConvertAndCensorWebHookSlice(t *testing.T) {
-	// GIVEN a webhook.Slice
+	// GIVEN a webhook.Slice.
 	tests := map[string]struct {
 		input *webhook.Slice
 		want  *apitype.WebHookSlice
@@ -1220,10 +1237,10 @@ func TestConvertAndCensorWebHookSlice(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorWebHookSlice is called
+			// WHEN convertAndCensorWebHookSlice is called.
 			got := convertAndCensorWebHookSlice(tc.input)
 
-			// THEN the result should be as expected
+			// THEN the result should be as expected.
 			if tc.want.String() != got.String() {
 				t.Errorf("want\n%q\ngot\n%q",
 					tc.want.String(), got.String())
@@ -1233,7 +1250,7 @@ func TestConvertAndCensorWebHookSlice(t *testing.T) {
 }
 
 func TestConvertAndCensorWebHook(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		wh   *webhook.WebHook
 		want *apitype.WebHook
@@ -1272,10 +1289,10 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorWebHook is called on it
+			// WHEN convertAndCensorWebHook is called on it.
 			got := convertAndCensorWebHook(tc.wh)
 
-			// THEN the WebHook is converted correctly
+			// THEN the WebHook is converted correctly.
 			if got.String() != tc.want.String() {
 				t.Errorf("want:\n%q\ngot:%q",
 					tc.want.String(), got.String())
@@ -1285,7 +1302,7 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 }
 
 func TestConvertWebHookHeaders(t *testing.T) {
-	// GIVEN a webhook.Headers
+	// GIVEN a webhook.Headers.
 	tests := map[string]struct {
 		input *webhook.Headers
 		want  *[]apitype.Header
@@ -1318,10 +1335,10 @@ func TestConvertWebHookHeaders(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertWebHookHeaders is called
+			// WHEN convertWebHookHeaders is called.
 			got := convertWebHookHeaders(tc.input)
 
-			// THEN the result should be as expected
+			// THEN the result should be as expected.
 			if got == nil && tc.want == nil {
 				return
 			}

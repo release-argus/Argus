@@ -30,7 +30,7 @@ import (
 )
 
 func TestGetAllShoutrrrNames(t *testing.T) {
-	// GIVEN various Services and Notifiers
+	// GIVEN various Services and Notifiers.
 	tests := map[string]struct {
 		service       service.Slice
 		rootNotifiers shoutrrr.SliceDefaults
@@ -83,10 +83,10 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 				Notify:  tc.rootNotifiers,
 			}
 
-			// WHEN getAllShoutrrrNames is called on this config
+			// WHEN getAllShoutrrrNames is called on this config.
 			got := getAllShoutrrrNames(&cfg)
 
-			// THEN a list of all Shoutrrrs will be returned
+			// THEN a list of all Shoutrrrs will be returned.
 			if len(got) != len(tc.want) {
 				t.Fatalf("lists differ in length\nwant: %s\ngot:  %s",
 					tc.want, got)
@@ -113,7 +113,7 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 }
 
 func TestFindShoutrrr(t *testing.T) {
-	// GIVEN a Config with/without Service containing a Shoutrrr and Root Shoutrrr(s)
+	// GIVEN a Config with/without Service containing a Shoutrrr and Root Shoutrrr(s).
 	tests := map[string]struct {
 		flag                    string
 		cfg                     *config.Config
@@ -388,7 +388,7 @@ func TestFindShoutrrr(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			if tc.panicRegex != nil {
@@ -412,10 +412,10 @@ func TestFindShoutrrr(t *testing.T) {
 					&tc.cfg.WebHook, &tc.cfg.Defaults.WebHook, &tc.cfg.HardDefaults.WebHook)
 			}
 
-			// WHEN findShoutrrr is called with the test Config
+			// WHEN findShoutrrr is called with the test Config.
 			got := findShoutrrr(tc.flag, tc.cfg, logutil.LogFrom{})
 
-			// THEN we get the expected stdout
+			// THEN we get the expected stdout.
 			stdout := releaseStdout()
 			if tc.stdoutRegex != nil {
 				if !util.RegexCheck(*tc.stdoutRegex, stdout) {
@@ -423,7 +423,7 @@ func TestFindShoutrrr(t *testing.T) {
 						*tc.stdoutRegex, stdout)
 				}
 			}
-			// if the notifier should have been found in the root or in a service
+			// If the notifier should have been found in the root or in a service.
 			if tc.foundInRoot != nil {
 				if *tc.foundInRoot {
 					if tc.cfg.Notify[tc.flag].String("") != got.String("") {
@@ -435,11 +435,11 @@ func TestFindShoutrrr(t *testing.T) {
 						t.Fatalf("want: %v\ngot: %v",
 							tc.cfg.Service["argus"].Notify[tc.flag].String(""), got.String(""))
 					}
-					// would have been given in the Init
+					// Would have been given in the Init.
 					got.Defaults = tc.cfg.Defaults.Notify[got.Type]
 				}
 			}
-			// if there were defaults for that type
+			// If there were Defaults for that type.
 			if tc.cfg.Defaults.Notify[got.Type] != nil {
 				if tc.cfg.Defaults.Notify[got.Type].String("") != got.Defaults.String("") {
 					t.Fatalf("defaults were not applied\nwant: %v\ngot: %v",
@@ -451,7 +451,7 @@ func TestFindShoutrrr(t *testing.T) {
 }
 
 func TestNotifyTest(t *testing.T) {
-	// GIVEN a Config with/without Service containing a Shoutrrr and Root Shoutrrr(s)
+	// GIVEN a Config with/without Service containing a Shoutrrr and Root Shoutrrr(s).
 	emptyShoutrrr := shoutrrr.NewDefaults(
 		"",
 		map[string]string{},
@@ -554,7 +554,7 @@ func TestNotifyTest(t *testing.T) {
 							map[string]string{
 								"max_tries": "1"},
 							map[string]string{
-								"host":  "valid.release-argus.io",
+								"host":  test.ValidCertNoProtocol,
 								"path":  "/gotify",
 								"token": test.ShoutrrrGotifyToken()},
 							map[string]string{},
@@ -567,7 +567,7 @@ func TestNotifyTest(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			serviceHardDefaults := service.Defaults{}
@@ -594,13 +594,13 @@ func TestNotifyTest(t *testing.T) {
 				}()
 			}
 
-			// WHEN NotifyTest is called with the test Config
+			// WHEN NotifyTest is called with the test Config.
 			cfg := config.Config{
 				Service: tc.slice,
 				Notify:  tc.rootSlice}
 			NotifyTest(&tc.flag, &cfg)
 
-			// THEN we get the expected stdout
+			// THEN we get the expected stdout.
 			stdout := releaseStdout()
 			if tc.stdoutRegex != nil {
 				if !util.RegexCheck(*tc.stdoutRegex, stdout) {

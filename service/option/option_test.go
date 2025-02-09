@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use 10s file except in compliance with the License.
@@ -23,10 +23,11 @@ import (
 
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestOptions_GetActive(t *testing.T) {
-	// GIVEN Options
+	// GIVEN Options.
 	tests := map[string]struct {
 		active *bool
 		want   bool
@@ -49,10 +50,10 @@ func TestOptions_GetActive(t *testing.T) {
 			options := testOptions()
 			options.Active = tc.active
 
-			// WHEN GetActive is called
+			// WHEN GetActive is called.
 			got := options.GetActive()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
 				t.Errorf("want: %t\ngot:  %t",
 					tc.want, got)
@@ -62,7 +63,7 @@ func TestOptions_GetActive(t *testing.T) {
 }
 
 func TestOptions_GetInterval(t *testing.T) {
-	// GIVEN Options
+	// GIVEN Options.
 	tests := map[string]struct {
 		rootValue, defaultValue, hardDefaultValue string
 		want                                      string
@@ -96,10 +97,10 @@ func TestOptions_GetInterval(t *testing.T) {
 			options.Defaults.Interval = tc.defaultValue
 			options.HardDefaults.Interval = tc.hardDefaultValue
 
-			// WHEN GetInterval is called
+			// WHEN GetInterval is called.
 			got := options.GetInterval()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
 				t.Errorf("want: %q\ngot:  %q",
 					tc.want, got)
@@ -109,7 +110,7 @@ func TestOptions_GetInterval(t *testing.T) {
 }
 
 func TestOptions_GetSemanticVersioning(t *testing.T) {
-	// GIVEN Options
+	// GIVEN Options.
 	tests := map[string]struct {
 		rootValue, defaultValue, hardDefaultValue *bool
 		wantBool                                  bool
@@ -140,10 +141,10 @@ func TestOptions_GetSemanticVersioning(t *testing.T) {
 			options.Defaults.SemanticVersioning = tc.defaultValue
 			options.HardDefaults.SemanticVersioning = tc.hardDefaultValue
 
-			// WHEN GetSemanticVersioning is called
+			// WHEN GetSemanticVersioning is called.
 			got := options.GetSemanticVersioning()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.wantBool {
 				t.Errorf("want: %t\ngot:  %t",
 					tc.wantBool, got)
@@ -153,7 +154,7 @@ func TestOptions_GetSemanticVersioning(t *testing.T) {
 }
 
 func TestOptions_GetIntervalPointer(t *testing.T) {
-	// GIVEN options
+	// GIVEN options.
 	tests := map[string]struct {
 		rootValue, defaultValue, hardDefaultValue string
 		want                                      string
@@ -181,10 +182,10 @@ func TestOptions_GetIntervalPointer(t *testing.T) {
 			options.Defaults.Interval = tc.defaultValue
 			options.HardDefaults.Interval = tc.hardDefaultValue
 
-			// WHEN GetIntervalPointer is called
+			// WHEN GetIntervalPointer is called.
 			got := options.GetIntervalPointer()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if *got != tc.want {
 				t.Errorf("want: %q\ngot:  %q",
 					tc.want, *got)
@@ -194,14 +195,14 @@ func TestOptions_GetIntervalPointer(t *testing.T) {
 }
 
 func TestOptions_GetIntervalDuration(t *testing.T) {
-	// GIVEN Options
+	// GIVEN Options.
 	options := testOptions()
 	options.Interval = "3h2m1s"
 
-	// WHEN GetInterval is called
+	// WHEN GetInterval is called.
 	got := options.GetIntervalDuration()
 
-	// THEN the function returns the correct result
+	// THEN the function returns the correct result.
 	want := (3 * time.Hour) + (2 * time.Minute) + time.Second
 	if got != want {
 		t.Errorf("want: %v\ngot:  %v",
@@ -210,7 +211,7 @@ func TestOptions_GetIntervalDuration(t *testing.T) {
 }
 
 func TestOptions_CheckValues(t *testing.T) {
-	// GIVEN Options
+	// GIVEN Options.
 	tests := map[string]struct {
 		options      *Options
 		wantInterval string
@@ -241,10 +242,10 @@ func TestOptions_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := tc.options.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
@@ -339,10 +340,10 @@ func TestOptions_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the Options is stringified with String
+			// WHEN the Options is stringified with String.
 			got := tc.options.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
@@ -353,7 +354,7 @@ func TestOptions_String(t *testing.T) {
 }
 
 func TestOptions_Copy(t *testing.T) {
-	// GIVEN Options
+	// GIVEN Options.
 	tests := map[string]struct {
 		options *Options
 	}{
@@ -380,10 +381,10 @@ func TestOptions_Copy(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Copy is called
+			// WHEN Copy is called.
 			got := tc.options.Copy()
 
-			// THEN the copied Options should match the original
+			// THEN the copied Options should match the original.
 			if tc.options == nil {
 				if got != nil {
 					t.Errorf("options.Copy() expected nil, got %v", got)
@@ -397,11 +398,11 @@ func TestOptions_Copy(t *testing.T) {
 				t.Errorf("options.Copy() mismatch\nwant: %q\ngot:  %q",
 					tc.options.String(), got.String())
 			}
-			// AND the Defaults should reference the same pointer
+			// AND the Defaults should reference the same pointer.
 			if got.Defaults != tc.options.Defaults {
 				t.Errorf("options.Copy() expected Defaults %v, got %v", tc.options.Defaults, got.Defaults)
 			}
-			// AND the HardDefaults should reference the same pointer
+			// AND the HardDefaults should reference the same pointer.
 			if got.HardDefaults != tc.options.HardDefaults {
 				t.Errorf("options.Copy() expected HardDefaults %v, got %v", tc.options.HardDefaults, got.HardDefaults)
 			}
@@ -410,7 +411,7 @@ func TestOptions_Copy(t *testing.T) {
 }
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN Defaults
+	// GIVEN Defaults.
 	tests := map[string]struct {
 		optionsDefaults *Defaults
 	}{
@@ -425,7 +426,7 @@ func TestDefaults_Default(t *testing.T) {
 				}},
 		},
 	}
-	// AND the expected values
+	// AND the expected values.
 	wants := struct {
 		interval string
 		semVer   bool
@@ -438,10 +439,10 @@ func TestDefaults_Default(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Default is called
+			// WHEN Default is called.
 			tc.optionsDefaults.Default()
 
-			// THEN the default values are set correctly
+			// THEN the default values are set correctly.
 			if tc.optionsDefaults.Interval != wants.interval {
 				t.Errorf("Defaults.Default() got Interval:\nwant: %q\ngot:  %q",
 					wants.interval, tc.optionsDefaults.Interval)
@@ -449,6 +450,51 @@ func TestDefaults_Default(t *testing.T) {
 			if tc.optionsDefaults.SemanticVersioning == nil || *tc.optionsDefaults.SemanticVersioning != wants.semVer {
 				t.Errorf("Defaults.Default() got SemanticVersioning:\nwant: %t\ngot:  %s",
 					wants.semVer, test.StringifyPtr(tc.optionsDefaults.SemanticVersioning))
+			}
+		})
+	}
+}
+
+func TestOptions_VerifySemanticVersioning(t *testing.T) {
+	// GIVEN Options.
+	tests := map[string]struct {
+		version string
+		wantErr bool
+	}{
+		"valid semantic version - MAJOR.MINOR.PATCH": {
+			version: "1.0.0",
+			wantErr: false,
+		},
+		"valid semantic version - MAJOR.MINOR": {
+			version: "1.0",
+			wantErr: false,
+		},
+		"valid semantic version - MAJOR": {
+			version: "1",
+			wantErr: false,
+		},
+		"invalid semantic version": {
+			version: "1_0_0",
+			wantErr: true,
+		},
+		"non-numeric version": {
+			version: "version1.2.3",
+			wantErr: true,
+		},
+	}
+	options := testOptions()
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN VerifySemanticVersioning is called.
+			_, err := options.VerifySemanticVersioning(tc.version, logutil.LogFrom{})
+
+			// THEN the function returns the correct result.
+			if (err != nil) != tc.wantErr {
+				t.Errorf("VerifySemanticVersioning() error = %v, wantErr %v",
+					err, tc.wantErr)
 			}
 		})
 	}

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -85,8 +85,12 @@ func (s *Service) CheckValues(prefix string) error {
 	util.AppendCheckError(&errs, prefix, "options", s.Options.CheckValues(errPrefix))
 	if s.LatestVersion != nil {
 		util.AppendCheckError(&errs, prefix, "latest_version", s.LatestVersion.CheckValues(errPrefix))
+	} else {
+		util.AppendCheckError(&errs, prefix, "latest_version", errors.New(errPrefix+"latest_version is nil"))
 	}
-	util.AppendCheckError(&errs, prefix, "deployed_version", s.DeployedVersionLookup.CheckValues(errPrefix))
+	if s.DeployedVersionLookup != nil {
+		util.AppendCheckError(&errs, prefix, "deployed_version", s.DeployedVersionLookup.CheckValues(errPrefix))
+	}
 	util.AppendCheckError(&errs, prefix, "notify", s.Notify.CheckValues(errPrefix))
 	util.AppendCheckError(&errs, prefix, "command", s.Command.CheckValues(errPrefix))
 	util.AppendCheckError(&errs, prefix, "webhook", s.WebHook.CheckValues(errPrefix))

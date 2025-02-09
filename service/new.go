@@ -26,38 +26,18 @@ import (
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
-// oldIntIndex to look at for any SecretValues used.
-type oldIntIndex struct {
-	OldIndex *int `json:"oldIndex,omitempty"`
-}
-
-// oldStringIndex to look at for any SecretValues used.
-type oldStringIndex struct {
-	OldIndex string `json:"oldIndex,omitempty"`
-}
-
-// dvSecretRef contains the reference for the DeployedVersionLookup SecretValues.
-type dvSecretRef struct {
-	Headers []oldIntIndex `json:"headers,omitempty"`
-}
-
-// whSecretRef contains the reference for the WebHook SecretValues.
-type whSecretRef struct {
-	OldIndex      string        `json:"oldIndex,omitempty"`
-	CustomHeaders []oldIntIndex `json:"custom_headers,omitempty"`
-}
-
 // oldSecretRefs contains the indexes to use for SecretValues.
 type oldSecretRefs struct {
-	ID                    string                    `json:"id"`
-	DeployedVersionLookup dvSecretRef               `json:"deployed_version,omitempty"`
-	Notify                map[string]oldStringIndex `json:"notify,omitempty"`
-	WebHook               map[string]whSecretRef    `json:"webhook,omitempty"`
+	ID                    string                           `json:"id"`
+	DeployedVersionLookup shared.DVSecretRef               `json:"deployed_version,omitempty"`
+	Notify                map[string]shared.OldStringIndex `json:"notify,omitempty"`
+	WebHook               map[string]shared.WHSecretRef    `json:"webhook,omitempty"`
 }
 
 // FromPayload creates a new/edited Service from a payload.
@@ -155,43 +135,16 @@ func (s *Service) giveSecretsLatestVersion(oldLatestVersion latestver.Lookup) {
 }
 
 // giveSecretsDeployedVersion from the `oldDeployedVersion`.
-func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion *deployedver.Lookup, secretRefs *dvSecretRef) {
+func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion deployedver.Lookup, secretRefs *shared.DVSecretRef) {
 	if s.DeployedVersionLookup == nil || oldDeployedVersion == nil {
 		return
 	}
 
-	if s.DeployedVersionLookup.BasicAuth != nil &&
-		s.DeployedVersionLookup.BasicAuth.Password == util.SecretValue &&
-		oldDeployedVersion.BasicAuth != nil {
-		s.DeployedVersionLookup.BasicAuth.Password = oldDeployedVersion.BasicAuth.Password
-	}
-
-	// If we have headers in old and new.
-	if len(s.DeployedVersionLookup.Headers) != 0 &&
-		len(oldDeployedVersion.Headers) != 0 {
-		for i := range s.DeployedVersionLookup.Headers {
-			// If referencing a secret of an existing header.
-			if s.DeployedVersionLookup.Headers[i].Value == util.SecretValue {
-				// Don't have a secretRef for this header.
-				if i >= len(secretRefs.Headers) {
-					break
-				}
-				oldIndex := secretRefs.Headers[i].OldIndex
-				// Not a reference to an old Header.
-				if oldIndex == nil {
-					continue
-				}
-
-				if *oldIndex < len(oldDeployedVersion.Headers) {
-					s.DeployedVersionLookup.Headers[i].Value = oldDeployedVersion.Headers[*oldIndex].Value
-				}
-			}
-		}
-	}
+	s.DeployedVersionLookup.InheritSecrets(oldDeployedVersion, secretRefs)
 }
 
 // giveSecretsNotify from the `oldNotifies`.
-func (s *Service) giveSecretsNotify(oldNotifies shoutrrr.Slice, secretRefs map[string]oldStringIndex) {
+func (s *Service) giveSecretsNotify(oldNotifies shoutrrr.Slice, secretRefs map[string]shared.OldStringIndex) {
 	//nolint:typecheck
 	if len(s.Notify) == 0 || len(oldNotifies) == 0 ||
 		len(secretRefs) == 0 {
@@ -220,7 +173,7 @@ func (s *Service) giveSecretsNotify(oldNotifies shoutrrr.Slice, secretRefs map[s
 }
 
 // giveSecretsWebHook from the `oldWebHooks`.
-func (s *Service) giveSecretsWebHook(oldWebHooks webhook.Slice, secretRefs map[string]whSecretRef) {
+func (s *Service) giveSecretsWebHook(oldWebHooks webhook.Slice, secretRefs map[string]shared.WHSecretRef) {
 	//nolint:typecheck
 	if s.WebHook == nil || oldWebHooks == nil ||
 		len(secretRefs) == 0 {
@@ -289,7 +242,9 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 	}
 
 	// Latest Version.
-	s.giveSecretsLatestVersion(oldService.LatestVersion)
+	if s.LatestVersion != nil {
+		s.giveSecretsLatestVersion(oldService.LatestVersion)
+	}
 	// Deployed Version.
 	s.giveSecretsDeployedVersion(oldService.DeployedVersionLookup, &secretRefs.DeployedVersionLookup)
 	// Notify.
@@ -300,13 +255,13 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 	s.CommandController.CopyFailsFrom(oldService.CommandController)
 
 	// Keep LatestVersion if the LatestVersion Lookup is unchanged.
-	if s.LatestVersion.IsEqual(s.LatestVersion, oldService.LatestVersion) {
+	if s.LatestVersion != nil && s.LatestVersion.IsEqual(s.LatestVersion, oldService.LatestVersion) {
 		s.Status.SetApprovedVersion(oldService.Status.ApprovedVersion(), false)
 		s.Status.SetLatestVersion(oldService.Status.LatestVersion(), oldService.Status.LatestVersionTimestamp(), false)
 		s.Status.SetLastQueried(oldService.Status.LastQueried())
 	}
 	// Keep DeployedVersion if the DeployedVersionLookup is unchanged.
-	if s.DeployedVersionLookup.IsEqual(oldService.DeployedVersionLookup) &&
+	if deployedver.IsEqual(s.DeployedVersionLookup, oldService.DeployedVersionLookup) &&
 		oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
 		s.Status.SetDeployedVersion(oldService.Status.DeployedVersion(), oldService.Status.DeployedVersionTimestamp(), false)
 	}
@@ -348,15 +303,14 @@ func (s *Service) CheckFetches() error {
 
 	// Fetch deployed version.
 	if s.DeployedVersionLookup != nil {
-		version, err := s.DeployedVersionLookup.Query(
+		if err := s.DeployedVersionLookup.Query(
 			false,
-			logFrom)
-		if err != nil {
+			logFrom); err != nil {
 			return fmt.Errorf("deployed_version - %w", err)
 		}
-		s.Status.SetDeployedVersion(version, "", false)
 	}
 
+	s.Status.SetLastQueried("")
 	return nil
 }
 

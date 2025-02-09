@@ -32,7 +32,7 @@ import (
 )
 
 func TestInsertionSort(t *testing.T) {
-	// GIVEN a list of releases and a release to add
+	// GIVEN a list of releases and a release to add.
 	tests := map[string]struct {
 		release  string
 		expectAt int
@@ -61,13 +61,13 @@ func TestInsertionSort(t *testing.T) {
 				releases[i].SemanticVersion = semVer
 			}
 
-			// WHEN insertionSort is called with a release
+			// WHEN insertionSort is called with a release.
 			release := github_types.Release{TagName: tc.release}
 			semVer, _ := semver.NewVersion(release.TagName)
 			release.SemanticVersion = semVer
 			insertionSort(release, &releases)
 
-			// THEN it can be found at the expected index
+			// THEN it can be found at the expected index.
 			if releases[tc.expectAt].TagName != release.TagName {
 				t.Errorf("Expected %v to be inserted at index %d. Got %v",
 					release, tc.expectAt, release)
@@ -77,7 +77,7 @@ func TestInsertionSort(t *testing.T) {
 }
 
 func TestLookup_FilterGitHubReleases(t *testing.T) {
-	// GIVEN a bunch of releases
+	// GIVEN a bunch of releases.
 	tests := map[string]struct {
 		releases                           []github_types.Release
 		semanticVersioning, usePreReleases bool
@@ -191,10 +191,10 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 			lv.Options.SemanticVersioning = &tc.semanticVersioning
 			lv.GetGitHubData().SetReleases(tc.releases)
 
-			// WHEN filterGitHubReleases is called on this body
+			// WHEN filterGitHubReleases is called on this body.
 			filteredReleases := lv.filterGitHubReleases(logutil.LogFrom{})
 
-			// THEN only the expected releases are kept
+			// THEN only the expected releases are kept.
 			if len(tc.want) != len(filteredReleases) {
 				t.Fatalf("Length not the same\nwant: %v (%d)\ngot:  %v (%d)",
 					tc.want, len(tc.want), filteredReleases, len(filteredReleases))
@@ -210,12 +210,12 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 }
 
 func TestLookup_CheckGitHubReleasesBody(t *testing.T) {
-	// GIVEN a body
+	// GIVEN a URL body.
 	tests := map[string]struct {
 		body     string
 		errRegex string
 	}{
-		"invalid json": {
+		"invalid JSON": {
 			body:     strings.Repeat("something something something", 100),
 			errRegex: `unmarshal .* failed`},
 		"1 release": {
@@ -241,16 +241,16 @@ func TestLookup_CheckGitHubReleasesBody(t *testing.T) {
 			body := []byte(tc.body)
 			lv := Lookup{}
 
-			// WHEN filterGitHubReleases is called on this body
+			// WHEN filterGitHubReleases is called on this body.
 			releases, err := lv.checkGitHubReleasesBody(body, logutil.LogFrom{})
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("want match for %q\nnot: %q",
 					tc.errRegex, e)
 			}
-			// ELSE the releases marshal correctly
+			// ELSE the releases marshal correctly.
 			if tc.errRegex == "^$" {
 				releasesYAML, _ := json.Marshal(releases)
 				if string(releasesYAML) != tc.body {

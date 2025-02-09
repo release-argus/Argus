@@ -30,12 +30,9 @@ import (
 // or if it is older than `currentVersion`.
 func (l *Lookup) VerifySemanticVersioning(newVersion, currentVersion string, logFrom logutil.LogFrom) error {
 	// Check it is a valid semantic version.
-	semNewVersion, err := semver.NewVersion(newVersion)
+	semNewVersion, err := l.Options.VerifySemanticVersioning(newVersion, logFrom)
 	if err != nil {
-		err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
-			newVersion)
-		logutil.Log.Error(err, logFrom, true)
-		return err
+		return err // nolint:wrapcheck
 	}
 
 	// Check for a progressive change in version.

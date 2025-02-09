@@ -52,7 +52,7 @@ func testWebHook(failing bool, selfSignedCert bool, customHeaders bool) *WebHook
 		"argus",
 		test.BoolPtr(false),
 		"github",
-		"https://valid.release-argus.io/hooks/github-style",
+		test.LookupGitHub["url_valid"],
 		&Defaults{},
 		&Defaults{}, &Defaults{})
 	webhook.ID = "test"
@@ -93,7 +93,7 @@ func testDefaults(failing bool, customHeaders bool) *Defaults {
 		"argus",
 		test.BoolPtr(false),
 		"github",
-		"https://valid.release-argus.io/hooks/github-style")
+		test.LookupGitHub["url_valid"])
 	if failing {
 		webhook.Secret = "invalid"
 	}

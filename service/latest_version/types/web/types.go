@@ -37,7 +37,7 @@ type Lookup struct {
 // New returns a new Lookup from a string in a given format (json/yaml).
 func New(
 	configFormat string,
-	configData interface{}, // []byte | string | *yaml.Node.
+	configData interface{}, // []byte | string | *yaml.Node | json.RawMessage.
 	options *opt.Options,
 	status *status.Status,
 	defaults, hardDefaults *base.Defaults,
