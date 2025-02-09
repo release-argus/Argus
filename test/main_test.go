@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import (
 )
 
 func TestCaptureStdout(t *testing.T) {
-	// GIVEN a function that writes to stdout
+	// GIVEN a function that writes to stdout.
 	tests := map[string]struct {
 		fn   func()
 		want string
@@ -48,14 +48,14 @@ func TestCaptureStdout(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 
-			// WHEN CaptureStdout is called
+			// WHEN CaptureStdout is called.
 			capture := CaptureStdout()
 			tc.fn()
 			result := capture()
 
-			// THEN the result should be the expected stdout output
+			// THEN the result should be the expected stdout output.
 			if result != tc.want {
 				t.Errorf("stdout mismatch\n%q\ngot:\n%q",
 					tc.want, result)
@@ -65,7 +65,7 @@ func TestCaptureStdout(t *testing.T) {
 }
 
 func TestBoolPtr(t *testing.T) {
-	// GIVEN a boolean value
+	// GIVEN a boolean value.
 	tests := map[string]struct {
 		val bool
 	}{
@@ -77,10 +77,10 @@ func TestBoolPtr(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN BoolPtr is called
+			// WHEN BoolPtr is called.
 			result := BoolPtr(tc.val)
 
-			// THEN the result should be a pointer to the boolean value
+			// THEN the result should be a pointer to the boolean value.
 			if *result != tc.val {
 				t.Errorf("expected %t but got %t",
 					tc.val, *result)
@@ -90,7 +90,7 @@ func TestBoolPtr(t *testing.T) {
 }
 
 func TestIntPtr(t *testing.T) {
-	// GIVEN an integer value
+	// GIVEN an integer value.
 	tests := map[string]struct {
 		val int
 	}{
@@ -103,10 +103,10 @@ func TestIntPtr(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN IntPtr is called
+			// WHEN IntPtr is called.
 			result := IntPtr(tc.val)
 
-			// THEN the result should be a pointer to the integer value
+			// THEN the result should be a pointer to the integer value.
 			if *result != tc.val {
 				t.Errorf("expected %d but got %d",
 					tc.val, *result)
@@ -116,7 +116,7 @@ func TestIntPtr(t *testing.T) {
 }
 
 func TestStringPtr(t *testing.T) {
-	// GIVEN a string value
+	// GIVEN a string value.
 	tests := map[string]struct {
 		val string
 	}{
@@ -128,10 +128,10 @@ func TestStringPtr(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN StringPtr is called
+			// WHEN StringPtr is called.
 			result := StringPtr(tc.val)
 
-			// THEN the result should be a pointer to the string value
+			// THEN the result should be a pointer to the string value.
 			if *result != tc.val {
 				t.Errorf("expected %q but got %q",
 					tc.val, *result)
@@ -141,7 +141,7 @@ func TestStringPtr(t *testing.T) {
 }
 
 func TestUInt8Ptr(t *testing.T) {
-	// GIVEN an integer value
+	// GIVEN an integer value.
 	tests := map[string]struct {
 		val uint
 	}{
@@ -153,10 +153,10 @@ func TestUInt8Ptr(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN UInt8Ptr is called
+			// WHEN UInt8Ptr is called.
 			result := UInt8Ptr(int(tc.val))
 
-			// THEN the result should be a pointer to the unsigned integer value
+			// THEN the result should be a pointer to the unsigned integer value.
 			if *result != uint8(tc.val) {
 				t.Errorf("expected %d but got %d",
 					tc.val, *result)
@@ -166,7 +166,7 @@ func TestUInt8Ptr(t *testing.T) {
 }
 
 func TestStringifyPtr(t *testing.T) {
-	// GIVEN a pointer to a value
+	// GIVEN a pointer to a value.
 	tests := map[string]struct {
 		ptr  interface{}
 		want string
@@ -183,7 +183,7 @@ func TestStringifyPtr(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN StringifyPtr is called
+			// WHEN StringifyPtr is called.
 			var result string
 			switch v := tc.ptr.(type) {
 			case *bool:
@@ -202,7 +202,7 @@ func TestStringifyPtr(t *testing.T) {
 					tc.ptr)
 			}
 
-			// THEN the result should be a string representation of the value
+			// THEN the result should be a string representation of the value.
 			if result != tc.want {
 				t.Errorf("expected %q but got %q",
 					tc.want, result)
@@ -212,7 +212,7 @@ func TestStringifyPtr(t *testing.T) {
 }
 
 func TestTrimJSON(t *testing.T) {
-	// GIVEN a JSON string
+	// GIVEN a JSON string.
 	tests := map[string]struct {
 		str  string
 		want string
@@ -257,10 +257,10 @@ func TestTrimJSON(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN TrimJSON is called
+			// WHEN TrimJSON is called.
 			result := TrimJSON(tc.str)
 
-			// THEN the result should be the JSON string without newlines and tabs
+			// THEN the result should be the JSON string without newlines and tabs.
 			if result != tc.want {
 				t.Errorf("expected %q but got %q",
 					tc.want, result)
@@ -270,7 +270,7 @@ func TestTrimJSON(t *testing.T) {
 }
 
 func TestTrimYAML(t *testing.T) {
-	// GIVEN a YAML string
+	// GIVEN a YAML string.
 	tests := map[string]struct {
 		str  string
 		want string
@@ -342,10 +342,10 @@ key2: value2
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN TrimYAML is called
+			// WHEN TrimYAML is called.
 			result := TrimYAML(tc.str)
 
-			// THEN the result should be the YAML string without unnecessary whitespace
+			// THEN the result should be the YAML string without unnecessary whitespace.
 			if result != tc.want {
 				t.Errorf("mismatch\n%q\ngot:\n%q",
 					tc.want, result)
@@ -355,7 +355,7 @@ key2: value2
 }
 
 func TestFlattenMultilineString(t *testing.T) {
-	// GIVEN a multiline string
+	// GIVEN a multiline string.
 	tests := map[string]struct {
 		str  string
 		want string
@@ -390,10 +390,10 @@ func TestFlattenMultilineString(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN FlattenMultilineString is called
+			// WHEN FlattenMultilineString is called.
 			result := FlattenMultilineString(tc.str)
 
-			// THEN the result should be the string with newlines and tabs replaced with spaces
+			// THEN the result should be the string with newlines and tabs replaced with spaces.
 			if result != tc.want {
 				t.Errorf("mismatch\n%q\ngot:\n%q",
 					tc.want, result)
@@ -403,7 +403,7 @@ func TestFlattenMultilineString(t *testing.T) {
 }
 
 func TestCombinations(t *testing.T) {
-	// GIVEN a slice of values
+	// GIVEN a slice of values.
 	tests := map[string]struct {
 		input []int
 		want  [][]int
@@ -442,10 +442,10 @@ func TestCombinations(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Combinations is called
+			// WHEN Combinations is called.
 			result := Combinations(tc.input)
 
-			// THEN the result should be all possible combinations of the values
+			// THEN the result should be all possible combinations of the values.
 			if len(result) != len(tc.want) {
 				t.Fatalf("length differs:\nwant: %d, %v\ngot:  %d, %v",
 					len(tc.want), tc.want, len(result), result)
@@ -467,7 +467,7 @@ func TestCombinations(t *testing.T) {
 }
 
 func TestIndent(t *testing.T) {
-	// GIVEN a string and an indent value
+	// GIVEN a string and an indent value.
 	tests := map[string]struct {
 		str    string
 		indent int
@@ -504,10 +504,10 @@ func TestIndent(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Indent is called
+			// WHEN Indent is called.
 			result := Indent(tc.str, tc.indent)
 
-			// THEN the result should be the string with each line indented by the given number of spaces
+			// THEN the result should be the string with each line indented by the given number of spaces.
 			if result != tc.want {
 				t.Errorf("expected %q but got %q",
 					tc.want, result)
@@ -540,13 +540,69 @@ func TestIgnoreError(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			// WHEN IgnoreError is called
+			// WHEN IgnoreError is called.
 			result := IgnoreError(t, tc.fn)
 
-			// THEN the result should be the expected value
+			// THEN the result should be the expected value.
 			if result != tc.want {
 				t.Errorf("expected %d but got %d",
 					tc.want, result)
+			}
+		})
+	}
+}
+
+func TestYAMLToNode(t *testing.T) {
+	tests := map[string]struct {
+		yamlStr string
+		wantErr bool
+	}{
+		"valid YAML": {
+			yamlStr: `
+				key: value
+			`,
+			wantErr: false,
+		},
+		"invalid YAML": {
+			yamlStr: `
+				key: [unclosed
+			`,
+			wantErr: true,
+		},
+		"empty YAML": {
+			yamlStr: ``,
+			wantErr: false,
+		},
+		"complex YAML": {
+			yamlStr: `
+				key1:
+					key2: value2
+					key3:
+					- item1
+					- item2
+				`,
+			wantErr: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			tc.yamlStr = TrimYAML(tc.yamlStr)
+
+			// WHEN YAMLToNode is called.
+			node, err := YAMLToNode(t, tc.yamlStr)
+
+			// THEN the result should be a valid yaml.Node, or an error.
+			if tc.wantErr && err == nil {
+				t.Errorf("expected error but got nil")
+			} else if !tc.wantErr {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				} else if node == nil {
+					t.Errorf("expected node but got nil")
+				}
 			}
 		})
 	}

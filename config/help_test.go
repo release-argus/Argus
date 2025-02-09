@@ -147,7 +147,7 @@ func testServiceURL(id string) *service.Service {
 	lv, err := latestver.New(
 		"url",
 		"yaml", test.TrimYAML(`
-			url: https://valid.release-argus.io/plain
+			url: `+test.LookupPlain["url_valid"]+`
 			url_commands:
 				- type: regex
 					regex: 'v([0-9.]+)'
@@ -162,11 +162,12 @@ func testServiceURL(id string) *service.Service {
 		panic(err)
 	}
 
-	dv := test.IgnoreError(nil, func() (*deployedver.Lookup, error) {
+	dv := test.IgnoreError(nil, func() (deployedver.Lookup, error) {
 		return deployedver.New(
+			"url",
 			"yaml", test.TrimYAML(`
 				method: GET
-				url: https://valid.release-argus.io/json
+				url: `+test.LookupJSON["url_valid"]+`
 				json: version
 		`),
 			nil,

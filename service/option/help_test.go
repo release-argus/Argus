@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,18 @@
 
 package option
 
-import "github.com/release-argus/Argus/test"
+import (
+	"os"
+	"testing"
+
+	"github.com/release-argus/Argus/test"
+	logtest "github.com/release-argus/Argus/test/log"
+)
+
+func TestMain(m *testing.M) {
+	logtest.InitLog()
+	os.Exit(m.Run())
+}
 
 func testOptions() *Options {
 	return New(

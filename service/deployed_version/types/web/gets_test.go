@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package deployedver
+package web
 
 import (
 	"io"
@@ -26,8 +26,8 @@ import (
 	"github.com/release-argus/Argus/test"
 )
 
-func TestLookup_GetAllowInvalidCerts(t *testing.T) {
-	// GIVEN a Lookup
+func TestLookup_allowInvalidCerts(t *testing.T) {
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		rootValue, defaultValue, hardDefaultValue *bool
 		want                                      bool
@@ -50,15 +50,15 @@ func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup()
+			lookup := testLookup(false)
 			lookup.AllowInvalidCerts = tc.rootValue
 			lookup.Defaults.AllowInvalidCerts = tc.defaultValue
 			lookup.HardDefaults.AllowInvalidCerts = tc.hardDefaultValue
 
-			// WHEN GetAllowInvalidCerts is called
-			got := lookup.GetAllowInvalidCerts()
+			// WHEN allowInvalidCerts is called.
+			got := lookup.allowInvalidCerts()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
 				t.Errorf("want: %t\ngot:  %t",
 					tc.want, got)
@@ -67,23 +67,23 @@ func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 	}
 }
 
-func TestLookup_GetURL(t *testing.T) {
-	// GIVEN a Lookup
+func TestLookup_url(t *testing.T) {
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		env  map[string]string
 		url  string
 		want string
 	}{
-		"returns URL": {
+		"URL": {
 			url:  "https://example.com",
 			want: "https://example.com",
 		},
-		"returns URL from env": {
+		"URL from env": {
 			env:  map[string]string{"TEST_LOOKUP__DV_GET_URL_ONE": "https://example.com"},
 			url:  "${TEST_LOOKUP__DV_GET_URL_ONE}",
 			want: "https://example.com",
 		},
-		"returns URL partially from env": {
+		"URL with env partial": {
 			env:  map[string]string{"TEST_LOOKUP__DV_GET_URL_TWO": "example.com"},
 			url:  "https://${TEST_LOOKUP__DV_GET_URL_TWO}",
 			want: "https://example.com",
@@ -99,13 +99,13 @@ func TestLookup_GetURL(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
-			lookup := testLookup()
+			lookup := testLookup(false)
 			lookup.URL = tc.url
 
-			// WHEN GetURL is called
-			got := lookup.GetURL()
+			// WHEN url is called.
+			got := lookup.url()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
 				t.Errorf("want: %q\ngot:  %q",
 					tc.want, got)
@@ -114,8 +114,8 @@ func TestLookup_GetURL(t *testing.T) {
 	}
 }
 
-func TestLookup_GetBody(t *testing.T) {
-	// GIVEN a Lookup
+func TestLookup_body(t *testing.T) {
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		body string
 		want io.Reader
@@ -134,13 +134,13 @@ func TestLookup_GetBody(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup()
+			lookup := testLookup(false)
 			lookup.Body = tc.body
 
-			// WHEN GetBody is called
-			got := lookup.GetBody()
+			// WHEN body is called.
+			got := lookup.body()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("want: %v\ngot:  %v",
 					tc.want, got)

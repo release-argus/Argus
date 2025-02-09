@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,6 @@ var PossibleTypes = []string{
 // ServiceMap maps a service type to a Lookup constructor.
 var ServiceMap = map[string]func() base.Interface{
 	"github": func() base.Interface { return &github.Lookup{} },
-	"web":    func() base.Interface { return &web.Lookup{} },
 	"url":    func() base.Interface { return &web.Lookup{} },
+	"web":    func() base.Interface { return &web.Lookup{} },
 }

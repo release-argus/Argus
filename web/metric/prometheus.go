@@ -51,6 +51,7 @@ var (
 		Help: "Whether this service's last deployed version query was successful (0=no, 1=yes)."},
 		[]string{
 			"id",
+			"type",
 		})
 	// DeployedVersionQueryResultTotal counts the amount of times the deployed version query has passed or failed.
 	DeployedVersionQueryResultTotal = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -58,6 +59,7 @@ var (
 		Help: "Number of times the deployed version check has passed/failed."},
 		[]string{
 			"id",
+			"type",
 			"result",
 		})
 	// LatestVersionIsDeployed tracks the deployment state of the latest version.
@@ -240,10 +242,10 @@ func GetVersionDeployedState(approvedVersion, latestVersion, deployedVersion str
 
 // SetUpdatesCurrent updates the UpdatesCurrent Prometheus metric with the given delta.
 // The metric is updated based on the given result value, which indicates the status:
-//   - 0: Latest version not deployed/approved/skipped
-//   - 1: Latest version deployed (does not modify metric)
-//   - 2: Latest version approved
-//   - 3: Latest version skipped
+//   - 0: Latest version not deployed/approved/skipped.
+//   - 1: Latest version deployed (does not modify metric).
+//   - 2: Latest version approved.
+//   - 3: Latest version skipped.
 func SetUpdatesCurrent(delta, result float64) {
 	switch result {
 	case 0, 2:
@@ -256,9 +258,9 @@ func SetUpdatesCurrent(delta, result float64) {
 
 // InitMetrics will initialise all global metrics.
 func InitMetrics() {
-	// service_count
+	// service_count.
 	ServiceCountCurrent.Set(0)
-	// updates_current
+	// updates_current.
 	UpdatesCurrent.With(prometheus.Labels{
 		"type": "AVAILABLE"}).Set(0)
 	UpdatesCurrent.With(prometheus.Labels{

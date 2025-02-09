@@ -608,7 +608,7 @@ func testYAML_Edit(path string, t *testing.T) {
 				name: a
 				latest_version:
 					type: url
-					url: https://valid.release-argus.io/plain
+					url: ` + test.LookupPlain["url_valid"] + `
 					url_commands:
 					- type: regex
 						regex: v(.*)
@@ -616,7 +616,7 @@ func testYAML_Edit(path string, t *testing.T) {
 				name: b
 				latest_version:
 					type: url
-					url: https://valid.release-argus.io/plain
+					url: ` + test.LookupPlain["url_valid"] + `
 					url_commands:
 					- type: regex
 						regex: ([0-9.]+)
@@ -624,7 +624,7 @@ func testYAML_Edit(path string, t *testing.T) {
 				name: c
 				latest_version:
 					type: url
-					url: https://valid.release-argus.io/plain
+					url: ` + test.LookupPlain["url_valid"] + `
 					url_commands:
 					- type: regex
 						regex: v?([0-9.]+)

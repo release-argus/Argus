@@ -1,7 +1,7 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use 10s file except in compliance with the License.
+// you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -17,9 +17,13 @@
 package deployedver
 
 import (
-	"strings"
+	"encoding/json"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
+	"github.com/release-argus/Argus/service/deployed_version/types/base"
+	"github.com/release-argus/Argus/service/deployed_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
@@ -28,22 +32,17 @@ import (
 
 func TestNew(t *testing.T) {
 	type args struct {
-		configFormat, configData string
-		options                  *opt.Options
-		status                   *status.Status
-		defaults, hardDefaults   *Defaults
+		lType        string
+		configFormat string
+		configData   interface{}
 	}
-	type wants struct {
-		yaml     string
-		errRegex string
-	}
-	// GIVEN a set of args
 	tests := map[string]struct {
-		args  args
-		wants wants
+		args    args
+		wantErr bool
 	}{
-		"valid yaml": {
+		"string, YAML - url": {
 			args: args{
+				lType:        "url",
 				configFormat: "yaml",
 				configData: test.TrimYAML(`
 					method: GET
@@ -61,33 +60,39 @@ func TestNew(t *testing.T) {
 					json: value.version
 					regex: v([0-9.]+)
 					regex_template: $1`),
-				options:      nil,
-				status:       nil,
-				defaults:     nil,
-				hardDefaults: nil,
 			},
-			wants: wants{
-				errRegex: `^$`,
-				yaml: test.TrimYAML(`
-					method: GET
-					url: https://example.com
-					allow_invalid_certs: false
-					basic_auth:
-						username: user
-						password: pass
-					headers:
-						- key: X-Header
-							value: val
-						- key: X-Another
-							value: val2
-					body: body_here
-					json: value.version
-					regex: v([0-9.]+)
-					regex_template: $1
-				`)},
+			wantErr: false,
 		},
-		"valid json": {
+		"yaml.Node - url": {
 			args: args{
+				lType:        "url",
+				configFormat: "something?",
+				configData: test.IgnoreError(t, func() (*yaml.Node, error) {
+					return test.YAMLToNode(t,
+						test.TrimYAML(`
+							method: GET
+							url: https://example.com
+							allow_invalid_certs: false
+							basic_auth:
+								username: user
+								password: pass
+							headers:
+								- key: X-Header
+									value: val
+								- key: X-Another
+									value: val2
+							body: body_here
+							json: value.version
+							regex: v([0-9.]+)
+							regex_template: $1
+					`))
+				}),
+			},
+			wantErr: false,
+		},
+		"string. JSON - web": {
+			args: args{
+				lType:        "web",
 				configFormat: "json",
 				configData: test.TrimJSON(`{
 					"method": "GET",
@@ -106,68 +111,49 @@ func TestNew(t *testing.T) {
 					"regex": "v([0-9.]+)",
 					"regex_template": "$1"
 				}`),
-				options:      nil,
-				status:       nil,
-				defaults:     nil,
-				hardDefaults: nil,
 			},
-			wants: wants{
-				errRegex: `^$`,
-				yaml: test.TrimYAML(`
-					method: GET
-					url: https://example.com
-					allow_invalid_certs: false
-					basic_auth:
-						username: user
-						password: pass
-					headers:
-						- key: X-Header
-							value: val
-						- key: X-Another
-							value: val2
-					body: body_here
-					json: value.version
-					regex: v([0-9.]+)
-					regex_template: $1
-				`)},
+			wantErr: false,
 		},
-		"invalid format": {
+		"json.RawMessage - web": {
 			args: args{
-				configFormat: "invalid",
-				configData: `
-<latest_version>Argus</latest_version>
-<url>release-argus/argus</url>`,
-				options:      nil,
-				status:       nil,
-				defaults:     nil,
-				hardDefaults: nil,
+				lType:        "web",
+				configFormat: "json",
+				configData: json.RawMessage(
+					test.TrimJSON(`{
+						"method": "GET",
+						"url": "https://example.com",
+						"allow_invalid_certs": false,
+						"basic_auth": {
+							"username": "user",
+							"password": "pass"
+						},
+						"headers": [
+							{"key": "X-Header", "value": "val"},
+							{"key": "X-Another", "value": "val2"}
+						],
+						"body": "body_here",
+						"json": "value.version",
+						"regex": "v([0-9.]+)",
+						"regex_template": "$1"
+					}`)),
 			},
-			wants: wants{
-				errRegex: `^failed to unmarshal deployedver.Lookup`},
+			wantErr: false,
 		},
-		"invalid yaml": {
+		"invalid type": {
 			args: args{
+				lType:        "invalid",
 				configFormat: "yaml",
 				configData:   "invalid_yaml",
-				options:      nil,
-				status:       nil,
-				defaults:     nil,
-				hardDefaults: nil,
 			},
-			wants: wants{
-				errRegex: `^failed to unmarshal deployedver.Lookup`},
+			wantErr: true,
 		},
-		"invalid json": {
+		"empty type": {
 			args: args{
-				configFormat: "json",
-				configData:   "invalid_json",
-				options:      nil,
-				status:       nil,
-				defaults:     nil,
-				hardDefaults: nil,
+				lType:        "",
+				configFormat: "yaml",
+				configData:   "invalid_yaml",
 			},
-			wants: wants{
-				errRegex: `^failed to unmarshal deployedver.Lookup`},
+			wantErr: true,
 		},
 	}
 
@@ -175,43 +161,40 @@ func TestNew(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN New is called with the test case parameters
-			got, err := New(
-				tc.args.configFormat, tc.args.configData,
-				tc.args.options,
-				tc.args.status,
-				tc.args.defaults, tc.args.hardDefaults)
+			options := opt.Options{}
+			status := status.Status{}
+			defaults := base.Defaults{}
+			hardDefaults := base.Defaults{}
 
-			// THEN the error is as expected
-			e := util.ErrorToString(err)
-			if !util.RegexCheck(tc.wants.errRegex, e) {
-				t.Errorf("deployedver.New() error mismatch\n%q\ngot:\n%q\n",
-					tc.wants.errRegex, e)
-			}
-			// AND the Lookup is returned as expected
-			gotYAML := got.String("")
-			if gotYAML != tc.wants.yaml {
-				t.Errorf("deployedver.New() mismatch\nwant:\n%q\ngot:\n%q\n",
-					tc.wants.yaml, gotYAML)
+			_, err := New(
+				tc.args.lType,
+				tc.args.configFormat,
+				tc.args.configData,
+				&options,
+				&status,
+				&defaults,
+				&hardDefaults,
+			)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("New() error = %v, wantErr %v", err, tc.wantErr)
 			}
 		})
 	}
 }
 
 func TestCopy(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
-		lookup *Lookup
+		lookup Lookup
 	}{
 		"nil lookup": {
 			lookup: nil,
 		},
-		"empty lookup": {
-			lookup: &Lookup{},
-		},
-		"filled lookup": {
-			lookup: test.IgnoreError(t, func() (*Lookup, error) {
+		"url": {
+			lookup: test.IgnoreError(t, func() (Lookup, error) {
 				return New(
+					"url",
 					"yaml", test.TrimYAML(`
 						method: GET
 						url: https://example.com
@@ -233,8 +216,8 @@ func TestCopy(t *testing.T) {
 						"9m",
 						test.BoolPtr(true),
 						nil, nil),
-					nil,
-					&Defaults{}, &Defaults{})
+					&status.Status{},
+					&base.Defaults{}, &base.Defaults{})
 			}),
 		},
 	}
@@ -243,160 +226,71 @@ func TestCopy(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			hadStr := tc.lookup.String("")
-
-			// WHEN Copy is called with the test case parameters
+			// WHEN Copy is called.
 			got := Copy(tc.lookup)
 
-			// THEN the result is as expected
-			gotStr := got.String("")
-			if gotStr != hadStr {
-				t.Errorf("deployedver.Copy() mismatch\n%q\ngot:\n%q\n",
-					hadStr, gotStr)
+			// THEN the variables are copied over.
+			gotYAML := util.ToYAMLString(got, "")
+			wantYAML := util.ToYAMLString(tc.lookup, "")
+			if gotYAML != wantYAML {
+				t.Errorf("YAML mismatch\nwant: %q\ngot:  %q",
+					wantYAML, gotYAML)
 			}
-			if tc.lookup != nil {
-				// AND the Lookup is not the same instance
-				if got == tc.lookup {
-					t.Errorf("deployedver.Copy() got same instance")
-				}
-				// AND the options are not the same instance
-				if got.Options != nil && got.Options == tc.lookup.Options {
-					t.Errorf("deployedver.Copy() got same Options instance")
-				}
-				// AND the defaults are the same instance
-				if got.Defaults != tc.lookup.Defaults {
-					t.Errorf("deployedver.Copy() got different Defaults instance")
-				}
-				// AND the hardDefaults are the same instance
-				if got.HardDefaults != tc.lookup.HardDefaults {
-					t.Errorf("deployedver.Copy() got different HardDefaults instance")
-				}
-			}
-		})
-	}
-}
-
-func TestLookup_String(t *testing.T) {
-	tests := map[string]struct {
-		lookup *string
-		want   string
-	}{
-		"nil": {
-			lookup: nil,
-			want:   "",
-		},
-		"empty": {
-			lookup: test.StringPtr(""),
-			want:   "{}",
-		},
-		"filled": {
-			lookup: test.StringPtr(test.TrimYAML(`
-				method: GET
-				url: https://example.com
-				allow_invalid_certs: false
-				options:
-					interval: 9m
-				basic_auth:
-					username: user
-					password: pass
-				headers:
-					- key: X-Header
-						value: val
-					- key: X-Another
-						value: val2
-				body: body_here
-				json: value.version
-				regex: v([0-9.]+)
-				regex_template: $1`)),
-			want: test.TrimYAML(`
-				method: GET
-				url: https://example.com
-				allow_invalid_certs: false
-				basic_auth:
-					username: user
-					password: pass
-				headers:
-					- key: X-Header
-						value: val
-					- key: X-Another
-						value: val2
-				body: body_here
-				json: value.version
-				regex: v([0-9.]+)
-				regex_template: $1`),
-		},
-		"quotes otherwise invalid yaml strings": {
-			lookup: test.StringPtr(test.TrimYAML(`
-				basic_auth:
-					username: '>123'
-					password: '{pass}'`)),
-			want: test.TrimYAML(`
-				basic_auth:
-					username: '>123'
-					password: '{pass}'`),
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			var lookup *Lookup
-			if tc.lookup != nil {
-				lookup, _ = New("yaml", *tc.lookup, nil, nil, nil, nil)
+			if tc.lookup == nil {
+				return // No further checks.
 			}
 
-			prefixes := []string{"", " ", "  ", "    ", "- "}
-			for _, prefix := range prefixes {
-				want := strings.TrimPrefix(tc.want, "\n")
-				if want != "" {
-					if want != "{}" {
-						want = prefix + strings.ReplaceAll(want, "\n", "\n"+prefix)
-					}
-					want += "\n"
-				}
+			if got.GetOptions() == tc.lookup.GetOptions() {
+				t.Error("options shouldn't point to the same memory address")
+			} else if got.GetOptions().String() != tc.lookup.GetOptions().String() {
+				t.Errorf("options mismatch\nwant: %q\ngot:  %q",
+					tc.lookup.GetOptions(), got.GetOptions())
+			}
 
-				// WHEN the Lookup is stringified with String
-				got := lookup.String(prefix)
+			if got.GetDefaults() != tc.lookup.GetDefaults() {
+				t.Errorf("defaults mismatch\nwant: %v\ngot:  %v",
+					tc.lookup.GetDefaults(), got.GetDefaults())
+			}
 
-				// THEN the result is as expected
-				if got != want {
-					t.Errorf("(prefix=%q) got:\n%q\nwant:\n%q",
-						prefix, got, want)
-				}
+			if got.GetHardDefaults() != tc.lookup.GetHardDefaults() {
+				t.Errorf("hardDefaults mismatch\nwant: %v\ngot:  %v",
+					tc.lookup.GetHardDefaults(), got.GetHardDefaults())
 			}
 		})
 	}
 }
 
-func TestLookup_IsEqual(t *testing.T) {
-	// GIVEN two Lookups
+func TestIsEqual(t *testing.T) {
+	// GIVEN two Lookups.
 	tests := map[string]struct {
-		a, b *Lookup
+		a, b Lookup
 		want bool
 	}{
 		"empty": {
-			a:    &Lookup{},
-			b:    &Lookup{},
+			a:    &web.Lookup{},
+			b:    &web.Lookup{},
 			want: true,
 		},
 		"defaults ignored": {
-			a: &Lookup{
-				Defaults: NewDefaults(
-					test.BoolPtr(false))},
-			b:    &Lookup{},
+			a: &web.Lookup{
+				Lookup: base.Lookup{
+					Defaults: &base.Defaults{
+						AllowInvalidCerts: test.BoolPtr(false)}}},
+			b:    &web.Lookup{},
 			want: true,
 		},
 		"hard_defaults ignored": {
-			a: &Lookup{
-				HardDefaults: NewDefaults(
-					test.BoolPtr(false))},
-			b:    &Lookup{},
+			a: &web.Lookup{
+				Lookup: base.Lookup{
+					Defaults: &base.Defaults{
+						AllowInvalidCerts: test.BoolPtr(false)}}},
+			b:    &web.Lookup{},
 			want: true,
 		},
 		"equal": {
-			a: test.IgnoreError(t, func() (*Lookup, error) {
+			a: test.IgnoreError(t, func() (Lookup, error) {
 				return New(
+					"url",
 					"yaml", test.TrimYAML(`
 						method: GET
 						url: https://example.com
@@ -417,8 +311,9 @@ func TestLookup_IsEqual(t *testing.T) {
 					nil,
 					nil, nil)
 			}),
-			b: test.IgnoreError(t, func() (*Lookup, error) {
+			b: test.IgnoreError(t, func() (Lookup, error) {
 				return New(
+					"url",
 					"yaml", test.TrimYAML(`
 						method: GET
 						url: https://example.com
@@ -442,8 +337,9 @@ func TestLookup_IsEqual(t *testing.T) {
 			want: true,
 		},
 		"not equal": {
-			a: test.IgnoreError(t, func() (*Lookup, error) {
+			a: test.IgnoreError(t, func() (Lookup, error) {
 				return New(
+					"url",
 					"yaml", test.TrimYAML(`
 						method: GET
 						url: https://example.com
@@ -464,8 +360,9 @@ func TestLookup_IsEqual(t *testing.T) {
 					nil,
 					nil, nil)
 			}),
-			b: test.IgnoreError(t, func() (*Lookup, error) {
+			b: test.IgnoreError(t, func() (Lookup, error) {
 				return New(
+					"url",
 					"yaml", test.TrimYAML(`
 						method: GET
 						url: https://example.com
@@ -490,7 +387,7 @@ func TestLookup_IsEqual(t *testing.T) {
 		},
 		"not equal with nil": {
 			a: nil,
-			b: &Lookup{
+			b: &web.Lookup{
 				URL: "https://example.com"},
 			want: false,
 		},
@@ -500,12 +397,253 @@ func TestLookup_IsEqual(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the two Lookups are compared
-			got := tc.a.IsEqual(tc.b)
+			// WHEN the two Lookups are compared.
+			got := IsEqual(tc.a, tc.b)
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.want {
 				t.Errorf("got %t, want %t", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestUnmarshalJSON(t *testing.T) {
+	// GIVEN a JSON string.
+	tests := map[string]struct {
+		jsonStr  string
+		errRegex string
+		wantJSON *string
+	}{
+		"Empty": {
+			jsonStr:  "",
+			errRegex: `unexpected end of JSON input`,
+			wantJSON: test.StringPtr(""),
+		},
+		"Invalid formatting": {
+			jsonStr:  "invalid",
+			errRegex: `invalid character`,
+		},
+		"Valid - URL": {
+			jsonStr: test.TrimJSON(`{
+				"type":"url",
+				"url":"https://example.com",
+				"allow_invalid_certs":true
+			}`),
+			errRegex: `^$`,
+		},
+		"Invalid - URL": {
+			jsonStr: test.TrimJSON(`{
+				"type":"url",
+				"url":"https://example.com",
+				"allow_invalid_certs":"true"
+			}`),
+			errRegex: `failed to unmarshal web.Lookup`,
+		},
+		"Unknown type": {
+			jsonStr: test.TrimJSON(`{
+				"type":"foo",
+				"url":"https://example.com",
+				"allow_invalid_certs":true
+			}`),
+			errRegex: `failed to unmarshal deployedver.Lookup`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.wantJSON == nil {
+				tc.wantJSON = &tc.jsonStr
+			}
+
+			// WHEN UnmarshalJSON is called on it.
+			lookupJSON, errJSON := UnmarshalJSON([]byte(tc.jsonStr))
+
+			// THEN any error is as expected.
+			eJSON := util.ErrorToString(errJSON)
+			if !util.RegexCheck(tc.errRegex, eJSON) {
+				t.Errorf("error mismatch on JSON unmarshal of deployedver.Lookup:\n%q\ngot:\n%q",
+					tc.errRegex, eJSON)
+			}
+			if tc.errRegex != "^$" {
+				return
+			}
+			// AND the Lookup is unmarshalled as expected.
+			gotFromJSON := util.ToJSONString(lookupJSON)
+			if *tc.wantJSON != gotFromJSON {
+				t.Errorf("deployedver.Lookup.String() mismatch on JSON unmarshal\n%q\ngot:\n%q",
+					*tc.wantJSON, gotFromJSON)
+			}
+		})
+	}
+}
+
+func TestUnmarshalYAML(t *testing.T) {
+	// GIVEN a YAML string.
+	tests := map[string]struct {
+		yamlStr  string
+		errRegex string
+		wantYAML *string
+	}{
+		"Empty": {
+			yamlStr:  "",
+			errRegex: `failed to unmarshal`,
+			wantYAML: test.StringPtr(""),
+		},
+		"Invalid formatting": {
+			yamlStr:  "{ invalid",
+			errRegex: `did not find expected`,
+		},
+		"Valid - URL": {
+			yamlStr: test.TrimYAML(`
+				type: url
+				url: https://example.com
+				allow_invalid_certs: true
+			`),
+			errRegex: `^$`,
+		},
+		"Invalid - URL": {
+			yamlStr: test.TrimYAML(`
+				type: url
+				url: https://example.com
+				allow_invalid_certs: "true"
+			`),
+			errRegex: `failed to unmarshal web.Lookup`,
+		},
+		"Unknown type": {
+			yamlStr: test.TrimJSON(`{
+				type: foo,
+				url: https://example.com",
+				allow_invalid_certs: true
+			}`),
+			errRegex: `failed to unmarshal deployedver.Lookup`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.wantYAML == nil {
+				tc.wantYAML = &tc.yamlStr
+			}
+
+			// WHEN UnmarshalYAML is called on it.
+			lookupYAML, errYAML := UnmarshalYAML([]byte(tc.yamlStr))
+
+			// THEN any error is as expected.
+			eYAML := util.ErrorToString(errYAML)
+			if !util.RegexCheck(tc.errRegex, eYAML) {
+				t.Errorf("error mismatch on YAML unmarshal of deployedver.Lookup:\n%q\ngot:  %q",
+					tc.errRegex, eYAML)
+			}
+			if tc.errRegex != "^$" {
+				return
+			}
+			// AND the Lookup is unmarshalled as expected.
+			gotFromYAML := lookupYAML.String(lookupYAML, "")
+			if *tc.wantYAML != gotFromYAML {
+				t.Errorf("deployedver.Lookup.String() mismatch on YAML unmarshal\n%q\ngot:  %q",
+					*tc.wantYAML, gotFromYAML)
+			}
+		})
+	}
+}
+
+func TestUnmarshal(t *testing.T) {
+	// GIVEN an input string in a specified format.
+	tests := map[string]struct {
+		format, data string
+		wantType     string
+		errRegex     string
+	}{
+		"valid JSON - URL": {
+			data: test.TrimJSON(`{
+				"type": "url",
+				"url": "https://example.com"
+			}`),
+			format:   "json",
+			wantType: "url",
+		},
+		"valid YAML - URL": {
+			data: test.TrimYAML(`
+				type: url
+				url: https://example.com
+			`),
+			format:   "yaml",
+			wantType: "url",
+		},
+		"invalid format": {
+			data:     `{"type": "url"}`,
+			format:   "xml",
+			errRegex: `unknown format: "xml"`,
+		},
+		"unknown type": {
+			data: test.TrimJSON(`{
+				"type": "unknown",
+				"url": "https://example.com"
+			}`),
+			format: "json",
+			errRegex: test.TrimYAML(`
+			^failed to unmarshal deployedver.Lookup:
+			type: "unknown" <invalid>.*$`),
+		},
+		"invalid JSON": {
+			data: test.TrimYAML(`{
+				"type": "url",
+				"url": https://example.com
+			}`),
+			format: "json",
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal deployedver.Lookup:
+				invalid character.*$`),
+		},
+		"invalid YAML": {
+			data: test.TrimYAML(`
+				type: url
+				url: https://example.com
+				invalid
+			`),
+			format: "yaml",
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal deployedver.Lookup:
+				line \d+: .*$`),
+		},
+		"invalid URL": {
+			data: test.TrimYAML(`
+				type: url
+				url:
+					invalid: true
+			`),
+			format: "yaml",
+			errRegex: test.TrimYAML(`
+				failed to unmarshal web.Lookup:
+				yaml: .+
+				.* cannot unmarshal .*$`),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN unmarshal is called on the input.
+			got, err := unmarshal([]byte(tc.data), tc.format)
+
+			// THEN any error is as expected.
+			if err != nil {
+				if !util.RegexCheck(tc.errRegex, err.Error()) {
+					t.Errorf("unmarshal() error mismatch\nwant: %q\ngot:  %q",
+						tc.errRegex, err)
+				}
+				return
+			}
+			// AND the correct type is returned.
+			if got.GetType() != tc.wantType {
+				t.Errorf("unmarshal() type mismatch\nwant: %q\ngot:  %q",
+					tc.wantType, got.GetType())
 			}
 		})
 	}

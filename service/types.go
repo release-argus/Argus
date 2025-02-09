@@ -25,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
@@ -85,13 +86,13 @@ func (s *Slice) giveIDs() {
 
 // Defaults are the default values for a Service.
 type Defaults struct {
-	Options               opt.Defaults             `yaml:"options,omitempty" json:"options,omitempty"`                   // Options to give the Service.
-	LatestVersion         latestver_base.Defaults  `yaml:"latest_version,omitempty" json:"latest_version,omitempty"`     // Vars to scrape the latest version of the Service.
-	DeployedVersionLookup deployedver.Defaults     `yaml:"deployed_version,omitempty" json:"deployed_version,omitempty"` // Vars to scrape the Service's current deployed version.
-	Notify                map[string]struct{}      `yaml:"notify,omitempty" json:"notify,omitempty"`                     // Default Notifiers to give a Service.
-	Command               command.Slice            `yaml:"command,omitempty" json:"command,omitempty"`                   // Default Commands to give a Service.
-	WebHook               map[string]struct{}      `yaml:"webhook,omitempty" json:"webhook,omitempty"`                   // Default WebHooks to give a Service.
-	Dashboard             DashboardOptionsDefaults `yaml:"dashboard,omitempty" json:"dashboard,omitempty"`               // Dashboard defaults.
+	Options               opt.Defaults              `yaml:"options,omitempty" json:"options,omitempty"`                   // Options to give the Service.
+	LatestVersion         latestver_base.Defaults   `yaml:"latest_version,omitempty" json:"latest_version,omitempty"`     // Vars to scrape the latest version of the Service.
+	DeployedVersionLookup deployedver_base.Defaults `yaml:"deployed_version,omitempty" json:"deployed_version,omitempty"` // Vars to scrape the Service's current deployed version.
+	Notify                map[string]struct{}       `yaml:"notify,omitempty" json:"notify,omitempty"`                     // Default Notifiers to give a Service.
+	Command               command.Slice             `yaml:"command,omitempty" json:"command,omitempty"`                   // Default Commands to give a Service.
+	WebHook               map[string]struct{}       `yaml:"webhook,omitempty" json:"webhook,omitempty"`                   // Default WebHooks to give a Service.
+	Dashboard             DashboardOptionsDefaults  `yaml:"dashboard,omitempty" json:"dashboard,omitempty"`               // Dashboard defaults.
 
 	Status status.Defaults `yaml:"-" json:"-"` // Track the Status of this source (version and regex misses).
 }
@@ -99,14 +100,14 @@ type Defaults struct {
 // Service is a source to track latest and deployed versions of a service.
 // It also has the ability to run commands, send notifications and send WebHooks on new releases.
 type Service struct {
-	ID                    string              `yaml:"-" json:"-"`                                                   // Key/Name of the Service.
-	Name                  string              `yaml:"-" json:"-"`                                                   // Name of the Service.
-	marshalName           bool                ``                                                                    // Whether to marshal the Name.
-	Comment               string              `yaml:"-" json:"-"`                                                   // Comment on the Service.
-	Options               opt.Options         `yaml:"-" json:"-"`                                                   // Options to give the Service.
-	LatestVersion         latestver.Lookup    `yaml:"-" json:"-"`                                                   // Vars to scrape the latest version of the Service.
-	DeployedVersionLookup *deployedver.Lookup `yaml:"deployed_version,omitempty" json:"deployed_version,omitempty"` // Vars to scrape the Service's current deployed version.
-	Notify                shoutrrr.Slice      `yaml:"notify,omitempty" json:"notify,omitempty"`                     // Service-specific Shoutrrr vars.
+	ID                    string             `yaml:"-" json:"-"`                               // Key/Name of the Service.
+	Name                  string             `yaml:"-" json:"-"`                               // Name of the Service.
+	marshalName           bool               ``                                                // Whether to marshal the Name.
+	Comment               string             `yaml:"-" json:"-"`                               // Comment on the Service.
+	Options               opt.Options        `yaml:"-" json:"-"`                               // Options to give the Service.
+	LatestVersion         latestver.Lookup   `yaml:"-" json:"-"`                               // Vars to scrape the latest version of the Service.
+	DeployedVersionLookup deployedver.Lookup `yaml:"-" json:"-"`                               // Vars to scrape the Service's current deployed version.
+	Notify                shoutrrr.Slice     `yaml:"notify,omitempty" json:"notify,omitempty"` // Service-specific Shoutrrr vars.
 	notifyFromDefaults    bool
 	CommandController     *command.Controller `yaml:"-" json:"-"`                                 // The controller for the OS Commands that tracks fails and has the announce channel.
 	Command               command.Slice       `yaml:"command,omitempty" json:"command,omitempty"` // OS Commands to run on new release.
@@ -121,7 +122,7 @@ type Service struct {
 	HardDefaults *Defaults `yaml:"-" json:"-"` // Hardcoded default values.
 }
 
-// MarshalName returns whether the Name should be marshaled.
+// MarshalName returns whether the Name should be marshalled.
 // (explicitly set in the config).
 func (s *Service) MarshalName() bool {
 	return s.marshalName
@@ -162,27 +163,27 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 			LatestVersionTimestamp:   s.Status.LatestVersionTimestamp(),
 			LastQueried:              s.Status.LastQueried()}}
 
-	// IconLinkTo
+	// IconLinkTo.
 	if s.Dashboard.IconLinkTo != "" {
 		summary.IconLinkTo = &s.Dashboard.IconLinkTo
 	}
 
-	// Name
+	// Name.
 	if s.MarshalName() {
 		summary.Name = &s.Name
 	}
 
-	// Tags
+	// Tags.
 	if len(s.Dashboard.Tags) != 0 {
 		summary.Tags = &s.Dashboard.Tags
 	}
 
-	// Command
+	// Command.
 	if len(s.Command) != 0 {
 		commands := len(s.Command)
 		summary.Command = &commands
 	}
-	// WebHook
+	// WebHook.
 	if len(s.WebHook) != 0 {
 		webhooks := len(s.WebHook)
 		summary.WebHook = &webhooks
@@ -206,11 +207,12 @@ func (s *Service) UnmarshalJSON(data []byte) error {
 	// Alias to avoid recursion.
 	type Alias Service
 	aux := &struct {
-		*Alias        `json:",inline"` // Embed the original struct.
-		Name          *string          `json:"name,omitempty"`           // Name of the Service.
-		Comment       *string          `json:"comment,omitempty"`        // Comment on the Service.
-		Options       *opt.Options     `json:"options,omitempty"`        // Options to give the Service.
-		LatestVersion json.RawMessage  `json:"latest_version,omitempty"` // Temp LatestVersion field to get Type.
+		*Alias          `json:",inline"` // Embed the original struct.
+		Name            *string          `json:"name,omitempty"`             // Name of the Service.
+		Comment         *string          `json:"comment,omitempty"`          // Comment on the Service.
+		Options         *opt.Options     `json:"options,omitempty"`          // Options to give the Service.
+		LatestVersion   json.RawMessage  `json:"latest_version,omitempty"`   // Temp LatestVersion field to get Type.
+		DeployedVersion json.RawMessage  `json:"deployed_version,omitempty"` // Temp DeployedVersion field to get Type.
 	}{
 		Alias:   (*Alias)(s),
 		Name:    &s.Name,
@@ -223,45 +225,42 @@ func (s *Service) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("failed to unmarshal Service:\n%w", err)
 	}
 
-	// Name
+	// Name.
 	if s.Name != "" {
 		s.marshalName = true
 	}
 
 	// -- Dynamic LatestVersion type --
-	if aux.LatestVersion == nil {
-		return nil
-	}
-
-	// Check for the type field in the JSON.
-	var typeField struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(aux.LatestVersion, &typeField); err != nil {
-		return fmt.Errorf("error in latest_version field:\ntype: <invalid> (%s)",
-			strings.Replace(err.Error(), "json: ", "", 1))
-	}
-
-	var err error
-	// If we don't have a type in the JSON, check if we already have a type in the struct.
-	if typeField.Type == "" {
-		// Have a LatestVersion struct, so unmarshal into it.
-		if s.LatestVersion != nil {
-			err = json.Unmarshal(aux.LatestVersion, s.LatestVersion)
-		} else
-		// No LatestVersion struct and the type remains absent.
-		{
-			err = fmt.Errorf("type: <required> [%s]",
-				strings.Join(latestver.PossibleTypes, ", "))
-		}
+	if aux.LatestVersion != nil {
+		lookupType, err := extractLookupType("json", aux.LatestVersion, s.LatestVersion)
 		if err != nil {
-			return fmt.Errorf("error in latest_version field:\n%w", err)
+			return fmt.Errorf("failed to unmarshal Service.LatestVersion:\n%w", err)
 		}
-	} else
-	// We have a type in the JSON, so we can unmarshal it.
-	{
-		if s.LatestVersion, err = latestver.UnmarshalJSON(aux.LatestVersion); err != nil {
-			return fmt.Errorf("error in latest_version field:\n%w", err)
+		s.LatestVersion, err = latestver.New(
+			lookupType,
+			"json", aux.LatestVersion,
+			nil,
+			nil,
+			nil, nil)
+		if err != nil {
+			return err //nolint:wrapcheck
+		}
+	}
+
+	// -- Dynamic DeployedVersion type --
+	if aux.DeployedVersion != nil {
+		lookupType, err := extractLookupType("json", aux.DeployedVersion, s.DeployedVersionLookup)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal Service.DeployedVersion:\n%w", err)
+		}
+		s.DeployedVersionLookup, err = deployedver.New(
+			lookupType,
+			"json", aux.DeployedVersion,
+			nil,
+			nil,
+			nil, nil)
+		if err != nil {
+			return err //nolint:wrapcheck
 		}
 	}
 
@@ -275,17 +274,19 @@ func (s *Service) MarshalJSON() ([]byte, error) {
 	// Alias to avoid recursion.
 	type Alias Service
 	aux := &struct {
-		Name          string           `json:"name,omitempty"`           // Name of the Service.
-		Comment       string           `json:"comment,omitempty"`        // Comment on the Service.
-		Options       opt.Options      `json:"options,omitempty"`        // Options to give the Service.
-		LatestVersion latestver.Lookup `json:"latest_version,omitempty"` // Vars to getting the latest version of the Service.
-		*Alias        `json:",inline"` // Embed the original struct.
+		Name            string             `json:"name,omitempty"`             // Name of the Service.
+		Comment         string             `json:"comment,omitempty"`          // Comment on the Service.
+		Options         opt.Options        `json:"options,omitempty"`          // Options to give the Service.
+		LatestVersion   latestver.Lookup   `json:"latest_version,omitempty"`   // Vars to getting the latest version of the Service.
+		DeployedVersion deployedver.Lookup `json:"deployed_version,omitempty"` // Vars to getting the deployed version of the Service.
+		*Alias          `json:",inline"`   // Embed the original struct.
 	}{
-		Name:          s.Name,
-		Comment:       s.Comment,
-		Options:       s.Options,
-		LatestVersion: s.LatestVersion,
-		Alias:         (*Alias)(s),
+		Name:            s.Name,
+		Comment:         s.Comment,
+		Options:         s.Options,
+		LatestVersion:   s.LatestVersion,
+		DeployedVersion: s.DeployedVersionLookup,
+		Alias:           (*Alias)(s),
 	}
 
 	if !s.MarshalName() {
@@ -295,6 +296,46 @@ func (s *Service) MarshalJSON() ([]byte, error) {
 	return json.Marshal(aux) //nolint:wrapcheck
 }
 
+type structWithGetType interface {
+	GetType() string
+}
+
+// extractLookupType extracts the type field from the YAML,
+// or uses the GetType from the struct if it's not in the YAML,
+// and the struct is non-nil.
+func extractLookupType(
+	dataFormat string,
+	data interface{},
+	lookup structWithGetType,
+) (string, error) {
+	// Check for the type field in the YAML.
+	var typeField struct {
+		Type string `yaml:"type"`
+	}
+	var err error
+	switch v := data.(type) {
+	case *yaml.Node:
+		err = v.Decode(&typeField)
+	case json.RawMessage:
+		err = json.Unmarshal(v, &typeField)
+	}
+	if err != nil {
+		return "", fmt.Errorf("invalid %s:\n%s",
+			dataFormat, strings.TrimPrefix(err.Error(), dataFormat+": "))
+	}
+
+	if typeField.Type != "" {
+		return typeField.Type, nil
+	}
+
+	// If we don't have a type in the YAML, check if we already have a type in the struct.
+	if lookup != nil {
+		return lookup.GetType(), nil
+	}
+	// Invalid, but let the New function handle it.
+	return "", nil
+}
+
 // UnmarshalYAML handles the unmarshalling of a Service.
 //
 // (dynamic typing).
@@ -302,11 +343,12 @@ func (s *Service) UnmarshalYAML(value *yaml.Node) error {
 	// Alias to avoid recursion.
 	type Alias Service
 	aux := &struct {
-		*Alias        `yaml:",inline"` // Embed the original struct.
-		Name          *string          `yaml:"name,omitempty"`           // Name of the Service.
-		Comment       *string          `yaml:"comment,omitempty"`        // Comment on the Service.
-		Options       *opt.Options     `yaml:"options,omitempty"`        // Options to give the Service.
-		LatestVersion util.RawNode     `yaml:"latest_version,omitempty"` // Temp LatestVersion field to get Type.
+		*Alias          `yaml:",inline"` // Embed the original struct.
+		Name            *string          `yaml:"name,omitempty"`             // Name of the Service.
+		Comment         *string          `yaml:"comment,omitempty"`          // Comment on the Service.
+		Options         *opt.Options     `yaml:"options,omitempty"`          // Options to give the Service.
+		LatestVersion   util.RawNode     `yaml:"latest_version,omitempty"`   // Temp LatestVersion field to get Type.
+		DeployedVersion util.RawNode     `yaml:"deployed_version,omitempty"` // Temp DeployedVersion field to get Type.
 	}{
 		Alias:   (*Alias)(s),
 		Name:    &s.Name,
@@ -319,51 +361,47 @@ func (s *Service) UnmarshalYAML(value *yaml.Node) error {
 		return fmt.Errorf("failed to unmarshal Service:\n%w", err)
 	}
 
-	// Name
+	// Name.
 	if s.Name != "" {
 		s.marshalName = true
 	}
 
 	// -- Dynamic LatestVersion type --
-	if aux.LatestVersion.Node == nil {
-		return nil
-	}
-
-	// Check for the type field in the YAML.
-	var typeField struct {
-		Type string `json:"type"`
-	}
-	if err := aux.LatestVersion.Decode(&typeField); err != nil {
-		return fmt.Errorf("error in latest_version field:\ntype: <invalid> (%q)",
-			strings.Replace(err.Error(), "yaml: unmarshal errors:\n  ", "", 1))
-	}
-
-	var err error
-	// If we don't have a type in the YAML, check if we already have a type in the struct.
-	if typeField.Type == "" {
-		// Have a LatestVersion struct, so unmarshal into it.
-		if s.LatestVersion != nil {
-			err = aux.LatestVersion.Decode(s.LatestVersion)
-		} else
-		// No LatestVersion struct and the type remains absent, so error.
-		{
-			err = fmt.Errorf("type: <required> [%s]",
-				strings.Join(latestver.PossibleTypes, ", "))
-		}
+	if aux.LatestVersion.Node != nil {
+		lookupType, err := extractLookupType("yaml", aux.LatestVersion.Node, s.LatestVersion)
 		if err != nil {
-			return fmt.Errorf("error in latest_version field:\n%w", err)
+			return fmt.Errorf("failed to unmarshal Service.LatestVersion:\n%w", err)
 		}
-	} else
-	// We have a type in the YAML, so we can unmarshal it.
-	{
-		// Validate the type and create the appropriate Lookup instance.
-		if s.LatestVersion, err = latestver.New(
-			typeField.Type,
+		s.LatestVersion, err = latestver.New(
+			lookupType,
 			"yaml", aux.LatestVersion.Node,
 			nil,
 			nil,
-			nil, nil); err != nil {
-			return fmt.Errorf("error in latest_version field:\n%w", err)
+			nil, nil)
+		if err != nil {
+			return err //nolint:wrapcheck
+		}
+	}
+
+	// -- Dynamic DeployedVersion type --
+	if aux.DeployedVersion.Node != nil {
+		lookupType, err := extractLookupType("yaml", aux.DeployedVersion.Node, s.DeployedVersionLookup)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal Service.DeployedVersion:\n%w", err)
+		}
+		if lookupType == "" {
+			// Default to url.
+			lookupType = "url"
+		}
+
+		s.DeployedVersionLookup, err = deployedver.New(
+			lookupType,
+			"yaml", aux.DeployedVersion.Node,
+			nil,
+			nil,
+			nil, nil)
+		if err != nil {
+			return err //nolint:wrapcheck
 		}
 	}
 
@@ -377,17 +415,19 @@ func (s *Service) MarshalYAML() (interface{}, error) {
 	// Alias to avoid recursion.
 	type Alias Service
 	aux := &struct {
-		Name          string           `yaml:"name,omitempty"`           // Name of the Service.
-		Comment       string           `yaml:"comment,omitempty"`        // Comment on the Service.
-		Options       opt.Options      `yaml:"options,omitempty"`        // Options to give the Service.
-		LatestVersion latestver.Lookup `yaml:"latest_version,omitempty"` // Vars to getting the latest version of the Service.
-		*Alias        `yaml:",inline"` // Embed the original struct.
+		Name            string             `yaml:"name,omitempty"`             // Name of the Service.
+		Comment         string             `yaml:"comment,omitempty"`          // Comment on the Service.
+		Options         opt.Options        `yaml:"options,omitempty"`          // Options to give the Service.
+		LatestVersion   latestver.Lookup   `yaml:"latest_version,omitempty"`   // Vars to getting the latest version of the Service.
+		DeployedVersion deployedver.Lookup `yaml:"deployed_version,omitempty"` // Vars to getting the deployed version of the Service.
+		*Alias          `yaml:",inline"`   // Embed the original struct.
 	}{
-		Name:          s.Name,
-		Comment:       s.Comment,
-		Options:       s.Options,
-		LatestVersion: s.LatestVersion,
-		Alias:         (*Alias)(s),
+		Name:            s.Name,
+		Comment:         s.Comment,
+		Options:         s.Options,
+		LatestVersion:   s.LatestVersion,
+		DeployedVersion: s.DeployedVersionLookup,
+		Alias:           (*Alias)(s),
 	}
 
 	if !s.MarshalName() {

@@ -33,7 +33,7 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	// GIVEN a Lookup and its dependencies
+	// GIVEN a Lookup and its dependencies.
 	options := &opt.Options{}
 	status := &status.Status{}
 	defaults := &Defaults{
@@ -48,10 +48,10 @@ func TestInit(t *testing.T) {
 		Require: require,
 	}
 
-	// WHEN Init is called
+	// WHEN Init is called.
 	l.Init(options, status, defaults, hardDefaults)
 
-	// THEN the fields are initialised correctly
+	// THEN the fields are initialised correctly.
 	if l.Options != options {
 		t.Errorf("latest_ver.Lookup.Init() unexpected Options\nwant: %v\ngot:  %v",
 			options, l.Options)
@@ -69,7 +69,7 @@ func TestInit(t *testing.T) {
 			hardDefaults, l.HardDefaults)
 	}
 
-	// AND the Require field is initialised correctly
+	// AND the Require field is initialised correctly.
 	if l.Require == nil {
 		t.Fatalf("latest_ver.Lookup.Init() Require should not be nil")
 	}
@@ -78,22 +78,45 @@ func TestInit(t *testing.T) {
 			wantRequireRegexContent, l.Require.RegexContent)
 	}
 
-	// GIVEN a Lookup with an empty Require
+	// GIVEN a Lookup with an empty Require.
 	l = &Lookup{
 		Require: &filter.Require{},
 	}
 
-	// WHEN Init is called
+	// WHEN Init is called.
 	l.Init(options, status, defaults, hardDefaults)
 
-	// THEN the Require field is set to nil
+	// THEN the Require field is set to nil.
 	if l.Require != nil {
 		t.Errorf("latest_ver.Lookup.Init() Require should be nil when empty")
 	}
 }
 
+func TestString(t *testing.T) {
+	// GIVEN a Lookup and a parentLookup.
+	parentLookup := &testLookup{
+		Lookup: Lookup{
+			Type: "foo",
+			URL:  "https://example.com/other"}}
+	l := &testLookup{
+		Lookup: Lookup{
+			Type: "test",
+			URL:  "https://example.com"}}
+	prefix := "  "
+
+	// WHEN String is called.
+	got := l.String(parentLookup, prefix)
+
+	// THEN the result is as expected.
+	want := util.ToYAMLString(parentLookup, prefix)
+	if got != want {
+		t.Errorf("unexpected String()\nwant: %q\ngot:  %q",
+			want, got)
+	}
+}
+
 func TestIsEqual(t *testing.T) {
-	// GIVEN two Lookups
+	// GIVEN two Lookups.
 	tests := map[string]struct {
 		a, b Interface
 		want bool
@@ -161,7 +184,7 @@ func TestIsEqual(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// Set Status vars just to ensure they're not printed
+			// Set Status vars just to ensure they are not printed.
 			status := &status.Status{}
 			status.Init(
 				0, 0, 0,
@@ -170,10 +193,10 @@ func TestIsEqual(t *testing.T) {
 			status.SetLatestVersion("foo", "", false)
 			tc.a.(*testLookup).Status = status
 
-			// WHEN the two Lookups are compared
+			// WHEN the two Lookups are compared.
 			got := tc.a.IsEqual(tc.a, tc.b)
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.want {
 				t.Errorf("got %t, want %t", got, tc.want)
 			}
@@ -182,17 +205,17 @@ func TestIsEqual(t *testing.T) {
 }
 
 func TestGetServiceID(t *testing.T) {
-	// GIVEN a Lookup with a Status containing a ServiceID
+	// GIVEN a Lookup with a Status containing a ServiceID.
 	serviceID := "foo"
 	l := &testLookup{
 		Lookup: Lookup{
 			Status: &status.Status{
 				ServiceID: test.StringPtr(serviceID)}}}
 
-	// WHEN GetService is called
+	// WHEN GetService is called.
 	got := l.GetServiceID()
 
-	// THEN the ServiceID is returned
+	// THEN the ServiceID is returned.
 	if got != serviceID {
 		t.Errorf("Unexpected ServiceID returned\nwant: %q\ngot:  %q",
 			serviceID, got)
@@ -200,15 +223,15 @@ func TestGetServiceID(t *testing.T) {
 }
 
 func TestGetType(t *testing.T) {
-	// GIVEN a Lookup with a Type
+	// GIVEN a Lookup with a Type.
 	lookupType := "test"
 	l := &testLookup{
 		Lookup: Lookup{Type: lookupType}}
 
-	// WHEN GetType is called
+	// WHEN GetType is called.
 	got := l.GetType()
 
-	// THEN the Type is returned
+	// THEN the Type is returned.
 	if got != lookupType {
 		t.Errorf("unexpected Type\nwant: %q\ngot:  %q",
 			lookupType, got)
@@ -216,16 +239,16 @@ func TestGetType(t *testing.T) {
 }
 
 func TestGetOptions(t *testing.T) {
-	// GIVEN a Lookup with Options
+	// GIVEN a Lookup with Options.
 	options := &opt.Options{}
 	l := &testLookup{
 		Lookup: Lookup{
 			Options: options}}
 
-	// WHEN GetOptions is called
+	// WHEN GetOptions is called.
 	got := l.GetOptions()
 
-	// THEN the Options are returned
+	// THEN the Options are returned.
 	if got != options {
 		t.Errorf("unexpected Options\nwant: %v\ngot:  %v",
 			options, got)
@@ -233,15 +256,15 @@ func TestGetOptions(t *testing.T) {
 }
 
 func TestGetRequite(t *testing.T) {
-	// GIVEN a Lookup with Require
+	// GIVEN a Lookup with Require.
 	require := &filter.Require{}
 	l := &testLookup{
 		Lookup: Lookup{Require: require}}
 
-	// WHEN GetRequire is called
+	// WHEN GetRequire is called.
 	got := l.GetRequire()
 
-	// THEN the Require is returned
+	// THEN the Require is returned.
 	if got != require {
 		t.Errorf("unexpected Require\nwant: %v\ngot:  %v",
 			require, got)
@@ -249,16 +272,16 @@ func TestGetRequite(t *testing.T) {
 }
 
 func TestGetStatus(t *testing.T) {
-	// GIVEN a Lookup with Status
+	// GIVEN a Lookup with Status.
 	status := &status.Status{}
 	l := &testLookup{
 		Lookup: Lookup{
 			Status: status}}
 
-	// WHEN GetStatus is called
+	// WHEN GetStatus is called.
 	got := l.GetStatus()
 
-	// THEN the Status is returned
+	// THEN the Status is returned.
 	if got != status {
 		t.Errorf("unexpected Status\nwant: %v\ngot:  %v",
 			status, got)
@@ -266,15 +289,15 @@ func TestGetStatus(t *testing.T) {
 }
 
 func TestGetDefaults(t *testing.T) {
-	// GIVEN a Lookup with Defaults
+	// GIVEN a Lookup with Defaults.
 	defaults := &Defaults{}
 	l := &testLookup{
 		Lookup: Lookup{Defaults: defaults}}
 
-	// WHEN GetDefaults is called
+	// WHEN GetDefaults is called.
 	got := l.GetDefaults()
 
-	// THEN the Defaults are returned
+	// THEN the Defaults are returned.
 	if got != defaults {
 		t.Errorf("unexpected Defaults\nwant: %v\ngot:  %v",
 			defaults, got)
@@ -282,15 +305,15 @@ func TestGetDefaults(t *testing.T) {
 }
 
 func TestGetHardDefaults(t *testing.T) {
-	// GIVEN a Lookup with HardDefaults
+	// GIVEN a Lookup with HardDefaults.
 	hardDefaults := &Defaults{}
 	l := &testLookup{
 		Lookup: Lookup{HardDefaults: hardDefaults}}
 
-	// WHEN GetHardDefaults is called
+	// WHEN GetHardDefaults is called.
 	got := l.GetHardDefaults()
 
-	// THEN the HardDefaults are returned
+	// THEN the HardDefaults are returned.
 	if got != hardDefaults {
 		t.Errorf("unexpected HardDefaults\nwant: %v\ngot:  %v",
 			hardDefaults, got)
@@ -306,7 +329,7 @@ func TestServiceURL(t *testing.T) {
 	testWebURL := "https://example.com/release"
 	testWebURLTemplate := "https://example.com/release/{{ version }}"
 
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		lookupArgs   lookupArgs
 		ignoreWebURL bool
@@ -353,10 +376,10 @@ func TestServiceURL(t *testing.T) {
 			lookup.Status.WebURL = &tc.lookupArgs.webURL
 			lookup.Status.SetLatestVersion(tc.lookupArgs.latestVersion, "", false)
 
-			// WHEN ServiceURL is called
+			// WHEN ServiceURL is called.
 			got := lookup.ServiceURL(tc.ignoreWebURL)
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.expectedURL {
 				t.Errorf("unexpected ServiceURL()\nwant: %q\ngot:  %q",
 					tc.expectedURL, got)
@@ -366,7 +389,7 @@ func TestServiceURL(t *testing.T) {
 }
 
 func TestCheckValues(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		yamlStr  string
 		errRegex string
@@ -423,16 +446,16 @@ func TestCheckValues(t *testing.T) {
 			t.Parallel()
 
 			l := &testLookup{}
-			// apply the YAML
+			// apply the YAML.
 			if err := yaml.Unmarshal([]byte(tc.yamlStr), l); err != nil {
 				t.Fatalf("error unmarshalling YAML: %v",
 					err)
 			}
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := l.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
@@ -462,7 +485,7 @@ func checkDockerToken(t *testing.T, gotQueryToken, wantQueryToken string, gotVal
 }
 
 func TestInherit(t *testing.T) {
-	// GIVEN two Lookups with/without Require
+	// GIVEN two Lookups with/without Require.
 	tests := map[string]struct {
 		overrides          string
 		inheritDockerToken bool
@@ -522,10 +545,10 @@ func TestInherit(t *testing.T) {
 					err)
 			}
 
-			// WHEN Inherit is called
+			// WHEN Inherit is called.
 			toLookup.Inherit(fromLookup)
 
-			// THEN the Docker.(QueryToken|ValidUntil) are copied over when expected
+			// THEN the Docker.(QueryToken|ValidUntil) are copied over when expected.
 			if tc.inheritDockerToken {
 				if toLookup.Require == nil || toLookup.Require.Docker == nil ||
 					fromLookup.Require == nil || fromLookup.Require.Docker == nil {
@@ -551,16 +574,16 @@ func TestInherit(t *testing.T) {
 }
 
 func TestQuery(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	l := &testLookup{
 		Lookup: Lookup{
 			Type: "test",
 			URL:  "https://example.com"}}
 
-	// WHEN Query is called
+	// WHEN Query is called.
 	gotBool, gotErr := l.Query(true, logutil.LogFrom{})
 
-	// THEN the function returns false and an error as it is not implemented
+	// THEN the function returns false and an error as it is not implemented.
 	if gotBool != false {
 		t.Errorf("unexpected return value\nwant: false\ngot:  %t",
 			gotBool)

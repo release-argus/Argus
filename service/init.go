@@ -137,10 +137,12 @@ func (s *Service) Init(
 	}
 
 	// DeployedVersionLookup.
-	s.DeployedVersionLookup.Init(
-		&s.Options,
-		&s.Status,
-		&s.Defaults.DeployedVersionLookup, &s.HardDefaults.DeployedVersionLookup)
+	if s.DeployedVersionLookup != nil {
+		s.DeployedVersionLookup.Init(
+			&s.Options,
+			&s.Status,
+			&s.Defaults.DeployedVersionLookup, &s.HardDefaults.DeployedVersionLookup)
+	}
 }
 
 // initMetrics will initialise the Prometheus metrics for the Service.
@@ -148,7 +150,9 @@ func (s *Service) initMetrics() {
 	if s.LatestVersion != nil {
 		s.LatestVersion.InitMetrics(s.LatestVersion)
 	}
-	s.DeployedVersionLookup.InitMetrics()
+	if s.DeployedVersionLookup != nil {
+		s.DeployedVersionLookup.InitMetrics(s.DeployedVersionLookup)
+	}
 	s.Notify.InitMetrics()
 	s.CommandController.InitMetrics()
 	s.WebHook.InitMetrics()
@@ -161,7 +165,9 @@ func (s *Service) deleteMetrics() {
 	if s.LatestVersion != nil {
 		s.LatestVersion.DeleteMetrics(s.LatestVersion)
 	}
-	s.DeployedVersionLookup.DeleteMetrics()
+	if s.DeployedVersionLookup != nil {
+		s.DeployedVersionLookup.DeleteMetrics(s.DeployedVersionLookup)
+	}
 	s.Notify.DeleteMetrics()
 	s.CommandController.DeleteMetrics()
 	s.WebHook.DeleteMetrics()

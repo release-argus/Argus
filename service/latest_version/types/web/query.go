@@ -59,11 +59,10 @@ func (l *Lookup) query(logFrom logutil.LogFrom) (bool, error) {
 	l.Status.SetLastQueried("")
 
 	// If this version differs (new?).
-	previousLatestVersion := l.Status.LatestVersion()
-	if version != previousLatestVersion {
+	if previousVersion := l.Status.LatestVersion(); version != previousVersion {
 		// Verify Semantic Versioning (if enabled).
 		if l.Options.GetSemanticVersioning() {
-			if err := l.VerifySemanticVersioning(version, previousLatestVersion, logFrom); err != nil {
+			if err := l.VerifySemanticVersioning(version, previousVersion, logFrom); err != nil {
 				return false, err //nolint: wrapcheck
 			}
 		}
@@ -87,6 +86,7 @@ func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
+	// Create the request.
 	req, err := http.NewRequest(http.MethodGet, l.URL, nil)
 	if err != nil {
 		err = fmt.Errorf("failed creating http request for %q: %w",
@@ -98,6 +98,7 @@ func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 	// Set headers.
 	req.Header.Set("Connection", "close")
 
+	// Send the request.
 	client := &http.Client{Transport: customTransport}
 	resp, err := client.Do(req)
 	if err != nil {

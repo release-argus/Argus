@@ -73,7 +73,7 @@ func (c *Config) Save() {
 		logutil.LogFrom{}, err != nil)
 	defer file.Close()
 
-	// Create the yaml encoder and set indentation.
+	// Create the YAML encoder and set indentation.
 	yamlEncoder := yaml.NewEncoder(file)
 	yamlEncoder.SetIndent(int(c.Settings.Indentation))
 

@@ -28,7 +28,7 @@ import (
 )
 
 func TestHeaders_UnmarshalYAML(t *testing.T) {
-	// GIVEN a string to unmarshal as a Headers
+	// GIVEN a string to unmarshal as a Headers.
 	tests := map[string]struct {
 		input    string
 		expected Headers
@@ -67,7 +67,7 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 				{Key: "foo", Value: "bar"}},
 			errRegex: `^$`,
 		},
-		"expected []Headers format yaml": {
+		"expected []Headers format YAML": {
 			input: test.TrimYAML(`
 				- key: foo
 					value: bar
@@ -90,11 +90,11 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			// WHEN the string is unmarshaled
+			// WHEN the string is unmarshalled.
 			var headers Headers
 			err := yaml.Unmarshal([]byte(tc.input), &headers)
 
-			// THEN we get an error if expected
+			// THEN we get an error if expected.
 			if tc.errRegex != "" || err != nil {
 				e := util.ErrorToString(err)
 				if !util.RegexCheck(tc.errRegex, e) {
@@ -103,7 +103,7 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 				}
 				return
 			}
-			// AND the Headers are as expected
+			// AND the Headers are as expected.
 			if len(headers) != len(tc.expected) {
 				t.Fatalf("Got differing amounts of headers\ngot: %v\nwant: %v", headers, tc.expected)
 			}
@@ -160,7 +160,7 @@ func TestDefaults_String(t *testing.T) {
 				max_tries: 4
 				silent_fails: true`),
 		},
-		"quotes otherwise invalid yaml strings": {
+		"quotes otherwise invalid YAML strings": {
 			webhook: NewDefaults(
 				nil,
 				&Headers{
@@ -186,10 +186,10 @@ func TestDefaults_String(t *testing.T) {
 					want += "\n"
 				}
 
-				// WHEN the Defaults are stringified with String
+				// WHEN the Defaults are stringified with String.
 				got := tc.webhook.String(prefix)
 
-				// THEN the result is as expected
+				// THEN the result is as expected.
 				want = strings.TrimPrefix(want, "\n")
 				if got != want {
 					t.Fatalf("(prefix=%q) got:\n%q\nwant:\n%q",
@@ -260,7 +260,7 @@ func TestWebHook_String(t *testing.T) {
 				silent_fails: true
 			`),
 		},
-		"quotes otherwise invalid yaml strings": {
+		"quotes otherwise invalid YAML strings": {
 			webhook: New(
 				nil,
 				&Headers{
@@ -277,10 +277,10 @@ func TestWebHook_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the WebHook is stringified with String
+			// WHEN the WebHook is stringified with String.
 			got := tc.webhook.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
@@ -339,7 +339,7 @@ func TestSliceDefaults_String(t *testing.T) {
 					type: gitlab
 					url: https://other.com`),
 		},
-		"quotes otherwise invalid yaml strings": {
+		"quotes otherwise invalid YAML strings": {
 			slice: &SliceDefaults{
 				"invalid": NewDefaults(
 					nil,
@@ -368,10 +368,10 @@ func TestSliceDefaults_String(t *testing.T) {
 					want += "\n"
 				}
 
-				// WHEN the Slice is stringified with String
+				// WHEN the Slice is stringified with String.
 				got := tc.slice.String(prefix)
 
-				// THEN the result is as expected
+				// THEN the result is as expected.
 				want = strings.TrimPrefix(want, "\n")
 				if got != want {
 					t.Fatalf("(prefix=%q) got:\n%q\nwant:\n%q",
@@ -429,7 +429,7 @@ func TestSlice_String(t *testing.T) {
 					url: https://other.com
 			`),
 		},
-		"quotes otherwise invalid yaml strings": {
+		"quotes otherwise invalid YAML strings": {
 			slice: &Slice{
 				"invalid": New(
 					nil,
@@ -448,10 +448,10 @@ func TestSlice_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the Slice is stringified with String
+			// WHEN the Slice is stringified with String.
 			got := tc.slice.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",

@@ -26,7 +26,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/release-argus/Argus/notify/shoutrrr"
-	"github.com/release-argus/Argus/service/latest_version/types/web"
+	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
+	lv_web "github.com/release-argus/Argus/service/latest_version/types/web"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
@@ -44,6 +45,7 @@ func TestService_Track(t *testing.T) {
 	type overrides struct {
 		latestVersion    string
 		nilLatestVersion bool
+		deployedVersion  string
 		other            string
 	}
 	type versions struct {
@@ -171,7 +173,7 @@ func TestService_Track(t *testing.T) {
 			latestVersionType: "url",
 			overrides: overrides{
 				latestVersion: test.TrimYAML(`
-					url: https://invalid.release-argus.io/plain
+					url: ` + test.LookupPlain["url_invalid"] + `
 					allow_invalid_certs: true
 					url_commands:
 						- type: regex
@@ -190,7 +192,7 @@ func TestService_Track(t *testing.T) {
 			latestVersionType: "url",
 			overrides: overrides{
 				latestVersion: test.TrimYAML(`
-					url: https://valid.release-argus.io/plain
+					url: ` + test.LookupPlain["url_valid"] + `
 					allow_invalid_certs: false
 					url_commands:
 						- type: regex
@@ -342,7 +344,7 @@ func TestService_Track(t *testing.T) {
 			latestVersionType: "url",
 			overrides: overrides{
 				latestVersion: test.TrimYAML(`
-					url: https://invalid.release-argus.io/plain
+					url: ` + test.LookupPlain["url_invalid"] + `
 					allow_invalid_certs: false
 					url_commands:
 						- type: regex
@@ -359,9 +361,10 @@ func TestService_Track(t *testing.T) {
 		"track gets DeployedVersion": {
 			latestVersionType: "url",
 			overrides: overrides{
-				other: test.TrimYAML(`
-					deployed_version:
-						json: bar
+				deployedVersion: test.TrimYAML(`
+					json: bar
+					regex: ""
+					regex_template: ""
 				`),
 			},
 			keepDeployedLookup: true, livenessMetric: 1,
@@ -374,9 +377,10 @@ func TestService_Track(t *testing.T) {
 		"track gets DeployedVersion that's newer updates LatestVersion too": {
 			latestVersionType: "url",
 			overrides: overrides{
-				other: test.TrimYAML(`
-					deployed_version:
-						json: foo.bar.version
+				deployedVersion: test.TrimYAML(`
+					json: foo.bar.version
+					regex: ""
+					regex_template: ""
 				`),
 			},
 			keepDeployedLookup:   true,
@@ -453,7 +457,7 @@ func TestService_Track(t *testing.T) {
 				t.Fatalf("failed to unmarshal overrides: %s", err)
 			}
 			// overrides - latest_version
-			if lv, ok := svc.LatestVersion.(*web.Lookup); ok {
+			if lv, ok := svc.LatestVersion.(*lv_web.Lookup); ok {
 				err = yaml.Unmarshal([]byte(tc.overrides.latestVersion), lv)
 				if err != nil {
 					t.Fatalf("failed to unmarshal overrides: %s", err)
@@ -461,6 +465,13 @@ func TestService_Track(t *testing.T) {
 			}
 			if tc.overrides.nilLatestVersion {
 				svc.LatestVersion = nil
+			}
+			// overrides - deployed_version
+			if dv, ok := svc.DeployedVersionLookup.(*dv_web.Lookup); ok {
+				err = yaml.Unmarshal([]byte(tc.overrides.deployedVersion), dv)
+				if err != nil {
+					t.Fatalf("failed to unmarshal overrides: %s", err)
+				}
 			}
 
 			svc.Status.SetLatestVersion(tc.versions.startLatestVersion, "", false)
@@ -498,13 +509,17 @@ func TestService_Track(t *testing.T) {
 			for i := 0; i < 200; i++ {
 				var passQ, failQ float64
 				if !tc.overrides.nilLatestVersion {
-					passQ = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(svc.ID, svc.LatestVersion.GetType(), "SUCCESS"))
-					failQ = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(svc.ID, svc.LatestVersion.GetType(), "FAIL"))
+					passQ = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
+						svc.ID, svc.LatestVersion.GetType(), "SUCCESS"))
+					failQ = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
+						svc.ID, svc.LatestVersion.GetType(), "FAIL"))
 				}
 				if passQ != float64(0) || failQ != float64(0) {
 					if tc.keepDeployedLookup {
-						passQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(svc.ID, "SUCCESS"))
-						failQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(svc.ID, "FAIL"))
+						passQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
+							svc.ID, svc.DeployedVersionLookup.GetType(), "SUCCESS"))
+						failQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
+							svc.ID, svc.DeployedVersionLookup.GetType(), "FAIL"))
 						// if deployedVersionLookup hasn't queried, keep waiting.
 						if passQ != float64(0) || failQ != float64(0) {
 							break
@@ -540,7 +555,7 @@ func TestService_Track(t *testing.T) {
 			// THEN the scrape updates the Status correctly.
 			if tc.versions.wantLatestVersion != svc.Status.LatestVersion() ||
 				tc.versions.wantDeployedVersion != svc.Status.DeployedVersion() {
-				t.Fatalf("\nLatestVersion, want %q, got %q\nDeployedVersion, want %q, got %q\n",
+				t.Fatalf("\nLatestVersion,   want %q, got %q\nDeployedVersion, want %q, got %q\n",
 					tc.versions.wantLatestVersion, svc.Status.LatestVersion(),
 					tc.versions.wantDeployedVersion, svc.Status.DeployedVersion())
 			}

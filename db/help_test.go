@@ -44,7 +44,10 @@ func TestMain(m *testing.M) {
 	cfg.Settings.Data.DatabaseFile = databaseFile
 	Run(cfg)
 
+	// Run other tests.
 	exitCode := m.Run()
+
+	// Exit.
 	os.Remove(cfg.Settings.Data.DatabaseFile)
 	os.Exit(exitCode)
 }

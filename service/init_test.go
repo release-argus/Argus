@@ -504,8 +504,11 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			service.Status.SetDeployedVersion("0.0.2", "", false)
 
 			// nil the vars.
+			var deployedVersionType string
 			if tc.nilDeployedVersion {
 				service.DeployedVersionLookup = nil
+			} else {
+				deployedVersionType = service.DeployedVersionLookup.GetType()
 			}
 			if tc.nilCommand {
 				service.Command = nil
@@ -523,7 +526,7 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 				service.ID)
 			// 	deployed_version_query_result_last.
 			deployedVersionMetric := metric.DeployedVersionQueryResultLast.WithLabelValues(
-				service.ID)
+				service.ID, deployedVersionType)
 			// 	command_result_total.
 			commandMetric := metric.CommandResultTotal.WithLabelValues(
 				testCommand.String(), "SUCCESS", service.ID)
@@ -619,7 +622,7 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 				service.ID)
 			// 	deployed_version_query_result_last.
 			deployedVersionMetric = metric.DeployedVersionQueryResultLast.WithLabelValues(
-				service.ID)
+				service.ID, deployedVersionType)
 			// 	command_result_total.
 			commandMetric = metric.CommandResultTotal.WithLabelValues(
 				testCommand.String(), "SUCCESS", service.ID)

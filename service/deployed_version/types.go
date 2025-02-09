@@ -12,98 +12,60 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package deployedver provides the deployed_version lookup.
+// Package deployedver provides the deployed_version lookup service to for a service.
 package deployedver
 
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"strings"
 
+	"gopkg.in/yaml.v3"
+
+	"github.com/release-argus/Argus/service/deployed_version/types/base"
+	"github.com/release-argus/Argus/service/deployed_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 )
 
-var (
-	supportedTypes = []string{http.MethodGet, http.MethodPost}
-)
-
-// Base is the base struct for the Lookup struct.
-type Base struct {
-	AllowInvalidCerts *bool `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
+// Lookup provides methods for retrieving the deployed version of a service.
+type Lookup interface {
+	base.Interface
 }
 
-// Defaults are the default values for the Lookup struct.
-type Defaults struct {
-	Base `yaml:",inline" json:",inline"`
-
-	Options *opt.Defaults `yaml:"-" json:"-"` // Options for the lookup.
-}
-
-// NewDefaults returns a new Defaults struct.
-func NewDefaults(
-	allowInvalidCerts *bool,
-) *Defaults {
-	return &Defaults{
-		Base: Base{
-			AllowInvalidCerts: allowInvalidCerts}}
-}
-
-// Default sets this Defaults to the default values.
-func (ld *Defaults) Default() {
-	allowInvalidCerts := false
-	ld.AllowInvalidCerts = &allowInvalidCerts
-}
-
-// Lookup the deployed version of the service.
-type Lookup struct {
-	Method        string `yaml:"method,omitempty" json:"method,omitempty"` // REQUIRED: HTTP method.
-	URL           string `yaml:"url,omitempty" json:"url,omitempty"`       // REQUIRED: URL to query.
-	Base          `yaml:",inline" json:",inline"`
-	BasicAuth     *BasicAuth `yaml:"basic_auth,omitempty" json:"basic_auth,omitempty"`         // OPTIONAL: Basic Auth credentials.
-	Headers       []Header   `yaml:"headers,omitempty" json:"headers,omitempty"`               // OPTIONAL: Request Headers.
-	Body          string     `yaml:"body,omitempty" json:"body,omitempty"`                     // OPTIONAL: Request Body.
-	JSON          string     `yaml:"json,omitempty" json:"json,omitempty"`                     // OPTIONAL: JSON key to use e.g. version_current.
-	Regex         string     `yaml:"regex,omitempty" json:"regex,omitempty"`                   // OPTIONAL: RegEx for the version.
-	RegexTemplate string     `yaml:"regex_template,omitempty" json:"regex_template,omitempty"` // OPTIONAL: Template to apply to the RegEx match.
-
-	Options *opt.Options   `yaml:"-" json:"-"` // Options for the lookups.
-	Status  *status.Status `yaml:"-" json:"-"` // Service Status.
-
-	Defaults     *Defaults `yaml:"-" json:"-"` // Default values.
-	HardDefaults *Defaults `yaml:"-" json:"-"` // Hardcoded default values.
-}
-
-// New returns a new instance of Lookup from the provided configuration data
-// in either JSON or YAML format, and initialises it with the provided
-// options, status, defaults, and hardDefaults.
+// New returns a new Lookup.
 func New(
+	lType string,
 	configFormat string,
-	configData interface{}, // []byte | string | *yaml.Node.
+	configData interface{}, // []byte | string | *yaml.Node | json.RawMessage.
 	options *opt.Options,
 	status *status.Status,
-	defaults, hardDefaults *Defaults,
-) (*Lookup, error) {
-	lookup := &Lookup{}
-
-	// Unmarshal.
-	if err := util.UnmarshalConfig(configFormat, configData, lookup); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\n%w", err)
+	defaults, hardDefaults *base.Defaults,
+) (base.Interface, error) {
+	switch lType {
+	case "url", "web":
+		return web.New( //nolint:wrapcheck
+			configFormat,
+			configData,
+			options,
+			status,
+			defaults,
+			hardDefaults)
 	}
 
-	lookup.Init(
-		options,
-		status,
-		defaults, hardDefaults)
-
-	return lookup, nil
+	// No/invalid type.
+	errorMsg := "<required>"
+	if lType != "" {
+		errorMsg = fmt.Sprintf("%q <invalid>", lType)
+	}
+	return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\ntype: %s (expected one of [%s])",
+		errorMsg, strings.Join(PossibleTypes, ", "))
 }
 
 // Copy returns a copy of the Lookup.
 func Copy(
-	lookup *Lookup,
-) *Lookup {
+	lookup Lookup,
+) Lookup {
 	if lookup == nil {
 		return nil
 	}
@@ -111,46 +73,84 @@ func Copy(
 	// JSON of existing lookup.
 	lookupJSON, _ := json.Marshal(lookup)
 
+	svcStatus := status.Status{}
+	svcStatus.Init(
+		0, 0, 0,
+		lookup.GetStatus().ServiceID, lookup.GetStatus().ServiceName,
+		lookup.GetStatus().WebURL)
+
 	// Create a new lookup.
 	newLookup, _ := New(
+		lookup.GetType(),
 		"json", lookupJSON,
-		lookup.Options.Copy(),
-		&status.Status{},
-		lookup.Defaults,
-		lookup.HardDefaults)
+		lookup.GetOptions().Copy(),
+		&svcStatus,
+		lookup.GetDefaults(), lookup.GetHardDefaults())
 
 	return newLookup
 }
 
-// String returns a string representation of the Lookup.
-func (l *Lookup) String(prefix string) string {
-	if l == nil {
-		return ""
-	}
-	return util.ToYAMLString(l, prefix)
-}
-
-// BasicAuth to use on the HTTP(s) request.
-type BasicAuth struct {
-	Username string `yaml:"username" json:"username"`
-	Password string `yaml:"password" json:"password"`
-}
-
-// Header to use in the HTTP request.
-type Header struct {
-	Key   string `yaml:"key" json:"key"`     // Header key, e.g. X-Sig.
-	Value string `yaml:"value" json:"value"` // Value to give the key.
-}
-
-// IsEqual will return a bool of whether this lookup is the same as `other` (excluding status).
-func (l *Lookup) IsEqual(other *Lookup) bool {
-	// If one/both nil.
-	if other == nil || l == nil {
-		// Equal if both nil.
-		return other == nil && l != nil
+// IsEqual will return whether `this` lookup is the same as `other` (excluding status).
+func IsEqual(this, other Lookup) bool {
+	if other == nil || this == nil {
+		// Equal if both are nil.
+		return other == nil && this == nil
 	}
 
-	// Equal if Options and Lookup marshal to the same strings.
-	return l.Options.String() == other.Options.String() &&
-		l.String("") == other.String("")
+	return this.GetOptions().String() == other.GetOptions().String() &&
+		this.String(this, "") == other.String(other, "")
+}
+
+// UnmarshalJSON unmarshals a Lookup from JSON.
+func UnmarshalJSON(data []byte) (Lookup, error) {
+	return unmarshal(data, "json")
+}
+
+// UnmarshalYAML unmarshals a Lookup from YAML.
+func UnmarshalYAML(data []byte) (Lookup, error) {
+	return unmarshal(data, "yaml")
+}
+
+// unmarshal handles the unmarshalling of a Lookup.
+//
+// (dynamic typing).
+func unmarshal(data []byte, format string) (Lookup, error) {
+	var temp struct {
+		Type string `yaml:"type" json:"type"`
+	}
+
+	// Unmarshal into temp to extract the type.
+	var err error
+	switch format {
+	case "json":
+		err = json.Unmarshal(data, &temp)
+	case "yaml":
+		err = yaml.Unmarshal(data, &temp)
+	default:
+		err = fmt.Errorf("unknown format: %q", format)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\n%s",
+			strings.TrimPrefix(err.Error(), "yaml: "))
+	}
+
+	// -- Dynamic deployedVersion type --
+	// Supported type?
+	_, exists := ServiceMap[temp.Type]
+	if !exists {
+		return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\ntype: %q <invalid> (expected one of [%s])",
+			temp.Type, strings.Join(PossibleTypes, ", "))
+	}
+
+	// New Lookup based on the type.
+	lookup, err := New(temp.Type,
+		format, data,
+		nil,
+		nil,
+		nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return lookup, nil
 }

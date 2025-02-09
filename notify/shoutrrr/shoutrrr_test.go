@@ -36,7 +36,7 @@ func TestShoutrrr_getSender(t *testing.T) {
 		title, msg string
 		params     string
 	}
-	// GIVEN a Shoutrrr, ServiceInfo and the hard defaults
+	// GIVEN a Shoutrrr, ServiceInfo and the hard defaults.
 	serviceInfo := util.ServiceInfo{
 		ID:            "service_id",
 		LatestVersion: "1.2.3",
@@ -112,10 +112,10 @@ func TestShoutrrr_getSender(t *testing.T) {
 				main,
 				&Defaults{}, hardDefaults[shoutrrr.Type])
 
-			// WHEN getSender is called
+			// WHEN getSender is called.
 			_, message, params, url, err := shoutrrr.getSender(tc.title, tc.msg, serviceInfo)
 
-			// THEN the expected results are returned
+			// THEN the expected results are returned.
 			if (err != nil) != tc.wants.err {
 				t.Fatalf("getSender() wants err=%t, got %t",
 					tc.wants.err, err != nil)
@@ -139,7 +139,7 @@ func TestShoutrrr_getSender(t *testing.T) {
 }
 
 func TestShoutrrr_BuildURL(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		sType                      string
 		options, urlFields, params map[string]string
@@ -583,10 +583,10 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			shoutrrr.URLFields = tc.urlFields
 			shoutrrr.Params = tc.params
 
-			// WHEN BuildURL is called
+			// WHEN BuildURL is called.
 			got := shoutrrr.BuildURL()
 
-			// THEN the expected URL is returned
+			// THEN the expected URL is returned.
 			if got != tc.want {
 				t.Errorf("\nwant: %q\ngot:  %q",
 					tc.want, got)
@@ -596,7 +596,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 }
 
 func Test_jsonMapToString(t *testing.T) {
-	// GIVEN a JSON string
+	// GIVEN a JSON string.
 	tests := map[string]struct {
 		jsonStr string
 		want    string
@@ -621,7 +621,7 @@ func Test_jsonMapToString(t *testing.T) {
 			jsonStr: `{"foo":["alpha","bravo","charlie"]}`,
 			want:    "",
 		},
-		"invalid json": {
+		"invalid JSON": {
 			jsonStr: `{"foo":"bar","bar":"foo`,
 			want:    "",
 		},
@@ -631,10 +631,10 @@ func Test_jsonMapToString(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN jsonMapToString is called
+			// WHEN jsonMapToString is called.
 			got := jsonMapToString(tc.jsonStr, "@")
 
-			// THEN the expected URL is returned
+			// THEN the expected URL is returned.
 			if got != tc.want {
 				t.Errorf("\nwant: %q\ngot:  %q",
 					tc.want, got)
@@ -644,7 +644,7 @@ func Test_jsonMapToString(t *testing.T) {
 }
 
 func TestShoutrrr_BuildParams(t *testing.T) {
-	// GIVEN a Shoutrrr and ServiceInfo
+	// GIVEN a Shoutrrr and ServiceInfo.
 	serviceInfo := util.ServiceInfo{
 		ID:            "service_id",
 		Name:          "service_name",
@@ -718,10 +718,10 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 				shoutrrr.HardDefaults.Params[key] = *tc.hardDefaultValue
 			}
 
-			// WHEN BuildParams is called
+			// WHEN BuildParams is called.
 			got := shoutrrr.BuildParams(serviceInfo)
 
-			// THEN the function returns the params to use
+			// THEN the function returns the params to use.
 			if (*got)[key] != tc.want {
 				t.Fatalf("want: %q\ngot:  %q",
 					tc.want, got)
@@ -731,7 +731,7 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 }
 
 func TestShoutrrr_parseSend(t *testing.T) {
-	// GIVEN a possible list of errors from a send operation
+	// GIVEN a possible list of errors from a send operation.
 	tests := map[string]struct {
 		errs        []error
 		serviceName string
@@ -776,7 +776,7 @@ func TestShoutrrr_parseSend(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're testing metrics
+			// t.Parallel() - Cannot run in parallel since we're testing metrics.
 
 			shoutrrr := testShoutrrr(false, false)
 			shoutrrr.ServiceStatus = &status.Status{}

@@ -90,7 +90,7 @@ func testLookup(lookupType string, failing bool) Lookup {
 			defaults, hardDefaults)
 
 	case *web.Lookup:
-		l.URL = "https://invalid.release-argus.io/plain"
+		l.URL = test.LookupPlain["url_invalid"]
 		l.AllowInvalidCerts = test.BoolPtr(true)
 		if failing {
 			*l.AllowInvalidCerts = false

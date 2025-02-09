@@ -27,7 +27,7 @@ import (
 )
 
 func TestNewDashboardOptions(t *testing.T) {
-	// GIVEN a set of input values
+	// GIVEN a set of input values.
 	tests := map[string]struct {
 		autoApprove  *bool
 		icon         string
@@ -101,7 +101,7 @@ func TestDashboardOptions_UnmarshalJSON(t *testing.T) {
 		errRegex string
 		want     *DashboardOptions
 	}{
-		"invalid json": {
+		"invalid JSON": {
 			jsonData: `{invalid: json}`,
 			errRegex: test.TrimYAML(`
 				failed to unmarshal DashboardOptions:
@@ -174,7 +174,7 @@ func TestDashboardOptions_UnmarshalYAML(t *testing.T) {
 		errRegex string
 		want     *DashboardOptions
 	}{
-		"invalid yaml": {
+		"invalid YAML": {
 			yamlData: `invalid yaml`,
 			errRegex: test.TrimYAML(`
 			failed to unmarshal DashboardOptions:
@@ -220,16 +220,16 @@ func TestDashboardOptions_UnmarshalYAML(t *testing.T) {
 			// Default to an empty DashboardOptions.
 			dashboardOptions := &DashboardOptions{}
 
-			// WHEN the YAML is unmarshalled into a DashboardOptions
+			// WHEN the YAML is unmarshalled into a DashboardOptions.
 			err := yaml.Unmarshal([]byte(test.TrimYAML(tc.yamlData)), &dashboardOptions)
 
-			// THEN the error is as expected
+			// THEN the error is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("DashboardOptions.UnmarshalYAML() error mismatch\nwant: %q\ngot:  %q",
 					tc.errRegex, e)
 			}
-			// AND the result is as expected
+			// AND the result is as expected.
 			gotStr := util.ToJSONString(dashboardOptions)
 			wantStr := util.ToJSONString(tc.want)
 			if tc.want != nil && gotStr != wantStr {
@@ -241,7 +241,7 @@ func TestDashboardOptions_UnmarshalYAML(t *testing.T) {
 }
 
 func TestDashboardOptions_GetAutoApprove(t *testing.T) {
-	// GIVEN a DashboardOptions
+	// GIVEN a DashboardOptions.
 	tests := map[string]struct {
 		rootValue, defaultValue, hardDefaultValue *bool
 		want                                      bool
@@ -270,10 +270,10 @@ func TestDashboardOptions_GetAutoApprove(t *testing.T) {
 			hardDefaultValues := NewDashboardOptionsDefaults(tc.hardDefaultValue)
 			dashboard.HardDefaults = &hardDefaultValues
 
-			// WHEN GetAutoApprove is called
+			// WHEN GetAutoApprove is called.
 			got := dashboard.GetAutoApprove()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
 				t.Errorf("want: %t\ngot:  %t",
 					tc.want, got)
@@ -283,7 +283,7 @@ func TestDashboardOptions_GetAutoApprove(t *testing.T) {
 }
 
 func TestDashboardOptions_CheckValues(t *testing.T) {
-	// GIVEN DashboardOptions
+	// GIVEN DashboardOptions.
 	tests := map[string]struct {
 		dashboardOptions *DashboardOptions
 		errRegex         string
@@ -302,10 +302,10 @@ func TestDashboardOptions_CheckValues(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			// WHEN CheckValues is called on it
+			// WHEN CheckValues is called on it.
 			err := tc.dashboardOptions.CheckValues("")
 
-			// THEN the err is what we expect
+			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")

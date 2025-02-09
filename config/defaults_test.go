@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import (
 
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
-	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
@@ -72,8 +72,8 @@ func TestDefaults_String(t *testing.T) {
 									"otherTokenQuay",
 									nil))},
 					},
-					DeployedVersionLookup: *deployedver.NewDefaults(
-						test.BoolPtr(false)),
+					DeployedVersionLookup: deployedver_base.Defaults{
+						AllowInvalidCerts: test.BoolPtr(false)},
 					Dashboard: service.NewDashboardOptionsDefaults(
 						test.BoolPtr(true))},
 				Notify: shoutrrr.SliceDefaults{
@@ -301,8 +301,8 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_DEPLOYED_VERSION_ALLOW_INVALID_CERTS": "true"},
 			want: &Defaults{
 				Service: service.Defaults{
-					DeployedVersionLookup: *deployedver.NewDefaults(
-						test.BoolPtr(true))}},
+					DeployedVersionLookup: deployedver_base.Defaults{
+						AllowInvalidCerts: test.BoolPtr(true)}}},
 		},
 		"service.deployed_version - invalid bool - allow_invalid_certs": {
 			env: map[string]string{
@@ -915,7 +915,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 
 			defaults := Defaults{
 				Service: service.Defaults{
-					DeployedVersionLookup: deployedver.Defaults{}}}
+					DeployedVersionLookup: deployedver_base.Defaults{}}}
 			if tc.want == nil {
 				tc.want = &Defaults{
 					Notify: shoutrrr.SliceDefaults{}}

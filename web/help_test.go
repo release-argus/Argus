@@ -36,6 +36,7 @@ import (
 	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
@@ -217,7 +218,7 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 	svc.DeployedVersionLookup.Init(
 		&svc.Options,
 		&svc.Status,
-		&deployedver.Defaults{}, &hardDefaults.Service.DeployedVersionLookup)
+		&deployedver_base.Defaults{}, &hardDefaults.Service.DeployedVersionLookup)
 
 	// Command.
 	svc.CommandController.Init(
@@ -248,20 +249,21 @@ func testDefaults(failing bool) *webhook.Defaults {
 		"argus",
 		test.BoolPtr(false),
 		"github",
-		"https://valid.release-argus.io/hooks/github-style")
+		test.LookupGitHub["url_valid"])
 	if failing {
 		wh.Secret = "notArgus"
 	}
 	return wh
 }
 
-func testDeployedVersion(t *testing.T) *deployedver.Lookup {
-	defaults := &deployedver.Defaults{}
-	hardDefaults := &deployedver.Defaults{}
+func testDeployedVersion(t *testing.T) deployedver.Lookup {
+	defaults := &deployedver_base.Defaults{}
+	hardDefaults := &deployedver_base.Defaults{}
 	hardDefaults.Default()
 
-	return test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+	return test.IgnoreError(t, func() (deployedver.Lookup, error) {
 		return deployedver.New(
+			"url",
 			"yaml", test.TrimYAML(`
 				method: GET
 				url: https://release-argus.io

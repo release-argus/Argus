@@ -27,12 +27,14 @@ import (
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
-	"github.com/release-argus/Argus/service/latest_version/types/github"
-	"github.com/release-argus/Argus/service/latest_version/types/web"
+	lv_github "github.com/release-argus/Argus/service/latest_version/types/github"
+	lv_web "github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -42,12 +44,12 @@ import (
 
 func TestService_GiveSecretsLatestVersion(t *testing.T) {
 	type otherData struct {
-		githubData            *github.Data
+		githubData            *lv_github.Data
 		githubDataTransformed bool
 	}
 
 	// GIVEN a LatestVersion that may have secrets in it referencing those in another LatestVersion
-	githubData := github.Data{}
+	githubData := lv_github.Data{}
 	githubData.SetETag("shazam")
 	tests := map[string]struct {
 		latestVersion latestver.Lookup
@@ -450,8 +452,8 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			gotLV := newService.LatestVersion
 
 			// Only GitHub types have AccessTokens
-			if gotLatestVersion, ok := gotLV.(*github.Lookup); ok {
-				if hadLatestVersion, ok := tc.latestVersion.(*github.Lookup); ok {
+			if gotLatestVersion, ok := gotLV.(*lv_github.Lookup); ok {
+				if hadLatestVersion, ok := tc.latestVersion.(*lv_github.Lookup); ok {
 					gotAccessToken := gotLatestVersion.AccessToken
 					expectedAccessToken := hadLatestVersion.AccessToken
 					if gotAccessToken != expectedAccessToken {
@@ -465,15 +467,15 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			var gotRequire *filter.Require
 			var expectedRequire *filter.Require
 			// Got
-			if gotLatestVersion, ok := gotLV.(*github.Lookup); ok {
+			if gotLatestVersion, ok := gotLV.(*lv_github.Lookup); ok {
 				gotRequire = gotLatestVersion.GetRequire()
-			} else if gotLatestVersion, ok := gotLV.(*web.Lookup); ok {
+			} else if gotLatestVersion, ok := gotLV.(*lv_web.Lookup); ok {
 				gotRequire = gotLatestVersion.GetRequire()
 			}
 			// Expected
-			if expectedLatestVersion, ok := tc.expected.(*github.Lookup); ok {
+			if expectedLatestVersion, ok := tc.expected.(*lv_github.Lookup); ok {
 				expectedRequire = expectedLatestVersion.GetRequire()
-			} else if expectedLatestVersion, ok := tc.expected.(*web.Lookup); ok {
+			} else if expectedLatestVersion, ok := tc.expected.(*lv_web.Lookup); ok {
 				expectedRequire = expectedLatestVersion.GetRequire()
 			}
 			// newService has a nil Require, but expected non-nil
@@ -490,9 +492,9 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			}
 
 			// Data
-			if expectedLatestVersion, ok := tc.expected.(*github.Lookup); ok {
-				// Ensure gotLV is a *github.Lookup
-				if gotLatestVersion, ok := gotLV.(*github.Lookup); ok {
+			if expectedLatestVersion, ok := tc.expected.(*lv_github.Lookup); ok {
+				// Ensure gotLV is a *lv_github.Lookup
+				if gotLatestVersion, ok := gotLV.(*lv_github.Lookup); ok {
 					got := gotLatestVersion.GetGitHubData().String()
 					expected := expectedLatestVersion.GetGitHubData().String()
 					if got != expected {
@@ -500,7 +502,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 							expected, got)
 					}
 				} else {
-					t.Fatalf("Expected *github.Lookup, got %T", gotLV)
+					t.Fatalf("Expected *lv_github.Lookup, got %T", gotLV)
 				}
 			}
 		})
@@ -510,282 +512,282 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 	// GIVEN a DeployedVersion that may have secrets in it referencing those in another DeployedVersion
 	tests := map[string]struct {
-		deployedVersion, otherDV *deployedver.Lookup
-		secretRefs               dvSecretRef
-		expected                 *deployedver.Lookup
+		deployedVersion, otherDV deployedver.Lookup
+		secretRefs               shared.DVSecretRef
+		expected                 deployedver.Lookup
 	}{
 		"nil DeployedVersion": {
 			deployedVersion: nil,
-			otherDV:         &deployedver.Lookup{},
-			secretRefs:      dvSecretRef{},
+			otherDV:         &dv_web.Lookup{},
+			secretRefs:      shared.DVSecretRef{},
 			expected:        nil,
 		},
 		"nil OldDeployedVersion": {
-			deployedVersion: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{
+			deployedVersion: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{
 					Password: "foo"}},
 			otherDV: nil,
-			expected: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{
+			expected: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{
 					Password: "foo"}},
 		},
 		"keep BasicAuth.Password": {
-			deployedVersion: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{
+			deployedVersion: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{
 					Password: "foo"}},
-			otherDV: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{
+			otherDV: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{
 					Password: "bar"}},
-			expected: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{
+			expected: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{
 					Password: "foo"}},
 		},
 		"give old BasicAuth.Password": {
-			deployedVersion: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{
+			deployedVersion: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{
 					Password: util.SecretValue}},
-			otherDV: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{
+			otherDV: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{
 					Password: "bar"}},
-			expected: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{
+			expected: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{
 					Password: "bar"}},
 		},
 		"referencing default BasicAuth.Password": {
-			deployedVersion: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{
+			deployedVersion: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{
 					Password: util.SecretValue}},
-			otherDV: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{}},
-			expected: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{
+			otherDV: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{}},
+			expected: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{
 					Password: ""}},
 		},
 		"referencing BasicAuth.Password that doesn't exist": {
-			deployedVersion: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{
+			deployedVersion: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{
 					Password: util.SecretValue}},
-			otherDV: &deployedver.Lookup{},
-			expected: &deployedver.Lookup{
-				BasicAuth: &deployedver.BasicAuth{
+			otherDV: &dv_web.Lookup{},
+			expected: &dv_web.Lookup{
+				BasicAuth: &dv_web.BasicAuth{
 					Password: util.SecretValue}},
 		},
 		"empty Headers": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{}},
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"}}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{}},
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{}},
 		},
 		"only new Headers": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "bish", Value: "bash"}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{}},
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{
 					{OldIndex: nil},
 					{OldIndex: nil}}},
 		},
 		"Headers with index out of range": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "bish", Value: util.SecretValue},
 					{Key: "bash", Value: util.SecretValue}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{}},
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "bish", Value: util.SecretValue},
 					{Key: "bash", Value: util.SecretValue}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)},
 					{OldIndex: test.IntPtr(1)}}},
 		},
 		"Headers with SecretValue but nil index refs": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "bish", Value: util.SecretValue},
 					{Key: "bash", Value: util.SecretValue}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "bish", Value: "bash"},
 					{Key: "bash", Value: "bop"}}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "bish", Value: util.SecretValue},
 					{Key: "bash", Value: util.SecretValue}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{
 					{OldIndex: nil},
 					{OldIndex: nil}}},
 		},
 		"only changed Headers": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "shazam"}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"}}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "shazam"}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)}}},
 		},
 		"only new/changed Headers": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"}}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)}, {OldIndex: nil}}},
 		},
 		"only new/changed Headers with expected refs": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"}}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)}, {OldIndex: nil}}},
 		},
 		"only new/changed Headers with no refs": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"}}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{}},
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{}},
 		},
 		"referencing old Header value with no refs": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"}}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{}},
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{}},
 		},
 		"only new/changed Headers with partial ref (not for all secrets)": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bang"},
 					{Key: "bosh", Value: util.SecretValue}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bash"}}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bang"},
 					{Key: "bosh", Value: util.SecretValue}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
 		},
 		"referencing old Header value": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"}}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)}, {OldIndex: nil}}},
 		},
 		"referencing old Header value that doesn't exist": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"}}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(1)}, {OldIndex: nil}}},
 		},
 		"referencing some old Header values but not others": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bang"},
 					{Key: "bish", Value: util.SecretValue}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bong"}}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bang"},
 					{Key: "bish", Value: "bong"}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{
 					{OldIndex: nil}, {OldIndex: test.IntPtr(1)}}},
 		},
 		"swap header values": {
-			deployedVersion: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			deployedVersion: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "bish", Value: util.SecretValue},
 					{Key: "foo", Value: util.SecretValue}}},
-			otherDV: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			otherDV: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bong"}}},
-			expected: &deployedver.Lookup{
-				Headers: []deployedver.Header{
+			expected: &dv_web.Lookup{
+				Headers: []dv_web.Header{
 					{Key: "bish", Value: "bar"},
 					{Key: "foo", Value: "bong"}}},
-			secretRefs: dvSecretRef{
-				Headers: []oldIntIndex{
+			secretRefs: shared.DVSecretRef{
+				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
 		},
 	}
@@ -809,26 +811,42 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			if gotDV == nil && tc.expected != nil ||
 				gotDV != nil && tc.expected == nil {
 				t.Errorf("Expected %q, got %q",
-					tc.expected.String(""), gotDV.String(""))
+					tc.expected.String(tc.expected, ""), gotDV.String(gotDV, ""))
 			}
 			// BasicAuth
-			if tc.expected.BasicAuth != gotDV.BasicAuth {
-				if tc.expected.BasicAuth == nil && gotDV.BasicAuth != nil {
-					t.Errorf("Expected BasicAuth to be nil, got %q", *gotDV.BasicAuth)
-				} else if gotDV.BasicAuth.Password != tc.expected.BasicAuth.Password {
+			var expectedBasicAuth *dv_web.BasicAuth
+			if expectedLV, ok := tc.expected.(*dv_web.Lookup); ok {
+				expectedBasicAuth = expectedLV.BasicAuth
+			}
+			var gotBasicAuth *dv_web.BasicAuth
+			if gotLV, ok := gotDV.(*dv_web.Lookup); ok {
+				gotBasicAuth = gotLV.BasicAuth
+			}
+			if expectedBasicAuth != gotBasicAuth {
+				if expectedBasicAuth == nil && gotBasicAuth != nil {
+					t.Errorf("Expected BasicAuth to be nil, got %q", *gotBasicAuth)
+				} else if gotBasicAuth.Password != expectedBasicAuth.Password {
 					t.Errorf("Expected %q, got %q",
-						util.DereferenceOrDefault(tc.expected.BasicAuth), util.DereferenceOrDefault(gotDV.BasicAuth))
+						util.DereferenceOrDefault(expectedBasicAuth), util.DereferenceOrDefault(gotBasicAuth))
 				}
 			}
 			// Headers
-			if len(gotDV.Headers) != len(tc.expected.Headers) {
+			var expectedHeaders []dv_web.Header
+			if expectedLV, ok := tc.expected.(*dv_web.Lookup); ok {
+				expectedHeaders = expectedLV.Headers
+			}
+			var gotHeaders []dv_web.Header
+			if gotLV, ok := gotDV.(*dv_web.Lookup); ok {
+				gotHeaders = gotLV.Headers
+			}
+			if len(gotHeaders) != len(expectedHeaders) {
 				t.Errorf("Expected %q, got %q",
-					tc.expected.Headers, gotDV.Headers)
+					expectedHeaders, gotHeaders)
 			} else {
-				for i, gotHeader := range gotDV.Headers {
-					if gotHeader != tc.expected.Headers[i] {
+				for i, gotHeader := range gotHeaders {
+					if gotHeader != expectedHeaders[i] {
 						t.Errorf("Expected %q, got %q",
-							tc.expected.Headers[i], gotHeader)
+							expectedHeaders[i], gotHeader)
 					}
 				}
 			}
@@ -840,7 +858,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 	// GIVEN a NotifySlice that may have secrets in it referencing those in another NotifySliceSlice
 	tests := map[string]struct {
 		notify, otherNotify shoutrrr.Slice
-		secretRefs          map[string]oldStringIndex
+		secretRefs          map[string]shared.OldStringIndex
 		expected            shoutrrr.Slice
 	}{
 		"nil NotifySlice": {
@@ -853,7 +871,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"apikey": "something"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{},
+			secretRefs: map[string]shared.OldStringIndex{},
 			expected:   nil,
 		},
 		"nil oldNotifies": {
@@ -866,7 +884,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					nil,
 					nil, nil, nil)},
 			otherNotify: nil,
-			secretRefs:  map[string]oldStringIndex{},
+			secretRefs:  map[string]shared.OldStringIndex{},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "",
@@ -916,7 +934,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"apikey": "something"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{},
+			secretRefs: map[string]shared.OldStringIndex{},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "", nil,
@@ -940,7 +958,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"apikey": "something"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"bish": {OldIndex: "bash"}},
+			secretRefs: map[string]shared.OldStringIndex{"bish": {OldIndex: "bash"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "", nil,
@@ -970,7 +988,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"apikey": "something"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: ""}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: ""}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "", nil,
@@ -1006,7 +1024,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"apikey": "something"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "baz"}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "baz"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "", nil,
@@ -1042,7 +1060,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"apikey": "something"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "", nil,
@@ -1078,7 +1096,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"apikey": "something"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "", nil,
@@ -1120,7 +1138,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"apikey": "shazam"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{
+			secretRefs: map[string]shared.OldStringIndex{
 				"bar": {OldIndex: "foo"},
 				"foo": {OldIndex: "bar"}},
 			expected: shoutrrr.Slice{
@@ -1164,7 +1182,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"apikey": "shazam"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{
+			secretRefs: map[string]shared.OldStringIndex{
 				"bar": {OldIndex: "foo"},
 				"foo": {OldIndex: "bar"}},
 			expected: shoutrrr.Slice{
@@ -1202,7 +1220,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"botkey": "something"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "", nil,
@@ -1238,7 +1256,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"password": "something"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "", nil,
@@ -1274,7 +1292,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"token": "something"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "", nil,
@@ -1310,7 +1328,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"tokena": "something"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "", nil,
@@ -1346,7 +1364,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"tokenb": "something"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "", nil,
@@ -1382,7 +1400,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"host": "https://example.com/foo"},
 					nil,
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "", nil,
@@ -1419,7 +1437,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					map[string]string{
 						"devices": "something"},
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "",
@@ -1460,7 +1478,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					map[string]string{
 						"avatar": "https://example.com/fooo"},
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "",
@@ -1508,7 +1526,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					map[string]string{
 						"devices": "id1,id2"},
 					nil, nil, nil)},
-			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
+			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
 					nil, "", "",
@@ -1561,7 +1579,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 	// GIVEN a WebHookSlice that may have secrets in it referencing those in another WebHookSliceSlice
 	tests := map[string]struct {
 		webhook, otherWebhook webhook.Slice
-		secretRefs            map[string]whSecretRef
+		secretRefs            map[string]shared.WHSecretRef
 		expected              webhook.Slice
 	}{
 		"nil WebHookSlice": {
@@ -1571,7 +1589,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{},
+			secretRefs: map[string]shared.WHSecretRef{},
 			expected:   nil,
 		},
 		"nil otherWebHook": {
@@ -1581,7 +1599,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"shazam",
 					nil, "", "", nil, nil, nil)},
 			otherWebhook: nil,
-			secretRefs:   map[string]whSecretRef{},
+			secretRefs:   map[string]shared.WHSecretRef{},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
@@ -1617,7 +1635,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{},
+			secretRefs: map[string]shared.WHSecretRef{},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
@@ -1635,7 +1653,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{
+			secretRefs: map[string]shared.WHSecretRef{
 				"bish": {OldIndex: "bash"}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
@@ -1658,7 +1676,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{
+			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {OldIndex: ""},
 				"bar": {OldIndex: ""}},
 			expected: webhook.Slice{
@@ -1686,7 +1704,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{
+			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {OldIndex: "bash"},
 				"bar": {OldIndex: ""}},
 			expected: webhook.Slice{
@@ -1714,7 +1732,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{
+			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {OldIndex: "foo"},
 				"bar": {OldIndex: ""}},
 			expected: webhook.Slice{
@@ -1746,7 +1764,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"whoosh",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{
+			secretRefs: map[string]shared.WHSecretRef{
 				"bar": {OldIndex: "foo"},
 				"foo": {OldIndex: "bar"}},
 			expected: webhook.Slice{
@@ -1778,7 +1796,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"whoosh",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{
+			secretRefs: map[string]shared.WHSecretRef{
 				"bar": {OldIndex: "foo"},
 				"foo": {OldIndex: "bar"}},
 			expected: webhook.Slice{
@@ -1814,7 +1832,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{},
+			secretRefs: map[string]shared.WHSecretRef{},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil,
@@ -1850,7 +1868,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{
+			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {OldIndex: "foo"},
 				"bar": {OldIndex: "bar"}},
 			expected: webhook.Slice{
@@ -1889,14 +1907,14 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{
+			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {
 					OldIndex: "foo",
-					CustomHeaders: []oldIntIndex{
+					CustomHeaders: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)}}},
 				"bar": {
 					OldIndex: "bar",
-					CustomHeaders: []oldIntIndex{
+					CustomHeaders: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)}}}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
@@ -1937,14 +1955,14 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{
+			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {
 					OldIndex: "foo",
-					CustomHeaders: []oldIntIndex{
+					CustomHeaders: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(5)}, {OldIndex: test.IntPtr(1)}}},
 				"bar": {
 					OldIndex: "bar",
-					CustomHeaders: []oldIntIndex{
+					CustomHeaders: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(2)}}}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
@@ -1987,15 +2005,15 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{
+			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {
 					OldIndex: "foo",
-					CustomHeaders: []oldIntIndex{
+					CustomHeaders: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)},
 						{OldIndex: test.IntPtr(1)}}},
 				"bar": {
 					OldIndex: "bar",
-					CustomHeaders: []oldIntIndex{
+					CustomHeaders: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)},
 						{OldIndex: test.IntPtr(1)}}}},
 			expected: webhook.Slice{
@@ -2039,15 +2057,15 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			secretRefs: map[string]whSecretRef{
+			secretRefs: map[string]shared.WHSecretRef{
 				"bar": {
 					OldIndex: "foo",
-					CustomHeaders: []oldIntIndex{
+					CustomHeaders: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)},
 						{OldIndex: test.IntPtr(1)}}},
 				"foo": {
 					OldIndex: "bar",
-					CustomHeaders: []oldIntIndex{
+					CustomHeaders: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)},
 						{OldIndex: test.IntPtr(1)}}}},
 			expected: webhook.Slice{
@@ -2156,8 +2174,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								username: user
@@ -2209,8 +2228,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								username: username
@@ -2259,8 +2279,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								username: user
@@ -2336,8 +2357,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								username: `+util.SecretValue+`
@@ -2390,8 +2412,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								username: `+util.SecretValue+`
@@ -2441,8 +2464,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								username: `+util.SecretValue+`
@@ -2493,8 +2517,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								username: username
@@ -2548,8 +2573,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								username: `+util.SecretValue+`
@@ -2599,8 +2625,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								username: `+util.SecretValue+`
@@ -2656,8 +2683,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								username: username
@@ -2703,9 +2731,9 @@ func TestService_GiveSecrets(t *testing.T) {
 				},
 			},
 			secretRefs: oldSecretRefs{
-				DeployedVersionLookup: dvSecretRef{Headers: []oldIntIndex{{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
-				Notify:                map[string]oldStringIndex{"foo": {OldIndex: "foo"}, "bar": {OldIndex: "bar"}},
-				WebHook:               map[string]whSecretRef{"foo": {OldIndex: "foo"}, "bar": {OldIndex: "bar"}},
+				DeployedVersionLookup: shared.DVSecretRef{Headers: []shared.OldIntIndex{{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
+				Notify:                map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}, "bar": {OldIndex: "bar"}},
+				WebHook:               map[string]shared.WHSecretRef{"foo": {OldIndex: "foo"}, "bar": {OldIndex: "bar"}},
 			},
 			expected: &Service{
 				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
@@ -2718,8 +2746,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								username: `+util.SecretValue+`
@@ -2861,8 +2890,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							url: https://example.com
 						`),
@@ -2880,8 +2910,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							url: https://example.com
 						`),
@@ -2906,8 +2937,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							url: https://example.com
 						`),
@@ -2927,8 +2959,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							url: https://example.com
 						`),
@@ -2946,8 +2979,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							url: https://example.com/somewhere-else
 						`),
@@ -2970,8 +3004,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							url: https://example.com
 						`),
@@ -3015,7 +3050,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				},
 			},
 			secretRefs: oldSecretRefs{
-				WebHook: map[string]whSecretRef{
+				WebHook: map[string]shared.WHSecretRef{
 					"test": {OldIndex: "test"}},
 			},
 			expected: &Service{
@@ -3276,8 +3311,7 @@ func TestService_CheckFetches(t *testing.T) {
 	testLV := testLatestVersion(t, "url", false)
 	testLV.Query(false, logutil.LogFrom{})
 	testDVL := testDeployedVersionLookup(t, false)
-	v, _ := testDVL.Query(false, logutil.LogFrom{})
-	testDVL.Status.SetDeployedVersion(v, "", false)
+	testDVL.Query(false, logutil.LogFrom{})
 	tests := map[string]struct {
 		svc                                       *Service
 		startLatestVersion, wantLatestVersion     string
@@ -3300,7 +3334,7 @@ func TestService_CheckFetches(t *testing.T) {
 				DeployedVersionLookup: testDeployedVersionLookup(t, false)},
 			startLatestVersion:   "foo",
 			wantLatestVersion:    testLV.GetStatus().LatestVersion(),
-			wantDeployedVersion:  testDVL.Status.DeployedVersion(),
+			wantDeployedVersion:  testDVL.GetStatus().DeployedVersion(),
 			startDeployedVersion: "bar",
 			errRegex:             `^$`,
 		},
@@ -3314,15 +3348,15 @@ func TestService_CheckFetches(t *testing.T) {
 			svc: &Service{
 				LatestVersion:         testLatestVersion(t, "url", false),
 				DeployedVersionLookup: testDeployedVersionLookup(t, true)},
-			wantLatestVersion: "1.2.2",
+			wantLatestVersion: testLV.GetStatus().LatestVersion(),
 			errRegex:          `deployed_version - x509 \(certificate invalid\)`,
 		},
 		"both queried": {
 			svc: &Service{
 				LatestVersion:         testLatestVersion(t, "url", false),
 				DeployedVersionLookup: testDeployedVersionLookup(t, false)},
-			wantLatestVersion:   "1.2.2",
-			wantDeployedVersion: "1.2.3",
+			wantLatestVersion:   testLV.GetStatus().LatestVersion(),
+			wantDeployedVersion: testDVL.GetStatus().DeployedVersion(),
 			errRegex:            `^$`,
 		},
 		"inactive queries neither": {
@@ -3860,6 +3894,7 @@ func TestFromPayload(t *testing.T) {
 							"tag": "{{ version }}",
 							"token": "` + util.SecretValue + `"}}},
 				"deployed_version": {
+					"type": "url",
 					"basic_auth": {
 						"password": "` + util.SecretValue + `"},
 					"headers": [
@@ -3883,8 +3918,9 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						&latestver_base.Defaults{}, &latestver_base.Defaults{})
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								password: aPassword
@@ -3914,8 +3950,9 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						&latestver_base.Defaults{}, &latestver_base.Defaults{})
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								password: aPassword
@@ -3942,6 +3979,7 @@ func TestFromPayload(t *testing.T) {
 							"tag": "{{ version }}",
 							"token": "` + util.SecretValue + `"}}},
 				"deployed_version": {
+					"type": "url",
 					"basic_auth": {
 						"password": "` + util.SecretValue + `"},
 					"headers": [
@@ -4000,8 +4038,9 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						&latestver_base.Defaults{}, &latestver_base.Defaults{})
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								password: aPassword
@@ -4084,8 +4123,9 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						&latestver_base.Defaults{}, &latestver_base.Defaults{})
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								password: aPassword
@@ -4176,6 +4216,7 @@ func TestFromPayload(t *testing.T) {
 							"tag": "{{ version }}",
 							"token": "` + util.SecretValue + `"}}},
 				"deployed_version": {
+					"type": "url",
 					"basic_auth": {
 						"password": "` + util.SecretValue + `"},
 					"headers": [
@@ -4247,8 +4288,9 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						&latestver_base.Defaults{}, &latestver_base.Defaults{})
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								password: aPassword
@@ -4351,8 +4393,9 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						&latestver_base.Defaults{}, &latestver_base.Defaults{})
 				}),
-				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
 					return deployedver.New(
+						"url",
 						"yaml", test.TrimYAML(`
 							basic_auth:
 								password: aPassword

@@ -40,7 +40,7 @@ func (n *RawNode) UnmarshalYAML(node *yaml.Node) error {
 //	to: Pointer to unmarshal into.
 func UnmarshalConfig(
 	configFormat string,
-	configData interface{}, // []byte | string | *yaml.Node.
+	configData interface{}, // []byte | string | *yaml.Node | json.RawMessage.
 	to interface{}, // struct pointer to unmarshal into.
 ) error {
 	var rawData []byte
@@ -51,6 +51,8 @@ func UnmarshalConfig(
 		rawData = []byte(v)
 	case *yaml.Node:
 		return v.Decode(to) //nolint:wrapcheck
+	case json.RawMessage:
+		rawData = v
 	default:
 		return fmt.Errorf("unsupported configData type: %T", configData)
 	}

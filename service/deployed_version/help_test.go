@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/deployed_version/types/base"
+	"github.com/release-argus/Argus/service/deployed_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
@@ -38,41 +40,56 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testLookup() *Lookup {
+func testLookup(lookupType string, failing bool) Lookup {
+	lookup, _ := New(
+		lookupType,
+		"yaml", "",
+		nil,
+		nil,
+		nil, nil)
+
 	// HardDefaults.
-	hardDefaults := &Defaults{}
+	hardDefaults := &base.Defaults{}
 	hardDefaults.Default()
 	// Defaults.
-	defaults := &Defaults{}
+	defaults := &base.Defaults{}
 	// Options.
 	hardDefaultOptions := &opt.Defaults{}
 	hardDefaultOptions.Default()
 	options := opt.New(
-		nil, "", test.BoolPtr(true),
+		nil, "5m", test.BoolPtr(true),
 		&opt.Defaults{}, hardDefaultOptions)
 	// Status.
 	announceChannel := make(chan []byte, 24)
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
-	status := status.New(
+	svcStatus := status.New(
 		&announceChannel, &databaseChannel, &saveChannel,
 		"", "", "", "", "", "")
-	status.Init(
+	svcStatus.Init(
 		0, 0, 0,
 		test.StringPtr("serviceID"), nil,
 		test.StringPtr("http://example.com"),
 	)
 
-	lookup, _ := New(
-		"yaml", test.TrimYAML(`
-			method: GET
-			url: https://invalid.release-argus.io/json
-			allow_invalid_certs: true
-			json: version
-		`),
-		options,
-		status,
-		defaults, hardDefaults)
+	switch l := lookup.(type) {
+	case *web.Lookup:
+		l.URL = test.LookupJSON["url_invalid"]
+		l.AllowInvalidCerts = test.BoolPtr(!failing)
+		l.JSON = "version"
+		l.Init(
+			options,
+			svcStatus,
+			defaults, hardDefaults)
+	}
 
 	return lookup
+}
+
+func getType(lookup Lookup) string {
+	switch lookup.(type) {
+	case *web.Lookup:
+		return "url"
+	}
+	return "unknown"
 }

@@ -24,6 +24,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 var StdoutMutex sync.Mutex // Only one test should write to stdout at a time.
@@ -173,4 +175,14 @@ func IgnoreError[T any](t *testing.T, fn func() (T, error)) T {
 	}
 
 	return result
+}
+
+func YAMLToNode(t *testing.T, yamlStr string) (*yaml.Node, error) {
+	var node yaml.Node
+	err := yaml.Unmarshal([]byte(yamlStr), &node)
+	if err != nil {
+		return nil, err
+	}
+
+	return &node, nil
 }

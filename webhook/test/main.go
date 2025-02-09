@@ -36,10 +36,10 @@ func WebHook(failing, selfSignedCert, customHeaders bool) *webhook.WebHook {
 		&whMaxTries,
 		nil,
 		test.StringPtr("12m"),
-		"argus",
+		test.LookupGitHub["secret_pass"],
 		test.BoolPtr(false),
 		"github",
-		"https://valid.release-argus.io/hooks/github-style",
+		test.LookupGitHub["url_valid"],
 		&webhook.Defaults{},
 		&webhook.Defaults{}, &webhook.Defaults{})
 	wh.ID = "test"
@@ -55,16 +55,16 @@ func WebHook(failing, selfSignedCert, customHeaders bool) *webhook.WebHook {
 		wh.URL = strings.Replace(wh.URL, "valid", "invalid", 1)
 	}
 	if failing {
-		wh.Secret = "invalid"
+		wh.Secret = test.LookupGitHub["secret_fail"]
 	}
 	if customHeaders {
 		wh.URL = strings.Replace(wh.URL, "github-style", "single-header", 1)
 		if failing {
 			wh.CustomHeaders = &webhook.Headers{
-				{Key: "X-Test", Value: "invalid"}}
+				{Key: test.LookupWithHeaders["header_key"], Value: test.LookupWithHeaders["header_value_fail"]}}
 		} else {
 			wh.CustomHeaders = &webhook.Headers{
-				{Key: "X-Test", Value: "secret"}}
+				{Key: test.LookupWithHeaders["header_key"], Value: test.LookupWithHeaders["header_value_pass"]}}
 		}
 	}
 

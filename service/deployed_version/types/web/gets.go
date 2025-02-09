@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package deployedver provides the deployed_version lookup.
-package deployedver
+// Package web provides a web-based lookup type.
+package web
 
 import (
 	"io"
@@ -23,7 +23,7 @@ import (
 )
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
-func (l *Lookup) GetAllowInvalidCerts() bool {
+func (l *Lookup) allowInvalidCerts() bool {
 	return *util.FirstNonNilPtr(
 		l.AllowInvalidCerts,
 		l.Defaults.AllowInvalidCerts,
@@ -31,12 +31,12 @@ func (l *Lookup) GetAllowInvalidCerts() bool {
 }
 
 // GetURL will return the URL of the Lookup.
-func (l *Lookup) GetURL() string {
+func (l *Lookup) url() string {
 	return util.EvalEnvVars(l.URL)
 }
 
 // GetBody will return the Body of the Lookup.
-func (l *Lookup) GetBody() io.Reader {
+func (l *Lookup) body() io.Reader {
 	if l.Body == "" {
 		return nil
 	}

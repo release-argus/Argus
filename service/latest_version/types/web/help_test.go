@@ -66,7 +66,7 @@ func testLookup(failing bool) *Lookup {
 
 	lookup, _ := New(
 		"yaml", test.TrimYAML(`
-				url: https://invalid.release-argus.io/plain
+				url: `+test.LookupPlain["url_invalid"]+`
 				url_commands:
 					- type: regex
 						regex: 'ver([0-9.]+)'

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package test
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -28,4 +29,44 @@ func ShoutrrrGotifyToken() (token string) {
 		token = "AGE-LlHU89Q56uQ"
 	}
 	return
+}
+
+var ValidCertNoProtocol = "valid.release-argus.io"
+var InvalidCertNoProtocol = "invalid.release-argus.io"
+
+var ValidCertHTTPS = fmt.Sprintf("https://%s", ValidCertNoProtocol)
+var InvalidCertHTTPS = fmt.Sprintf("https://%s", InvalidCertNoProtocol)
+
+var LookupPlain = map[string]string{
+	"url_valid":   fmt.Sprintf("%s/plain", ValidCertHTTPS),
+	"url_invalid": fmt.Sprintf("%s/plain", InvalidCertHTTPS),
+
+	"url_valid_post":   fmt.Sprintf("%s/plain_post", ValidCertHTTPS),
+	"url_invalid_post": fmt.Sprintf("%s/plain_post", InvalidCertHTTPS),
+	"post_data_pass":   `{"argus":"test"}`,
+	"post_data_fail":   `{"argus":"test-"}`,
+}
+var LookupJSON = map[string]string{
+	"url_valid":   fmt.Sprintf("%s/json", ValidCertHTTPS),
+	"url_invalid": fmt.Sprintf("%s/json", InvalidCertHTTPS),
+}
+var LookupGitHub = map[string]string{
+	"url_valid":   fmt.Sprintf("%s/hooks/github-style", ValidCertHTTPS),
+	"url_invalid": fmt.Sprintf("%s/hooks/github-style", InvalidCertHTTPS),
+	"secret_pass": "argus",
+	"secret_fail": "argus-",
+}
+var LookupWithHeaders = map[string]string{
+	"url_valid":         fmt.Sprintf("%s/hooks/single-header", ValidCertHTTPS),
+	"url_invalid":       fmt.Sprintf("%s/hooks/single-header", InvalidCertHTTPS),
+	"header_key":        "X-Test",
+	"header_value_pass": "secret",
+	"header_value_fail": "secret-",
+}
+
+var LookupBasicAuth = map[string]string{
+	"url_valid":   fmt.Sprintf("%s/basic-auth", ValidCertHTTPS),
+	"url_invalid": fmt.Sprintf("%s/basic-auth", InvalidCertHTTPS),
+	"username":    "test",
+	"password":    "123",
 }

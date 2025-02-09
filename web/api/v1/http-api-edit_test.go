@@ -35,7 +35,8 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/service/latest_version/types/web"
+	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
+	lv_web "github.com/release-argus/Argus/service/latest_version/types/web"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
@@ -68,7 +69,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 		},
 		"invalid JSON": {
 			params: map[string]string{
-				"overrides": `"type": "url", "url": "https://valid.release-argus.io/plain"}`,
+				"overrides": `"type": "url", "url": "` + test.LookupPlain["url_valid"] + `"}`,
 			},
 			wants: wants{
 				body:       `^\{"message":"invalid JSON[^"]+"\}$`,
@@ -81,14 +82,14 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 				}`),
 			},
 			wants: wants{
-				body:       `"message":"type: .*invalid`,
+				body:       `"message":".*type: .*invalid`,
 				statusCode: http.StatusBadRequest},
 		},
 		"invalid vars - CheckValues fail": {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
-					"type": "url",
-					"url":          "https://valid.release-argus.io/plain",
+					"type":         "url",
+					"url":          "` + test.LookupPlain["url_valid"] + `",
 					"url_commands": "[{\"type\": \"regex\"}]"
 				}`),
 			},
@@ -99,8 +100,8 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 		"valid vars": {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
-					"type": "url",
-					"url":          "https://valid.release-argus.io/plain",
+					"type":         "url",
+					"url":          "` + test.LookupPlain["url_valid"] + `",
 					"url_commands": "[{\"type\": \"regex\", \"regex\": \"stable version: \\\"v?([0-9.]+)\\\"\"}]"
 				}`),
 			},
@@ -111,8 +112,8 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 		"query fail": {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
-					"type": "url",
-					"url":          "https://invalid.release-argus.io/plain",
+					"type":         "url",
+					"url":          "` + test.LookupPlain["url_invalid"] + `",
 					"url_commands": "[{\"type\": \"regex\", \"regex\": \"stable version: \\\"v?([0-9.]+)\\\"\"}]"
 				}`),
 			},
@@ -187,16 +188,27 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 		},
 		"invalid JSON": {
 			params: map[string]string{
-				"overrides": `"type": "url", "url": "https://valid.release-argus.io/plain"}`,
+				"overrides": `"type": "url", "url": "` + test.LookupPlain["url_valid"] + `"}`,
 			},
 			wants: wants{
-				body:       `^\{"message":"failed to unmarshal deployed_version:[^"]+"\}$`,
+				body:       `^\{"message":"invalid JSON[^"]+"\}$`,
+				statusCode: http.StatusBadRequest},
+		},
+		"invalid vars - New fail": {
+			params: map[string]string{
+				"overrides": test.TrimJSON(`{
+					"type": "something"
+				}`),
+			},
+			wants: wants{
+				body:       `"message":".*type: .*invalid`,
 				statusCode: http.StatusBadRequest},
 		},
 		"invalid vars - CheckValues fail": {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
-					"url":   "https://valid.release-argus.io/plain",
+					"type":  "url",
+					"url":   "` + test.LookupPlain["url_valid"] + `",
 					"regex": "stable version: \"v?([0-9.+)\""
 				}`),
 			},
@@ -207,7 +219,8 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 		"valid vars": {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
-					"url":   "https://valid.release-argus.io/plain",
+					"type":  "url",
+					"url":   "` + test.LookupPlain["url_valid"] + `",
 					"regex": "stable version: \"v?([0-9.]+)\""
 				}`)},
 			wants: wants{
@@ -217,7 +230,8 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 		"query fail": {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
-					"url":   "https://invalid.release-argus.io/plain",
+					"type":  "url",
+					"url":   "` + test.LookupPlain["url_invalid"] + `",
 					"regex": "stable version: \"v?([0-9.]+)\""
 				}`),
 			},
@@ -269,8 +283,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 	testSVC := testService("TestHTTP_LatestVersionRefresh", false)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
 	testSVC.LatestVersion.Query(true, logutil.LogFrom{})
-	v, _ := testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
-	testSVC.Status.SetDeployedVersion(v, "", false)
+	testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	type wants struct {
 		body                           string
 		statusCode                     int
@@ -305,16 +318,6 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				deployedVersion: testSVC.Status.LatestVersion(),
 				announce:        true},
 		},
-		"different regex doesn't update service version": {
-			params: map[string]string{
-				"overrides": test.TrimJSON(`{
-					"url_commands": [{"type":"regex","regex":"beta: \"v?([0-9.]+-beta)\""}]
-				}`)},
-			wants: wants{
-				body:          `\{"version":"[0-9.]+-beta",.*"\}`,
-				statusCode:    http.StatusOK,
-				latestVersion: ""},
-		},
 		"semantic_versioning not sent - refreshes service": {
 			wants: wants{
 				body:            `\{"version":"ver[0-9.]+",.*"\}`,
@@ -347,6 +350,16 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			wants: wants{
 				body:          `failed converting .* to a semantic version`,
 				statusCode:    http.StatusBadRequest,
+				latestVersion: ""},
+		},
+		"different regex doesn't update service version": {
+			params: map[string]string{
+				"overrides": test.TrimJSON(`{
+					"url_commands": [{"type":"regex","regex":"beta: \"v?([0-9.]+-beta)\""}]
+				}`)},
+			wants: wants{
+				body:          `\{"version":"[0-9.]+-beta",.*"\}`,
+				statusCode:    http.StatusOK,
 				latestVersion: ""},
 		},
 		"invalid vars": {
@@ -451,8 +464,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 	testSVC := testService("TestHTTP_DeployedVersionRefresh", false)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
 	testSVC.LatestVersion.Query(true, logutil.LogFrom{})
-	v, _ := testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
-	testSVC.Status.SetDeployedVersion(v, "", false)
+	testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	type wants struct {
 		body                           string
 		statusCode                     int
@@ -481,7 +493,8 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			nilDeployedVersion: true,
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
-					"url":                 "https://invalid.release-argus.io/json",
+					"type":                "url",
+					"url":                 "` + test.LookupJSON["url_invalid"] + `",
 					"json":                "nonSemVer",
 					"allow_invalid_certs": true
 				}`)},
@@ -539,10 +552,10 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				latestVersion:   "",
 				deployedVersion: ""},
 		},
-		"different json doesn't update service version": {
+		"different JSON doesn't update service version": {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
-					"json":                "version"
+					"json": "version"
 				}`),
 				"semantic_versioning": "false"},
 			wants: wants{
@@ -555,17 +568,17 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"overrides": `"method": "GET"}`,
 			},
 			wants: wants{
-				body:          `^\{"message":"failed to unmarshal deployed_version:[^"]+"\}$`,
+				body:          `^\{"message":"failed to unmarshal deployedver.Lookup:[^"]+"\}$`,
 				statusCode:    http.StatusBadRequest,
 				latestVersion: ""},
 		},
 		"invalid JSON - new DVL": {
 			nilDeployedVersion: true,
 			params: map[string]string{
-				"overrides": `"method": "GET"}`,
+				"overrides": `{"type": "url", "method}}`,
 			},
 			wants: wants{
-				body:          `^\{"message":"failed to unmarshal deployedver.Lookup:[^"]+"\}$`,
+				body:          `^\{"message":"invalid JSON[^"]+"\}$`,
 				statusCode:    http.StatusBadRequest,
 				latestVersion: ""},
 		},
@@ -684,8 +697,8 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 				body: fmt.Sprintf(
 					`\{"comment":%q,.*"latest_version":{.*"url":%q.*,"deployed_version":{.*"url":%q,`,
 					testSVC.Comment,
-					testSVC.LatestVersion.(*web.Lookup).URL,
-					testSVC.DeployedVersionLookup.URL),
+					testSVC.LatestVersion.(*lv_web.Lookup).URL,
+					testSVC.DeployedVersionLookup.(*dv_web.Lookup).URL),
 				statusCode: http.StatusOK},
 		},
 		"unknown service": {
@@ -704,7 +717,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 			apiMutex.Lock()
 			api.Config.Service[svc.ID] = svc
 			apiMutex.Unlock()
-			// service_id
+			// service_id.
 			serviceID := svc.ID
 			if tc.serviceID != nil {
 				serviceID = *tc.serviceID
@@ -809,8 +822,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 	testSVC := testService("TestHTTP_ServiceEdit", true)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
 	testSVC.LatestVersion.Query(true, logutil.LogFrom{})
-	v, _ := testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
-	testSVC.Status.SetDeployedVersion(v, "", false)
+	testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	type wants struct {
 		body                           string
 		statusCode                     int
@@ -838,7 +850,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 		payload   string
 		wants     wants
 	}{
-		"invalid json": {
+		"invalid JSON": {
 			payload: `
 				"id": "__name__-",
 				"latest_version": {
@@ -907,7 +919,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 					"id": "__name__",
 					"latest_version": {
 						"type": "url",
-						"url": "https://valid.release-argus.io/plain",
+						"url":  "` + test.LookupPlain["url_valid"] + `",
 						"url_commands": [
 							{
 								"type": "regex",
@@ -927,7 +939,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				{
 					"latest_version": {
 						"type": "url",
-						"url": "https://valid.release-argus.io/plain",
+						"url":  "` + test.LookupPlain["url_valid"] + `",
 						"url_commands": [
 							{
 								"type": "regex",
@@ -946,7 +958,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 					"id": "__name__",
 					"latest_version": {
 						"type": "url",
-						"url": "https://valid.release-argus.io/plain",
+						"url":  "` + test.LookupPlain["url_valid"] + `",
 						"url_commands": [
 							{
 								"type": "regex",
@@ -973,10 +985,10 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 			tc.payload = test.TrimJSON(tc.payload)
 			payload := bytes.NewReader([]byte(tc.payload))
 			var req *http.Request
-			// CREATE
+			// CREATE.
 			target := "/api/v1/service/new"
 			req = httptest.NewRequest(http.MethodPost, target, payload)
-			// EDIT
+			// EDIT.
 			if tc.serviceID != nil {
 				// set service_id.
 				*tc.serviceID = strings.ReplaceAll(
@@ -1018,7 +1030,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 			}
 			// AND the service was created.
 			serviceID := util.DereferenceOrDefault(tc.serviceID)
-			// (CREATE)
+			// CREATE.
 			if serviceID == "" {
 				var data map[string]interface{}
 				json.Unmarshal([]byte(tc.payload), &data)
