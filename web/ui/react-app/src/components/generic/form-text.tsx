@@ -130,7 +130,7 @@ const FormText: FC<FormTextProps> = ({
 				)}
 				<FormControl
 					id={name}
-					aria-label={`Select options for ${label}`}
+					aria-label={`Value field for ${label}`}
 					aria-describedby={cx(error && name + '-error')}
 					type={type}
 					placeholder={defaultVal || placeholder}

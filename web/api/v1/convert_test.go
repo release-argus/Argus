@@ -733,6 +733,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 						method: POST
 						url: https://release-argus.io
 						allow_invalid_certs: true
+						target_header: X-Version
 						basic_auth:
 							username: jim
 							password: whoops
@@ -760,6 +761,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				Method:            http.MethodPost,
 				URL:               "https://release-argus.io",
 				AllowInvalidCerts: test.BoolPtr(true),
+				TargetHeader:      "X-Version",
 				BasicAuth: &apitype.BasicAuth{
 					Username: "jim",
 					Password: util.SecretValue},

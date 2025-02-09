@@ -37,6 +37,7 @@ type Lookup struct {
 	Method            string `yaml:"method,omitempty" json:"method,omitempty"`                           // REQUIRED: HTTP method.
 	URL               string `yaml:"url,omitempty" json:"url,omitempty"`                                 // REQUIRED: URL to query.
 	AllowInvalidCerts *bool  `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
+	TargetHeader      string `yaml:"target_header,omitempty" json:"target_header,omitempty"`             // OPTIONAL: Header to target for the version.
 
 	BasicAuth     *BasicAuth `yaml:"basic_auth,omitempty" json:"basic_auth,omitempty"`         // OPTIONAL: Basic Auth credentials.
 	Headers       []Header   `yaml:"headers,omitempty" json:"headers,omitempty"`               // OPTIONAL: Request Headers.

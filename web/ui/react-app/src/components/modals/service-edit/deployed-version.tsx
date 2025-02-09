@@ -118,16 +118,22 @@ const EditServiceDeployedVersion: FC<Props> = ({
 					</Row>
 				</FormGroup>
 				<FormKeyValMap name="deployed_version.headers" />
-				{selectedMethod === 'POST' && (
-					<FormTextArea
-						name="deployed_version.body"
-						col_sm={12}
-						rows={3}
-						label="Body"
-						tooltip="Body to send with this request"
-					/>
-				)}
 				<Row>
+					<FormText
+						name="deployed_version.target_header"
+						col_sm={12}
+						label="Target header"
+						tooltip="Ignore the body and retrieve the version from this header in the response?"
+					/>
+					{selectedMethod === 'POST' && (
+						<FormTextArea
+							name="deployed_version.body"
+							col_sm={12}
+							rows={3}
+							label="Body"
+							tooltip="Body to send with this request"
+						/>
+					)}
 					<FormText
 						name="deployed_version.json"
 						col_xs={6}

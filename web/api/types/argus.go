@@ -54,13 +54,13 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 		return
 	}
 
-	// ID
+	// ID.
 	if oldData.ID == s.ID {
 		s.ID = ""
 	}
-	// Name
+	// Name.
 	nilUnchanged(oldData.Name, &s.Name)
-	// Active
+	// Active.
 	if util.DereferenceOrNilValue(oldData.Active, true) ==
 		util.DereferenceOrNilValue(s.Active, true) {
 		s.Active = nil
@@ -68,15 +68,15 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 		active := util.DereferenceOrNilValue(s.Active, true)
 		s.Active = &active
 	}
-	// Type
+	// Type.
 	if oldData.Type == s.Type {
 		s.Type = ""
 	}
-	// URL
+	// URL.
 	nilUnchanged(oldData.WebURL, &s.WebURL)
-	// Icon
+	// Icon.
 	nilUnchanged(oldData.Icon, &s.Icon)
-	// IconLinkTo
+	// IconLinkTo.
 	nilUnchanged(oldData.IconLinkTo, &s.IconLinkTo)
 	// Has DeployedVersionLookup?
 	if util.DereferenceOrNilValue(oldData.HasDeployedVersionLookup, false) ==
@@ -84,20 +84,20 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 		s.HasDeployedVersionLookup = nil
 	}
 
-	// Status
+	// Status.
 	statusSameCount := 0
-	// 	ApprovedVersion
+	// 	ApprovedVersion.
 	if oldData.Status.ApprovedVersion == s.Status.ApprovedVersion {
 		s.Status.ApprovedVersion = ""
 		statusSameCount++
 	}
-	// 	DeployedVersion
+	// 	DeployedVersion.
 	if oldData.Status.DeployedVersion == s.Status.DeployedVersion {
 		s.Status.DeployedVersion = ""
 		s.Status.DeployedVersionTimestamp = ""
 		statusSameCount++
 	}
-	// 	LatestVersion
+	// 	LatestVersion.
 	if oldData.Status.LatestVersion == s.Status.LatestVersion {
 		s.Status.LatestVersion = ""
 		s.Status.LatestVersionTimestamp = ""
@@ -117,9 +117,9 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 		s.Tags = nil
 	}
 
-	// Command
+	// Command.
 	nilUnchanged(oldData.Command, &s.Command)
-	// WebHook
+	// WebHook.
 	nilUnchanged(oldData.WebHook, &s.WebHook)
 }
 
@@ -349,7 +349,7 @@ func (n *Notify) Censor() *Notify {
 		return nil
 	}
 
-	// url_fields
+	// url_fields.
 	n.URLFields = util.CopyMap(n.URLFields)
 	for _, field := range shoutrrr_types.CensorableURLFields {
 		if n.URLFields[field] != "" {
@@ -357,7 +357,7 @@ func (n *Notify) Censor() *Notify {
 		}
 	}
 
-	// params
+	// params.
 	n.Params = util.CopyMap(n.Params)
 	for _, param := range shoutrrr_types.CensorableParams {
 		if n.Params[param] != "" {
@@ -520,6 +520,7 @@ type DeployedVersionLookup struct {
 	Method            string                 `json:"method,omitempty" yaml:"method,omitempty"`                           // HTTP method.
 	URL               string                 `json:"url,omitempty" yaml:"url,omitempty"`                                 // URL to query.
 	AllowInvalidCerts *bool                  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
+	TargetHeader      string                 `json:"target_header,omitempty" yaml:"target_header,omitempty"`             // Header to target for the version.
 	BasicAuth         *BasicAuth             `json:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`                   // Basic Auth credentials.
 	Headers           []Header               `json:"headers,omitempty" yaml:"headers,omitempty"`                         // Request Headers.
 	Body              string                 `json:"body,omitempty" yaml:"body,omitempty"`                               // Request Body.
@@ -636,12 +637,12 @@ func (w *WebHook) Censor() {
 		return
 	}
 
-	// Secret
+	// Secret.
 	if w.Secret != "" {
 		w.Secret = util.SecretValue
 	}
 
-	// Headers
+	// Headers.
 	if w.CustomHeaders != nil {
 		for i := range *w.CustomHeaders {
 			(*w.CustomHeaders)[i].Value = util.SecretValue
