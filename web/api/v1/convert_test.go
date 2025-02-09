@@ -771,6 +771,10 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				Regex:         `([0-9]+\.[0-9]+\.[0-9]+)`,
 				RegexTemplate: "$1.$2.$3"},
 		},
+		"unknown type": {
+			dvl:  &deployedver_base.Lookup{},
+			want: nil,
+		},
 	}
 
 	for name, tc := range tests {
