@@ -68,7 +68,7 @@ const FormTextWithPreview: FC<Props> = ({
 				<div style={{ display: 'flex', alignItems: 'center' }}>
 					<FormControl
 						id={name}
-						aria-label={`Select options for ${label}`}
+						aria-label={`Value field for ${label}`}
 						aria-describedby={cx(
 							error && name + '-error',
 							tooltip && name + '-tooltip',

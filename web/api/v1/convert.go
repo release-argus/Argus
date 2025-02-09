@@ -234,6 +234,7 @@ func convertAndCensorDeployedVersionLookup(dvl deployedver.Lookup) *apitype.Depl
 			Method:            dvl.Method,
 			URL:               dvl.URL,
 			AllowInvalidCerts: dvl.AllowInvalidCerts,
+			TargetHeader:      dvl.TargetHeader,
 			Headers:           nil,
 			Body:              dvl.Body,
 			JSON:              dvl.JSON,

@@ -483,6 +483,29 @@ func TestLookup_Query(t *testing.T) {
 			`),
 			errRegex: `non-2XX response code: 404`,
 		},
+		"version from header - pass, exact casing": {
+			overrides: test.TrimYAML(`
+				method: GET
+				url: ` + test.LookupHeader["url_valid"] + `
+				target_header: ` + test.LookupHeader["header_key_pass"]),
+			wantVersion: `^\d+\.\d+\.\d+$`,
+			errRegex:    `^$`,
+		},
+		"version from header - pass, mixed casing": {
+			overrides: test.TrimYAML(`
+				method: GET
+				url: ` + test.LookupHeader["url_valid"] + `
+				target_header: ` + test.LookupHeader["header_key_pass_mixed_case"]),
+			wantVersion: `^\d+\.\d+\.\d+$`,
+			errRegex:    `^$`,
+		},
+		"version from header - fail": {
+			overrides: test.TrimYAML(`
+				method: GET
+				url: ` + test.LookupHeader["url_valid"] + `
+				target_header: ` + test.LookupHeader["header_key_fail"]),
+			errRegex: `^target header "[^"]+" not found$`,
+		},
 	}
 
 	for name, tc := range tests {
