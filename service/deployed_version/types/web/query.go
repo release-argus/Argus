@@ -78,15 +78,8 @@ func (l *Lookup) query(writeToDB bool, logFrom logutil.LogFrom) error {
 		return err
 	}
 
-	// If this version differs (new?).
+	// Set the deployed version if it has changed.
 	if previousVersion := l.Status.DeployedVersion(); version != previousVersion {
-		// Verify Semantic Versioning (if enabled).
-		if l.Options.GetSemanticVersioning() {
-			if err := l.VerifySemanticVersioning(version, previousVersion, logFrom); err != nil {
-				return err //nolint: wrapcheck
-			}
-		}
-
 		l.HandleNewVersion(version, "", writeToDB, logFrom) //nolint: wrapcheck
 	}
 
