@@ -42,10 +42,10 @@ func TestWebHook(t *testing.T) {
 			failing:        false,
 			selfSignedCert: false,
 			customHeaders:  true,
-			expectedURL:    test.LookupWithHeaders["url_valid"],
+			expectedURL:    test.LookupWithHeaderAuth["url_valid"],
 			expectedSecret: test.LookupGitHub["secret_pass"],
 			expectedHeaders: &webhook.Headers{
-				{Key: test.LookupWithHeaders["header_key"], Value: test.LookupWithHeaders["header_value_pass"]}},
+				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]}},
 		},
 		"passing, self-signed, no custom headers": {
 			failing:         false,
@@ -59,10 +59,10 @@ func TestWebHook(t *testing.T) {
 			failing:        false,
 			selfSignedCert: true,
 			customHeaders:  true,
-			expectedURL:    test.LookupWithHeaders["url_invalid"],
+			expectedURL:    test.LookupWithHeaderAuth["url_invalid"],
 			expectedSecret: test.LookupGitHub["secret_pass"],
 			expectedHeaders: &webhook.Headers{
-				{Key: test.LookupWithHeaders["header_key"], Value: test.LookupWithHeaders["header_value_pass"]}},
+				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]}},
 		},
 		"failing, signed, no custom headers": {
 			failing:         true,
@@ -76,10 +76,10 @@ func TestWebHook(t *testing.T) {
 			failing:        true,
 			selfSignedCert: false,
 			customHeaders:  true,
-			expectedURL:    test.LookupWithHeaders["url_valid"],
+			expectedURL:    test.LookupWithHeaderAuth["url_valid"],
 			expectedSecret: test.LookupGitHub["secret_fail"],
 			expectedHeaders: &webhook.Headers{
-				{Key: test.LookupWithHeaders["header_key"], Value: test.LookupWithHeaders["header_value_fail"]}},
+				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_fail"]}},
 		},
 		"failing, self-signed, no custom headers": {
 			failing:         true,
@@ -93,10 +93,10 @@ func TestWebHook(t *testing.T) {
 			failing:        true,
 			selfSignedCert: true,
 			customHeaders:  true,
-			expectedURL:    test.LookupWithHeaders["url_invalid"],
+			expectedURL:    test.LookupWithHeaderAuth["url_invalid"],
 			expectedSecret: test.LookupGitHub["secret_fail"],
 			expectedHeaders: &webhook.Headers{
-				{Key: test.LookupWithHeaders["header_key"], Value: test.LookupWithHeaders["header_value_fail"]}},
+				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_fail"]}},
 		},
 	}
 

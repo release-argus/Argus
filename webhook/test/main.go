@@ -61,10 +61,10 @@ func WebHook(failing, selfSignedCert, customHeaders bool) *webhook.WebHook {
 		wh.URL = strings.Replace(wh.URL, "github-style", "single-header", 1)
 		if failing {
 			wh.CustomHeaders = &webhook.Headers{
-				{Key: test.LookupWithHeaders["header_key"], Value: test.LookupWithHeaders["header_value_fail"]}}
+				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_fail"]}}
 		} else {
 			wh.CustomHeaders = &webhook.Headers{
-				{Key: test.LookupWithHeaders["header_key"], Value: test.LookupWithHeaders["header_value_pass"]}}
+				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]}}
 		}
 	}
 

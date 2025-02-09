@@ -41,7 +41,7 @@ func TestLookup_Track(t *testing.T) {
 	plainNonSemanticVersionAsSemantic := "1.2.2"
 	plainNonSemanticVersion := "ver" + plainNonSemanticVersionAsSemantic
 	jsonBarVersion := "1.2.2"
-	// GIVEN a Lookup()
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		env                                       map[string]string
 		lookup                                    *Lookup
@@ -349,8 +349,8 @@ func TestLookup_Query(t *testing.T) {
 		"POST - success": {
 			overrides: test.TrimYAML(`
 				method: POST
-				url: ` + test.LookupPlain["url_valid_post"] + `
-				body: '` + test.LookupPlain["post_data_pass"] + `'
+				url: ` + test.LookupPlainPOST["url_valid"] + `
+				body: '` + test.LookupPlainPOST["data_pass"] + `'
 				regex: ver([0-9.]+)
 			`),
 			wantVersion: "[0-9.]+",
@@ -359,8 +359,8 @@ func TestLookup_Query(t *testing.T) {
 		"POST - fail, invalid body": {
 			overrides: test.TrimYAML(`
 				method: POST
-				url: ` + test.LookupPlain["url_valid_post"] + `
-				body: '` + test.LookupPlain["post_data_fail"] + `'
+				url: ` + test.LookupPlainPOST["url_valid"] + `
+				body: '` + test.LookupPlainPOST["data_fail"] + `'
 			`),
 			errRegex: `non-2XX response code`,
 		},
@@ -420,8 +420,8 @@ func TestLookup_Query(t *testing.T) {
 			optionsOverrides: test.TrimYAML(`
 				semantic_versioning: false
 			`),
-			errRegex:    `^$`,
 			wantVersion: "version stable and, 1.2.1",
+			errRegex:    `^$`,
 		},
 		"failing regex": {
 			overrides: test.TrimYAML(`
@@ -464,8 +464,8 @@ func TestLookup_Query(t *testing.T) {
 				url: ` + test.LookupJSON["url_valid"] + `
 				json: bar
 			`),
-			errRegex:    `^$`,
 			wantVersion: `^[0-9.]+\.[0-9.]+\.[0-9.]+$`,
+			errRegex:    `^$`,
 		},
 		"headers fail": {
 			overrides: test.TrimYAML(`
@@ -525,10 +525,11 @@ func TestLookup_Query(t *testing.T) {
 }
 
 func TestLookup_HTTPRequest(t *testing.T) {
-	// GIVEN a Lookup()
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		env       map[string]string
 		overrides string
+		bodyRegex string
 		errRegex  string
 	}{
 		"url - invalid": {
@@ -565,19 +566,22 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		"headers - pass": {
 			overrides: `
 				method: POST
-				url: ` + test.LookupWithHeaders["url_valid"] + `
+				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
 				headers:
-					- key: ` + test.LookupWithHeaders["header_key"] + `
-						value: ` + test.LookupWithHeaders["header_value_pass"],
-			errRegex: `^$`,
+					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
+						value: ` + test.LookupWithHeaderAuth["header_value_pass"],
+			bodyRegex: `^$`,
+			errRegex:  `^$`,
 		},
 		"headers - fail": {
 			overrides: `
-				url: https://api.github.com/repos/release-argus/argus/releases/latest
+				method: POST
+				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
 				headers:
-					- key: Authorization
-						value: token ghp_FAIL`,
-			errRegex: `non-2XX response code: 401`,
+					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
+						value: ` + test.LookupWithHeaderAuth["header_value_fail"],
+			bodyRegex: `Hook rules were not satisfied\.`,
+			errRegex:  `^$`,
 		},
 		"basic auth - pass": {
 			overrides: `
@@ -633,13 +637,20 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			}
 
 			// WHEN httpRequest is called on it.
-			_, err = lookup.httpRequest(logutil.LogFrom{})
+			body, err := lookup.httpRequest(logutil.LogFrom{})
 
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("want match for %q\nnot: %q",
 					tc.errRegex, e)
+			}
+			// AND the body matches the expected regex.
+			if tc.bodyRegex != "" {
+				if !util.RegexCheck(tc.bodyRegex, string(body)) {
+					t.Errorf("body mismatch\n%q\ngot:\n%q",
+						tc.bodyRegex, string(body))
+				}
 			}
 		})
 	}

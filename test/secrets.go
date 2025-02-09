@@ -39,34 +39,33 @@ var InvalidCertHTTPS = fmt.Sprintf("https://%s", InvalidCertNoProtocol)
 
 var LookupPlain = map[string]string{
 	"url_valid":   fmt.Sprintf("%s/plain", ValidCertHTTPS),
-	"url_invalid": fmt.Sprintf("%s/plain", InvalidCertHTTPS),
+	"url_invalid": fmt.Sprintf("%s/plain", InvalidCertHTTPS)}
 
-	"url_valid_post":   fmt.Sprintf("%s/plain_post", ValidCertHTTPS),
-	"url_invalid_post": fmt.Sprintf("%s/plain_post", InvalidCertHTTPS),
-	"post_data_pass":   `{"argus":"test"}`,
-	"post_data_fail":   `{"argus":"test-"}`,
-}
+var LookupPlainPOST = map[string]string{
+	"url_valid":   fmt.Sprintf("%s/plain_post", ValidCertHTTPS),
+	"url_invalid": fmt.Sprintf("%s/plain_post", InvalidCertHTTPS),
+	"data_pass":   `{"argus":"test"}`,
+	"data_fail":   `{"argus":"test-"}`}
+
 var LookupJSON = map[string]string{
 	"url_valid":   fmt.Sprintf("%s/json", ValidCertHTTPS),
-	"url_invalid": fmt.Sprintf("%s/json", InvalidCertHTTPS),
-}
+	"url_invalid": fmt.Sprintf("%s/json", InvalidCertHTTPS)}
+
 var LookupGitHub = map[string]string{
 	"url_valid":   fmt.Sprintf("%s/hooks/github-style", ValidCertHTTPS),
 	"url_invalid": fmt.Sprintf("%s/hooks/github-style", InvalidCertHTTPS),
 	"secret_pass": "argus",
-	"secret_fail": "argus-",
-}
-var LookupWithHeaders = map[string]string{
+	"secret_fail": "argus-"}
+
+var LookupWithHeaderAuth = map[string]string{
 	"url_valid":         fmt.Sprintf("%s/hooks/single-header", ValidCertHTTPS),
 	"url_invalid":       fmt.Sprintf("%s/hooks/single-header", InvalidCertHTTPS),
 	"header_key":        "X-Test",
 	"header_value_pass": "secret",
-	"header_value_fail": "secret-",
-}
+	"header_value_fail": "secret-"}
 
 var LookupBasicAuth = map[string]string{
 	"url_valid":   fmt.Sprintf("%s/basic-auth", ValidCertHTTPS),
 	"url_invalid": fmt.Sprintf("%s/basic-auth", InvalidCertHTTPS),
 	"username":    "test",
-	"password":    "123",
-}
+	"password":    "123"}
