@@ -32,10 +32,10 @@ const HTTP: FC<Props> = ({ name, defaults }) => {
 		<>
 			<FormSelect
 				name={`${name}.method`}
-				col_sm={5}
+				col_sm={12}
 				label="Type"
 				options={methodOptions}
-				position="right"
+				positionXS="right"
 			/>
 			<FormText
 				name={`${name}.url`}

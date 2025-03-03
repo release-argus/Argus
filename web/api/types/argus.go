@@ -517,6 +517,12 @@ type RequireDockerCheck struct {
 
 // DeployedVersionLookup of the service.
 type DeployedVersionLookup struct {
+	Type string `json:"type,omitempty" yaml:"type,omitempty"` // Service Type, url/manual.
+
+	// manual
+	Version string `json:"version,omitempty" yaml:"version,omitempty"` // Deployed version.
+
+	// url
 	Method            string                 `json:"method,omitempty" yaml:"method,omitempty"`                           // HTTP method.
 	URL               string                 `json:"url,omitempty" yaml:"url,omitempty"`                                 // URL to query.
 	AllowInvalidCerts *bool                  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.

@@ -161,7 +161,7 @@ const OPSGENIE = ({
 					label="Port"
 					isNumber
 					defaultVal={convertedDefaults.url_fields.port}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.apikey`}
@@ -190,10 +190,11 @@ const OPSGENIE = ({
 					label="Description"
 					tooltip="Description field of the alert"
 					defaultVal={convertedDefaults.params.description}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.params.note`}
+					col_sm={12}
 					label="Note"
 					tooltip="Additional note that will be added while creating the alert"
 					defaultVal={convertedDefaults.params.note}
@@ -218,7 +219,7 @@ const OPSGENIE = ({
 					tooltip="Priority level of the alert. 1/2/3/4/5"
 					isNumber
 					defaultVal={convertedDefaults.params.priority}
-					position="right"
+					positionXS="right"
 				/>
 				<OpsGenieTargets
 					name={`${name}.params.responders`}
@@ -237,7 +238,7 @@ const OPSGENIE = ({
 					label="Tags"
 					tooltip="Tags of the alert"
 					defaultVal={convertedDefaults.params.tags}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.params.title`}
@@ -250,7 +251,7 @@ const OPSGENIE = ({
 					label="User"
 					tooltip="Display name of the request owner"
 					defaultVal={convertedDefaults.params.user}
-					position="right"
+					positionXS="right"
 				/>
 				<OpsGenieTargets
 					name={`${name}.params.visibleto`}

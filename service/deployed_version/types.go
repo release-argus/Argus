@@ -23,6 +23,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
+	"github.com/release-argus/Argus/service/deployed_version/types/manual"
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
@@ -37,7 +38,7 @@ type Lookup interface {
 func New(
 	lType string,
 	configFormat string,
-	configData interface{}, // []byte | string | *yaml.Node | json.RawMessage.
+	configData any, // []byte | string | *yaml.Node | json.RawMessage.
 	options *opt.Options,
 	status *status.Status,
 	defaults, hardDefaults *base.Defaults,
@@ -45,6 +46,14 @@ func New(
 	switch lType {
 	case "url", "web":
 		return web.New( //nolint:wrapcheck
+			configFormat,
+			configData,
+			options,
+			status,
+			defaults,
+			hardDefaults)
+	case "manual":
+		return manual.New( //nolint:wrapcheck
 			configFormat,
 			configData,
 			options,
@@ -135,6 +144,10 @@ func unmarshal(data []byte, format string) (Lookup, error) {
 	}
 
 	// -- Dynamic deployedVersion type --
+	if temp.Type == "" {
+		// TODO: Swap defaulting to an error
+		temp.Type = "url"
+	}
 	// Supported type?
 	_, exists := ServiceMap[temp.Type]
 	if !exists {

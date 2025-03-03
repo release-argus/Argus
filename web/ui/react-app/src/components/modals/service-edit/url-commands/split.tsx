@@ -16,7 +16,7 @@ const SPLIT = ({ name }: { name: string }) => (
 			col_sm={6}
 			label="Text"
 			smallLabel
-			position="middle"
+			positionXS="middle"
 		/>
 		<FormText
 			key="index"
@@ -27,7 +27,7 @@ const SPLIT = ({ name }: { name: string }) => (
 			label="Index"
 			smallLabel
 			isNumber
-			position="right"
+			positionXS="right"
 		/>
 	</>
 );

@@ -103,7 +103,7 @@ const MATTERMOST = ({
 					tooltip="e.g. 443"
 					isNumber
 					defaultVal={convertedDefaults.url_fields.port}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.path`}
@@ -122,7 +122,7 @@ const MATTERMOST = ({
 					label="Channel"
 					tooltip="e.g. releases"
 					defaultVal={convertedDefaults.url_fields.channel}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.username`}
@@ -135,7 +135,7 @@ const MATTERMOST = ({
 					label="Token"
 					tooltip="WebHook token"
 					defaultVal={convertedDefaults.url_fields.token}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 			<FormLabel text="Params" heading />

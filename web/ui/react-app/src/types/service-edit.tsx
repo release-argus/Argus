@@ -86,6 +86,7 @@ export interface DeployedVersionLookupEditType {
 		| undefined
 		| BasicAuthType
 		| HeaderEditType[];
+	type: 'url' | 'manual';
 	method?: 'GET' | 'POST';
 	url?: string;
 	allow_invalid_certs?: boolean | null;
@@ -94,6 +95,7 @@ export interface DeployedVersionLookupEditType {
 	body?: string;
 	json?: string;
 	regex?: string;
+	version?: string;
 }
 
 export type NotifyEditType = NotifyTypesValues & {

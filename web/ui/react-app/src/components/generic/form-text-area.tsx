@@ -16,14 +16,19 @@ interface Props {
 
 	col_xs?: number;
 	col_sm?: number;
+	col_md?: number;
+	col_lg?: number;
+
 	label?: string;
 
 	defaultVal?: string;
 	placeholder?: string;
 
 	rows?: number;
-	position?: Position;
 	positionXS?: Position;
+	positionSM?: Position;
+	positionMD?: Position;
+	positionLG?: Position;
 }
 
 type FormTextAreaProps = TooltipWithAriaProps & Props;
@@ -33,16 +38,24 @@ type FormTextAreaProps = TooltipWithAriaProps & Props;
  *
  * @param name - The name of the form item.
  * @param required - Whether the form item is required.
+ *
  * @param col_xs - The number of columns the item takes up on XS+ screens.
  * @param col_sm - The number of columns the item takes up on SM+ screens.
+ * @param col_md - The number of columns the item takes up on MD+ screens.
+ * @param col_lg - The number of columns the item takes up on LG+ screens.
+ *
  * @param label - The label of the form item.
  * @param tooltip - The tooltip of the form item.
  * @param tooltipAriaLabel - The aria label for the tooltip (Defaults to the tooltip).
+ *
  * @param defaultVal - The default value of the form item.
  * @param placeholder - The placeholder of the form item.
+ *
  * @param rows - The number of rows for the textarea.
- * @param position - The position of the form item.
- * @param positionXS - The position of the form item on extra small screens.
+ * @param positionXS - The position of the form item on XS+ screens.
+ * @param positionSM - The position of the form item on SM+ screens.
+ * @param positionMD - The position of the form item on MD+ screens.
+ * @param positionLG - The position of the form item on LG+ screens.
  * @returns A form textarea with a label and tooltip.
  */
 const FormTextArea: FC<FormTextAreaProps> = ({
@@ -51,6 +64,9 @@ const FormTextArea: FC<FormTextAreaProps> = ({
 
 	col_xs = 12,
 	col_sm = 6,
+	col_md,
+	col_lg,
+
 	label,
 	tooltip,
 	tooltipAriaLabel,
@@ -59,13 +75,24 @@ const FormTextArea: FC<FormTextAreaProps> = ({
 	placeholder,
 
 	rows,
-	position = 'left',
-	positionXS = position,
+	positionXS = 'left',
+	positionSM,
+	positionMD,
+	positionLG,
 }) => {
 	const { register, setError, clearErrors } = useFormContext();
 	const error = useError(name, required);
 
-	const padding = formPadding({ col_xs, col_sm, position, positionXS });
+	const padding = formPadding({
+		col_xs,
+		col_sm,
+		col_md,
+		col_lg,
+		positionXS,
+		positionSM,
+		positionMD,
+		positionLG,
+	});
 	const getTooltipProps = () => {
 		if (!tooltip) return {};
 		if (typeof tooltip === 'string') return { tooltip, tooltipAriaLabel };
@@ -73,7 +100,13 @@ const FormTextArea: FC<FormTextAreaProps> = ({
 	};
 
 	return (
-		<Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
+		<Col
+			xs={col_xs}
+			sm={col_sm}
+			md={col_md}
+			lg={col_lg}
+			className={`${padding} pt-1 pb-1 col-form`}
+		>
 			<FormGroup>
 				{label && (
 					<FormLabel

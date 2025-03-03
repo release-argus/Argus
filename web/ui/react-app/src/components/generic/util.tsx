@@ -1,10 +1,42 @@
 import { Position } from 'types/config';
+import { ScreenBreakpoint } from 'types/util';
+
+const getPadding = (
+	position?: Position,
+	col?: number,
+	breakpoint?: ScreenBreakpoint,
+	previous?: { pos?: Position; col?: number; applied?: boolean },
+) => {
+	// Skip padding if the column is full width,
+	// or the position is the same as the previous position (and that padding has already been applied).
+	if (col === 12 || (previous?.applied && position === previous?.pos))
+		return null;
+
+	const breakpointPrefix = (breakpoint ? '-' + breakpoint : '') + '-1';
+
+	// Apply the padding based on the position.
+	switch (position) {
+		case 'right':
+			return `ps${breakpointPrefix}`;
+		case 'middle':
+			return `ps${breakpointPrefix} pe${breakpointPrefix}`;
+		case 'left':
+			return `pe${breakpointPrefix}`;
+	}
+
+	return null; // No positioning given.
+};
 
 type formPaddingProps = {
-	col_xs: number;
-	col_sm: number;
-	position?: Position;
+	col_xs?: number;
+	col_sm?: number;
+	col_md?: number;
+	col_lg?: number;
+
 	positionXS?: Position;
+	positionSM?: Position;
+	positionMD?: Position;
+	positionLG?: Position;
 };
 
 /**
@@ -12,88 +44,83 @@ type formPaddingProps = {
  *
  * @param col_xs - The number of columns the item takes up on XS+ screens.
  * @param col_sm - The number of columns the item takes up on SM+ screens.
- * @param position - The position of the item on SM+.
- * @param positionXS - The position of the item on XS.
+ * @param col_md - The number of columns the item takes up on MD+ screens.
+ * @param col_lg - The number of columns the item takes up on LG+ screens.
+ *
+ * @param positionXS - The position of the item on XS+ screens.
+ * @param positionSM - The position of the item on SM+ screens.
+ * @param positionMD - The position of the item on MD+ screens.
+ * @param positionLG - The position of the item on LG+ screens.
  * @returns The padding classes for a form item depending on the screen size.
  */
 export const formPadding = ({
 	col_xs,
 	col_sm,
-	position,
-	positionXS = position,
+	col_md,
+	col_lg,
+
+	positionXS,
+	positionSM,
+	positionMD,
+	positionLG,
 }: formPaddingProps) => {
-	const paddingClasses = [];
+	const paddingClasses: string[] = [];
 
-	// Padding for SM+.
-	if (col_sm !== 12) {
-		// Padding for being on the right.
-		if (position === 'right') {
-			paddingClasses.push('ps-sm-2');
-		}
-		// Padding for being in the middle.
-		else if (position === 'middle') {
-			paddingClasses.push('ps-sm-1');
-			paddingClasses.push('pe-sm-1');
-		}
-		// Padding for being on the left.
-		else {
-			paddingClasses.push('pe-sm-2');
-		}
-	}
+	// All widths are max, so no padding needed.
+	if (col_lg === 12 && col_md === 12 && col_sm === 12 && col_xs === 12)
+		return '';
 
-	// If the padding is the same on XS+ and SM+, convert the SM+ padding to XS+.
-	if (position === positionXS && col_sm !== 12 && col_xs !== 12) {
-		for (let i = 0; i < paddingClasses.length; i++) {
-			paddingClasses[i] = paddingClasses[i].replace('-sm', '');
-		}
-	}
+	// Same padding if all widths are not max.
+	const allNotMax =
+		col_lg !== 12 && col_md !== 12 && col_sm !== 12 && col_xs !== 12;
+	// Same positioning on all breakpoints.
+	if (
+		(positionLG || positionMD || positionSM || positionXS) && // Have a position
+		positionXS === (positionSM ?? positionXS) && // XS === SM
+		(positionSM ?? positionXS) === (positionMD ?? positionSM ?? positionXS) && // SM === MD
+		(positionMD ?? positionSM ?? positionXS) ===
+			(positionLG ?? positionMD ?? positionSM ?? positionXS) && // MD === LG
+		allNotMax
+	)
+		return getPadding(positionLG ?? positionMD ?? positionSM ?? positionXS);
 
-	// Padding for XS.
-	else if (col_xs !== 12) {
-		// XS Padding for being on the right.
-		if (positionXS === 'right') {
-			paddingClasses.push('ps-1');
+	const addPadding = (
+		position?: Position,
+		col?: number,
+		breakpoint?: ScreenBreakpoint,
+		previous?: { pos?: Position; col?: number; applied?: boolean },
+	) => {
+		// Skip full-width columns.
+		if (col === 12)
+			return {
+				pos: position ?? previous?.pos,
+				col: col ?? previous?.col,
+				applied: previous?.applied,
+			};
 
-			// Remove padding for SM+
-			// if it's full width,
-			// or we're on the left for SM+.
-			if (col_sm === 12 || position === 'left') {
-				paddingClasses.push('ps-sm-0');
-			}
-		}
+		const newPosition = position ?? previous?.pos;
+		const padding = getPadding(newPosition, col, breakpoint, previous);
 
-		// XS Padding for being in the middle.
-		else if (positionXS === 'middle') {
-			paddingClasses.push('ps-1');
-			paddingClasses.push('pe-1');
+		// Only push the padding when not null.
+		if (padding) paddingClasses.push(padding);
 
-			// Remove padding for SM+ if it's full width.
-			if (col_sm === 12) {
-				paddingClasses.push('ps-sm-0');
-				paddingClasses.push('pe-sm-0');
-			}
-			// If we're on the right, remove the pe on SM+.
-			else if (position === 'right') {
-				paddingClasses.push('pe-sm-0');
-			}
-			// If we're on the left, remove the ps on SM+.
-			else if (position === 'left') {
-				paddingClasses.push('ps-sm-0');
-			}
-		}
+		// Return the updated previous position and column.
+		return {
+			pos: newPosition,
+			col: col ?? previous?.col,
+			applied: !!padding || previous?.applied,
+		};
+	};
 
-		// XS Padding for being on the left.
-		else if (positionXS === 'left') {
-			paddingClasses.push('pe-1');
-
-			// Remove padding for SM+
-			// if it's full width,
-			// or we're on the right for SM+.
-			if (col_sm === 12 || position === 'right') {
-				paddingClasses.push('pe-sm-0');
-			}
-		}
-	}
+	// Padding for each screen size (if it's different to the previous breakpoint).
+	// XS+
+	let previous = addPadding(positionXS, col_xs);
+	// SM+
+	previous = addPadding(positionSM, col_sm, 'sm', previous);
+	// MD+
+	previous = addPadding(positionMD, col_md, 'md', previous);
+	// LG+
+	addPadding(positionLG, col_lg, 'lg', previous);
 
 	return paddingClasses.join(' ');
 };

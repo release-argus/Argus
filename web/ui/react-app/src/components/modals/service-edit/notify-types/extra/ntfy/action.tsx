@@ -40,10 +40,10 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
 
 	return (
 		<>
-			<Col xs={2} sm={1} style={{ padding: '0.25rem' }}>
+			<Col xs={2} sm={1} className="py-1 pe-2">
 				<Button
 					aria-label="Remove this action"
-					className="btn-secondary-outlined btn-icon-center"
+					className="btn-secondary-outlined btn-icon-center p-0"
 					variant="secondary"
 					onClick={removeMe}
 				>
@@ -55,7 +55,6 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
 					<FormSelect
 						name={`${name}.action`}
 						col_xs={6}
-						col_sm={3}
 						label="Action Type"
 						options={typeOptions}
 					/>
@@ -63,13 +62,12 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
 						name={`${name}.label`}
 						required
 						col_xs={6}
-						col_sm={4}
 						label="Label"
 						tooltip="Button name to display on the notification"
 						defaultVal={defaults?.label}
 						placeholder={`e.g. '${typeLabelMap[targetType]}'`}
-						position="middle"
 						positionXS="right"
+						positionSM="middle"
 					/>
 					<RenderAction
 						name={name}

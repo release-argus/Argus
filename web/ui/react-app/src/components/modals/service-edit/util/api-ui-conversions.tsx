@@ -54,6 +54,7 @@ export const convertAPIServiceDataEditToUI = (
 				require: { docker: { type: '' } },
 			},
 			deployed_version: {
+				type: 'url',
 				headers: [],
 			},
 			command: [],
@@ -101,10 +102,10 @@ const convertAPILatestVersionDataEditToUI = (
 		latest_version?.type === 'github'
 			? {
 					use_prerelease: strToBool(latest_version?.use_prerelease),
-				}
+			  }
 			: {
 					allow_invalid_certs: strToBool(latest_version?.allow_invalid_certs),
-				};
+			  };
 
 	return {
 		...latest_version,
@@ -412,8 +413,16 @@ const convertStringMapToHeaderType = (
 const convertAPIDeployedVersionDataEditToUI = (
 	deployed_version?: DeployedVersionLookupEditType,
 ): DeployedVersionLookupEditType => {
+	const typeSpecific =
+		deployed_version?.type === 'url'
+			? {
+					method: deployed_version?.method ?? 'GET',
+			  }
+			: {};
+
 	return {
-		method: 'GET',
+		type: 'url',
+		...typeSpecific,
 		...deployed_version,
 		allow_invalid_certs: strToBool(deployed_version?.allow_invalid_certs),
 		basic_auth: {
@@ -479,7 +488,7 @@ const convertAPIWebhookDataEditToUI = (
 			? item.custom_headers?.map((header, index) => ({
 					...header,
 					oldIndex: index,
-				}))
+			  }))
 			: firstNonEmpty(
 					otherOptionsData?.webhook?.[whName]?.custom_headers,
 					(
@@ -492,7 +501,7 @@ const convertAPIWebhookDataEditToUI = (
 							| WebHookType
 							| undefined
 					)?.custom_headers,
-				).map(() => ({ key: '', item: '' }));
+			  ).map(() => ({ key: '', item: '' }));
 
 		return {
 			...item,

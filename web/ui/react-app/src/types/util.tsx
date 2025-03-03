@@ -1,3 +1,5 @@
+export type ScreenBreakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+
 export interface Dictionary<T> {
 	[Key: string]: T;
 }

@@ -134,7 +134,7 @@ const EditServiceRoot: FC<Props> = ({ id, name, original_name, loading }) => {
 								value === ''
 									? false
 									: // ID hasn't changed, or not in use.
-										valueNotInOtherNameOrID(value);
+									  valueNotInOtherNameOrID(value);
 							return (
 								validation || (value === '' ? 'Required' : 'Must be unique')
 							);
@@ -154,7 +154,7 @@ const EditServiceRoot: FC<Props> = ({ id, name, original_name, loading }) => {
 									value === ''
 										? false
 										: // Name hasn't changed, or not in use.
-											valueNotInOtherNameOrID(value);
+										  valueNotInOtherNameOrID(value);
 								return (
 									validation || (value === '' ? 'Required' : 'Must be unique')
 								);
@@ -162,7 +162,7 @@ const EditServiceRoot: FC<Props> = ({ id, name, original_name, loading }) => {
 						}}
 						label="Name"
 						tooltip="Name shown in the UI"
-						position="right"
+						positionXS="right"
 					/>
 				)}
 			</Row>

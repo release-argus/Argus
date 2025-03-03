@@ -17,16 +17,19 @@ package deployedver
 
 import (
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
+	"github.com/release-argus/Argus/service/deployed_version/types/manual"
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
 )
 
 // PossibleTypes for the deployed_version Lookup.
 var PossibleTypes = []string{
 	"url",
+	"manual",
 }
 
 // ServiceMap maps a service type to a Lookup constructor.
 var ServiceMap = map[string]func() base.Interface{
-	"url": func() base.Interface { return &web.Lookup{} },
-	"web": func() base.Interface { return &web.Lookup{} },
+	"url":    func() base.Interface { return &web.Lookup{} },
+	"web":    func() base.Interface { return &web.Lookup{} },
+	"manual": func() base.Interface { return &manual.Lookup{} },
 }

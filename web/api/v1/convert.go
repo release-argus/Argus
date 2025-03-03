@@ -21,6 +21,7 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	dvmanual "github.com/release-argus/Argus/service/deployed_version/types/manual"
 	dvweb "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
@@ -126,17 +127,19 @@ func convertAndCensorLatestVersion(lv latestver.Lookup) *apitype.LatestVersion {
 			AccessToken:   util.ValueUnlessDefault(v.AccessToken, util.SecretValue),
 			UsePreRelease: v.UsePreRelease,
 			URLCommands:   convertURLCommandSlice(&v.URLCommands),
-			Require:       convertAndCensorLatestVersionRequire(v.Require)}
+			Require:       convertAndCensorLatestVersionRequire(v.Require),
+		}
 	case *lvweb.Lookup:
 		return &apitype.LatestVersion{
 			Type:              v.Type,
 			URL:               v.URL,
 			AllowInvalidCerts: v.AllowInvalidCerts,
 			URLCommands:       convertURLCommandSlice(&v.URLCommands),
-			Require:           convertAndCensorLatestVersionRequire(v.Require)}
-	default:
-		return nil
+			Require:           convertAndCensorLatestVersionRequire(v.Require),
+		}
 	}
+
+	return nil
 }
 
 // convertAndCensorLatestVersionRequireDefaults converts RequireDefaults to API Type, censoring any secrets.
@@ -229,8 +232,10 @@ func convertAndCensorDeployedVersionLookup(dvl deployedver.Lookup) *apitype.Depl
 		return nil
 	}
 
-	if dvl, ok := dvl.(*dvweb.Lookup); ok {
+	switch dvl := dvl.(type) {
+	case *dvweb.Lookup:
 		apiDVL := apitype.DeployedVersionLookup{
+			Type:              dvl.Type,
 			Method:            dvl.Method,
 			URL:               dvl.URL,
 			AllowInvalidCerts: dvl.AllowInvalidCerts,
@@ -257,7 +262,13 @@ func convertAndCensorDeployedVersionLookup(dvl deployedver.Lookup) *apitype.Depl
 		}
 
 		return &apiDVL
+	case *dvmanual.Lookup:
+		return &apitype.DeployedVersionLookup{
+			Type:    dvl.Type,
+			Version: dvl.Status.DeployedVersion(),
+		}
 	}
+
 	return nil
 }
 

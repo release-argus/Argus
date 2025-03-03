@@ -101,7 +101,7 @@ func (s *Status) Copy() *Status {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	return New(
+	newStatus := New(
 		s.AnnounceChannel,
 		s.DatabaseChannel,
 		s.SaveChannel,
@@ -111,6 +111,11 @@ func (s *Status) Copy() *Status {
 		s.latestVersion,
 		s.latestVersionTimestamp,
 		s.lastQueried)
+
+	newStatus.ServiceID = s.ServiceID
+	newStatus.ServiceName = s.ServiceName
+
+	return newStatus
 }
 
 // String returns a string representation of the Status.

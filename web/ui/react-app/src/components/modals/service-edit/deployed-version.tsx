@@ -1,33 +1,29 @@
-import { Accordion, FormGroup, Row } from 'react-bootstrap';
-import { FC, memo, useEffect, useMemo } from 'react';
-import {
-	FormCheck,
-	FormKeyValMap,
-	FormLabel,
-	FormSelect,
-	FormText,
-	FormTextArea,
-} from 'components/generic/form';
+import { DeployedVersionLookupType, ServiceOptionsType } from 'types/config';
+import { FC, memo, useEffect } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 
-import { BooleanWithDefault } from 'components/generic';
+import { Accordion } from 'react-bootstrap';
 import { DeployedVersionLookupEditType } from 'types/service-edit';
-import { ServiceOptionsType } from 'types/config';
-import VersionWithLink from './version-with-link';
-import VersionWithRefresh from './version-with-refresh';
-
-const DeployedVersionMethodOptions = [
-	{ label: 'GET', value: 'GET' },
-	{ label: 'POST', value: 'POST' },
-];
+import DeployedVersionManual from './deployed-version-manual';
+import DeployedVersionURL from './deployed-version-url';
+import { FormSelect } from 'components/generic/form';
+import { useWebSocket } from 'contexts/websocket';
 
 interface Props {
 	serviceID: string;
 	original?: DeployedVersionLookupEditType;
 	original_options?: ServiceOptionsType;
-	defaults?: DeployedVersionLookupEditType;
-	hard_defaults?: DeployedVersionLookupEditType;
+	defaults?: DeployedVersionLookupType;
+	hard_defaults?: DeployedVersionLookupType;
 }
+
+const deployedVersionTypeOptions: {
+	label: string;
+	value: NonNullable<DeployedVersionLookupType['type']>;
+}[] = [
+	{ label: 'URL', value: 'url' },
+	{ label: 'Manual', value: 'manual' },
+];
 
 /**
  * The `deployed_version` form fields.
@@ -47,146 +43,46 @@ const EditServiceDeployedVersion: FC<Props> = ({
 	hard_defaults,
 }) => {
 	const { setValue } = useFormContext();
-
-	// RegEx Template toggle.
-	const templateToggle: boolean = useWatch({
-		name: 'deployed_version.template_toggle',
+	const selectedType: string = useWatch({
+		name: 'deployed_version.type',
 	});
+	const { monitorData } = useWebSocket();
+	const serviceStatus = monitorData.service?.[serviceID]?.status;
 	useEffect(() => {
-		// Clear the template when toggle false.
-		if (!templateToggle) {
-			setValue('deployed_version.regex_template', '');
-			setValue('deployed_version.template_toggle', false);
+		if (selectedType === 'manual') {
+			setValue(
+				'deployed_version.version',
+				serviceStatus?.deployed_version ?? serviceStatus?.latest_version ?? '',
+			);
 		}
-	}, [templateToggle]);
-	const selectedMethod = useWatch({
-		name: 'deployed_version.method',
-	});
-
-	const convertedDefaults = useMemo(
-		() => ({
-			allow_invalid_certs:
-				defaults?.allow_invalid_certs ?? hard_defaults?.allow_invalid_certs,
-		}),
-		[defaults, hard_defaults],
-	);
+	}, [selectedType]);
 
 	return (
 		<Accordion>
 			<Accordion.Header>Deployed Version:</Accordion.Header>
-			<Accordion.Body>
-				<FormGroup className="pt-1 mb-2">
-					<Row>
-						<FormSelect
-							name="deployed_version.method"
-							col_sm={4}
-							col_md={3}
-							label="Type"
-							options={DeployedVersionMethodOptions}
-						/>
-						<VersionWithLink
-							name="deployed_version.url"
-							type="url"
-							col_sm={8}
-							col_md={9}
-							tooltip="URL to query for the version that's running"
-							position="right"
-						/>
-					</Row>
-				</FormGroup>
-				<BooleanWithDefault
-					name="deployed_version.allow_invalid_certs"
-					label="Allow Invalid Certs"
-					defaultValue={convertedDefaults.allow_invalid_certs}
+			<Accordion.Body className="d-flex flex-wrap">
+				<FormSelect
+					name="deployed_version.type"
+					col_sm={6}
+					col_lg={2}
+					label="Type"
+					options={deployedVersionTypeOptions}
 				/>
-				<FormGroup className="pt-1 mb-2">
-					<FormLabel text="Basic auth credentials" />
-					<Row>
-						<FormText
-							key="username"
-							name="deployed_version.basic_auth.username"
-							col_xs={6}
-							label="Username"
-						/>
-						<FormText
-							key="password"
-							name="deployed_version.basic_auth.password"
-							col_xs={6}
-							label="Password"
-							position="right"
-						/>
-					</Row>
-				</FormGroup>
-				<FormKeyValMap name="deployed_version.headers" />
-				<Row>
-					<FormText
-						name="deployed_version.target_header"
-						col_sm={12}
-						label="Target header"
-						tooltip="Ignore the body and retrieve the version from this header in the response?"
+				{selectedType === 'manual' ? (
+					<DeployedVersionManual
+						serviceID={serviceID}
+						original={original}
+						original_options={original_options}
 					/>
-					{selectedMethod === 'POST' && (
-						<FormTextArea
-							name="deployed_version.body"
-							col_sm={12}
-							rows={3}
-							label="Body"
-							tooltip="Body to send with this request"
-						/>
-					)}
-					<FormText
-						name="deployed_version.json"
-						col_xs={6}
-						label="JSON"
-						tooltip={
-							<>
-								If the URL gives JSON, take the var at this location. e.g.{' '}
-								<span className="bold-underline">data.version</span>
-							</>
-						}
-						tooltipAriaLabel="If the URL gives JSON, take the var at this location. e.g. data.version"
+				) : (
+					<DeployedVersionURL
+						serviceID={serviceID}
+						original={original}
+						original_options={original_options}
+						defaults={defaults}
+						hard_defaults={hard_defaults}
 					/>
-					<FormText
-						name="deployed_version.regex"
-						required={templateToggle ? 'Required for template' : undefined}
-						col_xs={4}
-						col_sm={5}
-						label="RegEx"
-						tooltip={
-							<>
-								RegEx to extract the version from the URL, e.g.{' '}
-								<span className="bold-underline">v([0-9.]+)</span>
-							</>
-						}
-						tooltipAriaLabel="RegEx to extract the version from the URL, e.g. v([0-9.]+)"
-						isRegex
-						position="middle"
-					/>
-					<FormCheck
-						name={`deployed_version.template_toggle`}
-						col_sm={1}
-						col_xs={2}
-						size="lg"
-						label="T"
-						smallLabel
-						tooltip="Use the RegEx to create a template"
-						position="right"
-					/>
-					{templateToggle && (
-						<FormText
-							name="deployed_version.regex_template"
-							col_sm={12}
-							label="RegEx Template"
-							tooltip="e.g. RegEx of 'v(\d)-(\d)-(\d)' on 'v4-0-1' with template '$1.$2.$3' would give '4.0.1'"
-						/>
-					)}
-				</Row>
-				<VersionWithRefresh
-					vType={1}
-					serviceID={serviceID}
-					original={original}
-					original_options={original_options}
-				/>
+				)}
 			</Accordion.Body>
 		</Accordion>
 	);

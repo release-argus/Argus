@@ -18,11 +18,10 @@ const BROADCAST: FC<Props> = ({ name, defaults }) => (
 	<>
 		<FormText
 			name={`${name}.intent`}
-			col_sm={5}
+			col_sm={12}
 			label="Intent"
 			defaultVal={defaults?.intent}
 			placeholder="e.g. 'io.heckel.ntfy.USER_ACTION'"
-			position="right"
 		/>
 		<FormKeyValMap
 			name={`${name}.extras`}
