@@ -208,5 +208,9 @@ export const convertUIDeployedVersionDataEditToAPI = (
 		password: data?.basic_auth?.password ?? '',
 	};
 
+	// Remove if only type is given.
+	converted = removeEmptyValues(converted);
+	if (Object.keys(converted).length === 1 && 'type' in converted) return {};
+
 	return converted;
 };
