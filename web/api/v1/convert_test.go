@@ -241,6 +241,7 @@ func TestConvertAndCensorService(t *testing.T) {
 					"test_wh": &apitype.WebHook{
 						AllowInvalidCerts: test.BoolPtr(true)}},
 				DeployedVersionLookup: &apitype.DeployedVersionLookup{
+					Type:              "url",
 					AllowInvalidCerts: test.BoolPtr(true)},
 				Dashboard: &apitype.DashboardOptions{
 					Icon: "https://example.com/icon.png"}},
@@ -690,40 +691,69 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			dvl:  &dv_web.Lookup{},
 			want: &apitype.DeployedVersionLookup{},
 		},
-		"minimal": {
-			dvl: &dv_web.Lookup{
-				URL:  "https://example.com",
-				JSON: "version"},
+		"url - minimal": {
+			dvl: test.IgnoreError(t, func() (deployedver.Lookup, error) {
+				return deployedver.New(
+					"url",
+					"yaml", test.TrimYAML(`
+						url: https://example.com
+						json: version
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
 			want: &apitype.DeployedVersionLookup{
+				Type: "url",
 				URL:  "https://example.com",
 				JSON: "version"},
 		},
-		"censor basic_auth.password": {
-			dvl: &dv_web.Lookup{
-				URL: "https://example.com",
-				BasicAuth: &dv_web.BasicAuth{
-					Username: "alan",
-					Password: "pass123"}},
+		"url - censor basic_auth.password": {
+			dvl: test.IgnoreError(t, func() (deployedver.Lookup, error) {
+				return deployedver.New(
+					"url",
+					"yaml", test.TrimYAML(`
+						url: https://example.com
+						basic_auth:
+							username: alan
+							password: pass123
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
 			want: &apitype.DeployedVersionLookup{
-				URL: "https://example.com",
+				Type: "url",
+				URL:  "https://example.com",
 				BasicAuth: &apitype.BasicAuth{
 					Username: "alan",
 					Password: util.SecretValue}},
 		},
-		"censor headers": {
-			dvl: &dv_web.Lookup{
-				URL: "https://example.com",
-				Headers: []dv_web.Header{
-					{Key: "X-Test-0", Value: "foo"},
-					{Key: "X-Test-1", Value: "bar"}}},
+		"url - censor headers": {
+			dvl: test.IgnoreError(t, func() (deployedver.Lookup, error) {
+				return deployedver.New(
+					"url",
+					"yaml", test.TrimYAML(`
+						url: https://example.com
+						headers:
+							- key: X-Test-0
+								value: `+util.SecretValue+`
+							- key: X-Test-1
+								value: `+util.SecretValue+`
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
 			want: &apitype.DeployedVersionLookup{
-				URL: "https://example.com",
+				Type: "url",
+				URL:  "https://example.com",
 				Headers: []apitype.Header{
 					{Key: "X-Test-0", Value: util.SecretValue},
 					{Key: "X-Test-1", Value: util.SecretValue},
 				}},
 		},
-		"full": {
+		"url - full": {
 			regexMissesContent: 1,
 			regexMissesVersion: 3,
 			dvl: test.IgnoreError(t, func() (deployedver.Lookup, error) {
@@ -758,6 +788,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				ServiceID: test.StringPtr("service-id"),
 				WebURL:    test.StringPtr("https://release-argus.io")},
 			want: &apitype.DeployedVersionLookup{
+				Type:              "url",
 				Method:            http.MethodPost,
 				URL:               "https://release-argus.io",
 				AllowInvalidCerts: test.BoolPtr(true),
@@ -772,6 +803,29 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				JSON:          "version",
 				Regex:         `([0-9]+\.[0-9]+\.[0-9]+)`,
 				RegexTemplate: "$1.$2.$3"},
+		},
+		"manual": {
+			dvl: test.IgnoreError(t, func() (deployedver.Lookup, error) {
+				dvStatus := status.New(
+					nil, nil, nil,
+					"1.0.0",
+					"1.1.0", time.Now().UTC().Format(time.RFC3339),
+					"1.2.3", time.Now().Add(time.Minute).UTC().Format(time.RFC3339),
+					time.Now().UTC().Add(-time.Minute).Format(time.RFC3339))
+				// Need the ServiceID for the Query that's done because we have both Status and Options.
+				dvStatus.ServiceID = test.StringPtr("manual")
+				return deployedver.New(
+					"manual",
+					"yaml", ``,
+					opt.New(
+						nil, "", test.BoolPtr(true),
+						&opt.Defaults{}, &opt.Defaults{}),
+					dvStatus,
+					nil, nil)
+			}),
+			want: &apitype.DeployedVersionLookup{
+				Type:    "manual",
+				Version: "1.1.0"},
 		},
 		"unknown type": {
 			dvl:  &deployedver_base.Lookup{},
@@ -800,10 +854,10 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 					dvStatus.ServiceID = tc.dvlStatus.ServiceID
 					dvStatus.WebURL = tc.dvlStatus.WebURL
 				}
-				for i := 0; i < tc.regexMissesContent; i++ {
+				for range tc.regexMissesContent {
 					dvStatus.RegexMissContent()
 				}
-				for i := 0; i < tc.regexMissesVersion; i++ {
+				for range tc.regexMissesVersion {
 					dvStatus.RegexMissVersion()
 				}
 			}

@@ -89,7 +89,7 @@ const PUSHOVER = ({
 					label="User Key"
 					tooltip="Top right of Pushover dashboard"
 					defaultVal={convertedDefaults.url_fields.user}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 			<FormLabel text="Params" heading />
@@ -114,7 +114,7 @@ const PUSHOVER = ({
 					tooltip="Only supply priority values between -1 and 1, since 2 requires additional parameters that are not supported yet"
 					isNumber
 					defaultVal={convertedDefaults.params.priority}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 		</>

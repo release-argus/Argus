@@ -127,7 +127,7 @@ const IFTTT = ({
 					tooltip="Set the corresponding value field to the title"
 					isNumber
 					defaultVal={convertedDefaults.params.usetitleasvalue}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.params.value1`}
@@ -140,14 +140,14 @@ const IFTTT = ({
 					col_sm={4}
 					label="Value2"
 					defaultVal={convertedDefaults.params.value2}
-					position="middle"
+					positionXS="middle"
 				/>
 				<FormText
 					name={`${name}.params.value3`}
 					col_sm={4}
 					label="Value3"
 					defaultVal={convertedDefaults.params.value3}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 		</>

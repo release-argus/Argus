@@ -22,6 +22,7 @@ import (
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
+	"github.com/release-argus/Argus/service/deployed_version/types/manual"
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
@@ -41,13 +42,6 @@ func TestMain(m *testing.M) {
 }
 
 func testLookup(lookupType string, failing bool) Lookup {
-	lookup, _ := New(
-		lookupType,
-		"yaml", "",
-		nil,
-		nil,
-		nil, nil)
-
 	// HardDefaults.
 	hardDefaults := &base.Defaults{}
 	hardDefaults.Default()
@@ -72,11 +66,24 @@ func testLookup(lookupType string, failing bool) Lookup {
 		test.StringPtr("http://example.com"),
 	)
 
+	lookup, _ := New(
+		lookupType,
+		"yaml", "",
+		options,
+		svcStatus,
+		defaults, hardDefaults)
+
 	switch l := lookup.(type) {
 	case *web.Lookup:
 		l.URL = test.LookupJSON["url_invalid"]
 		l.AllowInvalidCerts = test.BoolPtr(!failing)
 		l.JSON = "version"
+		l.Init(
+			options,
+			svcStatus,
+			defaults, hardDefaults)
+	case *manual.Lookup:
+		l.Version = "1.0.0"
 		l.Init(
 			options,
 			svcStatus,

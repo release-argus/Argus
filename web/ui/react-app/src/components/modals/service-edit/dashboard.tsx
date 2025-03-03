@@ -100,7 +100,7 @@ const EditServiceDashboard: FC<Props> = ({
 					noOptionsMessage="No other tags in use. Type to create a new one."
 					optionCounts
 					dynamicHeight={true}
-					position="right"
+					positionXS="right"
 				/>
 			</Accordion.Body>
 		</Accordion>

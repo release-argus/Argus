@@ -109,7 +109,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
 						label={'RegEx Version'}
 						tooltip="Version found must match, e.g. exclude '*-beta' versions with '^[0-9.]+$'"
 						isRegex
-						position="right"
+						positionXS="right"
 					/>
 
 					<FormGroup className="pt-1">
@@ -137,7 +137,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
 						name="latest_version.require.docker.tag"
 						col_xs={6}
 						label="Tag"
-						position="right"
+						positionXS="right"
 					/>
 					{showUsernameField && (
 						<FormText
@@ -154,7 +154,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
 						col_sm={showUsernameField ? 8 : 12}
 						label="Token"
 						defaultVal={convertedDefaults.token}
-						position={showUsernameField ? 'right' : 'left'}
+						positionXS={showUsernameField ? 'right' : 'left'}
 					/>
 				</Row>
 			</Accordion.Body>

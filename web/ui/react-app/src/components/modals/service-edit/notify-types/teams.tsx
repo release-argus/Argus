@@ -93,7 +93,7 @@ const TEAMS = ({
 					name={`${name}.url_fields.tenant`}
 					label="Tenant"
 					defaultVal={convertedDefaults.url_fields.tenant}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.group`}
@@ -104,7 +104,7 @@ const TEAMS = ({
 					name={`${name}.url_fields.groupowner`}
 					label="Group Owner"
 					defaultVal={convertedDefaults.url_fields.groupowner}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 			<FormLabel text="Params" heading />
@@ -120,7 +120,7 @@ const TEAMS = ({
 					col_sm={6}
 					label="Title"
 					defaultVal={convertedDefaults.params.title}
-					position="right"
+					positionXS="right"
 				/>
 				<FormColour
 					name={`${name}.params.color`}

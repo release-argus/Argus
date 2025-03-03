@@ -186,7 +186,7 @@ const GENERIC = ({
 						tooltip="e.g. 443"
 						isNumber
 						defaultVal={convertedDefaults.url_fields.port}
-						position="right"
+						positionXS="right"
 					/>
 					<FormText
 						name={`${name}.url_fields.path`}
@@ -240,7 +240,7 @@ const GENERIC = ({
 						label="Content Type"
 						tooltip="The value of the Content-Type header"
 						defaultVal={convertedDefaults.params.contenttype}
-						position="right"
+						positionXS="right"
 					/>
 					<FormText
 						name={`${name}.params.template`}
@@ -249,7 +249,7 @@ const GENERIC = ({
 						label="Template"
 						tooltip="The template used for creating the request payload"
 						defaultVal={convertedDefaults.params.template}
-						position="right"
+						positionXS="right"
 					/>
 					<FormText
 						name={`${name}.params.messagekey`}
@@ -266,7 +266,7 @@ const GENERIC = ({
 						label="Title Key"
 						tooltip="The key that will be used for the title value"
 						defaultVal={convertedDefaults.params.titlekey}
-						position="right"
+						positionXS="right"
 					/>
 					<FormText
 						name={`${name}.params.title`}

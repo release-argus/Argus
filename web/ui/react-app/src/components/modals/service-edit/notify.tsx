@@ -170,7 +170,7 @@ const Notify: FC<Props> = ({
 							setValue(`${name}.type`, newType);
 						}}
 						options={TYPE_OPTIONS}
-						position="right"
+						positionXS="right"
 					/>
 					<FormText
 						name={`${name}.name`}

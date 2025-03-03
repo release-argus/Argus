@@ -23,6 +23,7 @@ type Props = {
 	col_xs?: number;
 	col_sm?: number;
 	col_md?: number;
+	col_lg?: number;
 
 	label?: string;
 	smallLabel?: boolean;
@@ -30,11 +31,13 @@ type Props = {
 	creatable?: boolean;
 	isClearable?: boolean;
 
-	options: OptionType[];
+	options: OptionType[] | readonly OptionType[];
 	customValidation?: (value: string) => string | boolean;
 
-	position?: Position;
 	positionXS?: Position;
+	positionSM?: Position;
+	positionMD?: Position;
+	positionLG?: Position;
 };
 
 type FormSelectProps = TooltipWithAriaProps & Props & ConditionalOnChangeProps;
@@ -48,6 +51,7 @@ type FormSelectProps = TooltipWithAriaProps & Props & ConditionalOnChangeProps;
  * @param col_xs - The number of columns the item takes up on XS+ screens.
  * @param col_sm - The number of columns the item takes up on SM+ screens.
  * @param col_md - The number of columns the item takes up on MD+ screens.
+ * @param col_lg - The number of columns the item takes up on LG+ screens.
  *
  * @param label - The label of the form item.
  * @param smallLabel - Whether the label should be small.
@@ -61,8 +65,10 @@ type FormSelectProps = TooltipWithAriaProps & Props & ConditionalOnChangeProps;
  * @param customValidation - Custom validation function for the form item.
  * @param onChange - The function to call when the form item changes.
  *
- * @param position - The position of the form item.
- * @param positionXS - The position of the form item on extra small screens.
+ * @param positionXS - The position of the form item on XS+ screens.
+ * @param positionSM - The position of the form item on SM+ screens.
+ * @param positionMD - The position of the form item on MD+ screens.
+ * @param positionLG - The position of the form item on LG+ screens.
  * @returns A labeled select form item.
  */
 const FormSelect: FC<FormSelectProps> = ({
@@ -71,7 +77,8 @@ const FormSelect: FC<FormSelectProps> = ({
 	key = name,
 	col_xs = 12,
 	col_sm = 6,
-	col_md = col_sm,
+	col_md,
+	col_lg,
 
 	label,
 	smallLabel,
@@ -85,12 +92,23 @@ const FormSelect: FC<FormSelectProps> = ({
 	customValidation,
 	onChange,
 
-	position = 'left',
-	positionXS = position,
+	positionXS = 'left',
+	positionSM,
+	positionMD,
+	positionLG,
 }) => {
 	const error = useError(name, customValidation !== undefined);
 
-	const padding = formPadding({ col_xs, col_sm, position, positionXS });
+	const padding = formPadding({
+		col_xs,
+		col_sm,
+		col_md,
+		col_lg,
+		positionXS,
+		positionSM,
+		positionMD,
+		positionLG,
+	});
 	const getTooltipProps = () => {
 		if (!tooltip) return {};
 		if (typeof tooltip === 'string') return { tooltip, tooltipAriaLabel };
@@ -102,6 +120,7 @@ const FormSelect: FC<FormSelectProps> = ({
 			xs={col_xs}
 			sm={col_sm}
 			md={col_md}
+			lg={col_lg}
 			className={`${padding} pt-1 pb-1 col-form`}
 			key={key}
 		>

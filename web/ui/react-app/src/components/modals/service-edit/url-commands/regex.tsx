@@ -34,20 +34,8 @@ const REGEX = ({ name }: { name: string }) => {
 				label="RegEx"
 				smallLabel
 				isRegex
-				position="middle"
 				positionXS="right"
-			/>
-			<FormText
-				name={`${name}.index`}
-				col_sm={2}
-				col_xs={2}
-				label="Index"
-				smallLabel
-				isNumber
-				isRegex
-				placeholder="0"
-				position="middle"
-				positionXS="left"
+				positionSM="middle"
 			/>
 			<FormCheck
 				name={`${name}.template_toggle`}
@@ -57,18 +45,31 @@ const REGEX = ({ name }: { name: string }) => {
 				label="T"
 				smallLabel
 				tooltip="Use the RegEx to create a template"
-				position="right"
 				positionXS="middle"
+			/>
+			<FormText
+				name={`${name}.index`}
+				className="order-2 order-sm-1"
+				col_sm={2}
+				col_xs={3}
+				label="Index"
+				smallLabel
+				tooltip="Index of the RegEx match to use (starting at 0). Omit to select the first release that meets version requirements"
+				isNumber
+				isRegex
+				positionXS="middle"
+				positionSM="right"
 			/>
 			{templateToggle && (
 				<FormText
 					name={`${name}.template`}
+					className="order-1 order-sm-2"
 					col_sm={12}
-					col_xs={8}
-					label="Template"
+					col_xs={7}
+					label="RegEx Template"
 					smallLabel
 					tooltip="e.g. RegEx of 'v(\d)-(\d)-(\d)' on 'v4-0-1' with template '$1.$2.$3' would give '4.0.1'"
-					position="right"
+					positionXS="right"
 				/>
 			)}
 		</>

@@ -204,7 +204,7 @@ const SMTP = ({
 					tooltip="e.g. 25/465/587/2525"
 					isNumber
 					defaultVal={convertedDefaults.url_fields.port}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.username`}
@@ -216,7 +216,7 @@ const SMTP = ({
 					name={`${name}.url_fields.password`}
 					label="Password"
 					defaultVal={convertedDefaults.url_fields.password}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 			<FormLabel text="Params" heading />
@@ -241,7 +241,7 @@ const SMTP = ({
 					label="From Name"
 					tooltip="Name to send as"
 					defaultVal={convertedDefaults.params.fromname}
-					position="right"
+					positionXS="right"
 				/>
 				<FormSelect
 					name={`${name}.params.auth`}
@@ -255,7 +255,7 @@ const SMTP = ({
 					label="Subject"
 					tooltip="Email subject"
 					defaultVal={convertedDefaults.params.subject}
-					position="right"
+					positionXS="right"
 				/>
 				<FormSelect
 					name={`${name}.params.encryption`}
@@ -271,7 +271,7 @@ const SMTP = ({
 					tooltip={`The client host name sent to the SMTP server during HELO phase.
 						If set to "auto", it will use the OS hostname`}
 					defaultVal={convertedDefaults.params.clienthost}
-					position="right"
+					positionXS="right"
 				/>
 				<BooleanWithDefault
 					name={`${name}.params.usehtml`}

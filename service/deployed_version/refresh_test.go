@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/service/deployed_version/types/manual"
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
@@ -56,6 +57,13 @@ func TestRefresh(t *testing.T) {
 	}{
 		"nil Lookup": {
 			errRegex: `lookup is nil`,
+		},
+		"invalid JSON - manual": {
+			args: args{
+				overrides: test.StringPtr(`{`),
+			},
+			previous: testLookup("manual", false),
+			errRegex: `failed to unmarshal deployedver.Lookup`,
 		},
 		"Change of URL": {
 			args: args{
@@ -123,7 +131,7 @@ func TestRefresh(t *testing.T) {
 			previous: testLookup("url", false),
 			errRegex: `^$`,
 			want:     testVersion,
-			announce: 2,
+			announce: 1,
 		},
 	}
 
@@ -135,6 +143,8 @@ func TestRefresh(t *testing.T) {
 			var targetStatus *status.Status
 			switch l := tc.previous.(type) {
 			case *web.Lookup:
+				targetStatus = l.Status
+			case *manual.Lookup:
 				targetStatus = l.Status
 			}
 
@@ -158,11 +168,15 @@ func TestRefresh(t *testing.T) {
 				}
 				previousStatus = targetStatus.Copy()
 			}
+			var previousType string
+			if tc.previous != nil {
+				previousType = tc.previous.GetType()
+			}
 
 			// WHEN we call Refresh.
 			got, err := Refresh(
 				tc.previous,
-				util.DereferenceOrDefault(tc.args.overrides),
+				previousType, util.DereferenceOrDefault(tc.args.overrides),
 				tc.args.semanticVersioning)
 
 			// THEN we get an error if expected.
@@ -223,7 +237,6 @@ func TestApplyOverridesJSON(t *testing.T) {
 	}
 	tests := map[string]struct {
 		args     args
-		wantErr  bool
 		errRegex string
 	}{
 		"no overrides, no semantic versioning change": {
@@ -233,7 +246,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			wantErr: false,
+			errRegex: `^$`,
 		},
 		"invalid semantic versioning JSON": {
 			args: args{
@@ -242,7 +255,6 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    true,
 				semanticVersioning: test.StringPtr("invalid"),
 			},
-			wantErr:  true,
 			errRegex: `failed to unmarshal deployedver\.Lookup\.SemanticVersioning`,
 		},
 		"valid semantic versioning change": {
@@ -252,7 +264,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    true,
 				semanticVersioning: test.StringPtr("true"),
 			},
-			wantErr: false,
+			errRegex: `^$`,
 		},
 		"valid overrides JSON": {
 			args: args{
@@ -264,9 +276,9 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			wantErr: false,
+			errRegex: `^$`,
 		},
-		"invalid overrides JSON": {
+		"invalid overrides JSON - Invalid JSON": {
 			args: args{
 				lookup: testLookup("url", false),
 				overrides: test.StringPtr(
@@ -276,10 +288,9 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			wantErr:  true,
 			errRegex: `failed to unmarshal deployedver.Lookup`,
 		},
-		"overrides in invalid format for url": {
+		"invalid overrides JSON - different var type": {
 			args: args{
 				lookup: testLookup("url", false),
 				overrides: test.StringPtr(
@@ -289,7 +300,6 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			wantErr:  true,
 			errRegex: `^failed to unmarshal deployedver.Lookup`,
 		},
 		"overrides that fail CheckValues": {
@@ -302,8 +312,43 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			wantErr:  true,
 			errRegex: `^url: <required>.*$`,
+		},
+		"change type with valid overrides - url to manual": {
+			args: args{
+				lookup: testLookup("url", false),
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"type": "manual",
+					"version": "1.2.3"
+				}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			errRegex: `^$`,
+		},
+		"change type with valid overrides - manual to url": {
+			args: args{
+				lookup: testLookup("manual", false),
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"type": "url",
+					"url": "` + test.LookupJSON["url_valid"] + `"
+				}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			errRegex: `^$`,
+		},
+		"change type to unknown type": {
+			args: args{
+				lookup: testLookup("url", false),
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"type": "newType",
+					"url": []
+				}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			errRegex: `\stype: "newType" <invalid> \(expected one of \[url, manual\]\)$`,
 		},
 	}
 
@@ -317,14 +362,12 @@ func TestApplyOverridesJSON(t *testing.T) {
 				tc.args.semanticVerDiff,
 				tc.args.semanticVersioning)
 
-			if (err != nil) != tc.wantErr {
-				t.Errorf("applyOverridesJSON() error = %v, wantErr %v", err, tc.wantErr)
-				return
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.errRegex, util.ErrorToString(err)) {
+				t.Errorf("applyOverridesJSON() error mismatch\nwant match for:\n%q\ngot:\n%q",
+					tc.errRegex, e)
 			}
-			if tc.wantErr && !util.RegexCheck(tc.errRegex, util.ErrorToString(err)) {
-				t.Errorf("applyOverridesJSON() error = %v, wantErr %v", err, tc.errRegex)
-			}
-			if !tc.wantErr && got == nil {
+			if tc.errRegex == `^$` && got == nil {
 				t.Errorf("applyOverridesJSON() got = nil, want non-nil")
 			}
 		})

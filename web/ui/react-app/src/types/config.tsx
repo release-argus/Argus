@@ -200,7 +200,16 @@ export interface LatestVersionRequireType {
 	command?: CommandType;
 	docker?: DockerFilterType;
 }
-export interface DeployedVersionLookupType {
+export type DeployedVersionLookupType =
+	| DeployedVersionLookupManualType
+	| DeployedVersionLookupURLType;
+
+export interface DeployedVersionLookupManualType {
+	type?: 'manual';
+	version?: string;
+}
+
+export interface DeployedVersionLookupURLType {
 	[key: string]:
 		| string
 		| boolean
@@ -208,10 +217,13 @@ export interface DeployedVersionLookupType {
 		| undefined
 		| BasicAuthType
 		| HeaderType[];
+	type?: 'url';
 	url?: string;
 	allow_invalid_certs?: boolean | null;
 	basic_auth?: BasicAuthType;
 	headers?: HeaderType[];
+	body?: string;
+	target_header?: string;
 	json?: string;
 	regex?: string;
 }

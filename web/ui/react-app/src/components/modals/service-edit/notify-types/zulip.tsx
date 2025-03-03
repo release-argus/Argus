@@ -86,7 +86,7 @@ const ZULIP_CHAT = ({
 					required
 					label="Bot Key"
 					defaultVal={convertedDefaults.url_fields.botkey}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.host`}
@@ -108,7 +108,7 @@ const ZULIP_CHAT = ({
 					name={`${name}.params.topic`}
 					label="Topic"
 					defaultVal={convertedDefaults.params.topic}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 		</>

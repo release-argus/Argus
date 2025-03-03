@@ -145,7 +145,7 @@ const TELEGRAM = ({
 					col_sm={4}
 					label="Parse Mode"
 					options={telegramParseModeOptions}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.params.title`}

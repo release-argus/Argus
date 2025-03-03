@@ -36,6 +36,7 @@ const EditServiceOptions: FC<Props> = ({ defaults, hard_defaults }) => {
 					<FormCheck
 						name="options.active"
 						col_xs={4}
+						col_sm={4}
 						label="Active"
 						tooltip="Whether the service is active and checking for updates"
 						size="sm"
@@ -44,9 +45,11 @@ const EditServiceOptions: FC<Props> = ({ defaults, hard_defaults }) => {
 						key="interval"
 						name="options.interval"
 						col_xs={8}
+						col_sm={8}
 						label="Interval"
 						tooltip="How often to check for both latest version and deployed version updates"
 						defaultVal={convertedDefaults.interval}
+						positionXS="right"
 					/>
 				</Row>
 				<BooleanWithDefault

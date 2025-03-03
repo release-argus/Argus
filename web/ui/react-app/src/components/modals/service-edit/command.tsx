@@ -49,7 +49,7 @@ const Command: FC<Props> = ({ name, removeMe }) => {
 						name={`${name}.${argIndex}.arg`}
 						required
 						placeholder={placeholder(argIndex)}
-						position={argIndex % 2 === 1 ? 'right' : 'left'}
+						positionXS={argIndex % 2 === 1 ? 'right' : 'left'}
 					/>
 				))}
 			</Row>

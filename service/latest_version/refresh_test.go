@@ -241,7 +241,6 @@ func TestApplyOverridesJSON(t *testing.T) {
 		lookupRequire      *filter.Require
 		wantStr            string
 		wantRequireInherit bool
-		wantErr            bool
 		errRegex           string
 	}{
 		"no overrides, no semantic versioning change": {
@@ -251,8 +250,8 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			wantStr: tLookup.String(tLookup, ""),
-			wantErr: false,
+			wantStr:  tLookup.String(tLookup, ""),
+			errRegex: `^$`,
 		},
 		"invalid semantic versioning JSON": {
 			args: args{
@@ -261,7 +260,6 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    true,
 				semanticVersioning: test.StringPtr("invalid"),
 			},
-			wantErr:  true,
 			errRegex: `failed to unmarshal latestver.Lookup.SemanticVersioning`,
 		},
 		"valid semantic versioning change": {
@@ -271,8 +269,8 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    true,
 				semanticVersioning: test.StringPtr("true"),
 			},
-			wantStr: tLookup.String(tLookup, ""),
-			wantErr: false,
+			wantStr:  tLookup.String(tLookup, ""),
+			errRegex: `^$`,
 		},
 		"valid overrides JSON": {
 			args: args{
@@ -291,7 +289,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 						regex: ver([0-9.]+)
 				allow_invalid_certs: true
 			`),
-			wantErr: false,
+			errRegex: `^$`,
 		},
 		"invalid overrides JSON - Invalid JSON": {
 			args: args{
@@ -302,7 +300,6 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			wantErr:  true,
 			errRegex: `failed to unmarshal latestver.Lookup`,
 		},
 		"invalid overrides JSON - different var type": {
@@ -314,7 +311,6 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			wantErr:  true,
 			errRegex: `failed to unmarshal latestver.Lookup`,
 		},
 		"overrides that make CheckValues fail": {
@@ -326,7 +322,6 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			wantErr:  true,
 			errRegex: `^url: <required>.*$`,
 		},
 		"change type with valid overrides": {
@@ -348,7 +343,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 						regex: ver([0-9.]+)
 				access_token: token
 			`),
-			wantErr: false,
+			errRegex: `^$`,
 		},
 		"change type to unknown type": {
 			args: args{
@@ -360,7 +355,6 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			wantErr:  true,
 			errRegex: `\stype: "newType" <invalid> \(expected one of \[github, url\]\)$`,
 		},
 		"inherit Require.Docker.* - same Lookup.type": {
@@ -393,7 +387,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 						tag: '{{ version }}'
 				allow_invalid_certs: true
 			`),
-			wantErr: false,
+			errRegex: `^$`,
 		},
 		"inherit Require.Docker.* - different Lookup.type": {
 			args: args{
@@ -432,7 +426,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 						image: release-argus/argus
 						tag: '{{ version }}'
 			`),
-			wantErr: false,
+			errRegex: `^$`,
 		},
 		"don't inherit Require.Docker.* - same Lookup.type": {
 			args: args{
@@ -469,7 +463,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 						tag: '{{ version }}'
 				allow_invalid_certs: true
 			`),
-			wantErr: false,
+			errRegex: `^$`,
 		},
 		"don't inherit Require.Docker.* - different Lookup.type": {
 			args: args{
@@ -512,7 +506,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 						image: release-argus/test
 						tag: '{{ version }}'
 			`),
-			wantErr: false,
+			errRegex: `^$`,
 		},
 	}
 
@@ -541,42 +535,43 @@ func TestApplyOverridesJSON(t *testing.T) {
 				t.Errorf("applyOverridesJSON() error mismatch\n%q\ngot:\n%q",
 					tc.errRegex, e)
 			}
-			if !tc.wantErr {
-				// AND the result is as expected.
-				if got == nil {
-					t.Errorf("applyOverridesJSON() got: nil, want: non-nil\n%s",
-						e)
-					return
-				}
-				gotStr := got.String(got, "")
-				if gotStr != tc.wantStr {
-					t.Errorf("applyOverridesJSON() got:\n%q\nwant:\n%q",
-						gotStr, tc.wantStr)
-				}
-				// AND Require.Docker.* is inherited when expected.
-				gotRequire := got.GetRequire()
-				if tc.wantRequireInherit {
-					if gotRequire == nil || gotRequire.Docker == nil {
-						t.Errorf("applyOverridesJSON() Require, got: nil, want: non-nil")
-					} else {
-						gotQueryToken, gotValidUntil := gotRequire.Docker.CopyQueryToken()
-						wantQueryToken, wantValidUntil := tc.lookupRequire.Docker.CopyQueryToken()
-						if gotRequire.Docker.Token != tc.lookupRequire.Docker.Token ||
-							gotQueryToken != wantQueryToken ||
-							gotValidUntil != wantValidUntil {
-							t.Errorf("applyOverridesJSON() Require.Docker mismatch, got:\n%+v\nwant:\n%+v",
-								gotRequire.Docker, tc.lookupRequire.Docker)
-						}
-					}
-				} else if gotRequire != nil && gotRequire.Docker != nil &&
-					tc.lookupRequire != nil && tc.lookupRequire.Docker != nil {
+			if tc.errRegex != `^$` {
+				return
+			}
+			// AND the result is as expected.
+			if got == nil {
+				t.Errorf("applyOverridesJSON() got: nil, want: non-nil\n%s",
+					e)
+				return
+			}
+			gotStr := got.String(got, "")
+			if gotStr != tc.wantStr {
+				t.Errorf("applyOverridesJSON() got:\n%q\nwant:\n%q",
+					gotStr, tc.wantStr)
+			}
+			// AND Require.Docker.* is inherited when expected.
+			gotRequire := got.GetRequire()
+			if tc.wantRequireInherit {
+				if gotRequire == nil || gotRequire.Docker == nil {
+					t.Errorf("applyOverridesJSON() Require, got: nil, want: non-nil")
+				} else {
 					gotQueryToken, gotValidUntil := gotRequire.Docker.CopyQueryToken()
-					avoidQueryToken, avoidValidUntil := tc.lookupRequire.Docker.CopyQueryToken()
-					if gotQueryToken == avoidQueryToken &&
-						gotValidUntil == avoidValidUntil {
-						t.Errorf("applyOverridesJSON() Require.Docker copied over unexpectedly\ngot:\n%+v\nhad:\n%+v",
+					wantQueryToken, wantValidUntil := tc.lookupRequire.Docker.CopyQueryToken()
+					if gotRequire.Docker.Token != tc.lookupRequire.Docker.Token ||
+						gotQueryToken != wantQueryToken ||
+						gotValidUntil != wantValidUntil {
+						t.Errorf("applyOverridesJSON() Require.Docker mismatch, got:\n%+v\nwant:\n%+v",
 							gotRequire.Docker, tc.lookupRequire.Docker)
 					}
+				}
+			} else if gotRequire != nil && gotRequire.Docker != nil &&
+				tc.lookupRequire != nil && tc.lookupRequire.Docker != nil {
+				gotQueryToken, gotValidUntil := gotRequire.Docker.CopyQueryToken()
+				avoidQueryToken, avoidValidUntil := tc.lookupRequire.Docker.CopyQueryToken()
+				if gotQueryToken == avoidQueryToken &&
+					gotValidUntil == avoidValidUntil {
+					t.Errorf("applyOverridesJSON() Require.Docker copied over unexpectedly\ngot:\n%+v\nhad:\n%+v",
+						gotRequire.Docker, tc.lookupRequire.Docker)
 				}
 			}
 		})

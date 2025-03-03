@@ -80,7 +80,7 @@ const FormKeyValMap: FC<Props> = ({
 	}, [fields.length, useDefaults]);
 
 	return (
-		<FormGroup>
+		<FormGroup className="d-contents">
 			<Row>
 				<Col className="pt-1">
 					<FormLabel text={label} tooltip={tooltip} />
