@@ -496,7 +496,7 @@ func TestNotifyTest(t *testing.T) {
 							"gotify",
 							map[string]string{},
 							map[string]string{
-								"host":  "example.com",
+								"host":  test.ValidCertNoProtocol,
 								"token": "invalid"},
 							map[string]string{
 								"max_tries": "1"},
@@ -519,7 +519,7 @@ func TestNotifyTest(t *testing.T) {
 							map[string]string{
 								"max_tries": "1"},
 							map[string]string{
-								"host":  "example.com",
+								"host":  test.ValidCertNoProtocol,
 								"token": "AGdjFCZugzJGhEG"},
 							map[string]string{},
 							emptyShoutrrr,
@@ -537,7 +537,7 @@ func TestNotifyTest(t *testing.T) {
 					map[string]string{
 						"max_tries": "1"},
 					map[string]string{
-						"host":  "example.com",
+						"host":  test.ValidCertNoProtocol,
 						"token": "AGdjFCZugzJGhEG"},
 					map[string]string{})},
 		},
