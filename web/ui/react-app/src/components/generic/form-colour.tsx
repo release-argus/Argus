@@ -5,7 +5,7 @@ import { FC } from 'react';
 import FormLabel from './form-label';
 import { Position } from 'types/config';
 import cx from 'classnames';
-import { formPadding } from './util';
+import { formPadding } from './form-shared';
 import { useError } from 'hooks/errors';
 
 interface Props {

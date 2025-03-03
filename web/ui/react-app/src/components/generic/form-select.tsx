@@ -13,7 +13,7 @@ import { Position } from 'types/config';
 import Select from 'react-select';
 import { TooltipWithAriaProps } from './tooltip';
 import cx from 'classnames';
-import { formPadding } from './util';
+import { formPadding } from './form-shared';
 import { useError } from 'hooks/errors';
 
 type Props = {
@@ -30,6 +30,7 @@ type Props = {
 
 	creatable?: boolean;
 	isClearable?: boolean;
+	isSearchable?: boolean;
 
 	options: OptionType[] | readonly OptionType[];
 	customValidation?: (value: string) => string | boolean;
@@ -60,6 +61,7 @@ type FormSelectProps = TooltipWithAriaProps & Props & ConditionalOnChangeProps;
  *
  * @param isMulti - Whether the select field should allow multiple values.
  * @param isClearable - Whether the select field should have a clear button.
+ * @param isSearchable - Whether the select field should accept input to filter the available option.
  *
  * @param options - The options for the select field.
  * @param customValidation - Custom validation function for the form item.
@@ -87,6 +89,7 @@ const FormSelect: FC<FormSelectProps> = ({
 
 	isMulti,
 	isClearable,
+	isSearchable,
 
 	options,
 	customValidation,
@@ -172,10 +175,11 @@ const FormSelect: FC<FormSelectProps> = ({
 									field.onChange((newValue as OptionType).value);
 								}
 							}}
-							isSearchable
+							isSearchable={options.length > 5 || isSearchable}
 							isMulti={isMulti}
 							isClearable={isClearable}
 							styles={customStyles}
+							menuShouldScrollIntoView
 						/>
 					)}
 					rules={{

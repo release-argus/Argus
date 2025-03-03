@@ -1,9 +1,12 @@
 import { FC, memo, useMemo } from 'react';
-import { FormText, FormTextWithPreview } from 'components/generic/form';
+import {
+	FormSelectCreatableSortable,
+	FormText,
+	FormTextWithPreview,
+} from 'components/generic/form';
 
 import { Accordion } from 'react-bootstrap';
 import { BooleanWithDefault } from 'components/generic';
-import FormSelectCreatableSortable from 'components/generic/form-select-creatable-sortable';
 import { ServiceDashboardOptionsType } from 'types/config';
 import { createOption } from 'components/generic/form-select-shared';
 import { firstNonDefault } from 'utils';

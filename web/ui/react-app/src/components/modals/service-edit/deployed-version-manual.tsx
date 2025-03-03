@@ -17,7 +17,7 @@ import { FormLabel } from 'components/generic/form';
 import { StatusSummaryType } from 'types/summary';
 import { TooltipWithAriaProps } from 'components/generic/tooltip';
 import cx from 'classnames';
-import { formPadding } from 'components/generic/util';
+import { formPadding } from 'components/generic/form-shared';
 import { useQuery } from '@tanstack/react-query';
 import useValuesRefetch from 'hooks/values-refetch';
 import { useWatch } from 'react-hook-form';
