@@ -374,7 +374,7 @@ func TestService_Track(t *testing.T) {
 			wantAnnounces:        2, // Announce: 1 for latest query, 1 for deployed change.
 			wantDatabaseMessages: 1, // DB: 1 for deployed change.
 		},
-		"track gets DeployedVersion that's newer updates LatestVersion too": {
+		"track gets DeployedVersion that is newer and does not change LatestVersion": {
 			latestVersionType: "url",
 			overrides: overrides{
 				deployedVersion: test.TrimYAML(`
@@ -387,11 +387,9 @@ func TestService_Track(t *testing.T) {
 			ignoreLivenessMetric: true, // Ignore as DeployedVersionLookup may be done before.
 			versions: versions{
 				startLatestVersion: testURLLatestVersion, startDeployedVersion: "0.0.0",
-				wantLatestVersion: "3.2.1", wantDeployedVersion: "3.2.1"},
-			wantAnnounces: 3, // Announce: 1 for latest query (as it'll give <latestVersion, but be called before we have deployedVersion).
-			// 1 for latest change.
-			// 1 for deployed change.
-			wantDatabaseMessages: 2, // db: 1 for latest change, 1 for deployed change.
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "3.2.1"},
+			wantAnnounces:        2, // Announce: 1 for latest query, 1 for deployed change.
+			wantDatabaseMessages: 1, // db: 1 for deployed change.
 		},
 		"track that last did a Query less than interval ago waits until interval": {
 			latestVersionType: "url",
@@ -506,7 +504,7 @@ func TestService_Track(t *testing.T) {
 				svc.Track()
 				didFinish <- true
 			}()
-			for i := 0; i < 200; i++ {
+			for range 200 {
 				var passQ, failQ float64
 				if !tc.overrides.nilLatestVersion {
 					passQ = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(

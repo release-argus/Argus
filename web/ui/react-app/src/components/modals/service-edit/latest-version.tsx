@@ -100,7 +100,7 @@ const EditServiceLatestVersion: FC<Props> = ({
 						col_sm={8}
 						col_xs={8}
 						{...getTooltipProps()}
-						position="right"
+						positionXS="right"
 					/>
 					{latestVersionType === 'github' ? (
 						<>

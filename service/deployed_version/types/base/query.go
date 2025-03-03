@@ -34,12 +34,12 @@ func (l *Lookup) VerifySemanticVersioning(newVersion, currentVersion string, log
 	if err != nil {
 		err = fmt.Errorf(
 			"failed converting %q to a semantic version. "+
-				"If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' "+
+				"If all versions are in this style, consider adding regex templating to get the version into the style of 'MAJOR.MINOR.PATCH' "+
 				"(https://semver.org/), or disabling semantic versioning "+
-				"(globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
+				"(globally with defaults.service.semantic_versioning or just for this service with the options.semantic_versioning var)",
 			newVersion,
 		)
-		logutil.Log.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, logFrom.Primary != "" || logFrom.Secondary != "")
 		return err
 	}
 
@@ -57,31 +57,10 @@ func (l *Lookup) HandleNewVersion(version, releaseDate string, writeToDB bool, l
 	// Set the new Deployed version.
 	l.Status.SetDeployedVersion(version, "", writeToDB)
 
-	latestVersion := l.Status.LatestVersion()
-	// If the LatestVersion is unknown, set it to the DeployedVersion.
-	if latestVersion == "" {
-		l.Status.SetLatestVersion(l.Status.DeployedVersion(), l.Status.DeployedVersionTimestamp(), writeToDB)
-		l.Status.AnnounceQueryNewVersion()
-		// If this new version is not LatestVersion,
-		// check it is not a later version than LatestVersion.
-	} else if version != latestVersion &&
-		l.Options.GetSemanticVersioning() {
-		//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning.
-		deployedVersionSV, _ := semver.NewVersion(version)
-		//#nosec G104 -- Disregard as LatestVersion will always be semantic if GetSemanticVersioning.
-		latestVersionSV, _ := semver.NewVersion(latestVersion)
-
-		// Update LatestVersion to DeployedVersion if newer.
-		if latestVersionSV.LessThan(deployedVersionSV) {
-			l.Status.SetLatestVersion(l.Status.DeployedVersion(), l.Status.DeployedVersionTimestamp(), writeToDB)
-			l.Status.AnnounceQueryNewVersion()
-		}
-	}
-
 	// Announce version change to WebSocket clients.
 	logutil.Log.Info(
 		fmt.Sprintf("Updated to %q", version),
-		logutil.LogFrom{Primary: *l.Status.ServiceID},
+		logFrom,
 		true)
 	l.Status.AnnounceUpdate()
 }

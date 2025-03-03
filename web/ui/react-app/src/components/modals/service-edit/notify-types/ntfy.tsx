@@ -236,7 +236,7 @@ const NTFY = ({
 					tooltip="e.g. 443"
 					isNumber
 					defaultVal={convertedDefaults.url_fields.port}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.username`}
@@ -247,7 +247,7 @@ const NTFY = ({
 					name={`${name}.url_fields.password`}
 					label="Password"
 					defaultVal={convertedDefaults.url_fields.password}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.topic`}
@@ -262,24 +262,29 @@ const NTFY = ({
 			<>
 				<FormSelect
 					name={`${name}.params.scheme`}
-					col_sm={3}
+					col_sm={6}
+					col_lg={3}
 					label="Scheme"
 					tooltip="Server protocol"
 					options={ntfySchemeOptions}
 				/>
 				<FormSelect
 					name={`${name}.params.priority`}
-					col_sm={3}
+					col_sm={6}
+					col_lg={3}
 					label="Priority"
 					options={ntfyPriorityOptions}
-					position="middle"
+					positionXS="right"
+					positionLG="middle"
 				/>
 				<FormText
 					name={`${name}.params.tags`}
+					col_sm={12}
+					col_lg={6}
 					label="Tags"
 					tooltip="Comma-separated list of tags that may or may not map to emojis"
 					defaultVal={convertedDefaults.params.tags}
-					position="right"
+					positionLG="right"
 				/>
 				<FormText
 					name={`${name}.params.attach`}
@@ -294,7 +299,7 @@ const NTFY = ({
 					label="Filename"
 					tooltip="File name of the attachment"
 					defaultVal={convertedDefaults.params.filename}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.params.email`}
@@ -306,7 +311,7 @@ const NTFY = ({
 					name={`${name}.params.title`}
 					label="Title"
 					defaultVal={convertedDefaults.params.title}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.params.click`}

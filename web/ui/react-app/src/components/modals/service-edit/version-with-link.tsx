@@ -30,7 +30,11 @@ interface Props {
 	col_xs?: number;
 	col_sm?: number;
 	col_md?: number;
-	position?: Position;
+	col_lg?: number;
+	positionXS?: Position;
+	positionSM?: Position;
+	positionMD?: Position;
+	positionLG?: Position;
 }
 
 type VersionWithLinkProps = TooltipWithAriaProps & Props;
@@ -44,8 +48,12 @@ type VersionWithLinkProps = TooltipWithAriaProps & Props;
  * @param col_xs - The amount of columns the item takes up on XS+ screens.
  * @param col_sm - The amount of columns the item takes up on SM+ screens.
  * @param col_md - The amount of columns the item takes up on MD+ screens.
+ * @param col_lg - The amount of columns the item takes up on LG+ screens.
  * @param tooltip - The tooltip for the field.
- * @param position - The position of the field.
+ * @param positionXS - The position of the field on XS+ screens.
+ * @param positionSM - The position of the field on SM+ screens.
+ * @param positionMD - The position of the field on MD+ screens.
+ * @param positionLG - The position of the field on LG+ screens.
  * @returns The version field with a link to the source being monitored.
  */
 const VersionWithLink: FC<VersionWithLinkProps> = ({
@@ -54,10 +62,14 @@ const VersionWithLink: FC<VersionWithLinkProps> = ({
 	required,
 	col_xs = 12,
 	col_sm = 6,
-	col_md = col_sm,
+	col_md,
+	col_lg,
 	tooltip,
 	tooltipAriaLabel,
-	position,
+	positionXS = 'left',
+	positionSM,
+	positionMD,
+	positionLG,
 }) => {
 	const { register, setError, clearErrors } = useFormContext();
 	const value: string = useWatch({ name: name });
@@ -69,7 +81,16 @@ const VersionWithLink: FC<VersionWithLinkProps> = ({
 
 	const link = (type: 'github' | 'url') =>
 		type === 'github' ? `https://github.com/${value}` : value;
-	const padding = formPadding({ col_xs, col_sm, position });
+	const padding = formPadding({
+		col_xs,
+		col_sm,
+		col_md,
+		col_lg,
+		positionXS,
+		positionSM,
+		positionMD,
+		positionLG,
+	});
 
 	const getTooltipProps = () => {
 		if (!tooltip) return {};
@@ -82,6 +103,7 @@ const VersionWithLink: FC<VersionWithLinkProps> = ({
 			xs={col_xs}
 			sm={col_sm}
 			md={col_md}
+			lg={col_lg}
 			className={`${padding} pt-1 pb-1 col-form`}
 		>
 			<FormGroup>

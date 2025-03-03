@@ -35,10 +35,10 @@ const OpsGenieTarget: FC<Props> = ({ name, removeMe, defaults }) => {
 
 	return (
 		<>
-			<Col xs={2} sm={1} style={{ padding: '0.25rem' }}>
+			<Col xs={2} sm={1} className="py-1 pe-2">
 				<Button
 					aria-label="Remove this target"
-					className="btn-secondary-outlined btn-icon-center"
+					className="btn-secondary-outlined btn-icon-center p-0"
 					variant="secondary"
 					onClick={removeMe}
 				>
@@ -50,28 +50,29 @@ const OpsGenieTarget: FC<Props> = ({ name, removeMe, defaults }) => {
 					<FormSelect
 						name={`${name}.type`}
 						col_xs={6}
-						col_sm={3}
+						col_md={3}
 						options={targetTypes}
 					/>
 					<FormSelect
 						name={`${name}.sub_type`}
 						col_xs={6}
-						col_sm={3}
+						col_md={3}
 						options={[
 							{ label: 'ID', value: 'id' },
 							targetType === 'team'
 								? { label: 'Name', value: 'name' }
 								: { label: 'Username', value: 'username' },
 						]}
-						position="middle"
 						positionXS="right"
+						positionMD="middle"
 					/>
 					<FormText
 						name={`${name}.value`}
 						required
-						col_sm={6}
+						col_sm={12}
+						col_md={6}
 						defaultVal={defaults?.value}
-						position="right"
+						positionXS="right"
 					/>
 				</Row>
 			</Col>

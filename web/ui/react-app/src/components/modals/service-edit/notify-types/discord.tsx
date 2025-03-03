@@ -113,7 +113,7 @@ const DISCORD = ({
 					}
 					tooltipAriaLabel="Format: https://discord.com/api/webhooks/webhook_id/TOKEN"
 					defaultVal={convertedDefaults.url_fields.token}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 			<FormLabel text="Params" heading />
@@ -134,7 +134,7 @@ const DISCORD = ({
 					name={`${name}.params.title`}
 					label="Title"
 					defaultVal={convertedDefaults.params.title}
-					position="right"
+					positionXS="right"
 				/>
 				<BooleanWithDefault
 					name={`${name}.params.splitlines}`}

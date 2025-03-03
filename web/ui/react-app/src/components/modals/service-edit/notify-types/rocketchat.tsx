@@ -96,7 +96,7 @@ const ROCKET_CHAT = ({
 					label="Port"
 					isNumber
 					defaultVal={convertedDefaults.url_fields.port}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.path`}
@@ -115,7 +115,7 @@ const ROCKET_CHAT = ({
 					required
 					label="Channel"
 					defaultVal={convertedDefaults.url_fields.channel}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.username`}
@@ -134,7 +134,7 @@ const ROCKET_CHAT = ({
 					required
 					label="Token B"
 					defaultVal={convertedDefaults.url_fields.tokenb}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 		</>

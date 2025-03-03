@@ -57,6 +57,7 @@ func TestLookup_Track(t *testing.T) {
 	}{
 		"get semantic version with regex": {
 			startLatestVersion:  plainNonSemanticVersionAsSemantic,
+			wantLatestVersion:   plainNonSemanticVersionAsSemantic,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:   test.LookupPlain["url_valid"],
@@ -67,6 +68,7 @@ func TestLookup_Track(t *testing.T) {
 		},
 		"get semantic version from JSON": {
 			startLatestVersion:  jsonBarVersion,
+			wantLatestVersion:   jsonBarVersion,
 			wantDeployedVersion: jsonBarVersion,
 			lookup: &Lookup{
 				URL:  test.LookupJSON["url_valid"],
@@ -76,6 +78,7 @@ func TestLookup_Track(t *testing.T) {
 		},
 		"get semantic version from multi-level JSON": {
 			startLatestVersion:  "3.2.1",
+			wantLatestVersion:   "3.2.1",
 			wantDeployedVersion: "3.2.1",
 			lookup: &Lookup{
 				URL:  test.LookupJSON["url_valid"],
@@ -95,6 +98,7 @@ func TestLookup_Track(t *testing.T) {
 		},
 		"allow non-semantic version": {
 			startLatestVersion:  plainNonSemanticVersion,
+			wantLatestVersion:   plainNonSemanticVersion,
 			wantDeployedVersion: plainNonSemanticVersion,
 			lookup: &Lookup{
 				URL:   test.LookupPlain["url_valid"],
@@ -105,6 +109,7 @@ func TestLookup_Track(t *testing.T) {
 		},
 		"get version behind basic auth": {
 			startLatestVersion:  plainNonSemanticVersionAsSemantic,
+			wantLatestVersion:   plainNonSemanticVersionAsSemantic,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			basicAuth: &BasicAuth{
 				Username: "test",
@@ -121,6 +126,7 @@ func TestLookup_Track(t *testing.T) {
 				"TEST_LOOKUP__DV_TRACK_ONE": "tes",
 				"TEST_LOOKUP__DV_TRACK_TWO": "23"},
 			startLatestVersion:  plainNonSemanticVersionAsSemantic,
+			wantLatestVersion:   plainNonSemanticVersionAsSemantic,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			basicAuth: &BasicAuth{
 				Username: "${TEST_LOOKUP__DV_TRACK_ONE}t",
@@ -134,6 +140,7 @@ func TestLookup_Track(t *testing.T) {
 		},
 		"get version behind an invalid cert": {
 			startLatestVersion:  plainNonSemanticVersionAsSemantic,
+			wantLatestVersion:   plainNonSemanticVersionAsSemantic,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:   test.LookupPlain["url_invalid"],
@@ -145,6 +152,7 @@ func TestLookup_Track(t *testing.T) {
 		},
 		"fail due to an unallowed invalid cert": {
 			startLatestVersion:  "",
+			wantLatestVersion:   "",
 			wantDeployedVersion: "",
 			lookup: &Lookup{
 				URL:   test.LookupPlain["url_invalid"],
@@ -156,6 +164,7 @@ func TestLookup_Track(t *testing.T) {
 		},
 		"update to a newer version": {
 			startLatestVersion:   plainNonSemanticVersionAsSemantic,
+			wantLatestVersion:    plainNonSemanticVersionAsSemantic,
 			startDeployedVersion: plainStableVersion,
 			wantDeployedVersion:  plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
@@ -167,6 +176,7 @@ func TestLookup_Track(t *testing.T) {
 		},
 		"update to an older version": {
 			startLatestVersion:   plainNonSemanticVersionAsSemantic,
+			wantLatestVersion:    plainNonSemanticVersionAsSemantic,
 			startDeployedVersion: "1.2.3",
 			wantDeployedVersion:  plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
@@ -176,16 +186,16 @@ func TestLookup_Track(t *testing.T) {
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"get a newer deployed version than latest version updates both": {
+		"get a newer deployed version than latest version": {
 			startLatestVersion:  plainStableVersion,
-			wantLatestVersion:   plainNonSemanticVersionAsSemantic,
+			wantLatestVersion:   plainStableVersion,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:  test.LookupJSON["url_valid"],
 				JSON: "bar"},
 			semanticVersioning:   true,
-			wantDatabaseMessages: 2,
-			wantAnnounces:        2,
+			wantDatabaseMessages: 1,
+			wantAnnounces:        1,
 		},
 		"get an older deployed version than latest version only updates deployed": {
 			startLatestVersion:  "1.2.3",
@@ -198,16 +208,16 @@ func TestLookup_Track(t *testing.T) {
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"get a deployed version with no latest version updates both": {
+		"get a deployed version with no latest version": {
 			startLatestVersion:  "",
-			wantLatestVersion:   jsonBarVersion,
+			wantLatestVersion:   "",
 			wantDeployedVersion: jsonBarVersion,
 			lookup: &Lookup{
 				URL:  test.LookupJSON["url_valid"],
 				JSON: "bar"},
 			semanticVersioning:   true,
-			wantDatabaseMessages: 2,
-			wantAnnounces:        2,
+			wantDatabaseMessages: 1,
+			wantAnnounces:        1,
 		},
 		"deleting service stops track": {
 			deleting: true,
@@ -215,8 +225,8 @@ func TestLookup_Track(t *testing.T) {
 				URL:  test.LookupJSON["url_valid"],
 				JSON: "bar"},
 			startLatestVersion:   "",
-			startDeployedVersion: "",
 			wantLatestVersion:    "",
+			startDeployedVersion: "",
 			wantDeployedVersion:  "",
 			wantAnnounces:        0,
 			wantDatabaseMessages: 0,
@@ -298,9 +308,6 @@ func TestLookup_Track(t *testing.T) {
 			if gotDeployedVersion := tc.lookup.Status.DeployedVersion(); tc.wantDeployedVersion != gotDeployedVersion {
 				t.Errorf("expected DeployedVersion to be %q after query, not %q",
 					tc.wantDeployedVersion, gotDeployedVersion)
-			}
-			if tc.wantLatestVersion == "" {
-				tc.wantLatestVersion = tc.wantDeployedVersion
 			}
 			if gotLatestVersion := tc.lookup.Status.LatestVersion(); tc.wantLatestVersion != gotLatestVersion {
 				t.Errorf("expected LatestVersion to be %q after query, not %q",
@@ -449,7 +456,7 @@ func TestLookup_Query(t *testing.T) {
 			`),
 			errRegex: `failed converting .* to a semantic version`,
 		},
-		"allow non-semantic versioning and get non-semantic version": {
+		"allow non-semantic version": {
 			overrides: test.TrimYAML(`
 				url: ` + test.LookupPlain["url_valid"] + `
 				regex: 'non-semantic: "([^"]+)'

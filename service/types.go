@@ -39,6 +39,8 @@ import (
 type Slice map[string]*Service
 
 // UnmarshalJSON handles the unmarshalling of a Slice.
+// It unmarshals the JSON data into a map of string keys to Service pointers,
+// and then calls the giveIDs method to assign IDs to the services.
 func (s *Slice) UnmarshalJSON(data []byte) error {
 	var aux map[string]*Service
 
@@ -52,7 +54,9 @@ func (s *Slice) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// UnmarshalYAML handles the unmarshalling of a Slice.
+// UnmarshalJSON handles the unmarshalling of a Slice.
+// It unmarshals the YAML data into a map of string keys to Service pointers,
+// and then calls the giveIDs method to assign IDs to the services.
 func (s *Slice) UnmarshalYAML(value *yaml.Node) error {
 	var aux map[string]*Service
 
@@ -200,9 +204,97 @@ func (s *Service) UsingDefaults() (bool, bool, bool) {
 	return s.notifyFromDefaults, s.commandFromDefaults, s.webhookFromDefaults
 }
 
+// unmarshalVersionLookups handles the unmarshalling of LatestVersion and DeployedVersion fields.
+func (s *Service) unmarshalVersionLookups(
+	format string,
+	latestVersion, deployedVersion any,
+) error {
+	// -- Dynamic LatestVersion type --
+	if latestVersion != nil {
+		lookupType, err := extractLookupType(
+			format, latestVersion,
+			s.LatestVersion)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal Service.LatestVersion:\n%w", err)
+		}
+		s.LatestVersion, err = latestver.New(
+			lookupType,
+			format, latestVersion,
+			nil,
+			nil,
+			nil, nil)
+		if err != nil {
+			return err //nolint:wrapcheck
+		}
+	}
+
+	// -- Dynamic DeployedVersion type --
+	if deployedVersion != nil {
+		lookupType, err := extractLookupType(
+			format, deployedVersion,
+			s.DeployedVersionLookup)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal Service.DeployedVersion:\n%w", err)
+		}
+		if format == "yaml" && lookupType == "" {
+			// Default to url for YAML only
+			lookupType = "url"
+		}
+
+		s.DeployedVersionLookup, err = deployedver.New(
+			lookupType,
+			format, deployedVersion,
+			nil,
+			nil,
+			nil, nil)
+		if err != nil {
+			return err //nolint:wrapcheck
+		}
+	}
+
+	return nil
+}
+
+// extractLookupType extracts the type field from the YAML,
+// or uses the GetType from the struct if it's not in the YAML,
+// and the struct is non-nil.
+func extractLookupType(
+	dataFormat string,
+	data any,
+	lookup structWithGetType,
+) (string, error) {
+	// Check for the type field in the YAML.
+	var typeField struct {
+		Type string `yaml:"type"`
+	}
+	var err error
+	switch v := data.(type) {
+	case *yaml.Node:
+		err = v.Decode(&typeField)
+	case json.RawMessage:
+		err = json.Unmarshal(v, &typeField)
+	}
+	if err != nil {
+		return "", fmt.Errorf("invalid %s:\n%s",
+			dataFormat, strings.TrimPrefix(err.Error(), dataFormat+": "))
+	}
+
+	if typeField.Type != "" {
+		return typeField.Type, nil
+	}
+
+	// If we don't have a type in the YAML, check if we already have a type in the struct.
+	if lookup != nil {
+		return lookup.GetType(), nil
+	}
+
+	// Invalid, but let the parent function handle it.
+	return "", nil
+}
+
 // UnmarshalJSON handles the unmarshalling of a Service.
 //
-// This addresses the dynamic LatestVersion type.
+// This addresses the dynamic Latest/Deployed Version types.
 func (s *Service) UnmarshalJSON(data []byte) error {
 	// Alias to avoid recursion.
 	type Alias Service
@@ -230,46 +322,21 @@ func (s *Service) UnmarshalJSON(data []byte) error {
 		s.marshalName = true
 	}
 
-	// -- Dynamic LatestVersion type --
+	var latestVersionNode, deployedVersionNode any
 	if aux.LatestVersion != nil {
-		lookupType, err := extractLookupType("json", aux.LatestVersion, s.LatestVersion)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal Service.LatestVersion:\n%w", err)
-		}
-		s.LatestVersion, err = latestver.New(
-			lookupType,
-			"json", aux.LatestVersion,
-			nil,
-			nil,
-			nil, nil)
-		if err != nil {
-			return err //nolint:wrapcheck
-		}
+		latestVersionNode = aux.LatestVersion
 	}
-
-	// -- Dynamic DeployedVersion type --
 	if aux.DeployedVersion != nil {
-		lookupType, err := extractLookupType("json", aux.DeployedVersion, s.DeployedVersionLookup)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal Service.DeployedVersion:\n%w", err)
-		}
-		s.DeployedVersionLookup, err = deployedver.New(
-			lookupType,
-			"json", aux.DeployedVersion,
-			nil,
-			nil,
-			nil, nil)
-		if err != nil {
-			return err //nolint:wrapcheck
-		}
+		deployedVersionNode = aux.DeployedVersion
 	}
 
-	return nil
+	return s.unmarshalVersionLookups(
+		"json",
+		latestVersionNode,
+		deployedVersionNode)
 }
 
 // MarshalJSON handles the marshalling of a Service.
-//
-// (dynamic typing).
 func (s *Service) MarshalJSON() ([]byte, error) {
 	// Alias to avoid recursion.
 	type Alias Service
@@ -300,45 +367,9 @@ type structWithGetType interface {
 	GetType() string
 }
 
-// extractLookupType extracts the type field from the YAML,
-// or uses the GetType from the struct if it's not in the YAML,
-// and the struct is non-nil.
-func extractLookupType(
-	dataFormat string,
-	data interface{},
-	lookup structWithGetType,
-) (string, error) {
-	// Check for the type field in the YAML.
-	var typeField struct {
-		Type string `yaml:"type"`
-	}
-	var err error
-	switch v := data.(type) {
-	case *yaml.Node:
-		err = v.Decode(&typeField)
-	case json.RawMessage:
-		err = json.Unmarshal(v, &typeField)
-	}
-	if err != nil {
-		return "", fmt.Errorf("invalid %s:\n%s",
-			dataFormat, strings.TrimPrefix(err.Error(), dataFormat+": "))
-	}
-
-	if typeField.Type != "" {
-		return typeField.Type, nil
-	}
-
-	// If we don't have a type in the YAML, check if we already have a type in the struct.
-	if lookup != nil {
-		return lookup.GetType(), nil
-	}
-	// Invalid, but let the New function handle it.
-	return "", nil
-}
-
 // UnmarshalYAML handles the unmarshalling of a Service.
 //
-// (dynamic typing).
+// This addresses the dynamic Latest/Deployed Version types.
 func (s *Service) UnmarshalYAML(value *yaml.Node) error {
 	// Alias to avoid recursion.
 	type Alias Service
@@ -366,52 +397,22 @@ func (s *Service) UnmarshalYAML(value *yaml.Node) error {
 		s.marshalName = true
 	}
 
-	// -- Dynamic LatestVersion type --
+	var latestVersionNode, deployedVersionNode any
 	if aux.LatestVersion.Node != nil {
-		lookupType, err := extractLookupType("yaml", aux.LatestVersion.Node, s.LatestVersion)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal Service.LatestVersion:\n%w", err)
-		}
-		s.LatestVersion, err = latestver.New(
-			lookupType,
-			"yaml", aux.LatestVersion.Node,
-			nil,
-			nil,
-			nil, nil)
-		if err != nil {
-			return err //nolint:wrapcheck
-		}
+		latestVersionNode = aux.LatestVersion.Node
 	}
-
-	// -- Dynamic DeployedVersion type --
 	if aux.DeployedVersion.Node != nil {
-		lookupType, err := extractLookupType("yaml", aux.DeployedVersion.Node, s.DeployedVersionLookup)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal Service.DeployedVersion:\n%w", err)
-		}
-		if lookupType == "" {
-			// Default to url.
-			lookupType = "url"
-		}
-
-		s.DeployedVersionLookup, err = deployedver.New(
-			lookupType,
-			"yaml", aux.DeployedVersion.Node,
-			nil,
-			nil,
-			nil, nil)
-		if err != nil {
-			return err //nolint:wrapcheck
-		}
+		deployedVersionNode = aux.DeployedVersion.Node
 	}
 
-	return nil
+	return s.unmarshalVersionLookups(
+		"yaml",
+		latestVersionNode,
+		deployedVersionNode)
 }
 
 // MarshalYAML handles the marshalling of a Service.
-//
-// (dynamic typing).
-func (s *Service) MarshalYAML() (interface{}, error) {
+func (s *Service) MarshalYAML() (any, error) {
 	// Alias to avoid recursion.
 	type Alias Service
 	aux := &struct {

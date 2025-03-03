@@ -225,7 +225,7 @@ const BARK = ({
 					label="Port"
 					isNumber
 					defaultVal={convertedDefaults.url_fields.port}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.path`}
@@ -238,7 +238,7 @@ const BARK = ({
 					required
 					label="Device Key"
 					defaultVal={convertedDefaults.url_fields.devicekey}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 			<FormLabel text="Params" heading />
@@ -257,14 +257,14 @@ const BARK = ({
 					tooltip="The number displayed next to the App icon"
 					isNumber
 					defaultVal={convertedDefaults.params.badge}
-					position="middle"
+					positionXS="middle"
 				/>
 				<FormText
 					name={`${name}.params.copy`}
 					label="Copy"
 					tooltip="The value to be copied"
 					defaultVal={convertedDefaults.params.copy}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.params.group`}
@@ -276,7 +276,7 @@ const BARK = ({
 					name={`${name}.params.sound`}
 					label="Sound"
 					options={barkSoundOptions}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.params.title`}
@@ -288,7 +288,7 @@ const BARK = ({
 					label="URL"
 					tooltip="URL to open when notification is tapped"
 					defaultVal={convertedDefaults.params.url}
-					position="right"
+					positionXS="right"
 				/>
 				<FormTextWithPreview
 					name={`${name}.params.icon`}

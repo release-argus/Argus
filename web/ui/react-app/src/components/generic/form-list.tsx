@@ -119,7 +119,7 @@ const FormList: FC<Props> = ({
 						name={`${name}.${index}.arg`}
 						required
 						defaultVal={placeholder(index)}
-						position={index % 2 === 1 ? 'right' : 'left'}
+						positionXS={index % 2 === 1 ? 'right' : 'left'}
 					/>
 				))}
 			</Row>

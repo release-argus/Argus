@@ -29,6 +29,7 @@ import (
 //	Returns: version, err.
 func Refresh(
 	lookup Lookup,
+	previousType string,
 	overrides string,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
 ) (string, error) {
@@ -47,7 +48,7 @@ func Refresh(
 		// semantic_versioning now resolves to a different value than the default.
 		(*semanticVersioning != "null" && *semanticVersioning == "true" != lookup.GetOptions().GetSemanticVersioning()))
 	// Whether we need to create a new Lookup.
-	usingOverrides := overrides != "" || semanticVerDiff
+	usingOverrides := (overrides != "" && previousType != "manual") || semanticVerDiff
 
 	newLookup := lookup
 	// Create a new Lookup if overrides provided.
@@ -60,6 +61,11 @@ func Refresh(
 			semanticVersioning)
 		if err != nil {
 			return "", err
+		}
+	} else if previousType == "manual" && lookup.GetType() == "manual" &&
+		overrides != "" {
+		if err := json.Unmarshal([]byte(overrides), &lookup); err != nil {
+			return "", fmt.Errorf("failed to unmarshal deployedver.Lookup: %w", err)
 		}
 	}
 
@@ -79,6 +85,11 @@ func Refresh(
 	return newLookup.GetStatus().DeployedVersion(), nil
 }
 
+// LookupTypeExtractor is a struct that extracts the type from a JSON string.
+type LookupTypeExtractor struct {
+	Type string `json:"type"`
+}
+
 // applyOverridesJSON applies the JSON overrides to the Lookup.
 func applyOverridesJSON(
 	lookup Lookup,
@@ -86,8 +97,29 @@ func applyOverridesJSON(
 	semanticVerDiff bool,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
 ) (Lookup, error) {
+	var newLookup Lookup
+	var extractedOverrides *LookupTypeExtractor
+	if overrides != "" {
+		if err := json.Unmarshal([]byte(overrides), &extractedOverrides); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup: %w", err)
+		}
+	}
 	// Copy the existing Lookup.
-	newLookup := Copy(lookup)
+	if overrides == "" || (extractedOverrides.Type == "" || extractedOverrides.Type == lookup.GetType()) {
+		newLookup = Copy(lookup)
+	} else {
+		// Convert to the new type.
+		var err error
+		newLookup, err = New(
+			extractedOverrides.Type,
+			"yaml", "",
+			lookup.GetOptions(),
+			lookup.GetStatus(),
+			lookup.GetDefaults(), lookup.GetHardDefaults())
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// Apply the new semantic_versioning JSON value.
 	if semanticVerDiff {

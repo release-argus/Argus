@@ -195,7 +195,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	// Query the DeployedVersionLookup.
 	version, err := deployedver.Refresh(
 		dvl,
-		"", nil)
+		"", "", nil)
 	if err != nil {
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
@@ -309,6 +309,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 	)
 
 	// Existing DeployedVersionLookup?
+	var previousType string
 	dvl := api.Config.Service[targetService].DeployedVersionLookup
 	// Must create the DeployedVersionLookup if it doesn't exist.
 	if dvl == nil {
@@ -333,11 +334,14 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 			&svcStatus,
 			&api.Config.Service[targetService].Defaults.DeployedVersionLookup,
 			&api.Config.Service[targetService].HardDefaults.DeployedVersionLookup) //nolint:errcheck // empty JSON.
+	} else {
+		previousType = dvl.GetType()
 	}
 
 	// Query the DeployedVersionLookup.
 	version, err := deployedver.Refresh(
 		dvl,
+		previousType,
 		overrides,
 		semanticVersioning)
 	if err != nil {

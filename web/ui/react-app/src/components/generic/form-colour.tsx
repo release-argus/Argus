@@ -13,25 +13,39 @@ interface Props {
 
 	col_xs?: number;
 	col_sm?: number;
+	col_md?: number;
+	col_lg?: number;
 
 	label: string;
 	tooltip?: string;
+
 	defaultVal?: string;
-	position?: Position;
+
 	positionXS?: Position;
+	positionSM?: Position;
+	positionMD?: Position;
+	positionLG?: Position;
 }
 
 /**
  * A form item for a hex colour with a colour picker.
  *
  * @param name - The name of the field.
- * @param col_xs - The amount of columns the item takes up on XS+ screens.
- * @param col_sm - The amount of columns the item takes up on SM+ screens.
+ *
+ * @param col_xs - The number of columns the item takes up on XS+ screens.
+ * @param col_sm - The number of columns the item takes up on SM+ screens.
+ * @param col_md - The number of columns the item takes up on MD+ screens.
+ * @param col_lg - The number of columns the item takes up on LG+ screens.
+ *
  * @param label - The form label to display.
  * @param tooltip - The tooltip to display.
+ *
  * @param defaultVal - The default value of the field.
- * @param position - The position of the field.
- * @param positionXS - The position of the field on extra small screens.
+ *
+ * @param positionXS - The position of the form item on XS+ screens.
+ * @param positionSM - The position of the form item on SM+ screens.
+ * @param positionMD - The position of the form item on MD+ screens.
+ * @param positionLG - The position of the form item on LG+ screens.
  * @returns A form item for a hex colour with a colour picker, label and tooltip.
  */
 const FormColour: FC<Props> = ({
@@ -39,24 +53,45 @@ const FormColour: FC<Props> = ({
 
 	col_xs = 12,
 	col_sm = 6,
+	col_md,
+	col_lg,
 
 	label,
 	tooltip,
+
 	defaultVal,
-	position = 'left',
-	positionXS = position,
+
+	positionXS = 'left',
+	positionSM,
+	positionMD,
+	positionLG,
 }) => {
 	const { register, setValue } = useFormContext();
 	const hexColour: string = useWatch({ name: name });
 	const trimmedHex = hexColour?.replace('#', '');
 	const error = useError(name, true);
 
-	const padding = formPadding({ col_xs, col_sm, position, positionXS });
+	const padding = formPadding({
+		col_xs,
+		col_sm,
+		col_md,
+		col_lg,
+		positionXS,
+		positionSM,
+		positionMD,
+		positionLG,
+	});
 	const setColour = (hex: string) =>
 		setValue(name, hex.substring(1), { shouldDirty: true });
 
 	return (
-		<Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
+		<Col
+			xs={col_xs}
+			sm={col_sm}
+			md={col_md}
+			lg={col_lg}
+			className={`${padding} pt-1 pb-1 col-form`}
+		>
 			<FormGroup style={{ display: 'flex', flexDirection: 'column' }}>
 				<div>
 					<FormLabel htmlFor={name} text={label} tooltip={tooltip} />

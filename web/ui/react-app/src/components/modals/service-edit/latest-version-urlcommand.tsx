@@ -31,10 +31,10 @@ const FormURLCommand: FC<Props> = ({ name, removeMe }) => {
 
 	return (
 		<>
-			<Col xs={2} sm={1} style={{ height: '100%', padding: '0.25rem' }}>
+			<Col xs={2} sm={1} className="h-100 py-1 pe-2">
 				<Button
 					aria-label="Delete this URL command"
-					className="btn-secondary-outlined btn-icon-center"
+					className="btn-secondary-outlined btn-icon-center p-0"
 					variant="secondary"
 					onClick={removeMe}
 				>

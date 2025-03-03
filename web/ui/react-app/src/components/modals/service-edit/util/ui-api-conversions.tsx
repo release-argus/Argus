@@ -6,7 +6,9 @@ import {
 	ServiceEditType,
 } from 'types/service-edit';
 import {
+	DeployedVersionLookupManualType,
 	DeployedVersionLookupType,
+	DeployedVersionLookupURLType,
 	Dict,
 	LatestVersionLookupType,
 	NotifyTypesValues,
@@ -171,6 +173,21 @@ export const convertUIDeployedVersionDataEditToAPI = (
 	data?: DeployedVersionLookupEditType,
 ): DeployedVersionLookupType | null => {
 	let converted: DeployedVersionLookupType = {
+		type: data?.type,
+	};
+
+	// manual
+	if (data?.type == 'manual') {
+		converted = {
+			...converted,
+			version: data?.version,
+		} as DeployedVersionLookupManualType;
+		return data.version ? converted : {};
+	}
+
+	// url
+	converted = {
+		...converted,
 		method: data?.method,
 		url: data?.url,
 		allow_invalid_certs: data?.allow_invalid_certs,
@@ -178,7 +195,7 @@ export const convertUIDeployedVersionDataEditToAPI = (
 		json: data?.json ?? '',
 		regex: data?.regex ?? '',
 		regex_template: data?.regex_template ?? '',
-	};
+	} as DeployedVersionLookupURLType;
 
 	// Method - POST
 	if (data?.method === 'POST') {
