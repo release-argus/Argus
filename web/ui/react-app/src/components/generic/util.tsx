@@ -12,16 +12,16 @@ const getPadding = (
 	if (col === 12 || (previous?.applied && position === previous?.pos))
 		return null;
 
-	const breakpointPrefix = (breakpoint ? '-' + breakpoint : '') + '-1';
+	const breakpointPrefix = breakpoint ? '-' + breakpoint : '';
 
 	// Apply the padding based on the position.
 	switch (position) {
 		case 'right':
-			return `ps${breakpointPrefix}`;
+			return `ps${breakpointPrefix}-1 pe${breakpointPrefix}-0`;
 		case 'middle':
-			return `ps${breakpointPrefix} pe${breakpointPrefix}`;
+			return `ps${breakpointPrefix}-1 pe${breakpointPrefix}-1`;
 		case 'left':
-			return `pe${breakpointPrefix}`;
+			return `ps${breakpointPrefix}-0 pe${breakpointPrefix}-1`;
 	}
 
 	return null; // No positioning given.
@@ -104,11 +104,12 @@ export const formPadding = ({
 		// Only push the padding when not null.
 		if (padding) paddingClasses.push(padding);
 
-		// Return the updated previous position and column.
+		// Return the updated previous position, column and applied status.
 		return {
 			pos: newPosition,
 			col: col ?? previous?.col,
-			applied: !!padding || previous?.applied,
+			applied:
+				!!padding || (newPosition === previous?.pos && previous?.applied),
 		};
 	};
 
