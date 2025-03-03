@@ -5,7 +5,7 @@ import FormLabel from './form-label';
 import { Position } from 'types/config';
 import { TooltipWithAriaProps } from './tooltip';
 import cx from 'classnames';
-import { formPadding } from './util';
+import { formPadding } from './form-shared';
 import { requiredTest } from './form-validate';
 import { useError } from 'hooks/errors';
 import { useFormContext } from 'react-hook-form';

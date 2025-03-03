@@ -19,7 +19,7 @@ import { Position } from 'types/config';
 import { TooltipWithAriaProps } from 'components/generic/tooltip';
 import cx from 'classnames';
 import { faLink } from '@fortawesome/free-solid-svg-icons';
-import { formPadding } from 'components/generic/util';
+import { formPadding } from 'components/generic/form-shared';
 import { useError } from 'hooks/errors';
 
 interface Props {

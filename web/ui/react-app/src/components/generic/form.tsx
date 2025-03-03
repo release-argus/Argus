@@ -6,6 +6,7 @@ import FormLabel from './form-label';
 import FormList from './form-list';
 import FormSelect from './form-select';
 import FormSelectCreatable from './form-select-creatable';
+import FormSelectCreatableSortable from './form-select-creatable-sortable';
 import FormText from './form-text';
 import FormTextArea from './form-text-area';
 import FormTextWithPreview from './form-text-with-preview';
@@ -19,6 +20,7 @@ export {
 	FormList,
 	FormSelect,
 	FormSelectCreatable,
+	FormSelectCreatableSortable,
 	FormText,
 	FormTextArea,
 	FormTextWithPreview,

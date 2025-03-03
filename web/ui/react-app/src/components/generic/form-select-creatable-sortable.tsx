@@ -21,7 +21,7 @@ import { OptionType } from 'types/util';
 import { Position } from 'types/config';
 import { TooltipWithAriaProps } from './tooltip';
 import cx from 'classnames';
-import { formPadding } from './util';
+import { formPadding } from './form-shared';
 import { useError } from 'hooks/errors';
 
 type Props = {
@@ -273,6 +273,7 @@ const FormSelectCreatableSortable: FC<FormSelectCreatableSortableProps> = ({
 									styles={
 										dynamicHeight ? customStyles : customStylesFixedHeight
 									}
+									menuShouldScrollIntoView
 								/>
 							</SortableContext>
 						</DndContext>
