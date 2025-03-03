@@ -273,6 +273,7 @@ const FormSelectCreatableSortable: FC<FormSelectCreatableSortableProps> = ({
 									styles={
 										dynamicHeight ? customStyles : customStylesFixedHeight
 									}
+									menuShouldScrollIntoView
 								/>
 							</SortableContext>
 						</DndContext>

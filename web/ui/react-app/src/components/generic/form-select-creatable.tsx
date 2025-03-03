@@ -237,6 +237,7 @@ const FormSelectCreatable: FC<FormSelectCreatableProps> = ({
 							}
 							components={customComponents}
 							styles={customStyles}
+							menuShouldScrollIntoView
 						/>
 					)}
 					rules={{

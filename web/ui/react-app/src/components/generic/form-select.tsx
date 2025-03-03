@@ -176,6 +176,7 @@ const FormSelect: FC<FormSelectProps> = ({
 							isMulti={isMulti}
 							isClearable={isClearable}
 							styles={customStyles}
+							menuShouldScrollIntoView
 						/>
 					)}
 					rules={{
