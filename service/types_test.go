@@ -1214,7 +1214,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				failed to unmarshal deployedver.Lookup:
-				type: "unsupported" <invalid> .*\[url\].*$`),
+				type: "unsupported" <invalid> .*\[url, manual\].*$`),
 			want: &Service{},
 		},
 		"deployed_version: missing type": {
@@ -1225,7 +1225,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal deployedver.Lookup:
-				type: <required> .*\[url\].*$`),
+				type: <required> .*\[url, manual\].*$`),
 			want: &Service{},
 		},
 		"deployed_version: invalid type format": {
@@ -1842,7 +1842,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: test.TrimYAML(`
 			failed to unmarshal deployedver.Lookup:
-			type: "unsupported" <invalid> .*\[url\].*$`),
+			type: "unsupported" <invalid> .*\[url, manual\].*$`),
 			want: &Service{},
 		},
 		"deployed_version: missing type": {

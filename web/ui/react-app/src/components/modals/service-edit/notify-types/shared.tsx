@@ -67,7 +67,7 @@ export const NotifyOptions = ({
 					isNumber
 					validationFunc={(value: string) => numberRangeTest(value, 0, 255)}
 					defaultVal={convertedDefaults.max_tries}
-					position="right"
+					positionXS="right"
 				/>
 				<FormTextArea
 					name={`${name}.options.message`}

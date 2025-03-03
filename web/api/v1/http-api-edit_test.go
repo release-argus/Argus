@@ -466,9 +466,9 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 	testSVC.LatestVersion.Query(true, logutil.LogFrom{})
 	testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	type wants struct {
-		body                           string
-		statusCode                     int
-		latestVersion, deployedVersion string
+		body            string
+		statusCode      int
+		deployedVersion string
 	}
 
 	// GIVEN an API and a request to refresh the deployed_version of a service.
@@ -509,16 +509,13 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			wants: wants{
 				body: fmt.Sprintf(`\{"version":%q,.*"\}`,
 					testSVC.Status.DeployedVersion()),
-				statusCode: http.StatusOK,
-				// Latest set to Deployed as not queried.
-				latestVersion:   testSVC.Status.DeployedVersion(),
+				statusCode:      http.StatusOK,
 				deployedVersion: testSVC.Status.DeployedVersion()},
 		},
 		"semantic_versioning not sent - refreshes service": {
 			wants: wants{
 				body:            `\{"version":"ver[\d.]+",.*"\}`,
 				statusCode:      http.StatusOK,
-				latestVersion:   testSVC.Status.DeployedVersion(),
 				deployedVersion: testSVC.Status.DeployedVersion()},
 		},
 		"semantic_versioning=null - fail as default=true": {
@@ -539,7 +536,6 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			wants: wants{
 				body:            `\{"version":"ver[0-9.]+",.*"\}`,
 				statusCode:      http.StatusOK,
-				latestVersion:   testSVC.Status.DeployedVersion(),
 				deployedVersion: testSVC.Status.DeployedVersion()},
 		},
 		"semantic_versioning=diff - not applied to service": {
@@ -549,7 +545,6 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			wants: wants{
 				body:            `failed converting .* to a semantic version`,
 				statusCode:      http.StatusBadRequest,
-				latestVersion:   "",
 				deployedVersion: ""},
 		},
 		"different JSON doesn't update service version": {
@@ -559,18 +554,16 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				}`),
 				"semantic_versioning": "false"},
 			wants: wants{
-				body:          `\{"version":"[0-9.]+",.*"\}`,
-				statusCode:    http.StatusOK,
-				latestVersion: ""},
+				body:       `\{"version":"[0-9.]+",.*"\}`,
+				statusCode: http.StatusOK},
 		},
 		"invalid JSON - existing DVL": {
 			params: map[string]string{
 				"overrides": `"method": "GET"}`,
 			},
 			wants: wants{
-				body:          `^\{"message":"failed to unmarshal deployedver.Lookup:[^"]+"\}$`,
-				statusCode:    http.StatusBadRequest,
-				latestVersion: ""},
+				body:       `^\{"message":"failed to unmarshal deployedver.Lookup:[^"]+"\}$`,
+				statusCode: http.StatusBadRequest},
 		},
 		"invalid JSON - new DVL": {
 			nilDeployedVersion: true,
@@ -578,9 +571,8 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"overrides": `{"type": "url", "method}}`,
 			},
 			wants: wants{
-				body:          `^\{"message":"invalid JSON[^"]+"\}$`,
-				statusCode:    http.StatusBadRequest,
-				latestVersion: ""},
+				body:       `^\{"message":"invalid JSON[^"]+"\}$`,
+				statusCode: http.StatusBadRequest},
 		},
 		"invalid vars - CheckValues fail": {
 			params: map[string]string{
@@ -588,18 +580,16 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 					"regex": "v?([0-9.+)"
 				}`)},
 			wants: wants{
-				body:          `\{"message":".*regex: .*invalid`,
-				statusCode:    http.StatusBadRequest,
-				latestVersion: ""},
+				body:       `\{"message":".*regex: .*invalid`,
+				statusCode: http.StatusBadRequest},
 		},
 		"unknown service": {
 			serviceID: test.StringPtr("bish-bash-bosh"),
 			params: map[string]string{
 				"semantic_versioning": "false"},
 			wants: wants{
-				body:          `\{"message":"service .+ not found"`,
-				statusCode:    http.StatusNotFound,
-				latestVersion: ""},
+				body:       `\{"message":"service .+ not found"`,
+				statusCode: http.StatusNotFound},
 		},
 	}
 
@@ -620,6 +610,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			for k, v := range tc.params {
 				params.Set(k, v)
 			}
+			initialLatestVersion := svc.Status.LatestVersion()
 
 			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
@@ -656,10 +647,10 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				t.Errorf("want Body to match\n%q\ngot:\n%q\n",
 					tc.wants.body, got)
 			}
-			// AND the LatestVersion is expected.
-			if svc.Status.LatestVersion() != tc.wants.latestVersion {
+			// AND the LatestVersion is unchanged.
+			if gotLatestVersion := svc.Status.LatestVersion(); gotLatestVersion != initialLatestVersion {
 				t.Errorf("VersionRefresh-LatestVersion, expected %q, not %q\n",
-					tc.wants.latestVersion, svc.Status.LatestVersion())
+					initialLatestVersion, svc.Status.LatestVersion())
 			}
 			// AND the DeployedVersion is expected.
 			if svc.Status.DeployedVersion() != tc.wants.deployedVersion {
@@ -1032,7 +1023,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 			serviceID := util.DereferenceOrDefault(tc.serviceID)
 			// CREATE.
 			if serviceID == "" {
-				var data map[string]interface{}
+				var data map[string]any
 				json.Unmarshal([]byte(tc.payload), &data)
 				serviceID = data["id"].(string)
 			}

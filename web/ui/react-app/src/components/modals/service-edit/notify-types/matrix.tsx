@@ -98,7 +98,7 @@ const MATRIX = ({
 					tooltip="e.g. 25/465/587/2525"
 					isNumber
 					defaultVal={convertedDefaults.url_fields.port}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.username`}
@@ -111,7 +111,7 @@ const MATRIX = ({
 					required
 					label="Password"
 					defaultVal={convertedDefaults.url_fields.password}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 			<FormLabel text="Params" heading />

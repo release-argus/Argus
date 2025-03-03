@@ -85,7 +85,7 @@ const NotificationProvider = () => {
 		<NotificationContext.Provider value={contextValue}>
 			<ToastContainer
 				className="p-3 position-fixed"
-				position={'bottom-end'}
+				position="bottom-end"
 				style={{
 					zIndex: 1056,
 					display: 'flex',

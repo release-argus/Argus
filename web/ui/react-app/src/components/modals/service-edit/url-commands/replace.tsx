@@ -16,8 +16,8 @@ const REPLACE = ({ name }: { name: string }) => (
 			col_sm={4}
 			label="Replace"
 			smallLabel
-			position="middle"
 			positionXS="right"
+			positionSM="middle"
 		/>
 		<FormText
 			key="new"
@@ -25,7 +25,7 @@ const REPLACE = ({ name }: { name: string }) => (
 			col_sm={4}
 			label="With"
 			smallLabel
-			position="right"
+			positionXS="right"
 		/>
 	</>
 );

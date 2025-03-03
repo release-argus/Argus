@@ -115,7 +115,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 				initialDeployedVersion: "",
 				newVersion:             "1.0.0",
 				releaseDate:            "2024-01-01"},
-			wantAnnounces: 2, // latest_version, deployed_version.
+			wantAnnounces: 1,
 			wantNotify:    false,
 		},
 		"first version found, have newer deployed version": {
@@ -124,7 +124,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 				initialDeployedVersion: "1.0.1",
 				newVersion:             "1.0.0",
 				releaseDate:            "2024-01-01"},
-			wantAnnounces: 2, // latest_version, deployed_version.
+			wantAnnounces: 1,
 			wantNotify:    false,
 		},
 		"first version found, have older deployed version": {
@@ -133,7 +133,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 				initialDeployedVersion: "0.9.0",
 				newVersion:             "1.0.0",
 				releaseDate:            "2024-01-01"},
-			wantAnnounces: 2, // latest_version, deployed_version.
+			wantAnnounces: 1,
 			wantNotify:    false,
 		},
 		"new version found": {
@@ -142,7 +142,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 				initialDeployedVersion: "1.0.0",
 				newVersion:             "1.1.0",
 				releaseDate:            "2024-02-01"},
-			wantAnnounces: 2, // latest_version, deployed_version.
+			wantAnnounces: 1,
 			wantNotify:    true,
 		},
 		"same version found": { // shouldn't occur in practice.
@@ -192,8 +192,8 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 				t.Errorf("Announcement channel length mismatch\nwant: %d\ngot:  %d",
 					tc.wantAnnounces, gotLen)
 			}
-			// AND the LatestVersion should be set to the new version.
-			if lookup.Status.LatestVersion() != tc.versions.newVersion {
+			// AND the LatestVersion should not be changed.
+			if lookup.Status.LatestVersion() != tc.versions.initialLatestVersion {
 				t.Errorf("LatestVersion mismatch\nwant: %q\ngot:  %q",
 					tc.versions.newVersion, lookup.Status.LatestVersion())
 			}

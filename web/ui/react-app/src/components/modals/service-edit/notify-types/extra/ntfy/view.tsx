@@ -19,11 +19,10 @@ const VIEW: FC<Props> = ({ name, defaults }) => (
 	<FormText
 		name={`${name}.url`}
 		required
-		col_sm={5}
+		col_sm={12}
 		label="URL"
 		defaultVal={defaults?.url}
 		placeholder="e.g. 'https://example.com'"
-		position="right"
 	/>
 );
 

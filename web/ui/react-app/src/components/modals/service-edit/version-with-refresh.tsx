@@ -2,16 +2,9 @@ import { Alert, Button } from 'react-bootstrap';
 import {
 	DeployedVersionLookupEditType,
 	LatestVersionLookupEditType,
-	ServiceRefreshType,
 } from 'types/service-edit';
 import { FC, useMemo, useState } from 'react';
-import {
-	beautifyGoErrors,
-	convertToQueryParams,
-	fetchJSON,
-	getChanges,
-	removeEmptyValues,
-} from 'utils';
+import { beautifyGoErrors, fetchVersionJSON, removeEmptyValues } from 'utils';
 import {
 	convertUIDeployedVersionDataEditToAPI,
 	convertUILatestVersionDataEditToAPI,
@@ -21,6 +14,7 @@ import { useFormContext, useWatch } from 'react-hook-form';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ServiceOptionsType } from 'types/config';
+import cx from 'classnames';
 import { useErrors } from 'hooks/errors';
 import { useQuery } from '@tanstack/react-query';
 import useValuesRefetch from 'hooks/values-refetch';
@@ -28,6 +22,7 @@ import { useWebSocket } from 'contexts/websocket';
 
 interface Props {
 	vType: 0 | 1; // 0: Latest, 1: Deployed
+	className?: string;
 	serviceID: string;
 	original?: LatestVersionLookupEditType | DeployedVersionLookupEditType;
 	original_options?: ServiceOptionsType;
@@ -37,6 +32,7 @@ interface Props {
  * The version with a button to refetch.
  *
  * @param vType - 0: Latest, 1: Deployed.
+ * @param className - Extra class name(s) for the comonent.
  * @param serviceID - The ID of the service.
  * @param original - The original values in the form.
  * @param original_options - The original service.options of the form.
@@ -44,6 +40,7 @@ interface Props {
  */
 const VersionWithRefresh: FC<Props> = ({
 	vType,
+	className,
 	serviceID,
 	original,
 	original_options,
@@ -74,35 +71,6 @@ const VersionWithRefresh: FC<Props> = ({
 	const { data: semanticVersioning, refetchData: refetchSemanticVersioning } =
 		useValuesRefetch('options.semantic_versioning');
 
-	const fetchVersionJSON = () => {
-		let semantic_versioning;
-		if (
-			(semanticVersioning ?? '') !==
-			(original_options?.semantic_versioning ?? '')
-		) {
-			if (semanticVersioning === null) {
-				semantic_versioning = 'null';
-			} else {
-				semantic_versioning = `${semanticVersioning}`;
-			}
-		}
-		const overrides = data
-			? getChanges({
-					params: data,
-					defaults: convertedOriginal,
-					target: dataTarget,
-			  })
-			: '';
-		return fetchJSON<ServiceRefreshType>({
-			url: `api/v1/${vType === 0 ? 'latest' : 'deployed'}_version/refresh${
-				serviceID ? `/${encodeURIComponent(serviceID)}` : ''
-			}${convertToQueryParams({
-				overrides,
-				semantic_versioning,
-			})}`,
-		});
-	};
-
 	const {
 		data: versionData,
 		isFetching,
@@ -118,7 +86,15 @@ const VersionWithRefresh: FC<Props> = ({
 				original_data: removeEmptyValues(original ?? []),
 			},
 		],
-		queryFn: () => fetchVersionJSON(),
+		queryFn: () =>
+			fetchVersionJSON({
+				serviceID,
+				dataTarget,
+				semanticVersioning,
+				options: original_options,
+				data,
+				original: convertedOriginal,
+			}),
 		enabled: false,
 		initialData: {
 			version: monitorData.service[serviceID]?.status?.[dataTarget] ?? '',
@@ -155,7 +131,7 @@ const VersionWithRefresh: FC<Props> = ({
 	);
 
 	return (
-		<span style={{ alignItems: 'center' }}>
+		<span className={cx('w-100', className)}>
 			<span className="pt-1 pb-2" style={{ display: 'flex' }}>
 				{vType === 0 ? 'Latest' : 'Deployed'} version: {versionData.version}
 				{data?.url !== '' && isFetching && LoadingSpinner}

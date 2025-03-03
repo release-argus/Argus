@@ -47,6 +47,13 @@ var LookupPlainPOST = map[string]string{
 	"data_pass":   `{"argus":"test"}`,
 	"data_fail":   `{"argus":"test-"}`}
 
+var LookupHeader = map[string]string{
+	"url_valid":                  fmt.Sprintf("%s/header", ValidCertHTTPS),
+	"url_invalid":                fmt.Sprintf("%s/header", InvalidCertHTTPS),
+	"header_key_pass":            "X-Version-Here",
+	"header_key_pass_mixed_case": "x-VeRSioN-HERe",
+	"header_key_fail":            "X-Version-Foo"}
+
 var LookupJSON = map[string]string{
 	"url_valid":   fmt.Sprintf("%s/json", ValidCertHTTPS),
 	"url_invalid": fmt.Sprintf("%s/json", InvalidCertHTTPS)}

@@ -129,7 +129,7 @@ func TestNew(t *testing.T) {
 			args: args{
 				format: "invalid",
 				data: `
-					<latest_version>Argus</latest_version>
+					<deployed_version>Argus</deployed_version>
 					<url>release-argus/argus</url>`,
 			},
 			wants: wants{

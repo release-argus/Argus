@@ -103,7 +103,7 @@ const GOTIFY = ({
 					tooltip="e.g. 443"
 					isNumber
 					defaultVal={convertedDefaults.url_fields.port}
-					position="right"
+					positionXS="right"
 				/>
 				<FormText
 					name={`${name}.url_fields.path`}
@@ -122,7 +122,7 @@ const GOTIFY = ({
 					required
 					label="Token"
 					defaultVal={convertedDefaults.url_fields.token}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 			<FormLabel text="Params" heading />
@@ -139,7 +139,7 @@ const GOTIFY = ({
 					col_sm={10}
 					label="Title"
 					defaultVal={convertedDefaults.params.title}
-					position="right"
+					positionXS="right"
 				/>
 				<BooleanWithDefault
 					name={`${name}.params.disabletls`}

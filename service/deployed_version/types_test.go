@@ -34,7 +34,7 @@ func TestNew(t *testing.T) {
 	type args struct {
 		lType        string
 		configFormat string
-		configData   interface{}
+		configData   any
 	}
 	tests := map[string]struct {
 		args    args
@@ -424,6 +424,13 @@ func TestUnmarshalJSON(t *testing.T) {
 			jsonStr:  "invalid",
 			errRegex: `invalid character`,
 		},
+		"Minimal JSON": {
+			jsonStr:  test.TrimJSON(`{}`),
+			errRegex: `^$`,
+			wantJSON: test.StringPtr(test.TrimJSON(`{
+				"type":"url"
+			}`)),
+		},
 		"Valid - URL": {
 			jsonStr: test.TrimJSON(`{
 				"type":"url",
@@ -488,9 +495,13 @@ func TestUnmarshalYAML(t *testing.T) {
 		wantYAML *string
 	}{
 		"Empty": {
-			yamlStr:  "",
-			errRegex: `failed to unmarshal`,
-			wantYAML: test.StringPtr(""),
+			yamlStr: "",
+			wantYAML: test.StringPtr(`
+				type: url
+			`),
+			// TODO: When url default removed, this will error.
+			// errRegex: `failed to unmarshal`,
+			// wantYAML: test.StringPtr(""),
 		},
 		"Invalid formatting": {
 			yamlStr:  "{ invalid",

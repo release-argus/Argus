@@ -104,7 +104,7 @@ const SLACK = ({
 					required
 					label="Channel"
 					defaultVal={convertedDefaults.url_fields.channel}
-					position="right"
+					positionXS="right"
 				/>
 			</>
 			<FormLabel text="Params" heading />
@@ -119,7 +119,7 @@ const SLACK = ({
 					label="Color"
 					tooltip="Message left-hand border color in hex, e.g. #ffffff"
 					defaultVal={convertedDefaults.params.color}
-					position="right"
+					positionXS="right"
 				/>
 				<FormTextWithPreview
 					name={`${name}.params.icon`}

@@ -152,7 +152,7 @@ const EditServiceWebHook: FC<Props> = ({
 						label="Type"
 						tooltip="Style of WebHook to emulate"
 						options={webHookTypeOptions}
-						position="right"
+						positionXS="right"
 					/>
 					<FormText
 						name={`${name}.name`}
@@ -202,7 +202,7 @@ const EditServiceWebHook: FC<Props> = ({
 						isNumber
 						validationFunc={(value: string) => numberRangeTest(value, 0, 255)}
 						defaultVal={convertedDefaults.max_tries}
-						position="right"
+						positionXS="right"
 					/>
 					<FormText
 						name={`${name}.delay`}
@@ -210,7 +210,7 @@ const EditServiceWebHook: FC<Props> = ({
 						label="Delay"
 						tooltip="Delay sending by this duration"
 						defaultVal={convertedDefaults.delay}
-						position="right"
+						positionXS="right"
 					/>
 					<BooleanWithDefault
 						name={`${name}.silent_fails`}
