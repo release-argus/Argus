@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.22.0](https://github.com/release-argus/Argus/compare/0.21.0...0.22.0) (2025-03-08)
+
+
+### Features
+
+* **deployed_version:** `target_header` to get version from resp header ([b99363f](https://github.com/release-argus/Argus/commits/b99363f1fd8ad94578ce58fc5a1dd66c1ced4e2f))
+* **deployed_version:** add `manual` type ([3f402f6](https://github.com/release-argus/Argus/commits/3f402f62c87a60f8c8596f8bab277cb9121f1376))
+* **ui:** disable search functionality for small select components ([1b9cc5a](https://github.com/release-argus/Argus/commits/1b9cc5a60449f6e2fb72a870904ee0c3c1f78589))
+
+
+### Bug Fixes
+
+* **ui:** only send deployed_version type with other values ([92d9c16](https://github.com/release-argus/Argus/commits/92d9c16b25e16c4e0570a799f39424112aeadbc9)), closes [#539](https://github.com/release-argus/Argus/issues/539)
+
 ### [0.21.0](https://github.com/release-argus/Argus/compare/0.20.0...0.21.0) (2025-02-08)
 
 
