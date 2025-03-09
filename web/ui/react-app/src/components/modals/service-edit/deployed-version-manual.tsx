@@ -10,6 +10,7 @@ import { FC, memo, useState } from 'react';
 import { NonNullable, ServiceOptionsType } from 'types/config';
 import { beautifyGoErrors, fetchVersionJSON } from 'utils';
 import { faSave, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { useFormContext, useWatch } from 'react-hook-form';
 
 import { DeployedVersionLookupEditType } from 'types/service-edit';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -20,7 +21,6 @@ import cx from 'classnames';
 import { formPadding } from 'components/generic/form-shared';
 import { useQuery } from '@tanstack/react-query';
 import useValuesRefetch from 'hooks/values-refetch';
-import { useWatch } from 'react-hook-form';
 import { useWebSocket } from 'contexts/websocket';
 
 interface Props {
@@ -45,13 +45,14 @@ const DeployedVersionManual: FC<DeployedVersionManualProps> = ({
 	original_options,
 }) => {
 	const name = 'deployed_version.version';
+	const { register } = useFormContext();
 	const [lastFetched, setLastFetched] = useState(0);
 	const value: string = useWatch({ name: name });
 	const { data: semanticVersioning, refetchData: refetchSemanticVersioning } =
 		useValuesRefetch('options.semantic_versioning');
 	const { monitorData } = useWebSocket();
-	let status = monitorData.service[serviceID]
-		.status as NonNullable<StatusSummaryType>;
+	const status = (monitorData.service[serviceID]?.status ??
+		{}) as NonNullable<StatusSummaryType>;
 
 	const canSave =
 		original?.type === 'manual' && value !== status.deployed_version;
@@ -137,8 +138,10 @@ const DeployedVersionManual: FC<DeployedVersionManualProps> = ({
 							id={name}
 							aria-label="Version string"
 							aria-describedby={cx(errorMessage && name + '-error')}
+							type="text"
 							defaultValue={value}
 							isInvalid={!!errorMessage}
+							{...register(name)}
 						/>
 						{canSave && value && (
 							<Button
