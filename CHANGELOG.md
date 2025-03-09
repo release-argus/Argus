@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.23.0](https://github.com/release-argus/Argus/compare/0.22.0...0.23.0) (2025-03-09)
+
+
+### Features
+
+* **ui:** add links to icon_url/web_url and visible lv/dv links on focus ([49a5b02](https://github.com/release-argus/Argus/commits/49a5b027c05016095a323404e7d725086d436431))
+
+
+### Bug Fixes
+
+* **ui:** improve deployed_version `manual` type input handling ([704c2cf](https://github.com/release-argus/Argus/commits/704c2cfcc450be606e1cf28fb6288dd41f810d89))
+
 ## [0.22.0](https://github.com/release-argus/Argus/compare/0.21.0...0.22.0) (2025-03-08)
 
 
