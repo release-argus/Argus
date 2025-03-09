@@ -243,8 +243,8 @@ const FormSelectCreatableSortable: FC<FormSelectCreatableSortableProps> = ({
 									id={name}
 									aria-label={`Select options for ${label}`}
 									aria-describedby={cx(
-										error && name + '-error',
-										tooltip && name + '-tooltip',
+										error && `${name}-error`,
+										tooltip && `${name}-tooltip`,
 									)}
 									className="form-select-creatable"
 									options={creatableOptions}
@@ -286,7 +286,7 @@ const FormSelectCreatableSortable: FC<FormSelectCreatableSortableProps> = ({
 					}}
 				/>
 				{error && (
-					<small id={name + '-error'} className="error-msg" role="alert">
+					<small id={`${name}-error`} className="error-msg" role="alert">
 						{error['message'] || 'err'}
 					</small>
 				)}

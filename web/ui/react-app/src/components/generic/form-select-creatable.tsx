@@ -207,8 +207,8 @@ const FormSelectCreatable: FC<FormSelectCreatableProps> = ({
 							id={name}
 							aria-label={`Select option${isMulti ? 's' : ''} for ${label}`}
 							aria-describedby={cx(
-								error && name + '-error',
-								tooltip && name + '-tooltip',
+								error && `${name}-error`,
+								tooltip && `${name}-tooltip`,
 							)}
 							className="form-select-creatable"
 							options={creatableOptions ?? []}
@@ -248,7 +248,7 @@ const FormSelectCreatable: FC<FormSelectCreatableProps> = ({
 					}}
 				/>
 				{error && (
-					<small id={name + '-error'} className="error-msg" role="alert">
+					<small id={`${name}-error`} className="error-msg" role="alert">
 						{error['message'] || 'err'}
 					</small>
 				)}

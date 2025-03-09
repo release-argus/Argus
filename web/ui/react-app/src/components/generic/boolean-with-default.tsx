@@ -62,11 +62,11 @@ const BooleanWithDefault: FC<Props> = ({
 		>
 			<>
 				{label && (
-					<FormLabel id={name + '-label'} style={{ float: 'left' }}>
+					<FormLabel id={`${name}-label`} style={{ float: 'left' }}>
 						{label}
 					</FormLabel>
 				)}
-				{tooltip && <HelpTooltip id={name + '-tooltip'} tooltip={tooltip} />}
+				{tooltip && <HelpTooltip id={`${name}-tooltip`} tooltip={tooltip} />}
 			</>
 
 			<div
@@ -85,8 +85,8 @@ const BooleanWithDefault: FC<Props> = ({
 						return (
 							<>
 								<ButtonGroup
-									aria-labelledby={name + '-label'}
-									aria-describedby={tooltip && name + '-tooltip'}
+									aria-labelledby={`${name}-label`}
+									aria-describedby={tooltip && `${name}-tooltip`}
 								>
 									{options.map((option) => (
 										<Button

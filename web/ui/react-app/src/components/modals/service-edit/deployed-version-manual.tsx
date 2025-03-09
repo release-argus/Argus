@@ -137,7 +137,7 @@ const DeployedVersionManual: FC<DeployedVersionManualProps> = ({
 						<FormControl
 							id={name}
 							aria-label="Version string"
-							aria-describedby={cx(errorMessage && name + '-error')}
+							aria-describedby={cx(errorMessage && `${name}-error`)}
 							type="text"
 							defaultValue={value}
 							isInvalid={!!errorMessage}
