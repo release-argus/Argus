@@ -62,7 +62,7 @@ const FormTextWithPreview: FC<Props> = ({
 	}, [formValue]);
 
 	return (
-		<Col xs={12} sm={12} className={'pt-1 pb-1 col-form'}>
+		<Col xs={12} sm={12} className={cx('py-1', 'col-form')}>
 			<FormGroup>
 				<FormLabel htmlFor={name} text={label} tooltip={tooltip} />
 				<div style={{ display: 'flex', alignItems: 'center' }}>
@@ -70,8 +70,8 @@ const FormTextWithPreview: FC<Props> = ({
 						id={name}
 						aria-label={`Value field for ${label}`}
 						aria-describedby={cx(
-							error && name + '-error',
-							tooltip && name + '-tooltip',
+							error && `${name}-error`,
+							tooltip && `${name}-tooltip`,
 						)}
 						type="text"
 						value={formValue}
@@ -104,7 +104,7 @@ const FormTextWithPreview: FC<Props> = ({
 				</div>
 			</FormGroup>
 			{error && (
-				<small id={name + '-error'} className="error-msg" role="alert">
+				<small id={`${name}-error`} className="error-msg" role="alert">
 					{error['message'] || 'err'}
 				</small>
 			)}

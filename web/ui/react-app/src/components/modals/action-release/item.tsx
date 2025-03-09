@@ -106,7 +106,7 @@ export const Item: FC<Props> = ({
 
 	return (
 		<Card bg="secondary" className={'no-margin service'}>
-			<Card.Title className="modal-item-title" key={title + '-title'}>
+			<Card.Title className="modal-item-title" key={`${title}-title`}>
 				<Container fluid style={{ paddingLeft: '0px' }}>
 					{title}
 				</Container>
@@ -116,7 +116,7 @@ export const Item: FC<Props> = ({
 						placement="top"
 						delay={{ show: 500, hide: 500 }}
 						overlay={
-							<Tooltip id={id + '-resend-date'}>
+							<Tooltip id={`${id}-resend-date`}>
 								{`Can resend ${formatRelative(
 									new Date(next_runnable),
 									new Date(),
@@ -149,7 +149,7 @@ export const Item: FC<Props> = ({
 						placement="top"
 						delay={{ show: 500, hide: 500 }}
 						overlay={
-							<Tooltip id={id + '-result'}>
+							<Tooltip id={`${id}-result`}>
 								{failed === true ? 'Failed' : 'Successful'}
 							</Tooltip>
 						}
@@ -181,7 +181,7 @@ export const Item: FC<Props> = ({
 						placement="top"
 						delay={{ show: 500, hide: 500 }}
 						overlay={
-							<Tooltip id={id + '-send'}>
+							<Tooltip id={`${id}-send`}>
 								{modalType === 'RESEND' || failed !== undefined
 									? 'Retry'
 									: 'Send'}
@@ -190,9 +190,9 @@ export const Item: FC<Props> = ({
 					>
 						<Button
 							aria-describedby={cx(
-								id + '-send',
-								!sendable && !sending && id + '-resend-date',
-								!sending && failed !== undefined && id + '-result',
+								`${id}-send`,
+								!sendable && !sending && `${id}-resend-date`,
+								!sending && failed !== undefined && `${id}-result`,
 							)}
 							variant="secondary"
 							size="sm"

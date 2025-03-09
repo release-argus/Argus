@@ -157,7 +157,7 @@ const FormText: FC<FormTextProps> = ({
 				<FormControl
 					id={name}
 					aria-label={`Value field for ${label}`}
-					aria-describedby={cx(error && name + '-error')}
+					aria-describedby={cx(error && `${name}-error`)}
 					type={type}
 					placeholder={defaultVal || placeholder}
 					autoFocus={false}
@@ -185,7 +185,7 @@ const FormText: FC<FormTextProps> = ({
 					isInvalid={!!error}
 				/>
 				{error && (
-					<small id={name + '-error'} className="error-msg" role="alert">
+					<small id={`${name}-error`} className="error-msg" role="alert">
 						{error['message'] || 'err'}
 					</small>
 				)}

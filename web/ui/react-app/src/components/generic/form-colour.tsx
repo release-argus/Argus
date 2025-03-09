@@ -102,8 +102,8 @@ const FormColour: FC<Props> = ({
 						<FormControl
 							id={name}
 							aria-describedby={cx(
-								error && name + '-error',
-								tooltip && name + '-tooltip',
+								error && `${name}-error`,
+								tooltip && `${name}-tooltip`,
 							)}
 							style={{ width: '25%' }}
 							type="text"
@@ -133,7 +133,7 @@ const FormColour: FC<Props> = ({
 				</div>
 			</FormGroup>
 			{error && (
-				<small id={name + '-error'} className="error-msg" role="alert">
+				<small id={`${name}-error`} className="error-msg" role="alert">
 					{error['message'] || 'err'}
 				</small>
 			)}

@@ -119,8 +119,8 @@ const FormTextArea: FC<FormTextAreaProps> = ({
 				<FormControl
 					id={name}
 					aria-describedby={cx(
-						error && name + '-error',
-						tooltip && name + '-tooltip',
+						error && `${name}-error`,
+						tooltip && `${name}-tooltip`,
 					)}
 					type={'textarea'}
 					as="textarea"
@@ -142,7 +142,7 @@ const FormTextArea: FC<FormTextAreaProps> = ({
 					isInvalid={!!error}
 				/>
 				{error && (
-					<small id={name + '-error'} className="error-msg" role="alert">
+					<small id={`${name}-error`} className="error-msg" role="alert">
 						{error['message'] || 'err'}
 					</small>
 				)}
