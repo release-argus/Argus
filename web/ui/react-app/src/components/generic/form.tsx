@@ -9,6 +9,7 @@ import FormSelectCreatable from './form-select-creatable';
 import FormSelectCreatableSortable from './form-select-creatable-sortable';
 import FormText from './form-text';
 import FormTextArea from './form-text-area';
+import FormTextWithButton from './form-text-with-button';
 import FormTextWithPreview from './form-text-with-preview';
 
 export {
@@ -23,5 +24,6 @@ export {
 	FormSelectCreatableSortable,
 	FormText,
 	FormTextArea,
+	FormTextWithButton,
 	FormTextWithPreview,
 };

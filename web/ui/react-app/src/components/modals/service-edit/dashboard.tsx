@@ -1,7 +1,7 @@
 import { FC, memo, useMemo } from 'react';
 import {
 	FormSelectCreatableSortable,
-	FormText,
+	FormTextWithButton,
 	FormTextWithPreview,
 } from 'components/generic/form';
 
@@ -9,6 +9,7 @@ import { Accordion } from 'react-bootstrap';
 import { BooleanWithDefault } from 'components/generic';
 import { ServiceDashboardOptionsType } from 'types/config';
 import { createOption } from 'components/generic/form-select-shared';
+import { faLink } from '@fortawesome/free-solid-svg-icons';
 import { firstNonDefault } from 'utils';
 import { useWebSocket } from 'contexts/websocket';
 
@@ -74,7 +75,7 @@ const EditServiceDashboard: FC<Props> = ({
 					tooltip="e.g. https://example.com/icon.png"
 					defaultVal={convertedDefaults.icon}
 				/>
-				<FormText
+				<FormTextWithButton
 					key="icon_link_to"
 					name="dashboard.icon_link_to"
 					col_sm={12}
@@ -82,8 +83,11 @@ const EditServiceDashboard: FC<Props> = ({
 					tooltip="Where the Icon will redirect when clicked"
 					defaultVal={convertedDefaults.icon_link_to}
 					isURL
+					buttonIcon={faLink}
+					buttonAriaLabel="Open icon link"
+					buttonHref={(value) => value}
 				/>
-				<FormText
+				<FormTextWithButton
 					key="web_url"
 					name="dashboard.web_url"
 					col_sm={12}
@@ -91,6 +95,9 @@ const EditServiceDashboard: FC<Props> = ({
 					tooltip="Where the 'Service name' will redirect when clicked"
 					defaultVal={convertedDefaults.web_url}
 					isURL
+					buttonIcon={faLink}
+					buttonAriaLabel="Open web URL"
+					buttonHref={(value) => value}
 				/>
 				<FormSelectCreatableSortable
 					name="dashboard.tags"
