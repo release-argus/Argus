@@ -3,11 +3,14 @@ import { FC, memo, useCallback, useContext, useMemo, useState } from 'react';
 import { ModalType, ServiceSummaryType } from 'types/summary';
 import { ServiceImage, ServiceInfo, UpdateInfo } from 'components/approvals';
 
+import { CSS } from '@dnd-kit/utilities';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ModalContext } from 'contexts/modal';
 import { faPen } from '@fortawesome/free-solid-svg-icons';
+import { useSortable } from '@dnd-kit/sortable';
 
 interface Props {
+	id: string;
 	service: ServiceSummaryType;
 	editable: boolean;
 }
@@ -20,7 +23,18 @@ interface Props {
  * @param editable - Whether edit mode is enabled.
  * @returns A component that displays the service.
  */
-const Service: FC<Props> = ({ service, editable = false }) => {
+const Service: FC<Props> = ({ id, service, editable = false }) => {
+	const { attributes, listeners, setNodeRef, transform, transition } =
+		useSortable({
+			id,
+			disabled: !editable,
+		});
+
+	const style = {
+		transform: CSS.Transform.toString(transform),
+		transition,
+	};
+
 	const [showUpdateInfo, setShowUpdateInfo] = useState(false);
 
 	const toggleShowUpdateInfo = useCallback(() => {
@@ -56,7 +70,13 @@ const Service: FC<Props> = ({ service, editable = false }) => {
 	);
 
 	return (
-		<Card key={service.id} bg="secondary" className={'service shadow'}>
+		<Card
+			ref={setNodeRef}
+			key={service.id}
+			bg="secondary"
+			className={'service shadow'}
+			style={style}
+		>
 			<Card.Title className="service-title" key={`${service.id}-title`}>
 				<a
 					href={service.url}
@@ -116,6 +136,11 @@ const Service: FC<Props> = ({ service, editable = false }) => {
 					visible={
 						!(updateStatus.available && showUpdateInfo && !updateStatus.skipped)
 					}
+					draggable={editable}
+					dragHandleProps={{
+						...attributes,
+						...listeners,
+					}}
 				/>
 				<ServiceInfo
 					service={service}

@@ -51,7 +51,6 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
 		fetchJSON<{ message: string }>({
 			url: 'api/v1/notify/test',
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				type: getValues(`${path}.type`),
 				...deepDiff(dataJSON, original),

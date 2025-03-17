@@ -32,15 +32,6 @@ func getParam(queryParams *url.Values, param string) *string {
 	return &val
 }
 
-// announceDelete broadcasts a DELETE message to all WebSocket clients.
-func (api *API) announceDelete(serviceID string) {
-	payloadData, _ := json.Marshal(apitype.WebSocketMessage{
-		Page:    "APPROVALS",
-		Type:    "DELETE",
-		SubType: serviceID})
-	*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
-}
-
 // AnnounceEdit broadcasts an EDIT message to all WebSocket clients
 // if the displayed data changes.
 func (api *API) announceEdit(oldData *apitype.ServiceSummary, newData *apitype.ServiceSummary) {
@@ -57,6 +48,25 @@ func (api *API) announceEdit(oldData *apitype.ServiceSummary, newData *apitype.S
 		ServiceData: newData})
 
 	// Announce all edits to refresh caches.
+	*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
+}
+
+// announceDelete broadcasts a DELETE message to all WebSocket clients.
+func (api *API) announceDelete(serviceID string) {
+	payloadData, _ := json.Marshal(apitype.WebSocketMessage{
+		Page:    "APPROVALS",
+		Type:    "DELETE",
+		SubType: serviceID})
+	*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
+}
+
+// announceOrder broadcasts an ORDER message to all WebSocket clients.
+func (api *API) announceOrder() {
+	payloadData, _ := json.Marshal(apitype.WebSocketMessage{
+		Page:    "APPROVALS",
+		Type:    "SERVICE",
+		SubType: "ORDER",
+		Order:   &api.Config.Order})
 	*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
 }
 

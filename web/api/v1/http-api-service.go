@@ -16,13 +16,16 @@
 package v1
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 
 	"github.com/gorilla/mux"
 
 	logutil "github.com/release-argus/Argus/util/log"
+	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 // ServiceOrderAPI is the API response for the service order.
@@ -30,12 +33,55 @@ type ServiceOrderAPI struct {
 	Order []string `json:"order"`
 }
 
-func (api *API) httpServiceOrder(w http.ResponseWriter, r *http.Request) {
-	logFrom := logutil.LogFrom{Primary: "httpServiceOrder", Secondary: getIP(r)}
+func (api *API) httpServiceOrderGet(w http.ResponseWriter, r *http.Request) {
+	logFrom := logutil.LogFrom{Primary: "httpServiceOrderGet", Secondary: getIP(r)}
 
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
 	api.writeJSON(w, ServiceOrderAPI{Order: api.Config.Order}, logFrom)
+}
+
+func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
+	logFrom := logutil.LogFrom{Primary: "httpServiceOrderSet", Secondary: getIP(r)}
+
+	api.Config.OrderMutex.RLock()
+	defer api.Config.OrderMutex.RUnlock()
+
+	currentOrder := api.Config.Order
+
+	// Read the payload.
+	payload := http.MaxBytesReader(w, r.Body, int64(512+(128*len(currentOrder))))
+	defer payload.Close()
+	body, err := io.ReadAll(payload)
+	if err != nil {
+		failRequest(&w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Unmarshal the new order from the payload.
+	var newOrder ServiceOrderAPI
+	if err := json.Unmarshal(body, &newOrder); err != nil {
+		failRequest(&w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Trim unknown services.
+	trimmedOrder := make([]string, 0, len(newOrder.Order))
+	for _, service := range newOrder.Order {
+		if api.Config.Service[service] != nil {
+			trimmedOrder = append(trimmedOrder, service)
+		}
+	}
+
+	// Set the new order.
+	api.Config.Order = trimmedOrder
+	api.writeJSON(w, apitype.Response{
+		Message: "order updated"},
+		logFrom)
+
+	// Announce to the WebSocket.
+	api.announceOrder()
+	// Trigger save.
+	*api.Config.HardDefaults.Service.Status.SaveChannel <- true
 }
 
 func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {

@@ -186,3 +186,17 @@ func YAMLToNode(t *testing.T, yamlStr string) (*yaml.Node, error) {
 
 	return &node, nil
 }
+
+func EqualSlices[T comparable](a, b []T) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+
+	return true
+}
