@@ -839,16 +839,9 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			if gotLV, ok := gotDV.(*dv_web.Lookup); ok {
 				gotHeaders = gotLV.Headers
 			}
-			if len(gotHeaders) != len(expectedHeaders) {
-				t.Errorf("Expected %q, got %q",
+			if !test.EqualSlices(expectedHeaders, gotHeaders) {
+				t.Errorf("Expected %v, got %v",
 					expectedHeaders, gotHeaders)
-			} else {
-				for i, gotHeader := range gotHeaders {
-					if gotHeader != expectedHeaders[i] {
-						t.Errorf("Expected %q, got %q",
-							expectedHeaders[i], gotHeader)
-					}
-				}
 			}
 		})
 	}

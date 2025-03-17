@@ -22,6 +22,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metric"
 )
 
@@ -149,15 +150,9 @@ func TestShoutrrr_InitOptions(t *testing.T) {
 			shoutrrr.initOptions()
 
 			// THEN the keys in the map will have been converted to lowercase.
-			if len(tc.want) != len(shoutrrr.Options) {
+			if !test.EqualSlices(util.SortedKeys(tc.want), util.SortedKeys(shoutrrr.Options)) {
 				t.Fatalf("want: %v\ngot: %v",
 					tc.want, shoutrrr.Options)
-			}
-			for key := range tc.want {
-				if tc.want[key] != shoutrrr.Options[key] {
-					t.Fatalf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
-						key, tc.want[key], key, shoutrrr.Options[key], tc.want, shoutrrr.Options)
-				}
 			}
 		})
 	}
@@ -192,15 +187,9 @@ func TestShoutrrr_InitURLFields(t *testing.T) {
 			shoutrrr.initURLFields()
 
 			// THEN the keys in the map will have been converted to lowercase.
-			if len(tc.want) != len(shoutrrr.URLFields) {
+			if !test.EqualSlices(util.SortedKeys(tc.want), util.SortedKeys(shoutrrr.URLFields)) {
 				t.Fatalf("want: %v\ngot: %v",
 					tc.want, shoutrrr.URLFields)
-			}
-			for key := range tc.want {
-				if tc.want[key] != shoutrrr.URLFields[key] {
-					t.Fatalf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
-						key, tc.want[key], key, shoutrrr.URLFields[key], tc.want, shoutrrr.URLFields)
-				}
 			}
 		})
 	}
@@ -235,15 +224,9 @@ func TestShoutrrr_InitParams(t *testing.T) {
 			shoutrrr.initParams()
 
 			// THEN the keys in the map will have been converted to lowercase.
-			if len(tc.want) != len(shoutrrr.Params) {
+			if !test.EqualSlices(util.SortedKeys(tc.want), util.SortedKeys(shoutrrr.Params)) {
 				t.Fatalf("want: %v\ngot: %v",
 					tc.want, shoutrrr.Params)
-			}
-			for key := range tc.want {
-				if tc.want[key] != shoutrrr.Params[key] {
-					t.Fatalf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
-						key, tc.want[key], key, shoutrrr.Params[key], tc.want, shoutrrr.Params)
-				}
 			}
 		})
 	}
@@ -293,15 +276,15 @@ func TestShoutrrr_InitMaps(t *testing.T) {
 				}
 				return
 			}
-			if len(tc.want) != len(shoutrrr.Options) {
+			if !test.EqualSlices(util.SortedKeys(tc.want), util.SortedKeys(shoutrrr.Options)) {
 				t.Fatalf("Options:\nwant: %v\ngot: %v",
 					tc.want, shoutrrr.Options)
 			}
-			if len(tc.want) != len(shoutrrr.URLFields) {
+			if !test.EqualSlices(util.SortedKeys(tc.want), util.SortedKeys(shoutrrr.URLFields)) {
 				t.Fatalf("URLFields:\nwant: %v\ngot: %v",
 					tc.want, shoutrrr.URLFields)
 			}
-			if len(tc.want) != len(shoutrrr.Params) {
+			if !test.EqualSlices(util.SortedKeys(tc.want), util.SortedKeys(shoutrrr.Params)) {
 				t.Fatalf("Params:\nwant: %v\ngot: %v",
 					tc.want, shoutrrr.Params)
 			}

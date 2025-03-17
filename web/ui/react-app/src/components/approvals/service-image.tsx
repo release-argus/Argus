@@ -1,6 +1,7 @@
 import { FC, useMemo } from 'react';
 import {
 	faCircleNotch,
+	faGripVertical,
 	faWindowMaximize,
 } from '@fortawesome/free-solid-svg-icons';
 
@@ -17,6 +18,9 @@ interface Props {
 	icon?: ServiceSummaryType['icon'];
 	icon_link_to?: ServiceSummaryType['icon_link_to'];
 	visible: boolean;
+
+	draggable?: boolean;
+	dragHandleProps?: any; // Props from useSortable
 }
 
 /**
@@ -29,6 +33,8 @@ interface Props {
  * @param icon - The URL of the service's icon.
  * @param icon_link_to - The URL to link to when the icon is clicked.
  * @param visible - Whether the image should be visible.
+ * @param draggable - Whether the service is draggable.
+ * @param dragHandleProps - Props for the drag handle.
  * @returns A component that displays the image of the service.
  */
 export const ServiceImage: FC<Props> = ({
@@ -38,6 +44,8 @@ export const ServiceImage: FC<Props> = ({
 	icon,
 	icon_link_to,
 	visible,
+	draggable = false,
+	dragHandleProps,
 }) => {
 	const delayedRender = useDelayedRender(500);
 
@@ -88,8 +96,29 @@ export const ServiceImage: FC<Props> = ({
 	return (
 		<div
 			className="empty"
-			style={{ height: '7rem', display: visible ? 'flex' : 'none' }}
+			style={{
+				height: '7rem',
+				display: visible ? 'flex' : 'none',
+				position: 'relative',
+			}}
 		>
+			{draggable && (
+				<div
+					{...dragHandleProps}
+					style={{
+						position: 'absolute',
+						top: '0.5rem',
+						left: '0.5rem',
+						cursor: 'grab',
+						padding: '0.5rem',
+						touchAction: 'none',
+						color: 'var(--bs-secondary-color)',
+					}}
+					aria-label="Drag handle"
+				>
+					<FontAwesomeIcon icon={faGripVertical} />
+				</div>
+			)}
 			<a
 				href={icon_link_to || undefined}
 				target="_blank"
