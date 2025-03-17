@@ -56,7 +56,9 @@ func (api *API) SetupRoutesAPI() {
 	v1Router.HandleFunc("/flags", api.httpFlags).Methods(http.MethodGet)
 	// /approvals
 	//   GET, service order.
-	v1Router.HandleFunc("/service/order", api.httpServiceOrder).Methods(http.MethodGet)
+	v1Router.HandleFunc("/service/order", api.httpServiceOrderGet).Methods(http.MethodGet)
+	//   PUT, service order (disable=order_edit).
+	v1Router.HandleFunc("/service/order", api.httpServiceOrderSet).Methods(http.MethodPut)
 	//   GET, service summary.
 	v1Router.HandleFunc("/service/summary/{service_id:.+}", api.httpServiceSummary).Methods(http.MethodGet)
 	//   GET, service actions (webhooks/commands).
@@ -80,15 +82,15 @@ func (api *API) SetupRoutesAPI() {
 	v1Router.HandleFunc("/service/new", api.httpServiceEdit).Methods(http.MethodPut)
 	//   DELETE, service-edit - delete service (disable=service_delete).
 	v1Router.HandleFunc("/service/delete/{service_id:.+}", api.httpServiceDelete).Methods(http.MethodDelete)
-	//   GET, counts for Heimdall.
+	// GET, counts for Heimdall.
 	v1Router.HandleFunc("/counts", api.httpCounts).Methods(http.MethodGet)
 
 	// Disable specified routes.
-	api.DisableRoutesAPI()
+	api.DisableRoutes()
 }
 
-// DisableRoutesAPI disables HTTP API routes marked as disabled in the config.
-func (api *API) DisableRoutesAPI() {
+// DisableRoutes disables HTTP API routes marked as disabled in the config.
+func (api *API) DisableRoutes() {
 	// Trim suffix to ensure no trailing slash and prevent '//api/v1/...' routes.
 	webRoutePrefix := strings.TrimSuffix(api.Config.Settings.WebRoutePrefix(), "/")
 	routes := map[string]*struct {
@@ -97,6 +99,7 @@ func (api *API) DisableRoutesAPI() {
 		otherMethods map[string]func(w http.ResponseWriter, r *http.Request)
 		disabled     bool
 	}{
+		webRoutePrefix + "/api/v1/service/order":                            {name: "order_edit", method: http.MethodPut},
 		webRoutePrefix + "/api/v1/service/new":                              {name: "service_create", method: http.MethodPut},
 		webRoutePrefix + "/api/v1/service/update/{service_id:.+}":           {name: "service_update", method: http.MethodPut},
 		webRoutePrefix + "/api/v1/service/delete/{service_id:.+}":           {name: "service_delete", method: http.MethodDelete},

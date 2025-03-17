@@ -100,7 +100,7 @@ func TestNew(t *testing.T) {
 			wants: wants{
 				errRegex: `^failed to unmarshal manual.Lookup`},
 		},
-		"non-semantic version cauvht": {
+		"non-semantic version caught": {
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`

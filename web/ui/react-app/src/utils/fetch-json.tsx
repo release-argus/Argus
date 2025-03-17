@@ -2,7 +2,7 @@ type Props = {
 	// The URL to fetch data from.
 	url: string;
 	// The HTTP method to use, either GET or POST.
-	method?: 'GET' | 'POST';
+	method?: 'GET' | 'POST' | 'PUT';
 	// Optional headers to include in the request.
 	headers?: Record<string, string>;
 	// Optional request body, applicable for POST requests.
@@ -21,7 +21,7 @@ type Props = {
 const fetchJSON = async <T,>({
 	url,
 	method = 'GET',
-	headers,
+	headers = { 'Content-Type': 'application/json' },
 	body,
 }: Props): Promise<T> => {
 	const response = await Promise.race([

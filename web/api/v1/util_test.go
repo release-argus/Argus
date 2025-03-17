@@ -109,6 +109,53 @@ func TestAnnounceDelete(t *testing.T) {
 	}
 }
 
+func TestAnnounceOrder(t *testing.T) {
+	// GIVEN an API instance with a service order.
+	announceChannel := make(chan []byte, 2)
+	statusDefaults := status.NewDefaults(
+		&announceChannel,
+		nil,
+		nil)
+	order := []string{"some-order"}
+	api := &API{
+		Config: &config.Config{
+			Order: order,
+			HardDefaults: config.Defaults{
+				Service: service.Defaults{
+					Status: statusDefaults}}}}
+
+	// WHEN announceOrder is called
+	api.announceOrder()
+
+	// THEN the message should be sent to the announce channel
+	select {
+	case msg := <-announceChannel:
+		var wsMessage apitype.WebSocketMessage
+		err := json.Unmarshal(msg, &wsMessage)
+		if err != nil {
+			t.Fatalf("failed to unmarshal message: %v", err)
+		}
+
+		if wsMessage.Page != "APPROVALS" ||
+			wsMessage.Type != "SERVICE" ||
+			wsMessage.SubType != "ORDER" {
+			t.Errorf("unexpected WebSocketMessage: %+v",
+				wsMessage)
+		}
+
+		if wsMessage.Order == nil {
+			t.Fatal("expected order in WebSocketMessage, but got none")
+		} else {
+			if mismatch := test.EqualSlices(*wsMessage.Order, order); mismatch {
+				t.Errorf("unexpected order in WebSocketMessage: %+v",
+					wsMessage)
+			}
+		}
+	default:
+		t.Fatal("expected message on announce channel, but got none")
+	}
+}
+
 func strPtr(s string) *string {
 	return &s
 }

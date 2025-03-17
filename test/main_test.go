@@ -607,3 +607,51 @@ func TestYAMLToNode(t *testing.T) {
 		})
 	}
 }
+
+func TestEqualSlices(t *testing.T) {
+	tests := []struct {
+		name     string
+		a, b     []int
+		expected bool
+	}{
+		{
+			name:     "Equal slices",
+			a:        []int{1, 2, 3},
+			b:        []int{1, 2, 3},
+			expected: true,
+		},
+		{
+			name:     "Different lengths",
+			a:        []int{1, 2, 3},
+			b:        []int{1, 2},
+			expected: false,
+		},
+		{
+			name:     "Same length, different elements",
+			a:        []int{1, 2, 3},
+			b:        []int{1, 2, 4},
+			expected: false,
+		},
+		{
+			name:     "Both slices empty",
+			a:        []int{},
+			b:        []int{},
+			expected: true,
+		},
+		{
+			name:     "One slice empty",
+			a:        []int{},
+			b:        []int{1},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := EqualSlices(tt.a, tt.b)
+			if result != tt.expected {
+				t.Errorf("EqualSlices(%v, %v) = %v; want %v", tt.a, tt.b, result, tt.expected)
+			}
+		})
+	}
+}

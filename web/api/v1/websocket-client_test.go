@@ -201,7 +201,7 @@ func TestClient_writePump(t *testing.T) {
 				`{"version":null,"type":"INVALID","page":"home"}`,
 			},
 			stdoutRegex: test.TrimYAML(`
-				^ERROR:.*Unknown TYPE.*
+				^ERROR:.*Unknown Type.*
 				.*INVALID.*`),
 		},
 		"invalid JSON": {

@@ -224,7 +224,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 func TestHTTP_DisableRoutes(t *testing.T) {
 	// GIVEN an API and a bunch of routes.
 	tests := map[string]struct {
-		method, path       string
+		method, path, body string
 		replaceLastPathDir string
 		wantStatus         int
 		wantBody           string
@@ -281,6 +281,15 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantBody: `{
 				"order": null
+			}`,
+		},
+		"order_edit": {
+			method:     http.MethodPut,
+			path:       "service/order",
+			body:       `{"order":["test"]}`,
+			wantStatus: http.StatusNotFound,
+			wantBody: `{
+				"message":"edit \\"order\\" failed[^"]*"
 			}`,
 		},
 		"-service_summary": {

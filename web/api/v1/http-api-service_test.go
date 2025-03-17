@@ -29,12 +29,14 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestHTTP_httpServiceOrder(t *testing.T) {
+func TestHTTP_httpServiceOrderGet(t *testing.T) {
 	// GIVEN an API and a request for the service order
-	file := "TestHTTP_httpServiceOrder.yml"
+	file := "TestHTTP_httpServiceOrderGet.yml"
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
@@ -70,7 +72,7 @@ func TestHTTP_httpServiceOrder(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/service/order", nil)
 			w := httptest.NewRecorder()
 			apiMutex.RLock()
-			api.httpServiceOrder(w, req)
+			api.httpServiceOrderGet(w, req)
 			apiMutex.RUnlock()
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
@@ -158,6 +160,119 @@ func TestHTTP_httpServiceSummary(t *testing.T) {
 			if !util.RegexCheck(tc.wantBody, got) {
 				t.Errorf("want match for %q\nnot: %q",
 					tc.wantBody, got)
+			}
+		})
+	}
+}
+
+func TestHTTP_httpServiceOrderSet(t *testing.T) {
+	// GIVEN an API and a request to set the service order.
+	file := "TestHTTP_httpServiceOrderSet.yml"
+	api := testAPI(file)
+	apiMutex := sync.RWMutex{}
+	t.Cleanup(func() {
+		os.RemoveAll(file)
+		if api.Config.Settings.Data.DatabaseFile != "" {
+			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+		}
+	})
+
+	testOrder := []string{"service1", "service2", "service3"}
+	successMessage := `{"message":"order updated"}` + "\n"
+	tests := map[string]struct {
+		body           string
+		wantStatusCode int
+		hadOrder       []string
+		wantOrder      []string
+		wantBody       string
+	}{
+		"valid order": {
+			hadOrder: testOrder,
+			body: test.TrimJSON(`{
+				"order":["service1"]
+			}`),
+			wantStatusCode: http.StatusOK,
+			wantOrder:      []string{"service1"},
+			wantBody:       successMessage,
+		},
+		"empty order": {
+			hadOrder:       testOrder,
+			body:           `{"order":[]}`,
+			wantStatusCode: http.StatusOK,
+			wantOrder:      []string{},
+			wantBody:       successMessage,
+		},
+		"body with no order": {
+			hadOrder:       testOrder,
+			body:           `{"invalid":"data"}`,
+			wantStatusCode: http.StatusOK,
+			wantOrder:      []string{},
+			wantBody:       successMessage,
+		},
+		"payload too large": {
+			hadOrder:       testOrder,
+			body:           strings.Repeat("a", 1024),
+			wantStatusCode: http.StatusBadRequest,
+			wantOrder:      nil,
+			wantBody:       `{"message":"http: request body too large"}`,
+		},
+		"invalid JSON": {
+			hadOrder:       testOrder,
+			body:           `{"order":["service1","service2","service3"}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantOrder:      nil,
+			wantBody:       `{"message":"invalid character '}' after array element"}`,
+		},
+		"trim unknown services": {
+			hadOrder:       testOrder,
+			body:           `{"order":["service1","service2","service3","service4"]}`,
+			wantStatusCode: http.StatusOK,
+			wantOrder:      testOrder,
+			wantBody:       successMessage,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() -- Cannot run in parallel since we're sharing the API.
+
+			api.Config.Order = tc.hadOrder
+			service := make(map[string]*service.Service, len(tc.hadOrder))
+			for _, svc := range tc.hadOrder {
+				service[svc] = testService(svc, true)
+			}
+			api.Config.Service = service
+
+			// WHEN that HTTP request is sent
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/service/order", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			apiMutex.Lock()
+			api.httpServiceOrderSet(w, req)
+			apiMutex.Unlock()
+			res := w.Result()
+			t.Cleanup(func() { res.Body.Close() })
+
+			// THEN the expected status code is returned
+			if res.StatusCode != tc.wantStatusCode {
+				t.Errorf("Status code, expected a %d, not a %d",
+					tc.wantStatusCode, res.StatusCode)
+			}
+			// AND the expected body is returned as expected
+			data, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("unexpected error - %v",
+					err)
+			}
+			got := string(data)
+			if got != tc.wantBody {
+				t.Errorf("want\n%q\nnot\n%q",
+					tc.wantBody, got)
+			}
+			// AND the service order is updated as expected
+			if tc.wantOrder != nil && !test.EqualSlices(api.Config.Order, tc.wantOrder) {
+				t.Errorf("want order\n%v\nnot\n%v",
+					tc.wantOrder, api.Config.Order)
 			}
 		})
 	}
