@@ -82,6 +82,8 @@ func (api *API) SetupRoutesAPI() {
 	v1Router.HandleFunc("/service/new", api.httpServiceEdit).Methods(http.MethodPut)
 	//   DELETE, service-edit - delete service (disable=service_delete).
 	v1Router.HandleFunc("/service/delete/{service_id:.+}", api.httpServiceDelete).Methods(http.MethodDelete)
+	//   GET, service-edit - template strings.
+	v1Router.HandleFunc("/template", api.httpTemplateParse).Methods(http.MethodGet)
 	// GET, counts for Heimdall.
 	v1Router.HandleFunc("/counts", api.httpCounts).Methods(http.MethodGet)
 

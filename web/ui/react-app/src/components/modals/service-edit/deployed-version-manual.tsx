@@ -49,7 +49,7 @@ const DeployedVersionManual: FC<DeployedVersionManualProps> = ({
 	const [lastFetched, setLastFetched] = useState(0);
 	const value: string = useWatch({ name: name });
 	const { data: semanticVersioning, refetchData: refetchSemanticVersioning } =
-		useValuesRefetch('options.semantic_versioning');
+		useValuesRefetch<boolean>('options.semantic_versioning');
 	const { monitorData } = useWebSocket();
 	const status = (monitorData.service[serviceID]?.status ??
 		{}) as NonNullable<StatusSummaryType>;

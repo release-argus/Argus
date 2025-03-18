@@ -1,12 +1,9 @@
 type Props = {
-	// The URL to fetch data from.
 	url: string;
-	// The HTTP method to use, either GET or POST.
 	method?: 'GET' | 'POST' | 'PUT';
-	// Optional headers to include in the request.
 	headers?: Record<string, string>;
-	// Optional request body, applicable for POST requests.
 	body?: string;
+	timeout?: number;
 };
 
 /**
@@ -16,6 +13,7 @@ type Props = {
  * @param method - The HTTP method to use.
  * @param headers - Optional headers to include in the request.
  * @param body - Optional request body, applicable for POST requests.
+ * @param timeout - Optional timeout value in milliseconds for the request.
  * @returns The JSON data returned from the request to the server.
  */
 const fetchJSON = async <T,>({
@@ -23,18 +21,32 @@ const fetchJSON = async <T,>({
 	method = 'GET',
 	headers = { 'Content-Type': 'application/json' },
 	body,
+	timeout = 5000,
 }: Props): Promise<T> => {
-	const response = await Promise.race([
-		fetch(url, {
-			method: method,
-			headers: headers,
-			body: body,
-		}),
-		new Promise<Response>((_, reject) =>
-			setTimeout(() => reject(new Error('Timeout')), 10000),
-		),
-	]);
-	return await response.json();
+	let loggedError = false;
+	try {
+		const response = await Promise.race([
+			fetch(url, {
+				method: method,
+				headers: headers,
+				body: body,
+			}),
+			new Promise<Response>((_, reject) =>
+				setTimeout(() => reject(new Error('Timeout')), timeout),
+			),
+		]);
+
+		if (response.ok) return await response.json();
+
+		const errorData = await response.json();
+		const error = new Error(errorData.message || 'Request failed');
+		console.error(error.message);
+		loggedError = true;
+		throw error;
+	} catch (error) {
+		if (!loggedError) console.error(error);
+		throw error;
+	}
 };
 
 export default fetchJSON;

@@ -3,7 +3,7 @@ import {
 	DeployedVersionLookupEditType,
 	LatestVersionLookupEditType,
 } from 'types/service-edit';
-import { FC, useMemo, useState } from 'react';
+import { FC, useEffect, useMemo, useState } from 'react';
 import { beautifyGoErrors, fetchVersionJSON, removeEmptyValues } from 'utils';
 import {
 	convertUIDeployedVersionDataEditToAPI,
@@ -47,7 +47,7 @@ const VersionWithRefresh: FC<Props> = ({
 }) => {
 	const [lastFetched, setLastFetched] = useState(0);
 	const { monitorData } = useWebSocket();
-	const { trigger } = useFormContext();
+	const { setValue, trigger } = useFormContext();
 	const dataTarget = vType === 0 ? 'latest_version' : 'deployed_version';
 	const convertedOriginal = useMemo(() => {
 		if (original === null) return {};
@@ -67,9 +67,11 @@ const VersionWithRefresh: FC<Props> = ({
 	}, [original, serviceID, dataTarget]);
 	const url: string | undefined = useWatch({ name: `${dataTarget}.url` });
 	const dataTargetErrors = useErrors(dataTarget, true);
-	const { data, refetchData } = useValuesRefetch(dataTarget);
+	const { data, refetchData } = useValuesRefetch<{ [x: string]: any }>(
+		dataTarget,
+	);
 	const { data: semanticVersioning, refetchData: refetchSemanticVersioning } =
-		useValuesRefetch('options.semantic_versioning');
+		useValuesRefetch<boolean>('options.semantic_versioning');
 
 	const {
 		data: versionData,
@@ -81,7 +83,7 @@ const VersionWithRefresh: FC<Props> = ({
 			dataTarget,
 			{ id: serviceID },
 			{
-				params: removeEmptyValues(data),
+				params: removeEmptyValues(data ?? {}),
 				semantic_versioning: semanticVersioning,
 				original_data: removeEmptyValues(original ?? []),
 			},
@@ -104,6 +106,12 @@ const VersionWithRefresh: FC<Props> = ({
 		notifyOnChangeProps: 'all',
 		staleTime: 0,
 	});
+	// Track the version in the form for dashboard templates.
+	useEffect(() => {
+		if (versionData.version !== '') {
+			setValue(`${dataTarget}.version`, versionData.version);
+		}
+	}, [versionData.version, dataTarget]);
 
 	const refetch = async () => {
 		// Prevent refetching too often.

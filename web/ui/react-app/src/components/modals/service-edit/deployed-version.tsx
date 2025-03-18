@@ -63,7 +63,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
 			<Accordion.Body className="d-flex flex-wrap">
 				<FormSelect
 					name="deployed_version.type"
-					col_sm={6}
+					col_xs={6}
 					col_lg={2}
 					label="Type"
 					options={deployedVersionTypeOptions}

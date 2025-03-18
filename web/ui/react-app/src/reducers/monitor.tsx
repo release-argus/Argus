@@ -315,14 +315,14 @@ const updateTags = (
 	let tagsAdded = false;
 	newServiceTags.forEach((tag) => {
 		// New tag.
-		if (!state.tags.has(tag)) {
+		if (!state.tags?.has(tag)) {
 			tagsAdded = true;
 		}
 		usedTags.add(tag);
 	});
 
 	// If a new tag was added, or the number of tags changed, update the state.
-	if (tagsAdded || usedTags.size !== state.tags.size) {
+	if (tagsAdded || (state.tags && usedTags.size !== state.tags.size)) {
 		return {
 			...state,
 			tags: usedTags,

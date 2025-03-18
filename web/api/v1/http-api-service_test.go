@@ -221,7 +221,7 @@ func TestHTTP_httpServiceOrderSet(t *testing.T) {
 			body:           `{"order":["service1","service2","service3"}`,
 			wantStatusCode: http.StatusBadRequest,
 			wantOrder:      nil,
-			wantBody:       `{"message":"invalid character '}' after array element"}`,
+			wantBody:       `{"message":"Invalid JSON - invalid character '}' after array element"}`,
 		},
 		"trim unknown services": {
 			hadOrder:       testOrder,

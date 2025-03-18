@@ -7,7 +7,7 @@ export interface OrderAPIResponse {
 export interface MonitorSummaryType {
 	order: string[];
 	names: Set<string>;
-	tags: Set<string>;
+	tags?: Set<string>;
 	service: ServiceSummaryDictType;
 }
 export interface ServiceSummaryDictType {

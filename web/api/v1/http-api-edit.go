@@ -442,6 +442,75 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 		logFrom)
 }
 
+// httpTemplateParse parses a template with provided or default parameters.
+//
+// # GET
+//
+// Query Parameters:
+//
+//	service_id: The ID of the Service to get the default parameters from.
+//	template: The template to parse.
+//	params: Optional JSON object containing the parameters to override the defaults.
+//		id: string
+//		name: string
+//		url: string
+//		web_url: string
+//		latest_version: string
+//
+// Response:
+//
+//	JSON object containing the parsed template.
+func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
+	logFrom := logutil.LogFrom{Primary: "httpTemplateParse", Secondary: getIP(r)}
+
+	// Extract query parameters.
+	serviceID := r.URL.Query().Get("service_id")
+	template := r.URL.Query().Get("template")
+	params := r.URL.Query().Get("params")
+
+	// Validate required parameters.
+	if serviceID == "" || template == "" {
+		failRequest(&w, "Missing required query parameters: service_id or template", http.StatusBadRequest)
+		return
+	}
+
+	fullParams := util.ServiceInfo{}
+
+	// Fetch default parameters from the service configuration.
+	api.Config.OrderMutex.RLock()
+	defer api.Config.OrderMutex.RUnlock()
+	serviceConfig, exists := api.Config.Service[serviceID]
+	// Parse default parameters.
+	if exists {
+		fullParams.ID = serviceConfig.ID
+		fullParams.Name = serviceConfig.Name
+		fullParams.URL = serviceConfig.LatestVersion.ServiceURL(true)
+		fullParams.WebURL = serviceConfig.Status.WebURL
+		fullParams.LatestVersion = serviceConfig.Status.LatestVersion()
+	}
+
+	if e := util.CheckTemplate(template); !e {
+		failRequest(&w, "failed to parse template", http.StatusBadRequest)
+		return
+	}
+
+	// Override with query parameters.
+	if params != "" {
+		if err := json.Unmarshal([]byte(params), &fullParams); err != nil {
+			failRequest(&w,
+				"Invalid 'params' query parameter format - "+err.Error(),
+				http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Parse the template with the parameters.
+	parsed := util.TemplateString(template, fullParams)
+
+	// Respond with the parsed template.
+	api.writeJSON(w, map[string]string{"parsed": parsed}, logFrom)
+}
+
 // httpServiceEdit handles creating/editing a Service.
 //
 // # PUT

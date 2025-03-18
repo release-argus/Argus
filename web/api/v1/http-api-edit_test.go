@@ -809,6 +809,134 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 	}
 }
 
+func TestHTTP_TemplateParse(t *testing.T) {
+	type wants struct {
+		body       string
+		statusCode int
+	}
+
+	// GIVEN an API and a request to parse a template.
+	file := "TestHTTP_TemplateParse.yml"
+	api := testAPI(file)
+	apiMutex := sync.RWMutex{}
+	t.Cleanup(func() {
+		os.RemoveAll(file)
+		if api.Config.Settings.Data.DatabaseFile != "" {
+			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+		}
+	})
+
+	testSVC := testService("TestHTTP_TemplateParse", true)
+	apiMutex.Lock()
+	api.Config.Service[testSVC.ID] = testSVC
+	apiMutex.Unlock()
+
+	tests := map[string]struct {
+		queryParams map[string]string
+		wants       wants
+	}{
+		"missing required parameters": {
+			queryParams: map[string]string{},
+			wants: wants{
+				body:       `{"message":"Missing required query parameters: service_id or template"}`,
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		"invalid template": {
+			queryParams: map[string]string{
+				"service_id": testSVC.ID,
+				"template":   "{{.InvalidField}",
+			},
+			wants: wants{
+				body:       `{"message":"failed to parse template"}`,
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		"invalid params JSON": {
+			queryParams: map[string]string{
+				"service_id": testSVC.ID,
+				"template":   "{{ service_name }}",
+				"params":     `{"invalid":}`,
+			},
+			wants: wants{
+				body:       `{"message":"Invalid 'params' query parameter format - invalid character '}' looking for beginning of value"}`,
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		"valid template with default parameters": {
+			queryParams: map[string]string{
+				"service_id": testSVC.ID,
+				"template":   `{{service_name }} - {{ version }}`,
+			},
+			wants: wants{
+				body: fmt.Sprintf(`{"parsed":"%s - %s"}`,
+					testSVC.Name, testSVC.Status.LatestVersion()),
+				statusCode: http.StatusOK,
+			},
+		},
+		"valid template with overridden parameters": {
+			queryParams: map[string]string{
+				"service_id": testSVC.ID,
+				"template":   `{{ service_id}} - {{ version }}`,
+				"params": test.TrimJSON(`{
+					"id": "OverriddenName",
+					"latest_version": "2.0.0"
+				}`),
+			},
+			wants: wants{
+				body:       `{"parsed":"OverriddenName - 2.0.0"}`,
+				statusCode: http.StatusOK,
+			},
+		},
+		"unknown service": {
+			queryParams: map[string]string{
+				"service_id": "unknown_service",
+				"template":   "{{ service_name }}",
+			},
+			wants: wants{
+				body:       `{"parsed":""}`,
+				statusCode: http.StatusOK,
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			target := "/api/v1/template/parse"
+			params := url.Values{}
+			for k, v := range tc.queryParams {
+				params.Set(k, v)
+			}
+
+			// WHEN that HTTP request is sent.
+			req := httptest.NewRequest(http.MethodGet, target, nil)
+			req.URL.RawQuery = params.Encode()
+			w := httptest.NewRecorder()
+			api.httpTemplateParse(w, req)
+			res := w.Result()
+			t.Cleanup(func() { res.Body.Close() })
+
+			// THEN the expected status code is returned.
+			if res.StatusCode != tc.wants.statusCode {
+				t.Errorf("unexpected status code. Want: %d, Got: %d",
+					tc.wants.statusCode, res.StatusCode)
+			}
+			// AND the expected body is returned as expected.
+			data, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("unexpected error - %v", err)
+			}
+			got := string(data)
+			if !util.RegexCheck(tc.wants.body, got) {
+				t.Errorf("want Body to match\n%q\ngot:\n%q",
+					tc.wants.body, got)
+			}
+		})
+	}
+}
+
 func TestHTTP_ServiceEdit(t *testing.T) {
 	testSVC := testService("TestHTTP_ServiceEdit", true)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)

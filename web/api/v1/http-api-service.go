@@ -60,7 +60,7 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 	// Unmarshal the new order from the payload.
 	var newOrder ServiceOrderAPI
 	if err := json.Unmarshal(body, &newOrder); err != nil {
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w, "Invalid JSON - "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
