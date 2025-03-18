@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,12 +43,14 @@ func NilFlags(cfg *config.Config) {
 
 // BareConfig returns a minimal config with no flags set.
 func BareConfig(nilFlags bool) (cfg *config.Config) {
+
 	cfg = &config.Config{
 		Settings: config.Settings{
 			SettingsBase: config.SettingsBase{
 				Web: config.WebSettings{
 					RoutePrefix: "",
-				}}}}
+				}}},
+		Order: []string{}}
 
 	// NilFlags can be a RACE condition, so use it conditionally.
 	if nilFlags {
@@ -58,5 +60,11 @@ func BareConfig(nilFlags bool) (cfg *config.Config) {
 	cfg.HardDefaults.Default()
 	cfg.Settings.Default()
 
+	// Announce channel.
+	announceChannel := make(chan []byte, 16)
+	cfg.HardDefaults.Service.Status.AnnounceChannel = &announceChannel
+	// Save channel.
+	saveChannel := make(chan bool, 16)
+	cfg.HardDefaults.Service.Status.SaveChannel = &saveChannel
 	return
 }

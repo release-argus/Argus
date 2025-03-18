@@ -63,7 +63,6 @@ export const useSortableServices = (
 
 	// Send the new ordering to the API.
 	const handleSaveOrder = useCallback(async () => {
-		console.log(JSON.stringify({ order: monitorData.order }));
 		await fetchJSON<OrderAPIResponse>({
 			url: 'api/v1/service/order',
 			method: 'PUT',

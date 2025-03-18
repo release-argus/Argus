@@ -1,14 +1,16 @@
 import { ApprovalsToolbar, Service } from 'components/approvals';
 import { DndContext, closestCenter } from '@dnd-kit/core';
-import { ReactElement, useEffect, useMemo, useState } from 'react';
+import { ReactElement, useEffect, useMemo } from 'react';
 
 import { ApprovalsToolbarOptions } from 'types/util';
 import { Container } from 'react-bootstrap';
+import { DEFAULT_HIDE_VALUE } from 'components/approvals/toolbar/filter-dropdown';
 import { OrderAPIResponse } from 'types/summary';
 import { SortableContext } from '@dnd-kit/sortable';
+import { URL_PARAMS } from 'constants/toolbar';
 import { fetchJSON } from 'utils';
-import useLocalStorage from 'hooks/local-storage';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { useSortableServices } from 'hooks/sortable-services';
 import { useWebSocket } from 'contexts/websocket';
 
@@ -17,15 +19,43 @@ import { useWebSocket } from 'contexts/websocket';
  */
 export const Approvals = (): ReactElement => {
 	const { monitorData, setMonitorData } = useWebSocket();
+	const [searchParams] = useSearchParams();
+
 	const toolbarDefaults: ApprovalsToolbarOptions = {
 		search: '',
 		tags: [],
 		editMode: false,
-		hide: [3],
+		hide: DEFAULT_HIDE_VALUE,
 	};
-	const [toolbarOptionsLS, setLSToolbarOptions] =
-		useLocalStorage<ApprovalsToolbarOptions>('toolbarOptions', toolbarDefaults);
-	const [toolbarOptions, setToolbarOptions] = useState(toolbarOptionsLS);
+
+	const toolbarOptions: ApprovalsToolbarOptions = useMemo(() => {
+		const search =
+			searchParams.get(URL_PARAMS.SEARCH) ?? toolbarDefaults.search;
+
+		const tagsQueryParam = searchParams.get(URL_PARAMS.TAGS);
+		let tags: string[] = [];
+		try {
+			tags = tagsQueryParam ? JSON.parse(tagsQueryParam) : toolbarDefaults.tags;
+		} catch {}
+
+		const editMode = searchParams.has(URL_PARAMS.EDIT_MODE);
+
+		const hideQueryParam = searchParams.get(URL_PARAMS.HIDE);
+		let hide: number[] = [];
+		if (hideQueryParam === null) {
+			hide = toolbarDefaults.hide;
+		} else if (hideQueryParam) {
+			try {
+				hide = JSON.parse(hideQueryParam)
+					.map(Number)
+					.filter((num: unknown) => Number.isFinite(num));
+			} catch {}
+		} else {
+			hide = [];
+		}
+
+		return { search, tags, editMode, hide };
+	}, [searchParams]);
 
 	const {
 		sensors,
@@ -50,14 +80,6 @@ export const Approvals = (): ReactElement => {
 				...orderData,
 			});
 	}, [orderData]);
-
-	// Keep local storage and state in sync.
-	useEffect(() => {
-		setLSToolbarOptions({
-			editMode: toolbarOptions.editMode,
-			hide: toolbarOptions.hide,
-		});
-	}, [toolbarOptions]);
 
 	const filteredServices = useMemo(() => {
 		const search = (toolbarOptions.search ?? '').toLowerCase();
@@ -98,7 +120,6 @@ export const Approvals = (): ReactElement => {
 		<>
 			<ApprovalsToolbar
 				values={toolbarOptions}
-				setValues={setToolbarOptions}
 				onEditModeToggle={(value: boolean) => !value && resetOrder()}
 				onSaveOrder={handleSaveOrder}
 				hasOrderChanged={hasOrderChanged}

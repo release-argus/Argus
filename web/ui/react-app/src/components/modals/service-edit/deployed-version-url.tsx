@@ -64,7 +64,7 @@ const DeployedVersionURL: FC<Props> = ({
 		<>
 			<FormSelect
 				name="deployed_version.method"
-				col_sm={6}
+				col_xs={6}
 				col_lg={2}
 				label="Method"
 				options={DeployedVersionMethodOptions}

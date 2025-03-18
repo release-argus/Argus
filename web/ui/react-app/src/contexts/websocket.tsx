@@ -49,7 +49,6 @@ export const WebSocketContext = createContext<WebSocketCtx>({
 	monitorData: {
 		order: [],
 		names: new Set<string>(),
-		tags: new Set<string>(),
 		service: {},
 	},
 	// eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -69,7 +68,6 @@ export const WebSocketProvider = (props: Props) => {
 	const [monitorData, setMonitorData] = useReducer(reducerMonitor, {
 		order: ['monitorData_loading'],
 		names: new Set<string>(),
-		tags: new Set<string>(),
 		service: {},
 	});
 	const [connected, setConnected] = useState<Bool>(undefined);
@@ -188,7 +186,7 @@ export const WebSocketProvider = (props: Props) => {
 					? item.handler({
 							event: msg,
 							...item.params,
-						})
+					  })
 					: item.handler(msg),
 			);
 		}

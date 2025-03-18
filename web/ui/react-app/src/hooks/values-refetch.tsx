@@ -8,13 +8,13 @@ import { useState } from 'react';
  * @param undefinedInitially - Whether the value is undefined initially.
  * @returns The data in the form at name, and a function to refetch the data.
  */
-const useValuesRefetch = (name: string, undefinedInitially?: boolean) => {
+const useValuesRefetch = <T,>(name: string, undefinedInitially?: boolean) => {
 	const { getValues } = useFormContext();
-	const [data, setData] = useState(
+	const [data, setData] = useState<T | undefined>(
 		undefinedInitially ? undefined : getValues(name),
 	);
 	const refetchData = () => {
-		const values = getValues(name);
+		const values: T = getValues(name);
 		setData(values);
 	};
 

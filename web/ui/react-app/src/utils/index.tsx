@@ -10,6 +10,7 @@ import {
 	stringifyQueryParam,
 } from './query-params';
 import { extractErrors, getNestedError } from './errors';
+import { fetchVersionJSON, parseTemplate } from './api';
 import { isEmptyArray, isEmptyObject } from './is-empty';
 
 import beautifyGoErrors from './beautify-go-errors';
@@ -17,7 +18,6 @@ import cleanEmpty from './clean-empty';
 import compareStringArrays from './compare-string-arrays';
 import dateIsAfterNow from './is-after-date';
 import fetchJSON from './fetch-json';
-import { fetchVersionJSON } from './api';
 import fetchYAML from './fetch-yaml';
 import firstNonDefault from './first-non-default';
 import firstNonEmpty from './first-non-empty';
@@ -47,6 +47,7 @@ export {
 	isEmptyArray,
 	isEmptyObject,
 	isEmptyOrNull,
+	parseTemplate,
 	removeEmptyValues,
 	stringifyQueryParam,
 	strToBool,

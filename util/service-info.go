@@ -17,9 +17,9 @@ package util
 
 // ServiceInfo holds information about a service.
 type ServiceInfo struct {
-	ID            string
-	Name          string
-	URL           string
-	WebURL        *string
-	LatestVersion string
+	ID            string  `json:"id,omitempty"`
+	Name          string  `json:"name,omitempty"`
+	URL           string  `json:"url,omitempty"`
+	WebURL        *string `json:"web_url,omitempty"`
+	LatestVersion string  `json:"latest_version,omitempty"`
 }

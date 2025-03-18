@@ -6,31 +6,48 @@ import {
 } from 'react-bootstrap';
 import { FC, useMemo } from 'react';
 
-import { ApprovalsToolbarOptions } from 'types/util';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { URL_PARAMS } from 'constants/toolbar';
 import { faEye } from '@fortawesome/free-solid-svg-icons';
+
+export enum HideValue {
+	UpToDate = 0,
+	Updatable = 1,
+	Skipped = 2,
+	Inactive = 3,
+}
+
+export const HIDE_OPTIONS = [
+	{ key: 'upToDate', label: 'Hide up-to-date', value: HideValue.UpToDate },
+	{ key: 'updatable', label: 'Hide updatable', value: HideValue.Updatable },
+	{ key: 'skipped', label: 'Hide skipped', value: HideValue.Skipped },
+	{ key: 'inactive', label: 'Hide inactive', value: HideValue.Inactive },
+] as const;
+
+export const DEFAULT_HIDE_VALUE = [HideValue.Inactive];
 
 type Props = {
 	values: number[];
-	setValue: (key: keyof ApprovalsToolbarOptions, value: number[]) => void;
+	setValue: (
+		key: (typeof URL_PARAMS)[keyof typeof URL_PARAMS],
+		value: number[],
+	) => void;
 };
 
 const FilterDropdown: FC<Props> = ({ values, setValue }) => {
-	const hideOptions = [
-		{ key: 'upToDate', label: 'Hide up-to-date', value: 0 },
-		{ key: 'updatable', label: 'Hide updatable', value: 1 },
-		{ key: 'skipped', label: 'Hide skipped', value: 2 },
-		{ key: 'inactive', label: 'Hide inactive', value: 3 },
-	];
-
 	const optionsMap = useMemo(
 		() => ({
-			upToDate: () => setValue('hide', toggleHideValue(0)),
-			updatable: () => setValue('hide', toggleHideValue(1)),
-			skipped: () => setValue('hide', toggleHideValue(2)),
-			inactive: () => setValue('hide', toggleHideValue(3)),
-			reset: () => setValue('hide', [3]),
-			flipAllHideOptions: () => setValue('hide', toggleAllHideValues()),
+			upToDate: () =>
+				setValue(URL_PARAMS.HIDE, toggleHideValue(HideValue.UpToDate)),
+			updatable: () =>
+				setValue(URL_PARAMS.HIDE, toggleHideValue(HideValue.Updatable)),
+			skipped: () =>
+				setValue(URL_PARAMS.HIDE, toggleHideValue(HideValue.Skipped)),
+			inactive: () =>
+				setValue(URL_PARAMS.HIDE, toggleHideValue(HideValue.Inactive)),
+			reset: () => setValue(URL_PARAMS.HIDE, [HideValue.Inactive]),
+			flipAllHideOptions: () =>
+				setValue(URL_PARAMS.HIDE, toggleAllHideValues()),
 		}),
 		[values],
 	);
@@ -41,12 +58,17 @@ const FilterDropdown: FC<Props> = ({ values, setValue }) => {
 			: [...values, value];
 
 	const toggleAllHideValues = () =>
-		[0, 1, 2, 3].filter((n) => !(n !== 3 && values.includes(n)));
+		[
+			HideValue.UpToDate,
+			HideValue.Updatable,
+			HideValue.Skipped,
+			HideValue.Inactive,
+		].filter((n) => !(n !== HideValue.Inactive && values.includes(n)));
 
 	const handleOption = (option: string) => {
-		const hideUpdatable = values.includes(0);
-		const hideUpToDate = values.includes(1);
-		const hideSkipped = values.includes(2);
+		const hideUpdatable = values.includes(HideValue.Updatable);
+		const hideUpToDate = values.includes(HideValue.UpToDate);
+		const hideSkipped = values.includes(HideValue.Skipped);
 		switch (option) {
 			case 'upToDate': // 0
 				hideUpToDate && hideSkipped // 1 && 2
@@ -88,7 +110,7 @@ const FilterDropdown: FC<Props> = ({ values, setValue }) => {
 				</Dropdown.Toggle>
 			</OverlayTrigger>
 			<Dropdown.Menu>
-				{hideOptions.map(({ key, label, value }) => (
+				{HIDE_OPTIONS.map(({ key, label, value }) => (
 					<Dropdown.Item
 						key={key}
 						eventKey={key}

@@ -20,15 +20,23 @@ const TagSelect: FC<Props> = ({ tags, setTags }) => {
 
 	const tagOptions = useMemo(
 		() =>
-			convertStringArrayToOptionTypeArray(Array.from(monitorData.tags), true),
+			convertStringArrayToOptionTypeArray(
+				Array.from(monitorData.tags ?? []),
+				true,
+			),
 		[monitorData.tags],
 	);
 
 	// useEffect as cannot change state during rendering (which happens in useMemo).
 	// useEffect ensures the state is updated after the render.
 	useEffect(() => {
+		if (
+			monitorData.tags === undefined ||
+			Object.values(monitorData.service).find((service) => service.loading)
+		)
+			return;
 		// Ensure selected tags exist.
-		const newTags = tags.filter((tag) => monitorData.tags.has(tag));
+		const newTags = tags.filter((tag) => monitorData.tags?.has(tag));
 		if (tags.length !== newTags.length) setTags(newTags);
 	}, [monitorData.tags, tags, setTags]);
 
