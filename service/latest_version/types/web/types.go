@@ -17,7 +17,9 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -66,7 +68,7 @@ func (l *Lookup) UnmarshalJSON(data []byte) error {
 
 	// Unmarshal.
 	if err := json.Unmarshal(data, aux); err != nil {
-		return err //nolint:wrapcheck
+		return errors.New(strings.Replace(err.Error(), ".Alias.Lookup", "", 1))
 	}
 	l.Type = "url"
 

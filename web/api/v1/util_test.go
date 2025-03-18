@@ -146,7 +146,7 @@ func TestAnnounceOrder(t *testing.T) {
 		if wsMessage.Order == nil {
 			t.Fatal("expected order in WebSocketMessage, but got none")
 		} else {
-			if mismatch := test.EqualSlices(*wsMessage.Order, order); mismatch {
+			if match := test.EqualSlices(*wsMessage.Order, order); !match {
 				t.Errorf("unexpected order in WebSocketMessage: %+v",
 					wsMessage)
 			}

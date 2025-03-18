@@ -75,6 +75,7 @@ const VersionWithLink: FC<VersionWithLinkProps> = ({
 		<FormTextWithButton
 			name={name}
 			required={required}
+			col_xs={col_xs}
 			col_sm={col_sm}
 			label={config.label}
 			type="text"

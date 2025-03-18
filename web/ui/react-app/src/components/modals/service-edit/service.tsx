@@ -11,6 +11,7 @@ import EditServiceWebHooks from 'components/modals/service-edit/webhooks';
 import { FC } from 'react';
 import { Stack } from 'react-bootstrap';
 import { WebHookType } from 'types/config';
+import { useWebSocket } from 'contexts/websocket';
 
 interface Props {
 	id: string;
@@ -37,6 +38,8 @@ const EditService: FC<Props> = ({
 	otherOptionsData,
 	loading,
 }) => {
+	const { monitorData } = useWebSocket();
+
 	return (
 		<Stack gap={3}>
 			<EditServiceRoot
@@ -81,9 +84,11 @@ const EditService: FC<Props> = ({
 				loading={loading}
 			/>
 			<EditServiceDashboard
+				serviceID={id}
 				originals={defaultData?.dashboard}
 				defaults={otherOptionsData?.defaults?.service?.dashboard}
 				hard_defaults={otherOptionsData?.hard_defaults?.service?.dashboard}
+				serviceStatus={monitorData.service?.[id]?.status}
 			/>
 		</Stack>
 	);

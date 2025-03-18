@@ -4,34 +4,46 @@ import {
 	FormTextWithButton,
 	FormTextWithPreview,
 } from 'components/generic/form';
+import { firstNonDefault, parseTemplate, removeEmptyValues } from 'utils';
 
 import { Accordion } from 'react-bootstrap';
 import { BooleanWithDefault } from 'components/generic';
 import { ServiceDashboardOptionsType } from 'types/config';
+import { StatusSummaryType } from 'types/summary';
 import { createOption } from 'components/generic/form-select-shared';
 import { faLink } from '@fortawesome/free-solid-svg-icons';
-import { firstNonDefault } from 'utils';
+import { useFormContext } from 'react-hook-form';
+import useValuesRefetch from 'hooks/values-refetch';
 import { useWebSocket } from 'contexts/websocket';
 
 interface Props {
+	serviceID: string;
 	originals?: ServiceDashboardOptionsType;
 	defaults?: ServiceDashboardOptionsType;
 	hard_defaults?: ServiceDashboardOptionsType;
+	serviceStatus?: StatusSummaryType;
 }
 
 /**
  * The `dashboard` form fields.
  *
+ * @param serviceID - The ID of the service.
  * @param originals - The original values of the form.
  * @param defaults - The default values.
  * @param hard_defaults - The hard default values.
  * @returns The form fields for the `dashboard` options.
  */
 const EditServiceDashboard: FC<Props> = ({
+	serviceID,
 	originals,
 	defaults,
 	hard_defaults,
+	serviceStatus,
 }) => {
+	const { setError } = useFormContext();
+
+	const { data: latest_version, refetchData: refetchLatestVersion } =
+		useValuesRefetch<string>('latest_version.version', true);
 	const convertedDefaults = useMemo(
 		() => ({
 			auto_approve: defaults?.auto_approve ?? hard_defaults?.auto_approve,
@@ -58,6 +70,27 @@ const EditServiceDashboard: FC<Props> = ({
 			),
 		[monitorData.service, monitorData.tags],
 	);
+	const handleTemplateClick = (fieldName: string, template: string) => {
+		if (!template.includes('{{')) {
+			window.open(template, '_blank');
+		}
+
+		refetchLatestVersion();
+		// setTimeout to allow time for refetch setStates ^
+		const timeout = setTimeout(() => {
+			const extraParams = removeEmptyValues({
+				latest_version: latest_version ?? serviceStatus?.latest_version,
+			});
+			parseTemplate({
+				serviceID,
+				template,
+				extraParams,
+			})
+				.then((parsed) => window.open(parsed, '_blank'))
+				.catch((error) => setError(fieldName, { message: error.message }));
+		});
+		return () => clearTimeout(timeout);
+	};
 
 	return (
 		<Accordion>
@@ -85,7 +118,9 @@ const EditServiceDashboard: FC<Props> = ({
 					isURL
 					buttonIcon={faLink}
 					buttonAriaLabel="Open icon link"
-					buttonHref={(value) => value}
+					buttonOnClick={(tpl) =>
+						handleTemplateClick('dashboard.icon_link_to', tpl)
+					}
 				/>
 				<FormTextWithButton
 					key="web_url"
@@ -97,7 +132,7 @@ const EditServiceDashboard: FC<Props> = ({
 					isURL
 					buttonIcon={faLink}
 					buttonAriaLabel="Open web URL"
-					buttonHref={(value) => value}
+					buttonOnClick={(tpl) => handleTemplateClick('dashboard.web_url', tpl)}
 				/>
 				<FormSelectCreatableSortable
 					name="dashboard.tags"

@@ -3,9 +3,12 @@ import {
 	LatestVersionLookupType,
 	ServiceOptionsType,
 } from 'types/config';
+import {
+	ServiceRefreshType,
+	TemplateAPIResponseType,
+} from 'types/service-edit';
 import { convertToQueryParams, getChanges } from './query-params';
 
-import { ServiceRefreshType } from 'types/service-edit';
 import fetchJSON from './fetch-json';
 
 type fetchVersionJSONProps = {
@@ -48,4 +51,30 @@ export const fetchVersionJSON = ({
 			semantic_versioning,
 		})}`,
 	});
+};
+
+type parseTemplateProps = {
+	serviceID: string;
+	template: string;
+	extraParams?: Record<string, string | undefined>;
+};
+
+export const parseTemplate = async ({
+	serviceID,
+	template,
+	extraParams,
+}: parseTemplateProps): Promise<string> => {
+	const queryParamStr = convertToQueryParams(
+		Object.fromEntries(
+			Object.entries({
+				service_id: serviceID,
+				template: template,
+				params: extraParams ? JSON.stringify(extraParams) : undefined,
+			}).filter(([_, v]) => v !== undefined),
+		),
+	);
+	return await fetchJSON<TemplateAPIResponseType>({
+		url: `api/v1/template${queryParamStr}`,
+		method: 'GET',
+	}).then((data) => data.parsed);
 };

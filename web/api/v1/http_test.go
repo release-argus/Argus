@@ -279,17 +279,17 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			method:     http.MethodGet,
 			path:       "service/order",
 			wantStatus: http.StatusOK,
-			wantBody: `{
-				"order": null
-			}`,
+			wantBody: test.TrimJSON(`{
+				"order": \[\]
+			}`),
 		},
 		"order_edit": {
 			method:     http.MethodPut,
 			path:       "service/order",
 			body:       `{"order":["test"]}`,
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusOK,
 			wantBody: `{
-				"message":"edit \\"order\\" failed[^"]*"
+				"message":"order updated[^"]*"
 			}`,
 		},
 		"-service_summary": {
@@ -428,6 +428,8 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 				t.Run(strings.Join(disabledRoutes, ";"), func(t *testing.T) {
 
 					cfg := config_test.BareConfig(false)
+					announceChannel := cfg.HardDefaults.Service.Status.AnnounceChannel
+					saveChannel := cfg.HardDefaults.Service.Status.SaveChannel
 					cfg.Settings.Web.DisabledRoutes = disabledRoutes
 					// Give every other test a route prefix.
 					routePrefix := ""
@@ -444,6 +446,13 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 
 					// Test each route for this set of disabled routes.
 					for name, tc := range tests {
+						if len(*announceChannel) != 0 {
+							<-(*announceChannel)
+						}
+						if len(*saveChannel) != 0 {
+							<-(*saveChannel)
+						}
+
 						if !strings.HasPrefix(name, "-") && util.Contains(disabledRoutes, name) {
 							tc.wantStatus = http.StatusNotFound
 							tc.wantBody = "Route disabled"
@@ -459,8 +468,12 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 						}
 						url := ts.URL + path
 
+						reqBody := io.NopCloser(strings.NewReader(tc.body))
+						if tc.body == "" {
+							reqBody = nil
+						}
 						// WHEN a HTTP request is made to this router.
-						req, err := http.NewRequest(tc.method, url, nil)
+						req, err := http.NewRequest(tc.method, url, reqBody)
 						if err != nil {
 							t.Fatal(err)
 						}
@@ -479,14 +492,14 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 						fail := false
 						// THEN the status code is as expected.
 						if resp.StatusCode != tc.wantStatus {
-							t.Errorf("%s - Expected a %d, not a %d",
-								path, tc.wantStatus, resp.StatusCode)
+							t.Errorf("%s, %s - Expected a %d, not a %d",
+								tc.method, path, tc.wantStatus, resp.StatusCode)
 							fail = true
 						}
 						// AND the body is as expected.
 						if !util.RegexCheck(tc.wantBody, string(body)) {
-							t.Errorf("%s - Expected a body of\n%s\nnot\n%s",
-								path, tc.wantBody, string(body))
+							t.Errorf("%s, %s - Expected a body of\n%s\nnot\n%s",
+								tc.method, path, tc.wantBody, string(body))
 							fail = true
 						}
 
