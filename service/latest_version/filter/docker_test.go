@@ -1662,7 +1662,7 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 			require := Require{Docker: tc.dockerCheck}
 
 			// WHEN DockerTagCheck is called on it.
-			err := require.DockerTagCheck("0.9.0")
+			err := require.DockerTagCheck("0.23.0")
 
 			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
