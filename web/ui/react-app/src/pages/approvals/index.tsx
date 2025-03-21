@@ -1,12 +1,17 @@
 import { ApprovalsToolbar, Service } from 'components/approvals';
-import { ReactElement, useEffect, useMemo, useState } from 'react';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import { ReactElement, useEffect, useMemo } from 'react';
 
 import { ApprovalsToolbarOptions } from 'types/util';
 import { Container } from 'react-bootstrap';
+import { DEFAULT_HIDE_VALUE } from 'components/approvals/toolbar/filter-dropdown';
 import { OrderAPIResponse } from 'types/summary';
+import { SortableContext } from '@dnd-kit/sortable';
+import { URL_PARAMS } from 'constants/toolbar';
 import { fetchJSON } from 'utils';
-import useLocalStorage from 'hooks/local-storage';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
+import { useSortableServices } from 'hooks/sortable-services';
 import { useWebSocket } from 'contexts/websocket';
 
 /**
@@ -14,27 +19,60 @@ import { useWebSocket } from 'contexts/websocket';
  */
 export const Approvals = (): ReactElement => {
 	const { monitorData, setMonitorData } = useWebSocket();
+	const [searchParams] = useSearchParams();
+
 	const toolbarDefaults: ApprovalsToolbarOptions = {
 		search: '',
 		tags: [],
 		editMode: false,
-		hide: [3],
+		hide: DEFAULT_HIDE_VALUE,
 	};
-	const [toolbarOptionsLS, setLSToolbarOptions] =
-		useLocalStorage<ApprovalsToolbarOptions>('toolbarOptions', toolbarDefaults);
-	const [toolbarOptions, setToolbarOptions] = useState(toolbarOptionsLS);
+
+	const toolbarOptions: ApprovalsToolbarOptions = useMemo(() => {
+		const search =
+			searchParams.get(URL_PARAMS.SEARCH) ?? toolbarDefaults.search;
+
+		const tagsQueryParam = searchParams.get(URL_PARAMS.TAGS);
+		let tags: string[] = [];
+		try {
+			tags = tagsQueryParam ? JSON.parse(tagsQueryParam) : toolbarDefaults.tags;
+		} catch {}
+
+		const editMode = searchParams.has(URL_PARAMS.EDIT_MODE);
+
+		const hideQueryParam = searchParams.get(URL_PARAMS.HIDE);
+		let hide: number[] = [];
+		if (hideQueryParam === null) {
+			hide = toolbarDefaults.hide;
+		} else if (hideQueryParam) {
+			try {
+				hide = JSON.parse(hideQueryParam)
+					.map(Number)
+					.filter((num: unknown) => Number.isFinite(num));
+			} catch {}
+		} else {
+			hide = [];
+		}
+
+		return { search, tags, editMode, hide };
+	}, [searchParams]);
+
 	const {
-		data: orderData,
-		isFetched: isFetchedOrder,
-		isFetching: isFetchingOrder,
-	} = useQuery({
+		sensors,
+		handleDragEnd,
+		handleSaveOrder,
+		hasOrderChanged,
+		resetOrder,
+	} = useSortableServices(monitorData, setMonitorData);
+
+	const { data: orderData } = useQuery({
 		queryKey: ['service/order'],
 		queryFn: () => fetchJSON<OrderAPIResponse>({ url: 'api/v1/service/order' }),
 		gcTime: 1000 * 60 * 30, // 30 minutes.
 		initialData: { order: monitorData.order },
 	});
 	useEffect(() => {
-		if (isFetchedOrder && !isFetchingOrder)
+		if (orderData)
 			setMonitorData({
 				page: 'APPROVALS',
 				type: 'SERVICE',
@@ -42,14 +80,6 @@ export const Approvals = (): ReactElement => {
 				...orderData,
 			});
 	}, [orderData]);
-
-	// Keep local storage and state in sync.
-	useEffect(() => {
-		setLSToolbarOptions({
-			editMode: toolbarOptions.editMode,
-			hide: toolbarOptions.hide,
-		});
-	}, [toolbarOptions]);
 
 	const filteredServices = useMemo(() => {
 		const search = (toolbarOptions.search ?? '').toLowerCase();
@@ -88,7 +118,12 @@ export const Approvals = (): ReactElement => {
 
 	return (
 		<>
-			<ApprovalsToolbar values={toolbarOptions} setValues={setToolbarOptions} />
+			<ApprovalsToolbar
+				values={toolbarOptions}
+				onEditModeToggle={(value: boolean) => !value && resetOrder()}
+				onSaveOrder={handleSaveOrder}
+				hasOrderChanged={hasOrderChanged}
+			/>
 			<Container
 				fluid
 				className="services"
@@ -99,14 +134,33 @@ export const Approvals = (): ReactElement => {
 							: '',
 				}}
 			>
-				{monitorData.order.length === Object.keys(monitorData.service).length &&
-					filteredServices.map((service_id) => (
-						<Service
-							key={service_id}
-							service={monitorData.service[service_id]}
-							editable={toolbarOptions.editMode}
-						/>
-					))}
+				<DndContext
+					sensors={sensors}
+					collisionDetection={closestCenter}
+					onDragEnd={handleDragEnd}
+					autoScroll={{
+						enabled: true,
+						acceleration: 100,
+						threshold: {
+							x: 0.2, // Start scrolling when within 20% of the edge
+							y: 0.2,
+						},
+						interval: 5,
+					}}
+				>
+					<SortableContext items={monitorData.order}>
+						{monitorData.order.length ===
+							Object.keys(monitorData.service).length &&
+							filteredServices.map((service_id) => (
+								<Service
+									key={service_id}
+									id={service_id}
+									service={monitorData.service[service_id]}
+									editable={toolbarOptions.editMode}
+								/>
+							))}
+					</SortableContext>
+				</DndContext>
 			</Container>
 		</>
 	);

@@ -97,8 +97,8 @@ const EditServiceLatestVersion: FC<Props> = ({
 						name="latest_version.url"
 						type={latestVersionType}
 						required
-						col_sm={8}
 						col_xs={8}
+						col_sm={8}
 						{...getTooltipProps()}
 						positionXS="right"
 					/>

@@ -152,8 +152,8 @@ export const ServiceInfo: FC<Props> = ({
 				status.not_found
 					? delayedRender(() => 'service-warning rounded-bottom', 'default')
 					: status.warning
-						? 'service-warning rounded-bottom'
-						: 'default'
+					? 'service-warning rounded-bottom'
+					: 'default'
 			}
 		>
 			<ListGroup className="list-group-flush">
@@ -221,8 +221,8 @@ export const ServiceInfo: FC<Props> = ({
 							status.not_found
 								? delayedRender(() => 'warning', 'secondary')
 								: status.warning
-									? 'warning'
-									: 'secondary'
+								? 'warning'
+								: 'secondary'
 						}
 						className={
 							'service-item' +
@@ -276,8 +276,8 @@ export const ServiceInfo: FC<Props> = ({
 						(status.not_found
 							? delayedRender(() => ' service-warning rounded-bottom', '')
 							: status.warning
-								? ' service-warning rounded-bottom'
-								: '')
+							? ' service-warning rounded-bottom'
+							: '')
 					}
 				>
 					{service?.status?.last_queried ? (

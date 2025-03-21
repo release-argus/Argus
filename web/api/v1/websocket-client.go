@@ -242,7 +242,7 @@ func (c *Client) writePump() {
 					}
 				default:
 					logutil.Log.Error(
-						fmt.Sprintf("Unknown TYPE %q\nFull message: %s", msg.Type, string(message)),
+						fmt.Sprintf("Unknown Type %q\nFull message: %s", msg.Type, string(message)),
 						logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true)
 					continue

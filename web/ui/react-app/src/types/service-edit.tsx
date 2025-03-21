@@ -133,3 +133,12 @@ export interface NotifyEditAPIType {
 	url_fields?: StringStringMap;
 	params?: StringStringMap;
 }
+
+export interface TemplateAPIRequestType {
+	service_id: string;
+	template: string;
+	params?: string[];
+}
+export interface TemplateAPIResponseType {
+	parsed: string;
+}

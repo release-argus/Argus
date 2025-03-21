@@ -25,10 +25,11 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/test"
 )
 
 func TestConfig_AddService(t *testing.T) {
-	// GIVEN a service to add/replace/rename and a Config to act on
+	// GIVEN a service to add/replace/rename and a Config to act on.
 	tests := map[string]struct {
 		newService *service.Service
 		oldService string
@@ -55,7 +56,7 @@ func TestConfig_AddService(t *testing.T) {
 			newService: testServiceURL("foo"),
 			wantOrder:  []string{"alpha", "foo", "charlie"},
 			added:      true,
-			dbMessages: 2, // 1 for change of id, 1 for change of versions
+			dbMessages: 2, // 1 for change of id, 1 for change of versions.
 		},
 		"ID already exists": {
 			newService: testServiceURL("alpha"),
@@ -81,7 +82,7 @@ func TestConfig_AddService(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using sharing global log state
+			// t.Parallel() - Cannot run in parallel since we're using sharing global log state.
 
 			file := fmt.Sprintf("TestConfig_AddService_%s.yml", strings.ReplaceAll(name, " ", "_"))
 			testYAML_Edit(file, t)
@@ -92,14 +93,14 @@ func TestConfig_AddService(t *testing.T) {
 				cfg.Order = []string{}
 			}
 
-			// WHEN AddService is called
+			// WHEN AddService is called.
 			loadMutex.RLock()
 			cfg.AddService(tc.oldService, tc.newService)
 			loadMutex.RUnlock()
 			logMutex.Unlock()
 
 			// THEN the service is
-			// added/renamed/replaced
+			// 	added/renamed/replaced.
 			cfg.OrderMutex.RLock()
 			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
 			if tc.added && cfg.Service[tc.newService.ID] != tc.newService {
@@ -108,19 +109,12 @@ func TestConfig_AddService(t *testing.T) {
 			if !tc.added && cfg.Service[tc.newService.ID] == tc.newService {
 				t.Fatalf("config[%q] shouldn't have been added", tc.newService.ID)
 			}
-			// Added to Order
-			if len(cfg.Order) != len(tc.wantOrder) {
-				t.Errorf("Order length mismatch: got %d, want %d\nwant: %v\ngot: %v",
-					len(cfg.Order), len(tc.wantOrder), cfg.Order, tc.wantOrder)
+			// Added to Order at the correct spot.
+			if !test.EqualSlices(cfg.Order, tc.wantOrder) {
+				t.Errorf("Order mismatch: got %v, want %v",
+					cfg.Order, tc.wantOrder)
 			}
-			// In the correct spot
-			for i, service := range cfg.Order {
-				if service != tc.wantOrder[i] {
-					t.Fatalf("Order mismatch at index %d: got %s, want %s\ngot:  %v\nwant: %v",
-						i, service, tc.wantOrder[i], cfg.Order, tc.wantOrder)
-				}
-			}
-			// AND the DatabaseChannel should have a message waiting if the service was added
+			// AND the DatabaseChannel should have a message waiting if the service was added.
 			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != tc.dbMessages {
 				t.Errorf("DatabaseChannel should have %d messages waiting, got %d",
 					tc.dbMessages, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
@@ -134,6 +128,7 @@ func TestConfig_AddService(t *testing.T) {
 }
 
 func TestConfig_ServiceWithNameExists(t *testing.T) {
+	// GIVEN a Config to act on.
 	tests := []struct {
 		name         string
 		config       *Config
@@ -201,7 +196,12 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN ServiceWithNameExists is called.
 			got := tt.config.ServiceWithNameExists(tt.serviceName, tt.oldServiceID)
+
+			// THEN we receive the expected result.
 			if got != tt.want {
 				t.Errorf("Config.ServiceWithNameExists() = %v, want %v", got, tt.want)
 			}
@@ -210,7 +210,7 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 }
 
 func TestConfig_RenameService(t *testing.T) {
-	// GIVEN a service to rename and a Config to act on
+	// GIVEN a service to rename and a Config to act on.
 	tests := map[string]struct {
 		oldName, newName string
 		wantOrder        []string
@@ -251,35 +251,30 @@ func TestConfig_RenameService(t *testing.T) {
 			cfg := testLoadBasic(file, t)
 			newSVC := testServiceURL(tc.newName)
 
-			// WHEN the service is renamed
+			// WHEN the service is renamed.
 			cfg.RenameService(tc.oldName, newSVC)
 			logMutex.Unlock()
 			time.Sleep(time.Second)
 
-			// THEN the order should be as expected
+			// THEN the order should be as expected.
 			cfg.OrderMutex.RLock()
 			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
-			if len(cfg.Order) != len(tc.wantOrder) {
-				t.Errorf("Order length mismatch: got %d, want %d", len(cfg.Order), len(tc.wantOrder))
+			if !test.EqualSlices(cfg.Order, tc.wantOrder) {
+				t.Errorf("Order mismatch: got %v, want %v",
+					cfg.Order, tc.wantOrder)
 			}
-			for i, service := range cfg.Order {
-				if service != tc.wantOrder[i] {
-					t.Fatalf("Order mismatch at index %d: got %s, want %s\ngot:  %v\nwant: %v",
-						i, service, tc.wantOrder[i], cfg.Order, tc.wantOrder)
-				}
-			}
-			// AND the service should be removed if it was renamed
+			// AND the service should be removed if it was renamed.
 			if !tc.fail && tc.oldName != tc.newName && cfg.Service[tc.oldName] != nil {
 				t.Errorf("%q should have been removed, got %+v", tc.oldName, cfg.Service[tc.oldName])
 			}
-			// AND the service should be at the address given
+			// AND the service should be at the address given.
 			if !tc.fail && cfg.Service[tc.newName] != newSVC {
 				if tc.noChange {
 					return
 				}
 				t.Errorf("%q should be at the given address, got\n%+v", tc.newName, cfg.Service[tc.newName])
 			}
-			// AND the DatabaseChannel should have a message waiting if it didn't fail
+			// AND the DatabaseChannel should have a message waiting if it didn't fail.
 			want := 0
 			if !tc.fail {
 				want = 1
@@ -297,7 +292,7 @@ func TestConfig_RenameService(t *testing.T) {
 }
 
 func TestConfig_DeleteService(t *testing.T) {
-	// GIVEN a service to delete and a Config to act on
+	// GIVEN a service to delete and a Config to act on.
 	tests := map[string]struct {
 		name      string
 		wantOrder []string
@@ -325,28 +320,22 @@ func TestConfig_DeleteService(t *testing.T) {
 			logMutex.Lock()
 			cfg := testLoadBasic(file, t)
 
-			// WHEN the service is deleted
+			// WHEN the service is deleted.
 			cfg.DeleteService(tc.name)
 			logMutex.Unlock()
 
-			// THEN the service was removed
+			// THEN the service was removed.
 			cfg.OrderMutex.RLock()
 			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
 			if cfg.Service[tc.name] != nil {
 				t.Errorf("%q was not removed", tc.name)
 			}
-			// AND the order was updated
-			if len(cfg.Order) != len(tc.wantOrder) {
-				t.Errorf("Order length mismatch: got %d, want %d",
-					len(cfg.Order), len(tc.wantOrder))
+			// AND the Order was updated.
+			if !test.EqualSlices(cfg.Order, tc.wantOrder) {
+				t.Errorf("Order mismatch: got %v, want %v",
+					cfg.Order, tc.wantOrder)
 			}
-			for i, service := range cfg.Order {
-				if service != tc.wantOrder[i] {
-					t.Fatalf("Order mismatch at index %d: got %s, want %s\ngot:  %v\nwant: %v",
-						i, service, tc.wantOrder[i], cfg.Order, tc.wantOrder)
-				}
-			}
-			// AND the DatabaseChannel should have a message waiting if the service was deleted
+			// AND the DatabaseChannel should have a message waiting if the service was deleted.
 			want := 0
 			if tc.dbMessage {
 				want = 1
