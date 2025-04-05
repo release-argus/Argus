@@ -120,8 +120,8 @@ func TestCheckFile(t *testing.T) {
 
 					rStr := fmt.Sprint(r)
 					if !util.RegexCheck(tc.panicRegex, rStr) {
-						t.Errorf("want match for %q\nnot: %q",
-							tc.panicRegex, rStr)
+						t.Errorf("%s\nwant: %q\ngot:  %q",
+							packageName, tc.panicRegex, rStr)
 					}
 				}()
 			}
@@ -131,8 +131,8 @@ func TestCheckFile(t *testing.T) {
 
 			// THEN we get here only when we should.
 			if tc.panicRegex != "" {
-				t.Fatalf("Expected panic with %q",
-					tc.panicRegex)
+				t.Fatalf("%s\nExpected panic with %q",
+					packageName, tc.panicRegex)
 			}
 		})
 	}
@@ -168,7 +168,8 @@ func TestAPI_Initialise(t *testing.T) {
 				}
 
 				if !tc.unreadableDB {
-					t.Fatalf("unexpected panic: %v", r)
+					t.Fatalf("%s\nunexpected panic: %v",
+						packageName, r)
 				}
 			}()
 
@@ -177,7 +178,8 @@ func TestAPI_Initialise(t *testing.T) {
 
 			// THEN the app panic'd if the db was unreadable.
 			if tc.unreadableDB {
-				t.Error("Expected a panic")
+				t.Errorf("%s\nExpected a panic",
+					packageName)
 				return
 			}
 			// THEN the status table was created in the db.
@@ -235,25 +237,25 @@ func TestDBQueryService(t *testing.T) {
 
 	// THEN that data can be queried.
 	got := queryRow(t, tAPI.db, serviceName)
-	if (*svc).Status.LatestVersion() != got.LatestVersion() {
-		t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
-			(*svc).Status.LatestVersion(), got.LatestVersion())
+	if got.LatestVersion() != (*svc).Status.LatestVersion() {
+		t.Errorf("%s\nLatestVersion db mismatch\nwant: %qgot:  %q",
+			packageName, (*svc).Status.LatestVersion(), got.LatestVersion())
 	}
-	if (*svc).Status.LatestVersionTimestamp() != got.LatestVersionTimestamp() {
-		t.Errorf("LatestVersionTimestamp %q was not pushed to the db. Got %q",
-			(*svc).Status.LatestVersionTimestamp(), got.LatestVersionTimestamp())
+	if got.LatestVersionTimestamp() != (*svc).Status.LatestVersionTimestamp() {
+		t.Errorf("%s\nLatestVersionTimestamp db mismatch\nwant: %qgot:  %q",
+			packageName, (*svc).Status.LatestVersionTimestamp(), got.LatestVersionTimestamp())
 	}
-	if (*svc).Status.DeployedVersion() != got.DeployedVersion() {
-		t.Errorf("DeployedVersion %q was not pushed to the db. Got %q\n%v\n%s",
-			(*svc).Status.DeployedVersion(), got.DeployedVersion(), got, (*svc).Status.String())
+	if got.DeployedVersion() != (*svc).Status.DeployedVersion() {
+		t.Errorf("%s\nDeployedVersion db mismatch\nwant: %qgot:  %q",
+			packageName, (*svc).Status.DeployedVersion(), got.DeployedVersion())
 	}
-	if (*svc).Status.DeployedVersionTimestamp() != got.DeployedVersionTimestamp() {
-		t.Errorf("DeployedVersionTimestamp %q was not pushed to the db. Got %q",
-			(*svc).Status.DeployedVersionTimestamp(), got.DeployedVersionTimestamp())
+	if got.DeployedVersionTimestamp() != (*svc).Status.DeployedVersionTimestamp() {
+		t.Errorf("%s\nDeployedVersionTimestamp db mismatch\nwant: %qgot:  %q",
+			packageName, (*svc).Status.DeployedVersionTimestamp(), got.DeployedVersionTimestamp())
 	}
-	if (*svc).Status.ApprovedVersion() != got.ApprovedVersion() {
-		t.Errorf("ApprovedVersion %q was not pushed to the db. Got %q",
-			(*svc).Status.ApprovedVersion(), got.ApprovedVersion())
+	if got.ApprovedVersion() != (*svc).Status.ApprovedVersion() {
+		t.Errorf("%s\nApprovedVersion db mismatch\nwant: %qgot:  %q",
+			packageName, (*svc).Status.ApprovedVersion(), got.ApprovedVersion())
 	}
 }
 
@@ -297,8 +299,8 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 				)
 			}
 			if len(tAPI.config.Order) <= 1 {
-				t.Fatalf("Want to test with more services present, have=%d",
-					len(tAPI.config.Order))
+				t.Fatalf("%s\nWant to test with more services present, have=%d",
+					packageName, len(tAPI.config.Order))
 			}
 			util.RemoveIndex(&tAPI.config.Order, 0)
 			_, err := tAPI.db.Exec(sqlStmt[:len(sqlStmt)-1] + ";")
@@ -314,7 +316,8 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 				}
 
 				if !tc.databaseDeleted {
-					t.Fatalf("unexpected panic: %v", r)
+					t.Fatalf("%s\nunexpected panic: %v",
+						packageName, r)
 				}
 			}()
 			// Delete the DB file.
@@ -327,7 +330,8 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 
 			// THEN the app panic'd if the db was deleted.
 			if tc.databaseDeleted {
-				t.Error("Expected a panic")
+				t.Errorf("%s\nExpected a panic",
+					packageName)
 				return
 			}
 			// AND the rows of Services not in .All are returned.
@@ -357,13 +361,13 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 				err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
 				svc := tAPI.config.Service[id]
 				if svc == nil || !util.Contains(tAPI.config.Order, id) {
-					t.Errorf("%q should have been removed from the table",
-						id)
+					t.Errorf("%s\n%q should have been removed from the table",
+						packageName, id)
 				}
 			}
 			if count != len(tAPI.config.Order) {
-				t.Errorf("Only %d were left in the table. Expected %d",
-					count, len(tAPI.config.Order))
+				t.Errorf("%s\nOrder length mismatch\nwant: %d\ngot:  %d",
+					packageName, len(tAPI.config.Order), count)
 			}
 		})
 	}
@@ -386,12 +390,14 @@ func TestAPI_Run(t *testing.T) {
 	otherCfg.Settings.Data.DatabaseFile = "TestAPI_Run-copy.db"
 	bytesRead, err := os.ReadFile(cfg.Settings.Data.DatabaseFile)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%s\n%v",
+			packageName, err)
 	}
 	t.Cleanup(func() { os.Remove(otherCfg.Settings.Data.DatabaseFile) })
 	err = os.WriteFile(otherCfg.Settings.Data.DatabaseFile, bytesRead, os.FileMode(0644))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%s\n%v",
+			packageName, err)
 	}
 	tAPI := api{config: otherCfg}
 	t.Cleanup(func() { dbCleanup(&tAPI) })
@@ -406,8 +412,8 @@ func TestAPI_Run(t *testing.T) {
 	want.SetApprovedVersion("0.0.1", false)
 	want.SetDeployedVersion("0.0.0", "2020-01-01T01:01:01Z", false)
 	if got.LatestVersion() != want.LatestVersion() {
-		t.Errorf("Expected %q to be updated to %q, not %q.\nWant %v",
-			cell.Column, cell.Value, got, want.String())
+		t.Errorf("%s\nwant: %q to be updated to %q\ngot:  %q",
+			packageName, cell.Column, cell.Value, got)
 	}
 }
 
@@ -454,28 +460,28 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 	tAPI.extractServiceStatus()
 
 	// THEN the Status in the Config is updated.
-	errMsg := "Expected %q to be updated to %q, got %q.\nWant %q"
+	errMsg := "%s\n%q not updated correctly\nwant: %q\ngot:  %q (%+v)"
 	for i := range wantStatus {
 		row := queryRow(t, tAPI.db, *wantStatus[i].ServiceID)
 		if row.LatestVersion() != wantStatus[i].LatestVersion() {
 			t.Errorf(errMsg,
-				"latest_version", row.LatestVersion(), row, wantStatus[i].String())
+				packageName, "latest_version", wantStatus[i].LatestVersion(), row.LatestVersion(), row)
 		}
 		if row.LatestVersionTimestamp() != wantStatus[i].LatestVersionTimestamp() {
 			t.Errorf(errMsg,
-				"latest_version_timestamp", row.LatestVersionTimestamp(), row, wantStatus[i].String())
+				packageName, "latest_version_timestamp", wantStatus[i].LatestVersionTimestamp(), row.LatestVersionTimestamp(), row)
 		}
 		if row.DeployedVersion() != wantStatus[i].DeployedVersion() {
 			t.Errorf(errMsg,
-				"deployed_version", row.DeployedVersion(), row, wantStatus[i].String())
+				packageName, "deployed_version", wantStatus[i].DeployedVersion(), row.DeployedVersion(), row)
 		}
 		if row.DeployedVersionTimestamp() != wantStatus[i].DeployedVersionTimestamp() {
 			t.Errorf(errMsg,
-				"deployed_version_timestamp", row.DeployedVersionTimestamp(), row, wantStatus[i].String())
+				packageName, "deployed_version_timestamp", wantStatus[i].DeployedVersionTimestamp(), row.DeployedVersionTimestamp(), row)
 		}
 		if row.ApprovedVersion() != wantStatus[i].ApprovedVersion() {
 			t.Errorf(errMsg,
-				"approved_version", row.ApprovedVersion(), row, wantStatus[i].String())
+				packageName, "approved_version", wantStatus[i].ApprovedVersion(), row.ApprovedVersion(), row)
 		}
 	}
 }
@@ -516,11 +522,13 @@ func Test_UpdateTypes(t *testing.T) {
 			db, err := sql.Open("sqlite", databaseFile)
 			// Enable foreign key constraint enforcement.
 			if _, err := db.Exec("PRAGMA foreign_keys = ON;"); err != nil {
-				t.Fatalf("Failed to enable foreign key constraints: %s", err)
+				t.Fatalf("%s\nFailed to enable foreign key constraints: %s",
+					packageName, err)
 			}
 			t.Cleanup(func() { os.Remove(databaseFile) })
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("%s\n%v",
+					packageName, err)
 			}
 			sqlStmtTable := `
 				CREATE TABLE IF NOT EXISTS status (
@@ -570,7 +578,8 @@ func Test_UpdateTypes(t *testing.T) {
 
 				releaseStdout()
 				if !expectPanic {
-					t.Fatalf("unexpected panic: %v", r)
+					t.Fatalf("%s\nunexpected panic: %v",
+						packageName, r)
 				}
 			}()
 			// Delete the DB file.
@@ -614,7 +623,8 @@ func Test_UpdateTypes(t *testing.T) {
 
 			// THEN the app panic'd if the db was deleted, or the table manipulation failed.
 			if expectPanic {
-				t.Error("Expected a panic")
+				t.Errorf("%s\nExpected a panic",
+					packageName)
 				releaseStdout()
 				return
 			}
@@ -624,8 +634,8 @@ func Test_UpdateTypes(t *testing.T) {
 				var columnType string
 				db.QueryRow("SELECT type FROM pragma_table_info('status') WHERE name = 'latest_version'").Scan(&columnType)
 				if columnType != "TEXT" {
-					t.Errorf("Expected %q to be %q, not %q",
-						row, "TEXT", columnType)
+					t.Errorf("%s\ncolumn type mismatch on %q\nwant: %q\ngot:  %q",
+						packageName, row, "TEXT", columnType)
 				}
 			}
 			// AND all rows were carried over.
@@ -633,20 +643,25 @@ func Test_UpdateTypes(t *testing.T) {
 			if got.LatestVersion() != latestVersion || got.LatestVersionTimestamp() != latestVersionTimestamp ||
 				got.DeployedVersion() != deployedVersion || got.DeployedVersionTimestamp() != deployedVersionTimestamp ||
 				got.ApprovedVersion() != approvedVersion {
-				t.Errorf("Row wasn't carried over correctly.\nHad: lv=%q, lvt=%q, dv=%q, dvt=%q, av=%q\nGot: lv=%q, lvt=%q, dv=%q, dvt=%q, av=%q",
-					latestVersion, latestVersionTimestamp, deployedVersion, deployedVersionTimestamp, approvedVersion,
-					got.LatestVersion(), got.LatestVersionTimestamp(), got.DeployedVersion(), got.DeployedVersionTimestamp(), got.ApprovedVersion())
+				t.Errorf("%s\nRow wasn't carried over correctly.\nHad: lv=%q, lvt=%q, dv=%q, dvt=%q, av=%q\nGot: lv=%q, lvt=%q, dv=%q, dvt=%q, av=%q",
+					packageName,
+					latestVersion, latestVersionTimestamp,
+					deployedVersion, deployedVersionTimestamp,
+					approvedVersion,
+					got.LatestVersion(), got.LatestVersionTimestamp(),
+					got.DeployedVersion(), got.DeployedVersionTimestamp(),
+					got.ApprovedVersion())
 			}
 			// AND the conversion was printed to stdout.
 			stdout := releaseStdout()
 			want := "Finished updating column types"
 			contains := strings.Contains(stdout, want)
 			if tc.columnType == "TEXT" && contains {
-				t.Errorf("Table started as %q, so should not have been updated. Got %q",
-					tc.columnType, stdout)
+				t.Errorf("%s\nTable started as %q, so should not have been updated\ngot: %q",
+					packageName, tc.columnType, stdout)
 			} else if tc.columnType == "STRING" && !contains {
-				t.Errorf("Table started as %q, so should have been updated. Got %q",
-					tc.columnType, stdout)
+				t.Errorf("%s\nTable started as %q, so should have been updated\ngot: %q",
+					packageName, tc.columnType, stdout)
 			}
 			time.Sleep(100 * time.Millisecond)
 		})

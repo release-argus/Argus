@@ -75,16 +75,16 @@ func TestSlice_Metrics(t *testing.T) {
 				want += 2 * len(*tc.slice)
 			}
 			if got != want {
-				t.Errorf("got %d metrics, expecting %d",
-					got, want)
+				t.Errorf("%s\nmetric count mismatch after InitMetrics()\nwant: %d\ngot:  %d",
+					name, want, got)
 			}
 
 			// AND the metrics can be deleted.
 			tc.slice.DeleteMetrics()
 			got = testutil.CollectAndCount(metric.WebHookResultTotal)
 			if got != had {
-				t.Errorf("deleted metrics but got %d, expecting %d",
-					got, want)
+				t.Errorf("%s\nmetric count mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
+					packageName, had, got)
 			}
 		})
 	}
@@ -121,16 +121,16 @@ func TestWebHook_Metrics(t *testing.T) {
 				wantC = 0
 			}
 			if (gotC - hadC) != wantC {
-				t.Errorf("%d Counter metrics were initialised, expecting %d",
-					(gotC - hadC), wantC)
+				t.Errorf("%s\nmetric count mismatch after initMetrics()\nwant: %d\ngot:  %d",
+					packageName, wantC, (gotC - hadC))
 			}
 
 			// AND it can be deleted.
 			webhook.deleteMetrics()
 			gotC = testutil.CollectAndCount(metric.WebHookResultTotal)
 			if gotC != hadC {
-				t.Errorf("Counter metrics were not deleted, still have %d. expecting %d",
-					gotC, hadC)
+				t.Errorf("%s\nmetric count mismatch after deleteMetrics()\nwant: %d\ngot:  %d",
+					packageName, hadC, gotC)
 			}
 		})
 	}
@@ -157,30 +157,30 @@ func TestWebHook_Init(t *testing.T) {
 	webhook.ID = "TestInit"
 
 	// THEN pointers to those vars are handed out to the WebHook:
-	// 	main
+	// 	Main:
 	if webhook.Main != &main {
-		t.Errorf("Main was not handed to the WebHook correctly\n want: %v\ngot:  %v",
-			&main, webhook.Main)
+		t.Errorf("%s\nMain was not handed to the WebHook correctly\nwant: %v\ngot:  %v",
+			packageName, &main, webhook.Main)
 	}
-	// 	defaults
+	// 	Defaults:
 	if webhook.Defaults != &defaults {
-		t.Errorf("Defaults were not handed to the WebHook correctly\n want: %v\ngot:  %v",
-			&defaults, webhook.Defaults)
+		t.Errorf("%s\nDefaults were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
+			packageName, &defaults, webhook.Defaults)
 	}
-	// 	hardDefaults
+	// 	HardDefaults:
 	if webhook.HardDefaults != &hardDefaults {
-		t.Errorf("HardDefaults were not handed to the WebHook correctly\n want: %v\ngot:  %v",
-			&hardDefaults, webhook.HardDefaults)
+		t.Errorf("%s\nHardDefaults were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
+			packageName, &hardDefaults, webhook.HardDefaults)
 	}
-	// 	status
+	// 	Status:
 	if webhook.ServiceStatus != &status {
-		t.Errorf("Status was not handed to the WebHook correctly\n want: %v\ngot:  %v",
-			&status, webhook.ServiceStatus)
+		t.Errorf("%s\nStatus was not handed to the WebHook correctly\nwant: %v\ngot:  %v",
+			packageName, &status, webhook.ServiceStatus)
 	}
-	// 	options
+	// 	Options:
 	if webhook.Notifiers.Shoutrrr != &notifiers {
-		t.Errorf("Notifiers were not handed to the WebHook correctly\n want: %v\ngot:  %v",
-			&notifiers, webhook.Notifiers.Shoutrrr)
+		t.Errorf("%s\nNotifiers were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
+			packageName, &notifiers, webhook.Notifiers.Shoutrrr)
 	}
 }
 
@@ -261,39 +261,39 @@ func TestSlice_Init(t *testing.T) {
 			// THEN pointers to those vars are handed out to the WebHook:
 			if tc.nilSlice {
 				if tc.slice != nil {
-					t.Fatalf("expecting the Slice to be nil, not %v",
-						*tc.slice)
+					t.Fatalf("%s\nslice mismatch\nwant: nil\ngot:  %v",
+						packageName, *tc.slice)
 				}
 				return
 			}
 			for _, webhook := range *tc.slice {
-				// 	main
+				// 	Main:
 				if webhook.Main == nil {
-					t.Errorf("Main of the WebHook was not initialised. got: %v",
-						webhook.Main)
+					t.Errorf("%s\nMain of the WebHook was not initialised\ngot: %v",
+						packageName, webhook.Main)
 				} else if tc.mains != nil && (*tc.mains)[webhook.ID] != nil && webhook.Main != (*tc.mains)[webhook.ID] {
-					t.Errorf("Main were not handed to the WebHook correctly\n want: %v\ngot:  %v",
-						(*tc.mains)[webhook.ID], webhook.Main)
+					t.Errorf("%s\nMain were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
+						packageName, (*tc.mains)[webhook.ID], webhook.Main)
 				}
-				// 	defaults
+				// 	Defaults:
 				if webhook.Defaults != tc.defaults {
-					t.Errorf("Defaults were not handed to the WebHook correctly\n want: %v\ngot:  %v",
-						&tc.defaults, webhook.Defaults)
+					t.Errorf("%s\nDefaults were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
+						packageName, &tc.defaults, webhook.Defaults)
 				}
-				// 	hardDefaults
+				// 	HardDefaults:
 				if webhook.HardDefaults != tc.hardDefaults {
-					t.Errorf("HardDefaults were not handed to the WebHook correctly\n want: %v\ngot:  %v",
-						&tc.hardDefaults, webhook.HardDefaults)
+					t.Errorf("%s\nHardDefaults were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
+						packageName, &tc.hardDefaults, webhook.HardDefaults)
 				}
-				// 	status
+				// 	Status:
 				if webhook.ServiceStatus != &serviceStatus {
-					t.Errorf("Status was not handed to the WebHook correctly\n want: %v\ngot:  %v",
-						&serviceStatus, webhook.ServiceStatus)
+					t.Errorf("%s\nStatus was not handed to the WebHook correctly\nwant: %v\ngot:  %v",
+						packageName, &serviceStatus, webhook.ServiceStatus)
 				}
-				// 	notifiers
+				// 	Notifiers:
 				if webhook.Notifiers.Shoutrrr != &notifiers {
-					t.Errorf("Notifiers were not handed to the WebHook correctly\n want: %v\ngot:  %v",
-						&notifiers, webhook.Notifiers.Shoutrrr)
+					t.Errorf("%s\nNotifiers were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
+						packageName, &notifiers, webhook.Notifiers.Shoutrrr)
 				}
 			}
 		})

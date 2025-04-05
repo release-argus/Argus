@@ -84,8 +84,8 @@ func TestHTTP_Counts(t *testing.T) {
 			// THEN the set values are returned in the JSON response.
 			data, _ := io.ReadAll(res.Body)
 			if dataStr := string(data); dataStr != wantJSON {
-				t.Errorf("/api/v1/counts body mismatch\n%q\nwant:\n%q",
-					dataStr, wantJSON)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, wantJSON, dataStr)
 			}
 		})
 	}

@@ -30,7 +30,7 @@ import (
 )
 
 func TestController_SetExecuting(t *testing.T) {
-	// GIVEN a Controller with various Commands
+	// GIVEN a Controller with various Commands.
 	controller := Controller{}
 	controller.Init(
 		&status.Status{ServiceID: test.StringPtr("service_id")},
@@ -92,11 +92,11 @@ func TestController_SetExecuting(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN SetNextRunnable is called
+			// WHEN SetNextRunnable is called.
 			ranAt := time.Now().UTC()
 			controller.SetExecuting(tc.index, tc.executing)
 
-			// THEN the result is expected
+			// THEN the result is expected.
 			got := ranAt
 			if tc.index < len(*controller.Command) {
 				got = (controller.NextRunnable(tc.index))
@@ -104,15 +104,15 @@ func TestController_SetExecuting(t *testing.T) {
 			minTime := ranAt.Add(tc.timeDifferenceMin)
 			maxTime := ranAt.Add(tc.timeDifferenceMax)
 			if !(minTime.Before(got)) || !(maxTime.After(got)) {
-				t.Fatalf("ran at\n%s\nwant between:\n%s and\n%s\ngot:\n%s",
-					ranAt, minTime, maxTime, got)
+				t.Fatalf("%s\nran at\n%s\nwant between:\n%s and\n%s\ngot:\n%s",
+					packageName, ranAt, minTime, maxTime, got)
 			}
 		})
 	}
 }
 
 func TestController_IsRunnable(t *testing.T) {
-	// GIVEN a Controller with various Commands
+	// GIVEN a Controller with various Commands.
 	controller := Controller{}
 	controller.Init(
 		&status.Status{ServiceID: test.StringPtr("service_id")},
@@ -150,20 +150,20 @@ func TestController_IsRunnable(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN IsRunnable is called
+			// WHEN IsRunnable is called.
 			got := controller.IsRunnable(tc.index)
 
-			// THEN the result is expected
+			// THEN the result is expected.
 			if got != tc.want {
-				t.Errorf("want: %t\ngot:\n%t",
-					tc.want, got)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestController_NextRunnable(t *testing.T) {
-	// GIVEN a Controller with various Commands
+	// GIVEN a Controller with various Commands.
 	controller := Controller{}
 	controller.Init(
 		&status.Status{ServiceID: test.StringPtr("service_id")},
@@ -202,26 +202,27 @@ func TestController_NextRunnable(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN NextRunnable is called
+			// WHEN NextRunnable is called.
 			got := controller.NextRunnable(tc.index)
 
-			// THEN the result is expected
+			// THEN the result is expected.
 			if tc.outOfRange {
 				var defaultTime time.Time
+				// out of range index should return the default time.
 				if got != defaultTime {
-					t.Fatalf("want: %s\ngot:\n%s",
-						defaultTime, got)
+					t.Fatalf("%s\nout of range\nwant: %s\ngot:  %s",
+						packageName, defaultTime, got)
 				}
 			} else if got != controller.NextRunnable(tc.index) {
-				t.Fatalf("want: %s\ngot:\n%s",
-					controller.NextRunnable(tc.index), got)
+				t.Fatalf("%s\nwant: %s\ngot:  %s",
+					packageName, controller.NextRunnable(tc.index), got)
 			}
 		})
 	}
 }
 
 func TestController_SetNextRunnable(t *testing.T) {
-	// GIVEN a Controller with various Commands
+	// GIVEN a Controller with various Commands.
 	controller := Controller{}
 	controller.Init(
 		&status.Status{ServiceID: test.StringPtr("service_id")},
@@ -255,28 +256,28 @@ func TestController_SetNextRunnable(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			// Reset nextRunnables
+			// Reset nextRunnables.
 			for i := range nextRunnables {
 				controller.SetNextRunnable(i, nextRunnables[i])
 			}
 
-			// WHEN SetNextRunnable is called
+			// WHEN SetNextRunnable is called.
 			controller.SetNextRunnable(tc.index, tc.setTo)
 
-			// THEN the NextRunnable is changed if the index is in range
+			// THEN the NextRunnable is changed if the index is in range.
 			if tc.index < len(*controller.Command) {
 				got := controller.NextRunnable(tc.index)
 				if !got.Equal(tc.setTo) {
-					t.Errorf("want: %s\ngot:\n%s",
-						tc.setTo, got)
+					t.Errorf("%s\nwant: %s\ngot:  %s",
+						packageName, tc.setTo, got)
 				}
 			} else {
-				// Ensure out of range index does not panic and does not change anything
+				// Ensure out of range index does not panic and does not change anything.
 				for i := range nextRunnables {
 					got := controller.NextRunnable(i)
 					if !got.Equal(nextRunnables[i]) {
-						t.Errorf("index out of range should not change nextRunnable. want: %s\ngot:\n%s",
-							nextRunnables[i], got)
+						t.Errorf("%s\nindex out of range should not change nextRunnable. want: %s\ngot:  %s",
+							packageName, nextRunnables[i], got)
 					}
 				}
 			}
@@ -285,7 +286,7 @@ func TestController_SetNextRunnable(t *testing.T) {
 }
 
 func TestCommand_String(t *testing.T) {
-	// GIVEN a Command
+	// GIVEN a Command.
 	tests := map[string]struct {
 		cmd  *Command
 		want string
@@ -310,20 +311,20 @@ func TestCommand_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the command is stringified with String()
+			// WHEN the command is stringified with String().
 			got := tc.cmd.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:\n%q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestCommand_FormattedString(t *testing.T) {
-	// GIVEN a Command
+	// GIVEN a Command.
 	tests := map[string]struct {
 		cmd  Command
 		want string
@@ -343,20 +344,20 @@ func TestCommand_FormattedString(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the command is stringified with FormattedString
+			// WHEN the command is stringified with FormattedString.
 			got := tc.cmd.FormattedString()
 
-			// THEN the result is expected
+			// THEN the result is expected.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:\n%q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestController_Metrics(t *testing.T) {
-	// GIVEN a Controller with multiple Commands
+	// GIVEN a Controller with multiple Commands.
 	controller := &Controller{}
 	controller.Init(
 		&status.Status{ServiceID: test.StringPtr("TestController_Metrics")},
@@ -376,76 +377,76 @@ func TestController_Metrics(t *testing.T) {
 		controller.SetNextRunnable(i, nextRunnables[i])
 	}
 
-	// WHEN the Prometheus metrics are initialised with initMetrics
+	// WHEN the Prometheus metrics are initialised with initMetrics.
 	hadC := testutil.CollectAndCount(metric.CommandResultTotal)
 	hadG := testutil.CollectAndCount(metric.LatestVersionIsDeployed)
 	controller.InitMetrics()
 
-	// THEN it can be collected
-	// counters
+	// THEN it can be collected.
+	// 	Counters:
 	gotC := testutil.CollectAndCount(metric.CommandResultTotal)
 	wantC := 2 * len(*controller.Command)
 	if (gotC - hadC) != wantC {
-		t.Errorf("Controller.InitMetrics() %d Counter metrics were initialised, expecting %d",
-			(gotC - hadC), wantC)
+		t.Errorf("%s\nCounter metrics mismatch after InitMetrics() \nwant: %d\ngot:  %d",
+			packageName, wantC, (gotC - hadC))
 	}
-	// gauges
+	// 	Gauges:
 	gotG := testutil.CollectAndCount(metric.LatestVersionIsDeployed)
 	wantG := 0
 	if (gotG - hadG) != wantG {
-		t.Errorf("Controller.InitMetrics() %d Gauge metrics were initialised, expecting %d",
-			(gotG - hadG), wantG)
+		t.Errorf("%s\nGauge metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
+			packageName, wantG, (gotG - hadG))
 	}
 
-	// AND it can be deleted
-	// counters
+	// AND it can be deleted.
+	// 	Counters:
 	controller.DeleteMetrics()
 	gotC = testutil.CollectAndCount(metric.CommandResultTotal)
 	if gotC != hadC {
-		t.Errorf("Controller.DeleteMetrics() was called, but Counter metrics mismatch got %d, expecting %d",
-			gotC, hadC)
+		t.Errorf("%s\nCounter metrics mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
+			packageName, hadC, gotC)
 	}
-	// gauges
+	// 	Gauges:
 	gotG = testutil.CollectAndCount(metric.LatestVersionIsDeployed)
 	if gotG != hadG {
-		t.Errorf("Controller.DeleteMetrics() was called, but Gauge metrics mismatch. got %d, expecting %d",
-			gotG, hadG)
+		t.Errorf("%s\nGauge metrics mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
+			packageName, hadG, gotG)
 	}
 
-	// AND a nil Controller doesn't panic
+	// AND a nil Controller doesn't panic.
 	controller = nil
-	// InitMetrics
+	// InitMetrics:
 	controller.InitMetrics()
-	// counters
+	// 	Counter:
 	gotC = testutil.CollectAndCount(metric.CommandResultTotal)
 	if gotC != hadC {
-		t.Errorf("Controller.InitMetrics() on nil Controller shouldn't have changed the Counter metrics, got %d. expecting %d",
-			gotC, hadC)
+		t.Errorf("%s\nInitMetrics() on nil Controller shouldn't have changed the Counter metrics\nwant: %d\ngot:  %d",
+			packageName, hadC, gotC)
 	}
-	// gauges
+	// 	Gauges:
 	gotG = testutil.CollectAndCount(metric.LatestVersionIsDeployed)
 	if gotG != hadG {
-		t.Errorf("Controller.InitMetrics() on nil Controller shouldn't have changed the Gauge metrics, got %d. expecting %d",
-			gotG, hadG)
+		t.Errorf("%s\nInitMetrics() on nil Controller shouldn't have changed the Gauge metrics\nwant: %d\ngot:  %d",
+			packageName, hadG, gotG)
 	}
-	// DeleteMetrics
+	// DeleteMetrics:
 	controller.DeleteMetrics()
-	// counters
+	// 	Counters:
 	gotC = testutil.CollectAndCount(metric.CommandResultTotal)
 	if gotC != hadC {
-		t.Errorf("Controller.DeleteMetrics() on nil Controller shouldn't have changed the Counter metrics, got %d. expecting %d",
-			gotC, hadC)
+		t.Errorf("%s\nDeleteMetrics() on nil Controller shouldn't have changed the Counter metrics\nwant: %d\ngot:  %d",
+			packageName, hadC, gotC)
 	}
-	// gauges
+	// 	Gauges:
 	gotG = testutil.CollectAndCount(metric.LatestVersionIsDeployed)
 	if gotG != hadG {
-		t.Errorf("Controller.DeleteMetrics() on nil Controller shouldn't have changed the Gauge metrics, got %d. expecting %d",
-			gotG, hadG)
+		t.Errorf("%s\nDeleteMetrics() on nil Controller shouldn't have changed the Gauge metrics\nwant: %d\ngot:  %d",
+			packageName, hadG, gotG)
 	}
 }
 
 func TestCommand_Init(t *testing.T) {
-	// GIVEN a Command
+	// GIVEN a Command.
 	tests := map[string]struct {
 		nilController     bool
 		command           *Slice
@@ -489,7 +490,7 @@ func TestCommand_Init(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN a controller is initialised with Init
+			// WHEN a controller is initialised with Init.
 			var controller *Controller
 			if !tc.nilController {
 				controller = &Controller{}
@@ -502,34 +503,34 @@ func TestCommand_Init(t *testing.T) {
 				tc.shoutrrrNotifiers,
 				tc.parentInterval)
 
-			// THEN the result is expected
-			// nilController
+			// THEN the result is expected.
+			// 	nilController:
 			if tc.nilController {
 				if controller != nil {
-					t.Fatalf("Init of nil Controller gave %v",
-						controller)
+					t.Fatalf("%s\nInit of nil Controller gave %v",
+						packageName, controller)
 				}
 				return
 			}
-			// serviceStatus
+			// 	serviceStatus:
 			if controller.ServiceStatus != &serviceStatus {
-				t.Errorf("want: ServiceStatus=%v\ngot:  ServiceStatus=%v",
-					controller.ServiceStatus, &serviceStatus)
+				t.Errorf("%s\nwant: ServiceStatus=%v\ngot:  ServiceStatus=%v",
+					packageName, controller.ServiceStatus, &serviceStatus)
 			}
-			// command
+			// 	command:
 			if controller.Command != tc.command {
-				t.Errorf("want: Command=%v\ngot:  Command=%v",
-					controller.Command, tc.command)
+				t.Errorf("%s\nwant: Command=%v\ngot:  Command=%v",
+					packageName, controller.Command, tc.command)
 			}
-			// shoutrrrNotifiers
+			// 	shoutrrrNotifiers:
 			if controller.Notifiers.Shoutrrr != tc.shoutrrrNotifiers {
-				t.Errorf("want: Notifiers.Shoutrrr=%v\ngot:  Notifiers.Shoutrrr=%v",
-					controller.Notifiers.Shoutrrr, tc.shoutrrrNotifiers)
+				t.Errorf("%s\nwant: Notifiers.Shoutrrr=%v\ngot:  Notifiers.Shoutrrr=%v",
+					packageName, controller.Notifiers.Shoutrrr, tc.shoutrrrNotifiers)
 			}
-			// parentInterval
+			// 	parentInterval:
 			if controller.ParentInterval != tc.parentInterval {
-				t.Errorf("want: ParentInterval=%v\ngot:  ParentInterval=%v",
-					controller.ParentInterval, tc.parentInterval)
+				t.Errorf("%s\nwant: ParentInterval=%v\ngot:  ParentInterval=%v",
+					packageName, controller.ParentInterval, tc.parentInterval)
 			}
 		})
 	}

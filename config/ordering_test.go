@@ -23,7 +23,7 @@ import (
 )
 
 func TestConfig_LoadOrdering(t *testing.T) {
-	// GIVEN we have configs to load
+	// GIVEN we have configs to load.
 	tests := map[string]struct {
 		file  func(path string, t *testing.T)
 		order []string
@@ -67,27 +67,28 @@ func TestConfig_LoadOrdering(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're accessing flag env vars
+			// t.Parallel() - Cannot run in parallel since we're accessing flag env vars.
 
 			file := fmt.Sprintf("%s.yml", name)
 			tc.file(file, t)
 
-			// WHEN they are loaded
+			// WHEN they are loaded.
 			flags := make(map[string]bool)
 			var config Config
-			loadMutex.Lock() // Protect flag env vars
+			loadMutex.Lock() // Protect flag env vars.
 			config.Load(file, &flags)
 			t.Cleanup(func() {
 				os.Remove(config.Settings.DataDatabaseFile())
 				loadMutex.Unlock()
 			})
 
-			// THEN it gets the ordering correctly
+			// THEN it gets the ordering correctly.
 			gotOrder := config.Order
 			for i := range gotOrder {
-				if i >= len(gotOrder) || tc.order[i] != (gotOrder)[i] {
-					t.Fatalf("%q %s - order:\nwant: %v\ngot:  %v",
-						file, name, tc.order, gotOrder)
+				if i >= len(gotOrder) ||
+					tc.order[i] != (gotOrder)[i] {
+					t.Fatalf("%s\n%q %s - order:\nwant: %v\ngot:  %v",
+						packageName, file, name, tc.order, gotOrder)
 				}
 			}
 		})
@@ -95,7 +96,7 @@ func TestConfig_LoadOrdering(t *testing.T) {
 }
 
 func TestIndentationW(t *testing.T) {
-	// GIVEN lines of varying indentation
+	// GIVEN lines of varying indentation.
 	tests := map[string]struct {
 		input, want string
 	}{
@@ -120,13 +121,13 @@ func TestIndentationW(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Indentation is called on it
+			// WHEN Indentation is called on it.
 			got := Indentation(tc.input)
 
-			// THEN we get the indentation
+			// THEN we get the indentation.
 			if got != tc.want {
-				t.Errorf("%s - %q:\nwant: %q\ngot:  %q",
-					name, tc.input, tc.want, got)
+				t.Errorf("%s\n%s - %q:\nwant: %q\ngot:  %q",
+					packageName, name, tc.input, tc.want, got)
 			}
 		})
 	}

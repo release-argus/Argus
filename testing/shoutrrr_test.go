@@ -88,11 +88,11 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 
 			// THEN a list of all Shoutrrrs will be returned.
 			if len(got) != len(tc.want) {
-				t.Fatalf("lists differ in length\nwant: %s\ngot:  %s",
-					tc.want, got)
+				t.Fatalf("%s\nlists length mismatch\nwant: %s\ngot:  %s",
+					packageName, tc.want, got)
 			}
 			gotIndex := 0
-			for gotIndex != 0 {
+			for 0 != gotIndex {
 				found := false
 				for wantIndex := range tc.want {
 					if got[gotIndex] == tc.want[wantIndex] {
@@ -103,8 +103,8 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 					}
 				}
 				if !found {
-					t.Fatalf("want: %v\ngot: %v",
-						tc.want, got)
+					t.Fatalf("%s\nwant: %v\ngot:  %v",
+						packageName, tc.want, got)
 				}
 				gotIndex--
 			}
@@ -399,8 +399,8 @@ func TestFindShoutrrr(t *testing.T) {
 
 					rStr := fmt.Sprint(r)
 					if !util.RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf("expected a panic that matched %q\ngot: %q",
-							*tc.panicRegex, rStr)
+						t.Errorf("%s\nexpected a panic that matched %q\ngot: %q",
+							packageName, *tc.panicRegex, rStr)
 					}
 				}()
 			}
@@ -419,21 +419,21 @@ func TestFindShoutrrr(t *testing.T) {
 			stdout := releaseStdout()
 			if tc.stdoutRegex != nil {
 				if !util.RegexCheck(*tc.stdoutRegex, stdout) {
-					t.Fatalf("want match for %q\nnot: %q",
-						*tc.stdoutRegex, stdout)
+					t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, *tc.stdoutRegex, stdout)
 				}
 			}
 			// If the notifier should have been found in the root or in a service.
 			if tc.foundInRoot != nil {
 				if *tc.foundInRoot {
-					if tc.cfg.Notify[tc.flag].String("") != got.String("") {
-						t.Fatalf("want:\n%v\n\ngot:\n%v",
-							tc.cfg.Notify[tc.flag].String(""), got.String(""))
+					if got.String("") != tc.cfg.Notify[tc.flag].String("") {
+						t.Fatalf("%s\nwasn't found in .Notify\nwant: %q\n\ngot:  %q",
+							packageName, tc.cfg.Notify[tc.flag].String(""), got.String(""))
 					}
 				} else {
-					if tc.cfg.Service["argus"].Notify[tc.flag].String("") != got.String("") {
-						t.Fatalf("want: %v\ngot: %v",
-							tc.cfg.Service["argus"].Notify[tc.flag].String(""), got.String(""))
+					if got.String("") != tc.cfg.Service["argus"].Notify[tc.flag].String("") {
+						t.Fatalf("%s\nwasn't found in Service\nwant: %q\ngot:  %q",
+							packageName, tc.cfg.Service["argus"].Notify[tc.flag].String(""), got.String(""))
 					}
 					// Would have been given in the Init.
 					got.Defaults = tc.cfg.Defaults.Notify[got.Type]
@@ -441,9 +441,9 @@ func TestFindShoutrrr(t *testing.T) {
 			}
 			// If there were Defaults for that type.
 			if tc.cfg.Defaults.Notify[got.Type] != nil {
-				if tc.cfg.Defaults.Notify[got.Type].String("") != got.Defaults.String("") {
-					t.Fatalf("defaults were not applied\nwant: %v\ngot: %v",
-						tc.cfg.Defaults.Notify[got.Type].String(""), got.Defaults.String(""))
+				if got.Defaults.String("") != tc.cfg.Defaults.Notify[got.Type].String("") {
+					t.Fatalf("%s\ndefaults were not applied\nwant: %v\ngot:  %v",
+						packageName, tc.cfg.Defaults.Notify[got.Type].String(""), got.Defaults.String(""))
 				}
 			}
 		})
@@ -588,8 +588,8 @@ func TestNotifyTest(t *testing.T) {
 
 					rStr := fmt.Sprint(r)
 					if !util.RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf("expected a panic that matched %q\ngot: %q",
-							*tc.panicRegex, rStr)
+						t.Errorf("%s\nexpected a panic that matched %q\ngot: %q",
+							packageName, *tc.panicRegex, rStr)
 					}
 				}()
 			}
@@ -604,8 +604,8 @@ func TestNotifyTest(t *testing.T) {
 			stdout := releaseStdout()
 			if tc.stdoutRegex != nil {
 				if !util.RegexCheck(*tc.stdoutRegex, stdout) {
-					t.Errorf("want match for %q\nnot: %q",
-						*tc.stdoutRegex, stdout)
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, *tc.stdoutRegex, stdout)
 				}
 			}
 		})

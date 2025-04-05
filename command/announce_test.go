@@ -27,7 +27,7 @@ import (
 )
 
 func TestController_AnnounceCommand(t *testing.T) {
-	// GIVEN Controllers with various failed Command announces
+	// GIVEN Controllers with various failed Command announces.
 	tests := map[string]struct {
 		nilChannel     bool
 		index          int
@@ -79,10 +79,10 @@ func TestController_AnnounceCommand(t *testing.T) {
 			}
 			time.Sleep(time.Millisecond)
 
-			// WHEN AnnounceCommand is run
+			// WHEN AnnounceCommand is run.
 			go controller.AnnounceCommand(tc.index)
 
-			// THEN the correct response is received
+			// THEN the correct response is received.
 			if controller.ServiceStatus.AnnounceChannel == nil {
 				return
 			}
@@ -91,33 +91,33 @@ func TestController_AnnounceCommand(t *testing.T) {
 			json.Unmarshal(m, &parsed)
 
 			if parsed.CommandData[(*controller.Command)[tc.index].String()] == nil {
-				t.Fatalf("message wasn't for %q\ngot %v",
-					(*controller.Command)[tc.index].String(), parsed.CommandData)
+				t.Fatalf("%s\nmessage wasn't for %q\ngot %v",
+					packageName, (*controller.Command)[tc.index].String(), parsed.CommandData)
 			}
 
-			// if they failed status matches
-			got := test.StringifyPtr(parsed.CommandData[(*controller.Command)[tc.index].String()].Failed)
+			// if they failed status matches.
 			want := test.StringifyPtr(controller.Failed.Get(tc.index))
+			got := test.StringifyPtr(parsed.CommandData[(*controller.Command)[tc.index].String()].Failed)
 			if got != want {
-				t.Errorf("want failed=%s\ngot  failed=%s",
-					want, got)
+				t.Errorf("%s\nfailed mismatch\nwant: %s\ngot:  %s",
+					packageName, want, got)
 			}
 
-			// next runnable is within expected range
+			// next runnable is within expected range.
 			now := time.Now().UTC()
 			minTime := now.Add(tc.timeDifference - time.Second)
 			maxTime := now.Add(tc.timeDifference + time.Second)
 			gotTime := parsed.CommandData[(*controller.Command)[tc.index].String()].NextRunnable
 			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
-				t.Fatalf("ran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
-					now, minTime, maxTime, gotTime)
+				t.Fatalf("%s\nran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
+					packageName, now, minTime, maxTime, gotTime)
 			}
 		})
 	}
 }
 
 func TestController_Find(t *testing.T) {
-	// GIVEN we have a Controller with Commands
+	// GIVEN we have a Controller with Commands.
 	tests := map[string]struct {
 		command       string
 		want          int
@@ -166,18 +166,18 @@ func TestController_Find(t *testing.T) {
 				controller = nil
 			}
 
-			// WHEN Find is run for a command
+			// WHEN Find is run for a command.
 			got, err := controller.Find(tc.command)
 
-			// THEN the index is returned if it exists
+			// THEN the index is returned if it exists.
 			if got != tc.want {
-				t.Errorf("Find() gave an unexpected index\nwant: %d\ngot:  %d",
-					tc.want, got)
+				t.Errorf("%s\nunexpected index\nwant: %d\ngot:  %d",
+					packageName, tc.want, got)
 			}
-			// AND an error is returned if it doesn't
+			// AND an error is returned if it doesn't.
 			if err != nil != tc.err {
-				t.Errorf("Find() returned an unexpected error\nwant: err=%t\ngot:  %v",
-					tc.err, err)
+				t.Errorf("%s\nerror mismatch\nwant: err=%t\ngot:  %v",
+					packageName, tc.err, err)
 			}
 		})
 	}

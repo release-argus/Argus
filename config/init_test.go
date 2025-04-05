@@ -21,43 +21,43 @@ import (
 )
 
 func TestConfig_Load(t *testing.T) {
-	// GIVEN Load is ran on a config
+	// GIVEN Load is ran on a config.
 	file := "TestConfig_Load.yml"
 	testYAML_config_test(file, t)
 	config := testLoad(file, t)
 
-	// WHEN the vars loaded are inspected
+	// WHEN the vars loaded are inspected.
 	tests := map[string]struct {
-		got, want string
+		want, got string
 	}{
 		"Defaults.Service.Interval": {
-			got:  config.Defaults.Service.Options.Interval,
-			want: "123s"},
+			want: "123s",
+			got:  config.Defaults.Service.Options.Interval},
 		"Notify.discord.username": {
-			got:  config.Defaults.Notify["slack"].GetParam("title"),
-			want: "defaultTitle"},
+			want: "defaultTitle",
+			got:  config.Defaults.Notify["slack"].GetParam("title")},
 		"WebHook.Delay": {
-			got:  config.Defaults.WebHook.Delay,
-			want: "2s"},
+			want: "2s",
+			got:  config.Defaults.WebHook.Delay},
 		"EmptyServiceIsDeleted": {
-			got:  config.Service["EmptyService"].String(""),
-			want: ""},
+			want: "",
+			got:  config.Service["EmptyService"].String("")},
 	}
 
-	// THEN they match the config file
+	// THEN they match the config file.
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
 			if tc.got != tc.want {
-				t.Errorf("invalid %s:\nwant: %s\ngot:  %s",
-					name, tc.want, tc.got)
+				t.Errorf("%s\ninvalid %s:\nwant: %s\ngot:  %s",
+					packageName, name, tc.want, tc.got)
 			}
 		})
 	}
 }
 
 func TestConfig_LoadDeleteNil(t *testing.T) {
-	// GIVEN config to Load
+	// GIVEN config to Load.
 	var (
 		config     Config
 		configFile func(path string, t *testing.T) = testYAML_SomeNilServices
@@ -66,24 +66,24 @@ func TestConfig_LoadDeleteNil(t *testing.T) {
 	file := "TestConfig_LoadDeleteNil.yml"
 	configFile(file, t)
 
-	// WHEN Load is called on it
+	// WHEN Load is called on it.
 	config.Load(file, &flags)
 
-	// THEN Services that are nil are deleted
+	// THEN Services that are nil are deleted.
 	for name, service := range config.Service {
 		if service == nil {
-			t.Errorf("Service %q is nil",
-				name)
+			t.Errorf("%s\nService %q is nil",
+				packageName, name)
 		}
 	}
 	if len(config.Service) != 2 {
-		t.Errorf("config.Service has %d entries, want 2",
-			len(config.Service))
+		t.Errorf("%s\nlength mismatch\nwant: 2\ngot:  %d",
+			packageName, len(config.Service))
 	}
 }
 
 func TestConfig_LoadDefaults(t *testing.T) {
-	// GIVEN config to Load
+	// GIVEN config to Load.
 	var (
 		config     Config
 		configFile func(path string, t *testing.T) = testYAML_config_test
@@ -92,14 +92,14 @@ func TestConfig_LoadDefaults(t *testing.T) {
 	file := "TestConfig_LoadDefaults.yml"
 	configFile(file, t)
 
-	// WHEN Load is called on it
+	// WHEN Load is called on it.
 	config.Load(file, &flags)
 
-	// THEN the defaults are assigned correctly to Services
+	// THEN the defaults are assigned correctly to Services.
 	want := false
 	got := config.Service["WantDefaults"].Options.GetSemanticVersioning()
 	if got != want {
-		t.Errorf(`config.Service['WantDefaults'].Options.SemanticVersioning = %v. GetSemanticVersion gave %t, want %t`,
-			got, *config.Service["WantDefaults"].Options.SemanticVersioning, want)
+		t.Errorf(`%s\nSemanticVersioning = %v\nwant: %t\ngot:  %t`,
+			packageName, *config.Service["WantDefaults"].Options.SemanticVersioning, want, got)
 	}
 }

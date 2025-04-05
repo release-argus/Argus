@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 )
 
 func TestMapEnvToStruct(t *testing.T) {
-	// GIVEN a struct and a bunch of env vars
+	// GIVEN a struct and a bunch of env vars.
 	test := map[string]struct {
 		customStruct interface{}
 		prefix       string
@@ -337,23 +337,23 @@ func TestMapEnvToStruct(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
-			// WHEN mapEnvToStruct is called on it
+			// WHEN mapEnvToStruct is called on it.
 			err := mapEnvToStruct(tc.customStruct, tc.prefix, nil)
 
-			// THEN any error is as expected
+			// THEN any error is as expected.
 			e := util.ErrorToString(err)
-			if !util.RegexCheck(tc.errRegex, e) { // Expected a FATAL panic to be caught above
-				t.Errorf("mapEnvToStruct() want error matching:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+			if !util.RegexCheck(tc.errRegex, e) { // Expected a FATAL panic to be caught above.
+				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			if tc.errRegex != "^$" {
 				return
 			}
-			// AND the defaults are set to the appropriate env vars
+			// AND the defaults are set to the appropriate env vars.
 			gotYAML := util.ToYAMLString(tc.customStruct, "")
-			if tc.want != gotYAML {
-				t.Errorf("mapEnvToStruct() mismatch\nwant:\n%q\ngot:\n%q",
-					tc.want, gotYAML)
+			if gotYAML != tc.want {
+				t.Errorf("%s\nmismatch\nwant:\n%q\ngot:\n%q",
+					packageName, tc.want, gotYAML)
 			}
 		})
 	}
@@ -361,18 +361,18 @@ func TestMapEnvToStruct(t *testing.T) {
 
 func TestConvertToEnvErrors(t *testing.T) {
 	tests := map[string]struct {
-		input, expected error
+		input, want error
 	}{
 		"nil error": {
-			input:    nil,
-			expected: nil,
+			input: nil,
+			want:  nil,
 		},
 		"single error": {
 			input: errors.New(test.TrimYAML(`
 				service:
 					options:
 						interval: "10x" <invalid>`)),
-			expected: errors.New(`ARGUS_SERVICE_OPTIONS_INTERVAL: "10x" <invalid>`),
+			want: errors.New(`ARGUS_SERVICE_OPTIONS_INTERVAL: "10x" <invalid>`),
 		},
 		"multiple errors": {
 			input: errors.New(test.TrimYAML(`
@@ -385,7 +385,7 @@ func TestConvertToEnvErrors(t *testing.T) {
 								type: "pizza" <invalid>
 				webhook:
 					delay: "10y" <invalid>`)),
-			expected: errors.Join(
+			want: errors.Join(
 				errors.New(`ARGUS_SERVICE_OPTIONS_INTERVAL: "10x" <invalid>`),
 				errors.New(`ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE: "pizza" <invalid>`),
 				errors.New(`ARGUS_WEBHOOK_DELAY: "10y" <invalid>`)),
@@ -394,15 +394,19 @@ func TestConvertToEnvErrors(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// WHEN convertToEnvErrors is called with the input error
+			// WHEN convertToEnvErrors is called with the input error.
 			got := convertToEnvErrors(tc.input)
 
-			// THEN the result should match the expected error
-			if got == nil && tc.expected == nil {
+			// THEN the result should match the expected error.
+			if got == nil &&
+				tc.want == nil {
 				return
 			}
-			if got == nil || tc.expected == nil || got.Error() != tc.expected.Error() {
-				t.Errorf("convertToEnvErrors() got \n%q\nwant:\n%q", got, tc.expected)
+			if got == nil ||
+				tc.want == nil ||
+				got.Error() != tc.want.Error() {
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}

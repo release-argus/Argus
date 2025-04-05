@@ -30,7 +30,7 @@ import (
 )
 
 func TestRequireDefaults_Default(t *testing.T) {
-	// GIVEN a RequireDefaults
+	// GIVEN a RequireDefaults.
 	tests := map[string]struct {
 		require RequireDefaults
 	}{
@@ -47,21 +47,21 @@ func TestRequireDefaults_Default(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Default is called on it
+			// WHEN Default is called on it.
 			tc.require.Default()
 
-			// THEN the DockerCheckDefaults is set to its default values
+			// THEN the DockerCheckDefaults is set to its default values.
 			defaultType := "hub"
 			if tc.require.Docker.Type != defaultType {
-				t.Errorf("filter.Require.Default() mismatch on Docker.Type:\nwant: %q\ngot:  %q",
-					defaultType, tc.require.Docker.Type)
+				t.Errorf("%s\nmismatch on Docker.Type:\nwant: %q\ngot:  %q",
+					packageName, defaultType, tc.require.Docker.Type)
 			}
 		})
 	}
 }
 
 func TestRequire_Init(t *testing.T) {
-	// GIVEN a Require, JLog and a Status
+	// GIVEN a Require, JLog and a Status.
 	tests := map[string]struct {
 		req             *Require
 		wantDockerCheck bool
@@ -98,32 +98,34 @@ func TestRequire_Init(t *testing.T) {
 					"",
 					nil)}
 
-			// WHEN Init is called with it
+			// WHEN Init is called with it.
 			tc.req.Init(&status, &defaults)
 
-			// THEN the global JLog is set to its address
+			// THEN the global JLog is set to its address.
 			if tc.req == nil {
-				// THEN the Require is still nil
+				// THEN the Require is still nil.
 				if tc.req != nil {
-					t.Fatal("Init with a nil require shouldn't initialise it")
+					t.Fatalf("%s\nInit with a nil require shouldn't initialise it",
+						packageName)
 				}
 			} else {
-				// THEN the status is given to the Require
+				// THEN the status is given to the Require.
 				if tc.req.Status != &status {
-					t.Fatalf("Status should be the address of the var given to it %v, not %v",
-						&status, tc.req.Status)
+					t.Fatalf("%s\nStatus should be the address of the var given to it\nwant: %v\ngot:  %v",
+						packageName, &status, tc.req.Status)
 				}
-				// AND the DockerCheck remains nil if it was initially
+				// AND the DockerCheck remains nil if it was initially.
 				if !tc.wantDockerCheck {
 					if tc.req.Docker != nil {
-						t.Fatal("Init with a nil DockerCheck shouldn't initialise it")
+						t.Fatalf("%s\nInit with a nil DockerCheck shouldn't initialise it",
+							packageName)
 					}
 					return
 				}
-				// AND the defaults are handed to it otherwise
+				// AND the defaults are handed to it otherwise.
 				if tc.req.Docker.Defaults != &defaults.Docker {
-					t.Fatalf("Docker defaults should be the address of the var given to it %v, not %v",
-						&defaults.Docker, tc.req.Docker.Defaults)
+					t.Fatalf("%s\nDocker defaults should be the address of the var given to it\nwant: %v\ngot:  %v",
+						packageName, &defaults.Docker, tc.req.Docker.Defaults)
 				}
 			}
 		})
@@ -131,7 +133,7 @@ func TestRequire_Init(t *testing.T) {
 }
 
 func TestRequireDefaults_CheckValues(t *testing.T) {
-	// GIVEN a RequireDefaults
+	// GIVEN a RequireDefaults.
 	tests := map[string]struct {
 		docker   DockerCheckDefaults
 		errRegex string
@@ -156,21 +158,21 @@ func TestRequireDefaults_CheckValues(t *testing.T) {
 			require := RequireDefaults{
 				Docker: tc.docker}
 
-			// WHEN CheckValues is called on it
+			// WHEN CheckValues is called on it.
 			err := require.CheckValues("")
 
-			// THEN err is expected
+			// THEN err is expected.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("RequireDefaults.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
+					packageName, wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("RequireDefaults.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 		})
@@ -178,7 +180,7 @@ func TestRequireDefaults_CheckValues(t *testing.T) {
 }
 
 func TestRequire_CheckValues(t *testing.T) {
-	// GIVEN a Require
+	// GIVEN a Require.
 	tests := map[string]struct {
 		require  *Require
 		errRegex string
@@ -268,21 +270,21 @@ func TestRequire_CheckValues(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			// WHEN CheckValues is called on it
+			// WHEN CheckValues is called on it.
 			err := tc.require.CheckValues("")
 
-			// THEN err is expected
+			// THEN err is expected.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("RequireDefaults.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
+					packageName, wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("RequireDefaults.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 		})
@@ -324,14 +326,14 @@ func TestRequire__String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the Require is stringified with String
+			// WHEN the Require is stringified with String.
 			got := tc.require.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -342,7 +344,7 @@ func TestRequire_Inherit(t *testing.T) {
 		overrides string
 		nil       bool
 	}
-	// GIVEN two Require objects
+	// GIVEN two Require objects.
 	tests := map[string]struct {
 		from               overrides
 		to                 overrides
@@ -448,8 +450,8 @@ func TestRequire_Inherit(t *testing.T) {
 						nil)}
 				err := yaml.Unmarshal([]byte(tc.from.overrides), from)
 				if err != nil {
-					t.Fatalf("error unmarshalling overrides: %v",
-						err)
+					t.Fatalf("%s\nerror unmarshalling overrides: %v",
+						packageName, err)
 				}
 			}
 			var to *Require
@@ -464,8 +466,8 @@ func TestRequire_Inherit(t *testing.T) {
 						nil)}
 				err := yaml.Unmarshal([]byte(tc.to.overrides), to)
 				if err != nil {
-					t.Fatalf("error unmarshalling overrides: %v",
-						err)
+					t.Fatalf("%s\nerror unmarshalling overrides: %v",
+						packageName, err)
 				}
 				if to.Docker != nil {
 					wantToken = to.Docker.Token
@@ -480,10 +482,10 @@ func TestRequire_Inherit(t *testing.T) {
 				wantValidUntil = from.Docker.validUntil.String()
 			}
 
-			// WHEN Inherit is called on them
+			// WHEN Inherit is called on them.
 			to.Inherit(from)
 
-			// THEN the Require tokens are inherited
+			// THEN the Require tokens are inherited.
 			gotToken, gotQueryToken, gotValidUntil := "", "", ""
 			if to != nil && to.Docker != nil {
 				gotToken = to.Docker.Token
@@ -491,16 +493,16 @@ func TestRequire_Inherit(t *testing.T) {
 				gotValidUntil = to.Docker.validUntil.String()
 			}
 			if gotToken != wantToken {
-				t.Errorf("filter.Require.Inherit() Token mismatch:\nwant: %q\ngot:  %q",
-					wantToken, gotToken)
+				t.Errorf("%s\nToken mismatch:\nwant: %q\ngot:  %q",
+					packageName, wantToken, gotToken)
 			}
 			if gotQueryToken != wantQueryToken {
-				t.Errorf("filter.Require.Inherit() QueryToken mismatch:\nwant: %q\ngot:  %q",
-					wantQueryToken, gotQueryToken)
+				t.Errorf("%s\nQueryToken mismatch:\nwant: %q\ngot:  %q",
+					packageName, wantQueryToken, gotQueryToken)
 			}
 			if gotValidUntil != wantValidUntil {
-				t.Errorf("filter.Require.Inherit()  ValidUntil mismatch:\nwant: %q\ngot:  %q",
-					wantValidUntil, gotValidUntil)
+				t.Errorf("%s\nValidUntil mismatch:\nwant: %q\ngot:  %q",
+					packageName, wantValidUntil, gotValidUntil)
 			}
 		})
 	}
@@ -552,13 +554,13 @@ func TestRequire_removeUnusedRequireDocker(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN removeUnusedRequireDocker is called
+			// WHEN removeUnusedRequireDocker is called.
 			tc.require.removeUnusedRequireDocker()
 
-			// THEN the Docker is removed if it has no Image or Tag
+			// THEN the Docker is removed if it has no Image or Tag.
 			if tc.nil != (tc.require == nil || tc.require.Docker == nil) {
-				t.Errorf("Docker:\nwant nil=%t\ngot  nil=%t",
-					tc.nil, tc.require == nil || tc.require.Docker == nil)
+				t.Errorf("%s\nDocker:\nwant: nil=%t\ngot:  nil=%t",
+					packageName, tc.nil, tc.require == nil || tc.require.Docker == nil)
 			}
 		})
 	}

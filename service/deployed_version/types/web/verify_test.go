@@ -139,8 +139,8 @@ func TestLookup_CheckValues(t *testing.T) {
 			lookup := testLookup(false)
 			// Apply the YAML.
 			if err := yaml.Unmarshal([]byte(tc.yamlStr), lookup); err != nil {
-				t.Fatalf("error unmarshalling YAML: %v",
-					err)
+				t.Fatalf("%s\nerror unmarshalling YAML: %v",
+					packageName, err)
 			}
 			hadBody := lookup.Body
 
@@ -152,26 +152,29 @@ func TestLookup_CheckValues(t *testing.T) {
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("base.Lookup.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
+					packageName, wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("base.Lookup.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 			// AND RegexTemplate is empty when Regex is empty.
 			if lookup.RegexTemplate != "" && lookup.Regex == "" {
-				t.Fatalf("RegexTemplate should be nil when Regex is empty")
+				t.Fatalf("%s\nRegexTemplate should be nil when Regex is empty",
+					packageName)
 			}
 			// AND Body is empty when Method is GET.
 			if lookup.Method == http.MethodGet && lookup.Body != "" {
-				t.Fatalf("Body should be nil when Method is GET")
+				t.Fatalf("%s\nBody should be nil when Method is GET",
+					packageName)
 			}
 			// AND Body is kept when Method is POST.
 			if lookup.Method == http.MethodPost && hadBody != "" && lookup.Body == "" {
-				t.Fatalf("Body should be kept when Method is POST")
+				t.Fatalf("%s\nBody should be kept when Method is POST",
+					packageName)
 			}
 			// AND Method is uppercased.
 			wantMethod := strings.ToUpper(lookup.Method)
@@ -179,8 +182,8 @@ func TestLookup_CheckValues(t *testing.T) {
 				wantMethod = http.MethodGet
 			}
 			if lookup.Method != wantMethod {
-				t.Fatalf("Method should be uppercased:\nwant: %q\ngot:  %q",
-					wantMethod, lookup.Method)
+				t.Fatalf("%s\nMethod should be uppercased:\nwant: %q\ngot:  %q",
+					packageName, wantMethod, lookup.Method)
 			}
 		})
 	}

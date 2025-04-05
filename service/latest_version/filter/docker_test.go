@@ -55,8 +55,8 @@ func TestDockerCheck_GetTag(t *testing.T) {
 
 			// THEN the expected Tag is returned.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -196,8 +196,8 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 			// THEN the err is what we expect and a queryToken is retrieved when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			if tc.dockerCheck.Image == "" {
 				return
@@ -206,19 +206,20 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 				// Do not want a queryToken.
 				if tc.noToken {
 					if queryToken != "" {
-						t.Errorf("didn't expect a queryToken. Got %q",
-							queryToken)
+						t.Errorf("%s\nqueryToken mismatch\nwant: ''\ngot:  %q",
+							packageName, queryToken)
 					}
 					// Did not get a queryToken.
 				} else if queryToken == "" {
-					t.Error("didn't get any queryToken")
+					t.Errorf("%s\ndidn't get any queryToken",
+						packageName)
 				}
 			}
 			// AND the query token is what we expect.
 			if tc.wantQueryToken != nil &&
 				*tc.wantQueryToken != queryToken {
-				t.Errorf("want queryToken %q, not %q",
-					*tc.wantQueryToken, queryToken)
+				t.Errorf("%s\nqueryToken mismatch\nwant: %q\ngot:  %q",
+					packageName, *tc.wantQueryToken, queryToken)
 			}
 		})
 	}
@@ -366,14 +367,14 @@ func TestDockerCheckDefaults_getQueryToken(t *testing.T) {
 				tc.dockerCheckDefaults.GetType())
 
 			// THEN the query token is what we expect.
-			if tc.wantToken != queryToken {
-				t.Errorf("want queryToken %q, not %q",
-					tc.wantToken, queryToken)
+			if queryToken != tc.wantToken {
+				t.Errorf("%s\nqueryToken mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantToken, queryToken)
 			}
 			// AND the validUntil is what we expect.
-			if tc.wantValidUntil != validUntil {
-				t.Errorf("want validUntil %q, not %q",
-					tc.wantValidUntil, validUntil)
+			if validUntil != tc.wantValidUntil {
+				t.Errorf("%s\nvalidUntil mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantValidUntil, validUntil)
 			}
 		})
 	}
@@ -519,82 +520,84 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 			// THEN the query token is what we expect.
 			if hadNil {
 				if tc.dockerCheck != nil {
-					t.Errorf("want nil dockerCheck, not %v", tc.dockerCheck)
+					t.Errorf("%s\ndockerCheck mismatch\nwant: nil\ngot:  %v",
+						packageName, tc.dockerCheck)
 				}
 				return
 			}
 			if tc.dockerCheck.queryToken != queryToken {
-				t.Errorf("want main queryToken to be %q, not %q",
-					queryToken, tc.dockerCheck.queryToken)
+				t.Errorf("%s\n.queryToken mismatch\nwant: %q\ngot:  %q",
+					packageName, queryToken, tc.dockerCheck.queryToken)
 			}
 			if tc.dockerCheck.validUntil != validUntil {
-				t.Errorf("want main validUntil to be %q, not %q",
-					validUntil, tc.dockerCheck.validUntil)
+				t.Errorf("%s\n.validUntil mismatch\nwant: %q\ngot:  %q",
+					packageName, validUntil, tc.dockerCheck.validUntil)
 			}
 			if hadNilDefaults {
 				if tc.dockerCheck.Defaults != nil {
-					t.Errorf("want nil dockerCheck.Defaults, not %v", tc.dockerCheck.Defaults)
+					t.Errorf("%s\n.Defaults mismatch\nwant: nil\ngot:  %v",
+						packageName, tc.dockerCheck.Defaults)
 				}
 				return
 			}
 			if tc.changeDefaults &&
 				setForType == "ghcr" {
 				if tc.dockerCheck.Defaults.RegistryGHCR.queryToken != queryToken {
-					t.Errorf("want main queryToken for type 'ghcr' to be %q, not %q",
-						queryToken, tc.dockerCheck.Defaults.RegistryGHCR.queryToken)
+					t.Errorf("%s\n queryToken mismatch for 'ghcr' \nwant: %q\ngot:  %q",
+						packageName, queryToken, tc.dockerCheck.Defaults.RegistryGHCR.queryToken)
 				}
 				if tc.dockerCheck.Defaults.RegistryGHCR.validUntil != validUntil {
-					t.Errorf("want main validUntil for type 'ghcr' to be %q, not %q",
-						validUntil, tc.dockerCheck.Defaults.RegistryGHCR.validUntil)
+					t.Errorf("%s\nvalidUntil mismatch for 'ghcr' \nwant: %q\ngot:  %q",
+						packageName, validUntil, tc.dockerCheck.Defaults.RegistryGHCR.validUntil)
 				}
 			} else {
 				if tc.dockerCheck.Defaults.RegistryGHCR.queryToken == queryToken {
-					t.Errorf("queryToken shouldn't have been set to %q in the defaults for type 'ghcr'",
-						tc.dockerCheck.Defaults.RegistryQuay.queryToken)
+					t.Errorf("%s\nqueryToken unwanted for 'ghcr' \ngot:  %q",
+						packageName, tc.dockerCheck.Defaults.RegistryQuay.queryToken)
 				}
 				if tc.dockerCheck.Defaults.RegistryGHCR.validUntil == validUntil {
-					t.Errorf("validUntil shouldn't have been set to %q in the defaults for type 'ghcr'",
-						tc.dockerCheck.Defaults.RegistryQuay.validUntil)
+					t.Errorf("%s\nvalidUntil unwanted for 'ghcr' \ngot:  %q",
+						packageName, tc.dockerCheck.Defaults.RegistryQuay.validUntil)
 				}
 			}
 			if tc.changeDefaults &&
 				setForType == "hub" {
 				if tc.dockerCheck.Defaults.RegistryHub.queryToken != queryToken {
-					t.Errorf("want defaults queryToken for type 'hub' to be %q, not %q",
-						queryToken, tc.dockerCheck.Defaults.RegistryHub.queryToken)
+					t.Errorf("%s\nqueryToken mismatch for 'hub' \nwant: %q\ngot:  %q",
+						packageName, queryToken, tc.dockerCheck.Defaults.RegistryHub.queryToken)
 				}
 				if tc.dockerCheck.Defaults.RegistryHub.validUntil != validUntil {
-					t.Errorf("want defaults validUntil for type 'hub' to be %q, not %q",
-						validUntil, tc.dockerCheck.Defaults.RegistryHub.validUntil)
+					t.Errorf("%s\nvalidUntil mismatch for 'hub' \nwant: %q\ngot:  %q",
+						packageName, validUntil, tc.dockerCheck.Defaults.RegistryHub.validUntil)
 				}
 			} else {
 				if tc.dockerCheck.Defaults.RegistryHub.queryToken == queryToken {
-					t.Errorf("queryToken shouldn't have been set to %q in the defaults for type 'hub'",
-						tc.dockerCheck.Defaults.RegistryQuay.queryToken)
+					t.Errorf("%s\nqueryToken unwanted for 'hub' \ngot:  %q",
+						packageName, tc.dockerCheck.Defaults.RegistryQuay.queryToken)
 				}
 				if tc.dockerCheck.Defaults.RegistryHub.validUntil == validUntil {
-					t.Errorf("validUntil shouldn't have been set to %q in the defaults for type 'hub'",
-						tc.dockerCheck.Defaults.RegistryQuay.validUntil)
+					t.Errorf("%s\nvalidUntil unwanted for 'hub' \ngot:  %q",
+						packageName, tc.dockerCheck.Defaults.RegistryQuay.validUntil)
 				}
 			}
 			if tc.changeDefaults &&
 				setForType == "quay" {
 				if tc.dockerCheck.Defaults.RegistryQuay.queryToken != queryToken {
-					t.Errorf("want defaults queryToken for type 'quay' to be %q, not %q",
-						queryToken, tc.dockerCheck.Defaults.RegistryQuay.queryToken)
+					t.Errorf("%s\nqueryToken mismatch for 'quay' \nwant: %q\ngot:  %q",
+						packageName, queryToken, tc.dockerCheck.Defaults.RegistryQuay.queryToken)
 				}
 				if tc.dockerCheck.Defaults.RegistryQuay.validUntil != validUntil {
-					t.Errorf("want defaults validUntil for type 'quay' to be %q, not %q",
-						validUntil, tc.dockerCheck.Defaults.RegistryQuay.validUntil)
+					t.Errorf("%s\nvalidUntil mismatch for 'quay' \nwant: %q\ngot:  %q",
+						packageName, validUntil, tc.dockerCheck.Defaults.RegistryQuay.validUntil)
 				}
 			} else {
 				if tc.dockerCheck.Defaults.RegistryQuay.queryToken == queryToken {
-					t.Errorf("queryToken shouldn't have been set to %q in the defaults for type 'quay'",
-						tc.dockerCheck.Defaults.RegistryQuay.queryToken)
+					t.Errorf("%s\nqueryToken unwanted for 'quay' \ngot:  %q",
+						packageName, tc.dockerCheck.Defaults.RegistryQuay.queryToken)
 				}
 				if tc.dockerCheck.Defaults.RegistryQuay.validUntil == validUntil {
-					t.Errorf("validUntil shouldn't have been set to %q in the defaults for type 'quay'",
-						tc.dockerCheck.Defaults.RegistryQuay.validUntil)
+					t.Errorf("%s\nvalidUntil unwanted for 'quay' \ngot:  %q",
+						packageName, tc.dockerCheck.Defaults.RegistryQuay.validUntil)
 				}
 			}
 		})
@@ -627,7 +630,8 @@ func TestDockerCheck_ClearQueryToken(t *testing.T) {
 
 			// THEN the queryToken is cleared.
 			if tc.dockerCheck != nil && tc.dockerCheck.queryToken != "" {
-				t.Errorf("expected queryToken to be cleared, but got %q", tc.dockerCheck.queryToken)
+				t.Errorf("%s\nexpected queryToken to be cleared, but got %q",
+					packageName, tc.dockerCheck.queryToken)
 			}
 		})
 	}
@@ -791,7 +795,8 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 			// THEN the query token isn't set if the DockerCheckDefaults was nil.
 			if hadNil {
 				if tc.dockerCheckDefaults != nil {
-					t.Error("didn't expect DockerCheckDefaults to be initialised")
+					t.Errorf("%s\ndidn't expect DockerCheckDefaults to be initialised",
+						packageName)
 				}
 				return
 			}
@@ -800,70 +805,71 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 			if tc.changeMain &&
 				tc.setForType == "ghcr" {
 				if tc.dockerCheckDefaults.RegistryGHCR.queryToken != queryToken {
-					t.Errorf("want main queryToken for type 'ghcr' to be %q, not %q",
-						queryToken, tc.dockerCheckDefaults.RegistryGHCR.queryToken)
+					t.Errorf("%s\nqueryToken mismatch for 'ghcr' \nwant: %q\ngot:  %q",
+						packageName, queryToken, tc.dockerCheckDefaults.RegistryGHCR.queryToken)
 				}
 				if tc.dockerCheckDefaults.RegistryGHCR.validUntil != validUntil {
-					t.Errorf("want main validUntil for type 'ghcr' to be %q, not %q",
-						validUntil, tc.dockerCheckDefaults.RegistryGHCR.validUntil)
+					t.Errorf("%s\nvalidUntil mismatch for 'ghcr' \nwant: %q\ngot:  %q",
+						packageName, validUntil, tc.dockerCheckDefaults.RegistryGHCR.validUntil)
 				}
 			} else {
 				if tc.dockerCheckDefaults.RegistryGHCR.queryToken == queryToken {
-					t.Errorf("token shouldn't have been set to %q in the main for type 'ghcr'",
-						tc.dockerCheckDefaults.RegistryGHCR.queryToken)
+					t.Errorf("%s\nqueryToken unwanted for 'ghcr' \ngot:  %q",
+						packageName, tc.dockerCheckDefaults.RegistryGHCR.queryToken)
 				}
 				if tc.dockerCheckDefaults.RegistryGHCR.validUntil == validUntil {
-					t.Errorf("validUntil shouldn't have been set to %q in the main for type 'ghcr'",
-						tc.dockerCheckDefaults.RegistryGHCR.validUntil)
+					t.Errorf("%s\nvalidUntil unwanted for 'ghcr' \ngot:  %q",
+						packageName, tc.dockerCheckDefaults.RegistryGHCR.validUntil)
 				}
 			}
 			// Hub.
 			if tc.changeMain &&
 				tc.setForType == "hub" {
 				if tc.dockerCheckDefaults.RegistryHub.queryToken != queryToken {
-					t.Errorf("want main queryToken for type 'hub' to be %q, not %q",
-						queryToken, tc.dockerCheckDefaults.RegistryHub.queryToken)
+					t.Errorf("%s\nqueryToken mismatch for 'hub' \nwant: %q\ngot:  %q",
+						packageName, queryToken, tc.dockerCheckDefaults.RegistryHub.queryToken)
 				}
 				if tc.dockerCheckDefaults.RegistryHub.validUntil != validUntil {
-					t.Errorf("want main validUntil for type 'hub' to be %q, not %q",
-						validUntil, tc.dockerCheckDefaults.RegistryHub.validUntil)
+					t.Errorf("%s\nvalidUntil mismatch for 'hub' \nwant: %q\ngot:  %q",
+						packageName, validUntil, tc.dockerCheckDefaults.RegistryHub.validUntil)
 				}
 			} else {
 				if tc.dockerCheckDefaults.RegistryHub.queryToken == queryToken {
-					t.Errorf("token shouldn't have been set to %q in the main for type 'hub'",
-						tc.dockerCheckDefaults.RegistryHub.queryToken)
+					t.Errorf("%s\nqueryToken unwanted for 'hub' \ngot:  %q",
+						packageName, tc.dockerCheckDefaults.RegistryHub.queryToken)
 				}
 				if tc.dockerCheckDefaults.RegistryHub.validUntil == validUntil {
-					t.Errorf("validUntil shouldn't have been set to %q in the main for type 'hub'",
-						tc.dockerCheckDefaults.RegistryHub.validUntil)
+					t.Errorf("%s\nvalidUntil unwanted for 'hub' \ngot:  %q",
+						packageName, tc.dockerCheckDefaults.RegistryHub.validUntil)
 				}
 			}
 			// Quay.
 			if tc.changeMain &&
 				tc.setForType == "quay" {
 				if tc.dockerCheckDefaults.RegistryQuay.queryToken != queryToken {
-					t.Errorf("want ain queryToken for type 'quay' to be %q, not %q",
-						queryToken, tc.dockerCheckDefaults.RegistryQuay.queryToken)
+					t.Errorf("%s\nqueryToken mismatch for 'quay' \nwant: %q\ngot:  %q",
+						packageName, queryToken, tc.dockerCheckDefaults.RegistryQuay.queryToken)
 				}
 				if tc.dockerCheckDefaults.RegistryQuay.validUntil != validUntil {
-					t.Errorf("want main validUntil for type 'quay' to be %q, not %q",
-						validUntil, tc.dockerCheckDefaults.RegistryQuay.validUntil)
+					t.Errorf("%s\nvalidUntil mismatch for 'quay' \nwant: %q\ngot:  %q",
+						packageName, validUntil, tc.dockerCheckDefaults.RegistryQuay.validUntil)
 				}
 			} else {
 				if tc.dockerCheckDefaults.RegistryQuay.queryToken == queryToken {
-					t.Errorf("token shouldn't have been set to %q in the main for type 'quay'",
-						tc.dockerCheckDefaults.RegistryQuay.queryToken)
+					t.Errorf("%s\nqueryToken unwanted for 'quay' \ngot:  %q",
+						packageName, tc.dockerCheckDefaults.RegistryQuay.queryToken)
 				}
 				if tc.dockerCheckDefaults.RegistryQuay.validUntil == validUntil {
-					t.Errorf("validUntil shouldn't have been set to %q in the main for type 'quay'",
-						tc.dockerCheckDefaults.RegistryQuay.validUntil)
+					t.Errorf("%s\nvalidUntil unwanted for 'quay' \ngot:  %q",
+						packageName, tc.dockerCheckDefaults.RegistryQuay.validUntil)
 				}
 			}
 
 			// AND the defaults aren't initialised if they were nil.
 			if hadNilDefaults {
 				if tc.dockerCheckDefaults.defaults != nil {
-					t.Error("didn't expect defaults to be initialised")
+					t.Errorf("%s\ndidn't expect defaults to be initialised",
+						packageName)
 				}
 				return
 			}
@@ -873,63 +879,63 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 			if tc.changeDefaults &&
 				tc.setForType == "ghcr" {
 				if tc.dockerCheckDefaults.defaults.RegistryGHCR.queryToken != queryToken {
-					t.Errorf("want default queryToken for type 'ghcr' to be %q, not %q",
-						queryToken, tc.dockerCheckDefaults.defaults.RegistryGHCR.queryToken)
+					t.Errorf("%s\nwant default queryToken for type 'ghcr' to be %q, not %q",
+						packageName, queryToken, tc.dockerCheckDefaults.defaults.RegistryGHCR.queryToken)
 				}
 				if tc.dockerCheckDefaults.defaults.RegistryGHCR.validUntil != validUntil {
-					t.Errorf("want default validUntil for type 'ghcr' to be %q, not %q",
-						validUntil, tc.dockerCheckDefaults.defaults.RegistryGHCR.validUntil)
+					t.Errorf("%s\nwant default validUntil for type 'ghcr' to be %q, not %q",
+						packageName, validUntil, tc.dockerCheckDefaults.defaults.RegistryGHCR.validUntil)
 				}
 			} else {
 				if tc.dockerCheckDefaults.defaults.RegistryGHCR.queryToken == queryToken {
-					t.Errorf("token shouldn't have been set to %q in the defaults for type 'ghcr'",
-						tc.dockerCheckDefaults.defaults.RegistryGHCR.queryToken)
+					t.Errorf("%s\ntoken shouldn't have been set to %q in the defaults for type 'ghcr'",
+						packageName, tc.dockerCheckDefaults.defaults.RegistryGHCR.queryToken)
 				}
 				if tc.dockerCheckDefaults.defaults.RegistryGHCR.validUntil == validUntil {
-					t.Errorf("validUntil shouldn't have been set to %q in the defaults for type 'hub'",
-						tc.dockerCheckDefaults.defaults.RegistryGHCR.validUntil)
+					t.Errorf("%s\nvalidUntil shouldn't have been set to %q in the defaults for type 'hub'",
+						packageName, tc.dockerCheckDefaults.defaults.RegistryGHCR.validUntil)
 				}
 			}
 			// Hub.
 			if tc.changeDefaults &&
 				tc.setForType == "hub" {
 				if tc.dockerCheckDefaults.defaults.RegistryHub.queryToken != queryToken {
-					t.Errorf("want default queryToken for type 'hub' to be %q, not %q",
-						queryToken, tc.dockerCheckDefaults.defaults.RegistryHub.queryToken)
+					t.Errorf("%s\nwant default queryToken for type 'hub' to be %q, not %q",
+						packageName, queryToken, tc.dockerCheckDefaults.defaults.RegistryHub.queryToken)
 				}
 				if tc.dockerCheckDefaults.defaults.RegistryHub.validUntil != validUntil {
-					t.Errorf("want default validUntil for type 'hub' to be %q, not %q",
-						validUntil, tc.dockerCheckDefaults.defaults.RegistryHub.validUntil)
+					t.Errorf("%s\nwant default validUntil for type 'hub' to be %q, not %q",
+						packageName, validUntil, tc.dockerCheckDefaults.defaults.RegistryHub.validUntil)
 				}
 			} else {
 				if tc.dockerCheckDefaults.defaults.RegistryHub.queryToken == queryToken {
-					t.Errorf("token shouldn't have been set to %q in the defaults for type 'hub'",
-						tc.dockerCheckDefaults.defaults.RegistryHub.queryToken)
+					t.Errorf("%s\ntoken shouldn't have been set to %q in the defaults for type 'hub'",
+						packageName, tc.dockerCheckDefaults.defaults.RegistryHub.queryToken)
 				}
 				if tc.dockerCheckDefaults.defaults.RegistryHub.validUntil == validUntil {
-					t.Errorf("validUntil shouldn't have been set to %q in the defaults for type 'hub'",
-						tc.dockerCheckDefaults.defaults.RegistryHub.validUntil)
+					t.Errorf("%s\nvalidUntil shouldn't have been set to %q in the defaults for type 'hub'",
+						packageName, tc.dockerCheckDefaults.defaults.RegistryHub.validUntil)
 				}
 			}
 			// Quay.
 			if tc.changeDefaults &&
 				tc.setForType == "quay" {
 				if tc.dockerCheckDefaults.defaults.RegistryQuay.queryToken != queryToken {
-					t.Errorf("want default queryToken for type 'quay' to be %q, not %q",
-						queryToken, tc.dockerCheckDefaults.defaults.RegistryQuay.queryToken)
+					t.Errorf("%s\nwant default queryToken for type 'quay' to be %q, not %q",
+						packageName, queryToken, tc.dockerCheckDefaults.defaults.RegistryQuay.queryToken)
 				}
 				if tc.dockerCheckDefaults.defaults.RegistryQuay.validUntil != validUntil {
-					t.Errorf("want default validUntil for type 'quay' to be %q, not %q",
-						validUntil, tc.dockerCheckDefaults.defaults.RegistryQuay.validUntil)
+					t.Errorf("%s\nwant default validUntil for type 'quay' to be %q, not %q",
+						packageName, validUntil, tc.dockerCheckDefaults.defaults.RegistryQuay.validUntil)
 				}
 			} else {
 				if tc.dockerCheckDefaults.defaults.RegistryQuay.queryToken == queryToken {
-					t.Errorf("token shouldn't have been set to %q in the defaults for type 'quay'",
-						tc.dockerCheckDefaults.defaults.RegistryQuay.queryToken)
+					t.Errorf("%s\ntoken shouldn't have been set to %q in the defaults for type 'quay'",
+						packageName, tc.dockerCheckDefaults.defaults.RegistryQuay.queryToken)
 				}
 				if tc.dockerCheckDefaults.defaults.RegistryQuay.validUntil == validUntil {
-					t.Errorf("validUntil shouldn't have been set to %q in the defaults for type 'quay'",
-						tc.dockerCheckDefaults.defaults.RegistryQuay.validUntil)
+					t.Errorf("%s\nvalidUntil shouldn't have been set to %q in the defaults for type 'quay'",
+						packageName, tc.dockerCheckDefaults.defaults.RegistryQuay.validUntil)
 				}
 			}
 		})
@@ -1021,9 +1027,9 @@ func TestDockerCheck_getValidToken(t *testing.T) {
 			got := tc.dockerCheck.getValidToken()
 
 			// THEN the token is what we expect.
-			if tc.want != got {
-				t.Errorf("want %q, not %q",
-					tc.want, got)
+			if got != tc.want {
+				t.Errorf("%s\nwant %q, not %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -1060,13 +1066,13 @@ func TestDockerCheck_CopyQueryToken(t *testing.T) {
 			gotQueryToken, gotValidUntil := tc.dockerCheck.CopyQueryToken()
 
 			// THEN the token is what we expect.
-			if tc.wantQueryToken != gotQueryToken {
-				t.Errorf("want %q, not %q",
-					tc.wantQueryToken, gotQueryToken)
+			if gotQueryToken != tc.wantQueryToken {
+				t.Errorf("%s\nqueryToken mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantQueryToken, gotQueryToken)
 			}
-			if tc.wantValidUntil != gotValidUntil {
-				t.Errorf("want %q, not %q",
-					tc.wantValidUntil, gotValidUntil)
+			if gotValidUntil != tc.wantValidUntil {
+				t.Errorf("%s\nvalidUntil mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantValidUntil, gotValidUntil)
 			}
 		})
 	}
@@ -1183,9 +1189,9 @@ func TestDockerCheck_getUsername(t *testing.T) {
 			got := tc.dockerCheck.getUsername()
 
 			// THEN the username is what we expect.
-			if tc.want != got {
-				t.Errorf("want %q, not %q",
-					tc.want, got)
+			if got != tc.want {
+				t.Errorf("%s\nwant %q, not %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -1330,9 +1336,9 @@ func TestDockerCheckDefaults_getUsername(t *testing.T) {
 			got := tc.dockerCheckDefaults.getUsername()
 
 			// THEN the username is what we expect.
-			if tc.want != got {
-				t.Errorf("want %q, not %q",
-					tc.want, got)
+			if got != tc.want {
+				t.Errorf("%s\nwant %q, not %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -1367,14 +1373,14 @@ func TestDockerCheckDefaults_SetDefaults(t *testing.T) {
 			// THEN the defaults are what we expect.
 			if tc.want == nil {
 				if tc.base != nil && tc.base.defaults != nil {
-					t.Errorf("want nil, not %v",
-						tc.base.defaults)
+					t.Errorf("%s\nwant: nil\ngot:  %v",
+						packageName, tc.base.defaults)
 				}
 				return
 			}
-			if tc.want != tc.base.defaults {
-				t.Errorf("want %v, not %v",
-					tc.want, tc.base.defaults)
+			if tc.base.defaults != tc.want {
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, tc.base.defaults)
 			}
 		})
 	}
@@ -1408,8 +1414,8 @@ func TestDockerCheckDefaults_Default(t *testing.T) {
 			// THEN the Type is set to the default value.
 			wantType := "hub"
 			if tc.dockerCheckDefaults != nil && tc.dockerCheckDefaults.Type != wantType {
-				t.Errorf("filter.DockerCheckDefaults.Default() Type mismatch\n%q\nnot: %q",
-					wantType, tc.dockerCheckDefaults.Type)
+				t.Errorf("%s\nType mismatch\n%q\ngot: %q",
+					packageName, wantType, tc.dockerCheckDefaults.Type)
 			}
 		})
 	}
@@ -1515,8 +1521,8 @@ func TestDockerCheck_CheckToken(t *testing.T) {
 			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -1667,8 +1673,8 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant:%q\ngot: %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -1726,8 +1732,8 @@ func TestDockerCheck_RefreshDockerHubToken(t *testing.T) {
 			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -1779,8 +1785,8 @@ func TestDockerCheckDefaults_CheckValues(t *testing.T) {
 			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -1920,12 +1926,12 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
-			if tc.wantImage != "" && tc.wantImage != tc.dockerCheck.Image {
-				t.Fatalf("expected image to be %q, not: %q",
-					tc.wantImage, tc.dockerCheck.Image)
+			if tc.wantImage != "" && tc.dockerCheck.Image != tc.wantImage {
+				t.Fatalf("%s\nimage mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantImage, tc.dockerCheck.Image)
 			}
 		})
 	}
@@ -1973,7 +1979,8 @@ func TestDockerCheckDefaults_GetType(t *testing.T) {
 
 			// THEN the result is what we expect.
 			if got != tc.want {
-				t.Fatalf("expected %q, got: %q", tc.want, got)
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -2022,7 +2029,8 @@ func TestDockerCheck_GetType(t *testing.T) {
 
 			// THEN the result is what we expect.
 			if got != tc.want {
-				t.Fatalf("expected %q, got: %q", tc.want, got)
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -2170,7 +2178,8 @@ func TestDockerCheckDefaults_getToken(t *testing.T) {
 
 			// THEN the result is what we expect.
 			if got != tc.want {
-				t.Fatalf("expected %q, got: %q", tc.want, got)
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -2295,7 +2304,8 @@ func TestDockerCheck_getToken(t *testing.T) {
 
 			// THEN the result is what we expect.
 			if got != tc.want {
-				t.Fatalf("expected %q, got: %q", tc.want, got)
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -2350,8 +2360,8 @@ func TestDockerCheckHub_Print(t *testing.T) {
 
 				// THEN the result is what we expect.
 				if got != want {
-					t.Fatalf("(prefix=%q), want:\n%q\ngot\n%q",
-						prefix, want, got)
+					t.Fatalf("%s\n (prefix=%q)\nwant: %q\ngot  %q",
+						packageName, prefix, want, got)
 				}
 			}
 		})
@@ -2426,8 +2436,8 @@ func TestDockerCheckDefaults_Print(t *testing.T) {
 
 				// THEN the result is what we expect.
 				if got != want {
-					t.Fatalf("(prefix=%q), expected\n%q\ngot:\n%q",
-						prefix, want, got)
+					t.Fatalf("%s\n(prefix=%q)\nwant: %q\ngot:  %q",
+						packageName, prefix, want, got)
 				}
 			}
 		})
@@ -2494,8 +2504,8 @@ func TestDockerCheck_String(t *testing.T) {
 
 				// THEN the result is as expected.
 				if got != want {
-					t.Errorf("(prefix=%q) got:\n%q\nwant:\n%q",
-						prefix, got, want)
+					t.Errorf("%s\n(prefix=%q)\nwant: %q\ngot:  %q",
+						packageName, prefix, want, got)
 				}
 			}
 		})

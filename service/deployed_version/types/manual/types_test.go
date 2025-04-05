@@ -82,7 +82,9 @@ func TestNew(t *testing.T) {
 					<version>1.2.3</version>`,
 			},
 			wants: wants{
-				errRegex: `^failed to unmarshal manual.Lookup`},
+				errRegex: test.TrimYAML(`
+					^failed to unmarshal manual.Lookup:
+						unsupported configFormat: invalid`)},
 		},
 		"invalid YAML": {
 			args: args{
@@ -90,7 +92,9 @@ func TestNew(t *testing.T) {
 				data:   "invalid_yaml",
 			},
 			wants: wants{
-				errRegex: `^failed to unmarshal manual.Lookup`},
+				errRegex: test.TrimYAML(`
+					^failed to unmarshal manual.Lookup:
+						line \d: cannot unmarshal .*$`)},
 		},
 		"invalid JSON": {
 			args: args{
@@ -155,11 +159,8 @@ func TestNew(t *testing.T) {
 			// THEN any error is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.wants.errRegex, e) {
-				if err == nil {
-					t.Error("manual.Lookup.New() expected error, got nil")
-				} else {
-					t.Errorf("manual.Lookup.New() unexpected error: %v", err)
-				}
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wants.errRegex, e)
 			}
 			if err != nil {
 				return
@@ -167,40 +168,163 @@ func TestNew(t *testing.T) {
 			// AND the lookup is created as expected.ValueOrValue(tc.wants.yaml, tc.args.data)).
 			gotStr := lookup.String(lookup, "")
 			if gotStr != tc.wants.yaml {
-				t.Errorf("manual.Lookup.String() mismatch\nwant: %q\ngot:  %q",
-					tc.wants.yaml, gotStr)
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wants.yaml, gotStr)
 			}
 			// AND the defaults are set as expected.
 			if lookup.Defaults != defaults {
-				t.Errorf("manual.Lookup.Defaults not set\nwant: %v\ngot:  %v",
-					lookup.Defaults, defaults)
+				t.Errorf("%s\nDefaults not set\nwant: %v\ngot:  %v",
+					packageName, lookup.Defaults, defaults)
 			}
 			// AND the hard defaults are set as expected.
 			if lookup.HardDefaults != hardDefaults {
-				t.Errorf("manual.Lookup.HardDefaults not set\nwant: %v\ngot:  %v",
-					lookup.HardDefaults, hardDefaults)
+				t.Errorf("%s\nHardDefaults not set\nwant: %v\ngot:  %v",
+					packageName, lookup.HardDefaults, hardDefaults)
 			}
 			// AND the status is set as expected.
 			if lookup.Status != status {
-				t.Errorf("manual.Lookup.Status not set\nwant: %v\ngot:  %v",
-					lookup.Status, status)
+				t.Errorf("%s\nStatus not set\nwant: %v\ngot:  %v",
+					packageName, lookup.Status, status)
 			}
 			// AND the options are set as expected.
 			if lookup.Options != options {
-				t.Errorf("manual.Lookup.Options not set\nwant: %v\ngot:  %v",
-					lookup.Options, &options)
+				t.Errorf("%s\nOptions not set\nwant: %v\ngot:  %v",
+					packageName, lookup.Options, &options)
 			}
 			if tc.args.nilStatus {
 				return // Ignore Status/Version checks if Status is nil on create.
 			}
 			// AND the version is set as expected.
 			if lookup.Status.DeployedVersion() != tc.wants.version {
-				t.Errorf("manual.Lookup.Version not set\nwant: %q\ngot:  %q",
-					tc.wants.version, lookup.Version)
+				t.Errorf("%s\nDeployedVersion not set\nwant: %q\ngot:  %q",
+					packageName, tc.wants.version, lookup.Version)
 			}
-			if lookup.Version != "" {
-				t.Errorf("manual.Lookup.Version not cleared\nwant: %q\ngot:  %q",
-					"", lookup.Version)
+			wantVersion := ""
+			if lookup.Version != wantVersion {
+				t.Errorf("%s\nVersion not cleared\nwant: %q\ngot:  %q",
+					packageName, wantVersion, lookup.Version)
+			}
+		})
+	}
+}
+
+func TestUnmarshalJSON(t *testing.T) {
+	// GIVEN a Lookup to unmarshal from JSON.
+	tests := map[string]struct {
+		json     string
+		wantStr  string
+		errRegex string
+	}{
+		"empty": {
+			json: "{}",
+			wantStr: test.TrimJSON(`{
+				"type": "manual"
+			}`),
+			errRegex: `^$`,
+		},
+		"filled": {
+			json: test.TrimJSON(`{
+				"type": "manual",
+				"version": "1.2.3"
+			}`),
+			errRegex: `^$`,
+		},
+		"invalid type - version": {
+			json: test.TrimJSON(`{
+				"type": "manual",
+				"version": ["1.2.3"]
+			}`),
+			errRegex: `json: cannot unmarshal array into Go struct field (\.Lookup)?\.version of type string$`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := &Lookup{}
+
+			// WHEN the JSON is unmarshalled.
+			err := lookup.UnmarshalJSON([]byte(tc.json))
+
+			// THEN it errors when expected.
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, err)
+			}
+			if err != nil {
+				return
+			}
+			gotStr := util.ToJSONString(lookup)
+			wantStr := util.ValueOrValue(tc.wantStr, tc.json)
+			if gotStr != wantStr {
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, wantStr, gotStr)
+			}
+		})
+	}
+}
+
+func TestUnmarshalYAML(t *testing.T) {
+	// GIVEN a Lookup to unmarshal from YAML.
+	tests := map[string]struct {
+		yaml     string
+		wantStr  string
+		errRegex string
+	}{
+		"empty": {
+			yaml: test.TrimYAML(``),
+			wantStr: test.TrimYAML(`
+				type: manual
+			`),
+			errRegex: `^$`,
+		},
+		"filled": {
+			yaml: test.TrimYAML(`
+				type: manual
+				version: 1.2.3
+			`),
+			errRegex: `^$`,
+		},
+		"invalid type - version": {
+			yaml: test.TrimYAML(`
+				version: ["https://example.com"]
+			`),
+			errRegex: test.TrimYAML(`
+				^yaml: unmarshal errors:
+					line 1: cannot unmarshal.*$`),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := &Lookup{}
+			yamlNode, err := test.YAMLToNode(t, tc.yaml)
+			if err != nil {
+				t.Errorf("%s\nfailed to convert YAML to yaml.Node: %v",
+					packageName, err)
+			}
+
+			// WHEN the YAML is unmarshalled.
+			err = lookup.UnmarshalYAML(yamlNode)
+
+			// THEN it errors when expected.
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, err)
+			}
+			if err != nil {
+				return
+			}
+			gotStr := lookup.String(lookup, "")
+			wantStr := util.ValueOrValue(tc.wantStr, tc.yaml)
+			if gotStr != wantStr {
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, wantStr, gotStr)
 			}
 		})
 	}
@@ -281,123 +405,8 @@ func TestString(t *testing.T) {
 
 				// THEN the result is as expected.
 				if got != want {
-					t.Errorf("(prefix=%q) got:\n%q\nwant:\n%q",
-						prefix, got, want)
-				}
-			}
-		})
-	}
-}
-
-func TestUnmarshalJSON(t *testing.T) {
-	// GIVEN a Lookup to unmarshal from JSON.
-	tests := map[string]struct {
-		json    string
-		wantStr string
-		wantErr bool
-	}{
-		"empty": {
-			json: "{}",
-			wantStr: test.TrimJSON(`{
-				"type": "manual"
-			}`),
-			wantErr: false,
-		},
-		"filled": {
-			json: test.TrimJSON(`{
-				"type": "manual",
-				"version": "1.2.3"
-			}`),
-			wantErr: false,
-		},
-		"invalid type - version": {
-			json: test.TrimJSON(`{
-				"type": "manual",
-				"version": ["1.2.3"]
-			}`),
-			wantErr: true,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			lookup := &Lookup{}
-
-			// WHEN the JSON is unmarshalled.
-			err := lookup.UnmarshalJSON([]byte(tc.json))
-
-			// THEN it errors when expected.
-			if (err != nil) != tc.wantErr {
-				t.Errorf("Lookup.UnmarshalJSON() error = %v, wantErr %v",
-					err, tc.wantErr)
-			}
-			if err == nil {
-				gotStr := util.ToJSONString(lookup)
-				wantStr := util.ValueOrValue(tc.wantStr, tc.json)
-				if gotStr != wantStr {
-					t.Errorf("Lookup.UnmarshalJSON()\ngot: \n%v\nwant:\n%v",
-						gotStr, wantStr)
-				}
-			}
-		})
-	}
-}
-
-func TestUnmarshalYAML(t *testing.T) {
-	// GIVEN a Lookup to unmarshal from YAML.
-	tests := map[string]struct {
-		yaml    string
-		wantStr string
-		wantErr bool
-	}{
-		"empty": {
-			yaml: test.TrimYAML(``),
-			wantStr: test.TrimYAML(`
-				type: manual
-			`),
-			wantErr: false,
-		},
-		"filled": {
-			yaml: test.TrimYAML(`
-				type: manual
-				version: 1.2.3
-			`),
-			wantErr: false,
-		},
-		"invalid type - version": {
-			yaml: test.TrimYAML(`
-				version: ["https://example.com"]
-			`),
-			wantErr: true,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			lookup := &Lookup{}
-			yamlNode, err := test.YAMLToNode(t, tc.yaml)
-			if err != nil {
-				t.Errorf("failed to convert YAML to yaml.Node: %v", err)
-			}
-
-			// WHEN the YAML is unmarshalled.
-			err = lookup.UnmarshalYAML(yamlNode)
-
-			// THEN it errors when expected.
-			if (err != nil) != tc.wantErr {
-				t.Errorf("Lookup.UnmarshalYAML() error = %v, wantErr %v",
-					err, tc.wantErr)
-			}
-			if err == nil {
-				gotStr := lookup.String(lookup, "")
-				wantStr := util.ValueOrValue(tc.wantStr, tc.yaml)
-				if gotStr != wantStr {
-					t.Errorf("Lookup.UnmarshalYAML()\ngot: \n%v\nwant:\n%v",
-						gotStr, wantStr)
+					t.Errorf("%s\n(prefix=%q) mismatch\nwant: %q\ngot:  %q",
+						packageName, prefix, want, got)
 				}
 			}
 		})

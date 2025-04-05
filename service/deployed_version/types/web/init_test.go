@@ -54,36 +54,33 @@ func TestLookup_Metrics(t *testing.T) {
 			// THEN they can be collected.
 			// counters:
 			gotC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
-			wantC := 2
-			if !tc.wantMetrics {
-				wantC = hadC
+			wantC := hadC
+			if tc.wantMetrics {
+				wantC += 2
 			}
-			if (gotC - hadC) != wantC {
-				t.Errorf("%d Counter metrics were initialised, expecting %d",
-					(gotC - hadC), wantC)
+			if gotC != wantC {
+				t.Errorf("%s\nCounter metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
+					packageName, wantC, gotC)
 			}
 			// gauges - not initialised.
 			gotG := testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
-			wantG := 0
-			if !tc.wantMetrics {
-				wantG = hadG
-			}
-			if (gotG - hadG) != wantG {
-				t.Errorf("%d Gauge metrics were initialised, expecting %d",
-					(gotG - hadG), wantG)
+			wantG := hadG
+			if gotG != wantG {
+				t.Errorf("%s\nGauge metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
+					packageName, wantG, gotG)
 			}
 			// But can be added.
 			if tc.lookup != nil {
 				tc.lookup.QueryMetrics(tc.lookup, nil)
 			}
 			gotG = testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
-			wantG = 1
-			if !tc.wantMetrics {
-				wantG = hadG
+			wantG = hadG
+			if tc.wantMetrics {
+				wantG += 1
 			}
-			if (gotG - hadG) != wantG {
-				t.Errorf("%d Gauge metrics were initialised, expecting %d",
-					(gotG - hadG), wantG)
+			if gotG != wantG {
+				t.Errorf("%s\nGauge metrics mismatch after QueryMetrics()\nwant: %d\ngot:  %d",
+					packageName, wantG, gotG)
 			}
 
 			// AND they can be deleted.
@@ -91,14 +88,14 @@ func TestLookup_Metrics(t *testing.T) {
 			// counters:
 			gotC = testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 			if gotC != hadC {
-				t.Errorf("Counter metrics were not deleted, got %d. expecting %d",
-					gotC, hadC)
+				t.Errorf("%s\nCounter metrics mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
+					packageName, hadC, gotC)
 			}
 			// gauges:
 			gotG = testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
 			if gotG != hadG {
-				t.Errorf("Gauge metrics were not deleted, got %d. expecting %d",
-					gotG, hadG)
+				t.Errorf("%s\nGauge metrics mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
+					packageName, hadG, gotG)
 			}
 		})
 	}
@@ -121,22 +118,22 @@ func TestLookup_Init(t *testing.T) {
 	// THEN pointers to those vars are handed out to the Lookup:
 	// 	Defaults.
 	if lookup.Defaults != defaults {
-		t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			defaults, lookup.Defaults)
+		t.Errorf("%s\nDefaults mismatch\nwant: %v\ngot:  %v",
+			packageName, defaults, lookup.Defaults)
 	}
 	// 	HardDefaults.
 	if lookup.HardDefaults != hardDefaults {
-		t.Errorf("HardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			hardDefaults, lookup.HardDefaults)
+		t.Errorf("%s\nHardDefaults mismatch\nwant: %v\ngot:  %v",
+			packageName, hardDefaults, lookup.HardDefaults)
 	}
 	// 	Status.
 	if lookup.Status != &status {
-		t.Errorf("Status was not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&status, lookup.Status)
+		t.Errorf("%s\nStatus mismatch\nwant: %v\ngot:  %v",
+			packageName, &status, lookup.Status)
 	}
 	// 	Options.
 	if lookup.Options != &options {
-		t.Errorf("Options were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&options, lookup.Options)
+		t.Errorf("%s\nOptions mismatch\nwant: %v\ngot:  %v",
+			packageName, &options, lookup.Options)
 	}
 }

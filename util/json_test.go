@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 )
 
 func TestParseKeys(t *testing.T) {
-	// GIVEN a JSON key string
+	// GIVEN a JSON key string.
 	tests := map[string]struct {
 		input    string
 		want     []interface{}
@@ -81,32 +81,32 @@ func TestParseKeys(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ParseKeys is called
+			// WHEN ParseKeys is called.
 			got, err := ParseKeys(tc.input)
 
-			// THEN the keys are returned correctly
+			// THEN the keys are returned correctly.
 			if len(got) != len(tc.want) {
-				t.Fatalf("different amount of keys returned\nwant: %v\ngot:  %v",
-					tc.want, got)
+				t.Fatalf("%s\ndifferent amount of keys returned\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 			}
 			for i := range got {
 				if got[i] != tc.want[i] {
-					t.Fatalf("wrong key - %d\nwant: %v\ngot:  %v",
-						i, tc.want, got)
+					t.Fatalf("%s - wrong key [%d]\nwant: %v\ngot:  %v",
+						packageName, i, tc.want, got)
 				}
 			}
-			// AND the error is returned correctly
+			// AND the error is returned correctly.
 			e := ErrorToString(err)
 			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
-				t.Errorf("want error matching %q, got %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q\n",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
 }
 
 func TestNavigateJSON(t *testing.T) {
-	// GIVEN a JSON string
+	// GIVEN a JSON string.
 	tests := map[string]struct {
 		input    string
 		key      string
@@ -193,26 +193,26 @@ func TestNavigateJSON(t *testing.T) {
 			var jsonData interface{}
 			err := json.Unmarshal([]byte(tc.input), &jsonData)
 
-			// WHEN navigateJSON is called
+			// WHEN navigateJSON is called.
 			got, err := navigateJSON(&jsonData, tc.key)
 
-			// THEN the value is returned correctly
+			// THEN the value is returned correctly.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
-			// AND the error is returned correctly
+			// AND the error is returned correctly.
 			e := ErrorToString(err)
 			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
-				t.Errorf("want error matching %q, got %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q\n",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
 }
 
 func TestGetValueByKey(t *testing.T) {
-	// GIVEN a JSON string
+	// GIVEN a JSON string.
 	tests := map[string]struct {
 		input    string
 		key      string
@@ -274,20 +274,20 @@ func TestGetValueByKey(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN GetValueByKey is called
+			// WHEN GetValueByKey is called.
 			got, err := GetValueByKey([]byte(tc.input), tc.key, "https://release-argus.com")
 
-			// THEN the value is returned correctly
+			// THEN the value is returned correctly.
 			tc.want = strings.ReplaceAll(tc.want, "__root", tc.input)
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
-			// AND the error is returned correctly
+			// AND the error is returned correctly.
 			e := ErrorToString(err)
 			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
-				t.Errorf("want error matching %q, got %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q\n",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -352,13 +352,13 @@ func TestToJSONString(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ToJSONString is called
+			// WHEN ToJSONString is called.
 			got := ToJSONString(tc.input)
 
-			// THEN the JSON string is returned correctly
+			// THEN the JSON string is returned correctly.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}

@@ -88,8 +88,8 @@ func TestTheMain(t *testing.T) {
 			if tc.outputContains != nil {
 				for _, text := range *tc.outputContains {
 					if !strings.Contains(stdout, text) {
-						t.Errorf("%q couldn't be found in stdout:\n%s",
-							text, stdout)
+						t.Errorf("%s\n%q couldn't be found in stdout:\n%s",
+							packageName, text, stdout)
 					}
 				}
 			}

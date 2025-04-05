@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package util
 import "testing"
 
 func TestInitMap(t *testing.T) {
-	// GIVEN a map
+	// GIVEN a map.
 	tests := map[string]struct {
 		input map[string]string
 	}{
@@ -47,22 +47,23 @@ func TestInitMap(t *testing.T) {
 
 			had := CopyMap(tc.input)
 
-			// WHEN InitMap is called
+			// WHEN InitMap is called.
 			InitMap(&tc.input)
 
-			// THEN the map is initialised correctly
+			// THEN the map is initialised correctly.
 			if tc.input == nil {
-				t.Fatalf("map is nil")
+				t.Fatalf("%s\nmap is nil",
+					packageName)
 			}
-			// AND any values inside haven't changed
+			// AND any values inside haven't changed.
 			if len(tc.input) != len(had) {
-				t.Fatalf("want: %v\ngot:  %v",
-					had, tc.input)
+				t.Fatalf("%s\nlength mismatch\nwant: %v\ngot:  %v",
+					packageName, had, tc.input)
 			}
 			for i := range tc.input {
 				if tc.input[i] != had[i] {
-					t.Fatalf("want: %v\ngot:  %v",
-						had, tc.input)
+					t.Fatalf("%s\nwant: %v\ngot:  %v",
+						packageName, had, tc.input)
 				}
 			}
 		})
@@ -70,7 +71,7 @@ func TestInitMap(t *testing.T) {
 }
 
 func TestMergeMaps(t *testing.T) {
-	// GIVEN two maps and a list of fields that may contain secrets
+	// GIVEN two maps and a list of fields that may contain secrets.
 	tests := map[string]struct {
 		base, overrides, want map[string]string
 		fields                []string
@@ -195,18 +196,18 @@ func TestMergeMaps(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN MergeMaps is called
+			// WHEN MergeMaps is called.
 			got := MergeMaps(tc.base, tc.overrides, tc.fields)
 
-			// THEN the maps are merged correctly
+			// THEN the maps are merged correctly.
 			if len(got) != len(tc.want) {
-				t.Fatalf("want: %v\ngot:  %v",
-					tc.want, got)
+				t.Fatalf("%s\nlength mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 			}
 			for i := range got {
 				if got[i] != tc.want[i] {
-					t.Fatalf("want: %v\ngot:  %v",
-						tc.want, got)
+					t.Fatalf("%s\nwant: %v\ngot:  %v",
+						packageName, tc.want, got)
 				}
 			}
 		})
@@ -214,7 +215,7 @@ func TestMergeMaps(t *testing.T) {
 }
 
 func TestCopyMap(t *testing.T) {
-	// GIVEN different byte strings
+	// GIVEN different byte strings.
 	tests := map[string]struct {
 		input, want map[string]string
 	}{
@@ -244,21 +245,22 @@ func TestCopyMap(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CopyMap is called
+			// WHEN CopyMap is called.
 			got := CopyMap(tc.input)
 
-			// THEN the map is copied correctly
+			// THEN the map is copied correctly.
 			if &got == &tc.want {
-				t.Error("map wasn't copied, they have the same addresses")
+				t.Errorf("%s\nmap wasn't copied, they have the same addresses",
+					packageName)
 			}
 			if len(got) != len(tc.want) {
-				t.Fatalf("want: %v\ngot:  %v",
-					tc.want, got)
+				t.Fatalf("%s\nlength mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 			}
 			for i := range got {
 				if got[i] != tc.want[i] {
-					t.Fatalf("want: %v\ngot:  %v",
-						tc.want, got)
+					t.Fatalf("%s\nwant: %v\ngot:  %v",
+						packageName, tc.want, got)
 				}
 			}
 		})
@@ -266,7 +268,7 @@ func TestCopyMap(t *testing.T) {
 }
 
 func TestLowercaseStringStringMap(t *testing.T) {
-	// GIVEN different byte strings
+	// GIVEN different byte strings.
 	tests := map[string]struct {
 		input, want map[string]string
 	}{
@@ -322,18 +324,18 @@ func TestLowercaseStringStringMap(t *testing.T) {
 
 			got := CopyMap(tc.input)
 
-			// WHEN LowercaseStringStringMap is called
+			// WHEN LowercaseStringStringMap is called.
 			LowercaseStringStringMap(&got)
 
-			// THEN the map keys are lower-cased correctly
+			// THEN the map keys are lower-cased correctly.
 			if len(got) != len(tc.want) {
-				t.Fatalf("want: %v\ngot:  %v",
-					tc.want, got)
+				t.Fatalf("%s\nlength mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 			}
 			for i := range got {
 				if got[i] != tc.want[i] {
-					t.Fatalf("want: %v\ngot:  %v",
-						tc.want, got)
+					t.Fatalf("%s\nwant: %v\ngot:  %v",
+						packageName, tc.want, got)
 				}
 			}
 		})
@@ -341,7 +343,7 @@ func TestLowercaseStringStringMap(t *testing.T) {
 }
 
 func TestSortedKeys(t *testing.T) {
-	// GIVEN a string map
+	// GIVEN a string map.
 	strMap := map[string]int{
 		"a": 0,
 		"b": 0,
@@ -367,12 +369,13 @@ func TestSortedKeys(t *testing.T) {
 		"v": 0,
 		"w": 0,
 		"x": 0,
-		"z": 0}
+		"z": 0,
+	}
 
-	// WHEN SortedKeys is called on it
+	// WHEN SortedKeys is called on it.
 	sorted := SortedKeys(strMap)
 
-	// THEN the keys of the map are returned alphabetically sorted
+	// THEN the keys of the map are returned alphabetically sorted.
 	want := []string{
 		"a",
 		"b",
@@ -398,12 +401,15 @@ func TestSortedKeys(t *testing.T) {
 		"v",
 		"w",
 		"x",
-		"z"}
-	for i := 1; i < 1000; i++ { // repeat due to random ordering
+		"z",
+	}
+	for i := 1; i < 1000; i++ { // repeat due to random ordering.
 		for i := range sorted {
 			if sorted[i] != want[i] {
-				t.Errorf("want index=%d to be %q, not %q\nwant: %v\ngot:  %v",
-					i, want[i], sorted[i], want, sorted)
+				t.Errorf("%s\nmismatch at [%d]\nwant: %q (%v)\ngot:  %q (%v)",
+					packageName, i,
+					want[i], want,
+					sorted[i], sorted)
 			}
 		}
 	}

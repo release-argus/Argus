@@ -286,7 +286,8 @@ func TestQuery(t *testing.T) {
 				lookup.Status.ServiceID = &name
 				err := yaml.Unmarshal([]byte(tc.overrides), lookup)
 				if err != nil {
-					t.Fatalf("github.Lookup.Query() failed to unmarshal overrides: %v", err)
+					t.Fatalf("%s\nfailed to unmarshal overrides: %v",
+						packageName, err)
 				}
 				*lookup.Options.SemanticVersioning = !tc.nonSemanticVersioning
 				lookup.Status.SetLatestVersion(tc.status.latestVersion, "", false)
@@ -315,19 +316,19 @@ func TestQuery(t *testing.T) {
 							continue
 						}
 					}
-					t.Fatalf("github.Lookup.Query() want match for %q\ngot:\n%q",
-						tc.want.errRegex, e)
+					t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.want.errRegex, e)
 				}
 				// AND the stdout contains the expected strings.
 				if !util.RegexCheck(tc.want.stdoutRegex, stdout) {
-					t.Fatalf("github.Lookup.Query() match for\n%q\nnot found in:\n%q",
-						tc.want.stdoutRegex, stdout)
+					t.Fatalf("%s\nstdout mismatch\n%q\nnot found in:\n%q",
+						packageName, tc.want.stdoutRegex, stdout)
 				}
 				// AND the LatestVersion is as expected.
 				if tc.status.wantLatestVersion != nil &&
 					*tc.status.wantLatestVersion != lookup.Status.LatestVersion() {
-					t.Fatalf("github.Lookup.Query() wanted LatestVersion to become %q, not %q",
-						*tc.status.wantLatestVersion, lookup.Status.LatestVersion())
+					t.Fatalf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
+						packageName, *tc.status.wantLatestVersion, lookup.Status.LatestVersion())
 				}
 			}
 		})
@@ -379,8 +380,8 @@ func TestHTTPRequest(t *testing.T) {
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("github.Lookup.httpRequest() error mismatch\nwant: %q\ngot:  %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -400,7 +401,8 @@ func TestGetResponse_ReadError(t *testing.T) {
 	// AND a request to the mock server's URL.
 	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
 	if err != nil {
-		t.Fatalf("github.Lookup.getResponse() could not create request: %v", err)
+		t.Fatalf("%s\ncould not create request: %v",
+			packageName, err)
 	}
 
 	// WHEN getResponse is called on that URL.
@@ -409,7 +411,8 @@ func TestGetResponse_ReadError(t *testing.T) {
 
 	// THEN an error is expected from the read error.
 	if err == nil {
-		t.Fatalf("github.Lookup.getResponse() expected an error when reading response body, got none")
+		t.Fatalf("%s\nexpected an error when reading response body, got none",
+			packageName)
 	}
 }
 
@@ -554,25 +557,28 @@ func TestHandleResponse(t *testing.T) {
 
 			// THEN any err is expected.
 			if tc.want.errRegex == "" && err != nil {
-				t.Errorf("github.Lookup.handleResponse() unexpected error: %v", err)
+				t.Errorf("%s\nunexpected error: %v",
+					packageName, err)
 			} else if !util.RegexCheck(tc.want.errRegex, util.ErrorToString(err)) {
-				t.Errorf("github.Lookup.handleResponse() error mismatch\nwant: %q\ngot:  %q",
-					tc.want.errRegex, util.ErrorToString(err))
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want.errRegex, util.ErrorToString(err))
 			}
 			// AND the body returned is as expected.
 			if tc.want.nilBody && len(gotBody) != 0 {
-				t.Errorf("github.Lookup.handleResponse() expected nil body, got %q",
-					string(tc.body))
+				t.Errorf("%s\nbody mismatch\nwant: nil\ngot:  %q",
+					packageName, string(tc.body))
 			} else if !tc.want.nilBody && len(gotBody) == 0 {
-				t.Errorf("github.Lookup.handleResponse() expected non-nil body, got nil")
+				t.Errorf("%s\nbody mismatch\nwant: non-nil\ngot:  nil",
+					packageName)
 			}
 			// AND the new EmptyListETag is as expected.
 			emptyListETag := getEmptyListETag()
 			if tc.want.setEmptyListETag && emptyListETag != hadETag {
-				t.Errorf("github.Lookup.handleResponse() empty list ETag not set\nwant: %q\ngot:  %q",
-					hadETag, emptyListETag)
+				t.Errorf("%s\nempty list ETag not set\nwant: %q\ngot:  %q",
+					packageName, hadETag, emptyListETag)
 			} else if !tc.want.setEmptyListETag && emptyListETag == hadETag {
-				t.Errorf("github.Lookup.handleResponse() empty list ETag should not have been set")
+				t.Errorf("%s\nempty list ETag should not have been set",
+					packageName)
 			}
 		})
 	}
@@ -730,7 +736,8 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 			lookup := testLookup(false)
 			err := yaml.Unmarshal([]byte(tc.overrides), lookup)
 			if err != nil {
-				t.Fatalf("github.Lookup.releaseMeetsRequirements failed to unmarshal overrides: %v", err)
+				t.Fatalf("%s\nfailed to unmarshal overrides: %v",
+					packageName, err)
 			}
 			lookup.Init(
 				lookup.Options,
@@ -747,19 +754,19 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 
 			// THEN the version is as expected.
 			if version != tc.want.version {
-				t.Errorf("github.Lookup.releaseMeetsRequirements() version mismatch\nwant: %q\ngot:  %q",
-					tc.want.version, version)
+				t.Errorf("%s\nersion mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want.version, version)
 			}
 			// AND the releaseDate is as expected.
 			if releaseDate != tc.want.releaseDate {
-				t.Errorf("github.Lookup.releaseMeetsRequirements() release date mismatch\nwant: %q\ngot:  %q",
-					tc.want.releaseDate, releaseDate)
+				t.Errorf("%s\nrelease date mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want.releaseDate, releaseDate)
 			}
 			// AND any err is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Errorf("github.Lookup.releaseMeetsRequirements() error mismatch\nwant: %q\ngot:  %q",
-					tc.want.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want.errRegex, e)
 			}
 		})
 	}
@@ -847,7 +854,8 @@ func TestGetVersion(t *testing.T) {
 			lookup := testLookup(false)
 			err := yaml.Unmarshal([]byte(tc.overrides), lookup)
 			if err != nil {
-				t.Fatalf("github.Lookup.getVersion failed to unmarshal overrides: %v", err)
+				t.Fatalf("%s\nfailed to unmarshal overrides: %v",
+					packageName, err)
 			}
 			lookup.data.releases = tc.hadReleases
 			// Ensure the Status has been handed out.
@@ -867,21 +875,21 @@ func TestGetVersion(t *testing.T) {
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Errorf("github.Lookup.getVersion() error mismatch\nwant: %q\ngot:  %q",
-					tc.want.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want.errRegex, e)
 			}
 			if tc.want.errRegex != "^$" {
 				return
 			}
 			// AND the version is as expected.
 			if version != tc.want.version {
-				t.Errorf("github.Lookup.getVersion() version mismatch\nwant: %q\ngot:  %q",
-					tc.want.version, version)
+				t.Errorf("%s\nversion mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want.version, version)
 			}
 			// AND the releaseDate is as expected.
 			if releaseDate != tc.want.releaseDate {
-				t.Errorf("github.Lookup.getVersion() release date mismatch\nwant: %q\ngot:  %q",
-					tc.want.releaseDate, releaseDate)
+				t.Errorf("%s\nrelease date mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want.releaseDate, releaseDate)
 			}
 		})
 	}
@@ -926,7 +934,8 @@ func TestSetReleases(t *testing.T) {
 			lookup := testLookup(false)
 			err := yaml.Unmarshal([]byte(tc.overrides), lookup)
 			if err != nil {
-				t.Fatalf("github.Lookup.setReleases failed to unmarshal overrides: %v", err)
+				t.Fatalf("%s\nailed to unmarshal overrides: %v",
+					packageName, err)
 			}
 			logFrom := logutil.LogFrom{Primary: "TestGetVersions", Secondary: name}
 			testBody := body
@@ -940,8 +949,8 @@ func TestSetReleases(t *testing.T) {
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("github.Lookup.setReleases() error mismatch\nwant: %q\ngot:  %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nrror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			if tc.errRegex != "^$" {
 				return
@@ -949,31 +958,32 @@ func TestSetReleases(t *testing.T) {
 			// AND the versions are as expected.
 			gotReleases := lookup.data.Releases()
 			if !tc.wantReleases {
-				if len(gotReleases) == 0 {
-					t.Errorf("github.Lookup.setReleases() wanted releases but got none")
-				} else {
-					t.Errorf("github.Lookup.setReleases() wanted no releases but got %v", gotReleases)
+				if len(gotReleases) != 0 {
+					t.Errorf("%s\nwant: no releases\ngot:  %v",
+						packageName, gotReleases)
 				}
 				return
 			} else if len(gotReleases) == 0 {
-				t.Errorf("github.Lookup.setReleases() wanted releases but got none")
+				t.Errorf("%s\nwant: releases\ngot:  none",
+					packageName)
 				return
 			}
-			if len(testBodyObject) != len(gotReleases) {
-				t.Errorf("github.Lookup.setReleases() wanted %d releases but got %d",
-					len(testBodyObject), len(gotReleases))
+			if len(gotReleases) != len(testBodyObject) {
+				t.Errorf("%s\nwant: %d releases\ngot:  %d",
+					packageName, len(testBodyObject), len(gotReleases))
 			}
 			for i, release := range testBodyObject {
 				for j, asset := range release.Assets {
 					// Asset counts match.
 					if len(gotReleases[i].Assets) != len(release.Assets) {
-						t.Errorf("github.Lookup.setReleases() wanted %d assets for release %d but got %d",
-							len(release.Assets), i, len(gotReleases[i].Assets))
+						t.Errorf("%s\nwant: %d assets for release %d\ngot:  %d",
+							packageName, len(release.Assets), i, len(gotReleases[i].Assets))
 					}
 					// non-matching asset.
 					if gotReleases[i].Assets[j].Name != asset.Name {
-						t.Errorf("github.Lookup.setReleases() wanted the asset at [%d][%d] (%q) but got %v",
-							i, j, asset.Name, gotReleases[i].Assets[j])
+						t.Errorf("%s\nmismatch at asset [%d][%d]\nwant: %q\ngot:  %v",
+							packageName, i, j,
+							asset.Name, gotReleases[i].Assets[j])
 					}
 				}
 			}
@@ -1041,26 +1051,26 @@ func TestQueryGitHubETag(t *testing.T) {
 				if err != nil {
 					errs = append(errs, err)
 				}
-				t.Logf("attempt %d, ETag: %s",
-					attempt, lookup.GetGitHubData().ETag())
+				t.Logf("%s - attempt %d, ETag: %s",
+					packageName, attempt, lookup.GetGitHubData().ETag())
 			}
 
 			// THEN any err is expected.
 			stdout := releaseStdout()
 			e := util.ErrorToString(errors.Join(errs...))
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("github.Lookup.Query() want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			gotETagChanged := strings.Count(stdout, "new ETag")
 			if gotETagChanged != tc.eTagChanged {
-				t.Errorf("github.Lookup.Query() new ETag - got=%d, want=%d\n%s",
-					gotETagChanged, tc.eTagChanged, stdout)
+				t.Errorf("%s\nnew ETag\nwant: %d\ngot:  %d\n\nstdout: %q",
+					packageName, tc.eTagChanged, gotETagChanged, stdout)
 			}
 			gotETagUnchangedUseCache := strings.Count(stdout, "Using cached releases")
 			if gotETagUnchangedUseCache != tc.eTagUnchangedUseCache {
-				t.Errorf("github.Lookup.Query() ETag unchanged use cache - got=%d, want=%d\n%s",
-					gotETagUnchangedUseCache, tc.eTagUnchangedUseCache, stdout)
+				t.Errorf("%s\nETag unchanged use cache\nwant: %d\ngot:  %d\n\nstdout: %q",
+					packageName, tc.eTagUnchangedUseCache, gotETagUnchangedUseCache, stdout)
 			}
 		})
 	}
@@ -1104,11 +1114,11 @@ func TestHandleNoVersionChange(t *testing.T) {
 				stdout)
 			if gotMessage != tc.doesPrint {
 				if gotMessage {
-					t.Errorf("github.Lookup.handleNoVersionChange() printed message when not expected %s",
-						stdout)
+					t.Errorf("%s\nprinted message when not expected %s",
+						packageName, stdout)
 				} else {
-					t.Errorf("github.Lookup.handleNoVersionChange() did not print message when expected %s",
-						stdout)
+					t.Errorf("%s\ndid not print message when expected %s",
+						packageName, stdout)
 				}
 			}
 		})

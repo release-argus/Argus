@@ -32,6 +32,8 @@ import (
 	logtest "github.com/release-argus/Argus/test/log"
 )
 
+var packageName = "service"
+
 func TestMain(m *testing.M) {
 	// Log.
 	logtest.InitLog()
@@ -104,11 +106,13 @@ func testService(t *testing.T, id string, sType string) *Service {
 	// Check the values.
 	err := svc.LatestVersion.CheckValues("")
 	if err != nil {
-		t.Fatalf("testService(), latest_version.CheckValues() error: %v", err)
+		t.Fatalf("%s\nlatest_version.CheckValues() error: %v",
+			packageName, err)
 	}
 	err = svc.DeployedVersionLookup.CheckValues("")
 	if err != nil {
-		t.Fatalf("testService(), deployed_version.CheckValues() error: %v", err)
+		t.Fatalf("%s\ndeployed_version.CheckValues() error: %v",
+			packageName, err)
 	}
 
 	return svc
@@ -138,7 +142,8 @@ func testLatestVersionGitHub(t *testing.T, fail bool) latestver_base.Interface {
 	// Check the values.
 	err := lv.CheckValues("")
 	if err != nil {
-		t.Fatalf("testLatestVersionGitHub(), CheckValues() error: %v", err)
+		t.Fatalf("%s\nunexpected error: %v",
+			packageName, err)
 	}
 
 	return lv
@@ -167,7 +172,8 @@ func testLatestVersionWeb(t *testing.T, fail bool) latestver_base.Interface {
 	// Check the values.
 	err := lv.CheckValues("")
 	if err != nil {
-		t.Fatalf("testLatestVersionWeb(), CheckValues() error: %v", err)
+		t.Fatalf("%s\nunexpected error: %v",
+			packageName, err)
 	}
 
 	return lv
@@ -189,7 +195,8 @@ func testLatestVersion(t *testing.T, lvType string, fail bool) (lv latestver.Loo
 	// Check the values.
 	err := lv.CheckValues("")
 	if err != nil {
-		t.Fatalf("testLatestVersion(), CheckValues() error: %v", err)
+		t.Fatalf("%s\nunexpected error: %v",
+			packageName, err)
 	}
 
 	return lv
@@ -216,7 +223,8 @@ func testDeployedVersionWeb(t *testing.T, fail bool) deployedver_base.Interface 
 	// Check the values.
 	err := dv.CheckValues("")
 	if err != nil {
-		t.Fatalf("testDeployedVersionWeb(), CheckValues() error: %v", err)
+		t.Fatalf("%s\nunexpected error: %v",
+			packageName, err)
 	}
 
 	return dv

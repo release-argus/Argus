@@ -31,6 +31,7 @@ import (
 	logtest "github.com/release-argus/Argus/test/log"
 )
 
+var packageName = "latestver_github"
 var initialEmptyListETag string
 var testBody = []byte(test.TrimJSON(`
 [

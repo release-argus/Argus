@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package util
 import "testing"
 
 func TestRandAlphaNumericLower(t *testing.T) {
-	// GIVEN different size strings are wanted
+	// GIVEN different size strings are wanted.
 	tests := map[string]struct {
 		wanted int
 	}{
@@ -37,13 +37,13 @@ func TestRandAlphaNumericLower(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN RandAlphaNumericLower is called
+			// WHEN RandAlphaNumericLower is called.
 			got := RandAlphaNumericLower(tc.wanted)
 
-			// THEN we get a random alphanumeric string of the specified length
+			// THEN we get a random alphanumeric string of the specified length.
 			if len(got) != tc.wanted {
-				t.Errorf("got length %d. wanted %d",
-					tc.wanted, len(got))
+				t.Errorf("%s\nlength mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wanted, len(got))
 			}
 			charactersVerified := 0
 			for charactersVerified != tc.wanted {
@@ -65,7 +65,7 @@ func TestRandAlphaNumericLower(t *testing.T) {
 }
 
 func TestRandNumeric(t *testing.T) {
-	// GIVEN different size strings are wanted
+	// GIVEN different size strings are wanted.
 	tests := map[string]struct {
 		wanted int
 	}{
@@ -83,13 +83,13 @@ func TestRandNumeric(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN RandNumeric is called
+			// WHEN RandNumeric is called.
 			got := RandNumeric(tc.wanted)
 
-			// THEN we get a random numeric string of the specified length
+			// THEN we get a random numeric string of the specified length.
 			if len(got) != tc.wanted {
-				t.Errorf("got length %d. wanted %d",
-					tc.wanted, len(got))
+				t.Errorf("%s\nlength mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wanted, len(got))
 			}
 			charactersVerified := 0
 			for charactersVerified != tc.wanted {
@@ -111,7 +111,7 @@ func TestRandNumeric(t *testing.T) {
 }
 
 func TestRandString(t *testing.T) {
-	// GIVEN different size strings are wanted with different alphabets
+	// GIVEN different size strings are wanted with different alphabets.
 	tests := map[string]struct {
 		wanted   int
 		alphabet string
@@ -132,13 +132,13 @@ func TestRandString(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN RandString is called
+			// WHEN RandString is called.
 			got := RandString(tc.wanted, tc.alphabet)
 
-			// THEN we get a random alphabet string of the specified length
+			// THEN we get a random alphabet string of the specified length.
 			if len(got) != tc.wanted {
-				t.Errorf("got length %d. wanted %d",
-					tc.wanted, len(got))
+				t.Errorf("%s\nlength mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wanted, len(got))
 			}
 			charactersVerified := 0
 			for charactersVerified != tc.wanted {

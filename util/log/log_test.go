@@ -29,8 +29,10 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+var packageName = "logutil"
+
 func TestInit(t *testing.T) {
-	// GIVEN a log level and timestamps setting
+	// GIVEN a log level and timestamps setting.
 	tests := map[string]struct {
 		level      string
 		timestamps bool
@@ -48,31 +50,32 @@ func TestInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel because of the once variable.
-			// Reset the once variable and Log for each test
+			// Reset the once variable and Log for each test.
 			once = sync.Once{}
 			Log = nil
 
-			// WHEN Init is called
+			// WHEN Init is called.
 			Init(tc.level, tc.timestamps)
 
-			// THEN the Log should be initialized correctly
+			// THEN the Log should be initialized correctly.
 			if Log == nil {
-				t.Fatalf("Log was not initialized")
+				t.Fatalf("%s\nLog was not initialized",
+					packageName)
 			}
 			if Log.Level != levelMap[tc.level] {
-				t.Errorf("want level=%d\ngot  level=%d",
-					levelMap[tc.level], Log.Level)
+				t.Errorf("%s\nwant: level=%d\ngot:  level=%d",
+					packageName, levelMap[tc.level], Log.Level)
 			}
 			if Log.Timestamps != tc.timestamps {
-				t.Errorf("want timestamps=%t\ngot  timestamps=%t",
-					tc.timestamps, Log.Timestamps)
+				t.Errorf("%s\nwant: timestamps=%t\ngot:  timestamps=%t",
+					packageName, tc.timestamps, Log.Timestamps)
 			}
 		})
 	}
 }
 
 func TestNewJLog(t *testing.T) {
-	// GIVEN a new JLog is wanted
+	// GIVEN a new JLog is wanted.
 	tests := map[string]struct {
 		level      string
 		timestamps bool
@@ -97,24 +100,24 @@ func TestNewJLog(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN NewJLog is called
+			// WHEN NewJLog is called.
 			jLog := NewJLog(tc.level, tc.timestamps)
 
-			// THEN the correct JLog is returned
+			// THEN the correct JLog is returned.
 			if jLog.Level != levelMap[tc.level] {
-				t.Errorf("want level=%d\ngot  level=%d",
-					levelMap[tc.level], jLog.Level)
+				t.Errorf("%s\nwant: level=%d\ngot:  level=%d",
+					packageName, levelMap[tc.level], jLog.Level)
 			}
 			if jLog.Timestamps != tc.timestamps {
-				t.Errorf("want timestamps=%t\ngot  timestamps=%t",
-					tc.timestamps, jLog.Timestamps)
+				t.Errorf("%s\nwant: timestamps=%t\ngot:  timestamps=%t",
+					packageName, tc.timestamps, jLog.Timestamps)
 			}
 		})
 	}
 }
 
 func TestSetLevel(t *testing.T) {
-	// GIVEN a JLog and various new log levels
+	// GIVEN a JLog and various new log levels.
 	tests := map[string]struct {
 		level      string
 		panicRegex *string
@@ -142,26 +145,26 @@ func TestSetLevel(t *testing.T) {
 
 					rStr := fmt.Sprint(r)
 					if !util.RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf("expected a panic that matched %q\ngot: %q",
-							*tc.panicRegex, rStr)
+						t.Errorf("%s\npanic error mismatch\nwant: %q\ngot: %q",
+							packageName, *tc.panicRegex, rStr)
 					}
 				}()
 			}
 
-			// WHEN SetLevel is called
+			// WHEN SetLevel is called.
 			jLog.SetLevel(tc.level)
 
-			// THEN the correct JLog is returned
+			// THEN the correct JLog is returned.
 			if jLog.Level != levelMap[strings.ToUpper(tc.level)] {
-				t.Errorf("want level=%d\ngot  level=%d",
-					levelMap[strings.ToUpper(tc.level)], jLog.Level)
+				t.Errorf("%s\nwant: level=%d\ngot:  level=%d",
+					packageName, levelMap[strings.ToUpper(tc.level)], jLog.Level)
 			}
 		})
 	}
 }
 
 func TestJLog_SetTimestamps(t *testing.T) {
-	// GIVEN a JLog and various tests
+	// GIVEN a JLog and various tests.
 	tests := map[string]struct {
 		start    bool
 		changeTo bool
@@ -178,20 +181,20 @@ func TestJLog_SetTimestamps(t *testing.T) {
 
 			jLog := NewJLog("INFO", tc.start)
 
-			// WHEN SetTimestamps is called
+			// WHEN SetTimestamps is called.
 			jLog.SetTimestamps(tc.changeTo)
 
-			// THEN the timestamps are set correctly
+			// THEN the timestamps are set correctly.
 			if jLog.Timestamps != tc.changeTo {
-				t.Errorf("want timestamps=%t\ngot  timestamps=%t",
-					tc.changeTo, jLog.Timestamps)
+				t.Errorf("%s\nwant: timestamps=%t\ngot:  timestamps=%t",
+					packageName, tc.changeTo, jLog.Timestamps)
 			}
 		})
 	}
 }
 
 func TestLogFrom_String(t *testing.T) {
-	// GIVEN a LogFrom
+	// GIVEN a LogFrom.
 	tests := map[string]struct {
 		logFrom LogFrom
 		want    string
@@ -214,20 +217,20 @@ func TestLogFrom_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN String() is called on it
+			// WHEN String() is called on it.
 			got := tc.logFrom.String()
 
-			// THEN an empty string is returned
+			// THEN an empty string is returned.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestJLog_IsLevel(t *testing.T) {
-	// GIVEN you have a valid JLog
+	// GIVEN you have a valid JLog.
 	tests := map[string]struct {
 		startLevel, testLevel string
 		want                  bool
@@ -292,20 +295,22 @@ func TestJLog_IsLevel(t *testing.T) {
 
 			jLog := NewJLog(tc.startLevel, false)
 
-			// WHEN IsLevel is called to check the given level
+			// WHEN IsLevel is called to check the given level.
 			got := jLog.IsLevel(tc.testLevel)
 
-			// THEN the correct response is returned
+			// THEN the correct response is returned.
 			if got != tc.want {
-				t.Errorf("level is %s, check of whether it's %s got %t. expected %t",
-					tc.startLevel, tc.testLevel, got, tc.want)
+				t.Errorf("%s\nlevel is %s, check of whether it's %s failed\nwant: %t\ngot:  %t",
+					packageName,
+					tc.startLevel, tc.testLevel,
+					tc.want, got)
 			}
 		})
 	}
 }
 
 func TestJLog_Error(t *testing.T) {
-	// GIVEN a JLog and message
+	// GIVEN a JLog and message.
 	msg := "argus"
 	tests := map[string]struct {
 		level          string
@@ -348,17 +353,17 @@ func TestJLog_Error(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
 
-			// WHEN Error is called with true
+			// WHEN Error is called with true.
 			jLog.Error(errors.New(msg), LogFrom{}, tc.otherCondition)
 
-			// THEN msg was logged if shouldPrint, with/without timestamps
+			// THEN msg was logged if shouldPrint, with/without timestamps.
 			stdout := releaseStdout()
 			var regex string
 			if tc.timestamps {
@@ -370,15 +375,15 @@ func TestJLog_Error(t *testing.T) {
 				regex = fmt.Sprintf("^ERROR: %s\n$", msg)
 			}
 			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("ERROR printed didn't match %q\nGot %q",
-					regex, stdout)
+				t.Errorf("%s\nerror mismatch on 'ERROR: '\nwant: %q\nGot %q",
+					packageName, regex, stdout)
 			}
 		})
 	}
 }
 
 func TestJLog_Warn(t *testing.T) {
-	// GIVEN a JLog and message
+	// GIVEN a JLog and message.
 	msg := "argus"
 	tests := map[string]struct {
 		level          string
@@ -420,17 +425,17 @@ func TestJLog_Warn(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
 
-			// WHEN Warn is called with true
+			// WHEN Warn is called with true.
 			jLog.Warn(errors.New(msg), LogFrom{}, tc.otherCondition)
 
-			// THEN msg was logged if shouldPrint, with/without timestamps
+			// THEN msg was logged if shouldPrint, with/without timestamps.
 			stdout := releaseStdout()
 			var regex string
 			if !tc.shouldPrint {
@@ -442,15 +447,15 @@ func TestJLog_Warn(t *testing.T) {
 				regex = fmt.Sprintf("^WARNING: %s\n$", msg)
 			}
 			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("WARNING printed didn't match %q\nGot %q",
-					regex, stdout)
+				t.Errorf("%s\nerror mismatch on 'WARNING: '\nwant: %q\ngot:  %q",
+					packageName, regex, stdout)
 			}
 		})
 	}
 }
 
 func TestJLog_Info(t *testing.T) {
-	// GIVEN a JLog and message
+	// GIVEN a JLog and message.
 	msg := "argus"
 	tests := map[string]struct {
 		level          string
@@ -492,17 +497,17 @@ func TestJLog_Info(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
 
-			// WHEN Info is called with true
+			// WHEN Info is called with true.
 			jLog.Info(errors.New(msg), LogFrom{}, tc.otherCondition)
 
-			// THEN msg was logged if shouldPrint, with/without timestamps
+			// THEN msg was logged if shouldPrint, with/without timestamps.
 			stdout := releaseStdout()
 			var regex string
 			if !tc.shouldPrint {
@@ -514,15 +519,15 @@ func TestJLog_Info(t *testing.T) {
 				regex = fmt.Sprintf("^INFO: %s\n$", msg)
 			}
 			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("INFO printed didn't match %q\nGot %q",
-					regex, stdout)
+				t.Errorf("%s\nError mismatch on 'INFO: '\nwant: %q\ngot:  %q",
+					packageName, regex, stdout)
 			}
 		})
 	}
 }
 
 func TestJLog_Verbose(t *testing.T) {
-	// GIVEN a JLog and message
+	// GIVEN a JLog and message.
 	tests := map[string]struct {
 		level          string
 		timestamps     bool
@@ -569,7 +574,7 @@ func TestJLog_Verbose(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			msg := "argus"
@@ -581,10 +586,10 @@ func TestJLog_Verbose(t *testing.T) {
 				msg = *tc.customMsg
 			}
 
-			// WHEN Verbose is called with true
+			// WHEN Verbose is called with true.
 			jLog.Verbose(errors.New(msg), LogFrom{}, tc.otherCondition)
 
-			// THEN msg was logged if shouldPrint, with/without timestamps
+			// THEN msg was logged if shouldPrint, with/without timestamps.
 			stdout := releaseStdout()
 			var regex string
 			if tc.customMsg != nil && tc.trimmed {
@@ -599,14 +604,14 @@ func TestJLog_Verbose(t *testing.T) {
 				regex = fmt.Sprintf("^VERBOSE: %s\n$", msg)
 			}
 			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("VERBOSE printed didn't match %q\nGot %q",
-					regex, stdout)
+				t.Errorf("%s\nVERBOSE print mismatch\nwant: %q\ngot:  %q",
+					packageName, regex, stdout)
 			}
 			if tc.customMsg != nil && tc.trimmed {
-				maxLength := 1001 // 1000 + 1 for the newline
+				maxLength := 1001 // 1000 + 1 for the newline.
 				if len(stdout) != maxLength {
-					t.Errorf("VERBOSE message length not limited to %d\nGot %d\n%q",
-						maxLength, len(stdout), stdout)
+					t.Errorf("%s\nVERBOSE message length not limited\nwant: %d lines\ngot:  %d\n\nstdout: %q",
+						packageName, maxLength, len(stdout), stdout)
 				}
 			}
 		})
@@ -614,7 +619,7 @@ func TestJLog_Verbose(t *testing.T) {
 }
 
 func TestJLog_Debug(t *testing.T) {
-	// GIVEN a JLog and message
+	// GIVEN a JLog and message.
 	msg := "argus"
 	tests := map[string]struct {
 		level          string
@@ -662,7 +667,7 @@ func TestJLog_Debug(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
@@ -672,10 +677,10 @@ func TestJLog_Debug(t *testing.T) {
 				msg = *tc.customMsg
 			}
 
-			// WHEN Debug is called with true
+			// WHEN Debug is called with true.
 			jLog.Debug(errors.New(msg), LogFrom{}, tc.otherCondition)
 
-			// THEN msg was logged if shouldPrint, with/without timestamps
+			// THEN msg was logged if shouldPrint, with/without timestamps.
 			stdout := releaseStdout()
 			var regex string
 			if tc.customMsg != nil && tc.trimmed {
@@ -691,14 +696,14 @@ func TestJLog_Debug(t *testing.T) {
 				regex = fmt.Sprintf("^DEBUG: %s\n$", msg)
 			}
 			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("DEBUG printed didn't match %q\nGot %q",
-					regex, stdout)
+				t.Errorf("%s\nDEBUG print mismatch\nwant: %q\ngot:  %q",
+					packageName, regex, stdout)
 			}
 			if tc.customMsg != nil && tc.trimmed {
-				maxLength := 1001 // 1000 + 1 for the newline
+				maxLength := 1001 // 1000 + 1 for the newline.
 				if len(stdout) != maxLength {
-					t.Errorf("DEBUG message length not limited to %d\nGot %d\n%q",
-						maxLength, len(stdout), stdout)
+					t.Errorf("%s\nDEBUG message length not limited\nwant: %d lines\ngot:  %d\n\nstdout: %q",
+						packageName, maxLength, len(stdout), stdout)
 				}
 			}
 		})
@@ -706,7 +711,7 @@ func TestJLog_Debug(t *testing.T) {
 }
 
 func TestJLog_Fatal(t *testing.T) {
-	// GIVEN a JLog and message
+	// GIVEN a JLog and message.
 	msg := "argus"
 	tests := map[string]struct {
 		level          string
@@ -748,7 +753,7 @@ func TestJLog_Fatal(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
@@ -766,28 +771,32 @@ func TestJLog_Fatal(t *testing.T) {
 						regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ERROR: %s\n$", msg)
 					}
 					if !util.RegexCheck(regex, stdout) {
-						t.Errorf("ERROR wasn't printed/didn't match %q\nGot %q",
-							regex, stdout)
+						t.Errorf("%s\ndid panic, but error mismatch on 'Error: ' (Fatal)\nwant: %q\ngot:  %q",
+							packageName, regex, stdout)
 					}
 				}()
 			}
 
-			// WHEN Fatal is called with true
+			// WHEN Fatal is called with true.
 			jLog.Fatal(errors.New(msg), LogFrom{}, tc.otherCondition)
 
-			// THEN msg was logged if shouldPrint, with/without timestamps
+			// THEN no message was logged in otherCondition is false.
 			stdout := releaseStdout()
 			regex := "^$"
 			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("ERROR printed didn't match %q\nGot %q",
-					regex, stdout)
+				t.Errorf("%s\nerror mismatch (otherCondition=%t)\nwant: %q\ngot:  %q",
+					packageName, tc.otherCondition, regex, stdout)
+			}
+			if tc.otherCondition {
+				t.Fatalf("%s\nFatal didn't panic, but should have",
+					packageName)
 			}
 		})
 	}
 }
 
 func TestJLog_logMessage(t *testing.T) {
-	// GIVEN a JLog and a message
+	// GIVEN a JLog and a message.
 	msg := "test message"
 	tests := map[string]struct {
 		timestamps bool
@@ -800,17 +809,17 @@ func TestJLog_logMessage(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog("INFO", tc.timestamps)
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
 
-			// WHEN logMessage is called
+			// WHEN logMessage is called.
 			jLog.logMessage(msg)
 
-			// THEN msg was logged with/without timestamps
+			// THEN msg was logged with/without timestamps.
 			stdout := releaseStdout()
 			var regex string
 			if tc.timestamps {
@@ -822,8 +831,8 @@ func TestJLog_logMessage(t *testing.T) {
 					msg)
 			}
 			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("logMessage printed didn't match\n%q\ngot:\n%q",
-					regex, stdout)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, regex, stdout)
 			}
 		})
 	}

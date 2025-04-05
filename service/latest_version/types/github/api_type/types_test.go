@@ -24,6 +24,8 @@ import (
 	"github.com/release-argus/Argus/test"
 )
 
+var packageName = "latestver_github_types"
+
 func TestRelease_String(t *testing.T) {
 	tests := map[string]struct {
 		release                  *Release
@@ -78,13 +80,13 @@ func TestRelease_String(t *testing.T) {
 				tc.release.SemanticVersion, _ = semver.NewVersion(tc.release_semantic_version)
 			}
 
-			// WHEN the Release is stringified with String
+			// WHEN the Release is stringified with String.
 			got := tc.release.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.want {
-				t.Errorf("GitHub Release.String() mismatch\ngot:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -119,13 +121,13 @@ func TestAsset_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN the Asset is stringified with String
+			// WHEN the Asset is stringified with String.
 			got := tc.asset.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,12 +21,12 @@ import (
 )
 
 func TestGetFS(t *testing.T) {
-	// GIVEN there's a static folder with the web ui inside
+	// GIVEN there's a static folder with the web ui inside.
 
-	// WHEN the FS is retrieved
+	// WHEN the FS is retrieved.
 	fs := GetFS()
 
-	// THEN those files can be accessed
+	// THEN those files can be accessed.
 	fileThatExists := "index.html"
 	_, errFileShouldExist := fs.Open(fileThatExists)
 	fileThatDoesNotExist := fileThatExists + "a"

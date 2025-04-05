@@ -60,12 +60,14 @@ func TestServiceMap(t *testing.T) {
 				if tc.expected == nil {
 					return
 				}
-				t.Fatalf("ServiceMap key %q does not exist", tc.key)
+				t.Fatalf("%s\nServiceMap key %q does not exist",
+					packageName, tc.key)
 			}
 			// And the returned type is of the expected type.
 			lookup := lookupFunc()
 			if getType(lookup) != getType(tc.expected) {
-				t.Errorf("ServiceMap[%q]() = %T, want %T", tc.key, lookup, tc.expected)
+				t.Errorf("%s\nServiceMap[%q]() = %T, want %T",
+					packageName, tc.key, lookup, tc.expected)
 			}
 		})
 	}

@@ -64,8 +64,8 @@ func TestService_ServiceInfo(t *testing.T) {
 	gotStr := util.ToJSONString(got)
 	wantStr := util.ToJSONString(want)
 	if gotStr != wantStr {
-		t.Errorf("ServiceInfo didn't get the correct data\nwant: %#v\ngot:  %#v",
-			wantStr, gotStr)
+		t.Errorf("%s\nwant: %#v\ngot:  %#v",
+			packageName, wantStr, gotStr)
 	}
 }
 
@@ -150,8 +150,8 @@ func TestService_IconURL(t *testing.T) {
 			// THEN the function returns the correct result.
 			gotStr := util.DereferenceOrNilValue(got, nilValue)
 			if gotStr != tc.want {
-				t.Errorf("IconURL() mismatch\n%q\ngot:  %q",
-					tc.want, gotStr)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, gotStr)
 			}
 		})
 	}
@@ -346,46 +346,49 @@ func TestService_Init(t *testing.T) {
 			// THEN pointers to those vars are handed out to the Lookup::
 			// 	Defaults.
 			if tc.svc.Defaults != tc.defaults {
-				t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					tc.defaults, tc.svc.Defaults)
+				t.Errorf("%s\nDefaults mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.defaults, tc.svc.Defaults)
 			}
 			// 	Dashboard.Defaults.
 			if tc.svc.Dashboard.Defaults != &tc.defaults.Dashboard {
-				t.Errorf("Dashboard defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&tc.defaults.Dashboard, tc.svc.Dashboard.Defaults)
+				t.Errorf("%s\nDashboard.Defaults mismatch\nwant: %v\ngot:  %v",
+					packageName, &tc.defaults.Dashboard, tc.svc.Dashboard.Defaults)
 			}
 			// 	Options.defaults.
 			if tc.svc.Options.Defaults != &tc.defaults.Options {
-				t.Errorf("Options defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&tc.defaults.Options, tc.svc.Options.Defaults)
+				t.Errorf("%s\nOptions.Defaults mismatch\nwant: %v\ngot:  %v",
+					packageName, &tc.defaults.Options, tc.svc.Options.Defaults)
 			}
 			// 	HardDefaults.
 			if tc.svc.HardDefaults != &hardDefaults {
-				t.Errorf("HardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&hardDefaults, tc.svc.HardDefaults)
+				t.Errorf("%s\nHardDefaults mismatch\nwant: %v\ngot:  %v",
+					packageName, &hardDefaults, tc.svc.HardDefaults)
 			}
 			// 	Dashboard.HardDefaults.
 			if tc.svc.Dashboard.HardDefaults != &hardDefaults.Dashboard {
-				t.Errorf("Dashboard hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&hardDefaults.Dashboard, tc.svc.Dashboard.HardDefaults)
+				t.Errorf("%s\nDashboard.HardDefaults mismatch\nwant: %v\ngot:  %v",
+					packageName, &hardDefaults.Dashboard, tc.svc.Dashboard.HardDefaults)
 			}
 			// 	Options.HardDefaults.
 			if tc.svc.Options.HardDefaults != &hardDefaults.Options {
-				t.Errorf("Options hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&hardDefaults.Options, tc.svc.Options.HardDefaults)
+				t.Errorf("%s\nOptions.HardDefaults mismatch\nwant: %v\ngot:  %v",
+					packageName, &hardDefaults.Options, tc.svc.Options.HardDefaults)
 			}
 			// 	Notify.
 			if len(tc.svc.Notify) != 0 {
 				for i := range tc.svc.Notify {
 					if tc.svc.Notify[i].Main == nil {
-						t.Error("Notify init didn't initialise the Main")
+						t.Errorf("%s\nNotify init didn't initialise the Main",
+							packageName)
 					}
 				}
 			}
 			// 		Notifiers are not overridden if non-empty.
 			if len(hadNotify) != 0 && len(tc.svc.Notify) != len(hadNotify) {
-				t.Fatalf("Notify length changed\n want: %d (%v)\ngot:  %d (%v)",
-					len(hadNotify), hadNotify, len(tc.svc.Notify), util.SortedKeys(tc.svc.Notify))
+				t.Fatalf("%s\nNotify length mismatch\nwant: %d (%v)\ngot:  %d (%v)",
+					packageName,
+					len(hadNotify), hadNotify,
+					len(tc.svc.Notify), util.SortedKeys(tc.svc.Notify))
 			}
 			wantNotify := hadNotify
 			if len(hadNotify) == 0 && tc.defaults != nil {
@@ -394,23 +397,26 @@ func TestService_Init(t *testing.T) {
 			}
 			for _, i := range wantNotify {
 				if tc.svc.Notify[i] == nil {
-					t.Errorf("Notify[%s] was nil", i)
+					t.Errorf("%s - Notify[%s] was nil",
+						packageName, i)
 				}
 			}
 			// 	Command.
 			if len(tc.svc.Command) != 0 {
 				if tc.svc.CommandController == nil {
-					t.Errorf("CommandController is still nil with %v Commands present",
-						tc.svc.Command)
+					t.Errorf("%s\nCommandController is still nil with %v Commands present",
+						packageName, tc.svc.Command)
 				}
 			} else if tc.svc.CommandController != nil {
-				t.Errorf("CommandController should be nil with %v Commands present",
-					tc.svc.Command)
+				t.Errorf("%s\nCommandController should be nil with %v Commands present",
+					packageName, tc.svc.Command)
 			}
 			// 		Command is not overridden if non-empty.
 			if len(hadCommand) != 0 && len(tc.svc.Command) != len(hadCommand) {
-				t.Fatalf("Command length changed\n want: %d (%v)\ngot: %d (%v)",
-					len(hadCommand), hadCommand, len(tc.svc.Command), tc.svc.Command)
+				t.Fatalf("%s\nCommand length changed\nwant: %d (%v)\ngot:  %d (%v)",
+					packageName,
+					len(hadCommand), hadCommand,
+					len(tc.svc.Command), tc.svc.Command)
 			}
 			wantCommand := hadCommand
 			if len(hadCommand) == 0 && tc.defaults != nil {
@@ -419,22 +425,26 @@ func TestService_Init(t *testing.T) {
 			}
 			for i := range wantCommand {
 				if tc.svc.Command[i].String() != wantCommand[i].String() {
-					t.Errorf("Command[%d] changed\n want: %q\ngot:  %q",
-						i, wantCommand[i].String(), tc.svc.Command[i].String())
+					t.Errorf("%s - Command[%d] changed\nwant: %q\ngot:  %q",
+						packageName, i,
+						wantCommand[i].String(), tc.svc.Command[i].String())
 				}
 			}
 			// 	WebHook.
 			if len(tc.svc.WebHook) != 0 {
 				for i := range tc.svc.WebHook {
 					if tc.svc.WebHook[i].Main == nil {
-						t.Error("WebHook init didn't initialise the Main")
+						t.Errorf("%s\nWebHook init didn't initialise the Main",
+							packageName)
 					}
 				}
 			}
 			// 		WebHooks are not overridden if non-empty.
 			if len(hadWebHook) != 0 && len(tc.svc.WebHook) != len(hadWebHook) {
-				t.Fatalf("WebHook length changed\n want: %d (%v)\ngot: %d (%v)",
-					len(hadWebHook), hadWebHook, len(tc.svc.WebHook), util.SortedKeys(tc.svc.WebHook))
+				t.Fatalf("%s\nWebHook length changed\nwant: %d (%v)\ngot:  %d (%v)",
+					packageName,
+					len(hadWebHook), hadWebHook,
+					len(tc.svc.WebHook), util.SortedKeys(tc.svc.WebHook))
 			}
 			wantWebHook := hadWebHook
 			if len(hadWebHook) == 0 && tc.defaults != nil {
@@ -443,7 +453,8 @@ func TestService_Init(t *testing.T) {
 			}
 			for _, i := range wantWebHook {
 				if tc.svc.WebHook[i] == nil {
-					t.Errorf("hadWebHook[%s] was nil", i)
+					t.Errorf("%s - hadWebHook[%s] was nil",
+						packageName, i)
 				}
 			}
 		})
@@ -540,9 +551,9 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			serviceCountTotal := metric.ServiceCountCurrent
 			initialServiceCountCurrent := testutil.ToFloat64(serviceCountTotal)
 
-			// ################################
-			// WHEN initMetrics is called on it
-			// ################################
+			// #################################
+			// WHEN initMetrics is called on it.
+			// #################################
 			service.initMetrics()
 
 			// THEN the metrics are created:
@@ -550,10 +561,9 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			oldWant := want
 			// 	latest_version_is_deployed.
 			latestVersionMetric.Set(want)
-			got := testutil.ToFloat64(latestVersionMetric)
-			if got != want {
-				t.Errorf("Init, Expected latestVersionMetric to be %f, not %f",
-					want, got)
+			if got := testutil.ToFloat64(latestVersionMetric); got != want {
+				t.Errorf("%s\nlatestVersionMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			// 	deployed_version_query_result_last.
 			if tc.nilDeployedVersion {
@@ -561,10 +571,9 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			} else {
 				deployedVersionMetric.Set(want)
 			}
-			got = testutil.ToFloat64(deployedVersionMetric)
-			if got != want {
-				t.Errorf("Init, Expected deployedVersionMetric to be %f, not %f",
-					want, got)
+			if got := testutil.ToFloat64(deployedVersionMetric); got != want {
+				t.Errorf("%s\ndeployedVersionMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			want = oldWant
 			// 	command_result_total.
@@ -573,10 +582,9 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			} else {
 				commandMetric.Add(want)
 			}
-			got = testutil.ToFloat64(commandMetric)
-			if got != want {
-				t.Errorf("Init, Expected commandMetric to be %f, not %f",
-					want, got)
+			if got := testutil.ToFloat64(commandMetric); got != want {
+				t.Errorf("%s\ncommandMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			want = oldWant
 			// 	notify_result_total.
@@ -585,10 +593,9 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			} else {
 				notifyMetric.Add(want)
 			}
-			got = testutil.ToFloat64(notifyMetric)
-			if got != want {
-				t.Errorf("Init, Expected notifyMetric to be %f, not %f",
-					want, got)
+			if got := testutil.ToFloat64(notifyMetric); got != want {
+				t.Errorf("%s\nnotifyMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			// 	webhook_result_total.
 			want = oldWant
@@ -597,23 +604,21 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			} else {
 				webhookMetric.Add(want)
 			}
-			got = testutil.ToFloat64(webhookMetric)
-			if got != want {
-				t.Errorf("Init, Expected webhookMetric to be %f, not %f",
-					want, got)
+			if got := testutil.ToFloat64(webhookMetric); got != want {
+				t.Errorf("%s\nwebhookMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			want = oldWant
 			// 	service_count_total.
-			got = testutil.ToFloat64(serviceCountTotal)
 			wantServiceCountCurrent := initialServiceCountCurrent + 1
-			if got != wantServiceCountCurrent {
-				t.Errorf("Reset, Expected ServiceCountCurrent to be %f, not %f",
-					wantServiceCountCurrent, got)
+			if got := testutil.ToFloat64(serviceCountTotal); got != wantServiceCountCurrent {
+				t.Errorf("%s\nServiceCountCurrent mismatch after initMetrics()\nwant: %f\ngot:  %f",
+					packageName, wantServiceCountCurrent, got)
 			}
 
-			// ##################################
-			// WHEN deleteMetrics is called on it
-			// ##################################
+			// ###################################
+			// WHEN deleteMetrics is called on it.
+			// ###################################
 			service.deleteMetrics()
 
 			// metrics:
@@ -636,41 +641,34 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			// THEN the metrics are deleted:
 			want = 0
 			// 	latest_version_is_deployed.
-			got = testutil.ToFloat64(latestVersionMetric)
-			if got != want {
-				t.Errorf("Delete, Expected latestVersionMetric to be %f, not %f",
-					want, got)
+			if got := testutil.ToFloat64(latestVersionMetric); got != want {
+				t.Errorf("%s\nlatestVersionMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			// 	deployed_version_query_result_last.
-			got = testutil.ToFloat64(deployedVersionMetric)
-			if got != want {
-				t.Errorf("Delete, Expected deployedVersionMetric to be %f, not %f",
-					want, got)
+			if got := testutil.ToFloat64(deployedVersionMetric); got != want {
+				t.Errorf("%s\ndeployedVersionMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			// 	command_result_total.
-			got = testutil.ToFloat64(commandMetric)
-			if got != want {
-				t.Errorf("Delete, Expected commandMetric to be %f, not %f",
-					want, got)
+			if got := testutil.ToFloat64(commandMetric); got != want {
+				t.Errorf("%s\ncommandMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			// 	notify_result_total.
-			got = testutil.ToFloat64(notifyMetric)
-			if got != want {
-				t.Errorf("Delete, Expected notifyMetric to be %f, not %f",
-					want, got)
+			if got := testutil.ToFloat64(notifyMetric); got != want {
+				t.Errorf("%s\nnotifyMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			// 	webhook_result_total.
-			got = testutil.ToFloat64(webhookMetric)
-			if got != want {
-				t.Errorf("Delete, Expected webhookMetric to be %f, not %f",
-					want, got)
+			if got := testutil.ToFloat64(webhookMetric); got != want {
+				t.Errorf("%s\nwebhookMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			// 	service_count_total.
-			got = testutil.ToFloat64(serviceCountTotal)
-			// Reset to initial value.
-			if got != initialServiceCountCurrent {
-				t.Errorf("Delete, Expected ServiceCountCurrent to be %f, not %f",
-					wantServiceCountCurrent, got)
+			if got := testutil.ToFloat64(serviceCountTotal); got != initialServiceCountCurrent {
+				t.Errorf("%s\nServiceCountCurrent mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
+					packageName, wantServiceCountCurrent, got)
 			}
 		})
 	}

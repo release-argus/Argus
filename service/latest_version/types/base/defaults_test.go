@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,25 +27,25 @@ import (
 )
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN a LookupDefault
+	// GIVEN a LookupDefault.
 	defaults := Defaults{}
 
-	// WHEN Default is called
+	// WHEN Default is called.
 	defaults.Default()
 
-	// THEN it should set the defaults
+	// THEN it should set the defaults.
 	if defaults.AllowInvalidCerts == nil {
-		t.Errorf("AllowInvalidCerts not set, got %v",
-			defaults.AllowInvalidCerts)
+		t.Errorf("%s\nAllowInvalidCerts not set, got %v",
+			packageName, defaults.AllowInvalidCerts)
 	}
 	if defaults.UsePreRelease == nil {
-		t.Errorf("UsePreRelease not set, got %v",
-			defaults.UsePreRelease)
+		t.Errorf("%s\nUsePreRelease not set, got %v",
+			packageName, defaults.UsePreRelease)
 	}
-	// AND Require has been defaulted
+	// AND Require has been defaulted.
 	if defaults.Require.Docker.Type == "" {
-		t.Errorf("Require.Docker.Type not set, got %v",
-			defaults.Require.Docker.Type)
+		t.Errorf("%s\nRequire.Docker.Type not set, got %v",
+			packageName, defaults.Require.Docker.Type)
 	}
 }
 
@@ -54,7 +54,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 		require         filter.RequireDefaults
 		urlCommandSlice filter.URLCommandSlice
 	}
-	// GIVEN a LookupDefault
+	// GIVEN a LookupDefault.
 	tests := map[string]struct {
 		args     args
 		errRegex string
@@ -83,21 +83,21 @@ func TestDefaults_CheckValues(t *testing.T) {
 			defaults := Defaults{
 				Require: tc.args.require}
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := defaults.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("Defaults.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Errorf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\nstdout: %q",
+					packageName, wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Defaults.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 		})

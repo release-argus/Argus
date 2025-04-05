@@ -97,8 +97,8 @@ func TestWebHook_Try(t *testing.T) {
 							continue
 						}
 					}
-					t.Errorf("want match for %q\nnot: %q",
-						tc.errRegex, e)
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.errRegex, e)
 				}
 			}
 		})
@@ -193,7 +193,8 @@ func TestWebHook_Send(t *testing.T) {
 								webhook.ID, "FAIL", serviceInfo.ID))
 							time.Sleep(time.Millisecond * 200)
 						}
-						t.Logf("Failed %d times", tc.retries)
+						t.Logf("%s - Failed %d times",
+							packageName, tc.retries)
 						webhook.mutex.Lock()
 						webhook.Secret = "argus"
 						webhook.mutex.Unlock()
@@ -216,17 +217,19 @@ func TestWebHook_Send(t *testing.T) {
 							continue
 						}
 					}
-					t.Errorf("match on %q not found in\n%q",
-						tc.stdoutRegex, stdout)
+					t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.stdoutRegex, stdout)
 				}
 				// AND the delay is expected.
 				if tc.delay != "" {
 					delayDuration, _ := time.ParseDuration(tc.delay)
 					took := completedAt.Sub(startAt)
 					if took < delayDuration {
-						t.Errorf("delay %s not used", tc.delay)
+						t.Errorf("%s\ndelay not used\nwant: %s+\ngot:  %s",
+							packageName, tc.delay, took)
 					} else if took > delayDuration+2*time.Second {
-						t.Errorf("delay %s took too long %s", tc.delay, took)
+						t.Errorf("%s\ntoo much delay\nwant: %s\ngot:  %s",
+							packageName, tc.delay, took)
 					}
 				}
 			}
@@ -308,13 +311,13 @@ func TestSlice_Send(t *testing.T) {
 						}
 						if tc.stdoutRegexAlt != "" {
 							if !util.RegexCheck(tc.stdoutRegexAlt, stdout) {
-								t.Errorf("match on %q not found in\n%q",
-									tc.stdoutRegexAlt, stdout)
+								t.Errorf("%s\nstdoutAlt mismatch\nwant: %q\ngot:  %q",
+									packageName, tc.stdoutRegexAlt, stdout)
 							}
 							return
 						}
-						t.Errorf("match on %q not found in\n%q",
-							tc.stdoutRegex, stdout)
+						t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+							packageName, tc.stdoutRegex, stdout)
 					}
 					tc.repeat--
 				}
@@ -353,8 +356,8 @@ func TestNotifiers_SendWithNotifier(t *testing.T) {
 			// THEN err is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("match on %q not found in\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -392,8 +395,8 @@ func TestCheckWebHookBody(t *testing.T) {
 
 			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %t\ngot:  %t",
-					tc.want, got)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}

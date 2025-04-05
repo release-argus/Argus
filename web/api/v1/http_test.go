@@ -49,8 +49,8 @@ func TestHTTP_Version(t *testing.T) {
 	// THEN the version is returned in JSON format.
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
-		t.Errorf("expected error to be nil got %v",
-			err)
+		t.Errorf("%s\nerror mismatch\nwant: nil\ngot:  %v",
+			packageName, err)
 	}
 	var got apitype.VersionAPI
 	json.Unmarshal(data, &got)
@@ -60,8 +60,8 @@ func TestHTTP_Version(t *testing.T) {
 		GoVersion: util.GoVersion,
 	}
 	if got != want {
-		t.Errorf("Version HTTP should have returned %v, not %v",
-			want, got)
+		t.Errorf("%s\nbody mismatch\nwant: %v\ngot:  %v",
+			packageName, want, got)
 	}
 }
 
@@ -114,7 +114,7 @@ func TestHTTP_BasicAuth(t *testing.T) {
 			}
 			if !tc.noHeader {
 				req.Header = http.Header{
-					// test:123
+					// "test:123"
 					"Authorization": {"Basic dGVzdDoxMjM="},
 				}
 			}
@@ -130,8 +130,8 @@ func TestHTTP_BasicAuth(t *testing.T) {
 				want = http.StatusUnauthorized
 			}
 			if got != want {
-				t.Errorf("Expected a %d, not a %d",
-					want, got)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, want, got)
 			}
 		})
 	}
@@ -173,11 +173,13 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 			// WHEN a HTTP request is made to this router (apple-touch-icon.png).
 			req, err := http.NewRequest(http.MethodGet, ts.URL+"/apple-touch-icon.png", nil)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("%s\n%v",
+					packageName, err)
 			}
 			resp, err := client.Do(req)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("%s\n%v",
+					packageName, err)
 			}
 
 			// THEN the status code is as expected.
@@ -186,22 +188,24 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 				wantStatus = http.StatusOK
 			}
 			if resp.StatusCode != wantStatus {
-				t.Errorf("/apple-touch-icon.png - Expected a %d, not a %d",
-					wantStatus, resp.StatusCode)
+				t.Errorf("%s\n/apple-touch-icon.png - status code mismatch\nwant: %d\ngot:  %d",
+					packageName, wantStatus, resp.StatusCode)
 			}
 			if tc.urlPNG != "" && tc.urlPNG != resp.Request.URL.String() {
-				t.Errorf("/apple-touch-icon.png - Expected a redirect to %s, not %s",
-					tc.urlPNG, resp.Request.URL.String())
+				t.Errorf("%s\n/apple-touch-icon.png - redirect mismatch\nwant: %q\ngot:  %s",
+					packageName, tc.urlPNG, resp.Request.URL.String())
 			}
 
 			// WHEN a HTTP request is made to this router (favicon.svg).
 			req, err = http.NewRequest(http.MethodGet, ts.URL+"/favicon.svg", nil)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("%s\n%v",
+					packageName, err)
 			}
 			resp, err = client.Do(req)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("%s\n%v",
+					packageName, err)
 			}
 
 			// THEN the status code is as expected.
@@ -210,12 +214,12 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 				wantStatus = http.StatusOK
 			}
 			if resp.StatusCode != wantStatus {
-				t.Errorf("/favicon.svg - Expected a %d, not a %d",
-					wantStatus, resp.StatusCode)
+				t.Errorf("%s\n/favicon.svg - status code mismatch\nwant: %d\ngot:  %d",
+					packageName, wantStatus, resp.StatusCode)
 			}
 			if tc.urlSVG != "" && tc.urlSVG != resp.Request.URL.String() {
-				t.Errorf("/favicon.svg - Expected a redirect to %s, not %s",
-					tc.urlSVG, resp.Request.URL.String())
+				t.Errorf("%s\n/favicon.svg - redirect mismatch\nwant: %s\ngot:  %s",
+					packageName, tc.urlSVG, resp.Request.URL.String())
 			}
 		})
 	}
@@ -475,11 +479,13 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 						// WHEN a HTTP request is made to this router.
 						req, err := http.NewRequest(tc.method, url, reqBody)
 						if err != nil {
-							t.Fatal(err)
+							t.Fatalf("%s\n%v",
+								packageName, err)
 						}
 						resp, err := client.Do(req)
 						if err != nil {
-							t.Fatal(err)
+							t.Fatalf("%s\n%v",
+								packageName, err)
 						}
 
 						// Read the response body.
@@ -492,14 +498,18 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 						fail := false
 						// THEN the status code is as expected.
 						if resp.StatusCode != tc.wantStatus {
-							t.Errorf("%s, %s - Expected a %d, not a %d",
-								tc.method, path, tc.wantStatus, resp.StatusCode)
+							t.Errorf("%s\n%s, %s - status code mismatch\nwant: %d\ngot:  %d",
+								packageName,
+								tc.method, path,
+								tc.wantStatus, resp.StatusCode)
 							fail = true
 						}
 						// AND the body is as expected.
 						if !util.RegexCheck(tc.wantBody, string(body)) {
-							t.Errorf("%s, %s - Expected a body of\n%s\nnot\n%s",
-								tc.method, path, tc.wantBody, string(body))
+							t.Errorf("%s\n%s, %s - body mismatch\nwant: %q\ngot:  %q",
+								packageName,
+								tc.method, path,
+								tc.wantBody, string(body))
 							fail = true
 						}
 
@@ -567,14 +577,16 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 
 			// THEN the status code is as expected.
 			if resp.StatusCode != tc.wantStatus {
-				t.Errorf("Expected status %d, got %d", tc.wantStatus, resp.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantStatus, resp.StatusCode)
 			}
 
 			// AND the content type is as expected.
 			if tc.wantContent != "" {
 				contentType := resp.Header.Get("Content-Type")
 				if !strings.Contains(contentType, tc.wantContent) {
-					t.Errorf("Expected content type %s, got %s", tc.wantContent, contentType)
+					t.Errorf("%s\ncontent type mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.wantContent, contentType)
 				}
 			}
 		})

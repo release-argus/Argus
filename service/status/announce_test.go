@@ -1,4 +1,4 @@
-// Copyright [2024]] [Argus]
+// Copyright [2025]] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 )
 
 func TestStatus_AnnounceFirstVersion(t *testing.T) {
-	// GIVEN a Status and an AnnounceChannel that may be nil
+	// GIVEN a Status and an AnnounceChannel that may be nil.
 	tests := map[string]struct {
 		nilChannel bool
 	}{
@@ -46,10 +46,10 @@ func TestStatus_AnnounceFirstVersion(t *testing.T) {
 			wantLatestVersion := status.LatestVersion()
 			wantLatestVersionTimestamp := status.LatestVersionTimestamp()
 
-			// WHEN AnnounceFirstVersion is called on it
+			// WHEN AnnounceFirstVersion is called on it.
 			status.AnnounceFirstVersion()
 
-			// THEN the message is received
+			// THEN the message is received.
 			if tc.nilChannel {
 				return
 			}
@@ -57,23 +57,23 @@ func TestStatus_AnnounceFirstVersion(t *testing.T) {
 			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
-				t.Fatalf("ID - got %q, want %q",
-					got.ServiceData.ID, wantID)
+				t.Fatalf("%s\nIDmismatch\nwant: %q\ngot:  %q",
+					packageName, wantID, got.ServiceData.ID)
 			}
 			if got.ServiceData.Status.LatestVersion != wantLatestVersion {
-				t.Errorf("LatestVersion - got %q, want %q",
-					got.ServiceData.Status.LatestVersion, wantLatestVersion)
+				t.Errorf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, wantLatestVersion, got.ServiceData.Status.LatestVersion)
 			}
 			if got.ServiceData.Status.LatestVersionTimestamp != wantLatestVersionTimestamp {
-				t.Errorf("LatestVersionTimestamp - got %q, want %q",
-					got.ServiceData.Status.LatestVersionTimestamp, wantLatestVersionTimestamp)
+				t.Errorf("%s\nLatestVersionTimestamp mismatch\nwant: %q\ngot:  %q",
+					packageName, wantLatestVersionTimestamp, got.ServiceData.Status.LatestVersionTimestamp)
 			}
 		})
 	}
 }
 
 func TestStatus_AnnounceQuery(t *testing.T) {
-	// GIVEN an AnnounceChannel
+	// GIVEN an AnnounceChannel.
 	tests := map[string]struct {
 		nilChannel bool
 	}{
@@ -94,10 +94,10 @@ func TestStatus_AnnounceQuery(t *testing.T) {
 			wantID := *status.ServiceID
 			wantLastQueried := status.LastQueried()
 
-			// WHEN AnnounceQuery is called on it
+			// WHEN AnnounceQuery is called on it.
 			status.AnnounceQuery()
 
-			// THEN the message is received
+			// THEN the message is received.
 			if tc.nilChannel {
 				return
 			}
@@ -105,19 +105,19 @@ func TestStatus_AnnounceQuery(t *testing.T) {
 			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
-				t.Fatalf("ID - got %q, want %q\n%#v",
-					got.ServiceData.ID, wantID, got.ServiceData.Status)
+				t.Fatalf("%s\nID mismatch\nwant: %q\ngot:  %q",
+					packageName, wantID, got.ServiceData.ID)
 			}
 			if got.ServiceData.Status.LastQueried != wantLastQueried {
-				t.Errorf("LastQueried - got %q, want %q",
-					got.ServiceData.Status.LatestVersion, wantLastQueried)
+				t.Fatalf("%s\nLastQueried mismatch\nwant: %q\ngot:  %q",
+					packageName, wantLastQueried, got.ServiceData.Status.LastQueried)
 			}
 		})
 	}
 }
 
 func TestStatus_AnnounceQueryNewVersion(t *testing.T) {
-	// GIVEN a Status and an AnnounceChannel that may be nil
+	// GIVEN a Status and an AnnounceChannel that may be nil.
 	tests := map[string]struct {
 		nilChannel bool
 	}{
@@ -139,10 +139,10 @@ func TestStatus_AnnounceQueryNewVersion(t *testing.T) {
 			wantLatestVersion := status.LatestVersion()
 			wantLatestVersionTimestamp := status.LatestVersionTimestamp()
 
-			// WHEN AnnounceQueryNewVersion is called on it
+			// WHEN AnnounceQueryNewVersion is called on it.
 			status.AnnounceQueryNewVersion()
 
-			// THEN the message is received
+			// THEN the message is received.
 			if tc.nilChannel {
 				return
 			}
@@ -150,23 +150,23 @@ func TestStatus_AnnounceQueryNewVersion(t *testing.T) {
 			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
-				t.Fatalf("ID - got %q, want %q\n%#v",
-					got.ServiceData.ID, wantID, got.ServiceData.Status)
+				t.Fatalf("%s\nID mismatch\nwant: %q\ngot:  %q",
+					packageName, wantID, got.ServiceData.ID)
 			}
 			if got.ServiceData.Status.LatestVersion != wantLatestVersion {
-				t.Errorf("LatestVersion - got %q, want %q",
-					got.ServiceData.Status.LatestVersion, wantLatestVersion)
+				t.Fatalf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, wantLatestVersion, got.ServiceData.Status.LatestVersion)
 			}
 			if got.ServiceData.Status.LatestVersionTimestamp != wantLatestVersionTimestamp {
-				t.Errorf("LatestVersionTimestamp - got %q, want %q\n%#v",
-					got.ServiceData.Status.LatestVersionTimestamp, wantLatestVersionTimestamp, got.ServiceData.Status)
+				t.Fatalf("%s\nLatestVersionTimestamp mismatch\nwant: %q\ngot:  %q",
+					packageName, wantLatestVersionTimestamp, got.ServiceData.Status.LatestVersionTimestamp)
 			}
 		})
 	}
 }
 
 func TestStatus_AnnounceUpdate(t *testing.T) {
-	// GIVEN a Status and an AnnounceChannel that may be nil
+	// GIVEN a Status and an AnnounceChannel that may be nil.
 	tests := map[string]struct {
 		nilChannel bool
 	}{
@@ -188,10 +188,10 @@ func TestStatus_AnnounceUpdate(t *testing.T) {
 			wantDeployedVersion := status.DeployedVersion()
 			wantDeployedVersionTimestamp := status.DeployedVersionTimestamp()
 
-			// WHEN AnnounceUpdate is called on it
+			// WHEN AnnounceUpdate is called on it.
 			status.AnnounceUpdate()
 
-			// THEN the message is received
+			// THEN the message is received.
 			if tc.nilChannel {
 				return
 			}
@@ -199,23 +199,23 @@ func TestStatus_AnnounceUpdate(t *testing.T) {
 			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
-				t.Fatalf("ID - got %q, want %q\n%#v",
-					got.ServiceData.ID, wantID, got.ServiceData.Status)
+				t.Fatalf("%s\nID mismatch\nwant: %q\ngot:  %q",
+					packageName, wantID, got.ServiceData.ID)
 			}
 			if got.ServiceData.Status.DeployedVersion != wantDeployedVersion {
-				t.Errorf("DeployedVersion - got %q, want %q",
-					got.ServiceData.Status.DeployedVersion, wantDeployedVersion)
+				t.Fatalf("%s\nDeployedVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, wantDeployedVersion, got.ServiceData.Status.DeployedVersion)
 			}
 			if got.ServiceData.Status.DeployedVersionTimestamp != wantDeployedVersionTimestamp {
-				t.Errorf("DeployedVersionTimestamp - got %q, want %q\n%#v",
-					got.ServiceData.Status.DeployedVersionTimestamp, wantDeployedVersionTimestamp, got.ServiceData.Status)
+				t.Fatalf("%s\nDeployedVersionTimestamp mismatch\nwant: %q\ngot:  %q",
+					packageName, wantDeployedVersionTimestamp, got.ServiceData.Status.DeployedVersionTimestamp)
 			}
 		})
 	}
 }
 
 func TestStatus_announceApproved(t *testing.T) {
-	// GIVEN a Status and an AnnounceChannel
+	// GIVEN a Status and an AnnounceChannel.
 	tests := map[string]struct {
 		nilChannel bool
 	}{
@@ -236,10 +236,10 @@ func TestStatus_announceApproved(t *testing.T) {
 			wantID := *status.ServiceID
 			wantApprovedVersion := status.ApprovedVersion()
 
-			// WHEN announceApproved is called on it
+			// WHEN announceApproved is called on it.
 			status.announceApproved()
 
-			// THEN the message is received
+			// THEN the message is received.
 			if tc.nilChannel {
 				return
 			}
@@ -247,12 +247,12 @@ func TestStatus_announceApproved(t *testing.T) {
 			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
-				t.Fatalf("ID - got %q, want %q\n%#v",
-					got.ServiceData.ID, wantID, got.ServiceData.Status)
+				t.Fatalf("%s\nID mismatch\nwant: %q\ngot:  %q",
+					packageName, wantID, got.ServiceData.ID)
 			}
 			if got.ServiceData.Status.ApprovedVersion != wantApprovedVersion {
-				t.Errorf("ApprovedVersion - got %q, want %q",
-					got.ServiceData.Status.LatestVersion, wantApprovedVersion)
+				t.Fatalf("%s\nApprovedVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, wantApprovedVersion, got.ServiceData.Status.ApprovedVersion)
 			}
 		})
 	}

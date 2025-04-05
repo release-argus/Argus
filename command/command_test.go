@@ -28,7 +28,7 @@ import (
 )
 
 func TestCommand_ApplyTemplate(t *testing.T) {
-	// GIVEN various Commands
+	// GIVEN various Commands.
 	tests := map[string]struct {
 		input         Command
 		want          Command
@@ -61,20 +61,20 @@ func TestCommand_ApplyTemplate(t *testing.T) {
 				tc.serviceStatus.SetLatestVersion(tc.latestVersion, "", false)
 			}
 
-			// WHEN ApplyTemplate is called on the Command
+			// WHEN ApplyTemplate is called on the Command.
 			got := tc.input.ApplyTemplate(tc.serviceStatus)
 
-			// THEN the result is expected
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Fatalf("want: %v\ngot:  %v",
-					tc.want, got)
+			// THEN the result is expected.
+			if !reflect.DeepEqual(tc.want, got) {
+				t.Fatalf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestCommand_Exec(t *testing.T) {
-	// GIVEN different Commands to execute
+	// GIVEN different Commands to execute.
 	tests := map[string]struct {
 		cmd         Command
 		err         error
@@ -91,28 +91,28 @@ func TestCommand_Exec(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
-			// WHEN Exec is called on it
+			// WHEN Exec is called on it.
 			err := tc.cmd.Exec(logutil.LogFrom{})
 
-			// THEN the stdout is expected
+			// THEN the stdout is expected.
 			if util.ErrorToString(err) != util.ErrorToString(tc.err) {
-				t.Fatalf("error mismatch%q\ngot:%q",
-					tc.err, err)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.err, err)
 			}
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf("want match for %q\nnot: %q",
-					tc.stdoutRegex, stdout)
+				t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.stdoutRegex, stdout)
 			}
 		})
 	}
 }
 
 func TestController_ExecIndex(t *testing.T) {
-	// GIVEN a Controller with different Commands to execute
+	// GIVEN a Controller with different Commands to execute.
 	announce := make(chan []byte, 8)
 	controller := Controller{}
 	svcStatus := status.New(
@@ -149,38 +149,38 @@ func TestController_ExecIndex(t *testing.T) {
 	runNumber := 0
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
-			// WHEN the Command @index is executed
+			// WHEN the Command @index is executed.
 			err := controller.ExecIndex(logutil.LogFrom{}, tc.index)
 
-			// THEN the stdout is expected
-			// err
+			// THEN the stdout is expected.
+			// 	err:
 			if util.ErrorToString(err) != util.ErrorToString(tc.err) {
-				t.Fatalf("errors differ\nwant: %s\ngot:  %s",
-					tc.err, err)
+				t.Fatalf("%s\nerror mismatch\nwant: %s\ngot:  %s",
+					packageName, tc.err, err)
 			}
-			// stdout
+			// 	stdout:
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.stdoutRegex, stdout)
+				t.Fatalf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.stdoutRegex, stdout)
 			}
-			// announced
+			// 	announced:
 			if !tc.noAnnounce {
 				runNumber++
 			}
 			if len(announce) != runNumber {
-				t.Fatalf("Command run not announced\nat %d, want %d",
-					len(announce), runNumber)
+				t.Fatalf("%s\nCommand run not announced\nwant: %d\ngot:  %d",
+					packageName, runNumber, len(announce))
 			}
 		})
 	}
 }
 
 func TestController_Exec(t *testing.T) {
-	// GIVEN a Controller
+	// GIVEN a Controller.
 	tests := map[string]struct {
 		nilController bool
 		commands      *Slice
@@ -209,39 +209,39 @@ func TestController_Exec(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			announce := make(chan []byte, 8)
 			controller := testController(&announce)
 
-			// WHEN the Command @index is executed
+			// WHEN the Command @index is executed.
 			controller.Command = tc.commands
 			if tc.nilController {
 				controller = nil
 			}
 			err := controller.Exec(logutil.LogFrom{})
 
-			// THEN the stdout is expected
-			// err
+			// THEN the stdout is expected.
+			// 	err:
 			if util.ErrorToString(err) != util.ErrorToString(tc.err) {
-				t.Fatalf("errors differ\nwant: %q\ngot:  %q",
-					util.ErrorToString(tc.err), util.ErrorToString(err))
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, util.ErrorToString(tc.err), util.ErrorToString(err))
 			}
-			// stdout
+			// 	stdout:
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.stdoutRegex, stdout)
+				t.Fatalf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.stdoutRegex, stdout)
 			}
-			// announced
+			// 	announced:
 			runNumber := 0
 			if !tc.noAnnounce {
 				runNumber = len(*controller.Command)
 			}
 			if len(announce) != runNumber {
-				t.Fatalf("Command run not announced\nat %d, want %d",
-					len(announce), runNumber)
+				t.Fatalf("%s\nCommand run not announced\nwant: %d\ngot:  %d",
+					packageName, runNumber, len(announce))
 			}
 		})
 	}

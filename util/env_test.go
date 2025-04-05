@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 
 func TestFirstNonDefaultWithEnv(t *testing.T) {
 	envVarNameBase := "TEST_FIRST_NON_DEFAULT_WITH_ENV_"
-	// GIVEN a bunch of comparables
+	// GIVEN a bunch of comparables.
 	tests := map[string]struct {
 		env         map[string]string
 		slice       []string
@@ -119,32 +119,33 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(envVarName) })
 			}
 
-			// WHEN FirstNonDefaultWithEnv is run on a slice of slice
+			// WHEN FirstNonDefaultWithEnv is run on a slice of slice.
 			got := FirstNonDefaultWithEnv(tc.slice...)
 
-			// THEN the correct var (or "") is returned
+			// THEN the correct var (or "") is returned.
 			if tc.allDefault {
 				if got != "" {
-					t.Fatalf("got:  %v\nfrom: %v",
-						got, tc.slice)
+					t.Fatalf("%s\nwant: non-empty\ngot:  %q\nfrom: %v",
+						packageName, got, tc.slice)
 				}
 				return
 			}
-			// Addresses should be the same (unless we're using an env var)
-			if got != tc.slice[tc.wantIndex] && !tc.diffAddress {
-				t.Errorf("address mismatch\nwant: %v\ngot:  %v",
-					tc.slice[tc.wantIndex], got)
-				// Addresses should only be the same
+			// Addresses should be the same (unless we're using an env var).
+			if got != tc.slice[tc.wantIndex] &&
+				!tc.diffAddress {
+				t.Errorf("%s\naddress mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.slice[tc.wantIndex], got)
+				// Addresses should only be the same.
 			} else if got == tc.slice[tc.wantIndex] {
-				// IF we're using an env var
+				// If we're using an env var.
 				if tc.diffAddress {
-					t.Errorf("addresses of pointers should differ (%v, %v)",
-						tc.slice[tc.wantIndex], got)
+					t.Errorf("%s\naddresses of pointers should differ (%v, %v)",
+						packageName, tc.slice[tc.wantIndex], got)
 				}
-				// Should have what the env var is set to
+				// Should have what the env var is set to.
 			} else if got != tc.wantText {
-				t.Errorf("value mismatch\nwant: %q\ngot:  %q",
-					tc.wantText, got)
+				t.Errorf("%s\nvalue mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantText, got)
 			}
 		})
 	}
@@ -152,7 +153,7 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 
 func TestEvalEnvVars(t *testing.T) {
 	envVarNameBase := "TEST_EVAL_ENV_VARS_"
-	// GIVEN a string
+	// GIVEN a string.
 	tests := map[string]struct {
 		input string
 		env   map[string]string
@@ -214,20 +215,20 @@ func TestEvalEnvVars(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(envVarName) })
 			}
 
-			// WHEN EvalEnvVars is called
+			// WHEN EvalEnvVars is called.
 			got := EvalEnvVars(tc.input)
 
-			// THEN the string is evaluated correctly
+			// THEN the string is evaluated correctly.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestExpandEnvVariables(t *testing.T) {
-	// GIVEN an env var that may or may not exist
+	// GIVEN an env var that may or may not exist.
 	envVarNameBase := "TEST_ENV_REPLACE_FUNC_"
 	tests := map[string]struct {
 		envVarName  string
@@ -263,14 +264,14 @@ func TestExpandEnvVariables(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(tc.envVarName) })
 			}
 
-			// WHEN expandEnvVariables is called
+			// WHEN expandEnvVariables is called.
 			got := expandEnvVariables(
 				fmt.Sprintf("${%s}", tc.envVarName))
 
-			// THEN the string is evaluated correctly
+			// THEN the string is evaluated correctly.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}

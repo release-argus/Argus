@@ -23,28 +23,34 @@ import (
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
+var packageName = "logtest"
+
 func TestInitLog(t *testing.T) {
 	// GIVEN the environment variable is not set.
-	os.Unsetenv("ARGUS_LOG_LEVEL")
+	envKey := "ARGUS_LOG_LEVEL"
+	os.Unsetenv(envKey)
 
 	// WHEN InitLog is called.
 	InitLog()
 
 	// THEN the environment variable should be set to "DEBUG".
-	if got := os.Getenv("ARGUS_LOG_LEVEL"); got != "DEBUG" {
-		t.Errorf("expected ARGUS_LOG_LEVEL to be 'DEBUG', got '%s'",
-			got)
+	got := os.Getenv(envKey)
+	wantLogLevel := "DEBUG"
+	if got != wantLogLevel {
+		t.Errorf("%s\nunexpected %s\nwant: %q\ngot:  %q",
+			packageName, envKey, wantLogLevel, got)
 	}
 	// AND the log level should be set to DEBUG.
 	hadLogLevel := logutil.Log.Level
 	logutil.Log.SetLevel("DEBUG")
 	debugLogLevel := logutil.Log.Level
-	if hadLogLevel != debugLogLevel {
-		t.Errorf("expected log level to be DEBUG, got %d (want %d)",
-			debugLogLevel, hadLogLevel)
+	if debugLogLevel != hadLogLevel {
+		t.Errorf("%s\nlog level mismatch\nwant: %d DEBUG\ngot %d",
+			packageName, debugLogLevel, hadLogLevel)
 	}
 	// AND the log should be in testing mode.
 	if !logutil.Log.Testing {
-		t.Errorf("expected log to be in testing mode")
+		t.Errorf("%s\nexpected log to be in testing mode",
+			packageName)
 	}
 }

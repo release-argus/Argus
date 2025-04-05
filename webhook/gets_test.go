@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 )
 
 func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue *bool
 		want                                                 bool
@@ -66,20 +66,20 @@ func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
 			webhook.Defaults.AllowInvalidCerts = tc.defaultValue
 			webhook.HardDefaults.AllowInvalidCerts = tc.hardDefaultValue
 
-			// WHEN GetAllowInvalidCerts is called
+			// WHEN GetAllowInvalidCerts is called.
 			got := webhook.GetAllowInvalidCerts()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %t\ngot:  %t",
-					tc.want, got)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestWebHook_GetDelay(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue string
 		want                                                 string
@@ -118,20 +118,20 @@ func TestWebHook_GetDelay(t *testing.T) {
 			webhook.Defaults.Delay = tc.defaultValue
 			webhook.HardDefaults.Delay = tc.hardDefaultValue
 
-			// WHEN GetDelay is called
+			// WHEN GetDelay is called.
 			got := webhook.GetDelay()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %s\ngot:  %s",
-					tc.want, got)
+				t.Errorf("%s\nwant: %s\ngot:  %s",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestWebHook_GetDelayDuration(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue string
 		want                                                 time.Duration
@@ -170,20 +170,20 @@ func TestWebHook_GetDelayDuration(t *testing.T) {
 			webhook.Defaults.Delay = tc.defaultValue
 			webhook.HardDefaults.Delay = tc.hardDefaultValue
 
-			// WHEN GetDelayDuration is called
+			// WHEN GetDelayDuration is called.
 			got := webhook.GetDelayDuration()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %s\ngot:  %s",
-					tc.want, got)
+				t.Errorf("%s\nwant: %s\ngot:  %s",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestWebHook_GetDesiredStatusCode(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue *uint16
 		want                                                 uint16
@@ -222,20 +222,20 @@ func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 			webhook.Defaults.DesiredStatusCode = tc.defaultValue
 			webhook.HardDefaults.DesiredStatusCode = tc.hardDefaultValue
 
-			// WHEN GetDesiredStatusCode is called
+			// WHEN GetDesiredStatusCode is called.
 			got := webhook.GetDesiredStatusCode()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %d\ngot:  %d",
-					tc.want, got)
+				t.Errorf("%s\nwant: %d\ngot:  %d",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestWebHook_GetMaxTries(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue *uint8
 		want                                                 uint8
@@ -274,20 +274,20 @@ func TestWebHook_GetMaxTries(t *testing.T) {
 			webhook.Defaults.MaxTries = tc.defaultValue
 			webhook.HardDefaults.MaxTries = tc.hardDefaultValue
 
-			// WHEN GetMaxTries is called
+			// WHEN GetMaxTries is called.
 			got := webhook.GetMaxTries()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %d\ngot:  %d",
-					tc.want, got)
+				t.Errorf("%s\nwant: %d\ngot:  %d",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestWebHook_BuildRequest(t *testing.T) {
-	// GIVEN a WebHook and a HTTP Request
+	// GIVEN a WebHook and a HTTP Request.
 	tests := map[string]struct {
 		webhookType   string
 		url           string
@@ -335,57 +335,57 @@ func TestWebHook_BuildRequest(t *testing.T) {
 			webhook.URL = tc.url
 			webhook.CustomHeaders = &tc.customHeaders
 
-			// WHEN BuildRequest is called
+			// WHEN BuildRequest is called.
 			req := webhook.BuildRequest()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if tc.wantNil {
 				if req != nil {
-					t.Fatalf("expected request to fail with url %q",
-						tc.url)
+					t.Fatalf("%s\nexpected request to fail with url %q",
+						packageName, tc.url)
 				}
 				return
 			}
 			switch tc.webhookType {
 			case "github":
-				// Payload
+				// Payload.
 				body, _ := io.ReadAll(req.Body)
 				var payload GitHub
 				json.Unmarshal(body, &payload)
 				want := "refs/heads/master"
 				if payload.Ref != want {
-					t.Errorf("didn't get %q in the payload\n%v",
-						want, payload)
+					t.Errorf("%s\npayload mismatch\nwant: %q\ngot:  %q (%+v)",
+						packageName, want, payload.Ref, payload)
 				}
-				// Content-Type
+				// Content-Type.
 				want = "application/json"
 				if req.Header["Content-Type"][0] != want {
-					t.Errorf("didn't get %q in the Content-Type\n%v",
-						want, req.Header["Content-Type"])
+					t.Errorf("%s\nContent-Type mismatch\nwant: %q\ngot:  %q (%+v)",
+						packageName, want, req.Header["Content-Type"][0], req.Header)
 				}
-				// X-Github-Event
+				// X-Github-Event.
 				want = "push"
 				if req.Header["X-Github-Event"][0] != want {
-					t.Errorf("GitHub headers weren't set? Didn't get %q in the X-Github-Event\n%v",
-						want, req.Header["X-Github-Event"])
+					t.Errorf("%s\nGitHub headers weren't set?\nwant: %q in 'X-Github-Event'\ngot:  %v",
+						packageName, want, req.Header["X-Github-Event"])
 				}
 			case "gitlab":
-				// Content-Type
+				// Content-Type.
 				want := "application/x-www-form-urlencoded"
 				if req.Header["Content-Type"][0] != want {
-					t.Errorf("didn't get %q in the Content-Type\n%v",
-						want, req.Header["Content-Type"])
+					t.Errorf("%s\nContent-Type mismatch\nwant: %q\ngot:  %q (%+v)",
+						packageName, want, req.Header["Content-Type"][0], req.Header)
 				}
 			}
-			// Custom Headers
+			// Custom Headers.
 			for _, header := range tc.customHeaders {
 				if len(req.Header[header.Key]) == 0 {
-					t.Fatalf("Custom Headers not set\n%v",
-						req.Header)
+					t.Fatalf("%s\nCustom Headers not set\n%+v",
+						packageName, req.Header)
 				}
 				if req.Header[header.Key][0] != header.Value {
-					t.Fatalf("Custom Headers not set correctly\nwant %q to be %q, not %q\n%v",
-						header, header.Value, req.Header[header.Key][0], req.Header)
+					t.Fatalf("%s\nCustom Headers mismatch\nwant: %q\ngot:  %q (%+v)",
+						packageName, header.Value, req.Header[header.Key][0], req.Header)
 				}
 			}
 		})
@@ -393,7 +393,7 @@ func TestWebHook_BuildRequest(t *testing.T) {
 }
 
 func TestWebHook_GetType(t *testing.T) {
-	// GIVEN a WebHook with Type in various locations
+	// GIVEN a WebHook with Type in various locations.
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue string
 		want                                                 string
@@ -432,20 +432,20 @@ func TestWebHook_GetType(t *testing.T) {
 			webhook.Defaults.Type = tc.defaultValue
 			webhook.HardDefaults.Type = tc.hardDefaultValue
 
-			// WHEN GetType is called
+			// WHEN GetType is called.
 			got := webhook.GetType()
 
-			// THEN the function returns the correct type
+			// THEN the function returns the correct type.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestWebHook_GetSecret(t *testing.T) {
-	// GIVEN a WebHook with Secret in various locations
+	// GIVEN a WebHook with Secret in various locations.
 	tests := map[string]struct {
 		env                                                  map[string]string
 		rootValue, mainValue, defaultValue, hardDefaultValue string
@@ -510,20 +510,20 @@ func TestWebHook_GetSecret(t *testing.T) {
 			webhook.Defaults.Secret = tc.defaultValue
 			webhook.HardDefaults.Secret = tc.hardDefaultValue
 
-			// WHEN GetSecret is called
+			// WHEN GetSecret is called.
 			got := webhook.GetSecret()
 
-			// THEN the function returns the correct secret
+			// THEN the function returns the correct secret.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestWebHook_GetSilentFails(t *testing.T) {
-	// GIVEN a WebHook with SilentFails in various locations
+	// GIVEN a WebHook with SilentFails in various locations.
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue *bool
 		want                                                 bool
@@ -562,20 +562,20 @@ func TestWebHook_GetSilentFails(t *testing.T) {
 			webhook.Defaults.SilentFails = tc.defaultValue
 			webhook.HardDefaults.SilentFails = tc.hardDefaultValue
 
-			// WHEN GetSilentFails is called
+			// WHEN GetSilentFails is called.
 			got := webhook.GetSilentFails()
 
-			// THEN the function returns the correct boolean
+			// THEN the function returns the correct boolean.
 			if got != tc.want {
-				t.Errorf("want: %t\ngot:  %t",
-					tc.want, got)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestWebHook_GetURL(t *testing.T) {
-	// GIVEN a WebHook with urls in various locations
+	// GIVEN a WebHook with urls in various locations.
 	tests := map[string]struct {
 		env                                                  map[string]string
 		rootValue, mainValue, defaultValue, hardDefaultValue string
@@ -651,20 +651,20 @@ func TestWebHook_GetURL(t *testing.T) {
 			webhook.HardDefaults.URL = tc.hardDefaultValue
 			webhook.ServiceStatus.SetLatestVersion(tc.latestVersion, "", false)
 
-			// WHEN GetURL is called
+			// WHEN GetURL is called.
 			got := webhook.GetURL()
 
-			// THEN the function returns the url
+			// THEN the function returns the url.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestWebHook_GetIsRunnable(t *testing.T) {
-	// GIVEN a WebHook with a NextRunnable time
+	// GIVEN a WebHook with a NextRunnable time.
 	tests := map[string]struct {
 		nextRunnable time.Time
 		want         bool
@@ -685,20 +685,20 @@ func TestWebHook_GetIsRunnable(t *testing.T) {
 			webhook.SetNextRunnable(tc.nextRunnable)
 			time.Sleep(time.Nanosecond)
 
-			// WHEN GetIsRunnable is called
+			// WHEN GetIsRunnable is called.
 			got := webhook.IsRunnable()
 
-			// THEN the function returns whether the webhook is runnable now
+			// THEN the function returns whether the webhook is runnable now.
 			if got != tc.want {
-				t.Errorf("want: %t\ngot:  %t",
-					tc.want, got)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestWebHook_SetExecuting(t *testing.T) {
-	// GIVEN a WebHook in different fail states
+	// GIVEN a WebHook in different fail states.
 	tests := map[string]struct {
 		failed         *bool
 		timeDifference time.Duration
@@ -750,18 +750,21 @@ func TestWebHook_SetExecuting(t *testing.T) {
 			webhook.Delay = tc.delay
 			webhook.MaxTries = test.UInt8Ptr(tc.maxTries)
 
-			// WHEN SetExecuting is run
+			// WHEN SetExecuting is run.
 			webhook.SetExecuting(tc.addDelay, tc.sending)
 
-			// THEN the correct response is received
-			// next runnable is within expected range
+			// THEN the correct response is received,
+			// and next runnable is within expected range.
 			now := time.Now().UTC()
 			minTime := now.Add(tc.timeDifference - time.Second)
 			maxTime := now.Add(tc.timeDifference + time.Second)
 			gotTime := webhook.NextRunnable()
 			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
-				t.Fatalf("ran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
-					now, minTime, maxTime, gotTime)
+				t.Fatalf("%s\nran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
+					packageName,
+					now,
+					minTime, maxTime,
+					gotTime)
 			}
 		})
 	}

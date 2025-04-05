@@ -18,6 +18,8 @@ package util
 
 import "github.com/release-argus/Argus/test"
 
+var packageName = "util"
+
 func testServiceInfo() ServiceInfo {
 	return ServiceInfo{
 		ID:            "something",

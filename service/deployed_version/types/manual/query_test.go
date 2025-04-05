@@ -28,20 +28,21 @@ import (
 )
 
 func TestLookup_Track(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	lookup := testLookup("1.2.3", false)
 	didFinish := make(chan bool, 1)
 
-	// WHEN Track is called on it
+	// WHEN Track is called on it.
 	go func() {
 		lookup.Track()
 		didFinish <- true
 	}()
 	time.Sleep(10 * time.Millisecond)
 
-	// THEN the function exits straight away
+	// THEN the function exits straight away.
 	if len(didFinish) == 0 {
-		t.Fatal("Track did not exit")
+		t.Fatalf("%s\nshould have exited immediately",
+			packageName)
 	}
 }
 
@@ -129,11 +130,13 @@ func TestLookup_Query(t *testing.T) {
 			dvl := testLookup("", false)
 			err := yaml.Unmarshal([]byte(tc.overrides), dvl)
 			if err != nil {
-				t.Fatalf("failed to unmarshal overrides: %s", err)
+				t.Fatalf("%s\nfailed to unmarshal overrides: %s",
+					packageName, err)
 			}
 			err = yaml.Unmarshal([]byte(tc.optionsOverrides), dvl.Options)
 			if err != nil {
-				t.Fatalf("failed to unmarshal options overrides: %s", err)
+				t.Fatalf("%s\nfailed to unmarshal options overrides: %s",
+					packageName, err)
 			}
 			oneMinuteAgo := time.Now().Add(-1 * time.Minute).Format(time.RFC3339)
 			dvl.Status.SetLatestVersion(tc.previousLatestVersion, oneMinuteAgo, false)
@@ -146,8 +149,8 @@ func TestLookup_Query(t *testing.T) {
 			if tc.wantVersion != "" {
 				version := dvl.Status.DeployedVersion()
 				if !util.RegexCheck(tc.wantVersion, version) {
-					t.Errorf("want version=%q\ngot  version=%q",
-						tc.wantVersion, version)
+					t.Errorf("%s\nversion mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.wantVersion, version)
 				}
 			}
 			e := util.ErrorToString(err)
@@ -155,19 +158,20 @@ func TestLookup_Query(t *testing.T) {
 				tc.errRegex = `^$`
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			// AND the Version is cleared.
-			if dvl.Version != "" {
-				t.Errorf("Version not cleared: %q",
-					dvl.Version)
+			wantVersion := ""
+			if dvl.Version != wantVersion {
+				t.Errorf("%s\nVersion not cleared\nwant: %q\ngot:  %q",
+					packageName, wantVersion, dvl.Version)
 			}
 			// AND the correct number of announces are queued.
 			gotAnnounces := len(*dvl.Status.AnnounceChannel)
 			if gotAnnounces != tc.announces {
-				t.Errorf("want %d announces, got %d",
-					tc.announces, gotAnnounces)
+				t.Errorf("%s\nannounce count mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.announces, gotAnnounces)
 			}
 		})
 	}
@@ -187,18 +191,19 @@ func TestLookup_Query__RateLimit(t *testing.T) {
 	// THEN it errors with a rate-limit message.
 	e := util.ErrorToString(err)
 	if util.RegexCheck("^$", e) {
-		t.Fatalf("Expected a rate-limit error, got %q",
-			e)
+		t.Fatalf("%s\nExpected a rate-limit error, got %q",
+			packageName, e)
 	}
 	// AND the Version is cleared.
 	if dvl.Version != "" {
-		t.Errorf("Version not cleared: %q", dvl.Version)
+		t.Errorf("%s\nVersion not cleared: %q",
+			packageName, dvl.Version)
 	}
 	// AND no announces are queued.
 	wantAnnounces := 0
 	gotAnnounces := len(*dvl.Status.AnnounceChannel)
 	if gotAnnounces != wantAnnounces {
-		t.Errorf("want %d announces, got %d",
-			wantAnnounces, gotAnnounces)
+		t.Errorf("%s\nannounce count mismatch\nwant: %d\ngot:  %d",
+			packageName, wantAnnounces, gotAnnounces)
 	}
 }

@@ -34,7 +34,8 @@ func TestLookup_InitMetrics(t *testing.T) {
 	// THEN no metrics should be initialised as the function does nothing.
 	gotC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 	if gotC != hadC {
-		t.Errorf("Counter metrics were initialised, expecting none")
+		t.Errorf("%s\nCounter metrics initialised unexpectedly\nwant: %d\ngot:  %d",
+			packageName, hadC, gotC)
 	}
 }
 
@@ -45,7 +46,8 @@ func TestLookup_DeleteMetrics(t *testing.T) {
 	lookup.Lookup.InitMetrics(lookup)
 	hadC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 	if hadC == 0 {
-		t.Fatalf("Counter metrics were not initialised")
+		t.Fatalf("%s\nCounter metrics were not initialised",
+			packageName)
 	}
 
 	// WHEN DeleteMetrics is called.
@@ -54,15 +56,15 @@ func TestLookup_DeleteMetrics(t *testing.T) {
 	// THEN no metrics should be deleted as the function does nothing.
 	gotC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 	if gotC != hadC {
-		t.Errorf("Counter metrics were deleted, expecting %d. Got %d",
-			hadC, gotC)
+		t.Errorf("%s\nCounter metrics deleted unexpectedly\nwant: %d\ngot:  %d",
+			packageName, hadC, gotC)
 	}
 	// AND they can be deleted with DeleteMetrics on the base Lookup.
 	lookup.Lookup.DeleteMetrics(lookup)
 	gotC = testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 	if gotC != originalC {
-		t.Errorf("Counter metrics were not deleted, expecting %d. Got %d",
-			originalC, gotC)
+		t.Errorf("%s\nCounter metrics not deleted\nwant: %d\ngot:  %d",
+			packageName, originalC, gotC)
 	}
 }
 
@@ -77,6 +79,7 @@ func TestLookup_QueryMetrics(t *testing.T) {
 	// THEN no metrics should be updated as the function does nothing.
 	gotC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 	if gotC != hadC {
-		t.Errorf("Counter metrics were updated, expecting none")
+		t.Errorf("%s\nunexpected Counter metric updates\nwant: %d\ngot:  %d",
+			packageName, hadC, gotC)
 	}
 }

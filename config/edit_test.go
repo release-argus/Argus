@@ -99,25 +99,27 @@ func TestConfig_AddService(t *testing.T) {
 			loadMutex.RUnlock()
 			logMutex.Unlock()
 
-			// THEN the service is
+			// THEN the service is:
 			// 	added/renamed/replaced.
 			cfg.OrderMutex.RLock()
 			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
 			if tc.added && cfg.Service[tc.newService.ID] != tc.newService {
-				t.Fatalf("oldService %q wasn't placed at config[%q]", tc.oldService, tc.newService.ID)
+				t.Fatalf("%s\noldService %q wasn't placed at config[%q]",
+					packageName, tc.oldService, tc.newService.ID)
 			}
 			if !tc.added && cfg.Service[tc.newService.ID] == tc.newService {
-				t.Fatalf("config[%q] shouldn't have been added", tc.newService.ID)
+				t.Fatalf("%s\nconfig[%q] shouldn't have been added",
+					packageName, tc.newService.ID)
 			}
 			// Added to Order at the correct spot.
 			if !test.EqualSlices(cfg.Order, tc.wantOrder) {
-				t.Errorf("Order mismatch: got %v, want %v",
-					cfg.Order, tc.wantOrder)
+				t.Errorf("%s\nOrder mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantOrder, cfg.Order)
 			}
 			// AND the DatabaseChannel should have a message waiting if the service was added.
 			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != tc.dbMessages {
-				t.Errorf("DatabaseChannel should have %d messages waiting, got %d",
-					tc.dbMessages, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
+				t.Errorf("%s\nDatabaseChannel mismatch\nwant: %d messages\ngot:  %d",
+					packageName, tc.dbMessages, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
 				for i := 0; i <= len(*cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
 					msg := <-*cfg.HardDefaults.Service.Status.DatabaseChannel
 					t.Log(msg)
@@ -194,16 +196,17 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			// WHEN ServiceWithNameExists is called.
-			got := tt.config.ServiceWithNameExists(tt.serviceName, tt.oldServiceID)
+			got := tc.config.ServiceWithNameExists(tc.serviceName, tc.oldServiceID)
 
 			// THEN we receive the expected result.
-			if got != tt.want {
-				t.Errorf("Config.ServiceWithNameExists() = %v, want %v", got, tt.want)
+			if got != tc.want {
+				t.Errorf("%s\nmismatch\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -260,19 +263,21 @@ func TestConfig_RenameService(t *testing.T) {
 			cfg.OrderMutex.RLock()
 			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
 			if !test.EqualSlices(cfg.Order, tc.wantOrder) {
-				t.Errorf("Order mismatch: got %v, want %v",
-					cfg.Order, tc.wantOrder)
+				t.Errorf("%s\nOrder mismatch:\nwant: %q\ngot:  %q",
+					packageName, tc.wantOrder, cfg.Order)
 			}
 			// AND the service should be removed if it was renamed.
 			if !tc.fail && tc.oldName != tc.newName && cfg.Service[tc.oldName] != nil {
-				t.Errorf("%q should have been removed, got %+v", tc.oldName, cfg.Service[tc.oldName])
+				t.Errorf("%s\n%q should have been removed, got %+v",
+					packageName, tc.oldName, cfg.Service[tc.oldName])
 			}
 			// AND the service should be at the address given.
 			if !tc.fail && cfg.Service[tc.newName] != newSVC {
 				if tc.noChange {
 					return
 				}
-				t.Errorf("%q should be at the given address, got\n%+v", tc.newName, cfg.Service[tc.newName])
+				t.Errorf("%s\n%q should be at the given address, got\n%+v",
+					packageName, tc.newName, cfg.Service[tc.newName])
 			}
 			// AND the DatabaseChannel should have a message waiting if it didn't fail.
 			want := 0
@@ -280,8 +285,8 @@ func TestConfig_RenameService(t *testing.T) {
 				want = 1
 			}
 			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != want {
-				t.Errorf("DatabaseChannel should have %d messages waiting, got %d",
-					want, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
+				t.Errorf("%s\nDatabaseChannel mismatch\nwant: %d messages\ngot:  %d",
+					packageName, want, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
 				for i := 0; i <= len(*cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
 					msg := <-*cfg.HardDefaults.Service.Status.DatabaseChannel
 					t.Log(msg)
@@ -328,12 +333,13 @@ func TestConfig_DeleteService(t *testing.T) {
 			cfg.OrderMutex.RLock()
 			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
 			if cfg.Service[tc.name] != nil {
-				t.Errorf("%q was not removed", tc.name)
+				t.Errorf("%s\n%q was not removed",
+					packageName, tc.name)
 			}
 			// AND the Order was updated.
 			if !test.EqualSlices(cfg.Order, tc.wantOrder) {
-				t.Errorf("Order mismatch: got %v, want %v",
-					cfg.Order, tc.wantOrder)
+				t.Errorf("%s\nOrder mismatch:\nwant: %q\ngot:  %q",
+					packageName, tc.wantOrder, cfg.Order)
 			}
 			// AND the DatabaseChannel should have a message waiting if the service was deleted.
 			want := 0
@@ -341,8 +347,8 @@ func TestConfig_DeleteService(t *testing.T) {
 				want = 1
 			}
 			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != want {
-				t.Errorf("DatabaseChannel should have %d messages waiting, got %d",
-					want, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
+				t.Errorf("%s\nDatabaseChannel mismatch\nwant: %d messages\ngot:  %d",
+					packageName, want, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
 				for i := 0; i <= len(*cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
 					msg := <-*cfg.HardDefaults.Service.Status.DatabaseChannel
 					t.Log(msg)

@@ -190,8 +190,8 @@ func TestServiceTest(t *testing.T) {
 					// Check the panic message.
 					rStr := fmt.Sprint(r)
 					if !util.RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf("expected a panic that matched %q\ngot: %q",
-							*tc.panicRegex, rStr)
+						t.Errorf("%s\nexpected a panic that matched %q\ngot: %q",
+							packageName, *tc.panicRegex, rStr)
 					}
 				}()
 			}
@@ -223,8 +223,8 @@ func TestServiceTest(t *testing.T) {
 			stdout := releaseStdout()
 			if tc.stdoutRegex != nil {
 				if !util.RegexCheck(*tc.stdoutRegex, stdout) {
-					t.Errorf("want match on %q\ngot:\n%s",
-						*tc.stdoutRegex, stdout)
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %s",
+						packageName, *tc.stdoutRegex, stdout)
 				}
 			}
 		})

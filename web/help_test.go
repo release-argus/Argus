@@ -48,8 +48,11 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-var mainCfg *config.Config
-var port string
+var (
+	packageName = "web"
+	mainCfg     *config.Config
+	port        string
+)
 
 func TestMain(m *testing.M) {
 	// Log.

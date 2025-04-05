@@ -76,7 +76,8 @@ func TestSettings_String(t *testing.T) {
 
 			// THEN it's stringified as expected.
 			if got != tc.want {
-				t.Errorf("want: %q, got: %q", tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -239,8 +240,8 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 			hadStr := tc.had.String("")
 			wantStr := tc.want.String("")
 			if hadStr != wantStr {
-				t.Errorf("want:\n%v\ngot:\n%v",
-					wantStr, hadStr)
+				t.Errorf("%s\nmismatch\nwant: %v\ngot:  %v",
+					packageName, wantStr, hadStr)
 			}
 			// AND the BasicAuth username and password are hashed (if they exist).
 			if tc.want.Web.BasicAuth != nil {
@@ -249,16 +250,16 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 					wantUsernameHash = tc.wantUsernameHash
 				}
 				if util.FmtHash(tc.had.Web.BasicAuth.UsernameHash) != wantUsernameHash {
-					t.Errorf("want: %q\ngot:  %q",
-						wantUsernameHash, tc.had.Web.BasicAuth.UsernameHash)
+					t.Errorf("%s\nUsername hash mismatch\nwant: %q\ngot:  %q",
+						packageName, wantUsernameHash, tc.had.Web.BasicAuth.UsernameHash)
 				}
 				wantPasswordHash := util.FmtHash(util.GetHash(tc.want.Web.BasicAuth.Password))
 				if tc.wantPasswordHash != "" {
 					wantPasswordHash = tc.wantPasswordHash
 				}
 				if util.FmtHash(tc.had.Web.BasicAuth.PasswordHash) != wantPasswordHash {
-					t.Errorf("want: %q\ngot:  %q",
-						wantPasswordHash, tc.had.Web.BasicAuth.PasswordHash)
+					t.Errorf("%s\nPassword hash mismatch\nwant: %q\ngot:  %q",
+						packageName, wantPasswordHash, tc.had.Web.BasicAuth.PasswordHash)
 				}
 			}
 		})
@@ -303,14 +304,14 @@ func TestSettings_NilUndefinedFlags(t *testing.T) {
 			gotStr := LogLevel
 			if (tc.flagSet && gotStr == nil) ||
 				(!tc.flagSet && gotStr != nil) {
-				t.Errorf("%s %s:\nwant: %s\ngot:  %v",
-					flagStr, name, *tc.setStrTo, util.DereferenceOrNilValue(gotStr, "<nil>"))
+				t.Errorf("%s\nmismatch on %s - %s:\nwant: %s\ngot:  %v",
+					packageName, flagStr, name, *tc.setStrTo, util.DereferenceOrNilValue(gotStr, "<nil>"))
 			}
 			gotBool := LogTimestamps
 			if (tc.flagSet && gotBool == nil) ||
 				(!tc.flagSet && gotBool != nil) {
-				t.Errorf("%s %s:\nwant: %v\ngot:  %v",
-					flagBool, name, *tc.setBoolTo, gotBool)
+				t.Errorf("%s\n%s:\nwant: %v\ngot:  %v",
+					packageName, flagBool, *tc.setBoolTo, gotBool)
 			}
 		})
 	}
@@ -470,8 +471,8 @@ func TestSettings_GetString(t *testing.T) {
 				got = util.DereferenceOrNilValue(tc.getFuncPtr(), "<nil>")
 			}
 			if got != tc.want {
-				t.Errorf("want: %s\ngot:  %v",
-					tc.want, got)
+				t.Errorf("%s\nmismatch\nwant: %s\ngot:  %v",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -584,16 +585,18 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				}
 
 				if tc.errRegex == "" {
-					t.Fatalf("unexpected panic: %v", r)
+					t.Fatalf("%s\nunexpected panic: %v",
+						packageName, r)
 				}
 				switch r.(type) {
 				case string:
 					if !util.RegexCheck(tc.errRegex, r.(string)) {
-						t.Errorf("want error matching:\n%v\ngot:\n%v",
-							tc.errRegex, t)
+						t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+							packageName, tc.errRegex, r.(string))
 					}
 				default:
-					t.Fatalf("unexpected panic: %v", r)
+					t.Fatalf("%s\nunexpected panic: %v",
+						packageName, r)
 				}
 			}()
 
@@ -602,12 +605,13 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 
 			// THEN any error is as expected.
 			if tc.errRegex != "" { // Expected a FATAL panic to be caught above.
-				t.Fatalf("expected an error matching %q, but got none", tc.errRegex)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  none",
+					packageName, tc.errRegex)
 			}
 			// AND the settings are set to the appropriate env vars.
 			if settings.String("") != tc.want.String("") {
-				t.Errorf("want:\n%v\ngot:\n%v",
-					tc.want.String(""), settings.String(""))
+				t.Errorf("%s\nmismatch\nwant: %v\ngot:  %v",
+					packageName, tc.want.String(""), settings.String(""))
 			}
 		})
 	}
@@ -669,8 +673,8 @@ func TestSettings_GetBool(t *testing.T) {
 				}
 			}
 			if got != tc.want {
-				t.Errorf("want: %s\ngot:  %v",
-					tc.want, got)
+				t.Errorf("%s\nwant: %s\ngot:  %v",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -728,8 +732,8 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 
 			// THEN the empty string is returned.
 			if got != file {
-				t.Errorf("empty string\nwant: %q\ngot:  %q",
-					file, got)
+				t.Errorf("%s\nempty string\nwant: %q\ngot:  %q",
+					packageName, file, got)
 			}
 
 			//
@@ -749,8 +753,8 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 
 			// THEN the file path is returned.
 			if got != file {
-				t.Errorf("file path\nwant: %q\ngot:  %q",
-					file, got)
+				t.Errorf("%s\nfile path\nwant: %q\ngot:  %q",
+					packageName, file, got)
 			}
 
 			//
@@ -776,8 +780,8 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 
 				if !(strings.Contains(r.(string), "no such file or directory") ||
 					strings.Contains(r.(string), "cannot find the file specified")) {
-					t.Errorf("expected an error about the file not existing, not %s",
-						r.(string))
+					t.Errorf("%s\nwant: an error about the file not existing\ngot:  %s",
+						packageName, r.(string))
 				}
 				tc.changeVar = nil
 			}()
@@ -786,7 +790,8 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 			got = tc.getFunc()
 
 			// THEN call will crash the program as the file doesn't exist.
-			t.Errorf("deleted file\nwant: panic\ngot:  %q", got)
+			t.Errorf("%s\ndeleted file\nwant: panic\ngot:  %q",
+				packageName, got)
 		})
 	}
 }
@@ -837,8 +842,8 @@ func TestSettings_WebBasicAuthUsernameHash(t *testing.T) {
 
 			// THEN the hash is returned.
 			if got != want {
-				t.Errorf("want: %s\ngot:  %s",
-					want, got)
+				t.Errorf("%s\nwant: %s\ngot:  %s",
+					packageName, want, got)
 			}
 		})
 	}
@@ -902,8 +907,8 @@ func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
 
 			// THEN the hash is returned.
 			if got != want {
-				t.Errorf("want: %s\ngot:  %s",
-					want, got)
+				t.Errorf("%s\nwant: %s\ngot:  %s",
+					packageName, want, got)
 			}
 		})
 	}
@@ -959,7 +964,8 @@ func TestWebSettings_String(t *testing.T) {
 
 			// THEN it's stringified as expected.
 			if got != tc.want {
-				t.Errorf("want: %q, got: %q", tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -1076,14 +1082,14 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			hadStr := tc.had.String("")
 			wantStr := tc.want.String("")
 			if hadStr != wantStr {
-				t.Errorf("want:\n%v\ngot:\n%v",
-					wantStr, hadStr)
+				t.Errorf("%s\nwant:\n%v\ngot:\n%v",
+					packageName, wantStr, hadStr)
 			}
 			if tc.wantUsernameHash != "" {
 				got := util.FmtHash(tc.had.BasicAuth.UsernameHash)
 				if got != tc.wantUsernameHash {
-					t.Errorf("Username hash\nwant: %q\ngot:  %q",
-						tc.wantUsernameHash, got)
+					t.Errorf("%s\nUsername hash mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.wantUsernameHash, got)
 				}
 			}
 		})
@@ -1140,7 +1146,8 @@ func TestWebSettingsBasicAuth_String(t *testing.T) {
 
 			// THEN it's stringified as expected.
 			if got != tc.want {
-				t.Errorf("want: %q, got: %q", tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -1249,8 +1256,8 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			hadStr := tc.had.String("")
 			wantStr := tc.want.String("")
 			if hadStr != wantStr {
-				t.Errorf("want:\n%v\ngot:\n%v",
-					wantStr, hadStr)
+				t.Errorf("%s\nString() mismatch\nwant: %v\ngot:  %v",
+					packageName, wantStr, hadStr)
 			}
 			// AND the UsernameHash is calculated correctly.
 			want := util.FmtHash(util.GetHash(
@@ -1260,8 +1267,8 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			}
 			got := util.FmtHash(tc.had.UsernameHash)
 			if got != want {
-				t.Errorf("Username Hash\nwant: %s\ngot:  %s",
-					want, got)
+				t.Errorf("%s\nUsername Hash mismatch\nwant: %s\ngot:  %s",
+					packageName, want, got)
 			}
 			// AND the PasswordHash is calculated correctly.
 			want = util.FmtHash(util.GetHash(
@@ -1271,8 +1278,8 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			}
 			got = util.FmtHash(tc.had.PasswordHash)
 			if got != want {
-				t.Errorf("Password Hash\nwant: %s\ngot:  %s",
-					want, got)
+				t.Errorf("%s\nPassword Hash mismatch\nwant: %s\ngot:  %s",
+					packageName, want, got)
 			}
 		})
 	}

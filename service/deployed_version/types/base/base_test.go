@@ -44,25 +44,25 @@ func TestInit(t *testing.T) {
 
 	// THEN the fields are initialised correctly.
 	if l.Options != options {
-		t.Errorf("latest_ver.Lookup.Init() unexpected Options\nwant: %v\ngot:  %v",
-			options, l.Options)
+		t.Errorf("%s\nunexpected Options\nwant: %v\ngot:  %v",
+			packageName, options, l.Options)
 	}
 	if l.Status != status {
-		t.Errorf("latest_ver.Lookup.Init() unexpected Status\nwant: %v\ngot:  %v",
-			status, l.Status)
+		t.Errorf("%s\nunexpected Status\nwant: %v\ngot:  %v",
+			packageName, status, l.Status)
 	}
 	if l.Defaults != defaults {
-		t.Errorf("latest_ver.Lookup.Init() unexpected Defaults\nwant: %v\ngot:  %v",
-			defaults, l.Defaults)
+		t.Errorf("%s\nunexpected Defaults\nwant: %v\ngot:  %v",
+			packageName, defaults, l.Defaults)
 	}
 	if l.HardDefaults != hardDefaults {
-		t.Errorf("latest_ver.Lookup.Init() unexpected HardDefaults\nwant: %v\ngot:  %v",
-			hardDefaults, l.HardDefaults)
+		t.Errorf("%s\nunexpected HardDefaults\nwant: %v\ngot:  %v",
+			packageName, hardDefaults, l.HardDefaults)
 	}
 }
 
 func TestString(t *testing.T) {
-	// GIVEN a Lookup and a parentLookup
+	// GIVEN a Lookup and a parentLookup.
 	parentLookup := &testLookup{
 		Lookup: Lookup{
 			Type: "foo"}}
@@ -71,14 +71,14 @@ func TestString(t *testing.T) {
 			Type: "test"}}
 	prefix := "  "
 
-	// WHEN String is called
+	// WHEN String is called.
 	got := l.String(parentLookup, prefix)
 
-	// THEN the result is as expected
+	// THEN the result is as expected.
 	want := util.ToYAMLString(parentLookup, prefix)
 	if got != want {
-		t.Errorf("unexpected String()\nwant: %q\ngot:  %q",
-			want, got)
+		t.Errorf("%s\nwant: %q\ngot:  %q",
+			packageName, want, got)
 	}
 }
 
@@ -95,8 +95,8 @@ func TestGetServiceID(t *testing.T) {
 
 	// THEN the ServiceID is returned.
 	if got != serviceID {
-		t.Errorf("Unexpected ServiceID returned\nwant: %q\ngot:  %q",
-			serviceID, got)
+		t.Errorf("%s\nwant: %q\ngot:  %q",
+			packageName, serviceID, got)
 	}
 }
 
@@ -111,8 +111,8 @@ func TestGetType(t *testing.T) {
 
 	// THEN the Type is returned.
 	if got != lookupType {
-		t.Errorf("unexpected Type\nwant: %q\ngot:  %q",
-			lookupType, got)
+		t.Errorf("%s\nwant: %q\ngot:  %q",
+			packageName, lookupType, got)
 	}
 }
 
@@ -128,8 +128,8 @@ func TestGetOptions(t *testing.T) {
 
 	// THEN the Options are returned.
 	if got != options {
-		t.Errorf("unexpected Options\nwant: %v\ngot:  %v",
-			options, got)
+		t.Errorf("%s\nwant: %v\ngot:  %v",
+			packageName, options, got)
 	}
 }
 
@@ -145,8 +145,8 @@ func TestGetStatus(t *testing.T) {
 
 	// THEN the Status is returned.
 	if got != status {
-		t.Errorf("unexpected Status\nwant: %v\ngot:  %v",
-			status, got)
+		t.Errorf("%s\nwant: %v\ngot:  %v",
+			packageName, status, got)
 	}
 }
 
@@ -161,8 +161,8 @@ func TestGetDefaults(t *testing.T) {
 
 	// THEN the Defaults are returned.
 	if got != defaults {
-		t.Errorf("unexpected Defaults\nwant: %v\ngot:  %v",
-			defaults, got)
+		t.Errorf("%s\nwant: %v\ngot:  %v",
+			packageName, defaults, got)
 	}
 }
 
@@ -177,8 +177,8 @@ func TestGetHardDefaults(t *testing.T) {
 
 	// THEN the HardDefaults are returned.
 	if got != hardDefaults {
-		t.Errorf("unexpected HardDefaults\nwant: %v\ngot:  %v",
-			hardDefaults, got)
+		t.Errorf("%s\nwant: %v\ngot:  %v",
+			packageName, hardDefaults, got)
 	}
 }
 
@@ -224,8 +224,8 @@ func TestCheckValues(t *testing.T) {
 			l := &testLookup{}
 			// Apply the YAML.
 			if err := yaml.Unmarshal([]byte(tc.yamlStr), l); err != nil {
-				t.Fatalf("error unmarshalling YAML: %v",
-					err)
+				t.Fatalf("%s\nerror unmarshalling YAML: %v",
+					packageName, err)
 			}
 
 			// WHEN CheckValues is called.
@@ -236,13 +236,13 @@ func TestCheckValues(t *testing.T) {
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("base.Lookup.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
+					packageName, wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("base.Lookup.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 		})
@@ -261,7 +261,8 @@ func TestQuery(t *testing.T) {
 
 	// THEN the function returns an error as it is not implemented.
 	if gotErr == nil {
-		t.Errorf("unexpected nil error")
+		t.Errorf("%s\nunexpected nil error",
+			packageName)
 	}
 }
 
@@ -285,7 +286,7 @@ func TestInheritSecrets(t *testing.T) {
 	// THEN no secrets are inherited as the function does nothing.
 	// As the function does nothing, we just ensure it doesn't panic or error.
 	if strAfter := l.String(l, ""); strBefore != strAfter {
-		t.Errorf("unexpected change in Lookup\nbefore: %q\nafter:  %q",
-			strBefore, l.String(l, ""))
+		t.Errorf("%s\nunexpected change in Lookup\nbefore: %q\nafter:  %q",
+			packageName, strBefore, l.String(l, ""))
 	}
 }

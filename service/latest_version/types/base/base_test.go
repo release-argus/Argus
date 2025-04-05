@@ -53,29 +53,30 @@ func TestInit(t *testing.T) {
 
 	// THEN the fields are initialised correctly.
 	if l.Options != options {
-		t.Errorf("latest_ver.Lookup.Init() unexpected Options\nwant: %v\ngot:  %v",
-			options, l.Options)
+		t.Errorf("%s\nunexpected Options\nwant: %v\ngot:  %v",
+			packageName, options, l.Options)
 	}
 	if l.Status != status {
-		t.Errorf("latest_ver.Lookup.Init() unexpected Status\nwant: %v\ngot:  %v",
-			status, l.Status)
+		t.Errorf("%s\nunexpected Status\nwant: %v\ngot:  %v",
+			packageName, status, l.Status)
 	}
 	if l.Defaults != defaults {
-		t.Errorf("latest_ver.Lookup.Init() unexpected Defaults\nwant: %v\ngot:  %v",
-			defaults, l.Defaults)
+		t.Errorf("%s\nunexpected Defaults\nwant: %v\ngot:  %v",
+			packageName, defaults, l.Defaults)
 	}
 	if l.HardDefaults != hardDefaults {
-		t.Errorf("latest_ver.Lookup.Init() unexpected HardDefaults\nwant: %v\ngot:  %v",
-			hardDefaults, l.HardDefaults)
+		t.Errorf("%s\nunexpected HardDefaults\nwant: %v\ngot:  %v",
+			packageName, hardDefaults, l.HardDefaults)
 	}
 
 	// AND the Require field is initialised correctly.
 	if l.Require == nil {
-		t.Fatalf("latest_ver.Lookup.Init() Require should not be nil")
+		t.Fatalf("%s\nRequire should not be nil",
+			packageName)
 	}
 	if l.Require.RegexContent != wantRequireRegexContent {
-		t.Errorf("latest_ver.Lookup.Init() unexpected Require.RegexContent\nwant: %q\ngot:  %q",
-			wantRequireRegexContent, l.Require.RegexContent)
+		t.Errorf("%s\nunexpected Require.RegexContent\nwant: %q\ngot:  %q",
+			packageName, wantRequireRegexContent, l.Require.RegexContent)
 	}
 
 	// GIVEN a Lookup with an empty Require.
@@ -88,7 +89,8 @@ func TestInit(t *testing.T) {
 
 	// THEN the Require field is set to nil.
 	if l.Require != nil {
-		t.Errorf("latest_ver.Lookup.Init() Require should be nil when empty")
+		t.Errorf("%s\nRequire should be nil when empty",
+			packageName)
 	}
 }
 
@@ -110,8 +112,8 @@ func TestString(t *testing.T) {
 	// THEN the result is as expected.
 	want := util.ToYAMLString(parentLookup, prefix)
 	if got != want {
-		t.Errorf("unexpected String()\nwant: %q\ngot:  %q",
-			want, got)
+		t.Errorf("%s\nwant: %q\ngot:  %q",
+			packageName, want, got)
 	}
 }
 
@@ -198,7 +200,8 @@ func TestIsEqual(t *testing.T) {
 
 			// THEN the result is as expected.
 			if got != tc.want {
-				t.Errorf("got %t, want %t", got, tc.want)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -216,9 +219,9 @@ func TestGetServiceID(t *testing.T) {
 	got := l.GetServiceID()
 
 	// THEN the ServiceID is returned.
-	if got != serviceID {
-		t.Errorf("Unexpected ServiceID returned\nwant: %q\ngot:  %q",
-			serviceID, got)
+	if serviceID != got {
+		t.Errorf("%s\nwant: %q\ngot:  %q",
+			packageName, serviceID, got)
 	}
 }
 
@@ -232,9 +235,9 @@ func TestGetType(t *testing.T) {
 	got := l.GetType()
 
 	// THEN the Type is returned.
-	if got != lookupType {
-		t.Errorf("unexpected Type\nwant: %q\ngot:  %q",
-			lookupType, got)
+	if lookupType != got {
+		t.Errorf("%s\nwant: %q\ngot:  %q",
+			packageName, lookupType, got)
 	}
 }
 
@@ -249,9 +252,9 @@ func TestGetOptions(t *testing.T) {
 	got := l.GetOptions()
 
 	// THEN the Options are returned.
-	if got != options {
-		t.Errorf("unexpected Options\nwant: %v\ngot:  %v",
-			options, got)
+	if options != got {
+		t.Errorf("%s\nwant: %v\ngot:  %v",
+			packageName, options, got)
 	}
 }
 
@@ -265,9 +268,9 @@ func TestGetRequite(t *testing.T) {
 	got := l.GetRequire()
 
 	// THEN the Require is returned.
-	if got != require {
-		t.Errorf("unexpected Require\nwant: %v\ngot:  %v",
-			require, got)
+	if require != got {
+		t.Errorf("%s\nwant: %v\ngot:  %v",
+			packageName, require, got)
 	}
 }
 
@@ -282,9 +285,9 @@ func TestGetStatus(t *testing.T) {
 	got := l.GetStatus()
 
 	// THEN the Status is returned.
-	if got != status {
-		t.Errorf("unexpected Status\nwant: %v\ngot:  %v",
-			status, got)
+	if status != got {
+		t.Errorf("%s\nwant: %v\ngot:  %v",
+			packageName, status, got)
 	}
 }
 
@@ -298,9 +301,9 @@ func TestGetDefaults(t *testing.T) {
 	got := l.GetDefaults()
 
 	// THEN the Defaults are returned.
-	if got != defaults {
-		t.Errorf("unexpected Defaults\nwant: %v\ngot:  %v",
-			defaults, got)
+	if defaults != got {
+		t.Errorf("%s\nwant: %v\ngot:  %v",
+			packageName, defaults, got)
 	}
 }
 
@@ -314,9 +317,9 @@ func TestGetHardDefaults(t *testing.T) {
 	got := l.GetHardDefaults()
 
 	// THEN the HardDefaults are returned.
-	if got != hardDefaults {
-		t.Errorf("unexpected HardDefaults\nwant: %v\ngot:  %v",
-			hardDefaults, got)
+	if hardDefaults != got {
+		t.Errorf("%s\nwant: %v\ngot:  %v",
+			packageName, hardDefaults, got)
 	}
 }
 
@@ -380,9 +383,9 @@ func TestServiceURL(t *testing.T) {
 			got := lookup.ServiceURL(tc.ignoreWebURL)
 
 			// THEN the result is as expected.
-			if got != tc.expectedURL {
-				t.Errorf("unexpected ServiceURL()\nwant: %q\ngot:  %q",
-					tc.expectedURL, got)
+			if tc.expectedURL != got {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.expectedURL, got)
 			}
 		})
 	}
@@ -448,8 +451,8 @@ func TestCheckValues(t *testing.T) {
 			l := &testLookup{}
 			// apply the YAML.
 			if err := yaml.Unmarshal([]byte(tc.yamlStr), l); err != nil {
-				t.Fatalf("error unmarshalling YAML: %v",
-					err)
+				t.Fatalf("%s\nerror unmarshalling YAML: %v",
+					packageName, err)
 			}
 
 			// WHEN CheckValues is called.
@@ -460,27 +463,32 @@ func TestCheckValues(t *testing.T) {
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("base.Lookup.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Errorf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
+					packageName, wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("base.Lookup.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 		})
 	}
 }
 
-func checkDockerToken(t *testing.T, gotQueryToken, wantQueryToken string, gotValidUntil, wantValidUntil time.Time, message string) {
+func checkDockerToken(
+	t *testing.T,
+	wantQueryToken, gotQueryToken string,
+	wantValidUntil, gotValidUntil time.Time,
+	message string,
+) {
 	if gotQueryToken != wantQueryToken {
-		t.Errorf("Require.Docker.queryToken %s\nwant: %q\ngot:  %q",
-			message, wantQueryToken, gotQueryToken)
+		t.Errorf("%s\nRequire.Docker.queryToken %s\nwant: %q\ngot:  %q",
+			packageName, message, wantQueryToken, gotQueryToken)
 	}
 	if gotValidUntil != wantValidUntil {
-		t.Errorf("Require.Docker.validUntil %s\nwant: %q\ngot:  %q",
-			message, wantValidUntil, gotValidUntil)
+		t.Errorf("%s\nRequire.Docker.validUntil %s\nwant: %q\ngot:  %q",
+			packageName, message, wantValidUntil, gotValidUntil)
 	}
 }
 
@@ -541,8 +549,8 @@ func TestInherit(t *testing.T) {
 					nil)}
 			err := yaml.Unmarshal([]byte(tc.overrides), fromLookup)
 			if err != nil {
-				t.Fatalf("error unmarshalling overrides: %v",
-					err)
+				t.Fatalf("%s\nerror unmarshalling overrides: %v",
+					packageName, err)
 			}
 
 			// WHEN Inherit is called.
@@ -552,21 +560,23 @@ func TestInherit(t *testing.T) {
 			if tc.inheritDockerToken {
 				if toLookup.Require == nil || toLookup.Require.Docker == nil ||
 					fromLookup.Require == nil || fromLookup.Require.Docker == nil {
-					t.Fatalf("unexpected nil values\nnil toLookup.Require.Docker=%t\nnil fromLookup.Require(.Docker)?=%t",
-						toLookup.Require == nil || toLookup.Require.Docker == nil, fromLookup.Require == nil || fromLookup.Require.Docker == nil)
+					t.Fatalf("%s\nunexpected nil values\ntoLookup.Require.Docker, nil=%t\nfromLookup.Require(.Docker, nil=%t",
+						packageName,
+						toLookup.Require == nil || toLookup.Require.Docker == nil,
+						fromLookup.Require == nil || fromLookup.Require.Docker == nil)
 				}
 				gotQueryToken, gotValidUntil := toLookup.Require.Docker.CopyQueryToken()
 				wantQueryToken, wantValidUntil := fromLookup.Require.Docker.CopyQueryToken()
 				checkDockerToken(t,
-					gotQueryToken, wantQueryToken,
-					gotValidUntil, wantValidUntil,
+					wantQueryToken, gotQueryToken,
+					wantValidUntil, gotValidUntil,
 					"not copied")
 			} else if toLookup.Require != nil && toLookup.Require.Docker != nil {
 				gotQueryToken, gotValidUntil := toLookup.Require.Docker.CopyQueryToken()
 				wantQueryToken, wantValidUntil := "", time.Time{}
 				checkDockerToken(t,
-					gotQueryToken, wantQueryToken,
-					gotValidUntil, wantValidUntil,
+					wantQueryToken, gotQueryToken,
+					wantValidUntil, gotValidUntil,
 					"should not be copied")
 			}
 		})
@@ -584,11 +594,13 @@ func TestQuery(t *testing.T) {
 	gotBool, gotErr := l.Query(true, logutil.LogFrom{})
 
 	// THEN the function returns false and an error as it is not implemented.
-	if gotBool != false {
-		t.Errorf("unexpected return value\nwant: false\ngot:  %t",
-			gotBool)
+	want := false
+	if gotBool != want {
+		t.Errorf("%s\nunexpected return value\nwant: %t\ngot:  %t",
+			packageName, want, gotBool)
 	}
 	if gotErr == nil {
-		t.Errorf("unexpected nil error")
+		t.Errorf("%s\nunexpected nil error",
+			packageName)
 	}
 }

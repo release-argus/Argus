@@ -29,7 +29,7 @@ import (
 )
 
 func TestCommandTest(t *testing.T) {
-	// GIVEN a Config with a Service containing a Command
+	// GIVEN a Config with a Service containing a Command.
 	tests := map[string]struct {
 		flag                    string
 		slice                   service.Slice
@@ -100,7 +100,7 @@ func TestCommandTest(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			if tc.panicRegex != nil {
@@ -111,8 +111,8 @@ func TestCommandTest(t *testing.T) {
 
 					rStr := fmt.Sprint(r)
 					if !util.RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf("expected a panic that matched %q\ngot: %q",
-							*tc.panicRegex, rStr)
+						t.Errorf("%s\npanic mismatch\nwant: %q\ngot:  %q",
+							packageName, *tc.panicRegex, rStr)
 					}
 				}()
 			}
@@ -120,7 +120,7 @@ func TestCommandTest(t *testing.T) {
 				tc.slice[i].Status.ServiceID = &tc.slice[i].ID
 			}
 
-			// WHEN CommandTest is called with the test Config
+			// WHEN CommandTest is called with the test Config.
 			if tc.slice[tc.flag] != nil && tc.slice[tc.flag].CommandController != nil {
 				tc.slice[tc.flag].CommandController.Init(
 					&tc.slice[tc.flag].Status,
@@ -138,12 +138,12 @@ func TestCommandTest(t *testing.T) {
 			}
 			CommandTest(&tc.flag, &cfg)
 
-			// THEN we get the expected stdout
+			// THEN we get the expected stdout.
 			stdout := releaseStdout()
 			if tc.stdoutRegex != nil {
 				if !util.RegexCheck(*tc.stdoutRegex, stdout) {
-					t.Errorf("want match for %q\ngot: %q",
-						*tc.stdoutRegex, stdout)
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, *tc.stdoutRegex, stdout)
 				}
 			}
 		})

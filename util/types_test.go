@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/release-argus/Argus/test"
 	"gopkg.in/yaml.v3"
 )
 
@@ -35,7 +36,7 @@ type ConfigCustom struct {
 }
 
 func (c *ConfigCustom) UnmarshalYAML(value *yaml.Node) error {
-	// Alias to avoid recursion
+	// Alias to avoid recursion.
 	type Alias ConfigCustom
 	aux := &struct {
 		*Alias `yaml:",inline"`
@@ -49,7 +50,7 @@ func (c *ConfigCustom) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 func (c *ConfigCustom) UnmarshalJSON(data []byte) error {
-	// Alias to avoid recursion
+	// Alias to avoid recursion.
 	type Alias ConfigCustom
 	aux := &struct {
 		*Alias `json:",inline"`
@@ -65,11 +66,11 @@ func (c *ConfigCustom) UnmarshalJSON(data []byte) error {
 
 func TestUnmarshalConfig(t *testing.T) {
 	type wants struct {
-		config interface{}
-		err    bool
+		config   interface{}
+		errRegex string
 	}
 
-	// GIVEN different config formats and data
+	// GIVEN different config formats and data.
 	tests := map[string]struct {
 		configFormat string
 		configData   interface{}
@@ -79,78 +80,82 @@ func TestUnmarshalConfig(t *testing.T) {
 			configFormat: "json",
 			configData:   `{"field1": "value1`,
 			wants: wants{
-				config: Config{},
-				err:    true},
+				config:   Config{},
+				errRegex: `^unexpected end of JSON input$`},
 		},
 		"JSON, Valid": {
 			configFormat: "json",
 			configData:   `{"field1": "value1", "field2": 2}`,
 			wants: wants{
-				config: Config{Field1: "value1", Field2: 2},
-				err:    false},
+				config:   Config{Field1: "value1", Field2: 2},
+				errRegex: `^$`},
 		},
 		"JSON, Invalid CustomUnmarshal": {
 			configFormat: "json",
 			configData:   `{"field1": []}`,
 			wants: wants{
-				config: ConfigCustom{},
-				err:    true},
+				config:   ConfigCustom{},
+				errRegex: `^json: cannot unmarshal array into Go struct field (\.Alias)?\.field1 of type string$`},
 		},
 		"JSON, valid CustomUnmarshal": {
 			configFormat: "json",
 			configData:   `{"field1": "value1", "field2": 2}`,
 			wants: wants{
-				config: ConfigCustom{Field1: "value1", Field2: 2},
-				err:    false},
+				config:   ConfigCustom{Field1: "value1", Field2: 2},
+				errRegex: `^$`},
 		},
 		"YAML, Invalid": {
 			configFormat: "yaml",
 			configData:   "field1: [value1]",
 			wants: wants{
 				config: Config{},
-				err:    true},
+				errRegex: test.TrimYAML(`
+					^yaml: unmarshal errors:
+						line 1: cannot unmarshal !!seq into string$`)},
 		},
 		"YAML, valid": {
 			configFormat: "yaml",
 			configData:   "field1: value1\nfield2: 2",
 			wants: wants{
-				config: Config{Field1: "value1", Field2: 2},
-				err:    false},
+				config:   Config{Field1: "value1", Field2: 2},
+				errRegex: `^$`},
 		},
 		"YAML, Invalid CustomUnmarshal - tabs": {
 			configFormat: "yaml",
 			configData:   `	field1: value1`,
 			wants: wants{
-				config: ConfigCustom{},
-				err:    true},
+				config:   ConfigCustom{},
+				errRegex: `^yaml: found character that cannot start any token$`},
 		},
 		"YAML, Invalid CustomUnmarshal": {
 			configFormat: "yaml",
 			configData:   "field1: []",
 			wants: wants{
 				config: ConfigCustom{},
-				err:    true},
+				errRegex: test.TrimYAML(`
+					^yaml: unmarshal errors:
+						line 1: cannot unmarshal !!seq into string$`)},
 		},
 		"YAML, valid CustomUnmarshal": {
 			configFormat: "yaml",
 			configData:   "field1: value1\nfield2: 2",
 			wants: wants{
-				config: ConfigCustom{Field1: "value1", Field2: 2},
-				err:    false},
+				config:   ConfigCustom{Field1: "value1", Field2: 2},
+				errRegex: `^$`},
 		},
 		"unsupported config format": {
 			configFormat: "xml",
 			configData:   `<config><field1>value1</field1><field2>2</field2></config>`,
 			wants: wants{
-				config: Config{},
-				err:    true},
+				config:   Config{},
+				errRegex: `^unsupported configFormat: xml$`},
 		},
 		"unsupported config data type": {
 			configFormat: "json",
 			configData:   12345,
 			wants: wants{
-				config: Config{},
-				err:    true},
+				config:   Config{},
+				errRegex: `^unsupported configData type: int$`},
 		},
 		"YAML, *yaml.Node": {
 			configFormat: "yaml",
@@ -160,15 +165,15 @@ func TestUnmarshalConfig(t *testing.T) {
 				return &node
 			}(),
 			wants: wants{
-				config: Config{Field1: "value1", Field2: 2},
-				err:    false},
+				config:   Config{Field1: "value1", Field2: 2},
+				errRegex: `^$`},
 		},
 		"YAML, []byte": {
 			configFormat: "yaml",
 			configData:   []byte("field1: value1\nfield2: 2"),
 			wants: wants{
-				config: Config{Field1: "value1", Field2: 2},
-				err:    false},
+				config:   Config{Field1: "value1", Field2: 2},
+				errRegex: `^$`},
 		},
 	}
 
@@ -183,30 +188,31 @@ func TestUnmarshalConfig(t *testing.T) {
 				got = &ConfigCustom{}
 			}
 
-			// WHEN UnmarshalConfig is called
+			// WHEN UnmarshalConfig is called.
 			err := UnmarshalConfig(tc.configFormat, tc.configData, got)
 
-			// THEN an error is returned if expected
-			if (err != nil) != tc.wants.err {
-				t.Errorf("UnmarshalConfig() error = %v, wantErr %v",
-					err, tc.wants.err)
+			// THEN an error is returned if expected.
+			e := ErrorToString(err)
+			if !RegexCheck(tc.wants.errRegex, e) {
+				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+					packageName, tc.wants.errRegex, e)
+			}
+			if err != nil {
 				return
 			}
-			// AND the config is unmarshalled as expected
+			// AND the config is unmarshalled as expected.
 			gotStr := ToYAMLString(got, "")
 			wantStr := ToYAMLString(tc.wants.config, "")
-			if !tc.wants.err && gotStr != wantStr {
-				t.Fatalf("UnmarshalConfig() = %v, want %v",
-					gotStr, wantStr)
+			if gotStr != wantStr {
+				t.Fatalf("%s\nstringified mismatch\nwant: %v\ngot:  %v",
+					packageName, wantStr, gotStr)
 			}
-			// AND the custom Unmarshal is called when the struct implements it
+			// AND the custom Unmarshal is called when the struct implements it.
 			if _, ok := tc.wants.config.(ConfigCustom); ok {
-				if got.(*ConfigCustom).Field3 != "custom" {
-					if tc.wants.err {
-						return // errored, so ignore the field3 check
-					}
-					t.Errorf("UnmarshalConfig() didn't call the struct-specific Unmarshal\nfield3 = %v, want %v",
-						got.(*ConfigCustom).Field3, "custom")
+				wantField3 := "custom"
+				if got.(*ConfigCustom).Field3 != wantField3 {
+					t.Errorf("%s\nstruct-specific Unmarshal not called for field3\nwant: %q\ngot:  %q",
+						packageName, wantField3, got.(*ConfigCustom).Field3)
 				}
 			}
 		})
@@ -264,8 +270,8 @@ func TestFormatUnmarshalError(t *testing.T) {
 				case "json":
 					err = json.Unmarshal([]byte(tc.data), &config)
 				default:
-					t.Fatalf("unsupported format: %s",
-						tc.format)
+					t.Fatalf("%s - unsupported format: %s",
+						packageName, tc.format)
 				}
 			} else {
 				err = errors.New(tc.err)
@@ -276,8 +282,8 @@ func TestFormatUnmarshalError(t *testing.T) {
 
 			// THEN the error message is returned as expected.
 			if result != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, result)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, result)
 			}
 		})
 	}

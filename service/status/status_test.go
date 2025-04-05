@@ -67,21 +67,22 @@ func TestStatus_Init(t *testing.T) {
 				&tc.webURL)
 
 			// THEN the Status is initialised as expected:
-			// 	ServiceID
+			// 	ServiceID:
 			if status.ServiceID != &tc.serviceID {
-				t.Errorf("ServiceID not initialised to address of %s (%v). Got %v",
-					tc.serviceID, &tc.serviceID, status.ServiceID)
+				t.Errorf("%s\nServiceID address mismatch\n\nwant: %v\ngot:  %v",
+					packageName, &tc.serviceID, status.ServiceID)
 			}
-			// 	WebURL
+			// 	WebURL:
 			if status.WebURL != &tc.webURL {
-				t.Errorf("WebURL not initialised to address of %s (%v). Got %v",
-					tc.webURL, &tc.webURL, status.WebURL)
+				t.Errorf("%s\nWebURL address mismatch\nwant: %v\ngot %v",
+					packageName, &tc.webURL, status.WebURL)
 			}
-			// 	Shoutrrr
+			// 	Shoutrrr:
+			want := 0
 			got := status.Fails.Shoutrrr.Length()
-			if got != 0 {
-				t.Errorf("Fails.Shoutrrr was initialised to %d. Want %d",
-					got, 0)
+			if got != want {
+				t.Errorf("%s\nFails.Shoutrrr initial length mismatch\nwant: %d\ngot:  %d",
+					packageName, want, got)
 			} else {
 				for i := 0; i < tc.shoutrrrs; i++ {
 					failed := false
@@ -89,21 +90,22 @@ func TestStatus_Init(t *testing.T) {
 				}
 				got := status.Fails.Shoutrrr.Length()
 				if got != tc.shoutrrrs {
-					t.Errorf("Fails.Shoutrrr wanted capacity for %d, but only got to %d",
-						tc.shoutrrrs, got)
+					t.Errorf("%s\nFails.Shoutrrr capacity mismatch\nwant: %d\ngot:  %d",
+						packageName, tc.shoutrrrs, got)
 				}
 			}
-			// 	Command
+			// 	Command:
 			got = status.Fails.Command.Length()
 			if got != tc.commands {
-				t.Errorf("Fails.Command was initialised to %d. Want %d",
-					got, tc.commands)
+				t.Errorf("%s\nFails.Command length mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.commands, got)
 			}
-			// 	WebHook
+			// 	WebHook:
+			want = 0
 			got = status.Fails.WebHook.Length()
-			if got != 0 {
-				t.Errorf("Fails.WebHook was initialised to %d. Want %d",
-					got, 0)
+			if got != want {
+				t.Errorf("%s\nFails.WebHook initial length mismatch\nwant: %d\ngot:  %d",
+					packageName, want, got)
 			} else {
 				for i := 0; i < tc.webhooks; i++ {
 					failed := false
@@ -111,8 +113,8 @@ func TestStatus_Init(t *testing.T) {
 				}
 				got := status.Fails.WebHook.Length()
 				if got != tc.webhooks {
-					t.Errorf("Fails.WebHook wanted capacity for %d, but only got to %d",
-						tc.webhooks, got)
+					t.Errorf("%s\nFails.WebHook capacity mismatch\nwant:  %d\ngot:  %d",
+						packageName, tc.webhooks, got)
 				}
 			}
 		})
@@ -158,8 +160,8 @@ func TestStatus_GetWebURL(t *testing.T) {
 			// THEN the returned WebURL is as expected.
 			gotStr := util.DereferenceOrNilValue(got, nilValue)
 			if gotStr != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, gotStr)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, gotStr)
 			}
 		})
 	}
@@ -177,8 +179,8 @@ func TestStatus_SetLastQueried(t *testing.T) {
 	lastQueried, _ := time.Parse(time.RFC3339, status.LastQueried())
 	since := lastQueried.Sub(start)
 	if since > time.Second {
-		t.Errorf("LastQueried was %v ago, not recent enough!",
-			since)
+		t.Errorf("%s\nLastQueried was %v ago, not recent enough!",
+			packageName, since)
 	}
 }
 
@@ -242,39 +244,39 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 			status.SetApprovedVersion(tc.approving, true)
 
 			// THEN the Status is as expected:
-			// 	ApprovedVersion
+			// 	ApprovedVersion:
 			got := status.ApprovedVersion()
 			if got != tc.approving {
-				t.Errorf("ApprovedVersion not set to %s. Got %s",
-					tc.approving, got)
+				t.Errorf("%s\nApprovedVersion mismatch\nwant: %s\ngot:  %s",
+					packageName, tc.approving, got)
 			}
-			// 	LatestVersion
+			// 	LatestVersion:
 			got = status.LatestVersion()
 			if got != latestVersion {
-				t.Errorf("LatestVersion not set to %s. Got %s",
-					latestVersion, got)
+				t.Errorf("%s\nLatestVersion mismatch\nwant: %s\ngot:  %s",
+					packageName, latestVersion, got)
 			}
-			// 	DeployedVersion
+			// 	DeployedVersion:
 			got = status.DeployedVersion()
 			if got != deployedVersion {
-				t.Errorf("DeployedVersion not set to %s. Got %s",
-					deployedVersion, got)
+				t.Errorf("%s\nDeployedVersion mismatch\nwant: %s\ngot:  %s",
+					packageName, deployedVersion, got)
 			}
-			// 	AnnounceChannel
+			// 	AnnounceChannel:
 			if len(*status.AnnounceChannel) != tc.wantMessages {
-				t.Errorf("AnnounceChannel should have %d message(s), but has %d",
-					tc.wantMessages, len(*status.AnnounceChannel))
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d message(s)\ngot:  %d",
+					packageName, tc.wantMessages, len(*status.AnnounceChannel))
 			}
-			// 	DatabaseChannel
+			// 	DatabaseChannel:
 			if len(*status.DatabaseChannel) != tc.wantMessages {
-				t.Errorf("DatabaseChannel should have %d message(s), but has %d",
-					tc.wantMessages, len(*status.DatabaseChannel))
+				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d message(s)\ngot:  %d",
+					packageName, tc.wantMessages, len(*status.DatabaseChannel))
 			}
 			// AND LatestVersionIsDeployedVersion metric is updated.
 			gotMetric := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID))
 			if gotMetric != tc.latestVersionIsDeployedMetric {
-				t.Errorf("LatestVersionIsDeployedVersion metric should be %f, not %f",
-					tc.latestVersionIsDeployedMetric, gotMetric)
+				t.Errorf("%s\nLatestVersionIsDeployedVersion metric mismatch\nwant: %f\ngot:  %f",
+					packageName, tc.latestVersionIsDeployedMetric, gotMetric)
 			}
 		})
 	}
@@ -404,37 +406,37 @@ func TestStatus_DeployedVersion(t *testing.T) {
 
 				// THEN DeployedVersion is set to this version.
 				if status.DeployedVersion() != tc.want.deployedVersion {
-					t.Errorf("Expected DeployedVersion to be set to %q, not %q",
-						tc.want.deployedVersion, status.DeployedVersion())
+					t.Errorf("%s\nDeployedVersion mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.want.deployedVersion, status.DeployedVersion())
 				}
 				if status.ApprovedVersion() != tc.want.approvedVersion {
-					t.Errorf("Expected ApprovedVersion to be set to %q, not %q",
-						tc.want.approvedVersion, status.ApprovedVersion())
+					t.Errorf("%s\nApprovedVersion mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.want.approvedVersion, status.ApprovedVersion())
 				}
 				if status.LatestVersion() != tc.want.latestVersion {
-					t.Errorf("Expected LatestVersion to be set to %q, not %q",
-						tc.want.latestVersion, status.LatestVersion())
+					t.Errorf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.want.latestVersion, status.LatestVersion())
 				}
 				// AND the DeployedVersionTimestamp is unchanged when DeployedVersion is unchanged.
 				if tc.had.deployedVersion == tc.args.version {
 					if timestamp := status.DeployedVersionTimestamp(); timestamp != tc.had.deployedVersionTimestamp {
-						t.Errorf("Expected DeployedVersionTimestamp to be unchanged\n%s\ngot:\n%s",
-							tc.had.deployedVersionTimestamp, timestamp)
+						t.Errorf("%s\nDeployedVersionTimestamp mismatch\nwant: %s (unchanged)\ngot:  %s",
+							packageName, tc.had.deployedVersionTimestamp, timestamp)
 					}
 				} else {
 					// AND the DeployedVersionTimestamp is set to the provided date (when provided).
 					if tc.want.deployedVersionTimestamp != "" {
 						if timestamp := status.DeployedVersionTimestamp(); timestamp != tc.want.deployedVersionTimestamp {
-							t.Errorf("Expected DeployedVersionTimestamp to be set to\n%s\ngot:\n%s",
-								tc.want.deployedVersionTimestamp, timestamp)
+							t.Errorf("%s\nDeployedVersionTimestamp mismatch\nwant: %s\ngot:  %s",
+								packageName, tc.want.deployedVersionTimestamp, timestamp)
 						}
 					} else {
 						// AND the DeployedVersionTimestamp is set to current time (when no releaseDate was given).
 						d, _ := time.Parse(time.RFC3339, status.DeployedVersionTimestamp())
 						since := time.Since(d)
 						if since > time.Second {
-							t.Errorf("DeployedVersionTimestamp was %v ago, not recent enough!",
-								since)
+							t.Errorf("%s\nDeployedVersionTimestamp was %v ago, not recent enough!",
+								packageName, since)
 						}
 					}
 				}
@@ -445,8 +447,8 @@ func TestStatus_DeployedVersion(t *testing.T) {
 					want = 1
 				}
 				if got != want {
-					t.Errorf("haveDB=%t LatestVersionIsDeployedVersion metric should be %f, not %f",
-						haveDB, want, got)
+					t.Errorf("%s\nhaveDB=%t LatestVersionIsDeployedVersion metric mismatch\nwant: %f\ngot:  %f",
+						packageName, haveDB, want, got)
 				}
 			}
 		})
@@ -525,13 +527,13 @@ func TestStatus_LatestVersion(t *testing.T) {
 
 				// THEN LatestVersion is set to this version.
 				if version := status.LatestVersion(); version != tc.want.version {
-					t.Errorf("Expected LatestVersion to be set to %q, not %q",
-						version, status.LatestVersion())
+					t.Errorf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.want.version, version)
 				}
 				// AND the LatestVersionTimestamp is set to the current time.
 				if timestamp := status.LatestVersionTimestamp(); timestamp != tc.want.timestamp {
-					t.Errorf("haveDB=%t LatestVersionTimestamp should have been set to \n%q, not \n%q",
-						haveDB, timestamp, status.LatestVersionTimestamp())
+					t.Errorf("%s\nhaveDB=%t LatestVersionTimestamp mismatch\nwant: %q\ngot:  %q",
+						packageName, haveDB, tc.want.timestamp, timestamp)
 				}
 				// AND the LatestVersionIsDeployedVersion metric is updated.
 				got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(name))
@@ -539,10 +541,10 @@ func TestStatus_LatestVersion(t *testing.T) {
 				if haveDB && status.LatestVersion() == status.DeployedVersion() {
 					want = 1
 				}
-				// LatestVersionIsDeployedVersion incorrect?
+				// LatestVersionIsDeployedVersion metric.
 				if got != want {
-					t.Errorf("haveDB=%t LatestVersionIsDeployedVersion metric should be %f, not %f",
-						haveDB, want, got)
+					t.Errorf("%s\nhaveDB=%t LatestVersionIsDeployedVersion metric mismatch\nwant: %f\ngot:  %f",
+						packageName, haveDB, want, got)
 				}
 			}
 		})
@@ -557,40 +559,44 @@ func TestStatus_RegexMissesContent(t *testing.T) {
 	status.RegexMissContent()
 
 	// THEN RegexMisses is incremented.
+	var want uint = 1
 	got := status.RegexMissesContent()
-	if got != 1 {
-		t.Errorf("Expected RegexMisses to be 1, not %d",
-			got)
+	if got != want {
+		t.Errorf("%s\nRegexMisses mismatch (1 RegexMissContent())\nwant: %d\ngot:  %d",
+			packageName, want, got)
 	}
 
 	// WHEN RegexMissContent is called on it again.
 	status.RegexMissContent()
 
 	// THEN RegexMisses is incremented again.
+	want++
 	got = status.RegexMissesContent()
-	if got != 2 {
-		t.Errorf("Expected RegexMisses to be 2, not %d",
-			got)
+	if got != want {
+		t.Errorf("%s\nRegexMisses mismatch (2 RegexMissContent()\nwant: %d\ngot:  %d",
+			packageName, want, got)
 	}
 
 	// WHEN RegexMissContent is called on it again.
 	status.RegexMissContent()
 
 	// THEN RegexMisses is incremented again.
+	want++
 	got = status.RegexMissesContent()
-	if got != 3 {
-		t.Errorf("Expected RegexMisses to be 3, not %d",
-			got)
+	if got != want {
+		t.Errorf("%s\nRegexMisses mismatch (3 RegexMissContent())\nwant: %d\ngot:  %d",
+			packageName, want, got)
 	}
 
 	// WHEN ResetRegexMisses is called on it.
 	status.ResetRegexMisses()
 
 	// THEN RegexMisses is reset.
+	want = 0
 	got = status.RegexMissesContent()
-	if got != 0 {
-		t.Errorf("Expected RegexMisses to be 0 after ResetRegexMisses, not %d",
-			got)
+	if got != want {
+		t.Errorf("%s\nRegexMisses mismatch (ResetRegexMisses())\nwant: %d\ngot:  %d",
+			packageName, want, got)
 	}
 }
 
@@ -602,40 +608,44 @@ func TestStatus_RegexMissesVersion(t *testing.T) {
 	status.RegexMissVersion()
 
 	// THEN RegexMisses is incremented.
+	var want uint = 1
 	got := status.RegexMissesVersion()
-	if got != 1 {
-		t.Errorf("Expected RegexMisses to be 1, not %d",
-			got)
+	if got != want {
+		t.Errorf("%s\nRegexMisses mismatch (1 RegexMissVersion())\nwant: %d\ngot:  %d",
+			packageName, want, got)
 	}
 
 	// WHEN RegexMissVersion is called on it again.
 	status.RegexMissVersion()
 
 	// THEN RegexMisses is incremented again.
+	want = 2
 	got = status.RegexMissesVersion()
-	if got != 2 {
-		t.Errorf("Expected RegexMisses to be 2, not %d",
-			got)
+	if got != want {
+		t.Errorf("%s\nRegexMisses mismatch (2 RegexMissVersion())\nwant: %d\ngot:  %d",
+			packageName, want, got)
 	}
 
 	// WHEN RegexMissVersion is called on it again.
 	status.RegexMissVersion()
 
 	// THEN RegexMisses is incremented again.
+	want = 3
 	got = status.RegexMissesVersion()
-	if got != 3 {
-		t.Errorf("Expected RegexMisses to be 3, not %d",
-			got)
+	if got != want {
+		t.Errorf("%s\nRegexMisses mismatch (3 RegexMissVersion())\nwant: %d\ngot:  %d",
+			packageName, want, got)
 	}
 
 	// WHEN ResetRegexMisses is called on it.
 	status.ResetRegexMisses()
 
 	// THEN RegexMisses is reset.
+	want = 0
 	got = status.RegexMissesVersion()
-	if got != 0 {
-		t.Errorf("Expected RegexMisses to be 0 after ResetRegexMisses, not %d",
-			got)
+	if got != want {
+		t.Errorf("%s\nRegexMisses mismatch (ResetRegexMisses())\nwant: %d\ngot:  %d",
+			packageName, want, got)
 	}
 }
 
@@ -678,8 +688,8 @@ func TestStatus_SendAnnounce(t *testing.T) {
 				want = 0
 			}
 			if got != want {
-				t.Errorf("Expected %d messages on AnnounceChannel, not %d",
-					want, got)
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
+					packageName, want, got)
 			}
 		})
 	}
@@ -715,17 +725,17 @@ func TestStatus_sendDatabase(t *testing.T) {
 			status.sendDatabase(&dbtype.Message{})
 
 			// THEN the DatabaseChannel is sent a message if not deleting or nil.
-			got := 0
-			if status.DatabaseChannel != nil {
-				got = len(*status.DatabaseChannel)
-			}
 			want := 1
 			if tc.deleting || tc.nilChannel {
 				want = 0
 			}
+			got := 0
+			if status.DatabaseChannel != nil {
+				got = len(*status.DatabaseChannel)
+			}
 			if got != want {
-				t.Errorf("Expected %d messages on DatabaseChannel, not %d",
-					want, got)
+				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d messages\ngot:  %d",
+					packageName, want, got)
 			}
 		})
 	}
@@ -761,17 +771,17 @@ func TestStatus_SendSave(t *testing.T) {
 			status.SendSave()
 
 			// THEN the SaveChannel is sent a message if not deleting or nil.
-			got := 0
-			if status.SaveChannel != nil {
-				got = len(*status.SaveChannel)
-			}
 			want := 1
 			if tc.deleting || tc.nilChannel {
 				want = 0
 			}
+			got := 0
+			if status.SaveChannel != nil {
+				got = len(*status.SaveChannel)
+			}
 			if got != want {
-				t.Errorf("Expected %d messages on SaveChannel, not %d",
-					want, got)
+				t.Errorf("%s\nSaveChannel length mismatch\nwant: %d messages\ngot:  %d",
+					packageName, want, got)
 			}
 		})
 	}
@@ -842,24 +852,24 @@ func TestFails_ResetFails(t *testing.T) {
 			if tc.shoutrrrFails != nil {
 				for i := range *tc.shoutrrrFails {
 					if fails.Shoutrrr.Get(i) != nil {
-						t.Errorf("Shoutrrr.Failed[%s] should have been reset to nil and not be %t",
-							i, *fails.Shoutrrr.Get(i))
+						t.Errorf("%s\nShoutrrr.Failed[%s] not reset\nwant: nil\ngot:  %t",
+							packageName, i, *fails.Shoutrrr.Get(i))
 					}
 				}
 			}
 			if tc.commandFails != nil {
 				for i := range *tc.commandFails {
 					if fails.Command.Get(i) != nil {
-						t.Errorf("Command.Failed[%d] should have been reset to nil and not be %t",
-							i, *fails.Command.Get(i))
+						t.Errorf("%s\nCommand.Failed[%d] not reset\nwant: nil\ngot:  %t",
+							packageName, i, *fails.Command.Get(i))
 					}
 				}
 			}
 			if tc.webhookFails != nil {
 				for i := range *tc.webhookFails {
 					if fails.WebHook.Get(i) != nil {
-						t.Errorf("WebHook.Failed[%s] should have been reset to nil and not be %t",
-							i, *fails.WebHook.Get(i))
+						t.Errorf("%s\nWebHook.Failed[%s] not reset\nwant: nil\ngot:  %t",
+							packageName, i, *fails.WebHook.Get(i))
 					}
 				}
 			}
@@ -984,8 +994,8 @@ func TestStatus_String(t *testing.T) {
 
 			// THEN the result is as expected.
 			if got != tc.want {
-				t.Errorf("Status.String() mismatch\n%q\ngot:\n%q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -1044,8 +1054,8 @@ func TestStatus_SetLatestVersionIsDeployedMetric(t *testing.T) {
 
 			// THEN the metric is as expected.
 			if got != tc.want {
-				t.Errorf("Expected SetLatestVersionIsDeployedMetric to be %f, not %f",
-					tc.want, got)
+				t.Errorf("%s\nwant: %f\ngot:  %f",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -1129,40 +1139,50 @@ func TestStatus_InitMetrics_DeleteMetrics(t *testing.T) {
 			status.InitMetrics()
 
 			// THEN the metrics are created.
-			if got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID)); got != tc.latestVersionIsDeployed {
-				t.Errorf("InitMetrics, Expected LatestVersionIsDeployed to be %f, not %f",
-					tc.latestVersionIsDeployed, got)
+			want := tc.latestVersionIsDeployed
+			got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID))
+			if got != want {
+				t.Errorf("%s\nLatestVersionIsDeployed mismatch after InitMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
-			want := hadUpdatesCurrentAvailable + updatesCurrentAvailableDelta
-			if got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE")); got != want {
-				t.Logf("hadUpdatesCurrentAvailable=%f, updatesCurrentAvailableDelta=%f", hadUpdatesCurrentAvailable, updatesCurrentAvailableDelta)
-				t.Errorf("InitMetrics, Expected UpdatesCurrent('AVAILABLE') to be %f, not %f",
-					want, got)
+			want = hadUpdatesCurrentAvailable + updatesCurrentAvailableDelta
+			got = testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE"))
+			if got != want {
+				t.Logf("%s - hadUpdatesCurrentAvailable=%f, updatesCurrentAvailableDelta=%f",
+					packageName, hadUpdatesCurrentAvailable, updatesCurrentAvailableDelta)
+				t.Errorf("%s\nUpdatesCurrent('AVAILABLE') mismatch after InitMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			want = hadUpdatesCurrentSkipped + updatesCurrentSkippedDelta
-			if got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED")); got != want {
-				t.Logf("hadUpdatesCurrentSkipped=%f, updatesCurrentSkippedDelta=%f", hadUpdatesCurrentSkipped, updatesCurrentSkippedDelta)
-				t.Errorf("InitMetrics, Expected UpdatesCurrent('SKIPPED') to be %f, not %f",
-					updatesCurrentSkippedDelta, got)
+			got = testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED"))
+			if got != want {
+				t.Logf("%s\nhadUpdatesCurrentSkipped=%f, updatesCurrentSkippedDelta=%f",
+					packageName, hadUpdatesCurrentSkipped, updatesCurrentSkippedDelta)
+				t.Errorf("%s\nUpdatesCurrent('SKIPPED') mismatch after InitMetrics()\nwant: %f\ngot:  %f",
+					packageName, updatesCurrentSkippedDelta, got)
 			}
 
 			// WHEN DeleteMetrics is called on it.
 			status.DeleteMetrics()
 
 			// THEN the metrics are deleted.
-			if got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID)); got != 0 {
-				t.Errorf("DeleteMetrics, Expected LatestVersionIsDeployed to be 0, not %f",
-					got)
+			want = 0
+			got = testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID))
+			if got != want {
+				t.Errorf("%s\nLatestVersionIsDeployed mismatch after DeleteMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			want = hadUpdatesCurrentAvailable
-			if got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE")); got != want {
-				t.Errorf("DeleteMetrics, Expected UpdatesCurrent('AVAILABLE') to be %f, not %f",
-					want, got)
+			got = testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE"))
+			if got != want {
+				t.Errorf("%s\nUpdatesCurrent('AVAILABLE') mismatch after DeleteMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			want = hadUpdatesCurrentSkipped
-			if got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED")); got != want {
-				t.Errorf("DeleteMetrics, Expected UpdatesCurrent('SKIPPED') to be %f, not %f",
-					want, got)
+			got = testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED"))
+			if got != want {
+				t.Errorf("%s\nUpdatesCurrent('SKIPPED') mismatch after DeleteMetrics()\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 		})
 	}
@@ -1178,19 +1198,19 @@ func TestNewDefaults(t *testing.T) {
 	statusDefaults := NewDefaults(&announceChannel, &databaseChannel, &saveChannel)
 
 	// THEN the AnnounceChannel is set to the given channel.
-	if statusDefaults.AnnounceChannel != &announceChannel {
-		t.Errorf("status.NewDefaults() AnnounceChannel not initialised correctly.\nwant: %v\ngot:  %v",
-			&announceChannel, statusDefaults.AnnounceChannel)
+	if &announceChannel != statusDefaults.AnnounceChannel {
+		t.Errorf("%s\nAnnounceChannel not initialised correctly.\nwant: %v\ngot:  %v",
+			packageName, &announceChannel, statusDefaults.AnnounceChannel)
 	}
 	// AND the DatabaseChannel is set to the given channel.
-	if statusDefaults.DatabaseChannel != &databaseChannel {
-		t.Errorf("status.NewDefaults()DatabaseChannel not initialised correctly.\nwant: %v\ngot:  %v",
-			&databaseChannel, statusDefaults.DatabaseChannel)
+	if &databaseChannel != statusDefaults.DatabaseChannel {
+		t.Errorf("%s\nDatabaseChannel not initialised correctly.\nwant: %v\ngot:  %v",
+			packageName, &databaseChannel, statusDefaults.DatabaseChannel)
 	}
 	// AND the SaveChannel is set to the given channel.
-	if statusDefaults.SaveChannel != &saveChannel {
-		t.Errorf("status.NewDefaults()SaveChannel not initialised correctly.\nwant: %v\ngot:  %v",
-			&saveChannel, statusDefaults.SaveChannel)
+	if &saveChannel != statusDefaults.SaveChannel {
+		t.Errorf("%s\nSaveChannel not initialised correctly.\nwant: %v\ngot:  %v",
+			packageName, &saveChannel, statusDefaults.SaveChannel)
 	}
 }
 
@@ -1215,40 +1235,40 @@ func TestStatus_Copy(t *testing.T) {
 
 	// THEN the copied Status should have the same values as the original.
 	if copiedStatus.AnnounceChannel != status.AnnounceChannel {
-		t.Errorf("status.Status.Copy() AnnounceChannel not copied correctly.\nwant: %v\ngot:  %v",
-			status.AnnounceChannel, copiedStatus.AnnounceChannel)
+		t.Errorf("%s\nAnnounceChannel not copied correctly\nwant: %v\ngot:  %v",
+			packageName, status.AnnounceChannel, copiedStatus.AnnounceChannel)
 	}
 	if copiedStatus.DatabaseChannel != status.DatabaseChannel {
-		t.Errorf("status.Status.Copy() DatabaseChannel not copied correctly.\nwant: %v\ngot:  %v",
-			status.DatabaseChannel, copiedStatus.DatabaseChannel)
+		t.Errorf("%s\nDatabaseChannel not copied correctly\nwant: %v\ngot:  %v",
+			packageName, status.DatabaseChannel, copiedStatus.DatabaseChannel)
 	}
 	if copiedStatus.SaveChannel != status.SaveChannel {
-		t.Errorf("status.Status.Copy() SaveChannel not copied correctly.\nwant: %v\ngot:  %v",
-			status.SaveChannel, copiedStatus.SaveChannel)
+		t.Errorf("%s\nSaveChannel not copied correctly\nwant: %v\ngot:  %v",
+			packageName, status.SaveChannel, copiedStatus.SaveChannel)
 	}
 	if copiedStatus.approvedVersion != status.approvedVersion {
-		t.Errorf("status.Status.Copy() approvedVersion not copied correctly.\nwant: %v\ngot:  %v",
-			status.approvedVersion, copiedStatus.approvedVersion)
+		t.Errorf("%s\napprovedVersion not copied correctly\nwant: %v\ngot:  %v",
+			packageName, status.approvedVersion, copiedStatus.approvedVersion)
 	}
 	if copiedStatus.deployedVersion != status.deployedVersion {
-		t.Errorf("status.Status.Copy() deployedVersion not copied correctly.\nwant: %v\ngot:  %v",
-			status.deployedVersion, copiedStatus.deployedVersion)
+		t.Errorf("%s\ndeployedVersion not copied correctly\nwant: %v\ngot:  %v",
+			packageName, status.deployedVersion, copiedStatus.deployedVersion)
 	}
 	if copiedStatus.deployedVersionTimestamp != status.deployedVersionTimestamp {
-		t.Errorf("status.Status.Copy() deployedVersionTimestamp not copied correctly.\nwant: %v\ngot:  %v",
-			status.deployedVersionTimestamp, copiedStatus.deployedVersionTimestamp)
+		t.Errorf("%s\ndeployedVersionTimestamp not copied correctly\nwant: %v\ngot:  %v",
+			packageName, status.deployedVersionTimestamp, copiedStatus.deployedVersionTimestamp)
 	}
 	if copiedStatus.latestVersion != status.latestVersion {
-		t.Errorf("status.Status.Copy() latestVersion not copied correctly.\nwant: %v\ngot:  %v",
-			status.latestVersion, copiedStatus.latestVersion)
+		t.Errorf("%s\nlatestVersion not copied correctly\nwant: %v\ngot:  %v",
+			packageName, status.latestVersion, copiedStatus.latestVersion)
 	}
 	if copiedStatus.latestVersionTimestamp != status.latestVersionTimestamp {
-		t.Errorf("status.Status.Copy() latestVersionTimestamp not copied correctly.\nwant: %v\ngot:  %v",
-			status.latestVersionTimestamp, copiedStatus.latestVersionTimestamp)
+		t.Errorf("%s\nlatestVersionTimestamp not copied correctly\nwant: %v\ngot:  %v",
+			packageName, status.latestVersionTimestamp, copiedStatus.latestVersionTimestamp)
 	}
 	if copiedStatus.lastQueried != status.lastQueried {
-		t.Errorf("status.Status.Copy() lastQueried not copied correctly.\nwant: %v\ngot:  %v",
-			status.lastQueried, copiedStatus.lastQueried)
+		t.Errorf("%s\nlastQueried not copied correctly\nwant: %v\ngot:  %v",
+			packageName, status.lastQueried, copiedStatus.lastQueried)
 	}
 }
 
@@ -1264,15 +1284,15 @@ func TestStatus_SetAnnounceChannel(t *testing.T) {
 	status.SetAnnounceChannel(&newChannel)
 
 	// THEN the AnnounceChannel should be updated to the new channel.
-	if status.AnnounceChannel != &newChannel {
-		t.Errorf("AnnounceChannel not set correctly.\nwant: %v\ngot:  %v",
-			&newChannel, status.AnnounceChannel)
+	if &newChannel != status.AnnounceChannel {
+		t.Errorf("%s\nAnnounceChannel not set correctly.\nwant: %v\ngot:  %v",
+			packageName, &newChannel, status.AnnounceChannel)
 	}
 
 	// AND the initial channel should no longer be the AnnounceChannel.
-	if status.AnnounceChannel == &initialChannel {
-		t.Errorf("AnnounceChannel shouldn't have been reset to be the initial channel.\nwant: %v\ngot:  %v",
-			&newChannel, status.AnnounceChannel)
+	if &initialChannel == status.AnnounceChannel {
+		t.Errorf("%s\nAnnounceChannel shouldn't have been reset to be the initial channel.\nwant: %v\ngot:  %v",
+			packageName, &newChannel, status.AnnounceChannel)
 	}
 }
 
@@ -1285,7 +1305,8 @@ func TestStatus_SetDeleting(t *testing.T) {
 
 	// THEN the deleting flag should be set to true.
 	if !status.Deleting() {
-		t.Errorf("Expected deleting to be true, but got false")
+		t.Errorf("%s\ndeleting flag mismatch\nwant: true\ngot:  false",
+			packageName)
 	}
 
 	// WHEN SetDeleting is called on it again.
@@ -1293,7 +1314,8 @@ func TestStatus_SetDeleting(t *testing.T) {
 
 	// THEN the deleting flag should still be true.
 	if !status.Deleting() {
-		t.Errorf("Expected deleting to be true on second call, but got false")
+		t.Errorf("%s\ndeleting flag mismatch after SetDeleting()\nwant: true\ngot:  false",
+			packageName)
 	}
 }
 
@@ -1402,7 +1424,8 @@ func TestStatus_SameVersions(t *testing.T) {
 
 			// THEN the result matches expected.
 			if result != tc.expected {
-				t.Errorf("got %v, want %v", result, tc.expected)
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.expected, result)
 			}
 		})
 	}
@@ -1468,8 +1491,8 @@ func TestUpdateUpdatesCurrent(t *testing.T) {
 			updateCountSkipped:   0,
 		},
 		// Cannot go from deployed to approved/skipped without first being available.
-		// "1 to 2 - Latest version deployed -> Latest version approved": {},
-		// "1 to 3 - Latest version deployed -> Latest version skipped": {},
+		// "1 to 2 - Latest version deployed -> Latest version approved": {}.
+		// "1 to 3 - Latest version deployed -> Latest version skipped": {}.
 		"2 to 0 - Latest version approved -> Latest version not deployed/approved/skipped": {
 			previousVersions: versions{
 				approvedVersion: "1.2.0",
@@ -1572,14 +1595,16 @@ func TestUpdateUpdatesCurrent(t *testing.T) {
 			// For this, we assume that `SetUpdatesCurrent` has been correctly implemented,
 			// and the metrics have been updated accordingly.
 			want := hadUpdatesCurrentAvailable + tc.updateCountAvailable
-			if got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE")); got != want {
-				t.Errorf("Expected available count %v, got %v",
-					want, got)
+			got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE"))
+			if got != want {
+				t.Errorf("%s\navailable count mismatch\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 			want = hadUpdatesCurrentSkipped + tc.updateCountSkipped
-			if got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED")); got != want {
-				t.Errorf("Expected skipped count %v, got %v",
-					want, got)
+			got = testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED"))
+			if got != want {
+				t.Errorf("%s\nskipped count mismatch\nwant: %f\ngot:  %f",
+					packageName, want, got)
 			}
 		})
 	}

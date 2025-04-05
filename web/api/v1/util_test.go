@@ -31,7 +31,7 @@ import (
 )
 
 func TestGetParam(t *testing.T) {
-	// GIVEN a map of query parameters and a parameter to retrieve
+	// GIVEN a map of query parameters and a parameter to retrieve.
 	tests := map[string]struct {
 		queryParams url.Values
 		param       string
@@ -58,21 +58,22 @@ func TestGetParam(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN getParam is called
+			// WHEN getParam is called.
 			got := getParam(&tc.queryParams, tc.param)
 
-			// THEN the result should be as expected
+			// THEN the result should be as expected.
 			if (got == nil && tc.want != nil) ||
 				(got != nil && tc.want == nil) ||
 				(got != nil && *got != *tc.want) {
-				t.Errorf("want %v, got %v", tc.want, got)
+				t.Errorf("%s\nwant %v, got %v",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestAnnounceDelete(t *testing.T) {
-	// GIVEN an API instance and a serviceID
+	// GIVEN an API instance and a serviceID.
 	serviceID := "test-service"
 	announceChannel := make(chan []byte, 2)
 	statusDefaults := status.NewDefaults(
@@ -86,26 +87,28 @@ func TestAnnounceDelete(t *testing.T) {
 				Service: service.Defaults{
 					Status: statusDefaults}}}}
 
-	// WHEN announceDelete is called
+	// WHEN announceDelete is called.
 	api.announceDelete(serviceID)
 
-	// THEN the message should be sent to the announce channel
+	// THEN the message should be sent to the announce channel.
 	select {
 	case msg := <-announceChannel:
 		var wsMessage apitype.WebSocketMessage
 		err := json.Unmarshal(msg, &wsMessage)
 		if err != nil {
-			t.Fatalf("failed to unmarshal message: %v", err)
+			t.Fatalf("%s\nfailed to unmarshal message: %v",
+				packageName, err)
 		}
 
 		if wsMessage.Page != "APPROVALS" ||
 			wsMessage.Type != "DELETE" ||
 			wsMessage.SubType != serviceID {
-			t.Errorf("unexpected WebSocketMessage: %+v",
-				wsMessage)
+			t.Errorf("%s\nunexpected WebSocketMessage: %+v",
+				packageName, wsMessage)
 		}
 	default:
-		t.Fatal("expected message on announce channel, but got none")
+		t.Fatalf("%s\nannounce channel mismatch\nwant: message\ngot:  none",
+			packageName)
 	}
 }
 
@@ -124,35 +127,38 @@ func TestAnnounceOrder(t *testing.T) {
 				Service: service.Defaults{
 					Status: statusDefaults}}}}
 
-	// WHEN announceOrder is called
+	// WHEN announceOrder is called.
 	api.announceOrder()
 
-	// THEN the message should be sent to the announce channel
+	// THEN the message should be sent to the announce channel.
 	select {
 	case msg := <-announceChannel:
 		var wsMessage apitype.WebSocketMessage
 		err := json.Unmarshal(msg, &wsMessage)
 		if err != nil {
-			t.Fatalf("failed to unmarshal message: %v", err)
+			t.Fatalf("%s\nfailed to unmarshal message: %v",
+				packageName, err)
 		}
 
 		if wsMessage.Page != "APPROVALS" ||
 			wsMessage.Type != "SERVICE" ||
 			wsMessage.SubType != "ORDER" {
-			t.Errorf("unexpected WebSocketMessage: %+v",
-				wsMessage)
+			t.Errorf("%s\nunexpected WebSocketMessage: %+v",
+				packageName, wsMessage)
 		}
 
 		if wsMessage.Order == nil {
-			t.Fatal("expected order in WebSocketMessage, but got none")
+			t.Fatalf("%s\nWebSocketMessage\nwant: order\ngot:  none",
+				packageName)
 		} else {
 			if match := test.EqualSlices(*wsMessage.Order, order); !match {
-				t.Errorf("unexpected order in WebSocketMessage: %+v",
-					wsMessage)
+				t.Errorf("%s\norder mismatch in WebSocketMessage\nwant: %+v\ngot:  %+v",
+					packageName, wsMessage, order)
 			}
 		}
 	default:
-		t.Fatal("expected message on announce channel, but got none")
+		t.Fatalf("%s\nannounce channel mismatch\nwant: message\ngot:  none",
+			packageName)
 	}
 }
 
@@ -161,7 +167,7 @@ func strPtr(s string) *string {
 }
 
 func TestConstantTimeCompare(t *testing.T) {
-	// GIVEN two hashes
+	// GIVEN two hashes.
 	tests := map[string]struct {
 		hash1, hash2 string
 	}{
@@ -189,21 +195,21 @@ func TestConstantTimeCompare(t *testing.T) {
 			hash1 := sha256.Sum256([]byte(tc.hash1))
 			hash2 := sha256.Sum256([]byte(tc.hash2))
 
-			// WHEN ConstantTimeCompare is called
+			// WHEN ConstantTimeCompare is called.
 			got := ConstantTimeCompare(hash1, hash2)
 
-			// THEN the result should be as expected
+			// THEN the result should be as expected.
 			want := tc.hash1 == tc.hash2
 			if got != (want) {
-				t.Errorf("want %v, got %v",
-					want, got)
+				t.Errorf("%s\nwant %v, got %v",
+					packageName, want, got)
 			}
 		})
 	}
 }
 
 func TestAnnounceEdit(t *testing.T) {
-	// GIVEN an API instance and old/new service data
+	// GIVEN an API instance and old/new service data.
 	announceChannel := make(chan []byte, 2)
 	statusDefaults := status.NewDefaults(
 		&announceChannel,
@@ -244,27 +250,27 @@ func TestAnnounceEdit(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - not parallel because we're using a shared channel
+			// t.Parallel() - not parallel because we're using a shared channel.
 
 			tc.newData.Status = &apitype.Status{}
 			if tc.oldData != nil {
 				tc.oldData.Status = &apitype.Status{}
 			}
 
-			// WHEN announceEdit is called
+			// WHEN announceEdit is called.
 			api.announceEdit(tc.oldData, &tc.newData)
 
-			// THEN the message should be sent to the announce channel
+			// THEN the message should be sent to the announce channel.
 			select {
 			case msg := <-announceChannel:
 				var wsMessage apitype.WebSocketMessage
 				err := json.Unmarshal(msg, &wsMessage)
 				if err != nil {
-					t.Fatalf("failed to unmarshal message: %v",
-						err)
+					t.Fatalf("%s\nfailed to unmarshal message: %v",
+						packageName, err)
 				}
 
-				// AND the ServiceData should be as expected
+				// AND the ServiceData should be as expected.
 				wantedStr := util.ToYAMLString(tc.wantedServiceData, "")
 				gotStr := util.ToYAMLString(wsMessage.ServiceData, "")
 				if wsMessage.Page != "APPROVALS" ||
@@ -272,11 +278,12 @@ func TestAnnounceEdit(t *testing.T) {
 					(tc.oldData != nil && wsMessage.SubType != tc.oldData.ID) ||
 					(tc.oldData == nil && wsMessage.SubType != "") ||
 					gotStr != wantedStr {
-					t.Errorf("unexpected WebSocketMessage:\nwant:%q\ngot:  %q",
-						wantedStr, gotStr)
+					t.Errorf("%s\nunexpected WebSocketMessage:\nwant: %q\ngot:  %q",
+						packageName, wantedStr, gotStr)
 				}
 			default:
-				t.Fatal("expected message on announce channel, but got none")
+				t.Fatalf("%s\nannounce channel mismatch\nwant: message\ngot:  none",
+					packageName)
 			}
 		})
 	}

@@ -98,21 +98,28 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 			if tc.errRegex != "" || err != nil {
 				e := util.ErrorToString(err)
 				if !util.RegexCheck(tc.errRegex, e) {
-					t.Fatalf("want match for %q\nnot: %q",
-						tc.errRegex, e)
+					t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.errRegex, e)
 				}
 				return
 			}
 			// AND the Headers are as expected.
 			if len(headers) != len(tc.expected) {
-				t.Fatalf("Got differing amounts of headers\ngot: %v\nwant: %v", headers, tc.expected)
+				t.Fatalf("%s\nheader length mismatch\nwant: %d (%+v)\ngot:  %d (%+v)",
+					packageName,
+					len(tc.expected), tc.expected,
+					len(headers), headers)
 			}
 			for i, header := range headers {
 				if header.Key != tc.expected[i].Key {
-					t.Errorf("Incorrect header key: %v, want %v", header.Key, tc.expected[i].Key)
+					t.Errorf("%s\nincorrect header key [%d]\nwant: %q\ngot:  %q",
+						packageName, i,
+						tc.expected[i].Key, header.Key)
 				}
 				if header.Value != tc.expected[i].Value {
-					t.Errorf("Incorrect header value: %v, want %v", header.Value, tc.expected[i].Value)
+					t.Errorf("%s\nincorrect header value value [%d]\nwant: %q\ngot:  %q",
+						packageName, i,
+						tc.expected[i].Value, header.Value)
 				}
 			}
 		})
@@ -120,6 +127,7 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 }
 
 func TestDefaults_String(t *testing.T) {
+	// GIVEN a Defaults.
 	tests := map[string]struct {
 		webhook *Defaults
 		want    string
@@ -192,8 +200,8 @@ func TestDefaults_String(t *testing.T) {
 				// THEN the result is as expected.
 				want = strings.TrimPrefix(want, "\n")
 				if got != want {
-					t.Fatalf("(prefix=%q) got:\n%q\nwant:\n%q",
-						prefix, got, want)
+					t.Fatalf("%s\n(prefix=%q)\nwant: %q\ngot:  %q",
+						packageName, prefix, want, got)
 				}
 			}
 		})
@@ -201,6 +209,7 @@ func TestDefaults_String(t *testing.T) {
 }
 
 func TestWebHook_String(t *testing.T) {
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		webhook *WebHook
 		want    string
@@ -283,14 +292,15 @@ func TestWebHook_String(t *testing.T) {
 			// THEN the result is as expected.
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestSliceDefaults_String(t *testing.T) {
+	// GIVEN a SliceDefaults.
 	tests := map[string]struct {
 		slice *SliceDefaults
 		want  string
@@ -374,8 +384,8 @@ func TestSliceDefaults_String(t *testing.T) {
 				// THEN the result is as expected.
 				want = strings.TrimPrefix(want, "\n")
 				if got != want {
-					t.Fatalf("(prefix=%q) got:\n%q\nwant:\n%q",
-						prefix, got, want)
+					t.Fatalf("%s\n(prefix=%q)\nwant: %q\ngot:  %q",
+						packageName, prefix, want, got)
 				}
 			}
 		})
@@ -383,6 +393,7 @@ func TestSliceDefaults_String(t *testing.T) {
 }
 
 func TestSlice_String(t *testing.T) {
+	// GIVEN a Slice.
 	tests := map[string]struct {
 		slice *Slice
 		want  string
@@ -454,8 +465,8 @@ func TestSlice_String(t *testing.T) {
 			// THEN the result is as expected.
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}

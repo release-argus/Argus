@@ -69,8 +69,8 @@ func TestInsertionSort(t *testing.T) {
 
 			// THEN it can be found at the expected index.
 			if releases[tc.expectAt].TagName != release.TagName {
-				t.Errorf("Expected %v to be inserted at index %d. Got %v",
-					release, tc.expectAt, release)
+				t.Errorf("%s\nwant: %v to be inserted at index %d\ngot:  %v",
+					packageName, release, tc.expectAt, release)
 			}
 		})
 	}
@@ -195,14 +195,14 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 			filteredReleases := lv.filterGitHubReleases(logutil.LogFrom{})
 
 			// THEN only the expected releases are kept.
-			if len(tc.want) != len(filteredReleases) {
-				t.Fatalf("Length not the same\nwant: %v (%d)\ngot:  %v (%d)",
-					tc.want, len(tc.want), filteredReleases, len(filteredReleases))
+			if len(filteredReleases) != len(tc.want) {
+				t.Fatalf("%s\nLength mismatch\nwant: %v (%d)\ngot:  %v (%d)",
+					packageName, tc.want, len(tc.want), filteredReleases, len(filteredReleases))
 			}
 			for i := range tc.want {
-				if tc.want[i] != filteredReleases[i].TagName {
-					t.Fatalf("got unexpected release %v\nwant: %q (%v)\ngot:  %v",
-						filteredReleases[i], tc.want[i], tc.want, filteredReleases)
+				if filteredReleases[i].TagName != tc.want[i] {
+					t.Fatalf("%s\nunexpected release %v\nwant: %q (%v)\ngot:  %v",
+						packageName, filteredReleases[i], tc.want[i], tc.want, filteredReleases)
 				}
 			}
 		})
@@ -247,15 +247,15 @@ func TestLookup_CheckGitHubReleasesBody(t *testing.T) {
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			// ELSE the releases marshal correctly.
 			if tc.errRegex == "^$" {
 				releasesYAML, _ := json.Marshal(releases)
 				if string(releasesYAML) != tc.body {
-					t.Errorf("releases mismatch\nwant: %q\ngot:  %q",
-						testBody, string(releasesYAML))
+					t.Errorf("%s\nreleases mismatch\nwant: %q\ngot:  %q",
+						packageName, testBody, string(releasesYAML))
 				}
 			}
 		})

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import (
 )
 
 func TestRegexCheck(t *testing.T) {
-	// GIVEN a variety of Regexes to apply to a string
+	// GIVEN a variety of Regexes to apply to a string.
 	str := `testing\n"beta-release": "0.1.2-beta"\n"stable-release": "0.1.1"`
 	tests := map[string]struct {
 		regex string
@@ -36,20 +36,22 @@ func TestRegexCheck(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN RegexCheck is called
+			// WHEN RegexCheck is called.
 			got := RegexCheck(tc.regex, str)
 
-			// THEN the regex matches when expected
+			// THEN the regex matches when expected.
 			if got != tc.match {
-				t.Errorf("wanted match=%t, not %t\n%q on %q",
-					tc.match, got, tc.regex, str)
+				t.Errorf("%s\nwant: %t\ngot:  %t\n%q on %q",
+					packageName,
+					tc.match, got,
+					tc.regex, str)
 			}
 		})
 	}
 }
 
 func TestRegexCheckWithVersion(t *testing.T) {
-	// GIVEN a variety of Regexes to apply to a string
+	// GIVEN a variety of Regexes to apply to a string.
 	str := `testing\n"beta-release": "0.1.2-beta"\n"stable-release": "0.1.1"`
 	tests := map[string]struct {
 		regex   string
@@ -70,20 +72,22 @@ func TestRegexCheckWithVersion(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN RegexCheckWithVersion is called
+			// WHEN RegexCheckWithVersion is called.
 			got := RegexCheckWithVersion(tc.regex, str, tc.version)
 
-			// THEN the regex matches when expected
+			// THEN the regex matches when expected.
 			if got != tc.match {
-				t.Errorf("wanted match=%t, not %t\n%q on %q",
-					tc.match, got, tc.regex, str)
+				t.Errorf("%s\nwant: %t\ngot:  %t\n%q on %q",
+					packageName,
+					tc.match, got,
+					tc.regex, str)
 			}
 		})
 	}
 }
 
 func TestRegexTemplate(t *testing.T) {
-	// GIVEN a RegEx, Index (and possibly a template) and text to run it on
+	// GIVEN a RegEx, Index (and possibly a template) and text to run it on.
 	tests := map[string]struct {
 		text            string
 		regex, template string
@@ -128,13 +132,13 @@ func TestRegexTemplate(t *testing.T) {
 			texts := re.FindAllStringSubmatch(tc.text, 1)
 			regexMatches := texts[0]
 
-			// WHEN RegexTemplate is called on the regex matches
+			// WHEN RegexTemplate is called on the regex matches.
 			got := RegexTemplate(regexMatches, tc.template)
 
-			// THEN the expected string is returned
+			// THEN the expected string is returned.
 			if got != tc.want {
-				t.Fatalf("want: %q\n got: %q",
-					tc.want, got)
+				t.Fatalf("%s\nwant: %q\n got:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}

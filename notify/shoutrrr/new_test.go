@@ -71,7 +71,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		typeWithDefaults:   &Defaults{},
 		typeWithNoDefaults: &Defaults{},
 		typeOther:          &Defaults{}}
-	// GIVEN a Shoutrrr
+	// GIVEN a payload for a Shoutrrr.
 	tests := map[string]struct {
 		payload          TestPayload
 		want             *Shoutrrr
@@ -273,44 +273,44 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				testServiceNotify = (*serviceNotifies)[tc.payload.NamePrevious]
 			}
 
-			// WHEN using the template
+			// WHEN using the payload.
 			got, serviceURL, errRegex := FromPayload(
 				tc.payload,
 				testServiceNotify,
 				mains,
 				defaults, hardDefaults)
 
-			// THEN the Shoutrrr is created as expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(errRegex)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Expecting error to match %q, got %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 			if tc.errRegex != "^$" {
 				return
 			}
-			// AND the Shoutrrr is as expected
+			// AND the Shoutrrr is as expected.
 			if got.String("") != tc.want.String("") {
-				t.Errorf("Result mismatch:\ngot:  %q\nwant: %q",
-					got.String(""), tc.want.String(""))
+				t.Errorf("%s\nstr mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(""), got.String(""))
 			}
-			// AND the serviceName is as expected
+			// AND the serviceName is as expected.
 			if *got.ServiceStatus.ServiceID != tc.payload.ServiceID {
-				t.Errorf("ServiceID mismatch:\ngot:  %q\nwant: %q",
-					*got.ServiceStatus.ServiceID, tc.payload.ServiceID)
+				t.Errorf("%s\nServiceID mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.payload.ServiceID, *got.ServiceStatus.ServiceID)
 			}
-			// AND the serviceURL is as expected
+			// AND the serviceURL is as expected.
 			if serviceURL != tc.wantServiceURL {
-				t.Errorf("ServiceURL mismatch:\ngot:  %q\nwant: %q",
-					serviceURL, tc.wantServiceURL)
+				t.Errorf("%s\nServiceURL mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantServiceURL, serviceURL)
 			}
 		})
 	}
 }
 
 func TestResolveDefaults(t *testing.T) {
-	// GIVEN a set of values for a Notify
+	// GIVEN a set of values for a Notify.
 	tests := map[string]struct {
 		name, nType                      string
 		main                             *Defaults
@@ -396,54 +396,61 @@ func TestResolveDefaults(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN resolveDefaults is called
+			// WHEN resolveDefaults is called.
 			gotType, gotMain, gotDefaults, gotHardDefaults, err := resolveDefaults(
-				tc.name, tc.nType, tc.main, tc.defaults, tc.hardDefaults)
+				tc.name,
+				tc.nType,
+				tc.main,
+				tc.defaults, tc.hardDefaults)
 
-			// THEN the err is as expected
+			// THEN the err is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Expecting error to match %q, got %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			if tc.errRegex != "^$" {
 				return
 			}
-			// AND the values are as expected
+			// AND the values are as expected.
 			if gotType != tc.wantType {
-				t.Fatalf("Type mismatch:\ngot:  %q\nwant: %q",
-					gotType, tc.wantType)
+				t.Fatalf("%s\nType mismatch:\nwant: %q\ngot:  %q",
+					packageName, tc.wantType, gotType)
 			}
 			allAddresses := fmt.Sprintf("main=%p, defaults=%p, hardDefaults=%p", gotMain, gotDefaults, gotHardDefaults)
-			// Main ref
+			// 	Main ref.
 			if tc.wantMain == "defaults" || tc.wantMain == "hardDefaults" {
 				if (tc.wantMain == "defaults" && gotMain != tc.defaults[gotType]) ||
 					(tc.wantMain == "hardDefaults" && gotMain != tc.hardDefaults[gotType]) {
-					t.Errorf("Main mismatch:\ngot:  %p\nwant: %q\n%s",
-						gotMain, tc.wantMain, allAddresses)
+					t.Errorf("%s\nMain mismatch:\nwant: %q\ngot:  %q\n\nall:\n%s",
+						packageName,
+						tc.wantMain, gotMain,
+						allAddresses)
 				}
 			} else if tc.wantMain != "defaults" && tc.wantMain != "hardDefaults" {
 				if gotMain == gotDefaults ||
 					gotMain == gotHardDefaults ||
 					gotMain != tc.main {
-					t.Errorf("Main mismatch:\ngot:  %p\nwant: %p\n%s",
-						gotMain, tc.main, allAddresses)
+					t.Errorf("%s\nMain mismatch:\nwant: %p\ngot:  %p\nall:\n%s",
+						packageName,
+						tc.main, gotMain,
+						allAddresses)
 				}
 			}
-			// Defaults ref
+			// 	Defaults ref.
 			if tc.wantDefaults == "hardDefaults" {
 				if gotDefaults != tc.hardDefaults[gotType] {
-					t.Errorf("Defaults mismatch:\ngot:  %p\nwant: %q\n%s",
-						gotDefaults, tc.wantDefaults, allAddresses)
+					t.Errorf("%s\nDefaults mismatch:\nwant: %q\ngot:  %q\nall:\n%s",
+						packageName, tc.wantDefaults, gotDefaults, allAddresses)
 				}
 			} else if gotDefaults != tc.defaults[gotType] {
-				t.Errorf("Defaults mismatch:\ngot:  %p\nwant: %p\n%s",
-					gotDefaults, tc.defaults[gotType], allAddresses)
+				t.Errorf("%s\nDefaults mismatch:\nwant: %p\ngot:  %p\nall:\n%s",
+					packageName, tc.defaults[gotType], gotDefaults, allAddresses)
 			}
-			// HardDefaults ref
+			// 	HardDefaults ref.
 			if gotHardDefaults != tc.hardDefaults[gotType] {
-				t.Errorf("HardDefaults mismatch:\ngot:  %p\nwant: %p\n%s",
-					gotHardDefaults, tc.hardDefaults[gotType], allAddresses)
+				t.Errorf("%s\nHardDefaults mismatch:\nwant: %p\ngot:  %p\nall:\n%s",
+					packageName, tc.hardDefaults[gotType], gotHardDefaults, allAddresses)
 			}
 		})
 	}

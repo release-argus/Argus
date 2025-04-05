@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,24 +19,28 @@ package service
 import "testing"
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN a Defaults struct
+	// GIVEN a Defaults struct.
 	d := &Defaults{}
 
-	// WHEN Default is called
+	// WHEN Default is called.
 	d.Default()
 
-	// THEN the struct is populated with default values
+	// THEN the struct is populated with default values.
 	if d.Options.Interval != "10m" {
-		t.Errorf("invalid Options.Interval:\nwant: 5m\ngot:  %s", d.Options.Interval)
+		t.Errorf("%s\ninvalid Options.Interval:\nwant: 5m\ngot:  %s",
+			packageName, d.Options.Interval)
 	}
 	if d.Dashboard.AutoApprove == nil {
-		t.Error("invalid Dashboard.AutoApprove:\nwant: non-nil\ngot:  nil")
+		t.Errorf("%s\ninvalid Dashboard.AutoApprove:\nwant: non-nil\ngot:  nil",
+			packageName)
 	}
-	// AND the X.Options vars are pointing to the Options struct
+	// AND the X.Options vars are pointing to the Options struct.
 	if d.LatestVersion.Options != &d.Options {
-		t.Errorf("invalid LatestVersion.Options:\nwant: %p\ngot:  %p", &d.Options, d.LatestVersion.Options)
+		t.Errorf("%s\ninvalid LatestVersion.Options:\nwant: %p\ngot:  %p",
+			packageName, &d.Options, d.LatestVersion.Options)
 	}
 	if d.DeployedVersionLookup.Options != &d.Options {
-		t.Errorf("invalid DeployedVersionLookup.Options:\nwant: %p\ngot:  %p", &d.Options, d.DeployedVersionLookup.Options)
+		t.Errorf("%s\ninvalid DeployedVersionLookup.Options:\nwant: %p\ngot:  %p",
+			packageName, &d.Options, d.DeployedVersionLookup.Options)
 	}
 }

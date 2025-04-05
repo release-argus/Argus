@@ -125,11 +125,11 @@ func TestShoutrrr_Send(t *testing.T) {
 			// THEN any error should match the expected regex.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Shoutrrr.Send() expected error matching:\n%q\ngot:\n%q\n",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q\n",
+					packageName, tc.errRegex, e)
 			}
 			// AND SUCCESS metrics are recorded as expected.
-			want := 0
+			var want float64 = 0
 			if tc.errRegex == "^$" && tc.expectMetrics {
 				want = 1
 			}
@@ -138,23 +138,23 @@ func TestShoutrrr_Send(t *testing.T) {
 				"SUCCESS",
 				*svcStatus.ServiceID,
 				tc.shoutrrr.GetType()))
-			if gotMetric != float64(want) {
-				t.Errorf("Shoutrrr.Send() expected %d success metrics, got %d",
-					want, int(gotMetric))
+			if gotMetric != want {
+				t.Errorf("%s\nwant: %f success metrics\ngot:  %f",
+					packageName, want, gotMetric)
 			}
 			// AND FAILURE metrics are recorded as expected.
 			want = 0
 			if tc.errRegex != "^$" && tc.expectMetrics {
-				want = int(tc.shoutrrr.GetMaxTries())
+				want = float64(tc.shoutrrr.GetMaxTries())
 			}
 			gotMetric = testutil.ToFloat64(metric.NotifyResultTotal.WithLabelValues(
 				tc.shoutrrr.ID,
 				"FAIL",
 				*svcStatus.ServiceID,
 				tc.shoutrrr.GetType()))
-			if gotMetric != float64(want) {
-				t.Errorf("Shoutrrr.Send() expected %d failure metrics, got %d",
-					want, int(gotMetric))
+			if gotMetric != want {
+				t.Errorf("%s\nwant: %f failure metrics\ngot:  %f",
+					packageName, want, gotMetric)
 			}
 		})
 	}
@@ -213,8 +213,8 @@ func TestSlice_Send(t *testing.T) {
 			// THEN the expected error state is returned.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("shoutrrr.Slice.Send() wants an error match on\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}

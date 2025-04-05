@@ -26,7 +26,7 @@ import (
 )
 
 func TestRequire_RegexCheckVersion(t *testing.T) {
-	// GIVEN a Require
+	// GIVEN a Require.
 	tests := map[string]struct {
 		require  *Require
 		errRegex string
@@ -52,21 +52,21 @@ func TestRequire_RegexCheckVersion(t *testing.T) {
 				tc.require.Status = &status.Status{}
 			}
 
-			// WHEN RegexCheckVersion is called on it
+			// WHEN RegexCheckVersion is called on it.
 			err := tc.require.RegexCheckVersion("0.1.1-beta", logutil.LogFrom{})
 
-			// THEN the err is what we expect
+			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
 }
 
 func TestRequire_RegexCheckContent(t *testing.T) {
-	// GIVEN a Require
+	// GIVEN a Require.
 	tests := map[string]struct {
 		require  *Require
 		body     string
@@ -101,21 +101,21 @@ func TestRequire_RegexCheckContent(t *testing.T) {
 				tc.require.Status = &status.Status{}
 			}
 
-			// WHEN RegexCheckContent is called on it
+			// WHEN RegexCheckContent is called on it.
 			err := tc.require.RegexCheckContent("0.1.1-beta", tc.body, logutil.LogFrom{})
 
-			// THEN the err is what we expect
+			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("error mismatch%q\ngot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch%q\ngot: %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
 }
 
 func TestRequire_RegexCheckContentGitHub(t *testing.T) {
-	// GIVEN a Require
+	// GIVEN a Require.
 	tests := map[string]struct {
 		require         *Require
 		body            []github_types.Asset
@@ -158,19 +158,19 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 				tc.require.Status = &status.Status{}
 			}
 
-			// WHEN RegexCheckContent is called on it
+			// WHEN RegexCheckContent is called on it.
 			releaseDate, err := tc.require.RegexCheckContentGitHub("0.1.1-beta", tc.body, logutil.LogFrom{})
 
-			// THEN the err is what we expect
+			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("error mismatch\nwant: %q\ngot:  %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
-			// AND the release date is what we expect
+			// AND the release date is what we expect.
 			if releaseDate != tc.wantReleaseDate {
-				t.Errorf("Release date mismatch\nwant: %q\ngot:  %q",
-					tc.wantReleaseDate, releaseDate)
+				t.Errorf("%s\nRelease date mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantReleaseDate, releaseDate)
 			}
 		})
 	}

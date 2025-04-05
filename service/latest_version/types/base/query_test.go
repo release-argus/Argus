@@ -32,7 +32,7 @@ func TestVerifySemanticVersioning(t *testing.T) {
 		deployed string
 	}
 
-	// GIVEN a Lookup and a set of versions
+	// GIVEN a Lookup and a set of versions.
 	tests := map[string]struct {
 		versions versions
 		errRegex string
@@ -83,14 +83,14 @@ func TestVerifySemanticVersioning(t *testing.T) {
 			lookup.Status.SetLatestVersion(tc.versions.current, "", false)
 			lookup.Status.SetDeployedVersion(tc.versions.deployed, "", false)
 
-			// WHEN VerifySemanticVersioning is called
+			// WHEN VerifySemanticVersioning is called.
 			err := lookup.VerifySemanticVersioning(tc.versions.new, tc.versions.current, logFrom)
 
-			// THEN the error message should match the expected regex
+			// THEN the error message should match the expected regex.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Expected error to match regex\n%q\ngot: %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -102,7 +102,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 		newVersion, releaseDate                      string
 	}
 
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		versions     versions
 		wantAnnounce bool
@@ -143,7 +143,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 				releaseDate:            "2024-02-01"},
 			wantNotify: true,
 		},
-		"same version found": { // shouldn't occur in practice
+		"same version found": { // shouldn't occur in practice.
 			versions: versions{
 				initialLatestVersion:   "1.0.0",
 				initialDeployedVersion: "1.0.0",
@@ -167,39 +167,39 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			lookup.Status.SetLatestVersion(tc.versions.initialLatestVersion, "", false)
 			lookup.Status.SetDeployedVersion(tc.versions.initialDeployedVersion, "", false)
 
-			// WHEN HandleNewVersion is called on it
+			// WHEN HandleNewVersion is called on it.
 			notify, err := lookup.HandleNewVersion(tc.versions.newVersion, tc.versions.releaseDate, logFrom)
 
-			// THEN the error should always be nil
+			// THEN the error should always be nil.
 			if err != nil {
-				t.Errorf("Expected error to be nil, got %v",
-					err)
+				t.Errorf("%s\nunexpected error\n%v",
+					packageName, err)
 			}
-			// AND the notify value should match the expected value
+			// AND the notify value should match the expected value.
 			if notify != tc.wantNotify {
-				t.Errorf("notify bool mismatch\nwant: %t\ngot:  %t",
-					tc.wantNotify, notify)
+				t.Errorf("%s\nnotify bool mismatch\nwant: %t\ngot:  %t",
+					packageName, tc.wantNotify, notify)
 			}
-			// AND an announcement should be made if expected
+			// AND an announcement should be made if expected.
 			wantLen := 0
 			if tc.wantAnnounce {
 				wantLen = 1
 			}
 			gotLen := len(*lookup.Status.AnnounceChannel)
-			if wantLen != gotLen {
-				t.Errorf("Announcement channel length mismatch\nwant: %d\ngot:  %d",
-					wantLen, gotLen)
+			if gotLen != wantLen {
+				t.Errorf("%s\nAnnounce channel length mismatch\nwant: %d\ngot:  %d",
+					packageName, wantLen, gotLen)
 			}
-			// AND the LatestVersion should be set to the new version
+			// AND the LatestVersion should be set to the new version.
 			if lookup.Status.LatestVersion() != tc.versions.newVersion {
-				t.Errorf("LatestVersion mismatch\nwant: %q\ngot:  %q",
-					tc.versions.newVersion, lookup.Status.LatestVersion())
+				t.Errorf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.versions.newVersion, lookup.Status.LatestVersion())
 			}
-			// AND the DeployedVersion should be set to the new version if it was previously unset
+			// AND the DeployedVersion should be set to the new version if it was previously unset.
 			if tc.versions.initialDeployedVersion == "" &&
 				lookup.Status.DeployedVersion() != tc.versions.newVersion {
-				t.Errorf("DeployedVersion mismatch\nwant: %q\ngot:  %q",
-					tc.versions.newVersion, lookup.Status.DeployedVersion())
+				t.Errorf("%s\nDeployedVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.versions.newVersion, lookup.Status.DeployedVersion())
 			}
 		})
 	}

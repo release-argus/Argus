@@ -9,7 +9,7 @@
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and.
+// See the License for the specific language governing permissions and
 // limitations under the License.
 
 //go:build unit
@@ -90,8 +90,8 @@ func TestVerifySemanticVersioning(t *testing.T) {
 			// THEN the error message should match the expected regex.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Expected error to match regex\n%q\ngot: %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -188,20 +188,20 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 
 			// THEN an announcement should be made when expected.
 			gotLen := len(*lookup.Status.AnnounceChannel)
-			if tc.wantAnnounces != gotLen {
-				t.Errorf("Announcement channel length mismatch\nwant: %d\ngot:  %d",
-					tc.wantAnnounces, gotLen)
+			if gotLen != tc.wantAnnounces {
+				t.Errorf("%s\nAnnounce channel length mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantAnnounces, gotLen)
 			}
 			// AND the LatestVersion should not be changed.
-			if lookup.Status.LatestVersion() != tc.versions.initialLatestVersion {
-				t.Errorf("LatestVersion mismatch\nwant: %q\ngot:  %q",
-					tc.versions.newVersion, lookup.Status.LatestVersion())
+			if tc.versions.initialLatestVersion != lookup.Status.LatestVersion() {
+				t.Errorf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.versions.initialLatestVersion, lookup.Status.LatestVersion())
 			}
 			// AND the DeployedVersion should be set to the new version if it was previously unset.
 			if tc.versions.initialDeployedVersion == "" &&
-				lookup.Status.DeployedVersion() != tc.versions.newVersion {
-				t.Errorf("DeployedVersion mismatch\nwant: %q\ngot:  %q",
-					tc.versions.newVersion, lookup.Status.DeployedVersion())
+				tc.versions.newVersion != lookup.Status.DeployedVersion() {
+				t.Errorf("%s\nDeployedVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.versions.newVersion, lookup.Status.DeployedVersion())
 			}
 		})
 	}

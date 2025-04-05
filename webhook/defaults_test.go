@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import (
 )
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN a Defaults and an expected Defaults
+	// GIVEN a Defaults and an expected Defaults.
 	defaults := Defaults{}
 	expected := Defaults{
 		Base: Base{
@@ -35,32 +35,33 @@ func TestDefaults_Default(t *testing.T) {
 			SilentFails:       test.BoolPtr(false),
 		}}
 
-	// WHEN Default is called
+	// WHEN Default is called.
 	defaults.Default()
 
-	// THEN it should set the defaults
+	// THEN it should set the defaults.
 	if defaults.Type != expected.Type {
-		t.Errorf("Type not set correctly, got %q, want %q",
-			defaults.Type, expected.Type)
+		t.Errorf("%s\nType mismatch\nwant: %q\ngot:  %q",
+			packageName, expected.Type, defaults.Type)
 	}
 	if defaults.Delay != expected.Delay {
-		t.Errorf("Delay not set correctly, got %q, want %q",
-			defaults.Delay, expected.Delay)
+		t.Errorf("%s\nDelay mismatch\nwant: %q\ngot:  %q",
+			packageName, expected.Delay, defaults.Delay)
 	}
 	if test.StringifyPtr(defaults.AllowInvalidCerts) != test.StringifyPtr(expected.AllowInvalidCerts) {
-		t.Errorf("AllowInvalidCerts not set correctly, got %q, want %q",
-			test.StringifyPtr(defaults.AllowInvalidCerts), test.StringifyPtr(expected.AllowInvalidCerts))
+		t.Errorf("%s\nAllowInvalidCerts mismatch\nwant: %q\ngot:  %q",
+			packageName,
+			test.StringifyPtr(expected.AllowInvalidCerts), test.StringifyPtr(defaults.AllowInvalidCerts))
 	}
 	if test.StringifyPtr(defaults.DesiredStatusCode) != test.StringifyPtr(expected.DesiredStatusCode) {
-		t.Errorf("DesiredStatusCode not set correctly, got %q, want %q",
-			test.StringifyPtr(defaults.DesiredStatusCode), test.StringifyPtr(expected.DesiredStatusCode))
+		t.Errorf("%s\nDesiredStatusCode mismatch\nwant: %q\ngot:  %q",
+			packageName, test.StringifyPtr(expected.DesiredStatusCode), test.StringifyPtr(defaults.DesiredStatusCode))
 	}
 	if test.StringifyPtr(defaults.MaxTries) != test.StringifyPtr(expected.MaxTries) {
-		t.Errorf("MaxTries not set correctly, got %q, want %q",
-			test.StringifyPtr(defaults.MaxTries), test.StringifyPtr(expected.MaxTries))
+		t.Errorf("%s\nMaxTries mismatch\nwant: %q\ngot:  %q",
+			packageName, test.StringifyPtr(expected.MaxTries), test.StringifyPtr(defaults.MaxTries))
 	}
 	if test.StringifyPtr(defaults.SilentFails) != test.StringifyPtr(expected.SilentFails) {
-		t.Errorf("SilentFails not set correctly, got %q, want %q",
-			test.StringifyPtr(defaults.SilentFails), test.StringifyPtr(expected.SilentFails))
+		t.Errorf("%s\nSilentFails mismatch\nwant: %q\ngot:  %q",
+			packageName, test.StringifyPtr(expected.SilentFails), test.StringifyPtr(defaults.SilentFails))
 	}
 }

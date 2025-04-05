@@ -24,6 +24,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+var packageName = "api.types"
 var secretValueMarshalled string
 
 func TestMain(m *testing.M) {

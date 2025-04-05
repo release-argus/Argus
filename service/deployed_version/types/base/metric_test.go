@@ -47,23 +47,23 @@ func TestLookup_Metrics(t *testing.T) {
 	gotC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 	wantC := 2
 	if (gotC - hadC) != wantC {
-		t.Errorf("%d Counter metrics were initialised, expecting %d",
-			(gotC - hadC), wantC)
+		t.Errorf("%s\nCount metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
+			packageName, wantC, (gotC - hadC))
 	}
 	// gauges:
 	gotG := testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
 	wantG := 0
 	if (gotG - hadG) != wantG {
-		t.Errorf("%d Gauge metrics were initialised, expecting %d",
-			(gotG - hadG), wantG)
+		t.Errorf("%s\nGauge metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
+			packageName, wantG, (gotG - hadG))
 	}
 	// But can be added.
 	lookup.QueryMetrics(&lookup, nil)
 	gotG = testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
 	wantG = 1
 	if (gotG - hadG) != wantG {
-		t.Errorf("%d Gauge metrics were initialised, expecting %d",
-			(gotG - hadG), wantG)
+		t.Errorf("%s\nGauge metrics mismatch after QueryMetrics()\nwant: %d\ngot:  %d",
+			packageName, wantG, (gotG - hadG))
 	}
 
 	// AND it can be deleted.
@@ -71,14 +71,14 @@ func TestLookup_Metrics(t *testing.T) {
 	// counters:
 	gotC = testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 	if gotC != hadC {
-		t.Errorf("Counter metrics were not deleted, got %d. expecting %d",
-			gotC, hadC)
+		t.Errorf("%s\nCount metrics mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
+			packageName, hadC, gotC)
 	}
 	// gauges:
 	gotG = testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
 	if gotG != hadG {
-		t.Errorf("Gauge metrics were not deleted, got %d. expecting %d",
-			gotG, hadG)
+		t.Errorf("%s\nGauge metrics mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
+			packageName, hadG, gotG)
 	}
 }
 
@@ -137,8 +137,8 @@ func TestLookup_QueryMetrics(t *testing.T) {
 			gauge := testutil.ToFloat64(metric.DeployedVersionQueryResultLast.WithLabelValues(
 				*lookup.Status.ServiceID, lookup.GetType()))
 			if counterSuccess != 0 || counterFail != 0 || gauge != 0 {
-				t.Errorf("Metrics were not initialised correctly. Got %f, %f, %f",
-					counterSuccess, counterFail, gauge)
+				t.Errorf("%s\nMetrics were not initialised correctly. Got %f, %f, %f",
+					packageName, counterSuccess, counterFail, gauge)
 			}
 
 			// WHEN QueryMetrics is called.
@@ -160,10 +160,13 @@ func TestLookup_QueryMetrics(t *testing.T) {
 				*lookup.Status.ServiceID, lookup.GetType(), "FAIL"))
 			gauge = testutil.ToFloat64(metric.DeployedVersionQueryResultLast.WithLabelValues(
 				*lookup.Status.ServiceID, lookup.GetType()))
-			if counterSuccess != wantSuccess || counterFail != wantFail || gauge != wantGauge {
-				t.Errorf("Metrics were not updated correctly.\nGot:  %f, %f, %f\nWant: %f, %f, %f",
-					counterSuccess, counterFail, gauge,
-					wantSuccess, wantFail, wantGauge)
+			if counterSuccess != wantSuccess ||
+				counterFail != wantFail ||
+				gauge != wantGauge {
+				t.Errorf("%s\nmetrics mismatch\nwant: %f, %f, %f\ngot:  %f, %f, %f",
+					packageName,
+					wantSuccess, wantFail, wantGauge,
+					counterSuccess, counterFail, gauge)
 			}
 		})
 	}

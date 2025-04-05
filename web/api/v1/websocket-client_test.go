@@ -80,8 +80,8 @@ func TestGetIP(t *testing.T) {
 
 			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %v",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %v",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -107,7 +107,8 @@ func setupWSTestClient(t *testing.T) *wsTestClient {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ws, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			t.Fatalf("could not upgrade connection: %v", err)
+			t.Fatalf("%s\ncould not upgrade connection: %v",
+				packageName, err)
 			return
 		}
 		defer ws.Close()
@@ -128,7 +129,8 @@ func setupWSTestClient(t *testing.T) *wsTestClient {
 	url := "ws" + strings.TrimPrefix(server.URL, "http")
 	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
-		t.Fatalf("could not open websocket connection: %v", err)
+		t.Fatalf("%s\ncould not open websocket connection: %v",
+			packageName, err)
 	}
 
 	// Create client.
@@ -245,7 +247,8 @@ func TestClient_writePump(t *testing.T) {
 					_, message, err := wsTest.conn.ReadMessage()
 					if err != nil {
 						if !tc.closeClient {
-							t.Logf("unexpected error reading message: %v", err)
+							t.Logf("%s\nunexpected error reading message: %v",
+								packageName, err)
 						}
 						break
 					}
@@ -273,15 +276,16 @@ func TestClient_writePump(t *testing.T) {
 				// Success.
 			case <-time.After(2 * time.Second):
 				if !tc.closeClient && len(receivedMessages) != len(tc.wantMessages) {
-					t.Errorf("timeout waiting for messages. Got %d messages, want %d",
-						len(receivedMessages), len(tc.messages))
+					t.Errorf("%s\ntimeout waiting for messages\nwant: %d messages\ngot:  %d",
+						packageName, len(tc.messages), len(receivedMessages))
 				}
 			}
 
 			// Verify stdout.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf("stdout did not match regex %q:\n%s", tc.stdoutRegex, stdout)
+				t.Errorf("%s\nstdout mismatch\nwant: %q:\ngot:  %s",
+					packageName, tc.stdoutRegex, stdout)
 			}
 		})
 	}
@@ -358,7 +362,8 @@ func TestClient_readPump(t *testing.T) {
 			for _, msg := range tc.messages {
 				err := wsTest.client.conn.WriteMessage(websocket.TextMessage, []byte(msg))
 				if err != nil {
-					t.Fatalf("failed to write message: %v", err)
+					t.Fatalf("%s\nfailed to write message: %v",
+						packageName, err)
 				}
 			}
 
@@ -372,28 +377,31 @@ func TestClient_readPump(t *testing.T) {
 				// Success.
 			case <-time.After(2 * time.Second):
 				if len(receivedMessages) != len(tc.wantMessages) {
-					t.Errorf("timeout waiting for messages. Got %d messages, want %d",
-						len(receivedMessages), len(tc.wantMessages))
+					t.Errorf("%s\ntimeout waiting for messages\nwant: %d messages\ngot:  %d",
+						packageName, len(tc.wantMessages), len(receivedMessages))
 				}
 			}
 
 			// Verify received messages.
 			if len(receivedMessages) != len(tc.wantMessages) {
-				t.Errorf("got %d messages, want %d", len(receivedMessages), len(tc.wantMessages))
+				t.Errorf("%s\nwant: %d messages\ngot:  %d",
+					packageName, len(tc.wantMessages), len(receivedMessages))
 			}
 			for i, want := range tc.wantMessages {
 				if i >= len(receivedMessages) {
 					break
 				}
 				if receivedMessages[i] != want {
-					t.Errorf("message %d:\ngot:  %s\nwant: %s", i, receivedMessages[i], want)
+					t.Errorf("%s\nmismatch on message [%d]\nwant: %s\ngot:  %s",
+						packageName, i, want, receivedMessages[i])
 				}
 			}
 
 			// THEN verify the results.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf("stdout did not match regex %q:\n%s", tc.stdoutRegex, stdout)
+				t.Errorf("%s\nstdout mismatch\nwant: %q:\ngot:  %s",
+					packageName, tc.stdoutRegex, stdout)
 			}
 		})
 	}

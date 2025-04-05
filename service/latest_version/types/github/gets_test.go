@@ -25,7 +25,7 @@ import (
 )
 
 func TestAccessToken(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		rootValue, defaultValue, hardDefaultValue string
 		want                                      string
@@ -56,20 +56,20 @@ func TestAccessToken(t *testing.T) {
 			lookup.Defaults.AccessToken = tc.defaultValue
 			lookup.HardDefaults.AccessToken = tc.hardDefaultValue
 
-			// WHEN accessToken is called
+			// WHEN accessToken is called.
 			got := lookup.accessToken()
 
-			// THEN the expected value is returned
+			// THEN the expected value is returned.
 			if got != tc.want {
-				t.Errorf("accessToken() mismatch:\nwant: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestURL(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		url         string
 		tagFallback bool
@@ -100,20 +100,20 @@ func TestURL(t *testing.T) {
 				lookup.GetGitHubData().SetTagFallback()
 			}
 
-			// WHEN url is called
+			// WHEN url is called.
 			got := lookup.url()
 
-			// THEN the expected value is returned
+			// THEN the expected value is returned.
 			if got != tc.want {
-				t.Errorf("url() mismatch\nwant: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestUsePreRelease(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		rootValue, defaultValue, hardDefaultValue *bool
 		want                                      *bool
@@ -144,15 +144,15 @@ func TestUsePreRelease(t *testing.T) {
 			lookup.Defaults.UsePreRelease = tc.defaultValue
 			lookup.HardDefaults.UsePreRelease = tc.hardDefaultValue
 
-			// WHEN usePreRelease is called
+			// WHEN usePreRelease is called.
 			got := lookup.usePreRelease()
 
-			// THEN the expected value is returned
+			// THEN the expected value is returned.
 			gotStr := fmt.Sprint(got)
 			wantStr := test.StringifyPtr(tc.want)
 			if gotStr != wantStr {
-				t.Errorf("usePreRelease mismatch\nwant: %q\ngot:  %q",
-					wantStr, gotStr)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, wantStr, gotStr)
 			}
 		})
 	}
@@ -162,7 +162,7 @@ func TestServiceURL(t *testing.T) {
 	type args struct {
 		ignoreWebURL bool
 	}
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		url, webURL   string
 		latestVersion string
@@ -222,13 +222,13 @@ func TestServiceURL(t *testing.T) {
 			lookup.Status.WebURL = test.StringPtr(tc.webURL)
 			lookup.Status.SetLatestVersion(tc.latestVersion, "", false)
 
-			// WHEN ServiceURL is called
+			// WHEN ServiceURL is called.
 			got := lookup.ServiceURL(tc.args.ignoreWebURL)
 
-			// THEN the expected value is returned
+			// THEN the expected value is returned.
 			if got != tc.want {
-				t.Errorf("ServiceURL(%t) mismatch\nwant: %q\ngot:  %q",
-					tc.args.ignoreWebURL, tc.want, got)
+				t.Errorf("%s\nServiceURL(%t) mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.args.ignoreWebURL, tc.want, got)
 			}
 		})
 	}

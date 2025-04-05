@@ -25,14 +25,16 @@ import (
 	logtest "github.com/release-argus/Argus/test/log"
 )
 
+var packageName = "command"
+
 func TestMain(m *testing.M) {
 	// Log.
 	logtest.InitLog()
 
-	// Run other tests
+	// Run other tests.
 	exitCode := m.Run()
 
-	// Exit
+	// Exit.
 	os.Exit(exitCode)
 }
 

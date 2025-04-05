@@ -29,7 +29,7 @@ import (
 )
 
 func TestNewAPI(t *testing.T) {
-	// GIVEN a config
+	// GIVEN a config.
 	tests := map[string]struct {
 		routePrefix string
 	}{
@@ -60,9 +60,10 @@ func TestNewAPI(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			// with/without basic auth
+			// with/without basic auth.
 			for _, basicAuthTest := range basicAuthTests {
-				t.Log("Testing with basic auth", basicAuthTest)
+				t.Logf("%s - Testing with basic auth %+v",
+					packageName, basicAuthTest)
 				cfg := &config.Config{
 					Settings: config.Settings{
 						SettingsBase: config.SettingsBase{
@@ -77,45 +78,46 @@ func TestNewAPI(t *testing.T) {
 						Password: basicAuthTest.password}
 					cfg.Settings.Web.BasicAuth.CheckValues()
 				}
-				// Test as if the routePrefix is always without a trailing slash
+				// Test as if the routePrefix is always without a trailing slash.
 				tc.routePrefix = strings.TrimSuffix(tc.routePrefix, "/")
 
-				// WHEN a new API is created
+				// WHEN a new API is created.
 				api := NewAPI(cfg)
 
-				// THEN the healthcheck endpoint is accessible
+				// THEN the healthcheck endpoint is accessible.
 				req, _ := http.NewRequest(http.MethodGet, tc.routePrefix+"/api/v1/healthcheck", nil)
 				resp := httptest.NewRecorder()
 				api.BaseRouter.ServeHTTP(resp, req)
-				// 200
+				// 200.
 				if http.StatusOK != resp.Code {
-					t.Errorf("Healthcheck, expected status code %d, got %d",
-						http.StatusOK, resp.Code)
+					t.Errorf("%s\nHealthcheck, status code mismatch\nwant: %d\ngot:  %d",
+						packageName, http.StatusOK, resp.Code)
 				}
-				// Alive
-				if resp.Body.String() != "Alive" {
-					t.Errorf("Healthcheck, expected body %s, got %s",
-						"Alive", resp.Body.String())
+				// Alive.
+				wantBody := "Alive"
+				if resp.Body.String() != wantBody {
+					t.Errorf("%s\nHealthcheck, body mismatch\nwant: %q\ngot:  %q",
+						packageName, wantBody, resp.Body.String())
 				}
-				// AND the route prefix always has a trailing slash
+				// AND the route prefix always has a trailing slash.
 				req, _ = http.NewRequest(http.MethodGet, tc.routePrefix, nil)
 				resp = httptest.NewRecorder()
 				api.BaseRouter.ServeHTTP(resp, req)
-				// 308
+				// 308.
 				expectedStatusCode := http.StatusPermanentRedirect
 				if tc.routePrefix == "" {
 					expectedStatusCode = http.StatusMovedPermanently
 				}
 				if expectedStatusCode != resp.Code {
-					t.Errorf("trailing slash, expected status code %d, got %d",
-						expectedStatusCode, resp.Code)
+					t.Errorf("%s\ntrailing slash, status code mismatch\nwant: %d\ngot:  %d",
+						packageName, expectedStatusCode, resp.Code)
 				}
-				// Location
+				// Location.
 				if resp.Header().Get("Location") != tc.routePrefix+"/" {
-					t.Errorf("trailing slash, expected Location %s, got %s",
-						tc.routePrefix+"/", resp.Header().Get("Location"))
+					t.Errorf("%s\ntrailing slash, expected Location %s, got %s",
+						packageName, tc.routePrefix+"/", resp.Header().Get("Location"))
 				}
-				// AND basic auth middleware is added when set
+				// AND basic auth middleware is added when set.
 				api.Router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 					w.Write([]byte("OK"))
 				}).Methods(http.MethodGet)
@@ -125,17 +127,17 @@ func TestNewAPI(t *testing.T) {
 				api.BaseRouter.ServeHTTP(resp, req)
 				middlewareUsed := resp.Body.String() != "OK"
 				if middlewareUsed != authMiddlewareWanted {
-					t.Errorf("Expected basicAuth middleware to be used: %t, got: %t",
-						authMiddlewareWanted, middlewareUsed)
+					t.Errorf("%s\nbasicAuth middleware mismatch\nwant: used=%t\ngot:  used=%t",
+						packageName, authMiddlewareWanted, middlewareUsed)
 				}
-				// Verify the basicAuth middleware is working
+				// Verify the basicAuth middleware is working.
 				if authMiddlewareWanted {
 					req.SetBasicAuth(basicAuthTest.username, basicAuthTest.password)
 					resp = httptest.NewRecorder()
 					api.BaseRouter.ServeHTTP(resp, req)
 					if resp.Body.String() != "OK" {
-						t.Errorf("Expected basicAuth middleware to pass, got: %s",
-							resp.Body.String())
+						t.Errorf("%s\nbasicAuth middleware failed, got body: %q",
+							packageName, resp.Body.String())
 					}
 				}
 			}
@@ -170,7 +172,7 @@ func TestWriteJSON(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			w := httptest.NewRecorder()
@@ -181,21 +183,21 @@ func TestWriteJSON(t *testing.T) {
 
 			// THEN the status code is as expected.
 			if w.Code != tc.statusCode {
-				t.Errorf("Expected status code %d, got %d",
-					tc.statusCode, w.Code)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.statusCode, w.Code)
 			}
 
 			if body := w.Body.String(); body != tc.expectedBody {
-				t.Errorf("Expected body %q, got %q",
-					tc.expectedBody, body)
+				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.expectedBody, body)
 			}
 
 			stdout := releaseStdout()
 			if tc.expectedErr {
 				errRegex := "ERROR: json: unsupported type: chan int"
 				if !util.RegexCheck(errRegex, stdout) {
-					t.Errorf("want match for %q\nnot: %q",
-						errRegex, stdout)
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, errRegex, stdout)
 				}
 			}
 		})

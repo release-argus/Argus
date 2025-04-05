@@ -32,6 +32,7 @@ import (
 	logtest "github.com/release-argus/Argus/test/log"
 )
 
+var packageName = "db"
 var cfg *config.Config
 
 func TestMain(m *testing.M) {

@@ -24,6 +24,8 @@ import (
 	logtest "github.com/release-argus/Argus/test/log"
 )
 
+var packageName = "deployedver_base"
+
 type testLookup struct {
 	Lookup `yaml:",inline" json:",inline"` // Base struct for a Lookup.
 }
