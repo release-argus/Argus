@@ -260,7 +260,9 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    true,
 				semanticVersioning: test.StringPtr("invalid"),
 			},
-			errRegex: `failed to unmarshal latestver.Lookup.SemanticVersioning`,
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal latestver\.Lookup\.Options\.SemanticVersioning:
+					invalid character.*$`),
 		},
 		"valid semantic versioning change": {
 			args: args{
@@ -300,7 +302,9 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			errRegex: `failed to unmarshal latestver.Lookup`,
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal latestver.Lookup:
+					unexpected end of JSON input$`),
 		},
 		"invalid overrides JSON - different var type": {
 			args: args{
@@ -311,7 +315,9 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			errRegex: `failed to unmarshal latestver.Lookup`,
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal latestver.Lookup:
+					cannot unmarshal array into Go struct field \.Lookup\.url of type string$`),
 		},
 		"overrides that make CheckValues fail": {
 			args: args{

@@ -48,7 +48,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			`),
 			wantVersion:        "",
 			semanticVersioning: true,
-			errRegex:           `^failed converting`,
+			errRegex:           `^failed to convert "[^"]+" to a semantic version`,
 		},
 		"want non-semantic, valid": {
 			lookupYAML: test.TrimYAML(`

@@ -255,7 +255,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    true,
 				semanticVersioning: test.StringPtr("invalid"),
 			},
-			errRegex: `failed to unmarshal deployedver\.Lookup\.SemanticVersioning`,
+			errRegex: `failed to unmarshal deployedver\.Lookup\.Options\.SemanticVersioning`,
 		},
 		"valid semantic versioning change": {
 			args: args{

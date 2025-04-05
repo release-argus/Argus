@@ -101,7 +101,7 @@ func TestLookup_Query(t *testing.T) {
 			optionsOverrides: test.TrimYAML(`
 				semantic_versioning: true
 			`),
-			errRegex:  `failed converting .* to a semantic version`,
+			errRegex:  `failed to convert "[^"]+" to a semantic version`,
 			announces: 0,
 		},
 		"allow non-semantic versioning and get non-semantic version": {

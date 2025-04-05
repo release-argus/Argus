@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -79,6 +80,8 @@ func NewDashboardOptions(
 
 // UnmarshalJSON handles the unmarshalling of a DashboardOptions.
 func (d *DashboardOptions) UnmarshalJSON(data []byte) error {
+	baseErr := "failed to unmarshal service.DashboardOptions:"
+
 	aux := &struct {
 		*DashboardOptionsBase `json:",inline"`
 
@@ -95,7 +98,10 @@ func (d *DashboardOptions) UnmarshalJSON(data []byte) error {
 
 	// Unmarshal into aux.
 	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("failed to unmarshal DashboardOptions:\n%w", err)
+		errStr := util.FormatUnmarshalError("json", err)
+		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+		return fmt.Errorf("%s\n  %s",
+			baseErr, errStr)
 	}
 
 	// Tags
@@ -110,7 +116,7 @@ func (d *DashboardOptions) UnmarshalJSON(data []byte) error {
 		} else if err := json.Unmarshal(aux.Tags, &tagsAsString); err == nil {
 			d.Tags = []string{tagsAsString}
 		} else {
-			return errors.New("error in tags field:\ntype: <invalid> (expected string or list of strings)")
+			return errors.New(baseErr + "\n  tags: <invalid> (expected a string or a list of strings)")
 		}
 	}
 
@@ -119,6 +125,8 @@ func (d *DashboardOptions) UnmarshalJSON(data []byte) error {
 
 // UnmarshalYAML handles the unmarshalling of a DashboardOptions.
 func (d *DashboardOptions) UnmarshalYAML(value *yaml.Node) error {
+	baseErr := "failed to unmarshal service.DashboardOptions:"
+
 	aux := &struct {
 		*DashboardOptionsBase `yaml:",inline"`
 
@@ -135,7 +143,10 @@ func (d *DashboardOptions) UnmarshalYAML(value *yaml.Node) error {
 
 	// Unmarshal into aux.
 	if err := value.Decode(&aux); err != nil {
-		return fmt.Errorf("failed to unmarshal DashboardOptions:\n%w", err)
+		errStr := util.FormatUnmarshalError("yaml", err)
+		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+		return fmt.Errorf("%s\n  %s",
+			baseErr, errStr)
 	}
 
 	// Tags
@@ -150,7 +161,7 @@ func (d *DashboardOptions) UnmarshalYAML(value *yaml.Node) error {
 		} else if err := aux.Tags.Decode(&tagsAsString); err == nil {
 			d.Tags = []string{tagsAsString}
 		} else {
-			return errors.New("error in tags field:\ntype: <invalid> (expected string or list of strings)")
+			return errors.New(baseErr + "\n  tags: <invalid> (expected a string or a list of strings)")
 		}
 	}
 

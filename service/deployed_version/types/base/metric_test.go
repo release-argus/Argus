@@ -103,7 +103,7 @@ func TestLookup_QueryMetrics(t *testing.T) {
 		},
 		"semantic version error": {
 			args: args{
-				err: errors.New("failed converting x to a semantic version.")},
+				err: errors.New("failed to convert x to a semantic version.")},
 			liveness: 0,
 		},
 		"version less than error": {

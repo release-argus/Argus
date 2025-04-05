@@ -18,6 +18,7 @@ package util
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -207,6 +208,76 @@ func TestUnmarshalConfig(t *testing.T) {
 					t.Errorf("UnmarshalConfig() didn't call the struct-specific Unmarshal\nfield3 = %v, want %v",
 						got.(*ConfigCustom).Field3, "custom")
 				}
+			}
+		})
+	}
+}
+
+func TestFormatUnmarshalError(t *testing.T) {
+	// GIVEN data to unmarshal in a given format, or an error from an unmarshal.
+	tests := map[string]struct {
+		format string
+		data   string
+		err    string
+		want   string
+	}{
+		"yaml, invalid type": {
+			format: "yaml",
+			data:   "field1: [invalid]",
+			want:   "line 1: cannot unmarshal !!seq into string",
+		},
+		"yaml, missing field": {
+			format: "yaml",
+			data:   "field2: 2",
+			want:   "",
+		},
+		"yaml, invalid syntax": {
+			format: "yaml",
+			data:   "field1: value1\nfield2: 2\ninvalid",
+			want:   "line 3: could not find expected ':'",
+		},
+		"json, invalid type": {
+			format: "json",
+			data:   `{"field1": ["invalid"]}`,
+			want:   "cannot unmarshal array into Go struct field Config.field1 of type string",
+		},
+		"json, missing field": {
+			format: "json",
+			data:   `{"field2": 2}`,
+			want:   "",
+		},
+		"json, invalid syntax": {
+			format: "json",
+			data:   `{"field1": "value1"`,
+			want:   "unexpected end of JSON input",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			var config Config
+			var err error
+			if tc.data != "" {
+				switch tc.format {
+				case "yaml":
+					err = yaml.Unmarshal([]byte(tc.data), &config)
+				case "json":
+					err = json.Unmarshal([]byte(tc.data), &config)
+				default:
+					t.Fatalf("unsupported format: %s",
+						tc.format)
+				}
+			} else {
+				err = errors.New(tc.err)
+			}
+
+			// WHEN the error is formatted.
+			result := FormatUnmarshalError(tc.format, err)
+
+			// THEN the error message is returned as expected.
+			if result != tc.want {
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, result)
 			}
 		})
 	}

@@ -87,8 +87,8 @@ func TestNewDashboardOptions(t *testing.T) {
 			gotStr := util.ToJSONString(got)
 			wantStr := util.ToJSONString(tc.want)
 			if gotStr != wantStr {
-				t.Errorf("NewDashboardOptions() result mismatch\n%q\ngot:\n%v",
-					wantStr, gotStr)
+				t.Errorf("%s\nwant: %q\ngot:  %v",
+					packageName, wantStr, gotStr)
 			}
 		})
 	}
@@ -104,8 +104,8 @@ func TestDashboardOptions_UnmarshalJSON(t *testing.T) {
 		"invalid JSON": {
 			jsonData: `{invalid: json}`,
 			errRegex: test.TrimYAML(`
-				failed to unmarshal DashboardOptions:
-				invalid character.*$`),
+				^failed to unmarshal service\.DashboardOptions:
+					invalid character.*$`),
 			want: &DashboardOptions{},
 		},
 		"tags - []string": {
@@ -136,8 +136,8 @@ func TestDashboardOptions_UnmarshalJSON(t *testing.T) {
 				}
 			}`,
 			errRegex: test.TrimYAML(`
-				^error in tags field:
-				type: <invalid>.*$`),
+				^failed to unmarshal service\.DashboardOptions:
+					tags: <invalid>.*$`),
 		},
 	}
 
@@ -154,15 +154,15 @@ func TestDashboardOptions_UnmarshalJSON(t *testing.T) {
 			// THEN the error is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("DashboardOptions.UnmarshalJSON() error mismatch\nwant: %q\ngot:  %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			// AND the result is as expected.
 			gotString := util.ToJSONString(dashboardOptions)
 			wantString := util.ToJSONString(tc.want)
 			if tc.want != nil && gotString != wantString {
-				t.Errorf("DashboardOptions.UnmarshalJSON() result mismatch\n%q\ngot:\n%q",
-					wantString, gotString)
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, wantString, gotString)
 			}
 		})
 	}
@@ -177,9 +177,8 @@ func TestDashboardOptions_UnmarshalYAML(t *testing.T) {
 		"invalid YAML": {
 			yamlData: `invalid yaml`,
 			errRegex: test.TrimYAML(`
-			failed to unmarshal DashboardOptions:
-			yaml: unmarshal errors:
-			  .*cannot unmarshal.*$`),
+				^failed to unmarshal service\.DashboardOptions:
+					line \d: cannot unmarshal.*$`),
 			want: &DashboardOptions{},
 		},
 		"tags - []string": {
@@ -208,8 +207,8 @@ func TestDashboardOptions_UnmarshalYAML(t *testing.T) {
 					foo: bar
 			`,
 			errRegex: test.TrimYAML(`
-				^error in tags field:
-				type: <invalid>.*$`),
+				^failed to unmarshal service\.DashboardOptions:
+					tags: <invalid>.*$`),
 		},
 	}
 
@@ -226,15 +225,15 @@ func TestDashboardOptions_UnmarshalYAML(t *testing.T) {
 			// THEN the error is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("DashboardOptions.UnmarshalYAML() error mismatch\nwant: %q\ngot:  %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			// AND the result is as expected.
 			gotStr := util.ToJSONString(dashboardOptions)
 			wantStr := util.ToJSONString(tc.want)
 			if tc.want != nil && gotStr != wantStr {
-				t.Errorf("DashboardOptions.UnmarshalYAML() result mismatch\nwant: %s\ngot:  %s",
-					wantStr, gotStr)
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, wantStr, gotStr)
 			}
 		})
 	}
@@ -275,8 +274,8 @@ func TestDashboardOptions_GetAutoApprove(t *testing.T) {
 
 			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %t\ngot:  %t",
-					tc.want, got)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -310,13 +309,13 @@ func TestDashboardOptions_CheckValues(t *testing.T) {
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("DashboardOptions.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nmismatch\nwant: %d lines of error:\n%q\ngot:  %d\n\nlines:\n%v\n\nstdout: %q",
+					packageName, wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("DashboardOptions.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 		})

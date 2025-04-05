@@ -329,7 +329,7 @@ func TestQuery(t *testing.T) {
 					  regex: ver[0-9.]+
 			`),
 			want: wantVars{
-				errRegex: `failed converting .* to a semantic version`},
+				errRegex: `failed to convert "[^"]+" to a semantic version`},
 		},
 		"query on self-signed https works when allowed": {
 			overrides: test.TrimYAML(`
@@ -502,7 +502,7 @@ func TestQuery(t *testing.T) {
 						regex: '([0-9.]+\.)'
 			`),
 			want: wantVars{
-				errRegex: `failed converting "[^"]+" to a semantic version`},
+				errRegex: `failed to convert "[^"]+" to a semantic version`},
 		},
 		"no overrides, first version does announce new version (with channel)": {
 			hadStatus: statusVars{

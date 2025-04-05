@@ -126,9 +126,18 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 			},
 			errRegex: `^$`,
 		},
-		"invalid JSON": {
-			input:    `{"invalid": json`,
-			errRegex: `failed to unmarshal Slice`,
+		"invalid JSON var": {
+			input: `{"invalid": "json"}`,
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal service\.Slice:
+					failed to unmarshal service\.Service:
+						cannot unmarshal string .*$`),
+		},
+		"invalid JSON format": {
+			input: `{"invalid": json`,
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal service\.Slice:
+					invalid character.*$`),
 		},
 	}
 
@@ -249,7 +258,10 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 				service1:
 					latest_version:
 						type: something`),
-			errRegex: `failed to unmarshal Slice`,
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal service\.Slice:
+					failed to unmarshal latestver\.Lookup:
+						type: "something" <invalid>.*$`),
 		},
 	}
 
@@ -884,8 +896,8 @@ func TestService_UnmarshalJSON(t *testing.T) {
 		"invalid JSON": {
 			jsonData: `{invalid: json}`,
 			errRegex: test.TrimYAML(`
-				failed to unmarshal Service:
-				invalid character.*$`),
+				failed to unmarshal service\.Service:
+					invalid character.*$`),
 			want: &Service{},
 		},
 		"latest_version: valid type - github": {
@@ -944,7 +956,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal github.Lookup:
-				json: cannot unmarshal array into Go struct field .url of type string`),
+					cannot unmarshal array into Go struct field \.Lookup\.url of type string`),
 		},
 		"latest_version: valid type - url": {
 			jsonData: `{
@@ -1003,7 +1015,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal web.Lookup:
-				json: cannot unmarshal array into Go struct field .url of type string`),
+					cannot unmarshal array into Go struct field \.Lookup\.url of type string`),
 		},
 		"latest_version: valid type - web (url alias)": {
 			jsonData: `{
@@ -1028,7 +1040,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal latestver.Lookup:
-				type: "unsupported" <invalid> .*\[github, url\].*$`),
+					type: "unsupported" <invalid> .*\[github, url\].*$`),
 			want: &Service{},
 		},
 		"latest_version: missing type": {
@@ -1039,7 +1051,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal latestver.Lookup:
-				type: <required> .*\[github, url\].*$`),
+					type: <required> .*\[github, url\].*$`),
 			want: &Service{},
 		},
 		"latest_version: invalid type format": {
@@ -1049,9 +1061,8 @@ func TestService_UnmarshalJSON(t *testing.T) {
 				}
 			}`,
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal Service.LatestVersion:
-				invalid json:
-				cannot unmarshal array.*$`),
+				^failed to unmarshal service.Service.LatestVersion:
+					cannot unmarshal array.* type string$`),
 			want: &Service{},
 		},
 		"latest_version: nil": {
@@ -1204,7 +1215,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal web.Lookup:
-				json: cannot unmarshal.*$`),
+					cannot unmarshal array.* type string$`),
 		},
 		"deployed_version: unknown type": {
 			jsonData: `{
@@ -1213,8 +1224,8 @@ func TestService_UnmarshalJSON(t *testing.T) {
 				}
 			}`,
 			errRegex: test.TrimYAML(`
-				failed to unmarshal deployedver.Lookup:
-				type: "unsupported" <invalid> .*\[url, manual\].*$`),
+				^failed to unmarshal deployedver.Lookup:
+					type: "unsupported" <invalid> .*\[url, manual\].*$`),
 			want: &Service{},
 		},
 		"deployed_version: missing type": {
@@ -1225,7 +1236,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal deployedver.Lookup:
-				type: <required> .*\[url, manual\].*$`),
+					type: <required> .*\[url, manual\].*$`),
 			want: &Service{},
 		},
 		"deployed_version: invalid type format": {
@@ -1235,9 +1246,8 @@ func TestService_UnmarshalJSON(t *testing.T) {
 				}
 			}`,
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal Service.DeployedVersion:
-				invalid json:
-				.*cannot unmarshal.*$`),
+				^failed to unmarshal service.Service.DeployedVersion:
+					cannot unmarshal.*$`),
 			want: &Service{},
 		},
 		"deployed_version: null": {
@@ -1326,9 +1336,9 @@ func TestService_UnmarshalJSON(t *testing.T) {
 				}
 			}`,
 			errRegex: test.TrimYAML(`
-				failed to unmarshal Service:
-				error in tags field:
-				type: <invalid>.*$`),
+				failed to unmarshal service\.Service:
+					failed to unmarshal service\.DashboardOptions:
+						tags: <invalid>.*$`),
 		},
 	}
 
@@ -1525,9 +1535,8 @@ func TestService_UnmarshalYAML(t *testing.T) {
 		"invalid YAML": {
 			yamlData: `invalid yaml`,
 			errRegex: test.TrimYAML(`
-			failed to unmarshal Service:
-			yaml: unmarshal errors:
-			  .*cannot unmarshal.*$`),
+				failed to unmarshal service\.Service:
+					line \d: cannot unmarshal.*$`),
 			want: &Service{},
 		},
 		"latest_version: valid type - github": {
@@ -1576,7 +1585,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 					UsePreRelease: test.BoolPtr(true)},
 			},
 		},
-		"latest_version: github - invalid JSON": {
+		"latest_version: github - invalid YAML": {
 			yamlData: `
 				latest_version:
 					type: github
@@ -1584,8 +1593,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal github.Lookup:
-				yaml: unmarshal errors:
-				.*cannot unmarshal.*$`),
+					line \d: cannot unmarshal.*$`),
 		},
 		"latest_version: valid type - url": {
 			yamlData: `
@@ -1653,8 +1661,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal web.Lookup:
-				yaml: unmarshal errors:
-				.*cannot unmarshal.*$`),
+					line \d: cannot unmarshal.*$`),
 		},
 		"latest_version: unknown type": {
 			yamlData: `
@@ -1662,8 +1669,8 @@ func TestService_UnmarshalYAML(t *testing.T) {
 					type: unsupported
 			`,
 			errRegex: test.TrimYAML(`
-			failed to unmarshal latestver.Lookup:
-			type: "unsupported" <invalid> .*\[github, url\].*$`),
+				^failed to unmarshal latestver.Lookup:
+					type: "unsupported" <invalid> .*\[github, url\].*$`),
 			want: &Service{},
 		},
 		"latest_version: missing type": {
@@ -1673,7 +1680,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal latestver.Lookup:
-				type: <required> .*\[github, url\].*$`),
+					type: <required> .*\[github, url\].*$`),
 			want: &Service{},
 		},
 		"latest_version: invalid type format": {
@@ -1682,10 +1689,8 @@ func TestService_UnmarshalYAML(t *testing.T) {
 					type: ["unsupported"]
 			`,
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal Service.LatestVersion:
-				invalid yaml:
-				unmarshal errors:
-				.*cannot unmarshal.*$`),
+				^failed to unmarshal service.Service.LatestVersion:
+					line \d: cannot unmarshal.*$`),
 			want: &Service{},
 		},
 		"latest_version: nil": {
@@ -1832,8 +1837,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal web.Lookup:
-				yaml: unmarshal errors:
-				.*cannot unmarshal.*$`),
+					line \d: cannot unmarshal.*$`),
 		},
 		"deployed_version: unknown type": {
 			yamlData: `
@@ -1841,8 +1845,8 @@ func TestService_UnmarshalYAML(t *testing.T) {
 					type: unsupported
 			`,
 			errRegex: test.TrimYAML(`
-			failed to unmarshal deployedver.Lookup:
-			type: "unsupported" <invalid> .*\[url, manual\].*$`),
+				^failed to unmarshal deployedver.Lookup:
+					type: "unsupported" <invalid> .*\[url, manual\].*$`),
 			want: &Service{},
 		},
 		"deployed_version: missing type": {
@@ -1864,10 +1868,8 @@ func TestService_UnmarshalYAML(t *testing.T) {
 					type: ["unsupported"]
 			`,
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal Service.DeployedVersion:
-				invalid yaml:
-				unmarshal errors:
-				.*cannot unmarshal.*$`),
+				^failed to unmarshal service.Service.DeployedVersion:
+					line \d: cannot unmarshal.*$`),
 			want: &Service{},
 		},
 		"deployed_version: nil": {
@@ -1945,9 +1947,9 @@ func TestService_UnmarshalYAML(t *testing.T) {
 						foo: bar
 			`,
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal Service:
-				error in tags field:
-				type: <invalid>.*$`),
+				^failed to unmarshal service\.Service:
+					failed to unmarshal service\.DashboardOptions:
+						tags: <invalid>.*$`),
 		},
 	}
 

@@ -78,7 +78,7 @@ func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
 			metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
 				l.GetServiceID(), parentLookup.GetType(),
 				2)
-		case strings.HasPrefix(e, "failed converting") && strings.Contains(e, " semantic version."):
+		case strings.HasPrefix(e, "failed to convert") && strings.Contains(e, " semantic version."):
 			metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
 				l.GetServiceID(), parentLookup.GetType(),
 				3)
