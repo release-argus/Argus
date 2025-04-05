@@ -219,7 +219,7 @@ func (c *Client) writePump() {
 			var msg apitype.WebSocketMessage
 			if err := json.Unmarshal(message, &msg); err != nil {
 				logutil.Log.Error(
-					fmt.Sprintf("Message failed to unmarshal %s",
+					fmt.Sprintf("failed to unmarshal Message: %s",
 						err),
 					logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 					true)

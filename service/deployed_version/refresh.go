@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
@@ -65,7 +66,9 @@ func Refresh(
 	} else if previousType == "manual" && lookup.GetType() == "manual" &&
 		overrides != "" {
 		if err := json.Unmarshal([]byte(overrides), &lookup); err != nil {
-			return "", fmt.Errorf("failed to unmarshal deployedver.Lookup: %w", err)
+			errStr := util.FormatUnmarshalError("json", err)
+			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+			return "", errors.New("failed to unmarshal deployedver.Lookup:\n  " + errStr)
 		}
 	}
 
@@ -101,7 +104,9 @@ func applyOverridesJSON(
 	var extractedOverrides *LookupTypeExtractor
 	if overrides != "" {
 		if err := json.Unmarshal([]byte(overrides), &extractedOverrides); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup: %w", err)
+			errStr := util.FormatUnmarshalError("json", err)
+			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+			return nil, errors.New("failed to unmarshal deployedver.Lookup:\n  " + errStr)
 		}
 	}
 	// Copy the existing Lookup.
@@ -126,7 +131,9 @@ func applyOverridesJSON(
 		semanticVersioningRoot := util.CopyPointer(lookup.GetOptions().SemanticVersioning)
 		// Apply the new semantic_versioning JSON value.
 		if err := json.Unmarshal([]byte(*semanticVersioning), &semanticVersioningRoot); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup.SemanticVersioning: %w", err)
+			errStr := util.FormatUnmarshalError("json", err)
+			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+			return nil, errors.New("failed to unmarshal deployedver.Lookup.Options.SemanticVersioning:\n  " + errStr)
 		}
 		newLookup.GetOptions().SemanticVersioning = semanticVersioningRoot
 	}
@@ -134,7 +141,9 @@ func applyOverridesJSON(
 	// Apply the overrides.
 	if overrides != "" {
 		if err := json.Unmarshal([]byte(overrides), &newLookup); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup: %w", err)
+			errStr := util.FormatUnmarshalError("json", err)
+			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+			return nil, errors.New("failed to unmarshal deployedver.Lookup:\n  " + errStr)
 		}
 		newLookup.Init(
 			newLookup.GetOptions(),

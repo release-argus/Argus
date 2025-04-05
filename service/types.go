@@ -17,6 +17,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -45,7 +46,9 @@ func (s *Slice) UnmarshalJSON(data []byte) error {
 	var aux map[string]*Service
 
 	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("failed to unmarshal Slice:\n%w", err)
+		errStr := util.FormatUnmarshalError("json", err)
+		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+		return errors.New("failed to unmarshal service.Slice:\n  " + errStr)
 	}
 	*s = aux
 
@@ -62,7 +65,9 @@ func (s *Slice) UnmarshalYAML(value *yaml.Node) error {
 
 	// Unmarshal YAML data.
 	if err := value.Decode(&aux); err != nil {
-		return fmt.Errorf("failed to unmarshal Slice:\n%w", err)
+		errStr := util.FormatUnmarshalError("yaml", err)
+		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+		return errors.New("failed to unmarshal service.Slice:\n  " + errStr)
 	}
 	*s = aux
 
@@ -206,7 +211,7 @@ func (s *Service) UsingDefaults() (bool, bool, bool) {
 
 // unmarshalVersionLookups handles the unmarshalling of LatestVersion and DeployedVersion fields.
 func (s *Service) unmarshalVersionLookups(
-	format string,
+	format string, // "json" | "yaml"
 	latestVersion, deployedVersion any,
 ) error {
 	// -- Dynamic LatestVersion type --
@@ -215,7 +220,9 @@ func (s *Service) unmarshalVersionLookups(
 			format, latestVersion,
 			s.LatestVersion)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal Service.LatestVersion:\n%w", err)
+			errStr := util.FormatUnmarshalError(format, err)
+			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+			return errors.New("failed to unmarshal service.Service.LatestVersion:\n  " + errStr)
 		}
 		s.LatestVersion, err = latestver.New(
 			lookupType,
@@ -234,7 +241,9 @@ func (s *Service) unmarshalVersionLookups(
 			format, deployedVersion,
 			s.DeployedVersionLookup)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal Service.DeployedVersion:\n%w", err)
+			errStr := util.FormatUnmarshalError(format, err)
+			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+			return errors.New("failed to unmarshal service.Service.DeployedVersion:\n  " + errStr)
 		}
 		if format == "yaml" && lookupType == "" {
 			// Default to url for YAML only
@@ -314,7 +323,9 @@ func (s *Service) UnmarshalJSON(data []byte) error {
 
 	// Unmarshal into aux to separate the latest_version field.
 	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("failed to unmarshal Service:\n%w", err)
+		errStr := util.FormatUnmarshalError("json", err)
+		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+		return errors.New("failed to unmarshal service.Service:\n  " + errStr)
 	}
 
 	// Name.
@@ -389,7 +400,9 @@ func (s *Service) UnmarshalYAML(value *yaml.Node) error {
 
 	// Unmarshal into aux to separate the latest_version field.
 	if err := value.Decode(&aux); err != nil {
-		return fmt.Errorf("failed to unmarshal Service:\n%w", err)
+		errStr := util.FormatUnmarshalError("yaml", err)
+		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+		return errors.New("failed to unmarshal service.Service:\n  " + errStr)
 	}
 
 	// Name.

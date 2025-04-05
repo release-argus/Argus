@@ -599,7 +599,7 @@ func TestUnmarshal(t *testing.T) {
 			format: "json",
 			errRegex: test.TrimYAML(`
 			^failed to unmarshal deployedver.Lookup:
-			type: "unknown" <invalid>.*$`),
+				type: "unknown" <invalid>.*$`),
 		},
 		"invalid JSON": {
 			data: test.TrimYAML(`{
@@ -609,9 +609,19 @@ func TestUnmarshal(t *testing.T) {
 			format: "json",
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal deployedver.Lookup:
-				invalid character.*$`),
+					invalid character.*$`),
 		},
-		"invalid YAML": {
+		"invalid YAML vars": {
+			data: test.TrimYAML(`
+				type: url
+				url: [https://example.com]
+			`),
+			format: "yaml",
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal web.Lookup:
+					line \d+: .*$`),
+		},
+		"invalid YAML format": {
 			data: test.TrimYAML(`
 				type: url
 				url: https://example.com
@@ -620,7 +630,7 @@ func TestUnmarshal(t *testing.T) {
 			format: "yaml",
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal deployedver.Lookup:
-				line \d+: .*$`),
+					line \d+: .*$`),
 		},
 		"invalid URL": {
 			data: test.TrimYAML(`
@@ -631,8 +641,7 @@ func TestUnmarshal(t *testing.T) {
 			format: "yaml",
 			errRegex: test.TrimYAML(`
 				failed to unmarshal web.Lookup:
-				yaml: .+
-				.* cannot unmarshal .*$`),
+					line \d: cannot unmarshal .*$`),
 		},
 	}
 

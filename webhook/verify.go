@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -128,7 +128,7 @@ func (w *WebHook) CheckValues(prefix string) error {
 			prefix, strings.Join(supportedTypes, ",")))
 		// Check the Type doesn't differ in the Main.
 	} else if w.Main.Type != "" && whType != w.Main.Type {
-		errs = append(errs, fmt.Errorf("%stype: %q != %q <invalid> (omit the type, or make it the same as the root webhook.%s.type)",
+		errs = append(errs, fmt.Errorf("%stype: %q != %q <invalid> (omit 'type', or make it match root webhook.%s.type)",
 			prefix, whType, w.Main.Type, w.ID))
 	}
 
@@ -142,12 +142,12 @@ func (w *WebHook) CheckValues(prefix string) error {
 		w.Main.URL,
 		w.Defaults.URL,
 		w.HardDefaults.URL) == "" {
-		errs = append(errs, fmt.Errorf("%surl: <required> (here, in the root webhook.%s, or in defaults)",
+		errs = append(errs, fmt.Errorf("%surl: <required> (here, in root webhook.%s, or in defaults)",
 			prefix, w.ID))
 	}
 	// secret
 	if w.GetSecret() == "" {
-		errs = append(errs, fmt.Errorf("%ssecret: <required> (here, in the root webhook.%s, or in defaults)",
+		errs = append(errs, fmt.Errorf("%ssecret: <required> (here, in root webhook.%s, or in defaults)",
 			prefix, w.ID))
 	}
 

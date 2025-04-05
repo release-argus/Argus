@@ -27,6 +27,7 @@ import (
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 // Lookup provides methods for retrieving the deployed version of a service.
@@ -36,8 +37,8 @@ type Lookup interface {
 
 // New returns a new Lookup.
 func New(
-	lType string,
-	configFormat string,
+	lType string, // "manual" | ("url"|"web")
+	configFormat string, // "json" | "yaml"
 	configData any, // []byte | string | *yaml.Node | json.RawMessage.
 	options *opt.Options,
 	status *status.Status,
@@ -67,7 +68,7 @@ func New(
 	if lType != "" {
 		errorMsg = fmt.Sprintf("%q <invalid>", lType)
 	}
-	return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\ntype: %s (expected one of [%s])",
+	return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\n  type: %s (expected one of [%s])",
 		errorMsg, strings.Join(PossibleTypes, ", "))
 }
 
@@ -124,6 +125,8 @@ func UnmarshalYAML(data []byte) (Lookup, error) {
 //
 // (dynamic typing).
 func unmarshal(data []byte, format string) (Lookup, error) {
+	baseErr := "failed to unmarshal deployedver.Lookup:"
+
 	var temp struct {
 		Type string `yaml:"type" json:"type"`
 	}
@@ -136,11 +139,14 @@ func unmarshal(data []byte, format string) (Lookup, error) {
 	case "yaml":
 		err = yaml.Unmarshal(data, &temp)
 	default:
-		err = fmt.Errorf("unknown format: %q", format)
+		return nil, fmt.Errorf("%s\n  unknown format: %q",
+			baseErr, format)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\n%s",
-			strings.TrimPrefix(err.Error(), "yaml: "))
+		errStr := util.FormatUnmarshalError(format, err)
+		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+		return nil, fmt.Errorf("%s\n  %s",
+			baseErr, errStr)
 	}
 
 	// -- Dynamic deployedVersion type --
@@ -149,10 +155,9 @@ func unmarshal(data []byte, format string) (Lookup, error) {
 		temp.Type = "url"
 	}
 	// Supported type?
-	_, exists := ServiceMap[temp.Type]
-	if !exists {
-		return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\ntype: %q <invalid> (expected one of [%s])",
-			temp.Type, strings.Join(PossibleTypes, ", "))
+	if _, exists := ServiceMap[temp.Type]; !exists {
+		return nil, fmt.Errorf("%s\n  type: %q <invalid> (expected one of [%s])",
+			baseErr, temp.Type, strings.Join(PossibleTypes, ", "))
 	}
 
 	// New Lookup based on the type.

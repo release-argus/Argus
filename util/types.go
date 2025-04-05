@@ -18,6 +18,7 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -75,4 +76,37 @@ func UnmarshalConfig(
 	default:
 		return fmt.Errorf("unsupported configFormat: %s", configFormat)
 	}
+}
+
+var yamlPrefixes = []string{"yaml: unmarshal errors:\n", "yaml: ", "invalid yaml:\nunmarshal errors:\n"}
+var jsonPrefixes = []string{"json: ", "invalid json:\n"}
+
+func FormatUnmarshalError(format string, err error) string {
+	if err == nil {
+		return ""
+	}
+
+	errStr := err.Error()
+
+	// Format-specific prefixes.
+	var prefixes []string
+	switch format {
+	case "yaml":
+		prefixes = yamlPrefixes
+	case "json":
+		prefixes = jsonPrefixes
+	}
+
+	// Trim any matching prefix.
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(errStr, prefix) {
+			errStr = strings.TrimPrefix(errStr, prefix)
+			break
+		}
+	}
+
+	// Remove leading spaces.
+	errStr = strings.TrimPrefix(errStr, "  ")
+
+	return errStr
 }

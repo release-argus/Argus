@@ -27,7 +27,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	// GIVEN a set of args.
+	// GIVEN a set of args to create a Lookup.
 	type args struct {
 		lType                  string
 		overrides              interface{}
@@ -51,7 +51,7 @@ func TestNew(t *testing.T) {
 			wantYAML: test.TrimYAML(`
 				type: github
 				url: release-argus/Argus
-				`),
+			`),
 		},
 		"github - full": {
 			args: args{
@@ -146,7 +146,7 @@ func TestNew(t *testing.T) {
 			},
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal github.Lookup:
-				unsupported configData type: int`),
+					unsupported configData type: int$`),
 		},
 		"URL - invalid configData type": {
 			args: args{
@@ -157,7 +157,7 @@ func TestNew(t *testing.T) {
 			},
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal web.Lookup:
-				unsupported configData type: int`),
+					unsupported configData type: int$`),
 		},
 	}
 
@@ -550,16 +550,18 @@ func TestUnmarshalJSON(t *testing.T) {
 		errRegex string
 		wantJSON *string
 	}{
-		"Empty": {
+		"empty": {
 			jsonStr:  "",
 			errRegex: `unexpected end of JSON input`,
 			wantJSON: test.StringPtr(""),
 		},
-		"Invalid formatting": {
-			jsonStr:  "invalid",
-			errRegex: `invalid character`,
+		"invalid formatting": {
+			jsonStr: "invalid",
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal latestver.Lookup:
+					invalid character .*$`),
 		},
-		"Valid - GitHub": {
+		"valid - GitHub": {
 			jsonStr: test.TrimJSON(`{
 				"type":"github",
 				"url":"release-argus/Argus",
@@ -567,7 +569,7 @@ func TestUnmarshalJSON(t *testing.T) {
 			}`),
 			errRegex: `^$`,
 		},
-		"Valid - URL": {
+		"valid - URL": {
 			jsonStr: test.TrimJSON(`{
 				"type":"url",
 				"url":"https://example.com",
@@ -575,21 +577,29 @@ func TestUnmarshalJSON(t *testing.T) {
 			}`),
 			errRegex: `^$`,
 		},
-		"Invalid - GitHub": {
+		"invalid - GitHub": {
 			jsonStr: test.TrimJSON(`{"
 				type":"github",
 				"url":"release-argus/Argus",
-				"access_token":1
+				"access_token":1,
+				"use_prerelease":"sometimes"
 			}`),
-			errRegex: `failed to unmarshal github.Lookup`,
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal latestver.Lookup:
+					failed to unmarshal github.Lookup:
+						cannot unmarshal number.* \.access_token of type string$`),
 		},
-		"Invalid - URL": {
+		"invalid - URL": {
 			jsonStr: test.TrimJSON(`{
 				"type":"url",
 				"url":"https://example.com",
-				"allow_invalid_certs":"true"
+				"allow_invalid_certs":"true",
+				"target_header":true
 			}`),
-			errRegex: `failed to unmarshal web.Lookup`,
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal latestver.Lookup:
+					failed to unmarshal web.Lookup:
+						cannot unmarshal string.* \.allow_invalid_certs of type bool$`),
 		},
 		"unknown type": {
 			jsonStr: test.TrimJSON(`{
@@ -643,8 +653,10 @@ func TestUnmarshalYAML(t *testing.T) {
 			wantYAML: test.StringPtr(""),
 		},
 		"Invalid formatting": {
-			yamlStr:  "{ invalid",
-			errRegex: `did not find expected`,
+			yamlStr: "{ invalid",
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal latestver.Lookup:
+					line \d: did not find expected.*$`),
 		},
 		"Valid - GitHub": {
 			yamlStr: test.TrimYAML(`
@@ -669,7 +681,10 @@ func TestUnmarshalYAML(t *testing.T) {
 				access_token:
 					sub: token
 			`),
-			errRegex: `failed to unmarshal github.Lookup`,
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal latestver.Lookup:
+					failed to unmarshal github.Lookup:
+						line \d: cannot unmarshal.*$`),
 		},
 		"Invalid - URL": {
 			yamlStr: test.TrimYAML(`
@@ -677,7 +692,10 @@ func TestUnmarshalYAML(t *testing.T) {
 				url: https://example.com
 				allow_invalid_certs: "true"
 			`),
-			errRegex: `failed to unmarshal web.Lookup`,
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal latestver.Lookup:
+					failed to unmarshal web.Lookup:
+						line \d: cannot unmarshal.*$`),
 		},
 	}
 
@@ -762,7 +780,7 @@ func TestUnmarshal(t *testing.T) {
 			format: "json",
 			errRegex: test.TrimYAML(`
 			^failed to unmarshal latestver.Lookup:
-			type: "unknown" <invalid>.*$`),
+				type: "unknown" <invalid>.*$`),
 		},
 		"invalid JSON": {
 			data: test.TrimYAML(`{
@@ -772,7 +790,7 @@ func TestUnmarshal(t *testing.T) {
 			format: "json",
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal latestver.Lookup:
-				invalid character.*$`),
+					invalid character.*$`),
 		},
 		"invalid YAML": {
 			data: test.TrimYAML(`
@@ -783,7 +801,7 @@ func TestUnmarshal(t *testing.T) {
 			format: "yaml",
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal latestver.Lookup:
-				yaml: .*$`),
+					line \d: could not find .*$`),
 		},
 		"invalid GitHub": {
 			data: test.TrimYAML(`
@@ -793,9 +811,9 @@ func TestUnmarshal(t *testing.T) {
 			`),
 			format: "yaml",
 			errRegex: test.TrimYAML(`
-				failed to unmarshal github.Lookup:
-				yaml: .+
-				.* cannot unmarshal .*$`),
+				^failed to unmarshal latestver.Lookup:
+					failed to unmarshal github.Lookup:
+						line \d: cannot unmarshal .*$`),
 		},
 	}
 

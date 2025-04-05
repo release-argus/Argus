@@ -132,7 +132,10 @@ func (o *Options) GetSemanticVersioning() bool {
 func (o *Options) VerifySemanticVersioning(version string, logFrom logutil.LogFrom) (*semver.Version, error) {
 	semanticVersion, err := semver.NewVersion(version)
 	if err != nil {
-		err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
+		err = fmt.Errorf(
+			"failed to convert %q to a semantic version. "+
+				"If all versions follow this format, consider adding url_commands to transform the version into the 'MAJOR.MINOR.PATCH' format (https://semver.org/). "+
+				"Alternatively, you can disable semantic versioning either globally with defaults.service.semantic_versioning or for this specific service using the options.semantic_versioning variable.",
 			version)
 		logutil.Log.Error(err, logFrom, true)
 		return nil, err

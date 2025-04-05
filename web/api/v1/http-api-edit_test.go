@@ -330,7 +330,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			params: map[string]string{
 				"semantic_versioning": "null"},
 			wants: wants{
-				body:          `failed converting .* to a semantic version`,
+				body:          `failed to convert \\"[^"]+\\" to a semantic version`,
 				statusCode:    http.StatusBadRequest,
 				latestVersion: ""},
 		},
@@ -348,7 +348,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			params: map[string]string{
 				"semantic_versioning": "true"},
 			wants: wants{
-				body:          `failed converting .* to a semantic version`,
+				body:          `failed to convert \\"[^"]+\\" to a semantic version`,
 				statusCode:    http.StatusBadRequest,
 				latestVersion: ""},
 		},
@@ -525,7 +525,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				}`),
 				"semantic_versioning": "null"},
 			wants: wants{
-				body:            `failed converting .* to a semantic version`,
+				body:            `failed to convert \\"[^"]+\\" to a semantic version`,
 				statusCode:      http.StatusBadRequest,
 				deployedVersion: ""},
 		},
@@ -543,7 +543,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"semantic_versioning": "true",
 			},
 			wants: wants{
-				body:            `failed converting .* to a semantic version`,
+				body:            `failed to convert \\"[^"]+\\" to a semantic version`,
 				statusCode:      http.StatusBadRequest,
 				deployedVersion: ""},
 		},

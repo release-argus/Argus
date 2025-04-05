@@ -109,7 +109,7 @@ func TestNew(t *testing.T) {
 				`),
 			},
 			wants: wants{
-				errRegex: `failed converting`,
+				errRegex: `failed to convert "[^"]+" to a semantic version`,
 				yaml: test.TrimYAML(`
 					type: manual
 				`)},

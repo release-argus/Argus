@@ -103,7 +103,9 @@ func applyOverridesJSON(
 	var extractedOverrides *LookupTypeExtractor
 	if overrides != nil {
 		if err := json.Unmarshal([]byte(*overrides), &extractedOverrides); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal latestver.Lookup: %w", err)
+			errStr := util.FormatUnmarshalError("json", err)
+			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+			return nil, errors.New("failed to unmarshal latestver.Lookup:\n  " + errStr)
 		}
 	}
 	// Copy the existing Lookup.
@@ -126,7 +128,9 @@ func applyOverridesJSON(
 		semanticVersioningRoot := util.CopyPointer(lookup.GetOptions().SemanticVersioning)
 		// Apply the new semantic_versioning JSON value.
 		if err := json.Unmarshal([]byte(*semanticVersioning), &semanticVersioningRoot); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal latestver.Lookup.SemanticVersioning: %w", err)
+			errStr := util.FormatUnmarshalError("json", err)
+			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+			return nil, errors.New("failed to unmarshal latestver.Lookup.Options.SemanticVersioning:\n  " + errStr)
 		}
 		newLookup.GetOptions().SemanticVersioning = semanticVersioningRoot
 	}
@@ -134,7 +138,9 @@ func applyOverridesJSON(
 	// Apply the overrides.
 	if overrides != nil {
 		if err := json.Unmarshal([]byte(*overrides), &newLookup); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal latestver.Lookup: %w", err)
+			errStr := util.FormatUnmarshalError("json", err)
+			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+			return nil, errors.New("failed to unmarshal latestver.Lookup:\n  " + errStr)
 		}
 		if strings.Contains(*overrides, `"docker":`) {
 			require := newLookup.GetRequire()

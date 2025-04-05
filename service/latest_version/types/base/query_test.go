@@ -47,7 +47,7 @@ func TestVerifySemanticVersioning(t *testing.T) {
 			versions: versions{
 				new:     "invalid-version",
 				current: ""},
-			errRegex: `failed converting "invalid-version" to a semantic version`,
+			errRegex: `failed to convert "invalid-version" to a semantic version`,
 		},
 		"progressive check - valid semantic version, non-semantic deployed version": {
 			versions: versions{

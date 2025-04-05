@@ -210,7 +210,7 @@ func TestClient_writePump(t *testing.T) {
 			},
 			wantMessages: []string{},
 			stdoutRegex: test.TrimYAML(`
-				^ERROR:.*Message failed to unmarshal.*`),
+				^ERROR:.*, failed to unmarshal Message: .*`),
 		},
 		"close client": {
 			messages: []string{
@@ -219,7 +219,7 @@ func TestClient_writePump(t *testing.T) {
 			wantMessages: []string{},
 			closeClient:  true,
 			stdoutRegex: test.TrimYAML(`
-				^ERROR:.*Message failed to unmarshal.*`),
+				^ERROR:.*, failed to unmarshal Message: .*`),
 		},
 	}
 

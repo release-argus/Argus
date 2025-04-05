@@ -17,7 +17,8 @@ package manual
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
+	"strings"
 	"sync"
 
 	"gopkg.in/yaml.v3"
@@ -38,7 +39,7 @@ type Lookup struct {
 
 // New returns a new Lookup from a string in a given format (json/yaml).
 func New(
-	configFormat string,
+	configFormat string, // "json" | "yaml"
 	configData any, // []byte | string | *yaml.Node | json.RawMessage.
 	options *opt.Options,
 	status *status.Status,
@@ -48,7 +49,9 @@ func New(
 
 	// Unmarshal.
 	if err := util.UnmarshalConfig(configFormat, configData, lookup); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal manual.Lookup:\n%w", err)
+		errStr := util.FormatUnmarshalError(configFormat, err)
+		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
+		return nil, errors.New("failed to unmarshal manual.Lookup:\n  " + errStr)
 	}
 
 	lookup.Init(
@@ -82,7 +85,7 @@ func (l *Lookup) UnmarshalJSON(data []byte) error {
 
 	// Unmarshal.
 	if err := json.Unmarshal(data, aux); err != nil {
-		return err //nolint:wrapcheck
+		return errors.New(strings.Replace(err.Error(), ".Alias", "", 1))
 	}
 	l.Type = "manual"
 
