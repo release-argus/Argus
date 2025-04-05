@@ -27,7 +27,7 @@ import (
 )
 
 func TestShoutrrr_GetOption(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		env                                                  map[string]string
 		rootValue, mainValue, defaultValue, hardDefaultValue *string
@@ -100,31 +100,31 @@ func TestShoutrrr_GetOption(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
-			// WHEN GetOption is called
+			// WHEN GetOption is called.
 			got := shoutrrr.GetOption(key)
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf("GetOption:\nwant: %q\ngot:  %q",
-					tc.want, got)
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 
-			// WHEN SetOption is called
+			// WHEN SetOption is called.
 			want := got + "-set-test"
 			shoutrrr.SetOption(key, want)
 
-			// THEN the Option is set and can be retrieved with a Get
+			// THEN the Option is set and can be retrieved with a Get.
 			got = shoutrrr.GetOption(key)
 			if got != want {
-				t.Fatalf("SetOption:\nwant: %q\ngot:  %q",
-					want, got)
+				t.Fatalf("%s\n\nwant: %q\ngot:  %q",
+					packageName, want, got)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_GetURLField(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		env                                                  map[string]string
 		rootValue, mainValue, defaultValue, hardDefaultValue *string
@@ -197,31 +197,31 @@ func TestShoutrrr_GetURLField(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
-			// WHEN GetURLField is called
+			// WHEN GetURLField is called.
 			got := shoutrrr.GetURLField(key)
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf("GetURLField:\nwant: %q\ngot:  %q",
-					tc.want, got)
+				t.Fatalf("%s\nGetURLField() mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 
-			// WHEN SetURLField is called
+			// WHEN SetURLField is called.
 			want := got + "-set-test"
 			shoutrrr.SetURLField(key, want)
 
-			// THEN the URLField is set and can be retrieved with a Get
+			// THEN the URLField is set and can be retrieved with a Get.
 			got = shoutrrr.GetURLField(key)
 			if got != want {
-				t.Fatalf("SetURLField:\nwant: %q\ngot:  %q",
-					want, got)
+				t.Fatalf("%s\nSetURLField() mismatch\nwant: %q\ngot:  %q",
+					packageName, want, got)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_GetParam(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		env                                                  map[string]string
 		rootValue, mainValue, defaultValue, hardDefaultValue *string
@@ -294,31 +294,31 @@ func TestShoutrrr_GetParam(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
-			// WHEN GetParam is called
+			// WHEN GetParam is called.
 			got := shoutrrr.GetParam(key)
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf("GetParam:\nwant: %q\ngot:  %q",
-					tc.want, got)
+				t.Fatalf("%s\nGetParam() mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 
-			// WHEN SetParam is called
+			// WHEN SetParam is called.
 			want := got + "-set-test"
 			shoutrrr.SetParam(key, want)
 
-			// THEN the Param is set and can be retrieved with a Get
+			// THEN the Param is set and can be retrieved with a Get.
 			got = shoutrrr.GetParam(key)
 			if got != want {
-				t.Fatalf("SetParam:\nwant: %q\ngot:  %q",
-					want, got)
+				t.Fatalf("%s\nSetParam() mismatch\nwant: %q\ngot:  %q",
+					packageName, want, got)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_GetDelay(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue *string
 		want                                                 string
@@ -370,20 +370,20 @@ func TestShoutrrr_GetDelay(t *testing.T) {
 				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
 			}
 
-			// WHEN GetDelay is called
+			// WHEN GetDelay is called.
 			got := shoutrrr.GetDelay()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_GetDelayDuration(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue *string
 		want                                                 time.Duration
@@ -431,20 +431,20 @@ func TestShoutrrr_GetDelayDuration(t *testing.T) {
 				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
 			}
 
-			// WHEN GetDelay is called
+			// WHEN GetDelay is called.
 			got := shoutrrr.GetDelayDuration()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_GetMaxTries(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue *string
 		want                                                 int
@@ -492,20 +492,20 @@ func TestShoutrrr_GetMaxTries(t *testing.T) {
 				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
 			}
 
-			// WHEN GetMaxTries is called
+			// WHEN GetMaxTries is called.
 			got := shoutrrr.GetMaxTries()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if int(got) != tc.want {
-				t.Fatalf("want: %d\ngot:  %d",
-					tc.want, got)
+				t.Fatalf("%s\nwant: %d\ngot:  %d",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_Message(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	serviceInfo := util.ServiceInfo{
 		ID:            "release-argus/Argus",
 		URL:           "https://github.com",
@@ -572,20 +572,20 @@ func TestShoutrrr_Message(t *testing.T) {
 				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
 			}
 
-			// WHEN Message is called
+			// WHEN Message is called.
 			got := shoutrrr.Message(serviceInfo)
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_Title(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	serviceInfo := util.ServiceInfo{
 		ID:            "release-argus/Argus",
 		URL:           "https://github.com",
@@ -652,20 +652,20 @@ func TestShoutrrr_Title(t *testing.T) {
 				shoutrrr.HardDefaults.Params[key] = *tc.hardDefaultValue
 			}
 
-			// WHEN Title is called
+			// WHEN Title is called.
 			got := shoutrrr.Title(serviceInfo)
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_GetType(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue string
 		want                                                 string
@@ -683,11 +683,11 @@ func TestShoutrrr_GetType(t *testing.T) {
 			defaultValue:     "other",
 			hardDefaultValue: "other",
 		},
-		"default is ignored": { // uses ID
+		"default is ignored": { // uses ID.
 			want:         "test",
 			defaultValue: "smtp",
 		},
-		"hardDefaultValue is ignored": { // uses ID
+		"hardDefaultValue is ignored": { // uses ID.
 			want:             "test",
 			hardDefaultValue: "smtp",
 		},
@@ -701,13 +701,13 @@ func TestShoutrrr_GetType(t *testing.T) {
 			shoutrrr.Type = tc.rootValue
 			shoutrrr.Main.Type = tc.mainValue
 
-			// WHEN GetType is called
+			// WHEN GetType is called.
 			got := shoutrrr.GetType()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}

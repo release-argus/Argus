@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import (
 var TIMEOUT time.Duration = 30 * time.Second
 
 func TestConfig_SaveHandler(t *testing.T) {
-	// GIVEN a message is sent to the SaveHandler
+	// GIVEN a message is sent to the SaveHandler.
 	config := testConfig()
 	// Disable fatal panics.
 	defer func() { recover() }()
@@ -42,17 +42,17 @@ func TestConfig_SaveHandler(t *testing.T) {
 		*config.SaveChannel <- true
 	}()
 
-	// WHEN the SaveHandler is running for a Config with an inaccessible file
+	// WHEN the SaveHandler is running for a Config with an inaccessible file.
 	config.SaveHandler()
 
-	// THEN it should have panic'd after TIMEOUT and not reach this
+	// THEN it should have panic'd after TIMEOUT and not reach this.
 	time.Sleep(TIMEOUT * time.Second)
-	t.Errorf("Save should panic'd on inaccessible file location %q",
-		config.File)
+	t.Errorf("%s\nSave should panic'd on inaccessible file location %q",
+		packageName, config.File)
 }
 
 func TestWaitChannelTimeout(t *testing.T) {
-	// GIVEN a Config.SaveChannel and messages to send/not send
+	// GIVEN a Config.SaveChannel and messages to send/not send.
 	tests := map[string]struct {
 		messages  int
 		timeTaken time.Duration
@@ -77,7 +77,7 @@ func TestWaitChannelTimeout(t *testing.T) {
 
 			config := testConfig()
 
-			// WHEN those messages are sent to the channel mid-way through the wait
+			// WHEN those messages are sent to the channel mid-way through the wait.
 			go func() {
 				for tc.messages != 0 {
 					time.Sleep(10 * time.Second)
@@ -89,19 +89,19 @@ func TestWaitChannelTimeout(t *testing.T) {
 			start := time.Now().UTC()
 			waitChannelTimeout(config.SaveChannel)
 
-			// THEN after `TIMEOUT`, it would have tried to Save
+			// THEN after `TIMEOUT`, it would have tried to Save.
 			elapsed := time.Since(start)
 			if elapsed < tc.timeTaken-100*time.Millisecond ||
 				elapsed > tc.timeTaken+100*time.Millisecond {
-				t.Errorf("waitChannelTimeout should have waited at least %s, but only waited %s",
-					tc.timeTaken, elapsed)
+				t.Errorf("%s\nshould have waited at least %s, but only waited %s",
+					packageName, tc.timeTaken, elapsed)
 			}
 		})
 	}
 }
 
 func TestConfig_Save(t *testing.T) {
-	// GIVEN we have a bunch of files that want to be Save'd
+	// GIVEN we have a bunch of files that want to be Saved.
 	tests := map[string]struct {
 		file        func(path string, t *testing.T)
 		corrections map[string]string
@@ -131,14 +131,14 @@ func TestConfig_Save(t *testing.T) {
 
 	for name, tc := range tests {
 
-		// Load here as it could DATA RACE with setting the JLog
+		// Load here as it could DATA RACE with setting the JLog.
 		file := name
 		tc.file(file, t)
 		t.Log(file)
 		originalData, err := os.ReadFile(file)
 		if err != nil {
-			t.Fatalf("Failed opening the file for the data we were going to Save\n%s",
-				err)
+			t.Fatalf("%s\nFailed opening the file for the data we were going to Save\n%s",
+				packageName, err)
 		}
 		had := string(originalData)
 		config := testLoadBasic(file, t)
@@ -146,25 +146,26 @@ func TestConfig_Save(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN we Save it to a new location
+			// WHEN we Save it to a new location.
 			config.File += ".test"
 			t.Cleanup(func() { os.Remove(config.File) })
 			loadMutex.RLock()
 			config.Save()
 			loadMutex.RUnlock()
 
-			// THEN it's the same as the original file
+			// THEN it's the same as the original file.
 			newData, err := os.ReadFile(config.File)
 			for from := range tc.corrections {
 				had = strings.ReplaceAll(had, from, tc.corrections[from])
 			}
 			if string(newData) != had {
-				t.Errorf("%q is different after Save(). Got \n%s\nexpecting:\n%s",
-					file, string(newData), had)
+				t.Errorf("%s\n%q is different after Save(). Got \n%s\nexpecting:\n%s",
+					packageName, file, string(newData), had)
 			}
 			err = os.Remove(config.File)
 			if err != nil {
-				t.Error(err)
+				t.Errorf("%s\n%v",
+					packageName, err)
 			}
 			time.Sleep(time.Second)
 		})
@@ -172,7 +173,7 @@ func TestConfig_Save(t *testing.T) {
 }
 
 func TestRemoveSection(t *testing.T) {
-	// GIVEN a file as a string and a section to remove from it
+	// GIVEN a file as a string and a section to remove from it.
 	file := test.TrimYAML(`
 		foo:
 			latest_version:
@@ -238,18 +239,18 @@ func TestRemoveSection(t *testing.T) {
 				want[i+(tc.aEnd-tc.aStart)] = lines[tc.bStart+i]
 			}
 
-			// WHEN we remove that section
+			// WHEN we remove that section.
 			removeSection(tc.section, &lines, uint8(2), tc.indentation)
 
-			// THEN it's removed
-			if len(want) != len(lines) {
-				t.Fatalf("want %d lines\n%v\ngot %d\n%v",
-					len(want), want, len(lines), lines)
+			// THEN it's removed.
+			if len(lines) != len(want) {
+				t.Fatalf("%s\nwant %d lines\n%v\ngot %d\n%v",
+					packageName, len(want), want, len(lines), lines)
 			}
 			for i := range want {
-				if want[i] != lines[i] {
-					t.Errorf("%d: want %q, got %q",
-						i, want[i], lines[i])
+				if lines[i] != want[i] {
+					t.Errorf("%s\n%d: want %q, got %q",
+						packageName, i, want[i], lines[i])
 				}
 			}
 		})
@@ -257,7 +258,7 @@ func TestRemoveSection(t *testing.T) {
 }
 
 func TestRemoveAllServiceDefaults(t *testing.T) {
-	// GIVEN a file as a []string and services that may/may not be using defaults in it
+	// GIVEN a file as a []string and services that may/may not be using defaults in it.
 	tests := map[string]struct {
 		lines                  string
 		services               *service.Slice
@@ -809,7 +810,7 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 			tc.want = strings.TrimLeft(tc.want, "\n")
 			tc.want = strings.ReplaceAll(tc.want, "\t", strings.Repeat(" ", indentation))
 			want := strings.Split(tc.want, "\n")
-			// Init the Services with the defaults
+			// Init the Services with the defaults.
 			for _, s := range *tc.services {
 				s.Init(
 					&tc.serviceDefaults, &service.Defaults{},
@@ -817,7 +818,7 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 					&tc.rootWebHook, &webhook.Defaults{}, &webhook.Defaults{})
 			}
 
-			// WHEN we remove all the service defaults
+			// WHEN we remove all the service defaults.
 			removeAllServiceDefaults(
 				&lines,
 				uint8(indentation),
@@ -826,21 +827,22 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 				&tc.currentOrderIndexStart,
 				&tc.currentOrderIndexEnd)
 
-			// THEN they're removed
-			if len(want) != len(lines) {
-				t.Fatalf("want %d lines, got %d\nwant:\n%q\n---\ngot:\n%q",
-					len(want), len(lines), want, lines)
+			// THEN they're removed.
+			if len(lines) != len(want) {
+				t.Fatalf("%s\nwant: %d lines\ngot:  %d lines\nwant: %v\n---\ngot:  %v",
+					packageName, len(want), len(lines), want, lines)
 			}
 			failed := false
 			for i := range want {
-				if want[i] != lines[i] {
+				if lines[i] != want[i] {
 					failed = true
-					t.Errorf("%d: tc.want %q, got %q",
-						i, want[i], lines[i])
+					t.Errorf("%s\nline %d: tc.want %q, got %q",
+						packageName, i, want[i], lines[i])
 				}
 			}
 			if failed {
-				t.Logf("want:\n%v\n\n---\ngot:\n%v", want, lines)
+				t.Logf("%s\nwant:\n%v\n\n---\ngot:\n%v",
+					packageName, want, lines)
 			}
 		})
 	}

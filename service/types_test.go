@@ -151,24 +151,26 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 			// THEN the error is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("UnmarshalYAML() error mismatch\n%v\ngot:\n%v",
-					tc.errRegex, err)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, err)
 				return
 			}
 			// AND the length is as expected.
 			if len(got) != len(tc.expected) {
-				t.Errorf("got length %v, expected %v", len(got), len(tc.expected))
+				t.Errorf("%s\nlength mismatch\nwant: %d\ngot:  %d",
+					packageName, len(tc.expected), len(got))
 			}
 			// AND the services are as expected.
 			for id, expectedService := range tc.expected {
 				gotService, exists := got[id]
 				if !exists {
-					t.Errorf("service %q not found in result", id)
+					t.Errorf("%s\nservice %q not found in result",
+						packageName, id)
 					continue
 				}
 				if gotService.ID != expectedService.ID {
-					t.Errorf("service %q: got ID %q, expected %q",
-						id, gotService.ID, expectedService.ID)
+					t.Errorf("%s\nservice %q, ID mismatch\nwant: %q\ngot:  %q",
+						packageName, id, gotService.ID, expectedService.ID)
 				}
 			}
 		})
@@ -274,7 +276,8 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 				if util.RegexCheck(tc.errRegex, err.Error()) {
 					return
 				}
-				t.Fatalf("failed to parse YAML: %v", err)
+				t.Fatalf("%s\nfailed to parse YAML: %v",
+					packageName, err)
 			}
 
 			// WHEN the YAML is unmarshalled into a Slice.
@@ -284,24 +287,26 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 			// THEN the error is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("UnmarshalYAML() error mismatch\n%v\ngot:\n%v",
-					tc.errRegex, err)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, err)
 				return
 			}
 			// AND the length is as expected.
 			if len(got) != len(tc.expected) {
-				t.Errorf("got length %v, expected %v", len(got), len(tc.expected))
+				t.Errorf("%s\nlength mismatch\nwant: %d\ngot:  %d",
+					packageName, len(tc.expected), len(got))
 			}
 			// AND the services are as expected.
 			for id, expectedService := range tc.expected {
 				gotService, exists := got[id]
 				if !exists {
-					t.Errorf("service %q not found in result", id)
+					t.Errorf("%s\nservice %q not found in result",
+						packageName, id)
 					continue
 				}
 				if gotService.ID != expectedService.ID {
-					t.Errorf("service %q: got ID %q, expected %q",
-						id, gotService.ID, expectedService.ID)
+					t.Errorf("%s\nservice %q, ID mismatch\nwant: %q\ngot:  %q",
+						packageName, id, expectedService.ID, gotService.ID)
 				}
 			}
 		})
@@ -372,24 +377,25 @@ func TestSlice_giveIDs(t *testing.T) {
 
 			// THEN the length is as expected.
 			if len(tc.slice) != len(tc.expected) {
-				t.Errorf("got length %v, expected %v",
-					len(tc.slice), len(tc.expected))
+				t.Errorf("%s\nlength mismatch\nwant: %d\ngot:  %d",
+					packageName, len(tc.expected), len(tc.slice))
 			}
 
 			// AND each Service is given its key as ID.
 			for id, service := range tc.expected {
 				got, exists := tc.slice[id]
 				if !exists {
-					t.Errorf("service %q not found in result", id)
+					t.Errorf("%s\nservice %q not found in result",
+						packageName, id)
 					continue
 				}
 				if got.ID != service.ID {
-					t.Errorf("service %q: got ID %q, expected %q",
-						id, got.ID, service.ID)
+					t.Errorf("%s\nservice %q, ID mismatch\nwant: %q\ngot:  %q",
+						packageName, id, service.ID, got.ID)
 				}
 				if got.Name != service.Name {
-					t.Errorf("service %q: got Name %q, expected %q",
-						id, got.Name, service.Name)
+					t.Errorf("%s\nservice %q, Name mismatch\nwant: %q\ngot:  %q",
+						packageName, id, got.Name, service.Name)
 				}
 			}
 		})
@@ -413,13 +419,15 @@ func TestService_MarshalName(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			s := &Service{
-				marshalName: tt.marshalName,
+				marshalName: tc.marshalName,
 			}
-			if got := s.MarshalName(); got != tt.want {
-				t.Errorf("Service.MarshalName() = %v, want %v", got, tt.want)
+			got := s.MarshalName()
+			if got != tc.want {
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -569,8 +577,8 @@ func TestService_String(t *testing.T) {
 
 				// THEN the result is as expected.
 				if got != want {
-					t.Errorf("Service.String() mismatch (prefix=%q)\nwant: %q\ngot:  %q",
-						prefix, want, got)
+					t.Errorf("%s\n(prefix=%q)\nwant: %q\ngot:  %q",
+						packageName, prefix, want, got)
 					return // No need to check other prefixes.
 				}
 			}
@@ -807,8 +815,8 @@ func TestService_Summary(t *testing.T) {
 
 			// THEN the result is as expected.
 			if got.String() != tc.want.String() {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got.String(), tc.want.String())
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), got.String())
 			}
 		})
 	}
@@ -870,16 +878,16 @@ func TestService_UsingDefaults(t *testing.T) {
 
 			// THEN the Service is using defaults as expected.
 			if tc.usingNotifyDefaults != usingNotifyDefaults {
-				t.Errorf("got: %v, want: %v",
-					usingNotifyDefaults, tc.usingNotifyDefaults)
+				t.Errorf("%s\nNotify Defaults mismatch\nwant: %t\ngot:  %t",
+					packageName, usingNotifyDefaults, tc.usingNotifyDefaults)
 			}
 			if tc.usingCommandDefaults != usingCommandDefaults {
-				t.Errorf("got: %v, want: %v",
-					usingCommandDefaults, tc.usingCommandDefaults)
+				t.Errorf("%s\nCommand defaults mismatch\nwant: %t\ngot:  %t",
+					packageName, usingCommandDefaults, tc.usingCommandDefaults)
 			}
 			if tc.usingDefaults != usingDefaults {
-				t.Errorf("got: %v, want: %v",
-					usingDefaults, tc.usingDefaults)
+				t.Errorf("%s\nregular Defaults mismatch\nwant: %t\ngot:  %t",
+					packageName, usingDefaults, tc.usingDefaults)
 			}
 		})
 	}
@@ -956,7 +964,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal github.Lookup:
-					cannot unmarshal array into Go struct field \.Lookup\.url of type string`),
+					cannot unmarshal array into Go struct field (\.Lookup)?\.url of type string`),
 		},
 		"latest_version: valid type - url": {
 			jsonData: `{
@@ -1015,7 +1023,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal web.Lookup:
-					cannot unmarshal array into Go struct field \.Lookup\.url of type string`),
+					cannot unmarshal array into Go struct field (\.Lookup)?\.url of type string`),
 		},
 		"latest_version: valid type - web (url alias)": {
 			jsonData: `{
@@ -1357,20 +1365,20 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			// THEN the error is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Service.UnmarshalJSON() error mismatch\nwant: %q\ngot:  %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			// AND the result is as expected.
 			gotString := tc.svc.String("")
 			wantString := tc.want.String("")
 			if tc.want != nil && gotString != wantString {
-				t.Errorf("Service.UnmarshalJSON() result mismatch\n%q\ngot:\n%q",
-					wantString, gotString)
+				t.Errorf("%s\nstringified mismatch\n%q\ngot:\n%q",
+					packageName, wantString, gotString)
 			}
 			// AND marshalName is only set if Name is non-empty.
 			if tc.svc.MarshalName() != (tc.svc.Name != "") {
-				t.Errorf("Service.UnmarshalJSON() marshalName mismatch\nwant: %t\ngot:  %t",
-					tc.svc.MarshalName(), (tc.svc.Name != ""))
+				t.Errorf("%s\nmarshalName mismatch\nwant: %t\ngot:  %t",
+					packageName, tc.svc.MarshalName(), (tc.svc.Name != ""))
 			}
 		})
 	}
@@ -1511,15 +1519,15 @@ func TestService_MarshalJSON(t *testing.T) {
 			// THEN the error is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("MarshalJSON() error mismatch\nwant: %q\ngot:  %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 
 			// AND the result is as expected.
 			gotString := string(gotBytes)
 			if gotString != tc.want {
-				t.Errorf("MarshalJSON() result mismatch\nwant: %q\ngot:  %q",
-					tc.want, gotString)
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want, gotString)
 			}
 		})
 	}
@@ -1968,18 +1976,18 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			// THEN the error is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Service.UnmarshalYAML() error mismatch\nwant: %q\ngot:  %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			// AND the result is as expected.
 			if tc.want != nil && tc.svc.String("") != tc.want.String("") {
-				t.Errorf("Service.UnmarshalYAML() result mismatch\nwant: %s\ngot:  %s",
-					tc.want.String(""), tc.svc.String(""))
+				t.Errorf("%s\nstringified mismatch\nwant: %s\ngot:  %s",
+					packageName, tc.want.String(""), tc.svc.String(""))
 			}
 			// AND marshalName is only set if Name is non-empty.
 			if tc.svc.MarshalName() != (tc.svc.Name != "") {
-				t.Errorf("Service.UnmarshalYAML() marshalName mismatch\nwant: %t\ngot:  %t",
-					tc.svc.MarshalName(), (tc.svc.Name != ""))
+				t.Errorf("%s\nMarshalName() mismatch\nwant: %t\ngot:  %t",
+					packageName, tc.svc.MarshalName(), (tc.svc.Name != ""))
 			}
 		})
 	}
@@ -2106,16 +2114,16 @@ func TestService_MarshalYAML(t *testing.T) {
 			// THEN the error is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("MarshalYAML() error mismatch\nwant: %q\ngot:  %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 
 			// AND the result is as expected.
 			gotBytes, err := yaml.Marshal(got)
 			gotString := string(gotBytes)
 			if gotString != tc.want {
-				t.Errorf("MarshalYAML() result mismatch\nwant: %q\ngot:  %q",
-					tc.want, gotString)
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want, gotString)
 			}
 		})
 	}

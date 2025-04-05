@@ -30,7 +30,7 @@ func TestDefaults_Default(t *testing.T) {
 
 	// THEN it should set the defaults.
 	if defaults.AllowInvalidCerts == nil {
-		t.Errorf("AllowInvalidCerts not set, got %v",
-			defaults.AllowInvalidCerts)
+		t.Errorf("%s\nAllowInvalidCerts not set, got %v",
+			packageName, defaults.AllowInvalidCerts)
 	}
 }

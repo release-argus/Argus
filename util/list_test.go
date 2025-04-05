@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 )
 
 func TestContains(t *testing.T) {
-	// GIVEN lists of strings
+	// GIVEN lists of strings.
 	tests := map[string]struct {
 		list        []string
 		contain     string
@@ -39,21 +39,21 @@ func TestContains(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Contains is run on this list with a element inside it
+			// WHEN Contains is run on this list with a element inside it.
 			var found bool
 			found = Contains(tc.list, tc.contain)
 
-			// THEN true is returned if it does contain the item
+			// THEN true is returned if it does contain the item.
 			if found != tc.doesContain {
-				t.Errorf("want Contains=%t, got Contains=%t",
-					found, tc.doesContain)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, found, tc.doesContain)
 			}
 		})
 	}
 }
 
 func TestCopyList(t *testing.T) {
-	// GIVEN a set of lists
+	// GIVEN a set of lists.
 	tests := map[string]struct {
 		had, want []int
 	}{
@@ -75,18 +75,18 @@ func TestCopyList(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CopyList is called on a list
+			// WHEN CopyList is called on a list.
 			got := CopyList(tc.had)
 
-			// THEN the copy is successful
+			// THEN the copy is successful.
 			if len(got) != len(tc.want) {
-				t.Fatalf("CopyList failed:\nwant:%v\ngot:  %v",
-					tc.want, got)
+				t.Fatalf("%s\nlength mismatch:\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 			}
 			for i := range got {
 				if got[i] != tc.want[i] {
-					t.Fatalf("\nwant: %v\ngot:  %v",
-						tc.want, got)
+					t.Fatalf("%s\nmismatch at [%d]\nwant: %v\ngot:  %v",
+						packageName, i, tc.want, got)
 				}
 			}
 		})
@@ -94,7 +94,7 @@ func TestCopyList(t *testing.T) {
 }
 
 func TestReplaceWithElements(t *testing.T) {
-	// GIVEN a set of lists and an element to replace
+	// GIVEN a set of lists and an element to replace.
 	tests := map[string]struct {
 		had, want []int
 		insert    []int
@@ -148,18 +148,18 @@ func TestReplaceWithElements(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ReplaceWithElements is called on a list
+			// WHEN ReplaceWithElements is called on a list.
 			ReplaceWithElements(&tc.had, tc.index, tc.insert)
 
-			// THEN the replacement is successful
+			// THEN the replacement is successful.
 			if len(tc.had) != len(tc.want) {
-				t.Fatalf("ReplaceWithElements failed:\nwant:%v\ngot:  %v",
-					tc.want, tc.had)
+				t.Fatalf("%s\nlength mismatch:\nwant: %v\ngot:  %v",
+					packageName, tc.want, tc.had)
 			}
 			for i := range tc.had {
 				if tc.had[i] != tc.want[i] {
-					t.Fatalf("\nwant: %v\ngot:  %v",
-						tc.want, tc.had)
+					t.Fatalf("%s\nmismatch at [%d]\nwant: %v\ngot:  %v",
+						packageName, i, tc.want, tc.had)
 				}
 			}
 		})
@@ -167,7 +167,7 @@ func TestReplaceWithElements(t *testing.T) {
 }
 
 func TestSwap(t *testing.T) {
-	// GIVEN a set of lists
+	// GIVEN a set of lists.
 	tests := map[string]struct {
 		had, want    []int
 		aStart, aEnd int
@@ -215,19 +215,19 @@ func TestSwap(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Swap is called on a list
+			// WHEN Swap is called on a list.
 			Swap(&tc.had, tc.aStart, tc.aEnd, tc.bStart, tc.bEnd)
 
-			// THEN the Swap is successful
-			// int
+			// THEN the Swap is successful.
+			// 	int:
 			if len(tc.had) != len(tc.want) {
-				t.Fatalf("Swap added/removed elements!\nwant:%v\ngot:  %v",
-					tc.want, tc.had)
+				t.Fatalf("%s\nlength mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.want, tc.had)
 			}
 			for i := range tc.had {
 				if tc.had[i] != tc.want[i] {
-					t.Fatalf("want: %v\ngot:  %v",
-						tc.want, tc.had)
+					t.Fatalf("%s\nmismatch at [%d]\nwant: %v\ngot:  %v",
+						packageName, i, tc.want, tc.had)
 				}
 			}
 		})
@@ -235,7 +235,7 @@ func TestSwap(t *testing.T) {
 }
 
 func TestReplaceElement(t *testing.T) {
-	// GIVEN a set of lists
+	// GIVEN a set of lists.
 	tests := map[string]struct {
 		had, want     []string
 		replace, with string
@@ -263,24 +263,25 @@ func TestReplaceElement(t *testing.T) {
 			want:    []string{"foo", "bar", "baz"},
 			replace: "bash",
 			with:    "bosh",
-		}}
+		},
+	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ReplaceElement is called on a list
+			// WHEN ReplaceElement is called on a list.
 			got := ReplaceElement(tc.had, tc.replace, tc.with)
 
-			// THEN the Replacement is successful
+			// THEN the Replacement is successful.
 			if len(got) != len(tc.want) {
-				t.Fatalf("ReplaceElement failed:\nwant:%v\ngot:  %v",
-					tc.want, got)
+				t.Fatalf("%s\nlength mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 			}
 			for i := range got {
 				if got[i] != tc.want[i] {
-					t.Fatalf("\nwant: %v\ngot:  %v",
-						tc.want, got)
+					t.Fatalf("%s\nmismatch at [%d]\nwant: %v\ngot:  %v",
+						packageName, i, tc.want, got)
 				}
 			}
 		})
@@ -288,7 +289,7 @@ func TestReplaceElement(t *testing.T) {
 }
 
 func TestRemoveIndex(t *testing.T) {
-	// GIVEN a set of lists
+	// GIVEN a set of lists.
 	tests := map[string]struct {
 		had, want []int
 		wantStr   []string
@@ -320,19 +321,19 @@ func TestRemoveIndex(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN RemoveIndex is called on a list
+			// WHEN RemoveIndex is called on a list.
 			RemoveIndex(&tc.had, tc.index)
 
-			// THEN the Removal is successful
-			// int
+			// THEN the Removal is successful.
+			// 	int:
 			if len(tc.had) != len(tc.want) {
-				t.Fatalf("Remove index failed\nwant:%v\ngot:  %v",
-					tc.want, tc.had)
+				t.Fatalf("%s\nlength mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.want, tc.had)
 			}
 			for i := range tc.had {
 				if tc.had[i] != tc.want[i] {
-					t.Fatalf("want: %v\ngot:  %v",
-						tc.want, tc.had)
+					t.Fatalf("%s\nmismatch at [%d]want: %v\ngot:  %v",
+						packageName, i, tc.want, tc.had)
 				}
 			}
 		})
@@ -340,7 +341,7 @@ func TestRemoveIndex(t *testing.T) {
 }
 
 func TestRemoveElement(t *testing.T) {
-	// GIVEN a set of lists
+	// GIVEN a set of lists.
 	tests := map[string]struct {
 		removeInt       int
 		hadInt, wantInt []int
@@ -373,31 +374,35 @@ func TestRemoveElement(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN RemoveElement is called on a list
+			// WHEN RemoveElement is called on a list.
 			gotInt := RemoveElement(tc.hadInt, tc.removeInt)
 			gotStr := RemoveElement(tc.hadStr, tc.removeStr)
 
-			// THEN the Removal is successful
-			// int
+			// THEN the Removal is successful.
+			// 	int:
 			if len(gotInt) != len(tc.wantInt) {
-				t.Fatalf("Remove element failed\nwant:%v\ngot:  %v",
-					tc.wantInt, gotInt)
+				t.Fatalf("%s\nlength mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.wantInt, gotInt)
 			}
 			for i := range gotInt {
 				if gotInt[i] != tc.wantInt[i] {
-					t.Fatalf("Mismatch at index %d: got %d, want %d\ngot:  %v\nwant: %v",
-						i, gotInt[i], tc.wantInt[i], gotInt, tc.wantInt)
+					t.Fatalf("%s\nmismatch at [%d]\nwan: %d (%v)\ngot:  %d (%v)",
+						packageName, i,
+						tc.wantInt[i], tc.wantInt,
+						gotInt[i], gotInt)
 				}
 			}
-			// string
+			// 	string:
 			if len(gotStr) != len(tc.wantStr) {
-				t.Fatalf("Remove element failed\nwant:%v\ngot:  %v",
-					tc.wantStr, gotStr)
+				t.Fatalf("%s\nlength mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.wantStr, gotStr)
 			}
 			for i := range gotStr {
 				if gotStr[i] != tc.wantStr[i] {
-					t.Fatalf("Mismatch at index %d: got %s, want %s\ngot:  %v\nwant: %v",
-						i, gotStr[i], tc.wantStr[i], gotStr, tc.wantStr)
+					t.Fatalf("%s\nmismatch at [%d]\nwant: %s (%v)\ngot:  %s (%v)",
+						packageName, i,
+						tc.wantStr[i], tc.wantStr,
+						gotStr[i], gotStr)
 				}
 			}
 		})

@@ -34,7 +34,7 @@ import (
 )
 
 func TestSlice_Print(t *testing.T) {
-	// GIVEN a Slice
+	// GIVEN a Slice.
 	tests := map[string]struct {
 		slice    *Slice
 		ordering []string
@@ -84,7 +84,7 @@ func TestSlice_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			if tc.want != "" {
@@ -92,21 +92,21 @@ func TestSlice_Print(t *testing.T) {
 			}
 			tc.want = strings.ReplaceAll(tc.want, "\t", "")
 
-			// WHEN Print is called
+			// WHEN Print is called.
 			tc.slice.Print("", tc.ordering)
 
-			// THEN it prints the expected stdout
+			// THEN it prints the expected stdout.
 			stdout := releaseStdout()
 			if stdout != tc.want {
-				t.Errorf("service.Slice.Print() should have given\n%q\nbut gave\n%q",
-					tc.want, stdout)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, stdout)
 			}
 		})
 	}
 }
 
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN a Defaults
+	// GIVEN a Defaults.
 	tests := map[string]struct {
 		options       opt.Defaults
 		latestVersion latestver_base.Defaults
@@ -165,21 +165,24 @@ func TestDefaults_CheckValues(t *testing.T) {
 				Options:       tc.options,
 				LatestVersion: tc.latestVersion}
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := svc.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("ServiceDefaults.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
+					packageName,
+					wantLines, tc.errRegex,
+					len(lines), lines,
+					e)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("ServiceDefaults.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 		})
@@ -187,7 +190,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 }
 
 func TestSlice_CheckValues(t *testing.T) {
-	// GIVEN a Slice
+	// GIVEN a Slice.
 	tests := map[string]struct {
 		slice    *Slice
 		errRegex string
@@ -280,21 +283,21 @@ func TestSlice_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := tc.slice.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Service.Slice.CheckValues() error mismatch\nwant match for\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
 }
 
 func TestService_CheckValues(t *testing.T) {
-	// GIVEN a Service
+	// GIVEN a Service.
 	tests := map[string]struct {
 		svc              *Service
 		options          opt.Options
@@ -563,21 +566,24 @@ func TestService_CheckValues(t *testing.T) {
 					&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 			}
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := tc.svc.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("ServiceDefaults.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
+					packageName,
+					wantLines, tc.errRegex,
+					len(lines), lines,
+					e)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("ServiceDefaults.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 		})

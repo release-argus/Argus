@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import (
 )
 
 func TestDefaults_String(t *testing.T) {
-	// GIVEN a Defaults
+	// GIVEN a Defaults.
 	tests := map[string]struct {
 		shoutrrr *Defaults
 		want     string
@@ -70,13 +70,13 @@ func TestDefaults_String(t *testing.T) {
 					want += "\n"
 				}
 
-				// WHEN the Shoutrrr is stringified with String
+				// WHEN the Shoutrrr is stringified with String.
 				got := tc.shoutrrr.String(prefix)
 
-				// THEN the result is as expected
+				// THEN the result is as expected when stringified.
 				if got != want {
-					t.Fatalf("shoutrrr.Defaults.String() (prefix=%q) mismatch\ngot:\n%q\nwant:\n%q",
-						prefix, got, want)
+					t.Fatalf("%s\n(prefix=%q) mismatch\nwant: %q\ngot:  %q",
+						packageName, prefix, want, got)
 				}
 			}
 		})
@@ -84,7 +84,7 @@ func TestDefaults_String(t *testing.T) {
 }
 
 func TestShoutrrr_String(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		shoutrrr      *Shoutrrr
 		latestVersion string
@@ -155,13 +155,13 @@ func TestShoutrrr_String(t *testing.T) {
 					want += "\n"
 				}
 
-				// WHEN the Shoutrrr is stringified with String
+				// WHEN the Shoutrrr is stringified with String.
 				got := tc.shoutrrr.String(prefix)
 
-				// THEN the result is as expected
+				// THEN the result is as expected.
 				if got != want {
-					t.Errorf("shoutrrr.Shoutrrr.String() (prefix=%q) mismatch\ngot:\n%q\nwant:\n%q",
-						prefix, got, want)
+					t.Errorf("%s\n(prefix=%q) mismatch\nwant: %q\ngot:  %q",
+						packageName, prefix, want, got)
 				}
 			}
 		})
@@ -169,7 +169,7 @@ func TestShoutrrr_String(t *testing.T) {
 }
 
 func TestSliceDefaults_String(t *testing.T) {
-	// GIVEN a Slice
+	// GIVEN a Slice.
 	tests := map[string]struct {
 		slice *SliceDefaults
 		want  string
@@ -223,14 +223,14 @@ func TestSliceDefaults_String(t *testing.T) {
 					want += "\n"
 				}
 
-				// WHEN the Slice is stringified with String
+				// WHEN the Slice is stringified with String.
 				got := tc.slice.String(prefix)
 
-				// THEN the result is as expected
+				// THEN the result is as expected.
 				want = strings.TrimPrefix(want, "\n")
 				if got != want {
-					t.Fatalf("shoutrrr.SliceDefaults.String() (prefix=%q) mismatch\ngot:\n%q\nwant:\n%q",
-						prefix, got, want)
+					t.Fatalf("%s\n(prefix=%q) mismatch\nwant: %q\ngot:  %q",
+						packageName, prefix, want, got)
 				}
 			}
 		})
@@ -238,7 +238,7 @@ func TestSliceDefaults_String(t *testing.T) {
 }
 
 func TestSlice_String(t *testing.T) {
-	// GIVEN a Slice
+	// GIVEN a Slice.
 	tests := map[string]struct {
 		slice *Slice
 		want  string
@@ -295,13 +295,13 @@ func TestSlice_String(t *testing.T) {
 					want += "\n"
 				}
 
-				// WHEN the Slice is stringified with String
+				// WHEN the Slice is stringified with String.
 				got := tc.slice.String(prefix)
 
-				// THEN the result is as expected
+				// THEN the result is as expected.
 				if got != want {
-					t.Errorf("shoutrrr.Slice.String() (prefix=%q) mismatch\ngot:\n%q\nwant:\n%q",
-						prefix, got, want)
+					t.Errorf("%s\n(prefix=%q) mismatch\nwant: %q\ngot:  %q",
+						packageName, prefix, want, got)
 				}
 			}
 		})

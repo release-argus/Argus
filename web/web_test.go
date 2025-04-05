@@ -47,16 +47,18 @@ func TestMainWithRoutePrefix(t *testing.T) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatalf("Error making request: %s", err)
+		t.Fatalf("%s\nError making request: %s",
+			packageName, err)
 	}
-	if resp.StatusCode != 200 {
-		t.Errorf("Should have got a 200 from a GET on %s",
-			url)
+	wantStatusCode := http.StatusOK
+	if resp.StatusCode != wantStatusCode {
+		t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+			packageName, wantStatusCode, resp.StatusCode)
 	}
 }
 
 func TestWebAccessible(t *testing.T) {
-	// GIVEN we have the Web UI Router from TestMain(),
+	// GIVEN we have the Web UI Router from TestMain().
 	tests := map[string]struct {
 		path      string
 		bodyRegex string
@@ -85,15 +87,16 @@ func TestWebAccessible(t *testing.T) {
 			router.ServeHTTP(response, req)
 
 			// THEN we get a Status OK.
-			if response.Code != http.StatusOK {
-				t.Errorf("Expected a 200, got %d",
-					response.Code)
+			wantStatusCode := http.StatusOK
+			if response.Code != wantStatusCode {
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, wantStatusCode, response.Code)
 			}
 			if tc.bodyRegex != "" {
 				body := response.Body.String()
 				if !util.RegexCheck(tc.bodyRegex, body) {
-					t.Errorf("expected %q in body\ngot: %q",
-						tc.bodyRegex, response.Body.String())
+					t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.bodyRegex, body)
 				}
 			}
 		})
@@ -143,15 +146,16 @@ func TestAccessibleHTTPS(t *testing.T) {
 			router.ServeHTTP(response, req)
 
 			// THEN we get a Status OK.
-			if response.Code != http.StatusOK {
-				t.Errorf("Expected a 200, got %d",
-					response.Code)
+			wantStatusCode := http.StatusOK
+			if response.Code != wantStatusCode {
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, wantStatusCode, response.Code)
 			}
 			if tc.bodyRegex != "" {
 				body := response.Body.String()
 				if !util.RegexCheck(tc.bodyRegex, body) {
-					t.Errorf("expected %q in body\ngot: %q",
-						tc.bodyRegex, response.Body.String())
+					t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.bodyRegex, body)
 				}
 			}
 		})

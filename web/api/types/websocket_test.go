@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import (
 )
 
 func TestWebSocketMessage_String(t *testing.T) {
-	// GIVEN a WebSocketMessage
+	// GIVEN a WebSocketMessage.
 	tests := map[string]struct {
 		websocketMessage WebSocketMessage
 		want             string
@@ -82,7 +82,8 @@ func TestWebSocketMessage_String(t *testing.T) {
 							}
 						}
 				}`,
-		}}
+		},
+	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -90,15 +91,15 @@ func TestWebSocketMessage_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN the Data is stringified with String
+			// WHEN the Data is stringified with String.
 			got := tc.websocketMessage.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			tc.want = strings.ReplaceAll(tc.want, "\n", "")
 			tc.want = strings.ReplaceAll(tc.want, "\t", "")
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}

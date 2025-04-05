@@ -60,8 +60,8 @@ func TestLookup_allowInvalidCerts(t *testing.T) {
 
 			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %t\ngot:  %t",
-					tc.want, got)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -107,8 +107,8 @@ func TestLookup_url(t *testing.T) {
 
 			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -141,9 +141,9 @@ func TestLookup_body(t *testing.T) {
 			got := lookup.body()
 
 			// THEN the function returns the correct result.
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("want: %v\ngot:  %v",
-					tc.want, got)
+			if !reflect.DeepEqual(tc.want, got) {
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 			}
 		})
 	}

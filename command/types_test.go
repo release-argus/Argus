@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import (
 )
 
 func TestController_CopyFailsFrom(t *testing.T) {
-	// GIVEN a Controller with fails and a Controller to copy them to
+	// GIVEN a Controller with fails and a Controller to copy them to.
 	tests := map[string]struct {
 		from, to                         *Controller
 		fromFails, toFails               []*bool
@@ -133,34 +133,34 @@ func TestController_CopyFailsFrom(t *testing.T) {
 					nil)
 			}
 
-			// WHEN CopyFailsFrom is called
+			// WHEN CopyFailsFrom is called.
 			tc.to.CopyFailsFrom(tc.from)
 
-			// THEN the fails aren't copied to a nil Controller
+			// THEN the fails aren't copied to a nil Controller.
 			if tc.toFails == nil && (tc.to == nil || tc.to.Failed == nil) {
 				return
 			} else if tc.to == nil {
-				t.Fatalf("expected to.fails to be %v, but got %v tc.to",
-					tc.toFails, tc.to)
+				t.Fatalf("%s\nfails mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.toFails, tc.to)
 			}
 			if tc.to.Failed.Length() != len(tc.toFails) {
-				t.Fatalf("expected fails to be %v, but got %v",
-					tc.toFails, tc.to.Failed)
+				t.Fatalf("%s\nexpected fails to be %d, but got %v",
+					packageName, tc.toFails, tc.to.Failed)
 			}
-			// AND the matching fails are copied to the Controller
+			// AND the matching fails are copied to the Controller.
 			for i := range tc.toFails {
 				if test.StringifyPtr(tc.toFails[i]) != test.StringifyPtr(tc.to.Failed.Get(i)) {
-					t.Errorf("Fail %d: expected %q, got %q",
-						i,
+					t.Errorf("%s\nFail %d: expected %q, got %q",
+						packageName, i,
 						test.StringifyPtr(tc.toFails[i]),
 						test.StringifyPtr(tc.to.Failed.Get(i)))
 				}
 			}
-			// AND the next_runnables are copied to the Controller
+			// AND the next_runnables are copied to the Controller.
 			for i := range tc.toNextRunnable {
 				if (tc.toNextRunnable)[i] != (tc.to.nextRunnable)[i] {
-					t.Errorf("Fail %d: expected %q, got %q",
-						i,
+					t.Errorf("%s\nFail %d: expected %q, got %q",
+						packageName, i,
 						tc.toNextRunnable[i],
 						tc.to.nextRunnable[i])
 				}

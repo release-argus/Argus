@@ -35,6 +35,8 @@ import (
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
+var packageName = "config"
+
 func TestMain(m *testing.M) {
 	logtest.InitLog()
 	os.Exit(m.Run())
@@ -125,7 +127,8 @@ func testLoadBasic(file string, t *testing.T) *Config {
 	config.GetOrder(data)
 	config.Init()
 	config.CheckValues()
-	t.Log("Loaded", file)
+	t.Logf("%s - Loaded %q",
+		packageName, file)
 
 	return config
 }

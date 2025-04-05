@@ -24,6 +24,8 @@ import (
 	logtest "github.com/release-argus/Argus/test/log"
 )
 
+var packageName = "option"
+
 func TestMain(m *testing.M) {
 	logtest.InitLog()
 	os.Exit(m.Run())

@@ -23,6 +23,8 @@ import (
 	logtest "github.com/release-argus/Argus/test/log"
 )
 
+var packageName = "testing"
+
 func TestMain(m *testing.M) {
 	// Log.
 	logtest.InitLog()

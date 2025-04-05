@@ -23,7 +23,7 @@ import (
 )
 
 func TestFirstNonNilPtr(t *testing.T) {
-	// GIVEN a bunch of pointers
+	// GIVEN a bunch of pointers.
 	tests := map[string]struct {
 		pointers  []*string
 		allNil    bool
@@ -63,27 +63,27 @@ func TestFirstNonNilPtr(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN FirstNonNilPtr is run on a slice of pointers
+			// WHEN FirstNonNilPtr is run on a slice of pointers.
 			got := FirstNonNilPtr(tc.pointers...)
 
-			// THEN the correct pointer (or nil) is returned
+			// THEN the correct pointer (or nil) is returned.
 			if tc.allNil {
 				if got != nil {
-					t.Fatalf("got:  %v\nfrom: %v",
-						got, tc.pointers)
+					t.Fatalf("%s\nwant: nil\ngot:  %v\nfrom: %v",
+						packageName, got, tc.pointers)
 				}
 				return
 			}
 			if got != tc.pointers[tc.wantIndex] {
-				t.Errorf("want: %v\ngot:  %v",
-					tc.pointers[tc.wantIndex], got)
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.pointers[tc.wantIndex], got)
 			}
 		})
 	}
 }
 
 func TestFirstNonDefault(t *testing.T) {
-	// GIVEN a bunch of comparables
+	// GIVEN a bunch of comparables.
 	tests := map[string]struct {
 		slice      []string
 		allDefault bool
@@ -123,20 +123,21 @@ func TestFirstNonDefault(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN FirstNonDefault is run on a slice of slice
+			// WHEN FirstNonDefault is run on a slice of slice.
 			got := FirstNonDefault(tc.slice...)
 
-			// THEN the correct var (or "") is returned
+			// THEN the correct var (or "") is returned.
 			if tc.allDefault {
-				if got != "" {
-					t.Fatalf("got:  %v\nfrom: %v",
-						got, tc.slice)
+				want := ""
+				if got != want {
+					t.Fatalf("%s\nwant: %q\ngot:  %v\nfrom: %v",
+						packageName, want, got, tc.slice)
 				}
 				return
 			}
 			if got != tc.slice[tc.wantIndex] {
-				t.Errorf("want: %v\ngot:  %v",
-					tc.slice[tc.wantIndex], got)
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.slice[tc.wantIndex], got)
 			}
 		})
 	}
@@ -184,15 +185,15 @@ func TestAreSlicesEqual(t *testing.T) {
 
 			// THEN the result is as expected.
 			if got != tc.want {
-				t.Errorf("want: %v\ngot:  %v",
-					tc.want, got)
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestNormaliseNewlines(t *testing.T) {
-	// GIVEN different byte strings
+	// GIVEN different byte strings.
 	tests := map[string]struct {
 		input, want []byte
 	}{
@@ -229,13 +230,13 @@ func TestNormaliseNewlines(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN NormaliseNewlines is called
+			// WHEN NormaliseNewlines is called.
 			got := NormaliseNewlines(tc.input)
 
-			// THEN the newlines are normalised correctly
+			// THEN the newlines are normalised correctly.
 			if string(got) != string(tc.want) {
-				t.Errorf("want: %q\ngot:  %q",
-					string(tc.want), string(got))
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, string(tc.want), string(got))
 			}
 		})
 	}

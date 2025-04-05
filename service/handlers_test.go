@@ -74,25 +74,26 @@ func TestService_HandleSkip(t *testing.T) {
 
 			// THEN DeployedVersion becomes LatestVersion as there is no dvl.
 			if tc.approvedVersion != svc.Status.ApprovedVersion() {
-				t.Errorf("ApprovedVersion should have changed to %q not %q",
-					tc.approvedVersion, svc.Status.ApprovedVersion())
+				t.Errorf("%s\nApprovedVersion should have changed\nwant: %q\ngot:  %q",
+					packageName, tc.approvedVersion, svc.Status.ApprovedVersion())
 			}
 			// AND the correct amount of changes are queued in the announce channel.
 			if tc.prepDelete {
 				if svc.Status.AnnounceChannel != nil || svc.Status.DatabaseChannel != nil {
-					t.Errorf("AnnounceChannel and DatabaseChannel should be nil but are not")
+					t.Errorf("%s\nAnnounceChannel and DatabaseChannel mismatch\nwant: nil\ngot:  non-nil",
+						packageName)
 				}
 				return
 			}
 			// AND the correct amount of changes are queued in the announce channel.
 			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
-				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d message(s)\ngot:  %d",
+					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 			}
 			// AND the correct amount of messages are queued in the database channel.
 			if len(*svc.Status.DatabaseChannel) != tc.wantDatabaseMessages {
-				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantDatabaseMessages, len(*svc.Status.DatabaseChannel))
+				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantDatabaseMessages, len(*svc.Status.DatabaseChannel))
 			}
 		})
 	}
@@ -212,42 +213,48 @@ func TestService_HandleCommand(t *testing.T) {
 					}
 				}
 				if actionsRan {
-					t.Logf("finished running after %v",
-						time.Duration(i*10)*time.Microsecond)
+					t.Logf("%s\nfinished running after %v",
+						packageName, time.Duration(i*10)*time.Microsecond)
 					break
 				}
 			}
 			if !actionsRan {
-				t.Error("actions didn't finish running or gave unexpected results")
+				t.Errorf("%s\nactions didn't finish running or gave unexpected results",
+					packageName)
 			}
 			time.Sleep(500 * time.Millisecond)
 
 			// THEN DeployedVersion becomes LatestVersion as there is no dvl.
 			got := svc.Status.DeployedVersion()
-			if !tc.deployedLatest && ((tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want)) {
-				t.Errorf("DeployedVersion should have changed to %q not %q",
-					want, got)
+			if !tc.deployedLatest &&
+				((tc.deployedBecomesLatest && got != want) ||
+					(!tc.deployedBecomesLatest && got == want)) {
+				t.Errorf("%s\nDeployedVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, want, got)
 			}
 			// THEN the correct amount of changes are queued in the channel.
 			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
-				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
+					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 				fails := ""
 				for i := range svc.Command {
-					fails += fmt.Sprintf("%d=%s, ", i, test.StringifyPtr(svc.Status.Fails.Command.Get(i)))
+					fails += fmt.Sprintf("%d=%s, ",
+						i, test.StringifyPtr(svc.Status.Fails.Command.Get(i)))
 				}
-				t.Logf("commandFails: {%s}", fails[:len(fails)-2])
+				t.Logf("%s\ncommandFails: {%s}", fails[:len(fails)-2],
+					packageName)
 				for len(*svc.Status.AnnounceChannel) != 0 {
 					msg := <-*svc.Status.AnnounceChannel
-					t.Logf("%#v",
-						string(msg))
+					t.Logf("%s - service.Service.HandleCommand() %#v",
+						packageName, string(msg))
 				}
 			}
 			// THEN the Command fails are as expected.
 			for i := range tc.wantFails {
 				if test.StringifyPtr(svc.Status.Fails.Command.Get(i)) != test.StringifyPtr(tc.wantFails[i]) {
-					t.Errorf("got, command[%d]=%s, want %s",
-						i, test.StringifyPtr(svc.Status.Fails.Command.Get(i)), test.StringifyPtr(tc.wantFails[i]))
+					t.Errorf("%s\nCommand[%d] mismatch\nwant: %s\ngot:  %s",
+						packageName, i,
+						test.StringifyPtr(tc.wantFails[i]), test.StringifyPtr(svc.Status.Fails.Command.Get(i)))
 				}
 			}
 		})
@@ -366,42 +373,48 @@ func TestService_HandleWebHook(t *testing.T) {
 					}
 				}
 				if actionsRan {
-					t.Logf("finished running after %v",
-						time.Duration(i*10)*time.Microsecond)
+					t.Logf("%s\nfinished running after %v",
+						packageName, time.Duration(i*10)*time.Microsecond)
 					break
 				}
 			}
 			if !actionsRan {
-				t.Error("actions didn't finish running or gave unexpected results")
+				t.Errorf("%s\nactions didn't finish running or gave unexpected results",
+					packageName)
 			}
 			time.Sleep(500 * time.Millisecond)
 
 			// THEN DeployedVersion becomes LatestVersion as there is no dvl.
 			got := svc.Status.DeployedVersion()
-			if !tc.deployedLatest && ((tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want)) {
-				t.Errorf("DeployedVersion should have changed to %q not %q",
-					want, got)
+			if !tc.deployedLatest &&
+				((tc.deployedBecomesLatest && got != want) ||
+					(!tc.deployedBecomesLatest && got == want)) {
+				t.Errorf("%s\nDeployedVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, want, got)
 			}
 			// THEN the correct amount of changes are queued in the channel.
 			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
-				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
+					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 				fails := ""
 				for i := range svc.WebHook {
-					fails += fmt.Sprintf("%s=%s, ", i, test.StringifyPtr(svc.Status.Fails.WebHook.Get(i)))
+					fails += fmt.Sprintf("%s=%s, ",
+						i, test.StringifyPtr(svc.Status.Fails.WebHook.Get(i)))
 				}
-				t.Logf("webhookFails: {%s}", fails[:len(fails)-2])
+				t.Logf("%s\nwebhookFails: {%s}",
+					fails[:len(fails)-2], packageName)
 				for len(*svc.Status.AnnounceChannel) != 0 {
 					msg := <-*svc.Status.AnnounceChannel
-					t.Logf("%#v",
-						string(msg))
+					t.Logf("%s - %#v",
+						packageName, string(msg))
 				}
 			}
 			// THEN the WebHook fails are as expected.
 			for i := range tc.wantFails {
 				if test.StringifyPtr(svc.Status.Fails.WebHook.Get(i)) != test.StringifyPtr(tc.wantFails[i]) {
-					t.Errorf("got, webhook[%s]=%s, want %s",
-						i, test.StringifyPtr(svc.Status.Fails.WebHook.Get(i)), test.StringifyPtr(tc.wantFails[i]))
+					t.Errorf("%s\nWebHook[%q] mismatch\nwant: %s\ngot:  %s",
+						packageName, i,
+						test.StringifyPtr(tc.wantFails[i]), test.StringifyPtr(svc.Status.Fails.WebHook.Get(i)))
 				}
 			}
 		})
@@ -518,8 +531,8 @@ func TestService_HandleUpdateActions(t *testing.T) {
 					}
 				}
 				if actionsRan {
-					t.Logf("finished running after %v",
-						time.Duration(i*10)*time.Microsecond)
+					t.Logf("%s\nfinished running after %v",
+						packageName, time.Duration(i*10)*time.Microsecond)
 					break
 				}
 			}
@@ -539,30 +552,33 @@ func TestService_HandleUpdateActions(t *testing.T) {
 						}
 					}
 					if ranCommand {
-						t.Fatalf("no actions should have run as auto_approve is %t\nfails:\n%s",
-							tc.autoApprove, svc.Status.Fails.String("  "))
+						t.Fatalf("%s\nno actions should have run as auto_approve is %t\nfails:\n%s",
+							packageName, tc.autoApprove, svc.Status.Fails.String("  "))
 					}
 				}
 			} else if !actionsRan {
-				t.Fatal("actions didn't finish running")
+				t.Fatalf("%s\nactions didn't finish running",
+					packageName)
 			}
 			time.Sleep(500 * time.Millisecond)
 
 			// THEN DeployedVersion becomes LatestVersion as there is no dvl.
 			got := svc.Status.DeployedVersion()
-			if (tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want) {
-				t.Errorf("DeployedVersion should have changed to %q not %q",
-					want, got)
+			if (tc.deployedBecomesLatest && got != want) ||
+				(!tc.deployedBecomesLatest && got == want) {
+				t.Errorf("%s\nDeployedVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, want, got)
 			}
 			// THEN the correct amount of changes are queued in the channel.
 			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
-				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
-				t.Logf("Fails:\n%s", svc.Status.Fails.String("  "))
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+				t.Logf("%s - Fails:\n%s",
+					packageName, svc.Status.Fails.String("  "))
 				for len(*svc.Status.AnnounceChannel) != 0 {
 					msg := <-*svc.Status.AnnounceChannel
-					t.Logf("%#v",
-						string(msg))
+					t.Logf("%s - AnnounceChannel message: %#v",
+						packageName, string(msg))
 				}
 			}
 		})
@@ -789,45 +805,50 @@ func TestService_HandleFailedActions(t *testing.T) {
 					}
 				}
 				if actionsRan {
-					t.Logf("finished running after %v",
-						time.Duration(i*10)*time.Microsecond)
+					t.Logf("%s\nfinished running after %v",
+						packageName, time.Duration(i*10)*time.Microsecond)
 					break
 				}
 			}
 			if !actionsRan {
-				t.Error("actions didn't finish running or gave unexpected results")
+				t.Errorf("%s\nactions didn't finish running or gave unexpected results",
+					packageName)
 			}
 			time.Sleep(500 * time.Millisecond)
 
 			// THEN DeployedVersion becomes LatestVersion as there is no dvl.
 			got := svc.Status.DeployedVersion()
-			if (tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want) {
-				t.Errorf("DeployedVersion should have changed to %q not %q",
-					want, got)
+			if (tc.deployedBecomesLatest && got != want) ||
+				(!tc.deployedBecomesLatest && got == want) {
+				t.Errorf("%s\nDeployedVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, want, got)
 			}
 			// AND the correct amount of changes are queued in the channel.
 			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
-				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
-				t.Logf("Fails:\n%s", svc.Status.Fails.String("  "))
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+				t.Logf("%s - Fails:\n%s",
+					packageName, svc.Status.Fails.String("  "))
 				for len(*svc.Status.AnnounceChannel) != 0 {
 					msg := <-*svc.Status.AnnounceChannel
-					t.Logf("%#v",
-						string(msg))
+					t.Logf("%s - %#v",
+						packageName, string(msg))
 				}
 			}
 			// AND the Command fails are as expected.
 			for i := range tc.wantFailsCommand {
 				if test.StringifyPtr(svc.Status.Fails.Command.Get(i)) != test.StringifyPtr(tc.wantFailsCommand[i]) {
-					t.Errorf("got, command[%d]=%s, want %s",
-						i, test.StringifyPtr(svc.Status.Fails.Command.Get(i)), test.StringifyPtr(tc.wantFailsCommand[i]))
+					t.Errorf("%s\nCommand[%d] mismatch\nwant: %s\ngot:  %s",
+						packageName, i,
+						test.StringifyPtr(tc.wantFailsCommand[i]), test.StringifyPtr(svc.Status.Fails.Command.Get(i)))
 				}
 			}
 			// AND the WebHook fails are as expected.
 			for i := range tc.wantFailsWebHook {
 				if test.StringifyPtr(svc.Status.Fails.WebHook.Get(i)) != test.StringifyPtr(tc.wantFailsWebHook[i]) {
-					t.Errorf("got, webhook[%s]=%s, want %s",
-						i, test.StringifyPtr(svc.Status.Fails.WebHook.Get(i)), test.StringifyPtr(tc.wantFailsWebHook[i]))
+					t.Errorf("%s\nWebHook[%q] mismatch\nwant: %s\ngot:  %s",
+						packageName, i,
+						test.StringifyPtr(tc.wantFailsWebHook[i]), test.StringifyPtr(svc.Status.Fails.WebHook.Get(i)))
 				}
 			}
 		})
@@ -961,9 +982,9 @@ func TestService_ShouldRetryAll(t *testing.T) {
 			got := svc.shouldRetryAll()
 
 			// THEN DeployedVersion becomes LatestVersion as there is no dvl.
-			if tc.want != got {
-				t.Errorf("want %t not %t",
-					tc.want, got)
+			if got != tc.want {
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -1002,13 +1023,13 @@ func TestService_UpdateLatestApproved(t *testing.T) {
 			// THEN ApprovedVersion becomes LatestVersion.
 			got := svc.Status.ApprovedVersion()
 			if got != want {
-				t.Errorf("LatestVersion should have changed to %q not %q",
-					want, got)
+				t.Errorf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, want, got)
 			}
 			// AND the correct amount of changes are queued in the channel.
 			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
-				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 			}
 		})
 	}
@@ -1159,20 +1180,20 @@ func TestService_UpdatedVersion(t *testing.T) {
 			gotAV := svc.Status.ApprovedVersion()
 			if (tc.approvedBecomesLatest && gotAV != startLV) ||
 				(!tc.approvedBecomesLatest && gotAV == startLV) {
-				t.Errorf("ApprovedVersion should have changed to %q not %q",
-					startLV, gotAV)
+				t.Errorf("%s\nApprovedVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, startLV, gotAV)
 			}
 			// AND DeployedVersion becomes LatestVersion if there is no dvl.
 			gotDV := svc.Status.DeployedVersion()
 			if (tc.deployedBecomesLatest && gotDV != startLV) ||
 				(!tc.deployedBecomesLatest && gotDV == startLV) {
-				t.Errorf("DeployedVersion should have changed to %q not %q",
-					startLV, gotDV)
+				t.Errorf("%s\nmismatch\nwant: %q\ngot:  %q",
+					packageName, startLV, gotDV)
 			}
 			// AND the correct amount of changes are queued in the channel.
 			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
-				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 			}
 		})
 	}

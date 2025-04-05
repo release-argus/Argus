@@ -141,12 +141,12 @@ func TestAPI_UpdateRow(t *testing.T) {
 				}
 				if got != cell.Value {
 					if !tc.databaseDeleted {
-						t.Errorf("expecting %s to have been updated to %q. got %q",
-							cell.Column, cell.Value, got)
+						t.Errorf("%s\nwant: %s to have been updated to %q\ngot:  %q",
+							packageName, cell.Column, cell.Value, got)
 					}
 				} else if tc.databaseDeleted {
-					t.Errorf("expecting %s to not have been updated. got %q",
-						cell.Column, got)
+					t.Errorf("%s\nwant: %s to not have been updated\ngot:  %q",
+						packageName, cell.Column, got)
 				}
 			}
 			time.Sleep(100 * time.Millisecond)
@@ -195,7 +195,8 @@ func TestAPI_DeleteRow(t *testing.T) {
 			// Check the row existence before the test.
 			row := queryRow(t, tAPI.db, tc.serviceID)
 			if tc.exists && (row.LatestVersion() == "" || row.DeployedVersion() == "") {
-				t.Errorf("expecting row to exist. got %#v", row)
+				t.Errorf("%s\nwant: row to exist\ngot:  %#v",
+					packageName, row)
 			}
 			// Delete the DB file.
 			if tc.databaseDeleted {
@@ -210,18 +211,20 @@ func TestAPI_DeleteRow(t *testing.T) {
 			stdout := releaseStdout()
 			deleteFailRegex := `ERROR: [^)]+\), deleteRow`
 			if tc.databaseDeleted != util.RegexCheck(deleteFailRegex, stdout) {
-				t.Errorf("stdout mismatch:\nwant=%t (%q)\ngot:\n%q",
-					tc.databaseDeleted, deleteFailRegex, stdout)
+				t.Errorf("%s\nstdout mismatch:\nwant=%t (%q)\ngot: %q",
+					packageName, tc.databaseDeleted, deleteFailRegex, stdout)
 			}
 			// AND the row is deleted from the DB (if it existed and the DB wasn't deleted).
 			row = queryRow(t, tAPI.db, tc.serviceID)
 			if row.LatestVersion() != "" || row.DeployedVersion() != "" {
 				// no delete if we deleted the db.
 				if !tc.databaseDeleted {
-					t.Errorf("expecting row to be deleted.\ngot %#v", row)
+					t.Errorf("%s\nwant: row deleted\ngot:  %#v",
+						packageName, row)
 				}
 			} else if tc.databaseDeleted {
-				t.Errorf("expecting row to exist as we deleted the db.\ngot %#v", row)
+				t.Errorf("%s\nwant: row exist as we deleted the db\ngot:  %#v",
+					packageName, row)
 			}
 		})
 	}
@@ -256,8 +259,8 @@ func TestAPI_Handler(t *testing.T) {
 	// THEN the cell was changed in the DB.
 	got := queryRow(t, tAPI.db, target)
 	if got.LatestVersion() != want.LatestVersion() {
-		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
-			cell1.Column, cell1.Value, got, want)
+		t.Errorf("%s\nExpected %q to be updated to %q\nwant: %#v\ngot:  %#v",
+			packageName, cell1.Column, cell1.Value, want, got)
 	}
 
 	// ------------------------------
@@ -271,8 +274,10 @@ func TestAPI_Handler(t *testing.T) {
 
 	// THEN the row is deleted from the DB.
 	got = queryRow(t, tAPI.db, target)
-	if got.LatestVersion() != "" || got.DeployedVersion() != "" {
-		t.Errorf("Expected row to be deleted\ngot  %#v\nwant %#v", got, want)
+	if got.LatestVersion() != "" ||
+		got.DeployedVersion() != "" {
+		t.Errorf("%s\nExpected row to be deleted\nwant: %#v\ngot:  %#v",
+			packageName, want, got)
 	}
 
 	// ------------------------------
@@ -286,7 +291,7 @@ func TestAPI_Handler(t *testing.T) {
 	// THEN the last message is the one that is applied.
 	got = queryRow(t, tAPI.db, target)
 	if got.LatestVersion() != wantLatestVersion {
-		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
-			cell2.Column, cell2.Value, got, want)
+		t.Errorf("%s\nExpected %q to be updated to %q\nwant: %#v\ngot:  %#v",
+			packageName, cell2.Column, cell2.Value, want, got)
 	}
 }

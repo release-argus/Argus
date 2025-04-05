@@ -39,6 +39,7 @@ import (
 )
 
 var (
+	packageName           string = "api_v1"
 	loadMutex             sync.Mutex
 	loadCount             int
 	secretValueMarshalled string

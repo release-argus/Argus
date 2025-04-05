@@ -25,7 +25,7 @@ import (
 )
 
 func TestDereferenceOrNilValue(t *testing.T) {
-	// GIVEN lists of strings
+	// GIVEN lists of strings.
 	tests := map[string]struct {
 		ptr    *string
 		nilStr string
@@ -43,20 +43,20 @@ func TestDereferenceOrNilValue(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN DereferenceOrNilValue is run on a pointer
+			// WHEN DereferenceOrNilValue is run on a pointer.
 			got := DereferenceOrNilValue(tc.ptr, tc.nilStr)
 
-			// THEN the correct value is returned
+			// THEN the correct value is returned.
 			if got != tc.want {
-				t.Errorf("want: %s\ngot:  %s",
-					tc.want, got)
+				t.Errorf("%s\nwant: %s\ngot:  %s",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestStringToBoolPtr(t *testing.T) {
-	// GIVEN a string
+	// GIVEN a string.
 	tests := map[string]struct {
 		input string
 		want  *bool
@@ -72,29 +72,30 @@ func TestStringToBoolPtr(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			// WHEN StringToBoolPtr is called
+			// WHEN StringToBoolPtr is called.
 			got := StringToBoolPtr(tc.input)
 
-			// THEN the string is converted to a bool pointer
+			// THEN the string is converted to a bool pointer.
 			if got == tc.want {
 				return
 			}
-			// One of them is nil, but the other is not
-			if (got == nil && tc.want != nil) || (tc.want == nil && got != nil) {
-				t.Errorf("want: %v\ngot:  %v",
-					tc.want, got)
+			// One of them is nil, but the other is not.
+			if (tc.want != nil && got == nil) ||
+				(tc.want == nil && got != nil) {
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 			}
-			// Not the same bool value
+			// Not the same bool value.
 			if *got != *tc.want {
-				t.Errorf("want: %v\ngot:  %v",
-					tc.want, got)
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestValueUnlessDefault(t *testing.T) {
-	// GIVEN a value to check and a value we want when it's not default
+	// GIVEN a value to check and a value we want when it's not default.
 	tests := map[string]struct {
 		check string
 		value string
@@ -112,20 +113,20 @@ func TestValueUnlessDefault(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ValueUnlessDefault is run on pointer and a value
+			// WHEN ValueUnlessDefault is run on pointer and a value.
 			got := ValueUnlessDefault(tc.check, tc.value)
 
-			// THEN the correct value is returned
+			// THEN the correct value is returned.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestValueOrValue(t *testing.T) {
-	// GIVEN two values
+	// GIVEN two values.
 	tests := map[string]struct {
 		first, second string
 		want          string
@@ -151,20 +152,20 @@ func TestValueOrValue(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ValueOrValue is called with two values
+			// WHEN ValueOrValue is called with two values.
 			got := ValueOrValue(tc.first, tc.second)
 
-			// THEN the correct value is returned
+			// THEN the correct value is returned.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestDereferenceOrDefault(t *testing.T) {
-	// GIVEN a value to check and a value we want when it's nil
+	// GIVEN a value to check and a value we want when it's nil.
 	tests := map[string]struct {
 		check *string
 		value string
@@ -182,20 +183,20 @@ func TestDereferenceOrDefault(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN DereferenceOrDefault is run on pointer and a value
+			// WHEN DereferenceOrDefault is run on pointer and a value.
 			got := DereferenceOrDefault(tc.check)
 
-			// THEN the correct value is returned
+			// THEN the correct value is returned.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestDereferenceOrValue(t *testing.T) {
-	// GIVEN a bunch of comparables
+	// GIVEN a bunch of comparables.
 	tests := map[string]struct {
 		element *string
 		value   string
@@ -211,20 +212,20 @@ func TestDereferenceOrValue(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN DereferenceOrValue is called
+			// WHEN DereferenceOrValue is called.
 			got := DereferenceOrValue(tc.element, tc.value)
 
-			// THEN the var is printed when it should be
+			// THEN the var is printed when it should be.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestPtrValueOrValue(t *testing.T) {
-	// GIVEN a bunch of comparables pointers and values
+	// GIVEN a bunch of comparables pointers and values.
 	tests := map[string]struct {
 		ptr, value interface{}
 		want       interface{}
@@ -253,7 +254,7 @@ func TestPtrValueOrValue(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN PtrValueOrValue is called
+			// WHEN PtrValueOrValue is called.
 			var got interface{}
 			switch v := tc.ptr.(type) {
 			case *string:
@@ -264,9 +265,10 @@ func TestPtrValueOrValue(t *testing.T) {
 				got = PtrValueOrValue(v, tc.value.(int))
 			}
 
-			// THEN the pointer is returned if it's nil, otherwise the value
+			// THEN the pointer is returned if it's nil, otherwise the value.
 			if got != tc.want {
-				t.Errorf("\nwant: %v\ngot:  %v", tc.want, got)
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -290,21 +292,22 @@ func TestCopyPointer(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CopyPointer is called
+			// WHEN CopyPointer is called.
 			got := CopyPointer(tc.input)
 
-			// THEN the result should be a pointer to a copy of the value
-			if (got == nil && tc.want != nil) ||
-				(got != nil && tc.want == nil) ||
-				(got != nil && *got != *tc.want) {
-				t.Errorf("want %v, got %v", tc.want, got)
+			// THEN the result should be a pointer to a copy of the value.
+			if (tc.want != nil && got == nil) ||
+				(tc.want == nil && got != nil) ||
+				(got != nil && *tc.want != *got) {
+				t.Errorf("%s\nwant %v, got %v",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestCopySecretValues(t *testing.T) {
-	// GIVEN maps with secrets to be copied
+	// GIVEN maps with secrets to be copied.
 	tests := map[string]struct {
 		input, copyFrom, want map[string]string
 		fields                []string
@@ -348,18 +351,18 @@ func TestCopySecretValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CopySecretValues is called
+			// WHEN CopySecretValues is called.
 			CopySecretValues(tc.copyFrom, tc.input, tc.fields)
 
-			// THEN the secrets are copied correctly
+			// THEN the secrets are copied correctly.
 			if len(tc.input) != len(tc.want) {
-				t.Fatalf("want: %v\ngot:  %v",
-					tc.want, tc.input)
+				t.Fatalf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, tc.input)
 			}
 			for i := range tc.input {
 				if tc.input[i] != tc.want[i] {
-					t.Fatalf("want: %v\ngot:  %v",
-						tc.want, tc.input)
+					t.Fatalf("%s\nwant: %v\ngot:  %v",
+						packageName, tc.want, tc.input)
 				}
 			}
 		})
@@ -374,7 +377,7 @@ func (c CustomErrorMarshal) MarshalYAML() (interface{}, error) {
 
 func TestTo____String(t *testing.T) {
 
-	// GIVEN a struct to print in YAML format
+	// GIVEN a struct to print in YAML format.
 	tests := map[string]struct {
 		input              interface{}
 		wantJSON, wantYAML string
@@ -426,30 +429,30 @@ func TestTo____String(t *testing.T) {
 					wantYAML += "\n"
 				}
 
-				// WHEN ToYAMLString is called
+				// WHEN ToYAMLString is called.
 				gotYAML := ToYAMLString(tc.input, prefix)
 
-				// THEN the struct is printed in YAML format
+				// THEN the struct is printed in YAML format.
 				if gotYAML != wantYAML {
-					t.Fatalf("YAML (prefix=%q) want:\n%q\ngot:\n%q",
-						prefix, wantYAML, gotYAML)
+					t.Fatalf("%s\nYAML mismatch (prefix=%q) want: %q\ngot:  %q",
+						packageName, prefix, wantYAML, gotYAML)
 				}
 			}
 
-			// WHEN ToJSONString is called
+			// WHEN ToJSONString is called.
 			gotJSON := ToJSONString(tc.input)
 
-			// THEN the struct is printed in JSON format
+			// THEN the struct is printed in JSON format.
 			if gotJSON != tc.wantJSON {
-				t.Fatalf("JSON want:\n%q\ngot:\n%q",
-					tc.wantJSON, gotJSON)
+				t.Fatalf("%s\nJSON mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantJSON, gotJSON)
 			}
 		})
 	}
 }
 
 func TestGetIndentation(t *testing.T) {
-	// GIVEN a set of strings with varying indentation
+	// GIVEN a set of strings with varying indentation.
 	tests := map[string]struct {
 		text       string
 		indentSize int
@@ -481,20 +484,20 @@ func TestGetIndentation(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Indentation is called on a string
+			// WHEN Indentation is called on a string.
 			got := Indentation(tc.text, uint8(tc.indentSize))
 
-			// THEN the expected indentation is returned
+			// THEN the expected indentation is returned.
 			if got != tc.want {
-				t.Fatalf("want:%q\ngot:  %q",
-					tc.want, got)
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestTruncateMessage(t *testing.T) {
-	// GIVEN a message and a maxLength to adhere to
+	// GIVEN a message and a maxLength to adhere to.
 	tests := map[string]struct {
 		msg       string
 		maxLength int
@@ -531,13 +534,13 @@ func TestTruncateMessage(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN TruncateMessage is called
+			// WHEN TruncateMessage is called.
 			got := TruncateMessage(tc.msg, tc.maxLength)
 
-			// THEN the message is truncated only if it exceeds maxLength
+			// THEN the message is truncated only if it exceeds maxLength.
 			if got != tc.want {
-				t.Errorf("truncateMessage(%q, %d) = %q; want %q",
-					tc.msg, tc.maxLength, got, tc.want)
+				t.Errorf("%s\ntruncateMessage(%q, %d)\nwant: %q\ngot:  %q",
+					packageName, tc.msg, tc.maxLength, tc.want, got)
 			}
 		})
 	}

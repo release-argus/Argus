@@ -69,16 +69,16 @@ func TestSlice_Metrics(t *testing.T) {
 				want += 2 * len(*tc.slice)
 			}
 			if got != want {
-				t.Errorf("got %d metrics, expecting %d",
-					got, want)
+				t.Errorf("%s\nInitMetrics() mismatch\nwant: %d counter metrics\ngot:  %d",
+					packageName, want, got)
 			}
 
 			// AND the metrics can be deleted.
 			tc.slice.DeleteMetrics()
 			got = testutil.CollectAndCount(metric.NotifyResultTotal)
 			if got != had {
-				t.Errorf("deleted metrics but got %d, expecting %d",
-					got, want)
+				t.Errorf("%s\nDeleteMetrics() mismatch\nwant: %d counter metrics\ngot:  %d",
+					packageName, want, got)
 			}
 		})
 	}
@@ -106,16 +106,16 @@ func TestShoutrrr_Metrics(t *testing.T) {
 			got := testutil.CollectAndCount(metric.NotifyResultTotal)
 			want := 2
 			if (got - had) != want {
-				t.Errorf("%d Counter metrics were initialised, expecting %d",
-					(got - had), want)
+				t.Errorf("%s\nInitMetrics() mismatch\nwant: %d counter metrics\ngot:  %d",
+					packageName, want, (got - had))
 			}
 
 			// AND it can be deleted.
 			shoutrrr.deleteMetrics()
 			got = testutil.CollectAndCount(metric.NotifyResultTotal)
 			if got != had {
-				t.Errorf("Counter metrics were deleted, got %d. expecting %d",
-					got, had)
+				t.Errorf("%s\ndeleteMetrics() mismatch\nwant: %d counter metrics\ngot:  %d",
+					packageName, got, had)
 			}
 		})
 	}
@@ -151,8 +151,8 @@ func TestShoutrrr_InitOptions(t *testing.T) {
 
 			// THEN the keys in the map will have been converted to lowercase.
 			if !test.EqualSlices(util.SortedKeys(tc.want), util.SortedKeys(shoutrrr.Options)) {
-				t.Fatalf("want: %v\ngot: %v",
-					tc.want, shoutrrr.Options)
+				t.Fatalf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, shoutrrr.Options)
 			}
 		})
 	}
@@ -188,8 +188,8 @@ func TestShoutrrr_InitURLFields(t *testing.T) {
 
 			// THEN the keys in the map will have been converted to lowercase.
 			if !test.EqualSlices(util.SortedKeys(tc.want), util.SortedKeys(shoutrrr.URLFields)) {
-				t.Fatalf("want: %v\ngot: %v",
-					tc.want, shoutrrr.URLFields)
+				t.Fatalf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, shoutrrr.URLFields)
 			}
 		})
 	}
@@ -225,8 +225,8 @@ func TestShoutrrr_InitParams(t *testing.T) {
 
 			// THEN the keys in the map will have been converted to lowercase.
 			if !test.EqualSlices(util.SortedKeys(tc.want), util.SortedKeys(shoutrrr.Params)) {
-				t.Fatalf("want: %v\ngot: %v",
-					tc.want, shoutrrr.Params)
+				t.Fatalf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, shoutrrr.Params)
 			}
 		})
 	}
@@ -271,35 +271,37 @@ func TestShoutrrr_InitMaps(t *testing.T) {
 			// THEN the keys in the options/urlFields/params maps will have been converted to lowercase.
 			if tc.nilShoutrrr {
 				if shoutrrr != nil {
-					t.Fatalf("nil shoutrrr should still be nil, not %v",
-						shoutrrr)
+					t.Fatalf("%s\nnil shoutrrr should remain nil\ngot: %v",
+						packageName, shoutrrr)
 				}
 				return
 			}
+			errStr := "%s\nmismatch on %s\nwant: %v\ngot:  %v"
 			if !test.EqualSlices(util.SortedKeys(tc.want), util.SortedKeys(shoutrrr.Options)) {
-				t.Fatalf("Options:\nwant: %v\ngot: %v",
-					tc.want, shoutrrr.Options)
+				t.Fatalf(errStr,
+					packageName, "Options", tc.want, shoutrrr.Options)
 			}
 			if !test.EqualSlices(util.SortedKeys(tc.want), util.SortedKeys(shoutrrr.URLFields)) {
-				t.Fatalf("URLFields:\nwant: %v\ngot: %v",
-					tc.want, shoutrrr.URLFields)
+				t.Fatalf(errStr,
+					packageName, "URLFields", tc.want, shoutrrr.URLFields)
 			}
 			if !test.EqualSlices(util.SortedKeys(tc.want), util.SortedKeys(shoutrrr.Params)) {
-				t.Fatalf("Params:\nwant: %v\ngot: %v",
-					tc.want, shoutrrr.Params)
+				t.Fatalf(errStr,
+					packageName, "Params", tc.want, shoutrrr.Params)
 			}
+			errStr = "%s\nmismatch on %s\nwant: %q:%q\ngot:  %q:%q\n%v\n%v"
 			for key := range tc.want {
-				if tc.want[key] != shoutrrr.Options[key] {
-					t.Fatalf("Options:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						key, tc.want[key], key, shoutrrr.Options[key], tc.want, shoutrrr.Options)
+				if shoutrrr.Options[key] != tc.want[key] {
+					t.Fatalf(errStr,
+						packageName, "Options", key, tc.want[key], key, shoutrrr.Options[key], tc.want, shoutrrr.Options)
 				}
-				if tc.want[key] != shoutrrr.URLFields[key] {
-					t.Fatalf("URLFields:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						key, tc.want[key], key, shoutrrr.URLFields[key], tc.want, shoutrrr.URLFields)
+				if shoutrrr.URLFields[key] != tc.want[key] {
+					t.Fatalf(errStr,
+						packageName, "URLFields", key, tc.want[key], key, shoutrrr.URLFields[key], tc.want, shoutrrr.URLFields)
 				}
-				if tc.want[key] != shoutrrr.Params[key] {
-					t.Fatalf("Params:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						key, tc.want[key], key, shoutrrr.Params[key], tc.want, shoutrrr.Params)
+				if shoutrrr.Params[key] != tc.want[key] {
+					t.Fatalf(errStr,
+						packageName, "Params", key, tc.want[key], key, shoutrrr.Params[key], tc.want, shoutrrr.Params)
 				}
 			}
 		})
@@ -386,43 +388,45 @@ func TestShoutrrr_Init(t *testing.T) {
 			// THEN the Shoutrrr is initialised correctly:
 			if tc.nilShoutrrr {
 				if shoutrrr != nil {
-					t.Fatalf("nil shoutrrr should still be nil, not %v",
-						shoutrrr)
+					t.Fatalf("%s\nnil shoutrrr should remain nil\ngot: %v",
+						packageName, shoutrrr)
 				}
 				return
 			}
-			// 	main
+			errStr := "%s\n%s not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v"
+			// 	main:
 			if shoutrrr.Main != tc.main && tc.giveMain {
-				t.Errorf("Main was not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
-					tc.main, &shoutrrr.Main)
+				t.Errorf(errStr,
+					packageName, "Main", tc.main, &shoutrrr.Main)
 			}
-			// 	defaults
+			// 	defaults:
 			if shoutrrr.Defaults != defaults {
-				t.Errorf("Defaults were not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
-					&defaults, shoutrrr.Defaults)
+				t.Errorf(errStr,
+					packageName, "Defaults", &defaults, shoutrrr.Defaults)
 			}
-			// 	hardDefaults
+			// 	hardDefaults:
 			if shoutrrr.HardDefaults != hardDefaults {
-				t.Errorf("HardDefaults were not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
-					&hardDefaults, shoutrrr.HardDefaults)
+				t.Errorf(errStr,
+					packageName, "HardDefaults", &hardDefaults, shoutrrr.HardDefaults)
 			}
-			// 	status
+			// 	status:
 			if shoutrrr.ServiceStatus != serviceStatus {
-				t.Errorf("Status was not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
-					&serviceStatus, shoutrrr.ServiceStatus)
+				t.Errorf(errStr,
+					packageName, "Status", &serviceStatus, shoutrrr.ServiceStatus)
 			}
+			errStr = "%s\nmismatch on %s\nwant: %q:%q\ngot:  %q:%q\n%v\n%v"
 			for key := range tc.want {
-				if tc.want[key] != shoutrrr.Options[key] {
-					t.Errorf("want: %q:%q, got:  %q:%q\nwant: %v\ngot: %v",
-						key, tc.want[key], key, shoutrrr.Options[key], tc.want, shoutrrr.Options)
+				if shoutrrr.Options[key] != tc.want[key] {
+					t.Errorf(errStr,
+						packageName, "Options", key, tc.want[key], key, shoutrrr.Options[key], tc.want, shoutrrr.Options)
 				}
-				if tc.want[key] != shoutrrr.URLFields[key] {
-					t.Errorf("want: %q:%q, got:  %q:%q\nwant: %v\ngot: %v",
-						key, tc.want[key], key, shoutrrr.URLFields[key], tc.want, shoutrrr.URLFields)
+				if shoutrrr.URLFields[key] != tc.want[key] {
+					t.Errorf(errStr,
+						packageName, "URLFields", key, tc.want[key], key, shoutrrr.URLFields[key], tc.want, shoutrrr.URLFields)
 				}
-				if tc.want[key] != shoutrrr.Params[key] {
-					t.Errorf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
-						key, tc.want[key], key, shoutrrr.Params[key], tc.want, shoutrrr.Params)
+				if shoutrrr.Params[key] != tc.want[key] {
+					t.Errorf(errStr,
+						packageName, "Params", key, tc.want[key], key, shoutrrr.Params[key], tc.want, shoutrrr.Params)
 				}
 			}
 		})
@@ -519,51 +523,56 @@ func TestSlice_Init(t *testing.T) {
 			// THEN the Shoutrrr is initialised correctly:
 			if tc.nilSlice {
 				if tc.slice != nil {
-					t.Fatalf("nil shoutrrr should still be nil, not %v",
-						tc.slice)
+					t.Fatalf("%s\nnil shoutrrr should still be nil\ngot: %v",
+						packageName, tc.slice)
 				}
 				return
 			}
 
 			for id := range *tc.slice {
-				// 	main
+				errStr := "%s\n%s not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v"
+				// 	main:
 				if (*tc.slice)[id].Main == nil ||
 					(tc.mains != nil && (*tc.mains)[id] != nil && (*tc.slice)[id].Main != (*tc.mains)[id]) {
-					t.Errorf("Main was not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
-						(*tc.mains)[id], &(*tc.slice)[id].Main)
+					t.Errorf(errStr,
+						packageName, "Main", (*tc.mains)[id], &(*tc.slice)[id].Main)
 				}
-				// 	defaults
+				// 	defaults:
 				if tc.defaults[id] != nil &&
 					(*tc.slice)[id].Defaults != tc.defaults[id] {
-					t.Errorf("Defaults were not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
-						tc.defaults[id], (*tc.slice)[id].Defaults)
+					t.Errorf(errStr,
+						packageName, "Defaults", tc.defaults[id], (*tc.slice)[id].Defaults)
 				}
-				// 	hardDefaults
+				// 	hardDefaults:
 				if tc.hardDefaults[id] != nil &&
 					(*tc.slice)[id].HardDefaults != tc.hardDefaults[id] {
-					t.Errorf("HardDefaults were not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
-						tc.hardDefaults[id], (*tc.slice)[id].HardDefaults)
+					t.Errorf(errStr,
+						packageName, "HardDefaults", tc.hardDefaults[id], (*tc.slice)[id].HardDefaults)
 				}
-				// 	status
+				// 	status:
 				if (*tc.slice)[id].ServiceStatus != &serviceStatus {
-					t.Errorf("Status was not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
-						&serviceStatus, (*tc.slice)[id].ServiceStatus)
+					t.Errorf(errStr,
+						packageName, "Status", &serviceStatus, (*tc.slice)[id].ServiceStatus)
 				}
 				if &(*tc.slice)[id].ServiceStatus.Fails.Shoutrrr != (*tc.slice)[id].Failed {
-					t.Errorf("Status was not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
-						&(*tc.slice)[id].ServiceStatus.Fails.Shoutrrr, (*tc.slice)[id].Failed)
+					t.Errorf(errStr,
+						packageName, "Status.Fails", &(*tc.slice)[id].ServiceStatus.Fails.Shoutrrr, (*tc.slice)[id].Failed)
 				}
+				errStr = "%s\nmismatch on %s\nwant: %q:%q\ngot:  %q:%q\n%v\n%v"
 				for key := range tc.want {
-					if tc.want[key] != (*tc.slice)[id].Options[key] {
-						t.Errorf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+					if (*tc.slice)[id].Options[key] != tc.want[key] {
+						t.Errorf(errStr,
+							packageName, "Options",
 							key, tc.want[key], key, (*tc.slice)[id].Options[key], tc.want, (*tc.slice)[id].Options)
 					}
-					if tc.want[key] != (*tc.slice)[id].Defaults.URLFields[key] {
-						t.Errorf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+					if (*tc.slice)[id].Defaults.URLFields[key] != tc.want[key] {
+						t.Errorf(errStr,
+							packageName, "URLFields",
 							key, tc.want[key], key, (*tc.slice)[id].Defaults.URLFields[key], tc.want, (*tc.slice)[id].Defaults.URLFields)
 					}
-					if tc.want[key] != (*tc.slice)[id].HardDefaults.Params[key] {
-						t.Errorf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+					if (*tc.slice)[id].HardDefaults.Params[key] != tc.want[key] {
+						t.Errorf(errStr,
+							packageName, "Params",
 							key, tc.want[key], key, (*tc.slice)[id].HardDefaults.Params[key], tc.want, (*tc.slice)[id].HardDefaults.Params)
 					}
 				}

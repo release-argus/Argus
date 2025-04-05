@@ -183,30 +183,30 @@ func TestNew(t *testing.T) {
 			// THEN any error is as expected.
 			if err != nil {
 				if !util.RegexCheck(tc.errRegex, err.Error()) {
-					t.Errorf("New() error mismatch\n%q\ngot:  %q",
-						tc.errRegex, err)
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.errRegex, err)
 				}
 				return
 			}
 			// THEN the correct type is returned.
-			if getType(got) != tc.args.lType {
-				t.Fatalf("New() Type mismatch\nwant: %q\ngot:  %T",
-					tc.args.lType, got)
+			if gotType := getType(got); gotType != tc.args.lType {
+				t.Fatalf("%s\nType mismatch\nwant: %q\ngot:  %q (%T)",
+					packageName, tc.args.lType, gotType, got)
 			}
 
 			// AND the variables are set correctly.
 			gotYAML := util.ToYAMLString(got, "")
 			if gotYAML != tc.wantYAML {
-				t.Errorf("YAML mismatch\nwant: %q\ngot:  %q",
-					tc.wantYAML, gotYAML)
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantYAML, gotYAML)
 			}
 			if got.GetDefaults() != tc.args.defaults {
-				t.Errorf("defaults mismatch\nwant: %p\ngot:  %p",
-					tc.args.defaults, got.GetDefaults())
+				t.Errorf("%s\nDefaults mismatch\nwant: %p\ngot:  %p",
+					packageName, tc.args.defaults, got.GetDefaults())
 			}
 			if got.GetHardDefaults() != tc.args.hardDefaults {
-				t.Errorf("hardDefaults mismatch\nwant: %p\ngot:  %p",
-					tc.args.hardDefaults, got.GetHardDefaults())
+				t.Errorf("%s\nHardDefaults mismatch\nwant: %p\ngot:  %p",
+					packageName, tc.args.hardDefaults, got.GetHardDefaults())
 			}
 		})
 	}
@@ -271,28 +271,29 @@ func TestCopy(t *testing.T) {
 			gotYAML := util.ToYAMLString(got, "")
 			wantYAML := util.ToYAMLString(tc.lookup, "")
 			if gotYAML != wantYAML {
-				t.Errorf("YAML mismatch\nwant: %q\ngot:  %q",
-					wantYAML, gotYAML)
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, wantYAML, gotYAML)
 			}
 			if tc.lookup == nil {
 				return // No further checks.
 			}
 
 			if got.GetOptions() == tc.lookup.GetOptions() {
-				t.Error("options shouldn't point to the same memory address")
+				t.Errorf("%s\nOptions shouldn't point to the same memory address",
+					packageName)
 			} else if got.GetOptions().String() != tc.lookup.GetOptions().String() {
-				t.Errorf("options mismatch\nwant: %q\ngot:  %q",
-					tc.lookup.GetOptions(), got.GetOptions())
+				t.Errorf("%s\nOptions mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.lookup.GetOptions(), got.GetOptions())
 			}
 
 			if got.GetDefaults() != tc.lookup.GetDefaults() {
-				t.Errorf("defaults mismatch\nwant: %v\ngot:  %v",
-					tc.lookup.GetDefaults(), got.GetDefaults())
+				t.Errorf("%s\nDefaults mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.lookup.GetDefaults(), got.GetDefaults())
 			}
 
 			if got.GetHardDefaults() != tc.lookup.GetHardDefaults() {
-				t.Errorf("hardDefaults mismatch\nwant: %v\ngot:  %v",
-					tc.lookup.GetHardDefaults(), got.GetHardDefaults())
+				t.Errorf("%s\nHardDefaults mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.lookup.GetHardDefaults(), got.GetHardDefaults())
 			}
 		})
 	}
@@ -502,43 +503,43 @@ func TestChangeType(t *testing.T) {
 				// Unknown type.
 				if tc.errRegex != "" {
 					if !util.RegexCheck(tc.errRegex, err.Error()) {
-						t.Errorf("error mismatch\nwant: %q\ngot:  %q",
-							tc.errRegex, err)
+						t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+							packageName, tc.errRegex, err)
 					}
 				} else {
-					t.Errorf("ChangeType() gave nil latestver.Lookup, expected type %q\nerr=%c",
-						tc.args.newType, err)
+					t.Errorf("%s\nType mismatch\nwant%q\ngot:  nil\nerr=%c",
+						packageName, tc.args.newType, err)
 				}
 				return
 			}
 			gotType := gotLookup.GetType()
-			if tc.args.newType != gotType {
-				t.Fatalf("Type mismatch\nwant: %q\ngot:  %T",
-					tc.args.newType, gotType)
+			if gotType != tc.args.newType {
+				t.Fatalf("%s\nType mismatch\nwant: %q\ngot:  %T",
+					packageName, tc.args.newType, gotType)
 			}
 
 			// AND the variables are copied over.
 			gotYAML := util.ToYAMLString(gotLookup, "")
 			tc.wantYAML = test.TrimYAML(tc.wantYAML)
 			if gotYAML != tc.wantYAML {
-				t.Errorf("YAML mismatch\nwant: %q\ngot:  %q",
-					tc.wantYAML, gotYAML)
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantYAML, gotYAML)
 			}
 
 			if gotLookup.GetOptions() != tc.args.lookup.GetOptions() &&
 				tc.args.lookup.GetOptions() != nil || gotLookup.GetOptions() == nil {
-				t.Errorf("options mismatch\nwant: %v\ngot:  %v",
-					tc.args.lookup.GetOptions(), gotLookup.GetOptions())
+				t.Errorf("%s\nOptions mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.args.lookup.GetOptions(), gotLookup.GetOptions())
 			}
 
 			if gotLookup.GetDefaults() != tc.args.lookup.GetDefaults() {
-				t.Errorf("defaults mismatch\nwant: %v\ngot:  %v",
-					tc.args.lookup.GetDefaults(), gotLookup.GetDefaults())
+				t.Errorf("%s\nDefaults mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.args.lookup.GetDefaults(), gotLookup.GetDefaults())
 			}
 
 			if gotLookup.GetHardDefaults() != tc.args.lookup.GetHardDefaults() {
-				t.Errorf("hardDefaults mismatch\nwant: %v\ngot:  %v",
-					tc.args.lookup.GetHardDefaults(), gotLookup.GetHardDefaults())
+				t.Errorf("%s\nHardDefaults mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.args.lookup.GetHardDefaults(), gotLookup.GetHardDefaults())
 			}
 		})
 	}
@@ -625,17 +626,17 @@ func TestUnmarshalJSON(t *testing.T) {
 			// THEN any error is as expected.
 			eJSON := util.ErrorToString(errJSON)
 			if !util.RegexCheck(tc.errRegex, eJSON) {
-				t.Errorf("error mismatch on JSON unmarshal of latestver.Lookup:\n%q\ngot:\n%q",
-					tc.errRegex, eJSON)
+				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, eJSON)
 			}
 			if tc.errRegex != "^$" {
 				return
 			}
 			// AND the Lookup is unmarshalled as expected.
 			gotFromJSON := util.ToJSONString(lookupJSON)
-			if *tc.wantJSON != gotFromJSON {
-				t.Errorf("latestver.Lookup.String() mismatch on JSON unmarshal\n%q\ngot:\n%q",
-					*tc.wantJSON, gotFromJSON)
+			if gotFromJSON != *tc.wantJSON {
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, *tc.wantJSON, gotFromJSON)
 			}
 		})
 	}
@@ -713,17 +714,17 @@ func TestUnmarshalYAML(t *testing.T) {
 			// THEN any error is as expected.
 			eYAML := util.ErrorToString(errYAML)
 			if !util.RegexCheck(tc.errRegex, eYAML) {
-				t.Errorf("error mismatch on YAML unmarshal of latestver.Lookup:\n%q\ngot:  %q",
-					tc.errRegex, eYAML)
+				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, eYAML)
 			}
 			if tc.errRegex != "^$" {
 				return
 			}
 			// AND the Lookup is unmarshalled as expected.
 			gotFromYAML := lookupYAML.String(lookupYAML, "")
-			if *tc.wantYAML != gotFromYAML {
-				t.Errorf("latestver.Lookup.String() mismatch on YAML unmarshal\n%q\ngot:  %q",
-					*tc.wantYAML, gotFromYAML)
+			if gotFromYAML != *tc.wantYAML {
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, *tc.wantYAML, gotFromYAML)
 			}
 		})
 	}
@@ -827,16 +828,16 @@ func TestUnmarshal(t *testing.T) {
 			// THEN any error is as expected.
 			if err != nil {
 				if !util.RegexCheck(tc.errRegex, err.Error()) {
-					t.Errorf("unmarshal() error mismatch\nwant: %q\ngot:  %q",
-						tc.errRegex, err)
+					t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+						packageName, tc.errRegex, err)
 				}
 				return
 			}
 
 			// AND the correct type is returned.
 			if got.GetType() != tc.wantType {
-				t.Errorf("unmarshal() type mismatch\nwant: %q\ngot:  %q",
-					tc.wantType, got.GetType())
+				t.Errorf("%s\nType mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantType, got.GetType())
 			}
 		})
 	}

@@ -76,48 +76,50 @@ func TestURLCommandSlice_UnmarshalJSON(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var slice URLCommandSlice
 
-			// WHEN UnmarshalJSON is called
+			// WHEN UnmarshalJSON is called.
 			err := slice.UnmarshalJSON([]byte(tc.input))
 
-			// THEN the expected result is returned
+			// THEN the expected result is returned.
 			if !util.RegexCheck(tc.errRegex, util.ErrorToString(err)) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, util.ErrorToString(err))
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, util.ErrorToString(err))
 			}
 
 			if len(slice) != len(tc.expected) {
-				t.Fatalf("got a slice of length %d. want %d\n%#v",
-					len(slice), len(tc.expected), slice)
+				t.Fatalf("%s\nslice length mismatch\nwant: %d\ngot:  %d\n%#v",
+					packageName,
+					len(tc.expected), len(slice),
+					slice)
 			}
 
 			for i := range tc.expected {
 				if slice[i].Type != tc.expected[i].Type {
-					t.Errorf("unmarshal fail - mismatch on Type:\nwant: %q\ngot:  %q\n",
-						tc.expected[i].Type, slice[i].Type)
+					t.Errorf("%s\nmismatch on Type\nwant: %q\ngot:  %q\n",
+						packageName, tc.expected[i].Type, slice[i].Type)
 				}
 				if slice[i].Regex != tc.expected[i].Regex {
-					t.Errorf("unmarshal fail - mismatch on Regex:\nwant: %q\ngot:  %q\n",
-						tc.expected[i].Regex, slice[i].Regex)
+					t.Errorf("%s\nmismatch on Regex\nwant: %q\ngot:  %q\n",
+						packageName, tc.expected[i].Regex, slice[i].Regex)
 				}
 				gotIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrNilValue(slice[i].Index, 999)), "999", "nil")
 				wantIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrNilValue(tc.expected[i].Index, 999)), "999", "nil")
-				if wantIndex != gotIndex {
-					t.Errorf("unmarshal fail - mismatch on Index:\nwant: %q\ngot:  %q\n",
-						wantIndex, gotIndex)
+				if gotIndex != wantIndex {
+					t.Errorf("%s\nmismatch on Index\nwant: %q\ngot:  %q\n",
+						packageName, wantIndex, gotIndex)
 				}
 				if slice[i].Text != tc.expected[i].Text {
-					t.Errorf("unmarshal fail - mismatch on Text:\nwant: %q\ngot:  %q\n",
-						tc.expected[i].Text, slice[i].Text)
+					t.Errorf("%s\nmismatch on Text\nwant: %q\ngot:  %q\n",
+						packageName, tc.expected[i].Text, slice[i].Text)
 				}
 				if slice[i].Old != tc.expected[i].Old {
-					t.Errorf("unmarshal fail - mismatch on Old:\nwant: %q\ngot:  %q\n",
-						tc.expected[i].Old, slice[i].Old)
+					t.Errorf("%s\nmismatch on Old\nwant: %q\ngot:  %q\n",
+						packageName, tc.expected[i].Old, slice[i].Old)
 				}
 				gotNew := util.DereferenceOrDefault(slice[i].New)
 				wantNew := util.DereferenceOrDefault(tc.expected[i].New)
 				if gotNew != wantNew {
-					t.Errorf("unmarshal fail - mismatch on New:\nwant: %q\ngot:  %q\n",
-						wantNew, gotNew)
+					t.Errorf("%s\nmismatch on New\nwant: %q\ngot:  %q\n",
+						packageName, wantNew, gotNew)
 				}
 			}
 		})
@@ -125,7 +127,7 @@ func TestURLCommandSlice_UnmarshalJSON(t *testing.T) {
 }
 
 func TestURLCommandSlice_UnmarshalYAML(t *testing.T) {
-	// GIVEN a file to read a URLCommandSlice
+	// GIVEN a file to read a URLCommandSlice.
 	tests := map[string]struct {
 		input    string
 		slice    URLCommandSlice
@@ -184,47 +186,49 @@ func TestURLCommandSlice_UnmarshalYAML(t *testing.T) {
 
 			var slice URLCommandSlice
 
-			// WHEN Unmarshalled
+			// WHEN Unmarshalled.
 			err := yaml.Unmarshal([]byte(tc.input), &slice)
 
 			// THEN the it errors when appropriate and unmarshals correctly into a list.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			if len(slice) != len(tc.slice) {
-				t.Fatalf("got a slice of length %d. want %d\n%#v",
-					len(slice), len(tc.slice), slice)
+				t.Fatalf("%s\nslice length mismatch\nwant: %d\ngot:  %d\n%#v",
+					packageName,
+					len(tc.slice), len(slice),
+					slice)
 			}
 			for i := range tc.slice {
 				if slice[i].Type != tc.slice[i].Type {
-					t.Errorf("unmarshal fail - mismatch on Type:\nwant: %q\ngot:  %q\n",
-						tc.slice[i].Type, slice[i].Type)
+					t.Errorf("%s\nmismatch on Type\nwant: %q\ngot:  %q\n",
+						packageName, tc.slice[i].Type, slice[i].Type)
 				}
 				if slice[i].Regex != tc.slice[i].Regex {
-					t.Errorf("unmarshal fail - mismatch on Regex:\nwant: %q\ngot:  %q\n",
-						tc.slice[i].Regex, slice[i].Regex)
+					t.Errorf("%s\nmismatch on Regex\nwant: %q\ngot:  %q\n",
+						packageName, tc.slice[i].Regex, slice[i].Regex)
 				}
 				gotIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrNilValue(slice[i].Index, 999)), "999", "nil")
 				wantIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrNilValue(tc.slice[i].Index, 999)), "999", "nil")
-				if wantIndex != gotIndex {
-					t.Errorf("unmarshal fail - mismatch on Index:\nwant: %q\ngot:  %q\n",
-						wantIndex, gotIndex)
+				if gotIndex != wantIndex {
+					t.Errorf("%s\nmismatch on Index\nwant: %q\ngot:  %q\n",
+						packageName, wantIndex, gotIndex)
 				}
 				if slice[i].Text != tc.slice[i].Text {
-					t.Errorf("unmarshal fail - mismatch on Text:\nwant: %q\ngot:  %q\n",
-						tc.slice[i].Text, slice[i].Text)
+					t.Errorf("%s\nmismatch on Text\nwant: %q\ngot:  %q\n",
+						packageName, tc.slice[i].Text, slice[i].Text)
 				}
 				if slice[i].Old != tc.slice[i].Old {
-					t.Errorf("unmarshal fail - mismatch on Old:\nwant: %q\ngot:  %q\n",
-						tc.slice[i].Old, slice[i].Old)
+					t.Errorf("%s\nmismatch on Old\nwant: %q\ngot:  %q\n",
+						packageName, tc.slice[i].Old, slice[i].Old)
 				}
 				gotNew := util.DereferenceOrDefault(slice[i].New)
 				wantNew := util.DereferenceOrDefault(tc.slice[i].New)
 				if gotNew != wantNew {
-					t.Errorf("unmarshal fail - mismatch on New:\nwant: %q\ngot:  %q\n",
-						wantNew, gotNew)
+					t.Errorf("%s\nmismatch on New\nwant: %q\ngot:  %q\n",
+						packageName, wantNew, gotNew)
 				}
 			}
 		})
@@ -232,7 +236,7 @@ func TestURLCommandSlice_UnmarshalYAML(t *testing.T) {
 }
 
 func TestURLCommandSlice_String(t *testing.T) {
-	// GIVEN a URLCommandSlice
+	// GIVEN a URLCommandSlice.
 	tests := map[string]struct {
 		slice *URLCommandSlice
 		want  string
@@ -300,21 +304,21 @@ func TestURLCommandSlice_String(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			// WHEN String is called on it
+			// WHEN String is called on it.
 			got := tc.slice.String()
 
-			// THEN the expected string is returned
+			// THEN the expected string is returned.
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if got != tc.want {
-				t.Fatalf("\nwant: %q\n got: %q",
-					tc.want, got)
+				t.Fatalf("%s\nwant: %q\n got:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestURLCommand_String(t *testing.T) {
-	// GIVEN a URLCommand
+	// GIVEN a URLCommand.
 	regex := testURLCommandRegex()
 	replace := testURLCommandReplace()
 	split := testURLCommandSplit()
@@ -356,21 +360,21 @@ func TestURLCommand_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN String is called on it
+			// WHEN String is called on it.
 			got := tc.cmd.String()
 
-			// THEN the expected string is returned
+			// THEN the expected string is returned.
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if got != tc.want {
-				t.Fatalf("URLCommand.String() mismatch\nwant: %q\n got: %q",
-					tc.want, got)
+				t.Fatalf("%s\nwant: %q\n got:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestURLCommandSlice_GetVersions(t *testing.T) {
-	// GIVEN a URLCommandSlice
+	// GIVEN a URLCommandSlice.
 	testText := "abc123-def456"
 	tests := map[string]struct {
 		slice        *URLCommandSlice
@@ -464,28 +468,28 @@ func TestURLCommandSlice_GetVersions(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN GetVersions is called on it
+			// WHEN GetVersions is called on it.
 			versions, err := tc.slice.GetVersions(tc.text, logutil.LogFrom{})
 
-			// THEN the expected versions are returned
+			// THEN the expected versions are returned.
 			wantVersions := strings.Join(tc.wantVersions, "__")
 			gotVersions := strings.Join(versions, "__")
-			if wantVersions != gotVersions {
-				t.Errorf("filter.URLCommandSlice.GetVersions() mismatch\n%v\ngot:\n%v",
-					tc.wantVersions, versions)
+			if gotVersions != wantVersions {
+				t.Errorf("%s\nwant:\n%v\ngot:\n%v",
+					packageName, tc.wantVersions, versions)
 			}
-			// AND the expected error is returned
+			// AND the expected error is returned.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("filter.URLCommandSlice.GetVersions() error mismatch\n%q\ngot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot: %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
 }
 
 func TestURLCommandSlice_Run(t *testing.T) {
-	// GIVEN a URLCommandSlice and text to run it on
+	// GIVEN a URLCommandSlice and text to run it on.
 	testText := "abc123-def456"
 	tests := map[string]struct {
 		slice    *URLCommandSlice
@@ -603,18 +607,18 @@ func TestURLCommandSlice_Run(t *testing.T) {
 				text = tc.text
 			}
 
-			// WHEN run is called on it
+			// WHEN run is called on it.
 			versions, err := tc.slice.Run(text, logutil.LogFrom{})
 
-			// THEN the expected text was returned
+			// THEN the expected text was returned.
 			if !reflect.DeepEqual(tc.want, versions) {
-				t.Errorf("Run() Should have returned\n%q\ngot:\n%q",
-					tc.want, text)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, text)
 			}
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("Run() error mismatch\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -629,6 +633,7 @@ func TestURLCommand_regex(t *testing.T) {
 		versions *[]string
 		errRegex string
 	}
+	// GIVEN a URLCommand for regex.
 	tests := map[string]struct {
 		command URLCommand
 		args    args
@@ -824,19 +829,19 @@ func TestURLCommand_regex(t *testing.T) {
 				tc.want.versions = &argsVersions
 			}
 
-			// WHEN regex is called on it
+			// WHEN regex is called on it for the version at the given index.
 			err := tc.command.regex(tc.args.versionIndex, &tc.args.versions, logutil.LogFrom{})
 
-			// THEN the expected versions are returned
+			// THEN the expected versions are returned.
 			if !reflect.DeepEqual(*tc.want.versions, tc.args.versions) {
-				t.Errorf("regex() mismatch\nwant: %v\ngot:  %v",
-					*tc.want.versions, tc.args.versions)
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, *tc.want.versions, tc.args.versions)
 			}
-			// AND the expected error is returned
+			// AND the expected error is returned.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Fatalf("regex() error mismatch\nwant match for %q\nnot: %q",
-					tc.want.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want.errRegex, e)
 			}
 		})
 	}
@@ -851,6 +856,7 @@ func TestURLCommand_split(t *testing.T) {
 		versions *[]string
 		errRegex string
 	}
+	// GIVEN a URLCommand for split.
 	tests := map[string]struct {
 		command URLCommand
 		args    args
@@ -939,26 +945,26 @@ func TestURLCommand_split(t *testing.T) {
 				tc.want.versions = &argsVersions
 			}
 
-			// WHEN split is called on it
+			// WHEN split is called on it for the version at the given index.
 			err := tc.command.split(tc.args.versionIndex, &tc.args.versions, logutil.LogFrom{})
 
-			// THEN the expected versions are returned
+			// THEN the expected versions are returned.
 			if !reflect.DeepEqual(*tc.want.versions, tc.args.versions) {
-				t.Errorf("split() mismatch\nwant: %v\ngot:  %v",
-					*tc.want.versions, tc.args.versions)
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, *tc.want.versions, tc.args.versions)
 			}
-			// AND the expected error is returned
+			// AND the expected error is returned.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Fatalf("split() error mismatch\nwant match for %q\nnot: %q",
-					tc.want.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want.errRegex, e)
 			}
 		})
 	}
 }
 
 func TestURLCommandSlice_CheckValues(t *testing.T) {
-	// GIVEN a URLCommandSlice
+	// GIVEN a URLCommandSlice.
 	tests := map[string]struct {
 		slice     *URLCommandSlice
 		wantSlice *URLCommandSlice
@@ -1063,31 +1069,31 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CheckValues is called on it
+			// WHEN CheckValues is called on it.
 			err := tc.slice.CheckValues("")
 
-			// THEN err is expected
+			// THEN err is expected.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("URLCommandSlice.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
+					packageName, wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("URLCommandSlice.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 
-			// AND the slice is as expected
+			// AND the slice is as expected.
 			if tc.wantSlice != nil {
 				strHave := tc.slice.String()
 				strWant := tc.wantSlice.String()
 				if strHave != strWant {
-					t.Errorf("want slice:\n%q\ngot:  %q",
-						strWant, strHave)
+					t.Errorf("%s\nwant slice:\n%q\ngot  slice: %q",
+						packageName, strWant, strHave)
 				}
 			}
 		})

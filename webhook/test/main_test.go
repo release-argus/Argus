@@ -23,6 +23,8 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
+var packageName = "webhook_test"
+
 func TestWebHook(t *testing.T) {
 	// GIVEN the failing, self-signed certificate, and custom headers flags.
 	tests := map[string]struct {
@@ -112,38 +114,40 @@ func TestWebHook(t *testing.T) {
 
 			// THEN the URL should be as expected.
 			if got.URL != tc.expectedURL {
-				t.Errorf("URL: expected %q but got %q",
-					tc.expectedURL, got.URL)
+				t.Errorf("%s\nURL mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.expectedURL, got.URL)
 			}
 
 			// AND the secret should be as expected.
 			if got.Secret != tc.expectedSecret {
-				t.Errorf("Secret: expected %q but got %q",
-					tc.expectedSecret, got.Secret)
+				t.Errorf("%s\nSecret mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.expectedSecret, got.Secret)
 			}
 
 			// AND the custom headers should be as expected.
 			if tc.expectedHeaders == nil {
 				if got.CustomHeaders != nil {
-					t.Errorf("CustomHeaders: expected nil but got %+v",
-						got.CustomHeaders)
+					t.Errorf("%s\nCustomHeaders mismatch\nwant: nil\ngot:  %+v",
+						packageName, got.CustomHeaders)
 				}
 			} else {
 				if got.CustomHeaders == nil {
-					t.Errorf("CustomHeaders: expected %+v but got nil",
-						tc.expectedHeaders)
+					t.Errorf("%s\nCustomHeaders mismatch\nwant: %+v\ngot:  nil",
+						packageName, tc.expectedHeaders)
 				} else {
 					// Lengths differ.
 					if len(*got.CustomHeaders) != len(*tc.expectedHeaders) {
-						t.Errorf("CustomHeaders: length differs, expected %+v but got %+v",
-							tc.expectedHeaders, got.CustomHeaders)
+						t.Errorf("%s\nCustomHeaders length mismatch\nwant: %d\ngot:  %d",
+							packageName, len(*tc.expectedHeaders), len(*got.CustomHeaders))
 					} else {
 						// Check each header.
 						for i := range *tc.expectedHeaders {
 							if (*tc.expectedHeaders)[i].Key != (*got.CustomHeaders)[i].Key ||
 								(*tc.expectedHeaders)[i].Value != (*got.CustomHeaders)[i].Value {
-								t.Errorf("CustomHeaders: expected %+v but got %+v",
-									tc.expectedHeaders, got.CustomHeaders)
+								t.Errorf("%s\nCustomHeaders mismatch\nwant: %v (%+v)\ngot:  %v (%+v)",
+									packageName,
+									(*tc.expectedHeaders)[i], *tc.expectedHeaders,
+									(*got.CustomHeaders)[i], *got.CustomHeaders)
 								break
 							}
 						}
@@ -152,42 +156,50 @@ func TestWebHook(t *testing.T) {
 			}
 
 			// AND the ID should be set.
-			if got.ID != "test" {
-				t.Errorf("ID: expected %q but got %q",
-					"test", got.ID)
+			wantID := "test"
+			if got.ID != wantID {
+				t.Errorf("%s\nID mismatch\nwant: %q\ngot:  %q",
+					packageName, wantID, got.ID)
 			}
 
 			// AND the ServiceStatus should be initialised.
 			if got.ServiceStatus == nil {
-				t.Error("ServiceStatus not initialised")
+				t.Errorf("%s\nServiceStatus not initialised",
+					packageName)
 			}
 
 			// AND the Fails should be set.
 			if got.ServiceStatus == nil || got.Failed == nil {
 				if got.Failed == nil {
-					t.Error("Failed not set")
+					t.Errorf("%s\nServiceStatus.Failed not set",
+						packageName)
 				} else {
-					t.Error("ServiceStatus not set")
+					t.Errorf("%s\nServiceStatus not set",
+						packageName)
 				}
 			}
 
 			// AND the DesiredStatusCode should be set.
-			if got.DesiredStatusCode == nil || *got.DesiredStatusCode != 0 {
+			wantDesiredStatusCode := 0
+			if got.DesiredStatusCode == nil || *got.DesiredStatusCode != uint16(wantDesiredStatusCode) {
 				if got.DesiredStatusCode == nil {
-					t.Error("DesiredStatusCode not set")
+					t.Errorf("%s\nDesiredStatusCode not set",
+						packageName)
 				} else {
-					t.Errorf("DesiredStatusCode: expected %d but got %d",
-						0, *got.DesiredStatusCode)
+					t.Errorf("%s\nDesiredStatusCode mismatch\nwant: %d\ngot:  %d",
+						packageName, wantDesiredStatusCode, *got.DesiredStatusCode)
 				}
 			}
 
 			// AND the MaxTries should be set.
-			if got.MaxTries == nil || *got.MaxTries != 1 {
+			wantMaxTries := 1
+			if got.MaxTries == nil || *got.MaxTries != uint8(wantMaxTries) {
 				if got.MaxTries == nil {
-					t.Error("MaxTries not set")
+					t.Errorf("%s\nMaxTries not set",
+						packageName)
 				} else {
-					t.Errorf("MaxTries: expected %d but got %d",
-						1, *got.MaxTries)
+					t.Errorf("%s\nMaxTries mismatch\nwant: %d\ngot:  %d",
+						packageName, wantMaxTries, *got.MaxTries)
 				}
 			}
 
@@ -195,33 +207,37 @@ func TestWebHook(t *testing.T) {
 			wantDelay := "0s"
 			if got.Delay == "" || got.Delay != wantDelay {
 				if got.Delay == "" {
-					t.Error("Delay not set")
+					t.Errorf("%s\nDelay not set",
+						packageName)
 				} else {
-					t.Errorf("Delay:expected %q but got %q",
-						wantDelay, got.Delay)
+					t.Errorf("%s\nDelay mismatch\nwant: %q\ngot:  %q",
+						packageName, wantDelay, got.Delay)
 				}
 			}
 
 			// AND the Main should be set.
 			if got.Main == nil {
-				t.Error("Main not set")
+				t.Errorf("%s\nMain not set",
+					packageName)
 			}
 
 			// AND the Defaults should be set.
 			if got.Defaults == nil {
-				t.Error("Defaults not set")
+				t.Errorf("%s\nDefaults not set",
+					packageName)
 			}
 
 			// AND the HardDefaults should be set.
 			if got.HardDefaults == nil {
-				t.Error("HardDefaults not set")
+				t.Errorf("%s\nHardDefaults not set",
+					packageName)
 			}
 
 			// AND the URL should be modified if selfSignedCert is true.
 			if tc.selfSignedCert {
 				if got.URL != tc.expectedURL {
-					t.Errorf("SelfSignedCert: url, expected %q but got %q",
-						tc.expectedURL, got.URL)
+					t.Errorf("%s\nSelfSignedCert: url mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.expectedURL, got.URL)
 				}
 			}
 
@@ -229,16 +245,16 @@ func TestWebHook(t *testing.T) {
 			if tc.failing {
 				expectedSecret := test.LookupGitHub["secret_fail"]
 				if got.Secret != expectedSecret {
-					t.Errorf("Failing: url, expected %q but got %q",
-						expectedSecret, got.Secret)
+					t.Errorf("%s\nFailing webhook, secret mismatch\nwant: %q\ngot:  %q",
+						packageName, expectedSecret, got.Secret)
 				}
 			}
 
 			// AND the URL should be modified and custom headers should be set if customHeaders is true.
 			if tc.customHeaders {
 				if got.URL != tc.expectedURL {
-					t.Errorf("CustomHeaders: url, expected %q but got %q",
-						tc.expectedURL, got.URL)
+					t.Errorf("%s\nCustomHeaders, url mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.expectedURL, got.URL)
 				}
 			}
 		})

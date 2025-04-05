@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 )
 
 func TestAllowInvalidCerts(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		rootValue, defaultValue, hardDefaultValue *bool
 		want                                      bool
@@ -52,13 +52,13 @@ func TestAllowInvalidCerts(t *testing.T) {
 			lookup.Defaults.AllowInvalidCerts = tc.defaultValue
 			lookup.HardDefaults.AllowInvalidCerts = tc.hardDefaultValue
 
-			// WHEN allowInvalidCerts is called
+			// WHEN allowInvalidCerts is called.
 			got := lookup.allowInvalidCerts()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %t\ngot:  %t",
-					tc.want, got)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}

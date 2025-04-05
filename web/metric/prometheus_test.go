@@ -23,6 +23,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
+var packageName = "metric"
+
 func TestInitPrometheusCounterVec(t *testing.T) {
 	// GIVEN a metric.
 	tests := map[string]struct {
@@ -73,8 +75,8 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 			got := testutil.CollectAndCount(tc.metric)
 			want := 0
 			if got != want {
-				t.Errorf("haven't initialised yet but got %d metrics, expecting %d",
-					got, want)
+				t.Errorf("%s\nmetric count mismatch before InitPrometheusCounter()\nwant: %d metrics\ngot:  %d",
+					packageName, want, got)
 			}
 
 			// WHEN it's initialised with InitPrometheusCounter.
@@ -87,15 +89,15 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 			got = testutil.CollectAndCount(tc.metric)
 			want = 1
 			if got != want {
-				t.Errorf("has been initialised but got %d metrics, expecting %d",
-					got, want)
+				t.Errorf("%s\nmetric count mismatch after InitPrometheusCounter()\nwant: %d metrics\ngot:  %d",
+					packageName, want, got)
 			}
 			var wantValue float64
 			var gotValue float64
 			gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(args...))
 			if gotValue != wantValue {
-				t.Errorf("has been initialised but got %f, expecting %f",
-					gotValue, wantValue)
+				t.Errorf("%s\nvalue mismatch after InitPrometheusCounter()\nwant: %f\ngot:  %f",
+					packageName, wantValue, gotValue)
 			}
 
 			// THEN it can be increased.
@@ -107,8 +109,8 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 			gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(args...))
 			wantValue++
 			if gotValue != wantValue {
-				t.Errorf("has been changed but got %f, expecting %f",
-					gotValue, wantValue)
+				t.Errorf("%s\nvalue mismatch after IncPrometheusCounter()\nwant: %f\ngot:  %f",
+					packageName, wantValue, gotValue)
 			}
 
 			// AND it can be deleted.
@@ -120,8 +122,8 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 			gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(args...))
 			wantValue = 0
 			if gotValue != wantValue {
-				t.Errorf("has been deleted but got %f, expecting %f",
-					gotValue, wantValue)
+				t.Errorf("%s\nvalue mismatch after DeletePrometheusCounter()\nwant: %f\ngot:  %f",
+					packageName, wantValue, gotValue)
 			}
 		})
 	}
@@ -161,8 +163,8 @@ func TestPrometheusGaugeVec(t *testing.T) {
 			got := testutil.CollectAndCount(tc.metric)
 			want := 0
 			if got != want {
-				t.Errorf("haven't initialised yet but got %d metrics, expecting %d",
-					got, want)
+				t.Errorf("%s\nmetric count mismatch before InitPrometheusGauge()\nwant: %d metrics\ngot:  %d",
+					packageName, want, got)
 			}
 
 			// WHEN it's initialised with SetPrometheusGauge.
@@ -174,13 +176,13 @@ func TestPrometheusGaugeVec(t *testing.T) {
 			got = testutil.CollectAndCount(tc.metric)
 			want = 1
 			if got != want {
-				t.Errorf("has been initialised but got %d metrics, expecting %d",
-					got, want)
+				t.Errorf("%s\nmetric count mismatch after SetPrometheusGauge()\nwant: %d metrics\ngot:  %d",
+					packageName, want, got)
 			}
 			gotValue := testutil.ToFloat64(tc.metric.WithLabelValues(args...))
 			if gotValue != wantValue {
-				t.Errorf("has been initialised but got %f, expecting %f",
-					gotValue, wantValue)
+				t.Errorf("%s\nvalue mismatch after SetPrometheusGauge()\nwant: %f\ngot:  %f",
+					packageName, wantValue, gotValue)
 			}
 
 			// THEN changes can be noticed.
@@ -191,8 +193,8 @@ func TestPrometheusGaugeVec(t *testing.T) {
 				wantValue)
 			gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(args...))
 			if gotValue != wantValue {
-				t.Errorf("has been changed but got %f, expecting %f",
-					gotValue, wantValue)
+				t.Errorf("%s\nvalue mismatch after SetPrometheusGauge()\nwant: %f\ngot:  %f",
+					packageName, wantValue, gotValue)
 			}
 
 			// AND it can be deleted.
@@ -202,8 +204,8 @@ func TestPrometheusGaugeVec(t *testing.T) {
 			wantValue = float64(0)
 			gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(args...))
 			if gotValue != wantValue {
-				t.Errorf("has been deleted but got %f, expecting %f",
-					gotValue, wantValue)
+				t.Errorf("%s\nvalue mismatch after DeletePrometheusGauge()\nwant: %f\ngot:  %f",
+					packageName, wantValue, gotValue)
 			}
 		})
 	}
@@ -273,8 +275,10 @@ func TestMetricsAndVersionState(t *testing.T) {
 
 			// THEN the returned state should match the expected state.
 			if state != tc.expectedState {
-				t.Errorf("GetVersionDeployedState(%q, %q, %q) = %v; want %v",
-					tc.approvedVersion, tc.latestVersion, tc.deployedVersion, state, tc.expectedState)
+				t.Errorf("%s\nGetVersionDeployedState(%q, %q, %q)\nwant: %v\ngot:  %v",
+					packageName,
+					tc.approvedVersion, tc.latestVersion, tc.deployedVersion,
+					tc.expectedState, state)
 			}
 
 			// WHEN SetUpdatesCurrent is called.
@@ -284,7 +288,9 @@ func TestMetricsAndVersionState(t *testing.T) {
 			for label, expected := range tc.expectedMetrics {
 				metric := testutil.ToFloat64(UpdatesCurrent.WithLabelValues(label))
 				if metric != expected {
-					t.Errorf("UpdatesCurrent[%q] = %v; want %v", label, metric, expected)
+					t.Errorf("%s\nUpdatesCurrent[%q]\nwant: %v\ngot:  %v",
+						packageName, label,
+						expected, metric)
 				}
 			}
 
@@ -294,8 +300,11 @@ func TestMetricsAndVersionState(t *testing.T) {
 			// THEN metrics should reset back to 0.
 			for label := range tc.expectedMetrics {
 				metric := testutil.ToFloat64(UpdatesCurrent.WithLabelValues(label))
-				if metric != 0 {
-					t.Errorf("UpdatesCurrent[%q] = %v; want 0", label, metric)
+				var want float64 = 0
+				if metric != want {
+					t.Errorf("%s\nUpdatesCurrent[%q]\nwant: %f\ngot:  %f",
+						packageName, label,
+						want, metric)
 				}
 			}
 		})

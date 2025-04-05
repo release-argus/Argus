@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ func testVerify(t *testing.T) *Config {
 }
 
 func TestConfig_CheckValues(t *testing.T) {
-	// GIVEN variations of Config to test
+	// GIVEN variations of Config to test.
 	tests := map[string]struct {
 		config   *Config
 		errRegex string
@@ -128,7 +128,7 @@ func TestConfig_CheckValues(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			if tc.config != nil {
@@ -145,32 +145,32 @@ func TestConfig_CheckValues(t *testing.T) {
 					lines := strings.Split(stdout, "\n")
 					wantLines := strings.Count(tc.errRegex, "\n")
 					if wantLines > len(lines) {
-						t.Fatalf("Config.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-							wantLines, tc.errRegex, len(lines), lines, stdout)
+						t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
+							packageName, wantLines, tc.errRegex, len(lines), lines, stdout)
 					}
 					if !util.RegexCheck(tc.errRegex, stdout) {
-						t.Errorf("Config.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-							tc.errRegex, stdout)
+						t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+							packageName, tc.errRegex, stdout)
 						return
 					}
 				}()
 			}
 
-			// WHEN CheckValues is called on them
+			// WHEN CheckValues is called on them.
 			tc.config.CheckValues()
 
-			// THEN this call will/wont crash the program
+			// THEN this call will/wont crash the program.
 			stdout := releaseStdout()
 			lines := strings.Split(stdout, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("Config.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, stdout)
+				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
+					packageName, wantLines, tc.errRegex, len(lines), lines, stdout)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, stdout) {
-				t.Errorf("Config.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, stdout)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, stdout)
 				return
 			}
 		})
@@ -178,7 +178,7 @@ func TestConfig_CheckValues(t *testing.T) {
 }
 
 func TestConfig_Print(t *testing.T) {
-	// GIVEN a Config and print flags of true and false
+	// GIVEN a Config and print flags of true and false.
 	config := testVerify(t)
 	tests := map[string]struct {
 		flag  bool
@@ -190,18 +190,18 @@ func TestConfig_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
-			// WHEN Print is called with these flags
+			// WHEN Print is called with these flags.
 			config.Print(&tc.flag)
 
-			// THEN config is printed only when the flag is true
+			// THEN config is printed only when the flag is true.
 			stdout := releaseStdout()
 			got := strings.Count(stdout, "\n")
 			if got != tc.lines {
-				t.Errorf("Print with %s wants %d lines but got %d\n%s\n\n%q",
-					name, tc.lines, got, stdout, stdout)
+				t.Errorf("%s\nPrint with %s mismatch\nwant: %d lines\ngot:  %d\nstdout:\n%s\n\nstdout: %q",
+					packageName, name, tc.lines, got, stdout, stdout)
 			}
 		})
 	}

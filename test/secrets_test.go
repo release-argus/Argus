@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import (
 )
 
 func TestShoutrrrGotifyToken(t *testing.T) {
-	// GIVEN the environment variable ARGUS_TEST_GOTIFY_TOKEN
+	// GIVEN the environment variable ARGUS_TEST_GOTIFY_TOKEN.
 	tests := map[string]struct {
 		env string
 	}{
@@ -32,7 +32,7 @@ func TestShoutrrrGotifyToken(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're manipulating the environment
+			// t.Parallel() - Cannot run in parallel since we're manipulating the environment.
 
 			want := tc.env
 			if tc.env != "" {
@@ -40,16 +40,16 @@ func TestShoutrrrGotifyToken(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv("ARGUS_TEST_GOTIFY_TOKEN") })
 			}
 
-			// WHEN ShoutrrrGotifyToken is called
+			// WHEN ShoutrrrGotifyToken is called.
 			token := ShoutrrrGotifyToken()
 
-			// THEN the token should be as expected
+			// THEN the token should be as expected.
 			if tc.env == "" {
-				want = token // default token when env is empty
+				want = token // default token when env is empty.
 			}
 			if token != want {
-				t.Errorf("expected %q but got %q",
-					want, token)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, want, token)
 			}
 		})
 	}

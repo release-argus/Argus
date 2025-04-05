@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -64,13 +64,13 @@ func TestAppendCheckError(t *testing.T) {
 			errs := tc.errs
 			AppendCheckError(&errs, tc.prefix, tc.label, tc.checkErr)
 			if len(errs) != len(tc.want) {
-				t.Fatalf("expected %d errors, got %d\n%q",
-					len(tc.want), len(errs), errs)
+				t.Fatalf("%s\nerror mismatch\nwant: %d errors, got %d\nerrors: %q",
+					packageName, len(tc.want), len(errs), errs)
 			}
 			for i, err := range errs {
 				if err.Error() != tc.want[i].Error() {
-					t.Errorf("error mismatch\n%q\ngot:\n%q",
-						tc.want[i], err)
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.want[i], err)
 				}
 			}
 		})
@@ -78,7 +78,7 @@ func TestAppendCheckError(t *testing.T) {
 }
 
 func TestErrorToString(t *testing.T) {
-	// GIVEN a bunch of comparables
+	// GIVEN a bunch of comparables.
 	tests := map[string]struct {
 		err  error
 		want string
@@ -93,13 +93,13 @@ func TestErrorToString(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ErrorToString is called
+			// WHEN ErrorToString is called.
 			got := ErrorToString(tc.err)
 
-			// THEN the var is printed when it should be
+			// THEN the var is printed when it should be.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}

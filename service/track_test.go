@@ -154,7 +154,7 @@ func TestService_Track(t *testing.T) {
 		},
 		"query doesn't update versions if it finds one that's older semantically": {
 			latestVersionType: "url",
-			// would get 1.2.1, but stay on 1.2.2
+			// would get '1.2.1', but stay on '1.2.2'.
 			overrides: overrides{
 				latestVersion: test.TrimYAML(`
 					url_commands:
@@ -449,26 +449,29 @@ func TestService_Track(t *testing.T) {
 
 			svc := testService(t, name, tc.latestVersionType)
 
-			// overrides - other
+			// overrides - other.
 			err := yaml.Unmarshal([]byte(tc.overrides.other), &svc)
 			if err != nil {
-				t.Fatalf("failed to unmarshal overrides: %s", err)
+				t.Fatalf("%s\nfailed to unmarshal overrides: %s",
+					packageName, err)
 			}
-			// overrides - latest_version
+			// overrides - latest_version.
 			if lv, ok := svc.LatestVersion.(*lv_web.Lookup); ok {
 				err = yaml.Unmarshal([]byte(tc.overrides.latestVersion), lv)
 				if err != nil {
-					t.Fatalf("failed to unmarshal overrides: %s", err)
+					t.Fatalf("%s\nfailed to unmarshal overrides: %s",
+						packageName, err)
 				}
 			}
 			if tc.overrides.nilLatestVersion {
 				svc.LatestVersion = nil
 			}
-			// overrides - deployed_version
+			// overrides - deployed_version.
 			if dv, ok := svc.DeployedVersionLookup.(*dv_web.Lookup); ok {
 				err = yaml.Unmarshal([]byte(tc.overrides.deployedVersion), dv)
 				if err != nil {
-					t.Fatalf("failed to unmarshal overrides: %s", err)
+					t.Fatalf("%s\nfailed to unmarshal overrides: %s",
+						packageName, err)
 				}
 			}
 
@@ -541,65 +544,68 @@ func TestService_Track(t *testing.T) {
 				// WHen we actually did the query.
 				didAt, _ := time.Parse(time.RFC3339, svc.Status.LastQueried())
 				if didAt.Before(lvExpectedAfter) {
-					t.Errorf("LatestVersionLookup should have waited until\n%s, but did it at\n%s\n%v",
-						lvExpectedAfter, svc.Status.LastQueried(), time.Now().UTC())
+					t.Errorf("%s\nLatestVersionLookup happened too early\nwant: %s or later\ngot:  %s\nnow:  %s",
+						packageName, lvExpectedAfter, svc.Status.LastQueried(), time.Now().UTC())
 				}
 				if didAt.Before(dvExpectedAfter) {
-					t.Errorf("DeployedVersionLookup should have waited until\n%s, but did it at\n%s\n%v",
-						dvExpectedAfter, svc.Status.LastQueried(), time.Now().UTC())
+					t.Errorf("%s\nDeployedVersionLookup happened too early\nwant: %s or later\ngot  %s\nnow:  %s",
+						packageName, dvExpectedAfter, svc.Status.LastQueried(), time.Now().UTC())
 				}
 			}
 
 			// THEN the scrape updates the Status correctly.
-			if tc.versions.wantLatestVersion != svc.Status.LatestVersion() ||
-				tc.versions.wantDeployedVersion != svc.Status.DeployedVersion() {
-				t.Fatalf("\nLatestVersion,   want %q, got %q\nDeployedVersion, want %q, got %q\n",
+			if svc.Status.LatestVersion() != tc.versions.wantLatestVersion ||
+				svc.Status.DeployedVersion() != tc.versions.wantDeployedVersion {
+				t.Fatalf("%s\nLatestVersion possible mismatch\nwant: %q\ngot  %q\nDeployedVersion possible mismatch\nwant: %q\ngot:  %q",
+					packageName,
 					tc.versions.wantLatestVersion, svc.Status.LatestVersion(),
 					tc.versions.wantDeployedVersion, svc.Status.DeployedVersion())
 			}
-			// LatestVersionQueryResultTotal
+			// LatestVersionQueryResultTotal.
 			if !tc.overrides.nilLatestVersion {
 				gotMetric := testutil.ToFloat64(metric.LatestVersionQueryResultLast.WithLabelValues(svc.ID, svc.LatestVersion.GetType()))
 				if !tc.ignoreLivenessMetric && gotMetric != float64(tc.livenessMetric) {
-					t.Errorf("LatestVersionQueryResultLast should be %d, not %f",
-						tc.livenessMetric, gotMetric)
+					t.Errorf("%s\nLatestVersionQueryResultLast mismatch\nwant: %d\ngot:  %f",
+						packageName, tc.livenessMetric, gotMetric)
 				}
 			}
-			// AnnounceChannel
-			gotAnnounceMessages := len(*svc.Status.AnnounceChannel)
-			if tc.wantAnnounces != len(*svc.Status.AnnounceChannel) {
-				t.Errorf("expected AnnounceChannel to have %d messages in queue, not %d",
-					tc.wantAnnounces, gotAnnounceMessages)
+			// AnnounceChannel.
+			if gotAnnounceMessages := len(*svc.Status.AnnounceChannel); gotAnnounceMessages != tc.wantAnnounces {
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
+					packageName, tc.wantAnnounces, gotAnnounceMessages)
 				for gotAnnounceMessages > 0 {
 					var msg apitype.WebSocketMessage
 					msgBytes := <-*svc.Status.AnnounceChannel
 					json.Unmarshal(msgBytes, &msg)
-					t.Logf("got message:\n{%v}\n", msg)
+					t.Logf("%s - got message: {%+v}",
+						packageName, msg)
 					gotAnnounceMessages = len(*svc.Status.AnnounceChannel)
 				}
 			}
-			// DatabaseChannel
-			gotDatabaseMessages := len(*svc.Status.DatabaseChannel)
-			if tc.wantDatabaseMessages != gotDatabaseMessages {
-				t.Errorf("expected DatabaseChannel to have %d messages in queue, not %d",
-					tc.wantDatabaseMessages, gotDatabaseMessages)
+			// DatabaseChannel.
+			if gotDatabaseMessages := len(*svc.Status.DatabaseChannel); gotDatabaseMessages != tc.wantDatabaseMessages {
+				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d messages\ngot:  %d",
+					packageName, tc.wantDatabaseMessages, gotDatabaseMessages)
 				for gotDatabaseMessages > 0 {
 					var msg apitype.WebSocketMessage
 					msgBytes := <-*svc.Status.AnnounceChannel
 					json.Unmarshal(msgBytes, &msg)
-					t.Logf("got message:\n{%v}\n", msg)
+					t.Logf("%s - got message:\n{%v}\n",
+						packageName, msg)
 					gotDatabaseMessages = len(*svc.Status.DatabaseChannel)
 				}
 			}
 			// Track should finish if it is not Active and is not being deleted.
 			shouldFinish := !svc.Options.GetActive() || tc.deleting || tc.overrides.nilLatestVersion
-			// Didn't finish, but should have?
+			// Didn't finish, but should have.
 			if shouldFinish && len(didFinish) == 0 {
-				t.Fatal("expected Track to finish when not active, deleting, or LatestVersion is nil")
+				t.Fatalf("%s\nexpected Track to finish when not active, deleting, or LatestVersion is nil",
+					packageName)
 			}
-			// Finished when it shouldn't have?
+			// Finished when it shouldn't have.
 			if !shouldFinish && len(didFinish) != 0 {
-				t.Fatal("didn't expect Track to finish")
+				t.Fatalf("%s\ndidn't expect Track to finish",
+					packageName)
 			}
 
 			// Set Deleting to stop the Track.
@@ -655,18 +661,20 @@ func TestSlice_Track(t *testing.T) {
 			time.Sleep(2 * time.Second)
 			for i := range *slice {
 				if !util.Contains(tc.ordering, i) {
-					if (*slice)[i].Status.LatestVersion() != "" {
-						t.Fatalf("didn't expect Query to have done anything for %s as it's not in the ordering %v\n%#v",
-							i, tc.ordering, (*slice)[i].Status.String())
+					if wantLatestVersion := ""; (*slice)[i].Status.LatestVersion() != wantLatestVersion {
+						t.Fatalf("%s\nQuery on Slice[%q] shouldn't have updated LatestVersion as not in ordering\nwant: %q\ngot:  %q\norder: %v",
+							packageName, i,
+							wantLatestVersion, (*slice)[i].Status.String(),
+							tc.ordering)
 					}
 				} else if (*slice)[i].Options.GetActive() {
 					if (*slice)[i].Status.LatestVersion() == "" {
-						t.Fatalf("expected Query to have found a LatestVersion\n%#v",
-							(*slice)[i].Status.String())
+						t.Fatalf("%s\nQuery on Slice[%q] didn't find LatestVersion\nwant: %s\ngot:  %q",
+							packageName, i, (*slice)[i].Status.String(), "")
 					}
 				} else if (*slice)[i].Status.LatestVersion() != "" {
-					t.Fatalf("didn't expect Query to have done anything for %s\n%#v",
-						i, (*slice)[i].Status.String())
+					t.Fatalf("%s\nQuery on Slice[%q] shouldn't have updated LatestVersion\nwant: %q\ngot:  %q",
+						packageName, i, "", (*slice)[i].Status.String())
 				}
 
 				// Set Deleting to stop the Track.

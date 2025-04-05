@@ -206,9 +206,9 @@ func testYAML_SomeNilServices(path string, t *testing.T) {
 }
 
 func testYAML_SmallConfigTest(path string, t *testing.T) {
-	// for the `save.go`
+	// For the `save.go`.
 	// if index < 0 {
-	// boundary check
+	// boundary check.
 	data := test.TrimYAML(`
 		settings:
 			data: {}

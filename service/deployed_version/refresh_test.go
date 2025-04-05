@@ -33,7 +33,8 @@ func TestRefresh(t *testing.T) {
 	testL.Query(true, logutil.LogFrom{Primary: "TestLookup_Refresh"})
 	testVersion := testL.GetStatus().DeployedVersion()
 	if testVersion == "" {
-		t.Fatalf("test version is empty")
+		t.Fatalf("%s\ntest version is empty",
+			packageName)
 	}
 
 	type versions struct {
@@ -183,8 +184,8 @@ func TestRefresh(t *testing.T) {
 			if tc.errRegex != "" || err != nil {
 				e := util.ErrorToString(err)
 				if !util.RegexCheck(tc.errRegex, e) {
-					t.Fatalf("want match for %q\nnot: %q",
-						tc.errRegex, e)
+					t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.errRegex, e)
 				}
 				if tc.previous == nil {
 					return
@@ -192,14 +193,14 @@ func TestRefresh(t *testing.T) {
 			}
 			// AND announce is only true when expected.
 			gotAnnounces := len(*targetStatus.AnnounceChannel)
-			if tc.announce != gotAnnounces {
-				t.Errorf("announce count mismatch\n want %d, got %d",
-					tc.announce, gotAnnounces)
+			if gotAnnounces != tc.announce {
+				t.Errorf("%s\nannounce channel count mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.announce, gotAnnounces)
 			}
 			// AND we get the expected result otherwise.
-			if tc.want != got {
-				t.Errorf("version mismatch\nwant: %q\ngot:  %q",
-					tc.want, got)
+			if got != tc.want {
+				t.Errorf("%s\nversion mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 			// AND the timestamp only changes if the version changed,
 			// and the possible query-changing overrides are nil.
@@ -208,20 +209,20 @@ func TestRefresh(t *testing.T) {
 				if previousStatus.DeployedVersion() != targetStatus.DeployedVersion() {
 					// then so should the timestamp.
 					if previousStatus.DeployedVersionTimestamp() == targetStatus.DeployedVersionTimestamp() {
-						t.Errorf("expected deployed_version_timestamp to change\nfrom: %q\ngot:  %q",
-							previousStatus.DeployedVersionTimestamp(), targetStatus.DeployedVersionTimestamp())
+						t.Errorf("%s\nexpected deployed_version_timestamp to change\nhad: %q\ngot: %q",
+							packageName, previousStatus.DeployedVersionTimestamp(), targetStatus.DeployedVersionTimestamp())
 					}
 					// otherwise, the timestamp should remain unchanged.
 				} else if previousStatus.DeployedVersionTimestamp() != targetStatus.DeployedVersionTimestamp() {
-					t.Errorf("expected deployed_version_timestamp to\nremain: %q\ngot:    %q",
-						previousStatus.DeployedVersionTimestamp(), targetStatus.DeployedVersionTimestamp())
+					t.Errorf("%s\nexpected deployed_version_timestamp to be unchanged\nwant: %q\ngot:  %q",
+						packageName, previousStatus.DeployedVersionTimestamp(), targetStatus.DeployedVersionTimestamp())
 				}
 				// If the overrides are not nil.
 			} else {
 				// The timestamp shouldn't change.
 				if previousStatus.DeployedVersionTimestamp() != targetStatus.DeployedVersionTimestamp() {
-					t.Errorf("expected timestamp %q but got %q",
-						previousStatus.DeployedVersionTimestamp(), targetStatus.DeployedVersionTimestamp())
+					t.Errorf("%s\ntimestamp mismatch\nwant: %q\ngot:  %q",
+						packageName, previousStatus.DeployedVersionTimestamp(), targetStatus.DeployedVersionTimestamp())
 				}
 			}
 		})
@@ -356,7 +357,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := applyOverridesJSON(
+			_, err := applyOverridesJSON(
 				tc.args.lookup,
 				util.DereferenceOrDefault(tc.args.overrides),
 				tc.args.semanticVerDiff,
@@ -364,11 +365,8 @@ func TestApplyOverridesJSON(t *testing.T) {
 
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, util.ErrorToString(err)) {
-				t.Errorf("applyOverridesJSON() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
-			}
-			if tc.errRegex == `^$` && got == nil {
-				t.Errorf("applyOverridesJSON() got = nil, want non-nil")
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}

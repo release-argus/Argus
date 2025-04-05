@@ -30,6 +30,8 @@ import (
 	logtest "github.com/release-argus/Argus/test/log"
 )
 
+var packageName = "deployedver"
+
 func TestMain(m *testing.M) {
 	// Log.
 	logtest.InitLog()
@@ -97,6 +99,8 @@ func getType(lookup Lookup) string {
 	switch lookup.(type) {
 	case *web.Lookup:
 		return "url"
+	case *manual.Lookup:
+		return "manual"
 	}
 	return "unknown"
 }

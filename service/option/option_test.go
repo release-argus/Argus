@@ -55,8 +55,8 @@ func TestOptions_GetActive(t *testing.T) {
 
 			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %t\ngot:  %t",
-					tc.want, got)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -102,8 +102,8 @@ func TestOptions_GetInterval(t *testing.T) {
 
 			// THEN the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -146,8 +146,8 @@ func TestOptions_GetSemanticVersioning(t *testing.T) {
 
 			// THEN the function returns the correct result.
 			if got != tc.wantBool {
-				t.Errorf("want: %t\ngot:  %t",
-					tc.wantBool, got)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.wantBool, got)
 			}
 		})
 	}
@@ -187,8 +187,8 @@ func TestOptions_GetIntervalPointer(t *testing.T) {
 
 			// THEN the function returns the correct result.
 			if *got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, *got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, *got)
 			}
 		})
 	}
@@ -205,8 +205,8 @@ func TestOptions_GetIntervalDuration(t *testing.T) {
 	// THEN the function returns the correct result.
 	want := (3 * time.Hour) + (2 * time.Minute) + time.Second
 	if got != want {
-		t.Errorf("want: %v\ngot:  %v",
-			want, got)
+		t.Errorf("%s\nwant: %v\ngot:  %v",
+			packageName, want, got)
 	}
 }
 
@@ -248,8 +248,8 @@ func TestOptions_CheckValues(t *testing.T) {
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -346,8 +346,8 @@ func TestOptions_String(t *testing.T) {
 			// THEN the result is as expected.
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -387,24 +387,28 @@ func TestOptions_Copy(t *testing.T) {
 			// THEN the copied Options should match the original.
 			if tc.options == nil {
 				if got != nil {
-					t.Errorf("options.Copy() expected nil, got %v", got)
+					t.Errorf("%s\ncopied nil\nwant: nil\ngot:  %v",
+						packageName, got)
 				}
 				return
 			}
 			if got == nil {
-				t.Fatalf("options.Copy() expected non-nil, got nil")
+				t.Fatalf("%s\nwant: non-nil\ngot:  nil",
+					packageName)
 			}
-			if tc.options.String() != got.String() {
-				t.Errorf("options.Copy() mismatch\nwant: %q\ngot:  %q",
-					tc.options.String(), got.String())
+			if got.String() != tc.options.String() {
+				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.options.String(), got.String())
 			}
 			// AND the Defaults should reference the same pointer.
 			if got.Defaults != tc.options.Defaults {
-				t.Errorf("options.Copy() expected Defaults %v, got %v", tc.options.Defaults, got.Defaults)
+				t.Errorf("%s\nDefaults mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.options.Defaults, got.Defaults)
 			}
 			// AND the HardDefaults should reference the same pointer.
 			if got.HardDefaults != tc.options.HardDefaults {
-				t.Errorf("options.Copy() expected HardDefaults %v, got %v", tc.options.HardDefaults, got.HardDefaults)
+				t.Errorf("%s\nHardDefaults mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.options.HardDefaults, got.HardDefaults)
 			}
 		})
 	}
@@ -444,12 +448,12 @@ func TestDefaults_Default(t *testing.T) {
 
 			// THEN the default values are set correctly.
 			if tc.optionsDefaults.Interval != wants.interval {
-				t.Errorf("Defaults.Default() got Interval:\nwant: %q\ngot:  %q",
-					wants.interval, tc.optionsDefaults.Interval)
+				t.Errorf("%s\nInterval mismatch\nwant: %q\ngot:  %q",
+					packageName, wants.interval, tc.optionsDefaults.Interval)
 			}
 			if tc.optionsDefaults.SemanticVersioning == nil || *tc.optionsDefaults.SemanticVersioning != wants.semVer {
-				t.Errorf("Defaults.Default() got SemanticVersioning:\nwant: %t\ngot:  %s",
-					wants.semVer, test.StringifyPtr(tc.optionsDefaults.SemanticVersioning))
+				t.Errorf("%s\nSemanticVersioning mismatch\nwant: %t\ngot:  %s",
+					packageName, wants.semVer, test.StringifyPtr(tc.optionsDefaults.SemanticVersioning))
 			}
 		})
 	}
@@ -458,28 +462,28 @@ func TestDefaults_Default(t *testing.T) {
 func TestOptions_VerifySemanticVersioning(t *testing.T) {
 	// GIVEN Options.
 	tests := map[string]struct {
-		version string
-		wantErr bool
+		version  string
+		errRegex string
 	}{
 		"valid semantic version - MAJOR.MINOR.PATCH": {
-			version: "1.0.0",
-			wantErr: false,
+			version:  "1.0.0",
+			errRegex: `^$`,
 		},
 		"valid semantic version - MAJOR.MINOR": {
-			version: "1.0",
-			wantErr: false,
+			version:  "1.0",
+			errRegex: `^$`,
 		},
 		"valid semantic version - MAJOR": {
-			version: "1",
-			wantErr: false,
+			version:  "1",
+			errRegex: `^$`,
 		},
 		"invalid semantic version": {
-			version: "1_0_0",
-			wantErr: true,
+			version:  "1_0_0",
+			errRegex: `^failed to convert "1_0_0" to a semantic version.*$`,
 		},
 		"non-numeric version": {
-			version: "version1.2.3",
-			wantErr: true,
+			version:  "major.minor.patch",
+			errRegex: `^failed to convert "major.minor.patch" to a semantic version.*$`,
 		},
 	}
 	options := testOptions()
@@ -492,9 +496,10 @@ func TestOptions_VerifySemanticVersioning(t *testing.T) {
 			_, err := options.VerifySemanticVersioning(tc.version, logutil.LogFrom{})
 
 			// THEN the function returns the correct result.
-			if (err != nil) != tc.wantErr {
-				t.Errorf("VerifySemanticVersioning() error = %v, wantErr %v",
-					err, tc.wantErr)
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}

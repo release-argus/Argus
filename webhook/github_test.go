@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import (
 )
 
 func TestSetGitHubHeaders(t *testing.T) {
-	// GIVEN a secret and a payload
+	// GIVEN a secret and a payload to send.
 	tests := map[string]struct {
 		secret string
 	}{
@@ -50,39 +50,44 @@ func TestSetGitHubHeaders(t *testing.T) {
 			})
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
 
-			// WHEN SetGitHubHeaders is called
+			// WHEN SetGitHubHeaders is called.
 			SetGitHubHeaders(req, payload, tc.secret)
 
-			// THEN the GitHub headers are correctly added
+			// THEN the GitHub headers are correctly added.
 			key := "X-Github-Event"
 			want := "^push$"
 			if !util.RegexCheck(want, getHeaderKey(req.Header[key])) {
-				t.Errorf("%s - Wanted %s, got %s",
-					key, want, getHeaderKey(req.Header[key]))
+				t.Errorf("%s - %s\nwant: %q\ngot:  %q",
+					packageName, key,
+					want, getHeaderKey(req.Header[key]))
 			}
 			key = "X-Github-Hook-Id"
 			want = "^[0-9]{9}$"
 			if !util.RegexCheck(want, getHeaderKey(req.Header[key])) {
-				t.Errorf("%s - Wanted %s, got %s",
-					key, want, getHeaderKey(req.Header[key]))
+				t.Errorf("%s - %s\nwant: %q\ngot:  %q",
+					packageName, key,
+					want, getHeaderKey(req.Header[key]))
 			}
 			key = "X-Github-Delivery"
 			want = "^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$"
 			if !util.RegexCheck(want, getHeaderKey(req.Header[key])) {
-				t.Errorf("%s - Wanted %s, got %s",
-					key, want, getHeaderKey(req.Header[key]))
+				t.Errorf("%s - %s\nwant: %q\ngot:  %q",
+					packageName, key,
+					want, getHeaderKey(req.Header[key]))
 			}
 			key = "X-Github-Hook-Installation-Target-Id"
 			want = "^[0-9]{9}$"
 			if !util.RegexCheck(want, getHeaderKey(req.Header[key])) {
-				t.Errorf("%s - Wanted %s, got %s",
-					key, want, getHeaderKey(req.Header[key]))
+				t.Errorf("%s - %s\nwant: %q\ngot:  %q",
+					packageName, key,
+					want, getHeaderKey(req.Header[key]))
 			}
 			key = "X-Github-Hook-Installation-Target-Type"
 			want = "^repository$"
 			if !util.RegexCheck(want, getHeaderKey(req.Header[key])) {
-				t.Errorf("%s - Wanted %s, got %s",
-					key, want, getHeaderKey(req.Header[key]))
+				t.Errorf("%s - %s\nwant: %q\ngot:  %q",
+					packageName, key,
+					want, getHeaderKey(req.Header[key]))
 			}
 			key = "X-Hub-Signature"
 			hash := hmac.New(sha1.New, []byte(tc.secret))
@@ -90,8 +95,9 @@ func TestSetGitHubHeaders(t *testing.T) {
 			wantVal := hex.EncodeToString(hash.Sum(nil))
 			want = "sha1=" + wantVal
 			if getHeaderKey(req.Header[key]) != want {
-				t.Errorf("%s - Wanted %s, got %s",
-					key, want, getHeaderKey(req.Header[key]))
+				t.Errorf("%s - %s\nwant: %q\ngot:  %q",
+					packageName, key,
+					want, getHeaderKey(req.Header[key]))
 			}
 			key = "X-Hub-Signature-256"
 			hash = hmac.New(sha256.New, []byte(tc.secret))
@@ -99,8 +105,9 @@ func TestSetGitHubHeaders(t *testing.T) {
 			wantVal = hex.EncodeToString(hash.Sum(nil))
 			want = "sha256=" + wantVal
 			if getHeaderKey(req.Header[key]) != want {
-				t.Errorf("%s - Wanted %s, got %s",
-					key, want, getHeaderKey(req.Header[key]))
+				t.Errorf("%s - %s\nwant: %q\ngot:  %q",
+					payload, key,
+					want, getHeaderKey(req.Header[key]))
 			}
 		})
 	}

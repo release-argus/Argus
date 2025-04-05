@@ -24,7 +24,7 @@ import (
 )
 
 func TestTemplate_String(t *testing.T) {
-	// GIVEN a variety of string templates
+	// GIVEN a variety of string templates.
 	tests := map[string]struct {
 		template    string
 		serviceInfo ServiceInfo
@@ -84,26 +84,26 @@ func TestTemplate_String(t *testing.T) {
 
 					rStr := fmt.Sprint(r)
 					if !RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf("expected a panic that matched %q\ngot: %q",
-							*tc.panicRegex, rStr)
+						t.Errorf("%s\npanic mismatch\nwant: %q\ngot:  %q",
+							packageName, *tc.panicRegex, rStr)
 					}
 				}()
 			}
 
-			// WHEN TemplateString is called
+			// WHEN TemplateString is called.
 			got := TemplateString(tc.template, tc.serviceInfo)
 
-			// THEN the string stays the same
+			// THEN the string stays the same.
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestCheckTemplate(t *testing.T) {
-	// GIVEN a variety of string templates
+	// GIVEN a variety of string templates.
 	tests := map[string]struct {
 		template string
 		pass     bool
@@ -117,13 +117,13 @@ func TestCheckTemplate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CheckTemplate is called
+			// WHEN CheckTemplate is called.
 			got := CheckTemplate(tc.template)
 
-			// THEN the string stays the same
+			// THEN the string stays the same.
 			if got != tc.pass {
-				t.Errorf("want: %t\ngot:  %t",
-					tc.pass, got)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.pass, got)
 			}
 		})
 	}

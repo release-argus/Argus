@@ -68,11 +68,13 @@ func TestLookup_CheckValues(t *testing.T) {
 			lookup := &Lookup{}
 			yamlNode, err := test.YAMLToNode(t, tc.lookupYAML)
 			if err != nil {
-				t.Fatalf("failed to convert YAML to yaml.Node: %v", err)
+				t.Fatalf("%s\nfailed to convert YAML to yaml.Node: %v",
+					packageName, err)
 			}
 			err = lookup.UnmarshalYAML(yamlNode)
 			if err != nil {
-				t.Fatalf("failed to unmarshal Lookup: %v", err)
+				t.Fatalf("%s\nfailed to unmarshal Lookup: %v",
+					packageName, err)
 			}
 			defaultLookup := testLookup("", false)
 			lookup.Options = defaultLookup.Options
@@ -89,21 +91,21 @@ func TestLookup_CheckValues(t *testing.T) {
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("manual.Lookup.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
+					packageName, wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("manual.Lookup.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 			// AND the version is set as expected.
-			if gotVersion := lookup.Status.DeployedVersion(); gotVersion != tc.wantVersion {
-				t.Errorf("manual.Lookup.CheckValues() got version %q, want %q",
-					gotVersion, tc.wantVersion)
+			gotVersion := lookup.Status.DeployedVersion()
+			if gotVersion != tc.wantVersion {
+				t.Errorf("%s\nversion mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantVersion, gotVersion)
 			}
-
 		})
 	}
 }

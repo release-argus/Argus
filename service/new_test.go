@@ -48,7 +48,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 		githubDataTransformed bool
 	}
 
-	// GIVEN a LatestVersion that may have secrets in it referencing those in another LatestVersion
+	// GIVEN a LatestVersion that may have secrets in it referencing those in another LatestVersion.
 	githubData := lv_github.Data{}
 	githubData.SetETag("shazam")
 	tests := map[string]struct {
@@ -445,64 +445,66 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			newService := &Service{LatestVersion: tc.latestVersion}
 			oldService := &Service{LatestVersion: tc.otherLV}
 
-			// WHEN we call GiveSecrets
+			// WHEN we call GiveSecrets.
 			newService.giveSecretsLatestVersion(oldService.LatestVersion)
 
-			// THEN we should get a Service with the secrets from the other Service
+			// THEN we should get a Service with the secrets from the other Service.
 			gotLV := newService.LatestVersion
 
-			// Only GitHub types have AccessTokens
+			// Only GitHub types have AccessTokens.
 			if gotLatestVersion, ok := gotLV.(*lv_github.Lookup); ok {
 				if hadLatestVersion, ok := tc.latestVersion.(*lv_github.Lookup); ok {
 					gotAccessToken := gotLatestVersion.AccessToken
 					expectedAccessToken := hadLatestVersion.AccessToken
 					if gotAccessToken != expectedAccessToken {
-						t.Errorf("Access Token\nwant: %q\ngot:  %q",
-							expectedAccessToken, gotAccessToken)
+						t.Errorf("%s\nAccessToken mismatch\nwant: %q\ngot:  %q",
+							packageName, expectedAccessToken, gotAccessToken)
 					}
 				}
 			}
 
-			// Require
+			// Require:
 			var gotRequire *filter.Require
 			var expectedRequire *filter.Require
-			// Got
+			// 	Got:
 			if gotLatestVersion, ok := gotLV.(*lv_github.Lookup); ok {
 				gotRequire = gotLatestVersion.GetRequire()
 			} else if gotLatestVersion, ok := gotLV.(*lv_web.Lookup); ok {
 				gotRequire = gotLatestVersion.GetRequire()
 			}
-			// Expected
+			// 	Expected:
 			if expectedLatestVersion, ok := tc.expected.(*lv_github.Lookup); ok {
 				expectedRequire = expectedLatestVersion.GetRequire()
 			} else if expectedLatestVersion, ok := tc.expected.(*lv_web.Lookup); ok {
 				expectedRequire = expectedLatestVersion.GetRequire()
 			}
-			// newService has a nil Require, but expected non-nil
+			// newService has a nil Require, but expected non-nil.
 			if gotRequire == nil && expectedRequire != nil {
-				t.Errorf("Expected Require to be non-nil, got nil")
+				t.Errorf("%s\nRequire mismatch\nwant: non-nil\ngot:  nil",
+					packageName)
 
-				// newService Require/Docker isn't nil when expected is or vice versa
+				// newService Require/Docker isn't nil when expected is or vice-versa.
 			} else if gotRequire != expectedRequire &&
 				gotRequire.Docker != expectedRequire.Docker &&
-				// newService doesn't have the expected Token
+				// newService doesn't have the expected Token.
 				gotRequire.Docker.Token != expectedRequire.Docker.Token {
-				t.Errorf("Expected %q, got %q",
-					expectedRequire.Docker.Token, gotRequire.Docker.Token)
+				t.Errorf("%s\nRequire.Docker.Token mismatch\nwant: %q\ngot:  %q",
+					packageName, expectedRequire.Docker.Token, gotRequire.Docker.Token)
 			}
 
-			// Data
+			// githubData:
 			if expectedLatestVersion, ok := tc.expected.(*lv_github.Lookup); ok {
-				// Ensure gotLV is a *lv_github.Lookup
+				// Ensure gotLV is a *lv_github.Lookup.
 				if gotLatestVersion, ok := gotLV.(*lv_github.Lookup); ok {
 					got := gotLatestVersion.GetGitHubData().String()
 					expected := expectedLatestVersion.GetGitHubData().String()
 					if got != expected {
-						t.Errorf("Expected githubData to be\n%v\ngot\n%v",
-							expected, got)
+						t.Errorf("%s\ngithubData mismatch\nwant: %v\ngot:  %v",
+							packageName, expected, got)
 					}
 				} else {
-					t.Fatalf("Expected *lv_github.Lookup, got %T", gotLV)
+					t.Fatalf("%s\n*lv_github.Lookup type mismatch\nwant: github.Lookup\ngot:  %T",
+						packageName, gotLV)
 				}
 			}
 		})
@@ -510,7 +512,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 }
 
 func TestService_GiveSecretsDeployedVersion(t *testing.T) {
-	// GIVEN a DeployedVersion that may have secrets in it referencing those in another DeployedVersion
+	// GIVEN a DeployedVersion that may have secrets in it referencing those in another DeployedVersion.
 	tests := map[string]struct {
 		deployedVersion, otherDV deployedver.Lookup
 		secretRefs               shared.DVSecretRef
@@ -799,21 +801,21 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			newService := &Service{DeployedVersionLookup: tc.deployedVersion}
 			oldService := &Service{DeployedVersionLookup: tc.otherDV}
 
-			// WHEN we call giveSecretsDeployedVersion
+			// WHEN we call giveSecretsDeployedVersion.
 			newService.giveSecretsDeployedVersion(oldService.DeployedVersionLookup, &tc.secretRefs)
 
-			// THEN we should get a Service with the secrets from the other Service
+			// THEN we should get a Service with the secrets from the other Service.
 			gotDV := newService.DeployedVersionLookup
 			if gotDV == tc.expected {
 				return
 			}
-			// Got/Expected nil but not both
+			// Got/Expected nil but not both.
 			if gotDV == nil && tc.expected != nil ||
 				gotDV != nil && tc.expected == nil {
-				t.Errorf("Expected %q, got %q",
-					tc.expected.String(tc.expected, ""), gotDV.String(gotDV, ""))
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.expected.String(tc.expected, ""), gotDV.String(gotDV, ""))
 			}
-			// BasicAuth
+			// BasicAuth:
 			var expectedBasicAuth *dv_web.BasicAuth
 			if expectedLV, ok := tc.expected.(*dv_web.Lookup); ok {
 				expectedBasicAuth = expectedLV.BasicAuth
@@ -822,15 +824,16 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			if gotLV, ok := gotDV.(*dv_web.Lookup); ok {
 				gotBasicAuth = gotLV.BasicAuth
 			}
-			if expectedBasicAuth != gotBasicAuth {
-				if expectedBasicAuth == nil && gotBasicAuth != nil {
-					t.Errorf("Expected BasicAuth to be nil, got %q", *gotBasicAuth)
+			if gotBasicAuth != expectedBasicAuth {
+				if gotBasicAuth != nil && expectedBasicAuth == nil {
+					t.Errorf("%s\nBasicAuth mismatch\nwant: nil\ngot:  %q",
+						packageName, *gotBasicAuth)
 				} else if gotBasicAuth.Password != expectedBasicAuth.Password {
-					t.Errorf("Expected %q, got %q",
-						util.DereferenceOrDefault(expectedBasicAuth), util.DereferenceOrDefault(gotBasicAuth))
+					t.Errorf("%s\nBasicAuth.Password mismatch\nwant: %q\ngot:  %q",
+						packageName, util.DereferenceOrDefault(expectedBasicAuth), util.DereferenceOrDefault(gotBasicAuth))
 				}
 			}
-			// Headers
+			// Headers:
 			var expectedHeaders []dv_web.Header
 			if expectedLV, ok := tc.expected.(*dv_web.Lookup); ok {
 				expectedHeaders = expectedLV.Headers
@@ -840,15 +843,15 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				gotHeaders = gotLV.Headers
 			}
 			if !test.EqualSlices(expectedHeaders, gotHeaders) {
-				t.Errorf("Expected %v, got %v",
-					expectedHeaders, gotHeaders)
+				t.Errorf("%s\nHeaders mismatch\nwant: %v\ngot:  %v",
+					packageName, expectedHeaders, gotHeaders)
 			}
 		})
 	}
 }
 
 func TestService_GiveSecretsNotify(t *testing.T) {
-	// GIVEN a NotifySlice that may have secrets in it referencing those in another NotifySliceSlice
+	// GIVEN a NotifySlice that may have secrets in it referencing those in another NotifySliceSlice.
 	tests := map[string]struct {
 		notify, otherNotify shoutrrr.Slice
 		secretRefs          map[string]shared.OldStringIndex
@@ -1544,7 +1547,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			len(newService.Notify), len(newService.Command), len(newService.WebHook),
 			&name, nil,
 			nil)
-		// Give empty defaults and hardDefaults to the NotifySlice
+		// Give empty defaults and hardDefaults to the NotifySlice.
 		newService.Notify.Init(
 			&newService.Status,
 			&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
@@ -1553,23 +1556,23 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN we call giveSecretsNotify
+			// WHEN we call giveSecretsNotify.
 			newService.giveSecretsNotify(tc.otherNotify, tc.secretRefs)
 
-			// THEN we should get a NotifySlice with the secrets from the other Service
+			// THEN we should get a NotifySlice with the secrets from the other Service.
 			gotNotify := newService.Notify
 			gotNotifyStr := gotNotify.String("")
 			expectedStr := tc.expected.String("")
 			if gotNotifyStr != expectedStr {
-				t.Errorf("secrets not passed over\nwant:\n%v\n\ngot:\n%v",
-					expectedStr, gotNotifyStr)
+				t.Errorf("%s\nsecrets not passed over\nwant: %v\n\ngot:  %v",
+					packageName, expectedStr, gotNotifyStr)
 			}
 		})
 	}
 }
 
 func TestService_GiveSecretsWebHook(t *testing.T) {
-	// GIVEN a WebHookSlice that may have secrets in it referencing those in another WebHookSliceSlice
+	// GIVEN a WebHookSlice that may have secrets in it referencing those in another WebHookSliceSlice.
 	tests := map[string]struct {
 		webhook, otherWebhook webhook.Slice
 		secretRefs            map[string]shared.WHSecretRef
@@ -2092,7 +2095,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 						nil, nil)
 				}),
 				WebHook: tc.webhook}
-			// New Service Status.Fails
+			// New Service Status.Fails.
 			newService.Status.Init(
 				len(newService.Notify), len(newService.Command), len(newService.WebHook),
 				&newService.ID, nil,
@@ -2102,7 +2105,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
 				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
 			)
-			// Other Service Status.Fails
+			// Other Service Status.Fails.
 			if tc.otherWebhook != nil {
 				otherServiceStatus := status.Status{}
 				otherServiceStatus.Init(
@@ -2116,14 +2119,14 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					test.StringPtr("10m"))
 			}
 
-			// WHEN we call giveSecretsWebHook
+			// WHEN we call giveSecretsWebHook.
 			newService.giveSecretsWebHook(tc.otherWebhook, tc.secretRefs)
 
-			// THEN we should get a WebHookSlice with the secrets from the other Service
+			// THEN we should get a WebHookSlice with the secrets from the other Service.
 			gotWebHook := newService.WebHook
 			if gotWebHook.String() != tc.expected.String() {
-				t.Errorf("Want:\n%v\n\nGot:\n%v",
-					tc.expected, gotWebHook)
+				t.Errorf("%s\nwant: %v\n\ngot:  %v",
+					packageName, tc.expected, gotWebHook)
 			}
 		})
 	}
@@ -2145,7 +2148,7 @@ func TestService_GiveSecrets(t *testing.T) {
 		expectedFails map[string]*bool
 	}
 
-	// GIVEN a Service that may have secrets in it referencing those in another Service
+	// GIVEN a Service that may have secrets in it referencing those in another Service.
 	tests := map[string]struct {
 		svc          *Service
 		oldService   *Service
@@ -3257,16 +3260,16 @@ func TestService_GiveSecrets(t *testing.T) {
 				}
 			}
 
-			// WHEN we call giveSecrets
+			// WHEN we call giveSecrets.
 			tc.svc.giveSecrets(tc.oldService, tc.secretRefs)
 
-			// THEN we should get a Service with the secrets from the old Service
+			// THEN we should get a Service with the secrets from the old Service.
 			gotService := tc.svc
 			gotServiceStr := gotService.String("")
 			expectedStr := tc.expected.String("")
 			if gotServiceStr != expectedStr {
-				t.Errorf("secrets weren't passed on with giveSecrets()\n%q\n\nGot:\n%q",
-					expectedStr, gotServiceStr)
+				t.Errorf("%s\nsecrets weren't passed on\nwant: %q\n\ngot:  %q",
+					packageName, expectedStr, gotServiceStr)
 			}
 
 			if gotService.WebHook != nil {
@@ -3275,24 +3278,23 @@ func TestService_GiveSecrets(t *testing.T) {
 					expectedWH = name
 					break
 				}
-				// Expecting Failed to be carried over
-				// Get failed state being copied
+				// Expecting Failed to be carried over.
+				// Get failed state being copied.
 				var wantFailed *bool
 				for name, wh := range tc.expected.WebHook {
 					wantFailed = wh.Failed.Get(name)
 					break
 				}
-				// Get carried over state
+				// Get carried over state.
 				gotFailed := gotService.WebHook[expectedWH].Failed.Get(expectedWH)
 				if gotFailed == wantFailed {
 					return
 				}
-				if gotFailed == nil || wantFailed == nil {
-					t.Errorf("Want: %v, got: %v",
-						wantFailed, gotFailed)
-				} else if *gotFailed != *wantFailed {
-					t.Errorf("Want: %t, got: %t",
-						*wantFailed, *gotFailed)
+				wantFailedStr := test.StringifyPtr(wantFailed)
+				gotFailedStr := test.StringifyPtr(gotFailed)
+				if gotFailedStr != wantFailedStr {
+					t.Errorf("%s\nstringified mismatch on .Failed\nwant: %q\ngot:  %q",
+						packageName, wantFailedStr, gotFailedStr)
 				}
 			}
 		})
@@ -3300,7 +3302,7 @@ func TestService_GiveSecrets(t *testing.T) {
 }
 
 func TestService_CheckFetches(t *testing.T) {
-	// GIVEN a Service
+	// GIVEN a Service.
 	testLV := testLatestVersion(t, "url", false)
 	testLV.Query(false, logutil.LogFrom{})
 	testDVL := testDeployedVersionLookup(t, false)
@@ -3355,7 +3357,7 @@ func TestService_CheckFetches(t *testing.T) {
 		"inactive queries neither": {
 			svc: &Service{
 				Options: *opt.New(
-					test.BoolPtr(false), // active
+					test.BoolPtr(false),
 					"", nil,
 					nil, nil),
 				LatestVersion:         testLatestVersion(t, "url", false),
@@ -3380,35 +3382,36 @@ func TestService_CheckFetches(t *testing.T) {
 			tc.svc.Status.SetLatestVersion(tc.startLatestVersion, "", false)
 			tc.svc.Status.SetDeployedVersion(tc.startDeployedVersion, "", false)
 
-			// WHEN we call CheckFetches
+			// WHEN we call CheckFetches.
 			err := tc.svc.CheckFetches()
 
-			// THEN we get the err we expect
+			// THEN we get the err we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
-			// AND we get the expected LatestVersion
+			// AND we get the expected LatestVersion.
 			if tc.svc.Status.LatestVersion() != tc.wantLatestVersion {
-				t.Errorf("LatestVersion\nWant: %q, got: %q",
-					tc.wantLatestVersion, tc.svc.Status.LatestVersion())
+				t.Errorf("%s\nStatus.LatestVersion() mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantLatestVersion, tc.svc.Status.LatestVersion())
 			}
-			// AND we get the expected DeployedVersion
+			// AND we get the expected DeployedVersion.
 			if tc.svc.Status.DeployedVersion() != tc.wantDeployedVersion {
-				t.Errorf("DeployedVersion\nWant: %q, got: %q",
-					tc.wantDeployedVersion, tc.svc.Status.DeployedVersion())
+				t.Errorf("%s\nStatus.DeployedVersion() mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantDeployedVersion, tc.svc.Status.DeployedVersion())
 			}
-			if len(*tc.svc.Status.AnnounceChannel) != 0 {
-				t.Errorf("AnnounceChannel should be empty, got %d",
-					len(*tc.svc.Status.AnnounceChannel))
+			want := 0
+			if len(*tc.svc.Status.AnnounceChannel) != want {
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
+					packageName, want, len(*tc.svc.Status.AnnounceChannel))
 			}
 		})
 	}
 }
 
 func TestRemoveDefaults(t *testing.T) {
-	// GIVEN a Service, old Service and defaults
+	// GIVEN a Service, old Service and defaults.
 	tests := map[string]struct {
 		svc                     *Service
 		wasUsingNotifyDefaults  bool
@@ -3660,25 +3663,25 @@ func TestRemoveDefaults(t *testing.T) {
 			oldService.commandFromDefaults = tc.wasUsingCommandDefaults
 			oldService.webhookFromDefaults = tc.wasUsingDefaults
 
-			// WHEN we call RemoveDefaults
+			// WHEN we call RemoveDefaults.
 			removeDefaults(&oldService, tc.svc, tc.d)
 
-			// THEN we get the expected Service
-			if tc.want.String("") != tc.svc.String("") {
-				t.Errorf("\nwant: %q\ngot:  %q",
-					tc.want.String(""), tc.svc.String(""))
+			// THEN we get the expected Service.
+			if tc.svc.String("") != tc.want.String("") {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(""), tc.svc.String(""))
 			}
 		})
 	}
 }
 
 func TestFromPayload_ReadFromFail(t *testing.T) {
-	// GIVEN an invalid payload
+	// GIVEN an invalid payload.
 	payloadStr := "this is a long payload"
 	payload := io.NopCloser(bytes.NewReader([]byte(payloadStr)))
 	payload = http.MaxBytesReader(nil, payload, 5)
 
-	// WHEN we call New
+	// WHEN we call New.
 	_, err := FromPayload(
 		&Service{},
 		&payload,
@@ -3690,14 +3693,15 @@ func TestFromPayload_ReadFromFail(t *testing.T) {
 		logutil.LogFrom{},
 	)
 
-	// THEN we should get an error
+	// THEN we should get an error.
 	if err == nil {
-		t.Errorf("Want error, got nil")
+		t.Errorf("%s\nwant: error\ngot:  nil",
+			packageName)
 	}
 }
 
 func TestFromPayload(t *testing.T) {
-	// GIVEN a payload and the Service defaults
+	// GIVEN a payload and the Service defaults.
 	tests := map[string]struct {
 		oldService *Service
 		payload    string
@@ -3721,8 +3725,10 @@ func TestFromPayload(t *testing.T) {
 			errRegex: `^invalid character 'a' looking for beginning of value$`,
 		},
 		"invalid Service payload": {
-			payload:  `{"name": false}`,
-			errRegex: `json: cannot unmarshal bool into Go struct field [^ ]+ of type string$`,
+			payload: `{"name": false}`,
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal service.Service:
+					cannot unmarshal bool into Go struct field [^ ]+ of type string$`),
 		},
 		"invalid SecretRefs payload": {
 			payload: `{
@@ -3735,7 +3741,7 @@ func TestFromPayload(t *testing.T) {
 			payload: `{
 				"options": {
 					"active": true}}`,
-			// Defaults as otherwise everything will be zero, so won't print
+			// Defaults as otherwise everything will be zero, so won't print.
 			want: &Service{
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
 				Options: opt.Options{
@@ -3748,7 +3754,7 @@ func TestFromPayload(t *testing.T) {
 			payload: `{
 				"options": {
 					"active": null}}`,
-			// Defaults as otherwise everything will be zero, so won't print
+			// Defaults as otherwise everything will be zero, so won't print.
 			want: &Service{
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
 				Options: opt.Options{
@@ -3761,7 +3767,7 @@ func TestFromPayload(t *testing.T) {
 			payload: `{
 				"options": {
 					"active": false}}`,
-			// Defaults as otherwise everything will be zero, so won't print
+			// Defaults as otherwise everything will be zero, so won't print.
 			want: &Service{
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
 				Options: opt.Options{
@@ -4048,7 +4054,7 @@ func TestFromPayload(t *testing.T) {
 				Notify: shoutrrr.Slice{
 					"slack": shoutrrr.New(
 						nil, "",
-						"", // Type removed as it's in ID
+						"", // Type removed as it's in ID.
 						nil,
 						map[string]string{
 							"token": "slackToken"},
@@ -4056,7 +4062,7 @@ func TestFromPayload(t *testing.T) {
 						nil, nil, nil),
 					"join": shoutrrr.New(
 						nil, "",
-						"", // Type removed as it's in ID
+						"", // Type removed as it's in ID.
 						nil,
 						map[string]string{
 							"devices": "aDevice",
@@ -4066,7 +4072,7 @@ func TestFromPayload(t *testing.T) {
 						nil, nil, nil),
 					"zulip": shoutrrr.New(
 						nil, "",
-						"", // Type removed as it's in ID
+						"", // Type removed as it's in ID.
 						nil,
 						map[string]string{
 							"botkey": "zulipBotKey"},
@@ -4082,7 +4088,7 @@ func TestFromPayload(t *testing.T) {
 						nil, nil, nil),
 					"rocketchat": shoutrrr.New(
 						nil, "",
-						"", // Type removed as it's in ID
+						"", // Type removed as it's in ID.
 						nil,
 						map[string]string{
 							"tokena": "rocketchatTokenA",
@@ -4091,7 +4097,7 @@ func TestFromPayload(t *testing.T) {
 						nil, nil, nil),
 					"teams": shoutrrr.New(
 						nil, "",
-						"", // Type removed as it's in ID
+						"", // Type removed as it's in ID.
 						nil,
 						map[string]string{
 							"altid": "teamsAltID"},
@@ -4298,7 +4304,7 @@ func TestFromPayload(t *testing.T) {
 				Notify: shoutrrr.Slice{
 					"slack": shoutrrr.New(
 						nil, "",
-						"", // Type removed as it's in ID
+						"", // Type removed as it's in ID.
 						nil,
 						map[string]string{
 							"token": "slackToken"},
@@ -4306,7 +4312,7 @@ func TestFromPayload(t *testing.T) {
 						nil, nil, nil),
 					"join": shoutrrr.New(
 						nil, "",
-						"", // Type removed as it's in ID
+						"", // Type removed as it's in ID.
 						nil,
 						map[string]string{
 							"apikey": "joinApiKey"},
@@ -4316,7 +4322,7 @@ func TestFromPayload(t *testing.T) {
 						nil, nil, nil),
 					"zulip": shoutrrr.New(
 						nil, "",
-						"", // Type removed as it's in ID
+						"", // Type removed as it's in ID.
 						nil,
 						map[string]string{
 							"botkey": "zulipBotKey"},
@@ -4332,7 +4338,7 @@ func TestFromPayload(t *testing.T) {
 						nil, nil, nil),
 					"rocketchat": shoutrrr.New(
 						nil, "",
-						"", // Type removed as it's in ID
+						"", // Type removed as it's in ID.
 						nil,
 						map[string]string{
 							"tokena": "rocketchatTokenA",
@@ -4341,7 +4347,7 @@ func TestFromPayload(t *testing.T) {
 						nil, nil, nil),
 					"teams": shoutrrr.New(
 						nil, "",
-						"", // Type removed as it's in ID
+						"", // Type removed as it's in ID.
 						nil,
 						map[string]string{
 							"altid": "teamsAltId"},
@@ -4356,7 +4362,7 @@ func TestFromPayload(t *testing.T) {
 						"", nil, nil, nil, nil, nil,
 						"githubSecret",
 						nil,
-						"", // Type removed as it's in ID
+						"", // Type removed as it's in ID.
 						"", nil, nil, nil),
 					"gitlab-": webhook.New(
 						nil,
@@ -4493,7 +4499,7 @@ func TestFromPayload(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// Convert the string payload to a ReadCloser
+			// Convert the string payload to a ReadCloser.
 			tc.payload = test.TrimJSON(tc.payload)
 			reader := bytes.NewReader([]byte(tc.payload))
 			payload := io.NopCloser(reader)
@@ -4518,7 +4524,7 @@ func TestFromPayload(t *testing.T) {
 					&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 			}
 
-			// WHEN we call FromPayload
+			// WHEN we call FromPayload.
 			got, err := FromPayload(
 				tc.oldService,
 				&payload,
@@ -4532,19 +4538,19 @@ func TestFromPayload(t *testing.T) {
 				tc.webhookHardDefaults,
 				logutil.LogFrom{Primary: name})
 
-			// THEN we get an error if the payload is invalid
+			// THEN we get an error if the payload is invalid.
 			if tc.errRegex != "" || err != nil {
 				e := util.ErrorToString(err)
 				if !util.RegexCheck(tc.errRegex, e) {
-					t.Fatalf("error doesn't match regex\nwant match for %q\ngot: %q",
-						tc.errRegex, e)
+					t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.errRegex, e)
 				}
 				return
 			}
-			// AND we should get a new Service otherwise
+			// AND we should get a new Service otherwise.
 			if got.String("") != tc.want.String("") {
-				t.Errorf("Service mismatch after FromPayload\nwant:\n%s\n\ngot:\n%s",
-					tc.want.String(""), got.String(""))
+				t.Errorf("%s\nmismatch\nwant: %q\n\ngot:  %q",
+					packageName, tc.want.String(""), got.String(""))
 			}
 		})
 	}

@@ -285,8 +285,8 @@ func TestLookup_Track(t *testing.T) {
 			time.Sleep(tc.wait)
 			if tc.expectFinish {
 				if len(didFinish) == 0 {
-					t.Fatalf("expected Track to finish in %s, but it didn't",
-						tc.wait)
+					t.Fatalf("%s\nTrack didn't finish in <= %s",
+						packageName, tc.wait)
 				}
 				releaseStdout()
 				return
@@ -305,24 +305,25 @@ func TestLookup_Track(t *testing.T) {
 			time.Sleep(5 * time.Second)
 			stdout := releaseStdout()
 			t.Log(stdout)
-			if gotDeployedVersion := tc.lookup.Status.DeployedVersion(); tc.wantDeployedVersion != gotDeployedVersion {
-				t.Errorf("expected DeployedVersion to be %q after query, not %q",
-					tc.wantDeployedVersion, gotDeployedVersion)
+			if gotDeployedVersion := tc.lookup.Status.DeployedVersion(); gotDeployedVersion != tc.wantDeployedVersion {
+				t.Errorf("%s\nDeployedVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantDeployedVersion, gotDeployedVersion)
 			}
-			if gotLatestVersion := tc.lookup.Status.LatestVersion(); tc.wantLatestVersion != gotLatestVersion {
-				t.Errorf("expected LatestVersion to be %q after query, not %q",
-					tc.wantLatestVersion, gotLatestVersion)
+			if gotLatestVersion := tc.lookup.Status.LatestVersion(); gotLatestVersion != tc.wantLatestVersion {
+				t.Errorf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantLatestVersion, gotLatestVersion)
 			}
-			if gotAnnounces := len(*tc.lookup.Status.AnnounceChannel); tc.wantAnnounces != gotAnnounces {
+			if gotAnnounces := len(*tc.lookup.Status.AnnounceChannel); gotAnnounces != tc.wantAnnounces {
 				for i := 0; i < gotAnnounces; i++ {
-					t.Logf("%s\n", <-(*tc.lookup.Status.AnnounceChannel))
+					t.Logf("%s\nAnnounce message - %s\n",
+						packageName, <-(*tc.lookup.Status.AnnounceChannel))
 				}
-				t.Errorf("expected AnnounceChannel to have %d messages in queue, not %d",
-					tc.wantAnnounces, gotAnnounces)
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantAnnounces, gotAnnounces)
 			}
-			if gotDatabaseMessages := len(*tc.lookup.Status.DatabaseChannel); tc.wantDatabaseMessages != gotDatabaseMessages {
-				t.Errorf("expected DatabaseChannel to have %d messages in queue, not %d",
-					tc.wantDatabaseMessages, gotDatabaseMessages)
+			if gotDatabaseMessages := len(*tc.lookup.Status.DatabaseChannel); gotDatabaseMessages != tc.wantDatabaseMessages {
+				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantDatabaseMessages, gotDatabaseMessages)
 			}
 
 			// Set Deleting to stop the Track.
@@ -527,28 +528,31 @@ func TestLookup_Query(t *testing.T) {
 			dvl.JSON = ""
 			err := yaml.Unmarshal([]byte(tc.overrides), dvl)
 			if err != nil {
-				t.Fatalf("failed to unmarshal overrides: %s", err)
+				t.Fatalf("%s\nfailed to unmarshal overrides: %s",
+					packageName, err)
 			}
 			err = yaml.Unmarshal([]byte(tc.optionsOverrides), dvl.Options)
 			if err != nil {
-				t.Fatalf("failed to unmarshal options overrides: %s", err)
+				t.Fatalf("%s\nfailed to unmarshal options overrides: %s",
+					packageName, err)
 			}
 
 			// WHEN Query is called on it.
 			err = dvl.Query(true, logutil.LogFrom{})
 
 			// THEN any err is expected.
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
+			}
+			// AND the version matches the expected regex.
 			if tc.wantVersion != "" {
 				version := dvl.Status.DeployedVersion()
 				if !util.RegexCheck(tc.wantVersion, version) {
-					t.Errorf("want version=%q\ngot  version=%q",
-						tc.wantVersion, version)
+					t.Errorf("%s\nDeployedVersion mismatch\nwant %q\ngot:  %q",
+						packageName, tc.wantVersion, version)
 				}
-			}
-			e := util.ErrorToString(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
 			}
 		})
 	}
@@ -663,7 +667,8 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			tc.overrides = test.TrimYAML(tc.overrides)
 			err := yaml.Unmarshal([]byte(tc.overrides), lookup)
 			if err != nil {
-				t.Fatalf("failed to unmarshal overrides: %s", err)
+				t.Fatalf("%s\nfailed to unmarshal overrides: %s",
+					packageName, err)
 			}
 
 			// WHEN httpRequest is called on it.
@@ -672,14 +677,14 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			// AND the body matches the expected regex.
 			if tc.bodyRegex != "" {
 				if !util.RegexCheck(tc.bodyRegex, string(body)) {
-					t.Errorf("body mismatch\n%q\ngot:\n%q",
-						tc.bodyRegex, string(body))
+					t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.bodyRegex, string(body))
 				}
 			}
 		})

@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 )
 
 func TestSetGitLabParameter(t *testing.T) {
-	// GIVEN a HTTP Request
+	// GIVEN a HTTP Request.
 	tests := map[string]struct {
 		secret      string
 		queryParams string
@@ -53,14 +53,14 @@ func TestSetGitLabParameter(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/approvals%s", tc.queryParams), nil)
 
-			// WHEN SetGitLabParameter is called
+			// WHEN SetGitLabParameter is called.
 			SetGitLabParameter(req, tc.secret)
 
-			// THEN the function correctly encodes URL.RawQuery
+			// THEN the function correctly encodes URL.RawQuery.
 			got := req.URL.RawQuery
 			if got != tc.want {
-				t.Errorf("SetGitLabParameter failed. Want %s, got %s",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}

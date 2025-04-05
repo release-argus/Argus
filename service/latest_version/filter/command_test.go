@@ -27,7 +27,7 @@ import (
 )
 
 func TestRequire_ExecCommand(t *testing.T) {
-	// GIVEN a Require with a Command
+	// GIVEN a Require with a Command.
 	tests := map[string]struct {
 		cmd      command.Command
 		errRegex string
@@ -55,14 +55,14 @@ func TestRequire_ExecCommand(t *testing.T) {
 				&name, nil,
 				test.StringPtr("http://example.com"))
 
-			// WHEN ApplyTemplate is called on the Command
+			// WHEN ApplyTemplate is called on the Command.
 			err := require.ExecCommand(logutil.LogFrom{})
 
-			// THEN the err is expected
+			// THEN the err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}

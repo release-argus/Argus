@@ -23,6 +23,8 @@ import (
 	"github.com/release-argus/Argus/test"
 )
 
+var packageName = "status"
+
 func TestFailsBase_Init(t *testing.T) {
 	// GIVEN a Fails.
 	tests := map[string]struct {
@@ -50,16 +52,16 @@ func TestFailsBase_Init(t *testing.T) {
 
 			// THEN the size of the map is as expected.
 			if len(failsCommand.fails) != tc.size {
-				t.Errorf("FailsCommand - want: %d, got: %d",
-					tc.size, len(failsCommand.fails))
+				t.Errorf("%s\nFailsCommand length mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.size, len(failsCommand.fails))
 			}
 			if failsShoutrrr.fails == nil {
-				t.Errorf("FailsCommand - want: non-nil, got: %v",
-					failsShoutrrr.fails)
+				t.Errorf("%s\nFailsShoutrrr length mismatch\nwant: non-nil, got:  %v",
+					packageName, failsShoutrrr.fails)
 			}
 			if failsWebHook.fails == nil {
-				t.Errorf("FailsWebHook - want: non-nil, got: %v",
-					failsWebHook.fails)
+				t.Errorf("%s\nFailsWebHook length mismatch\nwant: non-nil\ngot:  %v",
+					packageName, failsWebHook.fails)
 			}
 		})
 	}
@@ -106,17 +108,20 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 			for i := range tc.setAtArray {
 				got := failsCommand.Get(i)
 				if got != nil {
-					t.Errorf("FailsCommand - want: nil, got: %v", got)
+					t.Errorf("%s\nFailsCommand, Get after Init\nwant: nil\ngot:  %v",
+						packageName, got)
 				}
 			}
 			for k := range tc.setAtMap {
 				got := failsShoutrrr.Get(k)
 				if got != nil {
-					t.Errorf("FailsShoutrrr - want: nil, got: %v", got)
+					t.Errorf("%s\nFailsShoutrrr, Get after Init\nwant: nil\ngot:  %v",
+						packageName, got)
 				}
 				got = failsWebHook.Get(k)
 				if got != nil {
-					t.Errorf("FailsWebHook - want: nil, got: %v", got)
+					t.Errorf("%s\nFailsWebHook, Get after Init\nwant: nil\ngot:  %v",
+						packageName, got)
 				}
 			}
 
@@ -132,27 +137,24 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 			// THEN the values can be retrieved with Get.
 			for i, v := range tc.setAtArray {
 				got := failsCommand.Get(i)
+				gotStr := test.StringifyPtr(got)
 				if got == nil {
-					t.Errorf("FailsCommand - want: non-nil, got: %v", got)
-				}
-				if *got != *v {
-					t.Errorf("FailsCommand - want: %v, got: %v", v, got)
+					t.Errorf("%s\nFailsCommand, Get after Set\nwant: %t\ngot:  %q",
+						packageName, *v, gotStr)
 				}
 			}
 			for k, v := range tc.setAtMap {
 				got := failsShoutrrr.Get(k)
+				gotStr := test.StringifyPtr(got)
 				if got == nil {
-					t.Errorf("FailsShoutrrr - want: non-nil, got: %v", got)
-				}
-				if *got != *v {
-					t.Errorf("FailsShoutrrr - want: %v, got: %v", v, got)
+					t.Errorf("%s\nFailsShoutrrr, Get after Set\nwant: %t\ngot:  %q",
+						packageName, *v, gotStr)
 				}
 				got = failsWebHook.Get(k)
+				gotStr = test.StringifyPtr(got)
 				if got == nil {
-					t.Errorf("FailsWebHook - want: non-nil, got: %v", got)
-				}
-				if *got != *v {
-					t.Errorf("FailsWebHook - want: %v, got: %v", v, got)
+					t.Errorf("%s\nFailsWebHook, Get after Set\nwant: %t\ngot:  %q",
+						packageName, *v, gotStr)
 				}
 			}
 		})
@@ -225,13 +227,16 @@ func TestFailsBase_AllPassed(t *testing.T) {
 
 			// THEN the result is as expected.
 			if gotC != tc.want {
-				t.Errorf("FailsCommand - want: %v, got: %v", tc.want, gotC)
+				t.Errorf("%s\nFailsCommand\nwant: %t\ngot:  %t",
+					packageName, tc.want, gotC)
 			}
 			if gotS != tc.want {
-				t.Errorf("FailsShoutrrr - want: %v, got: %v", tc.want, gotS)
+				t.Errorf("%s\nFailsShoutrrr\nwant: %t\ngot:  %t",
+					packageName, tc.want, gotS)
 			}
 			if gotWH != tc.want {
-				t.Errorf("FailsWebHook - want: %v, got: %v", tc.want, gotWH)
+				t.Errorf("%s\nFailsWebHook\nwant: %t\ngot:  %t",
+					packageName, tc.want, gotWH)
 			}
 		})
 	}
@@ -299,16 +304,19 @@ func TestFailsBase_Reset(t *testing.T) {
 			for i := range tc.fails {
 				got := failsCommand.Get(i)
 				if got != nil {
-					t.Errorf("FailsCommand - want: nil, got: %v", got)
+					t.Errorf("%s\nFailsCommand\nwant: nil\ngot:  %v",
+						packageName, got)
 				}
 				iStr := strconv.Itoa(i)
 				got = failsShoutrrr.Get(iStr)
 				if got != nil {
-					t.Errorf("FailsShoutrrr - want: nil, got: %v", got)
+					t.Errorf("%s\nFailsShoutrrr\nwant: nil\ngot:  %v",
+						packageName, got)
 				}
 				got = failsWebHook.Get(iStr)
 				if got != nil {
-					t.Errorf("FailsWebHook - want: nil, got: %v", got)
+					t.Errorf("%s\nFailsWebHook\nwant: nil\ngot:  %v",
+						packageName, got)
 				}
 			}
 		})
@@ -379,16 +387,16 @@ func TestFailsBase_Length(t *testing.T) {
 
 			// THEN the lengths of the maps are returned.
 			if lengthC != tc.size {
-				t.Errorf("FailsCommand - want: %v, got: %v",
-					tc.size, lengthC)
+				t.Errorf("%s\nFailsCommand\nwant: %v, got:  %v",
+					packageName, tc.size, lengthC)
 			}
 			if lengthS != len(tc.setAtMap) {
-				t.Errorf("FailsShoutrrr - want: %v, got: %v",
-					len(tc.setAtMap), lengthS)
+				t.Errorf("%s\nFailsShoutrrr\nwant: %v, got:  %v",
+					packageName, len(tc.setAtMap), lengthS)
 			}
 			if lengthWH != len(tc.setAtMap) {
-				t.Errorf("FailsWebHook - want: %v, got: %v",
-					len(tc.setAtMap), lengthWH)
+				t.Errorf("%s\nFailsWebHook\nwant: %v, got:  %v",
+					packageName, len(tc.setAtMap), lengthWH)
 			}
 		})
 	}
@@ -547,8 +555,8 @@ func TestFails_String(t *testing.T) {
 
 			// THEN the result is as expected.
 			if got != tc.want {
-				t.Errorf("Fails.String() mismatch\n%q\ngot:\n%q",
-					tc.want, got)
+				t.Errorf("%s\n\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -657,41 +665,41 @@ func TestFails_Copy(t *testing.T) {
 			// THEN the values are copied correctly.
 			// Command.
 			if len(to.Command.fails) > len(from.Command.fails) {
-				t.Errorf("Command - want: %d, got: %d",
-					len(tc.fromCommandFails), len(tc.toCommandFails))
+				t.Errorf("%s\nCommand, length mismatch\nwant: %d\ngot:  %d",
+					packageName, len(tc.fromCommandFails), len(tc.toCommandFails))
 			}
 			for k, v := range tc.fromCommandFails {
 				fromStr := test.StringifyPtr(v)
 				gotStr := test.StringifyPtr(to.Command.Get(k))
-				if fromStr != gotStr {
-					t.Errorf("Command - want: %s, got: %s",
-						fromStr, gotStr)
+				if gotStr != fromStr {
+					t.Errorf("%s\nCommand[%d] mismatch\nwant: %s, got:  %s",
+						packageName, k, fromStr, gotStr)
 				}
 			}
 			// Shoutrrr.
 			if len(to.Shoutrrr.fails) > len(from.Shoutrrr.fails) {
-				t.Errorf("Shoutrrr - want: %d, got: %d",
-					len(tc.fromShoutrrrFails), len(tc.toShoutrrrFails))
+				t.Errorf("%s\nShoutrrr, length mismatch\nwant: %d\ngot:  %d",
+					packageName, len(tc.fromShoutrrrFails), len(tc.toShoutrrrFails))
 			}
 			for k, v := range tc.fromShoutrrrFails {
 				fromStr := test.StringifyPtr(v)
 				gotStr := test.StringifyPtr(to.Shoutrrr.Get(k))
-				if fromStr != gotStr {
-					t.Errorf("Shoutrrr - want: %s, got: %s",
-						fromStr, gotStr)
+				if gotStr != fromStr {
+					t.Errorf("%s\nShoutrrr[%q]\nwant: %s\ngot:  %s",
+						packageName, k, fromStr, gotStr)
 				}
 			}
 			// WebHook.
 			if len(to.WebHook.fails) > len(from.WebHook.fails) {
-				t.Errorf("WebHook - want: %d, got: %d",
-					len(tc.fromWebHookFails), len(tc.toWebHookFails))
+				t.Errorf("%s\nWebHook, length mismatch\nwant: %d\ngot:  %d",
+					packageName, len(tc.fromWebHookFails), len(tc.toWebHookFails))
 			}
 			for k, v := range tc.fromWebHookFails {
 				fromStr := test.StringifyPtr(v)
 				gotStr := test.StringifyPtr(to.WebHook.Get(k))
-				if fromStr != gotStr {
-					t.Errorf("WebHook - want: %s, got: %s",
-						fromStr, gotStr)
+				if gotStr != fromStr {
+					t.Errorf("%s\nWebHook[%q]\nwant: %s\ngot:  %s",
+						packageName, k, fromStr, gotStr)
 				}
 			}
 		})

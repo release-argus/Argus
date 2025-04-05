@@ -143,19 +143,19 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
-				t.Errorf("unexpected status code. Want: %d, Got: %d",
-					tc.wants.statusCode, res.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wants.statusCode, res.StatusCode)
 			}
 			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			if !util.RegexCheck(tc.wants.body, got) {
-				t.Errorf("want Body to match\n%q\ngot\n%q",
-					tc.wants.body, got)
+				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wants.body, got)
 			}
 		})
 	}
@@ -261,19 +261,19 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
-				t.Errorf("unexpected status code. Want: %d, Got: %d",
-					tc.wants.statusCode, res.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wants.statusCode, res.StatusCode)
 			}
 			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			if !util.RegexCheck(tc.wants.body, got) {
-				t.Errorf("want Body to match\n%q\ngot\n%q",
-					tc.wants.body, got)
+				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wants.body, got)
 			}
 		})
 	}
@@ -423,29 +423,29 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
-				t.Errorf("unexpected status code. Want: %d, Got: %d\n",
-					tc.wants.statusCode, res.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wants.statusCode, res.StatusCode)
 			}
 			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			if !util.RegexCheck(tc.wants.body, got) {
-				t.Errorf("want Body to match\n%q\ngot:\n%q\n",
-					tc.wants.body, got)
+				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wants.body, got)
 			}
 			// AND the LatestVersion is expected.
 			if svc.Status.LatestVersion() != tc.wants.latestVersion {
-				t.Errorf("VersionRefresh-LatestVersion, expected %q, not %q\n",
-					tc.wants.latestVersion, svc.Status.LatestVersion())
+				t.Errorf("%s\nVersionRefresh - LatestVersion\nwant: %q\ngot:  %q",
+					packageName, tc.wants.latestVersion, svc.Status.LatestVersion())
 			}
 			// AND the DeployedVersion is expected.
 			if svc.Status.DeployedVersion() != tc.wants.deployedVersion {
-				t.Errorf("VersionRefresh-DeployedVersion, expected %q, not %q\n",
-					tc.wants.deployedVersion, svc.Status.DeployedVersion())
+				t.Errorf("%s\nVersionRefresh - DeployedVersion\nwant: %q\ngot:  %q",
+					packageName, tc.wants.deployedVersion, svc.Status.DeployedVersion())
 			}
 			// AND the expected announcement is made.
 			wantAnnounces := 0
@@ -453,8 +453,8 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				wantAnnounces = 1
 			}
 			if got := len(*svc.Status.AnnounceChannel); got != wantAnnounces {
-				t.Errorf("DeployedVersionRefresh-Announcements, expected %d, not %d\n",
-					wantAnnounces, got)
+				t.Errorf("%s\nDeployedVersionRefresh - Announcements length mismatch\nwant: %d\ngot:  %d",
+					packageName, wantAnnounces, got)
 			}
 		})
 	}
@@ -633,29 +633,29 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
-				t.Errorf("unexpected status code. Want: %d, Got: %d\n",
-					tc.wants.statusCode, res.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wants.statusCode, res.StatusCode)
 			}
 			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			if !util.RegexCheck(tc.wants.body, got) {
-				t.Errorf("want Body to match\n%q\ngot:\n%q\n",
-					tc.wants.body, got)
+				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wants.body, got)
 			}
 			// AND the LatestVersion is unchanged.
 			if gotLatestVersion := svc.Status.LatestVersion(); gotLatestVersion != initialLatestVersion {
-				t.Errorf("VersionRefresh-LatestVersion, expected %q, not %q\n",
-					initialLatestVersion, svc.Status.LatestVersion())
+				t.Errorf("%s\nVersionRefresh - LatestVersion\nwant: %q\ngot:  %q",
+					packageName, initialLatestVersion, svc.Status.LatestVersion())
 			}
 			// AND the DeployedVersion is expected.
 			if svc.Status.DeployedVersion() != tc.wants.deployedVersion {
-				t.Errorf("VersionRefresh-DeployedVersion, expected %q, not %q\n",
-					tc.wants.deployedVersion, svc.Status.DeployedVersion())
+				t.Errorf("%s\nVersionRefresh - DeployedVersion\nwant: %q\ngot:  %q",
+					packageName, tc.wants.deployedVersion, svc.Status.DeployedVersion())
 			}
 		})
 	}
@@ -730,19 +730,19 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
-				t.Errorf("unexpected status code. Want: %d, Got: %d",
-					tc.wants.statusCode, res.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wants.statusCode, res.StatusCode)
 			}
 			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			if !util.RegexCheck(tc.wants.body, got) {
-				t.Errorf("want Body to match\n%q\ngot:\n%q",
-					tc.wants.body, got)
+				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wants.body, got)
 			}
 		})
 	}
@@ -790,20 +790,20 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wantStatusCode {
-				t.Errorf("unexpected status code. Want: %d, Got: %d",
-					tc.wantStatusCode, res.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantStatusCode, res.StatusCode)
 			}
 			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			tc.wantBody = strings.ReplaceAll(tc.wantBody, "\n", "")
 			if !util.RegexCheck(tc.wantBody, got) {
-				t.Errorf("want Body to match\n%q\ngot:\n%q",
-					tc.wantBody, got)
+				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantBody, got)
 			}
 		})
 	}
@@ -920,18 +920,19 @@ func TestHTTP_TemplateParse(t *testing.T) {
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
-				t.Errorf("unexpected status code. Want: %d, Got: %d",
-					tc.wants.statusCode, res.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wants.statusCode, res.StatusCode)
 			}
 			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v", err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			if !util.RegexCheck(tc.wants.body, got) {
-				t.Errorf("want Body to match\n%q\ngot:\n%q",
-					tc.wants.body, got)
+				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wants.body, got)
 			}
 		})
 	}
@@ -1130,19 +1131,19 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
-				t.Errorf("unexpected status code. Got: %d, Want: %d",
-					tc.wants.statusCode, res.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wants.statusCode, res.StatusCode)
 			}
 			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("ServiceEdit unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			if !util.RegexCheck(tc.wants.body, got) {
-				t.Errorf("want Body to match\n%q\ngot:\n%q",
-					tc.wants.body, got)
+				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wants.body, got)
 			}
 			if tc.wants.statusCode != http.StatusOK {
 				return
@@ -1158,28 +1159,28 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 			apiMutex.RLock()
 			if tc.serviceID != nil &&
 				api.Config.Service[*tc.serviceID] == nil {
-				t.Errorf("service %q not created",
-					*tc.serviceID)
+				t.Errorf("%s\nservice %q not created",
+					packageName, *tc.serviceID)
 			}
 			svc = api.Config.Service[serviceID]
 			apiMutex.RUnlock()
 			if svc == nil {
 				if tc.wants.latestVersion != tc.wants.deployedVersion &&
 					tc.wants.latestVersion != "" {
-					t.Errorf("service %q not created",
-						serviceID)
+					t.Errorf("%s\nservice %q not created",
+						packageName, serviceID)
 				}
 				return
 			}
 			// AND the LatestVersion is expected.
 			if !util.RegexCheck(tc.wants.latestVersion, svc.Status.LatestVersion()) {
-				t.Errorf("ServiceEdit-LatestVersion, expected %q, not %q",
-					tc.wants.latestVersion, svc.Status.LatestVersion())
+				t.Errorf("%s\nServiceEdit - LatestVersion\nwant: %q\ngot:  %q",
+					packageName, tc.wants.latestVersion, svc.Status.LatestVersion())
 			}
 			// AND the DeployedVersion is expected.
 			if !util.RegexCheck(tc.wants.deployedVersion, svc.Status.DeployedVersion()) {
-				t.Errorf("ServiceEdit-DeployedVersion, expected %q, not %q",
-					tc.wants.deployedVersion, svc.Status.DeployedVersion())
+				t.Errorf("%s\nServiceEdit - DeployedVersion\nwant: %q\ngot:  %q",
+					packageName, tc.wants.deployedVersion, svc.Status.DeployedVersion())
 			}
 		})
 	}
@@ -1255,40 +1256,40 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
-				t.Errorf("unexpected status code. Want: %d, Got: %d",
-					tc.wants.statusCode, res.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wants.statusCode, res.StatusCode)
 			}
 			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			if !util.RegexCheck(tc.wants.body, got) {
-				t.Errorf("want Body to match\n%q\ngot:\n%q",
-					tc.wants.body, got)
+				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wants.body, got)
 			}
 			// AND the service is removed from the config.
 			if api.Config.Service[tc.serviceID] != nil {
-				t.Errorf("ServiceDelete didn't remove %q from the config",
-					tc.serviceID)
+				t.Errorf("%s\nservice %q not removed from Config.Service[]",
+					packageName, tc.serviceID)
 			}
 			if util.Contains(api.Config.Order, tc.serviceID) {
-				t.Errorf("ServiceDelete didn't remove %q from the Order",
-					tc.serviceID)
+				t.Errorf("%s\nservice %q not removed from Order",
+					packageName, tc.serviceID)
 			}
 			// AND the service is removed from the database (if the req was OK).
 			if tc.wants.statusCode == http.StatusOK {
 				time.Sleep(time.Second)
 				if len(*api.Config.DatabaseChannel) == 0 {
-					t.Errorf("ServiceDelete didn't remove %q from the database",
-						tc.serviceID)
+					t.Errorf("%s\nservice %q not removed from database",
+						packageName, tc.serviceID)
 				} else {
 					msg := <-*api.Config.DatabaseChannel
 					if msg.Delete != true {
-						t.Errorf("ServiceDelete should have sent a deletion to the db, not\n%+v",
-							msg)
+						t.Errorf("%s\nServiceDelete should have sent a deletion to the db, not\n%+v",
+							packageName, msg)
 					}
 				}
 			}
@@ -1589,21 +1590,21 @@ func TestHTTP_NotifyTest(t *testing.T) {
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
-				t.Errorf("unexpected status code. Want: %d, Got: %d",
-					tc.wants.statusCode, res.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wants.statusCode, res.StatusCode)
 			}
 			// AND the expected message is contained in the body.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			// Marshal message out of JSON data {"message": text}.
 			var body map[string]string
 			err = json.Unmarshal(data, &body)
 			if !util.RegexCheck(tc.wants.body, body["message"]) {
-				t.Errorf("want Body to match\n%q\ngot:\n%q",
-					tc.wants.body, body["message"])
+				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wants.body, body["message"])
 			}
 		})
 	}

@@ -168,8 +168,8 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 			// THEN the function returns the correct result.
 			if tc.rootValue == nil && tc.mainValue == nil && tc.defaultValue == nil && tc.hardDefaultValue == nil {
 				if len(req.Header) != 0 {
-					t.Fatalf("custom headers was nil but Headers are %v",
-						req.Header)
+					t.Fatalf("%s\ncustom headers is nil but Headers are %v",
+						packageName, req.Header)
 				}
 				return
 			}
@@ -180,12 +180,16 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 			}
 			for header, val := range tc.want {
 				if req.Header[header] == nil {
-					t.Fatalf("%s: %s was not given to the request, got\n%v",
-						header, val, req.Header)
+					t.Fatalf("%s\n%s: %s was not given to the request, got\n%v",
+						packageName,
+						header, val,
+						req.Header)
 				}
 				if req.Header[header][0] != val {
-					t.Fatalf("%s: %s was not given to the request, got\n%v\n%v",
-						header, val, req.Header[header][0], req.Header)
+					t.Fatalf("%s\n%s: %s was not given to the request, got\n%v\n%v",
+						packageName,
+						header, val,
+						req.Header[header][0], req.Header)
 				}
 			}
 		})

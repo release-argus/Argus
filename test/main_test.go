@@ -19,7 +19,11 @@ package test
 import (
 	"fmt"
 	"testing"
+
+	"github.com/release-argus/Argus/util"
 )
+
+var packageName = "test"
 
 func TestCaptureStdout(t *testing.T) {
 	// GIVEN a function that writes to stdout.
@@ -57,8 +61,8 @@ func TestCaptureStdout(t *testing.T) {
 
 			// THEN the result should be the expected stdout output.
 			if result != tc.want {
-				t.Errorf("stdout mismatch\n%q\ngot:\n%q",
-					tc.want, result)
+				t.Errorf("%s\nstdout mismatch\n%q\ngot:\n%q",
+					packageName, tc.want, result)
 			}
 		})
 	}
@@ -82,8 +86,8 @@ func TestBoolPtr(t *testing.T) {
 
 			// THEN the result should be a pointer to the boolean value.
 			if *result != tc.val {
-				t.Errorf("expected %t but got %t",
-					tc.val, *result)
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.val, *result)
 			}
 		})
 	}
@@ -108,8 +112,8 @@ func TestIntPtr(t *testing.T) {
 
 			// THEN the result should be a pointer to the integer value.
 			if *result != tc.val {
-				t.Errorf("expected %d but got %d",
-					tc.val, *result)
+				t.Errorf("%s\nwant: %d\ngot:  %d",
+					packageName, tc.val, *result)
 			}
 		})
 	}
@@ -133,8 +137,8 @@ func TestStringPtr(t *testing.T) {
 
 			// THEN the result should be a pointer to the string value.
 			if *result != tc.val {
-				t.Errorf("expected %q but got %q",
-					tc.val, *result)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.val, *result)
 			}
 		})
 	}
@@ -158,8 +162,8 @@ func TestUInt8Ptr(t *testing.T) {
 
 			// THEN the result should be a pointer to the unsigned integer value.
 			if *result != uint8(tc.val) {
-				t.Errorf("expected %d but got %d",
-					tc.val, *result)
+				t.Errorf("%s\nwant: %d\ngot:  %d",
+					packageName, tc.val, *result)
 			}
 		})
 	}
@@ -198,14 +202,14 @@ func TestStringifyPtr(t *testing.T) {
 				var nilPtr *int
 				result = StringifyPtr(nilPtr)
 			default:
-				t.Fatalf("unexpected type %T",
-					tc.ptr)
+				t.Fatalf("%s\nunexpected type %T",
+					packageName, tc.ptr)
 			}
 
 			// THEN the result should be a string representation of the value.
 			if result != tc.want {
-				t.Errorf("expected %q but got %q",
-					tc.want, result)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, result)
 			}
 		})
 	}
@@ -262,8 +266,8 @@ func TestTrimJSON(t *testing.T) {
 
 			// THEN the result should be the JSON string without newlines and tabs.
 			if result != tc.want {
-				t.Errorf("expected %q but got %q",
-					tc.want, result)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, result)
 			}
 		})
 	}
@@ -347,8 +351,8 @@ key2: value2
 
 			// THEN the result should be the YAML string without unnecessary whitespace.
 			if result != tc.want {
-				t.Errorf("mismatch\n%q\ngot:\n%q",
-					tc.want, result)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, result)
 			}
 		})
 	}
@@ -395,8 +399,8 @@ func TestFlattenMultilineString(t *testing.T) {
 
 			// THEN the result should be the string with newlines and tabs replaced with spaces.
 			if result != tc.want {
-				t.Errorf("mismatch\n%q\ngot:\n%q",
-					tc.want, result)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, result)
 			}
 		})
 	}
@@ -447,17 +451,22 @@ func TestCombinations(t *testing.T) {
 
 			// THEN the result should be all possible combinations of the values.
 			if len(result) != len(tc.want) {
-				t.Fatalf("length differs:\nwant: %d, %v\ngot:  %d, %v",
-					len(tc.want), tc.want, len(result), result)
+				t.Fatalf("%s\nlength mismatch\nwant: %d, %v\ngot:  %d, %v",
+					packageName,
+					len(tc.want), tc.want,
+					len(result), result)
 			}
 			for i, want := range tc.want {
 				if len(result[i]) != len(want) {
-					t.Fatalf("items differ in length:\nwant: %v\ngot:  %v",
+					t.Fatalf("%s\nitems at [%d] differ in length:\nwant: %v\ngot:  %v",
+						packageName, i,
 						tc.want, result)
 				}
 				for j, v := range want {
 					if result[i][j] != v {
-						t.Fatalf("items of items differ:\nwant: %v\ngot:  %v",
+						t.Fatalf("%s\nitems of items at [%d][%d] differ:\nwant: %v\ngot:  %v",
+							packageName,
+							i, j,
 							tc.want, result)
 					}
 				}
@@ -509,8 +518,8 @@ func TestIndent(t *testing.T) {
 
 			// THEN the result should be the string with each line indented by the given number of spaces.
 			if result != tc.want {
-				t.Errorf("expected %q but got %q",
-					tc.want, result)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, result)
 			}
 		})
 	}
@@ -545,8 +554,8 @@ func TestIgnoreError(t *testing.T) {
 
 			// THEN the result should be the expected value.
 			if result != tc.want {
-				t.Errorf("expected %d but got %d",
-					tc.want, result)
+				t.Errorf("%s\nwant: %d\ngot:  %d",
+					packageName, tc.want, result)
 			}
 		})
 	}
@@ -554,24 +563,24 @@ func TestIgnoreError(t *testing.T) {
 
 func TestYAMLToNode(t *testing.T) {
 	tests := map[string]struct {
-		yamlStr string
-		wantErr bool
+		yamlStr  string
+		errRegex string
 	}{
 		"valid YAML": {
 			yamlStr: `
 				key: value
 			`,
-			wantErr: false,
+			errRegex: `^$`,
 		},
 		"invalid YAML": {
 			yamlStr: `
 				key: [unclosed
 			`,
-			wantErr: true,
+			errRegex: `^yaml:.*did not find expected.*$`,
 		},
 		"empty YAML": {
-			yamlStr: ``,
-			wantErr: false,
+			yamlStr:  ``,
+			errRegex: `^$`,
 		},
 		"complex YAML": {
 			yamlStr: `
@@ -581,7 +590,7 @@ func TestYAMLToNode(t *testing.T) {
 					- item1
 					- item2
 				`,
-			wantErr: false,
+			errRegex: `^$`,
 		},
 	}
 
@@ -595,14 +604,13 @@ func TestYAMLToNode(t *testing.T) {
 			node, err := YAMLToNode(t, tc.yamlStr)
 
 			// THEN the result should be a valid yaml.Node, or an error.
-			if tc.wantErr && err == nil {
-				t.Errorf("expected error but got nil")
-			} else if !tc.wantErr {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				} else if node == nil {
-					t.Errorf("expected node but got nil")
-				}
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
+			} else if node == nil && err == nil {
+				t.Errorf("%s\nexpected node but got nil",
+					packageName)
 			}
 		})
 	}
@@ -646,11 +654,14 @@ func TestEqualSlices(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := EqualSlices(tt.a, tt.b)
-			if result != tt.expected {
-				t.Errorf("EqualSlices(%v, %v) = %v; want %v", tt.a, tt.b, result, tt.expected)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := EqualSlices(tc.a, tc.b)
+			if result != tc.expected {
+				t.Errorf("%s\nEqualSlices(%v, %v) mismatch\nwant: %v\ngot:  %v",
+					packageName,
+					tc.a, tc.b,
+					tc.expected, result)
 			}
 		})
 	}

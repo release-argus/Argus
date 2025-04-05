@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import (
 )
 
 func TestHTTP_httpRuntimeInfo(t *testing.T) {
-	// GIVEN an API and a request for the runtime info
+	// GIVEN an API and a request for the runtime info.
 	file := "TestHTTP_httpRuntimeInfo.yml"
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
@@ -47,7 +47,7 @@ func TestHTTP_httpRuntimeInfo(t *testing.T) {
 			"GOMAXPROCS":[0-9]+
 		}\s$`
 
-	// WHEN that HTTP request is sent
+	// WHEN that HTTP request is sent.
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/status/runtime", nil)
 	w := httptest.NewRecorder()
 	apiMutex.RLock()
@@ -56,17 +56,17 @@ func TestHTTP_httpRuntimeInfo(t *testing.T) {
 	res := w.Result()
 	t.Cleanup(func() { res.Body.Close() })
 
-	// THEN the expected body is returned as expected
+	// THEN the expected body is returned as expected.
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
-		t.Fatalf("unexpected error - %v",
-			err)
+		t.Fatalf("%s\nunexpected error - %v",
+			packageName, err)
 	}
 	got := string(data)
 	want = strings.ReplaceAll(want, "\t", "")
 	want = strings.ReplaceAll(want, "\n", "")
 	if !util.RegexCheck(want, got) {
-		t.Errorf("%q doesn't match regex %q",
-			got, want)
+		t.Errorf("%s\nerror mismatch\nwant %q\ngot:  %q",
+			packageName, want, got)
 	}
 }

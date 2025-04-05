@@ -22,8 +22,10 @@ import (
 	"github.com/release-argus/Argus/test"
 )
 
+var packageName = "shoutrrr_test"
+
 func TestDefaults(t *testing.T) {
-	// GIVEN the failing and self-signed certificate flags
+	// GIVEN the failing and self-signed certificate flags.
 	tests := map[string]struct {
 		failing, selfSignedCert bool
 	}{
@@ -46,25 +48,27 @@ func TestDefaults(t *testing.T) {
 				wantHost = test.InvalidCertNoProtocol
 			}
 
-			// WHEN Defaults is called
+			// WHEN Defaults is called.
 			got := Defaults(tc.failing, tc.selfSignedCert)
 
-			// THEN the token should be as expected
-			if got.URLFields["token"] != wantToken {
-				t.Errorf("expected %q but got %q",
-					wantToken, got.URLFields["token"])
+			// THEN the token should be as expected.
+			key := "token"
+			if got.URLFields[key] != wantToken {
+				t.Errorf("%s\nmismatch on url_fields[%q]\nwant: %q\ngot:  %q",
+					packageName, key, wantToken, got.URLFields["token"])
 			}
-			// AND the host should be as expected
-			if wantHost != got.URLFields["host"] {
-				t.Errorf("expected %q but got %q",
-					wantHost, got.URLFields["host"])
+			// AND the host should be as expected.
+			key = "host"
+			if got.URLFields[key] != wantHost {
+				t.Errorf("%s\nmismatch on url_fields[%q]\nwant: %q\ngot:  %q",
+					packageName, key, wantHost, got.URLFields["host"])
 			}
 		})
 	}
 }
 
 func TestShoutrrr(t *testing.T) {
-	// GIVEN the failing and self-signed certificate flags
+	// GIVEN the failing and self-signed certificate flags.
 	tests := map[string]struct {
 		failing, selfSignedCert bool
 	}{
@@ -87,45 +91,55 @@ func TestShoutrrr(t *testing.T) {
 				wantHost = test.InvalidCertNoProtocol
 			}
 
-			// WHEN Shoutrrr is called
+			// WHEN Shoutrrr is called.
 			got := Shoutrrr(tc.failing, tc.selfSignedCert)
 
-			// THEN the token should be as expected
-			if wantToken != got.URLFields["token"] {
-				t.Errorf("expected %q but got %q",
-					wantToken, got.URLFields["token"])
+			// THEN the token should be as expected.
+			key := "token"
+			if got.URLFields[key] != wantToken {
+				t.Errorf("%s\nmismatch on url_fields[%q]\nwant: %q\ngot:  %q",
+					packageName, key, wantToken, got.URLFields["token"])
 			}
-			// AND the host should be as expected
-			if wantHost != got.URLFields["host"] {
-				t.Errorf("expected %q but got %q",
-					wantHost, got.URLFields["host"])
+			// AND the host should be as expected.
+			key = "host"
+			if got.URLFields[key] != wantHost {
+				t.Errorf("%s\nmismatch on url_fields[%q]\nwant: %q\ngot:  %q",
+					packageName, key, wantHost, got.URLFields["host"])
 			}
-			// AND the maps should be initialised
+			// AND the maps should be initialised.
 			if got.Options == nil {
-				t.Error("Options map not initialised")
+				t.Errorf("%s\nOptions not initialised",
+					packageName)
 			}
 			if got.URLFields == nil {
-				t.Error("URLFields map not initialised")
+				t.Errorf("%s\nURLFields not initialised",
+					packageName)
 			}
 			if got.Params == nil {
-				t.Error("Params map not initialised")
+				t.Errorf("%s\nParams not initialised",
+					packageName)
 			}
-			// AND the defaults should be set
+			// AND the defaults should be set.
 			if got.Main == nil {
-				t.Error("Main not set")
+				t.Errorf("%s\nMain not set",
+					packageName)
 			}
 			if got.Defaults == nil {
-				t.Error("Defaults not set")
+				t.Errorf("%s\nDefaults not set",
+					packageName)
 			}
 			if got.HardDefaults == nil {
-				t.Error("HardDefaults not set")
+				t.Errorf("%s\nHardDefaults not set",
+					packageName)
 			}
-			// AND the fails are initialised and set
+			// AND the fails are initialised and set.
 			if got.ServiceStatus == nil || got.Failed == nil {
 				if got.ServiceStatus == nil {
-					t.Error("ServiceStatus not set")
+					t.Errorf("%s\nServiceStatus not set",
+						packageName)
 				} else {
-					t.Error("Failed not set")
+					t.Errorf("%s\nServiceStatus.Failed not set",
+						packageName)
 				}
 			}
 		})

@@ -317,7 +317,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			},
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal latestver.Lookup:
-					cannot unmarshal array into Go struct field \.Lookup\.url of type string$`),
+					cannot unmarshal array into Go struct field (\.Lookup)?\.url of type string$`),
 		},
 		"overrides that make CheckValues fail": {
 			args: args{
@@ -538,7 +538,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			// THEN we get an error matching the format expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("applyOverridesJSON() error mismatch\n%q\ngot:\n%q",
+				t.Errorf("applyOverridesJSON() error mismatch\nwant: %q\ngot:  %q",
 					tc.errRegex, e)
 			}
 			if tc.errRegex != `^$` {

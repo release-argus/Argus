@@ -33,7 +33,7 @@ func TestInit(t *testing.T) {
 		requireHasDockerDefaults bool
 	}
 
-	// GIVEN a YAML string
+	// GIVEN a YAML string.
 	tests := map[string]struct {
 		overrides string
 		want      want
@@ -75,48 +75,49 @@ func TestInit(t *testing.T) {
 			hardDefaults := &base.Defaults{}
 			hardDefaults.Default()
 			lookup := &Lookup{}
-			// overrides
+			// overrides.
 			err := yaml.Unmarshal([]byte(tc.overrides), lookup)
 			if err != nil {
-				t.Fatalf("github.Lookup.Init failed to unmarshal overrides: %v", err)
+				t.Fatalf("%s\nfailed to unmarshal overrides: %v",
+					packageName, err)
 			}
 
-			// WHEN New is called with it
+			// WHEN New is called with it.
 			lookup.Init(
 				&options,
 				status,
 				defaults, hardDefaults,
 			)
 
-			// THEN the defaults are set as expected
+			// THEN the defaults are set as expected.
 			if lookup.Defaults != defaults {
-				t.Errorf("github.Lookup.Defaults not set\nwant: %v\ngot:  %v",
-					lookup.Defaults, defaults)
+				t.Errorf("%s\nDefaults not set\nwant: %v\ngot:  %v",
+					packageName, lookup.Defaults, defaults)
 			}
-			// AND the hard defaults are set as expected
+			// AND the hard defaults are set as expected.
 			if lookup.HardDefaults != hardDefaults {
-				t.Errorf("github.Lookup.HardDefaults not set\nwant: %v\ngot:  %v",
-					lookup.HardDefaults, hardDefaults)
+				t.Errorf("%s\nHardDefaults not set\nwant: %v\ngot:  %v",
+					packageName, lookup.HardDefaults, hardDefaults)
 			}
-			// AND the status is set as expected
+			// AND the status is set as expected.
 			if lookup.Status != status {
-				t.Errorf("github.Lookup.Status not set\nwant: %v\ngot:  %v",
-					lookup.Status, status)
+				t.Errorf("%s\nStatus not set\nwant: %v\ngot:  %v",
+					packageName, lookup.Status, status)
 			}
-			// AND the options are set as expected
+			// AND the options are set as expected.
 			if lookup.Options != &options {
-				t.Errorf("github.Lookup.Options not set\nwant: %v\ngot:  %v",
-					lookup.Options, &options)
+				t.Errorf("%s\nOptions not set\nwant: %v\ngot:  %v",
+					packageName, lookup.Options, &options)
 			}
-			// AND the require is given the correct defaults
+			// AND the require is given the correct defaults.
 			if lookup.Require != nil && lookup.Require.Docker != nil {
 				if lookup.Require.Docker.Defaults != &defaults.Require.Docker {
-					t.Errorf("github.Lookup.Require.Docker.Defaults not set\nwant: %v\ngot:  %v",
-						lookup.Require.Docker.Defaults, defaults.Require.Docker)
+					t.Errorf("%s\nRequire.Docker.Defaults not set\nwant: %v\ngot:  %v",
+						packageName, lookup.Require.Docker.Defaults, defaults.Require.Docker)
 				}
 			} else if tc.want.requireHasDockerDefaults {
-				t.Errorf("github.Lookup.Require.Docker not set\nrequire: %v",
-					lookup.Require)
+				t.Errorf("%s\nRequire.Docker not set\nrequire: %v",
+					packageName, lookup.Require)
 			}
 		})
 	}

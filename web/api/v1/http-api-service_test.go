@@ -35,7 +35,7 @@ import (
 )
 
 func TestHTTP_httpServiceOrderGet(t *testing.T) {
-	// GIVEN an API and a request for the service order
+	// GIVEN an API and a request for the service order.
 	file := "TestHTTP_httpServiceOrderGet.yml"
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
@@ -68,7 +68,7 @@ func TestHTTP_httpServiceOrderGet(t *testing.T) {
 
 			api.Config.Order = tc.order
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/service/order", nil)
 			w := httptest.NewRecorder()
 			apiMutex.RLock()
@@ -77,11 +77,11 @@ func TestHTTP_httpServiceOrderGet(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected body is returned as expected
+			// THEN the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			want := `{"order":[`
@@ -90,8 +90,8 @@ func TestHTTP_httpServiceOrderGet(t *testing.T) {
 			}
 			want += "]}\n"
 			if got != want {
-				t.Errorf("want\n%q\nnot\n%q",
-					want, got)
+				t.Errorf("%s\nwant %q\ngot:  %q",
+					packageName, want, got)
 			}
 		})
 	}
@@ -99,7 +99,7 @@ func TestHTTP_httpServiceOrderGet(t *testing.T) {
 
 func TestHTTP_httpServiceSummary(t *testing.T) {
 	testSVC := testService("TestHTTP_httpServiceSummary", true)
-	// GIVEN an API and a request for detail of a service
+	// GIVEN an API and a request for detail of a service.
 	file := "TestHTTP_httpServiceSummary.yml"
 	api := testAPI(file)
 	api.Config.Service[testSVC.ID] = testSVC
@@ -135,7 +135,7 @@ func TestHTTP_httpServiceSummary(t *testing.T) {
 			target := "/api/v1/service/summary/"
 			target += url.QueryEscape(tc.serviceID)
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			vars := map[string]string{
 				"service_id": tc.serviceID}
@@ -145,21 +145,21 @@ func TestHTTP_httpServiceSummary(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected status code is returned
+			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wantStatusCode {
-				t.Errorf("Status code, expected a %d, not a %d",
-					tc.wantStatusCode, res.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantStatusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected
+			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			if !util.RegexCheck(tc.wantBody, got) {
-				t.Errorf("want match for %q\nnot: %q",
-					tc.wantBody, got)
+				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+					packageName, tc.wantBody, got)
 			}
 		})
 	}
@@ -243,7 +243,7 @@ func TestHTTP_httpServiceOrderSet(t *testing.T) {
 			}
 			api.Config.Service = service
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/service/order", strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
@@ -253,26 +253,26 @@ func TestHTTP_httpServiceOrderSet(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected status code is returned
+			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wantStatusCode {
-				t.Errorf("Status code, expected a %d, not a %d",
-					tc.wantStatusCode, res.StatusCode)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantStatusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected
+			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			if got != tc.wantBody {
-				t.Errorf("want\n%q\nnot\n%q",
-					tc.wantBody, got)
+				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantBody, got)
 			}
-			// AND the service order is updated as expected
+			// AND the service order is updated as expected.
 			if tc.wantOrder != nil && !test.EqualSlices(api.Config.Order, tc.wantOrder) {
-				t.Errorf("want order\n%v\nnot\n%v",
-					tc.wantOrder, api.Config.Order)
+				t.Errorf("%s\nordering mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantOrder, api.Config.Order)
 			}
 		})
 	}

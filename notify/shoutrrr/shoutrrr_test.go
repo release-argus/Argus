@@ -97,11 +97,13 @@ func TestShoutrrr_getSender(t *testing.T) {
 
 			shoutrrr := &Shoutrrr{}
 			if err := yaml.Unmarshal([]byte(tc.shoutrrrYAML), shoutrrr); err != nil {
-				t.Fatalf("failed to unmarshal shoutrrr YAML: %v", err)
+				t.Fatalf("%s\nfailed to unmarshal shoutrrr YAML: %v",
+					packageName, err)
 			}
 			main := &Defaults{}
 			if err := yaml.Unmarshal([]byte(tc.mainYAML), main); err != nil {
-				t.Fatalf("failed to unmarshal main YAML: %v", err)
+				t.Fatalf("%s\nfailed to unmarshal main YAML: %v",
+					packageName, err)
 			}
 			status := status.Status{}
 			status.Init(1, 0, 0,
@@ -117,21 +119,21 @@ func TestShoutrrr_getSender(t *testing.T) {
 
 			// THEN the expected results are returned.
 			if (err != nil) != tc.wants.err {
-				t.Fatalf("getSender() wants err=%t, got %t",
-					tc.wants.err, err != nil)
+				t.Fatalf("%s\nerror mismatch\nwant: err=%t\ngot:  err=%t",
+					packageName, tc.wants.err, err != nil)
 			}
 			if err == nil {
 				if url != tc.url {
-					t.Errorf("getSender() url mismatch\nwant: %q\ngot:  %q\n",
-						tc.url, url)
+					t.Errorf("%s\nurl mismatch\nwant: %q\ngot:  %q\n",
+						packageName, tc.url, url)
 				}
 				if message != tc.wants.msg {
-					t.Errorf("getSender() message mismatch\nwant: %q\ngot:  %q\n",
-						tc.wants.msg, message)
+					t.Errorf("%s\nmessage mismatch\nwant: %q\ngot:  %q\n",
+						packageName, tc.wants.msg, message)
 				}
 				if tc.wants.title != "" && (*params)["title"] != tc.wants.title {
-					t.Errorf("getSender() title mismatch\nwant: %q\ngot:  %q\n",
-						tc.wants.title, (*params)["title"])
+					t.Errorf("%s\ntitle mismatch\nwant: %q\ngot:  %q\n",
+						packageName, tc.wants.title, (*params)["title"])
 				}
 			}
 		})
@@ -588,8 +590,8 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 
 			// THEN the expected URL is returned.
 			if got != tc.want {
-				t.Errorf("\nwant: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -636,8 +638,8 @@ func Test_jsonMapToString(t *testing.T) {
 
 			// THEN the expected URL is returned.
 			if got != tc.want {
-				t.Errorf("\nwant: %q\ngot:  %q",
-					tc.want, got)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -723,8 +725,8 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 
 			// THEN the function returns the params to use.
 			if (*got)[key] != tc.want {
-				t.Fatalf("want: %q\ngot:  %q",
-					tc.want, got)
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -789,12 +791,12 @@ func TestShoutrrr_parseSend(t *testing.T) {
 			failed := shoutrrr.parseSend(tc.errs, combinedErrs, tc.serviceName, logFrom)
 
 			if failed != tc.wantFailed {
-				t.Errorf("parseSend() failed mismatch\nwant: %t\ngot:  %t",
-					failed, tc.wantFailed)
+				t.Errorf("%s\nfailed mismatch\nwant: %t\ngot:  %t",
+					packageName, failed, tc.wantFailed)
 			}
 			if !reflect.DeepEqual(combinedErrs, tc.wantErrs) {
-				t.Errorf("parseSend() combinedErrs mismatch\nwant: %q\ngot:  %q",
-					tc.wantErrs, combinedErrs)
+				t.Errorf("%s\ncombinedErrs mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantErrs, combinedErrs)
 			}
 		})
 	}

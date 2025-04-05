@@ -27,7 +27,7 @@ import (
 )
 
 func TestNotify_Censor(t *testing.T) {
-	// GIVEN a Notify
+	// GIVEN a Notify.
 	tests := map[string]struct {
 		notify, want *Notify
 	}{
@@ -126,24 +126,26 @@ func TestNotify_Censor(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Censor is called on it
+			// WHEN Censor is called on it.
 			tc.notify.Censor()
 
-			// THEN nil Notifiers are kept
+			// THEN nil Notifiers are kept.
 			if tc.notify == tc.want {
 				return
 			}
-			// AND defined fields are censored as expected
+			// AND defined fields are censored as expected.
 			for k := range tc.want.URLFields {
-				if tc.want.URLFields[k] != tc.notify.URLFields[k] {
-					t.Errorf("URLField %q:\ngot %q, want %q",
-						k, tc.notify.URLFields[k], tc.want.URLFields[k])
+				if tc.notify.URLFields[k] != tc.want.URLFields[k] {
+					t.Errorf("%s\nURLField %q\nwant: %q\ngot:  %q",
+						packageName, k,
+						tc.want.URLFields[k], tc.notify.URLFields[k])
 				}
 			}
 			for k := range tc.want.Params {
-				if tc.want.Params[k] != tc.notify.Params[k] {
-					t.Errorf("Param %q:\ngot %q, want %q",
-						k, tc.notify.Params[k], tc.want.Params[k])
+				if tc.notify.Params[k] != tc.want.Params[k] {
+					t.Errorf("%s\nParam %q\nwant: %q\ngot:  %q",
+						packageName, k,
+						tc.want.Params[k], tc.notify.Params[k])
 				}
 			}
 		})
@@ -151,7 +153,7 @@ func TestNotify_Censor(t *testing.T) {
 }
 
 func TestNotifySlice_Censor(t *testing.T) {
-	// GIVEN a Notify
+	// GIVEN a Notify.
 	tests := map[string]struct {
 		notify, want *NotifySlice
 	}{
@@ -199,25 +201,27 @@ func TestNotifySlice_Censor(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Censor is called on it
+			// WHEN Censor is called on it.
 			tc.notify.Censor()
 
-			// THEN nil NotifySlices are kept
+			// THEN nil NotifySlices are kept.
 			if tc.notify == tc.want {
 				return
 			}
-			// AND defined fields are censored as expected
+			// AND defined fields are censored as expected.
 			for i := range *tc.notify {
 				for k := range (*tc.want)[i].URLFields {
-					if (*tc.want)[i].URLFields[k] != (*tc.notify)[i].URLFields[k] {
-						t.Errorf("URLField %q:\ngot %q, want %q",
-							k, (*tc.notify)[i].URLFields[k], (*tc.want)[i].URLFields[k])
+					if (*tc.notify)[i].URLFields[k] != (*tc.want)[i].URLFields[k] {
+						t.Errorf("%s\nURLField %q\nwant: %q\ngot:  %q",
+							packageName, k,
+							(*tc.want)[i].URLFields[k], (*tc.notify)[i].URLFields[k])
 					}
 				}
 				for k := range (*tc.want)[i].Params {
-					if (*tc.want)[i].Params[k] != (*tc.notify)[i].Params[k] {
-						t.Errorf("Param %q:\ngot %q, want %q",
-							k, (*tc.notify)[i].Params[k], (*tc.want)[i].Params[k])
+					if (*tc.notify)[i].Params[k] != (*tc.want)[i].Params[k] {
+						t.Errorf("%s\nParam %q\nwant: %q\ngot:  %q",
+							packageName, k,
+							(*tc.want)[i].Params[k], (*tc.notify)[i].Params[k])
 					}
 				}
 			}
@@ -226,7 +230,7 @@ func TestNotifySlice_Censor(t *testing.T) {
 }
 
 func TestNotifySlice_Flatten(t *testing.T) {
-	// GIVEN a NotifySlice
+	// GIVEN a NotifySlice.
 	tests := map[string]struct {
 		notify *NotifySlice
 		want   *[]Notify
@@ -299,29 +303,30 @@ func TestNotifySlice_Flatten(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Flatten is called on it
+			// WHEN Flatten is called on it.
 			got := tc.notify.Flatten()
 
-			// THEN nil NotifySlices are kept
+			// THEN nil NotifySlices are kept.
 			if tc.notify == nil && tc.want == nil {
 				return
 			}
-			// AND defined fields are censored as expected
+			// AND defined fields are censored as expected.
 			for i := range *tc.want {
-				if (*tc.want)[i].ID != got[i].ID {
-					t.Errorf("ID:\ngot %q, want %q",
-						got[i].ID, (*tc.want)[i].ID)
+				if got[i].ID != (*tc.want)[i].ID {
+					t.Errorf("%s\nID\nwant: %q\ngot:  %q",
+						packageName, (*tc.want)[i].ID, got[i].ID)
 				}
 				for k := range (*tc.want)[i].URLFields {
-					if (*tc.want)[i].URLFields[k] != got[i].URLFields[k] {
-						t.Errorf("URLField %q:\ngot %q, want %q",
-							k, got[i].URLFields[k], (*tc.want)[i].URLFields[k])
+					if got[i].URLFields[k] != (*tc.want)[i].URLFields[k] {
+						t.Errorf("%s\nURLField %q\nwant: %q\ngot:  %q",
+							packageName, k,
+							(*tc.want)[i].URLFields[k], got[i].URLFields[k])
 					}
 				}
 				for k := range (*tc.want)[i].Params {
-					if (*tc.want)[i].Params[k] != got[i].Params[k] {
-						t.Errorf("Param %q:\ngot %q, want %q",
-							k, got[i].Params[k], (*tc.want)[i].Params[k])
+					if got[i].Params[k] != (*tc.want)[i].Params[k] {
+						t.Errorf("%s\nParam %q:\nwant: %q\ngot:  %q",
+							packageName, (*tc.want)[i].Params[k], k, got[i].Params[k])
 					}
 				}
 			}
@@ -330,7 +335,7 @@ func TestNotifySlice_Flatten(t *testing.T) {
 }
 
 func TestWebHook_Censor(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		webhook, want *WebHook
 	}{
@@ -372,23 +377,24 @@ func TestWebHook_Censor(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Censor is called on it
+			// WHEN Censor is called on it.
 			tc.webhook.Censor()
 
-			// THEN nil WebHooks are kept
+			// THEN nil WebHooks are kept.
 			if tc.webhook == tc.want {
 				return
 			}
-			// AND the Secret is censored
-			if tc.want.Secret != tc.webhook.Secret {
-				t.Errorf("Secret uncensored\ngot %q, want %q",
-					tc.webhook.Secret, tc.want.Secret)
+			// AND the Secret is censored.
+			if tc.webhook.Secret != tc.want.Secret {
+				t.Errorf("%s\nSecret uncensored\nwant: %q\ngot:  %q",
+					packageName, tc.want.Secret, tc.webhook.Secret)
 			}
 			if tc.webhook.CustomHeaders != nil {
 				for i := range *tc.want.CustomHeaders {
-					if (*tc.want.CustomHeaders)[i] != (*tc.webhook.CustomHeaders)[i] {
-						t.Errorf("Header %d:\ngot %v, want %v",
-							i, (*tc.webhook.CustomHeaders)[i], (*tc.want.CustomHeaders)[i])
+					if (*tc.webhook.CustomHeaders)[i] != (*tc.want.CustomHeaders)[i] {
+						t.Errorf("%s\nHeader %d:\nwant: %v\ngot:  %v",
+							packageName, i,
+							(*tc.want.CustomHeaders)[i], (*tc.webhook.CustomHeaders)[i])
 					}
 				}
 			}
@@ -397,7 +403,7 @@ func TestWebHook_Censor(t *testing.T) {
 }
 
 func TestWebHookSlice_Flatten(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		webhook *WebHookSlice
 		want    []*WebHook
@@ -440,22 +446,22 @@ func TestWebHookSlice_Flatten(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Flatten is called on it
+			// WHEN Flatten is called on it.
 			got := tc.webhook.Flatten()
 
-			// THEN the map is flattened, ordered and censored
+			// THEN the map is flattened, ordered and censored.
 			gotBytes, _ := json.Marshal(got)
 			wantBytes, _ := json.Marshal(tc.want)
 			if string(gotBytes) != string(wantBytes) {
-				t.Errorf("Flatten\ngot %q, want %q",
-					string(gotBytes), string(wantBytes))
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, string(wantBytes), string(gotBytes))
 			}
 		})
 	}
 }
 
 func TestServiceSummary_String(t *testing.T) {
-	// GIVEN a ServiceSummary
+	// GIVEN a ServiceSummary.
 	tests := map[string]struct {
 		summary *ServiceSummary
 		want    string
@@ -518,26 +524,27 @@ func TestServiceSummary_String(t *testing.T) {
 		},
 	}
 
-	// WHEN String is called on it
+	// WHEN String is called on it.
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN the Summary is stringified with String
+			// WHEN the Summary is stringified with String.
 			got := tc.summary.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestNilUnchanged(t *testing.T) {
+	// GIVEN two pointers to integers.
 	tests := map[string]struct {
 		oldValue *int
 		newValue *int
@@ -574,19 +581,22 @@ func TestNilUnchanged(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN nilUnchanged is called
+			// WHEN nilUnchanged is called.
 			nilUnchanged(tc.oldValue, &tc.newValue)
 
-			// THEN the result is as expected
-			if (tc.want == nil && tc.newValue != nil) || (tc.want != nil && tc.newValue == nil) || (tc.want != nil && tc.newValue != nil && *tc.want != *tc.newValue) {
-				t.Errorf("got: %v, want: %v", tc.newValue, tc.want)
+			// THEN the newValue is nil\d if it's the same as oldValue.
+			if (tc.want == nil && tc.newValue != nil) ||
+				(tc.want != nil && tc.newValue == nil) ||
+				(tc.want != nil && tc.newValue != nil && *tc.newValue != *tc.want) {
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, tc.newValue)
 			}
 		})
 	}
 }
 
 func TestServiceSummary_RemoveUnchanged(t *testing.T) {
-	// GIVEN two ServiceSummaries
+	// GIVEN two ServiceSummaries.
 	tests := map[string]struct {
 		old, new, want *ServiceSummary
 	}{
@@ -898,7 +908,6 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		},
 	}
 
-	// Helper function to initialize fields
 	initialiseFields := func(instance *ServiceSummary) {
 		if instance.Status == nil {
 			instance.Status = &Status{}
@@ -923,20 +932,20 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 				initialiseFields(tc.new)
 			}
 
-			// WHEN RemoveUnchanged is called, comparing new to old
+			// WHEN RemoveUnchanged is called, comparing new to old.
 			tc.new.RemoveUnchanged(tc.old)
 
-			// THEN the values that are unchanged are removed
-			if tc.want.String() != tc.new.String() {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					tc.new.String(), tc.want.String())
+			// THEN the values that are unchanged are removed.
+			if tc.new.String() != tc.want.String() {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), tc.new.String())
 			}
 		})
 	}
 }
 
 func TestStatus_String(t *testing.T) {
-	// GIVEN a Status
+	// GIVEN a Status.
 	tests := map[string]struct {
 		status *Status
 		want   string
@@ -979,20 +988,20 @@ func TestStatus_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN the Status is stringified with String
+			// WHEN the Status is stringified with String.
 			got := tc.status.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestWebHook_String(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		webhook *WebHook
 		want    string
@@ -1040,21 +1049,21 @@ func TestWebHook_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the WebHook is stringified with String
+			// WHEN the WebHook is stringified with String.
 			got := tc.webhook.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf("mismatch\ngot:  %q\nwant: %q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestWebHookSlice_String(t *testing.T) {
-	// GIVEN a WebHookSlice
+	// GIVEN a WebHookSlice.
 	tests := map[string]struct {
 		slice *WebHookSlice
 		want  string
@@ -1116,21 +1125,21 @@ func TestWebHookSlice_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the WebHook is stringified with String
+			// WHEN the WebHook is stringified with String.
 			got := tc.slice.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf("got: %q\nwant: %q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestNotifySlice_String(t *testing.T) {
-	// GIVEN a NotifySlice
+	// GIVEN a NotifySlice.
 	tests := map[string]struct {
 		slice *NotifySlice
 		want  string
@@ -1206,21 +1215,21 @@ func TestNotifySlice_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the NotifySlice is stringified with String
+			// WHEN the NotifySlice is stringified with String.
 			got := tc.slice.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestDeployedVersionLookup_String(t *testing.T) {
-	// GIVEN a DeployedVersionLookup
+	// GIVEN a DeployedVersionLookup.
 	tests := map[string]struct {
 		dvl  *DeployedVersionLookup
 		want string
@@ -1271,21 +1280,21 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the DeployedVersionLookup is stringified with String
+			// WHEN the DeployedVersionLookup is stringified with String.
 			got := tc.dvl.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestURLCommandSlice_String(t *testing.T) {
-	// GIVEN a URLCommandSlice
+	// GIVEN a URLCommandSlice.
 	tests := map[string]struct {
 		slice *URLCommandSlice
 		want  string
@@ -1317,21 +1326,21 @@ func TestURLCommandSlice_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the URLCommandSlice is stringified with String
+			// WHEN the URLCommandSlice is stringified with String.
 			got := tc.slice.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestDefaults_String(t *testing.T) {
-	// GIVEN a Defaults
+	// GIVEN a Defaults.
 	tests := map[string]struct {
 		defaults *Defaults
 		want     string
@@ -1374,21 +1383,21 @@ func TestDefaults_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the Defaults are stringified with String
+			// WHEN the Defaults are stringified with String.
 			got := tc.defaults.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestService_String(t *testing.T) {
-	// GIVEN a Service
+	// GIVEN a Service.
 	tests := map[string]struct {
 		input *Service
 		want  string
@@ -1407,21 +1416,21 @@ func TestService_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the Defaults are stringified with String
+			// WHEN the Defaults are stringified with String.
 			got := tc.input.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			tc.want = strings.ReplaceAll(tc.want, "\n", "")
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestLatestVersion_String(t *testing.T) {
-	// GIVEN a LatestVersion
+	// GIVEN a LatestVersion.
 	tests := map[string]struct {
 		input *LatestVersion
 		want  string
@@ -1469,20 +1478,20 @@ func TestLatestVersion_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN the LatestVersion is stringified with String
+			// WHEN the LatestVersion is stringified with String.
 			got := tc.input.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.want {
-				t.Errorf("api.latest_version.String() mismatch\ngot:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestLatestVersionRequireDefaults_String(t *testing.T) {
-	// GIVEN a LatestVersionRequireDefaults
+	// GIVEN a LatestVersionRequireDefaults.
 	tests := map[string]struct {
 		lvRD *LatestVersionRequireDefaults
 		want string
@@ -1526,20 +1535,20 @@ func TestLatestVersionRequireDefaults_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN the LatestVersionRequireDefaults are stringified with String
+			// WHEN the LatestVersionRequireDefaults are stringified with String.
 			got := tc.lvRD.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestLatestVersionRequire_String(t *testing.T) {
-	// GIVEN a LatestVersionRequire
+	// GIVEN a LatestVersionRequire.
 	tests := map[string]struct {
 		input *LatestVersionRequire
 		want  string
@@ -1582,13 +1591,13 @@ func TestLatestVersionRequire_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN the LatestVersionRequire is stringified with String
+			// WHEN the LatestVersionRequire is stringified with String.
 			got := tc.input.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import (
 )
 
 func TestHTTP_Config(t *testing.T) {
-	// GIVEN an API and a request for the config
+	// GIVEN an API and a request for the config.
 	file := "TestHTTP_Config.yml"
 	api := testAPI(file)
 	t.Cleanup(func() {
@@ -311,16 +311,16 @@ func TestHTTP_Config(t *testing.T) {
 		"4. settings + defaults (with notify+command+webhook service defaults) + notify + webhook": {
 			webhook: &webhook.SliceDefaults{
 				"foo": webhook.NewDefaults(
-					test.BoolPtr(true), // allow_invalid_certs
+					test.BoolPtr(true),
 					&webhook.Headers{
 						{Key: "X-Header", Value: "value"}},
-					"4s",                    // delay
-					nil,                     // desired_status_code
-					nil,                     // max_tries
-					"something",             // secret
-					nil,                     // silent_fails
-					"github",                // type
-					"https://example.com")}, // url
+					"4s",
+					nil,
+					nil,
+					"something",
+					nil,
+					"github",
+					"https://example.com")},
 			wantBody: `
 				{
 					"settings": {
@@ -573,23 +573,23 @@ func TestHTTP_Config(t *testing.T) {
 			}
 			tc.wantBody = test.TrimJSON(tc.wantBody) + "\n"
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/config", nil)
 			w := httptest.NewRecorder()
 			api.httpConfig(w, req)
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected body is returned as expected
+			// THEN the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("unexpected error - %v",
-					err)
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
 			}
 			got := string(data)
 			if got != tc.wantBody {
-				t.Fatalf("want %q\ngot: %q",
-					tc.wantBody, got)
+				t.Fatalf("%s\nwant %q\ngot: %q",
+					packageName, tc.wantBody, got)
 			}
 		})
 	}

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 )
 
 func TestWebHook_AnnounceSend(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		nilChannel     bool
 		failed         *bool
@@ -61,10 +61,10 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 				webhook.ServiceStatus.AnnounceChannel = &announceChannel
 			}
 
-			// WH AnnounceCommand is run
+			// WH AnnounceCommand is run.
 			go webhook.AnnounceSend()
 
-			// THEN the correct response is received
+			// THEN the correct response is received.
 			if webhook.ServiceStatus.AnnounceChannel == nil {
 				return
 			}
@@ -73,26 +73,29 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 			json.Unmarshal(m, &parsed)
 
 			if parsed.WebHookData[webhook.ID] == nil {
-				t.Fatalf("message wasn't for %q\ngot %v",
-					webhook.ID, parsed.WebHookData)
+				t.Fatalf("%s\nmessage mismatch\nwant: message for service %q\ngot:  %+v",
+					packageName, webhook.ID, parsed.WebHookData)
 			}
 
-			// if they failed status matches
+			// if they failed status matches.
 			got := test.StringifyPtr(parsed.WebHookData[webhook.ID].Failed)
 			want := test.StringifyPtr(webhook.Failed.Get(webhook.ID))
 			if got != want {
-				t.Errorf("want failed=%s\ngot  failed=%s",
-					want, got)
+				t.Errorf("%s\nstringified failed mismatch\nwant: %q\ngot:  %q",
+					packageName, want, got)
 			}
 
-			// next runnable is within expected range
+			// next runnable is within expected range.
 			now := time.Now().UTC()
 			minTime := now.Add(tc.timeDifference - time.Second)
 			maxTime := now.Add(tc.timeDifference + time.Second)
 			gotTime := parsed.WebHookData[webhook.ID].NextRunnable
 			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
-				t.Fatalf("ran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
-					now, minTime, maxTime, gotTime)
+				t.Fatalf("%s\nran at:\n%s\nwant between:\n%s and\n%s\n\ngot:\n%s",
+					&parsed,
+					gotTime,
+					minTime, maxTime,
+					now)
 			}
 		})
 	}

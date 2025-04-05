@@ -69,8 +69,8 @@ func TestHTTPRequest(t *testing.T) {
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("web.Lookup.httpRequest() want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -265,7 +265,8 @@ func TestGetVersion(t *testing.T) {
 			lookup.URLCommands[0] = urlCommand
 			err := yaml.Unmarshal([]byte(tc.lookupOverrides), lookup)
 			if err != nil {
-				t.Fatalf("web.Lookup.GetVersion failed to unmarshal lookupOverrides: %v", err)
+				t.Fatalf("%s\nfailed to unmarshal lookupOverrides: %v",
+					packageName, err)
 			}
 			lookup.Init(
 				lookup.Options,
@@ -280,13 +281,13 @@ func TestGetVersion(t *testing.T) {
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Errorf("web.Lookup.getVersion() error mismatch:\nwant: %q\ngot:  %q",
-					tc.want.errRegex, e)
+				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+					packageName, tc.want.errRegex, e)
 			}
 			// AND the version is as expected.
-			if tc.want.version != version {
-				t.Errorf("web.Lookup.getVersion() version mismatch:\nwant: %q\ngot:  %q",
-					tc.want.version, version)
+			if version != tc.want.version {
+				t.Errorf("%s\nversion mismatch:\nwant: %q\ngot:  %q",
+					packageName, tc.want.version, version)
 			}
 		})
 	}
@@ -549,13 +550,14 @@ func TestQuery(t *testing.T) {
 				lookup.AllowInvalidCerts = nil
 				lookup.Status.ServiceID = &name
 				lookup.Options.SemanticVersioning = tc.semanticVersioning
-				// hadStatus
+				// hadStatus.
 				lookup.Status.SetLatestVersion(tc.hadStatus.latestVersion, "", false)
 				lookup.Status.SetDeployedVersion(tc.hadStatus.deployedVersion, "", false)
-				// overrides
+				// overrides.
 				err := yaml.Unmarshal([]byte(tc.overrides), lookup)
 				if err != nil {
-					t.Fatalf("web.Lookup.Query failed to unmarshal overrides: %v", err)
+					t.Fatalf("%s\nfailed to unmarshal overrides: %v",
+						packageName, err)
 				}
 				lookup.Init(
 					lookup.Options,
@@ -577,53 +579,54 @@ func TestQuery(t *testing.T) {
 							continue
 						}
 					}
-					t.Fatalf("web.Lookup.Query() want match for %q\nnot: %q",
-						tc.want.errRegex, e)
+					t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.want.errRegex, e)
 				}
 				// AND the stdout contains the expected strings.
 				if !util.RegexCheck(tc.want.stdoutRegex, stdout) {
-					t.Fatalf("web.Lookup.Query() match for %q not found in:\n%q",
-						tc.want.stdoutRegex, stdout)
+					t.Fatalf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.want.stdoutRegex, stdout)
 				}
 				// AND the LatestVersion is as expected.
 				if tc.hadStatus.latestVersionWant != "" &&
 					tc.hadStatus.latestVersionWant != lookup.Status.LatestVersion() {
-					t.Fatalf("web.Lookup.Query() wanted LatestVersion to become %q, not %q",
-						tc.hadStatus.latestVersionWant, lookup.Status.LatestVersion())
+					t.Fatalf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.hadStatus.latestVersionWant, lookup.Status.LatestVersion())
 				}
-				if tc.want.announce && len(*lookup.Status.AnnounceChannel) != 1 {
-					t.Fatalf("web.Lookup.Query() wanted an announcement")
+				if want := 1; tc.want.announce && len(*lookup.Status.AnnounceChannel) != want {
+					t.Fatalf("%s\nannouncement mismatch\nwant: %d\ngot:  %d",
+						packageName, want, len(*lookup.Status.AnnounceChannel))
 				}
-				if tc.want.newVersion != newVersion {
-					t.Fatalf("web.Lookup.Query() wanted newVersion to be %t, not %t",
-						tc.want.newVersion, newVersion)
+				if newVersion != tc.want.newVersion {
+					t.Fatalf("%s\nnewVersion mismatch\nwant: %t\ngot:  %t",
+						packageName, tc.want.newVersion, newVersion)
 				}
 				// AND the metrics are as expected.
-				// FAIL
-				want := 0
-				if tc.want.errRegex != "^$" {
+				// 	FAIL:
+				var want float64 = 0
+				if tc.want.errRegex != `^$` {
 					want = 1
 				}
 				got := testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
 					*lookup.Status.ServiceID,
 					lookup.Type,
 					"FAIL"))
-				if got != float64(want) {
-					t.Fatalf("web.Lookup.Query() LatestVersionQueryResultTotal - FAIL\nwant: %d\ngot:  %f",
-						want, got)
+				if got != want {
+					t.Fatalf("%s\nLatestVersionQueryResultTotal - FAIL\nwant: %f\ngot:  %f",
+						packageName, want, got)
 				}
-				// SUCCESS
+				// 	SUCCESS:
 				want = 0
-				if tc.want.errRegex == "^$" {
+				if tc.want.errRegex == `^$` {
 					want = 1
 				}
 				got = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
 					*lookup.Status.ServiceID,
 					lookup.Type,
 					"SUCCESS"))
-				if got != float64(want) {
-					t.Fatalf("web.Lookup.Query() LatestVersionQueryResultTotal - FAIL\nwant: %d\ngot:  %f",
-						want, got)
+				if got != want {
+					t.Fatalf("%s\nLatestVersionQueryResultTotal - SUCCESS\nwant: %f\ngot:  %f",
+						packageName, want, got)
 				}
 				lookup.DeleteMetrics(lookup)
 			}

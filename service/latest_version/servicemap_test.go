@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,12 +47,15 @@ func TestServiceMap(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			lookupFunc, exists := ServiceMap[tc.key]
 			if !exists {
-				t.Fatalf("ServiceMap key %q does not exist", tc.key)
+				t.Fatalf("%s\nServiceMap key %q does not exist",
+					packageName, tc.key)
 			}
 
 			lookup := lookupFunc()
 			if getType(lookup) != getType(tc.expected) {
-				t.Errorf("ServiceMap[%q]() = %T, want %T", tc.key, lookup, tc.expected)
+				t.Errorf("%s\nServiceMap[%q]() mismatch\nwant: %T\ngot:  %T",
+					packageName, tc.key,
+					tc.expected, lookup)
 			}
 		})
 	}

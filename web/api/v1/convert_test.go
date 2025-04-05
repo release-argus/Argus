@@ -120,9 +120,9 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 			got := convertAndCensorDefaults(tc.input)
 
 			// THEN the result should be as expected.
-			if tc.want.String() != got.String() {
-				t.Errorf("want\n%q\ngot\n%q",
-					tc.want.String(), got.String())
+			if got.String() != tc.want.String() {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), got.String())
 			}
 		})
 	}
@@ -265,9 +265,9 @@ func TestConvertAndCensorService(t *testing.T) {
 			got := convertAndCensorService(tc.input)
 
 			// THEN the result should be as expected.
-			if tc.want.String() != got.String() {
-				t.Errorf("want\n%q\ngot\n%q",
-					tc.want.String(), got.String())
+			if got.String() != tc.want.String() {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), got.String())
 			}
 		})
 	}
@@ -376,9 +376,9 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 			got := convertAndCensorLatestVersionRequireDefaults(tc.input)
 
 			// THEN the result should be as expected.
-			if tc.want.String() != got.String() {
-				t.Errorf("want\n%q\ngot\n%q",
-					tc.want.String(), got.String())
+			if got.String() != tc.want.String() {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), got.String())
 			}
 		})
 	}
@@ -501,9 +501,9 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 			got := convertAndCensorLatestVersion(tc.input)
 
 			// THEN the result should be as expected.
-			if tc.want != got.String() {
-				t.Errorf("want\n%q\ngot\n%q",
-					tc.want, got.String())
+			if got.String() != tc.want {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, got.String())
 			}
 		})
 	}
@@ -598,9 +598,9 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 			got := convertAndCensorLatestVersionRequire(tc.input)
 
 			// THEN the result should be as expected.
-			if tc.want.String() != got.String() {
-				t.Errorf("want\n%q\ngot\n%q",
-					tc.want.String(), got.String())
+			if got.String() != tc.want.String() {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), got.String())
 			}
 		})
 	}
@@ -659,8 +659,8 @@ func TestConvertURLCommandSlice(t *testing.T) {
 
 			// THEN the WebHookSlice is converted correctly.
 			if got.String() != tc.want.String() {
-				t.Errorf("want: %q, got: %q",
-					tc.want.String(), got.String())
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), got.String())
 			}
 		})
 	}
@@ -867,8 +867,8 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 
 			// THEN the WebHookSlice is converted correctly.
 			if got.String() != tc.want.String() {
-				t.Errorf("want:\n%q\ngot:\n%q",
-					tc.want.String(), got.String())
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), got.String())
 			}
 		})
 	}
@@ -960,9 +960,9 @@ func TestConvertAndCensorNotifySliceDefaults(t *testing.T) {
 			got := convertAndCensorNotifySliceDefaults(tc.input)
 
 			// THEN the result should be as expected.
-			if tc.want.String() != got.String() {
-				t.Errorf("want\n%q\ngot\n%q",
-					tc.want.String(), got.String())
+			if got.String() != tc.want.String() {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), got.String())
 			}
 		})
 	}
@@ -1056,9 +1056,9 @@ func TestConvertAndCensorNotifySlice(t *testing.T) {
 			got := convertAndCensorNotifySlice(tc.input)
 
 			// THEN the result should be as expected.
-			if tc.want.String() != got.String() {
-				t.Errorf("want\n%q\ngot\n%q",
-					tc.want.String(), got.String())
+			if got.String() != tc.want.String() {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), got.String())
 			}
 		})
 	}
@@ -1111,21 +1111,21 @@ func TestConvertCommandSlice(t *testing.T) {
 			}
 			// check number of commands.
 			if len(*got) != len(*tc.want) {
-				t.Errorf("want:\n%v\ngot:\n%v",
-					tc.want, got)
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 				return
 			}
 			for cI := range *got {
 				// check number of args.
 				if len((*got)[cI]) != len((*tc.want)[cI]) {
-					t.Errorf("want:\n%v\ngot:\n%v",
-						tc.want, got)
+					t.Errorf("%s\nwant: %v\ngot:  %v",
+						packageName, tc.want, got)
 				}
 				// check args.
 				for aI := range (*got)[cI] {
 					if (*got)[cI][aI] != (*tc.want)[cI][aI] {
-						t.Errorf("want:\n%v\ngot:\n%v",
-							tc.want, got)
+						t.Errorf("%s\nwant: %v\ngot:  %v",
+							packageName, tc.want, got)
 					}
 				}
 			}
@@ -1214,9 +1214,9 @@ func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
 			got := convertAndCensorWebHookSliceDefaults(tc.input)
 
 			// THEN the result should be as expected.
-			if tc.want.String() != got.String() {
-				t.Errorf("want\n%q\ngot\n%q",
-					tc.want.String(), got.String())
+			if got.String() != tc.want.String() {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), got.String())
 			}
 		})
 	}
@@ -1297,9 +1297,9 @@ func TestConvertAndCensorWebHookSlice(t *testing.T) {
 			got := convertAndCensorWebHookSlice(tc.input)
 
 			// THEN the result should be as expected.
-			if tc.want.String() != got.String() {
-				t.Errorf("want\n%q\ngot\n%q",
-					tc.want.String(), got.String())
+			if got.String() != tc.want.String() {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), got.String())
 			}
 		})
 	}
@@ -1350,8 +1350,8 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 
 			// THEN the WebHook is converted correctly.
 			if got.String() != tc.want.String() {
-				t.Errorf("want:\n%q\ngot:%q",
-					tc.want.String(), got.String())
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want.String(), got.String())
 			}
 		})
 	}
@@ -1399,16 +1399,19 @@ func TestConvertWebHookHeaders(t *testing.T) {
 				return
 			}
 			if got == nil || tc.want == nil {
-				t.Errorf("want: %v, got: %v", tc.want, got)
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 				return
 			}
 			if len(*got) != len(*tc.want) {
-				t.Errorf("want: %v, got: %v", tc.want, got)
+				t.Errorf("%s\nwant: %v\ngot:  %v",
+					packageName, tc.want, got)
 				return
 			}
 			for i := range *got {
 				if (*got)[i] != (*tc.want)[i] {
-					t.Errorf("want: %v, got: %v", tc.want, got)
+					t.Errorf("%s\nwant: %v\ngot:  %v",
+						packageName, tc.want, got)
 					return
 				}
 			}

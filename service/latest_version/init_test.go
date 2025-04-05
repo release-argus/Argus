@@ -43,22 +43,22 @@ func TestLookup_Init(t *testing.T) {
 	// THEN pointers to those vars are handed out to the Lookup:
 	// 	Defaults.
 	if lookup.GetDefaults() != &defaults {
-		t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&defaults, lookup.GetDefaults())
+		t.Errorf("%s\nDefaults were not handed to the Lookup correctly\nwant: %v\ngot:  %v",
+			packageName, &defaults, lookup.GetDefaults())
 	}
 	// HardDefaults.
 	if lookup.GetHardDefaults() != &hardDefaults {
-		t.Errorf("HardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&hardDefaults, lookup.GetHardDefaults())
+		t.Errorf("%s\nHardDefaults were not handed to the Lookup correctly\nwant: %v\ngot:  %v",
+			packageName, &hardDefaults, lookup.GetHardDefaults())
 	}
 	// 	Status.
 	if lookup.GetStatus() != &status {
-		t.Errorf("Status was not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&status, lookup.GetStatus())
+		t.Errorf("%s\nStatus was not handed to the Lookup correctly\nwant: %v\ngot:  %v",
+			packageName, &status, lookup.GetStatus())
 	}
 	// 	Options.
 	if lookup.GetOptions() != &options {
-		t.Errorf("Options were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&options, lookup.GetOptions())
+		t.Errorf("%s\nOptions were not handed to the Lookup correctly\nwant: %v\ngot:  %v",
+			packageName, &options, lookup.GetOptions())
 	}
 }

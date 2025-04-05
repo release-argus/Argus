@@ -40,7 +40,7 @@ import (
 )
 
 func TestHTTP_httpServiceGetActions(t *testing.T) {
-	// GIVEN an API and a request for the Actions of a Service
+	// GIVEN an API and a request for the Actions of a Service.
 	file := "TestHTTP_httpServiceGetActions.yml"
 	api := testAPI(file)
 	t.Cleanup(func() {
@@ -104,7 +104,7 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			if tc.statusCode == 0 {
@@ -151,7 +151,7 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			target := "/api/v1/service/actions/"
 			target += url.QueryEscape(tc.serviceID)
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			vars := map[string]string{
 				"service_id": tc.serviceID}
@@ -161,34 +161,34 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			res := wHTTP.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN we get the expected response
+			// THEN we get the expected response.
 			stdout := releaseStdout()
-			// stdout finishes
+			// stdout finishes.
 			if tc.stdoutRegex != "" {
 				tc.stdoutRegex = strings.ReplaceAll(tc.stdoutRegex, "__name__", name)
 				if !util.RegexCheck(tc.stdoutRegex, stdout) {
-					t.Errorf("match on %q not found in\n%q",
-						tc.stdoutRegex, stdout)
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.stdoutRegex, stdout)
 				}
 			}
 			message, _ := io.ReadAll(res.Body)
 			if res.StatusCode != tc.statusCode {
-				t.Errorf("expected status code %d but got %d\n%s",
-					tc.statusCode, res.StatusCode, message)
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d\nbody: %q",
+					packageName, tc.statusCode, res.StatusCode, message)
 			} else if tc.statusCode != http.StatusOK {
 				return
 			}
 			var gotStruct apitype.ActionSummary
 			_ = json.Unmarshal(message, &gotStruct)
 			if len(gotStruct.Command) != len(tc.commands) {
-				t.Fatalf("expected %d commands but got %d\n%s",
-					len(tc.commands), len(gotStruct.Command), message)
+				t.Fatalf("%s\ncommands mismatch\nwant: %d\ngot:  %d\nbody: %q",
+					packageName, len(tc.commands), len(gotStruct.Command), message)
 			}
 			if len(gotStruct.WebHook) != len(tc.webhooks) {
-				t.Fatalf("expected %d webhooks but got %d\n%s",
-					len(tc.webhooks), len(gotStruct.WebHook), message)
+				t.Fatalf("%s\nwebhooks mismatch\nwant: %d\ngot:  %d\nbody: %q",
+					packageName, len(tc.webhooks), len(gotStruct.WebHook), message)
 			}
-			// Check commands
+			// Check commands.
 			if tc.commands != nil {
 				for cmd, got := range gotStruct.Command {
 					found := false
@@ -204,19 +204,21 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 							}
 							if got.Failed != svc.CommandController.Failed.Get(indexInService) ||
 								got.NextRunnable != svc.CommandController.NextRunnable(indexInService) {
-								t.Fatalf("command %q: expected %+v but got %+v\n%s",
-									cmd, want, got, message)
+								t.Fatalf("%s\ncommand %q mismatch\nwant: %+v\ngot:  %+v\nbody: %q",
+									packageName, cmd,
+									want, got,
+									message)
 							}
 							break
 						}
 					}
 					if !found {
-						t.Fatalf("command %q wasn't sent\n%s",
-							cmd, message)
+						t.Fatalf("%s\ncommand %q wasn't sent\nbody: %q",
+							packageName, cmd, message)
 					}
 				}
 			}
-			// Check webhooks
+			// Check webhooks.
 			if tc.webhooks != nil {
 				for wh, got := range gotStruct.WebHook {
 					found := false
@@ -225,15 +227,17 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 							found = true
 							if got.Failed != want.ServiceStatus.Fails.WebHook.Get(wh) ||
 								got.NextRunnable != want.NextRunnable() {
-								t.Fatalf("webhook %q: expected %+v but got %+v\n%s",
-									wh, want, got, message)
+								t.Fatalf("%s\nwebhook %q mismatch\nwant: %+v\ngot:  %+v\nbody: %q",
+									packageName, wh,
+									want, got,
+									message)
 							}
 							break
 						}
 					}
 					if !found {
-						t.Fatalf("webhook %q wasn't sent\n%s",
-							wh, message)
+						t.Fatalf("%s\nwebhook %q wasn't sent\nbody: %q",
+							packageName, wh, message)
 					}
 				}
 			}
@@ -242,7 +246,7 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 }
 
 func TestHTTP_httpServiceRunActions(t *testing.T) {
-	// GIVEN an API and a request for the Actions of a Service
+	// GIVEN an API and a request for the Actions of a Service.
 	file := "TestHTTP_httpServiceRunActions.yml"
 	api := testAPI(file)
 	t.Cleanup(func() {
@@ -271,7 +275,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 	}{
 		"invalid payload": {
 			serviceID:   "__name__",
-			payload:     test.StringPtr("target: foo"), // not JSON
+			payload:     test.StringPtr("target: foo"),
 			stdoutRegex: `Invalid payload - invalid character`,
 		},
 		"ARGUS_SKIP known service_id": {
@@ -415,7 +419,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			tc.serviceID = strings.ReplaceAll(tc.serviceID, "__name__", name)
@@ -468,7 +472,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			api.Config.OrderMutex.Unlock()
 			t.Cleanup(func() { api.Config.DeleteService(name) })
 
-			// WHEN the HTTP request is sent to run the action(s)
+			// WHEN the HTTP request is sent to run the action(s).
 			target := tc.target
 			if tc.approveCommandsIndividually {
 				commandTarget := "command_" + tc.commands[0].String()
@@ -500,13 +504,13 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 				api.httpServiceRunActions(wHTTP, req)
 				res := wHTTP.Result()
 				data, _ := io.ReadAll(res.Body)
-				t.Log(fmt.Sprintf("target=%q\nresult=%q, status_code=%d",
-					util.PtrValueOrValue(target, "<nil>"), string(data), res.StatusCode))
+				t.Log(fmt.Sprintf("%s\ntarget=%q\nresult=%q, status_code=%d",
+					packageName, util.PtrValueOrValue(target, "<nil>"), string(data), res.StatusCode))
 				time.Sleep(10 * time.Microsecond)
 			}
 			time.Sleep(time.Duration((len(tc.commands)+len(tc.webhooks))*500) * time.Millisecond)
 
-			// THEN we get the expected response
+			// THEN we get the expected response.
 			expecting := 0
 			if tc.commands != nil {
 				expecting += len(tc.commands)
@@ -538,52 +542,53 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 				expecting++
 			}
 			messages := make([]apitype.WebSocketMessage, expecting)
-			t.Logf("expecting %d messages",
-				expecting)
+			t.Logf("%s\nexpecting %d messages",
+				packageName, expecting)
 			got := 0
 			for expecting != 0 {
 				message := <-*api.Config.HardDefaults.Service.Status.AnnounceChannel
 				if message == nil {
 					stdout := releaseStdout()
 					t.Log(time.Now(), stdout)
-					t.Errorf("expecting %d more messages but got %v",
-						expecting, message)
+					t.Errorf("%s\nwant: %d more messages\ngot:  %v",
+						packageName, expecting, message)
 					return
 				}
 				json.Unmarshal(message, &messages[got])
 				raw, _ := json.Marshal(messages[got])
-				t.Logf("\n%s\n", string(raw))
+				t.Logf("%s\n%s\n",
+					packageName, string(raw))
 				got++
 				expecting--
 			}
-			// extra message check
+			// extra message check.
 			extraMessages := len(*api.Config.HardDefaults.Service.Status.AnnounceChannel)
 			if extraMessages != 0 {
 				raw := <-*api.Config.HardDefaults.Service.Status.AnnounceChannel
-				t.Fatalf("wasn't expecting another message but got one\n%#v\n%s",
-					extraMessages, string(raw))
+				t.Fatalf("%s\nwasn't expecting another message but got one\n%#v\n%s",
+					packageName, extraMessages, string(raw))
 			}
 			stdout := releaseStdout()
-			// stdout finishes
+			// stdout finishes.
 			if tc.stdoutRegex != "" {
 				if !util.RegexCheck(tc.stdoutRegex, stdout) {
-					t.Errorf("match on %q not found in\n%q",
-						tc.stdoutRegex, stdout)
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.stdoutRegex, stdout)
 				}
 				return
 			}
 			t.Log(stdout)
-			// Check version was skipped
+			// Check version was skipped.
 			if util.DereferenceOrDefault(tc.target) == "ARGUS_SKIP" {
 				if tc.wantSkipMessage &&
 					messages[0].ServiceData.Status.ApprovedVersion != "SKIP_"+svc.Status.LatestVersion() {
-					t.Errorf("LatestVersion %q wasn't skipped. approved is %q\ngot=%q",
-						svc.Status.LatestVersion(),
+					t.Errorf("%s\nLatestVersion %q wasn't skipped. ApprovedVersion=%q\ngot=%q",
+						packageName, svc.Status.LatestVersion(),
 						svc.Status.ApprovedVersion(),
 						messages[0].ServiceData.Status.ApprovedVersion)
 				}
 			} else {
-				// expecting = commands + webhooks that have not failed=false
+				// expecting = commands + webhooks that have not failed=false.
 				expecting := 0
 				if tc.commands != nil {
 					expecting += len(tc.commands)
@@ -611,15 +616,16 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 				}
 				var received []string
 				for i, message := range messages {
-					t.Logf("message %d - %v",
-						i, message)
+					t.Logf("%s - message[%d]=%v",
+						packageName, i, message)
 					receivedForAnAction := false
 					for _, command := range tc.commands {
 						if message.CommandData[command.String()] != nil {
 							receivedForAnAction = true
 							received = append(received, command.String())
-							t.Logf("FOUND COMMAND %q - failed=%s",
-								command.String(), test.StringifyPtr(message.CommandData[command.String()].Failed))
+							t.Logf("%s\nFOUND COMMAND %q - failed=%s",
+								packageName, command.String(),
+								test.StringifyPtr(message.CommandData[command.String()].Failed))
 							break
 						}
 					}
@@ -628,32 +634,33 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 							if message.WebHookData[i] != nil {
 								receivedForAnAction = true
 								received = append(received, i)
-								t.Logf("FOUND WEBHOOK %q - failed=%s",
-									i, test.StringifyPtr(message.WebHookData[i].Failed))
+								t.Logf("%s\nFOUND WEBHOOK %q - failed=%s",
+									packageName, i,
+									test.StringifyPtr(message.WebHookData[i].Failed))
 								break
 							}
 						}
 					}
 					if !receivedForAnAction {
-						//  IF we're expecting a message about approvedVersion
+						//  IF we're expecting a message about approvedVersion.
 						if tc.upgradesApprovedVersion && message.Type == "VERSION" && message.SubType == "ACTION" {
 							if message.ServiceData.Status.ApprovedVersion != svc.Status.LatestVersion() {
-								t.Fatalf("expected approved version to be updated to latest version in the message\n%#v\napproved=%#v, latest=%#v",
-									message, message.ServiceData.Status.ApprovedVersion, svc.Status.LatestVersion())
+								t.Fatalf("%s\nexpected approved version to be updated to latest version in the message\n%#v\napproved=%#v, latest=%#v",
+									packageName, message, message.ServiceData.Status.ApprovedVersion, svc.Status.LatestVersion())
 							}
 							continue
 						}
 						if tc.upgradesDeployedVersion && message.Type == "VERSION" && message.SubType == "UPDATED" {
 							if message.ServiceData.Status.DeployedVersion != svc.Status.LatestVersion() {
-								t.Fatalf("expected deployed version to be updated to latest version in the message\n%#v\ndeployed=%#v, latest=%#v",
-									message, message.ServiceData.Status.DeployedVersion, svc.Status.LatestVersion())
+								t.Fatalf("%s\nexpected deployed version to be updated to latest version in the message\n%#v\ndeployed=%#v, latest=%#v",
+									packageName, message, message.ServiceData.Status.DeployedVersion, svc.Status.LatestVersion())
 							}
 							continue
 						}
 						raw, _ := json.Marshal(message)
 						if string(raw) != `{"page":"","type":""}` {
-							t.Fatalf("Unexpected message\n%#v\n%s",
-								message, raw)
+							t.Fatalf("%s\nUnexpected message\n%#v\n%s",
+								packageName, message, raw)
 						}
 					}
 				}

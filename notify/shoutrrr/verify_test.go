@@ -28,7 +28,7 @@ import (
 )
 
 func TestShoutrrr_checkValuesType(t *testing.T) {
-	// GIVEN a Shoutrrr with a Type and possibly a Main
+	// GIVEN a Shoutrrr with a Type and possibly a Main.
 	tests := map[string]struct {
 		sType     string
 		main      *Defaults
@@ -72,24 +72,24 @@ func TestShoutrrr_checkValuesType(t *testing.T) {
 				tc.main,
 				&Defaults{}, &Defaults{})
 
-			// WHEN checkValuesType is called
+			// WHEN checkValuesType is called.
 			errsType := shoutrrr.checkValuesType("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			if tc.errsRegex == "" {
 				tc.errsRegex = "^$"
 			}
 			e := util.ErrorToString(errsType)
 			if !util.RegexCheck(tc.errsRegex, e) {
-				t.Errorf("Shoutrrr.checkValuesType, want error on type to match:\n%q\ngot:\n%q\n",
-					tc.errsRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant:  %q\ngot:  %q",
+					packageName, tc.errsRegex, e)
 			}
 		})
 	}
 }
 
 func TestBase_checkValuesOptions(t *testing.T) {
-	// GIVEN a Base with Options
+	// GIVEN a Base with Options.
 	tests := map[string]struct {
 		options   map[string]string
 		wantDelay string
@@ -172,27 +172,27 @@ func TestBase_checkValuesOptions(t *testing.T) {
 			shoutrrr := Base{}
 			shoutrrr.Options = tc.options
 
-			// WHEN checkValuesOptions is called
+			// WHEN checkValuesOptions is called.
 			err := shoutrrr.checkValuesOptions("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Shoutrrr.checkValuesOptions(), want error on options to match:\n%q\ngot:\n%q\n",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q\n",
+					packageName, tc.errRegex, e)
 			}
-			// AND the delay is set as expected if it didn't error on delay
+			// AND the delay is set as expected if it didn't error on delay.
 			if !util.RegexCheck("^delay:.*", e) &&
 				shoutrrr.GetOption("delay") != tc.wantDelay {
-				t.Errorf("Shoutrrr.checkValuesOptions(), want delay to be %q, got %q",
-					tc.wantDelay, shoutrrr.GetOption("delay"))
+				t.Errorf("%s\ndelay mismatch\nwant: %q\n got:  %q",
+					packageName, tc.wantDelay, shoutrrr.GetOption("delay"))
 			}
 		})
 	}
 }
 
 func TestBase_checkValuesParams(t *testing.T) {
-	// GIVEN a Base with Params
+	// GIVEN a Base with Params.
 	tests := map[string]struct {
 		params   map[string]string
 		errRegex string
@@ -220,14 +220,14 @@ func TestBase_checkValuesParams(t *testing.T) {
 			shoutrrr := Base{}
 			shoutrrr.Params = tc.params
 
-			// WHEN checkValuesParams is called
+			// WHEN checkValuesParams is called.
 			err := shoutrrr.checkValuesParams("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Shoutrrr.checkValuesParams(), want error on params to match:\n%q\ngot:\n%q\n",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q\n",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
@@ -338,36 +338,36 @@ func TestBase_CheckValues(t *testing.T) {
 				}
 			}
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := tc.base.CheckValues("", tc.id)
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("Base.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
+					packageName, wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Base.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
-			// AND the Base is as expected
+			// AND the Base is as expected.
 			wantStr := util.ToYAMLString(tc.want, "")
 			gotStr := util.ToYAMLString(tc.base, "")
 			if gotStr != wantStr {
-				t.Errorf("Base.CheckValues() mismatch\nwant:\n%q\ngot:\n%q",
-					wantStr, gotStr)
+				t.Errorf("%s\nstringified mismatch\nwant:\n%q\ngot:\n%q",
+					packageName, wantStr, gotStr)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_checkValuesURLFields(t *testing.T) {
-	// GIVEN a Shoutrrr with Params
+	// GIVEN a Shoutrrr with Params.
 	tests := map[string]struct {
 		sType     string
 		urlFields map[string]string
@@ -1074,21 +1074,21 @@ func TestShoutrrr_checkValuesURLFields(t *testing.T) {
 				tc.main,
 				&Defaults{}, &Defaults{})
 
-			// WHEN checkValuesURLFields is called
+			// WHEN checkValuesURLFields is called.
 			err := shoutrrr.checkValuesURLFields("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Shoutrrr.checkValuesURLFields(), want error on url_fields to match:\n%q\ngot:\n%q\n",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_checkValuesParams(t *testing.T) {
-	// GIVEN a Shoutrrr with Params
+	// GIVEN a Shoutrrr with Params.
 	tests := map[string]struct {
 		sType    string
 		params   map[string]string
@@ -1256,21 +1256,21 @@ func TestShoutrrr_checkValuesParams(t *testing.T) {
 				tc.main,
 				&Defaults{}, &Defaults{})
 
-			// WHEN checkValuesParams is called
+			// WHEN checkValuesParams is called.
 			err := shoutrrr.checkValuesParams("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("Shoutrrr.checkValuesParams(), want error on params to match:\n%q\ngot:\n%q\n",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q\n",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_CorrectSelf(t *testing.T) {
-	// GIVEN a Service
+	// GIVEN a Service.
 	tests := map[string]struct {
 		sType         string
 		mapTarget     string
@@ -1422,9 +1422,10 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 					URLFields: shoutrrr.HardDefaults.URLFields,
 					Params:    shoutrrr.HardDefaults.Params},
 			}
-			// sub tests - set in different locations and check its corrected there
+			// Sub tests - set in different locations and check it's corrected there.
 			for sub_test := range subTestMap {
-				t.Logf("sub_test: %s", sub_test)
+				t.Logf("%s - sub_test: %s",
+					packageName, sub_test)
 				if tc.mapTarget == "url_fields" {
 					for k, v := range tc.startAs {
 						subTestMap[sub_test].URLFields[k] = v
@@ -1435,13 +1436,13 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 					}
 				}
 
-				// WHEN correctSelf is called
+				// WHEN correctSelf is called.
 				shoutrrr.correctSelf(shoutrrr.GetType())
 
-				// THEN the fields are corrected as necessary
+				// THEN the fields are corrected as necessary.
 				for k, v := range tc.want {
 					want := v
-					// root is the only one that gets corrected
+					// root is the only one that gets corrected.
 					if sub_test != "root" {
 						want = tc.startAs[k]
 					}
@@ -1450,20 +1451,22 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 						got = shoutrrr.GetParam(k)
 					}
 					if got != want {
-						t.Errorf("want %s:%q, not %q",
-							k, want, got)
+						t.Errorf("%s\nwant %s:%q, not %q",
+							packageName, k,
+							want, got)
 					} else {
 						for _, sub_test_check := range subTests {
 							if sub_test_check != sub_test {
 								testData := subTestMap[sub_test_check]
 								if len(testData.URLFields) > 0 || len(testData.Params) > 0 {
-									t.Errorf("want empty %s, not %v/%v",
-										sub_test_check, testData.URLFields, testData.Params)
+									t.Errorf("%s\nmismatch\nwant: empty %s\ngot:  url_fields=%+v / params=%+v",
+										packageName, sub_test_check,
+										testData.URLFields, testData.Params)
 								}
 							}
 						}
 					}
-					// reset
+					// Reset.
 					if tc.mapTarget == "url_fields" {
 						delete(subTestMap[sub_test].URLFields, k)
 					} else {
@@ -1476,7 +1479,7 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 }
 
 func TestShoutrrr_CheckValues(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	testS := testShoutrrr(false, false)
 	tests := map[string]struct {
 		nilShoutrrr                bool
@@ -1645,26 +1648,28 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 				shoutrrr = nil
 			}
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := shoutrrr.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 			if tc.nilShoutrrr {
 				return
 			}
 			if tc.wantDelay != "" && shoutrrr.GetOption("delay") != tc.wantDelay {
-				t.Errorf("delay not set/corrected. want match for %q\nnot: %q",
-					tc.wantDelay, shoutrrr.GetOption("delay"))
+				t.Errorf("%s\ndelay not set/corrected\nwant: %q\ngot:  %q",
+					packageName, tc.wantDelay, shoutrrr.GetOption("delay"))
 			}
 			for key := range tc.wantURLFields {
 				if shoutrrr.URLFields[key] != tc.wantURLFields[key] {
-					t.Errorf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
-						key, tc.wantURLFields[key], key, shoutrrr.URLFields[key], tc.wantURLFields, shoutrrr.URLFields)
+					t.Errorf("%s\nmismatch on %q\nwant: %q (%v)\ngot:  %q (%v)",
+						packageName, key,
+						tc.wantURLFields[key], tc.wantURLFields,
+						shoutrrr.URLFields[key], shoutrrr.URLFields)
 				}
 			}
 		})
@@ -1672,7 +1677,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 }
 
 func TestSlice_CheckValues(t *testing.T) {
-	// GIVEN a Slice
+	// GIVEN a Slice.
 	tests := map[string]struct {
 		slice    *Slice
 		errRegex string
@@ -1726,21 +1731,21 @@ func TestSlice_CheckValues(t *testing.T) {
 					&SliceDefaults{}, &SliceDefaults{}, &SliceDefaults{})
 			}
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := tc.slice.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
 }
 
 func TestSliceDefaults_CheckValues(t *testing.T) {
-	// GIVEN a SliceDefaults
+	// GIVEN a SliceDefaults.
 	tests := map[string]struct {
 		slice    *SliceDefaults
 		errRegex string
@@ -1756,7 +1761,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 				"other": testDefaults(false, false)},
 		},
 		"invalid type": {
-			errRegex: "", // Caught by Shoutrrr.CheckValues
+			errRegex: "", // Caught by Shoutrrr.CheckValues.
 			slice: &SliceDefaults{
 				"valid": testDefaults(false, false),
 				"other": NewDefaults(
@@ -1815,32 +1820,33 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := tc.slice.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("ShoutrrrSlice.CheckValues() mismatch\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_TestSend(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		sType       *string
 		nilShoutrrr bool
-		wantErr     bool
+		errRegex    string
 	}{
 		"nil shoutrrr": {
-			nilShoutrrr: true, wantErr: true},
+			nilShoutrrr: true, errRegex: `^shoutrrr is nil$`},
 		"invalid type": {
-			sType: test.StringPtr("somethingUnknown"), wantErr: true},
+			sType:    test.StringPtr("somethingUnknown"),
+			errRegex: `^failed to create Shoutrrr sender.*unknown service ""$`},
 		"valid": {
-			wantErr: false},
+			errRegex: `^$`},
 	}
 
 	for name, tc := range tests {
@@ -1855,23 +1861,21 @@ func TestShoutrrr_TestSend(t *testing.T) {
 				shoutrrr = nil
 			}
 
-			// WHEN TestSend is called
+			// WHEN TestSend is called.
 			err := shoutrrr.TestSend("https://example.com")
 
-			// THEN it errors when expected
-			if tc.wantErr && err == nil {
-				t.Errorf("want err, not nil")
-			}
-			if !tc.wantErr && err != nil {
-				t.Errorf("want nil, not err: %v", err)
+			// THEN it errors when expected.
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 			}
 		})
 	}
-
 }
 
 func TestSliceDefaults_Print(t *testing.T) {
-	// GIVEN a SliceDefaults
+	// GIVEN a SliceDefaults.
 	testValid := testDefaults(false, false)
 	testInvalid := testDefaults(true, true)
 	tests := map[string]struct {
@@ -1934,22 +1938,22 @@ func TestSliceDefaults_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			if tc.want != "" {
 				tc.want += "\n"
 			}
 
-			// WHEN Print is called
+			// WHEN Print is called.
 			tc.slice.Print("")
 
-			// THEN it prints the expected stdout
+			// THEN it prints the expected stdout.
 			stdout := releaseStdout()
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if stdout != tc.want {
-				t.Errorf("Print should have given\n%q\nbut gave\n%q",
-					tc.want, stdout)
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, tc.want, stdout)
 			}
 		})
 	}

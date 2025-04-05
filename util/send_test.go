@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,8 @@ func TestRetryWithBackoff_Success(t *testing.T) {
 
 	err := RetryWithBackoff(operation, 3, 100*time.Millisecond, 1*time.Second, nil)
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf("%s\nerror mismatch\nwant: none\ngot:  %v",
+			packageName, err)
 	}
 }
 
@@ -41,10 +42,12 @@ func TestRetryWithBackoff_Failure(t *testing.T) {
 
 	err := RetryWithBackoff(operation, 3, 100*time.Millisecond, 1*time.Second, nil)
 	if err == nil {
-		t.Fatalf("expected error, got nil")
+		t.Fatalf("%s\nerror mismatch\nwant: err\ngot:  none",
+			packageName)
 	}
 	if !errors.Is(err, expectedErr) {
-		t.Fatalf("expected %v, got %v", expectedErr, err)
+		t.Fatalf("%s\nerror mismatch\nwant: %v\ngot:  %v",
+			packageName, expectedErr, err)
 	}
 }
 
@@ -58,7 +61,8 @@ func TestRetryWithBackoff_StopCondition(t *testing.T) {
 
 	err := RetryWithBackoff(operation, 3, 100*time.Millisecond, 1*time.Second, shouldStop)
 	if err != nil {
-		t.Fatalf("expected no error due to stop condition, got %v", err)
+		t.Fatalf("%s\nstop condition didn't prevent error\nwant: none\ngot:  %v",
+			packageName, err)
 	}
 }
 
@@ -72,9 +76,11 @@ func TestRetryWithBackoff_ExponentialBackoff(t *testing.T) {
 	elapsed := time.Since(start)
 
 	if err == nil {
-		t.Fatalf("expected error, got nil")
+		t.Fatalf("%s\nerror mismatch\nwant: err\ngot:  none",
+			packageName)
 	}
 	if elapsed < 300*time.Millisecond {
-		t.Fatalf("expected at least 300ms delay, got %v", elapsed)
+		t.Fatalf("%s\ndelay mismatch\nwant: 300ms+\ngot:  %v",
+			packageName, elapsed)
 	}
 }

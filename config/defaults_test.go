@@ -33,7 +33,7 @@ import (
 )
 
 func TestDefaults_String(t *testing.T) {
-	// GIVEN a Defaults
+	// GIVEN a Defaults.
 	tests := map[string]struct {
 		defaults *Defaults
 		want     string
@@ -61,12 +61,12 @@ func TestDefaults_String(t *testing.T) {
 								Interval: "1m"}},
 						Require: filter.RequireDefaults{
 							Docker: *filter.NewDockerCheckDefaults(
-								"ghcr", // type
+								"ghcr",
 								"tokenGHCR",
 								"tokenHub", "usernameHub",
 								"tokenQuay",
 								filter.NewDockerCheckDefaults(
-									"quay", // type
+									"quay",
 									"otherTokenGHCR",
 									"otherTokenHub", "otherUsernameHub",
 									"otherTokenQuay",
@@ -157,14 +157,14 @@ func TestDefaults_String(t *testing.T) {
 					want += "\n"
 				}
 
-				// WHEN the Defaults are stringified with String()
+				// WHEN the Defaults are stringified with String().
 				got := tc.defaults.String(prefix)
 
-				// THEN the result is as expected
+				// THEN the result is as expected.
 				if got != want {
-					t.Errorf("Defaults.String() mismatch (prefix=%q)\nwant: %q\ngot:  %q",
-						prefix, want, got)
-					return // no need to check other prefixes
+					t.Errorf("%s\n(prefix=%q)\nwant: %q\ngot:  %q",
+						packageName, prefix, want, got)
+					return // no need to check other prefixes.
 				}
 			}
 		})
@@ -172,34 +172,34 @@ func TestDefaults_String(t *testing.T) {
 }
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN nil defaults
+	// GIVEN nil defaults.
 	var defaults Defaults
 
-	// WHEN Default is called on it
+	// WHEN Default is called on it.
 	defaults.Default()
 	tests := map[string]struct {
-		got, want string
+		want, got string
 	}{
 		"Service.Interval": {
-			got:  defaults.Service.Options.Interval,
-			want: "10m"},
+			want: "10m",
+			got:  defaults.Service.Options.Interval},
 		"Notify.discord.username": {
-			got:  defaults.Notify["discord"].GetParam("username"),
-			want: "Argus"},
+			want: "Argus",
+			got:  defaults.Notify["discord"].GetParam("username")},
 		"WebHook.Delay": {
-			got:  defaults.WebHook.Delay,
-			want: "0s"},
+			want: "0s",
+			got:  defaults.WebHook.Delay},
 	}
 
-	// THEN the defaults are set correctly
+	// THEN the defaults are set correctly.
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			if tc.got != tc.want {
 				t.Log(name)
-				t.Errorf("want: %s\ngot:  %s",
-					tc.want, tc.got)
+				t.Errorf("%s\nwant: %s\ngot:  %s",
+					packageName, tc.want, tc.got)
 			}
 		})
 	}
@@ -208,7 +208,7 @@ func TestDefaults_Default(t *testing.T) {
 func TestDefaults_MapEnvToStruct(t *testing.T) {
 	var unmodifiedDefaults Defaults
 	unmodifiedDefaults.Default()
-	// GIVEN a defaults and a bunch of env vars
+	// GIVEN a defaults and a bunch of env vars.
 	test := map[string]struct {
 		env      map[string]string
 		want     *Defaults
@@ -911,7 +911,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 
 	for name, tc := range test {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing some env vars
+			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
 
 			defaults := Defaults{
 				Service: service.Defaults{
@@ -949,37 +949,40 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				}
 
 				if tc.errRegex == "" {
-					t.Fatalf("unexpected panic: %v", r)
+					t.Fatalf("%s\nunexpected panic: %v",
+						packageName, r)
 				}
 				switch r.(type) {
 				case string:
 					if !util.RegexCheck(tc.errRegex, r.(string)) {
-						t.Errorf("MapEnvToStruct() want error matching:\n%q\ngot:\n%q",
-							tc.errRegex, r.(string))
+						t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+							packageName, tc.errRegex, r.(string))
 					}
 				default:
-					t.Fatalf("unexpected panic: %v", r)
+					t.Fatalf("%s\nunexpected panic: %v",
+						packageName, r)
 				}
 			}()
 
-			// WHEN MapEnvToStruct is called on it
+			// WHEN MapEnvToStruct is called on it.
 			defaults.MapEnvToStruct()
 
-			// THEN any error is as expected
-			if tc.errRegex != "" { // Expected a FATAL panic to be caught above
-				t.Fatalf("expected an error matching %q, but got none", tc.errRegex)
+			// THEN any error is as expected.
+			if tc.errRegex != "" { // Expected a FATAL panic to be caught above.
+				t.Fatalf("%s\nexpected an error matching %q, but got none",
+					packageName, tc.errRegex)
 			}
-			// AND the defaults are set to the appropriate env vars
+			// AND the defaults are set to the appropriate env vars.
 			if defaults.String("") != tc.want.String("") {
-				t.Errorf("unexpected struct after MapEnvToStruct on defaults:\n%v\ngot:\n%v",
-					tc.want.String(""), defaults.String(""))
+				t.Errorf("%s\nunexpected struct\nwant: %v\ngot:  %v",
+					packageName, tc.want.String(""), defaults.String(""))
 			}
 		})
 	}
 }
 
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN defaults with a test of invalid vars
+	// GIVEN defaults with a test of invalid vars.
 	var defaults Defaults
 	defaults.Default()
 	tests := map[string]struct {
@@ -1056,21 +1059,21 @@ func TestDefaults_CheckValues(t *testing.T) {
 				errRegex = strings.ReplaceAll(errRegex, "^", "^"+prefix)
 				errRegex = strings.ReplaceAll(errRegex, "\n", "\n"+prefix)
 
-				// WHEN CheckValues is called on it
+				// WHEN CheckValues is called on it.
 				err := tc.input.CheckValues(prefix)
 
-				// THEN err matches expected
+				// THEN err matches expected.
 				e := util.ErrorToString(err)
 				lines := strings.Split(e, "\n")
 				wantLines := strings.Count(errRegex, "\n")
 				if wantLines > len(lines) {
-					t.Fatalf("latestver.Lookup.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-						wantLines, errRegex, len(lines), lines, e)
+					t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d:\n%v\n\nstdout: %q",
+						packageName, wantLines, errRegex, len(lines), lines, e)
 					return
 				}
 				if !util.RegexCheck(errRegex, e) {
-					t.Errorf("latestver.Lookup.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-						errRegex, e)
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, errRegex, e)
 					return
 				}
 			}
@@ -1079,7 +1082,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 }
 
 func TestDefaults_Print(t *testing.T) {
-	// GIVEN a set of Defaults
+	// GIVEN a set of Defaults.
 	var defaults Defaults
 	defaults.Default()
 	tests := map[string]struct {
@@ -1096,18 +1099,18 @@ func TestDefaults_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
-			// WHEN Print is called
+			// WHEN Print is called.
 			tc.input.Print("")
 
-			// THEN the expected number of lines are printed
+			// THEN the expected number of lines are printed.
 			stdout := releaseStdout()
 			got := strings.Count(stdout, "\n")
 			if got != tc.lines {
-				t.Errorf("Print should have given %d lines, but gave %d\n%s",
-					tc.lines, got, stdout)
+				t.Errorf("%s\n\nwant: %d lines\ngot:  %d\n\n%s",
+					packageName, tc.lines, got, stdout)
 			}
 		})
 	}

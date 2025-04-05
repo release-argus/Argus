@@ -29,7 +29,7 @@ import (
 func TestSliceDefaults_Print(t *testing.T) {
 	testValid := testDefaults(false, false)
 	testInvalid := testDefaults(true, false)
-	// GIVEN a SliceDefaults
+	// GIVEN a SliceDefaults.
 	tests := map[string]struct {
 		slice *SliceDefaults
 		want  string
@@ -82,29 +82,29 @@ func TestSliceDefaults_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			if tc.want != "" {
 				tc.want += "\n"
 			}
 
-			// WHEN Print is called
+			// WHEN Print is called.
 			tc.slice.Print("")
 
-			// THEN it prints the expected output
+			// THEN it prints the expected output.
 			stdout := releaseStdout()
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if stdout != tc.want {
-				t.Errorf("stdout should have matched\n%q\ngot:\n%q",
-					tc.want, stdout)
+				t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want, stdout)
 			}
 		})
 	}
 }
 
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN a Defaults
+	// GIVEN a Defaults.
 	tests := map[string]struct {
 		webhook   *Defaults
 		wantDelay string
@@ -185,34 +185,36 @@ func TestDefaults_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := tc.webhook.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Errorf("WebHook.CheckValues() error mismatch\nwant %d errors:\n%q\ngot %d errors:\n%q",
-					wantLines, tc.errRegex, len(lines), e)
+				t.Errorf("%s\nerror mismatch\nwant %d lines of error:\n%q\ngot %d lines:\n%q",
+					packageName,
+					wantLines, tc.errRegex,
+					len(lines), lines)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("WebHook.CheckValues() error mismatch\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
-			// AND the delay is fixed when expected
+			// AND the delay is fixed when expected.
 			if tc.wantDelay != "" && tc.webhook.Delay != tc.wantDelay {
-				t.Errorf("want delay=%q\ngot  delay=%q",
-					tc.wantDelay, tc.webhook.Delay)
+				t.Errorf("%s\ndelay mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantDelay, tc.webhook.Delay)
 			}
 		})
 	}
 }
 
 func TestWebHook_CheckValues(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		delay, wantDelay string
 		whType           *string
@@ -235,7 +237,7 @@ func TestWebHook_CheckValues(t *testing.T) {
 			whType:   test.StringPtr("foo"),
 		},
 		"invalid main type": {
-			errRegex:   "", // Invalid, but caught in the Defaults CheckValues
+			errRegex:   "", // Invalid, but caught in the Defaults CheckValues.
 			whType:     test.StringPtr(""),
 			whMainType: "bar",
 		},
@@ -307,34 +309,36 @@ func TestWebHook_CheckValues(t *testing.T) {
 			}
 			webhook.CustomHeaders = &tc.customHeaders
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := webhook.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("latestver.Lookup.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nerror count mismatch\nwant: %d lines of error:\n%q\ngot %d:\n%v",
+					packageName,
+					wantLines, tc.errRegex,
+					len(lines), lines)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("latestver.Lookup.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
-			// AND the delay is fixed when expected
+			// AND the delay is fixed when expected.
 			if tc.wantDelay != "" && webhook.Delay != tc.wantDelay {
-				t.Errorf("want delay=%q\ngot  delay=%q",
-					tc.wantDelay, webhook.Delay)
+				t.Errorf("%s\ndelay mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantDelay, webhook.Delay)
 			}
 		})
 	}
 }
 
 func TestSliceDefaults_CheckValues(t *testing.T) {
-	// GIVEN a SliceDefaults
+	// GIVEN a SliceDefaults.
 	tests := map[string]struct {
 		slice    *SliceDefaults
 		errRegex string
@@ -382,21 +386,23 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := tc.slice.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("webhook.SliceDefaults.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nerror count mismatch\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%q",
+					packageName,
+					wantLines, tc.errRegex,
+					len(lines), lines)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("webhook.SliceDefaults.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 		})
@@ -404,7 +410,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 }
 
 func TestSlice_CheckValues(t *testing.T) {
-	// GIVEN a Slice
+	// GIVEN a Slice.
 	tests := map[string]struct {
 		slice    *Slice
 		errRegex string
@@ -474,21 +480,23 @@ func TestSlice_CheckValues(t *testing.T) {
 					nil, nil)
 			}
 
-			// WHEN CheckValues is called
+			// WHEN CheckValues is called.
 			err := tc.slice.CheckValues("")
 
-			// THEN it errors when expected
+			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
 			if wantLines > len(lines) {
-				t.Fatalf("webhook.Slice.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
-					wantLines, tc.errRegex, len(lines), lines, e)
+				t.Fatalf("%s\nerror count mismatch\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%q",
+					packageName,
+					wantLines, tc.errRegex,
+					len(lines), lines)
 				return
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("webhook.Slice.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
-					tc.errRegex, e)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
 				return
 			}
 		})
