@@ -227,8 +227,8 @@ func TestDereferenceOrValue(t *testing.T) {
 func TestPtrValueOrValue(t *testing.T) {
 	// GIVEN a bunch of comparables pointers and values.
 	tests := map[string]struct {
-		ptr, value interface{}
-		want       interface{}
+		ptr, value any
+		want       any
 	}{
 		"nil string pointer": {
 			ptr:   (*string)(nil),
@@ -255,7 +255,7 @@ func TestPtrValueOrValue(t *testing.T) {
 			t.Parallel()
 
 			// WHEN PtrValueOrValue is called.
-			var got interface{}
+			var got any
 			switch v := tc.ptr.(type) {
 			case *string:
 				got = PtrValueOrValue(v, tc.value.(string))
@@ -371,7 +371,7 @@ func TestCopySecretValues(t *testing.T) {
 
 type CustomErrorMarshal struct{}
 
-func (c CustomErrorMarshal) MarshalYAML() (interface{}, error) {
+func (c CustomErrorMarshal) MarshalYAML() (any, error) {
 	return nil, fmt.Errorf("intentional marshal error")
 }
 
@@ -379,7 +379,7 @@ func TestTo____String(t *testing.T) {
 
 	// GIVEN a struct to print in YAML format.
 	tests := map[string]struct {
-		input              interface{}
+		input              any
 		wantJSON, wantYAML string
 	}{
 		"invalid input": {

@@ -151,7 +151,7 @@ func TestWriteJSON(t *testing.T) {
 		response     *http.Response
 		statusCode   int
 		expectedBody string
-		input        interface{}
+		input        any
 		expectedErr  bool
 	}{
 		"successful JSON encoding": {

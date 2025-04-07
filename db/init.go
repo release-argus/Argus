@@ -135,7 +135,7 @@ func (api *api) removeUnknownServices() {
 		servicePlaceholders)
 
 	// Get the vars for the SQL statement.
-	params := make([]interface{}, len(api.config.Order))
+	params := make([]any, len(api.config.Order))
 	for i, name := range api.config.Order {
 		params[i] = name
 	}

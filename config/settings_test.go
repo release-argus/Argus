@@ -692,7 +692,7 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 	// GIVEN different target vars and their get functions.
 	tests := map[string]struct {
 		getFunc   func() string
-		changeVar interface{}
+		changeVar any
 	}{
 		"hard default cert file": {
 			changeVar: &settings.Web.CertFile,

@@ -182,7 +182,7 @@ type FaviconSettings struct {
 func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 	for _, f := range []struct {
 		Flag     string
-		Variable interface{}
+		Variable any
 	}{
 		{"log.level", &LogLevel},
 		{"log.timestamps", &LogTimestamps},

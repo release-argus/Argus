@@ -41,8 +41,8 @@ func (n *RawNode) UnmarshalYAML(node *yaml.Node) error {
 //	to: Pointer to unmarshal into.
 func UnmarshalConfig(
 	configFormat string,
-	configData interface{}, // []byte | string | *yaml.Node | json.RawMessage.
-	to interface{}, // struct pointer to unmarshal into.
+	configData any, // []byte | string | *yaml.Node | json.RawMessage.
+	to any, // struct pointer to unmarshal into.
 ) error {
 	var rawData []byte
 	switch v := configData.(type) {

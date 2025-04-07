@@ -250,7 +250,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			if tc.want != nil {
 				vars := []struct {
 					Target string
-					Var    interface{}
+					Var    any
 				}{
 					{Target: tc.wantMain, Var: tc.want.Main},
 					{Target: tc.wantDefaults, Var: tc.want.Defaults},

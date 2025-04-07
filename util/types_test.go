@@ -66,14 +66,14 @@ func (c *ConfigCustom) UnmarshalJSON(data []byte) error {
 
 func TestUnmarshalConfig(t *testing.T) {
 	type wants struct {
-		config   interface{}
+		config   any
 		errRegex string
 	}
 
 	// GIVEN different config formats and data.
 	tests := map[string]struct {
 		configFormat string
-		configData   interface{}
+		configData   any
 		wants        wants
 	}{
 		"JSON, Invalid": {
@@ -181,7 +181,7 @@ func TestUnmarshalConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			var got interface{}
+			var got any
 			if _, ok := tc.wants.config.(Config); ok {
 				got = &Config{}
 			} else {

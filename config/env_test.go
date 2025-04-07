@@ -28,7 +28,7 @@ import (
 func TestMapEnvToStruct(t *testing.T) {
 	// GIVEN a struct and a bunch of env vars.
 	test := map[string]struct {
-		customStruct interface{}
+		customStruct any
 		prefix       string
 		env          map[string]string
 		want         string

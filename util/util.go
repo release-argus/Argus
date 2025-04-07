@@ -28,7 +28,7 @@ var SecretValue = "<secret>"
 // Field is a helper struct for String() methods.
 type Field struct {
 	Name  string
-	Value interface{}
+	Value any
 }
 
 // DereferenceOrNilValue will return the value of pointer if non-nil, otherwise nilValue.
@@ -119,7 +119,7 @@ func CopySecretValues(from, to map[string]string, fields []string) {
 }
 
 // ToYAMLString returns a YAML string representation of `input`.
-func ToYAMLString(input interface{}, prefix string) string {
+func ToYAMLString(input any, prefix string) string {
 	buf := &bytes.Buffer{}
 	enc := yaml.NewEncoder(buf)
 	enc.SetIndent(2)
