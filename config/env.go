@@ -27,7 +27,7 @@ import (
 )
 
 // mapEnvToStruct maps environment variables to a struct.
-func mapEnvToStruct(src interface{}, prefix string, envVars []string) error {
+func mapEnvToStruct(src any, prefix string, envVars []string) error {
 	var errs []error
 	srcV := reflect.ValueOf(src)
 	if srcV.Kind() == reflect.Ptr {

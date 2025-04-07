@@ -30,7 +30,7 @@ func TestNew(t *testing.T) {
 	// GIVEN a set of args to create a Lookup.
 	type args struct {
 		lType                  string
-		overrides              interface{}
+		overrides              any
 		semanticVersioning     *bool
 		defaults, hardDefaults *base.Defaults
 	}

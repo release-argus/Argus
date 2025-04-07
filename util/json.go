@@ -24,11 +24,11 @@ import (
 )
 
 // ParseKeys will return the JSON keys in the string.
-func ParseKeys(key string) ([]interface{}, error) {
+func ParseKeys(key string) ([]any, error) {
 	// Split the key into individual components.
 	// e.g. "foo.bar[1].bash" => ["foo", "bar", "1", "bash"]
 	keyCount := strings.Count(key, ".") + strings.Count(key, "[")
-	keys := make([]interface{}, 0, keyCount+1)
+	keys := make([]any, 0, keyCount+1)
 	keyStrLength := len(key)
 	i := 0
 
@@ -68,7 +68,7 @@ func ParseKeys(key string) ([]interface{}, error) {
 }
 
 // ToJSONString converts `input` to its JSON string representation.
-func ToJSONString(input interface{}) string {
+func ToJSONString(input any) string {
 	bytes, err := json.Marshal(input)
 	if err != nil {
 		return ""
@@ -77,7 +77,7 @@ func ToJSONString(input interface{}) string {
 }
 
 // navigateJSON will navigate the JSON object to find the value of the key.
-func navigateJSON(jsonData *interface{}, fullKey string) (string, error) {
+func navigateJSON(jsonData *any, fullKey string) (string, error) {
 	if fullKey == "" {
 		return "", errors.New("no key was given to navigate the JSON")
 	}
@@ -90,7 +90,7 @@ func navigateJSON(jsonData *interface{}, fullKey string) (string, error) {
 		key := keys[keyIndex]
 		switch value := parsedJSON.(type) {
 		// Regular key.
-		case map[string]interface{}:
+		case map[string]any:
 			// Ensure key represents a string.
 			keyStr, ok := key.(string)
 			if !ok {
@@ -99,7 +99,7 @@ func navigateJSON(jsonData *interface{}, fullKey string) (string, error) {
 			}
 			parsedJSON = value[keyStr]
 		// Array.
-		case []interface{}:
+		case []any:
 			// Parse the index from the key.
 			index, ok := key.(int)
 			fmt.Printf("index: %v, ok: %t, key: %v\n", index, ok, key)
@@ -145,7 +145,7 @@ func GetValueByKey(body []byte, key string, jsonFrom string) (string, error) {
 		return string(body), nil
 	}
 
-	var jsonData interface{}
+	var jsonData any
 	err := json.Unmarshal(body, &jsonData)
 	// If the JSON proves invalid, return an error.
 	if err != nil {

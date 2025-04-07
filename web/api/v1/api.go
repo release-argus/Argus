@@ -68,7 +68,7 @@ func NewAPI(cfg *config.Config) *API {
 	return api
 }
 
-func (api *API) writeJSON(w http.ResponseWriter, v interface{}, logFrom logutil.LogFrom) {
+func (api *API) writeJSON(w http.ResponseWriter, v any, logFrom logutil.LogFrom) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 

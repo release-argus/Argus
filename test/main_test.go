@@ -172,7 +172,7 @@ func TestUInt8Ptr(t *testing.T) {
 func TestStringifyPtr(t *testing.T) {
 	// GIVEN a pointer to a value.
 	tests := map[string]struct {
-		ptr  interface{}
+		ptr  any
 		want string
 	}{
 		"nil":           {ptr: nil, want: "<nil>"},

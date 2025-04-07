@@ -27,47 +27,47 @@ func TestParseKeys(t *testing.T) {
 	// GIVEN a JSON key string.
 	tests := map[string]struct {
 		input    string
-		want     []interface{}
+		want     []any
 		errRegex string
 	}{
 		"empty string": {
 			input:    "",
-			want:     []interface{}{},
+			want:     []any{},
 			errRegex: `^$`,
 		},
 		"single key": {
 			input:    "foo",
-			want:     []interface{}{"foo"},
+			want:     []any{"foo"},
 			errRegex: `^$`,
 		},
 		"multiple keys": {
 			input:    "foo.bar",
-			want:     []interface{}{"foo", "bar"},
+			want:     []any{"foo", "bar"},
 			errRegex: `^$`,
 		},
 		"multiple keys with array": {
 			input:    "foo.bar[1]",
-			want:     []interface{}{"foo", "bar", 1},
+			want:     []any{"foo", "bar", 1},
 			errRegex: `^$`,
 		},
 		"multiple keys with array of objects": {
 			input:    "foo.bar[1].baz",
-			want:     []interface{}{"foo", "bar", 1, "baz"},
+			want:     []any{"foo", "bar", 1, "baz"},
 			errRegex: `^$`,
 		},
 		"multiple keys with array of arrays": {
 			input:    "foo.bar[1][2]",
-			want:     []interface{}{"foo", "bar", 1, 2},
+			want:     []any{"foo", "bar", 1, 2},
 			errRegex: `^$`,
 		},
 		"multiple keys with array of arrays of objects": {
 			input:    "foo.bar[1][2].baz",
-			want:     []interface{}{"foo", "bar", 1, 2, "baz"},
+			want:     []any{"foo", "bar", 1, 2, "baz"},
 			errRegex: `^$`,
 		},
 		"multiple keys with array of arrays of objects with array": {
 			input:    "foo.bar[1][2].baz[3]",
-			want:     []interface{}{"foo", "bar", 1, 2, "baz", 3},
+			want:     []any{"foo", "bar", 1, 2, "baz", 3},
 			errRegex: `^$`,
 		},
 		"non-int index": {
@@ -190,7 +190,7 @@ func TestNavigateJSON(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			var jsonData interface{}
+			var jsonData any
 			err := json.Unmarshal([]byte(tc.input), &jsonData)
 
 			// WHEN navigateJSON is called.
@@ -295,7 +295,7 @@ func TestGetValueByKey(t *testing.T) {
 
 func TestToJSONString(t *testing.T) {
 	tests := map[string]struct {
-		input interface{}
+		input any
 		want  string
 	}{
 		"invalid input": {
@@ -331,19 +331,19 @@ func TestToJSONString(t *testing.T) {
 			want:  "false",
 		},
 		"simple map": {
-			input: map[string]interface{}{"foo": "bar"},
+			input: map[string]any{"foo": "bar"},
 			want:  `{"foo":"bar"}`,
 		},
 		"nested map": {
-			input: map[string]interface{}{"foo": map[string]interface{}{"bar": "baz"}},
+			input: map[string]any{"foo": map[string]any{"bar": "baz"}},
 			want:  `{"foo":{"bar":"baz"}}`,
 		},
 		"simple slice": {
-			input: []interface{}{"foo", "bar"},
+			input: []any{"foo", "bar"},
 			want:  `["foo","bar"]`,
 		},
 		"nested slice": {
-			input: []interface{}{[]interface{}{"foo", "bar"}, "baz"},
+			input: []any{[]any{"foo", "bar"}, "baz"},
 			want:  `[["foo","bar"],"baz"]`,
 		},
 	}

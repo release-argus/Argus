@@ -39,7 +39,7 @@ type Lookup interface {
 func New(
 	lType string, // "github" | ("url"|"web")
 	configFormat string, // "json" | "yaml"
-	configData interface{}, // []byte | string | *yaml.Node | json.RawMessage.
+	configData any, // []byte | string | *yaml.Node | json.RawMessage.
 	options *opt.Options,
 	status *status.Status,
 	defaults, hardDefaults *base.Defaults,
