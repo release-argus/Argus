@@ -67,16 +67,6 @@ func (l *Lookup) Init(
 	}
 }
 
-// IsEqual will return whether `this` lookup is the same as `other` (excluding status).
-func (l *Lookup) IsEqual(this, other Interface) bool {
-	if other == nil || l == nil {
-		// Equal if both are nil.
-		return other == nil && l == nil
-	}
-	return this.GetOptions().String() == other.GetOptions().String() &&
-		this.String(this, "") == other.String(other, "")
-}
-
 // GetServiceID returns the service ID of the Lookup.
 func (l *Lookup) GetServiceID() string {
 	return *l.Status.ServiceID

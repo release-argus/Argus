@@ -40,8 +40,6 @@ type Interface interface {
 
 	// Inherit state values from `fromLookup` if the values should query the same data.
 	Inherit(fromLookup Interface)
-	// IsEqual will return a bool of whether `this` Lookup is the same as `other` (excluding status).
-	IsEqual(this, other Interface) bool
 
 	// ServiceURL returns the Service URL for the Lookup.
 	ServiceURL(ignoreWebURL bool) string

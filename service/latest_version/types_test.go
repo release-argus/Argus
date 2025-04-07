@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
@@ -540,6 +541,151 @@ func TestChangeType(t *testing.T) {
 			if gotLookup.GetHardDefaults() != tc.args.lookup.GetHardDefaults() {
 				t.Errorf("%s\nHardDefaults mismatch\nwant: %v\ngot:  %v",
 					packageName, tc.args.lookup.GetHardDefaults(), gotLookup.GetHardDefaults())
+			}
+		})
+	}
+}
+
+func TestIsEqual(t *testing.T) {
+	// GIVEN two Lookups.
+	tests := map[string]struct {
+		a, b Lookup
+		want bool
+	}{
+		"empty": {
+			a:    &web.Lookup{},
+			b:    &web.Lookup{},
+			want: true,
+		},
+		"defaults ignored": {
+			a: &web.Lookup{
+				Lookup: base.Lookup{
+					Defaults: &base.Defaults{
+						AllowInvalidCerts: test.BoolPtr(false)}}},
+			b:    &web.Lookup{},
+			want: true,
+		},
+		"hard_defaults ignored": {
+			a: &web.Lookup{
+				Lookup: base.Lookup{
+					Defaults: &base.Defaults{
+						AllowInvalidCerts: test.BoolPtr(false)}}},
+			b:    &web.Lookup{},
+			want: true,
+		},
+		"equal - url": {
+			a: test.IgnoreError(t, func() (Lookup, error) {
+				return New(
+					"url",
+					"yaml", test.TrimYAML(`
+						url: https://example.com
+						allow_invalid_certs: false
+						url_commands:
+							- type: split
+								text: v
+						require:
+							regex_version: v([0-9.]+)`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			b: test.IgnoreError(t, func() (Lookup, error) {
+				return New(
+					"url",
+					"yaml", test.TrimYAML(`
+						url: https://example.com
+						allow_invalid_certs: false
+						url_commands:
+							- type: split
+								text: v
+						require:
+							regex_version: v([0-9.]+)`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			want: true,
+		},
+		"equal - github": {
+			a: test.IgnoreError(t, func() (Lookup, error) {
+				return New(
+					"github",
+					"yaml", test.TrimYAML(`
+						url: release-argus/Argus
+						access_token: token
+						url_commands:
+							- type: split
+								text: v
+						require:
+							regex_version: v([0-9.]+)`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			b: test.IgnoreError(t, func() (Lookup, error) {
+				return New(
+					"github",
+					"yaml", test.TrimYAML(`
+						url: release-argus/Argus
+						access_token: token
+						url_commands:
+							- type: split
+								text: v
+						require:
+							regex_version: v([0-9.]+)`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			want: true,
+		},
+		"not equal": {
+			a: test.IgnoreError(t, func() (Lookup, error) {
+				return New(
+					"github",
+					"yaml", test.TrimYAML(`
+						url: release-argus/Argus`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			b: test.IgnoreError(t, func() (Lookup, error) {
+				return New(
+					"url",
+					"yaml", test.TrimYAML(`
+						url: release-argus/ARGUS`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			want: false,
+		},
+		"not equal with nil": {
+			a: test.IgnoreError(t, func() (Lookup, error) {
+				return New(
+					"github",
+					"yaml", test.TrimYAML(`
+						url: release-argus/Argus`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			b:    nil,
+			want: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN the two Lookups are compared.
+			got := IsEqual(tc.a, tc.b)
+
+			// THEN the result is as expected.
+			if got != tc.want {
+				t.Errorf("%s\nwant: %t\ngot:  %t",
+					packageName, tc.want, got)
 			}
 		})
 	}

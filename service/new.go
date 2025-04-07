@@ -255,7 +255,7 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 	s.CommandController.CopyFailsFrom(oldService.CommandController)
 
 	// Keep LatestVersion if the LatestVersion Lookup is unchanged.
-	if s.LatestVersion != nil && s.LatestVersion.IsEqual(s.LatestVersion, oldService.LatestVersion) {
+	if latestver.IsEqual(s.LatestVersion, oldService.LatestVersion) {
 		s.Status.SetApprovedVersion(oldService.Status.ApprovedVersion(), false)
 		s.Status.SetLatestVersion(oldService.Status.LatestVersion(), oldService.Status.LatestVersionTimestamp(), false)
 		s.Status.SetLastQueried(oldService.Status.LastQueried())

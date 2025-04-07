@@ -138,6 +138,16 @@ func ChangeType(newType string, lookup base.Interface, overridesJSON string) (ba
 	return newStruct, nil
 }
 
+// IsEqual will return whether `this` lookup is the same as `other` (excluding status).
+func IsEqual(this, other Lookup) bool {
+	if other == nil || this == nil {
+		// Equal if both are nil.
+		return other == nil && this == nil
+	}
+	return this.GetOptions().String() == other.GetOptions().String() &&
+		this.String(this, "") == other.String(other, "")
+}
+
 // UnmarshalJSON unmarshals a Lookup from JSON.
 func UnmarshalJSON(data []byte) (Lookup, error) {
 	return unmarshal(data, "json")
