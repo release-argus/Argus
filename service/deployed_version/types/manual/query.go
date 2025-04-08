@@ -42,7 +42,7 @@ func (l *Lookup) Query(_metrics bool, logFrom logutil.LogFrom) error {
 
 		lastQueriedAt, _ := time.Parse(time.RFC3339, l.Status.DeployedVersionTimestamp())
 		if time.Since(lastQueriedAt) < time.Second {
-			return errors.New("Manual version updates are rate-limited. Please try again in 1 second.")
+			return errors.New("manual version updates are rate-limited. Please try again in 1 second")
 		}
 		// If semantic versioning is enabled, check the version is in the correct format.
 		if l.Options.GetSemanticVersioning() {
