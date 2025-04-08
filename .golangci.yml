@@ -1,33 +1,48 @@
+version: "2"
 linters:
-  # Enable specific linter
-  # https://golangci-lint.run/usage/linters/#enabled-by-default-linters
   enable:
     - dupl
     - dupword
     - durationcheck
-    - errcheck
     - errorlint
-    - gci
     - gocritic
     - godot
-    - goimports
     - misspell
     - perfsprint
-    - typecheck
+    - unconvert
+    - usestdlibvars
     - whitespace
     - wrapcheck
-    - unconvert
-    - unused
-    - usestdlibvars
-
-linters-settings:
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/release-argus/Argus)
-  goimports:
-    local-prefixes: github.com/release-argus/Argus
-  perfsprint:
-    # Optimises into `err.Error()` even if it is only equivalent for non-nil errors.
-    err-error: true
+  settings:
+    perfsprint:
+      err-error: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/release-argus/Argus)
+    goimports:
+      local-prefixes:
+        - github.com/release-argus/Argus
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

@@ -35,7 +35,7 @@ func (l *Lookup) VerifySemanticVersioning(newVersion, currentVersion string, log
 		err = fmt.Errorf(
 			"failed to convert %q to a semantic version. "+
 				"If all versions follow this format, consider adding url_commands to transform the version into the 'MAJOR.MINOR.PATCH' format (https://semver.org/). "+
-				"Alternatively, you can disable semantic versioning either globally with defaults.service.semantic_versioning or for this specific service using the options.semantic_versioning variable.",
+				"Alternatively, you can disable semantic versioning either globally with defaults.service.semantic_versioning or for this specific service using the options.semantic_versioning variable",
 			newVersion,
 		)
 		logutil.Log.Error(err, logFrom, logFrom.Primary != "" || logFrom.Secondary != "")

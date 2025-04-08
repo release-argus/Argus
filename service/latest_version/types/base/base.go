@@ -107,7 +107,7 @@ func (l *Lookup) ServiceURL(ignoreWebURL bool) string {
 	if !ignoreWebURL && *l.Status.WebURL != "" {
 		// Don't use this template if `LatestVersion` has not been found and is used in `WebURL`.
 		latestVersion := l.Status.LatestVersion()
-		if !(latestVersion == "" && strings.Contains(*l.Status.WebURL, "version")) {
+		if latestVersion != "" || !strings.Contains(*l.Status.WebURL, "version") {
 			return util.TemplateString(
 				*l.Status.WebURL,
 				util.ServiceInfo{LatestVersion: latestVersion})
