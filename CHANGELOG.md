@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.24.0](https://github.com/release-argus/Argus/compare/0.23.0...0.24.0) (2025-04-08)
+
+
+### Features
+
+* **ui:** move toolbar args to query params and parse templates with api ([a4e2e87](https://github.com/release-argus/Argus/commits/a4e2e87f6255814a7171bd95888f48b6b4d5334e))
+* **ui:** re-arrange services ([faa7fc0](https://github.com/release-argus/Argus/commits/faa7fc0fe75aba7e92e0ddc455cd1b218264d0d4))
+
 ## [0.23.0](https://github.com/release-argus/Argus/compare/0.22.0...0.23.0) (2025-03-09)
 
 
