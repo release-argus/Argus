@@ -16,14 +16,18 @@
 package config
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/release-argus/Argus/util"
 )
 
 // mapEnvToStruct maps environment variables to a struct.
@@ -290,4 +294,65 @@ func convertToEnvErrors(errs error) error {
 	}
 
 	return errors.Join(newErrs...)
+}
+
+// loadEnvFile loads environment variables from the specified file.
+func loadEnvFile(filePath string) error {
+	// Check if the file exists.
+	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+
+	// Open the file.
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to open env file %q:\n  %w", filePath, err)
+	}
+	defer file.Close()
+
+	// Load environment variables from the file.
+	return loadEnvFromReader(file)
+}
+
+// loadEnvFromReader loads environment variables from an io.Reader.
+//
+//	It reads the content line by line, ignoring empty lines and comments.
+//	Both "key=value" and "export key=value" formats are supported.
+//	Quoted values, using either single or double quotes, are also handled.
+func loadEnvFromReader(reader io.Reader) error {
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// Ignore empty lines and comments.
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Get the key and its value.
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid env line: %q", line)
+		}
+		key := strings.TrimSpace(strings.TrimPrefix(parts[0], "export "))
+
+		value := parts[1]
+		// Handle quoted values.
+		if (strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`)) ||
+			(strings.HasPrefix(value, `'`) && strings.HasSuffix(value, `'`)) {
+			value = value[1 : len(value)-1]
+		}
+		// Handle nested environment variables.
+		value = util.EvalEnvVars(value)
+
+		// Set the environment variable.
+		if err := os.Setenv(key, value); err != nil {
+			return fmt.Errorf("failed to set env var %q: %w", key, err)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading env file: %w", err)
+	}
+
+	return nil
 }
