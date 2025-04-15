@@ -98,7 +98,7 @@ func TestParseKeys(t *testing.T) {
 			// AND the error is returned correctly.
 			e := ErrorToString(err)
 			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
-				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q\n",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q\n",
 					packageName, tc.errRegex, e)
 			}
 		})
@@ -204,7 +204,7 @@ func TestNavigateJSON(t *testing.T) {
 			// AND the error is returned correctly.
 			e := ErrorToString(err)
 			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
-				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q\n",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q\n",
 					packageName, tc.errRegex, e)
 			}
 		})
@@ -286,7 +286,7 @@ func TestGetValueByKey(t *testing.T) {
 			// AND the error is returned correctly.
 			e := ErrorToString(err)
 			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
-				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q\n",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q\n",
 					packageName, tc.errRegex, e)
 			}
 		})
