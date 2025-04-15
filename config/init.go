@@ -18,6 +18,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 
@@ -69,6 +70,13 @@ func (c *Config) Init() {
 func (c *Config) Load(file string, flagset *map[string]bool) {
 	// Initialise the Log if it hasn't been already.
 	logutil.Init("ERROR", false)
+
+	// Load the .env file (if it exists).
+	envFile := filepath.Join(filepath.Dir(file), ".env")
+	err := loadEnvFile(envFile)
+	logutil.Log.Warn(
+		err,
+		logutil.LogFrom{}, err != nil)
 
 	c.File = file
 	c.Settings.NilUndefinedFlags(flagset)

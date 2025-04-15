@@ -772,7 +772,7 @@ func TestUnmarshalJSON(t *testing.T) {
 			// THEN any error is as expected.
 			eJSON := util.ErrorToString(errJSON)
 			if !util.RegexCheck(tc.errRegex, eJSON) {
-				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, eJSON)
 			}
 			if tc.errRegex != "^$" {
@@ -860,7 +860,7 @@ func TestUnmarshalYAML(t *testing.T) {
 			// THEN any error is as expected.
 			eYAML := util.ErrorToString(errYAML)
 			if !util.RegexCheck(tc.errRegex, eYAML) {
-				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, eYAML)
 			}
 			if tc.errRegex != "^$" {
@@ -974,7 +974,7 @@ func TestUnmarshal(t *testing.T) {
 			// THEN any error is as expected.
 			if err != nil {
 				if !util.RegexCheck(tc.errRegex, err.Error()) {
-					t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 						packageName, tc.errRegex, err)
 				}
 				return

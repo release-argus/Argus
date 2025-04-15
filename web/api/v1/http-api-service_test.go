@@ -158,7 +158,7 @@ func TestHTTP_httpServiceSummary(t *testing.T) {
 			}
 			got := string(data)
 			if !util.RegexCheck(tc.wantBody, got) {
-				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantBody, got)
 			}
 		})

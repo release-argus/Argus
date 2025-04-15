@@ -194,7 +194,7 @@ func TestUnmarshalConfig(t *testing.T) {
 			// THEN an error is returned if expected.
 			e := ErrorToString(err)
 			if !RegexCheck(tc.wants.errRegex, e) {
-				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wants.errRegex, e)
 			}
 			if err != nil {

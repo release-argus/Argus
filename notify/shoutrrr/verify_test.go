@@ -178,7 +178,7 @@ func TestBase_checkValuesOptions(t *testing.T) {
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q\n",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q\n",
 					packageName, tc.errRegex, e)
 			}
 			// AND the delay is set as expected if it didn't error on delay.
@@ -226,7 +226,7 @@ func TestBase_checkValuesParams(t *testing.T) {
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q\n",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q\n",
 					packageName, tc.errRegex, e)
 			}
 		})

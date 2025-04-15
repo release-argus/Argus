@@ -72,7 +72,7 @@ func TestHTTP_httpFlags(t *testing.T) {
 	want = strings.ReplaceAll(want, "\t", "")
 	want = strings.ReplaceAll(want, "\n", "")
 	if !util.RegexCheck(want, got) {
-		t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+		t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 			packageName, want, got)
 	}
 }
