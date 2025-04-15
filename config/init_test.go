@@ -17,11 +17,18 @@
 package config
 
 import (
+	"fmt"
+	"os"
 	"testing"
 )
 
 func TestConfig_Load(t *testing.T) {
-	// GIVEN Load is ran on a config.
+	// GIVEN a .env file is present AND Load is ran on a config.
+	envKey := "TEST_ENV_KEY"
+	envValue := "1234"
+	writeFile(".env",
+		fmt.Sprintf("%s=%s", envKey, envValue),
+		t)
 	file := "TestConfig_Load.yml"
 	testYAML_config_test(file, t)
 	config := testLoad(file, t)
@@ -29,7 +36,11 @@ func TestConfig_Load(t *testing.T) {
 	// WHEN the vars loaded are inspected.
 	tests := map[string]struct {
 		want, got string
+		envVars   map[string]string
 	}{
+		"Environment variables loaded": {
+			envVars: map[string]string{
+				envKey: envValue}},
 		"Defaults.Service.Interval": {
 			want: "123s",
 			got:  config.Defaults.Service.Options.Interval},
@@ -44,13 +55,21 @@ func TestConfig_Load(t *testing.T) {
 			got:  config.Service["EmptyService"].String("")},
 	}
 
-	// THEN they match the config file.
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
+			// THEN they match the config file.
 			if tc.got != tc.want {
 				t.Errorf("%s\ninvalid %s:\nwant: %s\ngot:  %s",
 					packageName, name, tc.want, tc.got)
+			}
+
+			// AND the environment variables have been set.
+			for k, v := range tc.envVars {
+				if got := os.Getenv(k); got != v {
+					t.Errorf("%s\nenvironment variable mismatch on %q\nwant: %q\ngot:  %q",
+						packageName, k, v, got)
+				}
 			}
 		})
 	}
