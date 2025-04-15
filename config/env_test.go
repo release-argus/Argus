@@ -18,7 +18,10 @@ package config
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/test"
@@ -409,5 +412,186 @@ func TestConvertToEnvErrors(t *testing.T) {
 					packageName, tc.want, got)
 			}
 		})
+	}
+}
+
+func TestLoadEnvFile(t *testing.T) {
+	// GIVEN a file of environment variables.
+	tests := map[string]struct {
+		content        *string
+		cannotReadFile bool
+		want           map[string]string
+		doNotWant      []string
+		errRegex       string
+	}{
+		"no file": {
+			errRegex: `^$`,
+		},
+		"empty file": {
+			content:  test.StringPtr(""),
+			want:     map[string]string{},
+			errRegex: "^$",
+		},
+		"cannot read file": {
+			content:        test.StringPtr("FOO=bar"),
+			cannotReadFile: true,
+			doNotWant:      []string{"FOO"},
+			errRegex:       `failed to open env file `,
+		},
+		"comments and empty lines": {
+			content: test.StringPtr(test.TrimYAML(`
+				# comment
+
+					# indented comment
+				# comment=123
+				FOO=bar`)),
+			want: map[string]string{
+				"FOO": "bar",
+			},
+			doNotWant: []string{"# comment", " comment", "comment"},
+			errRegex:  "^$",
+		},
+		"basic key-value pairs": {
+			content: test.StringPtr(test.TrimYAML(`
+				FOO=bar
+				BAR=baz`)),
+			want: map[string]string{
+				"FOO": "bar",
+				"BAR": "baz",
+			},
+			errRegex: "^$",
+		},
+		"export prefix": {
+			content: test.StringPtr(test.TrimYAML(`
+				export FOO=bar
+				export  BAR=test
+				export=argus`)),
+			want: map[string]string{
+				"FOO":    "bar",
+				"BAR":    "test",
+				"export": "argus",
+			},
+			errRegex: "^$",
+		},
+		"quoted values": {
+			content: test.StringPtr(test.TrimYAML(`
+				FOO="bar"
+				BAR='123'`)),
+			want: map[string]string{
+				"FOO": "bar",
+				"BAR": "123",
+			},
+			errRegex: "^$",
+		},
+		"env var expansion": {
+			content: test.StringPtr(test.TrimYAML(`
+				FOO=bar
+				BAR=${FOO}`)),
+			want: map[string]string{
+				"FOO": "bar",
+				"BAR": "bar",
+			},
+			errRegex: "^$",
+		},
+		"invalid line format": {
+			content: test.StringPtr(test.TrimYAML(`
+				FOO=bar
+				invalid_line`)),
+			errRegex: `invalid env line: "invalid_line"`,
+		},
+		"invalid env var key": {
+			content: test.StringPtr(test.TrimYAML(`
+				FOO=bar
+				=baz`)),
+			errRegex: `failed to set env var "":`,
+		},
+	}
+
+	tmpDir := t.TempDir()
+	defer os.RemoveAll(tmpDir)
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
+
+			// Create env file if content provided.
+			filePath := fmt.Sprintf("%s/nonexistent.env",
+				tmpDir)
+			if tc.content != nil {
+				filePath = fmt.Sprintf("%s/.env", tmpDir)
+				err := os.WriteFile(filePath, []byte(test.TrimYAML(*tc.content)), 0644)
+				if err != nil {
+					t.Fatalf("%s\nFailed to create test file: %v",
+						packageName, err)
+				}
+			}
+			if tc.cannotReadFile {
+				os.Chmod(filePath, 0200)
+				t.Cleanup(func() {
+					os.Remove(filePath)
+				})
+			}
+
+			// WHEN loadEnvFile is called
+			err := loadEnvFile(filePath)
+
+			// THEN any error matches expected
+			if !util.RegexCheck(tc.errRegex, util.ErrorToString(err)) {
+				t.Errorf("%x\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, util.ErrorToString(err))
+			}
+
+			// AND environment variables are set as expected
+			if tc.errRegex == "^$" {
+				// Check that the expected env vars are set
+				for k, v := range tc.want {
+					if got := os.Getenv(k); got != v {
+						t.Errorf("%s\nenv var %q mismatch\nwant: %q\ngot:  %q",
+							packageName, k, v, got)
+					}
+				}
+				// Check that unexpected env vars are not set
+				want := ""
+				for _, k := range tc.doNotWant {
+					if got := os.Getenv(k); got != want {
+						t.Errorf("%s\nenv var %q should not be set\nwant: %q\ngot:  %q",
+							packageName, k, want, got)
+					}
+				}
+			}
+		})
+	}
+}
+
+type failingReader struct {
+	r         io.Reader
+	failAt    int
+	readSoFar int
+}
+
+func (f *failingReader) Read(p []byte) (int, error) {
+	if f.readSoFar >= f.failAt {
+		return 0, fmt.Errorf("simulated read error")
+	}
+	n, err := f.r.Read(p)
+	f.readSoFar += n
+	return n, err
+}
+
+func TestLoadEnvFile_ReadError(t *testing.T) {
+	// GIVEN a reader that fails after a certain number of bytes.
+	content := "FOO=bar\ntest=123\n"
+	reader := &failingReader{
+		r:      strings.NewReader(content),
+		failAt: 10, // fail after 10 bytes
+	}
+
+	// WHEN LoadEnvFile is called with the failing reader.
+	err := loadEnvFromReader(reader)
+
+	// THEN an error is returned.
+	if err == nil {
+		t.Fatalf("%s\nerror mismatch\nwant: error\ngot:  nil",
+			packageName)
 	}
 }
