@@ -281,7 +281,7 @@ func TestGetVersion(t *testing.T) {
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.want.errRegex, e)
 			}
 			// AND the version is as expected.

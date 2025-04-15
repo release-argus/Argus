@@ -591,7 +591,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				switch r.(type) {
 				case string:
 					if !util.RegexCheck(tc.errRegex, r.(string)) {
-						t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+						t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 							packageName, tc.errRegex, r.(string))
 					}
 				default:
