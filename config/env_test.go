@@ -343,7 +343,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			// THEN any error is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) { // Expected a FATAL panic to be caught above.
-				t.Errorf("%s\nerror mismatch:\nwant: %q\ngot:  %q",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
 			}
 			if tc.errRegex != "^$" {
