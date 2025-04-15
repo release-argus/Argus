@@ -20,6 +20,7 @@ package github
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -417,6 +418,7 @@ func TestGetResponse_ReadError(t *testing.T) {
 }
 
 func TestHandleResponse(t *testing.T) {
+	githubClientConnErr := `\/tags": http2: client conn could not be established`
 	type wants struct {
 		nilBody          bool
 		errRegex         string
@@ -551,34 +553,48 @@ func TestHandleResponse(t *testing.T) {
 			}
 
 			logFrom := logutil.LogFrom{Primary: "TestHandleResponse", Secondary: name}
+			// Retry up-to 3 times if we get a client conn error on GitHub requests.
+			for range 3 {
 
-			// WHEN handleResponse is called on it.
-			gotBody, err := lookup.handleResponse(resp, tc.body, logFrom)
+				// WHEN handleResponse is called on it.
+				gotBody, err := lookup.handleResponse(resp, tc.body, logFrom)
 
-			// THEN any err is expected.
-			if tc.want.errRegex == "" && err != nil {
-				t.Errorf("%s\nunexpected error: %v",
-					packageName, err)
-			} else if !util.RegexCheck(tc.want.errRegex, util.ErrorToString(err)) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want.errRegex, util.ErrorToString(err))
-			}
-			// AND the body returned is as expected.
-			if tc.want.nilBody && len(gotBody) != 0 {
-				t.Errorf("%s\nbody mismatch\nwant: nil\ngot:  %q",
-					packageName, string(tc.body))
-			} else if !tc.want.nilBody && len(gotBody) == 0 {
-				t.Errorf("%s\nbody mismatch\nwant: non-nil\ngot:  nil",
-					packageName)
-			}
-			// AND the new EmptyListETag is as expected.
-			emptyListETag := getEmptyListETag()
-			if tc.want.setEmptyListETag && emptyListETag != hadETag {
-				t.Errorf("%s\nempty list ETag not set\nwant: %q\ngot:  %q",
-					packageName, hadETag, emptyListETag)
-			} else if !tc.want.setEmptyListETag && emptyListETag == hadETag {
-				t.Errorf("%s\nempty list ETag should not have been set",
-					packageName)
+				// GitHub actions regularly fail /tags with:
+				//   'Get "https://api.github.com/repos/.../tags": http2: client conn could not be established'
+				e := util.ErrorToString(err)
+				if util.RegexCheck(githubClientConnErr, e) {
+					t.Logf("%s\nretrying... %q\n",
+						packageName, e)
+					time.Sleep(time.Duration(rand.Intn(25)) * time.Millisecond)
+					continue
+				}
+
+				// THEN any err is expected.
+				if tc.want.errRegex == "" && err != nil {
+					t.Errorf("%s\nunexpected error: %q",
+						packageName, e)
+				} else if !util.RegexCheck(tc.want.errRegex, e) {
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.want.errRegex, e)
+				}
+				// AND the body returned is as expected.
+				if tc.want.nilBody && len(gotBody) != 0 {
+					t.Errorf("%s\nbody mismatch\nwant: nil\ngot:  %q",
+						packageName, string(tc.body))
+				} else if !tc.want.nilBody && len(gotBody) == 0 {
+					t.Errorf("%s\nbody mismatch\nwant: non-nil\ngot:  nil",
+						packageName)
+				}
+				// AND the new EmptyListETag is as expected.
+				emptyListETag := getEmptyListETag()
+				if tc.want.setEmptyListETag && emptyListETag != hadETag {
+					t.Errorf("%s\nempty list ETag not set\nwant: %q\ngot:  %q",
+						packageName, hadETag, emptyListETag)
+				} else if !tc.want.setEmptyListETag && emptyListETag == hadETag {
+					t.Errorf("%s\nempty list ETag should not have been set",
+						packageName)
+				}
+				break
 			}
 		})
 	}
@@ -754,7 +770,7 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 
 			// THEN the version is as expected.
 			if version != tc.want.version {
-				t.Errorf("%s\nersion mismatch\nwant: %q\ngot:  %q",
+				t.Errorf("%s\nversion mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.want.version, version)
 			}
 			// AND the releaseDate is as expected.
@@ -949,7 +965,7 @@ func TestSetReleases(t *testing.T) {
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nrror mismatch\nwant: %q\ngot:  %q",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
 			}
 			if tc.errRegex != "^$" {
