@@ -420,6 +420,7 @@ func TestHandleResponse(t *testing.T) {
 	type wants struct {
 		nilBody          bool
 		errRegex         string
+		errAllowedRegex  string
 		setEmptyListETag bool
 	}
 	type conditions struct {
@@ -464,7 +465,8 @@ func TestHandleResponse(t *testing.T) {
 				hadReleases: true},
 			statusCode: http.StatusNotModified,
 			want: wants{
-				nilBody: true},
+				nilBody:         true,
+				errAllowedRegex: `\/tags": http2: client conn could not be established`},
 		},
 		"401 Unauthorized - Bad credentials": {
 			statusCode: http.StatusUnauthorized,
@@ -557,8 +559,12 @@ func TestHandleResponse(t *testing.T) {
 
 			// THEN any err is expected.
 			if tc.want.errRegex == "" && err != nil {
-				t.Errorf("%s\nunexpected error: %v",
-					packageName, err)
+				// GitHub actions regularly fail /tags with:
+				//   'Get "https://api.github.com/repos/.../tags": http2: client conn could not be established'
+				if tc.want.errAllowedRegex == "" || !util.RegexCheck(tc.want.errAllowedRegex, util.ErrorToString(err)) {
+					t.Errorf("%s\nunexpected error: %v",
+						packageName, err)
+				}
 			} else if !util.RegexCheck(tc.want.errRegex, util.ErrorToString(err)) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.want.errRegex, util.ErrorToString(err))
