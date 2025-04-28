@@ -7,6 +7,10 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   lint:
     name: lint
