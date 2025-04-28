@@ -19,7 +19,7 @@ const getPadding = (
 		case 'right':
 			return `ps${breakpointPrefix}-1 pe${breakpointPrefix}-0`;
 		case 'middle':
-			return `ps${breakpointPrefix}-1 pe${breakpointPrefix}-1`;
+			return `px${breakpointPrefix}-1`;
 		case 'left':
 			return `ps${breakpointPrefix}-0 pe${breakpointPrefix}-1`;
 	}
@@ -91,12 +91,20 @@ export const formPadding = ({
 		previous?: { pos?: Position; col?: number; applied?: boolean },
 	) => {
 		// Skip full-width columns.
-		if (col === 12)
+		if (col === 12) {
+			let applied = previous?.applied;
+			// Remove padding if the previous row was not full width.
+			if (previous?.applied && previous?.col !== 12) {
+				applied = true;
+				paddingClasses.push(`px-${breakpoint}-0`);
+			}
+
 			return {
 				pos: position ?? previous?.pos,
 				col: col ?? previous?.col,
-				applied: previous?.applied,
+				applied: applied,
 			};
+		}
 
 		const newPosition = position ?? previous?.pos;
 		const padding = getPadding(newPosition, col, breakpoint, previous);
