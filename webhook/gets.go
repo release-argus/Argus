@@ -78,7 +78,7 @@ func (w *WebHook) SetExecuting(addDelay bool, received bool) {
 
 	// Different times depending on pass/fail.
 	// pass.
-	if !util.DereferenceOrNilValue(w.Failed.Get(w.ID), true) {
+	if !util.DereferenceOrValue(w.Failed.Get(w.ID), true) {
 		parentInterval, _ := time.ParseDuration(*w.ParentInterval)
 		w.nextRunnable = time.Now().UTC().Add(2 * parentInterval)
 		// fail/nil.
@@ -139,7 +139,9 @@ func (w *WebHook) BuildRequest() (req *http.Request) {
 			After:  util.RandAlphaNumericLower(40),
 		})
 
-		req, err = http.NewRequest(http.MethodPost, w.GetURL(), bytes.NewReader(payload))
+		req, err = http.NewRequest(http.MethodPost,
+			w.GetURL(),
+			bytes.NewReader(payload))
 		if err != nil {
 			return nil
 		}
@@ -147,7 +149,9 @@ func (w *WebHook) BuildRequest() (req *http.Request) {
 
 		SetGitHubHeaders(req, payload, w.GetSecret())
 	case "gitlab":
-		req, err = http.NewRequest(http.MethodPost, w.GetURL(), nil)
+		req, err = http.NewRequest(http.MethodPost,
+			w.GetURL(),
+			nil)
 		if err != nil {
 			return nil
 		}
@@ -198,6 +202,6 @@ func (w *WebHook) GetURL() (url string) {
 
 	url = util.TemplateString(
 		url,
-		util.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion()})
+		w.ServiceStatus.GetServiceInfo())
 	return
 }

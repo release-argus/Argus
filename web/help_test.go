@@ -35,6 +35,7 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	latestver "github.com/release-argus/Argus/service/latest_version"
@@ -180,9 +181,9 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 			"10m",
 			test.BoolPtr(true),
 			&opt.Defaults{}, &opt.Defaults{}),
-		Dashboard: *service.NewDashboardOptions(
+		Dashboard: *dashboard.NewOptions(
 			test.BoolPtr(false), "test", "", "https://release-argus.io", nil,
-			&service.DashboardOptionsDefaults{}, &service.DashboardOptionsDefaults{}),
+			&dashboard.OptionsDefaults{}, &dashboard.OptionsDefaults{}),
 		Defaults:          &service.Defaults{},
 		HardDefaults:      &service.Defaults{},
 		Command:           command.Slice{command.Command{"ls", "-lah"}},
@@ -205,8 +206,9 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 	svc.Status.Init(
 		len(svc.Notify),
 		len(svc.Command), len(svc.WebHook),
-		&svc.ID, &svc.Name,
-		&svc.Dashboard.WebURL)
+		svc.ID, svc.Name, "",
+		&dashboard.Options{
+			WebURL: svc.Dashboard.WebURL})
 	svc.Status.SetApprovedVersion("2.0.0", false)
 	svc.Status.SetDeployedVersion("2.0.0", "", false)
 	svc.Status.SetLatestVersion("3.0.0", "", true)

@@ -38,7 +38,8 @@ func (s *SliceDefaults) CheckValues(prefix string) error {
 	keys := util.SortedKeys(*s)
 	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		util.AppendCheckError(&errs, prefix, key, (*s)[key].CheckValues(itemPrefix, key))
+		util.AppendCheckError(&errs, prefix, key,
+			(*s)[key].CheckValues(itemPrefix, key))
 	}
 
 	if len(errs) == 0 {
@@ -57,8 +58,10 @@ func (b *Base) CheckValues(prefix string, id string) error {
 
 	var errs []error
 	itemPrefix := prefix + "  "
-	util.AppendCheckError(&errs, prefix, "options", b.checkValuesOptions(itemPrefix))
-	util.AppendCheckError(&errs, prefix, "params", b.checkValuesParams(itemPrefix))
+	util.AppendCheckError(&errs, prefix, "options",
+		b.checkValuesOptions(itemPrefix))
+	util.AppendCheckError(&errs, prefix, "params",
+		b.checkValuesParams(itemPrefix))
 
 	if len(errs) == 0 {
 		return nil
@@ -76,7 +79,8 @@ func (s *Slice) CheckValues(prefix string) error {
 	keys := util.SortedKeys(*s)
 	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		util.AppendCheckError(&errs, prefix, key, (*s)[key].CheckValues(itemPrefix))
+		util.AppendCheckError(&errs, prefix, key,
+			(*s)[key].CheckValues(itemPrefix))
 	}
 
 	if len(errs) == 0 {
@@ -99,9 +103,12 @@ func (s *Shoutrrr) CheckValues(prefix string) error {
 		errs = append(errs, errsType)
 	}
 	itemPrefix := prefix + "  "
-	util.AppendCheckError(&errs, prefix, "options", s.checkValuesOptions(itemPrefix))
-	util.AppendCheckError(&errs, prefix, "url_fields", s.checkValuesURLFields(itemPrefix))
-	util.AppendCheckError(&errs, prefix, "params", s.checkValuesParams(itemPrefix))
+	util.AppendCheckError(&errs, prefix, "options",
+		s.checkValuesOptions(itemPrefix))
+	util.AppendCheckError(&errs, prefix, "url_fields",
+		s.checkValuesURLFields(itemPrefix))
+	util.AppendCheckError(&errs, prefix, "params",
+		s.checkValuesParams(itemPrefix))
 
 	// Exclude matrix since it logs in, so may run into a rate-limit.
 	if len(errs) == 0 && s.GetType() != "matrix" {
@@ -196,8 +203,7 @@ func (s *Shoutrrr) checkValuesType(prefix string) error {
 	if !util.Contains(supportedTypes, sType) {
 		sTypeWithoutID := util.FirstNonDefault(s.Type, s.Main.Type)
 		if sTypeWithoutID == "" {
-			return fmt.Errorf("%stype: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify",
-				prefix)
+			return errors.New(prefix + "type: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify")
 		}
 	}
 
@@ -281,186 +287,185 @@ func (s *Shoutrrr) checkValuesURLFields(prefix string) error {
 	case "bark":
 		// bark://:devicekey@host:port/[path]
 		if s.GetURLField("devicekey") == "" {
-			errs = append(errs, fmt.Errorf("%sdevicekey: <required>",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"devicekey: <required>"))
 		}
 		if s.GetURLField("host") == "" {
-			errs = append(errs, fmt.Errorf("%shost: <required>",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"host: <required>"))
 		}
 	case "discord":
 		// discord://token@webhookid
 		if s.GetURLField("token") == "" {
-			errs = append(errs, fmt.Errorf("%stoken: <required> e.g. 'https://discord.com/api/webhooks/[ 975870285909737583 <- webhookid ]/[ QEdyk-Qi5AiMXoZdxQFpWNcwEfmz5oOm_1Rni9DnjQAUap4zWcurM4IquamVrDIyNgBG <- TOKEN ]'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"token: <required> e.g. 'https://discord.com/api/webhooks/[ 975870285909737583 <- webhookid ]/[ QEdyk-Qi5AiMXoZdxQFpWNcwEfmz5oOm_1Rni9DnjQAUap4zWcurM4IquamVrDIyNgBG <- TOKEN ]'"))
 		}
 		if s.GetURLField("webhookid") == "" {
-			errs = append(errs, fmt.Errorf("%swebhookid: <required> e.g. 'https://discord.com/api/webhooks/[ 975870285909737583 <- WEBHOOKID ]/[ QEdyk-Qi5AiMXoZdxQFpWNcwEfmz5oOm_1Rni9DnjQAUap4zWcurM4IquamVrDIyNgBG <- token ]'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"webhookid: <required> e.g. 'https://discord.com/api/webhooks/[ 975870285909737583 <- WEBHOOKID ]/[ QEdyk-Qi5AiMXoZdxQFpWNcwEfmz5oOm_1Rni9DnjQAUap4zWcurM4IquamVrDIyNgBG <- token ]'"))
 		}
 	case "smtp":
 		// smtp://username:password@host:port[/path]
 		if s.GetURLField("host") == "" {
-			errs = append(errs, fmt.Errorf("%shost: <required> e.g. 'smtp.example.io'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"host: <required> e.g. 'smtp.example.com'"))
 		}
 	case "gotify":
 		// gotify://host:port/path/token
 		if s.GetURLField("host") == "" {
-			errs = append(errs, fmt.Errorf("%shost: <required> e.g. 'gotify.example.io'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"host: <required> e.g. 'gotify.example.com'"))
 		}
 		if s.GetURLField("token") == "" {
-			errs = append(errs, fmt.Errorf("%stoken: <required> e.g. 'Aod9Cb0zXCeOrnD'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"token: <required> e.g. 'Aod9Cb0zXCeOrnD'"))
 		}
 	case "googlechat":
 		// googlechat://url
 		if s.GetURLField("raw") == "" {
-			errs = append(errs, fmt.Errorf("%sraw: <required> e.g. 'https://chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"raw: <required> e.g. 'https://chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz'"))
 		}
 	case "ifttt":
 		// ifttt://webhookid
 		if s.GetURLField("webhookid") == "" {
-			errs = append(errs, fmt.Errorf("%swebhookid: <required> e.g. 'h1fyLh42h7lDI2L11T-bv'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"webhookid: <required> e.g. 'h1fyLh42h7lDI2L11T-bv'"))
 		}
 	case "join":
 		// join://apiKey@join
 		if s.GetURLField("apikey") == "" {
-			errs = append(errs, fmt.Errorf("%sapikey: <required> e.g. 'f8eae56127864015b0d2f4d8db6ff53f'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"apikey: <required> e.g. 'f8eae56127864015b0d2f4d8db6ff53f'"))
 		}
 	case "mattermost":
 		// mattermost://[username@]host[:port][/path]/token[/channel]
 		if s.GetURLField("host") == "" {
-			errs = append(errs, fmt.Errorf("%shost: <required> e.g. 'mattermost.example.io'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"host: <required> e.g. 'mattermost.example.com'"))
 		}
 		if s.GetURLField("token") == "" {
-			errs = append(errs, fmt.Errorf("%stoken: <required> e.g. 'Aod9Cb0zXCeOrnD'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"token: <required> e.g. 'Aod9Cb0zXCeOrnD'"))
 		}
 	case "matrix":
 		// matrix://user:password@host
 		if s.GetURLField("host") == "" {
-			errs = append(errs, fmt.Errorf("%shost: <required> e.g. 'matrix.example.io'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"host: <required> e.g. 'matrix.example.com'"))
 		}
 		if s.GetURLField("password") == "" {
-			errs = append(errs, fmt.Errorf("%spassword: <required> e.g. 'pass123' (with user) OR 'access_token' (no user)",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"password: <required> e.g. 'pass123' (with user) OR 'access_token' (no user)"))
 		}
 	case "ntfy":
 		// ntfy://[username]:[password]@[host][:port][/path]/topic
 		if s.GetURLField("topic") == "" {
-			errs = append(errs, fmt.Errorf("%stopic: <required>",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"topic: <required>"))
 		}
 	case "opsgenie":
 		// opsgenie://host[:port][/path]/apiKey
 		if s.GetURLField("apikey") == "" {
-			errs = append(errs, fmt.Errorf("%sapikey: <required> e.g. 'xxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"apikey: <required> e.g. 'xxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx'"))
 		}
 	case "pushbullet":
 		// pushbullet://token/targets
 		if s.GetURLField("token") == "" {
-			errs = append(errs, fmt.Errorf("%stoken: <required> e.g. 'o.5NfxzU9yH4xBZlEXZArRtyUB4S4Ua8Hd'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"token: <required> e.g. 'o.5NfxzU9yH4xBZlEXZArRtyUB4S4Ua8Hd'"))
 		}
 		if s.GetURLField("targets") == "" {
-			errs = append(errs, fmt.Errorf("%stargets: <required> e.g. 'fpwfXzDCYsTxw4VfAAoHiR,5eAzVLKp5VRUMJeYehwbzv,XR7VKoK5b2MYWDpstD3Hfq'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"targets: <required> e.g. 'fpwfXzDCYsTxw4VfAAoHiR,5eAzVLKp5VRUMJeYehwbzv,XR7VKoK5b2MYWDpstD3Hfq'"))
 		}
 	case "pushover":
 		// pushover://token@user
 		if s.GetURLField("token") == "" {
-			errs = append(errs, fmt.Errorf("%stoken: <required> e.g. 'aayohdg8gqjj3ssszuqwwmuipt5gcd'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"token: <required> e.g. 'aayohdg8gqjj3ssszuqwwmuipt5gcd'"))
 		}
 		if s.GetURLField("user") == "" {
-			errs = append(errs, fmt.Errorf("%suser: <required> e.g. '2QypyiVSnURsw72cpnXCuVAQMJpKKY'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"user: <required> e.g. '2QypyiVSnURsw72cpnXCuVAQMJpKKY'"))
 		}
 	case "rocketchat":
 		// rocketchat://[username@]host:port[/port]/tokenA/tokenB/channel
 		if s.GetURLField("host") == "" {
-			errs = append(errs, fmt.Errorf("%shost: <required> e.g. 'rocket-chat.example.io'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"host: <required> e.g. 'rocket-chat.example.com'"))
 		}
 		if s.GetURLField("tokena") == "" {
-			errs = append(errs, fmt.Errorf("%stokena: <required> e.g. '8eGdRzc9r4YYNyvge'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"tokena: <required> e.g. '8eGdRzc9r4YYNyvge'"))
 		}
 		if s.GetURLField("tokenb") == "" {
-			errs = append(errs, fmt.Errorf("%stokenb: <required> e.g. '2XYQcX9NBwJBKfQnphpebPcnXZcPEi32Nt4NKJfrnbhsbRfX'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"tokenb: <required> e.g. '2XYQcX9NBwJBKfQnphpebPcnXZcPEi32Nt4NKJfrnbhsbRfX'"))
 		}
 		if s.GetURLField("channel") == "" {
-			errs = append(errs, fmt.Errorf("%schannel: <required> e.g. 'argusChannel' or '@user'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"channel: <required> e.g. 'argusChannel' or '@user'"))
 		}
 	case "slack":
 		// slack://token:token@channel
 		if s.GetURLField("token") == "" {
-			errs = append(errs, fmt.Errorf("%stoken: <required> e.g. '123456789012-1234567890123-4mt0t4l1YL3g1T5L4cK70k3N'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"token: <required> e.g. '123456789012-1234567890123-4mt0t4l1YL3g1T5L4cK70k3N'"))
 		}
 		if s.GetURLField("channel") == "" {
-			errs = append(errs, fmt.Errorf("%schannel: <required> e.g. 'C001CH4NN3L' or 'webhook'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"channel: <required> e.g. 'C001CH4NN3L' or 'webhook'"))
 		}
 	case "teams":
 		// teams://[group@][tenant][/altid][/groupowner]
 		if s.GetURLField("group") == "" {
-			errs = append(errs, fmt.Errorf("%sgroup: <required> e.g. '<host>/webhookb2/<GROUP>@<tenant>/IncomingWebhook/<altId>/<groupOwner>'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"group: <required> e.g. '<host>/webhookb2/<GROUP>@<tenant>/IncomingWebhook/<altId>/<groupOwner>'"))
 		}
 		if s.GetURLField("tenant") == "" {
-			errs = append(errs, fmt.Errorf("%stenant: <required> e.g. '<host>/webhookb2/<group>@<TENANT>/IncomingWebhook/<altId>/<groupOwner>'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"tenant: <required> e.g. '<host>/webhookb2/<group>@<TENANT>/IncomingWebhook/<altId>/<groupOwner>'"))
 		}
 		if s.GetURLField("altid") == "" {
-			errs = append(errs, fmt.Errorf("%saltid: <required> e.g. '<host>/webhookb2/<group>@<tenant>/IncomingWebhook/<ALT-ID>/<groupOwner>'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"altid: <required> e.g. '<host>/webhookb2/<group>@<tenant>/IncomingWebhook/<ALT-ID>/<groupOwner>'"))
 		}
 		if s.GetURLField("groupowner") == "" {
-			errs = append(errs, fmt.Errorf("%sgroupowner: <required> e.g. '<host>/webhookb2/<group>@<tenant>/IncomingWebhook/<altId>/<GROUP-OWNER>'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"groupowner: <required> e.g. '<host>/webhookb2/<group>@<tenant>/IncomingWebhook/<altId>/<GROUP-OWNER>'"))
 		}
 	case "telegram":
 		// telegram://token@telegram
 		if s.GetURLField("token") == "" {
-			errs = append(errs, fmt.Errorf("%stoken: <required> e.g. '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"token: <required> e.g. '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'"))
 		}
 	case "zulip":
 		// zulip://botMail:botKey@host:port
 		if s.GetURLField("host") == "" {
-			errs = append(errs, fmt.Errorf("%shost: <required> e.g. 'example.zulipchat.com'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"host: <required> e.g. 'example.zulipchat.com'"))
 		}
 		if s.GetURLField("botmail") == "" {
-			errs = append(errs, fmt.Errorf("%sbotmail: <required> e.g. 'my-bot@zulipchat.com'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"botmail: <required> e.g. 'my-bot@zulipchat.com'"))
 		}
 		if s.GetURLField("botkey") == "" {
-			errs = append(errs, fmt.Errorf("%sbotkey: <required> e.g. 'correcthorsebatterystable'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"botkey: <required> e.g. 'correcthorsebatterystable'"))
 		}
 	case "shoutrrr":
 		// Raw
 		if s.GetURLField("raw") == "" {
-			errs = append(errs, fmt.Errorf("%sraw: <required> e.g. 'service://foo:bar@something'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"raw: <required> e.g. 'service://foo:bar@something'"))
 		}
 	case "generic":
 		// generic://host[:port][/path]
 		if s.GetURLField("host") == "" {
-			errs = append(errs, fmt.Errorf("%shost: <required> e.g. 'example.com'",
-				prefix))
+			errs = append(errs, errors.New(prefix+"host: <required> e.g. 'example.com'"))
 		}
 		jsonMaps := []string{"custom_headers", "json_payload_vars", "query_vars"}
 		for _, jsonMap := range jsonMaps {
@@ -512,36 +517,36 @@ func (s *Shoutrrr) checkValuesParams(prefix string) error {
 	case "smtp":
 		// smtp://username:password@host:port[/path]/?from=fromAddress&to=recipient1[,recipient2,...]
 		if s.GetParam("fromaddress") == "" {
-			errs = append(errs, fmt.Errorf("%sfromaddress: <required> e.g. 'service@gmail.com'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"fromaddress: <required> e.g. 'service@gmail.com'"))
 		}
 		if s.GetParam("toaddresses") == "" {
-			errs = append(errs, fmt.Errorf("%stoaddresses: <required> e.g. 'name@gmail.com'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"toaddresses: <required> e.g. 'name@gmail.com'"))
 		}
 	case "ifttt":
 		// ifttt://webhookid/?events=event1[,event2,...]&value1=value1&value2=value2&value3=value3
 		if s.GetParam("events") == "" {
-			errs = append(errs, fmt.Errorf("%sevents: <required> e.g. 'event1,event2'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"events: <required> e.g. 'event1,event2'"))
 		}
 	case "join":
 		// join://apiKey@join/?devices=device1[,device2, ...][&icon=icon][&title=title]
 		if s.GetParam("devices") == "" {
-			errs = append(errs, fmt.Errorf("%sdevices: <required> e.g. '550ddc132c2b4fd28b8b89f735860db1,7294feb73974e5c99d7479ab7b73ba39,d2d775a2f453237d733aa2b7ea2c3ecd'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"devices: <required> e.g. '550ddc132c2b4fd28b8b89f735860db1,7294feb73974e5c99d7479ab7b73ba39,d2d775a2f453237d733aa2b7ea2c3ecd'"))
 		}
 	case "teams":
 		// teams://group@tenant/altId/groupOwner?host=organization.webhook.office.com
 		if s.GetParam("host") == "" {
-			errs = append(errs, fmt.Errorf("%shost: <required> e.g. 'example.webhook.office.com'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"host: <required> e.g. 'example.webhook.office.com'"))
 		}
 	case "telegram":
 		// telegram://token@telegram?chats=channel-1[,chat-id-1,...]
 		if s.GetParam("chats") == "" {
-			errs = append(errs, fmt.Errorf("%schats: <required> e.g. '@channelName' or 'chatID'",
-				prefix))
+			errs = append(errs, errors.New(prefix+
+				"chats: <required> e.g. '@channelName' or 'chatID'"))
 		}
 	}
 
@@ -564,20 +569,10 @@ func (s *Shoutrrr) TestSend(serviceURL string) error {
 	s.SetOption("delay", "0s")
 	s.SetOption("max_tries", "1")
 
-	latestVersion := s.ServiceStatus.LatestVersion()
-	if latestVersion == "" {
-		latestVersion = "MAJOR.MINOR.PATCH"
+	testServiceInfo := s.ServiceStatus.GetServiceInfo()
+	if testServiceInfo.LatestVersion == "" {
+		testServiceInfo.LatestVersion = "MAJOR.MINOR.PATCH"
 	}
-
-	webURL := util.TemplateString(
-		util.DereferenceOrDefault(s.ServiceStatus.WebURL),
-		util.ServiceInfo{LatestVersion: latestVersion})
-
-	testServiceInfo := util.ServiceInfo{
-		ID:            util.DereferenceOrDefault(s.ServiceStatus.ServiceID),
-		URL:           serviceURL,
-		WebURL:        &webURL,
-		LatestVersion: latestVersion}
 
 	// Prefix 'TEST - ' if non-empty.
 	title := s.Title(testServiceInfo)
@@ -602,5 +597,6 @@ func (s *SliceDefaults) Print(prefix string) {
 	}
 
 	str := s.String(prefix + "  ")
-	fmt.Printf("%snotify:\n%s", prefix, str)
+	fmt.Printf("%snotify:\n%s",
+		prefix, str)
 }

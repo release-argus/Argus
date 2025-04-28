@@ -58,7 +58,8 @@ func NewAPI(cfg *config.Config) *API {
 
 	api.Router = baseRouter.PathPrefix(routePrefix).Subrouter().StrictSlash(true)
 
-	baseRouter.Handle(routePrefix, http.RedirectHandler(routePrefix+"/", http.StatusPermanentRedirect))
+	baseRouter.Handle(routePrefix,
+		http.RedirectHandler(routePrefix+"/", http.StatusPermanentRedirect))
 	// Add basic auth middleware.
 	if api.Config.Settings.Web.BasicAuth != nil ||
 		api.Config.Settings.FromFlags.Web.BasicAuth != nil ||

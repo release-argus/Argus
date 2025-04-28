@@ -31,10 +31,10 @@ import (
 
 // Lookup is a web-based lookup type.
 type Lookup struct {
-	base.Lookup `yaml:",inline" json:",inline"` // Base struct for a Lookup.
+	base.Lookup `json:",inline" yaml:",inline"` // Base struct for a Lookup.
 
 	mutex   sync.RWMutex // Lock for the Lookup.
-	Version string       `yaml:"version,omitempty" json:"version,omitempty"` // OPTIONAL: Version to initialise with/set to.
+	Version string       `json:"version,omitempty" yaml:"version,omitempty"` // OPTIONAL: Version to initialise with/set to.
 }
 
 // New returns a new Lookup from a string in a given format (json/yaml).
@@ -71,11 +71,27 @@ func New(
 
 // UnmarshalJSON will unmarshal the Lookup.
 func (l *Lookup) UnmarshalJSON(data []byte) error {
+	return l.unmarshal(func(v interface{}) error {
+		return json.Unmarshal(data, v)
+	})
+}
+
+// UnmarshalYAML will unmarshal the Lookup.
+func (l *Lookup) UnmarshalYAML(value *yaml.Node) error {
+	return l.unmarshal(func(v interface{}) error {
+		return value.Decode(v)
+	})
+}
+
+// unmarshal will unmarshal the Lookup using the provided unmarshal function.
+func (l *Lookup) unmarshal(unmarshalFunc func(interface{}) error) error {
 	// Alias to avoid recursion.
 	type Alias Lookup
 	aux := &struct {
-		*Alias `json:",inline"`
-	}{Alias: (*Alias)(l)}
+		*Alias `json:",inline" yaml:",inline"`
+	}{
+		Alias: (*Alias)(l),
+	}
 
 	// Lock the mutex if it's an existing Lookup.
 	if l != nil {
@@ -83,30 +99,10 @@ func (l *Lookup) UnmarshalJSON(data []byte) error {
 		defer l.mutex.Unlock()
 	}
 
-	// Unmarshal.
-	if err := json.Unmarshal(data, aux); err != nil {
+	// Unmarshal using the provided function.
+	if err := unmarshalFunc(aux); err != nil {
 		return errors.New(strings.Replace(err.Error(), ".Alias", "", 1))
 	}
-	l.Type = "manual"
-
-	return nil
-}
-
-// UnmarshalYAML will unmarshal the Lookup.
-func (l *Lookup) UnmarshalYAML(value *yaml.Node) error {
-	// Alias to avoid recursion.
-	type Alias Lookup
-	aux := &struct {
-		*Alias `yaml:",inline"`
-	}{
-		Alias: (*Alias)(l),
-	}
-
-	// Decode the YAML node into the struct.
-	if err := value.Decode(aux); err != nil {
-		return err //nolint:wrapcheck
-	}
-
 	l.Type = "manual"
 	return nil
 }

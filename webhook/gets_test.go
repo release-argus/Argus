@@ -585,20 +585,20 @@ func TestWebHook_GetURL(t *testing.T) {
 		"root overrides all": {
 			want:             "https://release-argus.io",
 			rootValue:        "https://release-argus.io",
-			mainValue:        "https://somewhere.com",
-			defaultValue:     "https://somewhere.com",
-			hardDefaultValue: "https://somewhere.com",
+			mainValue:        "https://example.com",
+			defaultValue:     "https://example.com",
+			hardDefaultValue: "https://example.com",
 		},
 		"main overrides default+hardDefault": {
 			want:             "https://release-argus.io",
 			mainValue:        "https://release-argus.io",
-			defaultValue:     "https://somewhere.com",
-			hardDefaultValue: "https://somewhere.com",
+			defaultValue:     "https://example.com",
+			hardDefaultValue: "https://example.com",
 		},
 		"default is last resort": {
 			want:             "https://release-argus.io",
 			defaultValue:     "https://release-argus.io",
-			hardDefaultValue: "https://somewhere.com",
+			hardDefaultValue: "https://example.com",
 		},
 		"hardDefaultValue last resort": {
 			want:             "https://release-argus.io",

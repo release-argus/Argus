@@ -272,7 +272,7 @@ func TestGetVersion(t *testing.T) {
 				lookup.Options,
 				lookup.Status,
 				lookup.Defaults, lookup.HardDefaults)
-			testBody := util.PtrValueOrValue(tc.bodyOverride, body)
+			testBody := util.DereferenceOrValue(tc.bodyOverride, body)
 
 			// WHEN getVersion is called on it.
 			version, err := lookup.getVersion(
@@ -537,6 +537,7 @@ func TestQuery(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
 
+			serviceID := name
 			try := 0
 			temporaryFailureInNameResolution := true
 			for temporaryFailureInNameResolution != false {
@@ -548,7 +549,7 @@ func TestQuery(t *testing.T) {
 				// Valid cert switch.
 				lookup.URL = strings.Replace(lookup.URL, "://invalid", "://valid", 1)
 				lookup.AllowInvalidCerts = nil
-				lookup.Status.ServiceID = &name
+				lookup.Status.ServiceInfo.ID = serviceID
 				lookup.Options.SemanticVersioning = tc.semanticVersioning
 				// hadStatus.
 				lookup.Status.SetLatestVersion(tc.hadStatus.latestVersion, "", false)
@@ -608,7 +609,7 @@ func TestQuery(t *testing.T) {
 					want = 1
 				}
 				got := testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-					*lookup.Status.ServiceID,
+					serviceID,
 					lookup.Type,
 					"FAIL"))
 				if got != want {
@@ -621,7 +622,7 @@ func TestQuery(t *testing.T) {
 					want = 1
 				}
 				got = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-					*lookup.Status.ServiceID,
+					serviceID,
 					lookup.Type,
 					"SUCCESS"))
 				if got != want {

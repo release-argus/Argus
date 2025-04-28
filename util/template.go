@@ -20,12 +20,14 @@ import (
 	"sync"
 
 	"github.com/flosch/pongo2/v5"
+
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 )
 
 var pongoMutex = sync.Mutex{}
 
 // TemplateString with pongo2 and `context`.
-func TemplateString(template string, context ServiceInfo) string {
+func TemplateString(template string, context serviceinfo.ServiceInfo) string {
 	// If the string does not represent a Jinja template.
 	if !strings.Contains(template, "{") {
 		return template
@@ -42,11 +44,17 @@ func TemplateString(template string, context ServiceInfo) string {
 
 	// Render the template.
 	result, err := tpl.Execute(pongo2.Context{
-		"service_id":   context.ID,
-		"service_name": context.Name,
-		"service_url":  context.URL,
-		"web_url":      context.WebURL,
-		"version":      context.LatestVersion})
+		"service_id":       context.ID,
+		"service_name":     context.Name,
+		"service_url":      context.URL,
+		"icon":             context.Icon,
+		"icon_link_to":     context.IconLinkTo,
+		"web_url":          context.WebURL,
+		"version":          context.LatestVersion,
+		"approved_version": context.ApprovedVersion,
+		"deployed_version": context.DeployedVersion,
+		"latest_version":   context.LatestVersion,
+	})
 	if err != nil {
 		panic(err)
 	}

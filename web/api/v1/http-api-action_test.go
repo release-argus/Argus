@@ -32,6 +32,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
@@ -116,8 +117,9 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			svc.HardDefaults = &cfg.HardDefaults.Service
 			svc.Status.Init(
 				len(svc.Notify), len(tc.commands), len(tc.webhooks),
-				&tc.serviceID, nil,
-				test.StringPtr("https://example.com"))
+				tc.serviceID, "", "",
+				&dashboard.Options{
+					WebURL: "https://example.com"})
 			svc.Status.SetAnnounceChannel(cfg.HardDefaults.Service.Status.AnnounceChannel)
 			svc.Status.SetApprovedVersion("2.0.0", false)
 			svc.Status.SetDeployedVersion("2.0.0", "", false)
@@ -429,8 +431,9 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			svc.HardDefaults = &api.Config.HardDefaults.Service
 			svc.Status.Init(
 				len(svc.Notify), len(tc.commands), len(tc.webhooks),
-				&tc.serviceID, &name,
-				test.StringPtr("https://example.com"))
+				tc.serviceID, name, "",
+				&dashboard.Options{
+					WebURL: "https://example.com"})
 			svc.Status.SetAnnounceChannel(api.Config.HardDefaults.Service.Status.AnnounceChannel)
 			svc.Status.SetApprovedVersion("2.0.0", false)
 			svc.Status.SetDeployedVersion("2.0.0", "", false)
@@ -505,7 +508,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 				res := wHTTP.Result()
 				data, _ := io.ReadAll(res.Body)
 				t.Log(fmt.Sprintf("%s\ntarget=%q\nresult=%q, status_code=%d",
-					packageName, util.PtrValueOrValue(target, "<nil>"), string(data), res.StatusCode))
+					packageName, util.DereferenceOrValue(target, "<nil>"), string(data), res.StatusCode))
 				time.Sleep(10 * time.Microsecond)
 			}
 			time.Sleep(time.Duration((len(tc.commands)+len(tc.webhooks))*500) * time.Millisecond)
@@ -516,7 +519,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 				expecting += len(tc.commands)
 				if tc.commandFails != nil {
 					for i := range tc.commandFails {
-						if util.DereferenceOrNilValue(tc.commandFails[i], true) == false {
+						if util.DereferenceOrValue(tc.commandFails[i], true) == false {
 							expecting--
 						}
 					}
@@ -594,7 +597,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 					expecting += len(tc.commands)
 					if tc.commandFails != nil {
 						for i := range tc.commandFails {
-							if util.DereferenceOrNilValue(tc.commandFails[i], true) == false {
+							if util.DereferenceOrValue(tc.commandFails[i], true) == false {
 								expecting--
 							}
 						}

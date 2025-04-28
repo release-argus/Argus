@@ -160,17 +160,19 @@ func (s *Slice) InitMetrics() {
 
 // initMetrics for this Shoutrrr.
 func (s *Shoutrrr) initMetrics() {
+	serviceID := s.ServiceStatus.ServiceInfo.ID
+
 	// ############
 	// # Counters #
 	// ############
 	metric.InitPrometheusCounter(metric.NotifyResultTotal,
 		s.ID,
-		*s.ServiceStatus.ServiceID,
+		serviceID,
 		s.GetType(),
 		"SUCCESS")
 	metric.InitPrometheusCounter(metric.NotifyResultTotal,
 		s.ID,
-		*s.ServiceStatus.ServiceID,
+		serviceID,
 		s.GetType(),
 		"FAIL")
 }
@@ -188,14 +190,19 @@ func (s *Slice) DeleteMetrics() {
 
 // deleteMetrics for this Shoutrrr.
 func (s *Shoutrrr) deleteMetrics() {
+	serviceID := s.ServiceStatus.ServiceInfo.ID
+
+	// ############
+	// # Counters #
+	// ############
 	metric.DeletePrometheusCounter(metric.NotifyResultTotal,
 		s.ID,
-		*s.ServiceStatus.ServiceID,
+		serviceID,
 		s.GetType(),
 		"SUCCESS")
 	metric.DeletePrometheusCounter(metric.NotifyResultTotal,
 		s.ID,
-		*s.ServiceStatus.ServiceID,
+		serviceID,
 		s.GetType(),
 		"FAIL")
 }

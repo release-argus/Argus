@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -62,11 +63,15 @@ func TestShoutrrr_checkValuesType(t *testing.T) {
 			shoutrrr.Type = tc.sType
 			svcStatus := status.New(
 				nil, nil, nil,
-				"", "", "", "", "", "")
+				"",
+				"", "",
+				"", "",
+				"",
+				&dashboard.Options{})
 			svcStatus.Init(
 				1, 0, 0,
-				&name, nil,
-				nil)
+				name, "", "",
+				&dashboard.Options{})
 			shoutrrr.Init(
 				svcStatus,
 				tc.main,
@@ -1064,11 +1069,15 @@ func TestShoutrrr_checkValuesURLFields(t *testing.T) {
 			shoutrrr.URLFields = tc.urlFields
 			svcStatus := status.New(
 				nil, nil, nil,
-				"", "", "", "", "", "")
+				"",
+				"", "",
+				"", "",
+				"",
+				&dashboard.Options{})
 			svcStatus.Init(
 				1, 0, 0,
-				test.StringPtr("serviceID"), nil,
-				nil)
+				"serviceID", "", "",
+				svcStatus.Dashboard)
 			shoutrrr.Init(
 				svcStatus,
 				tc.main,
@@ -1246,11 +1255,15 @@ func TestShoutrrr_checkValuesParams(t *testing.T) {
 			shoutrrr.Params = tc.params
 			svcStatus := status.New(
 				nil, nil, nil,
-				"", "", "", "", "", "")
+				"",
+				"", "",
+				"", "",
+				"",
+				&dashboard.Options{})
 			svcStatus.Init(
 				1, 0, 0,
-				test.StringPtr("serviceID"), nil,
-				nil)
+				"serviceID", "", "",
+				svcStatus.Dashboard)
 			shoutrrr.Init(
 				svcStatus,
 				tc.main,
@@ -1400,8 +1413,8 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 			serviceStatus := status.Status{}
 			serviceStatus.Init(
 				1, 0, 0,
-				&name, nil,
-				nil)
+				name, "", "",
+				&dashboard.Options{})
 			shoutrrr.Init(
 				&serviceStatus,
 				shoutrrr.Main, shoutrrr.Defaults, shoutrrr.HardDefaults)
@@ -1724,8 +1737,8 @@ func TestSlice_CheckValues(t *testing.T) {
 				svcStatus := &status.Status{}
 				svcStatus.Init(
 					len(*tc.slice), 0, 0,
-					nil, nil,
-					nil)
+					"", "", "",
+					&dashboard.Options{})
 				tc.slice.Init(
 					svcStatus,
 					&SliceDefaults{}, &SliceDefaults{}, &SliceDefaults{})

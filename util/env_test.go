@@ -276,3 +276,84 @@ func TestExpandEnvVariables(t *testing.T) {
 		})
 	}
 }
+
+func TestTryExpandEnv(t *testing.T) {
+	tests := map[string]struct {
+		input    string
+		envVars  map[string]string
+		expected *string
+	}{
+		"no environment variables": {
+			input:    "plain_text",
+			envVars:  nil,
+			expected: nil,
+		},
+		"single environment variable": {
+			input: "${TEST_EXPAND_ENV_FOO_1}",
+			envVars: map[string]string{
+				"TEST_EXPAND_ENV_FOO_1": "bar",
+			},
+			expected: test.StringPtr("bar"),
+		},
+		"environment variable requires curly brackets": {
+			input: "$TEST_EXPAND_ENV_FOO_2",
+			envVars: map[string]string{
+				"TEST_EXPAND_ENV_FOO_2": "bar",
+			},
+			expected: nil,
+		},
+		"multiple environment variables": {
+			input: "${TEST_EXPAND_ENV_FOO_3}-${TEST_EXPAND_ENV_BAR_1}",
+			envVars: map[string]string{
+				"TEST_EXPAND_ENV_FOO_3": "hello",
+				"TEST_EXPAND_ENV_BAR_1": "world",
+			},
+			expected: test.StringPtr("hello-world"),
+		},
+		"environment variable not set": {
+			input:    "${TEST_EXPAND_ENV_FOO_4}",
+			envVars:  nil,
+			expected: nil,
+		},
+		"mixed text and environment variables": {
+			input: "prefix-${TEST_EXPAND_ENV_FOO_5}-suffix",
+			envVars: map[string]string{
+				"TEST_EXPAND_ENV_FOO_5": "value",
+			},
+			expected: test.StringPtr("prefix-value-suffix"),
+		},
+		"no expansion needed": {
+			input:    "NO_EXPANSION_NEEDED",
+			envVars:  nil,
+			expected: nil,
+		},
+		"empty input string": {
+			input:    "",
+			envVars:  nil,
+			expected: nil,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Set environment variables
+			for k, v := range tc.envVars {
+				os.Setenv(k, v)
+				t.Cleanup(func() { os.Unsetenv(k) })
+			}
+
+			// Call TryExpandEnv
+			result := TryExpandEnv(tc.input)
+
+			// Check result
+			want := DereferenceOrValue(tc.expected, "<nil>")
+			got := DereferenceOrValue(result, "<nil>")
+			if want != got {
+				t.Errorf("%s\nmismatch\nwant: %q\ngot:  %q",
+					packageName, want, got)
+			}
+		})
+	}
+}

@@ -22,8 +22,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
 	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
 	metric "github.com/release-argus/Argus/web/metric"
 )
 
@@ -60,7 +60,8 @@ func TestSlice_Metrics(t *testing.T) {
 			if tc.slice != nil {
 				for name, s := range *tc.slice {
 					s.ID = name
-					s.ServiceStatus = &status.Status{ServiceID: test.StringPtr(name + "-service")}
+					s.ServiceStatus = &status.Status{}
+					s.ServiceStatus.ServiceInfo.ID = name + "-service"
 				}
 			}
 
@@ -104,7 +105,7 @@ func TestWebHook_Metrics(t *testing.T) {
 
 			webhook := testWebHook(true, false, false)
 			webhook.ID = name + "TestInitMetrics"
-			webhook.ServiceStatus.ServiceID = test.StringPtr(name + "TestInitMetrics")
+			webhook.ServiceStatus.ServiceInfo.ID = name + "TestInitMetrics"
 			if tc.isNil {
 				webhook = nil
 			}
@@ -142,11 +143,12 @@ func TestWebHook_Init(t *testing.T) {
 	var notifiers shoutrrr.Slice
 	var main Defaults
 	var defaults, hardDefaults Defaults
-	status := status.Status{ServiceID: test.StringPtr("TestInit")}
+	status := status.Status{}
 	status.Init(
 		0, 0, 1,
-		test.StringPtr("TestInit"), nil,
-		test.StringPtr("https://example.com"))
+		"TestInit", "", "",
+		&dashboard.Options{
+			WebURL: "https://example.com"})
 
 	// WHEN Init is called on it.
 	webhook.Init(
@@ -240,15 +242,16 @@ func TestSlice_Init(t *testing.T) {
 					}
 				}
 			}
-			serviceStatus := status.Status{ServiceID: &name}
+			serviceStatus := status.Status{}
+			serviceStatus.ServiceInfo.ID = name
 			mainCount := 0
 			if tc.mains != nil {
 				mainCount = len(*tc.mains)
 			}
 			serviceStatus.Init(
 				0, 0, mainCount,
-				&name, nil,
-				nil)
+				name, "", "",
+				&dashboard.Options{})
 			parentInterval := "10s"
 
 			// WHEN Init is called on it.

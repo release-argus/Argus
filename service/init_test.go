@@ -17,16 +17,14 @@
 package service
 
 import (
-	"fmt"
 	"testing"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"gopkg.in/yaml.v3"
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
+	"github.com/release-argus/Argus/service/dashboard"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -34,40 +32,6 @@ import (
 	"github.com/release-argus/Argus/webhook"
 	webhook_test "github.com/release-argus/Argus/webhook/test"
 )
-
-func TestService_ServiceInfo(t *testing.T) {
-	// GIVEN a Service.
-	svc := testService(t, "TestServiceInfo", "url")
-	id := "test_id"
-	svc.ID = id
-	url := "https://test_url.com"
-	yaml.Unmarshal(
-		[]byte("url: "+url),
-		svc.LatestVersion)
-	webURL := "https://test_webURL.com"
-	svc.Dashboard.WebURL = webURL
-	latestVersion := "latest.version"
-	svc.Status.SetLatestVersion(latestVersion, "", false)
-	time.Sleep(10 * time.Millisecond)
-	time.Sleep(time.Second)
-
-	// When ServiceInfo is called on it.
-	got := svc.ServiceInfo()
-	want := util.ServiceInfo{
-		ID:            id,
-		URL:           url,
-		WebURL:        &webURL,
-		LatestVersion: latestVersion,
-	}
-
-	// THEN we get the correct ServiceInfo.
-	gotStr := util.ToJSONString(got)
-	wantStr := util.ToJSONString(want)
-	if gotStr != wantStr {
-		t.Errorf("%s\nwant: %#v\ngot:  %#v",
-			packageName, wantStr, gotStr)
-	}
-}
 
 func TestService_IconURL(t *testing.T) {
 	nilValue := "<nil>"
@@ -148,7 +112,7 @@ func TestService_IconURL(t *testing.T) {
 			got := svc.IconURL()
 
 			// THEN the function returns the correct result.
-			gotStr := util.DereferenceOrNilValue(got, nilValue)
+			gotStr := util.DereferenceOrValue(got, nilValue)
 			if gotStr != tc.want {
 				t.Errorf("%s\nwant: %q\ngot:  %q",
 					packageName, tc.want, gotStr)
@@ -162,6 +126,7 @@ func TestService_Init(t *testing.T) {
 	tests := map[string]struct {
 		svc      *Service
 		defaults *Defaults
+		wantIcon string
 	}{
 		"bare service": {
 			svc: &Service{
@@ -176,6 +141,65 @@ func TestService_Init(t *testing.T) {
 						nil, nil)
 				}),
 			}},
+		"service with notify - doesn't set fallback when Service has a Dashboard.Icon": {
+			svc: &Service{
+				ID: "Init",
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New("github",
+						"yaml", test.TrimYAML(`
+								url: release-argus/Argus
+							`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				Notify: shoutrrr.Slice{
+					"test": shoutrrr.New(
+						nil, "", "discord",
+						nil, nil,
+						map[string]string{
+							"icon": "notify-icon"},
+						nil, nil, nil)},
+				Dashboard: *dashboard.NewOptions(
+					nil,
+					"dashboard-icon", "",
+					"", nil,
+					nil, nil)},
+			wantIcon: "dashboard-icon",
+		},
+		"service with notify - does set fallback when Service has no Dashboard.Icon": {
+			svc: &Service{
+				ID: "Init",
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New("github",
+						"yaml", test.TrimYAML(`
+								url: release-argus/Argus
+							`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				Notify: shoutrrr.Slice{
+					"baz": nil,
+					"foo": shoutrrr.New(
+						nil, "", "discord",
+						nil, nil,
+						map[string]string{
+							"icon": "example.com/notify-icon-1"},
+						nil, nil, nil),
+					"bar": shoutrrr.New(
+						nil, "", "discord",
+						nil, nil,
+						map[string]string{
+							"icon": "https://example.com/notify-icon-2"},
+						nil, nil, nil)},
+				Dashboard: *dashboard.NewOptions(
+					nil,
+					"", "",
+					"", nil,
+					nil, nil)},
+			wantIcon: "https://example.com/notify-icon-2",
+		},
 		"service with notify, command and webhook": {
 			svc: &Service{
 				ID: "Init",
@@ -457,6 +481,12 @@ func TestService_Init(t *testing.T) {
 						packageName, i)
 				}
 			}
+			// 	Dashboard
+			gotIcon := tc.svc.Dashboard.GetIcon()
+			if tc.wantIcon != gotIcon {
+				t.Errorf("%s\nDashboard icon fallback mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantIcon, gotIcon)
+			}
 		})
 	}
 }
@@ -493,8 +523,7 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			testNotify := shoutrrr_test.Shoutrrr(false, false)
 			testWebHook := webhook_test.WebHook(false, false, false)
 			service := &Service{
-				ID: fmt.Sprintf("TestService_InitMetrics_ResetMetrics_DeleteMetrics--%s",
-					name),
+				ID:                    "TestService_InitMetrics_ResetMetrics_DeleteMetrics--" + name,
 				LatestVersion:         testLatestVersion(t, "github", false),
 				DeployedVersionLookup: testDeployedVersionLookup(t, false),
 				Command: command.Slice{

@@ -27,8 +27,8 @@ import (
 	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
 	logtest "github.com/release-argus/Argus/test/log"
 )
 
@@ -91,11 +91,12 @@ func testConfig() (cfg *config.Config) {
 		svc := service.Service{
 			ID:     "foo",
 			Status: status.Status{},
-		}
+			Dashboard: dashboard.Options{
+				WebURL: "https://example.com"}}
 		svc.Status.Init(
 			len(svc.Notify), len(svc.Command), len(svc.WebHook),
-			&svc.ID, nil,
-			test.StringPtr("https://example.com"))
+			svc.ID, "", "",
+			&svc.Dashboard)
 		svc.Status.SetApprovedVersion("1.0.0", false)
 		svc.Status.SetDeployedVersion("2.0.0", "", false)
 		svc.Status.SetLatestVersion("3.0.0", time.Now().Add(time.Hour).Format(time.RFC3339), false)
@@ -170,8 +171,9 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 	status := status.Status{}
 	status.Init(
 		0, 0, 0,
-		&id, nil,
-		test.StringPtr("https://example.com"))
+		id, "", "",
+		&dashboard.Options{
+			WebURL: "https://example.com"})
 	status.SetLatestVersion(lv, lvt, false)
 	status.SetDeployedVersion(dv, dvt, false)
 	status.SetApprovedVersion(av, false)

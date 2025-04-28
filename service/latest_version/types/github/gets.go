@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,25 +54,15 @@ func (l *Lookup) usePreRelease() bool {
 }
 
 // ServiceURL translates possible `owner/repo` URLs, adding the github.com/ prefix.
-func (l *Lookup) ServiceURL(ignoreWebURL bool) (serviceURL string) {
-	if !ignoreWebURL && *l.Status.WebURL != "" {
-		// Don't use this template if `LatestVersion` hasn't been found and is used in `WebURL`.
-		latestVersion := l.Status.LatestVersion()
-		if latestVersion != "" && strings.Contains(*l.Status.WebURL, "{{") {
-			serviceURL = util.TemplateString(
-				*l.Status.WebURL,
-				util.ServiceInfo{LatestVersion: latestVersion})
-			return
-		}
-	}
-
-	serviceURL = l.URL
+func (l *Lookup) ServiceURL() string {
+	serviceURL := l.URL
 	// GitHub service. Get the non-API URL.
 	// If "owner/repo" rather than a full path.
 	if strings.Count(serviceURL, "/") == 1 {
 		serviceURL = "https://github.com/" + serviceURL
 	}
-	return
+
+	return serviceURL
 }
 
 // GetGitHubData will return the GitHub data. (For tests).

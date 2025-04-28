@@ -574,7 +574,9 @@ func TestHTTP_Config(t *testing.T) {
 			tc.wantBody = test.TrimJSON(tc.wantBody) + "\n"
 
 			// WHEN that HTTP request is sent.
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/config", nil)
+			req := httptest.NewRequest(http.MethodGet,
+				"/api/v1/config",
+				nil)
 			w := httptest.NewRecorder()
 			api.httpConfig(w, req)
 			res := w.Result()

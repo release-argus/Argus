@@ -17,7 +17,6 @@ package base
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/option"
@@ -28,16 +27,16 @@ import (
 
 // Lookup is the base struct for a Lookup.
 type Lookup struct {
-	Type        string                 `yaml:"type,omitempty" json:"type,omitempty"`                 // "github" | "url".
-	URL         string                 `yaml:"url,omitempty" json:"url,omitempty"`                   // "owner/repo" or "https://github.com/owner/repo".
-	URLCommands filter.URLCommandSlice `yaml:"url_commands,omitempty" json:"url_commands,omitempty"` // Commands to filter the release from the URL request.
-	Require     *filter.Require        `yaml:"require,omitempty" json:"require,omitempty"`           // Options to require before considering a release valid.
+	Type        string                 `json:"type,omitempty" yaml:"type,omitempty"`                 // "github" | "url".
+	URL         string                 `json:"url,omitempty" yaml:"url,omitempty"`                   // "owner/repo" or "https://github.com/owner/repo".
+	URLCommands filter.URLCommandSlice `json:"url_commands,omitempty" yaml:"url_commands,omitempty"` // Commands to filter the release from the URL request.
+	Require     *filter.Require        `json:"require,omitempty" yaml:"require,omitempty"`           // Options to require before considering a release valid.
 
-	Options *opt.Options   `yaml:"-" json:"-"` // Options.
-	Status  *status.Status `yaml:"-" json:"-"` // Service Status.
+	Options *opt.Options   `json:"-" yaml:"-"` // Options.
+	Status  *status.Status `json:"-" yaml:"-"` // Service Status.
 
-	Defaults     *Defaults `yaml:"-" json:"-"` // Defaults.
-	HardDefaults *Defaults `yaml:"-" json:"-"` // Hard Defaults.
+	Defaults     *Defaults `json:"-" yaml:"-"` // Defaults.
+	HardDefaults *Defaults `json:"-" yaml:"-"` // Hard Defaults.
 }
 
 // String returns a string representation of the Lookup.
@@ -69,7 +68,7 @@ func (l *Lookup) Init(
 
 // GetServiceID returns the service ID of the Lookup.
 func (l *Lookup) GetServiceID() string {
-	return *l.Status.ServiceID
+	return l.Status.ServiceInfo.ID
 }
 
 // GetType returns the type of the Lookup.
@@ -102,18 +101,8 @@ func (l *Lookup) GetHardDefaults() *Defaults {
 	return l.HardDefaults
 }
 
-// ServiceURL returns the service's URL with any templating applied.
-func (l *Lookup) ServiceURL(ignoreWebURL bool) string {
-	if !ignoreWebURL && *l.Status.WebURL != "" {
-		// Don't use this template if `LatestVersion` has not been found and is used in `WebURL`.
-		latestVersion := l.Status.LatestVersion()
-		if latestVersion != "" || !strings.Contains(*l.Status.WebURL, "version") {
-			return util.TemplateString(
-				*l.Status.WebURL,
-				util.ServiceInfo{LatestVersion: latestVersion})
-		}
-	}
-
+// ServiceURL returns the service's URL.
+func (l *Lookup) ServiceURL() string {
 	return l.URL
 }
 
@@ -122,9 +111,11 @@ func (l *Lookup) CheckValues(prefix string) error {
 	var errs []error
 
 	// url_commands
-	util.AppendCheckError(&errs, prefix, "url_commands", l.URLCommands.CheckValues(prefix+"  "))
+	util.AppendCheckError(&errs, prefix, "url_commands",
+		l.URLCommands.CheckValues(prefix+"  "))
 	// require
-	util.AppendCheckError(&errs, prefix, "require", l.Require.CheckValues(prefix+"  "))
+	util.AppendCheckError(&errs, prefix, "require",
+		l.Require.CheckValues(prefix+"  "))
 
 	if len(errs) == 0 {
 		return nil

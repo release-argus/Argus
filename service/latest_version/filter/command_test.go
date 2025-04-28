@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 )
@@ -48,12 +48,14 @@ func TestRequire_ExecCommand(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
+			dashboard := &dashboard.Options{
+				WebURL: "https://example.com"}
 			require := Require{Command: tc.cmd}
 			require.Status = &status.Status{}
 			require.Status.Init(
 				0, 1, 0,
-				&name, nil,
-				test.StringPtr("http://example.com"))
+				name, "", "",
+				dashboard)
 
 			// WHEN ApplyTemplate is called on the Command.
 			err := require.ExecCommand(logutil.LogFrom{})

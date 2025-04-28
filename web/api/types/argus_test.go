@@ -496,8 +496,8 @@ func TestServiceSummary_String(t *testing.T) {
 				Name:                     test.StringPtr("foo"),
 				Active:                   test.BoolPtr(true),
 				Comment:                  "test",
-				Type:                     "gitlab",
-				WebURL:                   test.StringPtr("http://example.com"),
+				Type:                     "url",
+				WebURL:                   test.StringPtr("https://example.com"),
 				Icon:                     test.StringPtr("https://example.com/icon.png"),
 				IconLinkTo:               test.StringPtr("https://release-argus.io"),
 				HasDeployedVersionLookup: test.BoolPtr(true),
@@ -511,8 +511,8 @@ func TestServiceSummary_String(t *testing.T) {
 					"name": "foo",
 					"active": true,
 					"comment": "test",
-					"type": "gitlab",
-					"url": "http://example.com",
+					"type": "url",
+					"url": "https://example.com",
 					"icon": "https://example.com/icon.png",
 					"icon_link_to": "https://release-argus.io",
 					"has_deployed_version": true,
@@ -543,7 +543,7 @@ func TestServiceSummary_String(t *testing.T) {
 	}
 }
 
-func TestNilUnchanged(t *testing.T) {
+func TestNilIfUnchanged(t *testing.T) {
 	// GIVEN two pointers to integers.
 	tests := map[string]struct {
 		oldValue *int
@@ -581,8 +581,8 @@ func TestNilUnchanged(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN nilUnchanged is called.
-			nilUnchanged(tc.oldValue, &tc.newValue)
+			// WHEN nilIfUnchanged is called.
+			tc.newValue = nilIfUnchanged(tc.oldValue, tc.newValue)
 
 			// THEN the newValue is nil\d if it's the same as oldValue.
 			if (tc.want == nil && tc.newValue != nil) ||
@@ -604,10 +604,8 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			old: nil,
 			new: &ServiceSummary{ID: "foo"},
 			want: &ServiceSummary{
-				ID:      "foo",
-				Status:  &Status{},
-				Command: test.IntPtr(0),
-				WebHook: test.IntPtr(0)},
+				ID:     "foo",
+				Status: &Status{}},
 		},
 		"same id": {
 			old: &ServiceSummary{
@@ -679,9 +677,9 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			old: &ServiceSummary{
 				Type: "github"},
 			new: &ServiceSummary{
-				Type: "gitlab"},
+				Type: "url"},
 			want: &ServiceSummary{
-				Type: "gitlab"},
+				Type: "url"},
 		},
 		"same icon": {
 			old: &ServiceSummary{
@@ -911,12 +909,6 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 	initialiseFields := func(instance *ServiceSummary) {
 		if instance.Status == nil {
 			instance.Status = &Status{}
-		}
-		if instance.Command == nil {
-			instance.Command = test.IntPtr(0)
-		}
-		if instance.WebHook == nil {
-			instance.WebHook = test.IntPtr(0)
 		}
 	}
 

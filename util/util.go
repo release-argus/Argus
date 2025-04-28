@@ -31,14 +31,6 @@ type Field struct {
 	Value any
 }
 
-// DereferenceOrNilValue will return the value of pointer if non-nil, otherwise nilValue.
-func DereferenceOrNilValue[T comparable](pointer *T, nilValue T) T {
-	if pointer == nil {
-		return nilValue
-	}
-	return *pointer
-}
-
 // StringToBoolPtr will take a string and convert it to a boolean pointer.
 //
 //	"" => nil
@@ -81,17 +73,9 @@ func DereferenceOrDefault[T comparable](check *T) T {
 	return *check
 }
 
-// DereferenceOrValue returns the default of `check` if nil,
-// otherwise `value`.
-func DereferenceOrValue[T comparable](check *T, value T) T {
-	if check == nil {
-		return *new(T)
-	}
-	return value
-}
-
-// PtrValueOrValue will return the value of `ptr` if non-nil, otherwise `fallback`.
-func PtrValueOrValue[T comparable](ptr *T, fallback T) T {
+// DereferenceOrValue returns the value of 'ptr' if non-nil,
+// otherwise the 'fallback'.
+func DereferenceOrValue[T comparable](ptr *T, fallback T) T {
 	if ptr != nil {
 		return *ptr
 	}

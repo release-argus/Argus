@@ -26,6 +26,7 @@ import (
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	opt "github.com/release-argus/Argus/service/option"
@@ -182,13 +183,17 @@ func testServiceURL(id string) *service.Service {
 		ID:                    id,
 		LatestVersion:         lv,
 		DeployedVersionLookup: dv,
-		Dashboard: *service.NewDashboardOptions(
+		Dashboard: *dashboard.NewOptions(
 			test.BoolPtr(false), "test", "https://release-argus.io", "https://release-argus.io/docs", nil,
-			&service.DashboardOptionsDefaults{}, &service.DashboardOptionsDefaults{}),
+			&dashboard.OptionsDefaults{}, &dashboard.OptionsDefaults{}),
 		Options: *options,
 		Status: *status.New(
 			&announceChannel, &databaseChannel, &saveChannel,
-			"", "", "", "", "", ""),
+			"",
+			"", "",
+			"", "",
+			"",
+			nil),
 		Defaults:     &service.Defaults{},
 		HardDefaults: &service.Defaults{}}
 

@@ -27,7 +27,8 @@ func TestConfig_Load(t *testing.T) {
 	envKey := "TEST_ENV_KEY"
 	envValue := "1234"
 	writeFile(".env",
-		fmt.Sprintf("%s=%s", envKey, envValue),
+		fmt.Sprintf("%s=%s",
+			envKey, envValue),
 		t)
 	file := "TestConfig_Load.yml"
 	testYAML_config_test(file, t)

@@ -45,13 +45,13 @@ type TestPayload struct {
 //	Returns the Notify, the ServiceURL, and any errors encountered.
 func FromPayload(
 	payload TestPayload,
-	serviceNotify *Shoutrrr,
+	serviceNotify *Shoutrrr, serviceStatus *status.Status,
 	mains SliceDefaults,
 	defaults, hardDefaults SliceDefaults,
-) (*Shoutrrr, string, error) {
+) (*Shoutrrr, error) {
 	// No `name` or `name_previous`.
 	if payload.NamePrevious == "" && payload.Name == "" {
-		return nil, "", errors.New("name and/or name_previous are required")
+		return nil, errors.New("name and/or name_previous are required")
 	}
 
 	name := util.FirstNonDefault(payload.Name, payload.NamePrevious)
@@ -69,7 +69,7 @@ func FromPayload(
 		name, payload.Type,
 		mains[name], defaults, hardDefaults)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	// Merge the payload with the original.
@@ -90,21 +90,15 @@ func FromPayload(
 		payload.Options, payload.URLFields, payload.Params,
 		main,
 		typeDefaults, typeHardDefaults)
-	s.ServiceStatus = &status.Status{}
-	s.ServiceStatus.Init(
-		1, 0, 0,
-		&payload.ServiceID, &payload.ServiceName,
-		&payload.WebURL,
-	)
+	s.ServiceStatus = serviceStatus
 	s.Failed = &s.ServiceStatus.Fails.Shoutrrr
-	serviceURL := payload.ServiceURL
 
 	// Check the final Notify.
 	errs := s.CheckValues("")
 	if errs != nil {
-		return nil, "", errs
+		return nil, errs
 	}
-	return s, serviceURL, nil
+	return s, nil
 }
 
 // resolveDefaults resolves the default values for a given name and/or type.

@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 )
@@ -140,7 +141,13 @@ func TestShoutrrr_String(t *testing.T) {
 
 			if tc.latestVersion != "" {
 				if tc.shoutrrr.ServiceStatus == nil {
-					tc.shoutrrr.ServiceStatus = &status.Status{}
+					tc.shoutrrr.ServiceStatus = status.New(
+						nil, nil, nil,
+						"",
+						"", "",
+						"", "",
+						"",
+						&dashboard.Options{})
 				}
 				tc.shoutrrr.ServiceStatus.SetLatestVersion(tc.latestVersion, "", false)
 			}

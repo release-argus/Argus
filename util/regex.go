@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 )
 
 // RegexCheck returns true if a regex match of `re` matches `text`.
@@ -31,7 +33,7 @@ func RegexCheck(re, text string) bool {
 // RegexCheckWithVersion returns true if a regex match of `re` occurs on `text`
 // after replacing "{{ version }}" with the version string.
 func RegexCheckWithVersion(re, text, version string) bool {
-	re = TemplateString(re, ServiceInfo{LatestVersion: version})
+	re = TemplateString(re, serviceinfo.ServiceInfo{LatestVersion: version})
 	return RegexCheck(re, text)
 }
 

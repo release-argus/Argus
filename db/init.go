@@ -224,7 +224,8 @@ func updateColumnTypes(db *sql.DB) {
 		);`
 	if _, err := db.Exec(sqlStmt); err != nil {
 		logutil.Log.Fatal(
-			fmt.Sprintf("updateColumnTypes - create: %s", err),
+			fmt.Sprintf("updateColumnTypes - create: %s",
+				err),
 			logFrom, true)
 	}
 

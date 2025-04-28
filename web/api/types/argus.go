@@ -59,13 +59,13 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 		s.ID = ""
 	}
 	// Name.
-	nilUnchanged(oldData.Name, &s.Name)
+	s.Name = nilIfUnchanged(oldData.Name, s.Name)
 	// Active.
-	if util.DereferenceOrNilValue(oldData.Active, true) ==
-		util.DereferenceOrNilValue(s.Active, true) {
+	if util.DereferenceOrValue(oldData.Active, true) ==
+		util.DereferenceOrValue(s.Active, true) {
 		s.Active = nil
 	} else {
-		active := util.DereferenceOrNilValue(s.Active, true)
+		active := util.DereferenceOrValue(s.Active, true)
 		s.Active = &active
 	}
 	// Type.
@@ -73,14 +73,14 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 		s.Type = ""
 	}
 	// URL.
-	nilUnchanged(oldData.WebURL, &s.WebURL)
+	s.WebURL = nilIfUnchanged(oldData.WebURL, s.WebURL)
 	// Icon.
-	nilUnchanged(oldData.Icon, &s.Icon)
+	s.Icon = nilIfUnchanged(oldData.Icon, s.Icon)
 	// IconLinkTo.
-	nilUnchanged(oldData.IconLinkTo, &s.IconLinkTo)
+	s.IconLinkTo = nilIfUnchanged(oldData.IconLinkTo, s.IconLinkTo)
 	// Has DeployedVersionLookup?
-	if util.DereferenceOrNilValue(oldData.HasDeployedVersionLookup, false) ==
-		util.DereferenceOrNilValue(s.HasDeployedVersionLookup, false) {
+	if util.DereferenceOrValue(oldData.HasDeployedVersionLookup, false) ==
+		util.DereferenceOrValue(s.HasDeployedVersionLookup, false) {
 		s.HasDeployedVersionLookup = nil
 	}
 
@@ -118,26 +118,25 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 	}
 
 	// Command.
-	nilUnchanged(oldData.Command, &s.Command)
+	s.Command = nilIfUnchanged(oldData.Command, s.Command)
 	// WebHook.
-	nilUnchanged(oldData.WebHook, &s.WebHook)
+	s.WebHook = nilIfUnchanged(oldData.WebHook, s.WebHook)
 }
 
 // Helper function to handle "Removed" or "Unchanged" logic.
-func nilUnchanged[T comparable](oldValue *T, newValue **T) {
+func nilIfUnchanged[T comparable](oldValue, newValue *T) *T {
 	// Removed: oldValue exists but newValue is nil.
-	if oldValue != nil && *newValue == nil {
+	if oldValue != nil && newValue == nil {
 		var fresh T
-		*newValue = &fresh
-		return
+		return &fresh
 	}
 	// Unchanged: oldValue and newValue are equal.
-	if oldValue != nil && *newValue != nil &&
-		*oldValue == **newValue {
-		*newValue = nil
-		return
+	if oldValue != nil && newValue != nil &&
+		*oldValue == *newValue {
+		return nil
 	}
 	// Added: Keep newValue as is (or both are nil).
+	return newValue
 }
 
 // Status is the Status of a Service.
@@ -573,7 +572,7 @@ type URLCommand struct {
 	Type     string  `json:"type,omitempty" yaml:"type,omitempty"`         // regex/replace/split.
 	Regex    string  `json:"regex,omitempty" yaml:"regex,omitempty"`       // regex: regexp.MustCompile(Regex).
 	Index    *int    `json:"index,omitempty" yaml:"index,omitempty"`       // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index].
-	Template string  `yaml:"template,omitempty" json:"template,omitempty"` // regex: template.
+	Template string  `json:"template,omitempty" yaml:"template,omitempty"` // regex: template.
 	Text     string  `json:"text,omitempty" yaml:"text,omitempty"`         // split:       strings.Split(tgtString, "Text").
 	New      *string `json:"new,omitempty" yaml:"new,omitempty"`           // replace:     strings.ReplaceAll(tgtString, "Old", "New").
 	Old      string  `json:"old,omitempty" yaml:"old,omitempty"`           // replace:     strings.ReplaceAll(tgtString, "Old", "New").

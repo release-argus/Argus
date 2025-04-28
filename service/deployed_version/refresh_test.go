@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/deployed_version/types/manual"
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
 	"github.com/release-argus/Argus/service/status"
@@ -154,8 +155,8 @@ func TestRefresh(t *testing.T) {
 			if tc.previous != nil {
 				targetStatus.Init(
 					0, 0, 0,
-					&name, nil,
-					nil)
+					name, "", "",
+					&dashboard.Options{})
 				// Set the latest version.
 				if tc.args.version.latestVersion != "" {
 					targetStatus.SetLatestVersion(
@@ -167,7 +168,7 @@ func TestRefresh(t *testing.T) {
 						tc.args.version.deployedVersion, tc.args.version.deployedVersionTimestamp,
 						false)
 				}
-				previousStatus = targetStatus.Copy()
+				previousStatus = targetStatus.Copy(true)
 			}
 			var previousType string
 			if tc.previous != nil {

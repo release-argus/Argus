@@ -16,16 +16,22 @@
 
 package util
 
-import "github.com/release-argus/Argus/test"
+import serviceinfo "github.com/release-argus/Argus/service/status/info"
 
 var packageName = "util"
 
-func testServiceInfo() ServiceInfo {
-	return ServiceInfo{
-		ID:            "something",
-		Name:          "another",
-		URL:           "example.com",
-		WebURL:        test.StringPtr("other.com"),
-		LatestVersion: "NEW",
+func testServiceInfo() serviceinfo.ServiceInfo {
+	return serviceinfo.ServiceInfo{
+		ID:   "something",
+		Name: "another",
+		URL:  "example.com",
+
+		WebURL:     "example.com/other",
+		Icon:       "icon.png",
+		IconLinkTo: "example.com/link",
+
+		ApprovedVersion: "APPROVED",
+		DeployedVersion: "DEPLOYED",
+		LatestVersion:   "NEW",
 	}
 }

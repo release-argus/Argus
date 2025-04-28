@@ -27,6 +27,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
@@ -262,10 +263,11 @@ func TestLookup_Track(t *testing.T) {
 					"",
 					tc.startDeployedVersion, "",
 					tc.startLatestVersion, "",
-					"")
+					"",
+					&dashboard.Options{})
 				tc.lookup.Status = svcStatus
-				tc.lookup.Status.ServiceID = test.StringPtr(name)
-				tc.lookup.Status.WebURL = &tc.lookup.URL
+				tc.lookup.Status.ServiceInfo.ID = name
+				tc.lookup.Status.ServiceInfo.WebURL = tc.lookup.URL
 				if tc.deleting {
 					tc.lookup.Status.SetDeleting()
 				}
@@ -293,10 +295,11 @@ func TestLookup_Track(t *testing.T) {
 			}
 			haveQueried := false
 			for haveQueried != false {
+				serviceID := tc.lookup.GetServiceID()
 				passQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-					*tc.lookup.Status.ServiceID, "SUCCESS", tc.lookup.Type))
+					serviceID, "SUCCESS", tc.lookup.Type))
 				failQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-					*tc.lookup.Status.ServiceID, "FAIL", tc.lookup.Type))
+					serviceID, "FAIL", tc.lookup.Type))
 				if passQ != float64(0) && failQ != float64(0) {
 					haveQueried = true
 				}

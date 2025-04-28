@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	dbtype "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/service/dashboard"
 )
 
 var (
@@ -35,17 +35,25 @@ func testStatus() (status *Status) {
 	)
 	svcStatus := New(
 		&announceChannel, &databaseChannel, &saveChannel,
-		"", "", "", "", "", "")
+		"",
+		"", "",
+		"", "",
+		"",
+		&dashboard.Options{})
 	status = svcStatus
-	status.ServiceID = test.StringPtr("test")
-	status.WebURL = test.StringPtr("")
+	status.ServiceInfo.ID = "test"
 	status.Init(
 		0, 0, 0,
-		test.StringPtr("test-service"), test.StringPtr("test-service"),
-		test.StringPtr("https://example.com"))
+		"test-service", "test-service", "https://example.com/service-url",
+		&dashboard.Options{
+			Icon:       "https://example.com/icon.png",
+			IconLinkTo: "https://example.com/icon-link",
+			WebURL:     "https://example.com"})
+
 	status.SetApprovedVersion("1.1.1", false)
 	status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)
 	status.SetDeployedVersion("0.0.0", "2001-01-01T01:01:01Z", false)
 	status.SetLastQueried("2002-02-02T00:00:00Z")
+
 	return status
 }

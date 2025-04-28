@@ -12,14 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package util provides utility functions for the Argus project.
-package util
+//go:build unit || integration
 
-// ServiceInfo holds information about a service.
-type ServiceInfo struct {
-	ID            string  `json:"id,omitempty"`
-	Name          string  `json:"name,omitempty"`
-	URL           string  `json:"url,omitempty"`
-	WebURL        *string `json:"web_url,omitempty"`
-	LatestVersion string  `json:"latest_version,omitempty"`
-}
+package dashboard
+
+var packageName = "service.dashboard"

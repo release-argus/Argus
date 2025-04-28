@@ -17,7 +17,6 @@ package web
 
 import (
 	"errors"
-	"fmt"
 )
 
 // CheckValues validates the fields of the Lookup struct.
@@ -25,8 +24,7 @@ func (l *Lookup) CheckValues(prefix string) error {
 	var errs []error
 	if l.URL == "" {
 		errs = append(errs,
-			fmt.Errorf("%surl: <required> e.g. 'https://example.com'",
-				prefix))
+			errors.New(prefix+"url: <required> e.g. 'https://example.com'"))
 	}
 
 	if baseErrs := l.Lookup.CheckValues(prefix); baseErrs != nil {

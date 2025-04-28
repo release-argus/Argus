@@ -1,4 +1,4 @@
-// Copyright [2025]] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ func TestStatus_AnnounceFirstVersion(t *testing.T) {
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
 			}
-			wantID := *status.ServiceID
+			wantID := status.ServiceInfo.ID
 			wantLatestVersion := status.LatestVersion()
 			wantLatestVersionTimestamp := status.LatestVersionTimestamp()
 
@@ -91,7 +91,7 @@ func TestStatus_AnnounceQuery(t *testing.T) {
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
 			}
-			wantID := *status.ServiceID
+			wantID := status.ServiceInfo.ID
 			wantLastQueried := status.LastQueried()
 
 			// WHEN AnnounceQuery is called on it.
@@ -135,7 +135,7 @@ func TestStatus_AnnounceQueryNewVersion(t *testing.T) {
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
 			}
-			wantID := *status.ServiceID
+			wantID := status.ServiceInfo.ID
 			wantLatestVersion := status.LatestVersion()
 			wantLatestVersionTimestamp := status.LatestVersionTimestamp()
 
@@ -184,7 +184,7 @@ func TestStatus_AnnounceUpdate(t *testing.T) {
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
 			}
-			wantID := *status.ServiceID
+			wantID := status.ServiceInfo.ID
 			wantDeployedVersion := status.DeployedVersion()
 			wantDeployedVersionTimestamp := status.DeployedVersionTimestamp()
 
@@ -233,7 +233,7 @@ func TestStatus_announceApproved(t *testing.T) {
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
 			}
-			wantID := *status.ServiceID
+			wantID := status.ServiceInfo.ID
 			wantApprovedVersion := status.ApprovedVersion()
 
 			// WHEN announceApproved is called on it.

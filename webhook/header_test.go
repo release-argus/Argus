@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 )
 
@@ -146,16 +147,17 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 			}
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
 			webhook := WebHook{
-				ServiceStatus: &status.Status{
-					ServiceID: &serviceID},
-				Main:         &Defaults{},
-				Defaults:     &Defaults{},
-				HardDefaults: &Defaults{}}
+				ServiceStatus: &status.Status{},
+				Main:          &Defaults{},
+				Defaults:      &Defaults{},
+				HardDefaults:  &Defaults{}}
+			webhook.ServiceStatus.ServiceInfo.ID = serviceID
 			url := "https://example.com"
 			webhook.ServiceStatus.Init(
 				0, 0, 0,
-				&serviceID, nil,
-				&url)
+				serviceID, "", "",
+				&dashboard.Options{
+					WebURL: url})
 			webhook.ServiceStatus.SetLatestVersion(latestVersion, "", false)
 			webhook.CustomHeaders = tc.rootValue
 			webhook.Main.CustomHeaders = tc.mainValue

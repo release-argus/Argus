@@ -59,7 +59,9 @@ func RetryWithBackoff(
 			break
 		}
 		// Space out retries with exponential backoff and jitter.
-		delay := time.Duration(math.Min(float64(baseDelay)*math.Pow(2, float64(try)), float64(maxDelay)))
+		delay := time.Duration(math.Min(
+			float64(baseDelay)*math.Pow(2, float64(try)),
+			float64(maxDelay)))
 		//#nosec G404 -- jitter does not need cryptographic security.
 		jitter := time.Duration(rand.Int63n(int64(baseDelay))) // Add randomness to avoid synchronized retries.
 		delay += jitter

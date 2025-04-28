@@ -28,6 +28,7 @@ import (
 	"github.com/containrrr/shoutrrr/pkg/router"
 	"github.com/containrrr/shoutrrr/pkg/types"
 
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
@@ -37,7 +38,7 @@ import (
 // It attempts to send each message up to max_tries times until they succeed or fail.
 func (s *Slice) Send(
 	title, message string,
-	serviceInfo util.ServiceInfo,
+	serviceInfo serviceinfo.ServiceInfo,
 	useDelay bool,
 ) error {
 	if s == nil {
@@ -74,7 +75,7 @@ func (s *Slice) Send(
 // It attempts to send the message up to max_tries times until it succeeds.
 func (s *Shoutrrr) Send(
 	title, msg string,
-	serviceInfo util.ServiceInfo,
+	serviceInfo serviceinfo.ServiceInfo,
 	useDelay bool,
 	useMetrics bool,
 ) error {
@@ -82,7 +83,8 @@ func (s *Shoutrrr) Send(
 
 	if useDelay && s.GetDelay() != "0s" {
 		// Delay sending the Shoutrrr message by the defined interval.
-		msg := fmt.Sprintf("%s, Sleeping for %s before sending the Shoutrrr message", s.ID, s.GetDelay())
+		msg := fmt.Sprintf("%s, Sleeping for %s before sending the Shoutrrr message",
+			s.ID, s.GetDelay())
 		logutil.Log.Info(msg, logFrom, s.GetDelay() != "0s")
 		time.Sleep(s.GetDelayDuration())
 	}
@@ -94,10 +96,12 @@ func (s *Shoutrrr) Send(
 
 	// Try sending the message.
 	if logutil.Log.IsLevel("VERBOSE") || logutil.Log.IsLevel("DEBUG") {
-		msg := fmt.Sprintf("Sending %q to %q", message, url)
+		msg := fmt.Sprintf("Sending %q to %q",
+			message, url)
 		logutil.Log.Verbose(msg, logFrom, !logutil.Log.IsLevel("DEBUG"))
 		logutil.Log.Debug(
-			fmt.Sprintf("%s with params=%q", msg, *params),
+			fmt.Sprintf("%s with params=%q",
+				msg, *params),
 			logFrom, true)
 	}
 	serviceName := serviceInfo.ID
@@ -115,7 +119,7 @@ func (s *Shoutrrr) Send(
 // getSender returns the Shoutrrr sender, message, params, and url.
 func (s *Shoutrrr) getSender(
 	title, msg string,
-	serviceInfo util.ServiceInfo,
+	serviceInfo serviceinfo.ServiceInfo,
 ) (*router.ServiceRouter, string, *types.Params, string, error) {
 	// Build the URL.
 	url := s.BuildURL()
@@ -389,7 +393,7 @@ func jsonMapToString(param string, prefix string) string {
 
 // BuildParams returns the params using everything from master>main>defaults>hardDefaults when
 // the key is not defined in the lower level.
-func (s *Shoutrrr) BuildParams(context util.ServiceInfo) *types.Params {
+func (s *Shoutrrr) BuildParams(context serviceinfo.ServiceInfo) *types.Params {
 	params := make(types.Params, len(s.Params)+len(s.Main.Params))
 
 	// Service Params.
@@ -460,13 +464,14 @@ func (s *Shoutrrr) send(
 	}
 
 	msg := fmt.Sprintf("failed %d times to send a %s message for %q to %q",
-		s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.BuildURL())
+		s.GetMaxTries(), s.GetType(), s.ServiceStatus.ServiceInfo.ID, s.BuildURL())
 	logutil.Log.Error(msg, logFrom, true)
 	failed := true
 	s.Failed.Set(s.ID, &failed)
 	errs := make([]error, 0, len(combinedErrs))
 	for key := range combinedErrs {
-		errs = append(errs, fmt.Errorf("%s x %d", key, combinedErrs[key]))
+		errs = append(errs, fmt.Errorf("%s x %d",
+			key, combinedErrs[key]))
 	}
 	return errors.Join(errs...)
 }

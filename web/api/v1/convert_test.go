@@ -27,6 +27,7 @@ import (
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
@@ -37,6 +38,7 @@ import (
 	lv_web "github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
@@ -63,7 +65,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 					Options:               opt.Defaults{},
 					LatestVersion:         latestver_base.Defaults{},
 					DeployedVersionLookup: deployedver_base.Defaults{},
-					Dashboard:             service.DashboardOptionsDefaults{}},
+					Dashboard:             dashboard.OptionsDefaults{}},
 			},
 			want: &apitype.Defaults{
 				Service: apitype.ServiceDefaults{
@@ -88,7 +90,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 								"tokenQuay",
 								nil)}},
 					DeployedVersionLookup: deployedver_base.Defaults{},
-					Dashboard:             service.DashboardOptionsDefaults{}},
+					Dashboard:             dashboard.OptionsDefaults{}},
 			},
 			want: &apitype.Defaults{
 				Service: apitype.ServiceDefaults{
@@ -210,7 +212,7 @@ func TestConvertAndCensorService(t *testing.T) {
 					"test_wh": webhook.New(
 						test.BoolPtr(true),
 						nil, "", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-				Dashboard: *service.NewDashboardOptions(
+				Dashboard: *dashboard.NewOptions(
 					nil,
 					"https://example.com/icon.png",
 					"", "", nil,
@@ -220,7 +222,8 @@ func TestConvertAndCensorService(t *testing.T) {
 					"2.0.0",
 					"1.0.0", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
 					"3.0.0", time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
-					time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)),
+					time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+					&dashboard.Options{}),
 			},
 			want: &apitype.Service{
 				Name:    "Something",
@@ -252,13 +255,20 @@ func TestConvertAndCensorService(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// If it has a Name that is different from the ID.
-			if tc.input != nil && tc.input.Name != "" && tc.input.ID != tc.input.Name {
-				// Re-marshal so that Name will unmarshal.
-				serviceJSON, _ := json.Marshal(tc.input)
-				serviceJSON = []byte(strings.Replace(string(serviceJSON),
-					"{", `{"name":"`+tc.input.Name+`",`, 1))
-				json.Unmarshal(serviceJSON, tc.input)
+			if tc.input != nil {
+				// If it has a Name that is different from the ID.
+				if tc.input.Name != "" && tc.input.ID != tc.input.Name {
+					// Re-marshal so that Name will unmarshal.
+					serviceJSON, _ := json.Marshal(tc.input)
+					serviceJSON = []byte(strings.Replace(string(serviceJSON),
+						"{", `{"name":"`+tc.input.Name+`",`, 1))
+					json.Unmarshal(serviceJSON, tc.input)
+				}
+				// Give the Status the Defaults of the Service.
+				tc.input.Status.Init(
+					0, 0, 0,
+					tc.input.ID, tc.input.Status.ServiceInfo.Name, tc.input.Status.ServiceInfo.URL,
+					&tc.input.Dashboard)
 			}
 
 			// WHEN convertAndCensorService is called.
@@ -567,7 +577,8 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 					"2.0.0",
 					"1.0.0", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
 					"3.0.0", time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
-					time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)),
+					time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+					&dashboard.Options{}),
 				RegexContent: ".*",
 				RegexVersion: `([0-9.]+)`,
 				Command:      command.Command{"echo", "hello"},
@@ -784,9 +795,10 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 					&deployedver_base.Defaults{}, &deployedver_base.Defaults{})
 			}),
 			dvlStatus: &status.Status{
-				Fails:     status.Fails{},
-				ServiceID: test.StringPtr("service-id"),
-				WebURL:    test.StringPtr("https://release-argus.io")},
+				Fails: status.Fails{},
+				ServiceInfo: serviceinfo.ServiceInfo{
+					ID:     "service-id",
+					WebURL: "https://release-argus.io"}},
 			want: &apitype.DeployedVersionLookup{
 				Type:              "url",
 				Method:            http.MethodPost,
@@ -811,9 +823,10 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 					"1.0.0",
 					"1.1.0", time.Now().UTC().Format(time.RFC3339),
 					"1.2.3", time.Now().Add(time.Minute).UTC().Format(time.RFC3339),
-					time.Now().UTC().Add(-time.Minute).Format(time.RFC3339))
+					time.Now().UTC().Add(-time.Minute).Format(time.RFC3339),
+					&dashboard.Options{})
 				// Need the ServiceID for the Query that's done because we have both Status and Options.
-				dvStatus.ServiceID = test.StringPtr("manual")
+				dvStatus.ServiceInfo.ID = "manual"
 				return deployedver.New(
 					"manual",
 					"yaml", ``,
@@ -851,8 +864,8 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				}
 				if tc.dvlStatus != nil {
 					dvStatus.Fails.Copy(&tc.dvlStatus.Fails)
-					dvStatus.ServiceID = tc.dvlStatus.ServiceID
-					dvStatus.WebURL = tc.dvlStatus.WebURL
+					dvStatus.ServiceInfo.ID = tc.dvlStatus.ServiceInfo.ID
+					dvStatus.ServiceInfo.WebURL = tc.dvlStatus.ServiceInfo.WebURL
 				}
 				for range tc.regexMissesContent {
 					dvStatus.RegexMissContent()

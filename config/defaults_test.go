@@ -23,6 +23,7 @@ import (
 
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/dashboard"
 	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
@@ -74,7 +75,7 @@ func TestDefaults_String(t *testing.T) {
 					},
 					DeployedVersionLookup: deployedver_base.Defaults{
 						AllowInvalidCerts: test.BoolPtr(false)},
-					Dashboard: service.NewDashboardOptionsDefaults(
+					Dashboard: dashboard.NewOptionsDefaults(
 						test.BoolPtr(true))},
 				Notify: shoutrrr.SliceDefaults{
 					"discord": shoutrrr.NewDefaults(
@@ -152,7 +153,8 @@ func TestDefaults_String(t *testing.T) {
 				want := strings.TrimPrefix(tc.want, "\n")
 				if want != "" {
 					if want != "{}" {
-						want = prefix + strings.ReplaceAll(want, "\n", "\n"+prefix)
+						want = prefix + strings.ReplaceAll(want,
+							"\n", "\n"+prefix)
 					}
 					want += "\n"
 				}
@@ -314,7 +316,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_DASHBOARD_AUTO_APPROVE": "true"},
 			want: &Defaults{
 				Service: service.Defaults{
-					Dashboard: service.NewDashboardOptionsDefaults(
+					Dashboard: dashboard.NewOptionsDefaults(
 						test.BoolPtr(true))}},
 		},
 		"service.dashboard - invalid bool - auto_approve": {
@@ -1056,8 +1058,10 @@ func TestDefaults_CheckValues(t *testing.T) {
 			prefixes := []string{"", " ", "  ", "    ", "- "}
 			for _, prefix := range prefixes {
 				errRegex := tc.errRegex
-				errRegex = strings.ReplaceAll(errRegex, "^", "^"+prefix)
-				errRegex = strings.ReplaceAll(errRegex, "\n", "\n"+prefix)
+				errRegex = strings.ReplaceAll(errRegex, "^",
+					"^"+prefix)
+				errRegex = strings.ReplaceAll(errRegex, "\n",
+					"\n"+prefix)
 
 				// WHEN CheckValues is called on it.
 				err := tc.input.CheckValues(prefix)

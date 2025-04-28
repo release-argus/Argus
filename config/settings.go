@@ -329,7 +329,8 @@ func (s *Settings) WebCertFile() string {
 			err = errors.New(strings.Replace(
 				err.Error(),
 				fmt.Sprintf(" %s:", certFile),
-				fmt.Sprintf(" %s/%s:", path, certFile),
+				fmt.Sprintf(" %s/%s:",
+					path, certFile),
 				1,
 			))
 		}
@@ -355,7 +356,8 @@ func (s *Settings) WebKeyFile() string {
 			err = errors.New(strings.Replace(
 				err.Error(),
 				fmt.Sprintf(" %s:", keyFile),
-				fmt.Sprintf(" %s/%s:", path, keyFile),
+				fmt.Sprintf(" %s/%s:",
+					path, keyFile),
 				1,
 			))
 		}

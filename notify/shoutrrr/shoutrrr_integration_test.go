@@ -23,7 +23,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metric"
 )
@@ -95,8 +97,8 @@ func TestShoutrrr_Send(t *testing.T) {
 			serviceID := "TestShoutrrr_Send - " + name
 			svcStatus.Init(
 				1, 0, 0,
-				&serviceID, nil,
-				nil)
+				serviceID, "", "",
+				&dashboard.Options{})
 			tc.shoutrrr.Init(
 				&svcStatus,
 				&Defaults{},
@@ -118,7 +120,7 @@ func TestShoutrrr_Send(t *testing.T) {
 			err := tc.shoutrrr.Send(
 				"test",
 				msg,
-				util.ServiceInfo{ID: *svcStatus.ServiceID},
+				svcStatus.ServiceInfo,
 				tc.useDelay,
 				!tc.noMetrics)
 
@@ -136,7 +138,7 @@ func TestShoutrrr_Send(t *testing.T) {
 			gotMetric := testutil.ToFloat64(metric.NotifyResultTotal.WithLabelValues(
 				tc.shoutrrr.ID,
 				"SUCCESS",
-				*svcStatus.ServiceID,
+				svcStatus.ServiceInfo.ID,
 				tc.shoutrrr.GetType()))
 			if gotMetric != want {
 				t.Errorf("%s\nwant: %f success metrics\ngot:  %f",
@@ -150,7 +152,7 @@ func TestShoutrrr_Send(t *testing.T) {
 			gotMetric = testutil.ToFloat64(metric.NotifyResultTotal.WithLabelValues(
 				tc.shoutrrr.ID,
 				"FAIL",
-				*svcStatus.ServiceID,
+				svcStatus.ServiceInfo.ID,
 				tc.shoutrrr.GetType()))
 			if gotMetric != want {
 				t.Errorf("%s\nwant: %f failure metrics\ngot:  %f",
@@ -204,7 +206,7 @@ func TestSlice_Send(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			serviceInfo := util.ServiceInfo{
+			serviceInfo := serviceinfo.ServiceInfo{
 				ID: name}
 
 			// WHEN Send is called.

@@ -117,7 +117,7 @@ func TestCommandTest(t *testing.T) {
 				}()
 			}
 			for i := range tc.slice {
-				tc.slice[i].Status.ServiceID = &tc.slice[i].ID
+				tc.slice[i].Status.ServiceInfo.ID = tc.slice[i].ID
 			}
 
 			// WHEN CommandTest is called with the test Config.

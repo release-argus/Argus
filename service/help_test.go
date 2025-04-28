@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	latestver "github.com/release-argus/Argus/service/latest_version"
@@ -63,7 +64,11 @@ func testStatus() *status.Status {
 
 	return status.New(
 		&announceChannel, &databaseChannel, &saveChannel,
-		"", "", "", "", "", "")
+		"",
+		"", "",
+		"", "",
+		"",
+		&dashboard.Options{})
 }
 
 func testService(t *testing.T, id string, sType string) *Service {
@@ -74,9 +79,12 @@ func testService(t *testing.T, id string, sType string) *Service {
 		ID:                    id,
 		LatestVersion:         testLatestVersion(t, sType, false),
 		DeployedVersionLookup: testDeployedVersionLookup(t, false),
-		Dashboard: *NewDashboardOptions(
-			test.BoolPtr(false), "test", "https://release-argus.io", "https://release-argus.io", nil,
-			&DashboardOptionsDefaults{}, &DashboardOptionsDefaults{}),
+		Dashboard: *dashboard.NewOptions(
+			test.BoolPtr(false),
+			"test", "https://release-argus.io",
+			"https://release-argus.io",
+			nil,
+			&dashboard.OptionsDefaults{}, &dashboard.OptionsDefaults{}),
 		Status:       *testStatus(),
 		Options:      *testOptions(),
 		Defaults:     &Defaults{},
@@ -88,8 +96,8 @@ func testService(t *testing.T, id string, sType string) *Service {
 	// Status.
 	svc.Status.Init(
 		0, 0, 0,
-		&svc.ID, &svc.ID,
-		&svc.Dashboard.WebURL)
+		svc.ID, svc.ID, svc.LatestVersion.ServiceURL(),
+		&svc.Dashboard)
 	svc.Status.SetApprovedVersion("1.1.1", false)
 	svc.Status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)
 	svc.Status.SetDeployedVersion("0.0.0", "2001-01-01T01:01:01Z", false)
@@ -190,7 +198,7 @@ func testLatestVersion(t *testing.T, lvType string, fail bool) (lv latestver.Loo
 		lv.GetOptions(),
 		lv.GetStatus(),
 		lv.GetDefaults(), lv.GetHardDefaults())
-	lv.GetStatus().ServiceID = test.StringPtr("TEST_LV")
+	lv.GetStatus().ServiceInfo.ID = "TEST_LV"
 
 	// Check the values.
 	err := lv.CheckValues("")
@@ -237,7 +245,7 @@ func testDeployedVersionLookup(t *testing.T, fail bool) deployedver.Lookup {
 		dv.GetOptions(),
 		dv.GetStatus(),
 		dv.GetDefaults(), dv.GetHardDefaults())
-	dv.GetStatus().ServiceID = test.StringPtr("TEST_DV")
+	dv.GetStatus().ServiceInfo.ID = "TEST_DV"
 
 	return dv
 }

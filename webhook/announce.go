@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package webhook
 import (
 	"encoding/json"
 
-	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -37,7 +36,7 @@ func (w *WebHook) AnnounceSend() {
 		Type:    "WEBHOOK",
 		SubType: "EVENT",
 		ServiceData: &apitype.ServiceSummary{
-			ID: util.DereferenceOrDefault(w.ServiceStatus.ServiceID)},
+			ID: w.ServiceStatus.ServiceInfo.ID},
 		WebHookData: webhookSummary})
 
 	w.ServiceStatus.SendAnnounce(&payloadData)

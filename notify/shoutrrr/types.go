@@ -42,10 +42,10 @@ func (s *Slice) String(prefix string) string {
 
 // Base is the base Shoutrrr.
 type Base struct {
-	Type      string            `yaml:"type,omitempty" json:"type,omitempty"`             // Notification type, e.g. slack.
-	Options   map[string]string `yaml:"options,omitempty" json:"options,omitempty"`       // Options.
-	URLFields map[string]string `yaml:"url_fields,omitempty" json:"url_fields,omitempty"` // URL Fields.
-	Params    map[string]string `yaml:"params,omitempty" json:"params,omitempty"`         // Query/Param Props.
+	Type      string            `json:"type,omitempty" yaml:"type,omitempty"`             // Notification type, e.g. slack.
+	Options   map[string]string `json:"options,omitempty" yaml:"options,omitempty"`       // Options.
+	URLFields map[string]string `json:"url_fields,omitempty" yaml:"url_fields,omitempty"` // URL Fields.
+	Params    map[string]string `json:"params,omitempty" yaml:"params,omitempty"`         // Query/Param Props.
 }
 
 // SliceDefaults mapping of Defaults.
@@ -80,7 +80,7 @@ func (s *SliceDefaults) String(prefix string) string {
 
 // Defaults are the default values for Shoutrrr.
 type Defaults struct {
-	Base `yaml:",inline" json:",inline"`
+	Base `json:",inline" yaml:",inline"`
 }
 
 // NewDefaults returns a new Defaults.
@@ -120,16 +120,16 @@ func (d *Defaults) String(prefix string) string {
 
 // Shoutrrr contains the configuration for a Shoutrrr sender (e.g. Slack).
 type Shoutrrr struct {
-	Base `yaml:",inline" json:",inline"`
+	Base `json:",inline" yaml:",inline"`
 
-	ID string `yaml:"-" json:"-"` // ID for this Shoutrrr sender.
+	ID string `json:"-" yaml:"-"` // ID for this Shoutrrr sender.
 
-	Failed        *status.FailsShoutrrr `yaml:"-" json:"-"` // Whether the last send attempt failed.
-	ServiceStatus *status.Status        `yaml:"-" json:"-"` // Status of the Service (used for templating commands).
+	Failed        *status.FailsShoutrrr `json:"-" yaml:"-"` // Whether the last send attempt failed.
+	ServiceStatus *status.Status        `json:"-" yaml:"-"` // Status of the Service (used for templating commands).
 
-	Main         *Defaults `yaml:"-" json:"-"` // The Shoutrrr that this Shoutrrr is calling (and may override parts of).
-	Defaults     *Defaults `yaml:"-" json:"-"` // Default values.
-	HardDefaults *Defaults `yaml:"-" json:"-"` // Hardcoded default values.
+	Main         *Defaults `json:"-" yaml:"-"` // The Shoutrrr that this Shoutrrr is calling (and may override parts of).
+	Defaults     *Defaults `json:"-" yaml:"-"` // Default values.
+	HardDefaults *Defaults `json:"-" yaml:"-"` // Hardcoded default values.
 }
 
 // New Shoutrrr.

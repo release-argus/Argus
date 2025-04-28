@@ -1,4 +1,4 @@
-// Copyright [2024]] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,15 +20,16 @@ import (
 	"errors"
 	"fmt"
 
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 // AnnounceCommand will announce the Command fail status to `c.Announce` channel
 // (Broadcast to all WebSocket clients).
-func (c *Controller) AnnounceCommand(index int) {
+func (c *Controller) AnnounceCommand(index int, serviceInfo serviceinfo.ServiceInfo) {
 	c.SetExecuting(index, false)
 	commandSummary := make(map[string]*apitype.CommandSummary, 1)
-	formatted := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)
+	formatted := (*c.Command)[index].ApplyTemplate(serviceInfo)
 	commandSummary[formatted.String()] = &apitype.CommandSummary{
 		Failed:       c.Failed.Get(index),
 		NextRunnable: c.NextRunnable(index),
@@ -41,7 +42,7 @@ func (c *Controller) AnnounceCommand(index int) {
 		Type:    "COMMAND",
 		SubType: "EVENT",
 		ServiceData: &apitype.ServiceSummary{
-			ID: *c.ServiceStatus.ServiceID},
+			ID: serviceInfo.ID},
 		CommandData: commandSummary})
 
 	c.ServiceStatus.SendAnnounce(&payloadData)
@@ -52,10 +53,11 @@ func (c *Controller) Find(command string) (int, error) {
 	if c == nil {
 		return 0, errors.New("controller is nil")
 	}
+	serviceinfo := c.ServiceStatus.GetServiceInfo()
 
 	// Loop through all the Command(s).
 	for key, cmd := range *c.Command {
-		formatted := cmd.ApplyTemplate(c.ServiceStatus)
+		formatted := cmd.ApplyTemplate(serviceinfo)
 		// If this key is the command.
 		if formatted.String() == command {
 			return key, nil

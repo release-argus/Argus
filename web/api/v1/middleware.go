@@ -59,11 +59,8 @@ func loggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Log the request.
 		logutil.Log.Verbose(
-			fmt.Sprintf(
-				"%s (%s), %s",
-				r.Method,
-				getIP(r),
-				r.URL.Path,
+			fmt.Sprintf("%s (%s), %s",
+				r.Method, getIP(r), r.URL.Path,
 			),
 			logutil.LogFrom{},
 			true)

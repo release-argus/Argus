@@ -19,6 +19,7 @@ package test
 import (
 	"strings"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/webhook"
@@ -46,19 +47,21 @@ func WebHook(failing, selfSignedCert, customHeaders bool) *webhook.WebHook {
 	wh.ServiceStatus = &status.Status{}
 	serviceName := "testServiceID"
 	wh.Failed = &wh.ServiceStatus.Fails.WebHook
-	webURL := "https://example.com"
 	wh.ServiceStatus.Init(
 		0, 1, 0,
-		&serviceName, &serviceName,
-		&webURL)
+		serviceName, serviceName, "https://example.com/service_url",
+		&dashboard.Options{
+			WebURL: "https://example.com/web_url"})
 	if selfSignedCert {
-		wh.URL = strings.Replace(wh.URL, "valid", "invalid", 1)
+		wh.URL = strings.Replace(wh.URL,
+			"valid", "invalid", 1)
 	}
 	if failing {
 		wh.Secret = test.LookupGitHub["secret_fail"]
 	}
 	if customHeaders {
-		wh.URL = strings.Replace(wh.URL, "github-style", "single-header", 1)
+		wh.URL = strings.Replace(wh.URL,
+			"github-style", "single-header", 1)
 		if failing {
 			wh.CustomHeaders = &webhook.Headers{
 				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_fail"]}}

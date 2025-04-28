@@ -99,11 +99,12 @@ func convertAndCensorService(service *service.Service) *apitype.Service {
 	// WebHook.
 	apiService.WebHook = convertAndCensorWebHookSlice(&service.WebHook)
 
+	serviceInfo := service.Status.GetServiceInfo()
 	apiService.Dashboard = &apitype.DashboardOptions{
 		AutoApprove: service.Dashboard.AutoApprove,
-		Icon:        service.Dashboard.Icon,
-		IconLinkTo:  service.Dashboard.IconLinkTo,
-		WebURL:      service.Dashboard.WebURL,
+		Icon:        serviceInfo.Icon,
+		IconLinkTo:  serviceInfo.IconLinkTo,
+		WebURL:      serviceInfo.WebURL,
 		Tags:        service.Dashboard.Tags}
 
 	return &apiService

@@ -27,13 +27,13 @@ import (
 
 // Lookup is the base struct for a Lookup.
 type Lookup struct {
-	Type string `yaml:"type,omitempty" json:"type,omitempty"` // "url".
+	Type string `json:"type,omitempty" yaml:"type,omitempty"` // "url".
 
-	Options *opt.Options   `yaml:"-" json:"-"` // Options.
-	Status  *status.Status `yaml:"-" json:"-"` // Service Status.
+	Options *opt.Options   `json:"-" yaml:"-"` // Options.
+	Status  *status.Status `json:"-" yaml:"-"` // Service Status.
 
-	Defaults     *Defaults `yaml:"-" json:"-"` // Defaults.
-	HardDefaults *Defaults `yaml:"-" json:"-"` // Hard Defaults.
+	Defaults     *Defaults `json:"-" yaml:"-"` // Defaults.
+	HardDefaults *Defaults `json:"-" yaml:"-"` // Hard Defaults.
 }
 
 // Init will initialise the Lookup.
@@ -55,7 +55,7 @@ func (l *Lookup) String(parentLookup Interface, prefix string) string {
 
 // GetServiceID returns the service ID of the Lookup.
 func (l *Lookup) GetServiceID() string {
-	return *l.Status.ServiceID
+	return l.Status.ServiceInfo.ID
 }
 
 // GetType returns the type of the Lookup.

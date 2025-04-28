@@ -40,7 +40,9 @@ func TestHTTP_Version(t *testing.T) {
 	util.BuildDate = "2022-01-01T01:01:01Z"
 
 	// WHEN a HTTP request is made to the httpVersion handler.
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/version", nil)
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/v1/version",
+		nil)
 	w := httptest.NewRecorder()
 	api.httpVersion(w, req)
 	res := w.Result()
@@ -108,7 +110,9 @@ func TestHTTP_BasicAuth(t *testing.T) {
 
 			// WHEN a HTTP request is made to this router.
 			client := http.Client{}
-			req, err := http.NewRequest(http.MethodGet, ts.URL+"/test", nil)
+			req, err := http.NewRequest(http.MethodGet,
+				ts.URL+"/test",
+				nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -171,7 +175,9 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 			client := http.Client{}
 
 			// WHEN a HTTP request is made to this router (apple-touch-icon.png).
-			req, err := http.NewRequest(http.MethodGet, ts.URL+"/apple-touch-icon.png", nil)
+			req, err := http.NewRequest(http.MethodGet,
+				ts.URL+"/apple-touch-icon.png",
+				nil)
 			if err != nil {
 				t.Fatalf("%s\n%v",
 					packageName, err)
@@ -197,7 +203,9 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 			}
 
 			// WHEN a HTTP request is made to this router (favicon.svg).
-			req, err = http.NewRequest(http.MethodGet, ts.URL+"/favicon.svg", nil)
+			req, err = http.NewRequest(http.MethodGet,
+				ts.URL+"/favicon.svg",
+				nil)
 			if err != nil {
 				t.Fatalf("%s\n%v",
 					packageName, err)

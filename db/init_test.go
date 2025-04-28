@@ -27,6 +27,7 @@ import (
 	"time"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -406,8 +407,9 @@ func TestAPI_Run(t *testing.T) {
 	want := status.Status{}
 	want.Init(
 		0, 0, 0,
-		&target, nil,
-		test.StringPtr("https://example.com"))
+		target, "", "",
+		&dashboard.Options{
+			WebURL: "https://example.com"})
 	want.SetLatestVersion("9.9.9", "2022-01-01T01:01:01Z", false)
 	want.SetApprovedVersion("0.0.1", false)
 	want.SetDeployedVersion("0.0.0", "2020-01-01T01:01:01Z", false)
@@ -428,7 +430,12 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 	index := 0
 	for id, svc := range tAPI.config.Service {
 		id := id
-		wantStatus[index].ServiceID = &id
+		wantStatus[index].Init(
+			0, 0, 0,
+			"", "", "",
+			&dashboard.Options{})
+
+		wantStatus[index].ServiceInfo.ID = id
 		wantStatus[index].SetLatestVersion(fmt.Sprintf("%d.%d.%d",
 			rand.Intn(10), rand.Intn(10), rand.Intn(10)),
 			time.Now().UTC().Format(time.RFC3339), false)
@@ -451,7 +458,15 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 		// Clear the Status in the Config.
 		svc.Status = *status.New(
 			svc.Status.AnnounceChannel, svc.Status.DatabaseChannel, svc.Status.SaveChannel,
-			"", "", "", "", "", "")
+			"",
+			"", "",
+			"", "",
+			"",
+			nil)
+		svc.Status.Init(
+			0, 0, 0,
+			"", "", "",
+			&svc.Dashboard)
 		index++
 	}
 	time.Sleep(250 * time.Millisecond)
@@ -462,7 +477,7 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 	// THEN the Status in the Config is updated.
 	errMsg := "%s\n%q not updated correctly\nwant: %q\ngot:  %q (%+v)"
 	for i := range wantStatus {
-		row := queryRow(t, tAPI.db, *wantStatus[i].ServiceID)
+		row := queryRow(t, tAPI.db, wantStatus[i].ServiceInfo.ID)
 		if row.LatestVersion() != wantStatus[i].LatestVersion() {
 			t.Errorf(errMsg,
 				packageName, "latest_version", wantStatus[i].LatestVersion(), row.LatestVersion(), row)

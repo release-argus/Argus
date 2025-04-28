@@ -24,6 +24,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
@@ -182,8 +183,8 @@ func TestWebHook_Send(t *testing.T) {
 				webhook.MaxTries = test.UInt8Ptr(tc.retries + 1)
 				webhook.SilentFails = &tc.silentFails
 				webhook.Notifiers = &Notifiers{Shoutrrr: &tc.notifiers}
-				serviceInfo := util.ServiceInfo{ID: name}
-				webhook.ServiceStatus.ServiceID = &serviceInfo.ID
+				webhook.ServiceStatus.ServiceInfo.ID = name
+				serviceInfo := webhook.ServiceStatus.GetServiceInfo()
 				if tc.retries > 0 {
 					go func() {
 						fails := testutil.ToFloat64(metric.WebHookResultTotal.WithLabelValues(
@@ -296,7 +297,7 @@ func TestSlice_Send(t *testing.T) {
 					}
 
 					// WHEN try is called on it.
-					tc.slice.Send(util.ServiceInfo{ID: name}, tc.useDelay)
+					tc.slice.Send(serviceinfo.ServiceInfo{ID: name}, tc.useDelay)
 
 					// THEN the logs are expected.
 					stdout := releaseStdout()
@@ -351,7 +352,10 @@ func TestNotifiers_SendWithNotifier(t *testing.T) {
 			notifiers := Notifiers{Shoutrrr: tc.shoutrrrNotifiers}
 
 			// WHEN Send is called with them.
-			err := notifiers.Send("TestNotifiersSendWithNotifier", name, util.ServiceInfo{ID: name})
+			err := notifiers.Send(
+				"TestNotifiersSendWithNotifier",
+				name,
+				serviceinfo.ServiceInfo{ID: name})
 
 			// THEN err is as expected.
 			e := util.ErrorToString(err)

@@ -133,7 +133,9 @@ func (api *API) DisableRoutes() {
 		route.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			disabledMethod := disabledMethod
 			if r.Method == disabledMethod {
-				failRequest(&w, "Route disabled", http.StatusNotFound)
+				failRequest(&w,
+					"Route disabled",
+					http.StatusNotFound)
 				return
 			}
 
@@ -176,12 +178,16 @@ func (api *API) SetupRoutesFavicon() {
 
 	if api.Config.Settings.Web.Favicon.SVG != "" {
 		api.Router.HandleFunc("/favicon.svg", func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, api.Config.Settings.Web.Favicon.SVG, http.StatusPermanentRedirect)
+			http.Redirect(w, r,
+				api.Config.Settings.Web.Favicon.SVG,
+				http.StatusPermanentRedirect)
 		})
 	}
 	if api.Config.Settings.Web.Favicon.PNG != "" {
 		api.Router.HandleFunc("/apple-touch-icon.png", func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, api.Config.Settings.Web.Favicon.PNG, http.StatusPermanentRedirect)
+			http.Redirect(w, r,
+				api.Config.Settings.Web.Favicon.PNG,
+				http.StatusPermanentRedirect)
 		})
 	}
 }

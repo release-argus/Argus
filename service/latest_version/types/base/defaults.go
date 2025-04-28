@@ -24,12 +24,12 @@ import (
 
 // Defaults are the default values for a Lookup.
 type Defaults struct {
-	AccessToken       string `yaml:"access_token,omitempty" json:"access_token,omitempty"`               // GitHub access token to use.
-	AllowInvalidCerts *bool  `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
-	UsePreRelease     *bool  `yaml:"use_prerelease,omitempty" json:"use_prerelease,omitempty"`           // Whether releases with prerelease tag are considered.
+	AccessToken       string `json:"access_token,omitempty" yaml:"access_token,omitempty"`               // GitHub access token to use.
+	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
+	UsePreRelease     *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"`           // Whether releases with prerelease tag are considered.
 
-	Options *opt.Defaults          `yaml:"-" json:"-"`             // Options for the Lookup.
-	Require filter.RequireDefaults `yaml:"require" json:"require"` // Requirements before release considered valid.
+	Options *opt.Defaults          `json:"-" yaml:"-"`             // Options for the Lookup.
+	Require filter.RequireDefaults `json:"require" yaml:"require"` // Requirements before release considered valid.
 }
 
 // Default sets this Defaults to the default values.

@@ -26,6 +26,7 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
@@ -88,7 +89,8 @@ func TestGetServiceID(t *testing.T) {
 	l := &testLookup{
 		Lookup: Lookup{
 			Status: &status.Status{
-				ServiceID: test.StringPtr(serviceID)}}}
+				ServiceInfo: serviceinfo.ServiceInfo{
+					ID: serviceID}}}}
 
 	// WHEN GetService is called.
 	got := l.GetServiceID()

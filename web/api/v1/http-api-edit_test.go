@@ -685,8 +685,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 	}{
 		"known service": {
 			wants: wants{
-				body: fmt.Sprintf(
-					`\{"comment":%q,.*"latest_version":{.*"url":%q.*,"deployed_version":{.*"url":%q,`,
+				body: fmt.Sprintf(`\{"comment":%q,.*"latest_version":{.*"url":%q.*,"deployed_version":{.*"url":%q,`,
 					testSVC.Comment,
 					testSVC.LatestVersion.(*lv_web.Lookup).URL,
 					testSVC.DeployedVersionLookup.(*dv_web.Lookup).URL),
@@ -1582,7 +1581,9 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			payload := bytes.NewReader([]byte(tc.payload))
 
 			// WHEN that request is sent.
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/notify/test", payload)
+			req := httptest.NewRequest(http.MethodGet,
+				"/api/v1/notify/test",
+				payload)
 			w := httptest.NewRecorder()
 			api.httpNotifyTest(w, req)
 			res := w.Result()

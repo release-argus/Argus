@@ -101,8 +101,10 @@ func TestURLCommandSlice_UnmarshalJSON(t *testing.T) {
 					t.Errorf("%s\nmismatch on Regex\nwant: %q\ngot:  %q\n",
 						packageName, tc.expected[i].Regex, slice[i].Regex)
 				}
-				gotIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrNilValue(slice[i].Index, 999)), "999", "nil")
-				wantIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrNilValue(tc.expected[i].Index, 999)), "999", "nil")
+				gotIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrValue(slice[i].Index, 999)),
+					"999", "nil")
+				wantIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrValue(tc.expected[i].Index, 999)),
+					"999", "nil")
 				if gotIndex != wantIndex {
 					t.Errorf("%s\nmismatch on Index\nwant: %q\ngot:  %q\n",
 						packageName, wantIndex, gotIndex)
@@ -210,8 +212,10 @@ func TestURLCommandSlice_UnmarshalYAML(t *testing.T) {
 					t.Errorf("%s\nmismatch on Regex\nwant: %q\ngot:  %q\n",
 						packageName, tc.slice[i].Regex, slice[i].Regex)
 				}
-				gotIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrNilValue(slice[i].Index, 999)), "999", "nil")
-				wantIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrNilValue(tc.slice[i].Index, 999)), "999", "nil")
+				gotIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrValue(slice[i].Index, 999)),
+					"999", "nil")
+				wantIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrValue(tc.slice[i].Index, 999)),
+					"999", "nil")
 				if gotIndex != wantIndex {
 					t.Errorf("%s\nmismatch on Index\nwant: %q\ngot:  %q\n",
 						packageName, wantIndex, gotIndex)

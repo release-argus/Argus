@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	logtest "github.com/release-argus/Argus/test/log"
@@ -61,8 +62,9 @@ func testWebHook(failing bool, selfSignedCert bool, customHeaders bool) *WebHook
 	webhook.ServiceStatus = &status.Status{}
 	webhook.ServiceStatus.Init(
 		0, 1, 1,
-		test.StringPtr("testServiceID"), nil,
-		test.StringPtr("https://example.com"))
+		"testServiceID", "", "",
+		&dashboard.Options{
+			WebURL: "https://example.com"})
 	webhook.Failed = &webhook.ServiceStatus.Fails.WebHook
 	if selfSignedCert {
 		webhook.URL = strings.Replace(webhook.URL, "valid", "invalid", 1)

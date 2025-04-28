@@ -24,6 +24,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -85,10 +86,12 @@ func TestRequire_Init(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			status := status.Status{}
+			dashboard := &dashboard.Options{
+				WebURL: "https://example.com"}
 			status.Init(
 				0, 0, 0,
-				test.StringPtr("test"), nil,
-				test.StringPtr("http://example.com"))
+				"test", "", "",
+				dashboard)
 			status.SetDeployedVersion("1.2.3", "", false)
 			defaults := RequireDefaults{
 				Docker: *NewDockerCheckDefaults(

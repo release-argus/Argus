@@ -84,7 +84,8 @@ func TestConfig_AddService(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using sharing global log state.
 
-			file := fmt.Sprintf("TestConfig_AddService_%s.yml", strings.ReplaceAll(name, " ", "_"))
+			file := fmt.Sprintf("TestConfig_AddService_%s.yml",
+				strings.ReplaceAll(name, " ", "_"))
 			testYAML_Edit(file, t)
 			logMutex.Lock()
 			cfg := testLoadBasic(file, t)

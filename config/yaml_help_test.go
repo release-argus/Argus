@@ -93,7 +93,7 @@ func testYAML_config_test(path string, t *testing.T) {
 		webhook:
 			default:
 				type: github
-				url: https://awx.main.com/api/v2/job_templates/XX/github/
+				url: https://awx.main.example.com/api/v2/job_templates/XX/github/
 				secret: YYYYmain
 				desired_status_code: 202
 				delay: 3s
@@ -119,7 +119,7 @@ func testYAML_config_test(path string, t *testing.T) {
 							message: overriddenMessage
 						url_fields:
 							channel: foo
-							host: example.io
+							host: example.com
 							token: "123"
 						params:
 							username: overriddenUsername
@@ -270,7 +270,7 @@ func testYAML_Ordering_0(path string, t *testing.T) {
 		webhook:
 			default:
 				type: github
-				url: https://awx.main.com/api/v2/job_templates/XX/github/
+				url: https://awx.main.example.com/api/v2/job_templates/XX/github/
 	`)
 
 	writeFile(path, data, t)
@@ -458,137 +458,6 @@ func testYAML_Ordering_7_no_services_after_service_line(path string, t *testing.
 			data:
 				database_file: test-ordering_5.db
 		service:
-	`)
-
-	writeFile(path, data, t)
-}
-
-func testYAML_LoadDefaults(path string, t *testing.T) {
-	data := test.TrimYAML(`
-		settings:
-			data:
-				database_file: test-config_test.db
-			web:
-				listen_port: 0
-		defaults:
-			service:
-				options:
-					interval: 123
-					semantic_versioning: n
-				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
-				notify:
-					gotify:
-						url_fields:
-						host: foo.bar
-						token: anonymous
-					slack:
-						params:
-						host: defaultHost
-						title: defaultTitle
-						username: defaultUsername
-				webhook:
-					desired_status_code: 0
-					delay: 2
-					max_tries: 3
-					silent_fails: false
-		notify:
-			default:
-			type: gotify
-			options:
-				message: mainMessage
-			params:
-				username: mainUsername
-		webhook:
-			default:
-				type: github
-				url: https://awx.main.com/api/v2/job_templates/XX/github/
-				secret: YYYYmain
-				desired_status_code: 202
-				delay: 3s
-				max_tries: 1
-		service:
-			NoDefaults:
-				options:
-					interval: 10m
-				latest_version:
-					type: github
-					url: release-argus/argus
-					url_commands:
-					- type: regex
-						regex: v(.*)
-					require:
-						regex_content: Argus-{{ version }}-linux-amd64
-						regex_version: ^[0-9.]+[0-9]$
-				notify:
-					personal:
-						type: mattermost
-						options:
-							message: overriddenMessage
-						url_fields:
-							channel: foo
-							host: example.io
-							token: "123"
-						params:
-							username: overriddenUsername
-				command:
-					- - bash
-					- /opt/upgrade.sh
-				webhook:
-					personal:
-						type: github
-						url: https://awx.example.com/api/v2/job_templates/XX/github/
-						secret: YYYY
-						desired_status_code: 202
-						delay: 3s
-						max_tries: 1
-			WantDefaults:
-				latest_version:
-					type: github
-					url: release-argus/argus
-					url_commands:
-					- type: regex
-						regex: v(.*)
-					require:
-						regex_content: Argus-{{ version }}-linux-amd64
-						regex_version: ^[0-9.]+[0-9]$
-			notify:
-				default: {}
-			webhook:
-				default: {}
-			Gitea:
-				latest_version:
-					type: github
-					url: go-gitea/gitea
-					url_commands:
-					- type: regex
-						regex: v(.*)
-					require:
-						regex_content: gitea-{{ version }}-linux-amd64
-						regex_version: ^[0-9.]+[0-9]$
-				notify:
-					personal:
-						type: mattermost
-						options:
-							delay: 0s
-						url_fields:
-							host: mattermost.example.com
-							port: "443"
-							token: ZZZZ
-						params:
-							icon: https://raw.githubusercontent.com/go-gitea/gitea/main/public/img/logo.png
-				webhook:
-					personal:
-						type: github
-						url: https://awx.example.com/api/v2/job_templates/XX/github/
-						secret: YYYY
-						delay: 0s
-			Disabled:
-				options:
-					active: false
-				latest_version:
-					type: github
-					url: release-argus/argus
 	`)
 
 	writeFile(path, data, t)

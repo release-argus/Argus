@@ -22,7 +22,6 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
 )
 
 func TestLookup_Init(t *testing.T) {
@@ -30,8 +29,9 @@ func TestLookup_Init(t *testing.T) {
 	lookup := testLookup("github", false)
 	var defaults base.Defaults
 	var hardDefaults base.Defaults
-	*lookup.GetStatus().ServiceID += "TestInit"
-	status := status.Status{ServiceID: test.StringPtr("test")}
+	lookup.GetStatus().ServiceInfo.ID += "TestInit"
+	status := status.Status{}
+	status.ServiceInfo.ID = "test"
 	var options opt.Options
 
 	// WHEN Init is called on it.
