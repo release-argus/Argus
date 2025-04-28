@@ -47,14 +47,14 @@ const VersionWithRefresh: FC<Props> = ({
 }) => {
 	const [lastFetched, setLastFetched] = useState(0);
 	const { monitorData } = useWebSocket();
-	const { setValue, trigger } = useFormContext();
+	const { setError, setValue, trigger } = useFormContext();
 	const dataTarget = vType === 0 ? 'latest_version' : 'deployed_version';
 	const convertedOriginal = useMemo(() => {
 		if (original === null) return {};
 		const preparedOriginal = serviceID
 			? original
 			: // Remove type from original if it's a new service.
-			  { ...original, type: '' };
+			{ ...original, type: '' };
 		// Latest version
 		if (dataTarget === 'latest_version')
 			return convertUILatestVersionDataEditToAPI(
@@ -105,6 +105,14 @@ const VersionWithRefresh: FC<Props> = ({
 		},
 		notifyOnChangeProps: 'all',
 		staleTime: 0,
+		retry: false,
+		throwOnError: (error) => {
+			setError(`${dataTarget}.version`, {
+				type: 'manual',
+				message: beautifyGoErrors(error instanceof Error ? error.message : String(error)),
+			});
+			return false; // Return false to satisfy the expected return type
+		},
 	});
 	// Track the version in the form for dashboard templates.
 	useEffect(() => {
