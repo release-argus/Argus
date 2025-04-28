@@ -305,7 +305,9 @@ func TestSettings_NilUndefinedFlags(t *testing.T) {
 			if (tc.flagSet && gotStr == nil) ||
 				(!tc.flagSet && gotStr != nil) {
 				t.Errorf("%s\nmismatch on %s - %s:\nwant: %s\ngot:  %v",
-					packageName, flagStr, name, *tc.setStrTo, util.DereferenceOrNilValue(gotStr, "<nil>"))
+					packageName,
+					flagStr, name,
+					*tc.setStrTo, util.DereferenceOrValue(gotStr, "<nil>"))
 			}
 			gotBool := LogTimestamps
 			if (tc.flagSet && gotBool == nil) ||
@@ -468,7 +470,7 @@ func TestSettings_GetString(t *testing.T) {
 				got = tc.getFunc()
 			}
 			if tc.getFuncPtr != nil {
-				got = util.DereferenceOrNilValue(tc.getFuncPtr(), "<nil>")
+				got = util.DereferenceOrValue(tc.getFuncPtr(), "<nil>")
 			}
 			if got != tc.want {
 				t.Errorf("%s\nmismatch\nwant: %s\ngot:  %v",

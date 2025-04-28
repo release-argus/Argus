@@ -213,7 +213,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestLookup_UnmarshalJSON(t *testing.T) {
+func TestUnmarshalJSON(t *testing.T) {
 	// GIVEN a JSON string to unmarshal.
 	tests := map[string]struct {
 		data     string

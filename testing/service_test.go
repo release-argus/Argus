@@ -26,6 +26,7 @@ import (
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	opt "github.com/release-argus/Argus/service/option"
@@ -85,7 +86,11 @@ func TestServiceTest(t *testing.T) {
 								nil, nil),
 							status.New(
 								nil, nil, nil,
-								"", "", "", "", "", ""),
+								"",
+								"", "",
+								"", "",
+								"",
+								&dashboard.Options{}),
 							nil, nil)
 					})}},
 		},
@@ -109,7 +114,11 @@ func TestServiceTest(t *testing.T) {
 								nil, nil),
 							status.New(
 								nil, nil, nil,
-								"", "", "", "", "", ""),
+								"",
+								"", "",
+								"", "",
+								"",
+								&dashboard.Options{}),
 							nil, nil)
 					})}},
 		},
@@ -133,7 +142,11 @@ func TestServiceTest(t *testing.T) {
 								nil, nil),
 							status.New(
 								nil, nil, nil,
-								"", "", "", "", "", ""),
+								"",
+								"", "",
+								"", "",
+								"",
+								&dashboard.Options{}),
 							nil, nil)
 					})}},
 		},

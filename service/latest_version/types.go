@@ -84,10 +84,12 @@ func Copy(
 	lookupJSON, _ := json.Marshal(lookup)
 
 	svcStatus := status.Status{}
+	lookupStatus := lookup.GetStatus()
+	serviceInfo := lookupStatus.GetServiceInfo()
 	svcStatus.Init(
 		0, 0, 0,
-		lookup.GetStatus().ServiceID, lookup.GetStatus().ServiceName,
-		nil)
+		serviceInfo.ID, serviceInfo.Name, serviceInfo.URL,
+		lookupStatus.Dashboard)
 
 	// Create a new lookup.
 	newLookup, _ := New(
@@ -165,7 +167,7 @@ func unmarshal(data []byte, format string) (Lookup, error) {
 	baseErr := "failed to unmarshal latestver.Lookup:"
 
 	var temp struct {
-		Type string `yaml:"type" json:"type"`
+		Type string `json:"type" yaml:"type"`
 	}
 
 	// Unmarshal into temp to extract the type.

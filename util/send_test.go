@@ -27,7 +27,10 @@ func TestRetryWithBackoff_Success(t *testing.T) {
 		return nil
 	}
 
-	err := RetryWithBackoff(operation, 3, 100*time.Millisecond, 1*time.Second, nil)
+	err := RetryWithBackoff(operation, 3,
+		100*time.Millisecond,
+		1*time.Second,
+		nil)
 	if err != nil {
 		t.Fatalf("%s\nerror mismatch\nwant: none\ngot:  %v",
 			packageName, err)
@@ -40,7 +43,10 @@ func TestRetryWithBackoff_Failure(t *testing.T) {
 		return expectedErr
 	}
 
-	err := RetryWithBackoff(operation, 3, 100*time.Millisecond, 1*time.Second, nil)
+	err := RetryWithBackoff(operation, 3,
+		100*time.Millisecond,
+		1*time.Second,
+		nil)
 	if err == nil {
 		t.Fatalf("%s\nerror mismatch\nwant: err\ngot:  none",
 			packageName)
@@ -59,7 +65,9 @@ func TestRetryWithBackoff_StopCondition(t *testing.T) {
 		return true
 	}
 
-	err := RetryWithBackoff(operation, 3, 100*time.Millisecond, 1*time.Second, shouldStop)
+	err := RetryWithBackoff(operation, 3,
+		100*time.Millisecond,
+		1*time.Second, shouldStop)
 	if err != nil {
 		t.Fatalf("%s\nstop condition didn't prevent error\nwant: none\ngot:  %v",
 			packageName, err)
@@ -72,7 +80,9 @@ func TestRetryWithBackoff_ExponentialBackoff(t *testing.T) {
 	}
 
 	start := time.Now()
-	err := RetryWithBackoff(operation, 3, 100*time.Millisecond, 1*time.Second, nil)
+	err := RetryWithBackoff(operation, 3,
+		100*time.Millisecond,
+		1*time.Second, nil)
 	elapsed := time.Since(start)
 
 	if err == nil {

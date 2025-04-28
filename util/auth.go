@@ -24,7 +24,8 @@ import (
 
 // BasicAuth returns the base64-encoded string of the username and password.
 func BasicAuth(username, password string) string {
-	encode := fmt.Sprintf("%s:%s", username, password)
+	encode := fmt.Sprintf("%s:%s",
+		username, password)
 	return base64.StdEncoding.EncodeToString([]byte(encode))
 }
 

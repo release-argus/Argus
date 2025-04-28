@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"time"
 
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -101,12 +102,12 @@ func (s *Shoutrrr) GetMaxTries() uint8 {
 }
 
 // Message of the Shoutrrr after the context is applied and template evaluated.
-func (s *Shoutrrr) Message(context util.ServiceInfo) string {
+func (s *Shoutrrr) Message(context serviceinfo.ServiceInfo) string {
 	return util.TemplateString(s.GetOption("message"), context)
 }
 
 // Title of the Shoutrrr after the context is applied and template evaluated.
-func (s *Shoutrrr) Title(context util.ServiceInfo) string {
+func (s *Shoutrrr) Title(context serviceinfo.ServiceInfo) string {
 	return util.TemplateString(s.GetParam("title"), context)
 }
 

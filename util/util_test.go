@@ -24,37 +24,6 @@ import (
 	"github.com/release-argus/Argus/test"
 )
 
-func TestDereferenceOrNilValue(t *testing.T) {
-	// GIVEN lists of strings.
-	tests := map[string]struct {
-		ptr    *string
-		nilStr string
-		want   string
-	}{
-		"nil *string": {
-			ptr: nil, nilStr: "bar",
-			want: "bar"},
-		"non-nil *string": {
-			ptr: test.StringPtr("foo"), nilStr: "bar",
-			want: "foo"},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN DereferenceOrNilValue is run on a pointer.
-			got := DereferenceOrNilValue(tc.ptr, tc.nilStr)
-
-			// THEN the correct value is returned.
-			if got != tc.want {
-				t.Errorf("%s\nwant: %s\ngot:  %s",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
 func TestStringToBoolPtr(t *testing.T) {
 	// GIVEN a string.
 	tests := map[string]struct {
@@ -196,35 +165,6 @@ func TestDereferenceOrDefault(t *testing.T) {
 }
 
 func TestDereferenceOrValue(t *testing.T) {
-	// GIVEN a bunch of comparables.
-	tests := map[string]struct {
-		element *string
-		value   string
-		want    string
-	}{
-		"nil pointer": {
-			element: nil, want: ""},
-		"non-nil pointer": {
-			element: test.StringPtr("foo"), value: "bar", want: "bar"},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN DereferenceOrValue is called.
-			got := DereferenceOrValue(tc.element, tc.value)
-
-			// THEN the var is printed when it should be.
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestPtrValueOrValue(t *testing.T) {
 	// GIVEN a bunch of comparables pointers and values.
 	tests := map[string]struct {
 		ptr, value any
@@ -254,15 +194,15 @@ func TestPtrValueOrValue(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN PtrValueOrValue is called.
+			// WHEN DereferenceOrValue is called.
 			var got any
 			switch v := tc.ptr.(type) {
 			case *string:
-				got = PtrValueOrValue(v, tc.value.(string))
+				got = DereferenceOrValue(v, tc.value.(string))
 			case *bool:
-				got = PtrValueOrValue(v, tc.value.(bool))
+				got = DereferenceOrValue(v, tc.value.(bool))
 			case *int:
-				got = PtrValueOrValue(v, tc.value.(int))
+				got = DereferenceOrValue(v, tc.value.(int))
 			}
 
 			// THEN the pointer is returned if it's nil, otherwise the value.

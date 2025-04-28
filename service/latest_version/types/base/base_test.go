@@ -122,8 +122,8 @@ func TestGetServiceID(t *testing.T) {
 	serviceID := "foo"
 	l := &testLookup{
 		Lookup: Lookup{
-			Status: &status.Status{
-				ServiceID: test.StringPtr(serviceID)}}}
+			Status: &status.Status{}}}
+	l.Status.ServiceInfo.ID = serviceID
 
 	// WHEN GetService is called.
 	got := l.GetServiceID()
@@ -234,48 +234,15 @@ func TestGetHardDefaults(t *testing.T) {
 }
 
 func TestServiceURL(t *testing.T) {
-	type lookupArgs struct {
-		webURL        string
-		latestVersion string
-	}
-	testURL := "https://example.com"
-	testWebURL := "https://example.com/release"
-	testWebURLTemplate := "https://example.com/release/{{ version }}"
-
 	// GIVEN a Lookup.
 	tests := map[string]struct {
-		lookupArgs   lookupArgs
-		ignoreWebURL bool
-		expectedURL  string
+		url string
 	}{
-		"URL without WebURL": {
-			ignoreWebURL: false,
-			expectedURL:  testURL,
+		"URL 1": {
+			url: "https://example.com",
 		},
-		"URL with WebURL and ignoreWebURL false": {
-			lookupArgs: lookupArgs{
-				webURL: testWebURL},
-			ignoreWebURL: false,
-			expectedURL:  testWebURL,
-		},
-		"URL with WebURL and ignoreWebURL true": {
-			lookupArgs: lookupArgs{
-				webURL: testWebURL},
-			ignoreWebURL: true,
-			expectedURL:  testURL,
-		},
-		"URL with WebURL containing version template and no latest version": {
-			lookupArgs: lookupArgs{
-				webURL: testWebURLTemplate},
-			ignoreWebURL: false,
-			expectedURL:  testURL,
-		},
-		"URL with WebURL containing version template and latest version": {
-			lookupArgs: lookupArgs{
-				webURL:        testWebURLTemplate,
-				latestVersion: "1.0.0"},
-			ignoreWebURL: false,
-			expectedURL:  testWebURL + "/1.0.0",
+		"URL 2": {
+			url: "https://release-argus.io",
 		},
 	}
 
@@ -284,18 +251,15 @@ func TestServiceURL(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup{}
-			lookup.URL = testURL
-			lookup.Status = &status.Status{}
-			lookup.Status.WebURL = &tc.lookupArgs.webURL
-			lookup.Status.SetLatestVersion(tc.lookupArgs.latestVersion, "", false)
+			lookup.URL = tc.url
 
 			// WHEN ServiceURL is called.
-			got := lookup.ServiceURL(tc.ignoreWebURL)
+			got := lookup.ServiceURL()
 
 			// THEN the result is as expected.
-			if tc.expectedURL != got {
+			if tc.url != got {
 				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.expectedURL, got)
+					packageName, tc.url, got)
 			}
 		})
 	}

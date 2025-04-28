@@ -94,7 +94,8 @@ func (c *Config) Save() {
 	// Read the file to find what needs to be re-arranged.
 	data, err := os.ReadFile(c.File)
 	logutil.Log.Fatal(
-		fmt.Sprintf("Error reading %q\n%s", c.File, err),
+		fmt.Sprintf("Error reading %q\n%s",
+			c.File, err),
 		logutil.LogFrom{}, err != nil)
 	lines := strings.Split(string(util.NormaliseNewlines(data)), "\n")
 

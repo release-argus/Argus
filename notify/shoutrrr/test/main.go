@@ -21,6 +21,7 @@ import (
 
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 )
 
@@ -74,8 +75,8 @@ func Shoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 
 	s.ID = "test"
 	s.ServiceStatus = &status.Status{
-		ServiceID: test.StringPtr("service"),
-	}
+		ServiceInfo: serviceinfo.ServiceInfo{
+			ID: "service"}}
 	s.ServiceStatus.Fails.Shoutrrr.Init(1)
 	s.Failed = &s.ServiceStatus.Fails.Shoutrrr
 

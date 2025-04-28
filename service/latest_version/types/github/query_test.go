@@ -284,7 +284,7 @@ func TestQuery(t *testing.T) {
 				if strings.Contains(tc.overrides, "access_token: null") {
 					lookup.HardDefaults.AccessToken = ""
 				}
-				lookup.Status.ServiceID = &name
+				lookup.Status.ServiceInfo.ID = name
 				err := yaml.Unmarshal([]byte(tc.overrides), lookup)
 				if err != nil {
 					t.Fatalf("%s\nfailed to unmarshal overrides: %v",
@@ -536,25 +536,28 @@ func TestHandleResponse(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're modifying global state.
 
-			lookup := testLookup(false)
-			resp := &http.Response{
-				StatusCode: tc.statusCode,
-				Header:     http.Header{},
-			}
-			hadETag := name
-			resp.Header.Add("ETag", hadETag)
-			if tc.conditions.hadReleases {
-				lookup.data.releases = testBodyObject
-			}
-			lookup.AccessToken = lookup.accessToken()
-			if !tc.conditions.hadDefaultAccessToken {
-				lookup.Defaults.AccessToken = ""
-				lookup.HardDefaults.AccessToken = "Something"
-			}
-
-			logFrom := logutil.LogFrom{Primary: "TestHandleResponse", Secondary: name}
 			// Retry up-to 3 times if we get a client conn error on GitHub requests.
-			for range 3 {
+			for try := range 3 {
+				t.Logf("%s - attempt %d\n",
+					packageName, try+1)
+
+				lookup := testLookup(false)
+				resp := &http.Response{
+					StatusCode: tc.statusCode,
+					Header:     http.Header{},
+				}
+				hadETag := name
+				resp.Header.Add("ETag", hadETag)
+				if tc.conditions.hadReleases {
+					lookup.data.releases = testBodyObject
+				}
+				lookup.AccessToken = lookup.accessToken()
+				if !tc.conditions.hadDefaultAccessToken {
+					lookup.Defaults.AccessToken = ""
+					lookup.HardDefaults.AccessToken = "Something"
+				}
+
+				logFrom := logutil.LogFrom{Primary: "TestHandleResponse", Secondary: name}
 
 				// WHEN handleResponse is called on it.
 				gotBody, err := lookup.handleResponse(resp, tc.body, logFrom)
@@ -1048,7 +1051,7 @@ func TestQueryGitHubETag(t *testing.T) {
 
 			lookup := testLookup(false)
 			lookup.GetGitHubData().SetETag("foo")
-			lookup.Status.ServiceID = &name
+			lookup.Status.ServiceInfo.ID = name
 			lookup.Require = &filter.Require{
 				RegexVersion: tc.initialRequireRegexVersion,
 				Status:       lookup.Status}
@@ -1126,7 +1129,8 @@ func TestHandleNoVersionChange(t *testing.T) {
 			// THEN a message is printed when expected.
 			stdout := releaseStdout()
 			gotMessage := util.RegexCheck(
-				fmt.Sprintf(`Staying on "%s" as that's the latest version in the second check`, tc.version),
+				fmt.Sprintf(`Staying on %q as that's the latest version in the second check`,
+					tc.version),
 				stdout)
 			if gotMessage != tc.doesPrint {
 				if gotMessage {

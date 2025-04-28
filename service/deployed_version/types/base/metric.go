@@ -27,12 +27,12 @@ func (l *Lookup) InitMetrics(parentLookup Interface) {
 	// # Counters #
 	// ############
 	metric.InitPrometheusCounter(metric.DeployedVersionQueryResultTotal,
-		*l.Status.ServiceID,
+		l.GetServiceID(),
 		"",
 		lookupType,
 		"SUCCESS")
 	metric.InitPrometheusCounter(metric.DeployedVersionQueryResultTotal,
-		*l.Status.ServiceID,
+		l.GetServiceID(),
 		"",
 		lookupType,
 		"FAIL")
@@ -44,17 +44,17 @@ func (l *Lookup) DeleteMetrics(parentLookup Interface) {
 
 	// Liveness.
 	metric.DeletePrometheusGauge(metric.DeployedVersionQueryResultLast,
-		*l.Status.ServiceID,
+		l.GetServiceID(),
 		lookupType,
 	)
 	// Counters.
 	metric.DeletePrometheusCounter(metric.DeployedVersionQueryResultTotal,
-		*l.Status.ServiceID,
+		l.GetServiceID(),
 		"",
 		lookupType,
 		"SUCCESS")
 	metric.DeletePrometheusCounter(metric.DeployedVersionQueryResultTotal,
-		*l.Status.ServiceID,
+		l.GetServiceID(),
 		"",
 		lookupType,
 		"FAIL")

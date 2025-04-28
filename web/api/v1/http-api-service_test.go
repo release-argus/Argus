@@ -69,7 +69,9 @@ func TestHTTP_httpServiceOrderGet(t *testing.T) {
 			api.Config.Order = tc.order
 
 			// WHEN that HTTP request is sent.
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/service/order", nil)
+			req := httptest.NewRequest(http.MethodGet,
+				"/api/v1/service/order",
+				nil)
 			w := httptest.NewRecorder()
 			apiMutex.RLock()
 			api.httpServiceOrderGet(w, req)
@@ -244,7 +246,9 @@ func TestHTTP_httpServiceOrderSet(t *testing.T) {
 			api.Config.Service = service
 
 			// WHEN that HTTP request is sent.
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/service/order", strings.NewReader(tc.body))
+			req := httptest.NewRequest(http.MethodPost,
+				"/api/v1/service/order",
+				strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 			apiMutex.Lock()

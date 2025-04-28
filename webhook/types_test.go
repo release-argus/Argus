@@ -340,14 +340,14 @@ func TestSliceDefaults_String(t *testing.T) {
 				"two": NewDefaults(
 					nil, nil, "", nil, nil, "", nil,
 					"gitlab",
-					"https://other.com")},
+					"https://example.com/other")},
 			want: test.TrimYAML(`
 				one:
 					type: github
 					url: https://example.com
 				two:
 					type: gitlab
-					url: https://other.com`),
+					url: https://example.com/other`),
 		},
 		"quotes otherwise invalid YAML strings": {
 			slice: &SliceDefaults{
@@ -429,7 +429,7 @@ func TestSlice_String(t *testing.T) {
 				"two": New(
 					nil, nil, "", nil, nil, nil, nil, nil, "", nil,
 					"gitlab",
-					"https://other.com",
+					"https://example.com/other",
 					nil, nil, nil)},
 			want: test.TrimYAML(`
 				one:
@@ -437,7 +437,7 @@ func TestSlice_String(t *testing.T) {
 					url: https://example.com
 				two:
 					type: gitlab
-					url: https://other.com
+					url: https://example.com/other
 			`),
 		},
 		"quotes otherwise invalid YAML strings": {

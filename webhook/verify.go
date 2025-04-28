@@ -35,7 +35,8 @@ func (s *SliceDefaults) CheckValues(prefix string) error {
 	keys := util.SortedKeys(*s)
 	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		util.AppendCheckError(&errs, prefix, key, (*s)[key].CheckValues(itemPrefix))
+		util.AppendCheckError(&errs, prefix, key,
+			(*s)[key].CheckValues(itemPrefix))
 	}
 
 	if len(errs) == 0 {
@@ -54,7 +55,8 @@ func (s *Slice) CheckValues(prefix string) error {
 	keys := util.SortedKeys(*s)
 	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		util.AppendCheckError(&errs, prefix, key, (*s)[key].CheckValues(itemPrefix))
+		util.AppendCheckError(&errs, prefix, key,
+			(*s)[key].CheckValues(itemPrefix))
 	}
 
 	if len(errs) == 0 {
@@ -80,7 +82,8 @@ func (b *Base) CheckValues(prefix string) error {
 	}
 	// custom_headers
 	if b.CustomHeaders != nil {
-		util.AppendCheckError(&errs, prefix, "custom_headers", b.checkValuesCustomHeaders(prefix+"  "))
+		util.AppendCheckError(&errs, prefix, "custom_headers",
+			b.checkValuesCustomHeaders(prefix+"  "))
 	}
 	// delay
 	if b.Delay != "" {
@@ -164,5 +167,6 @@ func (s *SliceDefaults) Print(prefix string) {
 	}
 
 	str := s.String(prefix + "  ")
-	fmt.Printf("%swebhook:\n%s", prefix, str)
+	fmt.Printf("%swebhook:\n%s",
+		prefix, str)
 }

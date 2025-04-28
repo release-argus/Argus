@@ -69,7 +69,9 @@ func TestGetIP(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
+			req := httptest.NewRequest(http.MethodGet,
+				"/approvals",
+				nil)
 			for header, val := range tc.headers {
 				req.Header.Set(header, val)
 			}

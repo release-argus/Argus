@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 	logtest "github.com/release-argus/Argus/test/log"
 )
@@ -89,8 +90,8 @@ func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
 
 	shoutrrr.ID = "test"
 	shoutrrr.ServiceStatus = &status.Status{
-		ServiceID: test.StringPtr("service"),
-	}
+		ServiceInfo: serviceinfo.ServiceInfo{
+			ID: "service"}}
 	shoutrrr.ServiceStatus.Fails.Shoutrrr.Init(1)
 	shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr
 

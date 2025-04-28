@@ -25,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 	metric "github.com/release-argus/Argus/web/metric"
 )
@@ -33,7 +34,9 @@ func TestController_SetExecuting(t *testing.T) {
 	// GIVEN a Controller with various Commands.
 	controller := Controller{}
 	controller.Init(
-		&status.Status{ServiceID: test.StringPtr("service_id")},
+		&status.Status{
+			ServiceInfo: serviceinfo.ServiceInfo{
+				ID: "service_id"}},
 		&Slice{
 			{"date", "+%m-%d-%Y"}, {"true"}, {"false"},
 			{"date", "+%m-%d-%Y"}, {"true"}, {"false"}},
@@ -115,7 +118,9 @@ func TestController_IsRunnable(t *testing.T) {
 	// GIVEN a Controller with various Commands.
 	controller := Controller{}
 	controller.Init(
-		&status.Status{ServiceID: test.StringPtr("service_id")},
+		&status.Status{
+			ServiceInfo: serviceinfo.ServiceInfo{
+				ID: "service_id"}},
 		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
@@ -166,7 +171,9 @@ func TestController_NextRunnable(t *testing.T) {
 	// GIVEN a Controller with various Commands.
 	controller := Controller{}
 	controller.Init(
-		&status.Status{ServiceID: test.StringPtr("service_id")},
+		&status.Status{
+			ServiceInfo: serviceinfo.ServiceInfo{
+				ID: "service_id"}},
 		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
@@ -225,7 +232,9 @@ func TestController_SetNextRunnable(t *testing.T) {
 	// GIVEN a Controller with various Commands.
 	controller := Controller{}
 	controller.Init(
-		&status.Status{ServiceID: test.StringPtr("service_id")},
+		&status.Status{
+			ServiceInfo: serviceinfo.ServiceInfo{
+				ID: "service_id"}},
 		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
@@ -360,7 +369,9 @@ func TestController_Metrics(t *testing.T) {
 	// GIVEN a Controller with multiple Commands.
 	controller := &Controller{}
 	controller.Init(
-		&status.Status{ServiceID: test.StringPtr("TestController_Metrics")},
+		&status.Status{
+			ServiceInfo: serviceinfo.ServiceInfo{
+				ID: "TestController_Metrics"}},
 		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
@@ -495,8 +506,9 @@ func TestCommand_Init(t *testing.T) {
 			if !tc.nilController {
 				controller = &Controller{}
 			}
-			serviceStatus := status.Status{}
-			serviceStatus.ServiceID = test.StringPtr("TestInit")
+			serviceStatus := status.Status{
+				ServiceInfo: serviceinfo.ServiceInfo{
+					ID: "TestInit"}}
 			controller.Init(
 				&serviceStatus,
 				tc.command,

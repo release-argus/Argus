@@ -31,7 +31,7 @@ import (
 
 // Track the deployed version (DeployedVersion) of the `parent`.
 func (l *Lookup) Track() {
-	logFrom := logutil.LogFrom{Primary: *l.Status.ServiceID}
+	logFrom := logutil.LogFrom{Primary: l.GetServiceID()}
 
 	// Track forever.
 	for {

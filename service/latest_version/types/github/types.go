@@ -30,10 +30,10 @@ import (
 
 // Lookup provides a GitHub-based lookup type.
 type Lookup struct {
-	base.Lookup `yaml:",inline" json:",inline"` // Base struct for a Lookup.
+	base.Lookup `json:",inline" yaml:",inline"` // Base struct for a Lookup.
 
-	AccessToken   string `yaml:"access_token,omitempty" json:"access_token,omitempty"`     // GitHub access token to use.
-	UsePreRelease *bool  `yaml:"use_prerelease,omitempty" json:"use_prerelease,omitempty"` // Whether releases with the prerelease tag should be considered.
+	AccessToken   string `json:"access_token,omitempty" yaml:"access_token,omitempty"`     // GitHub access token to use.
+	UsePreRelease *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"` // Whether releases with the prerelease tag should be considered.
 
 	data Data // GitHub Conditional Request vars / Releases.
 }
@@ -65,36 +65,32 @@ func New(
 
 // UnmarshalJSON will unmarshal the Lookup.
 func (l *Lookup) UnmarshalJSON(data []byte) error {
-	// Alias to avoid recursion.
-	type Alias Lookup
-	aux := &struct {
-		*Alias `json:",inline"`
-	}{Alias: (*Alias)(l)}
-
-	// Unmarshal.
-	if err := json.Unmarshal(data, aux); err != nil {
-		return errors.New(strings.Replace(err.Error(), ".Alias", "", 1))
-	}
-	l.Type = "github"
-
-	return nil
+	return l.unmarshal(func(v interface{}) error {
+		return json.Unmarshal(data, v)
+	})
 }
 
 // UnmarshalYAML will unmarshal the Lookup.
 func (l *Lookup) UnmarshalYAML(value *yaml.Node) error {
+	return l.unmarshal(func(v interface{}) error {
+		return value.Decode(v)
+	})
+}
+
+// unmarshal will unmarshal the Lookup using the provided unmarshal function.
+func (l *Lookup) unmarshal(unmarshalFunc func(interface{}) error) error {
 	// Alias to avoid recursion.
 	type Alias Lookup
 	aux := &struct {
-		*Alias `yaml:",inline"`
-	}{
-		Alias: (*Alias)(l),
-	}
+		*Alias `json:",inline" yaml:",inline"`
+	}{Alias: (*Alias)(l)}
 
-	// Decode the YAML node into the struct.
-	if err := value.Decode(aux); err != nil {
-		return err //nolint:wrapcheck
+	// Unmarshal using the provided function.
+	if err := unmarshalFunc(aux); err != nil {
+		return errors.New(strings.Replace(err.Error(), ".Alias", "", 1))
 	}
 
 	l.Type = "github"
+
 	return nil
 }

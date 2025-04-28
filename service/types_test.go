@@ -25,6 +25,7 @@ import (
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
@@ -81,9 +82,15 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 					}
 				},
 				"service2": {
+					"name": "service2",
 					"latest_version": {
 						"type": "github",
 						"url": "owner/repo2"
+					},
+					"deployed_version": {
+						"type": "url",
+						"method": "GET",
+						"url": "` + test.LookupPlain["url_valid"] + `"
 					}
 				}
 			}`),
@@ -96,10 +103,15 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 					},
 				},
 				"service2": &Service{
-					ID: "service2",
+					ID:   "service2",
+					Name: "service2",
 					LatestVersion: &github.Lookup{
 						Lookup: latestver_base.Lookup{
 							URL: "owner/repo2"},
+					},
+					DeployedVersionLookup: &dv_web.Lookup{
+						Method: http.MethodGet,
+						URL:    test.LookupPlain["url_valid"],
 					},
 				},
 			},
@@ -212,9 +224,14 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 						type: github
 						url: owner/repo1
 				service2:
+					name: service2
 					latest_version:
 						type: github
-						url: owner/repo2`),
+						url: owner/repo2
+					deployed_version:
+						type: url
+						method: GET
+						url: ` + test.LookupPlain["url_valid"]),
 			expected: Slice{
 				"service1": &Service{
 					ID: "service1",
@@ -224,10 +241,15 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 					},
 				},
 				"service2": &Service{
-					ID: "service2",
+					ID:   "service2",
+					Name: "service2",
 					LatestVersion: &github.Lookup{
 						Lookup: latestver_base.Lookup{
 							URL: "owner/repo2"},
+					},
+					DeployedVersionLookup: &dv_web.Lookup{
+						Method: http.MethodGet,
+						URL:    test.LookupPlain["url_valid"],
 					},
 				},
 			},
@@ -255,7 +277,15 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 			input:    "invalid: [yaml: syntax",
 			errRegex: `yaml: line 1: did not find expected`,
 		},
-		"invalid Slice YAML": {
+		"invalid Service YAML": {
+			input: test.TrimYAML(`
+				service1: []`),
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal service\.Slice:
+					failed to unmarshal service\.Service:
+						line \d: cannot unmarshal.*$`),
+		},
+		"invalid Version Lookup YAML": {
 			input: test.TrimYAML(`
 				service1:
 					latest_version:
@@ -505,7 +535,7 @@ func TestService_String(t *testing.T) {
 						"github",
 						"https://example.com",
 						nil, nil, nil)},
-				Dashboard: *NewDashboardOptions(
+				Dashboard: *dashboard.NewOptions(
 					test.BoolPtr(true), "", "", "", nil,
 					nil, nil),
 				Defaults: &Defaults{
@@ -652,7 +682,7 @@ func TestService_Summary(t *testing.T) {
 		},
 		"only dashboard.icon, and it's a url": {
 			svc: &Service{
-				Dashboard: DashboardOptions{
+				Dashboard: dashboard.Options{
 					Icon: "https://example.com/icon.png"}},
 			want: &apitype.ServiceSummary{
 				Icon:                     test.StringPtr("https://example.com/icon.png"),
@@ -661,9 +691,10 @@ func TestService_Summary(t *testing.T) {
 		},
 		"only dashboard.icon, and it's not a url": {
 			svc: &Service{
-				Dashboard: DashboardOptions{
+				Dashboard: dashboard.Options{
 					Icon: "smile"}},
 			want: &apitype.ServiceSummary{
+				Icon:                     test.StringPtr("smile"),
 				HasDeployedVersionLookup: test.BoolPtr(false),
 				Status:                   &apitype.Status{}},
 		},
@@ -689,7 +720,7 @@ func TestService_Summary(t *testing.T) {
 		},
 		"only dashboard.icon, dashboard overrides notify": {
 			svc: &Service{
-				Dashboard: DashboardOptions{
+				Dashboard: dashboard.Options{
 					Icon: "https://example.com/icon.png"},
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
@@ -710,16 +741,25 @@ func TestService_Summary(t *testing.T) {
 		},
 		"only dashboard.icon_link_to": {
 			svc: &Service{
-				Dashboard: DashboardOptions{
+				Dashboard: dashboard.Options{
 					IconLinkTo: "https://example.com"}},
 			want: &apitype.ServiceSummary{
 				IconLinkTo:               test.StringPtr("https://example.com"),
 				HasDeployedVersionLookup: test.BoolPtr(false),
 				Status:                   &apitype.Status{}},
 		},
+		"only dashboard.web_url": {
+			svc: &Service{
+				Dashboard: dashboard.Options{
+					WebURL: "https://example.com"}},
+			want: &apitype.ServiceSummary{
+				WebURL:                   test.StringPtr("https://example.com"),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Status:                   &apitype.Status{}},
+		},
 		"only dashboard.tags": {
 			svc: &Service{
-				Dashboard: DashboardOptions{
+				Dashboard: dashboard.Options{
 					Tags: []string{"hello", "there"}}},
 			want: &apitype.ServiceSummary{
 				Tags:                     &[]string{"hello", "there"},
@@ -785,7 +825,8 @@ func TestService_Summary(t *testing.T) {
 					"1",
 					"2", "2-",
 					"3", "3-",
-					"4")},
+					"4",
+					&dashboard.Options{})},
 			want: &apitype.ServiceSummary{
 				HasDeployedVersionLookup: test.BoolPtr(false),
 				Status: &apitype.Status{
@@ -796,7 +837,86 @@ func TestService_Summary(t *testing.T) {
 					LatestVersionTimestamp:   "3-",
 					LastQueried:              "4"}},
 		},
+		"all": {
+			svc: &Service{
+				ID:          "foo",
+				Name:        "bar",
+				Comment:     "svc for blah",
+				marshalName: true,
+				Options: opt.Options{
+					Active: test.BoolPtr(false)},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: &dv_web.Lookup{
+					Method: http.MethodGet,
+					URL:    test.LookupPlain["url_valid"],
+					JSON:   "version"},
+				Notify: shoutrrr.Slice{
+					"foo": shoutrrr.New(
+						nil, "",
+						"discord",
+						nil, nil, nil,
+						nil, nil, nil)},
+				Command: command.Slice{
+					{"true"},
+					{"false"}},
+				WebHook: webhook.Slice{
+					"bish": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"https://example.com", nil, nil, nil),
+					"bash": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"https://example.com", nil, nil, nil),
+					"bosh": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"gitlab",
+						"https://example.com", nil, nil, nil)},
+				Dashboard: dashboard.Options{
+					Icon:       "https://example.com/icon.png",
+					IconLinkTo: "https://example.com",
+					WebURL:     "https://example.com",
+					Tags:       []string{"hello", "there"}},
+				Defaults:     &Defaults{},
+				HardDefaults: &Defaults{},
+				Status: *status.New(
+					nil, nil, nil,
+					"1",
+					"2", "2-",
+					"3", "3-",
+					"4",
+					&dashboard.Options{})},
+			want: &apitype.ServiceSummary{
+				ID:                       "foo",
+				Name:                     test.StringPtr("bar"),
+				Active:                   test.BoolPtr(false),
+				Type:                     "github",
+				WebURL:                   test.StringPtr("https://example.com"),
+				Icon:                     test.StringPtr("https://example.com/icon.png"),
+				IconLinkTo:               test.StringPtr("https://example.com"),
+				HasDeployedVersionLookup: test.BoolPtr(true),
+				Command:                  test.IntPtr(2),
+				WebHook:                  test.IntPtr(3),
+				Status: &apitype.Status{
+					ApprovedVersion:          "1",
+					DeployedVersion:          "2",
+					DeployedVersionTimestamp: "2-",
+					LatestVersion:            "3",
+					LatestVersionTimestamp:   "3-",
+					LastQueried:              "4"},
+				Tags: &[]string{"hello", "there"},
+			},
+		},
 	}
+	defaults := Defaults{}
+	defaults.Default()
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -804,10 +924,10 @@ func TestService_Summary(t *testing.T) {
 
 			// Status.
 			if tc.svc != nil {
-				tc.svc.Status.Init(
-					len(tc.svc.Notify), len(tc.svc.Command), len(tc.svc.WebHook),
-					&tc.svc.ID, &name,
-					&tc.svc.Dashboard.WebURL)
+				tc.svc.Init(
+					&defaults, &defaults,
+					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
+					&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 			}
 
 			// WHEN the Service is converted to a ServiceSummary.
@@ -1315,7 +1435,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: `^$`,
 			want: &Service{
-				Dashboard: *NewDashboardOptions(
+				Dashboard: *dashboard.NewOptions(
 					nil, "", "", "",
 					[]string{"foo", "bar"},
 					nil, nil),
@@ -1329,7 +1449,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: `^$`,
 			want: &Service{
-				Dashboard: *NewDashboardOptions(
+				Dashboard: *dashboard.NewOptions(
 					nil, "", "", "",
 					[]string{"foo"},
 					nil, nil),
@@ -1345,7 +1465,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				failed to unmarshal service\.Service:
-					failed to unmarshal service\.DashboardOptions:
+					failed to unmarshal service\.Dashboard:
 						tags: <invalid>.*$`),
 		},
 	}
@@ -1483,7 +1603,7 @@ func TestService_MarshalJSON(t *testing.T) {
 		},
 		"service with tag": {
 			svc: &Service{
-				Dashboard: DashboardOptions{
+				Dashboard: dashboard.Options{
 					Tags: []string{"foo"}},
 			},
 			want: test.TrimJSON(`{
@@ -1496,7 +1616,7 @@ func TestService_MarshalJSON(t *testing.T) {
 		},
 		"service with tags": {
 			svc: &Service{
-				Dashboard: DashboardOptions{
+				Dashboard: dashboard.Options{
 					Tags: []string{"foo", "bar"}},
 			},
 			want: test.TrimJSON(`{
@@ -1933,7 +2053,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: `^$`,
 			want: &Service{
-				Dashboard: DashboardOptions{
+				Dashboard: dashboard.Options{
 					Tags: []string{"foo", "bar"}},
 			},
 		},
@@ -1944,7 +2064,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: `^$`,
 			want: &Service{
-				Dashboard: DashboardOptions{
+				Dashboard: dashboard.Options{
 					Tags: []string{"foo"}},
 			},
 		},
@@ -1956,7 +2076,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal service\.Service:
-					failed to unmarshal service\.DashboardOptions:
+					failed to unmarshal service\.Dashboard:
 						tags: <invalid>.*$`),
 		},
 	}
@@ -2026,7 +2146,7 @@ func TestService_MarshalYAML(t *testing.T) {
 		},
 		"tags - single": {
 			svc: &Service{
-				Dashboard: *NewDashboardOptions(
+				Dashboard: *dashboard.NewOptions(
 					nil, "", "", "",
 					[]string{"foo"},
 					nil, nil),
@@ -2040,7 +2160,7 @@ func TestService_MarshalYAML(t *testing.T) {
 		},
 		"tags - multiple": {
 			svc: &Service{
-				Dashboard: *NewDashboardOptions(
+				Dashboard: *dashboard.NewOptions(
 					nil, "", "", "",
 					[]string{"foo", "bar"},
 					nil, nil),

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
@@ -47,25 +48,32 @@ func testLookup(version string, failing bool) *Lookup {
 	hardDefaults.Default()
 	// Defaults.
 	defaults := &base.Defaults{}
+
 	// Options.
 	hardDefaultOptions := &opt.Defaults{}
 	hardDefaultOptions.Default()
 	options := opt.New(
 		nil, "", test.BoolPtr(true),
 		&opt.Defaults{}, hardDefaultOptions)
+
 	// Status.
 	announceChannel := make(chan []byte, 24)
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
 	status := status.New(
 		&announceChannel, &databaseChannel, &saveChannel,
-		"", "", "", "", "", "")
+		"",
+		"", "",
+		"", "",
+		"",
+		&dashboard.Options{})
 	status.Init(
 		0, 0, 0,
-		test.StringPtr("serviceID"), nil,
-		test.StringPtr("http://example.com"),
-	)
+		"serviceID", "", "",
+		&dashboard.Options{
+			WebURL: "https://example.com"})
 
+	// Lookup.
 	lookup, _ := New(
 		"yaml", test.TrimYAML(`
 			version: `+version+`

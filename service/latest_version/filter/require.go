@@ -28,7 +28,7 @@ import (
 // RequireDefaults are the default values for the Require struct.
 // It contains configuration defaults for validating version requirements.
 type RequireDefaults struct {
-	Docker DockerCheckDefaults `yaml:"docker" json:"docker"` // Docker image tag requirements.
+	Docker DockerCheckDefaults `json:"docker" yaml:"docker"` // Docker image tag requirements.
 }
 
 // Default sets this RequireDefaults to the default values.
@@ -48,11 +48,11 @@ func (r *RequireDefaults) CheckValues(prefix string) error {
 
 // Require defines validation requirements that must be met for a version to be considered valid.
 type Require struct {
-	Status       *status.Status  `yaml:"-" json:"-"`                                             // Service Status.
-	RegexContent string          `yaml:"regex_content,omitempty" json:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
-	RegexVersion string          `yaml:"regex_version,omitempty" json:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions.
-	Command      command.Command `yaml:"command,omitempty" json:"command,omitempty"`             // Require Command to pass.
-	Docker       *DockerCheck    `yaml:"docker,omitempty" json:"docker,omitempty"`               // Docker image tag requirements.
+	Status       *status.Status  `json:"-" yaml:"-"`                                             // Service Status.
+	RegexContent string          `json:"regex_content,omitempty" yaml:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
+	RegexVersion string          `json:"regex_version,omitempty" yaml:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions.
+	Command      command.Command `json:"command,omitempty" yaml:"command,omitempty"`             // Require Command to pass.
+	Docker       *DockerCheck    `json:"docker,omitempty" yaml:"docker,omitempty"`               // Docker image tag requirements.
 }
 
 // String returns a string representation of the Require.
@@ -121,7 +121,8 @@ func (r *Require) CheckValues(prefix string) error {
 		}
 	}
 
-	util.AppendCheckError(&errs, prefix, "docker", r.Docker.CheckValues(prefix+"  "))
+	util.AppendCheckError(&errs, prefix, "docker",
+		r.Docker.CheckValues(prefix+"  "))
 
 	if len(errs) == 0 {
 		return nil

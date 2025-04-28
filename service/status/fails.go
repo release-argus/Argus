@@ -26,9 +26,9 @@ import (
 
 // Fails keeps track of the unsent/fail/pass status of the different senders.
 type Fails struct {
-	Command  FailsCommand  `yaml:"-" json:"-"` // Command unsent/fail/pass.
-	Shoutrrr FailsShoutrrr `yaml:"-" json:"-"` // Shoutrrr unsent/fail/pass.
-	WebHook  FailsWebHook  `yaml:"-" json:"-"` // WebHook unsent/fail/pass.
+	Command  FailsCommand  `json:"-" yaml:"-"` // Command unsent/fail/pass.
+	Shoutrrr FailsShoutrrr `json:"-" yaml:"-"` // Shoutrrr unsent/fail/pass.
+	WebHook  FailsWebHook  `json:"-" yaml:"-"` // WebHook unsent/fail/pass.
 }
 
 // failsBase is the base struct for the Fails structs.
@@ -67,7 +67,7 @@ func (f *failsBase) AllPassed() bool {
 	defer f.mutex.RUnlock()
 
 	for _, fail := range f.fails {
-		if util.DereferenceOrNilValue(fail, true) {
+		if util.DereferenceOrValue(fail, true) {
 			return false
 		}
 	}
@@ -153,7 +153,7 @@ func (f *FailsCommand) AllPassed() bool {
 	defer f.mutex.RUnlock()
 
 	for _, fail := range f.fails {
-		if util.DereferenceOrNilValue(fail, true) {
+		if util.DereferenceOrValue(fail, true) {
 			return false
 		}
 	}

@@ -24,9 +24,10 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
@@ -37,7 +38,7 @@ func TestShoutrrr_getSender(t *testing.T) {
 		params     string
 	}
 	// GIVEN a Shoutrrr, ServiceInfo and the hard defaults.
-	serviceInfo := util.ServiceInfo{
+	serviceInfo := serviceinfo.ServiceInfo{
 		ID:            "service_id",
 		LatestVersion: "1.2.3",
 	}
@@ -107,8 +108,8 @@ func TestShoutrrr_getSender(t *testing.T) {
 			}
 			status := status.Status{}
 			status.Init(1, 0, 0,
-				&name, nil,
-				nil)
+				name, "", "",
+				&dashboard.Options{})
 			shoutrrr.Init(
 				&status,
 				main,
@@ -647,12 +648,16 @@ func Test_jsonMapToString(t *testing.T) {
 
 func TestShoutrrr_BuildParams(t *testing.T) {
 	// GIVEN a Shoutrrr and ServiceInfo.
-	serviceInfo := util.ServiceInfo{
-		ID:            "service_id",
-		Name:          "service_name",
-		URL:           "service_url",
-		WebURL:        test.StringPtr("service_web_url"),
-		LatestVersion: "1.2.3",
+	serviceInfo := serviceinfo.ServiceInfo{
+		ID:              "service_id",
+		Name:            "service_name",
+		URL:             "service_url",
+		Icon:            "https://example.com/icon.png",
+		IconLinkTo:      "https://example.com/icon_link_to",
+		WebURL:          "service_web_url",
+		ApprovedVersion: "1.2.3a",
+		DeployedVersion: "1.2.3b",
+		LatestVersion:   "1.2.3c",
 	}
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue *string
@@ -687,15 +692,18 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 			hardDefaultValue: test.StringPtr("not_this"),
 		},
 		"django vars": {
-			want:             fmt.Sprintf("foo%s-%s", serviceInfo.ID, serviceInfo.LatestVersion),
+			want: fmt.Sprintf("foo%s-%s",
+				serviceInfo.ID, serviceInfo.LatestVersion),
 			rootValue:        test.StringPtr("foo{{ service_id }}-{{ version }}"),
 			defaultValue:     test.StringPtr("not_this"),
 			hardDefaultValue: test.StringPtr("not_this"),
 		},
 		"all django vars": {
-			want: fmt.Sprintf("foo-%s-%s-%s-%s-%s",
-				serviceInfo.ID, serviceInfo.LatestVersion, serviceInfo.Name, serviceInfo.URL, *serviceInfo.WebURL),
-			rootValue:        test.StringPtr("foo-{{ service_id }}-{{ version }}-{{ service_name }}-{{ service_url }}-{{ web_url }}"),
+			want: fmt.Sprintf("foo-%s-%s-%s--%s-%s-%s--%s-%s-%s-%s",
+				serviceInfo.ID, serviceInfo.Name, serviceInfo.URL,
+				serviceInfo.Icon, serviceInfo.IconLinkTo, serviceInfo.WebURL,
+				serviceInfo.LatestVersion, serviceInfo.ApprovedVersion, serviceInfo.DeployedVersion, serviceInfo.LatestVersion),
+			rootValue:        test.StringPtr("foo-{{ service_id }}-{{ service_name }}-{{ service_url }}--{{ icon }}-{{ icon_link_to }}-{{ web_url }}--{{ version }}-{{ approved_version }}-{{ deployed_version }}-{{ latest_version }}"),
 			defaultValue:     test.StringPtr("not_this"),
 			hardDefaultValue: test.StringPtr("not_this"),
 		},

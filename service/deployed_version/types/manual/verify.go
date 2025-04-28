@@ -21,6 +21,6 @@ import (
 
 // CheckValues validates the fields of the Lookup struct.
 func (l *Lookup) CheckValues(prefix string) error {
-	logFrom := logutil.LogFrom{Primary: *l.Status.ServiceID}
+	logFrom := logutil.LogFrom{Primary: l.GetServiceID()}
 	return l.Query(false, logFrom)
 }

@@ -37,7 +37,8 @@ func (s *Slice) Print(prefix string, order []string) {
 			if itemStr == "{}\n" {
 				delim = " "
 			}
-			fmt.Printf("%s  %s:%s%s", prefix, serviceID, delim, itemStr)
+			fmt.Printf("%s  %s:%s%s",
+				prefix, serviceID, delim, itemStr)
 		}
 	}
 }
@@ -46,8 +47,10 @@ func (s *Slice) Print(prefix string, order []string) {
 func (d *Defaults) CheckValues(prefix string) error {
 	var errs []error
 
-	util.AppendCheckError(&errs, prefix, "options", d.Options.CheckValues(prefix+"  "))
-	util.AppendCheckError(&errs, prefix, "latest_version", d.LatestVersion.CheckValues(prefix+"  "))
+	util.AppendCheckError(&errs, prefix, "options",
+		d.Options.CheckValues(prefix+"  "))
+	util.AppendCheckError(&errs, prefix, "latest_version",
+		d.LatestVersion.CheckValues(prefix+"  "))
 
 	if len(errs) == 0 {
 		return nil
@@ -65,7 +68,8 @@ func (s *Slice) CheckValues(prefix string) error {
 	keys := util.SortedKeys(*s)
 	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		util.AppendCheckError(&errs, prefix, key, (*s)[key].CheckValues(itemPrefix))
+		util.AppendCheckError(&errs, prefix, key,
+			(*s)[key].CheckValues(itemPrefix))
 	}
 
 	if len(errs) == 0 {
@@ -82,19 +86,27 @@ func (s *Service) CheckValues(prefix string) error {
 
 	var errs []error
 	errPrefix := prefix + "  "
-	util.AppendCheckError(&errs, prefix, "options", s.Options.CheckValues(errPrefix))
+	util.AppendCheckError(&errs, prefix, "options",
+		s.Options.CheckValues(errPrefix))
 	if s.LatestVersion != nil {
-		util.AppendCheckError(&errs, prefix, "latest_version", s.LatestVersion.CheckValues(errPrefix))
+		util.AppendCheckError(&errs, prefix, "latest_version",
+			s.LatestVersion.CheckValues(errPrefix))
 	} else {
-		util.AppendCheckError(&errs, prefix, "latest_version", errors.New(errPrefix+"latest_version is nil"))
+		util.AppendCheckError(&errs, prefix, "latest_version",
+			errors.New(errPrefix+"latest_version is nil"))
 	}
 	if s.DeployedVersionLookup != nil {
-		util.AppendCheckError(&errs, prefix, "deployed_version", s.DeployedVersionLookup.CheckValues(errPrefix))
+		util.AppendCheckError(&errs, prefix, "deployed_version",
+			s.DeployedVersionLookup.CheckValues(errPrefix))
 	}
-	util.AppendCheckError(&errs, prefix, "notify", s.Notify.CheckValues(errPrefix))
-	util.AppendCheckError(&errs, prefix, "command", s.Command.CheckValues(errPrefix))
-	util.AppendCheckError(&errs, prefix, "webhook", s.WebHook.CheckValues(errPrefix))
-	util.AppendCheckError(&errs, prefix, "dashboard", s.Dashboard.CheckValues(errPrefix))
+	util.AppendCheckError(&errs, prefix, "notify",
+		s.Notify.CheckValues(errPrefix))
+	util.AppendCheckError(&errs, prefix, "command",
+		s.Command.CheckValues(errPrefix))
+	util.AppendCheckError(&errs, prefix, "webhook",
+		s.WebHook.CheckValues(errPrefix))
+	util.AppendCheckError(&errs, prefix, "dashboard",
+		s.Dashboard.CheckValues(errPrefix))
 
 	if len(errs) == 0 {
 		return nil

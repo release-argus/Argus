@@ -26,13 +26,14 @@ import (
 	"strconv"
 	"time"
 
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
 )
 
 // Send every WebHook in this Slice with a delay between each webhook.
-func (s *Slice) Send(serviceInfo util.ServiceInfo, useDelay bool) error {
+func (s *Slice) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
 	if s == nil {
 		return nil
 	}
@@ -63,7 +64,7 @@ func (s *Slice) Send(serviceInfo util.ServiceInfo, useDelay bool) error {
 }
 
 // Send the WebHook up to MaxTries times until a success.
-func (w *WebHook) Send(serviceInfo util.ServiceInfo, useDelay bool) error {
+func (w *WebHook) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
 	logFrom := logutil.LogFrom{Primary: w.ID, Secondary: serviceInfo.ID}
 
 	if useDelay && w.GetDelay() != "0s" {
@@ -79,7 +80,7 @@ func (w *WebHook) Send(serviceInfo util.ServiceInfo, useDelay bool) error {
 	sendErrs := util.RetryWithBackoff(
 		func() error {
 			err := w.try(logFrom)
-			w.parseTry(err, *w.ServiceStatus.ServiceID, logFrom)
+			w.parseTry(err, w.ServiceStatus.ServiceInfo.ID, logFrom)
 			if err == nil {
 				return nil
 			}
@@ -95,7 +96,7 @@ func (w *WebHook) Send(serviceInfo util.ServiceInfo, useDelay bool) error {
 	}
 
 	err := fmt.Errorf("failed %d times to send the WebHook for %s to %q",
-		w.GetMaxTries(), *w.ServiceStatus.ServiceID, w.ID)
+		w.GetMaxTries(), w.ServiceStatus.ServiceInfo.ID, w.ID)
 	logutil.Log.Error(err, logFrom, true)
 	failed := true
 	w.Failed.Set(w.ID, &failed)
@@ -155,17 +156,14 @@ func (w *WebHook) try(logFrom logutil.LogFrom) error {
 		prettyStatusCode = "2XX"
 	}
 
-	return fmt.Errorf(
-		"WebHook gave %d, not %s:\n%s\n%s",
-		resp.StatusCode,
-		prettyStatusCode,
-		resp.Status,
-		string(body),
+	return fmt.Errorf("WebHook gave %d, not %s:\n%s\n%s",
+		resp.StatusCode, prettyStatusCode,
+		resp.Status, string(body),
 	)
 }
 
 // Send a message to the Notifiers (if available).
-func (n *Notifiers) Send(title, message string, serviceInfo util.ServiceInfo) error {
+func (n *Notifiers) Send(title, message string, serviceInfo serviceinfo.ServiceInfo) error {
 	if n == nil || n.Shoutrrr == nil {
 		return nil
 	}

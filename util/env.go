@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,4 +52,19 @@ func expandEnvVariables(match string) string {
 		return value
 	}
 	return match
+}
+
+// TryExpandEnv tries to expand environment variables in the input string.
+//
+// If the input string contains no environment variables, it returns nil.
+// If the input string contains environment variables, it returns a pointer to the expanded string.
+func TryExpandEnv(input string) *string {
+	inputAfterEnvExpansion := EvalEnvVars(input)
+	if input == inputAfterEnvExpansion {
+		// No environment variables to expand.
+		return nil
+	}
+
+	// Set the pointer to the expanded value.
+	return &inputAfterEnvExpansion
 }

@@ -48,7 +48,9 @@ func TestHTTP_httpRuntimeInfo(t *testing.T) {
 		}\s$`
 
 	// WHEN that HTTP request is sent.
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/status/runtime", nil)
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/v1/status/runtime",
+		nil)
 	w := httptest.NewRecorder()
 	apiMutex.RLock()
 	api.httpRuntimeInfo(w, req)

@@ -49,6 +49,8 @@ type Interface interface {
 	GetType() string
 	// GetStatus returns the Lookup's status.
 	GetStatus() *status.Status
+	// GetServiceID returns the Lookup's service ID.
+	GetServiceID() string
 	// GetOptions returns the Lookup's options.
 	GetOptions() *opt.Options
 	// GetDefaults returns the Lookup's defaults.

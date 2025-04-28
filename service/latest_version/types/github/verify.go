@@ -17,7 +17,6 @@ package github
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
@@ -26,8 +25,7 @@ func (l *Lookup) CheckValues(prefix string) error {
 	var errs []error
 	if l.URL == "" {
 		errs = append(errs,
-			fmt.Errorf("%surl: <required> e.g. 'release-argus/Argus'",
-				prefix))
+			errors.New(prefix+"url: <required> e.g. 'release-argus/Argus'"))
 		// Convert full URL to just `owner/repo`.
 	} else if strings.Count(l.URL, "/") > 1 {
 		parts := strings.Split(l.URL, "/")

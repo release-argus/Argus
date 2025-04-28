@@ -19,13 +19,11 @@ package base
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
 	metric "github.com/release-argus/Argus/web/metric"
 )
 
@@ -33,9 +31,8 @@ func TestLookup_Metrics(t *testing.T) {
 	// GIVEN a Lookup.
 	lookup := Lookup{
 		Type: "test"}
-	lookup.Status = &status.Status{
-		ServiceID: test.StringPtr("TestLookup_Metrics"),
-	}
+	lookup.Status = &status.Status{}
+	lookup.Status.ServiceInfo.ID = "TestLookup_Metrics"
 
 	// WHEN the Prometheus metrics are initialised with initMetrics.
 	hadC := testutil.CollectAndCount(metric.LatestVersionQueryResultTotal)
@@ -123,19 +120,19 @@ func TestLookup_QueryMetrics(t *testing.T) {
 			t.Parallel()
 
 			lookup := Lookup{
-				Type: "test",
-				Status: &status.Status{
-					ServiceID: test.StringPtr(
-						fmt.Sprintf("TestLookup_QueryMetrics__%s", name))}}
+				Type:   "test",
+				Status: &status.Status{}}
+			serviceID := "TestLookup_QueryMetrics__" + name
+			lookup.Status.ServiceInfo.ID = serviceID
 			lookup.InitMetrics(&lookup)
 
 			// AND the Prometheus metrics are initialised to 0.
 			counterSuccess := testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-				*lookup.Status.ServiceID, lookup.GetType(), "SUCCESS"))
+				serviceID, lookup.GetType(), "SUCCESS"))
 			counterFail := testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-				*lookup.Status.ServiceID, lookup.GetType(), "FAIL"))
+				serviceID, lookup.GetType(), "FAIL"))
 			gauge := testutil.ToFloat64(metric.LatestVersionQueryResultLast.WithLabelValues(
-				*lookup.Status.ServiceID, lookup.GetType()))
+				serviceID, lookup.GetType()))
 			if counterSuccess != 0 || counterFail != 0 || gauge != 0 {
 				t.Errorf("%s\nMetrics were not initialised correctly. Got %f, %f, %f",
 					packageName, counterSuccess, counterFail, gauge)
@@ -155,11 +152,11 @@ func TestLookup_QueryMetrics(t *testing.T) {
 			}
 
 			counterSuccess = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-				*lookup.Status.ServiceID, lookup.GetType(), "SUCCESS"))
+				serviceID, lookup.GetType(), "SUCCESS"))
 			counterFail = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-				*lookup.Status.ServiceID, lookup.GetType(), "FAIL"))
+				serviceID, lookup.GetType(), "FAIL"))
 			gauge = testutil.ToFloat64(metric.LatestVersionQueryResultLast.WithLabelValues(
-				*lookup.Status.ServiceID, lookup.GetType()))
+				serviceID, lookup.GetType()))
 			if counterSuccess != wantSuccess ||
 				counterFail != wantFail ||
 				gauge != wantGauge {

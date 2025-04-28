@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ func LowercaseStringStringMap(change *map[string]string) {
 		}
 	}
 	// If all keys lowercase, do nothing.
-	if allLowercase {
+	if allLowercase && *change != nil {
 		return
 	}
 

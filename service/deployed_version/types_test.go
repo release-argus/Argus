@@ -22,6 +22,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
@@ -324,7 +325,8 @@ func TestCopy(t *testing.T) {
 						"9m",
 						test.BoolPtr(true),
 						nil, nil),
-					&status.Status{},
+					&status.Status{
+						Dashboard: &dashboard.Options{}},
 					&base.Defaults{}, &base.Defaults{})
 			}),
 		},

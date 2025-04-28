@@ -22,7 +22,8 @@ import "fmt"
 func AppendCheckError(errs *[]error, prefix, label string, checkErr error) {
 	if checkErr != nil {
 		*errs = append(*errs,
-			fmt.Errorf("%s%s:\n%w", prefix, label, checkErr))
+			fmt.Errorf("%s%s:\n%w",
+				prefix, label, checkErr))
 	}
 }
 

@@ -25,17 +25,6 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-// ServiceInfo returns info about the service.
-func (s *Service) ServiceInfo() util.ServiceInfo {
-	return util.ServiceInfo{
-		ID:            s.ID,
-		Name:          s.Name,
-		URL:           s.LatestVersion.ServiceURL(true),
-		WebURL:        s.Status.GetWebURL(),
-		LatestVersion: s.Status.LatestVersion(),
-	}
-}
-
 // IconURL returns the URL Icon for the Service.
 func (s *Service) IconURL() *string {
 	// Service.Icon
@@ -69,23 +58,29 @@ func (s *Service) Init(
 	webhookDefaults, webhookHardDefaults *webhook.Defaults,
 ) {
 	// Status.
+	var serviceURL string
+	if s.LatestVersion != nil {
+		serviceURL = s.LatestVersion.ServiceURL()
+	}
 	s.Status.Init(
 		len(s.Notify), len(s.Command), len(s.WebHook),
-		&s.ID, &s.Name,
-		&s.Dashboard.WebURL)
+		s.ID, s.Name, serviceURL,
+		&s.Dashboard)
 
 	// Service.
 	s.Defaults = defaults
 	s.HardDefaults = hardDefaults
+
 	// Dashboard.
 	s.Dashboard.Defaults = &s.Defaults.Dashboard
 	s.Dashboard.HardDefaults = &s.HardDefaults.Dashboard
+
 	// Options.
 	s.Options.Defaults = &s.Defaults.Options
 	s.Options.HardDefaults = &s.HardDefaults.Options
 
-	// Notify/
-	// use defaults?
+	// Notify.
+	// 	use defaults?
 	if len(s.Notify) == 0 && len(defaults.Notify) != 0 {
 		s.Notify = make(shoutrrr.Slice, len(defaults.Notify))
 		for key := range defaults.Notify {
@@ -96,9 +91,27 @@ func (s *Service) Init(
 	s.Notify.Init(
 		&s.Status,
 		rootNotifyConfig, notifyDefaults, notifyHardDefaults)
+	// 	If the dashboard icon is not set, use the first icon from a Notify.
+	if s.Dashboard.GetIcon() == "" && s.Notify != nil {
+		// Search for a web icon.
+		for _, notify := range s.Notify {
+			// `Params.Icon`
+			if icon := util.EvalEnvVars(notify.GetParam("icon")); icon != "" &&
+				strings.HasPrefix(icon, "http") &&
+				(strings.HasPrefix(icon, "http://") || strings.HasPrefix(icon, "https://")) {
+				s.Dashboard.SetFallbackIcon(icon)
+				// Refresh the ServiceInfo.
+				latestVersion := s.Status.LatestVersion()
+				latestVersionTimestamp := s.Status.LatestVersionTimestamp()
+				s.Status.SetLatestVersion(latestVersion+"-", latestVersionTimestamp, false)
+				s.Status.SetLatestVersion(latestVersion, latestVersionTimestamp, false)
+				break
+			}
+		}
+	}
 
 	// Command.
-	// use defaults?
+	// 	use defaults?
 	if len(s.Command) == 0 && len(defaults.Command) != 0 {
 		s.Command = make(command.Slice, len(defaults.Command))
 		copy(s.Command, defaults.Command)
@@ -114,7 +127,7 @@ func (s *Service) Init(
 	}
 
 	// WebHook.
-	// use defaults?
+	// 	use defaults?
 	if s.WebHook == nil && len(defaults.WebHook) != 0 {
 		s.WebHook = make(webhook.Slice, len(defaults.WebHook))
 		for key := range defaults.WebHook {

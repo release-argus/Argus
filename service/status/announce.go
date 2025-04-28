@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,13 +26,15 @@ import (
 func (s *Status) AnnounceFirstVersion() {
 	var payloadData []byte
 
+	webURL := s.ServiceInfo.GetWebURL()
+
 	payloadData, _ = json.Marshal(apitype.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "VERSION",
 		SubType: "INIT",
 		ServiceData: &apitype.ServiceSummary{
-			ID:     *s.ServiceID,
-			WebURL: s.GetWebURL(),
+			ID:     s.ServiceInfo.ID,
+			WebURL: &webURL,
 			Status: &apitype.Status{
 				LatestVersion:          s.LatestVersion(),
 				LatestVersionTimestamp: s.LatestVersionTimestamp()}}})
@@ -50,7 +52,7 @@ func (s *Status) AnnounceQuery() {
 		Type:    "VERSION",
 		SubType: "QUERY",
 		ServiceData: &apitype.ServiceSummary{
-			ID: *s.ServiceID,
+			ID: s.ServiceInfo.ID,
 			Status: &apitype.Status{
 				LastQueried: s.LastQueried()}}})
 
@@ -62,14 +64,16 @@ func (s *Status) AnnounceQuery() {
 func (s *Status) AnnounceQueryNewVersion() {
 	var payloadData []byte
 
+	webURL := s.ServiceInfo.GetWebURL()
+
 	// Last query time update OR approval/approved.
 	payloadData, _ = json.Marshal(apitype.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "VERSION",
 		SubType: "NEW",
 		ServiceData: &apitype.ServiceSummary{
-			ID:     *s.ServiceID,
-			WebURL: s.GetWebURL(),
+			ID:     s.ServiceInfo.ID,
+			WebURL: &webURL,
 			Status: &apitype.Status{
 				LatestVersion:          s.LatestVersion(),
 				LatestVersionTimestamp: s.LatestVersionTimestamp()}}})
@@ -88,7 +92,7 @@ func (s *Status) AnnounceUpdate() {
 		Type:    "VERSION",
 		SubType: "UPDATED",
 		ServiceData: &apitype.ServiceSummary{
-			ID: *s.ServiceID,
+			ID: s.ServiceInfo.ID,
 			Status: &apitype.Status{
 				DeployedVersion:          s.DeployedVersion(),
 				DeployedVersionTimestamp: s.DeployedVersionTimestamp()}}})
@@ -107,9 +111,9 @@ func (s *Status) announceApproved() {
 		Type:    "VERSION",
 		SubType: "ACTION",
 		ServiceData: &apitype.ServiceSummary{
-			ID: *s.ServiceID,
+			ID: s.ServiceInfo.ID,
 			Status: &apitype.Status{
-				ApprovedVersion: s.approvedVersion}}})
+				ApprovedVersion: s.ServiceInfo.ApprovedVersion}}})
 
 	s.SendAnnounce(&payloadData)
 }

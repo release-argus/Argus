@@ -77,7 +77,8 @@ func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
 
 	if logutil.Log.IsLevel("DEBUG") {
 		logutil.Log.Debug(
-			fmt.Sprintf("%s, %v", sqlStmt, params),
+			fmt.Sprintf("%s, %v",
+				sqlStmt, params),
 			logFrom, true)
 	}
 	res, err := api.db.Exec(sqlStmt, params...)
@@ -121,7 +122,8 @@ func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
 	// Log the SQL statement.
 	if logutil.Log.IsLevel("DEBUG") {
 		logutil.Log.Debug(
-			fmt.Sprintf("%s, %v", sqlStmt, params),
+			fmt.Sprintf("%s, %v",
+				sqlStmt, params),
 			logFrom, true)
 	}
 
@@ -141,7 +143,8 @@ func (api *api) deleteRow(serviceID string) {
 	// Log the SQL statement.
 	if logutil.Log.IsLevel("DEBUG") {
 		logutil.Log.Debug(
-			fmt.Sprintf("%s, %v", sqlStmt, serviceID),
+			fmt.Sprintf("%s, %v",
+				sqlStmt, serviceID),
 			logFrom, true)
 	}
 

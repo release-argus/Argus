@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -40,12 +41,6 @@ func TestCommand_ApplyTemplate(t *testing.T) {
 			want:          Command{"ls", "-lah"},
 			serviceStatus: &status.Status{},
 			latestVersion: "1.2.3"},
-		"command with no templating and nil service status": {
-			input: Command{"ls", "-lah"},
-			want:  Command{"ls", "-lah"}},
-		"command with templating and nil service status": {
-			input: Command{"ls", "-lah", "{{ version }}"},
-			want:  Command{"ls", "-lah", "{{ version }}"}},
 		"command with templating and non-nil service status": {
 			input:         Command{"ls", "-lah", "{{ version }}"},
 			want:          Command{"ls", "-lah", "1.2.3"},
@@ -57,12 +52,18 @@ func TestCommand_ApplyTemplate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			if tc.serviceStatus != nil {
+				tc.serviceStatus.Init(
+					0, 1, 0,
+					"", "", "",
+					&dashboard.Options{})
+			}
 			if tc.latestVersion != "" {
 				tc.serviceStatus.SetLatestVersion(tc.latestVersion, "", false)
 			}
 
 			// WHEN ApplyTemplate is called on the Command.
-			got := tc.input.ApplyTemplate(tc.serviceStatus)
+			got := tc.input.ApplyTemplate(tc.serviceStatus.GetServiceInfo())
 
 			// THEN the result is expected.
 			if !reflect.DeepEqual(tc.want, got) {
@@ -117,8 +118,12 @@ func TestController_ExecIndex(t *testing.T) {
 	controller := Controller{}
 	svcStatus := status.New(
 		&announce, nil, nil,
-		"", "", "", "", "", "")
-	svcStatus.ServiceID = test.StringPtr("service_id")
+		"",
+		"", "",
+		"", "",
+		"",
+		&dashboard.Options{})
+	svcStatus.ServiceInfo.ID = "service_id"
 	controller.Init(
 		svcStatus,
 		&Slice{
@@ -153,7 +158,10 @@ func TestController_ExecIndex(t *testing.T) {
 			releaseStdout := test.CaptureStdout()
 
 			// WHEN the Command @index is executed.
-			err := controller.ExecIndex(logutil.LogFrom{}, tc.index)
+			err := controller.ExecIndex(
+				logutil.LogFrom{},
+				tc.index,
+				controller.ServiceStatus.GetServiceInfo())
 
 			// THEN the stdout is expected.
 			// 	err:

@@ -57,7 +57,7 @@ func (s *Service) Track() {
 	logFrom := logutil.LogFrom{Primary: s.ID}
 	logutil.Log.Verbose(
 		fmt.Sprintf("Tracking %s at %s every %s",
-			s.ID, s.LatestVersion.ServiceURL(true), s.Options.GetInterval()),
+			s.ID, s.LatestVersion.ServiceURL(), s.Options.GetInterval()),
 		logFrom,
 		true)
 	for {

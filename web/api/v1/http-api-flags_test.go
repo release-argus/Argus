@@ -54,7 +54,9 @@ func TestHTTP_httpFlags(t *testing.T) {
 		}\s$`
 
 	// WHEN that HTTP request is sent.
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/flags", nil)
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/v1/flags",
+		nil)
 	w := httptest.NewRecorder()
 	apiMutex.RLock()
 	api.httpFlags(w, req)

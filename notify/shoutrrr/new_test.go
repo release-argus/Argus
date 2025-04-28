@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/release-argus/Argus/service/dashboard"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -272,11 +274,26 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			if tc.payload.NamePrevious != "" {
 				testServiceNotify = (*serviceNotifies)[tc.payload.NamePrevious]
 			}
+			testServiceStatus := status.New(
+				nil, nil, nil,
+				"",
+				"", "",
+				"", "",
+				"",
+				dashboard.NewOptions(
+					nil,
+					"", "", "",
+					nil,
+					nil, nil))
+			testServiceStatus.Init(
+				1, 0, 0,
+				tc.payload.ServiceID, tc.payload.ServiceName, "service_url",
+				testServiceStatus.Dashboard)
 
 			// WHEN using the payload.
-			got, serviceURL, errRegex := FromPayload(
+			got, errRegex := FromPayload(
 				tc.payload,
-				testServiceNotify,
+				testServiceNotify, testServiceStatus,
 				mains,
 				defaults, hardDefaults)
 
@@ -296,11 +313,12 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 					packageName, tc.want.String(""), got.String(""))
 			}
 			// AND the serviceName is as expected.
-			if *got.ServiceStatus.ServiceID != tc.payload.ServiceID {
+			if got.ServiceStatus.ServiceInfo.ID != tc.payload.ServiceID {
 				t.Errorf("%s\nServiceID mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.payload.ServiceID, *got.ServiceStatus.ServiceID)
+					packageName, tc.payload.ServiceID, got.ServiceStatus.ServiceInfo.ID)
 			}
 			// AND the serviceURL is as expected.
+			serviceURL := tc.payload.ServiceURL
 			if serviceURL != tc.wantServiceURL {
 				t.Errorf("%s\nServiceURL mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantServiceURL, serviceURL)
@@ -417,7 +435,8 @@ func TestResolveDefaults(t *testing.T) {
 				t.Fatalf("%s\nType mismatch:\nwant: %q\ngot:  %q",
 					packageName, tc.wantType, gotType)
 			}
-			allAddresses := fmt.Sprintf("main=%p, defaults=%p, hardDefaults=%p", gotMain, gotDefaults, gotHardDefaults)
+			allAddresses := fmt.Sprintf("main=%p, defaults=%p, hardDefaults=%p",
+				gotMain, gotDefaults, gotHardDefaults)
 			// 	Main ref.
 			if tc.wantMain == "defaults" || tc.wantMain == "hardDefaults" {
 				if (tc.wantMain == "defaults" && gotMain != tc.defaults[gotType]) ||

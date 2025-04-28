@@ -85,7 +85,9 @@ func TestNewAPI(t *testing.T) {
 				api := NewAPI(cfg)
 
 				// THEN the healthcheck endpoint is accessible.
-				req, _ := http.NewRequest(http.MethodGet, tc.routePrefix+"/api/v1/healthcheck", nil)
+				req, _ := http.NewRequest(http.MethodGet,
+					tc.routePrefix+"/api/v1/healthcheck",
+					nil)
 				resp := httptest.NewRecorder()
 				api.BaseRouter.ServeHTTP(resp, req)
 				// 200.
@@ -122,7 +124,9 @@ func TestNewAPI(t *testing.T) {
 					w.Write([]byte("OK"))
 				}).Methods(http.MethodGet)
 				authMiddlewareWanted := basicAuthTest.username != ""
-				req, _ = http.NewRequest(http.MethodGet, tc.routePrefix+"/", nil)
+				req, _ = http.NewRequest(http.MethodGet,
+					tc.routePrefix+"/",
+					nil)
 				resp = httptest.NewRecorder()
 				api.BaseRouter.ServeHTTP(resp, req)
 				middlewareUsed := resp.Body.String() != "OK"

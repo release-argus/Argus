@@ -22,6 +22,7 @@ import (
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
@@ -244,16 +245,7 @@ func TestSlice_CheckValues(t *testing.T) {
 					Comment: "foo_comment",
 					Options: *opt.New(
 						nil, "10x", nil, nil, nil),
-					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-						return latestver.New(
-							"github",
-							"yaml", test.TrimYAML(`
-								url: release-argus/Argus
-							`),
-							nil,
-							nil,
-							nil, nil)
-					})},
+					LatestVersion: nil},
 				"bar": {
 					ID:      "test",
 					Comment: "foo_comment",
@@ -268,14 +260,20 @@ func TestSlice_CheckValues(t *testing.T) {
 							nil,
 							nil,
 							nil, nil)
-					})}},
+					}),
+					DeployedVersionLookup: &dv_web.Lookup{
+						Method: "SOMETHING"}}},
 			errRegex: test.TrimYAML(`
 				^bar:
 					options:
 						interval: "10y" <invalid>.*
+					deployed_version:
+						method: "[^"]+" <invalid>.*
 				foo:
 					options:
-						interval: "10x".*$`),
+						interval: "10x" <invalid>.*
+					latest_version:
+						.*nil.*$`),
 		},
 	}
 
@@ -306,7 +304,7 @@ func TestService_CheckValues(t *testing.T) {
 		commands         command.Slice
 		webhooks         webhook.Slice
 		notifies         shoutrrr.Slice
-		dashboardOptions DashboardOptions
+		dashboardOptions dashboard.Options
 		errRegex         string
 	}{
 		"nil service": {
@@ -331,6 +329,18 @@ func TestService_CheckValues(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^options:
 					interval: "[^"]+" <invalid>.*$`),
+		},
+		"options, latest_version is nil": {
+			svc: &Service{
+				ID: "test", Comment: "foo_comment"},
+			options: *opt.New(
+				nil, "10x", nil, nil, nil),
+			latestVersion: nil,
+			errRegex: test.TrimYAML(`
+				^options:
+					interval: "[^"]+" <invalid>.*
+				latest_version:
+					.*nil.*$`),
 		},
 		"options, latest_version with errs": {
 			svc: &Service{
@@ -540,10 +550,11 @@ func TestService_CheckValues(t *testing.T) {
 				"wh": webhook.New(
 					nil, nil,
 					"0s",
-					nil, nil, nil, nil, nil, "", nil,
-					"", "",
+					nil, nil, nil,
+					nil, nil, "secret", nil,
+					"github", "https://example.com",
 					nil, nil, nil)},
-			errRegex: "",
+			errRegex: "^$",
 		},
 	}
 

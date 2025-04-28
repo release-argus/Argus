@@ -272,6 +272,10 @@ func TestLowercaseStringStringMap(t *testing.T) {
 	tests := map[string]struct {
 		input, want map[string]string
 	}{
+		"nil map": {
+			input: nil,
+			want:  map[string]string{},
+		},
 		"empty map": {
 			input: map[string]string{},
 			want:  map[string]string{},
@@ -337,6 +341,11 @@ func TestLowercaseStringStringMap(t *testing.T) {
 					t.Fatalf("%s\nwant: %v\ngot:  %v",
 						packageName, tc.want, got)
 				}
+			}
+			// AND the map is not nil.
+			if got == nil {
+				t.Fatalf("%s\nmap is nil",
+					packageName)
 			}
 		})
 	}

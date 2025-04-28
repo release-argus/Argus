@@ -41,8 +41,7 @@ func CommandTest(flag *string, cfg *config.Config) {
 
 	if !exist {
 		logutil.Log.Fatal(
-			fmt.Sprintf(
-				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
+			fmt.Sprintf("Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
 				*flag, strings.Join(cfg.Order, "\n  - "),
 			),
 			logFrom,
@@ -51,8 +50,7 @@ func CommandTest(flag *string, cfg *config.Config) {
 
 	if service.CommandController == nil {
 		logutil.Log.Fatal(
-			fmt.Sprintf(
-				"Service %q does not have any `command` defined",
+			fmt.Sprintf("Service %q does not have any `command` defined",
 				*flag),
 			logFrom,
 			true)

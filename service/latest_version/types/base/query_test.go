@@ -20,6 +20,7 @@ package base
 import (
 	"testing"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
@@ -78,8 +79,13 @@ func TestVerifySemanticVersioning(t *testing.T) {
 
 			logFrom := logutil.LogFrom{Primary: "TestVerifySemanticVersioning", Secondary: name}
 			lookup := &Lookup{
-				Status: &status.Status{},
-			}
+				Status: status.New(
+					nil, nil, nil,
+					"",
+					"", "",
+					"", "",
+					"",
+					&dashboard.Options{})}
 			lookup.Status.SetLatestVersion(tc.versions.current, "", false)
 			lookup.Status.SetDeployedVersion(tc.versions.deployed, "", false)
 
@@ -163,7 +169,10 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			}
 			announceChan := make(chan []byte, 2)
 			lookup.Status.AnnounceChannel = &announceChan
-			lookup.Status.ServiceID = &name
+			lookup.Status.Init(
+				0, 0, 0,
+				name, "", "",
+				&dashboard.Options{})
 			lookup.Status.SetLatestVersion(tc.versions.initialLatestVersion, "", false)
 			lookup.Status.SetDeployedVersion(tc.versions.initialDeployedVersion, "", false)
 

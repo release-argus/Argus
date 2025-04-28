@@ -17,6 +17,7 @@ package util
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -74,7 +75,7 @@ func UnmarshalConfig(
 		// For structs without custom UnmarshalYAML.
 		return yaml.Unmarshal(rawData, to) //nolint:wrapcheck
 	default:
-		return fmt.Errorf("unsupported configFormat: %s", configFormat)
+		return errors.New("unsupported configFormat: " + configFormat)
 	}
 }
 

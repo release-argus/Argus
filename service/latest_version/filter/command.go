@@ -28,7 +28,7 @@ func (r *Require) ExecCommand(logFrom logutil.LogFrom) error {
 	}
 
 	// Apply the template vars to the command.
-	cmd := r.Command.ApplyTemplate(r.Status)
+	cmd := r.Command.ApplyTemplate(r.Status.GetServiceInfo())
 
 	// Execute the command.
 	if err := cmd.Exec(logFrom); err != nil {

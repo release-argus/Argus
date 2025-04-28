@@ -48,7 +48,10 @@ func (s *Service) HandleCommand(command string) {
 	}
 
 	// Send the Command.
-	err = (*s.CommandController).ExecIndex(logutil.LogFrom{Primary: "Command", Secondary: s.ID}, index)
+	err = (*s.CommandController).ExecIndex(
+		logutil.LogFrom{Primary: "Command", Secondary: s.ID},
+		index,
+		s.Status.GetServiceInfo())
 	if err == nil {
 		s.UpdatedVersion(true)
 	}
@@ -67,7 +70,7 @@ func (s *Service) HandleWebHook(webhookID string) {
 	}
 
 	// Send the WebHook.
-	err := s.WebHook[webhookID].Send(s.ServiceInfo(), false)
+	err := s.WebHook[webhookID].Send(s.Status.GetServiceInfo(), false)
 	if err == nil {
 		s.UpdatedVersion(true)
 	}
@@ -77,7 +80,7 @@ func (s *Service) HandleWebHook(webhookID string) {
 // If new releases not auto-approved, then these will
 // only run/send if manually triggered fromUser (via the WebUI).
 func (s *Service) HandleUpdateActions(writeToDB bool) {
-	serviceInfo := s.ServiceInfo()
+	serviceInfo := s.Status.GetServiceInfo()
 
 	// Send the Notify Message(s).
 	//nolint:errcheck
@@ -120,6 +123,7 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 // that have either failed, or not sent for this version. Otherwise,
 // if all WebHooks have sent successfully, then they will all resend.
 func (s *Service) HandleFailedActions() {
+	serviceInfo := s.Status.GetServiceInfo()
 	errChan := make(chan error, len(s.WebHook)+len(s.Command))
 	errored := false
 
@@ -130,7 +134,7 @@ func (s *Service) HandleFailedActions() {
 	if len(s.WebHook) != 0 {
 		potentialErrors += len(s.WebHook)
 		for key, wh := range s.WebHook {
-			if retryAll || util.DereferenceOrNilValue(s.Status.Fails.WebHook.Get(key), true) {
+			if retryAll || util.DereferenceOrValue(s.Status.Fails.WebHook.Get(key), true) {
 				// Skip if before NextRunnable.
 				if !wh.IsRunnable() {
 					potentialErrors--
@@ -138,7 +142,7 @@ func (s *Service) HandleFailedActions() {
 				}
 				// Send.
 				go func(wh *webhook.WebHook) {
-					err := wh.Send(s.ServiceInfo(), false)
+					err := wh.Send(serviceInfo, false)
 					errChan <- err
 				}(wh)
 				// Space out WebHooks.
@@ -154,7 +158,7 @@ func (s *Service) HandleFailedActions() {
 		potentialErrors += len(s.Command)
 		logFrom := logutil.LogFrom{Primary: "Command", Secondary: s.ID}
 		for key := range s.Command {
-			if retryAll || util.DereferenceOrNilValue(s.Status.Fails.Command.Get(key), true) {
+			if retryAll || util.DereferenceOrValue(s.Status.Fails.Command.Get(key), true) {
 				// Skip if before NextRunnable.
 				if !s.CommandController.IsRunnable(key) {
 					potentialErrors--
@@ -162,7 +166,7 @@ func (s *Service) HandleFailedActions() {
 				}
 				// Run.
 				go func(key int) {
-					err := s.CommandController.ExecIndex(logFrom, key)
+					err := s.CommandController.ExecIndex(logFrom, key, serviceInfo)
 					errChan <- err
 				}(key)
 				// Space out Commands.
@@ -192,13 +196,13 @@ func (s *Service) HandleFailedActions() {
 func (s *Service) shouldRetryAll() bool {
 	// Retry all only if every WebHook has sent successfully.
 	for key := range s.WebHook {
-		if util.DereferenceOrNilValue(s.Status.Fails.WebHook.Get(key), true) {
+		if util.DereferenceOrValue(s.Status.Fails.WebHook.Get(key), true) {
 			return false
 		}
 	}
 	// AND every Command has run successfully.
 	for key := range s.Command {
-		if util.DereferenceOrNilValue(s.Status.Fails.Command.Get(key), true) {
+		if util.DereferenceOrValue(s.Status.Fails.Command.Get(key), true) {
 			return false
 		}
 	}

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,9 +44,7 @@ func (w *WebHook) setCustomHeaders(req *http.Request) {
 		return
 	}
 
-	serviceInfo := util.ServiceInfo{
-		ID:            *w.ServiceStatus.ServiceID,
-		LatestVersion: w.ServiceStatus.LatestVersion()}
+	serviceInfo := w.ServiceStatus.GetServiceInfo()
 	for _, header := range *customHeaders {
 		key := util.EvalEnvVars(header.Key)
 		value := util.TemplateString(util.EvalEnvVars(header.Value), serviceInfo)

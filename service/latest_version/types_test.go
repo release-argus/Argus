@@ -19,6 +19,7 @@ package latestver
 import (
 	"testing"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
@@ -237,7 +238,13 @@ func TestCopy(t *testing.T) {
 					use_prerelease: true
 			`)),
 					&opt.Options{},
-					&status.Status{},
+					status.New(
+						nil, nil, nil,
+						"",
+						"", "",
+						"", "",
+						"",
+						&dashboard.Options{}),
 					&base.Defaults{}, &base.Defaults{})
 			}),
 		},
@@ -255,7 +262,13 @@ func TestCopy(t *testing.T) {
 						allow_invalid_certs: true
 					`),
 					&opt.Options{},
-					&status.Status{},
+					status.New(
+						nil, nil, nil,
+						"",
+						"", "",
+						"", "",
+						"",
+						&dashboard.Options{}),
 					&base.Defaults{}, &base.Defaults{})
 			}),
 		},

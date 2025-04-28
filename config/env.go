@@ -244,7 +244,8 @@ func setMapFields(field reflect.Value, envKey string, envVars []string) error {
 	for _, key := range field.MapKeys() {
 		if err := mapEnvToStruct(
 			field.MapIndex(key).Interface(),
-			fmt.Sprintf("%s_%s_", envKey, strings.ToUpper(key.String())),
+			fmt.Sprintf("%s_%s_",
+				envKey, strings.ToUpper(key.String())),
 			envVars); err != nil {
 			errs = append(errs, err)
 		}
@@ -289,7 +290,8 @@ func convertToEnvErrors(errs error) error {
 			value := valueRegex.FindStringSubmatch(line)
 			newErrs = append(newErrs,
 				errors.New(strings.Join(basePrefix, "_")+
-					fmt.Sprintf("_%s: %s", strings.ToUpper(value[1]), value[2])))
+					fmt.Sprintf("_%s: %s",
+						strings.ToUpper(value[1]), value[2])))
 		}
 	}
 
@@ -306,7 +308,8 @@ func loadEnvFile(filePath string) error {
 	// Open the file.
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("failed to open env file %q:\n  %w", filePath, err)
+		return fmt.Errorf("failed to open env file %q:\n  %w",
+			filePath, err)
 	}
 	defer file.Close()
 
@@ -346,7 +349,8 @@ func loadEnvFromReader(reader io.Reader) error {
 
 		// Set the environment variable.
 		if err := os.Setenv(key, value); err != nil {
-			return fmt.Errorf("failed to set env var %q: %w", key, err)
+			return fmt.Errorf("failed to set env var %q: %w",
+				key, err)
 		}
 	}
 
