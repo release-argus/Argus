@@ -45,7 +45,8 @@ const REGEX = ({ name }: { name: string }) => {
 				label="T"
 				smallLabel
 				tooltip="Use the RegEx to create a template"
-				positionXS="middle"
+				positionXS="left"
+				positionSM="middle"
 			/>
 			<FormText
 				name={`${name}.index`}
@@ -57,8 +58,7 @@ const REGEX = ({ name }: { name: string }) => {
 				tooltip="Index of the RegEx match to use (starting at 0). Omit to select the first release that meets version requirements"
 				isNumber
 				isRegex
-				positionXS="middle"
-				positionSM="right"
+				positionXS="right"
 			/>
 			{templateToggle && (
 				<FormText
@@ -69,7 +69,7 @@ const REGEX = ({ name }: { name: string }) => {
 					label="RegEx Template"
 					smallLabel
 					tooltip="e.g. RegEx of 'v(\d)-(\d)-(\d)' on 'v4-0-1' with template '$1.$2.$3' would give '4.0.1'"
-					positionXS="right"
+					positionXS="middle"
 				/>
 			)}
 		</>
