@@ -43,10 +43,8 @@ func ServiceTest(flag *string, cfg *config.Config) {
 	// Check service exists.
 	if !util.Contains(cfg.Order, *flag) {
 		logutil.Log.Fatal(
-			fmt.Sprintf(
-				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
-				*flag, strings.Join(cfg.Order, "\n  - "),
-			),
+			fmt.Sprintf("Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
+				*flag, strings.Join(cfg.Order, "\n  - ")),
 			logFrom,
 			true,
 		)
@@ -59,11 +57,8 @@ func ServiceTest(flag *string, cfg *config.Config) {
 	_, err := service.LatestVersion.Query(false, logFrom)
 	if err != nil {
 		logutil.Log.Error(
-			fmt.Sprintf(
-				"No version matching the conditions specified could be found for %q at %q",
-				*flag,
-				service.LatestVersion.ServiceURL(true),
-			),
+			fmt.Sprintf("No version matching the conditions specified could be found for %q at %q",
+				*flag, service.LatestVersion.ServiceURL()),
 			logFrom,
 			true,
 		)
@@ -73,8 +68,7 @@ func ServiceTest(flag *string, cfg *config.Config) {
 	if service.DeployedVersionLookup != nil {
 		if err := service.DeployedVersionLookup.Query(false, logFrom); err == nil {
 			logutil.Log.Info(
-				fmt.Sprintf(
-					"Deployed version - %q",
+				fmt.Sprintf("Deployed version - %q",
 					service.Status.DeployedVersion()),
 				logFrom,
 				true,

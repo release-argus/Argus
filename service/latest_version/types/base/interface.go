@@ -42,7 +42,7 @@ type Interface interface {
 	Inherit(fromLookup Interface)
 
 	// ServiceURL returns the Service URL for the Lookup.
-	ServiceURL(ignoreWebURL bool) string
+	ServiceURL() string
 
 	// Helpers:
 
@@ -50,6 +50,8 @@ type Interface interface {
 	GetType() string
 	// GetStatus returns the Lookup's status.
 	GetStatus() *status.Status
+	// GetServiceID returns the Lookup's service ID.
+	GetServiceID() string
 	// GetOptions returns the Lookup's options.
 	GetOptions() *opt.Options
 	// GetRequire returns the Lookup's require options.

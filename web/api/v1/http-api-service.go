@@ -54,13 +54,17 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 	defer payload.Close()
 	body, err := io.ReadAll(payload)
 	if err != nil {
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 	// Unmarshal the new order from the payload.
 	var newOrder ServiceOrderAPI
 	if err := json.Unmarshal(body, &newOrder); err != nil {
-		failRequest(&w, "Invalid JSON - "+err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			"Invalid JSON - "+err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
@@ -95,7 +99,9 @@ func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 	if service == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err, http.StatusNotFound)
+		failRequest(&w,
+			err,
+			http.StatusNotFound)
 		return
 	}
 

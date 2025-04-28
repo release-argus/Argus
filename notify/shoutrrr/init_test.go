@@ -20,7 +20,9 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metric"
@@ -52,7 +54,9 @@ func TestSlice_Metrics(t *testing.T) {
 			if tc.slice != nil {
 				for name, s := range *tc.slice {
 					s.ID = name
-					s.ServiceStatus = &status.Status{ServiceID: test.StringPtr(name + "-service")}
+					s.ServiceStatus = &status.Status{
+						ServiceInfo: serviceinfo.ServiceInfo{
+							ID: name + "-service"}}
 					s.Main = &Defaults{}
 					s.Type = "gotify"
 				}
@@ -95,7 +99,7 @@ func TestShoutrrr_Metrics(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			shoutrrr := testShoutrrr(false, false)
-			*shoutrrr.ServiceStatus.ServiceID = name
+			shoutrrr.ServiceStatus.ServiceInfo.ID = name
 
 			// WHEN the Prometheus metrics are initialised with initMetrics.
 			had := testutil.CollectAndCount(metric.NotifyResultTotal)
@@ -143,7 +147,7 @@ func TestShoutrrr_InitOptions(t *testing.T) {
 			t.Parallel()
 
 			shoutrrr := testShoutrrr(false, false)
-			*shoutrrr.ServiceStatus.ServiceID = name
+			shoutrrr.ServiceStatus.ServiceInfo.ID = name
 			shoutrrr.Options = tc.had
 
 			// WHEN initOptions is called on it.
@@ -180,7 +184,7 @@ func TestShoutrrr_InitURLFields(t *testing.T) {
 			t.Parallel()
 
 			shoutrrr := testShoutrrr(false, false)
-			*shoutrrr.ServiceStatus.ServiceID = name
+			shoutrrr.ServiceStatus.ServiceInfo.ID = name
 			shoutrrr.URLFields = tc.had
 
 			// WHEN initURLFields is called on it.
@@ -217,7 +221,7 @@ func TestShoutrrr_InitParams(t *testing.T) {
 			t.Parallel()
 
 			shoutrrr := testShoutrrr(false, false)
-			*shoutrrr.ServiceStatus.ServiceID = name
+			shoutrrr.ServiceStatus.ServiceInfo.ID = name
 			shoutrrr.Params = tc.had
 
 			// WHEN initParams is called on it.
@@ -257,7 +261,7 @@ func TestShoutrrr_InitMaps(t *testing.T) {
 			t.Parallel()
 
 			shoutrrr := testShoutrrr(false, false)
-			*shoutrrr.ServiceStatus.ServiceID = name
+			shoutrrr.ServiceStatus.ServiceInfo.ID = name
 			shoutrrr.Options = tc.had
 			shoutrrr.URLFields = tc.had
 			shoutrrr.Params = tc.had
@@ -351,7 +355,7 @@ func TestShoutrrr_Init(t *testing.T) {
 			shoutrrr := testShoutrrr(false, false)
 			shoutrrr.ID = tc.id
 			serviceStatus := shoutrrr.ServiceStatus
-			*shoutrrr.ServiceStatus.ServiceID = name
+			shoutrrr.ServiceStatus.ServiceInfo.ID = name
 			if tc.giveMain {
 				tc.main.Options = tc.had
 			}
@@ -482,14 +486,6 @@ func TestSlice_Init(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.slice != nil {
-				for i := range *tc.slice {
-					if (*tc.slice)[i] != nil {
-						(*tc.slice)[i].ServiceStatus.ServiceID = test.StringPtr(name)
-						(*tc.slice)[i].Options = tc.had
-					}
-				}
-			}
 			serviceStatus := status.Status{}
 			mainCount := 0
 			if tc.mains != nil {
@@ -497,8 +493,8 @@ func TestSlice_Init(t *testing.T) {
 			}
 			serviceStatus.Init(
 				mainCount, 0, 0,
-				&name, nil,
-				nil)
+				name, "", "",
+				&dashboard.Options{})
 			for i := range tc.defaults {
 				tc.defaults[i].URLFields = tc.had
 			}

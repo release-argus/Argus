@@ -41,13 +41,13 @@ func (c *Command) String() string {
 // Controller holds the command(s) to run and the status of the last run.
 type Controller struct {
 	mutex        sync.RWMutex         // Mutex for concurrent access.
-	Command      *Slice               `yaml:"-" json:"-"` // command(s) to run (with args).
+	Command      *Slice               `json:"-" yaml:"-"` // command(s) to run (with args).
 	nextRunnable []time.Time          // Time the Commands can next be run (for staggering).
-	Failed       *status.FailsCommand `yaml:"-" json:"-"` // Whether the last execution attempt failed.
+	Failed       *status.FailsCommand `json:"-" yaml:"-"` // Whether the last execution attempt failed.
 
-	Notifiers      Notifiers      `yaml:"-" json:"-"` // The Notifiers to notify on failures.
-	ServiceStatus  *status.Status `yaml:"-" json:"-"` // Status of the Service (used for templating commands).
-	ParentInterval *string        `yaml:"-" json:"-"` // Interval between the parent Service's queries.
+	Notifiers      Notifiers      `json:"-" yaml:"-"` // The Notifiers to notify on failures.
+	ServiceStatus  *status.Status `json:"-" yaml:"-"` // Status of the Service (used for templating commands).
+	ParentInterval *string        `json:"-" yaml:"-"` // Interval between the parent Service's queries.
 }
 
 // Notifiers to use when their WebHook fails.

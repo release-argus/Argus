@@ -28,9 +28,9 @@ import (
 
 // Defaults for the other Structs.
 type Defaults struct {
-	Service service.Defaults       `yaml:"service,omitempty" json:"service,omitempty"`
-	Notify  shoutrrr.SliceDefaults `yaml:"notify,omitempty" json:"notify,omitempty"`
-	WebHook webhook.Defaults       `yaml:"webhook,omitempty" json:"webhook,omitempty"`
+	Service service.Defaults       `json:"service,omitempty" yaml:"service,omitempty"`
+	Notify  shoutrrr.SliceDefaults `json:"notify,omitempty" yaml:"notify,omitempty"`
+	WebHook webhook.Defaults       `json:"webhook,omitempty" yaml:"webhook,omitempty"`
 }
 
 // String returns a string representation of the Defaults.
@@ -83,11 +83,14 @@ func (d *Defaults) CheckValues(prefix string) error {
 	var errs []error
 
 	// Service.
-	util.AppendCheckError(&errs, prefix, "service", d.Service.CheckValues(itemPrefix))
+	util.AppendCheckError(&errs, prefix, "service",
+		d.Service.CheckValues(itemPrefix))
 	// Notify.
-	util.AppendCheckError(&errs, prefix, "notify", d.Notify.CheckValues(itemPrefix))
+	util.AppendCheckError(&errs, prefix, "notify",
+		d.Notify.CheckValues(itemPrefix))
 	// WebHook.
-	util.AppendCheckError(&errs, prefix, "webhook", d.WebHook.CheckValues(itemPrefix))
+	util.AppendCheckError(&errs, prefix, "webhook",
+		d.WebHook.CheckValues(itemPrefix))
 
 	if len(errs) == 0 {
 		return nil
@@ -104,5 +107,6 @@ func (d *Defaults) Print(prefix string) {
 	if str == "{}\n" {
 		delim = " "
 	}
-	fmt.Printf("%sdefaults:%s%s", prefix, delim, str)
+	fmt.Printf("%sdefaults:%s%s",
+		prefix, delim, str)
 }

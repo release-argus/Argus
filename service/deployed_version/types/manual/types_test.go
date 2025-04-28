@@ -336,7 +336,7 @@ func TestString(t *testing.T) {
 	lookup.Status.SetDeployedVersion(
 		lookup.Status.DeployedVersion(), time.Now().Add(-time.Minute).UTC().Format(time.RFC3339),
 		false)
-	lookup.Status.ServiceID = test.StringPtr("TestString")
+	lookup.Status.ServiceInfo.ID = "TestString"
 	tests := map[string]struct {
 		lookup *Lookup
 		want   string
@@ -344,7 +344,8 @@ func TestString(t *testing.T) {
 		"empty": {
 			lookup: test.IgnoreError(t, func() (*Lookup, error) {
 				l := Lookup{}
-				l.Status = &status.Status{ServiceID: test.StringPtr("empty")}
+				l.Status = &status.Status{}
+				l.Status.ServiceInfo.ID = "empty"
 				return &l, nil
 			}),
 			want: "{}",
@@ -358,7 +359,7 @@ func TestString(t *testing.T) {
 					opt.New(
 						nil, "1h2m3s", nil,
 						lookup.Options.Defaults, lookup.Options.HardDefaults),
-					lookup.Status.Copy(),
+					lookup.Status.Copy(true),
 					&base.Defaults{},
 					&base.Defaults{
 						AllowInvalidCerts: test.BoolPtr(false)})
@@ -376,7 +377,7 @@ func TestString(t *testing.T) {
 					opt.New(
 						nil, "", test.BoolPtr(false),
 						lookup.Options.Defaults, lookup.Options.HardDefaults),
-					lookup.Status.Copy(),
+					lookup.Status.Copy(true),
 					&base.Defaults{},
 					&base.Defaults{
 						AllowInvalidCerts: test.BoolPtr(false)})

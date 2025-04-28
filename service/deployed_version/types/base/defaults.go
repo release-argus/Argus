@@ -21,9 +21,9 @@ import (
 
 // Defaults are the default values for a Lookup.
 type Defaults struct {
-	AllowInvalidCerts *bool `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
+	AllowInvalidCerts *bool `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
 
-	Options *opt.Defaults `yaml:"-" json:"-"` // Options for the Lookup.
+	Options *opt.Defaults `json:"-" yaml:"-"` // Options for the Lookup.
 }
 
 // Default sets this Defaults to the default values.

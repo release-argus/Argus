@@ -105,7 +105,11 @@ func (c *Config) Load(file string, flagset *map[string]bool) {
 	for _, svc := range c.Service {
 		svc.Status = *status.New(
 			nil, c.DatabaseChannel, c.SaveChannel,
-			"", "", "", "", "", "")
+			"",
+			"", "",
+			"", "",
+			"",
+			nil)
 	}
 	c.HardDefaults.Service.Status.DatabaseChannel = c.DatabaseChannel
 	c.HardDefaults.Service.Status.SaveChannel = c.SaveChannel

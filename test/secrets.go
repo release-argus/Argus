@@ -17,7 +17,6 @@
 package test
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -34,45 +33,45 @@ func ShoutrrrGotifyToken() (token string) {
 var ValidCertNoProtocol = "valid.release-argus.io"
 var InvalidCertNoProtocol = "invalid.release-argus.io"
 
-var ValidCertHTTPS = fmt.Sprintf("https://%s", ValidCertNoProtocol)
-var InvalidCertHTTPS = fmt.Sprintf("https://%s", InvalidCertNoProtocol)
+var ValidCertHTTPS = "https://" + ValidCertNoProtocol
+var InvalidCertHTTPS = "https://" + InvalidCertNoProtocol
 
 var LookupPlain = map[string]string{
-	"url_valid":   fmt.Sprintf("%s/plain", ValidCertHTTPS),
-	"url_invalid": fmt.Sprintf("%s/plain", InvalidCertHTTPS)}
+	"url_valid":   ValidCertHTTPS + "/plain",
+	"url_invalid": InvalidCertHTTPS + "/plain"}
 
 var LookupPlainPOST = map[string]string{
-	"url_valid":   fmt.Sprintf("%s/plain_post", ValidCertHTTPS),
-	"url_invalid": fmt.Sprintf("%s/plain_post", InvalidCertHTTPS),
+	"url_valid":   ValidCertHTTPS + "/plain_post",
+	"url_invalid": InvalidCertHTTPS + "/plain_post",
 	"data_pass":   `{"argus":"test"}`,
 	"data_fail":   `{"argus":"test-"}`}
 
 var LookupHeader = map[string]string{
-	"url_valid":                  fmt.Sprintf("%s/header", ValidCertHTTPS),
-	"url_invalid":                fmt.Sprintf("%s/header", InvalidCertHTTPS),
+	"url_valid":                  ValidCertHTTPS + "/header",
+	"url_invalid":                InvalidCertHTTPS + "/header",
 	"header_key_pass":            "X-Version-Here",
 	"header_key_pass_mixed_case": "x-VeRSioN-HERe",
 	"header_key_fail":            "X-Version-Foo"}
 
 var LookupJSON = map[string]string{
-	"url_valid":   fmt.Sprintf("%s/json", ValidCertHTTPS),
-	"url_invalid": fmt.Sprintf("%s/json", InvalidCertHTTPS)}
+	"url_valid":   ValidCertHTTPS + "/json",
+	"url_invalid": InvalidCertHTTPS + "/json"}
 
 var LookupGitHub = map[string]string{
-	"url_valid":   fmt.Sprintf("%s/hooks/github-style", ValidCertHTTPS),
-	"url_invalid": fmt.Sprintf("%s/hooks/github-style", InvalidCertHTTPS),
+	"url_valid":   ValidCertHTTPS + "/hooks/github-style",
+	"url_invalid": InvalidCertHTTPS + "/hooks/github-style",
 	"secret_pass": "argus",
 	"secret_fail": "argus-"}
 
 var LookupWithHeaderAuth = map[string]string{
-	"url_valid":         fmt.Sprintf("%s/hooks/single-header", ValidCertHTTPS),
-	"url_invalid":       fmt.Sprintf("%s/hooks/single-header", InvalidCertHTTPS),
+	"url_valid":         ValidCertHTTPS + "/hooks/single-header",
+	"url_invalid":       InvalidCertHTTPS + "/hooks/single-header",
 	"header_key":        "X-Test",
 	"header_value_pass": "secret",
 	"header_value_fail": "secret-"}
 
 var LookupBasicAuth = map[string]string{
-	"url_valid":   fmt.Sprintf("%s/basic-auth", ValidCertHTTPS),
-	"url_invalid": fmt.Sprintf("%s/basic-auth", InvalidCertHTTPS),
+	"url_valid":   ValidCertHTTPS + "/basic-auth",
+	"url_invalid": InvalidCertHTTPS + "/basic-auth",
 	"username":    "test",
 	"password":    "123"}

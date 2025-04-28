@@ -22,12 +22,67 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"gopkg.in/yaml.v3"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/dashboard"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/web/metric"
 )
+
+func TestStatus_Unmarshal(t *testing.T) {
+	// GIVEN a Status.
+	tests := map[string]struct {
+		format string
+	}{
+		"YAML": {
+			format: "YAML",
+		},
+		"JSON": {
+			format: "JSON",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN UnmarshalX is called on the Status.
+			var status Status
+			if tc.format == "YAML" {
+				var node yaml.Node
+				status.UnmarshalYAML(&node)
+			} else if tc.format == "JSON" {
+				status.UnmarshalJSON([]byte(""))
+			}
+
+			// THEN the mutex is correctly handed to the ServiceInfo.
+			_ = status.GetServiceInfo()
+			// AND when the mutex is locked, GetServiceInfo is held.
+			unlockedAtChan := make(chan time.Time, 1)
+			gotServiceInfoAtChan := make(chan time.Time, 1)
+			status.mutex.Lock()
+			go func() {
+				status.GetServiceInfo()
+				gotServiceInfoAtChan <- time.Now()
+			}()
+			go func() {
+				time.Sleep(100 * time.Millisecond)
+				status.mutex.Unlock()
+				unlockedAtChan <- time.Now()
+			}()
+			unlockedAt := <-unlockedAtChan
+			gotServiceInfoAt := <-gotServiceInfoAtChan
+			if gotServiceInfoAt.Before(unlockedAt) {
+				t.Errorf("%s\nGetServiceInfo was not held while mutex was locked!\n"+
+					"want: %v\ngot:  %v",
+					packageName, gotServiceInfoAt, unlockedAt)
+			}
+		})
+	}
+}
 
 func TestStatus_Init(t *testing.T) {
 	// GIVEN we have a Status.
@@ -63,19 +118,15 @@ func TestStatus_Init(t *testing.T) {
 			// WHEN Init is called.
 			status.Init(
 				tc.shoutrrrs, tc.commands, tc.webhooks,
-				&tc.serviceID, &name,
-				&tc.webURL)
+				tc.serviceID, name, "",
+				&dashboard.Options{
+					WebURL: tc.webURL})
 
 			// THEN the Status is initialised as expected:
 			// 	ServiceID:
-			if status.ServiceID != &tc.serviceID {
+			if status.ServiceInfo.ID != tc.serviceID {
 				t.Errorf("%s\nServiceID address mismatch\n\nwant: %v\ngot:  %v",
-					packageName, &tc.serviceID, status.ServiceID)
-			}
-			// 	WebURL:
-			if status.WebURL != &tc.webURL {
-				t.Errorf("%s\nWebURL address mismatch\nwant: %v\ngot %v",
-					packageName, &tc.webURL, status.WebURL)
+					packageName, &tc.serviceID, status.ServiceInfo.ID)
 			}
 			// 	Shoutrrr:
 			want := 0
@@ -121,26 +172,75 @@ func TestStatus_Init(t *testing.T) {
 	}
 }
 
+func TestService_ServiceInfo(t *testing.T) {
+	// GIVEN a Status.
+	status := testStatus()
+
+	id := "test_id"
+	status.ServiceInfo.ID = id
+	name := "test_name"
+	status.ServiceInfo.Name = name
+	url := "https://example.com"
+	status.ServiceInfo.URL = url
+
+	icon := "https://example.com/icon"
+	status.Dashboard.Icon = icon
+	iconLinkTo := "https://example.com/icon_link"
+	status.Dashboard.IconLinkTo = iconLinkTo
+	webURL := "https://example.com/web"
+	status.Dashboard.WebURL = webURL
+
+	approvedVersion := "approved.version"
+	status.SetApprovedVersion(approvedVersion, false)
+	deployedVersion := "deployed.version"
+	status.SetDeployedVersion(deployedVersion, "", false)
+	latestVersion := "latest.version"
+	status.SetLatestVersion(latestVersion, "", false)
+
+	time.Sleep(10 * time.Millisecond)
+	time.Sleep(time.Second)
+
+	// When ServiceInfo is called on it.
+	got := status.GetServiceInfo()
+	want := serviceinfo.ServiceInfo{
+		ID:   id,
+		Name: name,
+		URL:  url,
+
+		Icon:       icon,
+		IconLinkTo: iconLinkTo,
+		WebURL:     webURL,
+
+		DeployedVersion: deployedVersion,
+		ApprovedVersion: approvedVersion,
+		LatestVersion:   latestVersion,
+	}
+
+	// THEN we get the correct ServiceInfo.
+	gotStr := util.ToJSONString(got)
+	wantStr := util.ToJSONString(want)
+	if gotStr != wantStr {
+		t.Errorf("%s\nwant: %#v\ngot:  %#v",
+			packageName, wantStr, gotStr)
+	}
+}
+
 func TestStatus_GetWebURL(t *testing.T) {
-	nilValue := "<nil>"
 	// GIVEN we have a Status.
 	latestVersion := "1.2.3"
 	tests := map[string]struct {
-		webURL *string
+		webURL string
 		want   string
 	}{
-		"nil string": {
-			webURL: nil,
-			want:   nilValue},
 		"empty string": {
-			webURL: test.StringPtr(""),
-			want:   nilValue},
+			webURL: "",
+			want:   ""},
 		"string without templating": {
-			webURL: test.StringPtr("https://something.com/somewhere"),
-			want:   "https://something.com/somewhere"},
+			webURL: "https://example.com/somewhere",
+			want:   "https://example.com/somewhere"},
 		"string with templating": {
-			webURL: test.StringPtr("https://something.com/somewhere/{{ version }}"),
-			want:   "https://something.com/somewhere/" + latestVersion},
+			webURL: "https://example.com/somewhere/{{ version }}",
+			want:   "https://example.com/somewhere/" + latestVersion},
 	}
 
 	for name, tc := range tests {
@@ -150,18 +250,18 @@ func TestStatus_GetWebURL(t *testing.T) {
 			status := Status{}
 			status.Init(
 				0, 0, 0,
-				&name, &name,
-				tc.webURL)
+				name, name, "",
+				&dashboard.Options{
+					WebURL: tc.webURL})
 			status.SetLatestVersion(latestVersion, "", false)
 
 			// WHEN GetWebURL is called.
 			got := status.GetWebURL()
 
 			// THEN the returned WebURL is as expected.
-			gotStr := util.DereferenceOrNilValue(got, nilValue)
-			if gotStr != tc.want {
+			if got != tc.want {
 				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, gotStr)
+					packageName, tc.want, got)
 			}
 		})
 	}
@@ -232,11 +332,13 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 				tc.hadApprovedVersion,
 				"", "",
 				"", "",
-				"")
+				"",
+				&dashboard.Options{
+					WebURL: "https://example.com"})
 			status.Init(
 				0, 0, 0,
-				test.StringPtr("TestStatus_SetApprovedVersion_"+name), test.StringPtr("TestStatus_SetApprovedVersion_"+name),
-				test.StringPtr("https://example.com"))
+				"TestStatus_SetApprovedVersion_"+name, "TestStatus_SetApprovedVersion_"+name, "",
+				status.Dashboard)
 			status.SetLatestVersion(latestVersion, "", false)
 			status.SetDeployedVersion(deployedVersion, "", false)
 
@@ -273,7 +375,7 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 					packageName, tc.wantMessages, len(*status.DatabaseChannel))
 			}
 			// AND LatestVersionIsDeployedVersion metric is updated.
-			gotMetric := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID))
+			gotMetric := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(status.ServiceInfo.ID))
 			if gotMetric != tc.latestVersionIsDeployedMetric {
 				t.Errorf("%s\nLatestVersionIsDeployedVersion metric mismatch\nwant: %f\ngot:  %f",
 					packageName, tc.latestVersionIsDeployedMetric, gotMetric)
@@ -391,14 +493,16 @@ func TestStatus_DeployedVersion(t *testing.T) {
 					tc.had.approvedVersion,
 					tc.had.deployedVersion, tc.had.deployedVersionTimestamp,
 					tc.had.latestVersion, "",
-					"")
+					"",
+					&dashboard.Options{
+						WebURL: "https://example.com"})
 				if !haveDB {
 					status.DatabaseChannel = nil
 				}
 				status.Init(
 					0, 0, 0,
-					&name, &name,
-					test.StringPtr("https://example.com"))
+					name, name, "",
+					status.Dashboard)
 
 				// WHEN SetDeployedVersion is called on it.
 				status.SetDeployedVersion(tc.args.version, tc.args.timestamp,
@@ -509,14 +613,16 @@ func TestStatus_LatestVersion(t *testing.T) {
 					"",
 					"", "",
 					tc.had.version, tc.had.timestamp,
-					lastQueried)
+					lastQueried,
+					&dashboard.Options{
+						WebURL: "https://example.com"})
 				if !haveDB {
 					status.DatabaseChannel = nil
 				}
 				status.Init(
 					0, 0, 0,
-					&name, &name,
-					test.StringPtr("https://example.com"))
+					name, name, "",
+					status.Dashboard)
 				if tc.want == nil {
 					tc.want = &tc.args
 				}
@@ -667,7 +773,11 @@ func TestStatus_SendAnnounce(t *testing.T) {
 			announceChannel := make(chan []byte, 4)
 			status := New(
 				&announceChannel, nil, nil,
-				"", "", "", "", "", "")
+				"",
+				"", "",
+				"", "",
+				"",
+				&dashboard.Options{})
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
 			}
@@ -713,7 +823,11 @@ func TestStatus_sendDatabase(t *testing.T) {
 			databaseChannel := make(chan dbtype.Message, 4)
 			status := New(
 				nil, &databaseChannel, nil,
-				"", "", "", "", "", "")
+				"",
+				"", "",
+				"", "",
+				"",
+				&dashboard.Options{})
 			if tc.nilChannel {
 				status.DatabaseChannel = nil
 			}
@@ -759,7 +873,11 @@ func TestStatus_SendSave(t *testing.T) {
 			saveChannel := make(chan bool, 4)
 			status := New(
 				nil, nil, &saveChannel,
-				"", "", "", "", "", "")
+				"",
+				"", "",
+				"", "",
+				"",
+				&dashboard.Options{})
 			if tc.nilChannel {
 				status.SaveChannel = nil
 			}
@@ -927,10 +1045,11 @@ func TestStatus_String(t *testing.T) {
 			regexMissesContent: 1,
 			regexMissesVersion: 2,
 			status: &Status{
-				approvedVersion:          "1.2.4",
-				deployedVersion:          "1.2.3",
+				ServiceInfo: serviceinfo.ServiceInfo{
+					ApprovedVersion: "1.2.4",
+					DeployedVersion: "1.2.3",
+					LatestVersion:   "1.2.4"},
 				deployedVersionTimestamp: "2022-01-01T01:01:02Z",
-				latestVersion:            "1.2.4",
 				latestVersionTimestamp:   "2022-01-01T01:01:01Z",
 				lastQueried:              "2022-01-01T01:01:01Z",
 				Fails: Fails{
@@ -1042,11 +1161,13 @@ func TestStatus_SetLatestVersionIsDeployedMetric(t *testing.T) {
 				tc.approvedVersion,
 				tc.deployedVersion, testStatus().deployedVersionTimestamp,
 				tc.latestVersion, "",
-				"")
+				"",
+				&dashboard.Options{
+					WebURL: "https://example.com"})
 			status.Init(
 				0, 0, 0,
-				&name, &name,
-				test.StringPtr("https://example.com"))
+				name, name, "",
+				status.Dashboard)
 
 			// WHEN setLatestVersion is called on it.
 			status.setLatestVersionIsDeployedMetric()
@@ -1118,11 +1239,13 @@ func TestStatus_InitMetrics_DeleteMetrics(t *testing.T) {
 				tc.versions.approvedVersion,
 				tc.versions.deployedVersion, "",
 				tc.versions.latestVersion, "",
-				"")
+				"",
+				&dashboard.Options{
+					WebURL: "https://example.com"})
 			status.Init(
 				0, 0, 0,
-				&name, &name,
-				test.StringPtr("https://example.com"))
+				name, name, "",
+				status.Dashboard)
 			var updatesCurrentAvailableDelta float64
 			var updatesCurrentSkippedDelta float64
 			switch tc.latestVersionIsDeployed {
@@ -1140,7 +1263,7 @@ func TestStatus_InitMetrics_DeleteMetrics(t *testing.T) {
 
 			// THEN the metrics are created.
 			want := tc.latestVersionIsDeployed
-			got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID))
+			got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(status.ServiceInfo.ID))
 			if got != want {
 				t.Errorf("%s\nLatestVersionIsDeployed mismatch after InitMetrics()\nwant: %f\ngot:  %f",
 					packageName, want, got)
@@ -1167,7 +1290,7 @@ func TestStatus_InitMetrics_DeleteMetrics(t *testing.T) {
 
 			// THEN the metrics are deleted.
 			want = 0
-			got = testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID))
+			got = testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(status.ServiceInfo.ID))
 			if got != want {
 				t.Errorf("%s\nLatestVersionIsDeployed mismatch after DeleteMetrics()\nwant: %f\ngot:  %f",
 					packageName, want, got)
@@ -1227,48 +1350,79 @@ func TestStatus_Copy(t *testing.T) {
 	lastQueried := "2023-01-03T00:00:00Z"
 	status := New(
 		&announceChannel, &databaseChannel, &saveChannel,
-		approvedVersion, deployedVersion, deployedVersionTimestamp,
-		latestVersion, latestVersionTimestamp, lastQueried)
+		approvedVersion,
+		deployedVersion, deployedVersionTimestamp,
+		latestVersion, latestVersionTimestamp,
+		lastQueried,
+		&dashboard.Options{})
 
-	// WHEN Copy is called on it.
-	copiedStatus := status.Copy()
+	tests := map[string]struct {
+		copyChannels bool
+	}{
+		"copy channels":       {copyChannels: true},
+		"don't copy channels": {copyChannels: false},
+	}
 
-	// THEN the copied Status should have the same values as the original.
-	if copiedStatus.AnnounceChannel != status.AnnounceChannel {
-		t.Errorf("%s\nAnnounceChannel not copied correctly\nwant: %v\ngot:  %v",
-			packageName, status.AnnounceChannel, copiedStatus.AnnounceChannel)
-	}
-	if copiedStatus.DatabaseChannel != status.DatabaseChannel {
-		t.Errorf("%s\nDatabaseChannel not copied correctly\nwant: %v\ngot:  %v",
-			packageName, status.DatabaseChannel, copiedStatus.DatabaseChannel)
-	}
-	if copiedStatus.SaveChannel != status.SaveChannel {
-		t.Errorf("%s\nSaveChannel not copied correctly\nwant: %v\ngot:  %v",
-			packageName, status.SaveChannel, copiedStatus.SaveChannel)
-	}
-	if copiedStatus.approvedVersion != status.approvedVersion {
-		t.Errorf("%s\napprovedVersion not copied correctly\nwant: %v\ngot:  %v",
-			packageName, status.approvedVersion, copiedStatus.approvedVersion)
-	}
-	if copiedStatus.deployedVersion != status.deployedVersion {
-		t.Errorf("%s\ndeployedVersion not copied correctly\nwant: %v\ngot:  %v",
-			packageName, status.deployedVersion, copiedStatus.deployedVersion)
-	}
-	if copiedStatus.deployedVersionTimestamp != status.deployedVersionTimestamp {
-		t.Errorf("%s\ndeployedVersionTimestamp not copied correctly\nwant: %v\ngot:  %v",
-			packageName, status.deployedVersionTimestamp, copiedStatus.deployedVersionTimestamp)
-	}
-	if copiedStatus.latestVersion != status.latestVersion {
-		t.Errorf("%s\nlatestVersion not copied correctly\nwant: %v\ngot:  %v",
-			packageName, status.latestVersion, copiedStatus.latestVersion)
-	}
-	if copiedStatus.latestVersionTimestamp != status.latestVersionTimestamp {
-		t.Errorf("%s\nlatestVersionTimestamp not copied correctly\nwant: %v\ngot:  %v",
-			packageName, status.latestVersionTimestamp, copiedStatus.latestVersionTimestamp)
-	}
-	if copiedStatus.lastQueried != status.lastQueried {
-		t.Errorf("%s\nlastQueried not copied correctly\nwant: %v\ngot:  %v",
-			packageName, status.lastQueried, copiedStatus.lastQueried)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN Copy is called on it.
+			copiedStatus := status.Copy(tc.copyChannels)
+
+			// THEN the copied Status should have the same values as the original.
+			if copiedStatus.ServiceInfo.ApprovedVersion != status.ServiceInfo.ApprovedVersion {
+				t.Errorf("%s\nApprovedVersion not copied correctly\nwant: %v\ngot:  %v",
+					packageName, status.ServiceInfo.ApprovedVersion, copiedStatus.ServiceInfo.ApprovedVersion)
+			}
+			if copiedStatus.ServiceInfo.DeployedVersion != status.ServiceInfo.DeployedVersion {
+				t.Errorf("%s\nSeployedVersion not copied correctly\nwant: %v\ngot:  %v",
+					packageName, status.ServiceInfo.DeployedVersion, copiedStatus.ServiceInfo.DeployedVersion)
+			}
+			if copiedStatus.deployedVersionTimestamp != status.deployedVersionTimestamp {
+				t.Errorf("%s\ndeployedVersionTimestamp not copied correctly\nwant: %v\ngot:  %v",
+					packageName, status.deployedVersionTimestamp, copiedStatus.deployedVersionTimestamp)
+			}
+			if copiedStatus.ServiceInfo.LatestVersion != status.ServiceInfo.LatestVersion {
+				t.Errorf("%s\nLatestVersion not copied correctly\nwant: %v\ngot:  %v",
+					packageName, status.ServiceInfo.LatestVersion, copiedStatus.ServiceInfo.LatestVersion)
+			}
+			if copiedStatus.latestVersionTimestamp != status.latestVersionTimestamp {
+				t.Errorf("%s\nlatestVersionTimestamp not copied correctly\nwant: %v\ngot:  %v",
+					packageName, status.latestVersionTimestamp, copiedStatus.latestVersionTimestamp)
+			}
+			if copiedStatus.lastQueried != status.lastQueried {
+				t.Errorf("%s\nlastQueried not copied correctly\nwant: %v\ngot:  %v",
+					packageName, status.lastQueried, copiedStatus.lastQueried)
+			}
+
+			// AND the channels are only copied over if copyChannels is true.
+			if tc.copyChannels {
+				if copiedStatus.AnnounceChannel != status.AnnounceChannel {
+					t.Errorf("%s\nAnnounceChannel not copied correctly\nwant: %v\ngot:  %v",
+						packageName, status.AnnounceChannel, copiedStatus.AnnounceChannel)
+				}
+				if copiedStatus.DatabaseChannel != status.DatabaseChannel {
+					t.Errorf("%s\nDatabaseChannel not copied correctly\nwant: %v\ngot:  %v",
+						packageName, status.DatabaseChannel, copiedStatus.DatabaseChannel)
+				}
+				if copiedStatus.SaveChannel != status.SaveChannel {
+					t.Errorf("%s\nSaveChannel not copied correctly\nwant: %v\ngot:  %v",
+						packageName, status.SaveChannel, copiedStatus.SaveChannel)
+				}
+			} else {
+				if copiedStatus.AnnounceChannel != nil {
+					t.Errorf("%s\nAnnounceChannel should not be copied\nwant: nil\ngot:  %v",
+						packageName, copiedStatus.AnnounceChannel)
+				}
+				if copiedStatus.DatabaseChannel != nil {
+					t.Errorf("%s\nDatabaseChannel should not be copied\nwant: nil\ngot:  %v",
+						packageName, copiedStatus.DatabaseChannel)
+				}
+				if copiedStatus.SaveChannel != nil {
+					t.Errorf("%s\nSaveChannel should not be copied\nwant: nil\ngot:  %v",
+						packageName, copiedStatus.SaveChannel)
+				}
+			}
+		})
 	}
 }
 
@@ -1277,7 +1431,11 @@ func TestStatus_SetAnnounceChannel(t *testing.T) {
 	initialChannel := make(chan []byte, 4)
 	status := New(
 		&initialChannel, nil, nil,
-		"", "", "", "", "", "")
+		"",
+		"", "",
+		"", "",
+		"",
+		&dashboard.Options{})
 
 	// WHEN SetAnnounceChannel is called with a new channel.
 	newChannel := make(chan []byte, 4)
@@ -1410,14 +1568,16 @@ func TestStatus_SameVersions(t *testing.T) {
 				tc.status1.approvedVersion,
 				tc.status1.deployedVersion, "",
 				tc.status1.latestVersion, "",
-				"")
+				"",
+				&dashboard.Options{})
 
 			status2 := New(
 				nil, nil, nil,
 				tc.status2.approvedVersion,
 				tc.status2.deployedVersion, "",
 				tc.status2.latestVersion, "",
-				"")
+				"",
+				&dashboard.Options{})
 
 			// WHEN comparing versions.
 			result := status1.SameVersions(status2)
@@ -1581,7 +1741,8 @@ func TestUpdateUpdatesCurrent(t *testing.T) {
 				tc.newVersions.approvedVersion,
 				tc.newVersions.deployedVersion, "",
 				tc.newVersions.latestVersion, "",
-				"")
+				"",
+				&dashboard.Options{})
 			hadUpdatesCurrentAvailable := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE"))
 			hadUpdatesCurrentSkipped := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED"))
 

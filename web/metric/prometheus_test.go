@@ -271,7 +271,10 @@ func TestMetricsAndVersionState(t *testing.T) {
 			InitMetrics()
 
 			// WHEN GetVersionDeployedState is called.
-			state := GetVersionDeployedState(tc.approvedVersion, tc.latestVersion, tc.deployedVersion)
+			state := GetVersionDeployedState(
+				tc.approvedVersion,
+				tc.latestVersion,
+				tc.deployedVersion)
 
 			// THEN the returned state should match the expected state.
 			if state != tc.expectedState {

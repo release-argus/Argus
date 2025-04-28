@@ -26,6 +26,7 @@ import (
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
@@ -1545,13 +1546,12 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		newService := &Service{Notify: tc.notify}
 		newService.Status.Init(
 			len(newService.Notify), len(newService.Command), len(newService.WebHook),
-			&name, nil,
-			nil)
+			name, "", "",
+			&dashboard.Options{})
 		// Give empty defaults and hardDefaults to the NotifySlice.
 		newService.Notify.Init(
 			&newService.Status,
-			&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-		)
+			&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{})
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -2098,8 +2098,8 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			// New Service Status.Fails.
 			newService.Status.Init(
 				len(newService.Notify), len(newService.Command), len(newService.WebHook),
-				&newService.ID, nil,
-				nil)
+				newService.ID, "", "",
+				&newService.Dashboard)
 			newService.Init(
 				&Defaults{}, &Defaults{},
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
@@ -2110,8 +2110,8 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				otherServiceStatus := status.Status{}
 				otherServiceStatus.Init(
 					len(tc.otherWebhook), 0, 0,
-					test.StringPtr("otherService"), nil,
-					nil)
+					"otherService", "", "",
+					&dashboard.Options{})
 				tc.otherWebhook.Init(
 					&otherServiceStatus,
 					&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
@@ -2203,13 +2203,13 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, "", nil, nil, nil, nil, nil,
 						"bar",
 						nil, "",
-						"http://foo.com",
+						"https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
 						"foo",
 						nil, "",
-						"http://bar.com",
+						"https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -2254,13 +2254,13 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, "", nil, nil, nil, nil, nil,
 						"bar",
 						nil, "",
-						"http://bar.com",
+						"https://example.com/bar",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
 						"foo",
 						nil, "",
-						"http://foo.com",
+						"https://example.com/foo",
 						nil, nil, nil)},
 			},
 			secretRefs: oldSecretRefs{},
@@ -2306,13 +2306,13 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, "", nil, nil, nil, nil, nil,
 						"bar",
 						nil, "",
-						"http://foo.com",
+						"https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
 						"foo",
 						nil, "",
-						"http://bar.com",
+						"https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -2385,13 +2385,13 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, "", nil, nil, nil, nil, nil,
 						util.SecretValue,
 						nil, "",
-						"http://foo.com",
+						"https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
 						util.SecretValue,
 						nil, "",
-						"http://bar.com",
+						"https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -2438,13 +2438,13 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, "", nil, nil, nil, nil, nil,
 						util.SecretValue,
 						nil, "",
-						"http://foo.com",
+						"https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
 						util.SecretValue,
 						nil, "",
-						"http://bar.com",
+						"https://example.com/bar",
 						nil, nil, nil)},
 			},
 		},
@@ -2492,13 +2492,13 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, "", nil, nil, nil, nil, nil,
 						util.SecretValue,
 						nil, "",
-						"http://foo.com",
+						"https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
 						util.SecretValue,
 						nil, "",
-						"http://bar.com",
+						"https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -2543,13 +2543,13 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, "", nil, nil, nil, nil, nil,
 						"foo",
 						nil, "",
-						"http://foo.com",
+						"https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
 						"bar",
 						nil, "",
-						"http://bar.com",
+						"https://example.com/bar",
 						nil, nil, nil)},
 			},
 			webhookTests: webhookTests{
@@ -2599,13 +2599,13 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, "", nil, nil, nil, nil, nil,
 						util.SecretValue,
 						nil, "",
-						"http://foo.com",
+						"https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
 						util.SecretValue,
 						nil, "",
-						"http://bar.com",
+						"https://example.com/bar",
 						nil, nil, nil)},
 			},
 		},
@@ -2658,13 +2658,13 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, "", nil, nil, nil, nil, nil,
 						util.SecretValue,
 						nil, "",
-						"http://foo.com",
+						"https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
 						util.SecretValue,
 						nil, "",
-						"http://bar.com",
+						"https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -2716,13 +2716,13 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, "", nil, nil, nil, nil, nil,
 						"foo",
 						nil, "",
-						"http://foo.com",
+						"https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
 						"bar",
 						nil, "",
-						"http://bar.com",
+						"https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -2779,13 +2779,13 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, "", nil, nil, nil, nil, nil,
 						"foo",
 						nil, "",
-						"http://foo.com",
+						"https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
 						"bar",
 						nil, "",
-						"http://bar.com",
+						"https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -3025,7 +3025,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				WebHook: webhook.Slice{
 					"test": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"http://example.com",
+						"https://example.com",
 						nil, nil, nil),
 				},
 			},
@@ -3041,7 +3041,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				WebHook: webhook.Slice{
 					"test": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"http://example.com",
+						"https://example.com",
 						nil, nil, nil),
 				},
 			},
@@ -3061,7 +3061,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				WebHook: webhook.Slice{
 					"test": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"http://example.com",
+						"https://example.com",
 						nil, nil, nil),
 				},
 			},
@@ -3085,7 +3085,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				WebHook: webhook.Slice{
 					"test": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"http://example.com/other",
+						"https://example.com/other",
 						nil, nil, nil)},
 			},
 			oldService: &Service{
@@ -3100,7 +3100,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				WebHook: webhook.Slice{
 					"test": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"http://example.com",
+						"https://example.com",
 						nil, nil, nil)},
 			},
 			secretRefs: oldSecretRefs{},
@@ -3116,7 +3116,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				WebHook: webhook.Slice{
 					"test": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"http://example.com/other",
+						"https://example.com/other",
 						nil, nil, nil)},
 			},
 			webhookTests: webhookTests{
@@ -3743,7 +3743,7 @@ func TestFromPayload(t *testing.T) {
 					"active": true}}`,
 			// Defaults as otherwise everything will be zero, so won't print.
 			want: &Service{
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				Dashboard: dashboard.Options{Defaults: &dashboard.OptionsDefaults{}},
 				Options: opt.Options{
 					Active:   nil,
 					Defaults: &opt.Defaults{}},
@@ -3756,7 +3756,7 @@ func TestFromPayload(t *testing.T) {
 					"active": null}}`,
 			// Defaults as otherwise everything will be zero, so won't print.
 			want: &Service{
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				Dashboard: dashboard.Options{Defaults: &dashboard.OptionsDefaults{}},
 				Options: opt.Options{
 					Active:   nil,
 					Defaults: &opt.Defaults{}},
@@ -3769,7 +3769,7 @@ func TestFromPayload(t *testing.T) {
 					"active": false}}`,
 			// Defaults as otherwise everything will be zero, so won't print.
 			want: &Service{
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				Dashboard: dashboard.Options{Defaults: &dashboard.OptionsDefaults{}},
 				Options: opt.Options{
 					Active:   test.BoolPtr(false),
 					Defaults: &opt.Defaults{}},
@@ -3785,7 +3785,7 @@ func TestFromPayload(t *testing.T) {
 							"type": "ghcr"}}}}`,
 			want: &Service{
 				Options:   opt.Options{Defaults: &opt.Defaults{}},
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				Dashboard: dashboard.Options{Defaults: &dashboard.OptionsDefaults{}},
 				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
 					return latestver.New(
 						"github",
@@ -3821,7 +3821,7 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						&latestver_base.Defaults{}, &latestver_base.Defaults{})
 				}),
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				Dashboard: dashboard.Options{Defaults: &dashboard.OptionsDefaults{}},
 			},
 			errRegex: `^$`,
 		},
@@ -3843,7 +3843,7 @@ func TestFromPayload(t *testing.T) {
 			},
 			want: &Service{
 				Options:   opt.Options{Defaults: &opt.Defaults{}},
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				Dashboard: dashboard.Options{Defaults: &dashboard.OptionsDefaults{}},
 				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
 					return latestver.New(
 						"github",
@@ -3900,7 +3900,7 @@ func TestFromPayload(t *testing.T) {
 						{"key": "X-Foo", "value": "` + util.SecretValue + `", "oldIndex": 0}]}}`,
 			want: &Service{
 				Options:   opt.Options{Defaults: &opt.Defaults{}},
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				Dashboard: dashboard.Options{Defaults: &dashboard.OptionsDefaults{}},
 				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
 					return latestver.New(
 						"github",
@@ -4020,7 +4020,7 @@ func TestFromPayload(t *testing.T) {
 						"oldIndex": "teams-initial"}}}`,
 			want: &Service{
 				Options:   opt.Options{Defaults: &opt.Defaults{}},
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				Dashboard: dashboard.Options{Defaults: &dashboard.OptionsDefaults{}},
 				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
 					return latestver.New(
 						"github",
@@ -4270,7 +4270,7 @@ func TestFromPayload(t *testing.T) {
 						"oldIndex": "gitlab-initial"}}}}`,
 			want: &Service{
 				Options:   opt.Options{Defaults: &opt.Defaults{}},
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				Dashboard: dashboard.Options{Defaults: &dashboard.OptionsDefaults{}},
 				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
 					return latestver.New(
 						"github",

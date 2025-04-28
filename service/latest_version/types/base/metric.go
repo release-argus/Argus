@@ -24,17 +24,18 @@ import (
 // InitMetrics for this Lookup.
 func (l *Lookup) InitMetrics(parentLookup Interface) {
 	lookupType := parentLookup.GetType()
+	serviceID := l.GetServiceID()
 
 	// ############
 	// # Counters #
 	// ############
 	metric.InitPrometheusCounter(metric.LatestVersionQueryResultTotal,
-		*l.Status.ServiceID,
+		serviceID,
 		"",
 		lookupType,
 		"SUCCESS")
 	metric.InitPrometheusCounter(metric.LatestVersionQueryResultTotal,
-		*l.Status.ServiceID,
+		serviceID,
 		"",
 		lookupType,
 		"FAIL")
@@ -43,20 +44,27 @@ func (l *Lookup) InitMetrics(parentLookup Interface) {
 // DeleteMetrics for this Lookup.
 func (l *Lookup) DeleteMetrics(parentLookup Interface) {
 	lookupType := parentLookup.GetType()
+	serviceID := l.GetServiceID()
 
+	// ############
+	// #  Gauges  #
+	// ############
 	// Liveness.
 	metric.DeletePrometheusGauge(metric.LatestVersionQueryResultLast,
-		*l.Status.ServiceID,
+		serviceID,
 		lookupType,
 	)
-	// Counters.
+
+	// ############
+	// # Counters #
+	// ############
 	metric.DeletePrometheusCounter(metric.LatestVersionQueryResultTotal,
-		*l.Status.ServiceID,
+		serviceID,
 		"",
 		lookupType,
 		"SUCCESS")
 	metric.DeletePrometheusCounter(metric.LatestVersionQueryResultTotal,
-		*l.Status.ServiceID,
+		serviceID,
 		"",
 		lookupType,
 		"FAIL")
@@ -64,11 +72,13 @@ func (l *Lookup) DeleteMetrics(parentLookup Interface) {
 
 // QueryMetrics sets the Prometheus metrics for the LatestVersion query.
 func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
+	serviceID := l.GetServiceID()
+
 	// If it failed.
 	if err != nil {
 		// Increase failure count.
 		metric.IncPrometheusCounter(metric.LatestVersionQueryResultTotal,
-			l.GetServiceID(),
+			serviceID,
 			"",
 			parentLookup.GetType(),
 			"FAIL")
@@ -76,30 +86,30 @@ func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
 		switch e := err.Error(); {
 		case strings.HasPrefix(e, "no releases were found matching"):
 			metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
-				l.GetServiceID(), parentLookup.GetType(),
+				serviceID, parentLookup.GetType(),
 				2)
 		case strings.HasPrefix(e, "failed to convert") && strings.Contains(e, " semantic version."):
 			metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
-				l.GetServiceID(), parentLookup.GetType(),
+				serviceID, parentLookup.GetType(),
 				3)
 		case strings.HasPrefix(e, "queried version") && strings.Contains(e, " less than "):
 			metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
-				l.GetServiceID(), parentLookup.GetType(),
+				serviceID, parentLookup.GetType(),
 				4)
 		default:
 			metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
-				l.GetServiceID(), parentLookup.GetType(),
+				serviceID, parentLookup.GetType(),
 				0)
 		}
 		// If it succeeded.
 	} else {
 		metric.IncPrometheusCounter(metric.LatestVersionQueryResultTotal,
-			l.GetServiceID(),
+			serviceID,
 			"",
 			parentLookup.GetType(),
 			"SUCCESS")
 		metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
-			l.GetServiceID(), parentLookup.GetType(),
+			serviceID, parentLookup.GetType(),
 			1)
 	}
 }

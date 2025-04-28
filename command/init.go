@@ -59,6 +59,7 @@ func (c *Controller) InitMetrics() {
 	if c == nil {
 		return
 	}
+	serviceID := c.ServiceStatus.ServiceInfo.ID
 
 	// ############
 	// # Counters #
@@ -67,12 +68,12 @@ func (c *Controller) InitMetrics() {
 		name := cmd.String()
 		metric.InitPrometheusCounter(metric.CommandResultTotal,
 			name,
-			*c.ServiceStatus.ServiceID,
+			serviceID,
 			"",
 			"SUCCESS")
 		metric.InitPrometheusCounter(metric.CommandResultTotal,
 			name,
-			*c.ServiceStatus.ServiceID,
+			serviceID,
 			"",
 			"FAIL")
 	}
@@ -83,17 +84,21 @@ func (c *Controller) DeleteMetrics() {
 	if c == nil {
 		return
 	}
+	serviceID := c.ServiceStatus.ServiceInfo.ID
 
+	// ############
+	// # Counters #
+	// ############
 	for _, cmd := range *c.Command {
 		name := cmd.String()
 		metric.DeletePrometheusCounter(metric.CommandResultTotal,
 			name,
-			*c.ServiceStatus.ServiceID,
+			serviceID,
 			"",
 			"SUCCESS")
 		metric.DeletePrometheusCounter(metric.CommandResultTotal,
 			name,
-			*c.ServiceStatus.ServiceID,
+			serviceID,
 			"",
 			"FAIL")
 	}
@@ -153,7 +158,7 @@ func (c *Controller) SetExecuting(index int, executing bool) {
 	}
 
 	// Different times depending on pass/fail.
-	if !util.DereferenceOrNilValue(c.Failed.Get(index), true) {
+	if !util.DereferenceOrValue(c.Failed.Get(index), true) {
 		parentInterval, _ := time.ParseDuration(*c.ParentInterval)
 		c.nextRunnable[index] = time.Now().UTC().Add(2 * parentInterval)
 	} else {

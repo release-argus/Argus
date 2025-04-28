@@ -49,20 +49,20 @@ type Headers []Header
 
 // Base is the base struct for WebHook.
 type Base struct {
-	Type              string   `yaml:"type,omitempty" json:"type,omitempty"`                               // "github"/"url".
-	URL               string   `yaml:"url,omitempty" json:"url,omitempty"`                                 // "https://example.com".
-	AllowInvalidCerts *bool    `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
-	CustomHeaders     *Headers `yaml:"custom_headers,omitempty" json:"custom_headers,omitempty"`           // Custom Headers for the WebHook.
-	Secret            string   `yaml:"secret,omitempty" json:"secret,omitempty"`                           // 'SECRET'.
-	DesiredStatusCode *uint16  `yaml:"desired_status_code,omitempty" json:"desired_status_code,omitempty"` // e.g. 202.
-	Delay             string   `yaml:"delay,omitempty" json:"delay,omitempty"`                             // The delay before sending the WebHook.
-	MaxTries          *uint8   `yaml:"max_tries,omitempty" json:"max_tries,omitempty"`                     // Amount of times to attempt sending the WebHook until we receive the desired status code.
-	SilentFails       *bool    `yaml:"silent_fails,omitempty" json:"silent_fails,omitempty"`               // Whether to notify if this WebHook fails MaxTries times.
+	Type              string   `json:"type,omitempty" yaml:"type,omitempty"`                               // "github"/"url".
+	URL               string   `json:"url,omitempty" yaml:"url,omitempty"`                                 // "https://example.com".
+	AllowInvalidCerts *bool    `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
+	CustomHeaders     *Headers `json:"custom_headers,omitempty" yaml:"custom_headers,omitempty"`           // Custom Headers for the WebHook.
+	Secret            string   `json:"secret,omitempty" yaml:"secret,omitempty"`                           // 'SECRET'.
+	DesiredStatusCode *uint16  `json:"desired_status_code,omitempty" yaml:"desired_status_code,omitempty"` // e.g. 202.
+	Delay             string   `json:"delay,omitempty" yaml:"delay,omitempty"`                             // The delay before sending the WebHook.
+	MaxTries          *uint8   `json:"max_tries,omitempty" yaml:"max_tries,omitempty"`                     // Amount of times to attempt sending the WebHook until we receive the desired status code.
+	SilentFails       *bool    `json:"silent_fails,omitempty" yaml:"silent_fails,omitempty"`               // Whether to notify if this WebHook fails MaxTries times.
 }
 
 // Defaults are the default values for WebHook.
 type Defaults struct {
-	Base `yaml:",inline" json:",inline"`
+	Base `json:",inline" yaml:",inline"`
 }
 
 // NewDefaults returns a new Defaults.
@@ -131,21 +131,21 @@ func (s *SliceDefaults) String(prefix string) string {
 
 // WebHook to send for a new version.
 type WebHook struct {
-	Base `yaml:",inline" json:",inline"`
+	Base `json:",inline" yaml:",inline"`
 
-	ID string `yaml:"-" json:"-"` // Unique across the Slice.
+	ID string `json:"-" yaml:"-"` // Unique across the Slice.
 
 	mutex        sync.RWMutex         // Mutex for concurrent access.
-	Failed       *status.FailsWebHook `yaml:"-" json:"-"` // Whether the last send attempt failed.
+	Failed       *status.FailsWebHook `json:"-" yaml:"-"` // Whether the last send attempt failed.
 	nextRunnable time.Time            // Time at which the WebHook can next run (for staggering).
 
-	Notifiers      *Notifiers     `yaml:"-" json:"-"` // The Notifiers to notify on failures.
-	ServiceStatus  *status.Status `yaml:"-" json:"-"` // Status of the Service (used for templating vars, and the Announce channel).
-	ParentInterval *string        `yaml:"-" json:"-"` // Interval between the parent Service's queries.
+	Notifiers      *Notifiers     `json:"-" yaml:"-"` // The Notifiers to notify on failures.
+	ServiceStatus  *status.Status `json:"-" yaml:"-"` // Status of the Service (used for templating vars, and the Announce channel).
+	ParentInterval *string        `json:"-" yaml:"-"` // Interval between the parent Service's queries.
 
-	Main         *Defaults `yaml:"-" json:"-"` // The root Webhook (That this WebHook may override parts of).
-	Defaults     *Defaults `yaml:"-" json:"-"` // Default values.
-	HardDefaults *Defaults `yaml:"-" json:"-"` // Hardcoded default values.
+	Main         *Defaults `json:"-" yaml:"-"` // The root Webhook (That this WebHook may override parts of).
+	Defaults     *Defaults `json:"-" yaml:"-"` // Default values.
+	HardDefaults *Defaults `json:"-" yaml:"-"` // Hardcoded default values.
 }
 
 // New WebHook.
@@ -199,8 +199,8 @@ type Notifiers struct {
 
 // Header to use in the HTTP request.
 type Header struct {
-	Key   string `yaml:"key" json:"key"`     // Header key, e.g. X-Sig.
-	Value string `yaml:"value" json:"value"` // Value to give the key.
+	Key   string `json:"key" yaml:"key"`     // Header key, e.g. X-Sig.
+	Value string `json:"value" yaml:"value"` // Value to give the key.
 }
 
 // UnmarshalYAML and convert map[string]string to {key: "X", val: "Y"}.
@@ -218,11 +218,11 @@ func (h *Headers) UnmarshalYAML(value *yaml.Node) error {
 		return err //nolint:wrapcheck
 	}
 
-	// sort the map keys.
+	// Sort the map keys.
 	keys := util.SortedKeys(headersMap)
 	*h = make([]Header, 0, len(keys))
 
-	// convert map to list.
+	// Convert map to list.
 	for _, key := range keys {
 		*h = append(*h, Header{Key: key, Value: headersMap[key]})
 	}

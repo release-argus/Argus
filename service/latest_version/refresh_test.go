@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	github "github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
@@ -167,13 +168,13 @@ func TestLookup_Refresh(t *testing.T) {
 			if tc.previous != nil {
 				targetStatus.Init(
 					0, 0, 0,
-					&name, nil,
-					nil)
+					name, "", "",
+					&dashboard.Options{})
 				// Set the latest version.
 				if tc.latestVersion != "" {
 					targetStatus.SetLatestVersion(tc.latestVersion, "", false)
 				}
-				previousStatus = targetStatus.Copy()
+				previousStatus = targetStatus.Copy(true)
 			}
 
 			// WHEN we call Refresh.

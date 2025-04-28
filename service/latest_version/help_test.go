@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
 	github "github.com/release-argus/Argus/service/latest_version/types/github"
@@ -69,12 +70,16 @@ func testLookup(lookupType string, failing bool) Lookup {
 	databaseChannel := make(chan dbtype.Message, 5)
 	svcStatus := status.New(
 		&announceChannel, &databaseChannel, &saveChannel,
-		"", "", "", "", "", "")
+		"",
+		"", "",
+		"", "",
+		"",
+		&dashboard.Options{})
 	svcStatus.Init(
 		0, 0, 0,
-		test.StringPtr("serviceID"), nil,
-		test.StringPtr("http://example.com"),
-	)
+		"serviceID", "", "",
+		&dashboard.Options{
+			WebURL: "https://example.com"})
 
 	switch l := lookup.(type) {
 	case *github.Lookup:

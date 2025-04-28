@@ -72,7 +72,7 @@ func testYAML_NoServices(path string, t *testing.T) {
 		webhook:
 			default:
 				type: github
-				url: https://awx.main.com/api/v2/job_templates/XX/github/
+				url: https://awx.main.example.com/api/v2/job_templates/XX/github/
 				secret: YYYYmain
 				desired_status_code: 202
 				delay: 3s

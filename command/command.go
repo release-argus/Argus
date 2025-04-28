@@ -22,7 +22,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
@@ -34,10 +34,11 @@ func (c *Controller) Exec(logFrom logutil.LogFrom) error {
 		return nil
 	}
 
+	serviceInfo := c.ServiceStatus.GetServiceInfo()
 	errChan := make(chan error)
 	for index := range *c.Command {
 		go func(controller *Controller, index int) {
-			errChan <- controller.ExecIndex(logFrom, index)
+			errChan <- controller.ExecIndex(logFrom, index, serviceInfo)
 		}(c, index)
 
 		// Space out Command starts.
@@ -60,7 +61,11 @@ func (c *Controller) Exec(logFrom logutil.LogFrom) error {
 }
 
 // ExecIndex will execute the `Command` at the given index.
-func (c *Controller) ExecIndex(logFrom logutil.LogFrom, index int) error {
+func (c *Controller) ExecIndex(
+	logFrom logutil.LogFrom,
+	index int,
+	serviceInfo serviceinfo.ServiceInfo,
+) error {
 	if index >= len(*c.Command) {
 		return nil
 	}
@@ -68,7 +73,7 @@ func (c *Controller) ExecIndex(logFrom logutil.LogFrom, index int) error {
 	c.SetExecuting(index, true)
 
 	// Copy Command and apply Jinja templating.
-	command := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)
+	command := (*c.Command)[index].ApplyTemplate(serviceInfo)
 
 	// Execute.
 	err := command.Exec(logFrom)
@@ -78,7 +83,7 @@ func (c *Controller) ExecIndex(logFrom logutil.LogFrom, index int) error {
 	c.Failed.Set(index, err != nil)
 
 	// Announce.
-	c.AnnounceCommand(index)
+	c.AnnounceCommand(index, serviceInfo)
 
 	metricResult := "SUCCESS"
 	if failed {
@@ -86,14 +91,14 @@ func (c *Controller) ExecIndex(logFrom logutil.LogFrom, index int) error {
 		//#nosec G104 -- Errors are logged to CL
 		//nolint:errcheck // ^
 		c.Notifiers.Shoutrrr.Send(
-			fmt.Sprintf("Command failed for %q", *c.ServiceStatus.ServiceID),
+			fmt.Sprintf("Command failed for %q", serviceInfo.ID),
 			(*c.Command)[index].String()+"\n"+err.Error(),
-			util.ServiceInfo{ID: *c.ServiceStatus.ServiceID},
+			serviceInfo,
 			true)
 	}
 	metric.IncPrometheusCounter(metric.CommandResultTotal,
 		(*c.Command)[index].String(),
-		*c.ServiceStatus.ServiceID,
+		serviceInfo.ID,
 		"",
 		metricResult)
 
@@ -118,16 +123,10 @@ func (c *Command) Exec(logFrom logutil.LogFrom) error {
 	return err
 }
 
-// ApplyTemplate applies Jinja templating to the Command.
-func (c *Command) ApplyTemplate(serviceStatus *status.Status) Command {
-	// Can't template without serviceStatus.
-	if serviceStatus == nil {
-		return *c
-	}
-
+// ApplyTemplate applies Django templating to the Command.
+func (c *Command) ApplyTemplate(serviceInfo serviceinfo.ServiceInfo) Command {
 	command := Command(make([]string, len(*c)))
 	copy(command, *c)
-	serviceInfo := util.ServiceInfo{LatestVersion: serviceStatus.LatestVersion()}
 	for i, cmd := range command {
 		command[i] = util.TemplateString(cmd, serviceInfo)
 	}

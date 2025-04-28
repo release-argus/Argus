@@ -71,7 +71,8 @@ func newWebUI(cfg *config.Config) *mux.Router {
 func Run(cfg *config.Config) {
 	router := newWebUI(cfg)
 
-	listenAddress := fmt.Sprintf("%s:%s", cfg.Settings.WebListenHost(), cfg.Settings.WebListenPort())
+	listenAddress := fmt.Sprintf("%s:%s",
+		cfg.Settings.WebListenHost(), cfg.Settings.WebListenPort())
 	logutil.Log.Info("Listening on "+listenAddress+cfg.Settings.WebRoutePrefix(), logutil.LogFrom{}, true)
 
 	srv := &http.Server{

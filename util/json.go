@@ -102,7 +102,8 @@ func navigateJSON(jsonData *any, fullKey string) (string, error) {
 		case []any:
 			// Parse the index from the key.
 			index, ok := key.(int)
-			fmt.Printf("index: %v, ok: %t, key: %v\n", index, ok, key)
+			fmt.Printf("index: %v, ok: %t, key: %v\n",
+				index, ok, key)
 			if !ok {
 				return "", fmt.Errorf("got an array, but the key is not an integer index: %q at %v",
 					key, parsedJSON)

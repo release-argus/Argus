@@ -33,19 +33,19 @@ var supportedMethods = []string{"GET", "POST"}
 
 // Lookup is a web-based lookup type.
 type Lookup struct {
-	base.Lookup `yaml:",inline" json:",inline"` // Base struct for a Lookup.
+	base.Lookup `json:",inline" yaml:",inline"` // Base struct for a Lookup.
 
-	Method            string `yaml:"method,omitempty" json:"method,omitempty"`                           // REQUIRED: HTTP method.
-	URL               string `yaml:"url,omitempty" json:"url,omitempty"`                                 // REQUIRED: URL to query.
-	AllowInvalidCerts *bool  `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
-	TargetHeader      string `yaml:"target_header,omitempty" json:"target_header,omitempty"`             // OPTIONAL: Header to target for the version.
+	Method            string `json:"method,omitempty" yaml:"method,omitempty"`                           // REQUIRED: HTTP method.
+	URL               string `json:"url,omitempty" yaml:"url,omitempty"`                                 // REQUIRED: URL to query.
+	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
+	TargetHeader      string `json:"target_header,omitempty" yaml:"target_header,omitempty"`             // OPTIONAL: Header to target for the version.
 
-	BasicAuth     *BasicAuth `yaml:"basic_auth,omitempty" json:"basic_auth,omitempty"`         // OPTIONAL: Basic Auth credentials.
-	Headers       []Header   `yaml:"headers,omitempty" json:"headers,omitempty"`               // OPTIONAL: Request Headers.
-	Body          string     `yaml:"body,omitempty" json:"body,omitempty"`                     // OPTIONAL: Request Body.
-	JSON          string     `yaml:"json,omitempty" json:"json,omitempty"`                     // OPTIONAL: JSON key to use e.g. version_current.
-	Regex         string     `yaml:"regex,omitempty" json:"regex,omitempty"`                   // OPTIONAL: RegEx for the version.
-	RegexTemplate string     `yaml:"regex_template,omitempty" json:"regex_template,omitempty"` // OPTIONAL: Template to apply to the RegEx match.
+	BasicAuth     *BasicAuth `json:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`         // OPTIONAL: Basic Auth credentials.
+	Headers       []Header   `json:"headers,omitempty" yaml:"headers,omitempty"`               // OPTIONAL: Request Headers.
+	Body          string     `json:"body,omitempty" yaml:"body,omitempty"`                     // OPTIONAL: Request Body.
+	JSON          string     `json:"json,omitempty" yaml:"json,omitempty"`                     // OPTIONAL: JSON key to use e.g. version_current.
+	Regex         string     `json:"regex,omitempty" yaml:"regex,omitempty"`                   // OPTIONAL: RegEx for the version.
+	RegexTemplate string     `json:"regex_template,omitempty" yaml:"regex_template,omitempty"` // OPTIONAL: Template to apply to the RegEx match.
 }
 
 // New returns a new Lookup from a string in a given format (json/yaml).
@@ -75,50 +75,44 @@ func New(
 
 // UnmarshalJSON will unmarshal the Lookup.
 func (l *Lookup) UnmarshalJSON(data []byte) error {
-	// Alias to avoid recursion.
-	type Alias Lookup
-	aux := &struct {
-		*Alias `json:",inline"`
-	}{Alias: (*Alias)(l)}
-
-	// Unmarshal.
-	if err := json.Unmarshal(data, aux); err != nil {
-		return errors.New(strings.Replace(err.Error(), ".Alias", "", 1))
-	}
-	l.Type = "url"
-
-	return nil
+	return l.unmarshal(func(v interface{}) error {
+		return json.Unmarshal(data, v)
+	})
 }
 
 // UnmarshalYAML will unmarshal the Lookup.
 func (l *Lookup) UnmarshalYAML(value *yaml.Node) error {
+	return l.unmarshal(func(v interface{}) error {
+		return value.Decode(v)
+	})
+}
+
+// unmarshal will unmarshal the Lookup using the provided unmarshal function.
+func (l *Lookup) unmarshal(unmarshalFunc func(interface{}) error) error {
 	// Alias to avoid recursion.
 	type Alias Lookup
 	aux := &struct {
-		*Alias `yaml:",inline"`
-	}{
-		Alias: (*Alias)(l),
-	}
+		*Alias `json:",inline" yaml:",inline"`
+	}{Alias: (*Alias)(l)}
 
-	// Decode the YAML node into the struct.
-	if err := value.Decode(aux); err != nil {
-		return err //nolint:wrapcheck
+	// Unmarshal using the provided function.
+	if err := unmarshalFunc(aux); err != nil {
+		return errors.New(strings.Replace(err.Error(), ".Alias", "", 1))
 	}
-
 	l.Type = "url"
 	return nil
 }
 
 // BasicAuth to use on the HTTP(s) request.
 type BasicAuth struct {
-	Username string `yaml:"username" json:"username"`
-	Password string `yaml:"password" json:"password"`
+	Username string `json:"username" yaml:"username"`
+	Password string `json:"password" yaml:"password"`
 }
 
 // Header to use in the HTTP request.
 type Header struct {
-	Key   string `yaml:"key" json:"key"`     // Header key, e.g. X-Sig.
-	Value string `yaml:"value" json:"value"` // Value to give the key.
+	Key   string `json:"key" yaml:"key"`     // Header key, e.g. X-Sig.
+	Value string `json:"value" yaml:"value"` // Value to give the key.
 }
 
 // inheritSecrets from the `oldLookup`.

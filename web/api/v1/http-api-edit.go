@@ -29,10 +29,12 @@ import (
 
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
@@ -61,7 +63,9 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	if overrides == "" {
 		err := errors.New("overrides: <required>")
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
@@ -69,13 +73,13 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	svcStatus := status.Status{}
 	svcStatus.Init(
 		0, 0, 0,
-		&logFrom.Primary, nil,
-		nil)
+		logFrom.Primary, "", "",
+		&dashboard.Options{})
 
 	// Options
 	options := opt.New(
 		nil, "",
-		util.StringToBoolPtr(util.PtrValueOrValue(
+		util.StringToBoolPtr(util.DereferenceOrValue(
 			getParam(&queryParams, "semantic_versioning"), "",
 		)),
 		api.Config.Defaults.Service.LatestVersion.Options,
@@ -84,7 +88,9 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	// Extract the desired lookup type.
 	lookupType, err := extractLookupType(overrides, logFrom)
 	if err != nil {
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
@@ -103,7 +109,9 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	// Error creating/validating the LatestVersionLookup.
 	if err != nil {
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
@@ -112,7 +120,9 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 		lv,
 		nil, nil)
 	if err != nil {
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
@@ -146,7 +156,9 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	if overrides == "" {
 		err := errors.New("overrides: <required>")
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
@@ -154,13 +166,13 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	svcStatus := status.Status{}
 	svcStatus.Init(
 		0, 0, 0,
-		&logFrom.Primary, nil,
-		nil)
+		logFrom.Primary, "", "",
+		&dashboard.Options{})
 
 	// Options
 	options := opt.New(
 		nil, "",
-		util.StringToBoolPtr(util.PtrValueOrValue(
+		util.StringToBoolPtr(util.DereferenceOrValue(
 			getParam(&queryParams, "semantic_versioning"), "",
 		)),
 		api.Config.Defaults.Service.LatestVersion.Options,
@@ -169,7 +181,9 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	// Extract the desired lookup type.
 	lookupType, err := extractLookupType(overrides, logFrom)
 	if err != nil {
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
@@ -188,7 +202,9 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	// Error creating/validating the DeployedVersionLookup.
 	if err != nil {
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
@@ -197,7 +213,9 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 		dvl,
 		"", "", nil)
 	if err != nil {
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
@@ -238,7 +256,9 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 	if api.Config.Service[targetService] == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err, http.StatusNotFound)
+		failRequest(&w,
+			err,
+			http.StatusNotFound)
 		return
 	}
 
@@ -257,7 +277,9 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 		api.Config.Service[targetService].HandleUpdateActions(true)
 	}
 	if err != nil {
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
@@ -298,7 +320,9 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 	if api.Config.Service[targetService] == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err, http.StatusNotFound)
+		failRequest(&w,
+			err,
+			http.StatusNotFound)
 		return
 	}
 
@@ -316,7 +340,9 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 		// Extract the desired lookup type.
 		lookupType, err := extractLookupType(overrides, logFrom)
 		if err != nil {
-			failRequest(&w, err.Error(), http.StatusBadRequest)
+			failRequest(&w,
+				err.Error(),
+				http.StatusBadRequest)
 			return
 		}
 
@@ -324,8 +350,8 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 		svcStatus := status.Status{}
 		svcStatus.Init(
 			0, 0, 0,
-			&logFrom.Primary, nil,
-			nil)
+			logFrom.Primary, "", "",
+			&dashboard.Options{})
 
 		dvl, _ = deployedver.New(
 			lookupType,
@@ -345,7 +371,9 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 		overrides,
 		semanticVersioning)
 	if err != nil {
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
@@ -360,7 +388,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 func extractLookupType(overrides string, logFrom logutil.LogFrom) (string, error) {
 	// Extract the desired lookup type.
 	var temp struct {
-		Type string `yaml:"type" json:"type"`
+		Type string `json:"type" yaml:"type"`
 	}
 
 	if err := util.UnmarshalConfig(
@@ -400,7 +428,9 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 	if svc == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err, http.StatusNotFound)
+		failRequest(&w,
+			err,
+			http.StatusNotFound)
 		return
 	}
 
@@ -454,7 +484,11 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 //		id: string
 //		name: string
 //		url: string
+//		icon: string
+//		icon_link_to: string
 //		web_url: string
+//		approved_version: string
+//		deployed_version: string
 //		latest_version: string
 //
 // Response:
@@ -470,11 +504,13 @@ func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
 
 	// Validate required parameters.
 	if serviceID == "" || template == "" {
-		failRequest(&w, "Missing required query parameters: service_id or template", http.StatusBadRequest)
+		failRequest(&w,
+			"Missing required query parameters: service_id or template",
+			http.StatusBadRequest)
 		return
 	}
 
-	fullParams := util.ServiceInfo{}
+	fullParams := serviceinfo.ServiceInfo{}
 
 	// Fetch default parameters from the service configuration.
 	api.Config.OrderMutex.RLock()
@@ -482,15 +518,13 @@ func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
 	serviceConfig, exists := api.Config.Service[serviceID]
 	// Parse default parameters.
 	if exists {
-		fullParams.ID = serviceConfig.ID
-		fullParams.Name = serviceConfig.Name
-		fullParams.URL = serviceConfig.LatestVersion.ServiceURL(true)
-		fullParams.WebURL = serviceConfig.Status.WebURL
-		fullParams.LatestVersion = serviceConfig.Status.LatestVersion()
+		fullParams = serviceConfig.Status.GetServiceInfo()
 	}
 
 	if e := util.CheckTemplate(template); !e {
-		failRequest(&w, "failed to parse template", http.StatusBadRequest)
+		failRequest(&w,
+			"failed to parse template",
+			http.StatusBadRequest)
 		return
 	}
 
@@ -503,6 +537,9 @@ func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	// Expand any environment variables in the template.
+	template = util.EvalEnvVars(template)
 
 	// Parse the template with the parameters.
 	parsed := util.TemplateString(template, fullParams)
@@ -634,8 +671,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		msg = "edited"
 	}
 	api.writeJSON(w, apitype.Response{
-		Message: fmt.Sprintf(
-			"%s service %q",
+		Message: fmt.Sprintf("%s service %q",
 			msg, util.ValueOrValue(targetService, newService.ID))},
 		logFrom)
 }
@@ -672,8 +708,8 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 	api.announceDelete(targetService)
 
 	api.writeJSON(w, apitype.Response{
-		Message: fmt.Sprintf(
-			"deleted service %q", targetService)},
+		Message: fmt.Sprintf("deleted service %q",
+			targetService)},
 		logFrom)
 }
 
@@ -702,7 +738,9 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(payload); err != nil {
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 	// Parse it.
@@ -710,46 +748,68 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	err := json.Unmarshal(buf.Bytes(), &parsedPayload)
 	if err != nil {
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
 	// Get the Notify.
 	var serviceNotify *shoutrrr.Shoutrrr
-	var latestVersion string
+	var serviceStatus *status.Status
 	// From the ServiceIDPrevious.
 	if parsedPayload.ServiceIDPrevious != "" {
 		api.Config.OrderMutex.RLock()
 		defer api.Config.OrderMutex.RUnlock()
 		// Check whether service exists.
-		if api.Config.Service[parsedPayload.ServiceIDPrevious] != nil {
+		service := api.Config.Service[parsedPayload.ServiceIDPrevious]
+		if service != nil {
 			// Check whether notifier exists.
-			if api.Config.Service[parsedPayload.ServiceIDPrevious].Notify != nil {
-				serviceNotify = api.Config.Service[parsedPayload.ServiceIDPrevious].Notify[parsedPayload.NamePrevious]
+			if service.Notify != nil {
+				serviceNotify = service.Notify[parsedPayload.NamePrevious]
 			}
-			latestVersion = api.Config.Service[parsedPayload.ServiceIDPrevious].Status.LatestVersion()
+			serviceStatus = service.Status.Copy(false)
 		}
 	}
 
+	if serviceStatus == nil {
+		serviceStatus = status.New(
+			nil, nil, nil,
+			"",
+			"", "",
+			"", "",
+			"",
+			dashboard.NewOptions(
+				nil,
+				"", "", parsedPayload.WebURL,
+				nil,
+				nil, nil))
+	}
+	serviceStatus.Init(
+		1, 0, 0,
+		parsedPayload.ServiceID, parsedPayload.ServiceName, "service_url",
+		serviceStatus.Dashboard)
+
 	// Apply any overrides.
-	testNotify, serviceURL, err := shoutrrr.FromPayload(
+	testNotify, err := shoutrrr.FromPayload(
 		parsedPayload,
-		serviceNotify,
+		serviceNotify, serviceStatus,
 		api.Config.Notify, api.Config.Defaults.Notify, api.Config.HardDefaults.Notify)
 	if err != nil {
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 
-	// Give the LatestVersion as the message may use it.
-	testNotify.ServiceStatus.SetLatestVersion(latestVersion, "", false)
-
 	// Send the message.
-	err = testNotify.TestSend(serviceURL)
+	err = testNotify.TestSend(parsedPayload.ServiceURL)
 	if err != nil {
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err.Error(), http.StatusBadRequest)
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
 		return
 	}
 

@@ -37,7 +37,7 @@ func Refresh(
 		return "", false, errors.New("lookup is nil")
 	}
 
-	logFrom := logutil.LogFrom{Primary: "latest_version/refresh", Secondary: *lookup.GetStatus().ServiceID}
+	logFrom := logutil.LogFrom{Primary: "latest_version/refresh", Secondary: lookup.GetServiceID()}
 
 	// Whether this new semantic_version resolves differently than the current one.
 	semanticVerDiff := semanticVersioning != nil && (
@@ -67,7 +67,8 @@ func Refresh(
 	// Log the lookup in use.
 	if logutil.Log.IsLevel("DEBUG") {
 		logutil.Log.Debug(
-			fmt.Sprintf("Refreshing with:\n%q", lookup.String(lookup, "")),
+			fmt.Sprintf("Refreshing with:\n%q",
+				lookup.String(lookup, "")),
 			logFrom, true)
 	}
 

@@ -28,13 +28,13 @@ import (
 
 // Base is the base struct for Options.
 type Base struct {
-	Interval           string `yaml:"interval,omitempty" json:"interval,omitempty"`                       // AhBmCs = Sleep A hours, B minutes, and C seconds between queries.
-	SemanticVersioning *bool  `yaml:"semantic_versioning,omitempty" json:"semantic_versioning,omitempty"` // Default - true = Version has to follow semantic versioning (https://semver.org/), and be greater than the previous to trigger anything.
+	Interval           string `json:"interval,omitempty" yaml:"interval,omitempty"`                       // AhBmCs = Sleep A hours, B minutes, and C seconds between queries.
+	SemanticVersioning *bool  `json:"semantic_versioning,omitempty" yaml:"semantic_versioning,omitempty"` // Default - true = Version has to follow semantic versioning (https://semver.org/), and be greater than the previous to trigger anything.
 }
 
 // Defaults are the default values for Options.
 type Defaults struct {
-	Base `yaml:",inline" json:",inline"`
+	Base `json:",inline" yaml:",inline"`
 }
 
 // NewDefaults returns a new Defaults.
@@ -60,12 +60,12 @@ func (od *Defaults) Default() {
 
 // Options are the options for a Service.
 type Options struct {
-	Base `yaml:",inline" json:",inline"`
+	Base `json:",inline" yaml:",inline"`
 
-	Active *bool `yaml:"active,omitempty" json:"active,omitempty"` // Disable the service.
+	Active *bool `json:"active,omitempty" yaml:"active,omitempty"` // Disable the service.
 
-	Defaults     *Defaults `yaml:"-" json:"-"` // Defaults.
-	HardDefaults *Defaults `yaml:"-" json:"-"` // Hard Defaults.
+	Defaults     *Defaults `json:"-" yaml:"-"` // Defaults.
+	HardDefaults *Defaults `json:"-" yaml:"-"` // Hard Defaults.
 }
 
 // New Options.
@@ -109,7 +109,7 @@ func (o *Options) String() string {
 
 // GetActive status of the Service.
 func (o *Options) GetActive() bool {
-	return util.DereferenceOrNilValue(o.Active, true)
+	return util.DereferenceOrValue(o.Active, true)
 }
 
 // GetInterval between queries for the latest/deployed version.

@@ -176,15 +176,15 @@ func TestData_String(t *testing.T) {
 			githubData: &Data{
 				eTag: "argus",
 				releases: []github_types.Release{
-					{URL: "https://test.com/1.2.3"},
-					{URL: "https://test.com/3.2.1", PreRelease: true},
+					{URL: "https://example.com/1.2.3"},
+					{URL: "https://example.com/3.2.1", PreRelease: true},
 				}},
 			want: `
 				{
 					"etag": "argus",
 					"releases": [
-						{"url": "https://test.com/1.2.3", "prerelease": false},
-						{"url": "https://test.com/3.2.1", "prerelease": true}
+						{"url": "https://example.com/1.2.3", "prerelease": false},
+						{"url": "https://example.com/3.2.1", "prerelease": true}
 					]
 				}`},
 	}

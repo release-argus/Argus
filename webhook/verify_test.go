@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -471,8 +472,8 @@ func TestSlice_CheckValues(t *testing.T) {
 				svcStatus := status.Status{}
 				svcStatus.Init(
 					0, 0, len(*tc.slice),
-					nil, nil,
-					nil)
+					"", "", "",
+					&dashboard.Options{})
 				tc.slice.Init(
 					&svcStatus,
 					&SliceDefaults{},

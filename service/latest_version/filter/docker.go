@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -287,8 +288,8 @@ func (d *DockerCheck) CheckValues(prefix string) error {
 	// Image
 	switch {
 	case d.Image == "":
-		errs = append(errs, fmt.Errorf("%simage: <required> (image to check tags for)",
-			prefix))
+		errs = append(errs, errors.New(prefix+
+			"image: <required> (image to check tags for)"))
 		// Invalid image.
 	case !util.RegexCheck(`^[\w\-\.\/]+$`, d.Image):
 		errs = append(errs, fmt.Errorf("%simage: %q <invalid> (non-ASCII)",
@@ -301,8 +302,8 @@ func (d *DockerCheck) CheckValues(prefix string) error {
 	// Tag
 	switch {
 	case d.Tag == "":
-		errs = append(errs, fmt.Errorf("%stag: <required> (tag of image to check for existence)",
-			prefix))
+		errs = append(errs, errors.New(prefix+
+			"tag: <required> (tag of image to check for existence)"))
 	case !util.CheckTemplate(d.Tag):
 		errs = append(errs, fmt.Errorf("%stag: %q <invalid> (didn't pass templating)",
 			prefix, d.Tag))
@@ -350,7 +351,7 @@ func (d *DockerCheck) checkToken() error {
 
 // GetTag to search for on Image.
 func (d *DockerCheck) GetTag(version string) string {
-	return util.TemplateString(d.Tag, util.ServiceInfo{LatestVersion: version})
+	return util.TemplateString(d.Tag, serviceinfo.ServiceInfo{LatestVersion: version})
 }
 
 // GetType of the DockerCheckDefaults.

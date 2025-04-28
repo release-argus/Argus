@@ -30,13 +30,17 @@ func (c *Config) CheckValues() {
 	c.Settings.CheckValues()
 
 	// defaults.
-	util.AppendCheckError(&errs, "", "defaults", c.Defaults.CheckValues("  "))
+	util.AppendCheckError(&errs, "", "defaults",
+		c.Defaults.CheckValues("  "))
 	// notify.
-	util.AppendCheckError(&errs, "", "notify", c.Notify.CheckValues("  "))
+	util.AppendCheckError(&errs, "", "notify",
+		c.Notify.CheckValues("  "))
 	// webhook.
-	util.AppendCheckError(&errs, "", "webhook", c.WebHook.CheckValues("  "))
+	util.AppendCheckError(&errs, "", "webhook",
+		c.WebHook.CheckValues("  "))
 	// service.
-	util.AppendCheckError(&errs, "", "service", c.Service.CheckValues("  "))
+	util.AppendCheckError(&errs, "", "service",
+		c.Service.CheckValues("  "))
 
 	// Combine all errors if any are present.
 	if len(errs) > 0 {

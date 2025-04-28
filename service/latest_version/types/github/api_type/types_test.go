@@ -40,33 +40,33 @@ func TestRelease_String(t *testing.T) {
 			want:    `{"prerelease": false}`},
 		"only assets": {
 			release: &Release{Assets: []Asset{
-				{ID: 1, Name: "test", URL: "https://test.com", BrowserDownloadURL: "https://test.com/download"},
+				{ID: 1, Name: "test", URL: "https://example.com", BrowserDownloadURL: "https://example.com/download"},
 				{ID: 2, Name: "test2"}}},
 			want: `
 				{
 					"prerelease": false,
 					"assets": [
-						{"url": "https://test.com", "id": 1, "name": "test", "browser_download_url": "https://test.com/download"},
+						{"url": "https://example.com", "id": 1, "name": "test", "browser_download_url": "https://example.com/download"},
 						{"id": 2, "name": "test2"}
 					]
 				}`},
 		"all fields defined": {
 			release: &Release{
-				URL:        "https://test.com",
-				AssetsURL:  "https://test.com/assets",
+				URL:        "https://example.com",
+				AssetsURL:  "https://example.com/assets",
 				TagName:    "v1.2.3",
 				PreRelease: true,
 				Assets: []Asset{
-					{ID: 1, Name: "test", URL: "https://test.com", BrowserDownloadURL: "https://test.com/download"}}},
+					{ID: 1, Name: "test", URL: "https://example.com", BrowserDownloadURL: "https://example.com/download"}}},
 			release_semantic_version: "1.2.3",
 			want: `
 				{
-					"url": "https://test.com",
-					"assets_url": "https://test.com/assets",
+					"url": "https://example.com",
+					"assets_url": "https://example.com/assets",
 					"tag_name": "v1.2.3",
 					"prerelease": true,
 					"assets": [
-						{"url": "https://test.com", "id": 1, "name": "test", "browser_download_url": "https://test.com/download"}
+						{"url": "https://example.com", "id": 1, "name": "test", "browser_download_url": "https://example.com/download"}
 					]
 				}`},
 	}
@@ -105,13 +105,13 @@ func TestAsset_String(t *testing.T) {
 			want:  `{"id": 0}`},
 		"all fields defined": {
 			asset: &Asset{
-				ID: 1, Name: "test", URL: "https://test.com", BrowserDownloadURL: "https://test.com/download"},
+				ID: 1, Name: "test", URL: "https://example.com", BrowserDownloadURL: "https://example.com/download"},
 			want: `
 				{
-					"url": "https://test.com",
+					"url": "https://example.com",
 					"id": 1,
 					"name": "test",
-					"browser_download_url": "https://test.com/download"
+					"browser_download_url": "https://example.com/download"
 				}`},
 	}
 

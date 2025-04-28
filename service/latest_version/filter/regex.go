@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 )
@@ -73,11 +74,10 @@ func (r *Require) regexCheckString(
 func (r *Require) regexCheckContentFail(version string, logFrom logutil.LogFrom) error {
 	// Escape all dots in the version.
 	regexStr := util.TemplateString(r.RegexContent,
-		util.ServiceInfo{
+		serviceinfo.ServiceInfo{
 			LatestVersion: strings.ReplaceAll(version, ".", `\.`)})
 	r.Status.RegexMissContent()
-	err := fmt.Errorf(
-		"regex %q not matched on content for version %q",
+	err := fmt.Errorf("regex %q not matched on content for version %q",
 		regexStr, version)
 	logutil.Log.Info(err, logFrom, r.Status.RegexMissesContent() == 1)
 	return err

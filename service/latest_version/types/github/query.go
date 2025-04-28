@@ -108,7 +108,8 @@ func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 func (l *Lookup) createRequest(logFrom logutil.LogFrom) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodGet, l.url(), nil)
 	if err != nil {
-		err = fmt.Errorf("failed creating http request for %q: %w", l.URL, err)
+		err = fmt.Errorf("failed creating http request for %q: %w",
+			l.URL, err)
 		logutil.Log.Error(err, logFrom, true)
 		return nil, err
 	}
@@ -177,7 +178,8 @@ func (l *Lookup) handleResponse(resp *http.Response, body []byte, logFrom loguti
 	}
 
 	// Unknown status code.
-	err := fmt.Errorf("unknown status code %d\n%s", resp.StatusCode, string(body))
+	err := fmt.Errorf("unknown status code %d\n%s",
+		resp.StatusCode, string(body))
 	logutil.Log.Error(err, logFrom, true)
 	return nil, err
 }
@@ -247,7 +249,7 @@ func (l *Lookup) handleStatusUnauthorized(body []byte, logFrom logutil.LogFrom) 
 		err = errors.New("github access token is invalid")
 	} else {
 		// Unknown error.
-		err = fmt.Errorf("unknown 401 response\n%s", bodyStr)
+		err = errors.New("unknown 401 response\n" + bodyStr)
 	}
 	logutil.Log.Error(err, logFrom, true)
 
@@ -269,12 +271,13 @@ func (l *Lookup) handleStatusForbidden(body []byte, logFrom logutil.LogFrom) ([]
 
 		// Missing tag_name.
 	case !strings.Contains(bodyStr, `"tag_name"`):
-		err = fmt.Errorf("tag_name not found at %s\n%s", l.URL, bodyStr)
+		err = fmt.Errorf("tag_name not found at %s\n%s",
+			l.URL, bodyStr)
 		logutil.Log.Error(err, logFrom, true)
 
 		// Other.
 	default:
-		err = fmt.Errorf("unknown 403 response\n%s", bodyStr)
+		err = errors.New("unknown 403 response\n" + bodyStr)
 		logutil.Log.Error(err, logFrom, true)
 	}
 
@@ -415,7 +418,8 @@ func (l *Lookup) handleNewVersion(
 ) (bool, error) {
 	// Verify that the version has changed. (GitHub may have just omitted the tag for some reason).
 	if checkNumber == 0 {
-		msg := fmt.Sprintf("Possibly found a new version (From %q to %q). Checking again", latestVersion, version)
+		msg := fmt.Sprintf("Possibly found a new version (From %q to %q). Checking again",
+			latestVersion, version)
 		logutil.Log.Verbose(msg, logFrom, latestVersion != "")
 		time.Sleep(time.Second)
 		return l.query(logFrom, 1)

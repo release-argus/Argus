@@ -44,15 +44,18 @@ func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 	if svc == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err, http.StatusNotFound)
+		failRequest(&w,
+			err,
+			http.StatusNotFound)
 		return
 	}
 
 	// Commands
 	commandSummary := make(map[string]apitype.CommandSummary, len(svc.Command))
 	if svc.CommandController != nil {
+		serviceInfo := svc.Status.GetServiceInfo()
 		for i, cmd := range *svc.CommandController.Command {
-			command := cmd.ApplyTemplate(&svc.Status)
+			command := cmd.ApplyTemplate(serviceInfo)
 			commandSummary[command.String()] = apitype.CommandSummary{
 				Failed:       svc.Status.Fails.Command.Get(i),
 				NextRunnable: svc.CommandController.NextRunnable(i)}
@@ -102,7 +105,9 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	if svc == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
 		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w, err, http.StatusNotFound)
+		failRequest(&w,
+			err,
+			http.StatusNotFound)
 		return
 	}
 
@@ -112,21 +117,27 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(payloadBytes).Decode(&payload)
 	if err != nil {
 		logutil.Log.Error(
-			fmt.Sprintf("Invalid payload - %s", err),
+			"Invalid payload - "+err.Error(),
 			logFrom, true)
-		failRequest(&w, "invalid payload", http.StatusBadRequest)
+		failRequest(&w,
+			"invalid payload",
+			http.StatusBadRequest)
 		return
 	}
 	if payload.Target == "" {
 		errMsg := "invalid payload, target service not provided"
 		logutil.Log.Error(errMsg, logFrom, true)
-		failRequest(&w, errMsg, http.StatusBadRequest)
+		failRequest(&w,
+			errMsg,
+			http.StatusBadRequest)
 		return
 	}
 	if !svc.Options.GetActive() {
 		errMsg := "service is inactive, actions can't be run for it"
 		logutil.Log.Error(errMsg, logFrom, true)
-		failRequest(&w, errMsg, http.StatusBadRequest)
+		failRequest(&w,
+			errMsg,
+			http.StatusBadRequest)
 		return
 	}
 

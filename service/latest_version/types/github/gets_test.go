@@ -159,57 +159,18 @@ func TestUsePreRelease(t *testing.T) {
 }
 
 func TestServiceURL(t *testing.T) {
-	type args struct {
-		ignoreWebURL bool
-	}
 	// GIVEN a Lookup.
 	tests := map[string]struct {
-		url, webURL   string
-		latestVersion string
-		args          args
-		want          string
+		url  string
+		want string
 	}{
-		"not ignoreWebURL, have webURL, have latestVersion, template webURL": {
-			url:           "release-argus/Argus",
-			webURL:        "https://example.com/{{ version }}",
-			latestVersion: "1.0.0",
-			args:          args{ignoreWebURL: false},
-			want:          "https://example.com/1.0.0",
+		"owner/repo": {
+			url:  "release-argus/Argus",
+			want: "https://github.com/release-argus/Argus",
 		},
-		"not ignoreWebURL, have webURL, have latestVersion, no template webURL": {
-			url:           "release-argus/Argus",
-			webURL:        "https://example.com/version",
-			latestVersion: "1.0.0",
-			args:          args{ignoreWebURL: false},
-			want:          "https://github.com/release-argus/Argus",
-		},
-		"not ignoreWebURL, have webURL, no latestVersion, template webURL": {
-			url:           "release-argus/Argus",
-			webURL:        "https://example.com/{{ version }}",
-			latestVersion: "",
-			args:          args{ignoreWebURL: false},
-			want:          "https://github.com/release-argus/Argus",
-		},
-		"not ignoreWebURL, no webURL, have latestVersion, template webURL": {
-			url:           "release-argus/Argus",
-			webURL:        "",
-			latestVersion: "1.0.0",
-			args:          args{ignoreWebURL: false},
-			want:          "https://github.com/release-argus/Argus",
-		},
-		"ignoreWebURL, repo": {
-			url:           "release-argus/Argus",
-			webURL:        "https://example.com/{{ version }}",
-			latestVersion: "1.0.0",
-			args:          args{ignoreWebURL: true},
-			want:          "https://github.com/release-argus/Argus",
-		},
-		"ignoreWebURL, url": {
-			url:           "https://github.com/release-argus/Argus/releases",
-			webURL:        "https://example.com/{{ version }}",
-			latestVersion: "1.0.0",
-			args:          args{ignoreWebURL: true},
-			want:          "https://github.com/release-argus/Argus/releases",
+		"GitHub url": {
+			url:  "https://api.github.com/repos/release-argus/Argus/tags",
+			want: "https://api.github.com/repos/release-argus/Argus/tags",
 		},
 	}
 
@@ -219,16 +180,14 @@ func TestServiceURL(t *testing.T) {
 
 			lookup := testLookup(false)
 			lookup.URL = tc.url
-			lookup.Status.WebURL = test.StringPtr(tc.webURL)
-			lookup.Status.SetLatestVersion(tc.latestVersion, "", false)
 
 			// WHEN ServiceURL is called.
-			got := lookup.ServiceURL(tc.args.ignoreWebURL)
+			got := lookup.ServiceURL()
 
 			// THEN the expected value is returned.
 			if got != tc.want {
-				t.Errorf("%s\nServiceURL(%t) mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.args.ignoreWebURL, tc.want, got)
+				t.Errorf("%s\nServiceURL mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.want, got)
 			}
 		})
 	}

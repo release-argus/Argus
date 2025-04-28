@@ -127,8 +127,7 @@ func (c *Client) readPump() {
 		c.hub.unregister <- c
 		if err := c.conn.Close(); err != nil {
 			logutil.Log.Verbose(
-				fmt.Sprintf("Closing the websocket connection failed (readPump)\n%s",
-					err),
+				"Closing the websocket connection failed (readPump)\n"+err.Error(),
 				logutil.LogFrom{},
 				true)
 		}
@@ -191,8 +190,7 @@ func (c *Client) writePump() {
 		ticker.Stop()
 		if err := c.conn.Close(); err != nil {
 			logutil.Log.Verbose(
-				fmt.Sprintf("Closing the connection\n%s",
-					err),
+				"Closing the connection\n"+err.Error(),
 				logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 				true)
 		}
@@ -208,8 +206,7 @@ func (c *Client) writePump() {
 				// The hub closed the channel.
 				if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
 					logutil.Log.Verbose(
-						fmt.Sprintf("Closing the connection (writePump)\n%s",
-							err),
+						"Closing the connection (writePump)\n"+err.Error(),
 						logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true)
 					return
@@ -219,8 +216,7 @@ func (c *Client) writePump() {
 			var msg apitype.WebSocketMessage
 			if err := json.Unmarshal(message, &msg); err != nil {
 				logutil.Log.Error(
-					fmt.Sprintf("failed to unmarshal Message: %s",
-						err),
+					"failed to unmarshal Message: "+err.Error(),
 					logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 					true)
 				continue
@@ -242,7 +238,8 @@ func (c *Client) writePump() {
 					}
 				default:
 					logutil.Log.Error(
-						fmt.Sprintf("Unknown Type %q\nFull message: %s", msg.Type, string(message)),
+						fmt.Sprintf("Unknown Type %q\nFull message: %s",
+							msg.Type, string(message)),
 						logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true)
 					continue

@@ -20,6 +20,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	logtest "github.com/release-argus/Argus/test/log"
@@ -42,8 +43,12 @@ func testController(announce *chan []byte) (control *Controller) {
 	control = &Controller{}
 	svcStatus := status.New(
 		announce, nil, nil,
-		"", "", "", "", "", "")
-	svcStatus.ServiceID = test.StringPtr("service_id")
+		"",
+		"", "",
+		"", "",
+		"",
+		&dashboard.Options{})
+	svcStatus.ServiceInfo.ID = "service_id"
 	control.Init(
 		svcStatus,
 		&Slice{{}, {}},

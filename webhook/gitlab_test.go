@@ -17,7 +17,6 @@
 package webhook
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -51,7 +50,9 @@ func TestSetGitLabParameter(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/approvals%s", tc.queryParams), nil)
+			req := httptest.NewRequest(http.MethodGet,
+				"/approvals"+tc.queryParams,
+				nil)
 
 			// WHEN SetGitLabParameter is called.
 			SetGitLabParameter(req, tc.secret)

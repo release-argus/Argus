@@ -25,6 +25,7 @@ import (
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	latestver "github.com/release-argus/Argus/service/latest_version"
@@ -95,40 +96,40 @@ func (s *Slice) giveIDs() {
 
 // Defaults are the default values for a Service.
 type Defaults struct {
-	Options               opt.Defaults              `yaml:"options,omitempty" json:"options,omitempty"`                   // Options to give the Service.
-	LatestVersion         latestver_base.Defaults   `yaml:"latest_version,omitempty" json:"latest_version,omitempty"`     // Vars to scrape the latest version of the Service.
-	DeployedVersionLookup deployedver_base.Defaults `yaml:"deployed_version,omitempty" json:"deployed_version,omitempty"` // Vars to scrape the Service's current deployed version.
-	Notify                map[string]struct{}       `yaml:"notify,omitempty" json:"notify,omitempty"`                     // Default Notifiers to give a Service.
-	Command               command.Slice             `yaml:"command,omitempty" json:"command,omitempty"`                   // Default Commands to give a Service.
-	WebHook               map[string]struct{}       `yaml:"webhook,omitempty" json:"webhook,omitempty"`                   // Default WebHooks to give a Service.
-	Dashboard             DashboardOptionsDefaults  `yaml:"dashboard,omitempty" json:"dashboard,omitempty"`               // Dashboard defaults.
+	Options               opt.Defaults              `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
+	LatestVersion         latestver_base.Defaults   `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Vars to scrape the latest version of the Service.
+	DeployedVersionLookup deployedver_base.Defaults `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Vars to scrape the Service's current deployed version.
+	Notify                map[string]struct{}       `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Default Notifiers to give a Service.
+	Command               command.Slice             `json:"command,omitempty" yaml:"command,omitempty"`                   // Default Commands to give a Service.
+	WebHook               map[string]struct{}       `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Default WebHooks to give a Service.
+	Dashboard             dashboard.OptionsDefaults `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`               // Dashboard defaults.
 
-	Status status.Defaults `yaml:"-" json:"-"` // Track the Status of this source (version and regex misses).
+	Status status.Defaults `json:"-" yaml:"-"` // Track the Status of this source (version and regex misses).
 }
 
 // Service is a source to track latest and deployed versions of a service.
 // It also has the ability to run commands, send notifications and send WebHooks on new releases.
 type Service struct {
-	ID                    string             `yaml:"-" json:"-"`                               // Key/Name of the Service.
-	Name                  string             `yaml:"-" json:"-"`                               // Name of the Service.
+	ID                    string             `json:"-" yaml:"-"`                               // Key/Name of the Service.
+	Name                  string             `json:"-" yaml:"-"`                               // Name of the Service.
 	marshalName           bool               ``                                                // Whether to marshal the Name.
-	Comment               string             `yaml:"-" json:"-"`                               // Comment on the Service.
-	Options               opt.Options        `yaml:"-" json:"-"`                               // Options to give the Service.
-	LatestVersion         latestver.Lookup   `yaml:"-" json:"-"`                               // Vars to scrape the latest version of the Service.
-	DeployedVersionLookup deployedver.Lookup `yaml:"-" json:"-"`                               // Vars to scrape the Service's current deployed version.
-	Notify                shoutrrr.Slice     `yaml:"notify,omitempty" json:"notify,omitempty"` // Service-specific Shoutrrr vars.
+	Comment               string             `json:"-" yaml:"-"`                               // Comment on the Service.
+	Options               opt.Options        `json:"-" yaml:"-"`                               // Options to give the Service.
+	LatestVersion         latestver.Lookup   `json:"-" yaml:"-"`                               // Vars to scrape the latest version of the Service.
+	DeployedVersionLookup deployedver.Lookup `json:"-" yaml:"-"`                               // Vars to scrape the Service's current deployed version.
+	Notify                shoutrrr.Slice     `json:"notify,omitempty" yaml:"notify,omitempty"` // Service-specific Shoutrrr vars.
 	notifyFromDefaults    bool
-	CommandController     *command.Controller `yaml:"-" json:"-"`                                 // The controller for the OS Commands that tracks fails and has the announce channel.
-	Command               command.Slice       `yaml:"command,omitempty" json:"command,omitempty"` // OS Commands to run on new release.
+	CommandController     *command.Controller `json:"-" yaml:"-"`                                 // The controller for the OS Commands that tracks fails and has the announce channel.
+	Command               command.Slice       `json:"command,omitempty" yaml:"command,omitempty"` // OS Commands to run on new release.
 	commandFromDefaults   bool
-	WebHook               webhook.Slice `yaml:"webhook,omitempty" json:"webhook,omitempty"` // Service-specific WebHook vars.
+	WebHook               webhook.Slice `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Service-specific WebHook vars.
 	webhookFromDefaults   bool
-	Dashboard             DashboardOptions `yaml:"dashboard,omitempty" json:"dashboard,omitempty"` // Options for the dashboard.
+	Dashboard             dashboard.Options `json:"dashboard,omitempty" yaml:"dashboard,omitempty"` // Options for the dashboard.
 
-	Status status.Status `yaml:"-" json:"-"` // Track the Status of this source (version and regex misses).
+	Status status.Status `json:"-" yaml:"-"` // Track the Status of this source (version and regex misses).
 
-	Defaults     *Defaults `yaml:"-" json:"-"` // Default values.
-	HardDefaults *Defaults `yaml:"-" json:"-"` // Hardcoded default values.
+	Defaults     *Defaults `json:"-" yaml:"-"` // Default values.
+	HardDefaults *Defaults `json:"-" yaml:"-"` // Hardcoded default values.
 }
 
 // MarshalName returns whether the Name should be marshalled.
@@ -157,24 +158,31 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 	}
 	hasDeployedVersionLookup := s.DeployedVersionLookup != nil
 
+	serviceInfo := s.Status.GetServiceInfo()
 	summary := &apitype.ServiceSummary{
 		ID:                       s.ID,
 		Active:                   s.Options.Active,
 		Type:                     latestVersionType,
-		WebURL:                   s.Status.GetWebURL(),
-		Icon:                     s.IconURL(),
 		HasDeployedVersionLookup: &hasDeployedVersionLookup,
 		Status: &apitype.Status{
-			ApprovedVersion:          s.Status.ApprovedVersion(),
-			DeployedVersion:          s.Status.DeployedVersion(),
+			ApprovedVersion:          serviceInfo.ApprovedVersion,
+			DeployedVersion:          serviceInfo.DeployedVersion,
 			DeployedVersionTimestamp: s.Status.DeployedVersionTimestamp(),
-			LatestVersion:            s.Status.LatestVersion(),
+			LatestVersion:            serviceInfo.LatestVersion,
 			LatestVersionTimestamp:   s.Status.LatestVersionTimestamp(),
 			LastQueried:              s.Status.LastQueried()}}
 
+	// Icon.
+	if serviceInfo.Icon != "" {
+		summary.Icon = &serviceInfo.Icon
+	}
 	// IconLinkTo.
-	if s.Dashboard.IconLinkTo != "" {
-		summary.IconLinkTo = &s.Dashboard.IconLinkTo
+	if serviceInfo.IconLinkTo != "" {
+		summary.IconLinkTo = &serviceInfo.IconLinkTo
+	}
+	// WebURL.
+	if serviceInfo.WebURL != "" {
+		summary.WebURL = &serviceInfo.WebURL
 	}
 
 	// Name.
@@ -264,6 +272,10 @@ func (s *Service) unmarshalVersionLookups(
 	return nil
 }
 
+type structWithGetType interface {
+	GetType() string
+}
+
 // extractLookupType extracts the type field from the YAML,
 // or uses the GetType from the struct if it's not in the YAML,
 // and the struct is non-nil.
@@ -347,37 +359,6 @@ func (s *Service) UnmarshalJSON(data []byte) error {
 		deployedVersionNode)
 }
 
-// MarshalJSON handles the marshalling of a Service.
-func (s *Service) MarshalJSON() ([]byte, error) {
-	// Alias to avoid recursion.
-	type Alias Service
-	aux := &struct {
-		Name            string             `json:"name,omitempty"`             // Name of the Service.
-		Comment         string             `json:"comment,omitempty"`          // Comment on the Service.
-		Options         opt.Options        `json:"options,omitempty"`          // Options to give the Service.
-		LatestVersion   latestver.Lookup   `json:"latest_version,omitempty"`   // Vars to getting the latest version of the Service.
-		DeployedVersion deployedver.Lookup `json:"deployed_version,omitempty"` // Vars to getting the deployed version of the Service.
-		*Alias          `json:",inline"`   // Embed the original struct.
-	}{
-		Name:            s.Name,
-		Comment:         s.Comment,
-		Options:         s.Options,
-		LatestVersion:   s.LatestVersion,
-		DeployedVersion: s.DeployedVersionLookup,
-		Alias:           (*Alias)(s),
-	}
-
-	if !s.MarshalName() {
-		aux.Name = ""
-	}
-
-	return json.Marshal(aux) //nolint:wrapcheck
-}
-
-type structWithGetType interface {
-	GetType() string
-}
-
 // UnmarshalYAML handles the unmarshalling of a Service.
 //
 // This addresses the dynamic Latest/Deployed Version types.
@@ -424,17 +405,32 @@ func (s *Service) UnmarshalYAML(value *yaml.Node) error {
 		deployedVersionNode)
 }
 
+// MarshalJSON handles the marshalling of a Service.
+func (s *Service) MarshalJSON() ([]byte, error) {
+	result, err := s.marshal(func(v any) (any, error) {
+		return json.Marshal(v) //nolint:wrapcheck
+	})
+	return result.([]byte), err
+}
+
 // MarshalYAML handles the marshalling of a Service.
 func (s *Service) MarshalYAML() (any, error) {
+	return s.marshal(func(v any) (any, error) {
+		return v, nil
+	})
+}
+
+// marshal is a shared function for marshalling a Service.
+func (s *Service) marshal(marshalFunc func(any) (any, error)) (any, error) {
 	// Alias to avoid recursion.
 	type Alias Service
 	aux := &struct {
-		Name            string             `yaml:"name,omitempty"`             // Name of the Service.
-		Comment         string             `yaml:"comment,omitempty"`          // Comment on the Service.
-		Options         opt.Options        `yaml:"options,omitempty"`          // Options to give the Service.
-		LatestVersion   latestver.Lookup   `yaml:"latest_version,omitempty"`   // Vars to getting the latest version of the Service.
-		DeployedVersion deployedver.Lookup `yaml:"deployed_version,omitempty"` // Vars to getting the deployed version of the Service.
-		*Alias          `yaml:",inline"`   // Embed the original struct.
+		Name            string                          `json:"name,omitempty" yaml:"name,omitempty"`                         // Name of the Service.
+		Comment         string                          `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Comment on the Service.
+		Options         opt.Options                     `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
+		LatestVersion   latestver.Lookup                `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Vars to scrape the latest version of the Service.
+		DeployedVersion deployedver.Lookup              `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Vars to scrape the deployed version of the Service.
+		*Alias          `json:",inline" yaml:",inline"` // Embed the original struct.
 	}{
 		Name:            s.Name,
 		Comment:         s.Comment,
@@ -448,5 +444,5 @@ func (s *Service) MarshalYAML() (any, error) {
 		aux.Name = ""
 	}
 
-	return aux, nil
+	return marshalFunc(aux)
 }

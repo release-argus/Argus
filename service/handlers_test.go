@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/test"
@@ -60,7 +61,7 @@ func TestService_HandleSkip(t *testing.T) {
 		svc := testService(t, name, "url")
 
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel as they share the same channel.
+			// t.Parallel() - Cannot run in parallel since we're using a shared channel.
 
 			svc.Status.SetDeployedVersion(tc.startVersion, "", false)
 			svc.Status.SetApprovedVersion("", false)
@@ -179,8 +180,8 @@ func TestService_HandleCommand(t *testing.T) {
 			}
 			svc.Status.Init(
 				len(svc.Notify), len(svc.Command), len(svc.WebHook),
-				&svc.ID, nil,
-				&svc.Dashboard.WebURL)
+				svc.ID, "", "",
+				&svc.Dashboard)
 			for k, v := range tc.fails {
 				if v != nil {
 					svc.Status.Fails.Command.Set(k, *v)
@@ -333,8 +334,8 @@ func TestService_HandleWebHook(t *testing.T) {
 		svc := testService(t, name, "url")
 		svc.Status.Init(
 			len(svc.Notify), len(tc.webhooks), 0,
-			&svc.ID, nil,
-			&svc.Dashboard.WebURL)
+			svc.ID, "", "",
+			&svc.Dashboard)
 		svc.WebHook = tc.webhooks
 		svc.WebHook.Init(
 			&svc.Status,
@@ -477,8 +478,8 @@ func TestService_HandleUpdateActions(t *testing.T) {
 		svc.WebHook = tc.webhooks
 		svc.Status.Init(
 			len(svc.Notify), len(svc.Command), len(svc.WebHook),
-			&svc.ID, nil,
-			&svc.Dashboard.WebURL)
+			svc.ID, "", "",
+			&svc.Dashboard)
 		if len(tc.commands) != 0 {
 			svc.CommandController = &command.Controller{}
 		}
@@ -742,8 +743,8 @@ func TestService_HandleFailedActions(t *testing.T) {
 
 			svc.Status.Init(
 				len(svc.Notify), len(tc.commands), len(tc.webhooks),
-				&svc.ID, nil,
-				&svc.Dashboard.WebURL)
+				svc.ID, "", "",
+				&svc.Dashboard)
 			if tc.deployedLatest {
 				svc.Status.SetDeployedVersion(svc.Status.LatestVersion(), "", false)
 			}
@@ -967,8 +968,8 @@ func TestService_ShouldRetryAll(t *testing.T) {
 			}
 			svc.Status.Init(
 				0, len(svc.Command), len(svc.WebHook),
-				&name, nil,
-				nil)
+				name, "", "",
+				&dashboard.Options{})
 			for k, v := range tc.command {
 				if v != nil {
 					svc.Status.Fails.Command.Set(k, *v)
@@ -1157,8 +1158,8 @@ func TestService_UpdatedVersion(t *testing.T) {
 			svc.WebHook = tc.webhooks
 			svc.Status.Init(
 				0, len(svc.Command), len(svc.WebHook),
-				&svc.ID, nil,
-				&svc.Dashboard.WebURL)
+				svc.ID, "", "",
+				&svc.Dashboard)
 			svc.DeployedVersionLookup = tc.deployedVersion
 			for i := range tc.commandFails {
 				if tc.commandFails[i] != nil {

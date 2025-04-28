@@ -210,7 +210,8 @@ func (l *JLog) Verbose(msg any, from LogFrom, otherCondition bool) {
 	// VERBOSE: msg from.Primary (from.Secondary)
 	l.logMessage(
 		util.TruncateMessage(
-			fmt.Sprintf("VERBOSE: %s%v", from, msg),
+			fmt.Sprintf("VERBOSE: %s%v",
+				from, msg),
 			997))
 }
 
@@ -225,7 +226,8 @@ func (l *JLog) Debug(msg any, from LogFrom, otherCondition bool) {
 	// DEBUG: msg from.Primary (from.Secondary)
 	l.logMessage(
 		util.TruncateMessage(
-			fmt.Sprintf("DEBUG: %s%v", from, msg),
+			fmt.Sprintf("DEBUG: %s%v",
+				from, msg),
 			997))
 }
 

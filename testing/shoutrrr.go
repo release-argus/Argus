@@ -23,6 +23,7 @@ import (
 
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
@@ -39,11 +40,6 @@ func NotifyTest(flag *string, cfg *config.Config) {
 	// Find the Shoutrrr to test.
 	notify := findShoutrrr(*flag, cfg, logFrom)
 
-	// Default webURL if not set.
-	if notify.ServiceStatus.WebURL == nil {
-		webURL := ""
-		notify.ServiceStatus.WebURL = &webURL
-	}
 	err := notify.TestSend("https://example.com/service_url")
 
 	if err == nil {
@@ -105,12 +101,13 @@ func findShoutrrr(
 			notify.HardDefaults = hardDefaults.Notify[notifyType]
 			notify.HardDefaults.InitMaps()
 
-			serviceID := ""
-			notify.ServiceStatus = &status.Status{ServiceID: &serviceID}
+			serviceID := "service_id"
+			serviceName := "service_name"
+			notify.ServiceStatus = &status.Status{}
 			notify.ServiceStatus.Init(
 				1, 0, 0,
-				notify.ServiceStatus.ServiceID, notify.ServiceStatus.ServiceName,
-				notify.ServiceStatus.WebURL)
+				serviceID, serviceName, "",
+				&dashboard.Options{})
 			notify.Failed = &notify.ServiceStatus.Fails.Shoutrrr
 
 			// Check whether all values set.
@@ -128,8 +125,8 @@ func findShoutrrr(
 			logutil.Log.Fatal(msg, logFrom, true)
 		}
 	}
-	serviceID := "TESTING"
-	notify.ServiceStatus = &status.Status{ServiceID: &serviceID}
+
+	notify.ServiceStatus.ServiceInfo.ID = "TESTING"
 	return
 }
 

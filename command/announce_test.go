@@ -21,7 +21,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
@@ -60,10 +62,12 @@ func TestController_AnnounceCommand(t *testing.T) {
 			controller := Controller{
 				ParentInterval: test.StringPtr("11m"),
 				ServiceStatus: &status.Status{
-					ServiceID: test.StringPtr("some_service_id")}}
+					ServiceInfo: serviceinfo.ServiceInfo{
+						ID: "some_service_id"}}}
 			controller.Init(
 				&status.Status{
-					ServiceID: test.StringPtr("some_service_id")},
+					ServiceInfo: serviceinfo.ServiceInfo{
+						ID: "some_service_id"}},
 				&Slice{
 					{"ls", "-lah", "/root"},
 					{"ls", "-lah"},
@@ -80,7 +84,7 @@ func TestController_AnnounceCommand(t *testing.T) {
 			time.Sleep(time.Millisecond)
 
 			// WHEN AnnounceCommand is run.
-			go controller.AnnounceCommand(tc.index)
+			go controller.AnnounceCommand(tc.index, controller.ServiceStatus.GetServiceInfo())
 
 			// THEN the correct response is received.
 			if controller.ServiceStatus.AnnounceChannel == nil {
@@ -154,12 +158,13 @@ func TestController_Find(t *testing.T) {
 					Command{"bash", "upgrade.sh", "{{ version }}"},
 				},
 				ServiceStatus: &status.Status{
-					ServiceID: test.StringPtr("some_service_id")},
+					ServiceInfo: serviceinfo.ServiceInfo{
+						ID: "some_service_id"}},
 			}
 			controller.ServiceStatus.Init(
 				0, len(*controller.Command), 0,
-				&name, nil,
-				nil)
+				name, "", "",
+				&dashboard.Options{})
 			controller.Failed = &controller.ServiceStatus.Fails.Command
 			controller.ServiceStatus.SetLatestVersion("1.2.3", "", false)
 			if tc.nilController {
