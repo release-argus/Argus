@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.25.0](https://github.com/release-argus/Argus/compare/0.24.0...0.25.0) (2025-04-30)
+
+
+### Features
+
+* **config:** load environment variables from a `.env` file ([3006932](https://github.com/release-argus/Argus/commits/300693285a4b2ae7defde15fedda9c09655c88d3))
+* **service:** cache ServiceInfo on Status for faster lookups ([ad5540a](https://github.com/release-argus/Argus/commits/ad5540a6272612f3eee7e24b968a347b5dc787b1))
+
+
+### Bug Fixes
+
+* **ui:** adjust padding logic for full-width columns ([ccab296](https://github.com/release-argus/Argus/commits/ccab2960e5f394b159353b2612ee46dddf092450))
+* **ui:** adjust position padding on RegEx url_commands in service edit ([56c2a84](https://github.com/release-argus/Argus/commits/56c2a84b012f86f711c47b18db2cdc452c7e390e))
+* **ui:** re-add error display for version fetch in VersionWithRefresh ([4a2fe33](https://github.com/release-argus/Argus/commits/4a2fe3319e4e3efe0009ea2468dbbe57bb025e54))
+
 ## [0.24.0](https://github.com/release-argus/Argus/compare/0.23.0...0.24.0) (2025-04-08)
 
 
