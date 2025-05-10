@@ -63,11 +63,11 @@ func (l *Lookup) query(logFrom logutil.LogFrom) (bool, error) {
 		// Verify Semantic Versioning (if enabled).
 		if l.Options.GetSemanticVersioning() {
 			if err := l.VerifySemanticVersioning(version, previousVersion, logFrom); err != nil {
-				return false, err //nolint: wrapcheck
+				return false, err //nolint:wrapcheck
 			}
 		}
 
-		return l.HandleNewVersion(version, "", logFrom) //nolint: wrapcheck
+		return l.HandleNewVersion(version, "", logFrom) //nolint:wrapcheck
 	}
 
 	// Announce `LastQueried`.
@@ -116,7 +116,7 @@ func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // Limit to 10 MB.
 	logutil.Log.Error(err, logFrom, err != nil)
-	return body, err //nolint: wrapcheck
+	return body, err //nolint:wrapcheck
 }
 
 // getVersion returns the latest version from `body` that matches the URLCommands, and Regex requirements.
@@ -152,17 +152,17 @@ func (l *Lookup) versionMeetsRequirements(version, body string, logFrom logutil.
 	// Check all `Require` filters for this version.
 	// Version RegEx.
 	if err := l.Require.RegexCheckVersion(version, logFrom); err != nil {
-		return err //nolint: wrapcheck
+		return err //nolint:wrapcheck
 	}
 
 	// Content RegEx (on response body).
 	if err := l.Require.RegexCheckContent(version, body, logFrom); err != nil {
-		return err //nolint: wrapcheck
+		return err //nolint:wrapcheck
 	}
 
 	// If the Command didn't return successfully.
 	if err := l.Require.ExecCommand(logFrom); err != nil {
-		return err //nolint: wrapcheck
+		return err //nolint:wrapcheck
 	}
 
 	// If the Docker tag doesn't exist.

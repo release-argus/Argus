@@ -17,6 +17,7 @@
 package test
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -29,17 +30,31 @@ import (
 )
 
 var StdoutMutex sync.Mutex // Only one test should write to stdout at a time.
+// CaptureStdout temporarily captures all output written to the standard output
+// and returns a function that, when called, restores the original standard output and
+// returns the captured output as a string.
 func CaptureStdout() func() string {
 	stdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 	StdoutMutex.Lock()
+
+	var buf bytes.Buffer
+	done := make(chan struct{})
+
+	// Drain the pipe until closed.
+	go func() {
+		io.Copy(&buf, r)
+		close(done)
+	}()
+
 	return func() string {
 		w.Close()
-		out, _ := io.ReadAll(r)
+		<-done
+
 		os.Stdout = stdout
 		StdoutMutex.Unlock()
-		return string(out)
+		return buf.String()
 	}
 }
 

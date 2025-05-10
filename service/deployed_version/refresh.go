@@ -83,7 +83,7 @@ func Refresh(
 	// Query the lookup.
 	err := newLookup.Query(!usingOverrides, logFrom)
 	if err != nil {
-		return "", err //nolint: wrapcheck
+		return "", err //nolint:wrapcheck
 	}
 
 	return newLookup.GetStatus().DeployedVersion(), nil

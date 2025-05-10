@@ -23,6 +23,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -261,6 +262,14 @@ func TestQuery(t *testing.T) {
 				errRegex:    `no releases were found`,
 				stdoutRegex: `/releases gave .*, trying /tags`},
 		},
+		"version from 2nd page": {
+			overrides: test.TrimYAML(`
+				url: "release-argus/test-pagination"
+			`),
+			overrideETag: test.StringPtr(""),
+			want: want{
+				stdoutRegex: `on page 1`},
+		},
 		"no access token": {
 			overrides: test.TrimYAML(`
 				access_token: null
@@ -342,27 +351,35 @@ func TestHTTPRequest(t *testing.T) {
 		failing  bool
 		url      string
 		eTag     *string
+		nextPage int
 		errRegex string
 	}{
 		"invalid url": {
 			url:      "invalid://	test",
-			errRegex: `invalid control character in URL`},
+			errRegex: `invalid control character in URL`,
+		},
 		"unknown url": {
 			url:      "https://release-argus.invalid-tld",
-			errRegex: `no such host`},
+			errRegex: `no such host`,
+		},
 		"valid url": {
 			url:      "release-argus/Argus",
-			errRegex: `^$`},
+			errRegex: `^$`,
+			nextPage: 2,
+		},
 		"repo that uses tags, not releases - has tags": {
 			url:      "release-argus/test",
-			errRegex: `^$`},
+			errRegex: `^$`,
+		},
 		"repo that uses tags, not releases - no tags": {
 			url:      "release-argus/.github",
-			errRegex: `^$`},
+			errRegex: `^$`,
+		},
 		"repo that uses tags, not releases - update EmptyListETag if 200 on empty list": {
 			url:      "release-argus/.github",
 			eTag:     test.StringPtr(""),
-			errRegex: `^$`},
+			errRegex: `^$`,
+		},
 	}
 
 	for name, tc := range tests {
@@ -376,13 +393,23 @@ func TestHTTPRequest(t *testing.T) {
 			}
 
 			// WHEN httpRequest is called on it.
-			_, err := lookup.httpRequest(logutil.LogFrom{})
+			_, nextPage, err := lookup.httpRequest(1, logutil.LogFrom{})
 
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
+			}
+			// AND the nextPage is as expected.
+			if err == nil {
+				if nextPage != tc.nextPage {
+					t.Errorf("%s\nnextPage mismatch\nwant: %d\ngot: %d",
+						packageName, tc.nextPage, nextPage)
+				}
+			} else if nextPage != tc.nextPage {
+				t.Errorf("%s\nnextPage mismatch\nwant: %d\ngot: %d",
+					packageName, tc.nextPage, nextPage)
 			}
 		})
 	}
@@ -421,6 +448,7 @@ func TestHandleResponse(t *testing.T) {
 	githubClientConnErr := `\/tags": http2: client conn could not be established`
 	type wants struct {
 		nilBody          bool
+		nextPage         int
 		errRegex         string
 		setEmptyListETag bool
 	}
@@ -442,7 +470,9 @@ func TestHandleResponse(t *testing.T) {
 			statusCode: http.StatusOK,
 			body:       []byte(`[]`),
 			want: wants{
-				setEmptyListETag: true},
+				nextPage:         2,
+				setEmptyListETag: true,
+			},
 		},
 		"200 OK - EmptyListETag not set if non-default access_token": {
 			conditions: conditions{
@@ -450,79 +480,96 @@ func TestHandleResponse(t *testing.T) {
 			statusCode: http.StatusOK,
 			body:       []byte(`[]`),
 			want: wants{
-				setEmptyListETag: false},
+				nextPage:         2,
+				setEmptyListETag: false,
+			},
 		},
 		"200 OK - Get releases": {
 			statusCode: http.StatusOK,
 			body:       []byte(`[{"tag_name":"v1.0.0"}]`),
+			want: wants{
+				nextPage: 0,
+			},
 		},
 		"304 Not Modified - Tag fallback request": {
 			statusCode: http.StatusNotModified,
 			want: wants{
-				nilBody: false},
+				nilBody:  false,
+				nextPage: 2,
+			},
 		},
 		"304 Not Modified - Use old releases": {
 			conditions: conditions{
 				hadReleases: true},
 			statusCode: http.StatusNotModified,
 			want: wants{
-				nilBody: true},
+				nilBody:  true,
+				nextPage: 2,
+			},
 		},
 		"401 Unauthorized - Bad credentials": {
 			statusCode: http.StatusUnauthorized,
 			body:       []byte(`{"message":"Bad credentials"}`),
 			want: wants{
 				errRegex: `github access token is invalid`,
-				nilBody:  true},
+				nilBody:  true,
+			},
 		},
 		"401 Unauthorized - Unknown": {
 			statusCode: http.StatusUnauthorized,
 			body:       []byte(`{"message":"Something else"}`),
 			want: wants{
 				errRegex: `unknown 401 response`,
-				nilBody:  true},
+				nilBody:  true,
+			},
 		},
 		"403 Forbidden - rate limit": {
 			statusCode: http.StatusForbidden,
 			body:       []byte(`{"message":"API rate limit exceeded"}`),
 			want: wants{
 				errRegex: `rate limit reached for GitHub`,
-				nilBody:  true},
+				nilBody:  true,
+			},
 		},
 		"403 Forbidden - missing tag_name": {
 			statusCode: http.StatusForbidden,
 			body:       []byte(`{"message":"some other error"}`),
 			want: wants{
 				errRegex: `tag_name not found at`,
-				nilBody:  true},
+				nilBody:  true,
+			},
 		},
 		"403 Forbidden - unknown": {
 			statusCode: http.StatusForbidden,
 			body:       []byte(`[{"tag_name":"v1.0.0"}]`),
 			want: wants{
 				errRegex: `unknown 403 response`,
-				nilBody:  true},
+				nilBody:  true,
+			},
 		},
 		"429 Too Many Requests - rate limit": {
 			statusCode: http.StatusTooManyRequests,
 			body:       []byte(`{"message":"something from GitHub"}`),
 			want: wants{
 				errRegex: `^too many requests made to GitHub - "something from GitHub"$`,
-				nilBody:  true},
+				nilBody:  true,
+			},
 		},
 		"429 Too Many Requests - unmarshal fail": {
 			statusCode: http.StatusTooManyRequests,
 			body:       []byte(`{"message":}`),
 			want: wants{
 				errRegex: `^too many requests made to GitHub$`,
-				nilBody:  true},
+				nilBody:  true,
+			},
 		},
 		"Unknown status code": {
 			statusCode: http.StatusTeapot,
 			body:       []byte(`{"message":"I'm a teapot"}`),
 			want: wants{
 				errRegex: `unknown status code 418`,
-				nilBody:  true},
+				nilBody:  true,
+			},
 		},
 	}
 
@@ -545,6 +592,9 @@ func TestHandleResponse(t *testing.T) {
 				resp := &http.Response{
 					StatusCode: tc.statusCode,
 					Header:     http.Header{},
+					Request: &http.Request{
+						URL: &url.URL{},
+					},
 				}
 				hadETag := name
 				resp.Header.Add("ETag", hadETag)
@@ -560,7 +610,7 @@ func TestHandleResponse(t *testing.T) {
 				logFrom := logutil.LogFrom{Primary: "TestHandleResponse", Secondary: name}
 
 				// WHEN handleResponse is called on it.
-				gotBody, err := lookup.handleResponse(resp, tc.body, logFrom)
+				gotBody, nextPage, err := lookup.handleResponse(resp, tc.body, logFrom)
 
 				// GitHub actions regularly fail /tags with:
 				//   'Get "https://api.github.com/repos/.../tags": http2: client conn could not be established'
@@ -596,6 +646,11 @@ func TestHandleResponse(t *testing.T) {
 				} else if !tc.want.setEmptyListETag && emptyListETag == hadETag {
 					t.Errorf("%s\nempty list ETag should not have been set",
 						packageName)
+				}
+				// AND the nextPage is as expected.
+				if nextPage != tc.want.nextPage {
+					t.Errorf("%s\nnextPage mismatch\nwant: %d\ngot: %d",
+						packageName, tc.want.nextPage, nextPage)
 				}
 				break
 			}
@@ -814,7 +869,7 @@ func TestGetVersion(t *testing.T) {
 						regex: 'ver[0-9.]+'
 			`),
 			want: want{
-				errRegex: `^no releases were found matching the url_commands$`},
+				errRegex: `^no releases were found matching the url_commands on page \d+ of the API response$`},
 		},
 		"invalid JSON": {
 			body: test.StringPtr("invalid"),
@@ -889,7 +944,7 @@ func TestGetVersion(t *testing.T) {
 			}
 
 			// WHEN getVersion is called on it.
-			version, releaseDate, err := lookup.getVersion(testBody, logFrom)
+			version, releaseDate, err := lookup.getVersion(testBody, 1, logFrom)
 
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
@@ -1027,21 +1082,21 @@ func TestQueryGitHubETag(t *testing.T) {
 			errRegex:              `^$`},
 		"if initial request fails filter, cached results will be used": {
 			attempts:                   3,
-			eTagChanged:                1,
-			eTagUnchangedUseCache:      3, // 2 attempts + 1 recheck.
+			eTagChanged:                3, // page1+2, page1.
+			eTagUnchangedUseCache:      2, // 1 last attempt + 1 recheck.
 			initialRequireRegexVersion: `^FOO$`,
 			errRegex: test.TrimYAML(`
 				^no releases were found matching the require field.*
 				regex "[^"]+" not matched on version "[^"]+"$`)},
 		"invalid url_commands will catch no versions": {
 			attempts:              2,
-			eTagChanged:           1,
-			eTagUnchangedUseCache: 1,
+			eTagChanged:           4, // page1+2, page1+2.
+			eTagUnchangedUseCache: 0, // 0 recheck.
 			urlCommands: filter.URLCommandSlice{
 				{Type: "regex", Regex: (`^FOO$`)}},
 			errRegex: test.TrimYAML(`
-				^no releases were found matching the url_commands
-				no releases were found matching the url_commands$`)},
+				^no releases were found matching the url_commands on page 2 of the API response
+				no releases were found matching the url_commands on page 2 of the API response$`)},
 	}
 
 	for name, tc := range tests {

@@ -18,6 +18,7 @@
 package github
 
 import (
+	"math/rand"
 	"os"
 	"sync"
 	"testing"
@@ -256,6 +257,33 @@ func TestData_ETag(t *testing.T) {
 	if got != want {
 		t.Errorf("%s\nwant: %q\ngot:  %q",
 			packageName, want, got)
+	}
+}
+
+func TestData_PerPage(t *testing.T) {
+	for range 10 {
+		// GIVEN a Data instance.
+		data := &Data{}
+
+		// WHEN SetPerPage is called with a new value.
+		foundOnPage := rand.Intn(10) + 1
+		data.SetPerPage(foundOnPage)
+
+		// THEN the PerPage field is updated correctly.
+		want := foundOnPage * defaultPerPage
+		if got := data.PerPage(); got != want {
+			t.Errorf("%s\nfailed to update PerPage\nwant: %d\ngot:  %d",
+				packageName, want, got)
+		}
+
+		// WHEN ResetPerPage is called.
+		data.ResetPerPage()
+
+		// THEN the PerPage field is reset to 0.
+		if got := data.PerPage(); got != 0 {
+			t.Errorf("%s\nfailed to reset PerPage\nwant: %d\ngot:  %d",
+				packageName, 0, got)
+		}
 	}
 }
 
