@@ -47,7 +47,7 @@ const VersionWithRefresh: FC<Props> = ({
 }) => {
 	const [lastFetched, setLastFetched] = useState(0);
 	const { monitorData } = useWebSocket();
-	const { setError, setValue, trigger } = useFormContext();
+	const { clearErrors, setError, setValue, trigger } = useFormContext();
 	const dataTarget = vType === 0 ? 'latest_version' : 'deployed_version';
 	const convertedOriginal = useMemo(() => {
 		if (original === null) return {};
@@ -123,6 +123,7 @@ const VersionWithRefresh: FC<Props> = ({
 	useEffect(() => {
 		if (versionData.version !== '') {
 			setValue(`${dataTarget}.version`, versionData.version);
+			clearErrors(`${dataTarget}.version`)
 		}
 	}, [versionData.version, dataTarget]);
 
