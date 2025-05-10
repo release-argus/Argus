@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.26.0](https://github.com/release-argus/Argus/compare/0.25.0...0.26.0) (2025-05-10)
+
+
+### Features
+
+* **latest_version:** add pagination to GitHub release fetching ([03726ad](https://github.com/release-argus/Argus/commits/03726adf9af72c9668ab615471895c776d5ce794))
+
+
+### Bug Fixes
+
+* **version-refresh:** clear version errors after fetch ([e968847](https://github.com/release-argus/Argus/commits/e96884764e1cbdab9f41f049efaa5b33220a7b66))
+* **version-refresh:** omit version from query keys ([ec8b3b2](https://github.com/release-argus/Argus/commits/ec8b3b2f2807029c0cb970eea4c2639d4a5b8d0e))
+
 ## [0.25.0](https://github.com/release-argus/Argus/compare/0.24.0...0.25.0) (2025-04-30)
 
 
