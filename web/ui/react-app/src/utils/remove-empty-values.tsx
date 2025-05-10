@@ -9,9 +9,17 @@ import { isEmptyArray, isEmptyObject } from './is-empty';
 
 import isEmptyOrNull from './is-empty-or-null';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const removeEmptyValues = (obj: { [x: string]: any }) => {
+const removeEmptyValues = (
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	obj: { [x: string]: any },
+	excludeKeys: string[] = [],
+) => {
 	for (const key in obj) {
+		if (excludeKeys.find((k) => k === key)) {
+			delete obj[key];
+			continue
+		}
+
 		// [] Array.
 		if (Array.isArray(obj[key])) {
 			// Empty array - remove.
@@ -21,8 +29,11 @@ const removeEmptyValues = (obj: { [x: string]: any }) => {
 			typeof obj[key] === 'object' &&
 			!['notify', 'webhook'].includes(key) // Not notify/webhook as they may be empty to reference globals.
 		) {
+			const childExcludeKeys = excludeKeys
+				.filter((k) => k.startsWith(`${key}.`))
+				.map((k) => k.substring(key.length + 1));
 			// Check object.
-			removeEmptyValues(obj[key]);
+			removeEmptyValues(obj[key], childExcludeKeys);
 			// Empty object - remove.
 			if (isEmptyObject(obj[key])) {
 				delete obj[key];
@@ -30,7 +41,7 @@ const removeEmptyValues = (obj: { [x: string]: any }) => {
 			// "" Empty/undefined string - remove.
 		} else if (isEmptyOrNull(obj[key])) delete obj[key];
 	}
-	return obj;
+	return JSON.parse(JSON.stringify(obj));
 };
 
 export default removeEmptyValues;

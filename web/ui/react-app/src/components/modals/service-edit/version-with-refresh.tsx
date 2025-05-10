@@ -73,6 +73,15 @@ const VersionWithRefresh: FC<Props> = ({
 	const { data: semanticVersioning, refetchData: refetchSemanticVersioning } =
 		useValuesRefetch<boolean>('options.semantic_versioning');
 
+	const queryParams = useMemo(
+		() => ({
+			params: removeEmptyValues(data ?? {}),
+			semantic_versioning: semanticVersioning,
+			original_data: removeEmptyValues(original ?? []),
+		}),
+		[data, semanticVersioning, original]
+	);
+
 	const {
 		data: versionData,
 		isFetching,
@@ -82,11 +91,7 @@ const VersionWithRefresh: FC<Props> = ({
 			'version/refresh',
 			dataTarget,
 			{ id: serviceID },
-			{
-				params: removeEmptyValues(data ?? {}),
-				semantic_versioning: semanticVersioning,
-				original_data: removeEmptyValues(original ?? []),
-			},
+			queryParams,
 		],
 		queryFn: () =>
 			fetchVersionJSON({
