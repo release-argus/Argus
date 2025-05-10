@@ -80,7 +80,7 @@ func (l *Lookup) query(writeToDB bool, logFrom logutil.LogFrom) error {
 
 	// Set the deployed version if it has changed.
 	if previousVersion := l.Status.DeployedVersion(); version != previousVersion {
-		l.HandleNewVersion(version, "", writeToDB, logFrom) //nolint: wrapcheck
+		l.HandleNewVersion(version, "", writeToDB, logFrom) //nolint:wrapcheck
 	}
 
 	return nil
@@ -149,7 +149,7 @@ func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 	// Return the body.
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // Limit to 10 MB.
 	logutil.Log.Error(err, logFrom, err != nil)
-	return body, err //nolint: wrapcheck
+	return body, err //nolint:wrapcheck
 }
 
 // getVersion returns the latest version from `body` that matches the URLCommands, and Regex requirements.

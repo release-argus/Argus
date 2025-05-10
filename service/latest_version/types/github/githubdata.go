@@ -27,6 +27,7 @@ import (
 var (
 	emptyListETagMutex sync.RWMutex
 	emptyListETag      = `"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"`
+	defaultPerPage     = 30
 )
 
 // SetEmptyListETag finds the ETag for an empty list query on the GitHub API
@@ -46,7 +47,7 @@ func SetEmptyListETag(accessToken string) {
 	lookup.data.SetTagFallback()
 	//#nosec G104 -- Disregard.
 	//nolint:errcheck // ^
-	lookup.httpRequest(logutil.LogFrom{Primary: "SetEmptyListETag"})
+	lookup.httpRequest(1, logutil.LogFrom{Primary: "SetEmptyListETag"})
 
 	setEmptyListETag(lookup.data.ETag())
 }
@@ -72,6 +73,7 @@ func getEmptyListETag() string {
 type Data struct {
 	mutex       sync.RWMutex           // Mutex to protect the Data.
 	eTag        string                 // GitHub ETag for conditional requests https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requestsl.
+	perPage     int                    // Number of releases per page.
 	releases    []github_types.Release // Store Releases tied to an ETag.
 	tagFallback bool                   // Whether we have fallen back to using /tags instead of /releases.
 }
@@ -123,6 +125,30 @@ func (g *Data) ETag() string {
 	defer g.mutex.RUnlock()
 
 	return g.eTag
+}
+
+// SetPerPage of the Data.
+func (g *Data) SetPerPage(foundOnPage int) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+
+	g.perPage = util.ValueOrValue(g.perPage, defaultPerPage) * foundOnPage
+}
+
+// ResetPerPage of the Data.
+func (g *Data) ResetPerPage() {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+
+	g.perPage = 0
+}
+
+// PerPage value of the Data.
+func (g *Data) PerPage() int {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+
+	return g.perPage
 }
 
 // SetReleases of the Data.

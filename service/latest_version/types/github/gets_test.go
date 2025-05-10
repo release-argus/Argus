@@ -73,6 +73,8 @@ func TestURL(t *testing.T) {
 	tests := map[string]struct {
 		url         string
 		tagFallback bool
+		page        int
+		perPage     int
 		want        string
 	}{
 		"Repo": {
@@ -88,6 +90,40 @@ func TestURL(t *testing.T) {
 			url:  "https://api.github.com/repos/release-argus/Argus",
 			want: "https://api.github.com/repos/release-argus/Argus",
 		},
+		"Repo with page 1": {
+			url:  "release-argus/Argus",
+			page: 1,
+			want: "https://api.github.com/repos/release-argus/Argus/releases",
+		},
+		"Repo with page >1": {
+			url:  "release-argus/Argus",
+			page: 2,
+			want: "https://api.github.com/repos/release-argus/Argus/releases?page=2",
+		},
+		"Repo with per_page": {
+			url:     "release-argus/Argus",
+			perPage: 2,
+			want:    fmt.Sprintf("https://api.github.com/repos/release-argus/Argus/releases?per_page=%d", 2*defaultPerPage),
+		},
+		"Repo with page >1 and per_page": {
+			url:     "release-argus/Argus",
+			page:    2,
+			perPage: 4,
+			want:    fmt.Sprintf("https://api.github.com/repos/release-argus/Argus/releases?page=2&per_page=%d", 4*defaultPerPage),
+		},
+		"Repo with tag fallback and page >1": {
+			url:         "release-argus/Argus",
+			tagFallback: true,
+			page:        3,
+			want:        "https://api.github.com/repos/release-argus/Argus/tags?page=3",
+		},
+		"Repo with tag fallback, page >1, and per_page": {
+			url:         "release-argus/Argus",
+			tagFallback: true,
+			page:        3,
+			perPage:     7,
+			want:        fmt.Sprintf("https://api.github.com/repos/release-argus/Argus/tags?page=3&per_page=%d", 7*defaultPerPage),
+		},
 	}
 
 	for name, tc := range tests {
@@ -99,9 +135,10 @@ func TestURL(t *testing.T) {
 			if tc.tagFallback {
 				lookup.GetGitHubData().SetTagFallback()
 			}
+			lookup.data.SetPerPage(tc.perPage)
 
-			// WHEN url is called.
-			got := lookup.url()
+			// WHEN url is called with the page argument.
+			got := lookup.url(tc.page)
 
 			// THEN the expected value is returned.
 			if got != tc.want {

@@ -31,7 +31,7 @@ func (l *Lookup) accessToken() string {
 }
 
 // url will return a GitHub API URL for the repository.
-func (l *Lookup) url() string {
+func (l *Lookup) url(page int) string {
 	url := util.EvalEnvVars(l.URL)
 	// Convert "owner/repo" to the API path.
 	if strings.Count(url, "/") == 1 {
@@ -41,7 +41,20 @@ func (l *Lookup) url() string {
 		}
 		url = fmt.Sprintf("https://api.github.com/repos/%s/%s",
 			url, apiTarget)
+
+		// Query params
+		params := make([]string, 0, 2)
+		if page > 1 {
+			params = append(params, fmt.Sprintf("page=%d", page))
+		}
+		if perPage := l.data.PerPage(); perPage != 0 {
+			params = append(params, fmt.Sprintf("per_page=%d", perPage))
+		}
+		if len(params) > 0 {
+			url += "?" + strings.Join(params, "&")
+		}
 	}
+
 	return url
 }
 

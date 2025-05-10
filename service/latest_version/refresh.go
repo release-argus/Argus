@@ -76,7 +76,7 @@ func Refresh(
 	// Query the lookup.
 	_, err := newLookup.Query(!usingOverrides, logFrom)
 	if err != nil {
-		return "", false, err //nolint: wrapcheck
+		return "", false, err //nolint:wrapcheck
 	}
 
 	version := newLookup.GetStatus().LatestVersion()
