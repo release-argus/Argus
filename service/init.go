@@ -57,6 +57,14 @@ func (s *Service) Init(
 	rootWebHookConfig *webhook.SliceDefaults,
 	webhookDefaults, webhookHardDefaults *webhook.Defaults,
 ) {
+	// Service.
+	s.Defaults = defaults
+	s.HardDefaults = hardDefaults
+	// Default Name to ID.
+	if s.Name == "" {
+		s.Name = s.ID
+	}
+
 	// Status.
 	var serviceURL string
 	if s.LatestVersion != nil {
@@ -66,10 +74,6 @@ func (s *Service) Init(
 		len(s.Notify), len(s.Command), len(s.WebHook),
 		s.ID, s.Name, serviceURL,
 		&s.Dashboard)
-
-	// Service.
-	s.Defaults = defaults
-	s.HardDefaults = hardDefaults
 
 	// Dashboard.
 	s.Dashboard.Defaults = &s.Defaults.Dashboard
