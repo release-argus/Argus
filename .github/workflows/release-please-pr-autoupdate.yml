@@ -1,0 +1,57 @@
+name: Release PR Auto-Update
+
+on:
+  workflow_run:
+    workflows: ["Release Please"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-commit:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install GitHub CLI
+        run: |
+          sudo apt update
+          sudo apt install -y gh
+
+      - name: Authenticate GitHub CLI
+        run: gh auth login --with-token < ${{ secrets.GH_RELEASE }}
+
+      - name: Get 'Release Please' PR branch name
+        id: get_pr_branch
+        run: |
+          pr_branch=$(gh pr list --search "Release Please" --json headRefName --jq '.[0].headRefName')
+          echo "pr_branch=$pr_branch" >> $GITHUB_OUTPUT
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.get_pr_branch.outputs.pr_branch }}
+          token: ${{ secrets.GH_RELEASE }}
+
+      - name: Use Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Build web components
+        run: make web
+
+      - name: Commit built files
+        run: |
+          git config user.name "release-please[bot]"
+          git config user.email "release-please[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GH_RELEASE }}@github.com/${{ github.repository }}
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: auto-build after version bump"
+            git push
+          else
+            echo "No changes to commit."
+          fi

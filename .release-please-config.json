@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "include-component-in-tag": false,
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "includeVInTag": false,
+      "extra-files": [
+        "web/ui/react-app/package.json",
+        "web/ui/package-lock.json",
+        "package.json",
+        "package-lock.json"
+      ],
+      "changelog-path": "CHANGELOG.md",
+      "changelog-sections": [
+        {
+          "type": "feat",
+          "section": "Features"
+        },
+        {
+          "type": "fix",
+          "section": "Bug Fixes"
+        }
+      ]
+    }
+  }
+}
