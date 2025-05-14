@@ -423,10 +423,6 @@ func TestSlice_giveIDs(t *testing.T) {
 					t.Errorf("%s\nservice %q, ID mismatch\nwant: %q\ngot:  %q",
 						packageName, id, service.ID, got.ID)
 				}
-				if got.Name != service.Name {
-					t.Errorf("%s\nservice %q, Name mismatch\nwant: %q\ngot:  %q",
-						packageName, id, got.Name, service.Name)
-				}
 			}
 		})
 	}

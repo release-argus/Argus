@@ -128,7 +128,7 @@ func TestService_Init(t *testing.T) {
 		defaults *Defaults
 		wantIcon string
 	}{
-		"bare service": {
+		"bare service - Name defaulted to ID": {
 			svc: &Service{
 				ID: "Init",
 				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
@@ -140,7 +140,23 @@ func TestService_Init(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-			}},
+			},
+		},
+		"service with Name": {
+			svc: &Service{
+				ID:   "Init",
+				Name: "other-name",
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New("github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+			},
+		},
 		"service with notify - doesn't set fallback when Service has a Dashboard.Icon": {
 			svc: &Service{
 				ID: "Init",
@@ -356,6 +372,7 @@ func TestService_Init(t *testing.T) {
 			}
 			var hardDefaults Defaults
 			tc.svc.ID = name
+			hadName := tc.svc.Name
 			hadNotify := util.SortedKeys(tc.svc.Notify)
 			hadWebHook := util.SortedKeys(tc.svc.WebHook)
 			hadCommand := make(command.Slice, len(tc.svc.Command))
@@ -367,6 +384,11 @@ func TestService_Init(t *testing.T) {
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
 				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 
+			// THEN the Name is set to the ID if not set.
+			if (hadName != "" && tc.svc.Name != hadName) || (hadName == "" && tc.svc.Name != tc.svc.ID) {
+				t.Errorf("%s\nName mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.svc.ID, tc.svc.Name)
+			}
 			// THEN pointers to those vars are handed out to the Lookup::
 			// 	Defaults.
 			if tc.svc.Defaults != tc.defaults {

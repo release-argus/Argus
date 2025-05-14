@@ -87,10 +87,6 @@ func (s *Slice) giveIDs() {
 		}
 
 		service.ID = id
-		// Default Name to ID.
-		if service.Name == "" {
-			service.Name = id
-		}
 	}
 }
 
