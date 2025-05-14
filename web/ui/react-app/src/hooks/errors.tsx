@@ -2,12 +2,13 @@ import { FieldError, useFormState } from 'react-hook-form';
 import { extractErrors, getNestedError } from 'utils';
 
 import { StringStringMap } from 'types/config';
+import { useMemo } from 'react';
 
 /**
  * Tracks an error of a field in a form.
  *
- * @param name - The name of the field in the form.
- * @param wanted - Whether the error is returned.
+ * @param name - Form field name.
+ * @param wanted - Whether to return the error.
  * @returns The error of the field.
  */
 export const useError = (
@@ -15,22 +16,26 @@ export const useError = (
 	wanted?: boolean,
 ): FieldError | undefined => {
 	const { errors } = useFormState({ name: name, exact: true });
-	if (!wanted) return undefined;
-	return getNestedError(errors, name);
+	return wanted ? getNestedError(errors, name) : undefined
 };
 
 /**
  * Tracks all errors under a field in a form.
  *
- * @param name - The name of the field in the form.
- * @param wanted - Whether the errors are returned.
+ * @param name - Form field name.
+ * @param wanted - Whether to return the error.
  * @returns The errors under the field.
  */
 export const useErrors = (
 	name: string,
 	wanted?: boolean,
 ): StringStringMap | undefined => {
-	const { errors } = useFormState({ name: name, exact: true });
-	if (!wanted) return undefined;
-	return extractErrors(errors, name);
+	const { errors } = useFormState({ name: name });
+
+	const extracted = useMemo(() => {
+		if (!wanted) return undefined;
+		return extractErrors(errors, name);
+	}, [JSON.stringify(errors), name, wanted]);
+
+	return extracted;
 };

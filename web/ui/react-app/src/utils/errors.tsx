@@ -1,7 +1,7 @@
 import { FieldError, FieldErrors } from 'react-hook-form';
 
 import { StringStringMap } from 'types/config';
-import { isEmptyObject } from './is-empty';
+import { isEmptyObject } from 'utils';
 
 /**
  * getNestedError gets the error for a potentially nested key in a react-hook-form errors object.
@@ -41,22 +41,21 @@ export const extractErrors = (
 	const traverse = (prefix: string, obj: any) => {
 		for (const key in obj) {
 			const value = obj[key];
-			if (value !== null) {
-				const fullPath = prefix ? `${prefix}.${key}` : key;
-				const atPath = fullPath.startsWith(path); // Path in the key.
-				if (atPath || path.includes(fullPath)) {
-					if (typeof value === 'object' && !value.hasOwnProperty('ref'))
-						traverse(fullPath, value);
-					else if (atPath && value?.hasOwnProperty('ref')) {
-						const trimmedPath = path
-							? fullPath.substring(path.length + 1)
-							: fullPath;
-						flatErrors[trimmedPath] = value.message;
-					}
+			const fullPath = prefix ? `${prefix}.${key}` : key;
+			if (!fullPath.startsWith(path) || value === null) continue;
+
+			if (typeof value === 'object') {
+				if ('message' in value && 'ref' in value) {
+					const trimmedPath = path ? fullPath.substring(path.length + 1) : fullPath;
+					flatErrors[trimmedPath] = value.message;
+				} else {
+					traverse(fullPath, value);
 				}
 			}
 		}
 	};
+
 	traverse('', errors);
 	return isEmptyObject(flatErrors) ? undefined : flatErrors;
 };
+
