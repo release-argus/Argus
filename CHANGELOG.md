@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.26.1](https://github.com/release-argus/Argus/compare/0.26.0...v0.26.1) (2025-05-15)
+
+
+### Bug Fixes
+
+* **ui:** show error on first version refresh failure ([2e0479f](https://github.com/release-argus/Argus/commit/2e0479ff75fc4b86896bd1c1cd49354a5dba5c3c))
+* **web:** default `Name` to `ID` when creating or editing a service ([58d1284](https://github.com/release-argus/Argus/commit/58d1284cd98713e9dcf28803fe5ce340430574ee))
+
 ## [0.26.0](https://github.com/release-argus/Argus/compare/0.25.0...0.26.0) (2025-05-10)
 
 
