@@ -5,7 +5,8 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "includeVInTag": false,
+      "include-v-in-tag": false,
+      "pull-request-title-pattern": "chore(build): release${component} ${version}",
       "extra-files": [
         "web/ui/react-app/package.json",
         "web/ui/package-lock.json",
