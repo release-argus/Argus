@@ -430,6 +430,7 @@ func (s *Shoutrrr) BuildParams(context serviceinfo.ServiceInfo) *types.Params {
 
 	// Apply django templating.
 	for key, value := range params {
+		value = util.EvalEnvVars(value)
 		params[key] = util.TemplateString(value, context)
 	}
 

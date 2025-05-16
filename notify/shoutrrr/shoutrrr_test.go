@@ -19,6 +19,7 @@ package shoutrrr
 import (
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 
@@ -661,6 +662,7 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 	}
 	tests := map[string]struct {
 		rootValue, mainValue, defaultValue, hardDefaultValue *string
+		envVars                                              map[string]string
 		want                                                 string
 	}{
 		"root overrides all": {
@@ -707,11 +709,26 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 			defaultValue:     test.StringPtr("not_this"),
 			hardDefaultValue: test.StringPtr("not_this"),
 		},
+		"env vars": {
+			want:             "this",
+			rootValue:        test.StringPtr("${ARGUS_TEST_SHOUTRRR_BUILD_PARAMS}"),
+			mainValue:        test.StringPtr("not_this"),
+			defaultValue:     test.StringPtr("not_this"),
+			hardDefaultValue: test.StringPtr("not_this"),
+			envVars: map[string]string{
+				"ARGUS_TEST_SHOUTRRR_BUILD_PARAMS": "this",
+			},
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			for k, v := range tc.envVars {
+				os.Setenv(k, v)
+				t.Cleanup(func() { os.Unsetenv(k) })
+			}
 
 			key := "test"
 			shoutrrr := testShoutrrr(false, false)
