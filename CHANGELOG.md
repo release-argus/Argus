@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.26.2](https://github.com/release-argus/Argus/compare/0.26.1...0.26.2) (2025-05-16)
+
+
+### Bug Fixes
+
+* **notify:** evaluate environment variables in params ([#580](https://github.com/release-argus/Argus/issues/580)) ([2f80722](https://github.com/release-argus/Argus/commit/2f807222064ee37759ff857256d4a49cb269387d))
+
 ## [0.26.1](https://github.com/release-argus/Argus/compare/0.26.0...v0.26.1) (2025-05-15)
 
 
