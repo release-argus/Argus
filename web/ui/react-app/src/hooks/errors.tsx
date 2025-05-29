@@ -35,7 +35,7 @@ export const useErrors = (
 	const extracted = useMemo(() => {
 		if (!wanted) return undefined;
 		return extractErrors(errors, name);
-	}, [JSON.stringify(errors), name, wanted]);
+	}, [errors, name, wanted]);
 
 	return extracted;
 };
