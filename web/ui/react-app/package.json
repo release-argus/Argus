@@ -1,6 +1,6 @@
 {
   "name": "argus",
-  "version": "0.26.2",
+  "version": "0.26.3",
   "description": "Automated checks for new software releases",
   "homepage": "https://release-argus.io",
   "private": true,

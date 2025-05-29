@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.26.3](https://github.com/release-argus/Argus/compare/0.26.2...0.26.3) (2025-05-29)
+
+
+### Bug Fixes
+
+* **ui:** avoid errors cyclic crash and move version fetch error to state ([#590](https://github.com/release-argus/Argus/issues/590)) ([fff0c65](https://github.com/release-argus/Argus/commit/fff0c65bc2b25813b13a3b25492847993fd83209))
+
 ## [0.26.2](https://github.com/release-argus/Argus/compare/0.26.1...0.26.2) (2025-05-16)
 
 
