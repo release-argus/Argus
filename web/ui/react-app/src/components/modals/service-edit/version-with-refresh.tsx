@@ -52,7 +52,8 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 }) => {
 	const [lastFetched, setLastFetched] = useState(0);
 	const { monitorData } = useWebSocket();
-	const { clearErrors, setError, setValue, trigger } = useFormContext();
+	const { clearErrors, setValue, trigger } = useFormContext();
+	const [queryError, setQueryError] = useState<string | null>(null);
 	const dataTarget = vType === 0 ? 'latest_version' : 'deployed_version';
 	const convertedOriginal = useMemo(() => {
 		if (original === null) return {};
@@ -92,6 +93,11 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 				data,
 				original: convertedOriginal,
 			}),
+		onMutate: () => {
+			// Reset errors and version field before fetching.
+			setQueryError(null);
+			setValue(`${dataTarget}.version`, '');
+		},
 		onSuccess: (data) => {
 			if (data.version) {
 				setValue(`${dataTarget}.version`, data.version);
@@ -100,10 +106,7 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 		},
 		onError: (error) => {
 			setValue(`${dataTarget}.version`, '');
-			setError(`${dataTarget}.version`, {
-				type: 'manual',
-				message: beautifyGoErrors(error instanceof Error ? error.message : String(error)),
-			});
+			setQueryError(beautifyGoErrors(error instanceof Error ? error.message : String(error)),)
 		},
 	});
 	const version = useWatch({ name: `${dataTarget}.version` }) ?? monitorData.service[serviceID]?.status?.[dataTarget];
@@ -148,7 +151,7 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 					Refresh
 				</Button>
 			</span>
-			{(versionData?.error || versionData?.message) && (
+			{(queryError || versionData?.message) && (
 				<span
 					className="mb-2"
 					style={{ width: '100%', wordBreak: 'break-all' }}
@@ -156,8 +159,8 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 					<Alert variant="danger">
 						Failed to refresh:
 						<br />
-						{beautifyGoErrors(
-							(versionData.error || versionData.message) as string,
+						{(
+							(queryError || beautifyGoErrors(versionData?.message ?? ""))
 						)}
 					</Alert>
 				</span>
