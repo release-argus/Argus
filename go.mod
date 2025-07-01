@@ -5,7 +5,7 @@ go 1.24
 toolchain go1.24.0
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/containrrr/shoutrrr v0.8.0
 	github.com/flosch/pongo2/v5 v5.0.0
 	github.com/gorilla/mux v1.8.1
