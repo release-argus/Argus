@@ -40,6 +40,41 @@ type oldSecretRefs struct {
 	WebHook               map[string]shared.WHSecretRef    `json:"webhook,omitempty"`
 }
 
+// UnmarshalJSON converts certain arrays into maps.
+func (o *oldSecretRefs) UnmarshalJSON(data []byte) error {
+	aux := struct {
+		ID                    string                  `json:"id"`
+		DeployedVersionLookup shared.DVSecretRef      `json:"deployed_version,omitempty"`
+		Notify                []shared.OldStringIndex `json:"notify,omitempty"`
+		WebHook               []shared.WHSecretRef    `json:"webhook,omitempty"`
+	}{}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err //nolint:wrapcheck
+	}
+
+	o.ID = aux.ID
+	o.DeployedVersionLookup = aux.DeployedVersionLookup
+
+	// Convert Notify array -> map
+	if aux.Notify != nil {
+		o.Notify = make(map[string]shared.OldStringIndex, len(aux.Notify))
+		for _, n := range aux.Notify {
+			o.Notify[n.OldIndex] = n
+		}
+	}
+
+	// Convert WebHook array -> map
+	if aux.WebHook != nil {
+		o.WebHook = make(map[string]shared.WHSecretRef, len(aux.WebHook))
+		for _, wh := range aux.WebHook {
+			o.WebHook[wh.OldIndex] = wh
+		}
+	}
+
+	return nil
+}
+
 // FromPayload creates a new/edited Service from a payload.
 func FromPayload(
 	oldService *Service,

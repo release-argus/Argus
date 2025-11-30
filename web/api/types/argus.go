@@ -48,7 +48,8 @@ func (s *ServiceSummary) String() string {
 	return util.ToJSONString(s)
 }
 
-// RemoveUnchanged will nil/clear the fields that haven't changed compared to `oldData`.
+// RemoveUnchanged updates a ServiceSummary by setting unchanged fields to nil or empty values based on a reference
+// ServiceSummary.
 func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 	if oldData == nil {
 		return
@@ -110,7 +111,7 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 
 	// Tags - Removed.
 	if oldData.Tags != nil && s.Tags == nil {
-		emptyTags := []string{}
+		var emptyTags []string
 		s.Tags = &emptyTags
 		// Unchanged.
 	} else if oldData.Tags != nil && s.Tags != nil && util.AreSlicesEqual(*oldData.Tags, *s.Tags) {
@@ -123,19 +124,21 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 	s.WebHook = nilIfUnchanged(oldData.WebHook, s.WebHook)
 }
 
-// Helper function to handle "Removed" or "Unchanged" logic.
+// nilIfUnchanged compares two pointers; returns nil if values are equal, newValue if different, or a zero value if removed.
 func nilIfUnchanged[T comparable](oldValue, newValue *T) *T {
-	// Removed: oldValue exists but newValue is nil.
-	if oldValue != nil && newValue == nil {
-		var fresh T
-		return &fresh
-	}
-	// Unchanged: oldValue and newValue are equal.
-	if oldValue != nil && newValue != nil &&
-		*oldValue == *newValue {
+	switch {
+	// Changed: no old value.
+	case oldValue == nil:
+		return newValue
+	// Removed: new value nil.
+	case newValue == nil:
+		var zero T
+		return &zero
+	// Unchanged.
+	case *oldValue == *newValue:
 		return nil
 	}
-	// Added: Keep newValue as is (or both are nil).
+	// Changed: values differ.
 	return newValue
 }
 
@@ -147,8 +150,8 @@ type Status struct {
 	LatestVersion            string `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`                         // Latest version found from query().
 	LatestVersionTimestamp   string `json:"latest_version_timestamp,omitempty" yaml:"latest_version_timestamp,omitempty"`     // UTC timestamp that the latest version changed.
 	LastQueried              string `json:"last_queried,omitempty" yaml:"last_queried,omitempty"`                             // UTC timestamp of the last query.
-	RegexMissesContent       uint   `json:"regex_misses_content,omitempty" yaml:"regex_misses_content,omitempty"`             // Counter for the amount of regex misses on URL content.
-	RegexMissesVersion       uint   `json:"regex_misses_version,omitempty" yaml:"regex_misses_version,omitempty"`             // Counter for the amount of regex misses on version.
+	RegexMissesContent       uint   `json:"regex_misses_content,omitempty" yaml:"regex_misses_content,omitempty"`             // Counter for the number of regular expression misses on URL content.
+	RegexMissesVersion       uint   `json:"regex_misses_version,omitempty" yaml:"regex_misses_version,omitempty"`             // Counter for the number of regular expression misses on version.
 }
 
 // String returns a JSON string representation of the Status.
@@ -200,7 +203,7 @@ type RuntimeInfo struct {
 	GoDebug        string    `json:"GODEBUG,omitempty" yaml:"GODEBUG,omitempty"`
 }
 
-// Flags defines the runtime flags.
+// Flags define the runtime flags.
 type Flags struct {
 	ConfigFile       string `json:"config.file,omitempty" yaml:"config.file,omitempty"`
 	LogLevel         string `json:"log.level,omitempty" yaml:"log.level,omitempty"`
@@ -257,13 +260,13 @@ type Config struct {
 	Settings     *Settings     `json:"settings,omitempty" yaml:"settings,omitempty"`           // Settings for the program.
 	HardDefaults *Defaults     `json:"hard_defaults,omitempty" yaml:"hard_defaults,omitempty"` // Hard default values.
 	Defaults     *Defaults     `json:"defaults,omitempty" yaml:"defaults,omitempty"`           // Default values.
-	Notify       *NotifySlice  `json:"notify,omitempty" yaml:"notify,omitempty"`               // Notify message(s) to send on a new release.
-	WebHook      *WebHookSlice `json:"webhook,omitempty" yaml:"webhook,omitempty"`             // WebHook(s) to send on a new release.
-	Service      *ServiceSlice `json:"service,omitempty" yaml:"service,omitempty"`             // The service(s) to monitor.
-	Order        []string      `json:"order,omitempty" yaml:"order,omitempty"`                 // Ordering for the Service(s) in the WebUI.
+	Notify       *NotifySlice  `json:"notify,omitempty" yaml:"notify,omitempty"`               // Notify messages to send on a new release.
+	WebHook      *WebHookSlice `json:"webhook,omitempty" yaml:"webhook,omitempty"`             // WebHooks to send on a new release.
+	Service      *ServiceSlice `json:"service,omitempty" yaml:"service,omitempty"`             // The services to monitor.
+	Order        []string      `json:"order,omitempty" yaml:"order,omitempty"`                 // Ordering for the Services in the WebUI.
 }
 
-// Settings contains settings for the program.
+// Settings contain settings for the program.
 type Settings struct {
 	Log LogSettings `json:"log,omitempty" yaml:"log,omitempty"`
 	Web WebSettings `json:"web,omitempty" yaml:"web,omitempty"`
@@ -271,7 +274,7 @@ type Settings struct {
 
 // LogSettings contains web settings for the program.
 type LogSettings struct {
-	Timestamps *bool  `json:"timestamps,omitempty" yaml:"timestamps,omitempty"` // Timestamps in CLI output.
+	Timestamps *bool  `json:"timestamps,omitempty" yaml:"timestamps,omitempty"` // Timestamps in command-line tool output.
 	Level      string `json:"level,omitempty" yaml:"level,omitempty"`           // Log level.
 }
 
@@ -486,12 +489,12 @@ type LatestVersionRequireDefaults struct {
 	Docker RequireDockerCheckDefaults `json:"docker,omitempty" yaml:"docker,omitempty"` // Docker repo defaults.
 }
 
-// RequireDockerCheckRegistryDefaults are a default value(s) for a RequireDockerCheckRegistry.
+// RequireDockerCheckRegistryDefaults are default values for a RequireDockerCheckRegistry.
 type RequireDockerCheckRegistryDefaults struct {
 	Token string `json:"token,omitempty" yaml:"token,omitempty"` // Token to get the token for the queries.
 }
 
-// RequireDockerCheckRegistryDefaultsWithUsername is a RequireDockerCheckRegistryDefaults with a Username.
+// RequireDockerCheckRegistryDefaultsWithUsername are RequireDockerCheckRegistryDefaults with a Username.
 type RequireDockerCheckRegistryDefaultsWithUsername struct {
 	RequireDockerCheckRegistryDefaults
 	Username string `json:"username,omitempty" yaml:"username,omitempty"` // Username to get a new token.
@@ -544,7 +547,7 @@ func (d *DeployedVersionLookup) String() string {
 	return util.ToJSONString(d)
 }
 
-// BasicAuth to use on the HTTP(s) request.
+// BasicAuth to use on the HTTP(S) request.
 type BasicAuth struct {
 	Username string `json:"username" yaml:"username"`
 	Password string `json:"password" yaml:"password"`
@@ -556,7 +559,7 @@ type Header struct {
 	Value string `json:"value" yaml:"value"` // Value to give the key.
 }
 
-// URLCommandSlice is a slice of URLCommand to filter version(s) from the URL Content.
+// URLCommandSlice is a slice of URLCommand to filter versions from the URL Content.
 type URLCommandSlice []URLCommand
 
 // String returns a string representation of the URLCommandSlice.
@@ -567,7 +570,7 @@ func (slice *URLCommandSlice) String() string {
 	return util.ToJSONString(slice)
 }
 
-// URLCommand is a command to run to filter version(s) from the URL body.
+// URLCommand is a command to run to filter versions from the URL body.
 type URLCommand struct {
 	Type     string  `json:"type,omitempty" yaml:"type,omitempty"`         // regex/replace/split.
 	Regex    string  `json:"regex,omitempty" yaml:"regex,omitempty"`       // regex: regexp.MustCompile(Regex).
@@ -624,7 +627,7 @@ type WebHook struct {
 	CustomHeaders     *[]Header `json:"custom_headers,omitempty" yaml:"custom_headers,omitempty"`           // Custom Headers for the WebHook.
 	DesiredStatusCode *uint16   `json:"desired_status_code,omitempty" yaml:"desired_status_code,omitempty"` // e.g. 202.
 	Delay             string    `json:"delay,omitempty" yaml:"delay,omitempty"`                             // The delay before sending the WebHook.
-	MaxTries          *uint8    `json:"max_tries,omitempty" yaml:"max_tries,omitempty"`                     // Amount of times to send the WebHook until we receive the desired status code.
+	MaxTries          *uint8    `json:"max_tries,omitempty" yaml:"max_tries,omitempty"`                     // Number of times to send the WebHook until we receive the desired status code.
 	SilentFails       *bool     `json:"silent_fails,omitempty" yaml:"silent_fails,omitempty"`               // Whether to notify if this WebHook fails MaxTries times.
 }
 

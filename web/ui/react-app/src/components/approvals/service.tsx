@@ -1,154 +1,200 @@
-import { Button, Card, OverlayTrigger, Tooltip } from 'react-bootstrap';
-import { FC, memo, useCallback, useContext, useMemo, useState } from 'react';
-import { ModalType, ServiceSummaryType } from 'types/summary';
-import { ServiceImage, ServiceInfo, UpdateInfo } from 'components/approvals';
-
-import { CSS } from '@dnd-kit/utilities';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { ModalContext } from 'contexts/modal';
-import { faPen } from '@fortawesome/free-solid-svg-icons';
 import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { useQuery } from '@tanstack/react-query';
+import { GripVertical, Pencil } from 'lucide-react';
+import { type FC, memo, use, useCallback, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import ServiceImage from '@/components/approvals/service-image';
+import ServiceInfo from '@/components/approvals/service-info';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ModalContext } from '@/contexts/modal';
+import { useWebSocket } from '@/contexts/websocket';
+import { useDelayedRender } from '@/hooks/use-delayed-render';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import { cn } from '@/lib/utils';
+import { isEmptyOrNull } from '@/utils';
+import { mapRequest } from '@/utils/api/types/api-request-handler';
+import type {
+	ModalType,
+	ServiceSummary,
+} from '@/utils/api/types/config/summary';
 
-interface Props {
+type ServiceProps = {
 	id: string;
-	service: ServiceSummaryType;
+	service: ServiceSummary;
 	editable: boolean;
-}
+};
 
 /**
  * A card with the service's information, including the service's image,
  * version info, and update info.
  *
+ * @param id - The service ID.
  * @param service - The service to display.
  * @param editable - Whether edit mode is enabled.
- * @returns A component that displays the service.
  */
-const Service: FC<Props> = ({ id, service, editable = false }) => {
-	const { attributes, listeners, setNodeRef, transform, transition } =
-		useSortable({
-			id,
-			disabled: !editable,
-		});
+const Service: FC<ServiceProps> = ({ id, service, editable = false }) => {
+	const delayedRender = useDelayedRender(250);
+	const { setMonitorData } = useWebSocket();
+	const { setModal } = use(ModalContext);
 
-	const style = {
+	// Service summary.
+	const { data, isSuccess } = useQuery({
+		queryFn: () => mapRequest('SERVICE_SUMMARY', { serviceID: id }),
+		queryKey: QUERY_KEYS.SERVICE.SUMMARY_ITEM(id),
+		staleTime: Infinity,
+	});
+
+	// Push query result to monitorData context.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: setMonitorData stable.
+	useEffect(() => {
+		if (!isSuccess || !data) return;
+		setMonitorData({
+			page: 'APPROVALS',
+			service_data: data,
+			sub_type: 'INIT',
+			type: 'SERVICE',
+		});
+	}, [isSuccess, data]);
+
+	// Sortable cards.
+	const {
+		attributes,
+		listeners,
+		setNodeRef,
+		transform,
+		transition,
+		isDragging,
+	} = useSortable({
+		disabled: !editable,
+		id,
+	});
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: setModal stable.
+	const showModal = useCallback(
+		(type: ModalType, service: ServiceSummary) =>
+			setModal({ actionType: type, service: service }),
+		[],
+	);
+
+	const updateStatus = useMemo(() => {
+		const updateAvailable =
+			service.status?.deployed_version !== service.status?.latest_version;
+		const updateSkipped =
+			service.status?.approved_version !== undefined &&
+			updateAvailable &&
+			service.status.approved_version ===
+				`SKIP_${service.status.latest_version ?? ''}`;
+		const updateWarning = updateAvailable && !updateSkipped;
+
+		return {
+			// Update available when both 'latest' and 'deployed' versions defined, and differ.
+			available: updateAvailable,
+			// className for possible warning state
+			className: cn(
+				updateWarning && [
+					'text-foreground',
+					service.active !== false && 'bg-accent',
+				],
+			),
+			hasActions:
+				(service.command ?? 0) > 0 ||
+				(service.webhook ?? 0) > 0 ||
+				updateAvailable ||
+				updateSkipped,
+			// Version not found.
+			not_found:
+				isEmptyOrNull(service.status?.deployed_version) ||
+				isEmptyOrNull(service.status?.latest_version) ||
+				isEmptyOrNull(service.status?.last_queried),
+			// Update available, and 'approved' version is a skip of the 'latest'.
+			skipped: updateSkipped,
+			// 'New' version found (and not skipped).
+			warning: updateWarning,
+		};
+	}, [service]);
+
+	const dragStyle = {
 		transform: CSS.Transform.toString(transform),
 		transition,
 	};
 
-	const [showUpdateInfo, setShowUpdateInfo] = useState(false);
-
-	const toggleShowUpdateInfo = useCallback(() => {
-		setShowUpdateInfo((prevState) => !prevState);
-	}, []);
-	const { handleModal } = useContext(ModalContext);
-
-	const showModal = useMemo(
-		() => (type: ModalType, service: ServiceSummaryType) => {
-			handleModal(type, service);
-		},
-		[],
-	);
-
-	const updateStatus = useMemo(
-		() => ({
-			// Update available if latest version and deployed version are both defined and differ.
-			available:
-				(service?.status?.deployed_version || undefined) !==
-				(service?.status?.latest_version || undefined),
-			// Update is available and approved version is a skip of that latest version.
-			skipped:
-				(service?.status?.deployed_version || undefined) !==
-					(service?.status?.latest_version || undefined) &&
-				service?.status?.approved_version ===
-					`SKIP_${service?.status?.latest_version}`,
-		}),
-		[
-			service?.status?.approved_version,
-			service?.status?.latest_version,
-			service?.status?.deployed_version,
-		],
-	);
-
 	return (
 		<Card
-			ref={setNodeRef}
+			className={cn(
+				'gap-0 shadow',
+				isDragging && 'z-100 border-primary/50 bg-secondary',
+				updateStatus.not_found
+					? delayedRender(() => updateStatus.className, 'default')
+					: updateStatus.className,
+			)}
 			key={service.id}
-			bg="secondary"
-			className={'service shadow'}
-			style={style}
+			ref={setNodeRef}
+			style={dragStyle}
 		>
-			<Card.Title className="service-title" key={`${service.id}-title`}>
-				<a
-					href={service.url}
-					target="_blank"
-					rel="noreferrer noopener"
-					style={{ height: '100% !important' }}
-				>
-					<strong>{service.name ?? service.id}</strong>
-				</a>
-				{editable && (
-					<OverlayTrigger
-						delay={{ show: 500, hide: 500 }}
-						overlay={<Tooltip id="tooltip-edit">Edit service</Tooltip>}
+			<CardHeader
+				className="relative flex h-full flex-col items-center text-balance text-center"
+				key={`${service.id}-title`}
+			>
+				{service.url ? (
+					<Button
+						asChild
+						className="m-auto h-min w-fit items-start justify-start p-0 text-foreground"
+						variant="link"
 					>
+						<Link rel="noreferrer noopener" target="_blank" to={service.url}>
+							<h4 className="whitespace-normal font-semibold text-xl tracking-tight">
+								{service.name ?? service.id}
+							</h4>
+						</Link>
+					</Button>
+				) : (
+					<h4 className="my-auto cursor-default text-center font-semibold text-xl tracking-tight">
+						{service.name ?? service.id}
+					</h4>
+				)}
+				{editable && (
+					<div className="-top-2.5 absolute right-0.5 z-1 flex flex-col">
 						<Button
-							className="btn-icon-center"
+							aria-label="Edit service"
+							className="size-6"
+							onClick={() => showModal('EDIT', service)}
 							size="sm"
 							variant="secondary"
-							onClick={() => showModal('EDIT', service)}
-							style={{
-								height: '1.5rem',
-								width: '1.5rem',
-
-								// lay it on top.
-								zIndex: 1,
-								position: 'absolute',
-								top: '0.5rem',
-								right: '0.5rem',
-							}}
-							aria-describedby="tooltip-edit"
 						>
-							<FontAwesomeIcon icon={faPen} className="fa-sm" />
+							<Pencil />
 						</Button>
-					</OverlayTrigger>
+						<Button
+							{...listeners}
+							{...attributes}
+							aria-label="Drag handle"
+							className="cursor-grab touch-none px-0! py-2 text-muted-foreground"
+							size="sm"
+							variant="ghost"
+						>
+							<GripVertical />
+						</Button>
+					</div>
 				)}
-			</Card.Title>
+			</CardHeader>
 
-			<Card
-				key={service.id}
-				bg="secondary"
-				className={`service-inner ${
-					service.active === false ? 'service-disabled' : ''
-				}`}
-			>
-				<UpdateInfo
-					service={service}
-					visible={
-						updateStatus.available && showUpdateInfo && !updateStatus.skipped
-					}
-				/>
-				<ServiceImage
-					service_name={service.name ?? service.id}
-					service_type={service.type}
-					icon={service.icon}
-					icon_link_to={service.icon_link_to}
-					loading={service.loading}
-					visible={
-						!(updateStatus.available && showUpdateInfo && !updateStatus.skipped)
-					}
-					draggable={editable}
-					dragHandleProps={{
-						...attributes,
-						...listeners,
-					}}
-				/>
-				<ServiceInfo
-					service={service}
-					toggleShowUpdateInfo={toggleShowUpdateInfo}
-					updateAvailable={updateStatus.available}
-					updateSkipped={updateStatus.skipped}
-				/>
-			</Card>
+			<CardContent className="px-2">
+				<div
+					className={cn(
+						'flex gap-4 border-0 p-2',
+						service.active === false &&
+							'border-2 border-[var(--muted-foreground)] bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_20px,var(--muted-foreground)_20px,var(--muted-foreground)_40px)] p-0.5',
+					)}
+				>
+					<ServiceImage service={service} />
+					<ServiceInfo
+						service={service}
+						updateAvailable={updateStatus.available}
+						updateSkipped={updateStatus.skipped}
+					/>
+				</div>
+			</CardContent>
 		</Card>
 	);
 };

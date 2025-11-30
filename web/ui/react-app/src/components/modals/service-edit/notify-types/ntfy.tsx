@@ -1,351 +1,228 @@
+import { useMemo } from 'react';
+import { BooleanWithDefault } from '@/components/generic';
 import {
-	FormLabel,
-	FormSelect,
-	FormText,
-	FormTextWithPreview,
-} from 'components/generic/form';
+	FieldSelect,
+	FieldText,
+	FieldTextWithPreview,
+} from '@/components/generic/field';
+import { NtfyActions } from '@/components/modals/service-edit/notify-types/extra';
 import {
-	convertNtfyActionsFromString,
-	normaliseForSelect,
-} from 'components/modals/service-edit/util';
-import { firstNonDefault, strToBool } from 'utils';
-import { useEffect, useMemo } from 'react';
-
-import { BooleanWithDefault } from 'components/generic';
-import { NotifyNtfyType } from 'types/config';
-import NotifyOptions from 'components/modals/service-edit/notify-types/shared';
-import { NtfyActions } from 'components/modals/service-edit/notify-types/extra';
-import { useFormContext } from 'react-hook-form';
-
-export const NtfySchemeOptions = [
-	{ label: 'HTTPS', value: 'https' },
-	{ label: 'HTTP', value: 'http' },
-];
-
-export const NtfyPriorityOptions = [
-	{ label: 'Min', value: 'min' },
-	{ label: 'Low', value: 'low' },
-	{ label: 'Default', value: 'default' },
-	{ label: 'High', value: 'high' },
-	{ label: 'Max', value: 'max' },
-];
+	Heading,
+	NotifyOptions,
+} from '@/components/modals/service-edit/notify-types/shared';
+import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import { FieldSet } from '@/components/ui/field';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import {
+	ntfyPriorityOptions,
+	ntfySchemeOptions,
+} from '@/utils/api/types/config/notify/ntfy';
+import type { NotifyNtfySchema } from '@/utils/api/types/config-edit/notify/schemas';
+import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
+import { applyDefaultsRecursive } from '@/utils/api/types/config-edit/util';
 
 /**
- * The form fields for a NTFY notifier.
+ * The form fields for a `NTFY` notifier.
  *
  * @param name - The path to this `NTFY` in the form.
  * @param main - The main values.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for this `NTFY` notifier.
  */
-const NTFY = ({
-	name,
-
-	main,
-	defaults,
-	hard_defaults,
-}: {
-	name: string;
-
-	main?: NotifyNtfyType;
-	defaults?: NotifyNtfyType;
-	hard_defaults?: NotifyNtfyType;
-}) => {
-	const { getValues, setValue } = useFormContext();
-
-	const convertedDefaults = useMemo(
-		() => ({
-			// URL Fields
-			url_fields: {
-				host: firstNonDefault(
-					main?.url_fields?.host,
-					defaults?.url_fields?.host,
-					hard_defaults?.url_fields?.host,
-				),
-				password: firstNonDefault(
-					main?.url_fields?.password,
-					defaults?.url_fields?.password,
-					hard_defaults?.url_fields?.password,
-				),
-				port: firstNonDefault(
-					main?.url_fields?.port,
-					defaults?.url_fields?.port,
-					hard_defaults?.url_fields?.port,
-				),
-				topic: firstNonDefault(
-					main?.url_fields?.topic,
-					defaults?.url_fields?.topic,
-					hard_defaults?.url_fields?.topic,
-				),
-				username: firstNonDefault(
-					main?.url_fields?.username,
-					defaults?.url_fields?.username,
-					hard_defaults?.url_fields?.username,
-				),
-			},
-			// Params
-			params: {
-				actions: convertNtfyActionsFromString(
-					firstNonDefault(
-						main?.params?.actions as string | undefined,
-						defaults?.params?.actions as string | undefined,
-						hard_defaults?.params?.actions as string | undefined,
-					),
-				),
-				attach: firstNonDefault(
-					main?.params?.attach,
-					defaults?.params?.attach,
-					hard_defaults?.params?.attach,
-				),
-				cache:
-					strToBool(
-						firstNonDefault(
-							main?.params?.cache,
-							defaults?.params?.cache,
-							hard_defaults?.params?.cache,
-						),
-					) ?? true,
-				click: firstNonDefault(
-					main?.params?.click,
-					defaults?.params?.click,
-					hard_defaults?.params?.click,
-				),
-				email: firstNonDefault(
-					main?.params?.email,
-					defaults?.params?.email,
-					hard_defaults?.params?.email,
-				),
-				filename: firstNonDefault(
-					main?.params?.filename,
-					defaults?.params?.filename,
-					hard_defaults?.params?.filename,
-				),
-				firebase:
-					strToBool(
-						firstNonDefault(
-							main?.params?.firebase,
-							defaults?.params?.firebase,
-							hard_defaults?.params?.firebase,
-						),
-					) ?? true,
-				icon: firstNonDefault(
-					main?.params?.icon,
-					defaults?.params?.icon,
-					hard_defaults?.params?.icon,
-				),
-				priority: firstNonDefault(
-					main?.params?.priority,
-					defaults?.params?.priority,
-					hard_defaults?.params?.priority,
-				).toLowerCase(),
-				scheme: firstNonDefault(
-					main?.params?.scheme,
-					defaults?.params?.scheme,
-					hard_defaults?.params?.scheme,
-				).toLowerCase(),
-				tags: firstNonDefault(
-					main?.params?.tags,
-					defaults?.params?.tags,
-					hard_defaults?.params?.tags,
-				),
-				title: firstNonDefault(
-					main?.params?.title,
-					defaults?.params?.title,
-					hard_defaults?.params?.title,
-				),
-			},
-		}),
-		[main, defaults, hard_defaults],
+const NTFY = ({ name, main }: { name: string; main?: NotifyNtfySchema }) => {
+	const { typeDataDefaults } = useSchemaContext();
+	const defaults = useMemo(
+		() => applyDefaultsRecursive(main ?? null, typeDataDefaults?.notify.ntfy),
+		[main, typeDataDefaults?.notify.ntfy],
 	);
 
-	const ntfyPriorityOptions = useMemo(() => {
+	const ntfyPriorityOptionsNormalised = useMemo(() => {
 		const defaultPriority = normaliseForSelect(
-			NtfyPriorityOptions,
-			convertedDefaults.params.priority,
+			ntfyPriorityOptions,
+			defaults?.params?.priority,
 		);
 
 		if (defaultPriority)
 			return [
-				{ value: '', label: `${defaultPriority.label} (default)` },
-				...NtfyPriorityOptions,
+				{ label: `${defaultPriority.label} (default)`, value: nullString },
+				...ntfyPriorityOptions,
 			];
 
-		return NtfyPriorityOptions;
-	}, [convertedDefaults.params.priority]);
+		return ntfyPriorityOptions;
+	}, [defaults?.params?.priority]);
 
-	const ntfySchemeOptions = useMemo(() => {
+	const ntfySchemeOptionsNormalised = useMemo(() => {
 		const defaultScheme = normaliseForSelect(
-			NtfySchemeOptions,
-			convertedDefaults.params.scheme,
+			ntfySchemeOptions,
+			defaults?.params?.scheme,
 		);
 
 		if (defaultScheme)
 			return [
-				{ value: '', label: `${defaultScheme.label} (default)` },
-				...NtfySchemeOptions,
+				{ label: `${defaultScheme.label} (default)`, value: nullString },
+				...ntfySchemeOptions,
 			];
 
-		return NtfySchemeOptions;
-	}, [convertedDefaults.params.scheme]);
-
-	useEffect(() => {
-		// Normalise selected priority, or default it.
-		if (convertedDefaults.params.priority === '')
-			setValue(
-				`${name}.params.priority`,
-				normaliseForSelect(
-					NtfyPriorityOptions,
-					getValues(`${name}.params.priority`),
-				)?.value || 'default',
-			);
-
-		// Normalise selected scheme, or default it.
-		if (convertedDefaults.params.scheme === '')
-			setValue(
-				`${name}.params.scheme`,
-				normaliseForSelect(
-					NtfySchemeOptions,
-					getValues(`${name}.params.scheme`),
-				)?.value || 'https',
-			);
-	}, []);
+		return ntfySchemeOptions;
+	}, [defaults?.params?.scheme]);
 
 	return (
-		<>
-			<NotifyOptions
-				name={name}
-				main={main?.options}
-				defaults={defaults?.options}
-				hard_defaults={hard_defaults?.options}
-			/>
-			<FormLabel text="URL Fields" heading />
-			<>
-				<FormText
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<NotifyOptions defaults={defaults?.options} name={name} />
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="URL Fields" />
+				<FieldText
+					colSize={{ xs: 9 }}
+					defaultVal={defaults?.url_fields?.host}
+					label="Host"
 					name={`${name}.url_fields.host`}
 					required
-					col_sm={9}
-					label="Host"
-					tooltip="e.g. ntfy.example.com"
-					defaultVal={convertedDefaults.url_fields.host}
+					tooltip={{
+						content: 'e.g. ntfy.example.com',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.url_fields.port`}
-					col_sm={3}
+				<FieldText
+					colSize={{ xs: 3 }}
+					defaultVal={defaults?.url_fields?.port}
 					label="Port"
-					tooltip="e.g. 443"
-					isNumber
-					defaultVal={convertedDefaults.url_fields.port}
-					positionXS="right"
+					name={`${name}.url_fields.port`}
+					tooltip={{
+						content: 'e.g. 443',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.url_fields.username`}
+				<FieldText
+					defaultVal={defaults?.url_fields?.username}
 					label="Username"
-					defaultVal={convertedDefaults.url_fields.username}
+					name={`${name}.url_fields.username`}
 				/>
-				<FormText
-					name={`${name}.url_fields.password`}
+				<FieldText
+					defaultVal={defaults?.url_fields?.password}
 					label="Password"
-					defaultVal={convertedDefaults.url_fields.password}
-					positionXS="right"
+					name={`${name}.url_fields.password`}
 				/>
-				<FormText
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.url_fields?.topic}
+					label="Topic"
 					name={`${name}.url_fields.topic`}
 					required
-					col_sm={12}
-					label="Topic"
-					tooltip="Target topic"
-					defaultVal={convertedDefaults.url_fields.topic}
+					tooltip={{
+						content: 'Target topic',
+						type: 'string',
+					}}
 				/>
-			</>
-			<FormLabel text="Params" heading />
-			<>
-				<FormSelect
-					name={`${name}.params.scheme`}
-					col_sm={6}
-					col_lg={3}
+			</FieldSet>
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="Params" />
+				<FieldSelect
+					colSize={{ lg: 3, sm: 6 }}
 					label="Scheme"
-					tooltip="Server protocol"
-					options={ntfySchemeOptions}
+					name={`${name}.params.scheme`}
+					options={ntfySchemeOptionsNormalised}
+					tooltip={{
+						content: 'Server protocol',
+						type: 'string',
+					}}
 				/>
-				<FormSelect
-					name={`${name}.params.priority`}
-					col_sm={6}
-					col_lg={3}
+				<FieldSelect
+					colSize={{ lg: 3, sm: 6 }}
 					label="Priority"
-					options={ntfyPriorityOptions}
-					positionXS="right"
-					positionLG="middle"
+					name={`${name}.params.priority`}
+					options={ntfyPriorityOptionsNormalised}
 				/>
-				<FormText
-					name={`${name}.params.tags`}
-					col_sm={12}
-					col_lg={6}
+				<FieldText
+					colSize={{ lg: 6, sm: 12 }}
+					defaultVal={defaults?.params?.tags}
 					label="Tags"
-					tooltip="Comma-separated list of tags that may or may not map to emojis"
-					defaultVal={convertedDefaults.params.tags}
-					positionLG="right"
+					name={`${name}.params.tags`}
+					tooltip={{
+						content:
+							'Comma-separated list of tags that may or may not map to emojis',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.attach`}
-					col_sm={8}
+				<FieldText
+					colSize={{ sm: 8 }}
+					defaultVal={defaults?.params?.attach}
 					label="Attach"
-					tooltip="URL of an attachment"
-					defaultVal={convertedDefaults.params.attach}
+					name={`${name}.params.attach`}
+					tooltip={{
+						content: 'URL of an attachment',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.filename`}
-					col_sm={4}
+				<FieldText
+					colSize={{ sm: 4 }}
+					defaultVal={defaults?.params?.filename}
 					label="Filename"
-					tooltip="File name of the attachment"
-					defaultVal={convertedDefaults.params.filename}
-					positionXS="right"
+					name={`${name}.params.filename`}
+					tooltip={{
+						content: 'File name of the attachment',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.email`}
+				<FieldText
+					defaultVal={defaults?.params?.email}
 					label="E-mail"
-					tooltip="E-mail address to send to"
-					defaultVal={convertedDefaults.params.email}
+					name={`${name}.params.email`}
+					tooltip={{
+						content: 'E-mail address to send to',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.title`}
+				<FieldText
+					defaultVal={defaults?.params?.title}
 					label="Title"
-					defaultVal={convertedDefaults.params.title}
-					positionXS="right"
+					name={`${name}.params.title`}
 				/>
-				<FormText
-					name={`${name}.params.click`}
-					col_sm={12}
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.click}
 					label="Click"
-					tooltip="URL to open when notification is clicked"
-					defaultVal={convertedDefaults.params.click}
+					name={`${name}.params.click`}
+					tooltip={{
+						content: 'URL to open when notification is clicked',
+						type: 'string',
+					}}
 				/>
-				<FormTextWithPreview
-					name={`${name}.params.icon`}
+				<FieldTextWithPreview
+					defaultVal={defaults?.params?.icon}
 					label="Icon"
-					tooltip="URL to an icon"
-					defaultVal={convertedDefaults.params.icon}
+					name={`${name}.params.icon`}
+					tooltip={{
+						content: 'URL to an icon',
+						type: 'string',
+					}}
 				/>
 				<NtfyActions
-					name={`${name}.params.actions`}
+					defaults={defaults?.params?.actions}
 					label="Actions"
-					tooltip="Custom action buttons for notifications"
-					defaults={convertedDefaults.params.actions}
+					name={`${name}.params.actions`}
+					tooltip={{
+						content: 'Custom action buttons for notifications',
+						type: 'string',
+					}}
 				/>
 				<BooleanWithDefault
-					name={`${name}.params.cache`}
+					defaultValue={defaults?.params?.cache}
 					label="Cache"
-					tooltip="Cache messages"
-					defaultValue={convertedDefaults.params.cache}
+					name={`${name}.params.cache`}
+					tooltip={{
+						content: 'Cache messages',
+						type: 'string',
+					}}
 				/>
 				<BooleanWithDefault
-					name={`${name}.params.firebase`}
+					defaultValue={defaults?.params?.firebase}
 					label="Firebase"
-					tooltip="Send to Firebase Cloud Messaging"
-					defaultValue={convertedDefaults.params.firebase}
+					name={`${name}.params.firebase`}
+					tooltip={{
+						content: 'Send to Firebase Cloud Messaging',
+						type: 'string',
+					}}
 				/>
-			</>
-		</>
+			</FieldSet>
+		</FieldSet>
 	);
 };
 export default NTFY;

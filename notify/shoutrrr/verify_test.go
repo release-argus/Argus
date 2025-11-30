@@ -1038,26 +1038,6 @@ func TestShoutrrr_checkValuesURLFields(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^query_vars: "\{foo:bar}" <invalid>.*$`),
 		},
-		"shoutrrr - invalid": {
-			sType: "shoutrrr",
-			errRegex: test.TrimYAML(`
-				^raw: <required>.*$`),
-		},
-		"shoutrrr - valid": {
-			sType: "shoutrrr",
-			urlFields: map[string]string{
-				"raw": "bish"},
-			errRegex: `^$`,
-		},
-		"shoutrrr - valid with main": {
-			sType: "shoutrrr",
-			main: NewDefaults(
-				"", nil,
-				map[string]string{
-					"raw": "bish"},
-				nil),
-			errRegex: `^$`,
-		},
 	}
 
 	for name, tc := range tests {

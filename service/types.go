@@ -58,7 +58,7 @@ func (s *Slice) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// UnmarshalJSON handles the unmarshalling of a Slice.
+// UnmarshalYAML handles the unmarshalling of a Slice.
 // It unmarshals the YAML data into a map of string keys to Service pointers,
 // and then calls the giveIDs method to assign IDs to the services.
 func (s *Slice) UnmarshalYAML(value *yaml.Node) error {

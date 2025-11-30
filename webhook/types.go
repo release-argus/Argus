@@ -16,6 +16,7 @@
 package webhook
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -133,7 +134,7 @@ func (s *SliceDefaults) String(prefix string) string {
 type WebHook struct {
 	Base `json:",inline" yaml:",inline"`
 
-	ID string `json:"-" yaml:"-"` // Unique across the Slice.
+	ID string `json:"name,omitempty" yaml:"-"` // Unique across the Slice.
 
 	mutex        sync.RWMutex         // Mutex for concurrent access.
 	Failed       *status.FailsWebHook `json:"-" yaml:"-"` // Whether the last send attempt failed.
@@ -146,6 +147,31 @@ type WebHook struct {
 	Main         *Defaults `json:"-" yaml:"-"` // The root Webhook (That this WebHook may override parts of).
 	Defaults     *Defaults `json:"-" yaml:"-"` // Default values.
 	HardDefaults *Defaults `json:"-" yaml:"-"` // Hardcoded default values.
+}
+
+func (s *Slice) UnmarshalJSON(data []byte) error {
+	var arr []WebHook
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return err //nolint:wrapcheck
+	}
+	*s = make(Slice, len(arr))
+
+	for i := range arr {
+		(*s)[arr[i].ID] = &arr[i]
+	}
+	return nil
+}
+
+func (s *Slice) MarshalJSON() ([]byte, error) {
+	if s == nil {
+		return []byte("null"), nil
+	}
+
+	arr := make([]*WebHook, 0, len(*s))
+	for _, v := range *s {
+		arr = append(arr, v)
+	}
+	return json.Marshal(arr) //nolint:wrapcheck
 }
 
 // New WebHook.

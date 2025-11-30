@@ -1,4 +1,2 @@
-import BooleanWithDefault from './boolean-with-default';
-import HelpTooltip from './tooltip';
-
-export { BooleanWithDefault, HelpTooltip };
+export { default as BooleanWithDefault } from './boolean-with-default';
+export { default as HelpTooltip } from './tooltip';

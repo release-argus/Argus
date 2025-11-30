@@ -147,10 +147,6 @@ func (s *SliceDefaults) Default() {
 			"messagekey":    "message",
 			"requestmethod": http.MethodPost,
 			"titlekey":      "title"})
-	newSlice["shoutrrr"] = NewDefaults(
-		"",
-		notifyDefaultOptions(),
-		nil, nil)
 
 	// Initialise maps.
 	for _, notify := range newSlice {

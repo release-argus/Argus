@@ -1,18 +1,23 @@
-import { Button, Col, Row } from 'react-bootstrap';
-import { FC, memo } from 'react';
-import { FormSelect, FormText } from 'components/generic/form';
-
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { NotifyOpsGenieTarget } from 'types/config';
-import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import { Trash2 } from 'lucide-react';
+import { type FC, memo } from 'react';
 import { useWatch } from 'react-hook-form';
+import { FieldSelect, FieldText } from '@/components/generic/field';
+import { Button } from '@/components/ui/button';
+import {
+	OpsGenieTargetSubTypeOptions,
+	OpsGenieTargetTypeOptions,
+} from '@/utils/api/types/config/notify/opsgenie';
+import type { OpsGenieTargetSchema } from '@/utils/api/types/config-edit/notify/types/opsgenie';
 
-interface Props {
+type OpsGenieTargetProps = {
+	/* The name of the field in the form. */
 	name: string;
+	/* The function to remove this target. */
 	removeMe: () => void;
 
-	defaults?: NotifyOpsGenieTarget;
-}
+	/* The default values for the target. */
+	defaults?: OpsGenieTargetSchema;
+};
 
 /**
  * OpsGenieTarget renders fields for an OpsGenie target.
@@ -22,61 +27,47 @@ interface Props {
  * @param defaults - The default values for the target.
  * @returns The form fields for this OpsGenie target.
  */
-const OpsGenieTarget: FC<Props> = ({ name, removeMe, defaults }) => {
-	const targetTypes: { label: string; value: NotifyOpsGenieTarget['type'] }[] =
-		[
-			{ label: 'Team', value: 'team' },
-			{ label: 'User', value: 'user' },
-		];
-
-	const targetType: NotifyOpsGenieTarget['type'] = useWatch({
+const OpsGenieTarget: FC<OpsGenieTargetProps> = ({
+	name,
+	removeMe,
+	defaults,
+}) => {
+	const targetType = useWatch({
 		name: `${name}.type`,
-	});
+	}) as OpsGenieTargetSchema['type'];
 
 	return (
-		<>
-			<Col xs={2} sm={1} className="py-1 pe-2">
+		<div className="col-span-full grid grid-cols-subgrid gap-x-2">
+			<div className="col-span-1 py-1 md:pe-2">
 				<Button
 					aria-label="Remove this target"
-					className="btn-secondary-outlined btn-icon-center p-0"
-					variant="secondary"
+					className="size-full"
 					onClick={removeMe}
+					size="icon-md"
+					variant="outline"
 				>
-					<FontAwesomeIcon icon={faTrash} />
+					<Trash2 />
 				</Button>
-			</Col>
-			<Col xs={10} sm={11}>
-				<Row>
-					<FormSelect
-						name={`${name}.type`}
-						col_xs={6}
-						col_md={3}
-						options={targetTypes}
-					/>
-					<FormSelect
-						name={`${name}.sub_type`}
-						col_xs={6}
-						col_md={3}
-						options={[
-							{ label: 'ID', value: 'id' },
-							targetType === 'team'
-								? { label: 'Name', value: 'name' }
-								: { label: 'Username', value: 'username' },
-						]}
-						positionXS="right"
-						positionMD="middle"
-					/>
-					<FormText
-						name={`${name}.value`}
-						required
-						col_sm={12}
-						col_md={6}
-						defaultVal={defaults?.value}
-						positionXS="right"
-					/>
-				</Row>
-			</Col>
-		</>
+			</div>
+			<div className="col-span-11 grid grid-cols-subgrid gap-x-2">
+				<FieldSelect
+					colSize={{ md: 2, sm: 5, xs: 5 }}
+					name={`${name}.type`}
+					options={OpsGenieTargetTypeOptions}
+				/>
+				<FieldSelect
+					colSize={{ md: 3, sm: 6, xs: 6 }}
+					name={`${name}.sub_type`}
+					options={OpsGenieTargetSubTypeOptions[targetType]}
+				/>
+				<FieldText
+					colSize={{ md: 6, sm: 11, xs: 11 }}
+					defaultVal={defaults?.value}
+					name={`${name}.value`}
+					required
+				/>
+			</div>
+		</div>
 	);
 };
 

@@ -1,31 +1,30 @@
-import { FC, memo } from 'react';
+import { type FC, memo } from 'react';
 import { REGEX, REPLACE, SPLIT } from '.';
+import type { URLCommand } from '@/utils/api/types/config/service/latest-version';
 
-import { URLCommandTypes } from 'types/config';
-
-const RENDER_TYPE_COMPONENTS: {
-	[key in URLCommandTypes]: FC<{
+const RENDER_TYPE_COMPONENTS: Record<
+	URLCommand['type'],
+	FC<{
 		name: string;
-	}>;
-} = {
+	}>
+> = {
 	regex: REGEX,
 	replace: REPLACE,
 	split: SPLIT,
 };
 
 /**
- * Renders the form fields for the url_command.
+ * Form fields for this 'type' of `url_command`.
  *
- * @param name - The name of the url_command in the form.
- * @param commandType - The type of the url_command.
- * @returns The form fields for this type of url_command.
+ * @param name - The name of the `url_command` in the form.
+ * @param commandType - Specifies the `url_command` type.
  */
 const RenderURLCommand = ({
 	name,
 	commandType,
 }: {
 	name: string;
-	commandType: URLCommandTypes;
+	commandType: URLCommand['type'];
 }) => {
 	const RenderTypeComponent = RENDER_TYPE_COMPONENTS[commandType];
 	if (!RenderTypeComponent) return null;

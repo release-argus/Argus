@@ -1,0 +1,6 @@
+format:
+  separate-diff: true
+sections:
+  - standard # Standard library imports
+  - default # External packages
+  - prefix=github.com/your_project_name # Local project imports

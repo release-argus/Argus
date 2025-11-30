@@ -1,51 +1,75 @@
-import { FC, useContext } from 'react';
-import { faPen, faPlus, faSave } from '@fortawesome/free-solid-svg-icons';
+import { Pencil, Plus, Save } from 'lucide-react';
+import { type FC, use } from 'react';
+import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
+import { Button } from '@/components/ui/button';
+import Tip from '@/components/ui/tip';
+import { ModalContext } from '@/contexts/modal';
 
-import ButtonWithTooltip from 'components/generic/button-with-tooltip';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { ModalContext } from 'contexts/modal';
-
-type Props = {
-	editMode: boolean;
-	toggleEditMode: () => void;
-	onSaveOrder: () => void;
-	hasOrderChanged: boolean;
-};
-
-const EditModeToggle: FC<Props> = ({
-	editMode,
-	toggleEditMode,
-	onSaveOrder,
-	hasOrderChanged,
-}) => {
-	const { handleModal } = useContext(ModalContext);
+/**
+ * EditModeToggle
+ *
+ * Toolbar control for toggling edit mode. Displays buttons for creating services
+ * and saving order changes when edit mode is active.
+ */
+const EditModeToggle: FC = () => {
+	const { values, toggleEditMode, onSaveOrder, hasOrderChanged } = useToolbar();
+	const { setModal } = use(ModalContext);
 
 	return (
 		<>
-			{editMode && (
+			{values.editMode && (
 				<>
-					<ButtonWithTooltip
-						hoverTooltip
-						tooltip="Create a service"
-						onClick={() => handleModal('EDIT', { id: '', loading: false })}
-						icon={<FontAwesomeIcon icon={faPlus} />}
-					/>
+					<Tip
+						content="Create a service"
+						delayDuration={500}
+						touchDelayDuration={250}
+					>
+						<Button
+							className="rounded-none"
+							onClick={() =>
+								setModal({
+									actionType: 'EDIT',
+									service: { id: '', loading: false },
+								})
+							}
+							type="button"
+							variant="outline"
+						>
+							<Plus />
+						</Button>
+					</Tip>
 					{hasOrderChanged && (
-						<ButtonWithTooltip
-							hoverTooltip
-							tooltip="Save order"
-							onClick={onSaveOrder}
-							icon={<FontAwesomeIcon icon={faSave} />}
-						/>
+						<Tip
+							content="Save order"
+							delayDuration={500}
+							touchDelayDuration={250}
+						>
+							<Button
+								className="rounded-none"
+								onClick={onSaveOrder}
+								type="button"
+								variant="outline"
+							>
+								<Save />
+							</Button>
+						</Tip>
 					)}
 				</>
 			)}
-			<ButtonWithTooltip
-				hoverTooltip
-				tooltip="Toggle edit mode"
-				onClick={toggleEditMode}
-				icon={<FontAwesomeIcon icon={faPen} />}
-			/>
+			<Tip
+				content="Toggle edit mode"
+				delayDuration={500}
+				touchDelayDuration={250}
+			>
+				<Button
+					className="rounded-s-none"
+					onClick={toggleEditMode}
+					type="button"
+					variant="outline"
+				>
+					<Pencil />
+				</Button>
+			</Tip>
 		</>
 	);
 };

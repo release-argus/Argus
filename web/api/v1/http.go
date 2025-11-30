@@ -1,16 +1,18 @@
-// Copyright [2025] [Argus]
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * Copyright [2025] [Argus]
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 // Package v1 provides the API for the webserver.
 package v1
@@ -65,24 +67,24 @@ func (api *API) SetupRoutesAPI() {
 	v1Router.HandleFunc("/service/actions/{service_id:.+}", api.httpServiceGetActions).Methods(http.MethodGet)
 	//   POST, service actions (disable=service_actions).
 	v1Router.HandleFunc("/service/actions/{service_id:.+}", api.httpServiceRunActions).Methods(http.MethodPost)
-	//   GET, service-edit - get details.
+	//   GET, service - get details.
 	v1Router.HandleFunc("/service/update", api.httpOtherServiceDetails).Methods(http.MethodGet)
 	v1Router.HandleFunc("/service/update/{service_id:.+}", api.httpServiceDetail).Methods(http.MethodGet)
-	//   GET, service-edit - refresh unsaved service (disable=[ld]v_refresh_new).
+	//   GET, service - refresh unsaved service (disable=[ld]v_refresh_new).
 	v1Router.HandleFunc("/latest_version/refresh", api.httpLatestVersionRefreshUncreated).Methods(http.MethodGet)
 	v1Router.HandleFunc("/deployed_version/refresh", api.httpDeployedVersionRefreshUncreated).Methods(http.MethodGet)
-	//   GET, service-edit - refresh service (disable=[ld]v_refresh).
+	//   GET, service - refresh service (disable=[ld]v_refresh).
 	v1Router.HandleFunc("/latest_version/refresh/{service_id:.+}", api.httpLatestVersionRefresh).Methods(http.MethodGet)
 	v1Router.HandleFunc("/deployed_version/refresh/{service_id:.+}", api.httpDeployedVersionRefresh).Methods(http.MethodGet)
-	//   POST, service-edit - test notify (disable=notify_test).
+	//   POST, service - test notify (disable=notify_test).
 	v1Router.HandleFunc("/notify/test", api.httpNotifyTest).Methods(http.MethodPost)
-	//   PUT, service-edit - update details (disable=service_edit).
+	//   PUT, service - update details (disable=service_edit).
 	v1Router.HandleFunc("/service/update/{service_id:.+}", api.httpServiceEdit).Methods(http.MethodPut)
-	//   PUT, service-edit - new service (disable=service_create).
+	//   PUT, service - new service (disable=service_create).
 	v1Router.HandleFunc("/service/new", api.httpServiceEdit).Methods(http.MethodPut)
-	//   DELETE, service-edit - delete service (disable=service_delete).
+	//   DELETE, service - delete service (disable=service_delete).
 	v1Router.HandleFunc("/service/delete/{service_id:.+}", api.httpServiceDelete).Methods(http.MethodDelete)
-	//   GET, service-edit - template strings.
+	//   GET, service - template strings.
 	v1Router.HandleFunc("/template", api.httpTemplateParse).Methods(http.MethodGet)
 	// GET, counts for Heimdall.
 	v1Router.HandleFunc("/counts", api.httpCounts).Methods(http.MethodGet)

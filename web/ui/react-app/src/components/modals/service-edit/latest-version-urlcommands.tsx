@@ -1,83 +1,86 @@
-import { Button, ButtonGroup, Col, Row } from 'react-bootstrap';
-import { faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { Minus, Plus } from 'lucide-react';
 import { memo, useCallback } from 'react';
-
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { FormLabel } from 'components/generic/form';
-import FormURLCommand from './latest-version-urlcommand';
-import { isEmptyArray } from 'utils';
 import { useFieldArray } from 'react-hook-form';
+import { FieldLabel } from '@/components/generic/field';
+import FormURLCommand from '@/components/modals/service-edit/latest-version-urlcommand';
+import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
+import { isEmptyArray } from '@/utils';
+import { latestVersionURLCommandTypeOptions } from '@/utils/api/types/config/service/latest-version';
 
 /**
  * @returns The form fields for a list of `latest_version.url_commands`.
  */
 const FormURLCommands = () => {
-	const { fields, append, remove } = useFieldArray({
-		name: 'latest_version.url_commands',
-	});
+	const id = 'latest_version.url_commands';
+	const { fields, append, remove } = useFieldArray({ name: id });
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: append stable.
 	const addItem = useCallback(() => {
 		append(
 			{
-				type: 'regex',
+				new: '',
+				old: '',
 				regex: '',
 				text: '',
-				index: null,
-				old: '',
-				new: '',
+				type: Object.values(latestVersionURLCommandTypeOptions)[0].value,
 			},
 			{ shouldFocus: false },
 		);
 	}, []);
-	const removeLast = useCallback(() => {
-		remove(fields.length - 1);
-	}, [fields.length]);
+
+	// Remove item at given index.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: remove stable.
+	const removeItem = useCallback(
+		(index: number) => () => {
+			document.getElementById(id)?.focus();
+			remove(index);
+		},
+		[],
+	);
+	// Remove last item.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: removeItem stable.
+	const removeLast = useCallback(
+		() => () => removeItem(fields.length - 1)(),
+		[fields.length],
+	);
 
 	return (
 		<>
-			<Row>
-				<Col className="pt-1">
-					<FormLabel text="URL Commands" />
-				</Col>
-				<Col>
-					<ButtonGroup style={{ float: 'right' }}>
+			<div className="col-span-full grid grid-cols-subgrid space-y-1">
+				<div className="col-span-full flex w-full items-center justify-between">
+					<FieldLabel text="URL Commands" />
+					<ButtonGroup>
 						<Button
 							aria-label="Add new URL Command"
-							className="btn-unchecked"
-							variant="success"
-							style={{ float: 'right' }}
+							id={id}
 							onClick={addItem}
+							size="icon-xs"
+							variant="ghost"
 						>
-							<FontAwesomeIcon icon={faPlus} />
+							<Plus />
 						</Button>
 						<Button
 							aria-label="Remove last URL Command"
-							className="btn-unchecked"
-							variant="danger"
-							style={{ float: 'left' }}
-							onClick={removeLast}
 							disabled={isEmptyArray(fields)}
+							onClick={removeLast()}
+							size="icon-xs"
+							variant="ghost"
 						>
-							<FontAwesomeIcon icon={faMinus} />
+							<Minus />
 						</Button>
 					</ButtonGroup>
-				</Col>
-			</Row>
-			{fields.map(({ id }, i, { length }) => {
-				return (
-					<Row
+				</div>
+			</div>
+			<div className="col-span-full grid grid-cols-subgrid gap-2">
+				{fields.map(({ id }, i) => (
+					<FormURLCommand
 						key={id}
-						className={`d-flex align-items-center ${
-							length - 1 === i ? 'mb-2' : ''
-						}`}
-					>
-						<FormURLCommand
-							name={`latest_version.url_commands.${i}`}
-							removeMe={() => remove(i)}
-						/>
-					</Row>
-				);
-			})}
+						name={`latest_version.url_commands.${i}`}
+						removeMe={removeItem(i)}
+					/>
+				))}
+			</div>
 			{!isEmptyArray(fields) && <br />}
 		</>
 	);

@@ -57,7 +57,7 @@ func (s *Service) HandleCommand(command string) {
 	}
 }
 
-// HandleWebHook will find tne specified WebHook on this Service (and send it if found).
+// HandleWebHook finds the specified WebHook on this Service (and sends it if found).
 func (s *Service) HandleWebHook(webhookID string) {
 	//nolint:typecheck
 	if s.WebHook == nil || s.WebHook[webhookID] == nil {
@@ -77,12 +77,12 @@ func (s *Service) HandleWebHook(webhookID string) {
 }
 
 // HandleUpdateActions runs all commands and send all WebHooks for this service if auto-approve true.
-// If new releases not auto-approved, then these will
+// If new releases are not auto-approved, then these will
 // only run/send if manually triggered fromUser (via the WebUI).
 func (s *Service) HandleUpdateActions(writeToDB bool) {
 	serviceInfo := s.Status.GetServiceInfo()
 
-	// Send the Notify Message(s).
+	// Send the Notify Messages.
 	//nolint:errcheck
 	go s.Notify.Send("", "", serviceInfo, true)
 
@@ -93,7 +93,7 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 				s.Status.LatestVersion())
 			logutil.Log.Info(msg, logutil.LogFrom{Primary: s.ID}, true)
 
-			// Run the Command(s).
+			// Run the Commands.
 			go func() {
 				err := s.CommandController.Exec(logutil.LogFrom{Primary: "Command", Secondary: s.ID})
 				if err == nil && len(s.Command) != 0 {
@@ -101,7 +101,7 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 				}
 			}()
 
-			// Send the WebHook(s).
+			// Send the WebHooks.
 			go func() {
 				err := s.WebHook.Send(serviceInfo, true)
 				if err == nil && len(s.WebHook) != 0 {
@@ -114,14 +114,14 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 			s.Status.AnnounceQueryNewVersion()
 		}
 	} else {
-		// Auto-update version for Service(s) without WebHook(s).
+		// Auto-update version for Services without WebHooks.
 		s.UpdatedVersion(writeToDB)
 	}
 }
 
-// HandleFailedActions will re-send all the WebHooks for this service
-// that have either failed, or not sent for this version. Otherwise,
-// if all WebHooks have sent successfully, then they will all resend.
+// HandleFailedActions re-sends all the WebHooks for this service
+// that have either failed or not sent for this version. Otherwise,
+// if all WebHooks have sent successfully, then they all resend.
 func (s *Service) HandleFailedActions() {
 	serviceInfo := s.Status.GetServiceInfo()
 	errChan := make(chan error, len(s.WebHook)+len(s.Command))
@@ -130,7 +130,7 @@ func (s *Service) HandleFailedActions() {
 	retryAll := s.shouldRetryAll()
 
 	potentialErrors := 0
-	// Send the WebHook(s).
+	// Send the WebHooks.
 	if len(s.WebHook) != 0 {
 		potentialErrors += len(s.WebHook)
 		for key, wh := range s.WebHook {
@@ -153,7 +153,7 @@ func (s *Service) HandleFailedActions() {
 			}
 		}
 	}
-	// Run the Command(s).
+	// Run the Commands.
 	if len(s.Command) != 0 {
 		potentialErrors += len(s.Command)
 		logFrom := logutil.LogFrom{Primary: "Command", Secondary: s.ID}

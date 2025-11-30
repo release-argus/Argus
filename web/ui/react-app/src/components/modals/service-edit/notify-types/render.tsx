@@ -1,6 +1,8 @@
+import { type FC, memo, type ReactElement } from 'react';
 import {
 	BARK,
 	DISCORD,
+	GENERIC,
 	GOOGLE_CHAT,
 	GOTIFY,
 	IFTTT,
@@ -17,82 +19,64 @@ import {
 	TEAMS,
 	TELEGRAM,
 	ZULIP,
-} from 'components/modals/service-edit/notify-types';
-import { FC, memo } from 'react';
-import { NotifyTypesKeys, NotifyTypesValues } from 'types/config';
+} from '@/components/modals/service-edit/notify-types';
+import type { NotifyTypeSchema } from '@/utils/api/types/config-edit/notify/schemas';
 
-import GENERIC from './generic';
-
-interface RenderTypeProps {
+type NotifyComponentProps<K extends keyof NotifyTypeSchema> = {
 	name: string;
-	type: NotifyTypesKeys;
-	main?: NotifyTypesValues;
-	defaults?: NotifyTypesValues;
-	hard_defaults?: NotifyTypesValues;
-}
+	main?: NotifyTypeSchema[K];
+	defaults?: NotifyTypeSchema[K];
+	hard_defaults?: NotifyTypeSchema[K];
+};
 
-const RENDER_TYPE_COMPONENTS: {
-	[key in NotifyTypesKeys]: FC<{
-		name: string;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		main: any;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		defaults: any;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		hard_defaults: any;
-	}>;
-} = {
+const RENDER_TYPE_COMPONENTS = {
 	bark: BARK,
 	discord: DISCORD,
-	smtp: SMTP,
+	generic: GENERIC,
 	googlechat: GOOGLE_CHAT,
 	gotify: GOTIFY,
 	ifttt: IFTTT,
 	join: JOIN,
-	mattermost: MATTERMOST,
 	matrix: MATRIX,
+	mattermost: MATTERMOST,
 	ntfy: NTFY,
 	opsgenie: OPSGENIE,
 	pushbullet: PUSHBULLET,
 	pushover: PUSHOVER,
 	rocketchat: ROCKET_CHAT,
 	slack: SLACK,
+	smtp: SMTP,
 	teams: TEAMS,
 	telegram: TELEGRAM,
 	zulip: ZULIP,
-	generic: GENERIC,
+} satisfies {
+	[K in keyof NotifyTypeSchema]: FC<NotifyComponentProps<K>>;
 };
 
 /**
- * The type-specific component for this notify.
+ * The type-specific component for this 'notify'.
  *
- * @param name - The name of the notifier in the form.
- * @param type - The type of the notifier.
- * @param main - The main notify options.
- * @param defaults - The default values for all notify types.
- * @param hard_defaults - The hard default values for all notify types.
- * @returns The type-specific component for this notify type.
+ * @template T A key of `NotifyTypesMap`, representing the type of 'notify' to render.
+ *
+ * @param props The properties object to customise the notification rendering.
+ * @param props.name The name identifier.
+ * @param props.type The type.
+ * @param props.main The `main` values.
+ * @param props.defaults The `default` values.
+ * @param props.hard_defaults The `hard default` values.
+ *
+ * @returns The rendered 'notify' accordion with the corresponding field values.
  */
-const RenderNotify: FC<RenderTypeProps> = ({
-	name,
-	type,
-	main,
-	defaults,
-	hard_defaults,
-}) => {
-	const RenderTypeComponent = RENDER_TYPE_COMPONENTS[type || 'discord'];
-
-	// Unknown type
-	if (!RenderTypeComponent) return null;
-
-	return (
-		<RenderTypeComponent
-			name={name}
-			main={main}
-			defaults={defaults}
-			hard_defaults={hard_defaults}
-		/>
-	);
+const RenderNotify = <T extends keyof NotifyTypeSchema>(props: {
+	name: string;
+	type: T;
+	main?: NotifyTypeSchema[T];
+	defaults?: NotifyTypeSchema[T];
+	hardDefaults?: NotifyTypeSchema[T];
+}): ReactElement => {
+	const { type, ...rest } = props;
+	const Component = RENDER_TYPE_COMPONENTS[type] as FC<NotifyComponentProps<T>>;
+	return <Component {...rest} />;
 };
 
 export default memo(RenderNotify);

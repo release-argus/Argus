@@ -762,13 +762,13 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 		api.Config.OrderMutex.RLock()
 		defer api.Config.OrderMutex.RUnlock()
 		// Check whether service exists.
-		service := api.Config.Service[parsedPayload.ServiceIDPrevious]
-		if service != nil {
+		svc := api.Config.Service[parsedPayload.ServiceIDPrevious]
+		if svc != nil {
 			// Check whether notifier exists.
-			if service.Notify != nil {
-				serviceNotify = service.Notify[parsedPayload.NamePrevious]
+			if svc.Notify != nil {
+				serviceNotify = svc.Notify[parsedPayload.NamePrevious]
 			}
-			serviceStatus = service.Status.Copy(false)
+			serviceStatus = svc.Status.Copy(false)
 		}
 	}
 

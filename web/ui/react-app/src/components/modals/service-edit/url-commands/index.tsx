@@ -1,10 +1,3 @@
-import REGEX from './regex';
-import REPLACE from './replace';
-import SPLIT from './split';
-
-// prettier-ignore
-export {
-	REGEX,
-	REPLACE,
-	SPLIT
-};
+export { default as REGEX } from './regex';
+export { default as REPLACE } from './replace';
+export { default as SPLIT } from './split';

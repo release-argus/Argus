@@ -1,8 +1,2 @@
-import NtfyActions from './ntfy/actions';
-import OpsGenieTargets from './opsgenie/targets';
-
-// prettier-ignore
-export {
-	NtfyActions,
-	OpsGenieTargets,
-}
+export { default as NtfyActions } from './ntfy/actions/actions';
+export { default as OpsGenieTargets } from './opsgenie/targets';

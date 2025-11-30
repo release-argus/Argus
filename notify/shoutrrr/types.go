@@ -16,6 +16,7 @@
 package shoutrrr
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -26,11 +27,38 @@ import (
 var (
 	supportedTypes = []string{
 		"bark", "discord", "smtp", "gotify", "googlechat", "ifttt", "join", "mattermost", "matrix", "ntfy",
-		"opsgenie", "pushbullet", "pushover", "rocketchat", "slack", "teams", "telegram", "zulip", "generic", "shoutrrr"}
+		"opsgenie", "pushbullet", "pushover", "rocketchat", "slack", "teams", "telegram", "zulip", "generic"}
 )
 
 // Slice mapping of Shoutrrr.
 type Slice map[string]*Shoutrrr
+
+// UnmarshalJSON converts a JSON array to a Slice map.
+func (s *Slice) UnmarshalJSON(data []byte) error {
+	var arr []Shoutrrr
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return err //nolint:wrapcheck
+	}
+	*s = make(Slice, len(arr))
+
+	for i := range arr {
+		(*s)[arr[i].ID] = &arr[i]
+	}
+	return nil
+}
+
+// MarshalJSON marshals into a JSON array of Shoutrrr values.
+func (s *Slice) MarshalJSON() ([]byte, error) {
+	if s == nil {
+		return []byte("null"), nil
+	}
+
+	arr := make([]*Shoutrrr, 0, len(*s))
+	for _, v := range *s {
+		arr = append(arr, v)
+	}
+	return json.Marshal(arr) //nolint:wrapcheck
+}
 
 // String returns a string representation of the Slice.
 func (s *Slice) String(prefix string) string {
@@ -122,7 +150,7 @@ func (d *Defaults) String(prefix string) string {
 type Shoutrrr struct {
 	Base `json:",inline" yaml:",inline"`
 
-	ID string `json:"-" yaml:"-"` // ID for this Shoutrrr sender.
+	ID string `json:"name,omitempty" yaml:"-"` // ID for this Shoutrrr sender.
 
 	Failed        *status.FailsShoutrrr `json:"-" yaml:"-"` // Whether the last send attempt failed.
 	ServiceStatus *status.Status        `json:"-" yaml:"-"` // Status of the Service (used for templating commands).

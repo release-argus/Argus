@@ -30,7 +30,7 @@ import (
 
 var urlCommandTypes = []string{"regex", "replace", "split"}
 
-// URLCommandSlice is a list of URLCommand that filter version(s) from the URL Content.
+// URLCommandSlice is a list of URLCommand that filter versions from the URL Content.
 type URLCommandSlice []URLCommand
 
 // UnmarshalJSON allows handling of a dict as well as a list of dicts.
@@ -95,7 +95,7 @@ func (s *URLCommandSlice) String() string {
 	return util.ToYAMLString(s, "")
 }
 
-// URLCommand is a command to filter version(s) from the URL body.
+// URLCommand is a command to filter versions from the URL body.
 type URLCommand struct {
 	Type     string  `json:"type" yaml:"type"`                             // regex/replace/split.
 	Regex    string  `json:"regex,omitempty" yaml:"regex,omitempty"`       // regex: regexp.MustCompile(Regex).
@@ -114,7 +114,7 @@ func (c *URLCommand) String() string {
 	return util.ToYAMLString(c, "")
 }
 
-// GetVersions from `text` using the URLCommand(s) in this URLCommandSlice.
+// GetVersions from `text` using the URLCommands in this URLCommandSlice.
 func (s *URLCommandSlice) GetVersions(text string, logFrom logutil.LogFrom) ([]string, error) {
 	// No URLCommands to run, so treat the text as a single version.
 	if len(*s) == 0 {
@@ -126,7 +126,7 @@ func (s *URLCommandSlice) GetVersions(text string, logFrom logutil.LogFrom) ([]s
 	return s.Run(text, logFrom)
 }
 
-// Run all of the URLCommand(s) in this URLCommandSlice on `text`.
+// Run all of the URLCommands in this URLCommandSlice on `text`.
 func (s *URLCommandSlice) Run(text string, logFrom logutil.LogFrom) ([]string, error) {
 	if s == nil {
 		return nil, nil
@@ -189,7 +189,7 @@ func (c *URLCommand) run(versions *[]string, logFrom logutil.LogFrom) error {
 //
 // Parameters:
 //   - versionIndex: The index of the version in the `versions` slice to validate.
-//   - versions: A pointer to the slice of version string(s) to regex.
+//   - versions: A pointer to the slice of version strings to regex.
 //   - logFrom: Used for logging the source of the operation.
 func (c *URLCommand) regex(versionIndex int, versions *[]string, logFrom logutil.LogFrom) error {
 	re := regexp.MustCompile(c.Regex)
@@ -245,7 +245,7 @@ func (c *URLCommand) regex(versionIndex int, versions *[]string, logFrom logutil
 //
 // Parameters:
 //   - versionIndex: The index of the version in the `versions` slice to process.
-//   - versions: A pointer to the slice of version string(s) to modify.
+//   - versions: A pointer to the slice of version strings to modify.
 //   - logFrom: Used for logging the source of the operation.
 func (c *URLCommand) split(versionIndex int, versions *[]string, logFrom logutil.LogFrom) error {
 	texts, err := c.splitAllMatches((*versions)[versionIndex], logFrom)

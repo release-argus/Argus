@@ -1,143 +1,96 @@
-import { FormLabel, FormText } from 'components/generic/form';
-
-import NotifyOptions from 'components/modals/service-edit/notify-types/shared';
-import { NotifyRocketChatType } from 'types/config';
-import { firstNonDefault } from 'utils';
 import { useMemo } from 'react';
+import { FieldText } from '@/components/generic/field';
+import {
+	Heading,
+	NotifyOptions,
+} from '@/components/modals/service-edit/notify-types/shared';
+import { FieldSet } from '@/components/ui/field';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import type { NotifyRocketChatSchema } from '@/utils/api/types/config-edit/notify/schemas';
 
 /**
- * The form fields for a Rocket.Chat notifier.
+ * Form fields for a `Rocket.Chat` notifier.
  *
  * @param name - The path to this `Rocket.Chat` in the form.
  * @param main - The main values.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for this `Rocket.Chat` notifier.
  */
 const ROCKET_CHAT = ({
 	name,
-
 	main,
-	defaults,
-	hard_defaults,
 }: {
 	name: string;
-
-	main?: NotifyRocketChatType;
-	defaults?: NotifyRocketChatType;
-	hard_defaults?: NotifyRocketChatType;
+	main?: NotifyRocketChatSchema;
 }) => {
-	const convertedDefaults = useMemo(
-		() => ({
-			// URL Fields
-			url_fields: {
-				channel: firstNonDefault(
-					main?.url_fields?.channel,
-					defaults?.url_fields?.channel,
-					hard_defaults?.url_fields?.channel,
-				),
-				host: firstNonDefault(
-					main?.url_fields?.host,
-					defaults?.url_fields?.host,
-					hard_defaults?.url_fields?.host,
-				),
-				path: firstNonDefault(
-					main?.url_fields?.path,
-					defaults?.url_fields?.path,
-					hard_defaults?.url_fields?.path,
-				),
-				port: firstNonDefault(
-					main?.url_fields?.port,
-					defaults?.url_fields?.port,
-					hard_defaults?.url_fields?.port,
-				),
-				tokena: firstNonDefault(
-					main?.url_fields?.tokena,
-					defaults?.url_fields?.tokena,
-					hard_defaults?.url_fields?.tokena,
-				),
-				tokenb: firstNonDefault(
-					main?.url_fields?.tokenb,
-					defaults?.url_fields?.tokenb,
-					hard_defaults?.url_fields?.tokenb,
-				),
-				username: firstNonDefault(
-					main?.url_fields?.username,
-					defaults?.url_fields?.username,
-					hard_defaults?.url_fields?.username,
-				),
-			},
-		}),
-		[main, defaults, hard_defaults],
+	const { typeDataDefaults } = useSchemaContext();
+	const defaults = useMemo(
+		() => main ?? typeDataDefaults?.notify.rocketchat,
+		[main, typeDataDefaults?.notify.rocketchat],
 	);
 
 	return (
-		<>
-			<NotifyOptions
-				name={name}
-				main={main?.options}
-				defaults={defaults?.options}
-				hard_defaults={hard_defaults?.options}
-			/>
-			<FormLabel text="URL Fields" heading />
-			<>
-				<FormText
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<NotifyOptions defaults={defaults?.options} name={name} />
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="URL Fields" />
+				<FieldText
+					colSize={{ xs: 9 }}
+					defaultVal={defaults?.url_fields?.host}
+					label="Host"
 					name={`${name}.url_fields.host`}
 					required
-					col_sm={9}
-					label="Host"
-					tooltip="e.g. rocketchat.example.io"
-					defaultVal={convertedDefaults.url_fields.host}
+					tooltip={{
+						content: 'e.g. rocketchat.example.io',
+						type: 'string',
+					}}
 				/>
-				<FormText
+				<FieldText
+					colSize={{ xs: 3 }}
+					defaultVal={defaults?.url_fields?.port}
+					label="Port"
 					name={`${name}.url_fields.port`}
 					required
-					col_sm={3}
-					label="Port"
-					isNumber
-					defaultVal={convertedDefaults.url_fields.port}
-					positionXS="right"
 				/>
-				<FormText
-					name={`${name}.url_fields.path`}
+				<FieldText
+					defaultVal={defaults?.url_fields?.path}
 					label="Path"
-					tooltip={
-						<>
-							e.g. rocketchat.example.io/{''}
-							<span className="bold-underline">path</span>
-						</>
-					}
-					tooltipAriaLabel="Format: rocketchat.example.io/PATH"
-					defaultVal={convertedDefaults.url_fields.path}
+					name={`${name}.url_fields.path`}
+					tooltip={{
+						ariaLabel: 'Format: rocketchat.example.io/PATH',
+						content: (
+							<>
+								e.g. rocketchat.example.io/{''}
+								<span className="bold-underline">path</span>
+							</>
+						),
+						type: 'element',
+					}}
 				/>
-				<FormText
+				<FieldText
+					defaultVal={defaults?.url_fields?.channel}
+					label="Channel"
 					name={`${name}.url_fields.channel`}
 					required
-					label="Channel"
-					defaultVal={convertedDefaults.url_fields.channel}
-					positionXS="right"
 				/>
-				<FormText
-					name={`${name}.url_fields.username`}
-					col_sm={12}
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.url_fields?.username}
 					label="Username"
-					defaultVal={convertedDefaults.url_fields.username}
+					name={`${name}.url_fields.username`}
 				/>
-				<FormText
+				<FieldText
+					defaultVal={defaults?.url_fields?.tokena}
+					label="Token A"
 					name={`${name}.url_fields.tokena`}
 					required
-					label="Token A"
-					defaultVal={convertedDefaults.url_fields.tokena}
 				/>
-				<FormText
+				<FieldText
+					defaultVal={defaults?.url_fields?.tokenb}
+					label="Token B"
 					name={`${name}.url_fields.tokenb`}
 					required
-					label="Token B"
-					defaultVal={convertedDefaults.url_fields.tokenb}
-					positionXS="right"
 				/>
-			</>
-		</>
+			</FieldSet>
+		</FieldSet>
 	);
 };
 

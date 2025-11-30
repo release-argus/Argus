@@ -1,31 +1,26 @@
-import { FormText } from 'components/generic/form';
+import { FieldText } from '@/components/generic/field';
 
 /**
- * The form fields for the `Replace` url_command.
+ * Form fields for a `Replace` `url_command`.
  *
  * @param name - The name of the field in the form.
- * @returns The form fields for this Replace url_command.
  */
 const REPLACE = ({ name }: { name: string }) => (
 	<>
-		<FormText
+		<FieldText
+			colSize={{ sm: 4, xs: 7 }}
 			key="old"
+			label="Replace"
+			labelSize="sm"
 			name={`${name}.old`}
 			required
-			col_xs={7}
-			col_sm={4}
-			label="Replace"
-			smallLabel
-			positionXS="right"
-			positionSM="middle"
 		/>
-		<FormText
+		<FieldText
+			colSize={{ sm: 4 }}
 			key="new"
-			name={`${name}.new`}
-			col_sm={4}
 			label="With"
-			smallLabel
-			positionXS="right"
+			labelSize="sm"
+			name={`${name}.new`}
 		/>
 	</>
 );

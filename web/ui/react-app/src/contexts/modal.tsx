@@ -1,50 +1,56 @@
-import { ModalType, ServiceModal, ServiceSummaryType } from 'types/summary';
-import { ReactElement, ReactNode, createContext, useMemo } from 'react';
+import {
+	createContext,
+	type Dispatch,
+	type FC,
+	type ReactNode,
+	type SetStateAction,
+} from 'react';
+import useModal from '@/hooks/use-modal';
+import { TooltipProviderGlobal } from '@/hooks/use-tooltip';
+import ActionReleaseModal from '@/modals/action-release';
+import ServiceEditModal from '@/modals/service-edit';
+import type { ServiceModal } from '@/utils/api/types/config/summary';
 
-import ApprovalModal from 'modals/action-release';
-import ServiceEditModal from 'modals/service-edit';
-import useModal from 'hooks/modal';
-
-interface ModalCtx {
-	handleModal: (modalType: ModalType, service: ServiceSummaryType) => void;
+type ModalContextProps = {
+	/* The function to handle the modal. */
+	setModal: Dispatch<SetStateAction<ServiceModal>>;
+	/* The modal to display. */
 	modal: ServiceModal;
-}
+};
 
 /**
- * Provides modals to the application.
+ * Provides modals to the app.
  *
- * @param modalType - The type of modal to display.
+ * @param modalType - The modal type to display.
  * @param service - The service to display in the modal.
  * @returns The modal context.
  */
-const ModalContext = createContext<ModalCtx>({
-	handleModal: (_modalType: ModalType, _service: ServiceSummaryType) => {},
+const ModalContext = createContext<ModalContextProps>({
 	modal: { actionType: '', service: { id: '', loading: true } },
+	setModal: () => {
+		/* noop */
+	},
 });
 
-interface Props {
+type ModalProviderProps = {
+	/* The content to wrap. */
 	children: ReactNode;
-}
+};
 
 /**
- * Provides modals to the application.
- *
- * @param props - The children to render.
- * @returns A Provider of modals to the application.
+ * @returns A Provider of modals to the app.
  */
-const ModalProvider = (props: Props): ReactElement => {
-	const { modal, handleModal } = useModal();
-	const contextValue = useMemo(
-		() => ({ handleModal, modal }),
-		[handleModal, modal],
-	);
+const ModalProvider: FC<ModalProviderProps> = ({ children }) => {
+	const contextValue = useModal();
 
 	return (
-		<ModalContext.Provider value={contextValue}>
-			<ApprovalModal />
-			<ServiceEditModal />
-			{props.children}
-		</ModalContext.Provider>
+		<ModalContext value={contextValue}>
+			<TooltipProviderGlobal>
+				<ActionReleaseModal />
+				<ServiceEditModal />
+				{children}
+			</TooltipProviderGlobal>
+		</ModalContext>
 	);
 };
 

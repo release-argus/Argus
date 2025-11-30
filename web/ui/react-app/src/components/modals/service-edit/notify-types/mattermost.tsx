@@ -1,154 +1,111 @@
-import {
-	FormLabel,
-	FormText,
-	FormTextWithPreview,
-} from 'components/generic/form';
-
-import { NotifyMatterMostType } from 'types/config';
-import NotifyOptions from 'components/modals/service-edit/notify-types/shared';
-import { firstNonDefault } from 'utils';
 import { useMemo } from 'react';
+import { FieldText, FieldTextWithPreview } from '@/components/generic/field';
+import {
+	Heading,
+	NotifyOptions,
+} from '@/components/modals/service-edit/notify-types/shared';
+import { FieldSet } from '@/components/ui/field';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import type { NotifyMatterMostSchema } from '@/utils/api/types/config-edit/notify/schemas';
 
 /**
- * The form fields for a MatterMost notifier.
+ * The form fields for a `MatterMost` notifier.
  *
  * @param name - The path to this `MatterMost` in the form.
  * @param main - The main values.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for this `MatterMost` notifier.
  */
 const MATTERMOST = ({
 	name,
-
 	main,
-	defaults,
-	hard_defaults,
 }: {
 	name: string;
-
-	main?: NotifyMatterMostType;
-	defaults?: NotifyMatterMostType;
-	hard_defaults?: NotifyMatterMostType;
+	main?: NotifyMatterMostSchema;
 }) => {
-	const convertedDefaults = useMemo(
-		() => ({
-			// URL Fields
-			url_fields: {
-				channel: firstNonDefault(
-					main?.url_fields?.channel,
-					defaults?.url_fields?.channel,
-					hard_defaults?.url_fields?.channel,
-				),
-				host: firstNonDefault(
-					main?.url_fields?.host,
-					defaults?.url_fields?.host,
-					hard_defaults?.url_fields?.host,
-				),
-				path: firstNonDefault(
-					main?.url_fields?.path,
-					defaults?.url_fields?.path,
-					hard_defaults?.url_fields?.path,
-				),
-				port: firstNonDefault(
-					main?.url_fields?.port,
-					defaults?.url_fields?.port,
-					hard_defaults?.url_fields?.port,
-				),
-				token: firstNonDefault(
-					main?.url_fields?.token,
-					defaults?.url_fields?.token,
-					hard_defaults?.url_fields?.token,
-				),
-				username: firstNonDefault(
-					main?.url_fields?.username,
-					defaults?.url_fields?.username,
-					hard_defaults?.url_fields?.username,
-				),
-			},
-			// Params
-			params: {
-				icon: firstNonDefault(
-					main?.params?.icon,
-					defaults?.params?.icon,
-					hard_defaults?.params?.icon,
-				),
-			},
-		}),
-		[main, defaults, hard_defaults],
+	const { typeDataDefaults } = useSchemaContext();
+	const defaults = useMemo(
+		() => main ?? typeDataDefaults?.notify.mattermost,
+		[main, typeDataDefaults?.notify.mattermost],
 	);
 
 	return (
-		<>
-			<NotifyOptions
-				name={name}
-				main={main?.options}
-				defaults={defaults?.options}
-				hard_defaults={hard_defaults?.options}
-			/>
-			<FormLabel text="URL Fields" heading />
-			<>
-				<FormText
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<NotifyOptions defaults={defaults?.options} name={name} />
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="URL Fields" />
+				<FieldText
+					colSize={{ xs: 9 }}
+					defaultVal={defaults?.url_fields?.host}
+					label="Host"
 					name={`${name}.url_fields.host`}
 					required
-					col_sm={9}
-					label="Host"
-					tooltip="e.g. gotify.example.com"
-					defaultVal={convertedDefaults.url_fields.host}
+					tooltip={{
+						content: 'e.g. gotify.example.com',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.url_fields.port`}
-					col_sm={3}
+				<FieldText
+					colSize={{ xs: 3 }}
+					defaultVal={defaults?.url_fields?.port}
 					label="Port"
-					tooltip="e.g. 443"
-					isNumber
-					defaultVal={convertedDefaults.url_fields.port}
-					positionXS="right"
+					name={`${name}.url_fields.port`}
+					tooltip={{
+						content: 'e.g. 443',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.url_fields.path`}
+				<FieldText
+					defaultVal={defaults?.url_fields?.path}
 					label="Path"
-					tooltip={
-						<>
-							{'e.g. mattermost.example.io/'}
-							<span className="bold-underline">path</span>
-						</>
-					}
-					tooltipAriaLabel="Format: mattermost.example.io/PATH"
-					defaultVal={convertedDefaults.url_fields.path}
+					name={`${name}.url_fields.path`}
+					tooltip={{
+						ariaLabel: 'Format: mattermost.example.io/PATH',
+						content: (
+							<>
+								{'e.g. mattermost.example.io/'}
+								<span className="bold-underline">path</span>
+							</>
+						),
+						type: 'element',
+					}}
 				/>
-				<FormText
-					name={`${name}.url_fields.channel`}
+				<FieldText
+					defaultVal={defaults?.url_fields?.channel}
 					label="Channel"
-					tooltip="e.g. releases"
-					defaultVal={convertedDefaults.url_fields.channel}
-					positionXS="right"
+					name={`${name}.url_fields.channel`}
+					tooltip={{
+						content: 'e.g. releases',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.url_fields.username`}
+				<FieldText
+					defaultVal={defaults?.url_fields?.username}
 					label="Username"
-					defaultVal={convertedDefaults.url_fields.username}
+					name={`${name}.url_fields.username`}
 				/>
-				<FormText
+				<FieldText
+					defaultVal={defaults?.url_fields?.token}
+					label="Token"
 					name={`${name}.url_fields.token`}
 					required
-					label="Token"
-					tooltip="WebHook token"
-					defaultVal={convertedDefaults.url_fields.token}
-					positionXS="right"
+					tooltip={{
+						content: 'WebHook token',
+						type: 'string',
+					}}
 				/>
-			</>
-			<FormLabel text="Params" heading />
-			<>
-				<FormTextWithPreview
-					name={`${name}.params.icon`}
+			</FieldSet>
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="Params" />
+				<FieldTextWithPreview
+					defaultVal={defaults?.params?.icon}
 					label="Icon"
-					tooltip="URL of icon to use"
-					isURL={false}
-					defaultVal={convertedDefaults.params.icon}
+					name={`${name}.params.icon`}
+					tooltip={{
+						content: 'URL of icon to use',
+						type: 'string',
+					}}
 				/>
-			</>
-		</>
+			</FieldSet>
+		</FieldSet>
 	);
 };
 

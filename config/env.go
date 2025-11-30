@@ -101,9 +101,9 @@ func mapEnvToStruct(src any, prefix string, envVars []string) error {
 				case reflect.String:
 					err = setStringField(field, envValueStr)
 				case reflect.Uint8:
-					err = setUint8Field(field, envValueStr, fieldName)
+					err = setUintField(field, envValueStr, fieldName, 8)
 				case reflect.Uint16:
-					err = setUint16Field(field, envValueStr, fieldName)
+					err = setUintField(field, envValueStr, fieldName, 16)
 				}
 			}
 		case reflect.Map:
@@ -145,73 +145,49 @@ func hasVarWithPrefix(prefix string, envVars []string) bool {
 }
 
 func setBoolField(field reflect.Value, value, envKey string) error {
-	envValue, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("%s: %q <invalid> (expected 'true' or 'false')",
-			envKey, value)
-	}
-	if field.Kind() == reflect.Ptr {
-		field.Set(reflect.ValueOf(&envValue))
-	} else {
-		field.SetBool(envValue)
-	}
-
-	return nil
+	return setField(field, value, envKey, strconv.ParseBool, "(expected 'true' or 'false')")
 }
 
 func setIntField(field reflect.Value, value, envKey string) error {
-	envValue, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("%s: %q <invalid> (expected an integer)",
-			envKey, value)
-	}
-	if field.Kind() == reflect.Ptr {
-		field.Set(reflect.ValueOf(&envValue))
-	} else {
-		field.SetInt(int64(envValue))
-	}
-
-	return nil
+	return setField(field, value, envKey, strconv.Atoi, "(expected an integer)")
 }
 
 func setStringField(field reflect.Value, value string) error {
-	envValue := value
-	if field.Kind() == reflect.Ptr {
-		field.Set(reflect.ValueOf(&envValue))
-	} else {
-		field.SetString(envValue)
-	}
-
-	return nil
+	return setField(field, value, "", func(s string) (string, error) { return s, nil }, "")
 }
 
-func setUint8Field(field reflect.Value, value, envKey string) error {
-	uintVal, err := strconv.ParseUint(value, 10, 8)
-	if err != nil {
-		return fmt.Errorf("%s: %q <invalid> (expected an unsigned (non-negative) integer between 0 and %d)",
-			envKey, value, math.MaxUint8)
+func setUintField(field reflect.Value, value, envKey string, bitSize int) error {
+	parser := func(s string) (uint16, error) {
+		v, err := strconv.ParseUint(s, 10, bitSize)
+		return uint16(v), err
 	}
-	temp := uint8(uintVal)
-	if field.Kind() == reflect.Ptr {
-		field.Set(reflect.ValueOf(&temp))
-	} else {
-		field.SetUint(uint64(temp))
-	}
-
-	return nil
+	return setField(field, value, envKey, parser,
+		fmt.Sprintf("(expected an unsigned (non-negative) integer between 0 and %d)", math.MaxUint16))
 }
 
-func setUint16Field(field reflect.Value, value, envKey string) error {
-	uintVal, err := strconv.ParseUint(value, 10, 16)
+// setField sets a given field's value by parsing a string using the provided parser function and validates the result.
+// The field update depends on its kind (pointer or value). It returns an error if parsing or assignment fails.
+func setField[T any](field reflect.Value, value, envKey string, parser func(string) (T, error), errorMsg string) error {
+	parsedValue, err := parser(value)
 	if err != nil {
-		return fmt.Errorf("%s: %q <invalid> (expected an unsigned (non-negative) integer between 0 and %d)",
-			envKey, value, math.MaxUint16)
+		return fmt.Errorf("%s: %q <invalid> %s", envKey, value, errorMsg)
 	}
-	temp := uint16(uintVal)
+
 	if field.Kind() == reflect.Ptr {
-		field.Set(reflect.ValueOf(&temp))
+		field.Set(reflect.ValueOf(&parsedValue))
 	} else {
-		field.SetUint(uint64(temp))
+		switch v := any(parsedValue).(type) {
+		case bool:
+			field.SetBool(v)
+		case int:
+			field.SetInt(int64(v))
+		case string:
+			field.SetString(v)
+		case uint8:
+			field.SetUint(uint64(v))
+		case uint16:
+			field.SetUint(uint64(v))
+		}
 	}
 
 	return nil

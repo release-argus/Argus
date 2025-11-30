@@ -1,38 +1,38 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-	ActionAPIType,
-	MonitorSummaryType,
-	OrderAPIResponse,
-	ServiceSummaryType,
-} from 'types/summary';
-import {
-	Dispatch,
-	JSX,
 	createContext,
-	useContext,
+	type Dispatch,
+	type ReactNode,
+	use,
 	useEffect,
 	useMemo,
 	useReducer,
 	useState,
 } from 'react';
-import { compareStringArrays, fetchJSON, getBasename } from 'utils';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-
-import { BooleanType } from 'types/boolean';
 import ReconnectingWebSocket from 'reconnecting-websocket';
-import { WS_ADDRESS } from 'config';
-import { WebSocketResponse } from 'types/websocket';
-import { WebSocketStatus } from 'components/websocket/status';
-import { handleMessage } from 'handlers/websocket';
-import reducerMonitor from 'reducers/monitor';
+import { WebSocketStatus } from '@/components/websocket/status';
+import { WS_ADDRESS } from '@/config';
+import { handleMessage } from '@/handlers/websocket';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import reducerMonitor from '@/reducers/monitor';
+import type { WebSocketResponse } from '@/types/websocket';
+import { compareStringArrays, getBasename } from '@/utils';
+import { mapRequest } from '@/utils/api/types/api-request-handler';
+import type {
+	ActionAPIType,
+	MonitorSummaryType,
+} from '@/utils/api/types/config/summary';
 
-type Bool = boolean | undefined;
-type Socket = ReconnectingWebSocket | undefined;
-interface WebSocketCtx {
-	ws: Socket;
-	connected: BooleanType;
+type WebSocketContextProps = {
+	/* The WebSocket connection. */
+	ws?: ReconnectingWebSocket;
+	/* Whether the WebSocket connection is established. */
+	connected?: boolean;
+	/* The service monitor data. */
 	monitorData: MonitorSummaryType;
+	/* Function to set monitor data. */
 	setMonitorData: Dispatch<WebSocketResponse>;
-}
+};
 
 /**
  * Provides the WebSocket connection and monitor data.
@@ -43,50 +43,55 @@ interface WebSocketCtx {
  * @param setMonitorData - Function to set the monitor data.
  * @returns The WebSocket context.
  */
-export const WebSocketContext = createContext<WebSocketCtx>({
-	ws: undefined,
+export const WebSocketContext = createContext<WebSocketContextProps>({
 	connected: false,
 	monitorData: {
-		order: [],
 		names: new Set<string>(),
+		order: [],
 		service: {},
+		tagsLoaded: false,
 	},
-	// eslint-disable-next-line @typescript-eslint/no-empty-function
-	setMonitorData: () => {},
+	setMonitorData: () => {
+		/* noop */
+	},
+	ws: undefined,
 });
 
-interface Props {
-	children: JSX.Element[];
-}
+type WebSocketProviderProps = {
+	/* The content to wrap. */
+	children: ReactNode;
+};
 
 const ws = new ReconnectingWebSocket(`${WS_ADDRESS}${getBasename()}/ws`);
 /**
  * @returns The WebSocket connection and monitor data.
  */
-export const WebSocketProvider = (props: Props) => {
+export const WebSocketProvider = (props: WebSocketProviderProps) => {
 	const queryClient = useQueryClient();
 	const [monitorData, setMonitorData] = useReducer(reducerMonitor, {
-		order: ['monitorData_loading'],
 		names: new Set<string>(),
+		order: [],
 		service: {},
+		tagsLoaded: false,
 	});
-	const [connected, setConnected] = useState<Bool>(undefined);
+	const [connected, setConnected] = useState<boolean | undefined>(undefined);
 
 	const contextValue = useMemo(
 		() => ({
-			ws: ws,
 			connected: connected,
 			monitorData: monitorData,
 			setMonitorData: setMonitorData,
+			ws: ws,
 		}),
 		[connected, monitorData],
 	);
 
 	const { data: orderData, isFetching: orderIsFetching } = useQuery({
-		queryKey: ['service/order'],
-		queryFn: () => fetchJSON<OrderAPIResponse>({ url: 'api/v1/service/order' }),
 		gcTime: 1000 * 60 * 30, // 30 minutes.
+		queryFn: () => mapRequest('SERVICE_ORDER_GET', null),
+		queryKey: QUERY_KEYS.SERVICE.ORDER(),
 	});
+	// biome-ignore lint/correctness/useExhaustiveDependencies: orderData covers monitorData.order.
 	useEffect(() => {
 		// Not a disconnect, still fetching, or no ordering.
 		if (
@@ -100,109 +105,96 @@ export const WebSocketProvider = (props: Props) => {
 		if (!compareStringArrays(orderData.order, monitorData.order)) {
 			setMonitorData({
 				page: 'APPROVALS',
-				type: 'SERVICE',
 				sub_type: 'ORDER',
+				type: 'SERVICE',
 				...orderData,
 			});
 		}
-
-		orderData.order.forEach((service) => {
-			// If service already cached, do not refetch.
-			if (monitorData.service[service]?.status?.latest_version_timestamp)
-				return;
-			fetchJSON<ServiceSummaryType | undefined>({
-				url: `api/v1/service/summary/${encodeURIComponent(service)}`,
-			}).then((data) => {
-				if (data)
-					setMonitorData({
-						page: 'APPROVALS',
-						type: 'SERVICE',
-						sub_type: 'INIT',
-						service_data: data,
-					});
-			});
-		});
 	}, [orderData, connected]);
 
 	ws.onopen = () => {
-		// Invalidate the cache if not the first connect event.
-		if (connected !== undefined)
-			queryClient.invalidateQueries({
-				queryKey: ['service/order'],
+		// Invalidate the cache if not the first 'connect' event.
+		if (connected !== undefined) {
+			void queryClient.invalidateQueries({
+				queryKey: QUERY_KEYS.SERVICE.ORDER(),
 			});
+		}
 		setConnected(true);
 	};
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	ws.onmessage = (event: any) => {
-		if (event.data === '') return;
+	ws.onmessage = (event: MessageEvent) => {
+		if (typeof event.data !== 'string' || event.data === '') return;
 		// Validate the JSON
-		if (event.data.length > 1 && event.data[0] == '{') {
+		if (event.data.length > 1 && event.data.startsWith('{')) {
 			const msg = JSON.parse(event.data.trim()) as WebSocketResponse;
 			handleMessage(msg, setMonitorData);
+
 			// update/invalidate caches.
 			if (msg.page === 'APPROVALS') {
-				if (msg.type === 'EDIT') {
-					queryClient.invalidateQueries({
-						queryKey: ['actions', { service: msg.sub_type }],
+				if (msg.type === 'EDIT' && msg.sub_type) {
+					void queryClient.invalidateQueries({
+						queryKey: QUERY_KEYS.SERVICE.ACTIONS(msg.sub_type),
 					});
-					queryClient.invalidateQueries({
-						queryKey: ['service/edit', { service: msg.sub_type }],
+					void queryClient.invalidateQueries({
+						queryKey: QUERY_KEYS.SERVICE.EDIT_ITEM(msg.sub_type),
 					});
 				}
 
-				if (
-					(msg.type === 'COMMAND' || msg.type === 'WEBHOOK') &&
-					msg.sub_type === 'EVENT'
-				) {
-					const queryKey = ['actions', { service: msg.service_data?.id }];
+				if (msg.type === 'COMMAND' || msg.type === 'WEBHOOK') {
+					const queryKey = QUERY_KEYS.SERVICE.ACTIONS(msg.service_data?.id);
 					const queryData = queryClient.getQueryData(queryKey);
 					if (queryData !== undefined) {
-						if (msg.command_data)
-							for (const command in msg.command_data) {
-								// store it in the cache.
-								(queryData as ActionAPIType).command[command] = {
-									failed: msg.command_data[command].failed,
-									next_runnable: msg.command_data[command].next_runnable,
+						if (msg.command_data) {
+							for (const [commandID, commandData] of Object.entries(
+								msg.command_data,
+							)) {
+								// Store it in the cache.
+								(queryData as ActionAPIType).command[commandID] = {
+									failed: commandData.failed,
+									next_runnable: commandData.next_runnable,
 								};
 							}
+						}
 
-						if (msg.webhook_data)
-							for (const webhook_id in msg.webhook_data) {
-								// store it in the cache.
-								(queryData as ActionAPIType).webhook[webhook_id] = {
-									failed: msg.webhook_data[webhook_id].failed,
-									next_runnable: msg.webhook_data[webhook_id].next_runnable,
+						if (msg.webhook_data) {
+							for (const [webhookID, webhookData] of Object.entries(
+								msg.webhook_data,
+							)) {
+								// {
+								//  "page":"APPROVALS",
+								//  "type":"WEBHOOK",
+								//  "sub_type":"EVENT",
+								//  "service_data":{"id":"autobrr/autobrr"},
+								//  "webhook_data":{"awx":{"failed":false,"next_runnable":"2025-11-07T02:48:14.157942826Z"}}
+								// }
+								// Store it in the cache.
+								(queryData as ActionAPIType).webhook[webhookID] = {
+									failed: webhookData.failed,
+									next_runnable: webhookData.next_runnable,
 								};
 							}
+						}
 						queryClient.setQueryData(queryKey, queryData);
 					}
 				}
 			}
 
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			messageHandlers.forEach((item: { handler: any; params?: any }) =>
-				item.params
-					? item.handler({
-							event: msg,
-							...item.params,
-					  })
-					: item.handler(msg),
-			);
+			for (const { handler, params } of messageHandlers.values()) {
+				handler(msg, params);
+			}
 		}
 	};
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	ws.onerror = (event: any) => {
-		connected && setConnected(false);
+	ws.onerror = (event: unknown) => {
+		if (connected) setConnected(false);
 		console.error('ws err', event);
 	};
 
 	return (
-		<WebSocketContext.Provider value={contextValue}>
+		<WebSocketContext value={contextValue}>
 			<WebSocketStatus connected={connected} />
 			{props.children}
-		</WebSocketContext.Provider>
+		</WebSocketContext>
 	);
 };
 
@@ -210,22 +202,27 @@ export const sendMessage = (data: string) => {
 	ws.send(data);
 };
 
-const messageHandlers = new Map();
+export type MessageHandler<P = undefined> = {
+	handler: (event: WebSocketResponse, params?: P) => void;
+	params?: P;
+};
+// biome-ignore lint/suspicious/noExplicitAny: any message.
+const messageHandlers = new Map<string, MessageHandler<any>>();
 
-export const addMessageHandler = (
+export const addMessageHandler = <P = undefined>(
 	id: string,
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	handler: any,
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	params?: any,
+	handlerObj: MessageHandler<P>,
 ): void => {
-	messageHandlers.set(id, { handler: handler, params: params });
+	messageHandlers.set(id, handlerObj);
 };
 
 export const removeMessageHandler = (id: string) => {
 	messageHandlers.delete(id);
 };
 
+/**
+ * useWebSocket retrieves the WebSocket context value from the WebSocketContext.
+ */
 export const useWebSocket = () => {
-	return useContext(WebSocketContext);
+	return use(WebSocketContext);
 };

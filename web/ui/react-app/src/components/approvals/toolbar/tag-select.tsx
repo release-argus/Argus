@@ -1,22 +1,20 @@
-import { FC, useEffect, useMemo } from 'react';
-import Select, { MultiValue } from 'react-select';
-import {
-	convertStringArrayToOptionTypeArray,
-	customComponents,
-	customStylesFixedHeight,
-} from 'components/generic/form-select-shared';
+import { type FC, useEffect, useMemo } from 'react';
+import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
+import { convertStringArrayToOptionTypeArray } from '@/components/generic/field-select-shared';
+import SelectTriState from '@/components/ui/react-select/select-tri-state';
+import { useWebSocket } from '@/contexts/websocket';
+import type { TagsTriType } from '@/types/util';
 
-import { Col } from 'react-bootstrap';
-import { OptionType } from 'types/util';
-import { useWebSocket } from 'contexts/websocket';
-
-type Props = {
-	tags: string[];
-	setTags: (tags: string[]) => void;
-};
-
-const TagSelect: FC<Props> = ({ tags, setTags }) => {
+/**
+ * TagSelect
+ *
+ * Select and manage service tags with tri-state logic.
+ * Prunes tags not present in `monitorData` and sync with the toolbar state.
+ */
+const TagSelect: FC = () => {
 	const { monitorData } = useWebSocket();
+	const { values, setTags } = useToolbar();
+	const tags: TagsTriType = values.tags ?? { exclude: [], include: [] };
 
 	const tagOptions = useMemo(
 		() =>
@@ -27,40 +25,59 @@ const TagSelect: FC<Props> = ({ tags, setTags }) => {
 		[monitorData.tags],
 	);
 
-	// useEffect as cannot change state during rendering (which happens in useMemo).
-	// useEffect ensures the state is updated after the render.
+	// Prune unknown tags.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: setTags stable.
 	useEffect(() => {
-		if (
-			monitorData.tags === undefined ||
-			Object.values(monitorData.service).find((service) => service.loading)
-		)
-			return;
-		// Ensure selected tags exist.
-		const newTags = tags.filter((tag) => monitorData.tags?.has(tag));
-		if (tags.length !== newTags.length) setTags(newTags);
-	}, [monitorData.tags, tags, setTags]);
+		if (!monitorData.tagsLoaded || !monitorData.tags) return;
+
+		const prune = (arr: string[]) =>
+			arr.filter((tag) => monitorData.tags?.has(tag));
+
+		const newTags = {
+			exclude: prune(tags.exclude),
+			include: prune(tags.include),
+		};
+
+		if (JSON.stringify(tags) !== JSON.stringify(newTags)) {
+			setTags(newTags);
+		}
+	}, [monitorData.tags, monitorData.tagsLoaded, tags]);
 
 	if (tagOptions.length === 0) return null;
 
 	return (
-		<Col xs={3}>
-			<Select
-				className="form-select"
-				options={tagOptions}
-				value={tagOptions.filter((option) => tags.includes(option.value))}
-				onChange={(newValue: MultiValue<OptionType>) =>
-					setTags(newValue.map((option) => option.value))
-				}
-				isMulti
-				placeholder="Tags..."
+		<div className="w-80 md:w-120 2xl:w-150">
+			<SelectTriState
+				aria-label="Select tags to filter services on"
 				closeMenuOnSelect={false}
+				fixedHeight
 				hideSelectedOptions={false}
-				noOptionsMessage={() => 'No matches'}
-				components={customComponents}
-				styles={customStylesFixedHeight}
-				aria-label="Select tag to filter services by"
+				isMulti
+				onChange={(newValue) => {
+					const include = newValue
+						.filter((item) => item.state === 'include')
+						.map((item) => item.value);
+
+					const exclude = newValue
+						.filter((item) => item.state === 'exclude')
+						.map((item) => item.value);
+
+					setTags({ exclude, include });
+				}}
+				options={tagOptions}
+				placeholder="Tags..."
+				value={[
+					...tags.include.map((value) => ({
+						state: 'include' as const,
+						value,
+					})),
+					...tags.exclude.map((value) => ({
+						state: 'exclude' as const,
+						value,
+					})),
+				]}
 			/>
-		</Col>
+		</div>
 	);
 };
 

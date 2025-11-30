@@ -1,185 +1,201 @@
-import {
-	DeployedVersionLookupType,
-	DeployedVersionLookupURLType,
-	ServiceOptionsType,
-} from 'types/config';
-import { FC, memo, useEffect, useMemo } from 'react';
-import {
-	FormCheck,
-	FormKeyValMap,
-	FormLabel,
-	FormSelect,
-	FormText,
-	FormTextArea,
-} from 'components/generic/form';
-import { FormGroup, Row } from 'react-bootstrap';
+import { memo, useEffect, useMemo } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
+import { BooleanWithDefault } from '@/components/generic';
+import {
+	FieldCheck,
+	FieldKeyValMap,
+	FieldSelect,
+	FieldText,
+	FieldTextArea,
+} from '@/components/generic/field';
+import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import VersionWithLink from '@/components/modals/service-edit/version-with-link';
+import VersionWithRefresh from '@/components/modals/service-edit/version-with-refresh';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import {
+	type DeployedVersionLookupURLMethod,
+	deployedVersionLookupURLMethodOptions,
+} from '@/utils/api/types/config/service/deployed-version';
+import type { DeployedVersionURLSchema } from '@/utils/api/types/config-edit/service/types/deployed-version';
+import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
+import { ensureValue } from '@/utils/form-utils';
 
-import { BooleanWithDefault } from 'components/generic';
-import { DeployedVersionLookupEditType } from 'types/service-edit';
-import VersionWithLink from './version-with-link';
-import VersionWithRefresh from './version-with-refresh';
+const RequestMethods = ['GET', 'POST'] as const;
+type RequestMethod = (typeof RequestMethods)[number];
 
-const DeployedVersionMethodOptions = [
-	{ label: 'GET', value: 'GET' },
-	{ label: 'POST', value: 'POST' },
-] as const;
+/**
+ * The `deployed_version` form fields for 'url' version.
+ */
+const DeployedVersionURL = () => {
+	const name = 'deployed_version';
+	const { schemaDataDefaults } = useSchemaContext();
+	const { getValues, setValue, trigger } = useFormContext();
+	// biome-ignore lint/correctness/useExhaustiveDependencies: deployed_version static.
+	const defaults = useMemo(
+		() =>
+			schemaDataDefaults?.deployed_version as Partial<DeployedVersionURLSchema>,
+		[],
+	);
 
-interface Props {
-	serviceID: string;
-	original?: DeployedVersionLookupEditType;
-	original_options?: ServiceOptionsType;
-	defaults?: DeployedVersionLookupType;
-	hard_defaults?: DeployedVersionLookupType;
-}
+	// Ensure selects have a valid value.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: defaults stable.
+	useEffect(() => {
+		ensureValue<DeployedVersionLookupURLMethod>({
+			defaultValue: defaults?.method,
+			fallback: Object.values(deployedVersionLookupURLMethodOptions)[0].value,
+			getValues,
+			path: `${name}.method`,
+			setValue,
+		});
+	}, []);
 
-const DeployedVersionURL: FC<Props> = ({
-	serviceID,
-	original,
-	original_options,
-	defaults,
-	hard_defaults,
-}) => {
-	const { setValue } = useFormContext();
-	const selectedMethod = useWatch({ name: 'deployed_version.method' });
-	const templateToggle = useWatch({ name: 'deployed_version.template_toggle' });
+	const selectedMethod = useWatch({
+		name: `${name}.method`,
+	}) as RequestMethod;
+	const templateToggle = (useWatch({
+		name: `${name}.template_toggle`,
+	}) ?? false) as boolean;
 
+	const deployedVersionLookupURLMethodNormalised = useMemo(() => {
+		const defaultMethod = normaliseForSelect(
+			deployedVersionLookupURLMethodOptions,
+			defaults?.method,
+		);
+
+		if (defaultMethod)
+			return [
+				{ label: `${defaultMethod.label} (default)`, value: nullString },
+				...deployedVersionLookupURLMethodOptions,
+			];
+
+		return deployedVersionLookupURLMethodOptions;
+	}, [defaults?.method]);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: setValue stable
 	useEffect(() => {
 		if (!templateToggle) {
-			setValue('deployed_version.regex_template', '');
-			setValue('deployed_version.template_toggle', false);
+			setValue(`${name}.regex_template`, '');
+			setValue(`${name}.template_toggle`, false);
+			trigger(`${name}.regex`);
 		}
-	}, [templateToggle, setValue]);
-
-	const convertedDefaults = useMemo(
-		() => ({
-			allow_invalid_certs:
-				(defaults as DeployedVersionLookupURLType)?.allow_invalid_certs ??
-				(hard_defaults as DeployedVersionLookupURLType)?.allow_invalid_certs,
-		}),
-		[defaults, hard_defaults],
-	);
+	}, [templateToggle]);
 
 	return (
 		<>
-			<FormSelect
-				name="deployed_version.method"
-				col_xs={6}
-				col_lg={2}
+			<FieldSelect
+				colSize={{ lg: 2, xs: 6 }}
 				label="Method"
-				options={DeployedVersionMethodOptions}
-				positionSM="right"
-				positionLG="middle"
+				name={`${name}.method`}
+				options={deployedVersionLookupURLMethodNormalised}
 			/>
 			<VersionWithLink
-				name="deployed_version.url"
+				colSize={{ lg: 8, sm: 12 }}
+				name={`${name}.url`}
+				tooltip={{
+					content: "URL to query for the version that's running",
+					type: 'string',
+				}}
 				type="url"
-				col_sm={12}
-				col_lg={8}
-				tooltip="URL to query for the version that's running"
-				positionXS="right"
 			/>
 			<BooleanWithDefault
-				name="deployed_version.allow_invalid_certs"
+				defaultValue={defaults?.allow_invalid_certs}
 				label="Allow Invalid Certs"
-				defaultValue={convertedDefaults.allow_invalid_certs}
+				name={`${name}.allow_invalid_certs`}
 			/>
-			<FormGroup className="pt-1 mb-2 col-12">
-				<FormLabel text="Basic auth credentials" />
-				<Row>
-					<FormText
-						key="username"
-						name="deployed_version.basic_auth.username"
-						col_xs={6}
-						label="Username"
-					/>
-					<FormText
-						key="password"
-						name="deployed_version.basic_auth.password"
-						col_xs={6}
-						label="Password"
-						positionXS="right"
-					/>
-				</Row>
-			</FormGroup>
-			<FormKeyValMap name="deployed_version.headers" />
+			<div className="col-span-full mb-2 grid grid-cols-subgrid pt-1">
+				<p className="col-span-full">Basic auth credentials</p>
+				<FieldText
+					colSize={{ xs: 6 }}
+					key="username"
+					label="Username"
+					name={`${name}.basic_auth.username`}
+				/>
+				<FieldText
+					colSize={{ xs: 6 }}
+					key="password"
+					label="Password"
+					name={`${name}.basic_auth.password`}
+				/>
+			</div>
+			<FieldKeyValMap name={`${name}.headers`} />
 			{selectedMethod === 'POST' && (
-				<FormTextArea
-					name="deployed_version.body"
-					col_sm={12}
-					rows={3}
+				<FieldTextArea
+					colSize={{ sm: 12 }}
 					label="Body"
-					tooltip="Body to send with this request"
+					name={`${name}.body`}
+					rows={3}
+					tooltip={{
+						content: 'Body to send with this request',
+						type: 'string',
+					}}
 				/>
 			)}
-			<FormText
-				name="deployed_version.target_header"
-				col_sm={12}
-				col_lg={6}
+			<FieldText
+				colSize={{ lg: 6, sm: 12 }}
 				label="Target header"
-				tooltip="Ignore the body and retrieve the version from this header in the response?"
+				name={`${name}.target_header`}
+				tooltip={{
+					content:
+						'Ignore the body and retrieve the version from this header in the response?',
+					type: 'string',
+				}}
 			/>
-			<FormText
-				name="deployed_version.json"
-				col_xs={6}
+			<FieldText
+				colSize={{ xs: 6 }}
 				label="JSON"
-				tooltip={
-					<>
-						If the URL gives JSON, take the var at this location. e.g.{' '}
-						<span className="bold-underline">data.version</span>
-					</>
-				}
-				tooltipAriaLabel="If the URL gives JSON, take the var at this location. e.g. data.version"
-				positionXS="left"
-				positionLG="right"
+				name={`${name}.json`}
+				tooltip={{
+					ariaLabel:
+						'If the URL gives JSON, take the var at this location. e.g. data.version',
+					content: (
+						<>
+							If the URL gives JSON, take the var at this location. e.g.{' '}
+							<span className="bold-underline">data.version</span>
+						</>
+					),
+					type: 'element',
+				}}
 			/>
-			<FormText
-				name="deployed_version.regex"
-				required={templateToggle ? 'Required for template' : undefined}
-				col_xs={4}
-				col_sm={5}
-				col_lg={templateToggle ? 6 : 11}
+			<FieldText
+				colSize={{ lg: templateToggle ? 6 : 11, sm: 5, xs: 4 }}
 				label="RegEx"
-				tooltip={
-					<>
-						RegEx to extract the version from the URL, e.g.{' '}
-						<span className="bold-underline">v([0-9.]+)</span>
-					</>
-				}
-				tooltipAriaLabel="RegEx to extract the version from the URL, e.g. v([0-9.]+)"
-				isRegex
-				positionXS="middle"
-				positionLG="left"
+				name={`${name}.regex`}
+				required={templateToggle ? 'Required for template' : undefined}
+				tooltip={{
+					ariaLabel:
+						'RegEx to extract the version from the URL, e.g. v([0-9.]+)',
+					content: (
+						<>
+							RegEx to extract the version from the URL, e.g.{' '}
+							<span className="bold-underline">v([0-9.]+)</span>
+						</>
+					),
+					type: 'element',
+				}}
 			/>
 			{templateToggle && (
-				<FormText
-					name="deployed_version.regex_template"
-					className="order-2 order-lg-1"
-					col_sm={12}
-					col_lg={5}
+				<FieldText
+					className="order-2 lg:order-1"
+					colSize={{ lg: 5, sm: 12 }}
 					label="RegEx Template"
-					tooltip="e.g. RegEx of 'v(\d)-(\d)-(\d)' on 'v4-0-1' with template '$1.$2.$3' would give '4.0.1'"
-					positionXS="middle"
+					name={`${name}.regex_template`}
+					tooltip={{
+						content: String.raw`e.g. RegEx of 'v(\d)-(\d)-(\d)' on 'v4-0-1' with template '$1.$2.$3' would give '4.0.1'`,
+						type: 'string',
+					}}
 				/>
 			)}
-			<FormCheck
-				name={`deployed_version.template_toggle`}
-				className="order-1 order-lg-2"
-				col_sm={1}
-				col_xs={2}
-				size="lg"
+			<FieldCheck
+				className="order-1 lg:order-2"
+				colSize={{ sm: 1, xs: 2 }}
 				label="T"
-				smallLabel
-				tooltip="Use the RegEx to create a template"
-				positionXS="right"
+				name={`${name}.template_toggle`}
+				tooltip={{
+					content: 'Use the RegEx to create a template',
+					type: 'string',
+				}}
 			/>
-			<VersionWithRefresh
-				className="order-3"
-				vType={1}
-				serviceID={serviceID}
-				original={original}
-				original_options={original_options}
-			/>
+			<VersionWithRefresh className="order-3" vType="deployed_version" />
 		</>
 	);
 };

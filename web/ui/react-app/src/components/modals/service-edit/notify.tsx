@@ -1,203 +1,190 @@
-import { Accordion, Button, Row } from 'react-bootstrap';
-import {
-	Dict,
-	LatestVersionLookupType,
-	NotifyTypes,
-	NotifyTypesConst,
-	NotifyTypesKeys,
-	NotifyTypesValues,
-} from 'types/config';
-import { FC, memo, useEffect, useMemo } from 'react';
-import { FormSelect, FormText } from 'components/generic/form';
-import { NotifyEditType, ServiceEditOtherData } from 'types/service-edit';
-import {
-	convertNotifyParams,
-	convertNotifyURLFields,
-} from 'components/modals/service-edit/util';
+import { Trash2 } from 'lucide-react';
+import { type FC, memo, useCallback, useEffect, useMemo } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
+import { FieldSelect, FieldText } from '@/components/generic/field';
+import RenderNotify from '@/components/modals/service-edit/notify-types/render';
+import TestNotify from '@/components/modals/service-edit/test-notify';
+import { AccordionContent, AccordionTrigger } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
+import type { OptionType } from '@/components/ui/react-select/custom-components';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import { isEmptyOrNull } from '@/utils';
+import { notifyTypeOptions } from '@/utils/api/types/config/notify/all-types';
+import {
+	LATEST_VERSION_LOOKUP_TYPE,
+	type LatestVersionLookupType,
+} from '@/utils/api/types/config/service/latest-version';
+import {
+	isNotifyType,
+	type NotifySchemaKeys,
+	type NotifySchemaValues,
+} from '@/utils/api/types/config-edit/notify/schemas';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { OptionType } from 'types/util';
-import RenderNotify from './notify-types/render';
-import { SingleValue } from 'react-select';
-import { TYPE_OPTIONS } from './notify-types/types';
-import TestNotify from 'components/modals/service-edit/test-notify';
-import { faTrash } from '@fortawesome/free-solid-svg-icons';
-import { isEmptyOrNull } from 'utils';
-
-interface Props {
+type NotifyProps = {
+	/* The name of the field in the form. */
 	name: string;
+	/* The function to remove this Notify. */
 	removeMe: () => void;
 
-	serviceID: string;
-	originals?: NotifyEditType[];
+	/* The 'main' notifier options. */
 	globalOptions: OptionType[];
-	mains?: Dict<NotifyTypesValues>;
-	defaults?: NotifyTypes;
-	hard_defaults?: NotifyTypes;
-}
+	/* The 'main' notifiers available to reference. */
+	mains?: Record<string, NotifySchemaValues>;
+};
 
 /**
  * The form fields for a notifier.
  *
  * @param name - The name of the field in the form.
  * @param removeMe - The function to remove this Notify.
- * @param serviceID - The ID of the service.
  * @param originals - The original values for the Notify.
  * @param globalOptions - The options for the global Notifiers.
  * @param mains - The main Notifiers.
- * @param defaults - The default values for all Notify types.
- * @param hard_defaults - The hard default values for all Notify types.
  * @returns The form fields for this Notify.
  */
-const Notify: FC<Props> = ({
+const Notify: FC<NotifyProps> = ({
 	name,
 	removeMe,
 
-	serviceID,
-	originals,
 	globalOptions,
 	mains,
-	defaults,
-	hard_defaults,
 }) => {
-	const { setValue, trigger } = useFormContext();
+	const { schemaData, typeDataDefaults } = useSchemaContext();
+	const { clearErrors, setValue, trigger } = useFormContext();
 
-	const itemName: string = useWatch({ name: `${name}.name` });
-	const itemType: NotifyTypesKeys = useWatch({ name: `${name}.type` });
-	const lvType: LatestVersionLookupType['type'] = useWatch({
+	// Original values.
+	const originals = schemaData?.notify;
+	// Main values.
+	const itemName = useWatch({ name: `${name}.name` }) as string;
+	const main = useMemo(() => mains?.[itemName], [mains, itemName]);
+	// Default values.
+	const itemType = useWatch({ name: `${name}.type` }) as NotifySchemaKeys;
+	const defaults = typeDataDefaults?.notify[itemType];
+
+	const lvType = useWatch({
 		name: 'latest_version.type',
-	});
-	const lvURL: string | undefined = useWatch({ name: 'latest_version.url' });
-	const webURL: string | undefined = useWatch({ name: 'dashboard.web_url' });
+	}) as LatestVersionLookupType;
+	const lvURL = useWatch({ name: 'latest_version.url' }) as string | undefined;
+	const webURL = useWatch({ name: 'dashboard.web_url' }) as string | undefined;
+
+	// Sync type with main.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: main.type doesn't change without itemName.
 	useEffect(() => {
 		// Set Type to that of the global for the new name if it exists.
-		if (mains?.[itemName]?.type) setValue(`${name}.type`, mains[itemName].type);
-		else if (itemType && (NotifyTypesConst as string[]).includes(itemName))
+		if (main?.type) {
+			setValue(`${name}.type`, main.type);
+		} else if (isNotifyType(itemName)) {
 			setValue(`${name}.type`, itemName);
-		// Trigger validation on name/type.
+		}
+
+		// Trigger validation on `name/type`.
 		const timeout = setTimeout(() => {
-			if (!isEmptyOrNull(itemName)) trigger(`${name}.name`);
-			trigger(`${name}.type`);
+			if (!isEmptyOrNull(itemName)) void trigger(`${name}.name`);
+			void trigger(`${name}.type`);
 		}, 25);
-		return () => clearTimeout(timeout);
-	}, [itemName]);
+
+		return () => {
+			clearTimeout(timeout);
+		};
+	}, [itemName, mains]);
+
+	// Clear errors and trigger validation when main/type changes.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: clearErrors stable.
+	useEffect(() => {
+		clearErrors(name);
+		void trigger(`${name}.type`);
+	}, [main, itemType]);
+
+	// Original values for this notify element.
+	const original = useMemo(
+		() => originals?.find((o) => o.old_index === itemName),
+		[itemName, originals],
+	);
+	const serviceURL =
+		lvType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value &&
+		(lvURL?.match(/\//g) ?? []).length == 1
+			? `https://github.com/${lvURL ?? ''}`
+			: lvURL;
+
+	// Reset values to their original when type reverted.
+	const onChangeNotifyType = useCallback(
+		(newType: NotifySchemaKeys) => {
+			// Reset to the original type.
+			if (original && newType === original?.type) {
+				setValue(`${name}.url_fields`, original.url_fields);
+				setValue(`${name}.params`, original.params);
+			}
+		},
+		[name, original, setValue],
+	);
+
+	// Accordion header.
 	const header = useMemo(
-		() => `${name.split('.').slice(-1)}: (${itemType}) ${itemName}`,
+		() => `${name.split('.').slice(-1).join('')}: (${itemType}) ${itemName}`,
 		[name, itemName, itemType],
 	);
 
-	const original: NotifyEditType = useMemo(() => {
-		const original = originals?.find((o) => o.oldIndex === itemName);
-		return (
-			original ?? { type: 'discord', options: {}, url_fields: {}, params: {} }
-		);
-	}, [originals]);
-	const serviceURL =
-		lvType === 'github' && (lvURL?.match(/\//g) ?? []).length == 1
-			? `https://github.com/${lvURL}`
-			: lvURL;
-
-	const onChangeNotifyType = (
-		newType: NotifyTypesKeys,
-		original: NotifyEditType,
-		otherOptionsData: ServiceEditOtherData,
-	) => {
-		// Reset to original type.
-		if (newType === original?.type) {
-			setValue(`${name}.url_fields`, original.url_fields);
-			setValue(`${name}.params`, original.params);
-			return;
-		}
-
-		// Set the default values for the selected type.
-		setValue(
-			`${name}.url_fields`,
-			convertNotifyURLFields(name, newType, undefined, otherOptionsData),
-		);
-		setValue(
-			`${name}.params`,
-			convertNotifyParams(name, newType, undefined, otherOptionsData),
-		);
-	};
-
 	return (
-		<Accordion>
-			<div style={{ display: 'flex', alignItems: 'center' }}>
+		<>
+			<ButtonGroup className="w-full">
 				<Button
 					aria-label="Delete this notifier"
-					className="btn-unchecked"
-					variant="secondary"
 					onClick={removeMe}
+					variant="ghost"
 				>
-					<FontAwesomeIcon icon={faTrash} />
+					<Trash2 />
 				</Button>
-				<Accordion.Button className="p-2">{header}</Accordion.Button>
-			</div>
+				<AccordionTrigger className="w-full items-center rounded-l-none py-0 pl-2">
+					{header}
+				</AccordionTrigger>
+			</ButtonGroup>
 
-			<Accordion.Body>
-				<Row xs={12}>
-					<FormSelect
-						name={`${name}.name`}
-						col_xs={6}
-						label="Global?"
-						tooltip="Use this Notify as a base"
-						options={globalOptions}
-					/>
-					<FormSelect
-						name={`${name}.type`}
-						col_xs={6}
-						label="Type"
-						customValidation={(value: string) => {
-							if (
-								itemType !== undefined &&
-								mains?.[itemName]?.type &&
-								itemType !== mains?.[itemName]?.type
-							) {
-								return `${value} does not match the global for "${itemName}" of ${mains?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
-							}
-							return true;
-						}}
-						onChange={(newValue: SingleValue<OptionType>) => {
-							if (newValue === null) return;
-							const newType = newValue?.value as NotifyTypesKeys;
-							const otherOptionsData: ServiceEditOtherData = {
-								notify: mains,
-								defaults: { notify: defaults },
-								hard_defaults: { notify: hard_defaults },
-							};
-							onChangeNotifyType(newType, original, otherOptionsData);
-							setValue(`${name}.type`, newType);
-						}}
-						options={TYPE_OPTIONS}
-						positionXS="right"
-					/>
-					<FormText
-						name={`${name}.name`}
-						required
-						unique
-						col_sm={12}
-						label="Name"
-					/>
-					<RenderNotify
-						name={name}
-						type={itemType}
-						main={mains?.[itemName]}
-						defaults={defaults?.[itemType]}
-						hard_defaults={hard_defaults?.[itemType]}
-					/>
-					<TestNotify
-						path={name}
-						original={original}
-						extras={{
-							service_id_previous: serviceID,
-							service_url: serviceURL,
-							web_url: webURL,
-						}}
-					/>
-				</Row>
-			</Accordion.Body>
-		</Accordion>
+			<AccordionContent className="grid grid-cols-12 gap-2 p-4">
+				<FieldSelect
+					colSize={{ xs: 6 }}
+					label="Base"
+					name={`${name}.name`}
+					options={globalOptions}
+					showError={false}
+					tooltip={{
+						content: 'Use this Notify as a base (`notify.x` in config root)',
+						type: 'string',
+					}}
+				/>
+				<FieldSelect
+					colSize={{ xs: 6 }}
+					label="Type"
+					name={`${name}.type`}
+					onChange={(newValue) => {
+						const newType = newValue?.value as NotifySchemaKeys;
+						onChangeNotifyType(newType);
+						return newValue;
+					}}
+					options={notifyTypeOptions}
+				/>
+				<FieldText
+					colSize={{ sm: 12 }}
+					label="Name"
+					name={`${name}.name`}
+					required
+				/>
+				<RenderNotify
+					defaults={defaults}
+					main={mains?.[itemName]}
+					name={name}
+					type={itemType}
+				/>
+				<TestNotify
+					extras={{
+						service_url: serviceURL,
+						web_url: webURL,
+					}}
+					original={original}
+					path={name}
+				/>
+			</AccordionContent>
+		</>
 	);
 };
 

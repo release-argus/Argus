@@ -1,180 +1,123 @@
-import {
-	Button,
-	Container,
-	FormGroup,
-	OverlayTrigger,
-	Row,
-	Tooltip,
-} from 'react-bootstrap';
-import { FC, memo, useEffect, useState } from 'react';
-import { faCircleNotch, faGears } from '@fortawesome/free-solid-svg-icons';
-
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { FormText } from 'components/generic/form';
-import { useDelayedRender } from 'hooks/delayed-render';
+import { IdCard, LoaderCircle } from 'lucide-react';
+import { type FC, memo, useCallback, useEffect, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
-import { useWebSocket } from 'contexts/websocket';
+import { FieldText } from '@/components/generic/field';
+import type { TooltipWithAriaProps } from '@/components/generic/tooltip';
+import Tip from '@/components/ui/tip';
+import { Toggle } from '@/components/ui/toggle';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import { useDelayedRender } from '@/hooks/use-delayed-render';
 
-interface Props {
-	id: string;
-	name?: string;
-	original_name?: string;
+type AdvancedToggleProps = {
+	onClick: () => void;
+};
+
+const AdvancedToggle: FC<AdvancedToggleProps> = ({ onClick }) => {
+	return (
+		<Tip
+			className="absolute top-1 right-0"
+			content="Toggle to separate ID (service key) and Name in the config YAML"
+			delayDuration={500}
+			touchDelayDuration={250}
+		>
+			<Toggle className="h-6 w-10" onClick={onClick}>
+				<IdCard />
+			</Toggle>
+		</Tip>
+	);
+};
+
+type EditServiceRootProps = {
 	loading: boolean;
-}
+};
 
 /**
  * The form fields for the root values of a Service.
  *
- * @param id - The ID of the Service.
- * @param name - The name of the Service.
- * @param original_name - The original name of the Service.
- * @param loading - Whether the modal is loading.
+ * @param loading - Indicates whether the modal shows a loading state.
  * @returns The form fields for the root values of a Service.
  */
-const EditServiceRoot: FC<Props> = ({ id, name, original_name, loading }) => {
+const EditServiceRoot: FC<EditServiceRootProps> = ({ loading }) => {
 	const delayedRender = useDelayedRender(500);
-	const [separateName, setSeparateName] = useState(false);
-	const { monitorData } = useWebSocket();
+	const { serviceID, schemaData } = useSchemaContext();
 	const { setValue, resetField } = useFormContext();
 
+	const [separateName, setSeparateName] = useState(false);
+
+	const originalName = schemaData?.name;
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: separateName stable.
 	useEffect(() => {
-		if (!original_name === separateName) {
-			setSeparateName(!!original_name);
+		if (!originalName === separateName) {
+			setSeparateName(!!originalName);
 		}
-	}, [original_name]);
+	}, [originalName]);
 
-	const advancedToggle = (
-		<OverlayTrigger
-			placement="top"
-			delay={{ show: 500, hide: 500 }}
-			overlay={
-				<Tooltip id="name-toggle-tooltip">
-					Toggle to separate ID (service key) and Name in the config YAML
-				</Tooltip>
+	// Handle toggling of id/name separation.
+	const toggleOnClick = useCallback(() => {
+		setValue('id_name_separator', !separateName);
+		if (separateName) {
+			if (originalName) {
+				setValue('name', '', { shouldDirty: true });
+			} else {
+				resetField('name');
 			}
-		>
-			<Button
-				aria-describedby="name-toggle-tooltip"
-				name="separate_name_toggle"
-				id="separate_name_toggle"
-				className={`btn-border btn-${separateName ? '' : 'un'}checked pad-no`}
-				style={{
-					height: '1.5rem',
-					width: '2.5rem',
-					marginBottom: '0.25rem',
-					position: 'absolute',
-					right: 0,
-				}}
-				onClick={() => {
-					if (separateName) {
-						name
-							? setValue('name', null, { shouldDirty: true })
-							: resetField('name');
-					} else {
-						name
-							? resetField('name')
-							: setValue('name', id, { shouldDirty: true });
-					}
-					setSeparateName((prev) => !prev);
-				}}
-				variant="secondary"
-			>
-				<FontAwesomeIcon
-					icon={faGears}
-					style={{
-						height: '1rem',
-					}}
-				/>
-			</Button>
-		</OverlayTrigger>
-	);
+			// Making ID and name separate.
+		} else if (originalName) {
+			resetField('name');
+		} else {
+			setValue('name', serviceID, { shouldDirty: true });
+		}
+		setSeparateName((prev) => !prev);
+	}, [serviceID, originalName, resetField, separateName, setValue]);
 
-	const valueNotInOtherNameOrID = (value: string) => {
-		return (
-			value === id ||
-			value === name ||
-			(!monitorData.order.includes(value) && !monitorData.names.has(value))
-		);
-	};
-
-	const getTooltipProps = () => {
-		if (!separateName) return {};
-		return {
-			tooltip: (
-				<pre
-					style={{
-						margin: 0,
-						textAlign: 'left',
-						whiteSpace: 'pre-wrap',
-					}}
-				>
-					{'services:\n  '}
-					<span className="bold-underline">ID</span>
-					{':\n    '}
-					<span className="bold-underline">NAME</span>
-					{': service_name\n    latest_version: ...'}
-				</pre>
-			),
-			tooltipAriaLabel: 'Format: services.ID.NAME=service_name',
-		};
-	};
+	const tooltip: TooltipWithAriaProps | undefined = separateName
+		? {
+				ariaLabel: 'Format: services.ID.NAME=service_name',
+				content: (
+					<pre className="m-0 whitespace-pre-wrap text-left font-mono text-xs">
+						{'services:\n  '}
+						<span className="font-semibold underline">ID</span>
+						{':\n    '}
+						<span className="font-semibold underline">NAME</span>
+						{': service_name\n    latest_version: ...'}
+					</pre>
+				),
+				type: 'element',
+			}
+		: undefined;
 
 	return (
-		<FormGroup className="mb-2">
-			<Row style={{ position: 'relative' }}>
-				{advancedToggle}
-				<FormText
-					name="id"
+		<div className="relative mb-2 grid grid-cols-12 gap-2">
+			<FieldText
+				colSize={{ sm: separateName ? 6 : 12, xs: 12 }}
+				label={separateName ? 'ID' : 'Name'}
+				name="id"
+				required
+				tooltip={tooltip}
+			/>
+			<AdvancedToggle onClick={toggleOnClick} />
+			{separateName && (
+				<FieldText
+					colSize={{ sm: 6 }}
+					label="Name"
+					name="name"
 					required
-					col_xs={12}
-					col_sm={separateName ? 6 : 12}
-					registerParams={{
-						validate: (value: string) => {
-							const validation =
-								value === ''
-									? false
-									: // ID hasn't changed, or not in use.
-									  valueNotInOtherNameOrID(value);
-							return (
-								validation || (value === '' ? 'Required' : 'Must be unique')
-							);
-						},
+					tooltip={{
+						content: 'Name shown in the UI',
+						type: 'string',
 					}}
-					label={separateName ? 'ID' : 'Name'}
-					{...getTooltipProps()}
 				/>
-				{separateName && (
-					<FormText
-						name="name"
-						required
-						col_sm={6}
-						registerParams={{
-							validate: (value: string) => {
-								const validation =
-									value === ''
-										? false
-										: // Name hasn't changed, or not in use.
-										  valueNotInOtherNameOrID(value);
-								return (
-									validation || (value === '' ? 'Required' : 'Must be unique')
-								);
-							},
-						}}
-						label="Name"
-						tooltip="Name shown in the UI"
-						positionXS="right"
-					/>
-				)}
-			</Row>
-			<FormText name="comment" col_sm={12} label="Comment" />
+			)}
+			<FieldText colSize={{ sm: 12 }} label="Comment" name="comment" />
 			{loading &&
 				delayedRender(() => (
-					<Container className="empty">
-						<FontAwesomeIcon icon={faCircleNotch} className={'fa-spin'} />
-						<span style={{ paddingLeft: '0.5rem' }}>Loading...</span>
-					</Container>
+					<div className="col-span-full flex flex-row items-center">
+						<LoaderCircle className="h-full animate-spin" />
+						<span className="pl-2">Loading...</span>
+					</div>
 				))}
-		</FormGroup>
+		</div>
 	);
 };
 

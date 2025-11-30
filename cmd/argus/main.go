@@ -14,7 +14,7 @@
 
 /*
 Argus monitors GitHub and/or other URLs for version changes.
-On a version change, send notification(s) and/or webhook(s).
+On a version change, send notifications and/or webhooks.
 */
 package main
 
@@ -39,16 +39,16 @@ var (
 	testServiceFlag  = flag.String("test.service", "", "Put the name of the Service to test the version query.")
 )
 
-// main loads the config and then calls service.Track to monitor
+// main loads the config and then calls `service.Track` to monitor
 // each Service of the config for version changes and acts on
 // them as defined. It also sets up the Web UI and SaveHandler.
 func main() {
 	flag.Parse()
-	flagset := make(map[string]bool)
-	flag.Visit(func(f *flag.Flag) { flagset[f.Name] = true })
+	flags := make(map[string]bool)
+	flag.Visit(func(f *flag.Flag) { flags[f.Name] = true })
 
 	var config cfg.Config
-	config.Load(*configFile, &flagset)
+	config.Load(*configFile, &flags)
 
 	// config.check
 	config.Print(configCheckFlag)

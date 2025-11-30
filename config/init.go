@@ -30,7 +30,7 @@ import (
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
-// Init will hand out the appropriate Defaults.X and HardDefaults.X pointer(s).
+// Init will hand out the appropriate Defaults.X and HardDefaults.X pointers.
 func (c *Config) Init() {
 	c.OrderMutex.RLock()
 	defer c.OrderMutex.RUnlock()

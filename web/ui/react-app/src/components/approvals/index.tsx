@@ -1,14 +1,5 @@
-import ApprovalsToolbar from './toolbar/toolbar';
-import Service from './service';
-import { ServiceImage } from './service-image';
-import { ServiceInfo } from './service-info';
-import UpdateInfo from './service-update-info';
-
-// prettier-ignore
-export {
-	ApprovalsToolbar,
-	Service,
-	ServiceImage,
-	ServiceInfo,
-	UpdateInfo,
-};
+export { default as Service } from '@/components/approvals/service';
+export { default as ServiceActionRelease } from '@/components/approvals/service-action-release';
+export { default as ServiceImage } from '@/components/approvals/service-image';
+export { default as ServiceInfo } from '@/components/approvals/service-info';
+export { default as ApprovalsToolbar } from '@/components/approvals/toolbar/toolbar';

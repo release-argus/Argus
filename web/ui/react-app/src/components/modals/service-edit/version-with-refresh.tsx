@@ -1,124 +1,130 @@
-import { Alert, Button } from 'react-bootstrap';
-import {
-	DeployedVersionLookupEditType,
-	LatestVersionLookupEditType,
-} from 'types/service-edit';
-import { FC, useMemo, useState } from 'react';
-import { beautifyGoErrors, fetchVersionJSON, } from 'utils';
-import {
-	convertUIDeployedVersionDataEditToAPI,
-	convertUILatestVersionDataEditToAPI,
-} from 'components/modals/service-edit/util';
-import { faSpinner, faSync } from '@fortawesome/free-solid-svg-icons';
-import { useFormContext, useWatch } from 'react-hook-form';
-
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { ServiceOptionsType } from 'types/config';
-import cx from 'classnames';
-import { useErrors } from 'hooks/errors';
 import { useMutation } from '@tanstack/react-query';
-import useValuesRefetch from 'hooks/values-refetch';
-import { useWebSocket } from 'contexts/websocket';
+import { AlertCircleIcon, Loader2Icon, RefreshCw } from 'lucide-react';
+import { type FC, useState } from 'react';
+import { useFormContext, useWatch } from 'react-hook-form';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import { useWebSocket } from '@/contexts/websocket';
+import { useErrors } from '@/hooks/use-error';
+import useValuesRefetch from '@/hooks/values-refetch';
+import { cn } from '@/lib/utils';
+import { beautifyGoErrors, removeEmptyValues } from '@/utils';
+import { mapRequest } from '@/utils/api/types/api-request-handler';
+import {
+	type URLCommandsSchema,
+	urlCommandsSchemaOutgoing,
+} from '@/utils/api/types/config-edit/service/types/latest-version';
 
-interface VersionWithRefreshProps {
-	/** The type of version to display/fetch (0 for "latest_version", otherwise "deployed_version"). */
-	vType: 0 | 1;
-	/** Optional additional CSS class names for styling the component. */
+/* The throttle time for refreshing the version. */
+const TEST_THROTTLE_MS = 1000;
+
+type VersionWithRefreshProps = {
+	/* The version to display/fetch. */
+	vType: 'latest_version' | 'deployed_version';
+	/* Optional additional CSS class names for styling the component. */
 	className?: string;
-	/** The unique identifier for the service. */
-	serviceID: string;
-	/** The original version data for the service. */
-	original?: LatestVersionLookupEditType | DeployedVersionLookupEditType;
-	/** The .options of the original version data. */
-	original_options?: ServiceOptionsType;
-}
+};
 
 /**
  * The version with a button to refetch.
  *
- * @param vType - 0: latest_version, 1: deployed_version.
- * @param className - Extra class name(s) for the component.
- * @param serviceID - The ID of the service.
- * @param original - The original values in the form.
- * @param original_options - The original service.options of the form.
+ * @param vType - latest_version/deployed_version.
+ * @param className - Extra class names for the component.
  * @returns The current version with a button to trigger a refetch.
  */
 const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 	vType,
 	className,
-	serviceID,
-	original,
-	original_options,
 }) => {
-	const [lastFetched, setLastFetched] = useState(0);
 	const { monitorData } = useWebSocket();
 	const { clearErrors, setValue, trigger } = useFormContext();
+	const {
+		serviceID,
+		schema: schemaFull,
+		schemaData: originalData,
+	} = useSchemaContext();
+
+	const [lastFetched, setLastFetched] = useState(0);
 	const [queryError, setQueryError] = useState<string | null>(null);
-	const dataTarget = vType === 0 ? 'latest_version' : 'deployed_version';
-	const convertedOriginal = useMemo(() => {
-		if (original === null) return {};
-		const preparedOriginal = serviceID
-			? original
-			: // Remove type from original if it's a new service.
-			{ ...original, type: '' };
-		// Latest version
-		if (dataTarget === 'latest_version')
-			return convertUILatestVersionDataEditToAPI(
-				preparedOriginal as LatestVersionLookupEditType,
-			);
-		// Deployed version
-		return convertUIDeployedVersionDataEditToAPI(
-			preparedOriginal as DeployedVersionLookupEditType,
-		);
-	}, [original, serviceID, dataTarget]);
-	const url: string | undefined = useWatch({ name: `${dataTarget}.url` });
-	const dataTargetErrors = useErrors(dataTarget, true);
-	const { data, refetchData } = useValuesRefetch<{ [x: string]: any }>(
-		dataTarget,
-	);
+
+	const schema = schemaFull.shape[vType];
+
+	const url = useWatch({ name: `${vType}.url` }) as string;
+
+	const vTypeErrors = useErrors(vType, true);
+	const { data, refetchData } = useValuesRefetch(vType);
 	const { data: semanticVersioning, refetchData: refetchSemanticVersioning } =
-		useValuesRefetch<boolean>('options.semantic_versioning');
+		useValuesRefetch<boolean | null>('options.semantic_versioning');
 
 	const {
 		mutate: fetchVersion,
 		data: versionData,
 		isPending: isFetching,
 	} = useMutation({
-		mutationFn: () =>
-			fetchVersionJSON({
-				serviceID,
-				dataTarget,
-				semanticVersioning,
-				options: original_options,
-				data,
-				original: convertedOriginal,
-			}),
+		mutationFn: async () => {
+			if (originalData === null) return null;
+
+			const dataConverted = schema.parse(data);
+			// Trim URL Commands.
+			if (vType === 'latest_version' && 'url_commands' in dataConverted) {
+				const parsedURLCommands = urlCommandsSchemaOutgoing.parse(
+					dataConverted.url_commands,
+				);
+				const trimmedURLCommands = parsedURLCommands
+					? parsedURLCommands.map((urlC) => removeEmptyValues(urlC))
+					: null;
+				dataConverted.url_commands = trimmedURLCommands as URLCommandsSchema;
+			}
+
+			return await mapRequest('VERSION_REFRESH', {
+				data: dataConverted,
+				dataSemanticVersioning: semanticVersioning ?? null,
+				dataTarget: vType,
+				original: originalData[vType],
+				originalSemanticVersioning:
+					originalData?.options?.semantic_versioning ?? null,
+				serviceID: serviceID,
+			});
+		},
+		onError: (error) => {
+			setValue(`${vType}.version`, '');
+			setQueryError(
+				beautifyGoErrors(
+					error instanceof Error ? error.message : String(error),
+				),
+			);
+		},
 		onMutate: () => {
 			// Reset errors and version field before fetching.
 			setQueryError(null);
-			setValue(`${dataTarget}.version`, '');
+			setValue(`${vType}.version`, '');
 		},
 		onSuccess: (data) => {
-			if (data.version) {
-				setValue(`${dataTarget}.version`, data.version);
-				clearErrors(`${dataTarget}.version`);
+			if (data?.version) {
+				setValue(`${vType}.version`, data.version);
+				clearErrors(`${vType}.version`);
 			}
 		},
-		onError: (error) => {
-			setValue(`${dataTarget}.version`, '');
-			setQueryError(beautifyGoErrors(error instanceof Error ? error.message : String(error)),)
-		},
 	});
-	const version = useWatch({ name: `${dataTarget}.version` }) ?? monitorData.service[serviceID]?.status?.[dataTarget];
 
+	const versionFallback = serviceID
+		? monitorData.service[serviceID]?.status?.[vType]
+		: null;
+	const version =
+		(useWatch({ name: `${vType}.version` }) as string | null | undefined) ??
+		versionFallback;
+
+	// Refetch the version.
 	const refetch = async () => {
 		// Prevent refetching too often.
 		const currentTime = Date.now();
-		if (currentTime - lastFetched < 1000) return;
+		if (currentTime - lastFetched < TEST_THROTTLE_MS) return undefined;
 
 		// Ensure valid form.
-		const result = await trigger(dataTarget, { shouldFocus: true });
-		if (!result) return;
+		const result = await trigger(vType, { shouldFocus: true });
+		if (!result) return undefined;
 
 		refetchSemanticVersioning();
 		refetchData();
@@ -131,50 +137,45 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 		});
 		return () => clearTimeout(timeout);
 	};
-	const LoadingSpinner = (
-		<FontAwesomeIcon icon={faSpinner} spin style={{ marginLeft: '0.5rem' }} />
-	);
 
 	return (
-		<span className={cx('w-100', className)}>
-			<span className="pt-1 pb-2" style={{ display: 'flex' }}>
-				{vType === 0 ? 'Latest' : 'Deployed'} version: {version}
-				{data?.url !== '' && isFetching && LoadingSpinner}
+		<span className={cn('col-span-full', className)}>
+			<span className="flex pt-1 pb-2">
+				{vType === 'latest_version' ? 'Latest' : 'Deployed'} version: {version}
+				{isFetching && <Skeleton className="ml-1 h-4 w-16 max-w-full" />}
 				<Button
 					aria-label="Refresh the version"
-					variant="secondary"
-					style={{ marginLeft: 'auto', padding: '0 1rem' }}
-					onClick={refetch}
+					className="ml-auto"
 					disabled={isFetching || !url}
+					onClick={refetch}
+					variant="secondary"
 				>
-					<FontAwesomeIcon icon={faSync} style={{ paddingRight: '0.25rem' }} />
+					{isFetching ? (
+						<Loader2Icon className="animate-spin" />
+					) : (
+						<RefreshCw />
+					)}
 					Refresh
 				</Button>
 			</span>
-			{(queryError || versionData?.message) && (
-				<span
-					className="mb-2"
-					style={{ width: '100%', wordBreak: 'break-all' }}
-				>
-					<Alert variant="danger">
-						Failed to refresh:
-						<br />
-						{(
-							(queryError || beautifyGoErrors(versionData?.message ?? ""))
-						)}
-					</Alert>
-				</span>
+			{(queryError ?? versionData?.message) && (
+				<Alert variant="destructive">
+					<AlertCircleIcon />
+					<AlertTitle>Failed to refresh:</AlertTitle>
+					<AlertDescription>
+						{queryError ?? beautifyGoErrors(versionData?.message ?? '')}
+					</AlertDescription>
+				</Alert>
 			)}
-			{dataTargetErrors && (
-				<Alert
-					variant="danger"
-					style={{ paddingLeft: '2rem', marginBottom: 'unset' }}
-				>
-					{Object.entries(dataTargetErrors).map(([key, error]) => (
-						<li key={key}>
-							{key}: {error}
-						</li>
-					))}
+			{vTypeErrors && (
+				<Alert className="mb-0 pl-8" variant="destructive">
+					<ul className="col-span-full list-inside list-disc space-y-1">
+						{Object.entries(vTypeErrors).map(([key, error]) => (
+							<li key={key}>
+								{key}: {error}
+							</li>
+						))}
+					</ul>
 				</Alert>
 			)}
 		</span>
