@@ -18,6 +18,7 @@ package test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -93,14 +94,12 @@ func StringifyPtr[T comparable](ptr *T) string {
 
 // TrimJSON removes unnecessary whitespace from a JSON string.
 func TrimJSON(str string) string {
-	replacer := strings.NewReplacer(
-		"\n", "",
-		"\t", "",
-		`": `, `":`,
-		`", `, `",`,
-		`, "`, `,"`,
-	)
-	return replacer.Replace(strings.TrimSpace(str))
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, []byte(str)); err != nil {
+		// Return original string if invalid JSON.
+		return str
+	}
+	return buf.String()
 }
 
 // TrimYAML removes unnecessary whitespace from a YAML string.

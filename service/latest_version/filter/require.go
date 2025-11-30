@@ -31,7 +31,7 @@ type RequireDefaults struct {
 	Docker DockerCheckDefaults `json:"docker" yaml:"docker"` // Docker image tag requirements.
 }
 
-// Default sets this RequireDefaults to the default values.
+// Default sets these RequireDefaults to the default values.
 func (r *RequireDefaults) Default() {
 	r.Docker.Default()
 }

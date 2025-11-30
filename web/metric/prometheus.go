@@ -105,7 +105,7 @@ var (
 		})
 )
 
-// InitPrometheusCounter will set the `metric` counter for the given label(s) to 0.
+// InitPrometheusCounter will set the `metric` counter for the given labels to 0.
 //
 // Required labels:
 //
@@ -123,7 +123,7 @@ func InitPrometheusCounter(
 	metric.With(mergeCounterLabels(id, serviceID, srcType, result)).Add(0)
 }
 
-// DeletePrometheusCounter will delete the `metric` counter with the given label(s).
+// DeletePrometheusCounter will delete the `metric` counter with the given labels.
 //
 // Required labels:
 //
@@ -141,7 +141,7 @@ func DeletePrometheusCounter(
 	metric.Delete(mergeCounterLabels(id, serviceID, srcType, result))
 }
 
-// IncPrometheusCounter will increment the `metric` counter with the given label(s).
+// IncPrometheusCounter will increment the `metric` counter with the given labels.
 //
 // Required labels:
 //
@@ -176,7 +176,7 @@ func mergeCounterLabels(
 	return labels
 }
 
-// SetPrometheusGauge will set the `metric` gauge for the given label(s) to `value`.
+// SetPrometheusGauge will set the `metric` gauge for the given labels to `value`.
 //
 // Required labels:
 //
@@ -193,7 +193,7 @@ func SetPrometheusGauge(
 	metric.With(mergeGaugeLabels(id, srcType)).Set(value)
 }
 
-// DeletePrometheusGauge will delete the `metric` gauge with the given label(s).
+// DeletePrometheusGauge will delete the `metric` gauge with the given labels.
 //
 // Required labels:
 //

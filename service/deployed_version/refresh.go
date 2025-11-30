@@ -30,8 +30,9 @@ import (
 //	Returns: version, err.
 func Refresh(
 	lookup Lookup,
+	lookupType string,
 	previousType string,
-	overrides string,
+	overrides *string,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
 ) (string, error) {
 	if lookup == nil {
@@ -40,7 +41,7 @@ func Refresh(
 
 	logFrom := logutil.LogFrom{Primary: "latest_version/refresh", Secondary: lookup.GetServiceID()}
 
-	// Whether this new semantic_version resolves differently than the current one.
+	// Whether this new `semantic_version` resolves differently than the current one.
 	semanticVerDiff := semanticVersioning != nil && (
 	// semantic_versioning explicitly null, and the default resolves to a different value.
 	(*semanticVersioning == "null" && lookup.GetOptions().GetSemanticVersioning() != *util.FirstNonNilPtr(
@@ -48,8 +49,8 @@ func Refresh(
 		lookup.GetHardDefaults().Options.SemanticVersioning)) ||
 		// semantic_versioning now resolves to a different value than the default.
 		(*semanticVersioning != "null" && *semanticVersioning == "true" != lookup.GetOptions().GetSemanticVersioning()))
-	// Whether we need to create a new Lookup.
-	usingOverrides := (overrides != "" && previousType != "manual") || semanticVerDiff
+	// Create a new lookup if overrides provided for a non-manual type or if `semantic_versioning` changed.
+	usingOverrides := (overrides != nil && lookupType != "manual") || semanticVerDiff
 
 	newLookup := lookup
 	// Create a new Lookup if overrides provided.
@@ -63,9 +64,9 @@ func Refresh(
 		if err != nil {
 			return "", err
 		}
-	} else if previousType == "manual" && lookup.GetType() == "manual" &&
-		overrides != "" {
-		if err := json.Unmarshal([]byte(overrides), &lookup); err != nil {
+	} else if previousType == "manual" && lookupType == "manual" &&
+		overrides != nil {
+		if err := json.Unmarshal([]byte(*overrides), &lookup); err != nil {
 			errStr := util.FormatUnmarshalError("json", err)
 			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
 			return "", errors.New("failed to unmarshal deployedver.Lookup:\n  " + errStr)
@@ -97,21 +98,21 @@ type LookupTypeExtractor struct {
 // applyOverridesJSON applies the JSON overrides to the Lookup.
 func applyOverridesJSON(
 	lookup Lookup,
-	overrides string,
+	overrides *string,
 	semanticVerDiff bool,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
 ) (Lookup, error) {
 	var newLookup Lookup
 	var extractedOverrides *LookupTypeExtractor
-	if overrides != "" {
-		if err := json.Unmarshal([]byte(overrides), &extractedOverrides); err != nil {
+	if overrides != nil {
+		if err := json.Unmarshal([]byte(*overrides), &extractedOverrides); err != nil {
 			errStr := util.FormatUnmarshalError("json", err)
 			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
 			return nil, errors.New("failed to unmarshal deployedver.Lookup:\n  " + errStr)
 		}
 	}
 	// Copy the existing Lookup.
-	if overrides == "" || (extractedOverrides.Type == "" || extractedOverrides.Type == lookup.GetType()) {
+	if overrides == nil || (extractedOverrides.Type == "" || extractedOverrides.Type == lookup.GetType()) {
 		newLookup = Copy(lookup)
 	} else {
 		// Convert to the new type.
@@ -140,15 +141,15 @@ func applyOverridesJSON(
 	}
 
 	// Apply the overrides.
-	if overrides != "" {
-		if err := json.Unmarshal([]byte(overrides), &newLookup); err != nil {
+	if overrides != nil {
+		if err := json.Unmarshal([]byte(*overrides), &newLookup); err != nil {
 			errStr := util.FormatUnmarshalError("json", err)
 			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
 			return nil, errors.New("failed to unmarshal deployedver.Lookup:\n  " + errStr)
 		}
 		newLookup.Init(
 			newLookup.GetOptions(),
-			newLookup.GetStatus(),
+			newLookup.GetStatus().Copy(false),
 			newLookup.GetDefaults(), newLookup.GetHardDefaults())
 	}
 

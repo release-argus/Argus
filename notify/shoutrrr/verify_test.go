@@ -189,7 +189,7 @@ func TestBase_checkValuesOptions(t *testing.T) {
 			// AND the delay is set as expected if it didn't error on delay.
 			if !util.RegexCheck("^delay:.*", e) &&
 				shoutrrr.GetOption("delay") != tc.wantDelay {
-				t.Errorf("%s\ndelay mismatch\nwant: %q\n got:  %q",
+				t.Errorf("%s\ndelay mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantDelay, shoutrrr.GetOption("delay"))
 			}
 		})
@@ -199,6 +199,7 @@ func TestBase_checkValuesOptions(t *testing.T) {
 func TestBase_checkValuesParams(t *testing.T) {
 	// GIVEN a Base with Params.
 	tests := map[string]struct {
+		itemType string
 		params   map[string]string
 		errRegex string
 	}{
@@ -216,6 +217,18 @@ func TestBase_checkValuesParams(t *testing.T) {
 				"a": "release! {{ version }"},
 			errRegex: `^a: "release! {{ version }" <invalid>.*$`,
 		},
+		"valid select param": {
+			itemType: "smtp",
+			params: map[string]string{
+				"auth": "OAuth2"},
+			errRegex: `^$`,
+		},
+		"invalid select param": {
+			itemType: "smtp",
+			params: map[string]string{
+				"auth": "-"},
+			errRegex: `^auth: "-" <invalid>.*OAuth2.*$`,
+		},
 	}
 
 	for name, tc := range tests {
@@ -226,13 +239,312 @@ func TestBase_checkValuesParams(t *testing.T) {
 			shoutrrr.Params = tc.params
 
 			// WHEN checkValuesParams is called.
-			err := shoutrrr.checkValuesParams("")
+			err := shoutrrr.checkValuesParams("", tc.itemType)
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q\n",
 					packageName, tc.errRegex, e)
+			}
+		})
+	}
+}
+
+func TestBase_normaliseParamSelect(t *testing.T) {
+	// GIVEN a Base and various inputs to normaliseParamSelect.
+	tests := map[string]struct {
+		value      string
+		allowed    []string
+		startParam string
+		wantOK     bool
+		wantValue  string
+	}{
+		"exact match uses canonical case": {
+			value:     "Two",
+			allowed:   []string{"One", "Two", "Three"},
+			wantOK:    true,
+			wantValue: "Two",
+		},
+		"case-insensitive match lower->upper": {
+			value:     "two",
+			allowed:   []string{"One", "Two", "Three"},
+			wantOK:    true,
+			wantValue: "Two",
+		},
+		"case-insensitive match upper->proper": {
+			value:     "THREE",
+			allowed:   []string{"One", "Two", "Three"},
+			wantOK:    true,
+			wantValue: "Three",
+		},
+		"non-match returns false and leaves value unchanged": {
+			value:      "four",
+			allowed:    []string{"One", "Two", "Three"},
+			startParam: "unchanged",
+			wantOK:     false,
+			wantValue:  "unchanged",
+		},
+		"empty value returns false and makes no change": {
+			value:     "",
+			allowed:   []string{"One", "Two"},
+			wantOK:    false,
+			wantValue: "",
+		},
+		"empty allowed set never matches": {
+			value:      "one",
+			allowed:    []string{},
+			startParam: "keepme",
+			wantOK:     false,
+			wantValue:  "keepme",
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			b := &Base{}
+			b.InitMaps()
+			if tc.startParam != "" {
+				b.SetParam(name, tc.startParam)
+			}
+
+			// WHEN normaliseParamSelect is called.
+			ok := b.normaliseParamSelect(name, tc.value, tc.allowed)
+
+			// THEN it returns the expected boolean.
+			if ok != tc.wantOK {
+				t.Fatalf("%s\nnormaliseParamSelect() ok mismatch\nwant: %t\ngot: %t",
+					packageName, tc.wantOK, ok)
+			}
+
+			// AND Params[key] is set/unchanged as expected.
+			got := b.GetParam(name)
+			if got != tc.wantValue {
+				t.Fatalf("%s\nnormaliseParamSelect() Params[x] mismatch\nwant: %q\ngot: %q",
+					packageName, tc.wantValue, got)
+			}
+		})
+	}
+}
+
+func TestBase_validateParamSelect(t *testing.T) {
+	key := "test"
+	// GIVEN a Base and various inputs to validateParamSelect.
+	tests := map[string]struct {
+		value     string
+		allowed   []string
+		wantErr   string
+		wantValue string
+	}{
+		"empty value returns nil": {
+			value:     "",
+			allowed:   []string{"low", "default", "high"},
+			wantErr:   `^$`,
+			wantValue: "",
+		},
+		"valid value normalises and returns nil": {
+			value:     "HiGh",
+			allowed:   []string{"min", "low", "default", "high", "max"},
+			wantErr:   `^$`,
+			wantValue: "high",
+		},
+		"invalid value returns error and leaves unchanged": {
+			value:     "nope",
+			allowed:   []string{"None", "Unknown", "Plain", "CramMD5", "OAuth2"},
+			wantErr:   "^" + key + `: "nope" <invalid> .*'CramMD5'.*$`,
+			wantValue: "nope",
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			b := &Base{}
+			b.InitMaps()
+			b.SetParam(key, tc.value)
+
+			// WHEN validateParamSelect is called.
+			err := b.validateParamSelect("", key, tc.allowed)
+
+			// THEN error matches expectation.
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.wantErr, e) {
+				t.Fatalf("%s\nvalidateParamSelect() error mismatch\nwant: %q\ngot: %q",
+					packageName, tc.wantErr, e)
+			}
+
+			// AND Params[key] is set/unchanged as expected.
+			got := b.GetParam(key)
+			if got != tc.wantValue {
+				t.Fatalf("%s\nvalidateParamSelect() Params[x] mismatch\nwant: %q\ngot: %q",
+					packageName, tc.wantValue, got)
+			}
+		})
+	}
+}
+
+func TestBase_checkValuesParamsSelects(t *testing.T) {
+	// GIVEN a Base with Params and different item types.
+	tests := map[string]struct {
+		itemType  string
+		params    map[string]string
+		wantErr   string
+		wantParam map[string]string
+	}{
+		// bark
+		"bark - valid scheme+sound normalised": {
+			itemType: "bark",
+			params: map[string]string{
+				"scheme": "HTTP",
+				"sound":  "BELL",
+			},
+			wantErr: `^$`,
+			wantParam: map[string]string{
+				"scheme": "http",
+				"sound":  "bell",
+			},
+		},
+		"bark - invalid scheme and sound aggregated": {
+			itemType: "bark",
+			params: map[string]string{
+				"scheme": "-",
+				"sound":  "nope",
+			},
+			wantErr: test.TrimYAML(`
+                ^scheme: "-" <invalid> \(supported = \['http', 'https'\]\)
+                sound: "nope" <invalid> \(supported = \['alarm', 'anticipate', 'bell'.*\)$`),
+		},
+		// generic
+		"generic - valid requestmethod normalised": {
+			itemType: "generic",
+			params: map[string]string{
+				"requestmethod": "post",
+			},
+			wantErr: `^$`,
+			wantParam: map[string]string{
+				"requestmethod": "POST",
+			},
+		},
+		"generic - invalid requestmethod": {
+			itemType: "generic",
+			params: map[string]string{
+				"requestmethod": "FETCH",
+			},
+			wantErr: `^requestmethod: "FETCH" <invalid> \(supported = \['CONNECT', 'DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'TRACE'\]\)$`,
+		},
+		// ntfy
+		"ntfy - valid priority and scheme": {
+			itemType: "ntfy",
+			params: map[string]string{
+				"priority": "DEFAULT",
+				"scheme":   "HTTPS",
+			},
+			wantErr: `^$`,
+			wantParam: map[string]string{
+				"priority": "default",
+				"scheme":   "https",
+			},
+		},
+		"ntfy - invalid priority and scheme aggregated": {
+			itemType: "ntfy",
+			params: map[string]string{
+				"priority": "urgENT",
+				"scheme":   "ftp",
+			},
+			wantErr: test.TrimYAML(`
+                ^priority: "urgENT" <invalid> \(supported = \['min', 'low', 'default', 'high', 'max'\]\)
+                scheme: "ftp" <invalid> \(supported = \['http', 'https'\]\)$`),
+		},
+		// smtp
+		"smtp - valid auth and encryption": {
+			itemType: "smtp",
+			params: map[string]string{
+				"auth":       "oauth2",
+				"encryption": "explicittls",
+			},
+			wantErr: `^$`,
+			wantParam: map[string]string{
+				"auth":       "OAuth2",
+				"encryption": "ExplicitTLS",
+			},
+		},
+		"smtp - invalid auth and encryption aggregated": {
+			itemType: "smtp",
+			params: map[string]string{
+				"auth":       "basic",
+				"encryption": "tls1.3",
+			},
+			wantErr: test.TrimYAML(`
+                ^auth: "basic" <invalid> \(supported = \['None', 'Unknown', 'Plain', 'CramMD5', 'OAuth2'\]\)
+                encryption: "tls1.3" <invalid> \(supported = \['Auto', 'ExplicitTLS', 'ImplicitTLS', 'None'\]\)$`),
+		},
+		// telegram
+		"telegram - valid parsemode": {
+			itemType: "telegram",
+			params: map[string]string{
+				"parsemode": "markdown",
+			},
+			wantErr: `^$`,
+			wantParam: map[string]string{
+				"parsemode": "Markdown",
+			},
+		},
+		"telegram - invalid parsemode": {
+			itemType: "telegram",
+			params: map[string]string{
+				"parsemode": "mdx",
+			},
+			wantErr: `^parsemode: "mdx" <invalid> \(supported = \['None', 'HTML', 'Markdown'\]\)$`,
+		},
+		// unknown type and empty params
+		"unknown - type is no-op even with values": {
+			itemType: "unknown",
+			params: map[string]string{
+				"scheme": "ftp",
+			},
+			wantErr:   `^$`,
+			wantParam: map[string]string{},
+		},
+		"nil/empty params produces no error": {
+			itemType: "smtp",
+			params:   map[string]string{},
+			wantErr:  `^$`,
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			b := &Base{}
+			b.InitMaps()
+			for k, v := range tc.params {
+				b.SetParam(k, v)
+			}
+
+			// WHEN checkValuesParamsSelects is called.
+			err := b.checkValuesParamsSelects("", tc.itemType)
+
+			// THEN error matches expectation.
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.wantErr, e) {
+				t.Fatalf("%s\ncheckValuesParamsSelects() error mismatch\nwant: %q\ngot: %q",
+					packageName, tc.wantErr, e)
+			}
+
+			// AND any expected normalisations took place.
+			for k, v := range tc.wantParam {
+				got := b.GetParam(k)
+				if got != v {
+					t.Fatalf("%s\ncheckValuesParamsSelects() normalisation mismatch for %q\nwant: %q\ngot: %q",
+						packageName, k, v, got)
+				}
 			}
 		})
 	}
@@ -267,7 +579,7 @@ func TestBase_CheckValues(t *testing.T) {
 			},
 			errRegex: test.TrimYAML(`
 				^options:
-					delay: "10x" <invalid>.*$`),
+				  delay: "10x" <invalid>.*$`),
 		},
 		"invalid param template": {
 			base: &Base{
@@ -1416,16 +1728,16 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 					Params:    shoutrrr.HardDefaults.Params},
 			}
 			// Sub tests - set in different locations and check it's corrected there.
-			for sub_test := range subTestMap {
+			for subTest := range subTestMap {
 				t.Logf("%s - sub_test: %s",
-					packageName, sub_test)
+					packageName, subTest)
 				if tc.mapTarget == "url_fields" {
 					for k, v := range tc.startAs {
-						subTestMap[sub_test].URLFields[k] = v
+						subTestMap[subTest].URLFields[k] = v
 					}
 				} else {
 					for k, v := range tc.startAs {
-						subTestMap[sub_test].Params[k] = v
+						subTestMap[subTest].Params[k] = v
 					}
 				}
 
@@ -1436,7 +1748,7 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 				for k, v := range tc.want {
 					want := v
 					// root is the only one that gets corrected.
-					if sub_test != "root" {
+					if subTest != "root" {
 						want = tc.startAs[k]
 					}
 					got := shoutrrr.GetURLField(k)
@@ -1448,12 +1760,12 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 							packageName, k,
 							want, got)
 					} else {
-						for _, sub_test_check := range subTests {
-							if sub_test_check != sub_test {
-								testData := subTestMap[sub_test_check]
+						for _, subTestCheck := range subTests {
+							if subTestCheck != subTest {
+								testData := subTestMap[subTestCheck]
 								if len(testData.URLFields) > 0 || len(testData.Params) > 0 {
 									t.Errorf("%s\nmismatch\nwant: empty %s\ngot:  url_fields=%+v / params=%+v",
-										packageName, sub_test_check,
+										packageName, subTestCheck,
 										testData.URLFields, testData.Params)
 								}
 							}
@@ -1461,9 +1773,9 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 					}
 					// Reset.
 					if tc.mapTarget == "url_fields" {
-						delete(subTestMap[sub_test].URLFields, k)
+						delete(subTestMap[subTest].URLFields, k)
 					} else {
-						delete(subTestMap[sub_test].Params, k)
+						delete(subTestMap[subTest].Params, k)
 					}
 				}
 			}
@@ -1670,23 +1982,23 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 }
 
 func TestSlice_CheckValues(t *testing.T) {
-	// GIVEN a Slice.
+	// GIVEN a Shoutrrrs.
 	tests := map[string]struct {
-		slice    *Slice
+		slice    *Shoutrrrs
 		errRegex string
 	}{
 		"nil slice": {
 			slice: nil, errRegex: `^$`},
 		"valid slice": {
 			errRegex: `^$`,
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"valid": testShoutrrr(false, false),
 				"other": testShoutrrr(false, false)}},
 		"invalid slice": {
 			errRegex: test.TrimYAML(`
 				other:
 					type: <required>`),
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"valid": testShoutrrr(false, false),
 				"other": New(
 					nil, "", "",
@@ -1698,7 +2010,7 @@ func TestSlice_CheckValues(t *testing.T) {
 					type: <required>.*
 				bNotify:
 					type: <required>.*`),
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"aNotify": New(
 					nil, "", "",
 					make(map[string]string), make(map[string]string), make(map[string]string),
@@ -1721,7 +2033,7 @@ func TestSlice_CheckValues(t *testing.T) {
 					&dashboard.Options{})
 				tc.slice.Init(
 					svcStatus,
-					&SliceDefaults{}, &SliceDefaults{}, &SliceDefaults{})
+					&ShoutrrrsDefaults{}, &ShoutrrrsDefaults{}, &ShoutrrrsDefaults{})
 			}
 
 			// WHEN CheckValues is called.
@@ -1738,9 +2050,9 @@ func TestSlice_CheckValues(t *testing.T) {
 }
 
 func TestSliceDefaults_CheckValues(t *testing.T) {
-	// GIVEN a SliceDefaults.
+	// GIVEN a ShoutrrrsDefaults.
 	tests := map[string]struct {
-		slice    *SliceDefaults
+		slice    *ShoutrrrsDefaults
 		errRegex string
 	}{
 		"nil slice": {
@@ -1749,13 +2061,13 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 		},
 		"valid slice": {
 			errRegex: `^$`,
-			slice: &SliceDefaults{
+			slice: &ShoutrrrsDefaults{
 				"valid": testDefaults(false, false),
 				"other": testDefaults(false, false)},
 		},
 		"invalid type": {
 			errRegex: "", // Caught by Shoutrrr.CheckValues.
-			slice: &SliceDefaults{
+			slice: &ShoutrrrsDefaults{
 				"valid": testDefaults(false, false),
 				"other": NewDefaults(
 					"somethingUnknown",
@@ -1763,7 +2075,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 		},
 		"delay without unit": {
 			errRegex: `^$`,
-			slice: &SliceDefaults{
+			slice: &ShoutrrrsDefaults{
 				"foo": NewDefaults(
 					"gotify",
 					map[string]string{
@@ -1775,7 +2087,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 				^foo:
 					options:
 						delay: "1x" <invalid>`),
-			slice: &SliceDefaults{
+			slice: &ShoutrrrsDefaults{
 				"foo": NewDefaults(
 					"gotify",
 					map[string]string{
@@ -1787,7 +2099,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 				^bar:
 					options:
 						message: "[^"]+" <invalid>.*$`),
-			slice: &SliceDefaults{
+			slice: &ShoutrrrsDefaults{
 				"bar": NewDefaults(
 					"gotify",
 					map[string]string{
@@ -1799,7 +2111,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 				^bar:
 					params:
 						title: "[^"]+" <invalid>.*$`),
-			slice: &SliceDefaults{
+			slice: &ShoutrrrsDefaults{
 				"bar": NewDefaults(
 					"gotify",
 					nil,
@@ -1815,6 +2127,94 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 
 			// WHEN CheckValues is called.
 			err := tc.slice.CheckValues("")
+
+			// THEN it errors when expected.
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, e)
+			}
+		})
+	}
+}
+
+func TestDefaults_CheckValues(t *testing.T) {
+	// GIVEN Defaults and various ids.
+	tests := map[string]struct {
+		d        *Defaults
+		id       string
+		errRegex string
+	}{
+		"nil defaults - valid id": {
+			d:        nil,
+			id:       "slack",
+			errRegex: `^$`,
+		},
+		"nil defaults - invalid id": {
+			d:        nil,
+			id:       "argus",
+			errRegex: `^type: "argus" <invalid>.*gotify.*$`,
+		},
+		"empty Type uses id - valid": {
+			d:        &Defaults{Base: Base{}},
+			id:       "gotify",
+			errRegex: `^$`,
+		},
+		"empty Type uses id - invalid": {
+			d:        &Defaults{Base: Base{}},
+			id:       "unknown",
+			errRegex: `^type: "unknown" <invalid>.*$`,
+		},
+		"Type set overrides id (both valid)": {
+			d:        &Defaults{Base: Base{Type: "gotify"}},
+			id:       "slack",
+			errRegex: `^$`,
+		},
+		"Base error is propagated": {
+			d: &Defaults{Base: Base{
+				Type:    "slack",
+				Options: map[string]string{"delay": "10x"},
+			}},
+			id: "",
+			errRegex: test.TrimYAML(`
+                ^options:
+				  delay: "10x" <invalid>.*$`),
+		},
+		"Combines type invalid and base error": {
+			d: &Defaults{Base: Base{
+				Type:   "invalid",
+				Params: map[string]string{"color": "{{ invalid template }}"},
+			}},
+			id: "",
+			errRegex: test.TrimYAML(`
+                ^type: "invalid" <invalid>.*
+                params:
+				  color: "{{ invalid template }}" <invalid>.*$`),
+		},
+		"both valid - no error": {
+			d: &Defaults{Base: Base{
+				Type: "gotify",
+				Options: map[string]string{
+					"delay": "1s"},
+				Params: map[string]string{
+					"message": "release {{ version }}"},
+			}},
+			id:       "",
+			errRegex: `^$`,
+		},
+		"empty Type and id empty": {
+			d:        &Defaults{Base: Base{}},
+			id:       "",
+			errRegex: `^type: "" <invalid>.*$`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN CheckValues is called.
+			err := tc.d.CheckValues("", tc.id)
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
@@ -1868,11 +2268,11 @@ func TestShoutrrr_TestSend(t *testing.T) {
 }
 
 func TestSliceDefaults_Print(t *testing.T) {
-	// GIVEN a SliceDefaults.
+	// GIVEN a ShoutrrrsDefaults.
 	testValid := testDefaults(false, false)
 	testInvalid := testDefaults(true, true)
 	tests := map[string]struct {
-		slice *SliceDefaults
+		slice *ShoutrrrsDefaults
 		want  string
 	}{
 		"nil": {
@@ -1880,18 +2280,18 @@ func TestSliceDefaults_Print(t *testing.T) {
 			want:  "",
 		},
 		"empty": {
-			slice: &SliceDefaults{},
+			slice: &ShoutrrrsDefaults{},
 			want:  "",
 		},
 		"single empty element slice": {
-			slice: &SliceDefaults{
+			slice: &ShoutrrrsDefaults{
 				"single": {}},
 			want: test.TrimYAML(`
 				notify:
 					single: {}`),
 		},
 		"single element slice": {
-			slice: &SliceDefaults{
+			slice: &ShoutrrrsDefaults{
 				"single": testValid},
 			want: test.TrimYAML(`
 				notify:
@@ -1905,7 +2305,7 @@ func TestSliceDefaults_Print(t *testing.T) {
 							token: ` + testValid.GetURLField("token")),
 		},
 		"multiple element slice": {
-			slice: &SliceDefaults{
+			slice: &ShoutrrrsDefaults{
 				"first":  testValid,
 				"second": testInvalid},
 			want: test.TrimYAML(`

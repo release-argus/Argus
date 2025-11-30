@@ -48,14 +48,14 @@ func TestRequire_ExecCommand(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			dashboard := &dashboard.Options{
+			svcDashboard := &dashboard.Options{
 				WebURL: "https://example.com"}
 			require := Require{Command: tc.cmd}
 			require.Status = &status.Status{}
 			require.Status.Init(
 				0, 1, 0,
 				name, "", "",
-				dashboard)
+				svcDashboard)
 
 			// WHEN ApplyTemplate is called on the Command.
 			err := require.ExecCommand(logutil.LogFrom{})

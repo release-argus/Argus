@@ -51,7 +51,7 @@ func testController(announce *chan []byte) (control *Controller) {
 	svcStatus.ServiceInfo.ID = "service_id"
 	control.Init(
 		svcStatus,
-		&Slice{{}, {}},
+		&Commands{{}, {}},
 		nil,
 		test.StringPtr("14m"),
 	)

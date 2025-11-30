@@ -16,12 +16,12 @@ import {
 	type DeployedVersionLookupURLMethod,
 	deployedVersionLookupURLMethodOptions,
 } from '@/utils/api/types/config/service/deployed-version';
-import type { DeployedVersionURLSchema } from '@/utils/api/types/config-edit/service/types/deployed-version';
+import type {
+	DeployedVersionURLMethod,
+	DeployedVersionURLSchema,
+} from '@/utils/api/types/config-edit/service/types/deployed-version';
 import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { ensureValue } from '@/utils/form-utils';
-
-const RequestMethods = ['GET', 'POST'] as const;
-type RequestMethod = (typeof RequestMethods)[number];
 
 /**
  * The `deployed_version` form fields for 'url' version.
@@ -37,6 +37,9 @@ const DeployedVersionURL = () => {
 		[],
 	);
 
+	const regexTemplateFormName = `${name}.regex_template`;
+	const methodFormName = `${name}.method`;
+	const templateToggleFormName = `${name}.template_toggle`;
 	// Ensure selects have a valid value.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: defaults stable.
 	useEffect(() => {
@@ -44,16 +47,16 @@ const DeployedVersionURL = () => {
 			defaultValue: defaults?.method,
 			fallback: Object.values(deployedVersionLookupURLMethodOptions)[0].value,
 			getValues,
-			path: `${name}.method`,
+			path: methodFormName,
 			setValue,
 		});
 	}, []);
 
-	const selectedMethod = useWatch({
-		name: `${name}.method`,
-	}) as RequestMethod;
+	const selectedMethod = (useWatch({
+		name: methodFormName,
+	}) || defaults?.method) as DeployedVersionURLMethod;
 	const templateToggle = (useWatch({
-		name: `${name}.template_toggle`,
+		name: templateToggleFormName,
 	}) ?? false) as boolean;
 
 	const deployedVersionLookupURLMethodNormalised = useMemo(() => {
@@ -74,8 +77,8 @@ const DeployedVersionURL = () => {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: setValue stable
 	useEffect(() => {
 		if (!templateToggle) {
-			setValue(`${name}.regex_template`, '');
-			setValue(`${name}.template_toggle`, false);
+			setValue(regexTemplateFormName, '');
+			setValue(methodFormName, false);
 			trigger(`${name}.regex`);
 		}
 	}, [templateToggle]);
@@ -85,7 +88,7 @@ const DeployedVersionURL = () => {
 			<FieldSelect
 				colSize={{ lg: 2, xs: 6 }}
 				label="Method"
-				name={`${name}.method`}
+				name={methodFormName}
 				options={deployedVersionLookupURLMethodNormalised}
 			/>
 			<VersionWithLink
@@ -178,7 +181,7 @@ const DeployedVersionURL = () => {
 					className="order-2 lg:order-1"
 					colSize={{ lg: 5, sm: 12 }}
 					label="RegEx Template"
-					name={`${name}.regex_template`}
+					name={regexTemplateFormName}
 					tooltip={{
 						content: String.raw`e.g. RegEx of 'v(\d)-(\d)-(\d)' on 'v4-0-1' with template '$1.$2.$3' would give '4.0.1'`,
 						type: 'string',
@@ -189,7 +192,7 @@ const DeployedVersionURL = () => {
 				className="order-1 lg:order-2"
 				colSize={{ sm: 1, xs: 2 }}
 				label="T"
-				name={`${name}.template_toggle`}
+				name={methodFormName}
 				tooltip={{
 					content: 'Use the RegEx to create a template',
 					type: 'string',

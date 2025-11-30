@@ -34,11 +34,11 @@ var (
 		"github", "gitlab"}
 )
 
-// Slice mapping of WebHook.
-type Slice map[string]*WebHook
+// WebHooks is a string map of WebHook.
+type WebHooks map[string]*WebHook
 
-// String returns a string representation of the Slice.
-func (s *Slice) String() string {
+// String returns a string representation of the WebHooks.
+func (s *WebHooks) String() string {
 	if s == nil {
 		return ""
 	}
@@ -99,11 +99,11 @@ func (d *Defaults) String(prefix string) string {
 	return util.ToYAMLString(d, prefix)
 }
 
-// SliceDefaults mapping of Defaults.
-type SliceDefaults map[string]*Defaults
+// WebHooksDefaults is a string map of Defaults.
+type WebHooksDefaults map[string]*Defaults
 
-// String returns a string representation of the SliceDefaults.
-func (s *SliceDefaults) String(prefix string) string {
+// String returns a string representation of the WebHooksDefaults.
+func (s *WebHooksDefaults) String(prefix string) string {
 	if s == nil {
 		return ""
 	}
@@ -134,7 +134,7 @@ func (s *SliceDefaults) String(prefix string) string {
 type WebHook struct {
 	Base `json:",inline" yaml:",inline"`
 
-	ID string `json:"name,omitempty" yaml:"-"` // Unique across the Slice.
+	ID string `json:"name,omitempty" yaml:"-"` // Unique across the WebHooks.
 
 	mutex        sync.RWMutex         // Mutex for concurrent access.
 	Failed       *status.FailsWebHook `json:"-" yaml:"-"` // Whether the last send attempt failed.
@@ -149,12 +149,12 @@ type WebHook struct {
 	HardDefaults *Defaults `json:"-" yaml:"-"` // Hardcoded default values.
 }
 
-func (s *Slice) UnmarshalJSON(data []byte) error {
+func (s *WebHooks) UnmarshalJSON(data []byte) error {
 	var arr []WebHook
 	if err := json.Unmarshal(data, &arr); err != nil {
 		return err //nolint:wrapcheck
 	}
-	*s = make(Slice, len(arr))
+	*s = make(WebHooks, len(arr))
 
 	for i := range arr {
 		(*s)[arr[i].ID] = &arr[i]
@@ -162,7 +162,7 @@ func (s *Slice) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (s *Slice) MarshalJSON() ([]byte, error) {
+func (s *WebHooks) MarshalJSON() ([]byte, error) {
 	if s == nil {
 		return []byte("null"), nil
 	}
@@ -220,7 +220,7 @@ func (w *WebHook) String() string {
 
 // Notifiers to use when their WebHook fails.
 type Notifiers struct {
-	Shoutrrr *shoutrrr.Slice
+	Shoutrrr *shoutrrr.Shoutrrrs
 }
 
 // Header to use in the HTTP request.

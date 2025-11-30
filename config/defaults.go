@@ -28,9 +28,9 @@ import (
 
 // Defaults for the other Structs.
 type Defaults struct {
-	Service service.Defaults       `json:"service,omitempty" yaml:"service,omitempty"`
-	Notify  shoutrrr.SliceDefaults `json:"notify,omitempty" yaml:"notify,omitempty"`
-	WebHook webhook.Defaults       `json:"webhook,omitempty" yaml:"webhook,omitempty"`
+	Service service.Defaults           `json:"service,omitempty" yaml:"service,omitempty"`
+	Notify  shoutrrr.ShoutrrrsDefaults `json:"notify,omitempty" yaml:"notify,omitempty"`
+	WebHook webhook.Defaults           `json:"webhook,omitempty" yaml:"webhook,omitempty"`
 }
 
 // String returns a string representation of the Defaults.
@@ -41,7 +41,7 @@ func (d *Defaults) String(prefix string) string {
 	return util.ToYAMLString(d, prefix)
 }
 
-// Default sets this Defaults to the default values.
+// Default sets these Defaults to the default values.
 func (d *Defaults) Default() {
 	d.Service.Default()
 

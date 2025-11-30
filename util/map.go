@@ -21,34 +21,34 @@ import (
 )
 
 // InitMap will initialise the map.
-func InitMap(m *map[string]string) {
+func InitMap[M ~map[K]V, K, V comparable](m *M) {
 	if *m == nil {
-		*m = make(map[string]string)
+		*m = make(M)
 	}
 }
 
 // MergeMaps merges `m2` into `m1`,
 // replacing any fields in `fields` with a value of 'SecretValue' with the corresponding value in `m2`.
-func MergeMaps(m1, m2 map[string]string, fields []string) (m3 map[string]string) {
-	m3 = CopyMap(m1)
+func MergeMaps[K comparable](m1, m2 map[K]string, fields []K) map[K]string {
+	m3 := CopyMap(m1)
 	for k, v := range m2 {
 		m3[k] = v
 	}
 	CopySecretValues(m1, m3, fields)
-	return
+	return m3
 }
 
-// CopyMap will return a copy of the map.
-func CopyMap[T, Y comparable](m map[T]Y) map[T]Y {
-	m2 := make(map[T]Y, len(m))
-	for key := range m {
-		m2[key] = m[key]
+// CopyMap returns a copy of the map.
+func CopyMap[K, V comparable, M ~map[K]V](m M) M {
+	m2 := make(M, len(m))
+	for k, v := range m {
+		m2[k] = v
 	}
 	return m2
 }
 
 // LowercaseStringStringMap converts all keys in the map to lowercase.
-func LowercaseStringStringMap(change *map[string]string) {
+func LowercaseStringStringMap[M ~map[string]string](change *M) {
 	// Check for a non-lowercase key.
 	allLowercase := true
 	for key := range *change {
@@ -63,7 +63,7 @@ func LowercaseStringStringMap(change *map[string]string) {
 	}
 
 	// Otherwise, create a new map with lowercase keys.
-	lowercasedMap := make(map[string]string, len(*change))
+	lowercasedMap := make(M, len(*change))
 	for key, value := range *change {
 		lowercasedMap[strings.ToLower(key)] = value
 	}
@@ -72,7 +72,7 @@ func LowercaseStringStringMap(change *map[string]string) {
 	*change = lowercasedMap
 }
 
-// SortedKeys will return a sorted list of the keys in a map.
+// SortedKeys returns a sorted list of the keys in a map.
 func SortedKeys[V any](m map[string]V) (keys []string) {
 	keys = make([]string, len(m))
 	i := 0

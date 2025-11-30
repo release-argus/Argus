@@ -22,8 +22,8 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// CheckValues validates that each member of the Slice passes templating.
-func (s *Slice) CheckValues(prefix string) error {
+// CheckValues validates that each Command passes templating.
+func (s *Commands) CheckValues(prefix string) error {
 	if s == nil {
 		return nil
 	}

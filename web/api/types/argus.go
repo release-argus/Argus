@@ -164,14 +164,14 @@ func (s *Status) String() string {
 
 // StatusFails is the fail status of each notifier/webhook.
 type StatusFails struct {
-	Notify  *[]bool `json:"notify,omitempty" yaml:"notify,omitempty"`   // Track whether any of the Slice failed.
-	WebHook *[]bool `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Track whether any of the WebHookSlice failed.
+	Notify  *[]bool `json:"notify,omitempty" yaml:"notify,omitempty"`   // Track whether any of the Notifiers failed.
+	WebHook *[]bool `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Track whether any of the WebHooks failed.
 }
 
 // StatusFailsSummary is the overall fail status of notifiers/webhooks.
 type StatusFailsSummary struct {
-	Notify  *bool `json:"notify,omitempty" yaml:"notify,omitempty"`   // Track whether any of the Slice failed.
-	WebHook *bool `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Track whether any of the WebHookSlice failed.
+	Notify  *bool `json:"notify,omitempty" yaml:"notify,omitempty"`   // Track whether any of the Notifiers failed.
+	WebHook *bool `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Track whether any of the WebHooks failed.
 }
 
 // ActionSummary is the summary of all Actions for a Service.
@@ -219,7 +219,7 @@ type Flags struct {
 // Defaults are the global defaults for vars.
 type Defaults struct {
 	Service ServiceDefaults `json:"service,omitempty" yaml:"service,omitempty"`
-	Notify  NotifySlice     `json:"notify,omitempty" yaml:"notify,omitempty"`
+	Notify  Notifiers       `json:"notify,omitempty" yaml:"notify,omitempty"`
 	WebHook WebHook         `json:"webhook,omitempty" yaml:"webhook,omitempty"`
 }
 
@@ -256,14 +256,14 @@ func (d *Defaults) String() string {
 
 // Config defines the config for Argus.
 type Config struct {
-	File         string        `json:"-" yaml:"-"`                                             // Path to the config file (-config.file='').
-	Settings     *Settings     `json:"settings,omitempty" yaml:"settings,omitempty"`           // Settings for the program.
-	HardDefaults *Defaults     `json:"hard_defaults,omitempty" yaml:"hard_defaults,omitempty"` // Hard default values.
-	Defaults     *Defaults     `json:"defaults,omitempty" yaml:"defaults,omitempty"`           // Default values.
-	Notify       *NotifySlice  `json:"notify,omitempty" yaml:"notify,omitempty"`               // Notify messages to send on a new release.
-	WebHook      *WebHookSlice `json:"webhook,omitempty" yaml:"webhook,omitempty"`             // WebHooks to send on a new release.
-	Service      *ServiceSlice `json:"service,omitempty" yaml:"service,omitempty"`             // The services to monitor.
-	Order        []string      `json:"order,omitempty" yaml:"order,omitempty"`                 // Ordering for the Services in the WebUI.
+	File         string     `json:"-" yaml:"-"`                                             // Path to the config file (-config.file='').
+	Settings     *Settings  `json:"settings,omitempty" yaml:"settings,omitempty"`           // Settings for the program.
+	HardDefaults *Defaults  `json:"hard_defaults,omitempty" yaml:"hard_defaults,omitempty"` // Hard default values.
+	Defaults     *Defaults  `json:"defaults,omitempty" yaml:"defaults,omitempty"`           // Default values.
+	Notify       *Notifiers `json:"notify,omitempty" yaml:"notify,omitempty"`               // Notify messages to send on a new release.
+	WebHook      *WebHooks  `json:"webhook,omitempty" yaml:"webhook,omitempty"`             // WebHooks to send on a new release.
+	Service      *Services  `json:"service,omitempty" yaml:"service,omitempty"`             // The services to monitor.
+	Order        []string   `json:"order,omitempty" yaml:"order,omitempty"`                 // Ordering for the Services in the WebUI.
 }
 
 // Settings contain settings for the program.
@@ -287,19 +287,19 @@ type WebSettings struct {
 	RoutePrefix string `json:"route_prefix,omitempty" yaml:"route_prefix,omitempty"` // Web endpoint prefix.
 }
 
-// NotifySlice is a slice map of Notify.
-type NotifySlice map[string]*Notify
+// Notifiers is a string map of Notify.
+type Notifiers map[string]*Notify
 
-// String returns a JSON string representation of the NotifySlice.
-func (n *NotifySlice) String() string {
+// String returns a JSON string representation of the Notifiers.
+func (n *Notifiers) String() string {
 	if n == nil {
 		return ""
 	}
 	return util.ToJSONString(n)
 }
 
-// Flatten this NotifySlice into a list.
-func (n *NotifySlice) Flatten() []Notify {
+// Flatten these Notifiers into a list.
+func (n *Notifiers) Flatten() []Notify {
 	if n == nil {
 		return nil
 	}
@@ -323,17 +323,17 @@ func (n *NotifySlice) Flatten() []Notify {
 	return list
 }
 
-// Censor this NotifySlice for sending externally.
-func (n *NotifySlice) Censor() *NotifySlice {
+// Censor these Notifiers for sending externally.
+func (n *Notifiers) Censor() *Notifiers {
 	if n == nil {
 		return nil
 	}
 
-	slice := make(NotifySlice, len(*n))
+	notifiers := make(Notifiers, len(*n))
 	for i, notify := range *n {
-		slice[i] = notify.Censor()
+		notifiers[i] = notify.Censor()
 	}
-	return &slice
+	return &notifiers
 }
 
 // Notify is a message notifier source.
@@ -373,8 +373,8 @@ func (n *Notify) Censor() *Notify {
 // NotifyParams is a map of Notify parameters.
 type NotifyParams map[string]string
 
-// ServiceSlice is a slice map of Service.
-type ServiceSlice map[string]*Service
+// Services is a string map of Service.
+type Services map[string]*Service
 
 // Service defines a software source to track and where/what to notify.
 type Service struct {
@@ -382,9 +382,9 @@ type Service struct {
 	Comment               string                 `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Comment on the Service.
 	Options               *ServiceOptions        `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
 	LatestVersion         *LatestVersion         `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Latest version lookup for the Service.
-	Command               *CommandSlice          `json:"command,omitempty" yaml:"command,omitempty"`                   // OS Commands to run on new release.
-	Notify                *NotifySlice           `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Service-specific Notify vars.
-	WebHook               *WebHookSlice          `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Service-specific WebHook vars.
+	Command               *Commands              `json:"command,omitempty" yaml:"command,omitempty"`                   // OS Commands to run on new release.
+	Notify                *Notifiers             `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Service-specific Notify vars.
+	WebHook               *WebHooks              `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Service-specific WebHook vars.
 	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version.
 	Dashboard             *DashboardOptions      `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`               // Dashboard options.
 	Status                *Status                `json:"status,omitempty" yaml:"status,omitempty"`                     // Track the Status of this source (version and regex misses).
@@ -404,7 +404,7 @@ type ServiceDefaults struct {
 	Options               *ServiceOptions        `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
 	LatestVersion         *LatestVersionDefaults `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Latest version lookup for the Service.
 	Notify                map[string]struct{}    `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Service-specific Notify vars.
-	Command               CommandSlice           `json:"command,omitempty" yaml:"command,omitempty"`                   // OS Commands to run on new release.
+	Command               *Commands              `json:"command,omitempty" yaml:"command,omitempty"`                   // OS Commands to run on new release.
 	WebHook               map[string]struct{}    `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Service-specific WebHook vars.
 	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version.
 	Dashboard             *DashboardOptions      `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`               // Dashboard options.
@@ -434,7 +434,7 @@ type LatestVersion struct {
 	AccessToken       string                `json:"access_token,omitempty" yaml:"access_token,omitempty"`               // GitHub access token to use.
 	AllowInvalidCerts *bool                 `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
 	UsePreRelease     *bool                 `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"`           // Whether to use GitHub prereleases.
-	URLCommands       *URLCommandSlice      `json:"url_commands,omitempty" yaml:"url_commands,omitempty"`               // Commands to filter the release from the URL request.
+	URLCommands       *URLCommands          `json:"url_commands,omitempty" yaml:"url_commands,omitempty"`               // Commands to filter the release from the URL request.
 	Require           *LatestVersionRequire `json:"require,omitempty" yaml:"require,omitempty"`                         // Requirements before treating a release as valid.
 }
 
@@ -448,7 +448,6 @@ func (r *LatestVersion) String() string {
 
 // LatestVersionDefaults are default values for a LatestVersion.
 type LatestVersionDefaults struct {
-	Type              string                        `json:"type,omitempty" yaml:"type,omitempty"`                               // Service Type, github/url.
 	URL               string                        `json:"url,omitempty" yaml:"url,omitempty"`                                 // URL to query.
 	AccessToken       string                        `json:"access_token,omitempty" yaml:"access_token,omitempty"`               // GitHub access token to use.
 	AllowInvalidCerts *bool                         `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
@@ -559,11 +558,11 @@ type Header struct {
 	Value string `json:"value" yaml:"value"` // Value to give the key.
 }
 
-// URLCommandSlice is a slice of URLCommand to filter versions from the URL Content.
-type URLCommandSlice []URLCommand
+// URLCommands is a slice of URLCommand to filter versions from the URL Content.
+type URLCommands []URLCommand
 
-// String returns a string representation of the URLCommandSlice.
-func (slice *URLCommandSlice) String() string {
+// String returns a string representation of the URLCommands.
+func (slice *URLCommands) String() string {
 	if slice == nil {
 		return ""
 	}
@@ -584,22 +583,22 @@ type URLCommand struct {
 // Command is a command to run.
 type Command []string
 
-// CommandSlice is a slice of Command.
-type CommandSlice []Command
+// Commands is a slice of Command.
+type Commands []Command
 
-// WebHookSlice is a slice map of WebHook.
-type WebHookSlice map[string]*WebHook
+// WebHooks is a slice map of WebHook.
+type WebHooks map[string]*WebHook
 
-// String returns a string representation of the WebHookSlice.
-func (slice *WebHookSlice) String() string {
+// String returns a string representation of the WebHooks.
+func (slice *WebHooks) String() string {
 	if slice == nil {
 		return ""
 	}
 	return util.ToJSONString(slice)
 }
 
-// Flatten the WebHookSlice into a list.
-func (slice *WebHookSlice) Flatten() []*WebHook {
+// Flatten these WebHooks into a list.
+func (slice *WebHooks) Flatten() []*WebHook {
 	if slice == nil {
 		return nil
 	}
@@ -658,11 +657,6 @@ func (w *WebHook) Censor() {
 	}
 }
 
-// Notifiers represent the notifiers to use when a WebHook fails.
-type Notifiers struct {
-	Notify *NotifySlice
-}
-
 // CommandSummary holds the summary of a Command.
 type CommandSummary struct {
 	Failed       *bool     `json:"failed,omitempty" yaml:"failed,omitempty"`               // Whether the last run failed.
@@ -691,7 +685,7 @@ type ServiceEdit struct {
 	Comment               string                 `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Comment on the Service.
 	Options               *ServiceOptions        `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
 	LatestVersion         *LatestVersion         `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Latest version lookup for the Service.
-	Command               *CommandSlice          `json:"command,omitempty" yaml:"command,omitempty"`                   // OS Commands to run on new release.
+	Command               *Commands              `json:"command,omitempty" yaml:"command,omitempty"`                   // OS Commands to run on new release.
 	Notify                []Notify               `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Service-specific Notify vars.
 	WebHook               []*WebHook             `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Service-specific WebHook vars.
 	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version.

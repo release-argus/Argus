@@ -53,9 +53,9 @@ func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 	// Commands
 	commandSummary := make(map[string]apitype.CommandSummary, len(svc.Command))
 	if svc.CommandController != nil {
-		serviceInfo := svc.Status.GetServiceInfo()
+		svcInfo := svc.Status.GetServiceInfo()
 		for i, cmd := range *svc.CommandController.Command {
-			command := cmd.ApplyTemplate(serviceInfo)
+			command := cmd.ApplyTemplate(svcInfo)
 			commandSummary[command.String()] = apitype.CommandSummary{
 				Failed:       svc.Status.Fails.Command.Get(i),
 				NextRunnable: svc.CommandController.NextRunnable(i)}

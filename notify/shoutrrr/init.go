@@ -21,17 +21,17 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Init the Slice metrics amd hand out the defaults.
-func (s *Slice) Init(
+// Init the Shoutrrrs metrics and hand out the defaults.
+func (s *Shoutrrrs) Init(
 	serviceStatus *status.Status,
-	mains *SliceDefaults,
-	defaults, hardDefaults *SliceDefaults,
+	mains *ShoutrrrsDefaults,
+	defaults, hardDefaults *ShoutrrrsDefaults,
 ) {
 	if s == nil {
 		return
 	}
 	if mains == nil || len(*mains) == 0 {
-		mains = &SliceDefaults{}
+		mains = &ShoutrrrsDefaults{}
 	}
 
 	for key, shoutrrr := range *s {
@@ -55,7 +55,7 @@ func (s *Slice) Init(
 
 		// Ensure defaults aren't nil.
 		if len(*defaults) == 0 {
-			defaults = &SliceDefaults{}
+			defaults = &ShoutrrrsDefaults{}
 		}
 		if (*defaults)[notifyType] == nil {
 			(*defaults)[notifyType] = &Defaults{}
@@ -147,8 +147,8 @@ func (b *Base) InitMaps() {
 	b.initParams()
 }
 
-// InitMetrics for this Slice.
-func (s *Slice) InitMetrics() {
+// InitMetrics for this Shoutrrrs.
+func (s *Shoutrrrs) InitMetrics() {
 	if s == nil {
 		return
 	}
@@ -177,8 +177,8 @@ func (s *Shoutrrr) initMetrics() {
 		"FAIL")
 }
 
-// DeleteMetrics for this Slice.
-func (s *Slice) DeleteMetrics() {
+// DeleteMetrics for this Shoutrrrs.
+func (s *Shoutrrrs) DeleteMetrics() {
 	if s == nil {
 		return
 	}

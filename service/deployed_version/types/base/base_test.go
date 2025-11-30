@@ -35,22 +35,22 @@ import (
 func TestInit(t *testing.T) {
 	// GIVEN a Lookup and its dependencies.
 	options := &opt.Options{}
-	status := &status.Status{}
+	svcStatus := &status.Status{}
 	defaults := &Defaults{}
 	hardDefaults := &Defaults{}
 	l := &Lookup{}
 
 	// WHEN Init is called.
-	l.Init(options, status, defaults, hardDefaults)
+	l.Init(options, svcStatus, defaults, hardDefaults)
 
 	// THEN the fields are initialised correctly.
 	if l.Options != options {
 		t.Errorf("%s\nunexpected Options\nwant: %v\ngot:  %v",
 			packageName, options, l.Options)
 	}
-	if l.Status != status {
+	if l.Status != svcStatus {
 		t.Errorf("%s\nunexpected Status\nwant: %v\ngot:  %v",
-			packageName, status, l.Status)
+			packageName, svcStatus, l.Status)
 	}
 	if l.Defaults != defaults {
 		t.Errorf("%s\nunexpected Defaults\nwant: %v\ngot:  %v",
@@ -137,18 +137,18 @@ func TestGetOptions(t *testing.T) {
 
 func TestGetStatus(t *testing.T) {
 	// GIVEN a Lookup with Status.
-	status := &status.Status{}
+	svcStatus := &status.Status{}
 	l := &testLookup{
 		Lookup: Lookup{
-			Status: status}}
+			Status: svcStatus}}
 
 	// WHEN GetStatus is called.
 	got := l.GetStatus()
 
 	// THEN the Status is returned.
-	if got != status {
+	if got != svcStatus {
 		t.Errorf("%s\nwant: %v\ngot:  %v",
-			packageName, status, got)
+			packageName, svcStatus, got)
 	}
 }
 

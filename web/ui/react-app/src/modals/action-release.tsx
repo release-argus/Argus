@@ -122,6 +122,7 @@ const ActionReleaseModal = () => {
 		}
 	}, [modal.actionType, modal.service.status]);
 
+	const isSkip = modal.actionType.startsWith('SKIP');
 	// biome-ignore lint/correctness/useExhaustiveDependencies: modal.service.command stable with modal.service.id.
 	const stats = useMemo(() => {
 		const isSending = isSendingService(
@@ -141,10 +142,11 @@ const ActionReleaseModal = () => {
 		);
 
 		const canSendUnspecific =
+			isSkip ||
 			(!isSending &&
 				isEmptyObject(modalData.commands) &&
 				isEmptyObject(modalData.webhooks)) ||
-			hasRunnableCommand ||
+				hasRunnableCommand ||
 			hasRunnableWebhook;
 
 		// Action text.
@@ -341,7 +343,6 @@ const ActionReleaseModal = () => {
 			addMessageHandler('action-modal', { handler });
 		}
 	}, [modal.actionType, modal.service.id]);
-	const isSkip = modal.actionType.startsWith('SKIP');
 
 	return (
 		<Dialog

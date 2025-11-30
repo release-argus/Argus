@@ -120,10 +120,10 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 	// Service.
 	svc := testService(t, "test")
 	svc.DeployedVersionLookup = testDeployedVersion(t)
-	svc.LatestVersion.(*web.Lookup).URLCommands = filter.URLCommandSlice{testURLCommandRegex()}
+	svc.LatestVersion.(*web.Lookup).URLCommands = filter.URLCommands{testURLCommandRegex()}
 	emptyNotify := shoutrrr.Defaults{}
 	emptyNotify.InitMaps()
-	notify := shoutrrr.Slice{
+	notify := shoutrrr.Shoutrrrs{
 		"test": shoutrrr_test.Shoutrrr(false, false)}
 	notify["test"].Params = map[string]string{}
 	svc.Notify = notify
@@ -140,7 +140,7 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 	// WebHook.
 	whPass := testDefaults(false)
 	whFail := testDefaults(true)
-	cfg.WebHook = webhook.SliceDefaults{
+	cfg.WebHook = webhook.WebHooksDefaults{
 		"pass": whPass,
 		"fail": whFail,
 	}
@@ -186,9 +186,9 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 			&dashboard.OptionsDefaults{}, &dashboard.OptionsDefaults{}),
 		Defaults:          &service.Defaults{},
 		HardDefaults:      &service.Defaults{},
-		Command:           command.Slice{command.Command{"ls", "-lah"}},
+		Command:           command.Commands{command.Command{"ls", "-lah"}},
 		CommandController: &command.Controller{},
-		WebHook: webhook.Slice{
+		WebHook: webhook.WebHooks{
 			"test": webhook.New(
 				nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
 				"example.com",
@@ -235,7 +235,7 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 	// WebHook.
 	svc.WebHook.Init(
 		&svc.Status,
-		&webhook.SliceDefaults{}, &webhook.Defaults{}, &hardDefaults.WebHook,
+		&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &hardDefaults.WebHook,
 		&svc.Notify,
 		&svc.Options.Interval)
 

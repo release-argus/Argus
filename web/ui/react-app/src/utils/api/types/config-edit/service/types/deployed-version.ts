@@ -36,6 +36,9 @@ const basicAuthSchema = z
 export const DeployedVersionURLMethodEnum = z.enum(
 	toZodEnumTuple(Object.values(DEPLOYED_VERSION_LOOKUP__URL_METHOD)),
 );
+export type DeployedVersionURLMethod = z.infer<
+	typeof DeployedVersionURLMethodEnum
+>;
 
 /* deployed_version */
 export const deployedVersionURLSchema = z.object({

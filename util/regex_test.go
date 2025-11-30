@@ -137,7 +137,7 @@ func TestRegexTemplate(t *testing.T) {
 
 			// THEN the expected string is returned.
 			if got != tc.want {
-				t.Fatalf("%s\nwant: %q\n got:  %q",
+				t.Fatalf("%s\nwant: %q\ngot:  %q",
 					packageName, tc.want, got)
 			}
 		})

@@ -163,9 +163,9 @@ func TestShoutrrr_Send(t *testing.T) {
 }
 
 func TestSlice_Send(t *testing.T) {
-	// GIVEN a Slice of Shoutrrr.
+	// GIVEN a Shoutrrrs of Shoutrrr.
 	tests := map[string]struct {
-		slice    *Slice
+		slice    *Shoutrrrs
 		useDelay bool
 		errRegex string
 	}{
@@ -174,27 +174,27 @@ func TestSlice_Send(t *testing.T) {
 			errRegex: `^$`,
 		},
 		"empty slice": {
-			slice:    &Slice{},
+			slice:    &Shoutrrrs{},
 			errRegex: `^$`,
 		},
 		"single shoutrrr, no error": {
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"single": testShoutrrr(false, false)},
 			errRegex: `^$`,
 		},
 		"single shoutrrr, with error": {
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"single": testShoutrrr(true, false)},
 			errRegex: `^invalid .* x 1$`,
 		},
 		"multiple shoutrrr, mixed results": {
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"passing": testShoutrrr(false, false),
 				"failing": testShoutrrr(true, false)},
 			errRegex: `^invalid .* x 1$`,
 		},
 		"multiple shoutrrr, mixed results - more": {
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"passing":      testShoutrrr(false, false),
 				"failing":      testShoutrrr(true, false),
 				"also_failing": testShoutrrr(true, false)},
@@ -206,11 +206,11 @@ func TestSlice_Send(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			serviceInfo := serviceinfo.ServiceInfo{
+			svcInfo := serviceinfo.ServiceInfo{
 				ID: name}
 
 			// WHEN Send is called.
-			err := tc.slice.Send("TestSlice_Send", name, serviceInfo, tc.useDelay)
+			err := tc.slice.Send("TestSlice_Send", name, svcInfo, tc.useDelay)
 
 			// THEN the expected error state is returned.
 			e := util.ErrorToString(err)

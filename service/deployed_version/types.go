@@ -68,8 +68,8 @@ func New(
 	if lType != "" {
 		errorMsg = fmt.Sprintf("%q <invalid>", lType)
 	}
-	return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\n  type: %s (expected one of [%s])",
-		errorMsg, strings.Join(PossibleTypes, ", "))
+	return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\n  type: %q <invalid> (supported types = ['%s'])",
+		errorMsg, strings.Join(PossibleTypes, "', '"))
 }
 
 // Copy returns a copy of the Lookup.
@@ -102,7 +102,7 @@ func Copy(
 	return newLookup
 }
 
-// IsEqual will return whether `this` lookup is the same as `other` (excluding status).
+// IsEqual returns whether `this` lookup is the same as `other` (excluding status).
 func IsEqual(this, other Lookup) bool {
 	if other == nil || this == nil {
 		// Equal if both are nil.
@@ -158,8 +158,8 @@ func unmarshal(data []byte, format string) (Lookup, error) {
 	}
 	// Supported type?
 	if _, exists := ServiceMap[temp.Type]; !exists {
-		return nil, fmt.Errorf("%s\n  type: %q <invalid> (expected one of [%s])",
-			baseErr, temp.Type, strings.Join(PossibleTypes, ", "))
+		return nil, fmt.Errorf("%s\n  type: %q <invalid> (supported types = ['%s'])",
+			baseErr, temp.Type, strings.Join(PossibleTypes, "', '"))
 	}
 
 	// New Lookup based on the type.

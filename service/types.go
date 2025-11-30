@@ -37,19 +37,19 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-// Slice is a slice mapping of Service.
-type Slice map[string]*Service
+// Services is a string map of Service.
+type Services map[string]*Service
 
-// UnmarshalJSON handles the unmarshalling of a Slice.
+// UnmarshalJSON handles unmarshalling of Services.
 // It unmarshals the JSON data into a map of string keys to Service pointers,
 // and then calls the giveIDs method to assign IDs to the services.
-func (s *Slice) UnmarshalJSON(data []byte) error {
+func (s *Services) UnmarshalJSON(data []byte) error {
 	var aux map[string]*Service
 
 	if err := json.Unmarshal(data, &aux); err != nil {
 		errStr := util.FormatUnmarshalError("json", err)
 		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-		return errors.New("failed to unmarshal service.Slice:\n  " + errStr)
+		return errors.New("failed to unmarshal service.Services:\n  " + errStr)
 	}
 	*s = aux
 
@@ -58,17 +58,17 @@ func (s *Slice) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// UnmarshalYAML handles the unmarshalling of a Slice.
+// UnmarshalYAML handles unmarshalling of Services.
 // It unmarshals the YAML data into a map of string keys to Service pointers,
 // and then calls the giveIDs method to assign IDs to the services.
-func (s *Slice) UnmarshalYAML(value *yaml.Node) error {
+func (s *Services) UnmarshalYAML(value *yaml.Node) error {
 	var aux map[string]*Service
 
 	// Unmarshal YAML data.
 	if err := value.Decode(&aux); err != nil {
 		errStr := util.FormatUnmarshalError("yaml", err)
 		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-		return errors.New("failed to unmarshal service.Slice:\n  " + errStr)
+		return errors.New("failed to unmarshal service.Services:\n  " + errStr)
 	}
 	*s = aux
 
@@ -78,15 +78,15 @@ func (s *Slice) UnmarshalYAML(value *yaml.Node) error {
 }
 
 // giveIDs gives the Services their IDs if they don't have one.
-func (s *Slice) giveIDs() {
-	for id, service := range *s {
+func (s *Services) giveIDs() {
+	for id, svc := range *s {
 		// Remove the service if nil.
-		if service == nil {
+		if svc == nil {
 			delete(*s, id)
 			continue
 		}
 
-		service.ID = id
+		svc.ID = id
 	}
 }
 
@@ -96,7 +96,7 @@ type Defaults struct {
 	LatestVersion         latestver_base.Defaults   `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Vars to scrape the latest version of the Service.
 	DeployedVersionLookup deployedver_base.Defaults `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Vars to scrape the Service's current deployed version.
 	Notify                map[string]struct{}       `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Default Notifiers to give a Service.
-	Command               command.Slice             `json:"command,omitempty" yaml:"command,omitempty"`                   // Default Commands to give a Service.
+	Command               command.Commands          `json:"command,omitempty" yaml:"command,omitempty"`                   // Default Commands to give a Service.
 	WebHook               map[string]struct{}       `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Default WebHooks to give a Service.
 	Dashboard             dashboard.OptionsDefaults `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`               // Dashboard defaults.
 
@@ -106,21 +106,25 @@ type Defaults struct {
 // Service is a source to track latest and deployed versions of a service.
 // It also has the ability to run commands, send notifications and send WebHooks on new releases.
 type Service struct {
-	ID                    string             `json:"-" yaml:"-"`                               // Key/Name of the Service.
-	Name                  string             `json:"-" yaml:"-"`                               // Name of the Service.
-	marshalName           bool               ``                                                // Whether to marshal the Name.
-	Comment               string             `json:"-" yaml:"-"`                               // Comment on the Service.
-	Options               opt.Options        `json:"-" yaml:"-"`                               // Options to give the Service.
-	LatestVersion         latestver.Lookup   `json:"-" yaml:"-"`                               // Vars to scrape the latest version of the Service.
-	DeployedVersionLookup deployedver.Lookup `json:"-" yaml:"-"`                               // Vars to scrape the Service's current deployed version.
-	Notify                shoutrrr.Slice     `json:"notify,omitempty" yaml:"notify,omitempty"` // Service-specific Shoutrrr vars.
-	notifyFromDefaults    bool
-	CommandController     *command.Controller `json:"-" yaml:"-"`                                 // The controller for the OS Commands that tracks fails and has the announce channel.
-	Command               command.Slice       `json:"command,omitempty" yaml:"command,omitempty"` // OS Commands to run on new release.
-	commandFromDefaults   bool
-	WebHook               webhook.Slice `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Service-specific WebHook vars.
-	webhookFromDefaults   bool
-	Dashboard             dashboard.Options `json:"dashboard,omitempty" yaml:"dashboard,omitempty"` // Options for the dashboard.
+	ID                    string             `json:"-" yaml:"-"` // Key/Name of the Service.
+	Name                  string             `json:"-" yaml:"-"` // Name of the Service.
+	marshalName           bool               ``                  // Whether to marshal the Name.
+	Comment               string             `json:"-" yaml:"-"` // Comment on the Service.
+	Options               opt.Options        `json:"-" yaml:"-"` // Options to give the Service.
+	LatestVersion         latestver.Lookup   `json:"-" yaml:"-"` // Vars to scrape the latest version of the Service.
+	DeployedVersionLookup deployedver.Lookup `json:"-" yaml:"-"` // Vars to scrape the Service's current deployed version.
+
+	Notify             shoutrrr.Shoutrrrs `json:"notify,omitempty" yaml:"notify,omitempty"` // Service-specific Shoutrrr vars.
+	NotifyFromDefaults bool               `json:"-" yaml:"-"`
+
+	CommandController   *command.Controller `json:"-" yaml:"-"`                                 // The controller for the OS Commands that tracks fails and has the announce channel.
+	Command             command.Commands    `json:"command,omitempty" yaml:"command,omitempty"` // OS Commands to run on new release.
+	CommandFromDefaults bool                `json:"-" yaml:"-"`
+
+	WebHook             webhook.WebHooks `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Service-specific WebHook vars.
+	WebHookFromDefaults bool             `json:"-" yaml:"-"`
+
+	Dashboard dashboard.Options `json:"dashboard,omitempty" yaml:"dashboard,omitempty"` // Options for the dashboard.
 
 	Status status.Status `json:"-" yaml:"-"` // Track the Status of this source (version and regex misses).
 
@@ -154,31 +158,31 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 	}
 	hasDeployedVersionLookup := s.DeployedVersionLookup != nil
 
-	serviceInfo := s.Status.GetServiceInfo()
+	svcInfo := s.Status.GetServiceInfo()
 	summary := &apitype.ServiceSummary{
 		ID:                       s.ID,
 		Active:                   s.Options.Active,
 		Type:                     latestVersionType,
 		HasDeployedVersionLookup: &hasDeployedVersionLookup,
 		Status: &apitype.Status{
-			ApprovedVersion:          serviceInfo.ApprovedVersion,
-			DeployedVersion:          serviceInfo.DeployedVersion,
+			ApprovedVersion:          svcInfo.ApprovedVersion,
+			DeployedVersion:          svcInfo.DeployedVersion,
 			DeployedVersionTimestamp: s.Status.DeployedVersionTimestamp(),
-			LatestVersion:            serviceInfo.LatestVersion,
+			LatestVersion:            svcInfo.LatestVersion,
 			LatestVersionTimestamp:   s.Status.LatestVersionTimestamp(),
 			LastQueried:              s.Status.LastQueried()}}
 
 	// Icon.
-	if serviceInfo.Icon != "" {
-		summary.Icon = &serviceInfo.Icon
+	if svcInfo.Icon != "" {
+		summary.Icon = &svcInfo.Icon
 	}
 	// IconLinkTo.
-	if serviceInfo.IconLinkTo != "" {
-		summary.IconLinkTo = &serviceInfo.IconLinkTo
+	if svcInfo.IconLinkTo != "" {
+		summary.IconLinkTo = &svcInfo.IconLinkTo
 	}
 	// WebURL.
-	if serviceInfo.WebURL != "" {
-		summary.WebURL = &serviceInfo.WebURL
+	if svcInfo.WebURL != "" {
+		summary.WebURL = &svcInfo.WebURL
 	}
 
 	// Name.
@@ -205,12 +209,12 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 	return summary
 }
 
-// UsingDefaults returns whether the Service is using the Notify(s)/Command(s)/WebHook(s) from Defaults.
+// UsingDefaults returns whether the Service is using the Notifiers/Commands/WebHooks from Defaults.
 func (s *Service) UsingDefaults() (bool, bool, bool) {
 	if s == nil {
 		return false, false, false
 	}
-	return s.notifyFromDefaults, s.commandFromDefaults, s.webhookFromDefaults
+	return s.NotifyFromDefaults, s.CommandFromDefaults, s.WebHookFromDefaults
 }
 
 // unmarshalVersionLookups handles the unmarshalling of LatestVersion and DeployedVersion fields.

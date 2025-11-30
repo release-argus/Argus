@@ -29,19 +29,19 @@ import (
 )
 
 func TestSlice_Metrics(t *testing.T) {
-	// GIVEN a Slice.
+	// GIVEN a Shoutrrrs.
 	tests := map[string]struct {
-		slice *Slice
+		slice *Shoutrrrs
 	}{
 		"nil": {
 			slice: nil},
 		"empty": {
-			slice: &Slice{}},
+			slice: &Shoutrrrs{}},
 		"with one": {
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"foo": &Shoutrrr{}}},
 		"multiple": {
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"bish": &Shoutrrr{},
 				"bash": &Shoutrrr{},
 				"bosh": &Shoutrrr{}}},
@@ -438,45 +438,45 @@ func TestShoutrrr_Init(t *testing.T) {
 }
 
 func TestSlice_Init(t *testing.T) {
-	// GIVEN a Slice.
+	// GIVEN a Shoutrrrs.
 	tests := map[string]struct {
 		nilSlice               bool
-		slice                  *Slice
+		slice                  *Shoutrrrs
 		had, want              map[string]string
-		mains                  *SliceDefaults
-		defaults, hardDefaults SliceDefaults
+		mains                  *ShoutrrrsDefaults
+		defaults, hardDefaults ShoutrrrsDefaults
 	}{
 		"nil slice": {
 			slice:    nil,
 			nilSlice: true,
 		},
 		"empty slice": {
-			slice: &Slice{},
+			slice: &Shoutrrrs{},
 		},
 		"nil mains": {
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"fail": testShoutrrr(true, false),
 				"pass": testShoutrrr(false, false)},
 		},
 		"slice with nil element and matching main": {
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"fail": nil},
-			mains: &SliceDefaults{
+			mains: &ShoutrrrsDefaults{
 				"fail": testDefaults(false, false)},
 		},
 		"have matching mains": {
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"fail": testShoutrrr(true, false),
 				"pass": testShoutrrr(false, false)},
-			mains: &SliceDefaults{
+			mains: &ShoutrrrsDefaults{
 				"fail": testDefaults(false, false),
 				"pass": testDefaults(true, false)},
 		},
 		"some matching mains": {
-			slice: &Slice{
+			slice: &Shoutrrrs{
 				"fail": testShoutrrr(true, false),
 				"pass": testShoutrrr(false, false)},
-			mains: &SliceDefaults{
+			mains: &ShoutrrrsDefaults{
 				"other": testDefaults(false, false),
 				"pass":  testDefaults(true, false)},
 		},
@@ -499,13 +499,13 @@ func TestSlice_Init(t *testing.T) {
 				tc.defaults[i].URLFields = tc.had
 			}
 			if tc.defaults == nil {
-				tc.defaults = make(SliceDefaults)
+				tc.defaults = make(ShoutrrrsDefaults)
 			}
 			for i := range tc.hardDefaults {
 				tc.hardDefaults[i].Params = tc.had
 			}
 			if tc.hardDefaults == nil {
-				tc.hardDefaults = make(SliceDefaults)
+				tc.hardDefaults = make(ShoutrrrsDefaults)
 			}
 			if tc.nilSlice {
 				tc.slice = nil

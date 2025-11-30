@@ -32,16 +32,16 @@ func TestCommandTest(t *testing.T) {
 	// GIVEN a Config with a Service containing a Command.
 	tests := map[string]struct {
 		flag                    string
-		slice                   service.Slice
+		services                service.Services
 		stdoutRegex, panicRegex *string
 	}{
 		"flag is empty": {
 			flag:        "",
 			stdoutRegex: test.StringPtr("^$"),
-			slice: service.Slice{
+			services: service.Services{
 				"argus": {
 					ID: "argus",
-					Command: command.Slice{
+					Command: command.Commands{
 						{"true", "0"}},
 					CommandController: &command.Controller{},
 					Options: *opt.New(
@@ -52,10 +52,10 @@ func TestCommandTest(t *testing.T) {
 			flag:        "something",
 			panicRegex:  test.StringPtr(" could not be found "),
 			stdoutRegex: test.StringPtr("should have panic'd before reaching this"),
-			slice: service.Slice{
+			services: service.Services{
 				"argus": {
 					ID: "argus",
-					Command: command.Slice{
+					Command: command.Commands{
 						{"true", "0"}},
 					CommandController: &command.Controller{},
 					Options: *opt.New(
@@ -65,10 +65,10 @@ func TestCommandTest(t *testing.T) {
 		"known service in flag successful command": {
 			flag:        "argus",
 			stdoutRegex: test.StringPtr(`Executing 'echo command did run'\s+.*command did run\s+`),
-			slice: service.Slice{
+			services: service.Services{
 				"argus": {
 					ID: "argus",
-					Command: command.Slice{
+					Command: command.Commands{
 						{"echo", "command did run"}},
 					CommandController: &command.Controller{},
 					Options: *opt.New(
@@ -78,10 +78,10 @@ func TestCommandTest(t *testing.T) {
 		"known service in flag failing command": {
 			flag:        "argus",
 			stdoutRegex: test.StringPtr(`.*Executing 'ls /root'\s+.*exit status [1-9]\s+`),
-			slice: service.Slice{
+			services: service.Services{
 				"argus": {
 					ID: "argus",
-					Command: command.Slice{
+					Command: command.Commands{
 						{"ls", "/root"}},
 					CommandController: &command.Controller{},
 					Options: *opt.New(
@@ -92,7 +92,7 @@ func TestCommandTest(t *testing.T) {
 			flag:        "argus",
 			panicRegex:  test.StringPtr(" does not have any `command` defined"),
 			stdoutRegex: test.StringPtr("should have panic'd before reaching this"),
-			slice: service.Slice{
+			services: service.Services{
 				"argus": {
 					ID: "argus"}},
 		},
@@ -116,24 +116,24 @@ func TestCommandTest(t *testing.T) {
 					}
 				}()
 			}
-			for i := range tc.slice {
-				tc.slice[i].Status.ServiceInfo.ID = tc.slice[i].ID
+			for i := range tc.services {
+				tc.services[i].Status.ServiceInfo.ID = tc.services[i].ID
 			}
 
 			// WHEN CommandTest is called with the test Config.
-			if tc.slice[tc.flag] != nil && tc.slice[tc.flag].CommandController != nil {
-				tc.slice[tc.flag].CommandController.Init(
-					&tc.slice[tc.flag].Status,
-					&tc.slice[tc.flag].Command,
+			if tc.services[tc.flag] != nil && tc.services[tc.flag].CommandController != nil {
+				tc.services[tc.flag].CommandController.Init(
+					&tc.services[tc.flag].Status,
+					&tc.services[tc.flag].Command,
 					nil,
-					&tc.slice[tc.flag].Options.Interval)
+					&tc.services[tc.flag].Options.Interval)
 			}
-			order := []string{}
-			for i := range tc.slice {
+			order := make([]string, len(tc.services))
+			for i := range tc.services {
 				order = append(order, i)
 			}
 			cfg := config.Config{
-				Service: tc.slice,
+				Service: tc.services,
 				Order:   order,
 			}
 			CommandTest(&tc.flag, &cfg)

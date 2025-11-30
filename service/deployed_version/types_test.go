@@ -244,7 +244,7 @@ func TestNew(t *testing.T) {
 			t.Parallel()
 
 			options := &opt.Options{}
-			status := &status.Status{}
+			svcStatus := &status.Status{}
 			defaults := &base.Defaults{}
 			hardDefaults := &base.Defaults{}
 
@@ -254,7 +254,7 @@ func TestNew(t *testing.T) {
 				tc.args.configFormat,
 				tc.args.configData,
 				options,
-				status,
+				svcStatus,
 				defaults,
 				hardDefaults,
 			)

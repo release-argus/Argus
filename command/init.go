@@ -29,8 +29,8 @@ import (
 // Init the Command Controller.
 func (c *Controller) Init(
 	serviceStatus *status.Status,
-	command *Slice,
-	shoutrrrNotifiers *shoutrrr.Slice,
+	command *Commands,
+	shoutrrrNotifiers *shoutrrr.Shoutrrrs,
 	parentInterval *string,
 ) {
 	if c == nil || len(*command) == 0 {
@@ -109,8 +109,8 @@ func (c *Command) FormattedString() string {
 	return fmt.Sprintf("[ \"%s\" ]", strings.Join(*c, "\", \""))
 }
 
-// IsRunnable will return whether the current time at `index` is before nextRunnable.
-// If out of range, it will return false.
+// IsRunnable returns whether the current time at `index` is before nextRunnable.
+// If out of range, it returns false.
 func (c *Controller) IsRunnable(index int) bool {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
@@ -124,7 +124,7 @@ func (c *Controller) IsRunnable(index int) bool {
 }
 
 // NextRunnable returns the nextRunnable of the Command at `index`.
-// If out of range, it will return a zero time.
+// If out of range, it returns a zero time.
 func (c *Controller) NextRunnable(index int) time.Time {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()

@@ -60,14 +60,14 @@ func testLookup(version string, failing bool) *Lookup {
 	announceChannel := make(chan []byte, 24)
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
-	status := status.New(
+	svcStatus := status.New(
 		&announceChannel, &databaseChannel, &saveChannel,
 		"",
 		"", "",
 		"", "",
 		"",
 		&dashboard.Options{})
-	status.Init(
+	svcStatus.Init(
 		0, 0, 0,
 		"serviceID", "", "",
 		&dashboard.Options{
@@ -79,7 +79,7 @@ func testLookup(version string, failing bool) *Lookup {
 			version: `+version+`
 		`),
 		options,
-		status,
+		svcStatus,
 		defaults, hardDefaults)
 
 	return lookup

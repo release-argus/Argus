@@ -35,9 +35,9 @@ import (
 )
 
 func TestSlice_Print(t *testing.T) {
-	// GIVEN a Slice.
+	// GIVEN a Services.
 	tests := map[string]struct {
-		slice    *Slice
+		slice    *Services
 		ordering []string
 		want     string
 	}{
@@ -52,14 +52,14 @@ func TestSlice_Print(t *testing.T) {
 		},
 		"slice with nil Service and empty Service": {
 			ordering: []string{"foo", "bar"},
-			slice:    &Slice{"foo": nil, "bar": &Service{}},
+			slice:    &Services{"foo": nil, "bar": &Service{}},
 			want: test.TrimYAML(`
 				service:
 					bar: {}`),
 		},
 		"respects ordering": {
 			ordering: []string{"zulu", "alpha"},
-			slice: &Slice{
+			slice: &Services{
 				"zulu":  &Service{ID: "zulu", Comment: "a"},
 				"alpha": &Service{ID: "alpha", Comment: "b"}},
 			want: test.TrimYAML(`
@@ -71,7 +71,7 @@ func TestSlice_Print(t *testing.T) {
 		},
 		"respects reversed ordering": {
 			ordering: []string{"alpha", "zulu"},
-			slice: &Slice{
+			slice: &Services{
 				"zulu":  &Service{ID: "zulu", Comment: "a"},
 				"alpha": &Service{ID: "alpha", Comment: "b"}},
 			want: test.TrimYAML(`
@@ -107,7 +107,7 @@ func TestSlice_Print(t *testing.T) {
 }
 
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN a Defaults.
+	// GIVEN Defaults.
 	tests := map[string]struct {
 		options       opt.Defaults
 		latestVersion latestver_base.Defaults
@@ -191,9 +191,9 @@ func TestDefaults_CheckValues(t *testing.T) {
 }
 
 func TestSlice_CheckValues(t *testing.T) {
-	// GIVEN a Slice.
+	// GIVEN a Services.
 	tests := map[string]struct {
-		slice    *Slice
+		slice    *Services
 		errRegex string
 	}{
 		"nil slice": {
@@ -201,7 +201,7 @@ func TestSlice_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		"single valid service": {
-			slice: &Slice{
+			slice: &Services{
 				"first": {
 					ID:      "test",
 					Comment: "foo_comment",
@@ -220,7 +220,7 @@ func TestSlice_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		"single invalid service": {
-			slice: &Slice{
+			slice: &Services{
 				"first": {
 					ID:      "test",
 					Comment: "foo_comment",
@@ -239,7 +239,7 @@ func TestSlice_CheckValues(t *testing.T) {
 			errRegex: `interval: "[^"]+" <invalid>.*$`,
 		},
 		"multiple invalid services": {
-			slice: &Slice{
+			slice: &Services{
 				"foo": {
 					ID:      "test",
 					Comment: "foo_comment",
@@ -301,9 +301,9 @@ func TestService_CheckValues(t *testing.T) {
 		options          opt.Options
 		latestVersion    latestver.Lookup
 		deployedVersion  deployedver.Lookup
-		commands         command.Slice
-		webhooks         webhook.Slice
-		notifies         shoutrrr.Slice
+		commands         command.Commands
+		webhooks         webhook.WebHooks
+		notifies         shoutrrr.Shoutrrrs
 		dashboardOptions dashboard.Options
 		errRegex         string
 	}{
@@ -400,7 +400,7 @@ func TestService_CheckValues(t *testing.T) {
 			}),
 			deployedVersion: &dv_web.Lookup{
 				Regex: `[0-`},
-			notifies: shoutrrr.Slice{
+			notifies: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil, "",
 					"discord",
@@ -435,13 +435,13 @@ func TestService_CheckValues(t *testing.T) {
 			}),
 			deployedVersion: &dv_web.Lookup{
 				Regex: `[0-`},
-			notifies: shoutrrr.Slice{
+			notifies: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil, "",
 					"discord",
 					nil, nil, nil,
 					nil, nil, nil)},
-			commands: command.Slice{{
+			commands: command.Commands{{
 				"bash", "update.sh", "{{ version }"}},
 			errRegex: test.TrimYAML(`
 				^options:
@@ -474,15 +474,15 @@ func TestService_CheckValues(t *testing.T) {
 			}),
 			deployedVersion: &dv_web.Lookup{
 				Regex: `[0-`},
-			commands: command.Slice{{
+			commands: command.Commands{{
 				"bash", "update.sh", "{{ version }"}},
-			notifies: shoutrrr.Slice{
+			notifies: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil, "",
 					"discord",
 					nil, nil, nil,
 					nil, nil, nil)},
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"wh": webhook.New(
 					nil, nil,
 					"0x",
@@ -534,9 +534,9 @@ func TestService_CheckValues(t *testing.T) {
 					nil,
 					nil, nil)
 			}),
-			commands: command.Slice{{
+			commands: command.Commands{{
 				"bash", "update.sh", "{{ version }}"}},
-			notifies: shoutrrr.Slice{
+			notifies: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil, "",
 					"discord",
@@ -546,7 +546,7 @@ func TestService_CheckValues(t *testing.T) {
 						"webhookid": "y"},
 					nil,
 					nil, nil, nil)},
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"wh": webhook.New(
 					nil, nil,
 					"0s",
@@ -573,8 +573,8 @@ func TestService_CheckValues(t *testing.T) {
 				tc.svc.Dashboard = tc.dashboardOptions
 				tc.svc.Init(
 					&Defaults{}, &Defaults{},
-					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-					&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
+					&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
+					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 			}
 
 			// WHEN CheckValues is called.

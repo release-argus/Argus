@@ -15,7 +15,7 @@
 // Package service provides the service functionality for Argus.
 package service
 
-// Default sets this Defaults to the default values.
+// Default sets these Defaults to the default values.
 func (d *Defaults) Default() {
 	// Service.Options
 	d.Options.Default()
@@ -32,7 +32,7 @@ func (d *Defaults) Default() {
 	d.Init()
 }
 
-// Init will hand out the appropriate Defaults.X pointer(s) between structs.
+// Init will hand out the appropriate Defaults.X pointers between structs.
 func (d *Defaults) Init() {
 	d.LatestVersion.Options = &d.Options
 	d.DeployedVersionLookup.Options = &d.Options

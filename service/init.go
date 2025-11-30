@@ -51,10 +51,10 @@ func (s *Service) IconURL() *string {
 func (s *Service) Init(
 	defaults, hardDefaults *Defaults,
 
-	rootNotifyConfig *shoutrrr.SliceDefaults,
-	notifyDefaults, notifyHardDefaults *shoutrrr.SliceDefaults,
+	rootNotifyConfig *shoutrrr.ShoutrrrsDefaults,
+	notifyDefaults, notifyHardDefaults *shoutrrr.ShoutrrrsDefaults,
 
-	rootWebHookConfig *webhook.SliceDefaults,
+	rootWebHookConfig *webhook.WebHooksDefaults,
 	webhookDefaults, webhookHardDefaults *webhook.Defaults,
 ) {
 	// Service.
@@ -86,11 +86,11 @@ func (s *Service) Init(
 	// Notify.
 	// 	use defaults?
 	if len(s.Notify) == 0 && len(defaults.Notify) != 0 {
-		s.Notify = make(shoutrrr.Slice, len(defaults.Notify))
+		s.Notify = make(shoutrrr.Shoutrrrs, len(defaults.Notify))
 		for key := range defaults.Notify {
 			s.Notify[key] = &shoutrrr.Shoutrrr{}
 		}
-		s.notifyFromDefaults = true
+		s.NotifyFromDefaults = true
 	}
 	s.Notify.Init(
 		&s.Status,
@@ -117,9 +117,9 @@ func (s *Service) Init(
 	// Command.
 	// 	use defaults?
 	if len(s.Command) == 0 && len(defaults.Command) != 0 {
-		s.Command = make(command.Slice, len(defaults.Command))
+		s.Command = make(command.Commands, len(defaults.Command))
 		copy(s.Command, defaults.Command)
-		s.commandFromDefaults = true
+		s.CommandFromDefaults = true
 	}
 	if len(s.Command) != 0 {
 		s.CommandController = &command.Controller{}
@@ -133,11 +133,11 @@ func (s *Service) Init(
 	// WebHook.
 	// 	use defaults?
 	if s.WebHook == nil && len(defaults.WebHook) != 0 {
-		s.WebHook = make(webhook.Slice, len(defaults.WebHook))
+		s.WebHook = make(webhook.WebHooks, len(defaults.WebHook))
 		for key := range defaults.WebHook {
 			s.WebHook[key] = &webhook.WebHook{}
 		}
-		s.webhookFromDefaults = true
+		s.WebHookFromDefaults = true
 	}
 	s.WebHook.Init(
 		&s.Status,

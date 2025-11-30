@@ -57,10 +57,10 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	logFrom := logutil.LogFrom{Primary: "httpVersionRefreshUncreated_Latest", Secondary: getIP(r)}
 
 	queryParams := r.URL.Query()
-	overrides := util.DereferenceOrDefault(getParam(&queryParams, "overrides"))
+	overrides := getParam(&queryParams, "overrides")
 
 	// Verify overrides are provided.
-	if overrides == "" {
+	if overrides == nil {
 		err := errors.New("overrides: <required>")
 		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w,
@@ -150,10 +150,10 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	logFrom := logutil.LogFrom{Primary: "httpVersionRefreshUncreated_Deployed", Secondary: getIP(r)}
 
 	queryParams := r.URL.Query()
-	overrides := util.DereferenceOrDefault(getParam(&queryParams, "overrides"))
+	overrides := getParam(&queryParams, "overrides")
 
 	// Verify overrides are provided.
-	if overrides == "" {
+	if overrides == nil {
 		err := errors.New("overrides: <required>")
 		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w,
@@ -211,7 +211,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	// Query the DeployedVersionLookup.
 	version, err := deployedver.Refresh(
 		dvl,
-		"", "", nil)
+		"", "", nil, nil)
 	if err != nil {
 		failRequest(&w,
 			err.Error(),
@@ -317,7 +317,8 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 	// Check if service exists.
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
-	if api.Config.Service[targetService] == nil {
+	svc := api.Config.Service[targetService]
+	if svc == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
 		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w,
@@ -328,20 +329,27 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 
 	// Parameters.
 	var (
-		overrides          = util.DereferenceOrDefault(getParam(&queryParams, "overrides"))
+		overrides          = getParam(&queryParams, "overrides")
 		semanticVersioning = getParam(&queryParams, "semantic_versioning")
 	)
 
+	// Extract the desired lookup type.
+	lookupType, err := extractLookupType(overrides, logFrom)
+	if err != nil {
+		failRequest(&w,
+			err.Error(),
+			http.StatusBadRequest)
+		return
+	}
+
 	// Existing DeployedVersionLookup?
 	var previousType string
-	dvl := api.Config.Service[targetService].DeployedVersionLookup
+	dvl := svc.DeployedVersionLookup
 	// Must create the DeployedVersionLookup if it doesn't exist.
 	if dvl == nil {
-		// Extract the desired lookup type.
-		lookupType, err := extractLookupType(overrides, logFrom)
-		if err != nil {
+		if lookupType == "" {
 			failRequest(&w,
-				err.Error(),
+				"missing required parameter: overrides.type",
 				http.StatusBadRequest)
 			return
 		}
@@ -359,14 +367,16 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 			&api.Config.Service[targetService].Options,
 			&svcStatus,
 			&api.Config.Service[targetService].Defaults.DeployedVersionLookup,
-			&api.Config.Service[targetService].HardDefaults.DeployedVersionLookup) //nolint:errcheck // empty JSON.
+			&api.Config.Service[targetService].HardDefaults.DeployedVersionLookup)
 	} else {
 		previousType = dvl.GetType()
+		lookupType = util.FirstNonDefault(lookupType, previousType)
 	}
 
 	// Query the DeployedVersionLookup.
 	version, err := deployedver.Refresh(
 		dvl,
+		lookupType,
 		previousType,
 		overrides,
 		semanticVersioning)
@@ -385,7 +395,11 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 }
 
 // extractLookupType extracts the desired `type` from the provided JSON.
-func extractLookupType(overrides string, logFrom logutil.LogFrom) (string, error) {
+func extractLookupType(overrides *string, logFrom logutil.LogFrom) (string, error) {
+	if overrides == nil {
+		return "", nil
+	}
+
 	// Extract the desired lookup type.
 	var temp struct {
 		Type string `json:"type" yaml:"type"`
@@ -466,8 +480,8 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 		apitype.Config{
 			HardDefaults: convertAndCensorDefaults(&api.Config.HardDefaults),
 			Defaults:     convertAndCensorDefaults(&api.Config.Defaults),
-			Notify:       convertAndCensorNotifySliceDefaults(&api.Config.Notify),
-			WebHook:      convertAndCensorWebHookSliceDefaults(&api.Config.WebHook),
+			Notify:       convertAndCensorNotifiersDefaults(&api.Config.Notify),
+			WebHook:      convertAndCensorWebHooksDefaults(&api.Config.WebHook),
 		},
 		logFrom)
 }

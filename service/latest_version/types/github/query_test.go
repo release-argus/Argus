@@ -1071,7 +1071,7 @@ func TestQueryGitHubETag(t *testing.T) {
 		attempts                           int
 		eTagChanged, eTagUnchangedUseCache int
 		initialRequireRegexVersion         string
-		urlCommands                        filter.URLCommandSlice
+		urlCommands                        filter.URLCommands
 		errRegex                           string
 	}{
 		// Keeps .Releases in case filters change.
@@ -1092,7 +1092,7 @@ func TestQueryGitHubETag(t *testing.T) {
 			attempts:              2,
 			eTagChanged:           4, // page1+2, page1+2.
 			eTagUnchangedUseCache: 0, // 0 recheck.
-			urlCommands: filter.URLCommandSlice{
+			urlCommands: filter.URLCommands{
 				{Type: "regex", Regex: (`^FOO$`)}},
 			errRegex: test.TrimYAML(`
 				^no releases were found matching the url_commands on page 2 of the API response

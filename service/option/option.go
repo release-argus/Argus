@@ -48,7 +48,7 @@ func NewDefaults(
 			SemanticVersioning: semanticVersioning}}
 }
 
-// Default sets this Defaults to the default values.
+// Default sets these Defaults to the default values.
 func (od *Defaults) Default() {
 	// interval.
 	od.Interval = "10m"

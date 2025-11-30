@@ -1,17 +1,14 @@
 import { z } from 'zod';
 import {
+	DEPLOYED_VERSION_LOOKUP_TYPE,
 	type DeployedVersionLookup,
-	type DeployedVersionLookupURL,
-	type DeployedVersionLookupURLMethod,
 	deployedVersionLookupTypeOptions,
-	deployedVersionLookupURLMethodOptions,
 } from '@/utils/api/types/config/service/deployed-version';
 import {
 	type deployedVersionLookupSchema,
 	deployedVersionManualSchema,
 	deployedVersionURLSchema,
 	isDeployedVersionType,
-	isDeployedVersionURLMethod,
 } from '@/utils/api/types/config-edit/service/types/deployed-version';
 import { buildHeadersSchemaWithFallbacks } from '@/utils/api/types/config-edit/shared/header/builder';
 import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse';
@@ -90,24 +87,13 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 	const schemaDataType = isDeployedVersionType(data?.type)
 		? data.type
 		: fallbackType;
-	const schemaDataMethod = isDeployedVersionURLMethod(
-		(data as DeployedVersionLookupURL | undefined)?.method,
-	)
-		? ((data as DeployedVersionLookupURL)
-				.method as DeployedVersionLookupURLMethod)
-		: Object.values(deployedVersionLookupURLMethodOptions)[1].value;
 	// Initial schema data.
 	const fallbackData = {
 		headers: headersSchemaData,
-		method: schemaDataMethod,
 		type: schemaDataType,
 	};
 	if (!isDeployedVersionType(fallbackData.type))
 		fallbackData.type = fallbackType;
-	if (!isDeployedVersionURLMethod(fallbackData.method))
-		fallbackData.method = Object.values(
-			deployedVersionLookupURLMethodOptions,
-		)[0].value;
 	const schemaData = safeParse({
 		data: {
 			allow_invalid_certs: null,
@@ -124,10 +110,10 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 		data: {
 			...combinedDefaults,
 			headers: headersSchemaDataDefaults,
+			type: DEPLOYED_VERSION_LOOKUP_TYPE.URL.value,
 		},
 		fallback: {
 			headers: headersSchemaDataDefaults,
-			method: fallbackData.method,
 			type: fallbackData.type,
 		},
 		path: `${path} (defaults)`,

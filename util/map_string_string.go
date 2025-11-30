@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package shoutrrr provides the shoutrrr notification service to services.
-package shoutrrr
+// Package util provides utility functions for the Argus project.
+package util
 
 import (
 	"encoding/json"
@@ -21,22 +21,22 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// MapStringString is a map[string]string that ignores null values when unmarshalling.
+// MapStringStringOmitNull is a map[string]string that ignores null values when unmarshalling.
 // Any key with a null value in YAML/JSON will be omitted from the map.
-type MapStringString map[string]string
+type MapStringStringOmitNull map[string]string
 
-// UnmarshalYAML implements the YAML unmarshaler for MapStringString.
+// UnmarshalYAML implements the YAML unmarshaler for MapStringStringOmitNull.
 // It decodes the YAML into a temporary map of *string, and only keeps
 // keys whose value is non-nil. This ensures null values are not turned into "".
-func (m *MapStringString) UnmarshalYAML(value *yaml.Node) error {
+func (m *MapStringStringOmitNull) UnmarshalYAML(value *yaml.Node) error {
 	temp := map[string]*string{}
 	if err := value.Decode(&temp); err != nil {
 		return err
 	}
 
-	res := make(map[string]string)
+	res := make(map[string]string, len(temp))
 	for k, v := range temp {
-		if v != nil {
+		if v != nil && *v != "" {
 			res[k] = *v
 		}
 	}
@@ -44,16 +44,16 @@ func (m *MapStringString) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// UnmarshalJSON implements the json unmarshaler for MapStringString.
+// UnmarshalJSON implements the json unmarshaler for MapStringStringOmitNull.
 // It decodes the JSON into a temporary map of *string, and only keeps
 // keys whose value is non-nil. This prevents null values from becoming "".
-func (m *MapStringString) UnmarshalJSON(data []byte) error {
+func (m *MapStringStringOmitNull) UnmarshalJSON(data []byte) error {
 	temp := map[string]*string{}
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return err
 	}
 
-	res := make(map[string]string)
+	res := make(map[string]string, len(temp))
 	for k, v := range temp {
 		if v != nil {
 			res[k] = *v

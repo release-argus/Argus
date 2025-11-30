@@ -28,7 +28,7 @@ import (
 
 // OptionsBase are the base options for the Dashboard.
 type OptionsBase struct {
-	AutoApprove *bool `json:"auto_approve,omitempty" yaml:"auto_approve,omitempty"` // Default - true = Require approval before sending WebHook(s) for new releases.
+	AutoApprove *bool `json:"auto_approve,omitempty" yaml:"auto_approve,omitempty"` // Default - true = Require approval before sending WebHooks for new releases.
 }
 
 // Options are options for the Dashboard.

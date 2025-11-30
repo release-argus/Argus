@@ -21,19 +21,19 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Init the Slice metrics and hand out the defaults/notifiers.
-func (s *Slice) Init(
+// Init the WebHooks metrics and hand out the defaults/notifiers.
+func (s *WebHooks) Init(
 	serviceStatus *status.Status,
-	mains *SliceDefaults,
+	mains *WebHooksDefaults,
 	defaults, hardDefaults *Defaults,
-	shoutrrrNotifiers *shoutrrr.Slice,
+	shoutrrrNotifiers *shoutrrr.Shoutrrrs,
 	parentInterval *string,
 ) {
 	if s == nil || len(*s) == 0 {
 		return
 	}
 	if mains == nil {
-		mains = &SliceDefaults{}
+		mains = &WebHooksDefaults{}
 	}
 
 	for id, wh := range *s {
@@ -56,7 +56,7 @@ func (w *WebHook) Init(
 	serviceStatus *status.Status,
 	main *Defaults,
 	defaults, hardDefaults *Defaults,
-	shoutrrrNotifiers *shoutrrr.Slice,
+	shoutrrrNotifiers *shoutrrr.Shoutrrrs,
 	parentInterval *string,
 ) {
 	w.ParentInterval = parentInterval
@@ -87,8 +87,8 @@ func (w *WebHook) Init(
 	}
 }
 
-// InitMetrics of the Slice.
-func (s *Slice) InitMetrics() {
+// InitMetrics of the WebHooks.
+func (s *WebHooks) InitMetrics() {
 	if s == nil {
 		return
 	}
@@ -119,8 +119,8 @@ func (w *WebHook) initMetrics() {
 		"FAIL")
 }
 
-// DeleteMetrics of the Slice.
-func (s *Slice) DeleteMetrics() {
+// DeleteMetrics of the WebHooks.
+func (s *WebHooks) DeleteMetrics() {
 	if s == nil {
 		return
 	}

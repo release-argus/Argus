@@ -81,7 +81,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 	tests := map[string]struct {
 		releases                           []github_types.Release
 		semanticVersioning, usePreReleases bool
-		urlCommands                        *filter.URLCommandSlice
+		urlCommands                        *filter.URLCommands
 		want                               []string
 	}{
 		"use Name if no TagName (/tags vs /releases API)": {
@@ -172,7 +172,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 				{TagName: "0.0.2-0.0.2"},
 				{TagName: "0.0.1-0.0.1"},
 			},
-			urlCommands: &filter.URLCommandSlice{
+			urlCommands: &filter.URLCommands{
 				{Type: "regex", Regex: `-(.*)`}},
 			want: []string{"0.0.2", "0.0.1"},
 		},

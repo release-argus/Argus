@@ -26,17 +26,17 @@ import (
 
 // TestPayload is the payload for testing a Notify at httpNotifyTest.
 type TestPayload struct {
-	ServiceID         string            `json:"service_id"`
-	ServiceIDPrevious string            `json:"service_id_previous"`
-	ServiceName       string            `json:"service_name"`
-	Name              string            `json:"name"`
-	NamePrevious      string            `json:"name_previous"`
-	Type              string            `json:"type,omitempty"`
-	Options           map[string]string `json:"options"`
-	URLFields         map[string]string `json:"url_fields"`
-	Params            map[string]string `json:"params"`
-	ServiceURL        string            `json:"service_url"`
-	WebURL            string            `json:"web_url"`
+	ServiceID         string                       `json:"service_id"`
+	ServiceIDPrevious string                       `json:"service_id_previous"`
+	ServiceName       string                       `json:"service_name"`
+	Name              string                       `json:"name"`
+	NamePrevious      string                       `json:"name_previous"`
+	Type              string                       `json:"type,omitempty"`
+	Options           util.MapStringStringOmitNull `json:"options"`
+	URLFields         util.MapStringStringOmitNull `json:"url_fields"`
+	Params            util.MapStringStringOmitNull `json:"params"`
+	ServiceURL        string                       `json:"service_url"`
+	WebURL            string                       `json:"web_url"`
 }
 
 // FromPayload will create a Shoutrrr from a payload.
@@ -46,8 +46,8 @@ type TestPayload struct {
 func FromPayload(
 	payload TestPayload,
 	serviceNotify *Shoutrrr, serviceStatus *status.Status,
-	mains SliceDefaults,
-	defaults, hardDefaults SliceDefaults,
+	mains ShoutrrrsDefaults,
+	defaults, hardDefaults ShoutrrrsDefaults,
 ) (*Shoutrrr, error) {
 	// No `name` or `name_previous`.
 	if payload.NamePrevious == "" && payload.Name == "" {
@@ -106,7 +106,7 @@ func FromPayload(
 func resolveDefaults(
 	name, nType string,
 	main *Defaults,
-	defaults, hardDefaults SliceDefaults,
+	defaults, hardDefaults ShoutrrrsDefaults,
 ) (string, *Defaults, *Defaults, *Defaults, error) {
 	// If a Main doesn't exist with this Name.
 	if main == nil {

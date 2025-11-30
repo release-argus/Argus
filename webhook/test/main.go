@@ -71,9 +71,9 @@ func WebHook(failing, selfSignedCert, customHeaders bool) *webhook.WebHook {
 		}
 	}
 
-	// Slice to InitMetrics.
-	slice := webhook.Slice{"test": wh}
-	slice.InitMetrics()
+	// WebHooks to InitMetrics.
+	webhooks := webhook.WebHooks{"test": wh}
+	webhooks.InitMetrics()
 
 	return wh
 }

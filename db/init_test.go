@@ -229,34 +229,34 @@ func TestDBQueryService(t *testing.T) {
 		serviceName,
 		[]dbtype.Cell{
 			{Column: "id", Value: serviceName},
-			{Column: "latest_version", Value: (*svc).Status.LatestVersion()},
-			{Column: "latest_version_timestamp", Value: (*svc).Status.LatestVersionTimestamp()},
-			{Column: "deployed_version", Value: (*svc).Status.DeployedVersion()},
-			{Column: "deployed_version_timestamp", Value: (*svc).Status.DeployedVersionTimestamp()},
-			{Column: "approved_version", Value: (*svc).Status.ApprovedVersion()}},
+			{Column: "latest_version", Value: svc.Status.LatestVersion()},
+			{Column: "latest_version_timestamp", Value: svc.Status.LatestVersionTimestamp()},
+			{Column: "deployed_version", Value: svc.Status.DeployedVersion()},
+			{Column: "deployed_version_timestamp", Value: svc.Status.DeployedVersionTimestamp()},
+			{Column: "approved_version", Value: svc.Status.ApprovedVersion()}},
 	)
 
 	// THEN that data can be queried.
 	got := queryRow(t, tAPI.db, serviceName)
-	if got.LatestVersion() != (*svc).Status.LatestVersion() {
-		t.Errorf("%s\nLatestVersion db mismatch\nwant: %qgot:  %q",
-			packageName, (*svc).Status.LatestVersion(), got.LatestVersion())
+	if got.LatestVersion() != svc.Status.LatestVersion() {
+		t.Errorf("%s\nLatestVersion db mismatch\nwant: %q\ngot:  %q",
+			packageName, svc.Status.LatestVersion(), got.LatestVersion())
 	}
-	if got.LatestVersionTimestamp() != (*svc).Status.LatestVersionTimestamp() {
-		t.Errorf("%s\nLatestVersionTimestamp db mismatch\nwant: %qgot:  %q",
-			packageName, (*svc).Status.LatestVersionTimestamp(), got.LatestVersionTimestamp())
+	if got.LatestVersionTimestamp() != svc.Status.LatestVersionTimestamp() {
+		t.Errorf("%s\nLatestVersionTimestamp db mismatch\nwant: %q\ngot:  %q",
+			packageName, svc.Status.LatestVersionTimestamp(), got.LatestVersionTimestamp())
 	}
-	if got.DeployedVersion() != (*svc).Status.DeployedVersion() {
-		t.Errorf("%s\nDeployedVersion db mismatch\nwant: %qgot:  %q",
-			packageName, (*svc).Status.DeployedVersion(), got.DeployedVersion())
+	if got.DeployedVersion() != svc.Status.DeployedVersion() {
+		t.Errorf("%s\nDeployedVersion db mismatch\nwant: %q\ngot:  %q",
+			packageName, svc.Status.DeployedVersion(), got.DeployedVersion())
 	}
-	if got.DeployedVersionTimestamp() != (*svc).Status.DeployedVersionTimestamp() {
-		t.Errorf("%s\nDeployedVersionTimestamp db mismatch\nwant: %qgot:  %q",
-			packageName, (*svc).Status.DeployedVersionTimestamp(), got.DeployedVersionTimestamp())
+	if got.DeployedVersionTimestamp() != svc.Status.DeployedVersionTimestamp() {
+		t.Errorf("%s\nDeployedVersionTimestamp db mismatch\nwant: %q\ngot:  %q",
+			packageName, svc.Status.DeployedVersionTimestamp(), got.DeployedVersionTimestamp())
 	}
-	if got.ApprovedVersion() != (*svc).Status.ApprovedVersion() {
-		t.Errorf("%s\nApprovedVersion db mismatch\nwant: %qgot:  %q",
-			packageName, (*svc).Status.ApprovedVersion(), got.ApprovedVersion())
+	if got.ApprovedVersion() != svc.Status.ApprovedVersion() {
+		t.Errorf("%s\nApprovedVersion db mismatch\nwant: %q\ngot:  %q",
+			packageName, svc.Status.ApprovedVersion(), got.ApprovedVersion())
 	}
 }
 

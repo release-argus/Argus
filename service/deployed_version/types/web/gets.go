@@ -22,7 +22,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
+// allowInvalidCerts returns whether invalid HTTPS certs are allowed.
 func (l *Lookup) allowInvalidCerts() bool {
 	return *util.FirstNonNilPtr(
 		l.AllowInvalidCerts,
@@ -30,15 +30,25 @@ func (l *Lookup) allowInvalidCerts() bool {
 		l.HardDefaults.AllowInvalidCerts)
 }
 
-// GetURL will return the URL of the Lookup.
-func (l *Lookup) url() string {
-	return util.EvalEnvVars(l.URL)
-}
-
-// GetBody will return the Body of the Lookup.
+// body returns the Body of the Lookup.
 func (l *Lookup) body() io.Reader {
 	if l.Body == "" {
 		return nil
 	}
 	return strings.NewReader(l.Body)
+}
+
+
+
+// method returns the method of the Lookup.
+func (l *Lookup) method() string {
+	return util.FirstNonDefault(
+		l.Method,
+		l.Defaults.Method,
+		l.HardDefaults.Method)
+}
+
+// url returns the URL of the Lookup.
+func (l *Lookup) url() string {
+	return util.EvalEnvVars(l.URL)
 }

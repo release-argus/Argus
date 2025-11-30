@@ -463,7 +463,7 @@ func (l *Lookup) getVersion(body []byte, page int, logFrom logutil.LogFrom) (str
 		}
 	}
 
-	return "", "", fmt.Errorf("no releases were found matching the require field(s)\n%w", firstErr)
+	return "", "", fmt.Errorf("no releases were found matching the require fields\n%w", firstErr)
 }
 
 // setReleases processes and stores the provided GitHub releases data.

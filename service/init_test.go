@@ -39,7 +39,7 @@ func TestService_IconURL(t *testing.T) {
 	tests := map[string]struct {
 		dashboardIcon string
 		want          string
-		notify        shoutrrr.Slice
+		notify        shoutrrr.Shoutrrrs
 	}{
 		"no dashboard.icon": {
 			want:          nilValue,
@@ -48,7 +48,7 @@ func TestService_IconURL(t *testing.T) {
 		"no icon anywhere": {
 			want:          nilValue,
 			dashboardIcon: "",
-			notify: shoutrrr.Slice{"test": {
+			notify: shoutrrr.Shoutrrrs{"test": {
 				Main:         &shoutrrr.Defaults{},
 				Defaults:     &shoutrrr.Defaults{},
 				HardDefaults: &shoutrrr.Defaults{},
@@ -64,7 +64,7 @@ func TestService_IconURL(t *testing.T) {
 		},
 		"notify icon only": {
 			want: "https://example.com/icon.png",
-			notify: shoutrrr.Slice{"test": shoutrrr.New(
+			notify: shoutrrr.Shoutrrrs{"test": shoutrrr.New(
 				nil, "", "",
 				nil, nil,
 				map[string]string{
@@ -76,7 +76,7 @@ func TestService_IconURL(t *testing.T) {
 		"notify icon takes precedence over emoji": {
 			want:          "https://example.com/icon.png",
 			dashboardIcon: ":smile:",
-			notify: shoutrrr.Slice{"test": shoutrrr.New(
+			notify: shoutrrr.Shoutrrrs{"test": shoutrrr.New(
 				nil, "", "",
 				nil, nil,
 				map[string]string{
@@ -88,7 +88,7 @@ func TestService_IconURL(t *testing.T) {
 		"dashboard icon takes precedence over notify icon": {
 			want:          "https://root.com/icon.png",
 			dashboardIcon: "https://root.com/icon.png",
-			notify: shoutrrr.Slice{"test": shoutrrr.New(
+			notify: shoutrrr.Shoutrrrs{"test": shoutrrr.New(
 				nil, "", "",
 				nil, nil,
 				map[string]string{
@@ -169,7 +169,7 @@ func TestService_Init(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				Notify: shoutrrr.Slice{
+				Notify: shoutrrr.Shoutrrrs{
 					"test": shoutrrr.New(
 						nil, "", "discord",
 						nil, nil,
@@ -195,7 +195,7 @@ func TestService_Init(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				Notify: shoutrrr.Slice{
+				Notify: shoutrrr.Shoutrrrs{
 					"baz": nil,
 					"foo": shoutrrr.New(
 						nil, "", "discord",
@@ -228,14 +228,14 @@ func TestService_Init(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				Notify: shoutrrr.Slice{
+				Notify: shoutrrr.Shoutrrrs{
 					"test": shoutrrr.New(
 						nil, "", "discord",
 						nil, nil, nil,
 						nil, nil, nil)},
-				Command: command.Slice{
+				Command: command.Commands{
 					{"ls"}},
-				WebHook: webhook.Slice{
+				WebHook: webhook.WebHooks{
 					"test": webhook_test.WebHook(false, false, false)}},
 		},
 		"service with notifies from defaults": {
@@ -266,7 +266,7 @@ func TestService_Init(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				Notify: shoutrrr.Slice{
+				Notify: shoutrrr.Shoutrrrs{
 					"test": &shoutrrr.Shoutrrr{}}},
 			defaults: &Defaults{
 				Notify: map[string]struct{}{
@@ -285,7 +285,7 @@ func TestService_Init(t *testing.T) {
 						nil, nil)
 				})},
 			defaults: &Defaults{
-				Command: command.Slice{
+				Command: command.Commands{
 					{"ls"}}},
 		},
 		"service with commands not from defaults": {
@@ -300,10 +300,10 @@ func TestService_Init(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				Command: command.Slice{
+				Command: command.Commands{
 					{"test"}}},
 			defaults: &Defaults{
-				Command: command.Slice{
+				Command: command.Commands{
 					{"ls"}}},
 		},
 		"service with webhooks from defaults": {
@@ -334,7 +334,7 @@ func TestService_Init(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				WebHook: webhook.Slice{
+				WebHook: webhook.WebHooks{
 					"test": webhook_test.WebHook(false, false, false)}},
 			defaults: &Defaults{
 				WebHook: map[string]struct{}{
@@ -352,12 +352,12 @@ func TestService_Init(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				Notify: shoutrrr.Slice{
+				Notify: shoutrrr.Shoutrrrs{
 					"test": &shoutrrr.Shoutrrr{}}},
 			defaults: &Defaults{
 				Notify: map[string]struct{}{
 					"foo": {}},
-				Command: command.Slice{
+				Command: command.Commands{
 					{"ls"}},
 				WebHook: map[string]struct{}{
 					"bar": {}}},
@@ -375,14 +375,14 @@ func TestService_Init(t *testing.T) {
 			hadName := tc.svc.Name
 			hadNotify := util.SortedKeys(tc.svc.Notify)
 			hadWebHook := util.SortedKeys(tc.svc.WebHook)
-			hadCommand := make(command.Slice, len(tc.svc.Command))
+			hadCommand := make(command.Commands, len(tc.svc.Command))
 			copy(hadCommand, tc.svc.Command)
 
 			// WHEN Init is called on it.
 			tc.svc.Init(
 				tc.defaults, &hardDefaults,
-				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
+				&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
+				&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 
 			// THEN the Name is set to the ID if not set.
 			if (hadName != "" && tc.svc.Name != hadName) || (hadName == "" && tc.svc.Name != tc.svc.ID) {
@@ -466,7 +466,7 @@ func TestService_Init(t *testing.T) {
 			}
 			wantCommand := hadCommand
 			if len(hadCommand) == 0 && tc.defaults != nil {
-				wantCommand = make(command.Slice, len(tc.defaults.Command))
+				wantCommand = make(command.Commands, len(tc.defaults.Command))
 				wantCommand = tc.defaults.Command
 			}
 			for i := range wantCommand {
@@ -544,60 +544,60 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			testCommand := command.Command{"ls"}
 			testNotify := shoutrrr_test.Shoutrrr(false, false)
 			testWebHook := webhook_test.WebHook(false, false, false)
-			service := &Service{
+			svc := &Service{
 				ID:                    "TestService_InitMetrics_ResetMetrics_DeleteMetrics--" + name,
 				LatestVersion:         testLatestVersion(t, "github", false),
 				DeployedVersionLookup: testDeployedVersionLookup(t, false),
-				Command: command.Slice{
+				Command: command.Commands{
 					testCommand},
-				Notify: shoutrrr.Slice{
+				Notify: shoutrrr.Shoutrrrs{
 					testNotify.ID: testNotify},
-				WebHook: webhook.Slice{
+				WebHook: webhook.WebHooks{
 					testWebHook.ID: testWebHook},
 			}
 
 			// Init the service.
-			service.Init(
+			svc.Init(
 				&Defaults{}, &Defaults{},
-				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
+				&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
+				&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
 			)
-			service.Status.SetLatestVersion("0.0.2", "", false)
-			service.Status.SetDeployedVersion("0.0.2", "", false)
+			svc.Status.SetLatestVersion("0.0.2", "", false)
+			svc.Status.SetDeployedVersion("0.0.2", "", false)
 
 			// nil the vars.
 			var deployedVersionType string
 			if tc.nilDeployedVersion {
-				service.DeployedVersionLookup = nil
+				svc.DeployedVersionLookup = nil
 			} else {
-				deployedVersionType = service.DeployedVersionLookup.GetType()
+				deployedVersionType = svc.DeployedVersionLookup.GetType()
 			}
 			if tc.nilCommand {
-				service.Command = nil
+				svc.Command = nil
 			}
 			if tc.nilNotify {
-				service.Notify = nil
+				svc.Notify = nil
 			}
 			if tc.nilWebHook {
-				service.WebHook = nil
+				svc.WebHook = nil
 			}
 
 			// metrics:
 			// 	latest_version_query_result_total.
 			latestVersionMetric := metric.LatestVersionIsDeployed.WithLabelValues(
-				service.ID)
+				svc.ID)
 			// 	deployed_version_query_result_last.
 			deployedVersionMetric := metric.DeployedVersionQueryResultLast.WithLabelValues(
-				service.ID, deployedVersionType)
+				svc.ID, deployedVersionType)
 			// 	command_result_total.
 			commandMetric := metric.CommandResultTotal.WithLabelValues(
-				testCommand.String(), "SUCCESS", service.ID)
+				testCommand.String(), "SUCCESS", svc.ID)
 			// 	notify_result_total.
 			notifyMetric := metric.NotifyResultTotal.WithLabelValues(
-				testNotify.ID, "SUCCESS", service.ID, testNotify.GetType())
+				testNotify.ID, "SUCCESS", svc.ID, testNotify.GetType())
 			// 	webhook_result_total.
 			webhookMetric := metric.WebHookResultTotal.WithLabelValues(
-				testWebHook.ID, "SUCCESS", service.ID)
+				testWebHook.ID, "SUCCESS", svc.ID)
 			// 	service_count_total.
 			serviceCountTotal := metric.ServiceCountCurrent
 			initialServiceCountCurrent := testutil.ToFloat64(serviceCountTotal)
@@ -605,7 +605,7 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			// #################################
 			// WHEN initMetrics is called on it.
 			// #################################
-			service.initMetrics()
+			svc.initMetrics()
 
 			// THEN the metrics are created:
 			want := float64(3)
@@ -670,24 +670,24 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			// ###################################
 			// WHEN deleteMetrics is called on it.
 			// ###################################
-			service.deleteMetrics()
+			svc.deleteMetrics()
 
 			// metrics:
 			// 	latest_version_is_deployed.
 			latestVersionMetric = metric.LatestVersionIsDeployed.WithLabelValues(
-				service.ID)
+				svc.ID)
 			// 	deployed_version_query_result_last.
 			deployedVersionMetric = metric.DeployedVersionQueryResultLast.WithLabelValues(
-				service.ID, deployedVersionType)
+				svc.ID, deployedVersionType)
 			// 	command_result_total.
 			commandMetric = metric.CommandResultTotal.WithLabelValues(
-				testCommand.String(), "SUCCESS", service.ID)
+				testCommand.String(), "SUCCESS", svc.ID)
 			// 	notify_result_total.
 			notifyMetric = metric.NotifyResultTotal.WithLabelValues(
-				testNotify.ID, "SUCCESS", service.ID, testNotify.GetType())
+				testNotify.ID, "SUCCESS", svc.ID, testNotify.GetType())
 			// 	webhook_result_total.
 			webhookMetric = metric.WebHookResultTotal.WithLabelValues(
-				testWebHook.ID, "SUCCESS", service.ID)
+				testWebHook.ID, "SUCCESS", svc.ID)
 
 			// THEN the metrics are deleted:
 			want = 0

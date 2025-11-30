@@ -31,7 +31,7 @@ func TestLookup_CheckValues(t *testing.T) {
 	type args struct {
 		url         *string
 		require     *filter.Require
-		urlCommands *filter.URLCommandSlice
+		urlCommands *filter.URLCommands
 	}
 	tests := map[string]struct {
 		errRegex string
@@ -65,7 +65,7 @@ func TestLookup_CheckValues(t *testing.T) {
 					- item_0:
 						type: "[^"]+" <invalid>.*$`),
 			args: args{
-				urlCommands: &filter.URLCommandSlice{{Type: "foo"}}},
+				urlCommands: &filter.URLCommands{{Type: "foo"}}},
 		},
 		"all errs": {
 			errRegex: test.TrimYAML(`
@@ -78,7 +78,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			args: args{
 				url:         test.StringPtr(""),
 				require:     &filter.Require{RegexContent: "[0-"},
-				urlCommands: &filter.URLCommandSlice{{Type: "foo"}}},
+				urlCommands: &filter.URLCommands{{Type: "foo"}}},
 		},
 	}
 

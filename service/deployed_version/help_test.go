@@ -67,12 +67,12 @@ func testLookup(lookupType string, failing bool) Lookup {
 		"", "",
 		"",
 		&dashboard.Options{})
-	dashboard := &dashboard.Options{
+	svcDashboard := &dashboard.Options{
 		WebURL: "https://example.com"}
 	svcStatus.Init(
 		0, 0, 0,
 		"serviceID", "", "",
-		dashboard)
+		svcDashboard)
 
 	lookup, _ := New(
 		lookupType,

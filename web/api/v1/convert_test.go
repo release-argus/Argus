@@ -149,9 +149,9 @@ func TestConvertAndCensorService(t *testing.T) {
 			want: &apitype.Service{
 				Options:       &apitype.ServiceOptions{},
 				LatestVersion: nil,
-				Command:       &apitype.CommandSlice{},
-				Notify:        &apitype.NotifySlice{},
-				WebHook:       &apitype.WebHookSlice{},
+				Command:       &apitype.Commands{},
+				Notify:        &apitype.Notifiers{},
+				WebHook:       &apitype.WebHooks{},
 				Dashboard:     &apitype.DashboardOptions{}},
 		},
 		"name ignored when no marshalName": {
@@ -164,9 +164,9 @@ func TestConvertAndCensorService(t *testing.T) {
 				Comment:       "Hi",
 				Options:       &apitype.ServiceOptions{},
 				LatestVersion: nil,
-				Command:       &apitype.CommandSlice{},
-				Notify:        &apitype.NotifySlice{},
-				WebHook:       &apitype.WebHookSlice{},
+				Command:       &apitype.Commands{},
+				Notify:        &apitype.Notifiers{},
+				WebHook:       &apitype.WebHooks{},
 				Dashboard:     &apitype.DashboardOptions{}},
 		},
 		"all fields": {
@@ -196,7 +196,7 @@ func TestConvertAndCensorService(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				Notify: shoutrrr.Slice{
+				Notify: shoutrrr.Shoutrrrs{
 					"gotify": shoutrrr.New(
 						nil,
 						"gotify",
@@ -206,9 +206,9 @@ func TestConvertAndCensorService(t *testing.T) {
 							"url": "http://gotify"},
 						nil,
 						nil, nil, nil)},
-				Command: command.Slice{
+				Command: command.Commands{
 					{"echo", "foo"}},
-				WebHook: webhook.Slice{
+				WebHook: webhook.WebHooks{
 					"test_wh": webhook.New(
 						test.BoolPtr(true),
 						nil, "", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
@@ -233,14 +233,14 @@ func TestConvertAndCensorService(t *testing.T) {
 				LatestVersion: &apitype.LatestVersion{
 					Type:        "github",
 					AccessToken: util.SecretValue,
-					URLCommands: &apitype.URLCommandSlice{}},
-				Command: &apitype.CommandSlice{
+					URLCommands: &apitype.URLCommands{}},
+				Command: &apitype.Commands{
 					{"echo", "foo"}},
-				Notify: &apitype.NotifySlice{
+				Notify: &apitype.Notifiers{
 					"gotify": &apitype.Notify{
 						URLFields: map[string]string{
 							"url": "http://gotify"}}},
-				WebHook: &apitype.WebHookSlice{
+				WebHook: &apitype.WebHooks{
 					"test_wh": &apitype.WebHook{
 						AllowInvalidCerts: test.BoolPtr(true)}},
 				DeployedVersionLookup: &apitype.DeployedVersionLookup{
@@ -617,44 +617,44 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 	}
 }
 
-func TestConvertURLCommandSlice(t *testing.T) {
-	// GIVEN a URL Command slice.
+func TestConvertURLCommands(t *testing.T) {
+	// GIVEN a list of URL Commands.
 	tests := map[string]struct {
-		slice *filter.URLCommandSlice
-		want  *apitype.URLCommandSlice
+		slice *filter.URLCommands
+		want  *apitype.URLCommands
 	}{
 		"nil": {
 			slice: nil,
 			want:  nil,
 		},
 		"empty": {
-			slice: &filter.URLCommandSlice{},
-			want:  &apitype.URLCommandSlice{},
+			slice: &filter.URLCommands{},
+			want:  &apitype.URLCommands{},
 		},
 		"regex": {
-			slice: &filter.URLCommandSlice{
+			slice: &filter.URLCommands{
 				{Type: "regex", Regex: "[0-9.]+"}},
-			want: &apitype.URLCommandSlice{
+			want: &apitype.URLCommands{
 				{Type: "regex", Regex: "[0-9.]+"}},
 		},
 		"replace": {
-			slice: &filter.URLCommandSlice{
+			slice: &filter.URLCommands{
 				{Type: "replace", Old: "foo", New: test.StringPtr("bar")}},
-			want: &apitype.URLCommandSlice{
+			want: &apitype.URLCommands{
 				{Type: "replace", Old: "foo", New: test.StringPtr("bar")}},
 		},
 		"split": {
-			slice: &filter.URLCommandSlice{
+			slice: &filter.URLCommands{
 				{Type: "split", Index: test.IntPtr(7)}},
-			want: &apitype.URLCommandSlice{
+			want: &apitype.URLCommands{
 				{Type: "split", Index: test.IntPtr(7)}},
 		},
 		"one of each": {
-			slice: &filter.URLCommandSlice{
+			slice: &filter.URLCommands{
 				{Type: "regex", Regex: "[0-9.]+"},
 				{Type: "replace", Old: "foo", New: test.StringPtr("bar")},
 				{Type: "split", Index: test.IntPtr(7)}},
-			want: &apitype.URLCommandSlice{
+			want: &apitype.URLCommands{
 				{Type: "regex", Regex: "[0-9.]+"},
 				{Type: "replace", Old: "foo", New: test.StringPtr("bar")},
 				{Type: "split", Index: test.IntPtr(7)}},
@@ -665,10 +665,10 @@ func TestConvertURLCommandSlice(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertURLCommandSlice is called on it.
-			got := convertURLCommandSlice(tc.slice)
+			// WHEN convertURLCommands is called on it.
+			got := convertURLCommands(tc.slice)
 
-			// THEN the WebHookSlice is converted correctly.
+			// THEN the WebHooks is converted correctly.
 			if got.String() != tc.want.String() {
 				t.Errorf("%s\nwant: %q\ngot:  %q",
 					packageName, tc.want.String(), got.String())
@@ -878,7 +878,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			// WHEN convertAndCensorDeployedVersionLookup is called on it.
 			got := convertAndCensorDeployedVersionLookup(tc.dvl)
 
-			// THEN the WebHookSlice is converted correctly.
+			// THEN the WebHooks is converted correctly.
 			if got.String() != tc.want.String() {
 				t.Errorf("%s\nwant: %q\ngot:  %q",
 					packageName, tc.want.String(), got.String())
@@ -891,22 +891,22 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 // Notify.
 //
 
-func TestConvertAndCensorNotifySliceDefaults(t *testing.T) {
-	// GIVEN a shoutrrr.SliceDefaults.
+func TestConvertAndCensorNotifierDefaults(t *testing.T) {
+	// GIVEN shoutrrr.ShoutrrrsDefaults.
 	tests := map[string]struct {
-		input *shoutrrr.SliceDefaults
-		want  *apitype.NotifySlice
+		input *shoutrrr.ShoutrrrsDefaults
+		want  *apitype.Notifiers
 	}{
 		"nil": {
 			input: nil,
 			want:  nil,
 		},
 		"empty": {
-			input: &shoutrrr.SliceDefaults{},
-			want:  &apitype.NotifySlice{},
+			input: &shoutrrr.ShoutrrrsDefaults{},
+			want:  &apitype.Notifiers{},
 		},
 		"one": {
-			input: &shoutrrr.SliceDefaults{
+			input: &shoutrrr.ShoutrrrsDefaults{
 				"test": shoutrrr.NewDefaults(
 					"discord",
 					map[string]string{
@@ -915,7 +915,7 @@ func TestConvertAndCensorNotifySliceDefaults(t *testing.T) {
 						"test": "2"},
 					map[string]string{
 						"test": "3"})},
-			want: &apitype.NotifySlice{
+			want: &apitype.Notifiers{
 				"test": {
 					Type: "discord",
 					Options: map[string]string{
@@ -926,7 +926,7 @@ func TestConvertAndCensorNotifySliceDefaults(t *testing.T) {
 						"test": "3"}}},
 		},
 		"multiple": {
-			input: &shoutrrr.SliceDefaults{
+			input: &shoutrrr.ShoutrrrsDefaults{
 				"test": shoutrrr.NewDefaults(
 					"discord",
 					map[string]string{
@@ -944,7 +944,7 @@ func TestConvertAndCensorNotifySliceDefaults(t *testing.T) {
 					map[string]string{
 						"devices": "censor this too",
 						"avatar":  "https://example.com"})},
-			want: &apitype.NotifySlice{
+			want: &apitype.Notifiers{
 				"test": {
 					Type: "discord",
 					Options: map[string]string{
@@ -969,8 +969,8 @@ func TestConvertAndCensorNotifySliceDefaults(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorNotifySliceDefaults is called.
-			got := convertAndCensorNotifySliceDefaults(tc.input)
+			// WHEN convertAndCensorNotifiersDefaults is called.
+			got := convertAndCensorNotifiersDefaults(tc.input)
 
 			// THEN the result should be as expected.
 			if got.String() != tc.want.String() {
@@ -981,22 +981,22 @@ func TestConvertAndCensorNotifySliceDefaults(t *testing.T) {
 	}
 }
 
-func TestConvertAndCensorNotifySlice(t *testing.T) {
-	// GIVEN a shoutrrr.Slice.
+func TestConvertAndCensorNotifiers(t *testing.T) {
+	// GIVEN shoutrrr.Shoutrrrs.
 	tests := map[string]struct {
-		input *shoutrrr.Slice
-		want  *apitype.NotifySlice
+		input *shoutrrr.Shoutrrrs
+		want  *apitype.Notifiers
 	}{
 		"nil": {
 			input: nil,
 			want:  nil,
 		},
 		"empty": {
-			input: &shoutrrr.Slice{},
-			want:  &apitype.NotifySlice{},
+			input: &shoutrrr.Shoutrrrs{},
+			want:  &apitype.Notifiers{},
 		},
 		"one": {
-			input: &shoutrrr.Slice{
+			input: &shoutrrr.Shoutrrrs{
 				"test": shoutrrr.New(
 					nil, "",
 					"discord",
@@ -1007,7 +1007,7 @@ func TestConvertAndCensorNotifySlice(t *testing.T) {
 					map[string]string{
 						"test": "3"},
 					nil, nil, nil)},
-			want: &apitype.NotifySlice{
+			want: &apitype.Notifiers{
 				"test": {
 					Type: "discord",
 					Options: map[string]string{
@@ -1018,7 +1018,7 @@ func TestConvertAndCensorNotifySlice(t *testing.T) {
 						"test": "3"}}},
 		},
 		"multiple": {
-			input: &shoutrrr.Slice{
+			input: &shoutrrr.Shoutrrrs{
 				"test": shoutrrr.New(
 					nil, "",
 					"discord",
@@ -1040,7 +1040,7 @@ func TestConvertAndCensorNotifySlice(t *testing.T) {
 						"devices": "censor this too",
 						"avatar":  "https://example.com"},
 					nil, nil, nil)},
-			want: &apitype.NotifySlice{
+			want: &apitype.Notifiers{
 				"test": {
 					Type: "discord",
 					Options: map[string]string{
@@ -1065,8 +1065,8 @@ func TestConvertAndCensorNotifySlice(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorNotifySlice is called.
-			got := convertAndCensorNotifySlice(tc.input)
+			// WHEN convertAndCensorNotifiers is called.
+			got := convertAndCensorNotifiers(tc.input)
 
 			// THEN the result should be as expected.
 			if got.String() != tc.want.String() {
@@ -1081,31 +1081,31 @@ func TestConvertAndCensorNotifySlice(t *testing.T) {
 // Command.
 //
 
-func TestConvertCommandSlice(t *testing.T) {
-	// GIVEN a Command slice.
+func TestConvertCommands(t *testing.T) {
+	// GIVEN Commands.
 	tests := map[string]struct {
-		slice *command.Slice
-		want  *apitype.CommandSlice
+		slice *command.Commands
+		want  *apitype.Commands
 	}{
 		"nil": {
 			slice: nil,
 			want:  nil,
 		},
 		"empty": {
-			slice: &command.Slice{},
-			want:  &apitype.CommandSlice{},
+			slice: &command.Commands{},
+			want:  &apitype.Commands{},
 		},
 		"one": {
-			slice: &command.Slice{
+			slice: &command.Commands{
 				{"ls", "-lah"}},
-			want: &apitype.CommandSlice{
+			want: &apitype.Commands{
 				{"ls", "-lah"}},
 		},
 		"two": {
-			slice: &command.Slice{
+			slice: &command.Commands{
 				{"ls", "-lah"},
 				{"/bin/bash", "something.sh"}},
-			want: &apitype.CommandSlice{
+			want: &apitype.Commands{
 				{"ls", "-lah"},
 				{"/bin/bash", "something.sh"}},
 		},
@@ -1115,10 +1115,10 @@ func TestConvertCommandSlice(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertCommandSlice is called on it.
-			got := convertCommandSlice(tc.slice)
+			// WHEN convertCommands is called on it.
+			got := convertCommands(tc.slice)
 
-			// THEN the CommandSlice is converted correctly.
+			// THEN the Commands is converted correctly.
 			if got == tc.want { // both nil.
 				return
 			}
@@ -1150,30 +1150,30 @@ func TestConvertCommandSlice(t *testing.T) {
 // WebHook.
 //
 
-func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
-	// GIVEN a webhook.SliceDefaults.
+func TestConvertAndCensorWebHooksDefaults(t *testing.T) {
+	// GIVEN webhook.WebHooksDefaults.
 	tests := map[string]struct {
-		input *webhook.SliceDefaults
-		want  *apitype.WebHookSlice
+		input *webhook.WebHooksDefaults
+		want  *apitype.WebHooks
 	}{
 		"nil": {
 			input: nil,
 			want:  nil,
 		},
 		"empty": {
-			input: &webhook.SliceDefaults{},
-			want:  &apitype.WebHookSlice{},
+			input: &webhook.WebHooksDefaults{},
+			want:  &apitype.WebHooks{},
 		},
 		"nil and empty elements": {
-			input: &webhook.SliceDefaults{
+			input: &webhook.WebHooksDefaults{
 				"test":  &webhook.Defaults{},
 				"other": nil},
-			want: &apitype.WebHookSlice{
+			want: &apitype.WebHooks{
 				"test":  {},
 				"other": nil},
 		},
 		"one": {
-			input: &webhook.SliceDefaults{
+			input: &webhook.WebHooksDefaults{
 				"test": webhook.NewDefaults(
 					nil,
 					&webhook.Headers{
@@ -1183,7 +1183,7 @@ func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
 					nil,
 					"github",
 					"https://example.com")},
-			want: &apitype.WebHookSlice{
+			want: &apitype.WebHooks{
 				"test": {
 					Type:   "github",
 					URL:    "https://example.com",
@@ -1192,7 +1192,7 @@ func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
 						{Key: "X-Test", Value: util.SecretValue}}}},
 		},
 		"multiple": {
-			input: &webhook.SliceDefaults{
+			input: &webhook.WebHooksDefaults{
 				"test": webhook.NewDefaults(
 					nil,
 					&webhook.Headers{
@@ -1206,7 +1206,7 @@ func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
 					nil, nil, "", nil, nil, "", nil,
 					"gitlab",
 					"https://release-argus.io")},
-			want: &apitype.WebHookSlice{
+			want: &apitype.WebHooks{
 				"test": {
 					Type:   "github",
 					URL:    "https://example.com",
@@ -1223,8 +1223,8 @@ func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorWebHookSliceDefaults is called.
-			got := convertAndCensorWebHookSliceDefaults(tc.input)
+			// WHEN convertAndCensorWebHooksDefaults is called.
+			got := convertAndCensorWebHooksDefaults(tc.input)
 
 			// THEN the result should be as expected.
 			if got.String() != tc.want.String() {
@@ -1235,22 +1235,22 @@ func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
 	}
 }
 
-func TestConvertAndCensorWebHookSlice(t *testing.T) {
-	// GIVEN a webhook.Slice.
+func TestConvertAndCensorWebHooks(t *testing.T) {
+	// GIVEN webhook.WebHooks.
 	tests := map[string]struct {
-		input *webhook.Slice
-		want  *apitype.WebHookSlice
+		input *webhook.WebHooks
+		want  *apitype.WebHooks
 	}{
 		"nil": {
 			input: nil,
 			want:  nil,
 		},
 		"empty": {
-			input: &webhook.Slice{},
-			want:  &apitype.WebHookSlice{},
+			input: &webhook.WebHooks{},
+			want:  &apitype.WebHooks{},
 		},
 		"one": {
-			input: &webhook.Slice{
+			input: &webhook.WebHooks{
 				"test": webhook.New(
 					nil,
 					&webhook.Headers{
@@ -1262,7 +1262,7 @@ func TestConvertAndCensorWebHookSlice(t *testing.T) {
 					"github",
 					"https://example.com",
 					nil, nil, nil)},
-			want: &apitype.WebHookSlice{
+			want: &apitype.WebHooks{
 				"test": {
 					Type:   "github",
 					URL:    "https://example.com",
@@ -1271,7 +1271,7 @@ func TestConvertAndCensorWebHookSlice(t *testing.T) {
 						{Key: "X-Test", Value: util.SecretValue}}}},
 		},
 		"multiple": {
-			input: &webhook.Slice{
+			input: &webhook.WebHooks{
 				"test": webhook.New(
 					nil,
 					&webhook.Headers{
@@ -1289,7 +1289,7 @@ func TestConvertAndCensorWebHookSlice(t *testing.T) {
 					"gitlab",
 					"https://release-argus.io",
 					nil, nil, nil)},
-			want: &apitype.WebHookSlice{
+			want: &apitype.WebHooks{
 				"test": {
 					Type:   "github",
 					URL:    "https://example.com",
@@ -1306,8 +1306,8 @@ func TestConvertAndCensorWebHookSlice(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertAndCensorWebHookSlice is called.
-			got := convertAndCensorWebHookSlice(tc.input)
+			// WHEN convertAndCensorWebHooks is called.
+			got := convertAndCensorWebHooks(tc.input)
 
 			// THEN the result should be as expected.
 			if got.String() != tc.want.String() {

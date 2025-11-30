@@ -82,10 +82,10 @@ func FromPayload(
 
 	serviceDefaults, serviceHardDefaults *Defaults,
 
-	notifyGlobals *shoutrrr.SliceDefaults,
-	notifyDefaults, notifyHardDefaults *shoutrrr.SliceDefaults,
+	notifyGlobals *shoutrrr.ShoutrrrsDefaults,
+	notifyDefaults, notifyHardDefaults *shoutrrr.ShoutrrrsDefaults,
 
-	webhookGlobals *webhook.SliceDefaults,
+	webhookGlobals *webhook.WebHooksDefaults,
 	webhookDefaults, webhookHardDefaults *webhook.Defaults,
 
 	logFrom logutil.LogFrom,
@@ -179,7 +179,7 @@ func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion deployedver.Look
 }
 
 // giveSecretsNotify from the `oldNotifies`.
-func (s *Service) giveSecretsNotify(oldNotifies shoutrrr.Slice, secretRefs map[string]shared.OldStringIndex) {
+func (s *Service) giveSecretsNotify(oldNotifies shoutrrr.Shoutrrrs, secretRefs map[string]shared.OldStringIndex) {
 	//nolint:typecheck
 	if len(s.Notify) == 0 || len(oldNotifies) == 0 ||
 		len(secretRefs) == 0 {
@@ -208,7 +208,7 @@ func (s *Service) giveSecretsNotify(oldNotifies shoutrrr.Slice, secretRefs map[s
 }
 
 // giveSecretsWebHook from the `oldWebHooks`.
-func (s *Service) giveSecretsWebHook(oldWebHooks webhook.Slice, secretRefs map[string]shared.WHSecretRef) {
+func (s *Service) giveSecretsWebHook(oldWebHooks webhook.WebHooks, secretRefs map[string]shared.WHSecretRef) {
 	//nolint:typecheck
 	if s.WebHook == nil || oldWebHooks == nil ||
 		len(secretRefs) == 0 {
@@ -366,7 +366,7 @@ func removeDefaults(oldService, newService *Service, d *Defaults) {
 		if len(defaultNotifiers) != len(usingNotifiers) {
 			notifyDefaults = false
 		} else {
-			// Check whether the Notifier(s) have changed.
+			// Check whether the Notifiers have changed.
 			for i, notify := range usingNotifiers {
 				// Name has changed or now has values that override the defaults.
 				if defaultNotifiers[i] != notify ||
@@ -387,7 +387,7 @@ func removeDefaults(oldService, newService *Service, d *Defaults) {
 		if len(newService.Command) != len(d.Command) {
 			commandDefaults = false
 		} else {
-			// Check whether the Command(s) have changed.
+			// Check whether the Commands have changed.
 			for i, command := range d.Command {
 				if newService.Command[i].FormattedString() != command.FormattedString() {
 					commandDefaults = false
@@ -409,7 +409,7 @@ func removeDefaults(oldService, newService *Service, d *Defaults) {
 		if len(defaultWebHooks) != len(usingWebHooks) {
 			webhookDefaults = false
 		} else {
-			// Check whether the WebHook(s) have changed.
+			// Check whether the WebHooks have changed.
 			for i, wh := range usingWebHooks {
 				// Name has changed or now has values that override the defaults.
 				if defaultWebHooks[i] != wh || newService.WebHook[wh].String() != fmt.Sprintf("type: %s\n", newService.WebHook[wh].Type) {

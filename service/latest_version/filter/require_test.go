@@ -85,14 +85,14 @@ func TestRequire_Init(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			status := status.Status{}
-			dashboard := &dashboard.Options{
+			svcStatus := status.Status{}
+			svcDashboard := &dashboard.Options{
 				WebURL: "https://example.com"}
-			status.Init(
+			svcStatus.Init(
 				0, 0, 0,
 				"test", "", "",
-				dashboard)
-			status.SetDeployedVersion("1.2.3", "", false)
+				svcDashboard)
+			svcStatus.SetDeployedVersion("1.2.3", "", false)
 			defaults := RequireDefaults{
 				Docker: *NewDockerCheckDefaults(
 					"ghcr",
@@ -102,7 +102,7 @@ func TestRequire_Init(t *testing.T) {
 					nil)}
 
 			// WHEN Init is called with it.
-			tc.req.Init(&status, &defaults)
+			tc.req.Init(&svcStatus, &defaults)
 
 			// THEN the global JLog is set to its address.
 			if tc.req == nil {
@@ -113,9 +113,9 @@ func TestRequire_Init(t *testing.T) {
 				}
 			} else {
 				// THEN the status is given to the Require.
-				if tc.req.Status != &status {
+				if tc.req.Status != &svcStatus {
 					t.Fatalf("%s\nStatus should be the address of the var given to it\nwant: %v\ngot:  %v",
-						packageName, &status, tc.req.Status)
+						packageName, &svcStatus, tc.req.Status)
 				}
 				// AND the DockerCheck remains nil if it was initially.
 				if !tc.wantDockerCheck {

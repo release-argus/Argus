@@ -34,7 +34,7 @@ import (
 )
 
 func TestDefaults_String(t *testing.T) {
-	// GIVEN a Defaults.
+	// GIVEN Defaults.
 	tests := map[string]struct {
 		defaults *Defaults
 		want     string
@@ -77,7 +77,7 @@ func TestDefaults_String(t *testing.T) {
 						AllowInvalidCerts: test.BoolPtr(false)},
 					Dashboard: dashboard.NewOptionsDefaults(
 						test.BoolPtr(true))},
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"discord": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
@@ -210,7 +210,7 @@ func TestDefaults_Default(t *testing.T) {
 func TestDefaults_MapEnvToStruct(t *testing.T) {
 	var unmodifiedDefaults Defaults
 	unmodifiedDefaults.Default()
-	// GIVEN a defaults and a bunch of env vars.
+	// GIVEN Defaults and a bunch of env vars.
 	test := map[string]struct {
 		env      map[string]string
 		want     *Defaults
@@ -326,9 +326,9 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		},
 		"notify.discord": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_DISCORD_OPTIONS_MESSAGE":      "bish",
-				"ARGUS_NOTIFY_DISCORD_OPTIONS_MAX_TRIES":    "1",
 				"ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY":        "1h",
+				"ARGUS_NOTIFY_DISCORD_OPTIONS_MAX_TRIES":    "1",
+				"ARGUS_NOTIFY_DISCORD_OPTIONS_MESSAGE":      "bish",
 				"ARGUS_NOTIFY_DISCORD_URL_FIELDS_TOKEN":     "foo",
 				"ARGUS_NOTIFY_DISCORD_URL_FIELDS_WEBHOOKID": "bar",
 				"ARGUS_NOTIFY_DISCORD_PARAMS_AVATAR":        ":argus:",
@@ -343,13 +343,13 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_DISCORD_PARAMS_USERNAME":      "test",
 			},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"discord": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "bish",
+							"delay":     "1h",
 							"max_tries": "1",
-							"delay":     "1h"},
+							"message":   "bish"},
 						map[string]string{
 							"token":     "foo",
 							"webhookid": "bar"},
@@ -369,7 +369,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			env: map[string]string{
 				"ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY": "foo"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"discord": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
@@ -378,72 +378,30 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY: "foo" <invalid> .+`),
 		},
-		"notify.smtp": {
-			env: map[string]string{
-				"ARGUS_NOTIFY_SMTP_OPTIONS_MESSAGE":     "bing",
-				"ARGUS_NOTIFY_SMTP_OPTIONS_MAX_TRIES":   "2",
-				"ARGUS_NOTIFY_SMTP_OPTIONS_DELAY":       "2m",
-				"ARGUS_NOTIFY_SMTP_URL_FIELDS_USERNAME": "user",
-				"ARGUS_NOTIFY_SMTP_URL_FIELDS_PASSWORD": "secret",
-				"ARGUS_NOTIFY_SMTP_URL_FIELDS_HOST":     "smtp.example.com",
-				"ARGUS_NOTIFY_SMTP_URL_FIELDS_PORT":     "25",
-				"ARGUS_NOTIFY_SMTP_PARAMS_FROMADDRESS":  "me@example.com",
-				"ARGUS_NOTIFY_SMTP_PARAMS_TOADDRESSES":  "you@somewhere.com",
-				"ARGUS_NOTIFY_SMTP_PARAMS_AUTH":         "Unknown",
-				"ARGUS_NOTIFY_SMTP_PARAMS_CLIENTHOST":   "localhost",
-				"ARGUS_NOTIFY_SMTP_PARAMS_ENCRYPTION":   "auto",
-				"ARGUS_NOTIFY_SMTP_PARAMS_FROMNAME":     "someone",
-				"ARGUS_NOTIFY_SMTP_PARAMS_SUBJECT":      "Argus SMTP Notification",
-				"ARGUS_NOTIFY_SMTP_PARAMS_USEHTML":      "no",
-				"ARGUS_NOTIFY_SMTP_PARAMS_USESTARTTLS":  "yes"},
-			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
-					"smtp": shoutrrr.NewDefaults(
-						"",
-						map[string]string{
-							"message":   "bing",
-							"max_tries": "2",
-							"delay":     "2m"},
-						map[string]string{
-							"username": "user",
-							"password": "secret",
-							"host":     "smtp.example.com",
-							"port":     "25"},
-						map[string]string{
-							"fromaddress": "me@example.com",
-							"toaddresses": "you@somewhere.com",
-							"auth":        "Unknown",
-							"clienthost":  "localhost",
-							"encryption":  "auto",
-							"fromname":    "someone",
-							"subject":     "Argus SMTP Notification",
-							"usehtml":     "no",
-							"usestarttls": "yes"})}},
-		},
 		"notify.gotify": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_GOTIFY_OPTIONS_MESSAGE":   "shazam",
-				"ARGUS_NOTIFY_GOTIFY_OPTIONS_MAX_TRIES": "3",
 				"ARGUS_NOTIFY_GOTIFY_OPTIONS_DELAY":     "3s",
+				"ARGUS_NOTIFY_GOTIFY_OPTIONS_MAX_TRIES": "3",
+				"ARGUS_NOTIFY_GOTIFY_OPTIONS_MESSAGE":   "shazam",
 				"ARGUS_NOTIFY_GOTIFY_URL_FIELDS_HOST":   "gotify.example.com",
-				"ARGUS_NOTIFY_GOTIFY_URL_FIELDS_PORT":   "443",
 				"ARGUS_NOTIFY_GOTIFY_URL_FIELDS_PATH":   "gotify",
+				"ARGUS_NOTIFY_GOTIFY_URL_FIELDS_PORT":   "443",
 				"ARGUS_NOTIFY_GOTIFY_URL_FIELDS_TOKEN":  "SuperSecretToken",
 				"ARGUS_NOTIFY_GOTIFY_PARAMS_DISABLETLS": "no",
 				"ARGUS_NOTIFY_GOTIFY_PARAMS_PRIORITY":   "0",
 				"ARGUS_NOTIFY_GOTIFY_PARAMS_TITLE":      "Argus Gotify Notification"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"gotify": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "shazam",
+							"delay":     "3s",
 							"max_tries": "3",
-							"delay":     "3s"},
+							"message":   "shazam"},
 						map[string]string{
 							"host":  "gotify.example.com",
-							"port":  "443",
 							"path":  "gotify",
+							"port":  "443",
 							"token": "SuperSecretToken"},
 						map[string]string{
 							"disabletls": "no",
@@ -452,27 +410,27 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		},
 		"notify.googlechat": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_GOOGLECHAT_OPTIONS_MESSAGE":   "whoosh",
-				"ARGUS_NOTIFY_GOOGLECHAT_OPTIONS_MAX_TRIES": "4",
 				"ARGUS_NOTIFY_GOOGLECHAT_OPTIONS_DELAY":     "4h",
+				"ARGUS_NOTIFY_GOOGLECHAT_OPTIONS_MAX_TRIES": "4",
+				"ARGUS_NOTIFY_GOOGLECHAT_OPTIONS_MESSAGE":   "whoosh",
 				"ARGUS_NOTIFY_GOOGLECHAT_URL_FIELDS_RAW":    "chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"googlechat": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "whoosh",
+							"delay":     "4h",
 							"max_tries": "4",
-							"delay":     "4h"},
+							"message":   "whoosh"},
 						map[string]string{
 							"raw": "chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz"},
 						nil)}},
 		},
 		"notify.ifttt": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_IFTTT_OPTIONS_MESSAGE":          "pow",
-				"ARGUS_NOTIFY_IFTTT_OPTIONS_MAX_TRIES":        "5",
 				"ARGUS_NOTIFY_IFTTT_OPTIONS_DELAY":            "5m",
+				"ARGUS_NOTIFY_IFTTT_OPTIONS_MAX_TRIES":        "5",
+				"ARGUS_NOTIFY_IFTTT_OPTIONS_MESSAGE":          "pow",
 				"ARGUS_NOTIFY_IFTTT_URL_FIELDS_WEBHOOKID":     "secretWHID",
 				"ARGUS_NOTIFY_IFTTT_PARAMS_EVENTS":            "event1,event2",
 				"ARGUS_NOTIFY_IFTTT_PARAMS_TITLE":             "Argus IFTTT Notification",
@@ -482,13 +440,13 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_IFTTT_PARAMS_VALUE2":            "bash",
 				"ARGUS_NOTIFY_IFTTT_PARAMS_VALUE3":            "bosh"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"ifttt": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "pow",
+							"delay":     "5m",
 							"max_tries": "5",
-							"delay":     "5m"},
+							"message":   "pow"},
 						map[string]string{
 							"webhookid": "secretWHID"},
 						map[string]string{
@@ -502,21 +460,21 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		},
 		"notify.join": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_JOIN_OPTIONS_MESSAGE":   "pew",
-				"ARGUS_NOTIFY_JOIN_OPTIONS_MAX_TRIES": "6",
 				"ARGUS_NOTIFY_JOIN_OPTIONS_DELAY":     "6s",
+				"ARGUS_NOTIFY_JOIN_OPTIONS_MAX_TRIES": "6",
+				"ARGUS_NOTIFY_JOIN_OPTIONS_MESSAGE":   "pew",
 				"ARGUS_NOTIFY_JOIN_URL_FIELDS_APIKEY": "apiKey",
 				"ARGUS_NOTIFY_JOIN_PARAMS_DEVICES":    "device1,device2",
 				"ARGUS_NOTIFY_JOIN_PARAMS_ICON":       "example.com/icon.png",
 				"ARGUS_NOTIFY_JOIN_PARAMS_TITLE":      "Argus Join Notification"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"join": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "pew",
+							"delay":     "6s",
 							"max_tries": "6",
-							"delay":     "6s"},
+							"message":   "pew"},
 						map[string]string{
 							"apikey": "apiKey"},
 						map[string]string{
@@ -526,63 +484,63 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		},
 		"notify.mattermost": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_MATTERMOST_OPTIONS_MESSAGE":     "ping",
-				"ARGUS_NOTIFY_MATTERMOST_OPTIONS_MAX_TRIES":   "7",
 				"ARGUS_NOTIFY_MATTERMOST_OPTIONS_DELAY":       "7h",
-				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_USERNAME": "Argus",
-				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_HOST":     "mattermost.example.com",
-				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_PORT":     "443",
-				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_PATH":     "mattermost",
-				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_TOKEN":    "mattermostToken",
+				"ARGUS_NOTIFY_MATTERMOST_OPTIONS_MAX_TRIES":   "7",
+				"ARGUS_NOTIFY_MATTERMOST_OPTIONS_MESSAGE":     "ping",
 				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_CHANNEL":  "argus",
+				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_HOST":     "mattermost.example.com",
+				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_PATH":     "mattermost",
+				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_PORT":     "443",
+				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_TOKEN":    "mattermostToken",
+				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_USERNAME": "Argus",
 				"ARGUS_NOTIFY_MATTERMOST_PARAMS_ICON":         ":argus:",
 				"ARGUS_NOTIFY_MATTERMOST_PARAMS_TITLE":        "Argus Mattermost Notification"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"mattermost": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "ping",
+							"delay":     "7h",
 							"max_tries": "7",
-							"delay":     "7h"},
+							"message":   "ping"},
 						map[string]string{
-							"username": "Argus",
+							"channel":  "argus",
 							"host":     "mattermost.example.com",
-							"port":     "443",
 							"path":     "mattermost",
+							"port":     "443",
 							"token":    "mattermostToken",
-							"channel":  "argus"},
+							"username": "Argus"},
 						map[string]string{
 							"icon":  ":argus:",
 							"title": "Argus Mattermost Notification"})}},
 		},
 		"notify.matrix": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_MATRIX_OPTIONS_MESSAGE":     "pong",
-				"ARGUS_NOTIFY_MATRIX_OPTIONS_MAX_TRIES":   "8",
 				"ARGUS_NOTIFY_MATRIX_OPTIONS_DELAY":       "8m",
-				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_USER":     "argus",
+				"ARGUS_NOTIFY_MATRIX_OPTIONS_MAX_TRIES":   "8",
+				"ARGUS_NOTIFY_MATRIX_OPTIONS_MESSAGE":     "pong",
 				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_HOST":     "matrix.example.com",
-				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_PORT":     "443",
-				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_PATH":     "matrix",
 				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_PASSWORD": "matrixPassword",
+				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_PATH":     "matrix",
+				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_PORT":     "443",
+				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_USER":     "argus",
 				"ARGUS_NOTIFY_MATRIX_PARAMS_DISABLETLS":   "no",
 				"ARGUS_NOTIFY_MATRIX_PARAMS_ROOMS":        "room1,room2",
 				"ARGUS_NOTIFY_MATRIX_PARAMS_TITLE":        "Argus Matrix Notification"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"matrix": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "pong",
+							"delay":     "8m",
 							"max_tries": "8",
-							"delay":     "8m"},
+							"message":   "pong"},
 						map[string]string{
-							"user":     "argus",
 							"host":     "matrix.example.com",
-							"port":     "443",
+							"password": "matrixPassword",
 							"path":     "matrix",
-							"password": "matrixPassword"},
+							"port":     "443",
+							"user":     "argus"},
 						map[string]string{
 							"disabletls": "no",
 							"rooms":      "room1,room2",
@@ -590,13 +548,13 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		},
 		"notify.opsgenie": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_OPSGENIE_OPTIONS_MESSAGE":    "pang",
-				"ARGUS_NOTIFY_OPSGENIE_OPTIONS_MAX_TRIES":  "9",
 				"ARGUS_NOTIFY_OPSGENIE_OPTIONS_DELAY":      "9s",
-				"ARGUS_NOTIFY_OPSGENIE_URL_FIELDS_HOST":    "opsgenie.example.com",
-				"ARGUS_NOTIFY_OPSGENIE_URL_FIELDS_PORT":    "443",
-				"ARGUS_NOTIFY_OPSGENIE_URL_FIELDS_PATH":    "opsgenie",
+				"ARGUS_NOTIFY_OPSGENIE_OPTIONS_MAX_TRIES":  "9",
+				"ARGUS_NOTIFY_OPSGENIE_OPTIONS_MESSAGE":    "pang",
 				"ARGUS_NOTIFY_OPSGENIE_URL_FIELDS_APIKEY":  "opsGenieApiKey",
+				"ARGUS_NOTIFY_OPSGENIE_URL_FIELDS_HOST":    "opsgenie.example.com",
+				"ARGUS_NOTIFY_OPSGENIE_URL_FIELDS_PATH":    "opsgenie",
+				"ARGUS_NOTIFY_OPSGENIE_URL_FIELDS_PORT":    "443",
 				"ARGUS_NOTIFY_OPSGENIE_PARAMS_ACTIONS":     "action1,action2",
 				"ARGUS_NOTIFY_OPSGENIE_PARAMS_ALIAS":       "argus",
 				"ARGUS_NOTIFY_OPSGENIE_PARAMS_DESCRIPTION": "Argus OpsGenie DESC",
@@ -611,18 +569,18 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_OPSGENIE_PARAMS_USER":        "argus",
 				"ARGUS_NOTIFY_OPSGENIE_PARAMS_VISIBLETO":   "visible1,visible2"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"opsgenie": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "pang",
+							"delay":     "9s",
 							"max_tries": "9",
-							"delay":     "9s"},
+							"message":   "pang"},
 						map[string]string{
+							"apikey": "opsGenieApiKey",
 							"host":   "opsgenie.example.com",
-							"port":   "443",
 							"path":   "opsgenie",
-							"apikey": "opsGenieApiKey"},
+							"port":   "443"},
 						map[string]string{
 							"actions":     "action1,action2",
 							"alias":       "argus",
@@ -640,44 +598,44 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		},
 		"notify.pushbullet": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_PUSHBULLET_OPTIONS_MESSAGE":    "pung",
-				"ARGUS_NOTIFY_PUSHBULLET_OPTIONS_MAX_TRIES":  "10",
 				"ARGUS_NOTIFY_PUSHBULLET_OPTIONS_DELAY":      "10h",
-				"ARGUS_NOTIFY_PUSHBULLET_URL_FIELDS_TOKEN":   "pushbulletToken",
+				"ARGUS_NOTIFY_PUSHBULLET_OPTIONS_MAX_TRIES":  "10",
+				"ARGUS_NOTIFY_PUSHBULLET_OPTIONS_MESSAGE":    "pung",
 				"ARGUS_NOTIFY_PUSHBULLET_URL_FIELDS_TARGETS": "target1,target2",
+				"ARGUS_NOTIFY_PUSHBULLET_URL_FIELDS_TOKEN":   "pushbulletToken",
 				"ARGUS_NOTIFY_PUSHBULLET_PARAMS_TITLE":       "Argus Pushbullet Notification"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"pushbullet": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "pung",
+							"delay":     "10h",
 							"max_tries": "10",
-							"delay":     "10h"},
+							"message":   "pung"},
 						map[string]string{
-							"token":   "pushbulletToken",
-							"targets": "target1,target2"},
+							"targets": "target1,target2",
+							"token":   "pushbulletToken"},
 						map[string]string{
 							"title": "Argus Pushbullet Notification"})}},
 		},
 		"notify.pushover": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_PUSHOVER_OPTIONS_MESSAGE":   "pung",
-				"ARGUS_NOTIFY_PUSHOVER_OPTIONS_MAX_TRIES": "11",
 				"ARGUS_NOTIFY_PUSHOVER_OPTIONS_DELAY":     "11m",
+				"ARGUS_NOTIFY_PUSHOVER_OPTIONS_MAX_TRIES": "11",
+				"ARGUS_NOTIFY_PUSHOVER_OPTIONS_MESSAGE":   "pung",
 				"ARGUS_NOTIFY_PUSHOVER_URL_FIELDS_TOKEN":  "pushoverToken",
 				"ARGUS_NOTIFY_PUSHOVER_URL_FIELDS_USER":   "pushoverUser",
 				"ARGUS_NOTIFY_PUSHOVER_PARAMS_DEVICES":    "device1,device2",
 				"ARGUS_NOTIFY_PUSHOVER_PARAMS_PRIORITY":   "0",
 				"ARGUS_NOTIFY_PUSHOVER_PARAMS_TITLE":      "Argus Pushbullet Notification"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"pushover": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "pung",
+							"delay":     "11m",
 							"max_tries": "11",
-							"delay":     "11m"},
+							"message":   "pung"},
 						map[string]string{
 							"token": "pushoverToken",
 							"user":  "pushoverUser"},
@@ -688,39 +646,39 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		},
 		"notify.rocketchat": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_ROCKETCHAT_OPTIONS_MESSAGE":     "pung",
-				"ARGUS_NOTIFY_ROCKETCHAT_OPTIONS_MAX_TRIES":   "12",
 				"ARGUS_NOTIFY_ROCKETCHAT_OPTIONS_DELAY":       "12s",
-				"ARGUS_NOTIFY_ROCKETCHAT_URL_FIELDS_USERNAME": "rocketchatUser",
+				"ARGUS_NOTIFY_ROCKETCHAT_OPTIONS_MAX_TRIES":   "12",
+				"ARGUS_NOTIFY_ROCKETCHAT_OPTIONS_MESSAGE":     "pung",
+				"ARGUS_NOTIFY_ROCKETCHAT_URL_FIELDS_CHANNEL":  "rocketchatChannel",
 				"ARGUS_NOTIFY_ROCKETCHAT_URL_FIELDS_HOST":     "rocketchat.example.com",
 				"ARGUS_NOTIFY_ROCKETCHAT_URL_FIELDS_PORT":     "443",
 				"ARGUS_NOTIFY_ROCKETCHAT_URL_FIELDS_PATH":     "rocketchat",
 				"ARGUS_NOTIFY_ROCKETCHAT_URL_FIELDS_TOKENA":   "FIRST_token",
 				"ARGUS_NOTIFY_ROCKETCHAT_URL_FIELDS_TOKENB":   "SECOND_token",
-				"ARGUS_NOTIFY_ROCKETCHAT_URL_FIELDS_CHANNEL":  "rocketchatChannel"},
+				"ARGUS_NOTIFY_ROCKETCHAT_URL_FIELDS_USERNAME": "rocketchatUser"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"rocketchat": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "pung",
+							"delay":     "12s",
 							"max_tries": "12",
-							"delay":     "12s"},
+							"message":   "pung"},
 						map[string]string{
-							"username": "rocketchatUser",
+							"channel":  "rocketchatChannel",
 							"host":     "rocketchat.example.com",
-							"port":     "443",
 							"path":     "rocketchat",
+							"port":     "443",
 							"tokena":   "FIRST_token",
 							"tokenb":   "SECOND_token",
-							"channel":  "rocketchatChannel"},
+							"username": "rocketchatUser"},
 						nil)}},
 		},
 		"notify.slack": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_SLACK_OPTIONS_MESSAGE":    "slung",
-				"ARGUS_NOTIFY_SLACK_OPTIONS_MAX_TRIES":  "13",
 				"ARGUS_NOTIFY_SLACK_OPTIONS_DELAY":      "13h",
+				"ARGUS_NOTIFY_SLACK_OPTIONS_MAX_TRIES":  "13",
+				"ARGUS_NOTIFY_SLACK_OPTIONS_MESSAGE":    "slung",
 				"ARGUS_NOTIFY_SLACK_URL_FIELDS_TOKEN":   "slackToken",
 				"ARGUS_NOTIFY_SLACK_URL_FIELDS_CHANNEL": "somewhere",
 				"ARGUS_NOTIFY_SLACK_PARAMS_BOTNAME":     "Argus",
@@ -729,16 +687,16 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_SLACK_PARAMS_THREADTS":    "1234567890.123456",
 				"ARGUS_NOTIFY_SLACK_PARAMS_TITLE":       "Argus Slack Notification"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"slack": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "slung",
+							"delay":     "13h",
 							"max_tries": "13",
-							"delay":     "13h"},
+							"message":   "slung"},
 						map[string]string{
-							"token":   "slackToken",
-							"channel": "somewhere"},
+							"channel": "somewhere",
+							"token":   "slackToken"},
 						map[string]string{
 							"botname":  "Argus",
 							"color":    "%23ff8000",
@@ -746,11 +704,53 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 							"threadts": "1234567890.123456",
 							"title":    "Argus Slack Notification"})}},
 		},
+		"notify.smtp": {
+			env: map[string]string{
+				"ARGUS_NOTIFY_SMTP_OPTIONS_DELAY":       "2m",
+				"ARGUS_NOTIFY_SMTP_OPTIONS_MAX_TRIES":   "2",
+				"ARGUS_NOTIFY_SMTP_OPTIONS_MESSAGE":     "bing",
+				"ARGUS_NOTIFY_SMTP_URL_FIELDS_HOST":     "smtp.example.com",
+				"ARGUS_NOTIFY_SMTP_URL_FIELDS_PASSWORD": "secret",
+				"ARGUS_NOTIFY_SMTP_URL_FIELDS_PORT":     "25",
+				"ARGUS_NOTIFY_SMTP_URL_FIELDS_USERNAME": "user",
+				"ARGUS_NOTIFY_SMTP_PARAMS_AUTH":         "Unknown",
+				"ARGUS_NOTIFY_SMTP_PARAMS_CLIENTHOST":   "localhost",
+				"ARGUS_NOTIFY_SMTP_PARAMS_ENCRYPTION":   "auto",
+				"ARGUS_NOTIFY_SMTP_PARAMS_FROMADDRESS":  "me@example.com",
+				"ARGUS_NOTIFY_SMTP_PARAMS_FROMNAME":     "someone",
+				"ARGUS_NOTIFY_SMTP_PARAMS_SUBJECT":      "Argus SMTP Notification",
+				"ARGUS_NOTIFY_SMTP_PARAMS_TOADDRESSES":  "you@somewhere.com",
+				"ARGUS_NOTIFY_SMTP_PARAMS_USEHTML":      "no",
+				"ARGUS_NOTIFY_SMTP_PARAMS_USESTARTTLS":  "yes"},
+			want: &Defaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
+					"smtp": shoutrrr.NewDefaults(
+						"",
+						map[string]string{
+							"delay":     "2m",
+							"max_tries": "2",
+							"message":   "bing"},
+						map[string]string{
+							"host":     "smtp.example.com",
+							"password": "secret",
+							"port":     "25",
+							"username": "user"},
+						map[string]string{
+							"auth":        "Unknown",
+							"clienthost":  "localhost",
+							"encryption":  "Auto",
+							"fromaddress": "me@example.com",
+							"fromname":    "someone",
+							"subject":     "Argus SMTP Notification",
+							"toaddresses": "you@somewhere.com",
+							"usehtml":     "no",
+							"usestarttls": "yes"})}},
+		},
 		"notify.teams": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_TEAMS_OPTIONS_MESSAGE":       "hi",
-				"ARGUS_NOTIFY_TEAMS_OPTIONS_MAX_TRIES":     "14",
 				"ARGUS_NOTIFY_TEAMS_OPTIONS_DELAY":         "14m",
+				"ARGUS_NOTIFY_TEAMS_OPTIONS_MAX_TRIES":     "14",
+				"ARGUS_NOTIFY_TEAMS_OPTIONS_MESSAGE":       "hi",
 				"ARGUS_NOTIFY_TEAMS_URL_FIELDS_GROUP":      "teamsGroup",
 				"ARGUS_NOTIFY_TEAMS_URL_FIELDS_TENANT":     "tenant",
 				"ARGUS_NOTIFY_TEAMS_URL_FIELDS_ALTID":      "otherID?",
@@ -759,18 +759,18 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_TEAMS_PARAMS_HOST":           "teams.example.com",
 				"ARGUS_NOTIFY_TEAMS_PARAMS_TITLE":          "Argus Teams Notification"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"teams": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
+							"delay":     "14m",
 							"message":   "hi",
-							"max_tries": "14",
-							"delay":     "14m"},
+							"max_tries": "14"},
 						map[string]string{
-							"group":      "teamsGroup",
-							"tenant":     "tenant",
 							"altid":      "otherID?",
-							"groupowner": "owner"},
+							"group":      "teamsGroup",
+							"groupowner": "owner",
+							"tenant":     "tenant"},
 						map[string]string{
 							"color": "#ff8000",
 							"host":  "teams.example.com",
@@ -778,9 +778,9 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		},
 		"notify.telegram": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_TELEGRAM_OPTIONS_MESSAGE":     "tong",
-				"ARGUS_NOTIFY_TELEGRAM_OPTIONS_MAX_TRIES":   "15",
 				"ARGUS_NOTIFY_TELEGRAM_OPTIONS_DELAY":       "15s",
+				"ARGUS_NOTIFY_TELEGRAM_OPTIONS_MAX_TRIES":   "15",
+				"ARGUS_NOTIFY_TELEGRAM_OPTIONS_MESSAGE":     "tong",
 				"ARGUS_NOTIFY_TELEGRAM_URL_FIELDS_TOKEN":    "telegramToken",
 				"ARGUS_NOTIFY_TELEGRAM_PARAMS_CHATS":        "chat1,chat2",
 				"ARGUS_NOTIFY_TELEGRAM_PARAMS_NOTIFICATION": "yes",
@@ -788,13 +788,13 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_TELEGRAM_PARAMS_PREVIEW":      "yes",
 				"ARGUS_NOTIFY_TELEGRAM_PARAMS_TITLE":        "Argus Telegram Notification"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"telegram": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "tong",
+							"delay":     "15s",
 							"max_tries": "15",
-							"delay":     "15s"},
+							"message":   "tong"},
 						map[string]string{
 							"token": "telegramToken"},
 						map[string]string{
@@ -806,9 +806,9 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		},
 		"notify.zulip": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_ZULIP_OPTIONS_MESSAGE":    "hiya",
-				"ARGUS_NOTIFY_ZULIP_OPTIONS_MAX_TRIES":  "16",
 				"ARGUS_NOTIFY_ZULIP_OPTIONS_DELAY":      "16h",
+				"ARGUS_NOTIFY_ZULIP_OPTIONS_MAX_TRIES":  "16",
+				"ARGUS_NOTIFY_ZULIP_OPTIONS_MESSAGE":    "hiya",
 				"ARGUS_NOTIFY_ZULIP_URL_FIELDS_BOTMAIL": "botmail",
 				"ARGUS_NOTIFY_ZULIP_URL_FIELDS_BOTKEY":  "botkey",
 				"ARGUS_NOTIFY_ZULIP_URL_FIELDS_HOST":    "zulip.example.com",
@@ -817,19 +817,19 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_ZULIP_PARAMS_STREAM":      "stream",
 				"ARGUS_NOTIFY_ZULIP_PARAMS_TOPIC":       "topic"},
 			want: &Defaults{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"zulip": shoutrrr.NewDefaults(
 						"",
 						map[string]string{
-							"message":   "hiya",
+							"delay":     "16h",
 							"max_tries": "16",
-							"delay":     "16h"},
+							"message":   "hiya"},
 						map[string]string{
-							"botmail": "botmail",
 							"botkey":  "botkey",
+							"botmail": "botmail",
 							"host":    "zulip.example.com",
-							"port":    "1234",
-							"path":    "zulip"},
+							"path":    "zulip",
+							"port":    "1234"},
 						map[string]string{
 							"stream": "stream",
 							"topic":  "topic"})}},
@@ -920,10 +920,10 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 					DeployedVersionLookup: deployedver_base.Defaults{}}}
 			if tc.want == nil {
 				tc.want = &Defaults{
-					Notify: shoutrrr.SliceDefaults{}}
+					Notify: shoutrrr.ShoutrrrsDefaults{}}
 			}
 			if tc.want.Notify != nil {
-				defaults.Notify = shoutrrr.SliceDefaults{}
+				defaults.Notify = shoutrrr.ShoutrrrsDefaults{}
 				for notifyType := range unmodifiedDefaults.Notify {
 					defaults.Notify[notifyType] = shoutrrr.NewDefaults(
 						"",
@@ -1031,7 +1031,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 								type: "pizza" <invalid>.*$`),
 		},
 		"Notify.x.Delay": {
-			input: &Defaults{Notify: shoutrrr.SliceDefaults{
+			input: &Defaults{Notify: shoutrrr.ShoutrrrsDefaults{
 				"slack": shoutrrr.NewDefaults(
 					"",
 					map[string]string{"delay": "10x"},
@@ -1095,7 +1095,7 @@ func TestDefaults_Print(t *testing.T) {
 	}{
 		"unmodified hard defaults": {
 			input: &defaults,
-			lines: 164 + len(defaults.Notify)},
+			lines: 165 + len(defaults.Notify)},
 		"empty defaults": {
 			input: &Defaults{},
 			lines: 1},

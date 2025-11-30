@@ -50,11 +50,7 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 			serviceNotifyDefaults[notify] = struct{}{}
 		}
 	}
-	serviceCommandDefaults := make(apitype.CommandSlice, len(api.Config.Defaults.Service.Command))
-	for i, command := range api.Config.Defaults.Service.Command {
-		serviceCommandDefaults[i] = make(apitype.Command, len(command))
-		copy(serviceCommandDefaults[i], command)
-	}
+	serviceCommandDefaults := convertCommands(&api.Config.Defaults.Service.Command)
 
 	var serviceDefaults map[string]struct{}
 	if api.Config.Defaults.Service.WebHook != nil {
@@ -64,7 +60,7 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	notifyDefaults := convertAndCensorNotifySliceDefaults(&api.Config.Defaults.Notify)
+	notifyDefaults := convertAndCensorNotifiersDefaults(&api.Config.Defaults.Notify)
 	webhookDefaults := convertAndCensorWebHookDefaults(&api.Config.Defaults.WebHook)
 
 	cfg.Defaults = &apitype.Defaults{
@@ -88,18 +84,18 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 		WebHook: *webhookDefaults}
 
 	// Notify
-	cfg.Notify = convertAndCensorNotifySliceDefaults(&api.Config.Notify)
+	cfg.Notify = convertAndCensorNotifiersDefaults(&api.Config.Notify)
 
 	// WebHook
-	cfg.WebHook = convertAndCensorWebHookSliceDefaults(&api.Config.WebHook)
+	cfg.WebHook = convertAndCensorWebHooksDefaults(&api.Config.WebHook)
 
 	// Service
 	api.Config.OrderMutex.RLock()
-	serviceConfig := make(apitype.ServiceSlice, len(api.Config.Order))
+	serviceConfig := make(apitype.Services, len(api.Config.Order))
 	if api.Config.Service != nil {
 		for _, key := range api.Config.Order {
-			service := api.Config.Service[key]
-			serviceConfig[key] = convertAndCensorService(service)
+			svc := api.Config.Service[key]
+			serviceConfig[key] = convertAndCensorService(svc)
 		}
 	}
 	cfg.Service = &serviceConfig

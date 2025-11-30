@@ -51,9 +51,9 @@ func TestHTTP_Config(t *testing.T) {
 	tests := map[string]struct {
 		settings *config.Settings
 		defaults *config.Defaults
-		notify   *shoutrrr.SliceDefaults
-		webhook  *webhook.SliceDefaults
-		service  *service.Slice
+		notify   *shoutrrr.ShoutrrrsDefaults
+		webhook  *webhook.WebHooksDefaults
+		service  *service.Services
 		order    *[]string
 		wantBody string
 	}{
@@ -168,7 +168,7 @@ func TestHTTP_Config(t *testing.T) {
 								nil)}},
 					Notify: map[string]struct{}{
 						"n1": {}},
-					Command: command.Slice{
+					Command: command.Commands{
 						{"command", "arg1", "arg2"}},
 					WebHook: map[string]struct{}{
 						"wh1": {},
@@ -231,7 +231,7 @@ func TestHTTP_Config(t *testing.T) {
 				}`,
 		},
 		"3. settings + defaults (with notify+command+webhook service defaults) + notify": {
-			notify: &shoutrrr.SliceDefaults{
+			notify: &shoutrrr.ShoutrrrsDefaults{
 				"foo": shoutrrr.NewDefaults(
 					"gotify",
 					map[string]string{
@@ -309,7 +309,7 @@ func TestHTTP_Config(t *testing.T) {
 				}`,
 		},
 		"4. settings + defaults (with notify+command+webhook service defaults) + notify + webhook": {
-			webhook: &webhook.SliceDefaults{
+			webhook: &webhook.WebHooksDefaults{
 				"foo": webhook.NewDefaults(
 					test.BoolPtr(true),
 					&webhook.Headers{
@@ -398,7 +398,7 @@ func TestHTTP_Config(t *testing.T) {
 				}`,
 		},
 		"5. settings + defaults (with notify+command+webhook service defaults) + notify + webhook + service": {
-			service: &service.Slice{
+			service: &service.Services{
 				"alpha": &service.Service{
 					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
 						return latestver.New(
@@ -544,9 +544,9 @@ func TestHTTP_Config(t *testing.T) {
 	}
 	api.Config.Settings = config.Settings{}
 	api.Config.Defaults = config.Defaults{}
-	api.Config.Notify = shoutrrr.SliceDefaults{}
-	api.Config.WebHook = webhook.SliceDefaults{}
-	api.Config.Service = service.Slice{}
+	api.Config.Notify = shoutrrr.ShoutrrrsDefaults{}
+	api.Config.WebHook = webhook.WebHooksDefaults{}
+	api.Config.Service = service.Services{}
 	api.Config.Order = []string{}
 
 	for _, name := range order {

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 // Package webhook provides WebHook functionality to services.
 package webhook
 
-// Default sets this Defaults to the default values.
+// Default sets these Defaults to the default values.
 func (d *Defaults) Default() {
 	// type
 	d.Type = "github"

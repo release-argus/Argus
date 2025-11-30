@@ -16,12 +16,12 @@ package shared
 
 // OldIntIndex to look at for any SecretValues used.
 type OldIntIndex struct {
-	OldIndex *int `json:"oldIndex,omitempty"`
+	OldIndex *int `json:"old_index,omitempty"`
 }
 
 // OldStringIndex to look at for any SecretValues used.
 type OldStringIndex struct {
-	OldIndex string `json:"oldIndex,omitempty"`
+	OldIndex string `json:"old_index,omitempty"`
 }
 
 // DVSecretRef contains the reference for the DeployedVersionLookup SecretValues.
@@ -31,6 +31,6 @@ type DVSecretRef struct {
 
 // WHSecretRef contains the reference for the WebHook SecretValues.
 type WHSecretRef struct {
-	OldIndex      string        `json:"oldIndex,omitempty"`
+	OldIndex      string        `json:"old_index,omitempty"`
 	CustomHeaders []OldIntIndex `json:"custom_headers,omitempty"`
 }

@@ -34,9 +34,9 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Send sends a notification with the given title and message to all Shoutrrrs in the Slice.
+// Send sends a notification with the given title and message to all Shoutrrrs in the Shoutrrrs.
 // It attempts to send each message up to max_tries times until they succeed or fail.
-func (s *Slice) Send(
+func (s *Shoutrrrs) Send(
 	title, message string,
 	serviceInfo serviceinfo.ServiceInfo,
 	useDelay bool,

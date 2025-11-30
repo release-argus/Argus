@@ -1307,7 +1307,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 	api := testAPI(file)
 	t.Cleanup(func() { os.Remove(file) })
 	validNotify := shoutrrr_test.Shoutrrr(false, false)
-	api.Config.Notify = shoutrrr.SliceDefaults{}
+	api.Config.Notify = shoutrrr.ShoutrrrsDefaults{}
 	options := util.CopyMap(validNotify.Options)
 	params := util.CopyMap(validNotify.Params)
 	urlFields := util.CopyMap(validNotify.URLFields)

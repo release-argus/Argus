@@ -113,7 +113,7 @@ func NewDockerCheckDefaults(
 	return dockerCheckDefaults
 }
 
-// Default sets this DockerCheckDefaults to the default values.
+// Default sets these DockerCheckDefaults to the default values.
 func (d *DockerCheckDefaults) Default() {
 	d.Type = "hub"
 }
@@ -159,8 +159,8 @@ func (d *DockerCheckDefaults) CheckValues(prefix string) error {
 	}
 
 	if d.Type != "" && !util.Contains(dockerCheckTypes, d.Type) {
-		return fmt.Errorf("%stype: %q <invalid> (supported types = [%v])",
-			prefix, d.Type, strings.Join(dockerCheckTypes, ","))
+		return fmt.Errorf("%stype: %q <invalid> (supported types = ['%s'])",
+			prefix, d.Type, strings.Join(dockerCheckTypes, "', '"))
 	}
 
 	return nil
@@ -277,12 +277,12 @@ func (d *DockerCheck) CheckValues(prefix string) error {
 	var errs []error
 	if d.Type != "" {
 		if !util.Contains(dockerCheckTypes, d.Type) {
-			errs = append(errs, fmt.Errorf("%stype: %q <invalid> (supported types = [%v])",
-				prefix, d.Type, strings.Join(dockerCheckTypes, ",")))
+			errs = append(errs, fmt.Errorf("%stype: %q <invalid> (supported types = ['%s'])",
+				prefix, d.Type, strings.Join(dockerCheckTypes, "', '")))
 		}
 	} else if d.GetType() == "" {
-		errs = append(errs, fmt.Errorf("%stype: <required> (supported types = %v)",
-			prefix, strings.Join(dockerCheckTypes, ",")))
+		errs = append(errs, fmt.Errorf("%stype: <required> (supported types = ['%s'])",
+			prefix, strings.Join(dockerCheckTypes, "', '")))
 	}
 
 	// Image
@@ -560,7 +560,7 @@ func (d *DockerCheck) getUsername() string {
 	return d.Defaults.getUsername()
 }
 
-// CopyQueryToken will return a copy of the queryToken along with the validUntil time.
+// CopyQueryToken returns a copy of the queryToken along with the validUntil time.
 func (d *DockerCheck) CopyQueryToken() (string, time.Time) {
 	if d == nil {
 		return "", time.Time{}

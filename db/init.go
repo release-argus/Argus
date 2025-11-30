@@ -125,7 +125,7 @@ func (api *api) initialise() {
 func (api *api) removeUnknownServices() {
 	// ? for each service.
 	servicePlaceholders := strings.Repeat("?,", len(api.config.Order))
-	servicePlaceholders = servicePlaceholders[:len(servicePlaceholders)-1]
+	servicePlaceholders = strings.TrimSuffix(servicePlaceholders, ",")
 
 	// SQL statement to remove unknown services.
 	//#nosec G201 -- servicePlaceholders is safe.

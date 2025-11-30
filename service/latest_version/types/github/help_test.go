@@ -101,14 +101,14 @@ func testLookup(failing bool) *Lookup {
 	announceChannel := make(chan []byte, 24)
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
-	status := status.New(
+	svcStatus := status.New(
 		&announceChannel, &databaseChannel, &saveChannel,
 		"",
 		"", "",
 		"", "",
 		"",
 		&dashboard.Options{})
-	status.Init(
+	svcStatus.Init(
 		0, 0, 0,
 		"serviceID", "", "",
 		&dashboard.Options{
@@ -122,7 +122,7 @@ func testLookup(failing bool) *Lookup {
 						regex: '[0-9.]+'
 			`),
 		options,
-		status,
+		svcStatus,
 		defaults, hardDefaults)
 	if failing {
 		lookup.AccessToken = "invalid"
@@ -130,7 +130,7 @@ func testLookup(failing bool) *Lookup {
 
 	lookup.Init(
 		options,
-		status,
+		svcStatus,
 		defaults, hardDefaults)
 
 	return lookup

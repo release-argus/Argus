@@ -51,6 +51,8 @@ func UnmarshalConfig(
 		rawData = v
 	case string:
 		rawData = []byte(v)
+	case *string:
+		rawData = []byte(*v)
 	case *yaml.Node:
 		return v.Decode(to) //nolint:wrapcheck
 	case json.RawMessage:

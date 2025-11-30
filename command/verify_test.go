@@ -59,9 +59,9 @@ func TestCommand_CheckValues(t *testing.T) {
 }
 
 func TestCommandSlice_CheckValues(t *testing.T) {
-	// GIVEN a Slice.
+	// GIVEN a Commands.
 	tests := map[string]struct {
-		slice    *Slice
+		slice    *Commands
 		errRegex string
 	}{
 		"nil slice": {
@@ -69,13 +69,13 @@ func TestCommandSlice_CheckValues(t *testing.T) {
 			slice:    nil},
 		"valid slice": {
 			errRegex: `^$`,
-			slice: &Slice{
+			slice: &Commands{
 				{"ls", "-la"}}},
 		"invalid templating": {
 			errRegex: test.TrimYAML(`
 				^item_1: .+ \(.+\) <invalid>.*
 				item_3: .+ \(.+\) <invalid>.*$`),
-			slice: &Slice{
+			slice: &Commands{
 				{"ls"},
 				{"ls", "-la", "{{ version }"},
 				{"ls"},

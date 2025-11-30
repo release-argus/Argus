@@ -44,7 +44,7 @@ export const handleNotifications = (
 				case 'NEW':
 					toast.info(serviceName, {
 						description: `New version: ${serviceData.status?.latest_version ?? 'Unknown'}`,
-						duration: 30000,
+						duration: 15000, // 15 seconds.
 					});
 					break;
 				case 'UPDATED':
@@ -52,7 +52,7 @@ export const handleNotifications = (
 						description: `Updated to version '${
 							serviceData.status?.deployed_version ?? 'Unknown'
 						}'`,
-						duration: 30000,
+						duration: 15000, // 15 seconds.
 					});
 					break;
 				case 'INIT':
@@ -60,7 +60,7 @@ export const handleNotifications = (
 						description: `Service initialised with version '${
 							serviceData.status?.deployed_version ?? 'Unknown'
 						}'`,
-						duration: 5000,
+						duration: 5000, // 5 seconds.
 					});
 					break;
 				case 'ACTION':
@@ -71,7 +71,7 @@ export const handleNotifications = (
 								description: `Skipped version: ${serviceData.status.approved_version.slice(
 									'SKIP_'.length,
 								)}`,
-								duration: 30000,
+								duration: 15000, // 15 seconds.
 							});
 					}
 					break;

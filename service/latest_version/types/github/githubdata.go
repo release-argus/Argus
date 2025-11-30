@@ -175,7 +175,7 @@ func (g *Data) hasReleases() bool {
 	return len(g.releases) > 0
 }
 
-// Copy will return a copy of the ETag, and Releases for the Data.
+// Copy returns a copy of the ETag, and Releases for the Data.
 func (g *Data) Copy() *Data {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()

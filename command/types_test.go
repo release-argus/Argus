@@ -57,10 +57,10 @@ func TestController_CopyFailsFrom(t *testing.T) {
 		},
 		"doesn't copy to new commands": {
 			from: &Controller{
-				Command: &Slice{
+				Command: &Commands{
 					{"ls", "-la"}}},
 			to: &Controller{
-				Command: &Slice{
+				Command: &Commands{
 					{"ls", "-lah"}}},
 			fromFails: []*bool{
 				test.BoolPtr(true)},
@@ -71,10 +71,10 @@ func TestController_CopyFailsFrom(t *testing.T) {
 		},
 		"does copy to retained commands": {
 			from: &Controller{
-				Command: &Slice{
+				Command: &Commands{
 					{"ls", "-lah"}}},
 			to: &Controller{
-				Command: &Slice{
+				Command: &Commands{
 					{"ls", "-lah"}}},
 			fromFails: []*bool{
 				test.BoolPtr(true)},
@@ -87,11 +87,11 @@ func TestController_CopyFailsFrom(t *testing.T) {
 		},
 		"does copy to reordered retained commands": {
 			from: &Controller{
-				Command: &Slice{
+				Command: &Commands{
 					{"false"},
 					{"ls", "-lah"}}},
 			to: &Controller{
-				Command: &Slice{
+				Command: &Commands{
 					{"ls", "-lah"}}},
 			fromFails: []*bool{
 				test.BoolPtr(true),

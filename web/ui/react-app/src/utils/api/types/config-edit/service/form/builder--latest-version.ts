@@ -455,11 +455,19 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 	});
 
 	// Defaults for the schema.
-	const schemaDataDefaults = latestVersionLookupSchemaDefault.parse({
-		...combinedDefaults,
-		require: requireSchemaDataDefaults,
-		type: typeDefault,
-		url_commands: urlCommandsSchemaDataDefaults,
+	const schemaDataDefaults = safeParse({
+		data: {
+			...combinedDefaults,
+			require: requireSchemaDataDefaults,
+			type: typeDefault,
+			url_commands: urlCommandsSchemaDataDefaults,
+		},
+		fallback: {
+			require: requireSchemaDataDefaults,
+			type: typeDefault,
+		},
+		path: path,
+		schema: latestVersionLookupSchemaDefault,
 	});
 
 	return {

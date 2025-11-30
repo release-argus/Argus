@@ -492,14 +492,14 @@ func TestService_Track(t *testing.T) {
 			}
 			latestVersionTimestamp := svc.Status.LatestVersionTimestamp()
 			deployedVersionTimestamp := svc.Status.DeployedVersionTimestamp()
-			shoutrrrHardDefaults := shoutrrr.SliceDefaults{}
+			shoutrrrHardDefaults := shoutrrr.ShoutrrrsDefaults{}
 			shoutrrrHardDefaults.Default()
 			webhookHardDefaults := webhook.Defaults{}
 			webhookHardDefaults.Default()
 			svc.Init(
 				svc.Defaults, svc.HardDefaults,
-				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrrHardDefaults,
-				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhookHardDefaults)
+				&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrrHardDefaults,
+				&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhookHardDefaults)
 			didFinish := make(chan bool, 1)
 
 			// WHEN Track is called on it.
@@ -615,7 +615,7 @@ func TestService_Track(t *testing.T) {
 }
 
 func TestSlice_Track(t *testing.T) {
-	// GIVEN a Slice.
+	// GIVEN a Services.
 	tests := map[string]struct {
 		ordering []string
 		slice    []string
@@ -631,9 +631,9 @@ func TestSlice_Track(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		var slice *Slice
+		var slice *Services
 		if len(tc.slice) != 0 {
-			slice = &Slice{}
+			slice = &Services{}
 			i := 0
 			for _, j := range tc.slice {
 				switch j {
@@ -662,18 +662,18 @@ func TestSlice_Track(t *testing.T) {
 			for i := range *slice {
 				if !util.Contains(tc.ordering, i) {
 					if wantLatestVersion := ""; (*slice)[i].Status.LatestVersion() != wantLatestVersion {
-						t.Fatalf("%s\nQuery on Slice[%q] shouldn't have updated LatestVersion as not in ordering\nwant: %q\ngot:  %q\norder: %v",
+						t.Fatalf("%s\nQuery on Services[%q] shouldn't have updated LatestVersion as not in ordering\nwant: %q\ngot:  %q\norder: %v",
 							packageName, i,
 							wantLatestVersion, (*slice)[i].Status.String(),
 							tc.ordering)
 					}
 				} else if (*slice)[i].Options.GetActive() {
 					if (*slice)[i].Status.LatestVersion() == "" {
-						t.Fatalf("%s\nQuery on Slice[%q] didn't find LatestVersion\nwant: %s\ngot:  %q",
+						t.Fatalf("%s\nQuery on Services[%q] didn't find LatestVersion\nwant: %s\ngot:  %q",
 							packageName, i, (*slice)[i].Status.String(), "")
 					}
 				} else if (*slice)[i].Status.LatestVersion() != "" {
-					t.Fatalf("%s\nQuery on Slice[%q] shouldn't have updated LatestVersion\nwant: %q\ngot:  %q",
+					t.Fatalf("%s\nQuery on Services[%q] shouldn't have updated LatestVersion\nwant: %q\ngot:  %q",
 						packageName, i, "", (*slice)[i].Status.String())
 				}
 

@@ -22,7 +22,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// accessToken will return the GitHub API access token.
+// accessToken returns the GitHub API access token.
 func (l *Lookup) accessToken() string {
 	return util.FirstNonDefaultWithEnv(
 		l.AccessToken,
@@ -30,7 +30,7 @@ func (l *Lookup) accessToken() string {
 		l.HardDefaults.AccessToken)
 }
 
-// url will return a GitHub API URL for the repository.
+// url returns a GitHub API URL for the repository.
 func (l *Lookup) url(page int) string {
 	url := util.EvalEnvVars(l.URL)
 	// Convert "owner/repo" to the API path.
@@ -78,7 +78,7 @@ func (l *Lookup) ServiceURL() string {
 	return serviceURL
 }
 
-// GetGitHubData will return the GitHub data. (For tests).
+// GetGitHubData returns the GitHub data. (For tests).
 func (l *Lookup) GetGitHubData() *Data {
 	return &l.data
 }

@@ -24,27 +24,27 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
-	metric "github.com/release-argus/Argus/web/metric"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestSlice_Metrics(t *testing.T) {
-	// GIVEN a Slice.
+	// GIVEN a WebHooks.
 	tests := map[string]struct {
-		slice *Slice
+		slice *WebHooks
 	}{
 		"nil": {
 			slice: nil},
 		"empty": {
-			slice: &Slice{}},
+			slice: &WebHooks{}},
 		"with one": {
-			slice: &Slice{
+			slice: &WebHooks{
 				"foo": &WebHook{
 					Main: &Defaults{}}}},
 		"no Main, no metrics": {
-			slice: &Slice{
+			slice: &WebHooks{
 				"foo": &WebHook{}}},
 		"multiple": {
-			slice: &Slice{
+			slice: &WebHooks{
 				"bish": &WebHook{
 					Main: &Defaults{}},
 				"bash": &WebHook{
@@ -123,7 +123,7 @@ func TestWebHook_Metrics(t *testing.T) {
 			}
 			if (gotC - hadC) != wantC {
 				t.Errorf("%s\nmetric count mismatch after initMetrics()\nwant: %d\ngot:  %d",
-					packageName, wantC, (gotC - hadC))
+					packageName, wantC, gotC-hadC)
 			}
 
 			// AND it can be deleted.
@@ -140,11 +140,11 @@ func TestWebHook_Metrics(t *testing.T) {
 func TestWebHook_Init(t *testing.T) {
 	// GIVEN a WebHook and vars for the Init.
 	webhook := testWebHook(true, false, false)
-	var notifiers shoutrrr.Slice
+	var notifiers shoutrrr.Shoutrrrs
 	var main Defaults
 	var defaults, hardDefaults Defaults
-	status := status.Status{}
-	status.Init(
+	svcStatus := status.Status{}
+	svcStatus.Init(
 		0, 0, 1,
 		"TestInit", "", "",
 		&dashboard.Options{
@@ -152,7 +152,7 @@ func TestWebHook_Init(t *testing.T) {
 
 	// WHEN Init is called on it.
 	webhook.Init(
-		&status,
+		&svcStatus,
 		&main, &defaults, &hardDefaults,
 		&notifiers,
 		webhook.ParentInterval)
@@ -175,9 +175,9 @@ func TestWebHook_Init(t *testing.T) {
 			packageName, &hardDefaults, webhook.HardDefaults)
 	}
 	// 	Status:
-	if webhook.ServiceStatus != &status {
+	if webhook.ServiceStatus != &svcStatus {
 		t.Errorf("%s\nStatus was not handed to the WebHook correctly\nwant: %v\ngot:  %v",
-			packageName, &status, webhook.ServiceStatus)
+			packageName, &svcStatus, webhook.ServiceStatus)
 	}
 	// 	Options:
 	if webhook.Notifiers.Shoutrrr != &notifiers {
@@ -187,45 +187,45 @@ func TestWebHook_Init(t *testing.T) {
 }
 
 func TestSlice_Init(t *testing.T) {
-	// GIVEN a Slice and vars for the Init.
-	var notifiers shoutrrr.Slice
+	// GIVEN a WebHooks and vars for the Init.
+	var notifiers shoutrrr.Shoutrrrs
 	tests := map[string]struct {
-		slice                  *Slice
+		slice                  *WebHooks
 		nilSlice               bool
-		mains                  *SliceDefaults
+		mains                  *WebHooksDefaults
 		defaults, hardDefaults *Defaults
 	}{
 		"nil slice": {
 			slice: nil, nilSlice: true,
 		},
 		"empty slice": {
-			slice: &Slice{},
+			slice: &WebHooks{},
 		},
 		"no mains": {
-			slice: &Slice{
+			slice: &WebHooks{
 				"fail": testWebHook(true, false, false),
 				"pass": testWebHook(false, false, false)},
 		},
 		"slice with nil element and matching main": {
-			slice: &Slice{
+			slice: &WebHooks{
 				"fail": nil},
-			mains: &SliceDefaults{
+			mains: &WebHooksDefaults{
 				"fail": testDefaults(false, false)},
 		},
 		"have matching mains": {
-			slice: &Slice{
+			slice: &WebHooks{
 				"fail": testWebHook(true, false, false),
 				"pass": testWebHook(false, false, false)},
-			mains: &SliceDefaults{
+			mains: &WebHooksDefaults{
 				"fail": testDefaults(false, false),
 				"pass": testDefaults(true, false),
 			},
 		},
 		"some matching mains": {
-			slice: &Slice{
+			slice: &WebHooks{
 				"fail": testWebHook(true, false, false),
 				"pass": testWebHook(false, false, false)},
-			mains: &SliceDefaults{
+			mains: &WebHooksDefaults{
 				"other": testDefaults(false, false),
 				"pass":  testDefaults(true, false)},
 		},

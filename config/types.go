@@ -26,16 +26,16 @@ import (
 
 // Config for Argus.
 type Config struct {
-	File         string                 `yaml:"-"`                  // Path to the config file (--config.file='').
-	Settings     Settings               `yaml:"settings,omitempty"` // Settings for the program.
-	HardDefaults Defaults               `yaml:"-"`                  // Hardcoded default values for the various parameters.
-	Defaults     Defaults               `yaml:"defaults,omitempty"` // Default values for the various parameters.
-	Notify       shoutrrr.SliceDefaults `yaml:"notify,omitempty"`   // Shoutrrr messages to send on a new release.
-	WebHook      webhook.SliceDefaults  `yaml:"webhook,omitempty"`  // WebHooks to send on a new release.
+	File         string                     `yaml:"-"`                  // Path to the config file (--config.file='').
+	Settings     Settings                   `yaml:"settings,omitempty"` // Settings for the program.
+	HardDefaults Defaults                   `yaml:"-"`                  // Hardcoded default values for the various parameters.
+	Defaults     Defaults                   `yaml:"defaults,omitempty"` // Default values for the various parameters.
+	Notify       shoutrrr.ShoutrrrsDefaults `yaml:"notify,omitempty"`   // Shoutrrr messages to send on a new release.
+	WebHook      webhook.WebHooksDefaults   `yaml:"webhook,omitempty"`  // WebHooks to send on a new release.
 
-	OrderMutex sync.RWMutex  `yaml:"-"`                 // Mutex for the Order/Service slice.
-	Order      []string      `yaml:"-"`                 // Ordered slice of all Services.
-	Service    service.Slice `yaml:"service,omitempty"` // The services to monitor.
+	OrderMutex sync.RWMutex     `yaml:"-"`                 // Mutex for the Order/Service slice.
+	Order      []string         `yaml:"-"`                 // Ordered slice of all Services.
+	Service    service.Services `yaml:"service,omitempty"` // The services to monitor.
 
 	DatabaseChannel *chan dbtype.Message `yaml:"-"` // Channel for broadcasts to the Database.
 	SaveChannel     *chan bool           `yaml:"-"` // Channel for triggering a save of the config.

@@ -115,7 +115,7 @@ func (w *WebHook) NextRunnable() time.Time {
 	return w.nextRunnable
 }
 
-// IsRunnable will return whether the current time is before NextRunnable.
+// IsRunnable returns whether the current time is before NextRunnable.
 func (w *WebHook) IsRunnable() bool {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
@@ -123,7 +123,7 @@ func (w *WebHook) IsRunnable() bool {
 	return time.Now().UTC().After(w.nextRunnable)
 }
 
-// BuildRequest will return the WebHook http.request ready to be sent.
+// BuildRequest returns the WebHook http.request ready to be sent.
 func (w *WebHook) BuildRequest() (req *http.Request) {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()

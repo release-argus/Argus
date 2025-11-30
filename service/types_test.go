@@ -45,12 +45,12 @@ import (
 func TestSlice_UnmarshalJSON(t *testing.T) {
 	tests := map[string]struct {
 		input    string
-		expected Slice
+		expected Services
 		errRegex string
 	}{
 		"empty JSON": {
 			input:    "{}",
-			expected: Slice{},
+			expected: Services{},
 			errRegex: `^$`,
 		},
 		"single service": {
@@ -62,7 +62,7 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 					}
 				}
 			}`),
-			expected: Slice{
+			expected: Services{
 				"service1": &Service{
 					ID: "service1",
 					LatestVersion: &github.Lookup{
@@ -94,7 +94,7 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 					}
 				}
 			}`),
-			expected: Slice{
+			expected: Services{
 				"service1": &Service{
 					ID: "service1",
 					LatestVersion: &github.Lookup{
@@ -127,7 +127,7 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 					}
 				}
 			}`),
-			expected: Slice{
+			expected: Services{
 				"service2": &Service{
 					ID: "service2",
 					LatestVersion: &github.Lookup{
@@ -141,14 +141,14 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 		"invalid JSON var": {
 			input: `{"invalid": "json"}`,
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal service\.Slice:
+				^failed to unmarshal service\.Services:
 					failed to unmarshal service\.Service:
 						cannot unmarshal string .*$`),
 		},
 		"invalid JSON format": {
 			input: `{"invalid": json`,
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal service\.Slice:
+				^failed to unmarshal service\.Services:
 					invalid character.*$`),
 		},
 	}
@@ -156,8 +156,8 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			// WHEN the YAML is unmarshalled into a Slice.
-			var got Slice
+			// WHEN the YAML is unmarshalled into a Services.
+			var got Services
 			err := got.UnmarshalJSON([]byte(tc.input))
 
 			// THEN the error is as expected.
@@ -192,12 +192,12 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 func TestSlice_UnmarshalYAML(t *testing.T) {
 	tests := map[string]struct {
 		input    string
-		expected Slice
+		expected Services
 		errRegex string
 	}{
 		"empty YAML": {
 			input:    "{}",
-			expected: Slice{},
+			expected: Services{},
 			errRegex: `^$`,
 		},
 		"single service": {
@@ -206,7 +206,7 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 					latest_version:
 						type: github
 						url: owner/repo`),
-			expected: Slice{
+			expected: Services{
 				"service1": &Service{
 					ID: "service1",
 					LatestVersion: &github.Lookup{
@@ -232,7 +232,7 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 						type: url
 						method: GET
 						url: ` + test.LookupPlain["url_valid"]),
-			expected: Slice{
+			expected: Services{
 				"service1": &Service{
 					ID: "service1",
 					LatestVersion: &github.Lookup{
@@ -262,7 +262,7 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 					latest_version:
 						type: github
 						url: owner/repo`),
-			expected: Slice{
+			expected: Services{
 				"service2": &Service{
 					ID: "service2",
 					LatestVersion: &github.Lookup{
@@ -281,7 +281,7 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 			input: test.TrimYAML(`
 				service1: []`),
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal service\.Slice:
+				^failed to unmarshal service\.Services:
 					failed to unmarshal service\.Service:
 						line \d: cannot unmarshal.*$`),
 		},
@@ -291,7 +291,7 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 					latest_version:
 						type: something`),
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal service\.Slice:
+				^failed to unmarshal service\.Services:
 					failed to unmarshal latestver\.Lookup:
 						type: "something" <invalid>.*$`),
 		},
@@ -310,8 +310,8 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 					packageName, err)
 			}
 
-			// WHEN the YAML is unmarshalled into a Slice.
-			var got Slice
+			// WHEN the YAML is unmarshalled into a Services.
+			var got Services
 			err := got.UnmarshalYAML(&node)
 
 			// THEN the error is as expected.
@@ -344,54 +344,54 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 }
 
 func TestSlice_giveIDs(t *testing.T) {
-	// GIVEN a Slice.
+	// GIVEN a Services.
 	tests := map[string]struct {
-		slice    Slice
-		expected Slice
+		slice    Services
+		expected Services
 	}{
 		"nil slice": {
 			slice:    nil,
 			expected: nil,
 		},
 		"empty slice": {
-			slice:    Slice{},
-			expected: Slice{},
+			slice:    Services{},
+			expected: Services{},
 		},
 		"slice with nil service": {
-			slice: Slice{
+			slice: Services{
 				"s1": nil,
 				"s2": &Service{},
 			},
-			expected: Slice{
+			expected: Services{
 				"s2": &Service{ID: "s2", Name: "s2"},
 			},
 		},
 		"multiple services": {
-			slice: Slice{
+			slice: Services{
 				"s1": &Service{},
 				"s2": &Service{},
 				"s3": &Service{},
 			},
-			expected: Slice{
+			expected: Services{
 				"s1": &Service{ID: "s1", Name: "s1"},
 				"s2": &Service{ID: "s2", Name: "s2"},
 				"s3": &Service{ID: "s3", Name: "s3"},
 			},
 		},
 		"service with existing ID": {
-			slice: Slice{
+			slice: Services{
 				"service1": &Service{ID: "oldID"},
 			},
-			expected: Slice{
+			expected: Services{
 				"service1": &Service{ID: "service1", Name: "service1"},
 			},
 		},
 		"services with Name different to ID": {
-			slice: Slice{
+			slice: Services{
 				"s1": &Service{ID: "s1"},
 				"s2": &Service{ID: "s2", Name: "Name 2"},
 			},
-			expected: Slice{
+			expected: Services{
 				"s1": &Service{ID: "s1", Name: "s1"},
 				"s2": &Service{ID: "s2", Name: "Name 2"},
 			},
@@ -412,16 +412,16 @@ func TestSlice_giveIDs(t *testing.T) {
 			}
 
 			// AND each Service is given its key as ID.
-			for id, service := range tc.expected {
+			for id, svc := range tc.expected {
 				got, exists := tc.slice[id]
 				if !exists {
 					t.Errorf("%s\nservice %q not found in result",
 						packageName, id)
 					continue
 				}
-				if got.ID != service.ID {
+				if got.ID != svc.ID {
 					t.Errorf("%s\nservice %q, ID mismatch\nwant: %q\ngot:  %q",
-						packageName, id, service.ID, got.ID)
+						packageName, id, svc.ID, got.ID)
 				}
 			}
 		})
@@ -514,7 +514,7 @@ func TestService_String(t *testing.T) {
 						nil,
 						nil, nil)
 				}),
-				Notify: shoutrrr.Slice{
+				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
 						nil, "",
 						"discord",
@@ -523,9 +523,9 @@ func TestService_String(t *testing.T) {
 							"token": "bar"},
 						nil,
 						nil, nil, nil)},
-				Command: command.Slice{
+				Command: command.Commands{
 					{"ls", "-la"}},
-				WebHook: webhook.Slice{
+				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
 						"github",
@@ -696,7 +696,7 @@ func TestService_Summary(t *testing.T) {
 		},
 		"only dashboard.icon, from notify": {
 			svc: &Service{
-				Notify: shoutrrr.Slice{
+				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
 						nil, "", "",
 						nil,
@@ -718,7 +718,7 @@ func TestService_Summary(t *testing.T) {
 			svc: &Service{
 				Dashboard: dashboard.Options{
 					Icon: "https://example.com/icon.png"},
-				Notify: shoutrrr.Slice{
+				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
 						nil, "", "",
 						map[string]string{
@@ -771,14 +771,14 @@ func TestService_Summary(t *testing.T) {
 		},
 		"no commands": {
 			svc: &Service{
-				Command: command.Slice{}},
+				Command: command.Commands{}},
 			want: &apitype.ServiceSummary{
 				HasDeployedVersionLookup: test.BoolPtr(false),
 				Status:                   &apitype.Status{}},
 		},
 		"3 commands": {
 			svc: &Service{
-				Command: command.Slice{
+				Command: command.Commands{
 					{"ls", "-la"},
 					{"true"},
 					{"false"}}},
@@ -789,14 +789,14 @@ func TestService_Summary(t *testing.T) {
 		},
 		"0 webhooks": {
 			svc: &Service{
-				WebHook: webhook.Slice{}},
+				WebHook: webhook.WebHooks{}},
 			want: &apitype.ServiceSummary{
 				HasDeployedVersionLookup: test.BoolPtr(false),
 				Status:                   &apitype.Status{}},
 		},
 		"3 webhooks": {
 			svc: &Service{
-				WebHook: webhook.Slice{
+				WebHook: webhook.WebHooks{
 					"bish": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
 						"github",
@@ -853,16 +853,16 @@ func TestService_Summary(t *testing.T) {
 					Method: http.MethodGet,
 					URL:    test.LookupPlain["url_valid"],
 					JSON:   "version"},
-				Notify: shoutrrr.Slice{
+				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
 						nil, "",
 						"discord",
 						nil, nil, nil,
 						nil, nil, nil)},
-				Command: command.Slice{
+				Command: command.Commands{
 					{"true"},
 					{"false"}},
-				WebHook: webhook.Slice{
+				WebHook: webhook.WebHooks{
 					"bish": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
 						"github",
@@ -922,8 +922,8 @@ func TestService_Summary(t *testing.T) {
 			if tc.svc != nil {
 				tc.svc.Init(
 					&defaults, &defaults,
-					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-					&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
+					&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
+					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 			}
 
 			// WHEN the Service is converted to a ServiceSummary.
@@ -984,9 +984,9 @@ func TestService_UsingDefaults(t *testing.T) {
 			var svc *Service
 			if !tc.nilService {
 				svc = &Service{}
-				svc.notifyFromDefaults = tc.usingNotifyDefaults
-				svc.commandFromDefaults = tc.usingCommandDefaults
-				svc.webhookFromDefaults = tc.usingDefaults
+				svc.NotifyFromDefaults = tc.usingNotifyDefaults
+				svc.CommandFromDefaults = tc.usingCommandDefaults
+				svc.WebHookFromDefaults = tc.usingDefaults
 			}
 
 			// WHEN UsingDefaults is called.
@@ -1062,7 +1062,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 					Lookup: latestver_base.Lookup{
 						Type: "github",
 						URL:  "release-argus/Argus",
-						URLCommands: filter.URLCommandSlice{
+						URLCommands: filter.URLCommands{
 							filter.URLCommand{Type: "regex", Regex: `.*`}},
 						Require: &filter.Require{
 							Docker: &filter.DockerCheck{
@@ -1122,7 +1122,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 					Lookup: latestver_base.Lookup{
 						Type: "url",
 						URL:  "https://example.com",
-						URLCommands: filter.URLCommandSlice{
+						URLCommands: filter.URLCommands{
 							filter.URLCommand{Type: "regex", Regex: `.*`}},
 						Require: &filter.Require{
 							Docker: &filter.DockerCheck{
@@ -1700,7 +1700,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 					Lookup: latestver_base.Lookup{
 						Type: "github",
 						URL:  "release-argus/Argus",
-						URLCommands: filter.URLCommandSlice{
+						URLCommands: filter.URLCommands{
 							filter.URLCommand{Type: "regex", Regex: `.*`}},
 						Require: &filter.Require{
 							Docker: &filter.DockerCheck{
@@ -1755,7 +1755,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 					Lookup: latestver_base.Lookup{
 						Type: "url",
 						URL:  "https://example.com",
-						URLCommands: filter.URLCommandSlice{
+						URLCommands: filter.URLCommands{
 							filter.URLCommand{Type: "regex", Regex: `.*`}},
 						Require: &filter.Require{
 							Docker: &filter.DockerCheck{

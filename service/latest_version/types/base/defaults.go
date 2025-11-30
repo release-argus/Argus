@@ -1,18 +1,16 @@
-/*
- * Copyright [2025] [Argus]
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright [2025] [Argus]
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 // Package base provides the base struct for latest_version lookups.
 package base
@@ -35,7 +33,7 @@ type Defaults struct {
 	Require filter.RequireDefaults `json:"require" yaml:"require"` // Requirements before release considered valid.
 }
 
-// Default sets this Defaults to the default values.
+// Default sets these Defaults to the default values.
 func (d *Defaults) Default() {
 	// allow_invalid_certs.
 	allowInvalidCerts := false

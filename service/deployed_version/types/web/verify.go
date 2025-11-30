@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/release-argus/Argus/service/deployed_version/types/web/constants"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -30,15 +31,20 @@ func (l *Lookup) CheckValues(prefix string) error {
 	var errs []error
 	// Method.
 	l.Method = strings.ToUpper(l.Method)
-	if l.Method == "" {
-		l.Method = http.MethodGet
-	} else if !util.Contains(supportedMethods, l.Method) {
-		errs = append(errs,
-			fmt.Errorf("%smethod: %q <invalid> (only [%s] are allowed)",
-				prefix, l.Method, strings.Join(supportedMethods, ", ")))
+	method := l.method()
+	if !util.Contains(constants.SupportedMethods, method) {
+		if method == "" {
+			errs = append(errs,
+				fmt.Errorf("%smethod: <required> (supported methods = ['%s'])",
+					prefix, strings.Join(constants.SupportedMethods, "', '")))
+		} else {
+			errs = append(errs,
+				fmt.Errorf("%smethod: %q <invalid> (supported methods = ['%s'])",
+					prefix, method, strings.Join(constants.SupportedMethods, "', '")))
+		}
 	}
 	// Body unused in GET, ensure it is empty.
-	if l.Method == http.MethodGet {
+	if method == http.MethodGet {
 		l.Body = ""
 	}
 

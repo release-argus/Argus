@@ -32,8 +32,8 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Send every WebHook in this Slice with a delay between each webhook.
-func (s *Slice) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
+// Send sends each WebHook, optionally applying a delay between them.
+func (s *WebHooks) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
 	if s == nil {
 		return nil
 	}
@@ -63,7 +63,7 @@ func (s *Slice) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
 	return errors.Join(errs...)
 }
 
-// Send the WebHook up to MaxTries times until a success.
+// Send attempts to send the WebHook up to MaxTries times until successful.
 func (w *WebHook) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
 	logFrom := logutil.LogFrom{Primary: w.ID, Secondary: serviceInfo.ID}
 
@@ -162,7 +162,7 @@ func (w *WebHook) try(logFrom logutil.LogFrom) error {
 	)
 }
 
-// Send a message to the Notifiers (if available).
+// Send sends a message to the Notifiers, if any are available.
 func (n *Notifiers) Send(title, message string, serviceInfo serviceinfo.ServiceInfo) error {
 	if n == nil || n.Shoutrrr == nil {
 		return nil
@@ -172,6 +172,8 @@ func (n *Notifiers) Send(title, message string, serviceInfo serviceinfo.ServiceI
 	return (*n.Shoutrrr).Send(title, message, serviceInfo, false)
 }
 
+// checkWebHookBody checks whether the given body is valid for a WebHook.
+// It returns false if the body contains certain forbidden phrases.
 func checkWebHookBody(body string) (okay bool) {
 	okay = true
 	if body == "" {

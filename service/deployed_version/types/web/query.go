@@ -97,7 +97,7 @@ func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 	}
 
 	// Create the request.
-	req, err := http.NewRequest(l.Method, l.url(), l.body())
+	req, err := http.NewRequest(l.method(), l.url(), l.body())
 	if err != nil {
 		err = fmt.Errorf("failed creating http request for %q: %w",
 			l.URL, err)

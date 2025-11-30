@@ -70,9 +70,9 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 
 	// Trim unknown services.
 	trimmedOrder := make([]string, 0, len(newOrder.Order))
-	for _, service := range newOrder.Order {
-		if api.Config.Service[service] != nil {
-			trimmedOrder = append(trimmedOrder, service)
+	for _, svc := range newOrder.Order {
+		if api.Config.Service[svc] != nil {
+			trimmedOrder = append(trimmedOrder, svc)
 		}
 	}
 
@@ -95,8 +95,8 @@ func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 	// Check Service still exists in this ordering.
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
-	service := api.Config.Service[targetService]
-	if service == nil {
+	svc := api.Config.Service[targetService]
+	if svc == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
 		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w,
@@ -106,7 +106,7 @@ func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get ServiceSummary.
-	summary := service.Summary()
+	summary := svc.Summary()
 
 	api.writeJSON(w, summary, logFrom)
 }

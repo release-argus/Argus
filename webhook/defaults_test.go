@@ -23,7 +23,7 @@ import (
 )
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN a Defaults and an expected Defaults.
+	// GIVEN Defaults and an expected Defaults.
 	defaults := Defaults{}
 	expected := Defaults{
 		Base: Base{

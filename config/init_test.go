@@ -90,8 +90,8 @@ func TestConfig_LoadDeleteNil(t *testing.T) {
 	config.Load(file, &flags)
 
 	// THEN Services that are nil are deleted.
-	for name, service := range config.Service {
-		if service == nil {
+	for name, svc := range config.Service {
+		if svc == nil {
 			t.Errorf("%s\nService %q is nil",
 				packageName, name)
 		}

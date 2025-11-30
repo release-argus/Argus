@@ -32,44 +32,44 @@ import (
 func TestGetAllShoutrrrNames(t *testing.T) {
 	// GIVEN various Services and Notifiers.
 	tests := map[string]struct {
-		service       service.Slice
-		rootNotifiers shoutrrr.SliceDefaults
+		service       service.Services
+		rootNotifiers shoutrrr.ShoutrrrsDefaults
 		want          []string
 	}{
 		"nothing": {},
 		"only service notifiers": {
-			service: service.Slice{
-				"0": {Notify: shoutrrr.Slice{"foo": {}}},
-				"1": {Notify: shoutrrr.Slice{"bar": {}}},
+			service: service.Services{
+				"0": {Notify: shoutrrr.Shoutrrrs{"foo": {}}},
+				"1": {Notify: shoutrrr.Shoutrrrs{"bar": {}}},
 			},
 			want: []string{"bar", "foo"},
 		},
 		"only service notifiers with duplicates": {
-			service: service.Slice{
-				"0": {Notify: shoutrrr.Slice{"foo": {}}},
-				"1": {Notify: shoutrrr.Slice{"foo": {}, "bar": {}}},
+			service: service.Services{
+				"0": {Notify: shoutrrr.Shoutrrrs{"foo": {}}},
+				"1": {Notify: shoutrrr.Shoutrrrs{"foo": {}, "bar": {}}},
 			},
 			want: []string{"bar", "foo"},
 		},
-		"only root notifiers": {rootNotifiers: shoutrrr.SliceDefaults{
+		"only root notifiers": {rootNotifiers: shoutrrr.ShoutrrrsDefaults{
 			"foo": {}, "bar": {}},
 			want: []string{"bar", "foo"},
 		},
 		"root + service notifiers": {
-			service: service.Slice{
-				"0": {Notify: shoutrrr.Slice{"foo": {}}},
-				"1": {Notify: shoutrrr.Slice{"foo": {}, "bar": {}}},
+			service: service.Services{
+				"0": {Notify: shoutrrr.Shoutrrrs{"foo": {}}},
+				"1": {Notify: shoutrrr.Shoutrrrs{"foo": {}, "bar": {}}},
 			},
-			rootNotifiers: shoutrrr.SliceDefaults{
+			rootNotifiers: shoutrrr.ShoutrrrsDefaults{
 				"baz": {}},
 			want: []string{"bar", "baz", "foo"},
 		},
 		"root + service notifiers with duplicates": {
-			service: service.Slice{
-				"0": {Notify: shoutrrr.Slice{"foo": {}}},
-				"1": {Notify: shoutrrr.Slice{"foo": {}, "bar": {}}},
+			service: service.Services{
+				"0": {Notify: shoutrrr.Shoutrrrs{"foo": {}}},
+				"1": {Notify: shoutrrr.Shoutrrrs{"foo": {}, "bar": {}}},
 			},
-			rootNotifiers: shoutrrr.SliceDefaults{
+			rootNotifiers: shoutrrr.ShoutrrrsDefaults{
 				"foo": {}, "bar": {}, "baz": {}},
 			want: []string{"bar", "baz", "foo"},
 		},
@@ -113,7 +113,7 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 }
 
 func TestFindShoutrrr(t *testing.T) {
-	// GIVEN a Config with/without Service containing a Shoutrrr and Root Shoutrrr(s).
+	// GIVEN a Config with/without Service containing a Shoutrrr and Root Shoutrrrs.
 	tests := map[string]struct {
 		flag                    string
 		cfg                     *config.Config
@@ -124,9 +124,9 @@ func TestFindShoutrrr(t *testing.T) {
 			flag:       "",
 			panicRegex: test.StringPtr(`could not be found.*\s+.*one of these?.*\s  - bar\s  - baz\s  - foo\s$`),
 			cfg: &config.Config{
-				Service: service.Slice{
+				Service: service.Services{
 					"argus": {
-						Notify: shoutrrr.Slice{
+						Notify: shoutrrr.Shoutrrrs{
 							"foo": {},
 							"bar": {},
 							"baz": {}}}}},
@@ -135,7 +135,7 @@ func TestFindShoutrrr(t *testing.T) {
 			flag:       "",
 			panicRegex: test.StringPtr(`could not be found.*\s+.*one of these?.*\s  - bar\s  - baz\s  - foo\s$`),
 			cfg: &config.Config{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"foo": {},
 					"bar": {},
 					"baz": {}}},
@@ -144,13 +144,13 @@ func TestFindShoutrrr(t *testing.T) {
 			flag:       "",
 			panicRegex: test.StringPtr(`could not be found.*\s+.*one of these?.*\s  - bar\s  - baz\s  - foo\s$`),
 			cfg: &config.Config{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"foo": {},
 					"bar": {},
 					"baz": {}},
-				Service: service.Slice{
+				Service: service.Services{
 					"argus": {
-						Notify: shoutrrr.Slice{
+						Notify: shoutrrr.Shoutrrrs{
 							"foo": {},
 							"bar": {},
 							"baz": {}}}}},
@@ -159,10 +159,10 @@ func TestFindShoutrrr(t *testing.T) {
 			flag:       "",
 			panicRegex: test.StringPtr(`could not be found.*\s+.*one of these?.*\s  - bar\s  - baz\s  - foo\s  - shazam\s$`),
 			cfg: &config.Config{
-				Service: service.Slice{
+				Service: service.Services{
 					"argus": {
-						Notify: shoutrrr.Slice{"foo": {}, "bar": {}, "baz": {}}}},
-				Notify: shoutrrr.SliceDefaults{
+						Notify: shoutrrr.Shoutrrrs{"foo": {}, "bar": {}, "baz": {}}}},
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"foo":    {},
 					"shazam": {},
 					"baz":    {}}},
@@ -171,11 +171,11 @@ func TestFindShoutrrr(t *testing.T) {
 			flag:        "bosh",
 			stdoutRegex: test.StringPtr("^$"),
 			cfg: &config.Config{
-				Service: service.Slice{
+				Service: service.Services{
 					"argus": {
-						Notify: shoutrrr.Slice{
+						Notify: shoutrrr.Shoutrrrs{
 							"foo": {}, "bar": {}, "baz": {}}}},
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"bosh": shoutrrr.NewDefaults(
 						"gotify",
 						nil,
@@ -189,9 +189,9 @@ func TestFindShoutrrr(t *testing.T) {
 			flag:        "baz",
 			stdoutRegex: test.StringPtr("^$"),
 			cfg: &config.Config{
-				Service: service.Slice{
+				Service: service.Services{
 					"argus": {
-						Notify: shoutrrr.Slice{
+						Notify: shoutrrr.Shoutrrrs{
 							"foo": {}, "bar": {},
 							"baz": shoutrrr.New(
 								nil, "",
@@ -208,9 +208,9 @@ func TestFindShoutrrr(t *testing.T) {
 			flag:        "bar",
 			stdoutRegex: test.StringPtr("^$"),
 			cfg: &config.Config{
-				Service: service.Slice{
+				Service: service.Services{
 					"argus": {
-						Notify: shoutrrr.Slice{
+						Notify: shoutrrr.Shoutrrrs{
 							"foo": {},
 							"bar": shoutrrr.New(
 								nil, "",
@@ -222,7 +222,7 @@ func TestFindShoutrrr(t *testing.T) {
 								nil,
 								nil, nil, nil),
 							"baz": {}}}},
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"bar": shoutrrr.NewDefaults(
 						"gotify",
 						nil,
@@ -235,9 +235,9 @@ func TestFindShoutrrr(t *testing.T) {
 		"matching search of Service notifier with incomplete config filled by Defaults": {
 			flag: "bar",
 			cfg: &config.Config{
-				Service: service.Slice{
+				Service: service.Services{
 					"argus": {
-						Notify: shoutrrr.Slice{
+						Notify: shoutrrr.Shoutrrrs{
 							"foo": {},
 							"bar": shoutrrr.New(
 								nil, "",
@@ -250,7 +250,7 @@ func TestFindShoutrrr(t *testing.T) {
 								nil, nil, nil),
 							"baz": {}}}},
 				Defaults: config.Defaults{
-					Notify: shoutrrr.SliceDefaults{
+					Notify: shoutrrr.ShoutrrrsDefaults{
 						"something": shoutrrr.NewDefaults(
 							"something",
 							map[string]string{
@@ -267,9 +267,9 @@ func TestFindShoutrrr(t *testing.T) {
 		"matching search of Service notifier with incomplete config filled by Root": {
 			flag: "bar",
 			cfg: &config.Config{
-				Service: service.Slice{
+				Service: service.Services{
 					"argus": {
-						Notify: shoutrrr.Slice{
+						Notify: shoutrrr.Shoutrrrs{
 							"foo": {},
 							"bar": shoutrrr.New(
 								nil, "",
@@ -281,7 +281,7 @@ func TestFindShoutrrr(t *testing.T) {
 									"fromaddress": "test@release-argus.io"},
 								nil, nil, nil),
 							"baz": {}}}},
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"something": shoutrrr.NewDefaults(
 						"something",
 						map[string]string{
@@ -298,9 +298,9 @@ func TestFindShoutrrr(t *testing.T) {
 		"matching search of Service notifier with incomplete config filled by Root and Defaults": {
 			flag: "bosh",
 			cfg: &config.Config{
-				Service: service.Slice{
+				Service: service.Services{
 					"argus": {
-						Notify: shoutrrr.Slice{
+						Notify: shoutrrr.Shoutrrrs{
 							"foo": {},
 							"bosh": shoutrrr.New(
 								nil, "",
@@ -312,7 +312,7 @@ func TestFindShoutrrr(t *testing.T) {
 									"fromaddress": "test@release-argus.io"},
 								nil, nil, nil),
 							"baz": {}}}},
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"bosh": shoutrrr.NewDefaults(
 						"smtp",
 						nil,
@@ -320,7 +320,7 @@ func TestFindShoutrrr(t *testing.T) {
 							"host": "example.com"},
 						nil)},
 				Defaults: config.Defaults{
-					Notify: shoutrrr.SliceDefaults{
+					Notify: shoutrrr.ShoutrrrsDefaults{
 						"something": shoutrrr.NewDefaults(
 							"something",
 							map[string]string{
@@ -337,13 +337,13 @@ func TestFindShoutrrr(t *testing.T) {
 			flag:       "bosh",
 			panicRegex: test.StringPtr(`^notify:\s  bosh:\s    params:\s      toaddresses: <required>`),
 			cfg: &config.Config{
-				Service: service.Slice{
+				Service: service.Services{
 					"argus": {
-						Notify: shoutrrr.Slice{
+						Notify: shoutrrr.Shoutrrrs{
 							"foo": {},
 							"bar": {},
 							"baz": {}}}},
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"bosh": shoutrrr.NewDefaults(
 						"smtp",
 						nil,
@@ -356,13 +356,13 @@ func TestFindShoutrrr(t *testing.T) {
 		"matching search of Root notifier with incomplete config filled by Defaults": {
 			flag: "bosh",
 			cfg: &config.Config{
-				Service: service.Slice{
+				Service: service.Services{
 					"argus": {
-						Notify: shoutrrr.Slice{
+						Notify: shoutrrr.Shoutrrrs{
 							"foo": {},
 							"bar": {},
 							"baz": {}}}},
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"bosh": shoutrrr.NewDefaults(
 						"smtp",
 						nil,
@@ -371,7 +371,7 @@ func TestFindShoutrrr(t *testing.T) {
 						map[string]string{
 							"fromaddress": "test@release-argus.io"})},
 				Defaults: config.Defaults{
-					Notify: shoutrrr.SliceDefaults{
+					Notify: shoutrrr.ShoutrrrsDefaults{
 						"something": shoutrrr.NewDefaults(
 							"something",
 							nil, nil,
@@ -451,7 +451,7 @@ func TestFindShoutrrr(t *testing.T) {
 }
 
 func TestNotifyTest(t *testing.T) {
-	// GIVEN a Config with/without Service containing a Shoutrrr and Root Shoutrrr(s).
+	// GIVEN a Config with/without Service containing a Shoutrrr and Root Shoutrrrs.
 	emptyShoutrrr := shoutrrr.NewDefaults(
 		"",
 		map[string]string{},
@@ -459,15 +459,15 @@ func TestNotifyTest(t *testing.T) {
 		map[string]string{})
 	tests := map[string]struct {
 		flag                    string
-		slice                   service.Slice
-		rootSlice               shoutrrr.SliceDefaults
+		slice                   service.Services
+		rootSlice               shoutrrr.ShoutrrrsDefaults
 		stdoutRegex, panicRegex *string
 	}{
 		"empty flag": {flag: "",
 			stdoutRegex: test.StringPtr("^$"),
-			slice: service.Slice{
+			slice: service.Services{
 				"argus": {
-					Notify: shoutrrr.Slice{
+					Notify: shoutrrr.Shoutrrrs{
 						"foo": {},
 						"bar": {},
 						"baz": {},
@@ -475,9 +475,9 @@ func TestNotifyTest(t *testing.T) {
 				}}},
 		"unknown Notifier": {flag: "something",
 			panicRegex: test.StringPtr("Notifier.* could not be found"),
-			slice: service.Slice{
+			slice: service.Services{
 				"argus": {
-					Notify: shoutrrr.Slice{
+					Notify: shoutrrr.Shoutrrrs{
 						"foo": {},
 						"bar": {},
 						"baz": {},
@@ -486,9 +486,9 @@ func TestNotifyTest(t *testing.T) {
 		"known Service Notifier with invalid Gotify token": {
 			flag:       "bar",
 			panicRegex: test.StringPtr(`Message failed to send with "bar" config\s+invalid gotify token`),
-			slice: service.Slice{
+			slice: service.Services{
 				"argus": {
-					Notify: shoutrrr.Slice{
+					Notify: shoutrrr.Shoutrrrs{
 						"foo": {},
 						"bar": shoutrrr.New(
 							nil,
@@ -508,9 +508,9 @@ func TestNotifyTest(t *testing.T) {
 		"valid Gotify token": {
 			flag:       "bar",
 			panicRegex: test.StringPtr(`HTTP 40\d`),
-			slice: service.Slice{
+			slice: service.Services{
 				"argus": {
-					Notify: shoutrrr.Slice{
+					Notify: shoutrrr.Shoutrrrs{
 						"foo": {},
 						"bar": shoutrrr.New(
 							nil,
@@ -530,8 +530,8 @@ func TestNotifyTest(t *testing.T) {
 		"shoutrrr from Root": {
 			flag:       "baz",
 			panicRegex: test.StringPtr(`HTTP 40\d`),
-			slice:      service.Slice{},
-			rootSlice: shoutrrr.SliceDefaults{
+			slice:      service.Services{},
+			rootSlice: shoutrrr.ShoutrrrsDefaults{
 				"baz": shoutrrr.NewDefaults(
 					"gotify",
 					map[string]string{
@@ -544,9 +544,9 @@ func TestNotifyTest(t *testing.T) {
 		"successful send": {
 			flag:        "work",
 			stdoutRegex: test.StringPtr(`Message sent successfully with "work" config`),
-			slice: service.Slice{
+			slice: service.Services{
 				"argus": {
-					Notify: shoutrrr.Slice{
+					Notify: shoutrrr.Shoutrrrs{
 						"work": shoutrrr.New(
 							nil,
 							"bar",
@@ -572,13 +572,13 @@ func TestNotifyTest(t *testing.T) {
 
 			serviceHardDefaults := service.Defaults{}
 			serviceHardDefaults.Default()
-			shoutrrrHardDefaults := shoutrrr.SliceDefaults{}
+			shoutrrrHardDefaults := shoutrrr.ShoutrrrsDefaults{}
 			shoutrrrHardDefaults.Default()
 			for i := range tc.slice {
 				(*tc.slice[i]).Init(
 					&service.Defaults{}, &serviceHardDefaults,
-					&tc.rootSlice, &shoutrrr.SliceDefaults{}, &shoutrrrHardDefaults,
-					&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
+					&tc.rootSlice, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrrHardDefaults,
+					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 			}
 			if tc.panicRegex != nil {
 				// Switch Fatal to panic and disable this panic.

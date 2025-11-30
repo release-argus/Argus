@@ -13,7 +13,7 @@ export default defineConfig({
 		viteTsconfigPaths(),
 		babel({
 			babelConfig: {
-				plugins: [['babel-plugin-react-compiler']],
+				plugins: ['babel-plugin-react-compiler'],
 				presets: ['@babel/preset-typescript'],
 			},
 			filter: /\.tsx?$/,

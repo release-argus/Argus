@@ -18,11 +18,14 @@
 package base
 
 import (
+	"net/http"
 	"testing"
+
+	"github.com/release-argus/Argus/util"
 )
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN a Default.
+	// GIVEN Defaults.
 	defaults := Defaults{}
 
 	// WHEN Default is called.
@@ -32,5 +35,66 @@ func TestDefaults_Default(t *testing.T) {
 	if defaults.AllowInvalidCerts == nil {
 		t.Errorf("%s\nAllowInvalidCerts not set, got %v",
 			packageName, defaults.AllowInvalidCerts)
+	}
+}
+
+func TestDefaults_CheckValues(t *testing.T) {
+	// GIVEN Defaults.
+	tests := map[string]struct {
+		method     string
+		prefix     string
+		wantErr    string
+		wantMethod string
+	}{
+		"empty method - no error": {
+			method:     "",
+			wantErr:    `^$`,
+			wantMethod: "",
+		},
+		"valid lowercase method - uppercased and ok": {
+			method:     "post",
+			wantErr:    `^$`,
+			wantMethod: http.MethodPost,
+		},
+		"valid uppercase method - unchanged and ok": {
+			method:     "GET",
+			wantErr:    `^$`,
+			wantMethod: http.MethodGet,
+		},
+		"unsupported method - with error prefix": {
+			method:     http.MethodDelete,
+			prefix:     "root: ",
+			wantErr:    `^root: method: "` + http.MethodDelete + `" <invalid> .*` + http.MethodGet + `.*$`,
+			wantMethod: http.MethodDelete,
+		},
+		"invalid method - no prefix": {
+			method:     "foo",
+			wantErr:    `^method: "FOO" <invalid> .*` + http.MethodPost + `.*$`,
+			wantMethod: "FOO",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			d := &Defaults{Method: tc.method}
+
+			// WHEN CheckValues is called.
+			err := d.CheckValues(tc.prefix)
+
+			// THEN the error matches expectation.
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.wantErr, e) {
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot: %q",
+					packageName, tc.wantErr, e)
+			}
+
+			// AND Method is uppercased/unchanged as expected.
+			if d.Method != tc.wantMethod {
+				t.Errorf("%s\nMethod mismatch\nwant: %q\ngot: %q",
+					packageName, tc.wantMethod, d.Method)
+			}
+		})
 	}
 }

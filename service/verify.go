@@ -22,8 +22,8 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Print the Services in the Slice.
-func (s *Slice) Print(prefix string, order []string) {
+// Print each Service to stdout.
+func (s *Services) Print(prefix string, order []string) {
 	if s == nil {
 		return
 	}
@@ -43,7 +43,7 @@ func (s *Slice) Print(prefix string, order []string) {
 	}
 }
 
-// CheckValues validates the fields of the Defaults struct.
+// CheckValues validates the fields of this Defaults struct.
 func (d *Defaults) CheckValues(prefix string) error {
 	var errs []error
 
@@ -58,8 +58,8 @@ func (d *Defaults) CheckValues(prefix string) error {
 	return errors.Join(errs...)
 }
 
-// CheckValues validates the fields of each Service in the Slice.
-func (s *Slice) CheckValues(prefix string) error {
+// CheckValues validates the fields of each Service.
+func (s *Services) CheckValues(prefix string) error {
 	if s == nil {
 		return nil
 	}
@@ -78,7 +78,7 @@ func (s *Slice) CheckValues(prefix string) error {
 	return errors.Join(errs...)
 }
 
-// CheckValues validates the fields of the Service struct.
+// CheckValues validates the fields of this Service struct.
 func (s *Service) CheckValues(prefix string) error {
 	if s == nil {
 		return nil

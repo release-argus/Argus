@@ -161,6 +161,7 @@ func setUintField(field reflect.Value, value, envKey string, bitSize int) error 
 		v, err := strconv.ParseUint(s, 10, bitSize)
 		return uint16(v), err
 	}
+
 	return setField(field, value, envKey, parser,
 		fmt.Sprintf("(expected an unsigned (non-negative) integer between 0 and %d)", math.MaxUint16))
 }
@@ -174,7 +175,20 @@ func setField[T any](field reflect.Value, value, envKey string, parser func(stri
 	}
 
 	if field.Kind() == reflect.Ptr {
-		field.Set(reflect.ValueOf(&parsedValue))
+		ptrVal := reflect.New(field.Type().Elem()) // allocate correct pointer type
+		switch v := any(parsedValue).(type) {
+		case uint8, uint16, uint32, uint64, uint:
+			ptrVal.Elem().SetUint(reflect.ValueOf(v).Convert(ptrVal.Elem().Type()).Uint())
+		case int, int8, int16, int32, int64:
+			ptrVal.Elem().SetInt(reflect.ValueOf(v).Convert(ptrVal.Elem().Type()).Int())
+		case bool:
+			ptrVal.Elem().SetBool(v)
+		case string:
+			ptrVal.Elem().SetString(v)
+		default:
+			return fmt.Errorf("unsupported type for pointer: %T", v)
+		}
+		field.Set(ptrVal)
 	} else {
 		switch v := any(parsedValue).(type) {
 		case bool:

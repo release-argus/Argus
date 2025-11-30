@@ -64,7 +64,7 @@ func testConfig() (cfg *config.Config) {
 					DatabaseFile: databaseFile,
 				}},
 		},
-		Service: service.Slice{
+		Service: service.Services{
 			"delete0": nil,
 			"keep0":   nil,
 			"delete1": nil,
@@ -168,15 +168,15 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 			t.Fatal(err)
 		}
 	}
-	status := status.Status{}
-	status.Init(
+	svcStatus := status.Status{}
+	svcStatus.Init(
 		0, 0, 0,
 		id, "", "",
 		&dashboard.Options{
 			WebURL: "https://example.com"})
-	status.SetLatestVersion(lv, lvt, false)
-	status.SetDeployedVersion(dv, dvt, false)
-	status.SetApprovedVersion(av, false)
+	svcStatus.SetLatestVersion(lv, lvt, false)
+	svcStatus.SetDeployedVersion(dv, dvt, false)
+	svcStatus.SetApprovedVersion(av, false)
 
-	return &status
+	return &svcStatus
 }

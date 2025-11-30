@@ -25,8 +25,8 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// CheckValues validates the fields of the SliceDefaults struct.
-func (s *SliceDefaults) CheckValues(prefix string) error {
+// CheckValues validates the fields of each Defaults struct.
+func (s *WebHooksDefaults) CheckValues(prefix string) error {
 	if s == nil {
 		return nil
 	}
@@ -45,8 +45,8 @@ func (s *SliceDefaults) CheckValues(prefix string) error {
 	return errors.Join(errs...)
 }
 
-// CheckValues validates the fields of each WebHook in the Slice.
-func (s *Slice) CheckValues(prefix string) error {
+// CheckValues validates the fields of each WebHook.
+func (s *WebHooks) CheckValues(prefix string) error {
 	if s == nil {
 		return nil
 	}
@@ -71,8 +71,8 @@ func (b *Base) CheckValues(prefix string) error {
 	// type
 	if b.Type != "" && !util.Contains(supportedTypes, b.Type) {
 		errs = append(errs,
-			fmt.Errorf("%stype: %q <invalid> (supported types = [%s])",
-				prefix, b.Type, strings.Join(supportedTypes, ",")))
+			fmt.Errorf("%stype: %q <invalid> (supported types = ['%s'])",
+				prefix, b.Type, strings.Join(supportedTypes, "', '")))
 	}
 	// url
 	if !util.CheckTemplate(b.URL) {
@@ -127,8 +127,8 @@ func (w *WebHook) CheckValues(prefix string) error {
 	// type
 	whType := w.GetType()
 	if whType == "" {
-		errs = append(errs, fmt.Errorf("%stype: <required> (supported types = [%s])",
-			prefix, strings.Join(supportedTypes, ",")))
+		errs = append(errs, fmt.Errorf("%stype: <required> (supported types = ['%s'])",
+			prefix, strings.Join(supportedTypes, "', '")))
 		// Check the Type doesn't differ in the Main.
 	} else if w.Main.Type != "" && whType != w.Main.Type {
 		errs = append(errs, fmt.Errorf("%stype: %q != %q <invalid> (omit 'type', or make it match root webhook.%s.type)",
@@ -160,8 +160,8 @@ func (w *WebHook) CheckValues(prefix string) error {
 	return errors.Join(errs...)
 }
 
-// Print the SliceDefaults.
-func (s *SliceDefaults) Print(prefix string) {
+// Print the WebHooksDefaults.
+func (s *WebHooksDefaults) Print(prefix string) {
 	if s == nil || len(*s) == 0 {
 		return
 	}

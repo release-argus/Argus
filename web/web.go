@@ -60,8 +60,8 @@ func newWebUI(cfg *config.Config) *mux.Router {
 
 	// Hand out the broadcast channel
 	cfg.HardDefaults.Service.Status.AnnounceChannel = &hub.Broadcast
-	for _, service := range cfg.Service {
-		service.Status.SetAnnounceChannel(&hub.Broadcast)
+	for _, svc := range cfg.Service {
+		svc.Status.SetAnnounceChannel(&hub.Broadcast)
 	}
 
 	return router

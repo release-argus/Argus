@@ -44,10 +44,10 @@ func (w *WebHook) setCustomHeaders(req *http.Request) {
 		return
 	}
 
-	serviceInfo := w.ServiceStatus.GetServiceInfo()
+	svcInfo := w.ServiceStatus.GetServiceInfo()
 	for _, header := range *customHeaders {
 		key := util.EvalEnvVars(header.Key)
-		value := util.TemplateString(util.EvalEnvVars(header.Value), serviceInfo)
+		value := util.TemplateString(util.EvalEnvVars(header.Value), svcInfo)
 		req.Header[key] = []string{value}
 	}
 }
