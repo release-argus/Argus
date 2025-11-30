@@ -111,7 +111,7 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 
 	// Tags - Removed.
 	if oldData.Tags != nil && s.Tags == nil {
-		var emptyTags []string
+		emptyTags := make([]string, 0)
 		s.Tags = &emptyTags
 		// Unchanged.
 	} else if oldData.Tags != nil && s.Tags != nil && util.AreSlicesEqual(*oldData.Tags, *s.Tags) {
@@ -590,24 +590,24 @@ type Commands []Command
 type WebHooks map[string]*WebHook
 
 // String returns a string representation of the WebHooks.
-func (slice *WebHooks) String() string {
-	if slice == nil {
+func (w *WebHooks) String() string {
+	if w == nil {
 		return ""
 	}
-	return util.ToJSONString(slice)
+	return util.ToJSONString(w)
 }
 
 // Flatten these WebHooks into a list.
-func (slice *WebHooks) Flatten() []*WebHook {
-	if slice == nil {
+func (w *WebHooks) Flatten() []*WebHook {
+	if w == nil {
 		return nil
 	}
 
-	names := util.SortedKeys(*slice)
+	names := util.SortedKeys(*w)
 	list := make([]*WebHook, len(names))
 
 	for index, name := range names {
-		list[index] = (*slice)[name]
+		list[index] = (*w)[name]
 		list[index].Censor()
 		list[index].ID = name
 	}

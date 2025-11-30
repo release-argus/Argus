@@ -65,37 +65,34 @@ func TestService_IconURL(t *testing.T) {
 		"notify icon only": {
 			want: "https://example.com/icon.png",
 			notify: shoutrrr.Shoutrrrs{"test": shoutrrr.New(
-				nil, "", "",
+				nil,
+				"", "",
 				nil, nil,
 				map[string]string{
 					"icon": "https://example.com/icon.png"},
-				&shoutrrr.Defaults{},
-				&shoutrrr.Defaults{},
-				&shoutrrr.Defaults{})},
+				&shoutrrr.Defaults{}, &shoutrrr.Defaults{}, &shoutrrr.Defaults{})},
 		},
 		"notify icon takes precedence over emoji": {
 			want:          "https://example.com/icon.png",
 			dashboardIcon: ":smile:",
 			notify: shoutrrr.Shoutrrrs{"test": shoutrrr.New(
-				nil, "", "",
+				nil,
+				"", "",
 				nil, nil,
 				map[string]string{
 					"icon": "https://example.com/icon.png"},
-				&shoutrrr.Defaults{},
-				&shoutrrr.Defaults{},
-				&shoutrrr.Defaults{})},
+				&shoutrrr.Defaults{}, &shoutrrr.Defaults{}, &shoutrrr.Defaults{})},
 		},
 		"dashboard icon takes precedence over notify icon": {
 			want:          "https://root.com/icon.png",
 			dashboardIcon: "https://root.com/icon.png",
 			notify: shoutrrr.Shoutrrrs{"test": shoutrrr.New(
-				nil, "", "",
+				nil,
+				"", "",
 				nil, nil,
 				map[string]string{
 					"icon": "https://example.com/icon.png"},
-				&shoutrrr.Defaults{},
-				&shoutrrr.Defaults{},
-				&shoutrrr.Defaults{})},
+				&shoutrrr.Defaults{}, &shoutrrr.Defaults{}, &shoutrrr.Defaults{})},
 		},
 	}
 
@@ -171,7 +168,8 @@ func TestService_Init(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"test": shoutrrr.New(
-						nil, "", "discord",
+						nil,
+						"", "discord",
 						nil, nil,
 						map[string]string{
 							"icon": "notify-icon"},
@@ -198,13 +196,15 @@ func TestService_Init(t *testing.T) {
 				Notify: shoutrrr.Shoutrrrs{
 					"baz": nil,
 					"foo": shoutrrr.New(
-						nil, "", "discord",
+						nil,
+						"", "discord",
 						nil, nil,
 						map[string]string{
 							"icon": "example.com/notify-icon-1"},
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", "discord",
+						nil,
+						"", "discord",
 						nil, nil,
 						map[string]string{
 							"icon": "https://example.com/notify-icon-2"},
@@ -230,7 +230,8 @@ func TestService_Init(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"test": shoutrrr.New(
-						nil, "", "discord",
+						nil,
+						"", "discord",
 						nil, nil, nil,
 						nil, nil, nil)},
 				Command: command.Commands{

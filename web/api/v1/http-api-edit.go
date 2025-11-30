@@ -40,7 +40,7 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// httpLatestVersionRefreshUncreated will create the latest version lookup type and query it.
+// httpLatestVersionRefreshUncreated will create the 'latest version lookup' type and query it.
 //
 // # GET
 //
@@ -133,7 +133,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	}, logFrom)
 }
 
-// httpDeployedVersionRefreshUncreated will create the deployed version lookup type and query it.
+// httpDeployedVersionRefreshUncreated will create the 'deployed version lookup' type and query it.
 //
 // # GET
 //
@@ -211,7 +211,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	// Query the DeployedVersionLookup.
 	version, err := deployedver.Refresh(
 		dvl,
-		"", "", nil, nil)
+		"", nil, nil)
 	if err != nil {
 		failRequest(&w,
 			err.Error(),
@@ -250,7 +250,7 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 
 	queryParams := r.URL.Query()
 
-	// Check if service exists.
+	// Check whether service exists.
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
 	if api.Config.Service[targetService] == nil {
@@ -314,7 +314,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 
 	queryParams := r.URL.Query()
 
-	// Check if service exists.
+	// Check whether service exists.
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
 	svc := api.Config.Service[targetService]
@@ -334,19 +334,20 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 	)
 
 	// Extract the desired lookup type.
-	lookupType, err := extractLookupType(overrides, logFrom)
-	if err != nil {
-		failRequest(&w,
-			err.Error(),
-			http.StatusBadRequest)
-		return
-	}
 
 	// Existing DeployedVersionLookup?
 	var previousType string
 	dvl := svc.DeployedVersionLookup
 	// Must create the DeployedVersionLookup if it doesn't exist.
 	if dvl == nil {
+		lookupType, err := extractLookupType(overrides, logFrom)
+		if err != nil {
+			failRequest(&w,
+				err.Error(),
+				http.StatusBadRequest)
+			return
+		}
+
 		if lookupType == "" {
 			failRequest(&w,
 				"missing required parameter: overrides.type",
@@ -370,13 +371,11 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 			&api.Config.Service[targetService].HardDefaults.DeployedVersionLookup)
 	} else {
 		previousType = dvl.GetType()
-		lookupType = util.FirstNonDefault(lookupType, previousType)
 	}
 
 	// Query the DeployedVersionLookup.
 	version, err := deployedver.Refresh(
 		dvl,
-		lookupType,
 		previousType,
 		overrides,
 		semanticVersioning)
@@ -673,7 +672,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	api.Config.OrderMutex.RUnlock() // Locked above.
 	//#nosec G104 -- Fail for duplicate service name handled above.
 	//nolint:errcheck // ^
-	api.Config.AddService(targetService, newService)
+	_ = api.Config.AddService(targetService, newService)
 	api.Config.OrderMutex.RLock() // Lock again for the defer.
 
 	newServiceSummary := newService.Summary()
@@ -747,7 +746,7 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
 
-	// Read payload.
+	// Read the payload.
 	payload := http.MaxBytesReader(w, r.Body, 1024_00)
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(payload); err != nil {

@@ -68,7 +68,7 @@ func New(
 	if lType != "" {
 		errorMsg = fmt.Sprintf("%q <invalid>", lType)
 	}
-	return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\n  type: %q <invalid> (supported types = ['%s'])",
+	return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\n  type: %s (supported types = ['%s'])",
 		errorMsg, strings.Join(PossibleTypes, "', '"))
 }
 

@@ -96,8 +96,15 @@ func StringifyPtr[T comparable](ptr *T) string {
 func TrimJSON(str string) string {
 	var buf bytes.Buffer
 	if err := json.Compact(&buf, []byte(str)); err != nil {
-		// Return original string if invalid JSON.
-		return str
+		// Invalid JSON: Trim as much as possible.
+		replacer := strings.NewReplacer(
+			"\n", "",
+			"\t", "",
+			`": `, `":`,
+			`", `, `",`,
+			`, "`, `,"`,
+		)
+		return replacer.Replace(strings.TrimSpace(str))
 	}
 	return buf.String()
 }

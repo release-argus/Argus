@@ -614,39 +614,39 @@ func TestService_Track(t *testing.T) {
 	}
 }
 
-func TestSlice_Track(t *testing.T) {
+func TestServices_Track(t *testing.T) {
 	// GIVEN a Services.
 	tests := map[string]struct {
 		ordering []string
-		slice    []string
+		services []string
 		active   []bool
 	}{
 		"empty Ordering does no queries": {
 			ordering: []string{},
-			slice:    []string{"github", "url"}},
+			services: []string{"github", "url"}},
 		"only tracks active Services": {
 			ordering: []string{"github", "url"},
-			slice:    []string{"github", "url"},
+			services: []string{"github", "url"},
 			active:   []bool{false, true}},
 	}
 
 	for name, tc := range tests {
-		var slice *Services
-		if len(tc.slice) != 0 {
-			slice = &Services{}
+		var services *Services
+		if len(tc.services) != 0 {
+			services = &Services{}
 			i := 0
-			for _, j := range tc.slice {
+			for _, j := range tc.services {
 				switch j {
 				case "github":
-					(*slice)[j] = testService(t, name, "github")
+					(*services)[j] = testService(t, name, "github")
 				case "url":
-					(*slice)[j] = testService(t, name, "url")
+					(*services)[j] = testService(t, name, "url")
 				}
 				if len(tc.active) != 0 {
-					(*slice)[j].Options.Active = test.BoolPtr(tc.active[i])
+					(*services)[j].Options.Active = test.BoolPtr(tc.active[i])
 				}
-				(*slice)[j].Status.SetLatestVersion("", "", false)
-				(*slice)[j].Status.SetDeployedVersion("", "", false)
+				(*services)[j].Status.SetLatestVersion("", "", false)
+				(*services)[j].Status.SetDeployedVersion("", "", false)
 				i++
 			}
 		}
@@ -655,30 +655,30 @@ func TestSlice_Track(t *testing.T) {
 			t.Parallel()
 
 			// WHEN Track is called on it.
-			slice.Track(&tc.ordering, &sync.RWMutex{})
+			services.Track(&tc.ordering, &sync.RWMutex{})
 
 			// THEN the function exits straight away.
 			time.Sleep(2 * time.Second)
-			for i := range *slice {
+			for i := range *services {
 				if !util.Contains(tc.ordering, i) {
-					if wantLatestVersion := ""; (*slice)[i].Status.LatestVersion() != wantLatestVersion {
+					if wantLatestVersion := ""; (*services)[i].Status.LatestVersion() != wantLatestVersion {
 						t.Fatalf("%s\nQuery on Services[%q] shouldn't have updated LatestVersion as not in ordering\nwant: %q\ngot:  %q\norder: %v",
 							packageName, i,
-							wantLatestVersion, (*slice)[i].Status.String(),
+							wantLatestVersion, (*services)[i].Status.String(),
 							tc.ordering)
 					}
-				} else if (*slice)[i].Options.GetActive() {
-					if (*slice)[i].Status.LatestVersion() == "" {
+				} else if (*services)[i].Options.GetActive() {
+					if (*services)[i].Status.LatestVersion() == "" {
 						t.Fatalf("%s\nQuery on Services[%q] didn't find LatestVersion\nwant: %s\ngot:  %q",
-							packageName, i, (*slice)[i].Status.String(), "")
+							packageName, i, (*services)[i].Status.String(), "")
 					}
-				} else if (*slice)[i].Status.LatestVersion() != "" {
+				} else if (*services)[i].Status.LatestVersion() != "" {
 					t.Fatalf("%s\nQuery on Services[%q] shouldn't have updated LatestVersion\nwant: %q\ngot:  %q",
-						packageName, i, "", (*slice)[i].Status.String())
+						packageName, i, "", (*services)[i].Status.String())
 				}
 
 				// Set Deleting to stop the Track.
-				(*slice)[i].Status.SetDeleting()
+				(*services)[i].Status.SetDeleting()
 			}
 		})
 	}

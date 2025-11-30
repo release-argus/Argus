@@ -78,6 +78,7 @@ func TestHTTP_Config(t *testing.T) {
 									"docker": {}
 								}
 							},
+							"command": [],
 							"deployed_version": {},
 							"dashboard": {}
 						},
@@ -139,6 +140,7 @@ func TestHTTP_Config(t *testing.T) {
 									}
 								}
 							},
+							"command": [],
 							"deployed_version": {},
 							"dashboard": {}
 						},
@@ -518,7 +520,8 @@ func TestHTTP_Config(t *testing.T) {
 								"url": "https://example.com/version",
 								"allow_invalid_certs": true,
 								"url_commands": []
-							},"command": [],
+							},
+							"command": [],
 							"notify": {},
 							"webhook": {},
 							"dashboard": {}
@@ -585,13 +588,13 @@ func TestHTTP_Config(t *testing.T) {
 			// THEN the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("%s\nunexpected error - %v",
-					packageName, err)
+				t.Fatalf("%s - %s\nunexpected error - %v",
+					packageName, name, err)
 			}
 			got := string(data)
 			if got != tc.wantBody {
-				t.Fatalf("%s\nwant %q\ngot: %q",
-					packageName, tc.wantBody, got)
+				t.Fatalf("%s - %s\nwant %q\ngot: %q",
+					packageName, name, tc.wantBody, got)
 			}
 		})
 	}

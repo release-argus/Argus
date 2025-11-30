@@ -31,7 +31,7 @@ import (
 
 func TestRefresh(t *testing.T) {
 	testL := testLookup("url", false)
-	testL.Query(true, logutil.LogFrom{Primary: "TestLookup_Refresh"})
+	_ = testL.Query(true, logutil.LogFrom{Primary: "TestLookup_Refresh"})
 	testVersion := testL.GetStatus().DeployedVersion()
 	if testVersion == "" {
 		t.Fatalf("%s\ntest version is empty",
@@ -178,7 +178,7 @@ func TestRefresh(t *testing.T) {
 			// WHEN we call Refresh.
 			got, err := Refresh(
 				tc.previous,
-				previousType, util.DereferenceOrDefault(tc.args.overrides),
+				previousType, tc.args.overrides,
 				tc.args.semanticVersioning)
 
 			// THEN we get an error if expected.
@@ -350,7 +350,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			errRegex: `\stype: "newType" <invalid> \(expected one of \[url, manual\]\)$`,
+			errRegex: `\stype: "newType" <invalid> \(supported types = \['url', 'manual'\]\)$`,
 		},
 	}
 
@@ -360,7 +360,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 
 			_, err := applyOverridesJSON(
 				tc.args.lookup,
-				util.DereferenceOrDefault(tc.args.overrides),
+				tc.args.overrides,
 				tc.args.semanticVerDiff,
 				tc.args.semanticVersioning)
 

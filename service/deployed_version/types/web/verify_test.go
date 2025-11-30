@@ -128,8 +128,8 @@ func TestLookup_CheckValues(t *testing.T) {
 				regex_template: $1.$2.$3
 			`),
 			errRegex: test.TrimYAML(`
-				method: "[^"]+" <invalid>.*
 				url: <required>.*
+				method: "[^"]+" <invalid>.*
 				json: "[^"]+" <invalid>.*
 				regex: "[^"]+" <invalid>.*`),
 		},

@@ -52,8 +52,8 @@ func Shoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 		url = strings.Replace(url, "valid", "invalid", 1)
 	}
 	s := shoutrrr.New(
-		nil, "",
-		"gotify",
+		nil,
+		"", "gotify",
 		map[string]string{"max_tries": "1"},
 		map[string]string{
 			"host":  url,

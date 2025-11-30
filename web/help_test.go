@@ -103,9 +103,9 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 		panic(err)
 	}
 	var (
-		listenHost  string = "0.0.0.0"
-		listenPort  string = fmt.Sprint(port)
-		routePrefix string = "/"
+		listenHost  = "0.0.0.0"
+		listenPort  = fmt.Sprint(port)
+		routePrefix = "/"
 	)
 	cfg.Settings.Web = config.WebSettings{
 		ListenHost:  listenHost,
@@ -190,15 +190,15 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 		CommandController: &command.Controller{},
 		WebHook: webhook.WebHooks{
 			"test": webhook.New(
-				nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
+				nil, nil, "", nil, nil, "test", nil, nil, nil, "", nil, "",
 				"example.com",
 				nil, nil, nil)}}
 
 	// Status.
 	var (
-		sAnnounceChannel chan []byte         = make(chan []byte, 2)
-		sDatabaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
-		sSaveChannel     chan bool           = make(chan bool, 5)
+		sAnnounceChannel = make(chan []byte, 2)
+		sDatabaseChannel = make(chan dbtype.Message, 5)
+		sSaveChannel     = make(chan bool, 5)
 	)
 	svc.Status.AnnounceChannel = &sAnnounceChannel
 	svc.Status.DatabaseChannel = &sDatabaseChannel

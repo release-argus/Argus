@@ -235,13 +235,13 @@ func TestData_TagFallback(t *testing.T) {
 
 func TestData_ETag(t *testing.T) {
 	// GIVEN a Data.
-	test := &Data{}
+	testData := &Data{}
 
 	// WHEN ETag is called.
-	got := test.ETag()
+	got := testData.ETag()
 
 	// THEN the releases are returned.
-	want := test.eTag
+	want := testData.eTag
 	if got != want {
 		t.Errorf("%s\nwant: %q\ngot:  %q",
 			packageName, want, got)
@@ -249,10 +249,10 @@ func TestData_ETag(t *testing.T) {
 
 	// WHEN the releases are changed.
 	newETag := "foo"
-	test.SetETag(newETag)
+	testData.SetETag(newETag)
 
 	// THEN the new releases can be fetched.
-	got = test.ETag()
+	got = testData.ETag()
 	want = newETag
 	if got != want {
 		t.Errorf("%s\nwant: %q\ngot:  %q",
@@ -289,13 +289,13 @@ func TestData_PerPage(t *testing.T) {
 
 func TestData_Releases(t *testing.T) {
 	// GIVEN a Data.
-	test := &Data{}
+	testData := &Data{}
 
 	// WHEN Releases is called.
-	got := test.Releases()
+	got := testData.Releases()
 
 	// THEN the releases are returned.
-	want := test.releases
+	want := testData.releases
 	match := len(got) == len(want)
 	if match {
 		for i, release := range got {
@@ -314,10 +314,10 @@ func TestData_Releases(t *testing.T) {
 	newReleases := []github_types.Release{
 		{TagName: "foo"},
 		{TagName: "bar"}}
-	test.SetReleases(newReleases)
+	testData.SetReleases(newReleases)
 
 	// THEN the new releases can be fetched.
-	got = test.Releases()
+	got = testData.Releases()
 	want = newReleases
 	match = len(got) == len(want)
 	if match {

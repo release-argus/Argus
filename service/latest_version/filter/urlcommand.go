@@ -188,8 +188,8 @@ func (c *URLCommand) run(versions *[]string, logFrom logutil.LogFrom) error {
 // regex applies the URLCommands regex to `versions[versionIndex]`.
 //
 // Parameters:
-//   - versionIndex: The index of the version in the `versions` slice to validate.
-//   - versions: A pointer to the slice of version strings to regex.
+//   - versionIndex: The index of the version in the `versions` urlCommands to validate.
+//   - versions: A pointer to the urlCommands of version strings to regex.
 //   - logFrom: Used for logging the source of the operation.
 func (c *URLCommand) regex(versionIndex int, versions *[]string, logFrom logutil.LogFrom) error {
 	re := regexp.MustCompile(c.Regex)
@@ -244,8 +244,8 @@ func (c *URLCommand) regex(versionIndex int, versions *[]string, logFrom logutil
 //   - If the split result does not contain enough elements to retrieve the specified index, an error is returned.
 //
 // Parameters:
-//   - versionIndex: The index of the version in the `versions` slice to process.
-//   - versions: A pointer to the slice of version strings to modify.
+//   - versionIndex: The index of the version in the `versions` urlCommands to process.
+//   - versions: A pointer to the urlCommands of version strings to modify.
 //   - logFrom: Used for logging the source of the operation.
 func (c *URLCommand) split(versionIndex int, versions *[]string, logFrom logutil.LogFrom) error {
 	texts, err := c.splitAllMatches((*versions)[versionIndex], logFrom)

@@ -38,8 +38,6 @@ func (l *Lookup) body() io.Reader {
 	return strings.NewReader(l.Body)
 }
 
-
-
 // method returns the method of the Lookup.
 func (l *Lookup) method() string {
 	return util.FirstNonDefault(

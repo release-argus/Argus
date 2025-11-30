@@ -1057,19 +1057,19 @@ func TestWebHook_String(t *testing.T) {
 func TestWebHooks_String(t *testing.T) {
 	// GIVEN WebHooks.
 	tests := map[string]struct {
-		slice *WebHooks
-		want  string
+		webhooks *WebHooks
+		want     string
 	}{
 		"nil": {
-			slice: nil,
-			want:  "",
+			webhooks: nil,
+			want:     "",
 		},
 		"empty": {
-			slice: &WebHooks{},
-			want:  "{}",
+			webhooks: &WebHooks{},
+			want:     "{}",
 		},
 		"single webhook, all fields": {
-			slice: &WebHooks{
+			webhooks: &WebHooks{
 				"0": {ServiceID: "something",
 					ID:                "foobar",
 					Type:              "url",
@@ -1100,7 +1100,7 @@ func TestWebHooks_String(t *testing.T) {
 				}`,
 		},
 		"multiple webhooks": {
-			slice: &WebHooks{
+			webhooks: &WebHooks{
 				"0": {URL: "bish"},
 				"1": {Secret: "bash"},
 				"2": {Type: "github"}},
@@ -1118,7 +1118,7 @@ func TestWebHooks_String(t *testing.T) {
 			t.Parallel()
 
 			// WHEN the WebHook is stringified with String.
-			got := tc.slice.String()
+			got := tc.webhooks.String()
 
 			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
@@ -1133,19 +1133,19 @@ func TestWebHooks_String(t *testing.T) {
 func TestNotifiers_String(t *testing.T) {
 	// GIVEN Notifiers.
 	tests := map[string]struct {
-		slice *Notifiers
-		want  string
+		notifiers *Notifiers
+		want      string
 	}{
 		"nil": {
-			slice: nil,
-			want:  "",
+			notifiers: nil,
+			want:      "",
 		},
 		"empty": {
-			slice: &Notifiers{},
-			want:  "{}",
+			notifiers: &Notifiers{},
+			want:      "{}",
 		},
 		"one": {
-			slice: &Notifiers{
+			notifiers: &Notifiers{
 				"0": {
 					ID:   "foo",
 					Type: "discord",
@@ -1171,7 +1171,7 @@ func TestNotifiers_String(t *testing.T) {
 				}`,
 		},
 		"multiple": {
-			slice: &Notifiers{
+			notifiers: &Notifiers{
 				"0": {
 					ID:   "foo",
 					Type: "discord",
@@ -1208,7 +1208,7 @@ func TestNotifiers_String(t *testing.T) {
 			t.Parallel()
 
 			// WHEN the Notifiers is stringified with String.
-			got := tc.slice.String()
+			got := tc.notifiers.String()
 
 			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
@@ -1288,19 +1288,19 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 func TestURLCommands_String(t *testing.T) {
 	// GIVEN URLCommands.
 	tests := map[string]struct {
-		slice *URLCommands
-		want  string
+		urlCommands *URLCommands
+		want        string
 	}{
 		"nil": {
-			slice: nil,
-			want:  "",
+			urlCommands: nil,
+			want:        "",
 		},
 		"empty": {
-			slice: &URLCommands{},
-			want:  "[]",
+			urlCommands: &URLCommands{},
+			want:        "[]",
 		},
 		"one of each type": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `bam`},
 				{Type: "replace", Old: "want-rid", New: test.StringPtr("replacement")},
 				{Type: "split", Text: "split on me", Index: test.IntPtr(5)},
@@ -1319,7 +1319,7 @@ func TestURLCommands_String(t *testing.T) {
 			t.Parallel()
 
 			// WHEN the URLCommands is stringified with String.
-			got := tc.slice.String()
+			got := tc.urlCommands.String()
 
 			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)

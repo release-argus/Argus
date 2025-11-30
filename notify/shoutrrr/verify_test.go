@@ -1981,24 +1981,24 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 	}
 }
 
-func TestSlice_CheckValues(t *testing.T) {
-	// GIVEN a Shoutrrrs.
+func TestShoutrrrs_CheckValues(t *testing.T) {
+	// GIVEN Shoutrrrs.
 	tests := map[string]struct {
-		slice    *Shoutrrrs
-		errRegex string
+		shoutrrrs *Shoutrrrs
+		errRegex  string
 	}{
-		"nil slice": {
-			slice: nil, errRegex: `^$`},
-		"valid slice": {
+		"nil map": {
+			shoutrrrs: nil, errRegex: `^$`},
+		"valid map": {
 			errRegex: `^$`,
-			slice: &Shoutrrrs{
+			shoutrrrs: &Shoutrrrs{
 				"valid": testShoutrrr(false, false),
 				"other": testShoutrrr(false, false)}},
-		"invalid slice": {
+		"invalid map": {
 			errRegex: test.TrimYAML(`
 				other:
 					type: <required>`),
-			slice: &Shoutrrrs{
+			shoutrrrs: &Shoutrrrs{
 				"valid": testShoutrrr(false, false),
 				"other": New(
 					nil, "", "",
@@ -2010,7 +2010,7 @@ func TestSlice_CheckValues(t *testing.T) {
 					type: <required>.*
 				bNotify:
 					type: <required>.*`),
-			slice: &Shoutrrrs{
+			shoutrrrs: &Shoutrrrs{
 				"aNotify": New(
 					nil, "", "",
 					make(map[string]string), make(map[string]string), make(map[string]string),
@@ -2025,19 +2025,19 @@ func TestSlice_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.slice != nil {
+			if tc.shoutrrrs != nil {
 				svcStatus := &status.Status{}
 				svcStatus.Init(
-					len(*tc.slice), 0, 0,
+					len(*tc.shoutrrrs), 0, 0,
 					"", "", "",
 					&dashboard.Options{})
-				tc.slice.Init(
+				tc.shoutrrrs.Init(
 					svcStatus,
 					&ShoutrrrsDefaults{}, &ShoutrrrsDefaults{}, &ShoutrrrsDefaults{})
 			}
 
 			// WHEN CheckValues is called.
-			err := tc.slice.CheckValues("")
+			err := tc.shoutrrrs.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
@@ -2049,25 +2049,25 @@ func TestSlice_CheckValues(t *testing.T) {
 	}
 }
 
-func TestSliceDefaults_CheckValues(t *testing.T) {
-	// GIVEN a ShoutrrrsDefaults.
+func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
+	// GIVEN ShoutrrrsDefaults.
 	tests := map[string]struct {
-		slice    *ShoutrrrsDefaults
-		errRegex string
+		shoutrrrsDefaults *ShoutrrrsDefaults
+		errRegex          string
 	}{
-		"nil slice": {
-			slice:    nil,
-			errRegex: `^$`,
+		"nil map": {
+			shoutrrrsDefaults: nil,
+			errRegex:          `^$`,
 		},
-		"valid slice": {
+		"valid map": {
 			errRegex: `^$`,
-			slice: &ShoutrrrsDefaults{
+			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"valid": testDefaults(false, false),
 				"other": testDefaults(false, false)},
 		},
 		"invalid type": {
 			errRegex: "", // Caught by Shoutrrr.CheckValues.
-			slice: &ShoutrrrsDefaults{
+			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"valid": testDefaults(false, false),
 				"other": NewDefaults(
 					"somethingUnknown",
@@ -2075,7 +2075,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 		},
 		"delay without unit": {
 			errRegex: `^$`,
-			slice: &ShoutrrrsDefaults{
+			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"foo": NewDefaults(
 					"gotify",
 					map[string]string{
@@ -2087,7 +2087,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 				^foo:
 					options:
 						delay: "1x" <invalid>`),
-			slice: &ShoutrrrsDefaults{
+			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"foo": NewDefaults(
 					"gotify",
 					map[string]string{
@@ -2099,7 +2099,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 				^bar:
 					options:
 						message: "[^"]+" <invalid>.*$`),
-			slice: &ShoutrrrsDefaults{
+			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"bar": NewDefaults(
 					"gotify",
 					map[string]string{
@@ -2111,7 +2111,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 				^bar:
 					params:
 						title: "[^"]+" <invalid>.*$`),
-			slice: &ShoutrrrsDefaults{
+			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"bar": NewDefaults(
 					"gotify",
 					nil,
@@ -2126,7 +2126,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CheckValues is called.
-			err := tc.slice.CheckValues("")
+			err := tc.shoutrrrsDefaults.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
@@ -2178,7 +2178,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 			id: "",
 			errRegex: test.TrimYAML(`
                 ^options:
-				  delay: "10x" <invalid>.*$`),
+                  delay: "10x" <invalid>.*$`),
 		},
 		"Combines type invalid and base error": {
 			d: &Defaults{Base: Base{
@@ -2189,7 +2189,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 			errRegex: test.TrimYAML(`
                 ^type: "invalid" <invalid>.*
                 params:
-				  color: "{{ invalid template }}" <invalid>.*$`),
+                  color: "{{ invalid template }}" <invalid>.*$`),
 		},
 		"both valid - no error": {
 			d: &Defaults{Base: Base{
@@ -2267,31 +2267,31 @@ func TestShoutrrr_TestSend(t *testing.T) {
 	}
 }
 
-func TestSliceDefaults_Print(t *testing.T) {
+func TestShoutrrrsDefaults_Print(t *testing.T) {
 	// GIVEN a ShoutrrrsDefaults.
 	testValid := testDefaults(false, false)
 	testInvalid := testDefaults(true, true)
 	tests := map[string]struct {
-		slice *ShoutrrrsDefaults
-		want  string
+		shoutrrrsDefaults *ShoutrrrsDefaults
+		want              string
 	}{
 		"nil": {
-			slice: nil,
-			want:  "",
+			shoutrrrsDefaults: nil,
+			want:              "",
 		},
 		"empty": {
-			slice: &ShoutrrrsDefaults{},
-			want:  "",
+			shoutrrrsDefaults: &ShoutrrrsDefaults{},
+			want:              "",
 		},
-		"single empty element slice": {
-			slice: &ShoutrrrsDefaults{
+		"single empty element map": {
+			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"single": {}},
 			want: test.TrimYAML(`
 				notify:
 					single: {}`),
 		},
-		"single element slice": {
-			slice: &ShoutrrrsDefaults{
+		"single element map": {
+			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"single": testValid},
 			want: test.TrimYAML(`
 				notify:
@@ -2304,8 +2304,8 @@ func TestSliceDefaults_Print(t *testing.T) {
 							path: ` + testValid.GetURLField("path") + `
 							token: ` + testValid.GetURLField("token")),
 		},
-		"multiple element slice": {
-			slice: &ShoutrrrsDefaults{
+		"multiple element map": {
+			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"first":  testValid,
 				"second": testInvalid},
 			want: test.TrimYAML(`
@@ -2339,7 +2339,7 @@ func TestSliceDefaults_Print(t *testing.T) {
 			}
 
 			// WHEN Print is called.
-			tc.slice.Print("")
+			tc.shoutrrrsDefaults.Print("")
 
 			// THEN it prints the expected stdout.
 			stdout := releaseStdout()

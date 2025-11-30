@@ -61,21 +61,21 @@ func TestCommand_CheckValues(t *testing.T) {
 func TestCommandSlice_CheckValues(t *testing.T) {
 	// GIVEN a Commands.
 	tests := map[string]struct {
-		slice    *Commands
+		commands *Commands
 		errRegex string
 	}{
 		"nil slice": {
 			errRegex: `^$`,
-			slice:    nil},
+			commands: nil},
 		"valid slice": {
 			errRegex: `^$`,
-			slice: &Commands{
+			commands: &Commands{
 				{"ls", "-la"}}},
 		"invalid templating": {
 			errRegex: test.TrimYAML(`
 				^item_1: .+ \(.+\) <invalid>.*
 				item_3: .+ \(.+\) <invalid>.*$`),
-			slice: &Commands{
+			commands: &Commands{
 				{"ls"},
 				{"ls", "-la", "{{ version }"},
 				{"ls"},
@@ -87,7 +87,7 @@ func TestCommandSlice_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CheckValues is called.
-			err := tc.slice.CheckValues("")
+			err := tc.commands.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)

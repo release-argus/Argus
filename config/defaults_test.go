@@ -211,7 +211,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 	var unmodifiedDefaults Defaults
 	unmodifiedDefaults.Default()
 	// GIVEN Defaults and a bunch of env vars.
-	test := map[string]struct {
+	tests := map[string]struct {
 		env      map[string]string
 		want     *Defaults
 		errRegex string
@@ -911,7 +911,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		},
 	}
 
-	for name, tc := range test {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
 
@@ -1095,7 +1095,7 @@ func TestDefaults_Print(t *testing.T) {
 	}{
 		"unmodified hard defaults": {
 			input: &defaults,
-			lines: 165 + len(defaults.Notify)},
+			lines: 161 + len(defaults.Notify)},
 		"empty defaults": {
 			input: &Defaults{},
 			lines: 1},

@@ -238,33 +238,33 @@ func TestWebHook_Send(t *testing.T) {
 	}
 }
 
-func TestSlice_Send(t *testing.T) {
-	// GIVEN a WebHooks.
+func TestWebHooks_Send(t *testing.T) {
+	// GIVEN WebHooks.
 	tests := map[string]struct {
-		slice                       *WebHooks
+		webhooks                    *WebHooks
 		stdoutRegex, stdoutRegexAlt string
 		notifiers                   shoutrrr.Shoutrrrs
 		useDelay                    bool
 		delays                      map[string]string
 		repeat                      int
 	}{
-		"nil slice": {
-			slice:       nil,
+		"nil map": {
+			webhooks:    nil,
 			stdoutRegex: `^$`},
 		"2 successful webhooks": {
-			slice: &WebHooks{
+			webhooks: &WebHooks{
 				"pass": testWebHook(false, false, false),
 				"fail": testWebHook(false, false, false)},
 			stdoutRegex:    `WebHook received.*WebHook received`,
 			stdoutRegexAlt: `^$`},
 		"successful and failing webhook": {
-			slice: &WebHooks{
+			webhooks: &WebHooks{
 				"pass": testWebHook(false, false, false),
 				"fail": testWebHook(true, false, false)},
 			stdoutRegex:    `WebHook received.*failed \d times to send the WebHook`,
 			stdoutRegexAlt: `failed \d times to send the WebHook.*WebHook received`},
 		"does apply webhook delay": {
-			slice: &WebHooks{
+			webhooks: &WebHooks{
 				"pass": testWebHook(false, false, false),
 				"fail": testWebHook(true, false, false)},
 			stdoutRegex: `WebHook received.*failed \d times to send the WebHook`,
@@ -287,17 +287,17 @@ func TestSlice_Send(t *testing.T) {
 				tc.repeat++ // repeat to check delay usage as map order is random.
 				for tc.repeat != 0 {
 					releaseStdout := test.CaptureStdout()
-					if tc.slice != nil {
-						for id := range *tc.slice {
-							(*tc.slice)[id].ID = id
+					if tc.webhooks != nil {
+						for id := range *tc.webhooks {
+							(*tc.webhooks)[id].ID = id
 						}
 						for id := range tc.delays {
-							(*tc.slice)[id].Delay = tc.delays[id]
+							(*tc.webhooks)[id].Delay = tc.delays[id]
 						}
 					}
 
 					// WHEN try is called on it.
-					tc.slice.Send(serviceinfo.ServiceInfo{ID: name}, tc.useDelay)
+					tc.webhooks.Send(serviceinfo.ServiceInfo{ID: name}, tc.useDelay)
 
 					// THEN the logs are expected.
 					stdout := releaseStdout()

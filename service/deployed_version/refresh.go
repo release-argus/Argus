@@ -30,7 +30,6 @@ import (
 //	Returns: version, err.
 func Refresh(
 	lookup Lookup,
-	lookupType string,
 	previousType string,
 	overrides *string,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
@@ -50,7 +49,7 @@ func Refresh(
 		// semantic_versioning now resolves to a different value than the default.
 		(*semanticVersioning != "null" && *semanticVersioning == "true" != lookup.GetOptions().GetSemanticVersioning()))
 	// Create a new lookup if overrides provided for a non-manual type or if `semantic_versioning` changed.
-	usingOverrides := (overrides != nil && lookupType != "manual") || semanticVerDiff
+	usingOverrides := (overrides != nil && previousType != "manual") || semanticVerDiff
 
 	newLookup := lookup
 	// Create a new Lookup if overrides provided.
@@ -64,7 +63,7 @@ func Refresh(
 		if err != nil {
 			return "", err
 		}
-	} else if previousType == "manual" && lookupType == "manual" &&
+	} else if previousType == "manual" && newLookup.GetType() == "manual" &&
 		overrides != nil {
 		if err := json.Unmarshal([]byte(*overrides), &lookup); err != nil {
 			errStr := util.FormatUnmarshalError("json", err)

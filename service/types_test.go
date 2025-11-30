@@ -42,7 +42,8 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestSlice_UnmarshalJSON(t *testing.T) {
+func TestServices_UnmarshalJSON(t *testing.T) {
+	// GIVEN a JSON string.
 	tests := map[string]struct {
 		input    string
 		expected Services
@@ -155,6 +156,7 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			// WHEN the YAML is unmarshalled into a Services.
 			var got Services
@@ -189,7 +191,8 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestSlice_UnmarshalYAML(t *testing.T) {
+func TestServices_UnmarshalYAML(t *testing.T) {
+	// GIVEN a YAML string.
 	tests := map[string]struct {
 		input    string
 		expected Services
@@ -343,22 +346,22 @@ func TestSlice_UnmarshalYAML(t *testing.T) {
 	}
 }
 
-func TestSlice_giveIDs(t *testing.T) {
-	// GIVEN a Services.
+func TestServices_giveIDs(t *testing.T) {
+	// GIVEN Services.
 	tests := map[string]struct {
-		slice    Services
+		services Services
 		expected Services
 	}{
-		"nil slice": {
-			slice:    nil,
+		"nil map": {
+			services: nil,
 			expected: nil,
 		},
-		"empty slice": {
-			slice:    Services{},
+		"empty map": {
+			services: Services{},
 			expected: Services{},
 		},
-		"slice with nil service": {
-			slice: Services{
+		"map with nil service": {
+			services: Services{
 				"s1": nil,
 				"s2": &Service{},
 			},
@@ -367,7 +370,7 @@ func TestSlice_giveIDs(t *testing.T) {
 			},
 		},
 		"multiple services": {
-			slice: Services{
+			services: Services{
 				"s1": &Service{},
 				"s2": &Service{},
 				"s3": &Service{},
@@ -379,7 +382,7 @@ func TestSlice_giveIDs(t *testing.T) {
 			},
 		},
 		"service with existing ID": {
-			slice: Services{
+			services: Services{
 				"service1": &Service{ID: "oldID"},
 			},
 			expected: Services{
@@ -387,7 +390,7 @@ func TestSlice_giveIDs(t *testing.T) {
 			},
 		},
 		"services with Name different to ID": {
-			slice: Services{
+			services: Services{
 				"s1": &Service{ID: "s1"},
 				"s2": &Service{ID: "s2", Name: "Name 2"},
 			},
@@ -403,17 +406,17 @@ func TestSlice_giveIDs(t *testing.T) {
 			t.Parallel()
 
 			// WHEN giveIDs is called.
-			tc.slice.giveIDs()
+			tc.services.giveIDs()
 
 			// THEN the length is as expected.
-			if len(tc.slice) != len(tc.expected) {
+			if len(tc.services) != len(tc.expected) {
 				t.Errorf("%s\nlength mismatch\nwant: %d\ngot:  %d",
-					packageName, len(tc.expected), len(tc.slice))
+					packageName, len(tc.expected), len(tc.services))
 			}
 
 			// AND each Service is given its key as ID.
 			for id, svc := range tc.expected {
-				got, exists := tc.slice[id]
+				got, exists := tc.services[id]
 				if !exists {
 					t.Errorf("%s\nservice %q not found in result",
 						packageName, id)
@@ -516,8 +519,8 @@ func TestService_String(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "",
-						"discord",
+						nil,
+						"", "discord",
 						nil,
 						map[string]string{
 							"token": "bar"},
@@ -527,9 +530,13 @@ func TestService_String(t *testing.T) {
 					{"ls", "-la"}},
 				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"https://example.com",
+						nil, nil,
+						"",
+						nil, nil, "foo",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "https://example.com",
 						nil, nil, nil)},
 				Dashboard: *dashboard.NewOptions(
 					test.BoolPtr(true), "", "", "", nil,
@@ -698,9 +705,9 @@ func TestService_Summary(t *testing.T) {
 			svc: &Service{
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "",
 						nil,
-						nil,
+						"", "",
+						nil, nil,
 						map[string]string{
 							"icon": "https://example.com/notify.png"},
 						shoutrrr.NewDefaults(
@@ -720,7 +727,8 @@ func TestService_Summary(t *testing.T) {
 					Icon: "https://example.com/icon.png"},
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						map[string]string{
 							"icon": "https://example.com/notify.png"},
 						nil, nil,
@@ -798,17 +806,33 @@ func TestService_Summary(t *testing.T) {
 			svc: &Service{
 				WebHook: webhook.WebHooks{
 					"bish": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil),
+						nil, nil,
+						"",
+						nil, nil, "bish",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil),
 					"bash": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil),
+						nil, nil,
+						"", nil, nil,
+						"bash",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil),
 					"bosh": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"gitlab",
-						"", nil, nil, nil)}},
+						nil, nil,
+						"",
+						nil, nil,
+						"bosh",
+						nil, nil, nil,
+						"",
+						nil,
+						"gitlab", "",
+						nil, nil, nil)}},
 			want: &apitype.ServiceSummary{
 				HasDeployedVersionLookup: test.BoolPtr(false),
 				WebHook:                  test.IntPtr(3),
@@ -855,8 +879,8 @@ func TestService_Summary(t *testing.T) {
 					JSON:   "version"},
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "",
-						"discord",
+						nil,
+						"", "discord",
 						nil, nil, nil,
 						nil, nil, nil)},
 				Command: command.Commands{
@@ -864,17 +888,35 @@ func TestService_Summary(t *testing.T) {
 					{"false"}},
 				WebHook: webhook.WebHooks{
 					"bish": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"https://example.com", nil, nil, nil),
+						nil, nil,
+						"",
+						nil, nil,
+						"bish",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "https://example.com",
+						nil, nil, nil),
 					"bash": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"https://example.com", nil, nil, nil),
+						nil, nil,
+						"",
+						nil, nil,
+						"bash",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "https://example.com",
+						nil, nil, nil),
 					"bosh": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"gitlab",
-						"https://example.com", nil, nil, nil)},
+						nil, nil,
+						"",
+						nil, nil,
+						"bosh",
+						nil, nil, nil,
+						"",
+						nil,
+						"gitlab", "https://example.com",
+						nil, nil, nil)},
 				Dashboard: dashboard.Options{
 					Icon:       "https://example.com/icon.png",
 					IconLinkTo: "https://example.com",
@@ -1164,7 +1206,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal latestver.Lookup:
-					type: "unsupported" <invalid> .*\[github, url\].*$`),
+					type: "unsupported" <invalid> .*\['github', 'url'\].*$`),
 			want: &Service{},
 		},
 		"latest_version: missing type": {
@@ -1175,7 +1217,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal latestver.Lookup:
-					type: <required> .*\[github, url\].*$`),
+					type: <required> .*\['github', 'url'\].*$`),
 			want: &Service{},
 		},
 		"latest_version: invalid type format": {
@@ -1349,7 +1391,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal deployedver.Lookup:
-					type: "unsupported" <invalid> .*\[url, manual\].*$`),
+					type: "unsupported" <invalid> .*\['url', 'manual'\].*$`),
 			want: &Service{},
 		},
 		"deployed_version: missing type": {
@@ -1360,7 +1402,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal deployedver.Lookup:
-					type: <required> .*\[url, manual\].*$`),
+					type: <required> .*\['url', 'manual'\].*$`),
 			want: &Service{},
 		},
 		"deployed_version: invalid type format": {
@@ -1494,7 +1536,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			// AND marshalName is only set if Name is non-empty.
 			if tc.svc.MarshalName() != (tc.svc.Name != "") {
 				t.Errorf("%s\nmarshalName mismatch\nwant: %t\ngot:  %t",
-					packageName, tc.svc.MarshalName(), (tc.svc.Name != ""))
+					packageName, tc.svc.MarshalName(), tc.svc.Name != "")
 			}
 		})
 	}
@@ -1794,7 +1836,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal latestver.Lookup:
-					type: "unsupported" <invalid> .*\[github, url\].*$`),
+					type: "unsupported" <invalid> .*\['github', 'url'\].*$`),
 			want: &Service{},
 		},
 		"latest_version: missing type": {
@@ -1804,7 +1846,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal latestver.Lookup:
-					type: <required> .*\[github, url\].*$`),
+					type: <required> .*\['github', 'url'\].*$`),
 			want: &Service{},
 		},
 		"latest_version: invalid type format": {
@@ -1970,7 +2012,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal deployedver.Lookup:
-					type: "unsupported" <invalid> .*\[url, manual\].*$`),
+					type: "unsupported" <invalid> .*\['url', 'manual'\].*$`),
 			want: &Service{},
 		},
 		"deployed_version: missing type": {
@@ -2103,7 +2145,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			// AND marshalName is only set if Name is non-empty.
 			if tc.svc.MarshalName() != (tc.svc.Name != "") {
 				t.Errorf("%s\nMarshalName() mismatch\nwant: %t\ngot:  %t",
-					packageName, tc.svc.MarshalName(), (tc.svc.Name != ""))
+					packageName, tc.svc.MarshalName(), tc.svc.Name != "")
 			}
 		})
 	}

@@ -74,10 +74,10 @@ func TestURLCommandSlice_UnmarshalJSON(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			var slice URLCommands
+			var urlCommands URLCommands
 
 			// WHEN UnmarshalJSON is called.
-			err := slice.UnmarshalJSON([]byte(tc.input))
+			err := urlCommands.UnmarshalJSON([]byte(tc.input))
 
 			// THEN the expected result is returned.
 			if !util.RegexCheck(tc.errRegex, util.ErrorToString(err)) {
@@ -85,23 +85,23 @@ func TestURLCommandSlice_UnmarshalJSON(t *testing.T) {
 					packageName, tc.errRegex, util.ErrorToString(err))
 			}
 
-			if len(slice) != len(tc.expected) {
+			if len(urlCommands) != len(tc.expected) {
 				t.Fatalf("%s\nslice length mismatch\nwant: %d\ngot:  %d\n%#v",
 					packageName,
-					len(tc.expected), len(slice),
-					slice)
+					len(tc.expected), len(urlCommands),
+					urlCommands)
 			}
 
 			for i := range tc.expected {
-				if slice[i].Type != tc.expected[i].Type {
+				if urlCommands[i].Type != tc.expected[i].Type {
 					t.Errorf("%s\nmismatch on Type\nwant: %q\ngot:  %q\n",
-						packageName, tc.expected[i].Type, slice[i].Type)
+						packageName, tc.expected[i].Type, urlCommands[i].Type)
 				}
-				if slice[i].Regex != tc.expected[i].Regex {
+				if urlCommands[i].Regex != tc.expected[i].Regex {
 					t.Errorf("%s\nmismatch on Regex\nwant: %q\ngot:  %q\n",
-						packageName, tc.expected[i].Regex, slice[i].Regex)
+						packageName, tc.expected[i].Regex, urlCommands[i].Regex)
 				}
-				gotIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrValue(slice[i].Index, 999)),
+				gotIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrValue(urlCommands[i].Index, 999)),
 					"999", "nil")
 				wantIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrValue(tc.expected[i].Index, 999)),
 					"999", "nil")
@@ -109,15 +109,15 @@ func TestURLCommandSlice_UnmarshalJSON(t *testing.T) {
 					t.Errorf("%s\nmismatch on Index\nwant: %q\ngot:  %q\n",
 						packageName, wantIndex, gotIndex)
 				}
-				if slice[i].Text != tc.expected[i].Text {
+				if urlCommands[i].Text != tc.expected[i].Text {
 					t.Errorf("%s\nmismatch on Text\nwant: %q\ngot:  %q\n",
-						packageName, tc.expected[i].Text, slice[i].Text)
+						packageName, tc.expected[i].Text, urlCommands[i].Text)
 				}
-				if slice[i].Old != tc.expected[i].Old {
+				if urlCommands[i].Old != tc.expected[i].Old {
 					t.Errorf("%s\nmismatch on Old\nwant: %q\ngot:  %q\n",
-						packageName, tc.expected[i].Old, slice[i].Old)
+						packageName, tc.expected[i].Old, urlCommands[i].Old)
 				}
-				gotNew := util.DereferenceOrDefault(slice[i].New)
+				gotNew := util.DereferenceOrDefault(urlCommands[i].New)
 				wantNew := util.DereferenceOrDefault(tc.expected[i].New)
 				if gotNew != wantNew {
 					t.Errorf("%s\nmismatch on New\nwant: %q\ngot:  %q\n",
@@ -131,9 +131,9 @@ func TestURLCommandSlice_UnmarshalJSON(t *testing.T) {
 func TestURLCommandSlice_UnmarshalYAML(t *testing.T) {
 	// GIVEN a file to read a URLCommands.
 	tests := map[string]struct {
-		input    string
-		slice    URLCommands
-		errRegex string
+		input       string
+		urlCommands URLCommands
+		errRegex    string
 	}{
 		"invalid unmarshal": {
 			input: test.TrimYAML(`
@@ -156,7 +156,7 @@ func TestURLCommandSlice_UnmarshalYAML(t *testing.T) {
 				old: was
 				new: now
 			`),
-			slice: URLCommands{
+			urlCommands: URLCommands{
 				{Type: "regex",
 					Regex: `foo`, Index: test.IntPtr(1),
 					Text: "hi", Old: "was", New: test.StringPtr("now")}},
@@ -175,7 +175,7 @@ func TestURLCommandSlice_UnmarshalYAML(t *testing.T) {
 					index: 2
 			`),
 			errRegex: `^$`,
-			slice: URLCommands{
+			urlCommands: URLCommands{
 				{Type: "regex",
 					Regex: `\"([0-9.+])\"`, Index: test.IntPtr(1)},
 				{Type: "replace", Old: "foo", New: test.StringPtr("bar")},
@@ -186,10 +186,10 @@ func TestURLCommandSlice_UnmarshalYAML(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			var slice URLCommands
+			var urlCommands URLCommands
 
 			// WHEN Unmarshalled.
-			err := yaml.Unmarshal([]byte(tc.input), &slice)
+			err := yaml.Unmarshal([]byte(tc.input), &urlCommands)
 
 			// THEN the it errors when appropriate and unmarshals correctly into a list.
 			e := util.ErrorToString(err)
@@ -197,39 +197,39 @@ func TestURLCommandSlice_UnmarshalYAML(t *testing.T) {
 				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
 			}
-			if len(slice) != len(tc.slice) {
+			if len(urlCommands) != len(tc.urlCommands) {
 				t.Fatalf("%s\nslice length mismatch\nwant: %d\ngot:  %d\n%#v",
 					packageName,
-					len(tc.slice), len(slice),
-					slice)
+					len(tc.urlCommands), len(urlCommands),
+					urlCommands)
 			}
-			for i := range tc.slice {
-				if slice[i].Type != tc.slice[i].Type {
+			for i := range tc.urlCommands {
+				if urlCommands[i].Type != tc.urlCommands[i].Type {
 					t.Errorf("%s\nmismatch on Type\nwant: %q\ngot:  %q\n",
-						packageName, tc.slice[i].Type, slice[i].Type)
+						packageName, tc.urlCommands[i].Type, urlCommands[i].Type)
 				}
-				if slice[i].Regex != tc.slice[i].Regex {
+				if urlCommands[i].Regex != tc.urlCommands[i].Regex {
 					t.Errorf("%s\nmismatch on Regex\nwant: %q\ngot:  %q\n",
-						packageName, tc.slice[i].Regex, slice[i].Regex)
+						packageName, tc.urlCommands[i].Regex, urlCommands[i].Regex)
 				}
-				gotIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrValue(slice[i].Index, 999)),
+				gotIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrValue(urlCommands[i].Index, 999)),
 					"999", "nil")
-				wantIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrValue(tc.slice[i].Index, 999)),
+				wantIndex := strings.ReplaceAll(fmt.Sprint(util.DereferenceOrValue(tc.urlCommands[i].Index, 999)),
 					"999", "nil")
 				if gotIndex != wantIndex {
 					t.Errorf("%s\nmismatch on Index\nwant: %q\ngot:  %q\n",
 						packageName, wantIndex, gotIndex)
 				}
-				if slice[i].Text != tc.slice[i].Text {
+				if urlCommands[i].Text != tc.urlCommands[i].Text {
 					t.Errorf("%s\nmismatch on Text\nwant: %q\ngot:  %q\n",
-						packageName, tc.slice[i].Text, slice[i].Text)
+						packageName, tc.urlCommands[i].Text, urlCommands[i].Text)
 				}
-				if slice[i].Old != tc.slice[i].Old {
+				if urlCommands[i].Old != tc.urlCommands[i].Old {
 					t.Errorf("%s\nmismatch on Old\nwant: %q\ngot:  %q\n",
-						packageName, tc.slice[i].Old, slice[i].Old)
+						packageName, tc.urlCommands[i].Old, urlCommands[i].Old)
 				}
-				gotNew := util.DereferenceOrDefault(slice[i].New)
-				wantNew := util.DereferenceOrDefault(tc.slice[i].New)
+				gotNew := util.DereferenceOrDefault(urlCommands[i].New)
+				wantNew := util.DereferenceOrDefault(tc.urlCommands[i].New)
 				if gotNew != wantNew {
 					t.Errorf("%s\nmismatch on New\nwant: %q\ngot:  %q\n",
 						packageName, wantNew, gotNew)
@@ -242,11 +242,11 @@ func TestURLCommandSlice_UnmarshalYAML(t *testing.T) {
 func TestURLCommandSlice_String(t *testing.T) {
 	// GIVEN a URLCommands.
 	tests := map[string]struct {
-		slice *URLCommands
-		want  string
+		urlCommands *URLCommands
+		want        string
 	}{
 		"regex": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				testURLCommandRegex()},
 			want: test.TrimYAML(`
 				- type: regex
@@ -255,7 +255,7 @@ func TestURLCommandSlice_String(t *testing.T) {
 			`),
 		},
 		"regex (templated)": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				testURLCommandRegexTemplate()},
 			want: test.TrimYAML(`
 				- type: regex
@@ -265,7 +265,7 @@ func TestURLCommandSlice_String(t *testing.T) {
 			`),
 		},
 		"replace": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				testURLCommandReplace()},
 			want: test.TrimYAML(`
 				- type: replace
@@ -274,7 +274,7 @@ func TestURLCommandSlice_String(t *testing.T) {
 			`),
 		},
 		"split": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				testURLCommandSplit()},
 			want: test.TrimYAML(`
 				- type: split
@@ -283,7 +283,7 @@ func TestURLCommandSlice_String(t *testing.T) {
 			`),
 		},
 		"all types": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				testURLCommandRegex(),
 				testURLCommandReplace(),
 				testURLCommandSplit()},
@@ -300,8 +300,8 @@ func TestURLCommandSlice_String(t *testing.T) {
 			`),
 		},
 		"nil slice": {
-			slice: nil,
-			want:  "",
+			urlCommands: nil,
+			want:        "",
 		},
 	}
 
@@ -309,7 +309,7 @@ func TestURLCommandSlice_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			// WHEN String is called on it.
-			got := tc.slice.String()
+			got := tc.urlCommands.String()
 
 			// THEN the expected string is returned.
 			tc.want = strings.TrimPrefix(tc.want, "\n")
@@ -381,53 +381,53 @@ func TestURLCommandSlice_GetVersions(t *testing.T) {
 	// GIVEN a URLCommands.
 	testText := "abc123-def456"
 	tests := map[string]struct {
-		slice        *URLCommands
+		urlCommands  *URLCommands
 		text         string
 		wantVersions []string
 		errRegex     string
 	}{
 		"empty slice": {
-			slice:        &URLCommands{},
+			urlCommands:  &URLCommands{},
 			text:         testText,
 			wantVersions: []string{testText},
 			errRegex:     `^$`,
 		},
 		"empty slice+text": {
-			slice:        &URLCommands{},
+			urlCommands:  &URLCommands{},
 			text:         "",
 			wantVersions: nil,
 			errRegex:     `^$`,
 		},
 		"single version - regex": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: test.IntPtr(1)}},
 			text:         testText,
 			wantVersions: []string{"def"},
 			errRegex:     `^$`,
 		},
 		"single version - replace": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "replace", Old: "-", New: test.StringPtr(" ")}},
 			text:         testText,
 			wantVersions: []string{"abc123 def456"},
 			errRegex:     `^$`,
 		},
 		"multiple versions - split": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "split", Text: "-"}},
 			text:         testText,
 			wantVersions: []string{"abc123", "def456"},
 			errRegex:     `^$`,
 		},
 		"multiple versions - split fail": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "split", Text: "_"}},
 			text:         testText,
 			wantVersions: nil,
 			errRegex:     `^split didn't find any "_" to split on$`,
 		},
 		"multiple versions - regex and split": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: nil},
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`}},
 			text:         testText,
@@ -435,7 +435,7 @@ func TestURLCommandSlice_GetVersions(t *testing.T) {
 			errRegex:     `^$`,
 		},
 		"multiple versions - regex fail": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: nil},
 				{Type: "split", Text: "_", Index: test.IntPtr(0)}},
 			text:         testText,
@@ -443,21 +443,21 @@ func TestURLCommandSlice_GetVersions(t *testing.T) {
 			errRegex:     `^split didn't find any "_" to split on$`,
 		},
 		"regex doesn't match": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([h-z]+)[0-9]+`, Index: test.IntPtr(1)}},
 			text:         testText,
 			wantVersions: nil,
 			errRegex:     `regex .* didn't return any matches on "` + testText + `"`,
 		},
 		"split index out of bounds": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: test.IntPtr(2)}},
 			text:         testText,
 			wantVersions: nil,
 			errRegex:     `split .* returned \d elements on "[^']+", but the index wants element number \d`,
 		},
 		"all types": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: test.IntPtr(0)},
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: test.IntPtr(0)},
 				{Type: "replace", Old: "b", New: test.StringPtr("a")},
@@ -473,7 +473,7 @@ func TestURLCommandSlice_GetVersions(t *testing.T) {
 			t.Parallel()
 
 			// WHEN GetVersions is called on it.
-			versions, err := tc.slice.GetVersions(tc.text, logutil.LogFrom{})
+			versions, err := tc.urlCommands.GetVersions(tc.text, logutil.LogFrom{})
 
 			// THEN the expected versions are returned.
 			wantVersions := strings.Join(tc.wantVersions, "__")
@@ -496,104 +496,104 @@ func TestURLCommandSlice_Run(t *testing.T) {
 	// GIVEN a URLCommands and text to run it on.
 	testText := "abc123-def456"
 	tests := map[string]struct {
-		slice    *URLCommands
-		text     string
-		want     []string
-		errRegex string
+		urlCommands *URLCommands
+		text        string
+		want        []string
+		errRegex    string
 	}{
 		"nil slice": {
-			slice:    nil,
-			errRegex: `^$`,
-			want:     nil,
+			urlCommands: nil,
+			errRegex:    `^$`,
+			want:        nil,
 		},
 		"regex": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: test.IntPtr(1)}},
 			errRegex: `^$`,
 			want:     []string{"def"},
 		},
 		"regex with negative index": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: test.IntPtr(-1)}},
 			errRegex: `^$`,
 			want:     []string{"def"},
 		},
 		"regex doesn't match (gives text that didn't match)": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([h-z]+)[0-9]+`, Index: test.IntPtr(1)}},
 			errRegex: `regex .* didn't return any matches on "` + testText + `"`,
 			want:     nil,
 		},
 		"regex doesn't match (doesn't give text that didn't match as too long)": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([h-z]+)[0-9]+`, Index: test.IntPtr(1)}},
 			errRegex: `regex .* didn't return any matches on "[^"]+"$`,
 			text:     strings.Repeat("a123", 5),
 			want:     nil,
 		},
 		"regex index out of bounds": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: test.IntPtr(2)}},
 			errRegex: `regex .* returned \d elements on "[^']+", but the index wants element number \d`,
 			want:     nil,
 		},
 		"regex with template": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)([0-9]+)`, Index: test.IntPtr(1), Template: "$1_$2"}},
 			errRegex: `^$`,
 			want:     []string{"def_456"},
 		},
 		"regex multiple matches": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`}},
 			errRegex: `^$`,
 			want:     []string{"abc", "def"},
 		},
 		"regex multiple matches - with template": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)([0-9])`, Template: "$1_$2"}},
 			errRegex: `^$`,
 			want:     []string{"abc_1", "def_4"},
 		},
 		"replace": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "replace", Old: "-", New: test.StringPtr(" ")}},
 			errRegex: `^$`,
 			want:     []string{"abc123 def456"},
 		},
 		"split": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: test.IntPtr(-1)}},
 			errRegex: `^$`,
 			want:     []string{"def456"},
 		},
 		"split with negative index": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: test.IntPtr(0)}},
 			errRegex: `^$`,
 			want:     []string{"abc123"},
 		},
 		"split on unknown text": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "split", Text: "7", Index: test.IntPtr(0)}},
 			errRegex: `split didn't find any .* to split on`,
 			want:     nil,
 		},
 		"split index out of bounds": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: test.IntPtr(2)}},
 			errRegex: `split .* returned \d elements on "[^']+", but the index wants element number \d`,
 			want:     nil,
 		},
 		"split with no index": {
 			text: "a-b-c-d",
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "split", Text: "-"}},
 			errRegex: `^$`,
 			want:     []string{"a", "b", "c", "d"},
 		},
 		"all types": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: test.IntPtr(1)},
 				{Type: "replace", Old: "e", New: test.StringPtr("a")},
 				{Type: "split", Text: "a", Index: test.IntPtr(1)}},
@@ -612,7 +612,7 @@ func TestURLCommandSlice_Run(t *testing.T) {
 			}
 
 			// WHEN run is called on it.
-			versions, err := tc.slice.Run(text, logutil.LogFrom{})
+			versions, err := tc.urlCommands.Run(text, logutil.LogFrom{})
 
 			// THEN the expected text was returned.
 			if !reflect.DeepEqual(tc.want, versions) {
@@ -970,20 +970,20 @@ func TestURLCommand_split(t *testing.T) {
 func TestURLCommandSlice_CheckValues(t *testing.T) {
 	// GIVEN a URLCommands.
 	tests := map[string]struct {
-		slice     *URLCommands
-		wantSlice *URLCommands
-		errRegex  string
+		urlCommands *URLCommands
+		want        *URLCommands
+		errRegex    string
 	}{
 		"nil slice": {
-			slice:    nil,
-			errRegex: `^$`,
+			urlCommands: nil,
+			errRegex:    `^$`,
 		},
 		"valid regex": {
-			slice:    &URLCommands{testURLCommandRegex()},
-			errRegex: `^$`,
+			urlCommands: &URLCommands{testURLCommandRegex()},
+			errRegex:    `^$`,
 		},
 		"undefined regex": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex"}},
 			errRegex: test.TrimYAML(`
 				^- item_0:
@@ -991,7 +991,7 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 					regex: <required>.*$`),
 		},
 		"invalid regex": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `[0-`}},
 			errRegex: test.TrimYAML(`
 				^- item_0:
@@ -999,23 +999,23 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 					regex: .* <invalid>.*$`),
 		},
 		"valid regex with template": {
-			slice:    &URLCommands{testURLCommandRegexTemplate()},
-			errRegex: `^$`,
+			urlCommands: &URLCommands{testURLCommandRegexTemplate()},
+			errRegex:    `^$`,
 		},
 		"valid regex with empty template": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `[0-]`, Template: ""}},
-			wantSlice: &URLCommands{
+			want: &URLCommands{
 				{Type: "regex", Regex: `[0-]`}},
 			errRegex: `^$`,
 		},
 		"valid replace": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				testURLCommandReplace()},
 			errRegex: `^$`,
 		},
 		"invalid replace": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "replace"}},
 			errRegex: test.TrimYAML(`
 				^- item_0:
@@ -1023,12 +1023,12 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 					old: <required>.*$`),
 		},
 		"valid split": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				testURLCommandSplit()},
 			errRegex: `^$`,
 		},
 		"invalid split": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "split"}},
 			errRegex: test.TrimYAML(`
 				^- item_0:
@@ -1036,21 +1036,21 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 					text: <required>`),
 		},
 		"invalid type": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "something"}},
 			errRegex: test.TrimYAML(`
 				^- item_0:
 					type: .* <invalid>.*$`),
 		},
 		"valid all types": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				testURLCommandRegex(),
 				testURLCommandReplace(),
 				testURLCommandSplit()},
 			errRegex: `^$`,
 		},
 		"all possible errors": {
-			slice: &URLCommands{
+			urlCommands: &URLCommands{
 				{Type: "regex"}, {Type: "replace"},
 				{Type: "split"},
 				{Type: "something"}},
@@ -1074,7 +1074,7 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CheckValues is called on it.
-			err := tc.slice.CheckValues("")
+			err := tc.urlCommands.CheckValues("")
 
 			// THEN err is expected.
 			e := util.ErrorToString(err)
@@ -1091,10 +1091,10 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 				return
 			}
 
-			// AND the slice is as expected.
-			if tc.wantSlice != nil {
-				strHave := tc.slice.String()
-				strWant := tc.wantSlice.String()
+			// AND the urlCommands is as expected.
+			if tc.want != nil {
+				strHave := tc.urlCommands.String()
+				strWant := tc.want.String()
 				if strHave != strWant {
 					t.Errorf("%s\nwant slice:\n%q\ngot  slice: %q",
 						packageName, strWant, strHave)

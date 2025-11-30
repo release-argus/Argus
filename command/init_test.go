@@ -461,7 +461,7 @@ func TestCommand_Init(t *testing.T) {
 	tests := map[string]struct {
 		nilController     bool
 		command           *Commands
-		shoutrrrNotifiers *shoutrrr.Slice
+		shoutrrrNotifiers *shoutrrr.Shoutrrrs
 		parentInterval    *string
 	}{
 		"nil Controller": {

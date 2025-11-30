@@ -26,17 +26,17 @@ import (
 )
 
 // CheckValues validates the fields of each Defaults struct.
-func (s *WebHooksDefaults) CheckValues(prefix string) error {
-	if s == nil {
+func (whd *WebHooksDefaults) CheckValues(prefix string) error {
+	if whd == nil {
 		return nil
 	}
 
 	var errs []error
-	keys := util.SortedKeys(*s)
+	keys := util.SortedKeys(*whd)
 	itemPrefix := prefix + "  "
 	for _, key := range keys {
 		util.AppendCheckError(&errs, prefix, key,
-			(*s)[key].CheckValues(itemPrefix))
+			(*whd)[key].CheckValues(itemPrefix))
 	}
 
 	if len(errs) == 0 {
@@ -46,17 +46,17 @@ func (s *WebHooksDefaults) CheckValues(prefix string) error {
 }
 
 // CheckValues validates the fields of each WebHook.
-func (s *WebHooks) CheckValues(prefix string) error {
-	if s == nil {
+func (wh *WebHooks) CheckValues(prefix string) error {
+	if wh == nil {
 		return nil
 	}
 
 	var errs []error
-	keys := util.SortedKeys(*s)
+	keys := util.SortedKeys(*wh)
 	itemPrefix := prefix + "  "
 	for _, key := range keys {
 		util.AppendCheckError(&errs, prefix, key,
-			(*s)[key].CheckValues(itemPrefix))
+			(*wh)[key].CheckValues(itemPrefix))
 	}
 
 	if len(errs) == 0 {
@@ -121,37 +121,37 @@ func (b *Base) checkValuesCustomHeaders(prefix string) error {
 }
 
 // CheckValues validates the fields of the WebHook struct.
-func (w *WebHook) CheckValues(prefix string) error {
+func (wh *WebHook) CheckValues(prefix string) error {
 	var errs []error
 
 	// type
-	whType := w.GetType()
+	whType := wh.GetType()
 	if whType == "" {
 		errs = append(errs, fmt.Errorf("%stype: <required> (supported types = ['%s'])",
 			prefix, strings.Join(supportedTypes, "', '")))
 		// Check the Type doesn't differ in the Main.
-	} else if w.Main.Type != "" && whType != w.Main.Type {
+	} else if wh.Main.Type != "" && whType != wh.Main.Type {
 		errs = append(errs, fmt.Errorf("%stype: %q != %q <invalid> (omit 'type', or make it match root webhook.%s.type)",
-			prefix, whType, w.Main.Type, w.ID))
+			prefix, whType, wh.Main.Type, wh.ID))
 	}
 
-	if baseErrs := w.Base.CheckValues(prefix); baseErrs != nil {
+	if baseErrs := wh.Base.CheckValues(prefix); baseErrs != nil {
 		errs = append(errs, baseErrs)
 	}
 
 	// url
 	if util.FirstNonDefault(
-		w.URL,
-		w.Main.URL,
-		w.Defaults.URL,
-		w.HardDefaults.URL) == "" {
+		wh.URL,
+		wh.Main.URL,
+		wh.Defaults.URL,
+		wh.HardDefaults.URL) == "" {
 		errs = append(errs, fmt.Errorf("%surl: <required> (here, in root webhook.%s, or in defaults)",
-			prefix, w.ID))
+			prefix, wh.ID))
 	}
 	// secret
-	if w.GetSecret() == "" {
+	if wh.GetSecret() == "" {
 		errs = append(errs, fmt.Errorf("%ssecret: <required> (here, in root webhook.%s, or in defaults)",
-			prefix, w.ID))
+			prefix, wh.ID))
 	}
 
 	if len(errs) == 0 {
@@ -161,12 +161,12 @@ func (w *WebHook) CheckValues(prefix string) error {
 }
 
 // Print the WebHooksDefaults.
-func (s *WebHooksDefaults) Print(prefix string) {
-	if s == nil || len(*s) == 0 {
+func (whd *WebHooksDefaults) Print(prefix string) {
+	if whd == nil || len(*whd) == 0 {
 		return
 	}
 
-	str := s.String(prefix + "  ")
+	str := whd.String(prefix + "  ")
 	fmt.Printf("%swebhook:\n%s",
 		prefix, str)
 }

@@ -234,7 +234,7 @@ func TestAnnounceEdit(t *testing.T) {
 		"edit with old data, no change": {
 			oldData:           &apitype.ServiceSummary{ID: "service-1", Icon: test.StringPtr("Service 1")},
 			newData:           apitype.ServiceSummary{ID: "service-1", Icon: test.StringPtr("Service 1")},
-			wantedServiceData: &apitype.ServiceSummary{},
+			wantedServiceData: nil,
 		},
 		"edit with old data, only changes sent": {
 			oldData:           &apitype.ServiceSummary{ID: "service-1", Icon: test.StringPtr("Service 1"), Type: "github"},
@@ -282,6 +282,11 @@ func TestAnnounceEdit(t *testing.T) {
 						packageName, wantedStr, gotStr)
 				}
 			default:
+				// Message not wanted.
+				if tc.wantedServiceData == nil {
+					return
+				}
+
 				t.Fatalf("%s\nannounce channel mismatch\nwant: message\ngot:  none",
 					packageName)
 			}

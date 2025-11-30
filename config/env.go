@@ -120,6 +120,9 @@ func mapEnvToStruct(src any, prefix string, envVars []string) error {
 			} else {
 				err = mapEnvToStruct(field.Addr().Interface(), fieldName, envVars)
 			}
+		default:
+			errs = append(errs, fmt.Errorf("unsupported env var kind on %s: %s",
+				fieldName, kind))
 		}
 		if err != nil {
 			errs = append(errs, err)
@@ -177,30 +180,26 @@ func setField[T any](field reflect.Value, value, envKey string, parser func(stri
 	if field.Kind() == reflect.Ptr {
 		ptrVal := reflect.New(field.Type().Elem()) // allocate correct pointer type
 		switch v := any(parsedValue).(type) {
-		case uint8, uint16, uint32, uint64, uint:
-			ptrVal.Elem().SetUint(reflect.ValueOf(v).Convert(ptrVal.Elem().Type()).Uint())
-		case int, int8, int16, int32, int64:
-			ptrVal.Elem().SetInt(reflect.ValueOf(v).Convert(ptrVal.Elem().Type()).Int())
 		case bool:
 			ptrVal.Elem().SetBool(v)
+		case int, int8, int16, int32, int64:
+			ptrVal.Elem().SetInt(reflect.ValueOf(v).Convert(ptrVal.Elem().Type()).Int())
 		case string:
 			ptrVal.Elem().SetString(v)
-		default:
-			return fmt.Errorf("unsupported type for pointer: %T", v)
+		case uint8, uint16, uint32, uint64, uint:
+			ptrVal.Elem().SetUint(reflect.ValueOf(v).Convert(ptrVal.Elem().Type()).Uint())
 		}
 		field.Set(ptrVal)
 	} else {
 		switch v := any(parsedValue).(type) {
 		case bool:
 			field.SetBool(v)
-		case int:
-			field.SetInt(int64(v))
+		case int, int8, int16, int32, int64:
+			field.SetInt(reflect.ValueOf(v).Int())
 		case string:
 			field.SetString(v)
-		case uint8:
-			field.SetUint(uint64(v))
-		case uint16:
-			field.SetUint(uint64(v))
+		case uint8, uint16, uint32, uint64, uint:
+			field.SetUint(reflect.ValueOf(v).Uint())
 		}
 	}
 

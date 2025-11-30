@@ -29,6 +29,14 @@ import (
 // CheckValues validates the fields of the Lookup struct.
 func (l *Lookup) CheckValues(prefix string) error {
 	var errs []error
+
+	// URL.
+	if l.URL == "" && l.Defaults != nil {
+		errs = append(errs,
+			fmt.Errorf("%surl: <required> (URL to get the deployed_version is required)",
+				prefix))
+	}
+
 	// Method.
 	l.Method = strings.ToUpper(l.Method)
 	method := l.method()
@@ -46,13 +54,6 @@ func (l *Lookup) CheckValues(prefix string) error {
 	// Body unused in GET, ensure it is empty.
 	if method == http.MethodGet {
 		l.Body = ""
-	}
-
-	// URL.
-	if l.URL == "" && l.Defaults != nil {
-		errs = append(errs,
-			fmt.Errorf("%surl: <required> (URL to get the deployed_version is required)",
-				prefix))
 	}
 
 	// JSON.

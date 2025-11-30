@@ -862,7 +862,8 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			notify: nil,
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					map[string]string{
 						"apikey": "something"},
@@ -874,7 +875,8 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"nil oldNotifies": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					map[string]string{
 						"apikey": "something"},
@@ -884,7 +886,8 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs:  map[string]shared.OldStringIndex{},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					map[string]string{
 						"apikey": "something"},
@@ -894,7 +897,8 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"nil secretRefs": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
@@ -902,7 +906,9 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
@@ -910,7 +916,9 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: nil,
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
@@ -919,14 +927,18 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"no secretRefs": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
@@ -934,7 +946,9 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
@@ -943,14 +957,18 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"no matching secretRefs": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
@@ -958,7 +976,9 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"bish": {OldIndex: "bash"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
@@ -967,20 +987,26 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRef referencing empty index": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "yikes"},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
@@ -988,13 +1014,17 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: ""}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "yikes"},
 					nil,
@@ -1003,20 +1033,26 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRef referencing index that doesn't exist": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "yikes"},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
@@ -1024,13 +1060,17 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "baz"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "yikes"},
 					nil,
@@ -1039,20 +1079,26 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - url_fields.altid": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "yikes"},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
@@ -1060,13 +1106,17 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "yikes"},
 					nil,
@@ -1075,20 +1125,26 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - url_fields.apikey": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "yikes"},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
@@ -1096,13 +1152,17 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "yikes"},
 					nil,
@@ -1111,26 +1171,34 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - url_fields.apikey swap vars": {
 			notify: shoutrrr.Shoutrrrs{
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "shazam"},
 					nil,
@@ -1140,13 +1208,17 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 				"foo": {OldIndex: "bar"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "shazam"},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
@@ -1155,26 +1227,34 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - url_fields.apikey swap vars ignores notify order": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": util.SecretValue},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "shazam"},
 					nil,
@@ -1184,13 +1264,17 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 				"foo": {OldIndex: "bar"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "shazam"},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"apikey": "something"},
 					nil,
@@ -1199,20 +1283,26 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - url_fields.botkey": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"botkey": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"botkey": "yikes"},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"botkey": "something"},
 					nil,
@@ -1220,13 +1310,17 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"botkey": "something"},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"botkey": "yikes"},
 					nil,
@@ -1235,20 +1329,26 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - url_fields.password": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"password": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"password": "yikes"},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"password": "something"},
 					nil,
@@ -1256,13 +1356,17 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"password": "something"},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"password": "yikes"},
 					nil,
@@ -1271,20 +1375,26 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - url_fields.token": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"token": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"token": "yikes"},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"token": "something"},
 					nil,
@@ -1292,13 +1402,17 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"token": "something"},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"token": "yikes"},
 					nil,
@@ -1307,20 +1421,26 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - url_fields.tokena": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"tokena": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"tokena": "yikes"},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"tokena": "something"},
 					nil,
@@ -1328,13 +1448,17 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"tokena": "something"},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"tokena": "yikes"},
 					nil,
@@ -1343,20 +1467,26 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - url_fields.tokenb": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"tokenb": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"tokenb": "yikes"},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"tokenb": "something"},
 					nil,
@@ -1364,13 +1494,17 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"tokenb": "something"},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"tokenb": "yikes"},
 					nil,
@@ -1379,20 +1513,26 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - url_fields.host ignored as SecretValue": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"host": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"host": "https://example.com"},
 					nil,
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"host": "https://example.com/foo"},
 					nil,
@@ -1400,13 +1540,17 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"host": util.SecretValue},
 					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "", nil,
+					nil,
+					"", "",
+					nil,
 					map[string]string{
 						"host": "https://example.com"},
 					nil,
@@ -1415,20 +1559,23 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - params.devices": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil, nil,
 					map[string]string{
 						"devices": util.SecretValue},
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil, nil,
 					map[string]string{
 						"devices": "yikes"},
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					nil,
 					map[string]string{
@@ -1437,14 +1584,16 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					nil,
 					map[string]string{
 						"devices": "something"},
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					nil,
 					map[string]string{
@@ -1454,14 +1603,16 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - params.avatar ignored as SecretValue": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					nil,
 					map[string]string{
 						"avatar": util.SecretValue},
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					nil,
 					map[string]string{
@@ -1469,7 +1620,8 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					nil,
 					map[string]string{
@@ -1478,14 +1630,16 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					nil,
 					map[string]string{
 						"avatar": util.SecretValue},
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					nil,
 					map[string]string{
@@ -1495,7 +1649,8 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		"secretRefs - ALL": {
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					map[string]string{
 						"altid":    util.SecretValue,
@@ -1510,7 +1665,8 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					nil, nil, nil)},
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					map[string]string{
 						"altid":    "whoosh",
@@ -1526,7 +1682,8 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "", "",
+					nil,
+					"", "",
 					nil,
 					map[string]string{
 						"altid":    "whoosh",
@@ -1582,228 +1739,462 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			webhook: nil,
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{},
 			expected:   nil,
 		},
 		"nil otherWebHook": {
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: nil,
 			secretRefs:   map[string]shared.WHSecretRef{},
 			expected: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"nil secretRefs": {
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: nil,
 			expected: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"no secretRefs": {
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{},
 			expected: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"no matching secretRefs": {
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{
 				"bish": {OldIndex: "bash"}},
 			expected: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"secretRef referencing empty index": {
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil),
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
 					"whoosh",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {OldIndex: ""},
 				"bar": {OldIndex: ""}},
 			expected: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil),
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
 					"whoosh",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"secretRef referencing index that doesn't exist": {
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil),
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
 					"whoosh",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {OldIndex: "bash"},
 				"bar": {OldIndex: ""}},
 			expected: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil),
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
 					"whoosh",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"secretRefs - secret": {
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil),
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
 					"whoosh",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {OldIndex: "foo"},
 				"bar": {OldIndex: ""}},
 			expected: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil),
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
 					"whoosh",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"secretRefs - secret swap vars": {
 			webhook: webhook.WebHooks{
 				"bar": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil),
+					nil,
+					"", "",
+					nil, nil, nil),
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil),
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
 					"whoosh",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{
 				"bar": {OldIndex: "foo"},
 				"foo": {OldIndex: "bar"}},
 			expected: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"whoosh",
-					nil, "", "", nil, nil, nil),
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"secretRefs - secret swap vars ignores order sent": {
 			webhook: webhook.WebHooks{
 				"bar": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil),
+					nil,
+					"", "",
+					nil, nil, nil),
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					util.SecretValue,
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil),
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
 					"whoosh",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{
 				"bar": {OldIndex: "foo"},
 				"foo": {OldIndex: "bar"}},
 			expected: webhook.WebHooks{
 				"foo": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
 					"whoosh",
-					nil, "", "", nil, nil, nil),
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil,
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
 					"shazam",
-					nil, "", "", nil, nil, nil)},
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"custom headers - no secretRefs": {
 			webhook: webhook.WebHooks{
@@ -1811,35 +2202,77 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: util.SecretValue}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "baz"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bing"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{},
 			expected: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: util.SecretValue}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "baz"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"custom headers - no header secretRefs": {
 			webhook: webhook.WebHooks{
@@ -1847,23 +2280,51 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: util.SecretValue}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "baz"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bing"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {OldIndex: "foo"},
 				"bar": {OldIndex: "bar"}},
@@ -1872,13 +2333,27 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: util.SecretValue}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "baz"},
 					},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"custom headers - header secretRefs but old secrets unwanted": {
 			webhook: webhook.WebHooks{
@@ -1886,23 +2361,51 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bar"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "baz"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bing"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {
 					OldIndex: "foo",
@@ -1917,12 +2420,26 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bar"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "baz"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"custom headers - header secretRefs, some indices out of range": {
 			webhook: webhook.WebHooks{
@@ -1931,26 +2448,54 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					&webhook.Headers{
 						{Key: "foo", Value: util.SecretValue},
 						{Key: "bish", Value: util.SecretValue}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: util.SecretValue},
 						{Key: "bang", Value: util.SecretValue}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bing"},
 						{Key: "bish", Value: "bash"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {
 					OldIndex: "foo",
@@ -1966,13 +2511,27 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					&webhook.Headers{
 						{Key: "foo", Value: util.SecretValue},
 						{Key: "bish", Value: "bash"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: util.SecretValue}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"custom headers - header secretRefs use all secrets": {
 			webhook: webhook.WebHooks{
@@ -1981,26 +2540,54 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					&webhook.Headers{
 						{Key: "foo", Value: util.SecretValue},
 						{Key: "bish", Value: util.SecretValue}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: util.SecretValue},
 						{Key: "bang", Value: util.SecretValue}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bing"},
 						{Key: "bish", Value: "bash"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {
 					OldIndex: "foo",
@@ -2018,13 +2605,27 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					&webhook.Headers{
 						{Key: "foo", Value: "bing"},
 						{Key: "bish", Value: "bash"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 		"custom headers - header secretRefs, swap names of webhook": {
 			webhook: webhook.WebHooks{
@@ -2033,26 +2634,54 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					&webhook.Headers{
 						{Key: "foo", Value: util.SecretValue},
 						{Key: "bish", Value: util.SecretValue}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: util.SecretValue},
 						{Key: "bang", Value: util.SecretValue}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bing"},
 						{Key: "bish", Value: "bash"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			secretRefs: map[string]shared.WHSecretRef{
 				"bar": {
 					OldIndex: "foo",
@@ -2070,13 +2699,27 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					&webhook.Headers{
 						{Key: "foo", Value: "bing"},
 						{Key: "bish", Value: "bash"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+					"",
+					nil, nil,
+					"bar",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil),
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"foo",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
 	}
 
@@ -2184,14 +2827,16 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil,
 						map[string]string{
 							"apikey": "saucy"},
 						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil,
 						nil,
 						map[string]string{
@@ -2200,16 +2845,24 @@ func TestService_GiveSecrets(t *testing.T) {
 				},
 				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"foo",
+						nil, nil, nil,
 						"bar",
-						nil, "",
-						"https://example.com/foo",
+						nil,
+						"", "https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
 						"foo",
-						nil, "",
-						"https://example.com/bar",
+						nil,
+						"", "https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -2238,29 +2891,40 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "", nil,
+						nil,
+						"", "",
+						nil,
 						nil,
 						map[string]string{
 							"apikey": "sweet"},
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil, nil,
 						map[string]string{
 							"avatar": "https://example.com/logo.png"},
 						nil, nil, nil)},
 				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"foo",
+						nil, nil, nil,
 						"bar",
-						nil, "",
-						"https://example.com/bar",
+						nil,
+						"", "https://example.com/bar",
 						nil, nil, nil),
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
 						"foo",
-						nil, "",
-						"https://example.com/foo",
+						nil,
+						"", "https://example.com/foo",
 						nil, nil, nil)},
 			},
 			secretRefs: oldSecretRefs{},
@@ -2289,13 +2953,16 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "", nil,
+						nil,
+						"", "",
+						nil,
 						map[string]string{
 							"apikey": "saucy"},
 						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil, nil,
 						map[string]string{
 							"avatar": "https://example.com"},
@@ -2303,16 +2970,24 @@ func TestService_GiveSecrets(t *testing.T) {
 				},
 				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"foo",
+						nil, nil, nil,
 						"bar",
-						nil, "",
-						"https://example.com/foo",
+						nil,
+						"", "https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
 						"foo",
-						nil, "",
-						"https://example.com/bar",
+						nil,
+						"", "https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -2367,14 +3042,16 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil,
 						map[string]string{
 							"apikey": util.SecretValue},
 						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil, nil,
 						map[string]string{
 							"avatar": util.SecretValue},
@@ -2382,16 +3059,24 @@ func TestService_GiveSecrets(t *testing.T) {
 				},
 				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"foo",
+						nil, nil, nil,
 						util.SecretValue,
-						nil, "",
-						"https://example.com/foo",
+						nil,
+						"", "https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
 						util.SecretValue,
-						nil, "",
-						"https://example.com/bar",
+						nil,
+						"", "https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -2422,29 +3107,40 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "", nil,
+						nil,
+						"", "",
+						nil,
 						map[string]string{
 							"apikey": util.SecretValue},
 						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil, nil,
 						map[string]string{
 							"avatar": util.SecretValue},
 						nil, nil, nil)},
 				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"foo",
+						nil, nil, nil,
 						util.SecretValue,
-						nil, "",
-						"https://example.com/foo",
+						nil,
+						"", "https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
 						util.SecretValue,
-						nil, "",
-						"https://example.com/bar",
+						nil,
+						"", "https://example.com/bar",
 						nil, nil, nil)},
 			},
 		},
@@ -2474,13 +3170,16 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "", nil,
+						nil,
+						"", "",
+						nil,
 						map[string]string{
 							"apikey": util.SecretValue},
 						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil,
 						nil,
 						map[string]string{
@@ -2489,16 +3188,24 @@ func TestService_GiveSecrets(t *testing.T) {
 				},
 				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"foo",
+						nil, nil, nil,
 						util.SecretValue,
-						nil, "",
-						"https://example.com/foo",
+						nil,
+						"", "https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
 						util.SecretValue,
-						nil, "",
-						"https://example.com/bar",
+						nil,
+						"", "https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -2527,29 +3234,40 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "", nil,
+						nil,
+						"", "",
+						nil,
 						map[string]string{
 							"apikey": "sweet"},
 						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil, nil,
 						map[string]string{
 							"avatar": "https://example.com/logo.png"},
 						nil, nil, nil)},
 				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
 						"foo",
-						nil, "",
-						"https://example.com/foo",
+						nil, nil, nil,
+						"foo",
+						nil,
+						"", "https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
 						"bar",
-						nil, "",
-						"https://example.com/bar",
+						nil, nil, nil,
+						"bar",
+						nil,
+						"", "https://example.com/bar",
 						nil, nil, nil)},
 			},
 			webhookTests: webhookTests{
@@ -2583,29 +3301,40 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "", nil,
+						nil,
+						"", "",
+						nil,
 						map[string]string{
 							"apikey": util.SecretValue},
 						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil, nil,
 						map[string]string{
 							"avatar": util.SecretValue},
 						nil, nil, nil)},
 				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"foo",
+						nil, nil, nil,
 						util.SecretValue,
-						nil, "",
-						"https://example.com/foo",
+						nil,
+						"", "https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
 						util.SecretValue,
-						nil, "",
-						"https://example.com/bar",
+						nil,
+						"", "https://example.com/bar",
 						nil, nil, nil)},
 			},
 		},
@@ -2640,14 +3369,16 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil,
 						map[string]string{
 							"apikey": util.SecretValue},
 						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil, nil,
 						map[string]string{
 							"avatar": util.SecretValue},
@@ -2655,16 +3386,24 @@ func TestService_GiveSecrets(t *testing.T) {
 				},
 				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"foo",
+						nil, nil, nil,
 						util.SecretValue,
-						nil, "",
-						"https://example.com/foo",
+						nil,
+						"", "https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
 						util.SecretValue,
-						nil, "",
-						"https://example.com/bar",
+						nil,
+						"", "https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -2698,14 +3437,16 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil,
 						map[string]string{
 							"apikey": "sweet"},
 						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil, nil,
 						map[string]string{
 							"avatar": "https://example.com/logo.png"},
@@ -2713,16 +3454,24 @@ func TestService_GiveSecrets(t *testing.T) {
 				},
 				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
 						"foo",
-						nil, "",
-						"https://example.com/foo",
+						nil, nil, nil,
+						"foo",
+						nil,
+						"", "https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
 						"bar",
-						nil, "",
-						"https://example.com/bar",
+						nil, nil, nil,
+						"bar",
+						nil,
+						"", "https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -2761,14 +3510,16 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil,
 						map[string]string{
 							"apikey": "sweet"},
 						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", "",
+						nil,
+						"", "",
 						nil, nil,
 						map[string]string{
 							"avatar": util.SecretValue},
@@ -2776,16 +3527,24 @@ func TestService_GiveSecrets(t *testing.T) {
 				},
 				WebHook: webhook.WebHooks{
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
 						"foo",
-						nil, "",
-						"https://example.com/foo",
+						nil, nil, nil,
+						"foo",
+						nil,
+						"", "https://example.com/foo",
 						nil, nil, nil),
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
+						nil, nil,
+						"",
+						nil, nil,
 						"bar",
-						nil, "",
-						"https://example.com/bar",
+						nil, nil, nil,
+						"bar",
+						nil,
+						"", "https://example.com/bar",
 						nil, nil, nil),
 				},
 			},
@@ -3024,8 +3783,14 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				WebHook: webhook.WebHooks{
 					"test": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"https://example.com",
+						nil, nil,
+						"",
+						nil, nil,
+						"test",
+						nil, nil, nil,
+						"",
+						nil,
+						"", "https://example.com",
 						nil, nil, nil),
 				},
 			},
@@ -3040,8 +3805,14 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				WebHook: webhook.WebHooks{
 					"test": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"https://example.com",
+						nil, nil,
+						"",
+						nil, nil,
+						"test",
+						nil, nil, nil,
+						"",
+						nil,
+						"", "https://example.com",
 						nil, nil, nil),
 				},
 			},
@@ -3060,8 +3831,14 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				WebHook: webhook.WebHooks{
 					"test": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"https://example.com",
+						nil, nil,
+						"",
+						nil, nil,
+						"test",
+						nil, nil, nil,
+						"",
+						nil,
+						"", "https://example.com",
 						nil, nil, nil),
 				},
 			},
@@ -3084,8 +3861,14 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				WebHook: webhook.WebHooks{
 					"test": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"https://example.com/other",
+						nil, nil,
+						"",
+						nil, nil,
+						"test",
+						nil, nil, nil,
+						"",
+						nil,
+						"", "https://example.com/other",
 						nil, nil, nil)},
 			},
 			oldService: &Service{
@@ -3099,8 +3882,14 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				WebHook: webhook.WebHooks{
 					"test": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"https://example.com",
+						nil, nil,
+						"",
+						nil, nil,
+						"test",
+						nil, nil, nil,
+						"",
+						nil,
+						"", "https://example.com",
 						nil, nil, nil)},
 			},
 			secretRefs: oldSecretRefs{},
@@ -3115,8 +3904,14 @@ func TestService_GiveSecrets(t *testing.T) {
 				}),
 				WebHook: webhook.WebHooks{
 					"test": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"https://example.com/other",
+						nil, nil,
+						"",
+						nil, nil,
+						"test",
+						nil, nil, nil,
+						"",
+						nil,
+						"", "https://example.com/other",
 						nil, nil, nil)},
 			},
 			webhookTests: webhookTests{
@@ -3304,9 +4099,9 @@ func TestService_GiveSecrets(t *testing.T) {
 func TestService_CheckFetches(t *testing.T) {
 	// GIVEN a Service.
 	testLV := testLatestVersion(t, "url", false)
-	testLV.Query(false, logutil.LogFrom{})
+	_, _ = testLV.Query(false, logutil.LogFrom{})
 	testDVL := testDeployedVersionLookup(t, false)
-	testDVL.Query(false, logutil.LogFrom{})
+	_ = testDVL.Query(false, logutil.LogFrom{})
 	tests := map[string]struct {
 		svc                                       *Service
 		startLatestVersion, wantLatestVersion     string
@@ -3358,7 +4153,8 @@ func TestService_CheckFetches(t *testing.T) {
 			svc: &Service{
 				Options: *opt.New(
 					test.BoolPtr(false),
-					"", nil,
+					"",
+					nil,
 					nil, nil),
 				LatestVersion:         testLatestVersion(t, "url", false),
 				DeployedVersionLookup: testDeployedVersionLookup(t, false)},
@@ -3431,9 +4227,15 @@ func TestRemoveDefaults(t *testing.T) {
 				Command: command.Commands{{"ls", "-lah"}},
 				WebHook: webhook.WebHooks{
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil)}},
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil)}},
 			wasUsingNotifyDefaults:  false,
 			wasUsingCommandDefaults: false,
 			wasUsingDefaults:        false,
@@ -3453,9 +4255,15 @@ func TestRemoveDefaults(t *testing.T) {
 				Command: command.Commands{{"ls", "-lah"}},
 				WebHook: webhook.WebHooks{
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil)}},
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil)}},
 		},
 		"All from defaults": {
 			svc: &Service{
@@ -3472,9 +4280,15 @@ func TestRemoveDefaults(t *testing.T) {
 				Command: command.Commands{{"ls", "-lah"}},
 				WebHook: webhook.WebHooks{
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil)}},
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil)}},
 			wasUsingNotifyDefaults:  true,
 			wasUsingCommandDefaults: true,
 			wasUsingDefaults:        true,
@@ -3502,9 +4316,15 @@ func TestRemoveDefaults(t *testing.T) {
 				Command: command.Commands{{"ls", "-lah"}},
 				WebHook: webhook.WebHooks{
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil)}},
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil)}},
 			wasUsingNotifyDefaults:  true,
 			wasUsingCommandDefaults: true,
 			wasUsingDefaults:        true,
@@ -3539,9 +4359,13 @@ func TestRemoveDefaults(t *testing.T) {
 					"bar": webhook.New(
 						nil, nil,
 						"1s",
-						nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil)}},
+						nil, nil,
+						"bar",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil)}},
 			wasUsingNotifyDefaults:  true,
 			wasUsingCommandDefaults: true,
 			wasUsingDefaults:        true,
@@ -3557,24 +4381,35 @@ func TestRemoveDefaults(t *testing.T) {
 					"bar": webhook.New(
 						nil, nil,
 						"1s",
-						nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil)}},
+						nil, nil,
+						"bar",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil)}},
 		},
 		"Command default changed": {
 			svc: &Service{
 				Comment: "foo",
 				Notify: shoutrrr.Shoutrrrs{
 					"foo": shoutrrr.New(
-						nil, "foo", "gotify",
+						nil,
+						"foo", "gotify",
 						nil, nil, nil,
 						nil, nil, nil)},
 				Command: command.Commands{{"rm", "-rf", "foo.txt"}},
 				WebHook: webhook.WebHooks{
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil)}},
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil)}},
 			wasUsingNotifyDefaults:  true,
 			wasUsingCommandDefaults: true,
 			wasUsingDefaults:        true,
@@ -3603,13 +4438,25 @@ func TestRemoveDefaults(t *testing.T) {
 				Command: command.Commands{{"ls", "-lah"}, {"rm", "-rf", "foo.txt"}},
 				WebHook: webhook.WebHooks{
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil),
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil),
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil)}},
+						nil, nil,
+						"",
+						nil, nil,
+						"foo",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil)}},
 			wasUsingNotifyDefaults:  true,
 			wasUsingCommandDefaults: true,
 			wasUsingDefaults:        true,
@@ -3633,13 +4480,25 @@ func TestRemoveDefaults(t *testing.T) {
 				Command: command.Commands{{"ls", "-lah"}, {"rm", "-rf", "foo.txt"}},
 				WebHook: webhook.WebHooks{
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil),
+						nil, nil,
+						"",
+						nil, nil,
+						"bar",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil),
 					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil)}},
+						nil, nil,
+						"",
+						nil, nil,
+						"foo",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil)}},
 		},
 	}
 
@@ -3656,9 +4515,15 @@ func TestRemoveDefaults(t *testing.T) {
 				Command: command.Commands{{"ls", "-lah"}},
 				WebHook: webhook.WebHooks{
 					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-						"github",
-						"", nil, nil, nil)}}
+						nil, nil,
+						"",
+						nil, nil,
+						"foo",
+						nil, nil, nil,
+						"",
+						nil,
+						"github", "",
+						nil, nil, nil)}}
 			oldService.NotifyFromDefaults = tc.wasUsingNotifyDefaults
 			oldService.CommandFromDefaults = tc.wasUsingCommandDefaults
 			oldService.WebHookFromDefaults = tc.wasUsingDefaults
@@ -3731,10 +4596,11 @@ func TestFromPayload(t *testing.T) {
 					cannot unmarshal bool into Go struct field [^ ]+ of type string$`),
 		},
 		"invalid SecretRefs payload": {
-			payload: `{
-				"webhook": {
-					"foo": {
-						"old_index": false}}}`,
+			payload: test.TrimJSON(`{
+				"webhook": [
+					{ "name": "foo", "old_index": false}
+				]
+			}`),
 			errRegex: `json: cannot unmarshal bool into Go struct field [^ ]+ of type string`,
 		},
 		"active True becomes nil": {
@@ -3967,7 +4833,7 @@ func TestFromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		"Give Notify secrets": {
-			payload: `{
+			payload: test.TrimJSON(`{
 				"latest_version": {
 					"type": "github",
 					"access_token": "` + util.SecretValue + `",
@@ -3983,41 +4849,55 @@ func TestFromPayload(t *testing.T) {
 						"password": "` + util.SecretValue + `"},
 					"headers": [
 						{"key": "X-Foo","value": "` + util.SecretValue + `","old_index": 0}]},
-				"notify": {
-					"slack": {
+				"notify": [
+					{
+						"name": "slack",
 						"type": "slack",
 						"url_fields": {
 							"token": "` + util.SecretValue + `"},
-						"old_index": "slack-initial"},
-					"join": {
+						"old_index": "slack-initial"
+					},
+					{
+						"name": "join",
 						"type": "join",
 						"url_fields": {
 							"apikey": "` + util.SecretValue + `"},
 						"params": {
 							"devices": "` + util.SecretValue + `",
 							"icon": "https://example.com/icon.png"},
-						"old_index": "join-initial"},
-					"zulip": {
+						"old_index": "join-initial"
+					},
+					{
+						"name": "zulip",
 						"type": "zulip",
 						"url_fields": {
 							"botkey": "` + util.SecretValue + `"},
-						"old_index": "zulip-initial"},
-					"matrix-": {
+						"old_index": "zulip-initial"
+					},
+					{
+						"name": "matrix-",
 						"type": "matrix",
 						"url_fields": {
 							"password": "` + util.SecretValue + `"},
-						"old_index": "matrix-initial"},
-					"rocketchat": {
+						"old_index": "matrix-initial"
+					},
+					{
+						"name": "rocketchat",
 						"type": "rocketchat",
 						"url_fields": {
 							"tokena": "` + util.SecretValue + `",
 							"tokenb": "` + util.SecretValue + `"},
-						"old_index": "rocketchat-initial"},
-					"teams": {
+						"old_index": "rocketchat-initial"
+					},
+					{
+						"name": "teams",
 						"type": "teams",
 						"url_fields": {
 							"altid": "` + util.SecretValue + `"},
-						"old_index": "teams-initial"}}}`,
+						"old_index": "teams-initial"
+					}
+				]
+			}`),
 			want: &Service{
 				Options:   opt.Options{Defaults: &opt.Defaults{}},
 				Dashboard: dashboard.Options{Defaults: &dashboard.OptionsDefaults{}},
@@ -4053,16 +4933,18 @@ func TestFromPayload(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"slack": shoutrrr.New(
-						nil, "",
-						"", // Type removed as it's in ID.
+						nil,
+						"",
+						"", // Type removed as it is in ID.
 						nil,
 						map[string]string{
 							"token": "slackToken"},
 						nil,
 						nil, nil, nil),
 					"join": shoutrrr.New(
-						nil, "",
-						"", // Type removed as it's in ID.
+						nil,
+						"",
+						"", // Type removed as it is in ID.
 						nil,
 						map[string]string{
 							"devices": "aDevice",
@@ -4071,15 +4953,17 @@ func TestFromPayload(t *testing.T) {
 							"apikey": "joinApiKey"},
 						nil, nil, nil),
 					"zulip": shoutrrr.New(
-						nil, "",
-						"", // Type removed as it's in ID.
+						nil,
+						"",
+						"", // Type removed as it is in ID.
 						nil,
 						map[string]string{
 							"botkey": "zulipBotKey"},
 						nil,
 						nil, nil, nil),
 					"matrix-": shoutrrr.New(
-						nil, "",
+						nil,
+						"",
 						"matrix",
 						nil,
 						map[string]string{
@@ -4087,8 +4971,9 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						nil, nil, nil),
 					"rocketchat": shoutrrr.New(
-						nil, "",
-						"", // Type removed as it's in ID.
+						nil,
+						"",
+						"", // Type removed as it is in ID.
 						nil,
 						map[string]string{
 							"tokena": "rocketchatTokenA",
@@ -4096,8 +4981,9 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						nil, nil, nil),
 					"teams": shoutrrr.New(
-						nil, "",
-						"", // Type removed as it's in ID.
+						nil,
+						"",
+						"", // Type removed as it is in ID.
 						nil,
 						map[string]string{
 							"altid": "teamsAltID"},
@@ -4138,8 +5024,8 @@ func TestFromPayload(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"slack-initial": shoutrrr.New(
-						nil, "",
-						"slack",
+						nil,
+						"", "slack",
 						nil,
 						map[string]string{
 							"botname": "testBotName"},
@@ -4148,8 +5034,8 @@ func TestFromPayload(t *testing.T) {
 							"channel": "slackChannel"},
 						nil, nil, nil),
 					"join-initial": shoutrrr.New(
-						nil, "",
-						"join",
+						nil,
+						"", "join",
 						nil,
 						map[string]string{
 							"apikey": "joinApiKey"},
@@ -4157,8 +5043,8 @@ func TestFromPayload(t *testing.T) {
 							"devices": "aDevice"},
 						nil, nil, nil),
 					"zulip-initial": shoutrrr.New(
-						nil, "",
-						"zulip",
+						nil,
+						"", "zulip",
 						nil,
 						map[string]string{
 							"botmail": "zulipBotMail",
@@ -4167,8 +5053,8 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						nil, nil, nil),
 					"matrix-initial": shoutrrr.New(
-						nil, "",
-						"matrix",
+						nil,
+						"", "matrix",
 						map[string]string{
 							"title": "matrixTitle"},
 						map[string]string{
@@ -4177,8 +5063,8 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						nil, nil, nil),
 					"rocketchat-initial": shoutrrr.New(
-						nil, "",
-						"rocketchat",
+						nil,
+						"", "rocketchat",
 						nil,
 						map[string]string{
 							"host":    "rocketchatHost",
@@ -4188,8 +5074,8 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						nil, nil, nil),
 					"teams-initial": shoutrrr.New(
-						nil, "",
-						"teams",
+						nil,
+						"", "teams",
 						nil,
 						map[string]string{
 							"group":      "teamsGroup",
@@ -4322,16 +5208,18 @@ func TestFromPayload(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"slack": shoutrrr.New(
-						nil, "",
-						"", // Type removed as it's in ID.
+						nil,
+						"",
+						"", // Type removed as it is in ID.
 						nil,
 						map[string]string{
 							"token": "slackToken"},
 						nil,
 						nil, nil, nil),
 					"join": shoutrrr.New(
-						nil, "",
-						"", // Type removed as it's in ID.
+						nil,
+						"",
+						"", // Type removed as it is in ID.
 						nil,
 						map[string]string{
 							"apikey": "joinApiKey"},
@@ -4340,15 +5228,17 @@ func TestFromPayload(t *testing.T) {
 							"icon":    "https://example.com/icon.png"},
 						nil, nil, nil),
 					"zulip": shoutrrr.New(
-						nil, "",
-						"", // Type removed as it's in ID.
+						nil,
+						"",
+						"", // Type removed as it is in ID.
 						nil,
 						map[string]string{
 							"botkey": "zulipBotKey"},
 						nil,
 						nil, nil, nil),
 					"matrix-": shoutrrr.New(
-						nil, "",
+						nil,
+						"",
 						"matrix",
 						nil,
 						map[string]string{
@@ -4356,8 +5246,9 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						nil, nil, nil),
 					"rocketchat": shoutrrr.New(
-						nil, "",
-						"", // Type removed as it's in ID.
+						nil,
+						"",
+						"", // Type removed as it is in ID.
 						nil,
 						map[string]string{
 							"tokena": "rocketchatTokenA",
@@ -4365,8 +5256,9 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						nil, nil, nil),
 					"teams": shoutrrr.New(
-						nil, "",
-						"", // Type removed as it's in ID.
+						nil,
+						"",
+						"", // Type removed as it is in ID.
 						nil,
 						map[string]string{
 							"altid": "teamsAltId"},
@@ -4378,20 +5270,27 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						&webhook.Headers{
 							{Key: "X-Foo", Value: "aFoo"}},
-						"", nil, nil, nil, nil, nil,
+						"",
+						nil, nil,
+						"github",
+						nil, nil, nil,
 						"githubSecret",
 						nil,
-						"", // Type removed as it's in ID.
-						"", nil, nil, nil),
+						"", // Type removed as it is in ID.
+						"",
+						nil, nil, nil),
 					"gitlab-": webhook.New(
 						nil,
 						&webhook.Headers{
 							{Key: "X-Bar", Value: "aBar"}},
-						"", nil, nil, nil, nil, nil,
+						"",
+						nil, nil,
+						"gitlab-",
+						nil, nil, nil,
 						"gitlabSecret",
 						nil,
-						"gitlab",
-						"", nil, nil, nil),
+						"gitlab", "",
+						nil, nil, nil),
 				},
 			},
 			oldService: &Service{
@@ -4427,8 +5326,8 @@ func TestFromPayload(t *testing.T) {
 				}),
 				Notify: shoutrrr.Shoutrrrs{
 					"slack-initial": shoutrrr.New(
-						nil, "",
-						"slack",
+						nil,
+						"", "slack",
 						nil,
 						map[string]string{
 							"token":   "slackToken",
@@ -4437,8 +5336,8 @@ func TestFromPayload(t *testing.T) {
 							"botname": "testBotName"},
 						nil, nil, nil),
 					"join-initial": shoutrrr.New(
-						nil, "",
-						"join",
+						nil,
+						"", "join",
 						nil,
 						map[string]string{
 							"apikey": "joinApiKey"},
@@ -4446,8 +5345,8 @@ func TestFromPayload(t *testing.T) {
 							"devices": "aDevice"},
 						nil, nil, nil),
 					"zulip-initial": shoutrrr.New(
-						nil, "",
-						"zulip",
+						nil,
+						"", "zulip",
 						nil,
 						map[string]string{
 							"botmail": "zulipBotMail",
@@ -4456,8 +5355,8 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						nil, nil, nil),
 					"matrix-initial": shoutrrr.New(
-						nil, "",
-						"matrix",
+						nil,
+						"", "matrix",
 						map[string]string{
 							"title": "matrixTitle"},
 						map[string]string{
@@ -4466,8 +5365,8 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						nil, nil, nil),
 					"rocketchat-initial": shoutrrr.New(
-						nil, "",
-						"rocketchat",
+						nil,
+						"", "rocketchat",
 						nil,
 						map[string]string{
 							"host":    "rocketchatHost",
@@ -4477,8 +5376,8 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						nil, nil, nil),
 					"teams-initial": shoutrrr.New(
-						nil, "",
-						"teams",
+						nil,
+						"", "teams",
 						nil,
 						map[string]string{
 							"group":      "teamsGroup",
@@ -4494,20 +5393,26 @@ func TestFromPayload(t *testing.T) {
 						nil,
 						&webhook.Headers{
 							{Key: "X-Foo", Value: "aFoo"}},
-						"", nil, nil, nil, nil, nil,
+						"",
+						nil, nil,
+						"github-initial",
+						nil, nil, nil,
 						"githubSecret",
 						nil,
-						"github-initial",
-						"", nil, nil, nil),
+						"github-initial", "",
+						nil, nil, nil),
 					"gitlab-initial": webhook.New(
 						nil,
 						&webhook.Headers{
 							{Key: "X-Bar", Value: "aBar"}},
-						"", nil, nil, nil, nil, nil,
+						"",
+						nil, nil,
+						"gitlab-initial",
+						nil, nil, nil,
 						"gitlabSecret",
 						nil,
-						"gitlab-initial",
-						"", nil, nil, nil),
+						"gitlab-initial", "",
+						nil, nil, nil),
 				},
 			},
 			errRegex: `^$`,

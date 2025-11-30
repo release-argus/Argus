@@ -33,10 +33,10 @@ import (
 
 func TestLookup_Refresh(t *testing.T) {
 	testURL := testLookup("url", false).(*web.Lookup)
-	testURL.Query(true, logutil.LogFrom{})
+	_, _ = testURL.Query(true, logutil.LogFrom{})
 	testVersionURL := testURL.Status.LatestVersion()
 	testGitHub := testLookup("github", false).(*github.Lookup)
-	testGitHub.Query(true, logutil.LogFrom{})
+	_, _ = testGitHub.Query(true, logutil.LogFrom{})
 	testVersionGitHub := testGitHub.Status.LatestVersion()
 
 	type args struct {
@@ -362,7 +362,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			errRegex: `\stype: "newType" <invalid> \(expected one of \[github, url\]\)$`,
+			errRegex: `\stype: "newType" <invalid> \(supported types = \['github', 'url'\]\)$`,
 		},
 		"inherit Require.Docker.* - same Lookup.type": {
 			args: args{
@@ -576,7 +576,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 				gotQueryToken, gotValidUntil := gotRequire.Docker.CopyQueryToken()
 				avoidQueryToken, avoidValidUntil := tc.lookupRequire.Docker.CopyQueryToken()
 				if gotQueryToken == avoidQueryToken &&
-					gotValidUntil == avoidValidUntil {
+					time.Time.Equal(gotValidUntil, avoidValidUntil) {
 					t.Errorf("applyOverridesJSON() Require.Docker copied over unexpectedly\ngot:\n%+v\nhad:\n%+v",
 						gotRequire.Docker, tc.lookupRequire.Docker)
 				}

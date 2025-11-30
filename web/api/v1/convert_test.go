@@ -72,6 +72,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 					Options: &apitype.ServiceOptions{},
 					LatestVersion: &apitype.LatestVersionDefaults{
 						Require: &apitype.LatestVersionRequireDefaults{}},
+					Command:               &apitype.Commands{},
 					DeployedVersionLookup: &apitype.DeployedVersionLookup{},
 					Dashboard:             &apitype.DashboardOptions{}}},
 		},
@@ -109,6 +110,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 								Quay: &apitype.RequireDockerCheckRegistryDefaults{
 									Token: util.SecretValue},
 							}}},
+					Command:               &apitype.Commands{},
 					DeployedVersionLookup: &apitype.DeployedVersionLookup{},
 					Dashboard:             &apitype.DashboardOptions{}}},
 		},
@@ -199,8 +201,7 @@ func TestConvertAndCensorService(t *testing.T) {
 				Notify: shoutrrr.Shoutrrrs{
 					"gotify": shoutrrr.New(
 						nil,
-						"gotify",
-						"",
+						"gotify", "",
 						nil,
 						map[string]string{
 							"url": "http://gotify"},
@@ -211,7 +212,15 @@ func TestConvertAndCensorService(t *testing.T) {
 				WebHook: webhook.WebHooks{
 					"test_wh": webhook.New(
 						test.BoolPtr(true),
-						nil, "", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+						nil,
+						"",
+						nil, nil,
+						"test_wh",
+						nil, nil, nil,
+						"",
+						nil,
+						"", "",
+						nil, nil, nil)},
 				Dashboard: *dashboard.NewOptions(
 					nil,
 					"https://example.com/icon.png",
@@ -262,7 +271,7 @@ func TestConvertAndCensorService(t *testing.T) {
 					serviceJSON, _ := json.Marshal(tc.input)
 					serviceJSON = []byte(strings.Replace(string(serviceJSON),
 						"{", `{"name":"`+tc.input.Name+`",`, 1))
-					json.Unmarshal(serviceJSON, tc.input)
+					_ = json.Unmarshal(serviceJSON, tc.input)
 				}
 				// Give the Status the Defaults of the Service.
 				tc.input.Status.Init(
@@ -620,37 +629,37 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 func TestConvertURLCommands(t *testing.T) {
 	// GIVEN a list of URL Commands.
 	tests := map[string]struct {
-		slice *filter.URLCommands
-		want  *apitype.URLCommands
+		urlCommands *filter.URLCommands
+		want        *apitype.URLCommands
 	}{
 		"nil": {
-			slice: nil,
-			want:  nil,
+			urlCommands: nil,
+			want:        nil,
 		},
 		"empty": {
-			slice: &filter.URLCommands{},
-			want:  &apitype.URLCommands{},
+			urlCommands: &filter.URLCommands{},
+			want:        &apitype.URLCommands{},
 		},
 		"regex": {
-			slice: &filter.URLCommands{
+			urlCommands: &filter.URLCommands{
 				{Type: "regex", Regex: "[0-9.]+"}},
 			want: &apitype.URLCommands{
 				{Type: "regex", Regex: "[0-9.]+"}},
 		},
 		"replace": {
-			slice: &filter.URLCommands{
+			urlCommands: &filter.URLCommands{
 				{Type: "replace", Old: "foo", New: test.StringPtr("bar")}},
 			want: &apitype.URLCommands{
 				{Type: "replace", Old: "foo", New: test.StringPtr("bar")}},
 		},
 		"split": {
-			slice: &filter.URLCommands{
+			urlCommands: &filter.URLCommands{
 				{Type: "split", Index: test.IntPtr(7)}},
 			want: &apitype.URLCommands{
 				{Type: "split", Index: test.IntPtr(7)}},
 		},
 		"one of each": {
-			slice: &filter.URLCommands{
+			urlCommands: &filter.URLCommands{
 				{Type: "regex", Regex: "[0-9.]+"},
 				{Type: "replace", Old: "foo", New: test.StringPtr("bar")},
 				{Type: "split", Index: test.IntPtr(7)}},
@@ -666,7 +675,7 @@ func TestConvertURLCommands(t *testing.T) {
 			t.Parallel()
 
 			// WHEN convertURLCommands is called on it.
-			got := convertURLCommands(tc.slice)
+			got := convertURLCommands(tc.urlCommands)
 
 			// THEN the WebHooks is converted correctly.
 			if got.String() != tc.want.String() {
@@ -998,8 +1007,8 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 		"one": {
 			input: &shoutrrr.Shoutrrrs{
 				"test": shoutrrr.New(
-					nil, "",
-					"discord",
+					nil,
+					"", "discord",
 					map[string]string{
 						"test": "1"},
 					map[string]string{
@@ -1020,8 +1029,8 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 		"multiple": {
 			input: &shoutrrr.Shoutrrrs{
 				"test": shoutrrr.New(
-					nil, "",
-					"discord",
+					nil,
+					"", "discord",
 					map[string]string{
 						"test": "1"},
 					map[string]string{
@@ -1030,8 +1039,8 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 						"test": "3"},
 					nil, nil, nil),
 				"other": shoutrrr.New(
-					nil, "",
-					"discord",
+					nil,
+					"", "discord",
 					map[string]string{
 						"message": "release {{ version }} is available"},
 					map[string]string{
@@ -1084,25 +1093,25 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 func TestConvertCommands(t *testing.T) {
 	// GIVEN Commands.
 	tests := map[string]struct {
-		slice *command.Commands
-		want  *apitype.Commands
+		commands *command.Commands
+		want     *apitype.Commands
 	}{
 		"nil": {
-			slice: nil,
-			want:  nil,
+			commands: nil,
+			want:     nil,
 		},
 		"empty": {
-			slice: &command.Commands{},
-			want:  &apitype.Commands{},
+			commands: &command.Commands{},
+			want:     &apitype.Commands{},
 		},
 		"one": {
-			slice: &command.Commands{
+			commands: &command.Commands{
 				{"ls", "-lah"}},
 			want: &apitype.Commands{
 				{"ls", "-lah"}},
 		},
 		"two": {
-			slice: &command.Commands{
+			commands: &command.Commands{
 				{"ls", "-lah"},
 				{"/bin/bash", "something.sh"}},
 			want: &apitype.Commands{
@@ -1116,7 +1125,7 @@ func TestConvertCommands(t *testing.T) {
 			t.Parallel()
 
 			// WHEN convertCommands is called on it.
-			got := convertCommands(tc.slice)
+			got := convertCommands(tc.commands)
 
 			// THEN the Commands is converted correctly.
 			if got == tc.want { // both nil.
@@ -1256,11 +1265,12 @@ func TestConvertAndCensorWebHooks(t *testing.T) {
 					&webhook.Headers{
 						{Key: "X-Test", Value: "foo"}},
 					"",
-					nil, nil, nil, nil, nil,
+					nil, nil,
+					"test",
+					nil, nil, nil,
 					"censor",
 					nil,
-					"github",
-					"https://example.com",
+					"github", "https://example.com",
 					nil, nil, nil)},
 			want: &apitype.WebHooks{
 				"test": {
@@ -1276,18 +1286,20 @@ func TestConvertAndCensorWebHooks(t *testing.T) {
 					nil,
 					&webhook.Headers{
 						{Key: "X-Test", Value: "foo"}},
-					"", nil, nil, nil, nil, nil,
+					"", nil, nil,
+					"test",
+					nil, nil, nil,
 					"censor",
 					nil,
-					"github",
-					"https://example.com",
+					"github", "https://example.com",
 					nil, nil, nil),
 				"other": webhook.New(
-					nil, nil, "", nil, nil, nil, nil, nil,
+					nil, nil, "", nil, nil,
+					"other",
+					nil, nil, nil,
 					"",
 					nil,
-					"gitlab",
-					"https://release-argus.io",
+					"gitlab", "https://release-argus.io",
 					nil, nil, nil)},
 			want: &apitype.WebHooks{
 				"test": {
@@ -1334,9 +1346,15 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 		},
 		"censor secret": {
 			wh: webhook.New(
-				nil, nil, "", nil, nil, nil, nil, nil,
+				nil, nil,
+				"",
+				nil, nil,
+				"wh",
+				nil, nil, nil,
 				"shazam",
-				nil, "", "", nil, nil, nil),
+				nil,
+				"", "",
+				nil, nil, nil),
 			want: &apitype.WebHook{
 				Secret: util.SecretValue},
 		},
@@ -1346,7 +1364,14 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 				&webhook.Headers{
 					{Key: "X-Something", Value: "foo"},
 					{Key: "X-Another", Value: "bar"}},
-				"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+				"",
+				nil, nil,
+				"wh",
+				nil, nil, nil,
+				"",
+				nil,
+				"", "",
+				nil, nil, nil),
 			want: &apitype.WebHook{
 				CustomHeaders: &[]apitype.Header{
 					{Key: "X-Something", Value: util.SecretValue},

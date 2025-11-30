@@ -31,6 +31,7 @@ type MapStringStringOmitNull map[string]string
 func (m *MapStringStringOmitNull) UnmarshalYAML(value *yaml.Node) error {
 	temp := map[string]*string{}
 	if err := value.Decode(&temp); err != nil {
+		// nolint:wrapcheck
 		return err
 	}
 
@@ -50,6 +51,7 @@ func (m *MapStringStringOmitNull) UnmarshalYAML(value *yaml.Node) error {
 func (m *MapStringStringOmitNull) UnmarshalJSON(data []byte) error {
 	temp := map[string]*string{}
 	if err := json.Unmarshal(data, &temp); err != nil {
+		// nolint:wrapcheck
 		return err
 	}
 

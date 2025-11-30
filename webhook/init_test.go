@@ -27,24 +27,24 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-func TestSlice_Metrics(t *testing.T) {
+func TestWebHooks_Metrics(t *testing.T) {
 	// GIVEN a WebHooks.
 	tests := map[string]struct {
-		slice *WebHooks
+		webhooks *WebHooks
 	}{
 		"nil": {
-			slice: nil},
+			webhooks: nil},
 		"empty": {
-			slice: &WebHooks{}},
+			webhooks: &WebHooks{}},
 		"with one": {
-			slice: &WebHooks{
+			webhooks: &WebHooks{
 				"foo": &WebHook{
 					Main: &Defaults{}}}},
 		"no Main, no metrics": {
-			slice: &WebHooks{
+			webhooks: &WebHooks{
 				"foo": &WebHook{}}},
 		"multiple": {
-			slice: &WebHooks{
+			webhooks: &WebHooks{
 				"bish": &WebHook{
 					Main: &Defaults{}},
 				"bash": &WebHook{
@@ -57,8 +57,8 @@ func TestSlice_Metrics(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're testing metrics.
 
-			if tc.slice != nil {
-				for name, s := range *tc.slice {
+			if tc.webhooks != nil {
+				for name, s := range *tc.webhooks {
 					s.ID = name
 					s.ServiceStatus = &status.Status{}
 					s.ServiceStatus.ServiceInfo.ID = name + "-service"
@@ -67,13 +67,13 @@ func TestSlice_Metrics(t *testing.T) {
 
 			// WHEN the Prometheus metrics are initialised with initMetrics.
 			had := testutil.CollectAndCount(metric.WebHookResultTotal)
-			tc.slice.InitMetrics()
+			tc.webhooks.InitMetrics()
 
 			// THEN it can be counted.
 			got := testutil.CollectAndCount(metric.WebHookResultTotal)
 			want := had
-			if tc.slice != nil {
-				want += 2 * len(*tc.slice)
+			if tc.webhooks != nil {
+				want += 2 * len(*tc.webhooks)
 			}
 			if got != want {
 				t.Errorf("%s\nmetric count mismatch after InitMetrics()\nwant: %d\ngot:  %d",
@@ -81,7 +81,7 @@ func TestSlice_Metrics(t *testing.T) {
 			}
 
 			// AND the metrics can be deleted.
-			tc.slice.DeleteMetrics()
+			tc.webhooks.DeleteMetrics()
 			got = testutil.CollectAndCount(metric.WebHookResultTotal)
 			if got != had {
 				t.Errorf("%s\nmetric count mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
@@ -186,34 +186,34 @@ func TestWebHook_Init(t *testing.T) {
 	}
 }
 
-func TestSlice_Init(t *testing.T) {
+func TestWebHooks_Init(t *testing.T) {
 	// GIVEN a WebHooks and vars for the Init.
 	var notifiers shoutrrr.Shoutrrrs
 	tests := map[string]struct {
-		slice                  *WebHooks
-		nilSlice               bool
+		webhooks               *WebHooks
+		nilMap                 bool
 		mains                  *WebHooksDefaults
 		defaults, hardDefaults *Defaults
 	}{
-		"nil slice": {
-			slice: nil, nilSlice: true,
+		"nil map": {
+			webhooks: nil, nilMap: true,
 		},
-		"empty slice": {
-			slice: &WebHooks{},
+		"empty map": {
+			webhooks: &WebHooks{},
 		},
 		"no mains": {
-			slice: &WebHooks{
+			webhooks: &WebHooks{
 				"fail": testWebHook(true, false, false),
 				"pass": testWebHook(false, false, false)},
 		},
-		"slice with nil element and matching main": {
-			slice: &WebHooks{
+		"map with nil element and matching main": {
+			webhooks: &WebHooks{
 				"fail": nil},
 			mains: &WebHooksDefaults{
 				"fail": testDefaults(false, false)},
 		},
 		"have matching mains": {
-			slice: &WebHooks{
+			webhooks: &WebHooks{
 				"fail": testWebHook(true, false, false),
 				"pass": testWebHook(false, false, false)},
 			mains: &WebHooksDefaults{
@@ -222,7 +222,7 @@ func TestSlice_Init(t *testing.T) {
 			},
 		},
 		"some matching mains": {
-			slice: &WebHooks{
+			webhooks: &WebHooks{
 				"fail": testWebHook(true, false, false),
 				"pass": testWebHook(false, false, false)},
 			mains: &WebHooksDefaults{
@@ -235,10 +235,10 @@ func TestSlice_Init(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if !tc.nilSlice {
-				for i := range *tc.slice {
-					if (*tc.slice)[i] != nil {
-						(*tc.slice)[i].ID = name + i
+			if !tc.nilMap {
+				for i := range *tc.webhooks {
+					if (*tc.webhooks)[i] != nil {
+						(*tc.webhooks)[i].ID = name + i
 					}
 				}
 			}
@@ -255,21 +255,21 @@ func TestSlice_Init(t *testing.T) {
 			parentInterval := "10s"
 
 			// WHEN Init is called on it.
-			tc.slice.Init(
+			tc.webhooks.Init(
 				&serviceStatus,
 				tc.mains, tc.defaults, tc.hardDefaults,
 				&notifiers,
 				&parentInterval)
 
 			// THEN pointers to those vars are handed out to the WebHook:
-			if tc.nilSlice {
-				if tc.slice != nil {
-					t.Fatalf("%s\nslice mismatch\nwant: nil\ngot:  %v",
-						packageName, *tc.slice)
+			if tc.nilMap {
+				if tc.webhooks != nil {
+					t.Fatalf("%s\nmap mismatch\nwant: nil\ngot:  %v",
+						packageName, *tc.webhooks)
 				}
 				return
 			}
-			for _, webhook := range *tc.slice {
+			for _, webhook := range *tc.webhooks {
 				// 	Main:
 				if webhook.Main == nil {
 					t.Errorf("%s\nMain of the WebHook was not initialised\ngot: %v",

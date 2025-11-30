@@ -34,7 +34,7 @@ type Config struct {
 	WebHook      webhook.WebHooksDefaults   `yaml:"webhook,omitempty"`  // WebHooks to send on a new release.
 
 	OrderMutex sync.RWMutex     `yaml:"-"`                 // Mutex for the Order/Service slice.
-	Order      []string         `yaml:"-"`                 // Ordered slice of all Services.
+	Order      []string         `yaml:"-"`                 // Ordered slice of all Service id's.
 	Service    service.Services `yaml:"service,omitempty"` // The services to monitor.
 
 	DatabaseChannel *chan dbtype.Message `yaml:"-"` // Channel for broadcasts to the Database.

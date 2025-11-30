@@ -102,8 +102,7 @@ func TestShoutrrr_String(t *testing.T) {
 			latestVersion: "1.2.3",
 			shoutrrr: New(
 				nil,
-				"foo",
-				"discord",
+				"foo", "discord",
 				map[string]string{
 					"delay": "1h"},
 				map[string]string{
@@ -176,22 +175,22 @@ func TestShoutrrr_String(t *testing.T) {
 	}
 }
 
-func TestSliceDefaults_String(t *testing.T) {
-	// GIVEN a Shoutrrrs.
+func TestShoutrrsDefaults_String(t *testing.T) {
+	// GIVEN Shoutrrrs.
 	tests := map[string]struct {
-		slice *ShoutrrrsDefaults
-		want  string
+		shoutrrrsDefaults *ShoutrrrsDefaults
+		want              string
 	}{
 		"nil": {
-			slice: nil,
-			want:  "",
+			shoutrrrsDefaults: nil,
+			want:              "",
 		},
 		"empty": {
-			slice: &ShoutrrrsDefaults{},
-			want:  "{}",
+			shoutrrrsDefaults: &ShoutrrrsDefaults{},
+			want:              "{}",
 		},
 		"one element": {
-			slice: &ShoutrrrsDefaults{
+			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"foo": NewDefaults(
 					"discord",
 					nil, nil, nil)},
@@ -200,7 +199,7 @@ func TestSliceDefaults_String(t *testing.T) {
 					type: discord`),
 		},
 		"multiple elements": {
-			slice: &ShoutrrrsDefaults{
+			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"foo": NewDefaults(
 					"discord",
 					nil, nil, nil),
@@ -232,7 +231,7 @@ func TestSliceDefaults_String(t *testing.T) {
 				}
 
 				// WHEN the Shoutrrrs is stringified with String.
-				got := tc.slice.String(prefix)
+				got := tc.shoutrrrsDefaults.String(prefix)
 
 				// THEN the result is as expected.
 				want = strings.TrimPrefix(want, "\n")
@@ -245,40 +244,43 @@ func TestSliceDefaults_String(t *testing.T) {
 	}
 }
 
-func TestSlice_String(t *testing.T) {
-	// GIVEN a Shoutrrrs.
+func TestShoutrrrs_String(t *testing.T) {
+	// GIVEN Shoutrrrs.
 	tests := map[string]struct {
-		slice *Shoutrrrs
-		want  string
+		shoutrrrs *Shoutrrrs
+		want      string
 	}{
 		"nil": {
-			slice: nil,
-			want:  "",
+			shoutrrrs: nil,
+			want:      "",
 		},
 		"empty": {
-			slice: &Shoutrrrs{},
-			want:  "{}",
+			shoutrrrs: &Shoutrrrs{},
+			want:      "{}",
 		},
 		"one element": {
-			slice: &Shoutrrrs{
+			shoutrrrs: &Shoutrrrs{
 				"foo": New(
-					nil, "",
-					"discord",
-					nil, nil, nil, nil, nil, nil)},
+					nil,
+					"", "discord",
+					nil, nil, nil,
+					nil, nil, nil)},
 			want: test.TrimYAML(`
 				foo:
 					type: discord`),
 		},
 		"multiple elements": {
-			slice: &Shoutrrrs{
+			shoutrrrs: &Shoutrrrs{
 				"foo": New(
-					nil, "",
-					"discord",
-					nil, nil, nil, nil, nil, nil),
+					nil,
+					"", "discord",
+					nil, nil, nil,
+					nil, nil, nil),
 				"bar": New(
-					nil, "",
-					"gotify",
-					nil, nil, nil, nil, nil, nil),
+					nil,
+					"", "gotify",
+					nil, nil, nil,
+					nil, nil, nil),
 			},
 			want: test.TrimYAML(`
 				bar:
@@ -304,7 +306,7 @@ func TestSlice_String(t *testing.T) {
 				}
 
 				// WHEN the Shoutrrrs is stringified with String.
-				got := tc.slice.String(prefix)
+				got := tc.shoutrrrs.String(prefix)
 
 				// THEN the result is as expected.
 				if got != want {
@@ -316,7 +318,7 @@ func TestSlice_String(t *testing.T) {
 	}
 }
 
-func TestSlice_UnmarshalJSON(t *testing.T) {
+func TestShoutrrrs_UnmarshalJSON(t *testing.T) {
 	// GIVEN various JSON inputs to unmarshal into Shoutrrrs.
 	tests := map[string]struct {
 		json     string
@@ -406,36 +408,32 @@ func TestSlice_UnmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestSlice_MarshalJSON(t *testing.T) {
+func TestShoutrrrs_MarshalJSON(t *testing.T) {
 	// GIVEN various Shoutrrrs states to marshal.
 	tests := map[string]struct {
-		slice   *Shoutrrrs
-		wantStr string
+		shoutrrrs *Shoutrrrs
+		wantStr   string
 	}{
-		"nil slice -> null": {
-			slice:   nil,
-			wantStr: "null",
+		"nil map -> null": {
+			shoutrrrs: nil,
+			wantStr:   "null",
 		},
-		"empty slice -> empty array": {
-			slice:   &Shoutrrrs{},
-			wantStr: "[]",
+		"empty map -> empty array": {
+			shoutrrrs: &Shoutrrrs{},
+			wantStr:   "[]",
 		},
 		"two items": {
-			slice: func() *Shoutrrrs {
+			shoutrrrs: func() *Shoutrrrs {
 				m := Shoutrrrs{
 					"a": New(
 						nil,
-						"a",
-						"slack",
+						"a", "slack",
 						nil, nil, nil,
-						nil,
-						nil, nil),
+						nil, nil, nil),
 					"b": New(nil,
-						"b",
-						"gotify",
+						"b", "gotify",
 						nil, nil, nil,
-						nil,
-						nil, nil),
+						nil, nil, nil),
 				}
 				return &m
 			}(),
@@ -451,7 +449,7 @@ func TestSlice_MarshalJSON(t *testing.T) {
 			t.Parallel()
 
 			// WHEN marshaling the Shoutrrrs.
-			data, err := tc.slice.MarshalJSON()
+			data, err := tc.shoutrrrs.MarshalJSON()
 			if err != nil {
 				t.Fatalf("%s\nMarshalJSON returned error: %v", packageName, err)
 			}

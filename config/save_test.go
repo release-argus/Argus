@@ -448,11 +448,13 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 				"alpha": &service.Service{
 					Notify: shoutrrr.Shoutrrrs{
 						"foo": shoutrrr.New(
-							nil, "foo", "gotify",
+							nil,
+							"foo", "gotify",
 							nil, nil, nil,
 							nil, nil, nil),
 						"bar": shoutrrr.New(
-							nil, "bar", "gotify",
+							nil,
+							"bar", "gotify",
 							nil, nil, nil,
 							nil, nil, nil)}}},
 			serviceDefaults: service.Defaults{
@@ -567,21 +569,36 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 				"alpha": &service.Service{
 					Notify: shoutrrr.Shoutrrrs{
 						"bop": shoutrrr.New(
-							nil, "bop", "gotify",
+							nil,
+							"bop", "gotify",
 							nil, nil, nil,
 							nil, nil, nil),
 						"top": shoutrrr.New(
-							nil, "top", "slack",
+							nil,
+							"top", "slack",
 							nil, nil, nil,
 							nil, nil, nil)},
 					Command: command.Commands{
 						{"ls", "-lah"}},
 					WebHook: webhook.WebHooks{
 						"bang": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "",
+							nil, nil,
+							"",
+							nil, nil,
+							"bang",
+							nil, nil, nil,
+							"", nil,
+							"gitlab", "",
 							nil, nil, nil),
 						"crash": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "github", "",
+							nil, nil,
+							"",
+							nil, nil,
+							"crash",
+							nil, nil, nil,
+							"",
+							nil,
+							"github", "",
 							nil, nil, nil)},
 				}},
 			serviceDefaults: service.Defaults{
@@ -741,32 +758,68 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 						{"ls", "-lah"}},
 					WebHook: webhook.WebHooks{
 						"bash": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "",
+							nil, nil,
+							"",
+							nil, nil,
+							"bash",
+							nil, nil, nil,
+							"",
+							nil,
+							"gitlab", "",
 							nil, nil, nil),
 						"bish": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "github", "",
+							nil, nil,
+							"", nil, nil,
+							"bish",
+							nil, nil, nil,
+							"",
+							nil,
+							"github", "",
 							nil, nil, nil),
 						"bosh": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "",
+							nil, nil,
+							"",
+							nil, nil,
+							"bosh",
+							nil, nil, nil,
+							"",
+							nil,
+							"gitlab", "",
 							nil, nil, nil)}},
 				"charlie": &service.Service{
 					Notify: shoutrrr.Shoutrrrs{
 						"bop": shoutrrr.New(
-							nil, "bop", "gotify",
+							nil,
+							"bop", "gotify",
 							nil, nil, nil,
 							nil, nil, nil),
 						"top": shoutrrr.New(
-							nil, "top", "slack",
+							nil,
+							"top", "slack",
 							nil, nil, nil,
 							nil, nil, nil)},
 					Command: command.Commands{
 						{"ls", "-lah", "/tmp"}},
 					WebHook: webhook.WebHooks{
 						"bang": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "",
+							nil, nil,
+							"",
+							nil, nil,
+							"bang",
+							nil, nil, nil,
+							"",
+							nil,
+							"gitlab", "",
 							nil, nil, nil),
 						"crash": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "github", "",
+							nil, nil,
+							"",
+							nil, nil,
+							"crash",
+							nil, nil, nil,
+							"",
+							nil,
+							"github", "",
 							nil, nil, nil)}}},
 			serviceDefaults: service.Defaults{
 				Notify: map[string]struct{}{

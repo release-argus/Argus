@@ -77,6 +77,7 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			cfg := config.Config{
 				Service: tc.service,
@@ -92,7 +93,7 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 					packageName, tc.want, got)
 			}
 			gotIndex := 0
-			for 0 != gotIndex {
+			for gotIndex != 0 {
 				found := false
 				for wantIndex := range tc.want {
 					if got[gotIndex] == tc.want[wantIndex] {
@@ -194,8 +195,8 @@ func TestFindShoutrrr(t *testing.T) {
 						Notify: shoutrrr.Shoutrrrs{
 							"foo": {}, "bar": {},
 							"baz": shoutrrr.New(
-								nil, "",
-								"gotify",
+								nil,
+								"", "gotify",
 								nil,
 								map[string]string{
 									"host":  "example.com",
@@ -213,8 +214,8 @@ func TestFindShoutrrr(t *testing.T) {
 						Notify: shoutrrr.Shoutrrrs{
 							"foo": {},
 							"bar": shoutrrr.New(
-								nil, "",
-								"gotify",
+								nil,
+								"", "gotify",
 								nil,
 								map[string]string{
 									"host":  "example.com",
@@ -240,8 +241,8 @@ func TestFindShoutrrr(t *testing.T) {
 						Notify: shoutrrr.Shoutrrrs{
 							"foo": {},
 							"bar": shoutrrr.New(
-								nil, "",
-								"smtp",
+								nil,
+								"", "smtp",
 								nil,
 								map[string]string{
 									"fromaddress": "test@release-argus.io"},
@@ -272,8 +273,8 @@ func TestFindShoutrrr(t *testing.T) {
 						Notify: shoutrrr.Shoutrrrs{
 							"foo": {},
 							"bar": shoutrrr.New(
-								nil, "",
-								"smtp",
+								nil,
+								"", "smtp",
 								nil,
 								map[string]string{
 									"host": "example.com"},
@@ -303,8 +304,8 @@ func TestFindShoutrrr(t *testing.T) {
 						Notify: shoutrrr.Shoutrrrs{
 							"foo": {},
 							"bosh": shoutrrr.New(
-								nil, "",
-								"smtp",
+								nil,
+								"", "smtp",
 								nil,
 								map[string]string{
 									"host": "example.com"},
@@ -459,13 +460,13 @@ func TestNotifyTest(t *testing.T) {
 		map[string]string{})
 	tests := map[string]struct {
 		flag                    string
-		slice                   service.Services
-		rootSlice               shoutrrr.ShoutrrrsDefaults
+		services                service.Services
+		mainShoutrrrs           shoutrrr.ShoutrrrsDefaults
 		stdoutRegex, panicRegex *string
 	}{
 		"empty flag": {flag: "",
 			stdoutRegex: test.StringPtr("^$"),
-			slice: service.Services{
+			services: service.Services{
 				"argus": {
 					Notify: shoutrrr.Shoutrrrs{
 						"foo": {},
@@ -475,7 +476,7 @@ func TestNotifyTest(t *testing.T) {
 				}}},
 		"unknown Notifier": {flag: "something",
 			panicRegex: test.StringPtr("Notifier.* could not be found"),
-			slice: service.Services{
+			services: service.Services{
 				"argus": {
 					Notify: shoutrrr.Shoutrrrs{
 						"foo": {},
@@ -486,14 +487,13 @@ func TestNotifyTest(t *testing.T) {
 		"known Service Notifier with invalid Gotify token": {
 			flag:       "bar",
 			panicRegex: test.StringPtr(`Message failed to send with "bar" config\s+invalid gotify token`),
-			slice: service.Services{
+			services: service.Services{
 				"argus": {
 					Notify: shoutrrr.Shoutrrrs{
 						"foo": {},
 						"bar": shoutrrr.New(
 							nil,
-							"bar",
-							"gotify",
+							"bar", "gotify",
 							map[string]string{},
 							map[string]string{
 								"host":  test.ValidCertNoProtocol,
@@ -505,17 +505,37 @@ func TestNotifyTest(t *testing.T) {
 							emptyShoutrrr),
 						"baz": {}}}},
 		},
-		"valid Gotify token": {
+		"invalid Gotify token format": {
 			flag:       "bar",
-			panicRegex: test.StringPtr(`HTTP 40\d`),
-			slice: service.Services{
+			panicRegex: test.StringPtr(`invalid gotify token "abc"`),
+			services: service.Services{
 				"argus": {
 					Notify: shoutrrr.Shoutrrrs{
 						"foo": {},
 						"bar": shoutrrr.New(
 							nil,
-							"bar",
-							"gotify",
+							"bar", "gotify",
+							map[string]string{
+								"max_tries": "1"},
+							map[string]string{
+								"host":  test.ValidCertNoProtocol,
+								"token": "abc"},
+							map[string]string{},
+							emptyShoutrrr,
+							emptyShoutrrr,
+							emptyShoutrrr),
+						"baz": {}}}},
+		},
+		"valid Gotify token format": {
+			flag:       "bar",
+			panicRegex: test.StringPtr(`Message failed to send with.*\s*server respond`),
+			services: service.Services{
+				"argus": {
+					Notify: shoutrrr.Shoutrrrs{
+						"foo": {},
+						"bar": shoutrrr.New(
+							nil,
+							"bar", "gotify",
 							map[string]string{
 								"max_tries": "1"},
 							map[string]string{
@@ -529,9 +549,9 @@ func TestNotifyTest(t *testing.T) {
 		},
 		"shoutrrr from Root": {
 			flag:       "baz",
-			panicRegex: test.StringPtr(`HTTP 40\d`),
-			slice:      service.Services{},
-			rootSlice: shoutrrr.ShoutrrrsDefaults{
+			panicRegex: test.StringPtr(`Message failed to send with.*\s*server respond`),
+			services:   service.Services{},
+			mainShoutrrrs: shoutrrr.ShoutrrrsDefaults{
 				"baz": shoutrrr.NewDefaults(
 					"gotify",
 					map[string]string{
@@ -544,13 +564,12 @@ func TestNotifyTest(t *testing.T) {
 		"successful send": {
 			flag:        "work",
 			stdoutRegex: test.StringPtr(`Message sent successfully with "work" config`),
-			slice: service.Services{
+			services: service.Services{
 				"argus": {
 					Notify: shoutrrr.Shoutrrrs{
 						"work": shoutrrr.New(
 							nil,
-							"bar",
-							"gotify",
+							"bar", "gotify",
 							map[string]string{
 								"max_tries": "1"},
 							map[string]string{
@@ -574,10 +593,10 @@ func TestNotifyTest(t *testing.T) {
 			serviceHardDefaults.Default()
 			shoutrrrHardDefaults := shoutrrr.ShoutrrrsDefaults{}
 			shoutrrrHardDefaults.Default()
-			for i := range tc.slice {
-				(*tc.slice[i]).Init(
+			for i := range tc.services {
+				(*tc.services[i]).Init(
 					&service.Defaults{}, &serviceHardDefaults,
-					&tc.rootSlice, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrrHardDefaults,
+					&tc.mainShoutrrrs, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrrHardDefaults,
 					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 			}
 			if tc.panicRegex != nil {
@@ -596,8 +615,8 @@ func TestNotifyTest(t *testing.T) {
 
 			// WHEN NotifyTest is called with the test Config.
 			cfg := config.Config{
-				Service: tc.slice,
-				Notify:  tc.rootSlice}
+				Service: tc.services,
+				Notify:  tc.mainShoutrrrs}
 			NotifyTest(&tc.flag, &cfg)
 
 			// THEN we get the expected stdout.

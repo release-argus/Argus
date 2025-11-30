@@ -272,7 +272,7 @@ func TestService_HandleWebHook(t *testing.T) {
 		deployedBecomesLatest, deployedLatest bool
 		wantAnnounces                         int
 	}{
-		"empty WebHook slice does nothing": {
+		"empty WebHook map does nothing": {
 			webhooks:              webhook.WebHooks{},
 			wantAnnounces:         0,
 			deployedLatest:        true,

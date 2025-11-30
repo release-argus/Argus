@@ -38,11 +38,11 @@ var (
 type WebHooks map[string]*WebHook
 
 // String returns a string representation of the WebHooks.
-func (s *WebHooks) String() string {
-	if s == nil {
+func (wh *WebHooks) String() string {
+	if wh == nil {
 		return ""
 	}
-	return util.ToYAMLString(s, "")
+	return util.ToYAMLString(wh, "")
 }
 
 // Headers is a list of Header.
@@ -103,12 +103,12 @@ func (d *Defaults) String(prefix string) string {
 type WebHooksDefaults map[string]*Defaults
 
 // String returns a string representation of the WebHooksDefaults.
-func (s *WebHooksDefaults) String(prefix string) string {
-	if s == nil {
+func (whd *WebHooksDefaults) String(prefix string) string {
+	if whd == nil {
 		return ""
 	}
 
-	keys := util.SortedKeys(*s)
+	keys := util.SortedKeys(*whd)
 	if len(keys) == 0 {
 		return "{}\n"
 	}
@@ -116,7 +116,7 @@ func (s *WebHooksDefaults) String(prefix string) string {
 	var builder strings.Builder
 	itemPrefix := prefix + "  "
 	for _, k := range keys {
-		itemStr := (*s)[k].String(itemPrefix)
+		itemStr := (*whd)[k].String(itemPrefix)
 		if itemStr != "" {
 			delim := "\n"
 			if itemStr == "{}\n" {
@@ -149,26 +149,26 @@ type WebHook struct {
 	HardDefaults *Defaults `json:"-" yaml:"-"` // Hardcoded default values.
 }
 
-func (s *WebHooks) UnmarshalJSON(data []byte) error {
+func (wh *WebHooks) UnmarshalJSON(data []byte) error {
 	var arr []WebHook
 	if err := json.Unmarshal(data, &arr); err != nil {
 		return err //nolint:wrapcheck
 	}
-	*s = make(WebHooks, len(arr))
+	*wh = make(WebHooks, len(arr))
 
 	for i := range arr {
-		(*s)[arr[i].ID] = &arr[i]
+		(*wh)[arr[i].ID] = &arr[i]
 	}
 	return nil
 }
 
-func (s *WebHooks) MarshalJSON() ([]byte, error) {
-	if s == nil {
+func (wh *WebHooks) MarshalJSON() ([]byte, error) {
+	if wh == nil {
 		return []byte("null"), nil
 	}
 
-	arr := make([]*WebHook, 0, len(*s))
-	for _, v := range *s {
+	arr := make([]*WebHook, 0, len(*wh))
+	for _, v := range *wh {
 		arr = append(arr, v)
 	}
 	return json.Marshal(arr) //nolint:wrapcheck
@@ -181,6 +181,7 @@ func New(
 	delay string,
 	desiredStatusCode *uint16,
 	failed *status.FailsWebHook,
+	id string,
 	maxTries *uint8,
 	notifiers *Notifiers,
 	parentInterval *string,
@@ -192,6 +193,7 @@ func New(
 	defaults, hardDefaults *Defaults,
 ) *WebHook {
 	return &WebHook{
+		ID: id,
 		Base: Base{
 			AllowInvalidCerts: allowInvalidCerts,
 			CustomHeaders:     customHeaders,
@@ -211,11 +213,11 @@ func New(
 }
 
 // String returns a string representation of the WebHook.
-func (w *WebHook) String() string {
-	if w == nil {
+func (wh *WebHook) String() string {
+	if wh == nil {
 		return ""
 	}
-	return util.ToYAMLString(w, "")
+	return util.ToYAMLString(wh, "")
 }
 
 // Notifiers to use when their WebHook fails.
