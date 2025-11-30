@@ -41,7 +41,7 @@
 		"sonner": "^2.0.7",
 		"tailwind-merge": "^3.4.0",
 		"tailwindcss": "^4.1.17",
-		"yaml": "^2.8.1",
+		"yaml": "^2.8.2",
 		"zod": "^4.1.13"
 	},
 	"description": "Automated checks for new software releases",
