@@ -78,8 +78,8 @@ const DeployedVersionURL = () => {
 	useEffect(() => {
 		if (!templateToggle) {
 			setValue(regexTemplateFormName, '');
-			setValue(methodFormName, false);
-			trigger(`${name}.regex`);
+			setValue(templateToggleFormName, false);
+			void trigger(`${name}.regex`);
 		}
 	}, [templateToggle]);
 
@@ -192,7 +192,7 @@ const DeployedVersionURL = () => {
 				className="order-1 lg:order-2"
 				colSize={{ sm: 1, xs: 2 }}
 				label="T"
-				name={methodFormName}
+				name={templateToggleFormName}
 				tooltip={{
 					content: 'Use the RegEx to create a template',
 					type: 'string',

@@ -2,36 +2,31 @@ import { type FC, useEffect, useMemo } from 'react';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
 import { convertStringArrayToOptionTypeArray } from '@/components/generic/field-select-shared';
 import SelectTriState from '@/components/ui/react-select/select-tri-state';
-import { useWebSocket } from '@/contexts/websocket';
+import { useTags } from '@/hooks/use-tags';
 import type { TagsTriType } from '@/types/util';
 
 /**
  * TagSelect
  *
  * Select and manage service tags with tri-state logic.
- * Prunes tags not present in `monitorData` and sync with the toolbar state.
+ * Prunes any tags not present in a service and syncs with the toolbar state.
  */
 const TagSelect: FC = () => {
-	const { monitorData } = useWebSocket();
 	const { values, setTags } = useToolbar();
 	const tags: TagsTriType = values.tags ?? { exclude: [], include: [] };
-
+	const { tags: allTags, isLoading } = useTags();
 	const tagOptions = useMemo(
-		() =>
-			convertStringArrayToOptionTypeArray(
-				Array.from(monitorData.tags ?? []),
-				true,
-			),
-		[monitorData.tags],
+		() => convertStringArrayToOptionTypeArray(allTags, true),
+		[allTags],
 	);
 
 	// Prune unknown tags.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: setTags stable.
 	useEffect(() => {
-		if (!monitorData.tagsLoaded || !monitorData.tags) return;
+		if (isLoading) return;
 
-		const prune = (arr: string[]) =>
-			arr.filter((tag) => monitorData.tags?.has(tag));
+		const tagsSet = new Set(allTags);
+		const prune = (arr: string[]) => arr.filter((tag) => tagsSet?.has(tag));
 
 		const newTags = {
 			exclude: prune(tags.exclude),
@@ -41,7 +36,7 @@ const TagSelect: FC = () => {
 		if (JSON.stringify(tags) !== JSON.stringify(newTags)) {
 			setTags(newTags);
 		}
-	}, [monitorData.tags, monitorData.tagsLoaded, tags]);
+	}, [tags, allTags, isLoading]);
 
 	if (tagOptions.length === 0) return null;
 

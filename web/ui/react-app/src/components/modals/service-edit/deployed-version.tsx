@@ -9,7 +9,7 @@ import {
 	AccordionTrigger,
 } from '@/components/ui/accordion';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
-import { useWebSocket } from '@/contexts/websocket';
+import { useServiceSummary } from '@/hooks/use-service-summary.ts';
 import {
 	DEPLOYED_VERSION_LOOKUP_TYPE,
 	type DeployedVersionLookupType,
@@ -22,14 +22,12 @@ import {
 const EditServiceDeployedVersion = () => {
 	const name = 'deployed_version';
 	const { serviceID } = useSchemaContext();
-	const { monitorData } = useWebSocket();
 	const { setValue } = useFormContext();
 
 	const selectedType = useWatch({
 		name: `${name}.type`,
 	}) as DeployedVersionLookupType;
-	const service = serviceID ? monitorData.service[serviceID] : undefined;
-	const serviceStatus = service?.status;
+	const { data: serviceData } = useServiceSummary(serviceID);
 
 	return (
 		<AccordionItem value="deployed_version">
@@ -40,7 +38,8 @@ const EditServiceDeployedVersion = () => {
 					label="Type"
 					name={`${name}.type`}
 					onChange={(opt) => {
-						if (opt?.value === 'manual') {
+						const serviceStatus = serviceData?.status;
+						if (opt?.value === DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value) {
 							setValue(
 								`${name}.version`,
 								serviceStatus?.deployed_version ??

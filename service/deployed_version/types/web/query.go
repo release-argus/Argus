@@ -79,9 +79,7 @@ func (l *Lookup) query(writeToDB bool, logFrom logutil.LogFrom) error {
 	}
 
 	// Set the deployed version if it has changed.
-	if previousVersion := l.Status.DeployedVersion(); version != previousVersion {
-		l.HandleNewVersion(version, "", writeToDB, logFrom) //nolint:wrapcheck
-	}
+	l.HandleNewVersion(version, "", writeToDB, logFrom) //nolint:wrapcheck
 
 	return nil
 }

@@ -1,7 +1,7 @@
 import { closestCenter, DndContext } from '@dnd-kit/core';
 import { SortableContext } from '@dnd-kit/sortable';
-import { useQuery } from '@tanstack/react-query';
-import { type ReactElement, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { type ReactElement, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ApprovalsToolbar, Service } from '@/components/approvals';
@@ -12,11 +12,10 @@ import {
 	type HideValueType,
 	URL_PARAMS,
 } from '@/constants/toolbar';
-import { useWebSocket } from '@/contexts/websocket';
+import { useServices } from '@/hooks/use-services.ts';
 import { useSortableServices } from '@/hooks/use-sortable-services';
-import { QUERY_KEYS } from '@/lib/query-keys';
 import type { TagsTriType } from '@/types/util';
-import { mapRequest } from '@/utils/api/types/api-request-handler';
+import type { ServiceSummary } from '@/utils/api/types/config/summary.ts';
 
 const toolbarDefaults: ApprovalsToolbarOptions = {
 	editMode: false,
@@ -29,7 +28,7 @@ const toolbarDefaults: ApprovalsToolbarOptions = {
  * @returns The 'approvals' page, including a toolbar, and a list of services.
  */
 export const Approvals = (): ReactElement => {
-	const { monitorData, setMonitorData } = useWebSocket();
+	const queryClient = useQueryClient();
 	const [searchParams] = useSearchParams();
 
 	const toolbarOptions: ApprovalsToolbarOptions = useMemo(() => {
@@ -87,6 +86,7 @@ export const Approvals = (): ReactElement => {
 	}, [searchParams]);
 
 	const {
+		order,
 		sensors,
 		handleDragEnd,
 		handleSaveOrder,
@@ -94,25 +94,10 @@ export const Approvals = (): ReactElement => {
 		resetOrder,
 	} = useSortableServices();
 
-	// Fetch the service ordering from the API.
-	const { data: orderData } = useQuery({
-		gcTime: 1000 * 60 * 30, // 30 minutes.
-		queryFn: () => mapRequest('SERVICE_ORDER_GET', null),
-		queryKey: QUERY_KEYS.SERVICE.ORDER(),
-	});
-	// Push the ordering to the 'monitorData' state.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: setMonitorData stable.
-	useEffect(() => {
-		if (orderData && orderData.order.length > 0)
-			setMonitorData({
-				page: 'APPROVALS',
-				sub_type: 'ORDER',
-				type: 'SERVICE',
-				...orderData,
-			});
-	}, [orderData]);
+	const services = useServices(order);
 
 	// Filter the services based on the toolbar options.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: queryClient stable.
 	const filteredServices = useMemo(() => {
 		const {
 			search = '',
@@ -125,58 +110,52 @@ export const Approvals = (): ReactElement => {
 		const filterOnTags = tags.include.length > 0 || tags.exclude.length > 0;
 		const excludeOnly = filterOnTags && tags.include.length === 0;
 
-		return Object.values(monitorData.order).filter((serviceID) => {
-			const service = monitorData.service[serviceID];
-			if (!service) return false;
+		return services
+			.filter((svc) => {
+				const service = svc.data;
+				if (!service || service.loading) return true;
 
-			const hideInactiveServices = hide.includes(HideValue.Inactive);
-			if (
-				!monitorData.tagsLoaded &&
-				(!hideInactiveServices || service.active !== false)
-			)
-				return true;
+				const serviceID = service.id;
 
-			// Filter on 'tags'.
-			//     Have no tags to filter on,
-			//   OR
-			//     The service doesn't have any EXCLUDE tags
-			//       AND
-			//     We are only excluding tags, OR the service has all INCLUDE tags.
-			const hasTags =
-				!filterOnTags ||
-				(!tags.exclude.some((tag) => service.tags?.includes(tag)) &&
-					(excludeOnly ||
-						tags.include.some((tag) => service.tags?.includes(tag))));
-			if (!hasTags) return false;
+				// Filter on 'tags'.
+				//     Have no tags to filter on,
+				//   OR
+				//     The service doesn't have any EXCLUDE tags
+				//       AND
+				//     We are only excluding tags, OR the service has all INCLUDE tags.
+				const hasTags =
+					!filterOnTags ||
+					(!tags.exclude.some((tag) => service.tags?.includes(tag)) &&
+						(excludeOnly ||
+							tags.include.some((tag) => service.tags?.includes(tag))));
+				if (!hasTags) return false;
 
-			// Filter on 'name'.
-			const name = (service.name ?? serviceID).toLowerCase();
-			if (!name.includes(search)) return false;
+				// Filter on 'name'.
+				const name = (service.name ?? serviceID).toLowerCase();
+				if (!name.includes(search)) return false;
 
-			// Filter on 'hide' options.
-			const skipped =
-				service.status?.latest_version &&
-				service.status.approved_version ===
-					`SKIP_${service.status.latest_version}`;
-			const upToDate =
-				service.status?.deployed_version === service.status?.latest_version;
-			return (
-				// hideUpToDate: deployed_version NOT latest_version.
-				(!hide.includes(HideValue.UpToDate) || !upToDate) &&
-				// hideUpdatable: deployed_version IS latest_version AND approved_version NOT "SKIP_"+latest_version.
-				(!hide.includes(HideValue.Updatable) || upToDate || skipped) &&
-				// hideSkipped: approved_version NOT "SKIP_"+latest_version OR NO approved_version.
-				(!hide.includes(HideValue.Skipped) || !skipped) &&
-				// hideInactive: active NOT false.
-				(!hideInactiveServices || service.active !== false)
-			);
-		});
-	}, [
-		toolbarOptions,
-		monitorData.service,
-		monitorData.order,
-		monitorData.tagsLoaded,
-	]);
+				// Filter on 'hide' options.
+				const skipped =
+					service.status?.latest_version &&
+					service.status.approved_version ===
+						`SKIP_${service.status.latest_version}`;
+				const upToDate =
+					service.status?.deployed_version === service.status?.latest_version;
+				const hideInactiveServices = hide.includes(HideValue.Inactive);
+				return (
+					// hideUpToDate: deployed_version NOT latest_version.
+					(!hide.includes(HideValue.UpToDate) || !upToDate) &&
+					// hideUpdatable: deployed_version IS latest_version AND approved_version NOT "SKIP_"+latest_version.
+					(!hide.includes(HideValue.Updatable) || upToDate || skipped) &&
+					// hideSkipped: approved_version NOT "SKIP_"+latest_version OR NO approved_version.
+					(!hide.includes(HideValue.Skipped) || !skipped) &&
+					// hideInactive: active NOT false.
+					(!hideInactiveServices || service.active !== false)
+				);
+			})
+			.map((svc) => svc.data)
+			.filter(Boolean) as ServiceSummary[];
+	}, [toolbarOptions, queryClient, services]);
 
 	return (
 		<>
@@ -203,17 +182,14 @@ export const Approvals = (): ReactElement => {
 					onDragEnd={handleDragEnd}
 					sensors={sensors}
 				>
-					<SortableContext items={monitorData.order}>
-						{monitorData.order.length ===
-							Object.keys(monitorData.service).length &&
-							filteredServices.map((id) => (
-								<Service
-									editable={toolbarOptions.editMode}
-									id={id}
-									key={id}
-									service={monitorData.service[id]}
-								/>
-							))}
+					<SortableContext items={order}>
+						{filteredServices.map((s) => (
+							<Service
+								editable={toolbarOptions.editMode}
+								id={s.id}
+								key={s.id}
+							/>
+						))}
 					</SortableContext>
 				</DndContext>
 			</div>

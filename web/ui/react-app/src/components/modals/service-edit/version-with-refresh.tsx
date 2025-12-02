@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertCircleIcon, Loader2Icon, RefreshCw } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
@@ -6,12 +6,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
-import { useWebSocket } from '@/contexts/websocket';
 import { useErrors } from '@/hooks/use-error';
 import useValuesRefetch from '@/hooks/values-refetch';
+import { QUERY_KEYS } from '@/lib/query-keys.ts';
 import { cn } from '@/lib/utils';
 import { beautifyGoErrors, removeEmptyValues } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
+import type { ServiceSummary } from '@/utils/api/types/config/summary.ts';
 import {
 	type URLCommandsSchema,
 	urlCommandsSchemaOutgoing,
@@ -38,7 +39,7 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 	vType,
 	className,
 }) => {
-	const { monitorData } = useWebSocket();
+	const queryClient = useQueryClient();
 	const { clearErrors, setValue, trigger } = useFormContext();
 	const {
 		serviceID,
@@ -110,7 +111,9 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 	});
 
 	const versionFallback = serviceID
-		? monitorData.service[serviceID]?.status?.[vType]
+		? queryClient.getQueryData<ServiceSummary>(
+				QUERY_KEYS.SERVICE.SUMMARY_ITEM(serviceID),
+			)?.status?.[vType]
 		: null;
 	const version =
 		(useWatch({ name: `${vType}.version` }) as string | null | undefined) ??

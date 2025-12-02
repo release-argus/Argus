@@ -167,9 +167,10 @@ func (wh *WebHooks) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
+	keys := util.SortedKeys(*wh)
 	arr := make([]*WebHook, 0, len(*wh))
-	for _, v := range *wh {
-		arr = append(arr, v)
+	for _, key := range keys {
+		arr = append(arr, (*wh)[key])
 	}
 	return json.Marshal(arr) //nolint:wrapcheck
 }

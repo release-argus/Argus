@@ -17,7 +17,6 @@ package v1
 
 import (
 	"encoding/json"
-	"time"
 
 	logutil "github.com/release-argus/Argus/util/log"
 )
@@ -68,36 +67,31 @@ func (h *Hub) Run() {
 				close(client.send)
 			}
 		case message := <-h.Broadcast:
-			n := len(h.Broadcast) + 1
-			for n != 0 {
-				if logutil.Log.IsLevel("DEBUG") {
-					logutil.Log.Debug(
-						"Broadcast "+string(message),
-						logutil.LogFrom{Primary: "WebSocket"},
-						len(h.clients) > 0)
-				}
-				var msg AnnounceMSG
-				if err := json.Unmarshal(message, &msg); err != nil {
-					logutil.Log.Warn(
-						"Invalid JSON broadcast to the WebSocket",
-						logutil.LogFrom{Primary: "WebSocket"},
-						true,
-					)
-					n = len(h.Broadcast)
-					continue
-				}
-				for client := range h.clients {
-					select {
-					case client.send <- message:
-					default:
-						close(client.send)
-						delete(h.clients, client)
-					}
-				}
-				n = len(h.Broadcast)
-				if n != 0 {
-					message = <-h.Broadcast
-					time.Sleep(100 * time.Microsecond)
+			if logutil.Log.IsLevel("DEBUG") {
+				logutil.Log.Debug(
+					"Broadcast "+string(message),
+					logutil.LogFrom{Primary: "WebSocket"},
+					len(h.clients) > 0)
+			}
+
+			// Validate JSON.
+			var msg AnnounceMSG
+			if err := json.Unmarshal(message, &msg); err != nil {
+				logutil.Log.Warn(
+					"Invalid JSON broadcast to the WebSocket",
+					logutil.LogFrom{Primary: "WebSocket"},
+					true,
+				)
+				continue
+			}
+
+			// Send message to all clients.
+			for client := range h.clients {
+				select {
+				case client.send <- message:
+				default:
+					close(client.send)
+					delete(h.clients, client)
 				}
 			}
 		}

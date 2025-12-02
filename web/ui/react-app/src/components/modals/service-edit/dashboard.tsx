@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'lucide-react';
 import { type FC, memo, useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
@@ -13,17 +14,19 @@ import {
 	AccordionTrigger,
 } from '@/components/ui/accordion';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
-import { useWebSocket } from '@/contexts/websocket';
+import { useTags } from '@/hooks/use-tags';
 import useValuesRefetch from '@/hooks/values-refetch';
+import { QUERY_KEYS } from '@/lib/query-keys.ts';
 import { removeEmptyValues } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
+import type { ServiceSummary } from '@/utils/api/types/config/summary.ts';
 
 /**
  * @returns The form fields for the `dashboard` options.
  */
 const EditServiceDashboard: FC = () => {
+	const queryClient = useQueryClient();
 	const name = 'dashboard';
-	const { monitorData } = useWebSocket();
 	const { serviceID, schemaDataDefaults } = useSchemaContext();
 	const { setError } = useFormContext();
 
@@ -31,29 +34,14 @@ const EditServiceDashboard: FC = () => {
 		useValuesRefetch<string>('latest_version.version', true);
 
 	// Options, and their respective use-counts on other services.
-	const tagState = useMemo(() => {
-		// Count how many other services use each tag.
-		const tagCounts: Record<string, number> = {};
-		for (const service of Object.values(monitorData.service)) {
-			if (service.id === serviceID) continue;
-			for (const tag of service.tags ?? []) {
-				tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
-			}
-		}
-
-		// Build options.
-		const sortedTags = Array.from(monitorData.tags ?? []).toSorted((a, b) =>
-			a.localeCompare(b, undefined, { sensitivity: 'base' }),
-		);
-
-		return {
-			counts: tagCounts,
-			options: Array.from(sortedTags).map((value) => ({
-				label: value,
-				value: value,
-			})),
-		};
-	}, [monitorData.service, monitorData.tags, serviceID]);
+	const { tags: allTags, counts } = useTags(serviceID);
+	const tagState = useMemo(
+		() => ({
+			counts: counts,
+			options: allTags.map((value) => ({ label: value, value })),
+		}),
+		[allTags, counts],
+	);
 
 	// Apply the template and navigate to the address.
 	const handleTemplateClick = (fieldName: string, template: string) => {
@@ -64,9 +52,15 @@ const EditServiceDashboard: FC = () => {
 		refetchLatestVersion();
 		// setTimeout to give time for refetch setStates ^
 		const timeout = setTimeout(() => {
+			const serviceStatusLV = serviceID
+				? queryClient.getQueryData<ServiceSummary>(
+						QUERY_KEYS.SERVICE.SUMMARY_ITEM(serviceID),
+					)?.status?.latest_version
+				: null;
 			const extraParams = removeEmptyValues({
-				latest_version: latestVersion ?? serviceStatus?.latest_version,
+				latest_version: latestVersion ?? serviceStatusLV,
 			});
+
 			mapRequest('TEMPLATE_PARSE', {
 				extraParams: extraParams,
 				serviceID: serviceID as string,
@@ -86,8 +80,6 @@ const EditServiceDashboard: FC = () => {
 		};
 	};
 
-	const service = serviceID ? monitorData.service[serviceID] : undefined;
-	const serviceStatus = service?.status;
 	const defaults = schemaDataDefaults?.dashboard;
 
 	return (

@@ -1,5 +1,5 @@
 import { LoaderCircle } from 'lucide-react';
-import { type FC, useCallback, useState } from 'react';
+import { type FC, use, useCallback, useState } from 'react';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -12,6 +12,7 @@ import {
 	AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { ModalContext } from '@/contexts/modal';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import { useServiceDelete } from '@/hooks/use-service-mutation';
 
@@ -28,10 +29,12 @@ type DeleteModalProps = {
 export const DeleteModal: FC<DeleteModalProps> = ({ disabled }) => {
 	const { serviceID, schema } = useSchemaContext();
 	const [open, setOpen] = useState(false);
+	const { hideModal } = use(ModalContext);
 
 	const { mutate, isPending } = useServiceDelete(schema, {
 		onSettled: () => {
 			setOpen(false);
+			hideModal();
 		},
 	});
 

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircleIcon, LoaderCircle } from 'lucide-react';
 import { type FC, use, useCallback, useEffect, useMemo, useState } from 'react';
 import { type FieldErrors, FormProvider, useWatch } from 'react-hook-form';
@@ -21,12 +21,14 @@ import {
 	SchemaProvider,
 	useSchemaContext,
 } from '@/contexts/service-edit-zod-type';
+import { useServiceEditDetail } from '@/hooks/use-service-edit-detail.ts';
 import useServiceForm from '@/hooks/use-service-form';
 import { useServiceEdit } from '@/hooks/use-service-mutation';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { DeleteModal } from '@/modals/delete-confirm';
 import { extractErrors } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
+import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version.ts';
 import { mapServiceToAPIRequest } from '@/utils/api/types/config-edit/service/api/conversions';
 import { getErrorMessage } from '@/utils/errors';
 
@@ -68,14 +70,11 @@ const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
 	const { data: otherOptionsData, isFetched: isFetchedOtherOptionsData } =
 		useQuery({
 			queryFn: () => mapRequest('SERVICE_EDIT_DEFAULTS', null),
-			queryKey: QUERY_KEYS.SERVICE.DETAIL(),
+			queryKey: QUERY_KEYS.SERVICE.EDIT_DEFAULTS(),
 		});
 	// Fetch the existing service data.
-	const { data: serviceData, isSuccess: isSuccessServiceData } = useQuery({
-		enabled: !!serviceID,
-		queryFn: () => mapRequest('SERVICE_EDIT_DETAIL', { serviceID: serviceID }),
-		queryKey: QUERY_KEYS.SERVICE.EDIT_ITEM(serviceID),
-	});
+	const { data: serviceData, isSuccess: isSuccessServiceData } =
+		useServiceEditDetail(serviceID);
 
 	const hasFetched =
 		isFetchedOtherOptionsData &&
@@ -134,12 +133,9 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 	serviceID,
 	loading,
 }) => {
-	const { setModal } = use(ModalContext);
+	const queryClient = useQueryClient();
+	const { hideModal } = use(ModalContext);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: setModal stable
-	const hideModal = useCallback(() => {
-		setModal({ actionType: '', service: { id: '', loading: true } });
-	}, []);
 	const {
 		schema,
 		schemaData,
@@ -186,13 +182,42 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 				schemaDataDefaults,
 			);
 
-			try {
-				await mutateAsync({ data: dataPayload, serviceID: serviceID ?? null });
-			} catch (error) {
-				const message = getErrorMessage(error);
-				console.error(error);
-				form.setError('root', { message, type: 'server' });
-			}
+			await mutateAsync({ data: dataPayload, serviceID: serviceID ?? null })
+				.then(() => {
+					// Add service.
+					queryClient.setQueryData(
+						QUERY_KEYS.SERVICE.SUMMARY_ITEM(dataPayload.id),
+						() => ({
+							active: dataPayload.options.active,
+							command: dataPayload.command?.length,
+							has_deployed_version:
+								dataPayload.deployed_version &&
+								(dataPayload.deployed_version.type ===
+								DEPLOYED_VERSION_LOOKUP_TYPE.URL.value
+									? !!dataPayload.deployed_version.url
+									: !!dataPayload.deployed_version.version),
+							icon: dataPayload.dashboard?.icon,
+							icon_link_to: dataPayload.dashboard?.icon_link_to,
+							id: dataPayload.id,
+							loading: false,
+							name: dataPayload.name,
+							notify: dataPayload.notify?.length,
+							tags: dataPayload.dashboard?.tags,
+							type: dataPayload.latest_version.type,
+							url: dataPayload.dashboard?.web_url,
+							webhook: dataPayload.webhook?.length,
+						}),
+					);
+					queryClient.invalidateQueries({
+						exact: true,
+						queryKey: QUERY_KEYS.SERVICE.SUMMARY_ITEM(dataPayload.id),
+					});
+				})
+				.catch((error) => {
+					const message = getErrorMessage(error);
+					console.error(error);
+					form.setError('root', { message, type: 'server' });
+				});
 		})();
 	}, [mainDataDefaults, mutateAsync, schema, schemaDataDefaults, serviceID]);
 

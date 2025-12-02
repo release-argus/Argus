@@ -16,14 +16,19 @@ export const convertStringArrayToOptionTypeArray = (
 		// Convert to a list of `Option` objects.
 		if (sort) {
 			return input
-				.toSorted((a, b) => a.localeCompare(b))
+				.toSorted((a, b) =>
+					a.localeCompare(b, undefined, { sensitivity: 'base' }),
+				)
 				.map((opt) => createOption(opt));
 		}
 		return input.map((opt) => createOption(opt));
 	}
 
 	// Already a list of `Option` objects, return it.
-	if (sort) return input.toSorted((a, b) => a.label.localeCompare(b.label));
+	if (sort)
+		return input.toSorted((a, b) =>
+			a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }),
+		);
 	return input;
 };
 

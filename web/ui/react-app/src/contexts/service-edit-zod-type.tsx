@@ -1,5 +1,6 @@
 import { createContext, type FC, type ReactNode, use, useMemo } from 'react';
-import { useWebSocket } from '@/contexts/websocket';
+import { useServiceOrder } from '@/hooks/use-service-order.ts';
+import { useServices } from '@/hooks/use-services.ts';
 import type { ServiceEditOtherData } from '@/utils/api/types/config/defaults';
 import type { Service } from '@/utils/api/types/config/service';
 import { buildServiceSchemaWithFallbacks } from '@/utils/api/types/config-edit/service/form/builder';
@@ -59,16 +60,24 @@ export const SchemaProvider: FC<SchemaProviderProps> = ({
 	otherOptionsData,
 	children,
 }) => {
-	const { monitorData } = useWebSocket();
-	// Stable key for service IDs.
-	const serviceIDs = useMemo(() => {
-		const ids = Object.keys(monitorData.service);
-		ids.sort((a, b) => a.localeCompare(b));
-		return ids.join('|');
-	}, [monitorData.service]);
+	const { data: orderData } = useServiceOrder();
+	const order = orderData?.order ?? [];
+	const services = useServices();
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: serviceIDs covers monitorData.service.
+	// Stable key for service IDs.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: orderData cocers order.
+	const serviceIDs = useMemo(() => {
+		const ids = [...order]; // Shallow copy.
+		ids.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+		return ids.join('|');
+	}, [orderData]);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: serviceIDs covers orderData.order.
 	const contextValue = useMemo(() => {
+		const serviceNamesSet = new Set(
+			services.map((svc) => svc.data?.name).filter(Boolean) as string[],
+		);
+
 		const {
 			schema,
 			schemaData,
@@ -78,8 +87,8 @@ export const SchemaProvider: FC<SchemaProviderProps> = ({
 			typeDataDefaultsHollow,
 			mainDataDefaults,
 		} = buildServiceSchemaWithFallbacks(
-			monitorData.names,
-			Object.keys(monitorData.service),
+			serviceNamesSet,
+			order,
 			otherOptionsData,
 			data,
 		);
@@ -97,7 +106,7 @@ export const SchemaProvider: FC<SchemaProviderProps> = ({
 			typeDataDefaults,
 			typeDataDefaultsHollow,
 		};
-	}, [data, monitorData.names, otherOptionsData, serviceIDs]);
+	}, [data, otherOptionsData, serviceIDs]);
 
 	return <SchemaContext value={contextValue}>{children}</SchemaContext>;
 };

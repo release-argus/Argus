@@ -1,23 +1,25 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useTheme } from 'next-themes';
-import { type CSSProperties, useEffect, useRef } from 'react';
+import { type CSSProperties, useEffect } from 'react';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
-import { addMessageHandler, useWebSocket } from '@/contexts/websocket';
+import { addMessageHandler, removeMessageHandler } from '@/contexts/websocket';
 import { handleNotifications } from '@/handlers/notifications';
 
 const Toaster = ({ ...props }: ToasterProps) => {
 	const { theme = 'system' } = useTheme();
 
 	// WS Notification handler.
-	const { monitorData } = useWebSocket();
-	const monitorDataRef = useRef(monitorData);
+	const queryClient = useQueryClient();
 	useEffect(() => {
 		addMessageHandler('notifications', {
 			handler: handleNotifications,
 			params: {
-				monitorData: monitorDataRef,
+				queryClient: queryClient,
 			},
 		});
-	}, []);
+
+		return () => removeMessageHandler('notifications');
+	}, [queryClient]);
 
 	return (
 		<Sonner

@@ -61,7 +61,7 @@ export const useServiceEdit = <T extends z.ZodType>(
 			}
 			// Invalidate service detail.
 			void queryClient.invalidateQueries({
-				queryKey: QUERY_KEYS.SERVICE.DETAIL(),
+				queryKey: QUERY_KEYS.SERVICE.EDIT_DEFAULTS(),
 				refetchType: 'none',
 			});
 		},

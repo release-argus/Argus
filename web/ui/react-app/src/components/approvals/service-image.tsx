@@ -6,7 +6,7 @@ import { LATEST_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/lat
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
 
 type ServiceImageProps = {
-	service: ServiceSummary;
+	service?: ServiceSummary;
 };
 
 /**
@@ -19,12 +19,11 @@ type ServiceImageProps = {
 const ServiceImage: FC<ServiceImageProps> = ({ service }) => {
 	const delayedRender = useDelayedRender(500);
 	const {
-		name: serviceName,
 		type: serviceType,
 		icon: icon,
 		icon_link_to: iconLinkTo,
 		loading,
-	} = { ...service, name: service.name ?? service.id };
+	} = service ?? {};
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: delayedRender stable.
 	const iconRender = useMemo(() => {

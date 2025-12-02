@@ -206,7 +206,7 @@ export const isLatestVersionType = (
 export const latestVersionLookupSchemaDefault = z
 	.object({
 		access_token: z.string().optional(),
-		allow_invalid_certs: z.boolean().nullable().default(null).optional(),
+		allow_invalid_certs: z.boolean().nullable().optional(),
 		require: latestVersionRequireSchemaDefaults.optional(),
 		type: LatestVersionTypeEnum.nullable().optional(),
 		url: z.string().optional(),

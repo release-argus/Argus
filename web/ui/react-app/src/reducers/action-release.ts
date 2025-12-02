@@ -10,10 +10,10 @@ import type { ActionModalData } from '@/utils/api/types/config/summary';
  * @param action - The action to perform on the action modal.
  * @returns The new state of the action modal.
  */
-export default function reducerActionModal(
+const reducerActionModal = (
 	state: ActionModalData,
 	action: WebSocketResponse,
-): ActionModalData {
+): ActionModalData => {
 	const newState: ActionModalData = structuredClone(state);
 
 	switch (action.type) {
@@ -120,4 +120,6 @@ export default function reducerActionModal(
 	// Got to update the state more for the reload.
 	state = newState;
 	return state;
-}
+};
+
+export default reducerActionModal;

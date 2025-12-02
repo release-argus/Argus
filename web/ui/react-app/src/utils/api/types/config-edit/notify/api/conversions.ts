@@ -7,6 +7,7 @@ import {
 	notifySchemaMapOutgoing,
 	notifySchemaMapOutgoingWithDefaults,
 } from '@/utils/api/types/config-edit/notify/schemas';
+import diffLists from '@/utils/diff-lists.ts';
 
 /**
  * Converts a `NotifiersSchema` object to a `NotifiersSchemaOutgoing` object.
@@ -32,18 +33,14 @@ export const mapNotifiersSchemaToAPIPayload = (
 		dataMinimised.every(
 			(i) =>
 				Object.keys(i).length === 2 && ['name', 'type'].every((k) => k in i),
-		)
+		) &&
+		!diffLists({
+			key: 'name',
+			listA: defaultValue,
+			listB: dataMinimised,
+		})
 	) {
-		const sortedDefaultValue = defaultValue
-			.map((i) => i.name)
-			.toSorted((a, b) => a.localeCompare(b))
-			.join('-_-');
-		const sortedDataMinimisedNames = dataMinimised
-			.map((i) => i.name)
-			.toSorted((a, b) => a.localeCompare(b))
-			.join('-_-');
-
-		if (sortedDefaultValue === sortedDataMinimisedNames) return null;
+		return null;
 	}
 
 	return dataMinimised;

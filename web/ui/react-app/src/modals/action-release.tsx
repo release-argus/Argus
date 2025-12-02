@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import Tip from '@/components/ui/tip';
 import { ModalContext } from '@/contexts/modal';
-import { addMessageHandler } from '@/contexts/websocket';
+import { addMessageHandler, removeMessageHandler } from '@/contexts/websocket';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import reducerActionModal from '@/reducers/action-release';
 import type { WebSocketResponse } from '@/types/websocket';
@@ -92,7 +92,7 @@ const ActionReleaseModal = () => {
 	//   SEND   - Send WebHooks for this new version. 'New release' Modal.
 	//   SKIP   - Release not wanted. 'Skip' Modal.
 	//   RETRY  - 1+ WebHooks failed sending. 'Retry' Modal.
-	const { setModal, modal } = use(ModalContext);
+	const { modal, hideModal: hideModalDialog } = use(ModalContext);
 	const [modalData, setModalData] = useReducer(reducerActionModal, {
 		commands: {},
 		sentC: [],
@@ -104,7 +104,7 @@ const ActionReleaseModal = () => {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: setModal stable.
 	const hideModal = useCallback(() => {
 		setModalData({ page: 'APPROVALS', sub_type: 'RESET', type: 'ACTION' });
-		setModal({ actionType: '', service: { id: '', loading: true } });
+		hideModalDialog();
 	}, []);
 
 	// Handle 'deployed version' becoming latest when there is no 'deployed version' check by closing the modal.
@@ -146,7 +146,7 @@ const ActionReleaseModal = () => {
 			(!isSending &&
 				isEmptyObject(modalData.commands) &&
 				isEmptyObject(modalData.webhooks)) ||
-				hasRunnableCommand ||
+			hasRunnableCommand ||
 			hasRunnableWebhook;
 
 		// Action text.
@@ -342,6 +342,8 @@ const ActionReleaseModal = () => {
 			};
 			addMessageHandler('action-modal', { handler });
 		}
+
+		return () => removeMessageHandler('action-modal');
 	}, [modal.actionType, modal.service.id]);
 
 	return (

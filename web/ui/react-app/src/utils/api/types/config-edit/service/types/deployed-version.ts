@@ -47,9 +47,9 @@ export const deployedVersionURLSchema = z.object({
 	body: z.string().default(''),
 	headers: headersSchemaDefaults,
 	json: z.string().default(''),
-	method: DeployedVersionURLMethodEnum.or(z.literal(nullString))
-		.nullable()
-		.default(null),
+	method: DeployedVersionURLMethodEnum.or(z.literal(nullString)).default(
+		nullString,
+	),
 	regex: regexStringWithFallback(false),
 	regex_template: z.string().default(''),
 	target_header: z.string().default(''),

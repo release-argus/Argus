@@ -105,7 +105,7 @@ export const RequestMap: RequestFns = {
 		};
 	},
 	SERVICE_DELETE: (input: ServiceDeleteRequestBuilder) => ({
-		endpoint: `service/delete/${encodeURIComponent(input.serviceID)},`,
+		endpoint: `service/delete/${encodeURIComponent(input.serviceID)}`,
 		method: 'DELETE',
 	}),
 	SERVICE_EDIT: (input: ServiceEditRequestBuilder) => ({
@@ -114,6 +114,7 @@ export const RequestMap: RequestFns = {
 			? `service/update/${encodeURIComponent(input.serviceID)}`
 			: `service/new`,
 		method: 'PUT',
+		timeout: 30000,
 	}),
 	SERVICE_EDIT_DEFAULTS: () => ({
 		endpoint: 'service/update',

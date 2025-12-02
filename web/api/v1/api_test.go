@@ -59,6 +59,7 @@ func TestNewAPI(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			// with/without basic auth.
 			for _, basicAuthTest := range basicAuthTests {

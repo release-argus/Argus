@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ServiceModal } from '@/utils/api/types/config/summary';
 
 /**
@@ -10,7 +10,11 @@ const useModal = () => {
 		service: { id: '', loading: true },
 	});
 
-	return { modal, setModal };
+	const hideModal = useCallback(() => {
+		setModal({ actionType: '', service: { id: '', loading: true } });
+	}, []);
+
+	return useMemo(() => ({ hideModal, modal, setModal }), [hideModal, modal]);
 };
 
 export default useModal;

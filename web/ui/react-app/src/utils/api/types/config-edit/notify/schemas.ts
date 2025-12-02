@@ -60,8 +60,8 @@ export const notifyBarkSchema = notifyBaseSchema.extend({
 			copy: z.string().default(''),
 			group: z.string().default(''),
 			icon: z.string().default(''),
-			scheme: BarkSchemeEnum.or(z.literal(nullString)).nullable().default(null),
-			sound: BarkSoundEnum.or(z.literal(nullString)).nullable().default(null),
+			scheme: BarkSchemeEnum.or(z.literal(nullString)).default(nullString),
+			sound: BarkSoundEnum.or(z.literal(nullString)).default(nullString),
 			title: z.string().default(''),
 			url: z.string().default(''),
 		})
@@ -70,8 +70,8 @@ export const notifyBarkSchema = notifyBaseSchema.extend({
 			copy: '',
 			group: '',
 			icon: '',
-			scheme: null,
-			sound: null,
+			scheme: nullString,
+			sound: nullString,
 			title: '',
 			url: '',
 		}),
@@ -117,11 +117,11 @@ export type NotifyDiscordSchema = z.infer<typeof notifyDiscordSchema>;
 export const notifySMTPSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
-			auth: SMTPAuthEnum.or(z.literal(nullString)).nullable().default(null),
+			auth: SMTPAuthEnum.or(z.literal(nullString)).default(nullString),
 			clienthost: z.string().default(''),
-			encryption: SMTPEncryptionEnum.or(z.literal(nullString))
-				.nullable()
-				.default(null),
+			encryption: SMTPEncryptionEnum.or(z.literal(nullString)).default(
+				nullString,
+			),
 			fromaddress: z.string().default(''), // Required.
 			fromname: z.string().default(''), // Required.
 			subject: z.string().default(''),
@@ -130,9 +130,9 @@ export const notifySMTPSchema = notifyBaseSchema.extend({
 			usestarttls: preprocessBooleanFromString,
 		})
 		.default({
-			auth: null,
+			auth: nullString,
 			clienthost: '',
-			encryption: null,
+			encryption: nullString,
 			fromaddress: '',
 			fromname: '',
 			subject: '',
@@ -323,12 +323,10 @@ export const notifyNtfySchema = notifyBaseSchema.extend({
 			filename: z.string().default(''),
 			firebase: preprocessBooleanFromString,
 			icon: z.string().default(''),
-			priority: NtfyPriorityZodEnum.nullable()
-				.or(z.literal(nullString))
-				.default(null),
-			scheme: NtfySchemeZodEnum.nullable()
-				.or(z.literal(nullString))
-				.default(null),
+			priority: NtfyPriorityZodEnum.or(z.literal(nullString)).default(
+				nullString,
+			),
+			scheme: NtfySchemeZodEnum.or(z.literal(nullString)).default(nullString),
 			tags: z.string().default(''),
 			title: z.string().default(''),
 		})
@@ -342,8 +340,8 @@ export const notifyNtfySchema = notifyBaseSchema.extend({
 			filename: '',
 			firebase: null,
 			icon: '',
-			priority: null,
-			scheme: null,
+			priority: nullString,
+			scheme: nullString,
 			tags: '',
 			title: '',
 		}),
@@ -512,16 +510,16 @@ export const notifyTelegramSchema = notifyBaseSchema.extend({
 		.object({
 			chats: z.string().default(''), // Required.
 			notification: preprocessBooleanFromString,
-			parsemode: TelegramParseModeEnum.or(z.literal(nullString))
-				.nullable()
-				.default(null),
+			parsemode: TelegramParseModeEnum.or(z.literal(nullString)).default(
+				nullString,
+			),
 			preview: preprocessBooleanFromString,
 			title: z.string().default(''),
 		})
 		.default({
 			chats: '',
 			notification: null,
-			parsemode: null,
+			parsemode: nullString,
 			preview: null,
 			title: '',
 		}),
@@ -567,9 +565,9 @@ export const notifyGenericSchema = notifyBaseSchema.extend({
 			contenttype: z.string().default(''),
 			disabletls: preprocessBooleanFromString,
 			messagekey: z.string().default(''),
-			requestmethod: GenericRequestMethodZodEnum.or(z.literal(nullString))
-				.nullable()
-				.default(null),
+			requestmethod: GenericRequestMethodZodEnum.or(
+				z.literal(nullString),
+			).default(nullString),
 			template: z.string().default(''),
 			title: z.string().default(''),
 			titlekey: z.string().default(''),
@@ -578,7 +576,7 @@ export const notifyGenericSchema = notifyBaseSchema.extend({
 			contenttype: '',
 			disabletls: null,
 			messagekey: '',
-			requestmethod: null,
+			requestmethod: nullString,
 			template: '',
 			title: '',
 			titlekey: '',

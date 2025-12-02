@@ -4,17 +4,17 @@ import type { WebSocketResponse } from '@/types/websocket';
 /**
  * Handle service change events from the WebSocket.
  *
- * @param action - The action to handle.
- * @param reducer - The reducer to dispatch the action.
+ * @param msg - The message to handle.
+ * @param reducer - The reducer to dispatch the message.
  */
 export const handleMessage = (
-	action: WebSocketResponse,
+	msg: WebSocketResponse,
 	reducer: Dispatch<WebSocketResponse>,
 ) => {
 	if (
-		action.page === 'APPROVALS' &&
-		['SERVICE', 'VERSION', 'EDIT', 'DELETE'].includes(action.type)
+		msg.page === 'APPROVALS' &&
+		['SERVICE', 'VERSION', 'EDIT', 'DELETE'].includes(msg.type)
 	) {
-		reducer(action);
+		reducer(msg);
 	}
 };

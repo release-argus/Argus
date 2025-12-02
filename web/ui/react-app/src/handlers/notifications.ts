@@ -1,10 +1,8 @@
-import type { RefObject } from 'react';
+import type { QueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { QUERY_KEYS } from '@/lib/query-keys.ts';
 import type { WebSocketResponse } from '@/types/websocket';
-import type {
-	MonitorSummaryType,
-	ServiceSummary,
-} from '@/utils/api/types/config/summary';
+import type { ServiceSummary } from '@/utils/api/types/config/summary';
 
 /**
  * Adds a notification based on the event type and subtype
@@ -15,7 +13,7 @@ import type {
  */
 export const handleNotifications = (
 	event: WebSocketResponse,
-	params?: { monitorData: RefObject<MonitorSummaryType> },
+	params?: { queryClient: QueryClient },
 ) => {
 	if (event.page !== 'APPROVALS' || !params) return;
 	// APPROVALS
@@ -23,9 +21,9 @@ export const handleNotifications = (
 	const serviceData = (event as { service_data?: ServiceSummary }).service_data;
 	if (serviceData === undefined) return;
 
-	const monitorServiceData = params.monitorData.current.service[
-		serviceData.id
-	] as ServiceSummary | undefined;
+	const monitorServiceData = params.queryClient.getQueryData<ServiceSummary>(
+		QUERY_KEYS.SERVICE.SUMMARY_ITEM(serviceData.id),
+	);
 	const serviceName = monitorServiceData?.name ?? serviceData.id;
 
 	// VERSION

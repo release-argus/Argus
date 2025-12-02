@@ -6,6 +6,7 @@ import {
 	type WebHooksSchemaOutgoing,
 	webhookSchemaOutgoing,
 } from '@/utils/api/types/config-edit/webhook/schemas';
+import diffLists from '@/utils/diff-lists.ts';
 
 /**
  * Maps the webhook form schema to an API payload.
@@ -30,18 +31,14 @@ export const mapWebHooksSchemaToAPIPayload = (
 		dataMinimised.every(
 			(i) =>
 				Object.keys(i).length === 2 && ['name', 'type'].every((k) => k in i),
-		)
+		) &&
+		!diffLists({
+			key: 'name',
+			listA: defaultValue,
+			listB: dataMinimised,
+		})
 	) {
-		const sortedDefaultValue = defaultValue
-			.map((i) => i.name)
-			.toSorted((a, b) => a.localeCompare(b))
-			.join('-_-');
-		const sortedDataMinimised = dataMinimised
-			.map((i) => i.name)
-			.toSorted((a, b) => a.localeCompare(b))
-			.join('-_-');
-
-		if (sortedDefaultValue === sortedDataMinimised) return null;
+		return null;
 	}
 
 	return dataMinimised;

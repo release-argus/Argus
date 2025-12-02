@@ -1,10 +1,10 @@
 /* Query keys for React Query. */
 export const QUERY_KEYS = {
 	CONFIG: {
-		BUILD_INFO: () => ['config/build'],
-		CLI_FLAGS: () => ['config/flags'],
+		BUILD_INFO: () => ['config', 'build'],
+		CLI_FLAGS: () => ['config', 'flags'],
 		RAW: () => ['config'],
-		RUNTIME_INFO: () => ['config/runtime'],
+		RUNTIME_INFO: () => ['config', 'runtime'],
 	},
 	NOTIFY: {
 		TEST: (serviceID?: string | null, notifyID?: string) => [
@@ -16,13 +16,21 @@ export const QUERY_KEYS = {
 		],
 	},
 	SERVICE: {
-		ACTIONS: (serviceID: string) => ['service/actions', { service: serviceID }],
-		DETAIL: () => ['service/edit', 'detail'],
-		EDIT_ITEM: (serviceID: string) => ['service/edit', { service: serviceID }],
-		ORDER: () => ['service/order'],
+		ACTIONS: (serviceID: string) => [
+			...QUERY_KEYS.SERVICE.BASE(serviceID),
+			'actions',
+		],
+		BASE: (serviceID: string) => ['service', { service: serviceID }],
+		EDIT_DEFAULTS: () => ['service', 'edit', 'defaults'],
+		EDIT_ITEM: (serviceID: string) => [
+			...QUERY_KEYS.SERVICE.BASE(serviceID),
+			'edit',
+		],
+		ORDER: () => ['service', 'order'],
 		SUMMARY_ITEM: (serviceID: string) => [
-			'service/summary',
+			...QUERY_KEYS.SERVICE.SUMMARY_ITEM_BASE,
 			{ service: serviceID },
 		],
+		SUMMARY_ITEM_BASE: ['service', 'summary'],
 	},
 };

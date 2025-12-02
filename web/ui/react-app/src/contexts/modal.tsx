@@ -16,6 +16,8 @@ type ModalContextProps = {
 	setModal: Dispatch<SetStateAction<ServiceModal>>;
 	/* The modal to display. */
 	modal: ServiceModal;
+	/* The function to hide the modal. */
+	hideModal: () => void;
 };
 
 /**
@@ -26,6 +28,9 @@ type ModalContextProps = {
  * @returns The modal context.
  */
 const ModalContext = createContext<ModalContextProps>({
+	hideModal: () => {
+		/* noop */
+	},
 	modal: { actionType: '', service: { id: '', loading: true } },
 	setModal: () => {
 		/* noop */

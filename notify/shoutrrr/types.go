@@ -53,9 +53,10 @@ func (s *Shoutrrrs) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
+	keys := util.SortedKeys(*s)
 	arr := make([]*Shoutrrr, 0, len(*s))
-	for _, v := range *s {
-		arr = append(arr, v)
+	for _, key := range keys {
+		arr = append(arr, (*s)[key])
 	}
 	return json.Marshal(arr) //nolint:wrapcheck
 }
