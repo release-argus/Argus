@@ -1,6 +1,3 @@
-import { Minus, Plus } from 'lucide-react';
-import { type FC, memo, useCallback, useEffect, useMemo } from 'react';
-import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import FieldKeyVal from '@/components/generic/field-key-val';
 import FieldLabelWithTooltip from '@/components/generic/field-label';
 import type { HeaderPlaceholders } from '@/components/generic/field-shared';
@@ -9,8 +6,11 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { cn } from '@/lib/utils';
 import { isEmptyArray } from '@/utils';
-import type { CustomHeader } from '@/utils/api/types/config/shared';
 import { isUsingDefaults } from '@/utils/api/types/config-edit/validators';
+import type { CustomHeader } from '@/utils/api/types/config/shared';
+import { Minus, Plus } from 'lucide-react';
+import { type FC, memo, useCallback, useEffect, useMemo } from 'react';
+import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 
 type BaseProps = {
 	/* The name of the field. */
@@ -71,6 +71,7 @@ const FieldKeyValMap: FC<FieldKeyValMapProps> = ({
 		[fieldValues, defaults],
 	);
 	// Trigger validation on change of defaults used/not.
+	// Reset to defaults when empty.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: usingDefaults covers fieldValues.
 	useEffect(() => {
 		void trigger(name);

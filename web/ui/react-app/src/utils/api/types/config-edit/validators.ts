@@ -631,30 +631,33 @@ export const safeParseListOfListWithSchemas = ({
 }: SafeParseListWithSchemasParams<
 	Record<string, unknown>[][]
 >): SafeParseWithDefaultsResult<Record<string, unknown>[][]> => {
-	// Cannot use defaults if lists differ in length.
-	const couldBeDefaults = arg.length === defaultValue.length;
+	// Using defaults if lengths equal, matchingFields match, and all other fields empty.
+	const usingDefaults =
+		defaultValue.length > 0 &&
+		defaultValue.length === arg.length &&
+		(arg ?? []).length === defaultValue.length &&
+		!arg.some(
+			(element, i) =>
+				element.length !== defaultValue[i].length ||
+				element.some(
+					(item, j) =>
+						hasNonEmptyField(item, matchingFields) ||
+						matchingFields.some((key) => item[key] !== defaultValue[i][j][key]),
+				),
+		);
 
-	const results = arg.map((subList, i) =>
-		safeParseListWithSchemas({
-			arg: subList,
-			defaultSchema: defaultSchema,
-			defaultValue: couldBeDefaults ? (defaultValue[i] ?? []) : [],
-			matchingFields: matchingFields,
-			schema: schema,
-		}),
+	const results = arg.map((subList) =>
+		(usingDefaults ? defaultSchema : schema).safeParse(subList),
 	);
 
-	// Using defaults if all sub-lists use defaults.
-	const usingDefaults = results.every((r) => r.usingDefaults);
-
 	// Group success/issues.
-	const allOk = results.every((r) => r.result.success);
+	const allOk = results.every((r) => r.success);
 	const issues = allOk
 		? []
 		: results.flatMap((r, i) =>
-				r.result.success
+				r.success
 					? []
-					: r.result.error.issues.map((issue) => ({
+					: r.error.issues.map((issue) => ({
 							...issue,
 							path: [i, ...issue.path],
 						})),
@@ -662,7 +665,7 @@ export const safeParseListOfListWithSchemas = ({
 	const error = new z.ZodError(issues);
 
 	const data: Record<string, unknown>[][] = results.map(
-		(r) => (r.result as z.ZodSafeParseSuccess<Record<string, unknown>[]>).data,
+		(r) => (r as z.ZodSafeParseSuccess<Record<string, unknown>[]>).data,
 	);
 
 	return {
