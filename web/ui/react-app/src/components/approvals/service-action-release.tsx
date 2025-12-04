@@ -1,6 +1,6 @@
-import { type FC, use, useCallback, useMemo } from 'react';
+import { type FC, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { ModalContext } from '@/contexts/modal';
+import useModal from '@/hooks/use-modal.ts';
 import type {
 	ModalType,
 	ServiceSummary,
@@ -26,7 +26,7 @@ const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 	updateAvailable,
 	updateSkipped,
 }) => {
-	const { setModal } = use(ModalContext);
+	const { setModal } = useModal();
 
 	const showModal = useCallback(
 		(type: ModalType, service: ServiceSummary) => {

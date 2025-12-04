@@ -1,20 +1,22 @@
-import { useCallback, useMemo, useState } from 'react';
-import type { ServiceModal } from '@/utils/api/types/config/summary';
+import { use } from 'react';
+import { ModalProviderContext } from '@/contexts/modal.tsx';
 
 /**
- * @returns The modal and a function to handle the modal.
+ * Access the modal context and functions to control modals.
+ *
+ * @returns An object with:
+ *   - `modal`: The current modal state (`actionType`, `service`, etc.).
+ *   - `setModal`: Function to update the modal state.
+ *   - `hideModal`: Function to hide the modal.
+ *
+ * @throws Error if used outside of a `ModalProvider`.
  */
 const useModal = () => {
-	const [modal, setModal] = useState<ServiceModal>({
-		actionType: '',
-		service: { id: '', loading: true },
-	});
-
-	const hideModal = useCallback(() => {
-		setModal({ actionType: '', service: { id: '', loading: true } });
-	}, []);
-
-	return useMemo(() => ({ hideModal, modal, setModal }), [hideModal, modal]);
+	const context = use(ModalProviderContext);
+	if (!context) {
+		throw new Error('useModalContext must be used within a ModalProvider');
+	}
+	return context;
 };
 
 export default useModal;

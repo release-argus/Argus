@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { formatRelative } from 'date-fns';
-import { use, useCallback, useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { pluralise } from '@/components/generic/util';
 import { ModalList } from '@/components/modals/action-release/list';
 import { Button } from '@/components/ui/button';
@@ -13,8 +13,8 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import Tip from '@/components/ui/tip';
-import { ModalContext } from '@/contexts/modal';
 import { addMessageHandler, removeMessageHandler } from '@/contexts/websocket';
+import useModal from '@/hooks/use-modal.ts';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import reducerActionModal from '@/reducers/action-release';
 import type { WebSocketResponse } from '@/types/websocket';
@@ -92,7 +92,7 @@ const ActionReleaseModal = () => {
 	//   SEND   - Send WebHooks for this new version. 'New release' Modal.
 	//   SKIP   - Release not wanted. 'Skip' Modal.
 	//   RETRY  - 1+ WebHooks failed sending. 'Retry' Modal.
-	const { modal, hideModal: hideModalDialog } = use(ModalContext);
+	const { modal, hideModal: hideModalDialog } = useModal();
 	const [modalData, setModalData] = useReducer(reducerActionModal, {
 		commands: {},
 		sentC: [],

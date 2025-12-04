@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircleIcon, LoaderCircle } from 'lucide-react';
-import { type FC, use, useCallback, useEffect, useMemo, useState } from 'react';
+import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { type FieldErrors, FormProvider, useWatch } from 'react-hook-form';
 import type z from 'zod';
 import { HelpTooltip } from '@/components/generic';
@@ -16,11 +16,11 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { TextOrLoading } from '@/components/ui/loading-ellipsis';
-import { ModalContext } from '@/contexts/modal';
 import {
 	SchemaProvider,
 	useSchemaContext,
 } from '@/contexts/service-edit-zod-type';
+import useModal from '@/hooks/use-modal.ts';
 import { useServiceEditDetail } from '@/hooks/use-service-edit-detail.ts';
 import useServiceForm from '@/hooks/use-service-form';
 import { useServiceEdit } from '@/hooks/use-service-mutation';
@@ -36,7 +36,7 @@ import { getErrorMessage } from '@/utils/errors';
  * @returns The service edit modal.
  */
 const ServiceEditModal = () => {
-	const { modal } = use(ModalContext);
+	const { modal } = useModal();
 	if (modal.actionType !== 'EDIT') {
 		return null;
 	}
@@ -134,7 +134,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 	loading,
 }) => {
 	const queryClient = useQueryClient();
-	const { hideModal } = use(ModalContext);
+	const { hideModal } = useModal();
 
 	const {
 		schema,
@@ -283,7 +283,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 											{/* Render either the server error or form validation error */}
 											{err ? (
 												<>
-													{err.split(`\\n`).map((line) => (
+													{err.split(String.raw`\n`).map((line) => (
 														<pre
 															className="whitespace-pre-wrap break-words"
 															key={line}

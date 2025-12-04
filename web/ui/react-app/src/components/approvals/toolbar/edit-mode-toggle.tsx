@@ -1,9 +1,9 @@
 import { Pencil, Plus, Save } from 'lucide-react';
-import { type FC, use } from 'react';
+import type { FC } from 'react';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
 import { Button } from '@/components/ui/button';
 import Tip from '@/components/ui/tip';
-import { ModalContext } from '@/contexts/modal';
+import useModal from '@/hooks/use-modal.ts';
 
 /**
  * EditModeToggle
@@ -13,7 +13,7 @@ import { ModalContext } from '@/contexts/modal';
  */
 const EditModeToggle: FC = () => {
 	const { values, toggleEditMode, onSaveOrder, hasOrderChanged } = useToolbar();
-	const { setModal } = use(ModalContext);
+	const { setModal } = useModal();
 
 	return (
 		<>

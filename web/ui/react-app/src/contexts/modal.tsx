@@ -4,14 +4,16 @@ import {
 	type FC,
 	type ReactNode,
 	type SetStateAction,
+	useCallback,
+	useMemo,
+	useState,
 } from 'react';
-import useModal from '@/hooks/use-modal';
 import { TooltipProviderGlobal } from '@/hooks/use-tooltip';
 import ActionReleaseModal from '@/modals/action-release';
 import ServiceEditModal from '@/modals/service-edit';
 import type { ServiceModal } from '@/utils/api/types/config/summary';
 
-type ModalContextProps = {
+type ModalProviderContextProps = {
 	/* The function to handle the modal. */
 	setModal: Dispatch<SetStateAction<ServiceModal>>;
 	/* The modal to display. */
@@ -27,7 +29,7 @@ type ModalContextProps = {
  * @param service - The service to display in the modal.
  * @returns The modal context.
  */
-const ModalContext = createContext<ModalContextProps>({
+const ModalProviderContext = createContext<ModalProviderContextProps>({
 	hideModal: () => {
 		/* noop */
 	},
@@ -46,17 +48,29 @@ type ModalProviderProps = {
  * @returns A Provider of modals to the app.
  */
 const ModalProvider: FC<ModalProviderProps> = ({ children }) => {
-	const contextValue = useModal();
+	const [modal, setModal] = useState<ServiceModal>({
+		actionType: '',
+		service: { id: '', loading: true },
+	});
+
+	const hideModal = useCallback(() => {
+		setModal({ actionType: '', service: { id: '', loading: true } });
+	}, []);
+
+	const contextValue = useMemo(
+		() => ({ hideModal, modal, setModal }),
+		[hideModal, modal],
+	);
 
 	return (
-		<ModalContext value={contextValue}>
+		<ModalProviderContext value={contextValue}>
 			<TooltipProviderGlobal>
 				<ActionReleaseModal />
 				<ServiceEditModal />
 				{children}
 			</TooltipProviderGlobal>
-		</ModalContext>
+		</ModalProviderContext>
 	);
 };
 
-export { ModalContext, ModalProvider };
+export { ModalProviderContext, ModalProvider };

@@ -7,6 +7,7 @@ import type { OrderAPIResponse } from '@/utils/api/types/config/summary.ts';
  * Fetch service summaries for a list of service IDs.
  *
  * @param order - The list of services to fetch.
+ * @returns A React Query response object from `useQueries`.
  */
 export const useServices = (order?: OrderAPIResponse['order']) =>
 	useQueries({

@@ -2,14 +2,14 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useQuery } from '@tanstack/react-query';
 import { GripVertical, Pencil } from 'lucide-react';
-import { type FC, memo, use, useCallback, useMemo } from 'react';
+import { type FC, memo, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import ServiceImage from '@/components/approvals/service-image';
 import ServiceInfo from '@/components/approvals/service-info';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ModalContext } from '@/contexts/modal';
 import { useDelayedRender } from '@/hooks/use-delayed-render';
+import useModal from '@/hooks/use-modal.ts';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { isEmptyOrNull } from '@/utils';
@@ -33,7 +33,7 @@ type ServiceProps = {
  */
 const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 	const delayedRender = useDelayedRender(250);
-	const { setModal } = use(ModalContext);
+	const { setModal } = useModal();
 
 	// Service summary.
 	const { data } = useQuery({
