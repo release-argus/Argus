@@ -33,13 +33,11 @@ const EditServiceCommands: FC<EditServiceCommandsProps> = ({
 	name,
 	loading,
 }) => {
-	const id = 'command';
 	const { schemaDataDefaults, schemaDataDefaultsHollow } = useSchemaContext();
 	const defaults = schemaDataDefaults?.command;
-	const { setValue } = useFormContext();
+	const defaultsHollow = schemaDataDefaultsHollow?.command;
+	const { setValue, trigger } = useFormContext();
 	const { fields, append, remove } = useFieldArray({ name: name });
-	const defaultArray = schemaDataDefaults?.command;
-	const defaultArrayHollow = schemaDataDefaultsHollow?.command;
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: append stable.
 	const addItem = useCallback(() => {
@@ -51,18 +49,11 @@ const EditServiceCommands: FC<EditServiceCommandsProps> = ({
 	const removeItem = useCallback(
 		(index: number) => () => {
 			// Change focus to the accordion.
-			document.getElementById(id)?.focus();
+			document.getElementById(name)?.focus();
 			remove(index);
 		},
 		[],
 	);
-
-	// Reset to defaults when empty.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: setValue stable.
-	useEffect(() => {
-		if (fields.length === 0 && (defaultArray ?? []).length > 0)
-			setValue(name, defaultArrayHollow);
-	}, [defaultArrayHollow, fields.length]);
 
 	// Keep track of the array values, so we can use defaults when empty.
 	// @ts-ignore: control in context.
@@ -73,9 +64,21 @@ const EditServiceCommands: FC<EditServiceCommandsProps> = ({
 		[defaults, fieldValues],
 	);
 
+	// Trigger validation on change of defaults used/not.
+	// Reset to defaults when empty.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: usingDefaults covers fieldValues.
+	useEffect(() => {
+		void trigger(name);
+
+		// Give defaults back when field empty.
+		if (!isEmptyArray(defaultsHollow) && isEmptyArray(fieldValues)) {
+			setValue(name, defaultsHollow);
+		}
+	}, [usingDefaults, defaultsHollow]);
+
 	return (
-		<AccordionItem value={id}>
-			<AccordionTrigger id={id}>Command:</AccordionTrigger>
+		<AccordionItem value={name}>
+			<AccordionTrigger id={name}>Command:</AccordionTrigger>
 			<AccordionContent className="mb-2 flex flex-col gap-2">
 				{fields.map(({ id }, index) => (
 					<FieldSet className="grid grid-cols-12 gap-2" key={id}>
