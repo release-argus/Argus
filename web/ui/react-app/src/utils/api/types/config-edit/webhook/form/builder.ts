@@ -187,7 +187,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 	if (data) {
 		schemaData = safeParse({
 			data: dataDefaulted,
-			fallback: [],
+			fallback: schemaDataDefaults,
 			path: path,
 			schema: schemaFinal,
 		});

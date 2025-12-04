@@ -414,11 +414,11 @@ export const buildNotifySchemaWithFallbacks = (
 		.superRefine(superRefineNameUnique);
 
 	// Initial schema data.
-	let schemaData: z.infer<typeof schemaFinal>;
+	let schemaData;
 	if (data) {
 		schemaData = safeParse({
 			data: dataDefaulted,
-			fallback: [],
+			fallback: schemaDataDefaults,
 			path: path,
 			schema: schemaFinal,
 		});

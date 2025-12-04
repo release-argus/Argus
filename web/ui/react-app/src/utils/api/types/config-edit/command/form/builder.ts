@@ -118,12 +118,17 @@ export const buildCommandsSchemaWithFallbacks = (
 		.default(defaultValueHollow);
 
 	// Initial schema data.
-	const schemaData = safeParse({
-		data: dataConverted,
-		fallback: [],
-		path: path,
-		schema: schema,
-	});
+	let schemaData;
+	if (data) {
+		schemaData = safeParse({
+			data: dataConverted,
+			fallback: defaultValueHollow,
+			path: path,
+			schema: schema,
+		});
+	} else {
+		schemaData = defaultValueHollow;
+	}
 
 	// Defaults for the schema.
 	const schemaDataDefaults = safeParse({
