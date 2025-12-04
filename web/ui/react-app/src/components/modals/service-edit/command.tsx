@@ -31,7 +31,7 @@ const Command: FC<CommandProps> = ({ name, defaults, removeMe }) => {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: append stable.
 	const addItem = useCallback(() => {
 		append({ arg: '' }, { shouldFocus: false });
-	}, []);
+	}, [name]);
 	// Remove the last arg, or the command if only 1 arg.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: remove stable.
 	const removeLast = useCallback(() => {
