@@ -7,6 +7,7 @@ import {
 	z,
 } from 'zod';
 import { isEmptyOrNull } from '@/utils';
+import { isEmpty } from '@/utils/is-empty.ts';
 
 /* Field validation */
 
@@ -313,10 +314,9 @@ export const isUsingDefaults = <T>({
 	key,
 }: IsUsingDefaultsParams<T>): boolean => {
 	// No value.
-	if (isEmptyOrNull(arg))
-		return key == null ? !isEmptyOrNull(defaultValue) : true;
+	if (isEmpty(arg)) return key == null ? !isEmpty(defaultValue) : true;
 	// No defaults.
-	if (isEmptyOrNull(defaultValue)) return false;
+	if (isEmpty(defaultValue)) return false;
 
 	// Arrays.
 	if (Array.isArray(arg)) {
