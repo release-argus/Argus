@@ -1,6 +1,6 @@
 import { IdCard, LoaderCircle } from 'lucide-react';
 import { type FC, memo, useCallback, useEffect, useState } from 'react';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, useWatch } from 'react-hook-form';
 import { FieldText } from '@/components/generic/field';
 import type { TooltipWithAriaProps } from '@/components/generic/tooltip';
 import Tip from '@/components/ui/tip';
@@ -9,10 +9,13 @@ import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import { useDelayedRender } from '@/hooks/use-delayed-render';
 
 type AdvancedToggleProps = {
+	name: string;
 	onClick: () => void;
 };
 
-const AdvancedToggle: FC<AdvancedToggleProps> = ({ onClick }) => {
+const AdvancedToggle: FC<AdvancedToggleProps> = ({ name, onClick }) => {
+	const state = useWatch({ name });
+
 	return (
 		<Tip
 			className="absolute top-1 right-0"
@@ -20,7 +23,7 @@ const AdvancedToggle: FC<AdvancedToggleProps> = ({ onClick }) => {
 			delayDuration={500}
 			touchDelayDuration={250}
 		>
-			<Toggle className="h-6 w-10" onClick={onClick}>
+			<Toggle className="h-6 w-10" onClick={onClick} pressed={!!state}>
 				<IdCard />
 			</Toggle>
 		</Tip>
@@ -54,8 +57,9 @@ const EditServiceRoot: FC<EditServiceRootProps> = ({ loading }) => {
 	}, [originalName]);
 
 	// Handle toggling of id/name separation.
+	const idNameSeparatorFormName = 'id_name_separator';
 	const toggleOnClick = useCallback(() => {
-		setValue('id_name_separator', !separateName);
+		setValue(idNameSeparatorFormName, !separateName);
 		if (separateName) {
 			if (originalName) {
 				setValue('name', '', { shouldDirty: true });
@@ -96,7 +100,7 @@ const EditServiceRoot: FC<EditServiceRootProps> = ({ loading }) => {
 				required
 				tooltip={tooltip}
 			/>
-			<AdvancedToggle onClick={toggleOnClick} />
+			<AdvancedToggle name={idNameSeparatorFormName} onClick={toggleOnClick} />
 			{separateName && (
 				<FieldText
 					colSize={{ sm: 6 }}
