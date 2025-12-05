@@ -165,7 +165,7 @@ export const approvalsQueryCacheUpdater = ({
 			);
 
 			// Ensure ID in order.
-			if (!newOrder.includes(newServiceData.id)) {
+			if (!newOrder.includes(newID)) {
 				queryClient.setQueryData<OrderAPIResponse>(
 					QUERY_KEYS.SERVICE.ORDER(),
 					(oldData) => ({
