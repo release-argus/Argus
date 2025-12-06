@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout PR branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -36,7 +36,7 @@ jobs:
           echo "pr_branch=$pr_branch" >> $GITHUB_OUTPUT
 
       - name: Checkout PR branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ steps.get_pr_branch.outputs.pr_branch }}
           token: ${{ secrets.GITHUB_TOKEN }}
