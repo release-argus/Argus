@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,12 +34,12 @@ func isHashed(s string) bool {
 	return RegexCheck("^h__[a-f0-9]{64}$", s)
 }
 
-// Hash will return the SHA256 hash of the string.
+// Hash returns the SHA256 hash of the string.
 func hash(s string) [32]byte {
 	return sha256.Sum256([]byte(s))
 }
 
-// HashFromString will return the byte slice of the hash string.
+// HashFromString returns the byte slice of the hash string.
 func hashFromString(s string) []byte {
 	hash, _ := hex.DecodeString(s)
 	return hash
@@ -57,7 +57,7 @@ func GetHash(s string) [32]byte {
 	return hash(s)
 }
 
-// FmtHash will return the formatted hash string.
+// FmtHash returns the formatted hash string.
 func FmtHash(h [32]byte) string {
 	return fmt.Sprintf("h__%x", h)
 }

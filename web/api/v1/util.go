@@ -16,6 +16,7 @@
 package v1
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/url"
 
@@ -46,6 +47,11 @@ func (api *API) announceEdit(oldData *apitype.ServiceSummary, newData *apitype.S
 		Type:        "EDIT",
 		SubType:     serviceChanged,
 		ServiceData: newData})
+
+	// Skip if ServiceData ended up empty
+	if bytes.Contains(payloadData, []byte(`"service_data":{}`)) {
+		return
+	}
 
 	// Announce all edits to refresh caches.
 	*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData

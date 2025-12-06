@@ -1,135 +1,94 @@
-import { FormLabel, FormText } from 'components/generic/form';
-import { firstNonDefault, strToBool } from 'utils';
-
-import { BooleanWithDefault } from 'components/generic';
-import { NotifyMatrixType } from 'types/config';
-import NotifyOptions from 'components/modals/service-edit/notify-types/shared';
 import { useMemo } from 'react';
+import { BooleanWithDefault } from '@/components/generic';
+import { FieldText } from '@/components/generic/field';
+import {
+	Heading,
+	NotifyOptions,
+} from '@/components/modals/service-edit/notify-types/shared';
+import { FieldSet } from '@/components/ui/field';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import type { NotifyMatrixSchema } from '@/utils/api/types/config-edit/notify/schemas';
 
 /**
- * The form fields for a Matrix notifier.
+ * The form fields for a `Matrix` notifier.
  *
  * @param name - The path to this `Matrix` in the form.
  * @param main - The main values.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for this `Matrix` notifier.
  */
 const MATRIX = ({
 	name,
-
 	main,
-	defaults,
-	hard_defaults,
 }: {
 	name: string;
-
-	main?: NotifyMatrixType;
-	defaults?: NotifyMatrixType;
-	hard_defaults?: NotifyMatrixType;
+	main?: NotifyMatrixSchema;
 }) => {
-	const convertedDefaults = useMemo(
-		() => ({
-			// URL Fields
-			url_fields: {
-				host: firstNonDefault(
-					main?.url_fields?.host,
-					defaults?.url_fields?.host,
-					hard_defaults?.url_fields?.host,
-				),
-				password: firstNonDefault(
-					main?.url_fields?.password,
-					defaults?.url_fields?.password,
-					hard_defaults?.url_fields?.password,
-				),
-				port: firstNonDefault(
-					main?.url_fields?.port,
-					defaults?.url_fields?.port,
-					hard_defaults?.url_fields?.port,
-				),
-				username: firstNonDefault(
-					main?.url_fields?.username,
-					defaults?.url_fields?.username,
-					hard_defaults?.url_fields?.username,
-				),
-			},
-			// Params
-			params: {
-				disabletls:
-					strToBool(
-						firstNonDefault(
-							main?.params?.disabletls,
-							defaults?.params?.disabletls,
-							hard_defaults?.params?.disabletls,
-						),
-					) ?? false,
-				rooms: firstNonDefault(
-					main?.params?.rooms,
-					defaults?.params?.rooms,
-					hard_defaults?.params?.rooms,
-				),
-			},
-		}),
-		[main, defaults, hard_defaults],
+	const { typeDataDefaults } = useSchemaContext();
+	const defaults = useMemo(
+		() => main ?? typeDataDefaults?.notify.matrix,
+		[main, typeDataDefaults?.notify.matrix],
 	);
 
 	return (
-		<>
-			<NotifyOptions
-				name={name}
-				main={main?.options}
-				defaults={defaults?.options}
-				hard_defaults={hard_defaults?.options}
-			/>
-			<FormLabel text="URL Fields" heading />
-			<>
-				<FormText
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<NotifyOptions defaults={defaults?.options} name={name} />
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="URL Fields" />
+				<FieldText
+					colSize={{ xs: 9 }}
+					defaultVal={defaults?.url_fields?.host}
+					label="Host"
 					name={`${name}.url_fields.host`}
 					required
-					col_sm={9}
-					label="Host"
-					tooltip="e.g. smtp.example.com"
-					defaultVal={convertedDefaults.url_fields.host}
+					tooltip={{
+						content: 'e.g. smtp.example.com',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.url_fields.port`}
-					col_sm={3}
+				<FieldText
+					colSize={{ xs: 3 }}
+					defaultVal={defaults?.url_fields?.port}
 					label="Port"
-					tooltip="e.g. 25/465/587/2525"
-					isNumber
-					defaultVal={convertedDefaults.url_fields.port}
-					positionXS="right"
+					name={`${name}.url_fields.port`}
+					tooltip={{
+						content: 'e.g. 25/465/587/2525',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.url_fields.username`}
+				<FieldText
+					defaultVal={defaults?.url_fields?.username}
 					label="Username"
-					tooltip="e.g. something@example.com"
-					defaultVal={convertedDefaults.url_fields.username}
+					name={`${name}.url_fields.username`}
+					tooltip={{
+						content: 'e.g. something@example.com',
+						type: 'string',
+					}}
 				/>
-				<FormText
+				<FieldText
+					defaultVal={defaults?.url_fields?.password}
+					label="Password"
 					name={`${name}.url_fields.password`}
 					required
-					label="Password"
-					defaultVal={convertedDefaults.url_fields.password}
-					positionXS="right"
 				/>
-			</>
-			<FormLabel text="Params" heading />
-			<>
-				<FormText
-					name={`${name}.params.rooms`}
-					col_sm={12}
+			</FieldSet>
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="Params" />
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.rooms}
 					label="Rooms"
-					tooltip="e.g. !ROOM_ID,ALIAS"
-					defaultVal={convertedDefaults.params.rooms}
+					name={`${name}.params.rooms`}
+					tooltip={{
+						content: 'e.g. !ROOM_ID,ALIAS',
+						type: 'string',
+					}}
 				/>
 				<BooleanWithDefault
-					name={`${name}.params.disabletls`}
+					defaultValue={defaults?.params?.disabletls}
 					label="Disable TLS"
-					defaultValue={convertedDefaults.params.disabletls}
+					name={`${name}.params.disabletls`}
 				/>
-			</>
-		</>
+			</FieldSet>
+		</FieldSet>
 	);
 };
 

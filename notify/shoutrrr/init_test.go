@@ -25,23 +25,23 @@ import (
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metric"
+	"github.com/release-argus/Argus/web/metric"
 )
 
-func TestSlice_Metrics(t *testing.T) {
-	// GIVEN a Slice.
+func TestShoutrrrs_Metrics(t *testing.T) {
+	// GIVEN Shoutrrrs.
 	tests := map[string]struct {
-		slice *Slice
+		shoutrrrs *Shoutrrrs
 	}{
 		"nil": {
-			slice: nil},
+			shoutrrrs: nil},
 		"empty": {
-			slice: &Slice{}},
+			shoutrrrs: &Shoutrrrs{}},
 		"with one": {
-			slice: &Slice{
+			shoutrrrs: &Shoutrrrs{
 				"foo": &Shoutrrr{}}},
 		"multiple": {
-			slice: &Slice{
+			shoutrrrs: &Shoutrrrs{
 				"bish": &Shoutrrr{},
 				"bash": &Shoutrrr{},
 				"bosh": &Shoutrrr{}}},
@@ -51,8 +51,8 @@ func TestSlice_Metrics(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're testing metrics.
 
-			if tc.slice != nil {
-				for name, s := range *tc.slice {
+			if tc.shoutrrrs != nil {
+				for name, s := range *tc.shoutrrrs {
 					s.ID = name
 					s.ServiceStatus = &status.Status{
 						ServiceInfo: serviceinfo.ServiceInfo{
@@ -64,13 +64,13 @@ func TestSlice_Metrics(t *testing.T) {
 
 			// WHEN the Prometheus metrics are initialised with initMetrics.
 			had := testutil.CollectAndCount(metric.NotifyResultTotal)
-			tc.slice.InitMetrics()
+			tc.shoutrrrs.InitMetrics()
 
 			// THEN it can be counted.
 			got := testutil.CollectAndCount(metric.NotifyResultTotal)
 			want := had
-			if tc.slice != nil {
-				want += 2 * len(*tc.slice)
+			if tc.shoutrrrs != nil {
+				want += 2 * len(*tc.shoutrrrs)
 			}
 			if got != want {
 				t.Errorf("%s\nInitMetrics() mismatch\nwant: %d counter metrics\ngot:  %d",
@@ -78,7 +78,7 @@ func TestSlice_Metrics(t *testing.T) {
 			}
 
 			// AND the metrics can be deleted.
-			tc.slice.DeleteMetrics()
+			tc.shoutrrrs.DeleteMetrics()
 			got = testutil.CollectAndCount(metric.NotifyResultTotal)
 			if got != had {
 				t.Errorf("%s\nDeleteMetrics() mismatch\nwant: %d counter metrics\ngot:  %d",
@@ -111,7 +111,7 @@ func TestShoutrrr_Metrics(t *testing.T) {
 			want := 2
 			if (got - had) != want {
 				t.Errorf("%s\nInitMetrics() mismatch\nwant: %d counter metrics\ngot:  %d",
-					packageName, want, (got - had))
+					packageName, want, got-had)
 			}
 
 			// AND it can be deleted.
@@ -437,46 +437,46 @@ func TestShoutrrr_Init(t *testing.T) {
 	}
 }
 
-func TestSlice_Init(t *testing.T) {
-	// GIVEN a Slice.
+func TestShoutrrrs_Init(t *testing.T) {
+	// GIVEN Shoutrrrs.
 	tests := map[string]struct {
-		nilSlice               bool
-		slice                  *Slice
+		nilMap                 bool
+		shoutrrrs              *Shoutrrrs
 		had, want              map[string]string
-		mains                  *SliceDefaults
-		defaults, hardDefaults SliceDefaults
+		mains                  *ShoutrrrsDefaults
+		defaults, hardDefaults ShoutrrrsDefaults
 	}{
 		"nil slice": {
-			slice:    nil,
-			nilSlice: true,
+			shoutrrrs: nil,
+			nilMap:    true,
 		},
 		"empty slice": {
-			slice: &Slice{},
+			shoutrrrs: &Shoutrrrs{},
 		},
 		"nil mains": {
-			slice: &Slice{
+			shoutrrrs: &Shoutrrrs{
 				"fail": testShoutrrr(true, false),
 				"pass": testShoutrrr(false, false)},
 		},
 		"slice with nil element and matching main": {
-			slice: &Slice{
+			shoutrrrs: &Shoutrrrs{
 				"fail": nil},
-			mains: &SliceDefaults{
+			mains: &ShoutrrrsDefaults{
 				"fail": testDefaults(false, false)},
 		},
 		"have matching mains": {
-			slice: &Slice{
+			shoutrrrs: &Shoutrrrs{
 				"fail": testShoutrrr(true, false),
 				"pass": testShoutrrr(false, false)},
-			mains: &SliceDefaults{
+			mains: &ShoutrrrsDefaults{
 				"fail": testDefaults(false, false),
 				"pass": testDefaults(true, false)},
 		},
 		"some matching mains": {
-			slice: &Slice{
+			shoutrrrs: &Shoutrrrs{
 				"fail": testShoutrrr(true, false),
 				"pass": testShoutrrr(false, false)},
-			mains: &SliceDefaults{
+			mains: &ShoutrrrsDefaults{
 				"other": testDefaults(false, false),
 				"pass":  testDefaults(true, false)},
 		},
@@ -499,77 +499,77 @@ func TestSlice_Init(t *testing.T) {
 				tc.defaults[i].URLFields = tc.had
 			}
 			if tc.defaults == nil {
-				tc.defaults = make(SliceDefaults)
+				tc.defaults = make(ShoutrrrsDefaults)
 			}
 			for i := range tc.hardDefaults {
 				tc.hardDefaults[i].Params = tc.had
 			}
 			if tc.hardDefaults == nil {
-				tc.hardDefaults = make(SliceDefaults)
+				tc.hardDefaults = make(ShoutrrrsDefaults)
 			}
-			if tc.nilSlice {
-				tc.slice = nil
+			if tc.nilMap {
+				tc.shoutrrrs = nil
 			}
 
 			// WHEN Init is called on it.
-			tc.slice.Init(
+			tc.shoutrrrs.Init(
 				&serviceStatus,
 				tc.mains, &tc.defaults, &tc.hardDefaults)
 
 			// THEN the Shoutrrr is initialised correctly:
-			if tc.nilSlice {
-				if tc.slice != nil {
+			if tc.nilMap {
+				if tc.shoutrrrs != nil {
 					t.Fatalf("%s\nnil shoutrrr should still be nil\ngot: %v",
-						packageName, tc.slice)
+						packageName, tc.shoutrrrs)
 				}
 				return
 			}
 
-			for id := range *tc.slice {
+			for id := range *tc.shoutrrrs {
 				errStr := "%s\n%s not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v"
 				// 	main:
-				if (*tc.slice)[id].Main == nil ||
-					(tc.mains != nil && (*tc.mains)[id] != nil && (*tc.slice)[id].Main != (*tc.mains)[id]) {
+				if (*tc.shoutrrrs)[id].Main == nil ||
+					(tc.mains != nil && (*tc.mains)[id] != nil && (*tc.shoutrrrs)[id].Main != (*tc.mains)[id]) {
 					t.Errorf(errStr,
-						packageName, "Main", (*tc.mains)[id], &(*tc.slice)[id].Main)
+						packageName, "Main", (*tc.mains)[id], &(*tc.shoutrrrs)[id].Main)
 				}
 				// 	defaults:
 				if tc.defaults[id] != nil &&
-					(*tc.slice)[id].Defaults != tc.defaults[id] {
+					(*tc.shoutrrrs)[id].Defaults != tc.defaults[id] {
 					t.Errorf(errStr,
-						packageName, "Defaults", tc.defaults[id], (*tc.slice)[id].Defaults)
+						packageName, "Defaults", tc.defaults[id], (*tc.shoutrrrs)[id].Defaults)
 				}
 				// 	hardDefaults:
 				if tc.hardDefaults[id] != nil &&
-					(*tc.slice)[id].HardDefaults != tc.hardDefaults[id] {
+					(*tc.shoutrrrs)[id].HardDefaults != tc.hardDefaults[id] {
 					t.Errorf(errStr,
-						packageName, "HardDefaults", tc.hardDefaults[id], (*tc.slice)[id].HardDefaults)
+						packageName, "HardDefaults", tc.hardDefaults[id], (*tc.shoutrrrs)[id].HardDefaults)
 				}
 				// 	status:
-				if (*tc.slice)[id].ServiceStatus != &serviceStatus {
+				if (*tc.shoutrrrs)[id].ServiceStatus != &serviceStatus {
 					t.Errorf(errStr,
-						packageName, "Status", &serviceStatus, (*tc.slice)[id].ServiceStatus)
+						packageName, "Status", &serviceStatus, (*tc.shoutrrrs)[id].ServiceStatus)
 				}
-				if &(*tc.slice)[id].ServiceStatus.Fails.Shoutrrr != (*tc.slice)[id].Failed {
+				if &(*tc.shoutrrrs)[id].ServiceStatus.Fails.Shoutrrr != (*tc.shoutrrrs)[id].Failed {
 					t.Errorf(errStr,
-						packageName, "Status.Fails", &(*tc.slice)[id].ServiceStatus.Fails.Shoutrrr, (*tc.slice)[id].Failed)
+						packageName, "Status.Fails", &(*tc.shoutrrrs)[id].ServiceStatus.Fails.Shoutrrr, (*tc.shoutrrrs)[id].Failed)
 				}
 				errStr = "%s\nmismatch on %s\nwant: %q:%q\ngot:  %q:%q\n%v\n%v"
 				for key := range tc.want {
-					if (*tc.slice)[id].Options[key] != tc.want[key] {
+					if (*tc.shoutrrrs)[id].Options[key] != tc.want[key] {
 						t.Errorf(errStr,
 							packageName, "Options",
-							key, tc.want[key], key, (*tc.slice)[id].Options[key], tc.want, (*tc.slice)[id].Options)
+							key, tc.want[key], key, (*tc.shoutrrrs)[id].Options[key], tc.want, (*tc.shoutrrrs)[id].Options)
 					}
-					if (*tc.slice)[id].Defaults.URLFields[key] != tc.want[key] {
+					if (*tc.shoutrrrs)[id].Defaults.URLFields[key] != tc.want[key] {
 						t.Errorf(errStr,
 							packageName, "URLFields",
-							key, tc.want[key], key, (*tc.slice)[id].Defaults.URLFields[key], tc.want, (*tc.slice)[id].Defaults.URLFields)
+							key, tc.want[key], key, (*tc.shoutrrrs)[id].Defaults.URLFields[key], tc.want, (*tc.shoutrrrs)[id].Defaults.URLFields)
 					}
-					if (*tc.slice)[id].HardDefaults.Params[key] != tc.want[key] {
+					if (*tc.shoutrrrs)[id].HardDefaults.Params[key] != tc.want[key] {
 						t.Errorf(errStr,
 							packageName, "Params",
-							key, tc.want[key], key, (*tc.slice)[id].HardDefaults.Params[key], tc.want, (*tc.slice)[id].HardDefaults.Params)
+							key, tc.want[key], key, (*tc.shoutrrrs)[id].HardDefaults.Params[key], tc.want, (*tc.shoutrrrs)[id].HardDefaults.Params)
 					}
 				}
 			}

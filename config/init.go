@@ -30,7 +30,7 @@ import (
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
-// Init will hand out the appropriate Defaults.X and HardDefaults.X pointer(s).
+// Init will hand out the appropriate Defaults.X and HardDefaults.X pointers.
 func (c *Config) Init() {
 	c.OrderMutex.RLock()
 	defer c.OrderMutex.RUnlock()
@@ -54,12 +54,12 @@ func (c *Config) Init() {
 	logutil.Log.SetLevel(c.Settings.LogLevel())
 
 	for i, name := range c.Order {
-		service := c.Service[name]
+		svc := c.Service[name]
 		logutil.Log.Debug(
 			fmt.Sprintf("%d/%d %s Init",
-				i+1, len(c.Service), service.Name),
+				i+1, len(c.Service), svc.Name),
 			logutil.LogFrom{}, true)
-		service.Init(
+		svc.Init(
 			&c.Defaults.Service, &c.HardDefaults.Service,
 			&c.Notify, &c.Defaults.Notify, &c.HardDefaults.Notify,
 			&c.WebHook, &c.Defaults.WebHook, &c.HardDefaults.WebHook)

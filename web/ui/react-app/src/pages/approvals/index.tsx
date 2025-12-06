@@ -1,167 +1,198 @@
-import { ApprovalsToolbar, Service } from 'components/approvals';
-import { DndContext, closestCenter } from '@dnd-kit/core';
-import { ReactElement, useEffect, useMemo } from 'react';
-
-import { ApprovalsToolbarOptions } from 'types/util';
-import { Container } from 'react-bootstrap';
-import { DEFAULT_HIDE_VALUE } from 'components/approvals/toolbar/filter-dropdown';
-import { OrderAPIResponse } from 'types/summary';
+import { closestCenter, DndContext } from '@dnd-kit/core';
 import { SortableContext } from '@dnd-kit/sortable';
-import { URL_PARAMS } from 'constants/toolbar';
-import { fetchJSON } from 'utils';
-import { useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { type ReactElement, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useSortableServices } from 'hooks/sortable-services';
-import { useWebSocket } from 'contexts/websocket';
+import { toast } from 'sonner';
+import { ApprovalsToolbar, Service } from '@/components/approvals';
+import {
+	type ApprovalsToolbarOptions,
+	DEFAULT_HIDE_VALUE,
+	HideValue,
+	type HideValueType,
+	URL_PARAMS,
+} from '@/constants/toolbar';
+import { useServices } from '@/hooks/use-services.ts';
+import { useSortableServices } from '@/hooks/use-sortable-services';
+import type { TagsTriType } from '@/types/util';
+import type { ServiceSummary } from '@/utils/api/types/config/summary.ts';
+
+const toolbarDefaults: ApprovalsToolbarOptions = {
+	editMode: false,
+	hide: DEFAULT_HIDE_VALUE,
+	search: '',
+	tags: { exclude: [], include: [] },
+};
 
 /**
- * @returns The approvals page, which includes a toolbar, and a list of services.
+ * @returns The 'approvals' page, including a toolbar, and a list of services.
  */
 export const Approvals = (): ReactElement => {
-	const { monitorData, setMonitorData } = useWebSocket();
+	const queryClient = useQueryClient();
 	const [searchParams] = useSearchParams();
-
-	const toolbarDefaults: ApprovalsToolbarOptions = {
-		search: '',
-		tags: [],
-		editMode: false,
-		hide: DEFAULT_HIDE_VALUE,
-	};
 
 	const toolbarOptions: ApprovalsToolbarOptions = useMemo(() => {
 		const search =
 			searchParams.get(URL_PARAMS.SEARCH) ?? toolbarDefaults.search;
 
-		const tagsQueryParam = searchParams.get(URL_PARAMS.TAGS);
-		let tags: string[] = [];
+		// Extract tags from URL.
+		const tagsIncludeQueryParam = searchParams.get(URL_PARAMS.TAGS_INCLUDE);
+		const tagsExcludeQueryParam = searchParams.get(URL_PARAMS.TAGS_EXCLUDE);
+		let tags: TagsTriType;
 		try {
-			tags = tagsQueryParam ? JSON.parse(tagsQueryParam) : toolbarDefaults.tags;
-		} catch {}
+			tags =
+				tagsIncludeQueryParam || tagsExcludeQueryParam
+					? {
+							exclude: JSON.parse(tagsExcludeQueryParam ?? '[]') as string[],
+							include: JSON.parse(tagsIncludeQueryParam ?? '[]') as string[],
+						}
+					: toolbarDefaults.tags;
+		} catch (e) {
+			toast.error('Failed to parse tags from URL', {
+				description: `Error: ${e instanceof Error ? e.message : String(e)}`,
+			});
+			tags = toolbarDefaults.tags;
+		}
 
 		const editMode = searchParams.has(URL_PARAMS.EDIT_MODE);
 
+		// Extract hide options from URL.
 		const hideQueryParam = searchParams.get(URL_PARAMS.HIDE);
-		let hide: number[] = [];
+		let hide: HideValueType[] = [];
 		if (hideQueryParam === null) {
-			hide = toolbarDefaults.hide;
+			hide = [...toolbarDefaults.hide];
 		} else if (hideQueryParam) {
 			try {
-				hide = JSON.parse(hideQueryParam)
-					.map(Number)
-					.filter((num: unknown) => Number.isFinite(num));
-			} catch {}
-		} else {
-			hide = [];
+				const parsedHide: unknown = JSON.parse(hideQueryParam);
+				if (Array.isArray(parsedHide)) {
+					const validValues = Object.values(HideValue) as HideValueType[];
+					hide = parsedHide
+						.map(Number)
+						.filter(
+							(num: unknown) =>
+								Number.isFinite(num) &&
+								validValues.includes(num as HideValueType),
+						) as HideValueType[];
+				}
+			} catch (e) {
+				toast.error('Failed to parse hide options from URL', {
+					description: `Error: ${e instanceof Error ? e.message : String(e)}`,
+				});
+				hide = [];
+			}
 		}
 
-		return { search, tags, editMode, hide };
+		return { editMode, hide, search, tags };
 	}, [searchParams]);
 
 	const {
+		order,
 		sensors,
 		handleDragEnd,
 		handleSaveOrder,
 		hasOrderChanged,
 		resetOrder,
-	} = useSortableServices(monitorData, setMonitorData);
+	} = useSortableServices();
 
-	const { data: orderData } = useQuery({
-		queryKey: ['service/order'],
-		queryFn: () => fetchJSON<OrderAPIResponse>({ url: 'api/v1/service/order' }),
-		gcTime: 1000 * 60 * 30, // 30 minutes.
-		initialData: { order: monitorData.order },
-	});
-	useEffect(() => {
-		if (orderData)
-			setMonitorData({
-				page: 'APPROVALS',
-				type: 'SERVICE',
-				sub_type: 'ORDER',
-				...orderData,
-			});
-	}, [orderData]);
+	const services = useServices(order);
 
+	// Filter the services based on the toolbar options.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: queryClient stable.
 	const filteredServices = useMemo(() => {
-		const search = (toolbarOptions.search ?? '').toLowerCase();
-		const tags = toolbarOptions.tags ?? [];
-		return Object.values(monitorData.order).filter((service_id) => {
-			const name = monitorData.service[service_id]?.name ?? service_id;
-			const hasTags =
-				tags.length === 0 ||
-				tags.some((tag) =>
-					monitorData.service[service_id]?.tags?.includes(tag),
-				);
+		const {
+			search = '',
+			tags = toolbarDefaults.tags,
+			hide,
+		} = {
+			...toolbarOptions,
+			search: toolbarOptions.search.toLowerCase(),
+		};
+		const filterOnTags = tags.include.length > 0 || tags.exclude.length > 0;
+		const excludeOnly = filterOnTags && tags.include.length === 0;
 
-			if (
-				monitorData.service[service_id] &&
-				hasTags &&
-				name.toLowerCase().includes(search)
-			) {
-				const svc = monitorData.service[service_id];
+		return services
+			.filter((svc) => {
+				const service = svc.data;
+				if (!service || service.loading) return true;
+
+				const serviceID = service.id;
+
+				// Filter on 'tags'.
+				//     Have no tags to filter on,
+				//   OR
+				//     The service doesn't have any EXCLUDE tags
+				//       AND
+				//     We are only excluding tags, OR the service has all INCLUDE tags.
+				const hasTags =
+					!filterOnTags ||
+					(!tags.exclude.some((tag) => service.tags?.includes(tag)) &&
+						(excludeOnly ||
+							tags.include.some((tag) => service.tags?.includes(tag))));
+				if (!hasTags) return false;
+
+				// Filter on 'name'.
+				const name = (service.name ?? serviceID).toLowerCase();
+				if (!name.includes(search)) return false;
+
+				// Filter on 'hide' options.
 				const skipped =
-					`SKIP_${svc.status?.latest_version}` === svc.status?.approved_version;
+					service.status?.latest_version &&
+					service.status.approved_version ===
+						`SKIP_${service.status.latest_version}`;
 				const upToDate =
-					svc.status?.deployed_version === svc.status?.latest_version;
+					service.status?.deployed_version === service.status?.latest_version;
+				const hideInactiveServices = hide.includes(HideValue.Inactive);
 				return (
-					// hideUpToDate - deployed_version NOT latest_version.
-					(!toolbarOptions.hide.includes(0) || !upToDate) &&
-					// hideUpdatable - deployed_version IS latest_version AND approved_version IS NOT "SKIP_"+latest_version.
-					(!toolbarOptions.hide.includes(1) || upToDate || skipped) &&
-					// hideSkipped - approved_version NOT "SKIP_"+latest_version OR NO approved_version.
-					(!toolbarOptions.hide.includes(2) || !skipped) &&
-					// hideInactive - active NOT false.
-					(!toolbarOptions.hide.includes(3) || svc.active !== false)
+					// hideUpToDate: deployed_version NOT latest_version.
+					(!hide.includes(HideValue.UpToDate) || !upToDate) &&
+					// hideUpdatable: deployed_version IS latest_version AND approved_version NOT "SKIP_"+latest_version.
+					(!hide.includes(HideValue.Updatable) || upToDate || skipped) &&
+					// hideSkipped: approved_version NOT "SKIP_"+latest_version OR NO approved_version.
+					(!hide.includes(HideValue.Skipped) || !skipped) &&
+					// hideInactive: active NOT false.
+					(!hideInactiveServices || service.active !== false)
 				);
-			}
-		});
-	}, [toolbarOptions, monitorData.service, monitorData.order]);
+			})
+			.map((svc) => svc.data)
+			.filter(Boolean) as ServiceSummary[];
+	}, [toolbarOptions, queryClient, services]);
 
 	return (
 		<>
 			<ApprovalsToolbar
-				values={toolbarOptions}
-				onEditModeToggle={(value: boolean) => !value && resetOrder()}
-				onSaveOrder={handleSaveOrder}
 				hasOrderChanged={hasOrderChanged}
-			/>
-			<Container
-				fluid
-				className="services"
-				style={{
-					maxWidth:
-						filteredServices.length < 5
-							? `${filteredServices.length * 30}rem`
-							: '',
+				onEditModeToggle={(value: boolean) => {
+					if (!value) resetOrder();
 				}}
-			>
+				onSaveOrder={() => handleSaveOrder()}
+				values={toolbarOptions}
+			/>
+			<div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(17.5rem,1fr))]">
 				<DndContext
-					sensors={sensors}
-					collisionDetection={closestCenter}
-					onDragEnd={handleDragEnd}
 					autoScroll={{
-						enabled: true,
 						acceleration: 100,
+						enabled: true,
+						interval: 5,
 						threshold: {
-							x: 0.2, // Start scrolling when within 20% of the edge
+							x: 0.2, // Start scrolling when within 20% of the edge.
 							y: 0.2,
 						},
-						interval: 5,
 					}}
+					collisionDetection={closestCenter}
+					onDragEnd={handleDragEnd}
+					sensors={sensors}
 				>
-					<SortableContext items={monitorData.order}>
-						{monitorData.order.length ===
-							Object.keys(monitorData.service).length &&
-							filteredServices.map((service_id) => (
-								<Service
-									key={service_id}
-									id={service_id}
-									service={monitorData.service[service_id]}
-									editable={toolbarOptions.editMode}
-								/>
-							))}
+					<SortableContext items={order}>
+						{filteredServices.map((s) => (
+							<Service
+								editable={toolbarOptions.editMode}
+								id={s.id}
+								key={s.id}
+							/>
+						))}
 					</SortableContext>
 				</DndContext>
-			</Container>
+			</div>
 		</>
 	);
 };

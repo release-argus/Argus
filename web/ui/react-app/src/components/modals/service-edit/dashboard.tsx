@@ -1,154 +1,155 @@
-import { FC, memo, useMemo } from 'react';
-import {
-	FormSelectCreatableSortable,
-	FormTextWithButton,
-	FormTextWithPreview,
-} from 'components/generic/form';
-import { firstNonDefault, parseTemplate, removeEmptyValues } from 'utils';
-
-import { Accordion } from 'react-bootstrap';
-import { BooleanWithDefault } from 'components/generic';
-import { ServiceDashboardOptionsType } from 'types/config';
-import { StatusSummaryType } from 'types/summary';
-import { createOption } from 'components/generic/form-select-shared';
-import { faLink } from '@fortawesome/free-solid-svg-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { Link } from 'lucide-react';
+import { type FC, memo, useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
-import useValuesRefetch from 'hooks/values-refetch';
-import { useWebSocket } from 'contexts/websocket';
-
-interface Props {
-	serviceID: string;
-	originals?: ServiceDashboardOptionsType;
-	defaults?: ServiceDashboardOptionsType;
-	hard_defaults?: ServiceDashboardOptionsType;
-	serviceStatus?: StatusSummaryType;
-}
+import { BooleanWithDefault } from '@/components/generic';
+import {
+	FieldSelectCreatableSortable,
+	FieldTextWithButton,
+	FieldTextWithPreview,
+} from '@/components/generic/field';
+import {
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from '@/components/ui/accordion';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import { useTags } from '@/hooks/use-tags';
+import useValuesRefetch from '@/hooks/values-refetch';
+import { QUERY_KEYS } from '@/lib/query-keys.ts';
+import { removeEmptyValues } from '@/utils';
+import { mapRequest } from '@/utils/api/types/api-request-handler';
+import type { ServiceSummary } from '@/utils/api/types/config/summary.ts';
 
 /**
- * The `dashboard` form fields.
- *
- * @param serviceID - The ID of the service.
- * @param originals - The original values of the form.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
  * @returns The form fields for the `dashboard` options.
  */
-const EditServiceDashboard: FC<Props> = ({
-	serviceID,
-	originals,
-	defaults,
-	hard_defaults,
-	serviceStatus,
-}) => {
+const EditServiceDashboard: FC = () => {
+	const queryClient = useQueryClient();
+	const name = 'dashboard';
+	const { serviceID, schemaDataDefaults } = useSchemaContext();
 	const { setError } = useFormContext();
 
-	const { data: latest_version, refetchData: refetchLatestVersion } =
+	const { data: latestVersion, refetchData: refetchLatestVersion } =
 		useValuesRefetch<string>('latest_version.version', true);
-	const convertedDefaults = useMemo(
+
+	// Options, and their respective use-counts on other services.
+	const { tags: allTags, counts } = useTags(serviceID);
+	const tagState = useMemo(
 		() => ({
-			auto_approve: defaults?.auto_approve ?? hard_defaults?.auto_approve,
-			icon: firstNonDefault(defaults?.icon, hard_defaults?.icon),
-			icon_link_to: firstNonDefault(
-				defaults?.icon_link_to,
-				hard_defaults?.icon_link_to,
-			),
-			web_url: firstNonDefault(defaults?.web_url, hard_defaults?.web_url),
+			counts: counts,
+			options: allTags.map((value) => ({ label: value, value })),
 		}),
-		[defaults, hard_defaults],
+		[allTags, counts],
 	);
-	const { monitorData } = useWebSocket();
-	const tagOptions = useMemo(
-		() =>
-			Array.from(monitorData.tags ?? []).map((value) =>
-				createOption(
-					value,
-					Object.values(monitorData.service).reduce(
-						(count, service) => count + (service.tags?.includes(value) ? 1 : 0),
-						0,
-					),
-				),
-			),
-		[monitorData.service, monitorData.tags],
-	);
+
+	// Apply the template and navigate to the address.
 	const handleTemplateClick = (fieldName: string, template: string) => {
 		if (!template.includes('{{')) {
 			window.open(template, '_blank');
 		}
 
 		refetchLatestVersion();
-		// setTimeout to allow time for refetch setStates ^
+		// setTimeout to give time for refetch setStates ^
 		const timeout = setTimeout(() => {
+			const serviceStatusLV = serviceID
+				? queryClient.getQueryData<ServiceSummary>(
+						QUERY_KEYS.SERVICE.SUMMARY_ITEM(serviceID),
+					)?.status?.latest_version
+				: null;
 			const extraParams = removeEmptyValues({
-				latest_version: latest_version ?? serviceStatus?.latest_version,
+				latest_version: latestVersion ?? serviceStatusLV,
 			});
-			parseTemplate({
-				serviceID,
-				template,
-				extraParams,
+
+			mapRequest('TEMPLATE_PARSE', {
+				extraParams: extraParams,
+				serviceID: serviceID as string,
+				template: template,
 			})
-				.then((parsed) => window.open(parsed, '_blank'))
-				.catch((error) => setError(fieldName, { message: error.message }));
+				.then((parsed) => parsed && window.open(parsed, '_blank'))
+				.catch((error: unknown) => {
+					const message =
+						error instanceof Error
+							? error.message
+							: 'An unknown error occurred';
+					setError(fieldName, { message });
+				});
 		});
-		return () => clearTimeout(timeout);
+		return () => {
+			clearTimeout(timeout);
+		};
 	};
 
+	const defaults = schemaDataDefaults?.dashboard;
+
 	return (
-		<Accordion>
-			<Accordion.Header>Dashboard:</Accordion.Header>
-			<Accordion.Body>
+		<AccordionItem value="dashboard">
+			<AccordionTrigger>Dashboard:</AccordionTrigger>
+			<AccordionContent className="grid grid-cols-12 gap-2">
 				<BooleanWithDefault
-					name="dashboard.auto_approve"
+					defaultValue={defaults?.auto_approve}
 					label="Auto-approve"
-					tooltip="Send all commands/webhooks when a new release is found"
-					defaultValue={convertedDefaults.auto_approve}
+					name={`${name}.auto_approve`}
+					tooltip={{
+						content: 'Send all commands/webhooks when a new release is found',
+						type: 'string',
+					}}
 				/>
-				<FormTextWithPreview
-					name="dashboard.icon"
+				<FieldTextWithPreview
+					defaultVal={defaults?.icon}
 					label="Icon"
-					tooltip="e.g. https://example.com/icon.png"
-					defaultVal={convertedDefaults.icon}
+					name={`${name}.icon`}
+					tooltip={{
+						content: 'e.g. https://example.com/icon.png',
+						type: 'string',
+					}}
 				/>
-				<FormTextWithButton
+				<FieldTextWithButton
+					button={{
+						ariaLabel: 'Open icon link',
+						Icon: Link,
+						kind: 'click',
+						onClick: (tpl) => handleTemplateClick(`${name}.icon_link_to`, tpl),
+					}}
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.icon_link_to}
 					key="icon_link_to"
-					name="dashboard.icon_link_to"
-					col_sm={12}
 					label="Icon link to"
-					tooltip="Where the Icon will redirect when clicked"
-					defaultVal={convertedDefaults.icon_link_to}
-					isURL
-					buttonIcon={faLink}
-					buttonAriaLabel="Open icon link"
-					buttonOnClick={(tpl) =>
-						handleTemplateClick('dashboard.icon_link_to', tpl)
-					}
+					name={`${name}.icon_link_to`}
+					tooltip={{
+						content: 'Where the Icon will redirect when clicked',
+						type: 'string',
+					}}
 				/>
-				<FormTextWithButton
+				<FieldTextWithButton
+					button={{
+						ariaLabel: 'Open web URL',
+						Icon: Link,
+						kind: 'click',
+						onClick: (tpl) => handleTemplateClick(`${name}.web_url`, tpl),
+					}}
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.web_url}
 					key="web_url"
-					name="dashboard.web_url"
-					col_sm={12}
 					label="Web URL"
-					tooltip="Where the 'Service name' will redirect when clicked"
-					defaultVal={convertedDefaults.web_url}
-					isURL
-					buttonIcon={faLink}
-					buttonAriaLabel="Open web URL"
-					buttonOnClick={(tpl) => handleTemplateClick('dashboard.web_url', tpl)}
+					name={`${name}.web_url`}
+					tooltip={{
+						content: "Where the 'Service name' will redirect when clicked",
+						type: 'string',
+					}}
 				/>
-				<FormSelectCreatableSortable
-					name="dashboard.tags"
-					col_sm={12}
-					label="Tags"
-					placeholder=""
-					initialValue={originals?.tags}
-					options={tagOptions}
+				<FieldSelectCreatableSortable
+					colSize={{ sm: 12 }}
+					counts={tagState.counts}
 					isClearable
+					label="Tags"
+					name={`${name}.tags`}
 					noOptionsMessage="No other tags in use. Type to create a new one."
-					optionCounts
-					dynamicHeight={true}
-					positionXS="right"
+					options={tagState.options}
+					placeholder=""
 				/>
-			</Accordion.Body>
-		</Accordion>
+			</AccordionContent>
+		</AccordionItem>
 	);
 };
 

@@ -286,7 +286,7 @@ func (c *Config) Save() {
 func removeAllServiceDefaults(
 	lines *[]string,
 	indentation uint8,
-	services *service.Slice,
+	services *service.Services,
 	currentOrder *[]string,
 	currentOrderIndexStart *[]int,
 	currentOrderIndexEnd *[]int) {

@@ -1,67 +1,52 @@
-import { FormLabel, FormTextArea } from 'components/generic/form';
-
-import { NotifyGoogleChatType } from 'types/config';
-import NotifyOptions from 'components/modals/service-edit/notify-types/shared';
-import { firstNonDefault } from 'utils';
 import { useMemo } from 'react';
+import { FieldTextArea } from '@/components/generic/field';
+import {
+	Heading,
+	NotifyOptions,
+} from '@/components/modals/service-edit/notify-types/shared';
+import { FieldSet } from '@/components/ui/field';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import type { NotifyGoogleChatSchema } from '@/utils/api/types/config-edit/notify/schemas';
 
 /**
- * The form fields for a Google Chat notifier.
+ * The form fields for a `Google Chat` notifier.
  *
  * @param name - The path to this `Google Chat` in the form.
  * @param main - The main values.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for this `Google Chat` notifier.
  */
 const GOOGLE_CHAT = ({
 	name,
-
 	main,
-	defaults,
-	hard_defaults,
 }: {
 	name: string;
-
-	main?: NotifyGoogleChatType;
-	defaults?: NotifyGoogleChatType;
-	hard_defaults?: NotifyGoogleChatType;
+	main?: NotifyGoogleChatSchema;
 }) => {
-	const convertedDefaults = useMemo(
-		() => ({
-			// URL Fields
-			url_fields: {
-				raw: firstNonDefault(
-					main?.url_fields?.raw,
-					defaults?.url_fields?.raw,
-					hard_defaults?.url_fields?.raw,
-				),
-			},
-		}),
-		[main, defaults, hard_defaults],
+	const { typeDataDefaults } = useSchemaContext();
+	const defaults = useMemo(
+		() => main ?? typeDataDefaults?.notify.googlechat,
+		[main, typeDataDefaults?.notify.googlechat],
 	);
 
 	return (
-		<>
-			<NotifyOptions
-				name={name}
-				main={main?.options}
-				defaults={defaults?.options}
-				hard_defaults={hard_defaults?.options}
-			/>
-			<FormLabel text="URL Fields" heading />
-			<>
-				<FormTextArea
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<NotifyOptions defaults={defaults?.options} name={name} />
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="URL Fields" />
+				<FieldTextArea
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.url_fields?.raw}
+					label="Raw"
 					name={`${name}.url_fields.raw`}
 					required
-					col_sm={12}
 					rows={2}
-					label="Raw"
-					tooltip="e.g. chat.googleapis.com/v1/spaces/foo/messages?key=bar&token=baz"
-					defaultVal={convertedDefaults.url_fields.raw}
+					tooltip={{
+						content:
+							'e.g. chat.googleapis.com/v1/spaces/foo/messages?key=bar&token=baz',
+						type: 'string',
+					}}
 				/>
-			</>
-		</>
+			</FieldSet>
+		</FieldSet>
 	);
 };
 

@@ -1,292 +1,223 @@
-import { FormLabel, FormSelect, FormText } from 'components/generic/form';
-import { firstNonDefault, strToBool } from 'utils';
 import { useEffect, useMemo } from 'react';
-
-import { BooleanWithDefault } from 'components/generic';
-import NotifyOptions from 'components/modals/service-edit/notify-types/shared';
-import { NotifySMTPType } from 'types/config';
-import { normaliseForSelect } from 'components/modals/service-edit/util/normalise-selects';
 import { useFormContext } from 'react-hook-form';
-
-export const SMTPAuthOptions = [
-	{ label: 'None', value: 'None' },
-	{ label: 'Plain', value: 'Plain' },
-	{ label: 'CRAM-MD5', value: 'CRAMMD5' },
-	{ label: 'Unknown', value: 'Unknown' },
-	{ label: 'OAuth2', value: 'OAuth2' },
-];
-export const SMTPEncryptionOptions = [
-	{ label: 'Auto', value: 'Auto' },
-	{ label: 'ExplicitTLS', value: 'ExplicitTLS' },
-	{ label: 'ImplicitTLS', value: 'ImplicitTLS' },
-	{ label: 'None', value: 'None' },
-];
+import { BooleanWithDefault } from '@/components/generic';
+import { FieldSelect, FieldText } from '@/components/generic/field';
+import {
+	Heading,
+	NotifyOptions,
+} from '@/components/modals/service-edit/notify-types/shared';
+import { normaliseForSelect } from '@/components/modals/service-edit/util/normalise';
+import { FieldSet } from '@/components/ui/field';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import {
+	type SMTPAuth,
+	type SMTPEncryption,
+	smtpAuthOptions,
+	smtpEncryptionOptions,
+} from '@/utils/api/types/config/notify/smtp';
+import type { NotifySMTPSchema } from '@/utils/api/types/config-edit/notify/schemas';
+import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
+import { ensureValue } from '@/utils/form-utils';
 
 /**
- * The form fields for an SMTP notifier.
+ * The form fields for an `SMTP` notifier.
  *
  * @param name - The path to this `SMTP` in the form.
  * @param main - The main values.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for this `SMTP` notifier.
  */
-const SMTP = ({
-	name,
-
-	main,
-	defaults,
-	hard_defaults,
-}: {
-	name: string;
-
-	main?: NotifySMTPType;
-	defaults?: NotifySMTPType;
-	hard_defaults?: NotifySMTPType;
-}) => {
+const SMTP = ({ name, main }: { name: string; main?: NotifySMTPSchema }) => {
 	const { getValues, setValue } = useFormContext();
-
-	const convertedDefaults = useMemo(
-		() => ({
-			// URL Fields
-			url_fields: {
-				host: firstNonDefault(
-					main?.url_fields?.host,
-					defaults?.url_fields?.host,
-					hard_defaults?.url_fields?.host,
-				),
-				password: firstNonDefault(
-					main?.url_fields?.password,
-					defaults?.url_fields?.password,
-					hard_defaults?.url_fields?.password,
-				),
-				port: firstNonDefault(
-					main?.url_fields?.port,
-					defaults?.url_fields?.port,
-					hard_defaults?.url_fields?.port,
-				),
-				username: firstNonDefault(
-					main?.url_fields?.username,
-					defaults?.url_fields?.username,
-					hard_defaults?.url_fields?.username,
-				),
-			},
-			// Params
-			params: {
-				auth: firstNonDefault(
-					main?.params?.auth,
-					defaults?.params?.auth,
-					hard_defaults?.params?.auth,
-				).toLowerCase(),
-				clienthost: firstNonDefault(
-					main?.params?.clienthost,
-					defaults?.params?.clienthost,
-					hard_defaults?.params?.clienthost,
-				),
-				encryption: firstNonDefault(
-					main?.params?.encryption,
-					defaults?.params?.encryption,
-					hard_defaults?.params?.encryption,
-				).toLowerCase(),
-				fromaddress: firstNonDefault(
-					main?.params?.fromaddress,
-					defaults?.params?.fromaddress,
-					hard_defaults?.params?.fromaddress,
-				),
-				fromname: firstNonDefault(
-					main?.params?.fromname,
-					defaults?.params?.fromname,
-					hard_defaults?.params?.fromname,
-				),
-				subject: firstNonDefault(
-					main?.params?.subject,
-					defaults?.params?.subject,
-					hard_defaults?.params?.subject,
-				),
-				toaddresses: firstNonDefault(
-					main?.params?.toaddresses,
-					defaults?.params?.toaddresses,
-					hard_defaults?.params?.toaddresses,
-				),
-				usehtml:
-					strToBool(
-						firstNonDefault(
-							main?.params?.usehtml,
-							defaults?.params?.usehtml,
-							hard_defaults?.params?.usehtml,
-						),
-					) ?? false,
-				usestarttls:
-					strToBool(
-						firstNonDefault(
-							main?.params?.usestarttls,
-							defaults?.params?.usestarttls,
-							hard_defaults?.params?.usestarttls,
-						),
-					) ?? true,
-			},
-		}),
-		[main, defaults, hard_defaults],
+	const { typeDataDefaults } = useSchemaContext();
+	const defaults = useMemo(
+		() => main ?? typeDataDefaults?.notify.smtp,
+		[main, typeDataDefaults?.notify.smtp],
 	);
 
-	const smtpAuthOptions = useMemo(() => {
+	// Ensure selects have a valid value.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: fallback on first load.
+	useEffect(() => {
+		ensureValue<SMTPAuth>({
+			defaultValue: defaults?.params?.auth,
+			fallback: Object.values(smtpAuthOptions)[0].value,
+			getValues,
+			path: `${name}.params.auth`,
+			setValue,
+		});
+		ensureValue<SMTPEncryption>({
+			defaultValue: defaults?.params?.encryption,
+			fallback: Object.values(smtpEncryptionOptions)[0].value,
+			getValues,
+			path: `${name}.params.encryption`,
+			setValue,
+		});
+	}, [main]);
+
+	const smtpAuthOptionsNormalised = useMemo(() => {
 		const defaultParamsAuthLabel = normaliseForSelect(
-			SMTPAuthOptions,
-			convertedDefaults.params.auth,
+			smtpAuthOptions,
+			defaults?.params?.auth,
 		);
 
 		if (defaultParamsAuthLabel)
 			return [
-				{ value: '', label: `${defaultParamsAuthLabel.label} (default)` },
-				...SMTPAuthOptions,
+				{
+					label: `${defaultParamsAuthLabel.label} (default)`,
+					value: nullString,
+				},
+				...smtpAuthOptions,
 			];
 
-		return SMTPAuthOptions;
-	}, [convertedDefaults.params.auth]);
+		return smtpAuthOptions;
+	}, [defaults?.params?.auth]);
 
-	const smtpEncryptionOptions = useMemo(() => {
+	const smtpEncryptionOptionsNormalised = useMemo(() => {
 		const defaultParamsEncryptionLabel = normaliseForSelect(
-			SMTPEncryptionOptions,
-			convertedDefaults.params.encryption,
+			smtpEncryptionOptions,
+			defaults?.params?.encryption,
 		);
 
 		if (defaultParamsEncryptionLabel)
 			return [
-				{ value: '', label: `${defaultParamsEncryptionLabel.label} (default)` },
-				...SMTPEncryptionOptions,
+				{
+					label: `${defaultParamsEncryptionLabel.label} (default)`,
+					value: nullString,
+				},
+				...smtpEncryptionOptions,
 			];
 
-		return SMTPEncryptionOptions;
-	}, [convertedDefaults.params.encryption]);
-
-	useEffect(() => {
-		const currentAuth = getValues(`${name}.params.auth`);
-		// Normalise selected auth, or default it.
-		if (convertedDefaults.params.auth === '')
-			setValue(
-				`${name}.params.auth`,
-				normaliseForSelect(SMTPAuthOptions, currentAuth)?.value || 'Unknown',
-			);
-
-		// Normalise selected encryption, or default it.
-		if (convertedDefaults.params.encryption === '')
-			setValue(
-				`${name}.params.encryption`,
-				normaliseForSelect(
-					SMTPEncryptionOptions,
-					getValues(`${name}.params.encryption`),
-				)?.value || 'Auto',
-			);
-	}, []);
+		return smtpEncryptionOptions;
+	}, [defaults?.params?.encryption]);
 
 	return (
-		<>
-			<NotifyOptions
-				name={name}
-				main={main?.options}
-				defaults={defaults?.options}
-				hard_defaults={hard_defaults?.options}
-			/>
-			<FormLabel text="URL Fields" heading />
-			<>
-				<FormText
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<NotifyOptions defaults={defaults?.options} name={name} />
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="URL Fields" />
+				<FieldText
+					colSize={{ xs: 9 }}
+					defaultVal={defaults?.url_fields?.host}
+					label="Host"
 					name={`${name}.url_fields.host`}
 					required
-					col_sm={9}
-					label="Host"
-					tooltip="e.g. smtp.example.com"
-					defaultVal={convertedDefaults.url_fields.host}
+					tooltip={{
+						content: 'e.g. smtp.example.com',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.url_fields.port`}
-					col_sm={3}
+				<FieldText
+					colSize={{ xs: 3 }}
+					defaultVal={defaults?.url_fields?.port}
 					label="Port"
-					tooltip="e.g. 25/465/587/2525"
-					isNumber
-					defaultVal={convertedDefaults.url_fields.port}
-					positionXS="right"
+					name={`${name}.url_fields.port`}
+					tooltip={{
+						content: 'e.g. 25/465/587/2525',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.url_fields.username`}
+				<FieldText
+					defaultVal={defaults?.url_fields?.username}
 					label="Username"
-					tooltip="e.g. something@example.com"
-					defaultVal={convertedDefaults.url_fields.username}
+					name={`${name}.url_fields.username`}
+					tooltip={{
+						content: 'e.g. something@example.com',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.url_fields.password`}
+				<FieldText
+					defaultVal={defaults?.url_fields?.password}
 					label="Password"
-					defaultVal={convertedDefaults.url_fields.password}
-					positionXS="right"
+					name={`${name}.url_fields.password`}
 				/>
-			</>
-			<FormLabel text="Params" heading />
-			<>
-				<FormText
+			</FieldSet>
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="Params" />
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.toaddresses}
+					label="To Address(es)"
 					name={`${name}.params.toaddresses`}
 					required
-					col_sm={12}
-					label="To Address(es)"
-					tooltip="Email(s) to send to (Comma separated)"
-					defaultVal={convertedDefaults.params.toaddresses}
+					tooltip={{
+						content: 'Emails to send to (Comma separated)',
+						type: 'string',
+					}}
 				/>
-				<FormText
+				<FieldText
+					defaultVal={defaults?.params?.fromaddress}
+					label="From Address"
 					name={`${name}.params.fromaddress`}
 					required
-					label="From Address"
-					tooltip="Email to send from"
-					defaultVal={convertedDefaults.params.fromaddress}
+					tooltip={{
+						content: 'Email to send from',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.fromname`}
+				<FieldText
+					defaultVal={defaults?.params?.fromname}
 					label="From Name"
-					tooltip="Name to send as"
-					defaultVal={convertedDefaults.params.fromname}
-					positionXS="right"
+					name={`${name}.params.fromname`}
+					tooltip={{
+						content: 'Name to send as',
+						type: 'string',
+					}}
 				/>
-				<FormSelect
-					name={`${name}.params.auth`}
-					col_sm={4}
+				<FieldSelect
+					colSize={{ sm: 4 }}
 					label="Auth"
-					options={smtpAuthOptions}
+					name={`${name}.params.auth`}
+					options={smtpAuthOptionsNormalised}
 				/>
-				<FormText
-					name={`${name}.params.subject`}
-					col_sm={8}
+				<FieldText
+					colSize={{ sm: 8 }}
+					defaultVal={defaults?.params?.subject}
 					label="Subject"
-					tooltip="Email subject"
-					defaultVal={convertedDefaults.params.subject}
-					positionXS="right"
+					name={`${name}.params.subject`}
+					tooltip={{
+						content: 'Email subject',
+						type: 'string',
+					}}
 				/>
-				<FormSelect
-					name={`${name}.params.encryption`}
-					col_sm={4}
+				<FieldSelect
+					colSize={{ sm: 4 }}
 					label="Encryption"
-					tooltip="Encryption method"
-					options={smtpEncryptionOptions}
+					name={`${name}.params.encryption`}
+					options={smtpEncryptionOptionsNormalised}
+					tooltip={{
+						content: 'Encryption method',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.clienthost`}
-					col_sm={8}
+				<FieldText
+					colSize={{ sm: 8 }}
+					defaultVal={defaults?.params?.clienthost}
 					label="Client Host"
-					tooltip={`The client host name sent to the SMTP server during HELO phase.
-						If set to "auto", it will use the OS hostname`}
-					defaultVal={convertedDefaults.params.clienthost}
-					positionXS="right"
+					name={`${name}.params.clienthost`}
+					tooltip={{
+						content: `The client host name sent to the SMTP server during HELO phase.
+						If set to "auto", it will use the OS hostname`,
+						type: 'string',
+					}}
 				/>
 				<BooleanWithDefault
-					name={`${name}.params.usehtml`}
+					defaultValue={defaults?.params?.usehtml}
 					label="Use HTML"
-					tooltip="Whether 'message' is in HTML"
-					defaultValue={convertedDefaults.params.usehtml}
+					name={`${name}.params.usehtml`}
+					tooltip={{
+						content: "Whether 'message' is in HTML",
+						type: 'string',
+					}}
 				/>
 				<BooleanWithDefault
-					name={`${name}.params.usestarttls`}
+					defaultValue={defaults?.params?.usestarttls}
 					label="Use StartTLS"
-					tooltip="Use StartTLS encryption"
-					defaultValue={convertedDefaults.params.usestarttls}
+					name={`${name}.params.usestarttls`}
+					tooltip={{
+						content: 'Use StartTLS encryption',
+						type: 'string',
+					}}
 				/>
-			</>
-		</>
+			</FieldSet>
+		</FieldSet>
 	);
 };
 

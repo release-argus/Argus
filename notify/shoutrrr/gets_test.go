@@ -506,7 +506,7 @@ func TestShoutrrr_GetMaxTries(t *testing.T) {
 
 func TestShoutrrr_Message(t *testing.T) {
 	// GIVEN a Shoutrrr.
-	serviceInfo := serviceinfo.ServiceInfo{
+	svcInfo := serviceinfo.ServiceInfo{
 		ID:            "release-argus/Argus",
 		WebURL:        "https://release-argus.io/demo",
 		LatestVersion: "0.9.0",
@@ -545,7 +545,7 @@ func TestShoutrrr_Message(t *testing.T) {
 		},
 		"django vars": {
 			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
-				serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
+				svcInfo.WebURL, svcInfo.URL, svcInfo.ID, svcInfo.LatestVersion),
 			rootValue:        test.StringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
 			defaultValue:     test.StringPtr("something"),
 			hardDefaultValue: test.StringPtr("something"),
@@ -572,7 +572,7 @@ func TestShoutrrr_Message(t *testing.T) {
 			}
 
 			// WHEN Message is called.
-			got := shoutrrr.Message(serviceInfo)
+			got := shoutrrr.Message(svcInfo)
 
 			// THEN the function returns the correct result.
 			if got != tc.want {
@@ -585,7 +585,7 @@ func TestShoutrrr_Message(t *testing.T) {
 
 func TestShoutrrr_Title(t *testing.T) {
 	// GIVEN a Shoutrrr.
-	serviceInfo := serviceinfo.ServiceInfo{
+	svcInfo := serviceinfo.ServiceInfo{
 		ID:            "release-argus/Argus",
 		URL:           "https://github.com",
 		WebURL:        "https://release-argus.io/demo",
@@ -625,7 +625,7 @@ func TestShoutrrr_Title(t *testing.T) {
 		},
 		"django vars": {
 			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
-				serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
+				svcInfo.WebURL, svcInfo.URL, svcInfo.ID, svcInfo.LatestVersion),
 			rootValue:        test.StringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
 			defaultValue:     test.StringPtr("something"),
 			hardDefaultValue: test.StringPtr("something"),
@@ -652,7 +652,7 @@ func TestShoutrrr_Title(t *testing.T) {
 			}
 
 			// WHEN Title is called.
-			got := shoutrrr.Title(serviceInfo)
+			got := shoutrrr.Title(svcInfo)
 
 			// THEN the function returns the correct result.
 			if got != tc.want {

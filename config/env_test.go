@@ -18,7 +18,6 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -30,7 +29,7 @@ import (
 
 func TestMapEnvToStruct(t *testing.T) {
 	// GIVEN a struct and a bunch of env vars.
-	test := map[string]struct {
+	tests := map[string]struct {
 		customStruct any
 		prefix       string
 		env          map[string]string
@@ -273,6 +272,17 @@ func TestMapEnvToStruct(t *testing.T) {
 				^ARGUS_TEST_UNSIGNED_INTEGER_16_PTR_INVALID: "65536" <invalid>.*
 				ARGUS_TEST_UNSIGNED_INTEGER_16_VAL_INVALID: "-1" <invalid>.*$`),
 		},
+		"float - unsupported type": {
+			env: map[string]string{
+				"ARGUS_TEST_FLOAT": "1.23",
+			},
+			customStruct: &struct {
+				Test struct {
+					Float *float64 `yaml:"float"`
+				} `yaml:"test"`
+			}{},
+			errRegex: `unsupported env var kind on ARGUS_TEST_FLOAT: float64`,
+		},
 		"inline struct": {
 			env: map[string]string{
 				"ARGUS_TEST_INLINE_STRING": "foo"},
@@ -332,12 +342,13 @@ func TestMapEnvToStruct(t *testing.T) {
 		},
 	}
 
-	for name, tc := range test {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
 			// WHEN mapEnvToStruct is called on it.
@@ -508,17 +519,16 @@ func TestLoadEnvFile(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
-	defer os.RemoveAll(tmpDir)
+	t.Cleanup(func() { _ = os.RemoveAll(tmpDir) })
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
 
 			// Create env file if content provided.
-			filePath := fmt.Sprintf("%s/nonexistent.env",
-				tmpDir)
+			filePath := tmpDir + "/nonexistent.env"
 			if tc.content != nil {
-				filePath = fmt.Sprintf("%s/.env", tmpDir)
+				filePath = tmpDir + "/.env"
 				err := os.WriteFile(filePath, []byte(test.TrimYAML(*tc.content)), 0644)
 				if err != nil {
 					t.Fatalf("%s\nFailed to create test file: %v",
@@ -526,31 +536,29 @@ func TestLoadEnvFile(t *testing.T) {
 				}
 			}
 			if tc.cannotReadFile {
-				os.Chmod(filePath, 0200)
-				t.Cleanup(func() {
-					os.Remove(filePath)
-				})
+				_ = os.Chmod(filePath, 0200)
+				t.Cleanup(func() { _ = os.Remove(filePath) })
 			}
 
-			// WHEN loadEnvFile is called
+			// WHEN loadEnvFile is called.
 			err := loadEnvFile(filePath)
 
-			// THEN any error matches expected
+			// THEN any error matches expected.
 			if !util.RegexCheck(tc.errRegex, util.ErrorToString(err)) {
 				t.Errorf("%x\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, util.ErrorToString(err))
 			}
 
-			// AND environment variables are set as expected
+			// AND environment variables are set as expected.
 			if tc.errRegex == "^$" {
-				// Check that the expected env vars are set
+				// Verify the expected env vars are set.
 				for k, v := range tc.want {
 					if got := os.Getenv(k); got != v {
 						t.Errorf("%s\nenv var %q mismatch\nwant: %q\ngot:  %q",
 							packageName, k, v, got)
 					}
 				}
-				// Check that unexpected env vars are not set
+				// Verify unexpected env vars are not set.
 				want := ""
 				for _, k := range tc.doNotWant {
 					if got := os.Getenv(k); got != want {
@@ -571,7 +579,7 @@ type failingReader struct {
 
 func (f *failingReader) Read(p []byte) (int, error) {
 	if f.readSoFar >= f.failAt {
-		return 0, fmt.Errorf("simulated read error")
+		return 0, errors.New("simulated read error")
 	}
 	n, err := f.r.Read(p)
 	f.readSoFar += n
@@ -583,7 +591,7 @@ func TestLoadEnvFile_ReadError(t *testing.T) {
 	content := "FOO=bar\ntest=123\n"
 	reader := &failingReader{
 		r:      strings.NewReader(content),
-		failAt: 10, // fail after 10 bytes
+		failAt: 10, // fail after 10 bytes.
 	}
 
 	// WHEN LoadEnvFile is called with the failing reader.

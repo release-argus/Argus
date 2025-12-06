@@ -1,37 +1,46 @@
-import { Button, ButtonGroup, Col, Row } from 'react-bootstrap';
-import { FC, memo, useCallback } from 'react';
-import { faMinus, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
-
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { FormText } from 'components/generic/form';
-import { isEmptyArray } from 'utils';
+import { Minus, Plus, Trash2 } from 'lucide-react';
+import { type FC, memo, useCallback } from 'react';
 import { useFieldArray } from 'react-hook-form';
+import { FieldText } from '@/components/generic/field';
+import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
+import { FieldGroup } from '@/components/ui/field';
+import { isEmptyArray } from '@/utils';
+import type { CommandSchema } from '@/utils/api/types/config-edit/command/schemas';
 
-interface Props {
+type CommandProps = {
+	/* The name of the field in the form. */
 	name: string;
+	/* The default values for the command. */
+	defaults?: CommandSchema;
+	/* The function to remove the command. */
 	removeMe?: () => void;
-}
+};
 
 /**
  * The form fields for a command.
  *
  * @param name - The name of the field in the form.
+ * @param defaults - The default values for the command.
  * @param removeMe - The function to remove the command.
- * @returns The form fields for this command with any amount of arguments.
+ * @returns The form fields for this command with any number of arguments.
  */
-const Command: FC<Props> = ({ name, removeMe }) => {
-	const { fields, append, remove } = useFieldArray({
-		name: name,
-	});
+const Command: FC<CommandProps> = ({ name, defaults, removeMe }) => {
+	const { fields, append, remove } = useFieldArray({ name: name });
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: append stable.
 	const addItem = useCallback(() => {
 		append({ arg: '' }, { shouldFocus: false });
-	}, []);
-	// remove the last argument.
+	}, [name]);
+	// Remove the last arg, or the command if only 1 arg.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: remove stable.
 	const removeLast = useCallback(() => {
-		if (fields.length > 1) return remove(fields.length - 1);
-		// if only 1 arg left, remove the command.
-		if (removeMe) return removeMe();
-		return undefined;
+		if (fields.length === 1 && removeMe !== undefined) {
+			removeMe();
+			return;
+		}
+
+		remove(fields.length - 1);
 	}, [fields.length, removeMe]);
 
 	const placeholder = (index: number) => {
@@ -41,48 +50,50 @@ const Command: FC<Props> = ({ name, removeMe }) => {
 	};
 
 	return (
-		<Col xs={12}>
-			<Row>
+		<div className="col-span-full grid grid-cols-subgrid">
+			<FieldGroup className="col-span-full grid grid-cols-subgrid gap-2">
 				{fields.map(({ id }, argIndex) => (
-					<FormText
+					<FieldText
+						className="py-0"
 						key={id}
 						name={`${name}.${argIndex}.arg`}
+						placeholder={defaults?.[argIndex]?.arg ?? placeholder(argIndex)}
 						required
-						placeholder={placeholder(argIndex)}
-						positionXS={argIndex % 2 === 1 ? 'right' : 'left'}
 					/>
 				))}
-			</Row>
+			</FieldGroup>
 
-			{removeMe && (
-				<Button
-					aria-label="Delete this command"
-					className="btn-unchecked float-left"
-					onClick={() => removeMe()}
-				>
-					<FontAwesomeIcon icon={faTrash} />
-				</Button>
-			)}
-			<ButtonGroup aria-label="Add/Remove arguments" style={{ float: 'right' }}>
-				<Button
-					aria-label="Add an argument"
-					className="btn-unchecked mb-3"
-					style={{ float: 'right' }}
-					onClick={addItem}
-				>
-					<FontAwesomeIcon icon={faPlus} />
-				</Button>
-				<Button
-					aria-label="Remove the last argument"
-					className="btn-unchecked mb-3"
-					style={{ float: 'right' }}
-					onClick={removeLast}
-					disabled={isEmptyArray(fields)}
-				>
-					<FontAwesomeIcon icon={faMinus} />
-				</Button>
-			</ButtonGroup>
-		</Col>
+			<div className="col-span-full flex flex-row items-center pt-4">
+				{removeMe && (
+					<Button
+						aria-label="Delete this command"
+						onClick={removeMe}
+						variant="outline"
+					>
+						<Trash2 />
+					</Button>
+				)}
+				<ButtonGroup className="ml-auto">
+					<Button
+						aria-label="Add an argument"
+						onClick={addItem}
+						size="icon-xs"
+						variant="ghost"
+					>
+						<Plus />
+					</Button>
+					<Button
+						aria-label="Remove the last argument"
+						disabled={isEmptyArray(fields)}
+						onClick={removeLast}
+						size="icon-xs"
+						variant="ghost"
+					>
+						<Minus />
+					</Button>
+				</ButtonGroup>
+			</div>
+		</div>
 	);
 };
 

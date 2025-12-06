@@ -27,20 +27,20 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestSliceDefaults_Print(t *testing.T) {
+func TestWebHooksDefaults_Print(t *testing.T) {
 	testValid := testDefaults(false, false)
 	testInvalid := testDefaults(true, false)
-	// GIVEN a SliceDefaults.
+	// GIVEN a WebHooksDefaults.
 	tests := map[string]struct {
-		slice *SliceDefaults
-		want  string
+		webhooksDefaults *WebHooksDefaults
+		want             string
 	}{
-		"nil slice": {
-			slice: nil,
-			want:  "",
+		"nil map": {
+			webhooksDefaults: nil,
+			want:             "",
 		},
-		"single element slice": {
-			slice: &SliceDefaults{
+		"single element map": {
+			webhooksDefaults: &WebHooksDefaults{
 				"single": testValid},
 			want: test.TrimYAML(`
 				webhook:
@@ -50,12 +50,12 @@ func TestSliceDefaults_Print(t *testing.T) {
 						allow_invalid_certs: ` + fmt.Sprint(*testValid.AllowInvalidCerts) + `
 						secret: ` + testValid.Secret + `
 						desired_status_code: ` + fmt.Sprint(*testValid.DesiredStatusCode) + `
-						delay: ` + fmt.Sprint(testValid.Delay) + `
+						delay: ` + testValid.Delay + `
 						max_tries: ` + fmt.Sprint(*testValid.MaxTries) + `
 						silent_fails: ` + fmt.Sprint(*testValid.SilentFails)),
 		},
-		"multiple element slice": {
-			slice: &SliceDefaults{
+		"multiple element map": {
+			webhooksDefaults: &WebHooksDefaults{
 				"first":  testValid,
 				"second": testInvalid},
 			want: test.TrimYAML(`
@@ -66,7 +66,7 @@ func TestSliceDefaults_Print(t *testing.T) {
 						allow_invalid_certs: ` + fmt.Sprint(*testValid.AllowInvalidCerts) + `
 						secret: ` + testValid.Secret + `
 						desired_status_code: ` + fmt.Sprint(*testValid.DesiredStatusCode) + `
-						delay: ` + fmt.Sprint(testValid.Delay) + `
+						delay: ` + testValid.Delay + `
 						max_tries: ` + fmt.Sprint(*testValid.MaxTries) + `
 						silent_fails: ` + fmt.Sprint(*testValid.SilentFails) + `
 					second:
@@ -75,7 +75,7 @@ func TestSliceDefaults_Print(t *testing.T) {
 						allow_invalid_certs: ` + fmt.Sprint(*testInvalid.AllowInvalidCerts) + `
 						secret: ` + testInvalid.Secret + `
 						desired_status_code: ` + fmt.Sprint(*testInvalid.DesiredStatusCode) + `
-						delay: ` + fmt.Sprint(testInvalid.Delay) + `
+						delay: ` + testInvalid.Delay + `
 						max_tries: ` + fmt.Sprint(*testInvalid.MaxTries) + `
 						silent_fails: ` + fmt.Sprint(*testInvalid.SilentFails)),
 		},
@@ -91,7 +91,7 @@ func TestSliceDefaults_Print(t *testing.T) {
 			}
 
 			// WHEN Print is called.
-			tc.slice.Print("")
+			tc.webhooksDefaults.Print("")
 
 			// THEN it prints the expected output.
 			stdout := releaseStdout()
@@ -105,7 +105,7 @@ func TestSliceDefaults_Print(t *testing.T) {
 }
 
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN a Defaults.
+	// GIVEN Defaults.
 	tests := map[string]struct {
 		webhook   *Defaults
 		wantDelay string
@@ -338,40 +338,40 @@ func TestWebHook_CheckValues(t *testing.T) {
 	}
 }
 
-func TestSliceDefaults_CheckValues(t *testing.T) {
-	// GIVEN a SliceDefaults.
+func TestWebHooksDefaults_CheckValues(t *testing.T) {
+	// GIVEN WebHooksDefaults.
 	tests := map[string]struct {
-		slice    *SliceDefaults
-		errRegex string
+		webhooksDefaults *WebHooksDefaults
+		errRegex         string
 	}{
-		"nil slice": {},
-		"valid single element slice": {
-			slice: &SliceDefaults{
+		"nil map": {},
+		"valid single element map": {
+			webhooksDefaults: &WebHooksDefaults{
 				"a": testDefaults(true, false)},
 		},
-		"invalid single element slice": {
+		"invalid single element map": {
 			errRegex: test.TrimYAML(`
 				^a:
 					delay: .* <invalid>.*$`),
-			slice: &SliceDefaults{
+			webhooksDefaults: &WebHooksDefaults{
 				"a": NewDefaults(
 					nil, nil,
 					"5x",
 					nil, nil, "", nil, "", "")},
 		},
-		"valid multi element slice": {
-			slice: &SliceDefaults{
+		"valid multi element map": {
+			webhooksDefaults: &WebHooksDefaults{
 				"a": testDefaults(true, false),
 				"b": testDefaults(false, false)},
 		},
-		"invalid multi element slice": {
+		"invalid multi element map": {
 			errRegex: test.TrimYAML(`
 				^a:
 					delay: "[^"]+" <invalid>.*
 				b:
 					type: "[^"]+" <invalid>.*
 					url: "[^"]+" <invalid>.*$`),
-			slice: &SliceDefaults{
+			webhooksDefaults: &WebHooksDefaults{
 				"a": NewDefaults(
 					nil, nil,
 					"5x",
@@ -388,7 +388,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CheckValues is called.
-			err := tc.slice.CheckValues("")
+			err := tc.webhooksDefaults.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
@@ -410,36 +410,42 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 	}
 }
 
-func TestSlice_CheckValues(t *testing.T) {
-	// GIVEN a Slice.
+func TestWebHooks_CheckValues(t *testing.T) {
+	// GIVEN WebHooks.
 	tests := map[string]struct {
-		slice    *Slice
+		webhooks *WebHooks
 		errRegex string
 	}{
-		"nil slice": {},
-		"valid single element slice": {
-			slice: &Slice{
+		"nil map": {},
+		"valid single element map": {
+			webhooks: &WebHooks{
 				"a": testWebHook(true, false, false)},
 		},
-		"invalid single element slice": {
+		"invalid single element map": {
 			errRegex: test.TrimYAML(`
 				^a:
 					type: <required>.*
 					delay: "5x" <invalid>.*
 					url: <required>.*
 					secret: <required>.*$`),
-			slice: &Slice{
+			webhooks: &WebHooks{
 				"a": New(
 					nil, nil,
 					"5x",
-					nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					nil, nil,
+					"a",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 		},
-		"valid multi element slice": {
-			slice: &Slice{
+		"valid multi element map": {
+			webhooks: &WebHooks{
 				"a": testWebHook(true, false, false),
 				"b": testWebHook(false, false, false)},
 		},
-		"invalid multi element slice": {
+		"invalid multi element map": {
 			errRegex: test.TrimYAML(`
 				^a:
 					type: <required>.*
@@ -450,17 +456,27 @@ func TestSlice_CheckValues(t *testing.T) {
 					type: "foo" <invalid>.*
 					url: <required>.*
 					secret: <required>.*$`),
-			slice: &Slice{
+			webhooks: &WebHooks{
 				"a": New(
 					nil, nil,
 					"5x",
-					nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
-				"b": New(
-					nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-					"foo",
+					nil, nil,
+					"a",
+					nil, nil, nil,
 					"",
-					&Defaults{},
-					&Defaults{}, &Defaults{})},
+					nil,
+					"", "",
+					nil, nil, nil),
+				"b": New(
+					nil, nil,
+					"",
+					nil, nil,
+					"b",
+					nil, nil, nil,
+					"",
+					nil,
+					"foo", "",
+					&Defaults{}, &Defaults{}, &Defaults{})},
 		},
 	}
 
@@ -468,21 +484,21 @@ func TestSlice_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.slice != nil {
+			if tc.webhooks != nil {
 				svcStatus := status.Status{}
 				svcStatus.Init(
-					0, 0, len(*tc.slice),
+					0, 0, len(*tc.webhooks),
 					"", "", "",
 					&dashboard.Options{})
-				tc.slice.Init(
+				tc.webhooks.Init(
 					&svcStatus,
-					&SliceDefaults{},
+					&WebHooksDefaults{},
 					&Defaults{}, &Defaults{},
 					nil, nil)
 			}
 
 			// WHEN CheckValues is called.
-			err := tc.slice.CheckValues("")
+			err := tc.webhooks.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)

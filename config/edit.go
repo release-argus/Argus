@@ -103,9 +103,9 @@ func (c *Config) ServiceWithNameExists(name, oldServiceID string) bool {
 	}
 
 	// Check if the name exists in a service.
-	for id, service := range c.Service {
-		// Name exists, and it's not from the service being modified.
-		if service.Name == name && id != oldServiceID {
+	for id, svc := range c.Service {
+		// Name exists, and not from the service being modified.
+		if svc.Name == name && id != oldServiceID {
 			return true
 		}
 	}

@@ -130,7 +130,7 @@ func findShoutrrr(
 	return
 }
 
-// getAllShoutrrrNames will return a list of all unique shoutrrr names.
+// getAllShoutrrrNames returns a list of all unique shoutrrr names.
 func getAllShoutrrrNames(cfg *config.Config) (all []string) {
 	// All global Shoutrrrs.
 	if cfg.Notify != nil {

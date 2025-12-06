@@ -40,13 +40,13 @@ func TestServiceTest(t *testing.T) {
 	// GIVEN a Config with a Service.
 	tests := map[string]struct {
 		flag                    string
-		slice                   service.Slice
+		services                service.Services
 		stdoutRegex, panicRegex *string
 	}{
 		"flag is empty": {
 			flag:        "",
 			stdoutRegex: test.StringPtr("^$"),
-			slice: service.Slice{
+			services: service.Services{
 				"argus": {
 					ID: "argus",
 					Options: *opt.New(
@@ -57,7 +57,7 @@ func TestServiceTest(t *testing.T) {
 		"unknown service": {
 			flag:       "test",
 			panicRegex: test.StringPtr(`Service "test" could not be found in config.service\sDid you mean one of these\?\s  - argus`),
-			slice: service.Slice{
+			services: service.Services{
 				"argus": {
 					ID: "argus",
 					Options: *opt.New(
@@ -68,7 +68,7 @@ func TestServiceTest(t *testing.T) {
 		"github service": {
 			flag:        "argus",
 			stdoutRegex: test.StringPtr(`argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
-			slice: service.Slice{
+			services: service.Services{
 				"argus": {
 					ID: "argus",
 					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
@@ -97,7 +97,7 @@ func TestServiceTest(t *testing.T) {
 		"url service type but github 'owner/repo' url": {
 			flag:        "argus",
 			stdoutRegex: test.StringPtr("unsupported protocol scheme"),
-			slice: service.Slice{
+			services: service.Services{
 				"argus": {
 					ID: "argus",
 					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
@@ -125,7 +125,7 @@ func TestServiceTest(t *testing.T) {
 		"url service": {
 			flag:        "argus",
 			stdoutRegex: test.StringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
-			slice: service.Slice{
+			services: service.Services{
 				"argus": {
 					ID: "argus",
 					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
@@ -153,7 +153,7 @@ func TestServiceTest(t *testing.T) {
 		"service with deployed version lookup": {
 			flag:        "argus",
 			stdoutRegex: test.StringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s.*Updated to.*\s.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
-			slice: service.Slice{
+			services: service.Services{
 				"argus": {
 					ID: "argus",
 					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
@@ -208,26 +208,26 @@ func TestServiceTest(t *testing.T) {
 					}
 				}()
 			}
-			if tc.slice[tc.flag] != nil {
+			if tc.services[tc.flag] != nil {
 				hardDefaults := config.Defaults{}
 				hardDefaults.Default()
-				tc.slice[tc.flag].ID = tc.flag
-				tc.slice[tc.flag].Init(
+				tc.services[tc.flag].ID = tc.flag
+				tc.services[tc.flag].Init(
 					&service.Defaults{}, &hardDefaults.Service,
-					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &hardDefaults.Notify,
-					&webhook.SliceDefaults{}, &webhook.Defaults{}, &hardDefaults.WebHook)
+					&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &hardDefaults.Notify,
+					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &hardDefaults.WebHook)
 				// will do a call for latest_version* and one for deployed_version*.
 				dbChannel := make(chan dbtype.Message, 4)
-				tc.slice[tc.flag].Status.DatabaseChannel = &dbChannel
+				tc.services[tc.flag].Status.DatabaseChannel = &dbChannel
 			}
 
 			// WHEN ServiceTest is called with the test Config.
 			order := []string{}
-			for i := range tc.slice {
+			for i := range tc.services {
 				order = append(order, i)
 			}
 			cfg := config.Config{
-				Service: tc.slice,
+				Service: tc.services,
 				Order:   order,
 			}
 			ServiceTest(&tc.flag, &cfg)

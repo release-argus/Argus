@@ -28,8 +28,8 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// CheckValues validates the fields of the SliceDefaults struct.
-func (s *SliceDefaults) CheckValues(prefix string) error {
+// CheckValues validates the fields of each Defaults struct.
+func (s *ShoutrrrsDefaults) CheckValues(prefix string) error {
 	if s == nil {
 		return nil
 	}
@@ -48,20 +48,26 @@ func (s *SliceDefaults) CheckValues(prefix string) error {
 	return errors.Join(errs...)
 }
 
-// CheckValues validates the fields of the Base struct.
-func (b *Base) CheckValues(prefix string, id string) error {
-	if b == nil {
-		return nil
-	}
-	b.InitMaps()
-	b.correctSelf(util.FirstNonDefault(b.Type, id))
-
+// CheckValues validates the fields of the Defaults struct.
+func (d *Defaults) CheckValues(prefix string, id string) error {
 	var errs []error
-	itemPrefix := prefix + "  "
-	util.AppendCheckError(&errs, prefix, "options",
-		b.checkValuesOptions(itemPrefix))
-	util.AppendCheckError(&errs, prefix, "params",
-		b.checkValuesParams(itemPrefix))
+	typeName := id
+	if d != nil {
+		typeName = util.FirstNonDefault(d.Type, id)
+	}
+
+	// Verify valid type.
+	if !util.Contains(supportedTypes, typeName) {
+		errs = append(errs, fmt.Errorf("%stype: %q <invalid> (supported types = ['%s'])",
+			prefix, typeName, strings.Join(supportedTypes, "', '")))
+	}
+
+	if d != nil {
+		// Run the Base checks.
+		if err := d.Base.CheckValues(prefix, id); err != nil {
+			errs = append(errs, err)
+		}
+	}
 
 	if len(errs) == 0 {
 		return nil
@@ -69,8 +75,30 @@ func (b *Base) CheckValues(prefix string, id string) error {
 	return errors.Join(errs...)
 }
 
-// CheckValues validates the fields of each member of the Slice.
-func (s *Slice) CheckValues(prefix string) error {
+// CheckValues validates the fields of the Base struct.
+func (b *Base) CheckValues(prefix string, id string) error {
+	if b == nil {
+		return nil
+	}
+	b.InitMaps()
+	itemType := util.FirstNonDefault(b.Type, id)
+	b.correctSelf(itemType)
+
+	var errs []error
+	itemPrefix := prefix + "  "
+	util.AppendCheckError(&errs, prefix, "options",
+		b.checkValuesOptions(itemPrefix))
+	util.AppendCheckError(&errs, prefix, "params",
+		b.checkValuesParams(itemPrefix, itemType))
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return errors.Join(errs...)
+}
+
+// CheckValues validates the fields of each Shoutrrr.
+func (s *Shoutrrrs) CheckValues(prefix string) error {
 	if s == nil {
 		return nil
 	}
@@ -196,6 +224,21 @@ func (b *Base) correctSelf(shoutrrrType string) {
 	}
 }
 
+// normaliseParamSelect normalizes a Param with a case-insensitive match to an allowed set,
+// setting it to the cased value from the provided list and returning `true`.
+// If the current value is empty or not found in the allowed list (case-insensitive), it is left unchanged
+// and `false` returned.
+func (b *Base) normaliseParamSelect(key string, value string, allowed []string) bool {
+	lc := strings.ToLower(value)
+	for _, opt := range allowed {
+		if strings.ToLower(opt) == lc {
+			b.SetParam(key, opt)
+			return true
+		}
+	}
+	return false
+}
+
 // checkValuesType validates that fields of this Shoutrrr struct are valid for `Type`.
 func (s *Shoutrrr) checkValuesType(prefix string) error {
 	// Check we have a Type.
@@ -215,15 +258,15 @@ func (s *Shoutrrr) checkValuesType(prefix string) error {
 
 	// Invalid/Unknown type.
 	if !util.Contains(supportedTypes, sType) {
-		return fmt.Errorf("%stype: %q <invalid> (supported types = [%s])",
-			prefix, sType, strings.Join(supportedTypes, ","))
+		return fmt.Errorf("%stype: %q <invalid> (supported types = ['%s'])",
+			prefix, sType, strings.Join(supportedTypes, "', '"))
 	}
 
 	// Pass.
 	return nil
 }
 
-// CheckValues validates the `Options` of the Shoutrrr struct.
+// checkValuesOptions validates the `Options` of the Shoutrrr struct.
 func (b *Base) checkValuesOptions(prefix string) error {
 	var errs []error
 	// Options.Delay.
@@ -456,12 +499,6 @@ func (s *Shoutrrr) checkValuesURLFields(prefix string) error {
 			errs = append(errs, errors.New(prefix+
 				"botkey: <required> e.g. 'correcthorsebatterystable'"))
 		}
-	case "shoutrrr":
-		// Raw
-		if s.GetURLField("raw") == "" {
-			errs = append(errs, errors.New(prefix+
-				"raw: <required> e.g. 'service://foo:bar@something'"))
-		}
 	case "generic":
 		// generic://host[:port][/path]
 		if s.GetURLField("host") == "" {
@@ -488,8 +525,13 @@ func (s *Shoutrrr) checkValuesURLFields(prefix string) error {
 }
 
 // checkValuesParams validates the `Params` of the Base struct.
-func (b *Base) checkValuesParams(prefix string) error {
+func (b *Base) checkValuesParams(prefix string, itemType string) error {
 	var errs []error
+
+	// Normalise 'select' params.
+	if e := b.checkValuesParamsSelects(prefix, itemType); e != nil {
+		errs = append(errs, e)
+	}
 
 	// Params.*
 	for key, value := range b.Params {
@@ -506,14 +548,58 @@ func (b *Base) checkValuesParams(prefix string) error {
 	return errors.Join(errs...)
 }
 
+// checkValuesParamsSelects validates the `Params` field of the Base struct for specific `itemType` against allowed selections.
+func (b *Base) checkValuesParamsSelects(prefix string, itemType string) error {
+	var errs []error
+
+	switch itemType {
+	case "bark":
+		if err := b.validateParamSelect(prefix, "scheme", barkNtfyParamScheme); err != nil {
+			errs = append(errs, err)
+		}
+		if err := b.validateParamSelect(prefix, "sound", barkParamSound); err != nil {
+			errs = append(errs, err)
+		}
+	case "generic":
+		if err := b.validateParamSelect(prefix, "requestmethod", genericParamRequestmethod); err != nil {
+			errs = append(errs, err)
+		}
+	case "ntfy":
+		if err := b.validateParamSelect(prefix, "priority", ntfyParamPriority); err != nil {
+			errs = append(errs, err)
+		}
+		if err := b.validateParamSelect(prefix, "scheme", barkNtfyParamScheme); err != nil {
+			errs = append(errs, err)
+		}
+	case "smtp":
+		if err := b.validateParamSelect(prefix, "auth", smtpParamAuth); err != nil {
+			errs = append(errs, err)
+		}
+		if err := b.validateParamSelect(prefix, "encryption", smtpParamEncryption); err != nil {
+			errs = append(errs, err)
+		}
+	case "telegram":
+		if err := b.validateParamSelect(prefix, "parsemode", telegramParamParsemode); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+
+	return errors.Join(errs...)
+}
+
 // checkValuesParams validates the `Params` of the Shoutrrr struct.
 func (s *Shoutrrr) checkValuesParams(prefix string) error {
 	var errs []error
-	if baseErrs := s.Base.checkValuesParams(prefix); baseErrs != nil {
+	itemType := s.GetType()
+	if baseErrs := s.Base.checkValuesParams(prefix, itemType); baseErrs != nil {
 		errs = append(errs, baseErrs)
 	}
 
-	switch s.GetType() {
+	switch itemType {
 	case "smtp":
 		// smtp://username:password@host:port[/path]/?from=fromAddress&to=recipient1[,recipient2,...]
 		if s.GetParam("fromaddress") == "" {
@@ -557,6 +643,23 @@ func (s *Shoutrrr) checkValuesParams(prefix string) error {
 	return errors.Join(errs...)
 }
 
+// validateParamSelect normalises a Param against an `allowed` set (case-insensitive) and
+// returns an error if the value is not within that set. On success, it sets the Param to
+// the cased value from `allowed` and returns nil.
+func (b *Base) validateParamSelect(prefix, key string, allowed []string) error {
+	value := b.GetParam(key)
+	if value == "" {
+		return nil
+	}
+
+	if ok := b.normaliseParamSelect(key, value, allowed); ok {
+		return nil
+	}
+
+	return fmt.Errorf("%s%s: %q <invalid> (supported = ['%s'])",
+		prefix, key, value, strings.Join(allowed, "', '"))
+}
+
 // TestSend will test the Shoutrrr by sending a test message.
 func (s *Shoutrrr) TestSend(serviceURL string) error {
 	if s == nil {
@@ -590,8 +693,8 @@ func (s *Shoutrrr) TestSend(serviceURL string) error {
 		false)
 }
 
-// Print the SliceDefaults.
-func (s *SliceDefaults) Print(prefix string) {
+// Print the ShoutrrrsDefaults.
+func (s *ShoutrrrsDefaults) Print(prefix string) {
 	if s == nil || len(*s) == 0 {
 		return
 	}

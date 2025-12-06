@@ -66,6 +66,7 @@ func New(
 	// Transfer the Version to the Status.
 	err := lookup.CheckValues("")
 
+	// nolint:wrapcheck
 	return lookup, err
 }
 

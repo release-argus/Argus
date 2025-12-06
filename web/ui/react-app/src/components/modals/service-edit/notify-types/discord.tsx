@@ -1,149 +1,111 @@
-import {
-	FormLabel,
-	FormText,
-	FormTextWithPreview,
-} from 'components/generic/form';
-import { firstNonDefault, strToBool } from 'utils';
-
-import { BooleanWithDefault } from 'components/generic';
-import { NotifyDiscordType } from 'types/config';
-import NotifyOptions from 'components/modals/service-edit/notify-types/shared';
 import { useMemo } from 'react';
+import { BooleanWithDefault } from '@/components/generic';
+import { FieldText, FieldTextWithPreview } from '@/components/generic/field';
+import {
+	Heading,
+	NotifyOptions,
+} from '@/components/modals/service-edit/notify-types/shared';
+import { FieldSet } from '@/components/ui/field';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import type { NotifyDiscordSchema } from '@/utils/api/types/config-edit/notify/schemas';
 
 /**
- * The form fields for a Discord notifier.
+ * The form fields for a `Discord` notifier.
  *
  * @param name - The path to this `Discord` in the form.
  * @param main - The main values.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for this `Discord` notifier.
  */
 const DISCORD = ({
 	name,
-
 	main,
-	defaults,
-	hard_defaults,
 }: {
 	name: string;
-
-	main?: NotifyDiscordType;
-	defaults?: NotifyDiscordType;
-	hard_defaults?: NotifyDiscordType;
+	main?: NotifyDiscordSchema;
 }) => {
-	const convertedDefaults = useMemo(
-		() => ({
-			// URL Fields
-			url_fields: {
-				token: firstNonDefault(
-					main?.url_fields?.token,
-					defaults?.url_fields?.token,
-					hard_defaults?.url_fields?.token,
-				),
-				webhookid: firstNonDefault(
-					main?.url_fields?.webhookid,
-					defaults?.url_fields?.webhookid,
-					hard_defaults?.url_fields?.webhookid,
-				),
-			},
-			// Params
-			params: {
-				avatar: firstNonDefault(
-					main?.params?.avatar,
-					defaults?.params?.avatar,
-					hard_defaults?.params?.avatar,
-				),
-				splitlines:
-					strToBool(
-						firstNonDefault(
-							main?.splitlines,
-							defaults?.splitlines,
-							hard_defaults?.splitlines,
-						),
-					) ?? true,
-				title: firstNonDefault(
-					main?.params?.title,
-					defaults?.params?.title,
-					hard_defaults?.params?.title,
-				),
-				username: firstNonDefault(
-					main?.params?.username,
-					defaults?.params?.username,
-					hard_defaults?.params?.username,
-				),
-			},
-		}),
-		[main, defaults, hard_defaults],
+	const { typeDataDefaults } = useSchemaContext();
+	const defaults = useMemo(
+		() => main ?? typeDataDefaults?.notify.discord,
+		[main, typeDataDefaults?.notify.discord],
 	);
+
 	return (
-		<>
-			<NotifyOptions
-				name={name}
-				main={main?.options}
-				defaults={defaults?.options}
-				hard_defaults={hard_defaults?.options}
-			/>
-			<FormLabel text="URL Fields" heading />
-			<>
-				<FormText
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<NotifyOptions defaults={defaults?.options} name={name} />
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="URL Fields" />
+				<FieldText
+					defaultVal={defaults?.url_fields?.webhookid}
+					label="WebHook ID"
 					name={`${name}.url_fields.webhookid`}
 					required
-					label="WebHook ID"
-					tooltip={
-						<>
-							e.g. https://discord.com/api/webhooks/{''}
-							<span className="bold-underline">webhook_id</span>
-							{''}
-							/token
-						</>
-					}
-					tooltipAriaLabel="Format: https://discord.com/api/webhooks/WEBHOOK_ID/token"
-					defaultVal={convertedDefaults.url_fields.webhookid}
+					tooltip={{
+						ariaLabel:
+							'Format: https://discord.com/api/webhooks/WEBHOOK_ID/token',
+						content: (
+							<>
+								e.g. https://discord.com/api/webhooks/{''}
+								<span className="bold-underline">webhook_id</span>
+								{''}
+								/token
+							</>
+						),
+						type: 'element',
+					}}
 				/>
-				<FormText
+				<FieldText
+					defaultVal={defaults?.url_fields?.token}
+					label="Token"
 					name={`${name}.url_fields.token`}
 					required
-					label="Token"
-					tooltip={
-						<>
-							e.g. https://discord.com/api/webhooks/webhook_id/{''}
-							<span className="bold-underline">token</span>
-						</>
-					}
-					tooltipAriaLabel="Format: https://discord.com/api/webhooks/webhook_id/TOKEN"
-					defaultVal={convertedDefaults.url_fields.token}
-					positionXS="right"
+					tooltip={{
+						ariaLabel:
+							'Format: https://discord.com/api/webhooks/webhook_id/TOKEN',
+						content: (
+							<>
+								e.g. https://discord.com/api/webhooks/webhook_id/{''}
+								<span className="bold-underline">token</span>
+							</>
+						),
+						type: 'element',
+					}}
 				/>
-			</>
-			<FormLabel text="Params" heading />
-			<>
-				<FormTextWithPreview
-					name={`${name}.params.avatar`}
+			</FieldSet>
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="Params" />
+				<FieldTextWithPreview
+					defaultVal={defaults?.params?.avatar}
 					label="Avatar"
-					tooltip="Override WebHook avatar with this URL"
-					defaultVal={convertedDefaults.params.avatar}
+					name={`${name}.params.avatar`}
+					tooltip={{
+						content: 'Override WebHook avatar with this URL',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.username`}
+				<FieldText
+					defaultVal={defaults?.params?.username}
 					label="Username"
-					tooltip="Override the WebHook username"
-					defaultVal={convertedDefaults.params.username}
+					name={`${name}.params.username`}
+					tooltip={{
+						content: 'Override the WebHook username',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.title`}
+				<FieldText
+					defaultVal={defaults?.params?.title}
 					label="Title"
-					defaultVal={convertedDefaults.params.title}
-					positionXS="right"
+					name={`${name}.params.title`}
 				/>
 				<BooleanWithDefault
-					name={`${name}.params.splitlines}`}
+					defaultValue={defaults?.params?.splitlines}
 					label="Split Lines"
-					tooltip="Whether to send each line as a separate embedded item"
-					defaultValue={convertedDefaults.params.splitlines}
+					name={`${name}.params.splitlines}`}
+					tooltip={{
+						content: 'Whether to send each line as a separate embedded item',
+						type: 'string',
+					}}
 				/>
-			</>
-		</>
+			</FieldSet>
+		</FieldSet>
 	);
 };
 

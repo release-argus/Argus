@@ -16,6 +16,7 @@
 package shoutrrr
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -26,14 +27,42 @@ import (
 var (
 	supportedTypes = []string{
 		"bark", "discord", "smtp", "gotify", "googlechat", "ifttt", "join", "mattermost", "matrix", "ntfy",
-		"opsgenie", "pushbullet", "pushover", "rocketchat", "slack", "teams", "telegram", "zulip", "generic", "shoutrrr"}
+		"opsgenie", "pushbullet", "pushover", "rocketchat", "slack", "teams", "telegram", "zulip", "generic"}
 )
 
-// Slice mapping of Shoutrrr.
-type Slice map[string]*Shoutrrr
+// Shoutrrrs is a string map of Shoutrrr.
+type Shoutrrrs map[string]*Shoutrrr
 
-// String returns a string representation of the Slice.
-func (s *Slice) String(prefix string) string {
+// UnmarshalJSON converts a JSON array to a Shoutrrrs map.
+func (s *Shoutrrrs) UnmarshalJSON(data []byte) error {
+	var arr []Shoutrrr
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return err //nolint:wrapcheck
+	}
+	*s = make(Shoutrrrs, len(arr))
+
+	for i := range arr {
+		(*s)[arr[i].ID] = &arr[i]
+	}
+	return nil
+}
+
+// MarshalJSON marshals into a JSON array of Shoutrrr values.
+func (s *Shoutrrrs) MarshalJSON() ([]byte, error) {
+	if s == nil {
+		return []byte("null"), nil
+	}
+
+	keys := util.SortedKeys(*s)
+	arr := make([]*Shoutrrr, 0, len(*s))
+	for _, key := range keys {
+		arr = append(arr, (*s)[key])
+	}
+	return json.Marshal(arr) //nolint:wrapcheck
+}
+
+// String returns a string representation of the Shoutrrrs.
+func (s *Shoutrrrs) String(prefix string) string {
 	if s == nil {
 		return ""
 	}
@@ -42,17 +71,17 @@ func (s *Slice) String(prefix string) string {
 
 // Base is the base Shoutrrr.
 type Base struct {
-	Type      string            `json:"type,omitempty" yaml:"type,omitempty"`             // Notification type, e.g. slack.
-	Options   map[string]string `json:"options,omitempty" yaml:"options,omitempty"`       // Options.
-	URLFields map[string]string `json:"url_fields,omitempty" yaml:"url_fields,omitempty"` // URL Fields.
-	Params    map[string]string `json:"params,omitempty" yaml:"params,omitempty"`         // Query/Param Props.
+	Type      string                       `json:"type,omitempty" yaml:"type,omitempty"`             // Notification type, e.g. slack.
+	Options   util.MapStringStringOmitNull `json:"options,omitempty" yaml:"options,omitempty"`       // Options.
+	URLFields util.MapStringStringOmitNull `json:"url_fields,omitempty" yaml:"url_fields,omitempty"` // URL Fields.
+	Params    util.MapStringStringOmitNull `json:"params,omitempty" yaml:"params,omitempty"`         // Query/Param Props.
 }
 
-// SliceDefaults mapping of Defaults.
-type SliceDefaults map[string]*Defaults
+// ShoutrrrsDefaults is a string map of Defaults.
+type ShoutrrrsDefaults map[string]*Defaults
 
-// String returns a string representation of the SliceDefaults.
-func (s *SliceDefaults) String(prefix string) string {
+// String returns a string representation of the ShoutrrrsDefaults.
+func (s *ShoutrrrsDefaults) String(prefix string) string {
 	if s == nil {
 		return ""
 	}
@@ -86,18 +115,18 @@ type Defaults struct {
 // NewDefaults returns a new Defaults.
 func NewDefaults(
 	sType string,
-	options, urlFields, params map[string]string,
+	options, urlFields, params util.MapStringStringOmitNull,
 ) (defaults *Defaults) {
 	// Ensure they are non-nil for mapEnvToStruct.
 	// (can edit the map after the struct has been created from the YAML).
 	if options == nil {
-		options = map[string]string{}
+		options = util.MapStringStringOmitNull{}
 	}
 	if params == nil {
-		params = map[string]string{}
+		params = util.MapStringStringOmitNull{}
 	}
 	if urlFields == nil {
-		urlFields = map[string]string{}
+		urlFields = util.MapStringStringOmitNull{}
 	}
 
 	defaults = &Defaults{
@@ -122,7 +151,7 @@ func (d *Defaults) String(prefix string) string {
 type Shoutrrr struct {
 	Base `json:",inline" yaml:",inline"`
 
-	ID string `json:"-" yaml:"-"` // ID for this Shoutrrr sender.
+	ID string `json:"name,omitempty" yaml:"-"` // ID for this Shoutrrr sender.
 
 	Failed        *status.FailsShoutrrr `json:"-" yaml:"-"` // Whether the last send attempt failed.
 	ServiceStatus *status.Status        `json:"-" yaml:"-"` // Status of the Service (used for templating commands).
@@ -137,7 +166,7 @@ func New(
 	failed *status.FailsShoutrrr,
 	id string,
 	sType string,
-	options, urlFields, params map[string]string,
+	options, urlFields, params util.MapStringStringOmitNull,
 	main *Defaults,
 	defaults, hardDefaults *Defaults,
 ) (shoutrrr *Shoutrrr) {

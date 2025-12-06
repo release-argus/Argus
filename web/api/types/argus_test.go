@@ -152,17 +152,17 @@ func TestNotify_Censor(t *testing.T) {
 	}
 }
 
-func TestNotifySlice_Censor(t *testing.T) {
-	// GIVEN a Notify.
+func TestNotifiers_Censor(t *testing.T) {
+	// GIVEN Notifiers.
 	tests := map[string]struct {
-		notify, want *NotifySlice
+		notify, want *Notifiers
 	}{
 		"nil": {
 			notify: nil,
 			want:   nil,
 		},
 		"non-nil": {
-			notify: &NotifySlice{
+			notify: &Notifiers{
 				"0": &Notify{
 					URLFields: map[string]string{
 						"password": "alpha",
@@ -178,7 +178,7 @@ func TestNotifySlice_Censor(t *testing.T) {
 						"devices": "hotel",
 						"rooms":   "golf"}},
 			},
-			want: &NotifySlice{
+			want: &Notifiers{
 				"0": &Notify{
 					URLFields: map[string]string{
 						"password": util.SecretValue,
@@ -204,7 +204,7 @@ func TestNotifySlice_Censor(t *testing.T) {
 			// WHEN Censor is called on it.
 			tc.notify.Censor()
 
-			// THEN nil NotifySlices are kept.
+			// THEN nil Notifiers are kept.
 			if tc.notify == tc.want {
 				return
 			}
@@ -229,10 +229,10 @@ func TestNotifySlice_Censor(t *testing.T) {
 	}
 }
 
-func TestNotifySlice_Flatten(t *testing.T) {
-	// GIVEN a NotifySlice.
+func TestNotifiers_Flatten(t *testing.T) {
+	// GIVEN a Notifiers.
 	tests := map[string]struct {
-		notify *NotifySlice
+		notify *Notifiers
 		want   *[]Notify
 	}{
 		"nil": {
@@ -240,11 +240,11 @@ func TestNotifySlice_Flatten(t *testing.T) {
 			want:   nil,
 		},
 		"empty": {
-			notify: &NotifySlice{},
+			notify: &Notifiers{},
 			want:   &[]Notify{},
 		},
 		"ordered": {
-			notify: &NotifySlice{
+			notify: &Notifiers{
 				"zulu": &Notify{
 					URLFields: map[string]string{
 						"port": "alpha"},
@@ -268,7 +268,7 @@ func TestNotifySlice_Flatten(t *testing.T) {
 						"hosts": "bravo"}}},
 		},
 		"ordered and censored": {
-			notify: &NotifySlice{
+			notify: &Notifiers{
 				"hotel": &Notify{
 					URLFields: map[string]string{
 						"port":  "alpha",
@@ -306,7 +306,7 @@ func TestNotifySlice_Flatten(t *testing.T) {
 			// WHEN Flatten is called on it.
 			got := tc.notify.Flatten()
 
-			// THEN nil NotifySlices are kept.
+			// THEN nil Notifiers are kept.
 			if tc.notify == nil && tc.want == nil {
 				return
 			}
@@ -402,10 +402,10 @@ func TestWebHook_Censor(t *testing.T) {
 	}
 }
 
-func TestWebHookSlice_Flatten(t *testing.T) {
+func TestWebHooks_Flatten(t *testing.T) {
 	// GIVEN a WebHook.
 	tests := map[string]struct {
-		webhook *WebHookSlice
+		webhook *WebHooks
 		want    []*WebHook
 	}{
 		"nil": {
@@ -413,11 +413,11 @@ func TestWebHookSlice_Flatten(t *testing.T) {
 			want:    nil,
 		},
 		"empty": {
-			webhook: &WebHookSlice{},
+			webhook: &WebHooks{},
 			want:    []*WebHook{},
 		},
 		"webhooks ordered": {
-			webhook: &WebHookSlice{
+			webhook: &WebHooks{
 				"alpha": &WebHook{URL: "https://example.com"},
 				"bravo": &WebHook{URL: "https://example.com/other"}},
 			want: []*WebHook{
@@ -425,7 +425,7 @@ func TestWebHookSlice_Flatten(t *testing.T) {
 				{ID: "bravo", URL: "https://example.com/other"}},
 		},
 		"webhooks ordered and censored": {
-			webhook: &WebHookSlice{
+			webhook: &WebHooks{
 				"alpha": &WebHook{
 					URL:    "https://example.com",
 					Secret: "foo"},
@@ -1054,22 +1054,22 @@ func TestWebHook_String(t *testing.T) {
 	}
 }
 
-func TestWebHookSlice_String(t *testing.T) {
-	// GIVEN a WebHookSlice.
+func TestWebHooks_String(t *testing.T) {
+	// GIVEN WebHooks.
 	tests := map[string]struct {
-		slice *WebHookSlice
-		want  string
+		webhooks *WebHooks
+		want     string
 	}{
 		"nil": {
-			slice: nil,
-			want:  "",
+			webhooks: nil,
+			want:     "",
 		},
 		"empty": {
-			slice: &WebHookSlice{},
-			want:  "{}",
+			webhooks: &WebHooks{},
+			want:     "{}",
 		},
 		"single webhook, all fields": {
-			slice: &WebHookSlice{
+			webhooks: &WebHooks{
 				"0": {ServiceID: "something",
 					ID:                "foobar",
 					Type:              "url",
@@ -1100,7 +1100,7 @@ func TestWebHookSlice_String(t *testing.T) {
 				}`,
 		},
 		"multiple webhooks": {
-			slice: &WebHookSlice{
+			webhooks: &WebHooks{
 				"0": {URL: "bish"},
 				"1": {Secret: "bash"},
 				"2": {Type: "github"}},
@@ -1118,7 +1118,7 @@ func TestWebHookSlice_String(t *testing.T) {
 			t.Parallel()
 
 			// WHEN the WebHook is stringified with String.
-			got := tc.slice.String()
+			got := tc.webhooks.String()
 
 			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
@@ -1130,22 +1130,22 @@ func TestWebHookSlice_String(t *testing.T) {
 	}
 }
 
-func TestNotifySlice_String(t *testing.T) {
-	// GIVEN a NotifySlice.
+func TestNotifiers_String(t *testing.T) {
+	// GIVEN Notifiers.
 	tests := map[string]struct {
-		slice *NotifySlice
-		want  string
+		notifiers *Notifiers
+		want      string
 	}{
 		"nil": {
-			slice: nil,
-			want:  "",
+			notifiers: nil,
+			want:      "",
 		},
 		"empty": {
-			slice: &NotifySlice{},
-			want:  "{}",
+			notifiers: &Notifiers{},
+			want:      "{}",
 		},
 		"one": {
-			slice: &NotifySlice{
+			notifiers: &Notifiers{
 				"0": {
 					ID:   "foo",
 					Type: "discord",
@@ -1171,7 +1171,7 @@ func TestNotifySlice_String(t *testing.T) {
 				}`,
 		},
 		"multiple": {
-			slice: &NotifySlice{
+			notifiers: &Notifiers{
 				"0": {
 					ID:   "foo",
 					Type: "discord",
@@ -1207,8 +1207,8 @@ func TestNotifySlice_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the NotifySlice is stringified with String.
-			got := tc.slice.String()
+			// WHEN the Notifiers is stringified with String.
+			got := tc.notifiers.String()
 
 			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
@@ -1285,22 +1285,22 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 	}
 }
 
-func TestURLCommandSlice_String(t *testing.T) {
-	// GIVEN a URLCommandSlice.
+func TestURLCommands_String(t *testing.T) {
+	// GIVEN URLCommands.
 	tests := map[string]struct {
-		slice *URLCommandSlice
-		want  string
+		urlCommands *URLCommands
+		want        string
 	}{
 		"nil": {
-			slice: nil,
-			want:  "",
+			urlCommands: nil,
+			want:        "",
 		},
 		"empty": {
-			slice: &URLCommandSlice{},
-			want:  "[]",
+			urlCommands: &URLCommands{},
+			want:        "[]",
 		},
 		"one of each type": {
-			slice: &URLCommandSlice{
+			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `bam`},
 				{Type: "replace", Old: "want-rid", New: test.StringPtr("replacement")},
 				{Type: "split", Text: "split on me", Index: test.IntPtr(5)},
@@ -1318,8 +1318,8 @@ func TestURLCommandSlice_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the URLCommandSlice is stringified with String.
-			got := tc.slice.String()
+			// WHEN the URLCommands is stringified with String.
+			got := tc.urlCommands.String()
 
 			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
@@ -1332,7 +1332,7 @@ func TestURLCommandSlice_String(t *testing.T) {
 }
 
 func TestDefaults_String(t *testing.T) {
-	// GIVEN a Defaults.
+	// GIVEN Defaults.
 	tests := map[string]struct {
 		defaults *Defaults
 		want     string
@@ -1350,7 +1350,7 @@ func TestDefaults_String(t *testing.T) {
 				Service: ServiceDefaults{
 					LatestVersion: &LatestVersionDefaults{
 						AccessToken: "foo"}},
-				Notify: NotifySlice{
+				Notify: Notifiers{
 					"gotify": &Notify{
 						URLFields: map[string]string{
 							"url": "https://gotify.example.com"}}},
@@ -1440,7 +1440,7 @@ func TestLatestVersion_String(t *testing.T) {
 				AccessToken:       util.SecretValue,
 				AllowInvalidCerts: test.BoolPtr(true),
 				UsePreRelease:     test.BoolPtr(false),
-				URLCommands: &URLCommandSlice{
+				URLCommands: &URLCommands{
 					{Type: "replace", Old: "this", New: test.StringPtr("withThis")},
 					{Type: "split", Text: "splitThis", Index: test.IntPtr(8)},
 					{Type: "regex", Regex: `([0-9.]+)`}},

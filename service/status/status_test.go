@@ -366,12 +366,12 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 			}
 			// 	AnnounceChannel:
 			if len(*status.AnnounceChannel) != tc.wantMessages {
-				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d message(s)\ngot:  %d",
+				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
 					packageName, tc.wantMessages, len(*status.AnnounceChannel))
 			}
 			// 	DatabaseChannel:
 			if len(*status.DatabaseChannel) != tc.wantMessages {
-				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d message(s)\ngot:  %d",
+				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d messages\ngot:  %d",
 					packageName, tc.wantMessages, len(*status.DatabaseChannel))
 			}
 			// AND LatestVersionIsDeployedVersion metric is updated.

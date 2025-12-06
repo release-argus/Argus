@@ -261,17 +261,17 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 	// GIVEN a file as a []string and services that may/may not be using defaults in it.
 	tests := map[string]struct {
 		lines                  string
-		services               *service.Slice
+		services               *service.Services
 		currentOrderIndexStart []int
 		currentOrderIndexEnd   []int
 		serviceDefaults        service.Defaults
-		rootNotify             shoutrrr.SliceDefaults
-		rootWebHook            webhook.SliceDefaults
+		rootNotify             shoutrrr.ShoutrrrsDefaults
+		rootWebHook            webhook.WebHooksDefaults
 		want                   string
 	}{
 		"empty": {
 			lines:    "",
-			services: &service.Slice{},
+			services: &service.Services{},
 			want:     "",
 		},
 		"service using defaults": {
@@ -342,24 +342,24 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 						latest_version:
 							url: release-argus/Argus
 			`),
-			services: &service.Slice{
+			services: &service.Services{
 				"alpha": &service.Service{}},
 			serviceDefaults: service.Defaults{
 				Notify: map[string]struct{}{
 					"foo": {},
 					"bar": {}},
-				Command: command.Slice{
+				Command: command.Commands{
 					{"echo", "hello"}},
 				WebHook: map[string]struct{}{
 					"bash": {},
 					"bish": {},
 					"bosh": {}}},
-			rootNotify: shoutrrr.SliceDefaults{
+			rootNotify: shoutrrr.ShoutrrrsDefaults{
 				"foo": shoutrrr.NewDefaults(
 					"gotify", nil, nil, nil),
 				"bar": shoutrrr.NewDefaults(
 					"discord", nil, nil, nil)},
-			rootWebHook: webhook.SliceDefaults{
+			rootWebHook: webhook.WebHooksDefaults{
 				"bash": webhook.NewDefaults(
 					nil, nil, "", nil, nil, "", nil, "github", ""),
 				"bish": webhook.NewDefaults(
@@ -444,33 +444,35 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 									message: 123
 							bar: {}
 			`),
-			services: &service.Slice{
+			services: &service.Services{
 				"alpha": &service.Service{
-					Notify: shoutrrr.Slice{
+					Notify: shoutrrr.Shoutrrrs{
 						"foo": shoutrrr.New(
-							nil, "foo", "gotify",
+							nil,
+							"foo", "gotify",
 							nil, nil, nil,
 							nil, nil, nil),
 						"bar": shoutrrr.New(
-							nil, "bar", "gotify",
+							nil,
+							"bar", "gotify",
 							nil, nil, nil,
 							nil, nil, nil)}}},
 			serviceDefaults: service.Defaults{
 				Notify: map[string]struct{}{
 					"foo": {},
 					"bar": {}},
-				Command: command.Slice{
+				Command: command.Commands{
 					{"echo", "hello"}},
 				WebHook: map[string]struct{}{
 					"bash": {},
 					"bish": {},
 					"bosh": {}}},
-			rootNotify: shoutrrr.SliceDefaults{
+			rootNotify: shoutrrr.ShoutrrrsDefaults{
 				"foo": shoutrrr.NewDefaults(
 					"gotify", nil, nil, nil),
 				"bar": shoutrrr.NewDefaults(
 					"discord", nil, nil, nil)},
-			rootWebHook: webhook.SliceDefaults{
+			rootWebHook: webhook.WebHooksDefaults{
 				"bash": webhook.NewDefaults(
 					nil, nil, "", nil, nil, "", nil, "github", ""),
 				"bish": webhook.NewDefaults(
@@ -563,43 +565,58 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 							crash:
 								type: github
 			`),
-			services: &service.Slice{
+			services: &service.Services{
 				"alpha": &service.Service{
-					Notify: shoutrrr.Slice{
+					Notify: shoutrrr.Shoutrrrs{
 						"bop": shoutrrr.New(
-							nil, "bop", "gotify",
+							nil,
+							"bop", "gotify",
 							nil, nil, nil,
 							nil, nil, nil),
 						"top": shoutrrr.New(
-							nil, "top", "slack",
+							nil,
+							"top", "slack",
 							nil, nil, nil,
 							nil, nil, nil)},
-					Command: command.Slice{
+					Command: command.Commands{
 						{"ls", "-lah"}},
-					WebHook: webhook.Slice{
+					WebHook: webhook.WebHooks{
 						"bang": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "",
+							nil, nil,
+							"",
+							nil, nil,
+							"bang",
+							nil, nil, nil,
+							"", nil,
+							"gitlab", "",
 							nil, nil, nil),
 						"crash": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "github", "",
+							nil, nil,
+							"",
+							nil, nil,
+							"crash",
+							nil, nil, nil,
+							"",
+							nil,
+							"github", "",
 							nil, nil, nil)},
 				}},
 			serviceDefaults: service.Defaults{
 				Notify: map[string]struct{}{
 					"foo": {},
 					"bar": {}},
-				Command: command.Slice{
+				Command: command.Commands{
 					{"echo", "hello"}},
 				WebHook: map[string]struct{}{
 					"bash": {},
 					"bish": {},
 					"bosh": {}}},
-			rootNotify: shoutrrr.SliceDefaults{
+			rootNotify: shoutrrr.ShoutrrrsDefaults{
 				"foo": shoutrrr.NewDefaults(
 					"gotify", nil, nil, nil),
 				"bar": shoutrrr.NewDefaults(
 					"discord", nil, nil, nil)},
-			rootWebHook: webhook.SliceDefaults{
+			rootWebHook: webhook.WebHooksDefaults{
 				"bash": webhook.NewDefaults(
 					nil, nil, "", nil, nil, "", nil, "github", ""),
 				"bish": webhook.NewDefaults(
@@ -734,56 +751,92 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 							crash:
 								type: github
 			`),
-			services: &service.Slice{
+			services: &service.Services{
 				"alpha": &service.Service{},
 				"bravo": &service.Service{
-					Command: command.Slice{
+					Command: command.Commands{
 						{"ls", "-lah"}},
-					WebHook: webhook.Slice{
+					WebHook: webhook.WebHooks{
 						"bash": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "",
+							nil, nil,
+							"",
+							nil, nil,
+							"bash",
+							nil, nil, nil,
+							"",
+							nil,
+							"gitlab", "",
 							nil, nil, nil),
 						"bish": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "github", "",
+							nil, nil,
+							"", nil, nil,
+							"bish",
+							nil, nil, nil,
+							"",
+							nil,
+							"github", "",
 							nil, nil, nil),
 						"bosh": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "",
+							nil, nil,
+							"",
+							nil, nil,
+							"bosh",
+							nil, nil, nil,
+							"",
+							nil,
+							"gitlab", "",
 							nil, nil, nil)}},
 				"charlie": &service.Service{
-					Notify: shoutrrr.Slice{
+					Notify: shoutrrr.Shoutrrrs{
 						"bop": shoutrrr.New(
-							nil, "bop", "gotify",
+							nil,
+							"bop", "gotify",
 							nil, nil, nil,
 							nil, nil, nil),
 						"top": shoutrrr.New(
-							nil, "top", "slack",
+							nil,
+							"top", "slack",
 							nil, nil, nil,
 							nil, nil, nil)},
-					Command: command.Slice{
+					Command: command.Commands{
 						{"ls", "-lah", "/tmp"}},
-					WebHook: webhook.Slice{
+					WebHook: webhook.WebHooks{
 						"bang": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "",
+							nil, nil,
+							"",
+							nil, nil,
+							"bang",
+							nil, nil, nil,
+							"",
+							nil,
+							"gitlab", "",
 							nil, nil, nil),
 						"crash": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "github", "",
+							nil, nil,
+							"",
+							nil, nil,
+							"crash",
+							nil, nil, nil,
+							"",
+							nil,
+							"github", "",
 							nil, nil, nil)}}},
 			serviceDefaults: service.Defaults{
 				Notify: map[string]struct{}{
 					"foo": {},
 					"bar": {}},
-				Command: command.Slice{
+				Command: command.Commands{
 					{"echo", "hello"}},
 				WebHook: map[string]struct{}{
 					"bash": {},
 					"bish": {},
 					"bosh": {}}},
-			rootNotify: shoutrrr.SliceDefaults{
+			rootNotify: shoutrrr.ShoutrrrsDefaults{
 				"foo": shoutrrr.NewDefaults(
 					"gotify", nil, nil, nil),
 				"bar": shoutrrr.NewDefaults(
 					"discord", nil, nil, nil)},
-			rootWebHook: webhook.SliceDefaults{
+			rootWebHook: webhook.WebHooksDefaults{
 				"bash": webhook.NewDefaults(
 					nil, nil, "", nil, nil, "", nil, "github", ""),
 				"bish": webhook.NewDefaults(
@@ -814,7 +867,7 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 			for _, s := range *tc.services {
 				s.Init(
 					&tc.serviceDefaults, &service.Defaults{},
-					&tc.rootNotify, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
+					&tc.rootNotify, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
 					&tc.rootWebHook, &webhook.Defaults{}, &webhook.Defaults{})
 			}
 

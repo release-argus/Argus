@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
@@ -29,8 +30,9 @@ import (
 func TestLookup_CheckValues(t *testing.T) {
 	// GIVEN a Lookup.
 	tests := map[string]struct {
-		yamlStr  string
-		errRegex string
+		yamlStr           string
+		emptyHardDefaults bool
+		errRegex          string
 	}{
 		"valid service": {
 			yamlStr: test.TrimYAML(`
@@ -45,14 +47,15 @@ func TestLookup_CheckValues(t *testing.T) {
 				method: ''
 				url: "https://example.com"
 			`),
-			errRegex: `^$`,
+			emptyHardDefaults: true,
+			errRegex:          `method: <required>.*` + http.MethodGet,
 		},
 		"method - invalid": {
 			yamlStr: test.TrimYAML(`
 				method: 'FOO'
 				url: "https://example.com"
 			`),
-			errRegex: `method: "[^"]+" <invalid>`,
+			errRegex: `method: "FOO" <invalid>.*` + http.MethodGet,
 		},
 		"method - valid": {
 			yamlStr: test.TrimYAML(`
@@ -125,8 +128,8 @@ func TestLookup_CheckValues(t *testing.T) {
 				regex_template: $1.$2.$3
 			`),
 			errRegex: test.TrimYAML(`
-				method: "[^"]+" <invalid>.*
 				url: <required>.*
+				method: "[^"]+" <invalid>.*
 				json: "[^"]+" <invalid>.*
 				regex: "[^"]+" <invalid>.*`),
 		},
@@ -137,6 +140,9 @@ func TestLookup_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup(false)
+			if tc.emptyHardDefaults {
+				lookup.HardDefaults = &base.Defaults{}
+			}
 			// Apply the YAML.
 			if err := yaml.Unmarshal([]byte(tc.yamlStr), lookup); err != nil {
 				t.Fatalf("%s\nerror unmarshalling YAML: %v",
@@ -181,7 +187,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			if wantMethod == "" {
 				wantMethod = http.MethodGet
 			}
-			if lookup.Method != wantMethod {
+			if lookup.Method != "" && lookup.Method != wantMethod {
 				t.Fatalf("%s\nMethod should be uppercased:\nwant: %q\ngot:  %q",
 					packageName, wantMethod, lookup.Method)
 			}

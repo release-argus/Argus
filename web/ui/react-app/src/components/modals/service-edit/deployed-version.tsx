@@ -1,90 +1,64 @@
-import { DeployedVersionLookupType, ServiceOptionsType } from 'types/config';
-import { FC, memo, useEffect } from 'react';
+import { memo } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
-
-import { Accordion } from 'react-bootstrap';
-import { DeployedVersionLookupEditType } from 'types/service-edit';
-import DeployedVersionManual from './deployed-version-manual';
-import DeployedVersionURL from './deployed-version-url';
-import { FormSelect } from 'components/generic/form';
-import { useWebSocket } from 'contexts/websocket';
-
-interface Props {
-	serviceID: string;
-	original?: DeployedVersionLookupEditType;
-	original_options?: ServiceOptionsType;
-	defaults?: DeployedVersionLookupType;
-	hard_defaults?: DeployedVersionLookupType;
-}
-
-const deployedVersionTypeOptions: {
-	label: string;
-	value: NonNullable<DeployedVersionLookupType['type']>;
-}[] = [
-	{ label: 'URL', value: 'url' },
-	{ label: 'Manual', value: 'manual' },
-];
+import { FieldSelect } from '@/components/generic/field';
+import DeployedVersionManual from '@/components/modals/service-edit/deployed-version-manual';
+import DeployedVersionURL from '@/components/modals/service-edit/deployed-version-url';
+import {
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from '@/components/ui/accordion';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import { useServiceSummary } from '@/hooks/use-service-summary.ts';
+import {
+	DEPLOYED_VERSION_LOOKUP_TYPE,
+	type DeployedVersionLookupType,
+	deployedVersionLookupTypeOptions,
+} from '@/utils/api/types/config/service/deployed-version';
 
 /**
  * The `deployed_version` form fields.
- *
- * @param serviceID - The name of the service.
- * @param original - The original values of the form.
- * @param original_options - The original service.options of the form.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default.
- * @returns The form fields for the `deployed_version`.
  */
-const EditServiceDeployedVersion: FC<Props> = ({
-	serviceID,
-	original,
-	original_options,
-	defaults,
-	hard_defaults,
-}) => {
+const EditServiceDeployedVersion = () => {
+	const name = 'deployed_version';
+	const { serviceID } = useSchemaContext();
 	const { setValue } = useFormContext();
-	const selectedType: string = useWatch({
-		name: 'deployed_version.type',
-	});
-	const { monitorData } = useWebSocket();
-	const serviceStatus = monitorData.service?.[serviceID]?.status;
-	useEffect(() => {
-		if (selectedType === 'manual') {
-			setValue(
-				'deployed_version.version',
-				serviceStatus?.deployed_version ?? serviceStatus?.latest_version ?? '',
-			);
-		}
-	}, [selectedType]);
+
+	const selectedType = useWatch({
+		name: `${name}.type`,
+	}) as DeployedVersionLookupType;
+	const { data: serviceData } = useServiceSummary(serviceID);
 
 	return (
-		<Accordion>
-			<Accordion.Header>Deployed Version:</Accordion.Header>
-			<Accordion.Body className="d-flex flex-wrap">
-				<FormSelect
-					name="deployed_version.type"
-					col_xs={6}
-					col_lg={2}
+		<AccordionItem value="deployed_version">
+			<AccordionTrigger>Deployed Version:</AccordionTrigger>
+			<AccordionContent className="grid grid-cols-12 gap-2">
+				<FieldSelect
+					colSize={{ lg: 2, xs: 6 }}
 					label="Type"
-					options={deployedVersionTypeOptions}
+					name={`${name}.type`}
+					onChange={(opt) => {
+						const serviceStatus = serviceData?.status;
+						if (opt?.value === DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value) {
+							setValue(
+								`${name}.version`,
+								serviceStatus?.deployed_version ??
+									serviceStatus?.latest_version ??
+									'',
+							);
+						}
+						return opt;
+					}}
+					options={deployedVersionLookupTypeOptions}
 				/>
-				{selectedType === 'manual' ? (
-					<DeployedVersionManual
-						serviceID={serviceID}
-						original={original}
-						original_options={original_options}
-					/>
+				{(selectedType ?? DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value) ===
+				DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value ? (
+					<DeployedVersionManual />
 				) : (
-					<DeployedVersionURL
-						serviceID={serviceID}
-						original={original}
-						original_options={original_options}
-						defaults={defaults}
-						hard_defaults={hard_defaults}
-					/>
+					<DeployedVersionURL />
 				)}
-			</Accordion.Body>
-		</Accordion>
+			</AccordionContent>
+		</AccordionItem>
 	);
 };
 

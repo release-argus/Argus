@@ -1,95 +1,77 @@
-import { Placeholder, Table } from 'react-bootstrap';
-import { ReactElement, useEffect, useState } from 'react';
-
-import { Dictionary } from 'types/util';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleNotch } from '@fortawesome/free-solid-svg-icons';
-import { fetchJSON } from 'utils';
-import { useDelayedRender } from 'hooks/delayed-render';
 import { useQuery } from '@tanstack/react-query';
+import { LoaderCircle } from 'lucide-react';
+import type { ReactElement } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import { useDelayedRender } from '@/hooks/use-delayed-render';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import { mapRequest } from '@/utils/api/types/api-request-handler';
 
 /**
- * @returns The CLI flags page, which includes a table of all the command-line flags.
+ * @returns The command-line flags page, which includes a table of all the command-line flags.
  */
 export const Flags = (): ReactElement => {
 	const delayedRender = useDelayedRender(750);
-	const [flags, setFlags] =
-		useState<Dictionary<string | boolean | undefined>>();
 
-	const { data, isFetching } = useQuery<
-		Dictionary<string | boolean | undefined>
-	>({
-		queryKey: ['flags'],
-		queryFn: () => fetchJSON({ url: `api/v1/flags` }),
+	// Fetch the command-line flags from the API.
+	const { data, isSuccess } = useQuery({
+		queryFn: () => mapRequest('CONFIG_FLAGS', null),
+		queryKey: QUERY_KEYS.CONFIG.CLI_FLAGS(),
 		staleTime: Infinity,
 	});
 
-	useEffect(() => {
-		if (!isFetching && data) setFlags(data);
-	}, [data]);
-
 	return (
 		<>
-			<h2
-				style={{
-					display: 'inline-block',
-				}}
-			>
+			<h2 className="flex scroll-m-20 flex-row gap-2 pb-2 font-semibold text-3xl tracking-tight">
 				Command-Line Flags
-				{flags === undefined &&
+				{!isSuccess &&
 					delayedRender(() => (
-						<div
-							style={{
-								display: 'inline-block',
-								justifyContent: 'center',
-								alignItems: 'center',
-								height: '2rem',
-								paddingLeft: '1rem',
-							}}
-						>
-							<FontAwesomeIcon
-								icon={faCircleNotch}
-								className="fa-spin"
-								style={{
-									height: '100%',
-								}}
-							/>
+						<div className="h-8 items-center justify-center">
+							<LoaderCircle className="h-full animate-spin" />
 						</div>
 					))}
 			</h2>
-			<Table striped bordered>
-				<thead>
-					<tr>
-						<th>Flag</th>
-						<th>Value</th>
-					</tr>
-				</thead>
-				<tbody>
-					{flags === undefined
-						? [...Array.from(Array(9).keys())].map((num) => (
-								<tr key={num}>
-									<th style={{ width: '35%' }}>
+			<Table className="border">
+				<TableHeader>
+					<TableRow>
+						<TableHead className="w-1/3 border-r px-4 py-2 font-bold">
+							Flag
+						</TableHead>
+						<TableHead className="px-4 py-2 font-bold">Value</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{isSuccess
+						? Object.entries(data).map(([k, v]) => (
+								<TableRow className="odd:bg-muted/30" key={k}>
+									<TableCell className="border-r px-4 py-2 font-bold">{`-${k}`}</TableCell>
+									<TableCell className="px-4 py-2 font-bold">
+										{v == undefined ? '' : v.toString()}
+									</TableCell>
+								</TableRow>
+							))
+						: Array.from(new Array(9).keys()).map((num) => (
+								<TableRow className="odd:bg-muted/30" key={num}>
+									<TableCell className="border-r py-3">
 										{delayedRender(() => (
-											<Placeholder xs={4} />
+											<Skeleton className="h-4 w-full" />
 										))}
-										&nbsp;
-									</th>
-									<td>
+									</TableCell>
+									<TableCell>
 										{delayedRender(() => (
-											<Placeholder xs={3} />
+											<Skeleton className="h-4 w-full" />
 										))}
-									</td>
-								</tr>
-						  ))
-						: Object.entries(flags).map(([k, v]) => {
-								return (
-									<tr key={k}>
-										<th style={{ width: '35%' }}>{`-${k}`}</th>
-										<td>{v === null ? '' : `${v}`}</td>
-									</tr>
-								);
-						  })}
-				</tbody>
+									</TableCell>
+								</TableRow>
+							))}
+				</TableBody>
 			</Table>
 		</>
 	);

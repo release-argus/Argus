@@ -29,23 +29,21 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-var supportedMethods = []string{"GET", "POST"}
-
 // Lookup is a web-based lookup type.
 type Lookup struct {
 	base.Lookup `json:",inline" yaml:",inline"` // Base struct for a Lookup.
 
 	Method            string `json:"method,omitempty" yaml:"method,omitempty"`                           // REQUIRED: HTTP method.
-	URL               string `json:"url,omitempty" yaml:"url,omitempty"`                                 // REQUIRED: URL to query.
+	URL               string `json:"url,omitempty" yaml:"url,omitempty"`                                 // REQUIRED: url to query.
 	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
-	TargetHeader      string `json:"target_header,omitempty" yaml:"target_header,omitempty"`             // OPTIONAL: Header to target for the version.
+	TargetHeader      string `json:"target_header,omitempty" yaml:"target_header,omitempty"`             // OPTIONAL: header to target for the version.
 
-	BasicAuth     *BasicAuth `json:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`         // OPTIONAL: Basic Auth credentials.
-	Headers       []Header   `json:"headers,omitempty" yaml:"headers,omitempty"`               // OPTIONAL: Request Headers.
-	Body          string     `json:"body,omitempty" yaml:"body,omitempty"`                     // OPTIONAL: Request Body.
+	BasicAuth     *BasicAuth `json:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`         // OPTIONAL: basic auth credentials.
+	Headers       []Header   `json:"headers,omitempty" yaml:"headers,omitempty"`               // OPTIONAL: request headers.
+	Body          string     `json:"body,omitempty" yaml:"body,omitempty"`                     // OPTIONAL: request body.
 	JSON          string     `json:"json,omitempty" yaml:"json,omitempty"`                     // OPTIONAL: JSON key to use e.g. version_current.
-	Regex         string     `json:"regex,omitempty" yaml:"regex,omitempty"`                   // OPTIONAL: RegEx for the version.
-	RegexTemplate string     `json:"regex_template,omitempty" yaml:"regex_template,omitempty"` // OPTIONAL: Template to apply to the RegEx match.
+	Regex         string     `json:"regex,omitempty" yaml:"regex,omitempty"`                   // OPTIONAL: regex for the version.
+	RegexTemplate string     `json:"regex_template,omitempty" yaml:"regex_template,omitempty"` // OPTIONAL: template to apply to the RegEx match.
 }
 
 // New returns a new Lookup from a string in a given format (json/yaml).

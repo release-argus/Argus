@@ -35,7 +35,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 	typeWithNoDefaultsURLFields := map[string]string{
 		"topic": "foo"}
 	typeOther := "slack"
-	serviceNotifies := &Slice{
+	serviceNotifies := &Shoutrrrs{
 		"no_main_no_type": &Shoutrrr{},
 		"no_main_with_type_and_defaults": &Shoutrrr{
 			Base: Base{
@@ -50,7 +50,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		"main_with_type_and_no_defaults": &Shoutrrr{
 			Base: Base{
 				Type: typeWithNoDefaults}}}
-	mains := SliceDefaults{
+	mains := ShoutrrrsDefaults{
 		"main_no_type": &Defaults{
 			Base: Base{
 				URLFields: typeWithNoDefaultsURLFields}},
@@ -67,9 +67,9 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				Type:      typeWithDefaults,
 				URLFields: typeWithDefaultsURLFields}},
 	}
-	defaults := SliceDefaults{
+	defaults := ShoutrrrsDefaults{
 		typeWithDefaults: &Defaults{}}
-	hardDefaults := SliceDefaults{
+	hardDefaults := ShoutrrrsDefaults{
 		typeWithDefaults:   &Defaults{},
 		typeWithNoDefaults: &Defaults{},
 		typeOther:          &Defaults{}}
@@ -332,7 +332,7 @@ func TestResolveDefaults(t *testing.T) {
 	tests := map[string]struct {
 		name, nType                      string
 		main                             *Defaults
-		defaults, hardDefaults           SliceDefaults
+		defaults, hardDefaults           ShoutrrrsDefaults
 		wantType, wantMain, wantDefaults string
 		errRegex                         string
 	}{
@@ -343,7 +343,7 @@ func TestResolveDefaults(t *testing.T) {
 		},
 		"Type from Name": {
 			name: "gotify",
-			hardDefaults: SliceDefaults{
+			hardDefaults: ShoutrrrsDefaults{
 				"gotify": &Defaults{}},
 			wantType:     "gotify",
 			wantMain:     "hardDefaults",
@@ -352,7 +352,7 @@ func TestResolveDefaults(t *testing.T) {
 		},
 		"Type from Main": {
 			name: "test",
-			hardDefaults: SliceDefaults{
+			hardDefaults: ShoutrrrsDefaults{
 				"gotify": &Defaults{}},
 			main: &Defaults{
 				Base: Base{
@@ -365,7 +365,7 @@ func TestResolveDefaults(t *testing.T) {
 		"No Main, No Defaults": {
 			name:  "test",
 			nType: "gotify",
-			hardDefaults: SliceDefaults{
+			hardDefaults: ShoutrrrsDefaults{
 				"gotify": &Defaults{}},
 			wantType:     "gotify",
 			wantMain:     "hardDefaults",
@@ -376,7 +376,7 @@ func TestResolveDefaults(t *testing.T) {
 			name:  "test",
 			nType: "gotify",
 			main:  &Defaults{},
-			hardDefaults: SliceDefaults{
+			hardDefaults: ShoutrrrsDefaults{
 				"gotify": &Defaults{}},
 			wantType:     "gotify",
 			wantMain:     "main",
@@ -386,9 +386,9 @@ func TestResolveDefaults(t *testing.T) {
 		"No Main, Defaults": {
 			name:  "test",
 			nType: "gotify",
-			defaults: SliceDefaults{
+			defaults: ShoutrrrsDefaults{
 				"gotify": &Defaults{}},
-			hardDefaults: SliceDefaults{
+			hardDefaults: ShoutrrrsDefaults{
 				"gotify": &Defaults{}},
 			wantType:     "gotify",
 			wantMain:     "defaults",
@@ -399,9 +399,9 @@ func TestResolveDefaults(t *testing.T) {
 			name:  "test",
 			nType: "gotify",
 			main:  &Defaults{},
-			defaults: SliceDefaults{
+			defaults: ShoutrrrsDefaults{
 				"gotify": &Defaults{}},
-			hardDefaults: SliceDefaults{
+			hardDefaults: ShoutrrrsDefaults{
 				"gotify": &Defaults{}},
 			wantType:     "gotify",
 			wantMain:     "main",

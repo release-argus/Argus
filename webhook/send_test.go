@@ -112,7 +112,7 @@ func TestWebHook_Send(t *testing.T) {
 		customHeaders, wouldFail, useDelay, deleting, silentFails bool
 		delay                                                     string
 		retries                                                   int
-		notifiers                                                 shoutrrr.Slice
+		notifiers                                                 shoutrrr.Shoutrrrs
 		stdoutRegex                                               string
 	}{
 		"successful webhook": {
@@ -149,14 +149,14 @@ func TestWebHook_Send(t *testing.T) {
 		"does try notifiers on fail": {
 			wouldFail:   true,
 			stdoutRegex: `WebHook gave 500.*invalid gotify token`,
-			notifiers: shoutrrr.Slice{
+			notifiers: shoutrrr.Shoutrrrs{
 				"fail": shoutrrr_test.Shoutrrr(true, false)},
 		},
 		"doesn't try notifiers on fail if silentFails": {
 			wouldFail:   true,
 			silentFails: true,
 			stdoutRegex: `WebHook gave 500.*failed \d times to send the WebHook [^-]+-n$`,
-			notifiers: shoutrrr.Slice{
+			notifiers: shoutrrr.Shoutrrrs{
 				"fail": shoutrrr_test.Shoutrrr(true, false)},
 		},
 		"doesn't send if deleting": {
@@ -184,14 +184,14 @@ func TestWebHook_Send(t *testing.T) {
 				webhook.SilentFails = &tc.silentFails
 				webhook.Notifiers = &Notifiers{Shoutrrr: &tc.notifiers}
 				webhook.ServiceStatus.ServiceInfo.ID = name
-				serviceInfo := webhook.ServiceStatus.GetServiceInfo()
+				svcInfo := webhook.ServiceStatus.GetServiceInfo()
 				if tc.retries > 0 {
 					go func() {
 						fails := testutil.ToFloat64(metric.WebHookResultTotal.WithLabelValues(
-							webhook.ID, "FAIL", serviceInfo.ID))
+							webhook.ID, "FAIL", svcInfo.ID))
 						for fails < float64(tc.retries) {
 							fails = testutil.ToFloat64(metric.WebHookResultTotal.WithLabelValues(
-								webhook.ID, "FAIL", serviceInfo.ID))
+								webhook.ID, "FAIL", svcInfo.ID))
 							time.Sleep(time.Millisecond * 200)
 						}
 						t.Logf("%s - Failed %d times",
@@ -204,7 +204,7 @@ func TestWebHook_Send(t *testing.T) {
 
 				// WHEN try is called on it.
 				startAt := time.Now()
-				webhook.Send(serviceInfo, tc.useDelay)
+				webhook.Send(svcInfo, tc.useDelay)
 
 				// THEN the logs are expected.
 				completedAt := time.Now()
@@ -238,33 +238,33 @@ func TestWebHook_Send(t *testing.T) {
 	}
 }
 
-func TestSlice_Send(t *testing.T) {
-	// GIVEN a Slice.
+func TestWebHooks_Send(t *testing.T) {
+	// GIVEN WebHooks.
 	tests := map[string]struct {
-		slice                       *Slice
+		webhooks                    *WebHooks
 		stdoutRegex, stdoutRegexAlt string
-		notifiers                   shoutrrr.Slice
+		notifiers                   shoutrrr.Shoutrrrs
 		useDelay                    bool
 		delays                      map[string]string
 		repeat                      int
 	}{
-		"nil slice": {
-			slice:       nil,
+		"nil map": {
+			webhooks:    nil,
 			stdoutRegex: `^$`},
 		"2 successful webhooks": {
-			slice: &Slice{
+			webhooks: &WebHooks{
 				"pass": testWebHook(false, false, false),
 				"fail": testWebHook(false, false, false)},
 			stdoutRegex:    `WebHook received.*WebHook received`,
 			stdoutRegexAlt: `^$`},
 		"successful and failing webhook": {
-			slice: &Slice{
+			webhooks: &WebHooks{
 				"pass": testWebHook(false, false, false),
 				"fail": testWebHook(true, false, false)},
 			stdoutRegex:    `WebHook received.*failed \d times to send the WebHook`,
 			stdoutRegexAlt: `failed \d times to send the WebHook.*WebHook received`},
 		"does apply webhook delay": {
-			slice: &Slice{
+			webhooks: &WebHooks{
 				"pass": testWebHook(false, false, false),
 				"fail": testWebHook(true, false, false)},
 			stdoutRegex: `WebHook received.*failed \d times to send the WebHook`,
@@ -287,17 +287,17 @@ func TestSlice_Send(t *testing.T) {
 				tc.repeat++ // repeat to check delay usage as map order is random.
 				for tc.repeat != 0 {
 					releaseStdout := test.CaptureStdout()
-					if tc.slice != nil {
-						for id := range *tc.slice {
-							(*tc.slice)[id].ID = id
+					if tc.webhooks != nil {
+						for id := range *tc.webhooks {
+							(*tc.webhooks)[id].ID = id
 						}
 						for id := range tc.delays {
-							(*tc.slice)[id].Delay = tc.delays[id]
+							(*tc.webhooks)[id].Delay = tc.delays[id]
 						}
 					}
 
 					// WHEN try is called on it.
-					tc.slice.Send(serviceinfo.ServiceInfo{ID: name}, tc.useDelay)
+					tc.webhooks.Send(serviceinfo.ServiceInfo{ID: name}, tc.useDelay)
 
 					// THEN the logs are expected.
 					stdout := releaseStdout()
@@ -330,18 +330,18 @@ func TestSlice_Send(t *testing.T) {
 func TestNotifiers_SendWithNotifier(t *testing.T) {
 	// GIVEN Notifiers.
 	tests := map[string]struct {
-		shoutrrrNotifiers *shoutrrr.Slice
+		shoutrrrNotifiers *shoutrrr.Shoutrrrs
 		errRegex          string
 	}{
 		"nill Notifiers": {
 			errRegex: `^$`},
 		"successful notifier": {
 			errRegex: `^$`,
-			shoutrrrNotifiers: &shoutrrr.Slice{
+			shoutrrrNotifiers: &shoutrrr.Shoutrrrs{
 				"pass": shoutrrr_test.Shoutrrr(false, false)}},
 		"failing notifier": {
 			errRegex: `invalid gotify token`,
-			shoutrrrNotifiers: &shoutrrr.Slice{
+			shoutrrrNotifiers: &shoutrrr.Shoutrrrs{
 				"fail": shoutrrr_test.Shoutrrr(true, false)}},
 	}
 

@@ -1,40 +1,19 @@
-import BARK from './bark';
-import DISCORD from './discord';
-import GOOGLE_CHAT from './google_chat';
-import GOTIFY from './gotify';
-import IFTTT from './ifttt';
-import JOIN from './join';
-import MATRIX from './matrix';
-import MATTERMOST from './mattermost';
-import NTFY from './ntfy';
-import OPSGENIE from './opsgenie';
-import PUSHBULLET from './pushbullet';
-import PUSHOVER from './pushover';
-import ROCKET_CHAT from './rocketchat';
-import SLACK from './slack';
-import SMTP from './smtp';
-import TEAMS from './teams';
-import TELEGRAM from './telegram';
-import ZULIP from './zulip';
-
-// prettier-ignore
-export {
-	BARK,
-	SMTP, // EMAIL
-	DISCORD,
-	GOOGLE_CHAT,
-	GOTIFY,
-	IFTTT,
-	JOIN,
-	MATRIX,
-	MATTERMOST,
-	NTFY,
-	OPSGENIE,
-	PUSHBULLET,
-	PUSHOVER,
-	ROCKET_CHAT,
-	SLACK,
-	TEAMS,
-	TELEGRAM,
-	ZULIP,
-};
+export { default as BARK } from './bark';
+export { default as DISCORD } from './discord';
+export { default as GENERIC } from './generic';
+export { default as GOOGLE_CHAT } from './google_chat';
+export { default as GOTIFY } from './gotify';
+export { default as IFTTT } from './ifttt';
+export { default as JOIN } from './join';
+export { default as MATRIX } from './matrix';
+export { default as MATTERMOST } from './mattermost';
+export { default as NTFY } from './ntfy';
+export { default as OPSGENIE } from './opsgenie';
+export { default as PUSHBULLET } from './pushbullet';
+export { default as PUSHOVER } from './pushover';
+export { default as ROCKET_CHAT } from './rocketchat';
+export { default as SLACK } from './slack';
+export { default as SMTP } from './smtp';
+export { default as TEAMS } from './teams';
+export { default as TELEGRAM } from './telegram';
+export { default as ZULIP } from './zulip';

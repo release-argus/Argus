@@ -82,7 +82,7 @@ func DereferenceOrValue[T comparable](ptr *T, fallback T) T {
 	return fallback
 }
 
-// CopyPointer will return a pointer to a copy of the value of `ptr`.
+// CopyPointer returns a pointer to a copy of the value of `ptr`.
 func CopyPointer[T comparable](ptr *T) *T {
 	if ptr == nil {
 		return nil
@@ -94,7 +94,7 @@ func CopyPointer[T comparable](ptr *T) *T {
 
 // CopySecretValues loops through 'fields' and replace values in 'to' of 'SecretValue' with values in 'from'.
 // if non-empty.
-func CopySecretValues(from, to map[string]string, fields []string) {
+func CopySecretValues[K comparable](from, to map[K]string, fields []K) {
 	for _, field := range fields {
 		if to[field] == SecretValue && from[field] != "" {
 			to[field] = from[field]

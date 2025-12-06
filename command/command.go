@@ -34,11 +34,11 @@ func (c *Controller) Exec(logFrom logutil.LogFrom) error {
 		return nil
 	}
 
-	serviceInfo := c.ServiceStatus.GetServiceInfo()
+	svcInfo := c.ServiceStatus.GetServiceInfo()
 	errChan := make(chan error)
 	for index := range *c.Command {
 		go func(controller *Controller, index int) {
-			errChan <- controller.ExecIndex(logFrom, index, serviceInfo)
+			errChan <- controller.ExecIndex(logFrom, index, svcInfo)
 		}(c, index)
 
 		// Space out Command starts.

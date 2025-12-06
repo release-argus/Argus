@@ -1,24 +1,23 @@
-import { ApprovalsPage, ConfigPage, FlagsPage, StatusPage } from 'pages';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import type { ReactElement } from 'react';
 import {
 	Navigate,
 	Route,
 	BrowserRouter as Router,
 	Routes,
 } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
-import { Container } from 'react-bootstrap';
-import Header from 'components/header';
-import { ModalProvider } from 'contexts/modal';
-import { NotificationProvider } from 'contexts/notification';
-import { ReactElement } from 'react';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { WebSocketProvider } from 'contexts/websocket';
-import { getBasename } from 'utils';
+import Header from '@/components/header';
+import { ThemeProvider } from '@/components/theme-provider';
+import { Toaster } from '@/components/ui/sonner';
+import { ModalProvider } from '@/contexts/modal';
+import { WebSocketProvider } from '@/contexts/websocket';
+import { ApprovalsPage, ConfigPage, FlagsPage, StatusPage } from '@/pages';
+import { getBasename } from '@/utils';
 
 const App = (): ReactElement => {
-	// Determine the pathPrefix by stripping the first known endpoint suffix from the window location path.
-	// Works for both direct hosting, and reverse proxy deployments.
+	// Determine `pathPrefix` by stripping the first known endpoint suffix from the window location path.
+	// Works for both direct hosting and reverse proxy deployments.
 	const basename = getBasename();
 
 	const queryClient = new QueryClient();
@@ -31,26 +30,28 @@ const App = (): ReactElement => {
 	});
 
 	return (
-		<QueryClientProvider client={queryClient}>
-			<Router basename={basename}>
-				<Header />
-				<WebSocketProvider>
-					<NotificationProvider />
-					<ModalProvider>
-						<Container fluid style={{ padding: '1.25rem' }}>
-							<Routes>
-								<Route path="/approvals" element={<ApprovalsPage />} />
-								<Route path="/status" element={<StatusPage />} />
-								<Route path="/flags" element={<FlagsPage />} />
-								<Route path="/config" element={<ConfigPage />} />
-								<Route path="/" element={<Navigate to="/approvals" />} />
-							</Routes>
-						</Container>
-					</ModalProvider>
-				</WebSocketProvider>
-			</Router>
-			<ReactQueryDevtools initialIsOpen={false} />
-		</QueryClientProvider>
+		<ThemeProvider>
+			<QueryClientProvider client={queryClient}>
+				<Router basename={basename}>
+					<Header />
+					<WebSocketProvider>
+						<Toaster expand richColors visibleToasts={3} />
+						<ModalProvider>
+							<div className="w-full p-5">
+								<Routes>
+									<Route element={<ApprovalsPage />} path="/approvals" />
+									<Route element={<StatusPage />} path="/status" />
+									<Route element={<FlagsPage />} path="/flags" />
+									<Route element={<ConfigPage />} path="/config" />
+									<Route element={<Navigate to="/approvals" />} path="/" />
+								</Routes>
+							</div>
+						</ModalProvider>
+					</WebSocketProvider>
+				</Router>
+				<ReactQueryDevtools initialIsOpen={false} />
+			</QueryClientProvider>
+		</ThemeProvider>
 	);
 };
 

@@ -148,7 +148,7 @@ func testService(id string, semVer bool) *service.Service {
 	// HardDefaults.
 	serviceHardDefaults := service.Defaults{}
 	serviceHardDefaults.Default()
-	shoutrrrHardDefaults := shoutrrr.SliceDefaults{}
+	shoutrrrHardDefaults := shoutrrr.ShoutrrrsDefaults{}
 	shoutrrrHardDefaults.Default()
 	webhookHardDefaults := webhook.Defaults{}
 	webhookHardDefaults.Default()
@@ -160,8 +160,8 @@ func testService(id string, semVer bool) *service.Service {
 	// Init with defaults/hardDefaults.
 	svc.Init(
 		&serviceDefaults, &serviceHardDefaults,
-		&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrrHardDefaults,
-		&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhookHardDefaults)
+		&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrrHardDefaults,
+		&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhookHardDefaults)
 
 	// Status channels.
 	svc.Status.AnnounceChannel = &announceChannel

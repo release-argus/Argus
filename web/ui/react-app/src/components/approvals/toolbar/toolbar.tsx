@@ -1,39 +1,57 @@
-import { ButtonGroup, Form } from 'react-bootstrap';
-import { FC, memo, useCallback } from 'react';
-import FilterDropdown, { DEFAULT_HIDE_VALUE } from './filter-dropdown';
-
-import { ApprovalsToolbarOptions } from 'types/util';
-import EditModeToggle from './edit-mode-toggle';
-import SearchBar from './search-bar';
-import TagSelect from './tag-select';
-import { URL_PARAMS } from 'constants/toolbar';
+import { type FC, memo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import EditModeToggle from '@/components/approvals/toolbar/edit-mode-toggle';
+import FilterDropdown from '@/components/approvals/toolbar/filter-dropdown';
+import SearchBar from '@/components/approvals/toolbar/search-bar';
+import TagSelect from '@/components/approvals/toolbar/tag-select';
+import { ToolbarProvider } from '@/components/approvals/toolbar/toolbar-context';
+import { ButtonGroup } from '@/components/ui/button-group';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import {
+	type ApprovalsToolbarOptions,
+	DEFAULT_HIDE_VALUE,
+	URL_PARAMS,
+} from '@/constants/toolbar';
+import type { TagsTriType } from '@/types/util';
 
-type Props = {
+type ApprovalsToolbarProps = {
+	/* Toolbar values from query params */
 	values: ApprovalsToolbarOptions;
 
-	// Sorting.
+	/* Callback for edit mode toggle */
 	onEditModeToggle: (value: boolean) => void;
+	/* Callback for saving the current ordering */
 	onSaveOrder: () => void;
+	/* Whether the service ordering has changed */
 	hasOrderChanged: boolean;
 };
 
-const ApprovalsToolbar: FC<Props> = ({
+type URLParam = boolean | number[] | readonly number[] | string | string[];
+
+/**
+ * ApprovalsToolbar
+ *
+ * Toolbar for the 'approvals' view.
+ * Manages search, tag filters, edit mode, hide settings, and service order state via URL parameters.
+ */
+
+const ApprovalsToolbar: FC<ApprovalsToolbarProps> = ({
 	values,
 
 	onEditModeToggle,
 	onSaveOrder,
 	hasOrderChanged,
 }) => {
-	const [_, setSearchParams] = useSearchParams();
+	const [, setSearchParams] = useSearchParams();
 
+	// Add/remove a query param.
 	const updateURLParam = useCallback(
 		(
 			key: (typeof URL_PARAMS)[keyof typeof URL_PARAMS],
-			value: boolean | number[] | string | string[],
-			defaultValue: boolean | number[] | string | string[],
+			value: URLParam,
+			defaultValue: URLParam,
 		) => {
-			const newSearchParams = new URLSearchParams(window.location.search);
+			const newSearchParams = new URLSearchParams(globalThis.location.search);
 
 			if (Array.isArray(value)) {
 				if (JSON.stringify(value) === JSON.stringify(defaultValue)) {
@@ -52,20 +70,25 @@ const ApprovalsToolbar: FC<Props> = ({
 		[setSearchParams],
 	);
 
+	// Set a query param.
 	const setValue = useCallback(
-		(key: (typeof URL_PARAMS)[keyof typeof URL_PARAMS], value: any) => {
+		(
+			key: (typeof URL_PARAMS)[keyof typeof URL_PARAMS],
+			value: string | boolean | number[] | readonly number[] | string[],
+		) => {
 			switch (key) {
 				case URL_PARAMS.SEARCH:
-					updateURLParam(URL_PARAMS.SEARCH, value, '');
+					updateURLParam(key, value, '');
 					break;
-				case URL_PARAMS.TAGS:
-					updateURLParam(URL_PARAMS.TAGS, value, []);
+				case URL_PARAMS.TAGS_INCLUDE:
+				case URL_PARAMS.TAGS_EXCLUDE:
+					updateURLParam(key, value, []);
 					break;
 				case URL_PARAMS.EDIT_MODE:
-					updateURLParam(URL_PARAMS.EDIT_MODE, value, false);
+					updateURLParam(key, value, false);
 					break;
 				case URL_PARAMS.HIDE:
-					updateURLParam(URL_PARAMS.HIDE, value, DEFAULT_HIDE_VALUE);
+					updateURLParam(key, value, DEFAULT_HIDE_VALUE);
 					break;
 			}
 		},
@@ -78,27 +101,39 @@ const ApprovalsToolbar: FC<Props> = ({
 		updateURLParam(URL_PARAMS.EDIT_MODE, newValue, false);
 		onEditModeToggle(newValue);
 	};
+	// Service search.
+	const setSearch = (value: string) => setValue(URL_PARAMS.SEARCH, value);
+	// Tag filtering.
+	const setTags = (newTags: TagsTriType) => {
+		setValue(URL_PARAMS.TAGS_INCLUDE, newTags.include);
+		setValue(URL_PARAMS.TAGS_EXCLUDE, newTags.exclude);
+	};
+	// 'Hide' options.
+	const setHide = (value: number[]) => setValue(URL_PARAMS.HIDE, value);
 
 	return (
-		<Form className="mb-3 gap-2 gap-md-3" style={{ display: 'flex' }}>
-			<SearchBar
-				search={values.search ?? ''}
-				setSearch={(value) => setValue(URL_PARAMS.SEARCH, value)}
-			/>
-			<TagSelect
-				tags={values.tags ?? []}
-				setTags={(tags) => setValue(URL_PARAMS.TAGS, tags)}
-			/>
-			<ButtonGroup className="gap-1 gap-md-2">
-				<FilterDropdown values={values.hide} setValue={setValue} />
-				<EditModeToggle
-					editMode={values.editMode}
-					toggleEditMode={toggleEditMode}
-					onSaveOrder={onSaveOrder}
-					hasOrderChanged={hasOrderChanged}
-				/>
-			</ButtonGroup>
-		</Form>
+		<div className="mb-3 flex gap-2 md:gap-3">
+			<TooltipProvider>
+				<ToolbarProvider
+					value={{
+						hasOrderChanged,
+						onSaveOrder,
+						setHide,
+						setSearch,
+						setTags,
+						toggleEditMode,
+						values,
+					}}
+				>
+					<SearchBar />
+					<TagSelect />
+					<ButtonGroup>
+						<FilterDropdown />
+						<EditModeToggle />
+					</ButtonGroup>
+				</ToolbarProvider>
+			</TooltipProvider>
+		</div>
 	);
 };
 

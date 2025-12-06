@@ -65,24 +65,24 @@ func (api *API) SetupRoutesAPI() {
 	v1Router.HandleFunc("/service/actions/{service_id:.+}", api.httpServiceGetActions).Methods(http.MethodGet)
 	//   POST, service actions (disable=service_actions).
 	v1Router.HandleFunc("/service/actions/{service_id:.+}", api.httpServiceRunActions).Methods(http.MethodPost)
-	//   GET, service-edit - get details.
+	//   GET, service - get details.
 	v1Router.HandleFunc("/service/update", api.httpOtherServiceDetails).Methods(http.MethodGet)
 	v1Router.HandleFunc("/service/update/{service_id:.+}", api.httpServiceDetail).Methods(http.MethodGet)
-	//   GET, service-edit - refresh unsaved service (disable=[ld]v_refresh_new).
+	//   GET, service - refresh unsaved service (disable=[ld]v_refresh_new).
 	v1Router.HandleFunc("/latest_version/refresh", api.httpLatestVersionRefreshUncreated).Methods(http.MethodGet)
 	v1Router.HandleFunc("/deployed_version/refresh", api.httpDeployedVersionRefreshUncreated).Methods(http.MethodGet)
-	//   GET, service-edit - refresh service (disable=[ld]v_refresh).
+	//   GET, service - refresh service (disable=[ld]v_refresh).
 	v1Router.HandleFunc("/latest_version/refresh/{service_id:.+}", api.httpLatestVersionRefresh).Methods(http.MethodGet)
 	v1Router.HandleFunc("/deployed_version/refresh/{service_id:.+}", api.httpDeployedVersionRefresh).Methods(http.MethodGet)
-	//   POST, service-edit - test notify (disable=notify_test).
+	//   POST, service - test notify (disable=notify_test).
 	v1Router.HandleFunc("/notify/test", api.httpNotifyTest).Methods(http.MethodPost)
-	//   PUT, service-edit - update details (disable=service_edit).
+	//   PUT, service - update details (disable=service_edit).
 	v1Router.HandleFunc("/service/update/{service_id:.+}", api.httpServiceEdit).Methods(http.MethodPut)
-	//   PUT, service-edit - new service (disable=service_create).
+	//   PUT, service - new service (disable=service_create).
 	v1Router.HandleFunc("/service/new", api.httpServiceEdit).Methods(http.MethodPut)
-	//   DELETE, service-edit - delete service (disable=service_delete).
+	//   DELETE, service - delete service (disable=service_delete).
 	v1Router.HandleFunc("/service/delete/{service_id:.+}", api.httpServiceDelete).Methods(http.MethodDelete)
-	//   GET, service-edit - template strings.
+	//   GET, service - template strings.
 	v1Router.HandleFunc("/template", api.httpTemplateParse).Methods(http.MethodGet)
 	// GET, counts for Heimdall.
 	v1Router.HandleFunc("/counts", api.httpCounts).Methods(http.MethodGet)
@@ -207,7 +207,7 @@ func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
 
 // failRequest returns a JSON response containing a message and status code.
 func failRequest(w *http.ResponseWriter, message string, statusCode int) {
-	// Write response.
+	// Write the response.
 	(*w).WriteHeader(statusCode)
 	resp := map[string]string{
 		"message": message,

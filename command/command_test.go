@@ -126,7 +126,7 @@ func TestController_ExecIndex(t *testing.T) {
 	svcStatus.ServiceInfo.ID = "service_id"
 	controller.Init(
 		svcStatus,
-		&Slice{
+		&Commands{
 			{"date", "+%m-%d-%Y"},
 			{"false"}},
 		nil,
@@ -191,7 +191,7 @@ func TestController_Exec(t *testing.T) {
 	// GIVEN a Controller.
 	tests := map[string]struct {
 		nilController bool
-		commands      *Slice
+		commands      *Commands
 		err           error
 		stdoutRegex   string
 		noAnnounce    bool
@@ -205,12 +205,12 @@ func TestController_Exec(t *testing.T) {
 			noAnnounce:  true},
 		"single Command": {
 			stdoutRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`,
-			commands: &Slice{
+			commands: &Commands{
 				{"date", "+%m-%d-%Y"}}},
 		"multiple Commands": {
 			err:         fmt.Errorf("exit status 1"),
 			stdoutRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+.*'false'\s.*exit status 1\s+$`,
-			commands: &Slice{
+			commands: &Commands{
 				{"date", "+%m-%d-%Y"},
 				{"false"}}},
 	}

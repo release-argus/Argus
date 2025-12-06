@@ -152,7 +152,7 @@ func applyOverridesJSON(
 		}
 		newLookup.Init(
 			newLookup.GetOptions(),
-			newLookup.GetStatus(),
+			newLookup.GetStatus().Copy(false),
 			newLookup.GetDefaults(), newLookup.GetHardDefaults())
 	}
 

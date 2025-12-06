@@ -52,7 +52,7 @@ func TestDefaults_Default(t *testing.T) {
 func TestDefaults_CheckValues(t *testing.T) {
 	type args struct {
 		require         filter.RequireDefaults
-		urlCommandSlice filter.URLCommandSlice
+		urlCommandSlice filter.URLCommands
 	}
 	// GIVEN a LookupDefault.
 	tests := map[string]struct {

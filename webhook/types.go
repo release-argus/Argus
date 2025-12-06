@@ -16,6 +16,7 @@
 package webhook
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -33,15 +34,15 @@ var (
 		"github", "gitlab"}
 )
 
-// Slice mapping of WebHook.
-type Slice map[string]*WebHook
+// WebHooks is a string map of WebHook.
+type WebHooks map[string]*WebHook
 
-// String returns a string representation of the Slice.
-func (s *Slice) String() string {
-	if s == nil {
+// String returns a string representation of the WebHooks.
+func (wh *WebHooks) String() string {
+	if wh == nil {
 		return ""
 	}
-	return util.ToYAMLString(s, "")
+	return util.ToYAMLString(wh, "")
 }
 
 // Headers is a list of Header.
@@ -98,16 +99,16 @@ func (d *Defaults) String(prefix string) string {
 	return util.ToYAMLString(d, prefix)
 }
 
-// SliceDefaults mapping of Defaults.
-type SliceDefaults map[string]*Defaults
+// WebHooksDefaults is a string map of Defaults.
+type WebHooksDefaults map[string]*Defaults
 
-// String returns a string representation of the SliceDefaults.
-func (s *SliceDefaults) String(prefix string) string {
-	if s == nil {
+// String returns a string representation of the WebHooksDefaults.
+func (whd *WebHooksDefaults) String(prefix string) string {
+	if whd == nil {
 		return ""
 	}
 
-	keys := util.SortedKeys(*s)
+	keys := util.SortedKeys(*whd)
 	if len(keys) == 0 {
 		return "{}\n"
 	}
@@ -115,7 +116,7 @@ func (s *SliceDefaults) String(prefix string) string {
 	var builder strings.Builder
 	itemPrefix := prefix + "  "
 	for _, k := range keys {
-		itemStr := (*s)[k].String(itemPrefix)
+		itemStr := (*whd)[k].String(itemPrefix)
 		if itemStr != "" {
 			delim := "\n"
 			if itemStr == "{}\n" {
@@ -133,7 +134,7 @@ func (s *SliceDefaults) String(prefix string) string {
 type WebHook struct {
 	Base `json:",inline" yaml:",inline"`
 
-	ID string `json:"-" yaml:"-"` // Unique across the Slice.
+	ID string `json:"name,omitempty" yaml:"-"` // Unique across the WebHooks.
 
 	mutex        sync.RWMutex         // Mutex for concurrent access.
 	Failed       *status.FailsWebHook `json:"-" yaml:"-"` // Whether the last send attempt failed.
@@ -148,6 +149,32 @@ type WebHook struct {
 	HardDefaults *Defaults `json:"-" yaml:"-"` // Hardcoded default values.
 }
 
+func (wh *WebHooks) UnmarshalJSON(data []byte) error {
+	var arr []WebHook
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return err //nolint:wrapcheck
+	}
+	*wh = make(WebHooks, len(arr))
+
+	for i := range arr {
+		(*wh)[arr[i].ID] = &arr[i]
+	}
+	return nil
+}
+
+func (wh *WebHooks) MarshalJSON() ([]byte, error) {
+	if wh == nil {
+		return []byte("null"), nil
+	}
+
+	keys := util.SortedKeys(*wh)
+	arr := make([]*WebHook, 0, len(*wh))
+	for _, key := range keys {
+		arr = append(arr, (*wh)[key])
+	}
+	return json.Marshal(arr) //nolint:wrapcheck
+}
+
 // New WebHook.
 func New(
 	allowInvalidCerts *bool,
@@ -155,6 +182,7 @@ func New(
 	delay string,
 	desiredStatusCode *uint16,
 	failed *status.FailsWebHook,
+	id string,
 	maxTries *uint8,
 	notifiers *Notifiers,
 	parentInterval *string,
@@ -166,6 +194,7 @@ func New(
 	defaults, hardDefaults *Defaults,
 ) *WebHook {
 	return &WebHook{
+		ID: id,
 		Base: Base{
 			AllowInvalidCerts: allowInvalidCerts,
 			CustomHeaders:     customHeaders,
@@ -185,16 +214,16 @@ func New(
 }
 
 // String returns a string representation of the WebHook.
-func (w *WebHook) String() string {
-	if w == nil {
+func (wh *WebHook) String() string {
+	if wh == nil {
 		return ""
 	}
-	return util.ToYAMLString(w, "")
+	return util.ToYAMLString(wh, "")
 }
 
 // Notifiers to use when their WebHook fails.
 type Notifiers struct {
-	Shoutrrr *shoutrrr.Slice
+	Shoutrrr *shoutrrr.Shoutrrrs
 }
 
 // Header to use in the HTTP request.

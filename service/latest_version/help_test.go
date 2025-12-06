@@ -84,7 +84,7 @@ func testLookup(lookupType string, failing bool) Lookup {
 	switch l := lookup.(type) {
 	case *github.Lookup:
 		l.URL = "release-argus/Argus"
-		l.URLCommands = filter.URLCommandSlice{
+		l.URLCommands = filter.URLCommands{
 			{Type: "regex", Regex: `([0-9.]+)`}}
 		l.AccessToken = os.Getenv("GITHUB_TOKEN")
 		if failing {
@@ -102,7 +102,7 @@ func testLookup(lookupType string, failing bool) Lookup {
 		if failing {
 			*l.AllowInvalidCerts = false
 		}
-		l.URLCommands = filter.URLCommandSlice{
+		l.URLCommands = filter.URLCommands{
 			{Type: "regex", Regex: `ver([0-9.]+)`}}
 		l.Init(
 			options,

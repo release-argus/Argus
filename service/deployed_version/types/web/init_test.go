@@ -105,14 +105,14 @@ func TestLookup_Init(t *testing.T) {
 	lookup := testLookup(false)
 	defaults := &base.Defaults{}
 	hardDefaults := &base.Defaults{}
-	status := status.Status{}
-	status.ServiceInfo.ID = "TestInit"
+	svcStatus := status.Status{}
+	svcStatus.ServiceInfo.ID = "TestInit"
 	var options opt.Options
 
 	// WHEN Init is called on it.
 	lookup.Init(
 		&options,
-		&status,
+		&svcStatus,
 		defaults, hardDefaults)
 
 	// THEN pointers to those vars are handed out to the Lookup:
@@ -127,9 +127,9 @@ func TestLookup_Init(t *testing.T) {
 			packageName, hardDefaults, lookup.HardDefaults)
 	}
 	// 	Status.
-	if lookup.Status != &status {
+	if lookup.Status != &svcStatus {
 		t.Errorf("%s\nStatus mismatch\nwant: %v\ngot:  %v",
-			packageName, &status, lookup.Status)
+			packageName, &svcStatus, lookup.Status)
 	}
 	// 	Options.
 	if lookup.Options != &options {

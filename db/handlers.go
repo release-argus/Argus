@@ -51,7 +51,7 @@ func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
 	// The columns to update.
 	var setVarsBuilder strings.Builder // `column` = ?,`column` = ?,...
 	for i, cell := range cells {
-		// Add separator before columns after the first.
+		// Add a separator before columns after the first.
 		if i != 0 {
 			setVarsBuilder.WriteString(",")
 		}

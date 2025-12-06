@@ -19,7 +19,7 @@ package service
 import "testing"
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN a Defaults struct.
+	// GIVEN Defaults.
 	d := &Defaults{}
 
 	// WHEN Default is called.

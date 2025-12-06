@@ -28,11 +28,11 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// httpServiceActions will return all Command(s)/WebHook(s) of a service.
+// httpServiceActions returns all Commands/WebHooks of a service.
 //
 // Required parameters:
 //
-//	service_id: The ID of the Service to get the actions of.
+//	service_id: the ID of the Service to get the actions of.
 func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpServiceActions", Secondary: getIP(r)}
 	// Service to get actions of.
@@ -53,9 +53,9 @@ func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 	// Commands
 	commandSummary := make(map[string]apitype.CommandSummary, len(svc.Command))
 	if svc.CommandController != nil {
-		serviceInfo := svc.Status.GetServiceInfo()
+		svcInfo := svc.Status.GetServiceInfo()
 		for i, cmd := range *svc.CommandController.Command {
-			command := cmd.ApplyTemplate(serviceInfo)
+			command := cmd.ApplyTemplate(svcInfo)
 			commandSummary[command.String()] = apitype.CommandSummary{
 				Failed:       svc.Status.Fails.Command.Get(i),
 				NextRunnable: svc.CommandController.NextRunnable(i)}
@@ -86,13 +86,13 @@ type RunActionsPayload struct {
 //
 // Required parameters:
 //
-//	service_id: The ID of the Service to target.
-//	target: The action to take. One of:
-//		"ARGUS_ALL": Approve all actions.
-//		"ARGUS_FAILED": Approve all failed actions.
-//		"ARGUS_SKIP": Skip this release.
-//		"webhook_<webhook_id>": Approve a specific WebHook.
-//		"command_<command_id>": Approve a specific Command.
+//	service_id: the ID of the Service to target.
+//	target: the action to take. One of:
+//		"ARGUS_ALL": approve all actions.
+//		"ARGUS_FAILED": approve all failed actions.
+//		"ARGUS_SKIP": skip this release.
+//		"webhook_<webhook_id>": approve a specific webhook.
+//		"command_<command_id>": approve a specific command.
 func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
 	// Service to run actions of.
@@ -157,7 +157,7 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send the WebHook(s).
+	// Send the WebHooks.
 	msg := fmt.Sprintf("%s %q Release actioned - %q",
 		targetService,
 		svc.Status.LatestVersion(),

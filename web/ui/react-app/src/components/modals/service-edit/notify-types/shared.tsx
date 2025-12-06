@@ -1,84 +1,61 @@
-import { FormLabel, FormText, FormTextArea } from 'components/generic/form';
-import { memo, useMemo } from 'react';
+import { FieldText, FieldTextArea } from '@/components/generic/field';
+import { FieldLegend, FieldSet } from '@/components/ui/field';
+import { Separator } from '@/components/ui/separator';
+import type { NotifyOptionsSchema } from '@/utils/api/types/config-edit/notify/schemas';
 
-import { NotifyOptionsType } from 'types/config';
-import { firstNonDefault } from 'utils';
-import { numberRangeTest } from 'components/generic/form-validate';
+type HeadingProps = {
+	title: string;
+};
+
+export const Heading = ({ title }: HeadingProps) => (
+	<div className="col-span-full flex flex-col gap-1 pt-4">
+		<FieldLegend className="text-lg underline">{title}</FieldLegend>
+		<Separator className="col-span-full" />
+	</div>
+);
 
 /**
- * The form fields for the `notify.X.options` section.
+ * Form fields for the `notify.X.options` section.
  *
- * @param name - The path to these `options` in the form.
- * @param main - The main values.
+ * @param name - The path to the parent `notify` in the form.
  * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
  * @returns The form fields for the `options` section of this `Notify`.
  */
 export const NotifyOptions = ({
 	name,
 
-	main,
 	defaults,
-	hard_defaults,
 }: {
 	name: string;
 
-	main?: NotifyOptionsType;
-	defaults?: NotifyOptionsType;
-	hard_defaults?: NotifyOptionsType;
+	defaults?: NotifyOptionsSchema;
 }) => {
-	const convertedDefaults = useMemo(
-		() => ({
-			// Options
-			delay: firstNonDefault(
-				main?.delay,
-				defaults?.delay,
-				hard_defaults?.delay,
-			),
-			max_tries: firstNonDefault(
-				main?.max_tries,
-				defaults?.max_tries,
-				hard_defaults?.max_tries,
-			),
-			message: firstNonDefault(
-				main?.message,
-				defaults?.message,
-				hard_defaults?.message,
-			),
-		}),
-		[main, defaults, hard_defaults],
-	);
-
 	return (
-		<>
-			<FormLabel text="Options" heading />
-			<>
-				<FormText
-					name={`${name}.options.delay`}
-					col_xs={6}
-					label="Delay"
-					tooltip="e.g. 1h2m3s = 1 hour, 2 minutes and 3 seconds"
-					defaultVal={convertedDefaults.delay}
-				/>
-				<FormText
-					name={`${name}.options.max_tries`}
-					col_xs={6}
-					label="Max tries"
-					isNumber
-					validationFunc={(value: string) => numberRangeTest(value, 0, 255)}
-					defaultVal={convertedDefaults.max_tries}
-					positionXS="right"
-				/>
-				<FormTextArea
-					name={`${name}.options.message`}
-					col_sm={12}
-					rows={3}
-					label="Message"
-					defaultVal={convertedDefaults.message}
-				/>
-			</>
-		</>
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<Heading title="Options" />
+			<FieldText
+				colSize={{ xs: 6 }}
+				defaultVal={defaults?.delay}
+				label="Delay"
+				name={`${name}.options.delay`}
+				tooltip={{
+					content: 'e.g. 1h2m3s = 1 hour, 2 minutes and 3 seconds',
+					type: 'string',
+				}}
+			/>
+			<FieldText
+				colSize={{ xs: 6 }}
+				defaultVal={defaults?.max_tries}
+				label="Max tries"
+				name={`${name}.options.max_tries`}
+			/>
+			<FieldTextArea
+				colSize={{ sm: 12 }}
+				defaultVal={defaults?.message}
+				label="Message"
+				name={`${name}.options.message`}
+				rows={3}
+			/>
+		</FieldSet>
 	);
 };
-
-export default memo(NotifyOptions);

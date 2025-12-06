@@ -68,7 +68,7 @@ func TestController_AnnounceCommand(t *testing.T) {
 				&status.Status{
 					ServiceInfo: serviceinfo.ServiceInfo{
 						ID: "some_service_id"}},
-				&Slice{
+				&Commands{
 					{"ls", "-lah", "/root"},
 					{"ls", "-lah"},
 					{"ls", "-lah", "a"}},
@@ -151,7 +151,7 @@ func TestController_Find(t *testing.T) {
 			t.Parallel()
 
 			controller := &Controller{
-				Command: &Slice{
+				Command: &Commands{
 					Command{"ls", "-lah"},
 					Command{"ls", "-lah", "a"},
 					Command{"ls", "-lah", "b"},

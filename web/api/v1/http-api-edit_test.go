@@ -52,9 +52,9 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 	file := "TestHTTP_LatestVersionRefreshUncreated.yml"
 	api := testAPI(file)
 	t.Cleanup(func() {
-		os.RemoveAll(file)
+		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 	tests := map[string]struct {
@@ -139,7 +139,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 			w := httptest.NewRecorder()
 			api.httpLatestVersionRefreshUncreated(w, req)
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
@@ -171,9 +171,9 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 	file := "TestHTTP_DeployedVersionRefreshUncreated.yml"
 	api := testAPI(file)
 	t.Cleanup(func() {
-		os.RemoveAll(file)
+		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 	tests := map[string]struct {
@@ -257,7 +257,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 			w := httptest.NewRecorder()
 			api.httpDeployedVersionRefreshUncreated(w, req)
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
@@ -282,8 +282,8 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 func TestHTTP_LatestVersionRefresh(t *testing.T) {
 	testSVC := testService("TestHTTP_LatestVersionRefresh", false)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
-	testSVC.LatestVersion.Query(true, logutil.LogFrom{})
-	testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
+	_, _ = testSVC.LatestVersion.Query(true, logutil.LogFrom{})
+	_ = testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	type wants struct {
 		body                           string
 		statusCode                     int
@@ -296,9 +296,9 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		os.RemoveAll(file)
+		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 
@@ -419,7 +419,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			api.httpLatestVersionRefresh(w, req)
 			apiMutex.Unlock()
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
@@ -463,8 +463,8 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 	testSVC := testService("TestHTTP_DeployedVersionRefresh", false)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
-	testSVC.LatestVersion.Query(true, logutil.LogFrom{})
-	testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
+	_, _ = testSVC.LatestVersion.Query(true, logutil.LogFrom{})
+	_ = testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	type wants struct {
 		body            string
 		statusCode      int
@@ -476,9 +476,9 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		os.RemoveAll(file)
+		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 
@@ -489,7 +489,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 		params             map[string]string
 		wants              wants
 	}{
-		"adding deployed version to service": {
+		"adding deployed version to service - success": {
 			nilDeployedVersion: true,
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
@@ -503,6 +503,24 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 					testSVC.Status.DeployedVersion()),
 				statusCode:      http.StatusOK,
 				deployedVersion: ""},
+		},
+		"adding deployed version to service - 'type' missing": {
+			nilDeployedVersion: true,
+			params: map[string]string{
+				"overrides": test.TrimJSON(`{
+					"url":                 "` + test.LookupJSON["url_invalid"] + `",
+					"json":                "nonSemVer",
+					"allow_invalid_certs": true
+				}`)},
+			wants: wants{
+				body:       `\{"message":"missing required parameter: overrides.type"`,
+				statusCode: http.StatusBadRequest},
+		},
+		"adding deployed version to service - no overrides": {
+			nilDeployedVersion: true,
+			wants: wants{
+				body:       `\{"message":"missing required parameter: overrides.type"`,
+				statusCode: http.StatusBadRequest},
 		},
 		"no changes": {
 			params: map[string]string{},
@@ -629,7 +647,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			api.httpDeployedVersionRefresh(w, req)
 			apiMutex.Unlock()
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
@@ -673,9 +691,9 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		os.RemoveAll(file)
+		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 
@@ -725,7 +743,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 			api.httpServiceDetail(w, req)
 			apiMutex.RUnlock()
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
@@ -772,9 +790,9 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 			tc.wantBody = test.TrimJSON(tc.wantBody)
 			svc := testService(name, true)
 			t.Cleanup(func() {
-				os.RemoveAll(file)
+				_ = os.RemoveAll(file)
 				if api.Config.Settings.Data.DatabaseFile != "" {
-					os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+					_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 				}
 			})
 			api.Config.Service[svc.ID] = svc
@@ -785,7 +803,7 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 			w := httptest.NewRecorder()
 			api.httpOtherServiceDetails(w, req)
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wantStatusCode {
@@ -819,9 +837,9 @@ func TestHTTP_TemplateParse(t *testing.T) {
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		os.RemoveAll(file)
+		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 
@@ -915,7 +933,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 			w := httptest.NewRecorder()
 			api.httpTemplateParse(w, req)
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
@@ -940,8 +958,8 @@ func TestHTTP_TemplateParse(t *testing.T) {
 func TestHTTP_ServiceEdit(t *testing.T) {
 	testSVC := testService("TestHTTP_ServiceEdit", true)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
-	testSVC.LatestVersion.Query(true, logutil.LogFrom{})
-	testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
+	_, _ = testSVC.LatestVersion.Query(true, logutil.LogFrom{})
+	_ = testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	type wants struct {
 		body                           string
 		statusCode                     int
@@ -953,9 +971,9 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		os.RemoveAll(file)
+		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 	var svcName string
@@ -1126,7 +1144,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 			api.httpServiceEdit(w, req)
 			apiMutex.Unlock()
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
@@ -1152,7 +1170,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 			// CREATE.
 			if serviceID == "" {
 				var data map[string]any
-				json.Unmarshal([]byte(tc.payload), &data)
+				_ = json.Unmarshal([]byte(tc.payload), &data)
 				serviceID = data["id"].(string)
 			}
 			apiMutex.RLock()
@@ -1195,9 +1213,9 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 	file := "TestHTTP_ServiceDelete.yml"
 	api := testAPI(file)
 	t.Cleanup(func() {
-		os.RemoveAll(file)
+		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 	svc := testService("TestHTTP_ServiceDelete", true)
@@ -1205,7 +1223,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 		&api.Config.Defaults.Service, &api.Config.HardDefaults.Service,
 		&api.Config.Notify, &api.Config.Defaults.Notify, &api.Config.HardDefaults.Notify,
 		&api.Config.WebHook, &api.Config.Defaults.WebHook, &api.Config.HardDefaults.WebHook)
-	api.Config.AddService("", svc)
+	_ = api.Config.AddService("", svc)
 	// Drain db from the Service addition.
 	<-*api.Config.DatabaseChannel
 	tests := []struct {
@@ -1239,6 +1257,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 	for _, tc := range tests {
 		name, tc := tc.name, tc
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() -- Cannot run in parallel since we're sharing the API.
 
 			target := "/api/v1/service/delete/" + url.QueryEscape(tc.serviceID)
 
@@ -1251,7 +1270,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 			w := httptest.NewRecorder()
 			api.httpServiceDelete(w, req)
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
@@ -1305,9 +1324,9 @@ func TestHTTP_NotifyTest(t *testing.T) {
 	// GIVEN an API and a request to test a notify.
 	file := "TestHTTP_NotifyTest.yml"
 	api := testAPI(file)
-	t.Cleanup(func() { os.Remove(file) })
+	t.Cleanup(func() { _ = os.Remove(file) })
 	validNotify := shoutrrr_test.Shoutrrr(false, false)
-	api.Config.Notify = shoutrrr.SliceDefaults{}
+	api.Config.Notify = shoutrrr.ShoutrrrsDefaults{}
 	options := util.CopyMap(validNotify.Options)
 	params := util.CopyMap(validNotify.Params)
 	urlFields := util.CopyMap(validNotify.URLFields)
@@ -1587,7 +1606,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			w := httptest.NewRecorder()
 			api.httpNotifyTest(w, req)
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
@@ -1602,7 +1621,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			}
 			// Marshal message out of JSON data {"message": text}.
 			var body map[string]string
-			err = json.Unmarshal(data, &body)
+			_ = json.Unmarshal(data, &body)
 			if !util.RegexCheck(tc.wants.body, body["message"]) {
 				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wants.body, body["message"])

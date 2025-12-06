@@ -1,123 +1,93 @@
-import { FormLabel, FormText } from 'components/generic/form';
-
-import NotifyOptions from 'components/modals/service-edit/notify-types/shared';
-import { NotifyPushoverType } from 'types/config';
-import { firstNonDefault } from 'utils';
 import { useMemo } from 'react';
+import { FieldText } from '@/components/generic/field';
+import {
+	Heading,
+	NotifyOptions,
+} from '@/components/modals/service-edit/notify-types/shared';
+import { FieldSet } from '@/components/ui/field';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import type { NotifyPushoverSchema } from '@/utils/api/types/config-edit/notify/schemas';
 
 /**
- * The form fields for a PushOver notifier.
+ * The form fields for a `PushOver` notifier.
  *
  * @param name - The path to this `PushOver` in the form.
  * @param main - The main values.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for this `PushOver` notifier.
  */
 const PUSHOVER = ({
 	name,
-
 	main,
-	defaults,
-	hard_defaults,
 }: {
 	name: string;
-
-	main?: NotifyPushoverType;
-	defaults?: NotifyPushoverType;
-	hard_defaults?: NotifyPushoverType;
+	main?: NotifyPushoverSchema;
 }) => {
-	const convertedDefaults = useMemo(
-		() => ({
-			// URL Fields
-			url_fields: {
-				token: firstNonDefault(
-					main?.url_fields?.token,
-					defaults?.url_fields?.token,
-					hard_defaults?.url_fields?.token,
-				),
-				user: firstNonDefault(
-					main?.url_fields?.user,
-					defaults?.url_fields?.user,
-					hard_defaults?.url_fields?.user,
-				),
-			},
-			// Params
-			params: {
-				devices: firstNonDefault(
-					main?.params?.devices,
-					defaults?.params?.devices,
-					hard_defaults?.params?.devices,
-				),
-				priority: firstNonDefault(
-					main?.params?.priority,
-					defaults?.params?.priority,
-					hard_defaults?.params?.priority,
-				),
-				title: firstNonDefault(
-					main?.params?.title,
-					defaults?.params?.title,
-					hard_defaults?.params?.title,
-				),
-			},
-		}),
-		[main, defaults, hard_defaults],
+	const { typeDataDefaults } = useSchemaContext();
+	const defaults = useMemo(
+		() => main ?? typeDataDefaults?.notify.pushover,
+		[main, typeDataDefaults?.notify.pushover],
 	);
 
 	return (
-		<>
-			<NotifyOptions
-				name={name}
-				main={main?.options}
-				defaults={defaults?.options}
-				hard_defaults={hard_defaults?.options}
-			/>
-			<FormLabel text="URL Fields" heading />
-			<>
-				<FormText
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<NotifyOptions defaults={defaults?.options} name={name} />
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="URL Fields" />
+				<FieldText
+					colSize={{ sm: 6 }}
+					defaultVal={defaults?.url_fields?.token}
+					label="API Token/Key"
 					name={`${name}.url_fields.token`}
 					required
-					col_sm={6}
-					label="API Token/Key"
-					tooltip="'Create an Application/API Token' on the Pushover dashboard'"
-					defaultVal={convertedDefaults.url_fields.token}
+					tooltip={{
+						content:
+							"'Create an Application/API Token' on the Pushover dashboard'",
+						type: 'string',
+					}}
 				/>
-				<FormText
+				<FieldText
+					colSize={{ sm: 6 }}
+					defaultVal={defaults?.url_fields?.user}
+					label="User Key"
 					name={`${name}.url_fields.user`}
 					required
-					col_sm={6}
-					label="User Key"
-					tooltip="Top right of Pushover dashboard"
-					defaultVal={convertedDefaults.url_fields.user}
-					positionXS="right"
+					tooltip={{
+						content: 'Top right of Pushover dashboard',
+						type: 'string',
+					}}
 				/>
-			</>
-			<FormLabel text="Params" heading />
-			<>
-				<FormText
-					name={`${name}.params.devices`}
-					col_sm={12}
+			</FieldSet>
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="Params" />
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.devices}
 					label="Devices"
-					tooltip="e.g. device1,device2... (deviceX=Name column in the 'Your Devices' list)"
-					defaultVal={convertedDefaults.params.devices}
+					name={`${name}.params.devices`}
+					tooltip={{
+						content:
+							"e.g. device1,device2... (deviceX=Name column in the 'Your Devices' list)",
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.title`}
-					col_sm={9}
+				<FieldText
+					colSize={{ xs: 9 }}
+					defaultVal={defaults?.params?.title}
 					label="Title"
-					defaultVal={convertedDefaults.params.title}
+					name={`${name}.params.title`}
 				/>
-				<FormText
-					name={`${name}.params.priority`}
-					col_sm={3}
+				<FieldText
+					colSize={{ xs: 3 }}
+					defaultVal={defaults?.params?.priority}
 					label="Priority"
-					tooltip="Only supply priority values between -1 and 1, since 2 requires additional parameters that are not supported yet"
-					isNumber
-					defaultVal={convertedDefaults.params.priority}
-					positionXS="right"
+					name={`${name}.params.priority`}
+					tooltip={{
+						content:
+							'Only supply priority values between -1 and 1, since 2 requires additional parameters that are not supported yet',
+						type: 'string',
+					}}
 				/>
-			</>
-		</>
+			</FieldSet>
+		</FieldSet>
 	);
 };
 

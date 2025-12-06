@@ -1,172 +1,126 @@
-import { FormLabel, FormSelect, FormText } from 'components/generic/form';
-import { firstNonDefault, strToBool } from 'utils';
 import { useEffect, useMemo } from 'react';
-
-import { BooleanWithDefault } from 'components/generic';
-import NotifyOptions from 'components/modals/service-edit/notify-types/shared';
-import { NotifyTelegramType } from 'types/config';
-import { normaliseForSelect } from 'components/modals/service-edit/util';
 import { useFormContext } from 'react-hook-form';
-
-export const TelegramParseModeOptions = [
-	{ label: 'None', value: 'None' },
-	{ label: 'HTML', value: 'HTML' },
-	{ label: 'Markdown', value: 'Markdown' },
-	{ label: 'Markdown v2', value: 'MarkdownV2' },
-];
+import { BooleanWithDefault } from '@/components/generic';
+import { FieldSelect, FieldText } from '@/components/generic/field';
+import {
+	Heading,
+	NotifyOptions,
+} from '@/components/modals/service-edit/notify-types/shared';
+import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import { FieldSet } from '@/components/ui/field';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import {
+	type TelegramParsemode,
+	telegramParsemodeOptions,
+} from '@/utils/api/types/config/notify/telegram';
+import type { NotifyTelegramSchema } from '@/utils/api/types/config-edit/notify/schemas';
+import { ensureValue } from '@/utils/form-utils';
 
 /**
- * The form fields for a Telegram notifier.
+ * The form fields for a `Telegram` notifier.
  *
  * @param name - The path to this `Telegram` in the form.
- * @param main - The main values.
  * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for this `Telegram` notifier.
  */
 const TELEGRAM = ({
 	name,
-
 	main,
-	defaults,
-	hard_defaults,
 }: {
 	name: string;
-
-	main?: NotifyTelegramType;
-	defaults?: NotifyTelegramType;
-	hard_defaults?: NotifyTelegramType;
+	main?: NotifyTelegramSchema;
 }) => {
 	const { getValues, setValue } = useFormContext();
-
-	const convertedDefaults = useMemo(
-		() => ({
-			// URL Fields
-			url_fields: {
-				token: firstNonDefault(
-					main?.url_fields?.token,
-					defaults?.url_fields?.token,
-					hard_defaults?.url_fields?.token,
-				),
-			},
-			// Params
-			params: {
-				chats: firstNonDefault(
-					main?.params?.chats,
-					defaults?.params?.chats,
-					hard_defaults?.params?.chats,
-				),
-				notification:
-					strToBool(
-						firstNonDefault(
-							main?.params?.notification,
-							defaults?.params?.notification,
-							hard_defaults?.params?.notification,
-						),
-					) ?? true,
-				parsemode: firstNonDefault(
-					main?.params?.parsemode,
-					defaults?.params?.parsemode,
-					hard_defaults?.params?.parsemode,
-				).toLowerCase(),
-				preview:
-					strToBool(
-						firstNonDefault(
-							main?.params?.preview,
-							defaults?.params?.preview,
-							hard_defaults?.params?.preview,
-						),
-					) ?? true,
-				title: firstNonDefault(
-					main?.params?.title,
-					defaults?.params?.title,
-					hard_defaults?.params?.title,
-				),
-			},
-		}),
-		[main, defaults, hard_defaults],
+	const { typeDataDefaults } = useSchemaContext();
+	const defaults = useMemo(
+		() => main ?? typeDataDefaults?.notify.telegram,
+		[main, typeDataDefaults?.notify.telegram],
 	);
+
+	// Ensure selects have a valid value.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: fallback on first load.
+	useEffect(() => {
+		ensureValue<TelegramParsemode>({
+			defaultValue: defaults?.params?.parsemode,
+			fallback: Object.values(telegramParsemodeOptions)[0].value,
+			getValues,
+			path: `${name}.params.parsemode`,
+			setValue,
+		});
+	}, [main]);
 
 	const telegramParseModeOptions = useMemo(() => {
 		const defaultParseMode = normaliseForSelect(
-			TelegramParseModeOptions,
-			convertedDefaults.params.parsemode,
+			telegramParsemodeOptions,
+			defaults?.params?.parsemode,
 		);
 
 		if (defaultParseMode)
 			return [
-				{ value: '', label: `${defaultParseMode.label} (default)` },
-				...TelegramParseModeOptions,
+				{ label: `${defaultParseMode.label} (default)`, value: '' },
+				...telegramParsemodeOptions,
 			];
 
-		return TelegramParseModeOptions;
-	}, [convertedDefaults.params.parsemode]);
-
-	useEffect(() => {
-		// Normalise selected parsemode, or default it.
-		if (convertedDefaults.params.parsemode === '')
-			setValue(
-				`${name}.params.parsemode`,
-				normaliseForSelect(getValues(`${name}.params.parsemode`))?.value ||
-					'None',
-			);
-	}, []);
+		return telegramParsemodeOptions;
+	}, [defaults?.params?.parsemode]);
 
 	return (
-		<>
-			<NotifyOptions
-				name={name}
-				main={main?.options}
-				defaults={defaults?.options}
-				hard_defaults={hard_defaults?.options}
-			/>
-			<FormLabel text="URL Fields" heading />
-			<>
-				<FormText
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<NotifyOptions defaults={defaults?.options} name={name} />
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="URL Fields" />
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.url_fields?.token}
+					label="Token"
 					name={`${name}.url_fields.token`}
 					required
-					col_sm={12}
-					label="Token"
-					defaultVal={convertedDefaults.url_fields.token}
 				/>
-			</>
-			<FormLabel text="Params" heading />
-			<>
-				<FormText
+			</FieldSet>
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="Params" />
+				<FieldText
+					colSize={{ sm: 8 }}
+					defaultVal={defaults?.params?.chats}
+					label="Chats"
 					name={`${name}.params.chats`}
 					required
-					col_sm={8}
-					label="Chats"
-					tooltip="Chat IDs or Channel names, e.g. -123,@bar"
-					defaultVal={convertedDefaults.params.chats}
+					tooltip={{
+						content: 'Chat IDs or Channel names, e.g. -123,@bar',
+						type: 'string',
+					}}
 				/>
-				<FormSelect
-					name={`${name}.params.parsemode`}
-					col_sm={4}
+				<FieldSelect
+					colSize={{ sm: 4 }}
 					label="Parse Mode"
+					name={`${name}.params.parsemode`}
 					options={telegramParseModeOptions}
-					positionXS="right"
 				/>
-				<FormText
-					name={`${name}.params.title`}
-					col_sm={12}
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.title}
 					label="Title"
-					defaultVal={convertedDefaults.params.title}
+					name={`${name}.params.title`}
 				/>
 				<BooleanWithDefault
-					name={`${name}.params.notification`}
+					defaultValue={defaults?.params?.notification}
 					label="Notification"
-					tooltip="Disable for silent messages"
-					defaultValue={convertedDefaults.params.notification}
+					name={`${name}.params.notification`}
+					tooltip={{
+						content: 'Disable for silent messages',
+						type: 'string',
+					}}
 				/>
 				<BooleanWithDefault
-					name={`${name}.params.preview`}
+					defaultValue={defaults?.params?.preview}
 					label="Preview"
-					tooltip="Enable web page previews on messages"
-					defaultValue={convertedDefaults.params.preview}
+					name={`${name}.params.preview`}
+					tooltip={{
+						content: 'Enable web page previews on messages',
+						type: 'string',
+					}}
 				/>
-			</>
-		</>
+			</FieldSet>
+		</FieldSet>
 	);
 };
 

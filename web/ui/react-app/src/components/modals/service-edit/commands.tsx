@@ -1,14 +1,26 @@
-import { Accordion, Button, FormGroup, Row } from 'react-bootstrap';
-import { FC, memo, useCallback } from 'react';
+import { type FC, memo, useCallback, useEffect, useMemo } from 'react';
+import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
+import Command from '@/components/modals/service-edit/command';
+import {
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { FieldSet } from '@/components/ui/field';
+import { Separator } from '@/components/ui/separator';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import { cn } from '@/lib/utils';
+import { isEmptyArray } from '@/utils';
+import type { CommandsSchema } from '@/utils/api/types/config-edit/command/schemas';
+import { isUsingDefaults } from '@/utils/api/types/config-edit/validators';
 
-import Command from './command';
-import { isEmptyArray } from 'utils';
-import { useFieldArray } from 'react-hook-form';
-
-interface Props {
+type EditServiceCommandsProps = {
+	/* The name of the field in the form. */
 	name: string;
+	/* Whether the modal is loading. */
 	loading: boolean;
-}
+};
 
 /**
  * The form fields for all commands in a service.
@@ -17,44 +29,79 @@ interface Props {
  * @param loading - Whether the modal is loading.
  * @returns The set of form fields for a list of `command`.
  */
-const EditServiceCommands: FC<Props> = ({ name, loading }) => {
-	const { fields, append, remove } = useFieldArray({
-		name: name,
-	});
+const EditServiceCommands: FC<EditServiceCommandsProps> = ({
+	name,
+	loading,
+}) => {
+	const { schemaDataDefaults, schemaDataDefaultsHollow } = useSchemaContext();
+	const defaults = schemaDataDefaults?.command;
+	const defaultsHollow = schemaDataDefaultsHollow?.command;
+	const { setValue, trigger } = useFormContext();
+	const { fields, append, remove } = useFieldArray({ name: name });
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: append stable.
 	const addItem = useCallback(() => {
-		append({ args: [{ arg: '' }] }, { shouldFocus: false });
+		append([[{ arg: '' }]], { shouldFocus: false });
 	}, []);
 
+	// Remove item at given index.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: remove stable.
+	const removeItem = useCallback(
+		(index: number) => () => {
+			// Change focus to the accordion.
+			document.getElementById(name)?.focus();
+			remove(index);
+		},
+		[],
+	);
+
+	// Keep track of the array values, so we can use defaults when empty.
+	// @ts-ignore: control in context.
+	const fieldValues = useWatch({ name: name }) as CommandsSchema;
+	// Use defaults when fieldValues undefined or the same as the defaults.
+	const usingDefaults = useMemo(
+		() => isUsingDefaults({ arg: fieldValues, defaultValue: defaults }),
+		[defaults, fieldValues],
+	);
+
+	// Trigger validation on change of defaults used/not.
+	// Reset to defaults when empty.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: usingDefaults covers fieldValues.
+	useEffect(() => {
+		void trigger(name);
+
+		// Give defaults back when field empty.
+		if (!isEmptyArray(defaultsHollow) && isEmptyArray(fieldValues)) {
+			setValue(name, defaultsHollow);
+		}
+	}, [usingDefaults, defaultsHollow]);
+
 	return (
-		<Accordion>
-			<Accordion.Header>Command:</Accordion.Header>
-			<Accordion.Body>
-				<FormGroup className="mb-2">
-					<Row>
-						{fields.map(({ id }, index) => (
-							<Row key={id}>
-								<Command
-									name={`${name}.${index}.args`}
-									removeMe={() => remove(index)}
-								/>
-							</Row>
-						))}
-					</Row>
-					<Row>
-						<Button
-							className={isEmptyArray(fields) ? 'mt-2' : ''}
-							variant="secondary"
-							onClick={addItem}
-							disabled={loading}
-						>
-							Add Command
-						</Button>
-					</Row>
-				</FormGroup>
-			</Accordion.Body>
-		</Accordion>
+		<AccordionItem value={name}>
+			<AccordionTrigger id={name}>Command:</AccordionTrigger>
+			<AccordionContent className="mb-2 flex flex-col gap-2">
+				{fields.map(({ id }, index) => (
+					<FieldSet className="grid grid-cols-12 gap-2" key={id}>
+						<Command
+							defaults={usingDefaults ? defaults?.[index] : undefined}
+							name={`${name}.${index}`}
+							removeMe={removeItem(index)}
+						/>
+						{index < fields.length - 1 && (
+							<Separator className="col-span-12 my-2" />
+						)}
+					</FieldSet>
+				))}
+				<Button
+					className={cn(isEmptyArray(fields) && 'mt-2', 'w-full')}
+					disabled={loading}
+					onClick={addItem}
+					variant="secondary"
+				>
+					Add Command
+				</Button>
+			</AccordionContent>
+		</AccordionItem>
 	);
 };
-
 export default memo(EditServiceCommands);

@@ -1,131 +1,132 @@
+import { CheckIcon, Eye } from 'lucide-react';
+import { type FC, useCallback } from 'react';
+import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
+import { Button } from '@/components/ui/button';
 import {
-	ButtonGroup,
-	Dropdown,
-	OverlayTrigger,
-	Tooltip,
-} from 'react-bootstrap';
-import { FC, useMemo } from 'react';
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { optionStyles } from '@/components/ui/react-select/helper';
+import Tip from '@/components/ui/tip';
+import {
+	ACTIVE_HIDE_VALUES,
+	DEFAULT_HIDE_VALUE,
+	HideValue,
+	type HideValueType,
+	toolbarHideOptions,
+} from '@/constants/toolbar';
+import { cn } from '@/lib/utils';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { URL_PARAMS } from 'constants/toolbar';
-import { faEye } from '@fortawesome/free-solid-svg-icons';
+type HideOptionKey = (typeof toolbarHideOptions)[number]['key'];
 
-export enum HideValue {
-	UpToDate = 0,
-	Updatable = 1,
-	Skipped = 2,
-	Inactive = 3,
-}
+/**
+ * FilterDropdown
+ *
+ * A dropdown component for toggling visibility filters on services.
+ * It lists all `HIDE_OPTIONS`, allowing users to show or hide specific statuses,
+ * and includes a reset option to restore default visibility (`DEFAULT_HIDE_VALUE`).
+ */
+const FilterDropdown: FC = () => {
+	const { values, setHide } = useToolbar();
+	const currentValues = values.hide;
 
-export const HIDE_OPTIONS = [
-	{ key: 'upToDate', label: 'Hide up-to-date', value: HideValue.UpToDate },
-	{ key: 'updatable', label: 'Hide updatable', value: HideValue.Updatable },
-	{ key: 'skipped', label: 'Hide skipped', value: HideValue.Skipped },
-	{ key: 'inactive', label: 'Hide inactive', value: HideValue.Inactive },
-] as const;
+	const handleOptionClick = useCallback(
+		(key: HideOptionKey) => {
+			const option = toolbarHideOptions.find((opt) => opt.key === key);
+			if (!option) return;
+			const { value: clickedValue } = option;
 
-export const DEFAULT_HIDE_VALUE = [HideValue.Inactive];
+			const toggle = (val: number) => {
+				const newValues = currentValues.includes(val as HideValueType)
+					? currentValues.filter((v) => v !== val)
+					: [...currentValues, val];
+				setHide(newValues);
+			};
 
-type Props = {
-	values: number[];
-	setValue: (
-		key: (typeof URL_PARAMS)[keyof typeof URL_PARAMS],
-		value: number[],
-	) => void;
-};
+			const flipActiveValues = () => {
+				const newActiveHidden = ACTIVE_HIDE_VALUES.filter(
+					(v) => !currentValues.includes(v),
+				);
+				const inactiveIsHidden = currentValues.includes(HideValue.Inactive);
+				const newValues = inactiveIsHidden
+					? [...newActiveHidden, HideValue.Inactive]
+					: newActiveHidden;
+				setHide(newValues);
+			};
 
-const FilterDropdown: FC<Props> = ({ values, setValue }) => {
-	const optionsMap = useMemo(
-		() => ({
-			upToDate: () =>
-				setValue(URL_PARAMS.HIDE, toggleHideValue(HideValue.UpToDate)),
-			updatable: () =>
-				setValue(URL_PARAMS.HIDE, toggleHideValue(HideValue.Updatable)),
-			skipped: () =>
-				setValue(URL_PARAMS.HIDE, toggleHideValue(HideValue.Skipped)),
-			inactive: () =>
-				setValue(URL_PARAMS.HIDE, toggleHideValue(HideValue.Inactive)),
-			reset: () => setValue(URL_PARAMS.HIDE, [HideValue.Inactive]),
-			flipAllHideOptions: () =>
-				setValue(URL_PARAMS.HIDE, toggleAllHideValues()),
-		}),
-		[values],
+			if (ACTIVE_HIDE_VALUES.includes(clickedValue)) {
+				const otherActiveValues = ACTIVE_HIDE_VALUES.filter(
+					(v) => v !== clickedValue,
+				);
+				// If all other active statuses hidden, flip them all.
+				if (otherActiveValues.every((v) => currentValues.includes(v))) {
+					flipActiveValues();
+					return;
+				}
+			}
+
+			toggle(clickedValue);
+		},
+		[currentValues, setHide],
 	);
 
-	const toggleHideValue = (value: number) =>
-		values.includes(value)
-			? values.filter((v) => v !== value)
-			: [...values, value];
+	const handleReset = useCallback(() => {
+		setHide(DEFAULT_HIDE_VALUE);
+	}, [setHide]);
 
-	const toggleAllHideValues = () =>
-		[
-			HideValue.UpToDate,
-			HideValue.Updatable,
-			HideValue.Skipped,
-			HideValue.Inactive,
-		].filter((n) => !(n !== HideValue.Inactive && values.includes(n)));
-
-	const handleOption = (option: string) => {
-		const hideUpdatable = values.includes(HideValue.Updatable);
-		const hideUpToDate = values.includes(HideValue.UpToDate);
-		const hideSkipped = values.includes(HideValue.Skipped);
-		switch (option) {
-			case 'upToDate': // 0
-				hideUpToDate && hideSkipped // 1 && 2
-					? optionsMap.flipAllHideOptions()
-					: optionsMap.upToDate();
-				break;
-			case 'updatable': // 1
-				hideUpdatable && hideSkipped // 0 && 2
-					? optionsMap.flipAllHideOptions()
-					: optionsMap.updatable();
-				break;
-			case 'skipped': // 2
-				hideUpdatable && hideUpToDate // 0 && 1
-					? optionsMap.flipAllHideOptions()
-					: optionsMap.skipped();
-				break;
-			case 'inactive': // 3
-				optionsMap.inactive();
-				break;
-			case 'reset':
-				optionsMap.reset();
-				break;
-		}
-	};
 	const filterButtonTooltip = 'Filter shown services';
 
 	return (
-		<Dropdown as={ButtonGroup}>
-			<OverlayTrigger
-				delay={{ show: 500, hide: 500 }}
-				overlay={<Tooltip id="tooltip-help">{filterButtonTooltip}</Tooltip>}
-			>
-				<Dropdown.Toggle
-					variant="secondary"
-					className="border-0"
-					aria-label={filterButtonTooltip}
-				>
-					<FontAwesomeIcon icon={faEye} />
-				</Dropdown.Toggle>
-			</OverlayTrigger>
-			<Dropdown.Menu>
-				{HIDE_OPTIONS.map(({ key, label, value }) => (
-					<Dropdown.Item
-						key={key}
-						eventKey={key}
-						active={values.includes(value)}
-						onClick={() => handleOption(key)}
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<div className="h-full cursor-pointer">
+					<Tip
+						content={filterButtonTooltip}
+						delayDuration={500}
+						touchDelayDuration={250}
 					>
-						{label}
-					</Dropdown.Item>
-				))}
-				<Dropdown.Divider />
-				<Dropdown.Item eventKey="reset" onClick={() => handleOption('reset')}>
+						<Button
+							aria-label={filterButtonTooltip}
+							className="rounded-e-none"
+							size="icon-md"
+							variant="outline"
+						>
+							<Eye />
+						</Button>
+					</Tip>
+				</div>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent className="w-max">
+				{toolbarHideOptions.map(({ key, label, value }) => {
+					const isSelected = currentValues.includes(value);
+					return (
+						<DropdownMenuItem
+							className={cn(
+								'cursor-pointer',
+								optionStyles.base,
+								isSelected && optionStyles.selected,
+							)}
+							key={key}
+							onClick={() => handleOptionClick(key)}
+						>
+							<div className="flex w-30 flex-row justify-between sm:w-36">
+								<span>{label}</span>
+								{isSelected && (
+									<span className="flex h-full items-center justify-center">
+										<CheckIcon className="size-4" />
+									</span>
+								)}
+							</div>
+						</DropdownMenuItem>
+					);
+				})}
+				<DropdownMenuItem className="cursor-pointer" onClick={handleReset}>
 					Reset
-				</Dropdown.Item>
-			</Dropdown.Menu>
-		</Dropdown>
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 };
 

@@ -1,111 +1,73 @@
-import {
-	FormLabel,
-	FormText,
-	FormTextWithPreview,
-} from 'components/generic/form';
-
-import { NotifyJoinType } from 'types/config';
-import NotifyOptions from 'components/modals/service-edit/notify-types/shared';
-import { firstNonDefault } from 'utils';
 import { useMemo } from 'react';
+import { FieldText, FieldTextWithPreview } from '@/components/generic/field';
+import {
+	Heading,
+	NotifyOptions,
+} from '@/components/modals/service-edit/notify-types/shared';
+import { FieldSet } from '@/components/ui/field';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import type { NotifyJoinSchema } from '@/utils/api/types/config-edit/notify/schemas';
 
 /**
- * The form fields for a Join notifier.
+ * The form fields for a `Join` notifier.
  *
- * @param name - The path to this `Join` in the form.
+ * @param name - The `path` to this `Join` in the form.
  * @param main - The main values.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for this `Join` notifier.
  */
-const JOIN = ({
-	name,
-
-	main,
-	defaults,
-	hard_defaults,
-}: {
-	name: string;
-
-	main?: NotifyJoinType;
-	defaults?: NotifyJoinType;
-	hard_defaults?: NotifyJoinType;
-}) => {
-	const convertedDefaults = useMemo(
-		() => ({
-			// URL Fields
-			url_fields: {
-				apikey: firstNonDefault(
-					main?.url_fields?.apikey,
-					defaults?.url_fields?.apikey,
-					hard_defaults?.url_fields?.apikey,
-				),
-			},
-			// Params
-			params: {
-				devices: firstNonDefault(
-					main?.params?.devices,
-					defaults?.params?.devices,
-					hard_defaults?.params?.devices,
-				),
-				icon: firstNonDefault(
-					main?.params?.icon,
-					defaults?.params?.icon,
-					hard_defaults?.params?.icon,
-				),
-				title: firstNonDefault(
-					main?.params?.title,
-					defaults?.params?.title,
-					hard_defaults?.params?.title,
-				),
-			},
-		}),
-		[main, defaults, hard_defaults],
+const JOIN = ({ name, main }: { name: string; main?: NotifyJoinSchema }) => {
+	const { typeDataDefaults } = useSchemaContext();
+	const defaults = useMemo(
+		() => main ?? typeDataDefaults?.notify.join,
+		[main, typeDataDefaults?.notify.join],
 	);
 
 	return (
-		<>
-			<NotifyOptions
-				name={name}
-				main={main?.options}
-				defaults={defaults?.options}
-				hard_defaults={hard_defaults?.options}
-			/>
-			<FormLabel text="URL Fields" heading />
-			<>
-				<FormText
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<NotifyOptions defaults={defaults?.options} name={name} />
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="URL Fields" />
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.url_fields?.apikey}
+					label="API Key"
 					name={`${name}.url_fields.apikey`}
 					required
-					col_sm={12}
-					label="API Key"
-					defaultVal={convertedDefaults.url_fields.apikey}
 				/>
-			</>
-			<FormLabel text="Params" heading />
-			<>
-				<FormText
+			</FieldSet>
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="Params" />
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.devices}
+					label="Devices"
 					name={`${name}.params.devices`}
 					required
-					col_sm={12}
-					label="Devices"
-					tooltip="e.g. ID1,ID2..."
-					defaultVal={convertedDefaults.params.devices}
+					tooltip={{
+						content: 'e.g. ID1,ID2...',
+						type: 'string',
+					}}
 				/>
-				<FormTextWithPreview
-					name={`${name}.params.icon`}
+				<FieldTextWithPreview
+					defaultVal={defaults?.params?.icon}
 					label="Icon"
-					tooltip="URL of icon to use"
-					defaultVal={convertedDefaults.params.icon}
+					name={`${name}.params.icon`}
+					tooltip={{
+						content: 'URL of icon to use',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.title`}
-					col_sm={12}
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.title}
 					label="Title"
-					tooltip="e.g. 'Release - {{ service_name | default:service_id }}'"
-					defaultVal={convertedDefaults.params.title}
+					name={`${name}.params.title`}
+					tooltip={{
+						content: "e.g. 'Release - {{ service_name | default:service_id }}'",
+						type: 'string',
+					}}
 				/>
-			</>
-		</>
+			</FieldSet>
+		</FieldSet>
 	);
 };
 

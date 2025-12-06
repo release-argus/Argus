@@ -27,8 +27,8 @@ func (l *Lookup) Track() {
 	// Do nothing.
 }
 
-// Query queries the source,
-// and returns whether a new release was found, and updates LatestVersion if so.
+// Query queries the source
+// and returns whether a new release was found and updates LatestVersion if so.
 //
 // Parameters:
 //
@@ -44,7 +44,7 @@ func (l *Lookup) Query(_metrics bool, logFrom logutil.LogFrom) error {
 		if time.Since(lastQueriedAt) < time.Second {
 			return errors.New("manual version updates are rate-limited. Please try again in 1 second")
 		}
-		// If semantic versioning is enabled, check the version is in the correct format.
+		// If semantic versioning enabled, check version formatting.
 		if l.Options.GetSemanticVersioning() {
 			if _, err := l.Options.VerifySemanticVersioning(l.Version, logFrom); err != nil {
 				return err //nolint:wrapcheck

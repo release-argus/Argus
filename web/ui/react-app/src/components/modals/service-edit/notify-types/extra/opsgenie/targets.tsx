@@ -1,126 +1,143 @@
-import {
-	Button,
-	ButtonGroup,
-	Col,
-	FormGroup,
-	Row,
-	Stack,
-} from 'react-bootstrap';
-import { FC, memo, useCallback, useEffect, useMemo } from 'react';
-import { faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { Minus, Plus } from 'lucide-react';
+import { type FC, memo, useCallback, useEffect, useMemo } from 'react';
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
+import { FieldLabel } from '@/components/generic/field';
+import type { TooltipWithAriaProps } from '@/components/generic/tooltip';
+import OpsGenieTarget from '@/components/modals/service-edit/notify-types/extra/opsgenie/target';
+import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
+import { isEmptyArray } from '@/utils';
+import type { OpsGenieTargetsSchema } from '@/utils/api/types/config-edit/notify/types/opsgenie';
+import { isUsingDefaults } from '@/utils/api/types/config-edit/validators';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { FormLabel } from 'components/generic/form';
-import { NotifyOpsGenieTarget } from 'types/config';
-import OpsGenieTarget from './target';
-import { diffObjects } from 'utils/diff-objects';
-import { isEmptyArray } from 'utils';
-
-interface Props {
+type BaseProps = {
+	/* The name of the field in the form. */
 	name: string;
+	/* The label for the field. */
 	label: string;
-	tooltip: string;
 
-	defaults?: NotifyOpsGenieTarget[];
-}
+	/* The default values for the field. */
+	defaults?: OpsGenieTargetsSchema;
+};
+
+type OpsGenieTargetsProps = BaseProps & {
+	/* The tooltip on the field label. */
+	tooltip: TooltipWithAriaProps;
+};
 
 /**
  * OpsGenieTargets returns the form fields for a list of OpsGenie targets.
  *
  * @param name - The name of the field in the form.
  * @param label - The label for the field.
- * @param tooltip - The tooltip for the field.
+ * @param tooltip - The tooltip on the field label.
+ * @param tooltip.type - 'string' | 'element'.
+ * @param tooltip.side - The wide to render the tooltip content.
+ * @param tooltip.size - The size of the tooltip.
+ * @param tooltip.delayDuration - Time before rendering the tooltip.
  * @param defaults - The default values for the field.
  * @returns A set of form fields for a list of OpsGenie targets.
  */
-const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
-	const { trigger } = useFormContext();
-	const { fields, append, remove } = useFieldArray({
-		name: name,
-	});
+const OpsGenieTargets: FC<OpsGenieTargetsProps> = ({
+	name,
+	label,
+	tooltip,
+	defaults,
+}) => {
+	const { setValue, trigger } = useFormContext();
+	const { fields, append, remove } = useFieldArray({ name: name });
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: append stable.
 	const addItem = useCallback(() => {
 		append(
 			{
-				type: 'team',
 				sub_type: 'id',
+				type: 'team',
 				value: '',
 			},
 			{ shouldFocus: false },
 		);
 	}, []);
 
-	// keep track of the array values, so can switch to defaults when unchanged.
-	const fieldValues: NotifyOpsGenieTarget[] = useWatch({ name: name });
-	// useDefaults when fieldValues undefined, or match defaults.
-	const useDefaults = useMemo(
+	// Keep track of the array values so can switch to defaults when unchanged.
+	// @ts-ignore: control in context.
+	const fieldValues = useWatch({ name: name }) as OpsGenieTargetsSchema;
+	// usingDefaults when fieldValues undefined, or match defaults.
+	const usingDefaults = useMemo(
 		() =>
-			isEmptyArray(defaults)
-				? false
-				: !diffObjects(fieldValues, defaults, ['.type', '.sub_type']),
+			isUsingDefaults({
+				arg: fieldValues,
+				defaultValue: defaults,
+				matchingFieldsEndsWiths: ['.type', '.sub_type'],
+			}),
 		[fieldValues, defaults],
 	);
+	// Validate on change of defaults being usable.
+	// Give defaults back when empty.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: defaults stable.
 	useEffect(() => {
-		trigger(name);
+		trigger(name).catch(() => {
+			return;
+		});
 
 		// Give defaults back if field empty.
-		if (isEmptyArray(fieldValues))
-			defaults?.forEach((value) => {
-				append(
-					{ type: value.type, sub_type: value.sub_type, value: '' },
-					{ shouldFocus: false },
-				);
-			});
-	}, [useDefaults]);
+		if (defaults && isEmptyArray(fieldValues))
+			setValue(
+				name,
+				defaults.map((t) => ({
+					sub_type: t.sub_type,
+					type: t.type,
+				})),
+			);
+	}, [usingDefaults]);
 
 	// Remove the last item if not the only one, or doesn't match the defaults.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: remove stable.
 	const removeLast = useCallback(() => {
-		!(useDefaults && fields.length == 1) && remove(fields.length - 1);
-	}, [fields.length, useDefaults]);
+		if (!(usingDefaults && fields.length == 1)) remove(fields.length - 1);
+	}, [fields.length, usingDefaults]);
 
 	return (
-		<FormGroup>
-			<Row>
-				<Col className="pt-1">
-					<FormLabel text={label} tooltip={tooltip} />
-				</Col>
-				<Col>
-					<ButtonGroup style={{ float: 'right' }}>
-						<Button
-							aria-label={`Add new ${label}`}
-							className="btn-unchecked"
-							style={{ float: 'right' }}
-							onClick={addItem}
-						>
-							<FontAwesomeIcon icon={faPlus} />
-						</Button>
-						<Button
-							aria-label={`Remove last ${label}`}
-							className="btn-unchecked"
-							style={{ float: 'left' }}
-							onClick={removeLast}
-							disabled={isEmptyArray(fields)}
-						>
-							<FontAwesomeIcon icon={faMinus} />
-						</Button>
-					</ButtonGroup>
-				</Col>
-			</Row>
-			<Stack>
+		<div className="col-span-full grid grid-cols-subgrid space-y-1">
+			<div className="col-span-full flex w-full items-center justify-between">
+				<FieldLabel text={label} tooltip={tooltip} />
+				<ButtonGroup>
+					<Button
+						aria-label={`Add new ${label}`}
+						onClick={addItem}
+						size="icon-xs"
+						variant="ghost"
+					>
+						<Plus />
+					</Button>
+					<Button
+						aria-label={`Remove last ${label}`}
+						disabled={isEmptyArray(fields)}
+						onClick={removeLast}
+						size="icon-xs"
+						variant="ghost"
+					>
+						<Minus />
+					</Button>
+				</ButtonGroup>
+			</div>
+			<div className="col-span-full grid grid-cols-subgrid gap-2">
 				{fields.map(({ id }, index) => (
-					<Row key={id}>
-						<OpsGenieTarget
-							name={`${name}.${index}`}
-							removeMe={
-								// Give the remove that is disabled if only one item, and it matches the defaults.
-								fieldValues?.length === 1 ? removeLast : () => remove(index)
-							}
-							defaults={useDefaults ? defaults?.[index] : undefined}
-						/>
-					</Row>
+					<OpsGenieTarget
+						defaults={usingDefaults ? defaults?.[index] : undefined}
+						key={id}
+						name={`${name}.${index}`}
+						removeMe={
+							fieldValues.length === 1
+								? removeLast
+								: () => {
+										remove(index);
+									}
+						}
+					/>
 				))}
-			</Stack>
-		</FormGroup>
+			</div>
+		</div>
 	);
 };
 

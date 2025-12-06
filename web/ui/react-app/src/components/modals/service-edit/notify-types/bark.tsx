@@ -1,303 +1,196 @@
-import {
-	FormLabel,
-	FormSelect,
-	FormText,
-	FormTextWithPreview,
-} from 'components/generic/form';
 import { useEffect, useMemo } from 'react';
-
-import { NotifyBarkType } from 'types/config';
-import NotifyOptions from 'components/modals/service-edit/notify-types/shared';
-import { firstNonDefault } from 'utils';
-import { normaliseForSelect } from 'components/modals/service-edit/util';
 import { useFormContext } from 'react-hook-form';
-
-export const BarkSchemeOptions = [
-	{ label: 'HTTPS', value: 'https' },
-	{ label: 'HTTP', value: 'http' },
-];
-
-export const BarkSoundOptions = [
-	{ label: '', value: '' },
-	{ label: 'Alarm', value: 'alarm' },
-	{ label: 'Anticipate', value: 'anticipate' },
-	{ label: 'Bell', value: 'bell' },
-	{ label: 'Birdsong', value: 'birdsong' },
-	{ label: 'Bloom', value: 'bloom' },
-	{ label: 'Calypso', value: 'calypso' },
-	{ label: 'Chime', value: 'chime' },
-	{ label: 'Choo', value: 'choo' },
-	{ label: 'Descent', value: 'descent' },
-	{ label: 'Electronic', value: 'electronic' },
-	{ label: 'Fanfare', value: 'fanfare' },
-	{ label: 'Glass', value: 'glass' },
-	{ label: 'GoToSleep', value: 'gotosleep' },
-	{ label: 'HealthNotification', value: 'healthnotification' },
-	{ label: 'Horn', value: 'horn' },
-	{ label: 'Ladder', value: 'ladder' },
-	{ label: 'MailSent', value: 'mailsent' },
-	{ label: 'Minuet', value: 'minuet' },
-	{ label: 'MultiWayInvitation', value: 'multiwayinvitation' },
-	{ label: 'NewMail', value: 'newmail' },
-	{ label: 'NewsFlash', value: 'newsflash' },
-	{ label: 'Noir', value: 'noir' },
-	{ label: 'PaymentSuccess', value: 'paymentsuccess' },
-	{ label: 'Shake', value: 'shake' },
-	{ label: 'SherwoodForest', value: 'sherwoodforest' },
-	{ label: 'Silence', value: 'silence' },
-	{ label: 'Spell', value: 'spell' },
-	{ label: 'Suspense', value: 'suspense' },
-	{ label: 'Telegraph', value: 'telegraph' },
-	{ label: 'Tiptoes', value: 'tiptoes' },
-	{ label: 'Typewriters', value: 'typewriters' },
-	{ label: 'Update', value: 'update' },
-];
+import {
+	FieldSelect,
+	FieldText,
+	FieldTextWithPreview,
+} from '@/components/generic/field';
+import {
+	Heading,
+	NotifyOptions,
+} from '@/components/modals/service-edit/notify-types/shared';
+import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import { FieldSet } from '@/components/ui/field';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import {
+	type BarkScheme,
+	type BarkSound,
+	barkSchemeOptions,
+	barkSoundOptions,
+} from '@/utils/api/types/config/notify/bark';
+import type { NotifyBarkSchema } from '@/utils/api/types/config-edit/notify/schemas';
+import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
+import { ensureValue } from '@/utils/form-utils';
 
 /**
- * The form fields for a Bark notifier.
+ * The form fields for a `Bark` notifier.
  *
  * @param name - The path to this `Bark` in the form.
  * @param main - The main values.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for this `Bark` notifier.
  */
-const BARK = ({
-	name,
-
-	main,
-	defaults,
-	hard_defaults,
-}: {
-	name: string;
-
-	main?: NotifyBarkType;
-	defaults?: NotifyBarkType;
-	hard_defaults?: NotifyBarkType;
-}) => {
+const BARK = ({ name, main }: { name: string; main?: NotifyBarkSchema }) => {
 	const { getValues, setValue } = useFormContext();
-	const convertedDefaults = useMemo(
-		() => ({
-			// URL Fields
-			url_fields: {
-				devicekey: firstNonDefault(
-					main?.url_fields?.devicekey,
-					defaults?.url_fields?.devicekey,
-					hard_defaults?.url_fields?.devicekey,
-				),
-				host: firstNonDefault(
-					main?.url_fields?.host,
-					defaults?.url_fields?.host,
-					hard_defaults?.url_fields?.host,
-				),
-				path: firstNonDefault(
-					main?.url_fields?.path,
-					defaults?.url_fields?.path,
-					hard_defaults?.url_fields?.path,
-				),
-				port: firstNonDefault(
-					main?.url_fields?.port,
-					defaults?.url_fields?.port,
-					hard_defaults?.url_fields?.port,
-				),
-			},
-			// Params
-			params: {
-				badge: firstNonDefault(
-					main?.params?.badge,
-					defaults?.params?.badge,
-					hard_defaults?.params?.badge,
-				),
-				copy: firstNonDefault(
-					main?.params?.copy,
-					defaults?.params?.copy,
-					hard_defaults?.params?.copy,
-				),
-				group: firstNonDefault(
-					main?.params?.group,
-					defaults?.params?.group,
-					hard_defaults?.params?.group,
-				),
-				icon: firstNonDefault(
-					main?.params?.icon,
-					defaults?.params?.icon,
-					hard_defaults?.params?.icon,
-				),
-				scheme: firstNonDefault(
-					main?.params?.scheme,
-					defaults?.params?.scheme,
-					hard_defaults?.params?.scheme,
-				).toLowerCase(),
-				sound: firstNonDefault(
-					main?.params?.sound,
-					defaults?.params?.sound,
-					hard_defaults?.params?.sound,
-				).toLowerCase(),
-				title: firstNonDefault(
-					main?.params?.title,
-					defaults?.params?.title,
-					hard_defaults?.params?.title,
-				),
-				url: firstNonDefault(
-					main?.params?.url,
-					defaults?.params?.url,
-					hard_defaults?.params?.url,
-				),
-			},
-		}),
-		[main, defaults, hard_defaults],
+	const { typeDataDefaults } = useSchemaContext();
+	const defaults = useMemo(
+		() => main ?? typeDataDefaults?.notify.bark,
+		[main, typeDataDefaults?.notify.bark],
 	);
 
-	const barkSchemeOptions = useMemo(() => {
+	// Ensure selects have a valid value.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: fallback on first load.
+	useEffect(() => {
+		ensureValue<BarkScheme>({
+			defaultValue: defaults?.params?.scheme,
+			fallback: Object.values(barkSchemeOptions)[0].value,
+			getValues,
+			path: `${name}.params.scheme`,
+			setValue,
+		});
+		ensureValue<BarkSound>({
+			defaultValue: defaults?.params?.sound,
+			fallback: Object.values(barkSoundOptions)[0].value,
+			getValues,
+			path: `${name}.params.sound`,
+			setValue,
+		});
+	}, [main]);
+
+	const barkSchemeOptionsNormalised = useMemo(() => {
 		const defaultScheme = normaliseForSelect(
-			BarkSchemeOptions,
-			convertedDefaults.params.scheme,
+			barkSchemeOptions,
+			defaults?.params?.scheme,
 		);
 
 		if (defaultScheme)
 			return [
-				{ value: '', label: `${defaultScheme.label} (default)` },
-				...BarkSchemeOptions,
+				{ label: `${defaultScheme.label} (default)`, value: nullString },
+				...barkSchemeOptions,
 			];
 
-		return BarkSchemeOptions;
-	}, [convertedDefaults.params.scheme]);
+		return barkSchemeOptions;
+	}, [defaults?.params?.scheme]);
 
-	const barkSoundOptions = useMemo(() => {
+	const barkSoundOptionsNormalised = useMemo(() => {
 		const defaultSound = normaliseForSelect(
-			BarkSoundOptions,
-			convertedDefaults.params.sound,
+			barkSoundOptions,
+			defaults?.params?.sound,
 		);
 
 		if (defaultSound)
 			return [
-				{ value: '', label: `${defaultSound.label} (default)` },
-				...BarkSoundOptions.filter((option) => option.value !== ''),
+				{ label: `${defaultSound.label} (default)`, value: nullString },
+				...barkSoundOptions.filter((option) => option.value !== ''),
 			];
 
-		return BarkSoundOptions;
-	}, [convertedDefaults.params.sound]);
-
-	useEffect(() => {
-		// Normalise selected scheme, or default it.
-		if (convertedDefaults.params.scheme === '')
-			setValue(
-				`${name}.params.scheme`,
-				normaliseForSelect(
-					BarkSchemeOptions,
-					getValues(`${name}.params.scheme`),
-				)?.value || 'https',
-			);
-
-		// Normalise selected sound, or default it.
-		if (
-			convertedDefaults.params.sound === '' &&
-			getValues(`${name}.params.sound`) !== undefined
-		)
-			setValue(
-				`${name}.params.sound`,
-				normaliseForSelect(BarkSoundOptions, getValues(`${name}.params.sound`))
-					?.value ?? '',
-			);
-	}, []);
+		return barkSoundOptions;
+	}, [defaults?.params?.sound]);
 
 	return (
-		<>
-			<NotifyOptions
-				name={name}
-				main={main?.options}
-				defaults={defaults?.options}
-				hard_defaults={hard_defaults?.options}
-			/>
-			<FormLabel text="URL Fields" heading />
-			<>
-				<FormText
-					name={`${name}.url_fields.host`}
-					col_sm={9}
-					required
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<NotifyOptions defaults={defaults?.options} name={name} />
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="URL Fields" />
+				<FieldText
+					colSize={{ xs: 9 }}
+					defaultVal={defaults?.url_fields?.host}
 					label="Host"
-					defaultVal={convertedDefaults.url_fields.host}
+					name={`${name}.url_fields.host`}
+					required
 				/>
-				<FormText
+				<FieldText
+					colSize={{ xs: 3 }}
+					defaultVal={defaults?.url_fields?.port}
+					label="Port"
 					name={`${name}.url_fields.port`}
 					required
-					col_sm={3}
-					label="Port"
-					isNumber
-					defaultVal={convertedDefaults.url_fields.port}
-					positionXS="right"
 				/>
-				<FormText
-					name={`${name}.url_fields.path`}
+				<FieldText
+					defaultVal={defaults?.url_fields?.path}
 					label="Path"
-					tooltip="Server path"
-					defaultVal={convertedDefaults.url_fields.path}
+					name={`${name}.url_fields.path`}
+					tooltip={{
+						content: 'Server path',
+						type: 'string',
+					}}
 				/>
-				<FormText
+				<FieldText
+					defaultVal={defaults?.url_fields?.devicekey}
+					label="Device Key"
 					name={`${name}.url_fields.devicekey`}
 					required
-					label="Device Key"
-					defaultVal={convertedDefaults.url_fields.devicekey}
-					positionXS="right"
 				/>
-			</>
-			<FormLabel text="Params" heading />
-			<>
-				<FormSelect
-					name={`${name}.params.scheme`}
-					col_sm={3}
+			</FieldSet>
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="Params" />
+				<FieldSelect
+					colSize={{ sm: 3 }}
 					label="Scheme"
-					tooltip="Server protocol"
-					options={barkSchemeOptions}
+					name={`${name}.params.scheme`}
+					options={barkSchemeOptionsNormalised}
+					tooltip={{
+						content: 'Server protocol',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.badge`}
-					col_sm={3}
+				<FieldText
+					colSize={{ sm: 3 }}
+					defaultVal={defaults?.params?.badge}
 					label="Badge"
-					tooltip="The number displayed next to the App icon"
-					isNumber
-					defaultVal={convertedDefaults.params.badge}
-					positionXS="middle"
+					name={`${name}.params.badge`}
+					tooltip={{
+						content: 'The number displayed next to the App icon',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.copy`}
+				<FieldText
+					defaultVal={defaults?.params?.copy}
 					label="Copy"
-					tooltip="The value to be copied"
-					defaultVal={convertedDefaults.params.copy}
-					positionXS="right"
+					name={`${name}.params.copy`}
+					tooltip={{
+						content: 'The value to be copied',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.group`}
+				<FieldText
+					defaultVal={defaults?.params?.group}
 					label="Group"
-					tooltip="The group of the notification"
-					defaultVal={convertedDefaults.params.group}
+					name={`${name}.params.group`}
+					tooltip={{
+						content: 'The group of the notification',
+						type: 'string',
+					}}
 				/>
-				<FormSelect
-					name={`${name}.params.sound`}
+				<FieldSelect
 					label="Sound"
-					options={barkSoundOptions}
-					positionXS="right"
+					name={`${name}.params.sound`}
+					options={barkSoundOptionsNormalised}
+					required={false}
 				/>
-				<FormText
-					name={`${name}.params.title`}
+				<FieldText
+					defaultVal={defaults?.params?.title}
 					label="Title"
-					defaultVal={convertedDefaults.params.title}
+					name={`${name}.params.title`}
 				/>
-				<FormText
-					name={`${name}.params.url`}
+				<FieldText
+					defaultVal={defaults?.params?.url}
 					label="URL"
-					tooltip="URL to open when notification is tapped"
-					defaultVal={convertedDefaults.params.url}
-					positionXS="right"
+					name={`${name}.params.url`}
+					tooltip={{
+						content: 'URL to open when notification is tapped',
+						type: 'string',
+					}}
 				/>
-				<FormTextWithPreview
-					name={`${name}.params.icon`}
+				<FieldTextWithPreview
+					defaultVal={defaults?.params?.icon}
 					label="Icon"
-					tooltip="URL to an icon"
-					defaultVal={convertedDefaults.params.icon}
+					name={`${name}.params.icon`}
+					tooltip={{
+						content: 'URL to an icon',
+						type: 'string',
+					}}
 				/>
-			</>
-		</>
+			</FieldSet>
+		</FieldSet>
 	);
 };
 

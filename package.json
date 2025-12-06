@@ -1,19 +1,20 @@
 {
-  "name": "commit-check",
-  "version": "0.26.3",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky"
-  },
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "husky": "^9.1.7"
-  },
-  "dependencies": {
-    "@commitlint/cli": "^19.8.1",
-    "@commitlint/config-conventional": "^19.8.1"
-  }
+	"author": "",
+	"dependencies": {
+		"@commitlint/cli": "^20.1.0",
+		"@commitlint/config-conventional": "^20.0.0"
+	},
+	"description": "",
+	"devDependencies": {
+		"husky": "^9.1.7"
+	},
+	"license": "ISC",
+	"main": "index.js",
+	"name": "commit-check",
+	"scripts": {
+		"prepare": "husky",
+		"tailwind-sort": "prettier './web/ui/react-app/src/**/*{.ts,.tsx}' --write",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"version": "0.26.3"
 }

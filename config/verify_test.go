@@ -37,18 +37,18 @@ func testVerify(t *testing.T) *Config {
 	cfg.Defaults.Default()
 	cfg.HardDefaults = Defaults{}
 
-	cfg.Notify = shoutrrr.SliceDefaults{
+	cfg.Notify = shoutrrr.ShoutrrrsDefaults{
 		"test": shoutrrr.NewDefaults(
 			"discord",
 			cfg.Defaults.Notify["discord"].Options,
 			cfg.Defaults.Notify["discord"].URLFields,
 			cfg.Defaults.Notify["discord"].Params)}
 
-	cfg.WebHook = webhook.SliceDefaults{
+	cfg.WebHook = webhook.WebHooksDefaults{
 		"test": &cfg.Defaults.WebHook}
 
 	serviceID := "test"
-	cfg.Service = service.Slice{
+	cfg.Service = service.Services{
 		serviceID: &service.Service{
 			ID: serviceID,
 			LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
@@ -89,7 +89,7 @@ func TestConfig_CheckValues(t *testing.T) {
 		},
 		"invalid Notify": {
 			config: &Config{
-				Notify: shoutrrr.SliceDefaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
 					"test": shoutrrr.NewDefaults(
 						"discord",
 						map[string]string{
@@ -103,7 +103,7 @@ func TestConfig_CheckValues(t *testing.T) {
 		},
 		"invalid WebHook": {
 			config: &Config{
-				WebHook: webhook.SliceDefaults{
+				WebHook: webhook.WebHooksDefaults{
 					"test": webhook.NewDefaults(
 						nil, nil, "3x", nil, nil, "", nil, "", "")}},
 			errRegex: test.TrimYAML(`
@@ -113,7 +113,7 @@ func TestConfig_CheckValues(t *testing.T) {
 		},
 		"invalid Service": {
 			config: &Config{
-				Service: service.Slice{
+				Service: service.Services{
 					"test": &service.Service{
 						Options: *opt.New(
 							nil, "4x", nil,
@@ -184,7 +184,7 @@ func TestConfig_Print(t *testing.T) {
 		flag  bool
 		lines int
 	}{
-		"flag on":  {flag: true, lines: 190 + len(config.Defaults.Notify)},
+		"flag on":  {flag: true, lines: 187 + len(config.Defaults.Notify)},
 		"flag off": {flag: false},
 	}
 

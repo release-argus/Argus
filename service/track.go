@@ -79,8 +79,8 @@ func (s *Service) Track() {
 	}
 }
 
-// Track will call Track on all Services in this Slice, each in their own goroutine.
-func (s *Slice) Track(ordering *[]string, orderMutex *sync.RWMutex) {
+// Track will call Track on each Service, each in their own goroutine.
+func (s *Services) Track(ordering *[]string, orderMutex *sync.RWMutex) {
 	metric.InitMetrics()
 
 	orderMutex.RLock()

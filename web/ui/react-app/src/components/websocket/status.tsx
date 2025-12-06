@@ -1,37 +1,30 @@
-import { Alert } from 'react-bootstrap';
-import { BooleanType } from 'types/boolean';
-import { FC } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { WS_ADDRESS } from 'config';
-import { faCircleNotch } from '@fortawesome/free-solid-svg-icons';
-import { useDelayedRender } from 'hooks/delayed-render';
+import { LoaderCircle } from 'lucide-react';
+import type { FC } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { WS_ADDRESS } from '@/config';
+import { useDelayedRender } from '@/hooks/use-delayed-render';
 
-interface Props {
-	connected: BooleanType;
-}
+type WebSocketStatusProps = {
+	/* The connection status of the WebSocket. */
+	connected?: boolean;
+};
 
 /**
- * A warning if the WebSocket is not connected.
- *
  * @param connected - The connection status of the WebSocket.
- * @returns A component displaying a warning if the WebSocket is not connected.
+ * @returns A warning 'Alert' if not connected.
  */
-export const WebSocketStatus: FC<Props> = ({ connected }) => {
+export const WebSocketStatus: FC<WebSocketStatusProps> = ({ connected }) => {
 	const delayedRender = useDelayedRender(1000);
 	const fallback = (
-		<Alert variant={connected === false ? 'danger' : 'info'}>
-			<Alert.Heading>
+		<Alert variant={connected === false ? 'destructive' : 'default'}>
+			<AlertTitle>
 				WebSocket{' '}
-				{connected === false ? 'Disconnected! Reconnecting' : 'connecting'}
-			</Alert.Heading>
-			<>
-				<FontAwesomeIcon
-					icon={faCircleNotch}
-					className="fa-spin"
-					style={{ marginRight: '0.5rem' }}
-				/>
+				{connected === false ? 'disconnected! Reconnecting' : 'connecting'}
+			</AlertTitle>
+			<AlertDescription className="flex flex-row items-center gap-2 pt-1">
+				<LoaderCircle className="animate-spin" />
 				Connecting to {WS_ADDRESS}...
-			</>
+			</AlertDescription>
 		</Alert>
 	);
 	return connected !== true && delayedRender(() => fallback);

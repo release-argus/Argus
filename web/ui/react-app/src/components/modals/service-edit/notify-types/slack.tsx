@@ -1,143 +1,99 @@
-import {
-	FormColour,
-	FormLabel,
-	FormText,
-	FormTextWithPreview,
-} from 'components/generic/form';
-
-import NotifyOptions from 'components/modals/service-edit/notify-types/shared';
-import { NotifySlackType } from 'types/config';
-import { firstNonDefault } from 'utils';
 import { useMemo } from 'react';
+import {
+	FieldColour,
+	FieldText,
+	FieldTextWithPreview,
+} from '@/components/generic/field';
+import {
+	Heading,
+	NotifyOptions,
+} from '@/components/modals/service-edit/notify-types/shared';
+import { FieldSet } from '@/components/ui/field';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import type { NotifySlackSchema } from '@/utils/api/types/config-edit/notify/schemas';
 
 /**
- * The form fields for a Slack notifier.
+ * The form fields for a `Slack` notifier.
  *
  * @param name - The path to this `Slack` in the form.
  * @param main - The main values.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for this `Slack` notifier.
  */
-const SLACK = ({
-	name,
-
-	main,
-	defaults,
-	hard_defaults,
-}: {
-	name: string;
-
-	main?: NotifySlackType;
-	defaults?: NotifySlackType;
-	hard_defaults?: NotifySlackType;
-}) => {
-	const convertedDefaults = useMemo(
-		() => ({
-			// URL Fields
-			url_fields: {
-				channel: firstNonDefault(
-					main?.url_fields?.channel,
-					defaults?.url_fields?.channel,
-					hard_defaults?.url_fields?.channel,
-				),
-				token: firstNonDefault(
-					main?.url_fields?.token,
-					defaults?.url_fields?.token,
-					hard_defaults?.url_fields?.token,
-				),
-			},
-			// Params
-			params: {
-				botname: firstNonDefault(
-					main?.params?.botname,
-					defaults?.params?.botname,
-					hard_defaults?.params?.botname,
-				),
-				color: firstNonDefault(
-					main?.params?.color,
-					defaults?.params?.color,
-					hard_defaults?.params?.color,
-				),
-				icon: firstNonDefault(
-					main?.params?.icon,
-					defaults?.params?.icon,
-					hard_defaults?.params?.icon,
-				),
-				title: firstNonDefault(
-					main?.params?.title,
-					defaults?.params?.title,
-					hard_defaults?.params?.title,
-				),
-			},
-		}),
-		[main, defaults, hard_defaults],
+const SLACK = ({ name, main }: { name: string; main?: NotifySlackSchema }) => {
+	const { typeDataDefaults } = useSchemaContext();
+	const defaults = useMemo(
+		() => main ?? typeDataDefaults?.notify.slack,
+		[main, typeDataDefaults?.notify.slack],
 	);
 
 	return (
-		<>
-			<NotifyOptions
-				name={name}
-				main={main?.options}
-				defaults={defaults?.options}
-				hard_defaults={hard_defaults?.options}
-			/>
-			<FormLabel text="URL Fields" heading />
-			<>
-				<FormText
+		<FieldSet className="col-span-full grid grid-cols-subgrid">
+			<NotifyOptions defaults={defaults?.options} name={name} />
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="URL Fields" />
+				<FieldText
+					defaultVal={defaults?.url_fields?.token}
+					label="Token"
 					name={`${name}.url_fields.token`}
 					required
-					label="Token"
-					tooltip={
-						<>
-							{'xoxb:'}
-							<span className="bold-underline">BOT-OAUTH-TOKEN</span>
-							{' or '}
-							<span className="bold-underline">WEBHOOK</span>
-						</>
-					}
-					tooltipAriaLabel="Format: xoxb:BOT-OAUTH-TOKEN or WEBHOOK"
-					defaultVal={convertedDefaults.url_fields.token}
+					tooltip={{
+						ariaLabel: 'Format: xoxb:BOT-OAUTH-TOKEN or WEBHOOK',
+						content: (
+							<>
+								{'xoxb:'}
+								<span className="bold-underline">BOT-OAUTH-TOKEN</span>
+								{' or '}
+								<span className="bold-underline">WEBHOOK</span>
+							</>
+						),
+						type: 'element',
+					}}
 				/>
-				<FormText
+				<FieldText
+					defaultVal={defaults?.url_fields?.channel}
+					label="Channel"
 					name={`${name}.url_fields.channel`}
 					required
-					label="Channel"
-					defaultVal={convertedDefaults.url_fields.channel}
-					positionXS="right"
 				/>
-			</>
-			<FormLabel text="Params" heading />
-			<>
-				<FormText
-					name={`${name}.params.botname`}
+			</FieldSet>
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="Params" />
+				<FieldText
+					defaultVal={defaults?.params?.botname}
 					label="Bot Name"
-					defaultVal={convertedDefaults.params.botname}
+					name={`${name}.params.botname`}
 				/>
-				<FormColour
-					name={`${name}.params.color`}
+				<FieldColour
+					defaultVal={defaults?.params?.color}
 					label="Color"
-					tooltip="Message left-hand border color in hex, e.g. #ffffff"
-					defaultVal={convertedDefaults.params.color}
-					positionXS="right"
+					name={`${name}.params.color`}
+					tooltip={{
+						content: 'Message left-hand border color in hex, e.g. #ffffff',
+						type: 'string',
+					}}
 				/>
-				<FormTextWithPreview
-					name={`${name}.params.icon`}
+				<FieldTextWithPreview
+					defaultVal={defaults?.params?.icon}
 					label="Icon"
-					tooltip="Use emoji or URL as icon (based on presence of http(s):// prefix)"
-					isURL={false}
-					defaultVal={convertedDefaults.params.icon}
+					name={`${name}.params.icon`}
+					tooltip={{
+						content:
+							'Use emoji or URL as icon (based on presence of http(s):// prefix)',
+						type: 'string',
+					}}
 				/>
-				<FormText
-					name={`${name}.params.title`}
-					col_sm={12}
-					type="text"
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.title}
 					label="Title"
-					tooltip="Text prepended to the message"
-					defaultVal={convertedDefaults.params.title}
+					name={`${name}.params.title`}
+					tooltip={{
+						content: 'Text prepended to the message',
+						type: 'string',
+					}}
+					type="text"
 				/>
-			</>
-		</>
+			</FieldSet>
+		</FieldSet>
 	);
 };
 

@@ -164,7 +164,7 @@ func TestNew(t *testing.T) {
 			t.Parallel()
 
 			options := opt.Options{}
-			status := &status.Status{}
+			svcStatus := &status.Status{}
 			defaults := &base.Defaults{}
 			hardDefaults := &base.Defaults{}
 			hardDefaults.Default()
@@ -173,7 +173,7 @@ func TestNew(t *testing.T) {
 			lookup, err := New(
 				tc.args.format, tc.args.data,
 				&options,
-				status,
+				svcStatus,
 				defaults, hardDefaults)
 
 			// THEN any error is expected.
@@ -202,9 +202,9 @@ func TestNew(t *testing.T) {
 					packageName, lookup.HardDefaults, hardDefaults)
 			}
 			// AND the status is set as expected.
-			if lookup.Status != status {
+			if lookup.Status != svcStatus {
 				t.Errorf("%s\nStatus not set\nwant: %v\ngot:  %v",
-					packageName, lookup.Status, status)
+					packageName, lookup.Status, svcStatus)
 			}
 			// AND the options are set as expected.
 			if lookup.Options != &options {

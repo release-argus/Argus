@@ -79,9 +79,7 @@ func (l *Lookup) query(writeToDB bool, logFrom logutil.LogFrom) error {
 	}
 
 	// Set the deployed version if it has changed.
-	if previousVersion := l.Status.DeployedVersion(); version != previousVersion {
-		l.HandleNewVersion(version, "", writeToDB, logFrom) //nolint:wrapcheck
-	}
+	l.HandleNewVersion(version, "", writeToDB, logFrom) //nolint:wrapcheck
 
 	return nil
 }
@@ -97,7 +95,7 @@ func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 	}
 
 	// Create the request.
-	req, err := http.NewRequest(l.Method, l.url(), l.body())
+	req, err := http.NewRequest(l.method(), l.url(), l.body())
 	if err != nil {
 		err = fmt.Errorf("failed creating http request for %q: %w",
 			l.URL, err)

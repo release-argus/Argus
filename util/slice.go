@@ -21,7 +21,7 @@ type customComparable interface {
 	bool | int | map[string]string | string | uint8 | uint16
 }
 
-// FirstNonNilPtr will return the first non-nil pointer in `pointers`.
+// FirstNonNilPtr returns the first non-nil pointer in `pointers`.
 func FirstNonNilPtr[T customComparable](pointers ...*T) *T {
 	for _, pointer := range pointers {
 		if pointer != nil {
@@ -31,7 +31,7 @@ func FirstNonNilPtr[T customComparable](pointers ...*T) *T {
 	return nil
 }
 
-// FirstNonDefault will return the first non-default var in `vars`.
+// FirstNonDefault returns the first non-default var in `vars`.
 func FirstNonDefault[T comparable](vars ...T) T {
 	var fresh T
 	for _, v := range vars {

@@ -1,76 +1,72 @@
-import { Button, Modal } from 'react-bootstrap';
-import { FC, useState } from 'react';
+import { LoaderCircle } from 'lucide-react';
+import { type FC, useCallback, useState } from 'react';
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import useModal from '@/hooks/use-modal.ts';
+import { useServiceDelete } from '@/hooks/use-service-mutation';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner } from '@fortawesome/free-solid-svg-icons';
-
-interface Props {
-	onDelete?: () => void;
+type DeleteModalProps = {
 	disabled?: boolean;
-}
+};
 
 /**
  * A delete confirmation modal.
  *
- * @param onDelete - The function to call when the delete button is clicked.
  * @param disabled - Disable the button.
  * @returns A delete confirmation modal.
  */
-export const DeleteModal: FC<Props> = ({ onDelete, disabled }) => {
-	const [modalShow, setModalShow] = useState(false);
-	const [deleting, setDeleting] = useState(false);
+export const DeleteModal: FC<DeleteModalProps> = ({ disabled }) => {
+	const { serviceID, schema } = useSchemaContext();
+	const [open, setOpen] = useState(false);
+	const { hideModal } = useModal();
 
-	const handleConfirm = async () => {
-		setDeleting(true);
-		// Call the onConfirm function.
-		onDelete && onDelete();
+	const { mutate, isPending } = useServiceDelete(schema, {
+		onSettled: () => {
+			setOpen(false);
+			hideModal();
+		},
+	});
 
-		// Close the modal.
-		setModalShow(false);
-	};
+	// biome-ignore lint/correctness/useExhaustiveDependencies: mutate stable.
+	const onClick = useCallback(() => {
+		if (serviceID) mutate({ serviceID });
+	}, [serviceID]);
+
 	return (
-		<>
-			<Button
-				variant="danger"
-				onClick={() => setModalShow(true)}
-				disabled={disabled}
-			>
-				Delete
-			</Button>
-			<Modal
-				show={modalShow}
-				onHide={() => setModalShow(false)}
-				style={{ backdropFilter: 'blur(3px)' }}
-				centered
-			>
-				<Modal.Header closeButton>
-					<Modal.Title>Confirm Delete</Modal.Title>
-				</Modal.Header>
-				<Modal.Body>
+		<AlertDialog onOpenChange={setOpen} open={open}>
+			<AlertDialogTrigger asChild>
+				<Button disabled={disabled} variant="destructive">
+					Delete
+				</Button>
+			</AlertDialogTrigger>
+			<AlertDialogContent className="backdrop-blur-sm">
+				<AlertDialogHeader>
+					<AlertDialogTitle>Confirm Delete</AlertDialogTitle>
+				</AlertDialogHeader>
+				<AlertDialogDescription>
 					Are you sure you want to delete this item?
 					<br />
 					This action cannot be undone.
-					{deleting && (
-						<FontAwesomeIcon
-							icon={faSpinner}
-							spin
-							style={{ marginLeft: '0.5rem' }}
-						/>
-					)}
-				</Modal.Body>
-				<Modal.Footer>
-					<Button variant="danger" onClick={handleConfirm} disabled={deleting}>
+					{isPending && <LoaderCircle className="ml-2 animate-spin" />}
+				</AlertDialogDescription>
+				<AlertDialogFooter>
+					<AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+					<AlertDialogAction disabled={isPending} onClick={onClick}>
 						Delete
-					</Button>
-					<Button
-						variant="secondary"
-						onClick={() => setModalShow(false)}
-						disabled={deleting}
-					>
-						Cancel
-					</Button>
-				</Modal.Footer>
-			</Modal>
-		</>
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
 	);
 };

@@ -108,13 +108,10 @@ func (c *Config) GetOrder(data []byte) {
 }
 
 // Indentation returns the indentation (leading spaces) of the line.
-func Indentation(line string) (indentation string) {
-	for _, v := range line {
-		if v == ' ' {
-			indentation += " "
-		} else {
-			return
-		}
+func Indentation(line string) string {
+	i := 0
+	for i < len(line) && line[i] == ' ' {
+		i++
 	}
-	return
+	return line[:i]
 }

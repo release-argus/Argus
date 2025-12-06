@@ -1,35 +1,52 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { formatRelative } from 'date-fns';
+import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { pluralise } from '@/components/generic/util';
+import { ModalList } from '@/components/modals/action-release/list';
+import { Button } from '@/components/ui/button';
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import Tip from '@/components/ui/tip';
+import { addMessageHandler, removeMessageHandler } from '@/contexts/websocket';
+import useModal from '@/hooks/use-modal.ts';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import reducerActionModal from '@/reducers/action-release';
+import type { WebSocketResponse } from '@/types/websocket';
+import { dateIsAfterNow, isEmptyObject } from '@/utils';
+import { mapRequest } from '@/utils/api/types/api-request-handler';
+import type {
 	ActionAPIType,
 	CommandSummaryListType,
+	CommandSummaryType,
 	WebHookSummaryListType,
-} from 'types/summary';
-import {
-	Button,
-	Container,
-	Modal,
-	OverlayTrigger,
-	Tooltip,
-} from 'react-bootstrap';
-import { dateIsAfterNow, fetchJSON, isEmptyObject } from 'utils';
-import { useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-
-import { ModalContext } from 'contexts/modal';
-import { ModalList } from 'components/modals/action-release/list';
-import { WebSocketResponse } from 'types/websocket';
-import { addMessageHandler } from 'contexts/websocket';
-import { formatRelative } from 'date-fns';
-import { pluralise } from 'components/generic/util';
-import reducerActionModal from 'reducers/action-release';
-import { useDelayedRender } from 'hooks/delayed-render';
+	WebHookSummaryType,
+} from '@/utils/api/types/config/summary';
+import { isNonEmptyObject } from '@/utils/is-empty';
 
 /**
- * Whether the service is sending any commands or webhooks.
+ * Creates an object with the given number of entries, each with a unique ID and a default next_runnable date.
  *
+ * @param count - The number of entries to create.
+ */
+const createInitialRecord = (count: number) =>
+	Object.fromEntries(
+		Array.from({ length: count }, (_, i) => [
+			' '.repeat(i),
+			{ loading: true, next_runnable: '0001-01-01T00:00:00Z' },
+		]),
+	);
+
+/**
  * @param serviceName - The service name.
- * @param sentCommands - The sent commands.
- * @param sentWebHooks - The sent webhooks.
- * @returns Whether the service is sending any commands or webhooks.
+ * @param sentCommands - Commands that have sent.
+ * @param sentWebHooks - WebHooks that have sent.
+ * @returns Whether this service is sending any commands or webhooks.
  */
 const isSendingService = (
 	serviceName: string,
@@ -47,44 +64,66 @@ const isSendingService = (
 };
 
 /**
- * @returns The action release modal, which allows the user to send/retry
+ * @param item - The command/webhook to check.
+ * @param allSuccessful - Whether all commands/webhooks have succeeded.
+ * @returns Whether we are past the time this command/webhook is next runnable.
+ */
+const isActionRunnable = (
+	item: CommandSummaryType | WebHookSummaryType,
+	allSuccessful: boolean,
+): boolean => {
+	const isScheduledForFuture =
+		item.next_runnable && dateIsAfterNow(item.next_runnable);
+
+	const allSucceededOrThisFailed = allSuccessful || item.failed === false;
+
+	// Runnable if not scheduled for the future,
+	// and either all have succeeded, or this hasn't.
+	return !isScheduledForFuture && allSucceededOrThisFailed;
+};
+
+/**
+ * @returns The 'Action release' modal, which allows the user to send/retry
  * sending webhooks or commands as long as they are runnable.
  */
 const ActionReleaseModal = () => {
 	// modal.actionType:
-	// RESEND - 0 WebHooks failed. Resend Modal.
-	// SEND   - Send WebHooks for this new version. New release Modal.
-	// SKIP   - Release not wanted. Skip release Modal.
-	// RETRY  - 1+ WebHooks failed to send. Retry send Modal.
-	const { handleModal, modal } = useContext(ModalContext);
-	const delayedRender = useDelayedRender(250);
+	//   RESEND - 0 WebHooks failed. 'Resend' Modal.
+	//   SEND   - Send WebHooks for this new version. 'New release' Modal.
+	//   SKIP   - Release not wanted. 'Skip' Modal.
+	//   RETRY  - 1+ WebHooks failed sending. 'Retry' Modal.
+	const { modal, hideModal: hideModalDialog } = useModal();
 	const [modalData, setModalData] = useReducer(reducerActionModal, {
-		service_id: '',
+		commands: {},
 		sentC: [],
 		sentWH: [],
+		service_id: '',
 		webhooks: {},
-		commands: {},
 	});
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: setModal stable.
 	const hideModal = useCallback(() => {
-		setModalData({ page: 'APPROVALS', type: 'ACTION', sub_type: 'RESET' });
-		handleModal('', { id: '', loading: true });
+		setModalData({ page: 'APPROVALS', sub_type: 'RESET', type: 'ACTION' });
+		hideModalDialog();
 	}, []);
 
-	// Handle deployed version becoming latest when there's no deployed version check.
-	// (close the modal)
+	// Handle 'deployed version' becoming latest when there is no 'deployed version' check by closing the modal.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: hideModal stable.
 	useEffect(() => {
 		if (
-			// Allow resend and edit/create modals to stay open.
+			// Allow 'resend' and 'edit'/'create' modals to stay open.
 			!['RESEND', 'EDIT'].includes(modal.actionType) &&
-			modal.service?.status?.deployed_version &&
-			modal.service?.status?.latest_version &&
-			modal.service?.status?.deployed_version ===
-				modal.service?.status?.latest_version
-		)
+			modal.service.status?.deployed_version &&
+			modal.service.status.latest_version &&
+			modal.service.status.deployed_version ===
+				modal.service.status.latest_version
+		) {
 			hideModal();
-	}, [modal.actionType, modal.service?.status]);
+		}
+	}, [modal.actionType, modal.service.status]);
 
+	const isSkip = modal.actionType.startsWith('SKIP');
+	// biome-ignore lint/correctness/useExhaustiveDependencies: modal.service.command stable with modal.service.id.
 	const stats = useMemo(() => {
 		const isSending = isSendingService(
 			modal.service.id,
@@ -103,6 +142,7 @@ const ActionReleaseModal = () => {
 		);
 
 		const canSendUnspecific =
+			isSkip ||
 			(!isSending &&
 				isEmptyObject(modalData.commands) &&
 				isEmptyObject(modalData.webhooks)) ||
@@ -110,55 +150,52 @@ const ActionReleaseModal = () => {
 			hasRunnableWebhook;
 
 		// Action text.
-		const commandCount = modal.service?.command ?? 0;
-		const webhookCount = modal.service?.webhook ?? 0;
+		const commandCount = modal.service.command ?? 0;
+		const webhookCount = modal.service.webhook ?? 0;
 		const action =
 			commandCount && webhookCount
-				? `${pluralise('Command', commandCount)} and ${pluralise(
-						'WebHook',
-						webhookCount,
-				  )}`
+				? 'Commands and WebHooks'
 				: commandCount
-				? pluralise('Command', commandCount)
-				: pluralise('WebHook', webhookCount);
+					? 'Commands'
+					: 'WebHooks';
 
 		// Text mappings.
 		const textMap: Record<
 			string,
 			{ title: string; ariaLabel: string; buttonText: string }
 		> = {
+			DEFAULT: {
+				ariaLabel: 'Skip this release',
+				buttonText: 'Skip release',
+				title: '',
+			},
 			RESEND: {
-				title: `Resend the ${action}?`,
 				ariaLabel: `Resend the ${action}`,
 				buttonText: 'Resend all',
-			},
-			SEND: {
-				title: `Send the ${action} to upgrade?`,
-				ariaLabel: `Send the ${action} to upgrade`,
-				buttonText: 'Confirm',
-			},
-			SKIP: {
-				title: `Skip this release? (don't send any ${action.replace(
-					'and',
-					'or',
-				)})`,
-				ariaLabel: 'Skip this release',
-				buttonText: 'Skip release',
-			},
-			SKIP_NO_WH: {
-				title: 'Skip this release?',
-				ariaLabel: 'Skip this release',
-				buttonText: 'Skip release',
+				title: `Resend the ${action}?`,
 			},
 			RETRY: {
-				title: `Retry the ${action}?`,
 				ariaLabel: `Retry the ${action}`,
 				buttonText: 'Retry all failed',
+				title: `Retry the ${action}?`,
 			},
-			DEFAULT: {
-				title: '',
+			SEND: {
+				ariaLabel: `Send the ${action} to upgrade`,
+				buttonText: 'Confirm',
+				title: `Send the ${action} to upgrade?`,
+			},
+			SKIP: {
 				ariaLabel: 'Skip this release',
 				buttonText: 'Skip release',
+				title: `Skip this release? (don't send any ${action.replace(
+					' and',
+					' or',
+				)})`,
+			},
+			SKIP_NO_WH: {
+				ariaLabel: 'Skip this release',
+				buttonText: 'Skip release',
+				title: 'Skip this release?',
 			},
 		};
 
@@ -168,38 +205,32 @@ const ActionReleaseModal = () => {
 		const confirmButtonText = canSendUnspecific ? buttonText : 'Done';
 
 		return {
-			isSending,
-			canSendUnspecific,
-			title,
 			ariaLabel,
+			canSendUnspecific,
 			confirmButtonText,
+			isSending,
+			title,
 		};
 	}, [modal.actionType, modal.service.id, modalData]);
 
 	const { mutate } = useMutation({
 		mutationFn: (data: {
 			target: string;
-			service: string;
+			serviceID: string;
 			isWebHook: boolean;
 			unspecificTarget: boolean;
 		}) =>
-			fetchJSON({
-				url: `api/v1/service/actions/${encodeURIComponent(data.service)}`,
-				method: 'POST',
-				body: JSON.stringify({ target: data.target }),
+			mapRequest('ACTION_SEND', {
+				serviceID: data.serviceID,
+				target: data.target,
 			}),
 		onMutate: (data) => {
 			if (data.target === 'ARGUS_SKIP') return;
 
-			let command_data: CommandSummaryListType | undefined = {};
-			let webhook_data: WebHookSummaryListType | undefined = {};
-			if (!data.unspecificTarget) {
-				// Targeting specific command/webhook.
-				if (data.isWebHook)
-					webhook_data = { [data.target.slice('webhook_'.length)]: {} };
-				else command_data = { [data.target.slice('command_'.length)]: {} };
-			} else {
-				// All Commands/WebHooks have been sent successfully.
+			let commandData: CommandSummaryListType = {};
+			let webhookData: WebHookSummaryListType = {};
+			if (data.unspecificTarget) {
+				// All Commands/WebHooks have sent successfully.
 				const allSuccessful =
 					Object.keys(modalData.commands).every(
 						(command_id) => modalData.commands[command_id].failed === false,
@@ -208,44 +239,36 @@ const ActionReleaseModal = () => {
 						(webhook_id) => modalData.webhooks[webhook_id].failed === false,
 					);
 
-				// sending these command(s).
-				for (const command_id in modalData.commands) {
-					// skip commands that aren't after next_runnable
-					// and commands that have already succeeded if some commands haven't.
-					if (
-						(modalData.commands[command_id].next_runnable !== undefined &&
-							dateIsAfterNow(modalData.commands[command_id].next_runnable)) ||
-						(!allSuccessful && modalData.commands[command_id].failed === false)
-					)
-						continue;
-					command_data[command_id] = {};
+				// Send these commands.
+				for (const [commandID, command] of Object.entries(modalData.commands)) {
+					if (isActionRunnable(command, allSuccessful))
+						commandData[commandID] = {};
 				}
 
-				// sending these webhook(s).
-				for (const webhook_id in modalData.webhooks) {
-					// skip webhooks that aren't after next_runnable
-					// and webhooks that have already succeeded if some webhooks haven't.
-					if (
-						(modalData.webhooks[webhook_id].next_runnable !== undefined &&
-							dateIsAfterNow(modalData.webhooks[webhook_id].next_runnable)) ||
-						(!allSuccessful && modalData.webhooks[webhook_id].failed === false)
-					)
-						continue;
-					webhook_data[webhook_id] = {};
+				// Send these webhooks.
+				for (const [webhookID, webhook] of Object.entries(modalData.webhooks)) {
+					if (isActionRunnable(webhook, allSuccessful))
+						webhookData[webhookID] = {};
 				}
+				// Targeting specific command/webhook.
+			} else if (data.isWebHook) {
+				webhookData = { [data.target.slice('webhook_'.length)]: {} };
+			} else {
+				commandData = { [data.target.slice('command_'.length)]: {} };
 			}
 
 			setModalData({
+				command_data: commandData,
 				page: 'APPROVALS',
-				type: 'ACTION',
-				sub_type: 'SENDING',
 				service_data: { id: modal.service.id, loading: false },
-				command_data: command_data,
-				webhook_data: webhook_data,
+				sub_type: 'SENDING',
+				type: 'ACTION',
+				webhook_data: webhookData,
 			});
 		},
 	});
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: hideModal stable.
 	const onClickAcknowledge = useCallback(
 		(target: string, isWebHook?: boolean) => {
 			const unspecificTarget = [
@@ -254,7 +277,7 @@ const ActionReleaseModal = () => {
 				'ARGUS_SKIP',
 			].includes(target);
 
-			// Do not allow unspecific non-skip targets if currently sending this service.
+			// Disallow unspecific non-skip targets whilst sending this service.
 			if (
 				!(
 					!stats.canSendUnspecific &&
@@ -262,15 +285,14 @@ const ActionReleaseModal = () => {
 					target !== 'ARGUS_SKIP'
 				)
 			) {
-				console.log(`Approving ${modal.service.id} - ${target}`);
 				let approveTarget = target;
 				if (!unspecificTarget)
 					if (isWebHook) approveTarget = `webhook_${target}`;
 					else approveTarget = `command_${target}`;
 				mutate({
-					service: modal.service.id,
-					target: approveTarget,
 					isWebHook: isWebHook === true,
+					serviceID: modal.service.id,
+					target: approveTarget,
 					unspecificTarget: unspecificTarget,
 				});
 			}
@@ -281,195 +303,185 @@ const ActionReleaseModal = () => {
 	);
 
 	// Query for the Commands/WebHooks for the service.
-	const { data } = useQuery<ActionAPIType>({
-		queryKey: ['actions', { service: modal.service.id }],
-		queryFn: () =>
-			fetchJSON({
-				url: `api/v1/service/actions/${encodeURIComponent(modal.service.id)}`,
-			}),
+	const { data, isFetching } = useQuery<ActionAPIType>({
 		enabled: modal.actionType !== 'EDIT' && modal.service.id !== '',
+		placeholderData: {
+			command: modal.service.command
+				? createInitialRecord(modal.service.command)
+				: {},
+			webhook: modal.service.webhook
+				? createInitialRecord(modal.service.webhook)
+				: {},
+		},
+		queryFn: () => mapRequest('ACTION_GET', { serviceID: modal.service.id }),
+		queryKey: QUERY_KEYS.SERVICE.ACTIONS(modal.service.id),
 		refetchOnMount: 'always',
+		staleTime: 0,
 	});
 
 	// Set the modal data from the query data.
-	useEffect(
-		() =>
-			setModalData({
-				page: 'APPROVALS',
-				type: 'ACTION',
-				sub_type: 'REFRESH',
-				service_data: { id: modal.service.id },
-				webhook_data: data?.webhook,
-				command_data: data?.command,
-			}),
-		[data],
-	);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: modal.service.id stable with data.
+	useEffect(() => {
+		setModalData({
+			command_data: data?.command,
+			page: 'APPROVALS',
+			service_data: { id: modal.service.id },
+			sub_type: 'REFRESH',
+			type: 'ACTION',
+			webhook_data: data?.webhook,
+		});
+	}, [data]);
 
 	// Catch WebSocket messages that impact the modal.
 	useEffect(() => {
 		if (modal.actionType !== 'EDIT' && modal.service.id !== '') {
 			// Handler to listen to WebSocket messages.
 			const handler = (event: WebSocketResponse) => {
-				if (event && ['ACTIONS', 'COMMAND', 'WEBHOOK'].includes(event.type))
+				if (['ACTIONS', 'COMMAND', 'WEBHOOK'].includes(event.type))
 					setModalData(event);
 			};
-			addMessageHandler('action-modal', handler);
+			addMessageHandler('action-modal', { handler });
 		}
+
+		return () => removeMessageHandler('action-modal');
 	}, [modal.actionType, modal.service.id]);
 
 	return (
-		<Modal
-			show={!['', 'EDIT'].includes(modal.actionType)}
-			onHide={() => hideModal()}
+		<Dialog
+			onOpenChange={(open) => {
+				if (!open) hideModal();
+			}}
+			open={!['', 'EDIT'].includes(modal.actionType)}
 		>
-			<Modal.Header closeButton>
-				<Modal.Title>
-					<strong>{stats.title}</strong>
-				</Modal.Title>
-			</Modal.Header>
-			<Modal.Body>
-				<Container
-					fluid
-					className="font-weight-bold"
-					style={{ paddingLeft: '0px' }}
-				>
-					<strong>{modal.service.id}</strong>
-					{modal.actionType === 'RESEND'
-						? ` - ${modal.service?.status?.latest_version ?? 'Unknown'}`
-						: ''}
-				</Container>
-				<>
-					{modal.actionType !== 'RESEND' && (
-						<>
-							<OverlayTrigger
-								key="from-version"
-								placement="top"
-								delay={{ show: 500, hide: 500 }}
-								overlay={
-									<Tooltip id="tooltip-deployed-version">
-										{modal.service?.status?.deployed_version_timestamp ? (
-											<>
-												{formatRelative(
-													new Date(
-														modal.service?.status?.deployed_version_timestamp,
-													),
-													new Date(),
-												)}
-											</>
-										) : (
-											<>Unknown</>
+			<DialogContent className="max-w-lg sm:max-w-2xl">
+				<DialogHeader>
+					<DialogTitle>
+						<strong>{stats.title}</strong>
+					</DialogTitle>
+					<DialogDescription className="font-semibold">
+						<strong>{modal.service.id}</strong>
+						{modal.actionType === 'RESEND'
+							? ` - ${modal.service.status?.latest_version ?? 'Unknown'}`
+							: ''}
+					</DialogDescription>
+				</DialogHeader>
+				{modal.actionType !== 'RESEND' && (
+					<div className="flex flex-col gap-0">
+						<Tip
+							className="w-fit"
+							content={
+								modal.service.status?.deployed_version_timestamp ? (
+									<p>
+										{formatRelative(
+											new Date(modal.service.status.deployed_version_timestamp),
+											new Date(),
 										)}
-									</Tooltip>
-								}
-							>
-								<p style={{ margin: 0, maxWidth: 'fit-content' }}>
-									{`${modal.actionType === 'SKIP' ? 'Stay on' : 'From'}: ${
-										modal.service?.status?.deployed_version
+									</p>
+								) : (
+									<p>Unknown</p>
+								)
+							}
+						>
+							<p>
+								{`${isSkip ? 'Stay on' : 'From'}: ${
+									modal.service.status?.deployed_version ?? 'Unknown'
+								}`}
+							</p>
+						</Tip>
+						<Tip
+							className="w-fit"
+							content={
+								modal.service.status?.latest_version_timestamp ? (
+									<p>
+										{formatRelative(
+											new Date(modal.service.status.latest_version_timestamp),
+											new Date(),
+										)}
+									</p>
+								) : (
+									<p>Unknown</p>
+								)
+							}
+							contentProps={{ side: 'bottom' }}
+						>
+							{
+								<p>
+									{`${isSkip ? 'Skip' : 'To'}: ${
+										modal.service.status?.latest_version ?? 'Unknown'
 									}`}
 								</p>
-							</OverlayTrigger>
-							<OverlayTrigger
-								key="to-version"
-								placement="bottom"
-								delay={{ show: 500, hide: 500 }}
-								overlay={
-									<Tooltip id="tooltip-latest-version">
-										{modal.service?.status?.latest_version_timestamp ? (
-											<>
-												{formatRelative(
-													new Date(
-														modal.service?.status?.latest_version_timestamp,
-													),
-													new Date(),
-												)}
-											</>
-										) : (
-											<>Unknown</>
-										)}
-									</Tooltip>
-								}
-							>
-								<p style={{ margin: 0, maxWidth: 'fit-content' }}>
-									{`${modal.actionType === 'SKIP' ? 'Skip' : 'To'}: ${
-										modal.service?.status?.latest_version
-									}`}
-								</p>
-							</OverlayTrigger>
-						</>
-					)}
-					{!isEmptyObject(data?.webhook) && (
-						<>
-							<br />
-							<strong>WebHook(s):</strong>
-							<ModalList
-								itemType="WEBHOOK"
-								modalType={modal.actionType}
-								serviceID={modal.service.id}
-								data={modalData.webhooks}
-								sent={modalData.sentWH}
-								onClickAcknowledge={onClickAcknowledge}
-								delayedRender={delayedRender}
-							/>
-						</>
-					)}
-					{!isEmptyObject(data?.command) && (
-						<>
-							<br />
-							<strong>Command(s):</strong>
-							<ModalList
-								itemType="COMMAND"
-								modalType={modal.actionType}
-								serviceID={modal.service.id}
-								data={modalData.commands}
-								sent={modalData.sentC}
-								onClickAcknowledge={onClickAcknowledge}
-								delayedRender={delayedRender}
-							/>
-						</>
-					)}
-				</>
-			</Modal.Body>
-			<Modal.Footer>
-				<Button
-					id="modal-cancel"
-					variant="secondary"
-					hidden={!stats.canSendUnspecific}
-					onClick={() => hideModal()}
-				>
-					Cancel
-				</Button>
-				<Button
-					aria-label={stats.ariaLabel}
-					id="modal-action"
-					variant="primary"
-					onClick={() => {
-						if (
-							!['SKIP', 'SKIP_NO_WH'].includes(modal.actionType) &&
-							!stats.canSendUnspecific
-						) {
-							hideModal();
-							return;
-						}
-						switch (modal.actionType) {
-							case 'RESEND':
-								onClickAcknowledge('ARGUS_ALL');
-								break;
-							case 'SEND':
-							case 'RETRY':
-								onClickAcknowledge('ARGUS_FAILED');
-								break;
-							case 'SKIP':
-							case 'SKIP_NO_WH':
-								onClickAcknowledge('ARGUS_SKIP');
-								break;
-						}
-					}}
-					disabled={modal.actionType !== 'SKIP' && stats.isSending}
-				>
-					{stats.confirmButtonText}
-				</Button>
-			</Modal.Footer>
-		</Modal>
+							}
+						</Tip>
+					</div>
+				)}
+				{isNonEmptyObject(data?.command) && (
+					<div className="flex flex-col gap-1">
+						<strong>
+							{pluralise('Command', Object.keys(data.command).length)}:
+						</strong>
+						<ModalList
+							data={modalData.commands}
+							itemType="COMMAND"
+							modalType={modal.actionType}
+							onClickAcknowledge={onClickAcknowledge}
+							sent={modalData.sentC}
+							serviceID={modal.service.id}
+						/>
+					</div>
+				)}
+				{isNonEmptyObject(data?.webhook) && (
+					<div className="flex flex-col gap-1">
+						<strong>
+							{pluralise('WebHook', Object.keys(data.webhook).length)}:
+						</strong>
+						<ModalList
+							data={modalData.webhooks}
+							itemType="WEBHOOK"
+							modalType={modal.actionType}
+							onClickAcknowledge={onClickAcknowledge}
+							sent={modalData.sentWH}
+							serviceID={modal.service.id}
+						/>
+					</div>
+				)}
+				<DialogFooter>
+					<Button
+						hidden={!stats.canSendUnspecific}
+						id="modal-cancel"
+						onClick={() => hideModal()}
+						variant="secondary"
+					>
+						Cancel
+					</Button>
+					<Button
+						aria-label={stats.ariaLabel}
+						disabled={isFetching || (!isSkip && stats.isSending)}
+						id="modal-action"
+						onClick={() => {
+							if (isSkip && !stats.canSendUnspecific) {
+								hideModal();
+								return;
+							}
+							switch (modal.actionType) {
+								case 'RESEND':
+									onClickAcknowledge('ARGUS_ALL');
+									break;
+								case 'SEND':
+								case 'RETRY':
+									onClickAcknowledge('ARGUS_FAILED');
+									break;
+								case 'SKIP':
+								case 'SKIP_NO_WH':
+									onClickAcknowledge('ARGUS_SKIP');
+									break;
+							}
+						}}
+					>
+						{stats.confirmButtonText}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 };
 

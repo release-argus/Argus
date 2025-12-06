@@ -25,7 +25,7 @@ import (
 )
 
 func TestTemplate_String(t *testing.T) {
-	serviceInfo := testServiceInfo()
+	svcInfo := testServiceInfo()
 	// GIVEN a variety of string templates.
 	tests := map[string]struct {
 		template    string
@@ -36,50 +36,50 @@ func TestTemplate_String(t *testing.T) {
 		"no django template": {
 			template:    "testing 123",
 			want:        "testing 123",
-			serviceInfo: serviceInfo},
+			serviceInfo: svcInfo},
 		"valid django template": {
 			template: "-{% if 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
 			want: fmt.Sprintf("-%s-%s-%s-%s",
-				serviceInfo.ID, serviceInfo.URL, serviceInfo.WebURL, serviceInfo.LatestVersion),
-			serviceInfo: serviceInfo},
+				svcInfo.ID, svcInfo.URL, svcInfo.WebURL, svcInfo.LatestVersion),
+			serviceInfo: svcInfo},
 		"valid django template with defaulting - had value": {
 			template: "{{ service_name | default:service_id }} - {{ version }} released",
 			want: fmt.Sprintf("%s - %s released",
-				serviceInfo.Name, serviceInfo.LatestVersion),
-			serviceInfo: serviceInfo},
+				svcInfo.Name, svcInfo.LatestVersion),
+			serviceInfo: svcInfo},
 		"valid django template with defaulting - had no value (empty string)": {
 			template: "{{ service_name | default:service_id }} - {{ version }} released",
 			want: fmt.Sprintf("%s - %s released",
-				serviceInfo.ID, serviceInfo.LatestVersion),
+				svcInfo.ID, svcInfo.LatestVersion),
 			serviceInfo: serviceinfo.ServiceInfo{
-				ID:            serviceInfo.ID,
+				ID:            svcInfo.ID,
 				Name:          "",
-				URL:           serviceInfo.URL,
-				WebURL:        serviceInfo.WebURL,
-				LatestVersion: serviceInfo.LatestVersion},
+				URL:           svcInfo.URL,
+				WebURL:        svcInfo.WebURL,
+				LatestVersion: svcInfo.LatestVersion},
 		},
 		"valid django template with defaulting - had no value (nil)": {
 			template: "{{ service_name | default:service_id }} - {{ web_url }}",
 			want: fmt.Sprintf("%s - %s",
-				"", serviceInfo.WebURL),
+				"", svcInfo.WebURL),
 			serviceInfo: serviceinfo.ServiceInfo{
 				ID:            "",
 				Name:          "",
-				URL:           serviceInfo.URL,
-				WebURL:        serviceInfo.WebURL,
-				LatestVersion: serviceInfo.LatestVersion},
+				URL:           svcInfo.URL,
+				WebURL:        svcInfo.WebURL,
+				LatestVersion: svcInfo.LatestVersion},
 		},
 		"invalid django template panic": {
 			template:    "-{% 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
 			panicRegex:  test.StringPtr("Tag name must be an identifier"),
-			serviceInfo: serviceInfo},
+			serviceInfo: svcInfo},
 		"all django vars": {
 			template: "{{ service_id }}-{{ service_name }}-{{ service_url }}--{{ icon }}-{{ icon_link_to }}-{{ web_url }}--{{ version }}-{{ approved_version }}-{{ deployed_version }}-{{ latest_version }}",
 			want: fmt.Sprintf("%s-%s-%s--%s-%s-%s--%s-%s-%s-%s",
-				serviceInfo.ID, serviceInfo.Name, serviceInfo.URL,
-				serviceInfo.Icon, serviceInfo.IconLinkTo, serviceInfo.WebURL,
-				serviceInfo.LatestVersion, serviceInfo.ApprovedVersion, serviceInfo.DeployedVersion, serviceInfo.LatestVersion),
-			serviceInfo: serviceInfo},
+				svcInfo.ID, svcInfo.Name, svcInfo.URL,
+				svcInfo.Icon, svcInfo.IconLinkTo, svcInfo.WebURL,
+				svcInfo.LatestVersion, svcInfo.ApprovedVersion, svcInfo.DeployedVersion, svcInfo.LatestVersion),
+			serviceInfo: svcInfo},
 	}
 
 	for name, tc := range tests {

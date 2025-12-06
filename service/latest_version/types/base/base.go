@@ -27,10 +27,10 @@ import (
 
 // Lookup is the base struct for a Lookup.
 type Lookup struct {
-	Type        string                 `json:"type,omitempty" yaml:"type,omitempty"`                 // "github" | "url".
-	URL         string                 `json:"url,omitempty" yaml:"url,omitempty"`                   // "owner/repo" or "https://github.com/owner/repo".
-	URLCommands filter.URLCommandSlice `json:"url_commands,omitempty" yaml:"url_commands,omitempty"` // Commands to filter the release from the URL request.
-	Require     *filter.Require        `json:"require,omitempty" yaml:"require,omitempty"`           // Options to require before considering a release valid.
+	Type        string             `json:"type,omitempty" yaml:"type,omitempty"`                 // "github" | "url".
+	URL         string             `json:"url,omitempty" yaml:"url,omitempty"`                   // "owner/repo" or "https://github.com/owner/repo".
+	URLCommands filter.URLCommands `json:"url_commands,omitempty" yaml:"url_commands,omitempty"` // Commands to filter the release from the URL request.
+	Require     *filter.Require    `json:"require,omitempty" yaml:"require,omitempty"`           // Options to require before considering a release valid.
 
 	Options *opt.Options   `json:"-" yaml:"-"` // Options.
 	Status  *status.Status `json:"-" yaml:"-"` // Service Status.

@@ -24,8 +24,8 @@ import (
 	"github.com/release-argus/Argus/service/status"
 )
 
-// Slice mapping of WebHook.
-type Slice []Command
+// Commands is a slice of Command.
+type Commands []Command
 
 // Command is a slice of strings representing a cli command.
 type Command []string
@@ -38,10 +38,10 @@ func (c *Command) String() string {
 	return strings.Join(*c, " ")
 }
 
-// Controller holds the command(s) to run and the status of the last run.
+// Controller holds the commands to run and the status of the last run.
 type Controller struct {
 	mutex        sync.RWMutex         // Mutex for concurrent access.
-	Command      *Slice               `json:"-" yaml:"-"` // command(s) to run (with args).
+	Command      *Commands            `json:"-" yaml:"-"` // Commands to run (with args).
 	nextRunnable []time.Time          // Time the Commands can next be run (for staggering).
 	Failed       *status.FailsCommand `json:"-" yaml:"-"` // Whether the last execution attempt failed.
 
@@ -52,7 +52,7 @@ type Controller struct {
 
 // Notifiers to use when their WebHook fails.
 type Notifiers struct {
-	Shoutrrr *shoutrrr.Slice
+	Shoutrrr *shoutrrr.Shoutrrrs
 }
 
 // CopyFailsFrom target.
@@ -70,7 +70,7 @@ func (c *Controller) CopyFailsFrom(target *Controller) {
 
 	// Loop through old fails.
 	for i := 0; i < target.Failed.Length(); i++ {
-		// Loop through new fails to find try and find this command.
+		// Loop through new fails and find try to find this command.
 		for j := 0; j < c.Failed.Length(); j++ {
 			// If the command has been run (has a failed state),
 			// and the commands match, copy the failed status.

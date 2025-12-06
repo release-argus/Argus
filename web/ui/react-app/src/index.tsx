@@ -1,15 +1,14 @@
-import 'bootstrap/dist/css/bootstrap.min.css';
-import './index.css';
-
-import App from './App';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import App from './App';
+import '@/app/globals.css';
 
-const container = document.getElementById('root') as HTMLElement;
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+	throw new Error('Could not find the root element to mount the application.');
+}
 
-const root = createRoot(container);
-
-root.render(
+createRoot(rootElement).render(
 	<StrictMode>
 		<App />
 	</StrictMode>,

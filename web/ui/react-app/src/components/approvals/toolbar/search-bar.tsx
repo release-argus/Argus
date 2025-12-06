@@ -1,47 +1,37 @@
-import { Button, FormControl, InputGroup } from 'react-bootstrap';
-import { FC, useEffect, useRef, useState } from 'react';
+import { SearchIcon, X } from 'lucide-react';
+import { type FC, useEffect, useRef } from 'react';
+import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
+import { Button } from '@/components/ui/button';
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupInput,
+} from '@/components/ui/input-group';
+import { Kbd } from '@/components/ui/kbd';
+import { Separator } from '@/components/ui/separator';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes } from '@fortawesome/free-solid-svg-icons';
-
-type Props = {
-	search: string;
-	setSearch: (value: string) => void;
-};
-
-const SearchBar: FC<Props> = ({ search, setSearch }) => {
+/**
+ * Toolbar input for filtering services by name.
+ *
+ * Supports '/' to focus and 'Escape' to clear.
+ */
+const SearchBar: FC = () => {
+	const { values, setSearch } = useToolbar();
+	const search = values.search ?? '';
 	const searchInputRef = useRef<HTMLInputElement | null>(null);
-	const [placeholder, setPlaceholder] = useState('');
+	const isMobile = useIsMobile();
 
-	// Update placeholder based on screen size
-	const updatePlaceholder = () => {
-		const newPlaceholder =
-			window.innerWidth <= 576
-				? 'Filter services'
-				: 'Type "/" to filter services';
-
-		// Only update if the placeholder text is different
-		if (newPlaceholder !== placeholder) {
-			setPlaceholder(newPlaceholder);
-		}
-	};
-
-	useEffect(() => {
-		updatePlaceholder();
-		window.addEventListener('resize', updatePlaceholder);
-
-		// Cleanup listener on unmount
-		return () => window.removeEventListener('resize', updatePlaceholder);
-	}, []);
-
+	// Event listeners for focus/clear.
 	useEffect(() => {
 		const handleKeyPress = (event: KeyboardEvent) => {
 			if (
 				event.target instanceof HTMLInputElement ||
 				event.target instanceof HTMLTextAreaElement
-			) {
+			)
 				return;
-			}
+
 			if (event.key === '/') {
 				event.preventDefault();
 				searchInputRef.current?.focus();
@@ -59,34 +49,47 @@ const SearchBar: FC<Props> = ({ search, setSearch }) => {
 			}
 		};
 
-		window.addEventListener('keydown', handleKeyPress);
-		window.addEventListener('keydown', handleEscape);
+		globalThis.addEventListener('keydown', handleKeyPress);
+		globalThis.addEventListener('keydown', handleEscape);
 
 		return () => {
-			window.removeEventListener('keydown', handleKeyPress);
-			window.removeEventListener('keydown', handleEscape);
+			globalThis.removeEventListener('keydown', handleKeyPress);
+			globalThis.removeEventListener('keydown', handleEscape);
 		};
 	}, [setSearch]);
 
 	return (
 		<InputGroup>
-			<FormControl
-				className="search-input"
+			<InputGroupInput
+				aria-label="Search and filter services by name"
+				onChange={(e) => {
+					setSearch(e.target.value);
+				}}
+				placeholder="Filter services"
 				ref={searchInputRef}
 				type="text"
-				placeholder={placeholder}
 				value={search}
-				onChange={(e) => setSearch(e.target.value)}
-				aria-label="Search and filter services by name"
 			/>
+			<InputGroupAddon>
+				<SearchIcon />
+			</InputGroupAddon>
+			{!isMobile && (
+				<InputGroupAddon align="inline-end">
+					<Kbd>/</Kbd>
+				</InputGroupAddon>
+			)}
 			{search && (
-				<Button
-					variant="outline-secondary"
-					onClick={() => setSearch('')}
-					aria-label="Clear search"
-				>
-					<FontAwesomeIcon icon={faTimes} />
-				</Button>
+				<InputGroupAddon align="inline-end" className="!py-0 !pr-1.5 gap-0">
+					<InputGroupButton
+						aria-label="Clear search"
+						className="order-last rounded-l-none border-l text-muted-foreground hover:text-foreground focus-visible:text-foreground"
+						onClick={() => setSearch('')}
+						size="icon-md"
+						variant="ghost"
+					>
+						<X />
+					</InputGroupButton>
+				</InputGroupAddon>
 			)}
 		</InputGroup>
 	);

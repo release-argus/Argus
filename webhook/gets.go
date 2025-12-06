@@ -26,44 +26,44 @@ import (
 )
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
-func (w *WebHook) GetAllowInvalidCerts() bool {
+func (wh *WebHook) GetAllowInvalidCerts() bool {
 	return *util.FirstNonNilPtr(
-		w.AllowInvalidCerts,
-		w.Main.AllowInvalidCerts,
-		w.Defaults.AllowInvalidCerts,
-		w.HardDefaults.AllowInvalidCerts)
+		wh.AllowInvalidCerts,
+		wh.Main.AllowInvalidCerts,
+		wh.Defaults.AllowInvalidCerts,
+		wh.HardDefaults.AllowInvalidCerts)
 }
 
 // GetDelay of the WebHook to use before auto-approving.
-func (w *WebHook) GetDelay() string {
+func (wh *WebHook) GetDelay() string {
 	return util.FirstNonDefault(
-		w.Delay,
-		w.Main.Delay,
-		w.Defaults.Delay,
-		w.HardDefaults.Delay)
+		wh.Delay,
+		wh.Main.Delay,
+		wh.Defaults.Delay,
+		wh.HardDefaults.Delay)
 }
 
 // GetDelayDuration before auto-approving this WebHook.
-func (w *WebHook) GetDelayDuration() (duration time.Duration) {
-	duration, _ = time.ParseDuration(w.GetDelay())
+func (wh *WebHook) GetDelayDuration() (duration time.Duration) {
+	duration, _ = time.ParseDuration(wh.GetDelay())
 	return duration
 }
 
 // GetDesiredStatusCode of the WebHook.
-func (w *WebHook) GetDesiredStatusCode() uint16 {
+func (wh *WebHook) GetDesiredStatusCode() uint16 {
 	return *util.FirstNonNilPtr(
-		w.DesiredStatusCode,
-		w.Main.DesiredStatusCode,
-		w.Defaults.DesiredStatusCode,
-		w.HardDefaults.DesiredStatusCode)
+		wh.DesiredStatusCode,
+		wh.Main.DesiredStatusCode,
+		wh.Defaults.DesiredStatusCode,
+		wh.HardDefaults.DesiredStatusCode)
 }
 
 // SetNextRunnable time that the WebHook can be re-run.
-func (w *WebHook) SetNextRunnable(time time.Time) {
-	w.mutex.Lock()
-	defer w.mutex.Unlock()
+func (wh *WebHook) SetNextRunnable(time time.Time) {
+	wh.mutex.Lock()
+	defer wh.mutex.Unlock()
 
-	w.nextRunnable = time
+	wh.nextRunnable = time
 }
 
 // SetExecuting will set a time that the WebHook can be re-run.
@@ -72,64 +72,64 @@ func (w *WebHook) SetNextRunnable(time time.Time) {
 //
 //	addDelay: only used on auto_approved releases.
 //	received: whether the WebHook has received a response.
-func (w *WebHook) SetExecuting(addDelay bool, received bool) {
-	w.mutex.Lock()
-	defer w.mutex.Unlock()
+func (wh *WebHook) SetExecuting(addDelay bool, received bool) {
+	wh.mutex.Lock()
+	defer wh.mutex.Unlock()
 
 	// Different times depending on pass/fail.
 	// pass.
-	if !util.DereferenceOrValue(w.Failed.Get(w.ID), true) {
-		parentInterval, _ := time.ParseDuration(*w.ParentInterval)
-		w.nextRunnable = time.Now().UTC().Add(2 * parentInterval)
+	if !util.DereferenceOrValue(wh.Failed.Get(wh.ID), true) {
+		parentInterval, _ := time.ParseDuration(*wh.ParentInterval)
+		wh.nextRunnable = time.Now().UTC().Add(2 * parentInterval)
 		// fail/nil.
 	} else {
-		w.nextRunnable = time.Now().UTC().Add(15 * time.Second)
+		wh.nextRunnable = time.Now().UTC().Add(15 * time.Second)
 	}
 
 	// Block for delay.
 	if addDelay {
-		w.nextRunnable = w.nextRunnable.Add(w.GetDelayDuration())
+		wh.nextRunnable = wh.nextRunnable.Add(wh.GetDelayDuration())
 	}
 
 	// Block reruns whilst waiting for a response.
 	if received {
-		w.nextRunnable = w.nextRunnable.Add(time.Hour)
-		w.nextRunnable = w.nextRunnable.Add(3 * time.Duration(int64(w.GetMaxTries())) * time.Second)
+		wh.nextRunnable = wh.nextRunnable.Add(time.Hour)
+		wh.nextRunnable = wh.nextRunnable.Add(3 * time.Duration(int64(wh.GetMaxTries())) * time.Second)
 	}
 }
 
 // GetMaxTries allowed for the WebHook.
-func (w *WebHook) GetMaxTries() uint8 {
+func (wh *WebHook) GetMaxTries() uint8 {
 	return *util.FirstNonNilPtr(
-		w.MaxTries,
-		w.Main.MaxTries,
-		w.Defaults.MaxTries,
-		w.HardDefaults.MaxTries)
+		wh.MaxTries,
+		wh.Main.MaxTries,
+		wh.Defaults.MaxTries,
+		wh.HardDefaults.MaxTries)
 }
 
 // NextRunnable returns the time that the WebHook can be re-run.
-func (w *WebHook) NextRunnable() time.Time {
-	w.mutex.RLock()
-	defer w.mutex.RUnlock()
+func (wh *WebHook) NextRunnable() time.Time {
+	wh.mutex.RLock()
+	defer wh.mutex.RUnlock()
 
-	return w.nextRunnable
+	return wh.nextRunnable
 }
 
-// IsRunnable will return whether the current time is before NextRunnable.
-func (w *WebHook) IsRunnable() bool {
-	w.mutex.RLock()
-	defer w.mutex.RUnlock()
+// IsRunnable returns whether the current time is before NextRunnable.
+func (wh *WebHook) IsRunnable() bool {
+	wh.mutex.RLock()
+	defer wh.mutex.RUnlock()
 
-	return time.Now().UTC().After(w.nextRunnable)
+	return time.Now().UTC().After(wh.nextRunnable)
 }
 
-// BuildRequest will return the WebHook http.request ready to be sent.
-func (w *WebHook) BuildRequest() (req *http.Request) {
-	w.mutex.RLock()
-	defer w.mutex.RUnlock()
+// BuildRequest returns the WebHook http.request ready to be sent.
+func (wh *WebHook) BuildRequest() (req *http.Request) {
+	wh.mutex.RLock()
+	defer wh.mutex.RUnlock()
 
 	var err error
-	switch w.GetType() {
+	switch wh.GetType() {
 	case "github":
 		//#nosec G104 -- Disregard.
 		//nolint:errcheck // ^
@@ -140,68 +140,68 @@ func (w *WebHook) BuildRequest() (req *http.Request) {
 		})
 
 		req, err = http.NewRequest(http.MethodPost,
-			w.GetURL(),
+			wh.GetURL(),
 			bytes.NewReader(payload))
 		if err != nil {
 			return nil
 		}
 		req.Header.Set("Content-Type", "application/json")
 
-		SetGitHubHeaders(req, payload, w.GetSecret())
+		SetGitHubHeaders(req, payload, wh.GetSecret())
 	case "gitlab":
 		req, err = http.NewRequest(http.MethodPost,
-			w.GetURL(),
+			wh.GetURL(),
 			nil)
 		if err != nil {
 			return nil
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-		SetGitLabParameter(req, w.GetSecret())
+		SetGitLabParameter(req, wh.GetSecret())
 	}
 	req.Header.Set("Connection", "close")
-	w.setCustomHeaders(req)
+	wh.setCustomHeaders(req)
 	return
 }
 
 // GetSecret for the WebHook.
-func (w *WebHook) GetSecret() string {
+func (wh *WebHook) GetSecret() string {
 	return util.FirstNonDefaultWithEnv(
-		w.Secret,
-		w.Main.Secret,
-		w.Defaults.Secret,
-		w.HardDefaults.Secret)
+		wh.Secret,
+		wh.Main.Secret,
+		wh.Defaults.Secret,
+		wh.HardDefaults.Secret)
 }
 
 // GetSilentFails returns the flag for whether WebHooks should fail silently or notify.
-func (w *WebHook) GetSilentFails() bool {
+func (wh *WebHook) GetSilentFails() bool {
 	return *util.FirstNonNilPtr(
-		w.SilentFails,
-		w.Main.SilentFails,
-		w.Defaults.SilentFails,
-		w.HardDefaults.SilentFails)
+		wh.SilentFails,
+		wh.Main.SilentFails,
+		wh.Defaults.SilentFails,
+		wh.HardDefaults.SilentFails)
 }
 
 // GetType of the WebHook.
-func (w *WebHook) GetType() string {
+func (wh *WebHook) GetType() string {
 	return util.FirstNonDefault(
-		w.Type,
-		w.Main.Type,
-		w.Defaults.Type,
-		w.HardDefaults.Type)
+		wh.Type,
+		wh.Main.Type,
+		wh.Defaults.Type,
+		wh.HardDefaults.Type)
 }
 
 // GetURL of the WebHook.
-func (w *WebHook) GetURL() (url string) {
+func (wh *WebHook) GetURL() (url string) {
 	url = strings.Clone(
 		util.FirstNonDefaultWithEnv(
-			w.URL,
-			w.Main.URL,
-			w.Defaults.URL,
-			w.HardDefaults.URL))
+			wh.URL,
+			wh.Main.URL,
+			wh.Defaults.URL,
+			wh.HardDefaults.URL))
 
 	url = util.TemplateString(
 		url,
-		w.ServiceStatus.GetServiceInfo())
+		wh.ServiceStatus.GetServiceInfo())
 	return
 }

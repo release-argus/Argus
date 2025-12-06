@@ -53,8 +53,8 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 	tests := map[string]struct {
 		serviceID              string
 		stdoutRegex, bodyRegex string
-		commands               command.Slice
-		webhooks               webhook.Slice
+		commands               command.Commands
+		webhooks               webhook.WebHooks
 		statusCode             int
 	}{
 		"service_id=unknown": {
@@ -69,34 +69,34 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 		},
 		"known service_id, 0 command, 0 webhooks": {
 			serviceID: "__name__",
-			commands:  command.Slice{},
+			commands:  command.Commands{},
 		},
 		"known service_id, 1 command, 0 webhooks": {
 			serviceID: "__name__",
-			commands: command.Slice{
+			commands: command.Commands{
 				testCommand(true)},
 		},
 		"known service_id, 2 command, 0 webhooks": {
 			serviceID: "__name__",
-			commands: command.Slice{
+			commands: command.Commands{
 				testCommand(true), testCommand(false)},
 		},
 		"known service_id, 0 command, 1 webhooks": {
 			serviceID: "__name__",
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"fail0": webhook_test.WebHook(true, false, false)},
 		},
 		"known service_id, 0 command, 2 webhooks": {
 			serviceID: "__name__",
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"fail0": webhook_test.WebHook(true, false, false),
 				"pass0": webhook_test.WebHook(false, false, false)},
 		},
 		"known service_id, 2 command, 2 webhooks": {
 			serviceID: "__name__",
-			commands: command.Slice{
+			commands: command.Commands{
 				testCommand(true), testCommand(false)},
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"fail0": webhook_test.WebHook(true, false, false),
 				"pass0": webhook_test.WebHook(false, false, false)},
 		},
@@ -142,7 +142,7 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			svc.WebHook = tc.webhooks
 			svc.WebHook.Init(
 				&svc.Status,
-				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
+				&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
 				&svc.Notify,
 				&svc.Options.Interval)
 			cfg.OrderMutex.Lock()
@@ -264,9 +264,9 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		target                      *string
 		wantSkipMessage             bool
 		stdoutRegex, bodyRegex      string
-		commands                    command.Slice
+		commands                    command.Commands
 		commandFails                []*bool
-		webhooks                    webhook.Slice
+		webhooks                    webhook.WebHooks
 		webhookFails                map[string]*bool
 		removeDVL                   bool
 		latestVersion               string
@@ -314,34 +314,34 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		"ARGUS_ALL, known service_id with command": {
 			serviceID: "__name__",
 			target:    test.StringPtr("ARGUS_ALL"),
-			commands: command.Slice{
+			commands: command.Commands{
 				{"false", "0"}},
 		},
 		"ARGUS_ALL, known service_id with webhook": {
 			serviceID: "__name__",
 			target:    test.StringPtr("ARGUS_ALL"),
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"known-service-and-webhook": webhook_test.WebHook(true, false, false)},
 		},
 		"ARGUS_ALL, known service_id with multiple webhooks": {
 			serviceID: "__name__",
 			target:    test.StringPtr("ARGUS_ALL"),
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"known-service-and-multiple-webhook-0": webhook_test.WebHook(true, false, false),
 				"known-service-and-multiple-webhook-1": webhook_test.WebHook(true, false, false)},
 		},
 		"ARGUS_ALL, known service_id with multiple commands": {
 			serviceID: "__name__",
 			target:    test.StringPtr("ARGUS_ALL"),
-			commands: command.Slice{
+			commands: command.Commands{
 				{"ls", "-a"}, {"false", "1"}},
 		},
 		"ARGUS_ALL, known service_id with dvl and command and webhook that pass upgrades approved_version": {
 			serviceID: "__name__",
 			target:    test.StringPtr("ARGUS_ALL"),
-			commands: command.Slice{
+			commands: command.Commands{
 				{"ls", "-b"}},
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"known-service-dvl-webhook-0": webhook_test.WebHook(false, false, false)},
 			upgradesApprovedVersion: true,
 			latestVersion:           "0.9.0",
@@ -349,9 +349,9 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		"ARGUS_ALL, known service_id with command and webhook that pass upgrades deployed_version": {
 			serviceID: "__name__",
 			target:    test.StringPtr("ARGUS_ALL"),
-			commands: command.Slice{
+			commands: command.Commands{
 				{"ls", "-c"}},
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"known-service-upgrade-deployed-version-webhook-0": webhook_test.WebHook(false, false, false)},
 			removeDVL:               true,
 			upgradesDeployedVersion: true,
@@ -360,29 +360,29 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		"ARGUS_ALL, known service_id with passing command and failing webhook doesn't upgrade any versions": {
 			serviceID: "__name__",
 			target:    test.StringPtr("ARGUS_ALL"),
-			commands: command.Slice{
+			commands: command.Commands{
 				{"ls", "-d"}},
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"known-service-fail-webhook-0": webhook_test.WebHook(true, false, false)},
 			latestVersionIsApproved: true,
 		},
 		"ARGUS_ALL, known service_id with failing command and passing webhook doesn't upgrade any versions": {
 			serviceID: "__name__",
 			target:    test.StringPtr("ARGUS_ALL"),
-			commands: command.Slice{
+			commands: command.Commands{
 				{"fail"}},
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"known-service-pass-webhook-0": webhook_test.WebHook(false, false, false)},
 			latestVersionIsApproved: true,
 		},
 		"webhook_NAME, known service_id with 1 webhook left to pass does upgrade deployed_version": {
 			serviceID: "__name__",
 			target:    test.StringPtr("webhook_will_pass"),
-			commands: command.Slice{
+			commands: command.Commands{
 				{"ls", "-f"}},
 			commandFails: []*bool{
 				test.BoolPtr(false)},
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"will_pass":  webhook_test.WebHook(false, false, false),
 				"would_fail": webhook_test.WebHook(true, false, false)},
 			webhookFails: map[string]*bool{
@@ -395,13 +395,13 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		"command_NAME, known service_id with 1 command left to pass does upgrade deployed_version": {
 			serviceID: "__name__",
 			target:    test.StringPtr("command_ls -g"),
-			commands: command.Slice{
+			commands: command.Commands{
 				{"ls", "/root"},
 				{"ls", "-g"}},
 			commandFails: []*bool{
 				test.BoolPtr(false),
 				test.BoolPtr(true)},
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"would_fail": webhook_test.WebHook(true, false, false)},
 			webhookFails: map[string]*bool{
 				"would_fail": test.BoolPtr(false)},
@@ -411,7 +411,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		},
 		"command_NAME, known service_id with multiple commands targeted individually (handle broadcast queue)": {
 			serviceID: "__name__",
-			commands: command.Slice{
+			commands: command.Commands{
 				{"ls", "-h"},
 				{"false", "2"},
 				{"true"}},
@@ -461,7 +461,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			svc.WebHook = tc.webhooks
 			svc.WebHook.Init(
 				&svc.Status,
-				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
+				&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
 				&svc.Notify,
 				&svc.Options.Interval)
 			if len(tc.webhookFails) != 0 {
@@ -475,7 +475,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			api.Config.OrderMutex.Unlock()
 			t.Cleanup(func() { api.Config.DeleteService(name) })
 
-			// WHEN the HTTP request is sent to run the action(s).
+			// WHEN the HTTP request is sent to run the actions.
 			target := tc.target
 			if tc.approveCommandsIndividually {
 				commandTarget := "command_" + tc.commands[0].String()

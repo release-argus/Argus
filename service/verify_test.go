@@ -24,6 +24,7 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
@@ -34,32 +35,32 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestSlice_Print(t *testing.T) {
-	// GIVEN a Slice.
+func TestServices_Print(t *testing.T) {
+	// GIVEN a Services.
 	tests := map[string]struct {
-		slice    *Slice
+		services *Services
 		ordering []string
 		want     string
 	}{
-		"nil slice with no ordering": {
-			slice: nil,
-			want:  "",
-		},
-		"nil slice with ordering": {
-			ordering: []string{"foo", "bar"},
-			slice:    nil,
+		"nil map with no ordering": {
+			services: nil,
 			want:     "",
 		},
-		"slice with nil Service and empty Service": {
+		"nil map with ordering": {
 			ordering: []string{"foo", "bar"},
-			slice:    &Slice{"foo": nil, "bar": &Service{}},
+			services: nil,
+			want:     "",
+		},
+		"map with nil Service and empty Service": {
+			ordering: []string{"foo", "bar"},
+			services: &Services{"foo": nil, "bar": &Service{}},
 			want: test.TrimYAML(`
 				service:
 					bar: {}`),
 		},
 		"respects ordering": {
 			ordering: []string{"zulu", "alpha"},
-			slice: &Slice{
+			services: &Services{
 				"zulu":  &Service{ID: "zulu", Comment: "a"},
 				"alpha": &Service{ID: "alpha", Comment: "b"}},
 			want: test.TrimYAML(`
@@ -71,7 +72,7 @@ func TestSlice_Print(t *testing.T) {
 		},
 		"respects reversed ordering": {
 			ordering: []string{"alpha", "zulu"},
-			slice: &Slice{
+			services: &Services{
 				"zulu":  &Service{ID: "zulu", Comment: "a"},
 				"alpha": &Service{ID: "alpha", Comment: "b"}},
 			want: test.TrimYAML(`
@@ -94,7 +95,7 @@ func TestSlice_Print(t *testing.T) {
 			tc.want = strings.ReplaceAll(tc.want, "\t", "")
 
 			// WHEN Print is called.
-			tc.slice.Print("", tc.ordering)
+			tc.services.Print("", tc.ordering)
 
 			// THEN it prints the expected stdout.
 			stdout := releaseStdout()
@@ -107,7 +108,7 @@ func TestSlice_Print(t *testing.T) {
 }
 
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN a Defaults.
+	// GIVEN Defaults.
 	tests := map[string]struct {
 		options       opt.Defaults
 		latestVersion latestver_base.Defaults
@@ -190,18 +191,18 @@ func TestDefaults_CheckValues(t *testing.T) {
 	}
 }
 
-func TestSlice_CheckValues(t *testing.T) {
-	// GIVEN a Slice.
+func TestServices_CheckValues(t *testing.T) {
+	// GIVEN a Services.
 	tests := map[string]struct {
-		slice    *Slice
+		services *Services
 		errRegex string
 	}{
-		"nil slice": {
-			slice:    nil,
+		"nil map": {
+			services: nil,
 			errRegex: `^$`,
 		},
 		"single valid service": {
-			slice: &Slice{
+			services: &Services{
 				"first": {
 					ID:      "test",
 					Comment: "foo_comment",
@@ -220,7 +221,7 @@ func TestSlice_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		"single invalid service": {
-			slice: &Slice{
+			services: &Services{
 				"first": {
 					ID:      "test",
 					Comment: "foo_comment",
@@ -239,7 +240,7 @@ func TestSlice_CheckValues(t *testing.T) {
 			errRegex: `interval: "[^"]+" <invalid>.*$`,
 		},
 		"multiple invalid services": {
-			slice: &Slice{
+			services: &Services{
 				"foo": {
 					ID:      "test",
 					Comment: "foo_comment",
@@ -261,13 +262,23 @@ func TestSlice_CheckValues(t *testing.T) {
 							nil,
 							nil, nil)
 					}),
-					DeployedVersionLookup: &dv_web.Lookup{
-						Method: "SOMETHING"}}},
+					DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
+						return deployedver.New(
+							"url",
+							"yaml", test.TrimYAML(`
+								method: "SOMETHING"
+							`),
+							nil,
+							nil,
+							&deployedver_base.Defaults{}, &deployedver_base.Defaults{})
+					}),
+				}},
 			errRegex: test.TrimYAML(`
 				^bar:
 					options:
 						interval: "10y" <invalid>.*
 					deployed_version:
+						url: <required>.*
 						method: "[^"]+" <invalid>.*
 				foo:
 					options:
@@ -282,7 +293,7 @@ func TestSlice_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CheckValues is called.
-			err := tc.slice.CheckValues("")
+			err := tc.services.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
@@ -301,9 +312,9 @@ func TestService_CheckValues(t *testing.T) {
 		options          opt.Options
 		latestVersion    latestver.Lookup
 		deployedVersion  deployedver.Lookup
-		commands         command.Slice
-		webhooks         webhook.Slice
-		notifies         shoutrrr.Slice
+		commands         command.Commands
+		webhooks         webhook.WebHooks
+		notifies         shoutrrr.Shoutrrrs
 		dashboardOptions dashboard.Options
 		errRegex         string
 	}{
@@ -383,6 +394,7 @@ func TestService_CheckValues(t *testing.T) {
 					url: <required>.*
 				deployed_version:
 					url: <required>.*
+					method: <required>.*
 					regex: "[^"]+" <invalid>.*$`),
 		},
 		"options, latest_version, deployed_version, notify with errs": {
@@ -400,7 +412,7 @@ func TestService_CheckValues(t *testing.T) {
 			}),
 			deployedVersion: &dv_web.Lookup{
 				Regex: `[0-`},
-			notifies: shoutrrr.Slice{
+			notifies: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil, "",
 					"discord",
@@ -413,6 +425,7 @@ func TestService_CheckValues(t *testing.T) {
 					url: <required>.*
 				deployed_version:
 					url: <required>.*
+					method: <required>.*
 					regex: "[^"]+" <invalid>.*
 				notify:
 					foo:
@@ -435,13 +448,13 @@ func TestService_CheckValues(t *testing.T) {
 			}),
 			deployedVersion: &dv_web.Lookup{
 				Regex: `[0-`},
-			notifies: shoutrrr.Slice{
+			notifies: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil, "",
 					"discord",
 					nil, nil, nil,
 					nil, nil, nil)},
-			commands: command.Slice{{
+			commands: command.Commands{{
 				"bash", "update.sh", "{{ version }"}},
 			errRegex: test.TrimYAML(`
 				^options:
@@ -450,6 +463,7 @@ func TestService_CheckValues(t *testing.T) {
 					url: <required>.*
 				deployed_version:
 					url: <required>.*
+					method: <required>.*
 					regex: "[^"]+" <invalid>.*
 				notify:
 					foo:
@@ -474,19 +488,25 @@ func TestService_CheckValues(t *testing.T) {
 			}),
 			deployedVersion: &dv_web.Lookup{
 				Regex: `[0-`},
-			commands: command.Slice{{
+			commands: command.Commands{{
 				"bash", "update.sh", "{{ version }"}},
-			notifies: shoutrrr.Slice{
+			notifies: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "",
-					"discord",
+					nil,
+					"", "discord",
 					nil, nil, nil,
 					nil, nil, nil)},
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"wh": webhook.New(
 					nil, nil,
 					"0x",
-					nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					nil, nil,
+					"wh",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			errRegex: test.TrimYAML(`
 				^options:
 					interval: "10x" <invalid>.*
@@ -494,6 +514,7 @@ func TestService_CheckValues(t *testing.T) {
 					url: <required>.*
 				deployed_version:
 					url: <required>.*
+					method: <required>.*
 					regex: "[^"]+" <invalid>.*
 				notify:
 					foo:
@@ -529,29 +550,34 @@ func TestService_CheckValues(t *testing.T) {
 					"url",
 					"yaml", test.TrimYAML(`
 						url: https://example.com
+						method: GET
 					`),
 					nil,
 					nil,
 					nil, nil)
 			}),
-			commands: command.Slice{{
+			commands: command.Commands{{
 				"bash", "update.sh", "{{ version }}"}},
-			notifies: shoutrrr.Slice{
+			notifies: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
-					nil, "",
-					"discord",
+					nil,
+					"", "discord",
 					nil,
 					map[string]string{
 						"token":     "x",
 						"webhookid": "y"},
 					nil,
 					nil, nil, nil)},
-			webhooks: webhook.Slice{
+			webhooks: webhook.WebHooks{
 				"wh": webhook.New(
 					nil, nil,
 					"0s",
-					nil, nil, nil,
-					nil, nil, "secret", nil,
+					nil, nil,
+					"wh",
+					nil,
+					nil, nil,
+					"secret",
+					nil,
 					"github", "https://example.com",
 					nil, nil, nil)},
 			errRegex: "^$",
@@ -573,8 +599,8 @@ func TestService_CheckValues(t *testing.T) {
 				tc.svc.Dashboard = tc.dashboardOptions
 				tc.svc.Init(
 					&Defaults{}, &Defaults{},
-					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-					&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
+					&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
+					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 			}
 
 			// WHEN CheckValues is called.

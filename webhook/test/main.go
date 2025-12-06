@@ -34,6 +34,7 @@ func WebHook(failing, selfSignedCert, customHeaders bool) *webhook.WebHook {
 		"0s",
 		&desiredStatusCode,
 		nil,
+		"test",
 		&whMaxTries,
 		nil,
 		test.StringPtr("12m"),
@@ -43,7 +44,6 @@ func WebHook(failing, selfSignedCert, customHeaders bool) *webhook.WebHook {
 		test.LookupGitHub["url_valid"],
 		&webhook.Defaults{},
 		&webhook.Defaults{}, &webhook.Defaults{})
-	wh.ID = "test"
 	wh.ServiceStatus = &status.Status{}
 	serviceName := "testServiceID"
 	wh.Failed = &wh.ServiceStatus.Fails.WebHook
@@ -71,9 +71,9 @@ func WebHook(failing, selfSignedCert, customHeaders bool) *webhook.WebHook {
 		}
 	}
 
-	// Slice to InitMetrics.
-	slice := webhook.Slice{"test": wh}
-	slice.InitMetrics()
+	// WebHooks to InitMetrics.
+	webhooks := webhook.WebHooks{"test": wh}
+	webhooks.InitMetrics()
 
 	return wh
 }

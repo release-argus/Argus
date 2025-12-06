@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import (
 	"strings"
 )
 
-// ParseKeys will return the JSON keys in the string.
+// ParseKeys returns the JSON keys in the string.
 func ParseKeys(key string) ([]any, error) {
 	// Split the key into individual components.
 	// e.g. "foo.bar[1].bash" => ["foo", "bar", "1", "bash"]
@@ -139,7 +139,7 @@ func navigateJSON(jsonData *any, fullKey string) (string, error) {
 		fullKey, *jsonData)
 }
 
-// GetValueByKey will return the value of the key in the JSON.
+// GetValueByKey returns the value of the key in the JSON.
 func GetValueByKey(body []byte, key string, jsonFrom string) (string, error) {
 	// If the key is empty, return the body as a string.
 	if key == "" {

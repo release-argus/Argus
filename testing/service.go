@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package testing provides utilities for CLI-based testing.
+// Package testing provides utilities for command-line-based testing.
 package testing
 
 import (
@@ -51,25 +51,25 @@ func ServiceTest(flag *string, cfg *config.Config) {
 	}
 
 	// Service to test.
-	service := cfg.Service[*flag]
+	svc := cfg.Service[*flag]
 
 	// LatestVersion.
-	_, err := service.LatestVersion.Query(false, logFrom)
+	_, err := svc.LatestVersion.Query(false, logFrom)
 	if err != nil {
 		logutil.Log.Error(
 			fmt.Sprintf("No version matching the conditions specified could be found for %q at %q",
-				*flag, service.LatestVersion.ServiceURL()),
+				*flag, svc.LatestVersion.ServiceURL()),
 			logFrom,
 			true,
 		)
 	}
 
 	// DeployedVersionLookup.
-	if service.DeployedVersionLookup != nil {
-		if err := service.DeployedVersionLookup.Query(false, logFrom); err == nil {
+	if svc.DeployedVersionLookup != nil {
+		if err := svc.DeployedVersionLookup.Query(false, logFrom); err == nil {
 			logutil.Log.Info(
 				fmt.Sprintf("Deployed version - %q",
-					service.Status.DeployedVersion()),
+					svc.Status.DeployedVersion()),
 				logFrom,
 				true,
 			)

@@ -1,7 +1,7 @@
 // Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use 10s file except in compliance with the License.
+// you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -142,18 +142,18 @@ func TestNew(t *testing.T) {
 
 			lookup := testLookup("", false)
 			options := lookup.Options
-			status := lookup.Status
+			svcStatus := lookup.Status
 			defaults := lookup.Defaults
 			hardDefaults := lookup.HardDefaults
 			if tc.args.nilStatus {
-				status = nil
+				svcStatus = nil
 			}
 
 			// WHEN New is called with it.
 			lookup, err := New(
 				tc.args.format, tc.args.data,
 				options,
-				status,
+				svcStatus,
 				defaults, hardDefaults)
 
 			// THEN any error is expected.
@@ -182,9 +182,9 @@ func TestNew(t *testing.T) {
 					packageName, lookup.HardDefaults, hardDefaults)
 			}
 			// AND the status is set as expected.
-			if lookup.Status != status {
+			if lookup.Status != svcStatus {
 				t.Errorf("%s\nStatus not set\nwant: %v\ngot:  %v",
-					packageName, lookup.Status, status)
+					packageName, lookup.Status, svcStatus)
 			}
 			// AND the options are set as expected.
 			if lookup.Options != options {

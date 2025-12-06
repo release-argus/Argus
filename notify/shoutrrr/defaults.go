@@ -25,32 +25,32 @@ func notifyDefaultOptions() map[string]string {
 		"delay":     "0s"}
 }
 
-// Default sets this SliceDefaults to the default values.
-func (s *SliceDefaults) Default() {
-	newSlice := make(SliceDefaults, len(supportedTypes))
-	newSlice["bark"] = NewDefaults(
+// Default sets these ShoutrrrsDefaults to the default values.
+func (s *ShoutrrrsDefaults) Default() {
+	defaults := make(ShoutrrrsDefaults, len(supportedTypes))
+	defaults["bark"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		map[string]string{
 			"port": "443"},
 		map[string]string{
 			"title": "Argus"})
-	newSlice["discord"] = NewDefaults(
+	defaults["discord"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil,
 		map[string]string{
 			"splitlines": "yes",
 			"username":   "Argus"})
-	newSlice["smtp"] = NewDefaults(
+	defaults["smtp"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil, nil)
-	newSlice["googlechat"] = NewDefaults(
+	defaults["googlechat"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil, nil)
-	newSlice["gotify"] = NewDefaults(
+	defaults["gotify"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		map[string]string{
@@ -59,18 +59,18 @@ func (s *SliceDefaults) Default() {
 			"disabletls": "no",
 			"priority":   "0",
 			"title":      "Argus"})
-	newSlice["ifttt"] = NewDefaults(
+	defaults["ifttt"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil,
 		map[string]string{
 			"usemessageasvalue": "2",
 			"usetitleasvalue":   "0"})
-	newSlice["join"] = NewDefaults(
+	defaults["join"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil, nil)
-	newSlice["mattermost"] = NewDefaults(
+	defaults["mattermost"] = NewDefaults(
 		"",
 		map[string]string{
 			"message": "<{{ service_url }}|{{ service_name | default:service_id }}>" +
@@ -82,62 +82,62 @@ func (s *SliceDefaults) Default() {
 			"username": "Argus",
 			"port":     "443"},
 		nil)
-	newSlice["matrix"] = NewDefaults(
+	defaults["matrix"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		map[string]string{
 			"disabletls": "no",
 			"port":       "443"},
 		nil)
-	newSlice["ntfy"] = NewDefaults(
+	defaults["ntfy"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		map[string]string{
 			"host": "ntfy.sh"},
 		map[string]string{
 			"title": "Argus"})
-	newSlice["opsgenie"] = NewDefaults(
+	defaults["opsgenie"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil, nil)
-	newSlice["pushbullet"] = NewDefaults(
+	defaults["pushbullet"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil,
 		map[string]string{
 			"title": "Argus"})
-	newSlice["pushover"] = NewDefaults(
+	defaults["pushover"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil, nil)
-	newSlice["rocketchat"] = NewDefaults(
+	defaults["rocketchat"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		map[string]string{
 			"port": "443"},
 		nil)
-	newSlice["slack"] = NewDefaults(
+	defaults["slack"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil,
 		map[string]string{
 			"botname": "Argus"})
-	newSlice["teams"] = NewDefaults(
+	defaults["teams"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil, nil)
-	newSlice["telegram"] = NewDefaults(
+	defaults["telegram"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil,
 		map[string]string{
 			"notification": "yes",
 			"preview":      "yes"})
-	newSlice["zulip"] = NewDefaults(
+	defaults["zulip"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil, nil)
-	newSlice["generic"] = NewDefaults(
+	defaults["generic"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil,
@@ -147,16 +147,12 @@ func (s *SliceDefaults) Default() {
 			"messagekey":    "message",
 			"requestmethod": http.MethodPost,
 			"titlekey":      "title"})
-	newSlice["shoutrrr"] = NewDefaults(
-		"",
-		notifyDefaultOptions(),
-		nil, nil)
 
 	// Initialise maps.
-	for _, notify := range newSlice {
+	for _, notify := range defaults {
 		notify.InitMaps()
 	}
 
-	// Set the new slice as the default slice.
-	*s = newSlice
+	// Overwrite the receiver.
+	*s = defaults
 }

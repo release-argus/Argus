@@ -1,17 +1,18 @@
-import { Button, Col, Row } from 'react-bootstrap';
-import { FC, memo } from 'react';
-
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { FormSelect } from 'components/generic/form';
-import RenderURLCommand from './url-commands/render';
-import { URLCommandTypes } from 'types/config';
-import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import { Trash2 } from 'lucide-react';
+import { type FC, memo } from 'react';
 import { useWatch } from 'react-hook-form';
+import { FieldSelect } from '@/components/generic/field';
+import RenderURLCommand from '@/components/modals/service-edit/url-commands/render';
+import { Button } from '@/components/ui/button';
+import {
+	latestVersionURLCommandTypeOptions,
+	type URLCommand,
+} from '@/utils/api/types/config/service/latest-version';
 
-interface Props {
+type FormURLCommandProps = {
 	name: string;
 	removeMe: () => void;
-}
+};
 
 /**
  * The form fields for a URL command.
@@ -20,43 +21,32 @@ interface Props {
  * @param removeMe - The function to remove the command.
  * @returns The form fields for this URL command.
  */
-const FormURLCommand: FC<Props> = ({ name, removeMe }) => {
-	const urlCommandTypeOptions: { label: string; value: URLCommandTypes }[] = [
-		{ label: 'RegEx', value: 'regex' },
-		{ label: 'Replace', value: 'replace' },
-		{ label: 'Split', value: 'split' },
-	];
-
-	const commandType: URLCommandTypes = useWatch({ name: `${name}.type` });
+const FormURLCommand: FC<FormURLCommandProps> = ({ name, removeMe }) => {
+	const commandType = useWatch({ name: `${name}.type` }) as URLCommand['type'];
 
 	return (
-		<>
-			<Col xs={2} sm={1} className="h-100 py-1 pe-2">
+		<div className="col-span-full grid grid-cols-subgrid gap-x-2">
+			<div className="col-span-1 py-1 md:pe-2">
 				<Button
 					aria-label="Delete this URL command"
-					className="btn-secondary-outlined btn-icon-center p-0"
-					variant="secondary"
+					className="size-full"
 					onClick={removeMe}
+					variant="outline"
 				>
-					<FontAwesomeIcon icon={faTrash} />
+					<Trash2 />
 				</Button>
-			</Col>
-			<Col>
-				<Row>
-					<FormSelect
-						name={`${name}.type`}
-						col_xs={5}
-						col_sm={4}
-						label="Type"
-						smallLabel
-						options={urlCommandTypeOptions}
-					/>
-					{commandType && (
-						<RenderURLCommand name={name} commandType={commandType} />
-					)}
-				</Row>
-			</Col>
-		</>
+			</div>
+			<div className="col-span-11 grid grid-cols-subgrid gap-2">
+				<FieldSelect
+					colSize={{ sm: 3, xs: 4 }}
+					label="Type"
+					labelSize="sm"
+					name={`${name}.type`}
+					options={latestVersionURLCommandTypeOptions}
+				/>
+				{<RenderURLCommand commandType={commandType} name={name} />}
+			</div>
+		</div>
 	);
 };
 

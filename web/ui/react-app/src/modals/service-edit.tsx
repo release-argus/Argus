@@ -1,116 +1,93 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertCircleIcon, LoaderCircle } from 'lucide-react';
+import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { type FieldErrors, FormProvider, useWatch } from 'react-hook-form';
+import type z from 'zod';
+import { HelpTooltip } from '@/components/generic';
+import EditService from '@/components/modals/service-edit/service';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
-	Button,
-	ButtonGroup,
-	Container,
-	Form,
-	Modal,
-	Row,
-} from 'react-bootstrap';
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import { TextOrLoading } from '@/components/ui/loading-ellipsis';
 import {
-	FC,
-	useCallback,
-	useContext,
-	useEffect,
-	useMemo,
-	useState,
-} from 'react';
-import { FormProvider, useForm } from 'react-hook-form';
-import {
-	ServiceEditAPIType,
-	ServiceEditOtherData,
-	ServiceEditType,
-} from 'types/service-edit';
-import { extractErrors, fetchJSON, removeEmptyValues } from 'utils';
+	SchemaProvider,
+	useSchemaContext,
+} from '@/contexts/service-edit-zod-type';
+import useModal from '@/hooks/use-modal.ts';
+import { useServiceEditDetail } from '@/hooks/use-service-edit-detail.ts';
+import useServiceForm from '@/hooks/use-service-form';
+import { useServiceEdit } from '@/hooks/use-service-mutation';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import { DeleteModal } from '@/modals/delete-confirm';
+import { extractErrors } from '@/utils';
+import { mapRequest } from '@/utils/api/types/api-request-handler';
+import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version.ts';
+import { mapServiceToAPIRequest } from '@/utils/api/types/config-edit/service/api/conversions';
+import { getErrorMessage } from '@/utils/errors';
 
-import { DeleteModal } from './delete-confirm';
-import EditService from 'components/modals/service-edit/service';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { HelpTooltip } from 'components/generic';
-import { ModalContext } from 'contexts/modal';
-import { convertAPIServiceDataEditToUI } from 'components/modals/service-edit/util';
-import { convertUIServiceDataEditToAPI } from 'components/modals/service-edit/util/ui-api-conversions';
-import { faCircleNotch } from '@fortawesome/free-solid-svg-icons';
-import { useQuery } from '@tanstack/react-query';
-
-/**
- * @param data - The data to convert.
- * @returns The data with empty values removed and converted to API format.
- */
-const getPayload = (data: ServiceEditType) => {
-	return removeEmptyValues(convertUIServiceDataEditToAPI(data));
-};
 /**
  * @returns The service edit modal.
  */
 const ServiceEditModal = () => {
-	const { handleModal, modal } = useContext(ModalContext);
+	const { modal } = useModal();
 	if (modal.actionType !== 'EDIT') {
 		return null;
 	}
-	return (
-		<ServiceEditModalGetData
-			serviceID={modal.service.id}
-			hideModal={() => handleModal('', { id: '', loading: true })}
-		/>
-	);
+	return <ServiceEditModalGetData serviceID={modal.service.id} />;
 };
 
-interface ServiceEditModalGetDataProps {
+type ServiceEditModalGetDataProps = {
+	/* The ID of the service to edit. */
 	serviceID: string;
-	hideModal: () => void;
-}
+};
 /**
  * Gets the data for and returns the service edit modal
  *
  * @param serviceID - The ID of the service to edit.
- * @param hideModal - The function to hide the modal.
- * @returns The service edit modal with the data fetched, and editing disabled whilst fetching.
+ * @returns The service edit modal, showing a loading state whilst fetching.
  */
 const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
 	serviceID,
-	hideModal,
 }) => {
 	const [loadingModal, setLoadingModal] = useState(true);
 	useEffect(() => {
-		const timeout = setTimeout(() => setLoadingModal(false), 200);
-		return () => clearTimeout(timeout);
+		const timeout = setTimeout(() => {
+			setLoadingModal(false);
+		}, 200);
+		return () => {
+			clearTimeout(timeout);
+		};
 	}, []);
+
+	// Fetch the defaults/hardDefaults and notify/webhook globals.
 	const { data: otherOptionsData, isFetched: isFetchedOtherOptionsData } =
 		useQuery({
-			queryKey: ['service/edit', 'detail'],
-			queryFn: () =>
-				fetchJSON<ServiceEditOtherData>({ url: 'api/v1/service/update' }),
+			queryFn: () => mapRequest('SERVICE_EDIT_DEFAULTS', null),
+			queryKey: QUERY_KEYS.SERVICE.EDIT_DEFAULTS(),
 		});
-	const { data: serviceData, isSuccess: isSuccessServiceData } = useQuery({
-		queryKey: ['service/edit', { id: serviceID }],
-		queryFn: () =>
-			fetchJSON<ServiceEditAPIType>({
-				url: `api/v1/service/update/${encodeURIComponent(serviceID)}`,
-			}),
-		enabled: !!serviceID,
-		refetchOnMount: 'always',
-	});
+	// Fetch the existing service data.
+	const { data: serviceData, isSuccess: isSuccessServiceData } =
+		useServiceEditDetail(serviceID);
 
 	const hasFetched =
 		isFetchedOtherOptionsData &&
 		(isSuccessServiceData || !serviceID) &&
 		otherOptionsData !== undefined;
 
-	const defaultData: ServiceEditType = useMemo(
-		() =>
-			convertAPIServiceDataEditToUI(serviceID, serviceData, otherOptionsData),
-		[serviceData, otherOptionsData],
-	);
-
 	return (
-		<ServiceEditModalWithData
-			serviceID={serviceID}
-			serviceName={serviceData?.name}
-			defaultData={defaultData}
-			otherOptionsData={otherOptionsData}
-			loading={loadingModal || !hasFetched}
-			hideModal={hideModal}
-		/>
+		<SchemaProvider data={serviceData} otherOptionsData={otherOptionsData}>
+			<ServiceEditModalWithData
+				loading={loadingModal || !hasFetched}
+				serviceID={serviceID}
+			/>
+		</SchemaProvider>
 	);
 };
 
@@ -122,194 +99,251 @@ type ServiceEditModalHeaderProps = {
  * @returns The header for the service edit modal.
  */
 const ServiceEditModalHeader: FC<ServiceEditModalHeaderProps> = ({ type }) => (
-	<Modal.Header closeButton>
-		<Modal.Title>
+	<DialogHeader className="flex items-center justify-between">
+		<DialogTitle>
 			<strong>{`${type} Service`}</strong>
 			<HelpTooltip
-				tooltip={`Greyed out placeholder text represents a default that you can override.
-					(current secrets can be kept by leaving them as '<secret>').`}
-				placement="bottom"
+				content="Greyed out placeholder text represents a default that you can override.
+					(current secrets can be kept by leaving them as '<secret>')."
+				delayDuration={500}
+				type="string"
 			/>
-		</Modal.Title>
-	</Modal.Header>
+		</DialogTitle>
+		<DialogDescription className="sr-only">
+			Configure the service options.
+		</DialogDescription>
+	</DialogHeader>
 );
 
-interface ServiceEditModalWithDataProps {
-	serviceID: string;
-	serviceName?: string;
-	defaultData: ServiceEditType;
-	otherOptionsData?: ServiceEditOtherData;
+type ServiceEditModalWithDataProps = {
+	/* Whether the modal is fetching data. */
 	loading: boolean;
-	hideModal: () => void;
-}
+	/* The ID of the service to edit. */
+	serviceID?: string;
+};
+
 /**
  * A modal for editing a service.
  *
  * @param serviceID - The ID of the service to edit.
- * @param serviceName - The name of the service.
- * @param defaultData - The default data for the service.
- * @param otherOptionsData - The mains/defaults/hardDefaults for the service.
- * @param loading - Whether the modal is loading.
- * @param hideModal - The function to hide the modal.
+ * @param loading - Indicates whether the modal shows a loading state.
  * @returns A modal for editing a service.
  */
 const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 	serviceID,
-	serviceName,
-	defaultData,
-	otherOptionsData,
 	loading,
-	hideModal,
 }) => {
-	const form = useForm<ServiceEditType>({
-		mode: 'onBlur',
-		defaultValues: defaultData ?? {},
+	const queryClient = useQueryClient();
+	const { hideModal } = useModal();
+
+	const {
+		schema,
+		schemaData,
+		schemaDataDefaults,
+		mainDataDefaults,
+		serviceID: sID,
+	} = useSchemaContext();
+
+	const form = useServiceForm({
+		defaultValues: {
+			comment: '',
+			id: '',
+			name: '',
+			...schemaData,
+		},
+		schema: schema,
 	});
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: form stable. Reset only once, after schemaData loaded.
 	useEffect(() => {
-		if (defaultData) form.reset(defaultData);
-	}, [defaultData]);
+		if (sID === undefined) return;
+		if (schemaData) form.reset(schemaData);
+	}, [sID, loading]);
 	// null if submitting.
 	const [err, setErr] = useState<string | null>('');
-
-	const resetAndHideModal = useCallback(() => {
-		form.reset({});
-		setErr('');
-		hideModal();
+	const onError = useCallback((error: unknown) => {
+		setErr(getErrorMessage(error));
 	}, []);
 
-	const onSubmit = async (data: ServiceEditType) => {
-		setErr(null);
-		const payload = getPayload(data);
+	const { mutateAsync, isPending: isSubmitting } = useServiceEdit(schema, {
+		onError: onError,
+		onSuccess: hideModal,
+	});
+	// biome-ignore lint/correctness/useExhaustiveDependencies: form stable
+	const onClick = useCallback(() => {
+		void form.handleSubmit(async (data: z.infer<typeof schema>) => {
+			const dataParsed = schema.safeParse(data);
+			if (!dataParsed.success) {
+				console.error(dataParsed.error);
+				return;
+			}
+			const dataPayload = mapServiceToAPIRequest(
+				dataParsed.data,
+				schemaDataDefaults,
+			);
 
-		await fetch(
-			serviceID
-				? `api/v1/service/update/${encodeURIComponent(serviceID)}`
-				: 'api/v1/service/new',
-			{
-				method: 'PUT',
-				body: JSON.stringify(payload),
-			},
-		)
-			.then((response) => {
-				if (!response.ok) throw response;
-				hideModal();
-			})
-			.catch(async (err) => {
-				let errorMessage = err.statusText;
-				try {
-					const responseBody = await err.json();
-					errorMessage = responseBody.message;
-					setErr(errorMessage);
-				} catch (e) {
-					console.error(e);
-					setErr(err.toString());
-				}
-			});
-	};
+			await mutateAsync({ data: dataPayload, serviceID: serviceID ?? null })
+				.then(() => {
+					// Add service.
+					queryClient.setQueryData(
+						QUERY_KEYS.SERVICE.SUMMARY_ITEM(dataPayload.id),
+						() => ({
+							active: dataPayload.options.active,
+							command: dataPayload.command?.length,
+							has_deployed_version:
+								dataPayload.deployed_version &&
+								(dataPayload.deployed_version.type ===
+								DEPLOYED_VERSION_LOOKUP_TYPE.URL.value
+									? !!dataPayload.deployed_version.url
+									: !!dataPayload.deployed_version.version),
+							icon: dataPayload.dashboard?.icon,
+							icon_link_to: dataPayload.dashboard?.icon_link_to,
+							id: dataPayload.id,
+							loading: false,
+							name: dataPayload.name,
+							notify: dataPayload.notify?.length,
+							tags: dataPayload.dashboard?.tags,
+							type: dataPayload.latest_version.type,
+							url: dataPayload.dashboard?.web_url,
+							webhook: dataPayload.webhook?.length,
+						}),
+					);
+					queryClient.invalidateQueries({
+						exact: true,
+						queryKey: QUERY_KEYS.SERVICE.SUMMARY_ITEM(dataPayload.id),
+					});
+				})
+				.catch((error) => {
+					const message = getErrorMessage(error);
+					console.error(error);
+					form.setError('root', { message, type: 'server' });
+				});
+		})();
+	}, [mainDataDefaults, mutateAsync, schema, schemaDataDefaults, serviceID]);
 
-	const onDelete = async () => {
-		console.log(`Deleting ${serviceID}`);
-		await fetch(`api/v1/service/delete/${encodeURIComponent(serviceID)}`, {
-			method: 'DELETE',
-		}).then(() => {
-			hideModal();
-		});
-	};
+	const separateNameToggle = useWatch({
+		control: form.control,
+		name: 'id_name_separator',
+	});
+
+	// Format the errors.
+	const errors = useMemo(
+		() => renameErrorField(form.formState.errors, separateNameToggle),
+		[separateNameToggle, form.formState.errors],
+	);
 
 	return (
-		<FormProvider {...form}>
-			<Form id="service-edit">
-				<Modal size="lg" show animation={false} onHide={resetAndHideModal}>
-					<ServiceEditModalHeader type={serviceID ? 'Edit' : 'Create'} />
-					<Modal.Body>
-						<Container
-							fluid
-							className="font-weight-bold"
-							style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}
-						>
-							<EditService
-								id={serviceID}
-								name={serviceName}
-								defaultData={defaultData}
-								otherOptionsData={otherOptionsData}
-								loading={loading}
-							/>
-						</Container>
-					</Modal.Body>
-					<Modal.Footer
-						style={{ display: 'flex', justifyContent: 'space-between' }}
-					>
-						<ButtonGroup>
-							{serviceID && (
-								<DeleteModal
-									onDelete={() => onDelete()}
-									disabled={err === null || loading}
-								/>
-							)}
-						</ButtonGroup>
-						{err === null && (
-							<FontAwesomeIcon
-								icon={faCircleNotch}
-								style={{
-									padding: '0',
-								}}
-								className="fa-spin"
-							/>
-						)}
-						<span>
-							<Button
-								id="modal-cancel"
-								variant="secondary"
-								onClick={() => hideModal()}
-								disabled={err === null || loading}
-							>
-								Cancel
-							</Button>
-							<Button
-								id="modal-action"
-								variant="primary"
-								type="submit"
-								onClick={form.handleSubmit(onSubmit)}
-								className="ms-2"
-								disabled={err === null || !form.formState.isDirty || loading}
-							>
-								Confirm
-							</Button>
-						</span>
-						{form.formState.submitCount > 0 &&
-							(!form.formState.isValid || err) && (
-								<Row>
-									<div className="error-msg">
-										Please correct the errors in the form and try again.
-										<br />
-										{/* Render either the server error or form validation error */}
-										{err ? (
-											<>
-												{err.split(`\\n`).map((line) => (
-													<pre key={line} className="no-margin">
-														{line}
-													</pre>
-												))}
-											</>
-										) : (
-											<ul>
-												{Object.entries(
-													extractErrors(form.formState.errors) ?? [],
-												).map(([key, error]) => (
-													<li key={key}>
-														{key}: {error}
-													</li>
-												))}
-											</ul>
-										)}
-									</div>
-								</Row>
-							)}
-					</Modal.Footer>
-				</Modal>
-			</Form>
-		</FormProvider>
+		<Dialog key={serviceID} onOpenChange={hideModal} open={true}>
+			<FormProvider {...form}>
+				<form>
+					<DialogContent className="max-h-full w-full max-w-full overflow-y-auto sm:max-w-xl md:max-h-[95%] md:max-w-2xl lg:max-w-4xl">
+						<ServiceEditModalHeader type={serviceID ? 'Edit' : 'Create'} />
+						<EditService loading={loading} />
+						<DialogFooter className="flex flex-col">
+							<div className="flex w-full items-center justify-between">
+								<div>
+									{serviceID && (
+										<DeleteModal disabled={err === null || loading} />
+									)}
+								</div>
+								{err === null && <LoaderCircle className="animate-spin" />}
+								<div className="flex">
+									<Button
+										disabled={err === null || loading}
+										id="modal-cancel"
+										onClick={() => hideModal()}
+										variant="secondary"
+									>
+										Cancel
+									</Button>
+									<Button
+										className="ms-2"
+										disabled={
+											err === null ||
+											!form.formState.isDirty ||
+											loading ||
+											isSubmitting
+										}
+										id="modal-action"
+										onClick={onClick}
+										type="submit"
+									>
+										<TextOrLoading loading={isSubmitting} text="Confirm" />
+									</Button>
+								</div>
+							</div>
+							{form.formState.submitCount > 0 &&
+								(!form.formState.isValid || err) && (
+									<Alert className="mb-0 pl-8" variant="destructive">
+										<AlertCircleIcon />
+										<AlertTitle>
+											Please correct the errors in the form and try again.
+										</AlertTitle>
+										<AlertDescription>
+											{/* Render either the server error or form validation error */}
+											{err ? (
+												<>
+													{err.split(String.raw`\n`).map((line) => (
+														<pre
+															className="whitespace-pre-wrap break-words"
+															key={line}
+														>
+															{line}
+														</pre>
+													))}
+												</>
+											) : (
+												<ul className="list-inside list-disc">
+													{Object.entries(extractErrors(errors) ?? []).map(
+														([key, error]) => (
+															<li key={key}>
+																{key}: {error}
+															</li>
+														),
+													)}
+												</ul>
+											)}
+										</AlertDescription>
+									</Alert>
+								)}
+						</DialogFooter>
+					</DialogContent>
+				</form>
+			</FormProvider>
+		</Dialog>
 	);
 };
 
 export default ServiceEditModal;
+
+/**
+ * Renames error fields in the form state according to whether `id` and `name` fields remain separate.
+ * When `separateNameField` equals `false`, converts `id` errors to `name` errors.
+ * Ensures `name` appears first in the error list (after `id`, when present).
+ *
+ * @param errors - The form field errors.
+ * @param separateNameField - Controls separation of the `id` and `name` fields.
+ * @returns The error object with fields renamed as needed.
+ */
+const renameErrorField = (
+	errors: FieldErrors,
+	separateNameField: boolean,
+): FieldErrors => {
+	if (!('id' in errors || 'name' in errors)) return errors;
+
+	const entries: [string, unknown][] = [];
+	// Rename 'id' to 'name' when we have no id/name separation.
+	if ('id' in errors)
+		entries.push([separateNameField ? 'id' : 'name', errors.id]);
+	// Push 'name' first when fields remain separate.
+	if (separateNameField && 'name' in errors)
+		entries.push(['name', errors.name]);
+
+	for (const [key, value] of Object.entries(errors)) {
+		if (key === 'id' || key === 'name') continue;
+
+		entries.push([key, value]);
+	}
+
+	return Object.fromEntries(entries) as FieldErrors;
+};

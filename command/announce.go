@@ -53,11 +53,11 @@ func (c *Controller) Find(command string) (int, error) {
 	if c == nil {
 		return 0, errors.New("controller is nil")
 	}
-	serviceinfo := c.ServiceStatus.GetServiceInfo()
+	svcInfo := c.ServiceStatus.GetServiceInfo()
 
-	// Loop through all the Command(s).
+	// Loop through all the Commands.
 	for key, cmd := range *c.Command {
-		formatted := cmd.ApplyTemplate(serviceinfo)
+		formatted := cmd.ApplyTemplate(svcInfo)
 		// If this key is the command.
 		if formatted.String() == command {
 			return key, nil

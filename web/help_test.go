@@ -103,9 +103,9 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 		panic(err)
 	}
 	var (
-		listenHost  string = "0.0.0.0"
-		listenPort  string = fmt.Sprint(port)
-		routePrefix string = "/"
+		listenHost  = "0.0.0.0"
+		listenPort  = fmt.Sprint(port)
+		routePrefix = "/"
 	)
 	cfg.Settings.Web = config.WebSettings{
 		ListenHost:  listenHost,
@@ -120,10 +120,10 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 	// Service.
 	svc := testService(t, "test")
 	svc.DeployedVersionLookup = testDeployedVersion(t)
-	svc.LatestVersion.(*web.Lookup).URLCommands = filter.URLCommandSlice{testURLCommandRegex()}
+	svc.LatestVersion.(*web.Lookup).URLCommands = filter.URLCommands{testURLCommandRegex()}
 	emptyNotify := shoutrrr.Defaults{}
 	emptyNotify.InitMaps()
-	notify := shoutrrr.Slice{
+	notify := shoutrrr.Shoutrrrs{
 		"test": shoutrrr_test.Shoutrrr(false, false)}
 	notify["test"].Params = map[string]string{}
 	svc.Notify = notify
@@ -140,7 +140,7 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 	// WebHook.
 	whPass := testDefaults(false)
 	whFail := testDefaults(true)
-	cfg.WebHook = webhook.SliceDefaults{
+	cfg.WebHook = webhook.WebHooksDefaults{
 		"pass": whPass,
 		"fail": whFail,
 	}
@@ -186,19 +186,19 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 			&dashboard.OptionsDefaults{}, &dashboard.OptionsDefaults{}),
 		Defaults:          &service.Defaults{},
 		HardDefaults:      &service.Defaults{},
-		Command:           command.Slice{command.Command{"ls", "-lah"}},
+		Command:           command.Commands{command.Command{"ls", "-lah"}},
 		CommandController: &command.Controller{},
-		WebHook: webhook.Slice{
+		WebHook: webhook.WebHooks{
 			"test": webhook.New(
-				nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
+				nil, nil, "", nil, nil, "test", nil, nil, nil, "", nil, "",
 				"example.com",
 				nil, nil, nil)}}
 
 	// Status.
 	var (
-		sAnnounceChannel chan []byte         = make(chan []byte, 2)
-		sDatabaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
-		sSaveChannel     chan bool           = make(chan bool, 5)
+		sAnnounceChannel = make(chan []byte, 2)
+		sDatabaseChannel = make(chan dbtype.Message, 5)
+		sSaveChannel     = make(chan bool, 5)
 	)
 	svc.Status.AnnounceChannel = &sAnnounceChannel
 	svc.Status.DatabaseChannel = &sDatabaseChannel
@@ -235,7 +235,7 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 	// WebHook.
 	svc.WebHook.Init(
 		&svc.Status,
-		&webhook.SliceDefaults{}, &webhook.Defaults{}, &hardDefaults.WebHook,
+		&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &hardDefaults.WebHook,
 		&svc.Notify,
 		&svc.Options.Interval)
 

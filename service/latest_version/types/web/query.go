@@ -139,7 +139,7 @@ func (l *Lookup) getVersion(body string, logFrom logutil.LogFrom) (string, error
 		}
 	}
 
-	return "", fmt.Errorf("no releases were found matching the require field(s)\n%w", firstErr)
+	return "", fmt.Errorf("no releases were found matching the require fields\n%w", firstErr)
 }
 
 // versionMeetsRequirements checks whether `version` meets the requirements of the Lookup.

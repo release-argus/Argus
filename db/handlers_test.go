@@ -121,7 +121,7 @@ func TestAPI_UpdateRow(t *testing.T) {
 			tAPI.updateRow(tc.target, tc.cells)
 			time.Sleep(100 * time.Millisecond)
 
-			// THEN those cell(s) are changed in the DB.
+			// THEN those cells are changed in the DB.
 			row := queryRow(t, tAPI.db, tc.target)
 			for _, cell := range tc.cells {
 				var got string

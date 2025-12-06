@@ -54,7 +54,7 @@ func TestCheckValues(t *testing.T) {
 		"Invalid URL Commands": {
 			lookup: &Lookup{
 				Lookup: base.Lookup{
-					URLCommands: filter.URLCommandSlice{
+					URLCommands: filter.URLCommands{
 						filter.URLCommand{
 							Type: "regex", Regex: `[0-9]+`},
 						filter.URLCommand{

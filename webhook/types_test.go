@@ -127,7 +127,7 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 }
 
 func TestDefaults_String(t *testing.T) {
-	// GIVEN a Defaults.
+	// GIVEN Defaults.
 	tests := map[string]struct {
 		webhook *Defaults
 		want    string
@@ -231,19 +231,19 @@ func TestWebHook_String(t *testing.T) {
 				"1h1m1s",
 				test.UInt16Ptr(200),
 				nil,
+				"filled",
 				test.UInt8Ptr(4),
 				&Notifiers{
-					Shoutrrr: &shoutrrr.Slice{
+					Shoutrrr: &shoutrrr.Shoutrrrs{
 						"foo": shoutrrr.New(
-							nil, "",
-							"discord",
+							nil,
+							"", "discord",
 							nil, nil, nil,
 							nil, nil, nil)}},
 				test.StringPtr("3h2m1s"),
 				"foobar",
 				test.BoolPtr(true),
-				"github",
-				"https://example.com",
+				"github", "https://example.com",
 				NewDefaults(
 					test.BoolPtr(false),
 					nil, "", nil, nil, "", nil, "", ""),
@@ -274,7 +274,14 @@ func TestWebHook_String(t *testing.T) {
 				nil,
 				&Headers{
 					{Key: ">123", Value: "{pass}"}},
-				"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
+				"",
+				nil, nil,
+				"wh",
+				nil, nil, nil,
+				"",
+				nil,
+				"", "",
+				nil, nil, nil),
 			want: test.TrimYAML(`
 				custom_headers:
 					- key: '>123'
@@ -299,29 +306,29 @@ func TestWebHook_String(t *testing.T) {
 	}
 }
 
-func TestSliceDefaults_String(t *testing.T) {
-	// GIVEN a SliceDefaults.
+func TestWebHooksDefaults_String(t *testing.T) {
+	// GIVEN a WebHooksDefaults.
 	tests := map[string]struct {
-		slice *SliceDefaults
-		want  string
+		webhooksDefaults *WebHooksDefaults
+		want             string
 	}{
 		"nil": {
-			slice: nil,
-			want:  "",
+			webhooksDefaults: nil,
+			want:             "",
 		},
 		"empty": {
-			slice: &SliceDefaults{},
-			want:  "{}",
+			webhooksDefaults: &WebHooksDefaults{},
+			want:             "{}",
 		},
 		"one empty and one nil": {
-			slice: &SliceDefaults{
+			webhooksDefaults: &WebHooksDefaults{
 				"one": &Defaults{},
 				"two": nil},
 			want: test.TrimYAML(`
 				one: {}`),
 		},
 		"one with data": {
-			slice: &SliceDefaults{
+			webhooksDefaults: &WebHooksDefaults{
 				"one": NewDefaults(
 					nil, nil, "", nil, nil, "", nil,
 					"github",
@@ -332,7 +339,7 @@ func TestSliceDefaults_String(t *testing.T) {
 					url: https://example.com`),
 		},
 		"multiple": {
-			slice: &SliceDefaults{
+			webhooksDefaults: &WebHooksDefaults{
 				"one": NewDefaults(
 					nil, nil, "", nil, nil, "", nil,
 					"github",
@@ -350,7 +357,7 @@ func TestSliceDefaults_String(t *testing.T) {
 					url: https://example.com/other`),
 		},
 		"quotes otherwise invalid YAML strings": {
-			slice: &SliceDefaults{
+			webhooksDefaults: &WebHooksDefaults{
 				"invalid": NewDefaults(
 					nil,
 					&Headers{
@@ -378,8 +385,8 @@ func TestSliceDefaults_String(t *testing.T) {
 					want += "\n"
 				}
 
-				// WHEN the Slice is stringified with String.
-				got := tc.slice.String(prefix)
+				// WHEN the WebHooks is stringified with String.
+				got := tc.webhooksDefaults.String(prefix)
 
 				// THEN the result is as expected.
 				want = strings.TrimPrefix(want, "\n")
@@ -392,26 +399,30 @@ func TestSliceDefaults_String(t *testing.T) {
 	}
 }
 
-func TestSlice_String(t *testing.T) {
-	// GIVEN a Slice.
+func TestWebHooks_String(t *testing.T) {
+	// GIVEN a WebHooks.
 	tests := map[string]struct {
-		slice *Slice
-		want  string
+		webhooks *WebHooks
+		want     string
 	}{
 		"nil": {
-			slice: nil,
-			want:  "",
+			webhooks: nil,
+			want:     "",
 		},
 		"empty": {
-			slice: &Slice{},
-			want:  "{}\n",
+			webhooks: &WebHooks{},
+			want:     "{}\n",
 		},
 		"one": {
-			slice: &Slice{
+			webhooks: &WebHooks{
 				"one": New(
-					nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-					"github",
-					"https://example.com",
+					nil, nil,
+					"",
+					nil, nil,
+					"one",
+					nil, nil, nil,
+					"", nil,
+					"github", "https://example.com",
 					nil, nil, nil)},
 			want: test.TrimYAML(`
 				one:
@@ -420,16 +431,26 @@ func TestSlice_String(t *testing.T) {
 			`),
 		},
 		"multiple": {
-			slice: &Slice{
+			webhooks: &WebHooks{
 				"one": New(
-					nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-					"github",
-					"https://example.com",
+					nil, nil,
+					"",
+					nil, nil,
+					"one",
+					nil, nil, nil,
+					"",
+					nil,
+					"github", "https://example.com",
 					nil, nil, nil),
 				"two": New(
-					nil, nil, "", nil, nil, nil, nil, nil, "", nil,
-					"gitlab",
-					"https://example.com/other",
+					nil, nil,
+					"",
+					nil, nil,
+					"two",
+					nil, nil, nil,
+					"",
+					nil,
+					"gitlab", "https://example.com/other",
 					nil, nil, nil)},
 			want: test.TrimYAML(`
 				one:
@@ -441,12 +462,19 @@ func TestSlice_String(t *testing.T) {
 			`),
 		},
 		"quotes otherwise invalid YAML strings": {
-			slice: &Slice{
+			webhooks: &WebHooks{
 				"invalid": New(
 					nil,
 					&Headers{
 						{Key: ">123", Value: "{pass}"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+					"",
+					nil, nil,
+					"invalid",
+					nil, nil, nil,
+					"",
+					nil,
+					"", "",
+					nil, nil, nil)},
 			want: test.TrimYAML(`
 				invalid:
 					custom_headers:
@@ -459,14 +487,150 @@ func TestSlice_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the Slice is stringified with String.
-			got := tc.slice.String()
+			// WHEN the WebHooks is stringified with String.
+			got := tc.webhooks.String()
 
 			// THEN the result is as expected.
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if got != tc.want {
 				t.Errorf("%s\nwant: %q\ngot:  %q",
 					packageName, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestWebHooks_UnmarshalJSON(t *testing.T) {
+	// GIVEN various JSON inputs to unmarshal into WebHooks.
+	tests := map[string]struct {
+		json     string
+		wantErr  string
+		wantKeys map[string]string
+	}{
+		"valid array with two items": {
+			json: test.TrimJSON(`[
+                {"name": "a", "type": "github"},
+                {"name": "b", "type": "gitlab"}
+            ]`),
+			wantErr: `^$`,
+			wantKeys: map[string]string{
+				"a": "github",
+				"b": "gitlab",
+			},
+		},
+		"empty array becomes empty map": {
+			json:     `[]`,
+			wantErr:  `^$`,
+			wantKeys: map[string]string{},
+		},
+		"null becomes empty map": {
+			json:     `null`,
+			wantErr:  `^$`,
+			wantKeys: map[string]string{},
+		},
+		"duplicate ids - last wins": {
+			json: test.TrimJSON(`[
+                {"name": "dupe", "type": "github"},
+                {"name": "dupe", "type": "gitlab"}
+            ]`),
+			wantErr: `^$`,
+			wantKeys: map[string]string{
+				"dupe": "gitlab",
+			},
+		},
+		"invalid JSON": {
+			json:    `{`,
+			wantErr: `.+`,
+		},
+		"wrong shape (object instead of array)": {
+			json: test.TrimJSON(`{
+                "name": "a", "type": "github"
+            }`),
+			wantErr: `json: cannot unmarshal object.+$`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN unmarshaling JSON into a WebHooks.
+			var s WebHooks
+			err := s.UnmarshalJSON([]byte(tc.json))
+
+			// THEN errors produced match the regex.
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.wantErr, e) {
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot: %q", packageName, tc.wantErr, e)
+			}
+			if e != "" {
+				return
+			}
+
+			// AND map keys and types are as expected.
+			if len(s) != len(tc.wantKeys) {
+				t.Fatalf("%s\nlength mismatch\nwant: %d\ngot: %d", packageName, len(tc.wantKeys), len(s))
+			}
+			for id, wantType := range tc.wantKeys {
+				got, ok := s[id]
+				if !ok {
+					t.Errorf("%s\nmissing key %q", packageName, id)
+				}
+				if got == nil {
+					t.Errorf("%s\nvalue for key %q is nil", packageName, id)
+				}
+				if got.Type != wantType {
+					t.Errorf("%s\nType mismatch for %q\nwant: %q\n got: %q", packageName, id, wantType, got.Type)
+				}
+				if got.ID != id {
+					t.Errorf("%s\nID mismatch for key %q\nwant: %q\n got: %q", packageName, id, id, got.ID)
+				}
+			}
+		})
+	}
+}
+
+func TestWebHooks_MarshalJSON(t *testing.T) {
+	// GIVEN various WebHooks states to marshal.
+	tests := map[string]struct {
+		webhooks *WebHooks
+		wantStr  string
+	}{
+		"nil map -> null": {
+			webhooks: nil,
+			wantStr:  "null",
+		},
+		"empty map -> empty array": {
+			webhooks: &WebHooks{},
+			wantStr:  "[]",
+		},
+		"two items": {
+			webhooks: &WebHooks{
+				"a": &WebHook{Base: Base{Type: "github"}, ID: "a"},
+				"b": &WebHook{Base: Base{Type: "gitlab"}, ID: "b"},
+			},
+			wantStr: test.TrimJSON(`[
+                {"type": "github", "name": "a"},
+                {"type": "gitlab", "name": "b"}
+            ]`),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN marshaling the WebHooks.
+			data, err := tc.webhooks.MarshalJSON()
+			if err != nil {
+				t.Fatalf("%s\nMarshalJSON returned error: %v", packageName, err)
+			}
+
+			// THEN the result matches the expected JSON.
+			dataStr := string(data)
+			if dataStr != tc.wantStr {
+				t.Errorf("%s\nJSON mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantStr, dataStr)
 			}
 		})
 	}

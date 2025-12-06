@@ -16,19 +16,47 @@
 package base
 
 import (
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/release-argus/Argus/service/deployed_version/types/web/constants"
 	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/util"
 )
 
 // Defaults are the default values for a Lookup.
 type Defaults struct {
-	AllowInvalidCerts *bool `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
+	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // False = Disallows invalid HTTPS certificates.
+	Method            string `json:"method,omitempty" yaml:"method,omitempty"`                           // HTTP method.
 
 	Options *opt.Defaults `json:"-" yaml:"-"` // Options for the Lookup.
 }
 
-// Default sets this Defaults to the default values.
+// Default sets these Defaults to the default values.
 func (d *Defaults) Default() {
 	// allow_invalid_certs.
 	allowInvalidCerts := false
 	d.AllowInvalidCerts = &allowInvalidCerts
+
+	// method.
+	d.Method = http.MethodGet
+}
+
+// CheckValues validates the fields of the Defaults struct.
+func (d *Defaults) CheckValues(prefix string) error {
+	var errs []error
+	// Method.
+	d.Method = strings.ToUpper(d.Method)
+	if d.Method != "" && !util.Contains(constants.SupportedMethods, d.Method) {
+		errs = append(errs,
+			fmt.Errorf("%smethod: %q <invalid> (supported methods = ['%s'])",
+				prefix, d.Method, strings.Join(constants.SupportedMethods, "', '")))
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return errors.Join(errs...)
 }

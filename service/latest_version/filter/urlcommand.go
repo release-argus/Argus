@@ -30,16 +30,16 @@ import (
 
 var urlCommandTypes = []string{"regex", "replace", "split"}
 
-// URLCommandSlice is a list of URLCommand that filter version(s) from the URL Content.
-type URLCommandSlice []URLCommand
+// URLCommands is a list of URLCommand that filter versions from the URL Content.
+type URLCommands []URLCommand
 
 // UnmarshalJSON allows handling of a dict as well as a list of dicts.
 //
 // It will convert a dict to a list of a dict.
 //
-//	e.g. URLCommandSlice: { "type": "split" }
-//	becomes URLCommandSlice: [ { "type": "split" } ]
-func (s *URLCommandSlice) UnmarshalJSON(data []byte) error {
+//	e.g. URLCommands: { "type": "split" }
+//	becomes URLCommands: [ { "type": "split" } ]
+func (s *URLCommands) UnmarshalJSON(data []byte) error {
 	// Handle the case where data is a quoted JSON string. (from web requests).
 	if len(data) > 0 && data[0] == '"' && data[len(data)-1] == '"' {
 		var jsonStr string
@@ -59,16 +59,16 @@ func (s *URLCommandSlice) UnmarshalJSON(data []byte) error {
 //
 // It will convert a dict to a list of a dict.
 //
-//	e.g. URLCommandSlice: { type: "split" }
-//	becomes URLCommandSlice: [ { type: "split" } ]
-func (s *URLCommandSlice) UnmarshalYAML(value *yaml.Node) error {
+//	e.g. URLCommands: { type: "split" }
+//	becomes URLCommands: [ { type: "split" } ]
+func (s *URLCommands) UnmarshalYAML(value *yaml.Node) error {
 	return s.unmarshal(func(v interface{}) error {
 		return value.Decode(v)
 	})
 }
 
-// unmarshal will unmarshal the URLCommandSlice using the provided unmarshal function.
-func (s *URLCommandSlice) unmarshal(unmarshalFunc func(interface{}) error) error {
+// unmarshal will unmarshal the URLCommands using the provided unmarshal function.
+func (s *URLCommands) unmarshal(unmarshalFunc func(interface{}) error) error {
 	// Alias to avoid recursion.
 	var multi []URLCommand
 	if err := unmarshalFunc(&multi); err == nil {
@@ -87,15 +87,15 @@ func (s *URLCommandSlice) unmarshal(unmarshalFunc func(interface{}) error) error
 	return err //nolint:wrapcheck
 }
 
-// String returns a string representation of the URLCommandSlice.
-func (s *URLCommandSlice) String() string {
+// String returns a string representation of the URLCommands.
+func (s *URLCommands) String() string {
 	if s == nil {
 		return ""
 	}
 	return util.ToYAMLString(s, "")
 }
 
-// URLCommand is a command to filter version(s) from the URL body.
+// URLCommand is a command to filter versions from the URL body.
 type URLCommand struct {
 	Type     string  `json:"type" yaml:"type"`                             // regex/replace/split.
 	Regex    string  `json:"regex,omitempty" yaml:"regex,omitempty"`       // regex: regexp.MustCompile(Regex).
@@ -114,8 +114,8 @@ func (c *URLCommand) String() string {
 	return util.ToYAMLString(c, "")
 }
 
-// GetVersions from `text` using the URLCommand(s) in this URLCommandSlice.
-func (s *URLCommandSlice) GetVersions(text string, logFrom logutil.LogFrom) ([]string, error) {
+// GetVersions from `text` using the URLCommands in this URLCommands.
+func (s *URLCommands) GetVersions(text string, logFrom logutil.LogFrom) ([]string, error) {
 	// No URLCommands to run, so treat the text as a single version.
 	if len(*s) == 0 {
 		if text == "" {
@@ -126,8 +126,8 @@ func (s *URLCommandSlice) GetVersions(text string, logFrom logutil.LogFrom) ([]s
 	return s.Run(text, logFrom)
 }
 
-// Run all of the URLCommand(s) in this URLCommandSlice on `text`.
-func (s *URLCommandSlice) Run(text string, logFrom logutil.LogFrom) ([]string, error) {
+// Run each of the URLCommand on `text`.
+func (s *URLCommands) Run(text string, logFrom logutil.LogFrom) ([]string, error) {
 	if s == nil {
 		return nil, nil
 	}
@@ -188,8 +188,8 @@ func (c *URLCommand) run(versions *[]string, logFrom logutil.LogFrom) error {
 // regex applies the URLCommands regex to `versions[versionIndex]`.
 //
 // Parameters:
-//   - versionIndex: The index of the version in the `versions` slice to validate.
-//   - versions: A pointer to the slice of version string(s) to regex.
+//   - versionIndex: The index of the version in the `versions` urlCommands to validate.
+//   - versions: A pointer to the urlCommands of version strings to regex.
 //   - logFrom: Used for logging the source of the operation.
 func (c *URLCommand) regex(versionIndex int, versions *[]string, logFrom logutil.LogFrom) error {
 	re := regexp.MustCompile(c.Regex)
@@ -244,8 +244,8 @@ func (c *URLCommand) regex(versionIndex int, versions *[]string, logFrom logutil
 //   - If the split result does not contain enough elements to retrieve the specified index, an error is returned.
 //
 // Parameters:
-//   - versionIndex: The index of the version in the `versions` slice to process.
-//   - versions: A pointer to the slice of version string(s) to modify.
+//   - versionIndex: The index of the version in the `versions` urlCommands to process.
+//   - versions: A pointer to the urlCommands of version strings to modify.
 //   - logFrom: Used for logging the source of the operation.
 func (c *URLCommand) split(versionIndex int, versions *[]string, logFrom logutil.LogFrom) error {
 	texts, err := c.splitAllMatches((*versions)[versionIndex], logFrom)
@@ -290,8 +290,8 @@ func (c *URLCommand) splitAllMatches(text string, logFrom logutil.LogFrom) ([]st
 	return texts, nil
 }
 
-// CheckValues validates the fields of each URLCommand in the URLCommandSlice.
-func (s *URLCommandSlice) CheckValues(prefix string) error {
+// CheckValues validates the fields of each URLCommand.
+func (s *URLCommands) CheckValues(prefix string) error {
 	if s == nil {
 		return nil
 	}

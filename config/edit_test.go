@@ -29,7 +29,7 @@ import (
 )
 
 func TestConfig_AddService(t *testing.T) {
-	// GIVEN a service to add/replace/rename and a Config to act on.
+	// GIVEN a service to add/replace/rename, and a Config to act on.
 	tests := map[string]struct {
 		newService *service.Service
 		oldService string
@@ -56,7 +56,7 @@ func TestConfig_AddService(t *testing.T) {
 			newService: testServiceURL("foo"),
 			wantOrder:  []string{"alpha", "foo", "charlie"},
 			added:      true,
-			dbMessages: 2, // 1 for change of id, 1 for change of versions.
+			dbMessages: 2, // 1 for change of ID, 1 for change of versions.
 		},
 		"ID already exists": {
 			newService: testServiceURL("alpha"),
@@ -96,7 +96,7 @@ func TestConfig_AddService(t *testing.T) {
 
 			// WHEN AddService is called.
 			loadMutex.RLock()
-			cfg.AddService(tc.oldService, tc.newService)
+			_ = cfg.AddService(tc.oldService, tc.newService)
 			loadMutex.RUnlock()
 			logMutex.Unlock()
 
@@ -214,7 +214,7 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 }
 
 func TestConfig_RenameService(t *testing.T) {
-	// GIVEN a service to rename and a Config to act on.
+	// GIVEN a service to rename, and a Config to act on.
 	tests := map[string]struct {
 		oldName, newName string
 		wantOrder        []string
@@ -250,7 +250,7 @@ func TestConfig_RenameService(t *testing.T) {
 
 			file := fmt.Sprintf("TestConfig_RenameService_%s.yml", name)
 			testYAML_Edit(file, t)
-			t.Cleanup(func() { os.Remove(file) })
+			t.Cleanup(func() { _ = os.Remove(file) })
 			logMutex.Lock()
 			cfg := testLoadBasic(file, t)
 			newSVC := testServiceURL(tc.newName)
@@ -298,7 +298,7 @@ func TestConfig_RenameService(t *testing.T) {
 }
 
 func TestConfig_DeleteService(t *testing.T) {
-	// GIVEN a service to delete and a Config to act on.
+	// GIVEN a service to delete, and a Config to act on.
 	tests := map[string]struct {
 		name      string
 		wantOrder []string

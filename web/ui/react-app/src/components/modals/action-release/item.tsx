@@ -1,79 +1,108 @@
-import {
-	Button,
-	Card,
-	Container,
-	OverlayTrigger,
-	Tooltip,
-} from 'react-bootstrap';
-import { FC, useEffect, useState } from 'react';
 import { differenceInMilliseconds, formatRelative } from 'date-fns';
+import { Hourglass } from 'lucide-react';
 import {
-	faCheck,
-	faCircleNotch,
-	faHourglass,
-	faPaperPlane,
-	faRedo,
-	faTimes,
-} from '@fortawesome/free-solid-svg-icons';
+	type Dispatch,
+	type FC,
+	type SetStateAction,
+	useEffect,
+	useState,
+} from 'react';
+import {
+	SendingIcon,
+	StatusIcon,
+} from '@/components/modals/action-release/icon';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import Tip from '@/components/ui/tip';
+import { cn } from '@/lib/utils';
+import type { ModalType } from '@/utils/api/types/config/summary';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { ModalType } from 'types/summary';
-import cx from 'classnames';
+type SendableTimeoutProps = {
+	/* Item can send. */
+	sendable: boolean;
+	/* Item actively sending. */
+	sending: boolean;
+	/* Updates the item's ability to send. */
+	setSendable: Dispatch<SetStateAction<boolean>>;
+	/* Represents the current time. */
+	now: Date;
+	/* Specifies the earliest time the item may next send. */
+	nextRunnable: Date;
+};
 
-interface Props {
+/* Fallback delay in milliseconds if the `nextRunnable` time is in the past. */
+const FALLBACK_SENDABLE_DELAY_MS = 1000;
+/**
+ * A timeout that permits the item to send after the current time exceeds its nextRunnable value,
+ * or prevents sending while the item remains active.
+ *
+ * @param sendable - Marks the item as ready to send.
+ * @param sending - Marks the item as actively sending.
+ * @param setSendable - Updates the item's ability to send.
+ * @param now - Represents the current time.
+ * @param nextRunnable - Specifies the earliest time the item may send.
+ */
+const sendableTimeout = ({
+	sendable,
+	sending,
+	setSendable,
+	now,
+	nextRunnable,
+}: SendableTimeoutProps): (() => void) | undefined => {
+	if (sending) {
+		setSendable(false);
+		return;
+	}
+
+	if (sendable) return;
+
+	// If not sendable and not sending, set a timer to become sendable.
+	const timeUntilNextRunnableMs = differenceInMilliseconds(nextRunnable, now);
+
+	const timeoutDuration =
+		timeUntilNextRunnableMs > 0
+			? timeUntilNextRunnableMs
+			: FALLBACK_SENDABLE_DELAY_MS;
+
+	const timer = setTimeout(() => {
+		setSendable(true);
+	}, timeoutDuration);
+
+	return () => {
+		clearTimeout(timer);
+	};
+};
+
+type ItemProps = {
 	itemType: 'COMMAND' | 'WEBHOOK';
 	modalType: ModalType;
 	title: string;
+	loading?: boolean;
 	failed?: boolean;
 	sending: boolean;
 	next_runnable: string;
 	ack: (target: string, isWebHook: boolean) => void;
-}
-
-/**
- * A timeout to enable the item to be sent when the current time is after
- * the items nextRunnable time, or disables the item if it is sending.
- *
- * @param sendable - Whether the item can be sent.
- * @param sending - Whether the item is being sent.
- * @param setSendable - Function to set whether the item can be sent.
- * @param now - The current time.
- * @param nextRunnable - The time the item can be sent.
- * @returns A function that sets a timeout to enable the item to be sent when it
- * is after the items nextRunnable time, or disables the item if it is sending.
- */
-const sendableTimeout = (
-	sendable: boolean,
-	sending: boolean,
-	setSendable: React.Dispatch<React.SetStateAction<boolean>>,
-	now: Date,
-	nextRunnable: Date,
-) => {
-	if (sending) setSendable(false);
-	else if (!sendable) {
-		let timeout = differenceInMilliseconds(nextRunnable, now);
-		// if we're already after nextRunnable, just wait a second.
-		if (now > nextRunnable) timeout = 1000;
-		const timer = setTimeout(() => setSendable(true), timeout);
-		return () => clearTimeout(timer);
-	}
 };
 
 /**
  * Renders the item's information with buttons based on the modal type.
  *
- * @param itemType - The type of the item (e.g. COMMAND/WEBHOOK).
- * @param modalType - The type of the modal.
+ * @param itemType - The item type (e.g. COMMAND/WEBHOOK).
+ * @param modalType - The modal type.
  * @param title - The title of the item.
+ * @param loading - Display a loading skeleton rather than the title.
  * @param failed - Whether the item failed.
- * @param sending - Whether the item is being sent.
- * @param next_runnable - The time the item can next be sent.
- * @returns A component that displays the item's information with buttons based on the modal type.
+ * @param sending - Marks the item as actively sending.
+ * @param next_runnable - Defines when the item becomes eligible for sending.
+ * @param ack - The action to send this item.
+ * @returns Displays the item's information with buttons based on the modal type.
  */
-export const Item: FC<Props> = ({
+export const Item: FC<ItemProps> = ({
 	itemType,
 	modalType,
 	title,
+	loading,
 	failed,
 	sending,
 	next_runnable,
@@ -83,132 +112,70 @@ export const Item: FC<Props> = ({
 	const now = new Date();
 	const [sendable, setSendable] = useState(!sending && nextRunnable <= now);
 
-	// disable resend button until nextRunnable.
+	// Disable resend button until nextRunnable.
 	useEffect(() => {
-		sendableTimeout(sendable, sending, setSendable, now, nextRunnable);
-	}, [next_runnable, sending]);
+		const nextRunnable = new Date(next_runnable);
+		const now = new Date();
 
-	// add timeout if it wasn't sent by this user.
-	useEffect(() => {
-		if (!sending && nextRunnable <= now)
-			sendableTimeout(sendable, sending, setSendable, now, nextRunnable);
-	}, []);
+		return sendableTimeout({
+			nextRunnable: nextRunnable,
+			now: now,
+			sendable: sendable,
+			sending: sending,
+			setSendable: setSendable,
+		});
+	}, [sendable, sending, next_runnable]);
 
-	const faIcon = () => {
-		// Sending and hasn't failed.
-		if (sending && failed === undefined) return faCircleNotch;
-		// Send first time.
-		if (modalType === 'SEND' && failed === undefined) return faPaperPlane;
-		// Resend.
-		return faRedo;
-	};
 	const id = title.replace(' ', '_').toLowerCase();
 
 	return (
-		<Card bg="secondary" className={'no-margin service'}>
-			<Card.Title className="modal-item-title" key={`${title}-title`}>
-				<Container fluid style={{ paddingLeft: '0px' }}>
-					{title}
-				</Container>
+		<Card className="flex min-h-12 flex-row items-center justify-between gap-4 px-4 py-2">
+			<CardHeader className="flex w-full items-center p-0">
+				<CardTitle className="w-full" key={`${title}-title`}>
+					{loading ? <Skeleton className={cn('h-6 w-full')} /> : title}
+				</CardTitle>
+			</CardHeader>
+			<CardContent className="justify-none flex flex-row items-center gap-2 px-0">
 				{!sendable && !sending && (
-					<OverlayTrigger
-						key="resend-unavailable"
-						placement="top"
-						delay={{ show: 500, hide: 500 }}
-						overlay={
-							<Tooltip id={`${id}-resend-date`}>
+					<Tip
+						content={
+							<p>
 								{`Can resend ${formatRelative(
 									new Date(next_runnable),
 									new Date(),
 								)}`}
-							</Tooltip>
+							</p>
 						}
 					>
-						<Container
-							fluid
-							style={{
-								display: 'flex',
-								justifyContent: 'flex-end',
-								width: 'auto',
-							}}
-						>
-							<FontAwesomeIcon
-								icon={faHourglass}
-								style={{
-									height: '1.25rem',
-								}}
-								transform={failed !== undefined ? 'right-8' : ''}
-							/>
-						</Container>
-					</OverlayTrigger>
+						<Hourglass className="size-5" />
+					</Tip>
 				)}
-
-				{!sending && failed !== undefined && (
-					<OverlayTrigger
-						key="status"
-						placement="top"
-						delay={{ show: 500, hide: 500 }}
-						overlay={
-							<Tooltip id={`${id}-result`}>
-								{failed === true ? 'Failed' : 'Successful'}
-							</Tooltip>
-						}
-					>
-						<Container
-							fluid
-							style={{
-								display: 'flex',
-								justifyContent: 'flex-end',
-								width: 'auto',
-								paddingRight: modalType === 'SKIP' ? '0px' : '',
-							}}
-						>
-							<FontAwesomeIcon
-								icon={failed === true ? faTimes : faCheck}
-								style={{
-									height: '2rem',
-								}}
-								className={failed === true ? 'text-danger' : 'text-success'}
-							/>
-						</Container>
-					</OverlayTrigger>
-				)}
-
+				{!sending && failed !== undefined && <StatusIcon failed={failed} />}
 				{/* Send button */}
 				{modalType !== 'SKIP' && (
-					<OverlayTrigger
-						key="send"
-						placement="top"
-						delay={{ show: 500, hide: 500 }}
-						overlay={
-							<Tooltip id={`${id}-send`}>
-								{modalType === 'RESEND' || failed !== undefined
-									? 'Retry'
-									: 'Send'}
-							</Tooltip>
+					<Button
+						aria-describedby={cn(
+							`${id}-send`,
+							!sendable && !sending && `${id}-resend-date`,
+							!sending && failed !== undefined && `${id}-result`,
+						)}
+						aria-label={
+							modalType === 'RESEND' || failed !== undefined ? 'Retry' : 'Send'
 						}
+						disabled={loading || !sendable}
+						onClick={() => ack(title, itemType === 'WEBHOOK')}
+						size="sm"
+						// Disable if success or waiting send response.
+						variant="secondary"
 					>
-						<Button
-							aria-describedby={cx(
-								`${id}-send`,
-								!sendable && !sending && `${id}-resend-date`,
-								!sending && failed !== undefined && `${id}-result`,
-							)}
-							variant="secondary"
-							size="sm"
-							onClick={() => ack(title, itemType === 'WEBHOOK')}
-							className="float-end"
-							// Disable if success or waiting send response.
-							disabled={!sendable}
-						>
-							<FontAwesomeIcon
-								icon={faIcon()}
-								className={sending ? 'fa-spin' : ''}
-							/>
-						</Button>
-					</OverlayTrigger>
+						<SendingIcon
+							failed={failed}
+							modalType={modalType}
+							sending={sending}
+						/>
+					</Button>
 				)}
-			</Card.Title>
+			</CardContent>
 		</Card>
 	);
 };

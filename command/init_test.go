@@ -37,7 +37,7 @@ func TestController_SetExecuting(t *testing.T) {
 		&status.Status{
 			ServiceInfo: serviceinfo.ServiceInfo{
 				ID: "service_id"}},
-		&Slice{
+		&Commands{
 			{"date", "+%m-%d-%Y"}, {"true"}, {"false"},
 			{"date", "+%m-%d-%Y"}, {"true"}, {"false"}},
 		nil,
@@ -121,7 +121,7 @@ func TestController_IsRunnable(t *testing.T) {
 		&status.Status{
 			ServiceInfo: serviceinfo.ServiceInfo{
 				ID: "service_id"}},
-		&Slice{
+		&Commands{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
@@ -174,7 +174,7 @@ func TestController_NextRunnable(t *testing.T) {
 		&status.Status{
 			ServiceInfo: serviceinfo.ServiceInfo{
 				ID: "service_id"}},
-		&Slice{
+		&Commands{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
@@ -235,7 +235,7 @@ func TestController_SetNextRunnable(t *testing.T) {
 		&status.Status{
 			ServiceInfo: serviceinfo.ServiceInfo{
 				ID: "service_id"}},
-		&Slice{
+		&Commands{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
@@ -372,7 +372,7 @@ func TestController_Metrics(t *testing.T) {
 		&status.Status{
 			ServiceInfo: serviceinfo.ServiceInfo{
 				ID: "TestController_Metrics"}},
-		&Slice{
+		&Commands{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
@@ -460,40 +460,40 @@ func TestCommand_Init(t *testing.T) {
 	// GIVEN a Command.
 	tests := map[string]struct {
 		nilController     bool
-		command           *Slice
-		shoutrrrNotifiers *shoutrrr.Slice
+		command           *Commands
+		shoutrrrNotifiers *shoutrrr.Shoutrrrs
 		parentInterval    *string
 	}{
 		"nil Controller": {
 			nilController: true,
 		},
 		"non-nil Controller": {
-			command: &Slice{
+			command: &Commands{
 				{"date", "+%m-%d-%Y"}},
 		},
 		"non-nil Commands": {
-			command: &Slice{
+			command: &Commands{
 				{"date", "+%m-%d-%Y"},
 				{"true"},
 				{"false"}},
 		},
 		"nil Notifiers": {
-			command: &Slice{
+			command: &Commands{
 				{"date", "+%m-%d-%Y"}},
 		},
 		"non-nil Notifiers": {
-			command: &Slice{
+			command: &Commands{
 				{"date", "+%m-%d-%Y"}},
-			shoutrrrNotifiers: &shoutrrr.Slice{
+			shoutrrrNotifiers: &shoutrrr.Shoutrrrs{
 				"test": shoutrrr_test.Shoutrrr(false, false)},
 		},
 		"nil parentInterval": {
-			command: &Slice{
+			command: &Commands{
 				{"date", "+%m-%d-%Y"}},
 		},
 		"non-nil parentInterval": {
 			parentInterval: test.StringPtr("11m"),
-			command: &Slice{
+			command: &Commands{
 				{"date", "+%m-%d-%Y"}}},
 	}
 

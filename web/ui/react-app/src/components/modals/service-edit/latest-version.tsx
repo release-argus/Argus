@@ -1,147 +1,107 @@
-import { Accordion, Row } from 'react-bootstrap';
+import { memo, useEffect } from 'react';
+import { useFormContext, useWatch } from 'react-hook-form';
+import { BooleanWithDefault } from '@/components/generic';
+import { FieldSelect, FieldText } from '@/components/generic/field';
+import EditServiceLatestVersionRequire from '@/components/modals/service-edit/latest-version-require';
+import FormURLCommands from '@/components/modals/service-edit/latest-version-urlcommands';
+import VersionWithLink from '@/components/modals/service-edit/version-with-link';
+import VersionWithRefresh from '@/components/modals/service-edit/version-with-refresh';
 import {
-	DefaultLatestVersionLookupType,
-	LatestVersionLookupType,
-	ServiceOptionsType,
-} from 'types/config';
-import { FC, memo, useMemo } from 'react';
-import { FormSelect, FormText } from 'components/generic/form';
-
-import { BooleanWithDefault } from 'components/generic';
-import EditServiceLatestVersionRequire from './latest-version-require';
-import FormURLCommands from './latest-version-urlcommands';
-import { LatestVersionLookupEditType } from 'types/service-edit';
-import VersionWithLink from './version-with-link';
-import VersionWithRefresh from './version-with-refresh';
-import { firstNonDefault } from 'utils';
-import { useWatch } from 'react-hook-form';
-
-interface Props {
-	serviceID: string;
-	original?: LatestVersionLookupEditType;
-	original_options?: ServiceOptionsType;
-	defaults?: DefaultLatestVersionLookupType;
-	hard_defaults?: DefaultLatestVersionLookupType;
-}
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from '@/components/ui/accordion';
+import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import {
+	LATEST_VERSION_LOOKUP_TYPE,
+	type LatestVersionLookupType,
+	latestVersionLookupTypeOptions,
+} from '@/utils/api/types/config/service/latest-version';
 
 /**
  * The `latest_version` form fields.
- *
- * @param serviceID - The ID of the service.
- * @param original - The original values in the form.
- * @param original_options - The original service.options of the form.
- * @param defaults - The default values.
- * @param hard_defaults - The hard default values.
- * @returns The form fields for the `latest_version`.
  */
-const EditServiceLatestVersion: FC<Props> = ({
-	serviceID,
-	original,
-	original_options,
-	defaults,
-	hard_defaults,
-}) => {
-	const latestVersionTypeOptions: {
-		label: string;
-		value: NonNullable<LatestVersionLookupType['type']>;
-	}[] = [
-		{ label: 'GitHub', value: 'github' },
-		{ label: 'URL', value: 'url' },
-	];
+const EditServiceLatestVersion = () => {
+	const name = 'latest_version';
+	const urlFieldName = `${name}.url`;
+	const { getValues, trigger } = useFormContext();
+	const { schemaDataDefaults } = useSchemaContext();
 
-	const latestVersionType: NonNullable<LatestVersionLookupType['type']> =
-		useWatch({
-			name: `latest_version.type`,
-		});
+	const latestVersionType = useWatch({
+		name: `${name}.type`,
+	}) as LatestVersionLookupType;
 
-	const convertedDefaults = useMemo(
-		() => ({
-			access_token: firstNonDefault(
-				defaults?.access_token,
-				hard_defaults?.access_token,
-			),
-			allow_invalid_certs:
-				defaults?.allow_invalid_certs ?? hard_defaults?.allow_invalid_certs,
-			use_prerelease: defaults?.use_prerelease ?? hard_defaults?.use_prerelease,
-		}),
-		[defaults, hard_defaults],
-	);
+	// Validate 'name' when the type changes if we have a 'name' value.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: getValues stable.
+	useEffect(() => {
+		if (getValues(urlFieldName)) void trigger(urlFieldName);
+	}, [latestVersionType]);
 
-	const getTooltipProps = () => {
-		if (latestVersionType == 'github')
-			return {
-				tooltip: (
-					<>
-						{'https://github.com/'}
-						<span className="bold-underline">OWNER/REPO</span>
-					</>
-				),
-				tooltipAriaLabel: 'Format: https://github.com/OWNER/REPO',
-			};
-		return {};
-	};
+	const defaults = schemaDataDefaults?.latest_version;
+
+	const urlTooltipText =
+		latestVersionType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value
+			? 'GitHub repository to query for the latest release version'
+			: 'URL to query for the latest version';
 
 	return (
-		<Accordion>
-			<Accordion.Header>Latest Version:</Accordion.Header>
-			<Accordion.Body>
-				<Row>
-					<FormSelect
-						name="latest_version.type"
-						col_xs={4}
-						col_sm={4}
-						label="Type"
-						options={latestVersionTypeOptions}
-					/>
-					<VersionWithLink
-						name="latest_version.url"
-						type={latestVersionType}
-						required
-						col_xs={8}
-						col_sm={8}
-						{...getTooltipProps()}
-						positionXS="right"
-					/>
-					{latestVersionType === 'github' ? (
-						<>
-							<FormText
-								key="access_token"
-								name="latest_version.access_token"
-								col_sm={12}
-								label="Access Token"
-								tooltip="GitHub Personal Access Token to handle possible rate limits and/or private repos"
-								isURL={latestVersionType !== 'github'}
-								defaultVal={convertedDefaults.access_token}
-							/>
-							<BooleanWithDefault
-								name="latest_version.use_prerelease"
-								label="Use pre-releases"
-								tooltip="Include releases marked 'Pre-release' in the latest version check"
-								defaultValue={convertedDefaults.use_prerelease}
-							/>
-						</>
-					) : (
-						<BooleanWithDefault
-							name="latest_version.allow_invalid_certs"
-							label="Allow Invalid Certs"
-							defaultValue={convertedDefaults.allow_invalid_certs}
+		<AccordionItem value={name}>
+			<AccordionTrigger>Latest Version:</AccordionTrigger>
+			<AccordionContent className="grid grid-cols-12 gap-2">
+				<FieldSelect
+					colSize={{ sm: 4, xs: 4 }}
+					label="Type"
+					name={`${name}.type`}
+					options={latestVersionLookupTypeOptions}
+				/>
+				<VersionWithLink
+					colSize={{ sm: 8, xs: 8 }}
+					name={urlFieldName}
+					required
+					tooltip={{
+						content: urlTooltipText,
+						type: 'string',
+					}}
+					type={latestVersionType}
+				/>
+				{latestVersionType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value ? (
+					<>
+						<FieldText
+							colSize={{ sm: 12 }}
+							defaultVal={defaults?.access_token}
+							key="access_token"
+							label="Access Token"
+							name={`${name}.access_token`}
+							tooltip={{
+								content:
+									'GitHub Personal Access Token to handle possible rate limits and/or private repos',
+								type: 'string',
+							}}
 						/>
-					)}
-					<FormURLCommands />
-					<EditServiceLatestVersionRequire
-						defaults={defaults?.require}
-						hard_defaults={hard_defaults?.require}
+						<BooleanWithDefault
+							defaultValue={defaults?.use_prerelease}
+							label="Use pre-releases"
+							name={`${name}.use_prerelease`}
+							tooltip={{
+								content:
+									"Include releases marked 'Pre-release' in the latest version check",
+								type: 'string',
+							}}
+						/>
+					</>
+				) : (
+					<BooleanWithDefault
+						defaultValue={defaults?.allow_invalid_certs}
+						label="Allow Invalid Certs"
+						name={`${name}.allow_invalid_certs`}
 					/>
+				)}
+				<FormURLCommands />
+				<EditServiceLatestVersionRequire />
 
-					<VersionWithRefresh
-						vType={0}
-						serviceID={serviceID}
-						original={original}
-						original_options={original_options}
-					/>
-				</Row>
-			</Accordion.Body>
-		</Accordion>
+				<VersionWithRefresh vType="latest_version" />
+			</AccordionContent>
+		</AccordionItem>
 	);
 };
 

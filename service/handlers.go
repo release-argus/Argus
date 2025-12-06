@@ -57,7 +57,7 @@ func (s *Service) HandleCommand(command string) {
 	}
 }
 
-// HandleWebHook will find tne specified WebHook on this Service (and send it if found).
+// HandleWebHook finds the specified WebHook on this Service (and sends it if found).
 func (s *Service) HandleWebHook(webhookID string) {
 	//nolint:typecheck
 	if s.WebHook == nil || s.WebHook[webhookID] == nil {
@@ -76,15 +76,15 @@ func (s *Service) HandleWebHook(webhookID string) {
 	}
 }
 
-// HandleUpdateActions runs all commands and send all WebHooks for this service if auto-approve true.
-// If new releases not auto-approved, then these will
+// HandleUpdateActions runs all commands and send all WebHooks for this service if `auto_approve` true.
+// If new releases are not automatically approved, then these will
 // only run/send if manually triggered fromUser (via the WebUI).
 func (s *Service) HandleUpdateActions(writeToDB bool) {
-	serviceInfo := s.Status.GetServiceInfo()
+	svcInfo := s.Status.GetServiceInfo()
 
-	// Send the Notify Message(s).
+	// Send the Notify Messages.
 	//nolint:errcheck
-	go s.Notify.Send("", "", serviceInfo, true)
+	go s.Notify.Send("", "", svcInfo, true)
 
 	//nolint:typecheck
 	if s.WebHook != nil || s.Command != nil {
@@ -93,7 +93,7 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 				s.Status.LatestVersion())
 			logutil.Log.Info(msg, logutil.LogFrom{Primary: s.ID}, true)
 
-			// Run the Command(s).
+			// Run the Commands.
 			go func() {
 				err := s.CommandController.Exec(logutil.LogFrom{Primary: "Command", Secondary: s.ID})
 				if err == nil && len(s.Command) != 0 {
@@ -101,9 +101,9 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 				}
 			}()
 
-			// Send the WebHook(s).
+			// Send the WebHooks.
 			go func() {
-				err := s.WebHook.Send(serviceInfo, true)
+				err := s.WebHook.Send(svcInfo, true)
 				if err == nil && len(s.WebHook) != 0 {
 					s.UpdatedVersion(writeToDB)
 				}
@@ -114,23 +114,23 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 			s.Status.AnnounceQueryNewVersion()
 		}
 	} else {
-		// Auto-update version for Service(s) without WebHook(s).
+		// Auto-update version for Services without WebHooks.
 		s.UpdatedVersion(writeToDB)
 	}
 }
 
-// HandleFailedActions will re-send all the WebHooks for this service
-// that have either failed, or not sent for this version. Otherwise,
-// if all WebHooks have sent successfully, then they will all resend.
+// HandleFailedActions re-sends all the WebHooks for this service
+// that have either failed or not sent for this version. Otherwise,
+// if all WebHooks have sent successfully, then they all resend.
 func (s *Service) HandleFailedActions() {
-	serviceInfo := s.Status.GetServiceInfo()
+	svcInfo := s.Status.GetServiceInfo()
 	errChan := make(chan error, len(s.WebHook)+len(s.Command))
 	errored := false
 
 	retryAll := s.shouldRetryAll()
 
 	potentialErrors := 0
-	// Send the WebHook(s).
+	// Send the WebHooks.
 	if len(s.WebHook) != 0 {
 		potentialErrors += len(s.WebHook)
 		for key, wh := range s.WebHook {
@@ -142,7 +142,7 @@ func (s *Service) HandleFailedActions() {
 				}
 				// Send.
 				go func(wh *webhook.WebHook) {
-					err := wh.Send(serviceInfo, false)
+					err := wh.Send(svcInfo, false)
 					errChan <- err
 				}(wh)
 				// Space out WebHooks.
@@ -153,7 +153,7 @@ func (s *Service) HandleFailedActions() {
 			}
 		}
 	}
-	// Run the Command(s).
+	// Run the Commands.
 	if len(s.Command) != 0 {
 		potentialErrors += len(s.Command)
 		logFrom := logutil.LogFrom{Primary: "Command", Secondary: s.ID}
@@ -166,7 +166,7 @@ func (s *Service) HandleFailedActions() {
 				}
 				// Run.
 				go func(key int) {
-					err := s.CommandController.ExecIndex(logFrom, key, serviceInfo)
+					err := s.CommandController.ExecIndex(logFrom, key, svcInfo)
 					errChan <- err
 				}(key)
 				// Space out Commands.
@@ -217,11 +217,11 @@ func (s *Service) UpdatedVersion(writeToDB bool) {
 		return
 	}
 
-	// Check that no WebHook(s) failed.
+	// Check that no WebHooks failed.
 	if !s.Status.Fails.WebHook.AllPassed() {
 		return
 	}
-	// Check that no Command(s) failed.
+	// Check that no Commands failed.
 	if !s.Status.Fails.Command.AllPassed() {
 		return
 	}
@@ -241,7 +241,7 @@ func (s *Service) UpdatedVersion(writeToDB bool) {
 	s.Status.AnnounceUpdate()
 }
 
-// UpdateLatestApproved will check if all WebHook(s) have sent successfully for this Service,
+// UpdateLatestApproved will check if all WebHooks have sent successfully for this Service,
 // set the LatestVersion as approved in the Status, and announce the approval (if not previously).
 func (s *Service) UpdateLatestApproved() {
 	// Only announce once.

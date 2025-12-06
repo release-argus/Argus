@@ -39,11 +39,11 @@ func TestShoutrrr_getSender(t *testing.T) {
 		params     string
 	}
 	// GIVEN a Shoutrrr, ServiceInfo and the hard defaults.
-	serviceInfo := serviceinfo.ServiceInfo{
+	svcInfo := serviceinfo.ServiceInfo{
 		ID:            "service_id",
 		LatestVersion: "1.2.3",
 	}
-	hardDefaults := SliceDefaults{}
+	hardDefaults := ShoutrrrsDefaults{}
 	hardDefaults.Default()
 	tests := map[string]struct {
 		title        string
@@ -82,7 +82,7 @@ func TestShoutrrr_getSender(t *testing.T) {
 			wants: wants{
 				title: "",
 				msg: fmt.Sprintf(`%s - %s released`,
-					serviceInfo.ID, serviceInfo.LatestVersion)},
+					svcInfo.ID, svcInfo.LatestVersion)},
 		},
 		"invalid sender URL": {
 			shoutrrrYAML: test.TrimYAML(`
@@ -107,17 +107,17 @@ func TestShoutrrr_getSender(t *testing.T) {
 				t.Fatalf("%s\nfailed to unmarshal main YAML: %v",
 					packageName, err)
 			}
-			status := status.Status{}
-			status.Init(1, 0, 0,
+			svcStatus := status.Status{}
+			svcStatus.Init(1, 0, 0,
 				name, "", "",
 				&dashboard.Options{})
 			shoutrrr.Init(
-				&status,
+				&svcStatus,
 				main,
 				&Defaults{}, hardDefaults[shoutrrr.Type])
 
 			// WHEN getSender is called.
-			_, message, params, url, err := shoutrrr.getSender(tc.title, tc.msg, serviceInfo)
+			_, message, params, url, err := shoutrrr.getSender(tc.title, tc.msg, svcInfo)
 
 			// THEN the expected results are returned.
 			if (err != nil) != tc.wants.err {
@@ -571,11 +571,6 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 				"json_payload_vars": `{"key1":"val1"}`,
 				"query_vars":        `{"foo":"bar"}`},
 		},
-		"shoutrrr - base": {
-			sType:     "shoutrrr",
-			want:      "RAW",
-			urlFields: map[string]string{"raw": "RAW"},
-		},
 	}
 
 	for name, tc := range tests {
@@ -649,7 +644,7 @@ func Test_jsonMapToString(t *testing.T) {
 
 func TestShoutrrr_BuildParams(t *testing.T) {
 	// GIVEN a Shoutrrr and ServiceInfo.
-	serviceInfo := serviceinfo.ServiceInfo{
+	svcInfo := serviceinfo.ServiceInfo{
 		ID:              "service_id",
 		Name:            "service_name",
 		URL:             "service_url",
@@ -695,16 +690,16 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 		},
 		"django vars": {
 			want: fmt.Sprintf("foo%s-%s",
-				serviceInfo.ID, serviceInfo.LatestVersion),
+				svcInfo.ID, svcInfo.LatestVersion),
 			rootValue:        test.StringPtr("foo{{ service_id }}-{{ version }}"),
 			defaultValue:     test.StringPtr("not_this"),
 			hardDefaultValue: test.StringPtr("not_this"),
 		},
 		"all django vars": {
 			want: fmt.Sprintf("foo-%s-%s-%s--%s-%s-%s--%s-%s-%s-%s",
-				serviceInfo.ID, serviceInfo.Name, serviceInfo.URL,
-				serviceInfo.Icon, serviceInfo.IconLinkTo, serviceInfo.WebURL,
-				serviceInfo.LatestVersion, serviceInfo.ApprovedVersion, serviceInfo.DeployedVersion, serviceInfo.LatestVersion),
+				svcInfo.ID, svcInfo.Name, svcInfo.URL,
+				svcInfo.Icon, svcInfo.IconLinkTo, svcInfo.WebURL,
+				svcInfo.LatestVersion, svcInfo.ApprovedVersion, svcInfo.DeployedVersion, svcInfo.LatestVersion),
 			rootValue:        test.StringPtr("foo-{{ service_id }}-{{ service_name }}-{{ service_url }}--{{ icon }}-{{ icon_link_to }}-{{ web_url }}--{{ version }}-{{ approved_version }}-{{ deployed_version }}-{{ latest_version }}"),
 			defaultValue:     test.StringPtr("not_this"),
 			hardDefaultValue: test.StringPtr("not_this"),
@@ -746,7 +741,7 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 			}
 
 			// WHEN BuildParams is called.
-			got := shoutrrr.BuildParams(serviceInfo)
+			got := shoutrrr.BuildParams(svcInfo)
 
 			// THEN the function returns the params to use.
 			if (*got)[key] != tc.want {
