@@ -29,16 +29,46 @@ import (
 
 // Export the flags.
 var (
-	LogLevel             = flag.String("log.level", "INFO", "ERROR, WARN, INFO, VERBOSE or DEBUG")
-	LogTimestamps        = flag.Bool("log.timestamps", false, "Enable timestamps in CLI output.")
-	DataDatabaseFile     = flag.String("data.database-file", "data/argus.db", "Database file path.")
-	WebListenHost        = flag.String("web.listen-host", "0.0.0.0", "IP address to listen on for UI, API, and telemetry.")
-	WebListenPort        = flag.String("web.listen-port", "8080", "Port to listen on for UI, API, and telemetry.")
-	WebCertFile          = flag.String("web.cert-file", "", "HTTPS certificate file path.")
-	WebPKeyFile          = flag.String("web.pkey-file", "", "HTTPS private key file path.")
-	WebRoutePrefix       = flag.String("web.route-prefix", "/", "Prefix for web endpoints")
-	WebBasicAuthUsername = flag.String("web.basic-auth.username", "", "Username for basic auth")
-	WebBasicAuthPassword = flag.String("web.basic-auth.password", "", "Password for basic auth")
+	LogLevel = flag.String(
+		"log.level",
+		"INFO",
+		"ERROR, WARN, INFO, VERBOSE or DEBUG. (env_var=ARGUS_LOG_LEVEL)")
+	LogTimestamps = flag.Bool(
+		"log.timestamps",
+		false,
+		"Enable timestamps in CLI output. (env_var=ARGUS_LOG_TIMESTAMPS)")
+	DataDatabaseFile = flag.String(
+		"data.database-file",
+		"data/argus.db",
+		"Database file path. (env_var=ARGUS_DATA_DATABASE_FILE)")
+	WebListenHost = flag.String(
+		"web.listen-host",
+		"0.0.0.0",
+		"IP address to listen on for UI, API, and telemetry. (env_var=ARGUS_WEB_LISTEN_HOST)")
+	WebListenPort = flag.String(
+		"web.listen-port",
+		"8080",
+		"Port to listen on for UI, API, and telemetry. (env_var=ARGUS_WEB_LISTEN_PORT)")
+	WebCertFile = flag.String(
+		"web.cert-file",
+		"",
+		"HTTPS certificate file path. (env_var=ARGUS_WEB_CERT_FILE)")
+	WebPKeyFile = flag.String(
+		"web.pkey-file",
+		"",
+		"HTTPS private key file path. (env_var=ARGUS_WEB_PKEY_FILE)")
+	WebRoutePrefix = flag.String(
+		"web.route-prefix",
+		"/",
+		"Prefix for web endpoints. (env_var=ARGUS_WEB_ROUTE_PREFIX)")
+	WebBasicAuthUsername = flag.String(
+		"web.basic-auth.username",
+		"",
+		"Username for basic auth. (env_var=ARGUS_WEB_BASIC_AUTH_USERNAME)")
+	WebBasicAuthPassword = flag.String(
+		"web.basic-auth.password",
+		"",
+		"Password for basic auth. (env_var=ARGUS_WEB_BASIC_AUTH_PASSWORD)")
 )
 
 // Settings for the binary.

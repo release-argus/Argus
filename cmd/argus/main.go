@@ -32,11 +32,26 @@ import (
 )
 
 var (
-	configFile       = flag.String("config.file", "config.yml", "Argus configuration file path.")
-	configCheckFlag  = flag.Bool("config.check", false, "Print the fully-parsed config.")
-	testCommandsFlag = flag.String("test.commands", "", "Put the name of the Service to test the `commands` of.")
-	testNotifyFlag   = flag.String("test.notify", "", "Put the name of the Notify service to send a test message.")
-	testServiceFlag  = flag.String("test.service", "", "Put the name of the Service to test the version query.")
+	configFile = flag.String(
+		"config.file",
+		"config.yml",
+		"Argus configuration file path.")
+	configCheckFlag = flag.Bool(
+		"config.check",
+		false,
+		"Print the fully-parsed config.")
+	testCommandsFlag = flag.String(
+		"test.commands",
+		"",
+		"Put the name of the Service to test the `commands` of.")
+	testNotifyFlag = flag.String(
+		"test.notify",
+		"",
+		"Put the name of the Notify service to send a test message.")
+	testServiceFlag = flag.String(
+		"test.service",
+		"",
+		"Put the name of the Service to test the version query.")
 )
 
 // main loads the config and then calls `service.Track` to monitor
