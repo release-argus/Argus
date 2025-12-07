@@ -48,8 +48,8 @@ func (l *Lookup) Track() {
 	}
 }
 
-// Query queries the source,
-// and returns whether a new release was found, and updates LatestVersion if so.
+// Query queries the source
+// and returns whether a new release was found, updating LatestVersion if so.
 //
 // Parameters:
 //
@@ -64,8 +64,8 @@ func (l *Lookup) Query(metrics bool, logFrom logutil.LogFrom) error {
 	return err
 }
 
-// Query queries the source,
-// and returns whether a new release was found, and updates LatestVersion if so.
+// Query queries the source
+// and returns whether a new release was found, updating LatestVersion if so.
 func (l *Lookup) query(writeToDB bool, logFrom logutil.LogFrom) error {
 	body, err := l.httpRequest(logFrom)
 	if err != nil {

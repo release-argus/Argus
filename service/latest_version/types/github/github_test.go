@@ -22,59 +22,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Masterminds/semver/v3"
-
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 )
-
-func TestInsertionSort(t *testing.T) {
-	// GIVEN a list of releases and a release to add.
-	tests := map[string]struct {
-		release  string
-		expectAt int
-	}{
-		"newer release": {
-			release: "1.0.0", expectAt: 0},
-		"middle release": {
-			release: "0.2.0", expectAt: 2},
-		"oldest release": {
-			release: "0.0.0", expectAt: 5},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			releases := []github_types.Release{
-				{TagName: "0.99.0"},
-				{TagName: "0.3.0"},
-				{TagName: "0.1.0"},
-				{TagName: "0.0.1"},
-				{TagName: "0.0.0"},
-			}
-			for i := range releases {
-				semVer, _ := semver.NewVersion(releases[i].TagName)
-				releases[i].SemanticVersion = semVer
-			}
-
-			// WHEN insertionSort is called with a release.
-			release := github_types.Release{TagName: tc.release}
-			semVer, _ := semver.NewVersion(release.TagName)
-			release.SemanticVersion = semVer
-			insertionSort(release, &releases)
-
-			// THEN it can be found at the expected index.
-			if releases[tc.expectAt].TagName != release.TagName {
-				t.Errorf("%s\nwant: %v to be inserted at index %d\ngot:  %v",
-					packageName, release, tc.expectAt, release)
-			}
-		})
-	}
-}
 
 func TestLookup_FilterGitHubReleases(t *testing.T) {
 	// GIVEN a bunch of releases.

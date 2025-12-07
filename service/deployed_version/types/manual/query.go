@@ -28,12 +28,12 @@ func (l *Lookup) Track() {
 }
 
 // Query queries the source
-// and returns whether a new release was found and updates LatestVersion if so.
+// and returns whether a new release was found, updating LatestVersion if so.
 //
 // Parameters:
 //
-//	_metrics: ignored
-func (l *Lookup) Query(_metrics bool, logFrom logutil.LogFrom) error {
+//	metrics: ignored
+func (l *Lookup) Query(metrics bool, logFrom logutil.LogFrom) error {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 

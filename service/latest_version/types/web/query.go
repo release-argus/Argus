@@ -21,13 +21,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
 
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
-// Query queries the source,
-// and returns whether a new release was found, and updates LatestVersion if so.
+// Query queries the source
+// and returns whether a new release was found, updating LatestVersion if so.
 //
 // Parameters:
 //
@@ -42,8 +45,8 @@ func (l *Lookup) Query(metrics bool, logFrom logutil.LogFrom) (bool, error) {
 	return isNewVersion, err
 }
 
-// Query queries the source,
-// and returns whether a new release was found, and updates LatestVersion if so.
+// Query queries the source
+// and returns whether a new release was found, updating LatestVersion if so.
 func (l *Lookup) query(logFrom logutil.LogFrom) (bool, error) {
 	body, err := l.httpRequest(logFrom)
 	if err != nil {
@@ -76,7 +79,7 @@ func (l *Lookup) query(logFrom logutil.LogFrom) (bool, error) {
 	return false, nil
 }
 
-// httpRequest makes a HTTP GET request to the URL, and returns the body.
+// httpRequest makes a HTTP GET request to the URL and returns the body.
 func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 	customTransport := &http.Transport{}
 	// HTTPS insecure skip verify.
@@ -127,6 +130,19 @@ func (l *Lookup) getVersion(body string, logFrom logutil.LogFrom) (string, error
 	}
 	if len(filteredVersions) == 0 {
 		return "", errors.New("no releases were found matching the url_commands")
+	}
+
+	// Sort versions if Semantic Versioning enabled.
+	if l.Options.GetSemanticVersioning() {
+		sort.Slice(filteredVersions, func(i, j int) bool {
+			vI, errI := semver.NewVersion(filteredVersions[i])
+			vJ, errJ := semver.NewVersion(filteredVersions[j])
+
+			if errI != nil || errJ != nil {
+				return false
+			}
+			return vI.GreaterThan(vJ)
+		})
 	}
 
 	// Check all releases for the one meeting the requirements.

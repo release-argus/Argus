@@ -159,7 +159,7 @@ func TestService_Track(t *testing.T) {
 				latestVersion: test.TrimYAML(`
 					url_commands:
 						- type: regex
-							regex: '([0-9.]+)'
+							regex: '"([0-9.]+)"'
 					require: null
 				`),
 			},
@@ -177,7 +177,7 @@ func TestService_Track(t *testing.T) {
 					allow_invalid_certs: true
 					url_commands:
 						- type: regex
-							regex: '([0-9.]+)'
+							regex: '"([0-9.]+)"'
 					require: null
 				`),
 			},
@@ -196,7 +196,7 @@ func TestService_Track(t *testing.T) {
 					allow_invalid_certs: false
 					url_commands:
 						- type: regex
-							regex: '([0-9.]+)'
+							regex: '"([0-9.]+)"'
 					require: null
 				`),
 			},
