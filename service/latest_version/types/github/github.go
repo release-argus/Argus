@@ -18,37 +18,13 @@ package github
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
 
 	"github.com/Masterminds/semver/v3"
 
 	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	"github.com/release-argus/Argus/service/shared"
 	logutil "github.com/release-argus/Argus/util/log"
 )
-
-// insertionSort performs an 'insertion sort' of the given `release` into the `filteredReleases` slice.
-// This operation assumes that semantic versioning is enabled, and sorts the releases accordingly.
-func insertionSort(release github_types.Release, filteredReleases *[]github_types.Release) {
-	n := len(*filteredReleases)
-	// find the insertion point.
-	i := sort.Search(n, func(index int) bool {
-		return (*filteredReleases)[index].SemanticVersion.LessThan(release.SemanticVersion)
-	})
-
-	// append an empty release to the end of the slice.
-	*filteredReleases = append(*filteredReleases, github_types.Release{})
-
-	// insert the release at the insertion point.
-	if i < n {
-		// shift elements to the right to make room for this release.
-		copy((*filteredReleases)[i+1:], (*filteredReleases)[i:])
-		// overwrite the element at the insertion point.
-		(*filteredReleases)[i] = release
-	} else {
-		// append the release to the end of the slice.
-		(*filteredReleases)[n] = release
-	}
-}
 
 // filterGitHubReleases filters releases based on the following:
 //   - URLCommands.
@@ -104,7 +80,7 @@ func (l *Lookup) filterGitHubReleases(logFrom logutil.LogFrom) []github_types.Re
 			continue
 		}
 		// else, insertion sort the release.
-		insertionSort(release, &filteredReleases)
+		filteredReleases = shared.InsertionSort(filteredReleases, release, github_types.ReleaseSort)
 	}
 	return filteredReleases
 }

@@ -30,7 +30,7 @@ import (
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
-	metric "github.com/release-argus/Argus/web/metric"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestHTTPRequest(t *testing.T) {
@@ -66,7 +66,7 @@ func TestHTTPRequest(t *testing.T) {
 			// WHEN httpRequest is called on it.
 			_, err := lookup.httpRequest(logutil.LogFrom{})
 
-			// THEN any err is expected.
+			// THEN any error is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
@@ -85,7 +85,7 @@ func TestGetVersion(t *testing.T) {
 		version 4 is "ver1.2.5"
 	`
 	urlCommand := filter.URLCommand{
-		Type: "regex", Regex: (`([0-9]\.[0-9.]+)`)}
+		Type: "regex", Regex: `([0-9]\.[0-9.]+)`}
 
 	type wantVars struct {
 		version  string
@@ -95,6 +95,7 @@ func TestGetVersion(t *testing.T) {
 	tests := map[string]struct {
 		bodyOverride    *string
 		lookupOverrides string
+		noSemVer        bool
 		want            wantVars
 	}{
 		"nil url_commands": {
@@ -114,6 +115,7 @@ func TestGetVersion(t *testing.T) {
 				errRegex: `^no releases were found matching the url_commands$`},
 		},
 		"nil Require": {
+			noSemVer: true,
 			want: wantVars{
 				version:  "0.0.0",
 				errRegex: `^$`},
@@ -134,6 +136,7 @@ func TestGetVersion(t *testing.T) {
 					- type: regex
 						regex: '"ver([0-9][^"]+)"'
 			`),
+			noSemVer: true,
 			want: wantVars{
 				version:  "1.2.3-dev",
 				errRegex: `^$`},
@@ -156,6 +159,7 @@ func TestGetVersion(t *testing.T) {
 				require:
 					regex_version: ^1\.[0-9.]+$
 			`),
+			noSemVer: true,
 			want: wantVars{
 				version:  "1.2.4",
 				errRegex: `^$`},
@@ -255,6 +259,40 @@ func TestGetVersion(t *testing.T) {
 				version:  "1.2.5",
 				errRegex: `^$`},
 		},
+		"sorts versions when semantic_versioning enabled": {
+			bodyOverride: test.StringPtr(`
+				patch for older major "0.4.7"
+				patch for latest major "v1.0.1"
+				latest major "v1.0.0"
+				older major "0.0.0"
+			`),
+			lookupOverrides: test.TrimYAML(`
+				url_commands:
+					- type: regex
+						regex: '"(v?[0-9][^"]+)"'
+			`),
+			want: wantVars{
+				version:  "v1.0.1",
+				errRegex: `^$`},
+		},
+		"does not sort versions when semantic_versioning disabled": {
+			bodyOverride: test.StringPtr(`
+				patch for older major "0.4.7"
+				patch for latest major "v1.0.1"
+				latest major "v1.0.0"
+				older major "0.0.0"
+			`),
+			lookupOverrides: test.TrimYAML(`
+				semantic_versioning: false
+				url_commands:
+					- type: regex
+						regex: '"(v?[0-9][^"]+)"'
+			`),
+			noSemVer: true,
+			want: wantVars{
+				version:  "0.4.7",
+				errRegex: `^$`},
+		},
 	}
 
 	for name, tc := range tests {
@@ -272,13 +310,16 @@ func TestGetVersion(t *testing.T) {
 				lookup.Options,
 				lookup.Status,
 				lookup.Defaults, lookup.HardDefaults)
+			if tc.noSemVer {
+				*lookup.Options.SemanticVersioning = false
+			}
 			testBody := util.DereferenceOrValue(tc.bodyOverride, body)
 
 			// WHEN getVersion is called on it.
 			version, err := lookup.getVersion(
 				testBody, logutil.LogFrom{})
 
-			// THEN any err is expected.
+			// THEN any error is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
@@ -295,7 +336,7 @@ func TestGetVersion(t *testing.T) {
 
 func TestQuery(t *testing.T) {
 	testLookupVersions := testLookup(false)
-	testLookupVersions.query(logutil.LogFrom{})
+	_, _ = testLookupVersions.query(logutil.LogFrom{})
 
 	type statusVars struct {
 		latestVersion, latestVersionWant string
@@ -569,7 +610,7 @@ func TestQuery(t *testing.T) {
 				var newVersion bool
 				newVersion, err = lookup.Query(true, logutil.LogFrom{})
 
-				// THEN any err is expected.
+				// THEN any error is expected.
 				stdout := releaseStdout()
 				e := util.ErrorToString(err)
 				if !util.RegexCheck(tc.want.errRegex, e) {

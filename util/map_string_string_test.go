@@ -102,28 +102,28 @@ func TestMapStringStringOmitNull_UnmarshalJSON(t *testing.T) {
 			errRegex: `^$`,
 		},
 		"single kv": {
-			input:    test.TrimJSON(`{
+			input: test.TrimJSON(`{
 				"foo":"bar"
 			}`),
 			expected: MapStringStringOmitNull{"foo": "bar"},
 			errRegex: `^$`,
 		},
 		"null value omitted": {
-			input:    test.TrimJSON(`{
+			input: test.TrimJSON(`{
 				"a":null
 			}`),
 			expected: MapStringStringOmitNull{},
 			errRegex: `^$`,
 		},
 		"empty string value kept": {
-			input:    test.TrimJSON(`{
+			input: test.TrimJSON(`{
 				"a":""
 			}`),
 			expected: MapStringStringOmitNull{"a": ""},
 			errRegex: `^$`,
 		},
 		"invalid JSON (array)": {
-			input:    test.TrimJSON(`
+			input: test.TrimJSON(`
 				[]`),
 			errRegex: `json: cannot unmarshal .* into Go value of type map\[string\]\*string`,
 		},

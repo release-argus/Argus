@@ -41,6 +41,11 @@ func (r *Release) String() string {
 	return util.ToJSONString(r)
 }
 
+// ReleaseSort sorts releases by SemanticVersion in descending order.
+func ReleaseSort(a, b Release) bool {
+	return a.SemanticVersion.LessThan(b.SemanticVersion)
+}
+
 // Asset is the format of an Asset on api.github.com/repos/OWNER/REPO/releases.
 type Asset struct {
 	URL                string `json:"url,omitempty"`

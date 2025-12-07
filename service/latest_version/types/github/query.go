@@ -33,7 +33,7 @@ import (
 )
 
 // Query queries the source
-// and returns whether a new release was found and updates LatestVersion if so.
+// and returns whether a new release was found, updating LatestVersion if so.
 //
 // Parameters:
 //   - metrics: if true, set Prometheus metrics based on the query.
@@ -48,7 +48,7 @@ func (l *Lookup) Query(metrics bool, logFrom logutil.LogFrom) (bool, error) {
 }
 
 // Query queries the source
-// and returns whether a new release was found and updates LatestVersion if so.
+// and returns whether a new release was found, updating LatestVersion if so.
 func (l *Lookup) query(logFrom logutil.LogFrom) (bool, error) {
 	page := 1
 	var newVersion bool
