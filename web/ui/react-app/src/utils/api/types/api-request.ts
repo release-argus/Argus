@@ -26,10 +26,11 @@ import type {
 	TemplateParseRequest,
 	TemplateParseRequestBuilder,
 } from '@/utils/api/types/requests/templates';
+import getBasename from '@/utils/get-basename';
 import { deepDiff, type GetChangesProps } from '@/utils/query-params';
 import removeEmptyValues from '@/utils/remove-empty-values';
 
-export const API_BASE = '/api/v1';
+export const API_BASE = `${getBasename()}/api/v1`;
 
 type RequestFns = {
 	[K in keyof RequestType]: (input: RequestType[K]['input']) => {
