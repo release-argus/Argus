@@ -1,6 +1,6 @@
 import { type FC, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import useModal from '@/hooks/use-modal.ts';
+import useModal from '@/hooks/use-modal';
 import type {
 	ModalType,
 	ServiceSummary,

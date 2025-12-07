@@ -8,10 +8,10 @@ import {
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useServiceOrder } from '@/hooks/use-service-order.ts';
-import { QUERY_KEYS } from '@/lib/query-keys.ts';
+import { useServiceOrder } from '@/hooks/use-service-order';
+import { QUERY_KEYS } from '@/lib/query-keys';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
-import diffLists from '@/utils/diff-lists.ts';
+import diffLists from '@/utils/diff-lists';
 
 /**
  * Manage sortable services.
@@ -26,7 +26,7 @@ import diffLists from '@/utils/diff-lists.ts';
  */
 export const useSortableServices = () => {
 	const queryClient = useQueryClient();
-	const { data: orderData } = useServiceOrder();
+	const { data: orderData, isSuccess: haveOrderData } = useServiceOrder();
 	const serverOrder = orderData?.order ?? [];
 
 	// Track the original order of services.
@@ -35,12 +35,12 @@ export const useSortableServices = () => {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: orderData covers serverOrder.
 	useEffect(() => {
 		// Initialise from server order once available.
-		if (serverOrder.length > 0) {
+		if (haveOrderData) {
 			// If a service was added/removed, reset the order to the server order.
 			const diffServiceIDs = diffLists({ listA: order, listB: serverOrder });
-			const applyOrder = !hasOrderChanged || diffServiceIDs;
+			const shouldApplyOrder = !hasOrderChanged || diffServiceIDs;
 
-			if (order.length === 0 || applyOrder) setOrder(serverOrder);
+			if (order.length === 0 || shouldApplyOrder) setOrder(serverOrder);
 		}
 	}, [serverOrder]);
 
@@ -71,13 +71,30 @@ export const useSortableServices = () => {
 	);
 
 	// Reset the order to its original state.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: queryClient stable.
 	const resetOrder = useCallback(() => {
 		const resetTo = serverOrder;
 		if (!resetTo || resetTo.length === 0) return;
 
 		setOrder(resetTo);
 	}, [serverOrder]);
+
+	// Apply a full new order (expects the complete list of service IDs).
+	// Ignore lists of differing length to the current server order.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: haveOrderData stable with serverOrder.
+	const applyOrder = useCallback(
+		(ids: string[]) => {
+			if (!ids || ids.length === 0 || !haveOrderData) return;
+
+			// Validate it is a full permutation of serverOrder.
+			if (ids.length !== serverOrder.length) return;
+			const a = [...ids].toSorted((a, b) => a.localeCompare(b));
+			const b = [...serverOrder].toSorted((a, b) => a.localeCompare(b));
+			for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return;
+
+			setOrder(ids);
+		},
+		[serverOrder],
+	);
 
 	// Send the new ordering to the API.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: resetOrder stable with order.
@@ -106,6 +123,7 @@ export const useSortableServices = () => {
 	);
 
 	return {
+		applyOrder,
 		handleDragEnd,
 		handleSaveOrder,
 		hasOrderChanged,

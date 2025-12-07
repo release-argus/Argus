@@ -1,5 +1,4 @@
 export { default as beautifyGoErrors } from './beautify-go-errors';
-export { default as compareStringArrays } from './compare-string-arrays';
 export {
 	containsEndsWith,
 	containsStartsWith,

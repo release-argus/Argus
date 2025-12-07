@@ -51,6 +51,8 @@ export type ActionModalData = {
 	commands: CommandSummaryListType;
 };
 
+export type ServiceUpdateState = 'AVAILABLE' | 'SKIPPED' | 'UP_TO_DATE' | null;
+
 export type StatusSummaryType = {
 	approved_version?: string;
 	deployed_version?: string;
@@ -58,6 +60,7 @@ export type StatusSummaryType = {
 	latest_version?: string;
 	latest_version_timestamp?: string;
 	last_queried?: string;
+	state?: ServiceUpdateState;
 };
 
 export type WebHookSummaryType = {

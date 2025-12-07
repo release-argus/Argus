@@ -7,7 +7,7 @@ import {
 	notifySchemaMapOutgoing,
 	notifySchemaMapOutgoingWithDefaults,
 } from '@/utils/api/types/config-edit/notify/schemas';
-import diffLists from '@/utils/diff-lists.ts';
+import diffLists from '@/utils/diff-lists';
 
 /**
  * Converts a `NotifiersSchema` object to a `NotifiersSchemaOutgoing` object.

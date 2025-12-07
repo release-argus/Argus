@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
-import useModal from '@/hooks/use-modal.ts';
+import useModal from '@/hooks/use-modal';
 import { useServiceDelete } from '@/hooks/use-service-mutation';
 
 type DeleteModalProps = {

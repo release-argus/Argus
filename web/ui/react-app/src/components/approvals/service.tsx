@@ -9,7 +9,7 @@ import ServiceInfo from '@/components/approvals/service-info';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useDelayedRender } from '@/hooks/use-delayed-render';
-import useModal from '@/hooks/use-modal.ts';
+import useModal from '@/hooks/use-modal';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { isEmptyOrNull } from '@/utils';
@@ -64,13 +64,8 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 	);
 
 	const updateStatus = useMemo(() => {
-		const updateAvailable =
-			data?.status?.deployed_version !== data?.status?.latest_version;
-		const updateSkipped =
-			data?.status?.approved_version !== undefined &&
-			updateAvailable &&
-			data?.status.approved_version ===
-				`SKIP_${data?.status.latest_version ?? ''}`;
+		const updateAvailable = data?.status?.state === 'AVAILABLE';
+		const updateSkipped = data?.status?.state === 'SKIPPED';
 		const updateWarning = updateAvailable && !updateSkipped;
 
 		return {

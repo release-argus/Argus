@@ -1,27 +1,34 @@
-import { closestCenter, DndContext } from '@dnd-kit/core';
-import { SortableContext } from '@dnd-kit/sortable';
 import { useQueryClient } from '@tanstack/react-query';
-import { type ReactElement, useMemo } from 'react';
+import type { Table, VisibilityState } from '@tanstack/react-table';
+import { type ReactElement, useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ApprovalsToolbar, Service } from '@/components/approvals';
+import { ApprovalsToolbar } from '@/components/approvals';
+import { ToolbarProvider } from '@/components/approvals/toolbar/toolbar-context';
 import {
+	APPROVALS_TOOLBAR_VIEW,
 	type ApprovalsToolbarOptions,
 	DEFAULT_HIDE_VALUE,
+	DEFAULT_VIEW_VALUE,
 	HideValue,
 	type HideValueType,
+	isToolbarViewOption,
+	type ToolbarViewOption,
 	URL_PARAMS,
 } from '@/constants/toolbar';
-import { useServices } from '@/hooks/use-services.ts';
+import { useServices } from '@/hooks/use-services';
 import { useSortableServices } from '@/hooks/use-sortable-services';
+import { GridLayout } from '@/pages/approvals/layouts/grid';
+import { TableLayout } from '@/pages/approvals/layouts/table/table';
 import type { TagsTriType } from '@/types/util';
-import type { ServiceSummary } from '@/utils/api/types/config/summary.ts';
+import type { ServiceSummary } from '@/utils/api/types/config/summary';
 
 const toolbarDefaults: ApprovalsToolbarOptions = {
 	editMode: false,
 	hide: DEFAULT_HIDE_VALUE,
 	search: '',
 	tags: { exclude: [], include: [] },
+	view: DEFAULT_VIEW_VALUE,
 };
 
 /**
@@ -29,7 +36,9 @@ const toolbarDefaults: ApprovalsToolbarOptions = {
  */
 export const Approvals = (): ReactElement => {
 	const queryClient = useQueryClient();
-	const [searchParams] = useSearchParams();
+	const [searchParams, setSearchParams] = useSearchParams();
+	// Signal for resetting table sorting when order is reset.
+	const [resetSortingSignal, setResetSortingSignal] = useState(0);
 
 	const toolbarOptions: ApprovalsToolbarOptions = useMemo(() => {
 		const search =
@@ -82,7 +91,12 @@ export const Approvals = (): ReactElement => {
 			}
 		}
 
-		return { editMode, hide, search, tags };
+		const rawView = searchParams.get(URL_PARAMS.VIEW);
+		const view: ApprovalsToolbarOptions['view'] = isToolbarViewOption(rawView)
+			? rawView
+			: toolbarDefaults.view;
+
+		return { editMode, hide, search, tags, view };
 	}, [searchParams]);
 
 	const {
@@ -92,6 +106,7 @@ export const Approvals = (): ReactElement => {
 		handleSaveOrder,
 		hasOrderChanged,
 		resetOrder,
+		applyOrder,
 	} = useSortableServices();
 
 	const services = useServices(order);
@@ -135,19 +150,15 @@ export const Approvals = (): ReactElement => {
 				if (!name.includes(search)) return false;
 
 				// Filter on 'hide' options.
-				const skipped =
-					service.status?.latest_version &&
-					service.status.approved_version ===
-						`SKIP_${service.status.latest_version}`;
-				const upToDate =
-					service.status?.deployed_version === service.status?.latest_version;
+				const skipped = service.status?.state === 'SKIPPED';
+				const upToDate = service.status?.state === 'UP_TO_DATE';
 				const hideInactiveServices = hide.includes(HideValue.Inactive);
 				return (
 					// hideUpToDate: deployed_version NOT latest_version.
 					(!hide.includes(HideValue.UpToDate) || !upToDate) &&
-					// hideUpdatable: deployed_version IS latest_version AND approved_version NOT "SKIP_"+latest_version.
+					// hideUpdatable: deployed_version IS latest_version AND approved_version NOT a skip of latest_version.
 					(!hide.includes(HideValue.Updatable) || upToDate || skipped) &&
-					// hideSkipped: approved_version NOT "SKIP_"+latest_version OR NO approved_version.
+					// hideSkipped: approved_version NOT a skip of latest_version OR NO approved_version.
 					(!hide.includes(HideValue.Skipped) || !skipped) &&
 					// hideInactive: active NOT false.
 					(!hideInactiveServices || service.active !== false)
@@ -157,42 +168,159 @@ export const Approvals = (): ReactElement => {
 			.filter(Boolean) as ServiceSummary[];
 	}, [toolbarOptions, queryClient, services]);
 
+	// URL param helpers and context value
+	type URLParam = boolean | number[] | readonly number[] | string | string[];
+
+	const updateURLParam = useCallback(
+		(
+			key: (typeof URL_PARAMS)[keyof typeof URL_PARAMS],
+			value: URLParam,
+			defaultValue: URLParam,
+		) => {
+			const newSearchParams = new URLSearchParams(globalThis.location.search);
+
+			if (Array.isArray(value)) {
+				if (JSON.stringify(value) === JSON.stringify(defaultValue)) {
+					newSearchParams.delete(key);
+				} else {
+					newSearchParams.set(key, JSON.stringify(value));
+				}
+			} else if (value === defaultValue) {
+				newSearchParams.delete(key);
+			} else {
+				newSearchParams.set(key, value.toString());
+			}
+
+			setSearchParams(newSearchParams);
+		},
+		[setSearchParams],
+	);
+
+	const setValue = useCallback(
+		(
+			key: (typeof URL_PARAMS)[keyof typeof URL_PARAMS],
+			value: string | boolean | number[] | readonly number[] | string[],
+		) => {
+			switch (key) {
+				case URL_PARAMS.SEARCH:
+					updateURLParam(key, value, '');
+					break;
+				case URL_PARAMS.TAGS_INCLUDE:
+				case URL_PARAMS.TAGS_EXCLUDE:
+					updateURLParam(key, value, []);
+					break;
+				case URL_PARAMS.EDIT_MODE:
+					updateURLParam(key, value, false);
+					break;
+				case URL_PARAMS.HIDE:
+					updateURLParam(key, value, DEFAULT_HIDE_VALUE);
+					break;
+				case URL_PARAMS.VIEW:
+					updateURLParam(key, value, DEFAULT_VIEW_VALUE);
+					break;
+				default:
+					break;
+			}
+		},
+		[updateURLParam],
+	);
+
+	// Reset service order and table sorting.
+	const resetSorting = useCallback(() => {
+		resetOrder();
+		setResetSortingSignal((x) => x + 1);
+	}, [resetOrder]);
+
+	const toggleEditMode = useCallback(() => {
+		const newValue = !toolbarOptions.editMode;
+		updateURLParam(URL_PARAMS.EDIT_MODE, newValue, false);
+		if (!newValue) {
+			// Turning edit mode off: reset order and table sorting
+			resetSorting();
+		}
+	}, [toolbarOptions.editMode, updateURLParam, resetSorting]);
+
+	// Set the 'search' filter.
+	const setSearch = useCallback(
+		(value: string) => setValue(URL_PARAMS.SEARCH, value),
+		[setValue],
+	);
+
+	// Set the 'tags' filter.
+	const setTags = useCallback(
+		(newTags: TagsTriType) => {
+			setValue(URL_PARAMS.TAGS_INCLUDE, newTags.include);
+			setValue(URL_PARAMS.TAGS_EXCLUDE, newTags.exclude);
+		},
+		[setValue],
+	);
+
+	// Set that layout.
+	const setView = useCallback(
+		(value: ToolbarViewOption) => setValue(URL_PARAMS.VIEW, value),
+		[setValue],
+	);
+
+	// Set the 'hide' filter options.
+	const setHide = useCallback(
+		(value: number[]) => setValue(URL_PARAMS.HIDE, value),
+		[setValue],
+	);
+
+	// Table instance for the 'table' view.
+	const [tableInstance, setTableInstance] = useState<
+		Table<ServiceSummary> | undefined
+	>(undefined);
+
+	// Column order for the 'table' view.
+	const [tableColumnOrder, setTableColumnOrder] = useState<string[]>([]);
+	// Column visibility for the 'table' view.
+	const [tableColumnVisibility, setTableColumnVisibility] =
+		useState<VisibilityState>({});
+
 	return (
-		<>
-			<ApprovalsToolbar
-				hasOrderChanged={hasOrderChanged}
-				onEditModeToggle={(value: boolean) => {
-					if (!value) resetOrder();
-				}}
-				onSaveOrder={() => handleSaveOrder()}
-				values={toolbarOptions}
-			/>
-			<div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(17.5rem,1fr))]">
-				<DndContext
-					autoScroll={{
-						acceleration: 100,
-						enabled: true,
-						interval: 5,
-						threshold: {
-							x: 0.2, // Start scrolling when within 20% of the edge.
-							y: 0.2,
-						},
-					}}
-					collisionDetection={closestCenter}
-					onDragEnd={handleDragEnd}
+		<ToolbarProvider
+			value={{
+				hasOrderChanged,
+				onSaveOrder: handleSaveOrder,
+				setHide,
+				setSearch,
+				setTableColumnOrder,
+				setTableColumnVisibility,
+				setTableInstance,
+				setTags,
+				setView,
+				tableColumnOrder,
+				tableColumnVisibility,
+
+				tableInstance,
+				toggleEditMode,
+
+				values: toolbarOptions,
+			}}
+		>
+			<ApprovalsToolbar />
+			{toolbarOptions.view === APPROVALS_TOOLBAR_VIEW.GRID.value && (
+				<GridLayout
+					editMode={toolbarOptions.editMode}
+					handleDragEnd={handleDragEnd}
+					order={order}
 					sensors={sensors}
-				>
-					<SortableContext items={order}>
-						{filteredServices.map((s) => (
-							<Service
-								editable={toolbarOptions.editMode}
-								id={s.id}
-								key={s.id}
-							/>
-						))}
-					</SortableContext>
-				</DndContext>
-			</div>
-		</>
+					services={filteredServices}
+				/>
+			)}
+			{toolbarOptions.view === APPROVALS_TOOLBAR_VIEW.TABLE.value && (
+				<TableLayout
+					applyOrder={applyOrder}
+					editMode={toolbarOptions.editMode}
+					handleDragEnd={handleDragEnd}
+					order={order}
+					resetSorting={resetSorting}
+					resetSortingSignal={resetSortingSignal}
+					sensors={sensors}
+					services={filteredServices}
+				/>
+			)}
+		</ToolbarProvider>
 	);
 };

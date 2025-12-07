@@ -3,7 +3,7 @@ import type { FC } from 'react';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
 import { Button } from '@/components/ui/button';
 import Tip from '@/components/ui/tip';
-import useModal from '@/hooks/use-modal.ts';
+import useModal from '@/hooks/use-modal';
 
 /**
  * EditModeToggle

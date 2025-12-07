@@ -7,7 +7,7 @@ import { handleMessage } from '@/handlers/websocket';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import type { WebSocketResponse } from '@/types/websocket';
 import { getBasename } from '@/utils';
-import approvalsQueryCacheUpdater from '@/utils/api/query-cache.ts';
+import approvalsQueryCacheUpdater from '@/utils/api/query-cache';
 
 type WebSocketContextProps = {
 	/* The WebSocket connection. */

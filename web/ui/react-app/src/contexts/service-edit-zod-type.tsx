@@ -1,6 +1,6 @@
 import { createContext, type FC, type ReactNode, use, useMemo } from 'react';
-import { useServiceOrder } from '@/hooks/use-service-order.ts';
-import { useServices } from '@/hooks/use-services.ts';
+import { useServiceOrder } from '@/hooks/use-service-order';
+import { useServices } from '@/hooks/use-services';
 import type { ServiceEditOtherData } from '@/utils/api/types/config/defaults';
 import type { Service } from '@/utils/api/types/config/service';
 import { buildServiceSchemaWithFallbacks } from '@/utils/api/types/config-edit/service/form/builder';

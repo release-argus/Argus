@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { QUERY_KEYS } from '@/lib/query-keys.ts';
-import { mapRequest } from '@/utils/api/types/api-request-handler.ts';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import { mapRequest } from '@/utils/api/types/api-request-handler';
 
 /**
  * Fetch service detail for a given service.

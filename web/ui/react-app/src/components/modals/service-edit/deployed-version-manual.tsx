@@ -13,14 +13,14 @@ import {
 	InputGroupInput,
 } from '@/components/ui/input-group';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
-import { useServiceSummary } from '@/hooks/use-service-summary.ts';
+import { useServiceSummary } from '@/hooks/use-service-summary';
 import useValuesRefetch from '@/hooks/values-refetch';
-import { QUERY_KEYS } from '@/lib/query-keys.ts';
+import { QUERY_KEYS } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { beautifyGoErrors } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
-import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version.ts';
-import type { ServiceSummary } from '@/utils/api/types/config/summary.ts';
+import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version';
+import type { ServiceSummary } from '@/utils/api/types/config/summary';
 
 /* The throttle time for saving the version. */
 const SAVE_THROTTLE_MS = 1000;

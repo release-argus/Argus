@@ -362,7 +362,7 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 	const fallbackType = Object.values(latestVersionLookupTypeOptions)[0].value;
 	const combinedDefaults = applyDefaultsRecursive<LatestVersionLookupDefaults>(
 		defaults ?? null,
-		hardDefaults ?? {},
+		hardDefaults,
 		{ type: fallbackType },
 	);
 	const typeDefault = isLatestVersionType(combinedDefaults.type)

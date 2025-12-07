@@ -7,7 +7,7 @@ import {
 	z,
 } from 'zod';
 import { isEmptyOrNull } from '@/utils';
-import { isEmpty } from '@/utils/is-empty.ts';
+import { isEmpty } from '@/utils/is-empty';
 
 /* Field validation */
 

@@ -36,7 +36,7 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 	const path = 'deployed_version';
 	const combinedDefaults = applyDefaultsRecursive<DeployedVersionLookup>(
 		defaults ?? null,
-		hardDefaults ?? {},
+		hardDefaults,
 	);
 
 	// Manual schema.
@@ -97,7 +97,7 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 	const schemaData = safeParse({
 		data: {
 			allow_invalid_certs: null,
-			...(data ?? {}),
+			...data,
 			...fallbackData,
 		},
 		fallback: fallbackData,
