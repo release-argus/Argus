@@ -4,23 +4,23 @@
 
 <div align="center">
 
-  Keeping an eye on releases.
+Keeping an eye on releases.
 
-  [![GitHub](https://img.shields.io/github/license/release-argus/argus)](https://github.com/release-argus/Argus/blob/master/LICENSE)
-  [![Go Report Card](https://goreportcard.com/badge/github.com/release-argus/Argus)](https://goreportcard.com/report/github.com/release-argus/Argus)
-  [![GitHub go.mod Go version (subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/release-argus/argus?filename=go.mod)](https://go.dev/dl/)
-  [![GitHub package.json dependency version (subfolder of monorepo)](https://img.shields.io/github/package-json/dependency-version/release-argus/argus/react?filename=web%2Fui%2Freact-app%2Fpackage.json)](https://reactjs.org/)
-  [![Codecov](https://img.shields.io/codecov/c/github/release-argus/argus)](https://app.codecov.io/gh/release-argus/Argus)
-  <br>
-  [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/release-argus/Argus/build-binary.yml)](https://github.com/release-argus/Argus/actions/workflows/build-binary.yml)
-  [![GitHub release (latest by date)](https://img.shields.io/github/v/release/release-argus/argus)](https://github.com/release-argus/Argus/releases)
-  [![GitHub all releases](https://img.shields.io/github/downloads/release-argus/argus/total)](https://github.com/release-argus/Argus/releases)
-  [![GitHub release (latest by SemVer)](https://img.shields.io/github/downloads/release-argus/argus/latest/total)](https://github.com/release-argus/Argus/releases/latest)
-  <br>
-  [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/release-argus/Argus/build-docker.yml)](https://github.com/release-argus/Argus/actions/workflows/build-docker.yml)
-  [![Docker Image Version (latest semver)](https://img.shields.io/docker/v/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
-  [![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
-  [![Docker Pulls](https://img.shields.io/docker/pulls/releaseargus/argus)](https://hub.docker.com/r/releaseargus/argus)
+[![GitHub](https://img.shields.io/github/license/release-argus/argus)](https://github.com/release-argus/Argus/blob/master/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/release-argus/Argus)](https://goreportcard.com/report/github.com/release-argus/Argus)
+[![GitHub go.mod Go version (subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/release-argus/argus?filename=go.mod)](https://go.dev/dl/)
+[![GitHub package.json dependency version (subfolder of monorepo)](https://img.shields.io/github/package-json/dependency-version/release-argus/argus/react?filename=web%2Fui%2Freact-app%2Fpackage.json)](https://reactjs.org/)
+[![Codecov](https://img.shields.io/codecov/c/github/release-argus/argus)](https://app.codecov.io/gh/release-argus/Argus)
+<br>
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/release-argus/Argus/build-binary.yml)](https://github.com/release-argus/Argus/actions/workflows/build-binary.yml)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/release-argus/argus)](https://github.com/release-argus/Argus/releases)
+[![GitHub all releases](https://img.shields.io/github/downloads/release-argus/argus/total)](https://github.com/release-argus/Argus/releases)
+[![GitHub release (latest by SemVer)](https://img.shields.io/github/downloads/release-argus/argus/latest/total)](https://github.com/release-argus/Argus/releases/latest)
+<br>
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/release-argus/Argus/build-docker.yml)](https://github.com/release-argus/Argus/actions/workflows/build-docker.yml)
+[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
+[![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
+[![Docker Pulls](https://img.shields.io/docker/pulls/releaseargus/argus)](https://hub.docker.com/r/releaseargus/argus)
 
 </div>
 
@@ -50,29 +50,33 @@ Usage of /usr/local/bin/argus:
   -config.check
         Print the fully-parsed config.
   -config.file string
-        Argus configuration file path. (default "config.yml")
+        Argus configuration file path. (env_var=ARGUS_CONFIG_FILE) (default "config.yml")
+  -data.database-file string
+        Database file path. (env_var=ARGUS_DATA_DATABASE_FILE) (default "data/argus.db")
   -log.level string
-        ERROR, WARN, INFO, VERBOSE or DEBUG (default "INFO")
+        ERROR, WARN, INFO, VERBOSE or DEBUG. (env_var=ARGUS_LOG_LEVEL) (default "INFO")
   -log.timestamps
-        Enable timestamps in CLI output.
+        Enable timestamps in CLI output. (env_var=ARGUS_LOG_TIMESTAMPS)
+  -test.commands commands
+        Put the name of the Service to test the commands of.
   -test.notify string
         Put the name of the Notify service to send a test message.
   -test.service string
         Put the name of the Service to test the version query.
   -web.basic-auth.password string
-        Password for basic auth
+        Password for basic auth. (env_var=ARGUS_WEB_BASIC_AUTH_PASSWORD)
   -web.basic-auth.username string
-        Username for basic auth
+        Username for basic auth. (env_var=ARGUS_WEB_BASIC_AUTH_USERNAME)
   -web.cert-file string
-        HTTPS certificate file path.
+        HTTPS certificate file path. (env_var=ARGUS_WEB_CERT_FILE)
   -web.listen-host string
-        IP address to listen on for UI, API, and telemetry. (default "0.0.0.0")
+        IP address to listen on for UI, API, and telemetry. (env_var=ARGUS_WEB_LISTEN_HOST) (default "0.0.0.0")
   -web.listen-port string
-        Port to listen on for UI, API, and telemetry. (default "8080")
+        Port to listen on for UI, API, and telemetry. (env_var=ARGUS_WEB_LISTEN_PORT) (default "8080")
   -web.pkey-file string
-        HTTPS private key file path.
+        HTTPS private key file path. (env_var=ARGUS_WEB_PKEY_FILE)
   -web.route-prefix string
-        Prefix for web endpoints (default "/")
+        Prefix for web endpoints. (env_var=ARGUS_WEB_ROUTE_PREFIX) (default "/")
 ```
 
 ## Building from source
