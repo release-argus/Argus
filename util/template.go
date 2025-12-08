@@ -50,10 +50,11 @@ func TemplateString(template string, context serviceinfo.ServiceInfo) string {
 		"icon":             context.Icon,
 		"icon_link_to":     context.IconLinkTo,
 		"web_url":          context.WebURL,
-		"version":          context.LatestVersion,
 		"approved_version": context.ApprovedVersion,
 		"deployed_version": context.DeployedVersion,
+		"version":          context.LatestVersion,
 		"latest_version":   context.LatestVersion,
+		"tags":             context.Tags,
 	})
 	if err != nil {
 		panic(err)

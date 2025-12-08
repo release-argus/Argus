@@ -19,7 +19,7 @@ import "sync"
 
 // ServiceInfo holds information about a service.
 type ServiceInfo struct {
-	mutex *sync.RWMutex `json:"-"` // Mutex for thread-safe access
+	mutex *sync.RWMutex // Mutex for thread-safe access
 
 	ID   string `json:"id,omitempty"`   // Service ID
 	Name string `json:"name,omitempty"` // Service name
@@ -32,6 +32,8 @@ type ServiceInfo struct {
 	ApprovedVersion string `json:"approved_version,omitempty"` // The version of the Service that has been approved for deployment.
 	DeployedVersion string `json:"deployed_version,omitempty"` // The version of the Service that is deployed.
 	LatestVersion   string `json:"latest_version,omitempty"`   // The latest version of the Service found from query().
+
+	Tags []string `json:"tags,omitempty"` // Tags for the Service.
 }
 
 // SetMutex sets the mutex pointer for thread-safe access.

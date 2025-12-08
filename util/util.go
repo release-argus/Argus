@@ -64,18 +64,18 @@ func ValueOrValue[T comparable](first T, second T) T {
 	return second
 }
 
-// DereferenceOrDefault returns the value of `check` if not nil,
+// DereferenceOrDefault returns the value of `ptr` if not nil,
 // otherwise default for the type.
-func DereferenceOrDefault[T comparable](check *T) T {
-	if check == nil {
+func DereferenceOrDefault[T any](ptr *T) T {
+	if ptr == nil {
 		return *new(T)
 	}
-	return *check
+	return *ptr
 }
 
 // DereferenceOrValue returns the value of 'ptr' if non-nil,
 // otherwise the 'fallback'.
-func DereferenceOrValue[T comparable](ptr *T, fallback T) T {
+func DereferenceOrValue[T any](ptr *T, fallback T) T {
 	if ptr != nil {
 		return *ptr
 	}
@@ -83,7 +83,7 @@ func DereferenceOrValue[T comparable](ptr *T, fallback T) T {
 }
 
 // CopyPointer returns a pointer to a copy of the value of `ptr`.
-func CopyPointer[T comparable](ptr *T) *T {
+func CopyPointer[T any](ptr *T) *T {
 	if ptr == nil {
 		return nil
 	}

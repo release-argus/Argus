@@ -18,6 +18,7 @@ package util
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -188,6 +189,12 @@ func TestDereferenceOrValue(t *testing.T) {
 		"non-nil int pointer": {
 			ptr:   test.IntPtr(3),
 			value: 2, want: 3},
+		"nil string slice": {
+			ptr:   (*[]string)(nil),
+			value: []string{"baz"}, want: []string{"baz"}},
+		"non-nil string slice": {
+			ptr:   test.StringSlicePtr([]string{"foo", "bar"}),
+			value: []string{"baz"}, want: []string{"foo", "bar"}},
 	}
 
 	for name, tc := range tests {
@@ -203,10 +210,12 @@ func TestDereferenceOrValue(t *testing.T) {
 				got = DereferenceOrValue(v, tc.value.(bool))
 			case *int:
 				got = DereferenceOrValue(v, tc.value.(int))
+			case *[]string:
+				got = DereferenceOrValue(v, tc.value.([]string))
 			}
 
 			// THEN the pointer is returned if it's nil, otherwise the value.
-			if got != tc.want {
+			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("%s\nwant: %v\ngot:  %v",
 					packageName, tc.want, got)
 			}
@@ -216,15 +225,28 @@ func TestDereferenceOrValue(t *testing.T) {
 
 func TestCopyPointer(t *testing.T) {
 	tests := map[string]struct {
-		input, want *int
+		input    any
+		doesCopy bool
 	}{
 		"nil pointer": {
-			input: nil,
-			want:  nil,
+			input:    nil,
+			doesCopy: false,
 		},
-		"non-nil pointer": {
-			input: test.IntPtr(6),
-			want:  test.IntPtr(6),
+		"non-nil int pointer": {
+			input:    test.IntPtr(6),
+			doesCopy: true,
+		},
+		"non-nil string pointer": {
+			input:    test.StringPtr("foo"),
+			doesCopy: true,
+		},
+		"non-nil bool pointer": {
+			input:    test.BoolPtr(true),
+			doesCopy: true,
+		},
+		"non-nil string slice pointer": {
+			input:    test.StringSlicePtr([]string{"foo", "bar"}),
+			doesCopy: true,
 		},
 	}
 
@@ -233,14 +255,24 @@ func TestCopyPointer(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CopyPointer is called.
-			got := CopyPointer(tc.input)
+			var got any
+			switch v := tc.input.(type) {
+			case *string:
+				got = CopyPointer(v)
+			case *bool:
+				got = CopyPointer(v)
+			case *int:
+				got = CopyPointer(v)
+			case *[]string:
+				got = CopyPointer(v)
+			}
 
 			// THEN the result should be a pointer to a copy of the value.
-			if (tc.want != nil && got == nil) ||
-				(tc.want == nil && got != nil) ||
-				(got != nil && *tc.want != *got) {
+			if (tc.doesCopy && got == nil) ||
+				(tc.doesCopy && !reflect.DeepEqual(got, tc.input)) ||
+				(!tc.doesCopy && got != nil) {
 				t.Errorf("%s\nwant %v, got %v",
-					packageName, tc.want, got)
+					packageName, tc.input, got)
 			}
 		})
 	}
