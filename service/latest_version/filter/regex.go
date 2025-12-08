@@ -18,6 +18,7 @@ package filter
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
@@ -119,6 +120,14 @@ func (r *Require) RegexCheckContentGitHub(
 		match := r.regexCheckString(version, logFrom,
 			asset.Name, asset.BrowserDownloadURL)
 		if match {
+			releaseDate := asset.CreatedAt
+			if _, err := time.Parse(time.RFC3339, releaseDate); err != nil && releaseDate != "" {
+				logutil.Log.Warn(
+					fmt.Errorf("ignoring release date of %q for version %q on %q as it's not in RFC3339 format\n%w",
+						releaseDate, version, r.Status.GetServiceInfo().ID, err),
+					logFrom, true)
+				return "", nil
+			}
 			// Copy asset date as release date.
 			return asset.CreatedAt, nil
 		}

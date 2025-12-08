@@ -17,10 +17,12 @@
 package filter
 
 import (
+	"strings"
 	"testing"
 
 	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	"github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 )
@@ -47,6 +49,7 @@ func TestRequire_RegexCheckVersion(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			if tc.require != nil {
 				tc.require.Status = &status.Status{}
@@ -96,6 +99,7 @@ func TestRequire_RegexCheckContent(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			if tc.require != nil {
 				tc.require.Status = &status.Status{}
@@ -117,42 +121,66 @@ func TestRequire_RegexCheckContent(t *testing.T) {
 func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 	// GIVEN a Require.
 	tests := map[string]struct {
-		require         *Require
-		body            []github_types.Asset
-		wantReleaseDate string
-		errRegex        string
+		require               *Require
+		body                  []github_types.Asset
+		wantReleaseDate       string
+		stdoutRegex, errRegex string
 	}{
 		"nil require": {
-			require:  nil,
-			errRegex: `^$`,
+			require:     nil,
+			stdoutRegex: `^$`,
+			errRegex:    `^$`,
 		},
 		"empty regex_content": {
-			require:  &Require{},
-			errRegex: `^$`,
+			require:     &Require{},
+			stdoutRegex: `^$`,
+			errRegex:    `^$`,
 		},
-		"github api body match": {
+		"github api, body match": {
 			require: &Require{
 				RegexContent: `argus-[0-9.]+.linux-amd64`},
-			errRegex: `^$`,
+			stdoutRegex: `^(DEBUG:.*\s){3}$`, // 3: name+browser_download_url for darwin, name for linux.
+			errRegex:    `^$`,
 			body: []github_types.Asset{
 				{Name: "argus-1.2.3.darwin-amd64", CreatedAt: "2020-01-01T00:00:00Z"},
 				{Name: "argus-1.2.3.linux-amd64", CreatedAt: "2021-01-01T00:00:00Z"},
 				{Name: "argus-1.2.3.windows-amd64", CreatedAt: "2022-01-01T00:00:00Z"}},
 			wantReleaseDate: "2021-01-01T00:00:00Z",
 		},
-		"github api body no match": {
+		"github api, body no match": {
 			require: &Require{
 				RegexContent: `argus-[0-9.]+.linux-amd64`},
-			errRegex: `regex .* not matched on content`,
+			stdoutRegex: `^(DEBUG:.*\s){6}INFO: regex.*not matched on content.*\s$`, // 6: name+browser_download_url for darwin/linux/windows.
+			errRegex:    `regex .* not matched on content`,
 			body: []github_types.Asset{
 				{Name: "argus-1.2.3.darwin-amd64"},
 				{Name: "argus-1.2.3.linux-arm64"},
 				{Name: "argus-1.2.3.windows-amd64"}},
 		},
+		"github api, missing created_at": {
+			require: &Require{
+				RegexContent: `argus-[0-9.]+.linux-amd64`},
+			stdoutRegex: `^DEBUG:.*\s$`,
+			errRegex:    `^$`,
+			body: []github_types.Asset{
+				{Name: "argus-1.2.3.linux-amd64", CreatedAt: ""}},
+			wantReleaseDate: "",
+		},
+		"github api, invalid created_at": {
+			require: &Require{
+				RegexContent: `argus-[0-9.]+.linux-amd64`},
+			stdoutRegex: `^DEBUG:.*\sWARNING: ignoring release date of "tomorrow" for version .*`,
+			errRegex:    `^$`,
+			body: []github_types.Asset{
+				{Name: "argus-1.2.3.linux-amd64", CreatedAt: "tomorrow"}},
+			wantReleaseDate: "",
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseStdout := test.CaptureStdout()
 
 			if tc.require != nil {
 				tc.require.Status = &status.Status{}
@@ -171,6 +199,16 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 			if releaseDate != tc.wantReleaseDate {
 				t.Errorf("%s\nRelease date mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantReleaseDate, releaseDate)
+			}
+			// AND any log output is as expected.
+			stdout := releaseStdout()
+			// stdout finishes.
+			if tc.stdoutRegex != "" {
+				tc.stdoutRegex = strings.ReplaceAll(tc.stdoutRegex, "__name__", name)
+				if !util.RegexCheck(tc.stdoutRegex, stdout) {
+					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.stdoutRegex, stdout)
+				}
 			}
 		})
 	}

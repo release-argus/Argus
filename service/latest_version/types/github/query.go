@@ -376,17 +376,18 @@ func (l *Lookup) releaseMeetsRequirements(release github_types.Release, logFrom 
 	}
 	releaseDate := release.PublishedAt
 
+	// Verify the date is in RFC3339 format.
+	if _, err := time.Parse(time.RFC3339, releaseDate); err != nil {
+		logutil.Log.Warn(
+			fmt.Errorf("ignoring release date of %q for version %q on %q as it's not in RFC3339 format\n%w",
+				releaseDate, version, l.GetServiceID(), err),
+			logFrom, releaseDate != "",
+		)
+		releaseDate = ""
+	}
+
 	// No `Require` filters; return the version and release date.
 	if l.Require == nil {
-		// Verify that date is in RFC3339 format.
-		if _, err := time.Parse(time.RFC3339, releaseDate); err != nil {
-			logutil.Log.Warn(
-				fmt.Errorf("ignoring release date of %q for version %q on %q as it's not in RFC3339 format\n%w",
-					releaseDate, version, l.GetServiceID(), err),
-				logFrom, true)
-			releaseDate = ""
-		}
-
 		return version, releaseDate, nil
 	}
 
@@ -421,15 +422,6 @@ func (l *Lookup) releaseMeetsRequirements(release github_types.Release, logFrom 
 			fmt.Sprintf(`found %s container "%s:%s"`,
 				l.Require.Docker.GetType(), l.Require.Docker.Image, l.Require.Docker.GetTag(version)),
 			logFrom, true)
-	}
-
-	// Verify date is in RFC3339 format.
-	if _, err := time.Parse(time.RFC3339, releaseDate); err != nil {
-		logutil.Log.Warn(
-			fmt.Errorf("ignoring release date of %q for version %q on %q as it's not in RFC3339 format\n%w",
-				releaseDate, version, l.GetServiceID(), err),
-			logFrom, true)
-		releaseDate = ""
 	}
 
 	return version, releaseDate, nil
