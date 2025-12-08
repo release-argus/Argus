@@ -16,7 +16,6 @@
 package web
 
 import (
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -81,12 +80,11 @@ func (l *Lookup) query(logFrom logutil.LogFrom) (bool, error) {
 
 // httpRequest makes a HTTP GET request to the URL and returns the body.
 func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
-	customTransport := &http.Transport{}
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
 	// HTTPS insecure skip verify.
 	if l.allowInvalidCerts() {
-		customTransport = http.DefaultTransport.(*http.Transport).Clone()
 		//#nosec G402 -- explicitly wanted InsecureSkipVerify
-		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		customTransport.TLSClientConfig.InsecureSkipVerify = true
 	}
 
 	// Create the request.

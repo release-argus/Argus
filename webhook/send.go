@@ -17,7 +17,6 @@ package webhook
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -124,11 +123,10 @@ func (wh *WebHook) try(logFrom logutil.LogFrom) error {
 	defer cancel()
 
 	// HTTPS insecure skip verify.
-	customTransport := &http.Transport{}
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
 	if wh.GetAllowInvalidCerts() {
-		customTransport = http.DefaultTransport.(*http.Transport).Clone()
 		//#nosec G402 -- explicitly wanted InsecureSkipVerify.
-		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		customTransport.TLSClientConfig.InsecureSkipVerify = true
 	}
 
 	client := &http.Client{Transport: customTransport}
