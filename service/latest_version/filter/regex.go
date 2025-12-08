@@ -124,7 +124,7 @@ func (r *Require) RegexCheckContentGitHub(
 			if _, err := time.Parse(time.RFC3339, releaseDate); err != nil && releaseDate != "" {
 				logutil.Log.Warn(
 					fmt.Errorf("ignoring release date of %q for version %q on %q as it's not in RFC3339 format\n%w",
-						releaseDate, version, r.Status.GetServiceInfo().ID, err),
+						releaseDate, version, r.Status.ServiceInfo.ID, err),
 					logFrom, true)
 				return "", nil
 			}
