@@ -51,11 +51,12 @@ func TestStatus_Unmarshal(t *testing.T) {
 
 			// WHEN UnmarshalX is called on the Status.
 			var status Status
-			if tc.format == "YAML" {
+			switch tc.format {
+			case "YAML":
 				var node yaml.Node
-				status.UnmarshalYAML(&node)
-			} else if tc.format == "JSON" {
-				status.UnmarshalJSON([]byte(""))
+				_ = status.UnmarshalYAML(&node)
+			case "JSON":
+				_ = status.UnmarshalJSON([]byte(""))
 			}
 
 			// THEN the mutex is correctly handed to the ServiceInfo.
@@ -189,6 +190,8 @@ func TestService_ServiceInfo(t *testing.T) {
 	status.Dashboard.IconLinkTo = iconLinkTo
 	webURL := "https://example.com/web"
 	status.Dashboard.WebURL = webURL
+	tags := []string{"tag1", "tag2"}
+	status.ServiceInfo.Tags = tags
 
 	approvedVersion := "approved.version"
 	status.SetApprovedVersion(approvedVersion, false)
@@ -210,6 +213,7 @@ func TestService_ServiceInfo(t *testing.T) {
 		Icon:       icon,
 		IconLinkTo: iconLinkTo,
 		WebURL:     webURL,
+		Tags:       tags,
 
 		DeployedVersion: deployedVersion,
 		ApprovedVersion: approvedVersion,

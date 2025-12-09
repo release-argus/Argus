@@ -248,6 +248,7 @@ func (s *Status) Init(
 	s.ServiceInfo.ID = serviceID
 	s.ServiceInfo.Name = serviceName
 	s.ServiceInfo.URL = serviceURL
+	s.ServiceInfo.Tags = dashboard.Tags
 
 	s.Dashboard = dashboard
 	s.ServiceInfo.SetMutex(&s.mutex)

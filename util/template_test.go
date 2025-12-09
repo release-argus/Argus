@@ -69,16 +69,29 @@ func TestTemplate_String(t *testing.T) {
 				WebURL:        svcInfo.WebURL,
 				LatestVersion: svcInfo.LatestVersion},
 		},
+		"valid django template with array access": {
+			template: "{{ tags | first }}-{{ tags.0 }}_{{ tags|slice:'1:2'|first }}-{{ tags | last }}-{{ tags.1 }}_{{ tags | join:',' }}",
+			want: fmt.Sprintf("%s-%s_%s-%s-%s_%s,%s",
+				svcInfo.Tags[0], svcInfo.Tags[0],
+				svcInfo.Tags[1], svcInfo.Tags[1], svcInfo.Tags[1],
+				svcInfo.Tags[0], svcInfo.Tags[1]),
+			serviceInfo: svcInfo},
+		"valid django template with array access out of bounds": {
+			template: "{{ tags.0 }}-{{ tags.1 }}-{{ tags.2 }}-{{ tags.3 }}",
+			want: fmt.Sprintf("%s-%s--",
+				svcInfo.Tags[0], svcInfo.Tags[1]),
+			serviceInfo: svcInfo},
 		"invalid django template panic": {
 			template:    "-{% 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
 			panicRegex:  test.StringPtr("Tag name must be an identifier"),
 			serviceInfo: svcInfo},
 		"all django vars": {
-			template: "{{ service_id }}-{{ service_name }}-{{ service_url }}--{{ icon }}-{{ icon_link_to }}-{{ web_url }}--{{ version }}-{{ approved_version }}-{{ deployed_version }}-{{ latest_version }}",
-			want: fmt.Sprintf("%s-%s-%s--%s-%s-%s--%s-%s-%s-%s",
+			template: "{{ service_id }}-{{ service_name }}-{{ service_url }}--{{ icon }}-{{ icon_link_to }}-{{ web_url }}--{{ version }}-{{ approved_version }}-{{ deployed_version }}-{{ latest_version }}-{{ tags|first }}-{{ tags.1 }}",
+			want: fmt.Sprintf("%s-%s-%s--%s-%s-%s--%s-%s-%s-%s-%s-%s",
 				svcInfo.ID, svcInfo.Name, svcInfo.URL,
 				svcInfo.Icon, svcInfo.IconLinkTo, svcInfo.WebURL,
-				svcInfo.LatestVersion, svcInfo.ApprovedVersion, svcInfo.DeployedVersion, svcInfo.LatestVersion),
+				svcInfo.LatestVersion, svcInfo.ApprovedVersion, svcInfo.DeployedVersion, svcInfo.LatestVersion,
+				svcInfo.Tags[0], svcInfo.Tags[1]),
 			serviceInfo: svcInfo},
 	}
 
