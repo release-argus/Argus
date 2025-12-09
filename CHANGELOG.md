@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.27.0](https://github.com/release-argus/Argus/compare/0.26.3...0.27.0) (2025-12-09)
+
+
+### Features
+
+* **cli:** add environment variable hints to '-h' help output ([#695](https://github.com/release-argus/Argus/issues/695)) ([270d151](https://github.com/release-argus/Argus/commit/270d151e01fe2e8cb325801115204e5dff013670))
+* **latest-version:** url, sort versions when semantic_versioning enabled ([#693](https://github.com/release-argus/Argus/issues/693)) ([cf82aa0](https://github.com/release-argus/Argus/commit/cf82aa0c893617bdc11c1fe0dba1c44481c23089))
+* **templating:** add support for 'tags' array ([#700](https://github.com/release-argus/Argus/issues/700)) ([8083828](https://github.com/release-argus/Argus/commit/80838283a8f09743435138911bbc6fd2ad92661b))
+* **ui:** migrate frontend from Bootstrap to shadcn + new features ([#690](https://github.com/release-argus/Argus/issues/690)) ([8ba9428](https://github.com/release-argus/Argus/commit/8ba9428b1acf9abe6320e349c8478b5ab6ec3c9b))
+  *  Adds inclusive/exclusive tag filtering ([#452](https://github.com/release-argus/Argus/issues/452))
+  *  Adds list defaults support to service create/edit (e.g. notify/webhook - services start with the defaults, and when all are removed, it resets to the default
+  *  Adds border/bg to service being moved
+* **ui:** table view ([#697](https://github.com/release-argus/Argus/issues/697)) ([4778c27](https://github.com/release-argus/Argus/commit/4778c2734e142388d78b9c31bc3291357fc7983b))
+
+
+### Bug Fixes
+
+* **latest-version,deployed-version,webhook:** respect proxy env vars in requests ([#699](https://github.com/release-argus/Argus/issues/699)) ([f5e1e14](https://github.com/release-argus/Argus/commit/f5e1e148c27476efbbc279faa6766292166291ce))
+* **ui:** use route-prefix in api requests ([#694](https://github.com/release-argus/Argus/issues/694)) ([4a3669a](https://github.com/release-argus/Argus/commit/4a3669a2400ecaa1ce4f0b97817cd626db3fd808))
+
 ## [0.26.3](https://github.com/release-argus/Argus/compare/0.26.2...0.26.3) (2025-05-29)
 
 
@@ -29,7 +49,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-* **latest_version:** add pagination to GitHub release fetching ([03726ad](https://github.com/release-argus/Argus/commit/03726adf9af72c9668ab615471895c776d5ce794))
+* **latest-version:** add pagination to GitHub release fetching ([03726ad](https://github.com/release-argus/Argus/commit/03726adf9af72c9668ab615471895c776d5ce794))
 
 
 ### Bug Fixes
@@ -77,8 +97,8 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-* **deployed_version:** `target_header` to get version from resp header ([b99363f](https://github.com/release-argus/Argus/commit/b99363f1fd8ad94578ce58fc5a1dd66c1ced4e2f))
-* **deployed_version:** add `manual` type ([3f402f6](https://github.com/release-argus/Argus/commit/3f402f62c87a60f8c8596f8bab277cb9121f1376))
+* **deployed-version:** `target_header` to get version from resp header ([b99363f](https://github.com/release-argus/Argus/commit/b99363f1fd8ad94578ce58fc5a1dd66c1ced4e2f))
+* **deployed-version:** add `manual` type ([3f402f6](https://github.com/release-argus/Argus/commit/3f402f62c87a60f8c8596f8bab277cb9121f1376))
 * **ui:** disable search functionality for small select components ([1b9cc5a](https://github.com/release-argus/Argus/commit/1b9cc5a60449f6e2fb72a870904ee0c3c1f78589))
 
 
@@ -158,7 +178,7 @@ All notable changes to this project will be documented in this file. See [standa
 ### Bug Fixes
 
 * **config:** handle commented out services ([#455](https://github.com/release-argus/Argus/issues/455)) ([d1b9e8c](https://github.com/release-argus/Argus/commit/d1b9e8cf27591407fc6bf595f50d13eb8ccec3ae))
-* **deployed_version:** null semVer default comp ([70c0625](https://github.com/release-argus/Argus/commit/70c062522917f865b3ae04ec5bbdebf339ef8ba0))
+* **deployed-version:** null semVer default comp ([70c0625](https://github.com/release-argus/Argus/commit/70c062522917f865b3ae04ec5bbdebf339ef8ba0))
 * **docker:** add OCI header for GHCR ([#503](https://github.com/release-argus/Argus/issues/503)) ([94bc9db](https://github.com/release-argus/Argus/commit/94bc9dbc5c98868d3129b05e0b9c768ba128e177))
 * **web:** ntfy, default fieldValues for actions ([#456](https://github.com/release-argus/Argus/issues/456)) ([280ebc1](https://github.com/release-argus/Argus/commit/280ebc17731b1db636723586b44cb49392a5c253))
 * **web:** render icon/icon_link_to/web_url changes from websocket ([78a5656](https://github.com/release-argus/Argus/commit/78a5656ea7a90398e4083105b9b82a87ac6d74fe))
@@ -168,7 +188,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-* **deployed_version:** support for POST requests ([#398](https://github.com/release-argus/Argus/issues/398)) ([9504d7d](https://github.com/release-argus/Argus/commit/9504d7de5fd1429ed86b805dc9c9e3de299766af)), closes [#397](https://github.com/release-argus/Argus/issues/397)
+* **deployed-version:** support for POST requests ([#398](https://github.com/release-argus/Argus/issues/398)) ([9504d7d](https://github.com/release-argus/Argus/commit/9504d7de5fd1429ed86b805dc9c9e3de299766af)), closes [#397](https://github.com/release-argus/Argus/issues/397)
 
 
 ### Bug Fixes
@@ -235,7 +255,7 @@ New mascot! Thanks [@rexapex](https://github.com/rexapex)
 
 ### Bug Fixes
 
-* **latest_version:** double check new releases ([9e319dd](https://github.com/release-argus/Argus/commit/9e319dd554166e4ffa847ae3784278de39610f8f))
+* **latest-version:** double check new releases ([9e319dd](https://github.com/release-argus/Argus/commit/9e319dd554166e4ffa847ae3784278de39610f8f))
 
 ### [0.15.1](https://github.com/release-argus/Argus/compare/0.15.0...0.15.1) (2024-01-13)
 
@@ -249,14 +269,14 @@ New mascot! Thanks [@rexapex](https://github.com/rexapex)
 
 ### Features
 
-* **deployed_version:** regex templating ([#347](https://github.com/release-argus/Argus/issues/347)) ([249379b](https://github.com/release-argus/Argus/commit/249379bbe250f88e2d69cf885c4926af26ed191a))
+* **deployed-version:** regex templating ([#347](https://github.com/release-argus/Argus/issues/347)) ([249379b](https://github.com/release-argus/Argus/commit/249379bbe250f88e2d69cf885c4926af26ed191a))
 
 ## [0.14.0](https://github.com/release-argus/Argus/compare/0.13.3...0.14.0) (2024-01-06)
 
 
 ### Features
 
-* **latest_version:** regex templating ([1d374a0](https://github.com/release-argus/Argus/commit/1d374a01f920224d9cc22c2c5a8465d1a552d824))
+* **latest-version:** regex templating ([1d374a0](https://github.com/release-argus/Argus/commit/1d374a01f920224d9cc22c2c5a8465d1a552d824))
 
 ### [0.13.3](https://github.com/release-argus/Argus/compare/0.13.2...0.13.3) (2023-09-12)
 
@@ -268,7 +288,7 @@ New mascot! Thanks [@rexapex](https://github.com/rexapex)
 
 ### Bug Fixes
 
-* **deployed_version:** req 2xx for version queries ([#310](https://github.com/release-argus/Argus/issues/310)) ([c2c70fc](https://github.com/release-argus/Argus/commit/c2c70fc830394a58948a467160559fa2aa91aa53))
+* **deployed-version:** req 2xx for version queries ([#310](https://github.com/release-argus/Argus/issues/310)) ([c2c70fc](https://github.com/release-argus/Argus/commit/c2c70fc830394a58948a467160559fa2aa91aa53))
 
 ### [0.13.2](https://github.com/release-argus/Argus/compare/0.13.1...0.13.2) (2023-07-19)
 
@@ -287,7 +307,7 @@ New mascot! Thanks [@rexapex](https://github.com/rexapex)
 
 ### Features
 
-* **deployed_version:** support arrays in json filter ([0e0bdb1](https://github.com/release-argus/Argus/commit/0e0bdb10ac1a44fb56f2ea0d2a31b9e96a5be62d)), closes [#292](https://github.com/release-argus/Argus/issues/292)
+* **deployed-version:** support arrays in json filter ([0e0bdb1](https://github.com/release-argus/Argus/commit/0e0bdb10ac1a44fb56f2ea0d2a31b9e96a5be62d)), closes [#292](https://github.com/release-argus/Argus/issues/292)
     * e.g. `foo[0].version`
 * **metrics:** add `latest_version_is_deployed` ([104d50d](https://github.com/release-argus/Argus/commit/104d50d43a0625a802ad3f4c9fac16e8da942d1f)), closes [#293](https://github.com/release-argus/Argus/issues/293)
     * merged `ack_waiting` into this
