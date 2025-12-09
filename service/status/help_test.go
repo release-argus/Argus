@@ -48,7 +48,8 @@ func testStatus() (status *Status) {
 		&dashboard.Options{
 			Icon:       "https://example.com/icon.png",
 			IconLinkTo: "https://example.com/icon-link",
-			WebURL:     "https://example.com"})
+			WebURL:     "https://example.com",
+			Tags:       []string{"foo", "bar"}})
 
 	status.SetApprovedVersion("1.1.1", false)
 	status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)

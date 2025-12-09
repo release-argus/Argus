@@ -16,7 +16,9 @@
 
 package util
 
-import serviceinfo "github.com/release-argus/Argus/service/status/info"
+import (
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
+)
 
 var packageName = "util"
 
@@ -33,5 +35,6 @@ func testServiceInfo() serviceinfo.ServiceInfo {
 		ApprovedVersion: "APPROVED",
 		DeployedVersion: "DEPLOYED",
 		LatestVersion:   "NEW",
+		Tags:            []string{"tag1", "tag2"},
 	}
 }
