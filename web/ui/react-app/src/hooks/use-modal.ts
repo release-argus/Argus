@@ -1,5 +1,5 @@
 import { use } from 'react';
-import { ModalProviderContext } from '@/contexts/modal.tsx';
+import { ModalProviderContext } from '@/contexts/modal';
 
 /**
  * Access the modal context and functions to control modals.

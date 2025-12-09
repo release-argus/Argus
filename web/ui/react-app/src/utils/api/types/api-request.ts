@@ -16,7 +16,10 @@ import type {
 } from '@/utils/api/types/requests/defaults';
 import type { NotifyTestRequestBuilder } from '@/utils/api/types/requests/notify-test';
 import type { ServiceDeleteRequestBuilder } from '@/utils/api/types/requests/service-delete';
-import type { ServiceEditRequestBuilder } from '@/utils/api/types/requests/service-edit';
+import {
+	type ServiceEditRequestBuilder,
+	serviceSummaryReducer,
+} from '@/utils/api/types/requests/service-edit';
 import type { ServiceOrderGetRequestBuilder } from '@/utils/api/types/requests/service-order';
 import type {
 	ServiceRefreshRequest,
@@ -141,6 +144,7 @@ export const RequestMap: RequestFns = {
 	SERVICE_SUMMARY: (input: ServiceSummaryRequestBuilder) => ({
 		endpoint: `service/summary/${encodeURIComponent(input.serviceID)}`,
 		method: 'GET',
+		reducer: serviceSummaryReducer,
 	}),
 	STATUS_BUILD: () => ({
 		endpoint: 'version',

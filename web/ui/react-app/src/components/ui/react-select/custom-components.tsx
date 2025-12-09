@@ -69,7 +69,7 @@ export const ClearIndicator = <
 			innerProps={{
 				...props.innerProps,
 				style: {
-					...(props.innerProps?.style ?? {}),
+					...props.innerProps?.style,
 					cursor: 'pointer',
 				},
 			}}
@@ -92,7 +92,7 @@ export const MultiValueRemove = <
 			innerProps={{
 				...props.innerProps,
 				style: {
-					...(props.innerProps?.style ?? {}),
+					...props.innerProps?.style,
 					cursor: 'pointer',
 				},
 			}}

@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { QUERY_KEYS } from '@/lib/query-keys.ts';
+import { QUERY_KEYS } from '@/lib/query-keys';
 import type { WebSocketResponse } from '@/types/websocket';
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
 

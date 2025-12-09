@@ -95,6 +95,7 @@ export type RequestType = {
 	SERVICE_SUMMARY: RequestTypeFields<
 		ServiceSummaryRequestBuilder,
 		null,
+		ServiceSummaryResponse,
 		ServiceSummaryResponse
 	>;
 	STATUS_BUILD: RequestTypeFields<null, null, BuildInfo>;

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { QUERY_KEYS } from '@/lib/query-keys.ts';
-import { mapRequest } from '@/utils/api/types/api-request-handler.ts';
-import type { OrderAPIResponse } from '@/utils/api/types/config/summary.ts';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import { mapRequest } from '@/utils/api/types/api-request-handler';
+import type { OrderAPIResponse } from '@/utils/api/types/config/summary';
 
 /*
  * Fetch the order of services.

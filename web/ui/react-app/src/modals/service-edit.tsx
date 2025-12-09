@@ -20,15 +20,15 @@ import {
 	SchemaProvider,
 	useSchemaContext,
 } from '@/contexts/service-edit-zod-type';
-import useModal from '@/hooks/use-modal.ts';
-import { useServiceEditDetail } from '@/hooks/use-service-edit-detail.ts';
+import useModal from '@/hooks/use-modal';
+import { useServiceEditDetail } from '@/hooks/use-service-edit-detail';
 import useServiceForm from '@/hooks/use-service-form';
 import { useServiceEdit } from '@/hooks/use-service-mutation';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { DeleteModal } from '@/modals/delete-confirm';
 import { extractErrors } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
-import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version.ts';
+import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version';
 import { mapServiceToAPIRequest } from '@/utils/api/types/config-edit/service/api/conversions';
 import { getErrorMessage } from '@/utils/errors';
 

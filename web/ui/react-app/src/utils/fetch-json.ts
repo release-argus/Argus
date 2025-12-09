@@ -37,8 +37,10 @@ const fetchJSON = async <T>({
 		]);
 
 		if (!response.ok) await handleResponseError(response);
+		const text = await response.text();
+		if (!text) return null as T;
 
-		return (await response.json()) as T;
+		return JSON.parse(text) as T;
 	} catch (error) {
 		if (error instanceof FetchTimeoutError || error instanceof APIError) {
 			throw error;

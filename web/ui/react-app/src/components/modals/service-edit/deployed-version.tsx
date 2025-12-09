@@ -9,7 +9,7 @@ import {
 	AccordionTrigger,
 } from '@/components/ui/accordion';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
-import { useServiceSummary } from '@/hooks/use-service-summary.ts';
+import { useServiceSummary } from '@/hooks/use-service-summary';
 import {
 	DEPLOYED_VERSION_LOOKUP_TYPE,
 	type DeployedVersionLookupType,

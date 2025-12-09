@@ -8,11 +8,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import { useErrors } from '@/hooks/use-error';
 import useValuesRefetch from '@/hooks/values-refetch';
-import { QUERY_KEYS } from '@/lib/query-keys.ts';
+import { QUERY_KEYS } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { beautifyGoErrors, removeEmptyValues } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
-import type { ServiceSummary } from '@/utils/api/types/config/summary.ts';
+import type { ServiceSummary } from '@/utils/api/types/config/summary';
 import {
 	type URLCommandsSchema,
 	urlCommandsSchemaOutgoing,

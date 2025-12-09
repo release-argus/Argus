@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import Tip from '@/components/ui/tip';
 import { addMessageHandler, removeMessageHandler } from '@/contexts/websocket';
-import useModal from '@/hooks/use-modal.ts';
+import useModal from '@/hooks/use-modal';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import reducerActionModal from '@/reducers/action-release';
 import type { WebSocketResponse } from '@/types/websocket';

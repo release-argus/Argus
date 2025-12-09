@@ -1,23 +1,41 @@
-import { CheckIcon, Eye } from 'lucide-react';
+import { DndContext, type DragEndEvent } from '@dnd-kit/core';
+import {
+	arrayMove,
+	SortableContext,
+	verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useQueryClient } from '@tanstack/react-query';
+import { Eye } from 'lucide-react';
 import { type FC, useCallback } from 'react';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
 import { Button } from '@/components/ui/button';
+import type { ExtraColumnMeta } from '@/components/ui/data-table';
+import { DropdownMenuCheckboxItemSortable } from '@/components/ui/dropdown-checkbox-sortable.tsx';
 import {
 	DropdownMenu,
+	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { optionStyles } from '@/components/ui/react-select/helper';
 import Tip from '@/components/ui/tip';
 import {
 	ACTIVE_HIDE_VALUES,
+	APPROVALS_TOOLBAR_VIEW,
+	approvalsToolbarViewOptions,
 	DEFAULT_HIDE_VALUE,
 	HideValue,
 	type HideValueType,
+	TABLE_COLUMNS_ORDER_STORAGE_KEY,
+	TABLE_COLUMNS_VISIBLE_STORAGE_KEY,
 	toolbarHideOptions,
 } from '@/constants/toolbar';
-import { cn } from '@/lib/utils';
+import { getServiceSummaries } from '@/hooks/use-services';
+import { resetColumnVisibility } from '@/pages/approvals/layouts/table/column-visibility';
+import { columns } from '@/pages/approvals/layouts/table/columns.tsx';
 
 type HideOptionKey = (typeof toolbarHideOptions)[number]['key'];
 
@@ -29,27 +47,82 @@ type HideOptionKey = (typeof toolbarHideOptions)[number]['key'];
  * and includes a reset option to restore default visibility (`DEFAULT_HIDE_VALUE`).
  */
 const FilterDropdown: FC = () => {
-	const { values, setHide } = useToolbar();
-	const currentValues = values.hide;
+	const queryClient = useQueryClient();
+	const {
+		values,
+		setHide,
+		setView,
+		tableInstance,
+		tableColumnVisibility,
+		setTableColumnVisibility,
+		tableColumnOrder,
+		setTableColumnOrder,
+	} = useToolbar();
+	const currentHideValues = values.hide;
 
-	const handleOptionClick = useCallback(
+	const onDragEnd = (event: DragEndEvent) => {
+		const { active, over } = event;
+		// If it hasn't moved, exit.
+		if (active.id === over?.id) return;
+
+		// Swap the indexes.
+		const oldIndex = tableColumnOrder.indexOf(String(active.id));
+		const newIndex = over ? tableColumnOrder.indexOf(String(over.id)) : -1;
+
+		const newOrder = arrayMove(tableColumnOrder, oldIndex, newIndex);
+
+		setTableColumnOrder(newOrder);
+		tableInstance?.setColumnOrder(newOrder);
+	};
+
+	// Sortable columns and visibility.
+	const tableColumnOptions = tableInstance ? (
+		<DndContext onDragEnd={onDragEnd}>
+			<SortableContext
+				items={tableColumnOrder}
+				strategy={verticalListSortingStrategy}
+			>
+				{tableColumnOrder.map((colID) => {
+					const col = tableInstance
+						?.getAllColumns()
+						.find((c) => c.id === colID);
+					if (!col) return null;
+					const meta = col.columnDef.meta as ExtraColumnMeta | undefined;
+
+					return (
+						<DropdownMenuCheckboxItemSortable
+							checked={
+								tableColumnVisibility ? !!tableColumnVisibility[col.id] : true
+							}
+							id={col.id}
+							key={col.id}
+							label={meta?.label ?? col.id}
+							onCheckedChange={(value) => col.toggleVisibility(!!value)}
+						/>
+					);
+				})}
+			</SortableContext>
+		</DndContext>
+	) : null;
+
+	const handleHideOptionClick = useCallback(
 		(key: HideOptionKey) => {
 			const option = toolbarHideOptions.find((opt) => opt.key === key);
 			if (!option) return;
 			const { value: clickedValue } = option;
 
 			const toggle = (val: number) => {
-				const newValues = currentValues.includes(val as HideValueType)
-					? currentValues.filter((v) => v !== val)
-					: [...currentValues, val];
+				const newValues = currentHideValues.includes(val as HideValueType)
+					? currentHideValues.filter((v) => v !== val)
+					: [...currentHideValues, val];
 				setHide(newValues);
 			};
 
 			const flipActiveValues = () => {
 				const newActiveHidden = ACTIVE_HIDE_VALUES.filter(
-					(v) => !currentValues.includes(v),
+					(v) => !currentHideValues.includes(v),
 				);
-				const inactiveIsHidden = currentValues.includes(HideValue.Inactive);
+				const inactiveIsHidden = currentHideValues.includes(HideValue.Inactive);
 				const newValues = inactiveIsHidden
 					? [...newActiveHidden, HideValue.Inactive]
 					: newActiveHidden;
@@ -61,7 +134,7 @@ const FilterDropdown: FC = () => {
 					(v) => v !== clickedValue,
 				);
 				// If all other active statuses hidden, flip them all.
-				if (otherActiveValues.every((v) => currentValues.includes(v))) {
+				if (otherActiveValues.every((v) => currentHideValues.includes(v))) {
 					flipActiveValues();
 					return;
 				}
@@ -69,12 +142,45 @@ const FilterDropdown: FC = () => {
 
 			toggle(clickedValue);
 		},
-		[currentValues, setHide],
+		[currentHideValues, setHide],
 	);
 
-	const handleReset = useCallback(() => {
+	const handleResetHideFilters = useCallback(() => {
 		setHide(DEFAULT_HIDE_VALUE);
 	}, [setHide]);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: queryClient stable.
+	const handleResetColumns = useCallback(() => {
+		const serviceSummaries = getServiceSummaries(queryClient);
+
+		const visibility = {};
+		resetColumnVisibility({
+			data: serviceSummaries,
+			visibility: visibility,
+		});
+		setTableColumnVisibility(visibility);
+
+		// Persist column visibility.
+		localStorage.setItem(
+			TABLE_COLUMNS_VISIBLE_STORAGE_KEY,
+			Object.entries(visibility)
+				.filter(([_, isVisible]) => isVisible)
+				.map(([columnID]) => columnID)
+				.join(','),
+		);
+
+		// Reset order.
+		const fallbackOrder = columns
+			.map((c) => c.id)
+			.filter((id): id is string => typeof id === 'string');
+		setTableColumnOrder(fallbackOrder);
+
+		// Persist column order.
+		localStorage.setItem(
+			TABLE_COLUMNS_ORDER_STORAGE_KEY,
+			fallbackOrder.join(','),
+		);
+	}, []);
 
 	const filterButtonTooltip = 'Filter shown services';
 
@@ -99,32 +205,59 @@ const FilterDropdown: FC = () => {
 				</div>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent className="w-max">
-				{toolbarHideOptions.map(({ key, label, value }) => {
-					const isSelected = currentValues.includes(value);
-					return (
-						<DropdownMenuItem
-							className={cn(
-								'cursor-pointer',
-								optionStyles.base,
-								isSelected && optionStyles.selected,
-							)}
-							key={key}
-							onClick={() => handleOptionClick(key)}
+				<DropdownMenuGroup>
+					<DropdownMenuLabel>Filters:</DropdownMenuLabel>
+					{toolbarHideOptions.map(({ key, label, value }) => {
+						const isSelected = currentHideValues.includes(value);
+						return (
+							<DropdownMenuCheckboxItem
+								checked={isSelected}
+								key={key}
+								onClick={() => handleHideOptionClick(key)}
+							>
+								{label}
+							</DropdownMenuCheckboxItem>
+						);
+					})}
+					<DropdownMenuItem
+						className="cursor-pointer"
+						onClick={handleResetHideFilters}
+					>
+						Reset
+					</DropdownMenuItem>
+				</DropdownMenuGroup>
+				<DropdownMenuSeparator className="sm:hidden" />
+				<DropdownMenuGroup className="sm:hidden">
+					<DropdownMenuLabel>Layout:</DropdownMenuLabel>
+					{Object.values(approvalsToolbarViewOptions).map((option) => (
+						<DropdownMenuCheckboxItem
+							checked={
+								option.value === APPROVALS_TOOLBAR_VIEW.GRID.value
+									? values.view === APPROVALS_TOOLBAR_VIEW.GRID.value
+									: values.view === APPROVALS_TOOLBAR_VIEW.TABLE.value
+							}
+							key={option.value}
+							onClick={() => setView(option.value)}
 						>
-							<div className="flex w-30 flex-row justify-between sm:w-36">
-								<span>{label}</span>
-								{isSelected && (
-									<span className="flex h-full items-center justify-center">
-										<CheckIcon className="size-4" />
-									</span>
-								)}
-							</div>
-						</DropdownMenuItem>
-					);
-				})}
-				<DropdownMenuItem className="cursor-pointer" onClick={handleReset}>
-					Reset
-				</DropdownMenuItem>
+							{option.label}
+						</DropdownMenuCheckboxItem>
+					))}
+				</DropdownMenuGroup>
+				{tableInstance && (
+					<>
+						<DropdownMenuSeparator />
+						<DropdownMenuGroup>
+							<DropdownMenuLabel>Columns:</DropdownMenuLabel>
+							{tableColumnOptions}
+							<DropdownMenuItem
+								className="cursor-pointer"
+								onClick={handleResetColumns}
+							>
+								Reset
+							</DropdownMenuItem>
+						</DropdownMenuGroup>
+					</>
+				)}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

@@ -31,11 +31,26 @@ export const createTimeoutPromise = (timeout: number): Promise<never> => {
 export const handleResponseError = async (
 	response: Response,
 ): Promise<never> => {
-	const errorData = (await response.json()) as { message: string };
-	const error = new APIError(
-		errorData.message || `Request failed with status ${response.status}`,
-		response.status,
-	);
+	let message = `Request failed with status ${response.status}`;
+
+	try {
+		const text = await response.text();
+		if (text.trim()) {
+			// Try parsing JSON.
+			try {
+				const data = JSON.parse(text);
+				if (data?.message) message = data.message;
+				else message = JSON.stringify(data);
+			} catch {
+				// Text fallback.
+				message = text;
+			}
+		}
+	} catch (err) {
+		console.error('Error reading error response:', err);
+	}
+
+	const error = new APIError(message, response.status);
 	console.error(`API Error: ${error.message}`);
 	throw error;
 };

@@ -1,11 +1,12 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { QUERY_KEYS } from '@/lib/query-keys.ts';
-import type { WebSocketResponse } from '@/types/websocket.ts';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import type { WebSocketResponse } from '@/types/websocket';
 import type {
 	ActionAPIType,
 	OrderAPIResponse,
 	ServiceSummary,
-} from '@/utils/api/types/config/summary.ts';
+} from '@/utils/api/types/config/summary';
+import { serviceSummaryReducer } from '@/utils/api/types/requests/service-edit';
 
 export type ApprovalsQueryCacheUpdaterParams = {
 	/* The React Query client. */
@@ -74,28 +75,7 @@ export const approvalsQueryCacheUpdater = ({
 
 			queryClient.setQueryData<ServiceSummary>(
 				QUERY_KEYS.SERVICE.SUMMARY_ITEM(id),
-				(_oldData) => {
-					const oldData = _oldData ?? { id: id };
-					const mergedStatus = {
-						...oldData?.status,
-						...msg.service_data?.status,
-					};
-
-					// Default the approved_version/deployed_version to latest_version.
-					if (msg.sub_type === 'INIT') {
-						mergedStatus.deployed_version ??=
-							msg.service_data?.status?.latest_version;
-						mergedStatus.deployed_version_timestamp ??=
-							msg.service_data?.status?.latest_version_timestamp;
-					}
-
-					return {
-						...oldData,
-						...msg.service_data,
-						loading: false,
-						status: mergedStatus,
-					};
-				},
+				(oldData) => serviceSummaryReducer(msg.service_data, oldData),
 			);
 			break;
 		}
@@ -153,15 +133,7 @@ export const approvalsQueryCacheUpdater = ({
 			// Upsert summary for newID.
 			queryClient.setQueryData<ServiceSummary>(
 				QUERY_KEYS.SERVICE.SUMMARY_ITEM(newID),
-				(oldData) => ({
-					...oldData,
-					...newServiceData,
-					loading: false,
-					status: {
-						...oldData?.status,
-						...newServiceData.status,
-					},
-				}),
+				(oldData) => serviceSummaryReducer(msg.service_data, oldData),
 			);
 
 			// Ensure ID in order.

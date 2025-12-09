@@ -163,7 +163,7 @@ const Tip = ({
 				</TooltipTrigger>
 				<TooltipContent
 					className={cn(!content && 'hidden', 'max-w-[60vw] text-wrap p-2')}
-					{...(contentProps ?? {})}
+					{...contentProps}
 				>
 					<span className="inline-block">{content}</span>
 				</TooltipContent>

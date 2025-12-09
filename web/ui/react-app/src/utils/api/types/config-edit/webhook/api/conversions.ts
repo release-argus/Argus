@@ -6,7 +6,7 @@ import {
 	type WebHooksSchemaOutgoing,
 	webhookSchemaOutgoing,
 } from '@/utils/api/types/config-edit/webhook/schemas';
-import diffLists from '@/utils/diff-lists.ts';
+import diffLists from '@/utils/diff-lists';
 
 /**
  * Maps the webhook form schema to an API payload.

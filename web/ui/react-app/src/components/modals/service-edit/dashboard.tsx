@@ -16,10 +16,10 @@ import {
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import { useTags } from '@/hooks/use-tags';
 import useValuesRefetch from '@/hooks/values-refetch';
-import { QUERY_KEYS } from '@/lib/query-keys.ts';
+import { QUERY_KEYS } from '@/lib/query-keys';
 import { removeEmptyValues } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
-import type { ServiceSummary } from '@/utils/api/types/config/summary.ts';
+import type { ServiceSummary } from '@/utils/api/types/config/summary';
 
 /**
  * @returns The form fields for the `dashboard` options.

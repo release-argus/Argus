@@ -24,7 +24,7 @@ const diffLists = <A, B, K extends keyof A & keyof B = keyof A & keyof B>({
 	listA,
 	listB,
 	key,
-	separator = '-_-',
+	separator = '\u0001',
 }: DiffListsOptions<A, B, K>): boolean => {
 	if (listA.length !== listB.length) return true;
 

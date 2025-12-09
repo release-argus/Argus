@@ -1,3 +1,4 @@
+import { LayoutGrid, List } from 'lucide-react';
 import type { TagsTriType } from '@/types/util';
 
 /* Hide value filters for the toolbar. */
@@ -10,11 +11,30 @@ export const HideValue = {
 
 export type HideValueType = (typeof HideValue)[keyof typeof HideValue];
 
+/* View options for the toolbar. */
+export const APPROVALS_TOOLBAR_VIEW = {
+	GRID: { icon: LayoutGrid, label: 'Grid', value: 'grid' },
+	TABLE: { icon: List, label: 'Table', value: 'table' },
+} as const;
+export const approvalsToolbarViewOptions = Object.values(
+	APPROVALS_TOOLBAR_VIEW,
+);
+export type ToolbarViewOption =
+	(typeof approvalsToolbarViewOptions)[number]['value'];
+
+export const DEFAULT_VIEW_VALUE = APPROVALS_TOOLBAR_VIEW.GRID.value;
+
+export const isToolbarViewOption = (
+	option: string | null,
+): option is ToolbarViewOption =>
+	approvalsToolbarViewOptions.some((o) => o.value === option);
+
 export type ApprovalsToolbarOptions = {
 	search: string;
 	tags: TagsTriType;
 	editMode: boolean;
 	hide: HideValueType[];
+	view: ToolbarViewOption;
 };
 
 /* Active service filters */
@@ -44,4 +64,10 @@ export const URL_PARAMS = {
 	SEARCH: 'search',
 	TAGS_EXCLUDE: 'tags_exclude',
 	TAGS_INCLUDE: 'tags',
+	VIEW: 'view',
 } as const;
+
+/* Storage key for the visible table columns. */
+export const TABLE_COLUMNS_VISIBLE_STORAGE_KEY = 'tableColumnsVisible';
+/* Storage key for the order of table columns. */
+export const TABLE_COLUMNS_ORDER_STORAGE_KEY = 'tableColumnsOrder';
