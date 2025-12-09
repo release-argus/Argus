@@ -10,7 +10,10 @@ All notable changes to this project will be documented in this file. See [standa
 * **cli:** add environment variable hints to '-h' help output ([#695](https://github.com/release-argus/Argus/issues/695)) ([270d151](https://github.com/release-argus/Argus/commit/270d151e01fe2e8cb325801115204e5dff013670))
 * **latest-version:** url, sort versions when semantic_versioning enabled ([#693](https://github.com/release-argus/Argus/issues/693)) ([cf82aa0](https://github.com/release-argus/Argus/commit/cf82aa0c893617bdc11c1fe0dba1c44481c23089))
 * **templating:** add support for 'tags' array ([#700](https://github.com/release-argus/Argus/issues/700)) ([8083828](https://github.com/release-argus/Argus/commit/80838283a8f09743435138911bbc6fd2ad92661b))
-* **ui:** migrate frontend from Bootstrap to shadcn + new features  ([#690](https://github.com/release-argus/Argus/issues/690)) ([8ba9428](https://github.com/release-argus/Argus/commit/8ba9428b1acf9abe6320e349c8478b5ab6ec3c9b))
+* **ui:** migrate frontend from Bootstrap to shadcn + new features ([#690](https://github.com/release-argus/Argus/issues/690)) ([8ba9428](https://github.com/release-argus/Argus/commit/8ba9428b1acf9abe6320e349c8478b5ab6ec3c9b))
+  *  Adds inclusive/exclusive tag filtering ([#452](https://github.com/release-argus/Argus/issues/452))
+  *  Adds list defaults support to service create/edit (e.g. notify/webhook - services start with the defaults, and when all are removed, it resets to the default
+  *  Adds border/bg to service being moved
 * **ui:** table view ([#697](https://github.com/release-argus/Argus/issues/697)) ([4778c27](https://github.com/release-argus/Argus/commit/4778c2734e142388d78b9c31bc3291357fc7983b))
 
 
