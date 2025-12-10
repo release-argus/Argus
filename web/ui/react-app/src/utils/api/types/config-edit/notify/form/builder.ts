@@ -389,7 +389,10 @@ export const buildNotifySchemaWithFallbacks = (
 	const schemaDataMains = Object.entries(mains ?? {}).reduce<
 		Record<string, NotifySchemaValues>
 	>((acc, [key, value]) => {
-		const itemType = value.type;
+		const nameLower = key.toLowerCase();
+		const itemType =
+			value?.type ?? (isNotifyType(nameLower) ? nameLower : null);
+		if (itemType === null) return acc; // Skip unsupported types.
 		const data = applyDefaultsRecursive(value, combinedDefaults[itemType]);
 
 		acc[key] = safeParse({
