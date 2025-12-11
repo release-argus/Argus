@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import { toZodEnumTuple } from '@/types/util';
 import { WEBHOOK_TYPE } from '@/utils/api/types/config/webhook';
-import { headersSchemaDefaults } from '@/utils/api/types/config-edit/shared/header/schemas';
+import {
+	headersSchemaDefaults,
+	preprocessHeaderArrayWithDefaults,
+} from '@/utils/api/types/config-edit/shared/header/preprocess';
 import {
 	preprocessNumberFromString,
 	preprocessStringFromNumber,
@@ -49,3 +52,19 @@ export const webhooksSchemaOutgoing = z
 	.nullable()
 	.default(null);
 export type WebHooksSchemaOutgoing = z.infer<typeof webhooksSchemaOutgoing>;
+
+/**
+ * Outgoing schemas that are defaults-aware for list-like fields.
+ *
+ * @returns a per-type schema with the provided defaults where
+ * preprocessors can null fields that match the defaults.
+ */
+export const webhookSchemaMapOutgoingWithDefaults = (
+	defaults?: WebHookSchema,
+) => {
+	return webhookSchema.extend({
+		custom_headers: preprocessHeaderArrayWithDefaults(defaults?.custom_headers),
+		desired_status_code: preprocessNumberFromString,
+		max_tries: preprocessNumberFromString,
+	});
+};

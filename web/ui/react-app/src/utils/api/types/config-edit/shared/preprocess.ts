@@ -1,4 +1,5 @@
 import { type ZodEnum, z } from 'zod';
+import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { isUsingDefaults } from '@/utils/api/types/config-edit/validators';
 
 /**
@@ -84,7 +85,7 @@ export const preprocessStringFromNumber = z.preprocess((arg) => {
  */
 export const preprocessStringFromZodEnum = (enumSchema: ZodEnum) =>
 	z.preprocess((val: unknown) => {
-		if (val == null) return undefined;
+		if (val == null || val === nullString) return undefined;
 
 		const enumValues = enumSchema.options;
 		if (enumValues.includes(val as string)) return val;

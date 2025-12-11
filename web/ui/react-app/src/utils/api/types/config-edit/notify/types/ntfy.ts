@@ -5,8 +5,10 @@ import {
 	ntfyPriorityOptions,
 	ntfySchemeOptions,
 } from '@/utils/api/types/config/notify/ntfy';
-import { flattenHeaderArray } from '@/utils/api/types/config-edit/shared/header/preprocess';
-import { headersSchemaDefaults } from '@/utils/api/types/config-edit/shared/header/schemas';
+import {
+	flattenHeaderArray,
+	headersSchemaDefaults,
+} from '@/utils/api/types/config-edit/shared/header/preprocess';
 import {
 	makeDefaultsAwareListPreprocessor,
 	preprocessArrayJSONFromString,

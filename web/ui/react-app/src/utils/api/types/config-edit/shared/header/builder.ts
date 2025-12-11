@@ -4,7 +4,7 @@ import { addZodIssuesToContext } from '@/utils/api/types/config-edit/shared/add-
 import {
 	headersSchema,
 	headersSchemaDefaults,
-} from '@/utils/api/types/config-edit/shared/header/schemas';
+} from '@/utils/api/types/config-edit/shared/header/preprocess';
 import { overrideSchemaDefault } from '@/utils/api/types/config-edit/shared/override-schema-default';
 import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse';
 import type { BuilderResponse } from '@/utils/api/types/config-edit/shared/types';

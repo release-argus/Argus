@@ -4,9 +4,10 @@ import {
 	type NotifiersSchemaOutgoing,
 	type NotifySchemaOutgoing,
 	type NotifySchemaValues,
-	notifySchemaMapOutgoing,
+	type NotifyTypeSchema,
 	notifySchemaMapOutgoingWithDefaults,
 } from '@/utils/api/types/config-edit/notify/schemas';
+import { applyDefaultsRecursive } from '@/utils/api/types/config-edit/util';
 import diffLists from '@/utils/diff-lists';
 
 /**
@@ -14,14 +15,21 @@ import diffLists from '@/utils/diff-lists';
  *
  * @param data - The `NotifiersSchema` data to map.
  * @param defaultValue - The default values to compare against (and omit if all defaults used and unmodified).
+ * @param mainDefaults - The 'notify' globals.
+ * @param typeDefaults - Type-specific notify form data.
  * @returns A `NotifiersSchemaOutgoing` representing the `NotifiersSchema`.
  */
 export const mapNotifiersSchemaToAPIPayload = (
 	data: NotifiersSchema,
 	defaultValue?: NotifiersSchema,
+	mainDefaults?: Record<string, NotifySchemaValues>,
+	typeDefaults?: NotifyTypeSchema,
 ): NotifiersSchemaOutgoing => {
-	const dataMinimised = data.map((item, idx) => {
-		const defaultsForItem = defaultValue?.[idx];
+	const dataMinimised = data.map((item) => {
+		const defaultsForItem = applyDefaultsRecursive(
+			mainDefaults?.[item.name] ?? null,
+			typeDefaults?.[item.type],
+		);
 		const d = mapNotifySchemaToAPIPayload(item, defaultsForItem);
 		return removeEmptyValues(d) as NotifySchemaOutgoing;
 	});
@@ -58,13 +66,10 @@ export const mapNotifySchemaToAPIPayload = (
 	defaults?: NotifySchemaValues,
 ): NotifySchemaOutgoing => {
 	const itemType = item.type;
-	if (defaults?.type === itemType) {
-		const schema = notifySchemaMapOutgoingWithDefaults(defaults);
-		return removeEmptyValues(
-			schema.parse(item) as NotifySchemaOutgoing,
-		) as NotifySchemaOutgoing;
-	}
+	const defaultsTyped = defaults ?? ({ type: itemType } as NotifySchemaValues);
+	const schema = notifySchemaMapOutgoingWithDefaults(defaultsTyped);
+
 	return removeEmptyValues(
-		notifySchemaMapOutgoing[itemType].parse(item),
+		schema.parse(item) as NotifySchemaOutgoing,
 	) as NotifySchemaOutgoing;
 };
