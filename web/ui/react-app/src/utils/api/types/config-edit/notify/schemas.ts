@@ -22,8 +22,10 @@ import {
 	SMTPEncryptionEnum,
 } from '@/utils/api/types/config-edit/notify/types/smtp';
 import { TelegramParseModeEnum } from '@/utils/api/types/config-edit/notify/types/telegram';
-import { preprocessStringFromHeaderArrayWithDefaults } from '@/utils/api/types/config-edit/shared/header/preprocess';
-import { headersSchemaDefaults } from '@/utils/api/types/config-edit/shared/header/schemas';
+import {
+	headersSchemaDefaults,
+	preprocessStringFromHeaderArrayWithDefaults,
+} from '@/utils/api/types/config-edit/shared/header/preprocess';
 import { nullString } from '@/utils/api/types/config-edit/shared/null-string'; /* Notify 'Options' Schema */
 import {
 	preprocessBooleanFromString,

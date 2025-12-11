@@ -6,6 +6,10 @@ import {
 	z,
 } from 'zod';
 import type { CustomHeaders } from '@/utils/api/types/config/shared';
+import {
+	headerSchema,
+	headerSchemaDefaults,
+} from '@/utils/api/types/config-edit/shared/header/schemas';
 import { makeDefaultsAwareListPreprocessor } from '@/utils/api/types/config-edit/shared/preprocess';
 
 /**
@@ -96,3 +100,15 @@ export const preprocessToHeadersArray = <T extends z.ZodType>(
 			return arg;
 		}, z.array(schema))
 		.default([]);
+
+/* Array of Header objects (min length 1 on key and value) */
+export const headersSchema = preprocessToHeadersArray(headerSchema);
+/* Array of Header objects (no validation) */
+export const headersSchemaDefaults =
+	preprocessToHeadersArray(headerSchemaDefaults);
+
+export const preprocessHeaderArrayWithDefaults = (defaults?: CustomHeaders) =>
+	makeDefaultsAwareListPreprocessor(headersSchemaDefaults.nullable(), {
+		defaults: defaults,
+		matchingFields: ['key', 'value'],
+	});

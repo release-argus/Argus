@@ -7,7 +7,7 @@ import {
 	type DeployedVersionLookupURLMethod,
 	deployedVersionLookupTypeOptions,
 } from '@/utils/api/types/config/service/deployed-version';
-import { headersSchemaDefaults } from '@/utils/api/types/config-edit/shared/header/schemas';
+import { headersSchemaDefaults } from '@/utils/api/types/config-edit/shared/header/preprocess';
 import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { regexStringWithFallback } from '@/utils/api/types/config-edit/validators';
 
