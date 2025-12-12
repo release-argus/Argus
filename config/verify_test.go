@@ -184,7 +184,7 @@ func TestConfig_Print(t *testing.T) {
 		flag  bool
 		lines int
 	}{
-		"flag on":  {flag: true, lines: 187 + len(config.Defaults.Notify)},
+		"flag on":  {flag: true, lines: 198 + len(config.Defaults.Notify)},
 		"flag off": {flag: false},
 	}
 

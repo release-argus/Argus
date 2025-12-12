@@ -486,7 +486,7 @@ func TestNotifyTest(t *testing.T) {
 				}}},
 		"known Service Notifier with invalid Gotify token": {
 			flag:       "bar",
-			panicRegex: test.StringPtr(`Message failed to send with "bar" config\s+invalid gotify token`),
+			panicRegex: test.StringPtr(`Message failed to send with "bar" config\s+.*invalid gotify token`),
 			services: service.Services{
 				"argus": {
 					Notify: shoutrrr.Shoutrrrs{
@@ -494,12 +494,12 @@ func TestNotifyTest(t *testing.T) {
 						"bar": shoutrrr.New(
 							nil,
 							"bar", "gotify",
-							map[string]string{},
+							map[string]string{
+								"max_tries": "1"},
 							map[string]string{
 								"host":  test.ValidCertNoProtocol,
 								"token": "invalid"},
-							map[string]string{
-								"max_tries": "1"},
+							map[string]string{},
 							emptyShoutrrr,
 							emptyShoutrrr,
 							emptyShoutrrr),
@@ -507,7 +507,7 @@ func TestNotifyTest(t *testing.T) {
 		},
 		"invalid Gotify token format": {
 			flag:       "bar",
-			panicRegex: test.StringPtr(`invalid gotify token "abc"`),
+			panicRegex: test.StringPtr(`invalid gotify token: "abc"`),
 			services: service.Services{
 				"argus": {
 					Notify: shoutrrr.Shoutrrrs{
@@ -528,7 +528,7 @@ func TestNotifyTest(t *testing.T) {
 		},
 		"valid Gotify token format": {
 			flag:       "bar",
-			panicRegex: test.StringPtr(`Message failed to send with.*\s*server respond`),
+			panicRegex: test.StringPtr(`Message failed to send with.*\s.*server responded`),
 			services: service.Services{
 				"argus": {
 					Notify: shoutrrr.Shoutrrrs{
@@ -549,7 +549,7 @@ func TestNotifyTest(t *testing.T) {
 		},
 		"shoutrrr from Root": {
 			flag:       "baz",
-			panicRegex: test.StringPtr(`Message failed to send with.*\s*server respond`),
+			panicRegex: test.StringPtr(`Message failed to send with.*\s.*server responded`),
 			services:   service.Services{},
 			mainShoutrrrs: shoutrrr.ShoutrrrsDefaults{
 				"baz": shoutrrr.NewDefaults(

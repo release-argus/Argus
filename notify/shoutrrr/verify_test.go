@@ -1931,7 +1931,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			urlFields: map[string]string{
 				"host":  "https://	example.com",
 				"token": "bish"},
-			errRegex: `invalid control character in URL`,
+			errRegex: `failed to parse URL`,
 		},
 	}
 
@@ -2237,7 +2237,7 @@ func TestShoutrrr_TestSend(t *testing.T) {
 			nilShoutrrr: true, errRegex: `^shoutrrr is nil$`},
 		"invalid type": {
 			sType:    test.StringPtr("somethingUnknown"),
-			errRegex: `^failed to create Shoutrrr sender.*unknown service ""$`},
+			errRegex: `^failed to create Shoutrrr sender.*unknown service: ""$`},
 		"valid": {
 			errRegex: `^$`},
 	}
