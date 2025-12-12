@@ -2,18 +2,28 @@ import { type ZodEnum, z } from 'zod';
 import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { isUsingDefaults } from '@/utils/api/types/config-edit/validators';
 
+type PreprocessArrayJSONFromStringProps<T extends z.ZodType> = {
+	schema: T;
+	jsonProcessor?: (data: z.output<T>[]) => z.output<T>[];
+};
+
 /**
  * Parses a JSON string into an array and validates items with the given Zod schema.
  *
  * @template T - Schema for array items.
  * @param schema - Zod schema for each array item.
+ * @param jsonProcessor - Optional processor for parsed JSON data.
  * @returns Zod schema parsing strings as JSON arrays, defaulting to an empty array.
  */
-export const preprocessArrayJSONFromString = <T extends z.ZodType>(schema: T) =>
+export const preprocessArrayJSONFromString = <T extends z.ZodType>({
+	schema,
+	jsonProcessor,
+}: PreprocessArrayJSONFromStringProps<T>) =>
 	z.preprocess((arg) => {
 		if (typeof arg === 'string') {
 			try {
-				return JSON.parse(arg) as unknown;
+				const data = JSON.parse(arg);
+				return jsonProcessor ? jsonProcessor(data) : data;
 			} catch {
 				return arg; // zod validation fail
 			}

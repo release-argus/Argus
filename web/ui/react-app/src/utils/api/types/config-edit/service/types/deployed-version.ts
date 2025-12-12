@@ -7,7 +7,7 @@ import {
 	type DeployedVersionLookupURLMethod,
 	deployedVersionLookupTypeOptions,
 } from '@/utils/api/types/config/service/deployed-version';
-import { headersSchemaDefaults } from '@/utils/api/types/config-edit/shared/header/preprocess';
+import { headersSchema } from '@/utils/api/types/config-edit/shared/header/preprocess';
 import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { regexStringWithFallback } from '@/utils/api/types/config-edit/validators';
 
@@ -45,7 +45,7 @@ export const deployedVersionURLSchema = z.object({
 	allow_invalid_certs: z.boolean().nullable().default(null),
 	basic_auth: basicAuthSchema,
 	body: z.string().default(''),
-	headers: headersSchemaDefaults,
+	headers: headersSchema,
 	json: z.string().default(''),
 	method: DeployedVersionURLMethodEnum.or(z.literal(nullString)).default(
 		nullString,

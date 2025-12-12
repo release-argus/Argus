@@ -14,7 +14,7 @@ import { beautifyGoErrors, removeEmptyValues } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
 import {
-	type URLCommandsSchema,
+	type URLCommandsSchemaWithValidation,
 	urlCommandsSchemaOutgoing,
 } from '@/utils/api/types/config-edit/service/types/latest-version';
 
@@ -76,7 +76,8 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 				const trimmedURLCommands = parsedURLCommands
 					? parsedURLCommands.map((urlC) => removeEmptyValues(urlC))
 					: null;
-				dataConverted.url_commands = trimmedURLCommands as URLCommandsSchema;
+				dataConverted.url_commands =
+					trimmedURLCommands as URLCommandsSchemaWithValidation;
 			}
 
 			return await mapRequest('VERSION_REFRESH', {

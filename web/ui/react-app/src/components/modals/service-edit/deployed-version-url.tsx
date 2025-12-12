@@ -153,7 +153,7 @@ const DeployedVersionURL = () => {
 					content: (
 						<>
 							If the URL gives JSON, take the var at this location. e.g.{' '}
-							<span className="bold-underline">data.version</span>
+							<span className="bold underline">data.version</span>
 						</>
 					),
 					type: 'element',
@@ -170,7 +170,7 @@ const DeployedVersionURL = () => {
 					content: (
 						<>
 							RegEx to extract the version from the URL, e.g.{' '}
-							<span className="bold-underline">v([0-9.]+)</span>
+							<span className="bold underline">v([0-9.]+)</span>
 						</>
 					),
 					type: 'element',

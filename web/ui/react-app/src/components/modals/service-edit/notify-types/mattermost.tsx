@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { BooleanWithDefault } from '@/components/generic';
 import { FieldText, FieldTextWithPreview } from '@/components/generic/field';
 import {
 	Heading,
@@ -61,8 +62,10 @@ const MATTERMOST = ({
 						ariaLabel: 'Format: mattermost.example.io/PATH',
 						content: (
 							<>
-								{'e.g. mattermost.example.io/'}
-								<span className="bold-underline">path</span>
+								<span className="text-muted-foreground">
+									{'e.g. mattermost.example.io/'}
+								</span>
+								<span className="bold underline">path</span>
 							</>
 						),
 						type: 'element',
@@ -103,6 +106,11 @@ const MATTERMOST = ({
 						content: 'URL of icon to use',
 						type: 'string',
 					}}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.disabletls}
+					label="Disable TLS"
+					name={`${name}.params.disabletls`}
 				/>
 			</FieldSet>
 		</FieldSet>

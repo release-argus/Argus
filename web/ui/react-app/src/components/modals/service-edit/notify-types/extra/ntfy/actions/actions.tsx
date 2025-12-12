@@ -11,7 +11,10 @@ import {
 	NTFY_ACTION_TYPE,
 	ntfyActionTypeOptions,
 } from '@/utils/api/types/config/notify/ntfy';
-import type { NtfyActionsSchema } from '@/utils/api/types/config-edit/notify/types/ntfy';
+import {
+	type NtfyActionsSchema,
+	ntfyActionsSchema,
+} from '@/utils/api/types/config-edit/notify/types/ntfy';
 import { isUsingDefaults } from '@/utils/api/types/config-edit/validators';
 
 type BaseProps = {
@@ -88,6 +91,7 @@ const NtfyActions: FC<NtfyActionsProps> = ({
 				arg: fieldValues,
 				defaultValue: defaults,
 				matchingFieldsEndsWiths: ['.action', '.method', '.clear'],
+				schema: ntfyActionsSchema,
 			}),
 		[fieldValues, defaults],
 	);

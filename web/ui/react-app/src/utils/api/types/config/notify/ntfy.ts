@@ -34,6 +34,8 @@ export const NTFY_ACTION_HTTP_METHOD = {
 	POST: { label: 'POST', value: 'post' },
 	PUT: { label: 'PUT', value: 'put' },
 } as const;
+export type NTFYActionHTTPMethod =
+	(typeof NTFY_ACTION_HTTP_METHOD)[keyof typeof NTFY_ACTION_HTTP_METHOD]['value'];
 export const ntfyActionHTTPMethodOptions = Object.values(
 	NTFY_ACTION_HTTP_METHOD,
 );

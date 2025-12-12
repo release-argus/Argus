@@ -132,13 +132,24 @@ const SMTP = ({ name, main }: { name: string; main?: NotifySMTPSchema }) => {
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="Params" />
 				<FieldText
-					colSize={{ sm: 12 }}
+					colSize={{ sm: 10, xs: 10 }}
 					defaultVal={defaults?.params?.toaddresses}
 					label="To Address(es)"
 					name={`${name}.params.toaddresses`}
 					required
 					tooltip={{
 						content: 'Emails to send to (Comma separated)',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					colSize={{ sm: 2, xs: 10 }}
+					defaultVal={defaults?.params?.timeout}
+					label="Timeout"
+					name={`${name}.params.timeout`}
+					required
+					tooltip={{
+						content: 'Timeout for send operations',
 						type: 'string',
 					}}
 				/>
@@ -213,6 +224,24 @@ const SMTP = ({ name, main }: { name: string; main?: NotifySMTPSchema }) => {
 					name={`${name}.params.usestarttls`}
 					tooltip={{
 						content: 'Use StartTLS encryption',
+						type: 'string',
+					}}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.requirestarttls}
+					label="Require StartTLS"
+					name={`${name}.params.requirestarttls`}
+					tooltip={{
+						content: 'Fail if StartTLS is enabled but unsupported',
+						type: 'string',
+					}}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.skiptlsverification}
+					label="Skip TLS Verification"
+					name={`${name}.params.skiptlsverify`}
+					tooltip={{
+						content: 'Skip TLS certificate verification',
 						type: 'string',
 					}}
 				/>

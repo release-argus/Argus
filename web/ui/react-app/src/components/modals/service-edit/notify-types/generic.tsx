@@ -107,8 +107,10 @@ const GENERIC = ({
 						ariaLabel: 'Format: mattermost.example.io/PATH',
 						content: (
 							<>
-								{'e.g. mattermost.example.io/'}
-								<span className="bold-underline">path</span>
+								<span className="text-muted-foreground">
+									{'e.g. mattermost.example.io/'}
+								</span>
+								<span className="bold underline">path</span>
 							</>
 						),
 						type: 'element',

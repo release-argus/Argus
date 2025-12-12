@@ -8,12 +8,16 @@ import {
 	webhookTypeOptions,
 } from '@/utils/api/types/config/webhook';
 import { buildSuperRefine } from '@/utils/api/types/config-edit/shared/builder--super-refine';
+import {
+	headersSchema,
+	headersSchemaWithValidation,
+} from '@/utils/api/types/config-edit/shared/header/preprocess.ts';
 import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse';
 import { superRefineNameUnique } from '@/utils/api/types/config-edit/shared/unique-name--super-refine';
 import { applyDefaultsRecursive } from '@/utils/api/types/config-edit/util';
 import {
+	validateArrayFieldWithSchemas,
 	validateListUniqueKeys,
-	validateListWithSchemas,
 	validateNumberInRange,
 	validateNumberString,
 	validateRequired,
@@ -48,10 +52,11 @@ const buildWebHookSchema = (
 			path: ['custom_headers'],
 			props: [
 				{
-					matchingFields: [],
+					defaultSchema: headersSchema,
+					schema: headersSchemaWithValidation,
 				},
 			],
-			validator: [validateListWithSchemas, validateListUniqueKeys],
+			validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],
 		},
 	]);
 };
