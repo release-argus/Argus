@@ -1,6 +1,10 @@
 import { type FC, useCallback, useEffect, useState } from 'react';
 import { Controller, useFormContext, useWatch } from 'react-hook-form';
 import FieldLabelWithTooltip from '@/components/generic/field-label';
+import {
+	type ColSize,
+	getColSpanClasses,
+} from '@/components/generic/field-shared.tsx';
 import type { TooltipWithAriaProps } from '@/components/generic/tooltip';
 import { Field, FieldError, FieldGroup } from '@/components/ui/field';
 import {
@@ -14,6 +18,9 @@ import { isValidURL } from '@/utils/api/types/config-edit/validators';
 type BaseProps = {
 	/* The name of the field. */
 	name: string;
+
+	/* The column width on different screen sizes. */
+	colSize?: ColSize;
 
 	/* The label of the field. */
 	label: string;
@@ -32,6 +39,7 @@ type FieldTextWithPreviewProps = BaseProps & {
  * A field item with a preview image
  *
  * @param name - The name of the form item.
+ * @param colSize - The column width on different screen sizes.
  * @param label - The label of the form item.
  * @param tooltip - The tooltip on the field label.
  * @param tooltip.type - The tooltip content type: either 'string' for plain text or 'element' for a React element.
@@ -44,7 +52,7 @@ type FieldTextWithPreviewProps = BaseProps & {
  */
 const FieldTextWithPreview: FC<FieldTextWithPreviewProps> = ({
 	name,
-
+	colSize,
 	label,
 	tooltip,
 	defaultVal,
@@ -52,6 +60,7 @@ const FieldTextWithPreview: FC<FieldTextWithPreviewProps> = ({
 }) => {
 	const { control } = useFormContext();
 	const formValue = useWatch({ name: name }) as string | null;
+	const responsiveColSpan = getColSpanClasses(colSize, { sm: 12, xs: 12 });
 
 	// The preview image address, or undefined if invalid.
 	const [previewURL, setPreviewURL] = useState(
@@ -81,7 +90,7 @@ const FieldTextWithPreview: FC<FieldTextWithPreviewProps> = ({
 	}, [formValue, setPreview]);
 
 	return (
-		<FieldGroup className={cn('col-span-full py-1')}>
+		<FieldGroup className={cn(responsiveColSpan, 'py-1')}>
 			<Controller
 				control={control}
 				name={name}
@@ -99,7 +108,7 @@ const FieldTextWithPreview: FC<FieldTextWithPreviewProps> = ({
 								aria-label={`Value field for ${label}`}
 								id={name}
 								onBlur={() => setPreview(formValue)}
-								placeholder={placeholder ?? defaultVal}
+								placeholder={defaultVal ?? placeholder}
 								type="text"
 							/>
 

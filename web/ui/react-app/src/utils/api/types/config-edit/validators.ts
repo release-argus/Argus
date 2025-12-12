@@ -7,6 +7,8 @@ import {
 	z,
 } from 'zod';
 import { isEmptyOrNull } from '@/utils';
+import { addZodIssuesToContext } from '@/utils/api/types/config-edit/shared/add-issues.ts';
+import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse.ts';
 import { isEmpty } from '@/utils/is-empty';
 
 /* Field validation */
@@ -18,6 +20,8 @@ export const INVALID_GITHUB_REPO_MESSAGE = 'Invalid GitHub repository.';
 export const INVALID_URL_MESSAGE =
 	"Invalid URL (Must start with 'http://' or 'https://').";
 export const UNIQUE_MESSAGE = 'Must be unique.';
+export const EXPECTED_UUID_MESSAGE = 'Expected a 36-character UUID string.';
+export const EXPECTED_HASH_MESSAGE = 'Expected a 32-character hex string.';
 
 const GITHUB_REPO_REGEX = /^[a-zA-Z0-9-_.]+\/[a-zA-Z0-9-_.]+$/;
 /**
@@ -99,6 +103,30 @@ export const validateHexString = ({ arg, ctx, path }: FieldValidatorProps) => {
 	}
 };
 
+const durationRegex = /^(\d+h)?(\d+m)?(\d+s)?$/;
+/**
+ * Validates that the input is a valid Go duration string.
+ *
+ * @param arg - The input to validate.
+ * @param ctx - The Zod refinement context.
+ * @param path - The path to the input in the object.
+ */
+export const validateDuration = ({ arg, ctx, path }: FieldValidatorProps) => {
+	if (arg && typeof arg === 'string' && !durationRegex.exec(arg)) {
+		ctx.addIssue({
+			code: CUSTOM_ISSUE_CODE,
+			message: "Invalid duration. Use 'AhBmCs' duration format.",
+			path: path,
+		});
+	}
+};
+export const durationString = () =>
+	z
+		.string()
+		.default('')
+		.superRefine((arg, ctx) => {
+			validateDuration({ arg, ctx, path: [] });
+		});
 /**
  * Validates that the input is a number.
  *
@@ -140,6 +168,36 @@ export const validateNumberInRange =
 			ctx.addIssue({
 				code: CUSTOM_ISSUE_CODE,
 				message: `Must be between ${min} and ${max}.`,
+				path: path,
+			});
+		}
+	};
+
+/**
+ * Creates a field validator that ensures a string length is within a specified range.
+ *
+ * @param min - Minimum allowed value (inclusive).
+ * @param max - Maximum allowed value (inclusive).
+ * @param message - Optional custom error message to use if the value is out of range.
+ * @returns A validator function that checks if `arg` is a string within [min, max.
+ */
+export const validateStringLength =
+	({ min, max, message }: { min: number; max: number; message?: string }) =>
+	({ arg, ctx, path }: FieldValidatorProps) => {
+		const errorMessage =
+			message ??
+			(min === max
+				? `Must be ${min} characters.`
+				: `Must be between ${min} and ${max} characters.`);
+
+		if (
+			arg &&
+			typeof arg === 'string' &&
+			(arg.length < min || arg.length > max)
+		) {
+			ctx.addIssue({
+				code: CUSTOM_ISSUE_CODE,
+				message: errorMessage,
 				path: path,
 			});
 		}
@@ -289,6 +347,8 @@ type IsUsingDefaultsParams<T> = {
 	matchingFieldsEndsWiths?: string[];
 	/* The key path of the current `fieldValues`. */
 	key?: string;
+	/* The Zod schema for this field. */
+	schema?: ZodType<T>;
 };
 
 /**
@@ -303,6 +363,7 @@ type IsUsingDefaultsParams<T> = {
  * @param matchingFieldsStartsWiths - Optional list of fields starting with these values that must much the defaults.
  * @param matchingFieldsEndsWiths - Optional list of fields ending with these values that must much the defaults.
  * @param key - The key path of the current `fieldValues`.
+ * @param schema - The Zod schema for this field.
  * @returns `true` if `arg` matches `defaultValue` on the specified fields and
  *          all other items are empty; otherwise `false`.
  */
@@ -312,7 +373,26 @@ export const isUsingDefaults = <T>({
 	matchingFieldsStartsWiths,
 	matchingFieldsEndsWiths,
 	key,
+	schema,
 }: IsUsingDefaultsParams<T>): boolean => {
+	if (key == null && schema) {
+		// Attempt to remove non-current schema values.
+		arg = safeParse({
+			data: arg,
+			fallback: arg,
+			path: '',
+			schema: schema,
+			showErrors: false,
+		});
+		defaultValue = safeParse({
+			data: defaultValue,
+			fallback: defaultValue,
+			path: '',
+			schema: schema,
+			showErrors: false,
+		});
+	}
+
 	// No value.
 	if (isEmpty(arg)) return key == null ? !isEmpty(defaultValue) : true;
 	// No defaults.
@@ -471,48 +551,6 @@ export const addIssuesForEmptyStringFields = ({
 	}
 };
 
-type ValidateListWithSchemasProps = {
-	/* Fields that must match between `arg` and `defaultValue` for `defaultSchema` to be applicable. */
-	matchingFields?: string[];
-	/* Fields that may be empty for validation. */
-	notRequired?: string[];
-};
-
-/**
- * Validates an array of objects against provided schemas and default values.
- *
- * Skips validation if the array exactly matches the default values and has no non-empty fields
- * outside the specified `matchingFields`, which must match.
- *
- * @param arg - The array of objects to validate.
- * @param ctx - Zod validation context for adding issues.
- * @param path - Path in the object for error reporting.
- * @param defaultValue - Array of default objects to compare against.
- * @param matchingFields - Keys to ignore when checking against defaults.
- */
-export const validateListWithSchemas = ({
-	arg,
-	ctx,
-	path,
-	defaultValue,
-	props,
-}: ArrayFieldValidatorProps<ValidateListWithSchemasProps>): void => {
-	if (!isRecordArray(arg)) return;
-	const matchingFields = props?.matchingFields;
-	const notRequired = props?.notRequired;
-
-	// Defaults used if the length matches, and fields in matchingFields match, and all other fields empty.
-	const usingDefaults = isUsingDefaults({
-		arg: arg,
-		defaultValue: defaultValue,
-		matchingFieldsStartsWiths: matchingFields,
-	});
-	if (usingDefaults) return;
-
-	// Otherwise, add issues for any empty string fields in the list of records.
-	addIssuesForEmptyStringFields({ arg, ctx, notRequired, path });
-};
-
 /**
  * Validates that a list of objects has unique keys.
  *
@@ -597,14 +635,12 @@ export const safeParseListWithSchemas = ({
 }: SafeParseListWithSchemasParams<
 	Record<string, unknown>[]
 >): SafeParseWithDefaultsResult<Record<string, unknown>[]> => {
-	const usingDefaults =
-		defaultValue.length > 0 &&
-		defaultValue.length === arg.length &&
-		!arg.some(
-			(item, i) =>
-				hasNonEmptyField(item, matchingFields) ||
-				matchingFields.some((key) => item[key] !== defaultValue[i][key]),
-		);
+	const usingDefaults = isUsingDefaults({
+		arg: arg,
+		defaultValue: defaultValue,
+		matchingFieldsStartsWiths: matchingFields,
+		schema: defaultSchema,
+	});
 
 	const result = (usingDefaults ? defaultSchema : schema).safeParse(arg);
 
@@ -682,6 +718,54 @@ export const safeParseListOfListWithSchemas = ({
 	};
 };
 
+type ValidateArrayFieldWithSchemasProps = {
+	schema: ZodType<Record<string, unknown>[]>;
+	defaultSchema: ZodType<Record<string, unknown>[]>;
+	matchingFields?: string[];
+};
+
+/**
+ * Validates an array field using safeParseListWithSchemas.
+ * - Applies the correct schema based on "hollow" detection.
+ * - If validation fails, attaches all issues to ctx using addZodIssuesToContext.
+ *
+ * Returns the parsed value if successful (or default) or undefined if validation errors occur.
+ */
+export const validateArrayFieldWithSchemas = ({
+	arg,
+	defaultValue,
+	path,
+	props,
+	ctx,
+}: ArrayFieldValidatorProps<ValidateArrayFieldWithSchemasProps>):
+	| Record<string, unknown>[]
+	| undefined => {
+	if (!props) return;
+
+	const { result } = safeParseListWithSchemas({
+		arg: (arg as Record<string, unknown>[]) ?? [],
+		defaultSchema: props.defaultSchema,
+		defaultValue: defaultValue,
+		matchingFields: props.matchingFields,
+		schema: props.schema,
+	});
+	if (result.success) return;
+
+	// Add the path to issues.
+	const errors = new z.ZodError(
+		result.error.issues.map((issue) => ({
+			...issue,
+			path: [...(path ?? []), ...issue.path],
+		})),
+	);
+	// Push the issues to the context.
+	addZodIssuesToContext({
+		ctx: ctx,
+		error: errors,
+	});
+	return undefined;
+};
+
 /**
  * Retrieves a nested value from an object using a path of keys.
  *
@@ -716,7 +800,7 @@ export type ArrayFieldValidatorProps<P = unknown> = FieldValidatorProps & {
 	/* Default value to use if value empty. */
 	defaultValue: Record<string, unknown>[];
 	/* Extra props passed into validators. */
-	props?: P;
+	props: P;
 };
 
 /**

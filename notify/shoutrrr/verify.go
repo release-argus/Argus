@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	goshoutrrr "github.com/containrrr/shoutrrr"
+	goshoutrrr "github.com/nicholas-fedor/shoutrrr"
 
 	"github.com/release-argus/Argus/util"
 )

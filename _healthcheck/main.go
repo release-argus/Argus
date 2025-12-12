@@ -21,23 +21,36 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 )
 
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Expected URL as command-line argument")
-		os.Exit(1)
+func run(args []string) error {
+	if len(args) < 1 {
+		return errors.New("expected URL as command-line argument")
 	}
-	url := os.Args[1]
 
-	//#nosec G402 -- Ignore TLS for healthcheck.
+	url := args[0]
+
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	//#nosec G402 -- Ignore TLS for the health check.
+	tr.TLSClientConfig.InsecureSkipVerify = true
 	http.DefaultTransport.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
+	client := &http.Client{Transport: tr}
+
 	//#nosec G107 -- explicitly set URL.
-	if _, err := http.Get(url); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v", err)
+	if _, err := client.Get(url); err != nil {
+		return fmt.Errorf("error: %w", err)
+	}
+
+	return nil
+}
+
+func main() {
+	if err := run(os.Args[1:]); err != nil {
+		fmt.Fprint(os.Stderr, err)
 		os.Exit(1)
 	}
 }

@@ -40,7 +40,6 @@ const EditServiceLatestVersionRequire = () => {
 	const name = 'latest_version.require';
 	const { schemaDataDefaults } = useSchemaContext();
 
-	// @ts-ignore: control in context.
 	const values = useWatch({ name: name }) as LatestVersionRequire;
 
 	const defaults = schemaDataDefaults?.latest_version?.require;

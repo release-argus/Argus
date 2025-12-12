@@ -1,16 +1,23 @@
 import { z } from 'zod';
+import { normaliseForSelect } from '@/components/modals/service-edit/util';
 import { toZodEnumTuple } from '@/types/util';
 import {
 	NTFY_ACTION_TYPE,
+	ntfyActionHTTPMethodOptions,
+	ntfyActionTypeOptions,
 	ntfyPriorityOptions,
 	ntfySchemeOptions,
 } from '@/utils/api/types/config/notify/ntfy';
-import { flattenHeaderArray } from '@/utils/api/types/config-edit/shared/header/preprocess';
-import { headersSchemaDefaults } from '@/utils/api/types/config-edit/shared/header/schemas';
+import {
+	flattenHeaderArray,
+	headersSchema,
+	headersSchemaWithValidation,
+} from '@/utils/api/types/config-edit/shared/header/preprocess';
 import {
 	makeDefaultsAwareListPreprocessor,
 	preprocessArrayJSONFromString,
 } from '@/utils/api/types/config-edit/shared/preprocess';
+import { REQUIRED_MESSAGE } from '@/utils/api/types/config-edit/validators.ts';
 
 export const NtfyPriorityZodEnum = z.enum(toZodEnumTuple(ntfyPriorityOptions));
 
@@ -23,19 +30,31 @@ export const ntfyActionBase = z.object({
 });
 export const ntfyActionBroadcast = ntfyActionBase.extend({
 	action: z.literal(NTFY_ACTION_TYPE.BROADCAST.value),
-	extras: headersSchemaDefaults,
+	extras: headersSchema,
 	intent: z.string().default(''),
+});
+export const ntfyActionBroadcastWithValidation = ntfyActionBroadcast.extend({
+	extras: headersSchemaWithValidation,
+	label: z.string().min(1, REQUIRED_MESSAGE).default(''),
 });
 export const ntfyActionHTTP = ntfyActionBase.extend({
 	action: z.literal(NTFY_ACTION_TYPE.HTTP.value),
 	body: z.string().default(''),
-	headers: headersSchemaDefaults,
+	headers: headersSchema,
 	method: z.string().default(''),
 	url: z.string().default(''),
+});
+export const ntfyActionHTTPWithValidation = ntfyActionHTTP.extend({
+	headers: headersSchemaWithValidation,
+	method: z.string().min(1, REQUIRED_MESSAGE).default(''),
+	url: z.string().min(1, REQUIRED_MESSAGE).default(''),
 });
 export const ntfyActionView = ntfyActionBase.extend({
 	action: z.literal(NTFY_ACTION_TYPE.VIEW.value),
 	url: z.string().default(''),
+});
+export const ntfyActionViewWithValidation = ntfyActionView.extend({
+	url: z.string().min(1, REQUIRED_MESSAGE).default(''),
 });
 
 export const ntfyActionSchema = z.discriminatedUnion('action', [
@@ -43,8 +62,44 @@ export const ntfyActionSchema = z.discriminatedUnion('action', [
 	ntfyActionHTTP,
 	ntfyActionView,
 ]);
-export const ntfyActionsSchema =
-	preprocessArrayJSONFromString(ntfyActionSchema);
+export const ntfyActionSchemaWithValidation = z.discriminatedUnion('action', [
+	ntfyActionBroadcastWithValidation,
+	ntfyActionHTTPWithValidation,
+	ntfyActionViewWithValidation,
+]);
+
+const normaliseNtfyActionsSchema = (
+	actions: NtfyActionSchema[],
+): NtfyActionSchema[] => {
+	return actions.map((action) => {
+		const actionNormalised = normaliseForSelect(
+			ntfyActionTypeOptions,
+			action.action,
+		)?.value;
+		if (actionNormalised) action.action = actionNormalised;
+
+		if (action.action === NTFY_ACTION_TYPE.HTTP.value) {
+			const method = normaliseForSelect(
+				ntfyActionHTTPMethodOptions,
+				action.method,
+			)?.value;
+			if (method) {
+				action.method = method;
+			}
+			return action;
+		} else {
+			return action;
+		}
+	});
+};
+
+export const ntfyActionsSchema = preprocessArrayJSONFromString({
+	jsonProcessor: normaliseNtfyActionsSchema,
+	schema: ntfyActionSchema,
+});
+export const ntfyActionsSchemaWithValidation = preprocessArrayJSONFromString({
+	schema: ntfyActionSchemaWithValidation,
+});
 
 export type NtfyActionSchema = z.infer<typeof ntfyActionSchema>;
 export type NtfyActionsSchema = NtfyActionSchema[];

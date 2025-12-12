@@ -141,6 +141,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 		schemaData,
 		schemaDataDefaults,
 		mainDataDefaults,
+		typeDataDefaults,
 		serviceID: sID,
 	} = useSchemaContext();
 
@@ -180,6 +181,8 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 			const dataPayload = mapServiceToAPIRequest(
 				dataParsed.data,
 				schemaDataDefaults,
+				mainDataDefaults,
+				typeDataDefaults,
 			);
 
 			await mutateAsync({ data: dataPayload, serviceID: serviceID ?? null })

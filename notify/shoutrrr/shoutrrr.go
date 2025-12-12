@@ -24,9 +24,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containrrr/shoutrrr"
-	"github.com/containrrr/shoutrrr/pkg/router"
-	"github.com/containrrr/shoutrrr/pkg/types"
+	"github.com/nicholas-fedor/shoutrrr"
+	"github.com/nicholas-fedor/shoutrrr/pkg/router"
+	"github.com/nicholas-fedor/shoutrrr/pkg/types"
 
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
@@ -282,15 +282,17 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetURLField("token"),
 			s.GetURLField("channel"))
 	case "teams":
-		// teams://[group@][tenant][/altid][/groupowner]?host=host.example.com
+		// teams://[group@][tenant][/altID][/groupOwner][/extraID]?host=organization.webhook.office.com
 		group := s.GetURLField("group")
-		altid := strings.TrimPrefix(s.GetURLField("altid"), "/")
-		groupowner := strings.TrimPrefix(s.GetURLField("groupowner"), "/")
-		url = fmt.Sprintf("teams://%s%s%s%s?host=%s",
+		altID := strings.TrimPrefix(s.GetURLField("altid"), "/")
+		groupOwner := strings.TrimPrefix(s.GetURLField("groupowner"), "/")
+		extraID := strings.TrimPrefix(s.GetURLField("extraid"), "/")
+		url = fmt.Sprintf("teams://%s%s%s%s%s?host=%s",
 			util.ValueUnlessDefault(group, group+"@"),
 			s.GetURLField("tenant"),
-			util.ValueUnlessDefault(altid, "/"+altid),
-			util.ValueUnlessDefault(groupowner, "/"+groupowner),
+			util.ValueUnlessDefault(altID, "/"+altID),
+			util.ValueUnlessDefault(groupOwner, "/"+groupOwner),
+			util.ValueUnlessDefault(extraID, "/"+extraID),
 			s.GetParam("host"))
 		url = strings.Replace(url, "///", "//", 1)
 	case "telegram":

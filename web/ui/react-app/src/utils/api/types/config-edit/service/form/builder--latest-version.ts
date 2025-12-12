@@ -31,7 +31,7 @@ import {
 	latestVersionRequireSchema,
 	latestVersionRequireSchemaDefaults,
 	urlCommandsSchema,
-	urlCommandsSchemaDefaults,
+	urlCommandsSchemaWithValidation,
 } from '@/utils/api/types/config-edit/service/types/latest-version';
 import { addZodIssuesToContext } from '@/utils/api/types/config-edit/shared/add-issues';
 import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
@@ -65,16 +65,16 @@ export const buildURLCommandsSchemaWithFallbacks = (
 	const defaultValue = urlCommandsTrimArray(defaultItem);
 
 	// Schema.
-	const schema = urlCommandsSchemaDefaults;
+	const schema = urlCommandsSchema;
 	const schemaFinal = schema.superRefine((arg, ctx) => {
 		if (arg.length === 0) return;
 
 		const { result } = safeParseListWithSchemas({
 			arg: arg,
-			defaultSchema: urlCommandsSchemaDefaults,
+			defaultSchema: urlCommandsSchema,
 			defaultValue: defaultValue,
 			matchingFields: ['type'],
-			schema: urlCommandsSchema,
+			schema: urlCommandsSchemaWithValidation,
 		});
 
 		if (!result.success) {

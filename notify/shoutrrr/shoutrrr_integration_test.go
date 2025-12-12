@@ -48,7 +48,7 @@ func TestShoutrrr_Send(t *testing.T) {
 		"valid, empty message": {
 			shoutrrr:      testShoutrrr(false, false),
 			message:       "",
-			errRegex:      `Field 'message' is required`,
+			errRegex:      `message cannot be empty`,
 			expectMetrics: true,
 		},
 		"valid, with message": {
@@ -67,13 +67,15 @@ func TestShoutrrr_Send(t *testing.T) {
 		},
 		"invalid https cert": {
 			shoutrrr:      testShoutrrr(false, true),
+			message:       "__name__",
 			errRegex:      `x509`,
 			expectMetrics: true,
 		},
 		"failing": {
 			shoutrrr:      testShoutrrr(true, true),
+			message:       "__name__",
 			retries:       1,
-			errRegex:      `invalid gotify token .* x 2`,
+			errRegex:      `invalid gotify token.* x 2`,
 			expectMetrics: true,
 		},
 		"deleting": {
@@ -185,20 +187,20 @@ func TestShoutrrrs_Send(t *testing.T) {
 		"single shoutrrr, with error": {
 			shoutrrrs: &Shoutrrrs{
 				"single": testShoutrrr(true, false)},
-			errRegex: `^invalid .* x 1$`,
+			errRegex: `^.*invalid gotify token.* x 1$`,
 		},
 		"multiple shoutrrr, mixed results": {
 			shoutrrrs: &Shoutrrrs{
 				"passing": testShoutrrr(false, false),
 				"failing": testShoutrrr(true, false)},
-			errRegex: `^invalid .* x 1$`,
+			errRegex: `^.*invalid gotify token.* x 1$`,
 		},
 		"multiple shoutrrr, mixed results - more": {
 			shoutrrrs: &Shoutrrrs{
 				"passing":      testShoutrrr(false, false),
 				"failing":      testShoutrrr(true, false),
 				"also_failing": testShoutrrr(true, false)},
-			errRegex: `^(invalid .* x 1\s?){2}$`,
+			errRegex: `^(failed to build request: invalid gotify token.* x 1\s?){2}$`,
 		},
 	}
 
