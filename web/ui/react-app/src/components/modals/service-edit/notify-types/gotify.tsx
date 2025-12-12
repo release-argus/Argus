@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { BooleanWithDefault } from '@/components/generic';
 import { FieldText } from '@/components/generic/field';
+import { GotifyExtras } from '@/components/modals/service-edit/notify-types/extra';
 import {
 	Heading,
 	NotifyOptions,
@@ -62,8 +63,10 @@ const GOTIFY = ({
 						ariaLabel: 'Format: gotify.example.io/PATH',
 						content: (
 							<>
-								e.g. gotify.example.io/{''}
-								<span className="bold-underline">path</span>
+								<span className="text-muted-foreground">
+									{'e.g. gotify.example.io/'}
+								</span>
+								<span className="bold underline">path</span>
 							</>
 						),
 						type: 'element',
@@ -90,10 +93,30 @@ const GOTIFY = ({
 					label="Title"
 					name={`${name}.params.title`}
 				/>
+				<GotifyExtras
+					defaults={defaults?.params?.extras}
+					label="Extras"
+					name={`${name}.params.extras`}
+					tooltip={{
+						content:
+							'Additional metadata in the notification payload sent to Gotify',
+						type: 'string',
+					}}
+				/>
 				<BooleanWithDefault
 					defaultValue={defaults?.params?.disabletls}
 					label="Disable TLS"
 					name={`${name}.params.disabletls`}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.disabletls}
+					label="Insecure Skip Verify"
+					name={`${name}.params.insecureskipverify`}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.useheader}
+					label="Use Header-based Authentication"
+					name={`${name}.params.insecureskipverify`}
 				/>
 			</FieldSet>
 		</FieldSet>

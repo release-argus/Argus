@@ -6,10 +6,10 @@ import type { OptionReadonly } from '@/components/ui/react-select/custom-compone
  * @param options - The options to search.
  * @param value - The value to search for.
  */
-export const normaliseForSelect = (
-	options: readonly OptionReadonly[],
+export const normaliseForSelect = <T extends readonly OptionReadonly[]>(
+	options: T,
 	value?: string | null,
-): { value: string; label: string } | undefined => {
+): { value: T[number]['value']; label: T[number]['label'] } | undefined => {
 	if (value == null) return undefined;
 
 	const valueLower = value.toLowerCase();

@@ -2,13 +2,18 @@ import z from 'zod';
 import { toZodEnumTuple } from '@/types/util';
 import { OPSGENIE_TARGET_TYPE } from '@/utils/api/types/config/notify/opsgenie';
 import { makeDefaultsAwareListPreprocessor } from '@/utils/api/types/config-edit/shared/preprocess';
+import { REQUIRED_MESSAGE } from '@/utils/api/types/config-edit/validators.ts';
 
 /* Actions */
 
 export const opsGenieActionSchema = z.object({
 	arg: z.string(),
 });
-export const opsGenieActionsSchema = z.preprocess((arg) => {
+const opsGenieActionSchemaWithValidation = z.object({
+	arg: z.string().min(1, REQUIRED_MESSAGE),
+});
+
+const preprocessOpsGenieActions = (arg: unknown) => {
 	if (typeof arg === 'string') {
 		try {
 			const list = JSON.parse(arg) as unknown;
@@ -23,13 +28,22 @@ export const opsGenieActionsSchema = z.preprocess((arg) => {
 		}
 	}
 	return arg;
-}, z.array(opsGenieActionSchema).default([]));
+};
+
+export const opsGenieActionsSchema = z.preprocess(
+	preprocessOpsGenieActions,
+	z.array(opsGenieActionSchema).default([]),
+);
 export type OpsGenieActionsSchema = z.infer<typeof opsGenieActionsSchema>;
+export const opsGenieActionsSchemaWithValidation = z.preprocess(
+	preprocessOpsGenieActions,
+	z.array(opsGenieActionSchemaWithValidation).default([]),
+);
 
 /**
  *  Converts the OpsGenie actions from an array of objects to a JSON string.
  *
- *  @param obj - The `NotifyOpsGenieAction[]` to convert.
+ *  @param obj - The `opsGenieActionsSchema` to convert.
  *  @returns A JSON string of the actions.
  */
 export const preprocessStringFromOpsGenieActions = z.preprocess(
@@ -72,6 +86,9 @@ const opsGenieTargetTeamSchema = z.object({
 	type: z.literal(OPSGENIE_TARGET_TYPE.TEAM.value),
 	value: z.string().default(''),
 });
+const opsGenieTargetTeamSchemaWithValidation = opsGenieTargetTeamSchema.extend({
+	value: z.string().min(1, REQUIRED_MESSAGE).default(''),
+});
 
 const opsGenieTargetUserSubtypeValues = toZodEnumTuple(
 	Object.values(OPSGENIE_TARGET_TYPE.USER.SUB_TYPE),
@@ -81,13 +98,21 @@ const opsGenieTargetUserSchema = z.object({
 	type: z.literal(OPSGENIE_TARGET_TYPE.USER.value),
 	value: z.string().default(''),
 });
+const opsGenieTargetUserSchemaWithValidation = opsGenieTargetUserSchema.extend({
+	value: z.string().min(1, REQUIRED_MESSAGE).default(''),
+});
 export const opsGenieTargetSchema = z.discriminatedUnion('type', [
 	opsGenieTargetTeamSchema,
 	opsGenieTargetUserSchema,
 ]);
+export const opsGenieTargetSchemaWithValidation = z.discriminatedUnion('type', [
+	opsGenieTargetTeamSchemaWithValidation,
+	opsGenieTargetUserSchemaWithValidation,
+]);
 export type OpsGenieTargetSchema = z.infer<typeof opsGenieTargetSchema>;
+
 /* Preprocess OpsGenie targets from a string to an array of objects. */
-export const opsGenieTargetsSchema = z.preprocess((arg) => {
+const preprocessOpsGenieTargets = (arg: unknown) => {
 	if (typeof arg === 'string') {
 		try {
 			const list = JSON.parse(arg) as unknown;
@@ -118,8 +143,16 @@ export const opsGenieTargetsSchema = z.preprocess((arg) => {
 		}
 	}
 	return arg;
-}, z.array(opsGenieTargetSchema).default([]));
+};
+export const opsGenieTargetsSchema = z.preprocess(
+	preprocessOpsGenieTargets,
+	z.array(opsGenieTargetSchema).default([]),
+);
 export type OpsGenieTargetsSchema = z.infer<typeof opsGenieTargetsSchema>;
+export const opsGenieTargetsSchemaWithValidation = z.preprocess(
+	preprocessOpsGenieTargets,
+	z.array(opsGenieTargetSchemaWithValidation).default([]),
+);
 
 /**
  * Converts the OpsGenie targets from an array of objects to a JSON string.

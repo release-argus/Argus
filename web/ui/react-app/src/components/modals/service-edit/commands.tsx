@@ -56,7 +56,6 @@ const EditServiceCommands: FC<EditServiceCommandsProps> = ({
 	);
 
 	// Keep track of the array values, so we can use defaults when empty.
-	// @ts-ignore: control in context.
 	const fieldValues = useWatch({ name: name }) as CommandsSchema;
 	// Use defaults when fieldValues undefined or the same as the defaults.
 	const usingDefaults = useMemo(

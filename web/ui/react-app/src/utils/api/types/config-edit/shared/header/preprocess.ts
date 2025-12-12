@@ -8,7 +8,7 @@ import {
 import type { CustomHeaders } from '@/utils/api/types/config/shared';
 import {
 	headerSchema,
-	headerSchemaDefaults,
+	headerSchemaWithValidation,
 } from '@/utils/api/types/config-edit/shared/header/schemas';
 import { makeDefaultsAwareListPreprocessor } from '@/utils/api/types/config-edit/shared/preprocess';
 
@@ -102,13 +102,16 @@ export const preprocessToHeadersArray = <T extends z.ZodType>(
 		.default([]);
 
 /* Array of Header objects (min length 1 on key and value) */
-export const headersSchema = preprocessToHeadersArray(headerSchema);
+export const headersSchemaWithValidation = preprocessToHeadersArray(
+	headerSchemaWithValidation,
+);
 /* Array of Header objects (no validation) */
-export const headersSchemaDefaults =
-	preprocessToHeadersArray(headerSchemaDefaults);
+export const headersSchema = preprocessToHeadersArray(headerSchema);
 
-export const preprocessHeaderArrayWithDefaults = (defaults?: CustomHeaders) =>
-	makeDefaultsAwareListPreprocessor(headersSchemaDefaults.nullable(), {
+export const preprocessCustomHeadersToHeadersSchema = (
+	defaults?: CustomHeaders,
+) =>
+	makeDefaultsAwareListPreprocessor(headersSchema.nullable(), {
 		defaults: defaults,
 		matchingFields: ['key', 'value'],
 	});

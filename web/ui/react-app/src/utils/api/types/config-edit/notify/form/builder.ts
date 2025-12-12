@@ -32,7 +32,25 @@ import {
 	notifyTelegramSchema,
 	notifyZulipSchema,
 } from '@/utils/api/types/config-edit/notify/schemas';
+import {
+	gotifyExtrasSchema,
+	gotifyExtrasSchemaWithValidation,
+} from '@/utils/api/types/config-edit/notify/types/gotify.ts';
+import {
+	ntfyActionsSchema,
+	ntfyActionsSchemaWithValidation,
+} from '@/utils/api/types/config-edit/notify/types/ntfy.ts';
+import {
+	opsGenieActionsSchema,
+	opsGenieActionsSchemaWithValidation,
+	opsGenieTargetsSchema,
+	opsGenieTargetsSchemaWithValidation,
+} from '@/utils/api/types/config-edit/notify/types/opsgenie.ts';
 import { buildSuperRefine } from '@/utils/api/types/config-edit/shared/builder--super-refine';
+import {
+	headersSchema,
+	headersSchemaWithValidation,
+} from '@/utils/api/types/config-edit/shared/header/preprocess.ts';
 import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse';
 import { superRefineNameUnique } from '@/utils/api/types/config-edit/shared/unique-name--super-refine';
 import {
@@ -40,12 +58,16 @@ import {
 	atLeastTwo,
 } from '@/utils/api/types/config-edit/util';
 import {
+	EXPECTED_HASH_MESSAGE,
+	EXPECTED_UUID_MESSAGE,
+	validateArrayFieldWithSchemas,
+	validateDuration,
 	validateHexString,
 	validateListUniqueKeys,
-	validateListWithSchemas,
 	validateNumberInRange,
 	validateNumberString,
 	validateRequired,
+	validateStringLength,
 } from '@/utils/api/types/config-edit/validators';
 
 /* Validators shared by all notify types. */
@@ -95,6 +117,7 @@ const buildNotifySchema = (
 				{ path: ['url_fields', 'host'], validator: validateRequired },
 				{ path: ['url_fields', 'port'], validator: validateNumberString },
 				{ path: ['params', 'fromaddress'], validator: validateRequired },
+				{ path: ['params', 'timeout'], validator: validateDuration },
 				{ path: ['params', 'toaddresses'], validator: validateRequired },
 			]);
 			break;
@@ -110,6 +133,18 @@ const buildNotifySchema = (
 				{ path: ['url_fields', 'host'], validator: validateRequired },
 				{ path: ['url_fields', 'port'], validator: validateNumberString },
 				{ path: ['url_fields', 'token'], validator: validateRequired },
+				{
+					kind: 'array',
+					path: ['params', 'extras'],
+					props: [
+						{
+							defaultSchema: gotifyExtrasSchema,
+							matchingFields: ['namespace', 'contentType'],
+							schema: gotifyExtrasSchemaWithValidation,
+						},
+					],
+					validator: [validateArrayFieldWithSchemas],
+				},
 				{ path: ['params', 'priority'], validator: validateNumberString },
 			]);
 			break;
@@ -159,11 +194,12 @@ const buildNotifySchema = (
 					path: ['params', 'actions'],
 					props: [
 						{
+							defaultSchema: ntfyActionsSchema,
 							matchingFields: ['action', 'method'],
-							notRequired: ['body', 'intent'],
+							schema: ntfyActionsSchemaWithValidation,
 						},
 					],
-					validator: [validateListWithSchemas],
+					validator: [validateArrayFieldWithSchemas],
 				},
 			]);
 			break;
@@ -174,32 +210,48 @@ const buildNotifySchema = (
 				{
 					kind: 'array',
 					path: ['params', 'actions'],
-					validator: [validateListWithSchemas],
+					props: [
+						{
+							defaultSchema: opsGenieActionsSchema,
+							schema: opsGenieActionsSchemaWithValidation,
+						},
+					],
+					validator: [validateArrayFieldWithSchemas],
 				},
 				{
 					kind: 'array',
 					path: ['params', 'details'],
-					validator: [validateListWithSchemas, validateListUniqueKeys],
+					props: [
+						{
+							defaultSchema: headersSchema,
+							schema: headersSchemaWithValidation,
+						},
+					],
+					validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],
 				},
 				{
 					kind: 'array',
 					path: ['params', 'responders'],
 					props: [
 						{
+							defaultSchema: opsGenieTargetsSchema,
 							matchingFields: ['type', 'sub_type'],
+							schema: opsGenieTargetsSchemaWithValidation,
 						},
 					],
-					validator: [validateListWithSchemas],
+					validator: [validateArrayFieldWithSchemas],
 				},
 				{
 					kind: 'array',
 					path: ['params', 'visibleto'],
 					props: [
 						{
+							defaultSchema: opsGenieTargetsSchema,
 							matchingFields: ['type', 'sub_type'],
+							schema: opsGenieTargetsSchemaWithValidation,
 						},
 					],
-					validator: [validateListWithSchemas],
+					validator: [validateArrayFieldWithSchemas],
 				},
 			]);
 			break;
@@ -240,6 +292,38 @@ const buildNotifySchema = (
 			schema = buildSuperRefine(notifyTeamsSchema, mains, defaults, [
 				...defaultValidators,
 				{ path: ['params', 'color'], validator: validateHexString },
+				{
+					path: ['url_fields', 'altid'],
+					validator: validateStringLength({
+						max: 32,
+						message: EXPECTED_HASH_MESSAGE,
+						min: 32,
+					}),
+				},
+				{
+					path: ['url_fields', 'group'],
+					validator: validateStringLength({
+						max: 36,
+						message: EXPECTED_UUID_MESSAGE,
+						min: 36,
+					}),
+				},
+				{
+					path: ['url_fields', 'groupowner'],
+					validator: validateStringLength({
+						max: 36,
+						message: EXPECTED_UUID_MESSAGE,
+						min: 36,
+					}),
+				},
+				{
+					path: ['url_fields', 'tenant'],
+					validator: validateStringLength({
+						max: 36,
+						message: EXPECTED_UUID_MESSAGE,
+						min: 36,
+					}),
+				},
 			]);
 			break;
 		case NOTIFY_TYPE_MAP.TELEGRAM.value:
@@ -263,7 +347,13 @@ const buildNotifySchema = (
 				{
 					kind: 'array',
 					path: ['url_fields', 'custom_headers'],
-					validator: [validateListWithSchemas, validateListUniqueKeys],
+					props: [
+						{
+							defaultSchema: headersSchema,
+							schema: headersSchemaWithValidation,
+						},
+					],
+					validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],
 				},
 				{
 					path: ['url_fields', 'host'],
@@ -272,7 +362,13 @@ const buildNotifySchema = (
 				{
 					kind: 'array',
 					path: ['url_fields', 'json_payload_vars'],
-					validator: [validateListWithSchemas, validateListUniqueKeys],
+					props: [
+						{
+							defaultSchema: headersSchema,
+							schema: headersSchemaWithValidation,
+						},
+					],
+					validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],
 				},
 				{
 					path: ['url_fields', 'port'],
@@ -281,7 +377,13 @@ const buildNotifySchema = (
 				{
 					kind: 'array',
 					path: ['url_fields', 'query_vars'],
-					validator: [validateListWithSchemas, validateListUniqueKeys],
+					props: [
+						{
+							defaultSchema: headersSchema,
+							schema: headersSchemaWithValidation,
+						},
+					],
+					validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],
 				},
 			]);
 			break;

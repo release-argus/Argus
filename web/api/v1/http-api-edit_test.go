@@ -1428,7 +1428,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"port": "number"}}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `invalid port`},
+				body:       `failed to parse URL`},
 		},
 		"new service, no main - no type": {
 			payload: `{

@@ -40,9 +40,9 @@ const SLACK = ({ name, main }: { name: string; main?: NotifySlackSchema }) => {
 						content: (
 							<>
 								{'xoxb:'}
-								<span className="bold-underline">BOT-OAUTH-TOKEN</span>
+								<span className="bold underline">BOT-OAUTH-TOKEN</span>
 								{' or '}
-								<span className="bold-underline">WEBHOOK</span>
+								<span className="bold underline">WEBHOOK</span>
 							</>
 						),
 						type: 'element',

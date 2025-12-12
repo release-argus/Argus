@@ -6,6 +6,10 @@ import {
 } from '@/utils/api/types/config-edit/notify/types/bark';
 import { GenericRequestMethodZodEnum } from '@/utils/api/types/config-edit/notify/types/generic';
 import {
+	gotifyExtrasSchema,
+	preprocessGotifyExtrasToStringWithDefaults,
+} from '@/utils/api/types/config-edit/notify/types/gotify.ts';
+import {
 	NtfyPriorityZodEnum,
 	NtfySchemeZodEnum,
 	ntfyActionsSchema,
@@ -23,7 +27,7 @@ import {
 } from '@/utils/api/types/config-edit/notify/types/smtp';
 import { TelegramParseModeEnum } from '@/utils/api/types/config-edit/notify/types/telegram';
 import {
-	headersSchemaDefaults,
+	headersSchema,
 	preprocessStringFromHeaderArrayWithDefaults,
 } from '@/utils/api/types/config-edit/shared/header/preprocess';
 import { nullString } from '@/utils/api/types/config-edit/shared/null-string'; /* Notify 'Options' Schema */
@@ -101,10 +105,17 @@ export const notifyDiscordSchema = notifyBaseSchema.extend({
 		.object({
 			avatar: z.string().default(''),
 			splitlines: preprocessBooleanFromString,
+			threadid: z.string().default(''),
 			title: z.string().default(''),
 			username: z.string().default(''),
 		})
-		.default({ avatar: '', splitlines: null, title: '', username: '' }),
+		.default({
+			avatar: '',
+			splitlines: null,
+			threadid: '',
+			title: '',
+			username: '',
+		}),
 	type: z.literal(NOTIFY_TYPE_MAP.DISCORD.value),
 	url_fields: z
 		.object({
@@ -126,7 +137,10 @@ export const notifySMTPSchema = notifyBaseSchema.extend({
 			),
 			fromaddress: z.string().default(''), // Required.
 			fromname: z.string().default(''), // Required.
+			requirestarttls: preprocessBooleanFromString,
+			skiptlsverification: preprocessBooleanFromString,
 			subject: z.string().default(''),
+			timeout: z.string().default(''),
 			toaddresses: z.string().default(''),
 			usehtml: preprocessBooleanFromString,
 			usestarttls: preprocessBooleanFromString,
@@ -137,7 +151,10 @@ export const notifySMTPSchema = notifyBaseSchema.extend({
 			encryption: nullString,
 			fromaddress: '',
 			fromname: '',
+			requirestarttls: null,
+			skiptlsverification: null,
 			subject: '',
+			timeout: '',
 			toaddresses: '',
 			usehtml: null,
 			usestarttls: null,
@@ -178,13 +195,19 @@ export const notifyGotifySchema = notifyBaseSchema.extend({
 	params: z
 		.object({
 			disabletls: preprocessBooleanFromString,
+			extras: gotifyExtrasSchema,
+			insecureskipverify: preprocessBooleanFromString,
 			priority: z.string().default(''),
 			title: z.string().default(''),
+			useheader: preprocessBooleanFromString,
 		})
 		.default({
 			disabletls: null,
+			extras: [],
+			insecureskipverify: null,
 			priority: '',
 			title: '',
+			useheader: null,
 		}),
 	type: z.literal(NOTIFY_TYPE_MAP.GOTIFY.value),
 	url_fields: z
@@ -260,9 +283,10 @@ export type NotifyJoinSchema = z.infer<typeof notifyJoinSchema>;
 export const notifyMatterMostSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
+			disabletls: preprocessBooleanFromString,
 			icon: z.string().default(''),
 		})
-		.default({ icon: '' }),
+		.default({ disabletls: null, icon: '' }),
 	type: z.literal(NOTIFY_TYPE_MAP.MATTERMOST.value),
 	url_fields: z
 		.object({
@@ -321,6 +345,7 @@ export const notifyNtfySchema = notifyBaseSchema.extend({
 			cache: preprocessBooleanFromString,
 			click: z.string().default(''),
 			delay: z.string().default(''),
+			disabletlsverification: preprocessBooleanFromString,
 			email: z.string().default(''),
 			filename: z.string().default(''),
 			firebase: preprocessBooleanFromString,
@@ -338,6 +363,7 @@ export const notifyNtfySchema = notifyBaseSchema.extend({
 			cache: null,
 			click: '',
 			delay: '',
+			disabletlsverification: null,
 			email: '',
 			filename: '',
 			firebase: null,
@@ -367,7 +393,7 @@ export const notifyOpsGenieSchema = notifyBaseSchema.extend({
 			actions: opsGenieActionsSchema,
 			alias: z.string().default(''),
 			description: z.string().default(''),
-			details: headersSchemaDefaults,
+			details: headersSchema,
 			entity: z.string().default(''),
 			note: z.string().default(''),
 			priority: z.string().default(''),
@@ -498,11 +524,12 @@ export const notifyTeamsSchema = notifyBaseSchema.extend({
 	url_fields: z
 		.object({
 			altid: z.string().default(''),
+			extraid: z.string().default(''),
 			group: z.string().default(''),
 			groupowner: z.string().default(''),
 			tenant: z.string().default(''),
 		})
-		.default({ altid: '', group: '', groupowner: '', tenant: '' }),
+		.default({ altid: '', extraid: '', group: '', groupowner: '', tenant: '' }),
 });
 export type NotifyTeamsSchema = z.infer<typeof notifyTeamsSchema>;
 
@@ -586,12 +613,12 @@ export const notifyGenericSchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.GENERIC.value),
 	url_fields: z
 		.object({
-			custom_headers: headersSchemaDefaults,
+			custom_headers: headersSchema,
 			host: z.string().default(''), // Required.
-			json_payload_vars: headersSchemaDefaults,
+			json_payload_vars: headersSchema,
 			path: z.string().default(''),
 			port: z.string().default(''),
-			query_vars: headersSchemaDefaults,
+			query_vars: headersSchema,
 		})
 		.default({
 			custom_headers: [],
@@ -697,6 +724,36 @@ export const notifySchemaMapOutgoingWithDefaults = (
 	defaults: NotifySchemaValues,
 ) => {
 	switch (defaults.type) {
+		// Generic WebHook.
+		case NOTIFY_TYPE_MAP.GENERIC.value:
+			return notifyGenericSchema.extend({
+				params: notifyGenericSchema.shape.params.unwrap().extend({
+					disabletls: preprocessStringFromBoolean,
+					requestmethod: preprocessStringFromZodEnum(
+						GenericRequestMethodZodEnum,
+					),
+				}),
+				url_fields: notifyGenericSchema.shape.url_fields.unwrap().extend({
+					custom_headers: preprocessStringFromHeaderArrayWithDefaults(
+						defaults?.url_fields?.custom_headers,
+					),
+					json_payload_vars: preprocessStringFromHeaderArrayWithDefaults(
+						defaults?.url_fields?.json_payload_vars,
+					),
+					query_vars: preprocessStringFromHeaderArrayWithDefaults(
+						defaults?.url_fields?.query_vars,
+					),
+				}),
+			});
+		// 	Gotify
+		case NOTIFY_TYPE_MAP.GOTIFY.value:
+			return notifyGotifySchema.extend({
+				params: notifyGotifySchema.shape.params.unwrap().extend({
+					extras: preprocessGotifyExtrasToStringWithDefaults(
+						defaults?.params?.extras,
+					),
+				}),
+			});
 		// ntfy.
 		case NOTIFY_TYPE_MAP.NTFY.value:
 			return notifyNtfySchema.extend({
@@ -725,27 +782,6 @@ export const notifySchemaMapOutgoingWithDefaults = (
 					),
 					visibleto: preprocessOpsGenieTargetsToStringWithDefaults(
 						defaults?.params?.visibleto,
-					),
-				}),
-			});
-		// Generic WebHook.
-		case NOTIFY_TYPE_MAP.GENERIC.value:
-			return notifyGenericSchema.extend({
-				params: notifyGenericSchema.shape.params.unwrap().extend({
-					disabletls: preprocessStringFromBoolean,
-					requestmethod: preprocessStringFromZodEnum(
-						GenericRequestMethodZodEnum,
-					),
-				}),
-				url_fields: notifyGenericSchema.shape.url_fields.unwrap().extend({
-					custom_headers: preprocessStringFromHeaderArrayWithDefaults(
-						defaults?.url_fields?.custom_headers,
-					),
-					json_payload_vars: preprocessStringFromHeaderArrayWithDefaults(
-						defaults?.url_fields?.json_payload_vars,
-					),
-					query_vars: preprocessStringFromHeaderArrayWithDefaults(
-						defaults?.url_fields?.query_vars,
 					),
 				}),
 			});

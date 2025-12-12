@@ -22,14 +22,14 @@ export const LatestVersionTypeEnum = z.enum(
 /* url_command: 'regex' | 'replace' | 'split' */
 
 /* type: 'regex' */
-export const urlCommandRegexSchema = z.object({
+export const urlCommandRegexSchemaWithValidation = z.object({
 	index: zodStringToNumber(z.number().optional()),
 	regex: regexStringWithFallback(true),
 	template: z.string().default(''),
 	template_toggle: z.boolean(),
 	type: z.literal(LATEST_VERSION__URL_COMMAND_TYPE.REGEX.value),
 });
-export const urlCommandRegexSchemaDefault = urlCommandRegexSchema
+export const urlCommandRegexSchema = urlCommandRegexSchemaWithValidation
 	.extend({
 		regex: z.string().default(''),
 		template_toggle: z.boolean().default(false),
@@ -49,58 +49,63 @@ const urlCommandRegexSchemaOutgoing = z.object({
 /* type: 'replace' */
 export const urlCommandReplaceSchema = z.object({
 	new: z.string().default(''),
-	old: z.string().min(1, REQUIRED_MESSAGE),
+	old: z.string().default(''),
 	type: z.literal(LATEST_VERSION__URL_COMMAND_TYPE.REPLACE.value),
 });
-export const urlCommandReplaceSchemaDefault = urlCommandReplaceSchema.extend({
-	old: z.string().default(''),
-});
+export const urlCommandReplaceSchemaWithValidation =
+	urlCommandReplaceSchema.extend({
+		old: z.string().min(1, REQUIRED_MESSAGE),
+	});
 
 /* type: 'split' */
 export const urlCommandSplitSchema = z.object({
-	index: zodStringToNumber(
-		z.number({
-			error: (issue) =>
-				issue.input ? NUMBER_REQUIRED_MESSAGE : REQUIRED_MESSAGE,
-		}),
-	),
-	text: z.string().min(1, REQUIRED_MESSAGE),
-	type: z.literal(LATEST_VERSION__URL_COMMAND_TYPE.SPLIT.value),
-});
-export const urlCommandSplitSchemaDefault = urlCommandSplitSchema.extend({
 	index: z.union([z.string(), z.number()]).default(''),
 	text: z.string().default(''),
+	type: z.literal(LATEST_VERSION__URL_COMMAND_TYPE.SPLIT.value),
 });
+export const urlCommandSplitSchemaWithValidation = urlCommandSplitSchema.extend(
+	{
+		index: zodStringToNumber(
+			z.number({
+				error: (issue) =>
+					issue.input ? NUMBER_REQUIRED_MESSAGE : REQUIRED_MESSAGE,
+			}),
+		),
+		text: z.string().min(1, REQUIRED_MESSAGE),
+	},
+);
 
 /* url_command */
-export const urlCommandSchemaDefaults = z.discriminatedUnion('type', [
-	urlCommandRegexSchemaDefault,
-	urlCommandReplaceSchemaDefault,
-	urlCommandSplitSchemaDefault,
-]);
-export type URLCommand = z.infer<typeof urlCommandSchemaDefaults>;
-export const urlCommandsSchemaDefaults = z
-	.array(urlCommandSchemaDefaults)
-	.default([]);
-
 export const urlCommandSchema = z.discriminatedUnion('type', [
 	urlCommandRegexSchema,
 	urlCommandReplaceSchema,
 	urlCommandSplitSchema,
 ]);
+export type URLCommand = z.infer<typeof urlCommandSchema>;
 export const urlCommandsSchema = z.array(urlCommandSchema).default([]);
-export type URLCommandsSchema = z.infer<typeof urlCommandsSchema>;
+
+export const urlCommandSchemaWithValidation = z.discriminatedUnion('type', [
+	urlCommandRegexSchemaWithValidation,
+	urlCommandReplaceSchemaWithValidation,
+	urlCommandSplitSchemaWithValidation,
+]);
+export const urlCommandsSchemaWithValidation = z
+	.array(urlCommandSchemaWithValidation)
+	.default([]);
+export type URLCommandsSchemaWithValidation = z.infer<
+	typeof urlCommandsSchemaWithValidation
+>;
 
 export const urlCommandMap = {
-	regex: urlCommandRegexSchemaDefault,
-	replace: urlCommandReplaceSchemaDefault,
-	split: urlCommandSplitSchemaDefault,
+	regex: urlCommandRegexSchema,
+	replace: urlCommandReplaceSchema,
+	split: urlCommandSplitSchema,
 };
 
 const urlCommandSchemaOutgoing = z.discriminatedUnion('type', [
 	urlCommandRegexSchemaOutgoing,
-	urlCommandReplaceSchema,
-	urlCommandSplitSchema,
+	urlCommandReplaceSchemaWithValidation,
+	urlCommandSplitSchemaWithValidation,
 ]);
 export const urlCommandsSchemaOutgoing = z
 	.array(urlCommandSchemaOutgoing)
@@ -168,7 +173,7 @@ export const latestVersionRequireSchemaDefaults =
 
 export const latestVersionLookupSchemaBase = z.object({
 	require: latestVersionRequireSchema,
-	url_commands: urlCommandsSchemaDefaults,
+	url_commands: urlCommandsSchema,
 });
 
 /* Require assets from GitHub. */
@@ -210,7 +215,7 @@ export const latestVersionLookupSchemaDefault = z
 		require: latestVersionRequireSchemaDefaults.optional(),
 		type: LatestVersionTypeEnum.nullable().optional(),
 		url: z.string().optional(),
-		url_commands: urlCommandsSchemaDefaults.optional(),
+		url_commands: urlCommandsSchema.optional(),
 		use_prerelease: z.boolean().nullable().optional(),
 	})
 	.optional();

@@ -1,3 +1,6 @@
+import { Minus, Plus } from 'lucide-react';
+import { type FC, memo, useCallback, useEffect, useMemo } from 'react';
+import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import FieldKeyVal from '@/components/generic/field-key-val';
 import FieldLabelWithTooltip from '@/components/generic/field-label';
 import type { HeaderPlaceholders } from '@/components/generic/field-shared';
@@ -6,11 +9,8 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { cn } from '@/lib/utils';
 import { isEmptyArray } from '@/utils';
-import { isUsingDefaults } from '@/utils/api/types/config-edit/validators';
 import type { CustomHeader } from '@/utils/api/types/config/shared';
-import { Minus, Plus } from 'lucide-react';
-import { type FC, memo, useCallback, useEffect, useMemo } from 'react';
-import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
+import { isUsingDefaults } from '@/utils/api/types/config-edit/validators';
 
 type BaseProps = {
 	/* The name of the field. */
@@ -63,7 +63,6 @@ const FieldKeyValMap: FC<FieldKeyValMapProps> = ({
 	}, []);
 
 	// Keep track of the array values, so we can use defaults when empty.
-	// @ts-ignore: control in context.
 	const fieldValues = useWatch({ name: name }) as CustomHeader[];
 	// Use defaults when fieldValues undefined or the same as the defaults.
 	const usingDefaults = useMemo(

@@ -81,7 +81,7 @@ const FieldColour: FC<FieldColourProps> = ({
 					};
 
 					return (
-						<Field data-invalid={fieldState.invalid} orientation="responsive">
+						<Field data-invalid={fieldState.invalid}>
 							{label && (
 								<FieldLabelWithTooltip
 									htmlFor={name}

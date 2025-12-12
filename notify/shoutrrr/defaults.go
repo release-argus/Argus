@@ -45,7 +45,12 @@ func (s *ShoutrrrsDefaults) Default() {
 	defaults["smtp"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil)
+		nil,
+		map[string]string{
+			"requirestarttls": "no",
+			"skiptlsverify":   "no",
+			"usehtml":         "no",
+			"usestarttls":     "yes"})
 	defaults["googlechat"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
@@ -56,9 +61,11 @@ func (s *ShoutrrrsDefaults) Default() {
 		map[string]string{
 			"port": "443"},
 		map[string]string{
-			"disabletls": "no",
-			"priority":   "0",
-			"title":      "Argus"})
+			"disabletls":         "no",
+			"insecureskipverify": "no",
+			"priority":           "0",
+			"title":              "Argus",
+			"useheader":          "no"})
 	defaults["ifttt"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
@@ -81,21 +88,25 @@ func (s *ShoutrrrsDefaults) Default() {
 		map[string]string{
 			"username": "Argus",
 			"port":     "443"},
-		nil)
+		map[string]string{
+			"disabletls": "no",
+		})
 	defaults["matrix"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		map[string]string{
+			"port": "443"},
+		map[string]string{
 			"disabletls": "no",
-			"port":       "443"},
-		nil)
+		})
 	defaults["ntfy"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		map[string]string{
 			"host": "ntfy.sh"},
 		map[string]string{
-			"title": "Argus"})
+			"disabletlsvalidation": "no",
+			"title":                "Argus"})
 	defaults["opsgenie"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),

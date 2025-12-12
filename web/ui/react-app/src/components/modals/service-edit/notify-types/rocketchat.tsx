@@ -58,8 +58,10 @@ const ROCKET_CHAT = ({
 						ariaLabel: 'Format: rocketchat.example.io/PATH',
 						content: (
 							<>
-								e.g. rocketchat.example.io/{''}
-								<span className="bold-underline">path</span>
+								<span className="text-muted-foreground">
+									{'e.g.rocketchat.example.io/'}
+								</span>
+								<span className="bold underline">path</span>
 							</>
 						),
 						type: 'element',

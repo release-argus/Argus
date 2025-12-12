@@ -43,10 +43,11 @@ const DISCORD = ({
 							'Format: https://discord.com/api/webhooks/WEBHOOK_ID/token',
 						content: (
 							<>
-								e.g. https://discord.com/api/webhooks/{''}
-								<span className="bold-underline">webhook_id</span>
-								{''}
-								/token
+								<span className="text-muted-foreground">
+									{'e.g. https://discord.com/api/webhooks/'}
+								</span>
+								<span className="bold underline">webhook_id</span>
+								<span className="text-muted-foreground">/token</span>
 							</>
 						),
 						type: 'element',
@@ -62,8 +63,10 @@ const DISCORD = ({
 							'Format: https://discord.com/api/webhooks/webhook_id/TOKEN',
 						content: (
 							<>
-								e.g. https://discord.com/api/webhooks/webhook_id/{''}
-								<span className="bold-underline">token</span>
+								<span className="text-muted-foreground">
+									{'e.g. https://discord.com/api/webhooks/webhook_id/'}
+								</span>
+								<span className="bold underline">token</span>
 							</>
 						),
 						type: 'element',
@@ -73,11 +76,21 @@ const DISCORD = ({
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="Params" />
 				<FieldTextWithPreview
+					colSize={{ sm: 6 }}
 					defaultVal={defaults?.params?.avatar}
 					label="Avatar"
 					name={`${name}.params.avatar`}
 					tooltip={{
 						content: 'Override WebHook avatar with this URL',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					defaultVal={defaults?.params?.threadid}
+					label="Thread ID"
+					name={`${name}.params.threadid`}
+					tooltip={{
+						content: 'The Thread ID to send the message to',
 						type: 'string',
 					}}
 				/>
