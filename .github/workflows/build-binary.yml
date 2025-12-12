@@ -19,8 +19,6 @@ jobs:
           - os: linux
             arch: amd64
           - os: linux
-            arch: arm
-          - os: linux
             arch: arm64
           - os: windows
             arch: amd64
@@ -34,7 +32,7 @@ jobs:
       - name: Use Node.js LTS
         uses: actions/setup-node@v6
         with:
-          node-version: 22.x
+          node-version: 24.x
 
       - name: Build web components
         run: make web
