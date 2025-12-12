@@ -571,6 +571,11 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 				"json_payload_vars": `{"key1":"val1"}`,
 				"query_vars":        `{"foo":"bar"}`},
 		},
+		"shoutrrr - base": {
+			sType:     "shoutrrr",
+			want:      "RAW",
+			urlFields: map[string]string{"raw": "RAW"},
+		},
 	}
 
 	for name, tc := range tests {

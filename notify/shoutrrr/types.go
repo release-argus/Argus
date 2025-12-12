@@ -27,7 +27,8 @@ import (
 var (
 	supportedTypes = []string{
 		"bark", "discord", "smtp", "gotify", "googlechat", "ifttt", "join", "mattermost", "matrix", "ntfy",
-		"opsgenie", "pushbullet", "pushover", "rocketchat", "slack", "teams", "telegram", "zulip", "generic"}
+		"opsgenie", "pushbullet", "pushover", "rocketchat", "slack", "teams", "telegram", "zulip", "generic",
+		"shoutrrr"}
 )
 
 // Shoutrrrs is a string map of Shoutrrr.
