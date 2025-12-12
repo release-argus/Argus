@@ -351,6 +351,9 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			util.ValueUnlessDefault(port, ":"+port),
 			util.ValueUnlessDefault(path, "/"+path),
 			urlParams)
+	case "shoutrrr":
+		// Raw
+		url = s.GetURLField("raw")
 	}
 	return
 }
