@@ -521,9 +521,10 @@ export const notifySlackSchema = notifyBaseSchema.extend({
 			botname: z.string().default(''),
 			color: z.string().default(''),
 			icon: z.string().default(''),
+			threadts: z.string().default(''),
 			title: z.string().default(''),
 		})
-		.default({ botname: '', color: '', icon: '', title: '' }),
+		.default({ botname: '', color: '', icon: '', threadts: '', title: '' }),
 	type: z.literal(NOTIFY_TYPE_MAP.SLACK.value),
 	url_fields: z
 		.object({
