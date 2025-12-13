@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.28.0](https://github.com/release-argus/Argus/compare/0.27.0...0.28.0) (2025-12-13)
+
+
+### Features
+
+* **notify:** migrate from containrrr/shoutrrr to nicholas-fedor/shoutrrr ([#718](https://github.com/release-argus/Argus/issues/718)) ([7b7aaf6](https://github.com/release-argus/Argus/commit/7b7aaf6b536982c1c45e8be7459ceeed0c480fff))
+
+
+### Bug Fixes
+
+* **healthcheck:** clone default transport to avoid nil pointer deref ([#707](https://github.com/release-argus/Argus/issues/707)) ([5b6ff38](https://github.com/release-argus/Argus/commit/5b6ff3865e94edd02804529861f75653abd80342))
+* **notify:** restore support for raw shoutrrr config ([#719](https://github.com/release-argus/Argus/issues/719)) ([d752a50](https://github.com/release-argus/Argus/commit/d752a508edf242b17ca01438a37d5f932471b5cc))
+* **ui:** always convert notify fields to strings ([#712](https://github.com/release-argus/Argus/issues/712)) ([383c379](https://github.com/release-argus/Argus/commit/383c3793723b63e80fb6a843cacb856b163c63b4))
+* **ui:** support notify.&lt;type&gt; with no explicit type field ([#704](https://github.com/release-argus/Argus/issues/704)) ([6f60f3a](https://github.com/release-argus/Argus/commit/6f60f3aa868e6ec05ee6af29b1eafde0c0129839))
+
 ## [0.27.0](https://github.com/release-argus/Argus/compare/0.26.3...0.27.0) (2025-12-09)
 
 
