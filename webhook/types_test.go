@@ -561,7 +561,8 @@ func TestWebHooks_UnmarshalJSON(t *testing.T) {
 			// THEN errors produced match the regex.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.wantErr, e) {
-				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot: %q", packageName, tc.wantErr, e)
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantErr, e)
 			}
 			if e != "" {
 				return
@@ -569,7 +570,8 @@ func TestWebHooks_UnmarshalJSON(t *testing.T) {
 
 			// AND map keys and types are as expected.
 			if len(s) != len(tc.wantKeys) {
-				t.Fatalf("%s\nlength mismatch\nwant: %d\ngot: %d", packageName, len(tc.wantKeys), len(s))
+				t.Fatalf("%s\nlength mismatch\nwant: %d\ngot:  %d",
+					packageName, len(tc.wantKeys), len(s))
 			}
 			for id, wantType := range tc.wantKeys {
 				got, ok := s[id]

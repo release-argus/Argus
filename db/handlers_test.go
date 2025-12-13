@@ -211,7 +211,7 @@ func TestAPI_DeleteRow(t *testing.T) {
 			stdout := releaseStdout()
 			deleteFailRegex := `ERROR: [^)]+\), deleteRow`
 			if tc.databaseDeleted != util.RegexCheck(deleteFailRegex, stdout) {
-				t.Errorf("%s\nstdout mismatch:\nwant=%t (%q)\ngot: %q",
+				t.Errorf("%s\nstdout mismatch:\nwant: %t (%q)\ngot:  %q",
 					packageName, tc.databaseDeleted, deleteFailRegex, stdout)
 			}
 			// AND the row is deleted from the DB (if it existed and the DB wasn't deleted).

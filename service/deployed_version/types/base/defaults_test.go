@@ -86,13 +86,13 @@ func TestDefaults_CheckValues(t *testing.T) {
 			// THEN the error matches expectation.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.wantErr, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot: %q",
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantErr, e)
 			}
 
 			// AND Method is uppercased/unchanged as expected.
 			if d.Method != tc.wantMethod {
-				t.Errorf("%s\nMethod mismatch\nwant: %q\ngot: %q",
+				t.Errorf("%s\nMethod mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantMethod, d.Method)
 			}
 		})

@@ -111,7 +111,7 @@ func TestRequire_RegexCheckContent(t *testing.T) {
 			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("%s\nerror mismatch%q\ngot: %q",
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
 			}
 		})

@@ -145,7 +145,7 @@ func TestSetLevel(t *testing.T) {
 
 					rStr := fmt.Sprint(r)
 					if !util.RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf("%s\npanic error mismatch\nwant: %q\ngot: %q",
+						t.Errorf("%s\npanic error mismatch\nwant: %q\ngot:  %q",
 							packageName, *tc.panicRegex, rStr)
 					}
 				}()

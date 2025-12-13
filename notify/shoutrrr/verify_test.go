@@ -316,14 +316,14 @@ func TestBase_normaliseParamSelect(t *testing.T) {
 
 			// THEN it returns the expected boolean.
 			if ok != tc.wantOK {
-				t.Fatalf("%s\nnormaliseParamSelect() ok mismatch\nwant: %t\ngot: %t",
+				t.Fatalf("%s\nnormaliseParamSelect() ok mismatch\nwant: %t\ngot:  %t",
 					packageName, tc.wantOK, ok)
 			}
 
 			// AND Params[key] is set/unchanged as expected.
 			got := b.GetParam(name)
 			if got != tc.wantValue {
-				t.Fatalf("%s\nnormaliseParamSelect() Params[x] mismatch\nwant: %q\ngot: %q",
+				t.Fatalf("%s\nnormaliseParamSelect() Params[x] mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantValue, got)
 			}
 		})
@@ -374,14 +374,14 @@ func TestBase_validateParamSelect(t *testing.T) {
 			// THEN error matches expectation.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.wantErr, e) {
-				t.Fatalf("%s\nvalidateParamSelect() error mismatch\nwant: %q\ngot: %q",
+				t.Fatalf("%s\nvalidateParamSelect() error mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantErr, e)
 			}
 
 			// AND Params[key] is set/unchanged as expected.
 			got := b.GetParam(key)
 			if got != tc.wantValue {
-				t.Fatalf("%s\nvalidateParamSelect() Params[x] mismatch\nwant: %q\ngot: %q",
+				t.Fatalf("%s\nvalidateParamSelect() Params[x] mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantValue, got)
 			}
 		})
@@ -534,7 +534,7 @@ func TestBase_checkValuesParamsSelects(t *testing.T) {
 			// THEN error matches expectation.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.wantErr, e) {
-				t.Fatalf("%s\ncheckValuesParamsSelects() error mismatch\nwant: %q\ngot: %q",
+				t.Fatalf("%s\ncheckValuesParamsSelects() error mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantErr, e)
 			}
 
@@ -542,7 +542,7 @@ func TestBase_checkValuesParamsSelects(t *testing.T) {
 			for k, v := range tc.wantParam {
 				got := b.GetParam(k)
 				if got != v {
-					t.Fatalf("%s\ncheckValuesParamsSelects() normalisation mismatch for %q\nwant: %q\ngot: %q",
+					t.Fatalf("%s\ncheckValuesParamsSelects() normalisation mismatch for %q\nwant: %q\ngot:  %q",
 						packageName, k, v, got)
 				}
 			}
