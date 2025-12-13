@@ -485,7 +485,7 @@ func TestURLCommandSlice_GetVersions(t *testing.T) {
 			// AND the expected error is returned.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot: %q",
+				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
 			}
 		})

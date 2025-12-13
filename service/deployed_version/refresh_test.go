@@ -210,7 +210,7 @@ func TestRefresh(t *testing.T) {
 				if previousStatus.DeployedVersion() != targetStatus.DeployedVersion() {
 					// then so should the timestamp.
 					if previousStatus.DeployedVersionTimestamp() == targetStatus.DeployedVersionTimestamp() {
-						t.Errorf("%s\nexpected deployed_version_timestamp to change\nhad: %q\ngot: %q",
+						t.Errorf("%s\nexpected deployed_version_timestamp to change\nhad: %q\ngot:  %q",
 							packageName, previousStatus.DeployedVersionTimestamp(), targetStatus.DeployedVersionTimestamp())
 					}
 					// otherwise, the timestamp should remain unchanged.

@@ -1414,7 +1414,7 @@ func TestDockerCheckDefaults_Default(t *testing.T) {
 			// THEN the Type is set to the default value.
 			wantType := "hub"
 			if tc.dockerCheckDefaults != nil && tc.dockerCheckDefaults.Type != wantType {
-				t.Errorf("%s\nType mismatch\n%q\ngot: %q",
+				t.Errorf("%s\nType mismatch\nwant: %q\ngot:  %q",
 					packageName, wantType, tc.dockerCheckDefaults.Type)
 			}
 		})
@@ -1673,7 +1673,7 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 			// THEN the err is what we expect.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("%s\nerror mismatch\nwant:%q\ngot: %q",
+				t.Fatalf("%s\nerror mismatch\nwant:%q\ngot:  %q",
 					packageName, tc.errRegex, e)
 			}
 		})

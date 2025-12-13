@@ -593,7 +593,7 @@ func TestHTTP_Config(t *testing.T) {
 			}
 			got := string(data)
 			if got != tc.wantBody {
-				t.Fatalf("%s - %s\nwant %q\ngot: %q",
+				t.Fatalf("%s - %s\nwant: %q\ngot:  %q",
 					packageName, name, tc.wantBody, got)
 			}
 		})

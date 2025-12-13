@@ -404,11 +404,11 @@ func TestHTTPRequest(t *testing.T) {
 			// AND the nextPage is as expected.
 			if err == nil {
 				if nextPage != tc.nextPage {
-					t.Errorf("%s\nnextPage mismatch\nwant: %d\ngot: %d",
+					t.Errorf("%s\nnextPage mismatch\nwant: %d\ngot:  %d",
 						packageName, tc.nextPage, nextPage)
 				}
 			} else if nextPage != tc.nextPage {
-				t.Errorf("%s\nnextPage mismatch\nwant: %d\ngot: %d",
+				t.Errorf("%s\nnextPage mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.nextPage, nextPage)
 			}
 		})
@@ -649,7 +649,7 @@ func TestHandleResponse(t *testing.T) {
 				}
 				// AND the nextPage is as expected.
 				if nextPage != tc.want.nextPage {
-					t.Errorf("%s\nnextPage mismatch\nwant: %d\ngot: %d",
+					t.Errorf("%s\nnextPage mismatch\nwant: %d\ngot:  %d",
 						packageName, tc.want.nextPage, nextPage)
 				}
 				break
@@ -1074,7 +1074,7 @@ func TestQueryGitHubETag(t *testing.T) {
 		urlCommands                        filter.URLCommands
 		errRegex                           string
 	}{
-		// Keeps .Releases in case filters change.
+		// Keeps `.Releases` in case filters change.
 		"three requests only uses 1 api limit": {
 			attempts:              3,
 			eTagChanged:           1,
@@ -1093,7 +1093,7 @@ func TestQueryGitHubETag(t *testing.T) {
 			eTagChanged:           4, // page1+2, page1+2.
 			eTagUnchangedUseCache: 0, // 0 recheck.
 			urlCommands: filter.URLCommands{
-				{Type: "regex", Regex: (`^FOO$`)}},
+				{Type: "regex", Regex: `^FOO$`}},
 			errRegex: test.TrimYAML(`
 				^no releases were found matching the url_commands on page 2 of the API response
 				no releases were found matching the url_commands on page 2 of the API response$`)},
@@ -1105,6 +1105,8 @@ func TestQueryGitHubETag(t *testing.T) {
 			releaseStdout := test.CaptureStdout()
 
 			lookup := testLookup(false)
+			lookup.URL = "release-argus/test-pagination"
+			lookup.UsePreRelease = test.BoolPtr(true)
 			lookup.GetGitHubData().SetETag("foo")
 			lookup.Status.ServiceInfo.ID = name
 			lookup.Require = &filter.Require{
@@ -1113,7 +1115,7 @@ func TestQueryGitHubETag(t *testing.T) {
 			lookup.URLCommands = tc.urlCommands
 
 			attempt := 0
-			// WHEN Query is called on it attempts number of times.
+			// WHEN Query is called on it 'attempts' number of times.
 			var errs []error
 			for tc.attempts != attempt {
 				attempt++
