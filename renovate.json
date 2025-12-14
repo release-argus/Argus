@@ -17,14 +17,14 @@
       "matchDepNames": ["go"],
       "matchDepTypes": ["golang"],
       "matchManagers": ["gomod"],
-      "matchUpdateTypes": ["major", "minor", "patch"]
+      "matchUpdateTypes": ["major", "minor", "patch"],
       "semanticCommitScope": "deps-go"
     },
     {
       "description": "Go toolchain updates",
       "matchDepNames": ["toolchain"],
       "matchManagers": ["gomod"],
-      "rangeStrategy": "pin"
+      "rangeStrategy": "pin",
       "semanticCommitScope": "deps-go"
     },
 
