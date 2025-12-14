@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.28.1](https://github.com/release-argus/Argus/compare/0.28.0...0.28.1) (2025-12-14)
+
+
+### Bug Fixes
+
+* **ui:** carry old data to renamed service and replace order array ([#725](https://github.com/release-argus/Argus/issues/725)) ([4ee6e5c](https://github.com/release-argus/Argus/commit/4ee6e5ce25b15f5bb27b089807a64f93c0104f10))
+* **ui:** show error toast instead of resetting order on failed save ([#727](https://github.com/release-argus/Argus/issues/727)) ([556abb8](https://github.com/release-argus/Argus/commit/556abb8ad01ae991fe7a4f5a655fa3976908e4bc))
+
 ## [0.28.0](https://github.com/release-argus/Argus/compare/0.27.0...0.28.0) (2025-12-13)
 
 
