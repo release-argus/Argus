@@ -1,6 +1,77 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
+  "extends": ["config:best-practices", ":semanticCommits"],
+  "semanticCommitType": "build",
+  "semanticCommitScope": "deps",
+  "postUpdateOptions": ["gomodTidy"],
+  "commitMessageExtra": "({{parentDir}})",
+  "enabledManagers": [
+    "dockerfile",
+    "github-actions",
+    "gomod",
+    "npm"
+  ],
+  "packageRules": [
+    {
+      "description": "Go version updates",
+      "matchDepNames": ["go"],
+      "matchDepTypes": ["golang"],
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["major", "minor", "patch"]
+      "semanticCommitScope": "deps-go"
+    },
+    {
+      "description": "Go toolchain updates",
+      "matchDepNames": ["toolchain"],
+      "matchManagers": ["gomod"],
+      "rangeStrategy": "pin"
+      "semanticCommitScope": "deps-go"
+    },
+
+    {
+      "description": "GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "matchPaths": [".github/workflows/**"],
+      "pinDigests": true,
+      "semanticCommitScope": "github-actions"
+    },
+
+    {
+      "description": "Dockerfile base image updates",
+      "matchManagers": ["dockerfile"],
+      "matchPaths": ["Dockerfile"],
+      "pinDigests": true,
+      "semanticCommitScope": "docker"
+    },
+
+    {
+      "description": "npm dependencies",
+      "matchDepTypes": ["dependencies"],
+      "matchManagers": ["npm"],
+      "matchPaths": ["package.json", "web/ui/package.json", "web/ui/react-app/package.json"],
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "description": "npm devDependencies",
+      "matchDepTypes": ["devDependencies"],
+      "matchManagers": ["npm"],
+      "matchPaths": ["package.json", "web/ui/package.json", "web/ui/react-app/package.json"],
+      "semanticCommitScope": "deps-npm-dev"
+    },
+
+    {
+      "description": "Group all minor/patch npm dependencies",
+      "groupName": "all non-major npm deps",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "Group all minor/patch npm devDependencies",
+      "groupName": "all non-major npm devDeps",
+      "matchDepTypes": ["devDependencies"],
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"]
+    }
   ]
 }
