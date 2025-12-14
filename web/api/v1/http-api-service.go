@@ -85,7 +85,7 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 	// Announce to the WebSocket.
 	api.announceOrder()
 	// Trigger save.
-	*api.Config.HardDefaults.Service.Status.SaveChannel <- true
+	api.Config.HardDefaults.Service.Status.SaveChannel <- true
 }
 
 func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {

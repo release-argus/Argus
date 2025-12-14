@@ -168,7 +168,7 @@ func TestLookup_Query(t *testing.T) {
 					packageName, wantVersion, dvl.Version)
 			}
 			// AND the correct number of announces are queued.
-			gotAnnounces := len(*dvl.Status.AnnounceChannel)
+			gotAnnounces := len(dvl.Status.AnnounceChannel)
 			if gotAnnounces != tc.announces {
 				t.Errorf("%s\nannounce count mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.announces, gotAnnounces)
@@ -201,7 +201,7 @@ func TestLookup_Query__RateLimit(t *testing.T) {
 	}
 	// AND no announces are queued.
 	wantAnnounces := 0
-	gotAnnounces := len(*dvl.Status.AnnounceChannel)
+	gotAnnounces := len(dvl.Status.AnnounceChannel)
 	if gotAnnounces != wantAnnounces {
 		t.Errorf("%s\nannounce count mismatch\nwant: %d\ngot:  %d",
 			packageName, wantAnnounces, gotAnnounces)

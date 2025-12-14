@@ -33,27 +33,29 @@ import (
 // when it receives a message.
 func (c *Config) SaveHandler() {
 	for {
-		<-*c.SaveChannel
-		waitChannelTimeout(c.SaveChannel)
+		<-c.SaveChannel
+		drainAndDebounce(c.SaveChannel)
 		c.Save()
 	}
 }
 
-// waitChannelTimeout will remove from `channel` and wait 30 seconds.
+var debounceDuration = 30 * time.Second
+
+// drainAndDebounce will clear the message queue from `channel` and wait `debounceDuration`.
 //
-// Repeat until the channel is empty at the end of the 30 seconds.
-func waitChannelTimeout(channel *chan bool) {
+// Repeat until the channel is empty at the end of the debounce.
+func drainAndDebounce(channel chan bool) {
 	for {
 		// Clear queue.
-		for len(*channel) != 0 {
-			<-*channel
+		for len(channel) != 0 {
+			<-channel
 		}
 
-		// Sleep 30s.
-		time.Sleep(30 * time.Second)
+		// Sleep.
+		time.Sleep(debounceDuration)
 
-		// End if channel is still empty.
-		if len(*channel) == 0 {
+		// End if channel still empty.
+		if len(channel) == 0 {
 			break
 		}
 	}

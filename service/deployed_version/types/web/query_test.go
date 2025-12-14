@@ -259,7 +259,7 @@ func TestLookup_Track(t *testing.T) {
 				dbChannel := make(chan dbtype.Message, 4)
 				announceChannel := make(chan []byte, 4)
 				svcStatus := status.New(
-					&announceChannel, &dbChannel, nil,
+					announceChannel, dbChannel, nil,
 					"",
 					tc.startDeployedVersion, "",
 					tc.startLatestVersion, "",
@@ -316,15 +316,15 @@ func TestLookup_Track(t *testing.T) {
 				t.Errorf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantLatestVersion, gotLatestVersion)
 			}
-			if gotAnnounces := len(*tc.lookup.Status.AnnounceChannel); gotAnnounces != tc.wantAnnounces {
+			if gotAnnounces := len(tc.lookup.Status.AnnounceChannel); gotAnnounces != tc.wantAnnounces {
 				for i := 0; i < gotAnnounces; i++ {
 					t.Logf("%s\nAnnounce message - %s\n",
-						packageName, <-(*tc.lookup.Status.AnnounceChannel))
+						packageName, <-(tc.lookup.Status.AnnounceChannel))
 				}
 				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wantAnnounces, gotAnnounces)
 			}
-			if gotDatabaseMessages := len(*tc.lookup.Status.DatabaseChannel); gotDatabaseMessages != tc.wantDatabaseMessages {
+			if gotDatabaseMessages := len(tc.lookup.Status.DatabaseChannel); gotDatabaseMessages != tc.wantDatabaseMessages {
 				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wantDatabaseMessages, gotDatabaseMessages)
 			}

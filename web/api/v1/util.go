@@ -54,7 +54,7 @@ func (api *API) announceEdit(oldData *apitype.ServiceSummary, newData *apitype.S
 	}
 
 	// Announce all edits to refresh caches.
-	*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
+	api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
 }
 
 // announceDelete broadcasts a DELETE message to all WebSocket clients.
@@ -63,7 +63,7 @@ func (api *API) announceDelete(serviceID string) {
 		Page:    "APPROVALS",
 		Type:    "DELETE",
 		SubType: serviceID})
-	*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
+	api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
 }
 
 // announceOrder broadcasts an ORDER message to all WebSocket clients.
@@ -73,7 +73,7 @@ func (api *API) announceOrder() {
 		Type:    "SERVICE",
 		SubType: "ORDER",
 		Order:   &api.Config.Order})
-	*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
+	api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
 }
 
 // ConstantTimeCompare returns whether the slices x and y have equal contents.

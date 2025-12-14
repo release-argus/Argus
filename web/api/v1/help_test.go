@@ -84,7 +84,7 @@ func testLoad(file string) *config.Config {
 	config.Load(file, &flags)
 	config.Init()
 	announceChannel := make(chan []byte, 8)
-	config.HardDefaults.Service.Status.AnnounceChannel = &announceChannel
+	config.HardDefaults.Service.Status.AnnounceChannel = announceChannel
 
 	return &config
 }
@@ -164,8 +164,8 @@ func testService(id string, semVer bool) *service.Service {
 		&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhookHardDefaults)
 
 	// Status channels.
-	svc.Status.AnnounceChannel = &announceChannel
-	svc.Status.DatabaseChannel = &databaseChannel
+	svc.Status.AnnounceChannel = announceChannel
+	svc.Status.DatabaseChannel = databaseChannel
 
 	return &svc
 }

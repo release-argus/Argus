@@ -87,14 +87,14 @@ func TestService_HandleSkip(t *testing.T) {
 				return
 			}
 			// AND the correct amount of changes are queued in the announce channel.
-			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
-					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+					packageName, tc.wantAnnounces, len(svc.Status.AnnounceChannel))
 			}
 			// AND the correct amount of messages are queued in the database channel.
-			if len(*svc.Status.DatabaseChannel) != tc.wantDatabaseMessages {
+			if len(svc.Status.DatabaseChannel) != tc.wantDatabaseMessages {
 				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d\ngot:  %d",
-					packageName, tc.wantDatabaseMessages, len(*svc.Status.DatabaseChannel))
+					packageName, tc.wantDatabaseMessages, len(svc.Status.DatabaseChannel))
 			}
 		})
 	}
@@ -234,9 +234,9 @@ func TestService_HandleCommand(t *testing.T) {
 					packageName, want, got)
 			}
 			// THEN the correct amount of changes are queued in the channel.
-			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
-					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+					packageName, tc.wantAnnounces, len(svc.Status.AnnounceChannel))
 				fails := ""
 				for i := range svc.Command {
 					fails += fmt.Sprintf("%d=%s, ",
@@ -244,8 +244,8 @@ func TestService_HandleCommand(t *testing.T) {
 				}
 				t.Logf("%s\ncommandFails: {%s}", fails[:len(fails)-2],
 					packageName)
-				for len(*svc.Status.AnnounceChannel) != 0 {
-					msg := <-*svc.Status.AnnounceChannel
+				for len(svc.Status.AnnounceChannel) != 0 {
+					msg := <-svc.Status.AnnounceChannel
 					t.Logf("%s - service.Service.HandleCommand() %#v",
 						packageName, string(msg))
 				}
@@ -394,9 +394,9 @@ func TestService_HandleWebHook(t *testing.T) {
 					packageName, want, got)
 			}
 			// THEN the correct amount of changes are queued in the channel.
-			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
-					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+					packageName, tc.wantAnnounces, len(svc.Status.AnnounceChannel))
 				fails := ""
 				for i := range svc.WebHook {
 					fails += fmt.Sprintf("%s=%s, ",
@@ -404,8 +404,8 @@ func TestService_HandleWebHook(t *testing.T) {
 				}
 				t.Logf("%s\nwebhookFails: {%s}",
 					fails[:len(fails)-2], packageName)
-				for len(*svc.Status.AnnounceChannel) != 0 {
-					msg := <-*svc.Status.AnnounceChannel
+				for len(svc.Status.AnnounceChannel) != 0 {
+					msg := <-svc.Status.AnnounceChannel
 					t.Logf("%s - %#v",
 						packageName, string(msg))
 				}
@@ -571,13 +571,13 @@ func TestService_HandleUpdateActions(t *testing.T) {
 					packageName, want, got)
 			}
 			// THEN the correct amount of changes are queued in the channel.
-			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d\ngot:  %d",
-					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+					packageName, tc.wantAnnounces, len(svc.Status.AnnounceChannel))
 				t.Logf("%s - Fails:\n%s",
 					packageName, svc.Status.Fails.String("  "))
-				for len(*svc.Status.AnnounceChannel) != 0 {
-					msg := <-*svc.Status.AnnounceChannel
+				for len(svc.Status.AnnounceChannel) != 0 {
+					msg := <-svc.Status.AnnounceChannel
 					t.Logf("%s - AnnounceChannel message: %#v",
 						packageName, string(msg))
 				}
@@ -825,13 +825,13 @@ func TestService_HandleFailedActions(t *testing.T) {
 					packageName, want, got)
 			}
 			// AND the correct amount of changes are queued in the channel.
-			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d\ngot:  %d",
-					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+					packageName, tc.wantAnnounces, len(svc.Status.AnnounceChannel))
 				t.Logf("%s - Fails:\n%s",
 					packageName, svc.Status.Fails.String("  "))
-				for len(*svc.Status.AnnounceChannel) != 0 {
-					msg := <-*svc.Status.AnnounceChannel
+				for len(svc.Status.AnnounceChannel) != 0 {
+					msg := <-svc.Status.AnnounceChannel
 					t.Logf("%s - %#v",
 						packageName, string(msg))
 				}
@@ -1028,9 +1028,9 @@ func TestService_UpdateLatestApproved(t *testing.T) {
 					packageName, want, got)
 			}
 			// AND the correct amount of changes are queued in the channel.
-			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d\ngot:  %d",
-					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+					packageName, tc.wantAnnounces, len(svc.Status.AnnounceChannel))
 			}
 		})
 	}
@@ -1192,9 +1192,9 @@ func TestService_UpdatedVersion(t *testing.T) {
 					packageName, startLV, gotDV)
 			}
 			// AND the correct amount of changes are queued in the channel.
-			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d\ngot:  %d",
-					packageName, tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
+					packageName, tc.wantAnnounces, len(svc.Status.AnnounceChannel))
 			}
 		})
 	}

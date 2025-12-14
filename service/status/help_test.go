@@ -34,7 +34,7 @@ func testStatus() (status *Status) {
 		databaseChannel = make(chan dbtype.Message, 5)
 	)
 	svcStatus := New(
-		&announceChannel, &databaseChannel, &saveChannel,
+		announceChannel, databaseChannel, saveChannel,
 		"",
 		"", "",
 		"", "",

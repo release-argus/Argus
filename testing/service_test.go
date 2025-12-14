@@ -218,7 +218,7 @@ func TestServiceTest(t *testing.T) {
 					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &hardDefaults.WebHook)
 				// will do a call for latest_version* and one for deployed_version*.
 				dbChannel := make(chan dbtype.Message, 4)
-				tc.services[tc.flag].Status.DatabaseChannel = &dbChannel
+				tc.services[tc.flag].Status.DatabaseChannel = dbChannel
 			}
 
 			// WHEN ServiceTest is called with the test Config.

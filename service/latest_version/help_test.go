@@ -69,7 +69,7 @@ func testLookup(lookupType string, failing bool) Lookup {
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
 	svcStatus := status.New(
-		&announceChannel, &databaseChannel, &saveChannel,
+		announceChannel, databaseChannel, saveChannel,
 		"",
 		"", "",
 		"", "",

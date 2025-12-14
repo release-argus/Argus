@@ -74,12 +74,12 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 
 	// Trigger a save if the Service has changed.
 	if changedService {
-		*c.HardDefaults.Service.Status.SaveChannel <- true
+		c.HardDefaults.Service.Status.SaveChannel <- true
 	}
 
 	// Update the database if the service is new, or the versions changed.
 	if changedDB {
-		*c.HardDefaults.Service.Status.DatabaseChannel <- dbtype.Message{
+		c.HardDefaults.Service.Status.DatabaseChannel <- dbtype.Message{
 			ServiceID: newService.ID,
 			Cells: []dbtype.Cell{
 				{Column: "latest_version", Value: newService.Status.LatestVersion()},
@@ -129,7 +129,7 @@ func (c *Config) RenameService(oldService string, newService *service.Service) {
 	c.Order = util.ReplaceElement(c.Order, oldService, newService.ID)
 	c.Service[newService.ID] = newService
 	// Rename the primary key for this service in the database.
-	*c.HardDefaults.Service.Status.DatabaseChannel <- dbtype.Message{
+	c.HardDefaults.Service.Status.DatabaseChannel <- dbtype.Message{
 		ServiceID: oldService,
 		Cells: []dbtype.Cell{
 			{Column: "id", Value: newService.ID}}}
@@ -162,5 +162,5 @@ func (c *Config) DeleteService(serviceID string) {
 	delete(c.Service, serviceID)
 
 	// Trigger save.
-	*c.HardDefaults.Service.Status.SaveChannel <- true
+	c.HardDefaults.Service.Status.SaveChannel <- true
 }

@@ -62,9 +62,9 @@ func BareConfig(nilFlags bool) (cfg *config.Config) {
 
 	// Announce channel.
 	announceChannel := make(chan []byte, 16)
-	cfg.HardDefaults.Service.Status.AnnounceChannel = &announceChannel
+	cfg.HardDefaults.Service.Status.AnnounceChannel = announceChannel
 	// Save channel.
 	saveChannel := make(chan bool, 16)
-	cfg.HardDefaults.Service.Status.SaveChannel = &saveChannel
+	cfg.HardDefaults.Service.Status.SaveChannel = saveChannel
 	return
 }

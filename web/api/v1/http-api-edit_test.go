@@ -452,7 +452,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			if tc.wants.announce {
 				wantAnnounces = 1
 			}
-			if got := len(*svc.Status.AnnounceChannel); got != wantAnnounces {
+			if got := len(svc.Status.AnnounceChannel); got != wantAnnounces {
 				t.Errorf("%s\nDeployedVersionRefresh - Announcements length mismatch\nwant: %d\ngot:  %d",
 					packageName, wantAnnounces, got)
 			}
@@ -1225,7 +1225,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 		&api.Config.WebHook, &api.Config.Defaults.WebHook, &api.Config.HardDefaults.WebHook)
 	_ = api.Config.AddService("", svc)
 	// Drain db from the Service addition.
-	<-*api.Config.DatabaseChannel
+	<-api.Config.DatabaseChannel
 	tests := []struct {
 		name      string
 		serviceID string
@@ -1300,11 +1300,11 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 			// AND the service is removed from the database (if the req was OK).
 			if tc.wants.statusCode == http.StatusOK {
 				time.Sleep(time.Second)
-				if len(*api.Config.DatabaseChannel) == 0 {
+				if len(api.Config.DatabaseChannel) == 0 {
 					t.Errorf("%s\nservice %q not removed from database",
 						packageName, tc.serviceID)
 				} else {
-					msg := <-*api.Config.DatabaseChannel
+					msg := <-api.Config.DatabaseChannel
 					if msg.Delete != true {
 						t.Errorf("%s\nServiceDelete should have sent a deletion to the db, not\n%+v",
 							packageName, msg)

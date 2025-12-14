@@ -332,7 +332,7 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 			announceChannel := make(chan []byte, 4)
 			databaseChannel := make(chan dbtype.Message, 4)
 			status := New(
-				&announceChannel, &databaseChannel, nil,
+				announceChannel, databaseChannel, nil,
 				tc.hadApprovedVersion,
 				"", "",
 				"", "",
@@ -369,14 +369,14 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 					packageName, deployedVersion, got)
 			}
 			// 	AnnounceChannel:
-			if len(*status.AnnounceChannel) != tc.wantMessages {
+			if len(status.AnnounceChannel) != tc.wantMessages {
 				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
-					packageName, tc.wantMessages, len(*status.AnnounceChannel))
+					packageName, tc.wantMessages, len(status.AnnounceChannel))
 			}
 			// 	DatabaseChannel:
-			if len(*status.DatabaseChannel) != tc.wantMessages {
+			if len(status.DatabaseChannel) != tc.wantMessages {
 				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d messages\ngot:  %d",
-					packageName, tc.wantMessages, len(*status.DatabaseChannel))
+					packageName, tc.wantMessages, len(status.DatabaseChannel))
 			}
 			// AND LatestVersionIsDeployedVersion metric is updated.
 			gotMetric := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(status.ServiceInfo.ID))
@@ -493,7 +493,7 @@ func TestStatus_DeployedVersion(t *testing.T) {
 			for _, haveDB := range []bool{false, true} {
 				dbChannel := make(chan dbtype.Message, 4)
 				status := New(
-					nil, &dbChannel, nil,
+					nil, dbChannel, nil,
 					tc.had.approvedVersion,
 					tc.had.deployedVersion, tc.had.deployedVersionTimestamp,
 					tc.had.latestVersion, "",
@@ -613,7 +613,7 @@ func TestStatus_LatestVersion(t *testing.T) {
 			for _, haveDB := range []bool{false, true} {
 				dbChannel := make(chan dbtype.Message, 8)
 				status := New(
-					nil, &dbChannel, nil,
+					nil, dbChannel, nil,
 					"",
 					"", "",
 					tc.had.version, tc.had.timestamp,
@@ -776,7 +776,7 @@ func TestStatus_SendAnnounce(t *testing.T) {
 
 			announceChannel := make(chan []byte, 4)
 			status := New(
-				&announceChannel, nil, nil,
+				announceChannel, nil, nil,
 				"",
 				"", "",
 				"", "",
@@ -795,7 +795,7 @@ func TestStatus_SendAnnounce(t *testing.T) {
 			// THEN the AnnounceChannel is sent a message if not deleting or nil.
 			got := 0
 			if status.AnnounceChannel != nil {
-				got = len(*status.AnnounceChannel)
+				got = len(status.AnnounceChannel)
 			}
 			want := 1
 			if tc.deleting || tc.nilChannel {
@@ -826,7 +826,7 @@ func TestStatus_sendDatabase(t *testing.T) {
 
 			databaseChannel := make(chan dbtype.Message, 4)
 			status := New(
-				nil, &databaseChannel, nil,
+				nil, databaseChannel, nil,
 				"",
 				"", "",
 				"", "",
@@ -849,7 +849,7 @@ func TestStatus_sendDatabase(t *testing.T) {
 			}
 			got := 0
 			if status.DatabaseChannel != nil {
-				got = len(*status.DatabaseChannel)
+				got = len(status.DatabaseChannel)
 			}
 			if got != want {
 				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d messages\ngot:  %d",
@@ -876,7 +876,7 @@ func TestStatus_SendSave(t *testing.T) {
 
 			saveChannel := make(chan bool, 4)
 			status := New(
-				nil, nil, &saveChannel,
+				nil, nil, saveChannel,
 				"",
 				"", "",
 				"", "",
@@ -899,7 +899,7 @@ func TestStatus_SendSave(t *testing.T) {
 			}
 			got := 0
 			if status.SaveChannel != nil {
-				got = len(*status.SaveChannel)
+				got = len(status.SaveChannel)
 			}
 			if got != want {
 				t.Errorf("%s\nSaveChannel length mismatch\nwant: %d messages\ngot:  %d",
@@ -1322,22 +1322,22 @@ func TestNewDefaults(t *testing.T) {
 	saveChannel := make(chan bool, 4)
 
 	// WHEN NewDefaults is called.
-	statusDefaults := NewDefaults(&announceChannel, &databaseChannel, &saveChannel)
+	statusDefaults := NewDefaults(announceChannel, databaseChannel, saveChannel)
 
 	// THEN the AnnounceChannel is set to the given channel.
-	if &announceChannel != statusDefaults.AnnounceChannel {
+	if announceChannel != statusDefaults.AnnounceChannel {
 		t.Errorf("%s\nAnnounceChannel not initialised correctly.\nwant: %v\ngot:  %v",
-			packageName, &announceChannel, statusDefaults.AnnounceChannel)
+			packageName, announceChannel, statusDefaults.AnnounceChannel)
 	}
 	// AND the DatabaseChannel is set to the given channel.
-	if &databaseChannel != statusDefaults.DatabaseChannel {
+	if databaseChannel != statusDefaults.DatabaseChannel {
 		t.Errorf("%s\nDatabaseChannel not initialised correctly.\nwant: %v\ngot:  %v",
-			packageName, &databaseChannel, statusDefaults.DatabaseChannel)
+			packageName, databaseChannel, statusDefaults.DatabaseChannel)
 	}
 	// AND the SaveChannel is set to the given channel.
-	if &saveChannel != statusDefaults.SaveChannel {
+	if saveChannel != statusDefaults.SaveChannel {
 		t.Errorf("%s\nSaveChannel not initialised correctly.\nwant: %v\ngot:  %v",
-			packageName, &saveChannel, statusDefaults.SaveChannel)
+			packageName, saveChannel, statusDefaults.SaveChannel)
 	}
 }
 
@@ -1353,7 +1353,7 @@ func TestStatus_Copy(t *testing.T) {
 	latestVersionTimestamp := "2023-01-02T00:00:00Z"
 	lastQueried := "2023-01-03T00:00:00Z"
 	status := New(
-		&announceChannel, &databaseChannel, &saveChannel,
+		announceChannel, databaseChannel, saveChannel,
 		approvedVersion,
 		deployedVersion, deployedVersionTimestamp,
 		latestVersion, latestVersionTimestamp,
@@ -1434,7 +1434,7 @@ func TestStatus_SetAnnounceChannel(t *testing.T) {
 	// GIVEN a Status with an initial AnnounceChannel.
 	initialChannel := make(chan []byte, 4)
 	status := New(
-		&initialChannel, nil, nil,
+		initialChannel, nil, nil,
 		"",
 		"", "",
 		"", "",
@@ -1443,18 +1443,18 @@ func TestStatus_SetAnnounceChannel(t *testing.T) {
 
 	// WHEN SetAnnounceChannel is called with a new channel.
 	newChannel := make(chan []byte, 4)
-	status.SetAnnounceChannel(&newChannel)
+	status.SetAnnounceChannel(newChannel)
 
 	// THEN the AnnounceChannel should be updated to the new channel.
-	if &newChannel != status.AnnounceChannel {
+	if newChannel != status.AnnounceChannel {
 		t.Errorf("%s\nAnnounceChannel not set correctly.\nwant: %v\ngot:  %v",
-			packageName, &newChannel, status.AnnounceChannel)
+			packageName, newChannel, status.AnnounceChannel)
 	}
 
 	// AND the initial channel should no longer be the AnnounceChannel.
-	if &initialChannel == status.AnnounceChannel {
+	if initialChannel == status.AnnounceChannel {
 		t.Errorf("%s\nAnnounceChannel shouldn't have been reset to be the initial channel.\nwant: %v\ngot:  %v",
-			packageName, &newChannel, status.AnnounceChannel)
+			packageName, newChannel, status.AnnounceChannel)
 	}
 }
 

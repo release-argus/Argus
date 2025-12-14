@@ -31,27 +31,25 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-var TIMEOUT time.Duration = 30 * time.Second
-
 func TestConfig_SaveHandler(t *testing.T) {
 	// GIVEN a message is sent to the SaveHandler.
 	config := testConfig()
 	// Disable fatal panics.
 	defer func() { recover() }()
 	go func() {
-		*config.SaveChannel <- true
+		config.SaveChannel <- true
 	}()
 
 	// WHEN the SaveHandler is running for a Config with an inaccessible file.
 	config.SaveHandler()
 
-	// THEN it should have panic'd after TIMEOUT and not reach this.
-	time.Sleep(TIMEOUT * time.Second)
+	// THEN it should have panic'd after `debounceDuration` and not reach this.
+	time.Sleep(debounceDuration * time.Second)
 	t.Errorf("%s\nSave should panic'd on inaccessible file location %q",
 		packageName, config.File)
 }
 
-func TestWaitChannelTimeout(t *testing.T) {
+func TestDrainAndDebounce(t *testing.T) {
 	// GIVEN a Config.SaveChannel and messages to send/not send.
 	tests := map[string]struct {
 		messages  int
@@ -59,15 +57,15 @@ func TestWaitChannelTimeout(t *testing.T) {
 	}{
 		"no messages": {
 			messages:  0,
-			timeTaken: TIMEOUT,
+			timeTaken: debounceDuration,
 		},
 		"one message": {
 			messages:  1,
-			timeTaken: 2 * TIMEOUT,
+			timeTaken: 2 * debounceDuration,
 		},
 		"two messages": {
 			messages:  2,
-			timeTaken: 2 * TIMEOUT,
+			timeTaken: 2 * debounceDuration,
 		},
 	}
 
@@ -80,16 +78,15 @@ func TestWaitChannelTimeout(t *testing.T) {
 			// WHEN those messages are sent to the channel mid-way through the wait.
 			go func() {
 				for tc.messages != 0 {
-					time.Sleep(10 * time.Second)
-					*config.SaveChannel <- true
+					time.Sleep(4 * (debounceDuration / 10))
+					config.SaveChannel <- true
 					tc.messages--
 				}
 			}()
-			time.Sleep(time.Second)
 			start := time.Now().UTC()
-			waitChannelTimeout(config.SaveChannel)
+			drainAndDebounce(config.SaveChannel)
 
-			// THEN after `TIMEOUT`, it would have tried to Save.
+			// THEN after `debounceDuration`, it would have tried to Save.
 			elapsed := time.Since(start)
 			if elapsed < tc.timeTaken-100*time.Millisecond ||
 				elapsed > tc.timeTaken+100*time.Millisecond {

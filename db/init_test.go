@@ -380,7 +380,7 @@ func TestAPI_Run(t *testing.T) {
 	// WHEN a message is send to the DatabaseChannel targeting latest_version.
 	target := "keep0"
 	cell := dbtype.Cell{Column: "latest_version", Value: "9.9.9"}
-	*cfg.DatabaseChannel <- dbtype.Message{
+	cfg.DatabaseChannel <- dbtype.Message{
 		ServiceID: target,
 		Cells:     []dbtype.Cell{cell},
 	}
@@ -446,7 +446,7 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 			rand.Intn(10), rand.Intn(10), rand.Intn(10)),
 			false)
 
-		*tAPI.config.DatabaseChannel <- dbtype.Message{
+		tAPI.config.DatabaseChannel <- dbtype.Message{
 			ServiceID: id,
 			Cells: []dbtype.Cell{
 				{Column: "id", Value: id},

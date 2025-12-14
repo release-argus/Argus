@@ -30,7 +30,7 @@ func (s *Service) PrepDelete(removeFromDB bool) {
 
 	// Delete the row for this service in the database.
 	if removeFromDB {
-		*s.HardDefaults.Status.DatabaseChannel <- dbtype.Message{
+		s.HardDefaults.Status.DatabaseChannel <- dbtype.Message{
 			ServiceID: s.ID,
 			Delete:    true}
 	}

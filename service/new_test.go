@@ -4174,7 +4174,7 @@ func TestService_CheckFetches(t *testing.T) {
 				&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
 			)
 			announceChannel := make(chan []byte, 5)
-			tc.svc.Status.AnnounceChannel = &announceChannel
+			tc.svc.Status.AnnounceChannel = announceChannel
 			tc.svc.Status.SetLatestVersion(tc.startLatestVersion, "", false)
 			tc.svc.Status.SetDeployedVersion(tc.startDeployedVersion, "", false)
 
@@ -4198,9 +4198,9 @@ func TestService_CheckFetches(t *testing.T) {
 					packageName, tc.wantDeployedVersion, tc.svc.Status.DeployedVersion())
 			}
 			want := 0
-			if len(*tc.svc.Status.AnnounceChannel) != want {
+			if len(tc.svc.Status.AnnounceChannel) != want {
 				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
-					packageName, want, len(*tc.svc.Status.AnnounceChannel))
+					packageName, want, len(tc.svc.Status.AnnounceChannel))
 			}
 		})
 	}

@@ -63,7 +63,7 @@ func testStatus() *status.Status {
 	)
 
 	return status.New(
-		&announceChannel, &databaseChannel, &saveChannel,
+		announceChannel, databaseChannel, saveChannel,
 		"",
 		"", "",
 		"", "",

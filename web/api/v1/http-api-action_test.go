@@ -549,7 +549,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 				packageName, expecting)
 			got := 0
 			for expecting != 0 {
-				message := <-*api.Config.HardDefaults.Service.Status.AnnounceChannel
+				message := <-api.Config.HardDefaults.Service.Status.AnnounceChannel
 				if message == nil {
 					stdout := releaseStdout()
 					t.Log(time.Now(), stdout)
@@ -565,9 +565,9 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 				expecting--
 			}
 			// extra message check.
-			extraMessages := len(*api.Config.HardDefaults.Service.Status.AnnounceChannel)
+			extraMessages := len(api.Config.HardDefaults.Service.Status.AnnounceChannel)
 			if extraMessages != 0 {
-				raw := <-*api.Config.HardDefaults.Service.Status.AnnounceChannel
+				raw := <-api.Config.HardDefaults.Service.Status.AnnounceChannel
 				t.Fatalf("%s\nwasn't expecting another message but got one\n%#v\n%s",
 					packageName, extraMessages, string(raw))
 			}
