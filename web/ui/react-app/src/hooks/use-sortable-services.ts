@@ -8,6 +8,7 @@ import {
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { useServiceOrder } from '@/hooks/use-service-order';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
@@ -109,7 +110,9 @@ export const useSortableServices = () => {
 			})
 			.catch((error: unknown) => {
 				console.error('Failed to save order:', error);
-				resetOrder();
+				toast.error('Failed to save order.', {
+					description: `Error: ${error instanceof Error ? error.message : String(error)}`,
+				});
 			});
 	}, [order, resetOrder]);
 
