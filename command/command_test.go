@@ -114,10 +114,10 @@ func TestCommand_Exec(t *testing.T) {
 
 func TestController_ExecIndex(t *testing.T) {
 	// GIVEN a Controller with different Commands to execute.
-	announce := make(chan []byte, 8)
+	announceChannel := make(chan []byte, 8)
 	controller := Controller{}
 	svcStatus := status.New(
-		&announce, nil, nil,
+		announceChannel, nil, nil,
 		"",
 		"", "",
 		"", "",
@@ -179,9 +179,9 @@ func TestController_ExecIndex(t *testing.T) {
 			if !tc.noAnnounce {
 				runNumber++
 			}
-			if len(announce) != runNumber {
+			if len(announceChannel) != runNumber {
 				t.Fatalf("%s\nCommand run not announced\nwant: %d\ngot:  %d",
-					packageName, runNumber, len(announce))
+					packageName, runNumber, len(announceChannel))
 			}
 		})
 	}
@@ -220,8 +220,8 @@ func TestController_Exec(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
-			announce := make(chan []byte, 8)
-			controller := testController(&announce)
+			announceChannel := make(chan []byte, 8)
+			controller := testController(announceChannel)
 
 			// WHEN the Command @index is executed.
 			controller.Command = tc.commands
@@ -247,9 +247,9 @@ func TestController_Exec(t *testing.T) {
 			if !tc.noAnnounce {
 				runNumber = len(*controller.Command)
 			}
-			if len(announce) != runNumber {
+			if len(announceChannel) != runNumber {
 				t.Fatalf("%s\nCommand run not announced\nwant: %d\ngot:  %d",
-					packageName, runNumber, len(announce))
+					packageName, runNumber, len(announceChannel))
 			}
 		})
 	}

@@ -635,9 +635,9 @@ func TestQuery(t *testing.T) {
 					t.Fatalf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
 						packageName, tc.hadStatus.latestVersionWant, lookup.Status.LatestVersion())
 				}
-				if want := 1; tc.want.announce && len(*lookup.Status.AnnounceChannel) != want {
+				if want := 1; tc.want.announce && len(lookup.Status.AnnounceChannel) != want {
 					t.Fatalf("%s\nannouncement mismatch\nwant: %d\ngot:  %d",
-						packageName, want, len(*lookup.Status.AnnounceChannel))
+						packageName, want, len(lookup.Status.AnnounceChannel))
 				}
 				if newVersion != tc.want.newVersion {
 					t.Fatalf("%s\nnewVersion mismatch\nwant: %t\ngot:  %t",

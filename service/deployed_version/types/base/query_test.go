@@ -169,8 +169,8 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 				Status: &status.Status{},
 			}
 			// Status.
-			announceChan := make(chan []byte, 2)
-			lookup.Status.AnnounceChannel = &announceChan
+			announceChannel := make(chan []byte, 2)
+			lookup.Status.AnnounceChannel = announceChannel
 			lookup.Status.Init(
 				0, 0, 0,
 				name, "", "",
@@ -194,7 +194,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			lookup.HandleNewVersion(tc.versions.newVersion, tc.versions.releaseDate, true, logFrom)
 
 			// THEN an announcement should be made when expected.
-			gotLen := len(*lookup.Status.AnnounceChannel)
+			gotLen := len(lookup.Status.AnnounceChannel)
 			if gotLen != tc.wantAnnounces {
 				t.Errorf("%s\nAnnounce channel length mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wantAnnounces, gotLen)

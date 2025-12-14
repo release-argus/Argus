@@ -193,7 +193,7 @@ func TestRefresh(t *testing.T) {
 				}
 			}
 			// AND announce is only true when expected.
-			gotAnnounces := len(*targetStatus.AnnounceChannel)
+			gotAnnounces := len(targetStatus.AnnounceChannel)
 			if gotAnnounces != tc.announce {
 				t.Errorf("%s\nannounce channel count mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.announce, gotAnnounces)

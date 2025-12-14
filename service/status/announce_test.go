@@ -53,7 +53,7 @@ func TestStatus_AnnounceFirstVersion(t *testing.T) {
 			if tc.nilChannel {
 				return
 			}
-			gotData := <-*status.AnnounceChannel
+			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
@@ -101,7 +101,7 @@ func TestStatus_AnnounceQuery(t *testing.T) {
 			if tc.nilChannel {
 				return
 			}
-			gotData := <-*status.AnnounceChannel
+			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
@@ -146,7 +146,7 @@ func TestStatus_AnnounceQueryNewVersion(t *testing.T) {
 			if tc.nilChannel {
 				return
 			}
-			gotData := <-*status.AnnounceChannel
+			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
@@ -195,7 +195,7 @@ func TestStatus_AnnounceUpdate(t *testing.T) {
 			if tc.nilChannel {
 				return
 			}
-			gotData := <-*status.AnnounceChannel
+			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
@@ -243,7 +243,7 @@ func TestStatus_announceApproved(t *testing.T) {
 			if tc.nilChannel {
 				return
 			}
-			gotData := <-*status.AnnounceChannel
+			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {

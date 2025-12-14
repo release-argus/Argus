@@ -58,7 +58,7 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 			webhook.ServiceStatus.AnnounceChannel = nil
 			if !tc.nilChannel {
 				announceChannel := make(chan []byte, 4)
-				webhook.ServiceStatus.AnnounceChannel = &announceChannel
+				webhook.ServiceStatus.AnnounceChannel = announceChannel
 			}
 
 			// WH AnnounceCommand is run.
@@ -68,7 +68,7 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 			if webhook.ServiceStatus.AnnounceChannel == nil {
 				return
 			}
-			m := <-*webhook.ServiceStatus.AnnounceChannel
+			m := <-webhook.ServiceStatus.AnnounceChannel
 			var parsed apitype.WebSocketMessage
 			json.Unmarshal(m, &parsed)
 

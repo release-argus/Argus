@@ -27,7 +27,7 @@ import (
 // incoming messages to the DatabaseChannel.
 func (api *api) handler() {
 	defer api.db.Close()
-	for message := range *api.config.DatabaseChannel {
+	for message := range api.config.DatabaseChannel {
 		// If the message is to delete a row.
 		if message.Delete {
 			api.deleteRow(message.ServiceID)

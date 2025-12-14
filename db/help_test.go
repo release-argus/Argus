@@ -82,8 +82,8 @@ func testConfig() (cfg *config.Config) {
 			"keep2",
 			"delete3",
 		},
-		DatabaseChannel: &databaseChannel,
-		SaveChannel:     &saveChannel,
+		DatabaseChannel: databaseChannel,
+		SaveChannel:     saveChannel,
 	}
 
 	// Services.

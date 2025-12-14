@@ -77,7 +77,7 @@ func TestAnnounceDelete(t *testing.T) {
 	serviceID := "test-service"
 	announceChannel := make(chan []byte, 2)
 	statusDefaults := status.NewDefaults(
-		&announceChannel,
+		announceChannel,
 		nil,
 		nil)
 	api := &API{
@@ -116,7 +116,7 @@ func TestAnnounceOrder(t *testing.T) {
 	// GIVEN an API instance with a service order.
 	announceChannel := make(chan []byte, 2)
 	statusDefaults := status.NewDefaults(
-		&announceChannel,
+		announceChannel,
 		nil,
 		nil)
 	order := []string{"some-order"}
@@ -212,7 +212,7 @@ func TestAnnounceEdit(t *testing.T) {
 	// GIVEN an API instance and old/new service data.
 	announceChannel := make(chan []byte, 2)
 	statusDefaults := status.NewDefaults(
-		&announceChannel,
+		announceChannel,
 		nil,
 		nil)
 	api := &API{

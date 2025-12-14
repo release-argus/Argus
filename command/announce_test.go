@@ -76,7 +76,7 @@ func TestController_AnnounceCommand(t *testing.T) {
 				test.StringPtr("11m"))
 			if !tc.nilChannel {
 				announceChannel := make(chan []byte, 4)
-				controller.ServiceStatus.AnnounceChannel = &announceChannel
+				controller.ServiceStatus.AnnounceChannel = announceChannel
 			}
 			if tc.failed != nil {
 				controller.Failed.Set(tc.index, *tc.failed)
@@ -90,7 +90,7 @@ func TestController_AnnounceCommand(t *testing.T) {
 			if controller.ServiceStatus.AnnounceChannel == nil {
 				return
 			}
-			m := <-*controller.ServiceStatus.AnnounceChannel
+			m := <-controller.ServiceStatus.AnnounceChannel
 			var parsed apitype.WebSocketMessage
 			json.Unmarshal(m, &parsed)
 

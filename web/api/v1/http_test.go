@@ -458,11 +458,11 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 
 					// Test each route for this set of disabled routes.
 					for name, tc := range tests {
-						if len(*announceChannel) != 0 {
-							<-(*announceChannel)
+						if len(announceChannel) != 0 {
+							<-(announceChannel)
 						}
-						if len(*saveChannel) != 0 {
-							<-(*saveChannel)
+						if len(saveChannel) != 0 {
+							<-(saveChannel)
 						}
 
 						if !strings.HasPrefix(name, "-") && util.Contains(disabledRoutes, name) {

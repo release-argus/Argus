@@ -118,11 +118,11 @@ func TestConfig_AddService(t *testing.T) {
 					packageName, tc.wantOrder, cfg.Order)
 			}
 			// AND the DatabaseChannel should have a message waiting if the service was added.
-			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != tc.dbMessages {
+			if len(cfg.HardDefaults.Service.Status.DatabaseChannel) != tc.dbMessages {
 				t.Errorf("%s\nDatabaseChannel mismatch\nwant: %d messages\ngot:  %d",
-					packageName, tc.dbMessages, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
-				for i := 0; i <= len(*cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
-					msg := <-*cfg.HardDefaults.Service.Status.DatabaseChannel
+					packageName, tc.dbMessages, len(cfg.HardDefaults.Service.Status.DatabaseChannel))
+				for i := 0; i <= len(cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
+					msg := <-cfg.HardDefaults.Service.Status.DatabaseChannel
 					t.Log(msg)
 				}
 			}
@@ -285,11 +285,11 @@ func TestConfig_RenameService(t *testing.T) {
 			if !tc.fail {
 				want = 1
 			}
-			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != want {
+			if len(cfg.HardDefaults.Service.Status.DatabaseChannel) != want {
 				t.Errorf("%s\nDatabaseChannel mismatch\nwant: %d messages\ngot:  %d",
-					packageName, want, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
-				for i := 0; i <= len(*cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
-					msg := <-*cfg.HardDefaults.Service.Status.DatabaseChannel
+					packageName, want, len(cfg.HardDefaults.Service.Status.DatabaseChannel))
+				for i := 0; i <= len(cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
+					msg := <-cfg.HardDefaults.Service.Status.DatabaseChannel
 					t.Log(msg)
 				}
 			}
@@ -347,11 +347,11 @@ func TestConfig_DeleteService(t *testing.T) {
 			if tc.dbMessage {
 				want = 1
 			}
-			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != want {
+			if len(cfg.HardDefaults.Service.Status.DatabaseChannel) != want {
 				t.Errorf("%s\nDatabaseChannel mismatch\nwant: %d messages\ngot:  %d",
-					packageName, want, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
-				for i := 0; i <= len(*cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
-					msg := <-*cfg.HardDefaults.Service.Status.DatabaseChannel
+					packageName, want, len(cfg.HardDefaults.Service.Status.DatabaseChannel))
+				for i := 0; i <= len(cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
+					msg := <-cfg.HardDefaults.Service.Status.DatabaseChannel
 					t.Log(msg)
 				}
 			}

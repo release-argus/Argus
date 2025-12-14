@@ -570,29 +570,29 @@ func TestService_Track(t *testing.T) {
 				}
 			}
 			// AnnounceChannel.
-			if gotAnnounceMessages := len(*svc.Status.AnnounceChannel); gotAnnounceMessages != tc.wantAnnounces {
+			if gotAnnounceMessages := len(svc.Status.AnnounceChannel); gotAnnounceMessages != tc.wantAnnounces {
 				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
 					packageName, tc.wantAnnounces, gotAnnounceMessages)
 				for gotAnnounceMessages > 0 {
 					var msg apitype.WebSocketMessage
-					msgBytes := <-*svc.Status.AnnounceChannel
+					msgBytes := <-svc.Status.AnnounceChannel
 					json.Unmarshal(msgBytes, &msg)
 					t.Logf("%s - got message: {%+v}",
 						packageName, msg)
-					gotAnnounceMessages = len(*svc.Status.AnnounceChannel)
+					gotAnnounceMessages = len(svc.Status.AnnounceChannel)
 				}
 			}
 			// DatabaseChannel.
-			if gotDatabaseMessages := len(*svc.Status.DatabaseChannel); gotDatabaseMessages != tc.wantDatabaseMessages {
+			if gotDatabaseMessages := len(svc.Status.DatabaseChannel); gotDatabaseMessages != tc.wantDatabaseMessages {
 				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d messages\ngot:  %d",
 					packageName, tc.wantDatabaseMessages, gotDatabaseMessages)
 				for gotDatabaseMessages > 0 {
 					var msg apitype.WebSocketMessage
-					msgBytes := <-*svc.Status.AnnounceChannel
+					msgBytes := <-svc.Status.AnnounceChannel
 					json.Unmarshal(msgBytes, &msg)
 					t.Logf("%s - got message:\n{%v}\n",
 						packageName, msg)
-					gotDatabaseMessages = len(*svc.Status.DatabaseChannel)
+					gotDatabaseMessages = len(svc.Status.DatabaseChannel)
 				}
 			}
 			// Track should finish if it is not Active and is not being deleted.

@@ -37,6 +37,6 @@ type Config struct {
 	Order      []string         `yaml:"-"`                 // Ordered slice of all Service id's.
 	Service    service.Services `yaml:"service,omitempty"` // The services to monitor.
 
-	DatabaseChannel *chan dbtype.Message `yaml:"-"` // Channel for broadcasts to the Database.
-	SaveChannel     *chan bool           `yaml:"-"` // Channel for triggering a save of the config.
+	DatabaseChannel chan dbtype.Message `yaml:"-"` // Channel for broadcasts to the Database.
+	SaveChannel     chan bool           `yaml:"-"` // Channel for triggering a save of the config.
 }

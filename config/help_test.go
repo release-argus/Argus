@@ -58,9 +58,9 @@ func testConfig() Config {
 		HardDefaults: Defaults{
 			Service: service.Defaults{
 				Status: status.NewDefaults(
-					nil, &databaseChannel, &saveChannel)}},
-		DatabaseChannel: &databaseChannel,
-		SaveChannel:     &saveChannel,
+					nil, databaseChannel, saveChannel)}},
+		DatabaseChannel: databaseChannel,
+		SaveChannel:     saveChannel,
 	}
 }
 
@@ -118,11 +118,11 @@ func testLoadBasic(file string, t *testing.T) *Config {
 		logutil.LogFrom{}, err != nil)
 
 	saveChannel := make(chan bool, 32)
-	config.SaveChannel = &saveChannel
+	config.SaveChannel = saveChannel
 	config.HardDefaults.Service.Status.SaveChannel = config.SaveChannel
 
 	databaseChannel := make(chan dbtype.Message, 32)
-	config.DatabaseChannel = &databaseChannel
+	config.DatabaseChannel = databaseChannel
 	config.HardDefaults.Service.Status.DatabaseChannel = config.DatabaseChannel
 
 	config.GetOrder(data)
@@ -188,7 +188,7 @@ func testServiceURL(id string) *service.Service {
 			&dashboard.OptionsDefaults{}, &dashboard.OptionsDefaults{}),
 		Options: *options,
 		Status: *status.New(
-			&announceChannel, &databaseChannel, &saveChannel,
+			announceChannel, databaseChannel, saveChannel,
 			"",
 			"", "",
 			"", "",

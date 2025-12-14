@@ -32,9 +32,9 @@ import (
 
 // statusBase is the base struct for the Status struct.
 type statusBase struct {
-	AnnounceChannel *chan []byte         // Announce to the WebSocket.
-	DatabaseChannel *chan dbtype.Message // Broadcasts to the Database.
-	SaveChannel     *chan bool           // Trigger a save of the config.
+	AnnounceChannel chan []byte         // Announce to the WebSocket.
+	DatabaseChannel chan dbtype.Message // Broadcasts to the Database.
+	SaveChannel     chan bool           // Trigger a save of the config.
 }
 
 // Defaults are the default values for the Status struct.
@@ -44,9 +44,9 @@ type Defaults struct {
 
 // NewDefaults returns a new Defaults struct.
 func NewDefaults(
-	announceChannel *chan []byte,
-	databaseChannel *chan dbtype.Message,
-	saveChannel *chan bool,
+	announceChannel chan []byte,
+	databaseChannel chan dbtype.Message,
+	saveChannel chan bool,
 ) Defaults {
 	return Defaults{
 		statusBase: statusBase{
@@ -108,9 +108,9 @@ type Status struct {
 
 // New Status struct.
 func New(
-	announceChannel *chan []byte,
-	databaseChannel *chan dbtype.Message,
-	saveChannel *chan bool,
+	announceChannel chan []byte,
+	databaseChannel chan dbtype.Message,
+	saveChannel chan bool,
 
 	av string,
 	dv, dvT string,
@@ -228,7 +228,7 @@ func (s *Status) String() string {
 }
 
 // SetAnnounceChannel will set the AnnounceChannel.
-func (s *Status) SetAnnounceChannel(channel *chan []byte) {
+func (s *Status) SetAnnounceChannel(channel chan []byte) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -532,7 +532,7 @@ func (s *Status) SendAnnounce(payload *[]byte) {
 		return
 	}
 
-	*s.AnnounceChannel <- *payload
+	s.AnnounceChannel <- *payload
 }
 
 // sendDatabase payload to the DatabaseChannel.
@@ -541,7 +541,7 @@ func (s *Status) sendDatabase(payload *dbtype.Message) {
 		return
 	}
 
-	*s.DatabaseChannel <- *payload
+	s.DatabaseChannel <- *payload
 }
 
 // SendSave request to the SaveChannel.
@@ -553,7 +553,7 @@ func (s *Status) SendSave() {
 		return
 	}
 
-	*s.SaveChannel <- true
+	s.SaveChannel <- true
 }
 
 // setLatestVersionIsDeployedMetric sets the Prometheus metric for whether the LatestVersion is deployed.

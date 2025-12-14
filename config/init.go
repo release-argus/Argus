@@ -97,10 +97,10 @@ func (c *Config) Load(file string, flagset *map[string]bool) {
 	c.GetOrder(data)
 
 	databaseChannel := make(chan dbtype.Message, 32)
-	c.DatabaseChannel = &databaseChannel
+	c.DatabaseChannel = databaseChannel
 
 	saveChannel := make(chan bool, 32)
-	c.SaveChannel = &saveChannel
+	c.SaveChannel = saveChannel
 
 	for _, svc := range c.Service {
 		svc.Status = *status.New(

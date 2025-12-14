@@ -200,9 +200,9 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 		sDatabaseChannel = make(chan dbtype.Message, 5)
 		sSaveChannel     = make(chan bool, 5)
 	)
-	svc.Status.AnnounceChannel = &sAnnounceChannel
-	svc.Status.DatabaseChannel = &sDatabaseChannel
-	svc.Status.SaveChannel = &sSaveChannel
+	svc.Status.AnnounceChannel = sAnnounceChannel
+	svc.Status.DatabaseChannel = sDatabaseChannel
+	svc.Status.SaveChannel = sSaveChannel
 	svc.Status.Init(
 		len(svc.Notify),
 		len(svc.Command), len(svc.WebHook),

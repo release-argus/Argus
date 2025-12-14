@@ -39,10 +39,10 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testController(announce *chan []byte) (control *Controller) {
+func testController(announceChannel chan []byte) (control *Controller) {
 	control = &Controller{}
 	svcStatus := status.New(
-		announce, nil, nil,
+		announceChannel, nil, nil,
 		"",
 		"", "",
 		"", "",

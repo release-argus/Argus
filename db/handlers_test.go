@@ -253,7 +253,7 @@ func TestAPI_Handler(t *testing.T) {
 		ServiceID: target,
 		Cells:     []dbtype.Cell{cell2},
 	}
-	*tAPI.config.DatabaseChannel <- msg1
+	tAPI.config.DatabaseChannel <- msg1
 	time.Sleep(250 * time.Millisecond)
 
 	// THEN the cell was changed in the DB.
@@ -266,7 +266,7 @@ func TestAPI_Handler(t *testing.T) {
 	// ------------------------------
 
 	// WHEN a message is sent to the DatabaseChannel deleting a row.
-	*tAPI.config.DatabaseChannel <- dbtype.Message{
+	tAPI.config.DatabaseChannel <- dbtype.Message{
 		ServiceID: target,
 		Delete:    true,
 	}
@@ -283,9 +283,9 @@ func TestAPI_Handler(t *testing.T) {
 	// ------------------------------
 
 	// WHEN multiple messages are targeting the same row in quick succession.
-	*tAPI.config.DatabaseChannel <- msg1
+	tAPI.config.DatabaseChannel <- msg1
 	wantLatestVersion := msg2.Cells[0].Value
-	*tAPI.config.DatabaseChannel <- msg2
+	tAPI.config.DatabaseChannel <- msg2
 	time.Sleep(250 * time.Millisecond)
 
 	// THEN the last message is the one that is applied.
