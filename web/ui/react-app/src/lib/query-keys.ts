@@ -20,7 +20,7 @@ export const QUERY_KEYS = {
 			...QUERY_KEYS.SERVICE.BASE(serviceID),
 			'actions',
 		],
-		BASE: (serviceID: string) => ['service', { service: serviceID }],
+		BASE: (serviceID: string) => ['service', serviceID],
 		EDIT_DEFAULTS: () => ['service', 'edit', 'defaults'],
 		EDIT_ITEM: (serviceID: string) => [
 			...QUERY_KEYS.SERVICE.BASE(serviceID),
@@ -29,7 +29,7 @@ export const QUERY_KEYS = {
 		ORDER: () => ['service', 'order'],
 		SUMMARY_ITEM: (serviceID: string) => [
 			...QUERY_KEYS.SERVICE.SUMMARY_ITEM_BASE,
-			{ service: serviceID },
+			serviceID,
 		],
 		SUMMARY_ITEM_BASE: ['service', 'summary'],
 	},

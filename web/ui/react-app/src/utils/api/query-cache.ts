@@ -88,14 +88,22 @@ export const approvalsQueryCacheUpdater = ({
 			const oldID = msg.sub_type;
 			const newID = newServiceData.id ?? oldID;
 			if (!newID) break;
+			const idHasChanged = oldID && oldID !== newID;
 
+			const oldData = oldID
+				? queryClient.getQueryData<ServiceSummary>(
+						QUERY_KEYS.SERVICE.SUMMARY_ITEM(oldID),
+					)
+				: null;
 			const orderData = queryClient.getQueryData<OrderAPIResponse>(
 				QUERY_KEYS.SERVICE.ORDER(),
-			);
-			const newOrder = orderData?.order ?? [];
-			if (oldID && oldID !== newID) {
+			) ?? { order: [] };
+			const newOrder = [...orderData.order];
+
+			if (idHasChanged) {
 				// Clear caches if another service already has this ID.
-				if (newOrder.includes(newID)) {
+				if (newOrder.includes(newID) || !newOrder.includes(oldID)) {
+					// ORDER.
 					queryClient
 						.invalidateQueries({
 							exact: true,
@@ -104,26 +112,43 @@ export const approvalsQueryCacheUpdater = ({
 						.catch((err) => {
 							console.error('Failed to invalidate queries', err);
 						});
-					queryClient
-						.invalidateQueries({
-							queryKey: QUERY_KEYS.SERVICE.SUMMARY_ITEM_BASE,
-						})
-						.catch((err) => {
-							console.error('Failed to invalidate queries', err);
-						});
-					return;
+					if (newOrder.includes(newID)) {
+						// ACTIONS/EDIT_ITEM.
+						queryClient
+							.invalidateQueries({
+								queryKey: QUERY_KEYS.SERVICE.BASE(newID),
+							})
+							.catch((err) => {
+								console.error('Failed to invalidate queries', err);
+							});
+						// SUMMARY_ITEM.
+						queryClient
+							.invalidateQueries({
+								exact: true,
+								queryKey: QUERY_KEYS.SERVICE.SUMMARY_ITEM(newID),
+							})
+							.catch((err) => {
+								console.error('Failed to invalidate queries', err);
+							});
+						return;
+					}
 				}
 
 				// Replace ID in the ORDER array.
 				const idx = newOrder.indexOf(oldID);
-				if (idx !== -1) newOrder[idx] = newID;
-				if (newOrder.length > 0) {
+				// If idx is -1, we will have invalidated above.
+				if (idx !== -1) {
+					newOrder[idx] = newID;
 					queryClient.setQueryData(QUERY_KEYS.SERVICE.ORDER(), () => ({
 						order: newOrder,
 					}));
 				}
 
-				// Remove old summary cache.
+				// Remove service actions/edit cache of old service.
+				queryClient.removeQueries({
+					queryKey: QUERY_KEYS.SERVICE.BASE(oldID),
+				});
+				// Remove summary cache of old service.
 				queryClient.removeQueries({
 					exact: true,
 					queryKey: QUERY_KEYS.SERVICE.SUMMARY_ITEM(oldID),
@@ -133,7 +158,25 @@ export const approvalsQueryCacheUpdater = ({
 			// Upsert summary for newID.
 			queryClient.setQueryData<ServiceSummary>(
 				QUERY_KEYS.SERVICE.SUMMARY_ITEM(newID),
-				(oldData) => serviceSummaryReducer(msg.service_data, oldData),
+				(_oldData) => {
+					// Don't trust cached _oldData if we think `newID` is new.
+					const oldDataMerged: ServiceSummary = idHasChanged
+						? {
+								id: newID,
+								...oldData,
+							}
+						: {
+								...oldData,
+								..._oldData,
+								id: newID,
+								status: {
+									...oldData?.status,
+									..._oldData?.status,
+								},
+							};
+
+					return serviceSummaryReducer(msg.service_data, oldDataMerged);
+				},
 			);
 
 			// Ensure ID in order.

@@ -316,6 +316,7 @@ const ActionReleaseModal = () => {
 		queryFn: () => mapRequest('ACTION_GET', { serviceID: modal.service.id }),
 		queryKey: QUERY_KEYS.SERVICE.ACTIONS(modal.service.id),
 		refetchOnMount: 'always',
+		refetchOnWindowFocus: false,
 		staleTime: 0,
 	});
 
