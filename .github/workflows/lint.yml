@@ -23,7 +23,7 @@ jobs:
       - name: Use Node.js LTS
         uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Build web components
         run: make web
