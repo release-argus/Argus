@@ -1,0 +1,137 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(build)"
+  ],
+  "semanticCommitType": "build",
+  "semanticCommitScope": "deps",
+  "rangeStrategy": "auto",
+  "separateMajorMinor": true,
+  "commitMessageExtra": "({{parentDir}})",
+  "enabledManagers": [
+    "dockerfile",
+    "github-actions",
+    "gomod",
+    "npm"
+  ],
+  "packageRules": [
+    {
+      "description": "Go version updates",
+      "matchDepNames": ["go"],
+      "matchDepTypes": ["golang"],
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["major", "minor"],
+      "semanticCommitScope": "go"
+    },
+    {
+      "description": "Go toolchain updates",
+      "matchDepNames": ["toolchain"],
+      "matchManagers": ["gomod"],
+      "semanticCommitScope": "go"
+    },
+    {
+      "description": "Go module updates",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["dependencies", "indirectDependencies"],
+      "postUpdateOptions": ["gomodTidy"],
+      "semanticCommitScope": "deps-go"
+    },
+    {
+      "groupName": "Go deps",
+      "matchManagers": ["gomod"],
+      "semanticCommitScope": "deps-go"
+    },
+
+    {
+      "description": "GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "matchPaths": [".github/workflows/**"],
+      "semanticCommitScope": "github-actions"
+    },
+    {
+      "groupName": "GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "semanticCommitScope": "github-actions"
+    },
+
+    {
+      "description": "Dockerfile base image updates",
+      "matchManagers": ["dockerfile"],
+      "matchPaths": ["Dockerfile"],
+      "semanticCommitScope": "docker"
+    },
+    {
+      "groupName": "Docker base images",
+      "matchManagers": ["dockerfile"],
+      "semanticCommitScope": "docker"
+    },
+
+    {
+      "description": "npm dependencies",
+      "matchDepTypes": ["dependencies"],
+      "matchManagers": ["npm"],
+      "matchPaths": ["package.json", "web/ui/package.json", "web/ui/react-app/package.json"],
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "description": "npm devDependencies",
+      "matchDepTypes": ["devDependencies"],
+      "matchManagers": ["npm"],
+      "matchPaths": ["package.json", "web/ui/package.json", "web/ui/react-app/package.json"],
+      "semanticCommitScope": "deps-npm-dev"
+    },
+    {
+      "groupName": "babel",
+      "matchPackageNames": ["/babel/"],
+      "semanticCommitScope": "deps-npm-dev"
+    },
+    {
+      "groupName": "dnd",
+      "matchPackageNames": ["/@dnd-kit/"],
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "groupName": "radix-ui",
+      "matchPackageNames": ["/radix-ui/"],
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "groupName": "react-hook-form",
+      "matchPackageNames": [
+        "/react-hook-form/",
+        "/hookform/"
+      ],
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "groupName": "react-query",
+      "matchPackageNames": ["/react-query/"],
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "groupName": "react",
+      "matchPackageNames": [
+        "/^react$/",
+        "/react-dom/",
+        "/react-router/",
+        "@types/react"
+      ],
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "groupName": "tailwind",
+      "matchPackageNames": [
+        "/tailwindcss/",
+        "/tw-animate-css/"
+      ],
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "matchPackageNames": ["/vite/"],
+      "groupName": "vite",
+      "semanticCommitScope": "deps-npm"
+    }
+  ]
+}
