@@ -3,6 +3,8 @@
   "extends": ["config:best-practices", ":semanticCommits"],
   "semanticCommitType": "build",
   "semanticCommitScope": "deps",
+  "rangeStrategy": "auto",
+  "separateMajorMinor": true,
   "postUpdateOptions": ["gomodTidy"],
   "commitMessageExtra": "({{parentDir}})",
   "enabledManagers": [
