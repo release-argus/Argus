@@ -3,7 +3,7 @@
   "extends": [
     "config:best-practices",
     ":semanticCommits",
-    "semanticCommitTypeAll(build)"
+    ":semanticCommitTypeAll(build)"
   ],
   "semanticCommitType": "build",
   "semanticCommitScope": "deps",
