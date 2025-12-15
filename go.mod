@@ -6,7 +6,6 @@ toolchain go1.25.5
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/flosch/pongo2/v5 v5.0.0
 	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
