@@ -23,7 +23,7 @@
       "matchDepNames": ["go"],
       "matchDepTypes": ["golang"],
       "matchManagers": ["gomod"],
-      "matchUpdateTypes": ["major", "minor", "patch"],
+      "matchUpdateTypes": ["major", "minor"],
       "semanticCommitScope": "go"
     },
     {
@@ -33,8 +33,13 @@
       "semanticCommitScope": "go"
     },
     {
-      "description": "Go module dependency updates",
-      "matchDepTypes": ["dependencies"],
+      "description": "Go module updates",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["dependencies", "indirectDependencies"],
+      "semanticCommitScope": "deps-go"
+    },
+    {
+      "groupName": "Go deps",
       "matchManagers": ["gomod"],
       "semanticCommitScope": "deps-go"
     },
@@ -45,11 +50,21 @@
       "matchPaths": [".github/workflows/**"],
       "semanticCommitScope": "github-actions"
     },
+    {
+      "groupName": "GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "semanticCommitScope": "github-actions"
+    },
 
     {
       "description": "Dockerfile base image updates",
       "matchManagers": ["dockerfile"],
       "matchPaths": ["Dockerfile"],
+      "semanticCommitScope": "docker"
+    },
+    {
+      "groupName": "Docker base images",
+      "matchManagers": ["dockerfile"],
       "semanticCommitScope": "docker"
     },
 
