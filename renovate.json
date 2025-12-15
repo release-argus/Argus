@@ -57,20 +57,32 @@
       "matchPaths": ["package.json", "web/ui/package.json", "web/ui/react-app/package.json"],
       "semanticCommitScope": "deps-npm-dev"
     },
-
     {
-      "description": "Group all minor/patch npm dependencies",
-      "groupName": "all non-major npm deps",
-      "matchManagers": ["npm"],
-      "matchDepTypes": ["dependencies"],
-      "matchUpdateTypes": ["minor", "patch"]
+      "matchPackageNames": ["/babel/"],
+      "groupName": "babel",
+      "semanticCommitScope": "deps-npm-dev"
     },
     {
-      "description": "Group all minor/patch npm devDependencies",
-      "groupName": "all non-major npm devDeps",
-      "matchDepTypes": ["devDependencies"],
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["minor", "patch"]
+      "matchPackageNames": ["/@dnd-kit/"],
+      "groupName": "dnd",
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "matchPackageNames": ["/radix-ui/"],
+      "groupName": "dnd",
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "matchPackageNames": [
+        "/^(react|react-dom|react-router-dom|@types\\/react|@types\\/react-dom)$/"
+      ],
+      "groupName": "react",
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "matchPackageNames": ["/vite/"],
+      "groupName": "vite",
+      "semanticCommitScope": "deps-npm"
     }
   ]
 }
