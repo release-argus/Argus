@@ -10,12 +10,7 @@
   "rangeStrategy": "auto",
   "separateMajorMinor": true,
   "commitMessageExtra": "({{parentDir}})",
-  "enabledManagers": [
-    "dockerfile",
-    "github-actions",
-    "gomod",
-    "npm"
-  ],
+  "enabledManagers": ["dockerfile", "github-actions", "gomod", "npm"],
   "packageRules": [
     {
       "description": "Go version updates",
@@ -43,11 +38,10 @@
       "matchManagers": ["gomod"],
       "semanticCommitScope": "deps-go"
     },
-
     {
       "description": "GitHub Actions updates",
       "matchManagers": ["github-actions"],
-      "matchPaths": [".github/workflows/**"],
+      "matchFileNames": [".github/workflows/**"],
       "semanticCommitScope": "github-actions"
     },
     {
@@ -55,11 +49,10 @@
       "matchManagers": ["github-actions"],
       "semanticCommitScope": "github-actions"
     },
-
     {
       "description": "Dockerfile base image updates",
       "matchManagers": ["dockerfile"],
-      "matchPaths": ["Dockerfile"],
+      "matchFileNames": ["Dockerfile"],
       "semanticCommitScope": "docker"
     },
     {
@@ -67,19 +60,26 @@
       "matchManagers": ["dockerfile"],
       "semanticCommitScope": "docker"
     },
-
     {
       "description": "npm dependencies",
       "matchDepTypes": ["dependencies"],
       "matchManagers": ["npm"],
-      "matchPaths": ["package.json", "web/ui/package.json", "web/ui/react-app/package.json"],
+      "matchFileNames": [
+        "package.json",
+        "web/ui/package.json",
+        "web/ui/react-app/package.json"
+      ],
       "semanticCommitScope": "deps-npm"
     },
     {
       "description": "npm devDependencies",
       "matchDepTypes": ["devDependencies"],
       "matchManagers": ["npm"],
-      "matchPaths": ["package.json", "web/ui/package.json", "web/ui/react-app/package.json"],
+      "matchFileNames": [
+        "package.json",
+        "web/ui/package.json",
+        "web/ui/react-app/package.json"
+      ],
       "semanticCommitScope": "deps-npm-dev"
     },
     {
@@ -99,10 +99,7 @@
     },
     {
       "groupName": "react-hook-form",
-      "matchPackageNames": [
-        "/react-hook-form/",
-        "/hookform/"
-      ],
+      "matchPackageNames": ["/react-hook-form/", "/hookform/"],
       "semanticCommitScope": "deps-npm"
     },
     {
@@ -122,10 +119,7 @@
     },
     {
       "groupName": "tailwind",
-      "matchPackageNames": [
-        "/tailwindcss/",
-        "/tw-animate-css/"
-      ],
+      "matchPackageNames": ["/tailwindcss/", "/tw-animate-css/"],
       "semanticCommitScope": "deps-npm"
     },
     {
