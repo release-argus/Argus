@@ -101,7 +101,7 @@
       "groupName": "react-hook-form",
       "matchPackageNames": [
         "/react-hook-form/",
-        "/hookform/",
+        "/hookform/"
       ],
       "semanticCommitScope": "deps-npm"
     },
@@ -126,7 +126,7 @@
         "/tw-animate-css/"
       ],
       "semanticCommitScope": "deps-npm"
-    }
+    },
     {
       "matchPackageNames": ["/vite/"],
       "groupName": "vite",
