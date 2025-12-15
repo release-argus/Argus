@@ -19,7 +19,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/flosch/pongo2/v5"
+	"github.com/flosch/pongo2/v6"
 
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 )
