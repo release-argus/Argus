@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { WebSocket } from 'partysocket';
 import { createContext, type ReactNode, use, useMemo, useState } from 'react';
-import ReconnectingWebSocket from 'reconnecting-websocket';
 import { WebSocketStatus } from '@/components/websocket/status';
 import { WS_ADDRESS } from '@/config';
 import { handleMessage } from '@/handlers/websocket';
@@ -11,7 +11,7 @@ import approvalsQueryCacheUpdater from '@/utils/api/query-cache';
 
 type WebSocketContextProps = {
 	/* The WebSocket connection. */
-	ws?: ReconnectingWebSocket;
+	ws?: WebSocket;
 	/* Whether the WebSocket connection is established. */
 	connected?: boolean;
 };
@@ -35,7 +35,7 @@ type WebSocketProviderProps = {
 	children: ReactNode;
 };
 
-const ws = new ReconnectingWebSocket(`${WS_ADDRESS}${getBasename()}/ws`);
+const ws = new WebSocket(`${WS_ADDRESS}${getBasename()}/ws`);
 /**
  * @returns The WebSocket connection and monitor data.
  */
