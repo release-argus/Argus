@@ -9,7 +9,6 @@
   "semanticCommitScope": "deps",
   "rangeStrategy": "auto",
   "separateMajorMinor": true,
-  "postUpdateOptions": ["gomodTidy"],
   "commitMessageExtra": "({{parentDir}})",
   "enabledManagers": [
     "dockerfile",
@@ -36,6 +35,7 @@
       "description": "Go module updates",
       "matchManagers": ["gomod"],
       "matchDepTypes": ["dependencies", "indirectDependencies"],
+      "postUpdateOptions": ["gomodTidy"],
       "semanticCommitScope": "deps-go"
     },
     {
