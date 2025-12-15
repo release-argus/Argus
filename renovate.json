@@ -83,27 +83,50 @@
       "semanticCommitScope": "deps-npm-dev"
     },
     {
-      "matchPackageNames": ["/babel/"],
       "groupName": "babel",
+      "matchPackageNames": ["/babel/"],
       "semanticCommitScope": "deps-npm-dev"
     },
     {
+      "groupName": "dnd",
       "matchPackageNames": ["/@dnd-kit/"],
-      "groupName": "dnd",
       "semanticCommitScope": "deps-npm"
     },
     {
+      "groupName": "radix-ui",
       "matchPackageNames": ["/radix-ui/"],
-      "groupName": "dnd",
       "semanticCommitScope": "deps-npm"
     },
     {
+      "groupName": "react-hook-form",
       "matchPackageNames": [
-        "/^(react|react-dom|react-router-dom|@types\\/react|@types\\/react-dom)$/"
+        "/react-hook-form/",
+        "/hookform/",
       ],
-      "groupName": "react",
       "semanticCommitScope": "deps-npm"
     },
+    {
+      "groupName": "react-query",
+      "matchPackageNames": ["/react-query/"],
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "groupName": "react",
+      "matchPackageNames": [
+        "/react$/",
+        "/react-dom/",
+        "/react-router/"
+      ],
+      "semanticCommitScope": "deps-npm"
+    },
+    {
+      "groupName": "tailwind",
+      "matchPackageNames": [
+        "/tailwindcss/",
+        "/tw-animate-css/"
+      ],
+      "semanticCommitScope": "deps-npm"
+    }
     {
       "matchPackageNames": ["/vite/"],
       "groupName": "vite",
