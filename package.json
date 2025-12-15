@@ -6,7 +6,7 @@
 	},
 	"description": "",
 	"devDependencies": {
-		"husky": "^9.1.7"
+		"husky": "9.1.7"
 	},
 	"license": "ISC",
 	"main": "index.js",
