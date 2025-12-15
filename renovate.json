@@ -113,9 +113,10 @@
     {
       "groupName": "react",
       "matchPackageNames": [
-        "/react$/",
+        "/^react$/",
         "/react-dom/",
-        "/react-router/"
+        "/react-router/",
+        "@types/react"
       ],
       "semanticCommitScope": "deps-npm"
     },
