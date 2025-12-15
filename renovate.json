@@ -24,11 +24,17 @@
       "matchDepTypes": ["golang"],
       "matchManagers": ["gomod"],
       "matchUpdateTypes": ["major", "minor", "patch"],
-      "semanticCommitScope": "deps-go"
+      "semanticCommitScope": "go"
     },
     {
       "description": "Go toolchain updates",
       "matchDepNames": ["toolchain"],
+      "matchManagers": ["gomod"],
+      "semanticCommitScope": "go"
+    },
+    {
+      "description": "Go module dependency updates",
+      "matchDepTypes": ["dependencies"],
       "matchManagers": ["gomod"],
       "semanticCommitScope": "deps-go"
     },
