@@ -24,7 +24,6 @@
       "description": "Go toolchain updates",
       "matchDepNames": ["toolchain"],
       "matchManagers": ["gomod"],
-      "rangeStrategy": "pin",
       "semanticCommitScope": "deps-go"
     },
 
@@ -32,7 +31,6 @@
       "description": "GitHub Actions updates",
       "matchManagers": ["github-actions"],
       "matchPaths": [".github/workflows/**"],
-      "pinDigests": true,
       "semanticCommitScope": "github-actions"
     },
 
@@ -40,7 +38,6 @@
       "description": "Dockerfile base image updates",
       "matchManagers": ["dockerfile"],
       "matchPaths": ["Dockerfile"],
-      "pinDigests": true,
       "semanticCommitScope": "docker"
     },
 
