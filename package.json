@@ -16,5 +16,5 @@
 		"tailwind-sort": "prettier './web/ui/react-app/src/**/*{.ts,.tsx}' --write",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
-	"version": "0.28.1"
+	"version": "0.28.2"
 }

@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.28.2](https://github.com/release-argus/Argus/compare/0.28.1...0.28.2) (2025-12-16)
+
+
+### Bug Fixes
+
+* **notify:** use `disabletls` instead of `disabletlsverification` for ntfy ([#750](https://github.com/release-argus/Argus/issues/750)) ([586965e](https://github.com/release-argus/Argus/commit/586965e59ad6f22e278c8ebdfce5ca0722d457ce))
+* **ui:** missing boolean to string conv in outgoing notify schemas ([#752](https://github.com/release-argus/Argus/issues/752)) ([5cfe8b7](https://github.com/release-argus/Argus/commit/5cfe8b7d2f34a89ba6e386b7fd4da8556c68d09c))
+
 ## [0.28.1](https://github.com/release-argus/Argus/compare/0.28.0...0.28.1) (2025-12-14)
 
 
