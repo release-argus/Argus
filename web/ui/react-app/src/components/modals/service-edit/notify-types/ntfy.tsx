@@ -213,7 +213,7 @@ const NTFY = ({ name, main }: { name: string; main?: NotifyNtfySchema }) => {
 					}}
 				/>
 				<BooleanWithDefault
-					defaultValue={defaults?.params?.disabletlsverification}
+					defaultValue={defaults?.params?.disabletls}
 					label="Disable TLS"
 					name={`${name}.params.disabletls`}
 				/>
