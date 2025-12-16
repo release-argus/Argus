@@ -111,7 +111,7 @@ const DISCORD = ({
 				<BooleanWithDefault
 					defaultValue={defaults?.params?.splitlines}
 					label="Split Lines"
-					name={`${name}.params.splitlines}`}
+					name={`${name}.params.splitlines`}
 					tooltip={{
 						content: 'Whether to send each line as a separate embedded item',
 						type: 'string',

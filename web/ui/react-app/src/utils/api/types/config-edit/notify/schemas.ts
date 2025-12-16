@@ -125,6 +125,11 @@ export const notifyDiscordSchema = notifyBaseSchema.extend({
 		.default({ token: '', webhookid: '' }),
 });
 export type NotifyDiscordSchema = z.infer<typeof notifyDiscordSchema>;
+export const notifyDiscordSchemaOutgoing = notifyDiscordSchema.extend({
+	params: notifyDiscordSchema.shape.params.unwrap().extend({
+		splitlines: preprocessStringFromBoolean,
+	}),
+});
 
 /* SMTP */
 export const notifySMTPSchema = notifyBaseSchema.extend({
@@ -174,6 +179,8 @@ export const notifySMTPSchemaOutgoing = notifySMTPSchema.extend({
 	params: notifySMTPSchema.shape.params.unwrap().extend({
 		auth: preprocessStringFromZodEnum(SMTPAuthEnum),
 		encryption: preprocessStringFromZodEnum(SMTPEncryptionEnum),
+		requirestarttls: preprocessStringFromBoolean,
+		skiptlsverification: preprocessStringFromBoolean,
 		usehtml: preprocessStringFromBoolean,
 		usestarttls: preprocessStringFromBoolean,
 	}),
@@ -228,6 +235,8 @@ export type NotifyGotifySchema = z.infer<typeof notifyGotifySchema>;
 export const notifyGotifySchemaOutgoing = notifyGotifySchema.extend({
 	params: notifyGotifySchema.shape.params.unwrap().extend({
 		disabletls: preprocessStringFromBoolean,
+		insecureskipverify: preprocessStringFromBoolean,
+		useheader: preprocessStringFromBoolean,
 	}),
 });
 
@@ -309,6 +318,11 @@ export const notifyMatterMostSchema = notifyBaseSchema.extend({
 		}),
 });
 export type NotifyMatterMostSchema = z.infer<typeof notifyMatterMostSchema>;
+export const notifyMatterMostSchemaOutgoing = notifyMatterMostSchema.extend({
+	params: notifyMatterMostSchema.shape.params.unwrap().extend({
+		disabletls: preprocessStringFromBoolean,
+	}),
+});
 
 /* Matrix */
 export const notifyMatrixSchema = notifyBaseSchema.extend({
@@ -698,8 +712,10 @@ export type NotifiersSchema = z.infer<typeof notifiersSchema>;
 export const notifySchemaMapOutgoing = {
 	...notifySchemaMap,
 	bark: notifyBarkSchemaOutgoing,
+	discord: notifyDiscordSchemaOutgoing,
 	gotify: notifyGotifySchemaOutgoing,
 	matrix: notifyMatrixSchemaOutgoing,
+	mattermost: notifyMatterMostSchemaOutgoing,
 	smtp: notifySMTPSchemaOutgoing,
 	telegram: notifyTelegramSchemaOutgoing,
 } as const;
@@ -762,6 +778,7 @@ export const notifySchemaMapOutgoingWithDefaults = (
 						defaults?.params?.actions,
 					),
 					cache: preprocessStringFromBoolean,
+					disabletls: preprocessStringFromBoolean,
 					firebase: preprocessStringFromBoolean,
 					priority: preprocessStringFromZodEnum(NtfyPriorityZodEnum),
 					scheme: preprocessStringFromZodEnum(NtfySchemeZodEnum),
