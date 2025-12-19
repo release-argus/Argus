@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.28.3](https://github.com/release-argus/Argus/compare/0.28.2...0.28.3) (2025-12-19)
+
+
+### Bug Fixes
+
+* **ui:** missing conversions of boolean to string in outgoing notify schemas ([#758](https://github.com/release-argus/Argus/issues/758)) ([f47f716](https://github.com/release-argus/Argus/commit/f47f716f79c29749009e41c01f696a21cb2bbcdd))
+
 ## [0.28.2](https://github.com/release-argus/Argus/compare/0.28.1...0.28.2) (2025-12-16)
 
 
