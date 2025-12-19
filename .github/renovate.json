@@ -17,6 +17,7 @@
       "matchDepTypes": ["golang"],
       "matchManagers": ["gomod"],
       "matchUpdateTypes": ["major", "minor"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "go"
     },
     {
@@ -24,6 +25,7 @@
       "labels": ["dependencies","go"],
       "matchDepNames": ["toolchain"],
       "matchManagers": ["gomod"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "go"
     },
     {
@@ -32,11 +34,13 @@
       "matchManagers": ["gomod"],
       "matchDepTypes": ["dependencies", "indirectDependencies"],
       "postUpdateOptions": ["gomodTidy"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "deps-go"
     },
     {
       "groupName": "Go deps",
       "matchManagers": ["gomod"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "deps-go"
     },
     {
@@ -44,11 +48,13 @@
       "labels": ["dependencies","github_actions"],
       "matchManagers": ["github-actions"],
       "matchFileNames": [".github/workflows/**"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "github-actions"
     },
     {
       "groupName": "GitHub Actions",
       "matchManagers": ["github-actions"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "github-actions"
     },
     {
@@ -56,11 +62,13 @@
       "labels": ["dependencies","docker"],
       "matchManagers": ["dockerfile"],
       "matchFileNames": ["Dockerfile"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "docker"
     },
     {
       "groupName": "Docker base images",
       "matchManagers": ["dockerfile"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "docker"
     },
     {
@@ -73,6 +81,7 @@
         "web/ui/package.json",
         "web/ui/react-app/package.json"
       ],
+      "semanticCommitType": "build",
       "semanticCommitScope": "deps-npm"
     },
     {
@@ -85,31 +94,37 @@
         "web/ui/package.json",
         "web/ui/react-app/package.json"
       ],
+      "semanticCommitType": "build",
       "semanticCommitScope": "deps-npm-dev"
     },
     {
       "groupName": "babel",
       "matchPackageNames": ["/babel/"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "deps-npm-dev"
     },
     {
       "groupName": "dnd",
       "matchPackageNames": ["/@dnd-kit/"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "deps-npm"
     },
     {
       "groupName": "radix-ui",
       "matchPackageNames": ["/radix-ui/"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "deps-npm"
     },
     {
       "groupName": "react-hook-form",
       "matchPackageNames": ["/react-hook-form/", "/hookform/"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "deps-npm"
     },
     {
       "groupName": "react-query",
       "matchPackageNames": ["/react-query/"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "deps-npm"
     },
     {
@@ -120,16 +135,19 @@
         "/react-router/",
         "@types/react"
       ],
+      "semanticCommitType": "build",
       "semanticCommitScope": "deps-npm"
     },
     {
       "groupName": "tailwind",
       "matchPackageNames": ["/tailwindcss/", "/tw-animate-css/"],
+      "semanticCommitType": "build",
       "semanticCommitScope": "deps-npm"
     },
     {
       "matchPackageNames": ["/vite/"],
       "groupName": "vite",
+      "semanticCommitType": "build",
       "semanticCommitScope": "deps-npm"
     }
   ]
