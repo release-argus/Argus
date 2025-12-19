@@ -116,7 +116,7 @@ const GOTIFY = ({
 				<BooleanWithDefault
 					defaultValue={defaults?.params?.useheader}
 					label="Use Header-based Authentication"
-					name={`${name}.params.insecureskipverify`}
+					name={`${name}.params.useheader`}
 				/>
 			</FieldSet>
 		</FieldSet>
