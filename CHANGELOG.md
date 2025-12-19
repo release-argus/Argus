@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.28.4](https://github.com/release-argus/Argus/compare/0.28.3...0.28.4) (2025-12-19)
+
+
+### Bug Fixes
+
+* **deps-go:** update module modernc.org/sqlite from v1.40.1 to v1.41.0 ([#760](https://github.com/release-argus/Argus/issues/760)) ([2d6143e](https://github.com/release-argus/Argus/commit/2d6143ed5e300fbbca0e46ce6d62c09c47a1e676))
+
 ## [0.28.3](https://github.com/release-argus/Argus/compare/0.28.2...0.28.3) (2025-12-19)
 
 
