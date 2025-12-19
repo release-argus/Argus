@@ -30,7 +30,7 @@ import {
 	headersSchema,
 	preprocessStringFromHeaderArrayWithDefaults,
 } from '@/utils/api/types/config-edit/shared/header/preprocess';
-import { nullString } from '@/utils/api/types/config-edit/shared/null-string'; /* Notify 'Options' Schema */
+import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import {
 	preprocessBooleanFromString,
 	preprocessStringFromBoolean,
@@ -399,6 +399,15 @@ export const notifyNtfySchema = notifyBaseSchema.extend({
 		.default({ host: '', password: '', port: '', topic: '', username: '' }),
 });
 export type NotifyNtfySchema = z.infer<typeof notifyNtfySchema>;
+const notifyNtfySchemaOutgoing = notifyNtfySchema.extend({
+	params: notifyNtfySchema.shape.params.unwrap().extend({
+		cache: preprocessStringFromBoolean,
+		disabletls: preprocessStringFromBoolean,
+		firebase: preprocessStringFromBoolean,
+		priority: preprocessStringFromZodEnum(NtfyPriorityZodEnum),
+		scheme: preprocessStringFromZodEnum(NtfySchemeZodEnum),
+	}),
+});
 
 /* OpsGenie */
 export const notifyOpsGenieSchema = notifyBaseSchema.extend({
@@ -644,6 +653,12 @@ export const notifyGenericSchema = notifyBaseSchema.extend({
 		}),
 });
 export type NotifyGenericSchema = z.infer<typeof notifyGenericSchema>;
+const notifyGenericSchemaOutgoing = notifyGenericSchema.extend({
+	params: notifyGenericSchema.shape.params.unwrap().extend({
+		disabletls: preprocessStringFromBoolean,
+		requestmethod: preprocessStringFromZodEnum(GenericRequestMethodZodEnum),
+	}),
+});
 
 /* All */
 export const notifySchemaMap = {
@@ -742,29 +757,25 @@ export const notifySchemaMapOutgoingWithDefaults = (
 	switch (defaults.type) {
 		// Generic WebHook.
 		case NOTIFY_TYPE_MAP.GENERIC.value:
-			return notifyGenericSchema.extend({
-				params: notifyGenericSchema.shape.params.unwrap().extend({
-					disabletls: preprocessStringFromBoolean,
-					requestmethod: preprocessStringFromZodEnum(
-						GenericRequestMethodZodEnum,
-					),
-				}),
-				url_fields: notifyGenericSchema.shape.url_fields.unwrap().extend({
-					custom_headers: preprocessStringFromHeaderArrayWithDefaults(
-						defaults?.url_fields?.custom_headers,
-					),
-					json_payload_vars: preprocessStringFromHeaderArrayWithDefaults(
-						defaults?.url_fields?.json_payload_vars,
-					),
-					query_vars: preprocessStringFromHeaderArrayWithDefaults(
-						defaults?.url_fields?.query_vars,
-					),
-				}),
+			return notifyGenericSchemaOutgoing.extend({
+				url_fields: notifyGenericSchemaOutgoing.shape.url_fields
+					.unwrap()
+					.extend({
+						custom_headers: preprocessStringFromHeaderArrayWithDefaults(
+							defaults?.url_fields?.custom_headers,
+						),
+						json_payload_vars: preprocessStringFromHeaderArrayWithDefaults(
+							defaults?.url_fields?.json_payload_vars,
+						),
+						query_vars: preprocessStringFromHeaderArrayWithDefaults(
+							defaults?.url_fields?.query_vars,
+						),
+					}),
 			});
 		// 	Gotify
 		case NOTIFY_TYPE_MAP.GOTIFY.value:
-			return notifyGotifySchema.extend({
-				params: notifyGotifySchema.shape.params.unwrap().extend({
+			return notifyGotifySchemaOutgoing.extend({
+				params: notifyGotifySchemaOutgoing.shape.params.extend({
 					extras: preprocessGotifyExtrasToStringWithDefaults(
 						defaults?.params?.extras,
 					),
@@ -772,16 +783,11 @@ export const notifySchemaMapOutgoingWithDefaults = (
 			});
 		// ntfy.
 		case NOTIFY_TYPE_MAP.NTFY.value:
-			return notifyNtfySchema.extend({
-				params: notifyNtfySchema.shape.params.unwrap().extend({
+			return notifyNtfySchemaOutgoing.extend({
+				params: notifyNtfySchemaOutgoing.shape.params.extend({
 					actions: preprocessStringFromNtfyActionsWithDefaults(
 						defaults?.params?.actions,
 					),
-					cache: preprocessStringFromBoolean,
-					disabletls: preprocessStringFromBoolean,
-					firebase: preprocessStringFromBoolean,
-					priority: preprocessStringFromZodEnum(NtfyPriorityZodEnum),
-					scheme: preprocessStringFromZodEnum(NtfySchemeZodEnum),
 				}),
 			});
 		// OpsGenie.
