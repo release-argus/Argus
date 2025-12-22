@@ -17,15 +17,17 @@
 package config
 
 import (
-	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
+
+	"golang.org/x/sync/errgroup"
 )
 
 func TestConfig_LoadOrdering(t *testing.T) {
 	// GIVEN we have configs to load.
 	tests := map[string]struct {
-		file  func(path string, t *testing.T)
+		file  func(path string)
 		order []string
 	}{
 		"with services": {
@@ -68,22 +70,23 @@ func TestConfig_LoadOrdering(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're accessing flag env vars.
+			g, _ := errgroup.WithContext(t.Context())
 
-			file := fmt.Sprintf("%s.yml", name)
-			tc.file(file, t)
+			file := filepath.Join(t.TempDir(), "config.yml")
+			tc.file(file)
 
 			// WHEN they are loaded.
 			flags := make(map[string]bool)
-			var config Config
+			var cfg Config
 			loadMutex.Lock() // Protect flag env vars.
-			config.Load(file, &flags)
+			cfg.Load(t.Context(), g, file, &flags)
 			t.Cleanup(func() {
-				os.Remove(config.Settings.DataDatabaseFile())
+				_ = os.Remove(cfg.Settings.DataDatabaseFile())
 				loadMutex.Unlock()
 			})
 
 			// THEN it gets the ordering correctly.
-			gotOrder := config.Order
+			gotOrder := cfg.Order
 			for i := range gotOrder {
 				if i >= len(gotOrder) ||
 					tc.order[i] != (gotOrder)[i] {

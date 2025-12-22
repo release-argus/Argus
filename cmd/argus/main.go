@@ -19,12 +19,20 @@ On a version change, send notifications and/or webhooks.
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	_ "modernc.org/sqlite"
 
-	cfg "github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/db"
 	"github.com/release-argus/Argus/testing"
 	logutil "github.com/release-argus/Argus/util/log"
@@ -54,30 +62,38 @@ var (
 		"Put the name of the Service to test the version query.")
 )
 
-// main loads the config and then calls `service.Track` to monitor
+// run loads the config and then calls `service.Track` to monitor
 // each Service of the config for version changes and acts on
-// them as defined. It also sets up the Web UI and SaveHandler.
-func main() {
+// them as defined. It also sets up the DB, Web UI and SaveHandler.
+func run() (exitCode int) {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	g, gctx := errgroup.WithContext(ctx)
+
 	flag.Parse()
 	flags := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { flags[f.Name] = true })
 
-	var config cfg.Config
-	config.Load(*configFile, &flags)
+	// Initialise the Log.
+	exitCodeChannel := logutil.Init("ERROR", false)
+
+	var cfg config.Config
+	_ = cfg.Load(ctx, g, *configFile, &flags)
 
 	// config.check
-	config.Print(configCheckFlag)
+	cfg.Print(configCheckFlag)
 	// test.*
-	testing.CommandTest(testCommandsFlag, &config)
-	testing.NotifyTest(testNotifyFlag, &config)
-	testing.ServiceTest(testServiceFlag, &config)
+	testing.RunAndExit(testing.CommandTest(testCommandsFlag, &cfg), testCommandsFlag)
+	testing.RunAndExit(testing.NotifyTest(testNotifyFlag, &cfg), testNotifyFlag)
+	testing.RunAndExit(testing.ServiceTest(testServiceFlag, &cfg), testServiceFlag)
 
 	// Count of active services to monitor (if log level INFO or above).
 	if logutil.Log.Level > 1 {
 		// Count active services.
-		serviceCount := len(config.Order)
-		for _, key := range config.Order {
-			if !config.Service[key].Options.GetActive() {
+		serviceCount := len(cfg.Order)
+		for _, key := range cfg.Order {
+			if !cfg.Service[key].Options.GetActive() {
 				serviceCount--
 			}
 		}
@@ -87,19 +103,65 @@ func main() {
 		logutil.Log.Info(msg, logutil.LogFrom{}, true)
 
 		// Log names of active services.
-		for _, key := range config.Order {
-			if config.Service[key].Options.GetActive() {
-				fmt.Printf("  - %s\n", config.Service[key].Name)
+		for _, key := range cfg.Order {
+			if cfg.Service[key].Options.GetActive() {
+				fmt.Printf("  - %s\n", cfg.Service[key].Name)
 			}
 		}
 	}
 
 	// Setup DB and last known service versions.
-	db.Run(&config)
+	g.Go(func() error {
+		if ok := db.Run(gctx, &cfg); !ok {
+			return errors.New("db.Run failed")
+		}
+		return nil
+	})
 
 	// Track all targets for changes in version and act on any found changes.
-	go config.Service.Track(&config.Order, &config.OrderMutex)
+	go cfg.Service.Track(&cfg.Order, &cfg.OrderMutex)
 
 	// Web server.
-	web.Run(&config)
+	g.Go(func() error {
+		return web.Run(gctx, &cfg)
+	})
+
+	// Wait for cancellation.
+	select {
+	case <-exitCodeChannel:
+		exitCode = 1
+		cancel()
+	case <-ctx.Done():
+		// OS signal cancel received.
+	}
+
+	// Begin shutdown.
+	logutil.Log.Info("Shutting down...",
+		logutil.LogFrom{}, true)
+	// Give goroutines time to finish.
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	done := make(chan struct{})
+	go func() {
+		_ = g.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		logutil.Log.Info("Shutdown complete",
+			logutil.LogFrom{}, true)
+	case <-shutdownCtx.Done():
+		logutil.Log.Error(shutdownCtx.Err(),
+			logutil.LogFrom{}, true,
+		)
+		exitCode = 1
+	}
+
+	return
+}
+
+func main() {
+	os.Exit(run())
 }

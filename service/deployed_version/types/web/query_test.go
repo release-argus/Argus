@@ -34,7 +34,7 @@ import (
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
-	metric "github.com/release-argus/Argus/web/metric"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestLookup_Track(t *testing.T) {
@@ -237,16 +237,16 @@ func TestLookup_Track(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 			if tc.lookup != nil {
 				// Marshal and Unmarshal to set Type.
 				data, _ := json.Marshal(tc.lookup)
-				json.Unmarshal(data, tc.lookup)
+				_ = json.Unmarshal(data, tc.lookup)
 
 				tc.lookup.AllowInvalidCerts = test.BoolPtr(tc.allowInvalidCerts)
 				tc.lookup.BasicAuth = tc.basicAuth
@@ -524,8 +524,8 @@ func TestLookup_Query(t *testing.T) {
 			t.Parallel()
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 			dvl := testLookup(false)
 			dvl.JSON = ""
@@ -656,12 +656,12 @@ func TestLookup_HTTPRequest(t *testing.T) {
 
 			for k, v := range tc.env {
 				previousValue := os.Getenv(k)
-				os.Setenv(k, v)
+				_ = os.Setenv(k, v)
 				t.Cleanup(func() {
 					if previousValue == "" {
-						os.Unsetenv(k)
+						_ = os.Unsetenv(k)
 					} else {
-						os.Setenv(k, previousValue)
+						_ = os.Setenv(k, previousValue)
 					}
 				})
 			}

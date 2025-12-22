@@ -14,10 +14,10 @@
 
 //go:build unit
 
+// Package testing provides utilities for CLI-based testing.
 package testing
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config"
@@ -51,8 +51,9 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 			},
 			want: []string{"bar", "foo"},
 		},
-		"only root notifiers": {rootNotifiers: shoutrrr.ShoutrrrsDefaults{
-			"foo": {}, "bar": {}},
+		"only root notifiers": {
+			rootNotifiers: shoutrrr.ShoutrrrsDefaults{
+				"foo": {}, "bar": {}},
 			want: []string{"bar", "foo"},
 		},
 		"root + service notifiers": {
@@ -116,14 +117,16 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 func TestFindShoutrrr(t *testing.T) {
 	// GIVEN a Config with/without Service containing a Shoutrrr and Root Shoutrrrs.
 	tests := map[string]struct {
-		flag                    string
-		cfg                     *config.Config
-		stdoutRegex, panicRegex *string
-		foundInRoot             *bool
+		flag        string
+		cfg         *config.Config
+		stdoutRegex *string
+		ok          bool
+		foundInRoot *bool
 	}{
 		"empty search with only Service notifiers": {
-			flag:       "",
-			panicRegex: test.StringPtr(`could not be found.*\s+.*one of these?.*\s  - bar\s  - baz\s  - foo\s$`),
+			flag:        "",
+			ok:          false,
+			stdoutRegex: test.StringPtr(`FATAL: Notifier .* could not be found.*\s+.*one of these?.*\s  - bar\s  - baz\s  - foo\s$`),
 			cfg: &config.Config{
 				Service: service.Services{
 					"argus": {
@@ -133,8 +136,9 @@ func TestFindShoutrrr(t *testing.T) {
 							"baz": {}}}}},
 		},
 		"empty search with only Root notifiers": {
-			flag:       "",
-			panicRegex: test.StringPtr(`could not be found.*\s+.*one of these?.*\s  - bar\s  - baz\s  - foo\s$`),
+			flag:        "",
+			ok:          false,
+			stdoutRegex: test.StringPtr(`FATAL: Notifier .* could not be found.*\s+.*one of these?.*\s  - bar\s  - baz\s  - foo\s$`),
 			cfg: &config.Config{
 				Notify: shoutrrr.ShoutrrrsDefaults{
 					"foo": {},
@@ -142,8 +146,9 @@ func TestFindShoutrrr(t *testing.T) {
 					"baz": {}}},
 		},
 		"empty search with Root notifiers and Service notifiers and no duplicates": {
-			flag:       "",
-			panicRegex: test.StringPtr(`could not be found.*\s+.*one of these?.*\s  - bar\s  - baz\s  - foo\s$`),
+			flag:        "",
+			ok:          false,
+			stdoutRegex: test.StringPtr(`FATAL: Notifier .* could not be found.*\s+.*one of these?.*\s  - bar\s  - baz\s  - foo\s$`),
 			cfg: &config.Config{
 				Notify: shoutrrr.ShoutrrrsDefaults{
 					"foo": {},
@@ -157,12 +162,16 @@ func TestFindShoutrrr(t *testing.T) {
 							"baz": {}}}}},
 		},
 		"empty search with Root notifiers and Service notifiers and duplicates": {
-			flag:       "",
-			panicRegex: test.StringPtr(`could not be found.*\s+.*one of these?.*\s  - bar\s  - baz\s  - foo\s  - shazam\s$`),
+			flag:        "",
+			ok:          false,
+			stdoutRegex: test.StringPtr(`FATAL: Notifier .* could not be found.*\s+.*one of these?.*\s  - bar\s  - baz\s  - foo\s  - shazam\s$`),
 			cfg: &config.Config{
 				Service: service.Services{
 					"argus": {
-						Notify: shoutrrr.Shoutrrrs{"foo": {}, "bar": {}, "baz": {}}}},
+						Notify: shoutrrr.Shoutrrrs{
+							"foo": {},
+							"bar": {},
+							"baz": {}}}},
 				Notify: shoutrrr.ShoutrrrsDefaults{
 					"foo":    {},
 					"shazam": {},
@@ -170,6 +179,7 @@ func TestFindShoutrrr(t *testing.T) {
 		},
 		"matching search of notifier in Root": {
 			flag:        "bosh",
+			ok:          true,
 			stdoutRegex: test.StringPtr("^$"),
 			cfg: &config.Config{
 				Service: service.Services{
@@ -188,6 +198,7 @@ func TestFindShoutrrr(t *testing.T) {
 		},
 		"matching search of notifier in Service": {
 			flag:        "baz",
+			ok:          true,
 			stdoutRegex: test.StringPtr("^$"),
 			cfg: &config.Config{
 				Service: service.Services{
@@ -207,6 +218,7 @@ func TestFindShoutrrr(t *testing.T) {
 		},
 		"matching search of notifier in Root and a Service": {
 			flag:        "bar",
+			ok:          true,
 			stdoutRegex: test.StringPtr("^$"),
 			cfg: &config.Config{
 				Service: service.Services{
@@ -235,6 +247,7 @@ func TestFindShoutrrr(t *testing.T) {
 		},
 		"matching search of Service notifier with incomplete config filled by Defaults": {
 			flag: "bar",
+			ok:   true,
 			cfg: &config.Config{
 				Service: service.Services{
 					"argus": {
@@ -267,6 +280,7 @@ func TestFindShoutrrr(t *testing.T) {
 		},
 		"matching search of Service notifier with incomplete config filled by Root": {
 			flag: "bar",
+			ok:   true,
 			cfg: &config.Config{
 				Service: service.Services{
 					"argus": {
@@ -298,6 +312,7 @@ func TestFindShoutrrr(t *testing.T) {
 		},
 		"matching search of Service notifier with incomplete config filled by Root and Defaults": {
 			flag: "bosh",
+			ok:   true,
 			cfg: &config.Config{
 				Service: service.Services{
 					"argus": {
@@ -335,8 +350,9 @@ func TestFindShoutrrr(t *testing.T) {
 			foundInRoot: test.BoolPtr(false),
 		},
 		"matching search of Root notifier with invalid config": {
-			flag:       "bosh",
-			panicRegex: test.StringPtr(`^notify:\s  bosh:\s    params:\s      toaddresses: <required>`),
+			flag:        "bosh",
+			ok:          false,
+			stdoutRegex: test.StringPtr(`^FATAL: notify:\s  bosh:\s    params:\s      toaddresses: <required>`),
 			cfg: &config.Config{
 				Service: service.Services{
 					"argus": {
@@ -356,6 +372,7 @@ func TestFindShoutrrr(t *testing.T) {
 		},
 		"matching search of Root notifier with incomplete config filled by Defaults": {
 			flag: "bosh",
+			ok:   true,
 			cfg: &config.Config{
 				Service: service.Services{
 					"argus": {
@@ -390,21 +407,8 @@ func TestFindShoutrrr(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
-			if tc.panicRegex != nil {
-				// Switch Fatal to panic and disable this panic.
-				defer func() {
-					r := recover()
-					releaseStdout()
-
-					rStr := fmt.Sprint(r)
-					if !util.RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf("%s\nexpected a panic that matched %q\ngot: %q",
-							packageName, *tc.panicRegex, rStr)
-					}
-				}()
-			}
 			tc.cfg.HardDefaults.Notify.Default()
 			for _, svc := range tc.cfg.Service {
 				svc.Init(
@@ -413,8 +417,10 @@ func TestFindShoutrrr(t *testing.T) {
 					&tc.cfg.WebHook, &tc.cfg.Defaults.WebHook, &tc.cfg.HardDefaults.WebHook)
 			}
 
+			resultChannel := make(chan bool, 1)
 			// WHEN findShoutrrr is called with the test Config.
-			got := findShoutrrr(tc.flag, tc.cfg, logutil.LogFrom{})
+			got, ok := findShoutrrr(tc.flag, tc.cfg, logutil.LogFrom{})
+			resultChannel <- ok
 
 			// THEN we get the expected stdout.
 			stdout := releaseStdout()
@@ -423,6 +429,14 @@ func TestFindShoutrrr(t *testing.T) {
 					t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 						packageName, *tc.stdoutRegex, stdout)
 				}
+			}
+			// AND it succeeds/fails as expected.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			if !tc.ok {
+				return
 			}
 			// If the notifier should have been found in the root or in a service.
 			if tc.foundInRoot != nil {
@@ -459,12 +473,15 @@ func TestNotifyTest(t *testing.T) {
 		map[string]string{},
 		map[string]string{})
 	tests := map[string]struct {
-		flag                    string
-		services                service.Services
-		mainShoutrrrs           shoutrrr.ShoutrrrsDefaults
-		stdoutRegex, panicRegex *string
+		flag          string
+		services      service.Services
+		mainShoutrrrs shoutrrr.ShoutrrrsDefaults
+		stdoutRegex   *string
+		ok            bool
 	}{
-		"empty flag": {flag: "",
+		"empty flag": {
+			flag:        "",
+			ok:          true,
 			stdoutRegex: test.StringPtr("^$"),
 			services: service.Services{
 				"argus": {
@@ -473,9 +490,12 @@ func TestNotifyTest(t *testing.T) {
 						"bar": {},
 						"baz": {},
 					},
-				}}},
-		"unknown Notifier": {flag: "something",
-			panicRegex: test.StringPtr("Notifier.* could not be found"),
+				}},
+		},
+		"unknown Notifier": {
+			flag:        "something",
+			ok:          false,
+			stdoutRegex: test.StringPtr("FATAL: .*Notifier .* could not be found"),
 			services: service.Services{
 				"argus": {
 					Notify: shoutrrr.Shoutrrrs{
@@ -483,10 +503,12 @@ func TestNotifyTest(t *testing.T) {
 						"bar": {},
 						"baz": {},
 					},
-				}}},
+				}},
+		},
 		"known Service Notifier with invalid Gotify token": {
-			flag:       "bar",
-			panicRegex: test.StringPtr(`Message failed to send with "bar" config\s+.*invalid gotify token`),
+			flag:        "bar",
+			ok:          false,
+			stdoutRegex: test.StringPtr(`Message failed to send with "bar" config\s+.*invalid gotify token`),
 			services: service.Services{
 				"argus": {
 					Notify: shoutrrr.Shoutrrrs{
@@ -506,8 +528,9 @@ func TestNotifyTest(t *testing.T) {
 						"baz": {}}}},
 		},
 		"invalid Gotify token format": {
-			flag:       "bar",
-			panicRegex: test.StringPtr(`invalid gotify token: "abc"`),
+			flag:        "bar",
+			ok:          false,
+			stdoutRegex: test.StringPtr(`invalid gotify token: "abc"`),
 			services: service.Services{
 				"argus": {
 					Notify: shoutrrr.Shoutrrrs{
@@ -527,8 +550,9 @@ func TestNotifyTest(t *testing.T) {
 						"baz": {}}}},
 		},
 		"valid Gotify token format": {
-			flag:       "bar",
-			panicRegex: test.StringPtr(`Message failed to send with.*\s.*server responded`),
+			flag:        "bar",
+			ok:          false,
+			stdoutRegex: test.StringPtr(`Message failed to send with.*\s.*server responded`),
 			services: service.Services{
 				"argus": {
 					Notify: shoutrrr.Shoutrrrs{
@@ -548,9 +572,10 @@ func TestNotifyTest(t *testing.T) {
 						"baz": {}}}},
 		},
 		"shoutrrr from Root": {
-			flag:       "baz",
-			panicRegex: test.StringPtr(`Message failed to send with.*\s.*server responded`),
-			services:   service.Services{},
+			flag:        "baz",
+			ok:          false,
+			stdoutRegex: test.StringPtr(`Message failed to send with.*\s.*server responded`),
+			services:    service.Services{},
 			mainShoutrrrs: shoutrrr.ShoutrrrsDefaults{
 				"baz": shoutrrr.NewDefaults(
 					"gotify",
@@ -563,6 +588,7 @@ func TestNotifyTest(t *testing.T) {
 		},
 		"successful send": {
 			flag:        "work",
+			ok:          true,
 			stdoutRegex: test.StringPtr(`Message sent successfully with "work" config`),
 			services: service.Services{
 				"argus": {
@@ -587,7 +613,7 @@ func TestNotifyTest(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			serviceHardDefaults := service.Defaults{}
 			serviceHardDefaults.Default()
@@ -599,25 +625,13 @@ func TestNotifyTest(t *testing.T) {
 					&tc.mainShoutrrrs, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrrHardDefaults,
 					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 			}
-			if tc.panicRegex != nil {
-				// Switch Fatal to panic and disable this panic.
-				defer func() {
-					r := recover()
-					releaseStdout()
 
-					rStr := fmt.Sprint(r)
-					if !util.RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf("%s\nexpected a panic that matched %q\ngot: %q",
-							packageName, *tc.panicRegex, rStr)
-					}
-				}()
-			}
-
+			resultChannel := make(chan bool, 1)
 			// WHEN NotifyTest is called with the test Config.
 			cfg := config.Config{
 				Service: tc.services,
 				Notify:  tc.mainShoutrrrs}
-			NotifyTest(&tc.flag, &cfg)
+			resultChannel <- NotifyTest(&tc.flag, &cfg)
 
 			// THEN we get the expected stdout.
 			stdout := releaseStdout()
@@ -626,6 +640,11 @@ func TestNotifyTest(t *testing.T) {
 					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 						packageName, *tc.stdoutRegex, stdout)
 				}
+			}
+			// AND it succeeds/fails as expected.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
 			}
 		})
 	}

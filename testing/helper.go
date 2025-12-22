@@ -12,35 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit || integration
-
 // Package testing provides utilities for CLI-based testing.
 package testing
 
-import (
-	"fmt"
-	"os"
-	"testing"
+import "os"
 
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
-)
+var exitFunc = os.Exit
 
-var packageName = "testing"
-
-func TestMain(m *testing.M) {
-	// Log.
-	logtest.InitLog()
-
-	// Run other tests.
-	exitCode := m.Run()
-
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
-		exitCode = 1
+// RunAndExit will exit the program with 0/1 depending on `ok` (true=0, false=1).
+//
+// If `flag` is empty, it will return immediately.
+func RunAndExit(ok bool, flag *string) {
+	if *flag == "" {
+		return
 	}
 
-	// Exit.
-	os.Exit(exitCode)
+	if ok {
+		exitFunc(0)
+	} else {
+		exitFunc(1)
+	}
 }

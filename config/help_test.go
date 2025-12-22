@@ -21,6 +21,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -40,7 +41,18 @@ var packageName = "config"
 
 func TestMain(m *testing.M) {
 	logtest.InitLog()
-	os.Exit(m.Run())
+
+	// Run other tests.
+	exitCode := m.Run()
+
+	if len(logutil.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty",
+			packageName)
+		exitCode = 1
+	}
+
+	// Exit.
+	os.Exit(exitCode)
 }
 
 func testConfig() Config {
@@ -87,35 +99,27 @@ func testSettings() Settings {
 
 var loadMutex sync.RWMutex
 
-func testLoad(file string, t *testing.T) *Config {
-	config := &Config{}
-
-	flags := make(map[string]bool)
-	loadMutex.Lock()
-	defer loadMutex.Unlock()
-	config.Load(file, &flags)
-	t.Cleanup(func() { os.Remove(config.Settings.DataDatabaseFile()) })
-
-	return config
-}
-
-func testLoadBasic(file string, t *testing.T) *Config {
+func testLoadBasic(t *testing.T, file string) *Config {
 	config := &Config{}
 
 	config.File = file
 
 	//#nosec G304 -- Loading the test config file
 	data, err := os.ReadFile(file)
-	logutil.Log.Fatal(
-		fmt.Sprintf("Error reading %q\n%s",
-			file, err),
-		logutil.LogFrom{}, err != nil)
+	if err != nil {
+		logutil.Log.Fatal(
+			fmt.Sprintf("%s\nError reading %q\n%s",
+				packageName, file, err),
+			logutil.LogFrom{})
+	}
 
 	err = yaml.Unmarshal(data, config)
-	logutil.Log.Fatal(
-		fmt.Sprintf("Unmarshal of %q failed\n%s",
-			file, err),
-		logutil.LogFrom{}, err != nil)
+	if err != nil {
+		logutil.Log.Fatal(
+			fmt.Sprintf("%q\nUnmarshal of %q failed\n%s",
+				packageName, file, err),
+			logutil.LogFrom{})
+	}
 
 	saveChannel := make(chan bool, 32)
 	config.SaveChannel = saveChannel
@@ -207,4 +211,21 @@ func testServiceURL(id string) *service.Service {
 	svc.Status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)
 	svc.Status.SetDeployedVersion("0.0.0", "2001-01-01T01:01:01Z", false)
 	return svc
+}
+
+func testOkMatch(t *testing.T, want bool, channel chan bool, releaseStdout func() string) {
+	select {
+	case got := <-channel:
+		drainAndDebounce(t.Context(), logutil.ExitCodeChannel(), 200*time.Millisecond)
+		// Ok value as expected.
+		if got != want {
+			t.Errorf("%s\nok mismatch:\nwant: %t\ngot:  %t",
+				packageName, want, got)
+		}
+	case <-time.After(2500 * time.Millisecond):
+		drainAndDebounce(t.Context(), logutil.ExitCodeChannel(), 200*time.Millisecond)
+		if releaseStdout != nil {
+			_ = releaseStdout()
+		}
+	}
 }

@@ -582,7 +582,7 @@ func TestQuery(t *testing.T) {
 			try := 0
 			temporaryFailureInNameResolution := true
 			for temporaryFailureInNameResolution != false {
-				releaseStdout := test.CaptureStdout()
+				releaseStdout := test.CaptureLog(logutil.Log)
 				try++
 				temporaryFailureInNameResolution = false
 				lookup := testLookup(false)

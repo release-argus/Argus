@@ -19,20 +19,16 @@ package web
 import (
 	"os"
 	"strings"
-	"testing"
 
 	"github.com/release-argus/Argus/test"
 )
 
-func writeFile(path string, data string, t *testing.T) {
+func writeFile(path string, data string) {
 	data = strings.TrimPrefix(data, "\n")
-	os.WriteFile(path, []byte(data), 0644)
-	if t != nil {
-		t.Cleanup(func() { os.Remove(path) })
-	}
+	_ = os.WriteFile(path, []byte(data), 0644)
 }
 
-func testYAML_Argus(path string, t *testing.T) {
+func testYAML_Argus(path string) {
 	data := test.TrimYAML(`
 		defaults:
 			service:
@@ -43,5 +39,5 @@ func testYAML_Argus(path string, t *testing.T) {
 				database_file: test-web.db
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }

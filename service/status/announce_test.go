@@ -55,7 +55,7 @@ func TestStatus_AnnounceFirstVersion(t *testing.T) {
 			}
 			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
-			json.Unmarshal(gotData, &got)
+			_ = json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("%s\nIDmismatch\nwant: %q\ngot:  %q",
 					packageName, wantID, got.ServiceData.ID)
@@ -103,7 +103,7 @@ func TestStatus_AnnounceQuery(t *testing.T) {
 			}
 			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
-			json.Unmarshal(gotData, &got)
+			_ = json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("%s\nID mismatch\nwant: %q\ngot:  %q",
 					packageName, wantID, got.ServiceData.ID)
@@ -148,7 +148,7 @@ func TestStatus_AnnounceQueryNewVersion(t *testing.T) {
 			}
 			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
-			json.Unmarshal(gotData, &got)
+			_ = json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("%s\nID mismatch\nwant: %q\ngot:  %q",
 					packageName, wantID, got.ServiceData.ID)
@@ -197,7 +197,7 @@ func TestStatus_AnnounceUpdate(t *testing.T) {
 			}
 			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
-			json.Unmarshal(gotData, &got)
+			_ = json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("%s\nID mismatch\nwant: %q\ngot:  %q",
 					packageName, wantID, got.ServiceData.ID)
@@ -245,7 +245,7 @@ func TestStatus_announceApproved(t *testing.T) {
 			}
 			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
-			json.Unmarshal(gotData, &got)
+			_ =json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("%s\nID mismatch\nwant: %q\ngot:  %q",
 					packageName, wantID, got.ServiceData.ID)

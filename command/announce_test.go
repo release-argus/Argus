@@ -92,7 +92,7 @@ func TestController_AnnounceCommand(t *testing.T) {
 			}
 			m := <-controller.ServiceStatus.AnnounceChannel
 			var parsed apitype.WebSocketMessage
-			json.Unmarshal(m, &parsed)
+			_ = json.Unmarshal(m, &parsed)
 
 			if parsed.CommandData[(*controller.Command)[tc.index].String()] == nil {
 				t.Fatalf("%s\nmessage wasn't for %q\ngot %v",

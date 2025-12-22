@@ -17,7 +17,9 @@
 package config
 
 import (
+	"context"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -28,28 +30,73 @@ import (
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
+	"gopkg.in/yaml.v3"
 )
 
-func TestConfig_SaveHandler(t *testing.T) {
-	// GIVEN a message is sent to the SaveHandler.
-	config := testConfig()
-	// Disable fatal panics.
-	defer func() { recover() }()
-	go func() {
-		config.SaveChannel <- true
-	}()
+func TestDrainChannel(t *testing.T) {
+	// GIVEN a channel with buffer size and values.
+	tests := map[string]struct {
+		buffer int
+		values []int
+	}{
+		"empty buffered channel": {
+			buffer: 3,
+			values: nil,
+		},
+		"partially-filled buffered channel": {
+			buffer: 5,
+			values: []int{1, 2, 3},
+		},
+		"full buffered channel": {
+			buffer: 3,
+			values: []int{10, 20, 30},
+		},
+		"unbuffered channel": {
+			buffer: 0,
+			values: nil,
+		},
+	}
 
-	// WHEN the SaveHandler is running for a Config with an inaccessible file.
-	config.SaveHandler()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	// THEN it should have panic'd after `debounceDuration` and not reach this.
-	time.Sleep(debounceDuration * time.Second)
-	t.Errorf("%s\nSave should panic'd on inaccessible file location %q",
-		packageName, config.File)
+			ch := make(chan int, tc.buffer)
+			// Push the values into the channel.
+			for _, v := range tc.values {
+				ch <- v
+			}
+
+			done := make(chan struct{})
+			// WHEN drainChannel is called.
+			go func() {
+				drainChannel(ch)
+				close(done)
+			}()
+
+			// THEN drainChannel must not block (even for unbuffered channels)
+			select {
+			case <-done:
+				// success
+			case <-time.After(100 * time.Millisecond):
+				t.Fatalf("%s\ndrainChannel blocked",
+					packageName)
+			}
+			// AND buffered channels should be fully drained.
+			if tc.buffer > 0 {
+				if got := len(ch); got != 0 {
+					t.Fatalf("%s\ndrain failed\nwant: %d, got: %d",
+						packageName, 0, got)
+				}
+			}
+		})
+	}
 }
 
 func TestDrainAndDebounce(t *testing.T) {
+	DebounceDuration = 2 * time.Second
 	// GIVEN a Config.SaveChannel and messages to send/not send.
 	tests := map[string]struct {
 		messages  int
@@ -57,15 +104,15 @@ func TestDrainAndDebounce(t *testing.T) {
 	}{
 		"no messages": {
 			messages:  0,
-			timeTaken: debounceDuration,
+			timeTaken: DebounceDuration,
 		},
 		"one message": {
 			messages:  1,
-			timeTaken: 2 * debounceDuration,
+			timeTaken: 2 * DebounceDuration,
 		},
 		"two messages": {
 			messages:  2,
-			timeTaken: 2 * debounceDuration,
+			timeTaken: 2 * DebounceDuration,
 		},
 	}
 
@@ -78,15 +125,15 @@ func TestDrainAndDebounce(t *testing.T) {
 			// WHEN those messages are sent to the channel mid-way through the wait.
 			go func() {
 				for tc.messages != 0 {
-					time.Sleep(4 * (debounceDuration / 10))
+					time.Sleep(4 * (DebounceDuration / 10))
 					config.SaveChannel <- true
 					tc.messages--
 				}
 			}()
 			start := time.Now().UTC()
-			drainAndDebounce(config.SaveChannel)
+			drainAndDebounce(t.Context(), config.SaveChannel, DebounceDuration)
 
-			// THEN after `debounceDuration`, it would have tried to Save.
+			// THEN after `DebounceDuration`, it would have tried to Save.
 			elapsed := time.Since(start)
 			if elapsed < tc.timeTaken-100*time.Millisecond ||
 				elapsed > tc.timeTaken+100*time.Millisecond {
@@ -97,13 +144,80 @@ func TestDrainAndDebounce(t *testing.T) {
 	}
 }
 
+func TestConfig_SaveHandler(t *testing.T) {
+	DebounceDuration = 2 * time.Second
+	tests := map[string]struct {
+		cancelCtx bool
+	}{
+		"normal debounce": {
+			cancelCtx: false,
+		},
+		"cancelled": {
+			cancelCtx: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			// GIVEN a SaveHandler running on a Config with a SaveChannel.
+			ctx, cancel := context.WithCancel(context.Background())
+			t.Cleanup(cancel)
+			config := testConfig()
+
+			done := make(chan struct{}, 1)
+			go func() {
+				config.SaveHandler(ctx)
+				done <- struct{}{}
+			}()
+
+			now := time.Now().UTC()
+			// WHEN a message is sent to the SaveHandler.
+			config.SaveChannel <- true
+			// AND the context optionally cancelled.
+			if tc.cancelCtx {
+				time.Sleep(100 * time.Millisecond)
+				cancel()
+			}
+
+			// THEN it should exit in the expected time window
+			timeout := DebounceDuration + 500*time.Millisecond
+			if tc.cancelCtx {
+				timeout = 1 * time.Second
+			}
+
+			select {
+			case <-done:
+				t.Errorf("%s\nSaveHandler expected to error on saving before returning, but didn't error first.",
+					packageName)
+			case <-logutil.ExitCodeChannel():
+				elapsed := time.Since(now)
+				if tc.cancelCtx {
+					if elapsed >= DebounceDuration-500*time.Millisecond {
+						t.Errorf("%sSaveHandler should have exited quickly on cancellation, but waited %s",
+							packageName, elapsed)
+					}
+				} else if elapsed > timeout {
+					t.Errorf("%s\nSaveHandler should have exited within expected time (%s)",
+						packageName, timeout)
+				}
+			case <-time.After(timeout):
+				t.Errorf("%s\nSaveHandler did not exit within expected time (%s)",
+					packageName, timeout)
+			}
+		})
+	}
+}
+
 func TestConfig_Save(t *testing.T) {
 	// GIVEN we have a bunch of files that want to be Saved.
 	tests := map[string]struct {
-		file        func(path string, t *testing.T)
+		file        func(path string)
+		preSaveFunc func(path string)
 		corrections map[string]string
+		stdoutRegex string
 	}{
-		"config_test.yml": {
+		"config test": {
 			file: testYAML_config_test,
 			corrections: map[string]string{
 				"listen_port: 0\n":           "listen_port: \"0\"\n",
@@ -111,60 +225,218 @@ func TestConfig_Save(t *testing.T) {
 				"interval: 123\n":            "interval: 123s\n",
 				"delay: 2\n":                 "delay: 2s\n",
 				"  EmptyServiceIsDeleted:\n": "",
-			}},
-		"argus.yml": {
+			},
+		},
+		"Argus": {
 			file: testYAML_Argus,
 			corrections: map[string]string{
 				"listen_port: 0\n": "listen_port: \"0\"\n",
-			}},
-		"small-config.yml": {
+			},
+		},
+		"small config": {
 			file: testYAML_SmallConfigTest,
 			corrections: map[string]string{
 				"settings:\n  data: {}\n  web: {}\n": "",
 				"    options: {}\n":                  "",
 				"    dashboard: {}\n":                "",
-			}},
+			},
+		},
+		"unreadable file": {
+			file: testYAML_Argus,
+			preSaveFunc: func(path string) {
+				if err := os.Chmod(path, 0_222); err != nil {
+					t.Fatalf("%s\nFailed to chmod the file to 222: %v",
+						packageName, err)
+				}
+			},
+			stdoutRegex: `error opening`,
+		},
+		"unwritable file": {
+			file: testYAML_Argus,
+			preSaveFunc: func(path string) {
+				if err := os.Chmod(path, 0_444); err != nil {
+					t.Fatalf("%s\nFailed to chmod the file to 444: %v",
+						packageName, err)
+				}
+			},
+			stdoutRegex: `error opening`,
+		},
 	}
 
 	for name, tc := range tests {
-
-		// Load here as it could DATA RACE with setting the JLog.
-		file := name
-		tc.file(file, t)
-		t.Log(file)
-		originalData, err := os.ReadFile(file)
-		if err != nil {
-			t.Fatalf("%s\nFailed opening the file for the data we were going to Save\n%s",
-				packageName, err)
-		}
-		had := string(originalData)
-		config := testLoadBasic(file, t)
-
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseStdout := test.CaptureLog(logutil.Log)
+
+			// Write the initial file and load the config from it.
+			file := filepath.Join(t.TempDir(), "config.yml")
+			tc.file(file)
+			t.Log(file)
+			originalData, err := os.ReadFile(file)
+			if err != nil {
+				t.Fatalf("%s\nFailed opening the file for the data we were going to Save\n%s",
+					packageName, err)
+			}
+			had := string(originalData)
+			cfg := testLoadBasic(t, file)
+			if tc.preSaveFunc != nil {
+				tc.preSaveFunc(file)
+			}
 
 			// WHEN we Save it to a new location.
-			config.File += ".test"
-			t.Cleanup(func() { os.Remove(config.File) })
+			t.Cleanup(func() { _ = os.Remove(cfg.File) })
 			loadMutex.RLock()
-			config.Save()
+			cfg.Save()
 			loadMutex.RUnlock()
 
-			// THEN it's the same as the original file.
-			newData, err := os.ReadFile(config.File)
+			// THEN the stdout is expected.
+			stdout := releaseStdout()
+			if !util.RegexCheck(tc.stdoutRegex, stdout) {
+				t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.stdoutRegex, stdout)
+			}
+			if tc.stdoutRegex != "" {
+				drainAndDebounce(t.Context(), logutil.ExitCodeChannel(), 100*time.Millisecond)
+				return
+			}
+			// AND it's the same as the original file.
+			newData, err := os.ReadFile(cfg.File)
 			for from := range tc.corrections {
 				had = strings.ReplaceAll(had, from, tc.corrections[from])
 			}
 			if string(newData) != had {
-				t.Errorf("%s\n%q is different after Save(). Got \n%s\nexpecting:\n%s",
-					packageName, file, string(newData), had)
+				t.Errorf("%s\n%q is different after Save()\ngot:\n%s\nwant:\n%s\n\nwant: %q\ngot:  %q",
+					packageName, file, string(newData), had, had, string(newData))
 			}
-			err = os.Remove(config.File)
+			err = os.Remove(cfg.File)
 			if err != nil {
 				t.Errorf("%s\n%v",
 					packageName, err)
 			}
 			time.Sleep(time.Second)
+		})
+	}
+}
+
+func TestConfig_ReorderYAML(t *testing.T) {
+	// GIVEN a YAML to sort with a certain order of services.
+	tests := map[string]struct {
+		order []string
+		lines []string
+		want  []string
+	}{
+		"empty input": {
+			order: nil,
+			lines: nil,
+			want:  nil,
+		},
+		"single service, no empty maps": {
+			order: nil,
+			lines: []string{
+				"service:",
+				"  alpha:",
+				"    name: Alpha",
+			},
+			want: []string{
+				"service:",
+				"  alpha:",
+				"    name: Alpha",
+			},
+		},
+		"don't remove empty notify/webhook under service": {
+			order: nil,
+			lines: []string{
+				"service:",
+				"  alpha:",
+				"    notify:",
+				"      DISCORD: {}",
+				"    webhook:",
+				"      URL: {}",
+			},
+			want: []string{
+				"service:",
+				"  alpha:",
+				"    notify:",
+				"      DISCORD: {}",
+				"    webhook:",
+				"      URL: {}",
+			},
+		},
+		"reorder services according to order": {
+			order: []string{"beta", "alpha"},
+			lines: []string{
+				"service:",
+				"  alpha:",
+				"    name: Alpha",
+				"  beta:",
+				"    name: Beta",
+			},
+			want: []string{
+				"service:",
+				"  beta:",
+				"    name: Beta",
+				"  alpha:",
+				"    name: Alpha",
+			},
+		},
+		"nested empty maps removed recursively": {
+			order: []string{"beta", "Alpha"},
+			lines: []string{
+				"service:",
+				"  Alpha:",
+				"    notify:",
+				"      DISCORD: {}",
+				"    options: {}",
+				"    latest_version:",
+				"    deployed_version:",
+				"      url: example.com",
+				"      headers: []",
+				"  beta:",
+				"    unknown: {}",
+				"    deployed_version:",
+				"      headers: []",
+				"      basic_auth: {}",
+			},
+			want: []string{
+				"service:",
+				"  Alpha:",
+				"    notify:",
+				"      DISCORD: {}",
+				"    deployed_version:",
+				"      url: example.com",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			var cfg Config
+			yamlStr := strings.Join(tc.lines, "\n")
+			if err := yaml.Unmarshal([]byte(yamlStr), &cfg); err != nil {
+				t.Fatalf("%s\nFailed to unmarshal YAML:\n%q\nerror:\n%s",
+					packageName, yamlStr, err.Error())
+			}
+			cfg.Order = tc.order
+			cfg.Settings.Indentation = 2
+			//c := &Config{
+			//	Service: service.Services{},
+			//	Settings: Settings{
+			//		Indentation: 2},
+			//	Order: tc.order,
+			//}
+
+			// WHEN reorderYAML is called.
+			got := cfg.reorderYAML(tc.lines)
+
+			// THEN the resulting lines match the expected output.
+			gotStr := strings.Join(got, "\n")
+			wantStr := strings.Join(tc.want, "\n")
+			if gotStr != wantStr {
+				t.Errorf("%sreorderYAML() mismatch\ngot:\n%s\nwant:\n%s\n\nwant: %q\ngot:  %q",
+					packageName, gotStr, wantStr, wantStr, gotStr)
+			}
 		})
 	}
 }
@@ -363,8 +635,8 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 					nil, nil, "", nil, nil, "", nil, "gitlab", ""),
 				"bosh": webhook.NewDefaults(
 					nil, nil, "", nil, nil, "", nil, "github", "")},
-			currentOrderIndexStart: []int{0, 24},
-			currentOrderIndexEnd:   []int{0, 35},
+			currentOrderIndexStart: []int{24},
+			currentOrderIndexEnd:   []int{35},
 		},
 		"service overriding defaults": {
 			lines: test.TrimYAML(`
@@ -476,8 +748,8 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 					nil, nil, "", nil, nil, "", nil, "gitlab", ""),
 				"bosh": webhook.NewDefaults(
 					nil, nil, "", nil, nil, "", nil, "github", "")},
-			currentOrderIndexStart: []int{0, 24},
-			currentOrderIndexEnd:   []int{0, 37},
+			currentOrderIndexStart: []int{24},
+			currentOrderIndexEnd:   []int{37},
 		},
 		"service not using defaults": {
 			lines: test.TrimYAML(`
@@ -620,8 +892,8 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 					nil, nil, "", nil, nil, "", nil, "gitlab", ""),
 				"bosh": webhook.NewDefaults(
 					nil, nil, "", nil, nil, "", nil, "github", "")},
-			currentOrderIndexStart: []int{0, 24},
-			currentOrderIndexEnd:   []int{0, 34},
+			currentOrderIndexStart: []int{24},
+			currentOrderIndexEnd:   []int{34},
 		},
 		"service using defaults, service overriding defaults and service not using defaults": {
 			lines: test.TrimYAML(`
@@ -840,8 +1112,8 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 					nil, nil, "", nil, nil, "", nil, "gitlab", ""),
 				"bosh": webhook.NewDefaults(
 					nil, nil, "", nil, nil, "", nil, "github", "")},
-			currentOrderIndexStart: []int{0, 24, 36, 51},
-			currentOrderIndexEnd:   []int{0, 35, 50, 65},
+			currentOrderIndexEnd:   []int{35, 50, 65},
+			currentOrderIndexStart: []int{24, 36, 51},
 		},
 	}
 

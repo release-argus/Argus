@@ -302,7 +302,7 @@ func TestUnmarshalYAML(t *testing.T) {
 			t.Parallel()
 
 			lookup := &Lookup{}
-			yamlNode, err := test.YAMLToNode(t, tc.yaml)
+			yamlNode, err := test.YAMLToNode(tc.yaml)
 			if err != nil {
 				t.Errorf("%s\nfailed to convert YAML to yaml.Node: %v",
 					packageName, err)

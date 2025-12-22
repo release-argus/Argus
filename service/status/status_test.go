@@ -323,7 +323,7 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 
 	// Changing UpdatesCurrent.
 	metricsMutex.RLock()
-	t.Cleanup(func() { metricsMutex.RUnlock() })
+	t.Cleanup(metricsMutex.RUnlock)
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -484,7 +484,7 @@ func TestStatus_DeployedVersion(t *testing.T) {
 
 	// Changing UpdatesCurrent.
 	metricsMutex.RLock()
-	t.Cleanup(func() { metricsMutex.RUnlock() })
+	t.Cleanup(metricsMutex.RUnlock)
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -604,7 +604,7 @@ func TestStatus_LatestVersion(t *testing.T) {
 
 	// Changing UpdatesCurrent.
 	metricsMutex.RLock()
-	t.Cleanup(func() { metricsMutex.RUnlock() })
+	t.Cleanup(metricsMutex.RUnlock)
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -1229,7 +1229,7 @@ func TestStatus_InitMetrics_DeleteMetrics(t *testing.T) {
 
 	// Changing and reading UpdatesCurrent.
 	metricsMutex.Lock()
-	t.Cleanup(func() { metricsMutex.Unlock() })
+	t.Cleanup(metricsMutex.Unlock)
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -1733,7 +1733,7 @@ func TestUpdateUpdatesCurrent(t *testing.T) {
 
 	// Changing and reading UpdatesCurrent.
 	metricsMutex.Lock()
-	t.Cleanup(func() { metricsMutex.Unlock() })
+	t.Cleanup(metricsMutex.Unlock)
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {

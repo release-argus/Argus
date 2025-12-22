@@ -93,16 +93,17 @@ func TestCommand_Exec(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			// WHEN Exec is called on it.
 			err := tc.cmd.Exec(logutil.LogFrom{})
 
-			// THEN the stdout is expected.
+			// THEN any error is expected.
 			if util.ErrorToString(err) != util.ErrorToString(tc.err) {
 				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.err, err)
 			}
+			// AND the stdout is expected.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
 				t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
@@ -155,7 +156,7 @@ func TestController_ExecIndex(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			// WHEN the Command @index is executed.
 			err := controller.ExecIndex(
@@ -218,7 +219,7 @@ func TestController_Exec(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			announceChannel := make(chan []byte, 8)
 			controller := testController(announceChannel)

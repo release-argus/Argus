@@ -20,44 +20,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"os"
 	"regexp"
 	"strings"
-	"sync"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 )
-
-var StdoutMutex sync.Mutex // Only one test should write to stdout at a time.
-// CaptureStdout temporarily captures all output written to the standard output
-// and returns a function that, when called, restores the original standard output and
-// returns the captured output as a string.
-func CaptureStdout() func() string {
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	StdoutMutex.Lock()
-
-	var buf bytes.Buffer
-	done := make(chan struct{})
-
-	// Drain the pipe until closed.
-	go func() {
-		io.Copy(&buf, r)
-		close(done)
-	}()
-
-	return func() string {
-		w.Close()
-		<-done
-
-		os.Stdout = stdout
-		StdoutMutex.Unlock()
-		return buf.String()
-	}
-}
 
 // BoolPtr returns a pointer to the given boolean value.
 func BoolPtr(val bool) *bool { return &val }
@@ -179,7 +147,7 @@ func Combinations[T comparable](input []T) [][]T {
 	return result
 }
 
-// Indent returns a string with lines indented by the given amount of spaces.
+// Indent returns a string with lines indented by the given number of spaces.
 func Indent(str string, indent int) string {
 	lines := strings.Split(str, "\n")
 
@@ -198,7 +166,8 @@ func IgnoreError[T any](t *testing.T, fn func() (T, error)) T {
 	return result
 }
 
-func YAMLToNode(t *testing.T, yamlStr string) (*yaml.Node, error) {
+// YAMLToNode converts a YAML string to a `*yaml.Node`
+func YAMLToNode(yamlStr string) (*yaml.Node, error) {
 	var node yaml.Node
 	err := yaml.Unmarshal([]byte(yamlStr), &node)
 	if err != nil {
@@ -208,6 +177,10 @@ func YAMLToNode(t *testing.T, yamlStr string) (*yaml.Node, error) {
 	return &node, nil
 }
 
+// EqualSlices reports whether slices `a` and `b` are equal in length and contain
+// the same elements, in the same order.
+//
+// Nil and empty slices are considered equal.
 func EqualSlices[T comparable](a, b []T) bool {
 	if len(a) != len(b) {
 		return false

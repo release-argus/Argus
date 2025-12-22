@@ -16,6 +16,7 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -68,7 +69,7 @@ func newWebUI(cfg *config.Config) *mux.Router {
 }
 
 // Run the web server.
-func Run(cfg *config.Config) {
+func Run(ctx context.Context, cfg *config.Config) error {
 	router := newWebUI(cfg)
 
 	listenAddress := fmt.Sprintf("%s:%s",
@@ -82,13 +83,27 @@ func Run(cfg *config.Config) {
 		WriteTimeout: 10 * time.Second, // Max time to write response.
 	}
 
-	if cfg.Settings.WebCertFile() != "" && cfg.Settings.WebKeyFile() != "" {
-		logutil.Log.Fatal(
-			srv.ListenAndServeTLS(cfg.Settings.WebCertFile(), cfg.Settings.WebKeyFile()),
-			logutil.LogFrom{}, true)
-	} else {
-		logutil.Log.Fatal(
-			srv.ListenAndServe(),
-			logutil.LogFrom{}, true)
+	errChan := make(chan error, 1)
+	go func() {
+		if cfg.Settings.WebCertFile() != "" && cfg.Settings.WebKeyFile() != "" {
+			errChan <- srv.ListenAndServeTLS(
+				cfg.Settings.WebCertFile(),
+				cfg.Settings.WebKeyFile(),
+			)
+		} else {
+			errChan <- srv.ListenAndServe()
+		}
+	}()
+
+	select {
+	// Graceful shutdown.
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		return srv.Shutdown(shutdownCtx)
+
+	// Error.
+	case err := <-errChan:
+		return err
 	}
 }

@@ -58,15 +58,27 @@ func (wh *WebHook) GetDesiredStatusCode() uint16 {
 		wh.HardDefaults.DesiredStatusCode)
 }
 
-// SetNextRunnable time that the WebHook can be re-run.
-func (wh *WebHook) SetNextRunnable(time time.Time) {
-	wh.mutex.Lock()
-	defer wh.mutex.Unlock()
-
-	wh.nextRunnable = time
+// DidFail returns whether the last send of this WebHook failed.
+func (wh *WebHook) DidFail() *bool {
+	return wh.Failed.Get(wh.ID)
 }
 
-// SetExecuting will set a time that the WebHook can be re-run.
+// SetFailed will set the 'Fail' status of this WebHook.
+func (wh *WebHook) SetFail(state *bool) {
+	wh.Failed.Set(wh.ID, state)
+}
+
+// NextRunnable returns the time the WebHook can next run.
+func (wh *WebHook) NextRunnable() time.Time {
+	return wh.Failed.NextRunnable(wh.ID)
+}
+
+// SetNextRunnable time the WebHook can next run.
+func (wh *WebHook) SetNextRunnable(time time.Time) {
+	wh.Failed.SetNextRunnable(wh.ID, time)
+}
+
+// SetExecuting will set the time the WebHook can next run.
 //
 // Parameters:
 //
@@ -76,26 +88,28 @@ func (wh *WebHook) SetExecuting(addDelay bool, received bool) {
 	wh.mutex.Lock()
 	defer wh.mutex.Unlock()
 
+	var nextRunnable time.Time
+
 	// Different times depending on pass/fail.
 	// pass.
-	if !util.DereferenceOrValue(wh.Failed.Get(wh.ID), true) {
+	if !util.DereferenceOrValue(wh.DidFail(), true) {
 		parentInterval, _ := time.ParseDuration(*wh.ParentInterval)
-		wh.nextRunnable = time.Now().UTC().Add(2 * parentInterval)
+		nextRunnable = time.Now().UTC().Add(2 * parentInterval)
 		// fail/nil.
 	} else {
-		wh.nextRunnable = time.Now().UTC().Add(15 * time.Second)
+		nextRunnable = time.Now().UTC().Add(15 * time.Second)
 	}
 
 	// Block for delay.
 	if addDelay {
-		wh.nextRunnable = wh.nextRunnable.Add(wh.GetDelayDuration())
+		nextRunnable = nextRunnable.Add(wh.GetDelayDuration())
 	}
 
 	// Block reruns whilst waiting for a response.
 	if received {
-		wh.nextRunnable = wh.nextRunnable.Add(time.Hour)
-		wh.nextRunnable = wh.nextRunnable.Add(3 * time.Duration(int64(wh.GetMaxTries())) * time.Second)
+		nextRunnable = nextRunnable.Add(time.Hour)
 	}
+	wh.SetNextRunnable(nextRunnable)
 }
 
 // GetMaxTries allowed for the WebHook.
@@ -107,20 +121,9 @@ func (wh *WebHook) GetMaxTries() uint8 {
 		wh.HardDefaults.MaxTries)
 }
 
-// NextRunnable returns the time that the WebHook can be re-run.
-func (wh *WebHook) NextRunnable() time.Time {
-	wh.mutex.RLock()
-	defer wh.mutex.RUnlock()
-
-	return wh.nextRunnable
-}
-
 // IsRunnable returns whether the current time is before NextRunnable.
 func (wh *WebHook) IsRunnable() bool {
-	wh.mutex.RLock()
-	defer wh.mutex.RUnlock()
-
-	return time.Now().UTC().After(wh.nextRunnable)
+	return time.Now().UTC().After(wh.NextRunnable())
 }
 
 // BuildRequest returns the WebHook http.request ready to be sent.

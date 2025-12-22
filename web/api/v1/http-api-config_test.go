@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -39,12 +40,11 @@ import (
 
 func TestHTTP_Config(t *testing.T) {
 	// GIVEN an API and a request for the config.
-	file := "TestHTTP_Config.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	t.Cleanup(func() {
-		os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 
@@ -583,7 +583,7 @@ func TestHTTP_Config(t *testing.T) {
 			w := httptest.NewRecorder()
 			api.httpConfig(w, req)
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)

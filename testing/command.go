@@ -17,7 +17,6 @@ package testing
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/release-argus/Argus/config"
@@ -25,10 +24,10 @@ import (
 )
 
 // CommandTest will test the commands given to a Service.
-func CommandTest(flag *string, cfg *config.Config) {
+func CommandTest(flag *string, cfg *config.Config) bool {
 	// Only if flag provided.
 	if *flag == "" {
-		return
+		return true
 	}
 	logFrom := logutil.LogFrom{Primary: "Testing", Secondary: *flag}
 
@@ -44,22 +43,21 @@ func CommandTest(flag *string, cfg *config.Config) {
 			fmt.Sprintf("Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
 				*flag, strings.Join(cfg.Order, "\n  - "),
 			),
-			logFrom,
-			true)
+			logFrom)
+		return false
 	}
 
 	if service.CommandController == nil {
 		logutil.Log.Fatal(
 			fmt.Sprintf("Service %q does not have any `command` defined",
 				*flag),
-			logFrom,
-			true)
+			logFrom)
+		return false
 	}
 
 	//#nosec G104 -- Disregard.
 	//nolint:errcheck // ^
 	service.CommandController.Exec(logFrom)
-	if !logutil.Log.Testing {
-		os.Exit(0)
-	}
+
+	return true
 }

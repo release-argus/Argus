@@ -17,17 +17,24 @@
 package web
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
+	"net/http"
 	"os"
 	"testing"
 	"time"
+
+	logutil "github.com/release-argus/Argus/util/log"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config"
@@ -52,6 +59,7 @@ import (
 var (
 	packageName = "web"
 	mainCfg     *config.Config
+	host        = "localhost"
 	port        string
 )
 
@@ -61,21 +69,37 @@ func TestMain(m *testing.M) {
 
 	// GIVEN a valid config with a Service.
 	file := "TestWebMain.yml"
-	mainCfg = testConfig(file, nil)
-	os.Remove(file)
+	mainCfg = testConfig(nil, file)
+	_ = os.Remove(file)
 	defer os.Remove(mainCfg.Settings.Data.DatabaseFile)
 	port = mainCfg.Settings.Web.ListenPort
-	mainCfg.Settings.Web.ListenHost = "localhost"
+	mainCfg.Settings.Web.ListenHost = host
+
+	// Create a cancellable context for shutdown.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// WHEN the Router is fetched for this Config.
 	router = newWebUI(mainCfg)
-	go Run(mainCfg)
-	time.Sleep(250 * time.Millisecond)
+	go Run(ctx, mainCfg)
+	url := fmt.Sprintf("http://%s:%s%s",
+		host, port, mainCfg.Settings.Web.RoutePrefix)
+	if err := waitForServer(url, 1*time.Second); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 
 	// THEN Web UI is accessible for the tests.
-	code := m.Run()
+	exitCode := m.Run()
 
-	os.Exit(code)
+	if len(logutil.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty",
+			packageName)
+		exitCode = 1
+	}
+
+	// Exit.
+	os.Exit(exitCode)
 }
 
 func getFreePort() (int, error) {
@@ -83,18 +107,25 @@ func getFreePort() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	ln.Close()
+	_ = ln.Close()
 	return ln.Addr().(*net.TCPAddr).Port, nil
 }
 
-func testConfig(path string, t *testing.T) (cfg *config.Config) {
-	testYAML_Argus(path, t)
+func testConfig(t *testing.T, path string) (cfg *config.Config) {
+	var ctx context.Context
+	if t == nil {
+		ctx = context.Background()
+	} else {
+		ctx = t.Context()
+	}
+	g, _ := errgroup.WithContext(ctx)
+	testYAML_Argus(path)
 	cfg = &config.Config{}
 
 	flags := make(map[string]bool)
-	cfg.Load(path, &flags)
+	cfg.Load(ctx, g, path, &flags)
 	if t != nil {
-		t.Cleanup(func() { os.Remove(cfg.Settings.DataDatabaseFile()) })
+		t.Cleanup(func() { _ = os.Remove(cfg.Settings.DataDatabaseFile()) })
 	}
 
 	// Settings.Web.
@@ -132,7 +163,7 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 		&cfg.Defaults.Service, &cfg.HardDefaults.Service,
 		&cfg.Notify, &cfg.Defaults.Notify, &cfg.HardDefaults.Notify,
 		&cfg.WebHook, &cfg.Defaults.WebHook, &cfg.HardDefaults.WebHook)
-	cfg.AddService(svc.ID, svc)
+	_ = cfg.AddService(svc.ID, svc)
 
 	// Notify.
 	cfg.Notify = cfg.Defaults.Notify
@@ -339,4 +370,66 @@ func generateCertFiles(certFile, keyFile string) error {
 	}
 
 	return nil
+}
+
+// assertServerShutdown verifies that the server shuts down correctly when the context is cancelled.
+func assertServerShutdown(
+	t *testing.T,
+	cancelFunc context.CancelFunc,
+	errCh <-chan error,
+	testURL string,
+) {
+	t.Helper()
+
+	// Cancel the context to trigger shutdown.
+	cancelFunc()
+
+	// Wait for the server to return.
+	select {
+	case err := <-errCh:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			t.Errorf("%s\nserver returned unexpected error on shutdown: %v",
+				packageName, err)
+		}
+	case <-time.After(time.Second):
+		t.Errorf("%s\nserver did not shutdown in time",
+			packageName)
+	}
+
+	// Test that the server no longer accepts requests.
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
+		Timeout: 500 * time.Millisecond}
+	if _, err := client.Get(testURL); err == nil {
+		t.Errorf("%s\nexpected request to fail after shutdown, but it succeeded",
+			packageName)
+	}
+}
+
+// waitForServer waits until the server at the given URL is ready, or the timeout is reached.
+func waitForServer(url string, timeout time.Duration) error {
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
+		Timeout: 500 * time.Millisecond}
+	deadline := time.Now().Add(timeout)
+	for {
+		resp, err := client.Get(url)
+
+		// Server is ready.
+		if err == nil {
+			_ = resp.Body.Close()
+			return nil
+		}
+
+		// Timeout reached.
+		if time.Now().After(deadline) {
+			return fmt.Errorf("%s\nserver did not start in time: %v",
+				packageName, err)
+		}
+
+		// Delay before retrying.
+		time.Sleep(10 * time.Millisecond)
+	}
 }

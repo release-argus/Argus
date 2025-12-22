@@ -18,22 +18,34 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 
+	logtest "github.com/release-argus/Argus/test/log"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 var packageName = "api.types"
 var secretValueMarshalled string
 
 func TestMain(m *testing.M) {
+	// Log.
+	logtest.InitLog()
+
 	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'.
 	secretValueMarshalledBytes, _ := json.Marshal(util.SecretValue)
 	secretValueMarshalled = string(secretValueMarshalledBytes)
 
 	// Run other tests.
 	exitCode := m.Run()
+
+	if len(logutil.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty",
+			packageName)
+		exitCode = 1
+	}
 
 	// Exit.
 	os.Exit(exitCode)

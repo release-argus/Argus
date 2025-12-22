@@ -27,7 +27,7 @@ import (
 	"github.com/release-argus/Argus/service/status"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
-	metric "github.com/release-argus/Argus/web/metric"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestController_SetExecuting(t *testing.T) {
@@ -102,7 +102,7 @@ func TestController_SetExecuting(t *testing.T) {
 			// THEN the result is expected.
 			got := ranAt
 			if tc.index < len(*controller.Command) {
-				got = (controller.NextRunnable(tc.index))
+				got = controller.NextRunnable(tc.index)
 			}
 			minTime := ranAt.Add(tc.timeDifferenceMin)
 			maxTime := ranAt.Add(tc.timeDifferenceMax)
@@ -399,14 +399,14 @@ func TestController_Metrics(t *testing.T) {
 	wantC := 2 * len(*controller.Command)
 	if (gotC - hadC) != wantC {
 		t.Errorf("%s\nCounter metrics mismatch after InitMetrics() \nwant: %d\ngot:  %d",
-			packageName, wantC, (gotC - hadC))
+			packageName, wantC, gotC - hadC)
 	}
 	// 	Gauges:
 	gotG := testutil.CollectAndCount(metric.LatestVersionIsDeployed)
 	wantG := 0
 	if (gotG - hadG) != wantG {
 		t.Errorf("%s\nGauge metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
-			packageName, wantG, (gotG - hadG))
+			packageName, wantG, gotG - hadG)
 	}
 
 	// AND it can be deleted.

@@ -24,6 +24,7 @@ import (
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestAPI_UpdateRow(t *testing.T) {
@@ -103,18 +104,18 @@ func TestAPI_UpdateRow(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tAPI := testAPI(name, "TestAPI_UpdateRow")
+			tAPI := testAPI(t)
 			t.Cleanup(func() { dbCleanup(tAPI) })
 			tAPI.initialise()
 
 			// Ensure the row exists when tc.exists.
 			if tc.exists {
-				tAPI.db.Exec("INSERT INTO status (id) VALUES (?)",
+				_, _ = tAPI.db.Exec("INSERT INTO status (id) VALUES (?)",
 					tc.target)
 			}
 			// Delete the DB file.
 			if tc.databaseDeleted {
-				os.Remove(tAPI.config.Settings.Data.DatabaseFile)
+				_ = os.Remove(tAPI.config.Settings.Data.DatabaseFile)
 			}
 
 			// WHEN updateRow is called targeting single/multiple cells.
@@ -155,7 +156,7 @@ func TestAPI_UpdateRow(t *testing.T) {
 }
 
 func TestAPI_DeleteRow(t *testing.T) {
-	// GIVEN a DB with a few service status'.
+	// GIVEN a DB with multiple service status'.
 	tests := map[string]struct {
 		serviceID       string
 		exists          bool
@@ -176,10 +177,10 @@ func TestAPI_DeleteRow(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
-			tAPI := testAPI(name, "TestAPI_DeleteRow")
-			os.Remove(tAPI.config.Settings.Data.DatabaseFile)
+			tAPI := testAPI(t)
+			_ = os.Remove(tAPI.config.Settings.Data.DatabaseFile)
 			t.Cleanup(func() { dbCleanup(tAPI) })
 			tAPI.initialise()
 
@@ -200,7 +201,7 @@ func TestAPI_DeleteRow(t *testing.T) {
 			}
 			// Delete the DB file.
 			if tc.databaseDeleted {
-				os.Remove(tAPI.config.Settings.Data.DatabaseFile)
+				_ = os.Remove(tAPI.config.Settings.Data.DatabaseFile)
 			}
 
 			// WHEN deleteRow is called targeting a row.
@@ -214,7 +215,7 @@ func TestAPI_DeleteRow(t *testing.T) {
 				t.Errorf("%s\nstdout mismatch:\nwant: %t (%q)\ngot:  %q",
 					packageName, tc.databaseDeleted, deleteFailRegex, stdout)
 			}
-			// AND the row is deleted from the DB (if it existed and the DB wasn't deleted).
+			// AND the row is deleted from the DB (if it existed and the DB was not deleted).
 			row = queryRow(t, tAPI.db, tc.serviceID)
 			if row.LatestVersion() != "" || row.DeployedVersion() != "" {
 				// no delete if we deleted the db.
@@ -232,10 +233,10 @@ func TestAPI_DeleteRow(t *testing.T) {
 
 func TestAPI_Handler(t *testing.T) {
 	// GIVEN a DB with a few service status'.
-	tAPI := testAPI("TestAPI_Handler", "db")
+	tAPI := testAPI(t)
 	t.Cleanup(func() { dbCleanup(tAPI) })
 	tAPI.initialise()
-	go tAPI.handler()
+	go tAPI.handler(t.Context())
 
 	// WHEN a message is sent to the DatabaseChannel targeting latest_version.
 	target := "keep0"
@@ -288,10 +289,31 @@ func TestAPI_Handler(t *testing.T) {
 	tAPI.config.DatabaseChannel <- msg2
 	time.Sleep(250 * time.Millisecond)
 
-	// THEN the last message is the one that is applied.
+	// THEN the last message is the one applied.
 	got = queryRow(t, tAPI.db, target)
 	if got.LatestVersion() != wantLatestVersion {
 		t.Errorf("%s\nExpected %q to be updated to %q\nwant: %#v\ngot:  %#v",
 			packageName, cell2.Column, cell2.Value, want, got)
 	}
+}
+
+func TestAPI_Handler_Fail(t *testing.T) {
+	// GIVEN a DB with a few service status'.
+	tAPI := testAPI(t)
+	t.Cleanup(func() { dbCleanup(tAPI) })
+	tAPI.initialise()
+	go tAPI.handler(t.Context())
+	releaseStdout := test.CaptureLog(logutil.Log)
+
+	// WHEN the DatabaseChannel is closed.
+	close(tAPI.config.DatabaseChannel)
+	time.Sleep(10 * time.Millisecond)
+
+	// THEN the handler exits cleanly.
+	stdout := releaseStdout()
+	if !util.RegexCheck(`FATAL: .*Database closed`, stdout) {
+		t.Errorf("%s\nstdout mismatch:\nwant: %q\ngot:  %q",
+			packageName, `FATAL: DatabaseChannel closed`, stdout)
+	}
+	<-logutil.ExitCodeChannel()
 }

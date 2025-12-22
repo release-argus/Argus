@@ -16,10 +16,12 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 
 	dbtype "github.com/release-argus/Argus/db/types"
@@ -67,7 +69,7 @@ func (c *Config) Init() {
 }
 
 // Load `file` as Config.
-func (c *Config) Load(file string, flagset *map[string]bool) {
+func (c *Config) Load(ctx context.Context, g *errgroup.Group, file string, flagset *map[string]bool) bool {
 	// Initialise the Log if it hasn't been already.
 	logutil.Init("ERROR", false)
 
@@ -83,16 +85,22 @@ func (c *Config) Load(file string, flagset *map[string]bool) {
 
 	//#nosec G304 -- Loading the file asked for by the user.
 	data, err := os.ReadFile(file)
-	logutil.Log.Fatal(
-		fmt.Sprintf("Error reading %q\n%s",
-			file, err),
-		logutil.LogFrom{}, err != nil)
+	if err != nil {
+		logutil.Log.Fatal(
+			fmt.Sprintf("Error reading %q\n%s",
+				file, err),
+			logutil.LogFrom{})
+		return false
+	}
 
 	err = yaml.Unmarshal(data, c)
-	logutil.Log.Fatal(
-		fmt.Sprintf("Unmarshal of %q failed\n%s",
-			file, err),
-		logutil.LogFrom{}, err != nil)
+	if err != nil {
+		logutil.Log.Fatal(
+			fmt.Sprintf("Unmarshal of %q failed\n%s",
+				file, err),
+			logutil.LogFrom{})
+		return false
+	}
 
 	c.GetOrder(data)
 
@@ -126,8 +134,11 @@ func (c *Config) Load(file string, flagset *map[string]bool) {
 	github.SetEmptyListETag(accessTokenDefault)
 
 	// SaveHandler that listens for calls to save config changes.
-	go c.SaveHandler()
+	g.Go(func() error {
+		c.SaveHandler(ctx)
+		return nil
+	})
 
 	c.Init()
-	c.CheckValues()
+	return c.CheckValues()
 }

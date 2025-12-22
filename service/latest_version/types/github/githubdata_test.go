@@ -32,7 +32,7 @@ var emptyListETagTestMutex = sync.Mutex{}
 func Test_SetEmptyListETag(t *testing.T) {
 	// GIVEN emptyListETag is set to the incorrect value.
 	emptyListETagTestMutex.Lock()
-	t.Cleanup(func() { emptyListETagTestMutex.Unlock() })
+	t.Cleanup(emptyListETagTestMutex.Unlock)
 	incorrectValue := "foo"
 	setEmptyListETag(incorrectValue)
 
@@ -54,7 +54,7 @@ func Test_SetEmptyListETag(t *testing.T) {
 func Test_setEmptyListETag(t *testing.T) {
 	// GIVEN emptyListETag exists.
 	emptyListETagTestMutex.Lock()
-	t.Cleanup(func() { emptyListETagTestMutex.Unlock() })
+	t.Cleanup(emptyListETagTestMutex.Unlock)
 
 	// WHEN setEmptyListETag is called.
 	newValue := "foo"
@@ -70,9 +70,9 @@ func Test_setEmptyListETag(t *testing.T) {
 func TestGetEmptyListETag(t *testing.T) {
 	// GIVEN emptyListETag exists.
 	emptyListETagTestMutex.Lock()
-	t.Cleanup(func() { emptyListETagTestMutex.Unlock() })
+	t.Cleanup(emptyListETagTestMutex.Unlock)
 	emptyListETagMutex.RLock()
-	t.Cleanup(func() { emptyListETagMutex.RUnlock() })
+	t.Cleanup(emptyListETagMutex.RUnlock)
 
 	// WHEN getEmptyListETag is called.
 	got := getEmptyListETag()
@@ -86,7 +86,7 @@ func TestGetEmptyListETag(t *testing.T) {
 
 func TestNewData(t *testing.T) {
 	emptyListETagTestMutex.Lock()
-	t.Cleanup(func() { emptyListETagTestMutex.Unlock() })
+	t.Cleanup(emptyListETagTestMutex.Unlock)
 	startingEmptyListETag := getEmptyListETag()
 	// GIVEN a Data is wanted with/without an eTag/releases.
 	tests := map[string]struct {

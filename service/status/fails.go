@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/release-argus/Argus/util"
 )
@@ -211,6 +212,32 @@ type FailsShoutrrr struct {
 // FailsWebHook keeps track of the unsent/fail/pass status of the WebHook sender.
 type FailsWebHook struct {
 	failsBase
+	nextRunnable map[string]time.Time // Map of index to time at which can next run (for staggering).
+}
+
+// Init the FailsWebHook.
+func (f *FailsWebHook) Init(length int) {
+	f.failsBase.Init(length)
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	f.nextRunnable = make(map[string]time.Time, length)
+}
+
+// NextRunnable returns the next time at which the index can be re-run.
+func (f *FailsWebHook) NextRunnable(index string) time.Time {
+	f.mutex.RLock()
+	defer f.mutex.RUnlock()
+
+	return f.nextRunnable[index]
+}
+
+// SetNextRunnable will set the `time` that the index can be re-run.
+func (f *FailsWebHook) SetNextRunnable(index string, time time.Time) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	f.nextRunnable[index] = time
 }
 
 // String returns a string representation of the Fails.

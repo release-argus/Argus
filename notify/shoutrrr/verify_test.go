@@ -257,45 +257,45 @@ func TestBase_normaliseParamSelect(t *testing.T) {
 		value      string
 		allowed    []string
 		startParam string
-		wantOK     bool
+		ok         bool
 		wantValue  string
 	}{
 		"exact match uses canonical case": {
 			value:     "Two",
 			allowed:   []string{"One", "Two", "Three"},
-			wantOK:    true,
+			ok:        true,
 			wantValue: "Two",
 		},
 		"case-insensitive match lower->upper": {
 			value:     "two",
 			allowed:   []string{"One", "Two", "Three"},
-			wantOK:    true,
+			ok:        true,
 			wantValue: "Two",
 		},
 		"case-insensitive match upper->proper": {
 			value:     "THREE",
 			allowed:   []string{"One", "Two", "Three"},
-			wantOK:    true,
+			ok:        true,
 			wantValue: "Three",
 		},
 		"non-match returns false and leaves value unchanged": {
 			value:      "four",
 			allowed:    []string{"One", "Two", "Three"},
 			startParam: "unchanged",
-			wantOK:     false,
+			ok:         false,
 			wantValue:  "unchanged",
 		},
 		"empty value returns false and makes no change": {
 			value:     "",
 			allowed:   []string{"One", "Two"},
-			wantOK:    false,
+			ok:        false,
 			wantValue: "",
 		},
 		"empty allowed set never matches": {
 			value:      "one",
 			allowed:    []string{},
 			startParam: "keepme",
-			wantOK:     false,
+			ok:         false,
 			wantValue:  "keepme",
 		},
 	}
@@ -311,13 +311,14 @@ func TestBase_normaliseParamSelect(t *testing.T) {
 				b.SetParam(name, tc.startParam)
 			}
 
+			resultChannel := make(chan bool, 1)
 			// WHEN normaliseParamSelect is called.
-			ok := b.normaliseParamSelect(name, tc.value, tc.allowed)
+			resultChannel <- b.normaliseParamSelect(name, tc.value, tc.allowed)
 
 			// THEN it returns the expected boolean.
-			if ok != tc.wantOK {
-				t.Fatalf("%s\nnormaliseParamSelect() ok mismatch\nwant: %t\ngot:  %t",
-					packageName, tc.wantOK, ok)
+			if err := test.OkMatch(t, tc.ok, resultChannel, nil, nil); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
 			}
 
 			// AND Params[key] is set/unchanged as expected.

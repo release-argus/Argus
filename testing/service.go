@@ -17,7 +17,6 @@ package testing
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/release-argus/Argus/config"
@@ -26,10 +25,10 @@ import (
 )
 
 // ServiceTest queries the service and returns the found version.
-func ServiceTest(flag *string, cfg *config.Config) {
+func ServiceTest(flag *string, cfg *config.Config) bool {
 	// Only if flag provided.
 	if *flag == "" {
-		return
+		return true
 	}
 
 	// Log the test details.
@@ -45,9 +44,8 @@ func ServiceTest(flag *string, cfg *config.Config) {
 		logutil.Log.Fatal(
 			fmt.Sprintf("Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
 				*flag, strings.Join(cfg.Order, "\n  - ")),
-			logFrom,
-			true,
-		)
+			logFrom)
+		return false
 	}
 
 	// Service to test.
@@ -76,7 +74,5 @@ func ServiceTest(flag *string, cfg *config.Config) {
 		}
 	}
 
-	if !logutil.Log.Testing {
-		os.Exit(0)
-	}
+	return true
 }

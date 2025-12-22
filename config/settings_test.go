@@ -24,6 +24,7 @@ import (
 
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestSettings_String(t *testing.T) {
@@ -89,6 +90,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 		env                                map[string]string
 		had, want                          Settings
 		wantUsernameHash, wantPasswordHash string
+		ok                                 bool
 	}{
 		"BasicAuth - empty": {
 			had: Settings{
@@ -99,6 +101,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						BasicAuth: nil}}},
+			ok: true,
 		},
 		"BasicAuth - hashed Username and str env Password": {
 			env: map[string]string{
@@ -117,6 +120,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 							Password: "p${TEST_SETTINGS_BASE__CHECK_VALUES__ONE}"}}}},
 			wantUsernameHash: util.FmtHash(util.GetHash("user")),
 			wantPasswordHash: util.FmtHash(util.GetHash("pass")),
+			ok:               true,
 		},
 		"Route prefix - empty": {
 			had: Settings{
@@ -127,6 +131,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						RoutePrefix: ""}}},
+			ok: true,
 		},
 		"Route prefix - no leading /": {
 			had: Settings{
@@ -137,6 +142,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						RoutePrefix: "/test"}}},
+			ok: true,
 		},
 		"Route prefix - leading /": {
 			had: Settings{
@@ -147,6 +153,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						RoutePrefix: "/test"}}},
+			ok: true,
 		},
 		"Route prefix - multiple leading /": {
 			had: Settings{
@@ -157,6 +164,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						RoutePrefix: "/test"}}},
+			ok: true,
 		},
 		"Route prefix - trailing /": {
 			had: Settings{
@@ -167,6 +175,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						RoutePrefix: "/test"}}},
+			ok: true,
 		},
 		"Route prefix - multiple trailing /": {
 			had: Settings{
@@ -177,6 +186,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						RoutePrefix: "/test"}}},
+			ok: true,
 		},
 		"Route prefix - only a /": {
 			had: Settings{
@@ -187,6 +197,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						RoutePrefix: "/"}}},
+			ok: true,
 		},
 		"Route prefix - only multiple /": {
 			had: Settings{
@@ -197,6 +208,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						RoutePrefix: "/"}}},
+			ok: true,
 		},
 		"Favicon - empty": {
 			had: Settings{
@@ -207,6 +219,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						Favicon: nil}}},
+			ok: true,
 		},
 		"Favicon - full": {
 			had: Settings{
@@ -221,6 +234,42 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 						Favicon: &FaviconSettings{
 							SVG: "https://example.com/favicon.svg",
 							PNG: "https://example.com/favicon.png"}}}},
+			ok: true,
+		},
+		"Web.CertFile - not found": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						CertFile: "cert.pem"}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						CertFile: "cert.pem"}}},
+			ok: false,
+		},
+		"Web.KeyFile - not found": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						KeyFile: "privkey.pem"}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						KeyFile: "privkey.pem"}}},
+			ok: false,
+		},
+		"Web.CertFile + Web.KeyFile - both not found": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						CertFile: "cert.pem",
+						KeyFile:  "privkey.pem"}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						CertFile: "cert.pem",
+						KeyFile:  "privkey.pem"}}},
+			ok: false,
 		},
 	}
 
@@ -229,14 +278,20 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
+			resultChannel := make(chan bool, 1)
 			// WHEN CheckValues is called on it.
-			tc.had.CheckValues()
+			go func() { resultChannel <- tc.had.CheckValues() }()
 
-			// THEN the Settings are converted/removed where necessary.
+			// THEN the ok value is as expected.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			// AND the Settings are converted/removed where necessary.
 			hadStr := tc.had.String("")
 			wantStr := tc.want.String("")
 			if hadStr != wantStr {
@@ -443,12 +498,12 @@ func TestSettings_GetString(t *testing.T) {
 	}
 
 	loadMutex.Lock() // Protect flag env vars.
-	t.Cleanup(func() { loadMutex.Unlock() })
+	t.Cleanup(loadMutex.Unlock)
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 			defer releaseStdout()
 
 			settings = testSettings()
@@ -483,18 +538,20 @@ func TestSettings_GetString(t *testing.T) {
 func TestSettings_MapEnvToStruct(t *testing.T) {
 	// Unset ARGUS_LOG_LEVEL.
 	logLevel := os.Getenv("ARGUS_LOG_LEVEL")
-	os.Unsetenv("ARGUS_LOG_LEVEL")
+	_ = os.Unsetenv("ARGUS_LOG_LEVEL")
 	defer os.Setenv("ARGUS_LOG_LEVEL", logLevel)
 	// GIVEN vars set for Settings vars.
 	tests := map[string]struct {
-		env      map[string]string
-		want     *Settings
-		errRegex string
+		env         map[string]string
+		want        *Settings
+		stdoutRegex string
+		ok          bool
 	}{
 		"empty vars ignored": {
 			env: map[string]string{
 				"ARGUS_LOG_LEVEL": ""},
 			want: &Settings{},
+			ok:   true,
 		},
 		"log.level": {
 			env: map[string]string{
@@ -503,6 +560,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Log: LogSettings{
 						Level: "ERROR"}}},
+			ok: true,
 		},
 		"log.timestamps": {
 			env: map[string]string{
@@ -511,11 +569,14 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Log: LogSettings{
 						Timestamps: test.BoolPtr(true)}}},
+			ok: true,
 		},
 		"log.timestamps - invalid, not a bool": {
 			env: map[string]string{
 				"ARGUS_LOG_TIMESTAMPS": "abc"},
-			errRegex: `ARGUS_LOG_TIMESTAMPS: "abc" <invalid>`,
+			want:        &Settings{},
+			stdoutRegex: `ARGUS_LOG_TIMESTAMPS: "abc" <invalid>`,
+			ok:          false,
 		},
 		"web.listen-host": {
 			env: map[string]string{
@@ -524,6 +585,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						ListenHost: "test"}}},
+			ok: true,
 		},
 		"web.listen-port": {
 			env: map[string]string{
@@ -532,6 +594,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						ListenPort: "123"}}},
+			ok: true,
 		},
 		"web.cert-file": {
 			env: map[string]string{
@@ -540,6 +603,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						CertFile: "cert.test"}}},
+			ok: false,
 		},
 		"web.pkey-file": {
 			env: map[string]string{
@@ -548,6 +612,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						KeyFile: "pkey.test"}}},
+			ok: false,
 		},
 		"web.route-prefix": {
 			env: map[string]string{
@@ -556,6 +621,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						RoutePrefix: "/prefix"}}},
+			ok: true,
 		},
 		"web.basic_auth": {
 			env: map[string]string{
@@ -567,52 +633,39 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 						BasicAuth: &WebSettingsBasicAuth{
 							Username: "user",
 							Password: util.FmtHash(util.GetHash("pass"))}}}},
+			ok: true,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 			settings := Settings{}
-			// Catch fatal panics.
-			defer func() {
-				r := recover()
-				// Ignore nil panics.
-				if r == nil {
-					return
-				}
 
-				if tc.errRegex == "" {
-					t.Fatalf("%s\nunexpected panic: %v",
-						packageName, r)
-				}
-				switch r.(type) {
-				case string:
-					if !util.RegexCheck(tc.errRegex, r.(string)) {
-						t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-							packageName, tc.errRegex, r.(string))
-					}
-				default:
-					t.Fatalf("%s\nunexpected panic: %v",
-						packageName, r)
-				}
-			}()
-
+			resultChannel := make(chan bool, 1)
 			// WHEN MapEnvToStruct is called on it.
-			settings.MapEnvToStruct()
+			resultChannel <- settings.MapEnvToStruct()
 
+			// THEN the ok value is as expected.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), releaseStdout); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
 			// THEN any error is as expected.
-			if tc.errRegex != "" { // Expected a FATAL panic to be caught above.
-				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  none",
-					packageName, tc.errRegex)
+			stdout := releaseStdout()
+			if !util.RegexCheck(tc.stdoutRegex, stdout) {
+				t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.stdoutRegex, stdout)
 			}
 			// AND the settings are set to the appropriate env vars.
 			if settings.String("") != tc.want.String("") {
-				t.Errorf("%s\nmismatch\nwant: %v\ngot:  %v",
+				t.Errorf("%s\nstruct mismatch\nwant: %v\ngot:  %v",
 					packageName, tc.want.String(""), settings.String(""))
 			}
 		})
@@ -647,7 +700,7 @@ func TestSettings_GetBool(t *testing.T) {
 	}
 
 	loadMutex.Lock() // Protect flag env vars.
-	t.Cleanup(func() { loadMutex.Unlock() })
+	t.Cleanup(loadMutex.Unlock)
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -691,7 +744,7 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 		HardDefaults: SettingsBase{
 			Log: LogSettings{}}}
 
-	// GIVEN different target vars and their get functions.
+	// GIVEN different target vars, and their respective 'get' functions.
 	tests := map[string]struct {
 		getFunc   func() string
 		changeVar any
@@ -720,8 +773,17 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're sharing the Settings struct.
 
+			t.Cleanup(func() {
+				if ptr, ok := tc.changeVar.(*string); ok {
+					*ptr = ""
+				} else if ptrPtr, ok := tc.changeVar.(**string); ok {
+					f := ""
+					*ptrPtr = &f
+				}
+			})
+
 			//
-			// Test 1.
+			// Test 1: empty string.
 			//
 			file := ""
 			if ptr, ok := tc.changeVar.(*string); ok {
@@ -739,18 +801,16 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 			}
 
 			//
-			// Test 2.
+			// Test 2: file path.
 			//
 			file = fmt.Sprintf("test_%s.pem",
 				strings.ReplaceAll(strings.ToLower(name), " ", "_"))
-			os.Create(file)
-			t.Cleanup(func() { os.Remove(file) })
 			if ptr, ok := tc.changeVar.(*string); ok {
 				*ptr = file
 			} else if ptrPtr, ok := tc.changeVar.(**string); ok {
 				*ptrPtr = &file
 			}
-			// WHEN a get is called with a file path set and that file does exist.
+			// WHEN a get is called with a file path set.
 			got = tc.getFunc()
 
 			// THEN the file path is returned.
@@ -758,42 +818,6 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 				t.Errorf("%s\nfile path\nwant: %q\ngot:  %q",
 					packageName, file, got)
 			}
-
-			//
-			// Test 3.
-			//
-			os.Remove(file)
-			if tc.changeVar != nil {
-				if ptr, ok := tc.changeVar.(*string); ok {
-					*ptr = file
-					defer func() { *ptr = "" }()
-				} else if ptrPtr, ok := tc.changeVar.(**string); ok {
-					*ptrPtr = &file
-					defer func() { file = "" }()
-				}
-			}
-			// Catch the panic.
-			defer func() {
-				r := recover()
-				// Ignore nil panics.
-				if r == nil {
-					return
-				}
-
-				if !(strings.Contains(r.(string), "no such file or directory") ||
-					strings.Contains(r.(string), "cannot find the file specified")) {
-					t.Errorf("%s\nwant: an error about the file not existing\ngot:  %s",
-						packageName, r.(string))
-				}
-				tc.changeVar = nil
-			}()
-
-			// WHEN a get is called on files that don't exist.
-			got = tc.getFunc()
-
-			// THEN call will crash the program as the file doesn't exist.
-			t.Errorf("%s\ndeleted file\nwant: panic\ngot:  %q",
-				packageName, got)
 		})
 	}
 }
@@ -979,12 +1003,14 @@ func TestWebSettings_CheckValues(t *testing.T) {
 		env              map[string]string
 		had, want        WebSettings
 		wantUsernameHash string
+		ok               bool
 	}{
 		"BasicAuth - empty": {
 			had: WebSettings{
 				BasicAuth: &WebSettingsBasicAuth{}},
 			want: WebSettings{
 				BasicAuth: nil},
+			ok: true,
 		},
 		"BasicAuth - str Username and Password already hashed": {
 			had: WebSettings{
@@ -995,6 +1021,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				BasicAuth: &WebSettingsBasicAuth{
 					Username: "user",
 					Password: util.FmtHash(util.GetHash("pass"))}},
+			ok: true,
 		},
 		"BasicAuth - hashed Username and str Password": {
 			had: WebSettings{
@@ -1005,6 +1032,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				BasicAuth: &WebSettingsBasicAuth{
 					Username: "user",
 					Password: util.FmtHash(util.GetHash("pass"))}},
+			ok: true,
 		},
 		"BasicAuth - Username and password from env vars": {
 			env: map[string]string{
@@ -1019,6 +1047,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 					Username: "${TEST_WEB_SETTINGS__CHECK_VALUES__ONE}",
 					Password: "${TEST_WEB_SETTINGS__CHECK_VALUES__TWO}"}},
 			wantUsernameHash: util.FmtHash(util.GetHash("user")),
+			ok:               true,
 		},
 		"BasicAuth - Username and password from env vars partial": {
 			env: map[string]string{
@@ -1033,12 +1062,14 @@ func TestWebSettings_CheckValues(t *testing.T) {
 					Username: "us${TEST_WEB_SETTINGS__CHECK_VALUES__THREE}",
 					Password: "pa${TEST_WEB_SETTINGS__CHECK_VALUES__FOUR}"}},
 			wantUsernameHash: util.FmtHash(util.GetHash("user")),
+			ok:               true,
 		},
 		"Favicon - empty": {
 			had: WebSettings{
 				Favicon: &FaviconSettings{}},
 			want: WebSettings{
 				Favicon: nil},
+			ok: true,
 		},
 		"Favicon - SVG": {
 			had: WebSettings{
@@ -1047,6 +1078,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			want: WebSettings{
 				Favicon: &FaviconSettings{
 					SVG: "https://example.com/favicon.svg"}},
+			ok: true,
 		},
 		"Favicon - PNG": {
 			had: WebSettings{
@@ -1055,6 +1087,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			want: WebSettings{
 				Favicon: &FaviconSettings{
 					PNG: "https://example.com/favicon.png"}},
+			ok: true,
 		},
 		"Favicon - Full": {
 			had: WebSettings{
@@ -1065,6 +1098,30 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				Favicon: &FaviconSettings{
 					SVG: "https://example.com/favicon.svg",
 					PNG: "https://example.com/favicon.png"}},
+			ok: true,
+		},
+		"Web.CertFile - not found": {
+			had: WebSettings{
+				CertFile: "cert.pem"},
+			want: WebSettings{
+				CertFile: "cert.pem"},
+			ok: false,
+		},
+		"Web.KeyFile - not found": {
+			had: WebSettings{
+				KeyFile: "privkey.pem"},
+			want: WebSettings{
+				KeyFile: "privkey.pem"},
+			ok: false,
+		},
+		"Web.CertFile + Web.KeyFile - both not found": {
+			had: WebSettings{
+				CertFile: "cert.pem",
+				KeyFile:  "privkey.pem"},
+			want: WebSettings{
+				CertFile: "cert.pem",
+				KeyFile:  "privkey.pem"},
+			ok: false,
 		},
 	}
 
@@ -1073,14 +1130,20 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
+			resultChannel := make(chan bool, 1)
 			// WHEN CheckValues is called on it.
-			tc.had.CheckValues()
+			go func() { resultChannel <- tc.had.CheckValues() }()
 
-			// THEN the Settings are converted/removed where necessary.
+			// THEN the ok value is as expected.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			// AND the Settings are converted/removed where necessary.
 			hadStr := tc.had.String("")
 			wantStr := tc.want.String("")
 			if hadStr != wantStr {
@@ -1161,6 +1224,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 		env                                map[string]string
 		had, want                          WebSettingsBasicAuth
 		wantUsernameHash, wantPasswordHash string
+		ok                                 bool
 	}{
 		"str Username": {
 			had: WebSettingsBasicAuth{
@@ -1168,6 +1232,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "test",
 				Password: util.FmtHash(util.GetHash(""))},
+			ok: true,
 		},
 		"str Web.BasicAuth.Password": {
 			had: WebSettingsBasicAuth{
@@ -1175,6 +1240,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "",
 				Password: util.FmtHash(util.GetHash("just a password here"))},
+			ok: true,
 		},
 		"str Web.BasicAuth.Username and str Web.BasicAuth.Password": {
 			had: WebSettingsBasicAuth{
@@ -1183,6 +1249,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "user",
 				Password: util.FmtHash(util.GetHash("pass"))},
+			ok: true,
 		},
 		"str env Web.BasicAuth.Username and str env Web.BasicAuth.Password": {
 			env: map[string]string{
@@ -1194,6 +1261,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__ONE}",
 				Password: "${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__TWO}"},
+			ok: true,
 		},
 		"str env partial Web.BasicAuth.Username and str env partial Web.BasicAuth.Password": {
 			env: map[string]string{
@@ -1205,6 +1273,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__THREE}",
 				Password: "b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__FOUR}"},
+			ok: true,
 		},
 		"str env undefined Web.BasicAuth.Username and str env undefined Web.BasicAuth.Password": {
 			had: WebSettingsBasicAuth{
@@ -1215,6 +1284,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 				Password: util.FmtHash(util.GetHash("b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}"))},
 			wantUsernameHash: util.FmtHash(util.GetHash("a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}")),
 			wantPasswordHash: util.FmtHash(util.GetHash("b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}")),
+			ok:               true,
 		},
 		"str Web.BasicAuth.Username and Web.BasicAuth.Password already hashed": {
 			had: WebSettingsBasicAuth{
@@ -1223,6 +1293,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "user",
 				Password: util.FmtHash(util.GetHash("pass"))},
+			ok: true,
 		},
 		"hashed Web.BasicAuth.Username and str Web.BasicAuth.Password": {
 			had: WebSettingsBasicAuth{
@@ -1231,6 +1302,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "user",
 				Password: util.FmtHash(util.GetHash("pass"))},
+			ok: true,
 		},
 		"hashed Web.BasicAuth.Username and hashed Web.BasicAuth.Password": {
 			had: WebSettingsBasicAuth{
@@ -1239,6 +1311,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "user",
 				Password: util.FmtHash(util.GetHash("pass"))},
+			ok: true,
 		},
 	}
 
@@ -1247,13 +1320,19 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
+			resultChannel := make(chan bool, 1)
 			// WHEN CheckValues is called on it.
-			tc.had.CheckValues()
+			resultChannel <- tc.had.CheckValues()
 
+			// THEN the ok value is as expected.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
 			// THEN the Settings are converted/removed where necessary.
 			hadStr := tc.had.String("")
 			wantStr := tc.want.String("")

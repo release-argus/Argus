@@ -17,15 +17,15 @@
 package config
 
 import (
-	"fmt"
 	"os"
-	"strings"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/test"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestConfig_AddService(t *testing.T) {
@@ -78,17 +78,16 @@ func TestConfig_AddService(t *testing.T) {
 			dbMessages: 1,
 		},
 	}
-	logMutex := sync.Mutex{}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using sharing global log state.
+			releaseStdout := test.CaptureLog(logutil.Log)
+			t.Cleanup(func() { _ = releaseStdout() })
 
-			file := fmt.Sprintf("TestConfig_AddService_%s.yml",
-				strings.ReplaceAll(name, " ", "_"))
-			testYAML_Edit(file, t)
-			logMutex.Lock()
-			cfg := testLoadBasic(file, t)
+			file := filepath.Join(t.TempDir(), "config.yml")
+			testYAML_Edit(file)
+			cfg := testLoadBasic(t, file)
 			if tc.nilMap {
 				cfg.Service = nil
 				cfg.Order = []string{}
@@ -98,12 +97,16 @@ func TestConfig_AddService(t *testing.T) {
 			loadMutex.RLock()
 			_ = cfg.AddService(tc.oldService, tc.newService)
 			loadMutex.RUnlock()
-			logMutex.Unlock()
 
 			// THEN the service is:
 			// 	added/renamed/replaced.
 			cfg.OrderMutex.RLock()
-			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
+			t.Cleanup(func() {
+				if tc.added {
+					cfg.Service[tc.newService.ID].PrepDelete(false)
+				}
+				cfg.OrderMutex.RUnlock()
+			})
 			if tc.added && cfg.Service[tc.newService.ID] != tc.newService {
 				t.Fatalf("%s\noldService %q wasn't placed at config[%q]",
 					packageName, tc.oldService, tc.newService.ID)
@@ -248,11 +251,11 @@ func TestConfig_RenameService(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			file := fmt.Sprintf("TestConfig_RenameService_%s.yml", name)
-			testYAML_Edit(file, t)
+			file := filepath.Join(t.TempDir(), "config.yml")
+			testYAML_Edit(file)
 			t.Cleanup(func() { _ = os.Remove(file) })
 			logMutex.Lock()
-			cfg := testLoadBasic(file, t)
+			cfg := testLoadBasic(t, file)
 			newSVC := testServiceURL(tc.newName)
 
 			// WHEN the service is renamed.
@@ -262,7 +265,12 @@ func TestConfig_RenameService(t *testing.T) {
 
 			// THEN the order should be as expected.
 			cfg.OrderMutex.RLock()
-			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
+			t.Cleanup(func() {
+				if !tc.fail {
+					cfg.Service[tc.newName].PrepDelete(false)
+				}
+				cfg.OrderMutex.RUnlock()
+			})
 			if !test.EqualSlices(cfg.Order, tc.wantOrder) {
 				t.Errorf("%s\nOrder mismatch:\nwant: %q\ngot:  %q",
 					packageName, tc.wantOrder, cfg.Order)
@@ -321,10 +329,10 @@ func TestConfig_DeleteService(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			file := fmt.Sprintf("TestConfig_DeleteService_%s.yml", name)
-			testYAML_Edit(file, t)
+			file := filepath.Join(t.TempDir(), "config.yml")
+			testYAML_Edit(file)
 			logMutex.Lock()
-			cfg := testLoadBasic(file, t)
+			cfg := testLoadBasic(t, file)
 
 			// WHEN the service is deleted.
 			cfg.DeleteService(tc.name)
@@ -332,7 +340,7 @@ func TestConfig_DeleteService(t *testing.T) {
 
 			// THEN the service was removed.
 			cfg.OrderMutex.RLock()
-			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
+			t.Cleanup(cfg.OrderMutex.RUnlock)
 			if cfg.Service[tc.name] != nil {
 				t.Errorf("%s\n%q was not removed",
 					packageName, tc.name)

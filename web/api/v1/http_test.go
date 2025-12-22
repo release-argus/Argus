@@ -46,7 +46,7 @@ func TestHTTP_Version(t *testing.T) {
 	w := httptest.NewRecorder()
 	api.httpVersion(w, req)
 	res := w.Result()
-	t.Cleanup(func() { res.Body.Close() })
+	t.Cleanup(func() { _ = res.Body.Close() })
 
 	// THEN the version is returned in JSON format.
 	data, err := io.ReadAll(res.Body)
@@ -55,7 +55,7 @@ func TestHTTP_Version(t *testing.T) {
 			packageName, err)
 	}
 	var got apitype.VersionAPI
-	json.Unmarshal(data, &got)
+	_ = json.Unmarshal(data, &got)
 	want := apitype.VersionAPI{
 		Version:   util.Version,
 		BuildDate: util.BuildDate,
@@ -106,7 +106,7 @@ func TestHTTP_BasicAuth(t *testing.T) {
 				return
 			})
 			ts := httptest.NewServer(api.BaseRouter)
-			t.Cleanup(func() { ts.Close() })
+			t.Cleanup(ts.Close)
 
 			// WHEN a HTTP request is made to this router.
 			client := http.Client{}
@@ -171,7 +171,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 			api := NewAPI(cfg)
 			api.SetupRoutesFavicon()
 			ts := httptest.NewServer(api.Router)
-			t.Cleanup(func() { ts.Close() })
+			t.Cleanup(ts.Close)
 			client := http.Client{}
 
 			// WHEN a HTTP request is made to this router (apple-touch-icon.png).
@@ -453,7 +453,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 					api.SetupRoutesAPI()
 					ts := httptest.NewServer(api.Router)
 					ts.Config.Handler = api.Router
-					t.Cleanup(func() { ts.Close() })
+					t.Cleanup(ts.Close)
 					client := http.Client{}
 
 					// Test each route for this set of disabled routes.
@@ -501,7 +501,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 						if err != nil {
 							t.Fatal(err)
 						}
-						resp.Body.Close()
+						_ = resp.Body.Close()
 
 						fail := false
 						// THEN the status code is as expected.
@@ -570,7 +570,7 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 			api := NewAPI(cfg)
 			api.SetupRoutesNodeJS()
 			ts := httptest.NewServer(api.Router)
-			t.Cleanup(func() { ts.Close() })
+			t.Cleanup(ts.Close)
 			client := http.Client{}
 
 			// WHEN a HTTP request is made to this router.

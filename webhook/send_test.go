@@ -22,13 +22,14 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
-	metric "github.com/release-argus/Argus/web/metric"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestWebHook_Try(t *testing.T) {
@@ -174,7 +175,7 @@ func TestWebHook_Send(t *testing.T) {
 			for contextDeadlineExceeded != false {
 				try++
 				contextDeadlineExceeded = false
-				releaseStdout := test.CaptureStdout()
+				releaseStdout := test.CaptureLog(logutil.Log)
 				webhook := testWebHook(tc.wouldFail, false, tc.customHeaders)
 				if tc.deleting {
 					webhook.ServiceStatus.SetDeleting()
@@ -286,7 +287,7 @@ func TestWebHooks_Send(t *testing.T) {
 				contextDeadlineExceeded = false
 				tc.repeat++ // repeat to check delay usage as map order is random.
 				for tc.repeat != 0 {
-					releaseStdout := test.CaptureStdout()
+					releaseStdout := test.CaptureLog(logutil.Log)
 					if tc.webhooks != nil {
 						for id := range *tc.webhooks {
 							(*tc.webhooks)[id].ID = id

@@ -20,7 +20,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -50,25 +52,34 @@ func TestInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel because of the once variable.
+
 			// Reset the once variable and Log for each test.
 			once = sync.Once{}
 			Log = nil
 
 			// WHEN Init is called.
-			Init(tc.level, tc.timestamps)
+			exitCodeChannel := Init(tc.level, tc.timestamps)
 
 			// THEN the Log should be initialized correctly.
 			if Log == nil {
 				t.Fatalf("%s\nLog was not initialized",
 					packageName)
 			}
+			// Level.
 			if Log.Level != levelMap[tc.level] {
 				t.Errorf("%s\nwant: level=%d\ngot:  level=%d",
 					packageName, levelMap[tc.level], Log.Level)
 			}
-			if Log.Timestamps != tc.timestamps {
+			// Timestamps.
+			if Log.timestamps != tc.timestamps {
 				t.Errorf("%s\nwant: timestamps=%t\ngot:  timestamps=%t",
-					packageName, tc.timestamps, Log.Timestamps)
+					packageName, tc.timestamps, Log.timestamps)
+			}
+			// AND ExitCodeChannel gives the channel returned.
+			got := ExitCodeChannel()
+			if got != exitCodeChannel {
+				t.Errorf("%s\nexitCodeChannel mismatch\nwant: %p\ngot:  %p",
+					packageName, exitCodeChannel, got)
 			}
 		})
 	}
@@ -104,60 +115,80 @@ func TestNewJLog(t *testing.T) {
 			jLog := NewJLog(tc.level, tc.timestamps)
 
 			// THEN the correct JLog is returned.
+			// Level.
 			if jLog.Level != levelMap[tc.level] {
 				t.Errorf("%s\nwant: level=%d\ngot:  level=%d",
 					packageName, levelMap[tc.level], jLog.Level)
 			}
-			if jLog.Timestamps != tc.timestamps {
+			// Timestamps.
+			if jLog.timestamps != tc.timestamps {
 				t.Errorf("%s\nwant: timestamps=%t\ngot:  timestamps=%t",
-					packageName, tc.timestamps, jLog.Timestamps)
+					packageName, tc.timestamps, jLog.timestamps)
 			}
 		})
 	}
 }
 
-func TestSetLevel(t *testing.T) {
+func TestJLog_SetExitCodeChannel(t *testing.T) {
+	// GIVEN a JLog with no exit code channel.
+	jLog := NewJLog("INFO", true)
+	// AND a slice of exit code channels.
+	channels := []chan string{
+		make(chan string),
+		make(chan string)}
+
+	for i, channel := range channels {
+		// WHEN SetShutdown is called.
+		jLog.SetExitCodeChannel(channel)
+
+		// THEN the shutdown handler is updated.
+		if jLog.exitCodeChannel != channel {
+			t.Fatalf(
+				"%s\niteration %d failed\nwant: exitCodeChannel=%p\ngot:  exitCodeChannel=%p",
+				packageName, i, channel, jLog.exitCodeChannel)
+		}
+	}
+}
+
+func TestJLog_SetLevel(t *testing.T) {
 	// GIVEN a JLog and various new log levels.
 	tests := map[string]struct {
-		level      string
-		panicRegex *string
+		ok    bool
+		level string
 	}{
-		"ERROR":              {level: "ERROR"},
-		"WARN":               {level: "WARN"},
-		"INFO":               {level: "INFO"},
-		"VERBOSE":            {level: "VERBOSE"},
-		"DEBUG":              {level: "DEBUG"},
-		"lower-case verbose": {level: "verbose"},
-		"mixed-case vERbOse": {level: "vERbOse"},
-		"invalid level PINEAPPLE": {level: "PINEAPPLE",
-			panicRegex: test.StringPtr(`not a valid log\.level`)}}
+		"ERROR":                   {ok: true, level: "ERROR"},
+		"WARN":                    {ok: true, level: "WARN"},
+		"INFO":                    {ok: true, level: "INFO"},
+		"VERBOSE":                 {ok: true, level: "VERBOSE"},
+		"DEBUG":                   {ok: true, level: "DEBUG"},
+		"lower-case verbose":      {ok: true, level: "verbose"},
+		"mixed-case vERbOse":      {ok: true, level: "vERbOse"},
+		"invalid level PINEAPPLE": {ok: false, level: "PINEAPPLE"}}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 
 			jLog := NewJLog("INFO", false)
-			if tc.panicRegex != nil {
-				jLog.Testing = true
-				// Switch Fatal to panic and disable this panic.
-				defer func() {
-					r := recover()
+			releaseStdout := test.CaptureLog(jLog)
 
-					rStr := fmt.Sprint(r)
-					if !util.RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf("%s\npanic error mismatch\nwant: %q\ngot:  %q",
-							packageName, *tc.panicRegex, rStr)
-					}
-				}()
-			}
-
+			resultChannel := make(chan bool, 1)
 			// WHEN SetLevel is called.
-			jLog.SetLevel(tc.level)
+			resultChannel <- jLog.SetLevel(tc.level)
 
 			// THEN the correct JLog is returned.
-			if jLog.Level != levelMap[strings.ToUpper(tc.level)] {
-				t.Errorf("%s\nwant: level=%d\ngot:  level=%d",
-					packageName, levelMap[strings.ToUpper(tc.level)], jLog.Level)
+			if err := test.OkMatch(t, tc.ok, resultChannel, jLog.exitCodeChannel, releaseStdout); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			// AND errors are logged for invalid levels.
+			stdout := releaseStdout()
+			if !tc.ok {
+				errRegex := `not a valid log\.level`
+				if !util.RegexCheck(errRegex, stdout) {
+					t.Errorf("%s\npanic error mismatch\nwant: %q\ngot:  %q",
+						packageName, errRegex, stdout)
+				}
 			}
 		})
 	}
@@ -185,9 +216,9 @@ func TestJLog_SetTimestamps(t *testing.T) {
 			jLog.SetTimestamps(tc.changeTo)
 
 			// THEN the timestamps are set correctly.
-			if jLog.Timestamps != tc.changeTo {
+			if jLog.timestamps != tc.changeTo {
 				t.Errorf("%s\nwant: timestamps=%t\ngot:  timestamps=%t",
-					packageName, tc.changeTo, jLog.Timestamps)
+					packageName, tc.changeTo, jLog.timestamps)
 			}
 		})
 	}
@@ -224,6 +255,60 @@ func TestLogFrom_String(t *testing.T) {
 			if got != tc.want {
 				t.Errorf("%s\nwant: %q\ngot:  %q",
 					packageName, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestJLog_SetGetOutput(t *testing.T) {
+	// GIVEN an initial Output, and an Output to change to.
+	tests := map[string]struct {
+		initialOutput io.Writer
+		newOutput     io.Writer
+	}{
+		"set to stdout": {
+			initialOutput: new(bytes.Buffer),
+			newOutput:     os.Stdout,
+		},
+		"set to stderr": {
+			initialOutput: new(bytes.Buffer),
+			newOutput:     os.Stderr,
+		},
+		"set to buffer": {
+			initialOutput: os.Stdout,
+			newOutput:     new(bytes.Buffer),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND a JLog with this initial output.
+			buf := &bytes.Buffer{}
+			jLog := &JLog{
+				writer: log.New(buf, "", 0),
+				out:    tc.initialOutput,
+			}
+
+			// WHEN we call SetOutput with the new output.
+			jLog.SetOutput(tc.newOutput)
+
+			// THEN GetOutput returns the new writer.
+			got := jLog.GetOutput()
+			if got != tc.newOutput {
+				t.Errorf("%s\nGetOutput mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.newOutput, got)
+			}
+			// AND writing a message uses the new writer.
+			testMsg := "test message"
+			jLog.logMessage(testMsg)
+
+			switch w := tc.newOutput.(type) {
+			case *bytes.Buffer:
+				if !strings.Contains(w.String(), testMsg) {
+					t.Errorf("logMessage did not write to new buffer")
+				}
 			}
 		})
 	}
@@ -354,11 +439,9 @@ func TestJLog_Error(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
-			var logOut bytes.Buffer
-			log.SetOutput(&logOut)
+			releaseStdout := test.CaptureLog(jLog)
 
 			// WHEN Error is called with true.
 			jLog.Error(errors.New(msg), LogFrom{}, tc.otherCondition)
@@ -367,7 +450,6 @@ func TestJLog_Error(t *testing.T) {
 			stdout := releaseStdout()
 			var regex string
 			if tc.timestamps {
-				stdout = logOut.String()
 				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ERROR: %s\n$", msg)
 			} else if !tc.otherCondition {
 				regex = "^$"
@@ -426,11 +508,9 @@ func TestJLog_Warn(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
-			var logOut bytes.Buffer
-			log.SetOutput(&logOut)
+			releaseStdout := test.CaptureLog(jLog)
 
 			// WHEN Warn is called with true.
 			jLog.Warn(errors.New(msg), LogFrom{}, tc.otherCondition)
@@ -441,7 +521,6 @@ func TestJLog_Warn(t *testing.T) {
 			if !tc.shouldPrint {
 				regex = "^$"
 			} else if tc.timestamps {
-				stdout = logOut.String()
 				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} WARNING: %s\n$", msg)
 			} else {
 				regex = fmt.Sprintf("^WARNING: %s\n$", msg)
@@ -498,11 +577,9 @@ func TestJLog_Info(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
-			var logOut bytes.Buffer
-			log.SetOutput(&logOut)
+			releaseStdout := test.CaptureLog(jLog)
 
 			// WHEN Info is called with true.
 			jLog.Info(errors.New(msg), LogFrom{}, tc.otherCondition)
@@ -513,7 +590,6 @@ func TestJLog_Info(t *testing.T) {
 			if !tc.shouldPrint {
 				regex = "^$"
 			} else if tc.timestamps {
-				stdout = logOut.String()
 				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} INFO: %s\n$", msg)
 			} else {
 				regex = fmt.Sprintf("^INFO: %s\n$", msg)
@@ -575,13 +651,11 @@ func TestJLog_Verbose(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
 
 			msg := "argus"
 
 			jLog := NewJLog(tc.level, tc.timestamps)
-			var logOut bytes.Buffer
-			log.SetOutput(&logOut)
+			releaseStdout := test.CaptureLog(jLog)
 			if tc.customMsg != nil {
 				msg = *tc.customMsg
 			}
@@ -598,7 +672,6 @@ func TestJLog_Verbose(t *testing.T) {
 			if !tc.shouldPrint {
 				regex = "^$"
 			} else if tc.timestamps {
-				stdout = logOut.String()
 				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} VERBOSE: %s\n$", msg)
 			} else {
 				regex = fmt.Sprintf("^VERBOSE: %s\n$", msg)
@@ -668,11 +741,9 @@ func TestJLog_Debug(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
-			var logOut bytes.Buffer
-			log.SetOutput(&logOut)
+			releaseStdout := test.CaptureLog(jLog)
 			if tc.customMsg != nil {
 				msg = *tc.customMsg
 			}
@@ -689,7 +760,6 @@ func TestJLog_Debug(t *testing.T) {
 			if !tc.shouldPrint {
 				regex = `^$`
 			} else if tc.timestamps {
-				stdout = logOut.String()
 				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} DEBUG: %s\n$",
 					strings.ReplaceAll(msg, ".", `\.`))
 			} else {
@@ -723,72 +793,53 @@ func TestJLog_Fatal(t *testing.T) {
 			level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: true},
 		"ERROR log no timestamps": {
 			level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: true},
-		"ERROR log with !otherCondition": {
-			level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
 		"WARN log with timestamps": {
 			level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
 		"WARN log no timestamps": {
 			level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
-		"WARN log with !otherCondition": {
-			level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
 		"INFO log with timestamps": {
 			level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
 		"INFO log no timestamps": {
 			level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
-		"INFO log with !otherCondition": {
-			level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
 		"VERBOSE log with timestamps": {
 			level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
 		"VERBOSE log no timestamps": {
 			level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
-		"VERBOSE log with !otherCondition": {
-			level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
 		"DEBUG log with timestamps": {
 			level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
 		"DEBUG log no timestamps": {
 			level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
-		"DEBUG log with !otherCondition": {
-			level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
-			var logOut bytes.Buffer
-			log.SetOutput(&logOut)
-			if tc.shouldPrint {
-				jLog.Testing = true
-				defer func() {
-					recover()
-					stdout := releaseStdout()
-
-					regex := fmt.Sprintf("^ERROR: %s\n$", msg)
-					if tc.timestamps {
-						stdout = logOut.String()
-						regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ERROR: %s\n$", msg)
-					}
-					if !util.RegexCheck(regex, stdout) {
-						t.Errorf("%s\ndid panic, but error mismatch on 'Error: ' (Fatal)\nwant: %q\ngot:  %q",
-							packageName, regex, stdout)
-					}
-				}()
-			}
+			releaseStdout := test.CaptureLog(jLog)
 
 			// WHEN Fatal is called with true.
-			jLog.Fatal(errors.New(msg), LogFrom{}, tc.otherCondition)
+			jLog.Fatal(errors.New(msg), LogFrom{})
 
-			// THEN no message was logged in otherCondition is false.
+			// THEN message was logged only if otherCondition is true.
 			stdout := releaseStdout()
-			regex := "^$"
+			regex := `^$`
+			if tc.otherCondition {
+				regex = fmt.Sprintf("^FATAL: %s\n$", msg)
+				if tc.timestamps {
+					regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} FATAL: %s\n$", msg)
+				}
+			}
 			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("%s\nerror mismatch (otherCondition=%t)\nwant: %q\ngot:  %q",
 					packageName, tc.otherCondition, regex, stdout)
 			}
-			if tc.otherCondition {
-				t.Fatalf("%s\nFatal didn't panic, but should have",
+			// And the exit code was sent to the channel.
+			select {
+			case <-jLog.exitCodeChannel:
+				return
+			default:
+				t.Errorf("%s\nno exit code sent to channel",
 					packageName)
 			}
 		})
@@ -810,11 +861,9 @@ func TestJLog_logMessage(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog("INFO", tc.timestamps)
-			var logOut bytes.Buffer
-			log.SetOutput(&logOut)
+			releaseStdout := test.CaptureLog(jLog)
 
 			// WHEN logMessage is called.
 			jLog.logMessage(msg)
@@ -823,7 +872,6 @@ func TestJLog_logMessage(t *testing.T) {
 			stdout := releaseStdout()
 			var regex string
 			if tc.timestamps {
-				stdout = logOut.String()
 				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} %s\n$",
 					msg)
 			} else {

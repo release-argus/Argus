@@ -18,55 +18,13 @@ package test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/util"
 )
 
 var packageName = "test"
-
-func TestCaptureStdout(t *testing.T) {
-	// GIVEN a function that writes to stdout.
-	tests := map[string]struct {
-		fn   func()
-		want string
-	}{
-		"single line": {
-			fn: func() {
-				fmt.Println("hello")
-			},
-			want: "hello\n",
-		},
-		"multiple lines": {
-			fn: func() {
-				fmt.Println("hello")
-				fmt.Println("world")
-			},
-			want: "hello\nworld\n",
-		},
-		"empty": {
-			fn:   func() {},
-			want: "",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-
-			// WHEN CaptureStdout is called.
-			capture := CaptureStdout()
-			tc.fn()
-			result := capture()
-
-			// THEN the result should be the expected stdout output.
-			if result != tc.want {
-				t.Errorf("%s\nstdout mismatch\n%q\ngot:\n%q",
-					packageName, tc.want, result)
-			}
-		})
-	}
-}
 
 func TestBoolPtr(t *testing.T) {
 	// GIVEN a boolean value.
@@ -144,10 +102,36 @@ func TestStringPtr(t *testing.T) {
 	}
 }
 
+func TestStringSlicePtr(t *testing.T) {
+	// GIVEN a string slice value.
+	tests := map[string]struct {
+		val []string
+	}{
+		"empty":             {val: []string{}},
+		"single element":    {val: []string{"hello"}},
+		"multiple elements": {val: []string{"hello", "argus"}},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN StringSlicePtr is called on this value.
+			result := StringSlicePtr(tc.val)
+
+			// THEN the result should be a pointer to the string slice value.
+			if !EqualSlices(*result, tc.val) {
+				t.Errorf("%s\nwant: %q\ngot:  %q",
+					packageName, strings.Join(tc.val, ", "), strings.Join(*result, ", "))
+			}
+		})
+	}
+}
+
 func TestUInt8Ptr(t *testing.T) {
 	// GIVEN an integer value.
 	tests := map[string]struct {
-		val uint
+		val uint8
 	}{
 		"positive": {val: 1},
 		"zero":     {val: 0},
@@ -161,7 +145,32 @@ func TestUInt8Ptr(t *testing.T) {
 			result := UInt8Ptr(int(tc.val))
 
 			// THEN the result should be a pointer to the unsigned integer value.
-			if *result != uint8(tc.val) {
+			if *result != tc.val {
+				t.Errorf("%s\nwant: %d\ngot:  %d",
+					packageName, tc.val, *result)
+			}
+		})
+	}
+}
+
+func TestUInt16Ptr(t *testing.T) {
+	// GIVEN an integer value.
+	tests := map[string]struct {
+		val uint16
+	}{
+		"positive": {val: 1},
+		"zero":     {val: 0},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN UInt16Ptr is called.
+			result := UInt16Ptr(int(tc.val))
+
+			// THEN the result should be a pointer to the unsigned integer value.
+			if *result != tc.val {
 				t.Errorf("%s\nwant: %d\ngot:  %d",
 					packageName, tc.val, *result)
 			}
@@ -601,7 +610,7 @@ func TestYAMLToNode(t *testing.T) {
 			tc.yamlStr = TrimYAML(tc.yamlStr)
 
 			// WHEN YAMLToNode is called.
-			node, err := YAMLToNode(t, tc.yamlStr)
+			node, err := YAMLToNode(tc.yamlStr)
 
 			// THEN the result should be a valid yaml.Node, or an error.
 			e := util.ErrorToString(err)

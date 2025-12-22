@@ -23,12 +23,15 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 
+	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -36,13 +39,12 @@ import (
 
 func TestHTTP_httpServiceOrderGet(t *testing.T) {
 	// GIVEN an API and a request for the service order.
-	file := "TestHTTP_httpServiceOrderGet.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 
@@ -77,7 +79,7 @@ func TestHTTP_httpServiceOrderGet(t *testing.T) {
 			api.httpServiceOrderGet(w, req)
 			apiMutex.RUnlock()
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
@@ -102,14 +104,13 @@ func TestHTTP_httpServiceOrderGet(t *testing.T) {
 func TestHTTP_httpServiceSummary(t *testing.T) {
 	testSVC := testService("TestHTTP_httpServiceSummary", true)
 	// GIVEN an API and a request for detail of a service.
-	file := "TestHTTP_httpServiceSummary.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	api.Config.Service[testSVC.ID] = testSVC
 	api.Config.Order = append(api.Config.Order, testSVC.ID)
 	t.Cleanup(func() {
-		os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 
@@ -145,7 +146,7 @@ func TestHTTP_httpServiceSummary(t *testing.T) {
 			w := httptest.NewRecorder()
 			api.httpServiceSummary(w, req)
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wantStatusCode {
@@ -169,14 +170,15 @@ func TestHTTP_httpServiceSummary(t *testing.T) {
 
 func TestHTTP_httpServiceOrderSet(t *testing.T) {
 	// GIVEN an API and a request to set the service order.
-	file := "TestHTTP_httpServiceOrderSet.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
+		// Give time for save before TempDir clean-up.
+		time.Sleep(2 * config.DebounceDuration)
 	})
 
 	testOrder := []string{"service1", "service2", "service3"}
@@ -255,7 +257,7 @@ func TestHTTP_httpServiceOrderSet(t *testing.T) {
 			api.httpServiceOrderSet(w, req)
 			apiMutex.Unlock()
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wantStatusCode {

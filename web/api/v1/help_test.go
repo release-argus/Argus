@@ -17,12 +17,18 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
+	logtest "github.com/release-argus/Argus/test/log"
+	logutil "github.com/release-argus/Argus/util/log"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config"
@@ -33,28 +39,32 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/test"
-	logtest "github.com/release-argus/Argus/test/log"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
 var (
-	packageName           string = "api_v1"
+	packageName           = "api_v1"
 	loadMutex             sync.Mutex
 	loadCount             int
 	secretValueMarshalled string
 )
 
 func TestMain(m *testing.M) {
-	// Log.
-	logtest.InitLog()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	g, _ := errgroup.WithContext(ctx)
 
+	config.DebounceDuration = 500 * time.Millisecond
 	flags := make(map[string]bool)
 	path := "TestWebAPIv1Main.yml"
 	testYAML_Argus(path)
-	var config config.Config
-	config.Load(path, &flags)
-	os.Remove(path)
+	var cfg config.Config
+	cfg.Load(ctx, g, path, &flags)
+	_ = os.Remove(path)
+
+	// Log.
+	logtest.InitLog()
 
 	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'.
 	secretValueMarshalledBytes, _ := json.Marshal(util.SecretValue)
@@ -62,6 +72,12 @@ func TestMain(m *testing.M) {
 
 	// Run other tests.
 	exitCode := m.Run()
+
+	if len(logutil.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty",
+			packageName)
+		exitCode = 1
+	}
 
 	// Exit.
 	os.Exit(exitCode)
@@ -77,23 +93,26 @@ func testClient() Client {
 	}
 }
 
-func testLoad(file string) *config.Config {
-	var config config.Config
+func testLoad(t *testing.T, file string) *config.Config {
+	var cfg config.Config
+	g, _ := errgroup.WithContext(t.Context())
 
 	flags := make(map[string]bool)
-	config.Load(file, &flags)
-	config.Init()
+	cfg.Load(t.Context(), g, file, &flags)
+	cfg.Init()
 	announceChannel := make(chan []byte, 8)
-	config.HardDefaults.Service.Status.AnnounceChannel = announceChannel
+	cfg.HardDefaults.Service.Status.AnnounceChannel = announceChannel
 
-	return &config
+	return &cfg
 }
 
-func testAPI(name string) API {
-	testYAML_Argus(name)
+func testAPI(t *testing.T, path string) API {
+	t.Helper()
+	testYAML_Argus(path)
 
-	cfg := testLoad(name)
+	cfg := testLoad(t, path)
 	cfg.HardDefaults.Service.LatestVersion.AccessToken = os.Getenv("GITHUB_TOKEN")
+
 	return API{Config: cfg}
 }
 

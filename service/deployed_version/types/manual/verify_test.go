@@ -66,7 +66,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			lookup := &Lookup{}
-			yamlNode, err := test.YAMLToNode(t, tc.lookupYAML)
+			yamlNode, err := test.YAMLToNode(tc.lookupYAML)
 			if err != nil {
 				t.Fatalf("%s\nfailed to convert YAML to yaml.Node: %v",
 					packageName, err)

@@ -4073,15 +4073,15 @@ func TestService_GiveSecrets(t *testing.T) {
 					expectedWH = name
 					break
 				}
-				// Expecting Failed to be carried over.
+				// Expecting `Failed` to be carried over.
 				// Get failed state being copied.
 				var wantFailed *bool
-				for name, wh := range tc.expected.WebHook {
-					wantFailed = wh.Failed.Get(name)
+				for _, wh := range tc.expected.WebHook {
+					wantFailed = wh.DidFail()
 					break
 				}
 				// Get carried over state.
-				gotFailed := gotService.WebHook[expectedWH].Failed.Get(expectedWH)
+				gotFailed := gotService.WebHook[expectedWH].DidFail()
 				if gotFailed == wantFailed {
 					return
 				}

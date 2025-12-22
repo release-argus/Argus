@@ -16,11 +16,7 @@
 package config
 
 import (
-	"errors"
 	"flag"
-	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/release-argus/Argus/util"
@@ -98,20 +94,28 @@ type SettingsBase struct {
 }
 
 // CheckValues validates the fields of the SettingsBase struct.
-func (s *SettingsBase) CheckValues() {
-	// Web
-	s.Web.CheckValues()
+func (s *SettingsBase) CheckValues() bool {
+	// Web.
+	return s.Web.CheckValues()
 }
 
 // MapEnvToStruct maps environment variables to this struct.
-func (s *SettingsBase) MapEnvToStruct() {
-	err := mapEnvToStruct(s, "", nil)
-	if err != nil {
+func (s *SettingsBase) MapEnvToStruct() bool {
+	ok := true
+
+	if err := mapEnvToStruct(s, "", nil); err != nil {
 		logutil.Log.Fatal(
 			"One or more 'ARGUS_' environment variables are incorrect:\n"+err.Error(),
-			logutil.LogFrom{}, true)
+			logutil.LogFrom{})
+		ok = false
 	}
-	s.CheckValues() // Set hash values and remove empty structs.
+
+	// Set hash values and remove empty structs.
+	if !s.CheckValues() {
+		ok = false
+	}
+
+	return ok
 }
 
 // LogSettings for the binary.
@@ -146,7 +150,9 @@ func (s *WebSettings) String(prefix string) string {
 }
 
 // CheckValues validates the fields of the WebSettings struct.
-func (s *WebSettings) CheckValues() {
+func (s *WebSettings) CheckValues() bool {
+	ok := true
+
 	// BasicAuth.
 	if s.BasicAuth != nil {
 		// Remove the BasicAuth if both the Username and Password are empty.
@@ -171,6 +177,20 @@ func (s *WebSettings) CheckValues() {
 			s.Favicon = nil
 		}
 	}
+
+	// CertFile.
+	if err := util.CheckFileReadable(s.CertFile); err != nil {
+		logutil.Log.Fatal("settings.web.cert_file "+err.Error(), logutil.LogFrom{})
+		ok = false
+	}
+
+	// KeyFile.
+	if err := util.CheckFileReadable(s.KeyFile); err != nil {
+		logutil.Log.Fatal("settings.web.pkey_file "+err.Error(), logutil.LogFrom{})
+		ok = false
+	}
+
+	return ok
 }
 
 // WebSettingsBasicAuth contains the basic auth credentials to use (if any).
@@ -190,9 +210,10 @@ func (b *WebSettingsBasicAuth) String(prefix string) string {
 }
 
 // CheckValues ensures the fields of the WebSettingsBasicAuth struct are SHA256 hashed.
-func (b *WebSettingsBasicAuth) CheckValues() {
+func (b *WebSettingsBasicAuth) CheckValues() bool {
 	// Username.
 	b.UsernameHash = util.GetHash(util.EvalEnvVars(b.Username))
+
 	// Password.
 	password := util.EvalEnvVars(b.Password)
 	b.PasswordHash = util.GetHash(password)
@@ -200,6 +221,8 @@ func (b *WebSettingsBasicAuth) CheckValues() {
 		// Password doesn't include an env var, so hash the config val.
 		b.Password = util.FmtHash(b.PasswordHash)
 	}
+
+	return true
 }
 
 // FaviconSettings contains the favicon override settings.
@@ -236,7 +259,9 @@ func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 }
 
 // Default sets these Settings to the default values.
-func (s *Settings) Default() {
+func (s *Settings) Default() bool {
+	ok := true
+
 	// #######
 	// # LOG #
 	// #######
@@ -287,11 +312,15 @@ func (s *Settings) Default() {
 		s.FromFlags.Web.BasicAuth = &WebSettingsBasicAuth{}
 		s.FromFlags.Web.BasicAuth.Username = util.EvalEnvVars(util.DereferenceOrDefault(WebBasicAuthUsername))
 		s.FromFlags.Web.BasicAuth.Password = util.EvalEnvVars(util.DereferenceOrDefault(WebBasicAuthPassword))
-		s.FromFlags.Web.BasicAuth.CheckValues()
+		ok = s.FromFlags.Web.BasicAuth.CheckValues()
 	}
 
 	// Overwrite defaults with environment variables.
-	s.HardDefaults.MapEnvToStruct()
+	if !s.HardDefaults.MapEnvToStruct() {
+		ok = false
+	}
+
+	return ok
 }
 
 // LogTimestamps returns the log timestamps setting.
@@ -344,56 +373,18 @@ func (s *Settings) WebRoutePrefix() string {
 
 // WebCertFile returns the path to the certificate file.
 func (s *Settings) WebCertFile() string {
-	certFile := util.FirstNonDefaultWithEnv(
+	return util.FirstNonDefaultWithEnv(
 		s.FromFlags.Web.CertFile,
 		s.Web.CertFile,
 		s.HardDefaults.Web.CertFile)
-	if certFile == "" {
-		return ""
-	}
-	if _, err := os.Stat(certFile); err != nil {
-		if !filepath.IsAbs(certFile) {
-			path, execErr := os.Executable()
-			logutil.Log.Error(execErr, logutil.LogFrom{}, execErr != nil)
-			// Add the path to the error message.
-			err = errors.New(strings.Replace(
-				err.Error(),
-				fmt.Sprintf(" %s:", certFile),
-				fmt.Sprintf(" %s/%s:",
-					path, certFile),
-				1,
-			))
-		}
-		logutil.Log.Fatal("settings.web.cert_file "+err.Error(), logutil.LogFrom{}, true)
-	}
-	return certFile
 }
 
 // WebKeyFile returns the path to the private key file.
 func (s *Settings) WebKeyFile() string {
-	keyFile := util.FirstNonDefaultWithEnv(
+	return util.FirstNonDefaultWithEnv(
 		s.FromFlags.Web.KeyFile,
 		s.Web.KeyFile,
 		s.HardDefaults.Web.KeyFile)
-	if keyFile == "" {
-		return ""
-	}
-	if _, err := os.Stat(keyFile); err != nil {
-		if !filepath.IsAbs(keyFile) {
-			path, execErr := os.Executable()
-			logutil.Log.Error(execErr, logutil.LogFrom{}, execErr != nil)
-			// Add the path to the error message.
-			err = errors.New(strings.Replace(
-				err.Error(),
-				fmt.Sprintf(" %s:", keyFile),
-				fmt.Sprintf(" %s/%s:",
-					path, keyFile),
-				1,
-			))
-		}
-		logutil.Log.Fatal("settings.web.key_file "+err.Error(), logutil.LogFrom{}, true)
-	}
-	return keyFile
 }
 
 // WebBasicAuthUsernameHash returns the SHA256 hash of the basic auth username.

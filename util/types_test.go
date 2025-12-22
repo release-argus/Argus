@@ -261,14 +261,15 @@ func TestFormatUnmarshalError(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			var config Config
+
+			var cfg Config
 			var err error
 			if tc.data != "" {
 				switch tc.format {
 				case "yaml":
-					err = yaml.Unmarshal([]byte(tc.data), &config)
+					err = yaml.Unmarshal([]byte(tc.data), &cfg)
 				case "json":
-					err = json.Unmarshal([]byte(tc.data), &config)
+					err = json.Unmarshal([]byte(tc.data), &cfg)
 				default:
 					t.Fatalf("%s - unsupported format: %s",
 						packageName, tc.format)

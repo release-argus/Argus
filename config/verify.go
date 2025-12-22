@@ -25,7 +25,7 @@ import (
 )
 
 // CheckValues validates the fields of the Config struct.
-func (c *Config) CheckValues() {
+func (c *Config) CheckValues() bool {
 	var errs []error
 	c.Settings.CheckValues()
 
@@ -46,8 +46,10 @@ func (c *Config) CheckValues() {
 	if len(errs) > 0 {
 		combinedErr := errors.Join(errs...)
 		fmt.Println(combinedErr.Error())
-		logutil.Log.Fatal("Config could not be parsed successfully.", logutil.LogFrom{}, true)
+		logutil.Log.Fatal("Config could not be parsed successfully.", logutil.LogFrom{})
+		return false
 	}
+	return true
 }
 
 // Print the parsed config if *flag.
