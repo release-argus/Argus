@@ -21,6 +21,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -211,4 +212,21 @@ func testServiceURL(id string) *service.Service {
 	svc.Status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)
 	svc.Status.SetDeployedVersion("0.0.0", "2001-01-01T01:01:01Z", false)
 	return svc
+}
+
+func testOkMatch(t *testing.T, want bool, channel chan bool, releaseStdout func() string) {
+	select {
+	case got := <-channel:
+		drainAndDebounce(t.Context(), logutil.ExitCodeChannel(), 200*time.Millisecond)
+		// Ok value as expected.
+		if got != want {
+			t.Errorf("%s\nok mismatch:\nwant: %t\ngot:  %t",
+				packageName, want, got)
+		}
+	case <-time.After(2500 * time.Millisecond):
+		drainAndDebounce(t.Context(), logutil.ExitCodeChannel(), 200*time.Millisecond)
+		if releaseStdout != nil {
+			_ = releaseStdout()
+		}
+	}
 }

@@ -18,7 +18,6 @@ package config
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"strings"
 
 	"github.com/release-argus/Argus/util"
@@ -158,8 +157,8 @@ func (s *WebSettings) String(prefix string) string {
 }
 
 // CheckValues validates the fields of the WebSettings struct.
-func (s *WebSettings) CheckValues(prefix string) error {
-	var errs []error
+func (s *WebSettings) CheckValues() bool {
+	ok := true
 
 	// BasicAuth.
 	if s.BasicAuth != nil {
@@ -188,22 +187,17 @@ func (s *WebSettings) CheckValues(prefix string) error {
 
 	// CertFile.
 	if err := util.CheckFileReadable(s.CertFile); err != nil {
-		errs = append(errs,
-			fmt.Errorf("%s: %w",
-				prefix+"cert_file", err))
+		logutil.Log.Fatal("settings.web.cert_file "+err.Error(), logutil.LogFrom{})
+		ok = false
 	}
 
 	// KeyFile.
 	if err := util.CheckFileReadable(s.KeyFile); err != nil {
-		errs = append(errs,
-			fmt.Errorf("%s: %w",
-				prefix+"pkey_file", err))
+		logutil.Log.Fatal("settings.web.pkey_file "+err.Error(), logutil.LogFrom{})
+		ok = false
 	}
 
-	if len(errs) == 0 {
-		return nil
-	}
-	return errors.Join(errs...)
+	return ok
 }
 
 // WebSettingsBasicAuth contains the basic auth credentials to use (if any).
@@ -223,7 +217,7 @@ func (b *WebSettingsBasicAuth) String(prefix string) string {
 }
 
 // CheckValues ensures the fields of the WebSettingsBasicAuth struct are SHA256 hashed.
-func (b *WebSettingsBasicAuth) CheckValues() {
+func (b *WebSettingsBasicAuth) CheckValues() bool {
 	// Username.
 	b.UsernameHash = util.GetHash(util.EvalEnvVars(b.Username))
 
@@ -234,6 +228,8 @@ func (b *WebSettingsBasicAuth) CheckValues() {
 		// Password doesn't include an env var, so hash the config val.
 		b.Password = util.FmtHash(b.PasswordHash)
 	}
+
+	return true
 }
 
 // FaviconSettings contains the favicon override settings.
@@ -271,6 +267,8 @@ func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 
 // Default sets these Settings to the default values.
 func (s *Settings) Default() bool {
+	ok := true
+
 	// #######
 	// # LOG #
 	// #######
@@ -321,17 +319,15 @@ func (s *Settings) Default() bool {
 		s.FromFlags.Web.BasicAuth = &WebSettingsBasicAuth{}
 		s.FromFlags.Web.BasicAuth.Username = util.EvalEnvVars(util.DereferenceOrDefault(WebBasicAuthUsername))
 		s.FromFlags.Web.BasicAuth.Password = util.EvalEnvVars(util.DereferenceOrDefault(WebBasicAuthPassword))
-		s.FromFlags.Web.BasicAuth.CheckValues()
+		ok = s.FromFlags.Web.BasicAuth.CheckValues()
 	}
 
 	// Overwrite defaults with environment variables.
-	if err := s.HardDefaults.MapEnvToStruct(); err != nil {
-		//nolint:wrapcheck
-		logutil.Log.Fatal(err, logutil.LogFrom{})
-		return false
+	if !s.HardDefaults.MapEnvToStruct() {
+		ok = false
 	}
 
-	return true
+	return ok
 }
 
 // LogTimestamps returns the log timestamps setting.

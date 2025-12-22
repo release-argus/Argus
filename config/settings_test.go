@@ -91,7 +91,6 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 		had, want                          Settings
 		wantUsernameHash, wantPasswordHash string
 		ok                                 bool
-		errRegex                           string
 	}{
 		"BasicAuth - empty": {
 			had: Settings{
@@ -246,8 +245,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						CertFile: "cert.pem"}}},
-			errRegex: `^web:\s  cert_file: .*no such file.*$`,
-			ok:       false,
+			ok: false,
 		},
 		"Web.KeyFile - not found": {
 			had: Settings{
@@ -258,8 +256,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						KeyFile: "privkey.pem"}}},
-			errRegex: `^web:\s  pkey_file: .*no such file.*$`,
-			ok:       false,
+			ok: false,
 		},
 		"Web.CertFile + Web.KeyFile - both not found": {
 			had: Settings{
@@ -272,8 +269,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 					Web: WebSettings{
 						CertFile: "cert.pem",
 						KeyFile:  "privkey.pem"}}},
-			ok:       false,
-			errRegex: `^web:\s  cert_file: .*no such file.*\s  pkey_file: .*no such file.*$`,
+			ok: false,
 		},
 	}
 
@@ -286,14 +282,9 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
-			errChannel := make(chan error, 1)
 			resultChannel := make(chan bool, 1)
 			// WHEN CheckValues is called on it.
-			go func() {
-				err := tc.had.CheckValues("")
-				errChannel <- err
-				resultChannel <- err == nil
-			}()
+			go func() { resultChannel <- tc.had.CheckValues() }()
 
 			// THEN the ok value is as expected.
 			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
@@ -561,13 +552,13 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 	// Unset ARGUS_LOG_LEVEL.
 	logLevel := os.Getenv("ARGUS_LOG_LEVEL")
 	_ = os.Unsetenv("ARGUS_LOG_LEVEL")
-	t.Cleanup(func() { _ = os.Setenv("ARGUS_LOG_LEVEL", logLevel) })
+	defer os.Setenv("ARGUS_LOG_LEVEL", logLevel)
 	// GIVEN vars set for Settings vars.
 	tests := map[string]struct {
-		env                   map[string]string
-		want                  *Settings
-		stdoutRegex, errRegex string
-		ok                    bool
+		env         map[string]string
+		want        *Settings
+		stdoutRegex string
+		ok          bool
 	}{
 		"empty vars ignored": {
 			env: map[string]string{
@@ -596,9 +587,9 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 		"log.timestamps - invalid, not a bool": {
 			env: map[string]string{
 				"ARGUS_LOG_TIMESTAMPS": "abc"},
-			want:     &Settings{},
-			ok:       false,
-			errRegex: `One or more.* environment variables.*\s.*ARGUS_LOG_TIMESTAMPS.*$`,
+			want:        &Settings{},
+			stdoutRegex: `ARGUS_LOG_TIMESTAMPS: "abc" <invalid>`,
+			ok:          false,
 		},
 		"web.listen-host": {
 			env: map[string]string{
@@ -625,8 +616,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						CertFile: "cert.test"}}},
-			ok:       false,
-			errRegex: `^hard_defaults:\s  settings:\s    web:\s      cert_file: .*no such file.*$`,
+			ok: false,
 		},
 		"web.pkey-file": {
 			env: map[string]string{
@@ -635,8 +625,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						KeyFile: "pkey.test"}}},
-			ok:       false,
-			errRegex: `^hard_defaults:\s  settings:\s    web:\s      pkey_file: .*no such file.*$`,
+			ok: false,
 		},
 		"web.route-prefix": {
 			env: map[string]string{
@@ -672,37 +661,20 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			}
 			settings := Settings{}
 
-			errChannel := make(chan error, 1)
 			resultChannel := make(chan bool, 1)
 			// WHEN MapEnvToStruct is called on it.
-			go func() {
-				err := settings.MapEnvToStruct()
-				errChannel <- err
-				resultChannel <- err == nil
-			}()
+			resultChannel <- settings.MapEnvToStruct()
 
 			// THEN the ok value is as expected.
 			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), releaseStdout); err != nil {
 				t.Fatalf("%s\n%s",
 					packageName, err.Error())
 			}
-			// AND any stdout error is as expected.
+			// THEN any error is as expected.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
 				t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.stdoutRegex, stdout)
-			}
-			// AND any returned error is as expected.
-			tc.errRegex = util.ValueOrValue(tc.errRegex, `^$`)
-			select {
-			case err := <-errChannel:
-				e := util.ErrorToString(err)
-				if !util.RegexCheck(tc.errRegex, e) {
-					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.errRegex, e)
-				}
-			default:
-				t.Fatalf("%s\nerror not returned", packageName)
 			}
 			// AND the settings are set to the appropriate env vars.
 			if settings.String("") != tc.want.String("") {
@@ -1108,7 +1080,6 @@ func TestWebSettings_CheckValues(t *testing.T) {
 		had, want        WebSettings
 		wantUsernameHash string
 		ok               bool
-		errRegex         string
 	}{
 		"BasicAuth - empty": {
 			had: WebSettings{
@@ -1210,16 +1181,14 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				CertFile: "cert.pem"},
 			want: WebSettings{
 				CertFile: "cert.pem"},
-			ok:       false,
-			errRegex: `^cert_file: .*no such file.*$`,
+			ok: false,
 		},
 		"Web.KeyFile - not found": {
 			had: WebSettings{
 				KeyFile: "privkey.pem"},
 			want: WebSettings{
 				KeyFile: "privkey.pem"},
-			ok:       false,
-			errRegex: `^pkey_file: .*no such file.*$`,
+			ok: false,
 		},
 		"Web.CertFile + Web.KeyFile - both not found": {
 			had: WebSettings{
@@ -1228,8 +1197,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			want: WebSettings{
 				CertFile: "cert.pem",
 				KeyFile:  "privkey.pem"},
-			ok:       false,
-			errRegex: `^cert_file: .*no such file.*\spkey_file: .*no such file.*$`,
+			ok: false,
 		},
 	}
 
@@ -1242,31 +1210,14 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
-			errChannel := make(chan error, 1)
 			resultChannel := make(chan bool, 1)
 			// WHEN CheckValues is called on it.
-			go func() {
-				err := tc.had.CheckValues("")
-				errChannel <- err
-				resultChannel <- err == nil
-			}()
+			go func() { resultChannel <- tc.had.CheckValues() }()
 
 			// THEN the ok value is as expected.
 			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
 				t.Fatalf("%s\n%s",
 					packageName, err.Error())
-			}
-			// AND the expected error is returned.
-			tc.errRegex = util.ValueOrValue(tc.errRegex, `^$`)
-			select {
-			case err := <-errChannel:
-				e := util.ErrorToString(err)
-				if !util.RegexCheck(tc.errRegex, e) {
-					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.errRegex, e)
-				}
-			default:
-				t.Fatalf("%s\nerror not returned", packageName)
 			}
 			// AND the Settings are converted/removed where necessary.
 			hadStr := tc.had.String("")
@@ -1349,6 +1300,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 		env                                map[string]string
 		had, want                          WebSettingsBasicAuth
 		wantUsernameHash, wantPasswordHash string
+		ok                                 bool
 	}{
 		"str Username": {
 			had: WebSettingsBasicAuth{
@@ -1356,6 +1308,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "test",
 				Password: util.FmtHash(util.GetHash(""))},
+			ok: true,
 		},
 		"str Web.BasicAuth.Password": {
 			had: WebSettingsBasicAuth{
@@ -1363,6 +1316,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "",
 				Password: util.FmtHash(util.GetHash("just a password here"))},
+			ok: true,
 		},
 		"str Web.BasicAuth.Username and str Web.BasicAuth.Password": {
 			had: WebSettingsBasicAuth{
@@ -1371,6 +1325,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "user",
 				Password: util.FmtHash(util.GetHash("pass"))},
+			ok: true,
 		},
 		"str env Web.BasicAuth.Username and str env Web.BasicAuth.Password": {
 			env: map[string]string{
@@ -1382,6 +1337,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__ONE}",
 				Password: "${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__TWO}"},
+			ok: true,
 		},
 		"str env partial Web.BasicAuth.Username and str env partial Web.BasicAuth.Password": {
 			env: map[string]string{
@@ -1393,6 +1349,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__THREE}",
 				Password: "b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__FOUR}"},
+			ok: true,
 		},
 		"str env undefined Web.BasicAuth.Username and str env undefined Web.BasicAuth.Password": {
 			had: WebSettingsBasicAuth{
@@ -1403,6 +1360,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 				Password: util.FmtHash(util.GetHash("b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}"))},
 			wantUsernameHash: util.FmtHash(util.GetHash("a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}")),
 			wantPasswordHash: util.FmtHash(util.GetHash("b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}")),
+			ok:               true,
 		},
 		"str Web.BasicAuth.Username and Web.BasicAuth.Password already hashed": {
 			had: WebSettingsBasicAuth{
@@ -1411,6 +1369,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "user",
 				Password: util.FmtHash(util.GetHash("pass"))},
+			ok: true,
 		},
 		"hashed Web.BasicAuth.Username and str Web.BasicAuth.Password": {
 			had: WebSettingsBasicAuth{
@@ -1419,6 +1378,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "user",
 				Password: util.FmtHash(util.GetHash("pass"))},
+			ok: true,
 		},
 		"hashed Web.BasicAuth.Username and hashed Web.BasicAuth.Password": {
 			had: WebSettingsBasicAuth{
@@ -1427,6 +1387,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "user",
 				Password: util.FmtHash(util.GetHash("pass"))},
+			ok: true,
 		},
 	}
 
@@ -1439,9 +1400,15 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
+			resultChannel := make(chan bool, 1)
 			// WHEN CheckValues is called on it.
-			tc.had.CheckValues()
+			resultChannel <- tc.had.CheckValues()
 
+			// THEN the ok value is as expected.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
 			// THEN the Settings are converted/removed where necessary.
 			hadStr := tc.had.String("")
 			wantStr := tc.want.String("")
