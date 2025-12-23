@@ -16,7 +16,9 @@
 package config
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"strings"
 
 	"github.com/release-argus/Argus/util"
@@ -94,28 +96,34 @@ type SettingsBase struct {
 }
 
 // CheckValues validates the fields of the SettingsBase struct.
-func (s *SettingsBase) CheckValues() bool {
+func (s *SettingsBase) CheckValues(prefix string) error {
+	var errs []error
+
 	// Web.
-	return s.Web.CheckValues()
+	util.AppendCheckError(&errs, prefix, "web",
+		s.Web.CheckValues(prefix+"  "))
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return errors.Join(errs...)
 }
 
 // MapEnvToStruct maps environment variables to this struct.
-func (s *SettingsBase) MapEnvToStruct() bool {
-	ok := true
-
+func (s *SettingsBase) MapEnvToStruct() error {
 	if err := mapEnvToStruct(s, "", nil); err != nil {
-		logutil.Log.Fatal(
-			"One or more 'ARGUS_' environment variables are incorrect:\n"+err.Error(),
-			logutil.LogFrom{})
-		ok = false
+		return errors.New("One or more 'ARGUS_' environment variables are incorrect:\n" + err.Error())
 	}
 
-	// Set hash values and remove empty structs.
-	if !s.CheckValues() {
-		ok = false
-	}
+	var errs []error
+	// Set hash values, remove empty structs, and validate cert/pkey.
+	util.AppendCheckError(&errs, "", "hard_defaults:\n  settings",
+		s.CheckValues("    "))
 
-	return ok
+	if len(errs) == 0 {
+		return nil
+	}
+	return errors.Join(errs...)
 }
 
 // LogSettings for the binary.
@@ -150,8 +158,8 @@ func (s *WebSettings) String(prefix string) string {
 }
 
 // CheckValues validates the fields of the WebSettings struct.
-func (s *WebSettings) CheckValues() bool {
-	ok := true
+func (s *WebSettings) CheckValues(prefix string) error {
+	var errs []error
 
 	// BasicAuth.
 	if s.BasicAuth != nil {
@@ -180,17 +188,22 @@ func (s *WebSettings) CheckValues() bool {
 
 	// CertFile.
 	if err := util.CheckFileReadable(s.CertFile); err != nil {
-		logutil.Log.Fatal("settings.web.cert_file "+err.Error(), logutil.LogFrom{})
-		ok = false
+		errs = append(errs,
+			fmt.Errorf("%s: %w",
+				prefix+"cert_file", err))
 	}
 
 	// KeyFile.
 	if err := util.CheckFileReadable(s.KeyFile); err != nil {
-		logutil.Log.Fatal("settings.web.pkey_file "+err.Error(), logutil.LogFrom{})
-		ok = false
+		errs = append(errs,
+			fmt.Errorf("%s: %w",
+				prefix+"pkey_file", err))
 	}
 
-	return ok
+	if len(errs) == 0 {
+		return nil
+	}
+	return errors.Join(errs...)
 }
 
 // WebSettingsBasicAuth contains the basic auth credentials to use (if any).
@@ -210,7 +223,7 @@ func (b *WebSettingsBasicAuth) String(prefix string) string {
 }
 
 // CheckValues ensures the fields of the WebSettingsBasicAuth struct are SHA256 hashed.
-func (b *WebSettingsBasicAuth) CheckValues() bool {
+func (b *WebSettingsBasicAuth) CheckValues() {
 	// Username.
 	b.UsernameHash = util.GetHash(util.EvalEnvVars(b.Username))
 
@@ -221,8 +234,6 @@ func (b *WebSettingsBasicAuth) CheckValues() bool {
 		// Password doesn't include an env var, so hash the config val.
 		b.Password = util.FmtHash(b.PasswordHash)
 	}
-
-	return true
 }
 
 // FaviconSettings contains the favicon override settings.
@@ -260,8 +271,6 @@ func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 
 // Default sets these Settings to the default values.
 func (s *Settings) Default() bool {
-	ok := true
-
 	// #######
 	// # LOG #
 	// #######
@@ -312,15 +321,17 @@ func (s *Settings) Default() bool {
 		s.FromFlags.Web.BasicAuth = &WebSettingsBasicAuth{}
 		s.FromFlags.Web.BasicAuth.Username = util.EvalEnvVars(util.DereferenceOrDefault(WebBasicAuthUsername))
 		s.FromFlags.Web.BasicAuth.Password = util.EvalEnvVars(util.DereferenceOrDefault(WebBasicAuthPassword))
-		ok = s.FromFlags.Web.BasicAuth.CheckValues()
+		s.FromFlags.Web.BasicAuth.CheckValues()
 	}
 
 	// Overwrite defaults with environment variables.
-	if !s.HardDefaults.MapEnvToStruct() {
-		ok = false
+	if err := s.HardDefaults.MapEnvToStruct(); err != nil {
+		//nolint:wrapcheck
+		logutil.Log.Fatal(err, logutil.LogFrom{})
+		return false
 	}
 
-	return ok
+	return true
 }
 
 // LogTimestamps returns the log timestamps setting.

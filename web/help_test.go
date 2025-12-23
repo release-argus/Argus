@@ -70,8 +70,6 @@ func TestMain(m *testing.M) {
 	// GIVEN a valid config with a Service.
 	file := "TestWebMain.yml"
 	mainCfg = testConfig(nil, file)
-	_ = os.Remove(file)
-	defer os.Remove(mainCfg.Settings.Data.DatabaseFile)
 	port = mainCfg.Settings.Web.ListenPort
 	mainCfg.Settings.Web.ListenHost = host
 
@@ -91,6 +89,8 @@ func TestMain(m *testing.M) {
 
 	// THEN Web UI is accessible for the tests.
 	exitCode := m.Run()
+	_ = os.Remove(file)
+	_ = os.Remove(mainCfg.Settings.Data.DatabaseFile)
 
 	if len(logutil.ExitCodeChannel()) > 0 {
 		fmt.Printf("%s\nexit code channel not empty",
