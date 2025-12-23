@@ -28,7 +28,7 @@ import (
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
-// checkFile will check that the directory and file at `path` exist,
+// checkFile will check that the directory and file at `path` exist.
 func checkFile(path string) (ok bool) {
 	file := filepath.Base(path)
 

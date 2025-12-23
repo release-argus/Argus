@@ -100,7 +100,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	case <-ctx.Done():
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		return srv.Shutdown(shutdownCtx)
+		return srv.Shutdown(shutdownCtx) //nolint:wrapcheck
 
 	// Error.
 	case err := <-errChan:

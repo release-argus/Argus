@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,8 +53,6 @@ func CheckFileReadable(path string) error {
 	}
 
 	f, err := os.Open(path)
-	defer f.Close()
-
 	// Failed to open.
 	if err != nil {
 		if !filepath.IsAbs(path) {
@@ -68,9 +66,10 @@ func CheckFileReadable(path string) error {
 		}
 		return err
 	}
+	defer f.Close()
 
 	if info, e := f.Stat(); e != nil {
-		return e
+		return e //nolint:wrapcheck
 	} else if info.IsDir() {
 		return fmt.Errorf("path %q is a directory, not a file", path)
 	}

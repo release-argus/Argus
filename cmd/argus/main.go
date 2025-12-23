@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"golang.org/x/sync/errgroup"
-
 	_ "modernc.org/sqlite"
 
 	"github.com/release-argus/Argus/config"
