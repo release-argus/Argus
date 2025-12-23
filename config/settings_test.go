@@ -539,7 +539,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 	// Unset ARGUS_LOG_LEVEL.
 	logLevel := os.Getenv("ARGUS_LOG_LEVEL")
 	_ = os.Unsetenv("ARGUS_LOG_LEVEL")
-	defer os.Setenv("ARGUS_LOG_LEVEL", logLevel)
+	t.Cleanup(func() { _ = os.Setenv("ARGUS_LOG_LEVEL", logLevel) })
 	// GIVEN vars set for Settings vars.
 	tests := map[string]struct {
 		env         map[string]string
@@ -657,7 +657,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				t.Fatalf("%s\n%s",
 					packageName, err.Error())
 			}
-			// THEN any error is as expected.
+			// AND any error is as expected.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
 				t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
@@ -667,6 +667,62 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			if settings.String("") != tc.want.String("") {
 				t.Errorf("%s\nstruct mismatch\nwant: %v\ngot:  %v",
 					packageName, tc.want.String(""), settings.String(""))
+			}
+		})
+	}
+}
+
+func TestSettings_Default(t *testing.T) {
+	// GIVEN a set of env vars.
+	tests := map[string]struct {
+		env         map[string]string
+		stdoutRegex string
+		ok          bool
+	}{
+		"no env vars": {
+			env:         map[string]string{},
+			stdoutRegex: `^$`,
+			ok:          true,
+		},
+		"valid env var": {
+			env: map[string]string{
+				"ARGUS_LOG_TIMESTAMPS": "false"},
+			stdoutRegex: `^$`,
+			ok:          true,
+		},
+		"invalid env var": {
+			env: map[string]string{
+				"ARGUS_LOG_TIMESTAMPS": "abc"},
+			stdoutRegex: `^FATAL.*environment variable.*incorrect.*\s.*ARGUS_LOG_TIMESTAMPS.*\s$`,
+			ok:          false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseStdout := test.CaptureLog(logutil.Log)
+
+			for k, v := range tc.env {
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
+			}
+			settings := Settings{}
+
+			resultChannel := make(chan bool, 1)
+			// WHEN Default is called.
+			resultChannel <- settings.Default()
+
+			// THEN the ok value is as expected.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), releaseStdout); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			// AND any error is as expected.
+			stdout := releaseStdout()
+			if !util.RegexCheck(tc.stdoutRegex, stdout) {
+				t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.stdoutRegex, stdout)
 			}
 		})
 	}
