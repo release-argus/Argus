@@ -20,9 +20,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
-
-	"github.com/gorilla/mux"
 
 	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
@@ -33,6 +30,9 @@ type ServiceOrderAPI struct {
 	Order []string `json:"order"`
 }
 
+// httpServiceOrderGet returns the current ordering of services.
+//
+// # GET
 func (api *API) httpServiceOrderGet(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpServiceOrderGet", Secondary: getIP(r)}
 
@@ -41,6 +41,13 @@ func (api *API) httpServiceOrderGet(w http.ResponseWriter, r *http.Request) {
 	api.writeJSON(w, ServiceOrderAPI{Order: api.Config.Order}, logFrom)
 }
 
+// httpServiceOrderSet sets the ordering of services.
+//
+// # POST
+//
+// Body:
+//
+//	JSON object containing the new order.
 func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpServiceOrderSet", Secondary: getIP(r)}
 
@@ -88,16 +95,30 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 	api.Config.HardDefaults.Service.Status.SaveChannel <- true
 }
 
+// httpServiceSummary returns the ServiceSummary for the given service.
+//
+// # GET
+//
+// Query Parameters:
+//
+//	service_id: The ID of the Service to get details for.
+//
+// Response:
+//
+//	JSON object containing the service details.
 func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
+	serviceID, ok := requireQueryParam(w, r, "service_id")
+	if !ok {
+		return
+	}
 
 	// Check Service still exists in this ordering.
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
-	svc := api.Config.Service[targetService]
+	svc := api.Config.Service[serviceID]
 	if svc == nil {
-		err := fmt.Sprintf("service %q not found", targetService)
+		err := fmt.Sprintf("service %q not found", serviceID)
 		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w,
 			err,

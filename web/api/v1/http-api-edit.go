@@ -21,11 +21,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
-
-	"github.com/gorilla/mux"
 
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
@@ -44,10 +41,10 @@ import (
 //
 // # GET
 //
-// Path Parameters:
+// Query Parameters:
 //
-//	"semantic_versioning": Optional boolean parameter to override semantic versioning defaults.
-//	"overrides": Required parameter to provide parameters for the version lookup.
+//	semantic_versioning: Optional boolean parameter to override semantic versioning defaults.
+//	overrides: Required parameter to provide parameters for the version lookup.
 //
 // Response:
 //
@@ -137,10 +134,10 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 //
 // # GET
 //
-// Path Parameters:
+// Query Parameters:
 //
-//	"semantic_versioning": Optional boolean parameter to override semantic versioning defaults.
-//	"overrides": Required parameter to provide parameters for the version lookup.
+//	semantic_versioning: Optional boolean parameter to override semantic versioning defaults.
+//	overrides: Required parameter to provide parameters for the version lookup.
 //
 // Response:
 //
@@ -230,14 +227,11 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 //
 // # GET
 //
-// Path Parameters:
-//
-//	service_id: The ID of the Service to refresh the LatestVersion of.
-//
 // Query Parameters:
 //
-//	"overrides": Optional parameter to provide parameters for the version lookup.
-//	"semantic_versioning": Optional boolean parameter to override semantic versioning defaults.
+//	service_id: The ID of the Service to refresh the LatestVersion of.
+//	overrides: Optional parameter to provide parameters for the version lookup.
+//	semantic_versioning: Optional boolean parameter to override semantic versioning defaults.
 //
 // Response:
 //
@@ -246,15 +240,18 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpVersionRefresh_Latest", Secondary: getIP(r)}
 	// Service to refresh.
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
+	serviceID, ok := requireQueryParam(w, r, "service_id")
+	if !ok {
+		return
+	}
 
 	queryParams := r.URL.Query()
 
 	// Check whether service exists.
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
-	if api.Config.Service[targetService] == nil {
-		err := fmt.Sprintf("service %q not found", targetService)
+	if api.Config.Service[serviceID] == nil {
+		err := fmt.Sprintf("service %q not found", serviceID)
 		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w,
 			err,
@@ -270,11 +267,11 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 
 	// Query the LatestVersion lookup.
 	version, announce, err := latestver.Refresh(
-		api.Config.Service[targetService].LatestVersion,
+		api.Config.Service[serviceID].LatestVersion,
 		overrides,
 		semanticVersioning)
 	if announce {
-		api.Config.Service[targetService].HandleUpdateActions(true)
+		api.Config.Service[serviceID].HandleUpdateActions(true)
 	}
 	if err != nil {
 		failRequest(&w,
@@ -294,14 +291,11 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 //
 // # GET
 //
-// Path Parameters:
-//
-//	service_id: The ID of the Service to refresh the DeployedVersion of.
-//
 // Query Parameters:
 //
-//	"overrides": Optional parameter to provide parameters for the version lookup.
-//	"semantic_versioning": Optional boolean parameter to override semantic versioning defaults.
+//	service_id: The ID of the Service to refresh the DeployedVersion of.
+//	overrides: Optional parameter to provide parameters for the version lookup.
+//	semantic_versioning: Optional boolean parameter to override semantic versioning defaults.
 //
 // Response:
 //
@@ -310,16 +304,19 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpVersionRefresh_Deployed", Secondary: getIP(r)}
 	// Service to refresh.
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
+	serviceID, ok := requireQueryParam(w, r, "service_id")
+	if !ok {
+		return
+	}
 
 	queryParams := r.URL.Query()
 
 	// Check whether service exists.
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
-	svc := api.Config.Service[targetService]
+	svc := api.Config.Service[serviceID]
 	if svc == nil {
-		err := fmt.Sprintf("service %q not found", targetService)
+		err := fmt.Sprintf("service %q not found", serviceID)
 		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w,
 			err,
@@ -365,10 +362,10 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 		dvl, _ = deployedver.New(
 			lookupType,
 			"json", "{}",
-			&api.Config.Service[targetService].Options,
+			&api.Config.Service[serviceID].Options,
 			&svcStatus,
-			&api.Config.Service[targetService].Defaults.DeployedVersionLookup,
-			&api.Config.Service[targetService].HardDefaults.DeployedVersionLookup)
+			&api.Config.Service[serviceID].Defaults.DeployedVersionLookup,
+			&api.Config.Service[serviceID].HardDefaults.DeployedVersionLookup)
 	} else {
 		previousType = dvl.GetType()
 	}
@@ -419,7 +416,7 @@ func extractLookupType(overrides *string, logFrom logutil.LogFrom) (string, erro
 //
 // # GET
 //
-// Path Parameters:
+// Query Parameters:
 //
 //	service_id: The ID of the Service to get details for.
 //
@@ -429,17 +426,20 @@ func extractLookupType(overrides *string, logFrom logutil.LogFrom) (string, erro
 func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpServiceDetail", Secondary: getIP(r)}
 	// Service to get details of.
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
+	serviceID, ok := requireQueryParam(w, r, "service_id")
+	if !ok {
+		return
+	}
 
 	// Find the Service.
 	api.Config.OrderMutex.RLock()
-	svc := api.Config.Service[targetService]
+	svc := api.Config.Service[serviceID]
 	// Convert to API Type, censoring secrets.
 	serviceConfig := convertAndCensorService(svc)
 	api.Config.OrderMutex.RUnlock()
 
 	if svc == nil {
-		err := fmt.Sprintf("service %q not found", targetService)
+		err := fmt.Sprintf("service %q not found", serviceID)
 		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w,
 			err,
@@ -511,17 +511,15 @@ func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpTemplateParse", Secondary: getIP(r)}
 
 	// Extract query parameters.
-	serviceID := r.URL.Query().Get("service_id")
-	template := r.URL.Query().Get("template")
-	params := r.URL.Query().Get("params")
-
-	// Validate required parameters.
-	if serviceID == "" || template == "" {
-		failRequest(&w,
-			"Missing required query parameters: service_id or template",
-			http.StatusBadRequest)
+	serviceID, ok := requireQueryParam(w, r, "service_id")
+	if !ok {
 		return
 	}
+	template, ok := requireQueryParam(w, r, "template")
+	if !ok {
+		return
+	}
+	params := r.URL.Query().Get("params")
 
 	fullParams := serviceinfo.ServiceInfo{}
 
@@ -565,7 +563,7 @@ func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
 //
 // # PUT
 //
-// Path Parameters:
+// Query Parameters:
 //
 //	service_id: The ID of the Service to edit (empty for a new service).
 //
@@ -579,34 +577,34 @@ func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
-	api.Config.OrderMutex.RLock()
-	defer api.Config.OrderMutex.RUnlock()
-
 	// Service to modify (empty for create new).
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
+	serviceID := r.URL.Query().Get("service_id")
 	reqType := "create"
-	if targetService != "" {
+	if serviceID != "" {
 		reqType = "edit"
 	}
 
+	api.Config.OrderMutex.RLock()
+	defer api.Config.OrderMutex.RUnlock()
+
 	var oldServiceSummary *apitype.ServiceSummary
 	// EDIT the existing service.
-	if targetService != "" {
-		if api.Config.Service[targetService] == nil {
+	if serviceID != "" {
+		if api.Config.Service[serviceID] == nil {
 			failRequest(&w,
 				fmt.Sprintf("edit %q failed, service could not be found",
-					targetService),
+					serviceID),
 				http.StatusNotFound)
 			return
 		}
-		oldServiceSummary = api.Config.Service[targetService].Summary()
+		oldServiceSummary = api.Config.Service[serviceID].Summary()
 	}
 
 	// Payload.
 	payload := http.MaxBytesReader(w, r.Body, 1024_00)
 
 	// Create the new/modified service.
-	targetServicePtr := api.Config.Service[targetService]
+	targetServicePtr := api.Config.Service[serviceID]
 	newService, err := service.FromPayload(
 		targetServicePtr, // nil if creating new.
 		&payload,
@@ -623,15 +621,15 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w,
 			fmt.Sprintf(`%s %q failed (invalid json)\n%s`,
-				reqType, targetService, err),
+				reqType, serviceID, err),
 			http.StatusBadRequest)
 		return
 	}
 
 	// CREATE a new service, but one with this ID already exists.
-	if (targetService == "" && api.Config.Service[newService.ID] != nil) ||
+	if (serviceID == "" && api.Config.Service[newService.ID] != nil) ||
 		// CREATE/EDIT, but a service with this name already exists.
-		api.Config.ServiceWithNameExists(newService.Name, targetService) {
+		api.Config.ServiceWithNameExists(newService.Name, serviceID) {
 		failRequest(&w,
 			fmt.Sprintf("create %q failed, service with this name already exists",
 				newService.ID),
@@ -645,7 +643,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 
 		failRequest(&w,
 			fmt.Sprintf(`%s %q failed (invalid values)\n%s`,
-				reqType, util.FirstNonDefault(targetService, newService.ID), err),
+				reqType, util.FirstNonDefault(serviceID, newService.ID), err),
 			http.StatusBadRequest)
 		return
 	}
@@ -656,7 +654,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 
 		failRequest(&w,
 			fmt.Sprintf(`%s %q failed (fetches failed)\n%s`,
-				reqType, util.FirstNonDefault(targetService, newService.ID), err),
+				reqType, util.FirstNonDefault(serviceID, newService.ID), err),
 			http.StatusBadRequest)
 		return
 	}
@@ -672,7 +670,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	api.Config.OrderMutex.RUnlock() // Locked above.
 	//#nosec G104 -- Fail for duplicate service name handled above.
 	//nolint:errcheck // ^
-	_ = api.Config.AddService(targetService, newService)
+	_ = api.Config.AddService(serviceID, newService)
 	api.Config.OrderMutex.RLock() // Lock again for the defer.
 
 	newServiceSummary := newService.Summary()
@@ -680,12 +678,12 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	api.announceEdit(oldServiceSummary, newServiceSummary)
 
 	msg := "created"
-	if targetService != "" {
+	if serviceID != "" {
 		msg = "edited"
 	}
 	api.writeJSON(w, apitype.Response{
 		Message: fmt.Sprintf("%s service %q",
-			msg, util.ValueOrValue(targetService, newService.ID))},
+			msg, util.ValueOrValue(serviceID, newService.ID))},
 		logFrom)
 }
 
@@ -693,7 +691,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 //
 // # DELETE
 //
-// Path Parameters:
+// Query Parameters:
 //
 //	service_id: The ID of the Service to delete.
 //
@@ -704,25 +702,28 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpServiceDelete", Secondary: getIP(r)}
 	// Service to delete.
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
+	serviceID, ok := requireQueryParam(w, r, "service_id")
+	if !ok {
+		return
+	}
 
 	// If service doesn't exist, return 404.
-	if api.Config.Service[targetService] == nil {
+	if api.Config.Service[serviceID] == nil {
 		failRequest(&w,
 			fmt.Sprintf("delete %q failed, service not found",
-				targetService),
+				serviceID),
 			http.StatusNotFound)
 		return
 	}
 
-	api.Config.DeleteService(targetService)
+	api.Config.DeleteService(serviceID)
 
 	// Announce deletion.
-	api.announceDelete(targetService)
+	api.announceDelete(serviceID)
 
 	api.writeJSON(w, apitype.Response{
 		Message: fmt.Sprintf("deleted service %q",
-			targetService)},
+			serviceID)},
 		logFrom)
 }
 

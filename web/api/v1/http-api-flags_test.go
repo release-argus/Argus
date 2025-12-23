@@ -17,12 +17,12 @@
 package v1
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -44,7 +44,7 @@ func TestHTTP_httpFlags(t *testing.T) {
 		{
 			"config.file":"` + file + `",
 			"log.level":"` + api.Config.Settings.LogLevel() + `",
-			"log.timestamps":` + fmt.Sprint(*api.Config.Settings.LogTimestamps()) + `,
+			"log.timestamps":` + strconv.FormatBool(*api.Config.Settings.LogTimestamps()) + `,
 			"data.database-file":"` + api.Config.Settings.DataDatabaseFile() + `",
 			"web.listen-host":"` + api.Config.Settings.WebListenHost() + `",
 			"web.listen-port":"[0-9]{1,5}",
@@ -64,7 +64,7 @@ func TestHTTP_httpFlags(t *testing.T) {
 	res := w.Result()
 	t.Cleanup(func() { _ = res.Body.Close() })
 
-	// THEN the expected body is returned as expected.
+	// THEN the expected body is returned.
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("%s\nunexpected error - %v",

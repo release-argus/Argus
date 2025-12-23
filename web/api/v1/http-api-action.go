@@ -19,10 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
-
-	"github.com/gorilla/mux"
 
 	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
@@ -30,19 +27,22 @@ import (
 
 // httpServiceActions returns all Commands/WebHooks of a service.
 //
-// Required parameters:
+// Query parameters:
 //
 //	service_id: the ID of the Service to get the actions of.
 func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpServiceActions", Secondary: getIP(r)}
 	// Service to get actions of.
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
+	serviceID, ok := requireQueryParam(w, r, "service_id")
+	if !ok {
+		return
+	}
 
 	api.Config.OrderMutex.RLock()
-	svc := api.Config.Service[targetService]
+	svc := api.Config.Service[serviceID]
 	defer api.Config.OrderMutex.RUnlock()
 	if svc == nil {
-		err := fmt.Sprintf("service %q not found", targetService)
+		err := fmt.Sprintf("service %q not found", serviceID)
 		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w,
 			err,
@@ -84,7 +84,7 @@ type RunActionsPayload struct {
 
 // httpServiceRunActions handles approvals/rejections of the latest version of a service.
 //
-// Required parameters:
+// Query Parameters:
 //
 //	service_id: the ID of the Service to target.
 //	target: the action to take. One of:
@@ -96,14 +96,17 @@ type RunActionsPayload struct {
 func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
 	// Service to run actions of.
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
+	serviceID, ok := requireQueryParam(w, r, "service_id")
+	if !ok {
+		return
+	}
 
 	// Check the service exists.
 	api.Config.OrderMutex.RLock()
-	svc := api.Config.Service[targetService]
+	svc := api.Config.Service[serviceID]
 	defer api.Config.OrderMutex.RUnlock()
 	if svc == nil {
-		err := fmt.Sprintf("service %q not found", targetService)
+		err := fmt.Sprintf("service %q not found", serviceID)
 		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w,
 			err,
@@ -144,7 +147,7 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	// SKIP this release.
 	if payload.Target == "ARGUS_SKIP" {
 		msg := fmt.Sprintf("%q release skip - %q",
-			targetService, svc.Status.LatestVersion())
+			serviceID, svc.Status.LatestVersion())
 		logutil.Log.Info(msg, logFrom, true)
 		svc.HandleSkip()
 		return
@@ -152,14 +155,14 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 
 	if svc.WebHook == nil && svc.Command == nil {
 		logutil.Log.Error(
-			fmt.Sprintf("%q does not have any commands/webhooks to approve", targetService),
+			fmt.Sprintf("%q does not have any commands/webhooks to approve", serviceID),
 			logFrom, true)
 		return
 	}
 
 	// Send the WebHooks.
 	msg := fmt.Sprintf("%s %q Release actioned - %q",
-		targetService,
+		serviceID,
 		svc.Status.LatestVersion(),
 		strings.ReplaceAll(
 			strings.ReplaceAll(

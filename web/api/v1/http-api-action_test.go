@@ -19,7 +19,6 @@ package v1
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -29,8 +28,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/gorilla/mux"
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config"
@@ -44,6 +41,11 @@ import (
 )
 
 func TestHTTP_httpServiceGetActions(t *testing.T) {
+	type wants struct {
+		stdoutRegex, bodyRegex string
+		statusCode             int
+	}
+
 	// GIVEN an API and a request for the Actions of a Service.
 	file := filepath.Join(t.TempDir(), "config.yml")
 	api := testAPI(t, file)
@@ -53,49 +55,46 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 		}
 	})
 	tests := map[string]struct {
-		serviceID              string
-		stdoutRegex, bodyRegex string
-		commands               command.Commands
-		webhooks               webhook.WebHooks
-		statusCode             int
+		serviceID *string
+		commands  command.Commands
+		webhooks  webhook.WebHooks
+		wants     wants
 	}{
 		"service_id=unknown": {
-			serviceID:   "unknown?",
-			stdoutRegex: `service "unknown\?" not found`,
-			statusCode:  http.StatusNotFound,
+			serviceID: test.StringPtr("unknown?"),
+			wants: wants{
+				stdoutRegex: `service "unknown\?" not found`,
+				statusCode:  http.StatusNotFound,
+			},
 		},
 		"service_id=nil": {
-			serviceID:   "",
-			stdoutRegex: `service "" not found`,
-			statusCode:  http.StatusNotFound,
+			serviceID: test.StringPtr(""),
+			wants: wants{
+				bodyRegex:  `\{"message":"missing required query parameter: service_id"\}`,
+				statusCode: http.StatusBadRequest,
+			},
 		},
 		"known service_id, 0 command, 0 webhooks": {
-			serviceID: "__name__",
-			commands:  command.Commands{},
+			commands: command.Commands{},
 		},
 		"known service_id, 1 command, 0 webhooks": {
-			serviceID: "__name__",
 			commands: command.Commands{
 				testCommand(true)},
 		},
 		"known service_id, 2 command, 0 webhooks": {
-			serviceID: "__name__",
 			commands: command.Commands{
 				testCommand(true), testCommand(false)},
 		},
 		"known service_id, 0 command, 1 webhooks": {
-			serviceID: "__name__",
 			webhooks: webhook.WebHooks{
 				"fail0": webhook_test.WebHook(true, false, false)},
 		},
 		"known service_id, 0 command, 2 webhooks": {
-			serviceID: "__name__",
 			webhooks: webhook.WebHooks{
 				"fail0": webhook_test.WebHook(true, false, false),
 				"pass0": webhook_test.WebHook(false, false, false)},
 		},
 		"known service_id, 2 command, 2 webhooks": {
-			serviceID: "__name__",
 			commands: command.Commands{
 				testCommand(true), testCommand(false)},
 			webhooks: webhook.WebHooks{
@@ -110,16 +109,16 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureLog(logutil.Log)
 
-			if tc.statusCode == 0 {
-				tc.statusCode = http.StatusOK
+			if tc.wants.statusCode == 0 {
+				tc.wants.statusCode = http.StatusOK
 			}
 			svc := testService(name, true)
-			tc.serviceID = strings.ReplaceAll(tc.serviceID, "__name__", name)
+			serviceID := util.DereferenceOrValue(tc.serviceID, svc.ID)
 			svc.Defaults = &cfg.Defaults.Service
 			svc.HardDefaults = &cfg.HardDefaults.Service
 			svc.Status.Init(
 				len(svc.Notify), len(tc.commands), len(tc.webhooks),
-				tc.serviceID, "", "",
+				serviceID, "", "",
 				&dashboard.Options{
 					WebURL: "https://example.com"})
 			svc.Status.SetAnnounceChannel(cfg.HardDefaults.Service.Status.AnnounceChannel)
@@ -152,13 +151,13 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			cfg.Order = append(cfg.Order, name)
 			cfg.OrderMutex.Unlock()
 			target := "/api/v1/service/actions/"
-			target += url.QueryEscape(tc.serviceID)
+			params := url.Values{}
+			// Set service_id.
+			params.Set("service_id", serviceID)
 
 			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
-			vars := map[string]string{
-				"service_id": tc.serviceID}
-			req = mux.SetURLVars(req, vars)
+			req.URL.RawQuery = params.Encode()
 			wHTTP := httptest.NewRecorder()
 			api.httpServiceGetActions(wHTTP, req)
 			res := wHTTP.Result()
@@ -167,18 +166,18 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			// THEN we get the expected response.
 			stdout := releaseStdout()
 			// stdout finishes.
-			if tc.stdoutRegex != "" {
-				tc.stdoutRegex = strings.ReplaceAll(tc.stdoutRegex, "__name__", name)
-				if !util.RegexCheck(tc.stdoutRegex, stdout) {
+			if tc.wants.stdoutRegex != "" {
+				tc.wants.stdoutRegex = strings.ReplaceAll(tc.wants.stdoutRegex, "__name__", name)
+				if !util.RegexCheck(tc.wants.stdoutRegex, stdout) {
 					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.stdoutRegex, stdout)
+						packageName, tc.wants.stdoutRegex, stdout)
 				}
 			}
 			message, _ := io.ReadAll(res.Body)
-			if res.StatusCode != tc.statusCode {
+			if res.StatusCode != tc.wants.statusCode {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d\nbody: %q",
-					packageName, tc.statusCode, res.StatusCode, message)
-			} else if tc.statusCode != http.StatusOK {
+					packageName, tc.wants.statusCode, res.StatusCode, message)
+			} else if tc.wants.statusCode != http.StatusOK {
 				return
 			}
 			var gotStruct apitype.ActionSummary
@@ -249,6 +248,16 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 }
 
 func TestHTTP_httpServiceRunActions(t *testing.T) {
+	type wants struct {
+		statusCode                  int
+		stdoutRegex, bodyRegex      string
+		wantSkipMessage             bool
+		latestVersionIsApproved     bool
+		upgradesApprovedVersion     bool
+		upgradesDeployedVersion     bool
+		approveCommandsIndividually bool
+	}
+
 	// GIVEN an API and a request for the Actions of a Service.
 	file := filepath.Join(t.TempDir(), "config.yml")
 	api := testAPI(t, file)
@@ -258,126 +267,148 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		t.Cleanup(func() { time.Sleep(2 * config.DebounceDuration) })
 	}
 	tests := map[string]struct {
-		serviceID                   string
-		active                      *bool
-		payload                     *string
-		target                      *string
-		wantSkipMessage             bool
-		stdoutRegex, bodyRegex      string
-		commands                    command.Commands
-		commandFails                []*bool
-		webhooks                    webhook.WebHooks
-		webhookFails                map[string]*bool
-		removeDVL                   bool
-		latestVersion               string
-		latestVersionIsApproved     bool
-		upgradesApprovedVersion     bool
-		upgradesDeployedVersion     bool
-		approveCommandsIndividually bool
+		serviceID     *string
+		active        *bool
+		payload       *string
+		target        *string
+		commands      command.Commands
+		commandFails  []*bool
+		webhooks      webhook.WebHooks
+		webhookFails  map[string]*bool
+		removeDVL     bool
+		latestVersion string
+		wants         wants
 	}{
 		"invalid payload": {
-			serviceID:   "__name__",
-			payload:     test.StringPtr("target: foo"),
-			stdoutRegex: `Invalid payload - invalid character`,
+			payload: test.StringPtr("target: foo"),
+			wants: wants{
+				stdoutRegex: `Invalid payload - invalid character`,
+			},
 		},
-		"ARGUS_SKIP known service_id": {
-			serviceID:       "__name__",
-			target:          test.StringPtr("ARGUS_SKIP"),
-			wantSkipMessage: true,
+		"ARGUS_SKIP, known service_id": {
+			target: test.StringPtr("ARGUS_SKIP"),
+			wants: wants{
+				wantSkipMessage: true,
+			},
 		},
-		"ARGUS_SKIP inactive service_id": {
-			serviceID:       "__name__",
-			active:          test.BoolPtr(false),
-			target:          test.StringPtr("ARGUS_SKIP"),
-			wantSkipMessage: false,
+		"ARGUS_SKIP, inactive service_id": {
+			active: test.BoolPtr(false),
+			target: test.StringPtr("ARGUS_SKIP"),
+			wants: wants{
+				wantSkipMessage: false,
+			},
 		},
-		"ARGUS_SKIP unknown service_id": {
-			serviceID:   "unknown?",
-			target:      test.StringPtr("ARGUS_SKIP"),
-			stdoutRegex: `service "unknown\?" not found`,
+		"ARGUS_SKIP, unknown service_id": {
+			serviceID: test.StringPtr("unknown?"),
+			target:    test.StringPtr("ARGUS_SKIP"),
+			wants: wants{
+				stdoutRegex: `service "unknown\?" not found`,
+			},
 		},
-		"ARGUS_SKIP empty service_id": {
-			serviceID:   "",
-			target:      test.StringPtr("ARGUS_SKIP"),
-			stdoutRegex: `service "" not found`,
+		"ARGUS_SKIP, no service_id provided": {
+			serviceID: test.StringPtr(""),
+			target:    test.StringPtr("ARGUS_SKIP"),
+			wants: wants{
+				bodyRegex:  `service "" not found`,
+				statusCode: http.StatusBadRequest,
+			},
 		},
 		"target=nil, known service_id": {
-			serviceID:   "__name__",
-			target:      nil,
-			stdoutRegex: `invalid payload, target service not provided`,
+			target: nil,
+			wants: wants{
+				stdoutRegex: `invalid payload, target service not provided`,
+				statusCode:  http.StatusOK,
+			},
 		},
 		"ARGUS_ALL, known service_id with no commands/webhooks": {
-			serviceID:   "__name__",
-			target:      test.StringPtr("ARGUS_ALL"),
-			stdoutRegex: `"[^"]+" does not have any commands\/webhooks to approve`,
+			target: test.StringPtr("ARGUS_ALL"),
+			wants: wants{
+				stdoutRegex: `"[^"]+" does not have any commands\/webhooks to approve`,
+				statusCode:  http.StatusOK,
+			},
 		},
 		"ARGUS_ALL, known service_id with command": {
-			serviceID: "__name__",
-			target:    test.StringPtr("ARGUS_ALL"),
+			target: test.StringPtr("ARGUS_ALL"),
 			commands: command.Commands{
 				{"false", "0"}},
+			wants: wants{
+				statusCode: http.StatusOK,
+			},
 		},
 		"ARGUS_ALL, known service_id with webhook": {
-			serviceID: "__name__",
-			target:    test.StringPtr("ARGUS_ALL"),
+			target: test.StringPtr("ARGUS_ALL"),
 			webhooks: webhook.WebHooks{
 				"known-service-and-webhook": webhook_test.WebHook(true, false, false)},
+			wants: wants{
+				statusCode: http.StatusOK,
+			},
 		},
 		"ARGUS_ALL, known service_id with multiple webhooks": {
-			serviceID: "__name__",
-			target:    test.StringPtr("ARGUS_ALL"),
+			target: test.StringPtr("ARGUS_ALL"),
 			webhooks: webhook.WebHooks{
 				"known-service-and-multiple-webhook-0": webhook_test.WebHook(true, false, false),
 				"known-service-and-multiple-webhook-1": webhook_test.WebHook(true, false, false)},
+			wants: wants{
+				statusCode: http.StatusOK,
+			},
 		},
 		"ARGUS_ALL, known service_id with multiple commands": {
-			serviceID: "__name__",
-			target:    test.StringPtr("ARGUS_ALL"),
+			target: test.StringPtr("ARGUS_ALL"),
 			commands: command.Commands{
 				{"ls", "-a"}, {"false", "1"}},
+			wants: wants{
+				statusCode: http.StatusOK,
+			},
 		},
 		"ARGUS_ALL, known service_id with dvl and command and webhook that pass upgrades approved_version": {
-			serviceID: "__name__",
-			target:    test.StringPtr("ARGUS_ALL"),
+			target: test.StringPtr("ARGUS_ALL"),
 			commands: command.Commands{
 				{"ls", "-b"}},
 			webhooks: webhook.WebHooks{
 				"known-service-dvl-webhook-0": webhook_test.WebHook(false, false, false)},
-			upgradesApprovedVersion: true,
-			latestVersion:           "0.9.0",
+			latestVersion: "0.9.0",
+			wants: wants{
+				statusCode:              http.StatusOK,
+				upgradesApprovedVersion: true,
+			},
 		},
 		"ARGUS_ALL, known service_id with command and webhook that pass upgrades deployed_version": {
-			serviceID: "__name__",
-			target:    test.StringPtr("ARGUS_ALL"),
+			target: test.StringPtr("ARGUS_ALL"),
 			commands: command.Commands{
 				{"ls", "-c"}},
 			webhooks: webhook.WebHooks{
 				"known-service-upgrade-deployed-version-webhook-0": webhook_test.WebHook(false, false, false)},
-			removeDVL:               true,
-			upgradesDeployedVersion: true,
-			latestVersion:           "0.9.0",
+			removeDVL:     true,
+			latestVersion: "0.9.0",
+			wants: wants{
+				statusCode:              http.StatusOK,
+				upgradesDeployedVersion: true,
+			},
 		},
 		"ARGUS_ALL, known service_id with passing command and failing webhook doesn't upgrade any versions": {
-			serviceID: "__name__",
-			target:    test.StringPtr("ARGUS_ALL"),
+			target: test.StringPtr("ARGUS_ALL"),
 			commands: command.Commands{
 				{"ls", "-d"}},
 			webhooks: webhook.WebHooks{
 				"known-service-fail-webhook-0": webhook_test.WebHook(true, false, false)},
-			latestVersionIsApproved: true,
+			wants: wants{
+				statusCode:              http.StatusOK,
+				latestVersionIsApproved: true,
+			},
 		},
 		"ARGUS_ALL, known service_id with failing command and passing webhook doesn't upgrade any versions": {
-			serviceID: "__name__",
-			target:    test.StringPtr("ARGUS_ALL"),
+			target: test.StringPtr("ARGUS_ALL"),
 			commands: command.Commands{
 				{"fail"}},
 			webhooks: webhook.WebHooks{
 				"known-service-pass-webhook-0": webhook_test.WebHook(false, false, false)},
-			latestVersionIsApproved: true,
+			wants: wants{
+				statusCode:              http.StatusOK,
+				latestVersionIsApproved: true,
+			},
 		},
 		"webhook_NAME, known service_id with 1 webhook left to pass does upgrade deployed_version": {
-			serviceID: "__name__",
-			target:    test.StringPtr("webhook_will_pass"),
+			target: test.StringPtr("webhook_will_pass"),
 			commands: command.Commands{
 				{"ls", "-f"}},
 			commandFails: []*bool{
@@ -388,13 +419,15 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			webhookFails: map[string]*bool{
 				"will_pass":  test.BoolPtr(true),
 				"would_fail": test.BoolPtr(false)},
-			removeDVL:               true,
-			upgradesDeployedVersion: true,
-			latestVersion:           "0.9.0",
+			removeDVL:     true,
+			latestVersion: "0.9.0",
+			wants: wants{
+				statusCode:              http.StatusOK,
+				upgradesDeployedVersion: true,
+			},
 		},
 		"command_NAME, known service_id with 1 command left to pass does upgrade deployed_version": {
-			serviceID: "__name__",
-			target:    test.StringPtr("command_ls -g"),
+			target: test.StringPtr("command_ls -g"),
 			commands: command.Commands{
 				{"ls", "/root"},
 				{"ls", "-g"}},
@@ -405,17 +438,22 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 				"would_fail": webhook_test.WebHook(true, false, false)},
 			webhookFails: map[string]*bool{
 				"would_fail": test.BoolPtr(false)},
-			removeDVL:               true,
-			upgradesDeployedVersion: true,
-			latestVersion:           "0.9.0",
+			removeDVL:     true,
+			latestVersion: "0.9.0",
+			wants: wants{
+				statusCode:              http.StatusOK,
+				upgradesDeployedVersion: true,
+			},
 		},
 		"command_NAME, known service_id with multiple commands targeted individually (handle broadcast queue)": {
-			serviceID: "__name__",
 			commands: command.Commands{
 				{"ls", "-h"},
 				{"false", "2"},
 				{"true"}},
-			approveCommandsIndividually: true,
+			wants: wants{
+				statusCode:                  http.StatusOK,
+				approveCommandsIndividually: true,
+			},
 		},
 	}
 
@@ -424,14 +462,14 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureLog(logutil.Log)
 
-			tc.serviceID = strings.ReplaceAll(tc.serviceID, "__name__", name)
-			svc := testService(tc.serviceID, true)
+			serviceID := util.DereferenceOrValue(tc.serviceID, name)
+			svc := testService(serviceID, true)
 			svc.Options.Active = tc.active
 			svc.Defaults = &api.Config.Defaults.Service
 			svc.HardDefaults = &api.Config.HardDefaults.Service
 			svc.Status.Init(
 				len(svc.Notify), len(tc.commands), len(tc.webhooks),
-				tc.serviceID, name, "",
+				serviceID, name, "",
 				&dashboard.Options{
 					WebURL: "https://example.com"})
 			svc.Status.SetAnnounceChannel(api.Config.HardDefaults.Service.Status.AnnounceChannel)
@@ -474,21 +512,24 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			api.Config.Order = append(api.Config.Order, name)
 			api.Config.OrderMutex.Unlock()
 			t.Cleanup(func() { api.Config.DeleteService(name) })
+			// Set service_id.
+			params := url.Values{}
+			params.Set("service_id", serviceID)
 
 			// WHEN the HTTP request is sent to run the actions.
 			target := tc.target
-			if tc.approveCommandsIndividually {
+			if tc.wants.approveCommandsIndividually {
 				commandTarget := "command_" + tc.commands[0].String()
 				target = &commandTarget
 			}
-			targetURL := "/api/v1/service/actions/" + url.QueryEscape(tc.serviceID)
+			targetURL := "/api/v1/service/actions"
 			sends := 1
-			if tc.approveCommandsIndividually {
+			if tc.wants.approveCommandsIndividually {
 				sends = len(tc.commands)
 			}
 			for sends != 0 {
 				sends--
-				if tc.approveCommandsIndividually {
+				if tc.wants.approveCommandsIndividually {
 					*target = "command_" + tc.commands[sends].String()
 				}
 				body := []byte(`{}`)
@@ -499,16 +540,13 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 					body = []byte(*tc.payload)
 				}
 				req := httptest.NewRequest(http.MethodPost, targetURL, bytes.NewBuffer(body))
-				vars := map[string]string{
-					"service_id": tc.serviceID,
-				}
-				req = mux.SetURLVars(req, vars)
+				req.URL.RawQuery = params.Encode()
 				wHTTP := httptest.NewRecorder()
 				api.httpServiceRunActions(wHTTP, req)
 				res := wHTTP.Result()
 				data, _ := io.ReadAll(res.Body)
-				t.Log(fmt.Sprintf("%s\ntarget=%q\nresult=%q, status_code=%d",
-					packageName, util.DereferenceOrValue(target, "<nil>"), string(data), res.StatusCode))
+				t.Logf("%s\ntarget=%q\nresult=%q, status_code=%d",
+					packageName, util.DereferenceOrValue(target, "<nil>"), string(data), res.StatusCode)
 				time.Sleep(10 * time.Microsecond)
 			}
 			time.Sleep(time.Duration((len(tc.commands)+len(tc.webhooks))*500) * time.Millisecond)
@@ -535,13 +573,13 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 					}
 				}
 			}
-			if tc.upgradesApprovedVersion {
+			if tc.wants.upgradesApprovedVersion {
 				expecting++
 			}
-			if tc.upgradesDeployedVersion {
+			if tc.wants.upgradesDeployedVersion {
 				expecting++
 			}
-			if tc.wantSkipMessage {
+			if tc.wants.wantSkipMessage {
 				expecting++
 			}
 			messages := make([]apitype.WebSocketMessage, expecting)
@@ -573,17 +611,17 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			}
 			stdout := releaseStdout()
 			// stdout finishes.
-			if tc.stdoutRegex != "" {
-				if !util.RegexCheck(tc.stdoutRegex, stdout) {
+			if tc.wants.stdoutRegex != "" {
+				if !util.RegexCheck(tc.wants.stdoutRegex, stdout) {
 					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.stdoutRegex, stdout)
+						packageName, tc.wants.stdoutRegex, stdout)
 				}
 				return
 			}
 			t.Log(stdout)
 			// Check version was skipped.
 			if util.DereferenceOrDefault(tc.target) == "ARGUS_SKIP" {
-				if tc.wantSkipMessage &&
+				if tc.wants.wantSkipMessage &&
 					messages[0].ServiceData.Status.ApprovedVersion != "SKIP_"+svc.Status.LatestVersion() {
 					t.Errorf("%s\nLatestVersion %q wasn't skipped. ApprovedVersion=%q\ngot=%q",
 						packageName, svc.Status.LatestVersion(),
@@ -614,7 +652,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 						}
 					}
 				}
-				if tc.upgradesApprovedVersion {
+				if tc.wants.upgradesApprovedVersion {
 					expecting++
 				}
 				var received []string
@@ -646,14 +684,14 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 					}
 					if !receivedForAnAction {
 						//  IF we're expecting a message about approvedVersion.
-						if tc.upgradesApprovedVersion && message.Type == "VERSION" && message.SubType == "ACTION" {
+						if tc.wants.upgradesApprovedVersion && message.Type == "VERSION" && message.SubType == "ACTION" {
 							if message.ServiceData.Status.ApprovedVersion != svc.Status.LatestVersion() {
 								t.Fatalf("%s\nexpected approved version to be updated to latest version in the message\n%#v\napproved=%#v, latest=%#v",
 									packageName, message, message.ServiceData.Status.ApprovedVersion, svc.Status.LatestVersion())
 							}
 							continue
 						}
-						if tc.upgradesDeployedVersion && message.Type == "VERSION" && message.SubType == "UPDATED" {
+						if tc.wants.upgradesDeployedVersion && message.Type == "VERSION" && message.SubType == "UPDATED" {
 							if message.ServiceData.Status.DeployedVersion != svc.Status.LatestVersion() {
 								t.Fatalf("%s\nexpected deployed version to be updated to latest version in the message\n%#v\ndeployed=%#v, latest=%#v",
 									packageName, message, message.ServiceData.Status.DeployedVersion, svc.Status.LatestVersion())
