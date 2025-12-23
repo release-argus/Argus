@@ -426,7 +426,6 @@ func TestJLog_Error(t *testing.T) {
 		"VERBOSE log no timestamps": {
 			level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
 		"VERBOSE log with !otherCondition": {
-
 			level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
 		"DEBUG log with timestamps": {
 			level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
@@ -448,13 +447,12 @@ func TestJLog_Error(t *testing.T) {
 
 			// THEN msg was logged if shouldPrint, with/without timestamps.
 			stdout := releaseStdout()
-			var regex string
-			if tc.timestamps {
-				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ERROR: %s\n$", msg)
-			} else if !tc.otherCondition {
-				regex = "^$"
-			} else {
+			regex := "^$"
+			if tc.shouldPrint {
 				regex = fmt.Sprintf("^ERROR: %s\n$", msg)
+				if tc.timestamps {
+					regex = strings.Replace(regex, `^`, `^[0-9]{4}\/[0-9]{2}\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} `, 1)
+				}
 			}
 			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("%s\nerror mismatch on 'ERROR: '\nwant: %q\nGot %q",
@@ -517,13 +515,12 @@ func TestJLog_Warn(t *testing.T) {
 
 			// THEN msg was logged if shouldPrint, with/without timestamps.
 			stdout := releaseStdout()
-			var regex string
-			if !tc.shouldPrint {
-				regex = "^$"
-			} else if tc.timestamps {
-				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} WARNING: %s\n$", msg)
-			} else {
+			regex := "^$"
+			if tc.shouldPrint {
 				regex = fmt.Sprintf("^WARNING: %s\n$", msg)
+				if tc.timestamps {
+					regex = strings.Replace(regex, `^`, `^[0-9]{4}\/[0-9]{2}\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} `, 1)
+				}
 			}
 			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("%s\nerror mismatch on 'WARNING: '\nwant: %q\ngot:  %q",
@@ -586,13 +583,12 @@ func TestJLog_Info(t *testing.T) {
 
 			// THEN msg was logged if shouldPrint, with/without timestamps.
 			stdout := releaseStdout()
-			var regex string
-			if !tc.shouldPrint {
-				regex = "^$"
-			} else if tc.timestamps {
-				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} INFO: %s\n$", msg)
-			} else {
+			regex := `^$`
+			if tc.shouldPrint {
 				regex = fmt.Sprintf("^INFO: %s\n$", msg)
+				if tc.timestamps {
+					regex = strings.Replace(regex, `^`, `^[0-9]{4}\/[0-9]{2}\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} `, 1)
+				}
 			}
 			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("%s\nError mismatch on 'INFO: '\nwant: %q\ngot:  %q",
@@ -665,16 +661,15 @@ func TestJLog_Verbose(t *testing.T) {
 
 			// THEN msg was logged if shouldPrint, with/without timestamps.
 			stdout := releaseStdout()
-			var regex string
+			regex := `^$`
 			if tc.customMsg != nil && tc.trimmed {
 				msg = (*tc.customMsg)[:1000-len("VERBOSE: ...")] + "..."
 			}
-			if !tc.shouldPrint {
-				regex = "^$"
-			} else if tc.timestamps {
-				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} VERBOSE: %s\n$", msg)
-			} else {
+			if tc.shouldPrint {
 				regex = fmt.Sprintf("^VERBOSE: %s\n$", msg)
+				if tc.timestamps {
+					regex = strings.Replace(regex, `^`, `^[0-9]{4}\/[0-9]{2}\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} `, 1)
+				}
 			}
 			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("%s\nVERBOSE print mismatch\nwant: %q\ngot:  %q",
@@ -753,17 +748,15 @@ func TestJLog_Debug(t *testing.T) {
 
 			// THEN msg was logged if shouldPrint, with/without timestamps.
 			stdout := releaseStdout()
-			var regex string
+			regex := `^$`
 			if tc.customMsg != nil && tc.trimmed {
 				msg = (*tc.customMsg)[:1000-len("DEBUG: ...")] + "..."
 			}
-			if !tc.shouldPrint {
-				regex = `^$`
-			} else if tc.timestamps {
-				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} DEBUG: %s\n$",
-					strings.ReplaceAll(msg, ".", `\.`))
-			} else {
+			if tc.shouldPrint {
 				regex = fmt.Sprintf("^DEBUG: %s\n$", msg)
+				if tc.timestamps {
+					regex = strings.Replace(regex, `^`, `^[0-9]{4}\/[0-9]{2}\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} `, 1)
+				}
 			}
 			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("%s\nDEBUG print mismatch\nwant: %q\ngot:  %q",
@@ -784,31 +777,29 @@ func TestJLog_Fatal(t *testing.T) {
 	// GIVEN a JLog and message.
 	msg := "argus"
 	tests := map[string]struct {
-		level          string
-		timestamps     bool
-		otherCondition bool
-		shouldPrint    bool
+		level      string
+		timestamps bool
 	}{
 		"ERROR log with timestamps": {
-			level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: true},
+			level: "ERROR", timestamps: true},
 		"ERROR log no timestamps": {
-			level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: true},
+			level: "ERROR", timestamps: false},
 		"WARN log with timestamps": {
-			level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
+			level: "WARN", timestamps: true},
 		"WARN log no timestamps": {
-			level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
+			level: "WARN", timestamps: false},
 		"INFO log with timestamps": {
-			level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
+			level: "INFO", timestamps: true},
 		"INFO log no timestamps": {
-			level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
+			level: "INFO", timestamps: false},
 		"VERBOSE log with timestamps": {
-			level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
+			level: "VERBOSE", timestamps: true},
 		"VERBOSE log no timestamps": {
-			level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+			level: "VERBOSE", timestamps: false},
 		"DEBUG log with timestamps": {
-			level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+			level: "DEBUG", timestamps: true},
 		"DEBUG log no timestamps": {
-			level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+			level: "DEBUG", timestamps: false},
 	}
 
 	for name, tc := range tests {
@@ -821,18 +812,15 @@ func TestJLog_Fatal(t *testing.T) {
 			// WHEN Fatal is called with true.
 			jLog.Fatal(errors.New(msg), LogFrom{})
 
-			// THEN message was logged only if otherCondition is true.
+			// THEN message was logged.
 			stdout := releaseStdout()
-			regex := `^$`
-			if tc.otherCondition {
-				regex = fmt.Sprintf("^FATAL: %s\n$", msg)
-				if tc.timestamps {
-					regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} FATAL: %s\n$", msg)
-				}
+			regex := fmt.Sprintf("^FATAL: %s\n$", msg)
+			if tc.timestamps {
+				regex = strings.Replace(regex, `^`, `^[0-9]{4}\/[0-9]{2}\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} `, 1)
 			}
 			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("%s\nerror mismatch (otherCondition=%t)\nwant: %q\ngot:  %q",
-					packageName, tc.otherCondition, regex, stdout)
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, regex, stdout)
 			}
 			// And the exit code was sent to the channel.
 			select {
@@ -841,6 +829,59 @@ func TestJLog_Fatal(t *testing.T) {
 			default:
 				t.Errorf("%s\nno exit code sent to channel",
 					packageName)
+			}
+		})
+	}
+}
+
+func TestJLog_Deprecated(t *testing.T) {
+	// GIVEN a JLog and message.
+	msg := "argus"
+	tests := map[string]struct {
+		level      string
+		timestamps bool
+	}{
+		"ERROR log with timestamps": {
+			level: "ERROR", timestamps: true},
+		"ERROR log no timestamps": {
+			level: "ERROR", timestamps: false},
+		"WARN log with timestamps": {
+			level: "WARN", timestamps: true},
+		"WARN log no timestamps": {
+			level: "WARN", timestamps: false},
+		"INFO log with timestamps": {
+			level: "INFO", timestamps: true},
+		"INFO log no timestamps": {
+			level: "INFO", timestamps: false},
+		"VERBOSE log with timestamps": {
+			level: "VERBOSE", timestamps: true},
+		"VERBOSE log no timestamps": {
+			level: "VERBOSE", timestamps: false},
+		"DEBUG log with timestamps": {
+			level: "DEBUG", timestamps: true},
+		"DEBUG log no timestamps": {
+			level: "DEBUG", timestamps: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+
+			jLog := NewJLog(tc.level, tc.timestamps)
+			releaseStdout := test.CaptureLog(jLog)
+
+			// WHEN Deprecated is called with true.
+			jLog.Deprecated(errors.New(msg))
+
+			// THEN message was logged.
+			stdout := releaseStdout()
+			regex := fmt.Sprintf("^DEPRECATED: %s\n$", msg)
+			if tc.timestamps {
+				regex = strings.Replace(regex, `^`, `^[0-9]{4}\/[0-9]{2}\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} `, 1)
+			}
+			if !util.RegexCheck(regex, stdout) {
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, regex, stdout)
 			}
 		})
 	}

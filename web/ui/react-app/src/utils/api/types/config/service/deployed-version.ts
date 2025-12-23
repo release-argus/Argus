@@ -1,4 +1,4 @@
-import type { CustomHeaders } from '@/utils/api/types/config/shared';
+import type { Headers } from '@/utils/api/types/config/shared';
 
 export const DEPLOYED_VERSION_LOOKUP_TYPE = {
 	MANUAL: { label: 'Manual', value: 'manual' },
@@ -41,7 +41,7 @@ export type DeployedVersionLookupURL = {
 	url?: string;
 	allow_invalid_certs?: boolean | null;
 	basic_auth?: BasicAuthType;
-	headers?: CustomHeaders;
+	headers?: Headers;
 	body?: string;
 	target_header?: string;
 	json?: string;

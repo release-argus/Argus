@@ -25,7 +25,7 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func WebHook(failing, selfSignedCert, customHeaders bool) *webhook.WebHook {
+func WebHook(failing, selfSignedCert, headers bool) *webhook.WebHook {
 	desiredStatusCode := uint16(0)
 	whMaxTries := uint8(1)
 	wh := webhook.New(
@@ -59,14 +59,14 @@ func WebHook(failing, selfSignedCert, customHeaders bool) *webhook.WebHook {
 	if failing {
 		wh.Secret = test.LookupGitHub["secret_fail"]
 	}
-	if customHeaders {
+	if headers {
 		wh.URL = strings.Replace(wh.URL,
 			"github-style", "single-header", 1)
 		if failing {
-			wh.CustomHeaders = &webhook.Headers{
+			wh.Headers = &webhook.Headers{
 				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_fail"]}}
 		} else {
-			wh.CustomHeaders = &webhook.Headers{
+			wh.Headers = &webhook.Headers{
 				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]}}
 		}
 	}

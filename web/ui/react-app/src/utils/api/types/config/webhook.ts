@@ -1,4 +1,4 @@
-import type { CustomHeaders } from '@/utils/api/types/config/shared';
+import type { Headers } from '@/utils/api/types/config/shared';
 
 export const WEBHOOK_TYPE = {
 	GITHUB: { label: 'GitHub', value: 'github' },
@@ -19,7 +19,7 @@ export type WebHook = {
 	type?: WebHookType;
 	url?: string;
 	allow_invalid_certs?: boolean | null;
-	custom_headers?: CustomHeaders;
+	headers?: Headers;
 	secret?: string;
 	desired_status_code?: number;
 	delay?: string;

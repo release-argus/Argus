@@ -623,7 +623,7 @@ type WebHook struct {
 	URL               string    `json:"url,omitempty" yaml:"url,omitempty"`                                 // "https://example.com".
 	AllowInvalidCerts *bool     `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
 	Secret            string    `json:"secret,omitempty" yaml:"secret,omitempty"`                           // "SECRET".
-	CustomHeaders     *[]Header `json:"custom_headers,omitempty" yaml:"custom_headers,omitempty"`           // Custom Headers for the WebHook.
+	Headers           *[]Header `json:"headers,omitempty" yaml:"headers,omitempty"`                         // Custom Headers for the WebHook.
 	DesiredStatusCode *uint16   `json:"desired_status_code,omitempty" yaml:"desired_status_code,omitempty"` // e.g. 202.
 	Delay             string    `json:"delay,omitempty" yaml:"delay,omitempty"`                             // The delay before sending the WebHook.
 	MaxTries          *uint8    `json:"max_tries,omitempty" yaml:"max_tries,omitempty"`                     // Number of times to send the WebHook until we receive the desired status code.
@@ -650,9 +650,9 @@ func (w *WebHook) Censor() {
 	}
 
 	// Headers.
-	if w.CustomHeaders != nil {
-		for i := range *w.CustomHeaders {
-			(*w.CustomHeaders)[i].Value = util.SecretValue
+	if w.Headers != nil {
+		for i := range *w.Headers {
+			(*w.Headers)[i].Value = util.SecretValue
 		}
 	}
 }

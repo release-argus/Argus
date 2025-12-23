@@ -52,7 +52,8 @@ type Base struct {
 	Type              string   `json:"type,omitempty" yaml:"type,omitempty"`                               // "github"/"url".
 	URL               string   `json:"url,omitempty" yaml:"url,omitempty"`                                 // "https://example.com".
 	AllowInvalidCerts *bool    `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
-	CustomHeaders     *Headers `json:"custom_headers,omitempty" yaml:"custom_headers,omitempty"`           // Custom Headers for the WebHook.
+	CustomHeaders     *Headers `json:"custom_headers,omitempty" yaml:"custom_headers,omitempty"`           // Deprecated: Use Headers.
+	Headers           *Headers `json:"headers,omitempty" yaml:"headers,omitempty"`                         // Custom Headers for the WebHook.
 	Secret            string   `json:"secret,omitempty" yaml:"secret,omitempty"`                           // 'SECRET'.
 	DesiredStatusCode *uint16  `json:"desired_status_code,omitempty" yaml:"desired_status_code,omitempty"` // e.g. 202.
 	Delay             string   `json:"delay,omitempty" yaml:"delay,omitempty"`                             // The delay before sending the WebHook.
@@ -68,7 +69,7 @@ type Defaults struct {
 // NewDefaults returns a new Defaults.
 func NewDefaults(
 	allowInvalidCerts *bool,
-	customHeaders *Headers,
+	headers *Headers,
 	delay string,
 	desiredStatusCode *uint16,
 	maxTries *uint8,
@@ -80,7 +81,7 @@ func NewDefaults(
 	return &Defaults{
 		Base: Base{
 			AllowInvalidCerts: allowInvalidCerts,
-			CustomHeaders:     customHeaders,
+			Headers:           headers,
 			Delay:             delay,
 			DesiredStatusCode: desiredStatusCode,
 			MaxTries:          maxTries,
@@ -176,7 +177,7 @@ func (wh *WebHooks) MarshalJSON() ([]byte, error) {
 // New WebHook.
 func New(
 	allowInvalidCerts *bool,
-	customHeaders *Headers,
+	headers *Headers,
 	delay string,
 	desiredStatusCode *uint16,
 	failed *status.FailsWebHook,
@@ -195,7 +196,7 @@ func New(
 		ID: id,
 		Base: Base{
 			AllowInvalidCerts: allowInvalidCerts,
-			CustomHeaders:     customHeaders,
+			Headers:           headers,
 			Delay:             delay,
 			DesiredStatusCode: desiredStatusCode,
 			MaxTries:          maxTries,

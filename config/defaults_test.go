@@ -134,7 +134,7 @@ func TestDefaults_String(t *testing.T) {
 					type: github
 					url: https://example.comm
 					allow_invalid_certs: true
-					custom_headers:
+					headers:
 						- key: X-Header
 							value: foo
 					secret: secret!!!
@@ -1005,6 +1005,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 	tests := map[string]struct {
 		input    *Defaults
 		errRegex string
+		ok       bool
 	}{
 		"Service.Interval": {
 			input: &Defaults{Service: service.Defaults{
@@ -1013,6 +1014,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 				^service:
 					options:
 						interval: "10x" <invalid>.*$`),
+			ok: false,
 		},
 		"Service.LatestVersion.Require.Docker.Type": {
 			input: &Defaults{Service: service.Defaults{
@@ -1027,6 +1029,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 						require:
 							docker:
 								type: "pizza" <invalid>.*$`),
+			ok: false,
 		},
 		"Service.Interval + Service.DeployedVersionLookup.Regex": {
 			input: &Defaults{Service: service.Defaults{
@@ -1044,6 +1047,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 						require:
 							docker:
 								type: "pizza" <invalid>.*$`),
+			ok: false,
 		},
 		"Notify.x.Delay": {
 			input: &Defaults{Notify: shoutrrr.ShoutrrrsDefaults{
@@ -1056,6 +1060,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 					slack:
 						options:
 							delay: "10x" <invalid>.*$`),
+			ok: false,
 		},
 		"WebHook.Delay": {
 			input: &Defaults{WebHook: *webhook.NewDefaults(
@@ -1063,6 +1068,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^webhook:
 					delay: "10x" <invalid>.*$`),
+			ok: false,
 		},
 	}
 
@@ -1078,10 +1084,17 @@ func TestDefaults_CheckValues(t *testing.T) {
 				errRegex = strings.ReplaceAll(errRegex, "\n",
 					"\n"+prefix)
 
+				resultChannel := make(chan bool, 1)
 				// WHEN CheckValues is called on it.
-				err := tc.input.CheckValues(prefix)
+				err, ok := tc.input.CheckValues(prefix)
+				resultChannel <- ok
 
-				// THEN err matches expected.
+				// THEN the ok value is as expected.
+				if err := test.OkMatch(t, tc.ok, resultChannel, nil, nil); err != nil {
+					t.Fatalf("%s\n%s",
+						packageName, err.Error())
+				}
+				// AND any error is as expected.
 				e := util.ErrorToString(err)
 				lines := strings.Split(e, "\n")
 				wantLines := strings.Count(errRegex, "\n")

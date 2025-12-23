@@ -110,6 +110,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 		webhook   *Defaults
 		wantDelay string
 		errRegex  string
+		changed   bool
 	}{
 		"valid WebHook": {
 			webhook: testDefaults(false, false),
@@ -154,7 +155,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 		},
 		"invalid custom headers": {
 			errRegex: test.TrimYAML(`
-				custom_headers:
+				headers:
 					bar: "[^"]+" <invalid>`),
 			webhook: NewDefaults(
 				nil,
@@ -163,11 +164,18 @@ func TestDefaults_CheckValues(t *testing.T) {
 					{Key: "bar", Value: "{{ version }"}},
 				"", nil, nil, "", nil, "", ""),
 		},
+		"custom_headers -> headers": {
+			webhook: &Defaults{
+				Base: Base{
+					CustomHeaders: &Headers{
+						{Key: "foo", Value: "bar"}}}},
+			changed: true,
+		},
 		"all errs": {
 			errRegex: test.TrimYAML(`
 				type: "[^"]+" <invalid>.*
 				url: "[^"]+" <invalid>.*
-				custom_headers:
+				headers:
 					bar: "[^"]+" <invalid>.*
 				delay: "[^"]+" <invalid>.*$`),
 			webhook: NewDefaults(
@@ -187,7 +195,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CheckValues is called.
-			err := tc.webhook.CheckValues("")
+			err, changed := tc.webhook.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
@@ -210,6 +218,11 @@ func TestDefaults_CheckValues(t *testing.T) {
 				t.Errorf("%s\ndelay mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantDelay, tc.webhook.Delay)
 			}
+			// AND changed is as expected.
+			if changed != tc.changed {
+				t.Errorf("%s\nchanged mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.changed, changed)
+			}
 		})
 	}
 }
@@ -221,8 +234,10 @@ func TestWebHook_CheckValues(t *testing.T) {
 		whType           *string
 		whMainType       string
 		url, secret      *string
-		customHeaders    Headers
+		customHeaders    *Headers
+		headers          *Headers
 		errRegex         string
+		changed          bool
 	}{
 		"valid WebHook": {},
 		"invalid delay": {
@@ -263,17 +278,23 @@ func TestWebHook_CheckValues(t *testing.T) {
 			errRegex: `^secret: <required>.*$`,
 			secret:   test.StringPtr(""),
 		},
-		"valid custom headers": {
-			customHeaders: Headers{
+		"valid headers": {
+			headers: &Headers{
 				{Key: "foo", Value: "bar"}},
+			changed: false,
 		},
-		"invalid custom headers": {
+		"invalid headers": {
 			errRegex: test.TrimYAML(`
-				^custom_headers:
+				^headers:
 					bar: "[^"]+" <invalid>.*$`),
-			customHeaders: Headers{
+			headers: &Headers{
 				{Key: "foo", Value: "bar"},
 				{Key: "bar", Value: "{{ version }"}},
+		},
+		"custom_headers -> headers": {
+			customHeaders: &Headers{
+				{Key: "foo", Value: "bar"}},
+			changed: true,
 		},
 		"all errs": {
 			errRegex: test.TrimYAML(`
@@ -308,10 +329,11 @@ func TestWebHook_CheckValues(t *testing.T) {
 			if tc.secret != nil {
 				webhook.Secret = *tc.secret
 			}
-			webhook.CustomHeaders = &tc.customHeaders
+			webhook.CustomHeaders = tc.customHeaders
+			webhook.Headers = tc.headers
 
 			// WHEN CheckValues is called.
-			err := webhook.CheckValues("")
+			err, changed := webhook.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
@@ -334,6 +356,16 @@ func TestWebHook_CheckValues(t *testing.T) {
 				t.Errorf("%s\ndelay mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantDelay, webhook.Delay)
 			}
+			// AND CustomHeaders are always moved to Headers.
+			if webhook.CustomHeaders != nil && webhook.Headers == nil {
+				t.Errorf("%s\nCustomHeaders not moved to Headers\nHeaders=%v\nCustomHeaders=%v",
+					packageName, webhook.Headers, webhook.CustomHeaders)
+			}
+			// AND changed is as expected.
+			if changed != tc.changed {
+				t.Errorf("%s\nchanged mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.changed, changed)
+			}
 		})
 	}
 }
@@ -343,6 +375,7 @@ func TestWebHooksDefaults_CheckValues(t *testing.T) {
 	tests := map[string]struct {
 		webhooksDefaults *WebHooksDefaults
 		errRegex         string
+		changed          bool
 	}{
 		"nil map": {},
 		"valid single element map": {
@@ -381,6 +414,14 @@ func TestWebHooksDefaults_CheckValues(t *testing.T) {
 					"4",
 					nil, nil, "", nil, "foo", "https://example.com/{{ version }")},
 		},
+		"custom_headers -> headers": {
+			webhooksDefaults: &WebHooksDefaults{
+				"a": &Defaults{
+					Base: Base{
+						CustomHeaders: &Headers{
+							{Key: "foo", Value: "bar"}}}}},
+			changed: true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -388,7 +429,7 @@ func TestWebHooksDefaults_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CheckValues is called.
-			err := tc.webhooksDefaults.CheckValues("")
+			err, changed := tc.webhooksDefaults.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
@@ -406,6 +447,11 @@ func TestWebHooksDefaults_CheckValues(t *testing.T) {
 					packageName, tc.errRegex, e)
 				return
 			}
+			// AND changed is as expected.
+			if changed != tc.changed {
+				t.Errorf("%s\nchanged mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.changed, changed)
+			}
 		})
 	}
 }
@@ -415,6 +461,7 @@ func TestWebHooks_CheckValues(t *testing.T) {
 	tests := map[string]struct {
 		webhooks *WebHooks
 		errRegex string
+		changed  bool
 	}{
 		"nil map": {},
 		"valid single element map": {
@@ -478,6 +525,14 @@ func TestWebHooks_CheckValues(t *testing.T) {
 					"foo", "",
 					&Defaults{}, &Defaults{}, &Defaults{})},
 		},
+		"custom_headers -> headers": {
+			webhooks: &WebHooks{
+				"a": &WebHook{
+					Base: Base{
+						CustomHeaders: &Headers{
+							{Key: "foo", Value: "bar"}}}}},
+			changed: true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -498,7 +553,7 @@ func TestWebHooks_CheckValues(t *testing.T) {
 			}
 
 			// WHEN CheckValues is called.
-			err := tc.webhooks.CheckValues("")
+			err, changed := tc.webhooks.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
@@ -515,6 +570,11 @@ func TestWebHooks_CheckValues(t *testing.T) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
 				return
+			}
+			// AND changed is as expected.
+			if changed != tc.changed {
+				t.Errorf("%s\nchanged mismatch\nwant: %v\ngot:  %v",
+					packageName, tc.changed, changed)
 			}
 		})
 	}

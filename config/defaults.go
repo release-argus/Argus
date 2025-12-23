@@ -69,7 +69,8 @@ func (d *Defaults) MapEnvToStruct() bool {
 	err := mapEnvToStruct(d, "", nil)
 	if err == nil {
 		// env vars parsed correctly, check the values are valid in the struct.
-		if err = d.CheckValues(""); err != nil {
+		// (ignore changed as we can't persist environment variable changes)
+		if err, _ = d.CheckValues(""); err != nil {
 			err = convertToEnvErrors(err)
 		}
 	}
@@ -84,25 +85,32 @@ func (d *Defaults) MapEnvToStruct() bool {
 }
 
 // CheckValues validates the fields of the Defaults struct.
-func (d *Defaults) CheckValues(prefix string) error {
+func (d *Defaults) CheckValues(prefix string) (error, bool) {
 	itemPrefix := prefix + "  "
 	var errs []error
+	changed := false
 
 	// Service.
 	util.AppendCheckError(&errs, prefix, "service",
 		d.Service.CheckValues(itemPrefix))
 	// Notify.
-	util.AppendCheckError(&errs, prefix, "notify",
-		d.Notify.CheckValues(itemPrefix))
+	notifyErr, notifyChanged := d.Notify.CheckValues(itemPrefix)
+	if notifyChanged {
+		changed = true
+	}
+	util.AppendCheckError(&errs, prefix, "notify", notifyErr)
 	// WebHook.
-	util.AppendCheckError(&errs, prefix, "webhook",
-		d.WebHook.CheckValues(itemPrefix))
+	webhookErr, webhookChanged := d.WebHook.CheckValues(itemPrefix)
+	if webhookChanged {
+		changed = true
+	}
+	util.AppendCheckError(&errs, prefix, "webhook", webhookErr)
 
 	if len(errs) == 0 {
-		return nil
+		return nil, changed
 	}
 
-	return errors.Join(errs...)
+	return errors.Join(errs...), changed
 }
 
 // Print the defaults to the console with the given prefix.

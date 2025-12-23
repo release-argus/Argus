@@ -111,7 +111,7 @@ func findShoutrrr(
 			notify.Failed = &notify.ServiceStatus.Fails.Shoutrrr
 
 			// Check whether all values set.
-			if err := notify.CheckValues("    "); err != nil {
+			if err, _ := notify.CheckValues("    "); err != nil {
 				msg := fmt.Sprintf("notify:\n  %s:\n%s\n",
 					name, err)
 				logutil.Log.Fatal(msg, logFrom)

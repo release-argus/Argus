@@ -235,28 +235,28 @@ func (s *Service) giveSecretsWebHook(oldWebHooks webhook.WebHooks, secretRefs ma
 			wh.Secret = oldWebHook.Secret
 		}
 
-		// custom_headers.
+		// headers.
 		// Check we have headers in old and new.
-		if wh.CustomHeaders != nil && oldWebHook.CustomHeaders != nil ||
-			len(whSecretRefs.CustomHeaders) != 0 {
-			for headerIndex := range *wh.CustomHeaders {
+		if wh.Headers != nil && oldWebHook.Headers != nil ||
+			len(whSecretRefs.Headers) != 0 {
+			for headerIndex := range *wh.Headers {
 				// Skip if out of range,
 				// or not referencing a secret of an existing header.
-				if headerIndex >= len(whSecretRefs.CustomHeaders) ||
-					(*wh.CustomHeaders)[headerIndex].Value != util.SecretValue {
+				if headerIndex >= len(whSecretRefs.Headers) ||
+					(*wh.Headers)[headerIndex].Value != util.SecretValue {
 					continue
 				}
 
 				// Index for this headers secret in the old Service.
 				// Map SecretValue in `i.hI` to this index.
-				oldHeaderIndex := whSecretRefs.CustomHeaders[headerIndex].OldIndex
+				oldHeaderIndex := whSecretRefs.Headers[headerIndex].OldIndex
 				// New header, or not referencing a previous secret.
-				if oldHeaderIndex == nil || len(*oldWebHook.CustomHeaders) <= *oldHeaderIndex {
+				if oldHeaderIndex == nil || len(*oldWebHook.Headers) <= *oldHeaderIndex {
 					continue
 				}
 
 				// Set the new header value to the old one.
-				(*wh.CustomHeaders)[headerIndex].Value = (*oldWebHook.CustomHeaders)[*oldHeaderIndex].Value
+				(*wh.Headers)[headerIndex].Value = (*oldWebHook.Headers)[*oldHeaderIndex].Value
 			}
 		}
 

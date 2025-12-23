@@ -31,6 +31,6 @@ type DVSecretRef struct {
 
 // WHSecretRef contains the reference for the WebHook SecretValues.
 type WHSecretRef struct {
-	OldIndex      string        `json:"old_index,omitempty"`
-	CustomHeaders []OldIntIndex `json:"custom_headers,omitempty"`
+	OldIndex string        `json:"old_index,omitempty"`
+	Headers  []OldIntIndex `json:"headers,omitempty"`
 }

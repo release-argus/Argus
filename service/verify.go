@@ -99,12 +99,18 @@ func (s *Service) CheckValues(prefix string) error {
 		util.AppendCheckError(&errs, prefix, "deployed_version",
 			s.DeployedVersionLookup.CheckValues(errPrefix))
 	}
-	util.AppendCheckError(&errs, prefix, "notify",
-		s.Notify.CheckValues(errPrefix))
+	notifyErr, notifyChanged := s.Notify.CheckValues(errPrefix)
+	if notifyChanged {
+		s.Status.SaveChannel <- true
+	}
+	util.AppendCheckError(&errs, prefix, "notify", notifyErr)
 	util.AppendCheckError(&errs, prefix, "command",
 		s.Command.CheckValues(errPrefix))
-	util.AppendCheckError(&errs, prefix, "webhook",
-		s.WebHook.CheckValues(errPrefix))
+	webhookErr, webhookChanged := s.WebHook.CheckValues(errPrefix)
+	if webhookChanged {
+		s.Status.SaveChannel <- true
+	}
+	util.AppendCheckError(&errs, prefix, "webhook", webhookErr)
 	util.AppendCheckError(&errs, prefix, "dashboard",
 		s.Dashboard.CheckValues(errPrefix))
 

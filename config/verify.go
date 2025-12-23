@@ -33,14 +33,23 @@ func (c *Config) CheckValues() bool {
 	// settings.
 	util.AppendCheckError(&errs, "", "settings", c.Settings.CheckValues(childPrefix))
 	// defaults.
-	util.AppendCheckError(&errs, "", "defaults",
-		c.Defaults.CheckValues(childPrefix))
+	defaultsErr, defaultsChanged := c.Defaults.CheckValues(childPrefix)
+	if defaultsChanged {
+		c.SaveChannel <- true
+	}
+	util.AppendCheckError(&errs, "", "defaults", defaultsErr)
 	// notify.
-	util.AppendCheckError(&errs, "", "notify",
-		c.Notify.CheckValues(childPrefix))
+	notifyErr, notifyChanged := c.Notify.CheckValues(childPrefix)
+	if notifyChanged {
+		c.SaveChannel <- true
+	}
+	util.AppendCheckError(&errs, "", "notify", notifyErr)
 	// webhook.
-	util.AppendCheckError(&errs, "", "webhook",
-		c.WebHook.CheckValues(childPrefix))
+	webhookErr, webhookChanged := c.WebHook.CheckValues(childPrefix)
+	if webhookChanged {
+		c.SaveChannel <- true
+	}
+	util.AppendCheckError(&errs, "", "webhook", webhookErr)
 	// service.
 	util.AppendCheckError(&errs, "", "service",
 		c.Service.CheckValues(childPrefix))

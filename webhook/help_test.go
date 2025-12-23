@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testWebHook(failing bool, selfSignedCert bool, customHeaders bool) *WebHook {
+func testWebHook(failing bool, selfSignedCert bool, headers bool) *WebHook {
 	desiredStatusCode := uint16(0)
 	whMaxTries := uint8(1)
 	webhook := New(
@@ -80,20 +80,20 @@ func testWebHook(failing bool, selfSignedCert bool, customHeaders bool) *WebHook
 	if failing {
 		webhook.Secret = "invalid"
 	}
-	if customHeaders {
+	if headers {
 		webhook.URL = strings.Replace(webhook.URL, "github-style", "single-header", 1)
 		testHeaderValue := "secret"
 		if failing {
 			testHeaderValue = "invalid"
 		}
-		webhook.CustomHeaders = &Headers{
+		webhook.Headers = &Headers{
 			{Key: "X-Test", Value: testHeaderValue}}
 	}
 	webhook.initMetrics()
 	return webhook
 }
 
-func testDefaults(failing bool, customHeaders bool) *Defaults {
+func testDefaults(failing bool, headers bool) *Defaults {
 	desiredStatusCode := uint16(0)
 	whMaxTries := uint8(1)
 	webhook := NewDefaults(
@@ -109,13 +109,13 @@ func testDefaults(failing bool, customHeaders bool) *Defaults {
 	if failing {
 		webhook.Secret = "invalid"
 	}
-	if customHeaders {
+	if headers {
 		webhook.URL = strings.Replace(webhook.URL, "github-style", "single-header", 1)
 		if failing {
-			webhook.CustomHeaders = &Headers{
+			webhook.Headers = &Headers{
 				{Key: "X-Test", Value: "invalid"}}
 		} else {
-			webhook.CustomHeaders = &Headers{
+			webhook.Headers = &Headers{
 				{Key: "X-Test", Value: "secret"}}
 		}
 	}

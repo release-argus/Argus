@@ -117,8 +117,8 @@ const GENERIC = ({
 					}}
 				/>
 				<FieldKeyValMap
-					defaults={defaults?.url_fields?.custom_headers}
-					name={`${name}.url_fields.custom_headers`}
+					defaults={defaults?.url_fields?.headers}
+					name={`${name}.url_fields.headers`}
 					tooltip={{
 						content: 'Additional HTTP headers',
 						type: 'string',

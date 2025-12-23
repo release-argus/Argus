@@ -2196,7 +2196,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"", "",
 					nil, nil, nil)},
 		},
-		"custom headers - no secretRefs": {
+		"headers - no secretRefs": {
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
@@ -2274,7 +2274,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"", "",
 					nil, nil, nil)},
 		},
-		"custom headers - no header secretRefs": {
+		"headers - no header secretRefs": {
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
@@ -2355,7 +2355,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"", "",
 					nil, nil, nil)},
 		},
-		"custom headers - header secretRefs but old secrets unwanted": {
+		"headers - header secretRefs but old secrets unwanted": {
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
@@ -2409,11 +2409,11 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {
 					OldIndex: "foo",
-					CustomHeaders: []shared.OldIntIndex{
+					Headers: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)}}},
 				"bar": {
 					OldIndex: "bar",
-					CustomHeaders: []shared.OldIntIndex{
+					Headers: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)}}}},
 			expected: webhook.WebHooks{
 				"foo": webhook.New(
@@ -2441,7 +2441,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"", "",
 					nil, nil, nil)},
 		},
-		"custom headers - header secretRefs, some indices out of range": {
+		"headers - header secretRefs, some indices out of range": {
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
@@ -2499,11 +2499,11 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {
 					OldIndex: "foo",
-					CustomHeaders: []shared.OldIntIndex{
+					Headers: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(5)}, {OldIndex: test.IntPtr(1)}}},
 				"bar": {
 					OldIndex: "bar",
-					CustomHeaders: []shared.OldIntIndex{
+					Headers: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(2)}}}},
 			expected: webhook.WebHooks{
 				"foo": webhook.New(
@@ -2533,7 +2533,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"", "",
 					nil, nil, nil)},
 		},
-		"custom headers - header secretRefs use all secrets": {
+		"headers - header secretRefs use all secrets": {
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
@@ -2591,12 +2591,12 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			secretRefs: map[string]shared.WHSecretRef{
 				"foo": {
 					OldIndex: "foo",
-					CustomHeaders: []shared.OldIntIndex{
+					Headers: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)},
 						{OldIndex: test.IntPtr(1)}}},
 				"bar": {
 					OldIndex: "bar",
-					CustomHeaders: []shared.OldIntIndex{
+					Headers: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)},
 						{OldIndex: test.IntPtr(1)}}}},
 			expected: webhook.WebHooks{
@@ -2627,7 +2627,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"", "",
 					nil, nil, nil)},
 		},
-		"custom headers - header secretRefs, swap names of webhook": {
+		"headers - header secretRefs, swap names of webhook": {
 			webhook: webhook.WebHooks{
 				"bar": webhook.New(
 					nil,
@@ -2685,12 +2685,12 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			secretRefs: map[string]shared.WHSecretRef{
 				"bar": {
 					OldIndex: "foo",
-					CustomHeaders: []shared.OldIntIndex{
+					Headers: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)},
 						{OldIndex: test.IntPtr(1)}}},
 				"foo": {
 					OldIndex: "bar",
-					CustomHeaders: []shared.OldIntIndex{
+					Headers: []shared.OldIntIndex{
 						{OldIndex: test.IntPtr(0)},
 						{OldIndex: test.IntPtr(1)}}}},
 			expected: webhook.WebHooks{
@@ -5159,7 +5159,7 @@ func TestFromPayload(t *testing.T) {
 						"name": "github",
 						"type": "github",
 						"secret": "` + util.SecretValue + `",
-						"custom_headers": [
+						"headers": [
 							{"key": "X-Foo", "Value": "` + util.SecretValue + `", "old_index": 0}],
 						"old_index": "github-initial"
 					},
@@ -5167,7 +5167,7 @@ func TestFromPayload(t *testing.T) {
 						"name": "gitlab-",
 						"type": "gitlab",
 						"secret": "` + util.SecretValue + `",
-						"custom_headers": [
+						"headers": [
 							{"key": "X-Bar", "Value": "` + util.SecretValue + `", "old_index": 0}],
 						"old_index": "gitlab-initial"
 					}

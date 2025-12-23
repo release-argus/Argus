@@ -346,7 +346,7 @@ const buildNotifySchema = (
 				...defaultValidators,
 				{
 					kind: 'array',
-					path: ['url_fields', 'custom_headers'],
+					path: ['url_fields', 'headers'],
 					props: [
 						{
 							defaultSchema: headersSchema,

@@ -349,25 +349,25 @@ func TestWebHook_Censor(t *testing.T) {
 			want: &WebHook{
 				Secret: util.SecretValue},
 		},
-		"custom_headers": {
+		"headers": {
 			webhook: &WebHook{
-				CustomHeaders: &[]Header{
+				Headers: &[]Header{
 					{Key: "X-Header", Value: "something"},
 					{Key: "X-Bing", Value: "Bam"}}},
 			want: &WebHook{
-				CustomHeaders: &[]Header{
+				Headers: &[]Header{
 					{Key: "X-Header", Value: util.SecretValue},
 					{Key: "X-Bing", Value: util.SecretValue}}},
 		},
 		"all": {
 			webhook: &WebHook{
 				Secret: "shazam",
-				CustomHeaders: &[]Header{
+				Headers: &[]Header{
 					{Key: "X-Header", Value: "something"},
 					{Key: "X-Bing", Value: "Bam"}}},
 			want: &WebHook{
 				Secret: util.SecretValue,
-				CustomHeaders: &[]Header{
+				Headers: &[]Header{
 					{Key: "X-Header", Value: util.SecretValue},
 					{Key: "X-Bing", Value: util.SecretValue}}},
 		},
@@ -389,12 +389,12 @@ func TestWebHook_Censor(t *testing.T) {
 				t.Errorf("%s\nSecret uncensored\nwant: %q\ngot:  %q",
 					packageName, tc.want.Secret, tc.webhook.Secret)
 			}
-			if tc.webhook.CustomHeaders != nil {
-				for i := range *tc.want.CustomHeaders {
-					if (*tc.webhook.CustomHeaders)[i] != (*tc.want.CustomHeaders)[i] {
+			if tc.webhook.Headers != nil {
+				for i := range *tc.want.Headers {
+					if (*tc.webhook.Headers)[i] != (*tc.want.Headers)[i] {
 						t.Errorf("%s\nHeader %d:\nwant: %v\ngot:  %v",
 							packageName, i,
-							(*tc.want.CustomHeaders)[i], (*tc.webhook.CustomHeaders)[i])
+							(*tc.want.Headers)[i], (*tc.webhook.Headers)[i])
 					}
 				}
 			}
@@ -1014,7 +1014,7 @@ func TestWebHook_String(t *testing.T) {
 				URL:               "https://release-argus.io",
 				AllowInvalidCerts: test.BoolPtr(true),
 				Secret:            "secret",
-				CustomHeaders: &[]Header{
+				Headers: &[]Header{
 					{Key: "X-Header", Value: "bosh"}},
 				DesiredStatusCode: test.UInt16Ptr(200),
 				Delay:             "1h",
@@ -1028,7 +1028,7 @@ func TestWebHook_String(t *testing.T) {
 					"url": "https://release-argus.io",
 					"allow_invalid_certs": true,
 					"secret": "secret",
-					"custom_headers": [{"key": "X-Header","value": "bosh"}],
+					"headers": [{"key": "X-Header","value": "bosh"}],
 					"desired_status_code": 200,
 					"delay": "1h",
 					"max_tries": 7,
@@ -1076,7 +1076,7 @@ func TestWebHooks_String(t *testing.T) {
 					URL:               "https://release-argus.io",
 					AllowInvalidCerts: test.BoolPtr(true),
 					Secret:            "secret",
-					CustomHeaders: &[]Header{
+					Headers: &[]Header{
 						{Key: "X-Header", Value: "bosh"}},
 					DesiredStatusCode: test.UInt16Ptr(200),
 					Delay:             "1h",
@@ -1091,7 +1091,7 @@ func TestWebHooks_String(t *testing.T) {
 						"url": "https://release-argus.io",
 						"allow_invalid_certs": true,
 						"secret": "secret",
-						"custom_headers": [{"key": "X-Header","value": "bosh"}],
+						"headers": [{"key": "X-Header","value": "bosh"}],
 						"desired_status_code": 200,
 						"delay": "1h",
 						"max_tries": 7,

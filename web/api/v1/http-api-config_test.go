@@ -393,7 +393,7 @@ func TestHTTP_Config(t *testing.T) {
 							"url": "https://example.com",
 							"allow_invalid_certs": true,
 							"secret": ` + secretValueMarshalled + `,
-							"custom_headers": [
+							"headers": [
 								{"key": "X-Header","value": ` + secretValueMarshalled + `}],
 							"delay": "4s"}},
 					"service": {}
@@ -496,7 +496,7 @@ func TestHTTP_Config(t *testing.T) {
 							"url": "https://example.com",
 							"allow_invalid_certs": true,
 							"secret": ` + secretValueMarshalled + `,
-							"custom_headers": [
+							"headers": [
 								{"key": "X-Header","value": ` + secretValueMarshalled + `}],
 							"delay": "4s"}},
 					"service": {
@@ -585,7 +585,7 @@ func TestHTTP_Config(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			// THEN the expected body is returned as expected.
+			// THEN the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s - %s\nunexpected error - %v",

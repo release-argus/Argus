@@ -3,7 +3,7 @@ import { toZodEnumTuple } from '@/types/util';
 import { WEBHOOK_TYPE } from '@/utils/api/types/config/webhook';
 import {
 	headersSchema,
-	preprocessCustomHeadersToHeadersSchema,
+	preprocessHeadersToHeadersSchema,
 } from '@/utils/api/types/config-edit/shared/header/preprocess';
 import {
 	preprocessNumberFromString,
@@ -17,9 +17,9 @@ export const WebHookTypeEnum = z.enum(
 
 export const webhookSchema = z.object({
 	allow_invalid_certs: z.boolean().nullable().default(null),
-	custom_headers: headersSchema,
 	delay: z.string().default(''),
 	desired_status_code: preprocessStringFromNumber,
+	headers: headersSchema,
 	max_tries: preprocessStringFromNumber,
 	name: stringWithFallback(), // Required.
 	old_index: z.string().nullable().default(null),
@@ -63,10 +63,8 @@ export const webhookSchemaMapOutgoingWithDefaults = (
 	defaults?: WebHookSchema,
 ) => {
 	return webhookSchema.extend({
-		custom_headers: preprocessCustomHeadersToHeadersSchema(
-			defaults?.custom_headers,
-		),
 		desired_status_code: preprocessNumberFromString,
+		headers: preprocessHeadersToHeadersSchema(defaults?.headers),
 		max_tries: preprocessNumberFromString,
 	});
 };

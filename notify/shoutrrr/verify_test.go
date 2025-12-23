@@ -1318,22 +1318,22 @@ func TestShoutrrr_checkValuesURLFields(t *testing.T) {
 				nil),
 			errRegex: `^$`,
 		},
-		"generic - valid with custom_headers/json_payload_vars/query_vars": {
+		"generic - valid with headers/json_payload_vars/query_vars": {
 			sType: "generic",
 			urlFields: map[string]string{
 				"host":              "example.com",
-				"custom_headers":    `{"foo":"bar"}`,
+				"headers":           `{"foo":"bar"}`,
 				"json_payload_vars": `{"bish":"bash","bosh":"bing"}`,
 				"query_vars":        `{"me":"work"}`},
 			errRegex: `^$`,
 		},
-		"generic - invalid custom_headers": {
+		"generic - invalid headers": {
 			sType: "generic",
 			urlFields: map[string]string{
-				"host":           "example.com",
-				"custom_headers": `"foo":"bar"}`},
+				"host":    "example.com",
+				"headers": `"foo":"bar"}`},
 			errRegex: test.TrimYAML(`
-				^custom_headers: "\\\"foo\\\":\\\"bar\\\"\}" <invalid>.*$`),
+				^headers: "\\\"foo\\\":\\\"bar\\\"\}" <invalid>.*$`),
 		},
 		"generic - invalid json_payload_vars": {
 			sType: "generic",

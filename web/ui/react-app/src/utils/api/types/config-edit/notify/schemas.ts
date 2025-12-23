@@ -637,7 +637,7 @@ export const notifyGenericSchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.GENERIC.value),
 	url_fields: z
 		.object({
-			custom_headers: headersSchema,
+			headers: headersSchema,
 			host: z.string().default(''), // Required.
 			json_payload_vars: headersSchema,
 			path: z.string().default(''),
@@ -645,7 +645,7 @@ export const notifyGenericSchema = notifyBaseSchema.extend({
 			query_vars: headersSchema,
 		})
 		.default({
-			custom_headers: [],
+			headers: [],
 			host: '',
 			json_payload_vars: [],
 			path: '',
@@ -762,8 +762,8 @@ export const notifySchemaMapOutgoingWithDefaults = (
 				url_fields: notifyGenericSchemaOutgoing.shape.url_fields
 					.unwrap()
 					.extend({
-						custom_headers: preprocessStringFromHeaderArrayWithDefaults(
-							defaults?.url_fields?.custom_headers,
+						headers: preprocessStringFromHeaderArrayWithDefaults(
+							defaults?.url_fields?.headers,
 						),
 						json_payload_vars: preprocessStringFromHeaderArrayWithDefaults(
 							defaults?.url_fields?.json_payload_vars,

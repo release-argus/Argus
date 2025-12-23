@@ -23,51 +23,59 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // CheckValues validates the fields of each Defaults struct.
-func (whd *WebHooksDefaults) CheckValues(prefix string) error {
+func (whd *WebHooksDefaults) CheckValues(prefix string) (error, bool) {
 	if whd == nil {
-		return nil
+		return nil, false
 	}
 
 	var errs []error
+	changed := false
 	keys := util.SortedKeys(*whd)
 	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		util.AppendCheckError(&errs, prefix, key,
-			(*whd)[key].CheckValues(itemPrefix))
+		err, keyChanged := (*whd)[key].CheckValues(itemPrefix)
+		util.AppendCheckError(&errs, prefix, key, err)
+		changed = changed || keyChanged
 	}
 
 	if len(errs) == 0 {
-		return nil
+		return nil, changed
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...), changed
 }
 
-// CheckValues validates the fields of each WebHook.
-func (wh *WebHooks) CheckValues(prefix string) error {
+// CheckValues validates the fields of each WebHook,
+// returning errors encountered and whether anything changed.
+func (wh *WebHooks) CheckValues(prefix string) (error, bool) {
 	if wh == nil {
-		return nil
+		return nil, false
 	}
 
 	var errs []error
+	changed := false
 	keys := util.SortedKeys(*wh)
 	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		util.AppendCheckError(&errs, prefix, key,
-			(*wh)[key].CheckValues(itemPrefix))
+		err, keyChanged := (*wh)[key].CheckValues(itemPrefix)
+		util.AppendCheckError(&errs, prefix, key, err)
+		changed = changed || keyChanged
 	}
 
 	if len(errs) == 0 {
-		return nil
+		return nil, changed
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...), changed
 }
 
-// CheckValues validates the fields of the Base struct.
-func (b *Base) CheckValues(prefix string) error {
+// CheckValues validates the fields of the Base struct,
+// returning errors encountered and whether anything changed.
+func (b *Base) CheckValues(prefix string) (error, bool) {
 	var errs []error
+	changed := false
 	// type
 	if b.Type != "" && !util.Contains(supportedTypes, b.Type) {
 		errs = append(errs,
@@ -80,10 +88,16 @@ func (b *Base) CheckValues(prefix string) error {
 			fmt.Errorf("%surl: %q <invalid> (didn't pass templating)",
 				prefix, b.URL))
 	}
-	// custom_headers
-	if b.CustomHeaders != nil {
-		util.AppendCheckError(&errs, prefix, "custom_headers",
-			b.checkValuesCustomHeaders(prefix+"  "))
+	// Deprecated: custom_header -> headers
+	if b.Headers == nil && b.CustomHeaders != nil {
+		b.Headers = b.CustomHeaders
+		b.CustomHeaders = nil
+		changed = true
+		logutil.Log.Deprecated("Renaming 'webhook.custom_headers' to 'webhook.headers'. If you use any 'ARGUS_*_CUSTOM_HEADERS' environment variables, please update them to 'ARGUS_*_HEADERS' instead.")
+	}
+	if b.Headers != nil {
+		util.AppendCheckError(&errs, prefix, "headers",
+			b.checkValuesHeaders(prefix+"  "))
 	}
 	// delay
 	if b.Delay != "" {
@@ -99,18 +113,18 @@ func (b *Base) CheckValues(prefix string) error {
 	}
 
 	if len(errs) == 0 {
-		return nil
+		return nil, changed
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...), changed
 }
 
-func (b *Base) checkValuesCustomHeaders(prefix string) error {
+func (b *Base) checkValuesHeaders(prefix string) error {
 	var errs []error
 
-	for _, customHeader := range *b.CustomHeaders {
-		if !util.CheckTemplate(customHeader.Value) {
+	for _, header := range *b.Headers {
+		if !util.CheckTemplate(header.Value) {
 			errs = append(errs, fmt.Errorf("%s%s: %q <invalid> (didn't pass templating)",
-				prefix, customHeader.Key, customHeader.Value))
+				prefix, header.Key, header.Value))
 		}
 	}
 
@@ -120,8 +134,9 @@ func (b *Base) checkValuesCustomHeaders(prefix string) error {
 	return errors.Join(errs...)
 }
 
-// CheckValues validates the fields of the WebHook struct.
-func (wh *WebHook) CheckValues(prefix string) error {
+// CheckValues validates the fields of the WebHook struct,
+// returning errors encountered and whether anything changed.
+func (wh *WebHook) CheckValues(prefix string) (error, bool) {
 	var errs []error
 
 	// type
@@ -135,7 +150,8 @@ func (wh *WebHook) CheckValues(prefix string) error {
 			prefix, whType, wh.Main.Type, wh.ID))
 	}
 
-	if baseErrs := wh.Base.CheckValues(prefix); baseErrs != nil {
+	baseErrs, changed := wh.Base.CheckValues(prefix)
+	if baseErrs != nil {
 		errs = append(errs, baseErrs)
 	}
 
@@ -155,9 +171,9 @@ func (wh *WebHook) CheckValues(prefix string) error {
 	}
 
 	if len(errs) == 0 {
-		return nil
+		return nil, changed
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...), changed
 }
 
 // Print the WebHooksDefaults.

@@ -275,6 +275,13 @@ func (l *JLog) Debug(msg any, from LogFrom, otherCondition bool) {
 			997))
 }
 
+// Deprecated will log the deprecation message.
+func (l *JLog) Deprecated(msg any) {
+	// DEPRECATED: msg
+	l.logMessage(
+		fmt.Sprintf("DEPRECATED: %v", msg))
+}
+
 // logMessage logs a message with/without a timestamp based on the Timestamps flag.
 func (l *JLog) logMessage(msg string) {
 	l.writer.Println(msg)

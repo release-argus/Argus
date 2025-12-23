@@ -323,7 +323,7 @@ func (s *Shoutrrr) BuildURL() (url string) {
 		// Add the JSON payload vars, custom headers, and query vars to the url.
 		var urlParamsBuilder strings.Builder
 		// Separate vars to preserve order.
-		jsonMaps := []string{"custom_headers", "json_payload_vars", "query_vars"}
+		jsonMaps := []string{"headers", "json_payload_vars", "query_vars"}
 		prefixes := []string{"@", "$", ""}
 
 		first := true // flag to track first entry.
