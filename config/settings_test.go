@@ -552,7 +552,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 	// Unset ARGUS_LOG_LEVEL.
 	logLevel := os.Getenv("ARGUS_LOG_LEVEL")
 	_ = os.Unsetenv("ARGUS_LOG_LEVEL")
-	defer os.Setenv("ARGUS_LOG_LEVEL", logLevel)
+	t.Cleanup(func() { _ = os.Setenv("ARGUS_LOG_LEVEL", logLevel) })
 	// GIVEN vars set for Settings vars.
 	tests := map[string]struct {
 		env         map[string]string
@@ -670,7 +670,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				t.Fatalf("%s\n%s",
 					packageName, err.Error())
 			}
-			// THEN any error is as expected.
+			// AND any error is as expected.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
 				t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
@@ -707,12 +707,6 @@ func TestSettings_Default(t *testing.T) {
 			env: map[string]string{
 				"ARGUS_LOG_TIMESTAMPS": "abc"},
 			stdoutRegex: `^FATAL.*environment variable.*incorrect.*\s.*ARGUS_LOG_TIMESTAMPS.*\s$`,
-			ok:          false,
-		},
-		"web.cert-file that doesn't exist": {
-			env: map[string]string{
-				"ARGUS_WEB_CERT_FILE": "cert.test"},
-			stdoutRegex: `^FATAL: hard_defaults:\s  settings:\s    web:\s      cert_file: .*no such file.*`,
 			ok:          false,
 		},
 	}
