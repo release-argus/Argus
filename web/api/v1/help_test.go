@@ -51,6 +51,9 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	// Log.
+	logtest.InitLog()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	g, _ := errgroup.WithContext(ctx)
@@ -61,10 +64,6 @@ func TestMain(m *testing.M) {
 	testYAML_Argus(path)
 	var cfg config.Config
 	cfg.Load(ctx, g, path, &flags)
-	_ = os.Remove(path)
-
-	// Log.
-	logtest.InitLog()
 
 	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'.
 	secretValueMarshalledBytes, _ := json.Marshal(util.SecretValue)
@@ -72,6 +71,8 @@ func TestMain(m *testing.M) {
 
 	// Run other tests.
 	exitCode := m.Run()
+	_ = os.Remove(path)
+	_ = os.Remove(cfg.Settings.DataDatabaseFile())
 
 	if len(logutil.ExitCodeChannel()) > 0 {
 		fmt.Printf("%s\nexit code channel not empty",

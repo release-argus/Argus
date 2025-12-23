@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/test"
-	logtest "github.com/release-argus/Argus/test/log"
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
@@ -37,22 +36,16 @@ func resetFlags() {
 }
 
 func TestRun(t *testing.T) {
-	// Log.
-	logtest.InitLog()
-
 	// GIVEN different Configs to test.
-	tests := map[string]struct {
+	tests := []struct {
+		name           string
 		file           func(path string)
 		preStartFunc   func(baseDir string)
 		outputContains *[]string
 		exitCode       *int
 	}{
-		"config with no services": {
-			file: testYAML_NoServices,
-			outputContains: &[]string{
-				"Found 0 services to monitor",
-				"Listening on "}},
-		"config with services, db invalid format": {
+		{
+			name: "config with services, db invalid format",
 			file: testYAML_Argus,
 			preStartFunc: func(baseDir string) {
 				// Create an invalid database file.
@@ -62,21 +55,30 @@ func TestRun(t *testing.T) {
 			outputContains: &[]string{
 				"file is not a database"},
 			exitCode: test.IntPtr(1)},
-		"config with services": {
+		{
+			name: "config with no services",
+			file: testYAML_NoServices,
+			outputContains: &[]string{
+				"Found 0 services to monitor",
+				"Listening on "}},
+		{
+			name: "config with services",
 			file: testYAML_Argus,
 			outputContains: &[]string{
 				"services to monitor:",
 				"release-argus/Argus, Latest Release - ",
 				"Listening on "}},
-		"config with services and some !active": {
+		{
+			name: "config with services and some !active",
 			file: testYAML_Argus_SomeInactive,
 			outputContains: &[]string{
 				"Found 1 services to monitor:"}},
 	}
 
-	for name, tc := range tests {
+	for _, tc := range tests {
+		name := tc.name
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout and sharing log exitCodeChannel.
+			// t.Parallel() - Cannot run in parallel since we're using stdout and sharing log resultChannel.
 			releaseStdout := test.CaptureLog(logutil.Log)
 
 			tempDir := t.TempDir()
@@ -93,24 +95,27 @@ func TestRun(t *testing.T) {
 				tc.preStartFunc(tempDir)
 			}
 
-			exitCodeChannel := make(chan int)
+			resultChannel := make(chan int)
 			// WHEN run is called.
 			go func() {
-				exitCodeChannel <- run()
+				resultChannel <- run()
 			}()
 
 			var exitCode *int
 			select {
-			case code := <-exitCodeChannel:
+			case code := <-resultChannel:
 				exitCode = &code
 			case <-time.After(3 * time.Second):
-				// Cancel after 3 seconds.
-				logutil.Log.Fatal("--TestRun--", logutil.LogFrom{})
-				time.Sleep(time.Second)
+				if tc.exitCode != nil {
+					t.Logf("%s\nrun timed out waiting for exit code",
+						packageName)
+				}
 			}
 
 			// THEN the program will have printed everything expected.
 			stdout := releaseStdout()
+			t.Logf("%s\nstdout: %q",
+				packageName, stdout)
 			if tc.outputContains != nil {
 				for _, text := range *tc.outputContains {
 					if !strings.Contains(stdout, text) {

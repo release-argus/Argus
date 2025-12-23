@@ -38,20 +38,20 @@ var packageName = "db"
 var cfg *config.Config
 
 func TestMain(m *testing.M) {
-	databaseFile := "TestMain.db.test"
-
 	// Log.
 	logtest.InitLog()
+
+	databaseFile := "TestMain.db.test"
 
 	cfg = testConfig(nil)
 	cfg.Settings.Data.DatabaseFile = databaseFile
 	// AND a cancellable context for shutdown.
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	Run(ctx, cfg)
 
 	// Run other tests.
 	exitCode := m.Run()
+	cancel()
 	_ = os.Remove(cfg.Settings.Data.DatabaseFile)
 
 	if len(logutil.ExitCodeChannel()) > 0 {

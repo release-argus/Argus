@@ -57,7 +57,7 @@ func TestMain(m *testing.M) {
 	initialEmptyListETag = getEmptyListETag()
 
 	// Unmarshal testBody.
-	_ =json.Unmarshal(testBody, &testBodyObject)
+	_ = json.Unmarshal(testBody, &testBodyObject)
 
 	// Run other tests.
 	exitCode := m.Run()

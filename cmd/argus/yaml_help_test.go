@@ -23,8 +23,6 @@ import (
 	"github.com/release-argus/Argus/test"
 )
 
-var packageName = "cmd"
-
 func writeFile(path string, data string) {
 	data = strings.TrimPrefix(data, "\n")
 	_ = os.WriteFile(path, []byte(data), 0644)
