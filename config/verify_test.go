@@ -77,6 +77,16 @@ func TestConfig_CheckValues(t *testing.T) {
 			config: testVerify(t),
 			ok:     true,
 		},
+		"invalid Settings": {
+			config: &Config{Settings: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						CertFile: "doesnotexist.pem"}}}},
+			errRegex: test.TrimYAML(`
+				^settings:
+					web:
+						cert_file: .*doesnotexist.pem.* no such file.*`),
+		},
 		"invalid Defaults": {
 			config: &Config{
 				Defaults: Defaults{
