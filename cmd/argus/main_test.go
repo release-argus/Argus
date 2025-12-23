@@ -78,7 +78,7 @@ func TestRun(t *testing.T) {
 	for _, tc := range tests {
 		name := tc.name
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout and sharing log exitCodeChannel.
+			// t.Parallel() - Cannot run in parallel since we're using stdout and sharing log resultChannel.
 			releaseStdout := test.CaptureLog(logutil.Log)
 
 			tempDir := t.TempDir()

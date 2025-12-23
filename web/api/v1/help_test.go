@@ -51,6 +51,9 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	// Log.
+	logtest.InitLog()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	g, _ := errgroup.WithContext(ctx)
 
@@ -60,10 +63,6 @@ func TestMain(m *testing.M) {
 	testYAML_Argus(path)
 	var cfg config.Config
 	cfg.Load(ctx, g, path, &flags)
-	_ = os.Remove(path)
-
-	// Log.
-	logtest.InitLog()
 
 	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'.
 	secretValueMarshalledBytes, _ := json.Marshal(util.SecretValue)
