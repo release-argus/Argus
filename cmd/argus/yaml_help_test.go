@@ -19,24 +19,18 @@ package main
 import (
 	"os"
 	"strings"
-	"testing"
 
 	"github.com/release-argus/Argus/test"
 )
 
-var packageName = "cmd"
-
-func writeFile(path string, data string, t *testing.T) {
+func writeFile(path string, data string) {
 	data = strings.TrimPrefix(data, "\n")
-	os.WriteFile(path, []byte(data), 0644)
-	t.Cleanup(func() { os.Remove(path) })
+	_ = os.WriteFile(path, []byte(data), 0644)
 }
 
-func testYAML_NoServices(path string, t *testing.T) {
+func testYAML_NoServices(path string) {
 	data := test.TrimYAML(`
 		settings:
-			data:
-				database_file: test-no_services.db
 			web:
 				listen_port: "0"
 		defaults:
@@ -79,14 +73,12 @@ func testYAML_NoServices(path string, t *testing.T) {
 				max_tries: 1
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_Argus(path string, t *testing.T) {
+func testYAML_Argus(path string) {
 	data := test.TrimYAML(`
 		settings:
-			data:
-				database_file: test-argus.db
 			web:
 				listen_port: 0
 		service:
@@ -96,14 +88,12 @@ func testYAML_Argus(path string, t *testing.T) {
 					url: release-argus/argus
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_Argus_SomeInactive(path string, t *testing.T) {
+func testYAML_Argus_SomeInactive(path string) {
 	data := test.TrimYAML(`
 		settings:
-				data:
-						database_file: test-argus-some-inactive.db
 				web:
 						listen_port: 0
 		service:
@@ -131,5 +121,5 @@ func testYAML_Argus_SomeInactive(path string, t *testing.T) {
 				#         url: release-argus/argus
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }

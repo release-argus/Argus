@@ -98,7 +98,7 @@ func (wh *WebHook) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) erro
 		wh.GetMaxTries(), wh.ServiceStatus.ServiceInfo.ID, wh.ID)
 	logutil.Log.Error(err, logFrom, true)
 	failed := true
-	wh.Failed.Set(wh.ID, &failed)
+	wh.SetFail(&failed)
 	wh.AnnounceSend()
 	if !wh.GetSilentFails() {
 		//#nosec G104 -- Errors are logged to CLI
@@ -202,7 +202,7 @@ func (wh *WebHook) parseTry(err error, serviceID string, logFrom logutil.LogFrom
 			"",
 			"SUCCESS")
 		failed := false
-		wh.Failed.Set(wh.ID, &failed)
+		wh.SetFail(&failed)
 		wh.AnnounceSend()
 		return
 	}

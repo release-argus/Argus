@@ -1,7 +1,7 @@
 // Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use 10s file except in compliance with the License.
+// you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -87,6 +87,55 @@ func TestRelease_String(t *testing.T) {
 			if got != tc.want {
 				t.Errorf("%s\nwant: %q\ngot:  %q",
 					packageName, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestReleaseSort(t *testing.T) {
+	// GIVEN two releases to compare.
+	tests := map[string]struct {
+		a, b Release
+		want bool
+	}{
+		"a < b": {
+			a:    Release{SemanticVersion: semver.MustParse("1.0.0")},
+			b:    Release{SemanticVersion: semver.MustParse("1.1.0")},
+			want: true,
+		},
+		"a > b": {
+			a:    Release{SemanticVersion: semver.MustParse("2.0.0")},
+			b:    Release{SemanticVersion: semver.MustParse("1.9.9")},
+			want: false,
+		},
+		"a == b": {
+			a:    Release{SemanticVersion: semver.MustParse("1.2.3")},
+			b:    Release{SemanticVersion: semver.MustParse("1.2.3")},
+			want: false, // LessThan returns false when equal.
+		},
+		"pre-release vs release": {
+			a:    Release{SemanticVersion: semver.MustParse("1.2.3-alpha")},
+			b:    Release{SemanticVersion: semver.MustParse("1.2.3")},
+			want: true, // pre-release < release.
+		},
+		"complex versions": {
+			a:    Release{SemanticVersion: semver.MustParse("1.2.3+build1")},
+			b:    Release{SemanticVersion: semver.MustParse("1.2.3+build2")},
+			want: false, // build metadata ignored in ordering.
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN we compare the releases.
+			got := ReleaseSort(tc.a, tc.b)
+
+			// THEN we get the expected result.
+			if got != tc.want {
+				t.Errorf("%s\nsort mismatch\nwant: %t\ngot:  %t\na: %s\nb: %s",
+					packageName, tc.want, got, tc.a.SemanticVersion, tc.b.SemanticVersion)
 			}
 		})
 	}

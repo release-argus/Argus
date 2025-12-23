@@ -26,7 +26,7 @@ import (
 
 	"github.com/release-argus/Argus/service/status"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
-	metric "github.com/release-argus/Argus/web/metric"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestLookup_Metrics(t *testing.T) {
@@ -49,14 +49,14 @@ func TestLookup_Metrics(t *testing.T) {
 	wantC := 2
 	if (gotC - hadC) != wantC {
 		t.Errorf("%s\nCount metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
-			packageName, wantC, (gotC - hadC))
+			packageName, wantC, gotC - hadC)
 	}
 	// gauges:
 	gotG := testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
 	wantG := 0
 	if (gotG - hadG) != wantG {
 		t.Errorf("%s\nGauge metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
-			packageName, wantG, (gotG - hadG))
+			packageName, wantG, gotG - hadG)
 	}
 	// But can be added.
 	lookup.QueryMetrics(&lookup, nil)
@@ -64,7 +64,7 @@ func TestLookup_Metrics(t *testing.T) {
 	wantG = 1
 	if (gotG - hadG) != wantG {
 		t.Errorf("%s\nGauge metrics mismatch after QueryMetrics()\nwant: %d\ngot:  %d",
-			packageName, wantG, (gotG - hadG))
+			packageName, wantG, gotG - hadG)
 	}
 
 	// AND it can be deleted.

@@ -30,6 +30,7 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -204,6 +205,31 @@ func TestDefaults_Default(t *testing.T) {
 					packageName, tc.want, tc.got)
 			}
 		})
+	}
+}
+
+func TestDefaults_Default_Fail(t *testing.T) {
+	releaseStdout := test.CaptureLog(logutil.Log)
+	// GIVEN Defaults, and an environment variable that will cause MapEnvToStruct to fail.
+	var defaults Defaults
+	_ = os.Setenv("ARGUS_SERVICE_OPTIONS_INTERVAL", "99 something")
+	t.Cleanup(func() { _ = os.Unsetenv("ARGUS_SERVICE_OPTIONS_INTERVAL") })
+
+	resultChannel := make(chan bool, 1)
+	// WHEN Default is called on the Defaults.
+	resultChannel <- defaults.Default()
+
+	// THEN if false is returned, the error is logged.
+	if err := test.OkMatch(t, false, resultChannel, logutil.ExitCodeChannel(), releaseStdout); err != nil {
+		t.Fatalf("%s\n%s",
+			packageName, err.Error())
+	}
+	// AND the stdout matches the expected result.
+	stdout := releaseStdout()
+	wantSubstring := `One or more 'ARGUS_' environment variables are invalid:`
+	if !strings.Contains(stdout, wantSubstring) {
+		t.Errorf("%s\nstdout mismatch\nwant substring: %q\ngot:  %q",
+			packageName, wantSubstring, stdout)
 	}
 }
 
@@ -914,6 +940,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			defaults := Defaults{
 				Service: service.Defaults{
@@ -939,40 +966,28 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				}
 			}
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
-			// Catch fatal panics.
-			defer func() {
-				r := recover()
-				// Ignore nil panics.
-				if r == nil {
-					return
-				}
+			wantOk := tc.errRegex == ""
 
-				if tc.errRegex == "" {
-					t.Fatalf("%s\nunexpected panic: %v",
-						packageName, r)
-				}
-				switch r.(type) {
-				case string:
-					if !util.RegexCheck(tc.errRegex, r.(string)) {
-						t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-							packageName, tc.errRegex, r.(string))
-					}
-				default:
-					t.Fatalf("%s\nunexpected panic: %v",
-						packageName, r)
-				}
-			}()
+			resultChannel := make(chan bool, 1)
+			// WHEN CheckValues is called on it.
+			go func() { resultChannel <- defaults.MapEnvToStruct() }()
 
-			// WHEN MapEnvToStruct is called on it.
-			defaults.MapEnvToStruct()
-
-			// THEN any error is as expected.
-			if tc.errRegex != "" { // Expected a FATAL panic to be caught above.
-				t.Fatalf("%s\nexpected an error matching %q, but got none",
-					packageName, tc.errRegex)
+			// THEN the ok value is as expected.
+			if err := test.OkMatch(t, wantOk, resultChannel, logutil.ExitCodeChannel(), releaseStdout); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			// AND any error is as expected.
+			stdout := releaseStdout()
+			if !wantOk {
+				return
+			}
+			if !util.RegexCheck(tc.errRegex, stdout) {
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, stdout)
 			}
 			// AND the defaults are set to the appropriate env vars.
 			if defaults.String("") != tc.want.String("") {

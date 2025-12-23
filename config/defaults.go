@@ -42,7 +42,7 @@ func (d *Defaults) String(prefix string) string {
 }
 
 // Default sets these Defaults to the default values.
-func (d *Defaults) Default() {
+func (d *Defaults) Default() bool {
 	d.Service.Default()
 
 	// Notify defaults.
@@ -52,16 +52,20 @@ func (d *Defaults) Default() {
 	d.WebHook.Default()
 
 	// Overwrite defaults with environment variables.
-	d.MapEnvToStruct()
+	if ok := d.MapEnvToStruct(); !ok {
+		return false
+	}
 
 	// Notify Types.
 	for notifyType, notify := range d.Notify {
 		notify.Type = notifyType
 	}
+
+	return true
 }
 
 // MapEnvToStruct maps environment variables to this struct.
-func (d *Defaults) MapEnvToStruct() {
+func (d *Defaults) MapEnvToStruct() bool {
 	err := mapEnvToStruct(d, "", nil)
 	if err == nil {
 		// env vars parsed correctly, check the values are valid in the struct.
@@ -73,8 +77,10 @@ func (d *Defaults) MapEnvToStruct() {
 	if err != nil {
 		logutil.Log.Fatal(
 			"One or more 'ARGUS_' environment variables are invalid:\n"+err.Error(),
-			logutil.LogFrom{}, true)
+			logutil.LogFrom{})
+		return false
 	}
+	return true
 }
 
 // CheckValues validates the fields of the Defaults struct.

@@ -17,14 +17,14 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/release-argus/Argus/test"
-	logtest "github.com/release-argus/Argus/test/log"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func resetFlags() {
@@ -35,56 +35,87 @@ func resetFlags() {
 	testServiceFlag = test.StringPtr("")
 }
 
-func TestTheMain(t *testing.T) {
-	// Log.
-	logtest.InitLog()
-
+func TestRun(t *testing.T) {
 	// GIVEN different Configs to test.
-	tests := map[string]struct {
-		file           func(path string, t *testing.T)
+	tests := []struct {
+		name           string
+		file           func(path string)
+		preStartFunc   func(baseDir string)
 		outputContains *[]string
-		db             string
+		exitCode       *int
 	}{
-		"config with no services": {
+		{
+			name: "config with services, db invalid format",
+			file: testYAML_Argus,
+			preStartFunc: func(baseDir string) {
+				// Create an invalid database file.
+				dbFile := filepath.Join(baseDir, "argus.db")
+				_ = os.WriteFile(dbFile, []byte("invalid format"), 0644)
+			},
+			outputContains: &[]string{
+				"file is not a database"},
+			exitCode: test.IntPtr(1)},
+		{
+			name: "config with no services",
 			file: testYAML_NoServices,
-			db:   "test-no_services.db",
 			outputContains: &[]string{
 				"Found 0 services to monitor",
 				"Listening on "}},
-		"config with services": {
+		{
+			name: "config with services",
 			file: testYAML_Argus,
-			db:   "test-argus.db",
 			outputContains: &[]string{
 				"services to monitor:",
 				"release-argus/Argus, Latest Release - ",
 				"Listening on "}},
-		"config with services and some !active": {
+		{
+			name: "config with services and some !active",
 			file: testYAML_Argus_SomeInactive,
-			db:   "test-argus-some-inactive.db",
 			outputContains: &[]string{
 				"Found 1 services to monitor:"}},
 	}
 
-	for name, tc := range tests {
+	for _, tc := range tests {
+		name := tc.name
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			// t.Parallel() - Cannot run in parallel since we're using stdout and sharing log resultChannel.
+			releaseStdout := test.CaptureLog(logutil.Log)
 
-			file := fmt.Sprintf("%s.yml", name)
-			os.Remove(tc.db)
-			tc.file(file, t)
-			t.Cleanup(func() { os.Remove(tc.db) })
+			tempDir := t.TempDir()
+			file := filepath.Join(tempDir, "config.yml")
+			tc.file(file)
 			resetFlags()
 			configFile = &file
 			accessToken := os.Getenv("GITHUB_TOKEN")
-			os.Setenv("ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN", accessToken)
+			_ = os.Setenv("ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN", accessToken)
+			// Add tempDir to database file path.
+			_ = os.Setenv("ARGUS_DATA_DATABASE_FILE", filepath.Join(tempDir, "argus.db"))
+			t.Cleanup(func() { _ = os.Unsetenv("ARGUS_DATA_DATABASE_FILE") })
+			if tc.preStartFunc != nil {
+				tc.preStartFunc(tempDir)
+			}
 
-			// WHEN Main is called.
-			go main()
-			time.Sleep(3 * time.Second)
+			resultChannel := make(chan int)
+			// WHEN run is called.
+			go func() {
+				resultChannel <- run()
+			}()
+
+			var exitCode *int
+			select {
+			case code := <-resultChannel:
+				exitCode = &code
+			case <-time.After(3 * time.Second):
+				if tc.exitCode != nil {
+					t.Logf("%s\nrun timed out waiting for exit code",
+						packageName)
+				}
+			}
 
 			// THEN the program will have printed everything expected.
 			stdout := releaseStdout()
+			t.Logf("%s\nstdout: %q",
+				packageName, stdout)
 			if tc.outputContains != nil {
 				for _, text := range *tc.outputContains {
 					if !strings.Contains(stdout, text) {
@@ -92,6 +123,13 @@ func TestTheMain(t *testing.T) {
 							packageName, text, stdout)
 					}
 				}
+			}
+			// AND the exit code is as expected.
+			wantCode := test.StringifyPtr(tc.exitCode)
+			gotCode := test.StringifyPtr(exitCode)
+			if wantCode != gotCode {
+				t.Errorf("%s\nexit code mismatch\nwant: %s\ngot:  %s",
+					packageName, wantCode, gotCode)
 			}
 		})
 	}

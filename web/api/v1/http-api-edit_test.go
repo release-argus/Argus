@@ -25,13 +25,14 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/gorilla/mux"
-
+	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
@@ -49,10 +50,9 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 	}
 
 	// GIVEN an API and a request to refresh the latest_version of a service.
-	file := "TestHTTP_LatestVersionRefreshUncreated.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	t.Cleanup(func() {
-		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
 			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
@@ -168,10 +168,9 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 	}
 
 	// GIVEN an API and a request to refresh the deployed_version of a service.
-	file := "TestHTTP_DeployedVersionRefreshUncreated.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	t.Cleanup(func() {
-		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
 			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
@@ -292,11 +291,10 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 	}
 
 	// GIVEN an API and a request to refresh the latest_version of a service.
-	file := "TestHTTP_LatestVersionRefresh.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
 			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
@@ -472,11 +470,10 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 	}
 
 	// GIVEN an API and a request to refresh the deployed_version of a service.
-	file := "TestHTTP_DeployedVersionRefresh.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
 			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
@@ -687,11 +684,10 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 
 	testSVC := testService("TestHTTP_ServiceDetail", true)
 	// GIVEN an API and a request for detail of a service.
-	file := "TestHTTP_ServiceDetail.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
 			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
@@ -782,15 +778,14 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		file := name + ".test.yml"
-		api := testAPI(file)
+		path := filepath.Join(t.TempDir(), name+".yaml")
+		api := testAPI(t, path)
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			tc.wantBody = test.TrimJSON(tc.wantBody)
 			svc := testService(name, true)
 			t.Cleanup(func() {
-				_ = os.RemoveAll(file)
 				if api.Config.Settings.Data.DatabaseFile != "" {
 					_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 				}
@@ -833,11 +828,10 @@ func TestHTTP_TemplateParse(t *testing.T) {
 	}
 
 	// GIVEN an API and a request to parse a template.
-	file := "TestHTTP_TemplateParse.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
 			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
@@ -967,11 +961,10 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 	}
 
 	// GIVEN an API and a request to create/edit a service.
-	file := "TestHTTP_ServiceEdit.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
 			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
@@ -981,6 +974,9 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 		svcName = svc.ID
 		break
 	}
+
+	// Give time for save before TempDir clean-up.
+	t.Cleanup(func() { time.Sleep(2 * config.DebounceDuration) })
 
 	tests := map[string]struct {
 		serviceID *string
@@ -1210,13 +1206,14 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 	}
 
 	// GIVEN an API and a request to delete a service.
-	file := "TestHTTP_ServiceDelete.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	t.Cleanup(func() {
-		_ = os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
 			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
+		// Give time for save before TempDir clean-up.
+		time.Sleep(2 * config.DebounceDuration)
 	})
 	svc := testService("TestHTTP_ServiceDelete", true)
 	svc.Init(
@@ -1322,9 +1319,13 @@ func TestHTTP_NotifyTest(t *testing.T) {
 	}
 
 	// GIVEN an API and a request to test a notify.
-	file := "TestHTTP_NotifyTest.yml"
-	api := testAPI(file)
-	t.Cleanup(func() { _ = os.Remove(file) })
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
+	t.Cleanup(func() {
+		if api.Config.Settings.Data.DatabaseFile != "" {
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+		}
+	})
 	validNotify := shoutrrr_test.Shoutrrr(false, false)
 	api.Config.Notify = shoutrrr.ShoutrrrsDefaults{}
 	options := util.CopyMap(validNotify.Options)

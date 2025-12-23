@@ -95,8 +95,8 @@ func TestLookup_url(t *testing.T) {
 			t.Parallel()
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
 			lookup := testLookup(false)

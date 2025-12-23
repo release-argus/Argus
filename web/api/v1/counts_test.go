@@ -79,7 +79,7 @@ func TestHTTP_Counts(t *testing.T) {
 			w := httptest.NewRecorder()
 			api.httpCounts(w, req)
 			res := w.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN the set values are returned in the JSON response.
 			data, _ := io.ReadAll(res.Body)

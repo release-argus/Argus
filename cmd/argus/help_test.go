@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit || integration
+//go:build integration
 
-// Package testing provides utilities for CLI-based testing.
-package testing
+package main
 
 import (
 	"fmt"
@@ -26,7 +25,7 @@ import (
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
-var packageName = "testing"
+var packageName = "main"
 
 func TestMain(m *testing.M) {
 	// Log.

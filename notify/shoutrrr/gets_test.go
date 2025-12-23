@@ -96,8 +96,8 @@ func TestShoutrrr_GetOption(t *testing.T) {
 				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
 			}
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
 			// WHEN GetOption is called.
@@ -193,8 +193,8 @@ func TestShoutrrr_GetURLField(t *testing.T) {
 				shoutrrr.HardDefaults.URLFields[key] = *tc.hardDefaultValue
 			}
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
 			// WHEN GetURLField is called.
@@ -290,8 +290,8 @@ func TestShoutrrr_GetParam(t *testing.T) {
 				shoutrrr.HardDefaults.Params[key] = *tc.hardDefaultValue
 			}
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
 			// WHEN GetParam is called.

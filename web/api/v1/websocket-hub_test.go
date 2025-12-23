@@ -115,7 +115,7 @@ func TestHub_RunWithBroadcast(t *testing.T) {
 	// THEN that message is broadcast to the client.
 	got := <-client.send
 	var gotMsg AnnounceMSG
-	json.Unmarshal(got, &gotMsg)
+	_ = json.Unmarshal(got, &gotMsg)
 	if gotMsg != sentMsg {
 		t.Errorf("%s\nclient message mismatch\nwant: %v\ngot:  %v",
 			packageName, sentMsg, gotMsg)

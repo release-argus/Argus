@@ -27,6 +27,7 @@ import (
 
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestGetIP(t *testing.T) {
@@ -152,7 +153,7 @@ func setupWSTestClient(t *testing.T) *wsTestClient {
 }
 
 func (w *wsTestClient) cleanup() {
-	w.conn.Close()
+	_ = w.conn.Close()
 	w.server.Close()
 }
 
@@ -230,7 +231,7 @@ func TestClient_writePump(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			// Setup test client.
 			wsTest := setupWSTestClient(t)
@@ -336,7 +337,7 @@ func TestClient_readPump(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			// Setup test client.
 			wsTest := setupWSTestClient(t)
@@ -370,7 +371,7 @@ func TestClient_readPump(t *testing.T) {
 			}
 
 			if tc.closeConnection {
-				wsTest.conn.Close()
+				_ = wsTest.conn.Close()
 			}
 
 			// Wait for messages, or timeout.

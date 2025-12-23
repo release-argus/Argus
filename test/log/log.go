@@ -29,7 +29,7 @@ func InitLog() {
 	once.Do(func() {
 		// Set the environment variable to "DEBUG" to stop .Load() resetting it.
 		logLevel := "DEBUG"
-		os.Setenv("ARGUS_LOG_LEVEL", logLevel)
+		_ = os.Setenv("ARGUS_LOG_LEVEL", logLevel)
 
 		logutil.Init(logLevel, false)
 		logutil.Log.Testing = true

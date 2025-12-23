@@ -70,7 +70,7 @@ func (wh *WebHook) Init(
 	}
 
 	wh.Failed = &wh.ServiceStatus.Fails.WebHook
-	wh.Failed.Set(wh.ID, nil)
+	wh.SetFail(nil)
 
 	// Remove the type if it matches the main type or matches the ID.
 	if wh.Type == wh.Main.Type || wh.ID == wh.Type {

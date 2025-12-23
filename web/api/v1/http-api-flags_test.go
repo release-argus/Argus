@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -31,13 +32,12 @@ import (
 
 func TestHTTP_httpFlags(t *testing.T) {
 	// GIVEN an API and a request for the flag var values.
-	file := "TestHTTP_httpFlags.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	apiMutex := sync.RWMutex{}
 	t.Cleanup(func() {
-		os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 	want := `
@@ -62,7 +62,7 @@ func TestHTTP_httpFlags(t *testing.T) {
 	api.httpFlags(w, req)
 	apiMutex.RUnlock()
 	res := w.Result()
-	t.Cleanup(func() { res.Body.Close() })
+	t.Cleanup(func() { _ = res.Body.Close() })
 
 	// THEN the expected body is returned as expected.
 	data, err := io.ReadAll(res.Body)

@@ -17,7 +17,6 @@ package testing
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -30,15 +29,18 @@ import (
 )
 
 // NotifyTest will send a test Shoutrrr message to the Shoutrrr with this flag as its ID.
-func NotifyTest(flag *string, cfg *config.Config) {
+func NotifyTest(flag *string, cfg *config.Config) bool {
 	// Only if flag provided.
 	if *flag == "" {
-		return
+		return true
 	}
 	logFrom := logutil.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	// Find the Shoutrrr to test.
-	notify := findShoutrrr(*flag, cfg, logFrom)
+	notify, ok := findShoutrrr(*flag, cfg, logFrom)
+	if !ok {
+		return false
+	}
 
 	err := notify.TestSend("https://example.com/service_url")
 
@@ -52,13 +54,11 @@ func NotifyTest(flag *string, cfg *config.Config) {
 		logutil.Log.Fatal(
 			fmt.Sprintf("Message failed to send with %q config\n%s\n",
 				*flag, err),
-			logFrom,
-			true)
+			logFrom)
+		return false
 	}
 
-	if !logutil.Log.Testing {
-		os.Exit(0)
-	}
+	return true
 }
 
 // findShoutrrr with `name` from cfg.Service.Notify || cfg.Notify.
@@ -66,7 +66,7 @@ func findShoutrrr(
 	name string,
 	cfg *config.Config,
 	logFrom logutil.LogFrom,
-) (notify *shoutrrr.Shoutrrr) {
+) (notify *shoutrrr.Shoutrrr, ok bool) {
 	// Find in Service.X.Notify.name.
 	for _, svc := range cfg.Service {
 		if svc.Notify != nil && svc.Notify[name] != nil {
@@ -114,20 +114,22 @@ func findShoutrrr(
 			if err := notify.CheckValues("    "); err != nil {
 				msg := fmt.Sprintf("notify:\n  %s:\n%s\n",
 					name, err)
-				logutil.Log.Fatal(msg, logFrom, true)
+				logutil.Log.Fatal(msg, logFrom)
+				return
 			}
 
 			// Not found.
 		} else {
 			all := getAllShoutrrrNames(cfg)
-			msg := fmt.Sprintf("Notifier %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s\n",
+			msg := fmt.Sprintf("Notifier %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s",
 				name, strings.Join(all, "\n  - "))
-			logutil.Log.Fatal(msg, logFrom, true)
+			logutil.Log.Fatal(msg, logFrom)
+			return
 		}
 	}
 
 	notify.ServiceStatus.ServiceInfo.ID = "TESTING"
-	return
+	return notify, true
 }
 
 // getAllShoutrrrNames returns a list of all unique shoutrrr names.

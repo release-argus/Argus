@@ -28,7 +28,7 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metric"
+	"github.com/release-argus/Argus/web/metric"
 	"github.com/release-argus/Argus/webhook"
 	webhook_test "github.com/release-argus/Argus/webhook/test"
 )

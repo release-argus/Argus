@@ -14,10 +14,10 @@
 
 //go:build unit
 
+// Package testing provides utilities for CLI-based testing.
 package testing
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/command"
@@ -26,17 +26,20 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestCommandTest(t *testing.T) {
 	// GIVEN a Config with a Service containing a Command.
 	tests := map[string]struct {
-		flag                    string
-		services                service.Services
-		stdoutRegex, panicRegex *string
+		flag        string
+		services    service.Services
+		stdoutRegex *string
+		ok          bool
 	}{
 		"flag is empty": {
 			flag:        "",
+			ok:          true,
 			stdoutRegex: test.StringPtr("^$"),
 			services: service.Services{
 				"argus": {
@@ -50,8 +53,8 @@ func TestCommandTest(t *testing.T) {
 		},
 		"unknown service in flag": {
 			flag:        "something",
-			panicRegex:  test.StringPtr(" could not be found "),
-			stdoutRegex: test.StringPtr("should have panic'd before reaching this"),
+			ok:          false,
+			stdoutRegex: test.StringPtr(" could not be found "),
 			services: service.Services{
 				"argus": {
 					ID: "argus",
@@ -64,6 +67,7 @@ func TestCommandTest(t *testing.T) {
 		},
 		"known service in flag successful command": {
 			flag:        "argus",
+			ok:          true,
 			stdoutRegex: test.StringPtr(`Executing 'echo command did run'\s+.*command did run\s+`),
 			services: service.Services{
 				"argus": {
@@ -77,6 +81,7 @@ func TestCommandTest(t *testing.T) {
 		},
 		"known service in flag failing command": {
 			flag:        "argus",
+			ok:          true,
 			stdoutRegex: test.StringPtr(`.*Executing 'ls /root'\s+.*exit status [1-9]\s+`),
 			services: service.Services{
 				"argus": {
@@ -90,8 +95,8 @@ func TestCommandTest(t *testing.T) {
 		},
 		"service with no commands": {
 			flag:        "argus",
-			panicRegex:  test.StringPtr(" does not have any `command` defined"),
-			stdoutRegex: test.StringPtr("should have panic'd before reaching this"),
+			ok:          false,
+			stdoutRegex: test.StringPtr(" does not have any `command` defined"),
 			services: service.Services{
 				"argus": {
 					ID: "argus"}},
@@ -101,32 +106,22 @@ func TestCommandTest(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
-			if tc.panicRegex != nil {
-				// Switch Fatal to panic and disable this panic.
-				defer func() {
-					r := recover()
-					releaseStdout()
-
-					rStr := fmt.Sprint(r)
-					if !util.RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf("%s\npanic mismatch\nwant: %q\ngot:  %q",
-							packageName, *tc.panicRegex, rStr)
-					}
-				}()
-			}
-			for i := range tc.services {
-				tc.services[i].Status.ServiceInfo.ID = tc.services[i].ID
-			}
-
-			// WHEN CommandTest is called with the test Config.
 			if tc.services[tc.flag] != nil && tc.services[tc.flag].CommandController != nil {
 				tc.services[tc.flag].CommandController.Init(
 					&tc.services[tc.flag].Status,
 					&tc.services[tc.flag].Command,
 					nil,
 					&tc.services[tc.flag].Options.Interval)
+			}
+			defaults := service.Defaults{}
+			defaults.Default()
+			for _, svc := range tc.services {
+				svc.Init(
+					&defaults, &defaults,
+					nil, nil, nil,
+					nil, nil, nil)
 			}
 			order := make([]string, len(tc.services))
 			for i := range tc.services {
@@ -136,7 +131,10 @@ func TestCommandTest(t *testing.T) {
 				Service: tc.services,
 				Order:   order,
 			}
-			CommandTest(&tc.flag, &cfg)
+
+			resultChannel := make(chan bool, 1)
+			// WHEN CommandTest is called with the test Config.
+			resultChannel <- CommandTest(&tc.flag, &cfg)
 
 			// THEN we get the expected stdout.
 			stdout := releaseStdout()
@@ -145,6 +143,11 @@ func TestCommandTest(t *testing.T) {
 					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 						packageName, *tc.stdoutRegex, stdout)
 				}
+			}
+			// AND it succeeds/fails as expected.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
 			}
 		})
 	}

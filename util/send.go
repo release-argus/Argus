@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ func RetryWithBackoff(
 			break
 		}
 		// Space out retries with exponential backoff and jitter.
-		delay := time.Duration(math.Min(
+		delay := time.Duration(min(
 			float64(baseDelay)*math.Pow(2, float64(try)),
 			float64(maxDelay)))
 		//#nosec G404 -- jitter does not need cryptographic security.

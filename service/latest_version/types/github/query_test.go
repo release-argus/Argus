@@ -286,7 +286,7 @@ func TestQuery(t *testing.T) {
 			try := 0
 			temporaryFailureInNameResolution := true
 			for temporaryFailureInNameResolution != false {
-				releaseStdout := test.CaptureStdout()
+				releaseStdout := test.CaptureLog(logutil.Log)
 				try++
 				temporaryFailureInNameResolution = false
 				lookup := testLookup(false)
@@ -424,7 +424,7 @@ func TestGetResponse_ReadError(t *testing.T) {
 		conn, _, _ := w.(http.Hijacker).Hijack()
 		conn.Close()
 	}))
-	t.Cleanup(func() { server.Close() })
+	t.Cleanup(server.Close)
 
 	// AND a request to the mock server's URL.
 	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
@@ -574,7 +574,7 @@ func TestHandleResponse(t *testing.T) {
 	}
 
 	// Ensure other tests that modify global state don't interfere.
-	releaseStdout := test.CaptureStdout()
+	releaseStdout := test.CaptureLog(logutil.Log)
 	defer releaseStdout()
 	hadEmptyListETag := getEmptyListETag()
 	t.Cleanup(func() { setEmptyListETag(hadEmptyListETag) })
@@ -1102,7 +1102,7 @@ func TestQueryGitHubETag(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			lookup := testLookup(false)
 			lookup.URL = "release-argus/test-pagination"
@@ -1176,7 +1176,7 @@ func TestHandleNoVersionChange(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			lookup := testLookup(false)
 

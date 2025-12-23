@@ -25,6 +25,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -32,9 +33,11 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 	webhook_test "github.com/release-argus/Argus/webhook/test"
@@ -42,12 +45,11 @@ import (
 
 func TestHTTP_httpServiceGetActions(t *testing.T) {
 	// GIVEN an API and a request for the Actions of a Service.
-	file := "TestHTTP_httpServiceGetActions.yml"
-	api := testAPI(file)
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
 	t.Cleanup(func() {
-		os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
 	tests := map[string]struct {
@@ -106,7 +108,7 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			if tc.statusCode == 0 {
 				tc.statusCode = http.StatusOK
@@ -149,7 +151,6 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			cfg.Service[name] = svc
 			cfg.Order = append(cfg.Order, name)
 			cfg.OrderMutex.Unlock()
-			t.Cleanup(func() { cfg.DeleteService(name) })
 			target := "/api/v1/service/actions/"
 			target += url.QueryEscape(tc.serviceID)
 
@@ -161,7 +162,7 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			wHTTP := httptest.NewRecorder()
 			api.httpServiceGetActions(wHTTP, req)
 			res := wHTTP.Result()
-			t.Cleanup(func() { res.Body.Close() })
+			t.Cleanup(func() { _ = res.Body.Close() })
 
 			// THEN we get the expected response.
 			stdout := releaseStdout()
@@ -249,14 +250,13 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 
 func TestHTTP_httpServiceRunActions(t *testing.T) {
 	// GIVEN an API and a request for the Actions of a Service.
-	file := "TestHTTP_httpServiceRunActions.yml"
-	api := testAPI(file)
-	t.Cleanup(func() {
-		os.RemoveAll(file)
-		if api.Config.Settings.Data.DatabaseFile != "" {
-			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
-		}
-	})
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
+	if api.Config.Settings.Data.DatabaseFile != "" {
+		_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+		// Give time for save before TempDir clean-up.
+		t.Cleanup(func() { time.Sleep(2 * config.DebounceDuration) })
+	}
 	tests := map[string]struct {
 		serviceID                   string
 		active                      *bool
@@ -422,7 +422,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			tc.serviceID = strings.ReplaceAll(tc.serviceID, "__name__", name)
 			svc := testService(tc.serviceID, true)
@@ -557,7 +557,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 						packageName, expecting, message)
 					return
 				}
-				json.Unmarshal(message, &messages[got])
+				_ = json.Unmarshal(message, &messages[got])
 				raw, _ := json.Marshal(messages[got])
 				t.Logf("%s\n%s\n",
 					packageName, string(raw))
@@ -622,13 +622,13 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 					t.Logf("%s - message[%d]=%v",
 						packageName, i, message)
 					receivedForAnAction := false
-					for _, command := range tc.commands {
-						if message.CommandData[command.String()] != nil {
+					for _, cmd := range tc.commands {
+						if message.CommandData[cmd.String()] != nil {
 							receivedForAnAction = true
-							received = append(received, command.String())
+							received = append(received, cmd.String())
 							t.Logf("%s\nFOUND COMMAND %q - failed=%s",
-								packageName, command.String(),
-								test.StringifyPtr(message.CommandData[command.String()].Failed))
+								packageName, cmd.String(),
+								test.StringifyPtr(message.CommandData[cmd.String()].Failed))
 							break
 						}
 					}

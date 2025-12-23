@@ -262,7 +262,7 @@ func (s *Service) giveSecretsWebHook(oldWebHooks webhook.WebHooks, secretRefs ma
 
 		// failed
 		if oldWebHook.String() == wh.String() {
-			wh.Failed.Set(i, oldWebHook.Failed.Get(oldWebHook.ID))
+			wh.SetFail(oldWebHook.DidFail())
 		}
 		// next_runnable
 		wh.SetNextRunnable(oldWebHook.NextRunnable())
@@ -412,7 +412,8 @@ func removeDefaults(oldService, newService *Service, d *Defaults) {
 			// Check whether the WebHooks have changed.
 			for i, wh := range usingWebHooks {
 				// Name has changed or now has values that override the defaults.
-				if defaultWebHooks[i] != wh || newService.WebHook[wh].String() != fmt.Sprintf("type: %s\n", newService.WebHook[wh].Type) {
+				if defaultWebHooks[i] != wh ||
+					newService.WebHook[wh].String() != fmt.Sprintf("type: %s\n", newService.WebHook[wh].Type) {
 					webhookDefaults = false
 					break
 				}

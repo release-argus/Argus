@@ -142,8 +142,8 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 			t.Parallel()
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
 			webhook := WebHook{

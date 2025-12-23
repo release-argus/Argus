@@ -22,15 +22,18 @@ import (
 	"io/fs"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	_ "modernc.org/sqlite"
 )
 
@@ -41,146 +44,225 @@ func TestCheckFile(t *testing.T) {
 	}
 	// GIVEN various paths.
 	tests := map[string]struct {
-		removeBefore     string
 		createDirBefore  []createOptions
+		dirPerms         []createOptions
 		createFileBefore string
 		path             string
-		panicRegex       string
+		stdoutRegex      string
 	}{
 		"file doesn't exist": {
-			path:         "something_does_not_exist.db",
-			removeBefore: "something_does_not_exist.db"},
+			path:        "something_does_not_exist.db",
+			stdoutRegex: `^$`},
 		"dir doesn't exist, so is created": {
-			path:         "dir_does_not_exist_1/argus.db",
-			removeBefore: "dir_does_not_exist_1"},
+			path:        "dir_does_not_exist_1/argus.db",
+			stdoutRegex: `^$`},
 		"dir exists but not file": {
 			path:            "dir_does_exist_2/argus.db",
-			createDirBefore: []createOptions{{path: "dir_does_exist_2", perms: 0_750}}},
+			createDirBefore: []createOptions{{path: "dir_does_exist_2", perms: 0_750}},
+			stdoutRegex:     `^$`},
 		"file is dir": {
 			path:            "folder.db",
 			createDirBefore: []createOptions{{path: "folder.db", perms: 0_750}},
-			panicRegex:      `path .* is a directory, not a file`},
+			stdoutRegex:     `path .* is a directory, not a file`},
 		"dir is file": {
 			path:             "item_not_a_dir/argus.db",
 			createFileBefore: "item_not_a_dir",
-			panicRegex:       `path .* is not a directory`},
+			stdoutRegex:      `path .* is not a directory`},
 		"no perms to create dir": {
 			path: "dir_no_perms_1/dir_no_perms_2/argus.db",
 			createDirBefore: []createOptions{
 				{path: "dir_no_perms_1", perms: 0_555}},
-			panicRegex: `mkdir .* permission denied`},
+			stdoutRegex: `mkdir .* permission denied`},
 		"no perms to check for file in dir": {
 			path: "dir_no_perms_3/dir_no_perms_4/argus.db",
 			createDirBefore: []createOptions{
 				{path: "dir_no_perms_3", perms: 0_444},
 				{path: "dir_no_perms_3/dir_no_perms_4", perms: 0_444}},
-			panicRegex: `stat .* permission denied`},
+			stdoutRegex: `stat .* permission denied`},
+		"cannot stat existing file due to dir perms": {
+			path: "dir_no_exec/argus.db",
+			createDirBefore: []createOptions{
+				{path: "dir_no_exec", perms: 0_666},
+			},
+			dirPerms: []createOptions{
+				{path: "dir_no_exec", perms: 0_666},
+			},
+			createFileBefore: "dir_no_exec/argus.db",
+			stdoutRegex:      `stat .* permission denied`},
+		"file does exist": {
+			path:             "file_does_exist.db",
+			createFileBefore: "file_does_exist.db",
+			stdoutRegex:      `^$`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseStdout := test.CaptureLog(logutil.Log)
 
-			os.RemoveAll(tc.removeBefore)
-			t.Cleanup(func() { os.RemoveAll(tc.removeBefore) })
+			baseDir := t.TempDir()
+			// Append baseDir to all paths.
+			for i, dir := range tc.createDirBefore {
+				tc.createDirBefore[i].path = filepath.Join(baseDir, dir.path)
+			}
+			for i, dir := range tc.dirPerms {
+				tc.dirPerms[i].path = filepath.Join(baseDir, dir.path)
+			}
+			if tc.createFileBefore != "" {
+				tc.createFileBefore = filepath.Join(baseDir, tc.createFileBefore)
+			}
+			tc.path = filepath.Join(baseDir, tc.path)
+
 			if len(tc.createDirBefore) > 0 {
-				os.RemoveAll(tc.createDirBefore[0].path)
+				_ = os.RemoveAll(tc.createDirBefore[0].path)
 				t.Cleanup(func() {
 					for _, dir := range tc.createDirBefore {
-						os.Chmod(dir.path, 0_750)
+						_ = os.Chmod(dir.path, 0_750)
 					}
-					os.RemoveAll(tc.createDirBefore[0].path)
+					_ = os.RemoveAll(tc.createDirBefore[0].path)
 				})
 				for _, dir := range tc.createDirBefore {
 					err := os.Mkdir(dir.path, 0_750)
 					if err != nil {
-						t.Fatalf("%s",
-							err)
-					}
-				}
-				// Set perms (in reverse order).
-				for i := len(tc.createDirBefore) - 1; i >= 0; i-- {
-					if err := os.Chmod(tc.createDirBefore[i].path, tc.createDirBefore[i].perms); err != nil {
-						t.Fatalf("%s",
-							err)
+						t.Fatalf("%s\ncreateDirBefore mkdir on %q-%q\nerror: %s",
+							packageName, dir.path, 0_750, err)
 					}
 				}
 			}
 			if tc.createFileBefore != "" {
 				file, err := os.Create(tc.createFileBefore)
 				if err != nil {
-					t.Fatalf("%s",
-						err)
+					t.Fatalf("%s\ncreateFileBefore on %q\nerror: %s",
+						packageName, tc.createFileBefore, err)
 				}
-				file.Close()
-				t.Cleanup(func() { os.Remove(tc.createFileBefore) })
+				_ = file.Close()
+				t.Cleanup(func() { _ = os.Remove(tc.createFileBefore) })
 			}
-			if tc.panicRegex != "" {
-				defer func() {
-					r := recover()
-
-					rStr := fmt.Sprint(r)
-					if !util.RegexCheck(tc.panicRegex, rStr) {
-						t.Errorf("%s\nwant: %q\ngot:  %q",
-							packageName, tc.panicRegex, rStr)
-					}
-				}()
+			// Set perms (in reverse order).
+			for i := len(tc.createDirBefore) - 1; i >= 0; i-- {
+				if err := os.Chmod(tc.createDirBefore[i].path, tc.createDirBefore[i].perms); err != nil {
+					t.Fatalf("%s\ncreateDirBefore chmod on %q-%q\nerror: %s",
+						packageName, tc.createDirBefore[i].path, tc.createDirBefore[i].perms, err)
+				}
 			}
 
+			resultChannel := make(chan bool, 1)
 			// WHEN checkFile is called on that same dir.
-			checkFile(tc.path)
+			resultChannel <- checkFile(tc.path)
 
-			// THEN we get here only when we should.
-			if tc.panicRegex != "" {
-				t.Fatalf("%s\nExpected panic with %q",
-					packageName, tc.panicRegex)
+			// THEN if false is returned, the error is logged.
+			wantOk := tc.stdoutRegex == `^$`
+			if err := test.OkMatch(t, wantOk, resultChannel, logutil.ExitCodeChannel(), releaseStdout); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			// AND the stdout matches the expected result.
+			stdout := releaseStdout()
+			if !util.RegexCheck(tc.stdoutRegex, stdout) {
+				t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.stdoutRegex, stdout)
 			}
 		})
 	}
 }
 
 func TestAPI_Initialise(t *testing.T) {
+	type pathInfo struct {
+		path     string
+		perms    os.FileMode
+		itemType string
+		data     string
+	}
 	// GIVEN a config with a database location.
 	tests := map[string]struct {
-		unreadableDB bool
+		ok    bool
+		paths []pathInfo
 	}{
-		"DB is readable": {
-			unreadableDB: false},
-		"DB is unreadable": {
-			unreadableDB: true},
+		"DB rw-r-r": {
+			ok: true,
+			paths: []pathInfo{
+				{path: "argus.db", perms: 0_644, itemType: "file"},
+			},
+		},
+		"DB -w--w--w-": {
+			ok: false,
+			paths: []pathInfo{
+				{path: "argus.db", perms: 0_444, itemType: "file"},
+			},
+		},
+		"DB r--r--r--": {
+			ok: false,
+			paths: []pathInfo{
+				{path: "argus.db", perms: 0_222, itemType: "file"},
+			},
+		},
+		"DB --x--x--x": {
+			ok: false,
+			paths: []pathInfo{
+				{path: "argus.db", perms: 0_111, itemType: "file"},
+			},
+		},
+		"Dir not writable": {
+			ok: false,
+			paths: []pathInfo{
+				{path: "test", perms: 0_555, itemType: "dir"},
+				{path: "test/argus.db", perms: 0_644, itemType: "file"},
+			},
+		},
+		"Non-DB file data": {
+			ok: false,
+			paths: []pathInfo{
+				{path: "argus.db", perms: 0_644, itemType: "file", data: "something"},
+			},
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tAPI := testAPI(name, "TestAPI_Initialise")
-			if tc.unreadableDB {
-				os.Create(tAPI.config.Settings.DataDatabaseFile())
-				os.Chmod(tAPI.config.Settings.DataDatabaseFile(), 0_000)
+			tAPI := testAPI(t)
+			baseDir := filepath.Dir(tAPI.config.Settings.Data.DatabaseFile)
+			var dbFile string
+			for i, p := range tc.paths {
+				tc.paths[i].path = filepath.Join(baseDir, p.path)
+				if p.itemType == "file" {
+					dbFile = tc.paths[i].path
+					_, _ = os.Create(tc.paths[i].path)
+					if p.data != "" {
+						_ = os.WriteFile(tc.paths[i].path, []byte(p.data), 0_644)
+					}
+					_ = os.Chmod(tc.paths[i].path, 0_644)
+				} else {
+					_ = os.Mkdir(tc.paths[i].path, 0_755)
+				}
 			}
-			defer dbCleanup(tAPI)
-			// Catch fatal panics.
-			defer func() {
-				r := recover()
-				// Ignore nil panics.
-				if r == nil {
-					return
+			for i := len(tc.paths) - 1; i >= 0; i-- {
+				if err := os.Chmod(tc.paths[i].path, tc.paths[i].perms); err != nil {
+					if tc.paths[i].itemType == "dir" {
+						t.Fatalf("%s\npaths chmod on %q (%q)\nerror: %s",
+							packageName, tc.paths[i].path, tc.paths[i].perms, err)
+					}
 				}
-
-				if !tc.unreadableDB {
-					t.Fatalf("%s\nunexpected panic: %v",
-						packageName, r)
+			}
+			tAPI.config.Settings.Data.DatabaseFile = dbFile
+			t.Cleanup(func() {
+				for _, p := range tc.paths {
+					_ = os.Chmod(p.path, 0_755)
 				}
-			}()
+				dbCleanup(tAPI)
+			})
 
+			resultChannel := make(chan bool, 1)
 			// WHEN the db is initialised with it.
-			tAPI.initialise()
+			resultChannel <- tAPI.initialise()
 
-			// THEN the app panic'd if the db was unreadable.
-			if tc.unreadableDB {
-				t.Errorf("%s\nExpected a panic",
-					packageName)
+			// THEN the function failed if the db was unreadable.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			if !tc.ok {
 				return
 			}
 			// THEN the status table was created in the db.
@@ -195,7 +277,7 @@ func TestAPI_Initialise(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			t.Cleanup(func() { rows.Close() })
+			t.Cleanup(func() { _ = rows.Close() })
 			for rows.Next() {
 				var (
 					id  string
@@ -213,7 +295,7 @@ func TestAPI_Initialise(t *testing.T) {
 
 func TestDBQueryService(t *testing.T) {
 	// GIVEN a blank DB.
-	tAPI := testAPI("TestDBQueryService", "db")
+	tAPI := testAPI(t)
 	t.Cleanup(func() { dbCleanup(tAPI) })
 	tAPI.initialise()
 	// Get a Service from the Config.
@@ -275,7 +357,7 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tAPI := testAPI(name, "TestAPI_RemoveUnknownServices")
+			tAPI := testAPI(t)
 			t.Cleanup(func() { dbCleanup(tAPI) })
 			tAPI.initialise()
 			sqlStmt := `
@@ -308,31 +390,22 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			// Catch fatal panics.
-			defer func() {
-				r := recover()
-				// Ignore nil panics.
-				if r == nil {
-					return
-				}
-
-				if !tc.databaseDeleted {
-					t.Fatalf("%s\nunexpected panic: %v",
-						packageName, r)
-				}
-			}()
 			// Delete the DB file.
 			if tc.databaseDeleted {
 				os.Remove(tAPI.config.Settings.Data.DatabaseFile)
 			}
+			wantOk := !tc.databaseDeleted
 
+			resultChannel := make(chan bool, 1)
 			// WHEN the unknown Services are removed with removeUnknownServices.
-			tAPI.removeUnknownServices()
+			resultChannel <- tAPI.removeUnknownServices()
 
-			// THEN the app panic'd if the db was deleted.
-			if tc.databaseDeleted {
-				t.Errorf("%s\nExpected a panic",
-					packageName)
+			// THEN the app panicked if the db was deleted.
+			if err := test.OkMatch(t, wantOk, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			if !wantOk {
 				return
 			}
 			// AND the rows of Services not in .All are returned.
@@ -348,7 +421,7 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 				t.Error(err)
 			}
 			count := 0
-			t.Cleanup(func() { rows.Close() })
+			t.Cleanup(func() { _ = rows.Close() })
 			for rows.Next() {
 				count++
 				var (
@@ -387,14 +460,14 @@ func TestAPI_Run(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// THEN the cell was changed in the DB.
-	otherCfg := testConfig()
+	otherCfg := testConfig(t)
 	otherCfg.Settings.Data.DatabaseFile = "TestAPI_Run-copy.db"
 	bytesRead, err := os.ReadFile(cfg.Settings.Data.DatabaseFile)
 	if err != nil {
 		t.Fatalf("%s\n%v",
 			packageName, err)
 	}
-	t.Cleanup(func() { os.Remove(otherCfg.Settings.Data.DatabaseFile) })
+	t.Cleanup(func() { _ = os.Remove(otherCfg.Settings.Data.DatabaseFile) })
 	err = os.WriteFile(otherCfg.Settings.Data.DatabaseFile, bytesRead, os.FileMode(0644))
 	if err != nil {
 		t.Fatalf("%s\n%v",
@@ -419,12 +492,122 @@ func TestAPI_Run(t *testing.T) {
 	}
 }
 
+func TestAPI_Run_Fail(t *testing.T) {
+	// GIVEN a DB to setup.
+	tests := map[string]struct {
+		setupDB      func(cfg *config.Config)
+		deleteDBFile bool
+		ok           bool
+	}{
+		"initialise fails": {
+			setupDB: func(cfg *config.Config) {
+				// Invalid DB path.
+				cfg.Settings.Data.DatabaseFile = "/invalid/path.db"
+			},
+			ok: false,
+		},
+		"removeUnknownServices returns false": {
+			setupDB: func(cfg *config.Config) {
+				// Drop required column so removeUnknownServices fails.
+				tAPI := testAPI(t)
+				t.Cleanup(func() { dbCleanup(tAPI) })
+				tAPI.initialise()
+				defer tAPI.db.Close()
+				if _, err := tAPI.db.Exec("DROP TABLE status"); err != nil {
+					t.Fatalf("%s\nerror dropping table in setupDB:\n%v", packageName, err)
+				}
+				if _, err := tAPI.db.Exec(`
+				CREATE TABLE IF NOT EXISTS status (
+					latest_version TEXT,
+					latest_version_timestamp TEXT,
+					deployed_version TEXT,
+					deployed_version_timestamp TEXT,
+					approved_version TEXT
+				);`); err != nil {
+					t.Fatalf("%s\nerror creating table in setupDB:\n%v", packageName, err)
+				}
+				if _, err := tAPI.db.Exec(`
+					INSERT INTO status (
+						latest_version,
+						latest_version_timestamp,
+						deployed_version,
+						deployed_version_timestamp,
+						approved_version
+					) VALUES (
+					  '0.0.0',
+					  '2020-01-01T01:01:01Z',
+					  '0.0.0',
+					  '2020-01-01T01:01:01Z',
+					  '0.0.1')`); err != nil {
+					t.Fatalf("%s\nerror inserting row in setupDB:\n%v", packageName, err)
+				}
+				cfg.Settings.Data.DatabaseFile = tAPI.config.Settings.Data.DatabaseFile
+			},
+			ok: false,
+		},
+		"extractServiceStatus returns false": {
+			setupDB: func(cfg *config.Config) {
+				// Drop required column so extractServiceStatus fails.
+				tAPI := testAPI(t)
+				t.Cleanup(func() { dbCleanup(tAPI) })
+				tAPI.initialise()
+				defer tAPI.db.Close()
+				if _, err := tAPI.db.Exec("ALTER TABLE status DROP COLUMN latest_version;"); err != nil {
+					t.Fatalf("%s\nerror dropping column in setupDB:\n%v", packageName, err)
+				}
+				if _, err := tAPI.db.Exec(`
+					INSERT INTO status (
+						id,
+						latest_version_timestamp,
+						deployed_version,
+						deployed_version_timestamp,
+						approved_version
+					) VALUES (
+					  'service1',
+					  '2020-01-01T01:01:01Z',
+					  '0.0.0',
+					  '2020-01-01T01:01:01Z',
+					  '0.0.1')`); err != nil {
+					t.Fatalf("%s\nerror inserting row in setupDB:\n%v", packageName, err)
+				}
+				cfg.Settings.Data.DatabaseFile = tAPI.config.Settings.Data.DatabaseFile
+			},
+			ok: false,
+		},
+		"success": {
+			setupDB: func(cfg *config.Config) {},
+			ok:      true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseStdout := test.CaptureLog(logutil.Log)
+
+			cfg := testConfig(t)
+			tc.setupDB(cfg)
+
+			resultChannel := make(chan bool, 1)
+			// WHEN that DB is run.
+			go func() { resultChannel <- Run(t.Context(), cfg) }()
+
+			// THEN the ok value is as expected.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), releaseStdout); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			_ = releaseStdout()
+		})
+	}
+}
+
 func TestAPI_extractServiceStatus(t *testing.T) {
 	// GIVEN an API on a DB containing at least 1 row.
-	tAPI := testAPI("TestAPI_extractServiceStatus", "db")
+	tAPI := testAPI(t)
 	t.Cleanup(func() { dbCleanup(tAPI) })
 	tAPI.initialise()
-	go tAPI.handler()
+	go tAPI.handler(t.Context())
 	wantStatus := make([]status.Status, len(cfg.Service))
 	// Push a random Status for each Service to the DB.
 	index := 0
@@ -501,67 +684,36 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 	}
 }
 
-func Test_UpdateTypes(t *testing.T) {
-	// GIVEN a DB with the *_version columns as STRING/TEXT.
+func TestAPI_extractServiceStatus_Fail(t *testing.T) {
+	// GIVEN an API with different 'status' columns.
 	tests := map[string]struct {
-		columnType                         string
-		databaseDeleted, backupTableExists bool
-		cannotDropTable, cannotAlterTable  bool
+		errRegex        string
+		tableCreateStmt string
+		insertDataStmt  string
 	}{
-		"No conversion necessary": {
-			columnType: "TEXT"},
-		"Conversion wanted": {
-			columnType: "STRING"},
-		"DB is deleted": {
-			columnType:      "STRING",
-			databaseDeleted: true},
-		"Backup exists with different fields": {
-			columnType:        "STRING",
-			backupTableExists: true},
-		"Cannot drop table because of foreign key": {
-			columnType:      "STRING",
-			cannotDropTable: true},
-		"Cannot alter backup table because of foreign key": {
-			columnType:       "STRING",
-			cannotAlterTable: true},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
-
-			databaseFile := strings.ReplaceAll(
-				fmt.Sprintf("%s-Test_UpdateColumnTypes.db", name),
-				" ", "_")
-			db, err := sql.Open("sqlite", databaseFile)
-			// Enable foreign key constraint enforcement.
-			if _, err := db.Exec("PRAGMA foreign_keys = ON;"); err != nil {
-				t.Fatalf("%s\nFailed to enable foreign key constraints: %s",
-					packageName, err)
-			}
-			t.Cleanup(func() { os.Remove(databaseFile) })
-			if err != nil {
-				t.Fatalf("%s\n%v",
-					packageName, err)
-			}
-			sqlStmtTable := `
+		"latest_version missing": {
+			errRegex: `^FATAL: db.*no such column: latest_version`,
+			tableCreateStmt: `
 				CREATE TABLE IF NOT EXISTS status (
-					id                         TYPE     NOT NULL PRIMARY KEY,
-					latest_version             TYPE     DEFAULT  '',
-					latest_version_timestamp   DATETIME DEFAULT  (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-					deployed_version           TYPE     DEFAULT  '',
-					deployed_version_timestamp DATETIME DEFAULT  (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-					approved_version           TYPE     DEFAULT  ''
-				);`
-			sqlStmtTable = strings.ReplaceAll(sqlStmtTable, "TYPE", tc.columnType)
-			db.Exec(sqlStmtTable)
-			// Add a row to the table.
-			id := "keepMe"
-			latestVersion, latestVersionTimestamp := "0.0.3", "2020-01-02T01:01:01Z"
-			deployedVersion, deployedVersionTimestamp := "0.0.2", "2020-01-01T01:01:01Z"
-			approvedVersion := "0.0.1"
-			sqlStmt := `
+					id TEXT PRIMARY KEY,
+					latest_version_timestamp TEXT,
+					deployed_version TEXT,
+					deployed_version_timestamp TEXT,
+					approved_version TEXT
+				);`,
+		},
+		"latest_version unexpected type": {
+			errRegex: `^FATAL: db.*converting NULL to string is unsupported`,
+			tableCreateStmt: `
+				CREATE TABLE IF NOT EXISTS status (
+					id TEXT PRIMARY KEY,
+					latest_version TEXT,
+					latest_version_timestamp TEXT,
+					deployed_version TEXT,
+					deployed_version_timestamp TEXT,
+					approved_version TEXT
+				);`,
+			insertDataStmt: `
 				INSERT OR REPLACE INTO status (
 					id,
 					latest_version,
@@ -571,76 +723,205 @@ func Test_UpdateTypes(t *testing.T) {
 					approved_version
 				)
 				VALUES (
-					'` + id + `',
-					'` + latestVersion + `',
-					'` + latestVersionTimestamp + `',
-					'` + deployedVersion + `',
-					'` + deployedVersionTimestamp + `',
-					'` + approvedVersion + `'
-				);`
-			db.Exec(sqlStmt)
-			// Catch fatal panics.
-			expectPanic := tc.databaseDeleted ||
-				tc.backupTableExists ||
-				tc.cannotDropTable ||
-				tc.cannotAlterTable
-			defer func() {
-				r := recover()
-				// Ignore nil panics.
-				if r == nil {
-					return
-				}
+					'service1',
+					NULL,
+					'2020-01-01T01:01:01Z',
+					'0.0.1',
+					'2020-01-01T01:01:01Z',
+					'0.0.0'
+				);`,
+		},
+	}
 
-				releaseStdout()
-				if !expectPanic {
-					t.Fatalf("%s\nunexpected panic: %v",
-						packageName, r)
-				}
-			}()
-			// Delete the DB file.
-			if tc.databaseDeleted {
-				os.Remove(databaseFile)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseStdout := test.CaptureLog(logutil.Log)
 
-				// Create a backup table with different fields.
-			} else if tc.backupTableExists {
-				db.Exec(`
+			tAPI := testAPI(t)
+			t.Cleanup(func() { dbCleanup(tAPI) })
+			tAPI.initialise()
+			_, _ = tAPI.db.Exec("DROP TABLE IF EXISTS status;")
+			_, _ = tAPI.db.Exec(tc.tableCreateStmt)
+			if tc.insertDataStmt != "'" {
+				_, _ = tAPI.db.Exec(tc.insertDataStmt)
+			}
+
+			go tAPI.handler(t.Context())
+
+			resultChannel := make(chan bool, 1)
+			// WHEN extractServiceStatus is called.
+			resultChannel <- tAPI.extractServiceStatus()
+
+			// THEN the Status in the Config is updated.
+			if err := test.OkMatch(t, false, resultChannel, logutil.ExitCodeChannel(), releaseStdout); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			stdout := releaseStdout()
+			if !util.RegexCheck(tc.errRegex, stdout) {
+				t.Errorf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.errRegex, stdout)
+			}
+		})
+	}
+}
+
+func Test_UpdateTypes(t *testing.T) {
+	// GIVEN a DB with the *_version columns as STRING/TEXT.
+	tests := map[string]struct {
+		columnType  string
+		setupDB     func(t *testing.T, db **sql.DB, dbFile string)
+		ok          bool
+		stdoutRegex string
+	}{
+		"No conversion necessary": {
+			columnType: "TEXT",
+			ok:         true,
+		},
+		"Conversion wanted": {
+			columnType: "STRING",
+			ok:         true,
+		},
+		"DB is deleted": {
+			columnType:  "STRING",
+			stdoutRegex: `no rows in result set`,
+			setupDB: func(t *testing.T, db **sql.DB, _ string) {
+				_, _ = (*db).Exec("DROP TABLE IF EXISTS status;")
+			},
+			ok: false,
+		},
+		"Backup exists with different fields": {
+			columnType:  "STRING",
+			stdoutRegex: `copy.*table .* has \d columns but \d values were supplied`,
+			setupDB: func(t *testing.T, db **sql.DB, _ string) {
+				_, _ = (*db).Exec(`
 					CREATE TABLE IF NOT EXISTS status_backup (
-						id  TEXT  NOT NULL  PRIMARY KEY
+						id TEXT NOT NULL PRIMARY KEY
 					);`)
-
-				// Create a foreign key to prevent dropping the status table.
-			} else if tc.cannotDropTable {
-				db.Exec(`
-					CREATE TABLE IF NOT EXISTS fk_table (
-						id     INTEGER  NOT NULL  PRIMARY KEY,
-						fk_id  TEXT     NOT NULL,
-						FOREIGN KEY (fk_id) REFERENCES status(id)
+			},
+			ok: false,
+		},
+		"Cannot drop table because of foreign key": {
+			columnType:  "STRING",
+			stdoutRegex: `drop.*FOREIGN KEY constraint failed`,
+			setupDB: func(t *testing.T, db **sql.DB, _ string) {
+				fkTable := "status_backup_fk"
+				_, _ = (*db).Exec(`
+					CREATE TABLE IF NOT EXISTS ` + fkTable + ` (
+						id INTEGER NOT NULL PRIMARY KEY,
+						fk_id TEXT NOT NULL,
+						FOREIGN KEY(fk_id) REFERENCES status(id)
 					);`)
-				// Create a row in the fk_table.
-				db.Exec(`
-					INSERT OR REPLACE INTO fk_table ( fk_id )
-					VALUES ( '` + id + `' );`)
-
-				// Create a trigger to prevent altering the status_backup table.
-			} else if tc.cannotAlterTable {
-				db.Exec(strings.Replace(
-					sqlStmtTable, "status", "status_backup", 1))
-				db.Exec(`
-					CREATE TRIGGER trigger_name
+				_, _ = (*db).Exec(`INSERT OR REPLACE INTO ` + fkTable + ` (fk_id) VALUES ('keepMe');`)
+			},
+			ok: false,
+		},
+		"Cannot alter backup table because of foreign key": {
+			columnType:  "STRING",
+			stdoutRegex: `rename.*no such table`,
+			setupDB: func(t *testing.T, db **sql.DB, _ string) {
+				backupTableName := "status_backup"
+				_ = createStatusTable(*db, backupTableName, "STRING")
+				_, _ = (*db).Exec(`
+					CREATE TRIGGER ` + backupTableName + `
 					AFTER INSERT ON status_backup
 					BEGIN
 						INSERT INTO status (id) VALUES ('name');
 					END;`)
+			},
+			ok: false,
+		},
+		"latest_version column doesn't exist": {
+			stdoutRegex: `no rows in result set`,
+			setupDB: func(t *testing.T, db **sql.DB, _ string) {
+				if _, err := (*db).Exec(`
+					ALTER TABLE status
+					DROP COLUMN latest_version;
+				`); err != nil {
+					t.Fatalf("%s\nfailed to drop column: %v",
+						packageName, err)
+				}
+			},
+			ok: false,
+		},
+		"Read-only DB": {
+			stdoutRegex: `create.*attempt to write a readonly database`,
+			setupDB: func(t *testing.T, db **sql.DB, dbFile string) {
+				_ = (*db).Close()
+				newDB, err := sql.Open("sqlite", "file:"+dbFile+"?mode=ro")
+				if err != nil {
+					t.Fatalf("%s\nfailed to open read-only db: %v",
+						packageName, err)
+				}
+				*db = newDB
+			},
+			ok: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseStdout := test.CaptureLog(logutil.Log)
+
+			databaseFile := filepath.Join(t.TempDir(), "test.db")
+			db, _ := sql.Open("sqlite", databaseFile)
+			t.Cleanup(func() {
+				_ = db.Close()
+				_ = os.Remove(databaseFile)
+			})
+
+			// Enable foreign key constraint enforcement.
+			if _, err := db.Exec("PRAGMA foreign_keys = ON;"); err != nil {
+				t.Fatalf("%s\nFailed to enable foreign key constraints: %s",
+					packageName, err)
 			}
 
-			// WHEN updateTable is called.
-			updateTable(db)
+			// Create the 'status' table.
+			if err := createStatusTable(db, "status", tc.columnType); err != nil {
+				t.Fatalf("%s\nfailed to create status table: %v",
+					packageName, err)
+			}
 
-			// THEN the app panic'd if the db was deleted, or the table manipulation failed.
-			if expectPanic {
-				t.Errorf("%s\nExpected a panic",
-					packageName)
-				releaseStdout()
+			var (
+				id                       = "keepMe"
+				latestVersion            = "0.0.3"
+				latestVersionTimestamp   = "2020-01-02T01:01:01Z"
+				deployedVersion          = "0.0.2"
+				deployedVersionTimestamp = "2020-01-01T01:01:01Z"
+				approvedVersion          = "0.0.1"
+			)
+			// Add a row to the table.
+			if err := insertStatusRow(db,
+				id,
+				latestVersion, latestVersionTimestamp,
+				deployedVersion, deployedVersionTimestamp,
+				approvedVersion); err != nil {
+				t.Fatalf("%s: failed to insert row: %v",
+					packageName, err)
+			}
+
+			// Apply test-specific setup.
+			if tc.setupDB != nil {
+				tc.setupDB(t, &db, databaseFile)
+			}
+
+			resultChannel := make(chan bool, 1)
+			// WHEN updateTable is called.
+			resultChannel <- updateTable(db)
+
+			// THEN it returns ok only if the update succeeded.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), releaseStdout); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			if !tc.ok {
+				stdout := releaseStdout()
+				if !util.RegexCheck(tc.stdoutRegex, stdout) {
+					t.Fatalf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.stdoutRegex, stdout)
+				}
 				return
 			}
 			// AND the ID column and all *_version columns are now TEXT.
@@ -681,4 +962,34 @@ func Test_UpdateTypes(t *testing.T) {
 			time.Sleep(100 * time.Millisecond)
 		})
 	}
+}
+
+func createStatusTable(db *sql.DB, tableName string, columnType string) error {
+	sqlStmt := `
+		CREATE TABLE IF NOT EXISTS ` + tableName + ` (
+			id                         TYPE     NOT NULL PRIMARY KEY,
+			latest_version             TYPE     DEFAULT '',
+			latest_version_timestamp   DATETIME DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+			deployed_version           TYPE     DEFAULT '',
+			deployed_version_timestamp DATETIME DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+			approved_version           TYPE     DEFAULT ''
+		);`
+	sqlStmt = strings.ReplaceAll(sqlStmt, "TYPE", columnType)
+	_, err := db.Exec(sqlStmt)
+
+	return err
+}
+
+func insertStatusRow(db *sql.DB, id, lv, lvt, dv, dvt, av string) error {
+	sqlStmt := `
+		INSERT OR REPLACE INTO status (
+			id, latest_version, latest_version_timestamp,
+			deployed_version, deployed_version_timestamp, approved_version
+		) VALUES (?, ?, ?, ?, ?, ?);`
+	_, err := db.Exec(sqlStmt, id, lv, lvt, dv, dvt, av)
+
+	return err
+}
+
+func createBackupTableWithTrigger(db *sql.DB, tableName string, columnType string) {
 }

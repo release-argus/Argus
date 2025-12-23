@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/service/dashboard"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 )
 
@@ -234,6 +236,110 @@ func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 	}
 }
 
+func TestWebHook_SetAndGetFail(t *testing.T) {
+	// GIVEN an initial state, and a new state for the WebHook's failure state.
+	tests := map[string]struct {
+		initialState *bool
+		newState     *bool
+	}{
+		"initial nil, set true": {
+			initialState: nil,
+			newState:     test.BoolPtr(true),
+		},
+		"initial false, set true": {
+			initialState: test.BoolPtr(false),
+			newState:     test.BoolPtr(true),
+		},
+		"initial true, set false": {
+			initialState: test.BoolPtr(true),
+			newState:     test.BoolPtr(false),
+		},
+		"initial nil, set nil": {
+			initialState: nil,
+			newState:     nil,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND a WebHook with this initial state.
+			svcStatus := status.Status{}
+			svcStatus.Init(
+				0, 0, 1,
+				packageName, name, "",
+				&dashboard.Options{})
+			wh := &WebHook{ID: t.Name()}
+			wh.Init(
+				&svcStatus,
+				nil, nil, nil,
+				nil,
+				nil)
+			wh.SetFail(tc.initialState)
+
+			// WHEN we call SetFail with the new state.
+			wh.SetFail(tc.newState)
+
+			// THEN DidFail returns the expected value.
+			got := wh.DidFail()
+			gotStr := test.StringifyPtr(got)
+			wantStr := test.StringifyPtr(tc.newState)
+			if gotStr != wantStr {
+				t.Errorf("%s\nFail mismatch\nwant: %s\ngot:  %s",
+					packageName, wantStr, gotStr)
+			}
+		})
+	}
+}
+
+func TestWebHook_SetAndGetNextRunnable(t *testing.T) {
+	// GIVEN an initial state, and a new state for the WebHook's next runnable time.
+	tests := map[string]struct {
+		initialState time.Time
+		newState     time.Time
+	}{
+		"date changed": {
+			initialState: time.Time{},
+			newState:     time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		"date not changed": {
+			initialState: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+			newState:     time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND a WebHook with this initial state.
+			svcStatus := status.Status{}
+			svcStatus.Init(
+				0, 0, 1,
+				packageName, name, "",
+				&dashboard.Options{})
+			wh := &WebHook{ID: t.Name()}
+			wh.Init(
+				&svcStatus,
+				nil, nil, nil,
+				nil,
+				nil)
+			wh.SetNextRunnable(tc.initialState)
+
+			// WHEN we call SetNextRunnable with the new state.
+			wh.SetNextRunnable(tc.newState)
+
+			// THEN NextRunnable returns the expected value.
+			got := wh.NextRunnable()
+			if got != tc.newState {
+				t.Errorf("%s\nFail mismatch\nwant: %s\ngot:  %s",
+					packageName, tc.newState, got)
+			}
+		})
+	}
+}
+
 func TestWebHook_GetMaxTries(t *testing.T) {
 	// GIVEN a WebHook.
 	tests := map[string]struct {
@@ -351,7 +457,7 @@ func TestWebHook_BuildRequest(t *testing.T) {
 				// Payload.
 				body, _ := io.ReadAll(req.Body)
 				var payload GitHub
-				json.Unmarshal(body, &payload)
+				_ = json.Unmarshal(body, &payload)
 				want := "refs/heads/master"
 				if payload.Ref != want {
 					t.Errorf("%s\npayload mismatch\nwant: %q\ngot:  %q (%+v)",
@@ -501,8 +607,8 @@ func TestWebHook_GetSecret(t *testing.T) {
 			t.Parallel()
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 			webhook := testWebHook(true, false, false)
 			webhook.Secret = tc.rootValue
@@ -641,8 +747,8 @@ func TestWebHook_GetURL(t *testing.T) {
 			t.Parallel()
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 			webhook := testWebHook(true, false, false)
 			webhook.URL = tc.rootValue
@@ -682,7 +788,7 @@ func TestWebHook_GetIsRunnable(t *testing.T) {
 			t.Parallel()
 
 			webhook := testWebHook(true, false, false)
-			webhook.SetNextRunnable(tc.nextRunnable)
+			webhook.Failed.SetNextRunnable(webhook.ID, tc.nextRunnable)
 			time.Sleep(time.Nanosecond)
 
 			// WHEN GetIsRunnable is called.
@@ -719,8 +825,8 @@ func TestWebHook_SetExecuting(t *testing.T) {
 			addDelay:       true,
 			delay:          "30m",
 		},
-		"sending with maxTries 10 and delay does delay by 3*maxTries+delay+1h": {
-			timeDifference: time.Hour + 30*time.Minute + 30*time.Second + 15*time.Second,
+		"sending with maxTries 10 and delay does delay by delay+1h+15s": {
+			timeDifference: time.Hour + 30*time.Minute + 15*time.Second,
 			failed:         nil,
 			sending:        true,
 			addDelay:       true,

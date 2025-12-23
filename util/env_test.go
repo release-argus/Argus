@@ -115,8 +115,8 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 			for k, v := range tc.env {
 				envVarName := fmt.Sprintf("%s_%s",
 					envVarNameBase, k)
-				os.Setenv(envVarName, v)
-				t.Cleanup(func() { os.Unsetenv(envVarName) })
+				_ = os.Setenv(envVarName, v)
+				t.Cleanup(func() { _ = os.Unsetenv(envVarName) })
 			}
 
 			// WHEN FirstNonDefaultWithEnv is run on a slice of slice.
@@ -211,8 +211,8 @@ func TestEvalEnvVars(t *testing.T) {
 			for k, v := range tc.env {
 				envVarName := fmt.Sprintf("%s_%s",
 					envVarNameBase, k)
-				os.Setenv(envVarName, v)
-				t.Cleanup(func() { os.Unsetenv(envVarName) })
+				_ = os.Setenv(envVarName, v)
+				t.Cleanup(func() { _ = os.Unsetenv(envVarName) })
 			}
 
 			// WHEN EvalEnvVars is called.
@@ -260,8 +260,8 @@ func TestExpandEnvVariables(t *testing.T) {
 			t.Parallel()
 
 			if tc.envVarValue != nil {
-				os.Setenv(tc.envVarName, *tc.envVarValue)
-				t.Cleanup(func() { os.Unsetenv(tc.envVarName) })
+				_ = os.Setenv(tc.envVarName, *tc.envVarValue)
+				t.Cleanup(func() { _ = os.Unsetenv(tc.envVarName) })
 			}
 
 			// WHEN expandEnvVariables is called.
@@ -340,8 +340,8 @@ func TestTryExpandEnv(t *testing.T) {
 
 			// Set environment variables
 			for k, v := range tc.envVars {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
 			// Call TryExpandEnv

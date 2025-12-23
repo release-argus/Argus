@@ -26,6 +26,7 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -70,11 +71,21 @@ func TestConfig_CheckValues(t *testing.T) {
 	tests := map[string]struct {
 		config   *Config
 		errRegex string
-		noPanic  bool
+		ok       bool
 	}{
 		"valid Config": {
-			config:  testVerify(t),
-			noPanic: true,
+			config: testVerify(t),
+			ok:     true,
+		},
+		"invalid Settings": {
+			config: &Config{Settings: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						CertFile: "doesnotexist.pem"}}}},
+			errRegex: test.TrimYAML(`
+				^settings:
+					web:
+						cert_file: .*doesnotexist.pem.* no such file.*`),
 		},
 		"invalid Defaults": {
 			config: &Config{
@@ -129,6 +140,7 @@ func TestConfig_CheckValues(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseLog := test.CaptureLog(logutil.Log)
 			releaseStdout := test.CaptureStdout()
 
 			if tc.config != nil {
@@ -136,30 +148,17 @@ func TestConfig_CheckValues(t *testing.T) {
 					svc.ID = name
 				}
 			}
-			// Switch Fatal to panic and disable this panic.
-			if !tc.noPanic {
-				defer func() {
-					recover()
-					stdout := releaseStdout()
 
-					lines := strings.Split(stdout, "\n")
-					wantLines := strings.Count(tc.errRegex, "\n")
-					if wantLines > len(lines) {
-						t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
-							packageName, wantLines, tc.errRegex, len(lines), lines, stdout)
-					}
-					if !util.RegexCheck(tc.errRegex, stdout) {
-						t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-							packageName, tc.errRegex, stdout)
-						return
-					}
-				}()
-			}
-
+			resultChannel := make(chan bool, 1)
 			// WHEN CheckValues is called on them.
-			tc.config.CheckValues()
+			resultChannel <- tc.config.CheckValues()
 
-			// THEN this call will/wont crash the program.
+			// THEN this call will/won't crash the program.
+			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
+				t.Fatalf("%s\n%s",
+					packageName, err.Error())
+			}
+			// AND the error line count matches.
 			stdout := releaseStdout()
 			lines := strings.Split(stdout, "\n")
 			wantLines := strings.Count(tc.errRegex, "\n")
@@ -168,10 +167,21 @@ func TestConfig_CheckValues(t *testing.T) {
 					packageName, wantLines, tc.errRegex, len(lines), lines, stdout)
 				return
 			}
+			// AND the error regex matches.
 			if !util.RegexCheck(tc.errRegex, stdout) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, stdout)
 				return
+			}
+			// AND the log matches.
+			logWant := `^FATAL: Config could not be parsed.*\s$`
+			if tc.ok {
+				logWant = `^$`
+			}
+			logOut := releaseLog()
+			if !util.RegexCheck(logWant, logOut) {
+				t.Errorf("%s\nlog mismatch\nwant: %q\ngot:  %q",
+					packageName, logWant, logOut)
 			}
 		})
 	}

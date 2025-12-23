@@ -25,29 +25,34 @@ import (
 )
 
 // CheckValues validates the fields of the Config struct.
-func (c *Config) CheckValues() {
+func (c *Config) CheckValues() bool {
 	var errs []error
-	c.Settings.CheckValues()
 
+	childPrefix := "  "
+
+	// settings.
+	util.AppendCheckError(&errs, "", "settings", c.Settings.CheckValues(childPrefix))
 	// defaults.
 	util.AppendCheckError(&errs, "", "defaults",
-		c.Defaults.CheckValues("  "))
+		c.Defaults.CheckValues(childPrefix))
 	// notify.
 	util.AppendCheckError(&errs, "", "notify",
-		c.Notify.CheckValues("  "))
+		c.Notify.CheckValues(childPrefix))
 	// webhook.
 	util.AppendCheckError(&errs, "", "webhook",
-		c.WebHook.CheckValues("  "))
+		c.WebHook.CheckValues(childPrefix))
 	// service.
 	util.AppendCheckError(&errs, "", "service",
-		c.Service.CheckValues("  "))
+		c.Service.CheckValues(childPrefix))
 
 	// Combine all errors if any are present.
 	if len(errs) > 0 {
 		combinedErr := errors.Join(errs...)
 		fmt.Println(combinedErr.Error())
-		logutil.Log.Fatal("Config could not be parsed successfully.", logutil.LogFrom{}, true)
+		logutil.Log.Fatal("Config could not be parsed successfully.", logutil.LogFrom{})
+		return false
 	}
+	return true
 }
 
 // Print the parsed config if *flag.

@@ -19,18 +19,16 @@ package config
 import (
 	"os"
 	"strings"
-	"testing"
 
 	"github.com/release-argus/Argus/test"
 )
 
-func writeFile(path string, data string, t *testing.T) {
+func writeFile(path string, data string) {
 	data = strings.TrimPrefix(data, "\n")
 	os.WriteFile(path, []byte(data), 0644)
-	t.Cleanup(func() { os.Remove(path) })
 }
 
-func testYAML_Argus(path string, t *testing.T) {
+func testYAML_Argus(path string) {
 	data := test.TrimYAML(`
 		settings:
 			data:
@@ -44,10 +42,10 @@ func testYAML_Argus(path string, t *testing.T) {
 					url: release-argus/Argus
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_config_test(path string, t *testing.T) {
+func testYAML_config_test(path string) {
 	data := test.TrimYAML(`
 		settings:
 			data:
@@ -180,10 +178,10 @@ func testYAML_config_test(path string, t *testing.T) {
 			EmptyServiceIsDeleted:
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_SomeNilServices(path string, t *testing.T) {
+func testYAML_SomeNilServices(path string) {
 	data := test.TrimYAML(`
 		defaults:
 			service:
@@ -202,10 +200,33 @@ func testYAML_SomeNilServices(path string, t *testing.T) {
 					url: release-argus/Argus
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_SmallConfigTest(path string, t *testing.T) {
+func testYAML_NilServiceMap(path string) {
+	data := test.TrimYAML(`
+		defaults:
+			service:
+				latest_version:
+					access_token: ` + os.Getenv("GITHUB_TOKEN"))
+
+	writeFile(path, data)
+}
+
+func testYAML_InvalidYAML(path string) {
+	data := test.TrimJSON(`{
+		"defaults": {
+			"service": {
+				"latest_version": {
+					"access_token": ""` + os.Getenv("GITHUB_TOKEN") + `"
+				}
+			}
+		}`)
+
+	writeFile(path, data)
+}
+
+func testYAML_SmallConfigTest(path string) {
 	// For the `save.go`.
 	// if index < 0 {
 	// boundary check.
@@ -222,10 +243,10 @@ func testYAML_SmallConfigTest(path string, t *testing.T) {
 				dashboard: {}
 		`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_Ordering_0(path string, t *testing.T) {
+func testYAML_Ordering_0(path string) {
 	data := test.TrimYAML(`
 		settings:
 			web:
@@ -273,10 +294,10 @@ func testYAML_Ordering_0(path string, t *testing.T) {
 				url: https://awx.main.example.com/api/v2/job_templates/XX/github/
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_Ordering_1_no_services(path string, t *testing.T) {
+func testYAML_Ordering_1_no_services(path string) {
 	data := test.TrimYAML(`
 		settings:
 			data:
@@ -308,10 +329,10 @@ func testYAML_Ordering_1_no_services(path string, t *testing.T) {
 				silent_fails: false
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_Ordering_2_obscure_service_names(path string, t *testing.T) {
+func testYAML_Ordering_2_obscure_service_names(path string) {
 	data := test.TrimYAML(`
 		defaults:
 			service:
@@ -360,10 +381,10 @@ func testYAML_Ordering_2_obscure_service_names(path string, t *testing.T) {
 					url: release-argus/argus
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_Ordering_3_empty_line_after_service_line(path string, t *testing.T) {
+func testYAML_Ordering_3_empty_line_after_service_line(path string) {
 	data := test.TrimYAML(`
 		defaults:
 			service:
@@ -387,10 +408,10 @@ func testYAML_Ordering_3_empty_line_after_service_line(path string, t *testing.T
 					url: release-argus/argus
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_Ordering_4_multiple_empty_lines_after_service_line(path string, t *testing.T) {
+func testYAML_Ordering_4_multiple_empty_lines_after_service_line(path string) {
 	data := test.TrimYAML(`
 		defaults:
 			service:
@@ -414,10 +435,10 @@ func testYAML_Ordering_4_multiple_empty_lines_after_service_line(path string, t 
 					url: release-argus/argus
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_Ordering_5_eof_is_service_line(path string, t *testing.T) {
+func testYAML_Ordering_5_eof_is_service_line(path string) {
 	data := test.TrimYAML(`
 		defaults:
 			service:
@@ -429,10 +450,10 @@ func testYAML_Ordering_5_eof_is_service_line(path string, t *testing.T) {
 
 		service:`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_Ordering_6_no_services_after_service_line_another_block(path string, t *testing.T) {
+func testYAML_Ordering_6_no_services_after_service_line_another_block(path string) {
 	data := test.TrimYAML(`
 		defaults:
 			service:
@@ -445,10 +466,10 @@ func testYAML_Ordering_6_no_services_after_service_line_another_block(path strin
 				database_file: test-ordering_5.db
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_Ordering_7_no_services_after_service_line(path string, t *testing.T) {
+func testYAML_Ordering_7_no_services_after_service_line(path string) {
 	data := test.TrimYAML(`
 		defaults:
 			service:
@@ -460,10 +481,10 @@ func testYAML_Ordering_7_no_services_after_service_line(path string, t *testing.
 		service:
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }
 
-func testYAML_Edit(path string, t *testing.T) {
+func testYAML_Edit(path string) {
 	data := test.TrimYAML(`
 		settings:
 			data:
@@ -499,5 +520,5 @@ func testYAML_Edit(path string, t *testing.T) {
 						regex: v?([0-9.]+)
 	`)
 
-	writeFile(path, data, t)
+	writeFile(path, data)
 }

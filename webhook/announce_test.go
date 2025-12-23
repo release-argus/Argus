@@ -70,7 +70,7 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 			}
 			m := <-webhook.ServiceStatus.AnnounceChannel
 			var parsed apitype.WebSocketMessage
-			json.Unmarshal(m, &parsed)
+			_ = json.Unmarshal(m, &parsed)
 
 			if parsed.WebHookData[webhook.ID] == nil {
 				t.Fatalf("%s\nmessage mismatch\nwant: message for service %q\ngot:  %+v",

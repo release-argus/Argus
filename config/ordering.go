@@ -17,7 +17,6 @@ package config
 
 import (
 	"fmt"
-	"math"
 	"regexp"
 	"strings"
 
@@ -80,7 +79,7 @@ func (c *Config) GetOrder(data []byte) {
 					line = lines[index]
 
 					indentation = Indentation(lines[index])
-					c.Settings.Indentation = uint8(math.Min(float64(len(indentation)), 16))
+					c.Settings.Indentation = uint8(max(min(float64(len(indentation)), 16), 2))
 				}
 			} else if afterService {
 				break

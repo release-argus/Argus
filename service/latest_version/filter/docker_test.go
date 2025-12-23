@@ -1181,8 +1181,8 @@ func TestDockerCheck_getUsername(t *testing.T) {
 			t.Parallel()
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
 			// WHEN getUsername is called on it.
@@ -1328,8 +1328,8 @@ func TestDockerCheckDefaults_getUsername(t *testing.T) {
 			t.Parallel()
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
 			// WHEN getUsername is called on it.
@@ -2169,8 +2169,8 @@ func TestDockerCheckDefaults_getToken(t *testing.T) {
 			t.Parallel()
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
 			// WHEN getToken is called on it.
@@ -2295,8 +2295,8 @@ func TestDockerCheck_getToken(t *testing.T) {
 			t.Parallel()
 
 			for k, v := range tc.env {
-				os.Setenv(k, v)
-				t.Cleanup(func() { os.Unsetenv(k) })
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 
 			// WHEN getToken is called on it.
@@ -2311,7 +2311,7 @@ func TestDockerCheck_getToken(t *testing.T) {
 	}
 }
 
-func TestDockerCheckHub_Print(t *testing.T) {
+func TestDockerCheckHub_String(t *testing.T) {
 	// GIVEN a DockerCheckHub.
 	tests := map[string]struct {
 		dockerCheckHub *DockerCheckHub
@@ -2368,7 +2368,7 @@ func TestDockerCheckHub_Print(t *testing.T) {
 	}
 }
 
-func TestDockerCheckDefaults_Print(t *testing.T) {
+func TestDockerCheckDefaults_String(t *testing.T) {
 	// GIVEN a DockerCheckDefaults.
 	tests := map[string]struct {
 		dockerCheckDefaults *DockerCheckDefaults

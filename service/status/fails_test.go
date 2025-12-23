@@ -19,6 +19,7 @@ package status
 import (
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/release-argus/Argus/test"
 )
@@ -397,6 +398,58 @@ func TestFailsBase_Length(t *testing.T) {
 			if lengthWH != len(tc.setAtMap) {
 				t.Errorf("%s\nFailsWebHook\nwant: %v, got:  %v",
 					packageName, len(tc.setAtMap), lengthWH)
+			}
+		})
+	}
+}
+
+func TestFailsWebHook_SetAndGetNextRunnable(t *testing.T) {
+	// GIVEN a FailsWebHook.
+	tests := map[string]struct {
+		size     int
+		setAtMap map[string]time.Time
+	}{
+		"can add to empty map": {
+			size: 0,
+			setAtMap: map[string]time.Time{
+				"test": time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)},
+		},
+		"can add to non-empty map or edit array": {
+			size: 3,
+			setAtMap: map[string]time.Time{
+				"bish": time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+				"bash": time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+				"bosh": time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			var failsWebHook FailsWebHook
+			failsWebHook.Init(tc.size)
+			// Ensure they are empty.
+			for k := range tc.setAtMap {
+				got := failsWebHook.Get(k)
+				if got != nil {
+					t.Errorf("%s\nFailsWebHook, NextRunnable after Init\nwant: nil\ngot:  %v",
+						packageName, got)
+				}
+			}
+
+			// WHEN we Set.
+			for k, v := range tc.setAtMap {
+				failsWebHook.SetNextRunnable(k, v)
+			}
+
+			// THEN the values can be retrieved with Get.
+			for k, v := range tc.setAtMap {
+				got := failsWebHook.NextRunnable(k)
+				if got != v {
+					t.Errorf("%s\nFailsWebHook, NextRunnable after SetNextRunnable\nwant: %s\ngot:  %s",
+						packageName, v, got)
+				}
 			}
 		})
 	}

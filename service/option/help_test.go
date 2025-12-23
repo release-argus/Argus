@@ -17,18 +17,32 @@
 package option
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/release-argus/Argus/test"
 	logtest "github.com/release-argus/Argus/test/log"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 var packageName = "option"
 
 func TestMain(m *testing.M) {
+	// Log.
 	logtest.InitLog()
-	os.Exit(m.Run())
+
+	// Run other tests.
+	exitCode := m.Run()
+
+	if len(logutil.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty",
+			packageName)
+		exitCode = 1
+	}
+
+	// Exit.
+	os.Exit(exitCode)
 }
 
 func testOptions() *Options {

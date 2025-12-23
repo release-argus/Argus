@@ -180,7 +180,7 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureStdout()
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			if tc.require != nil {
 				tc.require.Status = &status.Status{}

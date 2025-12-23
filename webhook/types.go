@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -136,9 +135,8 @@ type WebHook struct {
 
 	ID string `json:"name,omitempty" yaml:"-"` // Unique across the WebHooks.
 
-	mutex        sync.RWMutex         // Mutex for concurrent access.
-	Failed       *status.FailsWebHook `json:"-" yaml:"-"` // Whether the last send attempt failed.
-	nextRunnable time.Time            // Time at which the WebHook can next run (for staggering).
+	mutex  sync.RWMutex         // Mutex for concurrent access.
+	Failed *status.FailsWebHook `json:"-" yaml:"-"` // Whether the last send attempt failed.
 
 	Notifiers      *Notifiers     `json:"-" yaml:"-"` // The Notifiers to notify on failures.
 	ServiceStatus  *status.Status `json:"-" yaml:"-"` // Status of the Service (used for templating vars, and the Announce channel).

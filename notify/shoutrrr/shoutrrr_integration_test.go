@@ -27,7 +27,7 @@ import (
 	"github.com/release-argus/Argus/service/status"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metric"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestShoutrrr_Send(t *testing.T) {
@@ -105,7 +105,7 @@ func TestShoutrrr_Send(t *testing.T) {
 				&svcStatus,
 				&Defaults{},
 				&Defaults{}, &Defaults{})
-			t.Cleanup(func() { tc.shoutrrr.deleteMetrics() })
+			t.Cleanup(tc.shoutrrr.deleteMetrics)
 			if tc.shoutrrr.ServiceStatus != nil && tc.deleting {
 				tc.shoutrrr.ServiceStatus.SetDeleting()
 			}

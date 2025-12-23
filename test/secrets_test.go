@@ -36,8 +36,8 @@ func TestShoutrrrGotifyToken(t *testing.T) {
 
 			want := tc.env
 			if tc.env != "" {
-				os.Setenv("ARGUS_TEST_GOTIFY_TOKEN", tc.env)
-				t.Cleanup(func() { os.Unsetenv("ARGUS_TEST_GOTIFY_TOKEN") })
+				_ = os.Setenv("ARGUS_TEST_GOTIFY_TOKEN", tc.env)
+				t.Cleanup(func() { _ = os.Unsetenv("ARGUS_TEST_GOTIFY_TOKEN") })
 			}
 
 			// WHEN ShoutrrrGotifyToken is called.

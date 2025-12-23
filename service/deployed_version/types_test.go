@@ -90,7 +90,7 @@ func TestNew(t *testing.T) {
 				lType:        "url",
 				configFormat: "something?",
 				configData: test.IgnoreError(t, func() (*yaml.Node, error) {
-					return test.YAMLToNode(t,
+					return test.YAMLToNode(
 						test.TrimYAML(`
 							method: GET
 							url: https://example.com

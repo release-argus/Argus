@@ -28,7 +28,7 @@ var packageName = "logtest"
 func TestInitLog(t *testing.T) {
 	// GIVEN the environment variable is not set.
 	envKey := "ARGUS_LOG_LEVEL"
-	os.Unsetenv(envKey)
+	_ = os.Unsetenv(envKey)
 
 	// WHEN InitLog is called.
 	InitLog()

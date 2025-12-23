@@ -17,10 +17,11 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
-	"strings"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -30,31 +31,48 @@ import (
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	logtest "github.com/release-argus/Argus/test/log"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 var packageName = "db"
 var cfg *config.Config
 
 func TestMain(m *testing.M) {
-	databaseFile := "TestDB.db"
-
 	// Log.
 	logtest.InitLog()
 
-	cfg = testConfig()
+	databaseFile := "TestMain.db.test"
+
+	cfg = testConfig(nil)
 	cfg.Settings.Data.DatabaseFile = databaseFile
-	Run(cfg)
+	// AND a cancellable context for shutdown.
+	ctx, cancel := context.WithCancel(context.Background())
+	Run(ctx, cfg)
 
 	// Run other tests.
 	exitCode := m.Run()
+	cancel()
+	_ = os.Remove(cfg.Settings.Data.DatabaseFile)
+
+	if len(logutil.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty",
+			packageName)
+		exitCode = 1
+	}
 
 	// Exit.
-	os.Remove(cfg.Settings.Data.DatabaseFile)
 	os.Exit(exitCode)
 }
 
-func testConfig() (cfg *config.Config) {
+func testConfig(t *testing.T) (cfg *config.Config) {
 	databaseFile := "test.db"
+	var baseDir = ""
+	if t != nil {
+		baseDir = t.TempDir()
+		databaseFile = filepath.Join(baseDir, "test.db")
+		_, _ = os.Create(databaseFile)
+	}
+
 	databaseChannel := make(chan dbtype.Message, 16)
 	saveChannel := make(chan bool, 16)
 	cfg = &config.Config{
@@ -108,24 +126,17 @@ func testConfig() (cfg *config.Config) {
 	return
 }
 
-func testAPI(primary string, secondary string) *api {
-	testAPI := api{config: testConfig()}
+func testAPI(t *testing.T) *api {
+	return &api{config: testConfig(t)}
 
-	databaseFile := strings.ReplaceAll(
-		fmt.Sprintf("%s-%s.db",
-			primary, secondary),
-		" ", "_")
-	testAPI.config.Settings.Data.DatabaseFile = databaseFile
-
-	return &testAPI
 }
 
 func dbCleanup(api *api) {
 	if api.db != nil {
-		api.db.Close()
+		_ = api.db.Close()
 	}
-	os.Remove(api.config.Settings.Data.DatabaseFile)
-	os.Remove(api.config.Settings.Data.DatabaseFile + "-journal")
+	_ = os.Remove(api.config.Settings.Data.DatabaseFile)
+	_ = os.Remove(api.config.Settings.Data.DatabaseFile + "-journal")
 }
 
 func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
@@ -152,7 +163,7 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { row.Close() })
+	t.Cleanup(func() { _ = row.Close() })
 
 	var (
 		id  string

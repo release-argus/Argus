@@ -17,12 +17,14 @@
 package filter
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/release-argus/Argus/command"
 	logtest "github.com/release-argus/Argus/test/log"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 var packageName = "latestver.filter"
@@ -33,6 +35,12 @@ func TestMain(m *testing.M) {
 
 	// Run other tests.
 	exitCode := m.Run()
+
+	if len(logutil.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty",
+			packageName)
+		exitCode = 1
+	}
 
 	// Exit.
 	os.Exit(exitCode)

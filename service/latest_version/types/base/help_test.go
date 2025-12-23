@@ -18,10 +18,12 @@
 package base
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	logtest "github.com/release-argus/Argus/test/log"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 var packageName = "latestver_base"
@@ -36,6 +38,12 @@ func TestMain(m *testing.M) {
 
 	// Run other tests.
 	exitCode := m.Run()
+
+	if len(logutil.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty",
+			packageName)
+		exitCode = 1
+	}
 
 	// Exit.
 	os.Exit(exitCode)

@@ -16,6 +16,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -25,20 +26,31 @@ import (
 
 // handler will listen to the DatabaseChannel and act on
 // incoming messages to the DatabaseChannel.
-func (api *api) handler() {
+func (api *api) handler(ctx context.Context) {
 	defer api.db.Close()
-	for message := range api.config.DatabaseChannel {
-		// If the message is to delete a row.
-		if message.Delete {
-			api.deleteRow(message.ServiceID)
-			continue
-		}
 
-		// Else, the message is to update a row.
-		api.updateRow(
-			message.ServiceID,
-			message.Cells,
-		)
+	for {
+		select {
+		case message, ok := <-api.config.DatabaseChannel:
+			if !ok {
+				logutil.Log.Fatal("Database closed", logFrom)
+				return
+			}
+
+			// If the message is to delete a row.
+			if message.Delete {
+				api.deleteRow(message.ServiceID)
+				// Else, the message is to update a row.
+			} else {
+				api.updateRow(
+					message.ServiceID,
+					message.Cells,
+				)
+			}
+
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 

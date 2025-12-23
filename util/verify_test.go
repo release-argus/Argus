@@ -17,7 +17,11 @@
 package util
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -100,6 +104,82 @@ func TestErrorToString(t *testing.T) {
 			if got != tc.want {
 				t.Errorf("%s\nwant: %q\ngot:  %q",
 					packageName, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestCheckFileReadable(t *testing.T) {
+	tmpDir := t.TempDir() // isolated temp dir for testing
+
+	// Prepare some files and directories
+	existingFile := filepath.Join(tmpDir, "existing.txt")
+	if err := os.WriteFile(existingFile, []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Directory instead of file
+	existingDir := filepath.Join(tmpDir, "subdir")
+	if err := os.Mkdir(existingDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Relative path that doesn’t exist
+	relativeNonExistent := "nonexistent.txt"
+
+	tests := map[string]struct {
+		path         string
+		expectError  bool
+		containsPath string // substring expected in the error message (for relative paths)
+	}{
+		"empty path": {
+			path:        "",
+			expectError: false,
+		},
+		"existing absolute file": {
+			path:        existingFile,
+			expectError: false,
+		},
+		"existing directory": {
+			path:         existingDir,
+			expectError:  true,
+			containsPath: existingDir,
+		},
+		"non-existent absolute file": {
+			path:        filepath.Join(tmpDir, "missing.txt"),
+			expectError: true,
+		},
+		"non-existent relative file": {
+			path:         relativeNonExistent,
+			expectError:  true,
+			containsPath: relativeNonExistent,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN a path
+			path := tc.path
+
+			// WHEN CheckFileReadable is called
+			err := CheckFileReadable(path)
+
+			// THEN the error behavior should match expectations
+			if tc.expectError && err == nil || !tc.expectError && err != nil {
+				want := "nil"
+				if tc.expectError {
+					want = "error"
+				}
+				t.Fatalf("%s\nerror mismatch\nwant: %v\ngot:  %v",
+					packageName, want, err)
+			}
+
+			// AND if a substring is expected in the error, check it
+			if tc.containsPath != "" && err != nil {
+				if !errors.Is(err, os.ErrNotExist) && !strings.Contains(err.Error(), tc.containsPath) {
+					t.Fatalf("%s\nexpected error message to contain %q, got: %v",
+						packageName, tc.containsPath, err)
+				}
 			}
 		})
 	}
