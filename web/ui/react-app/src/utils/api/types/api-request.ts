@@ -56,12 +56,12 @@ type RequestFns = {
 
 export const RequestMap: RequestFns = {
 	ACTION_GET: (input: ActionGetRequestBuilder) => ({
-		endpoint: `service/actions/${encodeURIComponent(input.serviceID)}`,
+		endpoint: `service/actions${convertToQueryParams({ service_id: input.serviceID })}`,
 		method: 'GET',
 	}),
 	ACTION_SEND: (input: ActionSendRequestBuilder) => ({
 		body: JSON.stringify({ target: input.target }),
-		endpoint: `service/actions/${encodeURIComponent(input.serviceID)}`,
+		endpoint: `service/actions${convertToQueryParams({ service_id: input.serviceID })}`,
 		method: 'POST',
 	}),
 	CONFIG_FLAGS: () => ({
@@ -109,23 +109,23 @@ export const RequestMap: RequestFns = {
 		};
 	},
 	SERVICE_DELETE: (input: ServiceDeleteRequestBuilder) => ({
-		endpoint: `service/delete/${encodeURIComponent(input.serviceID)}`,
+		endpoint: `service/delete${convertToQueryParams({ service_id: input.serviceID })}`,
 		method: 'DELETE',
 	}),
 	SERVICE_EDIT: (input: ServiceEditRequestBuilder) => ({
 		body: JSON.stringify(input.body),
 		endpoint: input.serviceID
-			? `service/update/${encodeURIComponent(input.serviceID)}`
+			? `service/config${convertToQueryParams({ service_id: input.serviceID })}`
 			: `service/new`,
 		method: 'PUT',
 		timeout: 30000,
 	}),
 	SERVICE_EDIT_DEFAULTS: () => ({
-		endpoint: 'service/update',
+		endpoint: 'service/defaults',
 		method: 'GET',
 	}),
 	SERVICE_EDIT_DETAIL: (input: ServiceEditDetailRequestBuilder) => ({
-		endpoint: `service/update/${encodeURIComponent(input.serviceID)}`,
+		endpoint: `service/config${convertToQueryParams({ service_id: input.serviceID })}`,
 		method: 'GET',
 		reducer: (response) => ({
 			id: input.serviceID,
@@ -142,7 +142,7 @@ export const RequestMap: RequestFns = {
 		method: 'PUT',
 	}),
 	SERVICE_SUMMARY: (input: ServiceSummaryRequestBuilder) => ({
-		endpoint: `service/summary/${encodeURIComponent(input.serviceID)}`,
+		endpoint: `service/summary${convertToQueryParams({ service_id: input.serviceID })}`,
 		method: 'GET',
 		reducer: serviceSummaryReducer,
 	}),
@@ -155,18 +155,11 @@ export const RequestMap: RequestFns = {
 		method: 'GET',
 	}),
 	TEMPLATE_PARSE: (input: TemplateParseRequestBuilder) => ({
-		endpoint: `template${convertToQueryParams(
-			removeEmptyValues(
-				{
-					params: input.extraParams
-						? JSON.stringify(input.extraParams)
-						: undefined,
-					service_id: input.serviceID,
-					template: input.template,
-				} satisfies TemplateParseRequest,
-				[],
-			) as Record<string, string>,
-		)}`,
+		endpoint: `template${convertToQueryParams({
+			params: input.extraParams ? JSON.stringify(input.extraParams) : undefined,
+			service_id: input.serviceID,
+			template: input.template,
+		} satisfies TemplateParseRequest)}`,
 		method: 'GET',
 		reducer: (response) => response?.parsed ?? '',
 	}),
@@ -213,8 +206,8 @@ export const RequestMap: RequestFns = {
 
 		const idSegment =
 			typeof serviceID === 'string' && serviceID.trim() !== ''
-				? `/${encodeURIComponent(serviceID)}`
-				: '';
+				? `${convertToQueryParams({ service_id: input.serviceID })}`
+				: '_uncreated';
 
 		return {
 			endpoint: `${dataTarget}/refresh${idSegment}${queryParamsStr}`,

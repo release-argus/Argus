@@ -58,7 +58,7 @@ func TestHTTP_httpRuntimeInfo(t *testing.T) {
 	res := w.Result()
 	t.Cleanup(func() { _ = res.Body.Close() })
 
-	// THEN the expected body is returned as expected.
+	// THEN the expected body is returned.
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("%s\nunexpected error - %v",

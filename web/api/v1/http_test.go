@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"runtime"
 	"strings"
 	"testing"
@@ -237,7 +238,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 	// GIVEN an API and a bunch of routes.
 	tests := map[string]struct {
 		method, path, body string
-		replaceLastPathDir string
+		queryParams        url.Values
 		wantStatus         int
 		wantBody           string
 	}{
@@ -305,35 +306,35 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			}`,
 		},
 		"-service_summary": {
-			method:             http.MethodGet,
-			path:               "service/summary/{service_name:.+}",
-			replaceLastPathDir: "test",
-			wantStatus:         http.StatusNotFound,
+			method:      http.MethodGet,
+			path:        "service/summary",
+			queryParams: url.Values{"service_id": {"unknown_service_id"}},
+			wantStatus:  http.StatusNotFound,
 			wantBody: `{
 				"message":"service \\"[^"]+\\" not found"
 			}`,
 		},
 		"-service_actions - GET": {
-			method:             http.MethodGet,
-			path:               "service/actions/{service_name:.+}",
-			replaceLastPathDir: "test",
-			wantStatus:         http.StatusNotFound,
+			method:      http.MethodGet,
+			path:        "service/actions",
+			queryParams: url.Values{"service_id": {"unknown_service_id"}},
+			wantStatus:  http.StatusNotFound,
 			wantBody: `{
 				"message":"service \\"[^"]+\\" not found"
 			}`,
 		},
 		"service_actions": {
-			method:             http.MethodPost,
-			path:               "service/actions/{service_name:.+}",
-			replaceLastPathDir: "test",
-			wantStatus:         http.StatusNotFound,
+			method:      http.MethodPost,
+			path:        "service/actions",
+			queryParams: url.Values{"service_id": {"unknown_service_id"}},
+			wantStatus:  http.StatusNotFound,
 			wantBody: `{
 				"message":"service \\"[^"]+\\" not found"
 			}`,
 		},
 		"-service_update - GET unspecific": {
 			method:     http.MethodGet,
-			path:       "service/update",
+			path:       "service/defaults",
 			wantStatus: http.StatusOK,
 			wantBody: `{
 				"hard_defaults":{.*},
@@ -343,17 +344,17 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			}`,
 		},
 		"-service_update - GET": {
-			method:             http.MethodGet,
-			path:               "service/update/{service_name:.+}",
-			replaceLastPathDir: "test",
-			wantStatus:         http.StatusNotFound,
+			method:      http.MethodGet,
+			path:        "service/config",
+			queryParams: url.Values{"service_id": {"unknown_service_id"}},
+			wantStatus:  http.StatusNotFound,
 			wantBody: `{
 				"message":"service \\"[^"]+\\" not found"
 			}`,
 		},
 		"lv_refresh_new": {
 			method:     http.MethodGet,
-			path:       "latest_version/refresh",
+			path:       "latest_version/refresh_uncreated",
 			wantStatus: http.StatusBadRequest,
 			wantBody: `{
 				"message":"overrides: .*required.*"
@@ -361,26 +362,26 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 		},
 		"dv_refresh_new": {
 			method:     http.MethodGet,
-			path:       "deployed_version/refresh",
+			path:       "deployed_version/refresh_uncreated",
 			wantStatus: http.StatusBadRequest,
 			wantBody: `{
 				"message":"overrides: .*required.*"
 			}`,
 		},
 		"lv_refresh": {
-			method:             http.MethodGet,
-			path:               "latest_version/refresh/{service_name:.+}",
-			replaceLastPathDir: "test",
-			wantStatus:         http.StatusNotFound,
+			method:      http.MethodGet,
+			path:        "latest_version/refresh",
+			queryParams: url.Values{"service_id": {"unknown_service_id"}},
+			wantStatus:  http.StatusNotFound,
 			wantBody: `{
 				"message":"service \\"[^"]+\\" not found"
 			}`,
 		},
 		"dv_refresh": {
-			method:             http.MethodGet,
-			path:               "deployed_version/refresh/{service_name:.+}",
-			replaceLastPathDir: "test",
-			wantStatus:         http.StatusNotFound,
+			method:      http.MethodGet,
+			path:        "deployed_version/refresh",
+			queryParams: url.Values{"service_id": {"unknown_service_id"}},
+			wantStatus:  http.StatusNotFound,
 			wantBody: `{
 				"message":"service \\"[^"]+\\" not found"
 			}`,
@@ -394,10 +395,10 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			}`,
 		},
 		"service_update": {
-			method:             http.MethodPut,
-			path:               "service/update/{service_name:.+}",
-			replaceLastPathDir: "test",
-			wantStatus:         http.StatusNotFound,
+			method:      http.MethodPut,
+			path:        "service/config",
+			queryParams: url.Values{"service_id": {"unknown_service_id"}},
+			wantStatus:  http.StatusNotFound,
 			wantBody: `{
 				"message":"edit \\"[^"]+\\" failed[^"]*"
 			}`,
@@ -411,10 +412,10 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			}`,
 		},
 		"service_delete": {
-			method:             http.MethodDelete,
-			path:               "service/delete/{service_name:.+}",
-			replaceLastPathDir: "test",
-			wantStatus:         http.StatusNotFound,
+			method:      http.MethodDelete,
+			path:        "service/delete",
+			queryParams: url.Values{"service_id": {"unknown_service_id"}},
+			wantStatus:  http.StatusNotFound,
 			wantBody: `{
 				"message":"delete \\"[^"]+\\" failed[^"]*"
 			}`,
@@ -474,18 +475,15 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 
 						path := fmt.Sprintf("%s/api/v1/%s",
 							routePrefix, tc.path)
-						if tc.replaceLastPathDir != "" {
-							parts := strings.Split(path, "/")
-							path = strings.Join(parts[:len(parts)-1], "/") + "/" + tc.replaceLastPathDir
-						}
-						url := ts.URL + path
+						target := ts.URL + path
 
 						reqBody := io.NopCloser(strings.NewReader(tc.body))
 						if tc.body == "" {
 							reqBody = nil
 						}
 						// WHEN a HTTP request is made to this router.
-						req, err := http.NewRequest(tc.method, url, reqBody)
+						req, err := http.NewRequest(tc.method, target, reqBody)
+						req.URL.RawQuery = tc.queryParams.Encode()
 						if err != nil {
 							t.Fatalf("%s\n%v",
 								packageName, err)
@@ -496,7 +494,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 								packageName, err)
 						}
 
-						// Read the response body.
+						// Read the response bodyRegex.
 						body, err := io.ReadAll(resp.Body)
 						if err != nil {
 							t.Fatal(err)

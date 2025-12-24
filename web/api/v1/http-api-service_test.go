@@ -29,8 +29,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/mux"
-
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/test"
@@ -81,7 +79,7 @@ func TestHTTP_httpServiceOrderGet(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			// THEN the expected body is returned as expected.
+			// THEN the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s\nunexpected error - %v",
@@ -96,73 +94,6 @@ func TestHTTP_httpServiceOrderGet(t *testing.T) {
 			if got != want {
 				t.Errorf("%s\nwant %q\ngot:  %q",
 					packageName, want, got)
-			}
-		})
-	}
-}
-
-func TestHTTP_httpServiceSummary(t *testing.T) {
-	testSVC := testService("TestHTTP_httpServiceSummary", true)
-	// GIVEN an API and a request for detail of a service.
-	file := filepath.Join(t.TempDir(), "config.yml")
-	api := testAPI(t, file)
-	api.Config.Service[testSVC.ID] = testSVC
-	api.Config.Order = append(api.Config.Order, testSVC.ID)
-	t.Cleanup(func() {
-		if api.Config.Settings.Data.DatabaseFile != "" {
-			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
-		}
-	})
-
-	tests := map[string]struct {
-		serviceID      string
-		wantBody       string
-		wantStatusCode int
-	}{
-		"known service": {
-			serviceID:      testSVC.ID,
-			wantBody:       testSVC.Summary().String(),
-			wantStatusCode: http.StatusOK,
-		},
-		"unknown service": {
-			serviceID:      "bish-bash-bosh",
-			wantBody:       `\{"message":"service .+ not found"`,
-			wantStatusCode: http.StatusNotFound,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			target := "/api/v1/service/summary/"
-			target += url.QueryEscape(tc.serviceID)
-
-			// WHEN that HTTP request is sent.
-			req := httptest.NewRequest(http.MethodGet, target, nil)
-			vars := map[string]string{
-				"service_id": tc.serviceID}
-			req = mux.SetURLVars(req, vars)
-			w := httptest.NewRecorder()
-			api.httpServiceSummary(w, req)
-			res := w.Result()
-			t.Cleanup(func() { _ = res.Body.Close() })
-
-			// THEN the expected status code is returned.
-			if res.StatusCode != tc.wantStatusCode {
-				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
-					packageName, tc.wantStatusCode, res.StatusCode)
-			}
-			// AND the expected body is returned as expected.
-			data, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatalf("%s\nunexpected error - %v",
-					packageName, err)
-			}
-			got := string(data)
-			if !util.RegexCheck(tc.wantBody, got) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wantBody, got)
 			}
 		})
 	}
@@ -264,7 +195,7 @@ func TestHTTP_httpServiceOrderSet(t *testing.T) {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wantStatusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected.
+			// AND the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s\nunexpected error - %v",
@@ -279,6 +210,77 @@ func TestHTTP_httpServiceOrderSet(t *testing.T) {
 			if tc.wantOrder != nil && !test.EqualSlices(api.Config.Order, tc.wantOrder) {
 				t.Errorf("%s\nordering mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantOrder, api.Config.Order)
+			}
+		})
+	}
+}
+
+func TestHTTP_httpServiceSummary(t *testing.T) {
+	testSVC := testService("TestHTTP_httpServiceSummary", true)
+	// GIVEN an API and a request for detail of a service.
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
+	api.Config.Service[testSVC.ID] = testSVC
+	api.Config.Order = append(api.Config.Order, testSVC.ID)
+	t.Cleanup(func() {
+		if api.Config.Settings.Data.DatabaseFile != "" {
+			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
+		}
+	})
+
+	tests := map[string]struct {
+		serviceID      string
+		wantBody       string
+		wantStatusCode int
+	}{
+		"known service": {
+			serviceID:      testSVC.ID,
+			wantBody:       testSVC.Summary().String(),
+			wantStatusCode: http.StatusOK,
+		},
+		"unknown service": {
+			serviceID:      "bish-bash-bosh",
+			wantBody:       `\{"message":"service .+ not found"`,
+			wantStatusCode: http.StatusNotFound,
+		},
+		"no service_id provided": {
+			serviceID:      "",
+			wantBody:       `\{"message":"missing required query parameter: service_id"\}`,
+			wantStatusCode: http.StatusBadRequest,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			target := "/api/v1/service/summary"
+			params := url.Values{}
+			params.Set("service_id", tc.serviceID)
+
+			// WHEN that HTTP request is sent.
+			req := httptest.NewRequest(http.MethodGet, target, nil)
+			req.URL.RawQuery = params.Encode()
+			w := httptest.NewRecorder()
+			api.httpServiceSummary(w, req)
+			res := w.Result()
+			t.Cleanup(func() { _ = res.Body.Close() })
+
+			// THEN the expected status code is returned.
+			if res.StatusCode != tc.wantStatusCode {
+				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
+					packageName, tc.wantStatusCode, res.StatusCode)
+			}
+			// AND the expected body is returned.
+			data, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("%s\nunexpected error - %v",
+					packageName, err)
+			}
+			got := string(data)
+			if !util.RegexCheck(tc.wantBody, got) {
+				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.wantBody, got)
 			}
 		})
 	}

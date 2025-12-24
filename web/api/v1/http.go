@@ -60,28 +60,29 @@ func (api *API) SetupRoutesAPI() {
 	//   PUT, service order (disable=order_edit).
 	v1Router.HandleFunc("/service/order", api.httpServiceOrderSet).Methods(http.MethodPut)
 	//   GET, service summary.
-	v1Router.HandleFunc("/service/summary/{service_id:.+}", api.httpServiceSummary).Methods(http.MethodGet)
+	v1Router.HandleFunc("/service/summary", api.httpServiceSummary).Methods(http.MethodGet)
 	//   GET, service actions (webhooks/commands).
-	v1Router.HandleFunc("/service/actions/{service_id:.+}", api.httpServiceGetActions).Methods(http.MethodGet)
+	v1Router.HandleFunc("/service/actions", api.httpServiceGetActions).Methods(http.MethodGet)
 	//   POST, service actions (disable=service_actions).
-	v1Router.HandleFunc("/service/actions/{service_id:.+}", api.httpServiceRunActions).Methods(http.MethodPost)
-	//   GET, service - get details.
-	v1Router.HandleFunc("/service/update", api.httpOtherServiceDetails).Methods(http.MethodGet)
-	v1Router.HandleFunc("/service/update/{service_id:.+}", api.httpServiceDetail).Methods(http.MethodGet)
+	v1Router.HandleFunc("/service/actions", api.httpServiceRunActions).Methods(http.MethodPost)
+	//   GET, service - get details on specific service.
+	v1Router.HandleFunc("/service/config", api.httpServiceDetail).Methods(http.MethodGet)
+	//   GET, service - get details on service defaults.
+	v1Router.HandleFunc("/service/defaults", api.httpOtherServiceDetails).Methods(http.MethodGet)
 	//   GET, service - refresh unsaved service (disable=[ld]v_refresh_new).
-	v1Router.HandleFunc("/latest_version/refresh", api.httpLatestVersionRefreshUncreated).Methods(http.MethodGet)
-	v1Router.HandleFunc("/deployed_version/refresh", api.httpDeployedVersionRefreshUncreated).Methods(http.MethodGet)
+	v1Router.HandleFunc("/latest_version/refresh_uncreated", api.httpLatestVersionRefreshUncreated).Methods(http.MethodGet)
+	v1Router.HandleFunc("/deployed_version/refresh_uncreated", api.httpDeployedVersionRefreshUncreated).Methods(http.MethodGet)
 	//   GET, service - refresh service (disable=[ld]v_refresh).
-	v1Router.HandleFunc("/latest_version/refresh/{service_id:.+}", api.httpLatestVersionRefresh).Methods(http.MethodGet)
-	v1Router.HandleFunc("/deployed_version/refresh/{service_id:.+}", api.httpDeployedVersionRefresh).Methods(http.MethodGet)
+	v1Router.HandleFunc("/latest_version/refresh", api.httpLatestVersionRefresh).Methods(http.MethodGet)
+	v1Router.HandleFunc("/deployed_version/refresh", api.httpDeployedVersionRefresh).Methods(http.MethodGet)
 	//   POST, service - test notify (disable=notify_test).
 	v1Router.HandleFunc("/notify/test", api.httpNotifyTest).Methods(http.MethodPost)
 	//   PUT, service - update details (disable=service_edit).
-	v1Router.HandleFunc("/service/update/{service_id:.+}", api.httpServiceEdit).Methods(http.MethodPut)
+	v1Router.HandleFunc("/service/config", api.httpServiceEdit).Methods(http.MethodPut)
 	//   PUT, service - new service (disable=service_create).
 	v1Router.HandleFunc("/service/new", api.httpServiceEdit).Methods(http.MethodPut)
 	//   DELETE, service - delete service (disable=service_delete).
-	v1Router.HandleFunc("/service/delete/{service_id:.+}", api.httpServiceDelete).Methods(http.MethodDelete)
+	v1Router.HandleFunc("/service/delete", api.httpServiceDelete).Methods(http.MethodDelete)
 	//   GET, service - template strings.
 	v1Router.HandleFunc("/template", api.httpTemplateParse).Methods(http.MethodGet)
 	// GET, counts for Heimdall.
@@ -101,16 +102,16 @@ func (api *API) DisableRoutes() {
 		otherMethods map[string]func(w http.ResponseWriter, r *http.Request)
 		disabled     bool
 	}{
-		webRoutePrefix + "/api/v1/service/order":                            {name: "order_edit", method: http.MethodPut},
-		webRoutePrefix + "/api/v1/service/new":                              {name: "service_create", method: http.MethodPut},
-		webRoutePrefix + "/api/v1/service/update/{service_id:.+}":           {name: "service_update", method: http.MethodPut},
-		webRoutePrefix + "/api/v1/service/delete/{service_id:.+}":           {name: "service_delete", method: http.MethodDelete},
-		webRoutePrefix + "/api/v1/notify/test":                              {name: "notify_test", method: http.MethodPost},
-		webRoutePrefix + "/api/v1/latest_version/refresh/{service_id:.+}":   {name: "lv_refresh", method: http.MethodGet},
-		webRoutePrefix + "/api/v1/deployed_version/refresh/{service_id:.+}": {name: "dv_refresh", method: http.MethodGet},
-		webRoutePrefix + "/api/v1/latest_version/refresh":                   {name: "lv_refresh_new", method: http.MethodGet},
-		webRoutePrefix + "/api/v1/deployed_version/refresh":                 {name: "dv_refresh_new", method: http.MethodGet},
-		webRoutePrefix + "/api/v1/service/actions/{service_id:.+}":          {name: "service_actions", method: http.MethodPost},
+		webRoutePrefix + "/api/v1/service/order":                      {name: "order_edit", method: http.MethodPut},
+		webRoutePrefix + "/api/v1/service/new":                        {name: "service_create", method: http.MethodPut},
+		webRoutePrefix + "/api/v1/service/config":                     {name: "service_update", method: http.MethodPut},
+		webRoutePrefix + "/api/v1/service/delete":                     {name: "service_delete", method: http.MethodDelete},
+		webRoutePrefix + "/api/v1/notify/test":                        {name: "notify_test", method: http.MethodPost},
+		webRoutePrefix + "/api/v1/latest_version/refresh":             {name: "lv_refresh", method: http.MethodGet},
+		webRoutePrefix + "/api/v1/deployed_version/refresh":           {name: "dv_refresh", method: http.MethodGet},
+		webRoutePrefix + "/api/v1/latest_version/refresh_uncreated":   {name: "lv_refresh_new", method: http.MethodGet},
+		webRoutePrefix + "/api/v1/deployed_version/refresh_uncreated": {name: "dv_refresh_new", method: http.MethodGet},
+		webRoutePrefix + "/api/v1/service/actions":                    {name: "service_actions", method: http.MethodPost},
 	}
 	for _, r := range routes {
 		r.disabled = util.Contains(api.Config.Settings.Web.DisabledRoutes, r.name)
