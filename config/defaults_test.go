@@ -32,6 +32,7 @@ import (
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
+	"gopkg.in/yaml.v3"
 )
 
 func TestDefaults_String(t *testing.T) {
@@ -1006,6 +1007,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 		input    *Defaults
 		errRegex string
 		ok       bool
+		changed  bool
 	}{
 		"Service.Interval": {
 			input: &Defaults{Service: service.Defaults{
@@ -1014,7 +1016,8 @@ func TestDefaults_CheckValues(t *testing.T) {
 				^service:
 					options:
 						interval: "10x" <invalid>.*$`),
-			ok: false,
+			ok:      false,
+			changed: false,
 		},
 		"Service.LatestVersion.Require.Docker.Type": {
 			input: &Defaults{Service: service.Defaults{
@@ -1029,7 +1032,8 @@ func TestDefaults_CheckValues(t *testing.T) {
 						require:
 							docker:
 								type: "pizza" <invalid>.*$`),
-			ok: false,
+			ok:      false,
+			changed: false,
 		},
 		"Service.Interval + Service.DeployedVersionLookup.Regex": {
 			input: &Defaults{Service: service.Defaults{
@@ -1047,7 +1051,21 @@ func TestDefaults_CheckValues(t *testing.T) {
 						require:
 							docker:
 								type: "pizza" <invalid>.*$`),
-			ok: false,
+			ok:      false,
+			changed: false,
+		},
+		"Notify changed": {
+			input: &Defaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
+					"foo": shoutrrr.NewDefaults(
+						"generic",
+						nil,
+						map[string]string{
+							"host":           "x",
+							"secret":         "y",
+							"custom_headers": `{"foo": "bar"}`},
+						nil)}},
+			changed: true,
 		},
 		"Notify.x.Delay": {
 			input: &Defaults{Notify: shoutrrr.ShoutrrrsDefaults{
@@ -1060,7 +1078,21 @@ func TestDefaults_CheckValues(t *testing.T) {
 					slack:
 						options:
 							delay: "10x" <invalid>.*$`),
-			ok: false,
+			ok:      false,
+			changed: false,
+		},
+		"WebHook changed": {
+			input: &Defaults{
+				WebHook: webhook.Defaults{
+					Base: webhook.Base{
+						Type:   "github",
+						URL:    "example.com",
+						Secret: "Argus",
+						CustomHeaders: &webhook.Headers{
+							webhook.Header{
+								Key: "foo", Value: "bar"}},
+					}}},
+			changed: true,
 		},
 		"WebHook.Delay": {
 			input: &Defaults{WebHook: *webhook.NewDefaults(
@@ -1068,13 +1100,23 @@ func TestDefaults_CheckValues(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^webhook:
 					delay: "10x" <invalid>.*$`),
-			ok: false,
+			ok:      false,
+			changed: false,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			// Backup the defaults.
+			var backup []byte
+			var err error
+			backup, err = yaml.Marshal(tc.input)
+			if err != nil {
+				t.Fatalf("%s\nfailed to marshal backup - %q",
+					packageName, err.Error())
+			}
 
 			prefixes := []string{"", " ", "  ", "    ", "- "}
 			for _, prefix := range prefixes {
@@ -1083,18 +1125,17 @@ func TestDefaults_CheckValues(t *testing.T) {
 					"^"+prefix)
 				errRegex = strings.ReplaceAll(errRegex, "\n",
 					"\n"+prefix)
-
-				resultChannel := make(chan bool, 1)
-				// WHEN CheckValues is called on it.
-				err, ok := tc.input.CheckValues(prefix)
-				resultChannel <- ok
-
-				// THEN the ok value is as expected.
-				if err := test.OkMatch(t, tc.ok, resultChannel, nil, nil); err != nil {
-					t.Fatalf("%s\n%s",
+				// Restore backup.
+				tc.input = &Defaults{}
+				if err := yaml.Unmarshal(backup, tc.input); err != nil {
+					t.Fatalf("%s\nfailed to unmarshal backup - %q",
 						packageName, err.Error())
 				}
-				// AND any error is as expected.
+
+				// WHEN CheckValues is called on it.
+				err, changed := tc.input.CheckValues(prefix)
+
+				// THEN any error is as expected.
 				e := util.ErrorToString(err)
 				lines := strings.Split(e, "\n")
 				wantLines := strings.Count(errRegex, "\n")
@@ -1107,6 +1148,11 @@ func TestDefaults_CheckValues(t *testing.T) {
 					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 						packageName, errRegex, e)
 					return
+				}
+				// AND the 'changed' flag matches expectation.
+				if changed != tc.changed {
+					t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
+						packageName, tc.changed, changed)
 				}
 			}
 		})

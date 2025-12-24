@@ -88,26 +88,19 @@ func (d *Defaults) MapEnvToStruct() bool {
 func (d *Defaults) CheckValues(prefix string) (error, bool) {
 	itemPrefix := prefix + "  "
 	var errs []error
-	changed := false
 
 	// Service.
 	util.AppendCheckError(&errs, prefix, "service",
 		d.Service.CheckValues(itemPrefix))
 	// Notify.
 	notifyErr, notifyChanged := d.Notify.CheckValues(itemPrefix)
-	if notifyChanged {
-		changed = true
-	}
 	util.AppendCheckError(&errs, prefix, "notify", notifyErr)
 	// WebHook.
 	webhookErr, webhookChanged := d.WebHook.CheckValues(itemPrefix)
-	if webhookChanged {
-		changed = true
-	}
 	util.AppendCheckError(&errs, prefix, "webhook", webhookErr)
 
 	if len(errs) == 0 {
-		return nil, changed
+		return nil, notifyChanged || webhookChanged
 	}
 	return errors.Join(errs...), false
 }
