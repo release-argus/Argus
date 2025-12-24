@@ -31,7 +31,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
@@ -45,7 +44,7 @@ import (
 
 func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 	type wants struct {
-		body       string
+		bodyRegex  string
 		statusCode int
 	}
 
@@ -64,7 +63,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 		"no overrides": {
 			params: map[string]string{},
 			wants: wants{
-				body:       `"message":"overrides: .*required`,
+				bodyRegex:  `"message":"overrides: .*required`,
 				statusCode: http.StatusBadRequest},
 		},
 		"invalid JSON": {
@@ -72,7 +71,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 				"overrides": `"type": "url", "url": "` + test.LookupPlain["url_valid"] + `"}`,
 			},
 			wants: wants{
-				body:       `^\{"message":"invalid JSON[^"]+"\}$`,
+				bodyRegex:  `^\{"message":"invalid JSON[^"]+"\}$`,
 				statusCode: http.StatusBadRequest},
 		},
 		"invalid vars - New fail": {
@@ -82,7 +81,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 				}`),
 			},
 			wants: wants{
-				body:       `"message":".*type: .*invalid`,
+				bodyRegex:  `"message":".*type: .*invalid`,
 				statusCode: http.StatusBadRequest},
 		},
 		"invalid vars - CheckValues fail": {
@@ -94,7 +93,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 				}`),
 			},
 			wants: wants{
-				body:       `"message":"url_commands.*regex:.*required`,
+				bodyRegex:  `"message":"url_commands.*regex:.*required`,
 				statusCode: http.StatusBadRequest},
 		},
 		"valid vars": {
@@ -106,7 +105,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 				}`),
 			},
 			wants: wants{
-				body:       `^{"version":"[0-9.]+","timestamp":"[^"]+"}\s$`,
+				bodyRegex:  `^{"version":"[0-9.]+","timestamp":"[^"]+"}\s$`,
 				statusCode: http.StatusOK},
 		},
 		"query fail": {
@@ -118,7 +117,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 				}`),
 			},
 			wants: wants{
-				body:       `"message":"x509 `,
+				bodyRegex:  `"message":"x509 `,
 				statusCode: http.StatusBadRequest},
 		},
 	}
@@ -127,7 +126,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			target := "/api/v1/latest_version/refresh"
+			target := "/api/v1/latest_version/refresh_uncreated"
 			params := url.Values{}
 			for k, v := range tc.params {
 				params.Set(k, v)
@@ -146,16 +145,16 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected.
+			// AND the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s\nunexpected error - %v",
 					packageName, err)
 			}
 			got := string(data)
-			if !util.RegexCheck(tc.wants.body, got) {
+			if !util.RegexCheck(tc.wants.bodyRegex, got) {
 				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wants.body, got)
+					packageName, tc.wants.bodyRegex, got)
 			}
 		})
 	}
@@ -163,7 +162,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 
 func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 	type wants struct {
-		body       string
+		bodyRegex  string
 		statusCode int
 	}
 
@@ -182,7 +181,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 		"no vars": {
 			params: map[string]string{},
 			wants: wants{
-				body:       `"message":"overrides: .*required`,
+				bodyRegex:  `"message":"overrides: .*required`,
 				statusCode: http.StatusBadRequest},
 		},
 		"invalid JSON": {
@@ -190,7 +189,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 				"overrides": `"type": "url", "url": "` + test.LookupPlain["url_valid"] + `"}`,
 			},
 			wants: wants{
-				body:       `^\{"message":"invalid JSON[^"]+"\}$`,
+				bodyRegex:  `^\{"message":"invalid JSON[^"]+"\}$`,
 				statusCode: http.StatusBadRequest},
 		},
 		"invalid vars - New fail": {
@@ -200,7 +199,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 				}`),
 			},
 			wants: wants{
-				body:       `"message":".*type: .*invalid`,
+				bodyRegex:  `"message":".*type: .*invalid`,
 				statusCode: http.StatusBadRequest},
 		},
 		"invalid vars - CheckValues fail": {
@@ -212,7 +211,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 				}`),
 			},
 			wants: wants{
-				body:       `\{"message":"regex: .*invalid`,
+				bodyRegex:  `\{"message":"regex: .*invalid`,
 				statusCode: http.StatusBadRequest},
 		},
 		"valid vars": {
@@ -223,7 +222,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 					"regex": "stable version: \"v?([0-9.]+)\""
 				}`)},
 			wants: wants{
-				body:       `^\{"version":"[0-9.]+","timestamp":"[^"]+"\}\s$`,
+				bodyRegex:  `^\{"version":"[0-9.]+","timestamp":"[^"]+"\}\s$`,
 				statusCode: http.StatusOK},
 		},
 		"query fail": {
@@ -235,7 +234,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 				}`),
 			},
 			wants: wants{
-				body:       `"message":"x509 `,
+				bodyRegex:  `"message":"x509 `,
 				statusCode: http.StatusBadRequest},
 		},
 	}
@@ -244,7 +243,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			target := "/api/v1/deployed_version/refresh"
+			target := "/api/v1/deployed_version/refresh_uncreated"
 			params := url.Values{}
 			for k, v := range tc.params {
 				params.Set(k, v)
@@ -263,16 +262,16 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected.
+			// AND the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s\nunexpected error - %v",
 					packageName, err)
 			}
 			got := string(data)
-			if !util.RegexCheck(tc.wants.body, got) {
+			if !util.RegexCheck(tc.wants.bodyRegex, got) {
 				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wants.body, got)
+					packageName, tc.wants.bodyRegex, got)
 			}
 		})
 	}
@@ -284,7 +283,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 	_, _ = testSVC.LatestVersion.Query(true, logutil.LogFrom{})
 	_ = testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	type wants struct {
-		body                           string
+		bodyRegex                      string
 		statusCode                     int
 		latestVersion, deployedVersion string
 		announce                       bool
@@ -309,7 +308,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 		"no changes": {
 			params: map[string]string{},
 			wants: wants{
-				body: fmt.Sprintf(`\{"version":%q,.*"\}`,
+				bodyRegex: fmt.Sprintf(`\{"version":%q,.*"\}`,
 					testSVC.Status.LatestVersion()),
 				statusCode:      http.StatusOK,
 				latestVersion:   testSVC.Status.LatestVersion(),
@@ -318,7 +317,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 		},
 		"semantic_versioning not sent - refreshes service": {
 			wants: wants{
-				body:            `\{"version":"ver[0-9.]+",.*"\}`,
+				bodyRegex:       `\{"version":"ver[0-9.]+",.*"\}`,
 				statusCode:      http.StatusOK,
 				latestVersion:   testSVC.Status.LatestVersion(),
 				deployedVersion: testSVC.Status.LatestVersion(),
@@ -328,7 +327,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			params: map[string]string{
 				"semantic_versioning": "null"},
 			wants: wants{
-				body:          `failed to convert \\"[^"]+\\" to a semantic version`,
+				bodyRegex:     `failed to convert \\"[^"]+\\" to a semantic version`,
 				statusCode:    http.StatusBadRequest,
 				latestVersion: ""},
 		},
@@ -336,7 +335,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			params: map[string]string{
 				"semantic_versioning": "false"},
 			wants: wants{
-				body:            `\{"version":"ver[0-9.]+",.*"\}`,
+				bodyRegex:       `\{"version":"ver[0-9.]+",.*"\}`,
 				statusCode:      http.StatusOK,
 				latestVersion:   testSVC.Status.LatestVersion(),
 				deployedVersion: testSVC.Status.LatestVersion(),
@@ -346,7 +345,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			params: map[string]string{
 				"semantic_versioning": "true"},
 			wants: wants{
-				body:          `failed to convert \\"[^"]+\\" to a semantic version`,
+				bodyRegex:     `failed to convert \\"[^"]+\\" to a semantic version`,
 				statusCode:    http.StatusBadRequest,
 				latestVersion: ""},
 		},
@@ -356,7 +355,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 					"url_commands": [{"type":"regex","regex":"beta: \"v?([0-9.]+-beta)\""}]
 				}`)},
 			wants: wants{
-				body:          `\{"version":"[0-9.]+-beta",.*"\}`,
+				bodyRegex:     `\{"version":"[0-9.]+-beta",.*"\}`,
 				statusCode:    http.StatusOK,
 				latestVersion: ""},
 		},
@@ -367,7 +366,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				}`),
 				"semantic_versioning": "false"},
 			wants: wants{
-				body:          `{"message":".*regex: .*invalid`,
+				bodyRegex:     `{"message":".*regex: .*invalid`,
 				statusCode:    http.StatusBadRequest,
 				latestVersion: ""},
 		},
@@ -379,8 +378,15 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				}`),
 				"semantic_versioning": "false"},
 			wants: wants{
-				body:          `\{"message":"service .+ not found"\}`,
+				bodyRegex:     `\{"message":"service .+ not found"\}`,
 				statusCode:    http.StatusNotFound,
+				latestVersion: ""},
+		},
+		"no service_id provided": {
+			serviceID: test.StringPtr(""),
+			wants: wants{
+				bodyRegex:     `\{"message":"missing required query parameter: service_id"\}`,
+				statusCode:    http.StatusBadRequest,
 				latestVersion: ""},
 		},
 	}
@@ -393,25 +399,19 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			apiMutex.Lock()
 			api.Config.Service[svc.ID] = svc
 			apiMutex.Unlock()
-			target := "/api/v1/latest_version/refresh/" + url.QueryEscape(svc.ID)
+			target := "/api/v1/latest_version/refresh"
 			// Add the params to the URL.
 			params := url.Values{}
 			for k, v := range tc.params {
 				params.Set(k, v)
 			}
+			// Set service_id.
+			serviceID := util.DereferenceOrValue(tc.serviceID, svc.ID)
+			params.Set("service_id", serviceID)
 
 			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
-			// Set service_id.
-			serviceID := svc.ID
-			if tc.serviceID != nil {
-				serviceID = *tc.serviceID
-			}
-			vars := map[string]string{
-				"service_id": serviceID,
-			}
-			req = mux.SetURLVars(req, vars)
 			w := httptest.NewRecorder()
 			apiMutex.Lock()
 			api.httpLatestVersionRefresh(w, req)
@@ -424,16 +424,16 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected.
+			// AND the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s\nunexpected error - %v",
 					packageName, err)
 			}
 			got := string(data)
-			if !util.RegexCheck(tc.wants.body, got) {
+			if !util.RegexCheck(tc.wants.bodyRegex, got) {
 				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wants.body, got)
+					packageName, tc.wants.bodyRegex, got)
 			}
 			// AND the LatestVersion is expected.
 			if svc.Status.LatestVersion() != tc.wants.latestVersion {
@@ -464,7 +464,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 	_, _ = testSVC.LatestVersion.Query(true, logutil.LogFrom{})
 	_ = testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	type wants struct {
-		body            string
+		bodyRegex       string
 		statusCode      int
 		deployedVersion string
 	}
@@ -496,7 +496,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 					"allow_invalid_certs": true
 				}`)},
 			wants: wants{
-				body: fmt.Sprintf(`\{"version":%q`,
+				bodyRegex: fmt.Sprintf(`\{"version":%q`,
 					testSVC.Status.DeployedVersion()),
 				statusCode:      http.StatusOK,
 				deployedVersion: ""},
@@ -510,26 +510,26 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 					"allow_invalid_certs": true
 				}`)},
 			wants: wants{
-				body:       `\{"message":"missing required parameter: overrides.type"`,
+				bodyRegex:  `\{"message":"missing required parameter: overrides.type"`,
 				statusCode: http.StatusBadRequest},
 		},
 		"adding deployed version to service - no overrides": {
 			nilDeployedVersion: true,
 			wants: wants{
-				body:       `\{"message":"missing required parameter: overrides.type"`,
+				bodyRegex:  `\{"message":"missing required parameter: overrides.type"`,
 				statusCode: http.StatusBadRequest},
 		},
 		"no changes": {
 			params: map[string]string{},
 			wants: wants{
-				body: fmt.Sprintf(`\{"version":%q,.*"\}`,
+				bodyRegex: fmt.Sprintf(`\{"version":%q,.*"\}`,
 					testSVC.Status.DeployedVersion()),
 				statusCode:      http.StatusOK,
 				deployedVersion: testSVC.Status.DeployedVersion()},
 		},
 		"semantic_versioning not sent - refreshes service": {
 			wants: wants{
-				body:            `\{"version":"ver[\d.]+",.*"\}`,
+				bodyRegex:       `\{"version":"ver[\d.]+",.*"\}`,
 				statusCode:      http.StatusOK,
 				deployedVersion: testSVC.Status.DeployedVersion()},
 		},
@@ -540,7 +540,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				}`),
 				"semantic_versioning": "null"},
 			wants: wants{
-				body:            `failed to convert \\"[^"]+\\" to a semantic version`,
+				bodyRegex:       `failed to convert \\"[^"]+\\" to a semantic version`,
 				statusCode:      http.StatusBadRequest,
 				deployedVersion: ""},
 		},
@@ -549,7 +549,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"semantic_versioning": "false",
 			},
 			wants: wants{
-				body:            `\{"version":"ver[0-9.]+",.*"\}`,
+				bodyRegex:       `\{"version":"ver[0-9.]+",.*"\}`,
 				statusCode:      http.StatusOK,
 				deployedVersion: testSVC.Status.DeployedVersion()},
 		},
@@ -558,7 +558,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"semantic_versioning": "true",
 			},
 			wants: wants{
-				body:            `failed to convert \\"[^"]+\\" to a semantic version`,
+				bodyRegex:       `failed to convert \\"[^"]+\\" to a semantic version`,
 				statusCode:      http.StatusBadRequest,
 				deployedVersion: ""},
 		},
@@ -569,7 +569,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				}`),
 				"semantic_versioning": "false"},
 			wants: wants{
-				body:       `\{"version":"[0-9.]+",.*"\}`,
+				bodyRegex:  `\{"version":"[0-9.]+",.*"\}`,
 				statusCode: http.StatusOK},
 		},
 		"invalid JSON - existing DVL": {
@@ -577,7 +577,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"overrides": `"method": "GET"}`,
 			},
 			wants: wants{
-				body:       `^\{"message":"failed to unmarshal deployedver.Lookup:[^"]+"\}$`,
+				bodyRegex:  `^\{"message":"failed to unmarshal deployedver.Lookup:[^"]+"\}$`,
 				statusCode: http.StatusBadRequest},
 		},
 		"invalid JSON - new DVL": {
@@ -586,7 +586,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"overrides": `{"type": "url", "method}}`,
 			},
 			wants: wants{
-				body:       `^\{"message":"invalid JSON[^"]+"\}$`,
+				bodyRegex:  `^\{"message":"invalid JSON[^"]+"\}$`,
 				statusCode: http.StatusBadRequest},
 		},
 		"invalid vars - CheckValues fail": {
@@ -595,7 +595,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 					"regex": "v?([0-9.+)"
 				}`)},
 			wants: wants{
-				body:       `\{"message":".*regex: .*invalid`,
+				bodyRegex:  `\{"message":".*regex: .*invalid`,
 				statusCode: http.StatusBadRequest},
 		},
 		"unknown service": {
@@ -603,8 +603,15 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			params: map[string]string{
 				"semantic_versioning": "false"},
 			wants: wants{
-				body:       `\{"message":"service .+ not found"`,
+				bodyRegex:  `\{"message":"service .+ not found"`,
 				statusCode: http.StatusNotFound},
+		},
+		"no service_id provided": {
+			serviceID: test.StringPtr(""),
+			wants: wants{
+				bodyRegex:       `\{"message":"missing required query parameter: service_id"\}`,
+				statusCode:      http.StatusBadRequest,
+				deployedVersion: ""},
 		},
 	}
 
@@ -619,26 +626,20 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			if tc.nilDeployedVersion {
 				svc.DeployedVersionLookup = nil
 			}
-			target := "/api/v1/deployed_version/refresh/" + url.QueryEscape(svc.ID)
+			initialLatestVersion := svc.Status.LatestVersion()
+			target := "/api/v1/deployed_version/refresh"
 			// add the params to the URL.
 			params := url.Values{}
 			for k, v := range tc.params {
 				params.Set(k, v)
 			}
-			initialLatestVersion := svc.Status.LatestVersion()
+			// Set service_id.
+			serviceID := util.DereferenceOrValue(tc.serviceID, svc.ID)
+			params.Set("service_id", serviceID)
 
 			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
-			// Set service_id.
-			serviceID := svc.ID
-			if tc.serviceID != nil {
-				serviceID = *tc.serviceID
-			}
-			vars := map[string]string{
-				"service_id": serviceID,
-			}
-			req = mux.SetURLVars(req, vars)
 			w := httptest.NewRecorder()
 			apiMutex.Lock()
 			api.httpDeployedVersionRefresh(w, req)
@@ -651,16 +652,16 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected.
+			// AND the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s\nunexpected error - %v",
 					packageName, err)
 			}
 			got := string(data)
-			if !util.RegexCheck(tc.wants.body, got) {
+			if !util.RegexCheck(tc.wants.bodyRegex, got) {
 				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wants.body, got)
+					packageName, tc.wants.bodyRegex, got)
 			}
 			// AND the LatestVersion is unchanged.
 			if gotLatestVersion := svc.Status.LatestVersion(); gotLatestVersion != initialLatestVersion {
@@ -678,7 +679,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 
 func TestHTTP_ServiceDetail(t *testing.T) {
 	type wants struct {
-		body       string
+		bodyRegex  string
 		statusCode int
 	}
 
@@ -699,7 +700,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 	}{
 		"known service": {
 			wants: wants{
-				body: fmt.Sprintf(`\{"comment":%q,.*"latest_version":{.*"url":%q.*,"deployed_version":{.*"url":%q,`,
+				bodyRegex: fmt.Sprintf(`\{"comment":%q,.*"latest_version":{.*"url":%q.*,"deployed_version":{.*"url":%q,`,
 					testSVC.Comment,
 					testSVC.LatestVersion.(*lv_web.Lookup).URL,
 					testSVC.DeployedVersionLookup.(*dv_web.Lookup).URL),
@@ -708,8 +709,14 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 		"unknown service": {
 			serviceID: test.StringPtr("bish-bash-bosh"),
 			wants: wants{
-				body:       `\{"message":"service .+ not found"`,
+				bodyRegex:  `\{"message":"service .+ not found"`,
 				statusCode: http.StatusNotFound},
+		},
+		"no service_id provided": {
+			serviceID: test.StringPtr(""),
+			wants: wants{
+				bodyRegex:  `\{"message":"missing required query parameter: service_id"\}`,
+				statusCode: http.StatusBadRequest},
 		},
 	}
 
@@ -721,19 +728,15 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 			apiMutex.Lock()
 			api.Config.Service[svc.ID] = svc
 			apiMutex.Unlock()
-			// service_id.
-			serviceID := svc.ID
-			if tc.serviceID != nil {
-				serviceID = *tc.serviceID
-			}
-			target := "/api/v1/service/update/" + url.QueryEscape(serviceID)
+			target := "/api/v1/service/config"
+			params := url.Values{}
+			// Set service_id.
+			serviceID := util.DereferenceOrValue(tc.serviceID, svc.ID)
+			params.Set("service_id", serviceID)
 
 			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
-			vars := map[string]string{
-				"service_id": serviceID,
-			}
-			req = mux.SetURLVars(req, vars)
+			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
 			apiMutex.RLock()
 			api.httpServiceDetail(w, req)
@@ -746,16 +749,16 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected.
+			// AND the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s\nunexpected error - %v",
 					packageName, err)
 			}
 			got := string(data)
-			if !util.RegexCheck(tc.wants.body, got) {
+			if !util.RegexCheck(tc.wants.bodyRegex, got) {
 				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wants.body, got)
+					packageName, tc.wants.bodyRegex, got)
 			}
 		})
 	}
@@ -791,7 +794,7 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 				}
 			})
 			api.Config.Service[svc.ID] = svc
-			target := "/api/v1/service/update/" + url.QueryEscape(svc.ID)
+			target := "/api/v1/service/defaults"
 
 			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
@@ -805,7 +808,7 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wantStatusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected.
+			// AND the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s\nunexpected error - %v",
@@ -823,7 +826,7 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 
 func TestHTTP_TemplateParse(t *testing.T) {
 	type wants struct {
-		body       string
+		bodyRegex  string
 		statusCode int
 	}
 
@@ -849,7 +852,23 @@ func TestHTTP_TemplateParse(t *testing.T) {
 		"missing required parameters": {
 			queryParams: map[string]string{},
 			wants: wants{
-				body:       `{"message":"Missing required query parameters: service_id or template"}`,
+				bodyRegex:  `{"message":"missing required query parameter: service_id"}`,
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		"missing required parameters - service_id": {
+			queryParams: map[string]string{
+				"template": "{{ service_name }}"},
+			wants: wants{
+				bodyRegex:  `{"message":"missing required query parameter: service_id"}`,
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		"missing required parameters - template": {
+			queryParams: map[string]string{
+				"service_id": "release-argus/Argus"},
+			wants: wants{
+				bodyRegex:  `{"message":"missing required query parameter: template"}`,
 				statusCode: http.StatusBadRequest,
 			},
 		},
@@ -859,7 +878,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 				"template":   "{{.InvalidField}",
 			},
 			wants: wants{
-				body:       `{"message":"failed to parse template"}`,
+				bodyRegex:  `{"message":"failed to parse template"}`,
 				statusCode: http.StatusBadRequest,
 			},
 		},
@@ -870,7 +889,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 				"params":     `{"invalid":}`,
 			},
 			wants: wants{
-				body:       `{"message":"Invalid 'params' query parameter format - invalid character '}' looking for beginning of value"}`,
+				bodyRegex:  `{"message":"Invalid 'params' query parameter format - invalid character '}' looking for beginning of value"}`,
 				statusCode: http.StatusBadRequest,
 			},
 		},
@@ -880,7 +899,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 				"template":   `{{service_name }} - {{ version }}`,
 			},
 			wants: wants{
-				body: fmt.Sprintf(`{"parsed":"%s - %s"}`,
+				bodyRegex: fmt.Sprintf(`{"parsed":"%s - %s"}`,
 					testSVC.Name, testSVC.Status.LatestVersion()),
 				statusCode: http.StatusOK,
 			},
@@ -895,7 +914,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 				}`),
 			},
 			wants: wants{
-				body:       `{"parsed":"OverriddenName - 2.0.0"}`,
+				bodyRegex:  `{"parsed":"OverriddenName - 2.0.0"}`,
 				statusCode: http.StatusOK,
 			},
 		},
@@ -905,7 +924,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 				"template":   "{{ service_name }}",
 			},
 			wants: wants{
-				body:       `{"parsed":""}`,
+				bodyRegex:  `{"parsed":""}`,
 				statusCode: http.StatusOK,
 			},
 		},
@@ -934,16 +953,16 @@ func TestHTTP_TemplateParse(t *testing.T) {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected.
+			// AND the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s\nunexpected error - %v",
 					packageName, err)
 			}
 			got := string(data)
-			if !util.RegexCheck(tc.wants.body, got) {
+			if !util.RegexCheck(tc.wants.bodyRegex, got) {
 				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wants.body, got)
+					packageName, tc.wants.bodyRegex, got)
 			}
 		})
 	}
@@ -955,7 +974,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 	_, _ = testSVC.LatestVersion.Query(true, logutil.LogFrom{})
 	_ = testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	type wants struct {
-		body                           string
+		bodyRegex                      string
 		statusCode                     int
 		latestVersion, deployedVersion string
 	}
@@ -992,7 +1011,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `\{"message":"create .* cannot unmarshal.*"\}`},
+				bodyRegex:  `\{"message":"create .* cannot unmarshal.*"\}`},
 		},
 		"create new service": {
 			payload: `
@@ -1004,7 +1023,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				}`,
 			wants: wants{
 				statusCode: http.StatusOK,
-				body:       `\{"message":"created service[^}]+"\}`},
+				bodyRegex:  `\{"message":"created service[^}]+"\}`},
 		},
 		"create new service, but ID already taken": {
 			payload: `
@@ -1016,7 +1035,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `\{"message":"create .* failed.*"\}`},
+				bodyRegex:  `\{"message":"create .* failed.*"\}`},
 		},
 		"create new service, but name already taken": {
 			payload: `
@@ -1029,7 +1048,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `\{"message":"create .* failed.*"\}`},
+				bodyRegex:  `\{"message":"create .* failed.*"\}`},
 		},
 		"create new service, but invalid interval": {
 			payload: `
@@ -1043,7 +1062,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `\{"message":"create .* failed.*options:.*interval:.*invalid.*"\}`},
+				bodyRegex:  `\{"message":"create .* failed.*options:.*interval:.*invalid.*"\}`},
 		},
 		"edit service": {
 			serviceID: test.StringPtr("__name__"),
@@ -1062,7 +1081,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				}`,
 			wants: wants{
 				statusCode:      http.StatusOK,
-				body:            `\{"message":"edited service[^}]+"\}`,
+				bodyRegex:       `\{"message":"edited service[^}]+"\}`,
 				latestVersion:   "[0-9.]+",
 				deployedVersion: ""},
 		},
@@ -1082,7 +1101,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				}`,
 			wants: wants{
 				statusCode: http.StatusNotFound,
-				body:       `^\{"message":"edit .* failed.*"\}`},
+				bodyRegex:  `^\{"message":"edit .* failed.*"\}`},
 		},
 		"edit service that doesn't query successfully": {
 			serviceID: test.StringPtr("__name__"),
@@ -1101,7 +1120,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `^\{"message":"edit .* failed.*\\nlatest_version - no releases were found.*\\nregex \\".+\\" didn't return any matches on \\".+\\""\}`},
+				bodyRegex:  `^\{"message":"edit .* failed.*\\nlatest_version - no releases were found.*\\nregex \\".+\\" didn't return any matches on \\".+\\""\}`},
 		},
 	}
 
@@ -1126,12 +1145,13 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				// set service_id.
 				*tc.serviceID = strings.ReplaceAll(
 					*tc.serviceID, "__name__", name)
-				vars := map[string]string{
-					"service_id": url.PathEscape(*tc.serviceID),
-				}
-				target = "/api/v1/service/update/" + url.PathEscape(*tc.serviceID)
+				target = "/api/v1/service/config"
+				params := url.Values{}
+				// Set service_id.
+				serviceID := util.DereferenceOrValue(tc.serviceID, svc.ID)
+				params.Set("service_id", serviceID)
 				req = httptest.NewRequest(http.MethodPut, target, payload)
-				req = mux.SetURLVars(req, vars)
+				req.URL.RawQuery = params.Encode()
 			}
 
 			// WHEN that HTTP request is sent.
@@ -1147,16 +1167,16 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected.
+			// AND the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s\nunexpected error - %v",
 					packageName, err)
 			}
 			got := string(data)
-			if !util.RegexCheck(tc.wants.body, got) {
+			if !util.RegexCheck(tc.wants.bodyRegex, got) {
 				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wants.body, got)
+					packageName, tc.wants.bodyRegex, got)
 			}
 			if tc.wants.statusCode != http.StatusOK {
 				return
@@ -1201,7 +1221,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 
 func TestHTTP_ServiceDelete(t *testing.T) {
 	type wants struct {
-		body       string
+		bodyRegex  string
 		statusCode int
 	}
 
@@ -1223,47 +1243,48 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 	_ = api.Config.AddService("", svc)
 	// Drain db from the Service addition.
 	<-api.Config.DatabaseChannel
-	tests := []struct {
-		name      string
+	tests := map[string]struct {
 		serviceID string
 		wants     wants
 	}{
-		{
-			name:      "unknown service",
+		"unknown service": {
 			serviceID: "foo",
 			wants: wants{
-				body:       `{"message":"delete .* failed, service not found"`,
+				bodyRegex:  `{"message":"delete .* failed, service not found"`,
 				statusCode: http.StatusNotFound},
 		},
-		{
-			name:      "delete service",
+		"delete service": {
 			serviceID: svc.ID,
 			wants: wants{
-				body:       `\{"message":"deleted service[^}]+"\}`,
+				bodyRegex:  `\{"message":"deleted service[^}]+"\}`,
 				statusCode: http.StatusOK},
 		},
-		{
-			name:      "delete service again",
+		"delete service again": {
 			serviceID: svc.ID,
 			wants: wants{
-				body:       `{"message":"delete .* failed, service not found"`,
+				bodyRegex:  `{"message":"delete .* failed, service not found"`,
 				statusCode: http.StatusNotFound},
+		},
+		"no service_id provided": {
+			serviceID: "",
+			wants: wants{
+				bodyRegex:  `{"message":"missing required query parameter: service_id"}`,
+				statusCode: http.StatusBadRequest},
 		},
 	}
 
-	for _, tc := range tests {
-		name, tc := tc.name, tc
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() -- Cannot run in parallel since we're sharing the API.
 
-			target := "/api/v1/service/delete/" + url.QueryEscape(tc.serviceID)
+			target := "/api/v1/service/delete"
+			params := url.Values{}
+			// Set service_id.
+			params.Set("service_id", tc.serviceID)
 
 			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
-			vars := map[string]string{
-				"service_id": tc.serviceID,
-			}
-			req = mux.SetURLVars(req, vars)
+			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
 			api.httpServiceDelete(w, req)
 			res := w.Result()
@@ -1274,16 +1295,16 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected.
+			// AND the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s\nunexpected error - %v",
 					packageName, err)
 			}
 			got := string(data)
-			if !util.RegexCheck(tc.wants.body, got) {
+			if !util.RegexCheck(tc.wants.bodyRegex, got) {
 				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wants.body, got)
+					packageName, tc.wants.bodyRegex, got)
 			}
 			// AND the service is removed from the config.
 			if api.Config.Service[tc.serviceID] != nil {
@@ -1314,7 +1335,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 
 func TestHTTP_NotifyTest(t *testing.T) {
 	type wants struct {
-		body       string
+		bodyRegex  string
 		statusCode int
 	}
 
@@ -1347,26 +1368,26 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				"test": "` + strings.Repeat(strings.Repeat("abcdefghijklmnopqrstuvwxyz", 100), 100) + `"}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       "request body too large"},
+				bodyRegex:  "request body too large"},
 		},
-		"no body": {
+		"no bodyRegex": {
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       "unexpected end of JSON input"},
+				bodyRegex:  "unexpected end of JSON input"},
 		},
 		"no service, new notify": {
 			payload: `{
 				"name": "new_notify"}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `invalid type "[^"]+"`},
+				bodyRegex:  `invalid type "[^"]+"`},
 		},
 		"new service, no new/old notify": {
 			payload: `{
 				"service_id": "new_service"}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `name and/or name_previous are required`},
+				bodyRegex:  `name and/or name_previous are required`},
 		},
 		"new service, no main": {
 			payload: `{
@@ -1375,7 +1396,15 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				"type": "ntfy"}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       "url_fields:[^ ]+ +topic: .*required"},
+				bodyRegex:  "url_fields:[^ ]+ +topic: .*required"},
+		},
+		"new service, no main - no service_id": {
+			payload: `{
+				"name": "test_notify",
+				"type": "ntfy"}`,
+			wants: wants{
+				statusCode: http.StatusBadRequest,
+				bodyRegex:  "url_fields:[^ ]+ +topic: .*required"},
 		},
 		"new service, no main - invalid JSON, options": {
 			payload: `{
@@ -1387,7 +1416,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"something" "else"}}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       "invalid character .* after object key"},
+				bodyRegex:  "invalid character .* after object key"},
 		},
 		"new service, no main - options, invalid": {
 			payload: `{
@@ -1398,7 +1427,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"delay": "time"}}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `options:[^ ]+  delay: "[^"]+" <invalid>`},
+				bodyRegex:  `options:[^ ]+  delay: "[^"]+" <invalid>`},
 		},
 		"new service, have main - options, applied, delay ignored": {
 			payload: `{
@@ -1408,7 +1437,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"delay": "24h"}}`,
 			wants: wants{
 				statusCode: http.StatusOK,
-				body:       "message sent"},
+				bodyRegex:  "message sent"},
 		},
 		"new service, no main - invalid JSON, url_fields": {
 			payload: `{
@@ -1419,7 +1448,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"host" "example.com"}}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       "invalid character .* after object key"},
+				bodyRegex:  "invalid character .* after object key"},
 		},
 		"new service, have main - url_fields, invalid": {
 			payload: `{
@@ -1429,7 +1458,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"port": "number"}}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `failed to parse URL`},
+				bodyRegex:  `failed to parse URL`},
 		},
 		"new service, no main - no type": {
 			payload: `{
@@ -1437,7 +1466,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				"name": "test_notify"}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `invalid type "test_notify"`},
+				bodyRegex:  `invalid type "test_notify"`},
 		},
 		"new service, no main - unknown type": {
 			payload: `{
@@ -1446,7 +1475,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				"type": "something"}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `invalid type "something"`},
+				bodyRegex:  `invalid type "something"`},
 		},
 		"new service, no main - type from ID": {
 			payload: `{
@@ -1458,7 +1487,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"token": "` + validNotify.URLFields["token"] + `"}}`,
 			wants: wants{
 				statusCode: http.StatusOK,
-				body:       "message sent"},
+				bodyRegex:  "message sent"},
 		},
 		"new service, have main - type from Main": {
 			payload: `{
@@ -1470,7 +1499,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"token": "` + validNotify.URLFields["token"] + `"}}`,
 			wants: wants{
 				statusCode: http.StatusOK,
-				body:       "message sent"},
+				bodyRegex:  "message sent"},
 		},
 		"same service, have main - type from original": {
 			payload: `{
@@ -1484,7 +1513,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"token": "` + util.SecretValue + `"}}`,
 			wants: wants{
 				statusCode: http.StatusOK,
-				body:       "message sent"},
+				bodyRegex:  "message sent"},
 		},
 		"same service, no main - can remove vars": {
 			payload: `{
@@ -1498,7 +1527,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"token": ""}}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body: test.TrimYAML(`
+				bodyRegex: test.TrimYAML(`
 				^url_fields:
 					token: <required>.*$`)},
 		},
@@ -1514,7 +1543,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"path": "` + validNotify.URLFields["path"] + `"}}`,
 			wants: wants{
 				statusCode: http.StatusOK,
-				body:       "message sent"},
+				bodyRegex:  "message sent"},
 		},
 		"same service, have main - fail send": {
 			payload: `{
@@ -1529,7 +1558,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"token": "invalid"}}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       "invalid .* token"},
+				bodyRegex:  "invalid .* token"},
 		},
 		"same service, have main - new name, also fail send": {
 			payload: `{
@@ -1544,7 +1573,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"token": "invalid"}}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       "invalid .* token"},
+				bodyRegex:  "invalid .* token"},
 		},
 		"service_id_previous that doesn't exist": {
 			payload: `{
@@ -1558,7 +1587,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"token": "` + util.SecretValue + `"}}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `invalid type "new_notify"`},
+				bodyRegex:  `invalid type "new_notify"`},
 		},
 		"name_previous that doesn't exist": {
 			payload: `{
@@ -1572,7 +1601,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"token": "` + util.SecretValue + `"}}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `invalid type "new_notify"`},
+				bodyRegex:  `invalid type "new_notify"`},
 		},
 		"service_id_previous and name_previous that doesn't exist": {
 			payload: `{
@@ -1586,7 +1615,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"token": "` + util.SecretValue + `"}}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				body:       `invalid type "new_notify"`},
+				bodyRegex:  `invalid type "new_notify"`},
 		},
 	}
 
@@ -1594,9 +1623,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.wants.body == "" {
-				tc.wants.body = "^$"
-			}
+			tc.wants.bodyRegex = util.ValueOrValue(tc.wants.bodyRegex, `^$`)
 			tc.payload = test.TrimJSON(tc.payload)
 			payload := bytes.NewReader([]byte(tc.payload))
 
@@ -1614,7 +1641,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected message is contained in the body.
+			// AND the expected message is contained in the bodyRegex.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("%s\nunexpected error - %v",
@@ -1623,9 +1650,9 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			// Marshal message out of JSON data {"message": text}.
 			var body map[string]string
 			_ = json.Unmarshal(data, &body)
-			if !util.RegexCheck(tc.wants.body, body["message"]) {
+			if !util.RegexCheck(tc.wants.bodyRegex, body["message"]) {
 				t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wants.body, body["message"])
+					packageName, tc.wants.bodyRegex, body["message"])
 			}
 		})
 	}

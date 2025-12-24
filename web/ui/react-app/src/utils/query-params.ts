@@ -6,6 +6,7 @@ import type {
 	LatestVersionLookupSchema,
 	LatestVersionLookupSchemaDefault,
 } from '@/utils/api/types/config-edit/service/types/latest-version';
+import { removeEmptyValues } from '@/utils/index';
 import { isEmptyObject, isEmptyOrNull } from '@/utils/is-empty';
 import { replaceUndefinedWithNull } from '@/utils/json-stringify-helpers';
 
@@ -132,13 +133,28 @@ export const stringifyQueryParam = (
 export const convertToQueryParams = (
 	params: Record<string, string | number | boolean | null | undefined>,
 ) => {
-	const queryParams = Object.keys(params)
-		.filter((key) => (params[key] ?? '') !== '') // Filter out empty strings.
-		.map((key) => {
-			return stringifyQueryParam(key, params[key]);
-		})
-		.join('&');
-	return queryParams ? `?${queryParams}` : '';
+	// Remove null/undefined/empty values from params.
+	const paramsCleaned = removeEmptyValues(params);
+
+	// Convert all values to strings.
+	const stringParams: Record<string, string> = {};
+	for (const [key, value] of Object.entries(paramsCleaned)) {
+		// Convert primitive values directly.
+		if (
+			typeof value === 'string' ||
+			typeof value === 'number' ||
+			typeof value === 'boolean'
+		) {
+			stringParams[key] = String(value);
+		} else if (typeof value === 'object') {
+			// Convert objects/arrays to JSON.
+			stringParams[key] = JSON.stringify(value);
+		}
+	}
+
+	const urlParams = new URLSearchParams(stringParams);
+	const queryString = urlParams.toString();
+	return queryString ? `?${queryString}` : '';
 };
 
 export type GetChangesProps =

@@ -55,7 +55,6 @@ func TestMain(m *testing.M) {
 	logtest.InitLog()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	g, _ := errgroup.WithContext(ctx)
 
 	config.DebounceDuration = 500 * time.Millisecond
@@ -73,6 +72,7 @@ func TestMain(m *testing.M) {
 	exitCode := m.Run()
 	_ = os.Remove(path)
 	_ = os.Remove(cfg.Settings.DataDatabaseFile())
+	cancel()
 
 	if len(logutil.ExitCodeChannel()) > 0 {
 		fmt.Printf("%s\nexit code channel not empty",
