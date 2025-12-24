@@ -38,6 +38,8 @@ export type ServiceRefreshRequestBuilder = {
 
 export type ServiceRefreshRequest = {
 	queryParams: {
+		/* The ID of the service to refresh. */
+		service_id?: string | null;
 		/* Values to override the current schema data with. */
 		overrides?: string;
 		/* The semantic versioning override. */
