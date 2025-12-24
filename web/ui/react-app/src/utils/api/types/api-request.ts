@@ -174,6 +174,10 @@ export const RequestMap: RequestFns = {
 			originalSemanticVersioning,
 		} = input;
 
+		if (typeof serviceID === 'string' && serviceID.trim() !== '') {
+			props.queryParams.service_id = input.serviceID;
+		}
+
 		const hasSemanticVersioningChanged =
 			dataSemanticVersioning !== originalSemanticVersioning;
 
@@ -206,7 +210,7 @@ export const RequestMap: RequestFns = {
 
 		const idSegment =
 			typeof serviceID === 'string' && serviceID.trim() !== ''
-				? `${convertToQueryParams({ service_id: input.serviceID })}`
+				? ''
 				: '_uncreated';
 
 		return {
