@@ -30,9 +30,13 @@ type ServiceOrderAPI struct {
 	Order []string `json:"order"`
 }
 
-// httpServiceOrderGet returns the current ordering of services.
+// httpServiceOrderGet returns the current service ordering.
 //
-// # GET
+// Method: GET
+//
+// Response:
+//
+//	JSON object containing the current ordering.
 func (api *API) httpServiceOrderGet(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpServiceOrderGet", Secondary: getIP(r)}
 
@@ -43,7 +47,7 @@ func (api *API) httpServiceOrderGet(w http.ResponseWriter, r *http.Request) {
 
 // httpServiceOrderSet sets the ordering of services.
 //
-// # POST
+// Method: POST
 //
 // Body:
 //
@@ -97,7 +101,7 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 
 // httpServiceSummary returns the ServiceSummary for the given service.
 //
-// # GET
+// Method: GET
 //
 // Query Parameters:
 //

@@ -39,7 +39,7 @@ import (
 
 // httpLatestVersionRefreshUncreated will create the 'latest version lookup' type and query it.
 //
-// # GET
+// Method: GET
 //
 // Query Parameters:
 //
@@ -132,7 +132,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 
 // httpDeployedVersionRefreshUncreated will create the 'deployed version lookup' type and query it.
 //
-// # GET
+// Method: GET
 //
 // Query Parameters:
 //
@@ -225,7 +225,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 
 // httpLatestVersionRefresh refreshes the latest version of the target service.
 //
-// # GET
+// Method: GET
 //
 // Query Parameters:
 //
@@ -289,7 +289,7 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 
 // httpDeployedVersionRefresh refreshes the latest/deployed version of the target service.
 //
-// # GET
+// Method: GET
 //
 // Query Parameters:
 //
@@ -414,7 +414,7 @@ func extractLookupType(overrides *string, logFrom logutil.LogFrom) (string, erro
 
 // httpServiceDetail handles sending details about a Service.
 //
-// # GET
+// Method: GET
 //
 // Query Parameters:
 //
@@ -466,7 +466,7 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 
 // httpOtherServiceDetails handles sending details about the global notify/webhooks, defaults and hard defaults.
 //
-// # GET
+// Method: GET
 //
 // Response:
 //
@@ -487,7 +487,7 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 
 // httpTemplateParse parses a template with provided or default parameters.
 //
-// # GET
+// Method: GET
 //
 // Query Parameters:
 //
@@ -561,7 +561,7 @@ func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
 
 // httpServiceEdit handles creating/editing a Service.
 //
-// # PUT
+// Method: PUT
 //
 // Query Parameters:
 //
@@ -689,7 +689,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 
 // httpServiceDelete handles deleting a Service.
 //
-// # DELETE
+// Method: DELETE
 //
 // Query Parameters:
 //
@@ -729,7 +729,7 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 
 // httpNotifyTest handles testing a Notify.
 //
-// # POST
+// Method: POST
 //
 // Body:
 //
