@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -28,15 +29,18 @@ import (
 )
 
 func TestConfig_Load(t *testing.T) {
+	DebounceDuration = time.Second
 	// GIVEN a test file to load.
-	tests := map[string]struct {
+	tests := []struct {
+		name        string
 		setupFile   func(path string)
 		envVars     map[string]string
 		validate    func(t *testing.T, config *Config, stdout string)
 		exitCode    *int
 		stdoutRegex string
 	}{
-		"Environment variables loaded": {
+		{
+			name:      "Environment variables loaded",
 			setupFile: testYAML_config_test,
 			envVars: map[string]string{
 				"TEST_ENV_KEY": "1234",
@@ -70,7 +74,8 @@ func TestConfig_Load(t *testing.T) {
 				}
 			},
 		},
-		"Nil services deleted": {
+		{
+			name:      "Nil services deleted",
 			setupFile: testYAML_SomeNilServices,
 			validate: func(t *testing.T, config *Config, stdout string) {
 				for name, svc := range config.Service {
@@ -85,7 +90,8 @@ func TestConfig_Load(t *testing.T) {
 				}
 			},
 		},
-		"Defaults assigned to services": {
+		{
+			name:      "Defaults assigned to services",
 			setupFile: testYAML_config_test,
 			validate: func(t *testing.T, config *Config, stdout string) {
 				want := false
@@ -96,7 +102,8 @@ func TestConfig_Load(t *testing.T) {
 				}
 			},
 		},
-		"Nil service map initialises empty map": {
+		{
+			name:      "Nil service map initialises empty map",
 			setupFile: testYAML_NilServiceMap,
 			validate: func(t *testing.T, config *Config, stdout string) {
 				if config.Service == nil {
@@ -105,7 +112,8 @@ func TestConfig_Load(t *testing.T) {
 				}
 			},
 		},
-		"Invalid YAML returns exit code": {
+		{
+			name:      "Invalid YAML returns exit code",
 			setupFile: testYAML_InvalidYAML,
 			validate: func(t *testing.T, config *Config, stdout string) {
 				wantRegex := `Unmarshal of "[^"]+" failed`
@@ -116,7 +124,8 @@ func TestConfig_Load(t *testing.T) {
 			},
 			exitCode: test.IntPtr(1),
 		},
-		"Config that is unreadable": {
+		{
+			name: "Config that is unreadable",
 			setupFile: func(path string) {
 				testYAML_config_test(path)
 				_ = os.Chmod(path, 0_222)
@@ -125,8 +134,8 @@ func TestConfig_Load(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout and sharing log exitCodeChannel.
 			releaseStdout := test.CaptureLog(logutil.Log)
 
@@ -138,6 +147,10 @@ func TestConfig_Load(t *testing.T) {
 			if tc.setupFile != nil {
 				tc.setupFile(file)
 			}
+			t.Cleanup(func() {
+				// Give time for save before TempDir clean-up.
+				time.Sleep(2 * DebounceDuration)
+			})
 
 			// Set environment variables
 			for k, v := range tc.envVars {
@@ -159,7 +172,8 @@ func TestConfig_Load(t *testing.T) {
 			exitCodeChannel := logutil.ExitCodeChannel()
 			var exitCode *int
 			select {
-			case <-exitCodeChannel:
+			case msg := <-exitCodeChannel:
+				t.Logf("%s\n%s", packageName, msg)
 				exitCode = test.IntPtr(1)
 			default:
 			}
