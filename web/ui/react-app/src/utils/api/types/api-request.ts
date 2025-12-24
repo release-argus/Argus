@@ -174,6 +174,10 @@ export const RequestMap: RequestFns = {
 			originalSemanticVersioning,
 		} = input;
 
+		if (serviceID) {
+			props.queryParams.service_id = input.serviceID;
+		}
+
 		const hasSemanticVersioningChanged =
 			dataSemanticVersioning !== originalSemanticVersioning;
 
@@ -204,10 +208,7 @@ export const RequestMap: RequestFns = {
 		}
 		const queryParamsStr = convertToQueryParams(props.queryParams);
 
-		const idSegment =
-			typeof serviceID === 'string' && serviceID.trim() !== ''
-				? `${convertToQueryParams({ service_id: input.serviceID })}`
-				: '_uncreated';
+		const idSegment = serviceID ? '' : '_uncreated';
 
 		return {
 			endpoint: `${dataTarget}/refresh${idSegment}${queryParamsStr}`,
