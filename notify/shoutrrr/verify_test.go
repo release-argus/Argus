@@ -557,10 +557,12 @@ func TestBase_CheckValues(t *testing.T) {
 		want     *Base
 		id       string
 		errRegex string
+		changed  bool
 	}{
 		"nil Base": {
 			base:     nil,
 			errRegex: `^$`,
+			changed:  false,
 		},
 		"valid Base": {
 			base: &Base{
@@ -571,6 +573,7 @@ func TestBase_CheckValues(t *testing.T) {
 					"color": "orange"},
 			},
 			errRegex: `^$`,
+			changed:  false,
 		},
 		"invalid delay option": {
 			base: &Base{
@@ -581,6 +584,7 @@ func TestBase_CheckValues(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^options:
 				  delay: "10x" <invalid>.*$`),
+			changed: false,
 		},
 		"invalid param template": {
 			base: &Base{
@@ -591,6 +595,7 @@ func TestBase_CheckValues(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^params:
 					color: "{{ invalid template }}" <invalid>.*$`),
+			changed: false,
 		},
 		"multiple errors": {
 			base: &Base{
@@ -607,6 +612,7 @@ func TestBase_CheckValues(t *testing.T) {
 					delay: "10x" <invalid>.*
 				params:
 					color: "{{ invalid template }}" <invalid>.*$`),
+			changed: false,
 		},
 		"matrix - rooms, leading #": {
 			base: &Base{
@@ -618,6 +624,7 @@ func TestBase_CheckValues(t *testing.T) {
 				Type: "matrix",
 				Params: map[string]string{
 					"rooms": "alias:server"}},
+			changed: true,
 		},
 		"matrix - rooms, leading # already urlEncoded": {
 			base: &Base{
@@ -629,6 +636,7 @@ func TestBase_CheckValues(t *testing.T) {
 				Type: "matrix",
 				Params: map[string]string{
 					"rooms": "%23alias:server"}},
+			changed: false,
 		},
 		"matrix - rooms, valid": {
 			base: &Base{
@@ -640,6 +648,7 @@ func TestBase_CheckValues(t *testing.T) {
 				Type: "matrix",
 				Params: map[string]string{
 					"rooms": "alias:server"}},
+			changed: false,
 		},
 	}
 
@@ -657,7 +666,7 @@ func TestBase_CheckValues(t *testing.T) {
 			}
 
 			// WHEN CheckValues is called.
-			err := tc.base.CheckValues("", tc.id)
+			err, changed := tc.base.CheckValues("", tc.id)
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
@@ -672,6 +681,11 @@ func TestBase_CheckValues(t *testing.T) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
 				return
+			}
+			// AND the 'changed' flag matches expectation.
+			if changed != tc.changed {
+				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t\n%v",
+					packageName, tc.changed, changed, tc.base)
 			}
 			// AND the Base is as expected.
 			wantStr := util.ToYAMLString(tc.want, "")
@@ -1795,15 +1809,18 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 		wantDelay                  string
 		main                       *Defaults
 		errRegex                   string
+		changed                    bool
 	}{
 		"nil shoutrrr": {
 			nilShoutrrr: true,
 			errRegex:    `^$`,
+			changed:     false,
 		},
 		"empty": {
 			errRegex:  `^type: <required>[^:]+://[^:]+$`,
 			urlFields: map[string]string{},
 			params:    map[string]string{},
+			changed:   false,
 		},
 		"invalid delay": {
 			errRegex: test.TrimYAML(`
@@ -1813,6 +1830,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			urlFields: testS.URLFields,
 			options: map[string]string{
 				"delay": "5x"},
+			changed: false,
 		},
 		"fixes delay": {
 			errRegex:  `^$`,
@@ -1821,6 +1839,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			wantDelay: "5s",
 			options: map[string]string{
 				"delay": "5"},
+			changed: false,
 		},
 		"invalid message template": {
 			errRegex: test.TrimYAML(`
@@ -1830,6 +1849,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			urlFields: testS.URLFields,
 			options: map[string]string{
 				"message": "{{ version }"},
+			changed: false,
 		},
 		"valid message template": {
 			errRegex:  `^$`,
@@ -1837,6 +1857,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			urlFields: testS.URLFields,
 			options: map[string]string{
 				"message": "{{ version }}"},
+			changed: false,
 		},
 		"invalid title template": {
 			errRegex: test.TrimYAML(`
@@ -1846,6 +1867,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			urlFields: testS.URLFields,
 			params: map[string]string{
 				"title": "{{ version }"},
+			changed: false,
 		},
 		"valid title template": {
 			errRegex:  `^$`,
@@ -1853,6 +1875,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			urlFields: testS.URLFields,
 			params: map[string]string{
 				"title": "{{ version }}"},
+			changed: false,
 		},
 		"valid param template": {
 			errRegex:  `^$`,
@@ -1860,6 +1883,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			urlFields: testS.URLFields,
 			params: map[string]string{
 				"foo": "{{ version }}"},
+			changed: false,
 		},
 		"invalid param template": {
 			errRegex: test.TrimYAML(`
@@ -1869,6 +1893,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			urlFields: testS.URLFields,
 			params: map[string]string{
 				"foo": "{{ version }"},
+			changed: false,
 		},
 		"invalid param and option": {
 			errRegex: test.TrimYAML(`
@@ -1882,6 +1907,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 				"title": "{{ version }"},
 			options: map[string]string{
 				"delay": "2x"},
+			changed: false,
 		},
 		"does correctSelf": {
 			errRegex: `^$`,
@@ -1894,11 +1920,32 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			wantURLFields: map[string]string{
 				"port": "8080",
 				"path": "test"},
+			changed: true,
+		},
+		"generic.url_fields.custom_headers -> headers": {
+			sType: "generic",
+			urlFields: map[string]string{
+				"host":           "example.com",
+				"custom_headers": `{"foo":"bar"}`},
+			wantURLFields: map[string]string{
+				"custom_headers": `{"foo":"bar"}`},
+			changed: true,
+		},
+		"generic.url_fields.custom_headers not pulled to headers if headers already defined": {
+			sType: "generic",
+			urlFields: map[string]string{
+				"host":           "example.com",
+				"custom_headers": `{"foo":"bar"}`,
+				"headers":        `{"foo":"baz"}`},
+			wantURLFields: map[string]string{
+				"headers": `{"foo":"baz"}`},
+			changed: true,
 		},
 		"valid": {
 			errRegex:  `^$`,
 			urlFields: map[string]string{},
 			main:      testDefaults(false, false),
+			changed:   false,
 		},
 		"valid with self and main": {
 			errRegex: `^$`,
@@ -1910,13 +1957,15 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 				map[string]string{
 					"token": "bar"},
 				nil),
+			changed: false,
 		},
 		"invalid url_fields": {
 			errRegex: test.TrimYAML(`
 				^url_fields:
 					host: <required>.*
 					token: <required>.*$`),
-			sType: testS.Type,
+			sType:   testS.Type,
+			changed: false,
 		},
 		"invalid params + locate fail": {
 			errRegex: test.TrimYAML(`
@@ -1925,7 +1974,8 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 					toaddresses: <required>.*$`),
 			urlFields: map[string]string{
 				"host": "https://release-argus.io"},
-			sType: "smtp",
+			sType:   "smtp",
+			changed: false,
 		},
 		"gotify - fail CreateSender": {
 			sType: "gotify",
@@ -1933,6 +1983,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 				"host":  "https://	example.com",
 				"token": "bish"},
 			errRegex: `failed to parse URL`,
+			changed:  false,
 		},
 	}
 
@@ -1955,7 +2006,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			}
 
 			// WHEN CheckValues is called.
-			err := shoutrrr.CheckValues("")
+			err, changed := shoutrrr.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
@@ -1971,12 +2022,17 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 					packageName, tc.wantDelay, shoutrrr.GetOption("delay"))
 			}
 			for key := range tc.wantURLFields {
-				if shoutrrr.URLFields[key] != tc.wantURLFields[key] {
+				if shoutrrr.URLFields[key] != tc.wantURLFields[key] && shoutrrr.URLFields[key] != "" {
 					t.Errorf("%s\nmismatch on %q\nwant: %q (%v)\ngot:  %q (%v)",
 						packageName, key,
 						tc.wantURLFields[key], tc.wantURLFields,
 						shoutrrr.URLFields[key], shoutrrr.URLFields)
 				}
+			}
+			// AND the 'changed' flag matches expectation.
+			if changed != tc.changed {
+				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
+					packageName, tc.changed, changed)
 			}
 		})
 	}
@@ -1987,14 +2043,33 @@ func TestShoutrrrs_CheckValues(t *testing.T) {
 	tests := map[string]struct {
 		shoutrrrs *Shoutrrrs
 		errRegex  string
+		changed   bool
 	}{
 		"nil map": {
-			shoutrrrs: nil, errRegex: `^$`},
+			shoutrrrs: nil,
+			errRegex:  `^$`,
+			changed:   false,
+		},
 		"valid map": {
 			errRegex: `^$`,
 			shoutrrrs: &Shoutrrrs{
 				"valid": testShoutrrr(false, false),
-				"other": testShoutrrr(false, false)}},
+				"other": testShoutrrr(false, false)},
+			changed: false,
+		},
+		"valid map, with changed": {
+			errRegex: `^$`,
+			shoutrrrs: &Shoutrrrs{
+				"valid": testShoutrrr(false, false),
+				"other": testShoutrrr(false, false),
+				"generic": &Shoutrrr{
+					Base: Base{
+						URLFields: map[string]string{
+							"host":           "example.com",
+							"custom_headers": `{"foo":"bar"}`}}},
+			},
+			changed: true,
+		},
 		"invalid map": {
 			errRegex: test.TrimYAML(`
 				other:
@@ -2004,7 +2079,9 @@ func TestShoutrrrs_CheckValues(t *testing.T) {
 				"other": New(
 					nil, "", "",
 					make(map[string]string), make(map[string]string), make(map[string]string),
-					nil, nil, nil)}},
+					nil, nil, nil)},
+			changed: false,
+		},
 		"ordered errors": {
 			errRegex: test.TrimYAML(`
 				aNotify:
@@ -2019,7 +2096,9 @@ func TestShoutrrrs_CheckValues(t *testing.T) {
 				"bNotify": New(
 					nil, "", "",
 					make(map[string]string), make(map[string]string), make(map[string]string),
-					nil, nil, nil)}},
+					nil, nil, nil)},
+			changed: false,
+		},
 	}
 
 	for name, tc := range tests {
@@ -2038,13 +2117,18 @@ func TestShoutrrrs_CheckValues(t *testing.T) {
 			}
 
 			// WHEN CheckValues is called.
-			err := tc.shoutrrrs.CheckValues("")
+			err, changed := tc.shoutrrrs.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
+			}
+			// AND the 'changed' flag matches expectation.
+			if changed != tc.changed {
+				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
+					packageName, tc.changed, changed)
 			}
 		})
 	}
@@ -2055,16 +2139,31 @@ func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
 	tests := map[string]struct {
 		shoutrrrsDefaults *ShoutrrrsDefaults
 		errRegex          string
+		changed           bool
 	}{
 		"nil map": {
 			shoutrrrsDefaults: nil,
 			errRegex:          `^$`,
+			changed:           false,
 		},
 		"valid map": {
 			errRegex: `^$`,
 			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"valid": testDefaults(false, false),
 				"other": testDefaults(false, false)},
+			changed: false,
+		},
+		"valid map, with changed": {
+			errRegex: `^$`,
+			shoutrrrsDefaults: &ShoutrrrsDefaults{
+				"valid": testDefaults(false, false),
+				"other": testDefaults(false, false),
+				"generic": &Defaults{
+					Base: Base{
+						URLFields: map[string]string{
+							"host":           "example.com",
+							"custom_headers": `{"foo":"bar"}`}}}},
+			changed: true,
 		},
 		"invalid type": {
 			errRegex: "", // Caught by Shoutrrr.CheckValues.
@@ -2073,6 +2172,7 @@ func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
 				"other": NewDefaults(
 					"somethingUnknown",
 					make(map[string]string), make(map[string]string), make(map[string]string))},
+			changed: false,
 		},
 		"delay without unit": {
 			errRegex: `^$`,
@@ -2082,6 +2182,7 @@ func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
 					map[string]string{
 						"delay": "1"},
 					nil, nil)},
+			changed: false,
 		},
 		"invalid delay": {
 			errRegex: test.TrimYAML(`
@@ -2094,6 +2195,7 @@ func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
 					map[string]string{
 						"delay": "1x"},
 					nil, nil)},
+			changed: false,
 		},
 		"invalid message template": {
 			errRegex: test.TrimYAML(`
@@ -2106,6 +2208,7 @@ func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
 					map[string]string{
 						"message": "{{ .foo }"},
 					nil, nil)},
+			changed: false,
 		},
 		"invalid params template": {
 			errRegex: test.TrimYAML(`
@@ -2119,6 +2222,7 @@ func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
 					nil,
 					map[string]string{
 						"title": "{{ .bar }"})},
+			changed: false,
 		},
 	}
 
@@ -2127,13 +2231,18 @@ func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CheckValues is called.
-			err := tc.shoutrrrsDefaults.CheckValues("")
+			err, changed := tc.shoutrrrsDefaults.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
+			}
+			// AND the 'changed' flag matches expectation.
+			if changed != tc.changed {
+				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
+					packageName, tc.changed, changed)
 			}
 		})
 	}
@@ -2145,31 +2254,37 @@ func TestDefaults_CheckValues(t *testing.T) {
 		d        *Defaults
 		id       string
 		errRegex string
+		changed  bool
 	}{
 		"nil defaults - valid id": {
 			d:        nil,
 			id:       "slack",
 			errRegex: `^$`,
+			changed:  false,
 		},
 		"nil defaults - invalid id": {
 			d:        nil,
 			id:       "argus",
 			errRegex: `^type: "argus" <invalid>.*gotify.*$`,
+			changed:  false,
 		},
 		"empty Type uses id - valid": {
 			d:        &Defaults{Base: Base{}},
 			id:       "gotify",
 			errRegex: `^$`,
+			changed:  false,
 		},
 		"empty Type uses id - invalid": {
 			d:        &Defaults{Base: Base{}},
 			id:       "unknown",
 			errRegex: `^type: "unknown" <invalid>.*$`,
+			changed:  false,
 		},
 		"Type set overrides id (both valid)": {
 			d:        &Defaults{Base: Base{Type: "gotify"}},
 			id:       "slack",
 			errRegex: `^$`,
+			changed:  false,
 		},
 		"Base error is propagated": {
 			d: &Defaults{Base: Base{
@@ -2180,6 +2295,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 			errRegex: test.TrimYAML(`
                 ^options:
                   delay: "10x" <invalid>.*$`),
+			changed: false,
 		},
 		"Combines type invalid and base error": {
 			d: &Defaults{Base: Base{
@@ -2191,6 +2307,7 @@ func TestDefaults_CheckValues(t *testing.T) {
                 ^type: "invalid" <invalid>.*
                 params:
                   color: "{{ invalid template }}" <invalid>.*$`),
+			changed: false,
 		},
 		"both valid - no error": {
 			d: &Defaults{Base: Base{
@@ -2202,11 +2319,23 @@ func TestDefaults_CheckValues(t *testing.T) {
 			}},
 			id:       "",
 			errRegex: `^$`,
+			changed:  false,
 		},
 		"empty Type and id empty": {
 			d:        &Defaults{Base: Base{}},
 			id:       "",
 			errRegex: `^type: "" <invalid>.*$`,
+			changed:  false,
+		},
+		"port with colon prefix is corrected": {
+			d: &Defaults{Base: Base{
+				Type: "gotify",
+				URLFields: map[string]string{
+					"port": ":123"},
+			}},
+			id:       "",
+			errRegex: `^$`,
+			changed:  true,
 		},
 	}
 
@@ -2215,13 +2344,18 @@ func TestDefaults_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CheckValues is called.
-			err := tc.d.CheckValues("", tc.id)
+			err, changed := tc.d.CheckValues("", tc.id)
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
+			}
+			// AND the 'changed' flag matches expectation.
+			if changed != tc.changed {
+				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
+					packageName, tc.changed, changed)
 			}
 		})
 	}

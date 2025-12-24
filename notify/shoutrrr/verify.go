@@ -49,7 +49,7 @@ func (s *ShoutrrrsDefaults) CheckValues(prefix string) (error, bool) {
 	if len(errs) == 0 {
 		return nil, changed
 	}
-	return errors.Join(errs...), changed
+	return errors.Join(errs...), false
 }
 
 // CheckValues validates the fields of the Defaults struct,
@@ -79,7 +79,7 @@ func (d *Defaults) CheckValues(prefix string, id string) (error, bool) {
 	if len(errs) == 0 {
 		return nil, changed
 	}
-	return errors.Join(errs...), changed
+	return errors.Join(errs...), false
 }
 
 // CheckValues validates the fields of the Base struct,
@@ -102,7 +102,7 @@ func (b *Base) CheckValues(prefix string, id string) (error, bool) {
 	if len(errs) == 0 {
 		return nil, changed
 	}
-	return errors.Join(errs...), changed
+	return errors.Join(errs...), false
 }
 
 // CheckValues validates the fields of each Shoutrrr,
@@ -125,7 +125,7 @@ func (s *Shoutrrrs) CheckValues(prefix string) (error, bool) {
 	if len(errs) == 0 {
 		return nil, changed
 	}
-	return errors.Join(errs...), changed
+	return errors.Join(errs...), false
 }
 
 // CheckValues validates the fields of the Shoutrrr struct,
@@ -163,7 +163,7 @@ func (s *Shoutrrr) CheckValues(prefix string) (error, bool) {
 	if len(errs) == 0 {
 		return nil, changed
 	}
-	return errors.Join(errs...), changed
+	return errors.Join(errs...), false
 }
 
 // correctSelf will do a few corrections to user provided vars.
@@ -207,16 +207,18 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 	switch shoutrrrType {
 	case "generic":
 		// Deprecated: custom_headers -> headers.
-		if headers := b.GetURLField("custom_headers"); headers != "" {
-			logutil.Log.Deprecated("Renaming 'notify.generic.url_fields.custom_headers' to 'notify.generic.url_fields.headers'")
-			b.SetURLField("headers", headers)
+		if customHeaders := b.GetURLField("custom_headers"); customHeaders != "" {
+			if headers := b.GetURLField("headers"); headers == "" {
+				logutil.Log.Deprecated("Renaming 'notify.generic.url_fields.custom_headers' to 'notify.generic.url_fields.headers'")
+				b.SetURLField("headers", customHeaders)
+			}
 			b.SetURLField("custom_headers", "")
 			changed = true
 		}
 	case "matrix":
 		// Remove #'s in channel aliases.
-		if rooms := strings.ReplaceAll(b.GetParam("rooms"), "#", ""); rooms != "" {
-			b.SetParam("rooms", rooms)
+		if rooms := b.GetParam("rooms"); strings.Contains(rooms, "#") {
+			b.SetParam("rooms", strings.ReplaceAll(b.GetParam("rooms"), "#", ""))
 			changed = true
 		}
 	case "mattermost":
@@ -231,25 +233,30 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 		// The format for the Color prop follows the slack docs but # needs to be escaped as %23 when passed in a URL.
 		// So #ff8000 would be %23ff8000 etc.
 		key := "color"
-		if b.GetParam(key) != "" {
-			b.SetParam(key, strings.Replace(b.GetParam(key), "#", "%23", 1))
-			changed = true
+		if color := b.GetParam(key); color != "" {
+			if strings.HasPrefix(color, "#") {
+				b.SetParam(key, strings.Replace(color, "#", "%23", 1))
+				changed = true
+			}
 		}
 	case "teams":
 		// AltID, strip leading /
-		if altid := strings.TrimPrefix(b.GetURLField("altid"), "/"); altid != "" {
-			b.SetURLField("altid", altid)
+		key := "altid"
+		if altID := strings.TrimPrefix(b.GetURLField(key), "/"); altID != "" {
+			b.SetURLField(key, altID)
 			changed = true
 		}
 		// GroupOwner, strip leading /
-		if groupowner := strings.TrimPrefix(b.GetURLField("groupowner"), "/"); groupowner != "" {
-			b.SetURLField("groupowner", groupowner)
+		key = "groupowner"
+		if groupOwner := strings.TrimPrefix(b.GetURLField(key), "/"); groupOwner != "" {
+			b.SetURLField(key, groupOwner)
 			changed = true
 		}
 	case "zulip":
 		// BotMail, replace the @ with a %40 - https://containrrr.dev/shoutrrr/v0.5/services/zulip/
-		if botmail := b.GetURLField("botmail"); botmail != "" {
-			b.SetURLField("botmail", strings.ReplaceAll(botmail, "@", "%40"))
+		key := "botmail"
+		if botMail := b.GetURLField(key); strings.Contains(botMail, "@") {
+			b.SetURLField(key, strings.ReplaceAll(botMail, "@", "%40"))
 			changed = true
 		}
 	}

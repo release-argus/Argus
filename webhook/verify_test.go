@@ -218,9 +218,9 @@ func TestDefaults_CheckValues(t *testing.T) {
 				t.Errorf("%s\ndelay mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.wantDelay, tc.webhook.Delay)
 			}
-			// AND changed is as expected.
+			// AND the 'changed' flag matches expectation.
 			if changed != tc.changed {
-				t.Errorf("%s\nchanged mismatch\nwant: %v\ngot:  %v",
+				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
 					packageName, tc.changed, changed)
 			}
 		})
@@ -361,9 +361,9 @@ func TestWebHook_CheckValues(t *testing.T) {
 				t.Errorf("%s\nCustomHeaders not moved to Headers\nHeaders=%v\nCustomHeaders=%v",
 					packageName, webhook.Headers, webhook.CustomHeaders)
 			}
-			// AND changed is as expected.
+			// AND the 'changed' flag matches expectation.
 			if changed != tc.changed {
-				t.Errorf("%s\nchanged mismatch\nwant: %v\ngot:  %v",
+				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
 					packageName, tc.changed, changed)
 			}
 		})
@@ -447,9 +447,9 @@ func TestWebHooksDefaults_CheckValues(t *testing.T) {
 					packageName, tc.errRegex, e)
 				return
 			}
-			// AND changed is as expected.
+			// AND the 'changed' flag matches expectation.
 			if changed != tc.changed {
-				t.Errorf("%s\nchanged mismatch\nwant: %v\ngot:  %v",
+				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
 					packageName, tc.changed, changed)
 			}
 		})
@@ -529,6 +529,9 @@ func TestWebHooks_CheckValues(t *testing.T) {
 			webhooks: &WebHooks{
 				"a": &WebHook{
 					Base: Base{
+						Type:   "github",
+						URL:    "example.com",
+						Secret: "Argus",
 						CustomHeaders: &Headers{
 							{Key: "foo", Value: "bar"}}}}},
 			changed: true,
@@ -571,9 +574,9 @@ func TestWebHooks_CheckValues(t *testing.T) {
 					packageName, tc.errRegex, e)
 				return
 			}
-			// AND changed is as expected.
+			// AND the 'changed' flag matches expectation.
 			if changed != tc.changed {
-				t.Errorf("%s\nchanged mismatch\nwant: %v\ngot:  %v",
+				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
 					packageName, tc.changed, changed)
 			}
 		})

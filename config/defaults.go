@@ -109,8 +109,7 @@ func (d *Defaults) CheckValues(prefix string) (error, bool) {
 	if len(errs) == 0 {
 		return nil, changed
 	}
-
-	return errors.Join(errs...), changed
+	return errors.Join(errs...), false
 }
 
 // Print the defaults to the console with the given prefix.

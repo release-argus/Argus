@@ -59,29 +59,31 @@ func (d *Defaults) CheckValues(prefix string) error {
 }
 
 // CheckValues validates the fields of each Service.
-func (s *Services) CheckValues(prefix string) error {
+func (s *Services) CheckValues(prefix string) (error, bool) {
 	if s == nil {
-		return nil
+		return nil, false
 	}
 
 	var errs []error
+	changed := false
 	keys := util.SortedKeys(*s)
 	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		util.AppendCheckError(&errs, prefix, key,
-			(*s)[key].CheckValues(itemPrefix))
+		err, keyChanged := (*s)[key].CheckValues(itemPrefix)
+		util.AppendCheckError(&errs, prefix, key, err)
+		changed = changed || keyChanged
 	}
 
 	if len(errs) == 0 {
-		return nil
+		return nil, changed
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...), false
 }
 
 // CheckValues validates the fields of this Service struct.
-func (s *Service) CheckValues(prefix string) error {
+func (s *Service) CheckValues(prefix string) (error, bool) {
 	if s == nil {
-		return nil
+		return nil, false
 	}
 
 	var errs []error
@@ -100,22 +102,16 @@ func (s *Service) CheckValues(prefix string) error {
 			s.DeployedVersionLookup.CheckValues(errPrefix))
 	}
 	notifyErr, notifyChanged := s.Notify.CheckValues(errPrefix)
-	if notifyChanged {
-		s.Status.SaveChannel <- true
-	}
 	util.AppendCheckError(&errs, prefix, "notify", notifyErr)
 	util.AppendCheckError(&errs, prefix, "command",
 		s.Command.CheckValues(errPrefix))
 	webhookErr, webhookChanged := s.WebHook.CheckValues(errPrefix)
-	if webhookChanged {
-		s.Status.SaveChannel <- true
-	}
 	util.AppendCheckError(&errs, prefix, "webhook", webhookErr)
 	util.AppendCheckError(&errs, prefix, "dashboard",
 		s.Dashboard.CheckValues(errPrefix))
 
 	if len(errs) == 0 {
-		return nil
+		return nil, notifyChanged || webhookChanged
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...), false
 }

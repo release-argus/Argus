@@ -45,7 +45,7 @@ func (whd *WebHooksDefaults) CheckValues(prefix string) (error, bool) {
 	if len(errs) == 0 {
 		return nil, changed
 	}
-	return errors.Join(errs...), changed
+	return errors.Join(errs...), false
 }
 
 // CheckValues validates the fields of each WebHook,
@@ -68,7 +68,7 @@ func (wh *WebHooks) CheckValues(prefix string) (error, bool) {
 	if len(errs) == 0 {
 		return nil, changed
 	}
-	return errors.Join(errs...), changed
+	return errors.Join(errs...), false
 }
 
 // CheckValues validates the fields of the Base struct,
@@ -115,7 +115,7 @@ func (b *Base) CheckValues(prefix string) (error, bool) {
 	if len(errs) == 0 {
 		return nil, changed
 	}
-	return errors.Join(errs...), changed
+	return errors.Join(errs...), false
 }
 
 func (b *Base) checkValuesHeaders(prefix string) error {
@@ -173,7 +173,7 @@ func (wh *WebHook) CheckValues(prefix string) (error, bool) {
 	if len(errs) == 0 {
 		return nil, changed
 	}
-	return errors.Join(errs...), changed
+	return errors.Join(errs...), false
 }
 
 // Print the WebHooksDefaults.

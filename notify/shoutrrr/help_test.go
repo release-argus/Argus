@@ -59,7 +59,7 @@ func testDefaults(failing bool, selfSignedCert bool) *Defaults {
 			"max_tries": "1"},
 		map[string]string{
 			"host":  url,
-			"path":  "/gotify",
+			"path":  "gotify",
 			"token": test.ShoutrrrGotifyToken()},
 		map[string]string{})
 	if failing {

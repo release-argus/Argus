@@ -32,6 +32,8 @@ import (
 
 func testVerify(t *testing.T) *Config {
 	cfg := &Config{}
+	cfg.SaveChannel = make(chan bool, 10)
+
 	cfg.Order = []string{"test"}
 
 	cfg.Defaults = Defaults{}
@@ -71,7 +73,9 @@ func TestConfig_CheckValues(t *testing.T) {
 	tests := map[string]struct {
 		config   *Config
 		errRegex string
+		logRegex *string
 		ok       bool
+		wantSave bool
 	}{
 		"valid Config": {
 			config: testVerify(t),
@@ -135,6 +139,139 @@ func TestConfig_CheckValues(t *testing.T) {
 						options:
 							interval: "4x" <invalid>.*`),
 		},
+		"valid Config that gets changed is saved": {
+			config: test.IgnoreError(t, func() (*Config, error) {
+				cfg := testVerify(t)
+
+				newService := &service.Service{
+					ID:      "test",
+					Comment: "foo_comment",
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"github",
+							"yaml", test.TrimYAML(`
+						url: release-argus/Argus
+					`),
+							nil,
+							nil,
+							nil, nil)
+					}),
+					WebHook: map[string]*webhook.WebHook{
+						"wh": {
+							Base: webhook.Base{
+								Type:   "github",
+								URL:    "example.com",
+								Secret: "Argus",
+								CustomHeaders: &webhook.Headers{
+									webhook.Header{
+										Key: "foo", Value: "bar"}},
+							}}},
+				}
+				newService.Init(
+					&service.Defaults{}, &service.Defaults{},
+					&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
+					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
+				cfg.Service[t.Name()] = newService
+
+				return cfg, nil
+			}),
+			logRegex: test.StringPtr(`^DEPRECATED: .*\s$`),
+			ok:       true,
+			wantSave: true,
+		},
+		"invalid Config that gets changed is not saved": {
+			config: test.IgnoreError(t, func() (*Config, error) {
+				cfg := testVerify(t)
+
+				newService := &service.Service{
+					ID:      "test",
+					Comment: "foo_comment",
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"github",
+							"yaml", test.TrimYAML(`
+						url: release-argus/Argus
+					`),
+							nil,
+							nil,
+							nil, nil)
+					}),
+					WebHook: map[string]*webhook.WebHook{
+						"wh": {
+							Base: webhook.Base{
+								Type:   "github",
+								URL:    "example.com",
+								Secret: "Argus",
+								CustomHeaders: &webhook.Headers{
+									webhook.Header{
+										Key: "foo", Value: "bar"}},
+							}}},
+				}
+				newService.Init(
+					&service.Defaults{}, &service.Defaults{},
+					&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
+					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
+				cfg.Service[t.Name()] = newService
+
+				badService := &service.Service{
+					ID:      "bad",
+					Comment: "foo_comment",
+					Options: *opt.New(
+						nil, "10x", nil, nil, nil),
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"github",
+							"yaml", test.TrimYAML(`
+						url: release-argus/Argus
+					`),
+							nil,
+							nil,
+							nil, nil)
+					}),
+					Notify: shoutrrr.Shoutrrrs{
+						"foo": shoutrrr.New(
+							nil,
+							"", "generic",
+							nil,
+							map[string]string{
+								"host":           "x",
+								"secret":         "y",
+								"custom_headers": `{"foo": "bar"}`},
+							nil,
+							nil, nil, nil)},
+					WebHook: map[string]*webhook.WebHook{
+						"wh": {
+							Base: webhook.Base{
+								Type:   "github",
+								URL:    "example.com",
+								Secret: "Argus",
+								CustomHeaders: &webhook.Headers{
+									webhook.Header{
+										Key: "foo", Value: "bar"}},
+							}}},
+				}
+				badService.Init(
+					&service.Defaults{}, &service.Defaults{},
+					&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
+					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
+				cfg.Service["badService"] = badService
+
+				return cfg, nil
+			}),
+			errRegex: test.TrimYAML(`
+				^service:
+					badService:
+						options:
+							interval: "10x" <invalid>.*\s$`),
+			logRegex: test.StringPtr(
+				test.TrimYAML(`
+				^DEPRECATED: .*webhook.custom_headers.*
+				DEPRECATED: .*notify.generic.url_fields.custom_headers.*
+				DEPRECATED: .*webhook.custom_headers.*
+				FATAL: Config could not be parsed.*\s$`)),
+			ok:       false,
+			wantSave: false,
+		},
 	}
 
 	for name, tc := range tests {
@@ -178,10 +315,17 @@ func TestConfig_CheckValues(t *testing.T) {
 			if tc.ok {
 				logWant = `^$`
 			}
+			logWant = util.DereferenceOrValue(tc.logRegex, logWant)
 			logOut := releaseLog()
 			if !util.RegexCheck(logWant, logOut) {
 				t.Errorf("%s\nlog mismatch\nwant: %q\ngot:  %q",
 					packageName, logWant, logOut)
+			}
+			// AND saves are queued as expected.
+			saveQueued := len(tc.config.SaveChannel) > 0
+			if saveQueued != tc.wantSave {
+				t.Errorf("%s\nsave queue mismatch\nwant: %t\ngot:  %t",
+					packageName, tc.wantSave, saveQueued)
 			}
 		})
 	}
