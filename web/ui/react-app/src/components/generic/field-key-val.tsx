@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { type FC, memo } from 'react';
+import type { FC } from 'react';
 import { FieldText } from '@/components/generic/field';
 import type { HeaderPlaceholders } from '@/components/generic/field-shared';
 import { Button } from '@/components/ui/button';
@@ -37,8 +37,8 @@ const FieldKeyVal: FC<FieldKeyValProps> = ({
 	removeMe,
 	placeholders,
 }) => {
-	const keyColSpan = Math.round(colSpan / 2);
 	const valueColSpan = Math.floor(colSpan / 2);
+	const keyColSpan = colSpan - valueColSpan - 1;
 
 	return (
 		<>
@@ -54,7 +54,10 @@ const FieldKeyVal: FC<FieldKeyValProps> = ({
 				</Button>
 			</div>
 			<FieldGroup
-				className={cn(`col-span-${colSpan}`, 'grid grid-cols-subgrid gap-x-2')}
+				className={cn(
+					`col-span-${colSpan - 1}`,
+					'grid grid-cols-subgrid gap-x-2',
+				)}
 			>
 				<FieldText
 					colSize={{ sm: keyColSpan, xs: keyColSpan }}
@@ -75,4 +78,4 @@ const FieldKeyVal: FC<FieldKeyValProps> = ({
 	);
 };
 
-export default memo(FieldKeyVal);
+export default FieldKeyVal;

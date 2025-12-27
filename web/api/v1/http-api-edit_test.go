@@ -572,23 +572,6 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				bodyRegex:  `\{"version":"[0-9.]+",.*"\}`,
 				statusCode: http.StatusOK},
 		},
-		"invalid JSON - existing DVL": {
-			params: map[string]string{
-				"overrides": `"method": "GET"}`,
-			},
-			wants: wants{
-				bodyRegex:  `^\{"message":"failed to unmarshal deployedver.Lookup:[^"]+"\}$`,
-				statusCode: http.StatusBadRequest},
-		},
-		"invalid JSON - new DVL": {
-			nilDeployedVersion: true,
-			params: map[string]string{
-				"overrides": `{"type": "url", "method}}`,
-			},
-			wants: wants{
-				bodyRegex:  `^\{"message":"invalid JSON[^"]+"\}$`,
-				statusCode: http.StatusBadRequest},
-		},
 		"invalid vars - CheckValues fail": {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{

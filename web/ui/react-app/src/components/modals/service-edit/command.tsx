@@ -1,5 +1,5 @@
 import { Minus, Plus, Trash2 } from 'lucide-react';
-import { type FC, memo, useCallback } from 'react';
+import { type FC, useCallback } from 'react';
 import { useFieldArray } from 'react-hook-form';
 import { FieldText } from '@/components/generic/field';
 import { Button } from '@/components/ui/button';
@@ -97,4 +97,4 @@ const Command: FC<CommandProps> = ({ name, defaults, removeMe }) => {
 	);
 };
 
-export default memo(Command);
+export default Command;

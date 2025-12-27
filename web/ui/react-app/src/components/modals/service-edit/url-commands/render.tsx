@@ -1,4 +1,4 @@
-import { type FC, memo } from 'react';
+import type { FC } from 'react';
 import { REGEX, REPLACE, SPLIT } from '.';
 import type { URLCommand } from '@/utils/api/types/config/service/latest-version';
 
@@ -32,4 +32,4 @@ const RenderURLCommand = ({
 	return <RenderTypeComponent name={name} />;
 };
 
-export default memo(RenderURLCommand);
+export default RenderURLCommand;

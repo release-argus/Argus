@@ -8,6 +8,7 @@ import {
 	latestVersionLookupTypeOptions,
 } from '@/utils/api/types/config/service/latest-version';
 import { commandSchema } from '@/utils/api/types/config-edit/command/schemas';
+import { headersSchema } from '@/utils/api/types/config-edit/shared/header/preprocess.ts';
 import { zodStringToNumber } from '@/utils/api/types/config-edit/shared/number-string';
 import {
 	NUMBER_REQUIRED_MESSAGE,
@@ -189,6 +190,7 @@ export const latestVersionLookupSchemaGitHub =
 export const latestVersionLookupSchemaURL =
 	latestVersionLookupSchemaBase.extend({
 		allow_invalid_certs: z.boolean().nullable().default(null),
+		headers: headersSchema,
 		type: z.literal(LATEST_VERSION_LOOKUP_TYPE.URL.value),
 		url: z.string(),
 	});

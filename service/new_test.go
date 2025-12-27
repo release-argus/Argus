@@ -53,10 +53,10 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 	githubData := lv_github.Data{}
 	githubData.SetETag("shazam")
 	tests := map[string]struct {
-		latestVersion latestver.Lookup
-		otherLV       latestver.Lookup
-		expected      latestver.Lookup
-		otherData     otherData
+		latestVersion, otherLV latestver.Lookup
+		secretRefs             shared.VSecretRef
+		expected               latestver.Lookup
+		otherData              otherData
 	}{
 		"nil oldLatestVersion": {
 			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
@@ -437,6 +437,137 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 				githubDataTransformed: false,
 			},
 		},
+		"only new/changed Headers with expected refs": {
+			latestVersion: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "shazam"},
+					{Key: "bish", Value: "bash"}}},
+			otherLV: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bar"}}},
+			expected: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "shazam"},
+					{Key: "bish", Value: "bash"}}},
+			secretRefs: shared.VSecretRef{
+				Headers: []shared.OldIntIndex{
+					{OldIndex: test.IntPtr(0)}, {OldIndex: nil}}},
+		},
+		"only new/changed Headers with no refs": {
+			latestVersion: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "shazam"},
+					{Key: "bish", Value: "bash"}}},
+			otherLV: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bar"}}},
+			expected: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "shazam"},
+					{Key: "bish", Value: "bash"}}},
+			secretRefs: shared.VSecretRef{
+				Headers: []shared.OldIntIndex{}},
+		},
+		"referencing old Header value with no refs": {
+			latestVersion: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: util.SecretValue},
+					{Key: "bish", Value: "bash"}}},
+			otherLV: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bar"}}},
+			expected: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: util.SecretValue},
+					{Key: "bish", Value: "bash"}}},
+			secretRefs: shared.VSecretRef{
+				Headers: []shared.OldIntIndex{}},
+		},
+		"only new/changed Headers with partial ref (not for all secrets)": {
+			latestVersion: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: util.SecretValue},
+					{Key: "bish", Value: "bang"},
+					{Key: "bosh", Value: util.SecretValue}}},
+			otherLV: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bar"},
+					{Key: "bish", Value: "bash"}}},
+			expected: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bar"},
+					{Key: "bish", Value: "bang"},
+					{Key: "bosh", Value: util.SecretValue}}},
+			secretRefs: shared.VSecretRef{
+				Headers: []shared.OldIntIndex{
+					{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
+		},
+		"referencing old Header value": {
+			latestVersion: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: util.SecretValue},
+					{Key: "bish", Value: "bash"}}},
+			otherLV: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bar"}}},
+			expected: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bar"},
+					{Key: "bish", Value: "bash"}}},
+			secretRefs: shared.VSecretRef{
+				Headers: []shared.OldIntIndex{
+					{OldIndex: test.IntPtr(0)}, {OldIndex: nil}}},
+		},
+		"referencing old Header value that doesn't exist": {
+			latestVersion: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: util.SecretValue},
+					{Key: "bish", Value: "bash"}}},
+			otherLV: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bar"}}},
+			expected: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: util.SecretValue},
+					{Key: "bish", Value: "bash"}}},
+			secretRefs: shared.VSecretRef{
+				Headers: []shared.OldIntIndex{
+					{OldIndex: test.IntPtr(1)}, {OldIndex: nil}}},
+		},
+		"referencing some old Header values but not others": {
+			latestVersion: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bang"},
+					{Key: "bish", Value: util.SecretValue}}},
+			otherLV: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bar"},
+					{Key: "bish", Value: "bong"}}},
+			expected: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bang"},
+					{Key: "bish", Value: "bong"}}},
+			secretRefs: shared.VSecretRef{
+				Headers: []shared.OldIntIndex{
+					{OldIndex: nil}, {OldIndex: test.IntPtr(1)}}},
+		},
+		"swap header values": {
+			latestVersion: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "bish", Value: util.SecretValue},
+					{Key: "foo", Value: util.SecretValue}}},
+			otherLV: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bar"},
+					{Key: "bish", Value: "bong"}}},
+			expected: &lv_web.Lookup{
+				Headers: shared.Headers{
+					{Key: "bish", Value: "bar"},
+					{Key: "foo", Value: "bong"}}},
+			secretRefs: shared.VSecretRef{
+				Headers: []shared.OldIntIndex{
+					{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
+		},
 	}
 
 	for name, tc := range tests {
@@ -447,7 +578,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			oldService := &Service{LatestVersion: tc.otherLV}
 
 			// WHEN we call GiveSecrets.
-			newService.giveSecretsLatestVersion(oldService.LatestVersion)
+			newService.giveSecretsLatestVersion(oldService.LatestVersion, &tc.secretRefs)
 
 			// THEN we should get a Service with the secrets from the other Service.
 			gotLV := newService.LatestVersion
@@ -508,6 +639,19 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 						packageName, gotLV)
 				}
 			}
+			// Headers:
+			var expectedHeaders shared.Headers
+			if expectedLV, ok := tc.expected.(*lv_web.Lookup); ok {
+				expectedHeaders = expectedLV.Headers
+			}
+			var gotHeaders shared.Headers
+			if gotLV, ok := gotLV.(*lv_web.Lookup); ok {
+				gotHeaders = gotLV.Headers
+			}
+			if !test.EqualSlices(expectedHeaders, gotHeaders) {
+				t.Errorf("%s\nHeaders mismatch\nwant: %v\ngot:  %v",
+					packageName, expectedHeaders, gotHeaders)
+			}
 		})
 	}
 }
@@ -516,13 +660,13 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 	// GIVEN a DeployedVersion that may have secrets in it referencing those in another DeployedVersion.
 	tests := map[string]struct {
 		deployedVersion, otherDV deployedver.Lookup
-		secretRefs               shared.DVSecretRef
+		secretRefs               shared.VSecretRef
 		expected                 deployedver.Lookup
 	}{
 		"nil DeployedVersion": {
 			deployedVersion: nil,
 			otherDV:         &dv_web.Lookup{},
-			secretRefs:      shared.DVSecretRef{},
+			secretRefs:      shared.VSecretRef{},
 			expected:        nil,
 		},
 		"nil OldDeployedVersion": {
@@ -577,219 +721,219 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 		},
 		"empty Headers": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{}},
+				Headers: shared.Headers{}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"}}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{}},
+				Headers: shared.Headers{}},
 		},
 		"only new Headers": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "bish", Value: "bash"}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{}},
+				Headers: shared.Headers{}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: nil},
 					{OldIndex: nil}}},
 		},
 		"Headers with index out of range": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "bish", Value: util.SecretValue},
 					{Key: "bash", Value: util.SecretValue}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{}},
+				Headers: shared.Headers{}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "bish", Value: util.SecretValue},
 					{Key: "bash", Value: util.SecretValue}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)},
 					{OldIndex: test.IntPtr(1)}}},
 		},
 		"Headers with SecretValue but nil index refs": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "bish", Value: util.SecretValue},
 					{Key: "bash", Value: util.SecretValue}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "bish", Value: "bash"},
 					{Key: "bash", Value: "bop"}}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "bish", Value: util.SecretValue},
 					{Key: "bash", Value: util.SecretValue}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: nil},
 					{OldIndex: nil}}},
 		},
 		"only changed Headers": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "shazam"}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"}}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "shazam"}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)}}},
 		},
 		"only new/changed Headers": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"}}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)}, {OldIndex: nil}}},
 		},
 		"only new/changed Headers with expected refs": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"}}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)}, {OldIndex: nil}}},
 		},
 		"only new/changed Headers with no refs": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"}}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{}},
 		},
 		"referencing old Header value with no refs": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"}}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{}},
 		},
 		"only new/changed Headers with partial ref (not for all secrets)": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bang"},
 					{Key: "bosh", Value: util.SecretValue}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bash"}}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bang"},
 					{Key: "bosh", Value: util.SecretValue}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
 		},
 		"referencing old Header value": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"}}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)}, {OldIndex: nil}}},
 		},
 		"referencing old Header value that doesn't exist": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"}}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(1)}, {OldIndex: nil}}},
 		},
 		"referencing some old Header values but not others": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bang"},
 					{Key: "bish", Value: util.SecretValue}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bong"}}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bang"},
 					{Key: "bish", Value: "bong"}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: nil}, {OldIndex: test.IntPtr(1)}}},
 		},
 		"swap header values": {
 			deployedVersion: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "bish", Value: util.SecretValue},
 					{Key: "foo", Value: util.SecretValue}}},
 			otherDV: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bong"}}},
 			expected: &dv_web.Lookup{
-				Headers: []dv_web.Header{
+				Headers: shared.Headers{
 					{Key: "bish", Value: "bar"},
 					{Key: "foo", Value: "bong"}}},
-			secretRefs: shared.DVSecretRef{
+			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
 		},
@@ -835,11 +979,11 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				}
 			}
 			// Headers:
-			var expectedHeaders []dv_web.Header
-			if expectedLV, ok := tc.expected.(*dv_web.Lookup); ok {
-				expectedHeaders = expectedLV.Headers
+			var expectedHeaders shared.Headers
+			if expectedDV, ok := tc.expected.(*dv_web.Lookup); ok {
+				expectedHeaders = expectedDV.Headers
 			}
-			var gotHeaders []dv_web.Header
+			var gotHeaders shared.Headers
 			if gotLV, ok := gotDV.(*dv_web.Lookup); ok {
 				gotHeaders = gotLV.Headers
 			}
@@ -3476,7 +3620,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				},
 			},
 			secretRefs: oldSecretRefs{
-				DeployedVersionLookup: shared.DVSecretRef{Headers: []shared.OldIntIndex{{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
+				DeployedVersionLookup: shared.VSecretRef{Headers: []shared.OldIntIndex{{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
 				Notify:                map[string]shared.OldStringIndex{"foo": {OldIndex: "foo"}, "bar": {OldIndex: "bar"}},
 				WebHook:               map[string]shared.WHSecretRef{"foo": {OldIndex: "foo"}, "bar": {OldIndex: "bar"}},
 			},

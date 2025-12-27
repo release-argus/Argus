@@ -1,5 +1,5 @@
 import { Minus, Plus } from 'lucide-react';
-import { type FC, memo, useCallback, useEffect, useMemo } from 'react';
+import { type FC, useCallback, useEffect, useMemo } from 'react';
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import FieldKeyVal from '@/components/generic/field-key-val';
 import FieldLabelWithTooltip from '@/components/generic/field-label';
@@ -130,7 +130,7 @@ const FieldKeyValMap: FC<FieldKeyValMapProps> = ({
 			>
 				{fields.map(({ id: _id }, index) => (
 					<FieldKeyVal
-						colSpan={colSpan - 1}
+						colSpan={colSpan}
 						defaults={usingDefaults ? defaults?.[index] : undefined}
 						key={_id}
 						name={`${name}.${index}`}
@@ -146,4 +146,4 @@ const FieldKeyValMap: FC<FieldKeyValMapProps> = ({
 	);
 };
 
-export default memo(FieldKeyValMap);
+export default FieldKeyValMap;

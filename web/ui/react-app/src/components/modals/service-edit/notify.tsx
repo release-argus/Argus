@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { type FC, memo, useCallback, useEffect, useMemo } from 'react';
+import { type FC, useCallback, useEffect, useMemo } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { FieldSelect, FieldText } from '@/components/generic/field';
 import RenderNotify from '@/components/modals/service-edit/notify-types/render';
@@ -188,4 +188,4 @@ const Notify: FC<NotifyProps> = ({
 	);
 };
 
-export default memo(Notify);
+export default Notify;

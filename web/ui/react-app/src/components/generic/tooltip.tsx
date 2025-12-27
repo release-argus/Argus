@@ -1,5 +1,5 @@
 import { QuestionMarkCircledIcon } from '@radix-ui/react-icons';
-import { type ComponentProps, type FC, type JSX, memo } from 'react';
+import type { ComponentProps, FC, JSX } from 'react';
 import Tip from '@/components/ui/tip';
 import type { TooltipContent } from '@/components/ui/tooltip';
 import type { ScreenBreakpoint } from '@/types/util';
@@ -88,4 +88,4 @@ const HelpTooltip: FC<HelpTooltipProps> = ({
 	);
 };
 
-export default memo(HelpTooltip);
+export default HelpTooltip;

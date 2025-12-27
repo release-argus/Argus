@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { type FC, memo } from 'react';
+import type { FC } from 'react';
 import { useWatch } from 'react-hook-form';
 import { FieldSelect } from '@/components/generic/field';
 import RenderURLCommand from '@/components/modals/service-edit/url-commands/render';
@@ -50,4 +50,4 @@ const FormURLCommand: FC<FormURLCommandProps> = ({ name, removeMe }) => {
 	);
 };
 
-export default memo(FormURLCommand);
+export default FormURLCommand;

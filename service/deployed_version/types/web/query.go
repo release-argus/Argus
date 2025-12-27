@@ -149,9 +149,11 @@ func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 }
 
 // getVersion returns the latest version from `body` that matches the URLCommands, and Regex requirements.
-func (l *Lookup) getVersion(body []byte, logFrom logutil.LogFrom) (version string, err error) {
+func (l *Lookup) getVersion(body []byte, logFrom logutil.LogFrom) (string, error) {
+	var version string
 	// If JSON is provided, use it to extract the version.
 	if l.JSON != "" {
+		var err error
 		version, err = util.GetValueByKey(body, l.JSON, l.url())
 		if err != nil {
 			logutil.Log.Error(err, logFrom, true)

@@ -25,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	github "github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -42,16 +43,17 @@ func TestLookup_Refresh(t *testing.T) {
 	type args struct {
 		overrides          *string
 		semanticVersioning *string
+		latestVersion      string
+		secretRefs         shared.VSecretRef
 	}
 
 	// GIVEN a Lookup and a possible YAML string to override parts of it.
 	tests := map[string]struct {
-		args          args
-		latestVersion string
-		previous      Lookup
-		errRegex      string
-		want          string
-		announce      bool
+		args     args
+		previous Lookup
+		errRegex string
+		want     string
+		announce bool
 	}{
 		"nil Lookup": {
 			errRegex: `lookup is nil`,
@@ -107,18 +109,20 @@ func TestLookup_Refresh(t *testing.T) {
 			errRegex: `x509 \(certificate invalid\)`,
 		},
 		"GitHub - Refresh new version": {
-			previous:      testLookup("github", false),
-			latestVersion: "0.0.0",
-			errRegex:      `^$`,
-			want:          testVersionGitHub,
-			announce:      true,
+			args: args{
+				latestVersion: "0.0.0"},
+			previous: testLookup("github", false),
+			errRegex: `^$`,
+			want:     testVersionGitHub,
+			announce: true,
 		},
 		"URL - Refresh new version": {
-			previous:      testLookup("url", false),
-			latestVersion: "0.0.0",
-			errRegex:      `^$`,
-			want:          testVersionURL,
-			announce:      true,
+			args: args{
+				latestVersion: "0.0.0"},
+			previous: testLookup("url", false),
+			errRegex: `^$`,
+			want:     testVersionURL,
+			announce: true,
 		},
 		"GitHub -> URL": {
 			previous: testLookup("github", false),
@@ -131,11 +135,11 @@ func TestLookup_Refresh(t *testing.T) {
 							{"type": "regex", "regex": "ver([0-9.]+)"}
 						]
 				}`)),
-				semanticVersioning: test.StringPtr("false")},
-			latestVersion: "0.0.0",
-			errRegex:      `^$`,
-			want:          testVersionURL,
-			announce:      false,
+				semanticVersioning: test.StringPtr("false"),
+				latestVersion:      "0.0.0"},
+			errRegex: `^$`,
+			want:     testVersionURL,
+			announce: false,
 		},
 		"GitHub -> UNKNOWN": {
 			previous: testLookup("github", false),
@@ -143,10 +147,66 @@ func TestLookup_Refresh(t *testing.T) {
 				overrides: test.StringPtr(`{
 					"type": "unknown"
 				}`),
-				semanticVersioning: test.StringPtr("false")},
-			latestVersion: "0.0.0",
-			errRegex:      `type: "unknown" <invalid>.*$`,
-			announce:      false,
+				semanticVersioning: test.StringPtr("false"),
+				latestVersion:      "0.0.0"},
+			errRegex: `type: "unknown" <invalid>.*$`,
+			announce: false,
+		},
+		"InheritSecrets inherits header secrets": {
+			args: args{
+				overrides: test.StringPtr(test.TrimJSON(`{
+						"headers": [
+							{
+								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+								"value": "` + util.SecretValue + `",
+								"old_index": 0
+							}
+						]
+					}`)),
+				latestVersion: testVersionURL,
+			},
+			previous: test.IgnoreError(t, func() (Lookup, error) {
+				l := testLookup("url", false)
+				lTyped, _ := l.(*web.Lookup)
+				lTyped.Headers = shared.Headers{{
+					Key:   test.LookupWithHeaderAuth["header_key"],
+					Value: test.LookupWithHeaderAuth["header_value_pass"],
+				}}
+				return lTyped, nil
+			}),
+			want:     testVersionURL,
+			announce: false,
+			errRegex: `^$`,
+		},
+		"InheritSecrets can be overridden with non '<secret>' values": {
+			args: args{
+				overrides: test.StringPtr(test.TrimJSON(`{
+						"headers": [
+							{
+								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+								"value": "` + test.LookupWithHeaderAuth["header_value_fail"] + `",
+								"old_index": 0
+							}
+						]
+					}`)),
+				secretRefs: shared.VSecretRef{
+					Headers: []shared.OldIntIndex{
+						{OldIndex: test.IntPtr(0)}},
+				},
+				latestVersion: ""},
+			previous: test.IgnoreError(t, func() (Lookup, error) {
+				l := testLookup("url", false)
+				lTyped, _ := l.(*web.Lookup)
+				lTyped.URL = test.LookupWithHeaderAuth["url_valid"]
+				lTyped.Headers = shared.Headers{{
+					Key:   test.LookupWithHeaderAuth["header_key"],
+					Value: test.LookupWithHeaderAuth["header_value_pass"],
+				}}
+				return lTyped, nil
+			}),
+			want:     "",
+			announce: false,
+			errRegex: `Hook rules were not satisfied\.`,
 		},
 	}
 
@@ -171,8 +231,8 @@ func TestLookup_Refresh(t *testing.T) {
 					name, "", "",
 					&dashboard.Options{})
 				// Set the latest version.
-				if tc.latestVersion != "" {
-					targetStatus.SetLatestVersion(tc.latestVersion, "", false)
+				if tc.args.latestVersion != "" {
+					targetStatus.SetLatestVersion(tc.args.latestVersion, "", false)
 				}
 				previousStatus = targetStatus.Copy(true)
 			}
@@ -181,7 +241,8 @@ func TestLookup_Refresh(t *testing.T) {
 			got, gotAnnounce, err := Refresh(
 				tc.previous,
 				tc.args.overrides,
-				tc.args.semanticVersioning)
+				tc.args.semanticVersioning,
+				&tc.args.secretRefs)
 
 			// THEN we get an error if expected.
 			if tc.errRegex != "" || err != nil {

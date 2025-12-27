@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useWatch } from 'react-hook-form';
 import { HelpTooltip } from '@/components/generic';
 import { FieldLabel, FieldSelect, FieldText } from '@/components/generic/field';
@@ -191,4 +191,4 @@ const EditServiceLatestVersionRequire = () => {
 	);
 };
 
-export default memo(EditServiceLatestVersionRequire);
+export default EditServiceLatestVersionRequire;
