@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build unit
+
+// Package shared provides shared functionality for Latest Version and Deployed Version lookups.
 package shared
 
 var packageName = "service_shared"

@@ -30,6 +30,7 @@ import (
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
@@ -115,7 +116,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	// Query the latest version lookup.
 	version, _, err := latestver.Refresh(
 		lv,
-		nil, nil)
+		nil, nil, nil)
 	if err != nil {
 		failRequest(&w,
 			err.Error(),
@@ -208,7 +209,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	// Query the DeployedVersionLookup.
 	version, err := deployedver.Refresh(
 		dvl,
-		"", nil, nil)
+		"", nil, nil, nil)
 	if err != nil {
 		failRequest(&w,
 			err.Error(),
@@ -265,11 +266,24 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 		semanticVersioning = getParam(&queryParams, "semantic_versioning")
 	)
 
+	// SecretRefs.
+	var secretRefs *shared.VSecretRef
+	if overrides != nil {
+		if err := json.Unmarshal([]byte(*overrides), &secretRefs); err != nil {
+			logutil.Log.Error(err, logFrom, true)
+			failRequest(&w,
+				err.Error(),
+				http.StatusBadRequest)
+			return
+		}
+	}
+
 	// Query the LatestVersion lookup.
 	version, announce, err := latestver.Refresh(
 		api.Config.Service[serviceID].LatestVersion,
 		overrides,
-		semanticVersioning)
+		semanticVersioning,
+		secretRefs)
 	if announce {
 		api.Config.Service[serviceID].HandleUpdateActions(true)
 	}
@@ -330,6 +344,18 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 		semanticVersioning = getParam(&queryParams, "semantic_versioning")
 	)
 
+	// SecretRefs.
+	var secretRefs *shared.VSecretRef
+	if overrides != nil {
+		if err := json.Unmarshal([]byte(*overrides), &secretRefs); err != nil {
+			logutil.Log.Error(err, logFrom, true)
+			failRequest(&w,
+				err.Error(),
+				http.StatusBadRequest)
+			return
+		}
+	}
+
 	// Extract the desired lookup type.
 
 	// Existing DeployedVersionLookup?
@@ -375,7 +401,8 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 		dvl,
 		previousType,
 		overrides,
-		semanticVersioning)
+		semanticVersioning,
+		secretRefs)
 	if err != nil {
 		failRequest(&w,
 			err.Error(),

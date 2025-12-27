@@ -1,4 +1,4 @@
-import { type FC, memo, useCallback, useEffect, useMemo } from 'react';
+import { type FC, useCallback, useEffect, useMemo } from 'react';
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import Command from '@/components/modals/service-edit/command';
 import {
@@ -103,4 +103,5 @@ const EditServiceCommands: FC<EditServiceCommandsProps> = ({
 		</AccordionItem>
 	);
 };
-export default memo(EditServiceCommands);
+
+export default EditServiceCommands;

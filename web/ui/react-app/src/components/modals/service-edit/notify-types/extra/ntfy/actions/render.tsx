@@ -1,4 +1,4 @@
-import { type FC, memo } from 'react';
+import type { FC } from 'react';
 import BROADCAST from '@/components/modals/service-edit/notify-types/extra/ntfy/actions/types/broadcast';
 import HTTP from '@/components/modals/service-edit/notify-types/extra/ntfy/actions/types/http';
 import VIEW from '@/components/modals/service-edit/notify-types/extra/ntfy/actions/types/view';
@@ -51,4 +51,4 @@ const RenderAction: FC<RenderTypeProps> = ({ name, targetType, defaults }) => {
 	);
 };
 
-export default memo(RenderAction);
+export default RenderAction;

@@ -38,12 +38,12 @@ type Lookup struct {
 	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
 	TargetHeader      string `json:"target_header,omitempty" yaml:"target_header,omitempty"`             // OPTIONAL: header to target for the version.
 
-	BasicAuth     *BasicAuth `json:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`         // OPTIONAL: basic auth credentials.
-	Headers       []Header   `json:"headers,omitempty" yaml:"headers,omitempty"`               // OPTIONAL: request headers.
-	Body          string     `json:"body,omitempty" yaml:"body,omitempty"`                     // OPTIONAL: request body.
-	JSON          string     `json:"json,omitempty" yaml:"json,omitempty"`                     // OPTIONAL: JSON key to use e.g. version_current.
-	Regex         string     `json:"regex,omitempty" yaml:"regex,omitempty"`                   // OPTIONAL: regex for the version.
-	RegexTemplate string     `json:"regex_template,omitempty" yaml:"regex_template,omitempty"` // OPTIONAL: template to apply to the RegEx match.
+	BasicAuth     *BasicAuth     `json:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`         // OPTIONAL: basic auth credentials.
+	Headers       shared.Headers `json:"headers,omitempty" yaml:"headers,omitempty"`               // OPTIONAL: request headers.
+	Body          string         `json:"body,omitempty" yaml:"body,omitempty"`                     // OPTIONAL: request body.
+	JSON          string         `json:"json,omitempty" yaml:"json,omitempty"`                     // OPTIONAL: JSON key to use e.g. version_current.
+	Regex         string         `json:"regex,omitempty" yaml:"regex,omitempty"`                   // OPTIONAL: regex for the version.
+	RegexTemplate string         `json:"regex_template,omitempty" yaml:"regex_template,omitempty"` // OPTIONAL: template to apply to the RegEx match.
 }
 
 // New returns a new Lookup from a string in a given format (json/yaml).
@@ -107,14 +107,8 @@ type BasicAuth struct {
 	Password string `json:"password" yaml:"password"`
 }
 
-// Header to use in the HTTP request.
-type Header struct {
-	Key   string `json:"key" yaml:"key"`     // Header key, e.g. X-Sig.
-	Value string `json:"value" yaml:"value"` // Value to give the key.
-}
-
-// inheritSecrets from the `oldLookup`.
-func (l *Lookup) InheritSecrets(otherLookup base.Interface, secretRefs *shared.DVSecretRef) {
+// InheritSecrets will inherit secrets from the `otherLookup`.
+func (l *Lookup) InheritSecrets(otherLookup base.Interface, secretRefs *shared.VSecretRef) {
 	if otherL, ok := otherLookup.(*Lookup); ok {
 		if l.BasicAuth != nil &&
 			l.BasicAuth.Password == util.SecretValue &&
@@ -122,27 +116,8 @@ func (l *Lookup) InheritSecrets(otherLookup base.Interface, secretRefs *shared.D
 			l.BasicAuth.Password = otherL.BasicAuth.Password
 		}
 
-		// If we have headers in old and new.
-		if len(l.Headers) != 0 &&
-			len(otherL.Headers) != 0 {
-			for i := range l.Headers {
-				// If referencing a secret of an existing header.
-				if l.Headers[i].Value == util.SecretValue {
-					// Don't have a secretRef for this header.
-					if i >= len(secretRefs.Headers) {
-						break
-					}
-					oldIndex := secretRefs.Headers[i].OldIndex
-					// Not a reference to an old Header.
-					if oldIndex == nil {
-						continue
-					}
-
-					if *oldIndex < len(otherL.Headers) {
-						l.Headers[i].Value = otherL.Headers[*oldIndex].Value
-					}
-				}
-			}
+		if secretRefs != nil {
+			l.Headers.InheritSecrets(otherL.Headers, secretRefs.Headers)
 		}
 	}
 }

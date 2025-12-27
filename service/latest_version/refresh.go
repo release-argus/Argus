@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 )
@@ -32,6 +33,7 @@ func Refresh(
 	lookup Lookup,
 	overrides *string,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
+	secretRefs *shared.VSecretRef,
 ) (string, bool, error) {
 	if lookup == nil {
 		return "", false, errors.New("lookup is nil")
@@ -62,6 +64,7 @@ func Refresh(
 		if err != nil {
 			return "", false, err
 		}
+		newLookup.InheritSecrets(lookup, secretRefs)
 	}
 
 	// Log the lookup in use.
@@ -80,7 +83,8 @@ func Refresh(
 	}
 
 	version := newLookup.GetStatus().LatestVersion()
-	lookup.Inherit(newLookup)
+	// Inherit any updated 'Require' tokens.
+	lookup.InheritSecrets(newLookup, secretRefs)
 
 	// Announce the update? (if not using overrides, and the version changed).
 	announceUpdate := !usingOverrides && version != hadVersion

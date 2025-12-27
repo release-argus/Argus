@@ -1,4 +1,4 @@
-import { type FC, memo, type ReactElement } from 'react';
+import type { FC, ReactElement } from 'react';
 import {
 	BARK,
 	DISCORD,
@@ -79,4 +79,4 @@ const RenderNotify = <T extends keyof NotifyTypeSchema>(props: {
 	return <Component {...rest} />;
 };
 
-export default memo(RenderNotify);
+export default RenderNotify;

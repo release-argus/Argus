@@ -100,6 +100,6 @@ func (l *Lookup) Query(_ bool, _ logutil.LogFrom) error {
 }
 
 // InheritSecrets will inherit secrets from the `otherLookup`.
-func (l *Lookup) InheritSecrets(otherLookup Interface, secretRefs *shared.DVSecretRef) {
+func (l *Lookup) InheritSecrets(otherLookup Interface, secretRefs *shared.VSecretRef) {
 	// Nothing to inherit.
 }

@@ -20,6 +20,7 @@ import (
 
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
@@ -130,8 +131,8 @@ func (l *Lookup) inheritRequireTokens(fromLookup Interface) {
 	require.Inherit(fromRequire)
 }
 
-// Inherit values from `fromLookup` if the values should query the same data.
-func (l *Lookup) Inherit(fromLookup Interface) {
+// InheritSecrets will inherit secrets from `fromLookup` if the values should query the same data.
+func (l *Lookup) InheritSecrets(fromLookup Interface, secretRefs *shared.VSecretRef) {
 	l.inheritRequireTokens(fromLookup)
 }
 

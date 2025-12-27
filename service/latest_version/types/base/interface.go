@@ -18,6 +18,7 @@ package base
 import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
 	logutil "github.com/release-argus/Argus/util/log"
 )
@@ -38,8 +39,8 @@ type Interface interface {
 	// Query the Lookup for the latest version.
 	Query(metrics bool, logFrom logutil.LogFrom) (newVersion bool, err error)
 
-	// Inherit state values from `fromLookup` if the values should query the same data.
-	Inherit(fromLookup Interface)
+	// InheritSecrets will inherit secrets from `otherLookup` if the values should query the same data.
+	InheritSecrets(otherLookup Interface, secretRefs *shared.VSecretRef)
 
 	// ServiceURL returns the Service URL for the Lookup.
 	ServiceURL() string

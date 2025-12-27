@@ -1,4 +1,4 @@
-import { type FC, memo } from 'react';
+import type { FC } from 'react';
 import {
 	FieldCheck,
 	FieldKeyValMap,
@@ -79,4 +79,4 @@ const HTTP: FC<HTTPProps> = ({ name, defaults }) => {
 	);
 };
 
-export default memo(HTTP);
+export default HTTP;

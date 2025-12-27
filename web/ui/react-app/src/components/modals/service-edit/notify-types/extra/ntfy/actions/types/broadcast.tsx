@@ -1,4 +1,4 @@
-import { type FC, memo } from 'react';
+import type { FC } from 'react';
 import {
 	FieldCheck,
 	FieldKeyValMap,
@@ -56,4 +56,4 @@ const BROADCAST: FC<BROADCASTProps> = ({ name, defaults }) => {
 	);
 };
 
-export default memo(BROADCAST);
+export default BROADCAST;

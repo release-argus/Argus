@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LoaderCircle, Save } from 'lucide-react';
-import { memo, useState } from 'react';
+import { useState } from 'react';
 import { Controller, useFormContext, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
 import { FieldLabel } from '@/components/generic/field';
@@ -181,4 +181,4 @@ const DeployedVersionManual = () => {
 	);
 };
 
-export default memo(DeployedVersionManual);
+export default DeployedVersionManual;

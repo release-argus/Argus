@@ -23,6 +23,7 @@ import (
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/deployed_version/types/manual"
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -39,14 +40,15 @@ func TestRefresh(t *testing.T) {
 	}
 
 	type versions struct {
-		latestVersion            string
-		deployedVersion          string
+		latestVersion            *string
+		deployedVersion          *string
 		deployedVersionTimestamp string
 	}
 	type args struct {
 		overrides          *string
 		semanticVersioning *string
 		version            versions
+		secretRefs         shared.VSecretRef
 	}
 
 	// GIVEN a Lookup and various JSON strings to override parts of it.
@@ -114,8 +116,8 @@ func TestRefresh(t *testing.T) {
 		"Refresh new version": {
 			args: args{
 				version: versions{
-					latestVersion:            testVersion,
-					deployedVersion:          "0.0.0",
+					latestVersion:            &testVersion,
+					deployedVersion:          test.StringPtr("0.0.0"),
 					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339)},
 			},
 			previous: testLookup("url", false),
@@ -126,14 +128,79 @@ func TestRefresh(t *testing.T) {
 		"Refresh new version that's newer than latest": {
 			args: args{
 				version: versions{
-					latestVersion:            "0.0.0",
-					deployedVersion:          "0.0.0",
+					latestVersion:            test.StringPtr("0.0.0"),
+					deployedVersion:          test.StringPtr("0.0.0"),
 					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339)},
 			},
 			previous: testLookup("url", false),
 			errRegex: `^$`,
 			want:     testVersion,
 			announce: 1,
+		},
+		"InheritSecrets inherits header secrets": {
+			args: args{
+				overrides: test.StringPtr(test.TrimJSON(`{
+						"headers": [
+							{
+								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+								"value": "` + util.SecretValue + `",
+								"old_index": 0
+							}
+						]
+					}`)),
+				version: versions{
+					latestVersion:            &testVersion,
+					deployedVersion:          test.StringPtr("0.0.0"),
+					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339),
+				}},
+			previous: test.IgnoreError(t, func() (Lookup, error) {
+				l := testLookup("url", false)
+				lTyped, _ := l.(*web.Lookup)
+				lTyped.Method = "POST"
+				lTyped.Headers = shared.Headers{{
+					Key:   test.LookupWithHeaderAuth["header_key"],
+					Value: test.LookupWithHeaderAuth["header_value_pass"],
+				}}
+				return lTyped, nil
+			}),
+			want:     testVersion,
+			announce: 0,
+			errRegex: `^$`,
+		},
+		"InheritSecrets can be overridden with non '<secret>' values": {
+			args: args{
+				overrides: test.StringPtr(test.TrimJSON(`{
+						"headers": [
+							{
+								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+								"value": "` + test.LookupWithHeaderAuth["header_value_fail"] + `",
+								"old_index": 0
+							}
+						]
+					}`)),
+				secretRefs: shared.VSecretRef{
+					Headers: []shared.OldIntIndex{
+						{OldIndex: test.IntPtr(0)}},
+				},
+				version: versions{
+					latestVersion:            test.StringPtr(""),
+					deployedVersion:          test.StringPtr(""),
+					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339),
+				}},
+			previous: test.IgnoreError(t, func() (Lookup, error) {
+				l := testLookup("url", false)
+				lTyped, _ := l.(*web.Lookup)
+				lTyped.Method = "POST"
+				lTyped.URL = test.LookupWithHeaderAuth["url_valid"]
+				lTyped.Headers = shared.Headers{{
+					Key:   test.LookupWithHeaderAuth["header_key"],
+					Value: test.LookupWithHeaderAuth["header_value_pass"],
+				}}
+				return lTyped, nil
+			}),
+			want:     "",
+			announce: 0,
+			errRegex: `Hook rules were not satisfied\.`,
 		},
 	}
 
@@ -158,14 +225,14 @@ func TestRefresh(t *testing.T) {
 					name, "", "",
 					&dashboard.Options{})
 				// Set the latest version.
-				if tc.args.version.latestVersion != "" {
+				if tc.args.version.latestVersion != nil {
 					targetStatus.SetLatestVersion(
-						tc.args.version.latestVersion, "",
+						*tc.args.version.latestVersion, "",
 						false)
 				}
-				if tc.args.version.deployedVersion != "" {
+				if tc.args.version.deployedVersion != nil {
 					targetStatus.SetDeployedVersion(
-						tc.args.version.deployedVersion, tc.args.version.deployedVersionTimestamp,
+						*tc.args.version.deployedVersion, tc.args.version.deployedVersionTimestamp,
 						false)
 				}
 				previousStatus = targetStatus.Copy(true)
@@ -179,7 +246,8 @@ func TestRefresh(t *testing.T) {
 			got, err := Refresh(
 				tc.previous,
 				previousType, tc.args.overrides,
-				tc.args.semanticVersioning)
+				tc.args.semanticVersioning,
+				&tc.args.secretRefs)
 
 			// THEN we get an error if expected.
 			if tc.errRegex != "" || err != nil {

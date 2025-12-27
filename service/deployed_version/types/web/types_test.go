@@ -368,7 +368,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 	tests := map[string]struct {
 		lookup     *Lookup
 		other      *Lookup
-		secretRefs *shared.DVSecretRef
+		secretRefs *shared.VSecretRef
 		want       *Lookup
 	}{
 		"inherit BasicAuth password": {
@@ -382,7 +382,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 					Username: "user",
 					Password: "password",
 				}},
-			secretRefs: &shared.DVSecretRef{},
+			secretRefs: &shared.VSecretRef{},
 			want: &Lookup{
 				BasicAuth: &BasicAuth{
 					Username: "user",
@@ -391,19 +391,19 @@ func TestLookup_InheritSecrets(t *testing.T) {
 		},
 		"inherit headers": {
 			lookup: &Lookup{
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: util.SecretValue},
 				}},
 			other: &Lookup{
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: "secret"},
 				}},
-			secretRefs: &shared.DVSecretRef{
+			secretRefs: &shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(0)},
 				}},
 			want: &Lookup{
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: "secret"}}},
 		},
 		"no inheritance when no secrets": {
@@ -411,78 +411,78 @@ func TestLookup_InheritSecrets(t *testing.T) {
 				BasicAuth: &BasicAuth{
 					Username: "user",
 					Password: "password"},
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: "value"}},
 			},
 			other: &Lookup{
 				BasicAuth: &BasicAuth{
 					Username: "user",
 					Password: "other_password"},
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: "other_value"}},
 			},
-			secretRefs: &shared.DVSecretRef{},
+			secretRefs: &shared.VSecretRef{},
 			want: &Lookup{
 				BasicAuth: &BasicAuth{
 					Username: "user",
 					Password: "password"},
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: "value"}},
 			},
 		},
 		"no inheritance when no matching headers": {
 			lookup: &Lookup{
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: util.SecretValue}},
 			},
 			other: &Lookup{
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Other", Value: "secret"}},
 			},
-			secretRefs: &shared.DVSecretRef{
+			secretRefs: &shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(1)}},
 			},
 			want: &Lookup{
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: util.SecretValue}},
 			},
 		},
 		"no inheritance when secretRefs out of bounds": {
 			lookup: &Lookup{
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: util.SecretValue},
 					{Key: "X-Other", Value: util.SecretValue}},
 			},
 			other: &Lookup{
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: "secret"}},
 			},
-			secretRefs: &shared.DVSecretRef{
+			secretRefs: &shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: test.IntPtr(1)}},
 			},
 			want: &Lookup{
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: util.SecretValue},
 					{Key: "X-Other", Value: util.SecretValue}},
 			},
 		},
 		"no inheritance when secretRef index nil": {
 			lookup: &Lookup{
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: util.SecretValue}},
 			},
 			other: &Lookup{
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: "secret"}},
 			},
-			secretRefs: &shared.DVSecretRef{
+			secretRefs: &shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: nil}},
 			},
 			want: &Lookup{
-				Headers: []Header{
+				Headers: shared.Headers{
 					{Key: "X-Test", Value: util.SecretValue}},
 			},
 		},
