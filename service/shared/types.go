@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package shared provides shared functionality for Latest Version and Deployed Version lookups.
 package shared
 
 // OldIntIndex to look at for any SecretValues used.
@@ -24,8 +25,8 @@ type OldStringIndex struct {
 	OldIndex string `json:"old_index,omitempty"`
 }
 
-// DVSecretRef contains the reference for the DeployedVersionLookup SecretValues.
-type DVSecretRef struct {
+// VSecretRef contains the reference for the DeployedVersionLookup SecretValues.
+type VSecretRef struct {
 	Headers []OldIntIndex `json:"headers,omitempty"`
 }
 

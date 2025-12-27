@@ -1,4 +1,4 @@
-import { type FC, memo } from 'react';
+import type { FC } from 'react';
 import { FieldCheck, FieldText } from '@/components/generic/field';
 import { NTFY_ACTION_TYPE } from '@/utils/api/types/config/notify/ntfy';
 import type { NtfyActionSchema } from '@/utils/api/types/config-edit/notify/types/ntfy';
@@ -46,4 +46,4 @@ const VIEW: FC<VIEWProps> = ({ name, defaults }) => {
 	);
 };
 
-export default memo(VIEW);
+export default VIEW;

@@ -36,22 +36,54 @@ import (
 func TestHTTPRequest(t *testing.T) {
 	// GIVEN a Lookup.
 	tests := map[string]struct {
-		failing  bool
-		url      string
-		errRegex string
+		failing   bool
+		overrides string
+		bodyRegex string
+		errRegex  string
 	}{
 		"invalid url": {
-			url:      "invalid://	test",
-			errRegex: `invalid control character in URL`},
+			overrides: `
+				url: ` + "invalid://	test",
+			bodyRegex: `^$`,
+			errRegex:  `invalid control character in URL`,
+		},
 		"unknown url": {
-			url:      "https://release-argus.invalid-tld",
-			errRegex: `no such host`},
+			overrides: `
+				url: https://release-argus.invalid-tld`,
+			bodyRegex: `^$`,
+			errRegex:  `no such host`,
+		},
 		"valid url": {
-			url:      "https://release-argus.io",
-			errRegex: `^$`},
+			overrides: `
+				url: https://release-argus.io`,
+			bodyRegex: `.*`,
+			errRegex:  `^$`,
+		},
 		"invalid cert": {
-			failing:  true,
-			errRegex: `x509`},
+			failing:   true,
+			bodyRegex: `^$`,
+			errRegex:  `x509`,
+		},
+		"headers - pass": {
+			overrides: `
+				method: POST
+				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
+				headers:
+					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
+						value: ` + test.LookupWithHeaderAuth["header_value_pass"],
+			bodyRegex: `^$`,
+			errRegex:  `^$`,
+		},
+		"headers - fail": {
+			overrides: `
+				method: POST
+				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
+				headers:
+					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
+						value: ` + test.LookupWithHeaderAuth["header_value_fail"],
+			bodyRegex: `Hook rules were not satisfied\.`,
+			errRegex:  `^$`,
+		},
 	}
 
 	for name, tc := range tests {
@@ -59,18 +91,29 @@ func TestHTTPRequest(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup(tc.failing)
-			if tc.url != "" {
-				lookup.URL = tc.url
+			// Apply overrides.
+			tc.overrides = test.TrimYAML(tc.overrides)
+			err := yaml.Unmarshal([]byte(tc.overrides), lookup)
+			if err != nil {
+				t.Fatalf("%s\nfailed to unmarshal overrides: %s",
+					packageName, err)
 			}
 
 			// WHEN httpRequest is called on it.
-			_, err := lookup.httpRequest(logutil.LogFrom{})
+			body, err := lookup.httpRequest(logutil.LogFrom{})
 
 			// THEN any error is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
+			}
+			// AND the body matches the expected regex.
+			if tc.bodyRegex != "" {
+				if !util.RegexCheck(tc.bodyRegex, string(body)) {
+					t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
+						packageName, tc.bodyRegex, string(body))
+				}
 			}
 		})
 	}

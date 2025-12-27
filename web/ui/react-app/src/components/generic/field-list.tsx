@@ -1,5 +1,5 @@
 import { Minus, Plus } from 'lucide-react';
-import { type FC, memo, useCallback, useEffect, useMemo } from 'react';
+import { type FC, useCallback, useEffect, useMemo } from 'react';
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import { FieldLabel, FieldText } from '@/components/generic/field';
 import type { TooltipWithAriaProps } from '@/components/generic/tooltip';
@@ -136,4 +136,4 @@ const FieldList: FC<FieldListProps> = ({
 	);
 };
 
-export default memo(FieldList);
+export default FieldList;

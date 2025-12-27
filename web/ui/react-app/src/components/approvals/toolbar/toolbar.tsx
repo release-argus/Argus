@@ -1,3 +1,4 @@
+import type { FC } from 'react';
 import EditModeToggle from '@/components/approvals/toolbar/edit-mode-toggle';
 import FilterDropdown from '@/components/approvals/toolbar/filter-dropdown';
 import SearchBar from '@/components/approvals/toolbar/search-bar';
@@ -5,7 +6,6 @@ import TagSelect from '@/components/approvals/toolbar/tag-select';
 import ViewToggle from '@/components/approvals/toolbar/view-toggle';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { type FC, memo } from 'react';
 
 /**
  * ApprovalsToolbar
@@ -28,4 +28,4 @@ const ApprovalsToolbar: FC = () => (
 	</div>
 );
 
-export default memo(ApprovalsToolbar);
+export default ApprovalsToolbar;

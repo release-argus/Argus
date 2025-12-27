@@ -142,8 +142,8 @@ func TestLookup_Inherit(t *testing.T) {
 					packageName, err)
 			}
 
-			// WHEN we call Inherit.
-			toLookup.Inherit(fromLookup)
+			// WHEN we call InheritSecrets.
+			toLookup.InheritSecrets(fromLookup, nil)
 
 			// THEN the Data is copied when expected.
 			if tc.inheritData {

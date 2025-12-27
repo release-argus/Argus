@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 )
@@ -33,6 +34,7 @@ func Refresh(
 	previousType string,
 	overrides *string,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
+	secretRefs *shared.VSecretRef,
 ) (string, error) {
 	if lookup == nil {
 		return "", errors.New("lookup is nil")
@@ -63,6 +65,7 @@ func Refresh(
 		if err != nil {
 			return "", err
 		}
+		newLookup.InheritSecrets(lookup, secretRefs)
 	} else if previousType == "manual" && newLookup.GetType() == "manual" &&
 		overrides != nil {
 		if err := json.Unmarshal([]byte(*overrides), &lookup); err != nil {

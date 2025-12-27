@@ -273,7 +273,7 @@ func TestInheritSecrets(t *testing.T) {
 	otherLookup := &testLookup{
 		Lookup: Lookup{
 			Type: "other"}}
-	secretRefs := &shared.DVSecretRef{
+	secretRefs := &shared.VSecretRef{
 		Headers: []shared.OldIntIndex{
 			{OldIndex: test.IntPtr(0)}},
 	}

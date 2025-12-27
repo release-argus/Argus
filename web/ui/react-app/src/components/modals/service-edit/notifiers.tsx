@@ -1,4 +1,4 @@
-import { type FC, memo, useCallback, useEffect, useMemo } from 'react';
+import { type FC, useCallback, useEffect, useMemo } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
 import { createOption } from '@/components/generic/field-select-shared';
 import Notify from '@/components/modals/service-edit/notify';
@@ -105,4 +105,4 @@ const EditServiceNotifiers: FC<EditServiceNotifiersProps> = ({ loading }) => {
 	);
 };
 
-export default memo(EditServiceNotifiers);
+export default EditServiceNotifiers;

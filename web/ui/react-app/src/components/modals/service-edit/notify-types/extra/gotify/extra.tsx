@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { type FC, memo, useEffect } from 'react';
+import { type FC, useEffect } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { FieldSelect } from '@/components/generic/field';
 import { AndroidAction } from '@/components/modals/service-edit/notify-types/extra/gotify/types/android-action.tsx';
@@ -101,4 +101,4 @@ const Extra: FC<ExtraProps> = ({ name, removeMe, defaults }) => {
 	);
 };
 
-export default memo(Extra);
+export default Extra;

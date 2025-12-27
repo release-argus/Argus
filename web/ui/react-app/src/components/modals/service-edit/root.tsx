@@ -1,5 +1,5 @@
 import { IdCard, LoaderCircle } from 'lucide-react';
-import { type FC, memo, useCallback, useEffect, useState } from 'react';
+import { type FC, useCallback, useEffect, useState } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { FieldText } from '@/components/generic/field';
 import type { TooltipWithAriaProps } from '@/components/generic/tooltip';
@@ -51,7 +51,7 @@ const EditServiceRoot: FC<EditServiceRootProps> = ({ loading }) => {
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: separateName stable.
 	useEffect(() => {
-		if (!originalName === separateName) {
+		if (Boolean(originalName) !== separateName) {
 			setSeparateName(!!originalName);
 		}
 	}, [originalName]);
@@ -125,4 +125,4 @@ const EditServiceRoot: FC<EditServiceRootProps> = ({ loading }) => {
 	);
 };
 
-export default memo(EditServiceRoot);
+export default EditServiceRoot;
