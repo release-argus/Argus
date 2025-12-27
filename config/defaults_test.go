@@ -21,6 +21,8 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/dashboard"
@@ -32,7 +34,6 @@ import (
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
-	"gopkg.in/yaml.v3"
 )
 
 func TestDefaults_String(t *testing.T) {
@@ -278,7 +279,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "true"},
 			want: &Defaults{
 				Service: service.Defaults{
-					LatestVersion: *&latestver_base.Defaults{
+					LatestVersion: latestver_base.Defaults{
 						AccessToken:       "ghp_something",
 						AllowInvalidCerts: test.BoolPtr(true),
 						UsePreRelease:     test.BoolPtr(true)}}},
@@ -292,7 +293,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_QUAY_TOKEN":   "tokenForQuay"},
 			want: &Defaults{
 				Service: service.Defaults{
-					LatestVersion: *&latestver_base.Defaults{
+					LatestVersion: latestver_base.Defaults{
 						Require: filter.RequireDefaults{
 							Docker: *filter.NewDockerCheckDefaults(
 								"ghcr",
@@ -1006,7 +1007,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 	tests := map[string]struct {
 		input    *Defaults
 		errRegex string
-		ok       bool
 		changed  bool
 	}{
 		"Service.Interval": {
@@ -1016,7 +1016,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 				^service:
 					options:
 						interval: "10x" <invalid>.*$`),
-			ok:      false,
 			changed: false,
 		},
 		"Service.LatestVersion.Require.Docker.Type": {
@@ -1032,7 +1031,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 						require:
 							docker:
 								type: "pizza" <invalid>.*$`),
-			ok:      false,
 			changed: false,
 		},
 		"Service.Interval + Service.DeployedVersionLookup.Regex": {
@@ -1051,7 +1049,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 						require:
 							docker:
 								type: "pizza" <invalid>.*$`),
-			ok:      false,
 			changed: false,
 		},
 		"Notify changed": {
@@ -1078,7 +1075,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 					slack:
 						options:
 							delay: "10x" <invalid>.*$`),
-			ok:      false,
 			changed: false,
 		},
 		"WebHook changed": {
@@ -1088,6 +1084,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 						Type:   "github",
 						URL:    "example.com",
 						Secret: "Argus",
+						// CustomHeaders -> Headers.
 						CustomHeaders: &webhook.Headers{
 							webhook.Header{
 								Key: "foo", Value: "bar"}},
@@ -1100,7 +1097,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^webhook:
 					delay: "10x" <invalid>.*$`),
-			ok:      false,
 			changed: false,
 		},
 	}
