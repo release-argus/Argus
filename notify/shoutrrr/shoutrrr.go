@@ -430,6 +430,15 @@ func (s *Shoutrrr) BuildParams(context serviceinfo.ServiceInfo) *types.Params {
 		}
 	}
 
+	// Deprecated: ntfy.params, disabletls -> disabletlsverification.
+	if s.GetType() == "ntfy" {
+		// Shoutrrr 13.1 has the disabletlsverification param as disabletls.
+		if disableTLSVerification, ok := params["disabletlsverification"]; ok {
+			params["disabletls"] = disableTLSVerification
+			delete(params, "disabletlsverification")
+		}
+	}
+
 	// Apply django templating.
 	for key, value := range params {
 		value = util.EvalEnvVars(value)

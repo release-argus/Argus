@@ -227,6 +227,16 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 			b.SetURLField("channel", channel)
 			changed = true
 		}
+	case "ntfy":
+		// Deprecated: disabletls -> disabletlsverification.
+		if disableTLS := b.GetParam("disabletls"); disableTLS != "" {
+			if disableTLSVerification := b.GetParam("disabletlsverification"); disableTLSVerification == "" {
+				logutil.Log.Deprecated("Renaming 'notify.ntfy.params.disabletls' to 'notify.ntfy.params.disabletlsverification'")
+				b.SetParam("disabletlsverification", disableTLS)
+			}
+			b.SetParam("disabletls", "")
+			changed = true
+		}
 	case "slack":
 		// # -> %23
 		// https://containrrr.dev/shoutrrr/v0.5/services/slack/

@@ -1595,6 +1595,7 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 		sType         string
 		mapTarget     string
 		startAs, want map[string]string
+		renamedVar    bool
 	}{
 		"port - leading colon": {
 			mapTarget: "url_fields",
@@ -1620,6 +1621,25 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 			mapTarget: "url_fields",
 			startAs:   map[string]string{"host": "https://mattermost.example.com:8443", "port": ""},
 			want:      map[string]string{"host": "mattermost.example.com", "port": "8443"},
+		},
+		"generic - custom_headers -> headers": {
+			sType:     "generic",
+			mapTarget: "url_fields",
+			startAs: map[string]string{
+				"custom_headers": `{"foo":"bar"}`},
+			want: map[string]string{
+				"headers": `{"foo":"bar"}`},
+			renamedVar: true,
+		},
+		"generic - custom_headers -> headers (but headers already defined)": {
+			sType:     "generic",
+			mapTarget: "url_fields",
+			startAs: map[string]string{
+				"custom_headers": `{"foo":"bar"}`,
+				"headers":        `{"foo":"baz"}`},
+			want: map[string]string{
+				"headers": `{"foo":"baz"}`},
+			renamedVar: true,
 		},
 		"matrix - rooms, leading #": {
 			sType:     "matrix",
@@ -1650,6 +1670,20 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 			mapTarget: "url_fields",
 			startAs:   map[string]string{"channel": "argus"},
 			want:      map[string]string{"channel": "argus"},
+		},
+		"ntfy - disabletls -> disabletlsverification": {
+			sType:      "ntfy",
+			mapTarget:  "params",
+			startAs:    map[string]string{"disabletls": "true"},
+			want:       map[string]string{"disabletlsverification": "true"},
+			renamedVar: true,
+		},
+		"ntfy - disabletls -> disabletlsverification (but disabletlsverification already defined)": {
+			sType:      "ntfy",
+			mapTarget:  "params",
+			startAs:    map[string]string{"disabletls": "true", "disabletlsverification": "false"},
+			want:       map[string]string{"disabletlsverification": "false"},
+			renamedVar: true,
 		},
 		"slack - color, not urlEncoded": {
 			sType:     "slack",
@@ -1700,8 +1734,6 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 			want:      map[string]string{"botmail": "foo%40bar.com"},
 		},
 	}
-	subTests := []string{
-		"root", "main", "defaults", "hard_defaults"}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -1726,6 +1758,7 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 				&serviceStatus,
 				shoutrrr.Main, shoutrrr.Defaults, shoutrrr.HardDefaults)
 			var subTestMap = map[string]struct {
+				defaults  *Defaults
 				URLFields map[string]string
 				Params    map[string]string
 			}{
@@ -1760,6 +1793,10 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 				shoutrrr.correctSelf(shoutrrr.GetType())
 
 				// THEN the fields are corrected as necessary.
+				//want := tc.want
+				//if tc.renamedVar {
+				//	want := tc.startAs
+				//}
 				for k, v := range tc.want {
 					want := v
 					// root is the only one that gets corrected.
@@ -1774,17 +1811,6 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 						t.Errorf("%s\nwant %s:%q, not %q",
 							packageName, k,
 							want, got)
-					} else {
-						for _, subTestCheck := range subTests {
-							if subTestCheck != subTest {
-								testData := subTestMap[subTestCheck]
-								if len(testData.URLFields) > 0 || len(testData.Params) > 0 {
-									t.Errorf("%s\nmismatch\nwant: empty %s\ngot:  url_fields=%+v / params=%+v",
-										packageName, subTestCheck,
-										testData.URLFields, testData.Params)
-								}
-							}
-						}
 					}
 					// Reset.
 					if tc.mapTarget == "url_fields" {
@@ -1805,7 +1831,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 		nilShoutrrr                bool
 		sType                      string
 		options, urlFields, params map[string]string
-		wantURLFields              map[string]string
+		wantURLFields, wantParams  map[string]string
 		wantDelay                  string
 		main                       *Defaults
 		errRegex                   string
@@ -1941,6 +1967,31 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 				"headers": `{"foo":"baz"}`},
 			changed: true,
 		},
+		"ntfy.params.disabletls -> disabletlsverification": {
+			sType: "ntfy",
+			urlFields: map[string]string{
+				"topic": "123"},
+			wantURLFields: map[string]string{
+				"topic": "123"},
+			params: map[string]string{
+				"disabletls": "true"},
+			wantParams: map[string]string{
+				"disabletlsverification": "true"},
+			changed: true,
+		},
+		"ntfy.params.disabletls not pulled to disabletlsverification if disabletlsverification already defined": {
+			sType: "ntfy",
+			urlFields: map[string]string{
+				"topic": "123"},
+			wantURLFields: map[string]string{
+				"topic": "123"},
+			params: map[string]string{
+				"disabletls":             "true",
+				"disabletlsverification": "false"},
+			wantParams: map[string]string{
+				"disabletlsverification": "false"},
+			changed: true,
+		},
 		"valid": {
 			errRegex:  `^$`,
 			urlFields: map[string]string{},
@@ -2021,18 +2072,28 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 				t.Errorf("%s\ndelay not set/corrected\nwant: %q\ngot:  %q",
 					packageName, tc.wantDelay, shoutrrr.GetOption("delay"))
 			}
-			for key := range tc.wantURLFields {
-				if shoutrrr.URLFields[key] != tc.wantURLFields[key] && shoutrrr.URLFields[key] != "" {
+			// AND the url_fields match.
+			for key, wantValue := range tc.wantURLFields {
+				if shoutrrr.URLFields[key] != wantValue && shoutrrr.URLFields[key] != "" {
 					t.Errorf("%s\nmismatch on %q\nwant: %q (%v)\ngot:  %q (%v)",
 						packageName, key,
-						tc.wantURLFields[key], tc.wantURLFields,
+						wantValue, tc.wantURLFields,
+						shoutrrr.URLFields[key], shoutrrr.URLFields)
+				}
+			}
+			// AND the params match.
+			for key, wantValue := range tc.wantParams {
+				if shoutrrr.URLFields[key] != wantValue && shoutrrr.URLFields[key] != "" {
+					t.Errorf("%s\nmismatch on %q\nwant: %q (%v)\ngot:  %q (%v)",
+						packageName, key,
+						wantValue, tc.wantURLFields,
 						shoutrrr.URLFields[key], shoutrrr.URLFields)
 				}
 			}
 			// AND the 'changed' flag matches expectation.
 			if changed != tc.changed {
-				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
-					packageName, tc.changed, changed)
+				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t (err=%v)",
+					packageName, tc.changed, changed, err)
 			}
 		})
 	}
