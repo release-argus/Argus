@@ -28,14 +28,14 @@ var packageName = "webhook_test"
 func TestWebHook(t *testing.T) {
 	// GIVEN the failing, self-signed certificate, and custom headers flags.
 	tests := map[string]struct {
-		failing, selfSignedCert, customHeaders bool
-		expectedURL, expectedSecret            string
-		expectedHeaders                        *webhook.Headers
+		failing, selfSignedCert, headers bool
+		expectedURL, expectedSecret      string
+		expectedHeaders                  *webhook.Headers
 	}{
 		"passing, signed, no custom headers": {
 			failing:         false,
 			selfSignedCert:  false,
-			customHeaders:   false,
+			headers:         false,
 			expectedURL:     test.LookupGitHub["url_valid"],
 			expectedSecret:  test.LookupGitHub["secret_pass"],
 			expectedHeaders: nil,
@@ -43,7 +43,7 @@ func TestWebHook(t *testing.T) {
 		"passing, signed, with custom headers": {
 			failing:        false,
 			selfSignedCert: false,
-			customHeaders:  true,
+			headers:        true,
 			expectedURL:    test.LookupWithHeaderAuth["url_valid"],
 			expectedSecret: test.LookupGitHub["secret_pass"],
 			expectedHeaders: &webhook.Headers{
@@ -52,7 +52,7 @@ func TestWebHook(t *testing.T) {
 		"passing, self-signed, no custom headers": {
 			failing:         false,
 			selfSignedCert:  true,
-			customHeaders:   false,
+			headers:         false,
 			expectedURL:     test.LookupGitHub["url_invalid"],
 			expectedSecret:  test.LookupGitHub["secret_pass"],
 			expectedHeaders: nil,
@@ -60,7 +60,7 @@ func TestWebHook(t *testing.T) {
 		"passing, self-signed, with custom headers": {
 			failing:        false,
 			selfSignedCert: true,
-			customHeaders:  true,
+			headers:        true,
 			expectedURL:    test.LookupWithHeaderAuth["url_invalid"],
 			expectedSecret: test.LookupGitHub["secret_pass"],
 			expectedHeaders: &webhook.Headers{
@@ -69,7 +69,7 @@ func TestWebHook(t *testing.T) {
 		"failing, signed, no custom headers": {
 			failing:         true,
 			selfSignedCert:  false,
-			customHeaders:   false,
+			headers:         false,
 			expectedURL:     test.LookupGitHub["url_valid"],
 			expectedSecret:  test.LookupGitHub["secret_fail"],
 			expectedHeaders: nil,
@@ -77,7 +77,7 @@ func TestWebHook(t *testing.T) {
 		"failing, signed, with custom headers": {
 			failing:        true,
 			selfSignedCert: false,
-			customHeaders:  true,
+			headers:        true,
 			expectedURL:    test.LookupWithHeaderAuth["url_valid"],
 			expectedSecret: test.LookupGitHub["secret_fail"],
 			expectedHeaders: &webhook.Headers{
@@ -86,7 +86,7 @@ func TestWebHook(t *testing.T) {
 		"failing, self-signed, no custom headers": {
 			failing:         true,
 			selfSignedCert:  true,
-			customHeaders:   false,
+			headers:         false,
 			expectedURL:     test.LookupGitHub["url_invalid"],
 			expectedSecret:  test.LookupGitHub["secret_fail"],
 			expectedHeaders: nil,
@@ -94,7 +94,7 @@ func TestWebHook(t *testing.T) {
 		"failing, self-signed, with custom headers": {
 			failing:        true,
 			selfSignedCert: true,
-			customHeaders:  true,
+			headers:        true,
 			expectedURL:    test.LookupWithHeaderAuth["url_invalid"],
 			expectedSecret: test.LookupGitHub["secret_fail"],
 			expectedHeaders: &webhook.Headers{
@@ -110,7 +110,7 @@ func TestWebHook(t *testing.T) {
 			got := WebHook(
 				tc.failing,
 				tc.selfSignedCert,
-				tc.customHeaders)
+				tc.headers)
 
 			// THEN the URL should be as expected.
 			if got.URL != tc.expectedURL {
@@ -126,28 +126,28 @@ func TestWebHook(t *testing.T) {
 
 			// AND the custom headers should be as expected.
 			if tc.expectedHeaders == nil {
-				if got.CustomHeaders != nil {
-					t.Errorf("%s\nCustomHeaders mismatch\nwant: nil\ngot:  %+v",
-						packageName, got.CustomHeaders)
+				if got.Headers != nil {
+					t.Errorf("%s\nHeaders mismatch\nwant: nil\ngot:  %+v",
+						packageName, got.Headers)
 				}
 			} else {
-				if got.CustomHeaders == nil {
-					t.Errorf("%s\nCustomHeaders mismatch\nwant: %+v\ngot:  nil",
+				if got.Headers == nil {
+					t.Errorf("%s\nHeaders mismatch\nwant: %+v\ngot:  nil",
 						packageName, tc.expectedHeaders)
 				} else {
 					// Lengths differ.
-					if len(*got.CustomHeaders) != len(*tc.expectedHeaders) {
-						t.Errorf("%s\nCustomHeaders length mismatch\nwant: %d\ngot:  %d",
-							packageName, len(*tc.expectedHeaders), len(*got.CustomHeaders))
+					if len(*got.Headers) != len(*tc.expectedHeaders) {
+						t.Errorf("%s\nHeaders length mismatch\nwant: %d\ngot:  %d",
+							packageName, len(*tc.expectedHeaders), len(*got.Headers))
 					} else {
 						// Check each header.
 						for i := range *tc.expectedHeaders {
-							if (*tc.expectedHeaders)[i].Key != (*got.CustomHeaders)[i].Key ||
-								(*tc.expectedHeaders)[i].Value != (*got.CustomHeaders)[i].Value {
-								t.Errorf("%s\nCustomHeaders mismatch\nwant: %v (%+v)\ngot:  %v (%+v)",
+							if (*tc.expectedHeaders)[i].Key != (*got.Headers)[i].Key ||
+								(*tc.expectedHeaders)[i].Value != (*got.Headers)[i].Value {
+								t.Errorf("%s\nHeaders mismatch\nwant: %v (%+v)\ngot:  %v (%+v)",
 									packageName,
 									(*tc.expectedHeaders)[i], *tc.expectedHeaders,
-									(*got.CustomHeaders)[i], *got.CustomHeaders)
+									(*got.Headers)[i], *got.Headers)
 								break
 							}
 						}
@@ -205,7 +205,7 @@ func TestWebHook(t *testing.T) {
 
 			// AND the Delay should be set.
 			wantDelay := "0s"
-			if got.Delay == "" || got.Delay != wantDelay {
+			if got.Delay != wantDelay {
 				if got.Delay == "" {
 					t.Errorf("%s\nDelay not set",
 						packageName)
@@ -250,10 +250,10 @@ func TestWebHook(t *testing.T) {
 				}
 			}
 
-			// AND the URL should be modified and custom headers should be set if customHeaders is true.
-			if tc.customHeaders {
+			// AND the URL should be modified and headers should be set if headers is true.
+			if tc.headers {
 				if got.URL != tc.expectedURL {
-					t.Errorf("%s\nCustomHeaders, url mismatch\nwant: %q\ngot:  %q",
+					t.Errorf("%s\nHeaders, url mismatch\nwant: %q\ngot:  %q",
 						packageName, tc.expectedURL, got.URL)
 				}
 			}

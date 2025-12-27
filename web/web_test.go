@@ -155,6 +155,7 @@ func TestWebAccessible(t *testing.T) {
 				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
 					packageName, wantStatusCode, response.Code)
 			}
+			// AND the body matches the expected string RegEx.
 			if tc.bodyRegex != "" {
 				body := response.Body.String()
 				if !util.RegexCheck(tc.bodyRegex, body) {

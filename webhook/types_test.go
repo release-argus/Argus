@@ -157,7 +157,7 @@ func TestDefaults_String(t *testing.T) {
 				type: github
 				url: https://example.com
 				allow_invalid_certs: false
-				custom_headers:
+				headers:
 					- key: X-Header
 						value: val
 					- key: X-Another
@@ -175,7 +175,7 @@ func TestDefaults_String(t *testing.T) {
 					{Key: ">123", Value: "{pass}"}},
 				"", nil, nil, "", nil, "", ""),
 			want: test.TrimYAML(`
-				custom_headers:
+				headers:
 					- key: '>123'
 						value: '{pass}'`)},
 	}
@@ -257,7 +257,7 @@ func TestWebHook_String(t *testing.T) {
 				type: github
 				url: https://example.com
 				allow_invalid_certs: false
-				custom_headers:
+				headers:
 					- key: X-Header
 						value: val
 					- key: X-Another
@@ -283,7 +283,7 @@ func TestWebHook_String(t *testing.T) {
 				"", "",
 				nil, nil, nil),
 			want: test.TrimYAML(`
-				custom_headers:
+				headers:
 					- key: '>123'
 						value: '{pass}'
 			`)},
@@ -365,7 +365,7 @@ func TestWebHooksDefaults_String(t *testing.T) {
 					"", nil, nil, "", nil, "", "")},
 			want: test.TrimYAML(`
 				invalid:
-					custom_headers:
+					headers:
 						- key: '>123'
 							value: '{pass}'`),
 		},
@@ -477,7 +477,7 @@ func TestWebHooks_String(t *testing.T) {
 					nil, nil, nil)},
 			want: test.TrimYAML(`
 				invalid:
-					custom_headers:
+					headers:
 						- key: '>123'
 							value: '{pass}'
 			`)},

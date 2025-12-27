@@ -1197,7 +1197,7 @@ func TestConvertAndCensorWebHooksDefaults(t *testing.T) {
 					Type:   "github",
 					URL:    "https://example.com",
 					Secret: util.SecretValue,
-					CustomHeaders: &[]apitype.Header{
+					Headers: &[]apitype.Header{
 						{Key: "X-Test", Value: util.SecretValue}}}},
 		},
 		"multiple": {
@@ -1220,7 +1220,7 @@ func TestConvertAndCensorWebHooksDefaults(t *testing.T) {
 					Type:   "github",
 					URL:    "https://example.com",
 					Secret: util.SecretValue,
-					CustomHeaders: &[]apitype.Header{
+					Headers: &[]apitype.Header{
 						{Key: "X-Test", Value: util.SecretValue}}},
 				"other": {
 					Type: "gitlab",
@@ -1277,7 +1277,7 @@ func TestConvertAndCensorWebHooks(t *testing.T) {
 					Type:   "github",
 					URL:    "https://example.com",
 					Secret: util.SecretValue,
-					CustomHeaders: &[]apitype.Header{
+					Headers: &[]apitype.Header{
 						{Key: "X-Test", Value: util.SecretValue}}}},
 		},
 		"multiple": {
@@ -1306,7 +1306,7 @@ func TestConvertAndCensorWebHooks(t *testing.T) {
 					Type:   "github",
 					URL:    "https://example.com",
 					Secret: util.SecretValue,
-					CustomHeaders: &[]apitype.Header{
+					Headers: &[]apitype.Header{
 						{Key: "X-Test", Value: util.SecretValue}}},
 				"other": {
 					Type: "gitlab",
@@ -1373,7 +1373,7 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 				"", "",
 				nil, nil, nil),
 			want: &apitype.WebHook{
-				CustomHeaders: &[]apitype.Header{
+				Headers: &[]apitype.Header{
 					{Key: "X-Something", Value: util.SecretValue},
 					{Key: "X-Another", Value: util.SecretValue}}},
 		},

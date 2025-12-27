@@ -5,7 +5,7 @@ import {
 	type ZodTransform,
 	z,
 } from 'zod';
-import type { CustomHeaders } from '@/utils/api/types/config/shared';
+import type { Headers } from '@/utils/api/types/config/shared';
 import {
 	headerSchema,
 	headerSchemaWithValidation,
@@ -15,10 +15,10 @@ import { makeDefaultsAwareListPreprocessor } from '@/utils/api/types/config-edit
 /**
  * Flattens the headers for the API.
  *
- * @param headers - The CustomHeaders[] to flatten {key: "KEY", value: "VAL"}[].
+ * @param headers - The Headers[] to flatten {key: "KEY", value: "VAL"}[].
  * @returns The flattened object {KEY: VAL, ...}.
  */
-export const flattenHeaderArray = (headers?: CustomHeaders) => {
+export const flattenHeaderArray = (headers?: Headers) => {
 	if (!headers) return undefined;
 	return headers.reduce<Record<string, string>>((obj, header) => {
 		obj[header.key] = header.value;
@@ -29,7 +29,7 @@ export const flattenHeaderArray = (headers?: CustomHeaders) => {
 /**
  * Converts 'headers' from an array of objects to a JSON string.
  *
- * @param val - The `CustomHeaders[]` to convert.
+ * @param val - The `Headers[]` to convert.
  * @returns A JSON string of the headers.
  */
 export const preprocessStringFromHeaderArray = z.preprocess((val: unknown) => {
@@ -108,9 +108,7 @@ export const headersSchemaWithValidation = preprocessToHeadersArray(
 /* Array of Header objects (no validation) */
 export const headersSchema = preprocessToHeadersArray(headerSchema);
 
-export const preprocessCustomHeadersToHeadersSchema = (
-	defaults?: CustomHeaders,
-) =>
+export const preprocessHeadersToHeadersSchema = (defaults?: Headers) =>
 	makeDefaultsAwareListPreprocessor(headersSchema.nullable(), {
 		defaults: defaults,
 		matchingFields: ['key', 'value'],

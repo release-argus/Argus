@@ -28,24 +28,24 @@ type GitHub struct {
 	After  string `json:"after"`  // "RandAlphaNumericLower(40)".
 }
 
-// setCustomHeaders of the req.
-func (wh *WebHook) setCustomHeaders(req *http.Request) {
-	var customHeaders *Headers
+// setHeaders of the req.
+func (wh *WebHook) setHeaders(req *http.Request) {
+	var headers *Headers
 	switch {
-	case wh.CustomHeaders != nil:
-		customHeaders = wh.CustomHeaders
-	case wh.Main.CustomHeaders != nil:
-		customHeaders = wh.Main.CustomHeaders
-	case wh.Defaults.CustomHeaders != nil:
-		customHeaders = wh.Defaults.CustomHeaders
-	case wh.HardDefaults.CustomHeaders != nil:
-		customHeaders = wh.HardDefaults.CustomHeaders
+	case wh.Headers != nil:
+		headers = wh.Headers
+	case wh.Main.Headers != nil:
+		headers = wh.Main.Headers
+	case wh.Defaults.Headers != nil:
+		headers = wh.Defaults.Headers
+	case wh.HardDefaults.Headers != nil:
+		headers = wh.HardDefaults.Headers
 	default:
 		return
 	}
 
 	svcInfo := wh.ServiceStatus.GetServiceInfo()
-	for _, header := range *customHeaders {
+	for _, header := range *headers {
 		key := util.EvalEnvVars(header.Key)
 		value := util.TemplateString(util.EvalEnvVars(header.Value), svcInfo)
 		req.Header[key] = []string{value}

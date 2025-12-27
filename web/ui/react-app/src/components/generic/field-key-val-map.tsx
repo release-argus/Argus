@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { cn } from '@/lib/utils';
 import { isEmptyArray } from '@/utils';
-import type { CustomHeader } from '@/utils/api/types/config/shared';
+import type { Header } from '@/utils/api/types/config/shared';
 import { isUsingDefaults } from '@/utils/api/types/config-edit/validators';
 
 type BaseProps = {
@@ -23,7 +23,7 @@ type BaseProps = {
 	placeholders?: HeaderPlaceholders;
 
 	/* The default values for the field. */
-	defaults?: CustomHeader[];
+	defaults?: Header[];
 };
 
 type FieldKeyValMapProps = BaseProps & {
@@ -63,7 +63,7 @@ const FieldKeyValMap: FC<FieldKeyValMapProps> = ({
 	}, []);
 
 	// Keep track of the array values, so we can use defaults when empty.
-	const fieldValues = useWatch({ name: name }) as CustomHeader[];
+	const fieldValues = useWatch({ name: name }) as Header[];
 	// Use defaults when fieldValues undefined or the same as the defaults.
 	const usingDefaults = useMemo(
 		() => isUsingDefaults({ arg: fieldValues, defaultValue: defaults }),

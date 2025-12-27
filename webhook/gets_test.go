@@ -395,10 +395,10 @@ func TestWebHook_GetMaxTries(t *testing.T) {
 func TestWebHook_BuildRequest(t *testing.T) {
 	// GIVEN a WebHook and a HTTP Request.
 	tests := map[string]struct {
-		webhookType   string
-		url           string
-		customHeaders Headers
-		wantNil       bool
+		webhookType string
+		url         string
+		headers     Headers
+		wantNil     bool
 	}{
 		"valid github type": {
 			webhookType: "github",
@@ -421,13 +421,13 @@ func TestWebHook_BuildRequest(t *testing.T) {
 		"sets custom headers for github": {
 			webhookType: "github",
 			url:         "release-argus/Argus",
-			customHeaders: Headers{
+			headers: Headers{
 				{Key: "X-Foo", Value: "bar"}},
 		},
 		"sets custom headers for gitlab": {
 			webhookType: "gitlab",
 			url:         "https://release-argus.io",
-			customHeaders: Headers{
+			headers: Headers{
 				{Key: "X-Foo", Value: "bar"}},
 		},
 	}
@@ -439,7 +439,7 @@ func TestWebHook_BuildRequest(t *testing.T) {
 			webhook := testWebHook(true, false, false)
 			webhook.Type = tc.webhookType
 			webhook.URL = tc.url
-			webhook.CustomHeaders = &tc.customHeaders
+			webhook.Headers = &tc.headers
 
 			// WHEN BuildRequest is called.
 			req := webhook.BuildRequest()
@@ -484,7 +484,7 @@ func TestWebHook_BuildRequest(t *testing.T) {
 				}
 			}
 			// Custom Headers.
-			for _, header := range tc.customHeaders {
+			for _, header := range tc.headers {
 				if len(req.Header[header.Key]) == 0 {
 					t.Fatalf("%s\nCustom Headers not set\n%+v",
 						packageName, req.Header)

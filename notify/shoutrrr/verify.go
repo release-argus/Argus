@@ -26,30 +26,35 @@ import (
 	goshoutrrr "github.com/nicholas-fedor/shoutrrr"
 
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
-// CheckValues validates the fields of each Defaults struct.
-func (s *ShoutrrrsDefaults) CheckValues(prefix string) error {
+// CheckValues validates the fields of each Defaults struct,
+// returning errors encountered and whether anything changed.
+func (s *ShoutrrrsDefaults) CheckValues(prefix string) (error, bool) {
 	if s == nil {
-		return nil
+		return nil, false
 	}
 
 	var errs []error
+	changed := false
 	keys := util.SortedKeys(*s)
 	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		util.AppendCheckError(&errs, prefix, key,
-			(*s)[key].CheckValues(itemPrefix, key))
+		err, keyChanged := (*s)[key].CheckValues(itemPrefix, key)
+		util.AppendCheckError(&errs, prefix, key, err)
+		changed = changed || keyChanged
 	}
 
 	if len(errs) == 0 {
-		return nil
+		return nil, changed
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...), false
 }
 
-// CheckValues validates the fields of the Defaults struct.
-func (d *Defaults) CheckValues(prefix string, id string) error {
+// CheckValues validates the fields of the Defaults struct,
+// returning the errors encountered and whether anything changed.
+func (d *Defaults) CheckValues(prefix string, id string) (error, bool) {
 	var errs []error
 	typeName := id
 	if d != nil {
@@ -62,27 +67,30 @@ func (d *Defaults) CheckValues(prefix string, id string) error {
 			prefix, typeName, strings.Join(supportedTypes, "', '")))
 	}
 
+	changed := false
 	if d != nil {
 		// Run the Base checks.
-		if err := d.Base.CheckValues(prefix, id); err != nil {
+		var err error
+		if err, changed = d.Base.CheckValues(prefix, id); err != nil {
 			errs = append(errs, err)
 		}
 	}
 
 	if len(errs) == 0 {
-		return nil
+		return nil, changed
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...), false
 }
 
-// CheckValues validates the fields of the Base struct.
-func (b *Base) CheckValues(prefix string, id string) error {
+// CheckValues validates the fields of the Base struct,
+// returning errors encountered and whether anything changed.
+func (b *Base) CheckValues(prefix string, id string) (error, bool) {
 	if b == nil {
-		return nil
+		return nil, false
 	}
 	b.InitMaps()
 	itemType := util.FirstNonDefault(b.Type, id)
-	b.correctSelf(itemType)
+	changed := b.correctSelf(itemType)
 
 	var errs []error
 	itemPrefix := prefix + "  "
@@ -92,38 +100,42 @@ func (b *Base) CheckValues(prefix string, id string) error {
 		b.checkValuesParams(itemPrefix, itemType))
 
 	if len(errs) == 0 {
-		return nil
+		return nil, changed
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...), false
 }
 
-// CheckValues validates the fields of each Shoutrrr.
-func (s *Shoutrrrs) CheckValues(prefix string) error {
+// CheckValues validates the fields of each Shoutrrr,
+// returning errors encountered and whether anything changed.
+func (s *Shoutrrrs) CheckValues(prefix string) (error, bool) {
 	if s == nil {
-		return nil
+		return nil, false
 	}
 
 	var errs []error
+	changed := false
 	keys := util.SortedKeys(*s)
 	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		util.AppendCheckError(&errs, prefix, key,
-			(*s)[key].CheckValues(itemPrefix))
+		err, keyChanged := (*s)[key].CheckValues(itemPrefix)
+		util.AppendCheckError(&errs, prefix, key, err)
+		changed = changed || keyChanged
 	}
 
 	if len(errs) == 0 {
-		return nil
+		return nil, changed
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...), false
 }
 
-// CheckValues validates the fields of the Shoutrrr struct.
-func (s *Shoutrrr) CheckValues(prefix string) error {
+// CheckValues validates the fields of the Shoutrrr struct,
+// returning the errors encountered and whether anything changed.
+func (s *Shoutrrr) CheckValues(prefix string) (error, bool) {
 	if s == nil {
-		return nil
+		return nil, false
 	}
 	s.InitMaps()
-	s.correctSelf(s.GetType())
+	changed := s.correctSelf(s.GetType())
 
 	var errs []error
 	// Type.
@@ -149,25 +161,29 @@ func (s *Shoutrrr) CheckValues(prefix string) error {
 	}
 
 	if len(errs) == 0 {
-		return nil
+		return nil, changed
 	}
-	return errors.Join(errs...)
+	return errors.Join(errs...), false
 }
 
 // correctSelf will do a few corrections to user provided vars.
 //
 //	e.g. slack color wants $23 instead of #.
-func (b *Base) correctSelf(shoutrrrType string) {
+//
+// Returns whether anything changed.
+func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 	// Port, strip leading :
 	port := b.GetURLField("port")
 	if strings.HasPrefix(port, ":") {
 		b.SetURLField("port", strings.TrimPrefix(port, ":"))
+		changed = true
 	}
 
 	// Path, strip leading /
 	path := b.GetURLField("path")
 	if strings.HasPrefix(path, "/") {
 		b.SetURLField("path", strings.TrimPrefix(path, "/"))
+		changed = true
 	}
 
 	// Host.
@@ -185,18 +201,31 @@ func (b *Base) correctSelf(shoutrrrType string) {
 			b.SetURLField("port", split[1])
 		}
 		b.SetURLField("host", host)
+		changed = true
 	}
 
 	switch shoutrrrType {
+	case "generic":
+		// Deprecated: custom_headers -> headers.
+		if customHeaders := b.GetURLField("custom_headers"); customHeaders != "" {
+			if headers := b.GetURLField("headers"); headers == "" {
+				logutil.Log.Deprecated("Renaming 'notify.generic.url_fields.custom_headers' to 'notify.generic.url_fields.headers'")
+				b.SetURLField("headers", customHeaders)
+			}
+			b.SetURLField("custom_headers", "")
+			changed = true
+		}
 	case "matrix":
 		// Remove #'s in channel aliases.
-		if rooms := strings.ReplaceAll(b.GetParam("rooms"), "#", ""); rooms != "" {
-			b.SetParam("rooms", rooms)
+		if rooms := b.GetParam("rooms"); strings.Contains(rooms, "#") {
+			b.SetParam("rooms", strings.ReplaceAll(b.GetParam("rooms"), "#", ""))
+			changed = true
 		}
 	case "mattermost":
 		// Channel, strip leading /
 		if channel := strings.TrimPrefix(b.GetURLField("channel"), "/"); channel != "" {
 			b.SetURLField("channel", channel)
+			changed = true
 		}
 	case "slack":
 		// # -> %23
@@ -204,24 +233,35 @@ func (b *Base) correctSelf(shoutrrrType string) {
 		// The format for the Color prop follows the slack docs but # needs to be escaped as %23 when passed in a URL.
 		// So #ff8000 would be %23ff8000 etc.
 		key := "color"
-		if b.GetParam(key) != "" {
-			b.SetParam(key, strings.Replace(b.GetParam(key), "#", "%23", 1))
+		if color := b.GetParam(key); color != "" {
+			if strings.HasPrefix(color, "#") {
+				b.SetParam(key, strings.Replace(color, "#", "%23", 1))
+				changed = true
+			}
 		}
 	case "teams":
 		// AltID, strip leading /
-		if altid := strings.TrimPrefix(b.GetURLField("altid"), "/"); altid != "" {
-			b.SetURLField("altid", altid)
+		key := "altid"
+		if altID := strings.TrimPrefix(b.GetURLField(key), "/"); altID != "" {
+			b.SetURLField(key, altID)
+			changed = true
 		}
 		// GroupOwner, strip leading /
-		if groupowner := strings.TrimPrefix(b.GetURLField("groupowner"), "/"); groupowner != "" {
-			b.SetURLField("groupowner", groupowner)
+		key = "groupowner"
+		if groupOwner := strings.TrimPrefix(b.GetURLField(key), "/"); groupOwner != "" {
+			b.SetURLField(key, groupOwner)
+			changed = true
 		}
 	case "zulip":
 		// BotMail, replace the @ with a %40 - https://containrrr.dev/shoutrrr/v0.5/services/zulip/
-		if botmail := b.GetURLField("botmail"); botmail != "" {
-			b.SetURLField("botmail", strings.ReplaceAll(botmail, "@", "%40"))
+		key := "botmail"
+		if botMail := b.GetURLField(key); strings.Contains(botMail, "@") {
+			b.SetURLField(key, strings.ReplaceAll(botMail, "@", "%40"))
+			changed = true
 		}
 	}
+
+	return
 }
 
 // normaliseParamSelect normalizes a Param with a case-insensitive match to an allowed set,
@@ -504,7 +544,7 @@ func (s *Shoutrrr) checkValuesURLFields(prefix string) error {
 		if s.GetURLField("host") == "" {
 			errs = append(errs, errors.New(prefix+"host: <required> e.g. 'example.com'"))
 		}
-		jsonMaps := []string{"custom_headers", "json_payload_vars", "query_vars"}
+		jsonMaps := []string{"headers", "json_payload_vars", "query_vars"}
 		for _, jsonMap := range jsonMaps {
 			value := s.GetURLField(jsonMap)
 			if value != "" {

@@ -1,5 +1,5 @@
 import { firstNonEmpty } from '@/utils';
-import type { CustomHeaders } from '@/utils/api/types/config/shared';
+import type { Headers } from '@/utils/api/types/config/shared';
 import { addZodIssuesToContext } from '@/utils/api/types/config-edit/shared/add-issues';
 import {
 	headersSchema,
@@ -14,20 +14,20 @@ import {
 } from '@/utils/api/types/config-edit/validators';
 
 /**
- * Builds a schema for custom headers.
+ * Builds a schema for HTTP headers.
  *
  * @param data - The current value from the API.
  * @param defaults - Default values.
  */
 export const buildHeadersSchemaWithFallbacks = (
-	data?: CustomHeaders,
-	...defaults: (CustomHeaders | undefined)[]
+	data?: Headers,
+	...defaults: (Headers | undefined)[]
 ): BuilderResponse<typeof headersSchema> => {
 	const path = 'headers';
 	const dataDefaulted =
 		(data ?? []).map((h, i) => ({ ...h, old_index: i })) ?? [];
 	const defaultItem = defaults.find((arr) => arr?.length) ?? [];
-	const defaultValue: CustomHeaders = defaultItem.map((_) => ({
+	const defaultValue: Headers = defaultItem.map((_) => ({
 		key: '',
 		old_index: null,
 		value: '',

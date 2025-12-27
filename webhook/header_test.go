@@ -26,8 +26,8 @@ import (
 	"github.com/release-argus/Argus/service/status"
 )
 
-func TestWebHook_SetCustomHeaders(t *testing.T) {
-	// GIVEN a WebHook with CustomHeaders.
+func TestWebHook_SetHeaders(t *testing.T) {
+	// GIVEN a WebHook with Headers.
 	latestVersion := "1.2.3"
 	serviceID := "service"
 	tests := map[string]struct {
@@ -91,7 +91,7 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 				"X-Service": serviceID,
 				"X-Version": latestVersion},
 		},
-		"header from .CustomHeaders overrides those in .Main": {
+		"header from .Headers overrides those in .Main": {
 			rootValue: &Headers{
 				{Key: "X-Service", Value: "{{ service_id }}"},
 				{Key: "X-Version", Value: "{{ version }}"}},
@@ -102,7 +102,7 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 				"X-Service": serviceID,
 				"X-Version": latestVersion},
 		},
-		"header from .CustomHeaders overrides those in .Defaults": {
+		"header from .Headers overrides those in .Defaults": {
 			rootValue: &Headers{
 				{Key: "X-Service", Value: "{{ service_id }}"},
 				{Key: "X-Version", Value: "{{ version }}"}},
@@ -159,13 +159,13 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 				&dashboard.Options{
 					WebURL: url})
 			webhook.ServiceStatus.SetLatestVersion(latestVersion, "", false)
-			webhook.CustomHeaders = tc.rootValue
-			webhook.Main.CustomHeaders = tc.mainValue
-			webhook.Defaults.CustomHeaders = tc.defaultValue
-			webhook.HardDefaults.CustomHeaders = tc.hardDefaultValue
+			webhook.Headers = tc.rootValue
+			webhook.Main.Headers = tc.mainValue
+			webhook.Defaults.Headers = tc.defaultValue
+			webhook.HardDefaults.Headers = tc.hardDefaultValue
 
-			// WHEN setCustomHeaders is called on this request.
-			webhook.setCustomHeaders(req)
+			// WHEN setHeaders is called on this request.
+			webhook.setHeaders(req)
 
 			// THEN the function returns the correct result.
 			if tc.rootValue == nil && tc.mainValue == nil && tc.defaultValue == nil && tc.hardDefaultValue == nil {

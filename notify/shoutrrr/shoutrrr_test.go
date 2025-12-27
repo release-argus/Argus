@@ -541,12 +541,12 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			urlFields: map[string]string{
 				"host": "HOST"},
 		},
-		"generic - base + custom_headers": {
+		"generic - base + headers": {
 			sType: "generic",
 			want:  "generic://HOST?@contentType=val2&@fooBar=val1",
 			urlFields: map[string]string{
-				"host":           "HOST",
-				"custom_headers": `{"fooBar":"val1","contentType":"val2"}`},
+				"host":    "HOST",
+				"headers": `{"fooBar":"val1","contentType":"val2"}`},
 		},
 		"generic - base + json_payload_vars": {
 			sType: "generic",
@@ -562,12 +562,12 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 				"host":       "HOST",
 				"query_vars": `{"foo":"bar"}`},
 		},
-		"generic - base + custom_headers + json_payload_vars + query_vars": {
+		"generic - base + headers + json_payload_vars + query_vars": {
 			sType: "generic",
 			want:  "generic://HOST?@contentType=val2&@fooBar=val1&$key1=val1&foo=bar",
 			urlFields: map[string]string{
 				"host":              "HOST",
-				"custom_headers":    `{"fooBar":"val1","contentType":"val2"}`,
+				"headers":           `{"fooBar":"val1","contentType":"val2"}`,
 				"json_payload_vars": `{"key1":"val1"}`,
 				"query_vars":        `{"foo":"bar"}`},
 		},

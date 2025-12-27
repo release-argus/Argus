@@ -33,17 +33,17 @@ func (c *Config) CheckValues() bool {
 	// settings.
 	util.AppendCheckError(&errs, "", "settings", c.Settings.CheckValues(childPrefix))
 	// defaults.
-	util.AppendCheckError(&errs, "", "defaults",
-		c.Defaults.CheckValues(childPrefix))
+	defaultsErr, defaultsChanged := c.Defaults.CheckValues(childPrefix)
+	util.AppendCheckError(&errs, "", "defaults", defaultsErr)
 	// notify.
-	util.AppendCheckError(&errs, "", "notify",
-		c.Notify.CheckValues(childPrefix))
+	notifyErr, notifyChanged := c.Notify.CheckValues(childPrefix)
+	util.AppendCheckError(&errs, "", "notify", notifyErr)
 	// webhook.
-	util.AppendCheckError(&errs, "", "webhook",
-		c.WebHook.CheckValues(childPrefix))
+	webhookErr, webhookChanged := c.WebHook.CheckValues(childPrefix)
+	util.AppendCheckError(&errs, "", "webhook", webhookErr)
 	// service.
-	util.AppendCheckError(&errs, "", "service",
-		c.Service.CheckValues(childPrefix))
+	serviceErr, serviceChanged := c.Service.CheckValues(childPrefix)
+	util.AppendCheckError(&errs, "", "service", serviceErr)
 
 	// Combine all errors if any are present.
 	if len(errs) > 0 {
@@ -51,6 +51,11 @@ func (c *Config) CheckValues() bool {
 		fmt.Println(combinedErr.Error())
 		logutil.Log.Fatal("Config could not be parsed successfully.", logutil.LogFrom{})
 		return false
+	}
+
+	// All files valid, queue save if changed.
+	if defaultsChanged || notifyChanged || webhookChanged || serviceChanged {
+		c.SaveChannel <- true
 	}
 	return true
 }

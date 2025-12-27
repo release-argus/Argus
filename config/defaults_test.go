@@ -21,6 +21,8 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/dashboard"
@@ -134,7 +136,7 @@ func TestDefaults_String(t *testing.T) {
 					type: github
 					url: https://example.comm
 					allow_invalid_certs: true
-					custom_headers:
+					headers:
 						- key: X-Header
 							value: foo
 					secret: secret!!!
@@ -277,7 +279,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "true"},
 			want: &Defaults{
 				Service: service.Defaults{
-					LatestVersion: *&latestver_base.Defaults{
+					LatestVersion: latestver_base.Defaults{
 						AccessToken:       "ghp_something",
 						AllowInvalidCerts: test.BoolPtr(true),
 						UsePreRelease:     test.BoolPtr(true)}}},
@@ -291,7 +293,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_QUAY_TOKEN":   "tokenForQuay"},
 			want: &Defaults{
 				Service: service.Defaults{
-					LatestVersion: *&latestver_base.Defaults{
+					LatestVersion: latestver_base.Defaults{
 						Require: filter.RequireDefaults{
 							Docker: *filter.NewDockerCheckDefaults(
 								"ghcr",
@@ -1005,6 +1007,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 	tests := map[string]struct {
 		input    *Defaults
 		errRegex string
+		changed  bool
 	}{
 		"Service.Interval": {
 			input: &Defaults{Service: service.Defaults{
@@ -1013,6 +1016,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 				^service:
 					options:
 						interval: "10x" <invalid>.*$`),
+			changed: false,
 		},
 		"Service.LatestVersion.Require.Docker.Type": {
 			input: &Defaults{Service: service.Defaults{
@@ -1027,6 +1031,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 						require:
 							docker:
 								type: "pizza" <invalid>.*$`),
+			changed: false,
 		},
 		"Service.Interval + Service.DeployedVersionLookup.Regex": {
 			input: &Defaults{Service: service.Defaults{
@@ -1044,6 +1049,20 @@ func TestDefaults_CheckValues(t *testing.T) {
 						require:
 							docker:
 								type: "pizza" <invalid>.*$`),
+			changed: false,
+		},
+		"Notify changed": {
+			input: &Defaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
+					"foo": shoutrrr.NewDefaults(
+						"generic",
+						nil,
+						map[string]string{
+							"host":           "x",
+							"secret":         "y",
+							"custom_headers": `{"foo": "bar"}`},
+						nil)}},
+			changed: true,
 		},
 		"Notify.x.Delay": {
 			input: &Defaults{Notify: shoutrrr.ShoutrrrsDefaults{
@@ -1056,6 +1075,21 @@ func TestDefaults_CheckValues(t *testing.T) {
 					slack:
 						options:
 							delay: "10x" <invalid>.*$`),
+			changed: false,
+		},
+		"WebHook changed": {
+			input: &Defaults{
+				WebHook: webhook.Defaults{
+					Base: webhook.Base{
+						Type:   "github",
+						URL:    "example.com",
+						Secret: "Argus",
+						// CustomHeaders -> Headers.
+						CustomHeaders: &webhook.Headers{
+							webhook.Header{
+								Key: "foo", Value: "bar"}},
+					}}},
+			changed: true,
 		},
 		"WebHook.Delay": {
 			input: &Defaults{WebHook: *webhook.NewDefaults(
@@ -1063,12 +1097,22 @@ func TestDefaults_CheckValues(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^webhook:
 					delay: "10x" <invalid>.*$`),
+			changed: false,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			// Backup the defaults.
+			var backup []byte
+			var err error
+			backup, err = yaml.Marshal(tc.input)
+			if err != nil {
+				t.Fatalf("%s\nfailed to marshal backup - %q",
+					packageName, err.Error())
+			}
 
 			prefixes := []string{"", " ", "  ", "    ", "- "}
 			for _, prefix := range prefixes {
@@ -1077,11 +1121,17 @@ func TestDefaults_CheckValues(t *testing.T) {
 					"^"+prefix)
 				errRegex = strings.ReplaceAll(errRegex, "\n",
 					"\n"+prefix)
+				// Restore backup.
+				tc.input = &Defaults{}
+				if err := yaml.Unmarshal(backup, tc.input); err != nil {
+					t.Fatalf("%s\nfailed to unmarshal backup - %q",
+						packageName, err.Error())
+				}
 
 				// WHEN CheckValues is called on it.
-				err := tc.input.CheckValues(prefix)
+				err, changed := tc.input.CheckValues(prefix)
 
-				// THEN err matches expected.
+				// THEN any error is as expected.
 				e := util.ErrorToString(err)
 				lines := strings.Split(e, "\n")
 				wantLines := strings.Count(errRegex, "\n")
@@ -1094,6 +1144,11 @@ func TestDefaults_CheckValues(t *testing.T) {
 					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 						packageName, errRegex, e)
 					return
+				}
+				// AND the 'changed' flag matches expectation.
+				if changed != tc.changed {
+					t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
+						packageName, tc.changed, changed)
 				}
 			}
 		})

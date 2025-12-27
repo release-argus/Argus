@@ -22,7 +22,6 @@ import (
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/notify/shoutrrr"
-	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
 	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
@@ -196,10 +195,12 @@ func TestServices_CheckValues(t *testing.T) {
 	tests := map[string]struct {
 		services *Services
 		errRegex string
+		changed  bool
 	}{
 		"nil map": {
 			services: nil,
 			errRegex: `^$`,
+			changed:  false,
 		},
 		"single valid service": {
 			services: &Services{
@@ -219,6 +220,135 @@ func TestServices_CheckValues(t *testing.T) {
 							nil, nil)
 					})}},
 			errRegex: `^$`,
+			changed:  false,
+		},
+		"multiple valid services": {
+			services: &Services{
+				"first": {
+					ID:      "1",
+					Comment: "foo_comment",
+					Options: *opt.New(
+						nil, "10s", nil, nil, nil),
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"github",
+							"yaml", test.TrimYAML(`
+								url: release-argus/Argus
+							`),
+							nil,
+							nil,
+							nil, nil)
+					})},
+				"second": {
+					ID:      "2",
+					Comment: "bar_comment",
+					Options: *opt.New(
+						nil, "10s", nil, nil, nil),
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"github",
+							"yaml", test.TrimYAML(`
+								url: release-argus/Argus
+							`),
+							nil,
+							nil,
+							nil, nil)
+					})}},
+			errRegex: `^$`,
+			changed:  false,
+		},
+		"multiple valid services, 1+ changed": {
+			services: &Services{
+				"first": {
+					ID:      "1",
+					Comment: "foo_comment",
+					Options: *opt.New(
+						nil, "10s", nil, nil, nil),
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"github",
+							"yaml", test.TrimYAML(`
+								url: release-argus/Argus
+							`),
+							nil,
+							nil,
+							nil, nil)
+					}),
+					WebHook: map[string]*webhook.WebHook{
+						"wh": {
+							Base: webhook.Base{
+								Type:   "github",
+								URL:    "example.com",
+								Secret: "Argus",
+								CustomHeaders: &webhook.Headers{
+									webhook.Header{
+										Key: "foo", Value: "bar"}},
+							}}}},
+				"second": {
+					ID:      "2",
+					Comment: "bar_comment",
+					Options: *opt.New(
+						nil, "10s", nil, nil, nil),
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"github",
+							"yaml", test.TrimYAML(`
+								url: release-argus/Argus
+							`),
+							nil,
+							nil,
+							nil, nil)
+					})}},
+			errRegex: `^$`,
+			changed:  true,
+		},
+		"multiple valid services, 1+ changed but some error, so changed false": {
+			services: &Services{
+				"first": {
+					ID:      "1",
+					Comment: "foo_comment",
+					Options: *opt.New(
+						nil, "10s", nil, nil, nil),
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"github",
+							"yaml", test.TrimYAML(`
+								url: release-argus/Argus
+							`),
+							nil,
+							nil,
+							nil, nil)
+					}),
+					WebHook: map[string]*webhook.WebHook{
+						"wh": {
+							Base: webhook.Base{
+								Type:   "github",
+								URL:    "example.com",
+								Secret: "Argus",
+								CustomHeaders: &webhook.Headers{
+									webhook.Header{
+										Key: "foo", Value: "bar"}},
+							}}}},
+				"second": {
+					ID:      "2",
+					Comment: "bar_comment",
+					Options: *opt.New(
+						nil, "10x", nil, nil, nil),
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"github",
+							"yaml", test.TrimYAML(`
+								url: release-argus/Argus
+							`),
+							nil,
+							nil,
+							nil, nil)
+					})}},
+			errRegex: test.TrimYAML(`
+				^second:
+					options:
+						interval: "10x" <invalid>.*$`),
+			changed: false,
 		},
 		"single invalid service": {
 			services: &Services{
@@ -238,6 +368,7 @@ func TestServices_CheckValues(t *testing.T) {
 							nil, nil)
 					})}},
 			errRegex: `interval: "[^"]+" <invalid>.*$`,
+			changed:  false,
 		},
 		"multiple invalid services": {
 			services: &Services{
@@ -285,6 +416,7 @@ func TestServices_CheckValues(t *testing.T) {
 						interval: "10x" <invalid>.*
 					latest_version:
 						.*nil.*$`),
+			changed: false,
 		},
 	}
 
@@ -292,14 +424,28 @@ func TestServices_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			if tc.services != nil {
+				for _, svc := range *tc.services {
+					svc.Init(
+						&Defaults{}, &Defaults{},
+						&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
+						&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
+				}
+			}
+
 			// WHEN CheckValues is called.
-			err := tc.services.CheckValues("")
+			err, changed := tc.services.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
+			}
+			// AND the 'changed' flag matches expectation.
+			if changed != tc.changed {
+				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
+					packageName, tc.changed, changed)
 			}
 		})
 	}
@@ -308,85 +454,91 @@ func TestServices_CheckValues(t *testing.T) {
 func TestService_CheckValues(t *testing.T) {
 	// GIVEN a Service.
 	tests := map[string]struct {
-		svc              *Service
-		options          opt.Options
-		latestVersion    latestver.Lookup
-		deployedVersion  deployedver.Lookup
-		commands         command.Commands
-		webhooks         webhook.WebHooks
-		notifies         shoutrrr.Shoutrrrs
-		dashboardOptions dashboard.Options
-		errRegex         string
+		svc      *Service
+		errRegex string
+		changed  bool
 	}{
 		"nil service": {
 			svc:      nil,
 			errRegex: `^$`,
+			changed:  false,
 		},
 		"options with errs": {
 			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-				return latestver.New(
-					"github",
-					"yaml", test.TrimYAML(`
+				ID:      "test",
+				Comment: "foo_comment",
+				Options: *opt.New(
+					nil, "10x", nil, nil, nil),
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
 						url: release-argus/Argus
 					`),
-					nil,
-					nil,
-					nil, nil)
-			}),
-			options: *opt.New(
-				nil, "10x", nil, nil, nil),
+						nil,
+						nil,
+						nil, nil)
+				}),
+			},
 			errRegex: test.TrimYAML(`
 				^options:
 					interval: "[^"]+" <invalid>.*$`),
+			changed: false,
 		},
 		"options, latest_version is nil": {
 			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			options: *opt.New(
-				nil, "10x", nil, nil, nil),
-			latestVersion: nil,
+				ID:      "test",
+				Comment: "foo_comment",
+				Options: *opt.New(
+					nil, "10x", nil, nil, nil),
+				LatestVersion: nil,
+			},
 			errRegex: test.TrimYAML(`
 				^options:
 					interval: "[^"]+" <invalid>.*
 				latest_version:
 					.*nil.*$`),
+			changed: false,
 		},
 		"options, latest_version with errs": {
 			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			options: *opt.New(
-				nil, "10x", nil, nil, nil),
-			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-				return latestver.New(
-					"github",
-					"yaml", "",
-					nil,
-					nil,
-					nil, nil)
-			}),
+				ID:      "test",
+				Comment: "foo_comment",
+				Options: *opt.New(
+					nil, "10x", nil, nil, nil),
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+			},
 			errRegex: test.TrimYAML(`
 				^options:
 					interval: "[^"]+" <invalid>.*
 				latest_version:
 					url: <required>.*$`),
+			changed: false,
 		},
 		"options, latest_version, deployed_version with errs": {
 			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			options: *opt.New(
-				nil, "10x", nil, nil, nil),
-			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-				return latestver.New(
-					"github",
-					"yaml", "",
-					nil,
-					nil,
-					nil, nil)
-			}),
-			deployedVersion: &dv_web.Lookup{
-				Regex: `[0-`},
+				ID:      "test",
+				Comment: "foo_comment",
+				Options: *opt.New(
+					nil, "10x", nil, nil, nil),
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: &dv_web.Lookup{
+					Regex: `[0-`},
+			},
 			errRegex: test.TrimYAML(`
 				^options:
 					interval: "10x" <invalid>.*
@@ -396,28 +548,31 @@ func TestService_CheckValues(t *testing.T) {
 					url: <required>.*
 					method: <required>.*
 					regex: "[^"]+" <invalid>.*$`),
+			changed: false,
 		},
 		"options, latest_version, deployed_version, notify with errs": {
 			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			options: *opt.New(
-				nil, "10x", nil, nil, nil),
-			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-				return latestver.New(
-					"github",
-					"yaml", "",
-					nil,
-					nil,
-					nil, nil)
-			}),
-			deployedVersion: &dv_web.Lookup{
-				Regex: `[0-`},
-			notifies: shoutrrr.Shoutrrrs{
-				"foo": shoutrrr.New(
-					nil, "",
-					"discord",
-					nil, nil, nil,
-					nil, nil, nil)},
+				ID:      "test",
+				Comment: "foo_comment",
+				Options: *opt.New(
+					nil, "10x", nil, nil, nil),
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: &dv_web.Lookup{
+					Regex: `[0-`},
+				Notify: shoutrrr.Shoutrrrs{
+					"foo": shoutrrr.New(
+						nil, "",
+						"discord",
+						nil, nil, nil,
+						nil, nil, nil)},
+			},
 			errRegex: test.TrimYAML(`
 				^options:
 					interval: "[^"]+" <invalid>.*
@@ -432,30 +587,33 @@ func TestService_CheckValues(t *testing.T) {
 						url_fields:
 							token: <required>.*
 							webhookid: <required>.*$`),
+			changed: false,
 		},
 		"options, latest_version, deployed_version, notify, command with errs": {
 			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			options: *opt.New(
-				nil, "10x", nil, nil, nil),
-			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-				return latestver.New(
-					"github",
-					"yaml", "",
-					nil,
-					nil,
-					nil, nil)
-			}),
-			deployedVersion: &dv_web.Lookup{
-				Regex: `[0-`},
-			notifies: shoutrrr.Shoutrrrs{
-				"foo": shoutrrr.New(
-					nil, "",
-					"discord",
-					nil, nil, nil,
-					nil, nil, nil)},
-			commands: command.Commands{{
-				"bash", "update.sh", "{{ version }"}},
+				ID:      "test",
+				Comment: "foo_comment",
+				Options: *opt.New(
+					nil, "10x", nil, nil, nil),
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: &dv_web.Lookup{
+					Regex: `[0-`},
+				Notify: shoutrrr.Shoutrrrs{
+					"foo": shoutrrr.New(
+						nil, "",
+						"discord",
+						nil, nil, nil,
+						nil, nil, nil)},
+				Command: command.Commands{{
+					"bash", "update.sh", "{{ version }"}},
+			},
 			errRegex: test.TrimYAML(`
 				^options:
 					interval: "[^"]+" <invalid>.*
@@ -472,41 +630,44 @@ func TestService_CheckValues(t *testing.T) {
 							webhookid: <required>.*
 				command:
 					item_0: bash .* <invalid>.*templating.*$`),
+			changed: false,
 		},
 		"options, latest_version, deployed_version, notify, command, webhook with errs": {
 			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			options: *opt.New(
-				nil, "10x", nil, nil, nil),
-			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-				return latestver.New(
-					"github",
-					"yaml", "",
-					nil,
-					nil,
-					nil, nil)
-			}),
-			deployedVersion: &dv_web.Lookup{
-				Regex: `[0-`},
-			commands: command.Commands{{
-				"bash", "update.sh", "{{ version }"}},
-			notifies: shoutrrr.Shoutrrrs{
-				"foo": shoutrrr.New(
-					nil,
-					"", "discord",
-					nil, nil, nil,
-					nil, nil, nil)},
-			webhooks: webhook.WebHooks{
-				"wh": webhook.New(
-					nil, nil,
-					"0x",
-					nil, nil,
-					"wh",
-					nil, nil, nil,
-					"",
-					nil,
-					"", "",
-					nil, nil, nil)},
+				ID:      "test",
+				Comment: "foo_comment",
+				Options: *opt.New(
+					nil, "10x", nil, nil, nil),
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: &dv_web.Lookup{
+					Regex: `[0-`},
+				Command: command.Commands{{
+					"bash", "update.sh", "{{ version }"}},
+				Notify: shoutrrr.Shoutrrrs{
+					"foo": shoutrrr.New(
+						nil,
+						"", "discord",
+						nil, nil, nil,
+						nil, nil, nil)},
+				WebHook: webhook.WebHooks{
+					"wh": webhook.New(
+						nil, nil,
+						"0x",
+						nil, nil,
+						"wh",
+						nil, nil, nil,
+						"",
+						nil,
+						"", "",
+						nil, nil, nil)},
+			},
 			errRegex: test.TrimYAML(`
 				^options:
 					interval: "10x" <invalid>.*
@@ -529,58 +690,162 @@ func TestService_CheckValues(t *testing.T) {
 						delay: "[^"]+" <invalid>.*
 						url: <required>.*
 						secret: <required>.*$`),
+			changed: false,
 		},
 		"options, latest_version, deployed_version, notify, command, webhook with no errs": {
 			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			options: *opt.New(
-				nil, "10s", nil, nil, nil),
-			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-				return latestver.New(
-					"github",
-					"yaml", test.TrimYAML(`
+				ID:      "test",
+				Comment: "foo_comment",
+				Options: *opt.New(
+					nil, "10s", nil, nil, nil),
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
 						url: release-argus/Argus
 					`),
-					nil,
-					nil,
-					nil, nil)
-			}),
-			deployedVersion: test.IgnoreError(t, func() (deployedver.Lookup, error) {
-				return deployedver.New(
-					"url",
-					"yaml", test.TrimYAML(`
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (deployedver.Lookup, error) {
+					return deployedver.New(
+						"url",
+						"yaml", test.TrimYAML(`
 						url: https://example.com
 						method: GET
 					`),
-					nil,
-					nil,
-					nil, nil)
-			}),
-			commands: command.Commands{{
-				"bash", "update.sh", "{{ version }}"}},
-			notifies: shoutrrr.Shoutrrrs{
-				"foo": shoutrrr.New(
-					nil,
-					"", "discord",
-					nil,
-					map[string]string{
-						"token":     "x",
-						"webhookid": "y"},
-					nil,
-					nil, nil, nil)},
-			webhooks: webhook.WebHooks{
-				"wh": webhook.New(
-					nil, nil,
-					"0s",
-					nil, nil,
-					"wh",
-					nil,
-					nil, nil,
-					"secret",
-					nil,
-					"github", "https://example.com",
-					nil, nil, nil)},
+						nil,
+						nil,
+						nil, nil)
+				}),
+				Command: command.Commands{{
+					"bash", "update.sh", "{{ version }}"}},
+				Notify: shoutrrr.Shoutrrrs{
+					"foo": shoutrrr.New(
+						nil,
+						"", "discord",
+						nil,
+						map[string]string{
+							"token":     "x",
+							"webhookid": "y"},
+						nil,
+						nil, nil, nil)},
+				WebHook: webhook.WebHooks{
+					"wh": webhook.New(
+						nil, nil,
+						"0s",
+						nil, nil,
+						"wh",
+						nil,
+						nil, nil,
+						"secret",
+						nil,
+						"github", "https://example.com",
+						nil, nil, nil)},
+			},
 			errRegex: "^$",
+			changed:  false,
+		},
+		"notify changed": {
+			svc: &Service{
+				ID:      "test",
+				Comment: "foo_comment",
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+						url: release-argus/Argus
+					`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				Notify: shoutrrr.Shoutrrrs{
+					"foo": shoutrrr.New(
+						nil,
+						"", "generic",
+						nil,
+						map[string]string{
+							"host":           "x",
+							"secret":         "y",
+							"custom_headers": `{"foo": "bar"}`},
+						nil,
+						nil, nil, nil)},
+			},
+			errRegex: `^$`,
+			changed:  true,
+		},
+		"webhook changed": {
+			svc: &Service{
+				ID:      "test",
+				Comment: "foo_comment",
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+						url: release-argus/Argus
+					`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				WebHook: map[string]*webhook.WebHook{
+					"wh": {
+						Base: webhook.Base{
+							Type:   "github",
+							URL:    "example.com",
+							Secret: "Argus",
+							CustomHeaders: &webhook.Headers{
+								webhook.Header{
+									Key: "foo", Value: "bar"}},
+						}}},
+			},
+			errRegex: `^$`,
+			changed:  true,
+		},
+		"not changed if we have errors": {
+			svc: &Service{
+				ID:      "test",
+				Comment: "foo_comment",
+				Options: *opt.New(
+					nil, "10x", nil, nil, nil),
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+						url: release-argus/Argus
+					`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				Notify: shoutrrr.Shoutrrrs{
+					"foo": shoutrrr.New(
+						nil,
+						"", "generic",
+						nil,
+						map[string]string{
+							"host":           "x",
+							"secret":         "y",
+							"custom_headers": `{"foo": "bar"}`},
+						nil,
+						nil, nil, nil)},
+				WebHook: map[string]*webhook.WebHook{
+					"wh": {
+						Base: webhook.Base{
+							Type:   "github",
+							URL:    "example.com",
+							Secret: "Argus",
+							CustomHeaders: &webhook.Headers{
+								webhook.Header{
+									Key: "foo", Value: "bar"}},
+						}}},
+			},
+			errRegex: test.TrimYAML(`
+				^options:
+					interval: "10x" <invalid>.*$`),
+			changed: false,
 		},
 	}
 
@@ -589,14 +854,6 @@ func TestService_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			if tc.svc != nil {
-				tc.svc.ID = "test"
-				tc.svc.Options = tc.options
-				tc.svc.LatestVersion = tc.latestVersion
-				tc.svc.DeployedVersionLookup = tc.deployedVersion
-				tc.svc.Command = tc.commands
-				tc.svc.WebHook = tc.webhooks
-				tc.svc.Notify = tc.notifies
-				tc.svc.Dashboard = tc.dashboardOptions
 				tc.svc.Init(
 					&Defaults{}, &Defaults{},
 					&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
@@ -604,7 +861,7 @@ func TestService_CheckValues(t *testing.T) {
 			}
 
 			// WHEN CheckValues is called.
-			err := tc.svc.CheckValues("")
+			err, changed := tc.svc.CheckValues("")
 
 			// THEN it errors when expected.
 			e := util.ErrorToString(err)
@@ -622,6 +879,11 @@ func TestService_CheckValues(t *testing.T) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
 				return
+			}
+			// AND the 'changed' flag matches expectation.
+			if changed != tc.changed {
+				t.Errorf("%s\nchanged flag mismatch\nwant: %t\ngot:  %t",
+					packageName, tc.changed, changed)
 			}
 		})
 	}

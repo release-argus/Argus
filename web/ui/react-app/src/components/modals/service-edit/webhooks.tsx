@@ -54,7 +54,7 @@ const EditServiceWebHooks: FC<EditServiceWebHooksProps> = ({ loading }) => {
 	const addItem = useCallback(() => {
 		append(
 			{
-				custom_headers: defaultsHollow?.custom_headers,
+				headers: defaultsHollow?.headers,
 				name: '',
 				type: Object.values(WEBHOOK_TYPE)[0].value,
 			},

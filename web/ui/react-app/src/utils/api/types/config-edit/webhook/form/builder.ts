@@ -49,7 +49,7 @@ const buildWebHookSchema = (
 		{ path: ['url'], validator: validateRequired },
 		{
 			kind: 'array',
-			path: ['custom_headers'],
+			path: ['headers'],
 			props: [
 				{
 					defaultSchema: headersSchema,
@@ -82,6 +82,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 		defaults?.type ??
 		hardDefaults?.type ??
 		Object.values(webhookTypeOptions)[0].value;
+	console.log('dataDefaulted???', data ?? []);
 	const dataDefaulted = (data ?? []).map((item) => {
 		const main = mains?.[item.name];
 		const nameLower = item.name.toLowerCase();
@@ -105,7 +106,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 	const combinedDefaults = applyDefaultsRecursive<WebHook>(
 		defaults ?? null,
 		hardDefaults,
-		{ custom_headers: [], type: WEBHOOK_TYPE.GITHUB.value },
+		{ headers: [], type: WEBHOOK_TYPE.GITHUB.value },
 	);
 	const schemaDataTypeDefaults = safeParse({
 		data: combinedDefaults,
@@ -127,17 +128,17 @@ export const buildWebHooksSchemaWithFallbacks = (
 		const nameLower = name.toLowerCase();
 		const itemType =
 			main?.type ?? (isWebHookType(nameLower) ? nameLower : typeDefault);
-		// custom_headers.
-		const customHeaders = isEmptyArray(main?.custom_headers)
-			? schemaDataTypeDefaults.custom_headers
-			: main?.custom_headers;
-		const customHeadersHollow = customHeaders?.map(() => ({
+		// headers.
+		const headers = isEmptyArray(main?.headers)
+			? schemaDataTypeDefaults.headers
+			: main?.headers;
+		const headersHollow = headers?.map(() => ({
 			key: '',
 			value: '',
 		}));
 
 		const data = {
-			custom_headers: customHeadersHollow,
+			headers: headersHollow,
 			name: name,
 			old_index: null,
 			type: itemType,
@@ -156,7 +157,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 
 	// Defaults for each type.
 	const schemaDataTypeDefaultsHollow = {
-		custom_headers: schemaDataTypeDefaults.custom_headers.map(() => ({
+		headers: schemaDataTypeDefaults.headers.map(() => ({
 			key: '',
 			value: '',
 		})),

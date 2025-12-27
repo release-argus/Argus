@@ -20,10 +20,7 @@ import type {
 	smtpEncryptionOptions,
 } from '@/utils/api/types/config/notify/smtp';
 import type { TelegramParsemode } from '@/utils/api/types/config/notify/telegram';
-import type {
-	CustomHeaders,
-	EmptyObject,
-} from '@/utils/api/types/config/shared';
+import type { EmptyObject, Headers } from '@/utils/api/types/config/shared';
 
 export type NotifyTypesMap = {
 	bark: NotifyBark;
@@ -252,7 +249,7 @@ export type NotifyOpsGenie = NotifyBase & {
 		actions?: OpsGenieAction;
 		alias?: string;
 		description?: string;
-		details?: CustomHeaders;
+		details?: Headers;
 		entity?: string;
 		note?: string;
 		priority?: string;
@@ -372,7 +369,7 @@ export type NotifyGeneric = NotifyBase & {
 		host?: string;
 		port?: string;
 		path?: string;
-		custom_headers?: string;
+		headers?: string;
 		json_payload_vars?: string;
 		query_vars?: string;
 	};

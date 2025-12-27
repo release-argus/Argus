@@ -110,18 +110,18 @@ func TestWebHook_Try(t *testing.T) {
 func TestWebHook_Send(t *testing.T) {
 	// GIVEN a WebHook.
 	tests := map[string]struct {
-		customHeaders, wouldFail, useDelay, deleting, silentFails bool
-		delay                                                     string
-		retries                                                   int
-		notifiers                                                 shoutrrr.Shoutrrrs
-		stdoutRegex                                               string
+		headers, wouldFail, useDelay, deleting, silentFails bool
+		delay                                               string
+		retries                                             int
+		notifiers                                           shoutrrr.Shoutrrrs
+		stdoutRegex                                         string
 	}{
 		"successful webhook": {
 			stdoutRegex: `WebHook received`,
 		},
-		"successful webhook with custom_headers": {
-			stdoutRegex:   `WebHook received`,
-			customHeaders: true,
+		"successful webhook with headers": {
+			stdoutRegex: `WebHook received`,
+			headers:     true,
 		},
 		"does use delay": {
 			useDelay:    true,
@@ -137,10 +137,10 @@ func TestWebHook_Send(t *testing.T) {
 			wouldFail:   true,
 			stdoutRegex: `failed \d times to send`,
 		},
-		"failing webhook with custom_headers": {
-			wouldFail:     true,
-			customHeaders: true,
-			stdoutRegex:   `failed \d times to send`,
+		"failing webhook with headers": {
+			wouldFail:   true,
+			headers:     true,
+			stdoutRegex: `failed \d times to send`,
 		},
 		"retries multiple times": {
 			wouldFail:   true,
@@ -176,7 +176,7 @@ func TestWebHook_Send(t *testing.T) {
 				try++
 				contextDeadlineExceeded = false
 				releaseStdout := test.CaptureLog(logutil.Log)
-				webhook := testWebHook(tc.wouldFail, false, tc.customHeaders)
+				webhook := testWebHook(tc.wouldFail, false, tc.headers)
 				if tc.deleting {
 					webhook.ServiceStatus.SetDeleting()
 				}

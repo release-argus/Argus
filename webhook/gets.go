@@ -163,7 +163,7 @@ func (wh *WebHook) BuildRequest() (req *http.Request) {
 		SetGitLabParameter(req, wh.GetSecret())
 	}
 	req.Header.Set("Connection", "close")
-	wh.setCustomHeaders(req)
+	wh.setHeaders(req)
 	return
 }
 

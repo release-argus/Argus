@@ -94,7 +94,7 @@ func FromPayload(
 	s.Failed = &s.ServiceStatus.Fails.Shoutrrr
 
 	// Check the final Notify.
-	errs := s.CheckValues("")
+	errs, _ := s.CheckValues("")
 	if errs != nil {
 		return nil, errs
 	}

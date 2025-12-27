@@ -157,10 +157,7 @@ const EditServiceWebHook: FC<EditServiceWebHookProps> = ({
 					name={`${name}.secret`}
 					required
 				/>
-				<FieldKeyValMap
-					defaults={defaults?.custom_headers}
-					name={`${name}.custom_headers`}
-				/>
+				<FieldKeyValMap defaults={defaults?.headers} name={`${name}.headers`} />
 				<FieldText
 					colSize={{ xs: 6 }}
 					defaultVal={defaults?.desired_status_code}

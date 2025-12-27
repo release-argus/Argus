@@ -638,7 +638,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the values.
-	if err := newService.CheckValues(""); err != nil {
+	if err, _ := newService.CheckValues(""); err != nil {
 		logutil.Log.Error(err, logFrom, true)
 
 		failRequest(&w,

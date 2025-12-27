@@ -5,7 +5,7 @@ import type { HeaderPlaceholders } from '@/components/generic/field-shared';
 import { Button } from '@/components/ui/button';
 import { FieldGroup } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
-import type { CustomHeader } from '@/utils/api/types/config/shared';
+import type { Header } from '@/utils/api/types/config/shared';
 
 type FieldKeyValProps = {
 	/* The name of the field. */
@@ -13,7 +13,7 @@ type FieldKeyValProps = {
 	/* The column width on XS+ screens. */
 	colSpan: number;
 	/* The default values for the field. */
-	defaults?: CustomHeader;
+	defaults?: Header;
 	/* The function to remove the field. */
 	removeMe: () => void;
 	/* Optional placeholders for the key and value fields. */
