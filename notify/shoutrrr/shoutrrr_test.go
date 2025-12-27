@@ -757,6 +757,28 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 	}
 }
 
+func TestShoutrrr_BuildParams_ntfy(t *testing.T) {
+	// GIVEN a ntfy Shoutrrr with params.disabletlsverification.
+	shoutrrr := testShoutrrr(false, false)
+	wantValue := "true"
+	shoutrrr.Type = "ntfy"
+	shoutrrr.Params["disabletlsverification"] = wantValue
+
+	// WHEN BuildParams is called.
+	got := shoutrrr.BuildParams(serviceinfo.ServiceInfo{})
+
+	// THEN the disabletlsverification param is not present.
+	if gotValue, ok := (*got)["disabletlsverification"]; ok {
+		t.Errorf(`%s\ndisabletlsverification param should not be present\nwant: ""\ngot:  %q`,
+			packageName, gotValue)
+	}
+	// AND disabletls param is present.
+	if gotValue := (*got)["disabletls"]; gotValue != wantValue {
+		t.Errorf("%s\ndisabletls param mismatch\nwant: %q\ngot:  %q",
+			packageName, wantValue, gotValue)
+	}
+}
+
 func TestShoutrrr_parseSend(t *testing.T) {
 	// GIVEN a possible list of errors from a send operation.
 	tests := map[string]struct {

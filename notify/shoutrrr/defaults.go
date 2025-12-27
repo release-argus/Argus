@@ -105,8 +105,8 @@ func (s *ShoutrrrsDefaults) Default() {
 		map[string]string{
 			"host": "ntfy.sh"},
 		map[string]string{
-			"disabletls": "no",
-			"title":      "Argus"})
+			"disabletlsverification": "no",
+			"title":                  "Argus"})
 	defaults["opsgenie"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),

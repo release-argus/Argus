@@ -359,7 +359,7 @@ export const notifyNtfySchema = notifyBaseSchema.extend({
 			cache: preprocessBooleanFromString,
 			click: z.string().default(''),
 			delay: z.string().default(''),
-			disabletls: preprocessBooleanFromString,
+			disabletlsverification: preprocessBooleanFromString,
 			email: z.string().default(''),
 			filename: z.string().default(''),
 			firebase: preprocessBooleanFromString,
@@ -377,7 +377,7 @@ export const notifyNtfySchema = notifyBaseSchema.extend({
 			cache: null,
 			click: '',
 			delay: '',
-			disabletls: null,
+			disabletlsverification: null,
 			email: '',
 			filename: '',
 			firebase: null,
@@ -402,7 +402,7 @@ export type NotifyNtfySchema = z.infer<typeof notifyNtfySchema>;
 const notifyNtfySchemaOutgoing = notifyNtfySchema.extend({
 	params: notifyNtfySchema.shape.params.unwrap().extend({
 		cache: preprocessStringFromBoolean,
-		disabletls: preprocessStringFromBoolean,
+		disabletlsverification: preprocessStringFromBoolean,
 		firebase: preprocessStringFromBoolean,
 		priority: preprocessStringFromZodEnum(NtfyPriorityZodEnum),
 		scheme: preprocessStringFromZodEnum(NtfySchemeZodEnum),
