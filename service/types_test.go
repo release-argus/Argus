@@ -35,6 +35,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	lv_web "github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -1349,7 +1350,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 					BasicAuth: &dv_web.BasicAuth{
 						Username: "foo",
 						Password: "bar"},
-					Headers: []dv_web.Header{
+					Headers: shared.Headers{
 						{Key: "foo", Value: "bar"},
 						{Key: "something", Value: "else"}},
 					Body:          "removed_on_verify",
@@ -1973,7 +1974,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 					BasicAuth: &dv_web.BasicAuth{
 						Username: "foo",
 						Password: "bar"},
-					Headers: []dv_web.Header{
+					Headers: shared.Headers{
 						{Key: "foo", Value: "bar"},
 						{Key: "something", Value: "else"}},
 					Body:          "removed_on_verify",

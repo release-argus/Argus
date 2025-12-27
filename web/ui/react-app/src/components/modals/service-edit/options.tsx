@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import { BooleanWithDefault } from '@/components/generic';
 import { FieldCheck, FieldText } from '@/components/generic/field';
 import {
@@ -57,4 +56,4 @@ const EditServiceOptions = () => {
 	);
 };
 
-export default memo(EditServiceOptions);
+export default EditServiceOptions;

@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { BooleanWithDefault } from '@/components/generic';
 import {
@@ -203,4 +203,4 @@ const DeployedVersionURL = () => {
 	);
 };
 
-export default memo(DeployedVersionURL);
+export default DeployedVersionURL;

@@ -1,7 +1,11 @@
-import { memo, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { BooleanWithDefault } from '@/components/generic';
-import { FieldSelect, FieldText } from '@/components/generic/field';
+import {
+	FieldKeyValMap,
+	FieldSelect,
+	FieldText,
+} from '@/components/generic/field';
 import EditServiceLatestVersionRequire from '@/components/modals/service-edit/latest-version-require';
 import FormURLCommands from '@/components/modals/service-edit/latest-version-urlcommands';
 import VersionWithLink from '@/components/modals/service-edit/version-with-link';
@@ -90,11 +94,14 @@ const EditServiceLatestVersion = () => {
 						/>
 					</>
 				) : (
-					<BooleanWithDefault
-						defaultValue={defaults?.allow_invalid_certs}
-						label="Allow Invalid Certs"
-						name={`${name}.allow_invalid_certs`}
-					/>
+					<>
+						<BooleanWithDefault
+							defaultValue={defaults?.allow_invalid_certs}
+							label="Allow Invalid Certs"
+							name={`${name}.allow_invalid_certs`}
+						/>
+						<FieldKeyValMap name={`${name}.headers`} />
+					</>
 				)}
 				<FormURLCommands />
 				<EditServiceLatestVersionRequire />
@@ -105,4 +112,4 @@ const EditServiceLatestVersion = () => {
 	);
 };
 
-export default memo(EditServiceLatestVersion);
+export default EditServiceLatestVersion;

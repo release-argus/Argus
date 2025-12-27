@@ -35,7 +35,8 @@ import (
 // oldSecretRefs contains the indexes to use for SecretValues.
 type oldSecretRefs struct {
 	ID                    string                           `json:"id"`
-	DeployedVersionLookup shared.DVSecretRef               `json:"deployed_version,omitempty"`
+	LatestVersion         shared.VSecretRef                `json:"latest_version,omitempty"`
+	DeployedVersionLookup shared.VSecretRef                `json:"deployed_version,omitempty"`
 	Notify                map[string]shared.OldStringIndex `json:"notify,omitempty"`
 	WebHook               map[string]shared.WHSecretRef    `json:"webhook,omitempty"`
 }
@@ -44,7 +45,8 @@ type oldSecretRefs struct {
 func (o *oldSecretRefs) UnmarshalJSON(data []byte) error {
 	aux := struct {
 		ID                    string                  `json:"id"`
-		DeployedVersionLookup shared.DVSecretRef      `json:"deployed_version,omitempty"`
+		LatestVersion         shared.VSecretRef       `json:"latest_version,omitempty"`
+		DeployedVersionLookup shared.VSecretRef       `json:"deployed_version,omitempty"`
 		Notify                []shared.OldStringIndex `json:"notify,omitempty"`
 		WebHook               []shared.WHSecretRef    `json:"webhook,omitempty"`
 	}{}
@@ -151,7 +153,7 @@ func FromPayload(
 }
 
 // giveSecretsLatestVersion from the `oldLatestVersion`.
-func (s *Service) giveSecretsLatestVersion(oldLatestVersion latestver.Lookup) {
+func (s *Service) giveSecretsLatestVersion(oldLatestVersion latestver.Lookup, secretRefs *shared.VSecretRef) {
 	if s == nil || oldLatestVersion == nil {
 		return
 	}
@@ -166,11 +168,11 @@ func (s *Service) giveSecretsLatestVersion(oldLatestVersion latestver.Lookup) {
 		}
 	}
 
-	s.LatestVersion.Inherit(oldLatestVersion)
+	s.LatestVersion.InheritSecrets(oldLatestVersion, secretRefs)
 }
 
 // giveSecretsDeployedVersion from the `oldDeployedVersion`.
-func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion deployedver.Lookup, secretRefs *shared.DVSecretRef) {
+func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion deployedver.Lookup, secretRefs *shared.VSecretRef) {
 	if s.DeployedVersionLookup == nil || oldDeployedVersion == nil {
 		return
 	}
@@ -278,7 +280,7 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 
 	// Latest Version.
 	if s.LatestVersion != nil {
-		s.giveSecretsLatestVersion(oldService.LatestVersion)
+		s.giveSecretsLatestVersion(oldService.LatestVersion, &secretRefs.LatestVersion)
 	}
 	// Deployed Version.
 	s.giveSecretsDeployedVersion(oldService.DeployedVersionLookup, &secretRefs.DeployedVersionLookup)

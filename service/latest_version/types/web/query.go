@@ -25,6 +25,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
+	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
@@ -98,6 +99,9 @@ func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 
 	// Set headers.
 	req.Header.Set("Connection", "close")
+	for _, header := range l.Headers {
+		req.Header.Set(util.EvalEnvVars(header.Key), util.EvalEnvVars(header.Value))
+	}
 
 	// Send the request.
 	client := &http.Client{Transport: customTransport}

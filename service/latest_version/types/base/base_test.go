@@ -427,8 +427,8 @@ func TestInherit(t *testing.T) {
 					packageName, err)
 			}
 
-			// WHEN Inherit is called.
-			toLookup.Inherit(fromLookup)
+			// WHEN InheritSecrets is called.
+			toLookup.InheritSecrets(fromLookup, nil)
 
 			// THEN the Docker.(QueryToken|ValidUntil) are copied over when expected.
 			if tc.inheritDockerToken {

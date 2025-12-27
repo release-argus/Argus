@@ -24,6 +24,7 @@ import (
 
 	"github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 )
@@ -32,7 +33,8 @@ import (
 type Lookup struct {
 	base.Lookup `json:",inline" yaml:",inline"` // Base struct for a Lookup.
 
-	AllowInvalidCerts *bool `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Allow invalid SSL certificates.
+	AllowInvalidCerts *bool          `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Allow invalid SSL certificates.
+	Headers           shared.Headers `json:"headers,omitempty" yaml:"headers,omitempty"`                         // OPTIONAL: request headers.
 }
 
 // New returns a new Lookup from a string in a given format (json/yaml).
@@ -89,4 +91,13 @@ func (l *Lookup) unmarshal(unmarshalFunc func(interface{}) error) error {
 	l.Type = "url"
 
 	return nil
+}
+
+// InheritSecrets will inherit secrets from the `otherLookup`.
+func (l *Lookup) InheritSecrets(otherLookup base.Interface, secretRefs *shared.VSecretRef) {
+	l.Lookup.InheritSecrets(otherLookup, secretRefs)
+
+	if otherL, ok := otherLookup.(*Lookup); ok && secretRefs != nil {
+		l.Headers.InheritSecrets(otherL.Headers, secretRefs.Headers)
+	}
 }

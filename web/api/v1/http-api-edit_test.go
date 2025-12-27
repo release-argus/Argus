@@ -37,6 +37,7 @@ import (
 	"github.com/release-argus/Argus/service"
 	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
 	lv_web "github.com/release-argus/Argus/service/latest_version/types/web"
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
@@ -389,6 +390,60 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				statusCode:    http.StatusBadRequest,
 				latestVersion: ""},
 		},
+		"use secretRefs": {
+			svc: test.IgnoreError(t, func() (*service.Service, error) {
+				base := testService("TestHTTP_LatestVersionRefresh", false)
+				if lv, ok := base.LatestVersion.(*lv_web.Lookup); ok {
+					lv.URL = test.LookupWithHeaderAuth["url_valid"]
+					lv.Headers = shared.Headers{
+						{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]}}
+				}
+				return base, nil
+			}),
+			params: map[string]string{
+				"overrides": test.TrimJSON(`{
+						"headers": [
+							{
+								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+								"value": "` + util.SecretValue + `",
+								"old_index": 0
+							}
+						]
+					}`,
+				),
+			},
+			wants: wants{
+				bodyRegex:  `\{"version":"ver[0-9.]+",.*"\}`,
+				statusCode: http.StatusOK,
+				announce:   false},
+		},
+		"invalid secretRefs": {
+			svc: test.IgnoreError(t, func() (*service.Service, error) {
+				base := testService("TestHTTP_LatestVersionRefresh", false)
+				if lv, ok := base.LatestVersion.(*lv_web.Lookup); ok {
+					lv.URL = test.LookupWithHeaderAuth["url_valid"]
+					lv.Headers = shared.Headers{
+						{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]}}
+				}
+				return base, nil
+			}),
+			params: map[string]string{
+				"overrides": test.TrimJSON(`{
+						"headers": [
+							{
+								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+								"value": "` + util.SecretValue + `",
+								"old_index": [0]
+							}
+						]
+					}`,
+				),
+			},
+			wants: wants{
+				bodyRegex:  `cannot unmarshal array into Go struct field`,
+				statusCode: http.StatusBadRequest,
+				announce:   false},
+		},
 	}
 
 	for name, tc := range tests {
@@ -490,11 +545,11 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			nilDeployedVersion: true,
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
-					"type":                "url",
-					"url":                 "` + test.LookupJSON["url_invalid"] + `",
-					"json":                "nonSemVer",
-					"allow_invalid_certs": true
-				}`)},
+				"type":                "url",
+				"url":                 "` + test.LookupJSON["url_invalid"] + `",
+				"json":                "nonSemVer",
+				"allow_invalid_certs": true
+			}`)},
 			wants: wants{
 				bodyRegex: fmt.Sprintf(`\{"version":%q`,
 					testSVC.Status.DeployedVersion()),
@@ -505,10 +560,10 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			nilDeployedVersion: true,
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
-					"url":                 "` + test.LookupJSON["url_invalid"] + `",
-					"json":                "nonSemVer",
-					"allow_invalid_certs": true
-				}`)},
+			"url":                 "` + test.LookupJSON["url_invalid"] + `",
+			"json":                "nonSemVer",
+			"allow_invalid_certs": true
+			}`)},
 			wants: wants{
 				bodyRegex:  `\{"message":"missing required parameter: overrides.type"`,
 				statusCode: http.StatusBadRequest},
@@ -574,19 +629,24 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 		},
 		"invalid JSON - existing DVL": {
 			params: map[string]string{
-				"overrides": `"method": "GET"}`,
+				"overrides": `{"json": "x.y"}`,
 			},
 			wants: wants{
-				bodyRegex:  `^\{"message":"failed to unmarshal deployedver.Lookup:[^"]+"\}$`,
+				bodyRegex:  `^\{"message":"failed to find value for \\"x\.y\\" in .*"\}$`,
 				statusCode: http.StatusBadRequest},
 		},
 		"invalid JSON - new DVL": {
 			nilDeployedVersion: true,
 			params: map[string]string{
-				"overrides": `{"type": "url", "method}}`,
+				"overrides": `{
+					"type": "url",
+					"method": "GET",
+					"url": "` + test.LookupJSON["url_valid"] + `",
+					"json": "x.y"
+				}`,
 			},
 			wants: wants{
-				bodyRegex:  `^\{"message":"invalid JSON[^"]+"\}$`,
+				bodyRegex:  `^\{"message":"failed to find value for \\"x\.y\\" in .*"\}$`,
 				statusCode: http.StatusBadRequest},
 		},
 		"invalid vars - CheckValues fail": {
@@ -612,6 +672,58 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				bodyRegex:       `\{"message":"missing required query parameter: service_id"\}`,
 				statusCode:      http.StatusBadRequest,
 				deployedVersion: ""},
+		},
+		"use secretRefs": {
+			svc: test.IgnoreError(t, func() (*service.Service, error) {
+				base := testService("TestHTTP_LatestVersionRefresh", false)
+				if dv, ok := base.DeployedVersionLookup.(*dv_web.Lookup); ok {
+					dv.URL = test.LookupWithHeaderAuth["url_valid"]
+					dv.Headers = shared.Headers{
+						{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]}}
+				}
+				return base, nil
+			}),
+			params: map[string]string{
+				"overrides": test.TrimJSON(`{
+						"headers": [
+							{
+								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+								"value": "` + util.SecretValue + `",
+								"old_index": 0
+							}
+						]
+					}`,
+				),
+			},
+			wants: wants{
+				bodyRegex:  `\{"version":"ver[0-9.]+",.*"\}`,
+				statusCode: http.StatusOK},
+		},
+		"invalid secretRefs": {
+			svc: test.IgnoreError(t, func() (*service.Service, error) {
+				base := testService("TestHTTP_LatestVersionRefresh", false)
+				if dv, ok := base.DeployedVersionLookup.(*dv_web.Lookup); ok {
+					dv.URL = test.LookupWithHeaderAuth["url_valid"]
+					dv.Headers = shared.Headers{
+						{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]}}
+				}
+				return base, nil
+			}),
+			params: map[string]string{
+				"overrides": test.TrimJSON(`{
+						"headers": [
+							{
+								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+								"value": "` + util.SecretValue + `",
+								"old_index": [0]
+							}
+						]
+					}`,
+				),
+			},
+			wants: wants{
+				bodyRegex:  `cannot unmarshal array into Go struct field`,
+				statusCode: http.StatusBadRequest},
 		},
 	}
 
@@ -1243,29 +1355,33 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 	_ = api.Config.AddService("", svc)
 	// Drain db from the Service addition.
 	<-api.Config.DatabaseChannel
-	tests := map[string]struct {
+	tests := []struct {
+		name      string
 		serviceID string
 		wants     wants
 	}{
-		"unknown service": {
+		{
+			name:      "unknown service",
 			serviceID: "foo",
 			wants: wants{
 				bodyRegex:  `{"message":"delete .* failed, service not found"`,
 				statusCode: http.StatusNotFound},
-		},
-		"delete service": {
+		}, {
+			name:      "delete service",
 			serviceID: svc.ID,
 			wants: wants{
 				bodyRegex:  `\{"message":"deleted service[^}]+"\}`,
 				statusCode: http.StatusOK},
 		},
-		"delete service again": {
+		{
+			name:      "delete service again",
 			serviceID: svc.ID,
 			wants: wants{
 				bodyRegex:  `{"message":"delete .* failed, service not found"`,
 				statusCode: http.StatusNotFound},
 		},
-		"no service_id provided": {
+		{
+			name:      "no service_id provided",
 			serviceID: "",
 			wants: wants{
 				bodyRegex:  `{"message":"missing required query parameter: service_id"}`,
@@ -1273,8 +1389,8 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() -- Cannot run in parallel since we're sharing the API.
 
 			target := "/api/v1/service/delete"

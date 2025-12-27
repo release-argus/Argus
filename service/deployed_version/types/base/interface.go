@@ -41,7 +41,7 @@ type Interface interface {
 	Query(metrics bool, logFrom logutil.LogFrom) (err error)
 
 	// InheritSecrets will inherit secrets from the `otherLookup`.
-	InheritSecrets(otherLookup Interface, secretRefs *shared.DVSecretRef)
+	InheritSecrets(otherLookup Interface, secretRefs *shared.VSecretRef)
 
 	// Helpers:
 

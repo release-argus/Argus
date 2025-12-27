@@ -121,7 +121,7 @@ func ChangeType(newType string, lookup base.Interface, overridesJSON string) (ba
 		return nil, err
 	}
 
-	newStruct.Inherit(lookup)
+	newStruct.InheritSecrets(lookup, nil)
 
 	// Apply overrides.
 	if overridesJSON != "" {

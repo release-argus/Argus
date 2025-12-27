@@ -1,5 +1,5 @@
 import { Minus, Plus } from 'lucide-react';
-import { memo, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useFieldArray } from 'react-hook-form';
 import { FieldLabel } from '@/components/generic/field';
 import FormURLCommand from '@/components/modals/service-edit/latest-version-urlcommand';
@@ -86,4 +86,4 @@ const FormURLCommands = () => {
 	);
 };
 
-export default memo(FormURLCommands);
+export default FormURLCommands;

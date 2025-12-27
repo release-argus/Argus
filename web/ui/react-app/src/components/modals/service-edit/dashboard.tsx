@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'lucide-react';
-import { type FC, memo, useMemo } from 'react';
+import { type FC, useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { BooleanWithDefault } from '@/components/generic';
 import {
@@ -153,4 +153,4 @@ const EditServiceDashboard: FC = () => {
 	);
 };
 
-export default memo(EditServiceDashboard);
+export default EditServiceDashboard;

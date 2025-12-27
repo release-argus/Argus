@@ -17,12 +17,13 @@ package github
 
 import (
 	"github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/service/shared"
 )
 
 // Inherit values from `fromLookup` if the values should query the same source.
 //
 //	Values: githubData, Require.
-func (l *Lookup) Inherit(fromLookup base.Interface) {
+func (l *Lookup) InheritSecrets(fromLookup base.Interface, secretRefs *shared.VSecretRef) {
 	// Check whether inheriting from a GitHub Lookup.
 	if newGitHubLookup, ok := fromLookup.(*Lookup); ok && newGitHubLookup.URL == l.URL {
 		// Querying the same GitHub repo, and the ETag differs.
@@ -33,5 +34,5 @@ func (l *Lookup) Inherit(fromLookup base.Interface) {
 		}
 	}
 
-	l.Lookup.Inherit(fromLookup)
+	l.Lookup.InheritSecrets(fromLookup, secretRefs)
 }

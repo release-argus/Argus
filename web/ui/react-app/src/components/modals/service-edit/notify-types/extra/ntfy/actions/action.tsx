@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { type FC, memo } from 'react';
+import type { FC } from 'react';
 import { useWatch } from 'react-hook-form';
 import { FieldSelect, FieldText } from '@/components/generic/field';
 import RenderAction from '@/components/modals/service-edit/notify-types/extra/ntfy/actions/render';
@@ -73,4 +73,4 @@ const NtfyAction: FC<NtfyActionProps> = ({ name, defaults, removeMe }) => {
 	);
 };
 
-export default memo(NtfyAction);
+export default NtfyAction;

@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { FieldSelect } from '@/components/generic/field';
 import DeployedVersionManual from '@/components/modals/service-edit/deployed-version-manual';
@@ -62,4 +61,4 @@ const EditServiceDeployedVersion = () => {
 	);
 };
 
-export default memo(EditServiceDeployedVersion);
+export default EditServiceDeployedVersion;

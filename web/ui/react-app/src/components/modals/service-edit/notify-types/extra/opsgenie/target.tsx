@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { type FC, memo } from 'react';
+import type { FC } from 'react';
 import { useWatch } from 'react-hook-form';
 import { FieldSelect, FieldText } from '@/components/generic/field';
 import { Button } from '@/components/ui/button';
@@ -71,4 +71,4 @@ const OpsGenieTarget: FC<OpsGenieTargetProps> = ({
 	);
 };
 
-export default memo(OpsGenieTarget);
+export default OpsGenieTarget;
