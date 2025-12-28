@@ -189,10 +189,10 @@ func TestWebHook_Send(t *testing.T) {
 				if tc.retries > 0 {
 					go func() {
 						fails := testutil.ToFloat64(metric.WebHookResultTotal.WithLabelValues(
-							webhook.ID, "FAIL", svcInfo.ID))
+							webhook.ID, metric.ActionResultFail, svcInfo.ID))
 						for fails < float64(tc.retries) {
 							fails = testutil.ToFloat64(metric.WebHookResultTotal.WithLabelValues(
-								webhook.ID, "FAIL", svcInfo.ID))
+								webhook.ID, metric.ActionResultFail, svcInfo.ID))
 							time.Sleep(time.Millisecond * 200)
 						}
 						t.Logf("%s - Failed %d times",

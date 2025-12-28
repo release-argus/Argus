@@ -367,6 +367,7 @@ func TestService_Init(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			if tc.defaults == nil {
 				tc.defaults = &Defaults{}
@@ -516,211 +517,247 @@ func TestService_Init(t *testing.T) {
 
 func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 	// GIVEN a Service.
-	tests := map[string]struct {
+	tests := []struct {
+		name               string
 		nilDeployedVersion bool
 		nilCommand         bool
 		nilNotify          bool
 		nilWebHook         bool
 	}{
-		"all defined": {},
-		"nil DeployedVersionLookup": {
+		{
+			name: "all defined",
+		},
+		{
+			name:               "nil DeployedVersionLookup",
 			nilDeployedVersion: true},
-		"nil Command": {
+		{
+			name:       "nil Command",
 			nilCommand: true},
-		"nil Notify": {
+		{
+			name:      "nil Notify",
 			nilNotify: true},
-		"nil WebHook": {
+		{
+			name:       "nil WebHook",
 			nilWebHook: true},
-		"nil all": {
+		{
+			name:               "nil all",
 			nilDeployedVersion: true,
 			nilCommand:         true,
 			nilNotify:          true,
 			nilWebHook:         true},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're testing metrics.
 
-			testCommand := command.Command{"ls"}
-			testNotify := shoutrrr_test.Shoutrrr(false, false)
-			testWebHook := webhook_test.WebHook(false, false, false)
-			svc := &Service{
-				ID:                    "TestService_InitMetrics_ResetMetrics_DeleteMetrics--" + name,
-				LatestVersion:         testLatestVersion(t, "github", false),
-				DeployedVersionLookup: testDeployedVersionLookup(t, false),
-				Command: command.Commands{
-					testCommand},
-				Notify: shoutrrr.Shoutrrrs{
-					testNotify.ID: testNotify},
-				WebHook: webhook.WebHooks{
-					testWebHook.ID: testWebHook},
-			}
+			activeStates := []bool{true, false}
+			for _, active := range activeStates {
+				testCommand := command.Command{"ls"}
+				testNotify := shoutrrr_test.Shoutrrr(false, false)
+				testWebHook := webhook_test.WebHook(false, false, false)
+				svc := &Service{
+					ID:                    "TestService_InitMetrics_ResetMetrics_DeleteMetrics--" + tc.name,
+					LatestVersion:         testLatestVersion(t, "github", false),
+					DeployedVersionLookup: testDeployedVersionLookup(t, false),
+					Command: command.Commands{
+						testCommand},
+					Notify: shoutrrr.Shoutrrrs{
+						testNotify.ID: testNotify},
+					WebHook: webhook.WebHooks{
+						testWebHook.ID: testWebHook},
+				}
 
-			// Init the service.
-			svc.Init(
-				&Defaults{}, &Defaults{},
-				&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
-				&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
-			)
-			svc.Status.SetLatestVersion("0.0.2", "", false)
-			svc.Status.SetDeployedVersion("0.0.2", "", false)
+				// Init the service.
+				svc.Init(
+					&Defaults{}, &Defaults{},
+					&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
+					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
+				)
+				svc.Options.Active = &active
+				svc.Status.SetLatestVersion("0.0.2", "", false)
+				svc.Status.SetDeployedVersion("0.0.2", "", false)
 
-			// nil the vars.
-			var deployedVersionType string
-			if tc.nilDeployedVersion {
-				svc.DeployedVersionLookup = nil
-			} else {
-				deployedVersionType = svc.DeployedVersionLookup.GetType()
-			}
-			if tc.nilCommand {
-				svc.Command = nil
-			}
-			if tc.nilNotify {
-				svc.Notify = nil
-			}
-			if tc.nilWebHook {
-				svc.WebHook = nil
-			}
+				// nil the vars.
+				var deployedVersionType string
+				if tc.nilDeployedVersion {
+					svc.DeployedVersionLookup = nil
+				} else {
+					deployedVersionType = svc.DeployedVersionLookup.GetType()
+				}
+				if tc.nilCommand {
+					svc.Command = nil
+				}
+				if tc.nilNotify {
+					svc.Notify = nil
+				}
+				if tc.nilWebHook {
+					svc.WebHook = nil
+				}
 
-			// metrics:
-			// 	latest_version_query_result_total.
-			latestVersionMetric := metric.LatestVersionIsDeployed.WithLabelValues(
-				svc.ID)
-			// 	deployed_version_query_result_last.
-			deployedVersionMetric := metric.DeployedVersionQueryResultLast.WithLabelValues(
-				svc.ID, deployedVersionType)
-			// 	command_result_total.
-			commandMetric := metric.CommandResultTotal.WithLabelValues(
-				testCommand.String(), "SUCCESS", svc.ID)
-			// 	notify_result_total.
-			notifyMetric := metric.NotifyResultTotal.WithLabelValues(
-				testNotify.ID, "SUCCESS", svc.ID, testNotify.GetType())
-			// 	webhook_result_total.
-			webhookMetric := metric.WebHookResultTotal.WithLabelValues(
-				testWebHook.ID, "SUCCESS", svc.ID)
-			// 	service_count_total.
-			serviceCountTotal := metric.ServiceCountCurrent
-			initialServiceCountCurrent := testutil.ToFloat64(serviceCountTotal)
+				// metrics:
+				// 	latest_version_query_result_total.
+				latestVersionMetric := metric.LatestVersionIsDeployed.WithLabelValues(
+					svc.ID)
+				// 	deployed_version_query_result_last.
+				deployedVersionMetric := metric.DeployedVersionQueryResultLast.WithLabelValues(
+					svc.ID, deployedVersionType)
+				// 	command_result_total.
+				commandMetric := metric.CommandResultTotal.WithLabelValues(
+					testCommand.String(), metric.ActionResultSuccess, svc.ID)
+				// 	notify_result_total.
+				notifyMetric := metric.NotifyResultTotal.WithLabelValues(
+					testNotify.ID, metric.ActionResultSuccess, svc.ID, testNotify.GetType())
+				// 	webhook_result_total.
+				webhookMetric := metric.WebHookResultTotal.WithLabelValues(
+					testWebHook.ID, metric.ActionResultSuccess, svc.ID)
+				// 	service_count_current.
+				serviceCountCurrentActive := metric.ServiceCountCurrent.WithLabelValues(
+					metric.ServiceStateActive)
+				initialServiceCountCurrentActive := testutil.ToFloat64(serviceCountCurrentActive)
+				serviceCountCurrentInactive := metric.ServiceCountCurrent.WithLabelValues(
+					metric.ServiceStateInactive)
+				initialServiceCountCurrentInactive := testutil.ToFloat64(serviceCountCurrentInactive)
 
-			// #################################
-			// WHEN initMetrics is called on it.
-			// #################################
-			svc.initMetrics()
+				// #################################
+				// WHEN initMetrics is called on it.
+				// #################################
+				svc.initMetrics()
 
-			// THEN the metrics are created:
-			want := float64(3)
-			oldWant := want
-			// 	latest_version_is_deployed.
-			latestVersionMetric.Set(want)
-			if got := testutil.ToFloat64(latestVersionMetric); got != want {
-				t.Errorf("%s\nlatestVersionMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
-					packageName, want, got)
-			}
-			// 	deployed_version_query_result_last.
-			if tc.nilDeployedVersion {
+				// THEN the metrics are created:
+				want := float64(3)
+				oldWant := want
+				// 	latest_version_is_deployed.
+				if !active {
+					want = 0
+				} else {
+					latestVersionMetric.Set(want)
+				}
+				if got := testutil.ToFloat64(latestVersionMetric); got != want {
+					t.Errorf("%s\nlatestVersionMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
+						packageName, want, got)
+				}
+				// 	deployed_version_query_result_last.
+				if tc.nilDeployedVersion || !active {
+					want = 0
+				} else {
+					deployedVersionMetric.Set(want)
+				}
+				if got := testutil.ToFloat64(deployedVersionMetric); got != want {
+					t.Errorf("%s\ndeployedVersionMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
+						packageName, want, got)
+				}
+				want = oldWant
+				// 	command_result_total.
+				if tc.nilCommand || !active {
+					want = 0
+				} else {
+					commandMetric.Add(want)
+				}
+				if got := testutil.ToFloat64(commandMetric); got != want {
+					t.Errorf("%s\ncommandMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
+						packageName, want, got)
+				}
+				want = oldWant
+				// 	notify_result_total.
+				if tc.nilNotify || !active {
+					want = 0
+				} else {
+					notifyMetric.Add(want)
+				}
+				if got := testutil.ToFloat64(notifyMetric); got != want {
+					t.Errorf("%s\nnotifyMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
+						packageName, want, got)
+				}
+				want = oldWant
+				// 	webhook_result_total.
+				if tc.nilWebHook || !active {
+					want = 0
+				} else {
+					webhookMetric.Add(want)
+				}
+				if got := testutil.ToFloat64(webhookMetric); got != want {
+					t.Errorf("%s\nwebhookMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
+						packageName, want, got)
+				}
+				// 	service_count_current (active=true).
+				want = initialServiceCountCurrentActive
+				if active {
+					want++
+				}
+				if got := testutil.ToFloat64(serviceCountCurrentActive); got != want {
+					t.Errorf("%s\nServiceCountCurrent (active=true) mismatch after initMetrics()\nwant: %f\ngot:  %f",
+						packageName, want, got)
+				}
+				// 	service_count_current (active=false).
+				want = initialServiceCountCurrentInactive
+				if !active {
+					want++
+				}
+				if got := testutil.ToFloat64(serviceCountCurrentInactive); got != want {
+					t.Errorf("%s\nServiceCountCurrent (active=false) mismatch after initMetrics()\nwant: %f\ngot:  %f",
+						packageName, want, got)
+				}
+				want = oldWant
+
+				// ###################################
+				// WHEN deleteMetrics is called on it.
+				// ###################################
+				svc.deleteMetrics()
+
+				// metrics:
+				// 	latest_version_is_deployed.
+				latestVersionMetric = metric.LatestVersionIsDeployed.WithLabelValues(
+					svc.ID)
+				// 	deployed_version_query_result_last.
+				deployedVersionMetric = metric.DeployedVersionQueryResultLast.WithLabelValues(
+					svc.ID, deployedVersionType)
+				// 	command_result_total.
+				commandMetric = metric.CommandResultTotal.WithLabelValues(
+					testCommand.String(), metric.ActionResultSuccess, svc.ID)
+				// 	notify_result_total.
+				notifyMetric = metric.NotifyResultTotal.WithLabelValues(
+					testNotify.ID, metric.ActionResultSuccess, svc.ID, testNotify.GetType())
+				// 	webhook_result_total.
+				webhookMetric = metric.WebHookResultTotal.WithLabelValues(
+					testWebHook.ID, metric.ActionResultSuccess, svc.ID)
+
+				// THEN the metrics are deleted:
 				want = 0
-			} else {
-				deployedVersionMetric.Set(want)
-			}
-			if got := testutil.ToFloat64(deployedVersionMetric); got != want {
-				t.Errorf("%s\ndeployedVersionMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
-					packageName, want, got)
-			}
-			want = oldWant
-			// 	command_result_total.
-			if tc.nilCommand {
-				want = 0
-			} else {
-				commandMetric.Add(want)
-			}
-			if got := testutil.ToFloat64(commandMetric); got != want {
-				t.Errorf("%s\ncommandMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
-					packageName, want, got)
-			}
-			want = oldWant
-			// 	notify_result_total.
-			if tc.nilNotify {
-				want = 0
-			} else {
-				notifyMetric.Add(want)
-			}
-			if got := testutil.ToFloat64(notifyMetric); got != want {
-				t.Errorf("%s\nnotifyMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
-					packageName, want, got)
-			}
-			// 	webhook_result_total.
-			want = oldWant
-			if tc.nilWebHook {
-				want = 0
-			} else {
-				webhookMetric.Add(want)
-			}
-			if got := testutil.ToFloat64(webhookMetric); got != want {
-				t.Errorf("%s\nwebhookMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
-					packageName, want, got)
-			}
-			want = oldWant
-			// 	service_count_total.
-			wantServiceCountCurrent := initialServiceCountCurrent + 1
-			if got := testutil.ToFloat64(serviceCountTotal); got != wantServiceCountCurrent {
-				t.Errorf("%s\nServiceCountCurrent mismatch after initMetrics()\nwant: %f\ngot:  %f",
-					packageName, wantServiceCountCurrent, got)
-			}
-
-			// ###################################
-			// WHEN deleteMetrics is called on it.
-			// ###################################
-			svc.deleteMetrics()
-
-			// metrics:
-			// 	latest_version_is_deployed.
-			latestVersionMetric = metric.LatestVersionIsDeployed.WithLabelValues(
-				svc.ID)
-			// 	deployed_version_query_result_last.
-			deployedVersionMetric = metric.DeployedVersionQueryResultLast.WithLabelValues(
-				svc.ID, deployedVersionType)
-			// 	command_result_total.
-			commandMetric = metric.CommandResultTotal.WithLabelValues(
-				testCommand.String(), "SUCCESS", svc.ID)
-			// 	notify_result_total.
-			notifyMetric = metric.NotifyResultTotal.WithLabelValues(
-				testNotify.ID, "SUCCESS", svc.ID, testNotify.GetType())
-			// 	webhook_result_total.
-			webhookMetric = metric.WebHookResultTotal.WithLabelValues(
-				testWebHook.ID, "SUCCESS", svc.ID)
-
-			// THEN the metrics are deleted:
-			want = 0
-			// 	latest_version_is_deployed.
-			if got := testutil.ToFloat64(latestVersionMetric); got != want {
-				t.Errorf("%s\nlatestVersionMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
-					packageName, want, got)
-			}
-			// 	deployed_version_query_result_last.
-			if got := testutil.ToFloat64(deployedVersionMetric); got != want {
-				t.Errorf("%s\ndeployedVersionMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
-					packageName, want, got)
-			}
-			// 	command_result_total.
-			if got := testutil.ToFloat64(commandMetric); got != want {
-				t.Errorf("%s\ncommandMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
-					packageName, want, got)
-			}
-			// 	notify_result_total.
-			if got := testutil.ToFloat64(notifyMetric); got != want {
-				t.Errorf("%s\nnotifyMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
-					packageName, want, got)
-			}
-			// 	webhook_result_total.
-			if got := testutil.ToFloat64(webhookMetric); got != want {
-				t.Errorf("%s\nwebhookMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
-					packageName, want, got)
-			}
-			// 	service_count_total.
-			if got := testutil.ToFloat64(serviceCountTotal); got != initialServiceCountCurrent {
-				t.Errorf("%s\nServiceCountCurrent mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
-					packageName, wantServiceCountCurrent, got)
+				// 	latest_version_is_deployed.
+				if got := testutil.ToFloat64(latestVersionMetric); got != want {
+					t.Errorf("%s\nlatestVersionMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
+						packageName, want, got)
+				}
+				// 	deployed_version_query_result_last.
+				if got := testutil.ToFloat64(deployedVersionMetric); got != want {
+					t.Errorf("%s\ndeployedVersionMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
+						packageName, want, got)
+				}
+				// 	command_result_total.
+				if got := testutil.ToFloat64(commandMetric); got != want {
+					t.Errorf("%s\ncommandMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
+						packageName, want, got)
+				}
+				// 	notify_result_total.
+				if got := testutil.ToFloat64(notifyMetric); got != want {
+					t.Errorf("%s\nnotifyMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
+						packageName, want, got)
+				}
+				// 	webhook_result_total.
+				if got := testutil.ToFloat64(webhookMetric); got != want {
+					t.Errorf("%s\nwebhookMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
+						packageName, want, got)
+				}
+				// 	service_count_current.
+				if got := testutil.ToFloat64(serviceCountCurrentActive); got != initialServiceCountCurrentActive {
+					t.Errorf("%s\nServiceCountCurrent (active=true) (mismatch after initMetrics()\nwant: %f\ngot:  %f",
+						packageName, initialServiceCountCurrentActive, got)
+				}
+				if got := testutil.ToFloat64(serviceCountCurrentInactive); got != initialServiceCountCurrentInactive {
+					t.Errorf("%s\nServiceCountCurrent (active=false) (mismatch after initMetrics()\nwant: %f\ngot:  %f",
+						packageName, initialServiceCountCurrentInactive, got)
+				}
 			}
 		})
 	}

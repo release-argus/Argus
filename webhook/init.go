@@ -111,12 +111,12 @@ func (wh *WebHook) initMetrics() {
 		wh.ID,
 		wh.ServiceStatus.ServiceInfo.ID,
 		"",
-		"SUCCESS")
+		metric.ActionResultSuccess)
 	metric.InitPrometheusCounter(metric.WebHookResultTotal,
 		wh.ID,
 		wh.ServiceStatus.ServiceInfo.ID,
 		"",
-		"FAIL")
+		metric.ActionResultFail)
 }
 
 // DeleteMetrics of the WebHooks.
@@ -140,10 +140,10 @@ func (wh *WebHook) deleteMetrics() {
 		wh.ID,
 		wh.ServiceStatus.ServiceInfo.ID,
 		"",
-		"SUCCESS")
+		metric.ActionResultSuccess)
 	metric.DeletePrometheusCounter(metric.WebHookResultTotal,
 		wh.ID,
 		wh.ServiceStatus.ServiceInfo.ID,
 		"",
-		"FAIL")
+		metric.ActionResultFail)
 }

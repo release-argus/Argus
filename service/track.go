@@ -28,10 +28,10 @@ import (
 // Pause for s.Interval between each check.
 func (s *Service) Track() {
 	// Skip inactive Services.
+	s.initMetrics()
 	if !s.Options.GetActive() {
 		return
 	}
-	s.initMetrics()
 
 	// Wait until the interval has elapsed.
 	lastQueriedAt, _ := time.Parse(time.RFC3339, s.Status.LastQueried())
@@ -87,11 +87,9 @@ func (s *Services) Track(ordering *[]string, orderMutex *sync.RWMutex) {
 	defer orderMutex.RUnlock()
 	for _, key := range *ordering {
 		svc := (*s)[key]
-		// Skip inactive Services.
-		if !svc.Options.GetActive() {
-			continue
+		if svc.Options.GetActive() {
+			svc.Options.Active = nil
 		}
-		svc.Options.Active = nil
 
 		// Track this Service in an infinite loop goroutine.
 		go svc.Track()

@@ -139,7 +139,7 @@ func TestShoutrrr_Send(t *testing.T) {
 			}
 			gotMetric := testutil.ToFloat64(metric.NotifyResultTotal.WithLabelValues(
 				tc.shoutrrr.ID,
-				"SUCCESS",
+				metric.ActionResultSuccess,
 				svcStatus.ServiceInfo.ID,
 				tc.shoutrrr.GetType()))
 			if gotMetric != want {
@@ -153,7 +153,7 @@ func TestShoutrrr_Send(t *testing.T) {
 			}
 			gotMetric = testutil.ToFloat64(metric.NotifyResultTotal.WithLabelValues(
 				tc.shoutrrr.ID,
-				"FAIL",
+				metric.ActionResultFail,
 				svcStatus.ServiceInfo.ID,
 				tc.shoutrrr.GetType()))
 			if gotMetric != want {

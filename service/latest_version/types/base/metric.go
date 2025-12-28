@@ -33,12 +33,12 @@ func (l *Lookup) InitMetrics(parentLookup Interface) {
 		serviceID,
 		"",
 		lookupType,
-		"SUCCESS")
+		metric.ActionResultSuccess)
 	metric.InitPrometheusCounter(metric.LatestVersionQueryResultTotal,
 		serviceID,
 		"",
 		lookupType,
-		"FAIL")
+		metric.ActionResultFail)
 }
 
 // DeleteMetrics for this Lookup.
@@ -62,12 +62,12 @@ func (l *Lookup) DeleteMetrics(parentLookup Interface) {
 		serviceID,
 		"",
 		lookupType,
-		"SUCCESS")
+		metric.ActionResultSuccess)
 	metric.DeletePrometheusCounter(metric.LatestVersionQueryResultTotal,
 		serviceID,
 		"",
 		lookupType,
-		"FAIL")
+		metric.ActionResultFail)
 }
 
 // QueryMetrics sets the Prometheus metrics for the LatestVersion query.
@@ -81,7 +81,7 @@ func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
 			serviceID,
 			"",
 			parentLookup.GetType(),
-			"FAIL")
+			metric.ActionResultFail)
 		// Set liveness.
 		switch e := err.Error(); {
 		case strings.HasPrefix(e, "no releases were found matching"):
@@ -107,7 +107,7 @@ func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
 			serviceID,
 			"",
 			parentLookup.GetType(),
-			"SUCCESS")
+			metric.ActionResultSuccess)
 		metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
 			serviceID, parentLookup.GetType(),
 			1)

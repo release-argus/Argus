@@ -521,7 +521,7 @@ func (s *Shoutrrr) parseSend(
 			s.ID,
 			serviceName,
 			s.GetType(),
-			"SUCCESS")
+			metric.ActionResultSuccess)
 		s.Failed.Set(s.ID, &failed)
 		return
 	}
@@ -531,6 +531,6 @@ func (s *Shoutrrr) parseSend(
 		s.ID,
 		serviceName,
 		s.GetType(),
-		"FAIL")
+		metric.ActionResultFail)
 	return
 }

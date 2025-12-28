@@ -695,7 +695,7 @@ func TestQuery(t *testing.T) {
 				got := testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
 					serviceID,
 					lookup.Type,
-					"FAIL"))
+					metric.ActionResultFail))
 				if got != want {
 					t.Fatalf("%s\nLatestVersionQueryResultTotal - FAIL\nwant: %f\ngot:  %f",
 						packageName, want, got)
@@ -708,7 +708,7 @@ func TestQuery(t *testing.T) {
 				got = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
 					serviceID,
 					lookup.Type,
-					"SUCCESS"))
+					metric.ActionResultSuccess))
 				if got != want {
 					t.Fatalf("%s\nLatestVersionQueryResultTotal - SUCCESS\nwant: %f\ngot:  %f",
 						packageName, want, got)

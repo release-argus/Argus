@@ -49,14 +49,14 @@ func TestLookup_Metrics(t *testing.T) {
 	wantC := 2
 	if (gotC - hadC) != wantC {
 		t.Errorf("%s\nCount metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
-			packageName, wantC, gotC - hadC)
+			packageName, wantC, gotC-hadC)
 	}
 	// gauges:
 	gotG := testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
 	wantG := 0
 	if (gotG - hadG) != wantG {
 		t.Errorf("%s\nGauge metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
-			packageName, wantG, gotG - hadG)
+			packageName, wantG, gotG-hadG)
 	}
 	// But can be added.
 	lookup.QueryMetrics(&lookup, nil)
@@ -64,7 +64,7 @@ func TestLookup_Metrics(t *testing.T) {
 	wantG = 1
 	if (gotG - hadG) != wantG {
 		t.Errorf("%s\nGauge metrics mismatch after QueryMetrics()\nwant: %d\ngot:  %d",
-			packageName, wantG, gotG - hadG)
+			packageName, wantG, gotG-hadG)
 	}
 
 	// AND it can be deleted.
@@ -133,9 +133,9 @@ func TestLookup_QueryMetrics(t *testing.T) {
 
 			// AND the Prometheus metrics are initialised to 0.
 			counterSuccess := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-				lookup.GetServiceID(), lookup.GetType(), "SUCCESS"))
+				lookup.GetServiceID(), lookup.GetType(), metric.ActionResultSuccess))
 			counterFail := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-				lookup.GetServiceID(), lookup.GetType(), "FAIL"))
+				lookup.GetServiceID(), lookup.GetType(), metric.ActionResultFail))
 			gauge := testutil.ToFloat64(metric.DeployedVersionQueryResultLast.WithLabelValues(
 				lookup.GetServiceID(), lookup.GetType()))
 			if counterSuccess != 0 || counterFail != 0 || gauge != 0 {
@@ -157,9 +157,9 @@ func TestLookup_QueryMetrics(t *testing.T) {
 			}
 
 			counterSuccess = testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-				lookup.GetServiceID(), lookup.GetType(), "SUCCESS"))
+				lookup.GetServiceID(), lookup.GetType(), metric.ActionResultSuccess))
 			counterFail = testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-				lookup.GetServiceID(), lookup.GetType(), "FAIL"))
+				lookup.GetServiceID(), lookup.GetType(), metric.ActionResultFail))
 			gauge = testutil.ToFloat64(metric.DeployedVersionQueryResultLast.WithLabelValues(
 				lookup.GetServiceID(), lookup.GetType()))
 			if counterSuccess != wantSuccess ||

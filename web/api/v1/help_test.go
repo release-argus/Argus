@@ -21,13 +21,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/release-argus/Argus/command"
@@ -39,14 +36,14 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/test"
+	logtest "github.com/release-argus/Argus/test/log"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
 var (
 	packageName           = "api_v1"
-	loadMutex             sync.Mutex
-	loadCount             int
 	secretValueMarshalled string
 )
 

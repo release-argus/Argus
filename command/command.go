@@ -85,9 +85,9 @@ func (c *Controller) ExecIndex(
 	// Announce.
 	c.AnnounceCommand(index, serviceInfo)
 
-	metricResult := "SUCCESS"
+	metricResult := metric.ActionResultSuccess
 	if failed {
-		metricResult = "FAIL"
+		metricResult = metric.ActionResultFail
 		//#nosec G104 -- Errors are logged to CL
 		//nolint:errcheck // ^
 		c.Notifiers.Shoutrrr.Send(

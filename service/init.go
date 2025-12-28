@@ -164,6 +164,11 @@ func (s *Service) Init(
 
 // initMetrics will initialise the Prometheus metrics for the Service.
 func (s *Service) initMetrics() {
+	metric.ServiceCountCurrentAdd(s.Options.Active, 1)
+	if !s.Options.GetActive() {
+		return
+	}
+
 	if s.LatestVersion != nil {
 		s.LatestVersion.InitMetrics(s.LatestVersion)
 	}
@@ -174,11 +179,15 @@ func (s *Service) initMetrics() {
 	s.CommandController.InitMetrics()
 	s.WebHook.InitMetrics()
 	s.Status.InitMetrics()
-	metric.ServiceCountCurrent.Add(1)
 }
 
 // deleteMetrics will delete the Prometheus metrics for the Service.
 func (s *Service) deleteMetrics() {
+	metric.ServiceCountCurrentAdd(s.Options.Active, -1)
+	if !s.Options.GetActive() {
+		return
+	}
+
 	if s.LatestVersion != nil {
 		s.LatestVersion.DeleteMetrics(s.LatestVersion)
 	}
@@ -189,6 +198,4 @@ func (s *Service) deleteMetrics() {
 	s.CommandController.DeleteMetrics()
 	s.WebHook.DeleteMetrics()
 	s.Status.DeleteMetrics()
-
-	metric.ServiceCountCurrent.Add(-1)
 }
