@@ -511,16 +511,16 @@ func TestService_Track(t *testing.T) {
 				var passQ, failQ float64
 				if !tc.overrides.nilLatestVersion {
 					passQ = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-						svc.ID, svc.LatestVersion.GetType(), "SUCCESS"))
+						svc.ID, svc.LatestVersion.GetType(), metric.ActionResultSuccess))
 					failQ = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-						svc.ID, svc.LatestVersion.GetType(), "FAIL"))
+						svc.ID, svc.LatestVersion.GetType(), metric.ActionResultFail))
 				}
 				if passQ != float64(0) || failQ != float64(0) {
 					if tc.keepDeployedLookup {
 						passQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-							svc.ID, svc.DeployedVersionLookup.GetType(), "SUCCESS"))
+							svc.ID, svc.DeployedVersionLookup.GetType(), metric.ActionResultSuccess))
 						failQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-							svc.ID, svc.DeployedVersionLookup.GetType(), "FAIL"))
+							svc.ID, svc.DeployedVersionLookup.GetType(), metric.ActionResultFail))
 						// if deployedVersionLookup hasn't queried, keep waiting.
 						if passQ != float64(0) || failQ != float64(0) {
 							break

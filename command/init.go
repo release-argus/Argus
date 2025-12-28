@@ -70,12 +70,12 @@ func (c *Controller) InitMetrics() {
 			name,
 			serviceID,
 			"",
-			"SUCCESS")
+			metric.ActionResultSuccess)
 		metric.InitPrometheusCounter(metric.CommandResultTotal,
 			name,
 			serviceID,
 			"",
-			"FAIL")
+			metric.ActionResultFail)
 	}
 }
 
@@ -95,12 +95,12 @@ func (c *Controller) DeleteMetrics() {
 			name,
 			serviceID,
 			"",
-			"SUCCESS")
+			metric.ActionResultSuccess)
 		metric.DeletePrometheusCounter(metric.CommandResultTotal,
 			name,
 			serviceID,
 			"",
-			"FAIL")
+			metric.ActionResultFail)
 	}
 }
 

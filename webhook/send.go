@@ -200,7 +200,7 @@ func (wh *WebHook) parseTry(err error, serviceID string, logFrom logutil.LogFrom
 			wh.ID,
 			serviceID,
 			"",
-			"SUCCESS")
+			metric.ActionResultSuccess)
 		failed := false
 		wh.SetFail(&failed)
 		wh.AnnounceSend()
@@ -213,5 +213,5 @@ func (wh *WebHook) parseTry(err error, serviceID string, logFrom logutil.LogFrom
 		wh.ID,
 		serviceID,
 		"",
-		"FAIL")
+		metric.ActionResultFail)
 }

@@ -21,14 +21,60 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	promclient "github.com/prometheus/client_model/go"
 
+	"github.com/release-argus/Argus/config"
 	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
 )
 
+type UpdateDetails struct {
+	ServiceName     string `json:"service_name"`
+	DeployedVersion string `json:"deployed_version"`
+	LatestVersion   string `json:"latest_version"`
+	LastChecked     string `json:"last_checked"`
+	AutoApprove     bool   `json:"auto_approve"`
+	Approved        bool   `json:"approved"`
+	Skipped         bool   `json:"skipped"`
+}
+
+func getUpdateDetails(cfg *config.Config, length int) []UpdateDetails {
+	updateDetails := make([]UpdateDetails, 0, length)
+	for _, id := range cfg.Order {
+		svc := cfg.Service[id]
+		svcInfo := svc.Status.GetServiceInfo()
+		// Skip services that have the latest version deployed.
+		if svcInfo.DeployedVersion == svcInfo.LatestVersion {
+			continue
+		}
+
+		updateApproved := svcInfo.ApprovedVersion == svcInfo.LatestVersion
+		updateSkipped := !updateApproved && svcInfo.ApprovedVersion == "SKIP_"+svcInfo.LatestVersion
+		updateDetails = append(updateDetails, UpdateDetails{
+			ServiceName:     id,
+			DeployedVersion: svcInfo.DeployedVersion,
+			LatestVersion:   svcInfo.LatestVersion,
+			LastChecked:     svc.Status.LastQueried(),
+			AutoApprove:     svc.Dashboard.GetAutoApprove(),
+			Approved:        updateApproved,
+			Skipped:         updateSkipped,
+		})
+	}
+
+	return updateDetails
+}
+
 type CountsResponse struct {
-	ServiceCount            int `json:"service_count"`
-	UpdatesCurrentAvailable int `json:"updates_available"`
-	UpdatesCurrentSkipped   int `json:"updates_skipped"`
+	ServiceCount            int             `json:"service_count"`
+	ServiceCountActive      int             `json:"service_count_active"`
+	ServiceCountInactive    int             `json:"service_count_inactive"`
+	UpdatesCurrentAvailable int             `json:"updates_available"`
+	UpdatesCurrentSkipped   int             `json:"updates_skipped"`
+	UpdateDetails           []UpdateDetails `json:"update_details,omitempty"`
+}
+
+func getGaugeValue(g prometheus.Gauge) float64 {
+	var m promclient.Metric
+	_ = g.Write(&m)
+	return m.GetGauge().GetValue()
 }
 
 func (api *API) httpCounts(w http.ResponseWriter, r *http.Request) {
@@ -37,38 +83,24 @@ func (api *API) httpCounts(w http.ResponseWriter, r *http.Request) {
 	resp := CountsResponse{}
 
 	// Get service count from metric.
-	serviceCountMetric := metric.ServiceCountCurrent
+	serviceCountActiveMetric := metric.ServiceCountCurrent.WithLabelValues(metric.ServiceStateActive)
+	serviceCountInactiveMetric := metric.ServiceCountCurrent.WithLabelValues(metric.ServiceStateInactive)
+	resp.ServiceCountActive = int(getGaugeValue(serviceCountActiveMetric))
+	resp.ServiceCountInactive = int(getGaugeValue(serviceCountInactiveMetric))
+	resp.ServiceCount = resp.ServiceCountActive + resp.ServiceCountInactive
 
 	// Get updates counts from metrics.
 	availableMetric := metric.UpdatesCurrent.WithLabelValues("AVAILABLE")
 	skippedMetric := metric.UpdatesCurrent.WithLabelValues("SKIPPED")
+	resp.UpdatesCurrentAvailable = int(getGaugeValue(availableMetric))
+	resp.UpdatesCurrentSkipped = int(getGaugeValue(skippedMetric))
 
-	// Channel to extract values.
-	metricCh := make(chan prometheus.Metric, 1)
-	defer close(metricCh)
-
-	// Service count.
-	serviceCountMetric.Collect(metricCh)
-	if m := <-metricCh; m != nil {
-		var parser promclient.Metric
-		_ = m.Write(&parser)
-		resp.ServiceCount = int(*parser.Gauge.Value)
-	}
-
-	// Available updates.
-	availableMetric.Collect(metricCh)
-	if m := <-metricCh; m != nil {
-		var parser promclient.Metric
-		_ = m.Write(&parser)
-		resp.UpdatesCurrentAvailable = int(*parser.Gauge.Value)
-	}
-
-	// Skipped updates.
-	skippedMetric.Collect(metricCh)
-	if m := <-metricCh; m != nil {
-		var parser promclient.Metric
-		_ = m.Write(&parser)
-		resp.UpdatesCurrentSkipped = int(*parser.Gauge.Value)
+	// Get update details from services.
+	updatesCount := resp.UpdatesCurrentAvailable + resp.UpdatesCurrentSkipped
+	if updatesCount > 0 {
+		api.Config.OrderMutex.RLock()
+		defer api.Config.OrderMutex.RUnlock()
+		resp.UpdateDetails = getUpdateDetails(api.Config, updatesCount)
 	}
 
 	api.writeJSON(w, resp, logFrom)

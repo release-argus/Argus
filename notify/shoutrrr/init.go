@@ -169,12 +169,12 @@ func (s *Shoutrrr) initMetrics() {
 		s.ID,
 		serviceID,
 		s.GetType(),
-		"SUCCESS")
+		metric.ActionResultSuccess)
 	metric.InitPrometheusCounter(metric.NotifyResultTotal,
 		s.ID,
 		serviceID,
 		s.GetType(),
-		"FAIL")
+		metric.ActionResultFail)
 }
 
 // DeleteMetrics for this Shoutrrrs.
@@ -199,10 +199,10 @@ func (s *Shoutrrr) deleteMetrics() {
 		s.ID,
 		serviceID,
 		s.GetType(),
-		"SUCCESS")
+		metric.ActionResultSuccess)
 	metric.DeletePrometheusCounter(metric.NotifyResultTotal,
 		s.ID,
 		serviceID,
 		s.GetType(),
-		"FAIL")
+		metric.ActionResultFail)
 }

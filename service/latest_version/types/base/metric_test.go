@@ -128,9 +128,9 @@ func TestLookup_QueryMetrics(t *testing.T) {
 
 			// AND the Prometheus metrics are initialised to 0.
 			counterSuccess := testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-				serviceID, lookup.GetType(), "SUCCESS"))
+				serviceID, lookup.GetType(), metric.ActionResultSuccess))
 			counterFail := testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-				serviceID, lookup.GetType(), "FAIL"))
+				serviceID, lookup.GetType(), metric.ActionResultFail))
 			gauge := testutil.ToFloat64(metric.LatestVersionQueryResultLast.WithLabelValues(
 				serviceID, lookup.GetType()))
 			if counterSuccess != 0 || counterFail != 0 || gauge != 0 {
@@ -152,9 +152,9 @@ func TestLookup_QueryMetrics(t *testing.T) {
 			}
 
 			counterSuccess = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-				serviceID, lookup.GetType(), "SUCCESS"))
+				serviceID, lookup.GetType(), metric.ActionResultSuccess))
 			counterFail = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-				serviceID, lookup.GetType(), "FAIL"))
+				serviceID, lookup.GetType(), metric.ActionResultFail))
 			gauge = testutil.ToFloat64(metric.LatestVersionQueryResultLast.WithLabelValues(
 				serviceID, lookup.GetType()))
 			if counterSuccess != wantSuccess ||

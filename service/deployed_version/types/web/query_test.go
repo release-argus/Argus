@@ -297,9 +297,9 @@ func TestLookup_Track(t *testing.T) {
 			for haveQueried != false {
 				serviceID := tc.lookup.GetServiceID()
 				passQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-					serviceID, "SUCCESS", tc.lookup.Type))
+					serviceID, metric.ActionResultSuccess, tc.lookup.Type))
 				failQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-					serviceID, "FAIL", tc.lookup.Type))
+					serviceID, metric.ActionResultFail, tc.lookup.Type))
 				if passQ != float64(0) && failQ != float64(0) {
 					haveQueried = true
 				}

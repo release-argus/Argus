@@ -30,12 +30,12 @@ func (l *Lookup) InitMetrics(parentLookup Interface) {
 		l.GetServiceID(),
 		"",
 		lookupType,
-		"SUCCESS")
+		metric.ActionResultSuccess)
 	metric.InitPrometheusCounter(metric.DeployedVersionQueryResultTotal,
 		l.GetServiceID(),
 		"",
 		lookupType,
-		"FAIL")
+		metric.ActionResultFail)
 }
 
 // DeleteMetrics for this Lookup.
@@ -52,12 +52,12 @@ func (l *Lookup) DeleteMetrics(parentLookup Interface) {
 		l.GetServiceID(),
 		"",
 		lookupType,
-		"SUCCESS")
+		metric.ActionResultSuccess)
 	metric.DeletePrometheusCounter(metric.DeployedVersionQueryResultTotal,
 		l.GetServiceID(),
 		"",
 		lookupType,
-		"FAIL")
+		metric.ActionResultFail)
 }
 
 // QueryMetrics sets the Prometheus metrics for the DeployedVersion query.
@@ -69,7 +69,7 @@ func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
 			l.GetServiceID(),
 			"",
 			parentLookup.GetType(),
-			"FAIL")
+			metric.ActionResultFail)
 		// Set liveness.
 		metric.SetPrometheusGauge(metric.DeployedVersionQueryResultLast,
 			l.GetServiceID(), parentLookup.GetType(),
@@ -80,7 +80,7 @@ func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
 			l.GetServiceID(),
 			"",
 			parentLookup.GetType(),
-			"SUCCESS")
+			metric.ActionResultSuccess)
 		metric.SetPrometheusGauge(metric.DeployedVersionQueryResultLast,
 			l.GetServiceID(), parentLookup.GetType(),
 			1)

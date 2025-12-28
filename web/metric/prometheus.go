@@ -20,14 +20,19 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	"github.com/release-argus/Argus/util"
 )
 
 // Prometheus metric.
 var (
 	// ServiceCountCurrent holds the amount of services in the configuration.
-	ServiceCountCurrent = promauto.NewGauge(prometheus.GaugeOpts{
+	ServiceCountCurrent = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "service_count_current",
-		Help: "Number of services in the configuration."})
+		Help: "Number of services in the configuration."},
+		[]string{
+			"state",
+		})
 	// LatestVersionQueryResultLast holds the last latest version query result.
 	LatestVersionQueryResultLast = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "latest_version_query_result_last",
@@ -103,6 +108,21 @@ var (
 			"result",
 			"service_id",
 		})
+)
+
+// ActionResult* constants are used as 'result' label values for:
+//
+// command_result_total, deployed_version_query_result_total,
+// latest_version_query_result_total, notify_result_total, webhook_result_total.
+const (
+	ActionResultSuccess = "SUCCESS"
+	ActionResultFail    = "FAIL"
+)
+
+// ServiceState* constants are used as 'state' label values for service_count_current.
+const (
+	ServiceStateActive   = "active"
+	ServiceStateInactive = "inactive"
 )
 
 // InitPrometheusCounter will set the `metric` counter for the given labels to 0.
@@ -193,6 +213,17 @@ func SetPrometheusGauge(
 	metric.With(mergeGaugeLabels(id, srcType)).Set(value)
 }
 
+// ServiceCountCurrentAdd adds `amount` to the ServiceCountCurrent Prometheus metric with label `active`.
+func ServiceCountCurrentAdd(active *bool, amount int) {
+	value := util.DereferenceOrValue(active, true)
+	state := ServiceStateActive
+	if !value {
+		state = ServiceStateInactive
+	}
+
+	ServiceCountCurrent.WithLabelValues(state).Add(float64(amount))
+}
+
 // DeletePrometheusGauge will delete the `metric` gauge with the given labels.
 //
 // Required labels:
@@ -258,11 +289,10 @@ func SetUpdatesCurrent(delta, result float64) {
 
 // InitMetrics will initialise all global metrics.
 func InitMetrics() {
-	// service_count.
-	ServiceCountCurrent.Set(0)
-	// updates_current.
-	UpdatesCurrent.With(prometheus.Labels{
-		"type": "AVAILABLE"}).Set(0)
-	UpdatesCurrent.With(prometheus.Labels{
-		"type": "SKIPPED"}).Set(0)
+	// service_count_current (active=true/false).
+	ServiceCountCurrent.WithLabelValues(ServiceStateActive).Add(0)
+	ServiceCountCurrent.WithLabelValues(ServiceStateInactive).Add(0)
+	// updates_current (type=AVAILABLE/SKIPPED).
+	UpdatesCurrent.WithLabelValues("AVAILABLE").Set(0)
+	UpdatesCurrent.WithLabelValues("SKIPPED").Set(0)
 }
