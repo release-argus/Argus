@@ -1,131 +1,124 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:best-practices"],
-  "rangeStrategy": "auto",
   "commitMessageAction": "update",
-  "commitMessageTopic": "{{depName}}",
   "commitMessageExtra": "from {{currentVersion}} to {{newVersion}}",
-  "semanticCommitType": "build",
-  "semanticCommitScope": "deps",
-  "separateMajorMinor": true,
+  "commitMessageTopic": "{{depName}}",
   "enabledManagers": ["dockerfile", "github-actions", "gomod", "npm"],
+  "extends": ["config:best-practices"],
   "packageRules": [
     {
       "description": "Go version updates",
-      "labels": ["dependencies","go"],
+      "labels": ["dependencies", "go"],
       "matchDepNames": ["go"],
       "matchDepTypes": ["golang"],
       "matchManagers": ["gomod"],
       "matchUpdateTypes": ["major", "minor"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "go"
+      "postUpdateOptions": ["gomodTidy"],
+      "semanticCommitScope": "go",
+      "semanticCommitType": "build"
     },
     {
       "description": "Go toolchain updates",
-      "labels": ["dependencies","go"],
+      "labels": ["dependencies", "go"],
       "matchDepNames": ["toolchain"],
       "matchManagers": ["gomod"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "go"
+      "postUpdateOptions": ["gomodTidy"],
+      "semanticCommitScope": "go",
+      "semanticCommitType": "build"
     },
     {
       "description": "Go module updates",
-      "labels": ["dependencies","go"],
+      "labels": ["dependencies", "go"],
       "matchManagers": ["gomod"],
-      "matchDepTypes": ["dependencies", "indirectDependencies"],
       "postUpdateOptions": ["gomodTidy"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "deps-go"
-    },
-    {
-      "groupName": "Go deps",
-      "matchManagers": ["gomod"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "deps-go"
+      "semanticCommitScope": "deps-go",
+      "semanticCommitType": "build"
     },
     {
       "description": "GitHub Actions updates",
-      "labels": ["dependencies","github_actions"],
-      "matchManagers": ["github-actions"],
+      "labels": ["dependencies", "github_actions"],
       "matchFileNames": [".github/workflows/**"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "github-actions"
+      "matchManagers": ["github-actions"],
+      "semanticCommitScope": "github-actions",
+      "semanticCommitType": "build"
     },
     {
       "groupName": "GitHub Actions",
       "matchManagers": ["github-actions"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "github-actions"
+      "semanticCommitScope": "github-actions",
+      "semanticCommitType": "build"
     },
     {
       "description": "Dockerfile base image updates",
-      "labels": ["dependencies","docker"],
-      "matchManagers": ["dockerfile"],
+      "labels": ["dependencies", "docker"],
       "matchFileNames": ["Dockerfile"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "docker"
+      "matchManagers": ["dockerfile"],
+      "semanticCommitScope": "docker",
+      "semanticCommitType": "build"
     },
     {
       "groupName": "Docker base images",
       "matchManagers": ["dockerfile"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "docker"
+      "semanticCommitScope": "docker",
+      "semanticCommitType": "build"
     },
     {
       "description": "npm dependencies",
-      "labels": ["dependencies","javascript"],
+      "labels": ["dependencies", "javascript"],
       "matchDepTypes": ["dependencies"],
-      "matchManagers": ["npm"],
       "matchFileNames": [
         "package.json",
         "web/ui/package.json",
         "web/ui/react-app/package.json"
       ],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "deps-npm"
+      "matchManagers": ["npm"],
+      "postUpdateOptions": ["npmInstallTwice"],
+      "semanticCommitScope": "deps-npm",
+      "semanticCommitType": "build"
     },
     {
       "description": "npm devDependencies",
-      "labels": ["dependencies","javascript"],
+      "labels": ["dependencies", "javascript"],
       "matchDepTypes": ["devDependencies"],
-      "matchManagers": ["npm"],
       "matchFileNames": [
         "package.json",
         "web/ui/package.json",
         "web/ui/react-app/package.json"
       ],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "deps-npm-dev"
+      "matchManagers": ["npm"],
+      "postUpdateOptions": ["npmInstallTwice"],
+      "semanticCommitScope": "deps-npm-dev",
+      "semanticCommitType": "build"
     },
     {
       "groupName": "babel",
       "matchPackageNames": ["/babel/"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "deps-npm-dev"
+      "semanticCommitScope": "deps-npm-dev",
+      "semanticCommitType": "build"
     },
     {
       "groupName": "dnd",
       "matchPackageNames": ["/@dnd-kit/"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "deps-npm"
+      "semanticCommitScope": "deps-npm",
+      "semanticCommitType": "build"
     },
     {
       "groupName": "radix-ui",
       "matchPackageNames": ["/radix-ui/"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "deps-npm"
+      "semanticCommitScope": "deps-npm",
+      "semanticCommitType": "build"
     },
     {
       "groupName": "react-hook-form",
       "matchPackageNames": ["/react-hook-form/", "/hookform/"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "deps-npm"
+      "semanticCommitScope": "deps-npm",
+      "semanticCommitType": "build"
     },
     {
       "groupName": "react-query",
       "matchPackageNames": ["/react-query/"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "deps-npm"
+      "semanticCommitScope": "deps-npm",
+      "semanticCommitType": "build"
     },
     {
       "groupName": "react",
@@ -135,20 +128,24 @@
         "/react-router/",
         "@types/react"
       ],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "deps-npm"
+      "semanticCommitScope": "deps-npm",
+      "semanticCommitType": "build"
     },
     {
       "groupName": "tailwind",
       "matchPackageNames": ["/tailwindcss/", "/tw-animate-css/"],
-      "semanticCommitType": "build",
-      "semanticCommitScope": "deps-npm"
+      "semanticCommitScope": "deps-npm",
+      "semanticCommitType": "build"
     },
     {
-      "matchPackageNames": ["/vite/"],
       "groupName": "vite",
-      "semanticCommitType": "build",
-      "semanticCommitScope": "deps-npm"
+      "matchPackageNames": ["/vite/"],
+      "semanticCommitScope": "deps-npm",
+      "semanticCommitType": "build"
     }
-  ]
+  ],
+  "rangeStrategy": "auto",
+  "semanticCommitScope": "deps",
+  "semanticCommitType": "build",
+  "separateMajorMinor": true
 }
