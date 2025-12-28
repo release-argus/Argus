@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.29.0](https://github.com/release-argus/Argus/compare/0.28.3...0.29.0) (2025-12-28)
+
+
+### Features
+
+* **api:** extend counts endpoint with active/inactive counts and update_details ([#775](https://github.com/release-argus/Argus/issues/775)) ([7c11de5](https://github.com/release-argus/Argus/commit/7c11de50c2a83313ff5cb1113740935d6c67fb29))
+* **core:** add context-based graceful shutdown on interrupt signals ([#766](https://github.com/release-argus/Argus/issues/766)) ([a6ee5a6](https://github.com/release-argus/Argus/commit/a6ee5a68791fd7dfe3aa03edd44b58fa50b49fe4))
+* **latest-version:** url, support for `headers` ([#772](https://github.com/release-argus/Argus/issues/772)) ([664f24e](https://github.com/release-argus/Argus/commit/664f24e7028387703d76243676b797e6c3c153fd))
+* **notify:** slack, add threadts support ([#722](https://github.com/release-argus/Argus/issues/722)) ([edd3ad8](https://github.com/release-argus/Argus/commit/edd3ad8ee46615967a51734c595ebe1c08349268))
+
+
+### Bug Fixes
+
+* **ui:** prevent duplicate query params in refresh URL ([#771](https://github.com/release-argus/Argus/issues/771)) ([6d7d7c3](https://github.com/release-argus/Argus/commit/6d7d7c36b2dd41f723f63aaf632ff875783169ac))
+
 ## [0.28.3](https://github.com/release-argus/Argus/compare/0.28.2...0.28.3) (2025-12-19)
 
 
