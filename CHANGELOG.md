@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.29.1](https://github.com/release-argus/Argus/compare/0.29.0...0.29.1) (2026-01-06)
+
+
+### Bug Fixes
+
+* **config:** prevent panic on deeply nested config options ([#783](https://github.com/release-argus/Argus/issues/783)) ([1df1adc](https://github.com/release-argus/Argus/commit/1df1adc461c3c192199fa904d9015075b1921aac))
+
 ## [0.29.0](https://github.com/release-argus/Argus/compare/0.28.3...0.29.0) (2025-12-28)
 
 
