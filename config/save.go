@@ -157,6 +157,13 @@ func (c *Config) reorderYAML(lines []string) []string {
 		line := lines[index]
 		indents := indentCount(line, c.Settings.Indentation)
 		key := strings.Split(strings.TrimSpace(line), ":")[0]
+
+		// Grow parentKey slice if needed to accommodate deep nesting
+		if indents >= len(parentKey) {
+			newParentKey := make([]string, indents+10)
+			copy(newParentKey, parentKey)
+			parentKey = newParentKey
+		}
 		parentKey[indents] = key
 
 		// First item in the Service block.
