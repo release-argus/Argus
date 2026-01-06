@@ -38,7 +38,6 @@ export const DeleteModal: FC<DeleteModalProps> = ({ disabled }) => {
 			hideModal();
 		},
 		onError: (error) => {
-			console.error('Failed to delete service:', error);
 			toast.error('Failed to delete service.', {
 				description: `Error: ${error instanceof Error ? error.message : String(error)}`,
 			});
