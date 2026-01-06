@@ -109,7 +109,6 @@ export const useSortableServices = () => {
 				}));
 			})
 			.catch((error: unknown) => {
-				console.error('Failed to save order:', error);
 				toast.error('Failed to save order.', {
 					description: `Error: ${error instanceof Error ? error.message : String(error)}`,
 				});
