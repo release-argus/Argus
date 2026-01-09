@@ -298,7 +298,7 @@ type RegexValidation<T extends boolean = true> = T extends true
  * Creates a Zod string schema that validates a value as a string,
  * optionally using fallback defaults and enforcing requirement if specified.
  *
- * @param validation - Optional validation rehular expression.
+ * @param validation - Optional validation regular expression.
  * @param required - Whether a value must be provided.
  * @param defaults - Optional fallback strings to use if the field value is empty.
  */
