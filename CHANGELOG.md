@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.29.2](https://github.com/release-argus/Argus/compare/0.29.1...0.29.2) (2026-01-12)
+
+
+### Bug Fixes
+
+* **command:** use candidate version in `require.command` templates ([#796](https://github.com/release-argus/Argus/issues/796)) ([1e25ecf](https://github.com/release-argus/Argus/commit/1e25ecf2021228108e19a81fe1063d9e58868e9b))
+* **ui:** ignore `<secret>` placeholder in string length validation ([#797](https://github.com/release-argus/Argus/issues/797)) ([4030861](https://github.com/release-argus/Argus/commit/403086142f8e4294cc290bfa05622d9b63d91388))
+
 ## [0.29.1](https://github.com/release-argus/Argus/compare/0.29.0...0.29.1) (2026-01-06)
 
 
