@@ -121,9 +121,7 @@ func TestController_CopyFailsFrom(t *testing.T) {
 						tc.from.ServiceStatus.Fails.Command.Set(k, *v)
 					}
 				}
-				for i, v := range tc.fromNextRunnable {
-					tc.from.nextRunnable[i] = v
-				}
+				copy(tc.from.nextRunnable, tc.fromNextRunnable)
 			}
 			if tc.to != nil && tc.to.Command != nil {
 				tc.to.Init(

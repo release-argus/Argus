@@ -179,7 +179,7 @@ func (l *Lookup) versionMeetsRequirements(version, body string, logFrom logutil.
 	}
 
 	// If the Command didn't return successfully.
-	if err := l.Require.ExecCommand(logFrom); err != nil {
+	if err := l.Require.ExecCommand(version, logFrom); err != nil {
 		return err //nolint:wrapcheck
 	}
 

@@ -405,7 +405,7 @@ func (l *Lookup) releaseMeetsRequirements(release github_types.Release, logFrom 
 	}
 
 	// If the Command didn't return successfully.
-	if err := l.Require.ExecCommand(logFrom); err != nil {
+	if err := l.Require.ExecCommand(version, logFrom); err != nil {
 		return "", "", err //nolint:wrapcheck
 	}
 

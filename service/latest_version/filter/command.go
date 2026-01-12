@@ -22,13 +22,15 @@ import (
 )
 
 // ExecCommand will run Command.
-func (r *Require) ExecCommand(logFrom logutil.LogFrom) error {
+func (r *Require) ExecCommand(version string, logFrom logutil.LogFrom) error {
 	if r == nil || len(r.Command) == 0 {
 		return nil
 	}
 
 	// Apply the template vars to the command.
-	cmd := r.Command.ApplyTemplate(r.Status.GetServiceInfo())
+	serviceInfo := r.Status.GetServiceInfo()
+	serviceInfo.LatestVersion = version
+	cmd := r.Command.ApplyTemplate(serviceInfo)
 
 	// Execute the command.
 	if err := cmd.Exec(logFrom); err != nil {
