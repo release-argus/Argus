@@ -10,6 +10,7 @@ import { isEmptyOrNull } from '@/utils';
 import { addZodIssuesToContext } from '@/utils/api/types/config-edit/shared/add-issues.ts';
 import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse.ts';
 import { isEmpty } from '@/utils/is-empty';
+import { SecretValue } from '@/utils/secret-value';
 
 /* Field validation */
 
@@ -193,6 +194,7 @@ export const validateStringLength =
 		if (
 			arg &&
 			typeof arg === 'string' &&
+			arg !== SecretValue &&
 			(arg.length < min || arg.length > max)
 		) {
 			ctx.addIssue({
