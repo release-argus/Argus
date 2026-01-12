@@ -22,6 +22,8 @@ import (
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 )
@@ -29,8 +31,11 @@ import (
 func TestRequire_ExecCommand(t *testing.T) {
 	// GIVEN a Require with a Command.
 	tests := map[string]struct {
-		cmd      command.Command
-		errRegex string
+		cmd         command.Command
+		sInfo       *serviceinfo.ServiceInfo
+		version     string
+		stdoutRegex string
+		errRegex    string
 	}{
 		"no command": {
 			errRegex: `^$`},
@@ -38,15 +43,28 @@ func TestRequire_ExecCommand(t *testing.T) {
 			cmd:      []string{"true"},
 			errRegex: `^$`},
 		"valid multi-arg command": {
-			cmd:      []string{"ls", "-lah"},
-			errRegex: `^$`},
+			cmd:         []string{"ls", "-lah"},
+			stdoutRegex: `\.go`,
+			errRegex:    `^$`},
 		"invalid command": {
 			cmd:      []string{"false"},
 			errRegex: `exit status 1`},
+		"new version overrides previous latest_version": {
+			cmd: []string{"echo", "approved_version='{{ approved_version}}', deployed_version='{{ deployed_version }}', version='{{ version }}', latest_version='{{ latest_version }}',"},
+			sInfo: &serviceinfo.ServiceInfo{
+				ApprovedVersion: "v1.0.0-approved",
+				DeployedVersion: "v2.0.0-deployed",
+				LatestVersion:   "v3.0.0-latest",
+			},
+			version:     "v4.0.0",
+			stdoutRegex: `approved_version='v1.0.0-approved', deployed_version='v2.0.0-deployed', version='v4.0.0', latest_version='v4.0.0'`,
+			errRegex:    `^$`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout and sharing log resultChannel.
+			releaseStdout := test.CaptureLog(logutil.Log)
 
 			svcDashboard := &dashboard.Options{
 				WebURL: "https://example.com"}
@@ -56,15 +74,24 @@ func TestRequire_ExecCommand(t *testing.T) {
 				0, 1, 0,
 				name, "", "",
 				svcDashboard)
+			if tc.sInfo != nil {
+				require.Status.ServiceInfo = *tc.sInfo
+			}
 
 			// WHEN ApplyTemplate is called on the Command.
-			err := require.ExecCommand(logutil.LogFrom{})
+			err := require.ExecCommand(tc.version, logutil.LogFrom{})
 
 			// THEN the err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
 					packageName, tc.errRegex, e)
+			}
+			// AND the stdout is expected.
+			stdout := releaseStdout()
+			if !util.RegexCheck(tc.stdoutRegex, stdout) {
+				t.Fatalf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.stdoutRegex, stdout)
 			}
 		})
 	}
