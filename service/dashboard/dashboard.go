@@ -37,7 +37,7 @@ type Options struct {
 
 	Icon               string   `json:"icon,omitempty" yaml:"icon,omitempty"` // Icon URL to use for messages/Web UI.
 	iconExpanded       *string  // Icon URL after env var expansion. (nil if no env var expansion).
-	iconNotify         *string  // Faillback icon URL from a Notify after env var expansion. (nil if we already have an Icon).
+	iconNotify         *string  // Fallback icon URL from a Notify after env var expansion. (nil if we already have an Icon).
 	IconLinkTo         string   `json:"icon_link_to,omitempty" yaml:"icon_link_to,omitempty"` // URL to redirect Icon clicks to.
 	iconLinkToExpanded *string  // URL after env var expansion. (nil if no env var expansion).
 	WebURL             string   `json:"web_url,omitempty" yaml:"web_url,omitempty"` // URL to provide on the Web UI.

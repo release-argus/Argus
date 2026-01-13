@@ -300,7 +300,7 @@ func convertAndCensorNotifiersDefaults(input *shoutrrr.ShoutrrrsDefaults) *apity
 			Options:   notify.Options,
 			URLFields: notify.URLFields,
 			Params:    notify.Params}
-		// Censor and add to mappint.
+		// Censor and add to map.
 		n.Censor()
 		notifiers[name] = n
 	}
