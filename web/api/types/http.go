@@ -24,7 +24,7 @@ type VersionAPI struct {
 	GoVersion string `json:"goVersion"`
 }
 
-// RefreshAPI is the rsponse given at the /api/v1/*_version/refresh endpoint.
+// RefreshAPI is the response given at the /api/v1/*_version/refresh endpoint.
 type RefreshAPI struct {
 	Version string    `json:"version"`
 	Date    time.Time `json:"timestamp"`
