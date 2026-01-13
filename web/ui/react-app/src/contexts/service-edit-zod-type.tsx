@@ -65,7 +65,7 @@ export const SchemaProvider: FC<SchemaProviderProps> = ({
 	const services = useServices();
 
 	// Stable key for service IDs.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: orderData cocers order.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: orderData covers order.
 	const serviceIDs = useMemo(() => {
 		const ids = [...order]; // Shallow copy.
 		ids.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));

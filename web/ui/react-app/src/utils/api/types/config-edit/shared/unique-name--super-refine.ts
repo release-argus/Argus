@@ -26,7 +26,7 @@ export const superRefineNameUnique = <T extends { name: string }[]>(
 			// Record the first index of this name.
 			seen.set(name, index);
 		} else {
-			// Add an issue for this duplicate name, and the first occurence.
+			// Add an issue for this duplicate name, and the first occurrence.
 			for (const i of [firstIndex, index]) {
 				ctx.addIssue({
 					code: CUSTOM_ISSUE_CODE,
