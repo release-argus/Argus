@@ -52,7 +52,7 @@
     "@biomejs/biome": "2.3.11",
     "@tanstack/react-query-devtools": "5.91.2",
     "@types/node": "24.10.6",
-    "@types/react": "19.2.7",
+    "@types/react": "19.2.8",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react-swc": "4.2.2",
     "babel-plugin-react-compiler": "1.0.0",
