@@ -81,7 +81,6 @@ const DeployedVersionManual = () => {
 				},
 			);
 		} catch (error) {
-			console.error('Failed to save version', error);
 			toast.error('Failed to save version:', {
 				description: mutationError?.message,
 			});
