@@ -143,7 +143,7 @@ func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 	}
 
 	// Return the body.
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // Limit to 10 MB.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 50<<20)) // Limit to 50 MiB.
 	logutil.Log.Error(err, logFrom, err != nil)
 	return body, err //nolint:wrapcheck
 }
