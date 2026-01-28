@@ -180,7 +180,7 @@ func (l *Lookup) getResponse(req *http.Request, logFrom logutil.LogFrom) (*http.
 
 	// Read the response body.
 	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // Limit to 10 MB.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 50<<20)) // Limit to 50 MiB.
 	if err != nil {
 		logutil.Log.Error(err, logFrom, true)
 		return nil, nil, err //nolint:wrapcheck

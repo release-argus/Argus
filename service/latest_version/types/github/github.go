@@ -89,11 +89,8 @@ func (l *Lookup) filterGitHubReleases(logFrom logutil.LogFrom) []github_types.Re
 func (l *Lookup) checkGitHubReleasesBody(body []byte, logFrom logutil.LogFrom) ([]github_types.Release, error) {
 	var releases []github_types.Release
 	if err := json.Unmarshal(body, &releases); err != nil {
-		logutil.Log.Error(err, logFrom, true)
-		err = fmt.Errorf("unmarshal of GitHub API data failed\n%w",
+		return nil, fmt.Errorf("unmarshal of GitHub API data failed\n%w",
 			err)
-		logutil.Log.Error(err, logFrom, true)
-		return nil, err
 	}
 
 	return releases, nil
