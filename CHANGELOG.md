@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.29.3](https://github.com/release-argus/Argus/compare/0.29.2...0.29.3) (2026-01-28)
+
+
+### Bug Fixes
+
+* increase response body limit from 10 MiB to 50 MiB in queries ([#814](https://github.com/release-argus/Argus/issues/814)) ([7dc5afc](https://github.com/release-argus/Argus/commit/7dc5afc0f429004b3bb038b57abfb023f3081d72))
+
 ## [0.29.2](https://github.com/release-argus/Argus/compare/0.29.1...0.29.2) (2026-01-12)
 
 
