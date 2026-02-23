@@ -125,27 +125,27 @@ func (d *DockerCheckDefaults) String(prefix string) string {
 
 	var builder strings.Builder
 	if d.Type != "" {
-		builder.WriteString(fmt.Sprintf("%stype: %s\n",
-			prefix, d.Type))
+		_, _ = fmt.Fprintf(&builder, "%stype: %s\n",
+			prefix, d.Type)
 	}
 
 	if d.RegistryGHCR != nil {
 		registryGHCRStr := d.RegistryGHCR.String(prefix + "    ")
 		if registryGHCRStr != "" {
-			builder.WriteString(fmt.Sprintf("%sghcr:\n%s",
-				prefix, registryGHCRStr))
+			_, _ = fmt.Fprintf(&builder, "%sghcr:\n%s",
+				prefix, registryGHCRStr)
 		}
 	}
 	registryHubStr := d.RegistryHub.String(prefix + "    ")
 	if registryHubStr != "" {
-		builder.WriteString(fmt.Sprintf("%shub:\n%s",
-			prefix, registryHubStr))
+		_, _ = fmt.Fprintf(&builder, "%shub:\n%s",
+			prefix, registryHubStr)
 	}
 	if d.RegistryQuay != nil {
 		registryQuayStr := d.RegistryQuay.String(prefix + "    ")
 		if registryQuayStr != "" {
-			builder.WriteString(fmt.Sprintf("%squay:\n%s",
-				prefix, registryQuayStr))
+			_, _ = fmt.Fprintf(&builder, "%squay:\n%s",
+				prefix, registryQuayStr)
 		}
 	}
 

@@ -100,8 +100,8 @@ func (s *ShoutrrrsDefaults) String(prefix string) string {
 			if itemStr == "{}\n" {
 				delim = " "
 			}
-			builder.WriteString(fmt.Sprintf("%s%s:%s%s",
-				prefix, k, delim, itemStr))
+			_, _ = fmt.Fprintf(&builder, "%s%s:%s%s",
+				prefix, k, delim, itemStr)
 		}
 	}
 
