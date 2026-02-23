@@ -204,21 +204,18 @@ func (s *Status) String() string {
 		switch v := f.Value.(type) {
 		case string:
 			if v != "" {
-				builder.WriteString(
-					fmt.Sprintf("%s: %v\n",
-						f.Name, v))
+				_, _ = fmt.Fprintf(&builder, "%s: %v\n",
+					f.Name, v)
 			}
 		case uint:
 			if v != 0 {
-				builder.WriteString(
-					fmt.Sprintf("%s: %d\n",
-						f.Name, v))
+				_, _ = fmt.Fprintf(&builder, "%s: %d\n",
+					f.Name, v)
 			}
 		case *Fails:
 			if fails := v.String("  "); fails != "" {
-				builder.WriteString(
-					fmt.Sprintf("%s:\n%s",
-						f.Name, fails))
+				_, _ = fmt.Fprintf(&builder, "%s:\n%s",
+					f.Name, fails)
 			}
 		}
 	}

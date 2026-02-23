@@ -111,8 +111,8 @@ func (f *failsBase) String(prefix string) string {
 		if f.fails[key] != nil {
 			val = strconv.FormatBool(*f.fails[key])
 		}
-		builder.WriteString(fmt.Sprintf("%s%s: %s\n",
-			prefix, key, val))
+		_, _ = fmt.Fprintf(&builder, "%s%s: %s\n",
+			prefix, key, val)
 	}
 
 	return builder.String()
@@ -197,8 +197,8 @@ func (f *FailsCommand) String(prefix string) string {
 			val = strconv.FormatBool(*fail)
 		}
 
-		builder.WriteString(fmt.Sprintf("%s- %d: %s\n",
-			prefix, i, val))
+		_, _ = fmt.Fprintf(&builder, "%s- %d: %s\n",
+			prefix, i, val)
 	}
 
 	return builder.String()
@@ -246,18 +246,18 @@ func (f *Fails) String(prefix string) string {
 	itemPrefix := prefix + "  "
 
 	if shoutrrrStr := f.Shoutrrr.String(itemPrefix); shoutrrrStr != "" {
-		builder.WriteString(fmt.Sprintf("%sshoutrrr:\n%s",
-			prefix, shoutrrrStr))
+		_, _ = fmt.Fprintf(&builder, "%sshoutrrr:\n%s",
+			prefix, shoutrrrStr)
 	}
 
 	if commandStr := f.Command.String(itemPrefix); commandStr != "" {
-		builder.WriteString(fmt.Sprintf("%scommand:\n%s",
-			prefix, commandStr))
+		_, _ = fmt.Fprintf(&builder, "%scommand:\n%s",
+			prefix, commandStr)
 	}
 
 	if webhookStr := f.WebHook.String(itemPrefix); webhookStr != "" {
-		builder.WriteString(fmt.Sprintf("%swebhook:\n%s",
-			prefix, webhookStr))
+		_, _ = fmt.Fprintf(&builder, "%swebhook:\n%s",
+			prefix, webhookStr)
 	}
 
 	if builder.Len() == 0 {

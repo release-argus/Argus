@@ -387,8 +387,8 @@ func jsonMapToString(param string, prefix string) string {
 			builder.WriteString("&")
 		}
 
-		builder.WriteString(fmt.Sprintf("%s%s=%s",
-			prefix, key, jsonMap[key]))
+		_, _ = fmt.Fprintf(&builder, "%s%s=%s",
+			prefix, key, jsonMap[key])
 	}
 	return builder.String()
 }
