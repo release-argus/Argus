@@ -82,7 +82,6 @@ export const buildWebHooksSchemaWithFallbacks = (
 		defaults?.type ??
 		hardDefaults?.type ??
 		Object.values(webhookTypeOptions)[0].value;
-	console.log('dataDefaulted???', data ?? []);
 	const dataDefaulted = (data ?? []).map((item) => {
 		const main = mains?.[item.name];
 		const nameLower = item.name.toLowerCase();

@@ -1378,7 +1378,7 @@ func TestStatus_Copy(t *testing.T) {
 					packageName, status.ServiceInfo.ApprovedVersion, copiedStatus.ServiceInfo.ApprovedVersion)
 			}
 			if copiedStatus.ServiceInfo.DeployedVersion != status.ServiceInfo.DeployedVersion {
-				t.Errorf("%s\nSeployedVersion not copied correctly\nwant: %v\ngot:  %v",
+				t.Errorf("%s\nDeployedVersion not copied correctly\nwant: %v\ngot:  %v",
 					packageName, status.ServiceInfo.DeployedVersion, copiedStatus.ServiceInfo.DeployedVersion)
 			}
 			if copiedStatus.deployedVersionTimestamp != status.deployedVersionTimestamp {

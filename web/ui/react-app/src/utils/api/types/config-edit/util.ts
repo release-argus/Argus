@@ -44,7 +44,7 @@ const pickDefault = <T>(
 			chosen = val;
 		}
 
-		// Return the first non-null/emoty value.
+		// Return the first non-null/empty value.
 		if (val != null) {
 			// Other non-empty value.
 			return val;

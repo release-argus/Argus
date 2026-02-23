@@ -12,7 +12,7 @@ import { type FC, useCallback, useEffect } from 'react';
 type TableLayoutProps = {
 	/* The list of service summaries for the table. */
 	services: ServiceSummary[];
-	/* A flag inidcating whether the layout is in edit mode. */
+	/* A flag indicating whether the layout is in edit mode. */
 	editMode: boolean;
 	/* The current order of rows. */
 	order: string[];
@@ -35,7 +35,7 @@ type TableLayoutProps = {
  * @type {FC<TableLayoutProps>} TableLayout
  *
  * @param services - The list of service summaries for the table.
- * @param editMode - A flag inidcating whether the layout is in edit mode.
+ * @param editMode - A flag indicating whether the layout is in edit mode.
  * @param order - An array of sensor descriptors for drag-and-drop operations.
  * @param sensors - A function invoked after the drag-and-drop interaction on services is completed.
  * @param handleDragEnd - Apply the given order (without saving).

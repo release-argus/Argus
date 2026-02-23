@@ -8,7 +8,7 @@ import type { FC } from 'react';
 type GridLayoutProps = {
 	/* The list of service summaries for the grid. */
 	services: ServiceSummary[];
-	/* A flag inidcating whether the layout is in edit mode. */
+	/* A flag indicating whether the layout is in edit mode. */
 	editMode: boolean;
 	/* The current order of services. */
 	order: string[];
