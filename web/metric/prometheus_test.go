@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 )
 
 var packageName = "metric"
@@ -212,21 +213,21 @@ func TestPrometheusGaugeVec(t *testing.T) {
 }
 
 func TestMetricsAndVersionState(t *testing.T) {
-	// GIVEN the Prometheus metrics are initialized.
+	// GIVEN the Prometheus metrics are initialised.
 	InitMetrics()
 
 	tests := map[string]struct {
 		approvedVersion string
 		latestVersion   string
 		deployedVersion string
-		expectedState   float64
+		expectedState   LatestVersionDeployedState
 		expectedMetrics map[string]float64
 	}{
 		"latest version deployed": {
 			approvedVersion: "1.0.0",
 			latestVersion:   "1.2.0",
 			deployedVersion: "1.2.0",
-			expectedState:   1, // Latest version deployed.
+			expectedState:   LatestVersionDeployed, // Latest version deployed.
 			expectedMetrics: map[string]float64{
 				"AVAILABLE": 0,
 				"SKIPPED":   0,
@@ -236,17 +237,17 @@ func TestMetricsAndVersionState(t *testing.T) {
 			approvedVersion: "1.2.0",
 			latestVersion:   "1.2.0",
 			deployedVersion: "1.0.0",
-			expectedState:   2, // Latest version approved.
+			expectedState:   LatestVersionApproved, // Latest version approved.
 			expectedMetrics: map[string]float64{
 				"AVAILABLE": 1,
 				"SKIPPED":   0,
 			},
 		},
 		"latest version skipped": {
-			approvedVersion: "SKIP_1.2.0",
+			approvedVersion: serviceinfo.SkippedVersion("1.2.0"),
 			latestVersion:   "1.2.0",
 			deployedVersion: "1.0.0",
-			expectedState:   3, // Latest version skipped.
+			expectedState:   LatestVersionSkipped, // Latest version skipped.
 			expectedMetrics: map[string]float64{
 				"AVAILABLE": 1,
 				"SKIPPED":   1,
@@ -256,11 +257,29 @@ func TestMetricsAndVersionState(t *testing.T) {
 			approvedVersion: "1.0.0",
 			latestVersion:   "1.2.0",
 			deployedVersion: "1.1.0",
-			expectedState:   0, // Latest version not deployed/approved/skipped.
+			expectedState:   LatestVersionUnactioned, // Latest version not deployed/approved/skipped.
 			expectedMetrics: map[string]float64{
 				"AVAILABLE": 1,
 				"SKIPPED":   0,
 			},
+		},
+		"latest version known, deployed version unknown": {
+			approvedVersion: "",
+			latestVersion:   "1.2.3",
+			deployedVersion: "",
+			expectedState:   LatestVersionUnknown,
+		},
+		"latest version unknown, deployed version known": {
+			approvedVersion: "",
+			latestVersion:   "",
+			deployedVersion: "1.2.3",
+			expectedState:   LatestVersionUnknown,
+		},
+		"latest+deployed version unknown": {
+			approvedVersion: "",
+			latestVersion:   "",
+			deployedVersion: "",
+			expectedState:   LatestVersionUnknown,
 		},
 	}
 
@@ -269,18 +288,20 @@ func TestMetricsAndVersionState(t *testing.T) {
 
 			// Reset metrics for each test.
 			InitMetrics()
+			serviceInfo := serviceinfo.ServiceInfo{
+				ApprovedVersion: tc.approvedVersion,
+				LatestVersion:   tc.latestVersion,
+				DeployedVersion: tc.deployedVersion,
+			}
 
 			// WHEN GetVersionDeployedState is called.
-			state := GetVersionDeployedState(
-				tc.approvedVersion,
-				tc.latestVersion,
-				tc.deployedVersion)
+			state := GetVersionDeployedState(serviceInfo)
 
 			// THEN the returned state should match the expected state.
 			if state != tc.expectedState {
-				t.Errorf("%s\nGetVersionDeployedState(%q, %q, %q)\nwant: %v\ngot:  %v",
+				t.Errorf("%s\nGetVersionDeployedState(%+v)\nwant: %v\ngot:  %v",
 					packageName,
-					tc.approvedVersion, tc.latestVersion, tc.deployedVersion,
+					serviceInfo,
 					tc.expectedState, state)
 			}
 

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,4 +63,12 @@ func (s *ServiceInfo) GetWebURL() string {
 	defer s.mutex.RUnlock()
 
 	return s.WebURL
+}
+
+// SkipPrefix is the prefix for the ApprovedVersion when skipping a version (e.g. "SKIP_1.2.3").
+const SkipPrefix = "SKIP_"
+
+// SkippedVersion returns the version string representing a skip of the given version.
+func SkippedVersion(version string) string {
+	return SkipPrefix + version
 }

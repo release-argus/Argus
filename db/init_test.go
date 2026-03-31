@@ -447,7 +447,7 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 	}
 }
 
-func TestAPI_Run(t *testing.T) {
+func TestAPI_Get(t *testing.T) {
 	// GIVEN a DB is running (see TestMain).
 
 	// WHEN a message is send to the DatabaseChannel targeting latest_version.
@@ -461,7 +461,7 @@ func TestAPI_Run(t *testing.T) {
 
 	// THEN the cell was changed in the DB.
 	otherCfg := testConfig(t)
-	otherCfg.Settings.Data.DatabaseFile = "TestAPI_Run-copy.db"
+	otherCfg.Settings.Data.DatabaseFile = "TestAPI_Get-copy.db"
 	bytesRead, err := os.ReadFile(cfg.Settings.Data.DatabaseFile)
 	if err != nil {
 		t.Fatalf("%s\n%v",
@@ -492,8 +492,8 @@ func TestAPI_Run(t *testing.T) {
 	}
 }
 
-func TestAPI_Run_Fail(t *testing.T) {
-	// GIVEN a DB to setup.
+func TestAPI_Get_Fail(t *testing.T) {
+	// GIVEN a DB to set up.
 	tests := map[string]struct {
 		setupDB      func(cfg *config.Config)
 		deleteDBFile bool
@@ -501,12 +501,12 @@ func TestAPI_Run_Fail(t *testing.T) {
 	}{
 		"initialise fails": {
 			setupDB: func(cfg *config.Config) {
-				// Invalid DB path.
-				cfg.Settings.Data.DatabaseFile = "/invalid/path.db"
+				// Directory rather than file.
+				cfg.Settings.Data.DatabaseFile = t.TempDir()
 			},
 			ok: false,
 		},
-		"removeUnknownServices returns false": {
+		"removeUnknownServices fails": {
 			setupDB: func(cfg *config.Config) {
 				// Drop required column so removeUnknownServices fails.
 				tAPI := testAPI(t)
@@ -545,27 +545,27 @@ func TestAPI_Run_Fail(t *testing.T) {
 			},
 			ok: false,
 		},
-		"extractServiceStatus returns false": {
+		"extractServiceStatus fails": {
 			setupDB: func(cfg *config.Config) {
 				// Drop required column so extractServiceStatus fails.
 				tAPI := testAPI(t)
 				t.Cleanup(func() { dbCleanup(tAPI) })
 				tAPI.initialise()
 				defer tAPI.db.Close()
-				if _, err := tAPI.db.Exec("ALTER TABLE status DROP COLUMN latest_version;"); err != nil {
+				if _, err := tAPI.db.Exec("ALTER TABLE status DROP COLUMN deployed_version;"); err != nil {
 					t.Fatalf("%s\nerror dropping column in setupDB:\n%v", packageName, err)
 				}
 				if _, err := tAPI.db.Exec(`
 					INSERT INTO status (
 						id,
+						latest_version,
 						latest_version_timestamp,
-						deployed_version,
 						deployed_version_timestamp,
 						approved_version
 					) VALUES (
 					  'service1',
-					  '2020-01-01T01:01:01Z',
 					  '0.0.0',
+					  '2020-01-01T01:01:01Z',
 					  '2020-01-01T01:01:01Z',
 					  '0.0.1')`); err != nil {
 					t.Fatalf("%s\nerror inserting row in setupDB:\n%v", packageName, err)
@@ -589,8 +589,12 @@ func TestAPI_Run_Fail(t *testing.T) {
 			tc.setupDB(cfg)
 
 			resultChannel := make(chan bool, 1)
-			// WHEN that DB is run.
-			go func() { resultChannel <- Run(t.Context(), cfg) }()
+			// WHEN that DB is fetched.
+			api := Get(cfg)
+			if api != nil {
+				defer api.db.Close()
+			}
+			resultChannel <- api != nil
 
 			// THEN the ok value is as expected.
 			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), releaseStdout); err != nil {
@@ -607,7 +611,7 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 	tAPI := testAPI(t)
 	t.Cleanup(func() { dbCleanup(tAPI) })
 	tAPI.initialise()
-	go tAPI.handler(t.Context())
+	go tAPI.Handler(t.Context())
 	wantStatus := make([]status.Status, len(cfg.Service))
 	// Push a random Status for each Service to the DB.
 	index := 0
@@ -747,7 +751,7 @@ func TestAPI_extractServiceStatus_Fail(t *testing.T) {
 				_, _ = tAPI.db.Exec(tc.insertDataStmt)
 			}
 
-			go tAPI.handler(t.Context())
+			go tAPI.Handler(t.Context())
 
 			resultChannel := make(chan bool, 1)
 			// WHEN extractServiceStatus is called.

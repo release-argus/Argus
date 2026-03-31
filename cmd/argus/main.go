@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -110,20 +109,24 @@ func run() (exitCode int) {
 	}
 
 	// Setup DB and last known service versions.
-	g.Go(func() error {
-		if ok := db.Run(gctx, &cfg); !ok {
-			return errors.New("db.Run failed")
-		}
-		return nil
-	})
+	api := db.Get(&cfg)
 
-	// Track all targets for changes in version and act on any found changes.
-	go cfg.Service.Track(&cfg.Order, &cfg.OrderMutex)
+	// If we have an API, we've loaded previous status' from the DB.
+	if api != nil {
+		// DB message handler.
+		g.Go(func() error {
+			api.Handler(gctx)
+			return nil
+		})
 
-	// Web server.
-	g.Go(func() error {
-		return web.Run(gctx, &cfg)
-	})
+		// Track all targets for changes in version and act on any found changes.
+		go cfg.Service.Track(&cfg.Order, &cfg.OrderMutex)
+
+		// Web server.
+		g.Go(func() error {
+			return web.Run(gctx, &cfg)
+		})
+	}
 
 	// Wait for cancellation.
 	select {

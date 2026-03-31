@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"math/rand"
 	"time"
 
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
 	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
@@ -28,8 +29,8 @@ import (
 // HandleSkip will set `version` to skipped and announce it to the websocket.
 func (s *Service) HandleSkip() {
 	// Ignore skips if latest_version is deployed.
-	if s.Status.DeployedVersion() != s.Status.LatestVersion() {
-		s.Status.SetApprovedVersion("SKIP_"+s.Status.LatestVersion(), true)
+	if lv := s.Status.LatestVersion(); lv != s.Status.DeployedVersion() {
+		s.Status.SetApprovedVersion(serviceinfo.SkippedVersion(lv), true)
 	}
 }
 

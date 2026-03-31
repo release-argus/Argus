@@ -51,7 +51,7 @@ func (l *Lookup) Query(metrics bool, logFrom logutil.LogFrom) error {
 			}
 		}
 
-		l.HandleNewVersion(l.Version, "", true, logFrom)
+		l.HandleNewVersion(l.Version, "", metrics, logFrom)
 	}
 	return nil
 }

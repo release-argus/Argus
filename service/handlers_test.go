@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/webhook"
 	webhook_test "github.com/release-argus/Argus/webhook/test"
@@ -33,23 +34,27 @@ import (
 func TestService_HandleSkip(t *testing.T) {
 	// GIVEN a Service.
 	latestVersion := "1.2.3"
-	tests := map[string]struct {
+	tests := []struct {
+		name                                string
 		startVersion                        string
 		approvedVersion                     string
 		wantAnnounces, wantDatabaseMessages int
 		prepDelete                          bool
 	}{
-		"skip of latest version does nothing": {
+		{
+			name:                 "skip of latest version does nothing",
 			startVersion:         latestVersion,
 			approvedVersion:      "",
 			wantAnnounces:        0,
 			wantDatabaseMessages: 0},
-		"skip of version that's not latest skips version and announces to announce and database channels": {
+		{
+			name:                 "skip of version that's not latest skips version and announces to announce and database channels",
 			startVersion:         "1.0.0",
-			approvedVersion:      "SKIP_" + latestVersion,
+			approvedVersion:      serviceinfo.SkippedVersion(latestVersion),
 			wantAnnounces:        1,
 			wantDatabaseMessages: 1},
-		"skip of version that's not latest, but Service deletion has started": {
+		{
+			name:                 "skip of version that's not latest, but Service deletion has started",
 			startVersion:         "0.2.3",
 			approvedVersion:      "",
 			prepDelete:           true,
@@ -57,10 +62,9 @@ func TestService_HandleSkip(t *testing.T) {
 			wantDatabaseMessages: 0},
 	}
 
-	for name, tc := range tests {
-		svc := testService(t, name, "url")
-
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		svc := testService(t, tc.name, "url")
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using a shared channel.
 
 			svc.Status.SetDeployedVersion(tc.startVersion, "", false)

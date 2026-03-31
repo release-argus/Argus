@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -86,32 +86,32 @@ func TestLookup_QueryMetrics(t *testing.T) {
 	// GIVEN a Lookup and args for QueryMetrics.
 	tests := map[string]struct {
 		args     args
-		liveness int
+		liveness metric.LatestVersionQueryResult
 	}{
 		"success": {
 			args: args{
 				err: nil},
-			liveness: 1,
+			liveness: metric.LatestVersionQueryResultSuccess,
 		},
 		"regex error": {
 			args: args{
 				err: errors.New("no releases were found matching the stuff")},
-			liveness: 2,
+			liveness: metric.LatestVersionQueryResultNoMatch,
 		},
 		"semantic version error": {
 			args: args{
 				err: errors.New("failed to convert x to a semantic version.")},
-			liveness: 3,
+			liveness: metric.LatestVersionQueryResultSemanticVersionFail,
 		},
 		"version less than error": {
 			args: args{
 				err: errors.New("queried version x is less than the deployed version")},
-			liveness: 4,
+			liveness: metric.LatestVersionQueryResultProgressiveVersionFail,
 		},
 		"other error": {
 			args: args{
 				err: errors.New("some other error")},
-			liveness: 0,
+			liveness: metric.LatestVersionQueryResultFailed,
 		},
 	}
 

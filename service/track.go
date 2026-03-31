@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,8 +27,8 @@ import (
 // Track the Service and send Notify messages and WebHooks when a new release is found.
 // Pause for s.Interval between each check.
 func (s *Service) Track() {
-	// Skip inactive Services.
 	s.initMetrics()
+	// Skip inactive Services.
 	if !s.Options.GetActive() {
 		return
 	}

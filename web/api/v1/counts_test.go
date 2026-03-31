@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/dashboard"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/web/metric"
@@ -221,7 +222,7 @@ func TestHTTP_Counts(t *testing.T) {
 				if detail.Approved {
 					approvedVersion = detail.LatestVersion
 				} else if detail.Skipped {
-					approvedVersion = "SKIP_" + detail.LatestVersion
+					approvedVersion = serviceinfo.SkippedVersion(detail.LatestVersion)
 				}
 				newService.Status.SetDeployedVersion(detail.DeployedVersion, "", false)
 				newService.Status.SetLatestVersion(detail.LatestVersion, "", false)

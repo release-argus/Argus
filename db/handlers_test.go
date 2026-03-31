@@ -236,7 +236,7 @@ func TestAPI_Handler(t *testing.T) {
 	tAPI := testAPI(t)
 	t.Cleanup(func() { dbCleanup(tAPI) })
 	tAPI.initialise()
-	go tAPI.handler(t.Context())
+	go tAPI.Handler(t.Context())
 
 	// WHEN a message is sent to the DatabaseChannel targeting latest_version.
 	target := "keep0"
@@ -302,7 +302,7 @@ func TestAPI_Handler_Fail(t *testing.T) {
 	tAPI := testAPI(t)
 	t.Cleanup(func() { dbCleanup(tAPI) })
 	tAPI.initialise()
-	go tAPI.handler(t.Context())
+	go tAPI.Handler(t.Context())
 	releaseStdout := test.CaptureLog(logutil.Log)
 
 	// WHEN the DatabaseChannel is closed.
