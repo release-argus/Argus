@@ -16,7 +16,6 @@
 package db
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -83,8 +82,8 @@ func checkFile(path string) (ok bool) {
 
 var once sync.Once
 
-// Run will start the database, initialise it and run the handler for messages in the background.
-func Run(ctx context.Context, cfg *config.Config) bool {
+// Get will start the database, initialise it, and run the handler for messages in the background.
+func Get(cfg *config.Config) *api {
 	once.Do(func() {
 		if logFrom.Secondary == "" {
 			logFrom.Secondary = cfg.Settings.DataDatabaseFile()
@@ -93,20 +92,19 @@ func Run(ctx context.Context, cfg *config.Config) bool {
 
 	api := api{config: cfg}
 	if ok := api.initialise(); !ok {
-		return false
+		return nil
 	}
 
 	if len(api.config.Order) > 0 {
 		if ok := api.removeUnknownServices(); !ok {
-			return false
+			return nil
 		}
 		if ok := api.extractServiceStatus(); !ok {
-			return false
+			return nil
 		}
 	}
 
-	go api.handler(ctx)
-	return true
+	return &api
 }
 
 func (api *api) initialise() (ok bool) {
@@ -121,7 +119,7 @@ func (api *api) initialise() (ok bool) {
 	}
 
 	// Create the table.
-	sqlStmt := `
+	if _, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS status (
 			id                         TEXT     NOT NULL PRIMARY KEY,
 			latest_version             TEXT     DEFAULT  '',
@@ -129,8 +127,7 @@ func (api *api) initialise() (ok bool) {
 			deployed_version           TEXT     DEFAULT  '',
 			deployed_version_timestamp DATETIME DEFAULT  (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
 			approved_version           TEXT     DEFAULT  ''
-		);`
-	if _, err := db.Exec(sqlStmt); err != nil {
+	);`); err != nil {
 		logutil.Log.Fatal(err, logFrom)
 		return
 	}
@@ -207,9 +204,10 @@ func (api *api) extractServiceStatus() (ok bool) {
 				logFrom)
 			return
 		}
-		api.config.Service[id].Status.SetLatestVersion(lv, lvt, false)
-		api.config.Service[id].Status.SetDeployedVersion(dv, dvt, false)
-		api.config.Service[id].Status.SetApprovedVersion(av, false)
+		svc := api.config.Service[id]
+		svc.Status.SetLatestVersion(lv, lvt, false)
+		svc.Status.SetDeployedVersion(dv, dvt, false)
+		svc.Status.SetApprovedVersion(av, false)
 	}
 	if err := rows.Err(); err != nil {
 		logutil.Log.Fatal(
@@ -225,7 +223,9 @@ func (api *api) extractServiceStatus() (ok bool) {
 func updateTable(db *sql.DB) bool {
 	// Get the type of the *_version columns.
 	var columnType string
-	if err := db.QueryRow("SELECT type FROM pragma_table_info('status') WHERE name = 'latest_version'").Scan(&columnType); err != nil {
+	if err := db.QueryRow(
+		"SELECT type FROM pragma_table_info('status') WHERE name = 'latest_version'",
+	).Scan(&columnType); err != nil {
 		logutil.Log.Fatal(
 			fmt.Sprintf("updateTable: %s",
 				err),
@@ -247,7 +247,7 @@ func updateTable(db *sql.DB) bool {
 // updateColumnTypes will recreate the table with the correct column types.
 func updateColumnTypes(db *sql.DB) (ok bool) {
 	// Create the new table.
-	sqlStmt := `
+	if _, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS status_backup (
 			id                         TEXT     NOT NULL PRIMARY KEY,
 			latest_version             TEXT     DEFAULT  '',
@@ -255,8 +255,7 @@ func updateColumnTypes(db *sql.DB) (ok bool) {
 			deployed_version           TEXT     DEFAULT  '',
 			deployed_version_timestamp DATETIME DEFAULT  (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
 			approved_version           TEXT     DEFAULT  ''
-		);`
-	if _, err := db.Exec(sqlStmt); err != nil {
+	);`); err != nil {
 		logutil.Log.Fatal(
 			fmt.Sprintf("updateColumnTypes - create: %s",
 				err),

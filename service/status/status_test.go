@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -295,28 +295,28 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 	tests := map[string]struct {
 		hadApprovedVersion            string
 		approving                     string
-		latestVersionIsDeployedMetric float64
+		latestVersionIsDeployedMetric metric.LatestVersionDeployedState
 		wantMessages                  int
 	}{
 		"Same version": {
 			hadApprovedVersion:            "0.0.0",
 			approving:                     "0.0.0",
-			latestVersionIsDeployedMetric: 0,
+			latestVersionIsDeployedMetric: metric.LatestVersionUnactioned,
 			wantMessages:                  0,
 		},
 		"Approving LatestVersion": {
 			approving:                     latestVersion,
-			latestVersionIsDeployedMetric: 2,
+			latestVersionIsDeployedMetric: metric.LatestVersionApproved,
 			wantMessages:                  1,
 		},
 		"Skipping LatestVersion": {
-			approving:                     "SKIP_" + latestVersion,
-			latestVersionIsDeployedMetric: 3,
+			approving:                     serviceinfo.SkippedVersion(latestVersion),
+			latestVersionIsDeployedMetric: metric.LatestVersionSkipped,
 			wantMessages:                  1,
 		},
 		"Approving non-latest version": {
 			approving:                     "0.0.2a",
-			latestVersionIsDeployedMetric: 0,
+			latestVersionIsDeployedMetric: metric.LatestVersionUnactioned,
 			wantMessages:                  1,
 		},
 	}
@@ -379,9 +379,9 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 					packageName, tc.wantMessages, len(status.DatabaseChannel))
 			}
 			// AND LatestVersionIsDeployedVersion metric is updated.
-			gotMetric := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(status.ServiceInfo.ID))
+			gotMetric := metric.LatestVersionDeployedState(testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(status.ServiceInfo.ID)))
 			if gotMetric != tc.latestVersionIsDeployedMetric {
-				t.Errorf("%s\nLatestVersionIsDeployedVersion metric mismatch\nwant: %f\ngot:  %f",
+				t.Errorf("%s\nLatestVersionIsDeployedVersion metric mismatch\nwant: %d\ngot:  %d",
 					packageName, tc.latestVersionIsDeployedMetric, gotMetric)
 			}
 		})
@@ -550,13 +550,13 @@ func TestStatus_DeployedVersion(t *testing.T) {
 				}
 				// AND the LatestVersionIsDeployedVersion metric is updated.
 				got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(name))
-				want := float64(0)
+				want := metric.LatestVersionUnactioned
 				if haveDB && status.LatestVersion() == status.DeployedVersion() {
-					want = 1
+					want = metric.LatestVersionDeployed
 				}
-				if got != want {
-					t.Errorf("%s\nhaveDB=%t LatestVersionIsDeployedVersion metric mismatch\nwant: %f\ngot:  %f",
-						packageName, haveDB, want, got)
+				if g := metric.LatestVersionDeployedState(got); g != want {
+					t.Errorf("%s\nhaveDB=%t LatestVersionIsDeployedVersion metric mismatch\nwant: %d\ngot:  %d",
+						packageName, haveDB, want, g)
 				}
 			}
 		})
@@ -570,8 +570,9 @@ func TestStatus_LatestVersion(t *testing.T) {
 	// GIVEN a Status.
 	lastQueried := "2021-01-01T00:00:00Z"
 	tests := map[string]struct {
-		had, args values
-		want      *values // Default to args.
+		had, args             values
+		want                  *values // Default to args.
+		latestVersionDeployed metric.LatestVersionDeployedState
 	}{
 		"same version": {
 			had: values{
@@ -580,6 +581,7 @@ func TestStatus_LatestVersion(t *testing.T) {
 			args: values{
 				version: "1.2.3", timestamp: "2020-01-01T00:00:00Z",
 			},
+			latestVersionDeployed: metric.LatestVersionUnactioned,
 		},
 		"timestamp - Empty == Set to lastQueried": {
 			had: values{
@@ -591,6 +593,7 @@ func TestStatus_LatestVersion(t *testing.T) {
 			want: &values{
 				version: "0.0.1", timestamp: lastQueried,
 			},
+			latestVersionDeployed: metric.LatestVersionUnknown,
 		},
 		"Timestamp - Given == Set to value given": {
 			had: values{
@@ -599,6 +602,7 @@ func TestStatus_LatestVersion(t *testing.T) {
 			args: values{
 				version: "0.0.1", timestamp: "2022-01-01T00:00:00Z",
 			},
+			latestVersionDeployed: metric.LatestVersionUnknown,
 		},
 	}
 
@@ -647,14 +651,14 @@ func TestStatus_LatestVersion(t *testing.T) {
 				}
 				// AND the LatestVersionIsDeployedVersion metric is updated.
 				got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(name))
-				want := float64(0)
-				if haveDB && status.LatestVersion() == status.DeployedVersion() {
-					want = 1
+				want := metric.LatestVersionUnactioned
+				if haveDB {
+					want = tc.latestVersionDeployed
 				}
 				// LatestVersionIsDeployedVersion metric.
-				if got != want {
-					t.Errorf("%s\nhaveDB=%t LatestVersionIsDeployedVersion metric mismatch\nwant: %f\ngot:  %f",
-						packageName, haveDB, want, got)
+				if g := metric.LatestVersionDeployedState(got); g != want {
+					t.Errorf("%s\nhaveDB=%t LatestVersionIsDeployedVersion metric mismatch\nwant: %d\ngot:  %d",
+						packageName, haveDB, want, g)
 				}
 			}
 		})
@@ -1124,7 +1128,7 @@ func TestStatus_String(t *testing.T) {
 	}
 }
 
-func TestStatus_SetLatestVersionIsDeployedMetric(t *testing.T) {
+func TestSetLatestVersionIsDeployedMetric(t *testing.T) {
 	// GIVEN a Status.
 	tests := map[string]struct {
 		serviceID                                       string
@@ -1149,7 +1153,7 @@ func TestStatus_SetLatestVersionIsDeployedMetric(t *testing.T) {
 			want:            2,
 		},
 		"latest version is not deployed, but is skipped": {
-			approvedVersion: "SKIP_1.2.3",
+			approvedVersion: serviceinfo.SkippedVersion("1.2.3"),
 			latestVersion:   "1.2.3",
 			deployedVersion: "1.2.4",
 			want:            3,
@@ -1174,7 +1178,7 @@ func TestStatus_SetLatestVersionIsDeployedMetric(t *testing.T) {
 				status.Dashboard)
 
 			// WHEN setLatestVersion is called on it.
-			status.setLatestVersionIsDeployedMetric()
+			setLatestVersionIsDeployedMetric(status.GetServiceInfo())
 			got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(name))
 
 			// THEN the metric is as expected.
@@ -1219,7 +1223,7 @@ func TestStatus_InitMetrics_DeleteMetrics(t *testing.T) {
 		},
 		"latest version is skipped": {
 			versions: versions{
-				approvedVersion: "SKIP_0.0.1",
+				approvedVersion: serviceinfo.SkippedVersion("0.0.1"),
 				latestVersion:   "0.0.1",
 				deployedVersion: "0.0.0",
 			},
@@ -1595,7 +1599,7 @@ func TestStatus_SameVersions(t *testing.T) {
 	}
 }
 
-func TestUpdateUpdatesCurrent(t *testing.T) {
+func TestUpdateUpdatesCurrentMetric(t *testing.T) {
 	type versions struct {
 		approvedVersion, deployedVersion, latestVersion string
 	}
@@ -1637,7 +1641,7 @@ func TestUpdateUpdatesCurrent(t *testing.T) {
 				latestVersion:   "1.2.0",
 			},
 			newVersions: versions{
-				approvedVersion: "SKIP_1.2.0",
+				approvedVersion: serviceinfo.SkippedVersion("1.2.0"),
 			},
 			updateCountAvailable: 0,
 			updateCountSkipped:   1,
@@ -1688,14 +1692,14 @@ func TestUpdateUpdatesCurrent(t *testing.T) {
 				latestVersion:   "1.2.0",
 			},
 			newVersions: versions{
-				approvedVersion: "SKIP_1.2.0",
+				approvedVersion: serviceinfo.SkippedVersion("1.2.0"),
 			},
 			updateCountAvailable: 0,
 			updateCountSkipped:   1,
 		},
 		"3 to 0 - Latest version skipped -> Latest version not deployed/approved/skipped": {
 			previousVersions: versions{
-				approvedVersion: "SKIP_1.2.0",
+				approvedVersion: serviceinfo.SkippedVersion("1.2.0"),
 				deployedVersion: "1.1.0",
 				latestVersion:   "1.2.0",
 			},
@@ -1707,7 +1711,7 @@ func TestUpdateUpdatesCurrent(t *testing.T) {
 		},
 		"3 to 1 - Latest version skipped -> Latest version deployed": {
 			previousVersions: versions{
-				approvedVersion: "SKIP_1.2.0",
+				approvedVersion: serviceinfo.SkippedVersion("1.2.0"),
 				deployedVersion: "1.1.0",
 				latestVersion:   "1.2.0",
 			},
@@ -1719,7 +1723,7 @@ func TestUpdateUpdatesCurrent(t *testing.T) {
 		},
 		"3 to 2 - Latest version skipped -> Latest version approved": {
 			previousVersions: versions{
-				approvedVersion: "SKIP_1.2.0",
+				approvedVersion: serviceinfo.SkippedVersion("1.2.0"),
 				deployedVersion: "1.1.0",
 				latestVersion:   "1.2.0",
 			},
@@ -1739,6 +1743,11 @@ func TestUpdateUpdatesCurrent(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're testing metrics.
 
+			previousServiceInfo := serviceinfo.ServiceInfo{
+				ID:              name,
+				ApprovedVersion: tc.previousVersions.approvedVersion,
+				DeployedVersion: tc.previousVersions.deployedVersion,
+				LatestVersion:   tc.previousVersions.latestVersion}
 			tc.newVersions.deployedVersion = util.ValueOrValue(tc.newVersions.deployedVersion, tc.previousVersions.deployedVersion)
 			tc.newVersions.latestVersion = util.ValueOrValue(tc.newVersions.latestVersion, tc.previousVersions.latestVersion)
 			status := New(nil, nil, nil,
@@ -1747,14 +1756,13 @@ func TestUpdateUpdatesCurrent(t *testing.T) {
 				tc.newVersions.latestVersion, "",
 				"",
 				&dashboard.Options{})
+			status.ServiceInfo.ID = name
+			status.refreshServiceInfo()
 			hadUpdatesCurrentAvailable := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE"))
 			hadUpdatesCurrentSkipped := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED"))
 
-			// WHEN updateUpdatesCurrent is called with the previous and new versions.
-			status.updateUpdatesCurrent(
-				tc.previousVersions.approvedVersion,
-				tc.previousVersions.latestVersion,
-				tc.previousVersions.deployedVersion)
+			// WHEN updateUpdatesCurrentMetric is called with the previous and new versions.
+			updateUpdatesCurrentMetric(previousServiceInfo, status.ServiceInfo)
 
 			// Validate the update counts for both the approved and skipped metrics.
 			// For this, we assume that `SetUpdatesCurrent` has been correctly implemented,
@@ -1772,5 +1780,128 @@ func TestUpdateUpdatesCurrent(t *testing.T) {
 					packageName, want, got)
 			}
 		})
+	}
+}
+
+type fuzzSetVersionsOp uint8
+
+const (
+	opSetApprovedLatest fuzzSetVersionsOp = iota
+	opSetApprovedSkip
+	opSetLatest
+	opSetDeployed
+)
+
+func FuzzSetVersions(f *testing.F) {
+	f.Add([]byte{0, 1, 2, 3}, []byte{0, 1, 2, 3})
+
+	testStatus := testStatus()
+	testStatus.ServiceInfo.LatestVersion = "0.0.0"
+	testStatus.ServiceInfo.DeployedVersion = "0.0.0"
+	testStatus.ServiceInfo.ApprovedVersion = ""
+
+	announceChan := make(chan []byte, 4)
+	testStatus.AnnounceChannel = announceChan
+	databaseChan := make(chan dbtype.Message, 4)
+	testStatus.DatabaseChannel = databaseChan
+	saveChan := make(chan bool, 4)
+	testStatus.SaveChannel = saveChan
+	running := true
+	f.Cleanup(func() {
+		running = false
+	})
+	// Drain to prevent blocking.
+	go func() {
+		for running {
+			select {
+			case <-announceChan:
+				continue
+			case <-databaseChan:
+				continue
+			case <-saveChan:
+				continue
+			}
+		}
+	}()
+
+	hadUpdatesCurrentAvailable := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE"))
+	hadUpdatesCurrentSkipped := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED"))
+
+	f.Fuzz(func(t *testing.T, opsRaw []byte, versionsRaw []byte) {
+		if len(opsRaw) == 0 || len(versionsRaw) == 0 {
+			return
+		}
+
+		versions := []string{
+			"1.0.0",
+			"1.1.0",
+			"2.0.0",
+		}
+
+		for i := range len(opsRaw) {
+			op := fuzzSetVersionsOp(opsRaw[i] % 4)
+			version := versions[int(versionsRaw[i%len(versionsRaw)])%len(versions)]
+
+			switch op {
+			case opSetApprovedLatest:
+				testStatus.SetApprovedVersion(version, true)
+
+			case opSetApprovedSkip:
+				testStatus.SetApprovedVersion(
+					serviceinfo.SkippedVersion(testStatus.ServiceInfo.LatestVersion), true)
+
+			case opSetLatest:
+				testStatus.SetLatestVersion(version, "", true)
+
+			case opSetDeployed:
+				testStatus.SetDeployedVersion(version, "", true)
+			}
+
+			assertSetVersionsResult(t, testStatus, hadUpdatesCurrentAvailable, hadUpdatesCurrentSkipped)
+		}
+	})
+}
+
+func assertSetVersionsResult(t *testing.T, s *Status, hadAvailable, hadSkipped float64) {
+	info := s.GetServiceInfo()
+
+	// Approved must not equal Latest if Latest == Deployed.
+	if info.LatestVersion == info.DeployedVersion &&
+		info.ApprovedVersion == info.LatestVersion {
+		t.Fatalf("invalid state: approved == latest == deployed")
+	}
+
+	// SkippedVersion logic correctness.
+	if serviceinfo.SkippedVersion(info.LatestVersion) == info.DeployedVersion &&
+		info.ApprovedVersion != "" {
+		t.Fatalf("approved should reset after skipped deploy")
+	}
+
+	// Timestamps must exist if version exists.
+	if info.DeployedVersion != "" && s.DeployedVersionTimestamp() == "" {
+		t.Fatalf("deployed version without timestamp")
+	}
+
+	// Updates Available.
+	want := hadAvailable
+	//   Increase when Latest is not Deployed.
+	if info.LatestVersion != info.DeployedVersion {
+		want += 1
+	}
+	got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE"))
+	if got != want {
+		t.Fatalf("%s\navailable count mismatch\nwant: %f\ngot:  %f\nserviceInfo: %+v",
+			packageName, want, got, info)
+	}
+	// Updates Skipped.
+	want = hadSkipped
+	//   Increase when Approved is Skip of Latest.
+	if info.ApprovedVersion == serviceinfo.SkippedVersion(info.LatestVersion) {
+		want += 1
+	}
+	got = testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED"))
+	if got != want {
+		t.Fatalf("%s\nskipped count mismatch\nwant: %f\ngot:  %f\nserviceInfo: %+v",
+			packageName, want, got, info)
 	}
 }

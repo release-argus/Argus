@@ -24,9 +24,9 @@ import (
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
-// handler will listen to the DatabaseChannel and act on
+// Handler will listen to the DatabaseChannel and act on
 // incoming messages to the DatabaseChannel.
-func (api *api) handler(ctx context.Context) {
+func (api *api) Handler(ctx context.Context) {
 	defer api.db.Close()
 
 	for {

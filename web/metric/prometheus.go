@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,12 +16,38 @@
 package metric
 
 import (
-	"strings"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
+)
+
+type LatestVersionDeployedState int
+
+const (
+	LatestVersionUnactioned LatestVersionDeployedState = iota
+	LatestVersionDeployed
+	LatestVersionApproved
+	LatestVersionSkipped
+	LatestVersionUnknown
+)
+
+type LatestVersionQueryResult int
+
+const (
+	LatestVersionQueryResultFailed LatestVersionQueryResult = iota
+	LatestVersionQueryResultSuccess
+	LatestVersionQueryResultNoMatch
+	LatestVersionQueryResultSemanticVersionFail
+	LatestVersionQueryResultProgressiveVersionFail
+)
+
+type DeployedVersionQueryResult int
+
+const (
+	DeployedVersionQueryResultFailed DeployedVersionQueryResult = iota
+	DeployedVersionQueryResultSuccess
 )
 
 // Prometheus metric.
@@ -33,7 +59,7 @@ var (
 		[]string{
 			"state",
 		})
-	// LatestVersionQueryResultLast holds the last latest version query result.
+	// LatestVersionQueryResultLast holds the last latest version query result (LatestVersionQueryResult).
 	LatestVersionQueryResultLast = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "latest_version_query_result_last",
 		Help: "Whether this service's last latest version query was successful (0=no, 1=yes, 2=no_match__url_command_or_require, 3=semantic_version_fail, 4=progressive_version_fail)."},
@@ -50,7 +76,7 @@ var (
 			"type",
 			"result",
 		})
-	// DeployedVersionQueryResultLast holds the state of the latest deployed version query.
+	// DeployedVersionQueryResultLast holds the state of the latest deployed version query (DeployedVersionQueryResult).
 	DeployedVersionQueryResultLast = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "deployed_version_query_result_last",
 		Help: "Whether this service's last deployed version query was successful (0=no, 1=yes)."},
@@ -67,10 +93,10 @@ var (
 			"type",
 			"result",
 		})
-	// LatestVersionIsDeployed tracks the deployment state of the latest version.
+	// LatestVersionIsDeployed tracks the deployment state of the latest version (LatestVersionDeployedState).
 	LatestVersionIsDeployed = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "latest_version_is_deployed",
-		Help: "Whether this service's latest version is the same as its deployed version (0=no, 1=yes, 2=approved, 3=skipped)."},
+		Help: "Whether this service's latest version is the same as its deployed version (0=no, 1=yes, 2=approved, 3=skipped, 4=unknown)."},
 		[]string{
 			"id",
 		})
@@ -251,37 +277,40 @@ func mergeGaugeLabels(id, srcType string) prometheus.Labels {
 	return labels
 }
 
-// getLatestVersionIsDeployedState determines the deployment state of the latest version.
+// GetVersionDeployedState determines the deployment state of the latest version.
 //
 // Returns:
-// - 1: The latest version is deployed (latestVersion matches deployedVersion).
-// - 2: The latest version is approved (approvedVersion matches latestVersion).
-// - 3: The latest version is skipped (approvedVersion is SKIP_latestVersion).
-// - 0: The latest version is neither deployed, approved, nor skipped.
-func GetVersionDeployedState(approvedVersion, latestVersion, deployedVersion string) float64 {
+// - LatestVersionDeployed: The latest version is deployed (latestVersion matches deployedVersion, or latestVersion unfound, or deployedVersion is unset).
+// - LatestVersionApproved: The latest version is approved (approvedVersion matches latestVersion).
+// - LatestVersionSkipped: The latest version is skipped (approvedVersion is SKIP_latestVersion).
+// - LatestVersionUnactioned: The latest version is neither deployed, approved, nor skipped.
+// - LatestVersionUnknown: The latest version and/or deployed version is unknown.
+func GetVersionDeployedState(serviceInfo serviceinfo.ServiceInfo) LatestVersionDeployedState {
 	switch {
-	case latestVersion == deployedVersion:
-		return 1 // Latest version is deployed.
-	case approvedVersion == latestVersion:
-		return 2 // Latest version is approved.
-	case strings.HasSuffix(approvedVersion, latestVersion):
-		return 3 // Latest version is skipped.
+	case serviceInfo.LatestVersion == "", serviceInfo.DeployedVersion == "":
+		return LatestVersionUnknown // Deployed state unknown.
+	case serviceInfo.LatestVersion == serviceInfo.DeployedVersion:
+		return LatestVersionDeployed // Latest version is deployed.
+	case serviceInfo.ApprovedVersion == serviceInfo.LatestVersion:
+		return LatestVersionApproved // Latest version is approved.
+	case serviceInfo.ApprovedVersion == serviceinfo.SkippedVersion(serviceInfo.LatestVersion):
+		return LatestVersionSkipped // Latest version is skipped.
 	default:
-		return 0 // Latest version is not deployed/approved/skipped.
+		return LatestVersionUnactioned // Latest version is not deployed/approved/skipped.
 	}
 }
 
 // SetUpdatesCurrent updates the UpdatesCurrent Prometheus metric with the given delta.
 // The metric is updated based on the given result value, which indicates the status:
-//   - 0: Latest version not deployed/approved/skipped.
-//   - 1: Latest version deployed (does not modify metric).
-//   - 2: Latest version approved.
-//   - 3: Latest version skipped.
-func SetUpdatesCurrent(delta, result float64) {
+//   - LatestVersionDeployed: Latest version deployed (does not modify metric).
+//   - LatestVersionApproved: Latest version available.
+//   - LatestVersionSkipped: Latest version available and skipped.
+//   - LatestVersionUnactioned: Latest version available.
+func SetUpdatesCurrent(delta float64, result LatestVersionDeployedState) {
 	switch result {
-	case 0, 2:
+	case LatestVersionUnactioned, LatestVersionApproved:
 		UpdatesCurrent.WithLabelValues("AVAILABLE").Add(delta)
-	case 3:
+	case LatestVersionSkipped:
 		UpdatesCurrent.WithLabelValues("AVAILABLE").Add(delta)
 		UpdatesCurrent.WithLabelValues("SKIPPED").Add(delta)
 	}

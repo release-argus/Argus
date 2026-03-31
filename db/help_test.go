@@ -47,7 +47,8 @@ func TestMain(m *testing.M) {
 	cfg.Settings.Data.DatabaseFile = databaseFile
 	// AND a cancellable context for shutdown.
 	ctx, cancel := context.WithCancel(context.Background())
-	Run(ctx, cfg)
+	api := Get(cfg)
+	go api.Handler(ctx)
 
 	// Run other tests.
 	exitCode := m.Run()

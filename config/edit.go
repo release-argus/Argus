@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 	defer c.OrderMutex.Unlock()
 	logFrom := logutil.LogFrom{Primary: "AddService"}
 
-	// Check a service does not already exist with the new id/name, if the name is changing.
+	// Check a service does not already exist with the new id/name (if the name is changing).
 	if oldServiceID != newService.ID &&
 		(c.Service[newService.ID] != nil || c.ServiceWithNameExists(newService.ID, oldServiceID)) {
 		err := fmt.Errorf("service %q already exists", newService.ID)
@@ -71,15 +71,16 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 
 	// Add/Replace the service in the config.
 	c.Service[newService.ID] = newService
+	serviceStatusHardDefaults := c.HardDefaults.Service.Status
 
 	// Trigger a save if the Service has changed.
 	if changedService {
-		c.HardDefaults.Service.Status.SaveChannel <- true
+		serviceStatusHardDefaults.SaveChannel <- true
 	}
 
 	// Update the database if the service is new, or the versions changed.
 	if changedDB {
-		c.HardDefaults.Service.Status.DatabaseChannel <- dbtype.Message{
+		serviceStatusHardDefaults.DatabaseChannel <- dbtype.Message{
 			ServiceID: newService.ID,
 			Cells: []dbtype.Cell{
 				{Column: "latest_version", Value: newService.Status.LatestVersion()},

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -144,6 +144,51 @@ func TestGetWebURL(t *testing.T) {
 			if result != tc.value {
 				t.Errorf("%s\nmismatch\nwant: %s\ngot:  %s",
 					packageName, tc.value, result)
+			}
+		})
+	}
+}
+
+func TestSkippedVersion(t *testing.T) {
+	// GIVEN: a version string.
+	tests := []struct {
+		name    string
+		version string
+	}{
+		{
+			name:    "semver",
+			version: "1.2.3",
+		},
+		{
+			name:    "empty string",
+			version: "",
+		},
+		{
+			name:    "already prefixed",
+			version: SkipPrefix + "1.2.3",
+		},
+		{
+			name:    "non-semver string",
+			version: "latest",
+		},
+		{
+			name:    "with whitespace",
+			version: " 1.2.3 ",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: SkippedVersion is called with the version string.
+			result := SkippedVersion(tc.version)
+
+			// THEN: the returned string should be the SkipPrefix followed by the version string.
+			expected := SkipPrefix + tc.version
+			if result != expected {
+				t.Fatalf("%s\nSkippedVersion(%q) mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.version, expected, result)
 			}
 		})
 	}

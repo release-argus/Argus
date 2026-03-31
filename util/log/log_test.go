@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -60,9 +60,9 @@ func TestInit(t *testing.T) {
 			// WHEN Init is called.
 			exitCodeChannel := Init(tc.level, tc.timestamps)
 
-			// THEN the Log should be initialized correctly.
+			// THEN the Log should be initialised correctly.
 			if Log == nil {
-				t.Fatalf("%s\nLog was not initialized",
+				t.Fatalf("%s\nLog was not initialised",
 					packageName)
 			}
 			// Level.

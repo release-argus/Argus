@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -295,48 +295,54 @@ func (s *Status) ApprovedVersion() string {
 // SetApprovedVersion will set .ApprovedVersion to `version`.
 func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 	s.mutex.Lock()
-	// Do not modify if unchanged, or deleting (Or latest version is already deployed).
-	if s.ServiceInfo.ApprovedVersion == version || s.deleting ||
-		s.ServiceInfo.LatestVersion == s.ServiceInfo.DeployedVersion {
+
+	previousServiceInfo := s.ServiceInfo
+	// Do not modify if unchanged, deleting, or latest version is already deployed.
+	if previousServiceInfo.ApprovedVersion == version || s.deleting ||
+		previousServiceInfo.LatestVersion == previousServiceInfo.DeployedVersion {
 		s.mutex.Unlock()
 		return
 	}
 
-	previousApprovedVersion := s.ServiceInfo.ApprovedVersion
 	s.ServiceInfo.ApprovedVersion = version
 	s.refreshServiceInfo()
-	s.mutex.Unlock()
 
-	if writeToDB {
-		s.mutex.RLock()
-		defer s.mutex.RUnlock()
-
-		s.setLatestVersionIsDeployedMetric()
-		s.updateUpdatesCurrent(
-			previousApprovedVersion,
-			s.ServiceInfo.LatestVersion,
-			s.ServiceInfo.DeployedVersion)
-
-		// Update metrics if acting on the LatestVersion.
-		if strings.HasSuffix(s.ServiceInfo.ApprovedVersion, s.ServiceInfo.LatestVersion) {
-			value := float64(3) // Skipping LatestVersion.
-			if s.ServiceInfo.ApprovedVersion == s.ServiceInfo.LatestVersion {
-				value = 2 // Approving LatestVersion.
-			}
-			metric.SetPrometheusGauge(metric.LatestVersionIsDeployed,
-				s.ServiceInfo.ID, "",
-				value)
-		}
-
-		// WebSocket.
-		s.announceApproved()
-		// Database.
-		message := dbtype.Message{
-			ServiceID: s.ServiceInfo.ID,
-			Cells: []dbtype.Cell{
-				{Column: "approved_version", Value: version}}}
-		s.sendDatabase(&message)
+	if !writeToDB {
+		s.mutex.Unlock()
+		return
 	}
+
+	newServiceInfo := s.ServiceInfo
+	s.mutex.Unlock()
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	// Metrics.
+	setLatestVersionIsDeployedMetric(newServiceInfo)
+	updateUpdatesCurrentMetric(previousServiceInfo, newServiceInfo)
+
+	// Update metrics if acting on the LatestVersion.
+	isApproved := newServiceInfo.ApprovedVersion == newServiceInfo.LatestVersion
+	isSkipped := newServiceInfo.ApprovedVersion == serviceinfo.SkippedVersion(newServiceInfo.LatestVersion)
+	if isApproved || isSkipped {
+		value := metric.LatestVersionSkipped // Skipping LatestVersion.
+		if isApproved {
+			value = metric.LatestVersionApproved // Approving LatestVersion.
+		}
+		metric.SetPrometheusGauge(metric.LatestVersionIsDeployed,
+			newServiceInfo.ID, "",
+			float64(value))
+	}
+
+	// WebSocket.
+	s.announceApproved()
+
+	// Database.
+	message := dbtype.Message{
+		ServiceID: newServiceInfo.ID,
+		Cells: []dbtype.Cell{
+			{Column: "approved_version", Value: version}}}
+	s.sendDatabase(&message)
 }
 
 // DeployedVersion returns the DeployedVersion.
@@ -351,47 +357,47 @@ func (s *Status) DeployedVersion() string {
 // (or now if empty).
 func (s *Status) SetDeployedVersion(version, releaseDate string, writeToDB bool) {
 	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	previousServiceInfo := s.ServiceInfo
 	// Do not modify if unchanged, or deleting.
-	if s.ServiceInfo.DeployedVersion == version || s.deleting {
-		s.mutex.Unlock()
+	if previousServiceInfo.DeployedVersion == version || s.deleting {
 		return
 	}
 
-	previousDeployedVersion := s.ServiceInfo.DeployedVersion
 	s.ServiceInfo.DeployedVersion = version
 	if releaseDate != "" {
 		s.deployedVersionTimestamp = releaseDate
 	} else {
 		s.deployedVersionTimestamp = time.Now().UTC().Format(time.RFC3339)
 	}
-	// Reset ApprovedVersion if on it.
-	if version == s.ServiceInfo.ApprovedVersion {
+	// Reset ApprovedVersion if on it (or previously skipped it).
+	if version == previousServiceInfo.ApprovedVersion ||
+		serviceinfo.SkippedVersion(version) == previousServiceInfo.ApprovedVersion {
 		s.ServiceInfo.ApprovedVersion = ""
 	}
 	s.refreshServiceInfo()
-	s.mutex.Unlock()
 
-	// Write to the database if not deleting and have a channel.
-	if writeToDB {
-		s.mutex.RLock()
-		defer s.mutex.RUnlock()
-
-		s.setLatestVersionIsDeployedMetric()
-		s.updateUpdatesCurrent(
-			s.ServiceInfo.ApprovedVersion,
-			s.ServiceInfo.LatestVersion,
-			previousDeployedVersion)
-
-		// Clear the fail status of WebHooks/Commands.
-		s.Fails.resetFails()
-
-		message := dbtype.Message{
-			ServiceID: s.ServiceInfo.ID,
-			Cells: []dbtype.Cell{
-				{Column: "deployed_version", Value: s.ServiceInfo.DeployedVersion},
-				{Column: "deployed_version_timestamp", Value: s.deployedVersionTimestamp}}}
-		s.sendDatabase(&message)
+	if !writeToDB {
+		return
 	}
+
+	newServiceInfo := s.ServiceInfo
+
+	// Metrics.
+	setLatestVersionIsDeployedMetric(newServiceInfo)
+	updateUpdatesCurrentMetric(previousServiceInfo, newServiceInfo)
+
+	// Clear the fail status of WebHooks/Commands.
+	s.Fails.resetFails()
+
+	// Database.
+	message := dbtype.Message{
+		ServiceID: newServiceInfo.ID,
+		Cells: []dbtype.Cell{
+			{Column: "deployed_version", Value: newServiceInfo.DeployedVersion},
+			{Column: "deployed_version_timestamp", Value: s.deployedVersionTimestamp}}}
+	s.sendDatabase(&message)
 }
 
 // DeployedVersionTimestamp returns the DeployedVersionTimestamp.
@@ -414,13 +420,14 @@ func (s *Status) LatestVersion() string {
 // (or now if empty).
 func (s *Status) SetLatestVersion(version, releaseDate string, writeToDB bool) {
 	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	previousServiceInfo := s.ServiceInfo
 	// Do not modify if unchanged, or deleting.
-	if s.ServiceInfo.LatestVersion == version || s.deleting {
-		s.mutex.Unlock()
+	if previousServiceInfo.LatestVersion == version || s.deleting {
 		return
 	}
 
-	previousLatestVersion := s.ServiceInfo.LatestVersion
 	s.ServiceInfo.LatestVersion = version
 	if releaseDate != "" {
 		s.latestVersionTimestamp = releaseDate
@@ -428,29 +435,27 @@ func (s *Status) SetLatestVersion(version, releaseDate string, writeToDB bool) {
 		s.latestVersionTimestamp = s.lastQueried
 	}
 	s.refreshServiceInfo()
-	s.mutex.Unlock()
 
-	// Write to the database if not deleting, and have a channel.
-	if writeToDB {
-		s.mutex.RLock()
-		defer s.mutex.RUnlock()
-
-		s.updateUpdatesCurrent(
-			s.ServiceInfo.ApprovedVersion,
-			previousLatestVersion,
-			s.ServiceInfo.DeployedVersion)
-		s.setLatestVersionIsDeployedMetric()
-
-		// Clear the fail status of WebHooks/Commands.
-		s.Fails.resetFails()
-
-		message := dbtype.Message{
-			ServiceID: s.ServiceInfo.ID,
-			Cells: []dbtype.Cell{
-				{Column: "latest_version", Value: s.ServiceInfo.LatestVersion},
-				{Column: "latest_version_timestamp", Value: s.latestVersionTimestamp}}}
-		s.sendDatabase(&message)
+	if !writeToDB {
+		return
 	}
+
+	newServiceInfo := s.ServiceInfo
+
+	// Metrics.
+	setLatestVersionIsDeployedMetric(newServiceInfo)
+	updateUpdatesCurrentMetric(previousServiceInfo, newServiceInfo)
+
+	// Clear the fail status of WebHooks/Commands.
+	s.Fails.resetFails()
+
+	// Database.
+	message := dbtype.Message{
+		ServiceID: newServiceInfo.ID,
+		Cells: []dbtype.Cell{
+			{Column: "latest_version", Value: newServiceInfo.LatestVersion},
+			{Column: "latest_version_timestamp", Value: s.latestVersionTimestamp}}}
+	s.sendDatabase(&message)
 }
 
 // LatestVersionTimestamp returns the timestamp of the LatestVersion.
@@ -554,28 +559,19 @@ func (s *Status) SendSave() {
 }
 
 // setLatestVersionIsDeployedMetric sets the Prometheus metric for whether the LatestVersion is deployed.
-func (s *Status) setLatestVersionIsDeployedMetric() {
+func setLatestVersionIsDeployedMetric(serviceInfo serviceinfo.ServiceInfo) {
 	metric.SetPrometheusGauge(metric.LatestVersionIsDeployed,
-		s.ServiceInfo.ID, "",
-		metric.GetVersionDeployedState(
-			s.ServiceInfo.ApprovedVersion,
-			s.ServiceInfo.LatestVersion,
-			s.ServiceInfo.DeployedVersion))
+		serviceInfo.ID, "",
+		float64(metric.GetVersionDeployedState(serviceInfo)))
 }
 
-// updateUpdatesCurrent updates the Prometheus metric `UpdatesCurrent`
+// updateUpdatesCurrentMetric updates the Prometheus metric `UpdatesCurrent`
 // to reflect changes in the deployment state of the LatestVersion.
 // It compares the previous deployment state with the current state and adjusts the metric accordingly.
 // If the deployment state hasn't changed, no updates are made.
-func (s *Status) updateUpdatesCurrent(previousApprovedVersion, previousLatestVersion, previousDeployedVersion string) {
-	previousValue := metric.GetVersionDeployedState(
-		previousApprovedVersion,
-		previousLatestVersion,
-		previousDeployedVersion)
-	newValue := metric.GetVersionDeployedState(
-		s.ServiceInfo.ApprovedVersion,
-		s.ServiceInfo.LatestVersion,
-		s.ServiceInfo.DeployedVersion)
+func updateUpdatesCurrentMetric(previousServiceInfo, newServiceInfo serviceinfo.ServiceInfo) {
+	previousValue := metric.GetVersionDeployedState(previousServiceInfo)
+	newValue := metric.GetVersionDeployedState(newServiceInfo)
 	// No change.
 	if previousValue == newValue {
 		return
@@ -587,12 +583,11 @@ func (s *Status) updateUpdatesCurrent(previousApprovedVersion, previousLatestVer
 
 // InitMetrics for the Status.
 func (s *Status) InitMetrics() {
-	s.setLatestVersionIsDeployedMetric()
+	serviceInfo := s.GetServiceInfo()
+
+	setLatestVersionIsDeployedMetric(serviceInfo)
 	metric.SetUpdatesCurrent(1,
-		metric.GetVersionDeployedState(
-			s.ServiceInfo.ApprovedVersion,
-			s.ServiceInfo.LatestVersion,
-			s.ServiceInfo.DeployedVersion))
+		metric.GetVersionDeployedState(serviceInfo))
 }
 
 // DeleteMetrics of the Status.
@@ -600,8 +595,5 @@ func (s *Status) DeleteMetrics() {
 	metric.DeletePrometheusGauge(metric.LatestVersionIsDeployed,
 		s.ServiceInfo.ID, "")
 	metric.SetUpdatesCurrent(-1,
-		metric.GetVersionDeployedState(
-			s.ServiceInfo.ApprovedVersion,
-			s.ServiceInfo.LatestVersion,
-			s.ServiceInfo.DeployedVersion))
+		metric.GetVersionDeployedState(s.GetServiceInfo()))
 }

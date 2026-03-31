@@ -82,17 +82,25 @@ type RunActionsPayload struct {
 	Target string `json:"target"`
 }
 
+// Action codes.
+const (
+	ActionAll    = "ARGUS_ALL"
+	ActionSkip   = "ARGUS_SKIP"
+	ActionFailed = "ARGUS_FAILED"
+)
+
 // httpServiceRunActions handles approvals/rejections of the latest version of a service.
 //
 // Query Parameters:
 //
-//	service_id: the ID of the Service to target.
-//	target: the action to take. One of:
-//		"ARGUS_ALL": approve all actions.
-//		"ARGUS_FAILED": approve all failed actions.
-//		"ARGUS_SKIP": skip this release.
-//		"webhook_<webhook_id>": approve a specific webhook.
-//		"command_<command_id>": approve a specific command.
+// - service_id: the ID of the Service to target.
+//
+// - target: the action to take. One of:
+//   - ActionAll: approve all actions.
+//   - ActionFailed: approve all failed actions.
+//   - ActionSkip: skip this release.
+//   - "webhook_<webhook_id>": approve a specific webhook.
+//   - "command_<command_id>": approve a specific command.
 func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := logutil.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
 	// Service to run actions of.
@@ -145,7 +153,7 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// SKIP this release.
-	if payload.Target == "ARGUS_SKIP" {
+	if payload.Target == ActionSkip {
 		msg := fmt.Sprintf("%q release skip - %q",
 			serviceID, svc.Status.LatestVersion())
 		logutil.Log.Info(msg, logFrom, true)
@@ -167,13 +175,13 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 		strings.ReplaceAll(
 			strings.ReplaceAll(
 				strings.ReplaceAll(payload.Target,
-					"ARGUS_ALL", "ALL"),
-				"ARGUS_FAILED", "ALL UNSENT/FAILED"),
-			"ARGUS_SKIP", "SKIP"),
+					ActionAll, "ALL"),
+				ActionFailed, "ALL UNSENT/FAILED"),
+			ActionSkip, "SKIP"),
 	)
 	logutil.Log.Info(msg, logFrom, true)
 	switch payload.Target {
-	case "ARGUS_ALL", "ARGUS_FAILED":
+	case ActionAll, ActionFailed:
 		go svc.HandleFailedActions()
 	default:
 		if strings.HasPrefix(payload.Target, "webhook_") {

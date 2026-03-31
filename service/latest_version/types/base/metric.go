@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,43 +73,36 @@ func (l *Lookup) DeleteMetrics(parentLookup Interface) {
 // QueryMetrics sets the Prometheus metrics for the LatestVersion query.
 func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
 	serviceID := l.GetServiceID()
+	serviceType := parentLookup.GetType()
+	// Default to success.
+	liveness := metric.LatestVersionQueryResultSuccess
+	result := metric.ActionResultSuccess
 
 	// If it failed.
 	if err != nil {
 		// Increase failure count.
-		metric.IncPrometheusCounter(metric.LatestVersionQueryResultTotal,
-			serviceID,
-			"",
-			parentLookup.GetType(),
-			metric.ActionResultFail)
-		// Set liveness.
+		result = metric.ActionResultFail
+		// Liveness.
 		switch e := err.Error(); {
 		case strings.HasPrefix(e, "no releases were found matching"):
-			metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
-				serviceID, parentLookup.GetType(),
-				2)
+			liveness = metric.LatestVersionQueryResultNoMatch
 		case strings.HasPrefix(e, "failed to convert") && strings.Contains(e, " semantic version."):
-			metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
-				serviceID, parentLookup.GetType(),
-				3)
+			liveness = metric.LatestVersionQueryResultSemanticVersionFail
 		case strings.HasPrefix(e, "queried version") && strings.Contains(e, " less than "):
-			metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
-				serviceID, parentLookup.GetType(),
-				4)
+			liveness = metric.LatestVersionQueryResultProgressiveVersionFail
 		default:
-			metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
-				serviceID, parentLookup.GetType(),
-				0)
+			liveness = metric.LatestVersionQueryResultFailed
 		}
-		// If it succeeded.
-	} else {
-		metric.IncPrometheusCounter(metric.LatestVersionQueryResultTotal,
-			serviceID,
-			"",
-			parentLookup.GetType(),
-			metric.ActionResultSuccess)
-		metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
-			serviceID, parentLookup.GetType(),
-			1)
 	}
+
+	// Set liveness.
+	metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
+		serviceID, serviceType,
+		float64(liveness))
+	// Increase query result count.
+	metric.IncPrometheusCounter(metric.LatestVersionQueryResultTotal,
+		serviceID,
+		"",
+		serviceType,
+		result)
 }

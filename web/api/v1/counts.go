@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	promclient "github.com/prometheus/client_model/go"
 
 	"github.com/release-argus/Argus/config"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
 )
@@ -47,7 +48,7 @@ func getUpdateDetails(cfg *config.Config, length int) []UpdateDetails {
 		}
 
 		updateApproved := svcInfo.ApprovedVersion == svcInfo.LatestVersion
-		updateSkipped := !updateApproved && svcInfo.ApprovedVersion == "SKIP_"+svcInfo.LatestVersion
+		updateSkipped := !updateApproved && svcInfo.ApprovedVersion == serviceinfo.SkippedVersion(svcInfo.LatestVersion)
 		updateDetails = append(updateDetails, UpdateDetails{
 			ServiceName:     id,
 			DeployedVersion: svcInfo.DeployedVersion,

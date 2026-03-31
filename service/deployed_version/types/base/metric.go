@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,27 +62,28 @@ func (l *Lookup) DeleteMetrics(parentLookup Interface) {
 
 // QueryMetrics sets the Prometheus metrics for the DeployedVersion query.
 func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
+	serviceID := l.GetServiceID()
+	serviceType := parentLookup.GetType()
+	// Default to success.
+	liveness := metric.DeployedVersionQueryResultSuccess
+	result := metric.ActionResultSuccess
+
 	// If it failed.
 	if err != nil {
 		// Increase failure count.
-		metric.IncPrometheusCounter(metric.DeployedVersionQueryResultTotal,
-			l.GetServiceID(),
-			"",
-			parentLookup.GetType(),
-			metric.ActionResultFail)
-		// Set liveness.
-		metric.SetPrometheusGauge(metric.DeployedVersionQueryResultLast,
-			l.GetServiceID(), parentLookup.GetType(),
-			0)
-		// If it succeeded.
-	} else {
-		metric.IncPrometheusCounter(metric.DeployedVersionQueryResultTotal,
-			l.GetServiceID(),
-			"",
-			parentLookup.GetType(),
-			metric.ActionResultSuccess)
-		metric.SetPrometheusGauge(metric.DeployedVersionQueryResultLast,
-			l.GetServiceID(), parentLookup.GetType(),
-			1)
+		result = metric.ActionResultFail
+		// Liveness.
+		liveness = metric.DeployedVersionQueryResultFailed
 	}
+
+	// Set liveness.
+	metric.SetPrometheusGauge(metric.DeployedVersionQueryResultLast,
+		serviceID, serviceType,
+		float64(liveness))
+	// Increase query result count.
+	metric.IncPrometheusCounter(metric.DeployedVersionQueryResultTotal,
+		serviceID,
+		"",
+		serviceType,
+		result)
 }
