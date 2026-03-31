@@ -41,7 +41,7 @@ jobs:
           QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
 
       - name: Publish coverage
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
