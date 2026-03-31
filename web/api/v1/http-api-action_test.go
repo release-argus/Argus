@@ -287,28 +287,28 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			},
 		},
 		"ARGUS_SKIP, known service_id": {
-			target: &ActionSkip,
+			target: test.StringPtr(ActionSkip),
 			wants: wants{
 				wantSkipMessage: true,
 			},
 		},
 		"ARGUS_SKIP, inactive service_id": {
 			active: test.BoolPtr(false),
-			target: &ActionSkip,
+			target: test.StringPtr(ActionSkip),
 			wants: wants{
 				wantSkipMessage: false,
 			},
 		},
 		"ARGUS_SKIP, unknown service_id": {
 			serviceID: test.StringPtr("unknown?"),
-			target:    &ActionSkip,
+			target:    test.StringPtr(ActionSkip),
 			wants: wants{
 				stdoutRegex: `service "unknown\?" not found`,
 			},
 		},
 		"ARGUS_SKIP, no service_id provided": {
 			serviceID: test.StringPtr(""),
-			target:    &ActionSkip,
+			target:    test.StringPtr(ActionSkip),
 			wants: wants{
 				bodyRegex:  `service "" not found`,
 				statusCode: http.StatusBadRequest,
@@ -322,14 +322,14 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			},
 		},
 		"ARGUS_ALL, known service_id with no commands/webhooks": {
-			target: &ActionAll,
+			target: test.StringPtr(ActionAll),
 			wants: wants{
 				stdoutRegex: `"[^"]+" does not have any commands\/webhooks to approve`,
 				statusCode:  http.StatusOK,
 			},
 		},
 		"ARGUS_ALL, known service_id with command": {
-			target: &ActionAll,
+			target: test.StringPtr(ActionAll),
 			commands: command.Commands{
 				{"false", "0"}},
 			wants: wants{
@@ -337,7 +337,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			},
 		},
 		"ARGUS_ALL, known service_id with webhook": {
-			target: &ActionAll,
+			target: test.StringPtr(ActionAll),
 			webhooks: webhook.WebHooks{
 				"known-service-and-webhook": webhook_test.WebHook(true, false, false)},
 			wants: wants{
@@ -345,7 +345,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			},
 		},
 		"ARGUS_ALL, known service_id with multiple webhooks": {
-			target: &ActionAll,
+			target: test.StringPtr(ActionAll),
 			webhooks: webhook.WebHooks{
 				"known-service-and-multiple-webhook-0": webhook_test.WebHook(true, false, false),
 				"known-service-and-multiple-webhook-1": webhook_test.WebHook(true, false, false)},
@@ -354,7 +354,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			},
 		},
 		"ARGUS_ALL, known service_id with multiple commands": {
-			target: &ActionAll,
+			target: test.StringPtr(ActionAll),
 			commands: command.Commands{
 				{"ls", "-a"}, {"false", "1"}},
 			wants: wants{
@@ -362,7 +362,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			},
 		},
 		"ARGUS_ALL, known service_id with dvl and command and webhook that pass upgrades approved_version": {
-			target: &ActionAll,
+			target: test.StringPtr(ActionAll),
 			commands: command.Commands{
 				{"ls", "-b"}},
 			webhooks: webhook.WebHooks{
@@ -374,7 +374,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			},
 		},
 		"ARGUS_ALL, known service_id with command and webhook that pass upgrades deployed_version": {
-			target: &ActionAll,
+			target: test.StringPtr(ActionAll),
 			commands: command.Commands{
 				{"ls", "-c"}},
 			webhooks: webhook.WebHooks{
@@ -387,7 +387,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			},
 		},
 		"ARGUS_ALL, known service_id with passing command and failing webhook doesn't upgrade any versions": {
-			target: &ActionAll,
+			target: test.StringPtr(ActionAll),
 			commands: command.Commands{
 				{"ls", "-d"}},
 			webhooks: webhook.WebHooks{
@@ -398,7 +398,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			},
 		},
 		"ARGUS_ALL, known service_id with failing command and passing webhook doesn't upgrade any versions": {
-			target: &ActionAll,
+			target: test.StringPtr(ActionAll),
 			commands: command.Commands{
 				{"fail"}},
 			webhooks: webhook.WebHooks{
