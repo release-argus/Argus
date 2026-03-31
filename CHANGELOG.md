@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.29.4](https://github.com/release-argus/Argus/compare/0.29.3...0.29.4) (2026-03-31)
+
+
+### Bug Fixes
+
+* **metrics:** stop updates_available going negative  ([#840](https://github.com/release-argus/Argus/issues/840)) ([cb9333e](https://github.com/release-argus/Argus/commit/cb9333e295d1a69f47959e88ba2a3880779475fc))
+
 ## [0.29.3](https://github.com/release-argus/Argus/compare/0.29.2...0.29.3) (2026-01-28)
 
 
