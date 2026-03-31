@@ -110,13 +110,15 @@ func run() (exitCode int) {
 
 	// Setup DB and last known service versions.
 	api := db.Get(&cfg)
-	g.Go(func() error {
-		api.Handler(gctx)
-		return nil
-	})
 
 	// If we have an API, we've loaded previous status' from the DB.
 	if api != nil {
+		// DB message handler.
+		g.Go(func() error {
+			api.Handler(gctx)
+			return nil
+		})
+
 		// Track all targets for changes in version and act on any found changes.
 		go cfg.Service.Track(&cfg.Order, &cfg.OrderMutex)
 
