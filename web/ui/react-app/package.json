@@ -49,7 +49,7 @@
   "devDependencies": {
     "@babel/preset-react": "7.28.5",
     "@babel/preset-typescript": "7.28.5",
-    "@biomejs/biome": "2.4.10",
+    "@biomejs/biome": "2.4.13",
     "@tanstack/react-query-devtools": "5.96.0",
     "@types/node": "24.12.2",
     "@types/react": "19.2.14",
