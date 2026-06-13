@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,19 +45,10 @@ func EvalEnvVars(input string) string {
 	return input
 }
 
-// expandEnvVariables replaces environment variables in a string.
-func expandEnvVariables(match string) string {
-	envVarName := match[2 : len(match)-1] // Remove the '${' and '}'.
-	if value, ok := os.LookupEnv(envVarName); ok {
-		return value
-	}
-	return match
-}
-
-// TryExpandEnv tries to expand environment variables in the input string.
+// TryExpandEnv tries to expand environment variables in the data string.
 //
-// If the input string contains no environment variables, it returns nil.
-// If the input string contains environment variables, it returns a pointer to the expanded string.
+// If the data string contains no environment variables, it returns nil.
+// If the data string contains environment variables, it returns a pointer to the expanded string.
 func TryExpandEnv(input string) *string {
 	inputAfterEnvExpansion := EvalEnvVars(input)
 	if input == inputAfterEnvExpansion {
@@ -67,4 +58,13 @@ func TryExpandEnv(input string) *string {
 
 	// Set the pointer to the expanded value.
 	return &inputAfterEnvExpansion
+}
+
+// expandEnvVariables replaces environment variables in a string.
+func expandEnvVariables(match string) string {
+	envVarName := match[2 : len(match)-1] // Remove the '${' and '}'.
+	if value, ok := os.LookupEnv(envVarName); ok {
+		return value
+	}
+	return match
 }

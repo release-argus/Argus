@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@ package v1
 import (
 	"net/http"
 
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/internal/logx"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 // httpFlags retrieves the values of vars that may get set with flags.
 func (api *API) httpFlags(w http.ResponseWriter, r *http.Request) {
-	logFrom := logutil.LogFrom{Primary: "httpFlags", Secondary: getIP(r)}
+	logFrom := logx.LogFrom{Primary: "httpFlags", Secondary: getIP(r)}
 
 	// Create and send status page data.
 	msg := apitype.Flags{
@@ -36,7 +36,8 @@ func (api *API) httpFlags(w http.ResponseWriter, r *http.Request) {
 		WebListenPort:    api.Config.Settings.WebListenPort(),
 		WebCertFile:      api.Config.Settings.WebCertFile(),
 		WebPKeyFile:      api.Config.Settings.WebKeyFile(),
-		WebRoutePrefix:   api.Config.Settings.WebRoutePrefix()}
+		WebRoutePrefix:   api.Config.Settings.WebRoutePrefix(),
+	}
 
 	api.writeJSON(w, msg, logFrom)
 }

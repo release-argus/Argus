@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package status
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,41 +33,51 @@ type Fails struct {
 
 // failsBase is the base struct for the Fails structs.
 type failsBase struct {
-	mutex sync.RWMutex     // Mutex for concurrent access.
+	mu    sync.RWMutex     // Mutex for concurrent access.
 	fails map[string]*bool // Map of index to fail status.
 }
 
-// Init the failsBase.
+// Init initialises the internal failure map with the given capacity.
 func (f *failsBase) Init(length int) {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	f.fails = make(map[string]*bool, length)
 }
 
+// Copy returns a deep copy of the receiver.
+func (f *failsBase) Copy() *failsBase {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+
+	return &failsBase{
+		fails: util.CopyMap(f.fails),
+	}
+}
+
 // Get the fail status of this index.
 func (f *failsBase) Get(index string) *bool {
-	f.mutex.RLock()
-	defer f.mutex.RUnlock()
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 
 	return f.fails[index]
 }
 
 // Set the fail state of this index.
 func (f *failsBase) Set(index string, state *bool) {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	f.fails[index] = state
 }
 
 // AllPassed returns whether all the indexes have passed (fail=false).
 func (f *failsBase) AllPassed() bool {
-	f.mutex.RLock()
-	defer f.mutex.RUnlock()
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 
 	for _, fail := range f.fails {
-		if util.DereferenceOrValue(fail, true) {
+		if util.DerefOr(fail, true) {
 			return false
 		}
 	}
@@ -78,8 +87,8 @@ func (f *failsBase) AllPassed() bool {
 
 // Reset of the indexes.
 func (f *failsBase) Reset() {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	for i := range f.fails {
 		f.fails[i] = nil
@@ -88,16 +97,16 @@ func (f *failsBase) Reset() {
 
 // Length of the failsBase.
 func (f *failsBase) Length() int {
-	f.mutex.RLock()
-	defer f.mutex.RUnlock()
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 
 	return len(f.fails)
 }
 
 // String representation of failsBase.
 func (f *failsBase) String(prefix string) string {
-	f.mutex.RLock()
-	defer f.mutex.RUnlock()
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 	if len(f.fails) == 0 {
 		return ""
 	}
@@ -111,8 +120,12 @@ func (f *failsBase) String(prefix string) string {
 		if f.fails[key] != nil {
 			val = strconv.FormatBool(*f.fails[key])
 		}
-		_, _ = fmt.Fprintf(&builder, "%s%s: %s\n",
-			prefix, key, val)
+		// '<prefix><key>: <val>\n'
+		builder.WriteString(prefix)
+		builder.WriteString(key)
+		builder.WriteString(": ")
+		builder.WriteString(val)
+		builder.WriteString("\n")
 	}
 
 	return builder.String()
@@ -124,37 +137,37 @@ type FailsCommand struct {
 	fails []*bool
 }
 
-// Init will initialise the slice with the given length.
+// Init initialises the internal failure slice with the given capacity.
 func (f *FailsCommand) Init(length int) {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	f.fails = make([]*bool, length)
 }
 
 // Get the fail status of the Command at this index.
 func (f *FailsCommand) Get(index int) *bool {
-	f.mutex.RLock()
-	defer f.mutex.RUnlock()
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 
 	return f.fails[index]
 }
 
 // Set the fail status of the Command at this index.
 func (f *FailsCommand) Set(index int, state bool) {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	f.fails[index] = &state
 }
 
 // AllPassed returns whether all the Commands have passed (fail=false).
 func (f *FailsCommand) AllPassed() bool {
-	f.mutex.RLock()
-	defer f.mutex.RUnlock()
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 
 	for _, fail := range f.fails {
-		if util.DereferenceOrValue(fail, true) {
+		if util.DerefOr(fail, true) {
 			return false
 		}
 	}
@@ -164,8 +177,8 @@ func (f *FailsCommand) AllPassed() bool {
 
 // Reset clears all the entries in the fails slice by setting each element to nil.
 func (f *FailsCommand) Reset() {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	for i := range f.fails {
 		f.fails[i] = nil
@@ -175,16 +188,16 @@ func (f *FailsCommand) Reset() {
 // Length returns the amount of elements in the fails slice.
 // in a thread-safe manner.
 func (f *FailsCommand) Length() int {
-	f.mutex.RLock()
-	defer f.mutex.RUnlock()
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 
 	return len(f.fails)
 }
 
 // String representation of FailsCommand.
 func (f *FailsCommand) String(prefix string) string {
-	f.mutex.RLock()
-	defer f.mutex.RUnlock()
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 	if len(f.fails) == 0 {
 		return ""
 	}
@@ -197,8 +210,13 @@ func (f *FailsCommand) String(prefix string) string {
 			val = strconv.FormatBool(*fail)
 		}
 
-		_, _ = fmt.Fprintf(&builder, "%s- %d: %s\n",
-			prefix, i, val)
+		// '<prefix>- <i>: <val>\n'
+		builder.WriteString(prefix)
+		builder.WriteString("- ")
+		builder.WriteString(strconv.Itoa(i))
+		builder.WriteString(": ")
+		builder.WriteString(val)
+		builder.WriteString("\n")
 	}
 
 	return builder.String()
@@ -209,55 +227,82 @@ type FailsShoutrrr struct {
 	failsBase
 }
 
+// Copy returns a deep copy of the receiver.
+func (f *FailsShoutrrr) Copy() *FailsShoutrrr {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+
+	return &FailsShoutrrr{
+		failsBase: *f.failsBase.Copy(),
+	}
+}
+
 // FailsWebHook keeps track of the unsent/fail/pass status of the WebHook sender.
 type FailsWebHook struct {
 	failsBase
 	nextRunnable map[string]time.Time // Map of index to time at which can next run (for staggering).
 }
 
-// Init the FailsWebHook.
+// Init initialises the internal next runnable map with the given capacity.
 func (f *FailsWebHook) Init(length int) {
 	f.failsBase.Init(length)
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	f.nextRunnable = make(map[string]time.Time, length)
 }
 
+// Copy returns a deep copy of the receiver.
+func (f *FailsWebHook) Copy() *FailsWebHook {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+
+	return &FailsWebHook{
+		failsBase:    *f.failsBase.Copy(),
+		nextRunnable: util.CopyMap(f.nextRunnable),
+	}
+}
+
 // NextRunnable returns the next time at which the index can be re-run.
 func (f *FailsWebHook) NextRunnable(index string) time.Time {
-	f.mutex.RLock()
-	defer f.mutex.RUnlock()
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 
 	return f.nextRunnable[index]
 }
 
 // SetNextRunnable will set the `time` that the index can be re-run.
 func (f *FailsWebHook) SetNextRunnable(index string, time time.Time) {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	f.nextRunnable[index] = time
 }
 
-// String returns a string representation of the Fails.
+// String returns a string representation of the receiver.
 func (f *Fails) String(prefix string) string {
 	var builder strings.Builder
 	itemPrefix := prefix + "  "
 
 	if shoutrrrStr := f.Shoutrrr.String(itemPrefix); shoutrrrStr != "" {
-		_, _ = fmt.Fprintf(&builder, "%sshoutrrr:\n%s",
-			prefix, shoutrrrStr)
+		// '<prefix>shoutrrr:\n<shoutrrrStr>'
+		builder.WriteString(prefix)
+		builder.WriteString("shoutrrr:\n")
+		builder.WriteString(shoutrrrStr)
 	}
 
 	if commandStr := f.Command.String(itemPrefix); commandStr != "" {
-		_, _ = fmt.Fprintf(&builder, "%scommand:\n%s",
-			prefix, commandStr)
+		// '<prefix>command:\n<commandStr>'
+		builder.WriteString(prefix)
+		builder.WriteString("command:\n")
+		builder.WriteString(commandStr)
 	}
 
 	if webhookStr := f.WebHook.String(itemPrefix); webhookStr != "" {
-		_, _ = fmt.Fprintf(&builder, "%swebhook:\n%s",
-			prefix, webhookStr)
+		// '<prefix>webhook:\n<commandStr>'
+		builder.WriteString(prefix)
+		builder.WriteString("webhook:\n")
+		builder.WriteString(webhookStr)
 	}
 
 	if builder.Len() == 0 {
@@ -268,22 +313,22 @@ func (f *Fails) String(prefix string) string {
 	return result
 }
 
-// Copy copies the contents of another Fails into this one.
+// Copy returns a deep copy of the receiver.
 func (f *Fails) Copy(from *Fails) {
 	// Command.
-	f.Command.mutex.Lock()
-	defer from.Command.mutex.RUnlock()
-	from.Command.mutex.RLock()
-	defer f.Command.mutex.Unlock()
+	f.Command.mu.Lock()
+	defer from.Command.mu.RUnlock()
+	from.Command.mu.RLock()
+	defer f.Command.mu.Unlock()
 
 	f.Command.fails = make([]*bool, len(from.Command.fails))
 	copy(f.Command.fails, from.Command.fails)
 
 	// Shoutrrr.
-	f.Shoutrrr.mutex.Lock()
-	defer f.Shoutrrr.mutex.Unlock()
-	from.Shoutrrr.mutex.RLock()
-	defer from.Shoutrrr.mutex.RUnlock()
+	f.Shoutrrr.mu.Lock()
+	defer f.Shoutrrr.mu.Unlock()
+	from.Shoutrrr.mu.RLock()
+	defer from.Shoutrrr.mu.RUnlock()
 
 	f.Shoutrrr.fails = make(map[string]*bool, len(from.Shoutrrr.fails))
 	for key, fail := range from.Shoutrrr.fails {
@@ -291,10 +336,10 @@ func (f *Fails) Copy(from *Fails) {
 	}
 
 	// WebHook.
-	f.WebHook.mutex.Lock()
-	defer f.WebHook.mutex.Unlock()
-	from.WebHook.mutex.RLock()
-	defer from.WebHook.mutex.RUnlock()
+	f.WebHook.mu.Lock()
+	defer f.WebHook.mu.Unlock()
+	from.WebHook.mu.RLock()
+	defer from.WebHook.mu.RUnlock()
 
 	f.WebHook.fails = make(map[string]*bool, len(from.WebHook.fails))
 	for key, fail := range from.WebHook.fails {
@@ -302,7 +347,7 @@ func (f *Fails) Copy(from *Fails) {
 	}
 }
 
-// resetFails resets the state of the Command, Shoutrrr, and WebHook fails.
+// resetFails clears command, shoutrrr, and webhook failure tracking.
 func (f *Fails) resetFails() {
 	f.Command.Reset()
 	f.Shoutrrr.Reset()

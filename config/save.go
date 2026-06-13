@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,16 +20,22 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v3"
-
-	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
+
+// encodeConfigYAML marshals the config to YAML (overridable for tests).
+var encodeConfigYAML = func(w io.Writer, indent int, c *Config) error {
+	yamlEncoder := decode.NewYAMLEncoder(w, indent)
+	defer yamlEncoder.Close()
+	return yamlEncoder.Encode(c)
+}
 
 // drainChannel consumes all messages in the provided channel.
 func drainChannel[T any](ch <-chan T) {
@@ -42,6 +48,7 @@ func drainChannel[T any](ch <-chan T) {
 	}
 }
 
+// DebounceDuration is the delay before persisting config changes after the last edit signal.
 var DebounceDuration = 30 * time.Second
 
 // SaveHandler will listen to the `SaveChannel` and save the config (after a delay)
@@ -87,17 +94,16 @@ func drainAndDebounce[T any](ctx context.Context, channel chan T, duration time.
 // Save the configuration to `c.File`.
 func (c *Config) Save() (ok bool) {
 	// Lock the config.
-	c.OrderMutex.Lock()
-	defer c.OrderMutex.Unlock()
+	c.OrderMu.Lock()
+	defer c.OrderMu.Unlock()
 
 	// Encode to memory (Go-ordered slices, but with an order list for Services).
 	var buf bytes.Buffer
-	yamlEncoder := yaml.NewEncoder(&buf)
-	yamlEncoder.SetIndent(int(c.Settings.Indentation))
-	if err := yamlEncoder.Encode(c); err != nil {
-		logutil.Log.Fatal(
+	if err := encodeConfigYAML(&buf, int(c.Settings.Indentation), c); err != nil {
+		logx.Fatal(
 			fmt.Sprintf("error encoding config: %v", err),
-			logutil.LogFrom{})
+			logx.LogFrom{},
+		)
 		return
 	}
 
@@ -108,37 +114,39 @@ func (c *Config) Save() (ok bool) {
 	// Open the file.
 	file, err := os.OpenFile(c.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		logutil.Log.Fatal(
+		logx.Fatal(
 			fmt.Sprintf("error opening %s: %v", c.File, err),
-			logutil.LogFrom{})
+			logx.LogFrom{},
+		)
 		return false
 	}
 	defer file.Close()
 
 	writer := bufio.NewWriter(file)
-	// Write all lines except the potential trailing empty one from Split.
-	for i, line := range lines {
-		if i == len(lines)-1 && line == "" {
-			continue
-		}
+	// Trim trailing newline.
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	// Write all lines.
+	for _, line := range lines {
 		if _, err := fmt.Fprintln(writer, line); err != nil {
-			logutil.Log.Fatal(
+			logx.Fatal(
 				fmt.Sprintf("error writing to %s: %v", c.File, err),
-				logutil.LogFrom{})
+				logx.LogFrom{},
+			)
 			return
 		}
 	}
 
 	if err := writer.Flush(); err != nil {
-		logutil.Log.Fatal(
+		logx.Fatal(
 			fmt.Sprintf("error flushing %s: %v", c.File, err),
-			logutil.LogFrom{})
+			logx.LogFrom{},
+		)
 		return
 	}
 
-	logutil.Log.Info(
-		"Saved service updates to "+c.File,
-		logutil.LogFrom{}, true)
+	logx.Info("Saved service updates to "+c.File, logx.LogFrom{}, true)
 	return true
 }
 
@@ -200,7 +208,7 @@ func (c *Config) reorderYAML(lines []string) []string {
 				continue
 			}
 
-			util.RemoveIndex(&lines, index)
+			lines = util.RemoveAt(lines, index)
 			index--
 			if currentServiceNumber >= 0 {
 				currentOrderIndexEnd[currentServiceNumber]--
@@ -221,21 +229,13 @@ func (c *Config) reorderYAML(lines []string) []string {
 			if !canRemove {
 				break
 			}
-			util.RemoveIndex(&lines, index)
+			lines = util.RemoveAt(lines, index)
 			index--
 			if currentServiceNumber >= 0 {
 				currentOrderIndexEnd[currentServiceNumber]--
 			}
 		}
 	}
-
-	// Clean defaults.
-	removeAllServiceDefaults(
-		&lines,
-		c.Settings.Indentation,
-		&c.Service,
-		&currentOrder,
-		&currentOrderIndexStart, &currentOrderIndexEnd)
 
 	// Bubble sort services based on c.Order.
 	changed := true
@@ -263,12 +263,14 @@ func (c *Config) reorderYAML(lines []string) []string {
 			}
 			if swap {
 				// currentID needs to move before previousID.
-				util.Swap(&lines,
+				lines = util.SwapRanges(
+					lines,
 					currentOrderIndexStart[previousIndex], currentOrderIndexEnd[previousIndex],
-					currentOrderIndexStart[currentIndex], currentOrderIndexEnd[currentIndex])
+					currentOrderIndexStart[currentIndex], currentOrderIndexEnd[currentIndex],
+				)
 				changed = true
 
-				// Swap the current ordering values.
+				// SwapRanges the current ordering values.
 				currentOrder[previousIndex], currentOrder[currentIndex] = currentOrder[currentIndex], currentOrder[previousIndex]
 				lengthCurrent := currentOrderIndexEnd[currentIndex] - currentOrderIndexStart[currentIndex]
 				currentOrderIndexEnd[previousIndex] = currentOrderIndexStart[previousIndex] + lengthCurrent
@@ -279,95 +281,7 @@ func (c *Config) reorderYAML(lines []string) []string {
 	return lines
 }
 
-// removeAllServiceDefaults removes the written default values from all Services.
-func removeAllServiceDefaults(
-	lines *[]string,
-	indentation uint8,
-	services *service.Services,
-	currentOrder *[]string,
-	currentOrderIndexStart *[]int,
-	currentOrderIndexEnd *[]int) {
-	linesRemoved := 0
-	for i, serviceName := range *currentOrder {
-		svc := (*services)[serviceName]
-		n, c, w := svc.UsingDefaults()
-		// Not using any defaults, skip this Service.
-		if !n && !c && !w {
-			// Update the start/end indices of the next Service.
-			if i+1 < len(*currentOrderIndexStart) {
-				(*currentOrderIndexStart)[i+1] -= linesRemoved
-				(*currentOrderIndexEnd)[i+1] -= linesRemoved
-			}
-			continue
-		}
-
-		start := (*currentOrderIndexStart)[i]
-		end := (*currentOrderIndexEnd)[i]
-		section := (*lines)[start : end+1]
-		size := len(section)
-		// Notify.
-		if n {
-			removeSection("notify", &section, indentation, 2)
-		}
-		// Command.
-		if c {
-			removeSection("command", &section, indentation, 2)
-		}
-		// WebHook.
-		if w {
-			removeSection("webhook", &section, indentation, 2)
-		}
-
-		// Put the section back into the lines.
-		sectionDecrease := size - len(section)
-		newLines := make([]string, len(*lines)-sectionDecrease)
-		copy(newLines[:start], (*lines)[:start])
-		copy(newLines[start:], section)
-		if end+1 < len(*lines) {
-			copy(newLines[start+len(section):], (*lines)[end+1:])
-		}
-		*lines = newLines
-
-		// Update the end index of the current Service.
-		(*currentOrderIndexEnd)[i] -= sectionDecrease
-		// Update the start/end indices of the next Service.
-		linesRemoved += sectionDecrease
-		if i+1 < len(*currentOrderIndexStart) {
-			(*currentOrderIndexStart)[i+1] -= linesRemoved
-			(*currentOrderIndexEnd)[i+1] -= linesRemoved
-		}
-	}
-}
-
-// removeSection removes the given section from the given lines.
-func removeSection(section string, lines *[]string, indentation uint8, indents int) {
-	targetIndentation := strings.Repeat(" ", int(indentation)*indents)
-	outsideIndentation := targetIndentation + " "
-	sectionStart := targetIndentation + section + ":"
-	var insideSection bool
-	for i := 0; i < len(*lines); i++ {
-		line := (*lines)[i]
-		if !insideSection {
-			if strings.HasPrefix(line, sectionStart) {
-				insideSection = true
-				util.RemoveIndex(lines, i)
-				i-- // subtract as we've removed a line.
-			}
-			continue
-		}
-
-		// If we are inside the section, and this line is not indented more than the target,
-		// move to the next Service.
-		if !strings.HasPrefix(line, outsideIndentation) {
-			break
-		}
-		// else, we are still inside, so remove this line.
-		util.RemoveIndex(lines, i)
-		i-- // subtract as we've removed a line.
-	}
-}
-
-// indentCount returns the amount of indents in the given line.
+// indentCount returns the number of indents in the given line.
 func indentCount(line string, indentationSize uint8) int {
 	// characters of indent / indentationSize = indents.
 	return len(util.Indentation(line, indentationSize)) / int(indentationSize)

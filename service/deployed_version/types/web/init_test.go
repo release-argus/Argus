@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,40 +17,76 @@
 package web
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/release-argus/Argus/internal/test"
 
-	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/web/metric"
 )
 
+func TestLookup_Init(t *testing.T) {
+	dvCfg := plainDefaultsConfig(t)
+
+	// GIVEN: a Lookup and vars for the Init.
+	l := testLookup(t, false)
+	svcStatus := &status.Status{}
+	svcStatus.ServiceInfo.ID = "TestInit"
+	options := &opt.Options{}
+
+	// WHEN: Init is called on it.
+	l.Init(
+		options,
+		svcStatus,
+		dvCfg,
+	)
+
+	prefix := fmt.Sprintf(
+		"%s\nLookup.Init(options=%p, status=%p, defaults=%v)",
+		packageName, options, &svcStatus, dvCfg,
+	)
+
+	// THEN: pointers to those vars are handed out to the Lookup.
+	fieldTests := []test.FieldAssertion{
+		{Name: "Options", Got: l.Options, Want: options, Mode: test.CompareSamePointer},
+		{Name: "Status", Got: l.Status, Want: svcStatus, Mode: test.CompareSamePointer},
+		{Name: "Defaults", Got: l.Defaults, Want: dvCfg.Soft, Mode: test.CompareSamePointer},
+		{Name: "HardDefaults", Got: l.HardDefaults, Want: dvCfg.Hard, Mode: test.CompareSamePointer},
+	}
+	if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestLookup_Metrics(t *testing.T) {
-	// GIVEN a Lookup pointer.
-	tests := map[string]struct {
+	// GIVEN: a Lookup pointer.
+	tests := []struct {
+		name        string
 		lookup      *Lookup
 		serviceID   string
 		wantMetrics bool
 	}{
-		"non-nil": {
-			lookup:      testLookup(false),
+		{
+			name:        "non-nil",
+			lookup:      testLookup(t, false),
 			serviceID:   "TestLookup_Metrics",
 			wantMetrics: true,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're testing metrics.
 
-			// WHEN the Prometheus metrics are initialised with initMetrics.
+			// WHEN: the Prometheus metrics are initialised with initMetrics.
 			hadC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 			hadG := testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
 			tc.lookup.InitMetrics(tc.lookup)
 
-			// THEN they can be collected.
+			// THEN: they can be collected.
 			// counters:
 			gotC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 			wantC := hadC
@@ -58,15 +94,19 @@ func TestLookup_Metrics(t *testing.T) {
 				wantC += 2
 			}
 			if gotC != wantC {
-				t.Errorf("%s\nCounter metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
-					packageName, wantC, gotC)
+				t.Errorf(
+					"%s\nLookup.InitMetrics() Counter metrics mismatch after\ngot:  %d\nwant: %d",
+					packageName, gotC, wantC,
+				)
 			}
 			// gauges - not initialised.
 			gotG := testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
 			wantG := hadG
 			if gotG != wantG {
-				t.Errorf("%s\nGauge metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
-					packageName, wantG, gotG)
+				t.Errorf(
+					"%s\nLookup.InitMetrics() Gauge metrics mismatch\ngot:  %d\nwant: %d",
+					packageName, gotG, wantG,
+				)
 			}
 			// But can be added.
 			if tc.lookup != nil {
@@ -78,62 +118,28 @@ func TestLookup_Metrics(t *testing.T) {
 				wantG += 1
 			}
 			if gotG != wantG {
-				t.Errorf("%s\nGauge metrics mismatch after QueryMetrics()\nwant: %d\ngot:  %d",
-					packageName, wantG, gotG)
+				t.Errorf(
+					"%s\nLookup.QueryMetrics() Gauge metrics mismatch\ngot:  %d\nwant: %d",
+					packageName, gotG, wantG,
+				)
 			}
 
-			// AND they can be deleted.
+			// AND: they can be deleted.
 			tc.lookup.DeleteMetrics(tc.lookup)
 			// counters:
-			gotC = testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
-			if gotC != hadC {
-				t.Errorf("%s\nCounter metrics mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
-					packageName, hadC, gotC)
+			if gotC = testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal); gotC != hadC {
+				t.Errorf(
+					"%s\nLookup.DeleteMetrics() Counter metrics mismatch\ngot:  %d\nwant: %d",
+					packageName, gotC, hadC,
+				)
 			}
 			// gauges:
-			gotG = testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
-			if gotG != hadG {
-				t.Errorf("%s\nGauge metrics mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
-					packageName, hadG, gotG)
+			if gotG = testutil.CollectAndCount(metric.DeployedVersionQueryResultLast); gotG != hadG {
+				t.Errorf(
+					"%s\nLookup.DeleteMetrics() Gauge metrics mismatch\ngot:  %d\nwant: %d",
+					packageName, gotG, hadG,
+				)
 			}
 		})
-	}
-}
-
-func TestLookup_Init(t *testing.T) {
-	// GIVEN a Lookup and vars for the Init.
-	lookup := testLookup(false)
-	defaults := &base.Defaults{}
-	hardDefaults := &base.Defaults{}
-	svcStatus := status.Status{}
-	svcStatus.ServiceInfo.ID = "TestInit"
-	var options opt.Options
-
-	// WHEN Init is called on it.
-	lookup.Init(
-		&options,
-		&svcStatus,
-		defaults, hardDefaults)
-
-	// THEN pointers to those vars are handed out to the Lookup:
-	// 	Defaults.
-	if lookup.Defaults != defaults {
-		t.Errorf("%s\nDefaults mismatch\nwant: %v\ngot:  %v",
-			packageName, defaults, lookup.Defaults)
-	}
-	// 	HardDefaults.
-	if lookup.HardDefaults != hardDefaults {
-		t.Errorf("%s\nHardDefaults mismatch\nwant: %v\ngot:  %v",
-			packageName, hardDefaults, lookup.HardDefaults)
-	}
-	// 	Status.
-	if lookup.Status != &svcStatus {
-		t.Errorf("%s\nStatus mismatch\nwant: %v\ngot:  %v",
-			packageName, &svcStatus, lookup.Status)
-	}
-	// 	Options.
-	if lookup.Options != &options {
-		t.Errorf("%s\nOptions mismatch\nwant: %v\ngot:  %v",
-			packageName, &options, lookup.Options)
 	}
 }

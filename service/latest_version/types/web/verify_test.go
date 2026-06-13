@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,81 +17,74 @@
 package web
 
 import (
-	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
-	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
 )
 
-func TestCheckValues(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
-		lookup   *Lookup
+func TestLookup_CheckValues(t *testing.T) {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name     string
+		input    *Lookup
 		errRegex string
 	}{
-		"Valid Lookup": {
-			lookup: testLookup(false),
+		{
+			name:  "Valid Lookup",
+			input: testLookup(t, false),
 		},
-		"Empty URL": {
-			lookup:   &Lookup{},
+		{
+			name:     "Empty",
+			input:    &Lookup{},
 			errRegex: `^url: <required>[^\n]+$`,
 		},
-		"Invalid Require": {
-			lookup: &Lookup{
+		{
+			name: "Invalid Require",
+			input: &Lookup{
 				Lookup: base.Lookup{
 					Require: &filter.Require{
 						RegexVersion: "[0a",
-					}},
+					},
+				},
 			},
 			errRegex: test.TrimYAML(`
 				^url: <required>.*
 				require:
-					regex_version: "[^"]+" <invalid>.*$`),
+					regex_version: "[^"]+" <invalid>.*$`,
+			),
 		},
-		"Invalid URL Commands": {
-			lookup: &Lookup{
+		{
+			name: "Invalid URL Commands",
+			input: &Lookup{
 				Lookup: base.Lookup{
 					URLCommands: filter.URLCommands{
-						filter.URLCommand{
-							Type: "regex", Regex: `[0-9]+`},
-						filter.URLCommand{
-							Type: "regex", Regex: `[0-9]+`},
-						filter.URLCommand{Type: "foo"}}}},
+						{Type: "regex", Regex: `[0-9]+`},
+						{Type: "regex", Regex: `[0-9]+`},
+						{Type: "foo"},
+					},
+				},
+			},
 			errRegex: test.TrimYAML(`
 				^url: <required>.*
 				url_commands:
 					- item_2:
-						type: "foo" <invalid>.*$`),
+						type: "foo" <invalid>.*$`,
+			),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CheckValues is called on it.
-			err := tc.lookup.CheckValues("")
-
-			// THEN it errors when expected.
-			e := util.ErrorToString(err)
-			lines := strings.Split(e, "\n")
-			wantLines := strings.Count(tc.errRegex, "\n")
-			if wantLines > len(lines) {
-				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
-					packageName,
-					wantLines, tc.errRegex,
-					len(lines), lines,
-					e)
-				return
-			}
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
-				return
-			}
+			_ = test.AssertCheckValuesWithError(
+				t,
+				packageName,
+				tc.errRegex,
+				tc.input.CheckValues,
+			)
 		})
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,19 +35,19 @@ import (
 var router *mux.Router
 
 func TestWebSocketHandler(t *testing.T) {
-	// GIVEN a WebSocket is running (TestMain) and we have the URL.
+	// GIVEN: a WebSocket is running (TestMain) and we have the URL.
 	url := fmt.Sprintf("ws://%s:%s/ws", host, port)
 
 	t.Run("ConnectWebSocket", func(t *testing.T) {
 
-		// WHEN we attempt to connect.
+		// WHEN: we attempt to connect.
 		ws, resp, err := websocket.DefaultDialer.Dial(url, nil)
 		if err != nil {
 			t.Fatalf("failed to connect to WebSocket: %v (HTTP status %d)", err, resp.StatusCode)
 		}
 		defer ws.Close()
 
-		// THEN connection should be open.
+		// THEN: connection should be open.
 		if ws.NetConn() == nil {
 			t.Errorf("expected WebSocket underlying connection to be non-nil")
 		}
@@ -61,106 +61,130 @@ func TestWebSocketHandler(t *testing.T) {
 }
 
 func TestRun_Error(t *testing.T) {
-	// GIVEN a config that wants to use a port that is already in use (TestMain).
+	// GIVEN: a config that wants to use a port that is already in use (TestMain).
 	cfg := testConfig(t, filepath.Join(t.TempDir(), "config.yml"))
 	cfg.Settings.Web.ListenHost = host
 	cfg.Settings.Web.ListenPort = port
 
-	// WHEN Run is called.
+	// WHEN: Run is called.
 	errChan := make(chan error, 1)
 	go func() {
 		errChan <- Run(t.Context(), cfg)
 	}()
 
-	// THEN it should return an error since port already in use.
+	prefix := fmt.Sprintf("%s\nRun()", packageName)
+
+	// THEN: it should return an error since port already in use.
 	select {
 	case err := <-errChan:
 		if err == nil {
-			t.Fatalf("%s\nwant: error from port being in use\ngot:  nil",
-				packageName)
+			t.Fatalf(
+				"%s should have failed as port was in use\ngot:  nil\nwant: error",
+				prefix,
+			)
 		}
 	case <-time.After(1 * time.Second):
-		t.Fatalf("%s\nwant: err from port being in use\ngot:  timeout waiting for Run to return",
-			packageName)
+		t.Fatalf(
+			"%s should have failed as port was in use\ngot:  timeout waiting for Run to return\nwant: error",
+			prefix,
+		)
 	}
 }
 
 func TestMainWithRoutePrefix(t *testing.T) {
-	// GIVEN a valid config with a Service.
+	// GIVEN: a valid config with a Service.
 	cfg := testConfig(t, filepath.Join(t.TempDir(), "config.yml"))
 	cfg.Settings.Web.RoutePrefix = "/test"
-	// AND a cancellable context for shutdown.
+
+	// AND: a cancellable context for shutdown.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// WHEN the Web UI is started with this Config.
+	// WHEN: the Web UI is started with this Config.
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- Run(ctx, cfg)
 	}()
 
-	// THEN Web UI is accessible.
-	url := fmt.Sprintf("http://localhost:%s%s/metrics",
-		cfg.Settings.Web.ListenPort, cfg.Settings.Web.RoutePrefix)
+	// THEN: Web UI is accessible.
+	url := fmt.Sprintf(
+		"http://localhost:%s%s/metrics",
+		cfg.Settings.Web.ListenPort, cfg.Settings.Web.RoutePrefix,
+	)
 	if err := waitForServer(url, time.Second); err != nil {
 		t.Fatal(err)
 	}
 	resp, err := http.Get(url)
 	if err != nil {
-		t.Fatalf("%s\nError making request: %s",
-			packageName, err)
+		t.Fatalf(
+			"%s\nError making request: %s",
+			packageName, err,
+		)
 	}
 	wantStatusCode := http.StatusOK
 	if resp.StatusCode != wantStatusCode {
-		t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
-			packageName, wantStatusCode, resp.StatusCode)
+		t.Errorf(
+			"%s\nRun(%q) status code mismatch\ngot:  %d\nwant: %d",
+			packageName, url,
+			resp.StatusCode, wantStatusCode,
+		)
 	}
 
-	// AND the server shuts down cleanly.
+	// AND: the server shuts down cleanly.
 	assertServerShutdown(t, cancel, errCh, url)
 }
 
 func TestWebAccessible(t *testing.T) {
-	// GIVEN we have the Web UI Router from TestMain().
-	tests := map[string]struct {
+	// GIVEN: we have the Web UI Router from TestMain().
+	tests := []struct {
 		path      string
 		bodyRegex string
 	}{
-		"/approvals": {
-			path: "/approvals"},
-		"/metrics": {
+		{
+			path: "/approvals",
+		},
+		{
 			path:      "/metrics",
 			bodyRegex: `go_gc_duration_`},
-		"/api/v1/healthcheck": {
+		{
 			path:      "/api/v1/healthcheck",
-			bodyRegex: fmt.Sprintf(`^Alive$`)},
-		"/api/v1/version": {
+			bodyRegex: `^Alive$`},
+		{
 			path: "/api/v1/version",
 			bodyRegex: fmt.Sprintf(`"goVersion":"%s"`,
-				util.GoVersion)},
+				util.GoVersion,
+			),
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.path, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN we make a request to path.
+			// WHEN: we make a request to path.
 			req, _ := http.NewRequest(http.MethodGet, tc.path, nil)
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, req)
 
-			// THEN we get a Status OK.
+			// THEN: we get a Status OK.
 			wantStatusCode := http.StatusOK
 			if response.Code != wantStatusCode {
-				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
-					packageName, wantStatusCode, response.Code)
+				t.Errorf(
+					"%s\nGET %q status code mismatch\ngot:  %d\nwant: %d",
+					packageName, tc.path,
+					response.Code, wantStatusCode,
+				)
 			}
-			// AND the body matches the expected string RegEx.
+
+			// AND: the body matches the expected string RegEx.
 			if tc.bodyRegex != "" {
 				body := response.Body.String()
 				if !util.RegexCheck(tc.bodyRegex, body) {
-					t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.bodyRegex, body)
+					t.Errorf(
+						"%s\nGET %q body mismatch\ngot:  %q\nwant: %q",
+						packageName, tc.path,
+						body, tc.bodyRegex,
+					)
 				}
 			}
 		})
@@ -168,23 +192,27 @@ func TestWebAccessible(t *testing.T) {
 }
 
 func TestAccessibleHTTPS(t *testing.T) {
-	// GIVEN a bunch of URLs to test and the webserver is running with HTTPS.
-	tests := map[string]struct {
+	// GIVEN: a bunch of URLs to test and the webserver is running with HTTPS.
+	tests := []struct {
+		name      string
 		path      string
 		bodyRegex string
 	}{
-		"/approvals": {
-			path: "/approvals"},
-		"/metrics": {
+		{
+			path: "/approvals",
+		},
+		{
 			path:      "/metrics",
 			bodyRegex: `go_gc_duration_`},
-		"/api/v1/healthcheck": {
+		{
 			path:      "/api/v1/healthcheck",
-			bodyRegex: fmt.Sprintf(`^Alive$`)},
-		"/api/v1/version": {
+			bodyRegex: `^Alive$`},
+		{
 			path: "/api/v1/version",
 			bodyRegex: fmt.Sprintf(`"goVersion":"%s"`,
-				util.GoVersion)},
+				util.GoVersion,
+			),
+		},
 	}
 	cfg := testConfig(t, filepath.Join(t.TempDir(), "config.yml"))
 	cfg.Settings.Web.CertFile = "TestAccessibleHTTPS_cert.pem"
@@ -210,32 +238,39 @@ func TestAccessibleHTTPS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.path, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN we make a HTTPS request to path.
+			// WHEN: we make a HTTPS request to path.
 			req, _ := http.NewRequest(http.MethodGet, address+tc.path, nil)
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, req)
 
-			// THEN we get a Status OK.
+			// THEN: we get a Status OK.
 			wantStatusCode := http.StatusOK
 			if response.Code != wantStatusCode {
-				t.Errorf("%s\nstatus code mismatch\nwant: %d\ngot:  %d",
-					packageName, wantStatusCode, response.Code)
+				t.Errorf(
+					"%s\nGET %q status code mismatch\ngot:  %d\nwant: %d",
+					packageName, address+tc.path,
+					response.Code, wantStatusCode,
+				)
 			}
-			// AND the body matches the expected string RegEx.
+
+			// AND: the body matches the expected string RegEx.
 			if tc.bodyRegex != "" {
 				body := response.Body.String()
 				if !util.RegexCheck(tc.bodyRegex, body) {
-					t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.bodyRegex, body)
+					t.Errorf(
+						"%s\nGET %q body mismatch\ngot:  %q\nwant: %q",
+						packageName, address+tc.path,
+						body, tc.bodyRegex,
+					)
 				}
 			}
 		})
 	}
 
-	// AND the server shuts down cleanly.
+	// AND: the server shuts down cleanly.
 	assertServerShutdown(t, cancel, errCh, address)
 }

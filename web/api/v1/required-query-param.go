@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,9 +16,11 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 )
 
+// requireQueryParam reads a required query parameter and writes a 400 response when missing.
 func requireQueryParam(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -28,7 +30,7 @@ func requireQueryParam(
 	if val == "" {
 		failRequest(
 			&w,
-			"missing required query parameter: "+name,
+			fmt.Errorf("missing required query parameter: %s", name),
 			http.StatusBadRequest,
 		)
 		return "", false

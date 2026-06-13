@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,42 +17,49 @@
 package webhook
 
 import (
-	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/test"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestWebHook_AnnounceSend(t *testing.T) {
-	// GIVEN a WebHook.
-	tests := map[string]struct {
+	// GIVEN: a WebHook.
+	tests := []struct {
+		name           string
 		nilChannel     bool
 		failed         *bool
 		timeDifference time.Duration
 	}{
-		"no channel": {
-			nilChannel: true},
-		"not tried (failed=nil) does delay by 15s": {
+		{
+			name:       "no channel",
+			nilChannel: true,
+		},
+		{
+			name:           "not tried (failed=nil) does delay by 15s",
 			timeDifference: 15 * time.Second,
 			failed:         nil,
 		},
-		"failed (failed=true) does delay by 15s": {
+		{
+			name:           "failed (failed=true) does delay by 15s",
 			timeDifference: 15 * time.Second,
-			failed:         test.BoolPtr(true),
+			failed:         test.Ptr(true),
 		},
-		"success (failed=false) does delay by 2*Interval": {
+		{
+			name:           "success (failed=false) does delay by 2*Interval",
 			timeDifference: 24 * time.Minute,
-			failed:         test.BoolPtr(false),
+			failed:         test.Ptr(false),
 		},
 	}
 
-	for name, tc := range tests {
-		webhook := testWebHook(true, false, false)
-
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
+			webhook := testWebHook(true, false, false)
 
 			webhook.Failed.Set(webhook.ID, tc.failed)
 			webhook.ServiceStatus.AnnounceChannel = nil
@@ -64,25 +71,31 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 			// WH AnnounceCommand is run.
 			go webhook.AnnounceSend()
 
-			// THEN the correct response is received.
+			prefix := fmt.Sprintf("%s\nWebHook.AnnounceSend()", packageName)
+
+			// THEN: the correct response is received.
 			if webhook.ServiceStatus.AnnounceChannel == nil {
 				return
 			}
 			m := <-webhook.ServiceStatus.AnnounceChannel
 			var parsed apitype.WebSocketMessage
-			_ = json.Unmarshal(m, &parsed)
+			_ = decode.Unmarshal("json", m, &parsed)
 
 			if parsed.WebHookData[webhook.ID] == nil {
-				t.Fatalf("%s\nmessage mismatch\nwant: message for service %q\ngot:  %+v",
-					packageName, webhook.ID, parsed.WebHookData)
+				t.Fatalf(
+					"%s message mismatch\ngot:  %+v\nwant: message for service %q",
+					prefix, parsed.WebHookData, webhook.ID,
+				)
 			}
 
 			// if they failed status matches.
 			got := test.StringifyPtr(parsed.WebHookData[webhook.ID].Failed)
 			want := test.StringifyPtr(webhook.Failed.Get(webhook.ID))
 			if got != want {
-				t.Errorf("%s\nstringified failed mismatch\nwant: %q\ngot:  %q",
-					packageName, want, got)
+				t.Errorf(
+					"%s 'Failed' part of message didn't match\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
 			}
 
 			// next runnable is within expected range.
@@ -91,12 +104,44 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 			maxTime := now.Add(tc.timeDifference + time.Second)
 			gotTime := parsed.WebHookData[webhook.ID].NextRunnable
 			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
-				t.Fatalf("%s\nran at:\n%s\nwant between:\n%s and\n%s\n\ngot:\n%s",
-					&parsed,
+				t.Fatalf(
+					"%s NextRunnable mismatch for WebHook that ran at:\n     %s\ngot: %s\nwant between:\n     %s\n     %s",
+					prefix,
+					now,
 					gotTime,
 					minTime, maxTime,
-					now)
+				)
 			}
 		})
+	}
+}
+
+func TestWebHook_AnnounceSend__MarshalError(t *testing.T) {
+	// GIVEN: a failing marshal function.
+	original := marshalWebhookPayload
+	customErr := fmt.Errorf("marshal failed")
+	marshalWebhookPayload = func(v any) ([]byte, error) {
+		return nil, customErr
+	}
+	t.Cleanup(func() { marshalWebhookPayload = original })
+
+	// AND: a WebHook with an AnnounceChannel.
+	announceChannel := make(chan []byte, 1)
+	webhook := testWebHook(true, false, false)
+	webhook.ServiceStatus.AnnounceChannel = announceChannel
+
+	// WHEN: AnnounceSend is called.
+	webhook.AnnounceSend()
+
+	prefix := fmt.Sprintf("%s\nWebHook.AnnounceSend(marshal error)", packageName)
+
+	// THEN: no message is sent to the announce channel.
+	select {
+	case msg := <-announceChannel:
+		t.Fatalf(
+			"%s unexpected message on AnnounceChannel\ngot:  %q\nwant: none",
+			prefix, msg,
+		)
+	default:
 	}
 }

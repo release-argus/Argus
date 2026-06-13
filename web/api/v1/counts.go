@@ -22,11 +22,12 @@ import (
 	promclient "github.com/prometheus/client_model/go"
 
 	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/internal/logx"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
-	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
 )
 
+// UpdateDetails describes a service with an available update for the counts API.
 type UpdateDetails struct {
 	ServiceName     string `json:"service_name"`
 	DeployedVersion string `json:"deployed_version"`
@@ -37,32 +38,7 @@ type UpdateDetails struct {
 	Skipped         bool   `json:"skipped"`
 }
 
-func getUpdateDetails(cfg *config.Config, length int) []UpdateDetails {
-	updateDetails := make([]UpdateDetails, 0, length)
-	for _, id := range cfg.Order {
-		svc := cfg.Service[id]
-		svcInfo := svc.Status.GetServiceInfo()
-		// Skip services that have the latest version deployed.
-		if svcInfo.DeployedVersion == svcInfo.LatestVersion {
-			continue
-		}
-
-		updateApproved := svcInfo.ApprovedVersion == svcInfo.LatestVersion
-		updateSkipped := !updateApproved && svcInfo.ApprovedVersion == serviceinfo.SkippedVersion(svcInfo.LatestVersion)
-		updateDetails = append(updateDetails, UpdateDetails{
-			ServiceName:     id,
-			DeployedVersion: svcInfo.DeployedVersion,
-			LatestVersion:   svcInfo.LatestVersion,
-			LastChecked:     svc.Status.LastQueried(),
-			AutoApprove:     svc.Dashboard.GetAutoApprove(),
-			Approved:        updateApproved,
-			Skipped:         updateSkipped,
-		})
-	}
-
-	return updateDetails
-}
-
+// CountsResponse is the JSON payload for GET /api/v1/counts.
 type CountsResponse struct {
 	ServiceCount            int             `json:"service_count"`
 	ServiceCountActive      int             `json:"service_count_active"`
@@ -72,14 +48,9 @@ type CountsResponse struct {
 	UpdateDetails           []UpdateDetails `json:"update_details,omitempty"`
 }
 
-func getGaugeValue(g prometheus.Gauge) float64 {
-	var m promclient.Metric
-	_ = g.Write(&m)
-	return m.GetGauge().GetValue()
-}
-
+// httpCounts returns service and update counts for external dashboards.
 func (api *API) httpCounts(w http.ResponseWriter, r *http.Request) {
-	logFrom := logutil.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
+	logFrom := logx.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
 
 	resp := CountsResponse{}
 
@@ -99,10 +70,47 @@ func (api *API) httpCounts(w http.ResponseWriter, r *http.Request) {
 	// Get update details from services.
 	updatesCount := resp.UpdatesCurrentAvailable + resp.UpdatesCurrentSkipped
 	if updatesCount > 0 {
-		api.Config.OrderMutex.RLock()
-		defer api.Config.OrderMutex.RUnlock()
+		api.Config.OrderMu.RLock()
+		defer api.Config.OrderMu.RUnlock()
 		resp.UpdateDetails = getUpdateDetails(api.Config, updatesCount)
 	}
 
 	api.writeJSON(w, resp, logFrom)
+}
+
+// getGaugeValue reads the current value from a Prometheus gauge.
+func getGaugeValue(g prometheus.Gauge) float64 {
+	var m promclient.Metric
+	_ = g.Write(&m)
+	return m.GetGauge().GetValue()
+}
+
+// getUpdateDetails builds update summaries for services that are not on the latest version.
+func getUpdateDetails(cfg *config.Config, length int) []UpdateDetails {
+	updateDetails := make([]UpdateDetails, 0, length)
+	for _, id := range cfg.Order {
+		svc := cfg.Service[id]
+		svcInfo := svc.Status.GetServiceInfo()
+		// Skip services that have the latest version deployed.
+		if svcInfo.DeployedVersion == svcInfo.LatestVersion {
+			continue
+		}
+
+		updateApproved := svcInfo.ApprovedVersion == svcInfo.LatestVersion
+		updateSkipped := !updateApproved && svcInfo.ApprovedVersion == serviceinfo.SkippedVersion(svcInfo.LatestVersion)
+		updateDetails = append(
+			updateDetails,
+			UpdateDetails{
+				ServiceName:     id,
+				DeployedVersion: svcInfo.DeployedVersion,
+				LatestVersion:   svcInfo.LatestVersion,
+				LastChecked:     svc.Status.LastQueried(),
+				AutoApprove:     svc.Dashboard.GetAutoApprove(),
+				Approved:        updateApproved,
+				Skipped:         updateSkipped,
+			},
+		)
+	}
+
+	return updateDetails
 }

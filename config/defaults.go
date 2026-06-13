@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,29 +19,47 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
-// Defaults for the other Structs.
+// Defaults holds default configuration for services, notifiers, and webhooks.
 type Defaults struct {
-	Service service.Defaults           `json:"service,omitempty" yaml:"service,omitempty"`
-	Notify  shoutrrr.ShoutrrrsDefaults `json:"notify,omitempty" yaml:"notify,omitempty"`
-	WebHook webhook.Defaults           `json:"webhook,omitempty" yaml:"webhook,omitempty"`
+	Service service.Defaults           `json:"service,omitzero" yaml:"service,omitzero"`
+	Notify  shoutrrr.ShoutrrrsDefaults `json:"notify,omitzero" yaml:"notify,omitzero"`
+	WebHook webhook.Defaults           `json:"webhook,omitzero" yaml:"webhook,omitzero"`
 }
 
-// String returns a string representation of the Defaults.
+// IsZero implements the yaml.IsZeroer interface.
+func (d *Defaults) IsZero() bool {
+	return d == nil || (d.Service.IsZero() && d.Notify.IsZero() && d.WebHook.IsZero())
+}
+
+// DecodeDefaults creates and returns new [Defaults] from format-encoded data.
+func DecodeDefaults(format string, data []byte) (*Defaults, error) {
+	var field Defaults
+	if err := decode.Unmarshal(format, data, &field); err != nil {
+		return nil, &decode.KeyFieldError{
+			Key: "defaults",
+			Err: err,
+		}
+	}
+
+	return &field, nil
+}
+
+// String returns a string representation of the receiver.
 func (d *Defaults) String(prefix string) string {
 	if d == nil {
 		return ""
 	}
-	return util.ToYAMLString(d, prefix)
+	return decode.ToYAMLString(d, prefix)
 }
 
-// Default sets these Defaults to the default values.
+// Default sets the values of the receiver to their default values.
 func (d *Defaults) Default() bool {
 	d.Service.Default()
 
@@ -64,40 +82,71 @@ func (d *Defaults) Default() bool {
 	return true
 }
 
-// MapEnvToStruct maps environment variables to this struct.
+// SetDefaults assigns defaults to the receiver.
+func (d *Defaults) SetDefaults(dflts *Defaults) {
+	// TODO: Store HardDefaults inside Defaults.
+	d.Service.SetDefaults(&dflts.Service)
+	d.Notify.Init()
+	dflts.Notify.Init()
+}
+
+// MapEnvToStruct maps environment variables to the receiver.
 func (d *Defaults) MapEnvToStruct() bool {
 	err := mapEnvToStruct(d, "", nil)
 	if err == nil {
 		// env vars parsed correctly, check the values are valid in the struct.
 		// (ignore changed as we can't persist environment variable changes)
-		if err, _ = d.CheckValues(""); err != nil {
+		if err, _ = d.CheckValues(); err != nil {
 			err = convertToEnvErrors(err)
 		}
 	}
 
 	if err != nil {
-		logutil.Log.Fatal(
+		logx.Fatal(
 			"One or more 'ARGUS_' environment variables are invalid:\n"+err.Error(),
-			logutil.LogFrom{})
+			logx.LogFrom{},
+		)
 		return false
 	}
 	return true
 }
 
-// CheckValues validates the fields of the Defaults struct.
-func (d *Defaults) CheckValues(prefix string) (error, bool) {
-	itemPrefix := prefix + "  "
+// CheckValues validates each entry and reports whether any values were modified.
+func (d *Defaults) CheckValues() (error, bool) {
 	var errs []error
 
 	// Service.
-	util.AppendCheckError(&errs, prefix, "service",
-		d.Service.CheckValues(itemPrefix))
+	if err := d.Service.CheckValues(); err != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "service",
+				Err: err,
+			},
+		)
+	}
 	// Notify.
-	notifyErr, notifyChanged := d.Notify.CheckValues(itemPrefix)
-	util.AppendCheckError(&errs, prefix, "notify", notifyErr)
+	notifyErr, notifyChanged := d.Notify.CheckValues()
+	if notifyErr != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "notify",
+				Err: notifyErr,
+			},
+		)
+	}
 	// WebHook.
-	webhookErr, webhookChanged := d.WebHook.CheckValues(itemPrefix)
-	util.AppendCheckError(&errs, prefix, "webhook", webhookErr)
+	webhookErr, webhookChanged := d.WebHook.CheckValues()
+	if webhookErr != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "webhook",
+				Err: webhookErr,
+			},
+		)
+	}
 
 	if len(errs) == 0 {
 		return nil, notifyChanged || webhookChanged
@@ -105,14 +154,15 @@ func (d *Defaults) CheckValues(prefix string) (error, bool) {
 	return errors.Join(errs...), false
 }
 
-// Print the defaults to the console with the given prefix.
+// Print writes a YAML representation of the receiver to stdout.
 func (d *Defaults) Print(prefix string) {
-	itemPrefix := prefix + "  "
-	str := d.String(itemPrefix)
-	delim := "\n"
-	if str == "{}\n" {
-		delim = " "
+	if d.IsZero() {
+		return
 	}
-	fmt.Printf("%sdefaults:%s%s",
-		prefix, delim, str)
+
+	str := d.String(prefix + "  ")
+	fmt.Printf(
+		"%sdefaults:\n%s",
+		prefix, str,
+	)
 }

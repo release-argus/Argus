@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,17 +17,24 @@ package web
 
 import (
 	"errors"
+
+	"github.com/release-argus/Argus/config/decode"
 )
 
-// CheckValues validates the fields of the Lookup struct.
-func (l *Lookup) CheckValues(prefix string) error {
+// CheckValues validates the fields of the receiver.
+func (l *Lookup) CheckValues() error {
 	var errs []error
 	if l.URL == "" {
-		errs = append(errs,
-			errors.New(prefix+"url: <required> e.g. 'https://example.com'"))
+		errs = append(
+			errs,
+			&decode.FieldError{
+				Key:         "url",
+				Description: "e.g. https://example.com",
+			},
+		)
 	}
 
-	if baseErrs := l.Lookup.CheckValues(prefix); baseErrs != nil {
+	if baseErrs := l.Lookup.CheckValues(); baseErrs != nil {
 		errs = append(errs, baseErrs)
 	}
 

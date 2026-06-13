@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package types
 import (
 	"github.com/Masterminds/semver/v3"
 
-	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/config/decode"
 )
 
 // Release is the format of a Release on api.github.com/repos/OWNER/REPO/releases.
@@ -33,12 +33,12 @@ type Release struct {
 	Assets          []Asset         `json:"assets,omitempty"`
 }
 
-// String returns a string representation of the Release.
+// String implements [fmt.Stringer] and returns a JSON representation.
 func (r *Release) String() string {
 	if r == nil {
 		return ""
 	}
-	return util.ToJSONString(r)
+	return decode.ToJSONString(r)
 }
 
 // ReleaseSort sorts releases by SemanticVersion in descending order.
@@ -55,12 +55,12 @@ type Asset struct {
 	BrowserDownloadURL string `json:"browser_download_url,omitempty"`
 }
 
-// String returns a string representation of the Asset.
+// String implements [fmt.Stringer] and returns a JSON representation.
 func (a *Asset) String() string {
 	if a == nil {
 		return ""
 	}
-	return util.ToJSONString(a)
+	return decode.ToJSONString(a)
 }
 
 // Message is the format of a Message from a GitHub API response.

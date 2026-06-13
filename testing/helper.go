@@ -17,6 +17,7 @@ package testing
 
 import "os"
 
+// exitFunc terminates the process (overridable for tests).
 var exitFunc = os.Exit
 
 // RunAndExit will exit the program with 0/1 depending on `ok` (true=0, false=1).

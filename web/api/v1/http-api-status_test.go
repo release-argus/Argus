@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,58 +17,55 @@
 package v1
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestHTTP_httpRuntimeInfo(t *testing.T) {
-	// GIVEN an API and a request for the runtime info.
+func TestHTTP_HTTPRuntimeInfo(t *testing.T) {
+	// GIVEN: an API and a request for the runtime info.
 	file := filepath.Join(t.TempDir(), "config.yml")
 	api := testAPI(t, file)
-	apiMutex := sync.RWMutex{}
-	t.Cleanup(func() {
-		if api.Config.Settings.Data.DatabaseFile != "" {
-			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
-		}
-	})
-	want := `
+	apiMu := sync.RWMutex{}
+	bodyRegex := test.TrimJSON(`
 		{
 			"start_time":"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[^"]*",
 			"cwd":"[^"]+",
 			"goroutines":[0-9]+,
 			"GOMAXPROCS":[0-9]+
-		}\s$`
+		}`,
+	) + "\n$"
 
-	// WHEN that HTTP request is sent.
-	req := httptest.NewRequest(http.MethodGet,
-		"/api/v1/status/runtime",
-		nil)
+	// WHEN: that HTTP request is sent.
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/status/runtime", nil)
 	w := httptest.NewRecorder()
-	apiMutex.RLock()
+	apiMu.RLock()
 	api.httpRuntimeInfo(w, req)
-	apiMutex.RUnlock()
+	apiMu.RUnlock()
 	res := w.Result()
 	t.Cleanup(func() { _ = res.Body.Close() })
 
-	// THEN the expected body is returned.
+	prefix := fmt.Sprintf("%q\nAPI.httpRuntimeInfo()", packageName)
+
+	// THEN: the expected body is returned.
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
-		t.Fatalf("%s\nunexpected error - %v",
-			packageName, err)
+		t.Fatalf(
+			"%s unexpected error:\n%v",
+			prefix, err,
+		)
 	}
-	got := string(data)
-	want = strings.ReplaceAll(want, "\t", "")
-	want = strings.ReplaceAll(want, "\n", "")
-	if !util.RegexCheck(want, got) {
-		t.Errorf("%s\nerror mismatch\nwant %q\ngot:  %q",
-			packageName, want, got)
+	if got := string(data); !util.RegexCheck(bodyRegex, got) {
+		t.Errorf(
+			"%s error mismatch\ngot:  %q\nwant %q",
+			prefix, got, bodyRegex,
+		)
 	}
 }

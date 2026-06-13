@@ -25,7 +25,9 @@ const EditModeToggle: FC = () => {
 						touchDelayDuration={250}
 					>
 						<Button
+							aria-label="Create a service"
 							className="rounded-none"
+							id="create-service"
 							onClick={() =>
 								setModal({
 									actionType: 'EDIT',
@@ -45,7 +47,9 @@ const EditModeToggle: FC = () => {
 							touchDelayDuration={250}
 						>
 							<Button
+								aria-label="Save order"
 								className="rounded-none"
+								id="save-order"
 								onClick={onSaveOrder}
 								type="button"
 								variant="outline"
@@ -62,6 +66,7 @@ const EditModeToggle: FC = () => {
 				touchDelayDuration={250}
 			>
 				<Button
+					aria-label="Toggle edit mode"
 					className="rounded-s-none"
 					onClick={toggleEditMode}
 					type="button"

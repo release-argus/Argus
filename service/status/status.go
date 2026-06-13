@@ -16,12 +16,10 @@
 package status
 
 import (
-	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"gopkg.in/yaml.v3"
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/dashboard"
@@ -52,41 +50,9 @@ func NewDefaults(
 		statusBase: statusBase{
 			AnnounceChannel: announceChannel,
 			DatabaseChannel: databaseChannel,
-			SaveChannel:     saveChannel}}
-}
-
-// refreshServiceInfo updates the ServiceInfo struct with the latest values.
-// It uses the dashboard options to set the Icon, IconLinkTo, and WebURL fields.
-//
-// This method must be called with the Status mutex already locked.
-func (s *Status) refreshServiceInfo() {
-	s.ServiceInfo.Icon = util.TemplateString(
-		s.Dashboard.GetIcon(),
-		s.ServiceInfo)
-
-	s.ServiceInfo.IconLinkTo = util.TemplateString(
-		s.Dashboard.GetIconLinkTo(),
-		s.ServiceInfo)
-
-	s.ServiceInfo.WebURL = util.TemplateString(
-		s.Dashboard.GetWebURL(),
-		s.ServiceInfo)
-}
-
-// ServiceInfo returns the ServiceInfo struct.
-func (s *Status) GetServiceInfo() serviceinfo.ServiceInfo {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-
-	return s.ServiceInfo
-}
-
-// GetWebURL returns the WebURL field of the ServiceInfo struct.
-func (s *Status) GetWebURL() string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-
-	return s.ServiceInfo.WebURL
+			SaveChannel:     saveChannel,
+		},
+	}
 }
 
 // Status holds the current versioning state of the Service (version, and regex misses).
@@ -96,7 +62,7 @@ type Status struct {
 	ServiceInfo serviceinfo.ServiceInfo // ServiceInfo holds information about the service.
 	Dashboard   *dashboard.Options      // Dashboard options for the Service.
 
-	mutex                    sync.RWMutex // Lock for the Status.
+	mu                       sync.RWMutex // Lock for the Status.
 	deployedVersionTimestamp string       // UTC timestamp of latest DeployedVersion change.
 	latestVersionTimestamp   string       // UTC timestamp of latest LatestVersion change.
 	lastQueried              string       // UTC timestamp of latest LatestVersion query.
@@ -106,7 +72,7 @@ type Status struct {
 	deleting                 bool         // Flag to indicate undergoing deletion.
 }
 
-// New Status struct.
+// New returns a Status populated with version fields and channel references.
 func New(
 	announceChannel chan []byte,
 	databaseChannel chan dbtype.Message,
@@ -122,43 +88,49 @@ func New(
 		statusBase: statusBase{
 			AnnounceChannel: announceChannel,
 			DatabaseChannel: databaseChannel,
-			SaveChannel:     saveChannel},
+			SaveChannel:     saveChannel,
+		},
 		ServiceInfo: serviceinfo.ServiceInfo{
 			ApprovedVersion: av,
 			DeployedVersion: dv,
-			LatestVersion:   lv},
+			LatestVersion:   lv,
+		},
 		deployedVersionTimestamp: dvT,
 		latestVersionTimestamp:   lvT,
 		lastQueried:              lq,
-		Dashboard:                dashboard}
+		Dashboard:                dashboard,
+	}
 
-	status.ServiceInfo.SetMutex(&status.mutex)
+	status.ServiceInfo.SetMutex(&status.mu)
 
 	return status
 }
 
-// UnmarshalJSON unmarshals a Status from JSON.
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (s *Status) UnmarshalJSON(data []byte) error {
 	s.unmarshal()
 	return nil
 }
 
-// UnmarshalYAML unmarshals a Status from YAML.
-func (s *Status) UnmarshalYAML(value *yaml.Node) error {
+// UnmarshalYAML implements the yaml.Unmarshaler interface.
+func (s *Status) UnmarshalYAML(data []byte) error {
 	s.unmarshal()
 	return nil
 }
 
-// unmarshal handles the common unmarshalling logic for both JSON and YAML.
+// unmarshal wires ServiceInfo to the Status mutex.
 func (s *Status) unmarshal() {
-	// Set up the mutex pointer for ServiceInfo
-	s.ServiceInfo.SetMutex(&s.mutex)
+	// Set the mutex pointer for ServiceInfo
+	s.ServiceInfo.SetMutex(&s.mu)
 }
 
-// Copy the Status.
+// Copy returns a deep copy of the receiver (with/without channels).
 func (s *Status) Copy(withChannels bool) *Status {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	if s == nil {
+		return nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	newStatus := New(
 		nil, nil, nil,
@@ -166,7 +138,8 @@ func (s *Status) Copy(withChannels bool) *Status {
 		s.ServiceInfo.DeployedVersion, s.deployedVersionTimestamp,
 		s.ServiceInfo.LatestVersion, s.latestVersionTimestamp,
 		s.lastQueried,
-		s.Dashboard)
+		s.Dashboard,
+	)
 
 	if withChannels {
 		newStatus.AnnounceChannel = s.AnnounceChannel
@@ -176,16 +149,22 @@ func (s *Status) Copy(withChannels bool) *Status {
 
 	newStatus.Init(
 		len(s.Fails.Shoutrrr.fails), newStatus.Fails.Command.Length(), newStatus.Fails.WebHook.Length(),
-		s.ServiceInfo.ID, s.ServiceInfo.Name, s.ServiceInfo.URL,
-		s.Dashboard.Copy())
+		ServiceInfo{
+			ID:         s.ServiceInfo.ID,
+			Name:       s.ServiceInfo.Name,
+			Comment:    s.ServiceInfo.Comment,
+			ServiceURL: s.ServiceInfo.URL,
+		},
+		s.Dashboard.Copy(),
+	)
 
 	return newStatus
 }
 
-// String returns a string representation of the Status.
+// String implements [fmt.Stringer].
 func (s *Status) String() string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	fields := []util.Field{
 		{Name: "approved_version", Value: s.ServiceInfo.ApprovedVersion},
@@ -204,18 +183,26 @@ func (s *Status) String() string {
 		switch v := f.Value.(type) {
 		case string:
 			if v != "" {
-				_, _ = fmt.Fprintf(&builder, "%s: %v\n",
-					f.Name, v)
+				// '<name>: <val>\n'
+				builder.WriteString(f.Name)
+				builder.WriteString(": ")
+				builder.WriteString(v)
+				builder.WriteString("\n")
 			}
 		case uint:
 			if v != 0 {
-				_, _ = fmt.Fprintf(&builder, "%s: %d\n",
-					f.Name, v)
+				// '<name>: <val>\n'
+				builder.WriteString(f.Name)
+				builder.WriteString(": ")
+				builder.WriteString(strconv.Itoa(int(v)))
+				builder.WriteString("\n")
 			}
 		case *Fails:
 			if fails := v.String("  "); fails != "" {
-				_, _ = fmt.Fprintf(&builder, "%s:\n%s",
-					f.Name, fails)
+				// '<name>:\n<failsStr>'
+				builder.WriteString(f.Name)
+				builder.WriteString(":\n")
+				builder.WriteString(fails)
 			}
 		}
 	}
@@ -224,46 +211,117 @@ func (s *Status) String() string {
 	return result
 }
 
+// ServiceInfo holds identifying metadata passed to [Status.Init].
+type ServiceInfo struct {
+	ID         string
+	Name       string
+	Comment    string
+	ServiceURL string
+}
+
+// Init initialises and resets the Status.
+// It reinitialises internal failure tracking with the provided capacities,
+// copies service metadata into the embedded ServiceInfo, attaches dashboard
+// configuration, and refreshes derived fields.
+func (s *Status) Init(
+	commands, shoutrrrs, webhooks int,
+	serviceInfo ServiceInfo,
+	dashboard *dashboard.Options,
+) {
+	s.Fails.Command.Init(commands)
+	s.Fails.Shoutrrr.Init(shoutrrrs)
+	s.Fails.WebHook.Init(webhooks)
+
+	s.ServiceInfo.ID = serviceInfo.ID
+	s.ServiceInfo.Name = util.ValueOr(serviceInfo.Name, serviceInfo.ID)
+	s.ServiceInfo.Comment = serviceInfo.Comment
+	s.ServiceInfo.URL = serviceInfo.ServiceURL
+	s.ServiceInfo.Tags = dashboard.Tags
+
+	s.Dashboard = dashboard
+	s.ServiceInfo.SetMutex(&s.mu)
+	s.refreshServiceInfo()
+}
+
 // SetAnnounceChannel will set the AnnounceChannel.
 func (s *Status) SetAnnounceChannel(channel chan []byte) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	s.AnnounceChannel = channel
 }
 
-// Init will initialise the Status struct, creating the failure trackers.
-func (s *Status) Init(
-	shoutrrrs, commands, webhooks int,
-	serviceID, serviceName, serviceURL string,
-	dashboard *dashboard.Options,
-) {
-	s.Fails.Shoutrrr.Init(shoutrrrs)
-	s.Fails.Command.Init(commands)
-	s.Fails.WebHook.Init(webhooks)
+// RefreshServiceInfo updates the ServiceInfo struct with the latest values.
+// It uses the dashboard options to set the Icon, IconLinkTo, and WebURL fields.
+func (s *Status) RefreshServiceInfo() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	s.ServiceInfo.ID = serviceID
-	s.ServiceInfo.Name = serviceName
-	s.ServiceInfo.URL = serviceURL
-	s.ServiceInfo.Tags = dashboard.Tags
+	s.ServiceInfo.Icon = util.TemplateString(
+		s.Dashboard.GetIcon(),
+		s.ServiceInfo,
+	)
 
-	s.Dashboard = dashboard
-	s.ServiceInfo.SetMutex(&s.mutex)
-	s.refreshServiceInfo()
+	s.ServiceInfo.IconLinkTo = util.TemplateString(
+		s.Dashboard.GetIconLinkTo(),
+		s.ServiceInfo,
+	)
+
+	s.ServiceInfo.WebURL = util.TemplateString(
+		s.Dashboard.GetWebURL(),
+		s.ServiceInfo,
+	)
+}
+
+// refreshServiceInfo updates the ServiceInfo struct with the latest values.
+// It uses the dashboard options to set the Icon, IconLinkTo, and WebURL fields.
+//
+// This method must be called with the Status mutex already locked.
+func (s *Status) refreshServiceInfo() {
+	s.ServiceInfo.Icon = util.TemplateString(
+		s.Dashboard.GetIcon(),
+		s.ServiceInfo,
+	)
+
+	s.ServiceInfo.IconLinkTo = util.TemplateString(
+		s.Dashboard.GetIconLinkTo(),
+		s.ServiceInfo,
+	)
+
+	s.ServiceInfo.WebURL = util.TemplateString(
+		s.Dashboard.GetWebURL(),
+		s.ServiceInfo,
+	)
+}
+
+// ServiceInfo returns the ServiceInfo struct.
+func (s *Status) GetServiceInfo() serviceinfo.ServiceInfo {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.ServiceInfo
+}
+
+// GetWebURL returns the WebURL field of the ServiceInfo struct.
+func (s *Status) GetWebURL() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.ServiceInfo.WebURL
 }
 
 // LastQueried time of the LatestVersion.
 func (s *Status) LastQueried() string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.lastQueried
 }
 
 // SetLastQueried will update LastQueried to `t` (or now if `t` empty).
 func (s *Status) SetLastQueried(t string) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if t == "" {
 		s.lastQueried = time.Now().UTC().Format(time.RFC3339)
 	} else {
@@ -273,11 +331,11 @@ func (s *Status) SetLastQueried(t string) {
 
 // SameVersions returns whether the Status has the same versions as `s`.
 func (s *Status) SameVersions(s2 *Status) bool {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	s2.mutex.RLock()
-	defer s2.mutex.RUnlock()
+	s2.mu.RLock()
+	defer s2.mu.RUnlock()
 
 	return s.ServiceInfo.ApprovedVersion == s2.ServiceInfo.ApprovedVersion &&
 		s.ServiceInfo.LatestVersion == s2.ServiceInfo.LatestVersion &&
@@ -286,21 +344,21 @@ func (s *Status) SameVersions(s2 *Status) bool {
 
 // ApprovedVersion returns the ApprovedVersion.
 func (s *Status) ApprovedVersion() string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.ServiceInfo.ApprovedVersion
 }
 
 // SetApprovedVersion will set .ApprovedVersion to `version`.
 func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
-	s.mutex.Lock()
+	s.mu.Lock()
 
 	previousServiceInfo := s.ServiceInfo
 	// Do not modify if unchanged, deleting, or latest version is already deployed.
 	if previousServiceInfo.ApprovedVersion == version || s.deleting ||
 		previousServiceInfo.LatestVersion == previousServiceInfo.DeployedVersion {
-		s.mutex.Unlock()
+		s.mu.Unlock()
 		return
 	}
 
@@ -308,14 +366,14 @@ func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 	s.refreshServiceInfo()
 
 	if !writeToDB {
-		s.mutex.Unlock()
+		s.mu.Unlock()
 		return
 	}
 
 	newServiceInfo := s.ServiceInfo
-	s.mutex.Unlock()
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	// Metrics.
 	setLatestVersionIsDeployedMetric(newServiceInfo)
@@ -329,9 +387,11 @@ func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 		if isApproved {
 			value = metric.LatestVersionApproved // Approving LatestVersion.
 		}
-		metric.SetPrometheusGauge(metric.LatestVersionIsDeployed,
+		metric.SetPrometheusGauge(
+			metric.LatestVersionIsDeployed,
 			newServiceInfo.ID, "",
-			float64(value))
+			float64(value),
+		)
 	}
 
 	// WebSocket.
@@ -341,14 +401,16 @@ func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 	message := dbtype.Message{
 		ServiceID: newServiceInfo.ID,
 		Cells: []dbtype.Cell{
-			{Column: "approved_version", Value: version}}}
+			{Column: "approved_version", Value: version},
+		},
+	}
 	s.sendDatabase(&message)
 }
 
 // DeployedVersion returns the DeployedVersion.
 func (s *Status) DeployedVersion() string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.ServiceInfo.DeployedVersion
 }
@@ -356,8 +418,8 @@ func (s *Status) DeployedVersion() string {
 // SetDeployedVersion sets the DeployedVersion to `version` and DeployedVersionTimestamp to `releaseDate`
 // (or now if empty).
 func (s *Status) SetDeployedVersion(version, releaseDate string, writeToDB bool) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	previousServiceInfo := s.ServiceInfo
 	// Do not modify if unchanged, or deleting.
@@ -396,22 +458,24 @@ func (s *Status) SetDeployedVersion(version, releaseDate string, writeToDB bool)
 		ServiceID: newServiceInfo.ID,
 		Cells: []dbtype.Cell{
 			{Column: "deployed_version", Value: newServiceInfo.DeployedVersion},
-			{Column: "deployed_version_timestamp", Value: s.deployedVersionTimestamp}}}
+			{Column: "deployed_version_timestamp", Value: s.deployedVersionTimestamp},
+		},
+	}
 	s.sendDatabase(&message)
 }
 
 // DeployedVersionTimestamp returns the DeployedVersionTimestamp.
 func (s *Status) DeployedVersionTimestamp() string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.deployedVersionTimestamp
 }
 
 // LatestVersion returns the LatestVersion.
 func (s *Status) LatestVersion() string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.ServiceInfo.LatestVersion
 }
@@ -419,8 +483,8 @@ func (s *Status) LatestVersion() string {
 // SetLatestVersion sets the LatestVersion to `version`, and LatestVersionTimestamp to `releaseDate`
 // (or now if empty).
 func (s *Status) SetLatestVersion(version, releaseDate string, writeToDB bool) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	previousServiceInfo := s.ServiceInfo
 	// Do not modify if unchanged, or deleting.
@@ -454,81 +518,83 @@ func (s *Status) SetLatestVersion(version, releaseDate string, writeToDB bool) {
 		ServiceID: newServiceInfo.ID,
 		Cells: []dbtype.Cell{
 			{Column: "latest_version", Value: newServiceInfo.LatestVersion},
-			{Column: "latest_version_timestamp", Value: s.latestVersionTimestamp}}}
+			{Column: "latest_version_timestamp", Value: s.latestVersionTimestamp},
+		},
+	}
 	s.sendDatabase(&message)
 }
 
 // LatestVersionTimestamp returns the timestamp of the LatestVersion.
 func (s *Status) LatestVersionTimestamp() string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.latestVersionTimestamp
 }
 
 // RegexMissContent increments the count of RegEx misses on content.
 func (s *Status) RegexMissContent() {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	s.regexMissesContent++
 }
 
 // RegexMissesContent returns the count of RegEx misses on content.
 func (s *Status) RegexMissesContent() uint {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.regexMissesContent
 }
 
 // RegexMissVersion increments the count of RegEx misses on version.
 func (s *Status) RegexMissVersion() {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	s.regexMissesVersion++
 }
 
 // RegexMissesVersion returns the count of RegEx misses on version.
 func (s *Status) RegexMissesVersion() uint {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.regexMissesVersion
 }
 
 // ResetRegexMisses (the counters for RegEx misses).
 func (s *Status) ResetRegexMisses() {
-	s.mutex.Lock()
+	s.mu.Lock()
 	{
 		s.regexMissesContent = 0
 		s.regexMissesVersion = 0
 	}
-	s.mutex.Unlock()
+	s.mu.Unlock()
 }
 
 // SetDeleting will set `deleting` flag.
 func (s *Status) SetDeleting() {
-	s.mutex.Lock()
+	s.mu.Lock()
 	{
 		s.deleting = true
 	}
-	s.mutex.Unlock()
+	s.mu.Unlock()
 }
 
 // Deleting returns whether the Service is undergoing deletion.
 func (s *Status) Deleting() bool {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.deleting
 }
 
 // SendAnnounce payload to the AnnounceChannel.
 func (s *Status) SendAnnounce(payload *[]byte) {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	if s.deleting || s.AnnounceChannel == nil {
 		return
@@ -537,7 +603,7 @@ func (s *Status) SendAnnounce(payload *[]byte) {
 	s.AnnounceChannel <- *payload
 }
 
-// sendDatabase payload to the DatabaseChannel.
+// sendDatabase enqueues a database update when the service is not being deleted.
 func (s *Status) sendDatabase(payload *dbtype.Message) {
 	if s.deleting || s.DatabaseChannel == nil {
 		return
@@ -548,8 +614,8 @@ func (s *Status) sendDatabase(payload *dbtype.Message) {
 
 // SendSave request to the SaveChannel.
 func (s *Status) SendSave() {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	if s.deleting || s.SaveChannel == nil {
 		return
@@ -560,9 +626,11 @@ func (s *Status) SendSave() {
 
 // setLatestVersionIsDeployedMetric sets the Prometheus metric for whether the LatestVersion is deployed.
 func setLatestVersionIsDeployedMetric(serviceInfo serviceinfo.ServiceInfo) {
-	metric.SetPrometheusGauge(metric.LatestVersionIsDeployed,
+	metric.SetPrometheusGauge(
+		metric.LatestVersionIsDeployed,
 		serviceInfo.ID, "",
-		float64(metric.GetVersionDeployedState(serviceInfo)))
+		float64(metric.GetVersionDeployedState(serviceInfo)),
+	)
 }
 
 // updateUpdatesCurrentMetric updates the Prometheus metric `UpdatesCurrent`
@@ -586,14 +654,14 @@ func (s *Status) InitMetrics() {
 	serviceInfo := s.GetServiceInfo()
 
 	setLatestVersionIsDeployedMetric(serviceInfo)
-	metric.SetUpdatesCurrent(1,
-		metric.GetVersionDeployedState(serviceInfo))
+	metric.SetUpdatesCurrent(1, metric.GetVersionDeployedState(serviceInfo))
 }
 
 // DeleteMetrics of the Status.
 func (s *Status) DeleteMetrics() {
-	metric.DeletePrometheusGauge(metric.LatestVersionIsDeployed,
-		s.ServiceInfo.ID, "")
-	metric.SetUpdatesCurrent(-1,
-		metric.GetVersionDeployedState(s.GetServiceInfo()))
+	metric.DeletePrometheusGauge(
+		metric.LatestVersionIsDeployed,
+		s.ServiceInfo.ID, "",
+	)
+	metric.SetUpdatesCurrent(-1, metric.GetVersionDeployedState(s.GetServiceInfo()))
 }

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // ServiceTest queries the service and returns the found version.
@@ -32,8 +32,8 @@ func ServiceTest(flag *string, cfg *config.Config) bool {
 	}
 
 	// Log the test details.
-	logFrom := logutil.LogFrom{Primary: "Testing", Secondary: *flag}
-	logutil.Log.Info(
+	logFrom := logx.LogFrom{Primary: "Testing", Secondary: *flag}
+	logx.Info(
 		"",
 		logFrom,
 		true,
@@ -41,10 +41,13 @@ func ServiceTest(flag *string, cfg *config.Config) bool {
 
 	// Check service exists.
 	if !util.Contains(cfg.Order, *flag) {
-		logutil.Log.Fatal(
-			fmt.Sprintf("Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
-				*flag, strings.Join(cfg.Order, "\n  - ")),
-			logFrom)
+		logx.Fatal(
+			fmt.Sprintf(
+				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
+				*flag, strings.Join(cfg.Order, "\n  - "),
+			),
+			logFrom,
+		)
 		return false
 	}
 
@@ -54,9 +57,11 @@ func ServiceTest(flag *string, cfg *config.Config) bool {
 	// LatestVersion.
 	_, err := svc.LatestVersion.Query(false, logFrom)
 	if err != nil {
-		logutil.Log.Error(
-			fmt.Sprintf("No version matching the conditions specified could be found for %q at %q",
-				*flag, svc.LatestVersion.ServiceURL()),
+		logx.Error(
+			fmt.Sprintf(
+				"No version matching the conditions specified could be found for %q at %q",
+				*flag, svc.LatestVersion.ServiceURL(),
+			),
 			logFrom,
 			true,
 		)
@@ -65,9 +70,8 @@ func ServiceTest(flag *string, cfg *config.Config) bool {
 	// DeployedVersionLookup.
 	if svc.DeployedVersionLookup != nil {
 		if err := svc.DeployedVersionLookup.Query(false, logFrom); err == nil {
-			logutil.Log.Info(
-				fmt.Sprintf("Deployed version - %q",
-					svc.Status.DeployedVersion()),
+			logx.Info(
+				fmt.Sprintf("Deployed version - %q", svc.Status.DeployedVersion()),
 				logFrom,
 				true,
 			)

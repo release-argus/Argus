@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,25 +27,28 @@ import (
 
 	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
+	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
 var packageName = "db"
 var cfg *config.Config
 
 func TestMain(m *testing.M) {
-	// Log.
+	// GIVEN: a Log.
 	logtest.InitLog()
 
 	databaseFile := "TestMain.db.test"
 
 	cfg = testConfig(nil)
 	cfg.Settings.Data.DatabaseFile = databaseFile
-	// AND a cancellable context for shutdown.
+
+	// AND: a cancellable context for shutdown.
 	ctx, cancel := context.WithCancel(context.Background())
 	api := Get(cfg)
 	go api.Handler(ctx)
@@ -55,9 +58,8 @@ func TestMain(m *testing.M) {
 	cancel()
 	_ = os.Remove(cfg.Settings.Data.DatabaseFile)
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
@@ -81,7 +83,8 @@ func testConfig(t *testing.T) (cfg *config.Config) {
 			SettingsBase: config.SettingsBase{
 				Data: config.DataSettings{
 					DatabaseFile: databaseFile,
-				}},
+				},
+			},
 		},
 		Service: service.Services{
 			"delete0": nil,
@@ -105,20 +108,35 @@ func testConfig(t *testing.T) (cfg *config.Config) {
 		SaveChannel:     saveChannel,
 	}
 
+	if t != nil {
+		t.Cleanup(func() {
+			_ = os.Remove(cfg.File)
+			_ = os.Remove(cfg.Settings.Data.DatabaseFile)
+		})
+	}
+
 	// Services.
 	for svcName := range cfg.Service {
 		svc := service.Service{
 			ID:     "foo",
 			Status: status.Status{},
 			Dashboard: dashboard.Options{
-				WebURL: "https://example.com"}}
+				OptionsBase: dashboard.OptionsBase{
+					WebURL: "https://example.com",
+				},
+			},
+		}
+
 		svc.Status.Init(
-			len(svc.Notify), len(svc.Command), len(svc.WebHook),
-			svc.ID, "", "",
-			&svc.Dashboard)
-		svc.Status.SetApprovedVersion("1.0.0", false)
+			len(svc.Command), len(svc.Notify), len(svc.WebHook),
+			status.ServiceInfo{
+				ID: svc.ID,
+			},
+			&svc.Dashboard,
+		)
 		svc.Status.SetDeployedVersion("2.0.0", "", false)
 		svc.Status.SetLatestVersion("3.0.0", time.Now().Add(time.Hour).Format(time.RFC3339), false)
+		svc.Status.SetApprovedVersion("1.0.0", false)
 
 		// Add service to Config.
 		cfg.Service[svcName] = &svc
@@ -128,29 +146,35 @@ func testConfig(t *testing.T) (cfg *config.Config) {
 }
 
 func testAPI(t *testing.T) *api {
-	return &api{config: testConfig(t)}
+	tAPI := &api{config: testConfig(t)}
 
+	t.Cleanup(func() {
+		dbCleanup(tAPI)
+	})
+
+	return tAPI
 }
 
 func dbCleanup(api *api) {
 	if api.db != nil {
 		_ = api.db.Close()
 	}
+	_ = os.Remove(api.config.File)
 	_ = os.Remove(api.config.Settings.Data.DatabaseFile)
 	_ = os.Remove(api.config.Settings.Data.DatabaseFile + "-journal")
 }
 
 func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 	sqlStmt := `
-	SELECT
-		id,
-		latest_version,
-		latest_version_timestamp,
-		deployed_version,
-		deployed_version_timestamp,
-		approved_version
-	FROM status
-	WHERE id = ?;`
+		SELECT
+			id,
+			latest_version,
+			latest_version_timestamp,
+			deployed_version,
+			deployed_version_timestamp,
+			approved_version
+		FROM status
+		WHERE id = ?;`
 	// Retry up-to 10 times in case 'database is locked'.
 	var row *sql.Rows
 	var err error
@@ -168,11 +192,11 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 
 	var (
 		id  string
-		lv  string
-		lvt string
+		av  string
 		dv  string
 		dvt string
-		av  string
+		lv  string
+		lvt string
 	)
 	for row.Next() {
 		err = row.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
@@ -180,15 +204,26 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 			t.Fatal(err)
 		}
 	}
-	svcStatus := status.Status{}
+	svcStatus, _ := statustest.New(
+		"yaml", []byte(test.TrimYAML(`
+			approved_version: '`+av+`'
+			deployed_version: '`+dv+`'
+			deployed_version_timestamp: '`+dvt+`'
+			latest_version: '`+lv+`'
+			latest_version_timestamp: '`+lvt+`'
+		`)),
+	)
 	svcStatus.Init(
 		0, 0, 0,
-		id, "", "",
+		status.ServiceInfo{
+			ID: id,
+		},
 		&dashboard.Options{
-			WebURL: "https://example.com"})
-	svcStatus.SetLatestVersion(lv, lvt, false)
-	svcStatus.SetDeployedVersion(dv, dvt, false)
-	svcStatus.SetApprovedVersion(av, false)
+			OptionsBase: dashboard.OptionsBase{
+				WebURL: "https://example.com",
+			},
+		},
+	)
 
-	return &svcStatus
+	return svcStatus
 }

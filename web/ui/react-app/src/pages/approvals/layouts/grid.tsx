@@ -1,9 +1,14 @@
-import { Service } from '@/components/approvals';
-import type { ServiceSummary } from '@/utils/api/types/config/summary';
-import { closestCenter, DndContext, type DragEndEvent, type SensorOptions, } from '@dnd-kit/core';
+import {
+	closestCenter,
+	DndContext,
+	type DragEndEvent,
+	type SensorOptions,
+} from '@dnd-kit/core';
 import type { SensorDescriptor } from '@dnd-kit/core/dist/sensors/types';
 import { SortableContext } from '@dnd-kit/sortable';
 import type { FC } from 'react';
+import { Service } from '@/components/approvals';
+import type { ServiceSummary } from '@/utils/api/types/config/summary';
 
 type GridLayoutProps = {
 	/* The list of service summaries for the grid. */
@@ -36,7 +41,7 @@ export const GridLayout: FC<GridLayoutProps> = ({
 	handleDragEnd,
 }) => {
 	return (
-		<div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(17.5rem,1fr))]">
+		<div className="grid grid-cols-[repeat(auto-fill,minmax(17.5rem,1fr))] gap-4">
 			<DndContext
 				autoScroll={{
 					acceleration: 100,

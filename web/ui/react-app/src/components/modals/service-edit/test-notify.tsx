@@ -123,7 +123,7 @@ const TestNotify: FC<TestNotifyProps> = ({ path, original, extras }) => {
 				<CircleCheck className="text-success" />
 			);
 		}
-		return <></>;
+		return null;
 	}, [isPending, testStatus]);
 
 	return (

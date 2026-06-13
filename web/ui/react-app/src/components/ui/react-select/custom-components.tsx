@@ -181,7 +181,9 @@ export const SortableMultiValue = <
 		transform,
 		transition,
 		isDragging,
-	} = useSortable({ id: props.data.value });
+	} = useSortable({
+		id: props.data.value,
+	});
 
 	// Style the component during drag and drop operations.
 	const style = {

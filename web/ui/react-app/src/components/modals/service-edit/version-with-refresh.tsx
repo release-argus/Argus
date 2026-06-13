@@ -70,14 +70,8 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 			const dataConverted = schema.parse(data);
 			// Trim URL Commands.
 			if (vType === 'latest_version' && 'url_commands' in dataConverted) {
-				const parsedURLCommands = urlCommandsSchemaOutgoing.parse(
-					dataConverted.url_commands,
-				);
-				const trimmedURLCommands = parsedURLCommands
-					? parsedURLCommands.map((urlC) => removeEmptyValues(urlC))
-					: null;
-				dataConverted.url_commands =
-					trimmedURLCommands as URLCommandsSchemaWithValidation;
+				normaliseURLCommands(originalData.latest_version.url_commands);
+				normaliseURLCommands(dataConverted.url_commands);
 			}
 
 			return await mapRequest('VERSION_REFRESH', {
@@ -146,7 +140,7 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 		<span className={cn('col-span-full', className)}>
 			<span className="flex pt-1 pb-2">
 				{vType === 'latest_version' ? 'Latest' : 'Deployed'} version: {version}
-				{isFetching && <Skeleton className="ml-1 h-4 w-16 max-w-full" />}
+				{isFetching && <Skeleton className="max-str-full ml-1 h-4 w-16" />}
 				<Button
 					aria-label="Refresh the version"
 					className="ml-auto"
@@ -184,6 +178,18 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 			)}
 		</span>
 	);
+};
+
+// biome-ignore lint/suspicious/noExplicitAny: various types.
+const normaliseURLCommands = (obj: Record<string, any>) => {
+	if (obj?.url_commands) {
+		const parsed = urlCommandsSchemaOutgoing.parse(obj.url_commands);
+		obj.url_commands = parsed
+			? (parsed.map((urlC) =>
+					removeEmptyValues(urlC),
+				) as URLCommandsSchemaWithValidation)
+			: [];
+	}
 };
 
 export default VersionWithRefresh;

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,88 +18,302 @@
 package base
 
 import (
-	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 )
 
-func TestDefaults_Default(t *testing.T) {
-	// GIVEN a LookupDefault.
-	defaults := Defaults{}
+func TestDefaults_IsZero(t *testing.T) {
+	// GIVEN: Defaults.
+	tests := []struct {
+		name string
+		data *Defaults
+		want bool
+	}{
+		{
+			name: "empty",
+			data: &Defaults{},
+			want: true,
+		},
+		{
+			name: "non-empty Type",
+			data: &Defaults{
+				Type: "a",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty AccessToken",
+			data: &Defaults{
+				AccessToken: "foo",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty AllowInvalidCerts",
+			data: &Defaults{
+				AllowInvalidCerts: test.Ptr(true),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty UsePreRelease",
+			data: &Defaults{
+				UsePreRelease: test.Ptr(true),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty Require",
+			data: &Defaults{
+				Require: filter.RequireDefaults{
+					Docker: *test.Must(t, func() (*docker.Defaults, error) {
+						return docker.DecodeDefaults(
+							"yaml", []byte(`type: ghcr`),
+							nil,
+						)
+					}),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "filled",
+			data: &Defaults{
+				Type:              "a",
+				AccessToken:       "foo",
+				AllowInvalidCerts: test.Ptr(true),
+				UsePreRelease:     test.Ptr(true),
+				Require: filter.RequireDefaults{
+					Docker: *test.Must(t, func() (*docker.Defaults, error) {
+						return docker.DecodeDefaults(
+							"yaml", []byte(`type: ghcr`),
+							nil,
+						)
+					}),
+				},
+			},
+			want: false,
+		},
+	}
 
-	// WHEN Default is called.
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero is called.
+			got := tc.data.IsZero()
+
+			// THEN: the result is expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestDecodeDefaults(t *testing.T) {
+	// GIVEN: data in a given format to Decode into Defaults.
+	tests := []struct {
+		name     string
+		format   string
+		data     string
+		want     string
+		errRegex string
+	}{
+		{
+			name:     "JSON/empty",
+			format:   "json",
+			data:     "",
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     "{}",
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "YAML/empty",
+			format:   "yaml",
+			data:     "",
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:   "YAML/invalid data types",
+			format: "yaml",
+			data:   `type: ['github']`,
+			errRegex: test.TrimYAML(`
+					^latest_version:
+						[^\s]+ .*unmarshal.*
+						[^\s]+.*
+						\s+\^$`,
+			),
+		},
+		{
+			name:   "YAML/full",
+			format: "yaml",
+			data: test.TrimYAML(`
+				type: github
+				access_token: foo
+				allow_invalid_certs: false
+				use_prerelease: true
+				foo: bar
+				require:
+					docker:
+						image: i
+						tag: t
+			`),
+			want: test.TrimYAML(`
+				type: github
+				access_token: foo
+				allow_invalid_certs: false
+				use_prerelease: true
+				require:
+					docker:
+						image: i
+						tag: t
+			`),
+			errRegex: `^$`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, _, testErr := test.AssertDecode(
+				t,
+				DecodeDefaults,
+				tc.format, tc.data,
+				func(v *Defaults) string { return decode.ToYAMLString(v, "") },
+				tc.want,
+				tc.errRegex,
+				packageName,
+				"DecodeDefaults",
+			)
+			if testErr != nil {
+				t.Fatal(testErr)
+			}
+		})
+	}
+}
+
+func TestDefaults_Default(t *testing.T) {
+	// GIVEN: a LookupDefault.
+	defaults := Defaults{}
+	want := Defaults{
+		Type:              "github",
+		AllowInvalidCerts: test.Ptr(false),
+		UsePreRelease:     test.Ptr(false),
+		Require: filter.RequireDefaults{
+			Docker: docker.Defaults{
+				Type: "hub",
+				ContainerDetail: docker.ContainerDetail{
+					Tag: "{{ version }}",
+				},
+			},
+		},
+	}
+
+	// WHEN: Default is called.
 	defaults.Default()
 
-	// THEN it should set the defaults.
-	if defaults.AllowInvalidCerts == nil {
-		t.Errorf("%s\nAllowInvalidCerts not set, got %v",
-			packageName, defaults.AllowInvalidCerts)
+	wantStr := decode.ToYAMLString(want, "")
+	gotStr := decode.ToYAMLString(defaults, "")
+	// THEN: it should set the defaults as expected.
+	if gotStr != wantStr {
+		t.Errorf(
+			"%s\nDefaults.Default() value mismatch\ngot:  %q\nwant: %q",
+			packageName, gotStr, wantStr,
+		)
 	}
-	if defaults.UsePreRelease == nil {
-		t.Errorf("%s\nUsePreRelease not set, got %v",
-			packageName, defaults.UsePreRelease)
-	}
-	// AND Require has been defaulted.
-	if defaults.Require.Docker.Type == "" {
-		t.Errorf("%s\nRequire.Docker.Type not set, got %v",
-			packageName, defaults.Require.Docker.Type)
+}
+
+func TestDefaults_SetDefaults(t *testing.T) {
+	// GIVEN: Two sets of Defaults.
+	d := &Defaults{}
+	hd := &Defaults{}
+	hd.Default()
+
+	// WHEN: SetDefaults is called on defaults with these other defaults.
+	d.SetDefaults(hd)
+
+	// THEN: the struct is populated with default values.
+	if d.Require.Docker.Defaults != &hd.Require.Docker {
+		t.Errorf(
+			"%s\nDefaults.SetDefaults() pointer mismatch\ngot:  %p\nwant: %p",
+			packageName, d.Require.Docker.Defaults, hd.Require.Docker.Defaults,
+		)
 	}
 }
 
 func TestDefaults_CheckValues(t *testing.T) {
-	type args struct {
-		require         filter.RequireDefaults
-		urlCommandSlice filter.URLCommands
-	}
-	// GIVEN a LookupDefault.
-	tests := map[string]struct {
-		args     args
+	lvCfg := plainDefaultsConfig(t)
+
+	// GIVEN: a Defaults.
+	tests := []struct {
+		name     string
+		input    *Defaults
 		errRegex string
 	}{
-		"valid": {
-			args: args{require: filter.RequireDefaults{
-				Docker: *filter.NewDockerCheckDefaults(
-					"ghcr", "", "", "", "", nil)}},
+		{
+			name: "valid",
+			input: &Defaults{
+				Require: filter.RequireDefaults{
+					Docker: *test.Must(t, func() (*docker.Defaults, error) {
+						return docker.DecodeDefaults(
+							"yaml", []byte(`type: ghcr`),
+							&lvCfg.Soft.Require.Docker,
+						)
+					}),
+				},
+			},
 			errRegex: `^$`,
 		},
-		"invalid require": {
+		{
+			name: "invalid require",
 			errRegex: test.TrimYAML(`
 				^require:
 					docker:
-						type: "[^"]+" <invalid>.*$`),
-			args: args{require: filter.RequireDefaults{
-				Docker: *filter.NewDockerCheckDefaults(
-					"someType", "", "", "", "", nil)}},
+						type: "[^"]+" <invalid>.*$`,
+			),
+			input: func() *Defaults {
+				input := Defaults{
+					Require: filter.RequireDefaults{
+						Docker: *test.Must(t, func() (*docker.Defaults, error) {
+							return docker.DecodeDefaults(
+								"yaml", []byte(`type: ghcr`),
+								&lvCfg.Soft.Require.Docker,
+							)
+						}),
+					},
+				}
+				input.Require.Docker.Type = "foo"
+				return &input
+			}(),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			defaults := Defaults{
-				Require: tc.args.require}
-
-			// WHEN CheckValues is called.
-			err := defaults.CheckValues("")
-
-			// THEN it errors when expected.
-			e := util.ErrorToString(err)
-			lines := strings.Split(e, "\n")
-			wantLines := strings.Count(tc.errRegex, "\n")
-			if wantLines > len(lines) {
-				t.Errorf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\nstdout: %q",
-					packageName, wantLines, tc.errRegex, len(lines), lines, e)
-				return
-			}
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
-				return
-			}
+			_ = test.AssertCheckValuesWithError(
+				t,
+				packageName,
+				tc.errRegex,
+				tc.input.CheckValues,
+			)
 		})
 	}
 }

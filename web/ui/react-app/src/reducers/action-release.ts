@@ -27,7 +27,7 @@ const reducerActionModal = (
 			)
 				return state;
 
-			if (action.sub_type == 'EVENT') {
+			if (action.sub_type === 'EVENT') {
 				if (action.webhook_data)
 					for (const webhookID in action.webhook_data) {
 						// Remove them from the sending list.

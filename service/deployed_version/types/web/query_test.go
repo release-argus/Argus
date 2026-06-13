@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,33 +17,36 @@
 package web
 
 import (
-	"encoding/json"
-	"os"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"gopkg.in/yaml.v3"
-
+	"github.com/release-argus/Argus/config/decode"
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/dashboard"
-	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
+	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/util/errfmt"
 	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestLookup_Track(t *testing.T) {
+	dvCfg := plainDefaultsConfig(t)
+
 	plainStableVersion := "1.2.1"
 	plainNonSemanticVersionAsSemantic := "1.2.2"
 	plainNonSemanticVersion := "ver" + plainNonSemanticVersionAsSemantic
 	jsonBarVersion := "1.2.2"
-	// GIVEN a Lookup.
-	tests := map[string]struct {
+
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name                                      string
 		env                                       map[string]string
 		lookup                                    *Lookup
 		allowInvalidCerts, semanticVersioning     bool
@@ -56,175 +59,208 @@ func TestLookup_Track(t *testing.T) {
 		wantAnnounces, wantDatabaseMessages       int
 		deleting                                  bool
 	}{
-		"get semantic version with regex": {
+		{
+			name:                "get semantic version with regex",
 			startLatestVersion:  plainNonSemanticVersionAsSemantic,
 			wantLatestVersion:   plainNonSemanticVersionAsSemantic,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:   test.LookupPlain["url_valid"],
-				Regex: `non-semantic: "ver([^"]+)`},
+				Regex: `non-semantic: "ver([^"]+)`,
+			},
 			semanticVersioning:   true,
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"get semantic version from JSON": {
+		{
+			name:                "get semantic version from JSON",
 			startLatestVersion:  jsonBarVersion,
 			wantLatestVersion:   jsonBarVersion,
 			wantDeployedVersion: jsonBarVersion,
 			lookup: &Lookup{
 				URL:  test.LookupJSON["url_valid"],
-				JSON: "bar"},
+				JSON: "bar",
+			},
 			semanticVersioning:   true,
 			wantDatabaseMessages: 1, wantAnnounces: 1,
 		},
-		"get semantic version from multi-level JSON": {
+		{
+			name:                "get semantic version from multi-level JSON",
 			startLatestVersion:  "3.2.1",
 			wantLatestVersion:   "3.2.1",
 			wantDeployedVersion: "3.2.1",
 			lookup: &Lookup{
 				URL:  test.LookupJSON["url_valid"],
-				JSON: "foo.bar.version"},
+				JSON: "foo.bar.version",
+			},
 			semanticVersioning:   true,
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"reject non-semantic versions": {
+		{
+			name:                "reject non-semantic versions",
 			wantDeployedVersion: "",
 			lookup: &Lookup{
 				URL:   test.LookupPlain["url_valid"],
-				Regex: `non-semantic: ("[^"]+)`},
+				Regex: `non-semantic: ("[^"]+)`,
+			},
 			semanticVersioning:   true,
 			wantDatabaseMessages: 0,
 			wantAnnounces:        0,
 		},
-		"allow non-semantic version": {
+		{
+			name:                "allow non-semantic version",
 			startLatestVersion:  plainNonSemanticVersion,
 			wantLatestVersion:   plainNonSemanticVersion,
 			wantDeployedVersion: plainNonSemanticVersion,
 			lookup: &Lookup{
 				URL:   test.LookupPlain["url_valid"],
-				Regex: `non-semantic: "([^"]+)`},
+				Regex: `non-semantic: "([^"]+)`,
+			},
 			semanticVersioning:   false,
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"get version behind basic auth": {
+		{
+			name:                "get version behind basic auth",
 			startLatestVersion:  plainNonSemanticVersionAsSemantic,
 			wantLatestVersion:   plainNonSemanticVersionAsSemantic,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			basicAuth: &BasicAuth{
 				Username: "test",
-				Password: "123"},
+				Password: "123",
+			},
 			lookup: &Lookup{
 				URL:   test.LookupBasicAuth["url_valid"],
-				Regex: `non-semantic: "ver([^"]+)`},
+				Regex: `non-semantic: "ver([^"]+)`,
+			},
 			semanticVersioning:   true,
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"env vars in basic auth": {
+		{
+			name: "env vars in basic auth",
 			env: map[string]string{
 				"TEST_LOOKUP__DV_TRACK_ONE": "tes",
-				"TEST_LOOKUP__DV_TRACK_TWO": "23"},
+				"TEST_LOOKUP__DV_TRACK_TWO": "23",
+			},
 			startLatestVersion:  plainNonSemanticVersionAsSemantic,
 			wantLatestVersion:   plainNonSemanticVersionAsSemantic,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			basicAuth: &BasicAuth{
 				Username: "${TEST_LOOKUP__DV_TRACK_ONE}t",
-				Password: "1${TEST_LOOKUP__DV_TRACK_TWO}"},
+				Password: "1${TEST_LOOKUP__DV_TRACK_TWO}",
+			},
 			lookup: &Lookup{
 				URL:   test.LookupBasicAuth["url_valid"],
-				Regex: `non-semantic: "ver([^"]+)`},
+				Regex: `non-semantic: "ver([^"]+)`,
+			},
 			semanticVersioning:   true,
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"get version behind an invalid cert": {
+		{
+			name:                "get version behind an invalid cert",
 			startLatestVersion:  plainNonSemanticVersionAsSemantic,
 			wantLatestVersion:   plainNonSemanticVersionAsSemantic,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:   test.LookupPlain["url_invalid"],
-				Regex: `non-semantic: "ver([^"]+)`},
+				Regex: `non-semantic: "ver([^"]+)`,
+			},
 			allowInvalidCerts:    true,
 			semanticVersioning:   true,
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"fail due to an unallowed invalid cert": {
+		{
+			name:                "fail due to disallowed invalid cert",
 			startLatestVersion:  "",
 			wantLatestVersion:   "",
 			wantDeployedVersion: "",
 			lookup: &Lookup{
 				URL:   test.LookupPlain["url_invalid"],
-				Regex: `non-semantic: "ver([^"]+)`},
+				Regex: `non-semantic: "ver([^"]+)`,
+			},
 			allowInvalidCerts:    false,
 			semanticVersioning:   true,
 			wantDatabaseMessages: 0,
 			wantAnnounces:        0,
 		},
-		"update to a newer version": {
+		{
+			name:                 "update to a newer version",
 			startLatestVersion:   plainNonSemanticVersionAsSemantic,
 			wantLatestVersion:    plainNonSemanticVersionAsSemantic,
 			startDeployedVersion: plainStableVersion,
 			wantDeployedVersion:  plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:   test.LookupPlain["url_valid"],
-				Regex: `non-semantic: "ver([^"]+)`},
+				Regex: `non-semantic: "ver([^"]+)`,
+			},
 			semanticVersioning:   true,
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"update to an older version": {
+		{
+			name:                 "update to an older version",
 			startLatestVersion:   plainNonSemanticVersionAsSemantic,
 			wantLatestVersion:    plainNonSemanticVersionAsSemantic,
 			startDeployedVersion: "1.2.3",
 			wantDeployedVersion:  plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:   test.LookupPlain["url_valid"],
-				Regex: `non-semantic: "ver([^"]+)`},
+				Regex: `non-semantic: "ver([^"]+)`,
+			},
 			semanticVersioning:   true,
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"get a newer deployed version than latest version": {
+		{
+			name:                "get a deployed version newer than latest version",
 			startLatestVersion:  plainStableVersion,
 			wantLatestVersion:   plainStableVersion,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:  test.LookupJSON["url_valid"],
-				JSON: "bar"},
+				JSON: "bar",
+			},
 			semanticVersioning:   true,
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"get an older deployed version than latest version only updates deployed": {
+		{
+			name:                "get an deployed version older than latest version only updates deployed",
 			startLatestVersion:  "1.2.3",
 			wantLatestVersion:   "1.2.3",
 			wantDeployedVersion: jsonBarVersion,
 			lookup: &Lookup{
 				URL:  test.LookupJSON["url_valid"],
-				JSON: "bar"},
+				JSON: "bar",
+			},
 			semanticVersioning:   true,
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"get a deployed version with no latest version": {
+		{
+			name:                "get a deployed version with no latest version",
 			startLatestVersion:  "",
 			wantLatestVersion:   "",
 			wantDeployedVersion: jsonBarVersion,
 			lookup: &Lookup{
 				URL:  test.LookupJSON["url_valid"],
-				JSON: "bar"},
+				JSON: "bar",
+			},
 			semanticVersioning:   true,
 			wantDatabaseMessages: 1,
 			wantAnnounces:        1,
 		},
-		"deleting service stops track": {
+		{
+			name:     "deleting service stops track",
 			deleting: true,
 			lookup: &Lookup{
 				URL:  test.LookupJSON["url_valid"],
-				JSON: "bar"},
+				JSON: "bar",
+			},
 			startLatestVersion:   "",
 			wantLatestVersion:    "",
 			startDeployedVersion: "",
@@ -234,28 +270,27 @@ func TestLookup_Track(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureLog(logutil.Log)
+			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			for k, v := range tc.env {
-				_ = os.Setenv(k, v)
-				t.Cleanup(func() { _ = os.Unsetenv(k) })
-			}
+			test.SetEnv(t, tc.env)
 			if tc.lookup != nil {
 				// Marshal and Unmarshal to set Type.
-				data, _ := json.Marshal(tc.lookup)
-				_ = json.Unmarshal(data, tc.lookup)
+				data, _ := decode.Marshal("json", tc.lookup)
+				_ = decode.Unmarshal("json", data, tc.lookup)
 
-				tc.lookup.AllowInvalidCerts = test.BoolPtr(tc.allowInvalidCerts)
+				tc.lookup.AllowInvalidCerts = &tc.allowInvalidCerts
 				tc.lookup.BasicAuth = tc.basicAuth
-				tc.lookup.Defaults = &base.Defaults{}
-				tc.lookup.HardDefaults = &base.Defaults{}
-				tc.lookup.HardDefaults.Default()
-				tc.lookup.Options = opt.New(
-					nil, "2s", &tc.semanticVersioning,
-					&opt.Defaults{}, &opt.Defaults{})
+				tc.lookup.Defaults = dvCfg.Soft
+				tc.lookup.HardDefaults = dvCfg.Hard
+				optCfg := opttest.PlainDefaultsConfig(t)
+				tc.lookup.Options, _ = opt.Decode(
+					"yaml", []byte("interval: 2s"),
+					optCfg,
+				)
+				tc.lookup.Options.SemanticVersioning = &tc.semanticVersioning
 				dbChannel := make(chan dbtype.Message, 4)
 				announceChannel := make(chan []byte, 4)
 				svcStatus := status.New(
@@ -264,9 +299,10 @@ func TestLookup_Track(t *testing.T) {
 					tc.startDeployedVersion, "",
 					tc.startLatestVersion, "",
 					"",
-					&dashboard.Options{})
+					&dashboard.Options{},
+				)
 				tc.lookup.Status = svcStatus
-				tc.lookup.Status.ServiceInfo.ID = name
+				tc.lookup.Status.ServiceInfo.ID = tc.name
 				tc.lookup.Status.ServiceInfo.WebURL = tc.lookup.URL
 				if tc.deleting {
 					tc.lookup.Status.SetDeleting()
@@ -277,18 +313,22 @@ func TestLookup_Track(t *testing.T) {
 			}
 			didFinish := make(chan bool, 1)
 
-			// WHEN CheckValues is called on it.
+			// WHEN: CheckValues is called on it.
 			go func() {
 				tc.lookup.Track()
 				didFinish <- true
 			}()
 
-			// THEN the function exits straight away.
+			prefix := fmt.Sprintf("%s\nLookup.Track()", packageName)
+
+			// THEN: the function exits straight away.
 			time.Sleep(tc.wait)
 			if tc.expectFinish {
 				if len(didFinish) == 0 {
-					t.Fatalf("%s\nTrack didn't finish in <= %s",
-						packageName, tc.wait)
+					t.Fatalf(
+						"%s didn't finish in <= %s",
+						prefix, tc.wait,
+					)
 				}
 				releaseStdout()
 				return
@@ -296,10 +336,16 @@ func TestLookup_Track(t *testing.T) {
 			haveQueried := false
 			for haveQueried != false {
 				serviceID := tc.lookup.GetServiceID()
-				passQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-					serviceID, metric.ActionResultSuccess, tc.lookup.Type))
-				failQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-					serviceID, metric.ActionResultFail, tc.lookup.Type))
+				passQ := testutil.ToFloat64(
+					metric.DeployedVersionQueryResultTotal.WithLabelValues(
+						serviceID, metric.ActionResultSuccess, tc.lookup.Type,
+					),
+				)
+				failQ := testutil.ToFloat64(
+					metric.DeployedVersionQueryResultTotal.WithLabelValues(
+						serviceID, metric.ActionResultFail, tc.lookup.Type,
+					),
+				)
 				if passQ != float64(0) && failQ != float64(0) {
 					haveQueried = true
 				}
@@ -309,24 +355,34 @@ func TestLookup_Track(t *testing.T) {
 			stdout := releaseStdout()
 			t.Log(stdout)
 			if gotDeployedVersion := tc.lookup.Status.DeployedVersion(); gotDeployedVersion != tc.wantDeployedVersion {
-				t.Errorf("%s\nDeployedVersion mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wantDeployedVersion, gotDeployedVersion)
+				t.Errorf(
+					"%s .DeployedVersion() mismatch\ngot:  %q\nwant: %q",
+					prefix, gotDeployedVersion, tc.wantDeployedVersion,
+				)
 			}
 			if gotLatestVersion := tc.lookup.Status.LatestVersion(); gotLatestVersion != tc.wantLatestVersion {
-				t.Errorf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wantLatestVersion, gotLatestVersion)
+				t.Errorf(
+					"%s .LatestVersion() mismatch\ngot:  %q\nwant: %q",
+					prefix, gotLatestVersion, tc.wantLatestVersion,
+				)
 			}
 			if gotAnnounces := len(tc.lookup.Status.AnnounceChannel); gotAnnounces != tc.wantAnnounces {
 				for i := 0; i < gotAnnounces; i++ {
-					t.Logf("%s\nAnnounce message - %s\n",
-						packageName, <-(tc.lookup.Status.AnnounceChannel))
+					t.Logf(
+						"%s Announce message - %s\n",
+						prefix, <-(tc.lookup.Status.AnnounceChannel),
+					)
 				}
-				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d\ngot:  %d",
-					packageName, tc.wantAnnounces, gotAnnounces)
+				t.Errorf(
+					"%s Lookup.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					packageName, gotAnnounces, tc.wantAnnounces,
+				)
 			}
 			if gotDatabaseMessages := len(tc.lookup.Status.DatabaseChannel); gotDatabaseMessages != tc.wantDatabaseMessages {
-				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d\ngot:  %d",
-					packageName, tc.wantDatabaseMessages, gotDatabaseMessages)
+				t.Errorf(
+					"%s Lookup.DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
+					prefix, gotDatabaseMessages, tc.wantDatabaseMessages,
+				)
 			}
 
 			// Set Deleting to stop the Track.
@@ -336,28 +392,32 @@ func TestLookup_Track(t *testing.T) {
 }
 
 func TestLookup_Query(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name                        string
 		env                         map[string]string
 		overrides, optionsOverrides string
 		errRegex                    string
 		wantVersion                 string
 	}{
-		"JSON lookup value that doesn't exist": {
+		{
+			name: "JSON lookup value that doesn't exist",
 			overrides: test.TrimYAML(`
 				url:  ` + test.LookupJSON["url_valid"] + `
 				json: something
 			`),
 			errRegex: `failed to find value for \"[^"]+\" in `,
 		},
-		"URL that doesn't resolve to JSON": {
+		{
+			name: "URL that doesn't resolve to JSON",
 			overrides: test.TrimYAML(`
 				url: ` + test.LookupPlain["url_valid"] + `
 				json: something
 			`),
 			errRegex: `failed to unmarshal`,
 		},
-		"POST - success": {
+		{
+			name: "POST - success",
 			overrides: test.TrimYAML(`
 				method: POST
 				url: ` + test.LookupPlainPOST["url_valid"] + `
@@ -367,7 +427,8 @@ func TestLookup_Query(t *testing.T) {
 			wantVersion: "[0-9.]+",
 			errRegex:    `^$`,
 		},
-		"POST - fail, invalid body": {
+		{
+			name: "POST - fail, invalid body",
 			overrides: test.TrimYAML(`
 				method: POST
 				url: ` + test.LookupPlainPOST["url_valid"] + `
@@ -375,102 +436,97 @@ func TestLookup_Query(t *testing.T) {
 			`),
 			errRegex: `non-2XX response code`,
 		},
-		"passing regex": {
+		{
+			name: "passing regex",
 			overrides: test.TrimYAML(`
 				url: ` + test.LookupPlain["url_valid"] + `
 				regex: 'version: "([^"]+)'
 			`),
-			optionsOverrides: test.TrimYAML(`
-				semantic_versioning: false
-			`),
-			wantVersion: `\d\.\d\.\d`,
-			errRegex:    `^$`,
+			optionsOverrides: `semantic_versioning: false`,
+			wantVersion:      `\d\.\d\.\d`,
+			errRegex:         `^$`,
 		},
-		"url from env": {
+		{
+			name: "url from env",
 			env: map[string]string{
-				"TEST_LOOKUP__DV_QUERY_ONE": test.LookupPlain["url_valid"]},
+				"TEST_LOOKUP__DV_QUERY_ONE": test.LookupPlain["url_valid"],
+			},
 			overrides: test.TrimYAML(`
 				url: ${TEST_LOOKUP__DV_QUERY_ONE}
 				regex: 'version: "([^"]+)'
 			`),
-			optionsOverrides: test.TrimYAML(`
-				semantic_versioning: false
-			`),
-			wantVersion: `\d\.\d\.\d`,
-			errRegex:    `^$`,
+			optionsOverrides: `semantic_versioning: false`,
+			wantVersion:      `\d\.\d\.\d`,
+			errRegex:         `^$`,
 		},
-		"url from env partial": {
-			env: map[string]string{"TEST_LOOKUP__DV_QUERY_TWO": "valid.release-argus"},
+		{
+			name: "url from env partial",
+			env:  map[string]string{"TEST_LOOKUP__DV_QUERY_TWO": "valid.release-argus"},
 			overrides: test.TrimYAML(`
 				url: https://${TEST_LOOKUP__DV_QUERY_TWO}.io/json
 				json: foo.bar.version
 			`),
-			optionsOverrides: test.TrimYAML(`
-				semantic_versioning: false
-			`),
-			wantVersion: `\d\.\d\.\d`,
-			errRegex:    `^$`,
+			optionsOverrides: `semantic_versioning: false`,
+			wantVersion:      `\d\.\d\.\d`,
+			errRegex:         `^$`,
 		},
-		"passing regex with no capture group": {
+		{
+			name: "passing regex with no capture group",
 			overrides: test.TrimYAML(`
 				url: ` + test.LookupPlain["url_valid"] + `
 				regex: '[0-9.]+'
 			`),
-			optionsOverrides: test.TrimYAML(`
-				semantic_versioning: false
-			`),
-			wantVersion: "[0-9.]+",
-			errRegex:    `^$`,
+			optionsOverrides: `semantic_versioning: false`,
+			wantVersion:      "[0-9.]+",
+			errRegex:         `^$`,
 		},
-		"regex with template": {
+		{
+			name: "regex with template",
 			overrides: test.TrimYAML(`
 				url: ` + test.LookupPlain["url_valid"] + `
 				regex: '(stable).*(version).*"([\d.]+).*(and)'
 				regex_template: '$2 $1 $4, $3'
 			`),
-			optionsOverrides: test.TrimYAML(`
-				semantic_versioning: false
-			`),
-			wantVersion: "version stable and, 1.2.1",
-			errRegex:    `^$`,
+			optionsOverrides: `semantic_versioning: false`,
+			wantVersion:      "version stable and, 1.2.1",
+			errRegex:         `^$`,
 		},
-		"failing regex": {
+		{
+			name: "failing regex",
 			overrides: test.TrimYAML(`
 				url: ` + test.LookupPlain["url_valid"] + `
 				regex: '^bishBashBosh$'
 			`),
 			errRegex: `regex .* didn't return any matches on`,
 		},
-		"handle non-semantic (only major) version": {
+		{
+			name: "handle non-semantic (only major) version",
 			overrides: test.TrimYAML(`
 				url: ` + test.LookupPlain["url_valid"] + `
 				regex: '(\d+)'
 			`),
-			optionsOverrides: test.TrimYAML(`
-				semantic_versioning: false
-			`),
+			optionsOverrides: `semantic_versioning: false`,
 		},
-		"want semantic versioning but get non-semantic version": {
+		{
+			name: "want semantic versioning but get non-semantic version",
 			overrides: test.TrimYAML(`
 				url: ` + test.LookupPlain["url_valid"] + `
 				regex: 'non-semantic: "([^"]+)'
 			`),
-			optionsOverrides: test.TrimYAML(`
-				semantic_versioning: true
-			`),
-			errRegex: `failed to convert "[^"]+" to a semantic version`,
+			optionsOverrides: `semantic_versioning: true`,
+			errRegex:         `failed to convert "[^"]+" to a semantic version`,
 		},
-		"allow non-semantic version": {
+		{
+			name: "allow non-semantic version",
 			overrides: test.TrimYAML(`
 				url: ` + test.LookupPlain["url_valid"] + `
 				regex: 'non-semantic: "([^"]+)'
 			`),
-			optionsOverrides: test.TrimYAML(`
-				semantic_versioning: false
-			`),
-			errRegex: `^$`,
+			optionsOverrides: `semantic_versioning: false`,
+			errRegex:         `^$`,
 		},
-		"valid semantic version": {
+		{
+			name: "valid semantic version",
 			overrides: test.TrimYAML(`
 				url: ` + test.LookupJSON["url_valid"] + `
 				json: bar
@@ -478,9 +534,10 @@ func TestLookup_Query(t *testing.T) {
 			wantVersion: `^[0-9.]+\.[0-9.]+\.[0-9.]+$`,
 			errRegex:    `^$`,
 		},
-		"headers fail": {
+		{
+			name: "headers fail",
 			overrides: test.TrimYAML(`
-				url: https://api.github.com/repos/release-argus/argus/releases/latest
+				url: https://api.github.com/repos/` + test.ArgusGitHubRepo + `/releases/latest
 				json: something
 				headers:
 					- key: Authorization
@@ -488,206 +545,395 @@ func TestLookup_Query(t *testing.T) {
 			`),
 			errRegex: `non-2XX response code: 401`,
 		},
-		"404": {
+		{
+			name:      "404",
+			overrides: `url: ` + test.ValidCertHTTPS + `/foo/bar`,
+			errRegex:  `non-2XX response code: 404`,
+		},
+		{
+			name: "version from header - pass, exact casing",
 			overrides: test.TrimYAML(`
-				url: ` + test.ValidCertHTTPS + `/foo/bar
+				method: GET
+				url: ` + test.LookupResponseHeader["url_valid"] + `
+				target_header: ` + test.LookupResponseHeader["header_key_pass"] + `
 			`),
-			errRegex: `non-2XX response code: 404`,
-		},
-		"version from header - pass, exact casing": {
-			overrides: test.TrimYAML(`
-				method: GET
-				url: ` + test.LookupHeader["url_valid"] + `
-				target_header: ` + test.LookupHeader["header_key_pass"]),
 			wantVersion: `^\d+\.\d+\.\d+$`,
 			errRegex:    `^$`,
 		},
-		"version from header - pass, mixed casing": {
+		{
+			name: "version from header - pass, mixed casing",
 			overrides: test.TrimYAML(`
 				method: GET
-				url: ` + test.LookupHeader["url_valid"] + `
-				target_header: ` + test.LookupHeader["header_key_pass_mixed_case"]),
+				url: ` + test.LookupResponseHeader["url_valid"] + `
+				target_header: ` + test.LookupResponseHeader["header_key_pass_mixed_case"] + `
+			`),
 			wantVersion: `^\d+\.\d+\.\d+$`,
 			errRegex:    `^$`,
 		},
-		"version from header - fail": {
+		{
+			name: "version from header - fail",
 			overrides: test.TrimYAML(`
 				method: GET
-				url: ` + test.LookupHeader["url_valid"] + `
-				target_header: ` + test.LookupHeader["header_key_fail"]),
+				url: ` + test.LookupResponseHeader["url_valid"] + `
+				target_header: ` + test.LookupResponseHeader["header_key_fail"] + `
+			`),
 			errRegex: `^target header "[^"]+" not found$`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			for k, v := range tc.env {
-				_ = os.Setenv(k, v)
-				t.Cleanup(func() { _ = os.Unsetenv(k) })
-			}
-			dvl := testLookup(false)
+			test.SetEnv(t, tc.env)
+			dvl := testLookup(t, false)
 			dvl.JSON = ""
-			err := yaml.Unmarshal([]byte(tc.overrides), dvl)
-			if err != nil {
-				t.Fatalf("%s\nfailed to unmarshal overrides: %s",
-					packageName, err)
+			if err := dvl.ApplyOverrides("yaml", []byte(tc.overrides)); err != nil {
+				t.Fatalf(
+					"%s\nfailed to unmarshal Lookup overrides: %s",
+					packageName, err,
+				)
 			}
-			err = yaml.Unmarshal([]byte(tc.optionsOverrides), dvl.Options)
-			if err != nil {
-				t.Fatalf("%s\nfailed to unmarshal options overrides: %s",
-					packageName, err)
+			if tc.optionsOverrides != "" {
+				if err := decode.Unmarshal("yaml", []byte(tc.optionsOverrides), dvl.Options); err != nil {
+					t.Fatalf(
+						"%s\nfailed to unmarshal Lookup.Options overrides: %s",
+						packageName, err,
+					)
+				}
 			}
 
-			// WHEN Query is called on it.
-			err = dvl.Query(true, logutil.LogFrom{})
+			// WHEN: Query is called on it.
+			err := dvl.Query(true, logx.LogFrom{})
 
-			// THEN any err is expected.
-			e := util.ErrorToString(err)
+			// THEN: any decode is expected.
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
+				t.Fatalf(
+					"%s\nLookup.Query() error mismatch\ngot:  %q\nwant: %q",
+					packageName, e, tc.errRegex,
+				)
 			}
-			// AND the version matches the expected regex.
+
+			// AND: the version matches the expected regex.
 			if tc.wantVersion != "" {
-				version := dvl.Status.DeployedVersion()
-				if !util.RegexCheck(tc.wantVersion, version) {
-					t.Errorf("%s\nDeployedVersion mismatch\nwant %q\ngot:  %q",
-						packageName, tc.wantVersion, version)
+				if version := dvl.Status.DeployedVersion(); !util.RegexCheck(tc.wantVersion, version) {
+					t.Errorf(
+						"%s\nLookup.Query() .DeployedVersion() mismatch\ngot:  %q\nwant %q",
+						packageName, version, tc.wantVersion,
+					)
 				}
 			}
 		})
 	}
 }
 
+func TestLookup_getVersion(t *testing.T) {
+	const (
+		jsonBody  = `{"bar":"1.2.2","foo":{"bar":{"version":"3.2.1"}}}`
+		plainBody = `version: "1.2.1"
+non-semantic: "ver1.2.2"
+`
+	)
+
+	tests := []struct {
+		name                 string
+		body                 []byte
+		json                 string
+		regex, regexTemplate string
+		semVer               bool
+		wantVersion          string
+		errRegex             string
+	}{
+		{
+			name:     "empty body",
+			body:     nil,
+			semVer:   true,
+			errRegex: `^no version found in`,
+		},
+		{
+			name:        "plain body without regex or JSON",
+			body:        []byte("1.2.3"),
+			semVer:      true,
+			wantVersion: "1.2.3",
+			errRegex:    `^$`,
+		},
+		{
+			name:     "JSON empty string value",
+			body:     []byte(`{"bar":""}`),
+			json:     "bar",
+			semVer:   true,
+			errRegex: `^no version found in.*$`,
+		},
+		{
+			name:        "JSON top-level key",
+			body:        []byte(jsonBody),
+			json:        "bar",
+			semVer:      true,
+			wantVersion: "1.2.2",
+			errRegex:    `^$`,
+		},
+		{
+			name:        "JSON nested key",
+			body:        []byte(jsonBody),
+			json:        "foo.bar.version",
+			semVer:      true,
+			wantVersion: "3.2.1",
+			errRegex:    `^$`,
+		},
+		{
+			name:     "JSON invalid body",
+			body:     []byte(plainBody),
+			json:     "bar",
+			semVer:   true,
+			errRegex: `^failed to unmarshal response from.*$`,
+		},
+		{
+			name:   "JSON missing key",
+			body:   []byte(`{}`),
+			json:   "missing",
+			semVer: true,
+			errRegex: test.TrimYAML(`
+				^failed to navigate JSON:
+					failed to find value for .*$`,
+			),
+		},
+		{
+			name:        "regex with capture group",
+			body:        []byte(plainBody),
+			regex:       `version: "([^"]+)"`,
+			semVer:      true,
+			wantVersion: "1.2.1",
+			errRegex:    `^$`,
+		},
+		{
+			name:        "regex without capture group",
+			body:        []byte(plainBody),
+			regex:       `[0-9]+\.[0-9]+\.[0-9]+`,
+			semVer:      true,
+			wantVersion: "1.2.1",
+			errRegex:    `^$`,
+		},
+		{
+			name:     "regex no match",
+			body:     []byte(plainBody),
+			regex:    `^bishBashBosh$`,
+			semVer:   true,
+			errRegex: `^regex .* didn't return any matches on.*$`,
+		},
+		{
+			name: "regex with template",
+			body: []byte(
+				`stable release version info "1.2.1" and more`,
+			),
+			regex:         `(stable).*(version).*"([\d.]+).*(and)`,
+			regexTemplate: `$2 $1 $4, $3`,
+			semVer:        false,
+			wantVersion:   "version stable and, 1.2.1",
+			errRegex:      `^$`,
+		},
+		{
+			name:        "JSON then regex",
+			body:        []byte(jsonBody),
+			json:        "bar",
+			regex:       `^([0-9.]+)$`,
+			semVer:      true,
+			wantVersion: "1.2.2",
+			errRegex:    `^$`,
+		},
+		{
+			name:     "semantic versioning rejects non-semantic version",
+			body:     []byte(plainBody),
+			regex:    `non-semantic: "([^"]+)"`,
+			semVer:   true,
+			errRegex: `^failed to convert .* to a semantic version.*$`,
+		},
+		{
+			name:        "semantic versioning disabled allows non-semantic version",
+			body:        []byte(plainBody),
+			regex:       `non-semantic: "([^"]+)"`,
+			semVer:      false,
+			wantVersion: "ver1.2.2",
+			errRegex:    `^$`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := testLookup(t, false)
+			lookup.JSON = tc.json
+			lookup.Regex = tc.regex
+			lookup.RegexTemplate = tc.regexTemplate
+			lookup.Options.SemanticVersioning = &tc.semVer
+
+			version, err := lookup.getVersion(tc.body, logx.LogFrom{})
+
+			prefix := fmt.Sprintf("%s\nLookup.getVersion()", packageName)
+
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
+			}
+			if got, want := version, tc.wantVersion; got != want {
+				t.Errorf(
+					"%s version mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+		})
+	}
+}
+
 func TestLookup_HTTPRequest(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name      string
 		env       map[string]string
 		overrides string
 		bodyRegex string
 		errRegex  string
 	}{
-		"url - invalid": {
-			overrides: `
-				url: "invalid://	test"`,
-			errRegex: `invalid control character in URL`},
-		"url - unknown": {
-			overrides: `
-				url: https://release-argus.invalid-tld`,
-			errRegex: `no such host`},
-		"url - valid": {
-			overrides: `
-				url: ` + test.LookupPlain["url_valid"],
-			errRegex: `^$`},
-		"url - from env": {
+		{
+			name:      "url - invalid",
+			overrides: `url: "https://	test"`,
+			errRegex:  `invalid control character in URL`,
+		},
+		{
+			name:      "url - unknown",
+			overrides: `url: https://release-argus.invalid-tld`,
+			errRegex:  `no such host`,
+		},
+		{
+			name:      "url - valid",
+			overrides: `url: ` + test.LookupPlain["url_valid"],
+			errRegex:  `^$`,
+		},
+		{
+			name: "url - from env",
 			env: map[string]string{
-				"TEST_LOOKUP__DV_HTTP_REQUEST_ONE": test.LookupPlain["url_valid"]},
-			overrides: `
-				url: ${TEST_LOOKUP__DV_HTTP_REQUEST_ONE}`,
-			errRegex: `^$`},
-		"url - from env partial": {
+				"TEST_LOOKUP__DV_HTTP_REQUEST_ONE": test.LookupPlain["url_valid"],
+			},
+			overrides: `url: ${TEST_LOOKUP__DV_HTTP_REQUEST_ONE}`,
+			errRegex:  `^$`,
+		},
+		{
+			name: "url - from env partial",
 			env: map[string]string{
 				"TEST_LOOKUP__DV_HTTP_REQUEST_TWO": strings.TrimSuffix(
 					strings.TrimPrefix(test.ValidCertHTTPS, "https://"),
-					".io")},
-			overrides: `
-				url: https://${TEST_LOOKUP__DV_HTTP_REQUEST_TWO}.io/plain`,
-			errRegex: `^$`},
-		"404": {
-			overrides: `
-				url: ` + test.ValidCertHTTPS + `/foo/bar`,
-			errRegex: `non-2XX response code: 404`,
-		},
-		"headers - pass": {
-			overrides: `
-				method: POST
-				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
-				headers:
-					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
-						value: ` + test.LookupWithHeaderAuth["header_value_pass"],
-			bodyRegex: `^$`,
+					".io",
+				),
+			},
+			overrides: `url: https://${TEST_LOOKUP__DV_HTTP_REQUEST_TWO}.io/plain`,
 			errRegex:  `^$`,
 		},
-		"headers - fail": {
-			overrides: `
+		{
+			name:      "404",
+			overrides: `url: ` + test.ValidCertHTTPS + `/foo/bar`,
+			errRegex:  `non-2XX response code: 404`,
+		},
+		{
+			name: "headers - pass",
+			overrides: test.TrimYAML(`
 				method: POST
 				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
 				headers:
 					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
-						value: ` + test.LookupWithHeaderAuth["header_value_fail"],
+						value: ` + test.LookupWithHeaderAuth["header_value_pass"] + `
+			`),
+			bodyRegex: `^[\d.]+$`,
+			errRegex:  `^$`,
+		},
+		{
+			name: "headers - fail",
+			overrides: test.TrimYAML(`
+				method: POST
+				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
+				headers:
+					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
+						value: ` + test.LookupWithHeaderAuth["header_value_fail"] + `
+			`),
 			bodyRegex: `Hook rules were not satisfied\.`,
 			errRegex:  `^$`,
 		},
-		"basic auth - pass": {
-			overrides: `
+		{
+			name: "basic auth - pass",
+			overrides: test.TrimYAML(`
 				url: ` + test.LookupBasicAuth["url_valid"] + `
 				basic_auth:
 					username: ` + test.LookupBasicAuth["username"] + `
-					password: ` + test.LookupBasicAuth["password"],
+					password: ` + test.LookupBasicAuth["password"] + `
+			`),
 			errRegex: `^$`,
 		},
-		"basic auth - fail": {
-			overrides: `
+		{
+			name: "basic auth - fail",
+			overrides: test.TrimYAML(`
 				url: ` + test.LookupBasicAuth["url_valid"] + `
 				basic_auth:
 					username: ` + test.LookupBasicAuth["username"] + `
-					password: ` + test.LookupBasicAuth["password"] + "-",
+					password: ` + test.LookupBasicAuth["password"] + `-
+			`),
 			errRegex: `non-2XX response code: 401`,
 		},
-		"self-signed cert - pass": {
-			overrides: `
+		{
+			name: "self-signed cert - pass",
+			overrides: test.TrimYAML(`
 				url: ` + test.LookupPlain["url_invalid"] + `
-				allow_invalid_certs: true`,
+				allow_invalid_certs: true
+			`),
 			errRegex: `^$`,
 		},
-		"self-signed cert - fail": {
-			overrides: `
+		{
+			name: "self-signed cert - fail",
+			overrides: test.TrimYAML(`
 				url: ` + test.LookupPlain["url_invalid"] + `
-				allow_invalid_certs: false`,
+				allow_invalid_certs: false
+			`),
 			errRegex: `x509 \(certificate invalid\)`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			for k, v := range tc.env {
-				previousValue := os.Getenv(k)
-				_ = os.Setenv(k, v)
-				t.Cleanup(func() {
-					if previousValue == "" {
-						_ = os.Unsetenv(k)
-					} else {
-						_ = os.Setenv(k, previousValue)
-					}
-				})
-			}
-			lookup := testLookup(false)
+			test.SetEnv(t, tc.env)
+			lookup := testLookup(t, false)
 			// Apply overrides.
-			tc.overrides = test.TrimYAML(tc.overrides)
-			err := yaml.Unmarshal([]byte(tc.overrides), lookup)
-			if err != nil {
-				t.Fatalf("%s\nfailed to unmarshal overrides: %s",
-					packageName, err)
+			if err := lookup.UnmarshalYAML([]byte(tc.overrides)); err != nil {
+				t.Fatalf(
+					"%s\nfailed to unmarshal Lookup.overrides: %s",
+					packageName, err,
+				)
 			}
 
-			// WHEN httpRequest is called on it.
-			body, err := lookup.httpRequest(logutil.LogFrom{})
+			// WHEN: httpRequest is called on it.
+			body, err := lookup.httpRequest(logx.LogFrom{})
 
-			// THEN any err is expected.
-			e := util.ErrorToString(err)
+			prefix := fmt.Sprintf("%s\nLookup.httpRequest()", packageName)
+
+			// THEN: any decode is expected.
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
+				t.Errorf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
 			}
-			// AND the body matches the expected regex.
+
+			// AND: the body matches the expected regex.
 			if tc.bodyRegex != "" {
-				if !util.RegexCheck(tc.bodyRegex, string(body)) {
-					t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.bodyRegex, string(body))
+				if b := string(body); !util.RegexCheck(tc.bodyRegex, b) {
+					t.Errorf(
+						"%s body mismatch\ngot:  %q\nwant: %q",
+						prefix, b, tc.bodyRegex,
+					)
 				}
 			}
 		})

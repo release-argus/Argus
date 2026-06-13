@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,24 +23,9 @@ import (
 	"strings"
 )
 
-// AppendCheckError adds a formatted error to the slice if checkErr exists.
-// The message includes the prefix and label.
-func AppendCheckError(errs *[]error, prefix, label string, checkErr error) {
-	if checkErr != nil {
-		*errs = append(*errs,
-			fmt.Errorf("%s%s:\n%w",
-				prefix, label, checkErr))
-	}
-}
-
-// ErrorToString converts an error to a string.
-// nil == "".
-func ErrorToString(err error) string {
-	if err == nil {
-		return ""
-	}
-
-	return err.Error()
+// fileStat returns file metadata for an open file (overridable for tests).
+var fileStat = func(f *os.File) (os.FileInfo, error) {
+	return f.Stat() //nolint:wrapcheck
 }
 
 // CheckFileReadable checks if the file at the given path is readable.
@@ -57,19 +42,21 @@ func CheckFileReadable(path string) error {
 	if err != nil {
 		if !filepath.IsAbs(path) {
 			execPath, _ := os.Executable()
-			err = errors.New(strings.Replace(
-				err.Error(),
-				fmt.Sprintf(" %s:", path),
-				fmt.Sprintf(" %s/%s:", execPath, path),
-				1,
-			))
+			err = errors.New(
+				strings.Replace(
+					err.Error(),
+					fmt.Sprintf(" %s:", path),
+					fmt.Sprintf(" %s/%s:", execPath, path),
+					1,
+				),
+			)
 		}
 		return err
 	}
 	defer f.Close()
 
-	if info, e := f.Stat(); e != nil {
-		return e //nolint:wrapcheck
+	if info, e := fileStat(f); e != nil {
+		return e
 	} else if info.IsDir() {
 		return fmt.Errorf("path %q is a directory, not a file", path)
 	}

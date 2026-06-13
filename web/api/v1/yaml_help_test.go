@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/internal/test"
 )
 
 func writeFile(path string, data string) {
@@ -33,7 +33,13 @@ func testYAML_Argus(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ` + test.GitHubToken(nil) + `
+			notify:
+				gotify:
+					options:
+						message: hi
+			webhook:
+				desired_status_code: 0
 		settings:
 			data:
 				database_file: test-argus.db
@@ -44,7 +50,7 @@ func testYAML_Argus(path string) {
 				comment: foo
 				latest_version:
 					type: github
-					url: release-argus/Argus
+					url: ` + test.ArgusGitHubRepo + `
 	`)
 
 	writeFile(path, data)

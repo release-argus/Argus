@@ -1,8 +1,16 @@
-import type { ApprovalsToolbarOptions, ToolbarViewOption, } from '@/constants/toolbar';
+import type { Table, VisibilityState } from '@tanstack/react-table';
+import {
+	createContext,
+	type Dispatch,
+	type SetStateAction,
+	useContext,
+} from 'react';
+import type {
+	ApprovalsToolbarOptions,
+	ToolbarViewOption,
+} from '@/constants/toolbar';
 import type { TagsTriType } from '@/types/util';
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
-import type { Table, VisibilityState } from '@tanstack/react-table';
-import { createContext, type Dispatch, type SetStateAction, useContext, } from 'react';
 
 export type ToolbarContextValue = {
 	/* Current values reflected from URL/search params */
@@ -43,9 +51,9 @@ const ToolbarContext = createContext<ToolbarContextValue | null>(null);
 export const ToolbarProvider = ToolbarContext.Provider;
 
 export const useToolbar = (): ToolbarContextValue => {
-	const ctx = useContext(ToolbarContext);
-	if (!ctx) {
+	const context = useContext(ToolbarContext);
+	if (!context) {
 		throw new Error('useToolbar must be used within a ToolbarProvider');
 	}
-	return ctx;
+	return context;
 };

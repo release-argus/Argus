@@ -97,7 +97,7 @@ const OpsGenieTargets: FC<OpsGenieTargetsProps> = ({
 	// Remove the last item if not the only one, or doesn't match the defaults.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: remove stable.
 	const removeLast = useCallback(() => {
-		if (!(usingDefaults && fields.length == 1)) remove(fields.length - 1);
+		if (!(usingDefaults && fields.length === 1)) remove(fields.length - 1);
 	}, [fields.length, usingDefaults]);
 
 	return (

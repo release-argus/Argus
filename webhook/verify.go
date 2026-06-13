@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,15 +19,16 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/util/polymorphic"
 )
 
-// CheckValues validates the fields of each Defaults struct.
-func (whd *WebHooksDefaults) CheckValues(prefix string) (error, bool) {
+// CheckValues validates each entry and reports whether any values were modified.
+func (whd *WebHooksDefaults) CheckValues() (error, bool) {
 	if whd == nil {
 		return nil, false
 	}
@@ -35,10 +36,18 @@ func (whd *WebHooksDefaults) CheckValues(prefix string) (error, bool) {
 	var errs []error
 	changed := false
 	keys := util.SortedKeys(*whd)
-	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		err, keyChanged := (*whd)[key].CheckValues(itemPrefix)
-		util.AppendCheckError(&errs, prefix, key, err)
+		d := (*whd)[key]
+		err, keyChanged := d.CheckValues()
+		if err != nil {
+			errs = append(
+				errs,
+				&decode.KeyFieldError{
+					Key: key,
+					Err: err,
+				},
+			)
+		}
 		changed = changed || keyChanged
 	}
 
@@ -48,9 +57,9 @@ func (whd *WebHooksDefaults) CheckValues(prefix string) (error, bool) {
 	return errors.Join(errs...), false
 }
 
-// CheckValues validates the fields of each WebHook,
-// returning errors encountered and whether anything changed.
-func (wh *WebHooks) CheckValues(prefix string) (error, bool) {
+// CheckValues validates the fields of each [WebHook],
+// returning errors encountered and whether any values were modified.
+func (wh *WebHooks) CheckValues() (error, bool) {
 	if wh == nil {
 		return nil, false
 	}
@@ -58,10 +67,17 @@ func (wh *WebHooks) CheckValues(prefix string) (error, bool) {
 	var errs []error
 	changed := false
 	keys := util.SortedKeys(*wh)
-	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		err, keyChanged := (*wh)[key].CheckValues(itemPrefix)
-		util.AppendCheckError(&errs, prefix, key, err)
+		err, keyChanged := (*wh)[key].CheckValues()
+		if err != nil {
+			errs = append(
+				errs,
+				&decode.KeyFieldError{
+					Key: key,
+					Err: err,
+				},
+			)
+		}
 		changed = changed || keyChanged
 	}
 
@@ -71,86 +87,37 @@ func (wh *WebHooks) CheckValues(prefix string) (error, bool) {
 	return errors.Join(errs...), false
 }
 
-// CheckValues validates the fields of the Base struct,
-// returning errors encountered and whether anything changed.
-func (b *Base) CheckValues(prefix string) (error, bool) {
-	var errs []error
-	changed := false
-	// type
-	if b.Type != "" && !util.Contains(supportedTypes, b.Type) {
-		errs = append(errs,
-			fmt.Errorf("%stype: %q <invalid> (supported types = ['%s'])",
-				prefix, b.Type, strings.Join(supportedTypes, "', '")))
-	}
-	// url
-	if !util.CheckTemplate(b.URL) {
-		errs = append(errs,
-			fmt.Errorf("%surl: %q <invalid> (didn't pass templating)",
-				prefix, b.URL))
-	}
-	// Deprecated: custom_header -> headers
-	if b.Headers == nil && b.CustomHeaders != nil {
-		b.Headers = b.CustomHeaders
-		b.CustomHeaders = nil
-		changed = true
-		logutil.Log.Deprecated("Renaming 'webhook.custom_headers' to 'webhook.headers'. If you use any 'ARGUS_*_CUSTOM_HEADERS' environment variables, please update them to 'ARGUS_*_HEADERS' instead.")
-	}
-	if b.Headers != nil {
-		util.AppendCheckError(&errs, prefix, "headers",
-			b.checkValuesHeaders(prefix+"  "))
-	}
-	// delay
-	if b.Delay != "" {
-		// Treat integers as seconds by default.
-		if _, err := strconv.Atoi(b.Delay); err == nil {
-			b.Delay += "s"
-		}
-		if _, err := time.ParseDuration(b.Delay); err != nil {
-			errs = append(errs,
-				fmt.Errorf("%sdelay: %q <invalid> (Use 'AhBmCs' duration format)",
-					prefix, b.Delay))
-		}
-	}
-
-	if len(errs) == 0 {
-		return nil, changed
-	}
-	return errors.Join(errs...), false
-}
-
-func (b *Base) checkValuesHeaders(prefix string) error {
-	var errs []error
-
-	for _, header := range *b.Headers {
-		if !util.CheckTemplate(header.Value) {
-			errs = append(errs, fmt.Errorf("%s%s: %q <invalid> (didn't pass templating)",
-				prefix, header.Key, header.Value))
-		}
-	}
-
-	if errs == nil {
-		return nil
-	}
-	return errors.Join(errs...)
-}
-
-// CheckValues validates the fields of the WebHook struct,
-// returning errors encountered and whether anything changed.
-func (wh *WebHook) CheckValues(prefix string) (error, bool) {
+// CheckValues validates the fields of the receiver,
+// returning errors encountered and whether any values were modified.
+func (wh *WebHook) CheckValues() (error, bool) {
 	var errs []error
 
 	// type
 	whType := wh.GetType()
 	if whType == "" {
-		errs = append(errs, fmt.Errorf("%stype: <required> (supported types = ['%s'])",
-			prefix, strings.Join(supportedTypes, "', '")))
+		errs = append(
+			errs,
+			polymorphic.InvalidTypeError{
+				Key:     "type",
+				Allowed: supportedTypes,
+			},
+		)
 		// Check the Type doesn't differ in the Main.
 	} else if wh.Main.Type != "" && whType != wh.Main.Type {
-		errs = append(errs, fmt.Errorf("%stype: %q != %q <invalid> (omit 'type', or make it match root webhook.%s.type)",
-			prefix, whType, wh.Main.Type, wh.ID))
+		errs = append(
+			errs,
+			&decode.FieldError{
+				Key:   "type",
+				Value: whType,
+				Description: fmt.Sprintf(
+					"omit 'type', or match the root defaults.%s.type of %q",
+					wh.ID, wh.Main.Type,
+				),
+			},
+		)
 	}
 
-	baseErrs, changed := wh.Base.CheckValues(prefix)
+	baseErrs, changed := wh.Base.CheckValues()
 	if baseErrs != nil {
 		errs = append(errs, baseErrs)
 	}
@@ -160,14 +127,100 @@ func (wh *WebHook) CheckValues(prefix string) (error, bool) {
 		wh.URL,
 		wh.Main.URL,
 		wh.Defaults.URL,
-		wh.HardDefaults.URL) == "" {
-		errs = append(errs, fmt.Errorf("%surl: <required> (here, in root webhook.%s, or in defaults)",
-			prefix, wh.ID))
+		wh.HardDefaults.URL,
+	) == "" {
+		errs = append(
+			errs,
+			&decode.FieldError{
+				Key: "url",
+				Description: fmt.Sprintf(
+					"here, in root.defaults.%s, or in defaults",
+					wh.ID,
+				),
+			},
+		)
 	}
 	// secret
 	if wh.GetSecret() == "" {
-		errs = append(errs, fmt.Errorf("%ssecret: <required> (here, in root webhook.%s, or in defaults)",
-			prefix, wh.ID))
+		errs = append(
+			errs,
+			&decode.FieldError{
+				Key: "secret",
+				Description: fmt.Sprintf(
+					"here, in root.defaults.%s, or in defaults",
+					wh.ID,
+				),
+			},
+		)
+	}
+
+	if len(errs) == 0 {
+		return nil, changed
+	}
+	return errors.Join(errs...), false
+}
+
+// CheckValues validates the fields of the receiver,
+// returning errors encountered and whether any values were modified.
+func (b *Base) CheckValues() (error, bool) {
+	errs := make([]error, 0, 2)
+	changed := false
+	// type
+	if b.Type != "" && !util.Contains(supportedTypes, b.Type) {
+		errs = append(
+			errs,
+			polymorphic.InvalidTypeError{
+				Key:     "type",
+				Value:   b.Type,
+				Allowed: supportedTypes,
+			},
+		)
+	}
+	// url
+	if !util.CheckTemplate(b.URL) {
+		errs = append(
+			errs,
+			&decode.FieldError{
+				Key:         "url",
+				Value:       b.URL,
+				Description: "didn't pass templating",
+			},
+		)
+	}
+	// Deprecated: custom_header -> headers
+	if b.Headers == nil && b.CustomHeaders != nil {
+		b.Headers = b.CustomHeaders
+		b.CustomHeaders = nil
+		changed = true
+		logx.Deprecated("Renaming 'webhook.custom_headers' to 'webhook.headers'. If you use any 'ARGUS_*_CUSTOM_HEADERS' environment variables, please update them to 'ARGUS_*_HEADERS' instead.")
+	}
+	if b.Headers != nil {
+		if err := b.checkValuesHeaders(); err != nil {
+			errs = append(
+				errs,
+				&decode.KeyFieldError{
+					Key: "headers",
+					Err: err,
+				},
+			)
+		}
+	}
+	// delay
+	if b.Delay != "" {
+		// Treat integers as seconds by default.
+		if _, err := strconv.Atoi(b.Delay); err == nil {
+			b.Delay += "s"
+		}
+		if _, err := time.ParseDuration(b.Delay); err != nil {
+			errs = append(
+				errs,
+				&decode.FieldError{
+					Key:         "delay",
+					Value:       b.Delay,
+					Description: "use 'AhBmCs' duration format",
+				},
+			)
+		}
 	}
 
 	if len(errs) == 0 {
@@ -183,6 +236,32 @@ func (whd *WebHooksDefaults) Print(prefix string) {
 	}
 
 	str := whd.String(prefix + "  ")
-	fmt.Printf("%swebhook:\n%s",
-		prefix, str)
+	fmt.Printf(
+		"%swebhook:\n%s",
+		prefix, str,
+	)
+}
+
+// checkValuesHeaders validates the fields of the Headers struct,
+// returning errors encountered.
+func (b *Base) checkValuesHeaders() error {
+	var errs []error
+
+	for _, header := range b.Headers {
+		if !util.CheckTemplate(header.Value) {
+			errs = append(
+				errs,
+				&decode.FieldError{
+					Key:         header.Key,
+					Value:       header.Value,
+					Description: "didn't pass templating",
+				},
+			)
+		}
+	}
+
+	if errs == nil {
+		return nil
+	}
+	return errors.Join(errs...)
 }

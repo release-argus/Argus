@@ -20,9 +20,29 @@ import (
 	"sync"
 	"time"
 
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/web/metric"
 )
+
+// Track will call Track on each Service, each in their own goroutine.
+func (s *Services) Track(ordering *[]string, orderMu *sync.RWMutex) {
+	metric.InitMetrics()
+
+	orderMu.RLock()
+	defer orderMu.RUnlock()
+	for _, key := range *ordering {
+		svc := (*s)[key]
+		if svc.Options.GetActive() {
+			svc.Options.Active = nil
+		}
+
+		// Track this Service in an infinite loop goroutine.
+		go svc.Track()
+
+		// Space out the tracking of each Service.
+		time.Sleep(time.Second / 2)
+	}
+}
 
 // Track the Service and send Notify messages and WebHooks when a new release is found.
 // Pause for s.Interval between each check.
@@ -42,8 +62,6 @@ func (s *Service) Track() {
 	// Track the deployed version in an infinite loop goroutine.
 	if s.DeployedVersionLookup != nil {
 		go func() {
-			time.Sleep(2 * time.Second) // Give LatestVersion some time to query first.
-
 			go s.DeployedVersionLookup.Track()
 		}()
 	}
@@ -53,13 +71,17 @@ func (s *Service) Track() {
 		return
 	}
 
+	time.Sleep(2 * time.Second) // Give DeployedVersion some time to query first.
 	// Track forever.
-	logFrom := logutil.LogFrom{Primary: s.ID}
-	logutil.Log.Verbose(
-		fmt.Sprintf("Tracking %s at %s every %s",
-			s.ID, s.LatestVersion.ServiceURL(), s.Options.GetInterval()),
+	logFrom := logx.LogFrom{Primary: s.ID}
+	logx.Verbose(
+		fmt.Sprintf(
+			"Tracking %s at %s every %s",
+			s.ID, s.LatestVersion.ServiceURL(), s.Options.GetInterval(),
+		),
 		logFrom,
-		true)
+		true,
+	)
 	for {
 		// Stop tracking if deleting.
 		if s.Status.Deleting() {
@@ -67,34 +89,11 @@ func (s *Service) Track() {
 		}
 
 		// Query the Lookup.
-		newVersion, _ := s.LatestVersion.Query(true, logFrom)
-
-		// If new version found.
-		if newVersion {
+		if newVersion, _ := s.LatestVersion.Query(true, logFrom); newVersion {
 			go s.HandleUpdateActions(true)
 		}
 
 		// Sleep interval between checks.
 		time.Sleep(s.Options.GetIntervalDuration())
-	}
-}
-
-// Track will call Track on each Service, each in their own goroutine.
-func (s *Services) Track(ordering *[]string, orderMutex *sync.RWMutex) {
-	metric.InitMetrics()
-
-	orderMutex.RLock()
-	defer orderMutex.RUnlock()
-	for _, key := range *ordering {
-		svc := (*s)[key]
-		if svc.Options.GetActive() {
-			svc.Options.Active = nil
-		}
-
-		// Track this Service in an infinite loop goroutine.
-		go svc.Track()
-
-		// Space out the tracking of each Service.
-		time.Sleep(time.Second / 2)
 	}
 }

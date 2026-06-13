@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,162 +25,125 @@ import (
 	"testing"
 )
 
-func TestAppendCheckError(t *testing.T) {
-	tests := map[string]struct {
-		prefix, label string
-		checkErr      error
-		errs, want    []error
-	}{
-		"nil checkErr": {
-			errs:     []error{},
-			prefix:   "prefix",
-			label:    "label",
-			checkErr: nil,
-			want:     []error{},
-		},
-		"non-nil checkErr": {
-			errs:     []error{},
-			prefix:   "prefix_",
-			label:    "label",
-			checkErr: fmt.Errorf("an error occurred"),
-			want: []error{
-				fmt.Errorf("%slabel:\nan error occurred",
-					"prefix_"),
-			},
-		},
-		"existing errors with non-nil checkErr": {
-			errs: []error{
-				fmt.Errorf("existing error"),
-			},
-			prefix:   "prefix_",
-			label:    "label",
-			checkErr: fmt.Errorf("an error occurred"),
-			want: []error{
-				fmt.Errorf("existing error"),
-				fmt.Errorf("%slabel:\nan error occurred",
-					"prefix_"),
-			},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			errs := tc.errs
-			AppendCheckError(&errs, tc.prefix, tc.label, tc.checkErr)
-			if len(errs) != len(tc.want) {
-				t.Fatalf("%s\nerror mismatch\nwant: %d errors, got %d\nerrors: %q",
-					packageName, len(tc.want), len(errs), errs)
-			}
-			for i, err := range errs {
-				if err.Error() != tc.want[i].Error() {
-					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.want[i], err)
-				}
-			}
-		})
-	}
-}
-
-func TestErrorToString(t *testing.T) {
-	// GIVEN a bunch of comparables.
-	tests := map[string]struct {
-		err  error
-		want string
-	}{
-		"nil error": {
-			err: nil, want: ""},
-		"non-nil error": {
-			err: fmt.Errorf("test error"), want: "test error"},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN ErrorToString is called.
-			got := ErrorToString(tc.err)
-
-			// THEN the var is printed when it should be.
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
 func TestCheckFileReadable(t *testing.T) {
-	tmpDir := t.TempDir() // isolated temp dir for testing
+	tmpDir := t.TempDir() // isolated temp dir for testing.
 
-	// Prepare some files and directories
+	// Prepare some files and directories.
 	existingFile := filepath.Join(tmpDir, "existing.txt")
 	if err := os.WriteFile(existingFile, []byte("hello"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	// Directory instead of file
+	// Directory instead of file.
 	existingDir := filepath.Join(tmpDir, "subdir")
 	if err := os.Mkdir(existingDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
-	// Relative path that doesn’t exist
+	// Relative path that doesn’t exist.
 	relativeNonExistent := "nonexistent.txt"
 
-	tests := map[string]struct {
+	tests := []struct {
+		name         string
 		path         string
 		expectError  bool
-		containsPath string // substring expected in the error message (for relative paths)
+		containsPath string // substring expected in the error message (for relative paths).
 	}{
-		"empty path": {
+		{
+			name:        "empty path",
 			path:        "",
 			expectError: false,
 		},
-		"existing absolute file": {
+		{
+			name:        "existing absolute file",
 			path:        existingFile,
 			expectError: false,
 		},
-		"existing directory": {
+		{
+			name:         "existing directory",
 			path:         existingDir,
 			expectError:  true,
 			containsPath: existingDir,
 		},
-		"non-existent absolute file": {
+		{
+			name:        "non-existent absolute file",
 			path:        filepath.Join(tmpDir, "missing.txt"),
 			expectError: true,
 		},
-		"non-existent relative file": {
+		{
+			name:         "non-existent relative file",
 			path:         relativeNonExistent,
 			expectError:  true,
 			containsPath: relativeNonExistent,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN a path
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// GIVEN: a path.
 			path := tc.path
 
-			// WHEN CheckFileReadable is called
+			// WHEN: CheckFileReadable is called.
 			err := CheckFileReadable(path)
 
-			// THEN the error behavior should match expectations
+			prefix := fmt.Sprintf(
+				"%s\nCheckFileReadable(%q)",
+				packageName, path,
+			)
+
+			// THEN: the error behavior should match expectations.
 			if tc.expectError && err == nil || !tc.expectError && err != nil {
 				want := "nil"
 				if tc.expectError {
 					want = "error"
 				}
-				t.Fatalf("%s\nerror mismatch\nwant: %v\ngot:  %v",
-					packageName, want, err)
+				t.Fatalf(
+					"%s error mismatch\ngot:  %v\nwant: %v",
+					prefix, err, want,
+				)
 			}
 
-			// AND if a substring is expected in the error, check it
+			// AND: if a substring is expected in the error, check it.
 			if tc.containsPath != "" && err != nil {
 				if !errors.Is(err, os.ErrNotExist) && !strings.Contains(err.Error(), tc.containsPath) {
-					t.Fatalf("%s\nexpected error message to contain %q, got: %v",
-						packageName, tc.containsPath, err)
+					t.Fatalf(
+						"%s error mismatch\ngot:  %v\nwant contains(%q)",
+						prefix, err, tc.containsPath,
+					)
 				}
 			}
 		})
+	}
+}
+
+func TestCheckFileReadable__statError(t *testing.T) {
+	// GIVEN: a failing stat call.
+	original := fileStat
+	customErr := fmt.Errorf("stat failed")
+	fileStat = func(f *os.File) (os.FileInfo, error) {
+		return nil, customErr
+	}
+	t.Cleanup(func() { fileStat = original })
+
+	// AND: a readable file.
+	existingFile := filepath.Join(t.TempDir(), "existing.txt")
+	if err := os.WriteFile(existingFile, []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// WHEN: CheckFileReadable is called.
+	err := CheckFileReadable(existingFile)
+
+	prefix := fmt.Sprintf(
+		"%s\nCheckFileReadable(%q)",
+		packageName, existingFile,
+	)
+
+	// THEN: the stat error is returned.
+	if err == nil || err.Error() != customErr.Error() {
+		t.Errorf(
+			"%s error mismatch\ngot:  %q\nwant: %q",
+			prefix, err, customErr,
+		)
 	}
 }

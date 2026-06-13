@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,105 +21,116 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
-	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
 )
 
 func TestLookup_CheckValues(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
-		yamlStr           string
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name              string
+		data              string
 		emptyHardDefaults bool
 		errRegex          string
 	}{
-		"valid service": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "valid service",
+			data: test.TrimYAML(`
 				method: ` + http.MethodGet + `
 				url: "https://example.com"
 				regex: '[0-9.]+'
 			`),
 			errRegex: `^$`,
 		},
-		"method - empty string": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "method - empty string",
+			data: test.TrimYAML(`
 				method: ''
 				url: "https://example.com"
 			`),
 			emptyHardDefaults: true,
 			errRegex:          `method: <required>.*` + http.MethodGet,
 		},
-		"method - invalid": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "method - invalid",
+			data: test.TrimYAML(`
 				method: 'FOO'
 				url: "https://example.com"
 			`),
 			errRegex: `method: "FOO" <invalid>.*` + http.MethodGet,
 		},
-		"method - valid": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "method - valid",
+			data: test.TrimYAML(`
 				method: ` + http.MethodGet + `
 				url: "https://example.com"
 			`),
 			errRegex: `^$`,
 		},
-		"method - case insensitive": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "method - case insensitive",
+			data: test.TrimYAML(`
 				method: 'gEt'
 				url: "https://example.com"
 			`),
 			errRegex: `^$`,
 		},
-		"url - empty string": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "url - empty string",
+			data: test.TrimYAML(`
 				method: ''
 				url: ''
 			`),
 			errRegex: `url: <required>`,
 		},
-		"body - removed for GET": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "body - removed for GET",
+			data: test.TrimYAML(`
 				method: ` + http.MethodGet + `
 				url: "https://example.com"
 				body: "foo"
 			`),
 			errRegex: `^$`,
 		},
-		"body - not removed for POST": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "body - not removed for POST",
+			data: test.TrimYAML(`
 				method: ` + http.MethodPost + `
 				url: "https://example.com"
 				body: "foo"
 			`),
 			errRegex: `^$`,
 		},
-		"JSON - invalid, string in square brackets": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "JSON - invalid, string in square brackets",
+			data: test.TrimYAML(`
 				method: ` + http.MethodGet + `
 				url: "https://example.com"
 				json: 'foo[bar]'
 			`),
-			errRegex: `json: .* <invalid>`,
+			errRegex: `^json: .* <invalid>.*$`,
 		},
-		"regex - invalid": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "regex - invalid",
+			data: test.TrimYAML(`
 				method: ` + http.MethodGet + `
 				url: "https://example.com"
 				regex: '[0-'
 			`),
-			errRegex: `regex: .* <invalid>`,
+			errRegex: `^regex: .* <invalid>.*$`,
 		},
-		"regexTemplate - with no regex": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "regexTemplate - with no regex",
+			data: test.TrimYAML(`
 				method: ` + http.MethodGet + `
 				url: "https://example.com"
 				regex_template: "$1.$2.$3"
 			`),
 			errRegex: `^$`,
 		},
-		"all errs": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "all decode",
+			data: test.TrimYAML(`
 				type: url
 				method: asd
 				url: ""
@@ -131,65 +142,70 @@ func TestLookup_CheckValues(t *testing.T) {
 				url: <required>.*
 				method: "[^"]+" <invalid>.*
 				json: "[^"]+" <invalid>.*
-				regex: "[^"]+" <invalid>.*`),
+				regex: "[^"]+" <invalid>.*$`,
+			),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(false)
+			input := testLookup(t, false)
 			if tc.emptyHardDefaults {
-				lookup.HardDefaults = &base.Defaults{}
+				input.HardDefaults = &base.Defaults{}
 			}
 			// Apply the YAML.
-			if err := yaml.Unmarshal([]byte(tc.yamlStr), lookup); err != nil {
-				t.Fatalf("%s\nerror unmarshalling YAML: %v",
-					packageName, err)
+			if err := input.UnmarshalYAML([]byte(tc.data)); err != nil {
+				t.Fatalf(
+					"%s\nLookup.UnmarshalYAML(%q) failed before Lookup.CheckValues(): %v",
+					packageName, tc.data,
+					err,
+				)
 			}
-			hadBody := lookup.Body
+			hadBody := input.Body
 
-			// WHEN CheckValues is called.
-			err := lookup.CheckValues("")
+			_ = test.AssertCheckValuesWithError(
+				t,
+				packageName,
+				tc.errRegex,
+				input.CheckValues,
+			)
 
-			// THEN it errors when expected.
-			e := util.ErrorToString(err)
-			lines := strings.Split(e, "\n")
-			wantLines := strings.Count(tc.errRegex, "\n")
-			if wantLines > len(lines) {
-				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
-					packageName, wantLines, tc.errRegex, len(lines), lines, e)
-				return
+			// AND: RegexTemplate is empty when Regex is empty.
+			if input.RegexTemplate != "" && input.Regex == "" {
+				t.Fatalf(
+					"%s\nLookup.CheckValues() .RegexTemplate should be empty when Regex is empty",
+					packageName,
+				)
 			}
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
-				return
+
+			// AND: Body is empty when Method is GET.
+			if input.Method == http.MethodGet && input.Body != "" {
+				t.Fatalf(
+					"%s\nLookup.CheckValues() .Body should be empty when Method is GET",
+					packageName,
+				)
 			}
-			// AND RegexTemplate is empty when Regex is empty.
-			if lookup.RegexTemplate != "" && lookup.Regex == "" {
-				t.Fatalf("%s\nRegexTemplate should be nil when Regex is empty",
-					packageName)
+
+			// AND: Body is kept when Method is POST.
+			if input.Method == http.MethodPost && hadBody != "" && input.Body == "" {
+				t.Fatalf(
+					"%s\nLookup.CheckValues() .Body should be kept when Method is POST",
+					packageName,
+				)
 			}
-			// AND Body is empty when Method is GET.
-			if lookup.Method == http.MethodGet && lookup.Body != "" {
-				t.Fatalf("%s\nBody should be nil when Method is GET",
-					packageName)
-			}
-			// AND Body is kept when Method is POST.
-			if lookup.Method == http.MethodPost && hadBody != "" && lookup.Body == "" {
-				t.Fatalf("%s\nBody should be kept when Method is POST",
-					packageName)
-			}
-			// AND Method is uppercased.
-			wantMethod := strings.ToUpper(lookup.Method)
+
+			// AND: Method is uppercased.
+			wantMethod := strings.ToUpper(input.Method)
 			if wantMethod == "" {
 				wantMethod = http.MethodGet
 			}
-			if lookup.Method != "" && lookup.Method != wantMethod {
-				t.Fatalf("%s\nMethod should be uppercased:\nwant: %q\ngot:  %q",
-					packageName, wantMethod, lookup.Method)
+			if input.Method != "" && input.Method != wantMethod {
+				t.Fatalf(
+					"%s\nLookup.CheckValues() .Method should be uppercased:\ngot:  %q\nwant: %q",
+					packageName, input.Method, wantMethod,
+				)
 			}
 		})
 	}

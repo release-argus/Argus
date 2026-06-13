@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 package v1
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -38,10 +38,10 @@ type ServiceOrderAPI struct {
 //
 //	JSON object containing the current ordering.
 func (api *API) httpServiceOrderGet(w http.ResponseWriter, r *http.Request) {
-	logFrom := logutil.LogFrom{Primary: "httpServiceOrderGet", Secondary: getIP(r)}
+	logFrom := logx.LogFrom{Primary: "httpServiceOrderGet", Secondary: getIP(r)}
 
-	api.Config.OrderMutex.RLock()
-	defer api.Config.OrderMutex.RUnlock()
+	api.Config.OrderMu.RLock()
+	defer api.Config.OrderMu.RUnlock()
 	api.writeJSON(w, ServiceOrderAPI{Order: api.Config.Order}, logFrom)
 }
 
@@ -53,10 +53,10 @@ func (api *API) httpServiceOrderGet(w http.ResponseWriter, r *http.Request) {
 //
 //	JSON object containing the new order.
 func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
-	logFrom := logutil.LogFrom{Primary: "httpServiceOrderSet", Secondary: getIP(r)}
+	logFrom := logx.LogFrom{Primary: "httpServiceOrderSet", Secondary: getIP(r)}
 
-	api.Config.OrderMutex.RLock()
-	defer api.Config.OrderMutex.RUnlock()
+	api.Config.OrderMu.RLock()
+	defer api.Config.OrderMu.RUnlock()
 
 	currentOrder := api.Config.Order
 
@@ -65,17 +65,21 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 	defer payload.Close()
 	body, err := io.ReadAll(payload)
 	if err != nil {
-		failRequest(&w,
-			err.Error(),
-			http.StatusBadRequest)
+		failRequest(
+			&w,
+			err,
+			http.StatusBadRequest,
+		)
 		return
 	}
 	// Unmarshal the new order from the payload.
 	var newOrder ServiceOrderAPI
-	if err := json.Unmarshal(body, &newOrder); err != nil {
-		failRequest(&w,
-			"Invalid JSON - "+err.Error(),
-			http.StatusBadRequest)
+	if err := decode.Unmarshal("json", body, &newOrder); err != nil {
+		failRequest(
+			&w,
+			fmt.Errorf("invalid JSON: %w", err),
+			http.StatusBadRequest,
+		)
 		return
 	}
 
@@ -89,9 +93,13 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 
 	// Set the new order.
 	api.Config.Order = trimmedOrder
-	api.writeJSON(w, apitype.Response{
-		Message: "order updated"},
-		logFrom)
+	api.writeJSON(
+		w,
+		apitype.Response{
+			Message: "order updated",
+		},
+		logFrom,
+	)
 
 	// Announce to the WebSocket.
 	api.announceOrder()
@@ -111,22 +119,20 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 //
 //	JSON object containing the service details.
 func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
-	logFrom := logutil.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
+	logFrom := logx.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
 	serviceID, ok := requireQueryParam(w, r, "service_id")
 	if !ok {
 		return
 	}
 
 	// Check Service still exists in this ordering.
-	api.Config.OrderMutex.RLock()
-	defer api.Config.OrderMutex.RUnlock()
+	api.Config.OrderMu.RLock()
+	defer api.Config.OrderMu.RUnlock()
 	svc := api.Config.Service[serviceID]
 	if svc == nil {
-		err := fmt.Sprintf("service %q not found", serviceID)
-		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w,
-			err,
-			http.StatusNotFound)
+		err := fmt.Errorf("service %q not found", serviceID)
+		logx.Error(err, logFrom, true)
+		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
 

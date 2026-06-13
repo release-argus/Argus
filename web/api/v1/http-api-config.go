@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,79 +18,80 @@ package v1
 import (
 	"net/http"
 
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// wsConfig handles getting the config in use and sending it as YAML.
+// httpConfig returns the active configuration with secrets censored.
 func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
-	logFrom := logutil.LogFrom{Primary: "httpConfig", Secondary: getIP(r)}
+	logFrom := logx.LogFrom{Primary: "httpConfig", Secondary: getIP(r)}
 
 	cfg := &apitype.Config{}
 
-	// Settings
-	cfg.Settings = &apitype.Settings{
+	// Settings.
+	cfg.Settings = apitype.Settings{
 		Log: apitype.LogSettings{
 			Timestamps: api.Config.Settings.Log.Timestamps,
-			Level:      api.Config.Settings.Log.Level},
+			Level:      api.Config.Settings.Log.Level,
+		},
 		Web: apitype.WebSettings{
 			ListenHost:  api.Config.Settings.Web.ListenHost,
 			ListenPort:  api.Config.Settings.Web.ListenPort,
 			CertFile:    api.Config.Settings.Web.CertFile,
 			KeyFile:     api.Config.Settings.Web.KeyFile,
-			RoutePrefix: api.Config.Settings.Web.RoutePrefix}}
+			RoutePrefix: api.Config.Settings.Web.RoutePrefix,
+		},
+	}
 
-	// Defaults
+	// Defaults.Service.LatestVersion.Require.
 	serviceLatestVersionRequireDefaults := convertAndCensorLatestVersionRequireDefaults(&api.Config.Defaults.Service.LatestVersion.Require)
-	var serviceNotifyDefaults map[string]struct{}
-	if api.Config.Defaults.Service.Notify != nil {
-		serviceNotifyDefaults = make(map[string]struct{}, len(api.Config.Defaults.Service.Notify))
-		for notify := range api.Config.Defaults.Service.Notify {
-			serviceNotifyDefaults[notify] = struct{}{}
-		}
-	}
-	serviceCommandDefaults := convertCommands(&api.Config.Defaults.Service.Command)
+	// Defaults.Service.Notify.
+	serviceNotifyDefaults := util.SortedKeys(api.Config.Defaults.Service.Notify)
+	// Defaults.Service.Command.
+	serviceCommandDefaults := convertCommands(api.Config.Defaults.Service.Command)
+	// Defaults.Service.WebHook.
+	serviceWebHookDefaults := util.SortedKeys(api.Config.Defaults.Service.WebHook)
 
-	var serviceDefaults map[string]struct{}
-	if api.Config.Defaults.Service.WebHook != nil {
-		serviceDefaults = make(map[string]struct{}, len(api.Config.Defaults.Service.WebHook))
-		for webhook := range api.Config.Defaults.Service.WebHook {
-			serviceDefaults[webhook] = struct{}{}
-		}
-	}
+	// Defaults.Notify.
+	notifyDefaults := convertAndCensorNotifiersDefaults(api.Config.Defaults.Notify)
+	// Defaults.WebHook.
+	webhookDefaults := convertAndCensorWebHookDefaults(api.Config.Defaults.WebHook)
 
-	notifyDefaults := convertAndCensorNotifiersDefaults(&api.Config.Defaults.Notify)
-	webhookDefaults := convertAndCensorWebHookDefaults(&api.Config.Defaults.WebHook)
-
-	cfg.Defaults = &apitype.Defaults{
+	cfg.Defaults = apitype.Defaults{
 		Service: apitype.ServiceDefaults{
-			Options: &apitype.ServiceOptions{
+			Options: apitype.ServiceOptions{
 				Interval:           api.Config.Defaults.Service.Options.Interval,
-				SemanticVersioning: api.Config.Defaults.Service.Options.SemanticVersioning},
-			DeployedVersionLookup: &apitype.DeployedVersionLookup{
-				AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts},
-			Dashboard: &apitype.DashboardOptions{
-				AutoApprove: api.Config.Defaults.Service.Dashboard.AutoApprove},
-			LatestVersion: &apitype.LatestVersionDefaults{
+				SemanticVersioning: api.Config.Defaults.Service.Options.SemanticVersioning,
+			},
+			DeployedVersionLookup: apitype.DeployedVersionLookupDefaults{
+				AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts,
+			},
+			Dashboard: apitype.DashboardOptions{
+				AutoApprove: api.Config.Defaults.Service.Dashboard.AutoApprove,
+			},
+			LatestVersion: apitype.LatestVersionDefaults{
 				AccessToken:       util.ValueUnlessDefault(api.Config.Defaults.Service.LatestVersion.AccessToken, util.SecretValue),
 				AllowInvalidCerts: api.Config.Defaults.Service.LatestVersion.AllowInvalidCerts,
 				UsePreRelease:     api.Config.Defaults.Service.LatestVersion.UsePreRelease,
-				Require:           serviceLatestVersionRequireDefaults},
+				Require:           serviceLatestVersionRequireDefaults,
+			},
 			Notify:  serviceNotifyDefaults,
 			Command: serviceCommandDefaults,
-			WebHook: serviceDefaults},
-		Notify:  *notifyDefaults,
-		WebHook: *webhookDefaults}
+			WebHook: serviceWebHookDefaults,
+		},
+		Notify:  notifyDefaults,
+		WebHook: webhookDefaults,
+	}
 
-	// Notify
-	cfg.Notify = convertAndCensorNotifiersDefaults(&api.Config.Notify)
+	// Notify.
+	cfg.Notify = convertAndCensorNotifiersDefaults(api.Config.Notify)
 
-	// WebHook
-	cfg.WebHook = convertAndCensorWebHooksDefaults(&api.Config.WebHook)
+	// WebHook.
+	cfg.WebHook = convertAndCensorWebHooksDefaults(api.Config.WebHook)
 
-	// Service
-	api.Config.OrderMutex.RLock()
+	// Service.
+	api.Config.OrderMu.RLock()
 	serviceConfig := make(apitype.Services, len(api.Config.Order))
 	if api.Config.Service != nil {
 		for _, key := range api.Config.Order {
@@ -98,10 +99,10 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 			serviceConfig[key] = convertAndCensorService(svc)
 		}
 	}
-	cfg.Service = &serviceConfig
+	cfg.Service = serviceConfig
 
 	cfg.Order = api.Config.Order
-	api.Config.OrderMutex.RUnlock()
+	api.Config.OrderMu.RUnlock()
 
 	api.writeJSON(w, cfg, logFrom)
 }

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,128 +17,161 @@
 package webhook
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/prometheus/client_golang/prometheus/testutil"
-
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/web/metric"
 )
 
-func TestWebHooks_Metrics(t *testing.T) {
-	// GIVEN a WebHooks.
-	tests := map[string]struct {
-		webhooks *WebHooks
+func TestWebHooks_Init(t *testing.T) {
+	// GIVEN: a WebHooks and vars for the Init.
+	var notifiers shoutrrr.Shoutrrrs
+	tests := []struct {
+		name                   string
+		webhooks               *WebHooks
+		nilMap                 bool
+		mains                  WebHooksDefaults
+		defaults, hardDefaults *Defaults
 	}{
-		"nil": {
-			webhooks: nil},
-		"empty": {
-			webhooks: &WebHooks{}},
-		"with one": {
+		{
+			name:     "nil map",
+			webhooks: nil, nilMap: true,
+		},
+		{
+			name:     "empty map",
+			webhooks: &WebHooks{},
+		},
+		{
+			name: "no mains",
 			webhooks: &WebHooks{
-				"foo": &WebHook{
-					Main: &Defaults{}}}},
-		"no Main, no metrics": {
+				"fail": testWebHook(true, false, false),
+				"pass": testWebHook(false, false, false),
+			},
+		},
+		{
+			name: "map with nil element and matching main",
 			webhooks: &WebHooks{
-				"foo": &WebHook{}}},
-		"multiple": {
+				"fail": nil,
+			},
+			mains: WebHooksDefaults{
+				"fail": testDefaults(false, false),
+			},
+		},
+		{
+			name: "have matching mains",
 			webhooks: &WebHooks{
-				"bish": &WebHook{
-					Main: &Defaults{}},
-				"bash": &WebHook{
-					Main: &Defaults{}},
-				"bosh": &WebHook{
-					Main: &Defaults{}}}},
+				"fail": testWebHook(true, false, false),
+				"pass": testWebHook(false, false, false),
+			},
+			mains: WebHooksDefaults{
+				"fail": testDefaults(false, false),
+				"pass": testDefaults(true, false),
+			},
+		},
+		{
+			name: "some matching mains",
+			webhooks: &WebHooks{
+				"fail": testWebHook(true, false, false),
+				"pass": testWebHook(false, false, false),
+			},
+			mains: WebHooksDefaults{
+				"other": testDefaults(false, false),
+				"pass":  testDefaults(true, false),
+			},
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're testing metrics.
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-			if tc.webhooks != nil {
-				for name, s := range *tc.webhooks {
-					s.ID = name
-					s.ServiceStatus = &status.Status{}
-					s.ServiceStatus.ServiceInfo.ID = name + "-service"
+			if !tc.nilMap {
+				for i := range *tc.webhooks {
+					if (*tc.webhooks)[i] != nil {
+						(*tc.webhooks)[i].ID = tc.name + i
+					}
 				}
 			}
-
-			// WHEN the Prometheus metrics are initialised with initMetrics.
-			had := testutil.CollectAndCount(metric.WebHookResultTotal)
-			tc.webhooks.InitMetrics()
-
-			// THEN it can be counted.
-			got := testutil.CollectAndCount(metric.WebHookResultTotal)
-			want := had
-			if tc.webhooks != nil {
-				want += 2 * len(*tc.webhooks)
+			serviceStatus := status.Status{}
+			serviceStatus.ServiceInfo.ID = tc.name
+			mainCount := 0
+			if tc.mains != nil {
+				mainCount = len(tc.mains)
 			}
-			if got != want {
-				t.Errorf("%s\nmetric count mismatch after InitMetrics()\nwant: %d\ngot:  %d",
-					name, want, got)
-			}
+			serviceStatus.Init(
+				0, 0, mainCount,
+				status.ServiceInfo{
+					ID: tc.name,
+				},
+				&dashboard.Options{},
+			)
+			parentInterval := "10s"
 
-			// AND the metrics can be deleted.
-			tc.webhooks.DeleteMetrics()
-			got = testutil.CollectAndCount(metric.WebHookResultTotal)
-			if got != had {
-				t.Errorf("%s\nmetric count mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
-					packageName, had, got)
-			}
-		})
-	}
-}
+			// WHEN: Init is called on it.
+			tc.webhooks.Init(
+				&serviceStatus,
+				Config{
+					Root:         tc.mains,
+					Defaults:     tc.defaults,
+					HardDefaults: tc.hardDefaults,
+				},
+				&notifiers,
+				&parentInterval,
+			)
 
-func TestWebHook_Metrics(t *testing.T) {
-	// GIVEN a WebHook.
-	tests := map[string]struct {
-		isNil bool
-	}{
-		"nil":     {isNil: true},
-		"non-nil": {isNil: false},
-	}
+			prefix := fmt.Sprintf("%s\nWebHooks.Init()", packageName)
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			webhook := testWebHook(true, false, false)
-			webhook.ID = name + "TestInitMetrics"
-			webhook.ServiceStatus.ServiceInfo.ID = name + "TestInitMetrics"
-			if tc.isNil {
-				webhook = nil
+			// THEN: pointers to those vars are handed out to the WebHook:
+			if tc.nilMap {
+				if tc.webhooks != nil {
+					t.Fatalf(
+						"%s map mismatch\ngot:  %v\nwant: nil",
+						prefix, *tc.webhooks,
+					)
+				}
+				return
 			}
 
-			// WHEN the Prometheus metrics are initialised with initMetrics.
-			hadC := testutil.CollectAndCount(metric.WebHookResultTotal)
-			webhook.initMetrics()
+			for _, webhook := range *tc.webhooks {
+				// 	Main:
+				if webhook.Main == nil {
+					t.Errorf(
+						"%s .Main of the WebHook[%q] was not initialised\ngot: nil",
+						prefix, webhook.ID,
+					)
+				} else if len(tc.mains) != 0 {
+					if wantMain, ok := tc.mains[webhook.ID]; ok {
+						gotMain := webhook.Main
+						gotMain.Delay = tc.name
+						if wantMain.Delay != gotMain.Delay {
+							t.Errorf(
+								"%s Main[%q] was not handed to the WebHook correctly\ngot:  %v\nwant: %v",
+								prefix, webhook.ID,
+								webhook.Main, wantMain,
+							)
+						}
+					}
+				}
 
-			// THEN it can be collected.
-			// counters:
-			gotC := testutil.CollectAndCount(metric.WebHookResultTotal)
-			wantC := 2
-			if tc.isNil {
-				wantC = 0
-			}
-			if (gotC - hadC) != wantC {
-				t.Errorf("%s\nmetric count mismatch after initMetrics()\nwant: %d\ngot:  %d",
-					packageName, wantC, gotC-hadC)
-			}
-
-			// AND it can be deleted.
-			webhook.deleteMetrics()
-			gotC = testutil.CollectAndCount(metric.WebHookResultTotal)
-			if gotC != hadC {
-				t.Errorf("%s\nmetric count mismatch after deleteMetrics()\nwant: %d\ngot:  %d",
-					packageName, hadC, gotC)
+				fieldTests := []test.FieldAssertion{
+					{Name: "Defaults", Got: webhook.Defaults, Want: tc.defaults, Mode: test.CompareSamePointer},
+					{Name: "HardDefaults", Got: webhook.HardDefaults, Want: tc.hardDefaults, Mode: test.CompareSamePointer},
+					{Name: "Status", Got: webhook.ServiceStatus, Want: &serviceStatus, Mode: test.CompareSamePointer},
+					{Name: "Notifiers.Shoutrrr", Got: webhook.Notifiers.Shoutrrr, Want: &notifiers, Mode: test.CompareSamePointer},
+				}
+				if err := test.AssertFields(t, fieldTests, prefix, "WebHook"); err != nil {
+					t.Fatal(err)
+				}
 			}
 		})
 	}
 }
 
 func TestWebHook_Init(t *testing.T) {
-	// GIVEN a WebHook and vars for the Init.
+	// GIVEN: a WebHook and vars for the Init.
 	webhook := testWebHook(true, false, false)
 	var notifiers shoutrrr.Shoutrrrs
 	var main Defaults
@@ -146,159 +179,41 @@ func TestWebHook_Init(t *testing.T) {
 	svcStatus := status.Status{}
 	svcStatus.Init(
 		0, 0, 1,
-		"TestInit", "", "",
+		status.ServiceInfo{
+			ID: "TestWebHook_Init",
+		},
 		&dashboard.Options{
-			WebURL: "https://example.com"})
-
-	// WHEN Init is called on it.
-	webhook.Init(
-		&svcStatus,
-		&main, &defaults, &hardDefaults,
-		&notifiers,
-		webhook.ParentInterval)
-	webhook.ID = "TestInit"
-
-	// THEN pointers to those vars are handed out to the WebHook:
-	// 	Main:
-	if webhook.Main != &main {
-		t.Errorf("%s\nMain was not handed to the WebHook correctly\nwant: %v\ngot:  %v",
-			packageName, &main, webhook.Main)
-	}
-	// 	Defaults:
-	if webhook.Defaults != &defaults {
-		t.Errorf("%s\nDefaults were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
-			packageName, &defaults, webhook.Defaults)
-	}
-	// 	HardDefaults:
-	if webhook.HardDefaults != &hardDefaults {
-		t.Errorf("%s\nHardDefaults were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
-			packageName, &hardDefaults, webhook.HardDefaults)
-	}
-	// 	Status:
-	if webhook.ServiceStatus != &svcStatus {
-		t.Errorf("%s\nStatus was not handed to the WebHook correctly\nwant: %v\ngot:  %v",
-			packageName, &svcStatus, webhook.ServiceStatus)
-	}
-	// 	Options:
-	if webhook.Notifiers.Shoutrrr != &notifiers {
-		t.Errorf("%s\nNotifiers were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
-			packageName, &notifiers, webhook.Notifiers.Shoutrrr)
-	}
-}
-
-func TestWebHooks_Init(t *testing.T) {
-	// GIVEN a WebHooks and vars for the Init.
-	var notifiers shoutrrr.Shoutrrrs
-	tests := map[string]struct {
-		webhooks               *WebHooks
-		nilMap                 bool
-		mains                  *WebHooksDefaults
-		defaults, hardDefaults *Defaults
-	}{
-		"nil map": {
-			webhooks: nil, nilMap: true,
-		},
-		"empty map": {
-			webhooks: &WebHooks{},
-		},
-		"no mains": {
-			webhooks: &WebHooks{
-				"fail": testWebHook(true, false, false),
-				"pass": testWebHook(false, false, false)},
-		},
-		"map with nil element and matching main": {
-			webhooks: &WebHooks{
-				"fail": nil},
-			mains: &WebHooksDefaults{
-				"fail": testDefaults(false, false)},
-		},
-		"have matching mains": {
-			webhooks: &WebHooks{
-				"fail": testWebHook(true, false, false),
-				"pass": testWebHook(false, false, false)},
-			mains: &WebHooksDefaults{
-				"fail": testDefaults(false, false),
-				"pass": testDefaults(true, false),
+			OptionsBase: dashboard.OptionsBase{
+				WebURL: "https://example.com",
 			},
 		},
-		"some matching mains": {
-			webhooks: &WebHooks{
-				"fail": testWebHook(true, false, false),
-				"pass": testWebHook(false, false, false)},
-			mains: &WebHooksDefaults{
-				"other": testDefaults(false, false),
-				"pass":  testDefaults(true, false)},
+	)
+
+	// WHEN: Init is called on it.
+	webhook.init(
+		&svcStatus,
+		&main,
+		Config{
+			Root:         nil,
+			Defaults:     &defaults,
+			HardDefaults: &hardDefaults,
 		},
+		&notifiers,
+		webhook.ParentInterval,
+	)
+	webhook.ID = "TestInit"
+
+	prefix := fmt.Sprintf("%s\nWebHook.Init()", packageName)
+
+	// THEN: pointers to those vars are handed out to the WebHook:
+	fieldTests := []test.FieldAssertion{
+		{Name: "Main", Got: webhook.Main, Want: &main, Mode: test.CompareSamePointer},
+		{Name: "Defaults", Got: webhook.Defaults, Want: &defaults, Mode: test.CompareSamePointer},
+		{Name: "HardDefaults", Got: webhook.HardDefaults, Want: &hardDefaults, Mode: test.CompareSamePointer},
+		{Name: "Status", Got: webhook.ServiceStatus, Want: &svcStatus, Mode: test.CompareSamePointer},
+		{Name: "Notifiers.Shoutrrr", Got: webhook.Notifiers.Shoutrrr, Want: &notifiers, Mode: test.CompareSamePointer},
 	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			if !tc.nilMap {
-				for i := range *tc.webhooks {
-					if (*tc.webhooks)[i] != nil {
-						(*tc.webhooks)[i].ID = name + i
-					}
-				}
-			}
-			serviceStatus := status.Status{}
-			serviceStatus.ServiceInfo.ID = name
-			mainCount := 0
-			if tc.mains != nil {
-				mainCount = len(*tc.mains)
-			}
-			serviceStatus.Init(
-				0, 0, mainCount,
-				name, "", "",
-				&dashboard.Options{})
-			parentInterval := "10s"
-
-			// WHEN Init is called on it.
-			tc.webhooks.Init(
-				&serviceStatus,
-				tc.mains, tc.defaults, tc.hardDefaults,
-				&notifiers,
-				&parentInterval)
-
-			// THEN pointers to those vars are handed out to the WebHook:
-			if tc.nilMap {
-				if tc.webhooks != nil {
-					t.Fatalf("%s\nmap mismatch\nwant: nil\ngot:  %v",
-						packageName, *tc.webhooks)
-				}
-				return
-			}
-			for _, webhook := range *tc.webhooks {
-				// 	Main:
-				if webhook.Main == nil {
-					t.Errorf("%s\nMain of the WebHook was not initialised\ngot: %v",
-						packageName, webhook.Main)
-				} else if tc.mains != nil && (*tc.mains)[webhook.ID] != nil && webhook.Main != (*tc.mains)[webhook.ID] {
-					t.Errorf("%s\nMain were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
-						packageName, (*tc.mains)[webhook.ID], webhook.Main)
-				}
-				// 	Defaults:
-				if webhook.Defaults != tc.defaults {
-					t.Errorf("%s\nDefaults were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
-						packageName, &tc.defaults, webhook.Defaults)
-				}
-				// 	HardDefaults:
-				if webhook.HardDefaults != tc.hardDefaults {
-					t.Errorf("%s\nHardDefaults were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
-						packageName, &tc.hardDefaults, webhook.HardDefaults)
-				}
-				// 	Status:
-				if webhook.ServiceStatus != &serviceStatus {
-					t.Errorf("%s\nStatus was not handed to the WebHook correctly\nwant: %v\ngot:  %v",
-						packageName, &serviceStatus, webhook.ServiceStatus)
-				}
-				// 	Notifiers:
-				if webhook.Notifiers.Shoutrrr != &notifiers {
-					t.Errorf("%s\nNotifiers were not handed to the WebHook correctly\nwant: %v\ngot:  %v",
-						packageName, &notifiers, webhook.Notifiers.Shoutrrr)
-				}
-			}
-		})
+	if err := test.AssertFields(t, fieldTests, prefix, "WebHook"); err != nil {
+		t.Fatal(err)
 	}
 }

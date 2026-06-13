@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
+	"github.com/release-argus/Argus/internal/httpx"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // Query queries the source
@@ -35,7 +36,7 @@ import (
 // Parameters:
 //
 //	metrics: if true, set Prometheus metrics based on the query.
-func (l *Lookup) Query(metrics bool, logFrom logutil.LogFrom) (bool, error) {
+func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) (bool, error) {
 	isNewVersion, err := l.query(logFrom)
 
 	if metrics {
@@ -47,7 +48,7 @@ func (l *Lookup) Query(metrics bool, logFrom logutil.LogFrom) (bool, error) {
 
 // Query queries the source
 // and returns whether a new release was found, updating LatestVersion if so.
-func (l *Lookup) query(logFrom logutil.LogFrom) (bool, error) {
+func (l *Lookup) query(logFrom logx.LogFrom) (bool, error) {
 	body, err := l.httpRequest(logFrom)
 	if err != nil {
 		return false, err
@@ -55,7 +56,6 @@ func (l *Lookup) query(logFrom logutil.LogFrom) (bool, error) {
 
 	version, err := l.getVersion(string(body), logFrom)
 	if err != nil {
-		logutil.Log.Error(err, logFrom, true)
 		return false, err
 	}
 
@@ -63,13 +63,6 @@ func (l *Lookup) query(logFrom logutil.LogFrom) (bool, error) {
 
 	// If this version differs (new?).
 	if previousVersion := l.Status.LatestVersion(); version != previousVersion {
-		// Verify Semantic Versioning (if enabled).
-		if l.Options.GetSemanticVersioning() {
-			if err := l.VerifySemanticVersioning(version, previousVersion, logFrom); err != nil {
-				return false, err //nolint:wrapcheck
-			}
-		}
-
 		return l.HandleNewVersion(version, "", logFrom) //nolint:wrapcheck
 	}
 
@@ -80,71 +73,86 @@ func (l *Lookup) query(logFrom logutil.LogFrom) (bool, error) {
 }
 
 // httpRequest makes a HTTP GET request to the URL and returns the body.
-func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
-	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+func (l *Lookup) httpRequest(logFrom logx.LogFrom) ([]byte, error) {
+	client := httpx.Client
 	// HTTPS insecure skip verify.
 	if l.allowInvalidCerts() {
-		//#nosec G402 -- explicitly wanted InsecureSkipVerify
-		customTransport.TLSClientConfig.InsecureSkipVerify = true
+		client = httpx.InsecureClient
 	}
 
 	// Create the request.
 	req, err := http.NewRequest(http.MethodGet, l.URL, nil)
 	if err != nil {
-		err = fmt.Errorf("failed creating http request for %q: %w",
-			l.URL, err)
-		logutil.Log.Error(err, logFrom, true)
+		err = fmt.Errorf(
+			"failed creating http request for %q: %w",
+			l.URL, err,
+		)
+		logx.Error(err, logFrom, true)
 		return nil, err
 	}
 
 	// Set headers.
-	req.Header.Set("Connection", "close")
+	// req.Header.Set("Connection", "close")
 	for _, header := range l.Headers {
-		req.Header.Set(util.EvalEnvVars(header.Key), util.EvalEnvVars(header.Value))
+		req.Header.Set(
+			util.EvalEnvVars(header.Key),
+			util.EvalEnvVars(header.Value),
+		)
 	}
 
 	// Send the request.
-	client := &http.Client{Transport: customTransport}
 	resp, err := client.Do(req)
 	if err != nil {
 		// Don't crash on invalid certs.
 		if strings.Contains(err.Error(), "x509") {
 			err = errors.New("x509 (certificate invalid)")
-			logutil.Log.Warn(err, logFrom, true)
+			logx.Warn(err, logFrom, true)
 			return nil, err
 		}
-		logutil.Log.Error(err, logFrom, true)
+		logx.Error(err, logFrom, true)
 		return nil, err
 	}
 
 	// Read the response body.
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 50<<20)) // Limit to 50 MiB.
-	logutil.Log.Error(err, logFrom, err != nil)
+	logx.Error(err, logFrom, err != nil)
 	return body, err //nolint:wrapcheck
 }
 
 // getVersion returns the latest version from `body` that matches the URLCommands, and Regex requirements.
-func (l *Lookup) getVersion(body string, logFrom logutil.LogFrom) (string, error) {
+func (l *Lookup) getVersion(body string, logFrom logx.LogFrom) (string, error) {
 	filteredVersions, err := l.URLCommands.GetVersions(body, logFrom)
 	if err != nil {
-		return "", fmt.Errorf("no releases were found matching the url_commands\n%w", err)
+		err := fmt.Errorf("no releases were found matching the url_commands %w", err)
+		logx.Error(err, logFrom, true)
+		return "", err
 	}
 	if len(filteredVersions) == 0 {
-		return "", errors.New("no releases were found matching the url_commands")
+		err := errors.New("no releases were found matching the url_commands")
+		logx.Error(err, logFrom, true)
+		return "", err
 	}
 
 	// Sort versions if Semantic Versioning enabled.
 	if l.Options.GetSemanticVersioning() {
-		sort.Slice(filteredVersions, func(i, j int) bool {
-			vI, errI := semver.NewVersion(filteredVersions[i])
-			vJ, errJ := semver.NewVersion(filteredVersions[j])
-
-			if errI != nil || errJ != nil {
-				return false
+		// Sorting won't catch non-semver if there's only one version.
+		if len(filteredVersions) == 1 {
+			if _, err := l.Options.VerifySemanticVersioning(filteredVersions[0], logFrom); err != nil {
+				logx.Warn(err, logFrom, true)
+				return "", err //nolint:wrapcheck
 			}
-			return vI.GreaterThan(vJ)
-		})
+		} else {
+			sort.Slice(filteredVersions, func(i, j int) bool {
+				vI, errI := semver.NewVersion(filteredVersions[i])
+				vJ, errJ := semver.NewVersion(filteredVersions[j])
+
+				if errI != nil || errJ != nil {
+					return false
+				}
+				return vI.GreaterThan(vJ)
+			})
+		}
 	}
 
 	// Check all releases for the one meeting the requirements.
@@ -157,17 +165,21 @@ func (l *Lookup) getVersion(body string, logFrom logutil.LogFrom) (string, error
 		}
 	}
 
-	return "", fmt.Errorf("no releases were found matching the require fields\n%w", firstErr)
+	err = fmt.Errorf("no releases were found matching the require fields %w", firstErr)
+	logx.Error(err, logFrom, true)
+	return "", err
 }
 
 // versionMeetsRequirements checks whether `version` meets the requirements of the Lookup.
-func (l *Lookup) versionMeetsRequirements(version, body string, logFrom logutil.LogFrom) error {
+func (l *Lookup) versionMeetsRequirements(version, body string, logFrom logx.LogFrom) error {
 	// No `Require` filters.
 	if l.Require == nil {
 		return nil
 	}
 
 	// Check all `Require` filters for this version.
+	// ---
+
 	// Version RegEx.
 	if err := l.Require.RegexCheckVersion(version, logFrom); err != nil {
 		return err //nolint:wrapcheck
@@ -185,18 +197,18 @@ func (l *Lookup) versionMeetsRequirements(version, body string, logFrom logutil.
 
 	// If the Docker tag doesn't exist.
 	if err := l.Require.DockerTagCheck(version); err != nil {
-		errStr := err.Error()
-		if strings.HasSuffix(errStr, "\n") {
-			err = errors.New(strings.TrimSuffix(errStr, "\n"))
-		}
-		logutil.Log.Warn(err, logFrom, true)
-		return err
+		logx.Warn(err, logFrom, true)
+		return err //nolint:wrapcheck
 		// Docker image:tag does exist.
 	} else if l.Require.Docker != nil {
-		logutil.Log.Info(
-			fmt.Sprintf(`found %s container "%s:%s"`,
-				l.Require.Docker.GetType(), l.Require.Docker.Image, l.Require.Docker.GetTag(version)),
-			logFrom, true)
+		logx.Info(
+			fmt.Sprintf(
+				`found %s container "%s:%s"`,
+				l.Require.Docker.GetType(), l.Require.Docker.GetImage(), l.Require.Docker.GetTagForVersion(version),
+			),
+			logFrom,
+			true,
+		)
 	}
 
 	return nil

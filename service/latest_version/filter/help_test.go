@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,11 +20,9 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
-	"github.com/release-argus/Argus/command"
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/internal/logx"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 )
 
 var packageName = "latestver.filter"
@@ -36,9 +34,8 @@ func TestMain(m *testing.M) {
 	// Run other tests.
 	exitCode := m.Run()
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
@@ -46,52 +43,59 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
+// plainDefaults returns plain defaults and hardDefaults for testing.
+func plainDefaults() (*RequireDefaults, *RequireDefaults) {
+	defaults, _ := DecodeDefaults("yaml", nil)
+	hardDefaults, _ := DecodeDefaults("yaml", nil)
+	hardDefaults.Default()
+
+	defaults.SetDefaults(hardDefaults)
+
+	return defaults, hardDefaults
+}
+
 func testURLCommandRegex() URLCommand {
 	regex := "-([0-9.]+)-"
 	index := 0
+
 	return URLCommand{
 		Type:  "regex",
 		Regex: regex,
-		Index: &index}
+		Index: &index,
+	}
 }
 
 func testURLCommandRegexTemplate() URLCommand {
 	regex := "-([0-9.]+)-"
 	index := 0
 	template := "_$1_"
+
 	return URLCommand{
 		Type:     "regex",
 		Regex:    regex,
 		Index:    &index,
-		Template: template}
+		Template: template,
+	}
 }
 
 func testURLCommandReplace() URLCommand {
-	old := "foo"
-	new := "bar"
+	oldText := "foo"
+	newText := "bar"
+
 	return URLCommand{
 		Type: "replace",
-		Old:  old,
-		New:  &new}
+		Old:  oldText,
+		New:  newText,
+	}
 }
 
 func testURLCommandSplit() URLCommand {
 	text := "this"
 	index := 1
+
 	return URLCommand{
 		Type:  "split",
 		Text:  text,
-		Index: &index}
-}
-
-func testRequire() Require {
-	return Require{
-		Command:      command.Command{"echo", "foo"},
-		RegexContent: "bish",
-		RegexVersion: "bash",
-		Docker: NewDockerCheck(
-			"ghcr",
-			"releaseargus/argus",
-			"latest",
-			"", "", "", time.Now(), nil)}
+		Index: &index,
+	}
 }

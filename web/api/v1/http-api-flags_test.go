@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,64 +17,62 @@
 package v1
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestHTTP_httpFlags(t *testing.T) {
-	// GIVEN an API and a request for the flag var values.
+func TestHTTP_HTTPFlags(t *testing.T) {
+	// GIVEN: an API and a request for the flag var values.
 	file := filepath.Join(t.TempDir(), "config.yml")
 	api := testAPI(t, file)
-	apiMutex := sync.RWMutex{}
-	t.Cleanup(func() {
-		if api.Config.Settings.Data.DatabaseFile != "" {
-			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
-		}
-	})
-	want := `
+	apiMu := sync.RWMutex{}
+	bodyRegex := test.TrimJSON(`
 		{
-			"config.file":"` + file + `",
-			"log.level":"` + api.Config.Settings.LogLevel() + `",
-			"log.timestamps":` + strconv.FormatBool(*api.Config.Settings.LogTimestamps()) + `,
-			"data.database-file":"` + api.Config.Settings.DataDatabaseFile() + `",
-			"web.listen-host":"` + api.Config.Settings.WebListenHost() + `",
-			"web.listen-port":"[0-9]{1,5}",
-			"web.cert-file":"",
-			"web.pkey-file":"",
-			"web.route-prefix":"` + strings.ReplaceAll(api.Config.Settings.WebRoutePrefix(), "/", `\/`) + `"
-		}\s$`
+			"config.file": "`+file+`",
+			"log.level": "`+api.Config.Settings.LogLevel()+`",
+			"log.timestamps": `+strconv.FormatBool(*api.Config.Settings.LogTimestamps())+`,
+			"data.database-file": "`+api.Config.Settings.DataDatabaseFile()+`",
+			"web.listen-host": "`+api.Config.Settings.WebListenHost()+`",
+			"web.listen-port": "[0-9]{1,5}",
+			"web.cert-file": "",
+			"web.pkey-file": "",
+			"web.route-prefix": "`+strings.ReplaceAll(api.Config.Settings.WebRoutePrefix(), "/", `\/`)+`"
+		}`,
+	) + "\n$"
 
-	// WHEN that HTTP request is sent.
-	req := httptest.NewRequest(http.MethodGet,
-		"/api/v1/flags",
-		nil)
+	// WHEN: that HTTP request is sent.
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/flags", nil)
 	w := httptest.NewRecorder()
-	apiMutex.RLock()
+	apiMu.RLock()
 	api.httpFlags(w, req)
-	apiMutex.RUnlock()
+	apiMu.RUnlock()
 	res := w.Result()
 	t.Cleanup(func() { _ = res.Body.Close() })
 
-	// THEN the expected body is returned.
+	prefix := fmt.Sprintf("%s\nAPI.httpFlags()", packageName)
+
+	// THEN: the expected body is returned.
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
-		t.Fatalf("%s\nunexpected error - %v",
-			packageName, err)
+		t.Fatalf(
+			"%s unexpected error:\n%v",
+			prefix, err,
+		)
 	}
-	got := string(data)
-	want = strings.ReplaceAll(want, "\t", "")
-	want = strings.ReplaceAll(want, "\n", "")
-	if !util.RegexCheck(want, got) {
-		t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-			packageName, want, got)
+	if got := string(data); !util.RegexCheck(bodyRegex, got) {
+		t.Errorf(
+			"%s response body mismatch\ngot:  %q\nwant: %q",
+			prefix, got, bodyRegex,
+		)
 	}
 }

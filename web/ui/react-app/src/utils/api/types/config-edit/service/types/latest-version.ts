@@ -10,6 +10,7 @@ import {
 import { commandSchema } from '@/utils/api/types/config-edit/command/schemas';
 import { headersSchema } from '@/utils/api/types/config-edit/shared/header/preprocess.ts';
 import { zodStringToNumber } from '@/utils/api/types/config-edit/shared/number-string';
+import { stringDefault } from '@/utils/api/types/config-edit/shared/preprocess.ts';
 import {
 	NUMBER_REQUIRED_MESSAGE,
 	REQUIRED_MESSAGE,
@@ -26,13 +27,13 @@ export const LatestVersionTypeEnum = z.enum(
 export const urlCommandRegexSchemaWithValidation = z.object({
 	index: zodStringToNumber(z.number().optional()),
 	regex: regexStringWithFallback(true),
-	template: z.string().default(''),
+	template: stringDefault,
 	template_toggle: z.boolean(),
 	type: z.literal(LATEST_VERSION__URL_COMMAND_TYPE.REGEX.value),
 });
 export const urlCommandRegexSchema = urlCommandRegexSchemaWithValidation
 	.extend({
-		regex: z.string().default(''),
+		regex: stringDefault,
 		template_toggle: z.boolean().default(false),
 	})
 	.transform((data) => ({
@@ -43,14 +44,14 @@ export const urlCommandRegexSchema = urlCommandRegexSchemaWithValidation
 const urlCommandRegexSchemaOutgoing = z.object({
 	index: zodStringToNumber(z.number().optional()),
 	regex: regexStringWithFallback(true),
-	template: z.string().default(''),
+	template: stringDefault,
 	type: z.literal(LATEST_VERSION__URL_COMMAND_TYPE.REGEX.value),
 });
 
 /* type: 'replace' */
 export const urlCommandReplaceSchema = z.object({
-	new: z.string().default(''),
-	old: z.string().default(''),
+	new: stringDefault,
+	old: stringDefault,
 	type: z.literal(LATEST_VERSION__URL_COMMAND_TYPE.REPLACE.value),
 });
 export const urlCommandReplaceSchemaWithValidation =
@@ -61,7 +62,7 @@ export const urlCommandReplaceSchemaWithValidation =
 /* type: 'split' */
 export const urlCommandSplitSchema = z.object({
 	index: z.union([z.string(), z.number()]).default(''),
-	text: z.string().default(''),
+	text: stringDefault,
 	type: z.literal(LATEST_VERSION__URL_COMMAND_TYPE.SPLIT.value),
 });
 export const urlCommandSplitSchemaWithValidation = urlCommandSplitSchema.extend(
@@ -84,6 +85,7 @@ export const urlCommandSchema = z.discriminatedUnion('type', [
 ]);
 export type URLCommand = z.infer<typeof urlCommandSchema>;
 export const urlCommandsSchema = z.array(urlCommandSchema).default([]);
+export type URLCommands = z.infer<typeof urlCommandsSchema>;
 
 export const urlCommandSchemaWithValidation = z.discriminatedUnion('type', [
 	urlCommandRegexSchemaWithValidation,
@@ -120,25 +122,40 @@ const dockerFilterSchemaBase = [
 	LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.QUAY.value,
 ] as const;
 
+export const latestVersionLookupRequireDockerAuthSchemaBase = z.object({
+	token: stringDefault,
+});
 export const latestVersionLookupRequireDockerTypeSchemaBase = z.object({
-	image: z.string().default(''),
-	tag: z.string().default(''),
-	token: z.string().default(''),
+	image: stringDefault,
+	tag: stringDefault,
 });
 export const latestVersionLookupRequireDockerTypeSchema =
 	latestVersionLookupRequireDockerTypeSchemaBase.extend({
+		auth: latestVersionLookupRequireDockerAuthSchemaBase.default({
+			token: '',
+		}),
 		type: z.literal([
 			LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.GHCR.value,
 			LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.QUAY.value,
 		]),
 	});
 
-export const latestVersionLookupRequireDockerTypeSchemaDockerHubBase =
-	latestVersionLookupRequireDockerTypeSchemaBase.extend({
-		username: z.string().default(''),
+export const latestVersionLookupRequireDockerAuthSchemaDockerHubBase =
+	latestVersionLookupRequireDockerAuthSchemaBase.extend({
+		username: stringDefault,
 	});
+export const latestVersionLookupRequireDockerTypeSchemaDockerHubBase = z.object(
+	{
+		image: stringDefault,
+		tag: stringDefault,
+	},
+);
 export const latestVersionLookupRequireDockerTypeSchemaDockerHub =
 	latestVersionLookupRequireDockerTypeSchemaDockerHubBase.extend({
+		auth: latestVersionLookupRequireDockerAuthSchemaDockerHubBase.default({
+			token: '',
+			username: '',
+		}),
 		type: z.literal(
 			LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value,
 		),
@@ -151,20 +168,24 @@ export const dockerFilterSchema = z.discriminatedUnion('type', [
 export type DockerTypeDockerHub = z.infer<
 	typeof latestVersionLookupRequireDockerTypeSchemaDockerHub
 >;
-export const dockerFilterSchemaDefaults = z.object({
-	ghcr: latestVersionLookupRequireDockerTypeSchemaBase.optional(),
-
-	hub: latestVersionLookupRequireDockerTypeSchemaDockerHubBase.optional(),
-	quay: latestVersionLookupRequireDockerTypeSchemaBase.optional(),
-	type: z.literal(dockerFilterSchemaBase).optional(),
-});
+export const dockerFilterSchemaDefaults =
+	latestVersionLookupRequireDockerTypeSchemaBase.extend({
+		registry: z
+			.object({
+				ghcr: latestVersionLookupRequireDockerTypeSchema.partial(),
+				hub: latestVersionLookupRequireDockerTypeSchemaDockerHub.partial(),
+				quay: latestVersionLookupRequireDockerTypeSchema.partial(),
+			})
+			.optional(),
+		type: z.literal(dockerFilterSchemaBase).optional(),
+	});
 
 /* require */
 export const latestVersionRequireSchema = z.object({
 	command: commandSchema.default([]),
 	docker: dockerFilterSchema,
-	regex_content: z.string().default(''),
-	regex_version: z.string().default(''),
+	regex_content: stringDefault,
+	regex_version: stringDefault,
 });
 export type LatestVersionRequire = z.infer<typeof latestVersionRequireSchema>;
 export const latestVersionRequireSchemaDefaults =
@@ -180,10 +201,10 @@ export const latestVersionLookupSchemaBase = z.object({
 /* Require assets from GitHub. */
 export const latestVersionLookupSchemaGitHub =
 	latestVersionLookupSchemaBase.extend({
-		access_token: z.string().default(''),
+		access_token: stringDefault,
 		allow_invalid_certs: z.boolean().nullable().default(null),
 		type: z.literal(LATEST_VERSION_LOOKUP_TYPE.GITHUB.value),
-		url: z.string().default(''),
+		url: stringDefault,
 		use_prerelease: z.boolean().nullable().default(null),
 	});
 /* Require assets from the web page. */

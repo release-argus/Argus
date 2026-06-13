@@ -103,7 +103,7 @@ const Notify: FC<NotifyProps> = ({
 	);
 	const serviceURL =
 		lvType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value &&
-		(lvURL?.match(/\//g) ?? []).length == 1
+		(lvURL?.match(/\//g) ?? []).length === 1
 			? `https://github.com/${lvURL ?? ''}`
 			: lvURL;
 

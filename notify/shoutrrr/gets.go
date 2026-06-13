@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,42 +23,34 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+// GetType of this Shoutrrr.
+func (s *Shoutrrr) GetType() string {
+	// s.ID if the name is the same as the type.
+	return util.FirstNonDefault(
+		s.Type,
+		s.Main.Type,
+		s.ID,
+	)
+}
+
+// Title of the Shoutrrr after the service info is applied and template evaluated.
+func (s *Shoutrrr) Title(info serviceinfo.ServiceInfo) string {
+	return util.TemplateString(s.GetParam("title"), info)
+}
+
+// Message of the Shoutrrr after the service info is applied and template evaluated.
+func (s *Shoutrrr) Message(info serviceinfo.ServiceInfo) string {
+	return util.TemplateString(s.GetOption("message"), info)
+}
+
 // GetOption from this/Main/Defaults/HardDefaults on FiFo.
 func (s *Shoutrrr) GetOption(key string) string {
 	return util.FirstNonDefaultWithEnv(
 		s.Options[key],
 		s.Main.Options[key],
 		s.Defaults.Options[key],
-		s.HardDefaults.Options[key])
-}
-
-// GetOption gets Options[key] from this Shoutrrr.
-func (b *Base) GetOption(key string) string {
-	return b.Options[key]
-}
-
-// SetOption sets Options[key] to value.
-func (b *Base) SetOption(key, value string) {
-	b.Options[key] = value
-}
-
-// GetParam from this/Main/Defaults/HardDefaults on FiFo.
-func (s *Shoutrrr) GetParam(key string) string {
-	return util.FirstNonDefaultWithEnv(
-		s.Params[key],
-		s.Main.Params[key],
-		s.Defaults.Params[key],
-		s.HardDefaults.Params[key])
-}
-
-// GetParam gets Params[key] from this Shoutrrr.
-func (b *Base) GetParam(key string) string {
-	return b.Params[key]
-}
-
-// SetParam sets Params[key] to value.
-func (b *Base) SetParam(key, value string) {
-	b.Params[key] = value
+		s.HardDefaults.Options[key],
+	)
 }
 
 // GetURLField from this/Main/Defaults/HardDefaults on FiFo.
@@ -67,20 +59,21 @@ func (s *Shoutrrr) GetURLField(key string) string {
 		s.URLFields[key],
 		s.Main.URLFields[key],
 		s.Defaults.URLFields[key],
-		s.HardDefaults.URLFields[key])
+		s.HardDefaults.URLFields[key],
+	)
 }
 
-// GetURLField gets URLFields[key] from this Shoutrrr.
-func (b *Base) GetURLField(key string) string {
-	return b.URLFields[key]
+// GetParam from this/Main/Defaults/HardDefaults on FiFo.
+func (s *Shoutrrr) GetParam(key string) string {
+	return util.FirstNonDefaultWithEnv(
+		s.Params[key],
+		s.Main.Params[key],
+		s.Defaults.Params[key],
+		s.HardDefaults.Params[key],
+	)
 }
 
-// SetURLField sets URLFields[key] to value.
-func (b *Base) SetURLField(key, value string) {
-	b.URLFields[key] = value
-}
-
-// GetDelay before sending.
+// GetDelay returns the delay to wait before sending this notification.
 func (s *Shoutrrr) GetDelay() string {
 	delay := s.GetOption("delay")
 	if delay == "" {
@@ -89,33 +82,44 @@ func (s *Shoutrrr) GetDelay() string {
 	return delay
 }
 
-// GetDelayDuration before sending.
+// GetDelayDuration returns the time.Duration to wait before sending this notification.
 func (s *Shoutrrr) GetDelayDuration() (duration time.Duration) {
 	duration, _ = time.ParseDuration(s.GetDelay())
 	return
 }
 
-// GetMaxTries allowed for the Gotification.
+// GetMaxTries returns the max number of tries allowed for this notification.
 func (s *Shoutrrr) GetMaxTries() uint8 {
 	tries, _ := strconv.ParseUint(s.GetOption("max_tries"), 10, 8)
 	return uint8(tries)
 }
 
-// Message of the Shoutrrr after the context is applied and template evaluated.
-func (s *Shoutrrr) Message(context serviceinfo.ServiceInfo) string {
-	return util.TemplateString(s.GetOption("message"), context)
+// GetOption returns the value for key, or an empty string if it is not present.
+func (b *Base) getOption(key string) string {
+	return b.Options[key]
 }
 
-// Title of the Shoutrrr after the context is applied and template evaluated.
-func (s *Shoutrrr) Title(context serviceinfo.ServiceInfo) string {
-	return util.TemplateString(s.GetParam("title"), context)
+// setOption sets the value for key.
+func (b *Base) setOption(key, value string) {
+	b.Options[key] = value
 }
 
-// GetType of this Shoutrrr.
-func (s *Shoutrrr) GetType() string {
-	// s.ID if the name is the same as the type.
-	return util.FirstNonDefault(
-		s.Type,
-		s.Main.Type,
-		s.ID)
+// getURLField returns the value for key, or an empty string if it is not present.
+func (b *Base) getURLField(key string) string {
+	return b.URLFields[key]
+}
+
+// setURLField sets the value for key.
+func (b *Base) setURLField(key, value string) {
+	b.URLFields[key] = value
+}
+
+// GetParam returns the value for key, or an empty string if it is not present.
+func (b *Base) GetParam(key string) string {
+	return b.Params[key]
+}
+
+// setParam sets the value for key.
+func (b *Base) setParam(key, value string) {
+	b.Params[key] = value
 }

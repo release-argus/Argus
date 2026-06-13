@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,63 +17,70 @@
 package command
 
 import (
-	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestController_AnnounceCommand(t *testing.T) {
-	// GIVEN Controllers with various failed Command announces.
-	tests := map[string]struct {
+	// GIVEN: Controllers with various failed Command announces.
+	tests := []struct {
+		name           string
 		nilChannel     bool
 		index          int
 		failed         *bool
 		timeDifference time.Duration
 	}{
-		"no channel": {
+		{
+			name:       "no channel",
 			nilChannel: true,
 		},
-		"not tried does delay by 15s": {
+		{
+			name:           "not tried does delay by 15s",
 			index:          2,
 			timeDifference: 15 * time.Second,
 		},
-		"failed does delay by 15s": {
+		{
+			name:           "failed does delay by 15s",
 			index:          0,
 			timeDifference: 15 * time.Second,
-			failed:         test.BoolPtr(true),
+			failed:         test.Ptr(true),
 		},
-		"success does delay by 2*Interval": {
+		{
+			name:           "success does delay by 2*Interval",
 			index:          1,
 			timeDifference: 22 * time.Minute,
-			failed:         test.BoolPtr(false),
+			failed:         test.Ptr(false),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			controller := Controller{
-				ParentInterval: test.StringPtr("11m"),
-				ServiceStatus: &status.Status{
-					ServiceInfo: serviceinfo.ServiceInfo{
-						ID: "some_service_id"}}}
-			controller.Init(
+			controller := NewController(
 				&status.Status{
 					ServiceInfo: serviceinfo.ServiceInfo{
-						ID: "some_service_id"}},
-				&Commands{
+						ID: "some_service_id",
+					},
+				},
+				Commands{
 					{"ls", "-lah", "/root"},
 					{"ls", "-lah"},
-					{"ls", "-lah", "a"}},
+					{"ls", "-lah", "a"},
+				},
 				nil,
-				test.StringPtr("11m"))
+				test.Ptr("11m"),
+			)
 			if !tc.nilChannel {
 				announceChannel := make(chan []byte, 4)
 				controller.ServiceStatus.AnnounceChannel = announceChannel
@@ -83,106 +90,155 @@ func TestController_AnnounceCommand(t *testing.T) {
 			}
 			time.Sleep(time.Millisecond)
 
-			// WHEN AnnounceCommand is run.
-			go controller.AnnounceCommand(tc.index, controller.ServiceStatus.GetServiceInfo())
+			// WHEN: AnnounceCommand is run.
+			serviceInfo := controller.ServiceStatus.GetServiceInfo()
+			go controller.AnnounceCommand(tc.index, serviceInfo)
 
-			// THEN the correct response is received.
+			prefix := fmt.Sprintf(
+				"%s\nController.AnnounceCommand(index=%d, info=%v)",
+				packageName, tc.index, serviceInfo,
+			)
+
+			// THEN: the correct response is received.
 			if controller.ServiceStatus.AnnounceChannel == nil {
 				return
 			}
 			m := <-controller.ServiceStatus.AnnounceChannel
 			var parsed apitype.WebSocketMessage
-			_ = json.Unmarshal(m, &parsed)
+			_ = decode.Unmarshal("json", m, &parsed)
 
-			if parsed.CommandData[(*controller.Command)[tc.index].String()] == nil {
-				t.Fatalf("%s\nmessage wasn't for %q\ngot %v",
-					packageName, (*controller.Command)[tc.index].String(), parsed.CommandData)
+			cmdStr := controller.Command[tc.index].String()
+			if parsed.CommandData[cmdStr] == nil {
+				t.Fatalf(
+					"%s Command data not seen in AnnounceChannel message\ngot:  %+v\nwant: %q",
+					prefix, parsed.CommandData, cmdStr,
+				)
 			}
 
-			// if they failed status matches.
+			// AND: the failed state matches.
 			want := test.StringifyPtr(controller.Failed.Get(tc.index))
-			got := test.StringifyPtr(parsed.CommandData[(*controller.Command)[tc.index].String()].Failed)
+			got := test.StringifyPtr(parsed.CommandData[controller.Command[tc.index].String()].Failed)
 			if got != want {
-				t.Errorf("%s\nfailed mismatch\nwant: %s\ngot:  %s",
-					packageName, want, got)
+				t.Errorf(
+					"%s Controller.Failed state mismatch at index %d\ngot:  %s\nwant: %s",
+					packageName, tc.index, got, want,
+				)
 			}
 
-			// next runnable is within expected range.
+			// AND: 'next runnable' is within expected range.
 			now := time.Now().UTC()
 			minTime := now.Add(tc.timeDifference - time.Second)
 			maxTime := now.Add(tc.timeDifference + time.Second)
-			gotTime := parsed.CommandData[(*controller.Command)[tc.index].String()].NextRunnable
+			gotTime := parsed.CommandData[controller.Command[tc.index].String()].NextRunnable
 			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
-				t.Fatalf("%s\nran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
-					packageName, now, minTime, maxTime, gotTime)
+				t.Fatalf(
+					"%s Controller.NextRunnable[%d] mismatch\nran at\n%s\ngot:\n%s\nwant between:\n%s and\n%s",
+					packageName, tc.index,
+					now,
+					gotTime,
+					minTime, maxTime,
+				)
 			}
 		})
 	}
 }
 
 func TestController_Find(t *testing.T) {
-	// GIVEN we have a Controller with Commands.
-	tests := map[string]struct {
+	// GIVEN: we have a Controller with Commands.
+	tests := []struct {
+		name          string
 		command       string
-		want          int
-		err           bool
 		nilController bool
+		want          int
+		errRegex      string
 	}{
-		"command at first index": {
-			command: "ls -lah",
-			want:    0},
-		"command at second index": {
-			command: "ls -lah a",
-			want:    1},
-		"command with status": {
-			command: "bash upgrade.sh 1.2.3",
-			want:    3},
-		"unknown command": {
-			command: "ls -lah /root",
-			err:     true},
-		"nil controller": {
+		{
+			name:     "command at first index",
+			command:  "ls -lah",
+			want:     0,
+			errRegex: `^$`,
+		},
+		{
+			name:     "command at second index",
+			command:  "ls -lah a",
+			want:     1,
+			errRegex: `^$`,
+		},
+		{
+			name:     "command with status",
+			command:  "bash upgrade.sh 1.2.3",
+			want:     3,
+			errRegex: `^$`,
+		},
+		{
+			name:     "unknown command",
+			command:  "ls -lah /root",
+			errRegex: `^command "[^"]+" not found$`,
+		},
+		{
+			name:          "nil controller",
 			command:       "ls -lah /root",
-			err:           true,
-			nilController: true},
+			nilController: true,
+			errRegex:      `^controller is nil$`,
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			controller := &Controller{
-				Command: &Commands{
-					Command{"ls", "-lah"},
-					Command{"ls", "-lah", "a"},
-					Command{"ls", "-lah", "b"},
-					Command{"bash", "upgrade.sh", "{{ version }}"},
+				Command: Commands{
+					{"ls", "-lah"},
+					{"ls", "-lah", "a"},
+					{"ls", "-lah", "b"},
+					{"bash", "upgrade.sh", "{{ version }}"},
 				},
 				ServiceStatus: &status.Status{
 					ServiceInfo: serviceinfo.ServiceInfo{
-						ID: "some_service_id"}},
+						ID: "some_service_id",
+					},
+				},
 			}
+			controllerCommand := controller.Command
+
 			controller.ServiceStatus.Init(
-				0, len(*controller.Command), 0,
-				name, "", "",
-				&dashboard.Options{})
+				len(controller.Command), 0, 0,
+				status.ServiceInfo{
+					ID: tc.name,
+				},
+				&dashboard.Options{},
+			)
 			controller.Failed = &controller.ServiceStatus.Fails.Command
 			controller.ServiceStatus.SetLatestVersion("1.2.3", "", false)
 			if tc.nilController {
 				controller = nil
+				controllerCommand = nil
 			}
 
-			// WHEN Find is run for a command.
+			// WHEN: Find is run for a command.
 			got, err := controller.Find(tc.command)
 
-			// THEN the index is returned if it exists.
+			prefix := fmt.Sprintf(
+				"%s\nController Find(%q) (commands=%v)",
+				packageName, tc.command, controllerCommand,
+			)
+
+			// THEN: the index is returned if it exists.
 			if got != tc.want {
-				t.Errorf("%s\nunexpected index\nwant: %d\ngot:  %d",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s unexpected index\ngot:  %d\nwant: %d",
+					prefix, got, tc.want,
+				)
 			}
-			// AND an error is returned if it doesn't.
-			if err != nil != tc.err {
-				t.Errorf("%s\nerror mismatch\nwant: err=%t\ngot:  %v",
-					packageName, tc.err, err)
+
+			// AND: an error is returned if it doesn't.
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
 			}
 		})
 	}

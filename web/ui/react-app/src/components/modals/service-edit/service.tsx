@@ -8,6 +8,7 @@ import EditServiceOptions from '@/components/modals/service-edit/options';
 import EditServiceRoot from '@/components/modals/service-edit/root';
 import EditServiceWebHooks from '@/components/modals/service-edit/webhooks';
 import { Accordion } from '@/components/ui/accordion';
+import { FieldSet } from '@/components/ui/field';
 
 type EditServiceProps = {
 	/* Indicates whether the modal shows a loading state. */
@@ -23,18 +24,20 @@ type EditServiceProps = {
  */
 const EditService: FC<EditServiceProps> = ({ loading }) => {
 	return (
-		<div className="flex flex-col gap-4">
-			<EditServiceRoot loading={loading} />
-			<Accordion className="flex flex-col gap-2" type="multiple">
-				<EditServiceOptions />
-				<EditServiceLatestVersion />
-				<EditServiceDeployedVersion />
-				<EditServiceCommands loading={loading} name="command" />
-				<EditServiceWebHooks loading={loading} />
-				<EditServiceNotifiers loading={loading} />
-				<EditServiceDashboard />
-			</Accordion>
-		</div>
+		<FieldSet disabled={loading}>
+			<div className="flex flex-col gap-4">
+				<EditServiceRoot loading={loading} />
+				<Accordion className="flex flex-col gap-2" type="multiple">
+					<EditServiceOptions />
+					<EditServiceLatestVersion />
+					<EditServiceDeployedVersion />
+					<EditServiceCommands loading={loading} name="command" />
+					<EditServiceWebHooks loading={loading} />
+					<EditServiceNotifiers loading={loading} />
+					<EditServiceDashboard />
+				</Accordion>
+			</div>
+		</FieldSet>
 	);
 };
 

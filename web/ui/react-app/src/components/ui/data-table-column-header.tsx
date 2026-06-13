@@ -28,21 +28,21 @@ type SortArrowProps = {
 const SortArrow = ({ sortDirection, canSort }: SortArrowProps) => {
 	if (!canSort) return null;
 
-	if (sortDirection === 'asc') return <ArrowUp/>;
-	if (sortDirection === 'desc') return <ArrowDown/>;
+	if (sortDirection === 'asc') return <ArrowUp />;
+	if (sortDirection === 'desc') return <ArrowDown />;
 
-	return <ChevronsUpDown/>;
+	return <ChevronsUpDown />;
 };
 
 type DataTableColumnHeaderProps<TData, TValue> =
 	HTMLAttributes<HTMLDivElement> & {
-	/* The column to render the header for. */
-	column: Column<TData, TValue>;
-	/* The title of the column. */
-	title: string;
-	/* Triggers the 'sorting reset' signal to a new value. */
-	resetSorting?: () => void;
-};
+		/* The column to render the header for. */
+		column: Column<TData, TValue>;
+		/* The title of the column. */
+		title: string;
+		/* Triggers the 'sorting reset' signal to a new value. */
+		resetSorting?: () => void;
+	};
 
 /**
  * Renders a column header with sorting and hiding options.
@@ -65,8 +65,8 @@ export const DataTableColumnHeader = <TData, TValue>({
 	// SortArrow wasn't updating without this memo.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: canSort stable.
 	const sortArrow = useMemo(
-		() => <SortArrow canSort={canSort} sortDirection={column.getIsSorted()}/>,
-		[ column.getIsSorted() ],
+		() => <SortArrow canSort={canSort} sortDirection={column.getIsSorted()} />,
+		[column.getIsSorted()],
 	);
 
 	if (!canSort && !canHide) {
@@ -89,26 +89,26 @@ export const DataTableColumnHeader = <TData, TValue>({
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start">
 					{canSort &&
-					 [ 'asc', 'desc' ].map((dir) => (
-						 <DropdownMenuItem
-							 className="capitalize"
-							 key={dir}
-							 onClick={() =>
-								 column.getIsSorted() === dir
-								 ? resetSorting?.()
-								 : column.toggleSorting(dir === 'desc')
-							 }
-						 >
-							 {dir === 'asc' ? <ArrowUp/> : <ArrowDown/>}
-							 {dir}
-						 </DropdownMenuItem>
-					 ))}
+						['asc', 'desc'].map((dir) => (
+							<DropdownMenuItem
+								className="capitalize"
+								key={dir}
+								onClick={() =>
+									column.getIsSorted() === dir
+										? resetSorting?.()
+										: column.toggleSorting(dir === 'desc')
+								}
+							>
+								{dir === 'asc' ? <ArrowUp /> : <ArrowDown />}
+								{dir}
+							</DropdownMenuItem>
+						))}
 
-					{canSort && canHide && <DropdownMenuSeparator/>}
+					{canSort && canHide && <DropdownMenuSeparator />}
 
 					{canHide && (
 						<DropdownMenuItem onClick={() => column.toggleVisibility(false)}>
-							<EyeOff/>
+							<EyeOff />
 							Hide
 						</DropdownMenuItem>
 					)}

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,36 +20,79 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/util/errfmt"
 )
 
-// CheckValues validates the fields of the Config struct.
+// exitAfterPrint terminates the process after printing config
+// (overridable for tests).
+var exitAfterPrint = os.Exit
+
+// CheckValues validates the fields of the receiver.
 func (c *Config) CheckValues() bool {
 	var errs []error
 
-	childPrefix := "  "
-
 	// settings.
-	util.AppendCheckError(&errs, "", "settings", c.Settings.CheckValues(childPrefix))
+	if err := c.Settings.CheckValues(); err != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "settings",
+				Err: err,
+			},
+		)
+	}
 	// defaults.
-	defaultsErr, defaultsChanged := c.Defaults.CheckValues(childPrefix)
-	util.AppendCheckError(&errs, "", "defaults", defaultsErr)
+	defaultsErr, defaultsChanged := c.Defaults.CheckValues()
+	if defaultsErr != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "defaults",
+				Err: defaultsErr,
+			},
+		)
+	}
 	// notify.
-	notifyErr, notifyChanged := c.Notify.CheckValues(childPrefix)
-	util.AppendCheckError(&errs, "", "notify", notifyErr)
+	notifyErr, notifyChanged := c.Notify.CheckValues()
+	if notifyErr != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "notify",
+				Err: notifyErr,
+			},
+		)
+	}
 	// webhook.
-	webhookErr, webhookChanged := c.WebHook.CheckValues(childPrefix)
-	util.AppendCheckError(&errs, "", "webhook", webhookErr)
+	webhookErr, webhookChanged := c.WebHook.CheckValues()
+	if webhookErr != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "webhook",
+				Err: webhookErr,
+			},
+		)
+	}
 	// service.
-	serviceErr, serviceChanged := c.Service.CheckValues(childPrefix)
-	util.AppendCheckError(&errs, "", "service", serviceErr)
+	serviceErr, serviceChanged := c.Service.CheckValues()
+	if serviceErr != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "service",
+				Err: serviceErr,
+			},
+		)
+	}
 
 	// Combine all errors if any are present.
 	if len(errs) > 0 {
 		combinedErr := errors.Join(errs...)
-		fmt.Println(combinedErr.Error())
-		logutil.Log.Fatal("Config could not be parsed successfully.", logutil.LogFrom{})
+		fmt.Println(errfmt.FormatError(combinedErr))
+		logx.Fatal("Config could not be parsed successfully.", logx.LogFrom{})
 		return false
 	}
 
@@ -60,7 +103,7 @@ func (c *Config) CheckValues() bool {
 	return true
 }
 
-// Print the parsed config if *flag.
+// Print writes the parsed configuration to stdout when flag is true, then exits.
 func (c *Config) Print(flag *bool) {
 	if !*flag {
 		return
@@ -79,7 +122,6 @@ func (c *Config) Print(flag *bool) {
 		c.Service.Print("", c.Order)
 		fmt.Println()
 	}
-	if !logutil.Log.Testing {
-		os.Exit(0)
-	}
+
+	exitAfterPrint(0)
 }

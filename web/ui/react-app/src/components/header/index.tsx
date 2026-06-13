@@ -73,7 +73,7 @@ const Header = () => {
 	};
 
 	return (
-		<header className="w-full">
+		<header className="str-full">
 			<div className="flex h-16 w-full shrink-0 items-center justify-between p-4">
 				<span className="flex size-full flex-row">
 					<Button
@@ -170,7 +170,7 @@ const Header = () => {
 								>
 									<CollapsibleTrigger asChild>
 										<Button
-											className="!px-4 flex w-full items-center justify-between py-2 text-sm"
+											className="flex w-full items-center justify-between px-4! py-2 text-sm"
 											variant="ghost"
 										>
 											{option.name}

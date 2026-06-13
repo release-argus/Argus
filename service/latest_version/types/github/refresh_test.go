@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,15 +18,16 @@
 package github
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
-	"gopkg.in/yaml.v3"
-
-	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/service/latest_version/filter/docker"
+	filtertest "github.com/release-argus/Argus/service/latest_version/filter/test"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
-	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
-	"github.com/release-argus/Argus/test"
+	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -34,80 +35,94 @@ func checkDockerToken(
 	t *testing.T,
 	wantQueryToken, gotQueryToken string,
 	wantValidUntil, gotValidUntil time.Time,
-	message string,
+	prefix, message string,
 ) {
 	if gotQueryToken != wantQueryToken {
-		t.Errorf("%s\nRequire.Docker.queryToken %s\nwant: %q\ngot:  %q",
-			packageName, message, wantQueryToken, gotQueryToken)
+		t.Errorf(
+			"%s\nRequire.Docker.queryToken %s\ngot:  %q\nwant: %q",
+			prefix, message,
+			gotQueryToken, wantQueryToken,
+		)
 	}
 	if gotValidUntil != wantValidUntil {
-		t.Errorf("%s\nRequire.Docker.validUntil %s\nwant: %q\ngot:  %q",
-			packageName, message, wantValidUntil, gotValidUntil)
+		t.Errorf(
+			"%s\nRequire.Docker.validUntil %s\ngot:  %q\nwant: %q",
+			prefix, message,
+			gotValidUntil, wantValidUntil,
+		)
 	}
 }
 
-func TestLookup_Inherit(t *testing.T) {
+func TestLookup_InheritSecrets(t *testing.T) {
 	testData := newData(
 		"etag",
-		&[]github_types.Release{
+		&[]ghtypes.Release{
 			{URL: "foo"},
-			{URL: "bar"}})
+			{URL: "bar"},
+		},
+	)
 	testData.SetTagFallback()
-	testRequire := &filter.Require{
-		Docker: filter.NewDockerCheck(
-			"ghcr",
-			"release-argus/argus", "{{ version }}",
-			"ghcr-username", "ghcr-token",
-			"ghcr-query-token", time.Now(),
-			nil)}
 
-	// GIVEN a Lookup and a Lookup to inherit from.
-	tests := map[string]struct {
-		typeChanged    bool
-		overrides      string
-		inheritData    bool
-		inheritRequire bool
+	// GIVEN: a Lookup and a Lookup to inherit from.
+	tests := []struct {
+		name               string
+		typeChanged        bool
+		overrides          string
+		inheritData        bool
+		inheritAccessToken bool
+		inheritRequire     bool
 	}{
-		"don't inherit Data as Type changed": {
+		{
+			name:        "don't inherit Data as Type changed",
 			typeChanged: true,
 			overrides: test.TrimYAML(`
 				type: something-else
 				url: something-else
 			`),
-			inheritData: false,
-		},
-		"don't inherit Data as URL changed": {
-			overrides: test.TrimYAML(`
-				url: something-else
-			`),
-			inheritData: false,
-		},
-		"inherit Data": {
-			overrides: test.TrimYAML(`
-				require:
-					docker:
-						type: hub
-			`),
-			inheritData: true,
-		},
-		"inherit Require, not Data": {
-			overrides: test.TrimYAML(`
-				url: something-else
-			`),
+			inheritData:    false,
 			inheritRequire: true,
 		},
-		"don't inherit Require as Docker changed": {
+		{
+			name:               "don't inherit Data as URL changed",
+			overrides:          "url: something-else",
+			inheritData:        false,
+			inheritAccessToken: true,
+			inheritRequire:     true,
+		},
+		{
+			name: "inherit Data, not Require when Docker.Type changed",
 			overrides: test.TrimYAML(`
 				require:
 					docker:
-						type: something-else
+						type: ghcr
 			`),
 			inheritData:    true,
 			inheritRequire: false,
 		},
-		"inherit all": {
-			inheritData:    true,
-			inheritRequire: true,
+		{
+			name: "inherit AccessToken",
+			overrides: test.TrimYAML(`
+				url: something-else
+				require:
+					docker:
+						type: ` + docker.PossibleTypes[len(docker.PossibleTypes)-1] + `
+			`),
+			inheritData:        false,
+			inheritAccessToken: true,
+			inheritRequire:     false,
+		},
+		{
+			name:               "inherit Require, not Data",
+			overrides:          `url: something-else`,
+			inheritData:        false,
+			inheritAccessToken: true,
+			inheritRequire:     true,
+		},
+		{
+			name:               "inherit all",
+			inheritData:        true,
+			inheritRequire:     true,
+			inheritAccessToken: true,
 		},
 	}
 
@@ -116,72 +131,118 @@ func TestLookup_Inherit(t *testing.T) {
 		Data        *Data `yaml:"github_data"`
 	}{}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			toLookup := testLookup(false)
-			testRequireCopy := *testRequire
-			toLookup.Require = &testRequireCopy
-			toLookup.Require.Docker.SetQueryToken(
+			lookup := testLookup(t, false)
+			lookup.Require = filtertest.Require(t, "hub")
+			lookup.Require.Docker.GetAuth().SetQueryToken(
 				"",
-				"", time.Time{})
-			toLookup.data.eTag = ""
-			var fromLookup base.Interface
+				time.Time{},
+			)
+			var fromLookup base.BaseInterface
 			if !tc.typeChanged {
-				ghFromLookup := testLookup(false)
+				ghFromLookup := testLookup(t, false)
 				ghFromLookup.data.CopyFrom(testData)
 				fromLookup = ghFromLookup
 			} else {
 				otherLookup := *otherLookupTest
 				fromLookup = &otherLookup
 			}
-			err := yaml.Unmarshal([]byte(tc.overrides), fromLookup)
-			if err != nil {
-				t.Fatalf("%s\nerror unmarshalling overrides: %v",
-					packageName, err)
+			fromRequire := filtertest.Require(t, "hub")
+			fromLookup.SetRequire(fromRequire)
+			// overrides.
+			if fromL, ok := fromLookup.(*Lookup); ok {
+				if err := fromL.ApplyOverrides("yaml", []byte(tc.overrides)); err != nil {
+					t.Fatalf(
+						"%s\nfailed to unmarshal Lookup overrides: %v",
+						packageName, err,
+					)
+				}
 			}
 
-			// WHEN we call InheritSecrets.
-			toLookup.InheritSecrets(fromLookup, nil)
+			inheritableETag := "foo"
+			if fl, ok := fromLookup.(*Lookup); ok {
+				fl.data.eTag = inheritableETag
+			}
+			lookup.data.eTag = ""
+			hadETag := lookup.data.ETag()
+			wantQueryToken, wantValidUntil := fromRequire.Docker.GetAuth().GetQueryTokenSelf()
 
-			// THEN the Data is copied when expected.
+			inheritableAccessToken := "token-goes-here"
+			if fl, ok := fromLookup.(*Lookup); ok {
+				fl.AccessToken = inheritableAccessToken
+			}
+			if tc.inheritAccessToken {
+				lookup.AccessToken = util.SecretValue
+			}
+
+			// WHEN: we call InheritSecrets.
+			lookup.InheritSecrets(fromLookup, nil)
+
+			prefix := fmt.Sprintf("%s\nLookup.InheritSecrets()", packageName)
+
+			// THEN: the Data is copied when expected.
+			gotETag := lookup.data.ETag()
 			if tc.inheritData {
-				if toLookup.data.ETag() != testData.ETag() {
-					t.Errorf("%s\nETag not copied over\nwant: %q\ngot;  %q",
-						packageName, testData.ETag(), toLookup.data.ETag())
+				if gotETag != inheritableETag {
+					t.Errorf(
+						"%s ETag not copied over\ngot:  %q\nwant:  %q",
+						prefix, gotETag, inheritableETag,
+					)
 				}
-				if util.ToYAMLString(toLookup.data.Releases(), "") != util.ToYAMLString(testData.releases, "") {
-					t.Errorf("%s\nReleases not copied over\nwant: %q\ngot;  %q",
-						packageName, util.ToYAMLString(testData.releases, ""), util.ToYAMLString(toLookup.data.Releases(), ""))
+				gotReleases := decode.ToYAMLString(lookup.data.Releases(), "")
+				wantReleases := decode.ToYAMLString(testData.releases, "")
+				if gotReleases != wantReleases {
+					t.Errorf(
+						"%s Releases not copied over\ngot:  %q\nwant:  %q",
+						prefix, gotReleases, wantReleases,
+					)
 				}
-			} else if want := ""; want != toLookup.data.ETag() {
-				t.Errorf("%s\nData shouldn't have changed\nwant: %q\ngot;  %q",
-					packageName, want, toLookup.data.ETag())
+			} else if gotETag != hadETag {
+				t.Errorf(
+					"%s Data shouldn't have been inherited\ngot:  %q\nwant: %q",
+					packageName, gotETag, hadETag,
+				)
 			}
-			// AND the Require is copied when expected.
+
+			// AND: the access token is copied when expected.
+			if tc.inheritAccessToken {
+				if got, want := lookup.AccessToken, inheritableAccessToken; got != want {
+					t.Errorf(
+						"%s AccessToken not copied over\ngot:  %q\nwant: %q",
+						prefix, got, want,
+					)
+				}
+			}
+
+			// AND: the Require is copied when expected.
 			if tc.inheritRequire {
-				if toLookup.Require == nil {
-					t.Errorf("%s\nRequire not copied over\nwant: non-nil\ngot:  nil",
-						packageName)
-				} else if toLookup.Require.Docker == nil {
-					t.Errorf("%s\nRequire.Docker not copied over\nwant: non-nil\ngot:  nil",
-						packageName)
+				if lookup.Require == nil {
+					t.Errorf("%s Require not copied over\ngot:  nil\nwant: non-nil", prefix)
+				} else if lookup.Require.Docker == nil {
+					t.Errorf("%s Require.Docker not copied over\ngot:  nil\nwant: non-nil", prefix)
 				} else {
-					gotQueryToken, gotValidUntil := toLookup.Require.Docker.CopyQueryToken()
-					wantQueryToken, wantValidUntil := testRequire.Docker.CopyQueryToken()
-					checkDockerToken(t,
+					gotQueryToken, gotValidUntil := lookup.Require.Docker.GetAuth().GetQueryTokenSelf()
+					checkDockerToken(
+						t,
 						wantQueryToken, gotQueryToken,
 						wantValidUntil, gotValidUntil,
-						"not copied")
+						prefix,
+						"not copied",
+					)
 				}
-			} else if toLookup.Require != nil && toLookup.Require.Docker != nil {
-				gotQueryToken, gotValidUntil := toLookup.Require.Docker.CopyQueryToken()
-				wantQueryToken, wantValidUntil := "", time.Time{}
-				checkDockerToken(t,
+			} else if lookup.Require != nil && lookup.Require.Docker != nil {
+				gotQueryToken, gotValidUntil := lookup.Require.Docker.GetAuth().GetQueryTokenSelf()
+				wantQueryToken, wantValidUntil = "", time.Time{}
+				checkDockerToken(
+					t,
 					wantQueryToken, gotQueryToken,
 					wantValidUntil, gotValidUntil,
-					"should not be copied")
+					prefix,
+					"should not be copied",
+				)
 			}
 		})
 	}

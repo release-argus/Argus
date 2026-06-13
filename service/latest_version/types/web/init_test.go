@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,52 +17,58 @@
 package web
 
 import (
+	"fmt"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
-	"github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/service/latest_version/filter"
+	dockertest "github.com/release-argus/Argus/service/latest_version/filter/docker/test"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/util/polymorphic"
 )
 
-func TestInit(t *testing.T) {
+func TestLookup_Init(t *testing.T) {
+	lvCfg := plainDefaultsConfig(t)
+
 	type want struct {
 		requireHasDockerDefaults bool
 	}
 
-	// GIVEN a YAML string.
-	tests := map[string]struct {
+	// GIVEN: a YAML string.
+	tests := []struct {
+		name      string
 		overrides string
 		want      want
 	}{
-		"no require": {
-			overrides: test.TrimYAML(`
-				require: null
-			`),
+		{
+			name:      "no require",
+			overrides: `require: null`,
 		},
-		"require with no Docker": {
+		{
+			name: "require with no Docker",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: foo
 					docker: null
 			`),
 		},
-		"require with Docker": {
+		{
+			name: "require with Docker",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: foo
 					docker:
 						type: ghcr
-						image: release-argus/argus
+						image: ` + test.ArgusDockerGHCRRepo + `
 						tag: '{{ version }}'
 			`),
 			want: want{
 				requireHasDockerDefaults: true,
 			},
 		},
-		"URLCommands for single version": {
+		{
+			name: "URLCommands for single version",
 			overrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
@@ -71,14 +77,15 @@ func TestInit(t *testing.T) {
 				require:
 					docker:
 						type: ghcr
-						image: release-argus/argus
+						image: ` + test.ArgusDockerGHCRRepo + `
 						tag: '{{ version }}'
 			`),
 			want: want{
 				requireHasDockerDefaults: true,
 			},
 		},
-		"URLCommands for multiple versions": {
+		{
+			name: "URLCommands for multiple versions",
 			overrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
@@ -86,7 +93,8 @@ func TestInit(t *testing.T) {
 			`),
 			want: want{},
 		},
-		"require.docker and urlCommands for single version": {
+		{
+			name: "require.docker and urlCommands for single version",
 			overrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
@@ -95,7 +103,7 @@ func TestInit(t *testing.T) {
 				require:
 					docker:
 						type: ghcr
-						image: release-argus/argus
+						image: ` + test.ArgusDockerGHCRRepo + `
 						tag: '{{ version }}'
 			`),
 			want: want{
@@ -104,59 +112,69 @@ func TestInit(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			options := opt.Options{}
+			options := &opt.Options{}
 			svcStatus := &status.Status{}
-			defaults := &base.Defaults{}
-			hardDefaults := &base.Defaults{}
-			hardDefaults.Default()
-			lookup := &Lookup{}
+			l := &Lookup{}
 			// overrides.
-			err := yaml.Unmarshal([]byte(tc.overrides), lookup)
+			err := l.UnmarshalYAML([]byte(tc.overrides))
 			if err != nil {
-				t.Fatalf("%s\nfailed to unmarshal overrides: %v",
-					packageName, err)
+				t.Fatalf(
+					"%s\nfailed to unmarshal overrides: %v",
+					packageName, err,
+				)
 			}
+			requireData, _ := polymorphic.Extract("yaml", []byte(tc.overrides), "require")
+			req, err := filter.Decode(
+				"yaml", requireData,
+				l.Status,
+				&lvCfg.Soft.Require,
+			)
+			if err != nil {
+				t.Fatalf(
+					"%s\nfailed to unmarshal require overrides: %v",
+					packageName, err,
+				)
+			}
+			l.SetRequire(req)
 
-			// WHEN New is called with it.
-			lookup.Init(
-				&options,
-				svcStatus,
-				defaults, hardDefaults,
+			// WHEN: Init is called with it.
+			l.Init(options, svcStatus, lvCfg)
+
+			prefix := fmt.Sprintf(
+				"%s\nLookup.Init(options=%p, status=%p, defaults=%v)",
+				packageName, options, &svcStatus, lvCfg,
 			)
 
-			// THEN the defaults are set as expected.
-			if lookup.Defaults != defaults {
-				t.Errorf("%s\nDefaults not set\nwant: %v\ngot:  %v",
-					packageName, lookup.Defaults, defaults)
+			// THEN: pointers to those vars are handed out to the Lookup.
+			fieldTests := []test.FieldAssertion{
+				{Name: "Options", Got: l.Options, Want: options, Mode: test.CompareSamePointer},
+				{Name: "Status", Got: l.Status, Want: svcStatus, Mode: test.CompareSamePointer},
+				{Name: "Defaults", Got: l.Defaults, Want: lvCfg.Soft, Mode: test.CompareSamePointer},
+				{Name: "HardDefaults", Got: l.HardDefaults, Want: lvCfg.Hard, Mode: test.CompareSamePointer},
 			}
-			// AND the hard defaults are set as expected.
-			if lookup.HardDefaults != hardDefaults {
-				t.Errorf("%s\nHardDefaults not set\nwant: %v\ngot:  %v",
-					packageName, lookup.HardDefaults, hardDefaults)
+			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
+				t.Fatal(err)
 			}
-			// AND the status is set as expected.
-			if lookup.Status != svcStatus {
-				t.Errorf("%s\nStatus not set\nwant: %v\ngot:  %v",
-					packageName, lookup.Status, svcStatus)
-			}
-			// AND the options are set as expected.
-			if lookup.Options != &options {
-				t.Errorf("%s\nOptions not set\nwant: %v\ngot:  %v",
-					packageName, lookup.Options, &options)
-			}
-			// AND the require is given the correct defaults.
-			if lookup.Require != nil && lookup.Require.Docker != nil {
-				if lookup.Require.Docker.Defaults != &defaults.Require.Docker {
-					t.Errorf("%s\nRequire.Docker.Defaults not set\nwant: %v\ngot:  %v",
-						packageName, lookup.Require.Docker.Defaults, defaults.Require.Docker)
+
+			// AND: the Require is given the correct defaults.
+			if l.Require != nil && l.Require.Docker != nil {
+				dockerType := l.Require.Docker.GetType()
+				wantDefaults, _ := dockertest.GetDefaultOfDockerType(t, dockerType, &lvCfg.Soft.Require.Docker)
+				if got := l.Require.Docker.Defaults(); got != wantDefaults {
+					t.Errorf(
+						"%s .Require.Docker.Defaults was not handed to the Lookup correctly\ngot:  %v\nwant: %v",
+						prefix, got, wantDefaults,
+					)
 				}
 			} else if tc.want.requireHasDockerDefaults {
-				t.Errorf("%s\nRequire.Docker not set\nrequire: %v",
-					packageName, lookup.Require)
+				t.Errorf(
+					"%s .Require.Docker was not handed to the Lookup\ngot: Require=%v",
+					prefix, l.Require,
+				)
 			}
 		})
 	}

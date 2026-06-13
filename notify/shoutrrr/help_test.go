@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,11 +22,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/status"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
-	"github.com/release-argus/Argus/test"
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
 var packageName = "shoutrrr"
@@ -38,9 +38,8 @@ func TestMain(m *testing.M) {
 	// Run other tests.
 	exitCode := m.Run()
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
@@ -56,12 +55,15 @@ func testDefaults(failing bool, selfSignedCert bool) *Defaults {
 	shoutrrr := NewDefaults(
 		"gotify",
 		map[string]string{
-			"max_tries": "1"},
+			"max_tries": "1",
+		},
 		map[string]string{
 			"host":  url,
 			"path":  "gotify",
-			"token": test.ShoutrrrGotifyToken()},
-		map[string]string{})
+			"token": test.ShoutrrrGotifyToken(),
+		},
+		map[string]string{},
+	)
 	if failing {
 		shoutrrr.URLFields["token"] = "invalid"
 	}
@@ -77,21 +79,33 @@ func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
 		nil, "",
 		"gotify",
 		map[string]string{
-			"max_tries": "1"},
+			"max_tries": "1",
+		},
 		map[string]string{
 			"host":  url,
 			"path":  "gotify",
-			"token": test.ShoutrrrGotifyToken()},
+			"token": test.ShoutrrrGotifyToken(),
+		},
 		make(map[string]string),
 		NewDefaults(
 			"",
-			make(map[string]string), make(map[string]string), make(map[string]string)),
+			make(map[string]string),
+			make(map[string]string),
+			make(map[string]string),
+		),
 		NewDefaults(
 			"",
-			make(map[string]string), make(map[string]string), make(map[string]string)),
+			make(map[string]string),
+			make(map[string]string),
+			make(map[string]string),
+		),
 		NewDefaults(
 			"",
-			make(map[string]string), make(map[string]string), make(map[string]string)))
+			make(map[string]string),
+			make(map[string]string),
+			make(map[string]string),
+		),
+	)
 	shoutrrr.Main.InitMaps()
 	shoutrrr.Defaults.InitMaps()
 	shoutrrr.HardDefaults.InitMaps()
@@ -99,7 +113,9 @@ func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
 	shoutrrr.ID = "test"
 	shoutrrr.ServiceStatus = &status.Status{
 		ServiceInfo: serviceinfo.ServiceInfo{
-			ID: "service"}}
+			ID: "service",
+		},
+	}
 	shoutrrr.ServiceStatus.Fails.Shoutrrr.Init(1)
 	shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr
 
@@ -107,4 +123,16 @@ func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
 		shoutrrr.URLFields["token"] = "invalid"
 	}
 	return shoutrrr
+}
+
+func plainConfig() Config {
+	defaults := ShoutrrrsDefaults{}
+	hardDefaults := ShoutrrrsDefaults{}
+	hardDefaults.Default()
+
+	return Config{
+		Root:         ShoutrrrsDefaults{},
+		Defaults:     defaults,
+		HardDefaults: hardDefaults,
+	}
 }

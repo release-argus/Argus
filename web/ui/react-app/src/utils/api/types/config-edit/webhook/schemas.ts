@@ -8,6 +8,7 @@ import {
 import {
 	preprocessNumberFromString,
 	preprocessStringFromNumber,
+	stringDefault,
 } from '@/utils/api/types/config-edit/shared/preprocess';
 import { stringWithFallback } from '@/utils/api/types/config-edit/validators';
 
@@ -17,23 +18,23 @@ export const WebHookTypeEnum = z.enum(
 
 export const webhookSchema = z.object({
 	allow_invalid_certs: z.boolean().nullable().default(null),
-	delay: z.string().default(''),
+	delay: stringDefault,
 	desired_status_code: preprocessStringFromNumber,
 	headers: headersSchema,
 	max_tries: preprocessStringFromNumber,
 	name: stringWithFallback(), // Required.
 	old_index: z.string().nullable().default(null),
-	secret: z.string().default(''), // Required.
+	secret: stringDefault, // Required.
 	silent_fails: z.boolean().nullable().default(null),
 	type: WebHookTypeEnum,
-	url: z.string().default(''), // Required.
+	url: stringDefault, // Required.
 });
 export type WebHookSchema = z.infer<typeof webhookSchema>;
 export const webhooksSchema = z.array(webhookSchema).default([]);
 export type WebHooksSchema = z.infer<typeof webhooksSchema>;
 
 export const webhookSchemaDefault = webhookSchema.extend({
-	name: z.string().default(''),
+	name: stringDefault,
 });
 export type WebHookSchemaDefault = z.infer<typeof webhookSchemaDefault>;
 export const webhooksSchemaDefault = z.array(webhookSchemaDefault).default([]);

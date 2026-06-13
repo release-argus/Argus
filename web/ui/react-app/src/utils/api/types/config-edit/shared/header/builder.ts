@@ -56,7 +56,7 @@ export const buildHeadersSchemaWithFallbacks = (
 		});
 
 		if (!schemaResult.success) {
-			addZodIssuesToContext({ ctx, error: schemaResult.error });
+			addZodIssuesToContext({ ctx: ctx, error: schemaResult.error });
 		}
 	});
 

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { stringDefault } from '@/utils/api/types/config-edit/shared/preprocess';
 import { REQUIRED_MESSAGE } from '@/utils/api/types/config-edit/validators';
 
 /* Command */
@@ -14,7 +15,7 @@ export type CommandSchema = z.infer<typeof commandSchema>;
 /* Array of arguments for a command (no validation). */
 export const commandDefaultSchema = z.array(
 	z.object({
-		arg: z.string().default(''),
+		arg: stringDefault,
 	}),
 );
 

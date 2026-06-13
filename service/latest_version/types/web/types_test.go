@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,357 +17,538 @@
 package web
 
 import (
+	"fmt"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
+	opttest "github.com/release-argus/Argus/service/option/test"
+	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
+	statustest "github.com/release-argus/Argus/service/status/test"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestNew(t *testing.T) {
-	type args struct {
-		format string
-		data   string
-	}
+// ############
+// # DECODING #
+// ############
 
-	// GIVEN a YAML string.
-	tests := map[string]struct {
-		args     args
-		wantStr  string
-		errRegex string
+func TestLookup_Unmarshal(t *testing.T) {
+	lvCfg := plainDefaultsConfig(t)
+	// GIVEN: data to unmarshal into a Lookup.
+	tests := []struct {
+		name         string
+		format, data string
+		want         string
+		errRegex     string
 	}{
-		"valid YAML": {
-			args: args{
-				format: "yaml",
-				data: test.TrimYAML(`
-						url: https://example.com
-						url_commands:
-							- type: regex
-								regex: foo
-						require:
-							regex_version: v.+
-						allow_invalid_certs: true
-					`)},
+		{
+			name:     "JSON/empty",
+			format:   "json",
+			data:     "",
+			want:     "{}\n",
 			errRegex: `^$`,
 		},
-		"valid YAML with unmapped vars": {
-			args: args{
-				format: "yaml",
-				data: test.TrimYAML(`
-						url: https://example.com
-						require:
-							regex_version: v.+
-						allow_invalid_certs: true
-						access_token: token
-						foo: bar
-						url_commands:
-							- type: regex
-								regex: foo
-					`)},
-			wantStr: test.TrimYAML(`
-							url: https://example.com
-							url_commands:
-								- type: regex
-									regex: foo
-							require:
-								regex_version: v.+
-							allow_invalid_certs: true
-						`),
+		{
+			name:     "YAML/empty",
+			format:   "yaml",
+			data:     "",
+			want:     "{}\n",
 			errRegex: `^$`,
 		},
-		"valid YAML with Require.Docker": {
-			args: args{
-				format: "yaml",
-				data: test.TrimYAML(`
-						require:
-							docker:
-								type: ghcr
-								image: something
-								tag: '{{ version }}'
-					`)},
-			errRegex: `^$`,
-		},
-		"invalid YAML": {
-			args: args{
-				format: "yaml",
-				data: test.TrimYAML(`
-					allow_invalid_certs true
-				`)},
-			errRegex: test.TrimYAML(`
-				^failed to unmarshal web.Lookup:
-					line \d: cannot unmarshal.*$`),
-		},
-		"nil YAML": {
-			args: args{
-				format: "yaml",
-				data:   ""},
-			errRegex: `^$`,
-		},
-		"JSON": {
-			args: args{
-				format: "json",
-				data: test.TrimJSON(`{
-					"url": "https://example.com",
-					"allow_invalid_certs": true,
-					"url_commands": [
-						{ "type": "regex", "regex": "foo" },
-						{ "type": "replace", "old": "foo", "new": "bar" },
-						{ "type": "split", "text": "foo" }
-					],
-					"access_token": "abc",
-					"require": { "regex_version": "v.+" }
-				}`),
-			},
-			errRegex: `^$`,
-			wantStr: test.TrimYAML(`
-				url: https://example.com
-				url_commands:
-					- type: regex
-						regex: foo
-					- type: replace
-						new: bar
-						old: foo
-					- type: split
-						text: foo
-				require:
-					regex_version: v.+
-				allow_invalid_certs: true
-			`),
-		},
-		"invalid format": {
-			args: args{
-				format: "xml",
-				data: `
-					<url>https://example.com</url>`},
-			errRegex: test.TrimYAML(`
-				^failed to unmarshal web.Lookup:
-					unsupported configFormat: xml$`),
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			options := opt.Options{}
-			svcStatus := &status.Status{}
-			defaults := &base.Defaults{}
-			hardDefaults := &base.Defaults{}
-			hardDefaults.Default()
-
-			// WHEN New is called with it.
-			lookup, err := New(
-				tc.args.format, tc.args.data,
-				&options,
-				svcStatus,
-				defaults, hardDefaults)
-
-			// THEN any error is expected.
-			e := util.ErrorToString(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, err)
-			}
-			if err != nil {
-				return
-			}
-			// AND the Lookup is created as expected.
-			wantStr := "type: url\n" + util.ValueOrValue(tc.wantStr, tc.args.data)
-			gotStr := lookup.String(lookup, "")
-			if gotStr != wantStr {
-				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
-					packageName, wantStr, gotStr)
-			}
-			// AND the Defaults are set as expected.
-			if lookup.Defaults != defaults {
-				t.Errorf("%s\nDefaults not set\nwant: %v\ngot:  %v",
-					packageName, lookup.Defaults, defaults)
-			}
-			// AND the HardDefaults are set as expected.
-			if lookup.HardDefaults != hardDefaults {
-				t.Errorf("%s\nHardDefaults not set\nwant: %v\ngot:  %v",
-					packageName, lookup.HardDefaults, hardDefaults)
-			}
-			// AND the Status is set as expected.
-			if lookup.Status != svcStatus {
-				t.Errorf("%s\nStatus not set\nwant: %v\ngot:  %v",
-					packageName, lookup.Status, svcStatus)
-			}
-			// AND the Options are set as expected.
-			if lookup.Options != &options {
-				t.Errorf("%s\nOptions not set\nwant: %v\ngot:  %v",
-					packageName, lookup.Options, &options)
-			}
-			// AND the Require is given the correct defaults.
-			if lookup.Require != nil && lookup.Require.Docker != nil {
-				if lookup.Require.Docker.Defaults != &defaults.Require.Docker {
-					t.Errorf("%s\nRequire.Docker.Defaults not set\nwant: %v\ngot:  %v",
-						packageName, lookup.Require.Docker.Defaults, defaults.Require.Docker)
-				}
-			}
-		})
-	}
-}
-
-func TestUnmarshalJSON(t *testing.T) {
-	// GIVEN a JSON string to unmarshal.
-	tests := map[string]struct {
-		data     string
-		want     string
-		errRegex string
-	}{
-		"valid JSON": {
+		{
+			name:   "JSON/filled",
+			format: "json",
 			data: test.TrimJSON(`{
-				"url": "https://example.com",
+				"type": "web",
 				"allow_invalid_certs": true,
-				"use_prerelease": true,
-				"url_commands": [
-					{ "type": "regex", "regex": "foo" }
+				"headers": [
+					{"key": "X-Something", "value": "foo"}
 				],
-				"require": { "regex_version": "v.+" }
+				"require": {
+					"regex_version": "v.+"
+				},
+				"url": "https://example.com",
+				"url_commands": [
+					{"type": "regex", "regex": "foo"}
+				],
+				"use_prerelease": true
 			}`),
 			want: test.TrimYAML(`
-				type: url
+				require:
+					regex_version: v.+
+				allow_invalid_certs: true
+				headers:
+					- key: X-Something
+						value: foo
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name:   "YAML/filled",
+			format: "yaml",
+			data: test.TrimYAML(`
+				type: web
+				allow_invalid_certs: true
+				headers:
+					- key: X-Something
+						value: foo
+				require:
+					regex_version: v.+
 				url: https://example.com
 				url_commands:
 					- type: regex
 						regex: foo
+			`),
+			want: test.TrimYAML(`
 				require:
 					regex_version: v.+
 				allow_invalid_certs: true
+				headers:
+					- key: X-Something
+						value: foo
 			`),
 			errRegex: `^$`,
 		},
-		"invalid JSON vars": {
-			data:     `{"url": ["https://example.com"]}`,
-			errRegex: `json: cannot unmarshal array into Go struct field (\.Lookup)?\.url of type string$`,
+		{
+			name:     "JSON/invalid data types",
+			format:   "json",
+			data:     `{"allow_invalid_certs": maybe}`,
+			errRegex: `^jsontext: invalid character`,
 		},
-		"invalid JSON format": {
+		{
+			name:   "YAML/invalid data types",
+			format: "yaml",
+			data:   `allow_invalid_certs: maybe`,
+			errRegex: test.TrimYAML(`
+				^[^\s]+ .*unmarshal.*
+				[^\s]+.* allow_invalid_certs:.*
+				\s+\^$`,
+			),
+		},
+		{
+			name:     "JSON/invalid formatting",
+			format:   "json",
 			data:     `{"url": "https://example.com`,
-			errRegex: `^unexpected end of JSON input$`,
+			errRegex: `unexpected`,
 		},
-		"empty JSON": {
-			data:     `{}`,
-			want:     "type: url\n",
-			errRegex: `^$`,
+		{
+			name:   "Require - error",
+			format: "yaml",
+			data: test.TrimYAML(`
+				url: https://example.com
+				allow_invalid_certs: true
+				url_commands:
+					- type: regex
+						regex: foo
+				require:
+					regex_version: [ v.+ ]
+			`),
+			want: test.TrimYAML(`
+				url: https://example.com
+				url_commands:
+					- type: regex
+						regex: foo
+				allow_invalid_certs: true
+			`),
+			errRegex: test.TrimYAML(`
+				^require:
+					[^\s]+ .*unmarshal .*`,
+			),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var lookup Lookup
-
-			// WHEN UnmarshalJSON is called with it.
-			err := lookup.UnmarshalJSON([]byte(tc.data))
-
-			// THEN any error is expected.
-			e := util.ErrorToString(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, err)
-				return
+			v := Lookup{
+				Lookup: base.Lookup{
+					Defaults:     lvCfg.Soft,
+					HardDefaults: lvCfg.Hard,
+				},
 			}
-			gotStr := lookup.String(&lookup, "")
-			// AND the Lookup isn't created if it errored.
-			if err != nil {
-				if gotStr != "{}\n" {
-					t.Errorf("%s\nvalue mismatch after non-nil error\nwant: nil\ngot:  value=%q",
-						packageName, gotStr)
-				}
-				return
-			}
-			// AND the lookup is created if expected.
-			if gotStr != tc.want {
-				t.Errorf("%s\nvalue mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want, gotStr)
+			if _, testErr := test.AssertUnmarshal(
+				t,
+				tc.format, tc.data,
+				&v,
+				tc.errRegex,
+				func(t *Lookup) string { return t.String("") },
+				tc.want,
+				packageName,
+				"Lookup",
+			); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
 }
 
-func TestLookup_UnmarshalYAML(t *testing.T) {
-	// GIVEN a YAML string to unmarshal.
-	tests := map[string]struct {
-		data     string
-		want     string
-		errRegex string
+// #############
+// # STRINGIFY #
+// #############
+
+func TestLookup_String(t *testing.T) {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name   string
+		lookup *Lookup
+		want   string
 	}{
-		"valid YAML": {
-			data: test.TrimYAML(`
-				url: https://example.com
-				allow_invalid_certs: true
-				url_commands:
-					- type: regex
-						regex: foo
-				require:
-					regex_version: v.+
-			`),
+		{
+			name:   "nil",
+			lookup: nil,
+			want:   "null\n",
+		},
+		{
+			name:   "empty",
+			lookup: &Lookup{},
+			want:   "{}\n",
+		},
+		{
+			name: "filled",
+			lookup: &Lookup{
+				Lookup: base.Lookup{
+					Type: "test",
+					URL:  "https://example.com",
+					URLCommands: filter.URLCommands{
+						{Type: "regex", Regex: "abc"},
+					},
+					Require: &filter.Require{
+						RegexVersion: "def",
+					},
+				},
+				AllowInvalidCerts: test.Ptr(true),
+				Headers: shared.Headers{
+					{Key: "X-Test-1", Value: "foo"},
+					{Key: "X-Test-2", Value: "bar"},
+				},
+			},
 			want: test.TrimYAML(`
-				type: url
+				type: test
 				url: https://example.com
 				url_commands:
 					- type: regex
-						regex: foo
+						regex: abc
 				require:
-					regex_version: v.+
+					regex_version: def
 				allow_invalid_certs: true
+				headers:
+					- key: X-Test-1
+						value: foo
+					- key: X-Test-2
+						value: bar
 			`),
-			errRegex: `^$`,
-		},
-		"invalid YAML": {
-			data: test.TrimYAML(`
-				url: [https://example.com]
-			`),
-			errRegex: `line 1: cannot unmarshal .* into string$`,
-		},
-		"empty YAML": {
-			data:     `{}`,
-			want:     "type: url\n",
-			errRegex: `^$`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Convert the YAML string to a yaml.Node.
-			var node yaml.Node
-			if err := yaml.Unmarshal([]byte(tc.data), &node); err != nil {
-				t.Fatalf("%s\nfailed to unmarshal yaml: %v",
-					packageName, err)
-			}
-			var lookup Lookup
+			test.AssertStringWithPrefixes(
+				t,
+				packageName,
+				tc.lookup.String,
+				tc.want,
+			)
+		})
+	}
+}
 
-			// WHEN UnmarshalYAML is called with it.
-			err := lookup.UnmarshalYAML(&node)
+// #########
+// # STATE #
+// #########
 
-			// THEN any error is expected.
-			e := util.ErrorToString(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, err)
-				return
-			}
-			gotStr := lookup.String(&lookup, "")
-			// AND the Lookup isn't created if it errored.
-			if err != nil {
-				if gotStr != "{}\n" {
-					t.Errorf("%s\nvalue mismatch after non-nil error\nwant: nil\ngot:  value=%q",
-						packageName, gotStr)
+func TestLookup_Copy(t *testing.T) {
+	lvCfg := plainDefaultsConfig(t)
+	optCfg := opttest.PlainDefaultsConfig(t)
+
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name   string
+		lookup *Lookup
+		status *status.Status
+	}{
+		{
+			name:   "nil",
+			lookup: nil,
+			status: nil,
+		},
+		{
+			name: "headers",
+			lookup: test.Must(t, func() (*Lookup, error) {
+				svcStatus, _ := statustest.New("yaml", nil)
+				return Decode(
+					"yaml", []byte(test.TrimYAML(`
+						headers:
+							- key: X-Something
+								value: foo
+					`)),
+					nil,
+					svcStatus,
+					lvCfg,
+				)
+			}),
+			status: nil,
+		},
+		{
+			name: "filled",
+			lookup: test.Must(t, func() (*Lookup, error) {
+				svcStatus, _ := statustest.New("yaml", nil)
+				return Decode(
+					"yaml", []byte(test.TrimYAML(`
+						type: test
+						url: https://example.com
+						url_commands:
+							- type: regex
+								regex: v.*
+						require:
+							regex_version: '^1.*'
+							docker:
+								image: foo
+								tag: bar
+
+						allow_invalid_certs: true
+						headers:
+							- key: X-Something
+								value: foo
+					`)),
+					test.Must(t, func() (*opt.Options, error) {
+						return opt.Decode(
+							"yaml", []byte(test.TrimYAML(`
+								active: false
+								interval: 2s
+								semantic_versioning: false
+							`)),
+							optCfg,
+						)
+					}),
+					svcStatus,
+					lvCfg,
+				)
+			}),
+			status: test.Must(t, func() (*status.Status, error) {
+				return statustest.New("yaml", nil)
+			}),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			wantStr := decode.ToYAMLString(tc.lookup, "")
+
+			// WHEN: Copy() is called on it.
+			gotInterface := tc.lookup.Copy(tc.status)
+
+			prefix := fmt.Sprintf(
+				"%s\nLookup.Copy(status=%p)",
+				packageName, tc.status,
+			)
+
+			// THEN: if nil was copied, we get nil.
+			if tc.lookup == nil {
+				if gotInterface != nil {
+					t.Errorf(
+						"%s of nil mismatch\ngot:  %v\nwant: nil",
+						prefix, gotInterface,
+					)
 				}
 				return
 			}
-			// AND the lookup is created if expected.
-			if gotStr != tc.want {
-				t.Errorf("%s\nvalue mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want, gotStr)
+
+			// AND: the copy is non-nil.
+			if gotInterface == nil {
+				t.Fatalf("%s got nil want non-nil", prefix)
+			}
+
+			// AND: the copy is distinct.
+			if gotInterface == tc.lookup {
+				t.Fatalf(
+					"%s should return a distinct copy\ngot:  %p\nwant: %p",
+					prefix, gotInterface, tc.lookup,
+				)
+			}
+
+			// AND: the type is unchanged.
+			got, ok := gotInterface.(*Lookup)
+			if !ok {
+				t.Fatalf(
+					"%s type shouldn't have changed\ngot:  %T\nwant: Lookup",
+					prefix, gotInterface,
+				)
+			}
+
+			// AND: the copy unmarshals the same.
+			if gotStr := got.String(""); gotStr != wantStr {
+				t.Fatalf(
+					"%s stringified mismatch\ngot:  %q\nwant: %q",
+					prefix, gotStr, wantStr,
+				)
+			}
+
+			// AND: the fields are copied as expected.
+			err := []test.FieldAssertion{
+				{Name: "Type", Got: got.Type, Want: tc.lookup.Type, Mode: test.CompareEqual},
+				{Name: "URL", Got: got.URL, Want: tc.lookup.URL, Mode: test.CompareEqual},
+				{Name: "URLCommands", Got: &got.URLCommands, Want: &tc.lookup.URLCommands, Mode: test.CompareDifferentPointer},
+			}
+			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
+			}
+
+			// AND: copied pointers should be value-equal and non-aliased.
+			err = []test.FieldAssertion{
+				{Name: "Require", Got: got.Require, Want: tc.lookup.Require, Mode: test.CompareDifferentPointer},
+				{Name: "Options", Got: got.Options, Want: tc.lookup.Options, Mode: test.CompareDifferentPointer},
+				{Name: "Status", Got: got.Status, Want: tc.lookup.Status, Mode: test.CompareDifferentPointer},
+			}
+			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
+			}
+
+			// AND: the non-Base fields are copied as expected.
+			err = []test.FieldAssertion{
+				{Name: "AllowInvalidCerts", Got: got.AllowInvalidCerts, Want: tc.lookup.AllowInvalidCerts, Mode: test.CompareSamePointer},
+				{Name: "Headers", Got: &got.Headers, Want: &tc.lookup.Headers, Mode: test.CompareDifferentPointer},
+			}
+			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
+			}
+
+			// AND: defaults pointers are shared.
+			err = []test.FieldAssertion{
+				{Name: "Defaults", Got: got.Defaults, Want: tc.lookup.Defaults, Mode: test.CompareSamePointer},
+				{Name: "HardDefaults", Got: got.HardDefaults, Want: tc.lookup.HardDefaults, Mode: test.CompareSamePointer},
+			}
+			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
+			}
+		})
+	}
+}
+
+func TestLookup_InheritSecrets(t *testing.T) {
+	// GIVEN: a Lookup, a 'previous' Lookup, and secret refs.
+	tests := []struct {
+		name             string
+		lookup, previous *Lookup
+		secretRefs       *shared.VSecretRef
+		want             string
+	}{
+		{
+			name: "secrets to undefined vars",
+			lookup: &Lookup{
+				Lookup: base.Lookup{
+					Require: &filter.Require{
+						Docker: &docker.GHCRRegistry{
+							CommonRegistry: docker.CommonRegistry{
+								Auth: &docker.GHCRAuth{
+									GHCRAuthDefaults: docker.GHCRAuthDefaults{
+										Token: util.SecretValue,
+									},
+								},
+							},
+						},
+					},
+				},
+				Headers: shared.Headers{
+					{Key: "X-Test", Value: util.SecretValue},
+				},
+			},
+			previous: &Lookup{
+				Lookup: base.Lookup{},
+			},
+			secretRefs: &shared.VSecretRef{
+				Headers: []shared.OldIntIndex{
+					{OldIndex: test.Ptr(0)},
+				},
+			},
+			want: test.TrimYAML(`
+				require:
+					docker:
+						auth:
+							token: ` + util.SecretValue + `
+				headers:
+					- key: X-Test
+						value: ` + util.SecretValue + `
+			`),
+		},
+		{
+			name: "secrets inherited",
+			lookup: &Lookup{
+				Lookup: base.Lookup{
+					Require: &filter.Require{
+						Docker: &docker.GHCRRegistry{
+							CommonRegistry: docker.CommonRegistry{
+								Auth: &docker.GHCRAuth{
+									GHCRAuthDefaults: docker.GHCRAuthDefaults{
+										Token: util.SecretValue,
+									},
+								},
+							},
+						},
+					},
+				},
+				Headers: shared.Headers{
+					{Key: "X-Test", Value: util.SecretValue},
+				},
+			},
+			previous: &Lookup{
+				Lookup: base.Lookup{
+					Require: &filter.Require{
+						Docker: &docker.GHCRRegistry{
+							CommonRegistry: docker.CommonRegistry{
+								Auth: &docker.GHCRAuth{
+									GHCRAuthDefaults: docker.GHCRAuthDefaults{
+										Token: "123",
+									},
+								},
+							},
+						},
+					},
+				},
+				Headers: shared.Headers{
+					{Key: "X-Test-A", Value: "A"},
+					{Key: "X-Test-B", Value: "B"},
+					{Key: "X-Test-C", Value: "C"},
+				},
+			},
+			secretRefs: &shared.VSecretRef{
+				Headers: []shared.OldIntIndex{
+					{OldIndex: test.Ptr(1)},
+				},
+			},
+			want: test.TrimYAML(`
+				require:
+					docker:
+						auth:
+							token: '123'
+				headers:
+					- key: X-Test
+						value: B
+			`),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: InheritSecrets is called.
+			tc.lookup.InheritSecrets(tc.previous, tc.secretRefs)
+
+			// THEN: the expected secrets are inherited.
+			if got := tc.lookup.String(""); got != tc.want {
+				t.Errorf("%s\nLookup.InheritSecrets(secrets=%+v) mismatch\ngot:  %q\nwant: %q",
+					packageName, tc.secretRefs, got, tc.want,
+				)
 			}
 		})
 	}

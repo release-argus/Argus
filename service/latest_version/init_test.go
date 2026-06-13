@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,48 +17,41 @@
 package latestver
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/internal/test"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 )
 
 func TestLookup_Init(t *testing.T) {
-	// GIVEN a Lookup and vars for the Init.
-	lookup := testLookup("github", false)
-	var defaults base.Defaults
-	var hardDefaults base.Defaults
+	lvCfg := plainDefaultsConfig(t)
+
+	// GIVEN: a Lookup and vars for the Init.
+	lookup := testLookup(t, "github", false)
 	lookup.GetStatus().ServiceInfo.ID += "TestInit"
 	svcStatus := status.Status{}
 	svcStatus.ServiceInfo.ID = "test"
 	var options opt.Options
 
-	// WHEN Init is called on it.
+	// WHEN: Init is called on it.
 	lookup.Init(
 		&options,
 		&svcStatus,
-		&defaults, &hardDefaults)
+		lvCfg,
+	)
 
-	// THEN pointers to those vars are handed out to the Lookup:
-	// 	Defaults.
-	if lookup.GetDefaults() != &defaults {
-		t.Errorf("%s\nDefaults were not handed to the Lookup correctly\nwant: %v\ngot:  %v",
-			packageName, &defaults, lookup.GetDefaults())
+	prefix := fmt.Sprintf("%s\nLookup.Init()", packageName)
+
+	// THEN: pointers to those vars are handed out to the Lookup.
+	fieldTests := []test.FieldAssertion{
+		{Name: "Options", Got: lookup.GetOptions(), Want: &options, Mode: test.CompareSamePointer},
+		{Name: "Status", Got: lookup.GetStatus(), Want: &svcStatus, Mode: test.CompareSamePointer},
+		{Name: "Defaults", Got: lookup.GetDefaults(), Want: lvCfg.Soft, Mode: test.CompareSamePointer},
+		{Name: "HardDefaults", Got: lookup.GetHardDefaults(), Want: lvCfg.Hard, Mode: test.CompareSamePointer},
 	}
-	// HardDefaults.
-	if lookup.GetHardDefaults() != &hardDefaults {
-		t.Errorf("%s\nHardDefaults were not handed to the Lookup correctly\nwant: %v\ngot:  %v",
-			packageName, &hardDefaults, lookup.GetHardDefaults())
-	}
-	// 	Status.
-	if lookup.GetStatus() != &svcStatus {
-		t.Errorf("%s\nStatus was not handed to the Lookup correctly\nwant: %v\ngot:  %v",
-			packageName, &svcStatus, lookup.GetStatus())
-	}
-	// 	Options.
-	if lookup.GetOptions() != &options {
-		t.Errorf("%s\nOptions were not handed to the Lookup correctly\nwant: %v\ngot:  %v",
-			packageName, &options, lookup.GetOptions())
+	if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
+		t.Fatal(err)
 	}
 }

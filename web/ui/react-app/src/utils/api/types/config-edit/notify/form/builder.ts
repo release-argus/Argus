@@ -94,7 +94,7 @@ const buildNotifySchema = (
 ) => {
 	const itemType = defaults.type;
 
-	let schema;
+	let schema: z.ZodType<NotifySchemaValues> | null;
 	switch (itemType) {
 		case NOTIFY_TYPE_MAP.BARK.value:
 			schema = buildSuperRefine(notifyBarkSchema, mains, defaults, [
@@ -406,7 +406,7 @@ const buildNotifySchema = (
  */
 export const buildNotifySchemaWithFallbacks = (
 	data?: NotifyTypesValues[],
-	defaultItems?: Record<string, unknown>,
+	defaultItems?: string[],
 	mains?: NotifyMap,
 	defaults?: Partial<NotifyTypesMap>,
 	hardDefaults?: NotifyTypesMap,
@@ -467,9 +467,7 @@ export const buildNotifySchemaWithFallbacks = (
 	) as NotifyTypeSchema;
 
 	// Defaults for the schema.
-	const schemaDataDefaults: NotifySchemaValues[] = Object.keys(
-		defaultItems ?? {},
-	)
+	const schemaDataDefaults: NotifySchemaValues[] = (defaultItems ?? [])
 		.map((name) => {
 			const main = mains?.[name];
 			const nameLower = name.toLowerCase();
@@ -519,7 +517,7 @@ export const buildNotifySchemaWithFallbacks = (
 		.superRefine(superRefineNameUnique);
 
 	// Initial schema data.
-	let schemaData;
+	let schemaData: NotifySchemaValues[];
 	if (data) {
 		schemaData = safeParse({
 			data: dataDefaulted,

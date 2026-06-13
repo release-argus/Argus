@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,9 +25,7 @@ import (
 
 // RegexCheck returns true if a regex match of `re` matches `text`.
 func RegexCheck(re, text string) bool {
-	regex := regexp.MustCompile(re)
-	// Return regex match case.
-	return regex.MatchString(text)
+	return regexp.MustCompile(re).MatchString(text)
 }
 
 // RegexCheckWithVersion returns true if a regex match of `re` occurs on `text`
@@ -37,7 +35,7 @@ func RegexCheckWithVersion(re, text, version string) bool {
 	return RegexCheck(re, text)
 }
 
-// RegexTemplate on `texts[index]` with the regex `template`.
+// RegexTemplate substitutes $N placeholders in template with regex capture groups.
 func RegexTemplate(regexMatches []string, template string) string {
 	// No template, return the text at the last index.
 	if template == "" {

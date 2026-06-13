@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,14 +16,15 @@
 package github
 
 import (
-	"encoding/json"
 	"fmt"
+	"sort"
 
 	"github.com/Masterminds/semver/v3"
 
-	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
-	"github.com/release-argus/Argus/service/shared"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
+	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	"github.com/release-argus/Argus/util"
 )
 
 // filterGitHubReleases filters releases based on the following:
@@ -34,63 +35,57 @@ import (
 // -
 //
 //	Returns the filtered list, sorted in descending order (if semantic-versioning wanted).
-func (l *Lookup) filterGitHubReleases(logFrom logutil.LogFrom) []github_types.Release {
+func (l *Lookup) filterGitHubReleases(logFrom logx.LogFrom) []ghtypes.Release {
 	semanticVersioning := l.Options.GetSemanticVersioning()
 	usePreReleases := l.usePreRelease()
 
 	releases := l.data.Releases()
 	// Make a slice with the same capacity as releases.
-	filteredReleases := make([]github_types.Release, 0, len(releases))
+	filteredReleases := make([]ghtypes.Release, 0, len(releases))
 
-	for i := range releases {
+	for _, release := range releases {
 		// Skip prereleases if not wanted.
-		if releases[i].PreRelease && !usePreReleases {
+		if release.PreRelease && !usePreReleases {
 			continue
 		}
 
 		// Check that TagName matches URLCommands.
-		tag := releases[i].TagName
-		if tag == "" {
-			tag = releases[i].Name
-		}
+		tag := util.FirstNonDefault(release.TagName, release.Name)
 		tagName, err := l.URLCommands.Run(tag, logFrom)
 		if err != nil || len(tagName) == 0 {
 			continue
 		}
 
-		// Copy the release with the filtered TagName.
-		release := releases[i]
 		release.TagName = tagName[0]
 
-		// If SemVer not required, add without sorting.
-		if !semanticVersioning {
-			filteredReleases = append(filteredReleases, release)
-			continue
+		// Parse semver if enabled.
+		if semanticVersioning {
+			semVer, err := semver.NewVersion(tagName[0])
+			if err != nil {
+				continue
+			}
+			release.SemanticVersion = semVer
 		}
 
-		// Else, sort the versions.
-		semVer, err := semver.NewVersion(tagName[0])
-		if err != nil {
-			continue
-		}
-		release.SemanticVersion = semVer
-		// If first version, add without sorting.
-		if len(filteredReleases) == 0 {
-			filteredReleases = append(filteredReleases, release)
-			continue
-		}
-		// else, insertion sort the release.
-		filteredReleases = shared.InsertionSort(filteredReleases, release, github_types.ReleaseSort)
+		filteredReleases = append(filteredReleases, release)
 	}
+
+	if semanticVersioning {
+		sort.Slice(filteredReleases, func(i, j int) bool {
+			return filteredReleases[i].SemanticVersion.GreaterThan(
+				filteredReleases[j].SemanticVersion,
+			)
+		})
+	}
+
 	return filteredReleases
 }
 
-// checkGitHubReleasesBody validates that the response body conforms to the JSON formatting.
-func (l *Lookup) checkGitHubReleasesBody(body []byte, logFrom logutil.LogFrom) ([]github_types.Release, error) {
-	var releases []github_types.Release
-	if err := json.Unmarshal(body, &releases); err != nil {
-		return nil, fmt.Errorf("unmarshal of GitHub API data failed\n%w",
-			err)
+// unmarshalGitHubReleasesBody validates that the response body conforms to the JSON formatting.
+func (l *Lookup) unmarshalGitHubReleasesBody(body []byte) ([]ghtypes.Release, error) {
+	var releases []ghtypes.Release
+	if err := decode.Unmarshal("json", body, &releases); err != nil {
+		return nil, fmt.Errorf("unmarshal of GitHub API data failed: %w", err)
 	}
 
 	return releases, nil

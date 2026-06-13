@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,22 +16,22 @@
 package latestver
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/service/latest_version/types/base"
 	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // Refresh the Lookup with the provided overrides.
 //
-//	Returns: version, announceUpdate, err.
+//	Returns: version, announceUpdate, decode.
 func Refresh(
 	lookup Lookup,
-	overrides *string,
+	overrides []byte,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
 	secretRefs *shared.VSecretRef,
 ) (string, bool, error) {
@@ -39,7 +39,7 @@ func Refresh(
 		return "", false, errors.New("lookup is nil")
 	}
 
-	logFrom := logutil.LogFrom{Primary: "latest_version/refresh", Secondary: lookup.GetServiceID()}
+	logFrom := logx.LogFrom{Primary: "latest_version/refresh", Secondary: lookup.GetServiceID()}
 
 	// Whether this new semantic_version resolves differently than the current one.
 	semanticVerDiff := semanticVersioning != nil && (
@@ -52,33 +52,38 @@ func Refresh(
 	// Whether we need to create a new Lookup.
 	usingOverrides := overrides != nil || semanticVerDiff
 
-	newLookup := lookup
 	// Create a new Lookup if overrides provided.
-	if usingOverrides {
-		var err error
-		newLookup, err = applyOverridesJSON(
-			lookup,
-			overrides,
-			semanticVerDiff,
-			semanticVersioning)
-		if err != nil {
-			return "", false, err
-		}
+	newLookup, err := applyOverridesJSON(
+		lookup,
+		overrides,
+		semanticVerDiff,
+		semanticVersioning,
+	)
+	if err != nil {
+		return "", false, err
+	}
+	if overrides != nil {
 		newLookup.InheritSecrets(lookup, secretRefs)
+		// Remove channels from Status when using overrides.
+		newLookup.SetStatus(lookup.GetStatus().Copy(false))
+		// Check values as they may have changed.
+		if err := newLookup.CheckValues(); err != nil {
+			return "", false, err //nolint:wrapcheck
+		}
 	}
 
 	// Log the lookup in use.
-	if logutil.Log.IsLevel("DEBUG") {
-		logutil.Log.Debug(
-			fmt.Sprintf("Refreshing with:\n%q",
-				lookup.String(lookup, "")),
-			logFrom, true)
+	if logx.IsLevel("DEBUG") {
+		logx.Debug(
+			fmt.Sprintf("Refreshing with:\n%q", lookup.String("")),
+			logFrom,
+			true,
+		)
 	}
 
 	hadVersion := lookup.GetStatus().LatestVersion()
 	// Query the lookup.
-	_, err := newLookup.Query(!usingOverrides, logFrom)
-	if err != nil {
+	if _, err := newLookup.Query(!usingOverrides, logFrom); err != nil {
 		return "", false, err //nolint:wrapcheck
 	}
 
@@ -92,75 +97,39 @@ func Refresh(
 	return version, announceUpdate, nil
 }
 
-// LookupTypeExtractor is a struct that extracts the type from a JSON string.
-type LookupTypeExtractor struct {
-	Type string `json:"type"`
-}
-
 // applyOverridesJSON applies the JSON overrides to the Lookup.
 func applyOverridesJSON(
 	lookup Lookup,
-	overrides *string,
+	overrides []byte,
 	semanticVerDiff bool,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
 ) (Lookup, error) {
-	var newLookup Lookup
-	var extractedOverrides *LookupTypeExtractor
-	if overrides != nil {
-		if err := json.Unmarshal([]byte(*overrides), &extractedOverrides); err != nil {
-			errStr := util.FormatUnmarshalError("json", err)
-			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-			return nil, errors.New("failed to unmarshal latestver.Lookup:\n  " + errStr)
-		}
-	}
-	// Copy the existing Lookup.
-	if overrides == nil || (extractedOverrides.Type == "" || extractedOverrides.Type == lookup.GetType()) {
-		newLookup = Copy(lookup)
-	} else {
-		// Convert to the new type.
-		var err error
-		if newLookup, err = ChangeType(extractedOverrides.Type, lookup, ""); err != nil {
-			return nil, err
-		}
-		newRequire := newLookup.GetRequire()
-		if newRequire != nil {
-			newRequire.Inherit(lookup.GetRequire())
-		}
+	newLookup, err := ApplyOverrides(
+		"yaml", overrides,
+		lookup,
+		lookup.GetOptions(),
+		lookup.GetStatus(),
+		base.DefaultsConfig{
+			Soft: lookup.GetDefaults(),
+			Hard: lookup.GetHardDefaults(),
+		},
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	// Apply the new semantic_versioning JSON value.
 	if semanticVerDiff {
-		semanticVersioningRoot := util.CopyPointer(lookup.GetOptions().SemanticVersioning)
+		semanticVersioningRoot := util.ClonePtr(lookup.GetOptions().SemanticVersioning)
 		// Apply the new semantic_versioning JSON value.
-		if err := json.Unmarshal([]byte(*semanticVersioning), &semanticVersioningRoot); err != nil {
-			errStr := util.FormatUnmarshalError("json", err)
-			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-			return nil, errors.New("failed to unmarshal latestver.Lookup.Options.SemanticVersioning:\n  " + errStr)
+		if err := decode.Unmarshal("json", []byte(*semanticVersioning), &semanticVersioningRoot); err != nil {
+			return nil, &decode.KeyFieldError{
+				Key: "semantic_versioning",
+				Err: err,
+			}
 		}
 		newLookup.GetOptions().SemanticVersioning = semanticVersioningRoot
 	}
 
-	// Apply the overrides.
-	if overrides != nil {
-		if err := json.Unmarshal([]byte(*overrides), &newLookup); err != nil {
-			errStr := util.FormatUnmarshalError("json", err)
-			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-			return nil, errors.New("failed to unmarshal latestver.Lookup:\n  " + errStr)
-		}
-		if strings.Contains(*overrides, `"docker":`) {
-			require := newLookup.GetRequire()
-			if require.Docker != nil {
-				require.Docker.ClearQueryToken()
-				require.Inherit(lookup.GetRequire())
-			}
-		}
-		newLookup.Init(
-			newLookup.GetOptions(),
-			newLookup.GetStatus().Copy(false),
-			newLookup.GetDefaults(), newLookup.GetHardDefaults())
-	}
-
-	// Check the overrides.
-	err := newLookup.CheckValues("")
-	return newLookup, err //nolint:wrapcheck
+	return newLookup, nil
 }

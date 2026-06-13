@@ -16,6 +16,7 @@ import {
 import {
 	makeDefaultsAwareListPreprocessor,
 	preprocessArrayJSONFromString,
+	stringDefault,
 } from '@/utils/api/types/config-edit/shared/preprocess';
 import { REQUIRED_MESSAGE } from '@/utils/api/types/config-edit/validators.ts';
 
@@ -26,12 +27,12 @@ export const NtfySchemeZodEnum = z.enum(toZodEnumTuple(ntfySchemeOptions));
 /* Action */
 export const ntfyActionBase = z.object({
 	clear: z.boolean().default(false),
-	label: z.string().default(''),
+	label: stringDefault,
 });
 export const ntfyActionBroadcast = ntfyActionBase.extend({
 	action: z.literal(NTFY_ACTION_TYPE.BROADCAST.value),
 	extras: headersSchema,
-	intent: z.string().default(''),
+	intent: stringDefault,
 });
 export const ntfyActionBroadcastWithValidation = ntfyActionBroadcast.extend({
 	extras: headersSchemaWithValidation,
@@ -39,10 +40,10 @@ export const ntfyActionBroadcastWithValidation = ntfyActionBroadcast.extend({
 });
 export const ntfyActionHTTP = ntfyActionBase.extend({
 	action: z.literal(NTFY_ACTION_TYPE.HTTP.value),
-	body: z.string().default(''),
+	body: stringDefault,
 	headers: headersSchema,
-	method: z.string().default(''),
-	url: z.string().default(''),
+	method: stringDefault,
+	url: stringDefault,
 });
 export const ntfyActionHTTPWithValidation = ntfyActionHTTP.extend({
 	headers: headersSchemaWithValidation,
@@ -51,7 +52,7 @@ export const ntfyActionHTTPWithValidation = ntfyActionHTTP.extend({
 });
 export const ntfyActionView = ntfyActionBase.extend({
 	action: z.literal(NTFY_ACTION_TYPE.VIEW.value),
-	url: z.string().default(''),
+	url: stringDefault,
 });
 export const ntfyActionViewWithValidation = ntfyActionView.extend({
 	url: z.string().min(1, REQUIRED_MESSAGE).default(''),

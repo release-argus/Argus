@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,13 +22,14 @@ import (
 	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
+	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
 var packageName = "deployedver_web"
@@ -40,9 +41,8 @@ func TestMain(m *testing.M) {
 	// Run other tests.
 	exitCode := m.Run()
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
@@ -50,48 +50,74 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testLookup(failing bool) *Lookup {
-	// HardDefaults.
-	hardDefaults := &base.Defaults{}
-	hardDefaults.Default()
+func testLookup(t *testing.T, failing bool) *Lookup {
+	t.Helper()
+
 	// Defaults.
-	defaults := &base.Defaults{}
+	dvCfg := plainDefaultsConfig(t)
 	// Options.
-	hardDefaultOptions := &opt.Defaults{}
-	hardDefaultOptions.Default()
-	options := opt.New(
-		nil, "", test.BoolPtr(true),
-		&opt.Defaults{}, hardDefaultOptions)
+	optCfg := opttest.PlainDefaultsConfig(t)
+	options, _ := opt.Decode(
+		"yaml", []byte("semantic_versioning: true"),
+		optCfg,
+	)
 	// Status.
 	announceChannel := make(chan []byte, 24)
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
+	svcDashboard := &dashboard.Options{
+		OptionsBase: dashboard.OptionsBase{
+			WebURL: "https://example.com",
+		},
+	}
 	svcStatus := status.New(
 		announceChannel, databaseChannel, saveChannel,
 		"",
 		"", "",
 		"", "",
 		"",
-		&dashboard.Options{})
-	svcDashboard := &dashboard.Options{
-		WebURL: "https://example.com"}
+		svcDashboard,
+	)
 	svcStatus.Init(
 		0, 0, 0,
-		"serviceID", "", "",
+		status.ServiceInfo{
+			ID: "web-testLookup",
+		},
 		svcDashboard,
 	)
 
-	lookup, _ := New(
-		"yaml", test.TrimYAML(`
+	lookup, _ := Decode(
+		"yaml", []byte(test.TrimYAML(`
 			method: GET
 			url:    `+test.LookupJSON["url_invalid"]+`
 			json:   version
-		`),
+		`)),
 		options,
 		svcStatus,
-		defaults, hardDefaults)
+		dvCfg,
+	)
 	allowInvalidCerts := !failing
 	lookup.AllowInvalidCerts = &allowInvalidCerts
 
 	return lookup
+}
+
+// plainDefaultsConfig returns plain defaults and hardDefaults for testing.
+func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
+	t.Helper()
+
+	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
+	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
+	optHardDefaults.Default()
+
+	defaults, _ := base.DecodeDefaults("yaml", nil)
+	defaults.Options = optDefaults
+	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
+	hardDefaults.Default()
+	hardDefaults.Options = optHardDefaults
+
+	return base.DefaultsConfig{
+		Soft: defaults,
+		Hard: hardDefaults,
+	}
 }

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,10 +17,11 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/internal/test"
 )
 
 func writeFile(path string, data string) {
@@ -36,10 +37,10 @@ func testYAML_Argus(path string) {
 			web:
 				listen_port: 0
 		service:
-			release-argus/Argus:
+			SERVICE_NAME:
 				latest_version:
 					type: github
-					url: release-argus/Argus
+					url: ` + test.ArgusGitHubRepo + `
 	`)
 
 	writeFile(path, data)
@@ -56,7 +57,7 @@ func testYAML_config_test(path string) {
 			service:
 				options:
 					interval: 123
-					semantic_versioning: n
+					semantic_versioning: false
 				latest_version:
 					access_token: ghp_default
 				notify:
@@ -103,7 +104,7 @@ func testYAML_config_test(path string) {
 					interval: 10m
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 					url_commands:
 						- type: regex
 							regex: v(.*)
@@ -118,7 +119,7 @@ func testYAML_config_test(path string) {
 						url_fields:
 							channel: foo
 							host: example.com
-							token: "123"
+							token: '123'
 						params:
 							username: overriddenUsername
 				command:
@@ -135,7 +136,7 @@ func testYAML_config_test(path string) {
 			WantDefaults:
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 					url_commands:
 						- type: regex
 							regex: v(.*)
@@ -159,7 +160,7 @@ func testYAML_config_test(path string) {
 							delay: 0s
 						url_fields:
 							host: mattermost.example.com
-							port: "443"
+							port: '443'
 							token: ZZZZ
 						params:
 							icon: https://raw.githubusercontent.com/go-gitea/gitea/main/public/img/logo.png
@@ -174,11 +175,35 @@ func testYAML_config_test(path string) {
 					active: false
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 			EmptyServiceIsDeleted:
 	`)
 
 	writeFile(path, data)
+}
+
+func testYAML_config_large(path string) {
+	var b strings.Builder
+
+	b.WriteString(test.TrimYAML(`
+		settings:
+			log:
+				level: INFO
+		service:
+	`))
+
+	for i := range 256 {
+		fmt.Fprintf(
+			&b,
+			"  service_%d:\n"+
+				"    name: Service %d with padding to enlarge saved output\n"+
+				"    latest_version:\n"+
+				"      type: github\n"+
+				"      url: %s\n",
+			i, i, test.ArgusGitHubRepo,
+		)
+	}
+	writeFile(path, b.String())
 }
 
 func testYAML_SomeNilServices(path string) {
@@ -186,18 +211,18 @@ func testYAML_SomeNilServices(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ` + test.GitHubToken(nil) + `
 		service:
 			a:
 				latest_version:
 					type: github
-					url: release-argus/Argus
+					url: ` + test.ArgusGitHubRepo + `
 			b:
 			c:
 			d:
 				latest_version:
 					type: github
-					url: release-argus/Argus
+					url: ` + test.ArgusGitHubRepo + `
 	`)
 
 	writeFile(path, data)
@@ -208,7 +233,8 @@ func testYAML_NilServiceMap(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN"))
+					access_token: ` + test.GitHubToken(nil),
+	)
 
 	writeFile(path, data)
 }
@@ -218,18 +244,21 @@ func testYAML_InvalidYAML(path string) {
 		"defaults": {
 			"service": {
 				"latest_version": {
-					"access_token": ""` + os.Getenv("GITHUB_TOKEN") + `"
+					"access_token": ""` + test.GitHubToken(nil) + `"
 				}
 			}
-		}`)
+		}`,
+	)
 
 	writeFile(path, data)
 }
 
-func testYAML_SmallConfigTest(path string) {
-	// For the `save.go`.
-	// if index < 0 {
-	// boundary check.
+// testYAML_config_small is for `save.go`.
+//
+// if index < 0 {
+//
+// boundary check.
+func testYAML_config_small(path string) {
 	data := test.TrimYAML(`
 		settings:
 			data: {}
@@ -239,9 +268,9 @@ func testYAML_SmallConfigTest(path string) {
 				options: {}
 				latest_version:
 					type: github
-					url: release-argus/Argus
+					url: ` + test.ArgusGitHubRepo + `
 				dashboard: {}
-		`)
+	`)
 
 	writeFile(path, data)
 }
@@ -256,10 +285,10 @@ func testYAML_Ordering_0(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ` + test.GitHubToken(nil) + `
 				options:
 					interval: 123
-					semantic_versioning: n
+					semantic_versioning: false
 
 		notify:
 			default:
@@ -271,18 +300,18 @@ func testYAML_Ordering_0(path string) {
 			NoDefaults:
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 					access_token: ghp_other
 			WantDefaults:
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 			Disabled:
 				options:
 					active: false
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 			Gitea:
 				latest_version:
 					type: github
@@ -303,14 +332,14 @@ func testYAML_Ordering_1_no_services(path string) {
 			data:
 				database_file: test-ordering_1.db
 			web:
-				listen_port: "0"
+				listen_port: '0'
 		defaults:
 			service:
 				options:
 					interval: 123s
 					semantic_versioning: false
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ` + test.GitHubToken(nil) + `
 				deployed_version: {}
 			notify:
 				gotify:
@@ -337,48 +366,48 @@ func testYAML_Ordering_2_obscure_service_names(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ` + test.GitHubToken(nil) + `
 		service:
 			"123":
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 			"foo bar":
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 			"foo: bar":
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 			"foo: \"bar\"":
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 			"\"foo: bar\"":
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 			"'foo: bar'":
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 			"\"foo bar\"":
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 			"'foo bar'":
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 			"foo \"bar\"":
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 			"foo: bar, baz":
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 	`)
 
 	writeFile(path, data)
@@ -389,23 +418,23 @@ func testYAML_Ordering_3_empty_line_after_service_line(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ` + test.GitHubToken(nil) + `
 		service:
 
 			C:
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 					access_token: ghp_other
 			B:
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 
 			A:
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 	`)
 
 	writeFile(path, data)
@@ -416,23 +445,23 @@ func testYAML_Ordering_4_multiple_empty_lines_after_service_line(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ` + test.GitHubToken(nil) + `
 		service:
 ` + strings.Repeat("\n", 3) + `
 			P:
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 ` + strings.Repeat("\n", 5) + `
 			L:
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 ` + strings.Repeat("\n", 2) + `
 			S:
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 	`)
 
 	writeFile(path, data)
@@ -443,12 +472,13 @@ func testYAML_Ordering_5_eof_is_service_line(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ` + test.GitHubToken(nil) + `
 		settings:
 		data:
 		database_file: test-ordering_5.db
 
-		service:`)
+		service:`,
+	)
 
 	writeFile(path, data)
 }
@@ -458,7 +488,7 @@ func testYAML_Ordering_6_no_services_after_service_line_another_block(path strin
 		defaults:
 			service:
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ` + test.GitHubToken(nil) + `
 		service:
 
 		settings:
@@ -474,7 +504,7 @@ func testYAML_Ordering_7_no_services_after_service_line(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ` + test.GitHubToken(nil) + `
 		settings:
 			data:
 				database_file: test-ordering_5.db
@@ -492,7 +522,7 @@ func testYAML_Edit(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ` + test.GitHubToken(nil) + `
 		service:
 			alpha:
 				name: a

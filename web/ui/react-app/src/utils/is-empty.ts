@@ -36,6 +36,7 @@ export const isNonEmptyObject = <T extends Record<string, unknown>>(
 	arg: T | undefined,
 ): arg is T => arg !== undefined && Object.keys(arg).length > 0;
 
+type PlainObject = Record<string, unknown>;
 /**
  * Whether the arg is empty.
  *
@@ -44,7 +45,7 @@ export const isNonEmptyObject = <T extends Record<string, unknown>>(
  */
 export const isEmpty = (
 	arg: unknown,
-): arg is undefined | '' | null | {} | [] => {
+): arg is undefined | '' | null | PlainObject | [] => {
 	if (typeof arg === 'object') {
 		// Array.
 		if (Array.isArray(arg)) return isEmptyArray(arg);

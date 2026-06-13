@@ -109,6 +109,7 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 					? delayedRender(() => updateStatus.className, 'default')
 					: updateStatus.className,
 			)}
+			data-service-id={id}
 			key={data?.id}
 			ref={setNodeRef}
 			style={dragStyle}
@@ -164,7 +165,7 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 					className={cn(
 						'flex gap-4 border-0 p-2',
 						data?.active === false &&
-							'border-2 border-[var(--muted-foreground)] bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_20px,var(--muted-foreground)_20px,var(--muted-foreground)_40px)] p-0.5',
+							'border-2 border-muted-foreground bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_20px,var(--muted-foreground)_20px,var(--muted-foreground)_40px)] p-0.5',
 					)}
 				>
 					<ServiceImage service={data} />

@@ -139,12 +139,7 @@ export const Item: FC<ItemProps> = ({
 				{!sendable && !sending && (
 					<Tip
 						content={
-							<p>
-								{`Can resend ${formatRelative(
-									new Date(next_runnable),
-									new Date(),
-								)}`}
-							</p>
+							<p>{`Can resend ${formatRelative(new Date(next_runnable), new Date())}`}</p>
 						}
 					>
 						<Hourglass className="size-5" />

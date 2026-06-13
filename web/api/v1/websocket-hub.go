@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@
 package v1
 
 import (
-	"encoding/json"
-
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 )
 
 // Hub maintains the set of active clients and broadcasts messages to those clients.
@@ -67,19 +66,20 @@ func (h *Hub) Run() {
 				close(client.send)
 			}
 		case message := <-h.Broadcast:
-			if logutil.Log.IsLevel("DEBUG") {
-				logutil.Log.Debug(
+			if logx.IsLevel("DEBUG") {
+				logx.Debug(
 					"Broadcast "+string(message),
-					logutil.LogFrom{Primary: "WebSocket"},
-					len(h.clients) > 0)
+					logx.LogFrom{Primary: "WebSocket"},
+					len(h.clients) > 0,
+				)
 			}
 
 			// Validate JSON.
 			var msg AnnounceMSG
-			if err := json.Unmarshal(message, &msg); err != nil {
-				logutil.Log.Warn(
+			if err := decode.Unmarshal("json", message, &msg); err != nil {
+				logx.Warn(
 					"Invalid JSON broadcast to the WebSocket",
-					logutil.LogFrom{Primary: "WebSocket"},
+					logx.LogFrom{Primary: "WebSocket"},
 					true,
 				)
 				continue

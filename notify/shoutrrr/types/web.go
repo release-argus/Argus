@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package types
 
 // CensorableURLFields are the `url_fields` that should be censored.
-var CensorableURLFields = [...]string{
+var CensorableURLFields = []string{
 	"altid",
 	"apikey",
 	"botkey",
@@ -27,6 +27,6 @@ var CensorableURLFields = [...]string{
 }
 
 // CensorableParams are the `params` that should be censored.
-var CensorableParams = [...]string{
+var CensorableParams = []string{
 	"devices",
 }

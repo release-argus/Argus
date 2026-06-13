@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,233 +20,320 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/dashboard"
+	dashtest "github.com/release-argus/Argus/service/dashboard/test"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestShoutrrr_FromPayload(t *testing.T) {
+	dashCfg := dashtest.PlainDefaultsConfig(t)
+
 	testToken := "Aod9Cb0zXCeOrnD"
 	typeWithDefaults := "gotify"
 	typeWithDefaultsURLFields := map[string]string{
 		"host":  "localhost",
-		"token": testToken}
+		"token": testToken,
+	}
 	typeWithNoDefaults := "ntfy"
 	typeWithNoDefaultsURLFields := map[string]string{
-		"topic": "foo"}
+		"topic": "foo",
+	}
 	typeOther := "slack"
+
+	// GIVEN: a bunch of 'service' notifiers.
 	serviceNotifies := &Shoutrrrs{
 		"no_main_no_type": &Shoutrrr{},
 		"no_main_with_type_and_defaults": &Shoutrrr{
 			Base: Base{
-				Type: typeWithDefaults}},
+				Type: typeWithDefaults,
+			},
+		},
 		"no_main_with_type_and_no_defaults": &Shoutrrr{
 			Base: Base{
-				Type: typeWithNoDefaults}},
+				Type: typeWithNoDefaults,
+			},
+		},
 		"main_no_type": &Shoutrrr{},
 		"main_with_type_and_defaults": &Shoutrrr{
 			Base: Base{
-				Type: typeWithDefaults}},
+				Type: typeWithDefaults,
+			},
+		},
 		"main_with_type_and_no_defaults": &Shoutrrr{
 			Base: Base{
-				Type: typeWithNoDefaults}}}
+				Type: typeWithNoDefaults,
+			},
+		},
+	}
 	mains := ShoutrrrsDefaults{
 		"main_no_type": &Defaults{
 			Base: Base{
-				URLFields: typeWithNoDefaultsURLFields}},
+				URLFields: typeWithNoDefaultsURLFields,
+			},
+		},
 		"main_with_type_and_defaults": &Defaults{
 			Base: Base{
 				Type:      typeWithDefaults,
-				URLFields: typeWithDefaultsURLFields}},
+				URLFields: typeWithDefaultsURLFields,
+			},
+		},
 		"main_with_type_and_no_defaults": &Defaults{
 			Base: Base{
 				Type:      typeWithNoDefaults,
-				URLFields: typeWithNoDefaultsURLFields}},
+				URLFields: typeWithNoDefaultsURLFields,
+			},
+		},
 		"main_not_on_service_with_defaults": &Defaults{
 			Base: Base{
 				Type:      typeWithDefaults,
-				URLFields: typeWithDefaultsURLFields}},
+				URLFields: typeWithDefaultsURLFields,
+			},
+		},
 	}
 	defaults := ShoutrrrsDefaults{
-		typeWithDefaults: &Defaults{}}
+		typeWithDefaults: &Defaults{},
+	}
 	hardDefaults := ShoutrrrsDefaults{
 		typeWithDefaults:   &Defaults{},
 		typeWithNoDefaults: &Defaults{},
-		typeOther:          &Defaults{}}
-	// GIVEN a payload for a Shoutrrr.
-	tests := map[string]struct {
-		payload          TestPayload
-		want             *Shoutrrr
-		wantMain         string
-		wantDefaults     string
-		wantHardDefaults string
-		wantServiceURL   string
-		errRegex         string
+		typeOther:          &Defaults{},
+	}
+
+	// AND: a payload for a Shoutrrr.
+	tests := []struct {
+		name                                     string
+		payload                                  TestPayload
+		want                                     *Shoutrrr
+		wantMain, wantDefaults, wantHardDefaults string
+		wantServiceURL                           string
+		errRegex                                 string
 	}{
-		"empty": {
+		{
+			name:     "empty",
 			payload:  TestPayload{},
-			errRegex: "name and/or name_previous are required",
+			errRegex: `^name and/or name_previous are required`,
 		},
-		"no name": {
-			payload: TestPayload{
-				ServiceIDPrevious: "test"},
-			errRegex: "name and/or name_previous are required",
-		},
-		"no name, have name_previous": {
+		{
+			name: "no name",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
-				NamePrevious:      "test"},
-			errRegex: "invalid type",
+			},
+			errRegex: `^name and/or name_previous are required`,
 		},
-		"no Type": {
+		{
+			name: "no name, have name_previous",
+			payload: TestPayload{
+				ServiceIDPrevious: "test",
+				NamePrevious:      "test",
+			},
+			errRegex: `^invalid type "[^"]+"$`,
+		},
+		{
+			name: "no Type",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "no_main_no_defaults_no_hard_defaults",
-				URLFields:         typeWithNoDefaultsURLFields},
-			errRegex: "invalid type",
+				URLFields:         typeWithNoDefaultsURLFields,
+			},
+			errRegex: `^invalid type "[^"]+"$`,
 		},
-		"edit, no Main, no Defaults - No Type": {
+		{
+			name: "edit, no Main, no Defaults - No Type",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "no_main_no_type",
-				URLFields:         typeWithNoDefaultsURLFields},
-			errRegex: "invalid type",
+				URLFields:         typeWithNoDefaultsURLFields,
+			},
+			errRegex: `^invalid type "[^"]+"$`,
 		},
-		"edit, no Main, no Defaults - with Type": {
+		{
+			name: "edit, no Main, no Defaults - with Type",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "no_main_no_type",
 				Type:              typeWithNoDefaults,
-				URLFields:         typeWithNoDefaultsURLFields},
+				URLFields:         typeWithNoDefaultsURLFields,
+			},
 			want: &Shoutrrr{
 				Base: Base{
 					Type:      typeWithNoDefaults,
-					URLFields: typeWithNoDefaultsURLFields}},
+					URLFields: typeWithNoDefaultsURLFields,
+				},
+			},
 			errRegex: `^$`,
 		},
-		"edit, no Main, no Defaults - had Type (missing name_previous)": {
+		{
+			name: "edit, no Main, no Defaults - had Type (missing name_previous)",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "no_main_with_type_and_no_defaults",
-				URLFields:         typeWithNoDefaultsURLFields},
-			errRegex: "invalid type",
+				URLFields:         typeWithNoDefaultsURLFields,
+			},
+			errRegex: `^invalid type "[^"]+"$`,
 		},
-		"edit, no Main, no Defaults - had Type (have name_previous)": {
+		{
+			name: "edit, no Main, no Defaults - had Type (have name_previous)",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				NamePrevious:      "no_main_with_type_and_no_defaults",
-				URLFields:         typeWithNoDefaultsURLFields},
+				URLFields:         typeWithNoDefaultsURLFields,
+			},
 			want: &Shoutrrr{
 				Base: Base{
 					Type:      typeWithNoDefaults,
-					URLFields: typeWithNoDefaultsURLFields}},
+					URLFields: typeWithNoDefaultsURLFields,
+				},
+			},
 			errRegex: `^$`,
 		},
-		"edit, no Main, have Defaults": {
+		{
+			name: "edit, no Main, have Defaults",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "no_main_with_type_and_defaults",
 				Type:              typeWithDefaults,
-				URLFields:         typeWithDefaultsURLFields},
+				URLFields:         typeWithDefaultsURLFields,
+			},
 			want: &Shoutrrr{
 				Base: Base{
 					Type:      typeWithDefaults,
-					URLFields: typeWithDefaultsURLFields}},
+					URLFields: typeWithDefaultsURLFields,
+				},
+			},
 			errRegex: `^$`,
 		},
-		"edit, have Main, no Defaults - Give Type": {
+		{
+			name: "edit, have Main, no Defaults - Give Type",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "main_no_type",
-				Type:              typeWithNoDefaults},
+				Type:              typeWithNoDefaults,
+			},
 			want: &Shoutrrr{
 				Base: Base{
-					Type: typeWithNoDefaults}},
+					Type: typeWithNoDefaults,
+				},
+			},
 			errRegex: `^$`,
 		},
-		"edit, have Main, no Defaults - No Type": {
+		{
+			name: "edit, have Main, no Defaults - No Type",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
-				Name:              "main_no_type"},
-			errRegex: "invalid type",
+				Name:              "main_no_type",
+			},
+			errRegex: `^invalid type "[^"]+"$`,
 		},
-		"edit, have Main, have Defaults": {
+		{
+			name: "edit, have Main, have Defaults",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "main_with_type_and_defaults",
-				Type:              typeWithDefaults},
+				Type:              typeWithDefaults,
+			},
 			want: &Shoutrrr{
 				Base: Base{
-					Type: typeWithDefaults}},
+					Type: typeWithDefaults,
+				},
+			},
 			errRegex: `^$`,
 		},
-		"edit, have Main, have Defaults - Fail, Different Type to Main": {
+		{
+			name: "edit, have Main, have Defaults - Fail, Different Type to Main",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "main_with_type_and_defaults",
-				Type:              typeWithNoDefaults},
-			errRegex: `type: "[^"]+" != "[^"]+"`,
+				Type:              typeWithNoDefaults,
+			},
+			errRegex: `type: "` + typeWithNoDefaults + `" <invalid> .*\(gotify\)\)`,
 		},
-		"edit, have Main, have Defaults - Fail, Invalid field": {
+		{
+			name: "edit, have Main, have Defaults - Fail, Invalid field",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "main_with_type_and_defaults",
 				Options: map[string]string{
-					"delay": "number"}},
-			errRegex: `delay: "number" <invalid>`,
+					"delay": "number",
+				},
+			},
+			errRegex: test.TrimYAML(`
+				^options:
+					delay: "number" <invalid>.*$`,
+			),
 		},
-		"new, no Main, have Defaults, type from name": {
+		{
+			name: "new, no Main, have Defaults, type from name",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              typeWithDefaults,
-				URLFields:         typeWithDefaultsURLFields},
+				URLFields:         typeWithDefaultsURLFields,
+			},
 			want: &Shoutrrr{
 				Base: Base{
 					Type:      typeWithDefaults,
-					URLFields: typeWithDefaultsURLFields}},
+					URLFields: typeWithDefaultsURLFields,
+				},
+			},
 			errRegex: `^$`,
 		},
-		"new, no Main, no Defaults, type from name": {
+		{
+			name: "new, no Main, no Defaults, type from name",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              typeWithNoDefaults,
-				URLFields:         typeWithNoDefaultsURLFields},
+				URLFields:         typeWithNoDefaultsURLFields,
+			},
 			want: &Shoutrrr{
 				Base: Base{
 					Type:      typeWithNoDefaults,
-					URLFields: typeWithNoDefaultsURLFields}},
+					URLFields: typeWithNoDefaultsURLFields,
+				},
+			},
 			errRegex: `^$`,
 		},
-		"new, have Main, have Defaults": {
-			payload: TestPayload{
-				ServiceIDPrevious: "test",
-				Name:              "main_not_on_service_with_defaults"},
-			want: &Shoutrrr{
-				Base: Base{
-					Type: typeWithDefaults}},
-			errRegex: `^$`,
-		},
-		"new, have Main, have Defaults - new service": {
-			payload: TestPayload{
-				ServiceIDPrevious: "",
-				ServiceID:         "something",
-				Name:              "main_not_on_service_with_defaults"},
-			want: &Shoutrrr{
-				Base: Base{
-					Type: typeWithDefaults}},
-			errRegex: `^$`,
-		},
-		"new, have Main, have Defaults - Fail, Different Type to Main": {
+		{
+			name: "new, have Main, have Defaults",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "main_not_on_service_with_defaults",
-				Type:              typeWithNoDefaults},
-			errRegex: `type: "[^"]+" != "[^"]+"`,
+			},
+			want: &Shoutrrr{
+				Base: Base{
+					Type: typeWithDefaults,
+				},
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "new, have Main, have Defaults - new service",
+			payload: TestPayload{
+				ServiceIDPrevious: "",
+				ServiceID:         "something",
+				Name:              "main_not_on_service_with_defaults",
+			},
+			want: &Shoutrrr{
+				Base: Base{
+					Type: typeWithDefaults,
+				},
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "new, have Main, have Defaults - Fail, Different Type to Main",
+			payload: TestPayload{
+				ServiceIDPrevious: "test",
+				Name:              "main_not_on_service_with_defaults",
+				Type:              typeWithNoDefaults,
+			},
+			errRegex: `^type: "` + typeWithNoDefaults + `" <invalid> .*\(gotify\)\).*$`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			if tc.want != nil {
@@ -274,135 +361,184 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			if tc.payload.NamePrevious != "" {
 				testServiceNotify = (*serviceNotifies)[tc.payload.NamePrevious]
 			}
+			dash, _ := dashboard.Decode(
+				"yaml", nil,
+				dashCfg,
+			)
 			testServiceStatus := status.New(
 				nil, nil, nil,
 				"",
 				"", "",
 				"", "",
 				"",
-				dashboard.NewOptions(
-					nil,
-					"", "", "",
-					nil,
-					nil, nil))
+				dash,
+			)
 			testServiceStatus.Init(
-				1, 0, 0,
-				tc.payload.ServiceID, tc.payload.ServiceName, "service_url",
-				testServiceStatus.Dashboard)
+				0, 1, 0,
+				status.ServiceInfo{
+					ID:         tc.payload.ServiceID,
+					Name:       tc.payload.ServiceName,
+					ServiceURL: "https://example.com/service/url",
+				},
+				testServiceStatus.Dashboard,
+			)
 
-			// WHEN using the payload.
-			got, errRegex := FromPayload(
+			// WHEN: using the payload.
+			result, errRegex := FromPayload(
 				tc.payload,
 				testServiceNotify, testServiceStatus,
-				mains,
-				defaults, hardDefaults)
+				Config{
+					Root:         mains,
+					Defaults:     defaults,
+					HardDefaults: hardDefaults,
+				},
+			)
 
-			// THEN it errors when expected.
-			e := util.ErrorToString(errRegex)
+			prefix := fmt.Sprintf(
+				"%s\nFromPayload(%+v)",
+				packageName, tc.payload,
+			)
+
+			// THEN: it errors when expected.
+			e := errfmt.FormatError(errRegex)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
+				t.Errorf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
 				return
 			}
-			if tc.errRegex != "^$" {
+			if e != "" {
 				return
 			}
-			// AND the Shoutrrr is as expected.
-			if got.String("") != tc.want.String("") {
-				t.Errorf("%s\nstr mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want.String(""), got.String(""))
+
+			// AND: the Shoutrrr is as expected.
+			got := result.String("")
+			want := tc.want.String("")
+			if got != want {
+				t.Errorf(
+					"%s stringified mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
 			}
-			// AND the serviceName is as expected.
-			if got.ServiceStatus.ServiceInfo.ID != tc.payload.ServiceID {
-				t.Errorf("%s\nServiceID mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.payload.ServiceID, got.ServiceStatus.ServiceInfo.ID)
+
+			// AND: the serviceName is as expected.
+			got = result.ServiceStatus.ServiceInfo.ID
+			want = tc.payload.ServiceID
+			if got != want {
+				t.Errorf(
+					"%s .ServiceStatus.ServiceInfo.ID mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
 			}
-			// AND the serviceURL is as expected.
-			serviceURL := tc.payload.ServiceURL
-			if serviceURL != tc.wantServiceURL {
-				t.Errorf("%s\nServiceURL mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wantServiceURL, serviceURL)
+
+			// AND: the serviceURL is as expected.
+			got = tc.payload.ServiceURL
+			want = tc.wantServiceURL
+			if got != want {
+				t.Errorf(
+					"%s .ServiceURL mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
 			}
 		})
 	}
 }
 
 func TestResolveDefaults(t *testing.T) {
-	// GIVEN a set of values for a Notify.
-	tests := map[string]struct {
-		name, nType                      string
+	// GIVEN: a set of values for a Notify.
+	tests := []struct {
+		name                             string
+		notifyName, nType                string
 		main                             *Defaults
 		defaults, hardDefaults           ShoutrrrsDefaults
 		wantType, wantMain, wantDefaults string
 		errRegex                         string
 	}{
-		"Invalid Type": {
-			name:     "test",
-			nType:    "gotify",
-			errRegex: `invalid type "gotify"`,
+		{
+			name:       "Invalid Type",
+			notifyName: "test",
+			nType:      "gotify",
+			errRegex:   `invalid type "gotify"`,
 		},
-		"Type from Name": {
-			name: "gotify",
+		{
+			name:       "Type from Name",
+			notifyName: "gotify",
 			hardDefaults: ShoutrrrsDefaults{
-				"gotify": &Defaults{}},
+				"gotify": &Defaults{},
+			},
 			wantType:     "gotify",
 			wantMain:     "hardDefaults",
 			wantDefaults: "hardDefaults",
 			errRegex:     `^$`,
 		},
-		"Type from Main": {
-			name: "test",
+		{
+			name:       "Type from Main",
+			notifyName: "test",
 			hardDefaults: ShoutrrrsDefaults{
-				"gotify": &Defaults{}},
+				"gotify": &Defaults{},
+			},
 			main: &Defaults{
 				Base: Base{
-					Type: "gotify"}},
+					Type: "gotify",
+				},
+			},
 			wantType:     "gotify",
 			wantMain:     "main",
 			wantDefaults: "hardDefaults",
 			errRegex:     `^$`,
 		},
-		"No Main, No Defaults": {
-			name:  "test",
-			nType: "gotify",
+		{
+			name:       "No Main, No Defaults",
+			notifyName: "test",
+			nType:      "gotify",
 			hardDefaults: ShoutrrrsDefaults{
-				"gotify": &Defaults{}},
+				"gotify": &Defaults{},
+			},
 			wantType:     "gotify",
 			wantMain:     "hardDefaults",
 			wantDefaults: "hardDefaults",
 			errRegex:     `^$`,
 		},
-		"Main, No Defaults": {
-			name:  "test",
-			nType: "gotify",
-			main:  &Defaults{},
+		{
+			name:       "Main, No Defaults",
+			notifyName: "test",
+			nType:      "gotify",
+			main:       &Defaults{},
 			hardDefaults: ShoutrrrsDefaults{
-				"gotify": &Defaults{}},
+				"gotify": &Defaults{},
+			},
 			wantType:     "gotify",
 			wantMain:     "main",
 			wantDefaults: "hardDefaults",
 			errRegex:     `^$`,
 		},
-		"No Main, Defaults": {
-			name:  "test",
-			nType: "gotify",
+		{
+			name:       "No Main, Defaults",
+			notifyName: "test",
+			nType:      "gotify",
 			defaults: ShoutrrrsDefaults{
-				"gotify": &Defaults{}},
+				"gotify": &Defaults{},
+			},
 			hardDefaults: ShoutrrrsDefaults{
-				"gotify": &Defaults{}},
+				"gotify": &Defaults{},
+			},
 			wantType:     "gotify",
 			wantMain:     "defaults",
 			wantDefaults: "defaults",
 			errRegex:     `^$`,
 		},
-		"Main, Defaults": {
-			name:  "test",
-			nType: "gotify",
-			main:  &Defaults{},
+		{
+			name:       "Main, Defaults",
+			notifyName: "test",
+			nType:      "gotify",
+			main:       &Defaults{},
 			defaults: ShoutrrrsDefaults{
-				"gotify": &Defaults{}},
+				"gotify": &Defaults{},
+			},
 			hardDefaults: ShoutrrrsDefaults{
-				"gotify": &Defaults{}},
+				"gotify": &Defaults{},
+			},
 			wantType:     "gotify",
 			wantMain:     "main",
 			wantDefaults: "defaults",
@@ -410,66 +546,67 @@ func TestResolveDefaults(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN resolveDefaults is called.
+			// WHEN: resolveDefaults is called.
 			gotType, gotMain, gotDefaults, gotHardDefaults, err := resolveDefaults(
-				tc.name,
+				tc.notifyName,
 				tc.nType,
 				tc.main,
-				tc.defaults, tc.hardDefaults)
+				tc.defaults, tc.hardDefaults,
+			)
 
-			// THEN the err is as expected.
-			e := util.ErrorToString(err)
+			prefix := fmt.Sprintf("%s\nresolveDefaults()", packageName)
+
+			// THEN: the decode is as expected.
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
+				t.Errorf(
+					"%s error mismatch on \ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
 			}
 			if tc.errRegex != "^$" {
 				return
 			}
-			// AND the values are as expected.
-			if gotType != tc.wantType {
-				t.Fatalf("%s\nType mismatch:\nwant: %q\ngot:  %q",
-					packageName, tc.wantType, gotType)
+
+			// AND: the values are as expected.
+			fieldTests := []test.FieldAssertion{
+				{Name: "Type", Got: gotType, Want: tc.wantType},
 			}
-			allAddresses := fmt.Sprintf("main=%p, defaults=%p, hardDefaults=%p",
-				gotMain, gotDefaults, gotHardDefaults)
+
 			// 	Main ref.
 			if tc.wantMain == "defaults" || tc.wantMain == "hardDefaults" {
-				if (tc.wantMain == "defaults" && gotMain != tc.defaults[gotType]) ||
-					(tc.wantMain == "hardDefaults" && gotMain != tc.hardDefaults[gotType]) {
-					t.Errorf("%s\nMain mismatch:\nwant: %q\ngot:  %q\n\nall:\n%s",
-						packageName,
-						tc.wantMain, gotMain,
-						allAddresses)
+				wantMain := tc.defaults[gotType]
+				if tc.wantMain == "hardDefaults" {
+					wantMain = tc.hardDefaults[gotType]
 				}
-			} else if tc.wantMain != "defaults" && tc.wantMain != "hardDefaults" {
-				if gotMain == gotDefaults ||
-					gotMain == gotHardDefaults ||
-					gotMain != tc.main {
-					t.Errorf("%s\nMain mismatch:\nwant: %p\ngot:  %p\nall:\n%s",
-						packageName,
-						tc.main, gotMain,
-						allAddresses)
-				}
+				fieldTests = append(
+					fieldTests,
+					test.FieldAssertion{Name: "Main", Got: gotMain, Want: wantMain, Mode: test.CompareSamePointer},
+				)
+			} else {
+				fieldTests = append(
+					fieldTests,
+					test.FieldAssertion{Name: "Main", Got: gotMain, Want: tc.defaults[gotType], Mode: test.CompareDifferentPointer},
+					test.FieldAssertion{Name: "Main", Got: gotMain, Want: tc.hardDefaults[gotType], Mode: test.CompareDifferentPointer},
+				)
 			}
-			// 	Defaults ref.
+			// 	Defaults/HardDefaults refs.
+			wantDefaults := tc.defaults[gotType]
 			if tc.wantDefaults == "hardDefaults" {
-				if gotDefaults != tc.hardDefaults[gotType] {
-					t.Errorf("%s\nDefaults mismatch:\nwant: %q\ngot:  %q\nall:\n%s",
-						packageName, tc.wantDefaults, gotDefaults, allAddresses)
-				}
-			} else if gotDefaults != tc.defaults[gotType] {
-				t.Errorf("%s\nDefaults mismatch:\nwant: %p\ngot:  %p\nall:\n%s",
-					packageName, tc.defaults[gotType], gotDefaults, allAddresses)
+				wantDefaults = tc.hardDefaults[gotType]
 			}
-			// 	HardDefaults ref.
-			if gotHardDefaults != tc.hardDefaults[gotType] {
-				t.Errorf("%s\nHardDefaults mismatch:\nwant: %p\ngot:  %p\nall:\n%s",
-					packageName, tc.hardDefaults[gotType], gotHardDefaults, allAddresses)
+			fieldTests = append(
+				fieldTests,
+				test.FieldAssertion{Name: "Defaults", Got: gotDefaults, Want: wantDefaults, Mode: test.CompareSamePointer},
+				test.FieldAssertion{Name: "HardDefaults", Got: gotHardDefaults, Want: tc.hardDefaults[gotType], Mode: test.CompareSamePointer},
+			)
+
+			if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}

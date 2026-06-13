@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,31 +19,11 @@ package test
 import (
 	"strings"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service/status"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
-	"github.com/release-argus/Argus/test"
 )
-
-// Defaults returns a shoutrrr.Defaults instance for testing.
-func Defaults(failing bool, selfSignedCert bool) *shoutrrr.Defaults {
-	url := test.ValidCertNoProtocol
-	if selfSignedCert {
-		url = strings.Replace(url, "valid", "invalid", 1)
-	}
-	s := shoutrrr.NewDefaults(
-		"gotify",
-		map[string]string{"max_tries": "1"},
-		map[string]string{
-			"host":  url,
-			"path":  "/gotify",
-			"token": test.ShoutrrrGotifyToken()},
-		map[string]string{"title": "default title"})
-	if failing {
-		s.URLFields["token"] = "invalid"
-	}
-	return s
-}
 
 // Shoutrrr returns a shoutrrr instance for testing.
 func Shoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
@@ -53,22 +33,38 @@ func Shoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 	}
 	s := shoutrrr.New(
 		nil,
-		"", "gotify",
-		map[string]string{"max_tries": "1"},
+		"",
+		"gotify",
+		map[string]string{
+			"max_tries": "1",
+		},
 		map[string]string{
 			"host":  url,
 			"path":  "/gotify",
-			"token": test.ShoutrrrGotifyToken()},
-		map[string]string{"title": "A Title!"},
+			"token": test.ShoutrrrGotifyToken(),
+		},
+		map[string]string{
+			"title": "A Title!",
+		},
 		shoutrrr.NewDefaults(
 			"",
-			make(map[string]string), make(map[string]string), make(map[string]string)),
+			make(map[string]string),
+			make(map[string]string),
+			make(map[string]string),
+		),
 		shoutrrr.NewDefaults(
 			"",
-			make(map[string]string), make(map[string]string), make(map[string]string)),
+			make(map[string]string),
+			make(map[string]string),
+			make(map[string]string),
+		),
 		shoutrrr.NewDefaults(
 			"",
-			make(map[string]string), make(map[string]string), make(map[string]string)))
+			make(map[string]string),
+			make(map[string]string),
+			make(map[string]string),
+		),
+	)
 	s.Main.InitMaps()
 	s.Defaults.InitMaps()
 	s.HardDefaults.InitMaps()
@@ -76,7 +72,9 @@ func Shoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 	s.ID = "test"
 	s.ServiceStatus = &status.Status{
 		ServiceInfo: serviceinfo.ServiceInfo{
-			ID: "service"}}
+			ID: "service",
+		},
+	}
 	s.ServiceStatus.Fails.Shoutrrr.Init(1)
 	s.Failed = &s.ServiceStatus.Fails.Shoutrrr
 

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,144 +16,208 @@
 
 package util
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestRandAlphaNumericLower(t *testing.T) {
-	// GIVEN different size strings are wanted.
-	tests := map[string]struct {
+	// GIVEN: different size strings are wanted.
+	tests := []struct {
+		name   string
 		wanted int
 	}{
-		"length 1": {
-			wanted: 1},
-		"length 2": {
-			wanted: 2},
-		"length 3": {
-			wanted: 3},
-		"length 10": {
-			wanted: 10},
+		{
+			name:   "length 1",
+			wanted: 1,
+		},
+		{
+			name:   "length 2",
+			wanted: 2,
+		},
+		{
+			name:   "length 3",
+			wanted: 3,
+		},
+		{
+			name:   "length 10",
+			wanted: 10,
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN RandAlphaNumericLower is called.
+			// WHEN: RandAlphaNumericLower is called.
 			got := RandAlphaNumericLower(tc.wanted)
 
-			// THEN we get a random alphanumeric string of the specified length.
-			if len(got) != tc.wanted {
-				t.Errorf("%s\nlength mismatch\nwant: %d\ngot:  %d",
-					packageName, tc.wanted, len(got))
-			}
-			charactersVerified := 0
-			for charactersVerified != tc.wanted {
-				var characters []string
-				for i := range alphanumericLower {
-					characters = append(characters, string(alphanumericLower[i]))
-				}
+			prefix := fmt.Sprintf(
+				"%s\nRandAlphaNumericLower(%d)",
+				packageName, tc.wanted,
+			)
 
-				for i := range characters {
-					if got == characters[i] {
-						RemoveIndex(&characters, i)
+			// THEN: we get a random string of the specified length.
+			if gotLen := len(got); gotLen != tc.wanted {
+				t.Errorf(
+					"%s length mismatch\ngot:  %d\nwant: %d",
+					prefix, gotLen, tc.wanted,
+				)
+			}
+
+			// AND: it contains only lowercase alphanumeric characters.
+			for _, v := range got {
+				valid := false
+				for _, char := range alphanumericLower {
+					if v == char {
+						valid = true
 						break
 					}
 				}
-				charactersVerified++
+				if !valid {
+					t.Errorf(
+						"%s contains non-alphanumeric character %q\ngot:  %q",
+						prefix, string(v), got,
+					)
+				}
 			}
 		})
 	}
 }
 
 func TestRandNumeric(t *testing.T) {
-	// GIVEN different size strings are wanted.
-	tests := map[string]struct {
+	// GIVEN: different size strings are wanted.
+	tests := []struct {
+		name   string
 		wanted int
 	}{
-		"length 1": {
-			wanted: 1},
-		"length 2": {
-			wanted: 2},
-		"length 3": {
-			wanted: 3},
-		"length 10": {
-			wanted: 10},
+		{
+			name:   "length 1",
+			wanted: 1,
+		},
+		{
+			name:   "length 2",
+			wanted: 2,
+		},
+		{
+			name:   "length 3",
+			wanted: 3,
+		},
+		{
+			name:   "length 10",
+			wanted: 10,
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN RandNumeric is called.
+			// WHEN: RandNumeric is called.
 			got := RandNumeric(tc.wanted)
 
-			// THEN we get a random numeric string of the specified length.
-			if len(got) != tc.wanted {
-				t.Errorf("%s\nlength mismatch\nwant: %d\ngot:  %d",
-					packageName, tc.wanted, len(got))
-			}
-			charactersVerified := 0
-			for charactersVerified != tc.wanted {
-				var characters []string
-				for i := range numeric {
-					characters = append(characters, string(numeric[i]))
-				}
+			prefix := fmt.Sprintf(
+				"%s\nRandNumeric(%d)",
+				packageName, tc.wanted,
+			)
 
-				for i := range characters {
-					if got == characters[i] {
-						RemoveIndex(&characters, i)
+			// THEN: we get a random numeric string of the specified length.
+			if gotLen := len(got); gotLen != tc.wanted {
+				t.Errorf(
+					"%s length mismatch\ngot:  %d\nwant: %d",
+					prefix, gotLen, tc.wanted,
+				)
+			}
+
+			// AND: it contains only numeric characters.
+			for _, v := range got {
+				valid := false
+				for _, char := range numeric {
+					if v == char {
+						valid = true
 						break
 					}
 				}
-				charactersVerified++
+				if !valid {
+					t.Errorf(
+						"%s contains non-numeric character %q\ngot:  %q",
+						prefix, string(v), got,
+					)
+				}
 			}
 		})
 	}
 }
 
 func TestRandString(t *testing.T) {
-	// GIVEN different size strings are wanted with different alphabets.
-	tests := map[string]struct {
+	// GIVEN: different size strings are wanted with different alphabets.
+	tests := []struct {
+		name     string
 		wanted   int
 		alphabet string
 	}{
-		"length 1 string, length 1 alphabet": {
-			wanted: 1, alphabet: "a"},
-		"length 2, length 1 alphabet": {
-			wanted: 2, alphabet: "b"},
-		"length 3, length 1 alphabet": {
-			wanted: 3, alphabet: "c"},
-		"length 10, length 1 alphabet": {
-			wanted: 10, alphabet: "d"},
-		"length 10, length 5 alphabet": {
-			wanted: 10, alphabet: "abcde"},
+		{
+			name:     "length 1 string, length 1 alphabet",
+			wanted:   1,
+			alphabet: "a",
+		},
+		{
+			name:     "length 2, length 1 alphabet",
+			wanted:   2,
+			alphabet: "b",
+		},
+		{
+			name:     "length 3, length 1 alphabet",
+			wanted:   3,
+			alphabet: "c",
+		},
+		{
+			name:     "length 10, length 1 alphabet",
+			wanted:   10,
+			alphabet: "d",
+		},
+		{
+			name:     "length 10, length 5 alphabet",
+			wanted:   10,
+			alphabet: "abcde",
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN RandString is called.
-			got := RandString(tc.wanted, tc.alphabet)
+			// WHEN: RandString is called.
+			result := RandString(tc.wanted, tc.alphabet)
 
-			// THEN we get a random alphabet string of the specified length.
-			if len(got) != tc.wanted {
-				t.Errorf("%s\nlength mismatch\nwant: %d\ngot:  %d",
-					packageName, tc.wanted, len(got))
+			prefix := fmt.Sprintf(
+				"%s\nRandString(length=%d, alphabet=%q)",
+				packageName, tc.wanted, tc.alphabet,
+			)
+
+			// THEN: we get a random alphabet string of the specified length.
+			if got := len(result); got != tc.wanted {
+				t.Errorf(
+					"%s length mismatch\ngot:  %d\nwant: %d",
+					prefix, got, tc.wanted,
+				)
 			}
-			charactersVerified := 0
-			for charactersVerified != tc.wanted {
-				var characters []string
-				for i := range tc.alphabet {
-					characters = append(characters, string(tc.alphabet[i]))
-				}
 
-				for i := range characters {
-					if got == characters[i] {
-						RemoveIndex(&characters, i)
+			// AND: it contains only alphabet characters.
+			for _, v := range result {
+				valid := false
+				for _, char := range tc.alphabet {
+					if v == char {
+						valid = true
 						break
 					}
 				}
-				charactersVerified++
+				if !valid {
+					t.Errorf(
+						"%s contains non-alphabet character %q\ngot:  %q",
+						prefix, string(v), result,
+					)
+				}
 			}
 		})
 	}

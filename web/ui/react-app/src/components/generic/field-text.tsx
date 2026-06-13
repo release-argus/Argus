@@ -37,6 +37,7 @@ type BaseProps = {
 };
 
 type FieldTextProps = BaseProps & {
+	disabled?: boolean;
 	/* The tooltip on the field label. */
 	tooltip?: TooltipWithAriaProps;
 };

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,34 +21,32 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
+	lvtest "github.com/release-argus/Argus/service/latest_version/test"
+	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
-	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/webhook"
 )
 
 func TestHTTP_Config(t *testing.T) {
-	// GIVEN an API and a request for the config.
+	// GIVEN: defaults/hardDefaults.
+	lvCfg := lvtest.PlainDefaultsConfig(t)
+
+	// AND: an API and a request for the config.
 	file := filepath.Join(t.TempDir(), "config.yml")
 	api := testAPI(t, file)
-	t.Cleanup(func() {
-		if api.Config.Settings.Data.DatabaseFile != "" {
-			_ = os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
-		}
-	})
 
-	tests := map[string]struct {
+	tests := []struct {
+		name     string
 		settings *config.Settings
 		defaults *config.Defaults
 		notify   *shoutrrr.ShoutrrrsDefaults
@@ -57,60 +55,79 @@ func TestHTTP_Config(t *testing.T) {
 		order    *[]string
 		wantBody string
 	}{
-		"0. settings": {
+		{
+			name: "settings",
 			settings: &config.Settings{
 				SettingsBase: config.SettingsBase{
 					Web: config.WebSettings{
-						ListenHost: "127.0.0.1"}}},
+						ListenHost: "127.0.0.1",
+					},
+				},
+			},
 			wantBody: `
 				{
 					"settings": {
-						"log": {},
 						"web": {
 							"listen_host": "127.0.0.1"
 						}
-					},
-					"defaults": {
-						"service": {
-							"options": {},
-							"latest_version": {
-								"require": {
-									"docker": {}
-								}
-							},
-							"command": [],
-							"deployed_version": {},
-							"dashboard": {}
-						},
-						"webhook": {}
-					},
-					"notify": {},
-					"webhook": {},
-					"service": {}
+					}
 				}`,
 		},
-		"1. settings + defaults": {
+		{
+			name: "settings + defaults",
+			settings: &config.Settings{
+				SettingsBase: config.SettingsBase{
+					Web: config.WebSettings{
+						ListenHost: "127.0.0.1",
+					},
+				},
+			},
 			defaults: &config.Defaults{
 				Service: service.Defaults{
 					Options: opt.Defaults{
 						Base: opt.Base{
-							Interval: "1h"}},
-					LatestVersion: latestver_base.Defaults{
+							Interval: "1h",
+						},
+					},
+					LatestVersion: lvbase.Defaults{
 						AccessToken:       "foo",
-						AllowInvalidCerts: test.BoolPtr(true),
-						UsePreRelease:     test.BoolPtr(false),
-						Require: filter.RequireDefaults{
-							Docker: *filter.NewDockerCheckDefaults(
-								"ghcr",
-								"tokenForGHCR",
-								"tokenForHub", "usernameForHub",
-								"tokenForQuay",
-								nil)},
-					}}},
+						AllowInvalidCerts: test.Ptr(true),
+						UsePreRelease:     test.Ptr(false),
+						Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
+							return filter.DecodeDefaults(
+								"yaml", []byte(test.TrimYAML(`
+									docker:
+										type: hub
+										image: i
+										tag: t
+										registry:
+											ghcr:
+												image: iGHCR
+												tag: tGHCR
+												auth:
+													username: something
+													token: ghp_X
+											hub:
+												image: iHub
+												tag: tHub
+												auth:
+													username: something
+													token: hub_X
+											quay:
+												image: iQuay
+												tag: tQuay
+												auth:
+													username: something
+													token: quay_X
+								`)),
+							)
+						}),
+					},
+				},
+			},
 			wantBody: `
 				{
 					"settings": {
-						"log": {},
 						"web": {
 							"listen_host": "127.0.0.1"
 						}
@@ -126,61 +143,107 @@ func TestHTTP_Config(t *testing.T) {
 								"use_prerelease": false,
 								"require": {
 									"docker": {
-										"type": "ghcr",
-										"ghcr": {
-											"token": ` + secretValueMarshalled + `
-										},
-										"hub": {
-											"token": ` + secretValueMarshalled + `,
-											"username": "usernameForHub"
-										},
-										"quay": {
-											"token": ` + secretValueMarshalled + `
+										"type": "hub",
+										"image": "i",
+										"tag": "t",
+										"registry": {
+											"ghcr": {
+												"image": "iGHCR",
+												"tag": "tGHCR",
+												"auth": {
+													"token": ` + secretValueMarshalled + `
+												}
+											},
+											"hub": {
+												"image": "iHub",
+												"tag": "tHub",
+												"auth": {
+													"username": "something",
+													"token": ` + secretValueMarshalled + `
+												}
+											},
+											"quay": {
+												"image": "iQuay",
+												"tag": "tQuay",
+												"auth": {
+													"token": ` + secretValueMarshalled + `
+												}
+											}
 										}
 									}
 								}
-							},
-							"command": [],
-							"deployed_version": {},
-							"dashboard": {}
-						},
-						"webhook": {}
-					},
-					"notify": {},
-					"webhook": {},
-					"service": {}
+							}
+						}
+					}
 				}`,
 		},
-		"2. settings + defaults (with notify+command+webhook service defaults)": {
+		{
+			name: "settings + defaults (with notify+command+webhook service defaults)",
+			settings: &config.Settings{
+				SettingsBase: config.SettingsBase{
+					Web: config.WebSettings{
+						ListenHost: "127.0.0.1",
+					},
+				},
+			},
 			defaults: &config.Defaults{
 				Service: service.Defaults{
 					Options: opt.Defaults{
 						Base: opt.Base{
-							Interval: "1h"}},
-					LatestVersion: latestver_base.Defaults{
+							Interval: "1h",
+						},
+					},
+					LatestVersion: lvbase.Defaults{
 						AccessToken:       "foo",
-						AllowInvalidCerts: test.BoolPtr(true),
-						UsePreRelease:     test.BoolPtr(false),
-						Require: filter.RequireDefaults{
-							Docker: *filter.NewDockerCheckDefaults(
-								"ghcr",
-								"tokenForGHCR",
-								"tokenForHub", "usernameForHub",
-								"tokenForQuay",
-								nil)}},
+						AllowInvalidCerts: test.Ptr(true),
+						UsePreRelease:     test.Ptr(false),
+						Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
+							return filter.DecodeDefaults(
+								"yaml", []byte(test.TrimYAML(`
+									docker:
+										type: hub
+										image: i
+										tag: t
+										registry:
+											ghcr:
+												image: iGHCR
+												tag: tGHCR
+												auth:
+													username: something
+													token: ghp_X
+											hub:
+												image: iHub
+												tag: tHub
+												auth:
+													username: something
+													token: hub_X
+											quay:
+												image: iQuay
+												tag: tQuay
+												auth:
+													username: something
+													token: quay_X
+								`)),
+							)
+						}),
+					},
 					Notify: map[string]struct{}{
-						"n1": {}},
+						"n1": {},
+					},
 					Command: command.Commands{
-						{"command", "arg1", "arg2"}},
+						{"command", "arg1", "arg2"},
+					},
 					WebHook: map[string]struct{}{
 						"wh1": {},
 						"wh2": {},
 						"wh3": {},
-						"wh4": {}}}},
+						"wh4": {},
+					},
+				},
+			},
 			wantBody: `
 				{
 					"settings": {
-						"log": {},
 						"web": {
 							"listen_host": "127.0.0.1"
 						}
@@ -196,56 +259,131 @@ func TestHTTP_Config(t *testing.T) {
 								"use_prerelease": false,
 								"require": {
 									"docker": {
-										"type": "ghcr",
-										"ghcr": {
-											"token": ` + secretValueMarshalled + `
-										},
-										"hub": {
-											"token": ` + secretValueMarshalled + `,
-											"username": "usernameForHub"
-										},
-										"quay": {
-											"token": ` + secretValueMarshalled + `
+										"type": "hub",
+										"image": "i",
+										"tag": "t",
+										"registry": {
+											"ghcr": {
+												"image": "iGHCR",
+												"tag": "tGHCR",
+												"auth": {
+													"token": ` + secretValueMarshalled + `
+												}
+											},
+											"hub": {
+												"image": "iHub",
+												"tag": "tHub",
+												"auth": {
+													"username": "something",
+													"token": ` + secretValueMarshalled + `
+												}
+											},
+											"quay": {
+												"image": "iQuay",
+												"tag": "tQuay",
+												"auth": {
+													"token": ` + secretValueMarshalled + `
+												}
+											}
 										}
 									}
 								}
 							},
-							"notify": {
-								"n1": {}
-							},
+							"notify": ["n1"],
 							"command": [
 								["command","arg1","arg2"]
 							],
-							"webhook": {
-								"wh1": {},
-								"wh2": {},
-								"wh3": {},
-								"wh4": {}
-							},
-							"deployed_version": {},
-							"dashboard": {}
-						},
-						"webhook": {}
-					},
-					"notify": {},
-					"webhook": {},
-					"service": {}
+							"webhook": [
+								"wh1",
+								"wh2",
+								"wh3",
+								"wh4"
+							]
+						}
+					}
 				}`,
 		},
-		"3. settings + defaults (with notify+command+webhook service defaults) + notify": {
+		{
+			name: "settings + defaults (with notify+command+webhook service defaults) + notify",
+			settings: &config.Settings{
+				SettingsBase: config.SettingsBase{
+					Web: config.WebSettings{
+						ListenHost: "127.0.0.1",
+					},
+				},
+			},
+			defaults: &config.Defaults{
+				Service: service.Defaults{
+					Options: opt.Defaults{
+						Base: opt.Base{
+							Interval: "1h",
+						},
+					},
+					LatestVersion: lvbase.Defaults{
+						AccessToken:       "foo",
+						AllowInvalidCerts: test.Ptr(true),
+						UsePreRelease:     test.Ptr(false),
+						Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
+							return filter.DecodeDefaults(
+								"yaml", []byte(test.TrimYAML(`
+									docker:
+										type: hub
+										image: i
+										tag: t
+										registry:
+											ghcr:
+												image: iGHCR
+												tag: tGHCR
+												auth:
+													username: something
+													token: ghp_X
+											hub:
+												image: iHub
+												tag: tHub
+												auth:
+													username: something
+													token: hub_X
+											quay:
+												image: iQuay
+												tag: tQuay
+												auth:
+													username: something
+													token: quay_X
+								`)),
+							)
+						}),
+					},
+					Notify: map[string]struct{}{
+						"n1": {},
+					},
+					Command: command.Commands{
+						{"command", "arg1", "arg2"},
+					},
+					WebHook: map[string]struct{}{
+						"wh1": {},
+						"wh2": {},
+						"wh3": {},
+						"wh4": {},
+					},
+				},
+			},
 			notify: &shoutrrr.ShoutrrrsDefaults{
 				"foo": shoutrrr.NewDefaults(
 					"gotify",
 					map[string]string{
-						"message": "hello world"},
+						"message": "hello world",
+					},
 					map[string]string{
-						"token": "secret123"},
+						"token": "secret123",
+					},
 					map[string]string{
-						"title": "UPDATE"})},
+						"title": "UPDATE",
+					},
+				),
+			},
 			wantBody: `
 				{
 					"settings": {
-						"log": {},
 						"web": {
 							"listen_host": "127.0.0.1"
 						}
@@ -261,36 +399,47 @@ func TestHTTP_Config(t *testing.T) {
 								"use_prerelease": false,
 								"require": {
 									"docker": {
-										"type": "ghcr",
-										"ghcr": {
-											"token": ` + secretValueMarshalled + `
-										},
-										"hub": {
-											"token": ` + secretValueMarshalled + `,
-											"username": "usernameForHub"
-										},
-										"quay": {
-											"token": ` + secretValueMarshalled + `
+										"type": "hub",
+										"image": "i",
+										"tag": "t",
+										"registry": {
+											"ghcr": {
+												"image": "iGHCR",
+												"tag": "tGHCR",
+												"auth": {
+													"token": ` + secretValueMarshalled + `
+												}
+											},
+											"hub": {
+												"image": "iHub",
+												"tag": "tHub",
+												"auth": {
+													"username": "something",
+													"token": ` + secretValueMarshalled + `
+												}
+											},
+											"quay": {
+												"image": "iQuay",
+												"tag": "tQuay",
+												"auth": {
+													"token": ` + secretValueMarshalled + `
+												}
+											}
 										}
 									}
 								}
 							},
-							"notify": {
-								"n1": {}
-							},
+							"notify": ["n1"],
 							"command": [
 								["command","arg1","arg2"]
 							],
-							"webhook": {
-								"wh1": {},
-								"wh2": {},
-								"wh3": {},
-								"wh4": {}
-							},
-							"deployed_version": {},
-							"dashboard": {}
-						},
-						"webhook": {}
+							"webhook": [
+								"wh1",
+								"wh2",
+								"wh3",
+								"wh4"
+							]
+						}
 					},
 					"notify": {
 						"foo": {
@@ -305,28 +454,30 @@ func TestHTTP_Config(t *testing.T) {
 								"title": "UPDATE"
 							}
 						}
-					},
-					"webhook": {},
-					"service": {}
+					}
 				}`,
 		},
-		"4. settings + defaults (with notify+command+webhook service defaults) + notify + webhook": {
+		{
+			name: "settings + defaults (with notify+command+webhook service defaults) + notify + webhook",
 			webhook: &webhook.WebHooksDefaults{
-				"foo": webhook.NewDefaults(
-					test.BoolPtr(true),
-					&webhook.Headers{
-						{Key: "X-Header", Value: "value"}},
-					"4s",
-					nil,
-					nil,
-					"something",
-					nil,
-					"github",
-					"https://example.com")},
+				"foo": test.Must(t, func() (*webhook.Defaults, error) {
+					return webhook.DecodeDefaults(
+						"yaml", []byte(test.TrimYAML(`
+							allow_invalid_certs: true
+							headers:
+								- key: X-Header
+								  value: value
+							delay: 4s
+							secret: something
+							type: github
+							url: https://example.com
+						`)),
+					)
+				}),
+			},
 			wantBody: `
 				{
 					"settings": {
-						"log": {},
 						"web": {
 							"listen_host": "127.0.0.1"
 						}
@@ -342,36 +493,47 @@ func TestHTTP_Config(t *testing.T) {
 								"use_prerelease": false,
 								"require": {
 									"docker": {
-										"type": "ghcr",
-										"ghcr": {
-											"token": ` + secretValueMarshalled + `
-										},
-										"hub": {
-											"token": ` + secretValueMarshalled + `,
-											"username": "usernameForHub"
-										},
-										"quay": {
-											"token": ` + secretValueMarshalled + `
+										"type": "hub",
+										"image": "i",
+										"tag": "t",
+										"registry": {
+											"ghcr": {
+												"image": "iGHCR",
+												"tag": "tGHCR",
+												"auth": {
+													"token": ` + secretValueMarshalled + `
+												}
+											},
+											"hub": {
+												"image": "iHub",
+												"tag": "tHub",
+												"auth": {
+													"username": "something",
+													"token": ` + secretValueMarshalled + `
+												}
+											},
+											"quay": {
+												"image": "iQuay",
+												"tag": "tQuay",
+												"auth": {
+													"token": ` + secretValueMarshalled + `
+												}
+											}
 										}
 									}
 								}
 							},
-							"notify": {
-								"n1": {}
-							},
+							"notify": ["n1"],
 							"command": [
 								["command","arg1","arg2"]
 							],
-							"webhook": {
-								"wh1": {},
-								"wh2": {},
-								"wh3": {},
-								"wh4": {}
-							},
-							"deployed_version": {},
-							"dashboard": {}
-						},
-						"webhook": {}
+							"webhook": [
+								"wh1",
+								"wh2",
+								"wh3",
+								"wh4"
+							]
+						}
 					},
 					"notify": {
 						"foo": {
@@ -394,42 +556,52 @@ func TestHTTP_Config(t *testing.T) {
 							"allow_invalid_certs": true,
 							"secret": ` + secretValueMarshalled + `,
 							"headers": [
-								{"key": "X-Header","value": ` + secretValueMarshalled + `}],
-							"delay": "4s"}},
-					"service": {}
+								{
+									"key": "X-Header",
+									"value": ` + secretValueMarshalled + `
+								}
+							],
+							"delay": "4s"
+						}
+					}
 				}`,
 		},
-		"5. settings + defaults (with notify+command+webhook service defaults) + notify + webhook + service": {
+		{
+			name: "settings + defaults (with notify+command+webhook service defaults) + notify + webhook + service",
 			service: &service.Services{
 				"alpha": &service.Service{
-					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-						return latestver.New(
-							"github",
-							"yaml", test.TrimYAML(`
-								url: release-argus/Argus
+					LatestVersion: test.Must(t, func() (latestver.Lookup, error) {
+						return latestver.Decode(
+							"yaml", []byte(test.TrimYAML(`
+								type: github
+								url: `+test.ArgusGitHubRepo+`
 								access_token: aToken
-							`),
+							`)),
 							nil,
 							nil,
-							nil, nil)
-					})},
+							lvCfg,
+						)
+					}),
+				},
 				"bravo": &service.Service{
-					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-						return latestver.New(
-							"url",
-							"yaml", test.TrimYAML(`
+					LatestVersion: test.Must(t, func() (latestver.Lookup, error) {
+						return latestver.Decode(
+							"yaml", []byte(test.TrimYAML(`
+								type: url
 								url: https://example.com/version
 								allow_invalid_certs: true
-							`),
+							`)),
 							nil,
 							nil,
-							nil, nil)
-					})}},
+							lvCfg,
+						)
+					}),
+				},
+			},
 			order: &[]string{"alpha", "bravo"},
 			wantBody: `
 				{
 					"settings": {
-						"log": {},
 						"web": {
 							"listen_host": "127.0.0.1"
 						}
@@ -445,36 +617,47 @@ func TestHTTP_Config(t *testing.T) {
 								"use_prerelease": false,
 								"require": {
 									"docker": {
-										"type": "ghcr",
-										"ghcr": {
-											"token": ` + secretValueMarshalled + `
-										},
-										"hub": {
-											"token": ` + secretValueMarshalled + `,
-											"username": "usernameForHub"
-										},
-										"quay": {
-											"token": ` + secretValueMarshalled + `
+										"type": "hub",
+										"image": "i",
+										"tag": "t",
+										"registry": {
+											"ghcr": {
+												"image": "iGHCR",
+												"tag": "tGHCR",
+												"auth": {
+													"token": ` + secretValueMarshalled + `
+												}
+											},
+											"hub": {
+												"image": "iHub",
+												"tag": "tHub",
+												"auth": {
+													"username": "something",
+													"token": ` + secretValueMarshalled + `
+												}
+											},
+											"quay": {
+												"image": "iQuay",
+												"tag": "tQuay",
+												"auth": {
+													"token": ` + secretValueMarshalled + `
+												}
+											}
 										}
 									}
 								}
 							},
-							"notify": {
-								"n1": {}
-							},
+							"notify": ["n1"],
 							"command": [
 								["command","arg1","arg2"]
 							],
-							"webhook": {
-								"wh1": {},
-								"wh2": {},
-								"wh3": {},
-								"wh4": {}
-							},
-							"deployed_version": {},
-							"dashboard": {}
-						},
-						"webhook": {}
+							"webhook": [
+								"wh1",
+								"wh2",
+								"wh3",
+								"wh4"
+							]
+						}
 					},
 					"notify": {
 						"foo": {
@@ -497,34 +680,28 @@ func TestHTTP_Config(t *testing.T) {
 							"allow_invalid_certs": true,
 							"secret": ` + secretValueMarshalled + `,
 							"headers": [
-								{"key": "X-Header","value": ` + secretValueMarshalled + `}],
-							"delay": "4s"}},
+								{
+									"key": "X-Header",
+									"value": ` + secretValueMarshalled + `
+								}
+							],
+							"delay": "4s"
+						}
+					},
 					"service": {
 						"alpha": {
-							"options": {},
 							"latest_version": {
 								"type": "github",
-								"url": "release-argus/Argus",
-								"access_token": ` + secretValueMarshalled + `,
-								"url_commands": []
-							},
-							"command": [],
-							"notify": {},
-							"webhook": {},
-							"dashboard": {}
+								"url": "` + test.ArgusGitHubRepo + `",
+								"access_token": ` + secretValueMarshalled + `
+							}
 						},
 						"bravo": {
-							"options": {},
 							"latest_version": {
 								"type": "url",
 								"url": "https://example.com/version",
-								"allow_invalid_certs": true,
-								"url_commands": []
-							},
-							"command": [],
-							"notify": {},
-							"webhook": {},
-							"dashboard": {}
+								"allow_invalid_certs": true
+							}
 						}
 					},
 					"order": [
@@ -535,16 +712,6 @@ func TestHTTP_Config(t *testing.T) {
 		},
 	}
 
-	order := make([]string, len(tests))
-	for i := range order {
-		lookingFor := fmt.Sprintf("%d. ", i)
-		for name := range tests {
-			if strings.HasPrefix(name, lookingFor) {
-				order[i] = name
-				break
-			}
-		}
-	}
 	api.Config.Settings = config.Settings{}
 	api.Config.Defaults = config.Defaults{}
 	api.Config.Notify = shoutrrr.ShoutrrrsDefaults{}
@@ -552,10 +719,8 @@ func TestHTTP_Config(t *testing.T) {
 	api.Config.Service = service.Services{}
 	api.Config.Order = []string{}
 
-	for _, name := range order {
-		tc := tests[name]
-		t.Run(name, func(t *testing.T) {
-
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			if tc.settings != nil {
 				api.Config.Settings = *tc.settings
 			}
@@ -576,25 +741,25 @@ func TestHTTP_Config(t *testing.T) {
 			}
 			tc.wantBody = test.TrimJSON(tc.wantBody) + "\n"
 
-			// WHEN that HTTP request is sent.
-			req := httptest.NewRequest(http.MethodGet,
-				"/api/v1/config",
-				nil)
+			// WHEN: that HTTP request is sent.
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/config", nil)
 			w := httptest.NewRecorder()
 			api.httpConfig(w, req)
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			// THEN the expected body is returned.
+			prefix := fmt.Sprintf("%s\nAPI.httpConfig()", packageName)
+
+			// THEN: the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("%s - %s\nunexpected error - %v",
-					packageName, name, err)
+				t.Fatalf("%s unexpected error:\n%v", prefix, err)
 			}
-			got := string(data)
-			if got != tc.wantBody {
-				t.Fatalf("%s - %s\nwant: %q\ngot:  %q",
-					packageName, name, tc.wantBody, got)
+			if got := string(data); got != tc.wantBody {
+				t.Errorf(
+					"%s non-matching response\ngot:  %q\nwant: %q",
+					prefix, got, tc.wantBody,
+				)
 			}
 		})
 	}

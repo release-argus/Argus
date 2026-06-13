@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/release-argus/Argus/test"
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 )
 
 var packageName = "option"
@@ -35,9 +35,8 @@ func TestMain(m *testing.M) {
 	// Run other tests.
 	exitCode := m.Run()
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
@@ -46,7 +45,38 @@ func TestMain(m *testing.M) {
 }
 
 func testOptions() *Options {
-	return New(
-		test.BoolPtr(true), "10m", test.BoolPtr(true),
-		&Defaults{}, &Defaults{})
+	optCfg := plainDefaultsConfig()
+
+	o, _ := Decode(
+		"yaml", []byte(test.TrimYAML(`
+			active: true
+			interval: 10m
+			semantic_versioning: true
+		`)),
+		optCfg,
+	)
+
+	return o
+}
+
+func testDefaults() *Defaults {
+	defaults, _ := DecodeDefaults(
+		"yaml", []byte(test.TrimYAML(`
+			interval: 1h
+			semantic_versioning: false
+		`)),
+	)
+	return defaults
+}
+
+// plainDefaultsConfig returns plain defaults and hardDefaults for testing.
+func plainDefaultsConfig() DefaultsConfig {
+	defaults := Defaults{}
+	hardDefaults := Defaults{}
+	hardDefaults.Default()
+
+	return DefaultsConfig{
+		Soft: &defaults,
+		Hard: &hardDefaults,
+	}
 }

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,24 +17,69 @@ package base
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service/deployed_version/types/web/constants"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/polymorphic"
 )
+
+// #########
+// # TYPES #
+// #########
+
+// DefaultsConfig pairs soft and hard deployed version defaults for decoding.
+type DefaultsConfig struct {
+	Soft *Defaults
+	Hard *Defaults
+}
 
 // Defaults are the default values for a Lookup.
 type Defaults struct {
+	Type              string `json:"type,omitempty" yaml:"type,omitempty"`                               // "manual" | "url".
 	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // False = Disallows invalid HTTPS certificates.
 	Method            string `json:"method,omitempty" yaml:"method,omitempty"`                           // HTTP method.
 
 	Options *opt.Defaults `json:"-" yaml:"-"` // Options for the Lookup.
 }
 
-// Default sets these Defaults to the default values.
+// ############
+// # DECODING #
+// ############
+
+// DecodeDefaults decodes deployed version defaults from format-encoded data.
+func DecodeDefaults(format string, data []byte) (*Defaults, error) {
+	var field Defaults
+
+	if err := decode.Unmarshal(format, data, &field); err != nil {
+		return nil, &decode.KeyFieldError{
+			Key: "deployed_version",
+			Err: err,
+		}
+	}
+
+	return &field, nil
+}
+
+// #########
+// # STATE #
+// #########
+
+// IsZero implements the yaml.IsZeroer interface.
+func (d Defaults) IsZero() bool {
+	return d.Type == "" &&
+		d.AllowInvalidCerts == nil &&
+		d.Method == ""
+}
+
+// ########
+// # INIT #
+// ########
+
+// Default sets the values of the receiver to their default values.
 func (d *Defaults) Default() {
 	// allow_invalid_certs.
 	allowInvalidCerts := false
@@ -42,17 +87,29 @@ func (d *Defaults) Default() {
 
 	// method.
 	d.Method = http.MethodGet
+
+	// type.
+	d.Type = "url"
 }
 
-// CheckValues validates the fields of the Defaults struct.
-func (d *Defaults) CheckValues(prefix string) error {
+// ##############
+// # VALIDATION #
+// ##############
+
+// CheckValues validates the fields of the receiver.
+func (d *Defaults) CheckValues() error {
 	var errs []error
 	// Method.
 	d.Method = strings.ToUpper(d.Method)
 	if d.Method != "" && !util.Contains(constants.SupportedMethods, d.Method) {
-		errs = append(errs,
-			fmt.Errorf("%smethod: %q <invalid> (supported methods = ['%s'])",
-				prefix, d.Method, strings.Join(constants.SupportedMethods, "', '")))
+		errs = append(
+			errs,
+			polymorphic.InvalidTypeError{
+				Key:     "method",
+				Value:   d.Method,
+				Allowed: constants.SupportedMethods,
+			},
+		)
 	}
 
 	if len(errs) == 0 {

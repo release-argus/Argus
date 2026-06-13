@@ -5,6 +5,7 @@ import {
 	mapAPIPayloadToCommandsSchema,
 } from '@/utils/api/types/config-edit/command/api/conversions';
 import {
+	type CommandsSchema,
 	commandDefaultSchema,
 	commandSchema,
 	commandsDefaultSchema,
@@ -51,7 +52,7 @@ export const buildCommandSchemaWithFallbacks = (
 		});
 
 		if (!schemaResult.success) {
-			addZodIssuesToContext({ ctx, error: schemaResult.error });
+			addZodIssuesToContext({ ctx: ctx, error: schemaResult.error });
 		}
 	});
 
@@ -112,13 +113,13 @@ export const buildCommandsSchemaWithFallbacks = (
 			});
 
 			if (!result.success) {
-				addZodIssuesToContext({ ctx, error: result.error });
+				addZodIssuesToContext({ ctx: ctx, error: result.error });
 			}
 		})
 		.default(defaultValueHollow);
 
 	// Initial schema data.
-	let schemaData;
+	let schemaData: CommandsSchema;
 	if (data) {
 		schemaData = safeParse({
 			data: dataConverted,

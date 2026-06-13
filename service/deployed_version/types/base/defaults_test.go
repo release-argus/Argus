@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,82 +18,259 @@
 package base
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/test"
 )
 
-func TestDefaults_Default(t *testing.T) {
-	// GIVEN Defaults.
-	defaults := Defaults{}
+// ############
+// # DECODING #
+// ############
 
-	// WHEN Default is called.
-	defaults.Default()
+func TestDecodeDefaults(t *testing.T) {
+	// GIVEN: data in a given format to Decode into Defaults.
+	tests := []struct {
+		name         string
+		format, data string
+		want         string
+		errRegex     string
+	}{
+		{
+			name:     "JSON/empty",
+			format:   "json",
+			data:     "",
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     "{}",
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "YAML/empty",
+			format:   "yaml",
+			data:     "",
+			want:     "{}\n",
+			errRegex: "^$",
+		},
+		{
+			name:   "JSON/filled",
+			format: "json",
+			data: test.TrimJSON(`{
+				"type": "url",
+				"allow_invalid_certs": true,
+				"method": "GET"
+			}`),
+			want: test.TrimYAML(`
+				type: url
+				allow_invalid_certs: true
+				method: GET
+			`),
+		},
+		{
+			name:   "YAML/filled",
+			format: "yaml",
+			data: test.TrimYAML(`
+				type: url
+				allow_invalid_certs: true
+				method: GET
+			`),
+			want: test.TrimYAML(`
+				type: url
+				allow_invalid_certs: true
+				method: GET
+			`),
+		},
+		{
+			name:   "JSON/invalid format",
+			format: "json",
+			data:   `{"allow_invalid_certs": "true"}`,
+			errRegex: test.TrimYAML(`
+				^deployed_version:
+					json: .*unmarshal.*$`,
+			),
+		},
+		{
+			name:   "YAML/invalid deployed_version data types",
+			format: "yaml",
+			data:   `allow_invalid_certs: maybe`,
+			errRegex: test.TrimYAML(`
+				^deployed_version:
+					[^\s]+.* string .*`,
+			),
+		},
+	}
 
-	// THEN it should set the defaults.
-	if defaults.AllowInvalidCerts == nil {
-		t.Errorf("%s\nAllowInvalidCerts not set, got %v",
-			packageName, defaults.AllowInvalidCerts)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, _, testErr := test.AssertDecode(
+				t,
+				DecodeDefaults,
+				tc.format, tc.data,
+				func(v *Defaults) string { return decode.ToYAMLString(v, "") },
+				tc.want,
+				tc.errRegex,
+				packageName,
+				"DecodeDefaults",
+			)
+			if testErr != nil {
+				t.Fatal(testErr)
+			}
+		})
 	}
 }
 
+// #########
+// # STATE #
+// #########
+
+func TestDefaults_IsZero(t *testing.T) {
+	// GIVEN: Defaults.
+	tests := []struct {
+		name string
+		opt  *Defaults
+		want bool
+	}{
+		{
+			name: "empty",
+			opt:  &Defaults{},
+			want: true,
+		},
+		{
+			name: "non-empty Type",
+			opt: &Defaults{
+				Type: "url",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty AllowInvalidCerts",
+			opt: &Defaults{
+				AllowInvalidCerts: test.Ptr(true),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty Method",
+			opt: &Defaults{
+				Method: http.MethodPost,
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero is called.
+			got := tc.opt.IsZero()
+
+			// THEN: it should return the expected value.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+// ########
+// # INIT #
+// ########
+
+func TestDefaults_Default(t *testing.T) {
+	// GIVEN: Defaults.
+	defaults := Defaults{}
+
+	// WHEN: Default is called.
+	defaults.Default()
+
+	// THEN: it should set the defaults.
+	if defaults.AllowInvalidCerts == nil {
+		t.Errorf("%s\nDefaults.Default() .AllowInvalidCerts not set\ngot:  nil\nwant: non-nil", packageName)
+	}
+}
+
+// ##############
+// # VALIDATION #
+// ##############
+
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN Defaults.
-	tests := map[string]struct {
+	// GIVEN: Defaults.
+	tests := []struct {
+		name       string
 		method     string
-		prefix     string
-		wantErr    string
+		errRegex   string
 		wantMethod string
 	}{
-		"empty method - no error": {
+		{
+			name:       "empty method - no error",
 			method:     "",
-			wantErr:    `^$`,
+			errRegex:   `^$`,
 			wantMethod: "",
 		},
-		"valid lowercase method - uppercased and ok": {
+		{
+			name:       "valid lowercase method - uppercased and ok",
 			method:     "post",
-			wantErr:    `^$`,
+			errRegex:   `^$`,
 			wantMethod: http.MethodPost,
 		},
-		"valid uppercase method - unchanged and ok": {
+		{
+			name:       "valid uppercase method - unchanged and ok",
 			method:     "GET",
-			wantErr:    `^$`,
+			errRegex:   `^$`,
 			wantMethod: http.MethodGet,
 		},
-		"unsupported method - with error prefix": {
-			method:     http.MethodDelete,
-			prefix:     "root: ",
-			wantErr:    `^root: method: "` + http.MethodDelete + `" <invalid> .*` + http.MethodGet + `.*$`,
+		{
+			name:   "unsupported method",
+			method: http.MethodDelete,
+			errRegex: fmt.Sprintf(
+				`^method: "%s" <invalid> .*%s.*$`,
+				http.MethodDelete, http.MethodGet,
+			),
 			wantMethod: http.MethodDelete,
 		},
-		"invalid method - no prefix": {
-			method:     "foo",
-			wantErr:    `^method: "FOO" <invalid> .*` + http.MethodPost + `.*$`,
+		{
+			name:   "invalid method",
+			method: "foo",
+			errRegex: fmt.Sprintf(
+				`^method: "FOO" <invalid> .*%s.*$`,
+				http.MethodPost,
+			),
 			wantMethod: "FOO",
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			d := &Defaults{Method: tc.method}
+			input := Defaults{Method: tc.method}
 
-			// WHEN CheckValues is called.
-			err := d.CheckValues(tc.prefix)
+			_ = test.AssertCheckValuesWithError(
+				t,
+				packageName,
+				tc.errRegex,
+				input.CheckValues,
+			)
 
-			// THEN the error matches expectation.
-			e := util.ErrorToString(err)
-			if !util.RegexCheck(tc.wantErr, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wantErr, e)
-			}
-
-			// AND Method is uppercased/unchanged as expected.
-			if d.Method != tc.wantMethod {
-				t.Errorf("%s\nMethod mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wantMethod, d.Method)
+			// AND: Method is uppercased/unchanged as expected.
+			if input.Method != tc.wantMethod {
+				t.Errorf(
+					"%s\nDefaults.CheckValues() .Method mismatch\ngot:  %q\nwant: %q",
+					packageName, input.Method, tc.wantMethod,
+				)
 			}
 		})
 	}

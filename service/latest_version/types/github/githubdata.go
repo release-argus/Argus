@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,182 +18,190 @@ package github
 import (
 	"sync"
 
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
-	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
 var (
-	emptyListETagMutex sync.RWMutex
-	emptyListETag      = `"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"`
-	defaultPerPage     = 30
+	emptyListETagMu sync.RWMutex
+	emptyListETag   = `"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"`
+	defaultPerPage  = 30
 )
 
 // SetEmptyListETag finds the ETag for an empty list query on the GitHub API
 // and sets it to be used as the initial ETag for Data.
 func SetEmptyListETag(accessToken string) {
-	lookup, _ := New(
-		"yaml", "",
+	var defaults, hardDefaults base.Defaults
+	hardDefaults.Default()
+	lookup, _ := Decode(
+		"yaml", []byte("url: release-argus/.github"),
 		nil,
 		nil,
-		&base.Defaults{}, &base.Defaults{})
-	lookup.URL = "release-argus/.github"
+		base.DefaultsConfig{
+			Soft: &defaults,
+			Hard: &hardDefaults,
+		},
+	)
 	lookup.AccessToken = accessToken
-	lookup.Defaults = &base.Defaults{}
-	lookup.HardDefaults = &base.Defaults{}
 
 	// Fallback to /tags to stop the /tags fallback query if on /releases.
 	lookup.data.SetTagFallback()
 	//#nosec G104 -- Disregard.
 	//nolint:errcheck // ^
-	lookup.httpRequest(1, logutil.LogFrom{Primary: "SetEmptyListETag"})
+	_, _, _ = lookup.httpRequest(1, logx.LogFrom{Primary: "SetEmptyListETag"})
 
 	setEmptyListETag(lookup.data.ETag())
-}
-
-// setEmptyListETag sets the ETag for an empty list query on the GitHub API.
-func setEmptyListETag(eTag string) {
-	emptyListETagMutex.Lock()
-	defer emptyListETagMutex.Unlock()
-
-	emptyListETag = eTag
-}
-
-// getEmptyListETag returns the ETag for an empty list query on the GitHub API.
-func getEmptyListETag() string {
-	emptyListETagMutex.RLock()
-	defer emptyListETagMutex.RUnlock()
-
-	return emptyListETag
 }
 
 // Data contains the information used and retrieved during GitHub requests,
 // including the eTag, associated releases, and the usage state of the "/tags" endpoint.
 type Data struct {
-	mutex       sync.RWMutex           // Mutex to protect the Data.
-	eTag        string                 // GitHub ETag for conditional requests https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requestsl.
-	perPage     int                    // Number of releases per page.
-	releases    []github_types.Release // Store Releases tied to an ETag.
-	tagFallback bool                   // Whether we have fallen back to using /tags instead of /releases.
+	mu          sync.RWMutex      // Mutex to protect the Data.
+	eTag        string            // GitHub ETag for conditional requests https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requestsl.
+	perPage     int               // Number of releases per page.
+	releases    []ghtypes.Release // Store Releases tied to an ETag.
+	tagFallback bool              // Whether we have fallen back to using /tags instead of /releases.
 }
 
-// String returns a string representation of the Status.
+// DataJSON is the JSON representation of cached GitHub release data.
+type DataJSON struct {
+	ETag     string            `json:"etag,omitempty"`
+	Releases []ghtypes.Release `json:"releases,omitempty"`
+}
+
+// String implements [fmt.Stringer] and returns a JSON representation.
 func (g *Data) String() string {
 	if g == nil {
 		return ""
-	}
-	type DataJSON struct {
-		ETag     string                 `json:"etag,omitempty"`
-		Releases []github_types.Release `json:"releases,omitempty"`
 	}
 
 	jsonStruct := DataJSON{
 		ETag:     g.ETag(),
 		Releases: g.Releases()}
 
-	return util.ToJSONString(jsonStruct)
+	return decode.ToJSONString(jsonStruct)
 }
 
 // SetTagFallback will flip the TagFallback bool.
 func (g *Data) SetTagFallback() {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
 	g.tagFallback = !g.tagFallback
 }
 
 // TagFallback value of the Data.
 func (g *Data) TagFallback() bool {
-	g.mutex.RLock()
-	defer g.mutex.RUnlock()
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 
 	return g.tagFallback
 }
 
 // SetETag of the Data.
 func (g *Data) SetETag(etag string) {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
 	g.eTag = etag
 }
 
 // ETag value of the Data.
 func (g *Data) ETag() string {
-	g.mutex.RLock()
-	defer g.mutex.RUnlock()
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 
 	return g.eTag
 }
 
 // SetPerPage of the Data.
 func (g *Data) SetPerPage(foundOnPage int) {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
-	g.perPage = util.ValueOrValue(g.perPage, defaultPerPage) * foundOnPage
+	g.perPage = util.ValueOr(g.perPage, defaultPerPage) * foundOnPage
 }
 
 // ResetPerPage of the Data.
 func (g *Data) ResetPerPage() {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
 	g.perPage = 0
 }
 
 // PerPage value of the Data.
 func (g *Data) PerPage() int {
-	g.mutex.RLock()
-	defer g.mutex.RUnlock()
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 
 	return g.perPage
 }
 
 // SetReleases of the Data.
-func (g *Data) SetReleases(releases []github_types.Release) {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
+func (g *Data) SetReleases(releases []ghtypes.Release) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
 	g.releases = releases
 }
 
 // Releases stored in the Data.
-func (g *Data) Releases() []github_types.Release {
-	g.mutex.RLock()
-	defer g.mutex.RUnlock()
+func (g *Data) Releases() []ghtypes.Release {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 
 	return g.releases
 }
 
 // hasReleases returns whether the Data has releases.
 func (g *Data) hasReleases() bool {
-	g.mutex.RLock()
-	defer g.mutex.RUnlock()
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 
 	return len(g.releases) > 0
 }
 
-// Copy returns a copy of the ETag, and Releases for the Data.
+// Copy returns a deep copy of the receiver.
 func (g *Data) Copy() *Data {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
 	return &Data{
 		eTag:        g.eTag,
+		perPage:     g.perPage,
 		releases:    g.releases,
-		tagFallback: g.tagFallback}
+		tagFallback: g.tagFallback,
+	}
 }
 
 // CopyFrom copies the ETag and Releases from the given Data to the provider.
 func (g *Data) CopyFrom(from *Data) {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	from.mutex.RLock()
-	defer from.mutex.RUnlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	from.mu.RLock()
+	defer from.mu.RUnlock()
 
 	g.eTag = from.eTag
 	g.releases = from.releases
 	g.tagFallback = from.tagFallback
+}
+
+// setEmptyListETag sets the ETag for an empty list query on the GitHub API.
+func setEmptyListETag(eTag string) {
+	emptyListETagMu.Lock()
+	defer emptyListETagMu.Unlock()
+
+	emptyListETag = eTag
+}
+
+// getEmptyListETag returns the ETag for an empty list query on the GitHub API.
+func getEmptyListETag() string {
+	emptyListETagMu.RLock()
+	defer emptyListETagMu.RUnlock()
+
+	return emptyListETag
 }

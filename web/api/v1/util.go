@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,20 +16,36 @@
 package v1
 
 import (
-	"bytes"
-	"encoding/json"
 	"net/url"
 
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
+// marshalAnnouncePayload serialises WebSocket announce payloads (overridable for tests).
+var marshalAnnouncePayload = func(v any) ([]byte, error) {
+	return decode.Marshal("json", v)
+}
+
+// sendAnnouncePayload marshals a WebSocket message to JSON and publishes it on the announce channel.
+// Marshal failures are logged and the message is dropped.
+func (api *API) sendAnnouncePayload(msg apitype.WebSocketMessage) {
+	payloadData, err := marshalAnnouncePayload(msg)
+	if err != nil {
+		logx.Error(err, logx.LogFrom{Primary: "sendAnnouncePayload"}, true)
+		return
+	}
+	api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
+}
+
 // getParam from a URL query string.
-func getParam(queryParams *url.Values, param string) *string {
-	if !queryParams.Has(param) {
+func getParam(queryParams *url.Values, key string) *string {
+	if !queryParams.Has(key) {
 		return nil
 	}
 
-	val := queryParams.Get(param)
+	val := queryParams.Get(key)
 	return &val
 }
 
@@ -42,38 +58,42 @@ func (api *API) announceEdit(oldData *apitype.ServiceSummary, newData *apitype.S
 		newData.RemoveUnchanged(oldData)
 	}
 
-	payloadData, _ := json.Marshal(apitype.WebSocketMessage{
-		Page:        "APPROVALS",
-		Type:        "EDIT",
-		SubType:     serviceChanged,
-		ServiceData: newData})
-
 	// Skip if ServiceData ended up empty
-	if bytes.Contains(payloadData, []byte(`"service_data":{}`)) {
+	if newData.IsZero() {
 		return
 	}
 
-	// Announce all edits to refresh caches.
-	api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
+	api.sendAnnouncePayload(
+		apitype.WebSocketMessage{
+			Page:        "APPROVALS",
+			Type:        "EDIT",
+			SubType:     serviceChanged,
+			ServiceData: newData,
+		},
+	)
 }
 
 // announceDelete broadcasts a DELETE message to all WebSocket clients.
 func (api *API) announceDelete(serviceID string) {
-	payloadData, _ := json.Marshal(apitype.WebSocketMessage{
-		Page:    "APPROVALS",
-		Type:    "DELETE",
-		SubType: serviceID})
-	api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
+	api.sendAnnouncePayload(
+		apitype.WebSocketMessage{
+			Page:    "APPROVALS",
+			Type:    "DELETE",
+			SubType: serviceID,
+		},
+	)
 }
 
 // announceOrder broadcasts an ORDER message to all WebSocket clients.
 func (api *API) announceOrder() {
-	payloadData, _ := json.Marshal(apitype.WebSocketMessage{
-		Page:    "APPROVALS",
-		Type:    "SERVICE",
-		SubType: "ORDER",
-		Order:   &api.Config.Order})
-	api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
+	api.sendAnnouncePayload(
+		apitype.WebSocketMessage{
+			Page:    "APPROVALS",
+			Type:    "SERVICE",
+			SubType: "ORDER",
+			Order:   &api.Config.Order,
+		},
+	)
 }
 
 // ConstantTimeCompare returns whether the slices x and y have equal contents.

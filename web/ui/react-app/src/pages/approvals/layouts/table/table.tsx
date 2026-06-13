@@ -1,7 +1,13 @@
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
 import { DataTable } from '@/components/ui/data-table';
-import { TABLE_COLUMNS_ORDER_STORAGE_KEY, TABLE_COLUMNS_VISIBLE_STORAGE_KEY, } from '@/constants/toolbar';
-import { resetColumnVisibility, setAutoHideColumnVisibility, } from '@/pages/approvals/layouts/table/column-visibility';
+import {
+	TABLE_COLUMNS_ORDER_STORAGE_KEY,
+	TABLE_COLUMNS_VISIBLE_STORAGE_KEY,
+} from '@/constants/toolbar';
+import {
+	resetColumnVisibility,
+	setAutoHideColumnVisibility,
+} from '@/pages/approvals/layouts/table/column-visibility';
 import { columns } from '@/pages/approvals/layouts/table/columns';
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
 import type { DragEndEvent, SensorOptions } from '@dnd-kit/core';
@@ -67,8 +73,8 @@ export const TableLayout: FC<TableLayoutProps> = ({
 	const getRowClassName = useCallback(
 		(row: { original: ServiceSummary }) =>
 			row.original?.active === false
-			? 'border-2! border-[var(--muted-foreground)] italic line-through'
-			: undefined,
+				? 'border-2! border-[var(--muted-foreground)] italic line-through'
+				: undefined,
 		[],
 	);
 
@@ -83,11 +89,11 @@ export const TableLayout: FC<TableLayoutProps> = ({
 			// Remove any IDs present in the sorted subset from the current full order.
 			const visibleSet = new Set(sortedVisibleIDs);
 			const remaining = order.filter((id) => !visibleSet.has(id));
-			const nextOrder = [ ...sortedVisibleIDs, ...remaining ];
+			const nextOrder = [...sortedVisibleIDs, ...remaining];
 
 			applyOrder(nextOrder);
 		},
-		[ order ],
+		[order],
 	);
 
 	// Sets column visibility in the table, and persists to localStorage.
@@ -109,8 +115,8 @@ export const TableLayout: FC<TableLayoutProps> = ({
 				localStorage.setItem(
 					TABLE_COLUMNS_VISIBLE_STORAGE_KEY,
 					Object.entries(newValue)
-						.filter(([ _, isVisible ]) => isVisible)
-						.map(([ columnID ]) => columnID)
+						.filter(([_, isVisible]) => isVisible)
+						.map(([columnID]) => columnID)
 						.join(','),
 				);
 
@@ -119,7 +125,7 @@ export const TableLayout: FC<TableLayoutProps> = ({
 				return newValue;
 			});
 		},
-		[ services ],
+		[services],
 	);
 
 	// Initialise the column visibility, and column order.
@@ -128,18 +134,14 @@ export const TableLayout: FC<TableLayoutProps> = ({
 	useEffect(() => {
 		// Column visibility.
 		const storedVisibility = new Set(
-			(
-				localStorage.getItem(TABLE_COLUMNS_VISIBLE_STORAGE_KEY) ?? ''
-			)
+			(localStorage.getItem(TABLE_COLUMNS_VISIBLE_STORAGE_KEY) ?? '')
 				.split(',')
 				.filter(Boolean),
 		);
 
 		// Convert string[] to VisibilityState (full visibility if empty).
 		const visibility = columns.reduce<VisibilityState>((acc, col) => {
-			const id = col.id ?? (
-				'accessorKey' in col ? col.accessorKey : ''
-			);
+			const id = col.id ?? ('accessorKey' in col ? col.accessorKey : '');
 			if (id) acc[id] = storedVisibility.size ? storedVisibility.has(id) : true;
 			return acc;
 		}, {});

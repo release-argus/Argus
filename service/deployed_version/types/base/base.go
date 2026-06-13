@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,14 +18,17 @@ package base
 import (
 	"errors"
 
+	"github.com/release-argus/Argus/internal/logx"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
-// Lookup is the base struct for a Lookup.
+// #########
+// # TYPES #
+// #########
+
+// Lookup is the base struct for an [Interface].
 type Lookup struct {
 	Type string `json:"type,omitempty" yaml:"type,omitempty"` // "url".
 
@@ -36,31 +39,29 @@ type Lookup struct {
 	HardDefaults *Defaults `json:"-" yaml:"-"` // Hard Defaults.
 }
 
-// Init will initialise the Lookup.
+// ########
+// # INIT #
+// ########
+
+// Init wires the dependencies into the receiver as pointers.
 func (l *Lookup) Init(
 	options *opt.Options,
 	status *status.Status,
-	defaults, hardDefaults *Defaults,
+	cfg DefaultsConfig,
 ) {
-	l.HardDefaults = hardDefaults
-	l.Defaults = defaults
+	l.HardDefaults = cfg.Hard
+	l.Defaults = cfg.Soft
 	l.Status = status
 	l.Options = options
 }
 
-// String returns a string representation of the Lookup.
-func (l *Lookup) String(parentLookup Interface, prefix string) string {
-	return util.ToYAMLString(parentLookup, prefix)
-}
+// #############
+// # ACCESSORS #
+// #############
 
 // GetServiceID returns the service ID of the Lookup.
 func (l *Lookup) GetServiceID() string {
 	return l.Status.ServiceInfo.ID
-}
-
-// GetType returns the type of the Lookup.
-func (l *Lookup) GetType() string {
-	return l.Type
 }
 
 // GetOptions returns the Lookup's options.
@@ -73,6 +74,11 @@ func (l *Lookup) GetStatus() *status.Status {
 	return l.Status
 }
 
+// SetStatus sets the Lookup's status.
+func (l *Lookup) SetStatus(status *status.Status) {
+	l.Status = status
+}
+
 // GetDefaults returns the Lookup's defaults.
 func (l *Lookup) GetDefaults() *Defaults {
 	return l.Defaults
@@ -83,23 +89,22 @@ func (l *Lookup) GetHardDefaults() *Defaults {
 	return l.HardDefaults
 }
 
-// CheckValues validates the fields of the Lookup struct.
-func (l *Lookup) CheckValues(prefix string) error {
+// #############
+// # INTERFACE #
+// #############
+
+// CheckValues validates the fields of the receiver.
+func (l *Lookup) CheckValues() error {
 	// Nothing to check.
 	return nil
 }
 
-// Track will query the service's deployed version at the given Options.Interval.
-func (l *Lookup) Track() {
-	// Nothing to track.
-}
-
 // Query will query the service for the deployed version.
-func (l *Lookup) Query(_ bool, _ logutil.LogFrom) error {
+func (l *Lookup) Query(_ bool, _ logx.LogFrom) error {
 	return errors.New("not implemented")
 }
 
-// InheritSecrets will inherit secrets from the `otherLookup`.
-func (l *Lookup) InheritSecrets(otherLookup Interface, secretRefs *shared.VSecretRef) {
+// InheritSecrets is a no-op for the Lookup interface.
+func (l *Lookup) InheritSecrets(otherLookup BaseInterface, secretRefs *shared.VSecretRef) {
 	// Nothing to inherit.
 }

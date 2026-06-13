@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,14 +20,14 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 // httpRuntimeInfo returns runtime info about the server.
 func (api *API) httpRuntimeInfo(w http.ResponseWriter, r *http.Request) {
-	logFrom := logutil.LogFrom{Primary: "httpBuildInfo", Secondary: getIP(r)}
+	logFrom := logx.LogFrom{Primary: "httpBuildInfo", Secondary: getIP(r)}
 
 	// Create and send status page data.
 	msg := apitype.RuntimeInfo{
@@ -36,7 +36,8 @@ func (api *API) httpRuntimeInfo(w http.ResponseWriter, r *http.Request) {
 		GoRoutineCount: runtime.NumGoroutine(),
 		GOMAXPROCS:     runtime.GOMAXPROCS(0),
 		GoGC:           os.Getenv("GOGC"),
-		GoDebug:        os.Getenv("GODEBUG")}
+		GoDebug:        os.Getenv("GODEBUG"),
+	}
 
 	api.writeJSON(w, msg, logFrom)
 }

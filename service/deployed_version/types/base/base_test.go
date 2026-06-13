@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,277 +18,290 @@
 package base
 
 import (
-	"strings"
+	"fmt"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
-	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
-func TestInit(t *testing.T) {
-	// GIVEN a Lookup and its dependencies.
+// ########
+// # INIT #
+// ########
+
+func TestLookup_Init(t *testing.T) {
+	// GIVEN: a Lookup and its dependencies.
 	options := &opt.Options{}
 	svcStatus := &status.Status{}
-	defaults := &Defaults{}
-	hardDefaults := &Defaults{}
+	dvCfg := plainDefaultsConfig(t)
 	l := &Lookup{}
 
-	// WHEN Init is called.
-	l.Init(options, svcStatus, defaults, hardDefaults)
+	// WHEN: Init is called.
+	l.Init(options, svcStatus, dvCfg)
 
-	// THEN the fields are initialised correctly.
-	if l.Options != options {
-		t.Errorf("%s\nunexpected Options\nwant: %v\ngot:  %v",
-			packageName, options, l.Options)
+	prefix := fmt.Sprintf(
+		"%s\nLookup.Init(options=%v, status=%v, defaults=%v)",
+		packageName, options, &svcStatus, dvCfg,
+	)
+
+	// THEN: pointers to those vars are handed out to the Lookup.
+	fieldTests := []test.FieldAssertion{
+		{Name: "Options", Got: l.Options, Want: options, Mode: test.CompareSamePointer},
+		{Name: "Status", Got: l.Status, Want: svcStatus, Mode: test.CompareSamePointer},
+		{Name: "Defaults", Got: l.Defaults, Want: dvCfg.Soft, Mode: test.CompareSamePointer},
+		{Name: "HardDefaults", Got: l.HardDefaults, Want: dvCfg.Hard, Mode: test.CompareSamePointer},
 	}
-	if l.Status != svcStatus {
-		t.Errorf("%s\nunexpected Status\nwant: %v\ngot:  %v",
-			packageName, svcStatus, l.Status)
-	}
-	if l.Defaults != defaults {
-		t.Errorf("%s\nunexpected Defaults\nwant: %v\ngot:  %v",
-			packageName, defaults, l.Defaults)
-	}
-	if l.HardDefaults != hardDefaults {
-		t.Errorf("%s\nunexpected HardDefaults\nwant: %v\ngot:  %v",
-			packageName, hardDefaults, l.HardDefaults)
+	if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
+		t.Fatal(err)
 	}
 }
 
-func TestString(t *testing.T) {
-	// GIVEN a Lookup and a parentLookup.
-	parentLookup := &testLookup{
-		Lookup: Lookup{
-			Type: "foo"}}
-	l := &testLookup{
-		Lookup: Lookup{
-			Type: "test"}}
-	prefix := "  "
+// #############
+// # ACCESSORS #
+// #############
 
-	// WHEN String is called.
-	got := l.String(parentLookup, prefix)
-
-	// THEN the result is as expected.
-	want := util.ToYAMLString(parentLookup, prefix)
-	if got != want {
-		t.Errorf("%s\nwant: %q\ngot:  %q",
-			packageName, want, got)
-	}
-}
-
-func TestGetServiceID(t *testing.T) {
-	// GIVEN a Lookup with a Status containing a ServiceID.
+func TestLookup_GetServiceID(t *testing.T) {
+	// GIVEN: a Lookup with a Status containing a ServiceID.
 	serviceID := "foo"
 	l := &testLookup{
 		Lookup: Lookup{
 			Status: &status.Status{
 				ServiceInfo: serviceinfo.ServiceInfo{
-					ID: serviceID}}}}
+					ID: serviceID,
+				},
+			},
+		},
+	}
 
-	// WHEN GetService is called.
+	// WHEN: GetService is called.
 	got := l.GetServiceID()
 
-	// THEN the ServiceID is returned.
+	// THEN: the ServiceID is returned.
 	if got != serviceID {
-		t.Errorf("%s\nwant: %q\ngot:  %q",
-			packageName, serviceID, got)
+		t.Errorf(
+			"%s\nLookup.GetServiceID() value mismatch\ngot:  %q\nwant: %q",
+			packageName, got, serviceID,
+		)
 	}
 }
 
-func TestGetType(t *testing.T) {
-	// GIVEN a Lookup with a Type.
-	lookupType := "test"
-	l := &testLookup{
-		Lookup: Lookup{Type: lookupType}}
-
-	// WHEN GetType is called.
-	got := l.GetType()
-
-	// THEN the Type is returned.
-	if got != lookupType {
-		t.Errorf("%s\nwant: %q\ngot:  %q",
-			packageName, lookupType, got)
-	}
-}
-
-func TestGetOptions(t *testing.T) {
-	// GIVEN a Lookup with Options.
+func TestLookup_GetOptions(t *testing.T) {
+	// GIVEN: a Lookup with Options.
 	options := &opt.Options{}
 	l := &testLookup{
 		Lookup: Lookup{
-			Options: options}}
+			Options: options,
+		},
+	}
 
-	// WHEN GetOptions is called.
+	// WHEN: GetOptions is called.
 	got := l.GetOptions()
 
-	// THEN the Options are returned.
+	// THEN: the Options are returned.
 	if got != options {
-		t.Errorf("%s\nwant: %v\ngot:  %v",
-			packageName, options, got)
+		t.Errorf(
+			"%s\nLookup.GetOptions() pointer mismatch\ngot:  %p\nwant: %p",
+			packageName, options, got,
+		)
 	}
 }
 
-func TestGetStatus(t *testing.T) {
-	// GIVEN a Lookup with Status.
+func TestLookup_GetStatus(t *testing.T) {
+	// GIVEN: a Lookup with Status.
 	svcStatus := &status.Status{}
 	l := &testLookup{
 		Lookup: Lookup{
-			Status: svcStatus}}
+			Status: svcStatus,
+		},
+	}
 
-	// WHEN GetStatus is called.
+	// WHEN: GetStatus is called.
 	got := l.GetStatus()
 
-	// THEN the Status is returned.
+	// THEN: the Status is returned.
 	if got != svcStatus {
-		t.Errorf("%s\nwant: %v\ngot:  %v",
-			packageName, svcStatus, got)
+		t.Errorf(
+			"%s\nLookup.GetStatus() pointer mismatch\ngot:  %p\nwant: %p",
+			packageName, svcStatus, got,
+		)
 	}
 }
 
-func TestGetDefaults(t *testing.T) {
-	// GIVEN a Lookup with Defaults.
+func TestLookup_SetStatus(t *testing.T) {
+	// GIVEN: a Lookup and a Status.
+	l := &Lookup{}
+	svcStatus := &status.Status{}
+
+	// WHEN: SetStatus is called.
+	l.SetStatus(svcStatus)
+
+	// THEN: the Status is set.
+	if l.Status != svcStatus {
+		t.Errorf(
+			"%s\nLookup.SetStatus(%p) pointer mismatch\ngot:  %v\nwant: %v",
+			packageName, svcStatus,
+			l.Status, svcStatus,
+		)
+	}
+
+	// ---
+
+	// GIVEN: a new Status.
+	svcStatus = &status.Status{}
+
+	// WHEN: SetStatus is called.
+	l.SetStatus(svcStatus)
+
+	// THEN: the Status is set.
+	if l.Status != svcStatus {
+		t.Errorf(
+			"%s\nLookup.SetStatus(%p) pointer mismatch\ngot:  %v\nwant: %v",
+			packageName, svcStatus,
+			l.Status, svcStatus,
+		)
+	}
+}
+
+func TestLookup_GetDefaults(t *testing.T) {
+	// GIVEN: a Lookup with Defaults.
 	defaults := &Defaults{}
 	l := &testLookup{
-		Lookup: Lookup{Defaults: defaults}}
+		Lookup: Lookup{Defaults: defaults},
+	}
 
-	// WHEN GetDefaults is called.
+	// WHEN: GetDefaults is called.
 	got := l.GetDefaults()
 
-	// THEN the Defaults are returned.
+	// THEN: the Defaults are returned.
 	if got != defaults {
-		t.Errorf("%s\nwant: %v\ngot:  %v",
-			packageName, defaults, got)
+		t.Errorf(
+			"%s\nLookup.GetDefaults() pointer mismatch\ngot:  %v\nwant: %v",
+			packageName, defaults, got,
+		)
 	}
 }
 
-func TestGetHardDefaults(t *testing.T) {
-	// GIVEN a Lookup with HardDefaults.
+func TestLookup_GetHardDefaults(t *testing.T) {
+	// GIVEN: a Lookup with HardDefaults.
 	hardDefaults := &Defaults{}
 	l := &testLookup{
-		Lookup: Lookup{HardDefaults: hardDefaults}}
+		Lookup: Lookup{HardDefaults: hardDefaults},
+	}
 
-	// WHEN GetHardDefaults is called.
+	// WHEN: GetHardDefaults is called.
 	got := l.GetHardDefaults()
 
-	// THEN the HardDefaults are returned.
+	// THEN: the HardDefaults are returned.
 	if got != hardDefaults {
-		t.Errorf("%s\nwant: %v\ngot:  %v",
-			packageName, hardDefaults, got)
+		t.Errorf(
+			"%s\nLookup.GetHardDefaults() pointer mismatch\ngot:  %v\nwant: %v",
+			packageName, hardDefaults, got,
+		)
 	}
 }
 
-func TestTrack(t *testing.T) {
-	// GIVEN a Lookup.
-	l := &testLookup{
-		Lookup: Lookup{
-			Type: "test"},
-	}
+// #############
+// # INTERFACE #
+// #############
 
-	// WHEN Track is called.
-	l.Track()
-
-	// THEN no error occurs and nothing is tracked.
-	// As the function does nothing, we just ensure it doesn't panic or error.
-}
-
-func TestCheckValues(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
-		yamlStr  string
+func TestLookup_CheckValues(t *testing.T) {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name     string
+		data     string
 		errRegex string
 	}{
-		"no URL": {
-			yamlStr: test.TrimYAML(`
-				type: url
-			`),
+		{
+			name:     "no URL",
+			data:     "type: url",
 			errRegex: `^$`,
 		},
-		"have URL": {
-			yamlStr: test.TrimYAML(`
+		{
+			name: "have URL",
+			data: test.TrimYAML(`
 				type: url
-				url: release-argus/argus
+				url: owner/repo
 			`),
 			errRegex: `^$`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			l := &testLookup{}
+			input := &testLookup{}
 			// Apply the YAML.
-			if err := yaml.Unmarshal([]byte(tc.yamlStr), l); err != nil {
-				t.Fatalf("%s\nerror unmarshalling YAML: %v",
-					packageName, err)
+			if err := decode.Unmarshal("yaml", []byte(tc.data), input); err != nil {
+				t.Fatalf(
+					"%s\nLookup failed unmarshaling YAML: %v",
+					packageName, err,
+				)
 			}
 
-			// WHEN CheckValues is called.
-			err := l.CheckValues("")
-
-			// THEN it errors when expected.
-			e := util.ErrorToString(err)
-			lines := strings.Split(e, "\n")
-			wantLines := strings.Count(tc.errRegex, "\n")
-			if wantLines > len(lines) {
-				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
-					packageName, wantLines, tc.errRegex, len(lines), lines, e)
-				return
-			}
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
-				return
-			}
+			_ = test.AssertCheckValuesWithError(
+				t,
+				packageName,
+				tc.errRegex,
+				input.CheckValues,
+			)
 		})
 	}
 }
 
-func TestQuery(t *testing.T) {
-	// GIVEN a Lookup.
+func TestLookup_Query(t *testing.T) {
+	// GIVEN: a Lookup.
 	l := &testLookup{
 		Lookup: Lookup{
-			Type: "test"},
+			Type: "test",
+		},
 	}
 
-	// WHEN Query is called.
-	gotErr := l.Query(true, logutil.LogFrom{})
+	// WHEN: Query is called.
+	gotErr := l.Query(true, logx.LogFrom{})
 
-	// THEN the function returns an error as it is not implemented.
+	// THEN: the function returns an error as it is not implemented.
 	if gotErr == nil {
-		t.Errorf("%s\nunexpected nil error",
-			packageName)
+		t.Errorf(
+			"%s\nLookup.Query(), unexpected nil error",
+			packageName,
+		)
 	}
 }
 
-func TestInheritSecrets(t *testing.T) {
-	// GIVEN a Lookup and another Lookup to inherit secrets from.
+func TestLookup_InheritSecrets(t *testing.T) {
+	// GIVEN: a Lookup and another Lookup to inherit secrets from.
 	otherLookup := &testLookup{
 		Lookup: Lookup{
-			Type: "other"}}
+			Type: "other",
+		},
+	}
 	secretRefs := &shared.VSecretRef{
 		Headers: []shared.OldIntIndex{
-			{OldIndex: test.IntPtr(0)}},
+			{OldIndex: test.Ptr(0)},
+		},
 	}
 	l := &testLookup{
 		Lookup: Lookup{
-			Type: "test"}}
-	strBefore := l.String(l, "")
+			Type: "test",
+		},
+	}
+	strBefore := decode.ToYAMLString(l, "")
 
-	// WHEN InheritSecrets is called.
+	// WHEN: InheritSecrets is called.
 	l.InheritSecrets(otherLookup, secretRefs)
 
-	// THEN no secrets are inherited as the function does nothing.
+	// THEN: no secrets are inherited as the function does nothing.
 	// As the function does nothing, we just ensure it doesn't panic or error.
-	if strAfter := l.String(l, ""); strBefore != strAfter {
-		t.Errorf("%s\nunexpected change in Lookup\nbefore: %q\nafter:  %q",
-			packageName, strBefore, l.String(l, ""))
+	if strAfter := decode.ToYAMLString(l, ""); strBefore != strAfter {
+		t.Errorf(
+			"%s\nLookup.InheritSecrets(), unexpected change\nbefore: %q\nafter:  %q",
+			packageName, strBefore, strBefore,
+		)
 	}
 }

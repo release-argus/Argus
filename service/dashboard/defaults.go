@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,24 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package dashboard provides options for a Service in the
+// Package dashboard provides options for a Service.
 package dashboard
 
-// OptionsDefaults are the default values for Options.
-type OptionsDefaults struct {
+import "github.com/release-argus/Argus/config/decode"
+
+// DefaultsConfig pairs soft and hard dashboard defaults for decoding.
+type DefaultsConfig struct {
+	Soft *Defaults
+	Hard *Defaults
+}
+
+// Defaults are the default values for Options.
+type Defaults struct {
 	OptionsBase `json:",inline" yaml:",inline"`
 }
 
-// NewOptionsDefaults creates a new OptionsDefaults.
-func NewOptionsDefaults(
-	autoApprove *bool,
-) OptionsDefaults {
-	return OptionsDefaults{
-		OptionsBase: OptionsBase{
-			AutoApprove: autoApprove}}
+// DecodeDefaults creates and returns new [Defaults] from format-encoded data.
+func DecodeDefaults(format string, data []byte) (*Defaults, error) {
+	var field Defaults
+	if err := decode.Unmarshal(format, data, &field); err != nil {
+		return nil, &decode.KeyFieldError{
+			Key: "dashboard",
+			Err: err,
+		}
+	}
+
+	return &field, nil
 }
 
-func (o *OptionsDefaults) Default() {
+// Default sets the values of the receiver to their default values.
+func (o *Defaults) Default() {
 	serviceAutoApprove := false
 	o.AutoApprove = &serviceAutoApprove
 }

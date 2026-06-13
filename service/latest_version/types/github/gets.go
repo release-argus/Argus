@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,12 +22,18 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+// GetType returns the type of the Lookup.
+func (l *Lookup) GetType() string {
+	return Type
+}
+
 // accessToken returns the GitHub API access token.
 func (l *Lookup) accessToken() string {
 	return util.FirstNonDefaultWithEnv(
 		l.AccessToken,
 		l.Defaults.AccessToken,
-		l.HardDefaults.AccessToken)
+		l.HardDefaults.AccessToken,
+	)
 }
 
 // url returns a GitHub API URL for the repository.
@@ -39,8 +45,10 @@ func (l *Lookup) url(page int) string {
 		if l.data.TagFallback() {
 			apiTarget = "tags"
 		}
-		url = fmt.Sprintf("https://api.github.com/repos/%s/%s",
-			url, apiTarget)
+		url = fmt.Sprintf(
+			"https://api.github.com/repos/%s/%s",
+			url, apiTarget,
+		)
 
 		// Query params
 		params := make([]string, 0, 2)
@@ -63,7 +71,8 @@ func (l *Lookup) usePreRelease() bool {
 	return *util.FirstNonDefault(
 		l.UsePreRelease,
 		l.Defaults.UsePreRelease,
-		l.HardDefaults.UsePreRelease)
+		l.HardDefaults.UsePreRelease,
+	)
 }
 
 // ServiceURL translates possible `owner/repo` URLs, adding the github.com/ prefix.

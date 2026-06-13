@@ -1,16 +1,15 @@
 import {
 	type RefinementCtx,
-	type ZodDefault,
 	type ZodSafeParseResult,
-	type ZodString,
 	type ZodType,
 	z,
 } from 'zod';
 import { isEmptyOrNull } from '@/utils';
-import { addZodIssuesToContext } from '@/utils/api/types/config-edit/shared/add-issues.ts';
-import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse.ts';
+import { addZodIssuesToContext } from '@/utils/api/types/config-edit/shared/add-issues';
+import { stringDefault } from '@/utils/api/types/config-edit/shared/preprocess';
+import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse';
+import { SecretValue } from '@/utils/api/types/config-edit/shared/secret-value';
 import { isEmpty } from '@/utils/is-empty';
-import { SecretValue } from '@/utils/secret-value';
 
 /* Field validation */
 
@@ -122,12 +121,9 @@ export const validateDuration = ({ arg, ctx, path }: FieldValidatorProps) => {
 	}
 };
 export const durationString = () =>
-	z
-		.string()
-		.default('')
-		.superRefine((arg, ctx) => {
-			validateDuration({ arg, ctx, path: [] });
-		});
+	stringDefault.superRefine((arg, ctx) => {
+		validateDuration({ arg: arg, ctx: ctx, path: [] });
+	});
 /**
  * Validates that the input is a number.
  *
@@ -264,32 +260,29 @@ export const regexStringWithFallback = (
 	required: boolean,
 	...defaults: (string | undefined)[]
 ) =>
-	z
-		.string()
-		.default('')
-		.superRefine((arg, ctx) => {
-			const value = arg || defaults.find((d) => d?.trim());
-			// No value.
-			if (!value) {
-				if (required) {
-					ctx.addIssue({
-						code: CUSTOM_ISSUE_CODE,
-						message: REQUIRED_MESSAGE,
-					});
-				}
-				return;
-			}
-
-			// RegEx validation.
-			try {
-				new RegExp(value);
-			} catch {
+	stringDefault.superRefine((arg, ctx) => {
+		const value = arg || defaults.find((d) => d?.trim());
+		// No value.
+		if (!value) {
+			if (required) {
 				ctx.addIssue({
 					code: CUSTOM_ISSUE_CODE,
-					message: 'Invalid regular expression.',
+					message: REQUIRED_MESSAGE,
 				});
 			}
-		});
+			return;
+		}
+
+		// RegEx validation.
+		try {
+			new RegExp(value);
+		} catch {
+			ctx.addIssue({
+				code: CUSTOM_ISSUE_CODE,
+				message: 'Invalid regular expression.',
+			});
+		}
+	});
 
 /* RegEx validation for a field */
 type RegexValidation<T extends boolean = true> = T extends true
@@ -308,30 +301,27 @@ export const stringWithFallback = (
 	validation?: RegexValidation,
 	required = true,
 	...defaults: (string | undefined)[]
-): ZodDefault<ZodString> =>
-	z
-		.string()
-		.default('')
-		.superRefine((arg, ctx) => {
-			const value = arg || defaults.find((d) => d?.trim());
+) =>
+	stringDefault.superRefine((arg, ctx) => {
+		const value = arg || defaults.find((d) => d?.trim());
 
-			if (!value) {
-				if (required) {
-					ctx.addIssue({
-						code: CUSTOM_ISSUE_CODE,
-						message: REQUIRED_MESSAGE,
-					});
-				}
-				return;
-			}
-
-			if (validation?.regex && !validation.regex.test(value)) {
+		if (!value) {
+			if (required) {
 				ctx.addIssue({
 					code: CUSTOM_ISSUE_CODE,
-					message: validation.message,
+					message: REQUIRED_MESSAGE,
 				});
 			}
-		});
+			return;
+		}
+
+		if (validation?.regex && !validation.regex.test(value)) {
+			ctx.addIssue({
+				code: CUSTOM_ISSUE_CODE,
+				message: validation.message,
+			});
+		}
+	});
 /* URL prefix validator. */
 export const urlPrefixValidator: RegexValidation = {
 	message: INVALID_URL_MESSAGE,
@@ -729,7 +719,7 @@ type ValidateArrayFieldWithSchemasProps = {
 /**
  * Validates an array field using safeParseListWithSchemas.
  * - Applies the correct schema based on "hollow" detection.
- * - If validation fails, attaches all issues to ctx using addZodIssuesToContext.
+ * - If validation fails, attaches all issues to context using addZodIssuesToContext.
  *
  * Returns the parsed value if successful (or default) or undefined if validation errors occur.
  */

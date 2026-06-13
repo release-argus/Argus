@@ -21,21 +21,24 @@ import (
 	"testing"
 )
 
-func TestSetMutex(t *testing.T) {
-	// GIVEN a ServiceInfo struct and a mutex.
+func TestServiceInfo_SetMutex(t *testing.T) {
+	// GIVEN: a ServiceInfo struct and a mutex.
 	serviceInfo := &ServiceInfo{}
-	mutex := &sync.RWMutex{}
+	mu := &sync.RWMutex{}
 
-	// WHEN SetMutex is called.
-	serviceInfo.SetMutex(mutex)
+	// WHEN: SetMutex is called.
+	serviceInfo.SetMutex(mu)
 
-	// THEN the mutex is set correctly.
-	if serviceInfo.mutex != mutex {
-		t.Errorf("%s\nmutex mismatch\nwant: %v\ngot:  %v",
-			packageName, &mutex, serviceInfo.mutex)
+	// THEN: the mutex is set correctly.
+	if serviceInfo.mu != mu {
+		t.Errorf(
+			"%s\nSetMutex(%p) mu mismatch\ngot:  %p",
+			packageName, &mu, serviceInfo.mu,
+		)
 	}
 }
-func TestGetIcon(t *testing.T) {
+
+func TestServiceInfo_GetIcon(t *testing.T) {
 	tests := []struct {
 		name  string
 		value string
@@ -54,26 +57,28 @@ func TestGetIcon(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// GIVEN a ServiceInfo struct with a mutex and an Icon value.
-			mutex := &sync.RWMutex{}
+			// GIVEN: a ServiceInfo struct with a mutex and an Icon value.
+			mu := &sync.RWMutex{}
 			serviceInfo := &ServiceInfo{
-				mutex: mutex,
-				Icon:  tc.value,
+				mu:   mu,
+				Icon: tc.value,
 			}
 
-			// WHEN GetIcon is called.
+			// WHEN: GetIcon is called.
 			result := serviceInfo.GetIcon()
 
-			// THEN the returned value matches the Icon field.
+			// THEN: the returned value matches the Icon field.
 			if result != tc.value {
-				t.Errorf("%s\nmismatch\nwant: %s\ngot:  %s",
-					packageName, tc.value, result)
+				t.Errorf(
+					"%s\nServiceInfo.GetIcon() mismatch\ngot:  %s\nwant: %s",
+					packageName, result, tc.value,
+				)
 			}
 		})
 	}
 }
 
-func TestGetIconLinkTo(t *testing.T) {
+func TestServiceInfo_GetIconLinkTo(t *testing.T) {
 	tests := []struct {
 		name  string
 		value string
@@ -92,26 +97,28 @@ func TestGetIconLinkTo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// GIVEN a ServiceInfo struct with a mutex and an IconLinkTo values.
-			mutex := &sync.RWMutex{}
+			// GIVEN: a ServiceInfo struct with a mutex and an IconLinkTo value.
+			mu := &sync.RWMutex{}
 			serviceInfo := &ServiceInfo{
-				mutex:      mutex,
+				mu:         mu,
 				IconLinkTo: tc.value,
 			}
 
-			// WHEN GetIconLinkTo is called.
+			// WHEN: GetIconLinkTo is called.
 			result := serviceInfo.GetIconLinkTo()
 
-			// THEN the returned value matches the Icon field.
+			// THEN: the returned value matches the Icon field.
 			if result != tc.value {
-				t.Errorf("%s\nmismatch\nwant: %s\ngot:  %s",
-					packageName, tc.value, result)
+				t.Errorf(
+					"%s\nServiceInfo.GetIconLinkTo() mismatch\ngot:  %s\nwant: %s",
+					packageName, result, tc.value,
+				)
 			}
 		})
 	}
 }
 
-func TestGetWebURL(t *testing.T) {
+func TestServiceInfo_GetWebURL(t *testing.T) {
 	tests := []struct {
 		name  string
 		value string
@@ -130,20 +137,22 @@ func TestGetWebURL(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// GIVEN a ServiceInfo struct with a mutex and an WebURL value.
-			mutex := &sync.RWMutex{}
+			// GIVEN: a ServiceInfo struct with a mutex and an WebURL value.
+			mu := &sync.RWMutex{}
 			serviceInfo := &ServiceInfo{
-				mutex:  mutex,
+				mu:     mu,
 				WebURL: tc.value,
 			}
 
-			// WHEN GetWebURL is called.
+			// WHEN: GetWebURL is called.
 			result := serviceInfo.GetWebURL()
 
-			// THEN the returned value matches the Icon field.
+			// THEN: the returned value matches the Icon field.
 			if result != tc.value {
-				t.Errorf("%s\nmismatch\nwant: %s\ngot:  %s",
-					packageName, tc.value, result)
+				t.Errorf(
+					"%s\nServiceInfo.GetWebURL() mismatch\ngot:  %s\nwant: %s",
+					packageName, result, tc.value,
+				)
 			}
 		})
 	}
@@ -187,8 +196,10 @@ func TestSkippedVersion(t *testing.T) {
 			// THEN: the returned string should be the SkipPrefix followed by the version string.
 			expected := SkipPrefix + tc.version
 			if result != expected {
-				t.Fatalf("%s\nSkippedVersion(%q) mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.version, expected, result)
+				t.Fatalf(
+					"%s\nSkippedVersion(%q) mismatch\nwant: %q\ngot:  %q",
+					packageName, tc.version, expected, result,
+				)
 			}
 		})
 	}

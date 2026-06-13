@@ -1,9 +1,21 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { closestCenter, DndContext, type DragEndEvent, type SensorOptions, } from '@dnd-kit/core';
+import {
+	closestCenter,
+	DndContext,
+	type DragEndEvent,
+	type SensorOptions,
+} from '@dnd-kit/core';
 import type { SensorDescriptor } from '@dnd-kit/core/dist/sensors/types';
 import { SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -18,7 +30,15 @@ import {
 	type VisibilityState,
 } from '@tanstack/react-table';
 import { GripVertical } from 'lucide-react';
-import { type CSSProperties, type Dispatch, type Ref, type SetStateAction, useEffect, useRef, useState, } from 'react';
+import {
+	type CSSProperties,
+	type Dispatch,
+	type Ref,
+	type SetStateAction,
+	useEffect,
+	useRef,
+	useState,
+} from 'react';
 
 export type ExtraColumnMeta = {
 	/* Hide the column when all values are empty. */
@@ -50,7 +70,7 @@ type SortableRowProps<TData> = {
  * @param enabled - Whether drag-and-drop sorting is enabled.
  * @param getRowClassName - Function to get extra row CSS class names.
  */
-const SortableRow = <TData, >({
+const SortableRow = <TData,>({
 	row,
 	getItemId,
 	getRowClassName,
@@ -63,7 +83,9 @@ const SortableRow = <TData, >({
 		transform,
 		transition,
 		isDragging,
-	} = useSortable({ id: id });
+	} = useSortable({
+		id: id,
+	});
 
 	const style: CSSProperties = {
 		transform: CSS.Transform.toString(transform),
@@ -77,6 +99,7 @@ const SortableRow = <TData, >({
 				isDragging && 'z-100 bg-secondary!',
 				getRowClassName?.(row),
 			)}
+			data-service-id={id}
 			data-state={row.getIsSelected() && 'selected'}
 			ref={setNodeRef as Ref<HTMLTableRowElement>}
 			style={style}
@@ -90,7 +113,7 @@ const SortableRow = <TData, >({
 					size="sm"
 					variant="ghost"
 				>
-					<GripVertical/>
+					<GripVertical />
 				</Button>
 			</TableCell>
 			{row.getVisibleCells().map((cell) => (
@@ -106,42 +129,42 @@ const SortableRow = <TData, >({
 type DataTableDndProps<TData> = {
 	dnd:
 		| {
-		/* Flag to indicate whether drag-and-drop sorting is enabled. */
-		enabled: false;
-	}
+				/* Flag to indicate whether drag-and-drop sorting is enabled. */
+				enabled: false;
+		  }
 		| {
-		/* Flag to indicate whether drag-and-drop sorting is enabled. */
-		enabled: true;
-		/* The current order of rows. */
-		order: string[];
-		/* An array of sensor descriptors for drag-and-drop operations. */
-		sensors: SensorDescriptor<SensorOptions>[];
-		/* A function invoked after the drag-and-drop interaction on services is completed. */
-		onDragEnd: (event: DragEndEvent) => void;
-		/* Function to get the unique ID of a row. */
-		getItemId: (row: TData) => string;
-	};
+				/* Flag to indicate whether drag-and-drop sorting is enabled. */
+				enabled: true;
+				/* The current order of rows. */
+				order: string[];
+				/* An array of sensor descriptors for drag-and-drop operations. */
+				sensors: SensorDescriptor<SensorOptions>[];
+				/* A function invoked after the drag-and-drop interaction on services is completed. */
+				onDragEnd: (event: DragEndEvent) => void;
+				/* Function to get the unique ID of a row. */
+				getItemId: (row: TData) => string;
+		  };
 };
 
 /* Sorting properties that can optionally push sorting upwards. */
 type DataTableSortPushProps<TData> = {
 	sortToOrder:
 		| {
-		/* Flag to indicate whether sorting is enabled */
-		enabled: false;
-	}
+				/* Flag to indicate whether sorting is enabled */
+				enabled: false;
+		  }
 		| {
-		/* Flag to indicate whether sorting is enabled */
-		enabled: true;
-	}
+				/* Flag to indicate whether sorting is enabled */
+				enabled: true;
+		  }
 		| {
-		/* Flag to indicate whether sorting is enabled */
-		enabled: true;
-		/* Function to get the unique ID of a row. */
-		getItemId: (row: TData) => string;
-		/* Function to run when the row order changes. */
-		onOrderChange: (ids: string[]) => void;
-	};
+				/* Flag to indicate whether sorting is enabled */
+				enabled: true;
+				/* Function to get the unique ID of a row. */
+				getItemId: (row: TData) => string;
+				/* Function to run when the row order changes. */
+				onOrderChange: (ids: string[]) => void;
+		  };
 };
 
 /* Sorting reset properties. */
@@ -202,7 +225,7 @@ type DataTableProps<TData> = {
  * @param columnVisibility - Visible columns.
  * @param setColumnVisibility - Sets the visibility of a column.
  */
-export const DataTable = <TData, >({
+export const DataTable = <TData,>({
 	columns,
 	data,
 	dnd = { enabled: false },
@@ -217,7 +240,7 @@ export const DataTable = <TData, >({
 	columnVisibility,
 	setColumnVisibility,
 }: DataTableProps<TData>) => {
-	const [ sorting, setSorting ] = useState<SortingState>([]);
+	const [sorting, setSorting] = useState<SortingState>([]);
 
 	const orderRef = useRef<{
 		/**
@@ -231,29 +254,29 @@ export const DataTable = <TData, >({
 		 */
 		skipNextPush: boolean;
 	}>({
-		   lastEmittedOrder: null,
-		   skipNextPush: false,
-	   });
+		lastEmittedOrder: null,
+		skipNextPush: false,
+	});
 
 	const table = useReactTable({
-		                            columns: columns,
-		                            data: data,
-		                            enableSorting: sortToOrder.enabled,
-		                            getCoreRowModel: getCoreRowModel(),
-		                            getSortedRowModel: getSortedRowModel(),
-		                            onColumnOrderChange: setColumnOrder,
-		                            onColumnVisibilityChange: setColumnVisibility,
-		                            onSortingChange: setSorting,
-		                            state: {
-			                            columnOrder,
-			                            columnVisibility,
-			                            sorting,
-		                            },
-	                            });
+		columns: columns,
+		data: data,
+		enableSorting: sortToOrder.enabled,
+		getCoreRowModel: getCoreRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+		onColumnOrderChange: setColumnOrder,
+		onColumnVisibilityChange: setColumnVisibility,
+		onSortingChange: setSorting,
+		state: {
+			columnOrder,
+			columnVisibility,
+			sorting,
+		},
+	});
 	// biome-ignore lint/correctness/useExhaustiveDependencies: table stable.
 	useEffect(() => {
 		if (onTableReady) onTableReady(table);
-	}, [ onTableReady ]);
+	}, [onTableReady]);
 
 	// Reset sorting when asked by parent (e.g. when order reset is triggered).
 	useEffect(() => {
@@ -262,14 +285,12 @@ export const DataTable = <TData, >({
 		orderRef.current.lastEmittedOrder = null;
 		// Suppress the next sort-to-order emission that may be caused by this reset.
 		orderRef.current.skipNextPush = true;
-	}, [ resetSortingSignal ]);
+	}, [resetSortingSignal]);
 
 	// Optionally, push the current sorted row order upwards.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: sortToOrder.getItemId stable.
 	useEffect(() => {
-		if (!sortToOrder.enabled || !(
-			'getItemId' in sortToOrder
-		)) return;
+		if (!sortToOrder.enabled || !('getItemId' in sortToOrder)) return;
 
 		// If a reset just happened, skip this cycle once.
 		if (orderRef.current.skipNextPush) {
@@ -286,7 +307,7 @@ export const DataTable = <TData, >({
 			orderRef.current.lastEmittedOrder = key;
 			sortToOrder.onOrderChange(ids);
 		}
-	}, [ sorting, data ]);
+	}, [sorting, data]);
 
 	const rows = table.getRowModel().rows;
 
@@ -295,18 +316,18 @@ export const DataTable = <TData, >({
 			<TableHeader>
 				{table.getHeaderGroups().map((headerGroup) => (
 					<TableRow key={headerGroup.id}>
-						{dnd.enabled && <TableHead className="w-8"/>}
+						{dnd.enabled && <TableHead className="w-8" />}
 						{headerGroup.headers
 							.filter((header) => header.column.getIsVisible())
 							.map((header) => {
 								return (
 									<TableHead key={header.id}>
 										{header.isPlaceholder
-										 ? null
-										 : flexRender(header.column.columnDef.header, {
-												...header.getContext(),
-												resetSorting: resetSorting,
-											})}
+											? null
+											: flexRender(header.column.columnDef.header, {
+													...header.getContext(),
+													resetSorting: resetSorting,
+												})}
 									</TableHead>
 								);
 							})}
@@ -316,45 +337,44 @@ export const DataTable = <TData, >({
 			<TableBody>
 				{rows?.length ? (
 					rows.map((row) =>
-						         dnd.enabled ? (
-							         <SortableRow
-								         getItemId={dnd.getItemId}
-								         getRowClassName={getRowClassName}
-								         key={dnd.getItemId(row.original)}
-								         row={row}
-							         />
-						         ) : (
-							         <TableRow
-								         className={cn(
-									         'odd:bg-muted/30',
-									         getRowClassName?.(row),
-									         row.id,
-								         )}
-								         data-state={row.getIsSelected() && 'selected'}
-								         key={row.id}
-							         >
-								         {row.getVisibleCells().map((cell) => (
-									         <TableCell key={cell.id}>
-										         {flexRender(cell.column.columnDef.cell, cell.getContext())}
-									         </TableCell>
-								         ))}
-							         </TableRow>
-						         ),
+						dnd.enabled ? (
+							<SortableRow
+								getItemId={dnd.getItemId}
+								getRowClassName={getRowClassName}
+								key={dnd.getItemId(row.original)}
+								row={row}
+							/>
+						) : (
+							<TableRow
+								className={cn(
+									'odd:bg-muted/30',
+									getRowClassName?.(row),
+									row.id,
+								)}
+								data-service-id={row.original}
+								data-state={row.getIsSelected() && 'selected'}
+								key={row.id}
+							>
+								{row.getVisibleCells().map((cell) => (
+									<TableCell key={cell.id}>
+										{flexRender(cell.column.columnDef.cell, cell.getContext())}
+									</TableCell>
+								))}
+							</TableRow>
+						),
 					)
 				) : (
-					 <TableRow>
-						 <TableCell
-							 className="h-24 text-center"
-							 colSpan={
-								 (
-									 dnd.enabled ? 1 : 0
-								 ) + table.getVisibleLeafColumns().length
-							 }
-						 >
-							 {noDataMessage ?? 'No results.'}
-						 </TableCell>
-					 </TableRow>
-				 )}
+					<TableRow>
+						<TableCell
+							className="h-24 text-center"
+							colSpan={
+								(dnd.enabled ? 1 : 0) + table.getVisibleLeafColumns().length
+							}
+						>
+							{noDataMessage ?? 'No results.'}
+						</TableCell>
+					</TableRow>
+				)}
 			</TableBody>
 		</Table>
 	);
@@ -385,8 +405,8 @@ export const DataTable = <TData, >({
 					</SortableContext>
 				</DndContext>
 			) : (
-				 tableElement
-			 )}
+				tableElement
+			)}
 		</div>
 	);
 };

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,9 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/command"
+	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/web/metric"
 	"github.com/release-argus/Argus/webhook"
@@ -32,7 +34,6 @@ func (s *Service) IconURL() *string {
 		return &s.Dashboard.Icon
 	}
 
-	//nolint:typecheck
 	if s.Notify != nil {
 		// Search for a web icon.
 		for _, notify := range s.Notify {
@@ -47,119 +48,98 @@ func (s *Service) IconURL() *string {
 	return nil
 }
 
-// Init will initialise the Service metric.
-func (s *Service) Init(
-	defaults, hardDefaults *Defaults,
-
-	rootNotifyConfig *shoutrrr.ShoutrrrsDefaults,
-	notifyDefaults, notifyHardDefaults *shoutrrr.ShoutrrrsDefaults,
-
-	rootWebHookConfig *webhook.WebHooksDefaults,
-	webhookDefaults, webhookHardDefaults *webhook.Defaults,
+// Init will initialise the Service, giving the channels and setting whether defaults are in use (giving them if not).
+func (s *Service) init(
+	notifyCfg shoutrrr.Config,
+	whCfg webhook.Config,
+	announceChannel chan []byte,
+	databaseChannel chan dbtype.Message,
+	saveChannel chan bool,
 ) {
-	// Service.
-	s.Defaults = defaults
-	s.HardDefaults = hardDefaults
-	// Default Name to ID.
-	if s.Name == "" {
-		s.Name = s.ID
-	}
-
 	// Status.
+	s.Status.AnnounceChannel = announceChannel
+	s.Status.DatabaseChannel = databaseChannel
+	s.Status.SaveChannel = saveChannel
 	var serviceURL string
 	if s.LatestVersion != nil {
 		serviceURL = s.LatestVersion.ServiceURL()
 	}
 	s.Status.Init(
-		len(s.Notify), len(s.Command), len(s.WebHook),
-		s.ID, s.Name, serviceURL,
-		&s.Dashboard)
+		len(s.Command), len(s.Notify), len(s.WebHook),
+		status.ServiceInfo{
+			ID:         s.ID,
+			Name:       s.Name,
+			Comment:    s.Comment,
+			ServiceURL: serviceURL,
+		},
+		&s.Dashboard,
+	)
 
-	// Dashboard.
-	s.Dashboard.Defaults = &s.Defaults.Dashboard
-	s.Dashboard.HardDefaults = &s.HardDefaults.Dashboard
-
-	// Options.
-	s.Options.Defaults = &s.Defaults.Options
-	s.Options.HardDefaults = &s.HardDefaults.Options
+	// Command.
+	commandDefaults := util.FirstNonEmptySlice(s.Defaults.Command, s.HardDefaults.Command)
+	if len(s.Command) == 0 {
+		if len(commandDefaults) != 0 {
+			s.Command = make(command.Commands, len(commandDefaults))
+			copy(s.Command, commandDefaults)
+			s.CommandFromDefaults = true
+		}
+	}
+	if len(s.Command) != 0 {
+		s.CommandController = command.NewController(
+			&s.Status,
+			s.Command,
+			s.Notify,
+			s.Options.GetIntervalPointer(),
+		)
+	}
 
 	// Notify.
-	// 	use defaults?
-	if len(s.Notify) == 0 && len(defaults.Notify) != 0 {
-		s.Notify = make(shoutrrr.Shoutrrrs, len(defaults.Notify))
-		for key := range defaults.Notify {
-			s.Notify[key] = &shoutrrr.Shoutrrr{}
+	notifyDefaults := util.FirstNonEmptyMap(s.Defaults.Notify, s.HardDefaults.Notify)
+	if len(s.Notify) == 0 {
+		if len(notifyDefaults) != 0 {
+			s.Notify = make(shoutrrr.Shoutrrrs, len(notifyDefaults))
+			for key := range notifyDefaults {
+				s.Notify[key] = &shoutrrr.Shoutrrr{}
+			}
+			s.NotifyFromDefaults = true
 		}
-		s.NotifyFromDefaults = true
 	}
 	s.Notify.Init(
 		&s.Status,
-		rootNotifyConfig, notifyDefaults, notifyHardDefaults)
+		notifyCfg,
+	)
+
 	// 	If the dashboard icon is not set, use the first icon from a Notify.
 	if s.Dashboard.GetIcon() == "" && s.Notify != nil {
-		// Search for a web icon.
-		for _, notify := range s.Notify {
+		orderedNotifyKeys := util.SortedKeys(s.Notify)
+		for _, key := range orderedNotifyKeys {
 			// `Params.Icon`
-			if icon := util.EvalEnvVars(notify.GetParam("icon")); icon != "" &&
-				strings.HasPrefix(icon, "http") &&
-				(strings.HasPrefix(icon, "http://") || strings.HasPrefix(icon, "https://")) {
+			if icon := util.EvalEnvVars(s.Notify[key].GetParam("icon")); icon != "" &&
+				(strings.HasPrefix(icon, "https://") || strings.HasPrefix(icon, "http://")) {
 				s.Dashboard.SetFallbackIcon(icon)
-				// Refresh the ServiceInfo.
-				latestVersion := s.Status.LatestVersion()
-				latestVersionTimestamp := s.Status.LatestVersionTimestamp()
-				s.Status.SetLatestVersion(latestVersion+"-", latestVersionTimestamp, false)
-				s.Status.SetLatestVersion(latestVersion, latestVersionTimestamp, false)
+				s.Status.RefreshServiceInfo()
 				break
 			}
 		}
 	}
 
-	// Command.
-	// 	use defaults?
-	if len(s.Command) == 0 && len(defaults.Command) != 0 {
-		s.Command = make(command.Commands, len(defaults.Command))
-		copy(s.Command, defaults.Command)
-		s.CommandFromDefaults = true
-	}
-	if len(s.Command) != 0 {
-		s.CommandController = &command.Controller{}
-		s.CommandController.Init(
-			&s.Status,
-			&s.Command,
-			&s.Notify,
-			s.Options.GetIntervalPointer())
-	}
-
 	// WebHook.
-	// 	use defaults?
-	if s.WebHook == nil && len(defaults.WebHook) != 0 {
-		s.WebHook = make(webhook.WebHooks, len(defaults.WebHook))
-		for key := range defaults.WebHook {
-			s.WebHook[key] = &webhook.WebHook{}
+	webhookDefaults := util.FirstNonEmptyMap(s.Defaults.WebHook, s.HardDefaults.WebHook)
+	if s.WebHook == nil {
+		if len(webhookDefaults) != 0 {
+			s.WebHook = make(webhook.WebHooks, len(webhookDefaults))
+			for key := range webhookDefaults {
+				s.WebHook[key] = &webhook.WebHook{}
+			}
+			s.WebHookFromDefaults = true
 		}
-		s.WebHookFromDefaults = true
 	}
 	s.WebHook.Init(
 		&s.Status,
-		rootWebHookConfig, webhookDefaults, webhookHardDefaults,
+		whCfg,
 		&s.Notify,
-		s.Options.GetIntervalPointer())
-
-	// LatestVersion.
-	if s.LatestVersion != nil {
-		s.LatestVersion.Init(
-			&s.Options,
-			&s.Status,
-			&s.Defaults.LatestVersion, &s.HardDefaults.LatestVersion)
-	}
-
-	// DeployedVersionLookup.
-	if s.DeployedVersionLookup != nil {
-		s.DeployedVersionLookup.Init(
-			&s.Options,
-			&s.Status,
-			&s.Defaults.DeployedVersionLookup, &s.HardDefaults.DeployedVersionLookup)
-	}
+		s.Options.GetIntervalPointer(),
+	)
 }
 
 // initMetrics will initialise the Prometheus metrics for the Service.

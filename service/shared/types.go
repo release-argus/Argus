@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,16 +22,18 @@ type OldIntIndex struct {
 
 // OldStringIndex to look at for any SecretValues used.
 type OldStringIndex struct {
+	Name     string `json:"name,omitempty"`
 	OldIndex string `json:"old_index,omitempty"`
 }
 
-// VSecretRef contains the reference for the DeployedVersionLookup SecretValues.
+// VSecretRef contains the reference for the Headers SecretValues.
 type VSecretRef struct {
 	Headers []OldIntIndex `json:"headers,omitempty"`
 }
 
 // WHSecretRef contains the reference for the WebHook SecretValues.
 type WHSecretRef struct {
+	Name     string        `json:"name,omitempty"`
 	OldIndex string        `json:"old_index,omitempty"`
 	Headers  []OldIntIndex `json:"headers,omitempty"`
 }

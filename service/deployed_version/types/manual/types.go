@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,94 +16,53 @@
 package manual
 
 import (
-	"encoding/json"
-	"errors"
-	"strings"
 	"sync"
 
-	"gopkg.in/yaml.v3"
-
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
-	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 )
+
+// #############
+// # CONSTANTS #
+// #############
+
+// Type is the lookup type identifier for manual deployed version lookups.
+var Type = "manual"
+
+// #########
+// # TYPES #
+// #########
 
 // Lookup is a web-based lookup type.
 type Lookup struct {
-	base.Lookup `json:",inline" yaml:",inline"` // Base struct for a Lookup.
+	base.Lookup `json:",inline" yaml:",inline"`
 
-	mutex   sync.RWMutex // Lock for the Lookup.
+	mu      sync.RWMutex // Lock for the Lookup.
 	Version string       `json:"version,omitempty" yaml:"version,omitempty"` // OPTIONAL: Version to initialise with/set to.
 }
 
-// New returns a new Lookup from a string in a given format (json/yaml).
-func New(
-	configFormat string, // "json" | "yaml"
-	configData any, // []byte | string | *yaml.Node | json.RawMessage.
-	options *opt.Options,
-	status *status.Status,
-	defaults, hardDefaults *base.Defaults,
-) (*Lookup, error) {
-	lookup := &Lookup{}
+// #########
+// # STATE #
+// #########
 
-	// Unmarshal.
-	if err := util.UnmarshalConfig(configFormat, configData, lookup); err != nil {
-		errStr := util.FormatUnmarshalError(configFormat, err)
-		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-		return nil, errors.New("failed to unmarshal manual.Lookup:\n  " + errStr)
+// Copy returns a deep copy of the receiver as a [base.Interface].
+func (l *Lookup) Copy(svcStatus *status.Status) base.Interface {
+	if l == nil {
+		return nil
 	}
 
-	lookup.Init(
-		options,
-		status,
-		defaults, hardDefaults)
-
-	if lookup.Status == nil || lookup.Options == nil {
-		return lookup, nil
+	return &Lookup{
+		Lookup:  *l.Lookup.Clone(svcStatus), //nolint:staticcheck
+		Version: l.Version,
 	}
-
-	// Transfer the Version to the Status.
-	err := lookup.CheckValues("")
-
-	// nolint:wrapcheck
-	return lookup, err
 }
 
-// UnmarshalJSON will unmarshal the Lookup.
-func (l *Lookup) UnmarshalJSON(data []byte) error {
-	return l.unmarshal(func(v interface{}) error {
-		return json.Unmarshal(data, v)
-	})
-}
+// #############
+// # STRINGIFY #
+// #############
 
-// UnmarshalYAML will unmarshal the Lookup.
-func (l *Lookup) UnmarshalYAML(value *yaml.Node) error {
-	return l.unmarshal(func(v interface{}) error {
-		return value.Decode(v)
-	})
-}
-
-// unmarshal will unmarshal the Lookup using the provided unmarshal function.
-func (l *Lookup) unmarshal(unmarshalFunc func(interface{}) error) error {
-	// Alias to avoid recursion.
-	type Alias Lookup
-	aux := &struct {
-		*Alias `json:",inline" yaml:",inline"`
-	}{
-		Alias: (*Alias)(l),
-	}
-
-	// Lock the mutex if it's an existing Lookup.
-	if l != nil {
-		l.mutex.Lock()
-		defer l.mutex.Unlock()
-	}
-
-	// Unmarshal using the provided function.
-	if err := unmarshalFunc(aux); err != nil {
-		return errors.New(strings.Replace(err.Error(), ".Alias", "", 1))
-	}
-	l.Type = "manual"
-	return nil
+// String returns a string representation of the receiver.
+func (l *Lookup) String(prefix string) string {
+	return decode.ToYAMLString(l, prefix)
 }

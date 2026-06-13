@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/internal/test"
 )
 
 func writeFile(path string, data string) {
@@ -33,14 +33,16 @@ func testYAML_NoServices(path string) {
 		settings:
 			web:
 				listen_port: "0"
+
 		defaults:
 			service:
 				options:
 					interval: 123s
 					semantic_versioning: false
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ` + test.GitHubToken(nil) + `
 				deployed_version: {}
+
 			notify:
 				gotify:
 					url_fields:
@@ -51,11 +53,13 @@ func testYAML_NoServices(path string) {
 						host: defaultHost
 						title: defaultTitle
 						username: defaultUsername
+
 			webhook:
 				desired_status_code: 0
 				delay: 2s
 				max_tries: 3
 				silent_fails: false
+
 		notify:
 			default:
 				type: gotify
@@ -63,6 +67,7 @@ func testYAML_NoServices(path string) {
 					message: mainMessage
 				params:
 					username: mainUsername
+
 		webhook:
 			default:
 				type: github
@@ -78,14 +83,18 @@ func testYAML_NoServices(path string) {
 
 func testYAML_Argus(path string) {
 	data := test.TrimYAML(`
+		defaults:
+			service:
+				latest_version:
+					access_token: ` + test.GitHubToken(nil) + `
 		settings:
 			web:
 				listen_port: 0
 		service:
-			release-argus/Argus:
+			SERVICE_NAME:
 				latest_version:
 					type: github
-					url: release-argus/argus
+					url: ` + test.ArgusGitHubRepo + `
 	`)
 
 	writeFile(path, data)
@@ -93,32 +102,36 @@ func testYAML_Argus(path string) {
 
 func testYAML_Argus_SomeInactive(path string) {
 	data := test.TrimYAML(`
+		defaults:
+			service:
+				latest_version:
+					access_token: ` + test.GitHubToken(nil) + `
 		settings:
 				web:
 						listen_port: 0
 		service:
-				release-argus/Argus:
+				SERVICE_NAME:
 						latest_version:
 								type: github
-								url: release-argus/argus
-				release-argus/Argus-Not-Active:
+								url: ` + test.ArgusGitHubRepo + `
+				SERVICE_NAME_NOT_ACTIVE:
 						options:
 								active: false
 						latest_version:
 								type: github
-								url: release-argus/argus
-		#     release-argus/Argus-commented-out:
+								url: ` + test.ArgusGitHubRepo + `
+		#     SERVICE_NAME_COMMENTED_OUT:
 		#         options:
 		#             active: false
 		#         latest_version:
 		#             type: github
-		#             url: release-argus/argus
-				# release-argus/Argus-commented-out-indent:
+		#             url: ` + test.ArgusGitHubRepo + `
+				# SERVICE_NAME_COMMENTED_OUT_INDENT:
 				#     options:
 				#         active: false
 				#     latest_version:
 				#         type: github
-				#         url: release-argus/argus
+				#         url: ` + test.ArgusGitHubRepo + `
 	`)
 
 	writeFile(path, data)

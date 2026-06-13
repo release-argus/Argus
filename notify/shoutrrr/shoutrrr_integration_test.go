@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/release-argus/Argus/util/errfmt"
 
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
@@ -30,9 +31,84 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
+func TestShoutrrrs_Send(t *testing.T) {
+	// GIVEN: Shoutrrrs.
+	tests := []struct {
+		name      string
+		shoutrrrs *Shoutrrrs
+		useDelay  bool
+		errRegex  string
+	}{
+		{
+			name:      "nil map",
+			shoutrrrs: nil,
+			errRegex:  `^$`,
+		},
+		{
+			name:      "empty map",
+			shoutrrrs: &Shoutrrrs{},
+			errRegex:  `^$`,
+		},
+		{
+			name: "single shoutrrr, no error",
+			shoutrrrs: &Shoutrrrs{
+				"single": testShoutrrr(false, false),
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "single shoutrrr, with error",
+			shoutrrrs: &Shoutrrrs{
+				"single": testShoutrrr(true, false),
+			},
+			errRegex: `^.*invalid gotify token.* x 1$`,
+		},
+		{
+			name: "multiple shoutrrr, mixed results",
+			shoutrrrs: &Shoutrrrs{
+				"passing": testShoutrrr(false, false),
+				"failing": testShoutrrr(true, false),
+			},
+			errRegex: `^.*invalid gotify token.* x 1$`,
+		},
+		{
+			name: "multiple shoutrrr, mixed results - more",
+			shoutrrrs: &Shoutrrrs{
+				"passing":      testShoutrrr(false, false),
+				"failing":      testShoutrrr(true, false),
+				"also_failing": testShoutrrr(true, false),
+			},
+			errRegex: `^(failed to build request: invalid gotify token.* x 1\s?){2}$`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			svcInfo := serviceinfo.ServiceInfo{
+				ID: tc.name,
+			}
+
+			// WHEN: Send is called.
+			err := tc.shoutrrrs.Send("TestShoutrrrs_Send", tc.name, svcInfo, tc.useDelay)
+
+			// THEN: the expected error state is returned.
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf(
+					"%s\nShoutrrrs.Send() error mismatch\ngot:  %q\nwant: %q",
+					packageName, e, tc.errRegex,
+				)
+			}
+		})
+	}
+}
+
 func TestShoutrrr_Send(t *testing.T) {
-	// GIVEN a Shoutrrr to try and send.
-	tests := map[string]struct {
+	// GIVEN: a Shoutrrr to try and send.
+	tests := []struct {
+		name                               string
 		shoutrrr                           *Shoutrrr
 		delay                              string
 		useDelay                           bool
@@ -41,23 +117,27 @@ func TestShoutrrr_Send(t *testing.T) {
 		deleting, noMetrics, expectMetrics bool
 		errRegex                           string
 	}{
-		"empty": {
+		{
+			name:     "empty",
 			shoutrrr: &Shoutrrr{},
 			errRegex: `failed to create Shoutrrr sender`,
 		},
-		"valid, empty message": {
+		{
+			name:          "valid, empty message",
 			shoutrrr:      testShoutrrr(false, false),
 			message:       "",
 			errRegex:      `message cannot be empty`,
 			expectMetrics: true,
 		},
-		"valid, with message": {
+		{
+			name:          "valid, with message",
 			shoutrrr:      testShoutrrr(false, false),
 			message:       "__name__",
 			errRegex:      `^$`,
 			expectMetrics: true,
 		},
-		"valid, with message, with delay": {
+		{
+			name:          "valid, with message, with delay",
 			shoutrrr:      testShoutrrr(false, false),
 			message:       "__name__",
 			useDelay:      true,
@@ -65,25 +145,29 @@ func TestShoutrrr_Send(t *testing.T) {
 			errRegex:      `^$`,
 			expectMetrics: true,
 		},
-		"invalid https cert": {
+		{
+			name:          "invalid https cert",
 			shoutrrr:      testShoutrrr(false, true),
 			message:       "__name__",
 			errRegex:      `x509`,
 			expectMetrics: true,
 		},
-		"failing": {
+		{
+			name:          "failing",
 			shoutrrr:      testShoutrrr(true, true),
 			message:       "__name__",
 			retries:       1,
 			errRegex:      `invalid gotify token.* x 2`,
 			expectMetrics: true,
 		},
-		"deleting": {
+		{
+			name:     "deleting",
 			shoutrrr: testShoutrrr(true, true),
 			deleting: true,
 			errRegex: "",
 		},
-		"no metrics": {
+		{
+			name:      "no metrics",
 			shoutrrr:  testShoutrrr(false, false),
 			message:   "__name__",
 			errRegex:  `^$`,
@@ -91,20 +175,24 @@ func TestShoutrrr_Send(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			svcStatus := status.Status{}
-			serviceID := "TestShoutrrr_Send - " + name
+			serviceID := "TestShoutrrr_Send - " + tc.name
 			svcStatus.Init(
-				1, 0, 0,
-				serviceID, "", "",
-				&dashboard.Options{})
+				0, 1, 0,
+				status.ServiceInfo{
+					ID: serviceID,
+				},
+				&dashboard.Options{},
+			)
 			tc.shoutrrr.Init(
 				&svcStatus,
 				&Defaults{},
-				&Defaults{}, &Defaults{})
+				&Defaults{}, &Defaults{},
+			)
 			t.Cleanup(tc.shoutrrr.deleteMetrics)
 			if tc.shoutrrr.ServiceStatus != nil && tc.deleting {
 				tc.shoutrrr.ServiceStatus.SetDeleting()
@@ -117,108 +205,65 @@ func TestShoutrrr_Send(t *testing.T) {
 			}
 			tc.shoutrrr.Options["max_tries"] = fmt.Sprint(tc.retries + 1)
 
-			// WHEN send attempted.
-			msg := strings.ReplaceAll(tc.message, "__name__", name)
+			// WHEN: send attempted.
+			msg := strings.ReplaceAll(tc.message, "__name__", tc.name)
 			err := tc.shoutrrr.Send(
 				"test",
 				msg,
 				svcStatus.ServiceInfo,
 				tc.useDelay,
-				!tc.noMetrics)
+				!tc.noMetrics,
+			)
 
-			// THEN any error should match the expected regex.
-			e := util.ErrorToString(err)
+			prefix := fmt.Sprintf("%s\nShoutrrr.Send()", packageName)
+
+			// THEN: any error should match the expected regex.
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q\n",
-					packageName, tc.errRegex, e)
+				t.Errorf(
+					"%s\nerror mismatch\ngot:  %q\nwant: %q",
+					packageName, e, tc.errRegex,
+				)
 			}
-			// AND SUCCESS metrics are recorded as expected.
+
+			// AND: SUCCESS metrics are recorded as expected.
 			var want float64 = 0
 			if tc.errRegex == "^$" && tc.expectMetrics {
 				want = 1
 			}
-			gotMetric := testutil.ToFloat64(metric.NotifyResultTotal.WithLabelValues(
-				tc.shoutrrr.ID,
-				metric.ActionResultSuccess,
-				svcStatus.ServiceInfo.ID,
-				tc.shoutrrr.GetType()))
+			gotMetric := testutil.ToFloat64(
+				metric.NotifyResultTotal.WithLabelValues(
+					tc.shoutrrr.ID,
+					metric.ActionResultSuccess,
+					svcStatus.ServiceInfo.ID,
+					tc.shoutrrr.GetType(),
+				),
+			)
 			if gotMetric != want {
-				t.Errorf("%s\nwant: %f success metrics\ngot:  %f",
-					packageName, want, gotMetric)
+				t.Errorf(
+					"%s success metrics mismatch\ngot:  %f\nwant: %f",
+					prefix, gotMetric, want,
+				)
 			}
-			// AND FAILURE metrics are recorded as expected.
+
+			// AND: FAILURE metrics are recorded as expected.
 			want = 0
 			if tc.errRegex != "^$" && tc.expectMetrics {
 				want = float64(tc.shoutrrr.GetMaxTries())
 			}
-			gotMetric = testutil.ToFloat64(metric.NotifyResultTotal.WithLabelValues(
-				tc.shoutrrr.ID,
-				metric.ActionResultFail,
-				svcStatus.ServiceInfo.ID,
-				tc.shoutrrr.GetType()))
+			gotMetric = testutil.ToFloat64(
+				metric.NotifyResultTotal.WithLabelValues(
+					tc.shoutrrr.ID,
+					metric.ActionResultFail,
+					svcStatus.ServiceInfo.ID,
+					tc.shoutrrr.GetType(),
+				),
+			)
 			if gotMetric != want {
-				t.Errorf("%s\nwant: %f failure metrics\ngot:  %f",
-					packageName, want, gotMetric)
-			}
-		})
-	}
-}
-
-func TestShoutrrrs_Send(t *testing.T) {
-	// GIVEN Shoutrrrs.
-	tests := map[string]struct {
-		shoutrrrs *Shoutrrrs
-		useDelay  bool
-		errRegex  string
-	}{
-		"nil map": {
-			shoutrrrs: nil,
-			errRegex:  `^$`,
-		},
-		"empty map": {
-			shoutrrrs: &Shoutrrrs{},
-			errRegex:  `^$`,
-		},
-		"single shoutrrr, no error": {
-			shoutrrrs: &Shoutrrrs{
-				"single": testShoutrrr(false, false)},
-			errRegex: `^$`,
-		},
-		"single shoutrrr, with error": {
-			shoutrrrs: &Shoutrrrs{
-				"single": testShoutrrr(true, false)},
-			errRegex: `^.*invalid gotify token.* x 1$`,
-		},
-		"multiple shoutrrr, mixed results": {
-			shoutrrrs: &Shoutrrrs{
-				"passing": testShoutrrr(false, false),
-				"failing": testShoutrrr(true, false)},
-			errRegex: `^.*invalid gotify token.* x 1$`,
-		},
-		"multiple shoutrrr, mixed results - more": {
-			shoutrrrs: &Shoutrrrs{
-				"passing":      testShoutrrr(false, false),
-				"failing":      testShoutrrr(true, false),
-				"also_failing": testShoutrrr(true, false)},
-			errRegex: `^(failed to build request: invalid gotify token.* x 1\s?){2}$`,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			svcInfo := serviceinfo.ServiceInfo{
-				ID: name}
-
-			// WHEN Send is called.
-			err := tc.shoutrrrs.Send("TestShoutrrrs_Send", name, svcInfo, tc.useDelay)
-
-			// THEN the expected error state is returned.
-			e := util.ErrorToString(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
+				t.Errorf(
+					"%s failure metrics mismatch\ngot:  %f\nwant: %f",
+					prefix, gotMetric, want,
+				)
 			}
 		})
 	}

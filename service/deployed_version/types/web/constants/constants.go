@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package constants provides shared constants for deployed version web lookups.
 package constants
 
 import "net/http"
 
+// SupportedMethods lists HTTP methods allowed for deployed version web lookups.
 var SupportedMethods = []string{http.MethodGet, http.MethodPost}

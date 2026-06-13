@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,25 +17,25 @@
 package status
 
 import (
-	"encoding/json"
+	"fmt"
 	"testing"
 
+	"github.com/release-argus/Argus/config/decode"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestStatus_AnnounceFirstVersion(t *testing.T) {
-	// GIVEN a Status and an AnnounceChannel that may be nil.
-	tests := map[string]struct {
+	// GIVEN: a Status and an AnnounceChannel that may be nil.
+	tests := []struct {
+		name       string
 		nilChannel bool
 	}{
-		"nil channel doesn't crash": {
-			nilChannel: true},
-		"non-nil sends correct data": {
-			nilChannel: false},
+		{name: "nil channel doesn't crash", nilChannel: true},
+		{name: "non-nil sends correct data", nilChannel: false},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			status := testStatus()
@@ -46,45 +46,52 @@ func TestStatus_AnnounceFirstVersion(t *testing.T) {
 			wantLatestVersion := status.LatestVersion()
 			wantLatestVersionTimestamp := status.LatestVersionTimestamp()
 
-			// WHEN AnnounceFirstVersion is called on it.
+			// WHEN: AnnounceFirstVersion is called on it.
 			status.AnnounceFirstVersion()
 
-			// THEN the message is received.
+			prefix := fmt.Sprintf("%s\nStatus.AnnounceFirstVersion()", packageName)
+
+			// THEN: the message is received.
 			if tc.nilChannel {
 				return
 			}
 			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
-			_ = json.Unmarshal(gotData, &got)
+			_ = decode.Unmarshal("json", gotData, &got)
 			if got.ServiceData.ID != wantID {
-				t.Fatalf("%s\nIDmismatch\nwant: %q\ngot:  %q",
-					packageName, wantID, got.ServiceData.ID)
+				t.Fatalf(
+					"%s .ID mismatch\ngot:  %q\nwant: %q",
+					prefix, got.ServiceData.ID, wantID,
+				)
 			}
-			if got.ServiceData.Status.LatestVersion != wantLatestVersion {
-				t.Errorf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
-					packageName, wantLatestVersion, got.ServiceData.Status.LatestVersion)
+			if gotLatestVersion := got.ServiceData.Status.LatestVersion; gotLatestVersion != wantLatestVersion {
+				t.Errorf(
+					"%s .LatestVersion mismatch\ngot:  %q\nwant: %q",
+					prefix, gotLatestVersion, wantLatestVersion,
+				)
 			}
-			if got.ServiceData.Status.LatestVersionTimestamp != wantLatestVersionTimestamp {
-				t.Errorf("%s\nLatestVersionTimestamp mismatch\nwant: %q\ngot:  %q",
-					packageName, wantLatestVersionTimestamp, got.ServiceData.Status.LatestVersionTimestamp)
+			if gotLatestVersionTimestamp := got.ServiceData.Status.LatestVersionTimestamp; gotLatestVersionTimestamp != wantLatestVersionTimestamp {
+				t.Errorf(
+					"%s .LatestVersionTimestamp mismatch\ngot:  %q\nwant: %q",
+					prefix, gotLatestVersionTimestamp, wantLatestVersionTimestamp,
+				)
 			}
 		})
 	}
 }
 
 func TestStatus_AnnounceQuery(t *testing.T) {
-	// GIVEN an AnnounceChannel.
-	tests := map[string]struct {
+	// GIVEN: an AnnounceChannel.
+	tests := []struct {
+		name       string
 		nilChannel bool
 	}{
-		"nil channel doesn't crash": {
-			nilChannel: true},
-		"non-nil sends correct data": {
-			nilChannel: false},
+		{name: "nil channel doesn't crash", nilChannel: true},
+		{name: "non-nil sends correct data", nilChannel: false},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			status := testStatus()
@@ -94,41 +101,46 @@ func TestStatus_AnnounceQuery(t *testing.T) {
 			wantID := status.ServiceInfo.ID
 			wantLastQueried := status.LastQueried()
 
-			// WHEN AnnounceQuery is called on it.
+			// WHEN: AnnounceQuery is called on it.
 			status.AnnounceQuery()
 
-			// THEN the message is received.
+			prefix := fmt.Sprintf("%s\nStatus.AnnounceQuery()", packageName)
+
+			// THEN: the message is received.
 			if tc.nilChannel {
 				return
 			}
 			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
-			_ = json.Unmarshal(gotData, &got)
+			_ = decode.Unmarshal("json", gotData, &got)
 			if got.ServiceData.ID != wantID {
-				t.Fatalf("%s\nID mismatch\nwant: %q\ngot:  %q",
-					packageName, wantID, got.ServiceData.ID)
+				t.Fatalf(
+					"%s .ID mismatch\ngot:  %q\nwant: %q",
+					prefix, got.ServiceData.ID, wantID,
+				)
 			}
-			if got.ServiceData.Status.LastQueried != wantLastQueried {
-				t.Fatalf("%s\nLastQueried mismatch\nwant: %q\ngot:  %q",
-					packageName, wantLastQueried, got.ServiceData.Status.LastQueried)
+			if gotLastQueried := got.ServiceData.Status.LastQueried; gotLastQueried != wantLastQueried {
+				t.Fatalf(
+					"%s .LastQueried mismatch\ngot:  %q\nwant: %q",
+					prefix, gotLastQueried, wantLastQueried,
+				)
 			}
 		})
 	}
 }
 
 func TestStatus_AnnounceQueryNewVersion(t *testing.T) {
-	// GIVEN a Status and an AnnounceChannel that may be nil.
-	tests := map[string]struct {
+	// GIVEN: a Status and an AnnounceChannel that may be nil.
+	tests := []struct {
+		name       string
 		nilChannel bool
 	}{
-		"nil channel doesn't crash": {
-			nilChannel: true},
-		"non-nil sends correct data": {
-			nilChannel: false},
+		{name: "nil channel doesn't crash", nilChannel: true},
+		{name: "non-nil sends correct data", nilChannel: false},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			status := testStatus()
@@ -139,45 +151,52 @@ func TestStatus_AnnounceQueryNewVersion(t *testing.T) {
 			wantLatestVersion := status.LatestVersion()
 			wantLatestVersionTimestamp := status.LatestVersionTimestamp()
 
-			// WHEN AnnounceQueryNewVersion is called on it.
+			// WHEN: AnnounceQueryNewVersion is called on it.
 			status.AnnounceQueryNewVersion()
 
-			// THEN the message is received.
+			prefix := fmt.Sprintf("%s\nStatus.AnnounceQueryNewVersion()", packageName)
+
+			// THEN: the message is received.
 			if tc.nilChannel {
 				return
 			}
 			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
-			_ = json.Unmarshal(gotData, &got)
+			_ = decode.Unmarshal("json", gotData, &got)
 			if got.ServiceData.ID != wantID {
-				t.Fatalf("%s\nID mismatch\nwant: %q\ngot:  %q",
-					packageName, wantID, got.ServiceData.ID)
+				t.Fatalf(
+					"%s .ID mismatch\ngot:  %q\nwant: %q",
+					prefix, got.ServiceData.ID, wantID,
+				)
 			}
-			if got.ServiceData.Status.LatestVersion != wantLatestVersion {
-				t.Fatalf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
-					packageName, wantLatestVersion, got.ServiceData.Status.LatestVersion)
+			if gotLatestVersion := got.ServiceData.Status.LatestVersion; gotLatestVersion != wantLatestVersion {
+				t.Fatalf(
+					"%s .LatestVersion mismatch\ngot:  %q\nwant: %q",
+					prefix, gotLatestVersion, wantLatestVersion,
+				)
 			}
-			if got.ServiceData.Status.LatestVersionTimestamp != wantLatestVersionTimestamp {
-				t.Fatalf("%s\nLatestVersionTimestamp mismatch\nwant: %q\ngot:  %q",
-					packageName, wantLatestVersionTimestamp, got.ServiceData.Status.LatestVersionTimestamp)
+			if gotLatestVersionTimestamp := got.ServiceData.Status.LatestVersionTimestamp; gotLatestVersionTimestamp != wantLatestVersionTimestamp {
+				t.Fatalf(
+					"%s .LatestVersionTimestamp mismatch\ngot:  %q\nwant: %q",
+					prefix, gotLatestVersionTimestamp, wantLatestVersionTimestamp,
+				)
 			}
 		})
 	}
 }
 
 func TestStatus_AnnounceUpdate(t *testing.T) {
-	// GIVEN a Status and an AnnounceChannel that may be nil.
-	tests := map[string]struct {
+	// GIVEN: a Status and an AnnounceChannel that may be nil.
+	tests := []struct {
+		name       string
 		nilChannel bool
 	}{
-		"nil channel doesn't crash": {
-			nilChannel: true},
-		"non-nil sends correct data": {
-			nilChannel: false},
+		{name: "nil channel doesn't crash", nilChannel: true},
+		{name: "non-nil sends correct data", nilChannel: false},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			status := testStatus()
@@ -188,45 +207,52 @@ func TestStatus_AnnounceUpdate(t *testing.T) {
 			wantDeployedVersion := status.DeployedVersion()
 			wantDeployedVersionTimestamp := status.DeployedVersionTimestamp()
 
-			// WHEN AnnounceUpdate is called on it.
+			// WHEN: AnnounceUpdate is called on it.
 			status.AnnounceUpdate()
 
-			// THEN the message is received.
+			prefix := fmt.Sprintf("%s\nStatus.AnnounceUpdate()", packageName)
+
+			// THEN: the message is received.
 			if tc.nilChannel {
 				return
 			}
 			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
-			_ = json.Unmarshal(gotData, &got)
+			_ = decode.Unmarshal("json", gotData, &got)
 			if got.ServiceData.ID != wantID {
-				t.Fatalf("%s\nID mismatch\nwant: %q\ngot:  %q",
-					packageName, wantID, got.ServiceData.ID)
+				t.Fatalf(
+					"%s .ID mismatch\ngot:  %q\nwant: %q",
+					prefix, wantID, got.ServiceData.ID,
+				)
 			}
-			if got.ServiceData.Status.DeployedVersion != wantDeployedVersion {
-				t.Fatalf("%s\nDeployedVersion mismatch\nwant: %q\ngot:  %q",
-					packageName, wantDeployedVersion, got.ServiceData.Status.DeployedVersion)
+			if gotDeployedVersion := got.ServiceData.Status.DeployedVersion; gotDeployedVersion != wantDeployedVersion {
+				t.Fatalf(
+					"%s .DeployedVersion mismatch\ngot:  %q\nwant: %q",
+					prefix, gotDeployedVersion, wantDeployedVersion,
+				)
 			}
-			if got.ServiceData.Status.DeployedVersionTimestamp != wantDeployedVersionTimestamp {
-				t.Fatalf("%s\nDeployedVersionTimestamp mismatch\nwant: %q\ngot:  %q",
-					packageName, wantDeployedVersionTimestamp, got.ServiceData.Status.DeployedVersionTimestamp)
+			if gotDeployedVersionTimestamp := got.ServiceData.Status.DeployedVersionTimestamp; gotDeployedVersionTimestamp != wantDeployedVersionTimestamp {
+				t.Fatalf(
+					"%s .DeployedVersionTimestamp mismatch\ngot:  %q\nwant: %q",
+					prefix, gotDeployedVersionTimestamp, wantDeployedVersionTimestamp,
+				)
 			}
 		})
 	}
 }
 
-func TestStatus_announceApproved(t *testing.T) {
-	// GIVEN a Status and an AnnounceChannel.
-	tests := map[string]struct {
+func TestStatus_AnnounceApproved(t *testing.T) {
+	// GIVEN: a Status and an AnnounceChannel.
+	tests := []struct {
+		name       string
 		nilChannel bool
 	}{
-		"nil channel": {
-			nilChannel: true},
-		"non-nil": {
-			nilChannel: false},
+		{name: "nil channel", nilChannel: true},
+		{name: "non-nil", nilChannel: false},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			status := testStatus()
@@ -236,23 +262,36 @@ func TestStatus_announceApproved(t *testing.T) {
 			wantID := status.ServiceInfo.ID
 			wantApprovedVersion := status.ApprovedVersion()
 
-			// WHEN announceApproved is called on it.
+			// WHEN: announceApproved is called on it.
 			status.announceApproved()
 
-			// THEN the message is received.
+			prefix := fmt.Sprintf("%s\nStatus.announceApproved()", packageName)
+
+			// THEN: the message is received.
 			if tc.nilChannel {
 				return
 			}
 			gotData := <-status.AnnounceChannel
 			var got apitype.WebSocketMessage
-			_ =json.Unmarshal(gotData, &got)
+			_ = decode.Unmarshal("json", gotData, &got)
 			if got.ServiceData.ID != wantID {
-				t.Fatalf("%s\nID mismatch\nwant: %q\ngot:  %q",
-					packageName, wantID, got.ServiceData.ID)
+				t.Fatalf(
+					"%s .ID mismatch\ngot:  %q\nwant: %q",
+					prefix, got.ServiceData.ID, wantID,
+				)
 			}
-			if got.ServiceData.Status.ApprovedVersion != wantApprovedVersion {
-				t.Fatalf("%s\nApprovedVersion mismatch\nwant: %q\ngot:  %q",
-					packageName, wantApprovedVersion, got.ServiceData.Status.ApprovedVersion)
+			if got.ServiceData.Status == nil {
+				t.Fatalf(
+					"%s ServiceData.Status is nil in message (%+v)",
+					prefix, got,
+				)
+			}
+			gotApprovedVersion := got.ServiceData.Status.ApprovedVersion
+			if gotApprovedVersion != wantApprovedVersion {
+				t.Fatalf(
+					"%s .ApprovedVersion mismatch\ngot:  %q\nwant: %q",
+					prefix, gotApprovedVersion, wantApprovedVersion,
+				)
 			}
 		})
 	}

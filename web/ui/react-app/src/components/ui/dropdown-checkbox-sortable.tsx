@@ -34,7 +34,9 @@ export const DropdownMenuCheckboxItemSortable: FC<
 		transform,
 		transition,
 		isDragging,
-	} = useSortable({ id: id });
+	} = useSortable({
+		id: id,
+	});
 
 	const style = {
 		opacity: isDragging ? 0.4 : 1,
@@ -59,7 +61,7 @@ export const DropdownMenuCheckboxItemSortable: FC<
 				size="sm"
 				variant="ghost"
 			>
-				<GripVertical className="h-4 w-4"/>
+				<GripVertical className="h-4 w-4" />
 			</Button>
 		</div>
 	);

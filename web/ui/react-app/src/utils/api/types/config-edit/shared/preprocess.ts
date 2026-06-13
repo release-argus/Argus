@@ -135,3 +135,8 @@ export const makeDefaultsAwareListPreprocessor = (
 		}
 		return val;
 	}, inner);
+
+export const stringDefault = z
+	.string()
+	.nullish()
+	.transform((v) => v ?? '');

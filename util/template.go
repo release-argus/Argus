@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,17 +24,17 @@ import (
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 )
 
-var pongoMutex = sync.Mutex{}
+var pongoMu = sync.Mutex{}
 
-// TemplateString with pongo2 and `context`.
-func TemplateString(template string, context serviceinfo.ServiceInfo) string {
+// TemplateString with pongo2 and service info.
+func TemplateString(template string, info serviceinfo.ServiceInfo) string {
 	// If the string does not represent a Jinja template.
 	if !strings.Contains(template, "{") {
 		return template
 	}
 	// pongo2 DATA RACE.
-	pongoMutex.Lock()
-	defer pongoMutex.Unlock()
+	pongoMu.Lock()
+	defer pongoMu.Unlock()
 
 	// Compile the template.
 	tpl, err := pongo2.FromString(template)
@@ -43,19 +43,21 @@ func TemplateString(template string, context serviceinfo.ServiceInfo) string {
 	}
 
 	// Render the template.
-	result, err := tpl.Execute(pongo2.Context{
-		"service_id":       context.ID,
-		"service_name":     context.Name,
-		"service_url":      context.URL,
-		"icon":             context.Icon,
-		"icon_link_to":     context.IconLinkTo,
-		"web_url":          context.WebURL,
-		"approved_version": context.ApprovedVersion,
-		"deployed_version": context.DeployedVersion,
-		"version":          context.LatestVersion,
-		"latest_version":   context.LatestVersion,
-		"tags":             context.Tags,
-	})
+	result, err := tpl.Execute(
+		pongo2.Context{
+			"service_id":       info.ID,
+			"service_name":     info.Name,
+			"service_url":      info.URL,
+			"icon":             info.Icon,
+			"icon_link_to":     info.IconLinkTo,
+			"web_url":          info.WebURL,
+			"approved_version": info.ApprovedVersion,
+			"deployed_version": info.DeployedVersion,
+			"version":          info.LatestVersion,
+			"latest_version":   info.LatestVersion,
+			"tags":             info.Tags,
+		},
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -65,8 +67,8 @@ func TemplateString(template string, context serviceinfo.ServiceInfo) string {
 // CheckTemplate verifies the validity of the template.
 func CheckTemplate(template string) bool {
 	// pongo2 DATA RACE.
-	pongoMutex.Lock()
-	defer pongoMutex.Unlock()
+	pongoMu.Lock()
+	defer pongoMu.Unlock()
 
 	_, err := pongo2.FromString(template)
 	return err == nil

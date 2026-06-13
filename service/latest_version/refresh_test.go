@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,387 +17,122 @@
 package latestver
 
 import (
-	"strings"
+	"fmt"
 	"testing"
-	"time"
 
-	"github.com/release-argus/Argus/service/dashboard"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	github "github.com/release-argus/Argus/service/latest_version/types/github"
+	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
-	"github.com/release-argus/Argus/service/shared"
-	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
+	statustest "github.com/release-argus/Argus/service/status/test"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/util/errfmt"
 )
 
-func TestLookup_Refresh(t *testing.T) {
-	testURL := testLookup("url", false).(*web.Lookup)
-	_, _ = testURL.Query(true, logutil.LogFrom{})
-	testVersionURL := testURL.Status.LatestVersion()
-	testGitHub := testLookup("github", false).(*github.Lookup)
-	_, _ = testGitHub.Query(true, logutil.LogFrom{})
-	testVersionGitHub := testGitHub.Status.LatestVersion()
-
-	type args struct {
-		overrides          *string
-		semanticVersioning *string
-		latestVersion      string
-		secretRefs         shared.VSecretRef
-	}
-
-	// GIVEN a Lookup and a possible YAML string to override parts of it.
-	tests := map[string]struct {
-		args     args
-		previous Lookup
-		errRegex string
-		want     string
-		announce bool
-	}{
-		"nil Lookup": {
-			errRegex: `lookup is nil`,
-		},
-		"Change of URL": {
-			args: args{
-				overrides: test.StringPtr(
-					test.TrimJSON(`{
-						"url": "` + test.LookupPlain["url_valid"] + `"
-					}`)),
-			},
-			previous: testLookup("url", true),
-			errRegex: `^$`,
-			want:     testVersionURL,
-		},
-		"Fail CheckValues": {
-			args: args{
-				overrides: test.StringPtr(
-					test.TrimYAML(`{
-						"url_commands": [
-							{"type": "unknown"}
-						]
-				}`)),
-			},
-			previous: testLookup("url", false),
-			errRegex: test.TrimYAML(`
-				^url_commands:
-					- item_0:
-						type: "[^"]+" <invalid>.*$`),
-		},
-		"Change of a few vars": {
-			args: args{
-				overrides: test.StringPtr(
-					test.TrimJSON(`{
-						"url_commands": [
-							{"type": "regex", "regex": "beta: \"v?([^\\\"]+)\""}
-						]
-				}`)),
-				semanticVersioning: test.StringPtr("false"),
-			},
-			previous: testLookup("url", false),
-			errRegex: `^$`,
-			want:     testVersionURL + "-beta",
-		},
-		"Change of vars that fail Query": {
-			args: args{
-				overrides: test.StringPtr(
-					test.TrimYAML(`{
-						"allow_invalid_certs": false
-				}`)),
-			},
-			previous: testLookup("url", false),
-			errRegex: `x509 \(certificate invalid\)`,
-		},
-		"GitHub - Refresh new version": {
-			args: args{
-				latestVersion: "0.0.0"},
-			previous: testLookup("github", false),
-			errRegex: `^$`,
-			want:     testVersionGitHub,
-			announce: true,
-		},
-		"URL - Refresh new version": {
-			args: args{
-				latestVersion: "0.0.0"},
-			previous: testLookup("url", false),
-			errRegex: `^$`,
-			want:     testVersionURL,
-			announce: true,
-		},
-		"GitHub -> URL": {
-			previous: testLookup("github", false),
-			args: args{
-				overrides: test.StringPtr(
-					test.TrimYAML(`{
-						"type": "url",
-						"url": "` + test.LookupPlain["url_valid"] + `",
-						"url_commands": [
-							{"type": "regex", "regex": "ver([0-9.]+)"}
-						]
-				}`)),
-				semanticVersioning: test.StringPtr("false"),
-				latestVersion:      "0.0.0"},
-			errRegex: `^$`,
-			want:     testVersionURL,
-			announce: false,
-		},
-		"GitHub -> UNKNOWN": {
-			previous: testLookup("github", false),
-			args: args{
-				overrides: test.StringPtr(`{
-					"type": "unknown"
-				}`),
-				semanticVersioning: test.StringPtr("false"),
-				latestVersion:      "0.0.0"},
-			errRegex: `type: "unknown" <invalid>.*$`,
-			announce: false,
-		},
-		"InheritSecrets inherits header secrets": {
-			args: args{
-				overrides: test.StringPtr(test.TrimJSON(`{
-						"headers": [
-							{
-								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
-								"value": "` + util.SecretValue + `",
-								"old_index": 0
-							}
-						]
-					}`)),
-				latestVersion: testVersionURL,
-			},
-			previous: test.IgnoreError(t, func() (Lookup, error) {
-				l := testLookup("url", false)
-				lTyped, _ := l.(*web.Lookup)
-				lTyped.Headers = shared.Headers{{
-					Key:   test.LookupWithHeaderAuth["header_key"],
-					Value: test.LookupWithHeaderAuth["header_value_pass"],
-				}}
-				return lTyped, nil
-			}),
-			want:     testVersionURL,
-			announce: false,
-			errRegex: `^$`,
-		},
-		"InheritSecrets can be overridden with non '<secret>' values": {
-			args: args{
-				overrides: test.StringPtr(test.TrimJSON(`{
-						"headers": [
-							{
-								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
-								"value": "` + test.LookupWithHeaderAuth["header_value_fail"] + `",
-								"old_index": 0
-							}
-						]
-					}`)),
-				secretRefs: shared.VSecretRef{
-					Headers: []shared.OldIntIndex{
-						{OldIndex: test.IntPtr(0)}},
-				},
-				latestVersion: ""},
-			previous: test.IgnoreError(t, func() (Lookup, error) {
-				l := testLookup("url", false)
-				lTyped, _ := l.(*web.Lookup)
-				lTyped.URL = test.LookupWithHeaderAuth["url_valid"]
-				lTyped.Headers = shared.Headers{{
-					Key:   test.LookupWithHeaderAuth["header_key"],
-					Value: test.LookupWithHeaderAuth["header_value_pass"],
-				}}
-				return lTyped, nil
-			}),
-			want:     "",
-			announce: false,
-			errRegex: `Hook rules were not satisfied\.`,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// Status we will be working with.
-			var targetStatus *status.Status
-			switch l := tc.previous.(type) {
-			case *github.Lookup:
-				targetStatus = l.Status
-			case *web.Lookup:
-				targetStatus = l.Status
-			}
-
-			// Copy the starting Status.
-			var previousStatus *status.Status
-			if tc.previous != nil {
-				targetStatus.Init(
-					0, 0, 0,
-					name, "", "",
-					&dashboard.Options{})
-				// Set the latest version.
-				if tc.args.latestVersion != "" {
-					targetStatus.SetLatestVersion(tc.args.latestVersion, "", false)
-				}
-				previousStatus = targetStatus.Copy(true)
-			}
-
-			// WHEN we call Refresh.
-			got, gotAnnounce, err := Refresh(
-				tc.previous,
-				tc.args.overrides,
-				tc.args.semanticVersioning,
-				&tc.args.secretRefs)
-
-			// THEN we get an error if expected.
-			if tc.errRegex != "" || err != nil {
-				e := util.ErrorToString(err)
-				if !util.RegexCheck(tc.errRegex, e) {
-					t.Fatalf("want match for %q\nnot: %q",
-						tc.errRegex, e)
-				}
-				return
-			}
-			// AND announce is only true when expected.
-			if tc.announce != gotAnnounce {
-				t.Errorf("expected announce of %t, not %t",
-					tc.announce, gotAnnounce)
-			}
-			// AND we get the expected result otherwise.
-			if tc.want != got {
-				t.Errorf("expected version %q, not %q", tc.want, got)
-			}
-			// AND the timestamp only changes if the version changed.
-			if previousStatus.LatestVersionTimestamp() != "" {
-				// If the possible query-changing overrides are nil.
-				if tc.args.overrides == nil && tc.args.semanticVersioning == nil {
-					// The timestamp should change only if the version changed.
-					if previousStatus.LatestVersion() != targetStatus.LatestVersion() &&
-						previousStatus.LatestVersionTimestamp() == targetStatus.LatestVersionTimestamp() {
-						t.Errorf("expected timestamp to change from %q, but got %q",
-							previousStatus.LatestVersionTimestamp(), targetStatus.LatestVersionTimestamp())
-						// The timestamp shouldn't change as the version didn't change.
-					} else if previousStatus.LatestVersionTimestamp() != targetStatus.LatestVersionTimestamp() {
-						t.Errorf("expected timestamp %q but got %q",
-							previousStatus.LatestVersionTimestamp(), targetStatus.LatestVersionTimestamp())
-					}
-					// If the overrides are not nil.
-				} else {
-					// The timestamp shouldn't change.
-					if previousStatus.LatestVersionTimestamp() != targetStatus.LatestVersionTimestamp() {
-						t.Errorf("expected timestamp %q but got %q",
-							previousStatus.LatestVersionTimestamp(), targetStatus.LatestVersionTimestamp())
-					}
-				}
-			}
-		})
-	}
-}
-
 func TestApplyOverridesJSON(t *testing.T) {
-	tLookup := testLookup("url", false)
-	// GIVEN a Lookup and a possible JSON string to override parts of it.
+	lvCfg := plainDefaultsConfig(t)
+
+	tLookupInterface := testLookup(t, "url", false)
+	tLookup := tLookupInterface.(*web.Lookup)
+	// GIVEN: a Lookup and a possible JSON string to override parts of it.
 	type args struct {
 		lookup             Lookup
-		overrides          *string
+		overrides          []byte
 		semanticVerDiff    bool
 		semanticVersioning *string
 	}
-	tests := map[string]struct {
+	tests := []struct {
+		name               string
 		args               args
 		lookupRequire      *filter.Require
 		wantStr            string
 		wantRequireInherit bool
 		errRegex           string
 	}{
-		"no overrides, no semantic versioning change": {
+		{
+			name: "no overrides, no semantic versioning change",
 			args: args{
 				lookup:             tLookup,
 				overrides:          nil,
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			wantStr:  tLookup.String(tLookup, ""),
+			wantStr:  tLookup.String(""),
 			errRegex: `^$`,
 		},
-		"invalid semantic versioning JSON": {
+		{
+			name: "invalid semantic versioning JSON",
 			args: args{
 				lookup:             tLookup,
 				overrides:          nil,
 				semanticVerDiff:    true,
-				semanticVersioning: test.StringPtr("invalid"),
+				semanticVersioning: test.Ptr("invalid"),
 			},
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal latestver\.Lookup\.Options\.SemanticVersioning:
-					invalid character.*$`),
+				^semantic_versioning:
+					jsontext:
+						invalid character .*$`,
+			),
 		},
-		"valid semantic versioning change": {
+		{
+			name: "valid semantic versioning change",
 			args: args{
 				lookup:             tLookup,
 				overrides:          nil,
 				semanticVerDiff:    true,
-				semanticVersioning: test.StringPtr("true"),
+				semanticVersioning: test.Ptr("true"),
 			},
-			wantStr:  tLookup.String(tLookup, ""),
+			wantStr:  tLookup.String(""),
 			errRegex: `^$`,
 		},
-		"valid overrides JSON": {
+		{
+			name: "valid overrides JSON",
 			args: args{
-				lookup: tLookup,
-				overrides: test.StringPtr(test.TrimJSON(`{
-					"url": "` + test.LookupJSON["url_valid"] + `"
-				}`)),
+				lookup:             tLookup,
+				overrides:          []byte(`{"url": "https://example.com"}`),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
 			wantStr: test.TrimYAML(`
 				type: url
-				url: ` + test.LookupJSON["url_valid"] + `
-				url_commands:
-					- type: regex
-						regex: ver([0-9.]+)
+				url: https://example.com
 				allow_invalid_certs: true
 			`),
 			errRegex: `^$`,
 		},
-		"invalid overrides JSON - Invalid JSON": {
+		{
+			name: "invalid overrides JSON - Invalid JSON",
 			args: args{
-				lookup: tLookup,
-				overrides: test.StringPtr(test.TrimJSON(`{
-					"url": "
-				}`)),
+				lookup:             tLookup,
+				overrides:          []byte(`{"url": "}`),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal latestver.Lookup:
-					unexpected end of JSON input$`),
+				^latest_version:
+					[^\s]+ could not find.*`,
+			),
 		},
-		"invalid overrides JSON - different var type": {
+		{
+			name: "invalid overrides JSON - different var type",
 			args: args{
-				lookup: tLookup,
-				overrides: test.StringPtr(test.TrimJSON(`{
-					"url": ["newType"]
-				}`)),
+				lookup:             tLookup,
+				overrides:          []byte(`{"url": ["newType"]}`),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal latestver.Lookup:
-					cannot unmarshal array into Go struct field (\.Lookup)?\.url of type string$`),
+				^latest_version:
+					[^\s]+ .*unmarshal.*`,
+			),
 		},
-		"overrides that make CheckValues fail": {
+		{
+			name: "change type with valid overrides",
 			args: args{
 				lookup: tLookup,
-				overrides: test.StringPtr(test.TrimJSON(`{
-					"url": ""
-				}`)),
-				semanticVerDiff:    false,
-				semanticVersioning: nil,
-			},
-			errRegex: `^url: <required>.*$`,
-		},
-		"change type with valid overrides": {
-			args: args{
-				lookup: tLookup,
-				overrides: test.StringPtr(test.TrimJSON(`{
+				overrides: []byte(test.TrimJSON(`{
 					"type": "github",
-					"url": "release-argus/Argus",
+					"url": "` + test.ArgusGitHubRepo + `",
 					"access_token": "token"
 				}`)),
 				semanticVerDiff:    false,
@@ -405,241 +140,241 @@ func TestApplyOverridesJSON(t *testing.T) {
 			},
 			wantStr: test.TrimYAML(`
 				type: github
-				url: release-argus/Argus
-				url_commands:
-					- type: regex
-						regex: ver([0-9.]+)
+				url: ` + test.ArgusGitHubRepo + `
 				access_token: token
 			`),
 			errRegex: `^$`,
 		},
-		"change type to unknown type": {
+		{
+			name: "change type to unknown type",
 			args: args{
 				lookup: tLookup,
-				overrides: test.StringPtr(test.TrimJSON(`{
+				overrides: []byte(test.TrimJSON(`{
 					"type": "newType",
 					"url": []
 				}`)),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			errRegex: `\stype: "newType" <invalid> \(supported types = \['github', 'url'\]\)$`,
+			errRegex: test.TrimYAML(`
+				latest_version:
+					type: "newType" <invalid> \(supported values = \['github', 'url'\]\)$`,
+			),
 		},
-		"inherit Require.Docker.* - same Lookup.type": {
+		{
+			name: "inherit Require.Docker.* - same Lookup.type",
 			args: args{
-				lookup:             testLookup("url", false),
+				lookup:             testLookup(t, "url", false),
 				overrides:          nil,
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			lookupRequire: &filter.Require{
-				Docker: filter.NewDockerCheck(
-					"ghcr",
-					"release-argus/argus", "{{ version }}",
-					"user", "pass",
-					"queryToken!", time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					nil)},
+			lookupRequire: test.Must(t, func() (*filter.Require, error) {
+				svcStatus, _ := statustest.New("yaml", nil)
+				return filter.Decode(
+					"yaml", []byte(test.TrimYAML(`
+						docker:
+							type: ghcr
+							image: `+test.ArgusDockerGHCRRepo+`
+							tag: '{{ version }}'
+							auth:
+								token: pass
+					`)),
+					svcStatus,
+					&lvCfg.Soft.Require,
+				)
+			}),
 			wantRequireInherit: true,
 			wantStr: test.TrimYAML(`
 				type: url
-				url: ` + test.LookupPlain["url_invalid"] + `
-				url_commands:
-					- type: regex
-						regex: ver([0-9.]+)
+				url: ` + tLookup.URL + `
 				require:
 					docker:
 						type: ghcr
-						username: user
-						token: pass
-						image: release-argus/argus
+						image: ` + test.ArgusDockerGHCRRepo + `
 						tag: '{{ version }}'
+						auth:
+							token: pass
 				allow_invalid_certs: true
 			`),
 			errRegex: `^$`,
 		},
-		"inherit Require.Docker.* - different Lookup.type": {
+		{
+			name: "don't inherit Require.Docker.* - same Lookup.type, different Docker.Type",
 			args: args{
-				lookup: testLookup("url", false),
-				overrides: test.StringPtr(`{
-					"type": "github"
-				}`),
-				semanticVerDiff:    false,
-				semanticVersioning: nil,
-			},
-			lookupRequire: &filter.Require{
-				Docker: filter.NewDockerCheck(
-					"ghcr",
-					"release-argus/argus", "{{ version }}",
-					"user", "pass",
-					"queryToken!", time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					nil)},
-			wantRequireInherit: true,
-			wantStr: test.TrimYAML(`
-				type: github
-				url: ` +
-				strings.Join(
-					strings.Split(
-						strings.Split(
-							test.LookupPlain["url_invalid"], "://")[1],
-						"/")[strings.Count(test.LookupPlain["url_invalid"], "/")-3:],
-					"/") + `
-				url_commands:
-					- type: regex
-						regex: ver([0-9.]+)
-				require:
-					docker:
-						type: ghcr
-						username: user
-						token: pass
-						image: release-argus/argus
-						tag: '{{ version }}'
-			`),
-			errRegex: `^$`,
-		},
-		"don't inherit Require.Docker.* - same Lookup.type": {
-			args: args{
-				lookup: testLookup("url", false),
-				overrides: test.StringPtr(
+				lookup: testLookup(t, "url", false),
+				overrides: []byte(
 					test.TrimJSON(`{
 						"require": {
 							"docker": {
+								"type": "hub",
 								"image": "release-argus/test"
-				}}}`)),
+							}
+						}
+					}`),
+				),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			lookupRequire: &filter.Require{
-				Docker: filter.NewDockerCheck(
-					"ghcr",
-					"release-argus/argus", "{{ version }}",
-					"user", "pass",
-					"queryToken!", time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					nil)},
+			lookupRequire: test.Must(t, func() (*filter.Require, error) {
+				svcStatus, _ := statustest.New("yaml", nil)
+				return filter.Decode(
+					"yaml", []byte(test.TrimYAML(`
+						docker:
+							type: ghcr
+							image: `+test.ArgusDockerGHCRRepo+`
+							tag: '{{ version }}'
+							auth:
+								token: 'pass'
+					`)),
+					svcStatus,
+					&lvCfg.Soft.Require,
+				)
+			}),
 			wantRequireInherit: false,
 			wantStr: test.TrimYAML(`
 				type: url
-				url: ` + test.LookupPlain["url_invalid"] + `
-				url_commands:
-					- type: regex
-						regex: ver([0-9.]+)
+				url: ` + tLookup.URL + `
 				require:
 					docker:
-						type: ghcr
-						username: user
-						token: pass
+						type: hub
 						image: release-argus/test
-						tag: '{{ version }}'
 				allow_invalid_certs: true
 			`),
 			errRegex: `^$`,
 		},
-		"don't inherit Require.Docker.* - different Lookup.type": {
+		{
+			name: "changing type only uses overrides, does inherit Docker if same type/image/auth",
 			args: args{
-				lookup: testLookup("url", false),
-				overrides: test.StringPtr(
+				lookup: testLookup(t, "url", false),
+				overrides: []byte(
 					test.TrimJSON(`{
 						"type": "github",
+						"url": "` + test.ArgusGitHubRepo + `",
 						"require": {
 							"docker": {
-								"image": "release-argus/test"
-				}}}`)),
+								"type": "ghcr",
+								"image": "` + test.ArgusDockerGHCRRepo + `",
+								"tag": "{{ version }}-beta",
+								"auth": {
+									"token": "pass"
+								}
+							}
+						}
+					}`),
+				),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			lookupRequire: &filter.Require{
-				Docker: filter.NewDockerCheck(
-					"ghcr",
-					"release-argus/argus", "{{ version }}",
-					"user", "pass",
-					"queryToken!", time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					nil)},
-			wantRequireInherit: false,
+			lookupRequire: test.Must(t, func() (*filter.Require, error) {
+				svcStatus, _ := statustest.New("yaml", nil)
+				return filter.Decode(
+					"yaml", []byte(test.TrimYAML(`
+						docker:
+							type: ghcr
+							image: `+test.ArgusDockerGHCRRepo+`
+							tag: '{{ version }}'
+							auth:
+								token: 'pass'
+					`)),
+					svcStatus,
+					&lvCfg.Soft.Require,
+				)
+			}),
+			wantRequireInherit: true,
 			wantStr: test.TrimYAML(`
 				type: github
-				url: ` +
-				strings.Join(
-					strings.Split(
-						strings.Split(
-							test.LookupPlain["url_invalid"], "://")[1],
-						"/")[strings.Count(test.LookupPlain["url_invalid"], "/")-3:],
-					"/") + `
-				url_commands:
-					- type: regex
-						regex: ver([0-9.]+)
+				url: ` + test.ArgusGitHubRepo + `
 				require:
 					docker:
 						type: ghcr
-						username: user
-						token: pass
-						image: release-argus/test
-						tag: '{{ version }}'
+						image: ` + test.ArgusDockerGHCRRepo + `
+						tag: '{{ version }}-beta'
+						auth:
+							token: pass
 			`),
 			errRegex: `^$`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			if tc.lookupRequire != nil {
-				if lv, ok := tc.args.lookup.(*web.Lookup); ok {
+				switch lv := tc.args.lookup.(type) {
+				case *web.Lookup:
 					lv.Require = tc.lookupRequire
-				} else if lv, ok := tc.args.lookup.(*github.Lookup); ok {
+				case *github.Lookup:
 					lv.Require = tc.lookupRequire
 				}
 			}
 
-			// WHEN we call applyOverridesJSON.
+			// WHEN: we call applyOverridesJSON.
 			got, err := applyOverridesJSON(
 				tc.args.lookup,
 				tc.args.overrides,
 				tc.args.semanticVerDiff,
-				tc.args.semanticVersioning)
+				tc.args.semanticVersioning,
+			)
 
-			// THEN we get an error matching the format expected.
-			e := util.ErrorToString(err)
+			prefix := fmt.Sprintf(
+				"%s\napplyOverridesJSON(%q)",
+				packageName, tc.args.overrides,
+			)
+
+			// THEN: we get an error matching the format expected.
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("applyOverridesJSON() error mismatch\nwant: %q\ngot:  %q",
-					tc.errRegex, e)
+				t.Errorf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
 			}
 			if tc.errRegex != `^$` {
 				return
 			}
-			// AND the result is as expected.
+
+			// AND: the result is as expected.
 			if got == nil {
-				t.Errorf("applyOverridesJSON() got: nil, want: non-nil\n%s",
-					e)
+				t.Errorf(
+					"%s result mismatch\ngot:  nil\nwant: non-nil (%v)",
+					prefix, got,
+				)
 				return
 			}
-			gotStr := got.String(got, "")
-			if gotStr != tc.wantStr {
-				t.Errorf("applyOverridesJSON() got:\n%q\nwant:\n%q",
-					gotStr, tc.wantStr)
+			if gotStr := got.String(""); gotStr != tc.wantStr {
+				t.Errorf(
+					"%s stringified mismatch\ngot:  %q\nwant: %q",
+					prefix, gotStr, tc.wantStr,
+				)
 			}
-			// AND Require.Docker.* is inherited when expected.
+
+			// AND: Require.Docker.* is inherited when expected.
 			gotRequire := got.GetRequire()
 			if tc.wantRequireInherit {
 				if gotRequire == nil || gotRequire.Docker == nil {
-					t.Errorf("applyOverridesJSON() Require, got: nil, want: non-nil")
+					t.Errorf("%s .Require result mismatch\ngot:  nil\nwant: non-nil", prefix)
 				} else {
-					gotQueryToken, gotValidUntil := gotRequire.Docker.CopyQueryToken()
-					wantQueryToken, wantValidUntil := tc.lookupRequire.Docker.CopyQueryToken()
-					if gotRequire.Docker.Token != tc.lookupRequire.Docker.Token ||
-						gotQueryToken != wantQueryToken ||
-						gotValidUntil != wantValidUntil {
-						t.Errorf("applyOverridesJSON() Require.Docker mismatch, got:\n%+v\nwant:\n%+v",
-							gotRequire.Docker, tc.lookupRequire.Docker)
+					gotQueryToken, _ := gotRequire.Docker.GetAuth().GetQueryToken(gotRequire.Docker.Detail())
+					wantQueryToken, _ := tc.lookupRequire.Docker.GetAuth().GetQueryToken(tc.lookupRequire.Docker.Detail())
+					if gotRequire.Docker.GetAuth().GetTokenSelf() != tc.lookupRequire.Docker.GetAuth().GetTokenSelf() ||
+						gotQueryToken != wantQueryToken {
+						t.Errorf(
+							"%s .Require.Docker result mismatch\ngot:  %+v\nwant: %+v",
+							prefix, gotRequire.Docker.GetAuth(), tc.lookupRequire.Docker.GetAuth(),
+						)
 					}
 				}
 			} else if gotRequire != nil && gotRequire.Docker != nil &&
 				tc.lookupRequire != nil && tc.lookupRequire.Docker != nil {
-				gotQueryToken, gotValidUntil := gotRequire.Docker.CopyQueryToken()
-				avoidQueryToken, avoidValidUntil := tc.lookupRequire.Docker.CopyQueryToken()
-				if gotQueryToken == avoidQueryToken &&
-					time.Time.Equal(gotValidUntil, avoidValidUntil) {
-					t.Errorf("applyOverridesJSON() Require.Docker copied over unexpectedly\ngot:\n%+v\nhad:\n%+v",
-						gotRequire.Docker, tc.lookupRequire.Docker)
+				gotQueryToken, _ := gotRequire.Docker.GetAuth().GetQueryToken(gotRequire.Docker.Detail())
+				avoidQueryToken, _ := tc.lookupRequire.Docker.GetAuth().GetQueryToken(tc.lookupRequire.Docker.Detail())
+				if gotQueryToken == avoidQueryToken {
+					t.Errorf(
+						"%s .Require.Docker copied over unexpectedly\ngot:  %+v\nhad: %+v",
+						prefix, gotRequire.Docker.GetAuth(), tc.lookupRequire.Docker.GetAuth(),
+					)
 				}
 			}
 		})

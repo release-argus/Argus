@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,3 +17,15 @@
 package dashboard
 
 var packageName = "service.dashboard"
+
+// plainDefaultsConfig returns plain defaults and hardDefaults for testing.
+func plainDefaultsConfig() DefaultsConfig {
+	defaults, _ := DecodeDefaults("yaml", nil)
+	hardDefaults, _ := DecodeDefaults("yaml", nil)
+	hardDefaults.Default()
+
+	return DefaultsConfig{
+		Soft: defaults,
+		Hard: hardDefaults,
+	}
+}

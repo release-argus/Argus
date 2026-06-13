@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ import (
 	"errors"
 	"time"
 
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/internal/logx"
 )
 
-// Track the deployed version (DeployedVersion) of the `parent`.
+// Track the deployed version of the `parent`.
 func (l *Lookup) Track() {
 	// Do nothing.
 }
@@ -33,9 +33,9 @@ func (l *Lookup) Track() {
 // Parameters:
 //
 //	metrics: ignored
-func (l *Lookup) Query(metrics bool, logFrom logutil.LogFrom) error {
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
+func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
 	if l.Version != "" {
 		defer func() { l.Version = "" }()

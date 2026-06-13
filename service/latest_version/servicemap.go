@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,20 +16,23 @@
 package latestver
 
 import (
-	"github.com/release-argus/Argus/service/latest_version/types/base"
-	"github.com/release-argus/Argus/service/latest_version/types/github"
-	"github.com/release-argus/Argus/service/latest_version/types/web"
+	lvgithub "github.com/release-argus/Argus/service/latest_version/types/github"
+	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
+	"github.com/release-argus/Argus/util/polymorphic"
 )
 
 // PossibleTypes for the latest_version Lookup.
 var PossibleTypes = []string{
-	"github",
-	"url",
+	lvgithub.Type,
+	lvweb.Type,
 }
 
 // ServiceMap maps a service type to a Lookup constructor.
-var ServiceMap = map[string]func() base.Interface{
-	"github": func() base.Interface { return &github.Lookup{} },
-	"url":    func() base.Interface { return &web.Lookup{} },
-	"web":    func() base.Interface { return &web.Lookup{} },
+var ServiceMap = map[string]func() Lookup{
+	lvgithub.Type: func() Lookup { return &lvgithub.Lookup{} },
+	lvweb.Type:    func() Lookup { return &lvweb.Lookup{} },
+	"web":         func() Lookup { return &lvweb.Lookup{} },
 }
+
+// ServiceMapInheritable is [ServiceMap] wrapped for polymorphic inheritance decoding.
+var ServiceMapInheritable = polymorphic.ToInheritableMap(ServiceMap)

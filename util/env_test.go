@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,134 +18,162 @@ package util
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/internal/test"
 )
+
+func prefixMapKeys(m map[string]string, prefix string) map[string]string {
+	prefixed := make(map[string]string, len(m))
+	for k, v := range m {
+		prefixed[fmt.Sprintf("%s_%s", prefix, k)] = v
+	}
+	return prefixed
+}
 
 func TestFirstNonDefaultWithEnv(t *testing.T) {
 	envVarNameBase := "TEST_FIRST_NON_DEFAULT_WITH_ENV_"
-	// GIVEN a bunch of comparables.
-	tests := map[string]struct {
-		env         map[string]string
-		slice       []string
-		allDefault  bool
-		wantIndex   int
-		wantText    string
-		diffAddress bool
+	// GIVEN: a bunch of comparables.
+	tests := []struct {
+		name       string
+		env        map[string]string
+		slice      []string
+		allDefault bool
+		wantIndex  int
+		wantText   string
+		diffValue  bool
 	}{
-		"no vars": {
+		{
+			name:       "no vars",
 			slice:      []string{},
 			allDefault: true,
 		},
-		"all default vars": {
+		{
+			name: "all default vars",
 			slice: []string{
 				"",
 				"",
 				"",
-				""},
+				"",
+			},
 			allDefault: true,
 		},
-		"1 non-default var": {
+		{
+			name: "1 non-default var",
 			slice: []string{
 				"",
 				"",
 				"",
-				"bar"},
+				"bar",
+			},
 			wantIndex: 3,
 		},
-		"1 non-default var (env var)": {
+		{
+			name: "1 non-default var (env var)",
 			env: map[string]string{
-				"ONE": "bar"},
+				"ONE": "bar",
+			},
 			slice: []string{
 				"",
 				"",
 				"",
-				fmt.Sprintf(`${%s_ONE}`,
-					envVarNameBase)},
-			wantIndex:   3,
-			wantText:    "bar",
-			diffAddress: true,
+				fmt.Sprintf(`${%s_ONE}`, envVarNameBase),
+			},
+			wantIndex: 3,
+			wantText:  "bar",
+			diffValue: true,
 		},
-		"1 non-default var (env var partial)": {
+		{
+			name: "1 non-default var (env var partial)",
 			env: map[string]string{
-				"TWO": "bar"},
+				"TWO": "bar",
+			},
 			slice: []string{
 				"",
 				"",
 				"",
-				fmt.Sprintf(`foo${%s_TWO}`,
-					envVarNameBase)},
-			wantIndex:   3,
-			wantText:    "foobar",
-			diffAddress: true,
+				fmt.Sprintf(`foo${%s_TWO}`, envVarNameBase),
+			},
+			wantIndex: 3,
+			wantText:  "foobar",
+			diffValue: true,
 		},
-		"2 non-default vars": {
+		{
+			name: "2 non-default vars",
 			slice: []string{
 				"foo",
 				"",
 				"",
-				"bar"},
+				"bar",
+			},
 			wantIndex: 0,
 		},
-		"2 non-default vars (empty env vars ignored)": {
+		{
+			name: "2 non-default vars (empty env vars ignored)",
 			env: map[string]string{
 				"THREE": "",
-				"FOUR":  "bar"},
+				"FOUR":  "bar",
+			},
 			slice: []string{
-				fmt.Sprintf(`${%s_THREE}`,
-					envVarNameBase),
-				fmt.Sprintf(`${%s_UNSET}`,
-					envVarNameBase),
+				fmt.Sprintf(`${%s_THREE}`, envVarNameBase),
+				fmt.Sprintf(`${%s_UNSET}`, envVarNameBase),
 				"",
-				fmt.Sprintf(`${%s_FOUR}`,
-					envVarNameBase)},
+				fmt.Sprintf(`${%s_FOUR}`, envVarNameBase),
+			},
 			wantIndex: 3,
-			wantText: fmt.Sprintf(`${%s_UNSET}`,
-				envVarNameBase),
-			diffAddress: true,
+			wantText:  fmt.Sprintf(`${%s_UNSET}`, envVarNameBase),
+			diffValue: true,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			for k, v := range tc.env {
-				envVarName := fmt.Sprintf("%s_%s",
-					envVarNameBase, k)
-				_ = os.Setenv(envVarName, v)
-				t.Cleanup(func() { _ = os.Unsetenv(envVarName) })
-			}
+			// AND: the env vars are set.
+			tc.env = prefixMapKeys(tc.env, envVarNameBase)
+			test.SetEnv(t, tc.env)
 
-			// WHEN FirstNonDefaultWithEnv is run on a slice of slice.
+			// WHEN: FirstNonDefaultWithEnv is run on a slice of slice.
 			got := FirstNonDefaultWithEnv(tc.slice...)
 
-			// THEN the correct var (or "") is returned.
+			prefix := fmt.Sprintf(
+				"%s\nFirstNonDefaultWithEnv(%v)",
+				packageName, tc.slice,
+			)
+
+			// THEN: the correct var (or "") is returned.
 			if tc.allDefault {
 				if got != "" {
-					t.Fatalf("%s\nwant: non-empty\ngot:  %q\nfrom: %v",
-						packageName, got, tc.slice)
+					t.Fatalf("%s mismatch\ngot:  %q\nwant: \"\"", packageName, got)
 				}
 				return
 			}
-			// Addresses should be the same (unless we're using an env var).
-			if got != tc.slice[tc.wantIndex] &&
-				!tc.diffAddress {
-				t.Errorf("%s\naddress mismatch\nwant: %v\ngot:  %v",
-					packageName, tc.slice[tc.wantIndex], got)
-				// Addresses should only be the same.
-			} else if got == tc.slice[tc.wantIndex] {
-				// If we're using an env var.
-				if tc.diffAddress {
-					t.Errorf("%s\naddresses of pointers should differ (%v, %v)",
-						packageName, tc.slice[tc.wantIndex], got)
+			// Values differ when they contain an env var.
+			if tc.diffValue {
+				// Value unchanged.
+				if got == tc.slice[tc.wantIndex] {
+					t.Errorf(
+						"%s values should differ (got %v, slice %v)",
+						prefix, got, tc.slice[tc.wantIndex],
+					)
+
+					// Value isn't changed as expected.
+				} else if got != tc.wantText {
+					t.Errorf(
+						"%s value mismatch\ngot:  %q\nwant: %q",
+						prefix, got, tc.wantText,
+					)
 				}
-				// Should have what the env var is set to.
-			} else if got != tc.wantText {
-				t.Errorf("%s\nvalue mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wantText, got)
+
+				return
+			}
+			// Values should match slice
+			if got != tc.slice[tc.wantIndex] {
+				t.Errorf(
+					"%s value mismatch\ngot:  %v\nwant: %v",
+					prefix, got, tc.slice[tc.wantIndex],
+				)
 			}
 		})
 	}
@@ -153,206 +181,237 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 
 func TestEvalEnvVars(t *testing.T) {
 	envVarNameBase := "TEST_EVAL_ENV_VARS_"
-	// GIVEN a string.
-	tests := map[string]struct {
+	// GIVEN: a string.
+	tests := []struct {
+		name  string
 		input string
 		env   map[string]string
 		want  string
 	}{
-		"no env vars": {
+		{
+			name:  "no env var '${...}",
+			input: "hello there",
+			want:  "hello there",
+		},
+		{
+			name:  "no env vars",
 			input: "hello there ${not an env var}",
 			want:  "hello there ${not an env var}",
 		},
-		"1 env var": {
+		{
+			name: "1 env var",
 			env: map[string]string{
-				"ONE": "bar"},
-			input: fmt.Sprintf(`hello there ${%s_ONE}`,
-				envVarNameBase),
-			want: "hello there bar",
+				"ONE": "bar",
+			},
+			input: fmt.Sprintf(`hello there ${%s_ONE}`, envVarNameBase),
+			want:  "hello there bar",
 		},
-		"2 env vars": {
+		{
+			name: "2 env vars",
 			env: map[string]string{
 				"TWO":   "bar",
-				"THREE": "baz"},
-			input: fmt.Sprintf(`hello there ${%s_TWO} ${%s_THREE}`,
-				envVarNameBase, envVarNameBase),
+				"THREE": "baz",
+			},
+			input: fmt.Sprintf(
+				`hello there ${%s_TWO} ${%s_THREE}`,
+				envVarNameBase, envVarNameBase,
+			),
 			want: "hello there bar baz",
 		},
-		"unset env var": {
-			input: fmt.Sprintf(`hello there ${%s_UNSET}`,
-				envVarNameBase),
-			want: fmt.Sprintf(`hello there ${%s_UNSET}`,
-				envVarNameBase),
+		{
+			name:  "unset env var",
+			input: fmt.Sprintf(`hello there ${%s_UNSET}`, envVarNameBase),
+			want:  fmt.Sprintf(`hello there ${%s_UNSET}`, envVarNameBase),
 		},
-		"empty env var": {
+		{
+			name: "empty env var",
 			env: map[string]string{
-				"FOUR": ""},
-			input: fmt.Sprintf(`hello there ${%s_FOUR}`,
-				envVarNameBase),
-			want: "hello there ",
+				"FOUR": "",
+			},
+			input: fmt.Sprintf(`hello there ${%s_FOUR}`, envVarNameBase),
+			want:  "hello there ",
 		},
-		"nested env vars not evaluated": {
+		{
+			name: "nested env vars not evaluated",
 			env: map[string]string{
-				"FIVE": "bar",
-				"SIX": fmt.Sprintf(`${%s_SEVEN}`,
-					envVarNameBase),
-				"SEVEN": "qux"},
-			input: fmt.Sprintf(`hello there ${%s_FIVE} ${%s_SIX}`,
-				envVarNameBase, envVarNameBase),
-			want: fmt.Sprintf(`hello there bar ${%s_SEVEN}`,
-				envVarNameBase),
+				"FIVE":  "bar",
+				"SIX":   fmt.Sprintf(`${%s_SEVEN}`, envVarNameBase),
+				"SEVEN": "qux",
+			},
+			input: fmt.Sprintf(
+				`hello there ${%s_FIVE} ${%s_SIX}`,
+				envVarNameBase, envVarNameBase,
+			),
+			want: fmt.Sprintf(`hello there bar ${%s_SEVEN}`, envVarNameBase),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			for k, v := range tc.env {
-				envVarName := fmt.Sprintf("%s_%s",
-					envVarNameBase, k)
-				_ = os.Setenv(envVarName, v)
-				t.Cleanup(func() { _ = os.Unsetenv(envVarName) })
-			}
+			// AND: the env vars are set.
+			tc.env = prefixMapKeys(tc.env, envVarNameBase)
+			test.SetEnv(t, tc.env)
 
-			// WHEN EvalEnvVars is called.
+			// WHEN: EvalEnvVars is called.
 			got := EvalEnvVars(tc.input)
 
-			// THEN the string is evaluated correctly.
+			// THEN: the string is evaluated correctly.
 			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestExpandEnvVariables(t *testing.T) {
-	// GIVEN an env var that may or may not exist.
-	envVarNameBase := "TEST_ENV_REPLACE_FUNC_"
-	tests := map[string]struct {
-		envVarName  string
-		envVarValue *string
-		want        string
-	}{
-		"undefined env var": {
-			envVarName: fmt.Sprintf("%s_%s",
-				envVarNameBase, "UNDEFINED"),
-			want: fmt.Sprintf("${%s_%s}",
-				envVarNameBase, "UNDEFINED"),
-		},
-		"empty env var": {
-			envVarName: fmt.Sprintf("%s_%s",
-				envVarNameBase, "EMPTY"),
-			envVarValue: test.StringPtr(""),
-			want:        "",
-		},
-		"non-empty env var": {
-			envVarName: fmt.Sprintf("%s_%s",
-				envVarNameBase, "NON_EMPTY"),
-			envVarValue: test.StringPtr("bar"),
-			want:        "bar",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			if tc.envVarValue != nil {
-				_ = os.Setenv(tc.envVarName, *tc.envVarValue)
-				t.Cleanup(func() { _ = os.Unsetenv(tc.envVarName) })
-			}
-
-			// WHEN expandEnvVariables is called.
-			got := expandEnvVariables(
-				fmt.Sprintf("${%s}", tc.envVarName))
-
-			// THEN the string is evaluated correctly.
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s\nEvalEnvVars(%q) mismatch\ngot:  %q\nwant: %q",
+					packageName, tc.input,
+					got, tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestTryExpandEnv(t *testing.T) {
-	tests := map[string]struct {
+	// GIVEN: environment variables and a string that may contain environment variables.
+	tests := []struct {
+		name     string
 		input    string
-		envVars  map[string]string
+		env      map[string]string
 		expected *string
 	}{
-		"no environment variables": {
+		{
+			name:     "no environment variables",
 			input:    "plain_text",
-			envVars:  nil,
+			env:      nil,
 			expected: nil,
 		},
-		"single environment variable": {
+		{
+			name:  "single environment variable",
 			input: "${TEST_EXPAND_ENV_FOO_1}",
-			envVars: map[string]string{
+			env: map[string]string{
 				"TEST_EXPAND_ENV_FOO_1": "bar",
 			},
-			expected: test.StringPtr("bar"),
+			expected: test.Ptr("bar"),
 		},
-		"environment variable requires curly brackets": {
+		{
+			name:  "environment variable requires curly brackets",
 			input: "$TEST_EXPAND_ENV_FOO_2",
-			envVars: map[string]string{
+			env: map[string]string{
 				"TEST_EXPAND_ENV_FOO_2": "bar",
 			},
 			expected: nil,
 		},
-		"multiple environment variables": {
+		{
+			name:  "multiple environment variables",
 			input: "${TEST_EXPAND_ENV_FOO_3}-${TEST_EXPAND_ENV_BAR_1}",
-			envVars: map[string]string{
+			env: map[string]string{
 				"TEST_EXPAND_ENV_FOO_3": "hello",
 				"TEST_EXPAND_ENV_BAR_1": "world",
 			},
-			expected: test.StringPtr("hello-world"),
+			expected: test.Ptr("hello-world"),
 		},
-		"environment variable not set": {
+		{
+			name:     "environment variable not set",
 			input:    "${TEST_EXPAND_ENV_FOO_4}",
-			envVars:  nil,
+			env:      nil,
 			expected: nil,
 		},
-		"mixed text and environment variables": {
+		{
+			name:  "mixed text and environment variables",
 			input: "prefix-${TEST_EXPAND_ENV_FOO_5}-suffix",
-			envVars: map[string]string{
+			env: map[string]string{
 				"TEST_EXPAND_ENV_FOO_5": "value",
 			},
-			expected: test.StringPtr("prefix-value-suffix"),
+			expected: test.Ptr("prefix-value-suffix"),
 		},
-		"no expansion needed": {
+		{
+			name:     "no expansion needed",
 			input:    "NO_EXPANSION_NEEDED",
-			envVars:  nil,
+			env:      nil,
 			expected: nil,
 		},
-		"empty input string": {
+		{
+			name:     "empty data string",
 			input:    "",
-			envVars:  nil,
+			env:      nil,
 			expected: nil,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Set environment variables
-			for k, v := range tc.envVars {
-				_ = os.Setenv(k, v)
-				t.Cleanup(func() { _ = os.Unsetenv(k) })
-			}
+			// AND: the env vars are set.
+			test.SetEnv(t, tc.env)
 
-			// Call TryExpandEnv
+			// WHEN: TryExpandEnv is called on the string.
 			result := TryExpandEnv(tc.input)
 
-			// Check result
-			want := DereferenceOrValue(tc.expected, "<nil>")
-			got := DereferenceOrValue(result, "<nil>")
+			// THEN: the result is as expected.
+			want := DerefOr(tc.expected, "<nil>")
+			got := DerefOr(result, "<nil>")
 			if want != got {
-				t.Errorf("%s\nmismatch\nwant: %q\ngot:  %q",
-					packageName, want, got)
+				t.Errorf(
+					"%s\nTryExpandEnv(%q) mismatch\ngot:  %q\nwant: %q",
+					packageName, tc.input,
+					got, want,
+				)
+			}
+		})
+	}
+}
+
+func TestExpandEnvVariables(t *testing.T) {
+	// GIVEN: an env var that may or may not exist.
+	envVarNameBase := "TEST_ENV_REPLACE_FUNC_"
+	tests := []struct {
+		name        string
+		envVarName  string
+		envVarValue *string
+		want        string
+	}{
+		{
+			name:       "undefined env var",
+			envVarName: "UNDEFINED",
+			want: fmt.Sprintf(
+				"${%s%s}",
+				envVarNameBase, "UNDEFINED",
+			),
+		},
+		{
+			name:        "empty env var",
+			envVarName:  "EMPTY",
+			envVarValue: test.Ptr(""),
+			want:        "",
+		},
+		{
+			name:        "non-empty env var",
+			envVarName:  "NON_EMPTY",
+			envVarValue: test.Ptr("bar"),
+			want:        "bar",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND: the env vars are set.
+			tc.envVarName = envVarNameBase + tc.envVarName
+			if tc.envVarValue != nil {
+				env := map[string]string{tc.envVarName: *tc.envVarValue}
+				test.SetEnv(t, env)
+			}
+
+			// WHEN: expandEnvVariables is called.
+			got := expandEnvVariables(fmt.Sprintf("${%s}", tc.envVarName))
+
+			// THEN: the string is evaluated correctly.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nexpandEnvVariables(%q) mismatch\ngot:  %q\nwant: %q",
+					packageName, tc.envVarName,
+					got, tc.want,
+				)
 			}
 		})
 	}

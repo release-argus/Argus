@@ -1,7 +1,10 @@
 import z from 'zod';
 import { toZodEnumTuple } from '@/types/util';
 import { OPSGENIE_TARGET_TYPE } from '@/utils/api/types/config/notify/opsgenie';
-import { makeDefaultsAwareListPreprocessor } from '@/utils/api/types/config-edit/shared/preprocess';
+import {
+	makeDefaultsAwareListPreprocessor,
+	stringDefault,
+} from '@/utils/api/types/config-edit/shared/preprocess';
 import { REQUIRED_MESSAGE } from '@/utils/api/types/config-edit/validators.ts';
 
 /* Actions */
@@ -84,7 +87,7 @@ const opsGenieTargetTeamSubtypeValues = toZodEnumTuple(
 const opsGenieTargetTeamSchema = z.object({
 	sub_type: z.enum(opsGenieTargetTeamSubtypeValues),
 	type: z.literal(OPSGENIE_TARGET_TYPE.TEAM.value),
-	value: z.string().default(''),
+	value: stringDefault,
 });
 const opsGenieTargetTeamSchemaWithValidation = opsGenieTargetTeamSchema.extend({
 	value: z.string().min(1, REQUIRED_MESSAGE).default(''),
@@ -96,7 +99,7 @@ const opsGenieTargetUserSubtypeValues = toZodEnumTuple(
 const opsGenieTargetUserSchema = z.object({
 	sub_type: z.enum(opsGenieTargetUserSubtypeValues),
 	type: z.literal(OPSGENIE_TARGET_TYPE.USER.value),
-	value: z.string().default(''),
+	value: stringDefault,
 });
 const opsGenieTargetUserSchemaWithValidation = opsGenieTargetUserSchema.extend({
 	value: z.string().min(1, REQUIRED_MESSAGE).default(''),

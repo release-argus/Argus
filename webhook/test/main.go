@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,55 +19,84 @@ package test
 import (
 	"strings"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/webhook"
 )
 
+// WebHook returns a configured WebHook for tests.
 func WebHook(failing, selfSignedCert, headers bool) *webhook.WebHook {
+	defaults, _ := webhook.DecodeDefaults("yaml", nil)
+	hardDefaults, _ := webhook.DecodeDefaults("yaml", nil)
+
 	desiredStatusCode := uint16(0)
 	whMaxTries := uint8(1)
 	wh := webhook.New(
-		test.BoolPtr(false),
+		test.Ptr(false),
 		nil,
 		"0s",
 		&desiredStatusCode,
 		nil,
 		"test",
 		&whMaxTries,
-		nil,
-		test.StringPtr("12m"),
-		test.LookupGitHub["secret_pass"],
-		test.BoolPtr(false),
+		webhook.Notifiers{},
+		test.Ptr("12m"),
+		test.WebHookGitHub["secret_pass"],
+		test.Ptr(false),
 		"github",
-		test.LookupGitHub["url_valid"],
+		test.WebHookGitHub["url_valid"],
 		&webhook.Defaults{},
-		&webhook.Defaults{}, &webhook.Defaults{})
+		defaults, hardDefaults,
+	)
 	wh.ServiceStatus = &status.Status{}
 	serviceName := "testServiceID"
 	wh.Failed = &wh.ServiceStatus.Fails.WebHook
 	wh.ServiceStatus.Init(
-		0, 1, 0,
-		serviceName, serviceName, "https://example.com/service_url",
+		0, 1, 1,
+		status.ServiceInfo{
+			ID:         serviceName,
+			Name:       serviceName,
+			ServiceURL: "https://example.com/service/url",
+		},
 		&dashboard.Options{
-			WebURL: "https://example.com/web_url"})
+			OptionsBase: dashboard.OptionsBase{
+				WebURL: "https://example.com/web_url",
+			},
+		},
+	)
 	if selfSignedCert {
-		wh.URL = strings.Replace(wh.URL,
-			"valid", "invalid", 1)
+		wh.URL = strings.Replace(
+			wh.URL,
+			"valid",
+			"invalid",
+			1,
+		)
 	}
 	if failing {
-		wh.Secret = test.LookupGitHub["secret_fail"]
+		wh.Secret = test.WebHookGitHub["secret_fail"]
 	}
 	if headers {
-		wh.URL = strings.Replace(wh.URL,
-			"github-style", "single-header", 1)
+		wh.URL = strings.Replace(
+			wh.URL,
+			"github-style",
+			"single-header",
+			1,
+		)
 		if failing {
-			wh.Headers = &webhook.Headers{
-				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_fail"]}}
+			wh.Headers = webhook.Headers{
+				{
+					Key:   test.LookupWithHeaderAuth["header_key"],
+					Value: test.LookupWithHeaderAuth["header_value_fail"],
+				},
+			}
 		} else {
-			wh.Headers = &webhook.Headers{
-				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]}}
+			wh.Headers = webhook.Headers{
+				{
+					Key:   test.LookupWithHeaderAuth["header_key"],
+					Value: test.LookupWithHeaderAuth["header_value_pass"],
+				},
+			}
 		}
 	}
 

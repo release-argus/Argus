@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,8 +49,11 @@ func BareConfig(nilFlags bool) (cfg *config.Config) {
 			SettingsBase: config.SettingsBase{
 				Web: config.WebSettings{
 					RoutePrefix: "",
-				}}},
-		Order: []string{}}
+				},
+			},
+		},
+		Order: []string{},
+	}
 
 	// NilFlags can be a RACE condition, so use it conditionally.
 	if nilFlags {

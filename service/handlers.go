@@ -20,9 +20,11 @@ import (
 	"math/rand"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
+	"github.com/release-argus/Argus/internal/logx"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -39,7 +41,7 @@ func (s *Service) HandleCommand(command string) {
 	// Find the command.
 	index, err := s.CommandController.Find(command)
 	if err != nil {
-		logutil.Log.Warn(err, logutil.LogFrom{Primary: "Command", Secondary: s.ID}, true)
+		logx.Warn(err, logx.LogFrom{Primary: "Command", Secondary: s.ID}, true)
 		return
 	}
 
@@ -50,9 +52,10 @@ func (s *Service) HandleCommand(command string) {
 
 	// Send the Command.
 	err = (*s.CommandController).ExecIndex(
-		logutil.LogFrom{Primary: "Command", Secondary: s.ID},
+		logx.LogFrom{Primary: "Command", Secondary: s.ID},
 		index,
-		s.Status.GetServiceInfo())
+		s.Status.GetServiceInfo(),
+	)
 	if err == nil {
 		s.UpdatedVersion(true)
 	}
@@ -60,7 +63,6 @@ func (s *Service) HandleCommand(command string) {
 
 // HandleWebHook finds the specified WebHook on this Service (and sends it if found).
 func (s *Service) HandleWebHook(webhookID string) {
-	//nolint:typecheck
 	if s.WebHook == nil || s.WebHook[webhookID] == nil {
 		return
 	}
@@ -71,8 +73,7 @@ func (s *Service) HandleWebHook(webhookID string) {
 	}
 
 	// Send the WebHook.
-	err := s.WebHook[webhookID].Send(s.Status.GetServiceInfo(), false)
-	if err == nil {
+	if err := s.WebHook[webhookID].Send(s.Status.GetServiceInfo(), false); err == nil {
 		s.UpdatedVersion(true)
 	}
 }
@@ -83,39 +84,60 @@ func (s *Service) HandleWebHook(webhookID string) {
 func (s *Service) HandleUpdateActions(writeToDB bool) {
 	svcInfo := s.Status.GetServiceInfo()
 
-	// Send the Notify Messages.
+	// Send notify messages asynchronously.
 	//nolint:errcheck
 	go s.Notify.Send("", "", svcInfo, true)
 
-	//nolint:typecheck
-	if s.WebHook != nil || s.Command != nil {
-		if s.Dashboard.GetAutoApprove() {
-			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q",
-				s.Status.LatestVersion())
-			logutil.Log.Info(msg, logutil.LogFrom{Primary: s.ID}, true)
+	// Auto-update version for Services without WebHooks/Commands.
+	if len(s.WebHook) == 0 && len(s.Command) == 0 {
+		s.UpdatedVersion(writeToDB)
+		return
+	}
 
-			// Run the Commands.
-			go func() {
-				err := s.CommandController.Exec(logutil.LogFrom{Primary: "Command", Secondary: s.ID})
-				if err == nil && len(s.Command) != 0 {
-					s.UpdatedVersion(writeToDB)
-				}
-			}()
+	// Approval required for WebHooks/Commands.
+	if !s.Dashboard.GetAutoApprove() {
+		logx.Info(
+			"Waiting for approval on the Web UI",
+			logx.LogFrom{Primary: s.ID},
+			true,
+		)
 
-			// Send the WebHooks.
-			go func() {
-				err := s.WebHook.Send(svcInfo, true)
-				if err == nil && len(s.WebHook) != 0 {
-					s.UpdatedVersion(writeToDB)
-				}
-			}()
-		} else {
-			logutil.Log.Info("Waiting for approval on the Web UI", logutil.LogFrom{Primary: s.ID}, true)
+		s.Status.AnnounceQueryNewVersion()
 
-			s.Status.AnnounceQueryNewVersion()
-		}
-	} else {
-		// Auto-update version for Services without WebHooks.
+		return
+	}
+
+	logx.Info(
+		fmt.Sprintf(
+			"Sending WebHooks/Running Commands for %q",
+			s.Status.LatestVersion(),
+		),
+		logx.LogFrom{Primary: s.ID},
+		true,
+	)
+
+	var g errgroup.Group
+
+	// Run the Commands.
+	if len(s.Command) != 0 {
+		g.Go(func() error {
+			return s.CommandController.Exec(
+				logx.LogFrom{
+					Primary:   "Command",
+					Secondary: s.ID,
+				},
+			)
+		})
+	}
+
+	// Send the WebHooks.
+	if len(s.WebHook) != 0 {
+		g.Go(func() error {
+			return s.WebHook.Send(svcInfo, true)
+		})
+	}
+
+	if err := g.Wait(); err == nil {
 		s.UpdatedVersion(writeToDB)
 	}
 }
@@ -135,7 +157,7 @@ func (s *Service) HandleFailedActions() {
 	if len(s.WebHook) != 0 {
 		potentialErrors += len(s.WebHook)
 		for key, wh := range s.WebHook {
-			if retryAll || util.DereferenceOrValue(s.Status.Fails.WebHook.Get(key), true) {
+			if retryAll || util.DerefOr(s.Status.Fails.WebHook.Get(key), true) {
 				// Skip if before NextRunnable.
 				if !wh.IsRunnable() {
 					potentialErrors--
@@ -157,9 +179,9 @@ func (s *Service) HandleFailedActions() {
 	// Run the Commands.
 	if len(s.Command) != 0 {
 		potentialErrors += len(s.Command)
-		logFrom := logutil.LogFrom{Primary: "Command", Secondary: s.ID}
+		logFrom := logx.LogFrom{Primary: "Command", Secondary: s.ID}
 		for key := range s.Command {
-			if retryAll || util.DereferenceOrValue(s.Status.Fails.Command.Get(key), true) {
+			if retryAll || util.DerefOr(s.Status.Fails.Command.Get(key), true) {
 				// Skip if before NextRunnable.
 				if !s.CommandController.IsRunnable(key) {
 					potentialErrors--
@@ -197,13 +219,13 @@ func (s *Service) HandleFailedActions() {
 func (s *Service) shouldRetryAll() bool {
 	// Retry all only if every WebHook has sent successfully.
 	for key := range s.WebHook {
-		if util.DereferenceOrValue(s.Status.Fails.WebHook.Get(key), true) {
+		if util.DerefOr(s.Status.Fails.WebHook.Get(key), true) {
 			return false
 		}
 	}
-	// AND every Command has run successfully.
+	// And every Command has run successfully.
 	for key := range s.Command {
-		if util.DereferenceOrValue(s.Status.Fails.Command.Get(key), true) {
+		if util.DerefOr(s.Status.Fails.Command.Get(key), true) {
 			return false
 		}
 	}
@@ -246,8 +268,7 @@ func (s *Service) UpdatedVersion(writeToDB bool) {
 // set the LatestVersion as approved in the Status, and announce the approval (if not previously).
 func (s *Service) UpdateLatestApproved() {
 	// Only announce once.
-	lv := s.Status.LatestVersion()
-	if s.Status.ApprovedVersion() != lv {
+	if lv := s.Status.LatestVersion(); lv != s.Status.ApprovedVersion() {
 		s.Status.SetApprovedVersion(lv, true)
 	}
 }

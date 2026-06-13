@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,9 +19,16 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+// GetType returns the type of the Lookup.
+func (l *Lookup) GetType() string {
+	return Type
+}
+
+// allowInvalidCerts resolves whether invalid TLS certificates are permitted.
 func (l *Lookup) allowInvalidCerts() bool {
 	return *util.FirstNonNilPtr(
 		l.AllowInvalidCerts,
 		l.Defaults.AllowInvalidCerts,
-		l.HardDefaults.AllowInvalidCerts)
+		l.HardDefaults.AllowInvalidCerts,
+	)
 }

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,31 +17,35 @@ package shoutrrr
 
 import "net/http"
 
-// notifyDefaultOptions are the default options for all notifiers.
-func notifyDefaultOptions() map[string]string {
-	return map[string]string{
-		"message":   "{{ service_name | default:service_id }} - {{ version }} released",
-		"max_tries": "3",
-		"delay":     "0s"}
+// Init will initialise the each [Defaults].
+func (s ShoutrrrsDefaults) Init() {
+	for _, dflt := range s {
+		dflt.Init()
+	}
 }
 
-// Default sets these ShoutrrrsDefaults to the default values.
+// Default sets the values of the receiver to their default values.
 func (s *ShoutrrrsDefaults) Default() {
 	defaults := make(ShoutrrrsDefaults, len(supportedTypes))
 	defaults["bark"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		map[string]string{
-			"port": "443"},
+			"port": "443",
+		},
 		map[string]string{
-			"title": "Argus"})
+			"title": "Argus",
+		},
+	)
 	defaults["discord"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil,
 		map[string]string{
 			"splitlines": "yes",
-			"username":   "Argus"})
+			"username":   "Argus",
+		},
+	)
 	defaults["smtp"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
@@ -50,33 +54,42 @@ func (s *ShoutrrrsDefaults) Default() {
 			"requirestarttls": "no",
 			"skiptlsverify":   "no",
 			"usehtml":         "no",
-			"usestarttls":     "yes"})
+			"usestarttls":     "yes",
+		},
+	)
 	defaults["googlechat"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil)
+		nil, nil,
+	)
 	defaults["gotify"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		map[string]string{
-			"port": "443"},
+			"port": "443",
+		},
 		map[string]string{
 			"disabletls":         "no",
 			"insecureskipverify": "no",
 			"priority":           "0",
 			"title":              "Argus",
-			"useheader":          "no"})
+			"useheader":          "no",
+		},
+	)
 	defaults["ifttt"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil,
 		map[string]string{
 			"usemessageasvalue": "2",
-			"usetitleasvalue":   "0"})
+			"usetitleasvalue":   "0",
+		},
+	)
 	defaults["join"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil)
+		nil, nil,
+	)
 	defaults["mattermost"] = NewDefaults(
 		"",
 		map[string]string{
@@ -84,70 +97,90 @@ func (s *ShoutrrrsDefaults) Default() {
 				" - {{ version }} released" +
 				"{% if web_url %} (<{{ web_url }}|changelog>){% endif %}",
 			"max_tries": "3",
-			"delay":     "0s"},
+			"delay":     "0s",
+		},
 		map[string]string{
 			"username": "Argus",
-			"port":     "443"},
+			"port":     "443",
+		},
 		map[string]string{
 			"disabletls": "no",
-		})
+		},
+	)
 	defaults["matrix"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		map[string]string{
-			"port": "443"},
+			"port": "443",
+		},
 		map[string]string{
 			"disabletls": "no",
-		})
+		},
+	)
 	defaults["ntfy"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		map[string]string{
-			"host": "ntfy.sh"},
+			"host": "ntfy.sh",
+		},
 		map[string]string{
 			"disabletlsverification": "no",
-			"title":                  "Argus"})
+			"title":                  "Argus",
+		},
+	)
 	defaults["opsgenie"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil)
+		nil, nil,
+	)
 	defaults["pushbullet"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil,
 		map[string]string{
-			"title": "Argus"})
+			"title": "Argus",
+		},
+	)
 	defaults["pushover"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil)
+		nil, nil,
+	)
 	defaults["rocketchat"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		map[string]string{
-			"port": "443"},
-		nil)
+			"port": "443",
+		},
+		nil,
+	)
 	defaults["slack"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil,
 		map[string]string{
-			"botname": "Argus"})
+			"botname": "Argus",
+		},
+	)
 	defaults["teams"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil)
+		nil, nil,
+	)
 	defaults["telegram"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil,
 		map[string]string{
 			"notification": "yes",
-			"preview":      "yes"})
+			"preview":      "yes",
+		},
+	)
 	defaults["zulip"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil)
+		nil, nil,
+	)
 	defaults["generic"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
@@ -157,7 +190,15 @@ func (s *ShoutrrrsDefaults) Default() {
 			"disabletls":    "no",
 			"messagekey":    "message",
 			"requestmethod": http.MethodPost,
-			"titlekey":      "title"})
+			"titlekey":      "title",
+		},
+	)
+	defaults["shoutrrr"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		nil,
+		nil,
+	)
 
 	// Initialise maps.
 	for _, notify := range defaults {
@@ -166,4 +207,13 @@ func (s *ShoutrrrsDefaults) Default() {
 
 	// Overwrite the receiver.
 	*s = defaults
+}
+
+// notifyDefaultOptions are the default options for all notifiers.
+func notifyDefaultOptions() map[string]string {
+	return map[string]string{
+		"message":   "{{ service_name | default:service_id }} - {{ version }} released",
+		"max_tries": "3",
+		"delay":     "0s",
+	}
 }

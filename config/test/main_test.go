@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import (
 var packageName = "config.test"
 
 func TestBareConfig(t *testing.T) {
-	// GIVEN the config.settings flags.
+	// GIVEN: the config.settings flags.
 	strFlags := map[string]struct {
 		flag *string
 		cfg  *string
@@ -40,8 +40,10 @@ func TestBareConfig(t *testing.T) {
 	}
 	for key, value := range strFlags {
 		if value.flag == nil {
-			t.Errorf("%s\nflag mismatch on %s\nwant: non-nil\ngot:  %v",
-				packageName, key, value.flag)
+			t.Errorf(
+				"%s\nBareConfig flag mismatch on %s\ngot:  %v\nwant: non-nil",
+				packageName, key, value.flag,
+			)
 		}
 	}
 	boolFlags := map[string]struct {
@@ -52,8 +54,10 @@ func TestBareConfig(t *testing.T) {
 	}
 	for key, value := range boolFlags {
 		if value.flag == nil {
-			t.Errorf("%s\nflag mismatch on %s\nwant: non-nil\ngot:  %v",
-				packageName, key, value.flag)
+			t.Errorf(
+				"%s\nBareConfig flag mismatch on %s\ngot:  %v\nwant: non-nil",
+				packageName, key, value.flag,
+			)
 		}
 	}
 	webBasicAuthFlags := map[string]struct {
@@ -65,12 +69,14 @@ func TestBareConfig(t *testing.T) {
 	}
 	for key, value := range webBasicAuthFlags {
 		if value.flag == nil {
-			t.Errorf("%s\nflag mismatch on %s\nwant: non-nil\ngot:  %v",
-				packageName, key, value.flag)
+			t.Errorf(
+				"%s\nBareConfig flag mismatch on %s\ngot:  %v\nwant: non-nil",
+				packageName, key, value.flag,
+			)
 		}
 	}
 
-	// WHEN the config is initialised.
+	// WHEN: the config is initialised.
 	cfg := BareConfig(true)
 	strFlags = map[string]struct {
 		flag *string
@@ -98,38 +104,52 @@ func TestBareConfig(t *testing.T) {
 		"web.basic-auth.password": {cfg: cfg.Settings.FromFlags.Web.BasicAuth},
 	}
 
-	// THEN all flags should be nil.
+	// THEN: all flags should be nil.
 	for key, value := range strFlags {
 		if value.flag != nil {
-			t.Errorf("%s\nflag mismatch on %s\nwant: nil\ngot:  %v",
-				packageName, key, value.flag)
+			t.Errorf(
+				"%s\nBareConfig flag mismatch on %s\ngot:  %v\nwant: nil",
+				packageName, key, value.flag,
+			)
 		}
 		if value.cfg == nil {
-			t.Errorf("%s\ncfg mismatch on %s\nwant: non-nil\ngot:  %v",
-				packageName, key, value.cfg)
+			t.Errorf(
+				"%s\nBareConfig cfg mismatch on %s\ngot:  %v\nwant: non-nil",
+				packageName, key, value.cfg,
+			)
 		} else if *value.cfg != "" {
-			t.Errorf("%s\ncfg mismatch on %s\nwant: empty\ngot:  %q",
-				packageName, key, *value.cfg)
+			t.Errorf(
+				"%s\nBareConfig cfg mismatch on %s\ngot:  %q\nwant: empty",
+				packageName, key, *value.cfg,
+			)
 		}
 	}
 	for key, value := range boolFlags {
 		if value.flag != nil {
-			t.Errorf("%s\nflag mismatch on %s\nwant: nil\ngot:  %v",
-				packageName, key, value.flag)
+			t.Errorf(
+				"%s\nBareConfig flag mismatch on %s\ngot:  %v\nwant: nil",
+				packageName, key, value.flag,
+			)
 		}
 		if value.cfg != nil {
-			t.Errorf("%s\ncfg mismatch on %s\nwant: nil\ngot:  %v",
-				packageName, key, value.cfg)
+			t.Errorf(
+				"%s\nBareConfig cfg mismatch on %s\ngot:  %v\nwant: nil",
+				packageName, key, value.cfg,
+			)
 		}
 	}
 	for key, value := range webBasicAuthFlags {
 		if value.flag != nil {
-			t.Errorf("%s\nflag mismatch on %s\nwant: nil\ngot:  %v",
-				packageName, key, value.flag)
+			t.Errorf(
+				"%s\nBareConfig flag mismatch on %s\ngot:  %v\nwant: nil",
+				packageName, key, value.flag,
+			)
 		}
 		if value.cfg != nil {
-			t.Errorf("%s\ncfg mismatch on %s\nwant: nil\ngot:  %v",
-				packageName, key, value.cfg)
+			t.Errorf(
+				"%s\nBareConfig cfg mismatch on %s\ngot:  %v\nwant: nil",
+				packageName, key, value.cfg,
+			)
 			t.Error(value.cfg == nil)
 		}
 	}

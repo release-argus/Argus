@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,132 +18,236 @@ package web
 
 import (
 	"io"
-	"os"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/internal/test"
 )
 
-func TestLookup_allowInvalidCerts(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
+func TestLookup_GetType(t *testing.T) {
+	// GIVEN: a Lookup with a Type.
+	tests := []struct {
+		lType string
+	}{
+		{lType: ""},
+		{lType: "test"},
+		{lType: "x"},
+		{lType: "y"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.lType, func(t *testing.T) {
+			t.Parallel()
+
+			l := &Lookup{}
+			l.Type = tc.lType
+
+			// WHEN: GetType is called.
+			got := l.GetType()
+
+			wantType := "url"
+			// THEN: the Type is returned.
+			if got != wantType {
+				t.Errorf(
+					"%s\nLookup.GetType() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, wantType,
+				)
+			}
+		})
+	}
+}
+
+func TestLookup_AllowInvalidCerts(t *testing.T) {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name                                      string
 		rootValue, defaultValue, hardDefaultValue *bool
 		want                                      bool
 	}{
-		"root overrides all": {
+		{
+			name:             "root overrides all",
 			want:             true,
-			rootValue:        test.BoolPtr(true),
-			defaultValue:     test.BoolPtr(false),
-			hardDefaultValue: test.BoolPtr(false)},
-		"default overrides hardDefault": {
+			rootValue:        test.Ptr(true),
+			defaultValue:     test.Ptr(false),
+			hardDefaultValue: test.Ptr(false),
+		},
+		{
+			name:             "default overrides hardDefault",
 			want:             true,
-			defaultValue:     test.BoolPtr(true),
-			hardDefaultValue: test.BoolPtr(false)},
-		"hardDefault is last resort": {
+			defaultValue:     test.Ptr(true),
+			hardDefaultValue: test.Ptr(false),
+		},
+		{
+			name:             "hardDefault is last resort",
 			want:             true,
-			hardDefaultValue: test.BoolPtr(true)},
+			hardDefaultValue: test.Ptr(true),
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(false)
+			lookup := testLookup(t, false)
 			lookup.AllowInvalidCerts = tc.rootValue
 			lookup.Defaults.AllowInvalidCerts = tc.defaultValue
 			lookup.HardDefaults.AllowInvalidCerts = tc.hardDefaultValue
 
-			// WHEN allowInvalidCerts is called.
+			// WHEN: allowInvalidCerts is called.
 			got := lookup.allowInvalidCerts()
 
-			// THEN the function returns the correct result.
+			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("%s\nwant: %t\ngot:  %t",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s\nLookup.allowInvalidCerts() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
-func TestLookup_url(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
-		env  map[string]string
-		url  string
-		want string
-	}{
-		"URL": {
-			url:  "https://example.com",
-			want: "https://example.com",
-		},
-		"URL from env": {
-			env:  map[string]string{"TEST_LOOKUP__DV_GET_URL_ONE": "https://example.com"},
-			url:  "${TEST_LOOKUP__DV_GET_URL_ONE}",
-			want: "https://example.com",
-		},
-		"URL with env partial": {
-			env:  map[string]string{"TEST_LOOKUP__DV_GET_URL_TWO": "example.com"},
-			url:  "https://${TEST_LOOKUP__DV_GET_URL_TWO}",
-			want: "https://example.com",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			for k, v := range tc.env {
-				_ = os.Setenv(k, v)
-				t.Cleanup(func() { _ = os.Unsetenv(k) })
-			}
-
-			lookup := testLookup(false)
-			lookup.URL = tc.url
-
-			// WHEN url is called.
-			got := lookup.url()
-
-			// THEN the function returns the correct result.
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestLookup_body(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
+func TestLookup_Body(t *testing.T) {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name string
 		body string
 		want io.Reader
 	}{
-		"empty body": {
+		{
+			name: "empty body",
 			body: "",
 			want: nil,
 		},
-		"non-empty body": {
+		{
+			name: "non-empty body",
 			body: "test body",
 			want: strings.NewReader("test body"),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(false)
+			lookup := testLookup(t, false)
 			lookup.Body = tc.body
 
-			// WHEN body is called.
+			// WHEN: body is called.
 			got := lookup.body()
 
-			// THEN the function returns the correct result.
-			if !reflect.DeepEqual(tc.want, got) {
-				t.Errorf("%s\nwant: %v\ngot:  %v",
-					packageName, tc.want, got)
+			// THEN: the function returns the correct result.
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf(
+					"%s\nLookup.body() value mismatch\ngot:  %v\nwant: %v",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestLookup_Method(t *testing.T) {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name                                      string
+		rootValue, defaultValue, hardDefaultValue string
+		want                                      string
+	}{
+		{
+			name:             "root overrides all",
+			want:             http.MethodGet,
+			rootValue:        http.MethodGet,
+			defaultValue:     http.MethodPost,
+			hardDefaultValue: http.MethodPost,
+		},
+		{
+			name:             "default overrides hardDefault",
+			want:             http.MethodPost,
+			defaultValue:     http.MethodPost,
+			hardDefaultValue: http.MethodGet,
+		},
+		{
+			name:             "hardDefault is last resort",
+			want:             http.MethodGet,
+			hardDefaultValue: http.MethodGet,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := testLookup(t, false)
+			lookup.Method = tc.rootValue
+			lookup.Defaults.Method = tc.defaultValue
+			lookup.HardDefaults.Method = tc.hardDefaultValue
+
+			// WHEN: method is called.
+			got := lookup.method()
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nLookup.method() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestLookup_URL(t *testing.T) {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name string
+		env  map[string]string
+		url  string
+		want string
+	}{
+		{
+			name: "URL",
+			url:  "https://example.com",
+			want: "https://example.com",
+		},
+		{
+			name: "URL from env",
+			env: map[string]string{
+				"TEST_LOOKUP__DV_GET_URL_ONE": "https://example.com",
+			},
+			url:  "${TEST_LOOKUP__DV_GET_URL_ONE}",
+			want: "https://example.com",
+		},
+		{
+			name: "URL with env partial",
+			env: map[string]string{
+				"TEST_LOOKUP__DV_GET_URL_TWO": "example.com",
+			},
+			url:  "https://${TEST_LOOKUP__DV_GET_URL_TWO}",
+			want: "https://example.com",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			test.SetEnv(t, tc.env)
+
+			lookup := testLookup(t, false)
+			lookup.URL = tc.url
+
+			// WHEN: url is called.
+			got := lookup.url()
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nLookup.url() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}

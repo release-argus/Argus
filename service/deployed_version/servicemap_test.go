@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,49 +25,58 @@ import (
 )
 
 func TestServiceMap(t *testing.T) {
-	// GIVEN a service type string.
-	tests := map[string]struct {
+	// GIVEN: a service type string.
+	tests := []struct {
+		name     string
 		key      string
 		expected base.Interface
 	}{
-		"web": {
+		{
+			name:     "web",
 			key:      "web",
 			expected: &web.Lookup{},
 		},
-		"url": {
+		{
+			name:     "url",
 			key:      "url",
 			expected: &web.Lookup{},
 		},
-		"manual": {
+		{
+			name:     "manual",
 			key:      "manual",
 			expected: &manual.Lookup{},
 		},
-		"unknown": {
+		{
+			name:     "unknown",
 			key:      "foo",
 			expected: nil,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 
-			// WHEN the service type is looked up in the ServiceMap.
+			// WHEN: the service type is looked up in the ServiceMap.
 			lookupFunc, exists := ServiceMap[tc.key]
 
-			// THEN a type is returned.
+			// THEN: a type is returned.
 			if !exists {
 				// If the expected value is nil, then the key should not exist.
 				if tc.expected == nil {
 					return
 				}
-				t.Fatalf("%s\nServiceMap key %q does not exist",
-					packageName, tc.key)
+				t.Fatalf(
+					"%s\nServiceMap[%q] does not exist",
+					packageName, tc.key,
+				)
 			}
 			// And the returned type is of the expected type.
 			lookup := lookupFunc()
 			if getType(lookup) != getType(tc.expected) {
-				t.Errorf("%s\nServiceMap[%q]() = %T, want %T",
-					packageName, tc.key, lookup, tc.expected)
+				t.Errorf(
+					"%s\nServiceMap[%q]() = %T, want %T",
+					packageName, tc.key, lookup, tc.expected,
+				)
 			}
 		})
 	}

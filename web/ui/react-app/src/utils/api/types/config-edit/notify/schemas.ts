@@ -35,6 +35,7 @@ import {
 	preprocessBooleanFromString,
 	preprocessStringFromBoolean,
 	preprocessStringFromZodEnum,
+	stringDefault,
 } from '@/utils/api/types/config-edit/shared/preprocess';
 import { atLeastTwo } from '@/utils/api/types/config-edit/util';
 import { REQUIRED_MESSAGE } from '@/utils/api/types/config-edit/validators';
@@ -42,9 +43,9 @@ import { REQUIRED_MESSAGE } from '@/utils/api/types/config-edit/validators';
 /* Notify 'Options' Schema */
 const notifyOptionsSchema = z
 	.object({
-		delay: z.string().default(''),
-		max_tries: z.string().default(''),
-		message: z.string().default(''),
+		delay: stringDefault,
+		max_tries: stringDefault,
+		message: stringDefault,
 	})
 	.default({ delay: '', max_tries: '', message: '' });
 export type NotifyOptionsSchema = z.infer<typeof notifyOptionsSchema>;
@@ -62,14 +63,14 @@ const notifyBaseSchema = z.object({
 export const notifyBarkSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
-			badge: z.string().default(''),
-			copy: z.string().default(''),
-			group: z.string().default(''),
-			icon: z.string().default(''),
+			badge: stringDefault,
+			copy: stringDefault,
+			group: stringDefault,
+			icon: stringDefault,
 			scheme: BarkSchemeEnum.or(z.literal(nullString)).default(nullString),
 			sound: BarkSoundEnum.or(z.literal(nullString)).default(nullString),
-			title: z.string().default(''),
-			url: z.string().default(''),
+			title: stringDefault,
+			url: stringDefault,
 		})
 		.default({
 			badge: '',
@@ -84,10 +85,10 @@ export const notifyBarkSchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.BARK.value),
 	url_fields: z
 		.object({
-			devicekey: z.string().default(''), // Required.
-			host: z.string().default(''), // Required.
+			devicekey: stringDefault, // Required.
+			host: stringDefault, // Required.
 			path: z.string().optional(),
-			port: z.string().default(''), // Required.
+			port: stringDefault, // Required.
 		})
 		.default({ devicekey: '', host: '', path: '', port: '' }),
 });
@@ -103,11 +104,11 @@ export const notifyBarkSchemaOutgoing = notifyBarkSchema.extend({
 export const notifyDiscordSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
-			avatar: z.string().default(''),
+			avatar: stringDefault,
 			splitlines: preprocessBooleanFromString,
-			threadid: z.string().default(''),
-			title: z.string().default(''),
-			username: z.string().default(''),
+			threadid: stringDefault,
+			title: stringDefault,
+			username: stringDefault,
 		})
 		.default({
 			avatar: '',
@@ -119,8 +120,8 @@ export const notifyDiscordSchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.DISCORD.value),
 	url_fields: z
 		.object({
-			token: z.string().default(''), // Required.
-			webhookid: z.string().default(''), // Required.
+			token: stringDefault, // Required.
+			webhookid: stringDefault, // Required.
 		})
 		.default({ token: '', webhookid: '' }),
 });
@@ -136,17 +137,17 @@ export const notifySMTPSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
 			auth: SMTPAuthEnum.or(z.literal(nullString)).default(nullString),
-			clienthost: z.string().default(''),
+			clienthost: stringDefault,
 			encryption: SMTPEncryptionEnum.or(z.literal(nullString)).default(
 				nullString,
 			),
-			fromaddress: z.string().default(''), // Required.
-			fromname: z.string().default(''), // Required.
+			fromaddress: stringDefault, // Required.
+			fromname: stringDefault, // Required.
 			requirestarttls: preprocessBooleanFromString,
 			skiptlsverification: preprocessBooleanFromString,
-			subject: z.string().default(''),
-			timeout: z.string().default(''),
-			toaddresses: z.string().default(''),
+			subject: stringDefault,
+			timeout: stringDefault,
+			toaddresses: stringDefault,
 			usehtml: preprocessBooleanFromString,
 			usestarttls: preprocessBooleanFromString,
 		})
@@ -167,10 +168,10 @@ export const notifySMTPSchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.SMTP.value),
 	url_fields: z
 		.object({
-			host: z.string().default(''), // Required.
-			password: z.string().default(''),
-			port: z.string().default(''), // Required.
-			username: z.string().default(''),
+			host: stringDefault, // Required.
+			password: stringDefault,
+			port: stringDefault, // Required.
+			username: stringDefault,
 		})
 		.default({ host: '', password: '', port: '', username: '' }),
 });
@@ -191,7 +192,7 @@ export const notifyGoogleChatSchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.GOOGLE_CHAT.value),
 	url_fields: z
 		.object({
-			raw: z.string().default(''),
+			raw: stringDefault,
 		})
 		.default({ raw: '' }),
 });
@@ -204,8 +205,8 @@ export const notifyGotifySchema = notifyBaseSchema.extend({
 			disabletls: preprocessBooleanFromString,
 			extras: gotifyExtrasSchema,
 			insecureskipverify: preprocessBooleanFromString,
-			priority: z.string().default(''),
-			title: z.string().default(''),
+			priority: stringDefault,
+			title: stringDefault,
 			useheader: preprocessBooleanFromString,
 		})
 		.default({
@@ -219,10 +220,10 @@ export const notifyGotifySchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.GOTIFY.value),
 	url_fields: z
 		.object({
-			host: z.string().default(''), // Required.
-			path: z.string().default(''),
-			port: z.string().default(''),
-			token: z.string().default(''),
+			host: stringDefault, // Required.
+			path: stringDefault,
+			port: stringDefault,
+			token: stringDefault,
 		})
 		.default({
 			host: '',
@@ -244,13 +245,13 @@ export const notifyGotifySchemaOutgoing = notifyGotifySchema.extend({
 export const notifyIFTTTSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
-			events: z.string().default(''), // Required.
-			title: z.string().default(''),
-			usemessageasvalue: z.string().default(''),
-			usetitleasvalue: z.string().default(''),
-			value1: z.string().default(''),
-			value2: z.string().default(''),
-			value3: z.string().default(''),
+			events: stringDefault, // Required.
+			title: stringDefault,
+			usemessageasvalue: stringDefault,
+			usetitleasvalue: stringDefault,
+			value1: stringDefault,
+			value2: stringDefault,
+			value3: stringDefault,
 		})
 		.default({
 			events: '',
@@ -264,7 +265,7 @@ export const notifyIFTTTSchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.IFTTT.value),
 	url_fields: z
 		.object({
-			webhookid: z.string().default(''), // Required.
+			webhookid: stringDefault, // Required.
 		})
 		.default({ webhookid: '' }),
 });
@@ -274,15 +275,15 @@ export type NotifyIFTTTSchema = z.infer<typeof notifyIFTTTSchema>;
 export const notifyJoinSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
-			devices: z.string().default(''), // Required.
-			icon: z.string().default(''),
-			title: z.string().default(''),
+			devices: stringDefault, // Required.
+			icon: stringDefault,
+			title: stringDefault,
 		})
 		.default({ devices: '', icon: '', title: '' }),
 	type: z.literal(NOTIFY_TYPE_MAP.JOIN.value),
 	url_fields: z
 		.object({
-			apikey: z.string().default(''), // Required.
+			apikey: stringDefault, // Required.
 		})
 		.default({ apikey: '' }),
 });
@@ -293,19 +294,19 @@ export const notifyMatterMostSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
 			disabletls: preprocessBooleanFromString,
-			icon: z.string().default(''),
+			icon: stringDefault,
 		})
 		.default({ disabletls: null, icon: '' }),
 	type: z.literal(NOTIFY_TYPE_MAP.MATTERMOST.value),
 	url_fields: z
 		.object({
-			channel: z.string().default(''),
-			host: z.string().default(''), // Required.
-			password: z.string().default(''),
-			path: z.string().default(''), // Required.
-			port: z.string().default(''),
-			token: z.string().default(''), // Required.
-			username: z.string().default(''),
+			channel: stringDefault,
+			host: stringDefault, // Required.
+			password: stringDefault,
+			path: stringDefault, // Required.
+			port: stringDefault,
+			token: stringDefault, // Required.
+			username: stringDefault,
 		})
 		.default({
 			channel: '',
@@ -329,17 +330,17 @@ export const notifyMatrixSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
 			disabletls: preprocessBooleanFromString,
-			rooms: z.string().default(''),
-			title: z.string().default(''),
+			rooms: stringDefault,
+			title: stringDefault,
 		})
 		.default({ disabletls: null, rooms: '', title: '' }),
 	type: z.literal(NOTIFY_TYPE_MAP.MATRIX.value),
 	url_fields: z
 		.object({
-			host: z.string().default(''), // Required.
-			password: z.string().default(''), // Required.
-			port: z.string().default(''), // Required.
-			username: z.string().default(''),
+			host: stringDefault, // Required.
+			password: stringDefault, // Required.
+			port: stringDefault, // Required.
+			username: stringDefault,
 		})
 		.default({ host: '', password: '', port: '', username: '' }),
 });
@@ -355,21 +356,21 @@ export const notifyNtfySchema = notifyBaseSchema.extend({
 	params: z
 		.object({
 			actions: ntfyActionsSchema,
-			attach: z.string().default(''),
+			attach: stringDefault,
 			cache: preprocessBooleanFromString,
-			click: z.string().default(''),
-			delay: z.string().default(''),
+			click: stringDefault,
+			delay: stringDefault,
 			disabletlsverification: preprocessBooleanFromString,
-			email: z.string().default(''),
-			filename: z.string().default(''),
+			email: stringDefault,
+			filename: stringDefault,
 			firebase: preprocessBooleanFromString,
-			icon: z.string().default(''),
+			icon: stringDefault,
 			priority: NtfyPriorityZodEnum.or(z.literal(nullString)).default(
 				nullString,
 			),
 			scheme: NtfySchemeZodEnum.or(z.literal(nullString)).default(nullString),
-			tags: z.string().default(''),
-			title: z.string().default(''),
+			tags: stringDefault,
+			title: stringDefault,
 		})
 		.default({
 			actions: [],
@@ -390,11 +391,11 @@ export const notifyNtfySchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.NTFY.value),
 	url_fields: z
 		.object({
-			host: z.string().default(''),
-			password: z.string().default(''),
-			port: z.string().default(''),
-			topic: z.string().default(''), // Required.
-			username: z.string().default(''),
+			host: stringDefault,
+			password: stringDefault,
+			port: stringDefault,
+			topic: stringDefault, // Required.
+			username: stringDefault,
 		})
 		.default({ host: '', password: '', port: '', topic: '', username: '' }),
 });
@@ -414,17 +415,17 @@ export const notifyOpsGenieSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
 			actions: opsGenieActionsSchema,
-			alias: z.string().default(''),
-			description: z.string().default(''),
+			alias: stringDefault,
+			description: stringDefault,
 			details: headersSchema,
-			entity: z.string().default(''),
-			note: z.string().default(''),
-			priority: z.string().default(''),
+			entity: stringDefault,
+			note: stringDefault,
+			priority: stringDefault,
 			responders: opsGenieTargetsSchema,
-			source: z.string().default(''),
-			tags: z.string().default(''),
-			title: z.string().default(''),
-			user: z.string().default(''),
+			source: stringDefault,
+			tags: stringDefault,
+			title: stringDefault,
+			user: stringDefault,
 			visibleto: opsGenieTargetsSchema,
 		})
 		.default({
@@ -445,9 +446,9 @@ export const notifyOpsGenieSchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.OPSGENIE.value),
 	url_fields: z
 		.object({
-			apikey: z.string().default(''), // Required.
-			host: z.string().default(''),
-			port: z.string().default(''),
+			apikey: stringDefault, // Required.
+			host: stringDefault,
+			port: stringDefault,
 		})
 		.default({ apikey: '', host: '', port: '' }),
 });
@@ -457,14 +458,14 @@ export type NotifyOpsGenieSchema = z.infer<typeof notifyOpsGenieSchema>;
 export const notifyPushbulletSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
-			title: z.string().default(''),
+			title: stringDefault,
 		})
 		.default({ title: '' }),
 	type: z.literal(NOTIFY_TYPE_MAP.PUSHBULLET.value),
 	url_fields: z
 		.object({
-			targets: z.string().default(''), // Required.
-			token: z.string().default(''), // Required.
+			targets: stringDefault, // Required.
+			token: stringDefault, // Required.
 		})
 		.default({ targets: '', token: '' }),
 });
@@ -474,16 +475,16 @@ export type NotifyPushbulletSchema = z.infer<typeof notifyPushbulletSchema>;
 export const notifyPushoverSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
-			devices: z.string().default(''),
-			priority: z.string().default(''),
-			title: z.string().default(''),
+			devices: stringDefault,
+			priority: stringDefault,
+			title: stringDefault,
 		})
 		.default({ devices: '', priority: '', title: '' }),
 	type: z.literal(NOTIFY_TYPE_MAP.PUSHOVER.value),
 	url_fields: z
 		.object({
-			token: z.string().default(''), // Required.
-			user: z.string().default(''), // Required.
+			token: stringDefault, // Required.
+			user: stringDefault, // Required.
 		})
 		.default({ token: '', user: '' }),
 });
@@ -494,13 +495,13 @@ export const notifyRocketChatSchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.ROCKET_CHAT.value),
 	url_fields: z
 		.object({
-			channel: z.string().default(''), // Required.
-			host: z.string().default(''), // Required.
-			path: z.string().default(''), // Required.
-			port: z.string().default(''),
-			tokena: z.string().default(''), // Required.
-			tokenb: z.string().default(''), // Required.
-			username: z.string().default(''),
+			channel: stringDefault, // Required.
+			host: stringDefault, // Required.
+			path: stringDefault, // Required.
+			port: stringDefault,
+			tokena: stringDefault, // Required.
+			tokenb: stringDefault, // Required.
+			username: stringDefault,
 		})
 		.default({
 			channel: '',
@@ -518,18 +519,18 @@ export type NotifyRocketChatSchema = z.infer<typeof notifyRocketChatSchema>;
 export const notifySlackSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
-			botname: z.string().default(''),
-			color: z.string().default(''),
-			icon: z.string().default(''),
-			threadts: z.string().default(''),
-			title: z.string().default(''),
+			botname: stringDefault,
+			color: stringDefault,
+			icon: stringDefault,
+			threadts: stringDefault,
+			title: stringDefault,
 		})
 		.default({ botname: '', color: '', icon: '', threadts: '', title: '' }),
 	type: z.literal(NOTIFY_TYPE_MAP.SLACK.value),
 	url_fields: z
 		.object({
-			channel: z.string().default(''), // Required.
-			token: z.string().default(''), // Required.
+			channel: stringDefault, // Required.
+			token: stringDefault, // Required.
 		})
 		.default({ channel: '', token: '' }),
 });
@@ -539,19 +540,19 @@ export type NotifySlackSchema = z.infer<typeof notifySlackSchema>;
 export const notifyTeamsSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
-			color: z.string().default(''),
-			host: z.string().default(''),
-			title: z.string().default(''),
+			color: stringDefault,
+			host: stringDefault,
+			title: stringDefault,
 		})
 		.default({ color: '', host: '', title: '' }),
 	type: z.literal(NOTIFY_TYPE_MAP.TEAMS.value),
 	url_fields: z
 		.object({
-			altid: z.string().default(''),
-			extraid: z.string().default(''),
-			group: z.string().default(''),
-			groupowner: z.string().default(''),
-			tenant: z.string().default(''),
+			altid: stringDefault,
+			extraid: stringDefault,
+			group: stringDefault,
+			groupowner: stringDefault,
+			tenant: stringDefault,
 		})
 		.default({ altid: '', extraid: '', group: '', groupowner: '', tenant: '' }),
 });
@@ -561,13 +562,13 @@ export type NotifyTeamsSchema = z.infer<typeof notifyTeamsSchema>;
 export const notifyTelegramSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
-			chats: z.string().default(''), // Required.
+			chats: stringDefault, // Required.
 			notification: preprocessBooleanFromString,
 			parsemode: TelegramParseModeEnum.or(z.literal(nullString)).default(
 				nullString,
 			),
 			preview: preprocessBooleanFromString,
-			title: z.string().default(''),
+			title: stringDefault,
 		})
 		.default({
 			chats: '',
@@ -579,7 +580,7 @@ export const notifyTelegramSchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.TELEGRAM.value),
 	url_fields: z
 		.object({
-			token: z.string().default(''), // Required.
+			token: stringDefault, // Required.
 		})
 		.default({ token: '' }),
 });
@@ -596,16 +597,16 @@ export const notifyTelegramSchemaOutgoing = notifyTelegramSchema.extend({
 export const notifyZulipSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
-			stream: z.string().default(''),
-			topic: z.string().default(''),
+			stream: stringDefault,
+			topic: stringDefault,
 		})
 		.default({ stream: '', topic: '' }),
 	type: z.literal(NOTIFY_TYPE_MAP.ZULIP.value),
 	url_fields: z
 		.object({
-			botkey: z.string().default(''), // Required.
-			botmail: z.string().default(''), // Required.
-			host: z.string().default(''), // Required.
+			botkey: stringDefault, // Required.
+			botmail: stringDefault, // Required.
+			host: stringDefault, // Required.
 		})
 		.default({ botkey: '', botmail: '', host: '' }),
 });
@@ -615,15 +616,15 @@ export type NotifyZulipSchema = z.infer<typeof notifyZulipSchema>;
 export const notifyGenericSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
-			contenttype: z.string().default(''),
+			contenttype: stringDefault,
 			disabletls: preprocessBooleanFromString,
-			messagekey: z.string().default(''),
+			messagekey: stringDefault,
 			requestmethod: GenericRequestMethodZodEnum.or(
 				z.literal(nullString),
 			).default(nullString),
-			template: z.string().default(''),
-			title: z.string().default(''),
-			titlekey: z.string().default(''),
+			template: stringDefault,
+			title: stringDefault,
+			titlekey: stringDefault,
 		})
 		.default({
 			contenttype: '',
@@ -638,10 +639,10 @@ export const notifyGenericSchema = notifyBaseSchema.extend({
 	url_fields: z
 		.object({
 			headers: headersSchema,
-			host: z.string().default(''), // Required.
+			host: stringDefault, // Required.
 			json_payload_vars: headersSchema,
-			path: z.string().default(''),
-			port: z.string().default(''),
+			path: stringDefault,
+			port: stringDefault,
 			query_vars: headersSchema,
 		})
 		.default({

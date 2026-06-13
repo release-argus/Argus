@@ -94,7 +94,7 @@ const FieldList: FC<FieldListProps> = ({
 	// Remove the last item when not the only one, or it doesn't match the defaults.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: remove stable.
 	const removeLast = useCallback(() => {
-		if (!(usingDefaults && fields.length == 1)) remove(fields.length - 1);
+		if (!(usingDefaults && fields.length === 1)) remove(fields.length - 1);
 	}, [fields.length, usingDefaults]);
 
 	return (

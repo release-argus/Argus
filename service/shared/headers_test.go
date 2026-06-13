@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,14 +18,84 @@
 package shared
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestInheritSecrets(t *testing.T) {
-	// GIVEN a set of Headers and a list of secretRefs.
+func TestHeaders_Copy(t *testing.T) {
+	// GIVEN: a Headers.
+	tests := []struct {
+		name    string
+		headers *Headers
+	}{
+		{
+			name:    "nil",
+			headers: nil,
+		},
+		{
+			name:    "no headers",
+			headers: &Headers{},
+		},
+		{
+			name: "one header",
+			headers: &Headers{
+				{Key: "X-Test", Value: "Value1"},
+			},
+		},
+		{
+			name: "two headers",
+			headers: &Headers{
+				{Key: "X-Test", Value: "Value1"},
+				{Key: "X-Another", Value: "Value2"},
+			},
+		},
+		{
+			name: "three headers",
+			headers: &Headers{
+				{Key: "X-Test", Value: "Value1"},
+				{Key: "X-Another", Value: "Value2"},
+				{Key: "X-Third", Value: "Value3"},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: the Headers are copied.
+			got := tc.headers.Copy()
+
+			prefix := fmt.Sprintf("%s\nHeaders.Copy()", packageName)
+
+			// THEN: Copy on nil returns nil.
+			if tc.headers == nil {
+				if got != nil {
+					t.Errorf("%s result mismatch\ngot:  non-nil\nwant: nil", prefix)
+				}
+				return
+			}
+
+			// AND: the Headers match otherwise.
+			if err := test.AssertSlicesEqualFunc(
+				t,
+				got,
+				*tc.headers,
+				func(got, want Header) bool { return got.Key == want.Key && got.Value == want.Value },
+				prefix,
+				"Headers",
+			); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestHeaders_InheritSecrets(t *testing.T) {
+	// GIVEN: a set of Headers and a list of secretRefs.
 	tests := []struct {
 		name         string
 		h            Headers
@@ -50,7 +120,7 @@ func TestInheritSecrets(t *testing.T) {
 				{Key: "X-Secret", Value: "SecretValue"},
 			},
 			secretRefs: []OldIntIndex{
-				{OldIndex: test.IntPtr(0)},
+				{OldIndex: test.Ptr(0)},
 			},
 			want: Headers{
 				{Key: "X-Test", Value: "Value1"},
@@ -66,7 +136,7 @@ func TestInheritSecrets(t *testing.T) {
 				{Key: "X-Secret", Value: "SecretValue"},
 			},
 			secretRefs: []OldIntIndex{
-				{OldIndex: test.IntPtr(0)},
+				{OldIndex: test.Ptr(0)},
 			},
 			want: Headers{
 				{Key: "X-Test", Value: "SecretValue"},
@@ -109,7 +179,7 @@ func TestInheritSecrets(t *testing.T) {
 				{Key: "X-Secret", Value: "SecretValue"},
 			},
 			secretRefs: []OldIntIndex{
-				{OldIndex: test.IntPtr(2)},
+				{OldIndex: test.Ptr(2)},
 			},
 			want: Headers{
 				{Key: "X-Test", Value: util.SecretValue},
@@ -127,9 +197,9 @@ func TestInheritSecrets(t *testing.T) {
 				{Key: "X-Secret2", Value: "SecretValue2"},
 			},
 			secretRefs: []OldIntIndex{
-				{OldIndex: test.IntPtr(0)},
-				{OldIndex: test.IntPtr(1)},
-				{OldIndex: test.IntPtr(2)},
+				{OldIndex: test.Ptr(0)},
+				{OldIndex: test.Ptr(1)},
+				{OldIndex: test.Ptr(2)},
 			},
 			want: Headers{
 				{Key: "X-First", Value: "SecretValue1"},
@@ -149,8 +219,8 @@ func TestInheritSecrets(t *testing.T) {
 				{Key: "X-Secret2", Value: "SecretValue2"},
 			},
 			secretRefs: []OldIntIndex{
-				{OldIndex: test.IntPtr(1)},
-				{OldIndex: test.IntPtr(0)},
+				{OldIndex: test.Ptr(1)},
+				{OldIndex: test.Ptr(0)},
 			},
 			want: Headers{
 				{Key: "X-First", Value: "SecretValue2"},
@@ -168,8 +238,8 @@ func TestInheritSecrets(t *testing.T) {
 				{Key: "X-Secret2", Value: "SecretValue2"},
 			},
 			secretRefs: []OldIntIndex{
-				{OldIndex: test.IntPtr(0)},
-				{OldIndex: test.IntPtr(1)},
+				{OldIndex: test.Ptr(0)},
+				{OldIndex: test.Ptr(1)},
 			},
 			want: Headers{
 				{Key: "X-First", Value: "SecretValue1"},
@@ -194,19 +264,21 @@ func TestInheritSecrets(t *testing.T) {
 
 			h := tc.h
 
-			// WHEN InheritSecrets is called.
+			// WHEN: InheritSecrets is called.
 			h.InheritSecrets(tc.otherHeaders, tc.secretRefs)
 
-			// THEN the length is as expected.
-			if len(h) != len(tc.want) {
-				t.Fatalf("got %v, want %v", h, tc.want)
-			}
-			// AND the headers are as expected.
-			for i := range h {
-				if h[i] != tc.want[i] {
-					t.Errorf("%s\nindex %d: got %v, want %v",
-						packageName, i, h[i], tc.want[i])
-				}
+			prefix := fmt.Sprintf("%s\nHeaders.InheritSecrets()", packageName)
+
+			// THEN: the Headers are as expected.
+			if testErr := test.AssertSlicesEqualFunc(
+				t,
+				h,
+				tc.want,
+				func(a, b Header) bool { return a.Key == b.Key && a.Value == b.Value },
+				prefix,
+				"Headers",
+			); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}

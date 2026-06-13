@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package command provides the cli command functionality for Argus.
+// Package command provides CLI command execution for services.
 package command
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/release-argus/Argus/notify/shoutrrr"
@@ -26,35 +24,38 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Init the Command Controller.
-func (c *Controller) Init(
+// NewController returns a new [Controller].
+func NewController(
 	serviceStatus *status.Status,
-	command *Commands,
-	shoutrrrNotifiers *shoutrrr.Shoutrrrs,
+	command Commands,
+	shoutrrrNotifiers shoutrrr.Shoutrrrs,
 	parentInterval *string,
-) {
-	if c == nil || len(*command) == 0 {
-		return
+) *Controller {
+	if len(command) == 0 {
+		return nil
 	}
+	var field Controller
 
-	c.ServiceStatus = serviceStatus
-	c.Command = command
-	c.Failed = &serviceStatus.Fails.Command
-	commandCount := len(*c.Command)
-	if c.Failed.Length() != commandCount {
-		c.Failed.Init(commandCount)
+	field.ServiceStatus = serviceStatus
+	field.Command = command
+	field.Failed = &serviceStatus.Fails.Command
+	commandCount := len(field.Command)
+	if field.Failed.Length() != commandCount {
+		field.Failed.Init(commandCount)
 	}
-	c.nextRunnable = make([]time.Time, commandCount)
+	field.nextRunnable = make([]time.Time, commandCount)
 
-	c.ParentInterval = parentInterval
+	field.ParentInterval = parentInterval
 
 	// Command fail notifiers.
-	c.Notifiers = Notifiers{
+	field.Notifiers = Notifiers{
 		Shoutrrr: shoutrrrNotifiers,
 	}
+
+	return &field
 }
 
-// InitMetrics will initialise the Prometheus metrics for each Command in the Controller.
+// InitMetrics will initialise the Prometheus metrics for each Command in the receiver.
 func (c *Controller) InitMetrics() {
 	if c == nil {
 		return
@@ -64,22 +65,26 @@ func (c *Controller) InitMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	for _, cmd := range *c.Command {
+	for _, cmd := range c.Command {
 		name := cmd.String()
-		metric.InitPrometheusCounter(metric.CommandResultTotal,
+		metric.InitPrometheusCounter(
+			metric.CommandResultTotal,
 			name,
 			serviceID,
 			"",
-			metric.ActionResultSuccess)
-		metric.InitPrometheusCounter(metric.CommandResultTotal,
+			metric.ActionResultSuccess,
+		)
+		metric.InitPrometheusCounter(
+			metric.CommandResultTotal,
 			name,
 			serviceID,
 			"",
-			metric.ActionResultFail)
+			metric.ActionResultFail,
+		)
 	}
 }
 
-// DeleteMetrics for this Controller.
+// DeleteMetrics removes Prometheus counters for the receivers commands.
 func (c *Controller) DeleteMetrics() {
 	if c == nil {
 		return
@@ -89,31 +94,30 @@ func (c *Controller) DeleteMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	for _, cmd := range *c.Command {
+	for _, cmd := range c.Command {
 		name := cmd.String()
-		metric.DeletePrometheusCounter(metric.CommandResultTotal,
+		metric.DeletePrometheusCounter(
+			metric.CommandResultTotal,
 			name,
 			serviceID,
 			"",
-			metric.ActionResultSuccess)
-		metric.DeletePrometheusCounter(metric.CommandResultTotal,
+			metric.ActionResultSuccess,
+		)
+		metric.DeletePrometheusCounter(
+			metric.CommandResultTotal,
 			name,
 			serviceID,
 			"",
-			metric.ActionResultFail)
+			metric.ActionResultFail,
+		)
 	}
-}
-
-// FormattedString will convert Command to a string in the format of '[ "arg0", "arg1" ]'.
-func (c *Command) FormattedString() string {
-	return fmt.Sprintf("[ \"%s\" ]", strings.Join(*c, "\", \""))
 }
 
 // IsRunnable returns whether the current time at `index` is before nextRunnable.
 // If out of range, it returns false.
 func (c *Controller) IsRunnable(index int) bool {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	// out of range.
 	if index >= len(c.nextRunnable) {
@@ -123,11 +127,11 @@ func (c *Controller) IsRunnable(index int) bool {
 	return time.Now().UTC().After(c.nextRunnable[index])
 }
 
-// NextRunnable returns the nextRunnable of the Command at `index`.
+// NextRunnable returns the next runnable time of the Command at `index`.
 // If out of range, it returns a zero time.
 func (c *Controller) NextRunnable(index int) time.Time {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	// out of range.
 	if index >= len(c.nextRunnable) {
@@ -137,20 +141,20 @@ func (c *Controller) NextRunnable(index int) time.Time {
 	return c.nextRunnable[index]
 }
 
-// SetNextRunnable will set the `time` that the Command at `index` can be re-run.
+// SetNextRunnable records when the command at index may run again.
 func (c *Controller) SetNextRunnable(index int, time time.Time) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	if index < len(c.nextRunnable) {
 		c.nextRunnable[index] = time
 	}
 }
 
-// SetExecuting will set the time the Command at `index` can be re-run. (longer if `executing`).
+// SetExecuting blocks or extends the next runnable time while a command is running.
 func (c *Controller) SetExecuting(index int, executing bool) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// If out of range.
 	if index >= len(c.nextRunnable) {
@@ -158,7 +162,7 @@ func (c *Controller) SetExecuting(index int, executing bool) {
 	}
 
 	// Different times depending on pass/fail.
-	if !util.DereferenceOrValue(c.Failed.Get(index), true) {
+	if !util.DerefOr(c.Failed.Get(index), true) {
 		parentInterval, _ := time.ParseDuration(*c.ParentInterval)
 		c.nextRunnable[index] = time.Now().UTC().Add(2 * parentInterval)
 	} else {
