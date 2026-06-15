@@ -470,7 +470,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			changed: false,
 		},
 		{
-			name:  "gotify - fail CreateSender",
+			name:  "gotify/fail CreateSender",
 			sType: "gotify",
 			urlFields: map[string]string{
 				"host":  "https://	example.com",
@@ -586,7 +586,7 @@ func TestBase_CheckValues(t *testing.T) {
 			changed: false,
 		},
 		{
-			name: "matrix - rooms, leading #",
+			name: "matrix/rooms, leading #",
 			input: &Base{
 				Type: "matrix",
 				Params: map[string]string{
@@ -603,7 +603,7 @@ func TestBase_CheckValues(t *testing.T) {
 			changed: true,
 		},
 		{
-			name: "matrix - rooms, leading # already urlEncoded",
+			name: "matrix/rooms, leading # already urlEncoded",
 			input: &Base{
 				Type: "matrix",
 				Params: map[string]string{
@@ -620,7 +620,7 @@ func TestBase_CheckValues(t *testing.T) {
 			changed: false,
 		},
 		{
-			name: "matrix - rooms, valid",
+			name: "matrix/rooms, valid",
 			input: &Base{
 				Type: "matrix",
 				Params: map[string]string{
@@ -805,21 +805,21 @@ func TestDefaults_CheckValues(t *testing.T) {
 		changed  bool
 	}{
 		{
-			name:     "nil defaults - valid id",
+			name:     "nil defaults/valid id",
 			input:    (*Defaults)(nil),
 			id:       "slack",
 			errRegex: `^$`,
 			changed:  false,
 		},
 		{
-			name:     "nil defaults - invalid id",
+			name:     "nil defaults/invalid id",
 			input:    (*Defaults)(nil),
 			id:       "argus",
 			errRegex: `^type: "argus" <invalid>.*gotify.*$`,
 			changed:  false,
 		},
 		{
-			name: "empty Type uses id - valid",
+			name: "empty Type uses id/valid",
 			input: &Defaults{
 				Base: Base{},
 			},
@@ -828,7 +828,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 			changed:  false,
 		},
 		{
-			name: "empty Type uses id - invalid",
+			name: "empty Type uses id/invalid",
 			input: &Defaults{
 				Base: Base{},
 			},
@@ -1050,7 +1050,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 		renamedVar    bool
 	}{
 		{
-			name:      "port - leading colon",
+			name:      "port/leading colon",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
 				"port": ":8080",
@@ -1060,7 +1060,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "port - valid",
+			name:      "port/valid",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
 				"port": "8080",
@@ -1070,7 +1070,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "path - leading slash",
+			name:      "path/leading slash",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
 				"path": "/argus",
@@ -1080,7 +1080,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "path - valid",
+			name:      "path/valid",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
 				"path": "argus",
@@ -1090,17 +1090,75 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "port - from url",
+			name:      "port/from url",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
-				"host": "https://mattermost.example.com:8443", "port": "",
+				"host": "https://mattermost.example.com:8443",
+				"port": "",
 			},
 			want: map[string]string{
-				"host": "mattermost.example.com", "port": "8443",
+				"host": "mattermost.example.com",
+				"port": "8443",
 			},
 		},
 		{
-			name:      "generic - custom_headers -> headers",
+			name:      "host/valid, no change",
+			mapTarget: "url_fields",
+			startAs: map[string]string{
+				"host": "example.com",
+			},
+			want: map[string]string{
+				"host": "example.com",
+			},
+		},
+		{
+			name:      "host/port without scheme",
+			mapTarget: "url_fields",
+			startAs: map[string]string{
+				"host": "example.com:9090",
+				"port": "",
+			},
+			want: map[string]string{
+				"host": "example.com",
+				"port": "9090",
+			},
+		},
+		{
+			name:      "host/scheme without port",
+			mapTarget: "url_fields",
+			startAs: map[string]string{
+				"host": "https://example.com",
+				"port": "",
+			},
+			want: map[string]string{
+				"host": "example.com",
+				"port": "",
+			},
+		},
+		{
+			name:      "host/encoded port overrides existing port",
+			mapTarget: "url_fields",
+			startAs: map[string]string{
+				"host": "https://example.com:8443",
+				"port": "1234",
+			},
+			want: map[string]string{
+				"host": "example.com",
+				"port": "8443",
+			},
+		},
+		{
+			name:      "host/invalid host left unchanged",
+			mapTarget: "url_fields",
+			startAs: map[string]string{
+				"host": "https://\texample.com",
+			},
+			want: map[string]string{
+				"host": "https://\texample.com",
+			},
+		},
+		{
+			name:      "generic/custom_headers -> headers",
 			sType:     "generic",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
@@ -1112,7 +1170,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			renamedVar: true,
 		},
 		{
-			name:      "generic - custom_headers -> headers (but headers already defined)",
+			name:      "generic/custom_headers -> headers (but headers already defined)",
 			sType:     "generic",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
@@ -1125,7 +1183,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			renamedVar: true,
 		},
 		{
-			name:      "matrix - rooms, leading #",
+			name:      "matrix/rooms, leading #",
 			sType:     "matrix",
 			mapTarget: "params",
 			startAs: map[string]string{
@@ -1136,7 +1194,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "matrix - rooms, leading # already urlEncoded",
+			name:      "matrix/rooms, leading # already urlEncoded",
 			sType:     "matrix",
 			mapTarget: "params",
 			startAs: map[string]string{
@@ -1147,7 +1205,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "matrix - rooms, valid",
+			name:      "matrix/rooms, valid",
 			sType:     "matrix",
 			mapTarget: "params",
 			startAs: map[string]string{
@@ -1158,7 +1216,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "mattermost - channel, leading slash",
+			name:      "mattermost/channel, leading slash",
 			sType:     "mattermost",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
@@ -1169,7 +1227,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "mattermost - channel, valid",
+			name:      "mattermost/channel, valid",
 			sType:     "mattermost",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
@@ -1180,7 +1238,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "ntfy - disabletls -> disabletlsverification",
+			name:      "ntfy/disabletls -> disabletlsverification",
 			sType:     "ntfy",
 			mapTarget: "params",
 			startAs: map[string]string{
@@ -1192,11 +1250,12 @@ func TestBase_CorrectSelf(t *testing.T) {
 			renamedVar: true,
 		},
 		{
-			name:      "ntfy - disabletls -> disabletlsverification (but disabletlsverification already defined)",
+			name:      "ntfy/disabletls -> disabletlsverification (but disabletlsverification already defined)",
 			sType:     "ntfy",
 			mapTarget: "params",
 			startAs: map[string]string{
-				"disabletls": "true", "disabletlsverification": "false",
+				"disabletls":             "true",
+				"disabletlsverification": "false",
 			},
 			want: map[string]string{
 				"disabletlsverification": "false",
@@ -1204,7 +1263,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			renamedVar: true,
 		},
 		{
-			name:      "slack - color, not urlEncoded",
+			name:      "slack/color, not urlEncoded",
 			sType:     "slack",
 			mapTarget: "params",
 			startAs: map[string]string{
@@ -1215,7 +1274,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "slack - color, valid",
+			name:      "slack/color, valid",
 			sType:     "slack",
 			mapTarget: "params",
 			startAs: map[string]string{
@@ -1226,7 +1285,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "teams - altid, leading slash",
+			name:      "teams/altid, leading slash",
 			sType:     "teams",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
@@ -1237,7 +1296,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "teams - altid, valid",
+			name:      "teams/altid, valid",
 			sType:     "teams",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
@@ -1248,7 +1307,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "teams - groupowner, leading slash",
+			name:      "teams/groupowner, leading slash",
 			sType:     "teams",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
@@ -1259,7 +1318,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "teams - groupowner, valid",
+			name:      "teams/groupowner, valid",
 			sType:     "teams",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
@@ -1270,7 +1329,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "zulip - botmail, not urlEncoded",
+			name:      "zulip/botmail, not urlEncoded",
 			sType:     "zulip",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
@@ -1281,7 +1340,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "zulip - botmail, valid",
+			name:      "zulip/botmail, valid",
 			sType:     "zulip",
 			mapTarget: "url_fields",
 			startAs: map[string]string{
@@ -1400,6 +1459,150 @@ func TestBase_CorrectSelf(t *testing.T) {
 						delete(subTestMap[subTest].Params, k)
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestParseHostPort(t *testing.T) {
+	// GIVEN: an address that may contain a scheme, host, and/or port.
+	tests := []struct {
+		name     string
+		input    string
+		wantHost string
+		wantPort string
+	}{
+		{
+			name:     "empty",
+			input:    "",
+			wantHost: "",
+			wantPort: "",
+		},
+		{
+			name:     "bare hostname",
+			input:    "example.com",
+			wantHost: "example.com",
+			wantPort: "",
+		},
+		{
+			name:     "hostname with port, no scheme",
+			input:    "example.com:8080",
+			wantHost: "example.com",
+			wantPort: "8080",
+		},
+		{
+			name:     "scheme and hostname",
+			input:    "https://example.com",
+			wantHost: "example.com",
+			wantPort: "",
+		},
+		{
+			name:     "scheme, hostname, and port",
+			input:    "https://example.com:8443",
+			wantHost: "example.com",
+			wantPort: "8443",
+		},
+		{
+			name:     "scheme, hostname, port, and path",
+			input:    "https://example.com:8443/path",
+			wantHost: "example.com",
+			wantPort: "8443",
+		},
+		{
+			name:     "userinfo is stripped",
+			input:    "user:pass@example.com",
+			wantHost: "example.com",
+			wantPort: "",
+		},
+		{
+			name:     "IPv4 address/bare",
+			input:    "127.0.0.1",
+			wantHost: "127.0.0.1",
+			wantPort: "",
+		},
+		{
+			name:     "IPv4 address/schema, hostname, and port",
+			input:    "https://127.0.0.1:9000",
+			wantHost: "127.0.0.1",
+			wantPort: "9000",
+		},
+		{
+			name:     "IPv6 address/bare",
+			input:    "https://[::1]",
+			wantHost: "::1",
+			wantPort: "",
+		},
+		{
+			name:     "IPv6 address/scheme, hostname, and port",
+			input:    "https://[::1]:8080",
+			wantHost: "::1",
+			wantPort: "8080",
+		},
+		{
+			name:     "port only",
+			input:    ":8080",
+			wantHost: "",
+			wantPort: "8080",
+		},
+		{
+			name:     "trailing colon, no port",
+			input:    "example.com:",
+			wantHost: "example.com",
+			wantPort: "",
+		},
+		{
+			name:     "scheme only",
+			input:    "https://",
+			wantHost: "",
+			wantPort: "",
+		},
+		{
+			name:     "case is preserved",
+			input:    "EXAMPLE.COM",
+			wantHost: "EXAMPLE.COM",
+			wantPort: "",
+		},
+		{
+			name:     "invalid/control character returns input unchanged",
+			input:    "https://\texample.com",
+			wantHost: "https://\texample.com",
+			wantPort: "",
+		},
+		{
+			name:     "invalid/non-numeric port returns input unchanged",
+			input:    "example.com:notaport",
+			wantHost: "example.com:notaport",
+			wantPort: "",
+		},
+		{
+			name:     "leading/trailing spaces trimmed/bare",
+			input:    "  example.com  ",
+			wantHost: "example.com",
+			wantPort: "",
+		},
+		{
+			name:     "leading/trailing spaces trimmed/schema, hostname, and port",
+			input:    "  https://example.com:123  ",
+			wantHost: "example.com",
+			wantPort: "123",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: parseHostPort is called.
+			host, port := parseHostPort(tc.input)
+
+			// THEN: the host and port match the expected values.
+			if host != tc.wantHost || port != tc.wantPort {
+				t.Errorf(
+					"%s\nparseHostPort(%q) mismatch\ngot:  (%q, %q)\nwant: (%q, %q)",
+					packageName, tc.input,
+					host, port,
+					tc.wantHost, tc.wantPort,
+				)
 			}
 		})
 	}
@@ -1632,28 +1835,28 @@ func TestBase_CheckValuesOptions(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "invalid max_tries - too large",
+			name: "invalid max_tries/too large",
 			options: map[string]string{
 				"max_tries": strconv.Itoa(math.MaxUint16),
 			},
 			errRegex: `^max_tries: "\d+" <invalid>.*$`,
 		},
 		{
-			name: "invalid max_tries - too large, >uint64",
+			name: "invalid max_tries/too large, >uint64",
 			options: map[string]string{
 				"max_tries": fmt.Sprintf("1%d", uint(math.MaxUint64)),
 			},
 			errRegex: `^max_tries: "\d+" <invalid>.*$`,
 		},
 		{
-			name: "invalid max_tries - not a number",
+			name: "invalid max_tries/not a number",
 			options: map[string]string{
 				"max_tries": "oneOrTwo",
 			},
 			errRegex: `^max_tries: "oneOrTwo" <invalid>.*$`,
 		},
 		{
-			name: "invalid max_tries - negative",
+			name: "invalid max_tries/negative",
 			options: map[string]string{
 				"max_tries": "-1",
 			},
@@ -1700,7 +1903,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 		errRegex  string
 	}{
 		{
-			name:  "bark - invalid",
+			name:  "bark/invalid",
 			sType: "bark",
 			errRegex: test.TrimYAML(`
 				^devicekey: <required>.*
@@ -1708,7 +1911,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			),
 		},
 		{
-			name:  "bark - no devicekey",
+			name:  "bark/no devicekey",
 			sType: "bark",
 			urlFields: map[string]string{
 				"host": "https://example.com",
@@ -1716,7 +1919,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^devicekey: <required>.*$`,
 		},
 		{
-			name:  "bark - no host",
+			name:  "bark/no host",
 			sType: "bark",
 			urlFields: map[string]string{
 				"devicekey": "foo",
@@ -1724,7 +1927,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^host: <required>.*$`,
 		},
 		{
-			name:  "bark - valid",
+			name:  "bark/valid",
 			sType: "bark",
 			urlFields: map[string]string{
 				"devicekey": "foo",
@@ -1733,7 +1936,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "discord - invalid",
+			name:  "discord/invalid",
 			sType: "discord",
 			errRegex: test.TrimYAML(`
 				^token: <required>.*
@@ -1741,7 +1944,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			),
 		},
 		{
-			name:  "discord - no token",
+			name:  "discord/no token",
 			sType: "discord",
 			urlFields: map[string]string{
 				"webhookid": "bash",
@@ -1749,7 +1952,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^token: <required>.*$`,
 		},
 		{
-			name:  "discord - no webhookid",
+			name:  "discord/no webhookid",
 			sType: "discord",
 			urlFields: map[string]string{
 				"token": "bish",
@@ -1757,7 +1960,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^webhookid: <required>.*$`,
 		},
 		{
-			name:  "discord - valid",
+			name:  "discord/valid",
 			sType: "discord",
 			urlFields: map[string]string{
 				"token":     "bish",
@@ -1766,7 +1969,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "discord - valid with main",
+			name:  "discord/valid with main",
 			sType: "discord",
 			main: NewDefaults(
 				"", nil,
@@ -1779,13 +1982,13 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:      "smtp - no host",
+			name:      "smtp/no host",
 			sType:     "smtp",
 			urlFields: map[string]string{},
 			errRegex:  `^host: <required>.*$`,
 		},
 		{
-			name:  "smtp - valid",
+			name:  "smtp/valid",
 			sType: "smtp",
 			urlFields: map[string]string{
 				"host": "bish",
@@ -1793,7 +1996,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "smtp - valid with main",
+			name:  "smtp/valid with main",
 			sType: "smtp",
 			main: NewDefaults(
 				"", nil,
@@ -1805,7 +2008,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "gotify - invalid",
+			name:  "gotify/invalid",
 			sType: "gotify",
 			errRegex: test.TrimYAML(`
 				^host: <required>.*
@@ -1813,7 +2016,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			),
 		},
 		{
-			name:  "gotify - no host",
+			name:  "gotify/no host",
 			sType: "gotify",
 			urlFields: map[string]string{
 				"token": "bash",
@@ -1821,7 +2024,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^host: <required>.*$`,
 		},
 		{
-			name:  "gotify - no token",
+			name:  "gotify/no token",
 			sType: "gotify",
 			urlFields: map[string]string{
 				"host": "bish",
@@ -1829,7 +2032,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^token: <required>.*$`,
 		},
 		{
-			name:  "gotify - valid",
+			name:  "gotify/valid",
 			sType: "gotify",
 			urlFields: map[string]string{
 				"host":  "bish",
@@ -1838,7 +2041,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "gotify - valid with main",
+			name:  "gotify/valid with main",
 			sType: "gotify",
 			main: NewDefaults(
 				"", nil,
@@ -1851,12 +2054,12 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:     "googlechat - invalid",
+			name:     "googlechat/invalid",
 			sType:    "googlechat",
 			errRegex: `^raw: <required>.*$`,
 		},
 		{
-			name:  "googlechat - valid",
+			name:  "googlechat/valid",
 			sType: "googlechat",
 			urlFields: map[string]string{
 				"raw": "bish",
@@ -1864,7 +2067,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "googlechat - valid with main",
+			name:  "googlechat/valid with main",
 			sType: "googlechat",
 			main: NewDefaults(
 				"", nil,
@@ -1876,13 +2079,13 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:      "ifttt - no webhookid",
+			name:      "ifttt/no webhookid",
 			sType:     "ifttt",
 			urlFields: map[string]string{},
 			errRegex:  `^webhookid: <required>.*$`,
 		},
 		{
-			name:  "ifttt - valid",
+			name:  "ifttt/valid",
 			sType: "ifttt",
 			urlFields: map[string]string{
 				"webhookid": "bish",
@@ -1890,7 +2093,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "ifttt - valid with main",
+			name:  "ifttt/valid with main",
 			sType: "ifttt",
 			main: NewDefaults(
 				"", nil,
@@ -1904,13 +2107,13 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:      "join - no apikey",
+			name:      "join/no apikey",
 			sType:     "join",
 			urlFields: map[string]string{},
 			errRegex:  `^apikey: <required>.*$`,
 		},
 		{
-			name:  "join - valid",
+			name:  "join/valid",
 			sType: "join",
 			urlFields: map[string]string{
 				"apikey": "bish",
@@ -1918,7 +2121,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "join - valid with main",
+			name:  "join/valid with main",
 			sType: "join",
 			main: NewDefaults(
 				"", nil,
@@ -1930,7 +2133,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "mattermost - invalid",
+			name:  "mattermost/invalid",
 			sType: "mattermost",
 			errRegex: test.TrimYAML(`
 				^host: <required>.*
@@ -1938,7 +2141,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			),
 		},
 		{
-			name:  "mattermost - no host",
+			name:  "mattermost/no host",
 			sType: "mattermost",
 			urlFields: map[string]string{
 				"token": "bash",
@@ -1946,7 +2149,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^host: <required>.*$`,
 		},
 		{
-			name:  "mattermost - no token",
+			name:  "mattermost/no token",
 			sType: "mattermost",
 			urlFields: map[string]string{
 				"host": "bish",
@@ -1954,7 +2157,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^token: <required>.*$`,
 		},
 		{
-			name:  "mattermost - valid",
+			name:  "mattermost/valid",
 			sType: "mattermost",
 			urlFields: map[string]string{
 				"host":  "bish",
@@ -1963,7 +2166,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "mattermost - valid with main",
+			name:  "mattermost/valid with main",
 			sType: "mattermost",
 			main: NewDefaults(
 				"", nil,
@@ -1976,7 +2179,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "matrix - invalid",
+			name:  "matrix/invalid",
 			sType: "matrix",
 			errRegex: test.TrimYAML(`
 				^host: <required>.*
@@ -1984,7 +2187,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			),
 		},
 		{
-			name:  "matrix - no host",
+			name:  "matrix/no host",
 			sType: "matrix",
 			urlFields: map[string]string{
 				"password": "bash",
@@ -1992,7 +2195,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^host: <required>.*$`,
 		},
 		{
-			name:  "matrix - no password",
+			name:  "matrix/no password",
 			sType: "matrix",
 			urlFields: map[string]string{
 				"host": "bish",
@@ -2000,7 +2203,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^password: <required>.*$`,
 		},
 		{
-			name:  "matrix - valid",
+			name:  "matrix/valid",
 			sType: "matrix",
 			urlFields: map[string]string{
 				"host":     "bish",
@@ -2009,7 +2212,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "matrix - valid with main",
+			name:  "matrix/valid with main",
 			sType: "matrix",
 			main: NewDefaults(
 				"", nil,
@@ -2022,12 +2225,12 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:     "ntfy - invalid",
+			name:     "ntfy/invalid",
 			sType:    "ntfy",
 			errRegex: `^topic: <required>.*$`,
 		},
 		{
-			name:  "ntfy - valid",
+			name:  "ntfy/valid",
 			sType: "ntfy",
 			urlFields: map[string]string{
 				"topic": "foo",
@@ -2035,12 +2238,12 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:     "opsgenie - invalid",
+			name:     "opsgenie/invalid",
 			sType:    "opsgenie",
 			errRegex: `^apikey: <required>.*$`,
 		},
 		{
-			name:  "opsgenie - valid",
+			name:  "opsgenie/valid",
 			sType: "opsgenie",
 			urlFields: map[string]string{
 				"apikey": "apikey",
@@ -2048,7 +2251,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "opsgenie - valid with main",
+			name:  "opsgenie/valid with main",
 			sType: "opsgenie",
 			main: NewDefaults(
 				"", nil,
@@ -2060,7 +2263,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "pushbullet - invalid",
+			name:  "pushbullet/invalid",
 			sType: "pushbullet",
 			errRegex: test.TrimYAML(`
 				^token: <required>.*
@@ -2068,7 +2271,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			),
 		},
 		{
-			name:  "pushbullet - no token",
+			name:  "pushbullet/no token",
 			sType: "pushbullet",
 			urlFields: map[string]string{
 				"targets": "bash",
@@ -2076,7 +2279,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^token: <required>.*$`,
 		},
 		{
-			name:  "pushbullet - no targets",
+			name:  "pushbullet/no targets",
 			sType: "pushbullet",
 			urlFields: map[string]string{
 				"token": "bish",
@@ -2084,7 +2287,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^targets: <required>.*$`,
 		},
 		{
-			name:  "pushbullet - valid",
+			name:  "pushbullet/valid",
 			sType: "pushbullet",
 			urlFields: map[string]string{
 				"token":   "bish",
@@ -2093,7 +2296,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "pushbullet - valid with main",
+			name:  "pushbullet/valid with main",
 			sType: "pushbullet",
 			main: NewDefaults(
 				"", nil,
@@ -2106,7 +2309,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "pushover - invalid",
+			name:  "pushover/invalid",
 			sType: "pushover",
 			errRegex: test.TrimYAML(`
 				^token: <required>.*
@@ -2114,7 +2317,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			),
 		},
 		{
-			name:  "pushover - no token",
+			name:  "pushover/no token",
 			sType: "pushover",
 			urlFields: map[string]string{
 				"user": "bash",
@@ -2122,7 +2325,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^token: <required>.*$`,
 		},
 		{
-			name:  "pushover - no user",
+			name:  "pushover/no user",
 			sType: "pushover",
 			urlFields: map[string]string{
 				"token": "bish",
@@ -2130,7 +2333,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^user: <required>.*$`,
 		},
 		{
-			name:  "pushover - valid",
+			name:  "pushover/valid",
 			sType: "pushover",
 			urlFields: map[string]string{
 				"token": "bish",
@@ -2139,7 +2342,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "pushover - valid with main",
+			name:  "pushover/valid with main",
 			sType: "pushover",
 			main: NewDefaults(
 				"", nil,
@@ -2152,7 +2355,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "rocketchat - invalid",
+			name:  "rocketchat/invalid",
 			sType: "rocketchat",
 			errRegex: test.TrimYAML(`
 				^host: <required>.*
@@ -2162,7 +2365,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			),
 		},
 		{
-			name:  "rocketchat - no host",
+			name:  "rocketchat/no host",
 			sType: "rocketchat",
 			urlFields: map[string]string{
 				"tokena":  "bash",
@@ -2172,7 +2375,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^host: <required>.*$`,
 		},
 		{
-			name:  "rocketchat - no tokena",
+			name:  "rocketchat/no tokena",
 			sType: "rocketchat",
 			urlFields: map[string]string{
 				"host":    "bish",
@@ -2182,7 +2385,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^tokena: <required>.*$`,
 		},
 		{
-			name:  "rocketchat - no tokenb",
+			name:  "rocketchat/no tokenb",
 			sType: "rocketchat",
 			urlFields: map[string]string{
 				"host":    "bish",
@@ -2192,7 +2395,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^tokenb: <required>.*$`,
 		},
 		{
-			name:  "rocketchat - no channel",
+			name:  "rocketchat/no channel",
 			sType: "rocketchat",
 			urlFields: map[string]string{
 				"host":   "bish",
@@ -2202,7 +2405,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^channel: <required>.*$`,
 		},
 		{
-			name:  "rocketchat - valid",
+			name:  "rocketchat/valid",
 			sType: "rocketchat",
 			urlFields: map[string]string{
 				"host":    "bish",
@@ -2213,7 +2416,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "rocketchat - valid with main",
+			name:  "rocketchat/valid with main",
 			sType: "rocketchat",
 			main: NewDefaults(
 				"", nil,
@@ -2228,7 +2431,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "slack - invalid",
+			name:  "slack/invalid",
 			sType: "slack",
 			errRegex: test.TrimYAML(`
 				^token: <required>.*
@@ -2236,7 +2439,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			),
 		},
 		{
-			name:  "slack - no token",
+			name:  "slack/no token",
 			sType: "slack",
 			urlFields: map[string]string{
 				"channel": "bash",
@@ -2244,7 +2447,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^token: <required>.*$`,
 		},
 		{
-			name:  "slack - no channel",
+			name:  "slack/no channel",
 			sType: "slack",
 			urlFields: map[string]string{
 				"token": "bish",
@@ -2252,7 +2455,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^channel: <required>.*$`,
 		},
 		{
-			name:  "slack - valid",
+			name:  "slack/valid",
 			sType: "slack",
 			urlFields: map[string]string{
 				"token":   "bish",
@@ -2261,7 +2464,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "slack - valid with main",
+			name:  "slack/valid with main",
 			sType: "slack",
 			main: NewDefaults(
 				"", nil,
@@ -2274,7 +2477,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "teams - invalid",
+			name:  "teams/invalid",
 			sType: "teams",
 			errRegex: test.TrimYAML(`
 				^group: <required>.*
@@ -2285,7 +2488,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			),
 		},
 		{
-			name:  "teams - no group",
+			name:  "teams/no group",
 			sType: "teams",
 			urlFields: map[string]string{
 				"tenant":     "bash",
@@ -2296,7 +2499,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^group: <required>.*$`,
 		},
 		{
-			name:  "teams - no tenant",
+			name:  "teams/no tenant",
 			sType: "teams",
 			urlFields: map[string]string{
 				"group":      "bish",
@@ -2307,7 +2510,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^tenant: <required>.*$`,
 		},
 		{
-			name:  "teams - no altid",
+			name:  "teams/no altid",
 			sType: "teams",
 			urlFields: map[string]string{
 				"group":      "bish",
@@ -2318,7 +2521,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^altid: <required>.*$`,
 		},
 		{
-			name:  "teams - no groupowner",
+			name:  "teams/no groupowner",
 			sType: "teams",
 			urlFields: map[string]string{
 				"group":   "bish",
@@ -2329,7 +2532,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^groupowner: <required>.*$`,
 		},
 		{
-			name:  "teams - no extraid",
+			name:  "teams/no extraid",
 			sType: "teams",
 			urlFields: map[string]string{
 				"group":      "bish",
@@ -2340,7 +2543,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^extraid: <required>.*$`,
 		},
 		{
-			name:  "teams - valid",
+			name:  "teams/valid",
 			sType: "teams",
 			urlFields: map[string]string{
 				"group":      "bish",
@@ -2352,7 +2555,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "teams - valid with main",
+			name:  "teams/valid with main",
 			sType: "teams",
 			main: NewDefaults(
 				"",
@@ -2371,13 +2574,13 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:      "telegram - no token",
+			name:      "telegram/no token",
 			sType:     "telegram",
 			urlFields: map[string]string{},
 			errRegex:  `^token: <required>.*$`,
 		},
 		{
-			name:  "telegram - valid",
+			name:  "telegram/valid",
 			sType: "telegram",
 			urlFields: map[string]string{
 				"token": "bish",
@@ -2385,7 +2588,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "telegram - valid with main",
+			name:  "telegram/valid with main",
 			sType: "telegram",
 			main: NewDefaults(
 				"",
@@ -2400,7 +2603,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "zulip - invalid",
+			name:  "zulip/invalid",
 			sType: "zulip",
 			errRegex: test.TrimYAML(`
 				^host: <required>.*
@@ -2409,7 +2612,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			),
 		},
 		{
-			name:  "zulip - no host",
+			name:  "zulip/no host",
 			sType: "zulip",
 			urlFields: map[string]string{
 				"botmail": "bash",
@@ -2418,7 +2621,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^host: <required>.*$`,
 		},
 		{
-			name:  "zulip - no botmail",
+			name:  "zulip/no botmail",
 			sType: "zulip",
 			urlFields: map[string]string{
 				"host":   "bish",
@@ -2427,7 +2630,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^botmail: <required>.*$`,
 		},
 		{
-			name:  "zulip - no botkey",
+			name:  "zulip/no botkey",
 			sType: "zulip",
 			urlFields: map[string]string{
 				"host":    "bish",
@@ -2436,7 +2639,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^botkey: <required>.*$`,
 		},
 		{
-			name:  "zulip - valid",
+			name:  "zulip/valid",
 			sType: "zulip",
 			urlFields: map[string]string{
 				"host":    "bish",
@@ -2446,7 +2649,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "zulip - valid with main",
+			name:  "zulip/valid with main",
 			sType: "zulip",
 			main: NewDefaults(
 				"", nil,
@@ -2460,12 +2663,12 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:     "generic - invalid",
+			name:     "generic/invalid",
 			sType:    "generic",
 			errRegex: `^host: <required>.*$`,
 		},
 		{
-			name:  "generic - valid",
+			name:  "generic/valid",
 			sType: "generic",
 			urlFields: map[string]string{
 				"host": "example.com",
@@ -2473,7 +2676,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "generic - valid with main",
+			name:  "generic/valid with main",
 			sType: "generic",
 			main: NewDefaults(
 				"", nil,
@@ -2485,7 +2688,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "generic - valid with headers/json_payload_vars/query_vars",
+			name:  "generic/valid with headers, json_payload_vars, query_vars",
 			sType: "generic",
 			urlFields: map[string]string{
 				"host":              "example.com",
@@ -2496,7 +2699,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "generic - invalid headers",
+			name:  "generic/invalid headers",
 			sType: "generic",
 			urlFields: map[string]string{
 				"host":    "example.com",
@@ -2505,7 +2708,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^headers: "\\\"foo\\\":\\\"bar\\\"}" <invalid>.*$`,
 		},
 		{
-			name:  "generic - invalid json_payload_vars",
+			name:  "generic/invalid json_payload_vars",
 			sType: "generic",
 			urlFields: map[string]string{
 				"host":              "example.com",
@@ -2514,7 +2717,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^json_payload_vars: "{foo\\\":\\\"bar" <invalid>.*$`,
 		},
 		{
-			name:  "generic - invalid query_vars",
+			name:  "generic/invalid query_vars",
 			sType: "generic",
 			urlFields: map[string]string{
 				"host":       "example.com",
@@ -2584,7 +2787,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^a: "release! {{ version }" <invalid>.*$`,
 		},
 		{
-			name:  "smtp - invalid",
+			name:  "smtp/invalid",
 			sType: "smtp",
 			errRegex: test.TrimYAML(`
 				^fromaddress: <required>.*
@@ -2592,7 +2795,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			),
 		},
 		{
-			name:  "smtp - no fromaddress",
+			name:  "smtp/no fromaddress",
 			sType: "smtp",
 			params: map[string]string{
 				"toaddresses": "bosh",
@@ -2600,7 +2803,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^fromaddress: <required>.*$`,
 		},
 		{
-			name:  "smtp - no toaddresses",
+			name:  "smtp/no toaddresses",
 			sType: "smtp",
 			params: map[string]string{
 				"fromaddress": "bash",
@@ -2608,7 +2811,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^toaddresses: <required>.*$`,
 		},
 		{
-			name:  "smtp - valid",
+			name:  "smtp/valid",
 			sType: "smtp",
 			params: map[string]string{
 				"fromaddress": "bash",
@@ -2617,7 +2820,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "smtp - valid with main",
+			name:  "smtp/valid with main",
 			sType: "smtp",
 			params: map[string]string{
 				"fromaddress": "bash",
@@ -2633,12 +2836,12 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:     "ifttt - no events",
+			name:     "ifttt/no events",
 			sType:    "ifttt",
 			errRegex: `^events: <required>.*$`,
 		},
 		{
-			name:  "ifttt - valid",
+			name:  "ifttt/valid",
 			sType: "ifttt",
 			params: map[string]string{
 				"events": "events",
@@ -2646,7 +2849,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "ifttt - valid with main",
+			name:  "ifttt/valid with main",
 			sType: "ifttt",
 			main: NewDefaults(
 				"",
@@ -2659,13 +2862,13 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:     "join - no devices",
+			name:     "join/no devices",
 			sType:    "join",
 			params:   map[string]string{},
 			errRegex: `^devices: <required>.*$`,
 		},
 		{
-			name:  "join - valid",
+			name:  "join/valid",
 			sType: "join",
 			params: map[string]string{
 				"devices": "foo,bar",
@@ -2673,7 +2876,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "join - valid with main",
+			name:  "join/valid with main",
 			sType: "join",
 			main: NewDefaults(
 				"",
@@ -2686,13 +2889,13 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:     "teams - no host",
+			name:     "teams/no host",
 			sType:    "teams",
 			params:   map[string]string{},
 			errRegex: `^host: <required>.*$`,
 		},
 		{
-			name:  "teams - valid",
+			name:  "teams/valid",
 			sType: "teams",
 			params: map[string]string{
 				"host": "https://release-argus.io",
@@ -2700,7 +2903,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "teams - valid with main",
+			name:  "teams/valid with main",
 			sType: "teams",
 			main: NewDefaults(
 				"",
@@ -2713,12 +2916,12 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:     "telegram - no chats",
+			name:     "telegram/no chats",
 			sType:    "telegram",
 			errRegex: `^chats: <required>.*$`,
 		},
 		{
-			name:  "telegram - valid",
+			name:  "telegram/valid",
 			sType: "telegram",
 			params: map[string]string{
 				"chats": "chats",
@@ -2726,7 +2929,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "telegram - valid with main",
+			name:  "telegram/valid with main",
 			sType: "telegram",
 			main: NewDefaults(
 				"",
@@ -2847,7 +3050,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 	}{
 		// bark
 		{
-			name:     "bark - valid scheme+sound normalised",
+			name:     "bark/valid scheme+sound normalised",
 			itemType: "bark",
 			params: map[string]string{
 				"scheme": "HTTP",
@@ -2860,7 +3063,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			},
 		},
 		{
-			name:     "bark - invalid scheme and sound aggregated",
+			name:     "bark/invalid scheme and sound aggregated",
 			itemType: "bark",
 			params: map[string]string{
 				"scheme": "-",
@@ -2885,7 +3088,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 		},
 		// generic
 		{
-			name:     "generic - valid requestmethod normalised",
+			name:     "generic/valid requestmethod normalised",
 			itemType: "generic",
 			params: map[string]string{
 				"requestmethod": "post",
@@ -2896,7 +3099,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			},
 		},
 		{
-			name:     "generic - invalid requestmethod",
+			name:     "generic/invalid requestmethod",
 			itemType: "generic",
 			params: map[string]string{
 				"requestmethod": "FETCH",
@@ -2911,7 +3114,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 		},
 		// ntfy
 		{
-			name:     "ntfy - valid priority and scheme",
+			name:     "ntfy/valid priority and scheme",
 			itemType: "ntfy",
 			params: map[string]string{
 				"priority": "DEFAULT",
@@ -2924,7 +3127,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			},
 		},
 		{
-			name:     "ntfy - invalid priority and scheme aggregated",
+			name:     "ntfy/invalid priority and scheme aggregated",
 			itemType: "ntfy",
 			params: map[string]string{
 				"priority": "urgENT",
@@ -2949,7 +3152,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 		},
 		// smtp
 		{
-			name:     "smtp - valid auth and encryption",
+			name:     "smtp/valid auth and encryption",
 			itemType: "smtp",
 			params: map[string]string{
 				"auth":       "oauth2",
@@ -2962,7 +3165,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			},
 		},
 		{
-			name:     "smtp - invalid auth and encryption aggregated",
+			name:     "smtp/invalid auth and encryption aggregated",
 			itemType: "smtp",
 			params: map[string]string{
 				"auth":       "basic",
@@ -2987,7 +3190,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 		},
 		// telegram
 		{
-			name:     "telegram - valid parsemode",
+			name:     "telegram/valid parsemode",
 			itemType: "telegram",
 			params: map[string]string{
 				"parsemode": "markdown",
@@ -2998,7 +3201,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			},
 		},
 		{
-			name:     "telegram - invalid parsemode",
+			name:     "telegram/invalid parsemode",
 			itemType: "telegram",
 			params: map[string]string{
 				"parsemode": "mdx",
@@ -3013,7 +3216,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 		},
 		// unknown type and empty params
 		{
-			name:     "unknown - type is no-op even with values",
+			name:     "unknown/type is no-op even with values",
 			itemType: "unknown",
 			params: map[string]string{
 				"scheme": "ftp",

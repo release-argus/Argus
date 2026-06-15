@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -287,21 +288,13 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 		changed = true
 	}
 
-	// Host.
+	// Host: Strip schema/port.
 	host := b.getURLField("host")
-	// Check if host contains a scheme and/or port.
-	if util.RegexCheck(`^https?:\/\/.*:?`, host) {
-		// Trim leading http(s)://
-		host = strings.TrimPrefix(host, "http://")
-		host = strings.TrimPrefix(host, "https://")
-
-		// Move port from 'host' to 'port'.
-		split := strings.Split(host, ":")
-		if len(split) > 1 {
-			host = split[0]
-			b.setURLField("port", split[1])
+	if h, p := parseHostPort(host); h != host {
+		b.setURLField("host", h)
+		if p != "" {
+			b.setURLField("port", p)
 		}
-		b.setURLField("host", host)
 		changed = true
 	}
 
@@ -1077,4 +1070,23 @@ func (b *Base) validateParamSelect(key string, allowed []string) error {
 		Value:   value,
 		Allowed: allowed,
 	}
+}
+
+// parseHostPort extracts the hostname and optional port from an address.
+// The address may optionally include a URL scheme.
+// If the address cannot be parsed, it is returned unchanged with an empty port.
+func parseHostPort(input string) (string, string) {
+	address := input
+	address = strings.TrimSpace(address)
+	// Add scheme if missing (required for net/url).
+	if !strings.Contains(address, "://") {
+		address = "https://" + address
+	}
+
+	u, err := url.Parse(address)
+	if err != nil {
+		return input, ""
+	}
+
+	return u.Hostname(), u.Port()
 }
