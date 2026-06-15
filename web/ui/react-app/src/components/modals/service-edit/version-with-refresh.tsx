@@ -140,7 +140,7 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 		<span className={cn('col-span-full', className)}>
 			<span className="flex pt-1 pb-2">
 				{vType === 'latest_version' ? 'Latest' : 'Deployed'} version: {version}
-				{isFetching && <Skeleton className="max-str-full ml-1 h-4 w-16" />}
+				{isFetching && <Skeleton className="ml-1 h-4 w-16 max-w-full" />}
 				<Button
 					aria-label="Refresh the version"
 					className="ml-auto"

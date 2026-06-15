@@ -51,7 +51,7 @@ func convertAndCensorDefaults(input *config.Defaults) apitype.Defaults {
 				SemanticVersioning: input.Service.Options.SemanticVersioning,
 			},
 			LatestVersion: apitype.LatestVersionDefaults{
-				AccessToken:       util.ValueUnlessDefault(input.Service.LatestVersion.AccessToken, util.SecretValue),
+				AccessToken:       util.ValueUnlessZero(input.Service.LatestVersion.AccessToken, util.SecretValue),
 				AllowInvalidCerts: input.Service.LatestVersion.AllowInvalidCerts,
 				UsePreRelease:     input.Service.LatestVersion.UsePreRelease,
 				Require:           convertAndCensorLatestVersionRequireDefaults(&input.Service.LatestVersion.Require),
@@ -141,7 +141,7 @@ func convertAndCensorLatestVersion(input latestver.Lookup) *apitype.LatestVersio
 		return &apitype.LatestVersion{
 			Type:          lv.Type,
 			URL:           lv.URL,
-			AccessToken:   util.ValueUnlessDefault(lv.AccessToken, util.SecretValue),
+			AccessToken:   util.ValueUnlessZero(lv.AccessToken, util.SecretValue),
 			UsePreRelease: lv.UsePreRelease,
 			URLCommands:   convertURLCommands(lv.URLCommands),
 			Require:       convertAndCensorLatestVersionRequire(lv.Require),
@@ -207,7 +207,7 @@ func convertAndCensorRequireDockerRegistryDefaults(input docker.RegistryDefaults
 					Tag:   v.Tag,
 				},
 				RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-					Token: util.ValueUnlessDefault(auth.GetTokenSelf(), util.SecretValue),
+					Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
 				},
 			}
 		}
@@ -219,7 +219,7 @@ func convertAndCensorRequireDockerRegistryDefaults(input docker.RegistryDefaults
 					Tag:   v.Tag,
 				},
 				RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-					Token: util.ValueUnlessDefault(auth.GetTokenSelf(), util.SecretValue),
+					Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
 				},
 			}
 		}
@@ -233,7 +233,7 @@ func convertAndCensorRequireDockerRegistryDefaults(input docker.RegistryDefaults
 				RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
 					Username: auth.GetUsernameSelf(),
 					RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-						Token: util.ValueUnlessDefault(auth.GetTokenSelf(), util.SecretValue),
+						Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
 					},
 				},
 			}
@@ -257,7 +257,7 @@ func convertAndCensorLatestVersionRequire(input *filter.Require) *apitype.Latest
 			Type:  dockerInput.GetTypeSelf(),
 			Image: dockerInput.GetImageSelf(),
 			Tag:   dockerInput.GetTagSelf(),
-			Token: util.ValueUnlessDefault(dockerAuth.GetTokenSelf(), util.SecretValue),
+			Token: util.ValueUnlessZero(dockerAuth.GetTokenSelf(), util.SecretValue),
 		}
 		if a, ok := dockerAuth.(*docker.HubAuth); ok {
 			dockerResp.Username = a.Username
@@ -443,7 +443,7 @@ func convertAndCensorWebHookDefaults(input webhook.Defaults) apitype.WebHook {
 		Type:              input.Type,
 		URL:               input.URL,
 		AllowInvalidCerts: input.AllowInvalidCerts,
-		Secret:            util.ValueUnlessDefault(input.Secret, util.SecretValue),
+		Secret:            util.ValueUnlessZero(input.Secret, util.SecretValue),
 		Headers:           convertWebHookHeaders(input.Headers),
 		DesiredStatusCode: input.DesiredStatusCode,
 		Delay:             input.Delay,
@@ -479,7 +479,7 @@ func convertAndCensorWebHook(input *webhook.WebHook) apitype.WebHook {
 		Type:              input.Type,
 		URL:               input.URL,
 		AllowInvalidCerts: input.AllowInvalidCerts,
-		Secret:            util.ValueUnlessDefault(input.Secret, util.SecretValue),
+		Secret:            util.ValueUnlessZero(input.Secret, util.SecretValue),
 		Headers:           convertWebHookHeaders(input.Headers),
 		DesiredStatusCode: input.DesiredStatusCode,
 		Delay:             input.Delay,

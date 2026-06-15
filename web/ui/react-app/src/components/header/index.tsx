@@ -73,7 +73,7 @@ const Header = () => {
 	};
 
 	return (
-		<header className="str-full">
+		<header className="w-full">
 			<div className="flex h-16 w-full shrink-0 items-center justify-between p-4">
 				<span className="flex size-full flex-row">
 					<Button

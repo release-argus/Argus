@@ -71,7 +71,7 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 				AutoApprove: api.Config.Defaults.Service.Dashboard.AutoApprove,
 			},
 			LatestVersion: apitype.LatestVersionDefaults{
-				AccessToken:       util.ValueUnlessDefault(api.Config.Defaults.Service.LatestVersion.AccessToken, util.SecretValue),
+				AccessToken:       util.ValueUnlessZero(api.Config.Defaults.Service.LatestVersion.AccessToken, util.SecretValue),
 				AllowInvalidCerts: api.Config.Defaults.Service.LatestVersion.AllowInvalidCerts,
 				UsePreRelease:     api.Config.Defaults.Service.LatestVersion.UsePreRelease,
 				Require:           serviceLatestVersionRequireDefaults,

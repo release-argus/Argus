@@ -38,13 +38,15 @@ import (
 func (s *Shoutrrr) BuildURL() (url string) {
 	switch s.GetType() {
 	case "bark":
-		// bark://:devicekey@host:port/[path]
+		// bark://:devicekey@host[:port][/path]
+		path := s.GetURLField("path")
+
 		url = fmt.Sprintf(
 			"bark://:%s@%s:%s%s",
 			s.GetURLField("devicekey"),
 			s.GetURLField("host"),
 			s.GetURLField("port"),
-			util.ValueUnlessDefault(s.GetURLField("path"), "/"+s.GetURLField("path")),
+			util.ValueUnlessZero(path, "/"+path),
 		)
 	case "discord":
 		// discord://token@webhookid
@@ -54,34 +56,42 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetURLField("webhookid"),
 		)
 	case "smtp":
-		// smtp://username:password@host:port/?fromaddress=X&toaddresses=Y
+		// smtp://username:password@host[:port]/?fromaddress=X&toaddresses=Y[&fromname=X]
 		login := s.GetURLField("password")
-		login = s.GetURLField("username") + util.ValueUnlessDefault(login, ":"+login)
+		login = s.GetURLField("username") + util.ValueUnlessZero(login, ":"+login)
 		port := s.GetURLField("port")
+		fromAddress := s.GetParam("fromaddress")
 		fromName := s.GetParam("fromname")
+		toAddresses := s.GetParam("toaddresses")
+		query := buildQuery(
+			util.ValueUnlessZero(fromName, "&fromaddress="+net_url.QueryEscape(fromAddress)),
+			util.ValueUnlessZero(fromName, "&toaddresses="+net_url.QueryEscape(toAddresses)),
+			util.ValueUnlessZero(fromName, "&fromname="+net_url.QueryEscape(fromName)),
+		)
+
 		url = fmt.Sprintf(
-			"smtp://%s%s%s/?fromaddress=%s&toaddresses=%s%s",
-			util.ValueUnlessDefault(login, login+"@"),
+			"smtp://%s%s%s/%s",
+			util.ValueUnlessZero(login, login+"@"),
 			s.GetURLField("host"),
-			util.ValueUnlessDefault(port, ":"+port),
-			s.GetParam("fromaddress"),
-			s.GetParam("toaddresses"),
-			util.ValueUnlessDefault(fromName, "&fromname="+net_url.QueryEscape(fromName)),
+			util.ValueUnlessZero(port, ":"+port),
+			query,
 		)
 	case "gotify":
-		// gotify://host:port/path/token
+		// gotify://host[:port][/path]/token
 		port := s.GetURLField("port")
 		path := s.GetURLField("path")
+
 		url = fmt.Sprintf(
 			"gotify://%s%s%s/%s",
 			s.GetURLField("host"),
-			util.ValueUnlessDefault(port, ":"+port),
-			util.ValueUnlessDefault(path, "/"+path),
+			util.ValueUnlessZero(port, ":"+port),
+			util.ValueUnlessZero(path, "/"+path),
 			s.GetURLField("token"),
 		)
 	case "googlechat":
-		url = s.GetURLField("raw")
 		// googlechat://url
+		url = s.GetURLField("raw")
+
 		url = "googlechat://" + url
 	case "ifttt":
 		// ifttt://webhookid/?events=event1,event2
@@ -97,45 +107,39 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetURLField("apikey"),
 			s.GetParam("devices"),
 		)
+	case "matrix":
+		// matrix://user:password@host[:port]/[?rooms=!roomID1,roomAlias2]][&disableTLS=yes]
+		port := s.GetURLField("port")
+		rooms := s.GetParam("rooms")
+		disableTLS := s.GetParam("disabletls")
+		query := buildQuery(
+			util.ValueUnlessZero(rooms, "rooms="+rooms),
+			util.ValueUnlessZero(disableTLS, "disableTLS="+disableTLS),
+		)
+
+		url = fmt.Sprintf(
+			"matrix://%s:%s@%s%s/%s",
+			s.GetURLField("user"),
+			s.GetURLField("password"),
+			s.GetURLField("host"),
+			util.ValueUnlessZero(port, ":"+port),
+			query,
+		)
 	case "mattermost":
 		// mattermost://[username@]host[:port][/path]/token[/channel]
 		username := s.GetURLField("username")
 		port := s.GetURLField("port")
 		path := s.GetURLField("path")
 		channel := s.GetURLField("channel")
+
 		url = fmt.Sprintf(
 			"mattermost://%s%s%s%s/%s%s",
-			util.ValueUnlessDefault(username, username+"@"),
+			util.ValueUnlessZero(username, username+"@"),
 			s.GetURLField("host"),
-			util.ValueUnlessDefault(port, ":"+port),
-			util.ValueUnlessDefault(path, "/"+path),
+			util.ValueUnlessZero(port, ":"+port),
+			util.ValueUnlessZero(path, "/"+path),
 			s.GetURLField("token"),
-			util.ValueUnlessDefault(channel, "/"+channel),
-		)
-	case "matrix":
-		// matrix://user:password@host[:port][/port]/[?rooms=!roomID1[,roomAlias2]][&disableTLS=yes]
-		port := s.GetURLField("port")
-		path := s.GetURLField("path")
-		rooms := s.GetParam("rooms")
-		rooms = util.ValueUnlessDefault(rooms, "?rooms="+rooms)
-		disableTLS := s.GetParam("disabletls")
-		disableTLS = util.ValueUnlessDefault(disableTLS, "disableTLS="+disableTLS)
-		if disableTLS != "" {
-			if rooms != "" {
-				disableTLS = "&" + disableTLS
-			} else {
-				disableTLS = "?" + disableTLS
-			}
-		}
-		url = fmt.Sprintf(
-			"matrix://%s:%s@%s%s%s/%s%s",
-			s.GetURLField("user"),
-			s.GetURLField("password"),
-			s.GetURLField("host"),
-			util.ValueUnlessDefault(port, ":"+port),
-			util.ValueUnlessDefault(path, "/"+path),
-			rooms,
-			disableTLS,
+			util.ValueUnlessZero(channel, "/"+channel),
 		)
 	case "ntfy":
 		// ntfy://[username]:[password]@[host][:port]/topic
@@ -144,18 +148,17 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetURLField("username"),
 			s.GetURLField("password"),
 			s.GetURLField("host"),
-			util.ValueUnlessDefault(s.GetURLField("port"), ":"+s.GetURLField("port")),
+			util.ValueUnlessZero(s.GetURLField("port"), ":"+s.GetURLField("port")),
 			s.GetURLField("topic"),
 		)
 	case "opsgenie":
-		// opsgenie://host[:port][/path]/apikey
+		// opsgenie://host[:port]/apikey
 		port := s.GetURLField("port")
-		path := s.GetURLField("path")
+
 		url = fmt.Sprintf(
-			"opsgenie://%s%s%s/%s",
+			"opsgenie://%s%s/%s",
 			s.GetURLField("host"),
-			util.ValueUnlessDefault(port, ":"+port),
-			util.ValueUnlessDefault(path, "/"+path),
+			util.ValueUnlessZero(port, ":"+port),
 			s.GetURLField("apikey"),
 		)
 	case "pushbullet":
@@ -168,23 +171,25 @@ func (s *Shoutrrr) BuildURL() (url string) {
 	case "pushover":
 		// pushover://shoutrrr:token@user/[?devices=device1,device2]
 		devices := s.GetParam("devices")
+
 		url = fmt.Sprintf(
 			"pushover://shoutrrr:%s@%s/%s",
 			s.GetURLField("token"),
 			s.GetURLField("user"),
-			util.ValueUnlessDefault(devices, "?devices="+devices),
+			util.ValueUnlessZero(devices, "?devices="+devices),
 		)
 	case "rocketchat":
-		// rocketchat://[username@]host:port[/port]/tokenA/tokenB/channel
+		// rocketchat://[username@]host[:port][/path]/tokenA/tokenB/channel
 		username := s.GetURLField("username")
 		port := s.GetURLField("port")
 		path := s.GetURLField("path")
+
 		url = fmt.Sprintf(
 			"rocketchat://%s%s%s%s/%s/%s/%s",
-			util.ValueUnlessDefault(username, username+"@"),
+			util.ValueUnlessZero(username, username+"@"),
 			s.GetURLField("host"),
-			util.ValueUnlessDefault(port, ":"+port),
-			util.ValueUnlessDefault(path, "/"+path),
+			util.ValueUnlessZero(port, ":"+port),
+			util.ValueUnlessZero(path, "/"+path),
 			s.GetURLField("tokena"),
 			s.GetURLField("tokenb"),
 			s.GetURLField("channel"),
@@ -202,13 +207,14 @@ func (s *Shoutrrr) BuildURL() (url string) {
 		altID := strings.TrimPrefix(s.GetURLField("altid"), "/")
 		groupOwner := strings.TrimPrefix(s.GetURLField("groupowner"), "/")
 		extraID := strings.TrimPrefix(s.GetURLField("extraid"), "/")
+
 		url = fmt.Sprintf(
 			"teams://%s%s%s%s%s?host=%s",
-			util.ValueUnlessDefault(group, group+"@"),
+			util.ValueUnlessZero(group, group+"@"),
 			s.GetURLField("tenant"),
-			util.ValueUnlessDefault(altID, "/"+altID),
-			util.ValueUnlessDefault(groupOwner, "/"+groupOwner),
-			util.ValueUnlessDefault(extraID, "/"+extraID),
+			util.ValueUnlessZero(altID, "/"+altID),
+			util.ValueUnlessZero(groupOwner, "/"+groupOwner),
+			util.ValueUnlessZero(extraID, "/"+extraID),
 			s.GetParam("host"),
 		)
 		url = strings.Replace(url, "///", "//", 1)
@@ -220,58 +226,44 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetParam("chats"),
 		)
 	case "zulip":
-		// zulip://botMail:botKey@host?stream=STREAM&topic=TOPIC
+		// zulip://botMail:botKey@host[:port]?stream=STREAM&topic=TOPIC
+		port := s.GetURLField("port")
 		stream := s.GetParam("stream")
-		stream = util.ValueUnlessDefault(stream, "?stream="+stream)
 		topic := s.GetParam("topic")
-		topic = util.ValueUnlessDefault(topic, "&topic="+topic)
-		if stream == "" {
-			topic = strings.Replace(topic, "&", "?", 1)
-		}
+		query := buildQuery(
+			util.ValueUnlessZero(stream, "stream="+stream),
+			util.ValueUnlessZero(topic, "topic="+topic),
+		)
+
 		url = fmt.Sprintf(
 			"zulip://%s:%s@%s%s%s",
 			s.GetURLField("botmail"),
 			s.GetURLField("botkey"),
 			s.GetURLField("host"),
-			stream,
-			topic,
+			util.ValueUnlessZero(port, ":"+port),
+			query,
 		)
 	case "generic":
-		// generic://example.com:123/api/v1/postStuff
+		// generic://example.com[:port][/path]
 		port := s.GetURLField("port")
 		path := s.GetURLField("path")
 
 		// Add the JSON payload vars, custom headers, and query vars to the url.
-		var urlParamsBuilder strings.Builder
 		// Separate vars to preserve order.
 		jsonMaps := []string{"headers", "json_payload_vars", "query_vars"}
 		prefixes := []string{"@", "$", ""}
 
-		first := true // flag to track first entry.
+		parts := make([]string, len(jsonMaps))
 		for i := range jsonMaps {
-			urlField := s.GetURLField(jsonMaps[i])
-			// Skip non-empty values.
-			if urlField == "" {
-				continue
-			}
-
-			if !first {
-				// Add separator before entries after the first.
-				urlParamsBuilder.WriteString("&")
-			} else {
-				// Start the string with '?'.
-				urlParamsBuilder.WriteString("?")
-				first = false
-			}
-			urlParamsBuilder.WriteString(jsonMapToString(urlField, prefixes[i]))
+			parts[i] = jsonMapToString(s.GetURLField(jsonMaps[i]), prefixes[i])
 		}
-		urlParams := urlParamsBuilder.String()
+		urlParams := buildQuery(parts...)
 
 		url = fmt.Sprintf(
 			"generic://%s%s%s%s",
 			s.GetURLField("host"),
-			util.ValueUnlessDefault(port, ":"+port),
-			util.ValueUnlessDefault(path, "/"+path),
+			util.ValueUnlessZero(port, ":"+port),
+			util.ValueUnlessZero(path, "/"+path),
 			urlParams,
 		)
 	case "shoutrrr":
@@ -587,4 +579,24 @@ func jsonMapToString(param string, prefix string) string {
 		)
 	}
 	return builder.String()
+}
+
+// buildQuery joins the non-empty "key=value" parts into a URL query string,
+// prefixed with '?'.
+//
+//	e.g. buildQuery("", "foo=1", "bar=2") returns "?foo=1&bar=2"
+//
+// Returns "" if all parts are empty.
+func buildQuery(parts ...string) string {
+	nonEmpty := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part != "" {
+			nonEmpty = append(nonEmpty, part)
+		}
+	}
+	if len(nonEmpty) == 0 {
+		return ""
+	}
+
+	return "?" + strings.Join(nonEmpty, "&")
 }

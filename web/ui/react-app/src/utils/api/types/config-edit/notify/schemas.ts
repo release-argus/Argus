@@ -87,7 +87,7 @@ export const notifyBarkSchema = notifyBaseSchema.extend({
 		.object({
 			devicekey: stringDefault, // Required.
 			host: stringDefault, // Required.
-			path: z.string().optional(),
+			path: stringDefault,
 			port: stringDefault, // Required.
 		})
 		.default({ devicekey: '', host: '', path: '', port: '' }),
@@ -497,7 +497,7 @@ export const notifyRocketChatSchema = notifyBaseSchema.extend({
 		.object({
 			channel: stringDefault, // Required.
 			host: stringDefault, // Required.
-			path: stringDefault, // Required.
+			path: stringDefault,
 			port: stringDefault,
 			tokena: stringDefault, // Required.
 			tokenb: stringDefault, // Required.
@@ -548,11 +548,11 @@ export const notifyTeamsSchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.TEAMS.value),
 	url_fields: z
 		.object({
-			altid: stringDefault,
-			extraid: stringDefault,
-			group: stringDefault,
-			groupowner: stringDefault,
-			tenant: stringDefault,
+			altid: stringDefault, // Required.
+			extraid: stringDefault, // Required.
+			group: stringDefault, // Required.
+			groupowner: stringDefault, // Required.
+			tenant: stringDefault, // Required.
 		})
 		.default({ altid: '', extraid: '', group: '', groupowner: '', tenant: '' }),
 });
@@ -607,8 +607,9 @@ export const notifyZulipSchema = notifyBaseSchema.extend({
 			botkey: stringDefault, // Required.
 			botmail: stringDefault, // Required.
 			host: stringDefault, // Required.
+			port: stringDefault,
 		})
-		.default({ botkey: '', botmail: '', host: '' }),
+		.default({ botkey: '', botmail: '', host: '', port: '' }),
 });
 export type NotifyZulipSchema = z.infer<typeof notifyZulipSchema>;
 

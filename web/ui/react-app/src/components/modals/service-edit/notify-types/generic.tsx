@@ -78,18 +78,18 @@ const GENERIC = ({
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="URL Fields" />
 				<FieldText
-					colSize={{ xs: 9 }}
+					colSize={{ lg: 6, sm: 9, xs: 9 }}
 					defaultVal={defaults?.url_fields?.host}
 					label="Host"
 					name={`${name}.url_fields.host`}
 					required
 					tooltip={{
-						content: 'e.g. gotify.example.com',
+						content: 'e.g. generic.example.com',
 						type: 'string',
 					}}
 				/>
 				<FieldText
-					colSize={{ xs: 3 }}
+					colSize={{ lg: 2, sm: 3, xs: 3 }}
 					defaultVal={defaults?.url_fields?.port}
 					label="Port"
 					name={`${name}.url_fields.port`}
@@ -99,16 +99,16 @@ const GENERIC = ({
 					}}
 				/>
 				<FieldText
-					colSize={{ sm: 6 }}
+					colSize={{ lg: 4, sm: 12 }}
 					defaultVal={defaults?.url_fields?.path}
 					label="Path"
 					name={`${name}.url_fields.path`}
 					tooltip={{
-						ariaLabel: 'Format: mattermost.example.io/PATH',
+						ariaLabel: 'Format: generic.example.io/PATH',
 						content: (
 							<>
 								<span className="text-muted-foreground">
-									{'e.g. mattermost.example.io/'}
+									{'e.g. generic.example.io/'}
 								</span>
 								<span className="bold underline">path</span>
 							</>

@@ -233,11 +233,11 @@ export const isLatestVersionType = (
 
 export const latestVersionLookupSchemaDefault = z
 	.object({
-		access_token: z.string().optional(),
+		access_token: stringDefault,
 		allow_invalid_certs: z.boolean().nullable().optional(),
 		require: latestVersionRequireSchemaDefaults.optional(),
 		type: LatestVersionTypeEnum.nullable().optional(),
-		url: z.string().optional(),
+		url: stringDefault,
 		url_commands: urlCommandsSchema.optional(),
 		use_prerelease: z.boolean().nullable().optional(),
 	})

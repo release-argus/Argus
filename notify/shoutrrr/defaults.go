@@ -60,7 +60,8 @@ func (s *ShoutrrrsDefaults) Default() {
 	defaults["googlechat"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil,
+		nil,
+		nil,
 	)
 	defaults["gotify"] = NewDefaults(
 		"",
@@ -88,7 +89,8 @@ func (s *ShoutrrrsDefaults) Default() {
 	defaults["join"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil,
+		nil,
+		nil,
 	)
 	defaults["mattermost"] = NewDefaults(
 		"",
@@ -131,7 +133,8 @@ func (s *ShoutrrrsDefaults) Default() {
 	defaults["opsgenie"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil,
+		nil,
+		nil,
 	)
 	defaults["pushbullet"] = NewDefaults(
 		"",
@@ -144,7 +147,8 @@ func (s *ShoutrrrsDefaults) Default() {
 	defaults["pushover"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil,
+		nil,
+		nil,
 	)
 	defaults["rocketchat"] = NewDefaults(
 		"",
@@ -165,7 +169,8 @@ func (s *ShoutrrrsDefaults) Default() {
 	defaults["teams"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil,
+		nil,
+		nil,
 	)
 	defaults["telegram"] = NewDefaults(
 		"",
@@ -179,7 +184,8 @@ func (s *ShoutrrrsDefaults) Default() {
 	defaults["zulip"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil, nil,
+		nil,
+		nil,
 	)
 	defaults["generic"] = NewDefaults(
 		"",

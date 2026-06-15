@@ -34,18 +34,18 @@ const MATRIX = ({
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="URL Fields" />
 				<FieldText
-					colSize={{ xs: 9 }}
+					colSize={{ sm: 9, xs: 9 }}
 					defaultVal={defaults?.url_fields?.host}
 					label="Host"
 					name={`${name}.url_fields.host`}
 					required
 					tooltip={{
-						content: 'e.g. smtp.example.com',
+						content: 'e.g. matrix.example.com',
 						type: 'string',
 					}}
 				/>
 				<FieldText
-					colSize={{ xs: 3 }}
+					colSize={{ sm: 3, xs: 3 }}
 					defaultVal={defaults?.url_fields?.port}
 					label="Port"
 					name={`${name}.url_fields.port`}
@@ -55,6 +55,7 @@ const MATRIX = ({
 					}}
 				/>
 				<FieldText
+					colSize={{ lg: 4 }}
 					defaultVal={defaults?.url_fields?.username}
 					label="Username"
 					name={`${name}.url_fields.username`}
@@ -64,6 +65,7 @@ const MATRIX = ({
 					}}
 				/>
 				<FieldText
+					colSize={{ lg: 8 }}
 					defaultVal={defaults?.url_fields?.password}
 					label="Password"
 					name={`${name}.url_fields.password`}

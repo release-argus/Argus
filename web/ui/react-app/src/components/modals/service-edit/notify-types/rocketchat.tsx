@@ -33,7 +33,7 @@ const ROCKET_CHAT = ({
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="URL Fields" />
 				<FieldText
-					colSize={{ xs: 9 }}
+					colSize={{ lg: 6, sm: 9, xs: 9 }}
 					defaultVal={defaults?.url_fields?.host}
 					label="Host"
 					name={`${name}.url_fields.host`}
@@ -44,13 +44,14 @@ const ROCKET_CHAT = ({
 					}}
 				/>
 				<FieldText
-					colSize={{ xs: 3 }}
+					colSize={{ lg: 2, sm: 3, xs: 3 }}
 					defaultVal={defaults?.url_fields?.port}
 					label="Port"
 					name={`${name}.url_fields.port`}
 					required
 				/>
 				<FieldText
+					colSize={{ lg: 4, sm: 12 }}
 					defaultVal={defaults?.url_fields?.path}
 					label="Path"
 					name={`${name}.url_fields.path`}
@@ -59,7 +60,7 @@ const ROCKET_CHAT = ({
 						content: (
 							<>
 								<span className="text-muted-foreground">
-									{'e.g.rocketchat.example.io/'}
+									{'e.g. rocketchat.example.io/'}
 								</span>
 								<span className="bold underline">path</span>
 							</>
@@ -68,13 +69,14 @@ const ROCKET_CHAT = ({
 					}}
 				/>
 				<FieldText
+					colSize={{ sm: 6 }}
 					defaultVal={defaults?.url_fields?.channel}
 					label="Channel"
 					name={`${name}.url_fields.channel`}
 					required
 				/>
 				<FieldText
-					colSize={{ sm: 12 }}
+					colSize={{ sm: 6 }}
 					defaultVal={defaults?.url_fields?.username}
 					label="Username"
 					name={`${name}.url_fields.username`}

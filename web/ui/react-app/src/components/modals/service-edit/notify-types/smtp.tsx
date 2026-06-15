@@ -94,7 +94,7 @@ const SMTP = ({ name, main }: { name: string; main?: NotifySMTPSchema }) => {
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="URL Fields" />
 				<FieldText
-					colSize={{ xs: 9 }}
+					colSize={{ sm: 9, xs: 9 }}
 					defaultVal={defaults?.url_fields?.host}
 					label="Host"
 					name={`${name}.url_fields.host`}
@@ -105,7 +105,7 @@ const SMTP = ({ name, main }: { name: string; main?: NotifySMTPSchema }) => {
 					}}
 				/>
 				<FieldText
-					colSize={{ xs: 3 }}
+					colSize={{ sm: 3, xs: 3 }}
 					defaultVal={defaults?.url_fields?.port}
 					label="Port"
 					name={`${name}.url_fields.port`}

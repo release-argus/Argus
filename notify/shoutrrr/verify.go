@@ -51,11 +51,11 @@ func (s *Shoutrrr) TestSend(serviceURL string) error {
 
 	// Prefix 'TEST - ' if non-empty.
 	title := s.Title(testServiceInfo)
-	title = util.ValueUnlessDefault(
+	title = util.ValueUnlessZero(
 		title, "TEST - "+title,
 	)
 	message := s.Message(testServiceInfo)
-	message = "TEST" + util.ValueUnlessDefault(
+	message = "TEST" + util.ValueUnlessZero(
 		message, " - "+message,
 	)
 
@@ -514,7 +514,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 
 	switch s.GetType() {
 	case "bark":
-		// bark://:devicekey@host:port/[path]
+		// bark://:devicekey@host[:port][/path]
 		if s.GetURLField("devicekey") == "" {
 			errs = append(
 				errs,
@@ -552,7 +552,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 			)
 		}
 	case "smtp":
-		// smtp://username:password@host:port[/path]
+		// smtp://username:password@host[:port]/?fromaddress=X&toaddresses=Y[&fromname=X]
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
@@ -563,7 +563,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 			)
 		}
 	case "gotify":
-		// gotify://host:port/path/token
+		// gotify://host[:port][/path]/token
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
@@ -615,6 +615,26 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 				},
 			)
 		}
+	case "matrix":
+		// matrix://user:password@host[:port]/[?rooms=!roomID1,roomAlias2]][&disableTLS=yes]
+		if s.GetURLField("host") == "" {
+			errs = append(
+				errs,
+				&decode.FieldError{
+					Key:         "host",
+					Description: "e.g. 'matrix.example.com'",
+				},
+			)
+		}
+		if s.GetURLField("password") == "" {
+			errs = append(
+				errs,
+				&decode.FieldError{
+					Key:         "password",
+					Description: "e.g. 'pass123' (with user) OR 'access_token' (no user)",
+				},
+			)
+		}
 	case "mattermost":
 		// mattermost://[username@]host[:port][/path]/token[/channel]
 		if s.GetURLField("host") == "" {
@@ -635,28 +655,8 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 				},
 			)
 		}
-	case "matrix":
-		// matrix://user:password@host
-		if s.GetURLField("host") == "" {
-			errs = append(
-				errs,
-				&decode.FieldError{
-					Key:         "host",
-					Description: "e.g. 'matrix.example.com'",
-				},
-			)
-		}
-		if s.GetURLField("password") == "" {
-			errs = append(
-				errs,
-				&decode.FieldError{
-					Key:         "password",
-					Description: "e.g. 'pass123' (with user) OR 'access_token' (no user)",
-				},
-			)
-		}
 	case "ntfy":
-		// ntfy://[username]:[password]@[host][:port][/path]/topic
+		// ntfy://[username]:[password]@[host][:port]/topic
 		if s.GetURLField("topic") == "" {
 			errs = append(
 				errs,
@@ -666,7 +666,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 			)
 		}
 	case "opsgenie":
-		// opsgenie://host[:port][/path]/apiKey
+		// opsgenie://host[:port]/apiKey
 		if s.GetURLField("apikey") == "" {
 			errs = append(
 				errs,
@@ -717,7 +717,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 			)
 		}
 	case "rocketchat":
-		// rocketchat://[username@]host:port[/port]/tokenA/tokenB/channel
+		// rocketchat://[username@]host[:port][/path]/tokenA/tokenB/channel
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
@@ -908,7 +908,7 @@ func (s *Shoutrrr) checkValuesParams() error {
 
 	switch itemType {
 	case "smtp":
-		// smtp://username:password@host:port[/path]/?from=fromAddress&to=recipient1[,recipient2,...]
+		// smtp://username:password@host[:port]/?fromaddress=X&toaddresses=Y[&fromname=X]
 		if s.GetParam("fromaddress") == "" {
 			errs = append(
 				errs,

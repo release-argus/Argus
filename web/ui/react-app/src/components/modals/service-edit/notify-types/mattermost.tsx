@@ -34,18 +34,18 @@ const MATTERMOST = ({
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="URL Fields" />
 				<FieldText
-					colSize={{ xs: 9 }}
+					colSize={{ lg: 6, sm: 9, xs: 9 }}
 					defaultVal={defaults?.url_fields?.host}
 					label="Host"
 					name={`${name}.url_fields.host`}
 					required
 					tooltip={{
-						content: 'e.g. gotify.example.com',
+						content: 'e.g. mattermost.example.com',
 						type: 'string',
 					}}
 				/>
 				<FieldText
-					colSize={{ xs: 3 }}
+					colSize={{ lg: 2, sm: 3, xs: 3 }}
 					defaultVal={defaults?.url_fields?.port}
 					label="Port"
 					name={`${name}.url_fields.port`}
@@ -55,6 +55,7 @@ const MATTERMOST = ({
 					}}
 				/>
 				<FieldText
+					colSize={{ lg: 4, sm: 12 }}
 					defaultVal={defaults?.url_fields?.path}
 					label="Path"
 					name={`${name}.url_fields.path`}
@@ -72,15 +73,6 @@ const MATTERMOST = ({
 					}}
 				/>
 				<FieldText
-					defaultVal={defaults?.url_fields?.channel}
-					label="Channel"
-					name={`${name}.url_fields.channel`}
-					tooltip={{
-						content: 'e.g. releases',
-						type: 'string',
-					}}
-				/>
-				<FieldText
 					defaultVal={defaults?.url_fields?.username}
 					label="Username"
 					name={`${name}.url_fields.username`}
@@ -92,6 +84,16 @@ const MATTERMOST = ({
 					required
 					tooltip={{
 						content: 'WebHook token',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.url_fields?.channel}
+					label="Channel"
+					name={`${name}.url_fields.channel`}
+					tooltip={{
+						content: 'e.g. releases',
 						type: 'string',
 					}}
 				/>

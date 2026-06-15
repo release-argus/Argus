@@ -35,7 +35,7 @@ const GOTIFY = ({
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="URL Fields" />
 				<FieldText
-					colSize={{ xs: 9 }}
+					colSize={{ lg: 6, sm: 9, xs: 9 }}
 					defaultVal={defaults?.url_fields?.host}
 					label="Host"
 					name={`${name}.url_fields.host`}
@@ -46,7 +46,7 @@ const GOTIFY = ({
 					}}
 				/>
 				<FieldText
-					colSize={{ xs: 3 }}
+					colSize={{ lg: 2, sm: 3, xs: 3 }}
 					defaultVal={defaults?.url_fields?.port}
 					label="Port"
 					name={`${name}.url_fields.port`}
@@ -56,6 +56,7 @@ const GOTIFY = ({
 					}}
 				/>
 				<FieldText
+					colSize={{ lg: 4, sm: 12 }}
 					defaultVal={defaults?.url_fields?.path}
 					label="Path"
 					name={`${name}.url_fields.path`}
@@ -73,6 +74,7 @@ const GOTIFY = ({
 					}}
 				/>
 				<FieldText
+					colSize={{ sm: 12 }}
 					defaultVal={defaults?.url_fields?.token}
 					label="Token"
 					name={`${name}.url_fields.token`}

@@ -37,7 +37,7 @@ const IFTTT = ({ name, main }: { name: string; main?: NotifyIFTTTSchema }) => {
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="Params" />
 				<FieldText
-					colSize={{ sm: 12 }}
+					colSize={{ lg: 6, sm: 12 }}
 					defaultVal={defaults?.params?.events}
 					label="Events"
 					name={`${name}.params.events`}
@@ -48,7 +48,7 @@ const IFTTT = ({ name, main }: { name: string; main?: NotifyIFTTTSchema }) => {
 					}}
 				/>
 				<FieldText
-					colSize={{ sm: 12 }}
+					colSize={{ lg: 6, sm: 12 }}
 					defaultVal={defaults?.params?.title}
 					label="Title"
 					name={`${name}.params.title`}

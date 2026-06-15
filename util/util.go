@@ -37,9 +37,9 @@ func StringToBoolPtr(str string) *bool {
 	return &val
 }
 
-// ValueUnlessDefault returns `value` when `condition` differs from the default value for its type,
+// ValueUnlessZero returns `value` when `condition` differs from the default value for its type,
 // otherwise default.
-func ValueUnlessDefault[T comparable](condition T, value T) T {
+func ValueUnlessZero[T comparable](condition T, value T) T {
 	var zero T
 	if condition == zero {
 		return condition

@@ -72,8 +72,8 @@ func TestStringToBoolPtr(t *testing.T) {
 	}
 }
 
-func TestValueUnlessDefault(t *testing.T) {
-	// GIVEN: a value to check and a value we want when it's not default.
+func TestValueUnlessZero(t *testing.T) {
+	// GIVEN: a value to check and a value we want when it's not the zero value.
 	tests := []struct {
 		name  string
 		check string
@@ -96,8 +96,8 @@ func TestValueUnlessDefault(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: ValueUnlessDefault is run on pointer and a value.
-			got := ValueUnlessDefault(tc.check, tc.value)
+			// WHEN: ValueUnlessZero is run on pointer and a value.
+			got := ValueUnlessZero(tc.check, tc.value)
 
 			prefix := fmt.Sprintf(
 				"%s\nValueUnlessDefault(check=%q, value=%q)",
