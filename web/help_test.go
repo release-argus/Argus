@@ -94,7 +94,11 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func getFreePort() (int, error) {
+func getFreePort(t *testing.T) (int, error) {
+	if t != nil {
+		t.Helper()
+	}
+
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return 0, err
@@ -103,7 +107,11 @@ func getFreePort() (int, error) {
 	return ln.Addr().(*net.TCPAddr).Port, nil
 }
 
-func plainDefaults() (*config.Defaults, *config.Defaults) {
+func plainDefaults(t *testing.T) (*config.Defaults, *config.Defaults) {
+	if t != nil {
+		t.Helper()
+	}
+
 	defaults, _ := config.DecodeDefaults("yaml", nil)
 	defaults.Notify = shoutrrr.ShoutrrrsDefaults{}
 
@@ -135,7 +143,7 @@ func testConfig(t *testing.T, path string) (cfg *config.Config) {
 	}
 
 	// Settings.Web.
-	port, err := getFreePort()
+	port, err := getFreePort(t)
 	if err != nil {
 		panic(err)
 	}
@@ -151,7 +159,7 @@ func testConfig(t *testing.T, path string) (cfg *config.Config) {
 	}
 
 	// Defaults.
-	defaults, hardDefaults := plainDefaults()
+	defaults, hardDefaults := plainDefaults(t)
 	cfg.Defaults, cfg.HardDefaults = *defaults, *hardDefaults
 	cfg.WebHook = webhook.WebHooksDefaults{}
 	cfg.Notify = shoutrrr.ShoutrrrsDefaults{}
@@ -185,8 +193,8 @@ func testConfig(t *testing.T, path string) (cfg *config.Config) {
 }
 
 func testService(t *testing.T, id string, svcCfg service.DefaultsConfig) *service.Service {
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// Service.
 	svc := test.Must(t, func() (*service.Service, error) {
@@ -228,7 +236,7 @@ func testService(t *testing.T, id string, svcCfg service.DefaultsConfig) *servic
 					- ["ls", "-lah"]
 				notify:
 					test:
-				`+shoutrrrtest.Shoutrrr(false, false).String("    ")+`
+				`+shoutrrrtest.Shoutrrr(t, false, false).String("    ")+`
 				webhook:
 					test:
 						type: github

@@ -43,7 +43,7 @@ func TestConfig_AddService(t *testing.T) {
 	}{
 		{
 			name:       "New service",
-			newService: testServiceURL("test"),
+			newService: testServiceURL(t, "test"),
 			wantOrder:  []string{"alpha", "bravo", "charlie", "test"},
 			added:      true,
 			dbMessages: 1,
@@ -51,7 +51,7 @@ func TestConfig_AddService(t *testing.T) {
 		{
 			name:       "Replace service",
 			oldService: "bravo",
-			newService: testServiceURL("bravo"),
+			newService: testServiceURL(t, "bravo"),
 			wantOrder:  []string{"alpha", "bravo", "charlie"},
 			added:      true,
 			dbMessages: 1,
@@ -59,28 +59,28 @@ func TestConfig_AddService(t *testing.T) {
 		{
 			name:       "Rename service",
 			oldService: "bravo",
-			newService: testServiceURL("foo"),
+			newService: testServiceURL(t, "foo"),
 			wantOrder:  []string{"alpha", "foo", "charlie"},
 			added:      true,
 			dbMessages: 2, // 1 for change of ID, 1 for change of versions.
 		},
 		{
 			name:       "ID already exists",
-			newService: testServiceURL("alpha"),
+			newService: testServiceURL(t, "alpha"),
 			wantOrder:  []string{"alpha", "bravo", "charlie"},
 			added:      false,
 			dbMessages: 0,
 		},
 		{
 			name:       "Name already exists",
-			newService: testServiceURL("a"),
+			newService: testServiceURL(t, "a"),
 			wantOrder:  []string{"alpha", "bravo", "charlie"},
 			added:      false,
 			dbMessages: 0,
 		},
 		{
 			name:       "Add to nil service map",
-			newService: testServiceURL("test"),
+			newService: testServiceURL(t, "test"),
 			wantOrder:  []string{"test"},
 			added:      true,
 			nilMap:     true,
@@ -288,7 +288,7 @@ func TestConfig_RenameService(t *testing.T) {
 			t.Cleanup(func() { _ = os.Remove(file) })
 			logMu.Lock()
 			cfg := testLoadBasic(t, file)
-			newSVC := testServiceURL(tc.newID)
+			newSVC := testServiceURL(t, tc.newID)
 
 			// WHEN: the service is renamed.
 			cfg.RenameService(tc.oldID, newSVC)

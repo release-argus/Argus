@@ -17,11 +17,15 @@
 package test
 
 import (
+	"testing"
+
 	"github.com/release-argus/Argus/config"
 )
 
 // NilFlags sets all flags to nil in the given config.
-func NilFlags(cfg *config.Config) {
+func NilFlags(t *testing.T, cfg *config.Config) {
+	t.Helper()
+
 	flags := []string{
 		"log.level",
 		"log.timestamps",
@@ -42,7 +46,8 @@ func NilFlags(cfg *config.Config) {
 }
 
 // BareConfig returns a minimal config with no flags set.
-func BareConfig(nilFlags bool) (cfg *config.Config) {
+func BareConfig(t *testing.T, nilFlags bool) (cfg *config.Config) {
+	t.Helper()
 
 	cfg = &config.Config{
 		Settings: config.Settings{
@@ -57,7 +62,7 @@ func BareConfig(nilFlags bool) (cfg *config.Config) {
 
 	// NilFlags can be a RACE condition, so use it conditionally.
 	if nilFlags {
-		NilFlags(cfg)
+		NilFlags(t, cfg)
 	}
 
 	cfg.HardDefaults.Default()

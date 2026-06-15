@@ -24,7 +24,7 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 )
 
-// writeQuoted will write the string `s` to the builder `b` wrapped in backticks.
+// writeQuoted will write the s to b, wrapped in backticks.
 func writeQuoted(b *strings.Builder, s string) {
 	b.WriteByte('`')
 	b.WriteString(s)
@@ -60,12 +60,8 @@ func (api *api) Handler(ctx context.Context) {
 	}
 }
 
-// updateRow upserts the given cells for serviceID in the status table.
-func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
-	if len(cells) == 0 {
-		return
-	}
-
+// buildUpdateRowStatement builds the upsert SQL statement and params for updating a serviceID row with the given cells.
+func buildUpdateRowStatement(serviceID string, cells []dbtype.Cell) (string, []any) {
 	// The columns to update.
 	var (
 		columnsBuilder strings.Builder
@@ -99,16 +95,26 @@ func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
 	}
 
 	// The SQL statement.
-	//#nosec G201 -- setVarsBuilder is built from trusted sources.
-	sqlStmt := fmt.Sprintf(`
-			INSERT INTO status (%s)
-			VALUES (%s)
-			ON CONFLICT(`+"`id`"+`) DO UPDATE SET %s
-		`,
+	//#nosec G201 -- columnsBuilder, placeholders, and updateBuilder are built from trusted sources.
+	sqlStmt := fmt.Sprintf(
+		`INSERT INTO status (%s) `+
+			`VALUES (%s) `+
+			`ON CONFLICT("id") DO UPDATE SET %s`,
 		columnsBuilder.String(),
 		placeholders.String(),
 		updateBuilder.String(),
 	)
+
+	return sqlStmt, params
+}
+
+// updateRow upserts the given cells for serviceID in the status table.
+func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
+	if len(cells) == 0 {
+		return
+	}
+
+	sqlStmt, params := buildUpdateRowStatement(serviceID, cells)
 
 	if logx.IsLevel("DEBUG") {
 		logx.Debug(

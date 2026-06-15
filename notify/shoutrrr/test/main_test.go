@@ -67,7 +67,7 @@ func TestShoutrrr(t *testing.T) {
 			}
 
 			// WHEN: Shoutrrr is called.
-			got := Shoutrrr(tc.failing, tc.selfSignedCert)
+			got := Shoutrrr(t, tc.failing, tc.selfSignedCert)
 
 			prefix := fmt.Sprintf(
 				"%s\nTestShoutrrr(failing: %t, selfSigned: %t)",

@@ -47,9 +47,9 @@ import (
 )
 
 func TestService_Marshal(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	tests := []struct {
 		name               string
@@ -353,7 +353,7 @@ func TestService_Marshal(t *testing.T) {
 }
 
 func TestService_Unmarshal(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
+	svcCfg := plainDefaultsConfig(t)
 
 	// GIVEN: data to unmarshal into a Service.
 	tests := []struct {
@@ -513,7 +513,7 @@ func TestService_Unmarshal(t *testing.T) {
 }
 
 func TestService_UnmarshalLatestVersion(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
+	svcCfg := plainDefaultsConfig(t)
 
 	// GIVEN: data to unmarshal into LatestVersion.
 	tests := []struct {
@@ -684,7 +684,7 @@ func TestService_UnmarshalLatestVersion(t *testing.T) {
 }
 
 func TestService_UnmarshalDeployedVersion(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
+	svcCfg := plainDefaultsConfig(t)
 
 	// GIVEN: data to unmarshal into DeployedVersion.
 	tests := []struct {
@@ -1025,9 +1025,9 @@ func TestService_String(t *testing.T) {
 }
 
 func TestService_Summary(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// GIVEN: a Service.
 	tests := []struct {

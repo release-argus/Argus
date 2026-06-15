@@ -140,9 +140,9 @@ func TestService_IconURL(t *testing.T) {
 
 func TestService_Init(t *testing.T) {
 	// GIVEN: defaults.
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// AND: a Service.
 	tests := []struct {
@@ -241,7 +241,7 @@ func TestService_Init(t *testing.T) {
 							- - ls
 						webhook:
 							test:
-						`+whtest.WebHook(false, false, false).String(".   ")+`
+						`+whtest.WebHook(t, false, false, false).String(".   ")+`
 					`)),
 					"Init",
 					svcCfg, notifyCfg, whCfg,
@@ -251,7 +251,7 @@ func TestService_Init(t *testing.T) {
 		{
 			name: "service with notifies from defaults",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig()
+				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.Notify = map[string]struct{}{
 					"foo": {},
 				}
@@ -270,7 +270,7 @@ func TestService_Init(t *testing.T) {
 		{
 			name: "service with notifies not from defaults",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig()
+				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.Notify = map[string]struct{}{
 					"foo": {},
 				}
@@ -291,7 +291,7 @@ func TestService_Init(t *testing.T) {
 		{
 			name: "service with commands from defaults",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig()
+				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.Command = command.Commands{
 					{"ls"},
 				}
@@ -310,7 +310,7 @@ func TestService_Init(t *testing.T) {
 		{
 			name: "service with commands not from defaults",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig()
+				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.Command = command.Commands{
 					{"ls"},
 				}
@@ -331,7 +331,7 @@ func TestService_Init(t *testing.T) {
 		{
 			name: "service with webhooks from defaults",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig()
+				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.WebHook = map[string]struct{}{
 					"bar": {},
 				}
@@ -350,7 +350,7 @@ func TestService_Init(t *testing.T) {
 		{
 			name: "service with webhooks not from defaults",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig()
+				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.WebHook = map[string]struct{}{
 					"bar": {},
 				}
@@ -362,7 +362,7 @@ func TestService_Init(t *testing.T) {
 							url: `+test.ArgusGitHubRepo+`
 						webhook:
 							test:
-						`+whtest.WebHook(false, false, false).String(".   ")+`
+						`+whtest.WebHook(t, false, false, false).String(".   ")+`
 					`)),
 					"Init",
 					svcCfg, notifyCfg, whCfg,
@@ -372,7 +372,7 @@ func TestService_Init(t *testing.T) {
 		{
 			name: "service with webhooks/commands from defaults and notify overridden",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig()
+				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.Notify = map[string]struct{}{
 					"foo": {},
 				}
@@ -617,9 +617,9 @@ func TestService_Init(t *testing.T) {
 }
 
 func TestService_InitMetrics__ResetMetrics__DeleteMetrics(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// GIVEN: a Service.
 	tests := []struct {
@@ -664,8 +664,8 @@ func TestService_InitMetrics__ResetMetrics__DeleteMetrics(t *testing.T) {
 			activeStates := []bool{true, false}
 			for _, active := range activeStates {
 				testCommand := command.Command{"ls"}
-				testNotify := shoutrrrtest.Shoutrrr(false, false)
-				testWebHook := whtest.WebHook(false, false, false)
+				testNotify := shoutrrrtest.Shoutrrr(t, false, false)
+				testWebHook := whtest.WebHook(t, false, false, false)
 				svc := test.Must(t, func() (s *Service, err error) {
 					return DecodeService(
 						"yaml", []byte(test.TrimYAML(`

@@ -18,6 +18,7 @@ package test
 
 import (
 	"strings"
+	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
@@ -26,7 +27,7 @@ import (
 )
 
 // Shoutrrr returns a shoutrrr instance for testing.
-func Shoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
+func Shoutrrr(t *testing.T, failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 	url := test.ValidCertNoProtocol
 	if selfSignedCert {
 		url = strings.Replace(url, "valid", "invalid", 1)

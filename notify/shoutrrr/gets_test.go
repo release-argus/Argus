@@ -23,6 +23,7 @@ import (
 
 	"github.com/release-argus/Argus/internal/test"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestShoutrrr_GetType(t *testing.T) {
@@ -856,7 +857,7 @@ func TestBase_X_Option(t *testing.T) {
 
 			// AND: a Base with this Options map.
 			base := Base{
-				Options: values,
+				Options: util.CopyMap(values),
 			}
 
 			// WHEN: GetOption is called.
@@ -928,7 +929,7 @@ func TestBase_X_URLField(t *testing.T) {
 
 			// AND: a Base with this URLFields map.
 			base := Base{
-				URLFields: values,
+				URLFields: util.CopyMap(values),
 			}
 
 			// WHEN: GetURLField is called.
@@ -1000,7 +1001,7 @@ func TestBase_X_Param(t *testing.T) {
 
 			// AND: a Base with this Params map.
 			base := Base{
-				Params: values,
+				Params: util.CopyMap(values),
 			}
 
 			// WHEN: GetParam is called.

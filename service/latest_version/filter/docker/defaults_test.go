@@ -877,7 +877,7 @@ func TestDefaults_Default(t *testing.T) {
 }
 
 func TestDefaults_Defaults(t *testing.T) {
-	_, hardDefaults := plainDefaults()
+	_, hardDefaults := plainDefaults(t)
 	// GIVEN: a Defaults.
 	tests := []struct {
 		name     string
@@ -902,7 +902,7 @@ func TestDefaults_Defaults(t *testing.T) {
 			t.Parallel()
 
 			// AND: Those defaults have no Defaults.
-			defaults, _ := plainDefaults()
+			defaults, _ := plainDefaults(t)
 			defaults.Defaults = nil
 
 			// WHEN: Defaults is accessed on it before it is set.
@@ -1135,7 +1135,7 @@ func TestGetRegistryDefaults(t *testing.T) {
 			t.Parallel()
 
 			// AND: a Defaults struct.
-			_, defaults := plainDefaults()
+			_, defaults := plainDefaults(t)
 
 			var want RegistryDefaults
 			switch tc.dType {
@@ -1195,7 +1195,7 @@ func TestGetRegistryDefaults_NilDefaults(t *testing.T) {
 			t.Parallel()
 
 			// AND: a Defaults struct.
-			_, defaults := plainDefaults()
+			_, defaults := plainDefaults(t)
 
 			switch tc.dType {
 			case "ghcr":

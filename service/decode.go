@@ -15,7 +15,7 @@
 package service
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/notify/shoutrrr"
@@ -98,7 +98,7 @@ func DecodeService(
 	if err := decode.Unmarshal(format, data, &field); err != nil {
 		if id != "" {
 			return nil, &decode.KeyFieldError{
-				Key: fmt.Sprintf("%q", field.ID),
+				Key: strconv.Quote(field.ID),
 				Err: err,
 			}
 		}
@@ -150,7 +150,7 @@ func ApplyOverrides(
 	// Apply overrides.
 	if err := decode.Unmarshal(format, data, target); err != nil {
 		return nil, &decode.KeyFieldError{
-			Key: fmt.Sprintf("%q", id),
+			Key: strconv.Quote(id),
 			Err: err,
 		}
 	}

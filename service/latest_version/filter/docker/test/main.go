@@ -27,11 +27,9 @@ import (
 const packageName = "docker.test"
 
 // GetDefaultOfDockerType returns the registry defaults for dType from defaults.
-func GetDefaultOfDockerType(
-	t *testing.T,
-	dType string,
-	defaults *docker.Defaults,
-) (docker.RegistryDefaults, error) {
+func GetDefaultOfDockerType(t *testing.T, dType string, defaults *docker.Defaults) (docker.RegistryDefaults, error) {
+	t.Helper()
+
 	switch dType {
 	case "ghcr":
 		return defaults.Registry.GHCR, nil

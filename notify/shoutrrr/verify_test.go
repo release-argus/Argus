@@ -97,7 +97,7 @@ func TestShoutrrr_TestSend(t *testing.T) {
 }
 
 func TestShoutrrrs_CheckValues(t *testing.T) {
-	notifyCfg := plainConfig()
+	notifyCfg := plainConfig(t)
 
 	// GIVEN: Shoutrrrs.
 	tests := []struct {

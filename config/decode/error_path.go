@@ -25,6 +25,10 @@ type KeyFieldError struct {
 }
 
 // Error implements the [error] interface.
+//
+// Output format:
+//
+//	KEY: ERR
 func (e *KeyFieldError) Error() string {
 	return fmt.Sprintf(
 		"%s: %v",

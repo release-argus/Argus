@@ -175,7 +175,7 @@ func TestRequire_IsZero(t *testing.T) {
 }
 
 func TestRequire_String(t *testing.T) {
-	defaults, _ := plainDefaults()
+	defaults, _ := plainDefaults(t)
 
 	tests := []struct {
 		name    string
@@ -463,7 +463,7 @@ func TestRequire_Copy(t *testing.T) {
 }
 
 func TestRequire_Init(t *testing.T) {
-	defaults, _ := plainDefaults()
+	defaults, _ := plainDefaults(t)
 
 	// GIVEN: a Require, JLog and a Status.
 	tests := []struct {
@@ -767,7 +767,7 @@ func TestRequire_CheckValues(t *testing.T) {
 }
 
 func TestRequire_Inherit(t *testing.T) {
-	defaults, _ := plainDefaults()
+	defaults, _ := plainDefaults(t)
 
 	type overrides struct {
 		overrides string

@@ -1573,7 +1573,7 @@ func TestSettings_Default(t *testing.T) {
 
 func TestSettings_GetStrings(t *testing.T) {
 	// GIVEN: different flags/env vars are set that may impact the result of .Default().
-	settings := testSettings()
+	settings := testSettings(t)
 	tests := []struct {
 		name       string
 		flag       **string
@@ -1750,7 +1750,7 @@ func TestSettings_GetStrings(t *testing.T) {
 			defer releaseStdout()
 			test.SetEnv(t, tc.env)
 
-			settings = testSettings()
+			settings = testSettings(t)
 			if tc.flag != nil {
 				had := *tc.flag
 				*tc.flag = tc.flagVal
@@ -1790,7 +1790,7 @@ func TestSettings_GetStrings(t *testing.T) {
 
 func TestSettings_GetBool(t *testing.T) {
 	// GIVEN: vars set in dif	// GIVEN: different flags/env vars are set that may impact the result of .Default().
-	settings := testSettings()
+	settings := testSettings(t)
 	tests := []struct {
 		name       string
 		flag       **bool

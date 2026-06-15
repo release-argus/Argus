@@ -43,7 +43,7 @@ func testVerify(t *testing.T) *Config {
 
 	cfg.Order = []string{"test"}
 
-	defaults, hardDefaults := plainDefaults()
+	defaults, hardDefaults := plainDefaults(t)
 	cfg.Defaults = *defaults
 	cfg.Defaults.Default()
 	cfg.HardDefaults = *hardDefaults
@@ -86,9 +86,9 @@ func testVerify(t *testing.T) *Config {
 }
 
 func TestConfig_CheckValues(t *testing.T) {
-	svcCfg := svctest.PlainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// GIVEN: variations of Config to test.
 	tests := []struct {
@@ -110,7 +110,7 @@ func TestConfig_CheckValues(t *testing.T) {
 				Settings: Settings{
 					SettingsBase: SettingsBase{
 						Web: WebSettings{
-							CertFile: "doesnotexist.pem",
+							CertFile: "does_not_exist.pem",
 						},
 					},
 				},
@@ -118,7 +118,7 @@ func TestConfig_CheckValues(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^settings:
 					web:
-						cert_file: .*doesnotexist.pem.* no such file.*`,
+						cert_file: .*does_not_exist.pem.* no such file.*`,
 			),
 		},
 		{

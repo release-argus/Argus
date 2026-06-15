@@ -67,7 +67,7 @@ func TestRequireDefaults_IsZero(t *testing.T) {
 
 func TestRequireDefaults_SetDefaults(t *testing.T) {
 	// GIVEN: RequireDefaults, and RequireDefaults to give it.
-	defaults, _ := plainDefaults()
+	defaults, _ := plainDefaults(t)
 	req, _ := DecodeDefaults("yaml", nil)
 
 	// WHEN: SetDefaults is called.

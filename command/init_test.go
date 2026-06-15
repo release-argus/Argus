@@ -71,7 +71,7 @@ func TestNewController(t *testing.T) {
 				{"date", "+%m-%d-%Y"},
 			},
 			shoutrrrNotifiers: shoutrrr.Shoutrrrs{
-				"test": shoutrrrtest.Shoutrrr(false, false),
+				"test": shoutrrrtest.Shoutrrr(t, false, false),
 			},
 		},
 		{

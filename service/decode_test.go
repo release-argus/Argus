@@ -30,9 +30,9 @@ import (
 )
 
 func TestDecodeServices(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// GIVEN: data in a given format to Decode into Services.
 	tests := []struct {
@@ -322,9 +322,9 @@ func TestDecodeServices__MarshalError(t *testing.T) {
 	t.Cleanup(func() { marshalServiceRaw = original })
 
 	// AND: Service, Notify and WebHook config defaults.
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// AND: data to decode.
 	data := `{"service1": {"comment": "test"}}`
@@ -353,8 +353,8 @@ func TestDecodeServices__MarshalError(t *testing.T) {
 }
 
 func TestDecodeService(t *testing.T) {
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// GIVEN: data in a given format to Decode into a Service.
 	tests := []struct {
@@ -862,7 +862,7 @@ func TestDecodeService(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			svcCfg := plainDefaultsConfig()
+			svcCfg := plainDefaultsConfig(t)
 			if tc.emptyHardDefaults {
 				svcCfg.Hard = &Defaults{}
 				svcCfg.Soft.SetDefaults(svcCfg.Hard)
@@ -909,9 +909,9 @@ func TestDecodeService(t *testing.T) {
 }
 
 func TestApplyOverrides(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	type args struct {
 		format string
@@ -1029,16 +1029,16 @@ func TestApplyOverrides(t *testing.T) {
 							`+dvtest.Lookup(t, "url", false, "").String("  ")+`
 							notify:
 								"1":
-							`+shoutrrrtest.Shoutrrr(true, true).String("    ")+`
+							`+shoutrrrtest.Shoutrrr(t, true, true).String("    ")+`
 								"2":
-							`+shoutrrrtest.Shoutrrr(true, false).String("    ")+`
+							`+shoutrrrtest.Shoutrrr(t, true, false).String("    ")+`
 							command:
 							  - ["ls", "-lah"]
 							webhook:
 								"a":
-							`+whtest.WebHook(false, true, true).String("    ")+`
+							`+whtest.WebHook(t, false, true, true).String("    ")+`
 								"b":
-							`+whtest.WebHook(false, false, true).String("    ")+`
+							`+whtest.WebHook(t, false, false, true).String("    ")+`
 						`)),
 						"latest_version - change fields",
 						svcCfg, notifyCfg, whCfg,
@@ -1058,14 +1058,14 @@ func TestApplyOverrides(t *testing.T) {
 				deployed_version:` + "\n" +
 				dvtest.Lookup(t, "url", false, "").String("  ") +
 				`notify:
-					'1':` + "\n" + shoutrrrtest.Shoutrrr(true, true).String("    ") +
-				`					'2':` + "\n" + shoutrrrtest.Shoutrrr(true, false).String("    ") +
+					'1':` + "\n" + shoutrrrtest.Shoutrrr(t, true, true).String("    ") +
+				`					'2':` + "\n" + shoutrrrtest.Shoutrrr(t, true, false).String("    ") +
 				`command:
 					- - ls
 					  - -lah
 				webhook:
-					a:` + "\n" + whtest.WebHook(false, true, true).String("    ") +
-				`					b:` + "\n" + whtest.WebHook(false, false, true).String("    "),
+					a:` + "\n" + whtest.WebHook(t, false, true, true).String("    ") +
+				`					b:` + "\n" + whtest.WebHook(t, false, false, true).String("    "),
 			),
 			errRegex: `^$`,
 		},
@@ -1122,17 +1122,17 @@ func TestApplyOverrides(t *testing.T) {
 								json: foo
 							notify:
 								"1":
-							`+shoutrrrtest.Shoutrrr(true, true).String("    ")+`
+							`+shoutrrrtest.Shoutrrr(t, true, true).String("    ")+`
 								"2":
-							`+shoutrrrtest.Shoutrrr(true, false).String("    ")+`
+							`+shoutrrrtest.Shoutrrr(t, true, false).String("    ")+`
 							command:
 							  - ["ls", "-lah"]
 								- ["docker", "compose", "up"]
 							webhook:
 								"a":
-							`+whtest.WebHook(false, true, true).String("    ")+`
+							`+whtest.WebHook(t, false, true, true).String("    ")+`
 								"b":
-							`+whtest.WebHook(false, false, true).String("    ")+`
+							`+whtest.WebHook(t, false, false, true).String("    ")+`
 						`)),
 						"deployed_version - change fields",
 						svcCfg, notifyCfg, whCfg,
@@ -1154,8 +1154,8 @@ func TestApplyOverrides(t *testing.T) {
 					allow_invalid_certs: true
 					json: foo
 				notify:
-					'1':` + "\n" + shoutrrrtest.Shoutrrr(true, true).String("    ") +
-				`					'2':` + "\n" + shoutrrrtest.Shoutrrr(true, false).String("    ") +
+					'1':` + "\n" + shoutrrrtest.Shoutrrr(t, true, true).String("    ") +
+				`					'2':` + "\n" + shoutrrrtest.Shoutrrr(t, true, false).String("    ") +
 				`command:
 					- - ls
 					  - -lah
@@ -1163,8 +1163,8 @@ func TestApplyOverrides(t *testing.T) {
 					  - compose
 					  - up
 				webhook:
-					a:` + "\n" + whtest.WebHook(false, true, true).String("    ") +
-				`					b:` + "\n" + whtest.WebHook(false, false, true).String("    "),
+					a:` + "\n" + whtest.WebHook(t, false, true, true).String("    ") +
+				`					b:` + "\n" + whtest.WebHook(t, false, false, true).String("    "),
 			),
 			errRegex: `^$`,
 		},

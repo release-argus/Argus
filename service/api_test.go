@@ -218,9 +218,9 @@ func TestOldSecretRefs_UnmarshalJSON(t *testing.T) {
 }
 
 func TestFromPayload(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	type fromDefaults struct {
 		command bool
@@ -1455,9 +1455,9 @@ func TestFromPayload(t *testing.T) {
 }
 
 func TestFromPayload__NoServiceCreated(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// GIVEN: the function that decodes a Service payload returns nil.
 	original := decodeServiceFromPayload
@@ -1504,9 +1504,9 @@ func TestFromPayload__NoServiceCreated(t *testing.T) {
 }
 
 func TestFromPayload_ReadFromFail(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 	// GIVEN: an invalid payload.
 	payloadStr := "this is a long payload"
 	payload := io.NopCloser(bytes.NewReader([]byte(payloadStr)))
@@ -1532,9 +1532,9 @@ func TestFromPayload_ReadFromFail(t *testing.T) {
 }
 
 func TestService_CheckFetches(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 	id := "TestService_CheckFetches"
 
 	// GIVEN: a Service.
@@ -1721,9 +1721,9 @@ func TestService_CheckFetches(t *testing.T) {
 }
 
 func TestService_GiveSecrets(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 	id := "TestService_GiveSecrets"
 
 	type statusTests struct {
@@ -3916,7 +3916,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 }
 
 func TestService_GiveSecretsNotify(t *testing.T) {
-	notifyCfg := shoutrrrtest.PlainConfig()
+	notifyCfg := shoutrrrtest.PlainConfig(t)
 
 	// GIVEN: a NotifySlice that may have secrets in it referencing those in another NotifySliceSlice.
 	tests := []struct {
@@ -5085,9 +5085,9 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 }
 
 func TestService_GiveSecretsWebHook(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 	// GIVEN: a WebHookSlice that may have secrets in it referencing those in another WebHookSliceSlice.
 	tests := []struct {
 		name                  string

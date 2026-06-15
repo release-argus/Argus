@@ -20,7 +20,7 @@ import "testing"
 
 func TestPlainConfig(t *testing.T) {
 	// WHEN: PlainConfig is called.
-	notifyCfg := PlainConfig()
+	notifyCfg := PlainConfig(t)
 
 	// THEN: It returns a set of defaults.
 	if notifyCfg.Root == nil || notifyCfg.Defaults == nil || notifyCfg.HardDefaults == nil {

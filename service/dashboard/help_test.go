@@ -16,10 +16,14 @@
 
 package dashboard
 
+import "testing"
+
 var packageName = "service.dashboard"
 
 // plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig() DefaultsConfig {
+func plainDefaultsConfig(t *testing.T) DefaultsConfig {
+	t.Helper()
+
 	defaults, _ := DecodeDefaults("yaml", nil)
 	hardDefaults, _ := DecodeDefaults("yaml", nil)
 	hardDefaults.Default()

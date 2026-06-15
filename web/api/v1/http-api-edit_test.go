@@ -313,8 +313,8 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 }
 
 func TestHTTP_LatestVersionRefresh(t *testing.T) {
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	type wants struct {
 		bodyRegex                      string
@@ -339,7 +339,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			name:   "no changes",
 			params: map[string]string{},
 			svc: test.Must(t, func() (*service.Service, error) {
-				svcCfg := svctest.PlainDefaultsConfig()
+				svcCfg := svctest.PlainDefaultsConfig(t)
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						options:
@@ -366,7 +366,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				"semantic_versioning": "null",
 			},
 			svc: test.Must(t, func() (*service.Service, error) {
-				svcCfg := svctest.PlainDefaultsConfig()
+				svcCfg := svctest.PlainDefaultsConfig(t)
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						options:
@@ -391,7 +391,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				"semantic_versioning": "false",
 			},
 			svc: test.Must(t, func() (*service.Service, error) {
-				svcCfg := svctest.PlainDefaultsConfig()
+				svcCfg := svctest.PlainDefaultsConfig(t)
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						options:
@@ -418,7 +418,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				"semantic_versioning": "true",
 			},
 			svc: test.Must(t, func() (*service.Service, error) {
-				svcCfg := svctest.PlainDefaultsConfig()
+				svcCfg := svctest.PlainDefaultsConfig(t)
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						options:
@@ -447,7 +447,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				}`),
 			},
 			svc: test.Must(t, func() (*service.Service, error) {
-				svcCfg := svctest.PlainDefaultsConfig()
+				svcCfg := svctest.PlainDefaultsConfig(t)
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						options:
@@ -530,7 +530,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				),
 			},
 			svc: test.Must(t, func() (*service.Service, error) {
-				svcCfg := svctest.PlainDefaultsConfig()
+				svcCfg := svctest.PlainDefaultsConfig(t)
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						options:
@@ -567,7 +567,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				),
 			},
 			svc: test.Must(t, func() (*service.Service, error) {
-				svcCfg := svctest.PlainDefaultsConfig()
+				svcCfg := svctest.PlainDefaultsConfig(t)
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						options:
@@ -689,8 +689,8 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 }
 
 func TestHTTP_DeployedVersionRefresh(t *testing.T) {
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	type wants struct {
 		bodyRegex       string
@@ -740,7 +740,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			name:   "no changes",
 			params: map[string]string{},
 			svc: test.Must(t, func() (*service.Service, error) {
-				svcCfg := svctest.PlainDefaultsConfig()
+				svcCfg := svctest.PlainDefaultsConfig(t)
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						options:
@@ -770,7 +770,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"semantic_versioning": "null",
 			},
 			svc: test.Must(t, func() (*service.Service, error) {
-				svcCfg := svctest.PlainDefaultsConfig()
+				svcCfg := svctest.PlainDefaultsConfig(t)
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						options:
@@ -795,7 +795,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"semantic_versioning": "true",
 			},
 			svc: test.Must(t, func() (*service.Service, error) {
-				svcCfg := svctest.PlainDefaultsConfig()
+				svcCfg := svctest.PlainDefaultsConfig(t)
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						options:
@@ -821,7 +821,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"semantic_versioning": "false",
 			},
 			svc: test.Must(t, func() (*service.Service, error) {
-				svcCfg := svctest.PlainDefaultsConfig()
+				svcCfg := svctest.PlainDefaultsConfig(t)
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						options:
@@ -1045,9 +1045,9 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 }
 
 func TestHTTP_ServiceDetail(t *testing.T) {
-	svcCfg := svctest.PlainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	type wants struct {
 		bodyRegex  string
@@ -1778,9 +1778,9 @@ func TestHTTP_ServiceEdit__Create(t *testing.T) {
 }
 
 func TestHTTP_ServiceEdit__Edit(t *testing.T) {
-	svcCfg := svctest.PlainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	type wants struct {
 		bodyRegex                      string
@@ -2140,9 +2140,9 @@ func TestHTTP_ServiceEdit__Edit(t *testing.T) {
 }
 
 func TestHTTP_ServiceEdit__Edit__Secrets(t *testing.T) {
-	svcCfg := svctest.PlainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 	type wants struct {
 		statusCode  int
 		serviceYAML string
@@ -2693,7 +2693,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "config.yml")
 	api := testAPI(t, file)
 
-	validNotify := shoutrrrtest.Shoutrrr(false, false)
+	validNotify := shoutrrrtest.Shoutrrr(t, false, false)
 	api.Config.Notify = shoutrrr.ShoutrrrsDefaults{}
 	options := util.CopyMap(validNotify.Options)
 	params := util.CopyMap(validNotify.Params)
@@ -2703,8 +2703,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		options, urlFields, params,
 	)
 	api.Config.Service["test"].Notify = map[string]*shoutrrr.Shoutrrr{
-		"test":    shoutrrrtest.Shoutrrr(false, false),
-		"no_main": shoutrrrtest.Shoutrrr(false, false),
+		"test":    shoutrrrtest.Shoutrrr(t, false, false),
+		"no_main": shoutrrrtest.Shoutrrr(t, false, false),
 	}
 	tests := []struct {
 		name        string

@@ -26,7 +26,7 @@ import (
 )
 
 func TestDecode(t *testing.T) {
-	defaults, _ := plainDefaults()
+	defaults, _ := plainDefaults(t)
 
 	// GIVEN: data in a given format to Decode into a Registry.
 	tests := []struct {
@@ -155,7 +155,7 @@ func TestDecode_UnknownStructType(t *testing.T) {
 	}
 	RegistryMapInheritable = polymorphic.ToInheritableMap(rMap)
 
-	defaults, _ := plainDefaults()
+	defaults, _ := plainDefaults(t)
 
 	// WHEN: We Decode() with data that resolves to this non-Registry type.
 	data := "type: test"
@@ -180,7 +180,7 @@ func TestDecode_UnknownStructType(t *testing.T) {
 }
 
 func TestApplyOverrides(t *testing.T) {
-	defaults, _ := plainDefaults()
+	defaults, _ := plainDefaults(t)
 
 	tests := []struct {
 		name        string
@@ -487,7 +487,7 @@ func TestApplyOverrides_UnknownStructType(t *testing.T) {
 	}
 	RegistryMapInheritable = polymorphic.ToInheritableMap(rMap)
 
-	defaults, _ := plainDefaults()
+	defaults, _ := plainDefaults(t)
 
 	// WHEN: We ApplyOverrides() with data that resolves to this non-Registry type.
 	data := "type: test"

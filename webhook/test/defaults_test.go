@@ -20,12 +20,12 @@ import "testing"
 
 func TestPlainConfig(t *testing.T) {
 	// WHEN: PlainConfig is called.
-	whCfg := PlainConfig()
+	whCfg := PlainConfig(t)
 
 	// THEN: It returns a set of defaults.
 	if whCfg.Root == nil || whCfg.Defaults == nil || whCfg.HardDefaults == nil {
 		t.Fatalf(
-			"%s\nPlainConfig() returned nil, root: %v, defaults: %v, hardDefaults: %v",
+			"%s\nPlainConfig(t) returned nil, root: %v, defaults: %v, hardDefaults: %v",
 			packageName, whCfg.Root, whCfg.Defaults, whCfg.HardDefaults,
 		)
 	}

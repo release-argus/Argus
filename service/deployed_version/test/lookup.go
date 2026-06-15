@@ -52,6 +52,8 @@ func (f *MockLookup) Track()                                      {}
 
 // Lookup decodes and validates a deployed version lookup of the given type for tests.
 func Lookup(t *testing.T, typ string, fail bool, version string) (dv deployedver.Lookup) {
+	t.Helper()
+
 	dvCfg := PlainDefaultsConfig(t)
 
 	switch typ {
@@ -81,6 +83,8 @@ func Lookup(t *testing.T, typ string, fail bool, version string) (dv deployedver
 
 // testManual builds a manual deployed version lookup for tests.
 func testManual(t *testing.T, version string) deployedver.Lookup {
+	t.Helper()
+
 	dvCfg := PlainDefaultsConfig(t)
 
 	svcStatus, _ := statustest.New("yaml", nil)
@@ -100,6 +104,8 @@ func testManual(t *testing.T, version string) deployedver.Lookup {
 
 // testWeb builds a URL deployed version lookup for tests.
 func testWeb(t *testing.T, fail bool) deployedver.Lookup {
+	t.Helper()
+
 	dvCfg := PlainDefaultsConfig(t)
 
 	svcStatus, _ := statustest.New("yaml", nil)

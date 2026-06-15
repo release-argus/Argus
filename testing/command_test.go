@@ -33,9 +33,9 @@ import (
 )
 
 func TestCommandTest(t *testing.T) {
-	svcCfg := svctest.PlainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// GIVEN: a Config with a Service containing a Command.
 	tests := []struct {

@@ -44,8 +44,10 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testOptions() *Options {
-	optCfg := plainDefaultsConfig()
+func testOptions(t *testing.T) *Options {
+	t.Helper()
+
+	optCfg := plainDefaultsConfig(t)
 
 	o, _ := Decode(
 		"yaml", []byte(test.TrimYAML(`
@@ -59,7 +61,9 @@ func testOptions() *Options {
 	return o
 }
 
-func testDefaults() *Defaults {
+func testDefaults(t *testing.T) *Defaults {
+	t.Helper()
+
 	defaults, _ := DecodeDefaults(
 		"yaml", []byte(test.TrimYAML(`
 			interval: 1h
@@ -70,7 +74,9 @@ func testDefaults() *Defaults {
 }
 
 // plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig() DefaultsConfig {
+func plainDefaultsConfig(t *testing.T) DefaultsConfig {
+	t.Helper()
+
 	defaults := Defaults{}
 	hardDefaults := Defaults{}
 	hardDefaults.Default()

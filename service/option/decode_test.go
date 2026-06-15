@@ -114,7 +114,7 @@ func TestDecodeDefaults(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
-	optCfg := plainDefaultsConfig()
+	optCfg := plainDefaultsConfig(t)
 
 	// GIVEN: data in a given format to Decode into Options.
 	tests := []struct {

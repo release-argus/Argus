@@ -223,7 +223,7 @@ func TestHTTP_SetupRoutesAPI__DisableRoutes(t *testing.T) {
 				}
 				name := strings.Join(disabledRoutes, ";")
 				t.Run(name, func(t *testing.T) {
-					cfg := config_test.BareConfig(false)
+					cfg := config_test.BareConfig(t, false)
 					// Give values.
 					cfg.Defaults.Default()
 					cfg.WebHook = make(webhook.WebHooksDefaults)
@@ -386,7 +386,7 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := config_test.BareConfig(true)
+			cfg := config_test.BareConfig(t, true)
 			api := NewAPI(cfg)
 			api.SetupRoutesNodeJS()
 			ts := httptest.NewServer(api.Router)
@@ -454,7 +454,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 
-			cfg := config_test.BareConfig(true)
+			cfg := config_test.BareConfig(t, true)
 			cfg.Settings.Web.Favicon = testFaviconSettings(tc.urlPNG, tc.urlSVG)
 			api := NewAPI(cfg)
 			api.SetupRoutesFavicon()

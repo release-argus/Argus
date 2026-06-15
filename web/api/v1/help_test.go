@@ -180,9 +180,9 @@ func testService(
 	if t != nil {
 		t.Helper()
 	}
-	svcCfg := svctest.PlainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	svc := test.Must(t, func() (*service.Service, error) {
 		return service.DecodeService(

@@ -170,6 +170,88 @@ func TestAPI_Handler__Fail(t *testing.T) {
 	<-logx.ExitCodeChannel()
 }
 
+func TestBuildUpdateRowStatement(t *testing.T) {
+	// GIVEN: a serviceID and a set of cells to upsert.
+	tests := []struct {
+		name       string
+		serviceID  string
+		cells      []dbtype.Cell
+		wantSQL    string
+		wantParams []any
+	}{
+		{
+			name:      "single cell",
+			serviceID: "service1",
+			cells: []dbtype.Cell{
+				{Column: "latest_version", Value: "1.2.3"},
+			},
+			wantSQL: `` +
+				"INSERT INTO status (`id`,`latest_version`) " +
+				`VALUES (?,?) ` +
+				`ON CONFLICT("id") DO UPDATE SET ` +
+				"`latest_version` = excluded.`latest_version`",
+			wantParams: []any{"service1", "1.2.3"},
+		},
+		{
+			name:      "multiple cells",
+			serviceID: "service2",
+			cells: []dbtype.Cell{
+				{Column: "latest_version", Value: "1.2.3"},
+				{Column: "deployed_version", Value: "1.2.2"},
+				{Column: "deployed_version_timestamp", Value: "2026-06-15T00:00:00Z"},
+			},
+			wantSQL: `` +
+				"INSERT INTO status (`id`,`latest_version`,`deployed_version`,`deployed_version_timestamp`) " +
+				`VALUES (?,?,?,?) ` +
+				`ON CONFLICT("id") DO UPDATE SET ` +
+				"`latest_version` = excluded.`latest_version`," +
+				"`deployed_version` = excluded.`deployed_version`," +
+				"`deployed_version_timestamp` = excluded.`deployed_version_timestamp`",
+			wantParams: []any{"service2", "1.2.3", "1.2.2", "2026-06-15T00:00:00Z"},
+		},
+		{
+			name:      "empty cells",
+			serviceID: "service4",
+			cells:     []dbtype.Cell{},
+			wantSQL: `` +
+				"INSERT INTO status (`id`) " +
+				`VALUES (?) ` +
+				`ON CONFLICT("id") DO UPDATE SET `,
+			wantParams: []any{"service4"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: buildUpdateRowStatement is called with the serviceID and cells.
+			gotSQL, gotParams := buildUpdateRowStatement(tc.serviceID, tc.cells)
+
+			prefix := fmt.Sprintf(
+				"%s\nbuildUpdateRowStatement(%q, %+v)",
+				packageName, tc.serviceID, tc.cells,
+			)
+
+			// THEN: the SQL statement matches the expected upsert statement.
+			if gotSQL != tc.wantSQL {
+				t.Errorf(
+					"%s SQL mismatch\ngot:  %q\nwant: %q",
+					prefix, gotSQL, tc.wantSQL,
+				)
+			}
+
+			// AND: params has serviceID first, then each cell's Value in order.
+			if !util.AreSlicesEqual(gotParams, tc.wantParams) {
+				t.Fatalf(
+					"%s params mismatch\ngot:  %v\nwant: %v",
+					prefix, gotParams, tc.wantParams,
+				)
+			}
+		})
+	}
+}
+
 func TestAPI_UpdateRow(t *testing.T) {
 	// GIVEN: a DB with a few service status'.
 	tests := []struct {

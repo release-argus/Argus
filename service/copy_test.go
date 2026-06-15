@@ -253,9 +253,9 @@ func assertServiceCopyMutate(t *testing.T, prefix string, svcI, svcJ *Service) {
 }
 
 func TestService_Copy(t *testing.T) {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// GIVEN: a Service.
 	tests := []struct {
@@ -312,7 +312,7 @@ func TestService_Copy(t *testing.T) {
 					"yaml", []byte(test.TrimYAML(`
 						notify:
 							test:
-						`+shoutrrrtest.Shoutrrr(false, false).String("    ")+`
+						`+shoutrrrtest.Shoutrrr(t, false, false).String("    ")+`
 					`)),
 					"Notify",
 					svcCfg, notifyCfg, whCfg,
@@ -351,7 +351,7 @@ func TestService_Copy(t *testing.T) {
 					"yaml", []byte(test.TrimYAML(`
 						webhook:
 							test:
-						`+whtest.WebHook(false, false, true).String("    ")+`
+						`+whtest.WebHook(t, false, false, true).String("    ")+`
 					`)),
 					"WebHook",
 					svcCfg, notifyCfg, whCfg,

@@ -17,6 +17,7 @@ package config
 
 import (
 	"fmt"
+	"strconv"
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/internal/logx"
@@ -124,7 +125,7 @@ func (c *Config) RenameService(oldService string, newService *service.Service) {
 	}
 
 	logx.Info(
-		fmt.Sprintf("%q", newService.ID),
+		strconv.Quote(newService.ID),
 		logx.LogFrom{Primary: "RenameService", Secondary: oldService},
 		true,
 	)

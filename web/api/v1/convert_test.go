@@ -211,9 +211,9 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 //
 
 func TestConvertAndCensorService(t *testing.T) {
-	svcCfg := svctest.PlainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// GIVEN: a service.Service.
 	tests := []struct {

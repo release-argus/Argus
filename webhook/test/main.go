@@ -18,6 +18,7 @@ package test
 
 import (
 	"strings"
+	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/dashboard"
@@ -26,7 +27,9 @@ import (
 )
 
 // WebHook returns a configured WebHook for tests.
-func WebHook(failing, selfSignedCert, headers bool) *webhook.WebHook {
+func WebHook(t *testing.T, failing, selfSignedCert, headers bool) *webhook.WebHook {
+	t.Helper()
+
 	defaults, _ := webhook.DecodeDefaults("yaml", nil)
 	hardDefaults, _ := webhook.DecodeDefaults("yaml", nil)
 

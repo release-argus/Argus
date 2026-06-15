@@ -30,7 +30,7 @@ import (
 // ############
 
 func TestDecode(t *testing.T) {
-	dashCfg := plainDefaultsConfig()
+	dashCfg := plainDefaultsConfig(t)
 
 	// GIVEN: data in a given format to Decode into Options.
 	tests := []struct {

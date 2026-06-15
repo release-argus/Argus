@@ -61,7 +61,6 @@ func (s *Shoutrrr) Init(
 
 	// Give Hard Defaults.
 	s.HardDefaults = hardDefaults
-	s.HardDefaults.Init()
 }
 
 // Init will create the Prometheus metrics of each [Shoutrrr]

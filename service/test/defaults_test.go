@@ -20,7 +20,7 @@ import "testing"
 
 func TestPlainDefaultsConfig(t *testing.T) {
 	// WHEN: PlainDefaultsConfig is called.
-	svcCfg := PlainDefaultsConfig()
+	svcCfg := PlainDefaultsConfig(t)
 
 	// THEN: It returns a set of defaults.
 	if svcCfg.Soft == nil || svcCfg.Hard == nil {

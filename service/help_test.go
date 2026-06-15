@@ -50,9 +50,9 @@ func TestMain(m *testing.M) {
 }
 
 func testService(t *testing.T, id string, lvType, dvType string) *Service {
-	svcCfg := plainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	svc := test.Must(t, func() (*Service, error) {
 		return DecodeService(
@@ -92,7 +92,9 @@ func testService(t *testing.T, id string, lvType, dvType string) *Service {
 }
 
 // plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig() DefaultsConfig {
+func plainDefaultsConfig(t *testing.T) DefaultsConfig {
+	t.Helper()
+
 	defaults := Defaults{}
 	hardDefaults := Defaults{}
 	hardDefaults.Default()

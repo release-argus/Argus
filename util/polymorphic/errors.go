@@ -27,6 +27,16 @@ type InvalidTypeError struct {
 }
 
 // Error implements the [error] interface.
+//
+// Output formats:
+//
+// With value:
+//
+//	KEY: "VALUE" <invalid> (supported values = ['A', 'B', 'C'])
+//
+// Without value (required):
+//
+//	KEY: <required> (supported values = ['A', 'B', 'C'])
 func (e InvalidTypeError) Error() string {
 	valueMsg := "<required>"
 	if e.Value != "" {

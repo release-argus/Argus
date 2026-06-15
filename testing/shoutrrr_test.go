@@ -33,9 +33,9 @@ import (
 )
 
 func TestGetAllShoutrrrNames(t *testing.T) {
-	svcCfg := svctest.PlainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// GIVEN: various Services and Notifiers.
 	tests := []struct {
@@ -164,9 +164,9 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 }
 
 func TestFindShoutrrr(t *testing.T) {
-	svcCfg := svctest.PlainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	// GIVEN: a Config with/without Service containing a Shoutrrr and Root Shoutrrrs.
 	tests := []struct {

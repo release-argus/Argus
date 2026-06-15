@@ -165,6 +165,8 @@ func dbCleanup(api *api) {
 }
 
 func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
+	t.Helper()
+
 	sqlStmt := `
 		SELECT
 			id,

@@ -52,6 +52,7 @@ func (f *MockLookup) String(prefix string) string                 { return decod
 
 // Lookup decodes and validates a latest version lookup of the given type for tests.
 func Lookup(t *testing.T, typ string, fail bool) (lv latestver.Lookup) {
+	t.Helper()
 
 	switch typ {
 	case "github":
@@ -75,6 +76,8 @@ func Lookup(t *testing.T, typ string, fail bool) (lv latestver.Lookup) {
 
 // testGitHub builds a GitHub latest version lookup for tests.
 func testGitHub(t *testing.T, fail bool) latestver.Lookup {
+	t.Helper()
+
 	lvCfg := PlainDefaultsConfig(t)
 	accessToken := test.GitHubToken(t)
 	if fail {
@@ -99,6 +102,8 @@ func testGitHub(t *testing.T, fail bool) latestver.Lookup {
 
 // testWeb builds a URL latest version lookup for tests.
 func testWeb(t *testing.T, fail bool) latestver.Lookup {
+	t.Helper()
+
 	lvCfg := PlainDefaultsConfig(t)
 
 	svcStatus, _ := statustest.New("yaml", nil)

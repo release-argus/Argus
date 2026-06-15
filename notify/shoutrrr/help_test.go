@@ -125,7 +125,9 @@ func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
 	return shoutrrr
 }
 
-func plainConfig() Config {
+func plainConfig(t *testing.T) Config {
+	t.Helper()
+
 	defaults := ShoutrrrsDefaults{}
 	hardDefaults := ShoutrrrsDefaults{}
 	hardDefaults.Default()

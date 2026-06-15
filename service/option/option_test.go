@@ -266,8 +266,8 @@ func TestOptions_IsZero(t *testing.T) {
 }
 
 func TestOptions_Copy(t *testing.T) {
-	defaults := testDefaults()
-	hardDefaults := testDefaults()
+	defaults := testDefaults(t)
+	hardDefaults := testDefaults(t)
 	// GIVEN: Options.
 	tests := []struct {
 		name    string
@@ -337,7 +337,7 @@ func TestOptions_Copy(t *testing.T) {
 }
 
 func TestOptions_String(t *testing.T) {
-	optCfg := plainDefaultsConfig()
+	optCfg := plainDefaultsConfig(t)
 
 	tests := []struct {
 		name    string
@@ -474,7 +474,7 @@ func TestOptions_GetActive(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			options := testOptions()
+			options := testOptions(t)
 			options.Active = tc.active
 
 			// WHEN: GetActive is called.
@@ -504,8 +504,8 @@ func TestOptions_SetDefaults(t *testing.T) {
 		{
 			name: "existing defaults/hardDefaults overwritten",
 			options: &Options{
-				Defaults:     testDefaults(),
-				HardDefaults: testDefaults(),
+				Defaults:     testDefaults(t),
+				HardDefaults: testDefaults(t),
 			},
 		},
 	}
@@ -581,7 +581,7 @@ func TestOptions_GetInterval(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			options := testOptions()
+			options := testOptions(t)
 			options.Interval = tc.rootValue
 			options.Defaults.Interval = tc.defaultValue
 			options.HardDefaults.Interval = tc.hardDefaultValue
@@ -631,7 +631,7 @@ func TestOptions_GetSemanticVersioning(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			options := testOptions()
+			options := testOptions(t)
 			options.SemanticVersioning = tc.rootValue
 			options.Defaults.SemanticVersioning = tc.defaultValue
 			options.HardDefaults.SemanticVersioning = tc.hardDefaultValue
@@ -683,7 +683,7 @@ func TestOptions_VerifySemanticVersioning(t *testing.T) {
 			errRegex: `^failed to convert "major.minor.patch" to a semantic version.*$`,
 		},
 	}
-	options := testOptions()
+	options := testOptions(t)
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -736,7 +736,7 @@ func TestOptions_GetIntervalPointer(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			options := testOptions()
+			options := testOptions(t)
 			options.Interval = tc.rootValue
 			options.Defaults.Interval = tc.defaultValue
 			options.HardDefaults.Interval = tc.hardDefaultValue
@@ -757,7 +757,7 @@ func TestOptions_GetIntervalPointer(t *testing.T) {
 
 func TestOptions_GetIntervalDuration(t *testing.T) {
 	// GIVEN: Options.
-	options := testOptions()
+	options := testOptions(t)
 	options.Interval = "3h2m1s"
 
 	// WHEN: GetInterval is called.
@@ -774,7 +774,7 @@ func TestOptions_GetIntervalDuration(t *testing.T) {
 }
 
 func TestOptions_CheckValues(t *testing.T) {
-	optCfg := plainDefaultsConfig()
+	optCfg := plainDefaultsConfig(t)
 
 	// GIVEN: Options.
 	tests := []struct {

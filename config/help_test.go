@@ -100,7 +100,9 @@ func testConfig(t *testing.T) *Config {
 	return &cfg
 }
 
-func testSettings() Settings {
+func testSettings(t *testing.T) Settings {
+	t.Helper()
+
 	logTimestamps := true
 	return Settings{
 		SettingsBase: SettingsBase{
@@ -177,10 +179,10 @@ func testLoadBasic(t *testing.T, file string) *Config {
 	return cfg
 }
 
-func testServiceURL(id string) *service.Service {
-	svcCfg := svctest.PlainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+func testServiceURL(t *testing.T, id string) *service.Service {
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
 	svc, _ := service.DecodeService(
 		"yaml", []byte(test.TrimYAML(`
@@ -219,10 +221,12 @@ func testServiceURL(id string) *service.Service {
 	return svc
 }
 
-func plainDefaults() (*Defaults, *Defaults) {
-	svcCfg := svctest.PlainDefaultsConfig()
-	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig()
+func plainDefaults(t *testing.T) (*Defaults, *Defaults) {
+	t.Helper()
+
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 	defaults := &Defaults{
 		Service: *svcCfg.Soft,
 		Notify:  notifyCfg.Defaults,

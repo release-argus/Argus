@@ -27,7 +27,7 @@ import (
 )
 
 func TestDecode(t *testing.T) {
-	defaults, _ := plainDefaults()
+	defaults, _ := plainDefaults(t)
 
 	// GIVEN: data in a given format to Decode into a Require.
 	tests := []struct {
@@ -151,7 +151,7 @@ func TestDecode(t *testing.T) {
 }
 
 func TestApplyOverrides(t *testing.T) {
-	defaults, _ := plainDefaults()
+	defaults, _ := plainDefaults(t)
 
 	type Args struct {
 		format, data string

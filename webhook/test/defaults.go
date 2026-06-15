@@ -15,11 +15,17 @@
 package test
 
 import (
+	"testing"
+
 	"github.com/release-argus/Argus/webhook"
 )
 
 // PlainConfig returns plain defaults and hardDefaults for testing.
-func PlainConfig() webhook.Config {
+func PlainConfig(t *testing.T) webhook.Config {
+	if t != nil {
+		t.Helper()
+	}
+
 	defaults, _ := webhook.DecodeDefaults("yaml", nil)
 	hardDefaults, _ := webhook.DecodeDefaults("yaml", nil)
 	hardDefaults.Default()

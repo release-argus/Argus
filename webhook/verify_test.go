@@ -119,7 +119,7 @@ func TestWebHooksDefaults_CheckValues(t *testing.T) {
 }
 
 func TestWebHooks_CheckValues(t *testing.T) {
-	whCfg := plainConfig()
+	whCfg := plainConfig(t)
 	// GIVEN: WebHooks.
 	tests := []struct {
 		name     string

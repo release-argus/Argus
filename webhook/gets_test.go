@@ -407,7 +407,7 @@ func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 }
 
 func TestWebHook_SetAndGetFail(t *testing.T) {
-	whCfg := plainConfig()
+	whCfg := plainConfig(t)
 	// GIVEN: an initial state, and a new state for the WebHook's failure state.
 	tests := []struct {
 		name         string
@@ -474,7 +474,7 @@ func TestWebHook_SetAndGetFail(t *testing.T) {
 }
 
 func TestWebHook_SetAndGetNextRunnable(t *testing.T) {
-	whCfg := plainConfig()
+	whCfg := plainConfig(t)
 	// GIVEN: an initial state, and a new state for the WebHook's next runnable time.
 	tests := []struct {
 		name         string

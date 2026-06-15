@@ -270,7 +270,7 @@ func (c *Config) reorderYAML(lines []string) []string {
 				)
 				changed = true
 
-				// SwapRanges the current ordering values.
+				// Swap the current ordering values.
 				currentOrder[previousIndex], currentOrder[currentIndex] = currentOrder[currentIndex], currentOrder[previousIndex]
 				lengthCurrent := currentOrderIndexEnd[currentIndex] - currentOrderIndexStart[currentIndex]
 				currentOrderIndexEnd[previousIndex] = currentOrderIndexStart[previousIndex] + lengthCurrent

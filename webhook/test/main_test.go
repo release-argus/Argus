@@ -134,6 +134,7 @@ func TestWebHook(t *testing.T) {
 
 			// WHEN: WebHook is called.
 			result := WebHook(
+				t,
 				tc.failing,
 				tc.selfSignedCert,
 				tc.headers,
