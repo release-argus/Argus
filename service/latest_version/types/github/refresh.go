@@ -25,7 +25,7 @@ import (
 //
 //	Values: githubData, Require.
 func (l *Lookup) InheritSecrets(fromLookup base.BaseInterface, secretRefs *shared.VSecretRef) {
-	// Check whether inheriting from a GitHub Interface.
+	// Check whether inheriting from a GitHub Lookup.
 	if oldGitHubLookup, ok := fromLookup.(*Lookup); ok {
 		// AccessToken
 		if l.AccessToken == util.SecretValue {

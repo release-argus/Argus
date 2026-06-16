@@ -61,13 +61,13 @@ type DefaultsDecode struct {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-// Use [DecodeDefaults] for a full unmarshal.
+// Use [DecodeDefaults] for a complete Defaults.
 func (d *Defaults) UnmarshalJSON(data []byte) error {
 	return d.unmarshal("json", data)
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
-// Use [DecodeDefaults] for a full unmarshal.
+// Use [DecodeDefaults] for a complete Defaults.
 func (d *Defaults) UnmarshalYAML(data []byte) error {
 	return d.unmarshal("yaml", data)
 }

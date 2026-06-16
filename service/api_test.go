@@ -200,13 +200,13 @@ func TestOldSecretRefs_UnmarshalJSON(t *testing.T) {
 			t.Parallel()
 
 			// WHEN: UnmarshalJSON is called.
-			var v oldSecretRefs
+			var v secretRefs
 			if _, testErr := test.AssertUnmarshal(
 				t,
 				"json", tc.data,
 				&v,
 				tc.errRegex,
-				func(v *oldSecretRefs) string { return decode.ToYAMLString(v, "") },
+				func(v *secretRefs) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				packageName,
 				"oldSecretRefs",
@@ -1454,7 +1454,7 @@ func TestFromPayload(t *testing.T) {
 	}
 }
 
-func TestFromPayload__NoServiceCreated(t *testing.T) {
+func TestFromPayload__noServiceCreated(t *testing.T) {
 	svcCfg := plainDefaultsConfig(t)
 	notifyCfg := shoutrrrtest.PlainConfig(t)
 	whCfg := whtest.PlainConfig(t)
@@ -1489,7 +1489,7 @@ func TestFromPayload__NoServiceCreated(t *testing.T) {
 		nil,
 		&payload,
 		svcCfg, notifyCfg, whCfg,
-		logx.LogFrom{Primary: "TestFromPayload_noServiceCreated"},
+		logx.LogFrom{Primary: "TestFromPayload_NoServiceCreated"},
 	)
 
 	// THEN: we should get an error.
@@ -1748,7 +1748,7 @@ func TestService_GiveSecrets(t *testing.T) {
 		statusTests     statusTests
 		commandTests    commandTests
 		webhookTests    webhookTests
-		secretRefs      oldSecretRefs
+		secretRefs      secretRefs
 		want            string
 	}{
 		{
@@ -1818,7 +1818,7 @@ func TestService_GiveSecrets(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
-			secretRefs: oldSecretRefs{},
+			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
 				latest_version:
 					type: github
@@ -1860,7 +1860,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				)
 			}),
 			oldService: nil,
-			secretRefs: oldSecretRefs{},
+			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
 				latest_version:
 					type: github
@@ -1905,7 +1905,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				)
 			}),
 			oldService: nil,
-			secretRefs: oldSecretRefs{},
+			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
 				latest_version:
 					type: github
@@ -2011,7 +2011,7 @@ func TestService_GiveSecrets(t *testing.T) {
 					"bar": test.Ptr(true),
 				},
 			},
-			secretRefs: oldSecretRefs{},
+			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
 				latest_version:
 					type: github
@@ -2121,7 +2121,7 @@ func TestService_GiveSecrets(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
-			secretRefs: oldSecretRefs{
+			secretRefs: secretRefs{
 				DeployedVersionLookup: shared.VSecretRef{
 					Headers: []shared.OldIntIndex{
 						{OldIndex: test.Ptr(0)},
@@ -2188,7 +2188,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				oldLatestVersionTimestamp:      time.Now().Format(time.RFC3339),
 				expectedLatestVersionTimestamp: time.Now().Format(time.RFC3339),
 			},
-			secretRefs: oldSecretRefs{},
+			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
 				latest_version:
 					type: url
@@ -2223,7 +2223,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				oldLatestVersion:          "1.2.3",
 				oldLatestVersionTimestamp: time.Now().Format(time.RFC3339),
 			},
-			secretRefs: oldSecretRefs{},
+			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
 				latest_version:
 					type: url
@@ -2260,7 +2260,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				oldDeployedVersionTimestamp:      time.Now().Format(time.RFC3339),
 				expectedDeployedVersionTimestamp: time.Now().Format(time.RFC3339),
 			},
-			secretRefs: oldSecretRefs{},
+			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
 				deployed_version:
 					type: url
@@ -2303,7 +2303,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				oldDeployedVersion:          "1.2.3",
 				oldDeployedVersionTimestamp: time.Now().Format(time.RFC3339),
 			},
-			secretRefs: oldSecretRefs{},
+			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
 				latest_version:
 					type: github
@@ -2345,7 +2345,7 @@ func TestService_GiveSecrets(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
-			secretRefs: oldSecretRefs{
+			secretRefs: secretRefs{
 				WebHook: map[string]shared.WHSecretRef{
 					"test": {OldIndex: "test"},
 				},
@@ -2399,7 +2399,7 @@ func TestService_GiveSecrets(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
-			secretRefs: oldSecretRefs{},
+			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
 				latest_version:
 					type: github
@@ -2454,7 +2454,7 @@ func TestService_GiveSecrets(t *testing.T) {
 					- - ls
 						- -la
 			`),
-			secretRefs: oldSecretRefs{},
+			secretRefs: secretRefs{},
 			commandTests: commandTests{
 				oldFails: []*bool{
 					test.Ptr(true),
@@ -2496,7 +2496,7 @@ func TestService_GiveSecrets(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
-			secretRefs: oldSecretRefs{},
+			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
 				latest_version:
 					type: github

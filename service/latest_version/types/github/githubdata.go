@@ -72,7 +72,7 @@ type DataJSON struct {
 	Releases []ghtypes.Release `json:"releases,omitempty"`
 }
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (g *Data) String() string {
 	if g == nil {
 		return ""
@@ -80,7 +80,8 @@ func (g *Data) String() string {
 
 	jsonStruct := DataJSON{
 		ETag:     g.ETag(),
-		Releases: g.Releases()}
+		Releases: g.Releases(),
+	}
 
 	return decode.ToJSONString(jsonStruct)
 }

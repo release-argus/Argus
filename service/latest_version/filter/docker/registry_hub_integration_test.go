@@ -112,7 +112,7 @@ func TestHubRegistry_Check(t *testing.T) {
 	}
 }
 
-func TestHubRegistry_Check__Errors(t *testing.T) {
+func TestHubRegistry_Check__errors(t *testing.T) {
 	// GIVEN: a HubRegistry, and version to check for.
 	tests := []struct {
 		name            string
@@ -240,7 +240,7 @@ func TestHubRegistry_Check__Errors(t *testing.T) {
 // # AUTH | QUERY TOKENS #
 // #######################
 
-func TestHubAuth_GetQueryToken__Integration(t *testing.T) {
+func TestHubAuth_GetQueryToken__integration(t *testing.T) {
 	// GIVEN: a HubAuth and ContainerDetail to fetch a queryToken for.
 	tests := []struct {
 		name     string
@@ -320,7 +320,7 @@ func TestHubAuth_GetQueryToken__Integration(t *testing.T) {
 	}
 }
 
-func TestHubAuth_RefreshQueryToken__Integration(t *testing.T) {
+func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 	// GIVEN: a ContainerDetail to fetch a queryToken for.
 	tests := []struct {
 		name            string

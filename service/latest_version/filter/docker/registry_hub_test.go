@@ -122,7 +122,7 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 			),
 		},
 		{
-			name:     "auth: null",
+			name:     "JSON/auth-null",
 			format:   "json",
 			data:     `{"auth": null}`,
 			registry: &HubRegistryDefaults{},
@@ -299,7 +299,7 @@ func TestHubRegistry_Unmarshal(t *testing.T) {
 			),
 		},
 		{
-			name:     "auth: null",
+			name:     "JSON/auth-null",
 			format:   "json",
 			data:     `{"auth": null}`,
 			registry: &HubRegistry{},

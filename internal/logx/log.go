@@ -166,7 +166,7 @@ func (l *Logger) SetTimestamps(enable bool) {
 	}
 }
 
-// String implements [fmt.Stringer].
+// String implements fmt.Stringer.
 func (lf LogFrom) String() string {
 	// Have Primary.
 	if lf.Primary != "" {

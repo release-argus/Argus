@@ -86,31 +86,23 @@ func convertAndCensorService(input *service.Service) *apitype.Service {
 
 	apiService := apitype.Service{}
 
-	// Name.
 	apiService.Name = input.Name
-	// Comment.
 	apiService.Comment = input.Comment
 
-	// Options.
 	apiService.Options = apitype.ServiceOptions{
 		Active:             input.Options.Active,
 		Interval:           input.Options.Interval,
 		SemanticVersioning: input.Options.SemanticVersioning,
 	}
 
-	// LatestVersion.
 	apiService.LatestVersion = convertAndCensorLatestVersion(input.LatestVersion)
-	// DeployedVersionLookup.
 	apiService.DeployedVersionLookup = convertAndCensorDeployedVersionLookup(input.DeployedVersionLookup)
-	// Notify.
 	if !input.NotifyFromDefaults {
 		apiService.Notify = convertAndCensorNotifiers(input.Notify)
 	}
-	// Command.
 	if !input.CommandFromDefaults {
 		apiService.Command = convertCommands(input.Command)
 	}
-	// WebHook.
 	if !input.WebHookFromDefaults {
 		apiService.WebHook = convertAndCensorWebHooks(input.WebHook)
 	}
@@ -173,7 +165,6 @@ func convertAndCensorLatestVersionRequireDefaults(input *filter.RequireDefaults)
 		},
 	}
 
-	// Docker:
 	if !input.Docker.Registry.IsZero() {
 		registry := apitype.RequireDockerRegistriesDefaults{}
 		if val := convertAndCensorRequireDockerRegistryDefaults(input.Docker.Registry.GHCR); val != nil {
@@ -248,7 +239,6 @@ func convertAndCensorLatestVersionRequire(input *filter.Require) *apitype.Latest
 		return nil
 	}
 
-	// Docker.
 	var dockerResp *apitype.RequireDocker
 	if input.Docker != nil {
 		dockerInput := input.Docker
@@ -264,7 +254,6 @@ func convertAndCensorLatestVersionRequire(input *filter.Require) *apitype.Latest
 		}
 	}
 
-	// Require.
 	apiRequire := apitype.LatestVersionRequire{
 		Command:      input.Command,
 		Docker:       dockerResp,
@@ -360,7 +349,6 @@ func convertAndCensorNotifiersDefaults(input shoutrrr.ShoutrrrsDefaults) apitype
 		return nil
 	}
 
-	// Convert to API Type, censoring secrets.
 	notifiers := make(apitype.Notifiers, len(input))
 	for name, notify := range input {
 		n := &apitype.Notify{
@@ -369,7 +357,6 @@ func convertAndCensorNotifiersDefaults(input shoutrrr.ShoutrrrsDefaults) apitype
 			URLFields: notify.URLFields,
 			Params:    notify.Params,
 		}
-		// Censor and add to map.
 		n.Censor()
 		notifiers[name] = n
 	}
@@ -383,7 +370,6 @@ func convertAndCensorNotifiers(input shoutrrr.Shoutrrrs) apitype.Notifiers {
 		return nil
 	}
 
-	// Convert to API Type, censoring secrets.
 	notifiers := make(apitype.Notifiers, len(input))
 	for name, notify := range input {
 		n := &apitype.Notify{
@@ -392,7 +378,6 @@ func convertAndCensorNotifiers(input shoutrrr.Shoutrrrs) apitype.Notifiers {
 			URLFields: notify.URLFields,
 			Params:    notify.Params,
 		}
-		// Censor and add to mapping.
 		n.Censor()
 		notifiers[name] = n
 	}
@@ -428,7 +413,6 @@ func convertAndCensorWebHooksDefaults(input webhook.WebHooksDefaults) apitype.We
 		return nil
 	}
 
-	// Convert to API Type, censoring secrets.
 	webhooks := make(apitype.WebHooks, len(input))
 	for name, wh := range input {
 		webhooks[name] = convertAndCensorWebHookDefaults(*wh)

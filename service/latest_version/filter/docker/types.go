@@ -54,12 +54,24 @@ var RegistryMapInheritable = polymorphic.ToInheritableMap(RegistryMap)
 // RegistryDefaultsMap maps a registry type to a RegistryDefaults constructor.
 var RegistryDefaultsMap = map[string]func() RegistryDefaults{
 	"ghcr": func() RegistryDefaults {
-		return &GHCRRegistryDefaults{CommonRegistryDefaults: CommonRegistryDefaults{Auth: &GHCRAuthDefaults{}}}
+		return &GHCRRegistryDefaults{
+			CommonRegistryDefaults: CommonRegistryDefaults{
+				Auth: &GHCRAuthDefaults{},
+			},
+		}
 	},
 	"hub": func() RegistryDefaults {
-		return &HubRegistryDefaults{CommonRegistryDefaults: CommonRegistryDefaults{Auth: &HubAuthDefaults{}}}
+		return &HubRegistryDefaults{
+			CommonRegistryDefaults: CommonRegistryDefaults{
+				Auth: &HubAuthDefaults{},
+			},
+		}
 	},
 	"quay": func() RegistryDefaults {
-		return &QuayRegistryDefaults{CommonRegistryDefaults: CommonRegistryDefaults{Auth: &QuayAuthDefaults{}}}
+		return &QuayRegistryDefaults{
+			CommonRegistryDefaults: CommonRegistryDefaults{
+				Auth: &QuayAuthDefaults{},
+			},
+		}
 	},
 }

@@ -59,7 +59,7 @@ type URLCommand struct {
 //
 // The shorthand is converted to a single-element list.
 func (s *URLCommands) UnmarshalJSON(data []byte) error {
-	// Handle the case where data is a quoted JSON string. (from web requests).
+	// Handle the case where data is a quoted JSON string (from web requests).
 	if len(data) > 0 && data[0] == '"' && data[len(data)-1] == '"' {
 		var jsonStr string
 		if err := decode.Unmarshal("json", data, &jsonStr); err != nil {
@@ -123,7 +123,7 @@ func (c *URLCommand) IsZero() bool {
 // # STRINGIFY #
 // #############
 
-// String implements [fmt.Stringer] and returns a YAML representation.
+// String implements fmt.Stringer and returns a YAML representation.
 func (s *URLCommands) String() string {
 	if s == nil {
 		return ""
@@ -131,7 +131,7 @@ func (s *URLCommands) String() string {
 	return decode.ToYAMLString(s, "")
 }
 
-// String implements [fmt.Stringer] and returns a YAML representation.
+// String implements fmt.Stringer and returns a YAML representation.
 func (c *URLCommand) String() string {
 	if c == nil {
 		return ""

@@ -28,8 +28,8 @@ type Inheritable interface {
 	DecodeSelf(string, []byte) error
 }
 
-// ToInheritableMap converts a map of constructors returning concrete types
-// implementing Inheritable into a map returning Inheritable.
+// ToInheritableMap converts a map of constructors returning concrete types implementing Inheritable
+// into a map returning Inheritable.
 func ToInheritableMap[T Inheritable](constructors map[string]func() T) map[string]func() Inheritable {
 	result := make(map[string]func() Inheritable, len(constructors))
 	for k, ctor := range constructors {
@@ -90,8 +90,7 @@ func Construct(
 	return constructor(), nil
 }
 
-// Instantiate instantiates an object using a specified format and constructors with a default type,
-// then unmarshal the rest of the data into the implementation.
+// Instantiate instantiates an object from format-encoded data and constructors with a default type.
 func Instantiate(
 	format string,
 	data []byte,

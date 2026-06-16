@@ -312,7 +312,7 @@ func TestDecodeServices(t *testing.T) {
 	}
 }
 
-func TestDecodeServices__MarshalError(t *testing.T) {
+func TestDecodeServices__marshalError(t *testing.T) {
 	// GIVEN: a failing marshal function.
 	original := marshalServiceRaw
 	customErr := fmt.Errorf("marshal failed")

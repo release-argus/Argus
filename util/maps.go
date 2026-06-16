@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-// EnsureMap will ensure the map is initialised.
+// EnsureMap returns m if it is non-nil; otherwise it returns an empty initialised map.
 func EnsureMap[K comparable, V any](m map[K]V) map[K]V {
 	if m == nil {
 		return make(map[K]V)

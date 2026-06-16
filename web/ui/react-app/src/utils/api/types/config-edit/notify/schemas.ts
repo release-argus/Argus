@@ -47,7 +47,11 @@ const notifyOptionsSchema = z
 		max_tries: stringDefault,
 		message: stringDefault,
 	})
-	.default({ delay: '', max_tries: '', message: '' });
+	.default({
+		delay: '',
+		max_tries: '',
+		message: '',
+	});
 export type NotifyOptionsSchema = z.infer<typeof notifyOptionsSchema>;
 
 /* Base Notify Schema */
@@ -90,7 +94,12 @@ export const notifyBarkSchema = notifyBaseSchema.extend({
 			path: stringDefault,
 			port: stringDefault, // Required.
 		})
-		.default({ devicekey: '', host: '', path: '', port: '' }),
+		.default({
+			devicekey: '',
+			host: '',
+			path: '',
+			port: '',
+		}),
 });
 export type NotifyBarkSchema = z.infer<typeof notifyBarkSchema>;
 export const notifyBarkSchemaOutgoing = notifyBarkSchema.extend({
@@ -123,7 +132,10 @@ export const notifyDiscordSchema = notifyBaseSchema.extend({
 			token: stringDefault, // Required.
 			webhookid: stringDefault, // Required.
 		})
-		.default({ token: '', webhookid: '' }),
+		.default({
+			token: '',
+			webhookid: '',
+		}),
 });
 export type NotifyDiscordSchema = z.infer<typeof notifyDiscordSchema>;
 export const notifyDiscordSchemaOutgoing = notifyDiscordSchema.extend({
@@ -173,7 +185,12 @@ export const notifySMTPSchema = notifyBaseSchema.extend({
 			port: stringDefault, // Required.
 			username: stringDefault,
 		})
-		.default({ host: '', password: '', port: '', username: '' }),
+		.default({
+			host: '',
+			password: '',
+			port: '',
+			username: '',
+		}),
 });
 export type NotifySMTPSchema = z.infer<typeof notifySMTPSchema>;
 export const notifySMTPSchemaOutgoing = notifySMTPSchema.extend({
@@ -194,7 +211,9 @@ export const notifyGoogleChatSchema = notifyBaseSchema.extend({
 		.object({
 			raw: stringDefault,
 		})
-		.default({ raw: '' }),
+		.default({
+			raw: '',
+		}),
 });
 export type NotifyGoogleChatSchema = z.infer<typeof notifyGoogleChatSchema>;
 
@@ -267,7 +286,9 @@ export const notifyIFTTTSchema = notifyBaseSchema.extend({
 		.object({
 			webhookid: stringDefault, // Required.
 		})
-		.default({ webhookid: '' }),
+		.default({
+			webhookid: '',
+		}),
 });
 export type NotifyIFTTTSchema = z.infer<typeof notifyIFTTTSchema>;
 
@@ -279,13 +300,19 @@ export const notifyJoinSchema = notifyBaseSchema.extend({
 			icon: stringDefault,
 			title: stringDefault,
 		})
-		.default({ devices: '', icon: '', title: '' }),
+		.default({
+			devices: '',
+			icon: '',
+			title: '',
+		}),
 	type: z.literal(NOTIFY_TYPE_MAP.JOIN.value),
 	url_fields: z
 		.object({
 			apikey: stringDefault, // Required.
 		})
-		.default({ apikey: '' }),
+		.default({
+			apikey: '',
+		}),
 });
 export type NotifyJoinSchema = z.infer<typeof notifyJoinSchema>;
 
@@ -296,14 +323,16 @@ export const notifyMatterMostSchema = notifyBaseSchema.extend({
 			disabletls: preprocessBooleanFromString,
 			icon: stringDefault,
 		})
-		.default({ disabletls: null, icon: '' }),
+		.default({
+			disabletls: null,
+			icon: '',
+		}),
 	type: z.literal(NOTIFY_TYPE_MAP.MATTERMOST.value),
 	url_fields: z
 		.object({
 			channel: stringDefault,
 			host: stringDefault, // Required.
 			password: stringDefault,
-			path: stringDefault, // Required.
 			port: stringDefault,
 			token: stringDefault, // Required.
 			username: stringDefault,
@@ -312,7 +341,6 @@ export const notifyMatterMostSchema = notifyBaseSchema.extend({
 			channel: '',
 			host: '',
 			password: '',
-			path: '',
 			port: '',
 			token: '',
 			username: '',
@@ -333,7 +361,11 @@ export const notifyMatrixSchema = notifyBaseSchema.extend({
 			rooms: stringDefault,
 			title: stringDefault,
 		})
-		.default({ disabletls: null, rooms: '', title: '' }),
+		.default({
+			disabletls: null,
+			rooms: '',
+			title: '',
+		}),
 	type: z.literal(NOTIFY_TYPE_MAP.MATRIX.value),
 	url_fields: z
 		.object({
@@ -342,7 +374,12 @@ export const notifyMatrixSchema = notifyBaseSchema.extend({
 			port: stringDefault, // Required.
 			username: stringDefault,
 		})
-		.default({ host: '', password: '', port: '', username: '' }),
+		.default({
+			host: '',
+			password: '',
+			port: '',
+			username: '',
+		}),
 });
 export type NotifyMatrixSchema = z.infer<typeof notifyMatrixSchema>;
 export const notifyMatrixSchemaOutgoing = notifyMatrixSchema.extend({
@@ -397,7 +434,13 @@ export const notifyNtfySchema = notifyBaseSchema.extend({
 			topic: stringDefault, // Required.
 			username: stringDefault,
 		})
-		.default({ host: '', password: '', port: '', topic: '', username: '' }),
+		.default({
+			host: '',
+			password: '',
+			port: '',
+			topic: '',
+			username: '',
+		}),
 });
 export type NotifyNtfySchema = z.infer<typeof notifyNtfySchema>;
 const notifyNtfySchemaOutgoing = notifyNtfySchema.extend({
@@ -450,7 +493,11 @@ export const notifyOpsGenieSchema = notifyBaseSchema.extend({
 			host: stringDefault,
 			port: stringDefault,
 		})
-		.default({ apikey: '', host: '', port: '' }),
+		.default({
+			apikey: '',
+			host: '',
+			port: '',
+		}),
 });
 export type NotifyOpsGenieSchema = z.infer<typeof notifyOpsGenieSchema>;
 
@@ -460,14 +507,19 @@ export const notifyPushbulletSchema = notifyBaseSchema.extend({
 		.object({
 			title: stringDefault,
 		})
-		.default({ title: '' }),
+		.default({
+			title: '',
+		}),
 	type: z.literal(NOTIFY_TYPE_MAP.PUSHBULLET.value),
 	url_fields: z
 		.object({
 			targets: stringDefault, // Required.
 			token: stringDefault, // Required.
 		})
-		.default({ targets: '', token: '' }),
+		.default({
+			targets: '',
+			token: '',
+		}),
 });
 export type NotifyPushbulletSchema = z.infer<typeof notifyPushbulletSchema>;
 
@@ -479,14 +531,21 @@ export const notifyPushoverSchema = notifyBaseSchema.extend({
 			priority: stringDefault,
 			title: stringDefault,
 		})
-		.default({ devices: '', priority: '', title: '' }),
+		.default({
+			devices: '',
+			priority: '',
+			title: '',
+		}),
 	type: z.literal(NOTIFY_TYPE_MAP.PUSHOVER.value),
 	url_fields: z
 		.object({
 			token: stringDefault, // Required.
 			user: stringDefault, // Required.
 		})
-		.default({ token: '', user: '' }),
+		.default({
+			token: '',
+			user: '',
+		}),
 });
 export type NotifyPushoverSchema = z.infer<typeof notifyPushoverSchema>;
 
@@ -497,7 +556,6 @@ export const notifyRocketChatSchema = notifyBaseSchema.extend({
 		.object({
 			channel: stringDefault, // Required.
 			host: stringDefault, // Required.
-			path: stringDefault,
 			port: stringDefault,
 			tokena: stringDefault, // Required.
 			tokenb: stringDefault, // Required.
@@ -506,7 +564,6 @@ export const notifyRocketChatSchema = notifyBaseSchema.extend({
 		.default({
 			channel: '',
 			host: '',
-			path: '',
 			port: '',
 			tokena: '',
 			tokenb: '',
@@ -525,14 +582,23 @@ export const notifySlackSchema = notifyBaseSchema.extend({
 			threadts: stringDefault,
 			title: stringDefault,
 		})
-		.default({ botname: '', color: '', icon: '', threadts: '', title: '' }),
+		.default({
+			botname: '',
+			color: '',
+			icon: '',
+			threadts: '',
+			title: '',
+		}),
 	type: z.literal(NOTIFY_TYPE_MAP.SLACK.value),
 	url_fields: z
 		.object({
 			channel: stringDefault, // Required.
 			token: stringDefault, // Required.
 		})
-		.default({ channel: '', token: '' }),
+		.default({
+			channel: '',
+			token: '',
+		}),
 });
 export type NotifySlackSchema = z.infer<typeof notifySlackSchema>;
 
@@ -544,7 +610,11 @@ export const notifyTeamsSchema = notifyBaseSchema.extend({
 			host: stringDefault,
 			title: stringDefault,
 		})
-		.default({ color: '', host: '', title: '' }),
+		.default({
+			color: '',
+			host: '',
+			title: '',
+		}),
 	type: z.literal(NOTIFY_TYPE_MAP.TEAMS.value),
 	url_fields: z
 		.object({
@@ -554,7 +624,13 @@ export const notifyTeamsSchema = notifyBaseSchema.extend({
 			groupowner: stringDefault, // Required.
 			tenant: stringDefault, // Required.
 		})
-		.default({ altid: '', extraid: '', group: '', groupowner: '', tenant: '' }),
+		.default({
+			altid: '',
+			extraid: '',
+			group: '',
+			groupowner: '',
+			tenant: '',
+		}),
 });
 export type NotifyTeamsSchema = z.infer<typeof notifyTeamsSchema>;
 
@@ -582,7 +658,9 @@ export const notifyTelegramSchema = notifyBaseSchema.extend({
 		.object({
 			token: stringDefault, // Required.
 		})
-		.default({ token: '' }),
+		.default({
+			token: '',
+		}),
 });
 export type NotifyTelegramSchema = z.infer<typeof notifyTelegramSchema>;
 export const notifyTelegramSchemaOutgoing = notifyTelegramSchema.extend({
@@ -600,7 +678,10 @@ export const notifyZulipSchema = notifyBaseSchema.extend({
 			stream: stringDefault,
 			topic: stringDefault,
 		})
-		.default({ stream: '', topic: '' }),
+		.default({
+			stream: '',
+			topic: '',
+		}),
 	type: z.literal(NOTIFY_TYPE_MAP.ZULIP.value),
 	url_fields: z
 		.object({
@@ -609,7 +690,12 @@ export const notifyZulipSchema = notifyBaseSchema.extend({
 			host: stringDefault, // Required.
 			port: stringDefault,
 		})
-		.default({ botkey: '', botmail: '', host: '', port: '' }),
+		.default({
+			botkey: '',
+			botmail: '',
+			host: '',
+			port: '',
+		}),
 });
 export type NotifyZulipSchema = z.infer<typeof notifyZulipSchema>;
 

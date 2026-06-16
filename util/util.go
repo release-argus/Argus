@@ -37,8 +37,8 @@ func StringToBoolPtr(str string) *bool {
 	return &val
 }
 
-// ValueUnlessZero returns `value` when `condition` differs from the default value for its type,
-// otherwise default.
+// ValueUnlessZero returns value when condition differs from the zero value for its type,
+// otherwise zero value.
 func ValueUnlessZero[T comparable](condition T, value T) T {
 	var zero T
 	if condition == zero {
@@ -47,8 +47,8 @@ func ValueUnlessZero[T comparable](condition T, value T) T {
 	return value
 }
 
-// ValueOr returns `first` if it differs from the default,
-// otherwise `second`.
+// ValueOr returns first if it differs from the zero value,
+// otherwise second.
 func ValueOr[T comparable](first T, second T) T {
 	var zero T
 	if first != zero {
@@ -57,8 +57,8 @@ func ValueOr[T comparable](first T, second T) T {
 	return second
 }
 
-// DerefOrZero returns the value of `ptr` if not nil,
-// otherwise default for the type.
+// DerefOrZero returns the value of ptr if not nil,
+// otherwise zero value for the type.
 func DerefOrZero[T any](ptr *T) T {
 	if ptr == nil {
 		var zero T
@@ -67,8 +67,8 @@ func DerefOrZero[T any](ptr *T) T {
 	return *ptr
 }
 
-// DerefOr returns the value of 'ptr' if non-nil,
-// otherwise the 'fallback'.
+// DerefOr returns the value of ptr if non-nil,
+// otherwise the fallback.
 func DerefOr[T any](ptr *T, fallback T) T {
 	if ptr != nil {
 		return *ptr
@@ -76,7 +76,7 @@ func DerefOr[T any](ptr *T, fallback T) T {
 	return fallback
 }
 
-// PtrIfNotZero returns a pointer to `v` if `v` is not the zero value.
+// PtrIfNotZero returns a pointer to v if v is not the zero value.
 // Otherwise it returns nil.
 func PtrIfNotZero[T comparable](v T) *T {
 	var zero T
@@ -86,7 +86,7 @@ func PtrIfNotZero[T comparable](v T) *T {
 	return &v
 }
 
-// ClonePtr returns a pointer to a copy of the value of `ptr`.
+// ClonePtr returns a pointer to a copy of the value of ptr.
 func ClonePtr[T any](ptr *T) *T {
 	if ptr == nil {
 		return nil
@@ -96,7 +96,7 @@ func ClonePtr[T any](ptr *T) *T {
 	return &val
 }
 
-// RestoreMaskedValues loops through 'fields' and replaces values in 'to' of 'SecretValue' with values in 'from'
+// RestoreMaskedValues loops through fields and replaces values in to of [SecretValue] with values in from
 // if non-empty.
 func RestoreMaskedValues[K comparable](original, target map[K]string, fields []K) map[K]string {
 	for _, field := range fields {
@@ -125,7 +125,7 @@ func Indentation(line string, indentSize uint8) string {
 	return line[:prefix]
 }
 
-// TruncateMessage shortens a message to `maxLength` and appends "..." if it exceeds the limit.
+// TruncateMessage shortens a message to maxLength and appends "..." if it exceeds the limit.
 func TruncateMessage(msg string, maxLength int) string {
 	if len(msg) > maxLength {
 		return msg[:maxLength] + "..."

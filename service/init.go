@@ -48,7 +48,7 @@ func (s *Service) IconURL() *string {
 	return nil
 }
 
-// Init will initialise the Service, giving the channels and setting whether defaults are in use (giving them if not).
+// Init will initialise the Service, giving the channels and command/notify/webhook defaults (where unset).
 func (s *Service) init(
 	notifyCfg shoutrrr.Config,
 	whCfg webhook.Config,
@@ -77,12 +77,10 @@ func (s *Service) init(
 
 	// Command.
 	commandDefaults := util.FirstNonEmptySlice(s.Defaults.Command, s.HardDefaults.Command)
-	if len(s.Command) == 0 {
-		if len(commandDefaults) != 0 {
-			s.Command = make(command.Commands, len(commandDefaults))
-			copy(s.Command, commandDefaults)
-			s.CommandFromDefaults = true
-		}
+	if len(s.Command) == 0 && len(commandDefaults) != 0 {
+		s.Command = make(command.Commands, len(commandDefaults))
+		copy(s.Command, commandDefaults)
+		s.CommandFromDefaults = true
 	}
 	if len(s.Command) != 0 {
 		s.CommandController = command.NewController(
@@ -95,14 +93,12 @@ func (s *Service) init(
 
 	// Notify.
 	notifyDefaults := util.FirstNonEmptyMap(s.Defaults.Notify, s.HardDefaults.Notify)
-	if len(s.Notify) == 0 {
-		if len(notifyDefaults) != 0 {
-			s.Notify = make(shoutrrr.Shoutrrrs, len(notifyDefaults))
-			for key := range notifyDefaults {
-				s.Notify[key] = &shoutrrr.Shoutrrr{}
-			}
-			s.NotifyFromDefaults = true
+	if len(s.Notify) == 0 && len(notifyDefaults) != 0 {
+		s.Notify = make(shoutrrr.Shoutrrrs, len(notifyDefaults))
+		for key := range notifyDefaults {
+			s.Notify[key] = &shoutrrr.Shoutrrr{}
 		}
+		s.NotifyFromDefaults = true
 	}
 	s.Notify.Init(
 		&s.Status,
@@ -125,14 +121,12 @@ func (s *Service) init(
 
 	// WebHook.
 	webhookDefaults := util.FirstNonEmptyMap(s.Defaults.WebHook, s.HardDefaults.WebHook)
-	if s.WebHook == nil {
-		if len(webhookDefaults) != 0 {
-			s.WebHook = make(webhook.WebHooks, len(webhookDefaults))
-			for key := range webhookDefaults {
-				s.WebHook[key] = &webhook.WebHook{}
-			}
-			s.WebHookFromDefaults = true
+	if s.WebHook == nil && len(webhookDefaults) != 0 {
+		s.WebHook = make(webhook.WebHooks, len(webhookDefaults))
+		for key := range webhookDefaults {
+			s.WebHook[key] = &webhook.WebHook{}
 		}
+		s.WebHookFromDefaults = true
 	}
 	s.WebHook.Init(
 		&s.Status,
@@ -142,7 +136,7 @@ func (s *Service) init(
 	)
 }
 
-// initMetrics will initialise the Prometheus metrics for the Service.
+// DeleteMetrics registers all Prometheus metrics for the Service.
 func (s *Service) initMetrics() {
 	metric.ServiceCountCurrentAdd(s.Options.Active, 1)
 	if !s.Options.GetActive() {
@@ -161,7 +155,7 @@ func (s *Service) initMetrics() {
 	s.Status.InitMetrics()
 }
 
-// deleteMetrics will delete the Prometheus metrics for the Service.
+// DeleteMetrics removes all Prometheus metrics for the Service.
 func (s *Service) deleteMetrics() {
 	metric.ServiceCountCurrentAdd(s.Options.Active, -1)
 	if !s.Options.GetActive() {

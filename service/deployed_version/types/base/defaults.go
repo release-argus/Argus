@@ -31,7 +31,7 @@ import (
 // # TYPES #
 // #########
 
-// DefaultsConfig pairs soft and hard deployed version defaults for decoding.
+// DefaultsConfig pairs soft and hard deployed version defaults.
 type DefaultsConfig struct {
 	Soft *Defaults
 	Hard *Defaults

@@ -17,15 +17,35 @@
 package status
 
 import (
+	"fmt"
+	"os"
 	"sync"
+	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/internal/logx"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/dashboard"
 )
 
-var (
-	metricsMu sync.RWMutex
-)
+var metricsMu sync.RWMutex
+var packageName = "status"
+
+func TestMain(m *testing.M) {
+	// Log.
+	logtest.InitLog()
+
+	// Run other tests.
+	exitCode := m.Run()
+
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
+		exitCode = 1
+	}
+
+	// Exit.
+	os.Exit(exitCode)
+}
 
 func testStatus() (status *Status) {
 	var (

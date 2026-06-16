@@ -130,7 +130,7 @@ func TestGHCRRegistry_Check(t *testing.T) {
 	}
 }
 
-func TestGHCRRegistry_Check__Errors(t *testing.T) {
+func TestGHCRRegistry_Check__errors(t *testing.T) {
 	// GIVEN: a GHCRRegistry, and version to check for.
 	tests := []struct {
 		name             string
@@ -247,7 +247,7 @@ func TestGHCRRegistry_Check__Errors(t *testing.T) {
 // # AUTH | QUERY TOKENS #
 // #######################
 
-func TestGHCRAuth_GetQueryToken__Integration(t *testing.T) {
+func TestGHCRAuth_GetQueryToken__integration(t *testing.T) {
 	// GIVEN: a GHCRAuth and ContainerDetail to fetch a queryToken for.
 	tests := []struct {
 		name     string
@@ -325,7 +325,7 @@ func TestGHCRAuth_GetQueryToken__Integration(t *testing.T) {
 	}
 }
 
-func TestGHCRAuth_RefreshQueryToken__Integration(t *testing.T) {
+func TestGHCRAuth_RefreshQueryToken__integration(t *testing.T) {
 	// GIVEN: a ContainerDetail to fetch a queryToken for.
 	tests := []struct {
 		name         string

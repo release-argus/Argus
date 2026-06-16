@@ -56,13 +56,13 @@ type ConfigDecode struct {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
+// Use [Decode] for a complete Config.
 func (c *Config) UnmarshalJSON(data []byte) error {
 	return c.unmarshal("json", data)
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
+// Use [Decode] for a complete Config.
 func (c *Config) UnmarshalYAML(data []byte) error {
 	return c.unmarshal("yaml", data)
 }

@@ -45,7 +45,7 @@ func TestNewHub(t *testing.T) {
 	}
 }
 
-func TestHub_Run__Register(t *testing.T) {
+func TestHub_Run__register(t *testing.T) {
 	// GIVEN: a Hub.
 	hub := NewHub()
 	go hub.Run()
@@ -66,7 +66,7 @@ func TestHub_Run__Register(t *testing.T) {
 	}
 }
 
-func TestHub_Run__Unregister(t *testing.T) {
+func TestHub_Run__unregister(t *testing.T) {
 	// GIVEN: a Hub.
 	hub := NewHub()
 	go hub.Run()
@@ -94,7 +94,7 @@ func TestHub_Run__Unregister(t *testing.T) {
 	}
 }
 
-func TestHub_Run__Broadcast(t *testing.T) {
+func TestHub_Run__broadcast(t *testing.T) {
 	// GIVEN: a Hub.
 	client := testClient()
 	hub := client.hub
@@ -128,7 +128,7 @@ func TestHub_Run__Broadcast(t *testing.T) {
 	}
 }
 
-func TestHub_Run__Broadcast_AllClients(t *testing.T) {
+func TestHub_Run__broadcast_allClients(t *testing.T) {
 	// GIVEN: a Hub.
 	hub := NewHub()
 	go hub.Run()
@@ -184,7 +184,7 @@ func TestHub_Run__Broadcast_AllClients(t *testing.T) {
 	}
 }
 
-func TestHub_Run__Broadcast_DropsFullClient(t *testing.T) {
+func TestHub_Run__broadcast_dropsFullClient(t *testing.T) {
 	// GIVEN: a hub.
 	hub := NewHub()
 	go hub.Run()
@@ -252,7 +252,7 @@ func TestHub_Run__Broadcast_DropsFullClient(t *testing.T) {
 	}
 }
 
-func TestHub_Run__Broadcast_Invalid(t *testing.T) {
+func TestHub_Run__broadcast_invalid(t *testing.T) {
 	// GIVEN: a Hub.
 	client := testClient()
 	hub := client.hub

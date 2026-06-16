@@ -115,7 +115,7 @@ func (c *Controller) CopyFailsFrom(target *Controller) {
 // # STRINGIFY #
 // #############
 
-// String implements [fmt.Stringer].
+// String implements fmt.Stringer.
 func (c *Command) String() string {
 	if c == nil {
 		return ""

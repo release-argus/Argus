@@ -26,7 +26,7 @@ import (
 
 // BaseInterface provides methods for retrieving the latest version of a service.
 type BaseInterface interface {
-	// Init initialises the Lookup, assigning Defaults and initialising child structs.
+	// Init initialises the receiver, assigning Defaults and initialising child structs.
 	Init(options *opt.Options, status *status.Status, cfg DefaultsConfig)
 	// InitMetrics initialises the parentLookup's metrics.
 	InitMetrics(parentLookup BaseInterface)
@@ -35,13 +35,13 @@ type BaseInterface interface {
 	// CheckValues validates the fields of the receiver.
 	CheckValues() (errs error)
 
-	// Query the Lookup for the latest version.
+	// Query the receiver for the latest version.
 	Query(metrics bool, logFrom logx.LogFrom) (newVersion bool, err error)
 
 	// InheritSecrets will inherit secrets from `otherLookup` if the values should query the same data.
 	InheritSecrets(otherLookup BaseInterface, secretRefs *shared.VSecretRef)
 
-	// ServiceURL returns the Service URL for the Lookup.
+	// ServiceURL returns the Service URL for the receiver.
 	ServiceURL() string
 
 	// Helpers:

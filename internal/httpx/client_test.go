@@ -77,7 +77,7 @@ func TestConfigureInsecureTransport(t *testing.T) {
 	}
 }
 
-func TestInsecureTransport_init(t *testing.T) {
+func TestInit(t *testing.T) {
 	if InsecureTransport.TLSClientConfig == nil {
 		t.Fatalf("%s\nInsecureTransport.TLSClientConfig is nil after init", packageName)
 	}

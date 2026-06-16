@@ -33,7 +33,7 @@ func TestMockLookup_ApplyOverrides(t *testing.T) {
 		t.Errorf("MockLookup.ApplyOverrides(format=\"\", data=nil) error mismatch\ngot:  %v\nwant: nil", err)
 	}
 }
-func TestMockLookup_ApplyOverrides__Error(t *testing.T) {
+func TestMockLookup_ApplyOverrides__error(t *testing.T) {
 	// GIVEN: a MockLookup with an error override.
 	wantErr := "TestMockLookup_ApplyOverrides_Error"
 	fake := &MockLookup{OverrideErr: wantErr}

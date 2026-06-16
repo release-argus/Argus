@@ -34,7 +34,7 @@ type BaseInterface interface {
 	// CheckValues validates the fields of the receiver.
 	CheckValues() (errs error)
 
-	// Query the Lookup for the deployed version.
+	// Query the receiver for the deployed version.
 	Query(metrics bool, logFrom logx.LogFrom) (err error)
 
 	// InheritSecrets will inherit secrets from the `otherLookup`.

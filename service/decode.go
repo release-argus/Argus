@@ -25,7 +25,7 @@ import (
 // marshalServiceRaw re-encodes a service subtree (overridable for tests).
 var marshalServiceRaw = decode.Marshal
 
-// DecodeServices decodes a raw slice into a Services map.
+// Decode creates and returns a new [Services] from format-encoded data.
 func DecodeServices(
 	format string,
 	data []byte,
@@ -79,7 +79,7 @@ func DecodeServices(
 	return field, nil
 }
 
-// DecodeService decodes a raw slice into a Service.
+// Decode creates and returns a new [Service] from format-encoded data.
 func DecodeService(
 	format string,
 	data []byte,

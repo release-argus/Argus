@@ -28,12 +28,12 @@ var marshalWebhookPayload = func(v any) ([]byte, error) {
 
 // AnnounceSend of the WebHook to the `w.Announce` channel.
 // (Broadcast to all WebSocket clients).
-func (wh *WebHook) AnnounceSend() {
-	wh.SetExecuting(false, false)
+func (w *WebHook) AnnounceSend() {
+	w.SetExecuting(false, false)
 	webhookSummary := make(map[string]*apitype.WebHookSummary)
-	webhookSummary[wh.ID] = &apitype.WebHookSummary{
-		Failed:       wh.DidFail(),
-		NextRunnable: wh.NextRunnable(),
+	webhookSummary[w.ID] = &apitype.WebHookSummary{
+		Failed:       w.DidFail(),
+		NextRunnable: w.NextRunnable(),
 	}
 
 	// WebHook pass/fail.
@@ -43,15 +43,15 @@ func (wh *WebHook) AnnounceSend() {
 			Type:    "WEBHOOK",
 			SubType: "EVENT",
 			ServiceData: &apitype.ServiceSummary{
-				ID: wh.ServiceStatus.ServiceInfo.ID,
+				ID: w.ServiceStatus.ServiceInfo.ID,
 			},
 			WebHookData: webhookSummary,
 		},
 	)
 	if err != nil {
-		logx.Error(err, logx.LogFrom{Primary: wh.ID, Secondary: wh.ServiceStatus.ServiceInfo.ID}, true)
+		logx.Error(err, logx.LogFrom{Primary: w.ID, Secondary: w.ServiceStatus.ServiceInfo.ID}, true)
 		return
 	}
 
-	wh.ServiceStatus.SendAnnounce(&payloadData)
+	w.ServiceStatus.SendAnnounce(payloadData)
 }

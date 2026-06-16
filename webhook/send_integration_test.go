@@ -355,7 +355,7 @@ func TestNotifiers_SendWithNotifier(t *testing.T) {
 	}
 }
 
-func TestWebHook_try(t *testing.T) {
+func TestWebHook_Try(t *testing.T) {
 	tests := []struct {
 		name string
 

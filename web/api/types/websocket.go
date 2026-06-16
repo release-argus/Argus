@@ -30,7 +30,7 @@ type WebSocketMessage struct {
 	WebHookData map[string]*WebHookSummary `json:"webhook_data,omitempty"`
 }
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (w *WebSocketMessage) String() string {
 	return decode.ToJSONString(w)
 }

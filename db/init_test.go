@@ -89,7 +89,7 @@ func TestAPI_Get(t *testing.T) {
 	}
 }
 
-func TestAPI_Get__Fail(t *testing.T) {
+func TestAPI_Get__fail(t *testing.T) {
 	// GIVEN: a DB to set up.
 	tests := []struct {
 		name         string
@@ -553,7 +553,7 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 	}
 }
 
-func TestAPI_RemoveUnknownServices__Fail(t *testing.T) {
+func TestAPI_RemoveUnknownServices__fail(t *testing.T) {
 	// GIVEN: an API with no 'id' column in the 'status' table.
 	tests := []struct {
 		name            string
@@ -734,7 +734,7 @@ func TestAPI_ExtractServiceStatus(t *testing.T) {
 	}
 }
 
-func TestAPI_ExtractServiceStatus__Fail(t *testing.T) {
+func TestAPI_ExtractServiceStatus__fail(t *testing.T) {
 	// GIVEN: an API with different 'status' columns.
 	tests := []struct {
 		name            string

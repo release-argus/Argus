@@ -19,7 +19,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// GetType returns the type of the Lookup.
+// GetType returns the type of the receiver.
 func (l *Lookup) GetType() string {
 	return Type
 }

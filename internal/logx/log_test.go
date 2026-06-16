@@ -883,7 +883,7 @@ func TestLogger_Deprecated(t *testing.T) {
 	}
 }
 
-func TestLogger__LengthCap(t *testing.T) {
+func TestLogger__lengthCap(t *testing.T) {
 	// GIVEN: a Logger.
 	tests := []struct {
 		level      string

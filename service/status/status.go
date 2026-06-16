@@ -161,7 +161,7 @@ func (s *Status) Copy(withChannels bool) *Status {
 	return newStatus
 }
 
-// String implements [fmt.Stringer].
+// String implements fmt.Stringer.
 func (s *Status) String() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -592,7 +592,7 @@ func (s *Status) Deleting() bool {
 }
 
 // SendAnnounce payload to the AnnounceChannel.
-func (s *Status) SendAnnounce(payload *[]byte) {
+func (s *Status) SendAnnounce(payload []byte) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -600,7 +600,7 @@ func (s *Status) SendAnnounce(payload *[]byte) {
 		return
 	}
 
-	s.AnnounceChannel <- *payload
+	s.AnnounceChannel <- payload
 }
 
 // sendDatabase enqueues a database update when the service is not being deleted.
@@ -649,7 +649,7 @@ func updateUpdatesCurrentMetric(previousServiceInfo, newServiceInfo serviceinfo.
 	metric.SetUpdatesCurrent(1, newValue)
 }
 
-// InitMetrics for the Status.
+// InitMetrics registers status-derived Prometheus metrics for the service.
 func (s *Status) InitMetrics() {
 	serviceInfo := s.GetServiceInfo()
 
@@ -657,7 +657,7 @@ func (s *Status) InitMetrics() {
 	metric.SetUpdatesCurrent(1, metric.GetVersionDeployedState(serviceInfo))
 }
 
-// DeleteMetrics of the Status.
+// InitMetrics removes status-derived Prometheus metrics for the service.
 func (s *Status) DeleteMetrics() {
 	metric.DeletePrometheusGauge(
 		metric.LatestVersionIsDeployed,

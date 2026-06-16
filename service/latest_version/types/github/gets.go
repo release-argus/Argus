@@ -22,12 +22,12 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// GetType returns the type of the Lookup.
+// GetType returns the type of the receiver.
 func (l *Lookup) GetType() string {
 	return Type
 }
 
-// accessToken returns the GitHub API access token.
+// accessToken resolves the GitHub API access token.
 func (l *Lookup) accessToken() string {
 	return util.FirstNonDefaultWithEnv(
 		l.AccessToken,
@@ -66,7 +66,7 @@ func (l *Lookup) url(page int) string {
 	return url
 }
 
-// usePreRelease returns we want to consider GitHub PreReleases for new versions.
+// usePreRelease resolves whether to consider GitHub PreReleases for new versions.
 func (l *Lookup) usePreRelease() bool {
 	return *util.FirstNonDefault(
 		l.UsePreRelease,
@@ -87,7 +87,7 @@ func (l *Lookup) ServiceURL() string {
 	return serviceURL
 }
 
-// GetGitHubData returns the GitHub data. (For tests).
+// GetGitHubData returns the GitHub data (For tests).
 func (l *Lookup) GetGitHubData() *Data {
 	return &l.data
 }

@@ -31,8 +31,8 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-// oldSecretRefs contains the indexes to use for SecretValues.
-type oldSecretRefs struct {
+// secretRefs contains the indexes to use for SecretValues.
+type secretRefs struct {
 	ID                    string                           `json:"id"`
 	LatestVersion         shared.VSecretRef                `json:"latest_version,omitempty"`
 	DeployedVersionLookup shared.VSecretRef                `json:"deployed_version,omitempty"`
@@ -40,7 +40,7 @@ type oldSecretRefs struct {
 	WebHook               map[string]shared.WHSecretRef    `json:"webhook,omitempty"`
 }
 
-type oldSecretRefsIncoming struct {
+type secretRefsIncoming struct {
 	ID                    string                  `json:"id"`
 	LatestVersion         shared.VSecretRef       `json:"latest_version,omitempty"`
 	DeployedVersionLookup shared.VSecretRef       `json:"deployed_version,omitempty"`
@@ -52,8 +52,8 @@ type oldSecretRefsIncoming struct {
 //
 // The Web API represents Notify and WebHook entries as lists,
 // but internally they are stored as maps keyed by each entry's ID field.
-func (o *oldSecretRefs) UnmarshalJSON(data []byte) error {
-	var aux oldSecretRefsIncoming
+func (o *secretRefs) UnmarshalJSON(data []byte) error {
+	var aux secretRefsIncoming
 	if err := decode.Unmarshal("json", data, &aux); err != nil {
 		return err //nolint:wrapcheck
 	}
@@ -81,7 +81,7 @@ func (o *oldSecretRefs) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// decodeServiceFromPayload decodes a Service from JSON. (overridable for tests).
+// decodeServiceFromPayload decodes a Service from JSON (overridable for tests).
 var decodeServiceFromPayload = DecodeService
 
 // FromPayload creates a new/edited Service from a payload.
@@ -103,7 +103,7 @@ func FromPayload(
 	}
 
 	// SecretRefs.
-	var secretRefs oldSecretRefs
+	var secretRefs secretRefs
 	if err := decode.Unmarshal("json", raw, &secretRefs); err != nil {
 		err = fmt.Errorf("unmarshal service payload: %w", err)
 		logx.Error(err, logFrom, true)
@@ -198,7 +198,7 @@ func (s *Service) CheckFetches() error {
 
 // giveSecrets replaces `SecretValue` in this Service with the corresponding value from oldService,
 // using secretRefs to locate secrets in maps/lists.
-func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
+func (s *Service) giveSecrets(oldService *Service, secretRefs secretRefs) {
 	if oldService == nil {
 		return
 	}

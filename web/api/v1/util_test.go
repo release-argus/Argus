@@ -31,7 +31,7 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-func TestAPI_sendAnnouncePayload__MarshalError(t *testing.T) {
+func TestAPI_SendAnnouncePayload__marshalError(t *testing.T) {
 	// GIVEN: a failing marshal function.
 	original := marshalAnnouncePayload
 	customErr := fmt.Errorf("marshal failed")
@@ -57,10 +57,10 @@ func TestAPI_sendAnnouncePayload__MarshalError(t *testing.T) {
 		},
 	}
 
-	// WHEN: announceDelete is called.
-	api.announceDelete("service-1")
+	// WHEN: sendAnnouncePayload is called.
+	api.sendAnnouncePayload(apitype.WebSocketMessage{})
 
-	prefix := fmt.Sprintf("%s\nAPI.announceDelete(marshal error)", packageName)
+	prefix := fmt.Sprintf("%s\nAPI.sendAnnouncePayload(marshal error)", packageName)
 
 	// THEN: no message is sent to the announce channel.
 	select {
@@ -106,7 +106,7 @@ func TestGetParam(t *testing.T) {
 			t.Parallel()
 
 			// WHEN: getParam is called.
-			got := getParam(&tc.queryParams, tc.param)
+			got := getParam(tc.queryParams, tc.param)
 
 			prefix := fmt.Sprintf(
 				"%s\ngetParam(params=%+v, key=%q)",

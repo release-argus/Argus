@@ -116,7 +116,7 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 	}
 }
 
-func TestWebHook_AnnounceSend__MarshalError(t *testing.T) {
+func TestWebHook_AnnounceSend__marshalError(t *testing.T) {
 	// GIVEN: a failing marshal function.
 	original := marshalWebhookPayload
 	customErr := fmt.Errorf("marshal failed")

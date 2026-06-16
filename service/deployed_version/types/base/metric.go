@@ -19,7 +19,7 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// InitMetrics for this Lookup.
+// InitMetrics registers Prometheus counters for deployed version lookup results.
 func (l *Lookup) InitMetrics(parentLookup Interface) {
 	lookupType := parentLookup.GetType()
 
@@ -42,7 +42,7 @@ func (l *Lookup) InitMetrics(parentLookup Interface) {
 	)
 }
 
-// DeleteMetrics for this Lookup.
+// DeleteMetrics removes all Prometheus metrics for deployed version lookup results.
 func (l *Lookup) DeleteMetrics(parentLookup Interface) {
 	lookupType := parentLookup.GetType()
 

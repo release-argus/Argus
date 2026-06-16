@@ -628,7 +628,7 @@ func TestLookup_Query(t *testing.T) {
 	}
 }
 
-func TestLookup_getVersion(t *testing.T) {
+func TestLookup_GetVersion(t *testing.T) {
 	const (
 		jsonBody  = `{"bar":"1.2.2","foo":{"bar":{"version":"3.2.1"}}}`
 		plainBody = `version: "1.2.1"

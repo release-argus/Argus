@@ -52,13 +52,13 @@ type QuayRegistry struct {
 // #######################
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-// Use [DecodeDefaults] for a full unmarshal.
+// Use [DecodeDefaults] for a complete QuayRegistryDefaults.
 func (r *QuayRegistryDefaults) UnmarshalJSON(data []byte) error {
 	return r.unmarshal("json", data)
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
-// Use [DecodeDefaults] for a full unmarshal.
+// Use [DecodeDefaults] for a complete QuayRegistryDefaults.
 func (r *QuayRegistryDefaults) UnmarshalYAML(data []byte) error {
 	return r.unmarshal("yaml", data)
 }
@@ -83,13 +83,13 @@ func (r *QuayRegistryDefaults) unmarshal(format string, data []byte) error {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
+// Use [Decode] for a complete QuayRegistry.
 func (r *QuayRegistry) UnmarshalJSON(data []byte) error {
 	return r.unmarshal("json", data)
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
+// Use [Decode] for a complete QuayRegistry.
 func (r *QuayRegistry) UnmarshalYAML(data []byte) error {
 	return r.unmarshal("yaml", data)
 }

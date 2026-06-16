@@ -17,7 +17,7 @@ package dashboard
 
 import "github.com/release-argus/Argus/config/decode"
 
-// DefaultsConfig pairs soft and hard dashboard defaults for decoding.
+// DefaultsConfig pairs soft and hard dashboard defaults.
 type DefaultsConfig struct {
 	Soft *Defaults
 	Hard *Defaults

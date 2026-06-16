@@ -76,47 +76,47 @@ func (l *Lookup) Init(
 	}
 }
 
-// GetServiceID returns the service ID of the Lookup.
+// GetServiceID returns the service ID of the receiver.
 func (l *Lookup) GetServiceID() string {
 	return l.Status.ServiceInfo.ID
 }
 
-// GetType returns the type of the Lookup.
+// GetType returns the type of the receiver.
 func (l *Lookup) GetType() string {
 	return "-"
 }
 
-// GetOptions returns the Lookup's options.
+// GetOptions returns the receiver's options.
 func (l *Lookup) GetOptions() *opt.Options {
 	return l.Options
 }
 
-// GetRequire returns the Lookup's require options.
+// GetRequire returns the receiver's require options.
 func (l *Lookup) GetRequire() *filter.Require {
 	return l.Require
 }
 
-// SetRequire sets the Lookup's require options.
+// SetRequire sets the receiver's require options.
 func (l *Lookup) SetRequire(require *filter.Require) {
 	l.Require = require
 }
 
-// GetStatus returns the Lookup's status.
+// GetStatus returns the receiver's status.
 func (l *Lookup) GetStatus() *status.Status {
 	return l.Status
 }
 
-// SetStatus sets the Lookup's status.
+// SetStatus sets the receiver's status.
 func (l *Lookup) SetStatus(status *status.Status) {
 	l.Status = status
 }
 
-// GetDefaults returns the Lookup's defaults.
+// GetDefaults returns the receiver's defaults.
 func (l *Lookup) GetDefaults() *Defaults {
 	return l.Defaults
 }
 
-// GetHardDefaults returns the Lookup's hard defaults.
+// GetHardDefaults returns the receiver's hard defaults.
 func (l *Lookup) GetHardDefaults() *Defaults {
 	return l.HardDefaults
 }

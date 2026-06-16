@@ -648,7 +648,7 @@ func TestDefaults_Default(t *testing.T) {
 	}
 }
 
-func TestDefaults_Default__Fail(t *testing.T) {
+func TestDefaults_Default__fail(t *testing.T) {
 	releaseStdout := test.CaptureLog(t, logx.Default())
 	// GIVEN: Defaults, and an environment variable that will cause MapEnvToStruct to error.
 	var defaults Defaults

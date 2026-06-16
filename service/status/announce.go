@@ -17,17 +17,33 @@ package status
 
 import (
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
+// marshalAnnouncePayload serialises WebSocket announce payloads (overridable for tests).
+var marshalAnnouncePayload = func(v any) ([]byte, error) {
+	return decode.Marshal("json", v)
+}
+
+// sendAnnouncePayload marshals a WebSocket message to JSON and publishes it on the announce channel.
+// Marshal failures are logged and the message is dropped.
+func (s *Status) sendAnnouncePayload(msg apitype.WebSocketMessage) {
+	payloadData, err := marshalAnnouncePayload(msg)
+	if err != nil {
+		logx.Error(err, logx.LogFrom{Primary: "Status sendAnnouncePayload"}, true)
+		return
+	}
+
+	s.SendAnnounce(payloadData)
+}
+
 // AnnounceFirstVersion broadcasts the first retrieved latest version to WebSocket clients.
 func (s *Status) AnnounceFirstVersion() {
-	var payloadData []byte
-
 	webURL := s.ServiceInfo.GetWebURL()
 
-	payloadData, _ = decode.Marshal(
-		"json", apitype.WebSocketMessage{
+	s.sendAnnouncePayload(
+		apitype.WebSocketMessage{
 			Page:    "APPROVALS",
 			Type:    "VERSION",
 			SubType: "INIT",
@@ -41,16 +57,12 @@ func (s *Status) AnnounceFirstVersion() {
 			},
 		},
 	)
-
-	s.SendAnnounce(&payloadData)
 }
 
 // AnnounceQuery broadcasts a latest version query timestamp to WebSocket clients.
 func (s *Status) AnnounceQuery() {
-	var payloadData []byte
-
-	payloadData, _ = decode.Marshal(
-		"json", apitype.WebSocketMessage{
+	s.sendAnnouncePayload(
+		apitype.WebSocketMessage{
 			Page:    "APPROVALS",
 			Type:    "VERSION",
 			SubType: "QUERY",
@@ -62,19 +74,15 @@ func (s *Status) AnnounceQuery() {
 			},
 		},
 	)
-
-	s.SendAnnounce(&payloadData)
 }
 
 // AnnounceQueryNewVersion broadcasts a new latest version to WebSocket clients.
 func (s *Status) AnnounceQueryNewVersion() {
-	var payloadData []byte
-
 	webURL := s.ServiceInfo.GetWebURL()
 
 	// Last query time update OR approval/approved.
-	payloadData, _ = decode.Marshal(
-		"json", apitype.WebSocketMessage{
+	s.sendAnnouncePayload(
+		apitype.WebSocketMessage{
 			Page:    "APPROVALS",
 			Type:    "VERSION",
 			SubType: "NEW",
@@ -88,17 +96,12 @@ func (s *Status) AnnounceQueryNewVersion() {
 			},
 		},
 	)
-
-	s.SendAnnounce(&payloadData)
 }
 
 // AnnounceUpdate broadcasts a deployed version change to WebSocket clients.
 func (s *Status) AnnounceUpdate() {
-	var payloadData []byte
-
-	// DeployedVersion update.
-	payloadData, _ = decode.Marshal(
-		"json", apitype.WebSocketMessage{
+	s.sendAnnouncePayload(
+		apitype.WebSocketMessage{
 			Page:    "APPROVALS",
 			Type:    "VERSION",
 			SubType: "UPDATED",
@@ -111,17 +114,12 @@ func (s *Status) AnnounceUpdate() {
 			},
 		},
 	)
-
-	s.SendAnnounce(&payloadData)
 }
 
 // announceApproved broadcasts an approval or skip action to WebSocket clients.
 func (s *Status) announceApproved() {
-	var payloadData []byte
-
-	// Last query time update OR approval/approved.
-	payloadData, _ = decode.Marshal(
-		"json", apitype.WebSocketMessage{
+	s.sendAnnouncePayload(
+		apitype.WebSocketMessage{
 			Page:    "APPROVALS",
 			Type:    "VERSION",
 			SubType: "ACTION",
@@ -133,6 +131,4 @@ func (s *Status) announceApproved() {
 			},
 		},
 	)
-
-	s.SendAnnounce(&payloadData)
 }

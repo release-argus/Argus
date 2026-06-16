@@ -50,13 +50,13 @@ Usage of /usr/local/bin/argus:
   -config.check
         Print the fully-parsed config.
   -config.file string
-        Argus configuration file path. (env_var=ARGUS_CONFIG_FILE) (default "config.yml")
+        Argus configuration file path (env_var=ARGUS_CONFIG_FILE) (default "config.yml")
   -data.database-file string
-        Database file path. (env_var=ARGUS_DATA_DATABASE_FILE) (default "data/argus.db")
+        Database file path (env_var=ARGUS_DATA_DATABASE_FILE) (default "data/argus.db")
   -log.level string
-        ERROR, WARN, INFO, VERBOSE or DEBUG. (env_var=ARGUS_LOG_LEVEL) (default "INFO")
+        ERROR, WARN, INFO, VERBOSE or DEBUG (env_var=ARGUS_LOG_LEVEL) (default "INFO")
   -log.timestamps
-        Enable timestamps in CLI output. (env_var=ARGUS_LOG_TIMESTAMPS)
+        Enable timestamps in CLI output (env_var=ARGUS_LOG_TIMESTAMPS)
   -test.commands commands
         Put the name of the Service to test the commands of.
   -test.notify string
@@ -64,19 +64,19 @@ Usage of /usr/local/bin/argus:
   -test.service string
         Put the name of the Service to test the version query.
   -web.basic-auth.password string
-        Password for basic auth. (env_var=ARGUS_WEB_BASIC_AUTH_PASSWORD)
+        Password for basic auth (env_var=ARGUS_WEB_BASIC_AUTH_PASSWORD)
   -web.basic-auth.username string
-        Username for basic auth. (env_var=ARGUS_WEB_BASIC_AUTH_USERNAME)
+        Username for basic auth (env_var=ARGUS_WEB_BASIC_AUTH_USERNAME)
   -web.cert-file string
-        HTTPS certificate file path. (env_var=ARGUS_WEB_CERT_FILE)
+        HTTPS certificate file path (env_var=ARGUS_WEB_CERT_FILE)
   -web.listen-host string
-        IP address to listen on for UI, API, and telemetry. (env_var=ARGUS_WEB_LISTEN_HOST) (default "0.0.0.0")
+        IP address to listen on for UI, API, and telemetry (env_var=ARGUS_WEB_LISTEN_HOST) (default "0.0.0.0")
   -web.listen-port string
-        Port to listen on for UI, API, and telemetry. (env_var=ARGUS_WEB_LISTEN_PORT) (default "8080")
+        Port to listen on for UI, API, and telemetry (env_var=ARGUS_WEB_LISTEN_PORT) (default "8080")
   -web.pkey-file string
-        HTTPS private key file path. (env_var=ARGUS_WEB_PKEY_FILE)
+        HTTPS private key file path (env_var=ARGUS_WEB_PKEY_FILE)
   -web.route-prefix string
-        Prefix for web endpoints. (env_var=ARGUS_WEB_ROUTE_PREFIX) (default "/")
+        Prefix for web endpoints (env_var=ARGUS_WEB_ROUTE_PREFIX) (default "/")
 ```
 
 ## Building from source
@@ -90,11 +90,11 @@ The backend of Argus is built with [Go](https://go.dev/), and the frontend with 
 
 ### Go changes
 
-To see the changes you've made by modifying any of the `.go` files, you must compile Argus. Run `make build` the first time to ensure the web components are available locally. Any future builds that don't need the web-ui to be rebuilt can be done with `make go-build` (faster than `make build`). (Running either of these in the root dir will produce an `argus` binary)
+To see the changes you've made by modifying any of the `.go` files, you must compile Argus. Run `make build` the first time to ensure the web components are available locally. Any future builds that don't need the web-ui to be rebuilt can be done with `make go-build` (faster than `make build`). Running either of these in the root dir will produce an `argus` binary.
 
 ### React changes
 
-To see the changes after modifying anything in `web/ui/react-app`, you must recompile both the Go backend and the React frontend. This can be done by running `make build`. (Running this in the root dir will produce the `argus` binary)
+To see the changes after modifying anything in `web/ui/react-app`, you must recompile both the Go backend and the React frontend. This can be done by running `make build`. Running this in the root dir will produce the `argus` binary.
 
 ## Getting started
 

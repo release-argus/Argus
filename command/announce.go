@@ -48,7 +48,7 @@ func (c *Controller) AnnounceCommand(index int, serviceInfo serviceinfo.ServiceI
 		},
 	)
 
-	c.ServiceStatus.SendAnnounce(&payloadData)
+	c.ServiceStatus.SendAnnounce(payloadData)
 }
 
 // Find returns the index of the [Command] matching the given string.

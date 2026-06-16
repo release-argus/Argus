@@ -129,7 +129,29 @@ func (s *Shoutrrr) InitMaps() {
 	s.Base.InitMaps()
 }
 
-// initMetrics registers Prometheus counters for the receiver.
+// InitMetrics registers Prometheus counters for all Shoutrrr elements.
+func (s *Shoutrrrs) InitMetrics() {
+	if s == nil {
+		return
+	}
+
+	for _, shoutrrr := range *s {
+		shoutrrr.initMetrics()
+	}
+}
+
+// DeleteMetrics removes Prometheus counters for all Shoutrrr elements.
+func (s *Shoutrrrs) DeleteMetrics() {
+	if s == nil {
+		return
+	}
+
+	for _, shoutrrr := range *s {
+		shoutrrr.deleteMetrics()
+	}
+}
+
+// initMetrics registers Prometheus counters for Shoutrrr success/failure results.
 func (s *Shoutrrr) initMetrics() {
 	serviceID := s.ServiceStatus.ServiceInfo.ID
 
@@ -152,18 +174,7 @@ func (s *Shoutrrr) initMetrics() {
 	)
 }
 
-// InitMetrics for this Shoutrrrs.
-func (s *Shoutrrrs) InitMetrics() {
-	if s == nil {
-		return
-	}
-
-	for _, shoutrrr := range *s {
-		shoutrrr.initMetrics()
-	}
-}
-
-// deleteMetrics removes Prometheus counters for the receiver.
+// deleteMetrics removes Prometheus counters for Notify success/failure results.
 func (s *Shoutrrr) deleteMetrics() {
 	serviceID := s.ServiceStatus.ServiceInfo.ID
 
@@ -184,15 +195,4 @@ func (s *Shoutrrr) deleteMetrics() {
 		s.GetType(),
 		metric.ActionResultFail,
 	)
-}
-
-// DeleteMetrics for this Shoutrrrs.
-func (s *Shoutrrrs) DeleteMetrics() {
-	if s == nil {
-		return
-	}
-
-	for _, shoutrrr := range *s {
-		shoutrrr.deleteMetrics()
-	}
 }

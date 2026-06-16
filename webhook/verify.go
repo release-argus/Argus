@@ -59,16 +59,16 @@ func (whd *WebHooksDefaults) CheckValues() (error, bool) {
 
 // CheckValues validates the fields of each [WebHook],
 // returning errors encountered and whether any values were modified.
-func (wh *WebHooks) CheckValues() (error, bool) {
-	if wh == nil {
+func (w *WebHooks) CheckValues() (error, bool) {
+	if w == nil {
 		return nil, false
 	}
 
 	var errs []error
 	changed := false
-	keys := util.SortedKeys(*wh)
+	keys := util.SortedKeys(*w)
 	for _, key := range keys {
-		err, keyChanged := (*wh)[key].CheckValues()
+		err, keyChanged := (*w)[key].CheckValues()
 		if err != nil {
 			errs = append(
 				errs,
@@ -89,11 +89,11 @@ func (wh *WebHooks) CheckValues() (error, bool) {
 
 // CheckValues validates the fields of the receiver,
 // returning errors encountered and whether any values were modified.
-func (wh *WebHook) CheckValues() (error, bool) {
+func (w *WebHook) CheckValues() (error, bool) {
 	var errs []error
 
 	// type
-	whType := wh.GetType()
+	whType := w.GetType()
 	if whType == "" {
 		errs = append(
 			errs,
@@ -103,7 +103,7 @@ func (wh *WebHook) CheckValues() (error, bool) {
 			},
 		)
 		// Check the Type doesn't differ in the Main.
-	} else if wh.Main.Type != "" && whType != wh.Main.Type {
+	} else if w.Main.Type != "" && whType != w.Main.Type {
 		errs = append(
 			errs,
 			&decode.FieldError{
@@ -111,23 +111,23 @@ func (wh *WebHook) CheckValues() (error, bool) {
 				Value: whType,
 				Description: fmt.Sprintf(
 					"omit 'type', or match the root defaults.%s.type of %q",
-					wh.ID, wh.Main.Type,
+					w.ID, w.Main.Type,
 				),
 			},
 		)
 	}
 
-	baseErrs, changed := wh.Base.CheckValues()
+	baseErrs, changed := w.Base.CheckValues()
 	if baseErrs != nil {
 		errs = append(errs, baseErrs)
 	}
 
 	// url
 	if util.FirstNonDefault(
-		wh.URL,
-		wh.Main.URL,
-		wh.Defaults.URL,
-		wh.HardDefaults.URL,
+		w.URL,
+		w.Main.URL,
+		w.Defaults.URL,
+		w.HardDefaults.URL,
 	) == "" {
 		errs = append(
 			errs,
@@ -135,20 +135,20 @@ func (wh *WebHook) CheckValues() (error, bool) {
 				Key: "url",
 				Description: fmt.Sprintf(
 					"here, in root.defaults.%s, or in defaults",
-					wh.ID,
+					w.ID,
 				),
 			},
 		)
 	}
 	// secret
-	if wh.GetSecret() == "" {
+	if w.GetSecret() == "" {
 		errs = append(
 			errs,
 			&decode.FieldError{
 				Key: "secret",
 				Description: fmt.Sprintf(
 					"here, in root.defaults.%s, or in defaults",
-					wh.ID,
+					w.ID,
 				),
 			},
 		)

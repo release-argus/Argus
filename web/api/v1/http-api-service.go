@@ -65,11 +65,7 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 	defer payload.Close()
 	body, err := io.ReadAll(payload)
 	if err != nil {
-		failRequest(
-			&w,
-			err,
-			http.StatusBadRequest,
-		)
+		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
 	// Unmarshal the new order from the payload.

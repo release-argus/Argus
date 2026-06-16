@@ -1055,7 +1055,7 @@ func TestCommonRegistry_Defaults__nil(t *testing.T) {
 	}
 }
 
-func TestCommonRegistry_SetDefaults__UnknownType(t *testing.T) {
+func TestCommonRegistry_SetDefaults__unknownType(t *testing.T) {
 	dockerType := "ghcr"
 	// GIVEN: a CommonRegistry with Defaults.
 	registry := RegistryMap[dockerType]()

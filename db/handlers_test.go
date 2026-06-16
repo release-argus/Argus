@@ -147,7 +147,7 @@ func TestAPI_Handler(t *testing.T) {
 	}
 }
 
-func TestAPI_Handler__Fail(t *testing.T) {
+func TestAPI_Handler__fail(t *testing.T) {
 	// GIVEN: a DB with a few service status'.
 	tAPI := testAPI(t)
 	tAPI.initialise()

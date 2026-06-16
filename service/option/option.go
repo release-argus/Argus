@@ -27,7 +27,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// DefaultsConfig pairs soft and hard service option defaults for decoding.
+// DefaultsConfig pairs soft and hard service option defaults.
 type DefaultsConfig struct {
 	Soft *Defaults
 	Hard *Defaults
@@ -97,7 +97,7 @@ func (o *Options) Copy() *Options {
 	}
 }
 
-// String implements [fmt.Stringer] and returns a YAML representation.
+// String implements fmt.Stringer and returns a YAML representation.
 func (o *Options) String() string {
 	if o == nil {
 		return ""

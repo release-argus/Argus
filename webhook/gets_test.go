@@ -143,7 +143,7 @@ func TestWebHook_BuildRequest(t *testing.T) {
 	}
 }
 
-func TestWebHook_BuildRequest__MarshalError(t *testing.T) {
+func TestWebHook_BuildRequest__marshalError(t *testing.T) {
 	// GIVEN: a failing marshal function.
 	original := marshalWebhookPayload
 	marshalWebhookPayload = func(v any) ([]byte, error) {

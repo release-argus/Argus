@@ -187,25 +187,13 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "mattermost - base + port",
+			name:  "mattermost - base + username + port",
 			sType: "mattermost",
 			want:  "mattermost://USERNAME@HOST:8443/TOKEN",
 			urlFields: map[string]string{
 				"host":     "HOST",
 				"token":    "TOKEN",
 				"username": "USERNAME",
-				"port":     "8443",
-			},
-		},
-		{
-			name:  "mattermost - base + port + path",
-			sType: "mattermost",
-			want:  "mattermost://USERNAME@HOST:8443/PATH/TOKEN",
-			urlFields: map[string]string{
-				"host":     "HOST",
-				"token":    "TOKEN",
-				"username": "USERNAME",
-				"path":     "PATH",
 				"port":     "8443",
 			},
 		},
@@ -240,57 +228,42 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "matrix - base + user + port + path",
+			name:  "matrix - base + user + port + rooms",
 			sType: "matrix",
-			want:  "matrix://USER:PASSWORD@HOST:8443/PATH/",
+			want:  "matrix://USER:PASSWORD@HOST:8443/?rooms=ROOMS",
 			urlFields: map[string]string{
 				"host":     "HOST",
 				"password": "PASSWORD",
 				"user":     "USER",
 				"port":     "8443",
-				"path":     "PATH",
-			},
-		},
-		{
-			name:  "matrix - base + user + port + path + rooms",
-			sType: "matrix",
-			want:  "matrix://USER:PASSWORD@HOST:8443/PATH/?rooms=ROOMS",
-			urlFields: map[string]string{
-				"host":     "HOST",
-				"password": "PASSWORD",
-				"user":     "USER",
-				"port":     "8443",
-				"path":     "PATH",
 			},
 			params: map[string]string{
 				"rooms": "ROOMS",
 			},
 		},
 		{
-			name:  "matrix - base + user + port + path + disabletls",
+			name:  "matrix - base + user + port + disabletls",
 			sType: "matrix",
-			want:  "matrix://USER:PASSWORD@HOST:8443/PATH/?disableTLS=yes",
+			want:  "matrix://USER:PASSWORD@HOST:8443/?disableTLS=yes",
 			urlFields: map[string]string{
 				"host":     "HOST",
 				"password": "PASSWORD",
 				"user":     "USER",
 				"port":     "8443",
-				"path":     "PATH",
 			},
 			params: map[string]string{
 				"disabletls": "yes",
 			},
 		},
 		{
-			name:  "matrix - base + user + port + path + rooms + disabletls",
+			name:  "matrix - base + user + port + rooms + disabletls",
 			sType: "matrix",
-			want:  "matrix://USER:PASSWORD@HOST:8443/PATH/?rooms=ROOMS&disableTLS=yes",
+			want:  "matrix://USER:PASSWORD@HOST:8443/?rooms=ROOMS&disableTLS=yes",
 			urlFields: map[string]string{
 				"host":     "HOST",
 				"password": "PASSWORD",
 				"user":     "USER",
 				"port":     "8443",
-				"path":     "PATH",
 			},
 			params: map[string]string{
 				"rooms":      "ROOMS",
@@ -367,17 +340,6 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "opsgenie - base + port + path",
-			sType: "opsgenie",
-			want:  "opsgenie://DEFAULT_HOST:8443/PATH/APIKEY",
-			urlFields: map[string]string{
-				"host":   "DEFAULT_HOST",
-				"apikey": "APIKEY",
-				"port":   "8443",
-				"path":   "PATH",
-			},
-		},
-		{
 			name:  "pushbullet - base",
 			sType: "pushbullet",
 			want:  "pushbullet://TOKEN/TARGETS",
@@ -428,19 +390,6 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 				"tokenb":  "TOKENB",
 				"channel": "CHANNEL",
 				"port":    "8443",
-			},
-		},
-		{
-			name:  "rocketchat - base + port + path",
-			sType: "rocketchat",
-			want:  "rocketchat://HOST:8443/PATH/TOKENA/TOKENB/CHANNEL",
-			urlFields: map[string]string{
-				"host":    "HOST",
-				"tokena":  "TOKENA",
-				"tokenb":  "TOKENB",
-				"channel": "CHANNEL",
-				"port":    "8443",
-				"path":    "PATH",
 			},
 		},
 		{

@@ -413,7 +413,7 @@ func TestLookup_Query(t *testing.T) {
 	}
 }
 
-func TestLookup_Query__GitHubETag(t *testing.T) {
+func TestLookup_Query__githubETag(t *testing.T) {
 	// GIVEN: a Lookup.
 	tests := []struct {
 		name                               string

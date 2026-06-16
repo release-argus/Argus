@@ -14,7 +14,7 @@
 
 package manual
 
-// GetType returns the type of the Lookup.
+// GetType returns the type of the receiver.
 func (l *Lookup) GetType() string {
 	return Type
 }

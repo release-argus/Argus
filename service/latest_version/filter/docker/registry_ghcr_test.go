@@ -123,7 +123,7 @@ func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
 			),
 		},
 		{
-			name:     "auth: null",
+			name:     "JSON/auth-null",
 			format:   "json",
 			data:     `{"auth": null}`,
 			registry: &GHCRRegistryDefaults{},
@@ -298,7 +298,7 @@ func TestGHCRRegistry_Unmarshal(t *testing.T) {
 			),
 		},
 		{
-			name:     "auth: null",
+			name:     "JSON/auth-null",
 			format:   "json",
 			data:     `{"auth": null}`,
 			registry: &GHCRRegistry{},
@@ -1836,7 +1836,7 @@ func TestGHCRAuthDefaults_GetQueryTokenSelf(t *testing.T) {
 	}
 }
 
-func TestGHCRAuthDefaults_GetQueryTokenSelf__Parallel(t *testing.T) {
+func TestGHCRAuthDefaults_GetQueryTokenSelf__parallel(t *testing.T) {
 	// GIVEN: a GHCRAuthDefaults with a queryToken that has expired.
 	data := &GHCRAuthDefaults{
 		Token:      "token",

@@ -21,7 +21,7 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 )
 
-// DefaultsConfig pairs soft and hard latest version defaults for decoding.
+// DefaultsConfig pairs soft and hard latest version defaults.
 type DefaultsConfig struct {
 	Soft *Defaults
 	Hard *Defaults

@@ -115,29 +115,29 @@ func DecodeDefaults(format string, data []byte) (*Defaults, error) {
 // The map is encoded as a JSON array of WebHook values.
 // Entries are sorted by map key to ensure deterministic output.
 // The map key corresponds to WebHook.ID and is not separately included in the output.
-func (wh *WebHooks) MarshalJSON() ([]byte, error) {
-	if wh == nil {
+func (w *WebHooks) MarshalJSON() ([]byte, error) {
+	if w == nil {
 		return []byte("null"), nil
 	}
 
-	keys := util.SortedKeys(*wh)
-	arr := make([]*WebHook, 0, len(*wh))
+	keys := util.SortedKeys(*w)
+	arr := make([]*WebHook, 0, len(*w))
 	for _, key := range keys {
-		arr = append(arr, (*wh)[key])
+		arr = append(arr, (*w)[key])
 	}
 	return decode.Marshal("json", arr) //nolint:wrapcheck
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-func (wh *WebHooks) UnmarshalJSON(data []byte) error {
+func (w *WebHooks) UnmarshalJSON(data []byte) error {
 	var arr []WebHook
 	if err := decode.Unmarshal("json", data, &arr); err != nil {
 		return err //nolint:wrapcheck
 	}
-	*wh = make(WebHooks, len(arr))
+	*w = make(WebHooks, len(arr))
 
 	for i := range arr {
-		(*wh)[arr[i].ID] = &arr[i]
+		(*w)[arr[i].ID] = &arr[i]
 	}
 	return nil
 }
@@ -184,44 +184,44 @@ func New(
 }
 
 // Copy returns a deep copy of the WebHooks map.
-func (wh *WebHooks) Copy(serviceStatus *status.Status, notifiers Notifiers) WebHooks {
-	if wh == nil {
+func (w *WebHooks) Copy(serviceStatus *status.Status, notifiers Notifiers) WebHooks {
+	if w == nil {
 		return nil
 	}
 
-	newWebHooks := make(WebHooks, len(*wh))
-	for k, v := range *wh {
+	newWebHooks := make(WebHooks, len(*w))
+	for k, v := range *w {
 		newWebHooks[k] = v.Copy(serviceStatus, notifiers)
 	}
 	return newWebHooks
 }
 
 // Copy returns a deep copy of the WebHook.
-func (wh *WebHook) Copy(serviceStatus *status.Status, notifiers Notifiers) *WebHook {
-	if wh == nil {
+func (w *WebHook) Copy(serviceStatus *status.Status, notifiers Notifiers) *WebHook {
+	if w == nil {
 		return nil
 	}
 
 	return &WebHook{
 		Base: Base{
-			Type:              wh.Type,
-			URL:               wh.URL,
-			AllowInvalidCerts: util.ClonePtr(wh.AllowInvalidCerts),
-			Headers:           util.CopySlice(wh.Headers),
-			Secret:            wh.Secret,
-			DesiredStatusCode: util.ClonePtr(wh.DesiredStatusCode),
-			Delay:             wh.Delay,
-			MaxTries:          util.ClonePtr(wh.MaxTries),
-			SilentFails:       util.ClonePtr(wh.SilentFails),
+			Type:              w.Type,
+			URL:               w.URL,
+			AllowInvalidCerts: util.ClonePtr(w.AllowInvalidCerts),
+			Headers:           util.CopySlice(w.Headers),
+			Secret:            w.Secret,
+			DesiredStatusCode: util.ClonePtr(w.DesiredStatusCode),
+			Delay:             w.Delay,
+			MaxTries:          util.ClonePtr(w.MaxTries),
+			SilentFails:       util.ClonePtr(w.SilentFails),
 		},
-		ID:             wh.ID,
-		Failed:         wh.Failed.Copy(),
+		ID:             w.ID,
+		Failed:         w.Failed.Copy(),
 		Notifiers:      notifiers,
 		ServiceStatus:  serviceStatus,
-		ParentInterval: util.ClonePtr(wh.ParentInterval),
-		Main:           wh.Main,
-		Defaults:       wh.Defaults,
-		HardDefaults:   wh.HardDefaults,
+		ParentInterval: util.ClonePtr(w.ParentInterval),
+		Main:           w.Main,
+		Defaults:       w.Defaults,
+		HardDefaults:   w.HardDefaults,
 	}
 }
 
@@ -247,19 +247,19 @@ func (d *Defaults) IsZero() bool {
 }
 
 // IsZero implements the yaml.IsZeroer interface.
-func (wh *WebHooks) IsZero() bool {
-	if wh == nil {
+func (w *WebHooks) IsZero() bool {
+	if w == nil {
 		return true
 	}
 
-	return len(*wh) == 0
+	return len(*w) == 0
 }
 
 // IsDefault checks if the WebHook is empty (i.e. all fields are default values).
-func (wh *WebHook) IsDefault() bool {
-	return wh.Type == "" && wh.URL == "" && wh.AllowInvalidCerts == nil && len(wh.Headers) == 0 &&
-		wh.Secret == "" && wh.DesiredStatusCode == nil && wh.Delay == "" &&
-		wh.MaxTries == nil && wh.SilentFails == nil
+func (w *WebHook) IsDefault() bool {
+	return w.Type == "" && w.URL == "" && w.AllowInvalidCerts == nil && len(w.Headers) == 0 &&
+		w.Secret == "" && w.DesiredStatusCode == nil && w.Delay == "" &&
+		w.MaxTries == nil && w.SilentFails == nil
 }
 
 // #############
@@ -280,18 +280,18 @@ func (whd *WebHooksDefaults) String(prefix string) string {
 	return decode.ToYAMLString(whd, prefix)
 }
 
-// String implements [fmt.Stringer] and returns a YAML representation of the receiver.
-func (wh *WebHooks) String() string {
-	if wh == nil {
+// String implements fmt.Stringer and returns a YAML representation of the receiver.
+func (w *WebHooks) String() string {
+	if w == nil {
 		return ""
 	}
-	return decode.ToYAMLString(wh, "")
+	return decode.ToYAMLString(w, "")
 }
 
 // String returns a string representation of the receiver.
-func (wh *WebHook) String(prefix string) string {
-	if wh == nil {
+func (w *WebHook) String(prefix string) string {
+	if w == nil {
 		return ""
 	}
-	return decode.ToYAMLString(wh, prefix)
+	return decode.ToYAMLString(w, prefix)
 }

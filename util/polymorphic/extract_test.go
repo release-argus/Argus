@@ -151,7 +151,7 @@ func TestExtract(t *testing.T) {
 	}
 }
 
-func TestExtract__MarshalError(t *testing.T) {
+func TestExtract__marshalError(t *testing.T) {
 	// GIVEN: a failing marshal function.
 	original := marshalExtractSubtree
 	customErr := fmt.Errorf("marshal failed")

@@ -32,7 +32,7 @@ func (l *Lookup) CheckValues() error {
 	var errs []error
 
 	// URL.
-	if l.URL == "" && l.Defaults != nil {
+	if l.URL == "" {
 		errs = append(
 			errs,
 			&decode.FieldError{

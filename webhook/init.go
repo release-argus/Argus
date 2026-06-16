@@ -22,20 +22,20 @@ import (
 )
 
 // Init the WebHooks metrics and hand out the defaults/notifiers.
-func (wh *WebHooks) Init(
+func (w *WebHooks) Init(
 	serviceStatus *status.Status,
 	cfg Config,
 	shoutrrrNotifiers *shoutrrr.Shoutrrrs,
 	parentInterval *string,
 ) {
-	if wh == nil || len(*wh) == 0 {
+	if w == nil || len(*w) == 0 {
 		return
 	}
 
-	for id, webhook := range *wh {
+	for id, webhook := range *w {
 		if webhook == nil {
 			webhook = &WebHook{}
-			(*wh)[id] = webhook // Update the map.
+			(*w)[id] = webhook // Update the map.
 		}
 		main := cfg.Root[id]
 
@@ -54,66 +54,66 @@ func (wh *WebHooks) Init(
 // It assigns service status tracking, ensures a non-nil Main configuration,
 // attaches failure tracking, applies defaults, and configures notifiers.
 // It also clears Type when it matches inherited defaults or ID to avoid redundancy.
-func (wh *WebHook) init(
+func (w *WebHook) init(
 	serviceStatus *status.Status,
 	main *Defaults,
 	cfg Config,
 	shoutrrrNotifiers *shoutrrr.Shoutrrrs,
 	parentInterval *string,
 ) {
-	wh.ParentInterval = parentInterval
-	wh.ServiceStatus = serviceStatus
+	w.ParentInterval = parentInterval
+	w.ServiceStatus = serviceStatus
 
 	// Give the matching main.
-	wh.Main = main
+	w.Main = main
 	// Create an empty Main if nil.
-	if wh.Main == nil {
-		wh.Main = &Defaults{}
+	if w.Main == nil {
+		w.Main = &Defaults{}
 	}
 
-	wh.Failed = &wh.ServiceStatus.Fails.WebHook
-	wh.SetFail(nil)
+	w.Failed = &w.ServiceStatus.Fails.WebHook
+	w.SetFail(nil)
 
 	// Remove the type if it matches the main type or matches the ID.
-	if wh.Type == wh.Main.Type || wh.ID == wh.Type {
-		wh.Type = ""
+	if w.Type == w.Main.Type || w.ID == w.Type {
+		w.Type = ""
 	}
 
 	// Give the defaults.
-	wh.Defaults = cfg.Defaults
-	wh.HardDefaults = cfg.HardDefaults
+	w.Defaults = cfg.Defaults
+	w.HardDefaults = cfg.HardDefaults
 
 	// WebHook fail notifiers.
-	wh.Notifiers = Notifiers{
+	w.Notifiers = Notifiers{
 		Shoutrrr: shoutrrrNotifiers,
 	}
 }
 
-// InitMetrics of the WebHooks.
-func (wh *WebHooks) InitMetrics() {
-	if wh == nil {
+// InitMetrics registers Prometheus counters for all WebHook elements.
+func (w *WebHooks) InitMetrics() {
+	if w == nil {
 		return
 	}
 
-	for _, wh := range *wh {
+	for _, wh := range *w {
 		wh.initMetrics()
 	}
 }
 
-// DeleteMetrics of the WebHooks.
-func (wh *WebHooks) DeleteMetrics() {
-	if wh == nil {
+// DeleteMetrics removes Prometheus counters for all WebHook elements.
+func (w *WebHooks) DeleteMetrics() {
+	if w == nil {
 		return
 	}
 
-	for _, wh := range *wh {
+	for _, wh := range *w {
 		wh.deleteMetrics()
 	}
 }
 
-// initMetrics registers Prometheus counters for the receiver.
-func (wh *WebHook) initMetrics() {
-	if wh == nil {
+// initMetrics registers Prometheus counters for WebHook success/failure results.
+func (w *WebHook) initMetrics() {
+	if w == nil {
 		return
 	}
 
@@ -122,37 +122,37 @@ func (wh *WebHook) initMetrics() {
 	// ############
 	metric.InitPrometheusCounter(
 		metric.WebHookResultTotal,
-		wh.ID,
-		wh.ServiceStatus.ServiceInfo.ID,
+		w.ID,
+		w.ServiceStatus.ServiceInfo.ID,
 		"",
 		metric.ActionResultSuccess,
 	)
 	metric.InitPrometheusCounter(
 		metric.WebHookResultTotal,
-		wh.ID,
-		wh.ServiceStatus.ServiceInfo.ID,
+		w.ID,
+		w.ServiceStatus.ServiceInfo.ID,
 		"",
 		metric.ActionResultFail,
 	)
 }
 
-// deleteMetrics removes Prometheus counters for the receiver.
-func (wh *WebHook) deleteMetrics() {
-	if wh == nil {
+// deleteMetrics removes Prometheus counters for WebHook success/failure results.
+func (w *WebHook) deleteMetrics() {
+	if w == nil {
 		return
 	}
 
 	metric.DeletePrometheusCounter(
 		metric.WebHookResultTotal,
-		wh.ID,
-		wh.ServiceStatus.ServiceInfo.ID,
+		w.ID,
+		w.ServiceStatus.ServiceInfo.ID,
 		"",
 		metric.ActionResultSuccess,
 	)
 	metric.DeletePrometheusCounter(
 		metric.WebHookResultTotal,
-		wh.ID,
-		wh.ServiceStatus.ServiceInfo.ID,
+		w.ID,
+		w.ServiceStatus.ServiceInfo.ID,
 		"",
 		metric.ActionResultFail,
 	)

@@ -153,8 +153,6 @@ func (l *Lookup) createRequest(page int, logFrom logx.LogFrom) (*http.Request, e
 		return nil, err
 	}
 
-	// Set headers.
-	// req.Header.Set("Connection", "close")
 	// Access Token.
 	if accessToken := l.accessToken(); accessToken != "" {
 		req.Header.Set("Authorization", "token "+accessToken)
@@ -369,7 +367,7 @@ func (l *Lookup) handleStatusTooManyRequests(body []byte, logFrom logx.LogFrom) 
 	return nil, 0, fmt.Errorf("too many requests made to GitHub - %q", message.Message)
 }
 
-// releaseMeetsRequirements verifies that the `release` meets the requirements of the Lookup
+// releaseMeetsRequirements verifies that the `release` meets the requirements of the receiver
 // and returns the version and its release date if it does.
 func (l *Lookup) releaseMeetsRequirements(release ghtypes.Release, logFrom logx.LogFrom) (string, string, error) {
 	version := release.TagName
@@ -483,7 +481,7 @@ func (l *Lookup) handleNewVersion(
 	version, releaseDate, latestVersion string,
 	logFrom logx.LogFrom,
 ) (bool, error) {
-	// Verify that the version has changed. (GitHub may have just omitted the tag for some reason).
+	// Verify that the version has changed (GitHub may have just omitted the tag for some reason).
 	if checkNumber == 0 {
 		msg := fmt.Sprintf(
 			"Possibly found a new version (From %q to %q). Checking again",

@@ -64,9 +64,9 @@ func (s *Shoutrrr) BuildURL() (url string) {
 		fromName := s.GetParam("fromname")
 		toAddresses := s.GetParam("toaddresses")
 		query := buildQuery(
-			util.ValueUnlessZero(fromName, "&fromaddress="+net_url.QueryEscape(fromAddress)),
-			util.ValueUnlessZero(fromName, "&toaddresses="+net_url.QueryEscape(toAddresses)),
-			util.ValueUnlessZero(fromName, "&fromname="+net_url.QueryEscape(fromName)),
+			util.ValueUnlessZero(fromAddress, "fromaddress="+fromAddress),
+			util.ValueUnlessZero(toAddresses, "toaddresses="+toAddresses),
+			util.ValueUnlessZero(fromName, "fromname="+net_url.QueryEscape(fromName)),
 		)
 
 		url = fmt.Sprintf(
@@ -126,18 +126,16 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			query,
 		)
 	case "mattermost":
-		// mattermost://[username@]host[:port][/path]/token[/channel]
+		// mattermost://[username@]host[:port]/token[/channel]
 		username := s.GetURLField("username")
 		port := s.GetURLField("port")
-		path := s.GetURLField("path")
 		channel := s.GetURLField("channel")
 
 		url = fmt.Sprintf(
-			"mattermost://%s%s%s%s/%s%s",
+			"mattermost://%s%s%s/%s%s",
 			util.ValueUnlessZero(username, username+"@"),
 			s.GetURLField("host"),
 			util.ValueUnlessZero(port, ":"+port),
-			util.ValueUnlessZero(path, "/"+path),
 			s.GetURLField("token"),
 			util.ValueUnlessZero(channel, "/"+channel),
 		)
@@ -151,7 +149,7 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			util.ValueUnlessZero(s.GetURLField("port"), ":"+s.GetURLField("port")),
 			s.GetURLField("topic"),
 		)
-	case "opsgenie":
+	case "opsgenie": // TODO: OpsGenie permanently shut down April 5, 2027
 		// opsgenie://host[:port]/apikey
 		port := s.GetURLField("port")
 
@@ -179,17 +177,15 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			util.ValueUnlessZero(devices, "?devices="+devices),
 		)
 	case "rocketchat":
-		// rocketchat://[username@]host[:port][/path]/tokenA/tokenB/channel
+		// rocketchat://[username@]host[:port]/tokenA/tokenB/channel
 		username := s.GetURLField("username")
 		port := s.GetURLField("port")
-		path := s.GetURLField("path")
 
 		url = fmt.Sprintf(
-			"rocketchat://%s%s%s%s/%s/%s/%s",
+			"rocketchat://%s%s%s/%s/%s/%s",
 			util.ValueUnlessZero(username, username+"@"),
 			s.GetURLField("host"),
 			util.ValueUnlessZero(port, ":"+port),
-			util.ValueUnlessZero(path, "/"+path),
 			s.GetURLField("tokena"),
 			s.GetURLField("tokenb"),
 			s.GetURLField("channel"),

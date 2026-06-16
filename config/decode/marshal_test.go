@@ -247,7 +247,7 @@ func (c *customUnmarshaler) UnmarshalYAML(data []byte) error {
 	return nil
 }
 
-func TestUnmarshal__CustomUnmarshaler(t *testing.T) {
+func TestUnmarshal__customUnmarshaler(t *testing.T) {
 	// GIVEN: a target that implements a custom unmarshaler.
 	tests := []struct {
 		name   string

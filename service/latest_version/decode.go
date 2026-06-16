@@ -38,28 +38,6 @@ func Decode(
 		return nil, nil
 	}
 
-	// Decode data into struct.
-	field, err := decodeLookup(
-		format, data,
-		options,
-		status,
-		cfg,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return field, nil
-}
-
-// decodeLookup decodes a raw slice into a Lookup.
-func decodeLookup(
-	format string,
-	data []byte,
-	options *opt.Options,
-	status *status.Status,
-	cfg base.DefaultsConfig,
-) (Lookup, error) {
 	// Polymorphic fields.
 	defType := util.FirstNonDefault(cfg.Soft.Type, cfg.Hard.Type)
 	// Create.

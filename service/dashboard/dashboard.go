@@ -38,10 +38,10 @@ type OptionsBase struct {
 type Options struct {
 	OptionsBase `json:",inline" yaml:",inline"`
 
-	iconExpanded       *string  // Icon URL after env var expansion. (nil if no env var expansion).
-	iconNotify         *string  // Fallback icon URL from a Notify after env var expansion. (nil if we already have an Icon).
-	iconLinkToExpanded *string  // URL after env var expansion. (nil if no env var expansion).
-	webURLExpanded     *string  // URL after env var expansion. (nil if no env var expansion).
+	iconExpanded       *string  // Icon URL after env var expansion (nil if no env var expansion).
+	iconNotify         *string  // Fallback icon URL from a Notify after env var expansion (nil if we already have an Icon).
+	iconLinkToExpanded *string  // URL after env var expansion (nil if no env var expansion).
+	webURLExpanded     *string  // URL after env var expansion (nil if no env var expansion).
 	Tags               []string `json:"tags,omitempty" yaml:"tags,omitempty"` // Tags for the Service.
 
 	Defaults     *Defaults `json:"-" yaml:"-"` // Defaults.

@@ -58,7 +58,7 @@ func (s *ServiceSummary) IsZero() bool {
 		s.Tags == nil
 }
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (s *ServiceSummary) String() string {
 	if s == nil {
 		return ""
@@ -212,7 +212,7 @@ func (d Defaults) IsZero() bool {
 		d.WebHook.IsZero()
 }
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (d *Defaults) String() string {
 	if d == nil {
 		return ""
@@ -278,7 +278,7 @@ func (w WebSettings) IsZero() bool {
 // Notifiers is a string map of Notify.
 type Notifiers map[string]*Notify
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (n *Notifiers) String() string {
 	if n == nil {
 		return ""
@@ -367,18 +367,18 @@ type Services map[string]*Service
 // Service defines a software source to track and where/what to notify.
 type Service struct {
 	Name                  string                 `json:"name,omitempty" yaml:"name,omitempty"`                         // Name for this Service.
-	Comment               string                 `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Comment on the Service.
-	Options               ServiceOptions         `json:"options,omitzero" yaml:"options,omitzero"`                     // Options to give the Service.
+	Comment               string                 `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Extra detail on the Service..
+	Options               ServiceOptions         `json:"options,omitzero" yaml:"options,omitzero"`                     // Options to give the Service Lookup's.
 	LatestVersion         *LatestVersion         `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Latest version lookup for the Service.
-	Command               Commands               `json:"command,omitempty" yaml:"command,omitempty"`                   // OS Commands to run on new release.
-	Notify                Notifiers              `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Service-specific Notify vars.
-	WebHook               WebHooks               `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Service-specific WebHook vars.
-	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version.
+	Notify                Notifiers              `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Service-specific Notify configuration.
+	Command               Commands               `json:"command,omitempty" yaml:"command,omitempty"`                   // CLI Commands to run on new release.
+	WebHook               WebHooks               `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Service-specific WebHook configuration.
+	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Configuration to scrape the Service's current deployed version.
 	Dashboard             DashboardOptions       `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`                 // Dashboard options.
 	Status                *Status                `json:"status,omitempty" yaml:"status,omitempty"`                     // Track the Status of this source (version and regex misses).
 }
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (r *Service) String() string {
 	if r == nil {
 		return ""
@@ -391,10 +391,10 @@ type ServiceDefaults struct {
 	Comment               string                        `json:"comment,omitempty" yaml:"comment,omitempty"`                 // Comment on the Service.
 	Options               ServiceOptions                `json:"options,omitzero" yaml:"options,omitzero"`                   // Options to give the Service.
 	LatestVersion         LatestVersionDefaults         `json:"latest_version,omitzero" yaml:"latest_version,omitzero"`     // Latest version lookup for the Service.
-	Notify                []string                      `json:"notify,omitempty" yaml:"notify,omitempty"`                   // Service-specific Notify vars.
-	Command               Commands                      `json:"command,omitempty" yaml:"command,omitempty"`                 // OS Commands to run on new release.
-	WebHook               []string                      `json:"webhook,omitempty" yaml:"webhook,omitempty"`                 // Service-specific WebHook vars.
-	DeployedVersionLookup DeployedVersionLookupDefaults `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"` // Var to scrape the Service's current deployed version.
+	Notify                []string                      `json:"notify,omitempty" yaml:"notify,omitempty"`                   // Service-specific Notify configuration.
+	Command               Commands                      `json:"command,omitempty" yaml:"command,omitempty"`                 // CLI Commands to run on new release.
+	WebHook               []string                      `json:"webhook,omitempty" yaml:"webhook,omitempty"`                 // Service-specific WebHook configuration.
+	DeployedVersionLookup DeployedVersionLookupDefaults `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"` // Configuration to scrape the Service's current deployed version.
 	Dashboard             DashboardOptions              `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`               // Dashboard options.
 }
 
@@ -454,7 +454,7 @@ type LatestVersion struct {
 	Require           *LatestVersionRequire `json:"require,omitempty" yaml:"require,omitempty"`                         // Requirements before treating a release as valid.
 }
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (r *LatestVersion) String() string {
 	if r == nil {
 		return ""
@@ -488,7 +488,7 @@ type LatestVersionRequire struct {
 	RegexVersion string         `json:"regex_version,omitempty" yaml:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions/.
 }
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (r *LatestVersionRequire) String() string {
 	if r == nil {
 		return ""
@@ -506,7 +506,7 @@ func (l LatestVersionRequireDefaults) IsZero() bool {
 	return l.Docker.IsZero()
 }
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (r *LatestVersionRequireDefaults) String() string {
 	if r == nil {
 		return ""
@@ -653,7 +653,7 @@ type DeployedVersionLookup struct {
 	Defaults          *DeployedVersionLookup `json:"-" yaml:"-"`                                                         // Default values.
 }
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (d *DeployedVersionLookup) String() string {
 	if d == nil {
 		return ""
@@ -676,7 +676,7 @@ type Header struct {
 // URLCommands is a slice of URLCommand to filter versions from the URL Content.
 type URLCommands []URLCommand
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (slice *URLCommands) String() string {
 	if slice == nil {
 		return ""
@@ -707,7 +707,7 @@ type Status struct {
 	RegexMissesVersion       uint   `json:"regex_misses_version,omitzero" yaml:"regex_misses_version,omitzero"`               // Counter for the number of regular expression misses on version.
 }
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (s *Status) String() string {
 	if s == nil {
 		return ""
@@ -724,7 +724,7 @@ type Commands []Command
 // WebHooks is a slice map of WebHook.
 type WebHooks map[string]WebHook
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (w *WebHooks) String() string {
 	if w == nil {
 		return ""
@@ -835,8 +835,8 @@ type ServiceEdit struct {
 	Comment               string                 `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Comment on the Service.
 	Options               ServiceOptions         `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
 	LatestVersion         *LatestVersion         `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Latest version lookup for the Service.
-	Command               Commands               `json:"command,omitempty" yaml:"command,omitempty"`                   // OS Commands to run on new release.
 	Notify                []Notify               `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Service-specific Notify vars.
+	Command               Commands               `json:"command,omitempty" yaml:"command,omitempty"`                   // OS Commands to run on new release.
 	WebHook               []WebHook              `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Service-specific WebHook vars.
 	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Deployed version lookup for the Service.
 	Dashboard             DashboardOptions       `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`               // Dashboard options.

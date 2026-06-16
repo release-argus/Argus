@@ -24,6 +24,36 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
+func TestStatus_SendAnnouncePayload__marshalError(t *testing.T) {
+	// GIVEN: a failing marshal function.
+	original := marshalAnnouncePayload
+	customErr := fmt.Errorf("marshal failed")
+	marshalAnnouncePayload = func(v any) ([]byte, error) {
+		return nil, customErr
+	}
+	t.Cleanup(func() { marshalAnnouncePayload = original })
+
+	// AND: a Status with an Announce Channel.
+	status := testStatus()
+	announceChannel := make(chan []byte, 1)
+	status.AnnounceChannel = announceChannel
+
+	// WHEN: sendAnnouncePayload is called.
+	status.sendAnnouncePayload(apitype.WebSocketMessage{})
+
+	prefix := fmt.Sprintf("%s\nStatus.sendAnnouncePayload(marshal error)", packageName)
+
+	// THEN: no message is sent to the announce channel.
+	select {
+	case msg := <-announceChannel:
+		t.Fatalf(
+			"%s unexpected message on AnnounceChannel\ngot:  %q\nwant: none",
+			prefix, msg,
+		)
+	default:
+	}
+}
+
 func TestStatus_AnnounceFirstVersion(t *testing.T) {
 	// GIVEN: a Status and an AnnounceChannel that may be nil.
 	tests := []struct {

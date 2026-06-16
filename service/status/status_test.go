@@ -1393,7 +1393,7 @@ func TestStatus_SendAnnounce(t *testing.T) {
 			}
 
 			// WHEN: SendAnnounce is called on it.
-			status.SendAnnounce(&[]byte{})
+			status.SendAnnounce([]byte{})
 
 			// THEN: the AnnounceChannel is sent a message if not deleting or nil.
 			got := 0
@@ -1725,7 +1725,7 @@ func assertSetVersionsResult(t *testing.T, s *Status, hadAvailable, hadSkipped f
 	}
 }
 
-func TestStatus_InitMetrics__DeleteMetrics(t *testing.T) {
+func TestStatus_InitMetrics_then_DeleteMetrics(t *testing.T) {
 	// GIVEN: a Status.
 	status := testStatus()
 	status.ServiceInfo.ID = "TestStatus_InitMetrics_DeleteMetrics"

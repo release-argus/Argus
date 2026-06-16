@@ -92,7 +92,6 @@ func (l *Lookup) httpRequest(logFrom logx.LogFrom) ([]byte, error) {
 	}
 
 	// Set headers.
-	// req.Header.Set("Connection", "close")
 	for _, header := range l.Headers {
 		req.Header.Set(
 			util.EvalEnvVars(header.Key),
@@ -170,7 +169,7 @@ func (l *Lookup) getVersion(body string, logFrom logx.LogFrom) (string, error) {
 	return "", err
 }
 
-// versionMeetsRequirements checks whether `version` meets the requirements of the Lookup.
+// versionMeetsRequirements checks whether `version` meets the requirements of the receiver.
 func (l *Lookup) versionMeetsRequirements(version, body string, logFrom logx.LogFrom) error {
 	// No `Require` filters.
 	if l.Require == nil {

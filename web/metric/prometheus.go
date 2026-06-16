@@ -318,7 +318,7 @@ func SetUpdatesCurrent(delta float64, result LatestVersionDeployedState) {
 	}
 }
 
-// InitMetrics will initialise all global metrics.
+// InitMetrics registers the global Prometheus metrics.
 func InitMetrics() {
 	// service_count_current (active=true/false).
 	ServiceCountCurrent.WithLabelValues(ServiceStateActive).Add(0)

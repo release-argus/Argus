@@ -187,7 +187,7 @@ func TestLookup_Query(t *testing.T) {
 	}
 }
 
-func TestLookup_Query__RateLimit(t *testing.T) {
+func TestLookup_Query__rateLimit(t *testing.T) {
 	// GIVEN: a Lookup that has just had its DeployedVersion set.
 	dvl := testLookup(t, "")
 	oneMinuteAgo := time.Now().Add(-1 * time.Minute).Format(time.RFC3339)

@@ -673,7 +673,8 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			input: func() WebSettingsBasicAuth {
 				return WebSettingsBasicAuth{
 					Username: "user",
-					Password: util.FmtHash(util.GetHash("pass"))}
+					Password: util.FmtHash(util.GetHash("pass")),
+				}
 			},
 			want: WebSettingsBasicAuth{
 				Username: "user",
@@ -1870,7 +1871,7 @@ func TestSettings_GetBool(t *testing.T) {
 	}
 }
 
-func TestSettings_GetWebFile__NotExist(t *testing.T) {
+func TestSettings_GetWebFile__notExist(t *testing.T) {
 	settings := Settings{
 		SettingsBase: SettingsBase{
 			Log: LogSettings{},

@@ -17,7 +17,7 @@ package shoutrrr
 
 import "net/http"
 
-// Init will initialise the each [Defaults].
+// Init will initialise each [Defaults].
 func (s ShoutrrrsDefaults) Init() {
 	for _, dflt := range s {
 		dflt.Init()

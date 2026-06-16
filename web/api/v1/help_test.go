@@ -137,9 +137,9 @@ func plainDefaults(t *testing.T) (*config.Defaults, *config.Defaults) {
 func testClient() Client {
 	hub := NewHub()
 	return Client{
-		hub:  hub,
-		ip:   "1.1.1.1",
-		conn: &websocket.Conn{},
+		hub:            hub,
+		ip:             "1.1.1.1",
+		conn:           &websocket.Conn{},
 		send: make(chan []byte, 5),
 	}
 }

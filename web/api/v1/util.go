@@ -33,14 +33,14 @@ var marshalAnnouncePayload = func(v any) ([]byte, error) {
 func (api *API) sendAnnouncePayload(msg apitype.WebSocketMessage) {
 	payloadData, err := marshalAnnouncePayload(msg)
 	if err != nil {
-		logx.Error(err, logx.LogFrom{Primary: "sendAnnouncePayload"}, true)
+		logx.Error(err, logx.LogFrom{Primary: "API sendAnnouncePayload"}, true)
 		return
 	}
 	api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
 }
 
-// getParam from a URL query string.
-func getParam(queryParams *url.Values, key string) *string {
+// getParam returns a query parameter value pointer if present, otherwise nil.
+func getParam(queryParams url.Values, key string) *string {
 	if !queryParams.Has(key) {
 		return nil
 	}

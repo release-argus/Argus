@@ -24,7 +24,7 @@ import (
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
-func TestFieldError__FormatError(t *testing.T) {
+func TestFieldError__formatError(t *testing.T) {
 	// GIVEN: a KeyFieldError.
 	tests := []struct {
 		name string

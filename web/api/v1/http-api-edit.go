@@ -57,9 +57,9 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 
 	queryParams := r.URL.Query()
 
-	overrides := getParam(&queryParams, "overrides")
+	overrides := queryParams.Get("overrides")
 	// Verify overrides are provided.
-	if overrides == nil {
+	if overrides == "" {
 		err := errors.New("overrides: <required>")
 		logx.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
@@ -84,16 +84,11 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 			Hard: api.Config.HardDefaults.Service.LatestVersion.Options,
 		},
 	)
-	options.SemanticVersioning = util.StringToBoolPtr(
-		util.DerefOr(
-			getParam(&queryParams, "semantic_versioning"),
-			"",
-		),
-	)
+	options.SemanticVersioning = util.StringToBoolPtr(queryParams.Get("semantic_versioning"))
 
 	// Create the LatestVersionLookup.
 	lv, err := latestver.Decode(
-		"json", []byte(*overrides),
+		"json", []byte(overrides),
 		options,
 		&svcStatus,
 		lvbase.DefaultsConfig{
@@ -149,10 +144,10 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	logFrom := logx.LogFrom{Primary: "httpVersionRefreshUncreated_Deployed", Secondary: getIP(r)}
 
 	queryParams := r.URL.Query()
-	overrides := getParam(&queryParams, "overrides")
+	overrides := queryParams.Get("overrides")
 
 	// Verify overrides are provided.
-	if overrides == nil {
+	if overrides == "" {
 		err := errors.New("overrides: <required>")
 		logx.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
@@ -177,16 +172,11 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 			Hard: api.Config.HardDefaults.Service.LatestVersion.Options,
 		},
 	)
-	options.SemanticVersioning = util.StringToBoolPtr(
-		util.DerefOr(
-			getParam(&queryParams, "semantic_versioning"),
-			"",
-		),
-	)
+	options.SemanticVersioning = util.StringToBoolPtr(queryParams.Get("semantic_versioning"))
 
 	// Create the DeployedVersionLookup.
 	dvl, err := deployedver.Decode(
-		"json", []byte(*overrides),
+		"json", []byte(overrides),
 		options,
 		&svcStatus,
 		dvbase.DefaultsConfig{
@@ -261,15 +251,15 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 
 	// Parameters
 	var (
-		overrides          = getParam(&queryParams, "overrides")
-		semanticVersioning = getParam(&queryParams, "semantic_versioning")
+		overrides          = queryParams.Get("overrides")
+		semanticVersioning = getParam(queryParams, "semantic_versioning")
 	)
 
 	var overrideBytes []byte
 	// SecretRefs.
 	var secretRefs *shared.VSecretRef
-	if overrides != nil {
-		overrideBytes = []byte(*overrides)
+	if overrides != "" {
+		overrideBytes = []byte(overrides)
 		if err := decode.Unmarshal("json", overrideBytes, &secretRefs); err != nil {
 			logx.Error(err, logFrom, true)
 			failRequest(&w, err, http.StatusBadRequest)
@@ -340,15 +330,15 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 
 	// Parameters.
 	var (
-		overrides          = getParam(&queryParams, "overrides")
-		semanticVersioning = getParam(&queryParams, "semantic_versioning")
+		overrides          = queryParams.Get("overrides")
+		semanticVersioning = getParam(queryParams, "semantic_versioning")
 	)
 
 	var overrideBytes []byte
 	// SecretRefs.
 	var secretRefs *shared.VSecretRef
-	if overrides != nil {
-		overrideBytes = []byte(*overrides)
+	if overrides != "" {
+		overrideBytes = []byte(overrides)
 		if err := decode.Unmarshal("json", overrideBytes, &secretRefs); err != nil {
 			logx.Error(err, logFrom, true)
 			failRequest(&w, err, http.StatusBadRequest)
@@ -361,13 +351,9 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 	dvl := svc.DeployedVersionLookup
 	// Must create the DeployedVersionLookup if it doesn't exist.
 	if dvl == nil {
-		if overrides == nil {
+		if overrides == "" {
 			err := errors.New("missing required parameter: overrides")
-			failRequest(
-				&w,
-				err,
-				http.StatusBadRequest,
-			)
+			failRequest(&w, err, http.StatusBadRequest)
 			return
 		}
 
@@ -764,11 +750,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(payload); err != nil {
 		logx.Error(err, logFrom, true)
-		failRequest(
-			&w,
-			err,
-			http.StatusBadRequest,
-		)
+		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
 	// Decode it.

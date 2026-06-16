@@ -72,22 +72,22 @@ type GitHub struct {
 }
 
 // setHeaders applies configured custom headers to req.
-func (wh *WebHook) setHeaders(req *http.Request) {
+func (w *WebHook) setHeaders(req *http.Request) {
 	var headers Headers
 	switch {
-	case wh.Headers != nil:
-		headers = wh.Headers
-	case wh.Main.Headers != nil:
-		headers = wh.Main.Headers
-	case wh.Defaults.Headers != nil:
-		headers = wh.Defaults.Headers
-	case wh.HardDefaults.Headers != nil:
-		headers = wh.HardDefaults.Headers
+	case w.Headers != nil:
+		headers = w.Headers
+	case w.Main.Headers != nil:
+		headers = w.Main.Headers
+	case w.Defaults.Headers != nil:
+		headers = w.Defaults.Headers
+	case w.HardDefaults.Headers != nil:
+		headers = w.HardDefaults.Headers
 	default:
 		return
 	}
 
-	svcInfo := wh.ServiceStatus.GetServiceInfo()
+	svcInfo := w.ServiceStatus.GetServiceInfo()
 	for _, header := range headers {
 		key := util.EvalEnvVars(header.Key)
 		value := util.TemplateString(util.EvalEnvVars(header.Value), svcInfo)

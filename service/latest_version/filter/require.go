@@ -60,13 +60,13 @@ func (r *Require) String(prefix string) string {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
+// Use [Decode] for a complete Require.
 func (r *Require) UnmarshalJSON(data []byte) error {
 	return r.unmarshal("json", data)
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
+// Use [Decode] for a complete Require.
 func (r *Require) UnmarshalYAML(data []byte) error {
 	return r.unmarshal("yaml", data)
 }
@@ -205,7 +205,7 @@ func (r *Require) CheckValues() error {
 	}
 
 	if r.Docker != nil {
-		// Clear Docker if no image:tag (with defaults), or no image / tag (without defaults).
+		// Clear Docker if no image:tag.
 		if (r.Docker.GetImage() == "" && r.Docker.GetTag() == "") ||
 			(r.Docker.GetImageSelf() == "" && r.Docker.GetTagSelf() == "") {
 			r.Docker = nil

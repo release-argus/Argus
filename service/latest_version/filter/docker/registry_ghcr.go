@@ -65,13 +65,13 @@ type GHCRRegistry struct {
 // #######################
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-// Use [DecodeDefaults] for a full unmarshal.
+// Use [DecodeDefaults] for a complete GHCRRegistryDefaults.
 func (r *GHCRRegistryDefaults) UnmarshalJSON(data []byte) error {
 	return r.unmarshal("json", data)
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
-// Use [DecodeDefaults] for a full unmarshal.
+// Use [DecodeDefaults] for a complete GHCRRegistryDefaults.
 func (r *GHCRRegistryDefaults) UnmarshalYAML(data []byte) error {
 	return r.unmarshal("yaml", data)
 }
@@ -96,19 +96,18 @@ func (r *GHCRRegistryDefaults) unmarshal(format string, data []byte) error {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
+// Use [Decode] for a complete GHCRRegistry.
 func (r *GHCRRegistry) UnmarshalJSON(data []byte) error {
 	return r.unmarshal("json", data)
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
+// Use [Decode] for a complete GHCRRegistry.
 func (r *GHCRRegistry) UnmarshalYAML(data []byte) error {
 	return r.unmarshal("yaml", data)
 }
 
 // unmarshal implements the format.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
 func (r *GHCRRegistry) unmarshal(format string, data []byte) error {
 	// Alias to avoid recursion.
 	type Alias GHCRRegistry
@@ -260,13 +259,13 @@ type GHCRAuth struct {
 // ###################
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-// Use [DecodeDefaults] for a full unmarshal.
+// Use [DecodeDefaults] for a complete GHCRAuthDefaults.
 func (d *GHCRAuthDefaults) UnmarshalJSON(data []byte) error {
 	return d.unmarshal("json", data)
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
-// Use [DecodeDefaults] for a full unmarshal.
+// Use [DecodeDefaults] for a complete GHCRAuthDefaults.
 func (d *GHCRAuthDefaults) UnmarshalYAML(data []byte) error {
 	return d.unmarshal("yaml", data)
 }

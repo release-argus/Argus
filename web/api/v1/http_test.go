@@ -43,7 +43,7 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestHTTP_SetupRoutesAPI__DisableRoutes(t *testing.T) {
+func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 	// GIVEN: an API and a bunch of routes.
 	tests := map[string]struct {
 		method, path, body string
@@ -661,7 +661,7 @@ func TestFailRequest(t *testing.T) {
 	}
 }
 
-func TestFailRequest__MarshalError(t *testing.T) {
+func TestFailRequest__marshalError(t *testing.T) {
 	// GIVEN: a failing marshal function.
 	original := marshalFailRequestBody
 	marshalFailRequestBody = func(v map[string]string) ([]byte, error) {

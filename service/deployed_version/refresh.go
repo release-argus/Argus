@@ -27,9 +27,9 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Refresh the Lookup with the provided overrides.
+// Refresh the lookup with the provided overrides.
 //
-//	Returns: version, decode.
+//	Returns: version, err.
 func Refresh(
 	lookup Lookup,
 	previousType string,
@@ -93,7 +93,7 @@ func Refresh(
 	return newLookup.GetStatus().DeployedVersion(), nil
 }
 
-// applyOverridesJSON applies the JSON overrides to the Lookup.
+// applyOverridesJSON applies the JSON overrides to the lookup.
 func applyOverridesJSON(
 	lookup Lookup,
 	overrides []byte,

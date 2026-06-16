@@ -55,7 +55,7 @@ func NewController(
 	return &field
 }
 
-// InitMetrics will initialise the Prometheus metrics for each Command in the receiver.
+// InitMetrics registers Prometheus counters for all Command success/failure results.
 func (c *Controller) InitMetrics() {
 	if c == nil {
 		return
@@ -84,7 +84,7 @@ func (c *Controller) InitMetrics() {
 	}
 }
 
-// DeleteMetrics removes Prometheus counters for the receivers commands.
+// DeleteMetrics removes Prometheus counters for all Command success/failure results.
 func (c *Controller) DeleteMetrics() {
 	if c == nil {
 		return

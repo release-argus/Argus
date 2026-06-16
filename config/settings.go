@@ -31,52 +31,52 @@ var (
 	LogLevel = flag.String(
 		"log.level",
 		"INFO",
-		"ERROR, WARN, INFO, VERBOSE or DEBUG. (env_var=ARGUS_LOG_LEVEL)",
+		"ERROR, WARN, INFO, VERBOSE or DEBUG (env_var=ARGUS_LOG_LEVEL)",
 	)
 	LogTimestamps = flag.Bool(
 		"log.timestamps",
 		false,
-		"Enable timestamps in CLI output. (env_var=ARGUS_LOG_TIMESTAMPS)",
+		"Enable timestamps in CLI output (env_var=ARGUS_LOG_TIMESTAMPS)",
 	)
 	DataDatabaseFile = flag.String(
 		"data.database-file",
 		"data/argus.db",
-		"Database file path. (env_var=ARGUS_DATA_DATABASE_FILE)",
+		"Database file path (env_var=ARGUS_DATA_DATABASE_FILE)",
 	)
 	WebListenHost = flag.String(
 		"web.listen-host",
 		"0.0.0.0",
-		"IP address to listen on for UI, API, and telemetry. (env_var=ARGUS_WEB_LISTEN_HOST)",
+		"IP address to listen on for UI, API, and telemetry (env_var=ARGUS_WEB_LISTEN_HOST)",
 	)
 	WebListenPort = flag.String(
 		"web.listen-port",
 		"8080",
-		"Port to listen on for UI, API, and telemetry. (env_var=ARGUS_WEB_LISTEN_PORT)",
+		"Port to listen on for UI, API, and telemetry (env_var=ARGUS_WEB_LISTEN_PORT)",
 	)
 	WebCertFile = flag.String(
 		"web.cert-file",
 		"",
-		"HTTPS certificate file path. (env_var=ARGUS_WEB_CERT_FILE)",
+		"HTTPS certificate file path (env_var=ARGUS_WEB_CERT_FILE)",
 	)
 	WebPKeyFile = flag.String(
 		"web.pkey-file",
 		"",
-		"HTTPS private key file path. (env_var=ARGUS_WEB_PKEY_FILE)",
+		"HTTPS private key file path (env_var=ARGUS_WEB_PKEY_FILE)",
 	)
 	WebRoutePrefix = flag.String(
 		"web.route-prefix",
 		"/",
-		"Prefix for web endpoints. (env_var=ARGUS_WEB_ROUTE_PREFIX)",
+		"Prefix for web endpoints (env_var=ARGUS_WEB_ROUTE_PREFIX)",
 	)
 	WebBasicAuthUsername = flag.String(
 		"web.basic-auth.username",
 		"",
-		"Username for basic auth. (env_var=ARGUS_WEB_BASIC_AUTH_USERNAME)",
+		"Username for basic auth (env_var=ARGUS_WEB_BASIC_AUTH_USERNAME)",
 	)
 	WebBasicAuthPassword = flag.String(
 		"web.basic-auth.password",
 		"",
-		"Password for basic auth. (env_var=ARGUS_WEB_BASIC_AUTH_PASSWORD)",
+		"Password for basic auth (env_var=ARGUS_WEB_BASIC_AUTH_PASSWORD)",
 	)
 )
 
@@ -416,7 +416,7 @@ func (s *Settings) LogTimestamps() *bool {
 	)
 }
 
-// LogLevel returns the log level.
+// LogLevel resolves the log level.
 func (s *Settings) LogLevel() string {
 	return strings.ToUpper(
 		util.FirstNonDefaultWithEnv(
@@ -427,7 +427,7 @@ func (s *Settings) LogLevel() string {
 	)
 }
 
-// DataDatabaseFile returns the path to the database file.
+// DataDatabaseFile resolves the path to the database file.
 func (s *Settings) DataDatabaseFile() string {
 	return util.FirstNonDefaultWithEnv(
 		s.FromFlags.Data.DatabaseFile,
@@ -436,7 +436,7 @@ func (s *Settings) DataDatabaseFile() string {
 	)
 }
 
-// WebListenHost returns the host to listen on.
+// WebListenHost resolves the host to listen on.
 func (s *Settings) WebListenHost() string {
 	return util.FirstNonDefaultWithEnv(
 		s.FromFlags.Web.ListenHost,
@@ -445,7 +445,7 @@ func (s *Settings) WebListenHost() string {
 	)
 }
 
-// WebListenPort returns the port to listen on.
+// WebListenPort resolves the port to listen on.
 func (s *Settings) WebListenPort() string {
 	return util.FirstNonDefaultWithEnv(
 		s.FromFlags.Web.ListenPort,
@@ -454,7 +454,7 @@ func (s *Settings) WebListenPort() string {
 	)
 }
 
-// WebRoutePrefix returns the prefix for the web endpoints.
+// WebRoutePrefix resolves the prefix for the web endpoints.
 func (s *Settings) WebRoutePrefix() string {
 	return util.FirstNonDefaultWithEnv(
 		s.FromFlags.Web.RoutePrefix,
@@ -463,7 +463,7 @@ func (s *Settings) WebRoutePrefix() string {
 	)
 }
 
-// WebCertFile returns the path to the certificate file.
+// WebCertFile resolves the path to the certificate file.
 func (s *Settings) WebCertFile() string {
 	return util.FirstNonDefaultWithEnv(
 		s.FromFlags.Web.CertFile,
@@ -472,7 +472,7 @@ func (s *Settings) WebCertFile() string {
 	)
 }
 
-// WebKeyFile returns the path to the private key file.
+// WebKeyFile resolves the path to the private key file.
 func (s *Settings) WebKeyFile() string {
 	return util.FirstNonDefaultWithEnv(
 		s.FromFlags.Web.KeyFile,
@@ -481,7 +481,7 @@ func (s *Settings) WebKeyFile() string {
 	)
 }
 
-// WebBasicAuthUsernameHash returns the SHA256 hash of the basic auth username.
+// WebBasicAuthUsernameHash resolves the SHA256 hash of the basic auth username.
 func (s *Settings) WebBasicAuthUsernameHash() [32]byte {
 	// Username set through flag.
 	if s.FromFlags.Web.BasicAuth != nil && s.FromFlags.Web.BasicAuth.Username != "" {
@@ -494,7 +494,7 @@ func (s *Settings) WebBasicAuthUsernameHash() [32]byte {
 	return s.HardDefaults.Web.BasicAuth.UsernameHash
 }
 
-// WebBasicAuthPasswordHash returns the SHA256 hash of the password.
+// WebBasicAuthPasswordHash resolves the SHA256 hash of the password.
 func (s *Settings) WebBasicAuthPasswordHash() [32]byte {
 	// Password set through flag.
 	if s.FromFlags.Web.BasicAuth != nil && s.FromFlags.Web.BasicAuth.Password != "" {

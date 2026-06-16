@@ -52,13 +52,13 @@ type LookupDecode struct {
 // ############
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
+// Use [Decode] for a complete Lookup.
 func (l *Lookup) UnmarshalJSON(data []byte) error {
 	return l.unmarshal("json", data)
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
+// Use [Decode] for a complete Lookup.
 func (l *Lookup) UnmarshalYAML(data []byte) error {
 	return l.unmarshal("yaml", data)
 }

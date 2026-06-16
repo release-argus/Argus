@@ -32,7 +32,7 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-// DefaultsConfig pairs soft and hard service defaults for decoding.
+// DefaultsConfig pairs soft and hard service defaults.
 type DefaultsConfig struct {
 	Soft *Defaults
 	Hard *Defaults

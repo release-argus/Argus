@@ -215,8 +215,8 @@ func TestAccessibleHTTPS(t *testing.T) {
 		},
 	}
 	cfg := testConfig(t, filepath.Join(t.TempDir(), "config.yml"))
-	cfg.Settings.Web.CertFile = "TestAccessibleHTTPS_cert.pem"
-	cfg.Settings.Web.KeyFile = "TestAccessibleHTTPS_key.pem"
+	cfg.Settings.Web.CertFile = "TestAccessibleHTTPS_Cert.pem"
+	cfg.Settings.Web.KeyFile = "TestAccessibleHTTPS_Key.pem"
 	_ = generateCertFiles(cfg.Settings.Web.CertFile, cfg.Settings.Web.KeyFile)
 	t.Cleanup(func() {
 		_ = os.Remove(cfg.Settings.Web.CertFile)

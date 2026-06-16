@@ -616,7 +616,7 @@ func TestService_Init(t *testing.T) {
 	}
 }
 
-func TestService_InitMetrics__ResetMetrics__DeleteMetrics(t *testing.T) {
+func TestService_InitMetrics_then_ResetMetrics_then_DeleteMetrics(t *testing.T) {
 	svcCfg := plainDefaultsConfig(t)
 	notifyCfg := shoutrrrtest.PlainConfig(t)
 	whCfg := whtest.PlainConfig(t)

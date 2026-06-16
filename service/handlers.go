@@ -164,8 +164,8 @@ func (s *Service) HandleFailedActions() {
 					continue
 				}
 				// Send.
-				go func(wh *webhook.WebHook) {
-					err := wh.Send(svcInfo, false)
+				go func(w *webhook.WebHook) {
+					err := w.Send(svcInfo, false)
 					errChan <- err
 				}(wh)
 				// Space out WebHooks.

@@ -128,7 +128,7 @@ func TestQuayRegistry_Check(t *testing.T) {
 	}
 }
 
-func TestQuayRegistry_Check__Errors(t *testing.T) {
+func TestQuayRegistry_Check__errors(t *testing.T) {
 	// GIVEN: a QuayRegistry, and version to check for.
 	tests := []struct {
 		name         string

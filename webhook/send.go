@@ -32,13 +32,13 @@ import (
 )
 
 // Send sends each WebHook, optionally applying a delay between them.
-func (wh *WebHooks) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
-	if wh == nil {
+func (w *WebHooks) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
+	if w == nil {
 		return nil
 	}
 
-	errChan := make(chan error, len(*wh))
-	for _, wh := range *wh {
+	errChan := make(chan error, len(*w))
+	for _, wh := range *w {
 		go func(webhook *WebHook) {
 			errChan <- webhook.Send(serviceInfo, useDelay)
 		}(wh)
@@ -50,7 +50,7 @@ func (wh *WebHooks) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) err
 
 	// Wait for all WebHooks to finish.
 	var errs []error
-	for range *wh {
+	for range *w {
 		if err := <-errChan; err != nil {
 			errs = append(errs, err)
 		}
@@ -63,32 +63,32 @@ func (wh *WebHooks) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) err
 }
 
 // Send attempts to send the WebHook up to MaxTries times until successful.
-func (wh *WebHook) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
-	logFrom := logx.LogFrom{Primary: wh.ID, Secondary: serviceInfo.ID}
+func (w *WebHook) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
+	logFrom := logx.LogFrom{Primary: w.ID, Secondary: serviceInfo.ID}
 
-	if useDelay && wh.GetDelay() != "0s" {
+	if useDelay && w.GetDelay() != "0s" {
 		// Delay sending the WebHook message by the defined interval.
-		msg := fmt.Sprintf("Sleeping for %s before sending the WebHook", wh.GetDelay())
+		msg := fmt.Sprintf("Sleeping for %s before sending the WebHook", w.GetDelay())
 		logx.Info(msg, logFrom, true)
-		wh.SetExecuting(true, true) // disable sending of auto_approved w/ delay.
-		time.Sleep(wh.GetDelayDuration())
+		w.SetExecuting(true, true) // disable sending of auto_approved w/ delay.
+		time.Sleep(w.GetDelayDuration())
 	} else {
-		wh.SetExecuting(false, true)
+		w.SetExecuting(false, true)
 	}
 
 	sendErrs := util.RetryWithBackoff(
 		func() error {
-			err := wh.try(logFrom)
-			wh.parseTry(err, wh.ServiceStatus.ServiceInfo.ID, logFrom)
+			err := w.try(logFrom)
+			w.parseTry(err, w.ServiceStatus.ServiceInfo.ID, logFrom)
 			if err == nil {
 				return nil
 			}
 			return err
 		},
-		wh.GetMaxTries(),
+		w.GetMaxTries(),
 		1*time.Second,
 		30*time.Second,
-		wh.ServiceStatus.Deleting,
+		w.ServiceStatus.Deleting,
 	)
 	if sendErrs == nil {
 		return nil
@@ -96,16 +96,16 @@ func (wh *WebHook) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) erro
 
 	err := fmt.Errorf(
 		"failed %d times to send the WebHook for %s to %q",
-		wh.GetMaxTries(), wh.ServiceStatus.ServiceInfo.ID, wh.ID,
+		w.GetMaxTries(), w.ServiceStatus.ServiceInfo.ID, w.ID,
 	)
 	logx.Error(err, logFrom, true)
 	failed := true
-	wh.SetFail(&failed)
-	wh.AnnounceSend()
-	if !wh.GetSilentFails() {
+	w.SetFail(&failed)
+	w.AnnounceSend()
+	if !w.GetSilentFails() {
 		//#nosec G104 -- Errors are logged to CLI
 		//nolint:errcheck // ^
-		wh.Notifiers.Send("WebHook fail", err.Error(), serviceInfo)
+		w.Notifiers.Send("WebHook fail", err.Error(), serviceInfo)
 	}
 	return errors.Join(sendErrs, err)
 }
@@ -122,8 +122,8 @@ func (n *Notifiers) Send(title, message string, serviceInfo serviceinfo.ServiceI
 
 // try sends a WebHook to its URL with the body hashed using SHA1 and SHA256,
 // encrypted with its Secret, and includes simulated GitHub headers.
-func (wh *WebHook) try(logFrom logx.LogFrom) error {
-	req := wh.BuildRequest()
+func (w *WebHook) try(logFrom logx.LogFrom) error {
+	req := w.BuildRequest()
 	if req == nil {
 		err := errors.New("failed to get *http.request for WebHook")
 		logx.Error(err, logFrom, true)
@@ -136,7 +136,7 @@ func (wh *WebHook) try(logFrom logx.LogFrom) error {
 
 	client := httpx.Client
 	// HTTPS insecure skip verify.
-	if wh.GetAllowInvalidCerts() {
+	if w.GetAllowInvalidCerts() {
 		client = httpx.InsecureClient
 	}
 
@@ -150,7 +150,7 @@ func (wh *WebHook) try(logFrom logx.LogFrom) error {
 	bodyOkay := checkWebHookBody(string(body))
 
 	// SUCCESS!
-	desiredStatusCode := wh.GetDesiredStatusCode()
+	desiredStatusCode := w.GetDesiredStatusCode()
 	if bodyOkay &&
 		(resp.StatusCode == int(desiredStatusCode) ||
 			(desiredStatusCode == 0 && (strconv.Itoa(resp.StatusCode)[:1] == "2"))) {
@@ -176,19 +176,19 @@ func (wh *WebHook) try(logFrom logx.LogFrom) error {
 // parseTry checks the result of a WebHook `try`.
 // It updates the Prometheus SUCCESS or FAIL counter
 // and logs any error from the `try`.
-func (wh *WebHook) parseTry(err error, serviceID string, logFrom logx.LogFrom) {
+func (w *WebHook) parseTry(err error, serviceID string, logFrom logx.LogFrom) {
 	// SUCCESS!
 	if err == nil {
 		metric.IncPrometheusCounter(
 			metric.WebHookResultTotal,
-			wh.ID,
+			w.ID,
 			serviceID,
 			"",
 			metric.ActionResultSuccess,
 		)
 		failed := false
-		wh.SetFail(&failed)
-		wh.AnnounceSend()
+		w.SetFail(&failed)
+		w.AnnounceSend()
 		return
 	}
 
@@ -196,7 +196,7 @@ func (wh *WebHook) parseTry(err error, serviceID string, logFrom logx.LogFrom) {
 	logx.Error(err, logFrom, true)
 	metric.IncPrometheusCounter(
 		metric.WebHookResultTotal,
-		wh.ID,
+		w.ID,
 		serviceID,
 		"",
 		metric.ActionResultFail,

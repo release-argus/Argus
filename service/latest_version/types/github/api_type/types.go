@@ -33,7 +33,7 @@ type Release struct {
 	Assets          []Asset         `json:"assets,omitempty"`
 }
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (r *Release) String() string {
 	if r == nil {
 		return ""
@@ -55,7 +55,7 @@ type Asset struct {
 	BrowserDownloadURL string `json:"browser_download_url,omitempty"`
 }
 
-// String implements [fmt.Stringer] and returns a JSON representation.
+// String implements fmt.Stringer and returns a JSON representation.
 func (a *Asset) String() string {
 	if a == nil {
 		return ""

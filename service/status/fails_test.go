@@ -25,8 +25,6 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 )
 
-var packageName = "status"
-
 func TestFailsBase_Init(t *testing.T) {
 	// GIVEN: a Fails.
 	tests := []struct {

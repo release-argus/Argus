@@ -977,7 +977,7 @@ func TestRequire_Inherit(t *testing.T) {
 	}
 }
 
-func TestRequire_DockerTagCheck__Unit(t *testing.T) {
+func TestRequire_DockerTagCheck__unit(t *testing.T) {
 	// GIVEN: a Require and version.
 	tests := []struct {
 		name     string

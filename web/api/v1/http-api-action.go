@@ -57,7 +57,8 @@ func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 			command := cmd.ApplyTemplate(svcInfo)
 			commandSummary[command.String()] = apitype.CommandSummary{
 				Failed:       svc.Status.Fails.Command.Get(i),
-				NextRunnable: svc.CommandController.NextRunnable(i)}
+				NextRunnable: svc.CommandController.NextRunnable(i),
+			}
 		}
 	}
 	// WebHooks.

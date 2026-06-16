@@ -1418,7 +1418,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 	}
 }
 
-func TestHTTP_ServiceEdit__Create(t *testing.T) {
+func TestHTTP_ServiceEdit__create(t *testing.T) {
 	testSVC := testService(t, "TestHTTP_ServiceEdit_Create", "url", "url", true)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
 	_, _ = testSVC.LatestVersion.Query(true, logx.LogFrom{})
@@ -1777,7 +1777,7 @@ func TestHTTP_ServiceEdit__Create(t *testing.T) {
 	}
 }
 
-func TestHTTP_ServiceEdit__Edit(t *testing.T) {
+func TestHTTP_ServiceEdit__edit(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig(t)
 	notifyCfg := shoutrrrtest.PlainConfig(t)
 	whCfg := whtest.PlainConfig(t)
@@ -2139,7 +2139,7 @@ func TestHTTP_ServiceEdit__Edit(t *testing.T) {
 	}
 }
 
-func TestHTTP_ServiceEdit__Edit__Secrets(t *testing.T) {
+func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig(t)
 	notifyCfg := shoutrrrtest.PlainConfig(t)
 	whCfg := whtest.PlainConfig(t)

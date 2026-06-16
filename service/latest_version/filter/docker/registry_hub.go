@@ -72,13 +72,13 @@ type HubRegistry struct {
 // #######################
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-// Use [DecodeDefaults] for a full unmarshal.
+// Use [DecodeDefaults] for a complete HubRegistryDefaults.
 func (r *HubRegistryDefaults) UnmarshalJSON(data []byte) error {
 	return r.unmarshal("json", data)
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
-// Use [DecodeDefaults] for a full unmarshal.
+// Use [DecodeDefaults] for a complete HubRegistryDefaults.
 func (r *HubRegistryDefaults) UnmarshalYAML(data []byte) error {
 	return r.unmarshal("yaml", data)
 }
@@ -101,13 +101,13 @@ func (r *HubRegistryDefaults) unmarshal(format string, data []byte) error {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
+// Use [Decode] for a complete HubRegistry.
 func (r *HubRegistry) UnmarshalJSON(data []byte) error {
 	return r.unmarshal("json", data)
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
-// Use [Decode] for a full unmarshal.
+// Use [Decode] for a complete HubRegistry.
 func (r *HubRegistry) UnmarshalYAML(data []byte) error {
 	return r.unmarshal("yaml", data)
 }
@@ -503,7 +503,6 @@ func (a *HubAuth) refreshQueryToken(ContainerDetail) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("create docker-hub token request: %w", err)
 	}
-	// req.Header.Set("Connection", "close")
 	req.Header.Add("Content-Type", "application/json")
 
 	// Do the request.
