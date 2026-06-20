@@ -52,11 +52,11 @@ func TestHTTP_HTTPServiceOrderGet(t *testing.T) {
 			order: []string{"service1"},
 		},
 		{
-			name:  "multiple",
+			name:  "multiple/alphabetical ordering",
 			order: []string{"service1", "service2", "service3"},
 		},
 		{
-			name:  "multiple - other order",
+			name:  "multiple/custom ordering",
 			order: []string{"service2", "service3", "service1"},
 		},
 	}

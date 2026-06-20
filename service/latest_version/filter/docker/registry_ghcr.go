@@ -117,8 +117,10 @@ func (r *GHCRRegistry) unmarshal(format string, data []byte) error {
 		r.Auth = &GHCRAuth{}
 	}
 	// CommonRegistry.
-	if err := decode.Unmarshal(format, data, aux); err != nil {
-		return err //nolint:wrapcheck
+	if len(data) != 0 {
+		if err := decode.Unmarshal(format, data, aux); err != nil {
+			return err //nolint:wrapcheck
+		}
 	}
 
 	return nil

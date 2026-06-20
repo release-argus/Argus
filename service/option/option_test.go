@@ -40,21 +40,21 @@ func TestBase_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Interval",
+			name: "non-empty/Interval",
 			base: &Base{
 				Interval: "10s",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty SemanticVersioning",
+			name: "non-empty/SemanticVersioning",
 			base: &Base{
 				SemanticVersioning: test.Ptr(true),
 			},
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			base: &Base{
 				Interval:           "10s",
 				SemanticVersioning: test.Ptr(true),
@@ -94,7 +94,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "non-empty Interval",
+			name: "non-empty/Interval",
 			defaults: &Defaults{
 				Base: Base{
 					Interval: "10s",
@@ -103,7 +103,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty SemanticVersioning",
+			name: "non-empty/SemanticVersioning",
 			defaults: &Defaults{
 				Base: Base{
 					SemanticVersioning: test.Ptr(true),
@@ -112,7 +112,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			defaults: &Defaults{
 				Base: Base{
 					Interval:           "10s",
@@ -210,7 +210,7 @@ func TestOptions_IsZero(t *testing.T) {
 			want:    true,
 		},
 		{
-			name: "non-empty Interval",
+			name: "non-empty/Interval",
 			options: &Options{
 				Base: Base{
 					Interval: "1m",
@@ -219,7 +219,7 @@ func TestOptions_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty SemanticVersioning",
+			name: "non-empty/SemanticVersioning",
 			options: &Options{
 				Base: Base{
 					SemanticVersioning: test.Ptr(false),
@@ -228,14 +228,14 @@ func TestOptions_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Active",
+			name: "non-empty/Active",
 			options: &Options{
 				Active: test.Ptr(false),
 			},
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			options: &Options{
 				Active: test.Ptr(false),
 				Base: Base{
@@ -350,7 +350,7 @@ func TestOptions_String(t *testing.T) {
 			want:    "",
 		},
 		{
-			name:    "empty/default Options",
+			name:    "empty",
 			options: &Options{},
 			want:    "{}\n",
 		},
@@ -502,7 +502,7 @@ func TestOptions_SetDefaults(t *testing.T) {
 			options: &Options{},
 		},
 		{
-			name: "existing defaults/hardDefaults overwritten",
+			name: "existing defaults, hardDefaults overwritten",
 			options: &Options{
 				Defaults:     testDefaults(t),
 				HardDefaults: testDefaults(t),
@@ -658,17 +658,17 @@ func TestOptions_VerifySemanticVersioning(t *testing.T) {
 		errRegex string
 	}{
 		{
-			name:     "valid semantic version - MAJOR.MINOR.PATCH",
+			name:     "valid semantic version/MAJOR.MINOR.PATCH",
 			version:  "1.0.0",
 			errRegex: `^$`,
 		},
 		{
-			name:     "valid semantic version - MAJOR.MINOR",
+			name:     "valid semantic version/MAJOR.MINOR",
 			version:  "1.0",
 			errRegex: `^$`,
 		},
 		{
-			name:     "valid semantic version - MAJOR",
+			name:     "valid semantic version/MAJOR",
 			version:  "1",
 			errRegex: `^$`,
 		},

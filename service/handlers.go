@@ -28,7 +28,7 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-// HandleSkip will set `version` to skipped and announce it to the websocket.
+// HandleSkip marks the latest version as skipped.
 func (s *Service) HandleSkip() {
 	// Ignore skips if latest_version is deployed.
 	if lv := s.Status.LatestVersion(); lv != s.Status.DeployedVersion() {
@@ -36,7 +36,7 @@ func (s *Service) HandleSkip() {
 	}
 }
 
-// HandleCommand will find the specified command on this Service (and run it if found).
+// HandleCommand finds and runs the named command on the Service if it is runnable.
 func (s *Service) HandleCommand(command string) {
 	// Find the command.
 	index, err := s.CommandController.Find(command)
@@ -78,9 +78,8 @@ func (s *Service) HandleWebHook(webhookID string) {
 	}
 }
 
-// HandleUpdateActions runs all commands and send all WebHooks for this service if `auto_approve` true.
-// If new releases are not automatically approved, then these will
-// only run/send if manually triggered fromUser (via the WebUI).
+// HandleUpdateActions runs all Commands and WebHooks for the service if auto_approve is enabled,
+// otherwise waits for manual approval via the API.
 func (s *Service) HandleUpdateActions(writeToDB bool) {
 	svcInfo := s.Status.GetServiceInfo()
 
@@ -142,9 +141,7 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 	}
 }
 
-// HandleFailedActions re-sends all the WebHooks for this service
-// that have either failed or not sent for this version. Otherwise,
-// if all WebHooks have sent successfully, then they all resend.
+// HandleFailedActions re-sends all failed WebHooks and Commands, or re-sends all if all previously succeeded.
 func (s *Service) HandleFailedActions() {
 	svcInfo := s.Status.GetServiceInfo()
 	errChan := make(chan error, len(s.WebHook)+len(s.Command))
@@ -233,8 +230,8 @@ func (s *Service) shouldRetryAll() bool {
 	return true
 }
 
-// UpdatedVersion will register the version change, setting `s.Status.DeployedVersion`
-// to `s.Status.LatestVersion` if there's no DeployedVersionLookup and announce the change.
+// UpdatedVersion registers the version change, setting DeployedVersion to LatestVersion
+// if there is no DeployedVersionLookup, and announces the change.
 func (s *Service) UpdatedVersion(writeToDB bool) {
 	if s.Status.DeployedVersion() == s.Status.LatestVersion() {
 		return
@@ -264,10 +261,8 @@ func (s *Service) UpdatedVersion(writeToDB bool) {
 	s.Status.AnnounceUpdate()
 }
 
-// UpdateLatestApproved will check if all WebHooks have sent successfully for this Service,
-// set the LatestVersion as approved in the Status, and announce the approval (if not previously).
+// UpdateLatestApproved sets the latest version as approved if not already set.
 func (s *Service) UpdateLatestApproved() {
-	// Only announce once.
 	if lv := s.Status.LatestVersion(); lv != s.Status.ApprovedVersion() {
 		s.Status.SetApprovedVersion(lv, true)
 	}

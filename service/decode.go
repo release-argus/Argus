@@ -25,7 +25,7 @@ import (
 // marshalServiceRaw re-encodes a service subtree (overridable for tests).
 var marshalServiceRaw = decode.Marshal
 
-// Decode creates and returns a new [Services] from format-encoded data.
+// DecodeServices creates and returns a new [Services] from format-encoded data.
 func DecodeServices(
 	format string,
 	data []byte,
@@ -79,7 +79,7 @@ func DecodeServices(
 	return field, nil
 }
 
-// Decode creates and returns a new [Service] from format-encoded data.
+// DecodeService creates and returns a new [Service] from format-encoded data.
 func DecodeService(
 	format string,
 	data []byte,
@@ -116,7 +116,7 @@ func DecodeService(
 	return &field, nil
 }
 
-// ApplyOverrides applies format-encoded overrides to a [Service] object.
+// ApplyOverrides applies format-encoded overrides to target.
 // If the target is nil, a new [Service] is created.
 func ApplyOverrides(
 	format string,
@@ -155,7 +155,13 @@ func ApplyOverrides(
 		}
 	}
 
-	target.init(notifyCfg, whCfg, nil, nil, nil)
+	target.init(
+		notifyCfg,
+		whCfg,
+		target.Status.AnnounceChannel,
+		target.Status.DatabaseChannel,
+		target.Status.SaveChannel,
+	)
 
 	return target, nil
 }

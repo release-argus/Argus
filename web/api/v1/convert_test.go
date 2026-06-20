@@ -190,16 +190,28 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := tc.input.String("")
+
 			// WHEN: convertAndCensorDefaults is called.
 			result := convertAndCensorDefaults(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertAndCensorDefaults()", packageName)
 
 			// THEN: the result should be as expected.
 			got := decode.ToYAMLString(result, "")
 			want := decode.ToYAMLString(tc.want, "")
 			if got != want {
 				t.Errorf(
-					"%s\nconvertAndCensorDefaults() mismatch\ngot:  %q\nwant: %q",
+					"%s mismatch\ngot:  %q\nwant: %q",
 					packageName, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := tc.input.String(""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
@@ -330,20 +342,35 @@ func TestConvertAndCensorService(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			var had string
 			if tc.input != nil {
 				if err, _ := tc.input.CheckValues(); err != nil {
-					fmt.Printf("invalid test input: %v\n", err)
+					fmt.Printf(
+						"%s\ninvalid test input: %v\n",
+						packageName, err,
+					)
 				}
+				had = tc.input.String("")
 			}
 
 			// WHEN: convertAndCensorService is called.
 			result := convertAndCensorService(tc.input)
 
+			prefix := fmt.Sprintf("%s\nconvertAndCensorService()", packageName)
+
 			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
 				t.Errorf(
-					"%s\nconvertAndCensorService() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
+					"%s mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := tc.input.String(""); got != had {
+				t.Errorf(
+					"%s changed original notifier\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
@@ -368,12 +395,12 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 			want:  nil,
 		},
 		{
-			name:  "github - bare",
+			name:  "github/bare",
 			input: &lvgithub.Lookup{},
 			want:  &apitype.LatestVersion{},
 		},
 		{
-			name: "github - filled",
+			name: "github/filled",
 			input: test.Must(t, func() (latestver.Lookup, error) {
 				return latestver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -414,12 +441,12 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 			},
 		},
 		{
-			name:  "url - bare",
+			name:  "url/bare",
 			input: &lvweb.Lookup{},
 			want:  &apitype.LatestVersion{},
 		},
 		{
-			name: "url - filled",
+			name: "url/filled",
 			input: test.Must(t, func() (latestver.Lookup, error) {
 				return latestver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -478,14 +505,44 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			var had string
+			if tc.input != nil {
+				had = tc.input.String("")
+			}
+
 			// WHEN: convertAndCensorLatestVersion is called.
 			result := convertAndCensorLatestVersion(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertAndCensorLatestVersion()", packageName)
 
 			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
 				t.Errorf(
-					"%s\nconvertAndCensorLatestVersion() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
+					"%s mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if result == nil || tc.input == nil {
+				if tc.input == nil && result != nil {
+					t.Fatalf(
+						"%s mismatch\ngot:  %q\nwant: nil",
+						prefix, result,
+					)
+				}
+				if result == nil && tc.want != nil {
+					t.Fatalf(
+						"%s mismatch\ngot:  nil\nwant: non-nil",
+						prefix,
+					)
+				}
+				return
+			}
+			if got := tc.input.String(""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
@@ -510,7 +567,7 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 			want:  &apitype.LatestVersionRequireDefaults{},
 		},
 		{
-			name: "bare with bare Docker",
+			name: "docker/bare",
 			input: &filter.RequireDefaults{
 				Docker: docker.Defaults{},
 			},
@@ -519,7 +576,7 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "docker globals",
+			name: "docker/globals",
 			input: test.Must(t, func() (*filter.RequireDefaults, error) {
 				return filter.DecodeDefaults(
 					"yaml", []byte(test.TrimYAML(`
@@ -539,7 +596,7 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "docker.ghcr",
+			name: "docker/ghcr",
 			input: test.Must(t, func() (*filter.RequireDefaults, error) {
 				return filter.DecodeDefaults(
 					"yaml", []byte(test.TrimYAML(`
@@ -571,7 +628,7 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "docker.hub",
+			name: "docker/hub",
 			input: test.Must(t, func() (*filter.RequireDefaults, error) {
 				return filter.DecodeDefaults(
 					"yaml", []byte(test.TrimYAML(`
@@ -606,7 +663,7 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "docker.quay",
+			name: "docker/quay",
 			input: test.Must(t, func() (*filter.RequireDefaults, error) {
 				return filter.DecodeDefaults(
 					"yaml", []byte(test.TrimYAML(`
@@ -714,14 +771,26 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := decode.ToYAMLString(tc.input, "")
+
 			// WHEN: convertAndCensorLatestVersionRequireDefaults is called.
 			result := convertAndCensorLatestVersionRequireDefaults(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertAndCensorLatestVersionRequireDefaults()", packageName)
 
 			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
 				t.Errorf(
-					"%s\nconvertAndCensorLatestVersionRequireDefaults() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
+					"%s mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := decode.ToYAMLString(tc.input, ""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
@@ -748,7 +817,7 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 			want:  &apitype.LatestVersionRequire{},
 		},
 		{
-			name: "bare with bare Docker",
+			name: "docker/bare",
 			input: &filter.Require{
 				Docker: docker.RegistryMap["hub"](),
 			},
@@ -757,7 +826,7 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 			},
 		},
 		{
-			name: "docker.ghcr",
+			name: "docker/ghcr",
 			input: test.Must(t, func() (*filter.Require, error) {
 				svcStatus, _ := statustest.New("yaml", nil)
 				return filter.Decode(
@@ -784,14 +853,14 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 			},
 		},
 		{
-			name: "docker.hub",
+			name: "docker/hub",
 			input: test.Must(t, func() (*filter.Require, error) {
 				svcStatus, _ := statustest.New("yaml", nil)
 				return filter.Decode(
 					"yaml", []byte(test.TrimYAML(`
 						docker:
 							type: hub
-							image: releaseargus/argus
+							image: test/app
 							tag: '{{ version }}'
 							auth:
 								username: user
@@ -804,10 +873,37 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 			want: &apitype.LatestVersionRequire{
 				Docker: &apitype.RequireDocker{
 					Type:     "hub",
-					Image:    "releaseargus/argus",
+					Image:    "test/app",
 					Tag:      "{{ version }}",
 					Username: "user",
 					Token:    util.SecretValue,
+				},
+			},
+		},
+		{
+			name: "docker/quay",
+			input: test.Must(t, func() (*filter.Require, error) {
+				svcStatus, _ := statustest.New("yaml", nil)
+				return filter.Decode(
+					"yaml", []byte(test.TrimYAML(`
+						docker:
+							type: quay
+							image: test/app
+							tag: '{{ version }}'
+							auth:
+								username: something
+								token: quay_X
+					`)),
+					svcStatus,
+					&defaults,
+				)
+			}),
+			want: &apitype.LatestVersionRequire{
+				Docker: &apitype.RequireDocker{
+					Type:  "quay",
+					Image: "test/app",
+					Tag:   "{{ version }}",
+					Token: util.SecretValue,
 				},
 			},
 		},
@@ -863,15 +959,27 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := tc.input.String("")
+
 			// WHEN: convertAndCensorLatestVersionRequire is called.
 			result := convertAndCensorLatestVersionRequire(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertAndCensorLatestVersionRequire()", packageName)
 
 			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
 				t.Errorf(
-					"%s\nconvertAndCensorLatestVersionRequire() mismatch\ngot:  %q\nwant: %q",
+					"%s mismatch\ngot:  %q\nwant: %q",
 					packageName,
 					got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := tc.input.String(""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
@@ -886,12 +994,12 @@ func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
 		want  apitype.RequireDockerRegistryDefaults
 	}{
 		{
-			name:  "docker.ghcr - IsZero",
+			name:  "docker/ghcr/IsZero",
 			input: &docker.GHCRRegistryDefaults{},
 			want:  nil,
 		},
 		{
-			name: "docker.ghcr",
+			name: "docker/ghcr/converted",
 			input: &docker.GHCRRegistryDefaults{
 				CommonRegistryDefaults: docker.CommonRegistryDefaults{
 					ContainerDetail: docker.ContainerDetail{
@@ -914,12 +1022,12 @@ func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
 			},
 		},
 		{
-			name:  "docker.hub - IsZero",
+			name:  "docker/hub/IsZero",
 			input: &docker.HubRegistryDefaults{},
 			want:  nil,
 		},
 		{
-			name: "docker.hub",
+			name: "docker/hub/converted",
 			input: &docker.HubRegistryDefaults{
 				CommonRegistryDefaults: docker.CommonRegistryDefaults{
 					ContainerDetail: docker.ContainerDetail{
@@ -946,12 +1054,12 @@ func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
 			},
 		},
 		{
-			name:  "docker.quay - IsZero",
+			name:  "docker/quay/IsZero",
 			input: &docker.QuayRegistryDefaults{},
 			want:  nil,
 		},
 		{
-			name: "docker.quay",
+			name: "docker/quay/converted",
 			input: &docker.QuayRegistryDefaults{
 				CommonRegistryDefaults: docker.CommonRegistryDefaults{
 					ContainerDetail: docker.ContainerDetail{
@@ -979,23 +1087,35 @@ func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := tc.input.String("")
+
 			// WHEN: convertAndCensorRequireDockerRegistryDefaults is called.
 			result := convertAndCensorRequireDockerRegistryDefaults(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertAndCensorRequireDockerRegistryDefaults()", packageName)
 
 			// THEN: the result should be as expected.
 			got := decode.ToYAMLString(result, "")
 			want := decode.ToYAMLString(tc.want, "")
 			if got != want {
 				t.Errorf(
-					"%s\nconvertAndCensorRequireDockerRegistryDefaults() result mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
+					"%s result mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := tc.input.String(""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
 	}
 }
 
-func TestConvertAndCensorRequireDockerRegistryDefaults_UnknownType(t *testing.T) {
+func TestConvertAndCensorRequireDockerRegistryDefaults__unknownType(t *testing.T) {
 	// GIVEN: a docker.RegistryDefaults of an unknown type.
 	input := &dockertest.MockRegistryDefaults{}
 
@@ -1014,24 +1134,24 @@ func TestConvertAndCensorRequireDockerRegistryDefaults_UnknownType(t *testing.T)
 func TestConvertURLCommands(t *testing.T) {
 	// GIVEN: a list of URL Commands.
 	tests := []struct {
-		name        string
-		urlCommands filter.URLCommands
-		want        apitype.URLCommands
+		name  string
+		input filter.URLCommands
+		want  apitype.URLCommands
 	}{
 		{
 
-			name:        "nil",
-			urlCommands: nil,
-			want:        nil,
+			name:  "nil",
+			input: nil,
+			want:  nil,
 		},
 		{
-			name:        "empty",
-			urlCommands: filter.URLCommands{},
-			want:        nil,
+			name:  "empty",
+			input: filter.URLCommands{},
+			want:  nil,
 		},
 		{
 			name: "regex",
-			urlCommands: filter.URLCommands{
+			input: filter.URLCommands{
 				{Type: "regex", Regex: "[0-9.]+"},
 			},
 			want: apitype.URLCommands{
@@ -1040,7 +1160,7 @@ func TestConvertURLCommands(t *testing.T) {
 		},
 		{
 			name: "replace",
-			urlCommands: filter.URLCommands{
+			input: filter.URLCommands{
 				{Type: "replace", Old: "foo", New: "bar"},
 			},
 			want: apitype.URLCommands{
@@ -1049,7 +1169,7 @@ func TestConvertURLCommands(t *testing.T) {
 		},
 		{
 			name: "split",
-			urlCommands: filter.URLCommands{
+			input: filter.URLCommands{
 				{Type: "split", Index: test.Ptr(7)},
 			},
 			want: apitype.URLCommands{
@@ -1058,7 +1178,7 @@ func TestConvertURLCommands(t *testing.T) {
 		},
 		{
 			name: "one of each",
-			urlCommands: filter.URLCommands{
+			input: filter.URLCommands{
 				{Type: "regex", Regex: "[0-9.]+"},
 				{Type: "replace", Old: "foo", New: "bar"},
 				{Type: "split", Index: test.Ptr(7)},
@@ -1075,14 +1195,26 @@ func TestConvertURLCommands(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := tc.input.String()
+
 			// WHEN: convertURLCommands is called on it.
-			result := convertURLCommands(tc.urlCommands)
+			result := convertURLCommands(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertURLCommands()", packageName)
 
 			// THEN: the WebHooks is converted correctly.
 			if got, want := result.String(), tc.want.String(); got != want {
 				t.Errorf(
 					"%s\nconvertURLCommands() mismatch\ngot:  %q\nwant: %q",
 					packageName, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := tc.input.String(); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
@@ -1116,14 +1248,14 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			want:  nil,
 		},
 		{
-			name:  "empty - url",
+			name:  "url/bare",
 			input: &dvweb.Lookup{},
 			want: &apitype.DeployedVersionLookup{
 				Type: "url",
 			},
 		},
 		{
-			name: "url - minimal",
+			name: "url/minimal",
 			input: test.Must(t, func() (deployedver.Lookup, error) {
 				return deployedver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -1143,7 +1275,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			},
 		},
 		{
-			name: "url - censor basic_auth.password",
+			name: "url/censor basic_auth.password",
 			input: test.Must(t, func() (deployedver.Lookup, error) {
 				return deployedver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -1168,7 +1300,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			},
 		},
 		{
-			name: "url - censor headers",
+			name: "url/censor headers",
 			input: test.Must(t, func() (deployedver.Lookup, error) {
 				return deployedver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -1195,7 +1327,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			},
 		},
 		{
-			name:               "url - full",
+			name:               "url/filled",
 			regexMissesContent: 1,
 			regexMissesVersion: 3,
 			input: test.Must(t, func() (deployedver.Lookup, error) {
@@ -1260,7 +1392,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			},
 		},
 		{
-			name: "manual",
+			name: "manual/filled",
 			input: test.Must(t, func() (deployedver.Lookup, error) {
 				dvStatus := status.New(
 					nil, nil, nil,
@@ -1299,7 +1431,10 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			var had string
 			if tc.input != nil {
+				had = tc.input.String("")
+
 				var dvStatus *status.Status
 				if dv, ok := tc.input.(*dvweb.Lookup); ok {
 					dvStatus = dv.Status
@@ -1327,11 +1462,36 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			// WHEN: convertAndCensorDeployedVersionLookup is called on it.
 			result := convertAndCensorDeployedVersionLookup(tc.input)
 
+			prefix := fmt.Sprintf("%s\nconvertAndCensorDeployedVersionLookup", packageName)
+
 			// THEN: the WebHooks is converted correctly.
 			if got, want := result.String(), tc.want.String(); got != want {
 				t.Errorf(
-					"%s\nconvertAndCensorDeployedVersionLookup() mismatch\ngot:  %q\nwant: %q",
+					"%s mismatch\ngot:  %q\nwant: %q",
 					packageName, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if result == nil || tc.input == nil {
+				if tc.input == nil && result != nil {
+					t.Fatalf(
+						"%s mismatch\ngot:  %q\nwant: nil",
+						prefix, result,
+					)
+				}
+				if result == nil && tc.want != nil {
+					t.Fatalf(
+						"%s mismatch\ngot:  nil\nwant: non-nil",
+						prefix,
+					)
+				}
+				return
+			}
+			if got := tc.input.String(""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
@@ -1453,14 +1613,25 @@ func TestConvertAndCensorNotifierDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := tc.input.String("")
+
 			// WHEN: convertAndCensorNotifiersDefaults is called.
 			result := convertAndCensorNotifiersDefaults(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertAndCensorNotifiersDefaults()", packageName)
 
 			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
 				t.Errorf(
-					"%s\nconvertAndCensorNotifiersDefaults() mismatch\ngot:  %q\nwant: %q",
+					"%s mismatch\ngot:  %q\nwant: %q",
 					packageName, got, want,
+				)
+			}
+
+			if got := tc.input.String(""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
@@ -1494,10 +1665,16 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 						"test": "1",
 					},
 					map[string]string{
-						"test": "2",
+						"altid":    "VALUE",
+						"apikey":   "VALUE",
+						"botkey":   "VALUE",
+						"password": "VALUE",
+						"token":    "VALUE",
+						"tokena":   "VALUE",
+						"tokenb":   "VALUE",
 					},
 					map[string]string{
-						"test": "3",
+						"devices": "VALUE",
 					},
 					nil, nil, nil,
 				),
@@ -1509,10 +1686,16 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 						"test": "1",
 					},
 					URLFields: map[string]string{
-						"test": "2",
+						"altid":    util.SecretValue,
+						"apikey":   util.SecretValue,
+						"botkey":   util.SecretValue,
+						"password": util.SecretValue,
+						"token":    util.SecretValue,
+						"tokena":   util.SecretValue,
+						"tokenb":   util.SecretValue,
 					},
 					Params: map[string]string{
-						"test": "3",
+						"devices": util.SecretValue,
 					},
 				},
 			},
@@ -1527,10 +1710,16 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 						"test": "1",
 					},
 					map[string]string{
-						"test": "2",
+						"altid":    "VALUE",
+						"apikey":   "VALUE",
+						"botkey":   "VALUE",
+						"password": "VALUE",
+						"token":    "VALUE",
+						"tokena":   "VALUE",
+						"tokenb":   "VALUE",
 					},
 					map[string]string{
-						"test": "3",
+						"devices": "VALUE",
 					},
 					nil, nil, nil,
 				),
@@ -1557,10 +1746,16 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 						"test": "1",
 					},
 					URLFields: map[string]string{
-						"test": "2",
+						"altid":    util.SecretValue,
+						"apikey":   util.SecretValue,
+						"botkey":   util.SecretValue,
+						"password": util.SecretValue,
+						"token":    util.SecretValue,
+						"tokena":   util.SecretValue,
+						"tokenb":   util.SecretValue,
 					},
 					Params: map[string]string{
-						"test": "3",
+						"devices": util.SecretValue,
 					},
 				},
 				"other": {
@@ -1584,6 +1779,8 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := tc.input.String("")
+
 			// WHEN: convertAndCensorNotifiers is called.
 			result := convertAndCensorNotifiers(tc.input)
 
@@ -1592,6 +1789,14 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 				t.Errorf(
 					"%s\nconvertAndCensorNotifiers() mismatch\ngot:  %q\nwant: %q",
 					packageName, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := tc.input.String(""); got != had {
+				t.Errorf(
+					"%s\nconvertAndCensorNotifiers() changed original input\ngot:  %q\nwant: %q",
+					packageName, got, had,
 				)
 			}
 		})
@@ -1605,23 +1810,23 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 func TestConvertCommands(t *testing.T) {
 	// GIVEN: Commands.
 	tests := []struct {
-		name     string
-		commands command.Commands
-		want     apitype.Commands
+		name  string
+		input command.Commands
+		want  apitype.Commands
 	}{
 		{
-			name:     "nil",
-			commands: nil,
-			want:     nil,
+			name:  "nil",
+			input: nil,
+			want:  nil,
 		},
 		{
-			name:     "empty",
-			commands: command.Commands{},
-			want:     apitype.Commands{},
+			name:  "empty",
+			input: command.Commands{},
+			want:  apitype.Commands{},
 		},
 		{
 			name: "one",
-			commands: command.Commands{
+			input: command.Commands{
 				{"ls", "-lah"},
 			},
 			want: apitype.Commands{
@@ -1630,7 +1835,7 @@ func TestConvertCommands(t *testing.T) {
 		},
 		{
 			name: "two",
-			commands: command.Commands{
+			input: command.Commands{
 				{"ls", "-lah"},
 				{"/bin/bash", "something.sh"},
 			},
@@ -1645,12 +1850,14 @@ func TestConvertCommands(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := decode.ToYAMLString(tc.input, "")
+
 			// WHEN: convertCommands is called on it.
-			got := convertCommands(tc.commands)
+			got := convertCommands(tc.input)
 
 			prefix := fmt.Sprintf(
 				"%s\nconvertCommands(%+v)",
-				packageName, tc.commands,
+				packageName, tc.input,
 			)
 
 			// THEN: the Commands is converted correctly.
@@ -1663,6 +1870,14 @@ func TestConvertCommands(t *testing.T) {
 				"",
 			); testErr != nil {
 				t.Error(testErr)
+			}
+
+			// AND: the original input is unchanged.
+			if got := decode.ToYAMLString(tc.input, ""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
+				)
 			}
 		})
 	}
@@ -1772,14 +1987,26 @@ func TestConvertAndCensorWebHooksDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := tc.input.String("")
+
 			// WHEN: convertAndCensorWebHooksDefaults is called.
 			result := convertAndCensorWebHooksDefaults(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertAndCensorWebHooksDefaults()", packageName)
 
 			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
 				t.Errorf(
-					"%s\nconvertAndCensorWebHooksDefaults() result mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
+					"%s result mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := tc.input.String(""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
@@ -1837,14 +2064,26 @@ func TestConvertAndCensorWebHookDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := tc.input.String("")
+
 			// WHEN: convertAndCensorWebHookDefaults is called.
 			result := convertAndCensorWebHookDefaults(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertAndCensorWebHookDefaults()", packageName)
 
 			// THEN: the result should be as expected.
 			if got, want := result.String(""), tc.want.String(""); got != want {
 				t.Errorf(
-					"%s\nconvertAndCensorWebHookDefaults() result mismatch\ngot:  %q\nwant: %q",
+					"%s result mismatch\ngot:  %q\nwant: %q",
 					packageName, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := tc.input.String(""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
@@ -1944,14 +2183,26 @@ func TestConvertAndCensorWebHooks(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := tc.input.String()
+
 			// WHEN: convertAndCensorWebHooks is called.
 			result := convertAndCensorWebHooks(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertAndCensorWebHooks()", packageName)
 
 			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
 				t.Errorf(
-					"%s\nconvertAndCensorWebHooks() result mismatch\ngot:  %q\nwant: %q",
+					"%s result mismatch\ngot:  %q\nwant: %q",
 					packageName, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := tc.input.String(); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
@@ -1961,23 +2212,23 @@ func TestConvertAndCensorWebHooks(t *testing.T) {
 func TestConvertAndCensorWebHook(t *testing.T) {
 	// GIVEN: a WebHook.
 	tests := []struct {
-		name string
-		wh   *webhook.WebHook
-		want apitype.WebHook
+		name  string
+		input *webhook.WebHook
+		want  apitype.WebHook
 	}{
 		{
-			name: "nil",
-			wh:   nil,
-			want: apitype.WebHook{},
+			name:  "nil",
+			input: nil,
+			want:  apitype.WebHook{},
 		},
 		{
-			name: "empty",
-			wh:   &webhook.WebHook{},
-			want: apitype.WebHook{},
+			name:  "empty",
+			input: &webhook.WebHook{},
+			want:  apitype.WebHook{},
 		},
 		{
 			name: "censor secret",
-			wh: webhook.New(
+			input: webhook.New(
 				nil, nil,
 				"",
 				nil, nil,
@@ -1994,7 +2245,7 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 		},
 		{
 			name: "copy and censor headers",
-			wh: webhook.New(
+			input: webhook.New(
 				nil,
 				webhook.Headers{
 					{Key: "X-Something", Value: "foo"},
@@ -2022,14 +2273,26 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := tc.input.String("")
+
 			// WHEN: convertAndCensorWebHook is called on it.
-			result := convertAndCensorWebHook(tc.wh)
+			result := convertAndCensorWebHook(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertAndCensorWebHook()", packageName)
 
 			// THEN: the WebHook is converted correctly.
 			if got, want := result.String(""), tc.want.String(""); got != want {
 				t.Errorf(
-					"%s\nconvertAndCensorWebHook() result mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
+					"%s result mismatch\ngot:  %q\nwant: %q",
+					*config.WebRoutePrefix, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := tc.input.String(""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
 				)
 			}
 		})
@@ -2079,6 +2342,8 @@ func TestConvertWebHookHeaders(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			had := decode.ToYAMLString(tc.input, "")
+
 			// WHEN: convertWebHookHeaders is called.
 			got := convertWebHookHeaders(tc.input)
 
@@ -2097,6 +2362,14 @@ func TestConvertWebHookHeaders(t *testing.T) {
 				"",
 			); testErr != nil {
 				t.Error(testErr)
+			}
+
+			// AND: the original input is unchanged.
+			if got := decode.ToYAMLString(tc.input, ""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
+				)
 			}
 		})
 	}

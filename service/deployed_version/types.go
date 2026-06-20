@@ -22,7 +22,7 @@ import (
 // Lookup provides methods for retrieving the deployed version of a service.
 type Lookup = base.Interface
 
-// IsEqual returns whether `this` lookup is the same as `other` (excluding status).
+// IsEqual reports whether this and other represent the same lookup, excluding status.
 func IsEqual(this, other Lookup) bool {
 	if other == nil || this == nil {
 		// Equal if both are nil.

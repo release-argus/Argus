@@ -65,17 +65,17 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			nextPage: 2,
 		},
 		{
-			name:     "repo that uses tags, not releases - has tags",
+			name:     "repo that uses tags, not releases/has tags",
 			url:      "release-argus/test",
 			errRegex: `^$`,
 		},
 		{
-			name:     "repo that uses tags, not releases - no tags",
+			name:     "repo that uses tags, not releases/no tags",
 			url:      "release-argus/.github",
 			errRegex: `^$`,
 		},
 		{
-			name:     "repo that uses tags, not releases - update EmptyListETag if 200 on empty list",
+			name:     "repo that uses tags, not releases/update EmptyListETag if 200 on empty list",
 			url:      "release-argus/.github",
 			eTag:     test.Ptr(""),
 			errRegex: `^$`,
@@ -174,7 +174,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 		want       wants
 	}{
 		{
-			name: "200 OK - EmptyListETag set if default access_token",
+			name: "200 OK/EmptyListETag set if default access_token",
 			conditions: conditions{
 				hadDefaultAccessToken: true,
 			},
@@ -187,7 +187,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name: "200 OK - EmptyListETag not set if non-default access_token",
+			name: "200 OK/EmptyListETag not set if non-default access_token",
 			conditions: conditions{
 				hadDefaultAccessToken: false,
 			},
@@ -200,7 +200,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name:       "200 OK - Get releases",
+			name:       "200 OK/Get releases",
 			statusCode: http.StatusOK,
 			body:       []byte(`[{"tag_name":"v1.0.0"}]`),
 			want: wants{
@@ -209,7 +209,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name:       "304 Not Modified - Tag fallback request",
+			name:       "304 Not Modified/Tag fallback request",
 			statusCode: http.StatusNotModified,
 			want: wants{
 				nilBody:  false,
@@ -218,7 +218,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name: "304 Not Modified - Use old releases",
+			name: "304 Not Modified/Use old releases",
 			conditions: conditions{
 				hadReleases: true,
 			},
@@ -230,7 +230,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name:       "401 Unauthorized - Bad credentials",
+			name:       "401 Unauthorized/bad credentials",
 			statusCode: http.StatusUnauthorized,
 			body:       []byte(`{"message":"Bad credentials"}`),
 			want: wants{
@@ -239,7 +239,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name:       "401 Unauthorized - Unknown",
+			name:       "401 Unauthorized/unknown",
 			statusCode: http.StatusUnauthorized,
 			body:       []byte(`{"message":"Something else"}`),
 			want: wants{
@@ -248,7 +248,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name:       "403 Forbidden - rate limit",
+			name:       "403 Forbidden/rate limit",
 			statusCode: http.StatusForbidden,
 			body:       []byte(`{"message":"API rate limit exceeded"}`),
 			want: wants{
@@ -257,7 +257,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name:       "403 Forbidden - missing tag_name",
+			name:       "403 Forbidden/missing tag_name",
 			statusCode: http.StatusForbidden,
 			body:       []byte(`{"message":"some other error"}`),
 			want: wants{
@@ -266,7 +266,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name:       "403 Forbidden - unknown",
+			name:       "403 Forbidden/unknown",
 			statusCode: http.StatusForbidden,
 			body:       []byte(`[{"tag_name":"v1.0.0"}]`),
 			want: wants{
@@ -275,7 +275,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name:       "429 Too Many Requests - rate limit",
+			name:       "429 Too Many Requests/rate limit",
 			statusCode: http.StatusTooManyRequests,
 			body:       []byte(`{"message":"something from GitHub"}`),
 			want: wants{
@@ -284,7 +284,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name:       "429 Too Many Requests - unmarshal fail",
+			name:       "429 Too Many Requests/unmarshal fail",
 			statusCode: http.StatusTooManyRequests,
 			body:       []byte(`{"message":}`),
 			want: wants{
@@ -450,7 +450,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 			},
 		},
 		{
-			name: "require.regex_version - match",
+			name: "require.regex_version/match",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -462,7 +462,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 			},
 		},
 		{
-			name: "require.regex_version - match but timestamp of asset invalid",
+			name: "require.regex_version/match, but timestamp of asset invalid",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -478,7 +478,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 			},
 		},
 		{
-			name: "require.regex_version - no match",
+			name: "require.regex_version/no match",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "x[0-9.]+"
@@ -488,7 +488,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 			},
 		},
 		{
-			name: "require.regex_content - match",
+			name: "require.regex_content/match",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -501,7 +501,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 			},
 		},
 		{
-			name: "require.regex_content - no match",
+			name: "require.regex_content/no match",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -512,7 +512,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 			},
 		},
 		{
-			name: "command - pass",
+			name: "command/pass",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -526,7 +526,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 			},
 		},
 		{
-			name: "command - fail",
+			name: "command/fail",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -541,7 +541,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 			},
 		},
 		{
-			name: "docker tag - found",
+			name: "docker tag/found",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -560,7 +560,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 			},
 		},
 		{
-			name: "docker tag - not found",
+			name: "docker tag/not found",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"

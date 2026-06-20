@@ -24,7 +24,7 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 )
 
-// writeQuoted will write the s to b, wrapped in backticks.
+// writeQuoted writes s to b wrapped in backticks.
 func writeQuoted(b *strings.Builder, s string) {
 	b.WriteByte('`')
 	b.WriteString(s)
@@ -62,6 +62,10 @@ func (api *api) Handler(ctx context.Context) {
 
 // buildUpdateRowStatement builds the upsert SQL statement and params for updating a serviceID row with the given cells.
 func buildUpdateRowStatement(serviceID string, cells []dbtype.Cell) (string, []any) {
+	if len(cells) == 0 {
+		return "", nil
+	}
+
 	// The columns to update.
 	var (
 		columnsBuilder strings.Builder

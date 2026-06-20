@@ -227,7 +227,7 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs secretRefs) {
 	}
 }
 
-// giveSecretsLatestVersion from the `oldLatestVersion`.
+// giveSecretsLatestVersion copies secrets from oldLatestVersion into the receiver's LatestVersion.
 func (s *Service) giveSecretsLatestVersion(oldLatestVersion latestver.Lookup, secretRefs *shared.VSecretRef) {
 	if s == nil || s.LatestVersion == nil || oldLatestVersion == nil {
 		return
@@ -236,7 +236,7 @@ func (s *Service) giveSecretsLatestVersion(oldLatestVersion latestver.Lookup, se
 	s.LatestVersion.InheritSecrets(oldLatestVersion, secretRefs)
 }
 
-// giveSecretsDeployedVersion from the `oldDeployedVersion`.
+// giveSecretsDeployedVersion copies secrets from oldDeployedVersion into the receiver's DeployedVersionLookup.
 func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion deployedver.Lookup, secretRefs *shared.VSecretRef) {
 	if s.DeployedVersionLookup == nil || oldDeployedVersion == nil {
 		return
@@ -245,9 +245,9 @@ func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion deployedver.Look
 	s.DeployedVersionLookup.InheritSecrets(oldDeployedVersion, secretRefs)
 }
 
-// giveSecretsNotify from the `oldNotifies`.
-func (s *Service) giveSecretsNotify(oldNotifies shoutrrr.Shoutrrrs, secretRefs map[string]shared.OldStringIndex) {
-	if len(s.Notify) == 0 || len(oldNotifies) == 0 ||
+// giveSecretsNotify copies secrets from oldNotifiers into the receiver's Notify.
+func (s *Service) giveSecretsNotify(oldNotifiers shoutrrr.Shoutrrrs, secretRefs map[string]shared.OldStringIndex) {
+	if len(s.Notify) == 0 || len(oldNotifiers) == 0 ||
 		len(secretRefs) == 0 {
 		return
 	}
@@ -260,7 +260,7 @@ func (s *Service) giveSecretsNotify(oldNotifies shoutrrr.Shoutrrrs, secretRefs m
 		if oldIndex == "" {
 			continue
 		}
-		oldNotify := oldNotifies[oldIndex]
+		oldNotify := oldNotifiers[oldIndex]
 		// Reference doesn't exist?
 		if oldNotify == nil {
 			continue
@@ -273,7 +273,7 @@ func (s *Service) giveSecretsNotify(oldNotifies shoutrrr.Shoutrrrs, secretRefs m
 	}
 }
 
-// giveSecretsWebHook from the `oldWebHooks`.
+// giveSecretsWebHook copies secrets from oldWebHooks into the receiver's WebHook.
 func (s *Service) giveSecretsWebHook(oldWebHooks webhook.WebHooks, secretRefs map[string]shared.WHSecretRef) {
 	if s.WebHook == nil || oldWebHooks == nil ||
 		len(secretRefs) == 0 {

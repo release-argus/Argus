@@ -33,7 +33,7 @@ import (
 	"github.com/release-argus/Argus/web/ui"
 )
 
-// SetupRoutesAPI will set up the HTTP API routes.
+// SetupRoutesAPI sets up the HTTP API routes.
 func (api *API) SetupRoutesAPI() {
 	// Create a subrouter for "/api/v1".
 	v1Router := api.Router.PathPrefix("/api/v1").Subrouter()
@@ -152,7 +152,7 @@ func (api *API) DisableRoutes() {
 	})
 }
 
-// SetupRoutesNodeJS will set up the HTTP routes to the Node.js files.
+// SetupRoutesNodeJS sets up the HTTP routes to the Node.js files.
 func (api *API) SetupRoutesNodeJS() {
 	nodeRoutes := []string{
 		"/approvals",

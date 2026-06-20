@@ -49,7 +49,7 @@ func TestUpdateUpdatesCurrentMetric(t *testing.T) {
 			updateCountSkipped:   0,
 		},
 		{
-			name: "0 to 1 - Latest version not deployed/approved/skipped -> Latest version deployed",
+			name: "0 to 1 - Latest version not deployed, approved, or skipped -> Latest version deployed",
 			previousVersions: serviceinfo.ServiceInfo{
 				ApprovedVersion: "",
 				DeployedVersion: "1.1.0",
@@ -62,7 +62,7 @@ func TestUpdateUpdatesCurrentMetric(t *testing.T) {
 			updateCountSkipped:   0,
 		},
 		{
-			name: "0 to 2 - Latest version not deployed/approved/skipped -> Latest version approved",
+			name: "0 to 2 - Latest version not deployed, approved, or skipped -> Latest version approved",
 			previousVersions: serviceinfo.ServiceInfo{
 				ApprovedVersion: "",
 				DeployedVersion: "1.1.0",
@@ -75,7 +75,7 @@ func TestUpdateUpdatesCurrentMetric(t *testing.T) {
 			updateCountSkipped:   0,
 		},
 		{
-			name: "0 to 3 - Latest version not deployed/approved/skipped -> Latest version skipped",
+			name: "0 to 3 - Latest version not deployed, approved, or skipped -> Latest version skipped",
 			previousVersions: serviceinfo.ServiceInfo{
 				ApprovedVersion: "",
 				DeployedVersion: "1.1.0",
@@ -88,7 +88,7 @@ func TestUpdateUpdatesCurrentMetric(t *testing.T) {
 			updateCountSkipped:   1,
 		},
 		{
-			name: "1 to 0 - Latest version deployed -> Latest version not deployed/approved/skipped",
+			name: "1 to 0 - Latest version deployed -> Latest version not deployed, approved, or skipped",
 			previousVersions: serviceinfo.ServiceInfo{
 				ApprovedVersion: "",
 				DeployedVersion: "1.2.0",
@@ -104,7 +104,7 @@ func TestUpdateUpdatesCurrentMetric(t *testing.T) {
 		// "1 to 2 - Latest version deployed -> Latest version approved": {}.
 		// "1 to 3 - Latest version deployed -> Latest version skipped": {}.
 		{
-			name: "2 to 0 - Latest version approved -> Latest version not deployed/approved/skipped",
+			name: "2 to 0 - Latest version approved -> Latest version not deployed, approved, or skipped",
 			previousVersions: serviceinfo.ServiceInfo{
 				ApprovedVersion: "1.2.0",
 				DeployedVersion: "1.1.0",
@@ -143,7 +143,7 @@ func TestUpdateUpdatesCurrentMetric(t *testing.T) {
 			updateCountSkipped:   1,
 		},
 		{
-			name: "3 to 0 - Latest version skipped -> Latest version not deployed/approved/skipped",
+			name: "3 to 0 - Latest version skipped -> Latest version not deployed, approved, or skipped",
 			previousVersions: serviceinfo.ServiceInfo{
 				ApprovedVersion: serviceinfo.SkippedVersion("1.2.0"),
 				DeployedVersion: "1.1.0",

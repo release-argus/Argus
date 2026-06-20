@@ -43,6 +43,13 @@ func TestLookup_DecodeSelf(t *testing.T) {
 		{
 			name:     "JSON/empty",
 			format:   "json",
+			data:     "",
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
 			data:     `{}`,
 			errRegex: `^$`,
 			want:     "{}\n",
@@ -130,7 +137,7 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON filled",
+			name:   "JSON/filled",
 			format: "json",
 			data: test.TrimJSON(`{
 				"type": "url",
@@ -240,14 +247,14 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name:     "override error - base.Lookup",
+			name:     "override error/base.Lookup",
 			format:   "json",
 			data:     `{"url": []}`,
 			previous: &Lookup{},
 			errRegex: `^json: .*unmarshal.*$`,
 		},
 		{
-			name:     "override error - Lookup",
+			name:     "override error/Lookup",
 			format:   "json",
 			data:     `{"allow_invalid_certs": "true"}`,
 			previous: &Lookup{},

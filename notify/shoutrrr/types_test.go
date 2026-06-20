@@ -241,19 +241,19 @@ func TestShoutrrrsDefaults_IsZero(t *testing.T) {
 		want              bool
 	}{
 		{
-			name:              "empty",
+			name:              "empty/no elements",
 			shoutrrrsDefaults: &ShoutrrrsDefaults{},
 			want:              true,
 		},
 		{
-			name: "one empty element",
+			name: "empty/one element",
 			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"foo": &Defaults{},
 			},
 			want: true,
 		},
 		{
-			name: "one non-empty element",
+			name: "non-empty/one element",
 			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"foo": NewDefaults(
 					"discord",
@@ -263,7 +263,7 @@ func TestShoutrrrsDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "multiple non-empty elements",
+			name: "non-empty/multiple elements",
 			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"foo": NewDefaults(
 					"discord",
@@ -277,7 +277,7 @@ func TestShoutrrrsDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "mixed with first empty",
+			name: "mixed",
 			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"foo": &Defaults{},
 				"bar": NewDefaults(
@@ -325,7 +325,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "type only",
+			name: "non-empty/Type",
 			defaults: &Defaults{
 				Base: Base{
 					Type: "discord",
@@ -334,7 +334,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "options only",
+			name: "non-empty/Options",
 			defaults: &Defaults{
 				Base: Base{
 					Options: map[string]string{
@@ -345,7 +345,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "url fields only",
+			name: "non-empty/URLFields",
 			defaults: &Defaults{
 				Base: Base{
 					URLFields: map[string]string{
@@ -356,7 +356,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "params only",
+			name: "non-empty/Params",
 			defaults: &Defaults{
 				Base: Base{
 					Params: map[string]string{
@@ -367,7 +367,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			defaults: &Defaults{
 				Base: Base{
 					Type: "discord",
@@ -417,19 +417,26 @@ func TestShoutrrrs_IsZero(t *testing.T) {
 			want:      true,
 		},
 		{
-			name:      "empty",
+			name:      "empty/0 elements",
 			shoutrrrs: &Shoutrrrs{},
 			want:      true,
 		},
 		{
-			name: "length 1",
+			name: "non-empty/1 element",
 			shoutrrrs: &Shoutrrrs{
 				"foo": New(nil, "", "discord", nil, nil, nil, nil, nil, nil),
 			},
 			want: false,
 		},
 		{
-			name: "length 2",
+			name: "empty/1 element",
+			shoutrrrs: &Shoutrrrs{
+				"bop": &Shoutrrr{},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/multiple elements",
 			shoutrrrs: &Shoutrrrs{
 				"foo": New(nil, "", "discord", nil, nil, nil, nil, nil, nil),
 				"bar": New(nil, "", "gotify", nil, nil, nil, nil, nil, nil),
@@ -437,11 +444,12 @@ func TestShoutrrrs_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "length 3",
+			name: "mixed",
 			shoutrrrs: &Shoutrrrs{
 				"foo": New(nil, "", "discord", nil, nil, nil, nil, nil, nil),
 				"bar": New(nil, "", "gotify", nil, nil, nil, nil, nil, nil),
 				"baz": New(nil, "", "slack", nil, nil, nil, nil, nil, nil),
+				"bop": &Shoutrrr{},
 			},
 			want: false,
 		},
@@ -492,7 +500,7 @@ func TestShoutrrr_IsDefault(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "type only",
+			name: "non-empty Type",
 			shoutrrr: &Shoutrrr{
 				Base: Base{
 					Type: "discord",
@@ -501,7 +509,7 @@ func TestShoutrrr_IsDefault(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "options only",
+			name: "non-empty Options",
 			shoutrrr: &Shoutrrr{
 				Base: Base{
 					Options: MapStringStringOmitNull{
@@ -523,7 +531,7 @@ func TestShoutrrr_IsDefault(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "params only",
+			name: "non-empty Params",
 			shoutrrr: &Shoutrrr{
 				Base: Base{
 					Params: MapStringStringOmitNull{
@@ -1368,7 +1376,7 @@ func TestShoutrrsDefaults_String(t *testing.T) {
 			`),
 		},
 		{
-			name: "multiple empty/non-empty elements",
+			name: "multiple empty and non-empty elements",
 			shoutrrrsDefaults: &ShoutrrrsDefaults{
 				"foo": NewDefaults(
 					"discord",

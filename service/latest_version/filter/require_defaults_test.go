@@ -37,7 +37,7 @@ func TestRequireDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Docker",
+			name: "non-empty",
 			req: &RequireDefaults{
 				Docker: docker.Defaults{
 					Type: "ghcr",
@@ -103,7 +103,7 @@ func TestRequireDefaults_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "non-empty Docker",
+			name: "valid Docker",
 			req: &RequireDefaults{
 				Docker: docker.Defaults{
 					Type: "ghcr",

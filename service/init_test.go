@@ -151,7 +151,7 @@ func TestService_Init(t *testing.T) {
 		wantIcon string
 	}{
 		{
-			name: "bare service - Name defaulted to ID",
+			name: "bare/Name defaulted to ID",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -165,7 +165,7 @@ func TestService_Init(t *testing.T) {
 			}),
 		},
 		{
-			name: "service with Name",
+			name: "bare/Name",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -180,7 +180,7 @@ func TestService_Init(t *testing.T) {
 			}),
 		},
 		{
-			name: "service with notify - doesn't set fallback when Service has a Dashboard.Icon",
+			name: "notify/doesn't set fallback when Service has a Dashboard.Icon",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -202,7 +202,7 @@ func TestService_Init(t *testing.T) {
 			wantIcon: "dashboard-icon",
 		},
 		{
-			name: "service with notify - does set fallback when Service has no Dashboard.Icon",
+			name: "notify/does set fallback when Service has no Dashboard.Icon",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -227,7 +227,7 @@ func TestService_Init(t *testing.T) {
 			wantIcon: "https://example.com/notify-icon-2",
 		},
 		{
-			name: "service with notify, command and webhook",
+			name: "notify + command + webhook",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -249,7 +249,7 @@ func TestService_Init(t *testing.T) {
 			}),
 		},
 		{
-			name: "service with notifies from defaults",
+			name: "notify/from defaults",
 			svc: test.Must(t, func() (*Service, error) {
 				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.Notify = map[string]struct{}{
@@ -268,7 +268,7 @@ func TestService_Init(t *testing.T) {
 			}),
 		},
 		{
-			name: "service with notifies not from defaults",
+			name: "notify/not from defaults",
 			svc: test.Must(t, func() (*Service, error) {
 				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.Notify = map[string]struct{}{
@@ -289,7 +289,7 @@ func TestService_Init(t *testing.T) {
 			}),
 		},
 		{
-			name: "service with commands from defaults",
+			name: "command/from defaults",
 			svc: test.Must(t, func() (*Service, error) {
 				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.Command = command.Commands{
@@ -308,7 +308,7 @@ func TestService_Init(t *testing.T) {
 			}),
 		},
 		{
-			name: "service with commands not from defaults",
+			name: "command/not from defaults",
 			svc: test.Must(t, func() (*Service, error) {
 				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.Command = command.Commands{
@@ -329,7 +329,7 @@ func TestService_Init(t *testing.T) {
 			}),
 		},
 		{
-			name: "service with webhooks from defaults",
+			name: "webhook/from defaults",
 			svc: test.Must(t, func() (*Service, error) {
 				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.WebHook = map[string]struct{}{
@@ -348,7 +348,7 @@ func TestService_Init(t *testing.T) {
 			}),
 		},
 		{
-			name: "service with webhooks not from defaults",
+			name: "webhook/not from defaults",
 			svc: test.Must(t, func() (*Service, error) {
 				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.WebHook = map[string]struct{}{
@@ -370,7 +370,7 @@ func TestService_Init(t *testing.T) {
 			}),
 		},
 		{
-			name: "service with webhooks/commands from defaults and notify overridden",
+			name: "webhook + command - from defaults and notify overridden",
 			svc: test.Must(t, func() (*Service, error) {
 				svcCfg := plainDefaultsConfig(t)
 				svcCfg.Soft.Notify = map[string]struct{}{

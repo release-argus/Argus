@@ -23,7 +23,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Print each Service to stdout.
+// Print writes each Service to stdout with the given prefix.
 func (s *Services) Print(prefix string, order []string) {
 	if s == nil {
 		return

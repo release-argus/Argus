@@ -55,7 +55,7 @@ type testLookup struct {
 // decodeTestLookup returns a new testLookup from a string in a given format (json/yaml).
 func decodeTestLookup(
 	t *testing.T,
-	format string, // "json" | "yaml"
+	format string,
 	data []byte,
 	options *opt.Options,
 	svcStatus *status.Status,

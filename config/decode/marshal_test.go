@@ -43,22 +43,22 @@ func TestIsNull(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "null",
+			name: "null/bare",
 			data: []byte("null"),
 			want: true,
 		},
 		{
-			name: "null - trailing spaces trimmed",
+			name: "null/trailing spaces trimmed",
 			data: []byte("null  "),
 			want: true,
 		},
 		{
-			name: "null - leading spaces trimmed",
+			name: "null/leading spaces trimmed",
 			data: []byte("   null"),
 			want: true,
 		},
 		{
-			name: "null - leading and trailing spaces trimmed",
+			name: "null/leading and trailing spaces trimmed",
 			data: []byte("   null "),
 			want: true,
 		},
@@ -139,28 +139,38 @@ func TestUnmarshal(t *testing.T) {
 		errRegex string
 	}{
 		{
-			name:     "JSON - no data",
-			data:     []byte{},
+			name:   "JSON/no data",
+			data:   []byte{},
+			format: "json",
+			errRegex: test.TrimYAML(`
+				jsontext:
+					unexpected EOF`,
+			),
+			want: "{}\n",
+		},
+		{
+			name:     "JSON/empty object",
+			data:     []byte("{}"),
 			format:   "json",
 			errRegex: `^$`,
 			want:     "{}\n",
 		},
 		{
-			name:     "YAML - no data",
+			name:     "YAML/no data",
 			data:     []byte{},
 			format:   "yaml",
 			errRegex: `^$`,
 			want:     "{}\n",
 		},
 		{
-			name:     "unsupported format - no data",
+			name:     "unsupported format/no data",
 			data:     []byte{},
 			format:   "x",
 			errRegex: `^unsupported format: "x"$`,
 			want:     "{}\n",
 		},
 		{
-			name: "JSON - valid data",
+			name: "JSON/valid data",
 			data: []byte(test.TrimJSON(`{
 				"a": "hi",
 				"b": 6,
@@ -175,7 +185,7 @@ func TestUnmarshal(t *testing.T) {
 			`),
 		},
 		{
-			name: "YAML - valid data",
+			name: "YAML/valid data",
 			data: []byte(test.TrimYAML(`
 				a: foo
 				b: 42
@@ -190,7 +200,7 @@ func TestUnmarshal(t *testing.T) {
 			`),
 		},
 		{
-			name:     "unsupported format",
+			name:     "unsupported format/core",
 			data:     []byte("{}"),
 			format:   "txt",
 			errRegex: `^unsupported format: "txt"$`,
@@ -314,7 +324,7 @@ func TestMarshal(t *testing.T) {
 		errRegex string
 	}{
 		{
-			name:     "json",
+			name:     "JSON",
 			data:     testStruct{A: "foo", B: 1, C: true},
 			format:   "json",
 			errRegex: `^$`,
@@ -325,7 +335,7 @@ func TestMarshal(t *testing.T) {
 			}`),
 		},
 		{
-			name:     "yaml",
+			name:     "YAML",
 			data:     testStruct{A: "bar", B: 2, C: true},
 			format:   "yaml",
 			errRegex: `^$`,

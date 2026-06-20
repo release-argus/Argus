@@ -520,7 +520,7 @@ func TestConfig_ReorderYAML(t *testing.T) {
 			},
 		},
 		{
-			name:  "don't remove empty notify/webhook under service",
+			name:  "don't remove empty notify or webhook under service",
 			order: nil,
 			lines: []string{
 				"defaults:",

@@ -105,7 +105,7 @@ func TestUnmarshal(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "known key",
+			name:   "known key/valid",
 			format: "yaml",
 			data: []byte(test.TrimYAML(`
 				foo:
@@ -127,7 +127,7 @@ func TestUnmarshal(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "known key - invalid data type",
+			name:   "known key/invalid data type",
 			format: "yaml",
 			data: []byte(test.TrimYAML(`
 				foo:

@@ -146,7 +146,7 @@ var LookupWithHeaderAuth = map[string]string{
 }
 
 // LookupWithBasicAuth is a lookup for testing lookups that require basic authentication.
-var LookupBasicAuth = map[string]string{
+var LookupWithBasicAuth = map[string]string{
 	"url_valid":   ValidCertHTTPS + "/basic-auth",
 	"url_invalid": InvalidCertHTTPS + "/basic-auth",
 	"username":    "test",

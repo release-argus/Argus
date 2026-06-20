@@ -59,7 +59,7 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 			allDefault: true,
 		},
 		{
-			name: "1 non-default var",
+			name: "1 non-default var/value",
 			slice: []string{
 				"",
 				"",
@@ -69,7 +69,7 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 			wantIndex: 3,
 		},
 		{
-			name: "1 non-default var (env var)",
+			name: "1 non-default var/env var",
 			env: map[string]string{
 				"ONE": "bar",
 			},
@@ -84,7 +84,7 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 			diffValue: true,
 		},
 		{
-			name: "1 non-default var (env var partial)",
+			name: "1 non-default var/env var partial",
 			env: map[string]string{
 				"TWO": "bar",
 			},
@@ -109,7 +109,7 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 			wantIndex: 0,
 		},
 		{
-			name: "2 non-default vars (empty env vars ignored)",
+			name: "2 non-default vars, empty env vars ignored",
 			env: map[string]string{
 				"THREE": "",
 				"FOUR":  "bar",

@@ -51,8 +51,7 @@ func drainChannel[T any](ch <-chan T) {
 // DebounceDuration is the delay before persisting config changes after the last edit signal.
 var DebounceDuration = 30 * time.Second
 
-// SaveHandler will listen to the `SaveChannel` and save the config (after a delay)
-// when it receives a message.
+// SaveHandler listens on SaveChannel and saves the config after a debounce delay.
 func (c *Config) SaveHandler(ctx context.Context) {
 	for {
 		select {
@@ -68,9 +67,7 @@ func (c *Config) SaveHandler(ctx context.Context) {
 	}
 }
 
-// drainAndDebounce will clear the message queue from `channel` and wait `DebounceDuration`.
-//
-// Repeat until the channel is empty at the end of the debounce.
+// drainAndDebounce drains channel and waits duration, repeating until the channel is empty at the end of a debounce interval.
 func drainAndDebounce[T any](ctx context.Context, channel chan T, duration time.Duration) {
 	for {
 		// Drain queue.
@@ -91,7 +88,7 @@ func drainAndDebounce[T any](ctx context.Context, channel chan T, duration time.
 	}
 }
 
-// Save the configuration to `c.File`.
+// Save writes the configuration to c.File.
 func (c *Config) Save() (ok bool) {
 	// Lock the config.
 	c.OrderMu.Lock()

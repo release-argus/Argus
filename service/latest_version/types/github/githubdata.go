@@ -86,7 +86,7 @@ func (g *Data) String() string {
 	return decode.ToJSONString(jsonStruct)
 }
 
-// SetTagFallback will flip the TagFallback bool.
+// SetTagFallback toggles the TagFallback flag.
 func (g *Data) SetTagFallback() {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -158,7 +158,7 @@ func (g *Data) Releases() []ghtypes.Release {
 	return g.releases
 }
 
-// hasReleases returns whether the Data has releases.
+// hasReleases reports whether the Data has any releases.
 func (g *Data) hasReleases() bool {
 	g.mu.RLock()
 	defer g.mu.RUnlock()

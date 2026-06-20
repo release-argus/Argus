@@ -44,6 +44,17 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 		{
 			name:     "JSON/empty",
 			format:   "json",
+			data:     "",
+			registry: &HubRegistryDefaults{},
+			errRegex: test.TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
+			want: "",
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
 			data:     "{}",
 			registry: &HubRegistryDefaults{},
 			errRegex: `^$`,
@@ -184,13 +195,16 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*HubRegistryDefaults, error) {
+					err := decode.Unmarshal(format, data, tc.registry)
+					return tc.registry, err
+				},
 				tc.format, tc.data,
-				tc.registry,
-				tc.errRegex,
 				func(v *HubRegistryDefaults) string { return v.String("") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"HubRegistryDefaults",
 			); testErr != nil {
@@ -220,6 +234,14 @@ func TestHubRegistry_Unmarshal(t *testing.T) {
 	}{
 		{
 			name:     "JSON/empty",
+			format:   "json",
+			data:     "",
+			registry: &HubRegistry{},
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
 			data:     "{}",
 			registry: &HubRegistry{},
@@ -361,13 +383,16 @@ func TestHubRegistry_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*HubRegistry, error) {
+					err := decode.Unmarshal(format, data, tc.registry)
+					return tc.registry, err
+				},
 				tc.format, tc.data,
-				tc.registry,
-				tc.errRegex,
 				func(v *HubRegistry) string { return v.String("") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"HubRegistry",
 			); testErr != nil {
@@ -397,6 +422,14 @@ func TestHubRegistry_ApplyOverrides(t *testing.T) {
 	}{
 		{
 			name:     "JSON/empty",
+			format:   "json",
+			data:     "",
+			registry: &HubRegistry{},
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
 			data:     "{}",
 			registry: &HubRegistry{},
@@ -631,7 +664,7 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "only username",
+			name: "non-empty/Username",
 			registry: &HubRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					Auth: &HubAuthDefaults{
@@ -642,7 +675,7 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "only token",
+			name: "non-empty/Token",
 			registry: &HubRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					Auth: &HubAuthDefaults{
@@ -653,7 +686,7 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "only query-token/valid-until",
+			name: "non-empty/queryToken and validUntil",
 			registry: &HubRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					Auth: &HubAuthDefaults{
@@ -665,7 +698,7 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "only image",
+			name: "non-empty/Image",
 			registry: &HubRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					ContainerDetail: ContainerDetail{
@@ -676,7 +709,7 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "only tag",
+			name: "non-empty/Tag",
 			registry: &HubRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					ContainerDetail: ContainerDetail{
@@ -687,7 +720,7 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "only image/tag",
+			name: "non-empty/ContainerDetail",
 			registry: &HubRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					ContainerDetail: ContainerDetail{
@@ -699,7 +732,7 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "full",
+			name: "non-empty/all",
 			registry: &HubRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					ContainerDetail: ContainerDetail{
@@ -754,7 +787,7 @@ func TestHubRegistry_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty - type",
+			name: "non-empty/Type",
 			data: &HubRegistry{
 				CommonRegistry: CommonRegistry{
 					Type: "abc",
@@ -764,12 +797,25 @@ func TestHubRegistry_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty - CommonRegistry",
+			name: "non-empty/CommonRegistry",
 			data: &HubRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
 						Image: "i",
 					},
+					Auth: RegistryMap["hub"]().GetAuth(),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			data: &HubRegistry{
+				CommonRegistry: CommonRegistry{
+					ContainerDetail: ContainerDetail{
+						Image: "i",
+					},
+					Type: "abc",
 					Auth: RegistryMap["hub"]().GetAuth(),
 				},
 			},
@@ -1294,11 +1340,12 @@ func TestHubRegistry_NewRequest(t *testing.T) {
 		errRegex string
 	}{
 		{
-			name: "no image/tag",
+			name: "no image or tag",
 			registry: &HubRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
 						Image: "",
+						Tag:   "",
 					},
 				},
 			},
@@ -1400,21 +1447,21 @@ func TestHubAuthDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty (username)",
+			name: "non-empty/Username",
 			data: &HubAuthDefaults{
 				Username: "u1",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty (token)",
+			name: "non-empty/Token",
 			data: &HubAuthDefaults{
 				Token: "t1",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty (username+token)",
+			name: "non-empty/all",
 			data: &HubAuthDefaults{
 				Username: "u1",
 				Token:    "t1",
@@ -2126,7 +2173,7 @@ func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
 			setRootToken: true,
 		},
 		{
-			name: "defaults/hardDefaults ignored",
+			name: "defaults - hardDefaults ignored",
 			data: &HubAuth{
 				HubAuthDefaults: HubAuthDefaults{
 					Token:      "token",

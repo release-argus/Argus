@@ -39,10 +39,8 @@ type TestPayload struct {
 	WebURL            string                  `json:"web_url"`
 }
 
-// FromPayload will create a Shoutrrr from a payload.
-// Replacing any undefined values with that of the previous Notify.
-//
-//	Returns the Notify, the ServiceURL, and any errors encountered.
+// FromPayload constructs a [Shoutrrr] from payload,
+// using serviceNotify as a fallback source for undefined fields.
 func FromPayload(
 	payload TestPayload,
 	serviceNotify *Shoutrrr, serviceStatus *status.Status,
@@ -103,8 +101,7 @@ func FromPayload(
 	return s, nil
 }
 
-// resolveDefaults resolves the default values for a given name and/or type.
-// It returns the resolved type, main defaults, type-specific defaults, type-specific hard defaults, and an error if the type is invalid.
+// resolveDefaults returns the resolved type, Main, type-specific Defaults, and HardDefaults for the given name and type, or an error if the type is invalid.
 func resolveDefaults(
 	name, nType string,
 	main *Defaults,

@@ -39,11 +39,15 @@ func TestDecodeDefaults(t *testing.T) {
 		errRegex     string
 	}{
 		{
-			name:     "JSON/empty",
-			format:   "json",
-			data:     "",
-			want:     "{}\n",
-			errRegex: `^$`,
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				deployed_version:
+					jsontext:
+						unexpected EOF$`,
+			),
 		},
 		{
 			name:     "JSON/empty object",
@@ -111,7 +115,7 @@ func TestDecodeDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, testErr := test.AssertDecode(
+			if _, _, testErr := test.AssertDecode(
 				t,
 				DecodeDefaults,
 				tc.format, tc.data,
@@ -120,8 +124,7 @@ func TestDecodeDefaults(t *testing.T) {
 				tc.errRegex,
 				packageName,
 				"DecodeDefaults",
-			)
-			if testErr != nil {
+			); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})
@@ -145,23 +148,32 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Type",
+			name: "non-empty/Type",
 			opt: &Defaults{
 				Type: "url",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty AllowInvalidCerts",
+			name: "non-empty/AllowInvalidCerts",
 			opt: &Defaults{
 				AllowInvalidCerts: test.Ptr(true),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Method",
+			name: "non-empty/Method",
 			opt: &Defaults{
 				Method: http.MethodPost,
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			opt: &Defaults{
+				Type:              "url",
+				AllowInvalidCerts: test.Ptr(true),
+				Method:            http.MethodPost,
 			},
 			want: false,
 		},

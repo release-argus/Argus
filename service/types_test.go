@@ -268,7 +268,7 @@ func TestService_Marshal(t *testing.T) {
 			`),
 		},
 		{
-			name: "tags - single",
+			name: "tags/single",
 			svc: &Service{
 				Dashboard: dashboard.Options{
 					Tags: []string{"foo"},
@@ -287,7 +287,7 @@ func TestService_Marshal(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "tags - multiple",
+			name: "tags/multiple",
 			svc: &Service{
 				Dashboard: dashboard.Options{
 					Tags: []string{"foo", "bar"},
@@ -363,9 +363,19 @@ func TestService_Unmarshal(t *testing.T) {
 		errRegex     string
 	}{
 		{
-			name:     "JSON/empty",
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
-			data:     "",
+			data:     "{}",
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
@@ -491,18 +501,21 @@ func TestService_Unmarshal(t *testing.T) {
 			t.Parallel()
 
 			// AND: a Service with defaults/hardDefaults.
-			v := Service{
-				Defaults:     svcCfg.Soft,
-				HardDefaults: svcCfg.Hard,
-			}
 
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*Service, error) {
+					v := Service{
+						Defaults:     svcCfg.Soft,
+						HardDefaults: svcCfg.Hard,
+					}
+					err := decode.Unmarshal(format, data, &v)
+					return &v, err
+				},
 				tc.format, tc.data,
-				&v,
-				tc.errRegex,
 				func(v *Service) string { return v.String("") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"Service",
 			); testErr != nil {
@@ -517,23 +530,29 @@ func TestService_UnmarshalLatestVersion(t *testing.T) {
 
 	// GIVEN: data to unmarshal into LatestVersion.
 	tests := []struct {
-		name     string
-		format   string
-		data     []byte
-		want     string
-		errRegex string
+		name         string
+		format, data string
+		want         string
+		errRegex     string
 	}{
 		{
 			name:     "JSON/empty",
 			format:   "json",
-			data:     []byte{},
+			data:     "",
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     "{}",
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
 			name:   "JSON/invalid",
 			format: "json",
-			data:   []byte("foo"),
+			data:   "foo",
 			errRegex: test.TrimYAML(`
 				^latest_version:
 					extract "latest_version":
@@ -544,14 +563,14 @@ func TestService_UnmarshalLatestVersion(t *testing.T) {
 		{
 			name:     "YAML/empty",
 			format:   "yaml",
-			data:     []byte{},
+			data:     "",
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
 			name:   "YAML/invalid",
 			format: "yaml",
-			data:   []byte("foo"),
+			data:   "foo",
 			errRegex: test.TrimYAML(`
 				^latest_version:
 					extract "latest_version":
@@ -561,12 +580,12 @@ func TestService_UnmarshalLatestVersion(t *testing.T) {
 		{
 			name:   "JSON/latest_version",
 			format: "json",
-			data: []byte(test.TrimJSON(`{
+			data: test.TrimJSON(`{
 				"latest_version": {
 					"type": "github",
 					"url": "` + test.ArgusGitHubRepo + `"
 				}
-			}`)),
+			}`),
 			want: test.TrimYAML(`
 				latest_version:
 					type: github
@@ -575,13 +594,13 @@ func TestService_UnmarshalLatestVersion(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "YAML/latest_version",
+			name:   "YAML/latest_version/full",
 			format: "yaml",
-			data: []byte(test.TrimYAML(`
+			data: test.TrimYAML(`
 				latest_version:
 					type: github
 					url: ` + test.ArgusGitHubRepo + `
-			`)),
+			`),
 			want: test.TrimYAML(`
 				latest_version:
 					type: github
@@ -590,13 +609,13 @@ func TestService_UnmarshalLatestVersion(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "latest_version err",
+			name:   "YAML/latest_version/err",
 			format: "yaml",
-			data: []byte(test.TrimYAML(`
+			data: test.TrimYAML(`
 				latest_version:
 					type: github
 					url: [` + test.ArgusGitHubRepo + `]
-			`)),
+			`),
 			errRegex: test.TrimYAML(`
 				latest_version:
 					[^\s]+ .*unmarshal.*
@@ -607,36 +626,36 @@ func TestService_UnmarshalLatestVersion(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSON/deployed_version - ignored",
+			name:   "JSON/deployed_version, ignored",
 			format: "json",
-			data: []byte(test.TrimJSON(`{
+			data: test.TrimJSON(`{
 				"deployed_version": {
 					"type": "url",
 					"url": "https://example.com"
 				}
-			}`)),
+			}`),
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
-			name:   "YAML/deployed_version - ignored",
+			name:   "YAML/deployed_version/ignored",
 			format: "yaml",
-			data: []byte(test.TrimYAML(`
+			data: test.TrimYAML(`
 				deployed_version:
 					type: url
 					url: https://example.com
-			`)),
+			`),
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
-			name:   "deployed_version err - not reached",
+			name:   "YAML/deployed_version/err, not reached",
 			format: "yaml",
-			data: []byte(test.TrimYAML(`
+			data: test.TrimYAML(`
 				deployed_version:
 					type: url
 					url: [https://example.com]
-			`)),
+			`),
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
@@ -653,7 +672,7 @@ func TestService_UnmarshalLatestVersion(t *testing.T) {
 			}
 
 			// WHEN: the data is unmarshaled into that Service.
-			err := svc.unmarshalLatestVersion(tc.format, tc.data)
+			err := svc.unmarshalLatestVersion(tc.format, []byte(tc.data))
 
 			prefix := fmt.Sprintf(
 				"%s\nunmarshalLatestVersion(format=%q, data=%q)",
@@ -688,23 +707,29 @@ func TestService_UnmarshalDeployedVersion(t *testing.T) {
 
 	// GIVEN: data to unmarshal into DeployedVersion.
 	tests := []struct {
-		name     string
-		format   string
-		data     []byte
-		want     string
-		errRegex string
+		name         string
+		format, data string
+		want         string
+		errRegex     string
 	}{
 		{
 			name:     "JSON/empty",
 			format:   "json",
-			data:     []byte{},
+			data:     "",
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     "{}",
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
 			name:   "JSON/invalid",
 			format: "json",
-			data:   []byte("foo"),
+			data:   "foo",
 			errRegex: test.TrimYAML(`
 				^deployed_version:
 					extract "deployed_version":
@@ -715,14 +740,14 @@ func TestService_UnmarshalDeployedVersion(t *testing.T) {
 		{
 			name:     "YAML/empty",
 			format:   "yaml",
-			data:     []byte{},
+			data:     "",
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
 			name:   "YAML/invalid",
 			format: "yaml",
-			data:   []byte("foo"),
+			data:   "foo",
 			errRegex: test.TrimYAML(`
 				^deployed_version:
 					extract "deployed_version":
@@ -730,48 +755,48 @@ func TestService_UnmarshalDeployedVersion(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSON/latest_version - ignored",
+			name:   "JSON/latest_version, ignored",
 			format: "json",
-			data: []byte(test.TrimJSON(`{
+			data: test.TrimJSON(`{
 				"latest_version": {
 					"type": "github",
 					"url": "` + test.ArgusGitHubRepo + `"
 				}
-			}`)),
+			}`),
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
-			name:   "YAML/latest_version - ignored",
+			name:   "YAML/latest_version/ignored",
 			format: "yaml",
-			data: []byte(test.TrimYAML(`
+			data: test.TrimYAML(`
 				latest_version:
 					type: github
 					url: ` + test.ArgusGitHubRepo + `
-			`)),
+			`),
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
-			name:   "latest_version err - not reached",
+			name:   "YAML/latest_version/err, not reached",
 			format: "yaml",
-			data: []byte(test.TrimYAML(`
+			data: test.TrimYAML(`
 				latest_version:
 					type: github
 					url: [` + test.ArgusGitHubRepo + `]
-			`)),
+			`),
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
 			name:   "JSON/deployed_version",
 			format: "json",
-			data: []byte(test.TrimJSON(`{
+			data: test.TrimJSON(`{
 				"deployed_version": {
 					"type": "url",
 					"url": "https://example.com"
 				}
-			}`)),
+			}`),
 			want: test.TrimYAML(`
 				deployed_version:
 					type: url
@@ -780,13 +805,13 @@ func TestService_UnmarshalDeployedVersion(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "YAML/deployed_version",
+			name:   "YAML/deployed_version/full",
 			format: "yaml",
-			data: []byte(test.TrimYAML(`
+			data: test.TrimYAML(`
 				deployed_version:
 					type: url
 					url: https://example.com
-			`)),
+			`),
 			want: test.TrimYAML(`
 				deployed_version:
 					type: url
@@ -795,13 +820,13 @@ func TestService_UnmarshalDeployedVersion(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "deployed_version err",
+			name:   "YAML/deployed_version/err",
 			format: "yaml",
-			data: []byte(test.TrimYAML(`
+			data: test.TrimYAML(`
 				deployed_version:
 					type: url
 					url: [https://example.com]
-			`)),
+			`),
 			errRegex: test.TrimYAML(`
 				deployed_version:
 					[^\s]+ .*unmarshal.*
@@ -829,7 +854,7 @@ func TestService_UnmarshalDeployedVersion(t *testing.T) {
 			)
 
 			// WHEN: the data is unmarshaled into that Service.
-			err := svc.unmarshalDeployedVersion(tc.format, tc.data)
+			err := svc.unmarshalDeployedVersion(tc.format, []byte(tc.data))
 
 			// THEN: The error is as want.
 			e := errfmt.FormatError(err)
@@ -893,7 +918,7 @@ func TestService_String(t *testing.T) {
 							require:
 								regex_version: v.+
 								docker:
-									image: releaseargus/argus
+									image: test/app
 									tag: '{{ version }}'
 						`)),
 						nil,
@@ -979,7 +1004,7 @@ func TestService_String(t *testing.T) {
 					require:
 						regex_version: v.+
 						docker:
-							image: releaseargus/argus
+							image: test/app
 							tag: '{{ version }}'
 				deployed_version:
 					type: url
@@ -1130,7 +1155,7 @@ func TestService_Summary(t *testing.T) {
 			},
 		},
 		{
-			name: "only dashboard.icon, and it's a url",
+			name: "only dashboard.icon/is a url",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -1148,7 +1173,7 @@ func TestService_Summary(t *testing.T) {
 			},
 		},
 		{
-			name: "only dashboard.icon, and it's not a url",
+			name: "only dashboard.icon/is not a url",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -1166,7 +1191,7 @@ func TestService_Summary(t *testing.T) {
 			},
 		},
 		{
-			name: "only dashboard.icon, from notify",
+			name: "only dashboard.icon/from notify",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -1187,7 +1212,7 @@ func TestService_Summary(t *testing.T) {
 			},
 		},
 		{
-			name: "only dashboard.icon, dashboard overrides notify",
+			name: "only dashboard.icon/dashboard overrides notify",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`

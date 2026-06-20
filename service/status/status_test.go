@@ -1185,7 +1185,7 @@ func TestStatus_LatestVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "Timestamp - Given == Set to value given",
+			name: "timestamp - Given == Set to value given",
 			had: values{
 				version: "0.0.0", timestamp: "2022-01-01T00:00:00Z",
 			},
@@ -1548,7 +1548,7 @@ func TestSetLatestVersionIsDeployedMetric(t *testing.T) {
 			want: 1,
 		},
 		{
-			name: "latest version is not deployed",
+			name: "latest version is not deployed/only",
 			versions: serviceinfo.ServiceInfo{
 				LatestVersion:   "1.2.3",
 				DeployedVersion: "1.2.4",
@@ -1556,7 +1556,7 @@ func TestSetLatestVersionIsDeployedMetric(t *testing.T) {
 			want: 0,
 		},
 		{
-			name: "latest version is not deployed, but is approved",
+			name: "latest version is not deployed/is approved",
 			versions: serviceinfo.ServiceInfo{
 				ApprovedVersion: "1.2.3",
 				LatestVersion:   "1.2.3",
@@ -1565,7 +1565,7 @@ func TestSetLatestVersionIsDeployedMetric(t *testing.T) {
 			want: 2,
 		},
 		{
-			name: "latest version is not deployed, but is skipped",
+			name: "latest version is not deployed/is skipped",
 			versions: serviceinfo.ServiceInfo{
 				ApprovedVersion: serviceinfo.SkippedVersion("1.2.3"),
 				LatestVersion:   "1.2.3",

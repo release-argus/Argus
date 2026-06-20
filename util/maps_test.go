@@ -89,25 +89,25 @@ func TestEnsureMap(t *testing.T) {
 func TestMergeMaps(t *testing.T) {
 	// GIVEN: two maps and a list of fields that may contain secrets.
 	tests := []struct {
-		name                  string
-		base, overrides, want map[string]string
+		name         string
+		m1, m2, want map[string]string
 	}{
 		{
-			name:      "empty maps",
-			base:      map[string]string{},
-			overrides: map[string]string{},
-			want:      map[string]string{},
+			name: "empty maps",
+			m1:   map[string]string{},
+			m2:   map[string]string{},
+			want: map[string]string{},
 		},
 		{
-			name:      "nil maps",
-			base:      nil,
-			overrides: nil,
-			want:      map[string]string{},
+			name: "nil maps",
+			m1:   nil,
+			m2:   nil,
+			want: map[string]string{},
 		},
 		{
-			name: "empty base map",
-			base: map[string]string{},
-			overrides: map[string]string{
+			name: "empty m1 map",
+			m1:   map[string]string{},
+			m2: map[string]string{
 				"test": "123",
 				"foo":  "bar",
 			},
@@ -117,9 +117,9 @@ func TestMergeMaps(t *testing.T) {
 			},
 		},
 		{
-			name: "nil base map",
-			base: nil,
-			overrides: map[string]string{
+			name: "nil m1 map",
+			m1:   nil,
+			m2: map[string]string{
 				"test": "123",
 				"foo":  "bar",
 			},
@@ -129,24 +129,24 @@ func TestMergeMaps(t *testing.T) {
 			},
 		},
 		{
-			name: "empty overrides map",
-			base: map[string]string{
+			name: "empty m2 map",
+			m1: map[string]string{
 				"test": "123",
 				"foo":  "bar",
 			},
-			overrides: map[string]string{},
+			m2: map[string]string{},
 			want: map[string]string{
 				"test": "123",
 				"foo":  "bar",
 			},
 		},
 		{
-			name: "nil overrides map",
-			base: map[string]string{
+			name: "nil m2 map",
+			m1: map[string]string{
 				"test": "123",
 				"foo":  "bar",
 			},
-			overrides: nil,
+			m2: nil,
 			want: map[string]string{
 				"test": "123",
 				"foo":  "bar",
@@ -154,13 +154,13 @@ func TestMergeMaps(t *testing.T) {
 		},
 		{
 			name: "non-empty maps",
-			base: map[string]string{
+			m1: map[string]string{
 				"test":      "123",
 				"foo":       "bar",
 				"bish":      "bash",
 				"something": "else",
 			},
-			overrides: map[string]string{
+			m2: map[string]string{
 				"test": "456",
 				"foo":  "baz",
 				"bish": "",
@@ -172,70 +172,6 @@ func TestMergeMaps(t *testing.T) {
 				"something": "else",
 			},
 		},
-		{
-			name: "ref secret in base map",
-			base: map[string]string{
-				"test": "123",
-			},
-			overrides: map[string]string{
-				"test": SecretValue,
-			},
-			want: map[string]string{
-				"test": SecretValue,
-			},
-		},
-		{
-			name: "ref secret in base map, secret not found/empty",
-			base: map[string]string{
-				"foo": "",
-			},
-			overrides: map[string]string{
-				"foo":  SecretValue,
-				"test": SecretValue,
-			},
-			want: map[string]string{
-				"foo":  SecretValue,
-				"test": SecretValue,
-			},
-		},
-		{
-			name: "secret not in fields",
-			base: map[string]string{
-				"test": "123",
-				"foo":  "bar",
-			},
-			overrides: map[string]string{
-				"test": SecretValue,
-				"foo":  SecretValue,
-			},
-			want: map[string]string{
-				"foo":  SecretValue,
-				"test": SecretValue,
-			},
-		},
-		{
-			name: "non-empty maps with secrets",
-			base: map[string]string{
-				"test":      "123",
-				"foo":       "bar",
-				"bish":      "bash",
-				"something": "else",
-				"nothing":   "",
-			},
-			overrides: map[string]string{
-				"test":    "456",
-				"foo":     SecretValue,
-				"bish":    SecretValue,
-				"nothing": SecretValue,
-			},
-			want: map[string]string{
-				"test":      "456",
-				"foo":       SecretValue,
-				"bish":      SecretValue,
-				"something": "else",
-				"nothing":   SecretValue,
-			},
-		},
 	}
 
 	for _, tc := range tests {
@@ -243,11 +179,11 @@ func TestMergeMaps(t *testing.T) {
 			t.Parallel()
 
 			// WHEN: MergeMaps is called.
-			result := MergeMaps(tc.base, tc.overrides)
+			result := MergeMaps(tc.m1, tc.m2)
 
 			prefix := fmt.Sprintf(
 				"%s\nMergeMaps(m1=%v, m2=%v)",
-				packageName, tc.base, tc.overrides,
+				packageName, tc.m1, tc.m2,
 			)
 
 			// THEN: the maps are merged correctly.

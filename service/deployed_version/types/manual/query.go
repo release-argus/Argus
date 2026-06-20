@@ -22,17 +22,12 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 )
 
-// Track the deployed version of the `parent`.
+// Track is a no-op for the manual lookup type.
 func (l *Lookup) Track() {
 	// Do nothing.
 }
 
-// Query queries the source
-// and returns whether a new release was found, updating LatestVersion if so.
-//
-// Parameters:
-//
-//	metrics: ignored
+// Query applies the manual version override if set, validating semantic versioning if required.
 func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()

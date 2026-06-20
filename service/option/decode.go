@@ -38,10 +38,7 @@ func Decode(
 	data []byte,
 	cfg DefaultsConfig,
 ) (*Options, error) {
-	field := Options{
-		Defaults:     cfg.Soft,
-		HardDefaults: cfg.Hard,
-	}
+	field := Options{}
 
 	if err := decode.Unmarshal(format, data, &field); err != nil {
 		return nil, &decode.KeyFieldError{
@@ -49,6 +46,9 @@ func Decode(
 			Err: err,
 		}
 	}
+
+	field.Defaults = cfg.Soft
+	field.HardDefaults = cfg.Hard
 
 	return &field, nil
 }

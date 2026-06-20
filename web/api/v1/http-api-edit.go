@@ -39,7 +39,7 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// httpLatestVersionRefreshUncreated will create the latest version lookup and query it.
+// httpLatestVersionRefreshUncreated creates a latest version lookup and queries it.
 //
 // Method: GET
 //
@@ -78,7 +78,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 
 	// Options
 	options, _ := opt.Decode(
-		"json", nil,
+		"json", []byte("{}"),
 		opt.DefaultsConfig{
 			Soft: api.Config.Defaults.Service.LatestVersion.Options,
 			Hard: api.Config.HardDefaults.Service.LatestVersion.Options,
@@ -127,7 +127,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	)
 }
 
-// httpDeployedVersionRefreshUncreated will create the deployed version lookup and query it.
+// httpDeployedVersionRefreshUncreated creates a deployed version lookup and queries it.
 //
 // Method: GET
 //
@@ -166,7 +166,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 
 	// Options.
 	options, _ := opt.Decode(
-		"yaml", nil,
+		"json", []byte("{}"),
 		opt.DefaultsConfig{
 			Soft: api.Config.Defaults.Service.LatestVersion.Options,
 			Hard: api.Config.HardDefaults.Service.LatestVersion.Options,
@@ -749,6 +749,12 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	payload := http.MaxBytesReader(w, r.Body, 1024_00)
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(payload); err != nil {
+		logx.Error(err, logFrom, true)
+		failRequest(&w, err, http.StatusBadRequest)
+		return
+	}
+	if buf.Len() == 0 {
+		err := errors.New("body required")
 		logx.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return

@@ -21,7 +21,7 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Init the WebHooks metrics and hand out the defaults/notifiers.
+// Init initialises each WebHook with the given status, config, notifiers, and parent interval.
 func (w *WebHooks) Init(
 	serviceStatus *status.Status,
 	cfg Config,
@@ -50,10 +50,7 @@ func (w *WebHooks) Init(
 	}
 }
 
-// init wires dependencies and config into the WebHook and normalises its state.
-// It assigns service status tracking, ensures a non-nil Main configuration,
-// attaches failure tracking, applies defaults, and configures notifiers.
-// It also clears Type when it matches inherited defaults or ID to avoid redundancy.
+// init wires status, defaults, failure tracking, and notifiers into the WebHook.
 func (w *WebHook) init(
 	serviceStatus *status.Status,
 	main *Defaults,
@@ -64,9 +61,8 @@ func (w *WebHook) init(
 	w.ParentInterval = parentInterval
 	w.ServiceStatus = serviceStatus
 
-	// Give the matching main.
+	// Assign the matching main defaults.
 	w.Main = main
-	// Create an empty Main if nil.
 	if w.Main == nil {
 		w.Main = &Defaults{}
 	}
@@ -79,7 +75,6 @@ func (w *WebHook) init(
 		w.Type = ""
 	}
 
-	// Give the defaults.
 	w.Defaults = cfg.Defaults
 	w.HardDefaults = cfg.HardDefaults
 

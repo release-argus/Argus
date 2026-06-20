@@ -37,11 +37,6 @@ func TestConfig_LoadOrdering(t *testing.T) {
 			order: []string{"NoDefaults", "WantDefaults", "Disabled", "Gitea"},
 		},
 		{
-			name:  "no services",
-			file:  testYAML_Ordering_1_no_services,
-			order: []string{},
-		},
-		{
 			name: "obscure service names",
 			file: testYAML_Ordering_2_obscure_service_names,
 			order: []string{
@@ -58,27 +53,32 @@ func TestConfig_LoadOrdering(t *testing.T) {
 			},
 		},
 		{
-			name:  "empty line after 'service:'",
+			name:  "service block/none",
+			file:  testYAML_Ordering_1_no_services,
+			order: []string{},
+		},
+		{
+			name:  "service block/empty/single empty line",
 			file:  testYAML_Ordering_3_empty_line_after_service_line,
 			order: []string{"C", "B", "A"},
 		},
 		{
-			name:  "multiple empty lines after 'service:'",
+			name:  "service block/empty/multiple empty lines",
 			file:  testYAML_Ordering_4_multiple_empty_lines_after_service_line,
 			order: []string{"P", "L", "S"},
 		},
 		{
-			name:  "eof on 'service:'",
+			name:  "service block/empty/eof",
 			file:  testYAML_Ordering_5_eof_is_service_line,
 			order: []string{},
 		},
 		{
-			name:  "no services after 'service:' - another block",
+			name:  "service block/empty/more blocks",
 			file:  testYAML_Ordering_6_no_services_after_service_line_another_block,
 			order: []string{},
 		},
 		{
-			name:  "no services after 'service:'",
+			name:  "service block/empty/no more blocks",
 			file:  testYAML_Ordering_7_no_services_after_service_line,
 			order: []string{},
 		},

@@ -80,9 +80,7 @@ var (
 	)
 )
 
-// SettingsBase for the binary.
-//
-// (Used in Defaults).
+// SettingsBase holds the base settings for the binary.
 type SettingsBase struct {
 	Log  LogSettings  `json:"log,omitempty" yaml:"log,omitempty"`   // Log settings
 	Data DataSettings `json:"data,omitempty" yaml:"data,omitempty"` // Data settings
@@ -144,7 +142,7 @@ func (s *SettingsBase) MapEnvToStruct() error {
 	return errors.Join(errs...)
 }
 
-// DataSettings for the binary.
+// DataSettings holds data-related settings for the binary.
 type DataSettings struct {
 	DatabaseFile string `json:"database_file,omitempty" yaml:"database_file,omitempty"` // Database path
 }
@@ -154,7 +152,7 @@ func (s DataSettings) IsZero() bool {
 	return s.DatabaseFile == ""
 }
 
-// LogSettings for the binary.
+// LogSettings holds log-related settings for the binary.
 type LogSettings struct {
 	Timestamps *bool  `json:"timestamps,omitempty" yaml:"timestamps,omitempty"` // Timestamps in CLI output
 	Level      string `json:"level,omitempty" yaml:"level,omitempty"`           // Log level
@@ -202,7 +200,7 @@ type FaviconSettings struct {
 	PNG string `json:"png,omitempty" yaml:"png,omitempty"`
 }
 
-// WebSettings for the binary.
+// WebSettings holds web server settings for the binary.
 type WebSettings struct {
 	ListenHost     string                `json:"listen_host,omitempty" yaml:"listen_host,omitempty"`         // Web listen host.
 	ListenPort     string                `json:"listen_port,omitempty" yaml:"listen_port,omitempty"`         // Web listen port.
@@ -293,7 +291,7 @@ func (s *WebSettings) CheckValues() error {
 	return errors.Join(errs...)
 }
 
-// Settings for the binary.
+// Settings holds the runtime configuration for the binary.
 type Settings struct {
 	SettingsBase `json:",inline" yaml:",inline"` // SettingsBase for the binary.
 

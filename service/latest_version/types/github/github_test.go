@@ -41,7 +41,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 		want                               []string
 	}{
 		{
-			name: "use Name if no TagName (/tags vs /releases API)",
+			name: "use Name if no TagName (tags vs releases API)",
 			releases: []ghtypes.Release{
 				{Name: "0.99.0"},
 				{Name: "0.3.0"},

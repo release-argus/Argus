@@ -51,7 +51,7 @@ const (
 
 // Prometheus metric.
 var (
-	// ServiceCountCurrent holds the amount of services in the configuration.
+	// ServiceCountCurrent holds the number of services in the configuration.
 	ServiceCountCurrent = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "service_count_current",
@@ -72,7 +72,7 @@ var (
 			"type",
 		},
 	)
-	// LatestVersionQueryResultTotal counts the amount of times the latest version query has passed or failed.
+	// LatestVersionQueryResultTotal counts the number of times the latest version query has passed or failed.
 	LatestVersionQueryResultTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "latest_version_query_result_total",
@@ -95,7 +95,7 @@ var (
 			"type",
 		},
 	)
-	// DeployedVersionQueryResultTotal counts the amount of times the deployed version query has passed or failed.
+	// DeployedVersionQueryResultTotal counts the number of times the deployed version query has passed or failed.
 	DeployedVersionQueryResultTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "deployed_version_query_result_total",
@@ -127,7 +127,7 @@ var (
 			"type",
 		},
 	)
-	// CommandResultTotal counts the amount of times a Command has passed or failed.
+	// CommandResultTotal counts the number of times a Command has passed or failed.
 	CommandResultTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "command_result_total",
@@ -139,7 +139,7 @@ var (
 			"service_id",
 		},
 	)
-	// NotifyResultTotal counts the amount of times a Notify has passed or failed.
+	// NotifyResultTotal counts the number of times a Notify has passed or failed.
 	NotifyResultTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "notify_result_total",
@@ -152,7 +152,7 @@ var (
 			"type",
 		},
 	)
-	// WebHookResultTotal counts the amount of times a WebHook has passed or failed.
+	// WebHookResultTotal counts the number of times a WebHook has passed or failed.
 	WebHookResultTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "webhook_result_total",
@@ -181,7 +181,7 @@ const (
 	ServiceStateInactive = "inactive"
 )
 
-// InitPrometheusCounter will set the `metric` counter for the given labels to 0.
+// InitPrometheusCounter sets the metric counter for the given labels to 0.
 //
 // Required labels:
 //
@@ -199,7 +199,7 @@ func InitPrometheusCounter(
 	metric.With(mergeCounterLabels(id, serviceID, srcType, result)).Add(0)
 }
 
-// DeletePrometheusCounter will delete the `metric` counter with the given labels.
+// DeletePrometheusCounter deletes the metric counter with the given labels.
 //
 // Required labels:
 //
@@ -217,7 +217,7 @@ func DeletePrometheusCounter(
 	metric.Delete(mergeCounterLabels(id, serviceID, srcType, result))
 }
 
-// IncPrometheusCounter will increment the `metric` counter with the given labels.
+// IncPrometheusCounter increments the metric counter with the given labels.
 //
 // Required labels:
 //
@@ -235,7 +235,7 @@ func IncPrometheusCounter(
 	metric.With(mergeCounterLabels(id, serviceID, srcType, result)).Inc()
 }
 
-// SetPrometheusGauge will set the `metric` gauge for the given labels to `value`.
+// SetPrometheusGauge sets the metric gauge for the given labels to value.
 //
 // Required labels:
 //
@@ -263,7 +263,7 @@ func ServiceCountCurrentAdd(active *bool, amount int) {
 	ServiceCountCurrent.WithLabelValues(state).Add(float64(amount))
 }
 
-// DeletePrometheusGauge will delete the `metric` gauge with the given labels.
+// DeletePrometheusGauge deletes the metric gauge with the given labels.
 //
 // Required labels:
 //
@@ -279,7 +279,7 @@ func DeletePrometheusGauge(
 	metric.Delete(mergeGaugeLabels(id, srcType))
 }
 
-// getLatestVersionIsDeployedState determines the deployment state of the latest version.
+// GetVersionDeployedState returns the deployment state of the latest version.
 //
 // Returns:
 // - LatestVersionDeployed: The latest version is deployed (latestVersion matches deployedVersion, or latestVersion unfound, or deployedVersion is unset).

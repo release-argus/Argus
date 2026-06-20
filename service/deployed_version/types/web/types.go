@@ -142,7 +142,7 @@ func (b *BasicAuth) Copy() *BasicAuth {
 	}
 }
 
-// InheritSecrets will inherit secrets from the `otherLookup`.
+// InheritSecrets copies the BasicAuth password and header secrets from otherLookup.
 func (l *Lookup) InheritSecrets(otherLookup base.BaseInterface, secretRefs *shared.VSecretRef) {
 	if otherL, ok := otherLookup.(*Lookup); ok {
 		if l.BasicAuth != nil &&

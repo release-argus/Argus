@@ -27,16 +27,17 @@ import (
 func TestLookup_GetType(t *testing.T) {
 	// GIVEN: a Lookup with a Type.
 	tests := []struct {
+		name  string
 		lType string
 	}{
-		{lType: ""},
-		{lType: "test"},
-		{lType: "x"},
-		{lType: "y"},
+		{name: "empty", lType: ""},
+		{name: "test", lType: "test"},
+		{name: "x", lType: "x"},
+		{name: "y", lType: "y"},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.lType, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			l := &Lookup{}
@@ -269,7 +270,7 @@ func TestServiceURL(t *testing.T) {
 		want string
 	}{
 		{
-			name: "owner/repo",
+			name: "owner-repo",
 			url:  test.ArgusGitHubRepo,
 			want: "https://github.com/" + test.ArgusGitHubRepo,
 		},

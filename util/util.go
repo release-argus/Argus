@@ -24,7 +24,7 @@ type Field struct {
 	Value any
 }
 
-// StringToBoolPtr will take a string and convert it to a boolean pointer.
+// StringToBoolPtr converts a string to a *bool.
 //
 //	"" => nil
 //	"true" => true
@@ -96,7 +96,7 @@ func ClonePtr[T any](ptr *T) *T {
 	return &val
 }
 
-// RestoreMaskedValues loops through fields and replaces values in to of [SecretValue] with values in from
+// RestoreMaskedValues loops through fields and replaces values in target equal to [SecretValue] with values from original
 // if non-empty.
 func RestoreMaskedValues[K comparable](original, target map[K]string, fields []K) map[K]string {
 	for _, field := range fields {

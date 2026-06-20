@@ -39,7 +39,18 @@ func TestDecodeDefaults(t *testing.T) {
 		want         string
 	}{
 		{
-			name:     "JSON/empty",
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			errRegex: test.TrimYAML(`
+				docker:
+					jsontext:
+						unexpected EOF`,
+			),
+			want: "",
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
 			data:     "{}",
 			errRegex: `^$`,
@@ -128,7 +139,7 @@ func TestDecodeDefaults(t *testing.T) {
 			`),
 		},
 		{
-			name:   "YAML/filled",
+			name:   "YAML/filled/bare",
 			format: "yaml",
 			data: test.TrimYAML(`
 				type: ghcr
@@ -177,7 +188,7 @@ func TestDecodeDefaults(t *testing.T) {
 			`),
 		},
 		{
-			name:   "YAML/filled (oldStyle)",
+			name:   "YAML/filled/oldStyle",
 			format: "yaml",
 			data: test.TrimYAML(`
 				type: ghcr
@@ -517,12 +528,14 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty str",
-			data: &Defaults{Type: "a"},
+			name: "non-empty/Type",
+			data: &Defaults{
+				Type: "a",
+			},
 			want: false,
 		},
 		{
-			name: "non-empty ContainerDetail",
+			name: "non-empty/ContainerDetail",
 			data: &Defaults{
 				ContainerDetail: ContainerDetail{
 					Image: "a",
@@ -531,7 +544,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Registry",
+			name: "non-empty/Registry",
 			data: &Defaults{
 				Registry: RegistryDefaultsSet{
 					GHCR: &GHCRRegistryDefaults{
@@ -583,7 +596,7 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty GHCR",
+			name: "non-empty/GHCR",
 			data: &RegistryDefaultsSet{
 				GHCR: &GHCRRegistryDefaults{
 					CommonRegistryDefaults: CommonRegistryDefaults{
@@ -596,7 +609,7 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Hub",
+			name: "non-empty/Hub",
 			data: &RegistryDefaultsSet{
 				Hub: &HubRegistryDefaults{
 					CommonRegistryDefaults: CommonRegistryDefaults{
@@ -609,7 +622,7 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Quay",
+			name: "non-empty/Quay",
 			data: &RegistryDefaultsSet{
 				Quay: &QuayRegistryDefaults{
 					CommonRegistryDefaults: CommonRegistryDefaults{
@@ -622,7 +635,7 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty GHCR+Hub+Quay",
+			name: "non-empty/all",
 			data: &RegistryDefaultsSet{
 				GHCR: &GHCRRegistryDefaults{
 					CommonRegistryDefaults: CommonRegistryDefaults{

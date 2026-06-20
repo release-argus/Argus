@@ -59,7 +59,7 @@ type Base struct {
 	Secret            string  `json:"secret,omitempty" yaml:"secret,omitempty"`                           // 'SECRET'.
 	DesiredStatusCode *uint16 `json:"desired_status_code,omitempty" yaml:"desired_status_code,omitempty"` // e.g. 202.
 	Delay             string  `json:"delay,omitempty" yaml:"delay,omitempty"`                             // The delay before sending the WebHook.
-	MaxTries          *uint8  `json:"max_tries,omitempty" yaml:"max_tries,omitempty"`                     // Amount of times to attempt sending the WebHook until we receive the desired status code.
+	MaxTries          *uint8  `json:"max_tries,omitempty" yaml:"max_tries,omitempty"`                     // Number of times to attempt sending the WebHook until we receive the desired status code.
 	SilentFails       *bool   `json:"silent_fails,omitempty" yaml:"silent_fails,omitempty"`               // Whether to notify if this WebHook fails MaxTries times.
 }
 
@@ -89,7 +89,7 @@ type WebHook struct {
 	HardDefaults *Defaults `json:"-" yaml:"-"` // Hardcoded default values.
 }
 
-// Notifiers to use when their WebHook fails.
+// Notifiers holds the notifiers used when a WebHook fails.
 type Notifiers struct {
 	Shoutrrr *shoutrrr.Shoutrrrs
 }
@@ -142,7 +142,7 @@ func (w *WebHooks) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// New WebHook.
+// New returns a new [WebHook].
 // TODO: polymorphic types.
 func New(
 	allowInvalidCerts *bool,
@@ -255,7 +255,7 @@ func (w *WebHooks) IsZero() bool {
 	return len(*w) == 0
 }
 
-// IsDefault checks if the WebHook is empty (i.e. all fields are default values).
+// IsDefault reports whether all WebHook fields are at their default (zero) values.
 func (w *WebHook) IsDefault() bool {
 	return w.Type == "" && w.URL == "" && w.AllowInvalidCerts == nil && len(w.Headers) == 0 &&
 		w.Secret == "" && w.DesiredStatusCode == nil && w.Delay == "" &&

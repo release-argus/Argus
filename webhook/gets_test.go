@@ -564,17 +564,17 @@ func TestWebHook_SetExecuting(t *testing.T) {
 			maxTries:       10,
 		},
 		{
-			name:           "not tried (failed=nil) does delay by 15s",
+			name:           "not tried (failed=nil) - does delay by 15s",
 			timeDifference: 15 * time.Second,
 			failed:         nil,
 		},
 		{
-			name:           "failed (failed=true) does delay by 15s",
+			name:           "failed (failed=true) - does delay by 15s",
 			timeDifference: 15 * time.Second,
 			failed:         test.Ptr(true),
 		},
 		{
-			name:           "success (failed=false) does delay by 2*Interval",
+			name:           "success (failed=false) - does delay by 2*Interval",
 			timeDifference: 24 * time.Minute,
 			failed:         test.Ptr(false),
 		},
@@ -751,13 +751,6 @@ func TestWebHook_GetSecret(t *testing.T) {
 		},
 		{
 			name: "env var is used",
-			want: "argus-secret",
-			env: map[string]string{
-				"TEST_WEBHOOK__GET_SECRET__ONE": "argus-secret",
-			},
-			rootValue: "${TEST_WEBHOOK__GET_SECRET__ONE}",
-		},
-		{
 			want: "argus-secret",
 			env: map[string]string{
 				"TEST_WEBHOOK__GET_SECRET__ONE": "argus-secret",

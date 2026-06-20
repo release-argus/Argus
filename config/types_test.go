@@ -28,27 +28,53 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestConfig_UnmarshalJSON(t *testing.T) {
+func TestConfig_Unmarshal(t *testing.T) {
 	// GIVEN: a JSON string to unmarshal into a Config.
 	tests := []struct {
-		name     string
-		data     string
-		want     string
-		errRegex string
+		name         string
+		format, data string
+		want         string
+		errRegex     string
 	}{
 		{
-			name:     "empty JSON",
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     "{}",
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "YAML/empty",
+			format:   "yaml",
 			data:     "",
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
-			name:     "invalid 'service' JSON",
+			name:     "JSON/invalid format",
+			format:   "json",
 			data:     `{"service": abc}`,
 			errRegex: `invalid character`,
 		},
 		{
-			name: "static fields",
+			name:     "YAML/invalid format",
+			format:   "yaml",
+			data:     `service: [abc`,
+			errRegex: `[^\s]+ sequence end token.*`,
+		},
+		{
+			name:   "JSON/static fields",
+			format: "json",
 			data: test.TrimJSON(`{
 				"settings": {
 						"log": {
@@ -94,7 +120,94 @@ func TestConfig_UnmarshalJSON(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "service subtree - ignored in Unmarshal",
+			name:   "YAML/static fields",
+			format: "yaml",
+			data: test.TrimYAML(`
+				settings:
+						log:
+							level: "INFO"
+				defaults:
+					service:
+						options:
+							interval: "10s"
+				notify:
+					hello:
+						options:
+							webhook_url: "https://example.com/webhook"
+				webhook:
+					hi:
+						url: "https://example.com/webhook"
+			`),
+			want: test.TrimYAML(`
+				settings:
+					log:
+						level: INFO
+				defaults:
+					service:
+						options:
+							interval: 10s
+				notify:
+					hello:
+						options:
+							webhook_url: https://example.com/webhook
+				webhook:
+					hi:
+						url: https://example.com/webhook
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name:   "JSON/service subtree, ignored in Unmarshal",
+			format: "json",
+			data: test.TrimJSON(`{
+				"service": {
+					"a": {
+						"name": "hi",
+						"comment": "hello",
+						"options": {
+							"interval": "10s"
+						},
+						"latest_version": {
+							"type": "github",
+							"url": "` + test.ArgusGitHubRepo + `"
+						},
+						"deployed_version": {
+							"type": "url",
+							"url": "https://example.com"
+						},
+						"notify": {
+							"smtp": {
+								"url_fields": {
+									"host": "smtp.example.com"
+								},
+								"params": {
+									"fromaddress": "test@example.com",
+									"toaddresses": "me@example.com"
+								}
+							}
+						},
+						"command": [
+							"-",
+							"ls"
+						],
+						"webhook": {
+							"hi": {
+								"url": "https://example.com/webhook",
+								"secret": "foo"
+							}
+						},
+						"dashboard": {
+							"icon": "https://example.com/icon.png"
+						}
+					}
+				}
+			}`),
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:   "YAML/service subtree, ignored in Unmarshal",
+			format: "yaml",
 			data: test.TrimJSON(`{
 				"service": {
 					"a": {
@@ -147,34 +260,22 @@ func TestConfig_UnmarshalJSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var cfg Config
-
-			// WHEN: UnmarshalJSON is called.
-			err := cfg.UnmarshalJSON([]byte(tc.data))
-
-			prefix := fmt.Sprintf(
-				"%s\nConfig.UnmarshalJSON(%q)",
-				packageName, tc.data,
-			)
-
-			// THEN: the error is as expected.
-			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
-			}
-			if e != "" {
-				return
-			}
-
-			// AND: the Config stringifies as expected.
-			if got := decode.ToYAMLString(&cfg, ""); got != tc.want {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+			// AND: a Config.
+			if _, _, testErr := test.AssertDecode(
+				t,
+				func(format string, data []byte) (*Config, error) {
+					var zero Config
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
+				tc.format, tc.data,
+				func(v *Config) string { return decode.ToYAMLString(v, "") },
+				tc.want,
+				tc.errRegex,
+				packageName,
+				"Config",
+			); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
@@ -187,115 +288,22 @@ func TestConfig_UnmarshalYAML(t *testing.T) {
 		data     string
 		want     string
 		errRegex string
-	}{
-		{
-			name:     "empty YAML",
-			data:     "",
-			want:     "{}\n",
-			errRegex: `^$`,
-		},
-		{
-			name:     "invalid 'service' YAML",
-			data:     `service: [abc`,
-			errRegex: `[^\s]+ sequence end token.*`,
-		},
-		{
-			name: "static fields",
-			data: test.TrimYAML(`
-				settings:
-						log:
-							level: "INFO"
-				defaults:
-					service:
-						options:
-							interval: "10s"
-				notify:
-					hello:
-						options:
-							webhook_url: "https://example.com/webhook"
-				webhook:
-					hi:
-						url: "https://example.com/webhook"
-			`),
-			want: test.TrimYAML(`
-				settings:
-					log:
-						level: INFO
-				defaults:
-					service:
-						options:
-							interval: 10s
-				notify:
-					hello:
-						options:
-							webhook_url: https://example.com/webhook
-				webhook:
-					hi:
-						url: https://example.com/webhook
-			`),
-			errRegex: `^$`,
-		},
-		{
-			name: "service subtree - ignored in Unmarshal",
-			data: test.TrimJSON(`{
-				"service": {
-					"a": {
-						"name": "hi",
-						"comment": "hello",
-						"options": {
-							"interval": "10s"
-						},
-						"latest_version": {
-							"type": "github",
-							"url": "` + test.ArgusGitHubRepo + `"
-						},
-						"deployed_version": {
-							"type": "url",
-							"url": "https://example.com"
-						},
-						"notify": {
-							"smtp": {
-								"url_fields": {
-									"host": "smtp.example.com"
-								},
-								"params": {
-									"fromaddress": "test@example.com",
-									"toaddresses": "me@example.com"
-								}
-							}
-						},
-						"command": [
-							"-",
-							"ls"
-						],
-						"webhook": {
-							"hi": {
-								"url": "https://example.com/webhook",
-								"secret": "foo"
-							}
-						},
-						"dashboard": {
-							"icon": "https://example.com/icon.png"
-						}
-					}
-				}
-			}`),
-			want:     "{}\n",
-			errRegex: `^$`,
-		},
-	}
+	}{}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 
-			var v Config
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*Config, error) {
+					var zero Config
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
 				"yaml", tc.data,
-				&v,
-				tc.errRegex,
 				func(v *Config) string { return decode.ToYAMLString(v, "") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"Config",
 			); testErr != nil {
@@ -343,7 +351,7 @@ func TestConfig_Decode(t *testing.T) {
 			),
 		},
 		{
-			name: "YAML/invalid defaults subtree - duplicate keys",
+			name: "YAML/invalid defaults subtree/duplicate keys",
 			data: test.TrimYAML(`
 				defaults:
 					service:
@@ -358,7 +366,7 @@ func TestConfig_Decode(t *testing.T) {
 			),
 		},
 		{
-			name: "YAML/invalid defaults subtree - invalid data types",
+			name: "YAML/invalid defaults subtree/invalid data types",
 			data: test.TrimYAML(`
 				defaults:
 					service:
@@ -478,7 +486,7 @@ func TestConfig_Decode(t *testing.T) {
 			cfg := &Config{}
 
 			// WHEN: Decode is called on it.
-			_, _, testErr := test.AssertDecode(
+			if _, _, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*Config, error) {
 					err := cfg.Decode(data)
@@ -490,8 +498,7 @@ func TestConfig_Decode(t *testing.T) {
 				tc.errRegex,
 				packageName,
 				"Config.Decode",
-			)
-			if testErr != nil {
+			); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})

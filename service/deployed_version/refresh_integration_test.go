@@ -56,11 +56,14 @@ func TestLookup_Refresh(t *testing.T) {
 		announce int
 	}{
 		{
-			name:     "nil Lookup",
+			name: "nil Lookup",
+			args: args{
+				ignoreSecretRefs: true,
+			},
 			errRegex: `lookup is nil`,
 		},
 		{
-			name: "invalid JSON - manual",
+			name: "JSON/manual, invalid",
 			args: args{
 				overrides:        []byte(`{`),
 				ignoreSecretRefs: true,
@@ -113,6 +116,7 @@ func TestLookup_Refresh(t *testing.T) {
 		{
 			name: "Refresh new version that's newer than latest",
 			args: args{
+				ignoreSecretRefs: true,
 				version: versions{
 					latestVersion:            test.Ptr("1.2.2"),
 					deployedVersion:          test.Ptr("0.0.0"),

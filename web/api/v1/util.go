@@ -49,8 +49,8 @@ func getParam(queryParams url.Values, key string) *string {
 	return &val
 }
 
-// AnnounceEdit broadcasts an EDIT message to all WebSocket clients
-// if the displayed data changes.
+// announceEdit broadcasts an EDIT message to all WebSocket clients
+// if the displayed data has changed.
 func (api *API) announceEdit(oldData *apitype.ServiceSummary, newData *apitype.ServiceSummary) {
 	serviceChanged := ""
 	if oldData != nil {
@@ -96,9 +96,8 @@ func (api *API) announceOrder() {
 	)
 }
 
-// ConstantTimeCompare returns whether the slices x and y have equal contents.
-// The time taken depends on the length of the slices,
-// and remains independent of the contents.
+// ConstantTimeCompare reports whether the arrays x and y have equal contents.
+// The time taken depends only on the length of the arrays, not their contents.
 func ConstantTimeCompare(x, y [32]byte) bool {
 	var result byte
 

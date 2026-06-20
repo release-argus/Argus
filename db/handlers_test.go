@@ -210,14 +210,11 @@ func TestBuildUpdateRowStatement(t *testing.T) {
 			wantParams: []any{"service2", "1.2.3", "1.2.2", "2026-06-15T00:00:00Z"},
 		},
 		{
-			name:      "empty cells",
-			serviceID: "service4",
-			cells:     []dbtype.Cell{},
-			wantSQL: `` +
-				"INSERT INTO status (`id`) " +
-				`VALUES (?) ` +
-				`ON CONFLICT("id") DO UPDATE SET `,
-			wantParams: []any{"service4"},
+			name:       "empty cells",
+			serviceID:  "service4",
+			cells:      []dbtype.Cell{},
+			wantSQL:    "",
+			wantParams: nil,
 		},
 	}
 

@@ -120,8 +120,7 @@ func (n *Notifiers) Send(title, message string, serviceInfo serviceinfo.ServiceI
 	return (*n.Shoutrrr).Send(title, message, serviceInfo, false)
 }
 
-// try sends a WebHook to its URL with the body hashed using SHA1 and SHA256,
-// encrypted with its Secret, and includes simulated GitHub headers.
+// try makes a single send attempt for the WebHook.
 func (w *WebHook) try(logFrom logx.LogFrom) error {
 	req := w.BuildRequest()
 	if req == nil {
@@ -173,9 +172,7 @@ func (w *WebHook) try(logFrom logx.LogFrom) error {
 	)
 }
 
-// parseTry checks the result of a WebHook `try`.
-// It updates the Prometheus SUCCESS or FAIL counter
-// and logs any error from the `try`.
+// parseTry updates the Prometheus counter and logs any error from a single send attempt.
 func (w *WebHook) parseTry(err error, serviceID string, logFrom logx.LogFrom) {
 	// SUCCESS!
 	if err == nil {
@@ -203,7 +200,7 @@ func (w *WebHook) parseTry(err error, serviceID string, logFrom logx.LogFrom) {
 	)
 }
 
-// checkWebHookBody checks whether the given body is valid for a WebHook.
+// checkWebHookBody reports whether the response body is valid for the WebHook.
 // It returns false if the body contains certain forbidden phrases.
 func checkWebHookBody(body string) (okay bool) {
 	okay = true

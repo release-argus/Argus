@@ -86,13 +86,13 @@ func TestDecode(t *testing.T) {
 			format: "json",
 			data: test.TrimJSON(`{
 					"type": "hub",
-					"image": "releaseargus/argus",
+					"image": "test/app",
 					"tag": "{{ version }}"
 			}`),
 			errRegex: `^$`,
 			want: test.TrimYAML(`
 				type: hub
-				image: releaseargus/argus
+				image: test/app
 				tag: '{{ version }}'
 			`),
 		},
@@ -111,7 +111,7 @@ func TestDecode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, testErr := test.AssertDecode(
+			if _, _, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (Registry, error) {
 					return Decode(
@@ -125,8 +125,7 @@ func TestDecode(t *testing.T) {
 				tc.errRegex,
 				packageName,
 				"Decode",
-			)
-			if testErr != nil {
+			); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})
@@ -391,7 +390,7 @@ func TestApplyOverrides(t *testing.T) {
 			`),
 		},
 		{
-			name:   "image-only override keeps existing tag/type",
+			name:   "image-only override keeps existing tag and type",
 			format: "json",
 			data: test.TrimJSON(`{
 				"image": "test/other"
@@ -414,7 +413,7 @@ func TestApplyOverrides(t *testing.T) {
 			`),
 		},
 		{
-			name:   "tag-only override keeps existing image/type",
+			name:   "tag-only override keeps existing image and type",
 			format: "json",
 			data: test.TrimJSON(`{
 				"tag": "1.2.3"

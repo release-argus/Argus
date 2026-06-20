@@ -146,8 +146,7 @@ func mapEnvToStruct(src any, prefix string, envVars []string) error {
 	return nil
 }
 
-// hasVarWithPrefix returns whether any of the environment variables in the provided
-// slice start with the specified prefix.
+// hasVarWithPrefix reports whether any variable in envVars starts with the given prefix.
 func hasVarWithPrefix(prefix string, envVars []string) bool {
 	for _, envVar := range envVars {
 		if strings.HasPrefix(envVar, prefix) {
@@ -189,8 +188,7 @@ func setUintField(field reflect.Value, value, envKey string, bitSize int) error 
 	)
 }
 
-// setField sets a given field's value by parsing a string using the provided parser function and validates the result.
-// The field update depends on its kind (pointer or value). It returns an error if parsing or assignment fails.
+// setField parses value with parser and assigns the result to field, returning an error if parsing or assignment fails.
 func setField[T any](
 	field reflect.Value,
 	value, envKey string,

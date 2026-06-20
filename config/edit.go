@@ -98,7 +98,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 	return nil
 }
 
-// ServiceWithNameExists checks whether a Service with the given name exists.
+// ServiceWithNameExists reports whether a Service with the given name exists.
 func (c *Config) ServiceWithNameExists(name, oldServiceID string) bool {
 	// Have no name, so skip the check.
 	if name == "" {

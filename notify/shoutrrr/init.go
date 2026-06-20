@@ -21,12 +21,12 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Init will initialise the receiver, ensuring maps have lowercase keys and are non-nil.
+// Init initialises the receiver, ensuring maps are non-nil with lowercase keys.
 func (b *Base) Init() {
 	b.InitMaps()
 }
 
-// Init will create the Prometheus metrics and hand out the defaults to the receiver.
+// Init wires defaults, status tracking, and failure state into the Shoutrrr.
 func (s *Shoutrrr) Init(
 	serviceStatus *status.Status,
 	main *Defaults,
@@ -39,9 +39,8 @@ func (s *Shoutrrr) Init(
 	s.InitMaps()
 	s.ServiceStatus = serviceStatus
 
-	// Give the matching main.
+	// Assign the matching main.
 	s.Main = main
-	// Create a new main if nil.
 	if main == nil {
 		s.Main = &Defaults{}
 	}
@@ -56,15 +55,11 @@ func (s *Shoutrrr) Init(
 
 	s.Main.Init()
 
-	// Give Defaults.
 	s.Defaults = defaults
-
-	// Give Hard Defaults.
 	s.HardDefaults = hardDefaults
 }
 
-// Init will create the Prometheus metrics of each [Shoutrrr]
-// and assign the defaults to each.
+// Init assigns defaults and failure tracking to each Shoutrrr in the map.
 func (s *Shoutrrrs) Init(serviceStatus *status.Status, cfg Config) {
 	if s == nil {
 		return
@@ -109,7 +104,7 @@ func (s *Shoutrrrs) Init(serviceStatus *status.Status, cfg Config) {
 	}
 }
 
-// InitMaps will initialise all maps, converting all keys to lowercase.
+// InitMaps initialises all maps and lowercases all keys.
 func (b *Base) InitMaps() {
 	b.Options = util.EnsureMap(b.Options)
 	b.Options = util.LowercaseKeys(b.Options)
@@ -121,7 +116,7 @@ func (b *Base) InitMaps() {
 	b.Params = util.LowercaseKeys(b.Params)
 }
 
-// InitMaps will initialise all maps, converting all keys to lowercase.
+// InitMaps initialises all maps and lowercases all keys.
 func (s *Shoutrrr) InitMaps() {
 	if s == nil {
 		return

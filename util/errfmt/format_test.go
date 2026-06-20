@@ -51,7 +51,7 @@ func TestFormatError(t *testing.T) {
 
 		// Single unwrap.
 		{
-			name: "single unwrap simple",
+			name: "single unwrap/simple",
 			err: fmt.Errorf(
 				"outer: %w",
 				fmt.Errorf("inner"),
@@ -61,7 +61,7 @@ outer:
   inner`, "\n"),
 		},
 		{
-			name: "single unwrap (no colon)",
+			name: "single unwrap/no colon",
 			err: fmt.Errorf(
 				"outer message %w",
 				fmt.Errorf("inner"),

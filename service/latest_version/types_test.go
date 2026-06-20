@@ -64,7 +64,7 @@ func TestIsEqual(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "equal - url",
+			name: "equal/url",
 			a: test.Must(t, func() (Lookup, error) {
 				return Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -102,7 +102,7 @@ func TestIsEqual(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "equal - github",
+			name: "equal/github",
 			a: test.Must(t, func() (Lookup, error) {
 				return Decode(
 					"yaml", []byte(test.TrimYAML(`

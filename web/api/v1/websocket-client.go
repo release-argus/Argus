@@ -50,7 +50,7 @@ var (
 	space   = []byte{' '}
 )
 
-// ServeWs handles websocket requests from the peer.
+// ServeWs upgrades an HTTP connection to WebSocket and registers the client with the hub.
 func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -63,7 +63,8 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		hub:  hub,
 		ip:   getIP(r),
 		conn: conn,
-		send: make(chan []byte, 256)}
+		send: make(chan []byte, 256),
+	}
 	client.hub.register <- client
 
 	go client.writePump()
@@ -78,7 +79,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(_ *http.Request) bool { return true },
 }
 
-// Client connects the websocket and the hub.
+// Client is a WebSocket connection registered with the Hub.
 type Client struct {
 	// The WebSocket hub.
 	hub *Hub
@@ -89,7 +90,7 @@ type Client struct {
 	// The WebSocket connection.
 	conn *websocket.Conn
 
-	// A buffered channel of outbound messages.
+	// send carries outbound messages from the hub/server to this client.
 	send chan []byte
 }
 
@@ -138,11 +139,10 @@ type serverMessageCheck struct {
 	Version int `json:"version"`
 }
 
-// readPump reads messages from the websocket connection to the hub.
+// readPump reads incoming WebSocket frames and handles connection teardown.
 //
-// The application runs readPump in a separate goroutine for each connection.
-// It ensures only one reader operates on a connection by running all
-// reads in this goroutine.
+// Must run in its own goroutine - concentrating all reads here ensures only
+// one reader operates on the connection at a time.
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
@@ -201,7 +201,7 @@ func (c *Client) readPump() {
 	}
 }
 
-// writeWebSocketMessage unmarshals and writes a single outbound WebSocket message.
+// writeServerMessage decodes and writes an outbound WebSocket message, rejecting unknown types.
 func (c *Client) writeWebSocketMessage(message []byte) {
 	var msg apitype.WebSocketMessage
 	if err := decode.Unmarshal("json", message, &msg); err != nil {
@@ -253,9 +253,7 @@ func (c *Client) writeWebSocketMessage(message []byte) {
 	}
 }
 
-// drainSendMessages writes any messages already queued on send.
-//
-// It stops when the channel is closed or has no more buffered messages.
+// drainSendMessages writes all messages currently buffered in send without blocking.
 func (c *Client) drainSendMessages() {
 	for {
 		select {
@@ -270,10 +268,10 @@ func (c *Client) drainSendMessages() {
 	}
 }
 
-// writePump sends messages from the hub to the websocket connection.
+// writePump sends messages from the hub to the WebSocket connection.
 //
-// The application starts a separate goroutine for each connection to run writePump.
-// It ensures only one writer handles the connection by executing all writes in this goroutine.
+// Must run in its own goroutine - concentrating all writes here ensures only
+// one writer operates on the connection at a time.
 func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {

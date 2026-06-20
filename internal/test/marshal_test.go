@@ -35,51 +35,54 @@ func TestUnmarshal(t *testing.T) {
 		errRegex string
 	}{
 		{
-			name:     "supported format - no data",
-			data:     []byte{},
-			format:   "json",
-			errRegex: `^$`,
-			want:     "{}\n",
+			name:   "JSON/no data",
+			data:   []byte{},
+			format: "json",
+			want:   "{}\n",
+			errRegex: TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
 		},
 		{
-			name:     "unsupported format - no data",
+			name:     "unsupported format/no data",
 			data:     []byte{},
 			format:   "x",
-			errRegex: `^unsupported format: "x"$`,
 			want:     "{}\n",
+			errRegex: `^unsupported format: "x"$`,
 		},
 		{
-			name: "JSON - valid data",
+			name: "JSON/valid data",
 			data: []byte(TrimJSON(`{
 				"string": "hi",
 				"int": 6,
 				"bool": true
 			}`)),
-			format:   "json",
-			errRegex: `^$`,
+			format: "json",
 			want: TrimYAML(`
-				string: hi
-				int: 6
-				bool: true
+			string: hi
+			int: 6
+			bool: true
 			`),
+			errRegex: `^$`,
 		},
 		{
-			name: "YAML - valid data",
+			name: "YAML/valid data",
 			data: []byte(TrimYAML(`
 				string: foo
 				int: 42
 				bool: true
 			`)),
-			format:   "yaml",
-			errRegex: `^$`,
+			format: "yaml",
 			want: TrimYAML(`
-				string: foo
-				int: 42
-				bool: true
+			string: foo
+			int: 42
+			bool: true
 			`),
+			errRegex: `^$`,
 		},
 		{
-			name:     "unsupported format",
+			name:     "unsupported format/core",
 			data:     []byte("{}"),
 			format:   "txt",
 			errRegex: `^unsupported format: "txt"$`,

@@ -45,6 +45,14 @@ func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
 		{
 			name:     "JSON/empty",
 			format:   "json",
+			data:     "",
+			registry: &GHCRRegistryDefaults{},
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
 			data:     "{}",
 			registry: &GHCRRegistryDefaults{},
 			errRegex: `^$`,
@@ -183,13 +191,16 @@ func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*GHCRRegistryDefaults, error) {
+					err := decode.Unmarshal(format, data, tc.registry)
+					return tc.registry, err
+				},
 				tc.format, tc.data,
-				tc.registry,
-				tc.errRegex,
 				func(v *GHCRRegistryDefaults) string { return v.String("") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"GHCRRegistryDefaults",
 			); testErr != nil {
@@ -219,6 +230,14 @@ func TestGHCRRegistry_Unmarshal(t *testing.T) {
 	}{
 		{
 			name:     "JSON/empty",
+			format:   "json",
+			data:     "",
+			registry: &GHCRRegistry{},
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
 			data:     "{}",
 			registry: &GHCRRegistry{},
@@ -358,21 +377,25 @@ func TestGHCRRegistry_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if _, testErr := test.AssertUnmarshal(
+			registry, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*GHCRRegistry, error) {
+					err := decode.Unmarshal(format, data, tc.registry)
+					return tc.registry, err
+				},
 				tc.format, tc.data,
-				tc.registry,
-				tc.errRegex,
 				func(v *GHCRRegistry) string { return v.String("") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"GHCRRegistry",
-			); testErr != nil {
-				t.Error(testErr)
+			)
+			if testErr != nil {
+				t.Fatal(testErr)
 			}
 
 			// AND: Auth should never be nil.
-			if tc.registry.Auth == nil {
+			if registry.Auth == nil {
 				t.Errorf(
 					"%s\nGHCRRegistry.Unmarshal(format=%q, data=%q) - Auth should not be nil",
 					packageName, tc.format, tc.data,
@@ -394,6 +417,14 @@ func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
 	}{
 		{
 			name:     "JSON/empty",
+			format:   "json",
+			data:     "",
+			registry: &GHCRRegistry{},
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
 			data:     "{}",
 			registry: &GHCRRegistry{},
@@ -624,7 +655,7 @@ func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "only token",
+			name: "non-empty/Token",
 			registry: &GHCRRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					Auth: &GHCRAuthDefaults{
@@ -635,7 +666,7 @@ func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "only query-token/valid-until",
+			name: "non-empty/queryToken and validUntil",
 			registry: &GHCRRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					Auth: &GHCRAuthDefaults{
@@ -647,7 +678,7 @@ func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "only image",
+			name: "non-empty/Image",
 			registry: &GHCRRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					ContainerDetail: ContainerDetail{
@@ -658,7 +689,7 @@ func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "only tag",
+			name: "non-empty/Tag",
 			registry: &GHCRRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					ContainerDetail: ContainerDetail{
@@ -669,7 +700,7 @@ func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "only image/tag",
+			name: "non-empty/ContainerDetail",
 			registry: &GHCRRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					ContainerDetail: ContainerDetail{
@@ -681,7 +712,7 @@ func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "full",
+			name: "non-empty/all",
 			registry: &GHCRRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					ContainerDetail: ContainerDetail{
@@ -737,7 +768,7 @@ func TestGHCRRegistry_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty - type",
+			name: "non-empty/Type",
 			data: &GHCRRegistry{
 				CommonRegistry: CommonRegistry{
 					Type: "abc",
@@ -747,12 +778,24 @@ func TestGHCRRegistry_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty - CommonRegistry",
+			name: "non-empty/ContainerDetail",
 			data: &GHCRRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
 						Image: "i",
 					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			data: &GHCRRegistry{
+				CommonRegistry: CommonRegistry{
+					ContainerDetail: ContainerDetail{
+						Image: "i",
+					},
+					Type: "abc",
 					Auth: RegistryMap["ghcr"]().GetAuth(),
 				},
 			},
@@ -1060,11 +1103,12 @@ func TestGHCRRegistry_NewRequest(t *testing.T) {
 		errRegex string
 	}{
 		{
-			name: "no image/tag",
+			name: "no image or tag",
 			registry: &GHCRRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
 						Image: "",
+						Tag:   "",
 					},
 				},
 			},
@@ -1243,14 +1287,14 @@ func TestGHCRAuthDefaults_Unmarshal(t *testing.T) {
 		errRegex     string
 	}{
 		{
-			name:     "JSONL empty",
+			name:     "JSON/empty",
 			format:   "json",
 			data:     "{}",
 			errRegex: `^$`,
 			want:     &GHCRAuthDefaults{},
 		},
 		{
-			name:     "YAML empty",
+			name:     "YAML/empty",
 			format:   "yaml",
 			data:     "{}\n",
 			errRegex: `^$`,
@@ -1321,28 +1365,32 @@ func TestGHCRAuthDefaults_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var v GHCRAuthDefaults
-			if err, testErr := test.AssertUnmarshal(
+			auth, err, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*GHCRAuthDefaults, error) {
+					var zero GHCRAuthDefaults
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
 				tc.format, tc.data,
-				&v,
-				tc.errRegex,
 				func(v *GHCRAuthDefaults) string { return v.String("") },
 				func() string { return decode.ToYAMLString(tc.want, "") }(),
+				tc.errRegex,
 				packageName,
 				"GHCRAuthDefaults",
-			); testErr != nil {
+			)
+			if testErr != nil {
 				t.Fatal(testErr)
 			} else if err != nil {
 				return
 			}
 
 			// AND: The queryToken is encoded only if not already.
-			if v.queryToken != tc.want.queryToken {
+			if auth.queryToken != tc.want.queryToken {
 				t.Errorf(
 					"%s\nGHCRAuthDefaults.Unmarshal(format=%q, data=%q) .queryToken mismatch:\ngot:  %q\nwant: %q",
 					packageName, tc.format, tc.data,
-					v.queryToken, tc.want.queryToken,
+					auth.queryToken, tc.want.queryToken,
 				)
 			}
 		})
@@ -1371,7 +1419,7 @@ func TestGHCRAuthDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty",
+			name: "filled",
 			data: &GHCRAuthDefaults{Token: "t1"},
 			want: false,
 		},
@@ -1983,7 +2031,7 @@ func TestGHCRAuthDefaults_SetQueryToken(t *testing.T) {
 			},
 		},
 		{
-			name: "defaults/hardDefaults ignored",
+			name: "defaults - hardDefaults ignored",
 			data: &GHCRAuth{
 				GHCRAuthDefaults: GHCRAuthDefaults{
 					Token:      "token",

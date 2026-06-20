@@ -951,7 +951,7 @@ func TestFails_ResetFails(t *testing.T) {
 			webhookFails:  &map[string]*bool{},
 		},
 		{
-			name: "only notifies",
+			name: "only notifiers",
 			shoutrrrFails: &map[string]*bool{
 				"0": nil,
 				"1": test.Ptr(false),

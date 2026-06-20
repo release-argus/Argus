@@ -84,7 +84,7 @@ func TestCommandTest(t *testing.T) {
 			}),
 		},
 		{
-			name:        "known service - successful command",
+			name:        "known service/successful command",
 			flag:        "argus",
 			ok:          true,
 			stdoutRegex: test.Ptr(`Executing 'echo command did run'\s+.*command did run\s+`),
@@ -103,7 +103,7 @@ func TestCommandTest(t *testing.T) {
 			}),
 		},
 		{
-			name:        "known service - failing command",
+			name:        "known service/failing command",
 			flag:        "argus",
 			ok:          true,
 			stdoutRegex: test.Ptr(`.*Executing 'false'\s+.*exit status [1-9]\s+`),
@@ -121,7 +121,7 @@ func TestCommandTest(t *testing.T) {
 			}),
 		},
 		{
-			name:        "service - no commands",
+			name:        "known service/no commands",
 			flag:        "argus",
 			ok:          false,
 			stdoutRegex: test.Ptr(" does not have any `command` defined"),

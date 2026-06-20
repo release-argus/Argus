@@ -301,7 +301,7 @@ func TestLookup_Query(t *testing.T) {
 			},
 		},
 		{
-			name: "no overrides, first version does announce new version (with channel)",
+			name: "no overrides/first version does announce new version, with channel",
 			hadStatus: statusVars{
 				latestVersion: "",
 			},
@@ -313,7 +313,7 @@ func TestLookup_Query(t *testing.T) {
 			},
 		},
 		{
-			name: "no overrides, new version does announce new version (with var)",
+			name: "no overrides/new version does announce new version, with var",
 			hadStatus: statusVars{
 				latestVersion: "0.0.0",
 			},
@@ -325,7 +325,7 @@ func TestLookup_Query(t *testing.T) {
 			},
 		},
 		{
-			name: "no overrides, same version does not announce new version",
+			name: "no overrides/same version does not announce new version",
 			hadStatus: statusVars{
 				latestVersion: testLookupVersions.Status.LatestVersion(),
 			},

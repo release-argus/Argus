@@ -167,7 +167,7 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 		want         bool
 	}{
 		{
-			name: "add - empty name",
+			name: "add/empty name",
 			config: &Config{
 				Service: map[string]*service.Service{
 					"service1": {Name: "a"},
@@ -178,7 +178,7 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 			want:         false,
 		},
 		{
-			name: "add - new name",
+			name: "add/new name",
 			config: &Config{
 				Service: map[string]*service.Service{
 					"service1": {Name: "a"},
@@ -189,7 +189,7 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 			want:         false,
 		},
 		{
-			name: "add - conflict",
+			name: "add/conflict",
 			config: &Config{
 				Service: map[string]*service.Service{
 					"service1": {Name: "a"},
@@ -200,7 +200,7 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 			want:         true,
 		},
 		{
-			name: "rename - unchanged",
+			name: "rename/unchanged",
 			config: &Config{
 				Service: map[string]*service.Service{
 					"service1": {Name: "a"},
@@ -211,7 +211,7 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 			want:         false,
 		},
 		{
-			name: "rename - conflict",
+			name: "rename/conflict",
 			config: &Config{
 				Service: map[string]*service.Service{
 					"service1": {Name: "a"},

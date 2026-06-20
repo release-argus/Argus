@@ -29,7 +29,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// NotifyTest will send a test Shoutrrr message to the Shoutrrr with this flag as its ID.
+// NotifyTest sends a test Shoutrrr message to the notifier identified by flag.
 func NotifyTest(flag *string, cfg *config.Config) bool {
 	// Only if flag provided.
 	if *flag == "" {
@@ -65,7 +65,7 @@ func NotifyTest(flag *string, cfg *config.Config) bool {
 	return true
 }
 
-// findShoutrrr with `name` from cfg.Service.Notify || cfg.Notify.
+// findShoutrrr returns the Shoutrrr named by name from cfg.Service.Notify or cfg.Notify.
 func findShoutrrr(
 	name string,
 	cfg *config.Config,

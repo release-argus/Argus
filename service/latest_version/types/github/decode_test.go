@@ -42,9 +42,16 @@ func TestLookup_DecodeSelf(t *testing.T) {
 		{
 			name:     "JSON/empty",
 			format:   "json",
-			data:     `{}`,
-			errRegex: `^$`,
+			data:     "",
 			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     "{}",
+			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
 			name:     "YAML/empty",
@@ -207,18 +214,9 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 		want     string
 	}{
 		{
-			name: "JSON/empty data",
+			name: "empty data returns previous",
 			args: Args{
 				format: "json",
-				data:   "",
-				target: &Lookup{},
-			},
-			errRegex: `^$`,
-		},
-		{
-			name: "YAML/empty data",
-			args: Args{
-				format: "yaml",
 				data:   "",
 				target: &Lookup{},
 			},
@@ -237,7 +235,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "override error - base.Lookup",
+			name: "override error/base.Lookup",
 			args: Args{
 				format: "json",
 				data:   `{"url": []}`,
@@ -246,7 +244,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			errRegex: `^json: .*unmarshal.*$`,
 		},
 		{
-			name: "override error - Lookup",
+			name: "override error/Lookup",
 			args: Args{
 				format: "json",
 				data:   `{"use_prerelease": "true"}`,

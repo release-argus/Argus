@@ -29,7 +29,7 @@ import (
 	v1 "github.com/release-argus/Argus/web/api/v1"
 )
 
-// Run the web server.
+// Run starts the web server.
 func Run(ctx context.Context, cfg *config.Config) error {
 	router := newWebUI(cfg)
 
@@ -99,7 +99,7 @@ func newRouter(cfg *config.Config, hub *v1.Hub) *mux.Router {
 	return api.BaseRouter
 }
 
-// newWebUI will set up everything web-related for Argus.
+// newWebUI sets up everything web-related for Argus.
 func newWebUI(cfg *config.Config) *mux.Router {
 	hub := v1.NewHub()
 	go hub.Run()

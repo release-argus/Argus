@@ -43,7 +43,17 @@ func TestDecodeDefaults(t *testing.T) {
 		errRegex     string
 	}{
 		{
-			name:     "JSON/empty",
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
 			data:     "{}",
 			want:     "{}\n",
@@ -145,7 +155,7 @@ func TestDecodeDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, testErr := test.AssertDecode(
+			if _, _, testErr := test.AssertDecode(
 				t,
 				DecodeDefaults,
 				tc.format, tc.data,
@@ -154,8 +164,7 @@ func TestDecodeDefaults(t *testing.T) {
 				tc.errRegex,
 				packageName,
 				"DecodeDefaults",
-			)
-			if testErr != nil {
+			); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})
@@ -446,7 +455,7 @@ func TestWebHook_Copy(t *testing.T) {
 			wantNil: true,
 		},
 		{
-			name:                      "copies fields and deep-copies pointers/slices and fails",
+			name:                      "copies fields and deep-copies pointers, slices, and fails",
 			wantFail:                  map[string]*bool{"notify": test.Ptr(false)},
 			mutateOriginalHeaderValue: "mutated",
 			mutateCopyHeaderValue:     "copy-mutated",
@@ -703,24 +712,51 @@ func TestWebHooksDefaults_IsZero(t *testing.T) {
 		want     bool
 	}{
 		{
-			name:     "empty",
+			name:     "empty/0 items",
 			defaults: &WebHooksDefaults{},
 			want:     true,
 		},
 		{
-			name: "one empty item",
+			name: "empty/1 item",
 			defaults: &WebHooksDefaults{
 				"a": &Defaults{},
 			},
 			want: true,
 		},
 		{
-			name: "two empty items",
+			name: "empty/2 items",
 			defaults: &WebHooksDefaults{
 				"a": &Defaults{},
 				"b": &Defaults{},
 			},
 			want: true,
+		},
+		{
+			name: "non-empty/1 item",
+			defaults: &WebHooksDefaults{
+				"a": &Defaults{
+					Base: Base{
+						Type: "github",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/1 item",
+			defaults: &WebHooksDefaults{
+				"a": &Defaults{
+					Base: Base{
+						Type: "github",
+					},
+				},
+				"b": &Defaults{
+					Base: Base{
+						Type: "gitkav",
+					},
+				},
+			},
+			want: false,
 		},
 		{
 			name: "mixed",
@@ -772,7 +808,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "type only",
+			name: "non-empty/Type",
 			defaults: &Defaults{
 				Base: Base{
 					Type: "github",
@@ -781,7 +817,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "url only",
+			name: "non-empty/URL",
 			defaults: &Defaults{
 				Base: Base{
 					URL: "https://example.com",
@@ -790,7 +826,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "allow_invalid_certs only",
+			name: "non-empty/AllowInvalidCerts",
 			defaults: &Defaults{
 				Base: Base{
 					AllowInvalidCerts: test.Ptr(false),
@@ -799,7 +835,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "headers only",
+			name: "non-empty/Headers",
 			defaults: &Defaults{
 				Base: Base{
 					Headers: Headers{
@@ -811,7 +847,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "secret only",
+			name: "non-empty/Secret",
 			defaults: &Defaults{
 				Base: Base{
 					Secret: "foobar",
@@ -820,7 +856,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "desired_status_code only",
+			name: "non-empty/DesiredStatusCode",
 			defaults: &Defaults{
 				Base: Base{
 					DesiredStatusCode: test.Ptr[uint16](200),
@@ -829,7 +865,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "delay only",
+			name: "non-empty/Delay",
 			defaults: &Defaults{
 				Base: Base{
 					Delay: "1h2m3s",
@@ -838,7 +874,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "max_tries only",
+			name: "non-empty/MaxTries",
 			defaults: &Defaults{
 				Base: Base{
 					MaxTries: test.Ptr[uint8](4),
@@ -847,7 +883,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "silent_fails only",
+			name: "non-empty/SilentFails",
 			defaults: &Defaults{
 				Base: Base{
 					SilentFails: test.Ptr(true),
@@ -856,7 +892,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			defaults: &Defaults{
 				Base: Base{
 					Type:              "github",
@@ -910,14 +946,14 @@ func TestWebHooks_IsZero(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "one item",
+			name: "non-empty/1 item",
 			webhooks: &WebHooks{
 				"a": &WebHook{},
 			},
 			want: false,
 		},
 		{
-			name: "two item",
+			name: "non-empty/2 items",
 			webhooks: &WebHooks{
 				"a": &WebHook{},
 				"b": &WebHook{},
@@ -956,7 +992,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			want:    true,
 		},
 		{
-			name: "type only",
+			name: "non-empty/Type",
 			webhook: &WebHook{
 				Base: Base{
 					Type: "github",
@@ -965,7 +1001,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "url only",
+			name: "non-empty/URL",
 			webhook: &WebHook{
 				Base: Base{
 					URL: "https://example.com",
@@ -974,7 +1010,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "allow_invalid_certs only",
+			name: "non-empty/AllowInvalidCerts",
 			webhook: &WebHook{
 				Base: Base{
 					AllowInvalidCerts: test.Ptr(false),
@@ -983,7 +1019,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "headers only",
+			name: "non-empty/Headers",
 			webhook: &WebHook{
 				Base: Base{
 					Headers: Headers{
@@ -995,7 +1031,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "secret only",
+			name: "non-empty/Secret",
 			webhook: &WebHook{
 				Base: Base{
 					Secret: "foobar",
@@ -1004,7 +1040,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "desired_status_code only",
+			name: "non-empty/DesiredStatusCode",
 			webhook: &WebHook{
 				Base: Base{
 					DesiredStatusCode: test.Ptr[uint16](200),
@@ -1013,7 +1049,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "delay only",
+			name: "non-empty/Delay",
 			webhook: &WebHook{
 				Base: Base{
 					Delay: "1h2m3s",
@@ -1022,7 +1058,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "max_tries only",
+			name: "non-empty/MaxTries",
 			webhook: &WebHook{
 				Base: Base{
 					MaxTries: test.Ptr[uint8](4),
@@ -1031,7 +1067,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "silent_fails only",
+			name: "non-empty/SilentFails",
 			webhook: &WebHook{
 				Base: Base{
 					SilentFails: test.Ptr(true),
@@ -1040,7 +1076,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			webhook: &WebHook{
 				Base: Base{
 					Type:              "github",

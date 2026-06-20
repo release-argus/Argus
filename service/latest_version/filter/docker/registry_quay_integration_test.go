@@ -37,11 +37,11 @@ func TestQuayRegistry_Check(t *testing.T) {
 		errRegex string
 	}{
 		{
-			name: "no auth/known image+tag",
+			name: "no auth, known image+tag",
 			registry: QuayRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
-						Image: "argus-io/argus",
+						Image: test.ArgusDockerQuayRepo,
 						Tag:   "{{ version }}",
 					},
 					Auth: &QuayAuth{},
@@ -55,7 +55,7 @@ func TestQuayRegistry_Check(t *testing.T) {
 			registry: QuayRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
-						Image: "argus-io/argus",
+						Image: test.ArgusDockerQuayRepo,
 						Tag:   "{{ version }}",
 					},
 					Auth: &QuayAuth{
@@ -73,7 +73,7 @@ func TestQuayRegistry_Check(t *testing.T) {
 			registry: QuayRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
-						Image: "argus-io/argus",
+						Image: test.ArgusDockerQuayRepo,
 						Tag:   "{{ version }}-unknown",
 					},
 					Auth: &QuayAuth{
@@ -84,14 +84,14 @@ func TestQuayRegistry_Check(t *testing.T) {
 				},
 			},
 			version:  "latest",
-			errRegex: `^argus-io\/argus:latest-unknown - tag not found$`,
+			errRegex: `^` + test.ArgusDockerQuayRepo + `:latest-unknown - tag not found$`,
 		},
 		{
 			name: "auth/unknown image",
 			registry: QuayRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
-						Image: "argus-io/argus-unknown",
+						Image: test.ArgusDockerQuayRepo + "-unknown",
 						Tag:   "{{ version }}",
 					},
 					Auth: &QuayAuth{
@@ -103,7 +103,7 @@ func TestQuayRegistry_Check(t *testing.T) {
 			},
 			version: "latest",
 			errRegex: test.TrimYAML(`
-				argus-io/argus-unknown:latest
+				` + test.ArgusDockerQuayRepo + `-unknown:latest
 					{"detail": "[^"]+".*}$`,
 			),
 		},
@@ -138,12 +138,12 @@ func TestQuayRegistry_Check__errors(t *testing.T) {
 		errRegex     string
 	}{
 		{
-			name:         "newRequest error - invalid URL",
+			name:         "newRequest error, invalid URL",
 			quayQueryURL: "https://	example.com",
 			registry: QuayRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
-						Image: "argus-io/argus-unknown",
+						Image: test.ArgusDockerQuayRepo + "-unknown",
 						Tag:   "{{ version }}",
 					},
 					Auth: &QuayAuth{
@@ -160,7 +160,7 @@ func TestQuayRegistry_Check__errors(t *testing.T) {
 			),
 		},
 		{
-			name:         "http.client.Do error - invalid URL TLD",
+			name:         "http.client.Do error, invalid URL TLD",
 			quayQueryURL: "https://example.invalid",
 			registry: QuayRegistry{
 				CommonRegistry: CommonRegistry{

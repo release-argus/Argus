@@ -24,7 +24,7 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Track will call Track on each Service, each in their own goroutine.
+// Track starts a tracking goroutine for each active Service.
 func (s *Services) Track(ordering *[]string, orderMu *sync.RWMutex) {
 	metric.InitMetrics()
 
@@ -44,8 +44,7 @@ func (s *Services) Track(ordering *[]string, orderMu *sync.RWMutex) {
 	}
 }
 
-// Track the Service and send Notify messages and WebHooks when a new release is found.
-// Pause for s.Interval between each check.
+// Track monitors the Service for new releases, triggering notifications and WebHooks when found.
 func (s *Service) Track() {
 	s.initMetrics()
 	// Skip inactive Services.

@@ -82,6 +82,10 @@ func Decode(
 
 // ApplyOverrides applies format-encoded overrides to the receiver.
 func (l *Lookup) ApplyOverrides(format string, data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+
 	// Polymorphic fields.
 	baseLookup, err := base.ApplyOverrides(
 		format, data,

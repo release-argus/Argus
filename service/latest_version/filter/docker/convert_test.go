@@ -41,21 +41,21 @@ func TestOldDockerRegistryDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "Username",
+			name: "non-empty/Username",
 			val: &oldDockerRegistryDefaults{
 				Username: "a",
 			},
 			want: false,
 		},
 		{
-			name: "Token",
+			name: "non-empty/Token",
 			val: &oldDockerRegistryDefaults{
 				Token: "a",
 			},
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			val: &oldDockerRegistryDefaults{
 				Username: "foo",
 				Token:    "bar",
@@ -100,7 +100,7 @@ func TestOldDockerDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "GHCR",
+			name: "non-empty/GHCR",
 			val: &oldDockerDefaults{
 				RegistryGHCR: &oldDockerRegistryDefaults{
 					Username: "a",
@@ -109,7 +109,7 @@ func TestOldDockerDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "Hub",
+			name: "non-empty/Hub",
 			val: &oldDockerDefaults{
 				RegistryHub: &oldDockerRegistryDefaults{
 					Username: "a",
@@ -118,7 +118,7 @@ func TestOldDockerDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "Quay",
+			name: "non-empty/Quay",
 			val: &oldDockerDefaults{
 				RegistryQuay: &oldDockerRegistryDefaults{
 					Username: "a",
@@ -127,7 +127,7 @@ func TestOldDockerDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			val: &oldDockerDefaults{
 				RegistryGHCR: &oldDockerRegistryDefaults{
 					Username: "a",

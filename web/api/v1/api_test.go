@@ -36,23 +36,23 @@ func TestNewAPI(t *testing.T) {
 		routePrefix string
 	}{
 		{
-			name:        "prefix: ''",
+			name:        "empty route prefix",
 			routePrefix: "",
 		},
 		{
-			name:        "prefix: /",
+			name:        "root route prefix",
 			routePrefix: "/",
 		},
 		{
-			name:        "prefix: /test",
+			name:        "single-segment route prefix",
 			routePrefix: "/test",
 		},
 		{
-			name:        "prefix: /my/test",
+			name:        "multi-segment route prefix",
 			routePrefix: "/my/test",
 		},
 		{
-			name:        "prefix: /my/test/",
+			name:        "multi-segment route prefix, trailing slash",
 			routePrefix: "/my/test/",
 		},
 	}

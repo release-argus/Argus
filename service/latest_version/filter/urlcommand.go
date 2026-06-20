@@ -236,7 +236,7 @@ func (c *URLCommand) CheckValues() error {
 // # COMMANDS #
 // ############
 
-// GetVersions from `text` using the URLCommands in this URLCommands.
+// GetVersions extracts version strings from text using the URLCommands.
 func (s *URLCommands) GetVersions(text string, logFrom logx.LogFrom) ([]string, error) {
 	// No URLCommands to run, so treat the text as a single version.
 	if len(*s) == 0 {
@@ -248,7 +248,7 @@ func (s *URLCommands) GetVersions(text string, logFrom logx.LogFrom) ([]string, 
 	return s.Run(text, logFrom)
 }
 
-// Run each of the URLCommand on `text`.
+// Run applies each URLCommand in sequence to text and returns the resulting version strings.
 func (s *URLCommands) Run(text string, logFrom logx.LogFrom) ([]string, error) {
 	if s == nil {
 		return nil, nil
@@ -266,7 +266,7 @@ func (s *URLCommands) Run(text string, logFrom logx.LogFrom) ([]string, error) {
 	return versions, nil
 }
 
-// run this URLCommand on `text`.
+// run applies the URLCommand to each version in versions.
 func (c *URLCommand) run(versions []string, logFrom logx.LogFrom) ([]string, error) {
 	var err error
 
@@ -319,12 +319,7 @@ func (c *URLCommand) run(versions []string, logFrom logx.LogFrom) ([]string, err
 	return versions, nil
 }
 
-// regex applies the URLCommands regex to `versions[versionIndex]`.
-//
-// Parameters:
-//   - versionIndex: The index of the version in the `versions` urlCommands to validate.
-//   - versions: A pointer to the urlCommands of version strings to regex.
-//   - logFrom: Used for logging the source of the operation.
+// regex applies the regex URLCommand to versions[versionIndex], expanding all matches.
 func (c *URLCommand) regex(versionIndex int, versions []string, logFrom logx.LogFrom) ([]string, error) {
 	re := regexp.MustCompile(c.Regex)
 
@@ -373,18 +368,7 @@ func (c *URLCommand) regex(versionIndex int, versions []string, logFrom logx.Log
 	return versions, nil
 }
 
-// split processes the version string at `versions[versionIndex]` by splitting it
-// using the URLCommands text pattern, and updates the element at `versionIndex`.
-//
-//   - If no `Index` is specified, the entire split result replaces the version string at `versionIndex`.
-//   - If `Index` is specified, the element at that index replaces the current version string at `versionIndex`.
-//   - Negative indices are supported, where `-1` refers to the last element.
-//   - If the split result does not contain enough elements to retrieve the specified index, an error is returned.
-//
-// Parameters:
-//   - versionIndex: The index of the version in the `versions` urlCommands to process.
-//   - versions: A pointer to the urlCommands of version strings to modify.
-//   - logFrom: Used for logging the source of the operation.
+// split applies the split URLCommand to the version at versionIndex, replacing it with the split result.
 func (c *URLCommand) split(versionIndex int, versions []string, logFrom logx.LogFrom) ([]string, error) {
 	texts, err := c.splitAllMatches(versions[versionIndex], logFrom)
 	if err != nil {
@@ -417,7 +401,7 @@ func (c *URLCommand) split(versionIndex int, versions []string, logFrom logx.Log
 	return versions, nil
 }
 
-// splitAllMatches will split `text` on the URLCommand.Text, and return all matches.
+// splitAllMatches splits text on URLCommand.Text and returns all segments.
 func (c *URLCommand) splitAllMatches(text string, logFrom logx.LogFrom) ([]string, error) {
 	texts := strings.Split(text, c.Text)
 	if len(texts) == 1 {

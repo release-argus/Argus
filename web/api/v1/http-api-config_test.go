@@ -56,7 +56,7 @@ func TestHTTP_Config(t *testing.T) {
 		wantBody string
 	}{
 		{
-			name: "settings",
+			name: "settings/only",
 			settings: &config.Settings{
 				SettingsBase: config.SettingsBase{
 					Web: config.WebSettings{
@@ -74,7 +74,7 @@ func TestHTTP_Config(t *testing.T) {
 				}`,
 		},
 		{
-			name: "settings + defaults",
+			name: "settings/and defaults/only",
 			settings: &config.Settings{
 				SettingsBase: config.SettingsBase{
 					Web: config.WebSettings{
@@ -178,7 +178,7 @@ func TestHTTP_Config(t *testing.T) {
 				}`,
 		},
 		{
-			name: "settings + defaults (with notify+command+webhook service defaults)",
+			name: "settings/and defaults/with notify+command+webhook service defaults/only",
 			settings: &config.Settings{
 				SettingsBase: config.SettingsBase{
 					Web: config.WebSettings{
@@ -304,7 +304,7 @@ func TestHTTP_Config(t *testing.T) {
 				}`,
 		},
 		{
-			name: "settings + defaults (with notify+command+webhook service defaults) + notify",
+			name: "settings/and defaults/with notify+command+webhook service defaults/and notify",
 			settings: &config.Settings{
 				SettingsBase: config.SettingsBase{
 					Web: config.WebSettings{
@@ -458,7 +458,7 @@ func TestHTTP_Config(t *testing.T) {
 				}`,
 		},
 		{
-			name: "settings + defaults (with notify+command+webhook service defaults) + notify + webhook",
+			name: "settings/and defaults/with notify+command+webhook service defaults/and notify and webhook",
 			webhook: &webhook.WebHooksDefaults{
 				"foo": test.Must(t, func() (*webhook.Defaults, error) {
 					return webhook.DecodeDefaults(
@@ -567,7 +567,7 @@ func TestHTTP_Config(t *testing.T) {
 				}`,
 		},
 		{
-			name: "settings + defaults (with notify+command+webhook service defaults) + notify + webhook + service",
+			name: "settings/and defaults/with notify+command+webhook service defaults/and notify and webhook and service",
 			service: &service.Services{
 				"alpha": &service.Service{
 					LatestVersion: test.Must(t, func() (latestver.Lookup, error) {

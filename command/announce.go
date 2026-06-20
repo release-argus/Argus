@@ -24,7 +24,7 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// AnnounceCommand broadcasts command failure state to WebSocket clients.
+// AnnounceCommand broadcasts the command run result and next-runnable time to WebSocket clients.
 func (c *Controller) AnnounceCommand(index int, serviceInfo serviceinfo.ServiceInfo) {
 	c.SetExecuting(index, false)
 	commandSummary := make(map[string]*apitype.CommandSummary, 1)
@@ -61,7 +61,6 @@ func (c *Controller) Find(command string) (int, error) {
 	// Loop through all the Commands.
 	for key, cmd := range c.Command {
 		formatted := cmd.ApplyTemplate(svcInfo)
-		// If this key is the command.
 		if formatted.String() == command {
 			return key, nil
 		}

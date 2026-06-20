@@ -27,9 +27,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Refresh the lookup with the provided overrides.
-//
-//	Returns: version, err.
+// Refresh queries the lookup with the provided overrides, returning the deployed version and any error.
 func Refresh(
 	lookup Lookup,
 	previousType string,

@@ -21,7 +21,7 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 )
 
-// ExecCommand will run Command.
+// ExecCommand runs the require Command for the given version.
 func (r *Require) ExecCommand(version string, logFrom logx.LogFrom) error {
 	if r == nil || len(r.Command) == 0 {
 		return nil

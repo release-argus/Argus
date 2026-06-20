@@ -44,6 +44,16 @@ func TestNew(t *testing.T) {
 			name:     "JSON/empty",
 			format:   "json",
 			data:     "",
+			errRegex: `failed to unmarshal`,
+			wants: wants{
+				ServiceInfo:      info.ServiceInfo{},
+				statusTimestamps: statusTimestamps{},
+			},
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     "{}",
 			errRegex: `^$`,
 			wants: wants{
 				ServiceInfo:      info.ServiceInfo{},

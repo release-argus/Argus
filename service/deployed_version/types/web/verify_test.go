@@ -43,7 +43,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "method - empty string",
+			name: "method/empty string",
 			data: test.TrimYAML(`
 				method: ''
 				url: "https://example.com"
@@ -52,7 +52,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex:          `method: <required>.*` + http.MethodGet,
 		},
 		{
-			name: "method - invalid",
+			name: "method/invalid",
 			data: test.TrimYAML(`
 				method: 'FOO'
 				url: "https://example.com"
@@ -60,7 +60,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: `method: "FOO" <invalid>.*` + http.MethodGet,
 		},
 		{
-			name: "method - valid",
+			name: "method/valid",
 			data: test.TrimYAML(`
 				method: ` + http.MethodGet + `
 				url: "https://example.com"
@@ -68,7 +68,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "method - case insensitive",
+			name: "method/case insensitive",
 			data: test.TrimYAML(`
 				method: 'gEt'
 				url: "https://example.com"
@@ -76,7 +76,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "url - empty string",
+			name: "url/empty string",
 			data: test.TrimYAML(`
 				method: ''
 				url: ''
@@ -84,7 +84,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: `url: <required>`,
 		},
 		{
-			name: "body - removed for GET",
+			name: "body/removed for GET",
 			data: test.TrimYAML(`
 				method: ` + http.MethodGet + `
 				url: "https://example.com"
@@ -93,7 +93,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "body - not removed for POST",
+			name: "body/not removed for POST",
 			data: test.TrimYAML(`
 				method: ` + http.MethodPost + `
 				url: "https://example.com"
@@ -102,7 +102,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "JSON - invalid, string in square brackets",
+			name: "JSON/invalid, string in square brackets",
 			data: test.TrimYAML(`
 				method: ` + http.MethodGet + `
 				url: "https://example.com"
@@ -111,7 +111,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: `^json: .* <invalid>.*$`,
 		},
 		{
-			name: "regex - invalid",
+			name: "regex/invalid",
 			data: test.TrimYAML(`
 				method: ` + http.MethodGet + `
 				url: "https://example.com"
@@ -120,7 +120,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: `^regex: .* <invalid>.*$`,
 		},
 		{
-			name: "regexTemplate - with no regex",
+			name: "regex_template, with no regex",
 			data: test.TrimYAML(`
 				method: ` + http.MethodGet + `
 				url: "https://example.com"

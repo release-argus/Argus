@@ -47,7 +47,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "invalid semantic versioning JSON",
+			name: "invalid semantic versioning",
 			args: args{
 				lookup:             testLookup(t, "url", false, ""),
 				overrides:          nil,
@@ -71,7 +71,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "valid overrides JSON",
+			name: "overrides/valid",
 			args: args{
 				lookup:             testLookup(t, "url", false, ""),
 				overrides:          []byte(`{"url": "` + test.LookupJSON["url_valid"] + `"}`),
@@ -81,7 +81,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "invalid overrides JSON - Invalid JSON",
+			name: "overrides/invalid JSON",
 			args: args{
 				lookup:             testLookup(t, "url", false, ""),
 				overrides:          []byte(`{"url": "}`),
@@ -94,7 +94,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			),
 		},
 		{
-			name: "invalid overrides JSON - different var type",
+			name: "overrides/invalid var data type",
 			args: args{
 				lookup:             testLookup(t, "url", false, ""),
 				overrides:          []byte(`{"url": [""]}`),

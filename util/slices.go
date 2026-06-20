@@ -55,12 +55,7 @@ func SliceReplace[T any](s []T, index int, insert []T) []T {
 	return out
 }
 
-// SwapRanges swaps two subSlices within a slice, defined by their start and end indices.
-//
-// Parameters:
-//   - slice: A pointer to the slice containing the subSlices to swap.
-//   - aStart, aEnd: Indices defining the first subSlice.
-//   - bStart, bEnd: Indices defining the second subSlice.
+// SwapRanges swaps two sub-slices within s, defined by their start and end indices.
 func SwapRanges[T any](
 	s []T,
 	aStart, aEnd int,
@@ -118,9 +113,7 @@ func RemoveAt[T any](s []T, i int) []T {
 	return append(s[:i], s[i+1:]...)[:len(s)-1]
 }
 
-// AreSlicesEqual compares two slices of strings and returns true if they are identical.
-// It checks both the length of the slices and the values at each index.
-// If the slices have different lengths or any corresponding elements differ, it returns false.
+// AreSlicesEqual reports whether two slices are identical in length and element values.
 func AreSlicesEqual[T comparable](slice1, slice2 []T) bool {
 	// Check if the lengths of the slices differ.
 	if len(slice1) != len(slice2) {
@@ -170,7 +163,7 @@ func FirstNonEmptySlice[T ~[]E, E any](vars ...T) T {
 	return zero
 }
 
-// NormaliseNewlines all newlines in `data` to \n.
+// NormaliseNewlines replaces all newlines (Mac/Windows) in data with \n (Unix).
 func NormaliseNewlines(data []byte) []byte {
 	// replace CR LF \r\n (Windows) with LF \n (Unix).
 	data = bytes.ReplaceAll(data, []byte{13, 10}, []byte{10})

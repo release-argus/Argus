@@ -151,7 +151,7 @@ func TestAPI_AnnounceEdit(t *testing.T) {
 		wantedServiceData *apitype.ServiceSummary
 	}{
 		{
-			name: "edit with old data",
+			name: "edit with old data/all change",
 			oldData: &apitype.ServiceSummary{
 				ID:   "service-1",
 				Icon: test.Ptr("Service 1"),
@@ -166,7 +166,7 @@ func TestAPI_AnnounceEdit(t *testing.T) {
 			},
 		},
 		{
-			name: "edit with old data, no change",
+			name: "edit with old data/no changes",
 			oldData: &apitype.ServiceSummary{
 				ID:   "service-1",
 				Icon: test.Ptr("Service 1"),
@@ -178,7 +178,7 @@ func TestAPI_AnnounceEdit(t *testing.T) {
 			wantedServiceData: nil,
 		},
 		{
-			name: "edit with old data, only changes sent",
+			name: "edit with old data/only changes sent",
 			oldData: &apitype.ServiceSummary{
 				ID:   "service-1",
 				Icon: test.Ptr("Service 1"),
@@ -394,22 +394,22 @@ func TestConstantTimeCompare(t *testing.T) {
 		hash1, hash2 string
 	}{
 		{
-			name:  "equal - 1",
+			name:  "equal/1",
 			hash1: "a",
 			hash2: "a",
 		},
 		{
-			name:  "equal - 2",
+			name:  "equal/2",
 			hash1: "abc",
 			hash2: "abc",
 		},
 		{
-			name:  "not equal - 1",
+			name:  "not equal/1",
 			hash1: "a",
 			hash2: "b",
 		},
 		{
-			name:  "not equal - 2",
+			name:  "not equal/2",
 			hash1: "abc",
 			hash2: "abb",
 		},

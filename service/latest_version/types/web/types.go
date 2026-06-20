@@ -135,7 +135,7 @@ func (l *Lookup) Copy(svcStatus *status.Status) base.Interface {
 	return nil
 }
 
-// InheritSecrets will inherit secrets from the `otherLookup`.
+// InheritSecrets copies header secrets from otherLookup and delegates to the base.
 func (l *Lookup) InheritSecrets(otherLookup base.BaseInterface, secretRefs *shared.VSecretRef) {
 	if otherL, ok := otherLookup.(*Lookup); ok && secretRefs != nil {
 		l.Headers.InheritSecrets(otherL.Headers, secretRefs.Headers)

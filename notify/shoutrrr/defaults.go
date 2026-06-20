@@ -17,7 +17,7 @@ package shoutrrr
 
 import "net/http"
 
-// Init will initialise each [Defaults].
+// Init initialises all Defaults in the map.
 func (s ShoutrrrsDefaults) Init() {
 	for _, dflt := range s {
 		dflt.Init()
@@ -215,7 +215,7 @@ func (s *ShoutrrrsDefaults) Default() {
 	*s = defaults
 }
 
-// notifyDefaultOptions are the default options for all notifiers.
+// notifyDefaultOptions returns the default options for all notifiers.
 func notifyDefaultOptions() map[string]string {
 	return map[string]string{
 		"message":   "{{ service_name | default:service_id }} - {{ version }} released",

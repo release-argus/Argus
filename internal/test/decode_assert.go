@@ -57,7 +57,7 @@ func AssertDecode[T any](
 		return v, err, testErr
 	}
 
-	// AND: The struct stringifies correctly.
+	// AND: The struct stringifies as expected.
 	var gotStr string
 	if stringify == nil {
 		return v, nil, fmt.Errorf("stringify function is required")

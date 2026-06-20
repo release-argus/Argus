@@ -22,14 +22,8 @@ import (
 	"time"
 )
 
-// RetryWithBackoff retries the operation with jitter and exponential backoff.
-//
-// Parameters:
-//   - operation: Function to execute.
-//   - maxTries: Maximum amount retries.
-//   - baseDelay: Initial delay before the first retry.
-//   - maxDelay: Maximum delay between retries (exponential backoff).
-//   - shouldStop: Function to check if the operation should stop.
+// RetryWithBackoff retries operation up to maxTries times with exponential backoff and jitter,
+// stopping early if shouldStop returns true.
 func RetryWithBackoff(
 	operation func() error,
 	maxTries uint8,

@@ -35,13 +35,19 @@ func TestDecodeDefaults(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "{}\n",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				^dashboard:
+					jsontext:
+						unexpected EOF$`,
+			),
 		},
 		{
-			name:   "JSON/empty object",
-			format: "json",
-			data:   "{}",
-			want:   "{}\n",
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     "{}",
+			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
 			name:   "YAML/empty",
@@ -135,7 +141,7 @@ func TestDecodeDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, testErr := test.AssertDecode(
+			if _, _, testErr := test.AssertDecode(
 				t,
 				DecodeDefaults,
 				tc.format, tc.data,
@@ -144,8 +150,7 @@ func TestDecodeDefaults(t *testing.T) {
 				tc.errRegex,
 				packageName,
 				"DecodeDefaults",
-			)
-			if testErr != nil {
+			); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})
@@ -165,7 +170,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty AutoApprove",
+			name: "non-empty/AutoApprove",
 			opt: &Defaults{
 				OptionsBase: OptionsBase{
 					AutoApprove: test.Ptr(true),
@@ -174,7 +179,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Icon",
+			name: "non-empty/Icon",
 			opt: &Defaults{
 				OptionsBase: OptionsBase{
 					Icon: "icon-url",
@@ -183,7 +188,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty IconLinkTo",
+			name: "non-empty/IconLinkTo",
 			opt: &Defaults{
 				OptionsBase: OptionsBase{
 					IconLinkTo: "icon-link",
@@ -192,7 +197,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty WebURL",
+			name: "non-empty/WebURL",
 			opt: &Defaults{
 				OptionsBase: OptionsBase{
 					WebURL: "web-url",
@@ -201,7 +206,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			opt: &Defaults{
 				OptionsBase: OptionsBase{
 					AutoApprove: test.Ptr(true),

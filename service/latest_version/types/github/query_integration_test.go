@@ -64,7 +64,7 @@ func TestLookup_Query(t *testing.T) {
 			},
 		},
 		{
-			name: "query that gets a non-semantic version - not allowed",
+			name: "query that gets a non-semantic version/not allowed",
 			overrides: test.TrimYAML(`
 				url: release-argus/test
 				url_commands:
@@ -77,7 +77,7 @@ func TestLookup_Query(t *testing.T) {
 			},
 		},
 		{
-			name: "query that gets a non-semantic version - allowed",
+			name: "query that gets a non-semantic version/allowed",
 			overrides: test.TrimYAML(`
 				url: release-argus/test
 				url_commands:
@@ -282,7 +282,7 @@ func TestLookup_Query(t *testing.T) {
 			},
 		},
 		{
-			name:      "repo that uses tags, not releases - has tags",
+			name:      "repo that uses tags, not releases/has tags",
 			overrides: `url: "release-argus/test"`,
 			status: statusVars{
 				wantLatestVersion: test.Ptr("1.1.1"),
@@ -294,7 +294,7 @@ func TestLookup_Query(t *testing.T) {
 			},
 		},
 		{
-			name:         "repo that uses tags, not releases - no tags",
+			name:         "repo that uses tags, not releases/no tags",
 			overrides:    `url: "release-argus/.github"`,
 			overrideETag: &emptyReleasesETag,
 			semVer:       true,
@@ -304,7 +304,7 @@ func TestLookup_Query(t *testing.T) {
 			},
 		},
 		{
-			name:         "repo that uses tags, not releases - no tags - emptyListETag changed",
+			name:         "repo that uses tags, not releases/no tags - emptyListETag changed",
 			overrides:    `url: "release-argus/.github"`,
 			overrideETag: test.Ptr(""),
 			semVer:       true,

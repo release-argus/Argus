@@ -62,7 +62,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			errRegex:  `x509`,
 		},
 		{
-			name: "headers - pass",
+			name: "headers/pass",
 			overrides: test.TrimYAML(`
 				method: POST
 				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
@@ -74,7 +74,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			errRegex:  `^$`,
 		},
 		{
-			name: "headers - fail",
+			name: "headers/fail",
 			overrides: test.TrimYAML(`
 				method: POST
 				url: ` + test.LookupWithHeaderAuth["url_valid"] + `

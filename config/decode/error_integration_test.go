@@ -31,7 +31,6 @@ func TestFieldError__formatError(t *testing.T) {
 		err  error
 		want string
 	}{
-		{},
 		{
 			name: "single error",
 			err: &KeyFieldError{

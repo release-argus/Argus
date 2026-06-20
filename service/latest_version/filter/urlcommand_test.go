@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
@@ -41,9 +42,19 @@ func TestURLCommands_Unmarshal(t *testing.T) {
 		errRegex     string
 	}{
 		{
-			name:     "JSON/empty",
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
-			data:     "",
+			data:     "{}",
 			want:     "[]\n",
 			errRegex: `^$`,
 		},
@@ -190,14 +201,17 @@ func TestURLCommands_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var v URLCommands
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*URLCommands, error) {
+					var zero URLCommands
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
 				tc.format, tc.data,
-				&v,
-				tc.errRegex,
-				func(t *URLCommands) string { return v.String() },
+				func(v *URLCommands) string { return v.String() },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"URLCommands",
 			); testErr != nil {
@@ -224,56 +238,56 @@ func TestURLCommand_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Type",
+			name: "non-empty/Type",
 			data: URLCommand{
 				Type: "regex",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Regex",
+			name: "non-empty/Regex",
 			data: URLCommand{
 				Regex: "foo",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Text",
+			name: "non-empty/Text",
 			data: URLCommand{
 				Text: "foo",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Old",
+			name: "non-empty/Old",
 			data: URLCommand{
 				Old: "foo",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty New",
+			name: "non-empty/New",
 			data: URLCommand{
 				New: "foo",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Index",
+			name: "non-empty/Index",
 			data: URLCommand{
 				Index: test.Ptr(3),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Template",
+			name: "non-empty/Template",
 			data: URLCommand{
 				Template: "foo",
 			},
 			want: false,
 		},
 		{
-			name: "filled regex",
+			name: "non-empty/regex without template",
 			data: URLCommand{
 				Type:  "regex",
 				Regex: "foo",
@@ -282,7 +296,7 @@ func TestURLCommand_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled replace",
+			name: "non-empty/replace",
 			data: URLCommand{
 				Type: "replace",
 				Old:  "foo",
@@ -291,7 +305,7 @@ func TestURLCommand_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled split",
+			name: "non-empty/split",
 			data: URLCommand{
 				Type:  "split",
 				Text:  "abc",
@@ -694,7 +708,7 @@ func TestURLCommands_GetVersions(t *testing.T) {
 			errRegex:     `^$`,
 		},
 		{
-			name: "single version - regex",
+			name: "single version/regex",
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: test.Ptr(1)},
 			},
@@ -703,7 +717,7 @@ func TestURLCommands_GetVersions(t *testing.T) {
 			errRegex:     `^$`,
 		},
 		{
-			name: "single version - replace",
+			name: "single version/replace",
 			urlCommands: &URLCommands{
 				{Type: "replace", Old: "-", New: " "},
 			},
@@ -712,7 +726,7 @@ func TestURLCommands_GetVersions(t *testing.T) {
 			errRegex:     `^$`,
 		},
 		{
-			name: "multiple versions - split",
+			name: "multiple versions/split",
 			urlCommands: &URLCommands{
 				{Type: "split", Text: "-"},
 			},
@@ -721,7 +735,7 @@ func TestURLCommands_GetVersions(t *testing.T) {
 			errRegex:     `^$`,
 		},
 		{
-			name: "multiple versions - split fail",
+			name: "multiple versions/split fail",
 			urlCommands: &URLCommands{
 				{Type: "split", Text: "_"},
 			},
@@ -730,7 +744,7 @@ func TestURLCommands_GetVersions(t *testing.T) {
 			errRegex:     `^split didn't find any "_" to split on$`,
 		},
 		{
-			name: "multiple versions - regex and split",
+			name: "multiple versions/regex and split",
 			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: nil},
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`},
@@ -740,7 +754,7 @@ func TestURLCommands_GetVersions(t *testing.T) {
 			errRegex:     `^$`,
 		},
 		{
-			name: "multiple versions - regex fail",
+			name: "multiple versions/regex fail",
 			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: nil},
 				{Type: "split", Text: "_", Index: test.Ptr(0)},
@@ -832,7 +846,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:        nil,
 		},
 		{
-			name: "regex",
+			name: "regex/standard",
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: test.Ptr(1)},
 			},
@@ -840,7 +854,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     []string{"def"},
 		},
 		{
-			name: "regex with negative index",
+			name: "regex/negative index",
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: test.Ptr(-1)},
 			},
@@ -848,7 +862,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     []string{"def"},
 		},
 		{
-			name: "regex doesn't match (gives text that didn't match)",
+			name: "regex/no match/gives text that didn't match",
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([h-z]+)[0-9]+`, Index: test.Ptr(1)},
 			},
@@ -856,7 +870,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     nil,
 		},
 		{
-			name: "regex doesn't match (doesn't give text that didn't match as too long)",
+			name: "regex/no match/doesn't give text that didn't match as too long",
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([h-z]+)[0-9]+`, Index: test.Ptr(1)},
 			},
@@ -865,7 +879,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     nil,
 		},
 		{
-			name: "regex index out of bounds",
+			name: "regex/index out of bounds",
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: test.Ptr(2)},
 			},
@@ -873,7 +887,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     nil,
 		},
 		{
-			name: "regex with template",
+			name: "regex/with template",
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)([0-9]+)`, Index: test.Ptr(1), Template: "$1_$2"},
 			},
@@ -881,7 +895,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     []string{"def_456"},
 		},
 		{
-			name: "regex multiple matches",
+			name: "regex/multiple matches/no template",
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`},
 			},
@@ -889,7 +903,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     []string{"abc", "def"},
 		},
 		{
-			name: "regex multiple matches - with template",
+			name: "regex/multiple matches/with template",
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)([0-9])`, Template: "$1_$2"},
 			},
@@ -905,7 +919,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     []string{"abc123 def456"},
 		},
 		{
-			name: "split",
+			name: "split/standard",
 			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: test.Ptr(-1)},
 			},
@@ -913,7 +927,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     []string{"def456"},
 		},
 		{
-			name: "split with negative index",
+			name: "split/negative index",
 			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: test.Ptr(0)},
 			},
@@ -921,7 +935,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     []string{"abc123"},
 		},
 		{
-			name: "split on unknown text",
+			name: "split/unknown text",
 			urlCommands: &URLCommands{
 				{Type: "split", Text: "7", Index: test.Ptr(0)},
 			},
@@ -929,7 +943,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     nil,
 		},
 		{
-			name: "split index out of bounds",
+			name: "split/index out of bounds",
 			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: test.Ptr(2)},
 			},
@@ -937,7 +951,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     nil,
 		},
 		{
-			name: "split with no index",
+			name: "split/no index",
 			text: "a-b-c-d",
 			urlCommands: &URLCommands{
 				{Type: "split", Text: "-"},

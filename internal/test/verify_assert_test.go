@@ -31,7 +31,7 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 		wantChanged bool
 	}{
 		{
-			name: "no error, unchanged",
+			name: "no error/unchanged",
 			checkValues: func() (error, bool) {
 				return nil, false
 			},
@@ -39,7 +39,7 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 			wantChanged: false,
 		},
 		{
-			name: "no error, changed",
+			name: "no error/changed",
 			checkValues: func() (error, bool) {
 				return nil, true
 			},
@@ -47,7 +47,7 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 			wantChanged: true,
 		},
 		{
-			name: "expected error, unchanged",
+			name: "expected error/changed",
 			checkValues: func() (error, bool) {
 				return fmt.Errorf("error happened"), true
 			},
@@ -55,7 +55,7 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 			wantChanged: true,
 		},
 		{
-			name: "expected error, unchanged",
+			name: "expected error/unchanged",
 			checkValues: func() (error, bool) {
 				return fmt.Errorf("error happened"), false
 			},
@@ -63,7 +63,7 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 			wantChanged: false,
 		},
 		{
-			name: "error line mismatch, unchanged",
+			name: "error line mismatch - unchanged",
 			checkValues: func() (error, bool) {
 				return fmt.Errorf("error happened"), false
 			},
@@ -75,7 +75,7 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 			wantChanged: true,
 		},
 		{
-			name: "expected error, unexpected changed",
+			name: "expected error/unexpected changed",
 			checkValues: func() (error, bool) {
 				return fmt.Errorf("error happened"), false
 			},
@@ -84,7 +84,7 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 			wantChanged: true,
 		},
 		{
-			name: "error, unchanged",
+			name: "error/unchanged",
 			checkValues: func() (error, bool) {
 				return fmt.Errorf("error happened"), false
 			},
@@ -93,7 +93,7 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 			wantChanged: false,
 		},
 		{
-			name: "error, changed",
+			name: "error/changed",
 			checkValues: func() (error, bool) {
 				return fmt.Errorf("error happened"), true
 			},

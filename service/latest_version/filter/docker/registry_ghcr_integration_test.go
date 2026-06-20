@@ -141,7 +141,7 @@ func TestGHCRRegistry_Check__errors(t *testing.T) {
 		errRegex         string
 	}{
 		{
-			name:             "GetQueryToken error - no token, no-op token req fails",
+			name:             "GetQueryToken error, no token (no-op token req fails)",
 			ghcrTokenAddress: "https://	example.com",
 			registry: GHCRRegistry{
 				CommonRegistry: CommonRegistry{
@@ -160,7 +160,7 @@ func TestGHCRRegistry_Check__errors(t *testing.T) {
 			),
 		},
 		{
-			name:         "newRequest error - invalid URL",
+			name:         "newRequest error, invalid URL",
 			ghcrQueryURL: "https://	example.com",
 			registry: GHCRRegistry{
 				CommonRegistry: CommonRegistry{
@@ -183,7 +183,7 @@ func TestGHCRRegistry_Check__errors(t *testing.T) {
 			),
 		},
 		{
-			name:         "http.client.Do error - invalid URL TLD",
+			name:         "http.client.Do error, invalid URL TLD",
 			ghcrQueryURL: "https://example.invalid/%s/%s",
 			registry: GHCRRegistry{
 				CommonRegistry: CommonRegistry{

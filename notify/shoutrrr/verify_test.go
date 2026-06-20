@@ -586,7 +586,7 @@ func TestBase_CheckValues(t *testing.T) {
 			changed: false,
 		},
 		{
-			name: "matrix/rooms, leading #",
+			name: "matrix/rooms/leading #",
 			input: &Base{
 				Type: "matrix",
 				Params: map[string]string{
@@ -603,7 +603,7 @@ func TestBase_CheckValues(t *testing.T) {
 			changed: true,
 		},
 		{
-			name: "matrix/rooms, leading # already urlEncoded",
+			name: "matrix/rooms/leading # already urlEncoded",
 			input: &Base{
 				Type: "matrix",
 				Params: map[string]string{
@@ -620,7 +620,7 @@ func TestBase_CheckValues(t *testing.T) {
 			changed: false,
 		},
 		{
-			name: "matrix/rooms, valid",
+			name: "matrix/rooms/valid",
 			input: &Base{
 				Type: "matrix",
 				Params: map[string]string{
@@ -883,7 +883,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 			changed: false,
 		},
 		{
-			name: "both valid - no error",
+			name: "both valid, no error",
 			input: &Defaults{
 				Base: Base{
 					Type: "gotify",
@@ -1183,7 +1183,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			renamedVar: true,
 		},
 		{
-			name:      "matrix/rooms, leading #",
+			name:      "matrix/rooms/leading #",
 			sType:     "matrix",
 			mapTarget: "params",
 			startAs: map[string]string{
@@ -1194,7 +1194,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "matrix/rooms, leading # already urlEncoded",
+			name:      "matrix/rooms/leading # already urlEncoded",
 			sType:     "matrix",
 			mapTarget: "params",
 			startAs: map[string]string{
@@ -1205,7 +1205,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "matrix/rooms, valid",
+			name:      "matrix/rooms/valid",
 			sType:     "matrix",
 			mapTarget: "params",
 			startAs: map[string]string{
@@ -1575,13 +1575,13 @@ func TestParseHostPort(t *testing.T) {
 			wantPort: "",
 		},
 		{
-			name:     "leading/trailing spaces trimmed/bare",
+			name:     "leading trailing spaces trimmed/hostname",
 			input:    "  example.com  ",
 			wantHost: "example.com",
 			wantPort: "",
 		},
 		{
-			name:     "leading/trailing spaces trimmed/schema, hostname, and port",
+			name:     "leading trailing spaces trimmed/schema, hostname, and port",
 			input:    "  https://example.com:123  ",
 			wantHost: "example.com",
 			wantPort: "123",
@@ -1717,12 +1717,12 @@ func TestShoutrrr_CheckValuesType(t *testing.T) {
 			sType:    "",
 		},
 		{
-			name:     "invalid type",
+			name:     "invalid type/unknown",
 			errRegex: `^type: .* <invalid>.*$`,
 			sType:    "argus",
 		},
 		{
-			name:     "invalid type - type in main differs",
+			name:     "invalid type/type in main differs",
 			errRegex: `type: "gotify" <invalid> .*\(discord\)\)`,
 			sType:    "gotify",
 			main: NewDefaults(
@@ -1835,14 +1835,14 @@ func TestBase_CheckValuesOptions(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "invalid max_tries/too large",
+			name: "invalid max_tries/too large, MaxUint16",
 			options: map[string]string{
 				"max_tries": strconv.Itoa(math.MaxUint16),
 			},
 			errRegex: `^max_tries: "\d+" <invalid>.*$`,
 		},
 		{
-			name: "invalid max_tries/too large, >uint64",
+			name: "invalid max_tries/too large, >MaxUint64",
 			options: map[string]string{
 				"max_tries": fmt.Sprintf("1%d", uint(math.MaxUint64)),
 			},

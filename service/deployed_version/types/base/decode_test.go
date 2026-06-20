@@ -33,9 +33,8 @@ func TestDecode(t *testing.T) {
 	optCfg := opttest.PlainDefaultsConfig(t)
 
 	type Args struct {
-		format string
-		data   string
-		lookup *Lookup
+		format, data string
+		lookup       *Lookup
 	}
 	// GIVEN: data in a given format to Decode into a Lookup.
 	tests := []struct {
@@ -46,6 +45,15 @@ func TestDecode(t *testing.T) {
 	}{
 		{
 			name: "JSON/empty",
+			args: Args{
+				format: "json",
+				data:   "",
+			},
+			want:     "",
+			errRegex: `^$`,
+		},
+		{
+			name: "JSON/empty object",
 			args: Args{
 				format: "json",
 				data:   `{}`,
@@ -78,7 +86,7 @@ func TestDecode(t *testing.T) {
 			errRegex: `^json: .*unmarshal.*$`,
 		},
 		{
-			name: "JSON/valid payload, no require",
+			name: "JSON/no require",
 			args: Args{
 				format: "json",
 				data:   `{"type": "url"}`,
@@ -185,6 +193,19 @@ func TestApplyOverrides(t *testing.T) {
 				data:   "",
 				target: &Lookup{},
 			},
+			want: "",
+			errRegex: test.TrimYAML(`
+					jsontext:
+						unexpected EOF`,
+			),
+		},
+		{
+			name: "JSON/empty object",
+			args: Args{
+				format: "json",
+				data:   "{}",
+				target: &Lookup{},
+			},
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
@@ -199,7 +220,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "JSON/new, filled",
+			name: "JSON/new, filled, bare",
 			args: Args{
 				format: "json",
 				data:   `{"type": "foo"}`,
@@ -209,7 +230,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex:       `^$`,
 		},
 		{
-			name: "YAML/new, filled",
+			name: "YAML/new, filled, bare",
 			args: Args{
 				format: "yaml",
 				data:   `type: foo`,
@@ -219,7 +240,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex:       `^$`,
 		},
 		{
-			name: "JSON/existing, filled",
+			name: "JSON/existing, filled/valid",
 			args: Args{
 				format: "json",
 				data:   `{"type": "bar"}`,
@@ -231,7 +252,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "YAML/existing, filled",
+			name: "YAML/existing, filled/valid",
 			args: Args{
 				format: "yaml",
 				data:   `type: bar`,
@@ -243,7 +264,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "JSON/existing, filled - type error",
+			name: "JSON/existing, filled/type error",
 			args: Args{
 				format: "json",
 				data:   `{"type": []}`,
@@ -252,7 +273,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^json: .*unmarshal.*$`,
 		},
 		{
-			name: "YAML/existing, filled - type error",
+			name: "YAML/existing, filled/type error",
 			args: Args{
 				format: "yaml",
 				data:   `type: []`,

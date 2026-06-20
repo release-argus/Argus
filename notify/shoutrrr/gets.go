@@ -23,7 +23,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// GetType of this Shoutrrr.
+// GetType resolves the notification type from instance, Main, or ID.
 func (s *Shoutrrr) GetType() string {
 	// s.ID if the name is the same as the type.
 	return util.FirstNonDefault(
@@ -33,17 +33,17 @@ func (s *Shoutrrr) GetType() string {
 	)
 }
 
-// Title of the Shoutrrr after the service info is applied and template evaluated.
+// Title returns the notification title with info templates evaluated.
 func (s *Shoutrrr) Title(info serviceinfo.ServiceInfo) string {
 	return util.TemplateString(s.GetParam("title"), info)
 }
 
-// Message of the Shoutrrr after the service info is applied and template evaluated.
+// Message returns the notification message with info templates evaluated.
 func (s *Shoutrrr) Message(info serviceinfo.ServiceInfo) string {
 	return util.TemplateString(s.GetOption("message"), info)
 }
 
-// GetOption from this/Main/Defaults/HardDefaults on FiFo.
+// GetOption returns the value for key, resolved from instance, Main, Defaults, and HardDefaults in order.
 func (s *Shoutrrr) GetOption(key string) string {
 	return util.FirstNonDefaultWithEnv(
 		s.Options[key],
@@ -53,7 +53,7 @@ func (s *Shoutrrr) GetOption(key string) string {
 	)
 }
 
-// GetURLField from this/Main/Defaults/HardDefaults on FiFo.
+// GetURLField returns the value for key, resolved from instance, Main, Defaults, and HardDefaults in order.
 func (s *Shoutrrr) GetURLField(key string) string {
 	return util.FirstNonDefaultWithEnv(
 		s.URLFields[key],
@@ -63,7 +63,7 @@ func (s *Shoutrrr) GetURLField(key string) string {
 	)
 }
 
-// GetParam from this/Main/Defaults/HardDefaults on FiFo.
+// GetParam returns the value for key, resolved from instance, Main, Defaults, and HardDefaults in order.
 func (s *Shoutrrr) GetParam(key string) string {
 	return util.FirstNonDefaultWithEnv(
 		s.Params[key],
@@ -82,19 +82,19 @@ func (s *Shoutrrr) GetDelay() string {
 	return delay
 }
 
-// GetDelayDuration returns the time.Duration to wait before sending this notification.
+// GetDelayDuration resolves the send delay as a time.Duration.
 func (s *Shoutrrr) GetDelayDuration() (duration time.Duration) {
 	duration, _ = time.ParseDuration(s.GetDelay())
 	return
 }
 
-// GetMaxTries returns the max number of tries allowed for this notification.
+// GetMaxTries resolves the maximum number of send attempts.
 func (s *Shoutrrr) GetMaxTries() uint8 {
 	tries, _ := strconv.ParseUint(s.GetOption("max_tries"), 10, 8)
 	return uint8(tries)
 }
 
-// GetOption returns the value for key, or an empty string if it is not present.
+// getOption returns the value for key, or an empty string if not present.
 func (b *Base) getOption(key string) string {
 	return b.Options[key]
 }
@@ -104,7 +104,7 @@ func (b *Base) setOption(key, value string) {
 	b.Options[key] = value
 }
 
-// getURLField returns the value for key, or an empty string if it is not present.
+// getURLField returns the value for key, or an empty string if not present.
 func (b *Base) getURLField(key string) string {
 	return b.URLFields[key]
 }
@@ -114,7 +114,7 @@ func (b *Base) setURLField(key, value string) {
 	b.URLFields[key] = value
 }
 
-// GetParam returns the value for key, or an empty string if it is not present.
+// GetParam returns the value for key, or an empty string if not present.
 func (b *Base) GetParam(key string) string {
 	return b.Params[key]
 }

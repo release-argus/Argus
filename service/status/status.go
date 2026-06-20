@@ -66,8 +66,8 @@ type Status struct {
 	deployedVersionTimestamp string       // UTC timestamp of latest DeployedVersion change.
 	latestVersionTimestamp   string       // UTC timestamp of latest LatestVersion change.
 	lastQueried              string       // UTC timestamp of latest LatestVersion query.
-	regexMissesContent       uint         // Counter for the amount of regex misses on the URL content.
-	regexMissesVersion       uint         // Counter for the amount of regex misses on the version.
+	regexMissesContent       uint         // Counter for the number of regex misses on the URL content.
+	regexMissesVersion       uint         // Counter for the number of regex misses on the version.
 	Fails                    Fails        // Track the Notify/WebHook fails.
 	deleting                 bool         // Flag to indicate undergoing deletion.
 }
@@ -243,7 +243,7 @@ func (s *Status) Init(
 	s.refreshServiceInfo()
 }
 
-// SetAnnounceChannel will set the AnnounceChannel.
+// SetAnnounceChannel sets the AnnounceChannel.
 func (s *Status) SetAnnounceChannel(channel chan []byte) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -257,26 +257,10 @@ func (s *Status) RefreshServiceInfo() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.ServiceInfo.Icon = util.TemplateString(
-		s.Dashboard.GetIcon(),
-		s.ServiceInfo,
-	)
-
-	s.ServiceInfo.IconLinkTo = util.TemplateString(
-		s.Dashboard.GetIconLinkTo(),
-		s.ServiceInfo,
-	)
-
-	s.ServiceInfo.WebURL = util.TemplateString(
-		s.Dashboard.GetWebURL(),
-		s.ServiceInfo,
-	)
+	s.refreshServiceInfo()
 }
 
-// refreshServiceInfo updates the ServiceInfo struct with the latest values.
-// It uses the dashboard options to set the Icon, IconLinkTo, and WebURL fields.
-//
-// This method must be called with the Status mutex already locked.
+// refreshServiceInfo is like [RefreshServiceInfo] but requires the Status mutex to already be held.
 func (s *Status) refreshServiceInfo() {
 	s.ServiceInfo.Icon = util.TemplateString(
 		s.Dashboard.GetIcon(),
@@ -294,7 +278,7 @@ func (s *Status) refreshServiceInfo() {
 	)
 }
 
-// ServiceInfo returns the ServiceInfo struct.
+// GetServiceInfo returns a snapshot of the current ServiceInfo.
 func (s *Status) GetServiceInfo() serviceinfo.ServiceInfo {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -310,7 +294,7 @@ func (s *Status) GetWebURL() string {
 	return s.ServiceInfo.WebURL
 }
 
-// LastQueried time of the LatestVersion.
+// LastQueried returns the timestamp of the most recent LatestVersion query.
 func (s *Status) LastQueried() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -318,7 +302,7 @@ func (s *Status) LastQueried() string {
 	return s.lastQueried
 }
 
-// SetLastQueried will update LastQueried to `t` (or now if `t` empty).
+// SetLastQueried sets LastQueried to t, or to the current UTC time if t is empty.
 func (s *Status) SetLastQueried(t string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -329,7 +313,7 @@ func (s *Status) SetLastQueried(t string) {
 	}
 }
 
-// SameVersions returns whether the Status has the same versions as `s`.
+// SameVersions reports whether the Status has the same versions as s.
 func (s *Status) SameVersions(s2 *Status) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -350,7 +334,7 @@ func (s *Status) ApprovedVersion() string {
 	return s.ServiceInfo.ApprovedVersion
 }
 
-// SetApprovedVersion will set .ApprovedVersion to `version`.
+// SetApprovedVersion sets ApprovedVersion to version.
 func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 	s.mu.Lock()
 
@@ -564,7 +548,7 @@ func (s *Status) RegexMissesVersion() uint {
 	return s.regexMissesVersion
 }
 
-// ResetRegexMisses (the counters for RegEx misses).
+// ResetRegexMisses resets the content and version regex miss counters to zero.
 func (s *Status) ResetRegexMisses() {
 	s.mu.Lock()
 	{
@@ -574,7 +558,7 @@ func (s *Status) ResetRegexMisses() {
 	s.mu.Unlock()
 }
 
-// SetDeleting will set `deleting` flag.
+// SetDeleting marks the service as undergoing deletion.
 func (s *Status) SetDeleting() {
 	s.mu.Lock()
 	{
@@ -591,7 +575,7 @@ func (s *Status) Deleting() bool {
 	return s.deleting
 }
 
-// SendAnnounce payload to the AnnounceChannel.
+// SendAnnounce sends payload to the AnnounceChannel if the service is not being deleted.
 func (s *Status) SendAnnounce(payload []byte) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -612,7 +596,7 @@ func (s *Status) sendDatabase(payload *dbtype.Message) {
 	s.DatabaseChannel <- *payload
 }
 
-// SendSave request to the SaveChannel.
+// SendSave sends a save request to the SaveChannel if the service is not being deleted.
 func (s *Status) SendSave() {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -633,10 +617,7 @@ func setLatestVersionIsDeployedMetric(serviceInfo serviceinfo.ServiceInfo) {
 	)
 }
 
-// updateUpdatesCurrentMetric updates the Prometheus metric `UpdatesCurrent`
-// to reflect changes in the deployment state of the LatestVersion.
-// It compares the previous deployment state with the current state and adjusts the metric accordingly.
-// If the deployment state hasn't changed, no updates are made.
+// updateUpdatesCurrentMetric adjusts the UpdatesCurrent metric when the deployment state changes.
 func updateUpdatesCurrentMetric(previousServiceInfo, newServiceInfo serviceinfo.ServiceInfo) {
 	previousValue := metric.GetVersionDeployedState(previousServiceInfo)
 	newValue := metric.GetVersionDeployedState(newServiceInfo)
@@ -657,7 +638,7 @@ func (s *Status) InitMetrics() {
 	metric.SetUpdatesCurrent(1, metric.GetVersionDeployedState(serviceInfo))
 }
 
-// InitMetrics removes status-derived Prometheus metrics for the service.
+// DeleteMetrics removes status-derived Prometheus metrics for the service.
 func (s *Status) DeleteMetrics() {
 	metric.DeletePrometheusGauge(
 		metric.LatestVersionIsDeployed,

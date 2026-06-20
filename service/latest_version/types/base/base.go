@@ -156,17 +156,17 @@ func (l *Lookup) CheckValues() error {
 	return errors.Join(errs...)
 }
 
-// InheritSecrets will inherit secrets from `fromLookup` if the values should query the same data.
+// InheritSecrets copies secrets from fromLookup if both query the same data.
 func (l *Lookup) InheritSecrets(fromLookup BaseInterface, secretRefs *shared.VSecretRef) {
 	l.inheritRequireTokens(fromLookup)
 }
 
-// Query will query the service for the latest version.
+// Query queries the service for the latest version.
 func (l *Lookup) Query(_ bool, _ logx.LogFrom) (bool, error) {
 	return false, errors.New("not implemented")
 }
 
-// inheritRequireTokens will inherit the `require` tokens from `fromLookup`.
+// inheritRequireTokens copies require tokens from fromLookup.
 func (l *Lookup) inheritRequireTokens(fromLookup BaseInterface) {
 	require := l.GetRequire()
 	fromRequire := fromLookup.GetRequire()

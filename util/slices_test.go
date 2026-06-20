@@ -370,19 +370,19 @@ func TestRemoveFirst_Int(t *testing.T) {
 		hadInt, wantInt []int
 	}{
 		{
-			name:      "one occurrence (first)",
+			name:      "one occurrence/first",
 			removeInt: 3,
 			hadInt:    []int{3, 2, 1},
 			wantInt:   []int{2, 1},
 		},
 		{
-			name:      "one occurrence (middle)",
+			name:      "one occurrence/middle",
 			removeInt: 2,
 			hadInt:    []int{3, 2, 1},
 			wantInt:   []int{3, 1},
 		},
 		{
-			name:      "one occurrence (end)",
+			name:      "one occurrence/end",
 			removeInt: 1,
 			hadInt:    []int{3, 2, 1},
 			wantInt:   []int{3, 2},

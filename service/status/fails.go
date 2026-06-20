@@ -55,7 +55,7 @@ func (f *failsBase) Copy() *failsBase {
 	}
 }
 
-// Get the fail status of this index.
+// Get returns the fail status of the given index.
 func (f *failsBase) Get(index string) *bool {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
@@ -63,7 +63,7 @@ func (f *failsBase) Get(index string) *bool {
 	return f.fails[index]
 }
 
-// Set the fail state of this index.
+// Set updates the fail state for the given index.
 func (f *failsBase) Set(index string, state *bool) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -85,7 +85,7 @@ func (f *failsBase) AllPassed() bool {
 	return true
 }
 
-// Reset of the indexes.
+// Reset sets the fail state of all indexes to nil.
 func (f *failsBase) Reset() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -95,7 +95,7 @@ func (f *failsBase) Reset() {
 	}
 }
 
-// Length of the failsBase.
+// Length returns the number of tracked entries.
 func (f *failsBase) Length() int {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
@@ -103,7 +103,7 @@ func (f *failsBase) Length() int {
 	return len(f.fails)
 }
 
-// String representation of failsBase.
+// String returns a string representation of the fail states.
 func (f *failsBase) String(prefix string) string {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
@@ -145,7 +145,7 @@ func (f *FailsCommand) Init(length int) {
 	f.fails = make([]*bool, length)
 }
 
-// Get the fail status of the Command at this index.
+// Get returns the fail status of the Command at the given index.
 func (f *FailsCommand) Get(index int) *bool {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
@@ -153,7 +153,7 @@ func (f *FailsCommand) Get(index int) *bool {
 	return f.fails[index]
 }
 
-// Set the fail status of the Command at this index.
+// Set updates the fail status of the Command at the given index.
 func (f *FailsCommand) Set(index int, state bool) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -185,8 +185,7 @@ func (f *FailsCommand) Reset() {
 	}
 }
 
-// Length returns the amount of elements in the fails slice.
-// in a thread-safe manner.
+// Length returns the number of elements in the fails slice.
 func (f *FailsCommand) Length() int {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
@@ -194,7 +193,7 @@ func (f *FailsCommand) Length() int {
 	return len(f.fails)
 }
 
-// String representation of FailsCommand.
+// String returns a string representation of the fail states.
 func (f *FailsCommand) String(prefix string) string {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
@@ -271,7 +270,7 @@ func (f *FailsWebHook) NextRunnable(index string) time.Time {
 	return f.nextRunnable[index]
 }
 
-// SetNextRunnable will set the `time` that the index can be re-run.
+// SetNextRunnable updates the time at which the given index can be re-run.
 func (f *FailsWebHook) SetNextRunnable(index string, time time.Time) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

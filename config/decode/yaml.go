@@ -46,7 +46,7 @@ func NewYAMLEncoder(w io.Writer, spaces int) *yaml.Encoder {
 	return yaml.NewEncoder(w, opts...)
 }
 
-// ToYAMLString returns a YAML string representation of `data`.
+// ToYAMLString converts input to its YAML string representation with the given prefix.
 func ToYAMLString(input any, prefix string) string {
 	b, err := yaml.MarshalWithOptions(input, YAMLMarshalOpts...)
 	if err != nil {

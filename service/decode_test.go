@@ -42,9 +42,20 @@ func TestDecodeServices(t *testing.T) {
 		errRegex     string
 	}{
 		{
-			name:     "JSON/empty",
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				^service:
+					jsontext:
+						unexpected EOF$`,
+			),
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
-			data:     "",
+			data:     "{}",
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
@@ -52,13 +63,6 @@ func TestDecodeServices(t *testing.T) {
 			name:     "YAML/empty",
 			format:   "yaml",
 			data:     "",
-			want:     "{}\n",
-			errRegex: `^$`,
-		},
-		{
-			name:     "JSON/empty object",
-			format:   "json",
-			data:     "{}",
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
@@ -290,7 +294,7 @@ func TestDecodeServices(t *testing.T) {
 
 			tc.errRegex = strings.ReplaceAll(tc.errRegex, "__name__", tc.name)
 
-			_, _, testErr := test.AssertDecode(
+			if _, _, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (Services, error) {
 					return DecodeServices(
@@ -304,8 +308,7 @@ func TestDecodeServices(t *testing.T) {
 				tc.errRegex,
 				packageName,
 				"DecodeServices",
-			)
-			if testErr != nil {
+			); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})
@@ -366,11 +369,15 @@ func TestDecodeService(t *testing.T) {
 		errRegex          string
 	}{
 		{
-			name:     "JSON/empty",
-			format:   "json",
-			data:     "",
-			want:     "{}\n",
-			errRegex: `^$`,
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				^"__name__":
+					jsontext:
+						unexpected EOF$`,
+			),
 		},
 		{
 			name:     "JSON/empty object",
@@ -387,7 +394,7 @@ func TestDecodeService(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "JSON/invalid",
+			name:   "JSON/invalid/format",
 			format: "json",
 			data:   `{invalid: json}`,
 			errRegex: test.TrimYAML(`
@@ -396,14 +403,14 @@ func TestDecodeService(t *testing.T) {
 			),
 		},
 		{
-			name:     "JSON/invalid - empty ID",
+			name:     "JSON/invalid/empty ID",
 			format:   "json",
 			data:     `{invalid: json}`,
 			id:       test.Ptr(""),
 			errRegex: `invalid character`,
 		},
 		{
-			name:   "JSON/latest_version: valid type - github",
+			name:   "JSON/latest_version/github/bare",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -419,7 +426,7 @@ func TestDecodeService(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/latest_version, valid type - github (filled)",
+			name:   "JSON/latest_version/github/filled",
 			format: "json",
 			data: test.TrimJSON(`{
 				"name": "foo",
@@ -428,7 +435,7 @@ func TestDecodeService(t *testing.T) {
 					"url": "` + test.ArgusGitHubRepo + `",
 					"require": {
 						"docker": {
-							"image": "releaseargus/argus"
+							"image": "test/app"
 						}
 					},
 					"access_token": "foo",
@@ -452,13 +459,13 @@ func TestDecodeService(t *testing.T) {
 							regex: .*
 					require:
 						docker:
-							image: releaseargus/argus
+							image: test/app
 					access_token: foo
 					use_prerelease: true
 			`),
 		},
 		{
-			name:   "JSON/latest_version, github - invalid",
+			name:   "JSON/latest_version/github/invalid/format",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -473,7 +480,7 @@ func TestDecodeService(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSON/latest_version, github - invalid, empty ID",
+			name:   "JSON/latest_version/github/invalid/empty ID",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -488,7 +495,7 @@ func TestDecodeService(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSON/latest_version, valid type - url",
+			name:   "JSON/latest_version/url/bare",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -504,7 +511,7 @@ func TestDecodeService(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/latest_version, valid type - url (full)",
+			name:   "JSON/latest_version/url/full",
 			format: "json",
 			data: test.TrimJSON(`{
 				"name": "bar",
@@ -513,7 +520,7 @@ func TestDecodeService(t *testing.T) {
 					"url": "https://example.com",
 					"require": {
 						"docker": {
-							"image": "releaseargus/argus"
+							"image": "test/app"
 						}
 					},
 					"allow_invalid_certs": true,
@@ -533,12 +540,12 @@ func TestDecodeService(t *testing.T) {
 							regex: .*
 					require:
 						docker:
-							image: releaseargus/argus
+							image: test/app
 					allow_invalid_certs: true
 			`),
 		},
 		{
-			name:   "JSON/latest_version, url - invalid",
+			name:   "JSON/latest_version/url/invalid",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -553,7 +560,7 @@ func TestDecodeService(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSONL latest_version, valid type - web (url alias)",
+			name:   "JSON/latest_version/url/web (url alias)",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -569,7 +576,7 @@ func TestDecodeService(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/latest_version: unknown type",
+			name:   "JSON/latest_version/unknown type",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -583,7 +590,7 @@ func TestDecodeService(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSON/latest_version: missing type",
+			name:   "JSON/latest_version/missing type",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -598,7 +605,7 @@ func TestDecodeService(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSON/latest_version, invalid type format",
+			name:   "JSON/latest_version/invalid type format",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -612,14 +619,14 @@ func TestDecodeService(t *testing.T) {
 			),
 		},
 		{
-			name:     "JSON/latest_version=null, no deployed_version",
+			name:     "JSON/latest_version/null - no deployed_version",
 			format:   "json",
 			data:     `{"latest_version": null}`,
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
-			name:   "JSON/no latest_version, have deployed_version",
+			name:   "JSON/no latest_version/have deployed_version",
 			format: "json",
 			data: test.TrimJSON(`{
 				"deployed_version": {
@@ -636,7 +643,7 @@ func TestDecodeService(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/deployed_version, valid type - url",
+			name:   "JSON/deployed_version/types/url/bare",
 			format: "json",
 			data: test.TrimJSON(`{
 				"deployed_version": {
@@ -652,7 +659,7 @@ func TestDecodeService(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/deployed_version, valid type - url (full)",
+			name:   "JSON/deployed_version/types/url/full",
 			format: "json",
 			data: test.TrimJSON(`{
 				"name": "foo",
@@ -696,7 +703,7 @@ func TestDecodeService(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/deployed_version, valid type - web (url alias)",
+			name:   "JSON/deployed_version/types/url/web (url alias)",
 			format: "json",
 			data: test.TrimJSON(`{
 				"deployed_version": {
@@ -712,7 +719,7 @@ func TestDecodeService(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/deployed_version, url - invalid",
+			name:   "JSON/deployed_version/types/url/invalid",
 			format: "json",
 			data: test.TrimJSON(`{
 				"deployed_version": {
@@ -727,7 +734,52 @@ func TestDecodeService(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSON/deployed_version, unknown type",
+			name:   "JSON/deployed_version/types/manual/bare",
+			format: "json",
+			data: test.TrimJSON(`{
+				"deployed_version": {
+					"type": "manual"
+				}
+			}`),
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				deployed_version:
+					type: manual
+			`),
+		},
+		{
+			name:   "JSON/deployed_version/types/manual/full",
+			format: "json",
+			data: test.TrimJSON(`{
+				"deployed_version": {
+					"type": "manual",
+					"version": "1.2.3"
+				}
+			}`),
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				deployed_version:
+					type: manual
+					version: 1.2.3
+			`),
+		},
+		{
+			name:   "JSON/deployed_version/types/manual/invalid",
+			format: "json",
+			data: test.TrimJSON(`{
+				"deployed_version": {
+					"type": "manual",
+					"version": ["https://example.com"]
+				}
+			}`),
+			errRegex: test.TrimYAML(`
+				^"__name__":
+					deployed_version:
+						json: .*unmarshal.*$`,
+			),
+		},
+		{
+			name:   "JSON/deployed_version/unknown type",
 			format: "json",
 			data: test.TrimJSON(`{
 				"deployed_version": {
@@ -741,7 +793,7 @@ func TestDecodeService(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSON/deployed_version, missing type",
+			name:   "JSON/deployed_version/missing type",
 			format: "json",
 			data: test.TrimJSON(`{
 				"deployed_version": {
@@ -756,7 +808,7 @@ func TestDecodeService(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSON/deployed_version, invalid type format",
+			name:   "JSON/deployed_version/invalid type format",
 			format: "json",
 			data: test.TrimJSON(`{
 				"deployed_version": {
@@ -770,14 +822,14 @@ func TestDecodeService(t *testing.T) {
 			),
 		},
 		{
-			name:     "JSON/no latest_version, deployed_version=null",
+			name:     "JSON/no latest_version/deployed_version - null",
 			format:   "json",
 			data:     `{"deployed_version": null}`,
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
-			name:   "JSON/have latest_version, no deployed_version",
+			name:   "JSON/have latest_version - no deployed_version",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -793,7 +845,7 @@ func TestDecodeService(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/dashboard.tags - []string",
+			name:   "JSON/dashboard.tags/[]string",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -819,7 +871,7 @@ func TestDecodeService(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/dashboard.tags - string",
+			name:   "JSON/dashboard.tags/string",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -841,7 +893,7 @@ func TestDecodeService(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/dashboard.tags - invalid",
+			name:   "JSON/dashboard.tags/invalid",
 			format: "json",
 			data: test.TrimJSON(`{
 				"dashboard": {
@@ -926,7 +978,7 @@ func TestApplyOverrides(t *testing.T) {
 		errRegex string
 	}{
 		{
-			name: "no overrides - github",
+			name: "no overrides/github",
 			args: args{
 				format: "yaml",
 				data:   "",
@@ -936,7 +988,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "no overrides - url",
+			name: "no overrides/url",
 			args: args{
 				format: "yaml",
 				data:   "",
@@ -946,7 +998,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "null overrides = remove",
+			name: "null overrides",
 			args: args{
 				format: "yaml",
 				data:   "null",
@@ -973,7 +1025,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "nil target creates fresh - error",
+			name: "nil target returns create error",
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -990,7 +1042,7 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "fail to extract 'latest_version'",
+			name: "latest_version/fail to extract",
 			args: args{
 				format: "yaml",
 				data: test.TrimJSON(`{
@@ -1006,7 +1058,7 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "latest_version - change fields",
+			name: "latest_version/change fields",
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -1040,7 +1092,7 @@ func TestApplyOverrides(t *testing.T) {
 								"b":
 							`+whtest.WebHook(t, false, false, true).String("    ")+`
 						`)),
-						"latest_version - change fields",
+						"latest_version/change fields",
 						svcCfg, notifyCfg, whCfg,
 					)
 				}),
@@ -1070,7 +1122,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "latest_version - invalid field types",
+			name: "latest_version/invalid field types",
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -1084,19 +1136,19 @@ func TestApplyOverrides(t *testing.T) {
 								type: url
 								url: "https://example.com"
 						`)),
-						"latest_version - invalid field types",
+						"latest_version/invalid field types",
 						svcCfg, notifyCfg, whCfg,
 					)
 				}),
 			},
 			errRegex: test.TrimYAML(`
-				"latest_version - invalid field types":
+				"latest_version/invalid field types":
 					latest_version:
 						[^\s]+ .*unmarshal.*`,
 			),
 		},
 		{
-			name: "deployed_version - change fields",
+			name: "deployed_version/change fields",
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -1134,7 +1186,7 @@ func TestApplyOverrides(t *testing.T) {
 								"b":
 							`+whtest.WebHook(t, false, false, true).String("    ")+`
 						`)),
-						"deployed_version - change fields",
+						"deployed_version/change fields",
 						svcCfg, notifyCfg, whCfg,
 					)
 				}),
@@ -1169,7 +1221,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "deployed_version - invalid field types",
+			name: "deployed_version/invalid field types",
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -1180,13 +1232,13 @@ func TestApplyOverrides(t *testing.T) {
 				target: test.Must(t, func() (*Service, error) {
 					return DecodeService(
 						"yaml", nil,
-						"deployed_version - invalid field types",
+						"deployed_version/invalid field types",
 						svcCfg, notifyCfg, whCfg,
 					)
 				}),
 			},
 			errRegex: test.TrimYAML(`
-				^"deployed_version - invalid field types":
+				^"deployed_version/invalid field types":
 					deployed_version:
 						[^\s]+ .*unmarshal.*`,
 			),

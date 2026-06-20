@@ -26,7 +26,7 @@ import (
 
 var pongoMu = sync.Mutex{}
 
-// TemplateString with pongo2 and service info.
+// TemplateString applies Django templating to template using service info.
 func TemplateString(template string, info serviceinfo.ServiceInfo) string {
 	// If the string does not represent a Jinja template.
 	if !strings.Contains(template, "{") {

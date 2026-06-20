@@ -64,7 +64,7 @@ type Shoutrrr struct {
 	Failed        *status.FailsShoutrrr `json:"-" yaml:"-"` // Whether the last send attempt failed.
 	ServiceStatus *status.Status        `json:"-" yaml:"-"` // Status of the Service (used for templating commands).
 
-	Main         *Defaults `json:"-" yaml:"-"` // The Shoutrrr that this Shoutrrr is calling (and may override parts of).
+	Main         *Defaults `json:"-" yaml:"-"` // The root Shoutrrr configuration that this instance may partially override.
 	Defaults     *Defaults `json:"-" yaml:"-"` // Default values.
 	HardDefaults *Defaults `json:"-" yaml:"-"` // Hardcoded default values.
 }
@@ -136,7 +136,7 @@ func (s *Shoutrrrs) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// New Shoutrrr.
+// New returns a new Shoutrrr.
 func New(
 	failed *status.FailsShoutrrr,
 	id string,
@@ -260,7 +260,7 @@ func (s *Shoutrrrs) IsZero() bool {
 	return len(*s) == 0
 }
 
-// IsDefault reports whether the receiver is referring to a default configuration for all fields.
+// IsDefault reports whether all Shoutrrr fields are at their default (zero) values.
 func (s *Shoutrrr) IsDefault() bool {
 	return len(s.Options) == 0 &&
 		len(s.URLFields) == 0 &&

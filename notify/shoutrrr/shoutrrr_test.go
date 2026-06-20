@@ -38,7 +38,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 		want                       string
 	}{
 		{
-			name:  "bark - base",
+			name:  "bark/base",
 			sType: "bark",
 			want:  "bark://:KEY@HOST:8080",
 			urlFields: map[string]string{
@@ -48,7 +48,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "bark - base + path",
+			name:  "bark/base + path",
 			sType: "bark",
 			want:  "bark://:KEY@HOST:8080/shazam",
 			urlFields: map[string]string{
@@ -59,7 +59,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "discord - base",
+			name:  "discord",
 			sType: "discord",
 			want:  "discord://TOKEN@WEBHOOKID",
 			urlFields: map[string]string{
@@ -68,7 +68,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "smtp - base",
+			name:  "smtp/base",
 			sType: "smtp",
 			want:  "smtp://HOST/?fromaddress=FROMADDRESS&toaddresses=TO_ADDRESS1,TO_ADDRESS2",
 			urlFields: map[string]string{
@@ -80,7 +80,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "smtp - base + login",
+			name:  "smtp/base + login",
 			sType: "smtp",
 			want:  "smtp://USERNAME:PASSWORD@HOST/?fromaddress=FROMADDRESS&toaddresses=TO_ADDRESS1,TO_ADDRESS2",
 			urlFields: map[string]string{
@@ -94,7 +94,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "smtp - base + login + port",
+			name:  "smtp/base + login + port",
 			sType: "smtp",
 			want:  "smtp://USERNAME:PASSWORD@HOST:587/?fromaddress=FROMADDRESS&toaddresses=TO_ADDRESS1,TO_ADDRESS2",
 			urlFields: map[string]string{
@@ -109,7 +109,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "gotify - base",
+			name:  "gotify/base",
 			sType: "gotify",
 			want:  "gotify://HOST/TOKEN",
 			urlFields: map[string]string{
@@ -117,7 +117,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "gotify - base + port",
+			name:  "gotify/base + port",
 			sType: "gotify",
 			want:  "gotify://HOST:8443/TOKEN",
 			urlFields: map[string]string{
@@ -127,7 +127,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "gotify - base + port + path",
+			name:  "gotify/base + port + path",
 			sType: "gotify",
 			want:  "gotify://HOST:8443/PATH/TOKEN",
 			urlFields: map[string]string{
@@ -138,7 +138,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "googlechat - base",
+			name:  "googlechat",
 			sType: "googlechat",
 			want:  "googlechat://RAW",
 			urlFields: map[string]string{
@@ -146,7 +146,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "ifttt - base",
+			name:  "ifttt",
 			sType: "ifttt",
 			want:  "ifttt://WEBHOOKID/?events=EVENT1,EVENT2",
 			urlFields: map[string]string{
@@ -157,7 +157,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "join - base",
+			name:  "join",
 			sType: "join",
 			want:  "join://shoutrrr:APIKEY@join/?devices=DEVICE1,DEVICE2",
 			urlFields: map[string]string{
@@ -168,7 +168,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "mattermost - base",
+			name:  "mattermost/base",
 			sType: "mattermost",
 			want:  "mattermost://HOST/TOKEN",
 			urlFields: map[string]string{
@@ -177,7 +177,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "mattermost - base + username",
+			name:  "mattermost/base + username",
 			sType: "mattermost",
 			want:  "mattermost://USERNAME@HOST/TOKEN",
 			urlFields: map[string]string{
@@ -187,7 +187,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "mattermost - base + username + port",
+			name:  "mattermost/base + username + port",
 			sType: "mattermost",
 			want:  "mattermost://USERNAME@HOST:8443/TOKEN",
 			urlFields: map[string]string{
@@ -198,7 +198,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "matrix - base",
+			name:  "matrix/base",
 			sType: "matrix",
 			want:  "matrix://:PASSWORD@HOST/",
 			urlFields: map[string]string{
@@ -207,7 +207,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "matrix - base + user",
+			name:  "matrix/base + user",
 			sType: "matrix",
 			want:  "matrix://USER:PASSWORD@HOST/",
 			urlFields: map[string]string{
@@ -217,7 +217,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "matrix - base + user + port",
+			name:  "matrix/base + user + port",
 			sType: "matrix",
 			want:  "matrix://USER:PASSWORD@HOST:8443/",
 			urlFields: map[string]string{
@@ -228,7 +228,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "matrix - base + user + port + rooms",
+			name:  "matrix/base + user + port + rooms",
 			sType: "matrix",
 			want:  "matrix://USER:PASSWORD@HOST:8443/?rooms=ROOMS",
 			urlFields: map[string]string{
@@ -242,7 +242,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "matrix - base + user + port + disabletls",
+			name:  "matrix/base + user + port + disabletls",
 			sType: "matrix",
 			want:  "matrix://USER:PASSWORD@HOST:8443/?disableTLS=yes",
 			urlFields: map[string]string{
@@ -256,7 +256,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "matrix - base + user + port + rooms + disabletls",
+			name:  "matrix/base + user + port + rooms + disabletls",
 			sType: "matrix",
 			want:  "matrix://USER:PASSWORD@HOST:8443/?rooms=ROOMS&disableTLS=yes",
 			urlFields: map[string]string{
@@ -271,7 +271,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "ntfy - base",
+			name:  "ntfy/base",
 			sType: "ntfy",
 			want:  "ntfy://:@/TOPIC",
 			urlFields: map[string]string{
@@ -279,7 +279,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "ntfy - base + username",
+			name:  "ntfy/base + username",
 			sType: "ntfy",
 			want:  "ntfy://USER:@/TOPIC",
 			urlFields: map[string]string{
@@ -288,7 +288,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "ntfy - base + username + password",
+			name:  "ntfy/base + username + password",
 			sType: "ntfy",
 			want:  "ntfy://USER:PASS@/TOPIC",
 			urlFields: map[string]string{
@@ -298,7 +298,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "ntfy - base + username + password + host",
+			name:  "ntfy/base + username + password + host",
 			sType: "ntfy",
 			want:  "ntfy://USER:PASS@HOST/TOPIC",
 			urlFields: map[string]string{
@@ -309,7 +309,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "ntfy - base + username + password + host + port",
+			name:  "ntfy/base + username + password + host + port",
 			sType: "ntfy",
 			want:  "ntfy://USER:PASS@HOST:8443/TOPIC",
 			urlFields: map[string]string{
@@ -321,7 +321,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "opsgenie - base",
+			name:  "opsgenie/base",
 			sType: "opsgenie",
 			want:  "opsgenie://DEFAULT_HOST/APIKEY",
 			urlFields: map[string]string{
@@ -330,7 +330,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "opsgenie - base + port",
+			name:  "opsgenie/base + port",
 			sType: "opsgenie",
 			want:  "opsgenie://DEFAULT_HOST:8443/APIKEY",
 			urlFields: map[string]string{
@@ -340,7 +340,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "pushbullet - base",
+			name:  "pushbullet/base",
 			sType: "pushbullet",
 			want:  "pushbullet://TOKEN/TARGETS",
 			urlFields: map[string]string{
@@ -349,7 +349,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "pushover - base",
+			name:  "pushover/base",
 			sType: "pushover",
 			want:  "pushover://shoutrrr:TOKEN@USER/",
 			urlFields: map[string]string{
@@ -358,7 +358,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "pushover - base + devices",
+			name:  "pushover/base + devices",
 			sType: "pushover",
 			want:  "pushover://shoutrrr:TOKEN@USER/?devices=DEVICES",
 			urlFields: map[string]string{
@@ -370,7 +370,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "rocketchat - base",
+			name:  "rocketchat/base",
 			sType: "rocketchat",
 			want:  "rocketchat://HOST/TOKENA/TOKENB/CHANNEL",
 			urlFields: map[string]string{
@@ -381,7 +381,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "rocketchat - base + port",
+			name:  "rocketchat/base + port",
 			sType: "rocketchat",
 			want:  "rocketchat://HOST:8443/TOKENA/TOKENB/CHANNEL",
 			urlFields: map[string]string{
@@ -393,7 +393,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "slack - base",
+			name:  "slack",
 			sType: "slack",
 			want:  "slack://TOKEN@CHANNEL",
 			urlFields: map[string]string{
@@ -402,7 +402,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "teams - base",
+			name:  "teams",
 			sType: "teams",
 			want:  "teams://GROUP@TENANT/ALTID/GROUPOWNER?host=HOST",
 			urlFields: map[string]string{
@@ -416,7 +416,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "telegram - base",
+			name:  "telegram",
 			sType: "telegram",
 			want:  "telegram://TOKEN@telegram?chats=CHATS",
 			urlFields: map[string]string{
@@ -427,7 +427,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "zulip - base",
+			name:  "zulip/base",
 			sType: "zulip",
 			want:  "zulip://BOTMAIL:BOTKEY@HOST",
 			urlFields: map[string]string{
@@ -437,7 +437,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "zulip - base + token",
+			name:  "zulip/base + token",
 			sType: "zulip",
 			want:  "zulip://BOTMAIL:BOTKEY@HOST?topic=TOPIC",
 			urlFields: map[string]string{
@@ -450,7 +450,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "zulip - base + stream",
+			name:  "zulip/base + stream",
 			sType: "zulip",
 			want:  "zulip://BOTMAIL:BOTKEY@HOST?stream=STREAM",
 			urlFields: map[string]string{
@@ -463,7 +463,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "zulip - base + token + stream",
+			name:  "zulip/base + token + stream",
 			sType: "zulip",
 			want:  "zulip://BOTMAIL:BOTKEY@HOST?stream=STREAM&topic=TOPIC",
 			urlFields: map[string]string{
@@ -477,7 +477,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "generic - base",
+			name:  "generic/base",
 			sType: "generic",
 			want:  "generic://HOST",
 			urlFields: map[string]string{
@@ -485,7 +485,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "generic - base + headers",
+			name:  "generic/base + headers",
 			sType: "generic",
 			want:  "generic://HOST?@contentType=val2&@fooBar=val1",
 			urlFields: map[string]string{
@@ -494,7 +494,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "generic - base + json_payload_vars",
+			name:  "generic/base + json_payload_vars",
 			sType: "generic",
 			want:  "generic://HOST?$key1=val1",
 			urlFields: map[string]string{
@@ -503,7 +503,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "generic - base + query_vars",
+			name:  "generic/base + query_vars",
 			sType: "generic",
 			want:  "generic://HOST?foo=bar",
 			urlFields: map[string]string{
@@ -512,7 +512,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "generic - base + headers + json_payload_vars + query_vars",
+			name:  "generic/base + headers + json_payload_vars + query_vars",
 			sType: "generic",
 			want:  "generic://HOST?@contentType=val2&@fooBar=val1&$key1=val1&foo=bar",
 			urlFields: map[string]string{
@@ -523,7 +523,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "shoutrrr - base",
+			name:  "shoutrrr",
 			sType: "shoutrrr",
 			want:  "RAW",
 			urlFields: map[string]string{
@@ -877,7 +877,7 @@ func TestShoutrrr_ParseSend(t *testing.T) {
 			errCounts:   map[string]int{},
 		},
 		{
-			name: "errors, service not deleting",
+			name: "errors/service not deleting",
 			errs: []error{
 				errors.New("error1"),
 				errors.New("error2"),
@@ -891,7 +891,7 @@ func TestShoutrrr_ParseSend(t *testing.T) {
 			},
 		},
 		{
-			name: "errors, service deleting",
+			name: "errors/service deleting",
 			errs: []error{
 				errors.New("error1"),
 				errors.New("error2"),

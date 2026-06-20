@@ -50,7 +50,7 @@ func TestTemplate_String(t *testing.T) {
 			serviceInfo: svcInfo,
 		},
 		{
-			name:     "valid django template with defaulting - had value",
+			name:     "valid django template with defaulting/had value",
 			template: "{{ service_name | default:service_id }} - {{ version }} released",
 			want: fmt.Sprintf(
 				"%s - %s released",
@@ -59,7 +59,7 @@ func TestTemplate_String(t *testing.T) {
 			serviceInfo: svcInfo,
 		},
 		{
-			name:     "valid django template with defaulting - had no value (empty string)",
+			name:     "valid django template with defaulting/had no value/empty string",
 			template: "{{ service_name | default:service_id }} - {{ version }} released",
 			want: fmt.Sprintf(
 				"%s - %s released",
@@ -74,7 +74,7 @@ func TestTemplate_String(t *testing.T) {
 			},
 		},
 		{
-			name:     "valid django template with defaulting - had no value (nil)",
+			name:     "valid django template with defaulting/had no value/nil",
 			template: "{{ service_name | default:service_id }} - {{ web_url }}",
 			want:     fmt.Sprintf(" - %s", svcInfo.WebURL),
 			serviceInfo: serviceinfo.ServiceInfo{

@@ -79,7 +79,7 @@ func Decode(
 	return field, nil
 }
 
-// ApplyOverrides applies format-encoded overrides to a [Lookup] object.
+// ApplyOverrides applies format-encoded overrides to target.
 // If the target is nil, a new [Lookup] is created.
 func ApplyOverrides(
 	format string,

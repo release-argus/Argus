@@ -229,7 +229,7 @@ func (b *Base) CheckValues() (error, bool) {
 	return errors.Join(errs...), false
 }
 
-// Print the WebHooksDefaults.
+// Print writes the WebHooksDefaults to stdout with the given prefix.
 func (whd *WebHooksDefaults) Print(prefix string) {
 	if whd == nil || len(*whd) == 0 {
 		return
@@ -242,8 +242,7 @@ func (whd *WebHooksDefaults) Print(prefix string) {
 	)
 }
 
-// checkValuesHeaders validates the fields of the Headers struct,
-// returning errors encountered.
+// checkValuesHeaders validates the Header values, returning any errors encountered.
 func (b *Base) checkValuesHeaders() error {
 	var errs []error
 

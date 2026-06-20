@@ -182,13 +182,16 @@ func TestQuayRegistryDefaults_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*QuayRegistryDefaults, error) {
+					err := decode.Unmarshal(format, data, tc.registry)
+					return tc.registry, err
+				},
 				tc.format, tc.data,
-				tc.registry,
-				tc.errRegex,
 				func(v *QuayRegistryDefaults) string { return v.String("") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"QuayRegistryDefaults",
 			); testErr != nil {
@@ -357,13 +360,16 @@ func TestQuayRegistry_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*QuayRegistry, error) {
+					err := decode.Unmarshal(format, data, tc.registry)
+					return tc.registry, err
+				},
 				tc.format, tc.data,
-				tc.registry,
-				tc.errRegex,
 				func(v *QuayRegistry) string { return v.String("") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"QuayRegistry",
 			); testErr != nil {
@@ -623,7 +629,7 @@ func TestQuayRegistryDefaults_IsZero(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "only token",
+			name: "non-empty/Token",
 			registry: &QuayRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					Auth: &QuayAuthDefaults{
@@ -634,7 +640,7 @@ func TestQuayRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "only image",
+			name: "non-empty/Image",
 			registry: &QuayRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					ContainerDetail: ContainerDetail{
@@ -645,7 +651,7 @@ func TestQuayRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "only tag",
+			name: "non-empty/Tag",
 			registry: &QuayRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					ContainerDetail: ContainerDetail{
@@ -656,7 +662,7 @@ func TestQuayRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "only image/tag",
+			name: "non-empty/ContainerDetail",
 			registry: &QuayRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					ContainerDetail: ContainerDetail{
@@ -668,7 +674,7 @@ func TestQuayRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "full",
+			name: "non-empty/all",
 			registry: &QuayRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
 					ContainerDetail: ContainerDetail{
@@ -720,7 +726,7 @@ func TestQuayRegistry_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty - type",
+			name: "non-empty/Type",
 			data: &QuayRegistry{
 				CommonRegistry: CommonRegistry{
 					Type: "abc",
@@ -730,12 +736,25 @@ func TestQuayRegistry_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty - CommonRegistry",
+			name: "non-empty/CommonRegistry",
 			data: &QuayRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
 						Image: "i",
 					},
+					Auth: RegistryMap["quay"]().GetAuth(),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			data: &QuayRegistry{
+				CommonRegistry: CommonRegistry{
+					ContainerDetail: ContainerDetail{
+						Image: "i",
+					},
+					Type: "abc",
 					Auth: RegistryMap["quay"]().GetAuth(),
 				},
 			},
@@ -1109,11 +1128,12 @@ func TestQuayRegistry_NewRequest(t *testing.T) {
 		errRegex string
 	}{
 		{
-			name: "no image/tag",
+			name: "no image - tag",
 			registry: &QuayRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
 						Image: "",
+						Tag:   "",
 					},
 				},
 			},
@@ -1215,7 +1235,7 @@ func TestQuayAuthDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty (token)",
+			name: "non-empty",
 			data: &QuayAuthDefaults{Token: "t1"},
 			want: false,
 		},

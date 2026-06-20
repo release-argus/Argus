@@ -45,21 +45,21 @@ func TestLookup_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Type",
+			name: "non-empty/Type",
 			data: Lookup{
 				Type: "abc",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty URL",
+			name: "non-empty/URL",
 			data: Lookup{
 				URL: "https://example.com",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty URLCommands",
+			name: "non-empty/URLCommands",
 			data: Lookup{
 				URLCommands: filter.URLCommands{
 					{Type: "regex", Regex: "[0-9.]+"},
@@ -68,7 +68,7 @@ func TestLookup_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Require",
+			name: "non-empty/Require",
 			data: Lookup{
 				Require: &filter.Require{
 					RegexVersion: "[0-9.]+",
@@ -77,7 +77,7 @@ func TestLookup_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			data: Lookup{
 				Type: "abc",
 				URL:  "https://example.com",
@@ -501,12 +501,12 @@ func TestLookup_InheritSecrets(t *testing.T) {
 		inheritDockerToken bool
 	}{
 		{
-			name:               "no overrides - inherits token",
+			name:               "no overrides, inherits token",
 			dType:              "hub",
 			inheritDockerToken: true,
 		},
 		{
-			name:  "hub, differing Require.Docker.Image - does inherit token",
+			name:  "hub, differing Require.Docker.Image, does inherit token",
 			dType: "hub",
 			overrides: test.TrimYAML(`
 				require:
@@ -516,7 +516,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 			inheritDockerToken: true,
 		},
 		{
-			name:  "ghcr, differing Require.Docker.Image - does not inherit token",
+			name:  "ghcr, differing Require.Docker.Image, does not inherit token",
 			dType: "ghcr",
 			overrides: test.TrimYAML(`
 				require:
@@ -552,7 +552,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 					require:
 						docker:
 							type: `+tc.dType+`
-							image: releaseargus/argus
+							image: test/app
 							tag: '{{ version }}'
 							username: hub-username
 							token: hub-token
@@ -569,7 +569,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 					require:
 						docker:
 							type: `+tc.dType+`
-							image: releaseargus/argus
+							image: test/app
 							tag: '{{ version }}'
 							username: hub-username
 							token: hub-token

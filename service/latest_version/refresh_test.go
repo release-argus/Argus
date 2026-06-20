@@ -101,7 +101,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "invalid overrides JSON - Invalid JSON",
+			name: "invalid overrides JSON/Invalid JSON",
 			args: args{
 				lookup:             tLookup,
 				overrides:          []byte(`{"url": "}`),
@@ -114,7 +114,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			),
 		},
 		{
-			name: "invalid overrides JSON - different var type",
+			name: "invalid overrides JSON/different var type",
 			args: args{
 				lookup:             tLookup,
 				overrides:          []byte(`{"url": ["newType"]}`),
@@ -162,7 +162,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			),
 		},
 		{
-			name: "inherit Require.Docker.* - same Lookup.type",
+			name: "inherit Require.Docker.*, same Lookup.type, same Docker",
 			args: args{
 				lookup:             testLookup(t, "url", false),
 				overrides:          nil,
@@ -200,7 +200,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "don't inherit Require.Docker.* - same Lookup.type, different Docker.Type",
+			name: "don't inherit Require.Docker.*, same Lookup.type, different Docker.Type",
 			args: args{
 				lookup: testLookup(t, "url", false),
 				overrides: []byte(
@@ -244,7 +244,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "changing type only uses overrides, does inherit Docker if same type/image/auth",
+			name: "changing type only uses overrides, does inherit Docker if same type or image or auth",
 			args: args{
 				lookup: testLookup(t, "url", false),
 				overrides: []byte(

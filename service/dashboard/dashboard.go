@@ -209,7 +209,7 @@ func copyPtr[T any](v *T) *T {
 // # VALUES #
 // ##########
 
-// GetAutoApprove returns whether new releases are auto-approved.
+// GetAutoApprove resolves whether new releases are auto-approved.
 func (o *Options) GetAutoApprove() bool {
 	return *util.FirstNonDefault(
 		o.AutoApprove,

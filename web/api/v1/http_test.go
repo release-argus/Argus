@@ -180,7 +180,7 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 			method:     http.MethodPost,
 			path:       "notify/test",
 			wantStatus: http.StatusBadRequest,
-			wantBody:   `{"message":"name and/or name_previous are required"}`,
+			wantBody:   `{"message":"body required"}`,
 		},
 		"service_update": {
 			method:      http.MethodPut,
@@ -371,13 +371,13 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 			wantContent: "text/html",
 		},
 		{
-			name:        "catch-all route - file not found",
+			name:        "catch-all route/file not found",
 			route:       "/some/random/path",
 			wantStatus:  http.StatusNotFound,
 			wantContent: "text/plain",
 		},
 		{
-			name:        "catch-all route - file exists",
+			name:        "catch-all route/file exists",
 			route:       "/robots.txt",
 			wantStatus:  http.StatusOK,
 			wantContent: "text/plain",

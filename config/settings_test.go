@@ -41,7 +41,7 @@ func TestDataSettings_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty DatabaseFile",
+			name: "non-empty/DatabaseFile",
 			data: DataSettings{
 				DatabaseFile: "db.sqlite",
 			},
@@ -80,21 +80,21 @@ func TestLogSettings_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Timestamps",
+			name: "non-empty/Timestamps",
 			data: LogSettings{
 				Timestamps: test.Ptr(true),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Level",
+			name: "non-empty/Level",
 			data: LogSettings{
 				Level: "INFO",
 			},
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			data: LogSettings{
 				Timestamps: test.Ptr(true),
 				Level:      "INFO",
@@ -134,49 +134,49 @@ func TestWebSettings_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty ListenHost",
+			name: "non-empty/ListenHost",
 			data: WebSettings{
 				ListenHost: "0.0.0.0",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty ListenPort",
+			name: "non-empty/ListenPort",
 			data: WebSettings{
 				ListenPort: "8080",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty RoutePrefix",
+			name: "non-empty/RoutePrefix",
 			data: WebSettings{
 				RoutePrefix: "/test",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty CertFile",
+			name: "non-empty/CertFile",
 			data: WebSettings{
 				CertFile: "cert.pem",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty KeyFile",
+			name: "non-empty/KeyFile",
 			data: WebSettings{
 				KeyFile: "privkey.pem",
 			},
 			want: false,
 		},
 		{
-			name: "empty BasicAuth",
+			name: "BasicAuth/empty",
 			data: WebSettings{
 				BasicAuth: &WebSettingsBasicAuth{},
 			},
 			want: false,
 		},
 		{
-			name: "non-empty BasicAuth",
+			name: "BasicAuth/non-empty",
 			data: WebSettings{
 				BasicAuth: &WebSettingsBasicAuth{
 					Username: "user",
@@ -186,21 +186,21 @@ func TestWebSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty DisabledRouted",
+			name: "non-empty/DisabledRouted",
 			data: WebSettings{
 				DisabledRoutes: []string{"route1", "route2"},
 			},
 			want: false,
 		},
 		{
-			name: "empty Favicon",
+			name: "Favicon/empty",
 			data: WebSettings{
 				Favicon: &FaviconSettings{},
 			},
 			want: false,
 		},
 		{
-			name: "non-empty favicon",
+			name: "Favicon/non-empty",
 			data: WebSettings{
 				Favicon: &FaviconSettings{
 					SVG: "favicon.svg",
@@ -209,7 +209,7 @@ func TestWebSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			data: WebSettings{
 				ListenHost: "0.0.0.0",
 				ListenPort: "8080",
@@ -296,7 +296,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 		errRegex                           string
 	}{
 		{
-			name: "BasicAuth - empty",
+			name: "BasicAuth/empty",
 			input: &WebSettings{
 				BasicAuth: &WebSettingsBasicAuth{},
 			},
@@ -304,7 +304,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			ok:   true,
 		},
 		{
-			name: "BasicAuth - str Username and Password already hashed",
+			name: "BasicAuth/str Username and Password already hashed",
 			input: &WebSettings{
 				BasicAuth: &WebSettingsBasicAuth{
 					Username: "user",
@@ -321,7 +321,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			ok:               true,
 		},
 		{
-			name: "BasicAuth - hashed Username and str Password",
+			name: "BasicAuth/hashed Username and str Password",
 			input: &WebSettings{
 				BasicAuth: &WebSettingsBasicAuth{
 					Username: "user",
@@ -338,7 +338,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			ok:               true,
 		},
 		{
-			name: "BasicAuth - Username and password from env vars",
+			name: "BasicAuth/Username and password from env vars",
 			env: map[string]string{
 				"TEST_WEB_SETTINGS__CHECK_VALUES__ONE": "user",
 				"TEST_WEB_SETTINGS__CHECK_VALUES__TWO": "pass",
@@ -358,7 +358,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			ok:               true,
 		},
 		{
-			name: "BasicAuth - Username and password from env vars partial",
+			name: "BasicAuth/Username and password from env vars partial",
 			env: map[string]string{
 				"TEST_WEB_SETTINGS__CHECK_VALUES__THREE": "er",
 				"TEST_WEB_SETTINGS__CHECK_VALUES__FOUR":  "ss",
@@ -379,7 +379,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			ok:               true,
 		},
 		{
-			name: "Favicon - empty",
+			name: "Favicon/empty",
 			input: &WebSettings{
 				Favicon: &FaviconSettings{},
 			},
@@ -387,7 +387,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			ok:   true,
 		},
 		{
-			name: "Favicon - SVG",
+			name: "Favicon/SVG",
 			input: &WebSettings{
 				Favicon: &FaviconSettings{
 					SVG: "https://example.com/favicon.svg",
@@ -400,7 +400,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "Favicon - PNG",
+			name: "Favicon/PNG",
 			input: &WebSettings{
 				Favicon: &FaviconSettings{
 					PNG: "https://example.com/favicon.png",
@@ -413,7 +413,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "Favicon - Full",
+			name: "Favicon/full",
 			input: &WebSettings{
 				Favicon: &FaviconSettings{
 					SVG: "https://example.com/favicon.svg",
@@ -428,7 +428,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "Web.CertFile - not found",
+			name: "Web.CertFile, not found",
 			input: &WebSettings{
 				CertFile: "cert.pem",
 			},
@@ -437,7 +437,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			errRegex: `^cert_file: .*no such file.*$`,
 		},
 		{
-			name: "Web.KeyFile - not found",
+			name: "Web.KeyFile, not found",
 			input: &WebSettings{
 				KeyFile: "privkey.pem",
 			},
@@ -446,7 +446,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 			errRegex: `^pkey_file: .*no such file.*$`,
 		},
 		{
-			name: "Web.CertFile + Web.KeyFile - both not found",
+			name: "Web.CertFile + Web.KeyFile, both not found",
 			input: &WebSettings{
 				CertFile: "cert.pem",
 				KeyFile:  "privkey.pem",
@@ -758,7 +758,7 @@ func TestSettings_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Log",
+			name: "non-empty/Log",
 			data: Settings{
 				SettingsBase: SettingsBase{
 					Log: LogSettings{
@@ -769,7 +769,7 @@ func TestSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Data",
+			name: "non-empty/Data",
 			data: Settings{
 				SettingsBase: SettingsBase{
 					Data: DataSettings{
@@ -780,7 +780,7 @@ func TestSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Web",
+			name: "non-empty/Web",
 			data: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -791,7 +791,7 @@ func TestSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			data: Settings{
 				SettingsBase: SettingsBase{
 					Log: LogSettings{
@@ -841,7 +841,7 @@ func TestSettings_CheckValues(t *testing.T) {
 		errRegex                           string
 	}{
 		{
-			name: "BasicAuth - empty",
+			name: "BasicAuth/empty",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -853,7 +853,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok:   true,
 		},
 		{
-			name: "BasicAuth - hashed Username and str env Password",
+			name: "BasicAuth/hashed Username and str env Password",
 			env: map[string]string{
 				"TEST_SETTINGS_BASE__CHECK_VALUES__ONE": "ass",
 			},
@@ -878,7 +878,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok:               true,
 		},
 		{
-			name: "Route prefix - empty",
+			name: "Route prefix/empty",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -890,7 +890,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok:   true,
 		},
 		{
-			name: "Route prefix - no leading /",
+			name: "Route prefix/no leading /",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -905,7 +905,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "Route prefix - leading /",
+			name: "Route prefix/leading /",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -920,7 +920,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "Route prefix - multiple leading /",
+			name: "Route prefix/multiple leading /",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -935,7 +935,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "Route prefix - trailing /",
+			name: "Route prefix/trailing /",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -950,7 +950,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "Route prefix - multiple trailing /",
+			name: "Route prefix/multiple trailing /",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -965,7 +965,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "Route prefix - only a /",
+			name: "Route prefix/only a /",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -980,7 +980,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "Route prefix - only multiple /",
+			name: "Route prefix/only multiple /",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -995,7 +995,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "Favicon - empty",
+			name: "Favicon/empty",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -1007,7 +1007,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok:   true,
 		},
 		{
-			name: "Favicon - full",
+			name: "Favicon/full",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -1027,7 +1027,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "Web.CertFile - not found",
+			name: "Web.CertFile, not found",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -1046,7 +1046,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok: false,
 		},
 		{
-			name: "Web.KeyFile - not found",
+			name: "Web.KeyFile, not found",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -1065,7 +1065,7 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok: false,
 		},
 		{
-			name: "Web.CertFile + Web.KeyFile - both not found",
+			name: "Web.CertFile + Web.KeyFile, both not found",
 			input: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
@@ -1177,7 +1177,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "log.timestamps",
+			name: "log.timestamps/valid",
 			env: map[string]string{
 				"ARGUS_LOG_TIMESTAMPS": "true",
 			},
@@ -1191,7 +1191,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "log.timestamps - invalid, not a bool",
+			name: "log.timestamps/invalid - not a bool",
 			env: map[string]string{
 				"ARGUS_LOG_TIMESTAMPS": "abc",
 			},

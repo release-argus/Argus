@@ -33,9 +33,19 @@ func TestMapStringStringOmitNull_Unmarshal(t *testing.T) {
 		errRegex     string
 	}{
 		{
-			name:     "JSON/empty",
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
-			data:     "",
+			data:     "{}",
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
@@ -120,14 +130,17 @@ func TestMapStringStringOmitNull_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var v MapStringStringOmitNull
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*MapStringStringOmitNull, error) {
+					var zero MapStringStringOmitNull
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
 				tc.format, tc.data,
-				&v,
-				tc.errRegex,
 				func(v *MapStringStringOmitNull) string { return decode.ToYAMLString(v, "") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"MapStringStringOmitNull",
 			); testErr != nil {

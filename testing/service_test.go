@@ -97,7 +97,7 @@ func TestServiceTest(t *testing.T) {
 			}),
 		},
 		{
-			name:        "url service type but github 'owner/repo' url",
+			name:        "url service type but github owner-repo url",
 			flag:        "argus",
 			ok:          true,
 			stdoutRegex: test.Ptr("unsupported protocol scheme"),

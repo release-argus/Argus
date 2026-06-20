@@ -43,7 +43,7 @@ func TestCheckWebHookBody(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "adnanh/defaults hook fail",
+			name: "adnanh-webhook - defaults hook fail",
 			body: `Hook rules were not satisfied.`,
 			want: false,
 		},

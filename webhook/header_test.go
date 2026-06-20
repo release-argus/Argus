@@ -53,7 +53,7 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple map Headers, sorted input",
+			name: "multiple map Headers/sorted input",
 			data: test.TrimYAML(`
 				bish: bash
 				bosh: boom
@@ -67,7 +67,7 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple map Headers, unsorted input - sorted output",
+			name: "multiple map Headers/unsorted input gives sorted output",
 			data: test.TrimYAML(`
 				foo: bar
 				bish: bash
@@ -81,7 +81,7 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 			},
 		},
 		{
-			name: "expected []Headers format YAML",
+			name: "list format",
 			data: test.TrimYAML(`
 				- key: foo
 					value: bar

@@ -23,13 +23,12 @@ import (
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 )
 
-// RegexCheck returns true if a regex match of `re` matches `text`.
+// RegexCheck reports whether re matches text.
 func RegexCheck(re, text string) bool {
 	return regexp.MustCompile(re).MatchString(text)
 }
 
-// RegexCheckWithVersion returns true if a regex match of `re` occurs on `text`
-// after replacing "{{ version }}" with the version string.
+// RegexCheckWithVersion reports whether re matches text with version templated.
 func RegexCheckWithVersion(re, text, version string) bool {
 	re = TemplateString(re, serviceinfo.ServiceInfo{LatestVersion: version})
 	return RegexCheck(re, text)

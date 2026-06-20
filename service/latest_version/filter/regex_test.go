@@ -170,7 +170,7 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 			errRegex:    `^$`,
 		},
 		{
-			name: "github api, body match",
+			name: "github api/body match",
 			require: &Require{
 				RegexContent: `argus-[0-9.]+.linux-amd64`,
 			},
@@ -184,7 +184,7 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 			wantReleaseDate: "2021-01-01T00:00:00Z",
 		},
 		{
-			name: "github api, body no match",
+			name: "github api/body no match",
 			require: &Require{
 				RegexContent: `argus-[0-9.]+.linux-amd64`,
 			},
@@ -197,7 +197,7 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 			},
 		},
 		{
-			name: "github api, missing created_at",
+			name: "github api/missing created_at",
 			require: &Require{
 				RegexContent: `argus-[0-9.]+.linux-amd64`,
 			},
@@ -209,7 +209,7 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 			wantReleaseDate: "",
 		},
 		{
-			name: "github api, invalid created_at",
+			name: "github api/invalid created_at",
 			require: &Require{
 				RegexContent: `argus-[0-9.]+.linux-amd64`,
 			},

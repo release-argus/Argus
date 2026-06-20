@@ -40,7 +40,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 		wantNotify   bool
 	}{
 		{
-			name: "first version found, no deployed version",
+			name: "first version found/no deployed version",
 			versions: versions{
 				initialLatestVersion:   "",
 				initialDeployedVersion: "",
@@ -51,7 +51,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			wantNotify:   false,
 		},
 		{
-			name: "first version found, have newer deployed version",
+			name: "first version found/have newer deployed version",
 			versions: versions{
 				initialLatestVersion:   "",
 				initialDeployedVersion: "1.0.1",
@@ -62,7 +62,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			wantNotify:   false,
 		},
 		{
-			name: "first version found, have older deployed version",
+			name: "first version found/have older deployed version",
 			versions: versions{
 				initialLatestVersion:   "",
 				initialDeployedVersion: "0.9.0",

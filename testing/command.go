@@ -23,7 +23,7 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 )
 
-// CommandTest will test the commands given to a Service.
+// CommandTest tests the commands of the service named by flag.
 func CommandTest(flag *string, cfg *config.Config) bool {
 	// Only if flag provided.
 	if *flag == "" {

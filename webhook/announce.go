@@ -26,8 +26,7 @@ var marshalWebhookPayload = func(v any) ([]byte, error) {
 	return decode.Marshal("json", v)
 }
 
-// AnnounceSend of the WebHook to the `w.Announce` channel.
-// (Broadcast to all WebSocket clients).
+// AnnounceSend broadcasts the WebHook's send result to all WebSocket clients.
 func (w *WebHook) AnnounceSend() {
 	w.SetExecuting(false, false)
 	webhookSummary := make(map[string]*apitype.WebHookSummary)

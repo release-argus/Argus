@@ -54,7 +54,7 @@ func ResolveType(
 ) (string, error) {
 	var probe typeProbe
 	// Extract 'type'.
-	if !decode.IsNull(data) {
+	if !decode.IsNull(data) && len(data) != 0 {
 		if err := decode.Unmarshal(format, data, &probe); err != nil {
 			return "", err //nolint:wrapcheck
 		}
@@ -113,7 +113,7 @@ func Instantiate(
 	return field, nil
 }
 
-// ApplyOverrides applies format-encoded overrides to a [Inheritable] object.
+// ApplyOverrides applies format-encoded overrides to target.
 // If the target is nil, a new [Inheritable] is created.
 func ApplyOverrides(
 	format string,

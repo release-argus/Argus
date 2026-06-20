@@ -126,7 +126,7 @@ func TestDecode(t *testing.T) {
 			`),
 		},
 		{
-			name:   "YAML/github - bare",
+			name:   "YAML/github/bare",
 			format: "yaml",
 			data: test.TrimYAML(`
 				type: github
@@ -139,7 +139,7 @@ func TestDecode(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "YAML/github - full",
+			name:   "YAML/github/full",
 			format: "yaml",
 			data: test.TrimYAML(`
 				type: github
@@ -179,7 +179,7 @@ func TestDecode(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "YAML/url - bare",
+			name:   "YAML/url/bare",
 			format: "yaml",
 			data: test.TrimYAML(`
 				type: url
@@ -192,7 +192,7 @@ func TestDecode(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "YAML/url - full",
+			name:   "YAML/url/full",
 			format: "yaml",
 			data: test.TrimYAML(`
 				type: url
@@ -205,7 +205,7 @@ func TestDecode(t *testing.T) {
 					regex_version: v[\d.]+
 					docker:
 						type: hub
-						image: releaseargus/argus
+						image: test/app
 						tag: '{{ version }}'
 						auth:
 							username: me
@@ -223,7 +223,7 @@ func TestDecode(t *testing.T) {
 					regex_version: 'v[\d.]+'
 					docker:
 						type: hub
-						image: releaseargus/argus
+						image: test/app
 						tag: '{{ version }}'
 						auth:
 							username: me
@@ -233,7 +233,7 @@ func TestDecode(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "YAML/unknown/invalid type",
+			name:   "YAML/unknown, invalid type",
 			format: "yaml",
 			data: test.TrimYAML(`
 				type: foo
@@ -445,7 +445,7 @@ func TestApplyOverrides(t *testing.T) {
 			`),
 		},
 		{
-			name: "require extraction, invalid data type",
+			name: "require extraction/invalid data type",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -460,7 +460,7 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "require extraction, invalid type",
+			name: "require extraction/invalid type",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{

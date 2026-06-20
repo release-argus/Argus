@@ -43,6 +43,13 @@ func TestLookup_DecodeSelf(t *testing.T) {
 		{
 			name:     "JSON/empty",
 			format:   "json",
+			data:     ``,
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
 			data:     `{}`,
 			errRegex: `^$`,
 			want:     "{}\n",
@@ -68,7 +75,7 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			want:     "type: manual\n",
 		},
 		{
-			name:   "filled",
+			name:   "filled/semantic version",
 			format: "json",
 			data: test.TrimJSON(`{
 				"type": "manual",
@@ -82,7 +89,7 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			wantDV: "1.2.3",
 		},
 		{
-			name:   "filled - non-semantic version",
+			name:   "filled/non-semantic version",
 			format: "json",
 			data: test.TrimJSON(`{
 				"type": "manual",
@@ -193,7 +200,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			errRegex: `unexpected`,
 		},
 		{
-			name: "override error - base.Lookup",
+			name: "override error/base.Lookup",
 			args: Args{
 				format: "json",
 				data:   `{"type": []}`,
@@ -202,7 +209,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			errRegex: `^json: .*unmarshal.*$`,
 		},
 		{
-			name: "override error - Lookup",
+			name: "override error/Lookup",
 			args: Args{
 				format: "json",
 				data:   `{"version": ["v1.2.3"]}`,

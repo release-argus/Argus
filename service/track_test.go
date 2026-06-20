@@ -186,7 +186,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
 		{
-			name:              "query finds a newer version and updates LatestVersion and DeployedVersion - no commands/webhooks",
+			name:              "query finds a newer version/updates LatestVersion and DeployedVersion - no commands or webhooks",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
@@ -201,7 +201,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
 		{
-			name:              "query finds a newer version and updates LatestVersion and not DeployedVersion - has webhook",
+			name:              "query finds a newer version/updates LatestVersion and not DeployedVersion - has webhook",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
@@ -219,7 +219,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMessages: 1, // DB: 1 for latest.
 		},
 		{
-			name:              "query finds a newer version does send webhooks if autoApprove enabled",
+			name:              "query finds a newer version/does send webhooks if autoApprove enabled",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
@@ -256,7 +256,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
 		{
-			name:              "track on invalid cert disallowed",
+			name:              "cert/invalid disallowed",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
@@ -273,7 +273,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMessages: 0, // Query fail.
 		},
 		{
-			name:              "track on invalid cert allowed",
+			name:              "cert/invalid allowed",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
@@ -290,7 +290,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
 		{
-			name:              "track on signed cert allowed",
+			name:              "cert/signed allowed",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
@@ -306,7 +306,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
 		{
-			name:              "github - urlCommand, regex fail",
+			name:              "github/urlCommand, regex fail",
 			latestVersionType: "github",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
@@ -322,7 +322,7 @@ func TestService_Track(t *testing.T) {
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		{
-			name:              "url - urlCommand, regex fail",
+			name:              "url/urlCommand, regex fail",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
@@ -338,7 +338,7 @@ func TestService_Track(t *testing.T) {
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		{
-			name:              "github - urlCommand, split fail",
+			name:              "github/urlCommand, split fail",
 			latestVersionType: "github",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
@@ -354,7 +354,7 @@ func TestService_Track(t *testing.T) {
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		{
-			name:              "url - urlCommand, split fail",
+			name:              "url/urlCommand, split fail",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
@@ -370,7 +370,7 @@ func TestService_Track(t *testing.T) {
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		{
-			name:              "handle leading v's - semantic",
+			name:              "handle leading v's/semantic",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
@@ -385,7 +385,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
 		{
-			name:              "handle leading v's - non-semantic",
+			name:              "handle leading v's/non-semantic",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				options:
@@ -402,7 +402,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
 		{
-			name:              "github - non-semantic version fail",
+			name:              "github/non-semantic version fail",
 			latestVersionType: "github",
 			overrides: []byte(test.TrimYAML(`
 				options:
@@ -422,7 +422,7 @@ func TestService_Track(t *testing.T) {
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		{
-			name:              "url - non-semantic version fail",
+			name:              "url/non-semantic version fail",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				options:
@@ -459,7 +459,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
 		{
-			name:              "track gets DeployedVersion",
+			name:              "track gets DeployedVersion/unchanged",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				deployed_version:
@@ -468,14 +468,14 @@ func TestService_Track(t *testing.T) {
 			keepDeployedLookup: true,
 			livenessMetric:     metric.LatestVersionQueryResultSuccess,
 			versions: versions{
-				startLatestVersion: testURLLatestVersion, startDeployedVersion: testURLLatestVersion,
+				startLatestVersion: testURLLatestVersion, startDeployedVersion: "1.2.4",
 				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "1.2.4",
 			},
-			wantAnnounces:        2, // Announce: 1 for latest query, 1 for deployed change.
-			wantDatabaseMessages: 1, // DB: 1 for deployed change.
+			wantAnnounces:        1, // Announce: 1 for latest query.
+			wantDatabaseMessages: 0,
 		},
 		{
-			name:              "track gets DeployedVersion that is newer and does not change LatestVersion",
+			name:              "track gets DeployedVersion/newer does not change LatestVersion",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				deployed_version:

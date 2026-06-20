@@ -69,7 +69,7 @@ func Decode(
 	return &field, nil
 }
 
-// ApplyOverrides applies format-encoded overrides to a [Require] object.
+// ApplyOverrides applies format-encoded overrides to the receiver.
 // If the target is nil, a new [Require] is created.
 func (r *Require) ApplyOverrides(
 	format string,
@@ -81,10 +81,12 @@ func (r *Require) ApplyOverrides(
 	if len(data) == 0 {
 		return r, nil
 	}
+
 	// Remove.
 	if decode.IsNull(data) {
 		return nil, nil
 	}
+
 	// New.
 	if r == nil {
 		return Decode(

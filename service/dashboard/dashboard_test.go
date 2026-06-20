@@ -123,7 +123,7 @@ func TestDecode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, testErr := test.AssertDecode(
+			if _, _, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*Options, error) {
 					return Decode(
@@ -137,8 +137,7 @@ func TestDecode(t *testing.T) {
 				tc.errRegex,
 				packageName,
 				"Decode",
-			)
-			if testErr != nil {
+			); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})
@@ -154,11 +153,21 @@ func TestOptions_Unmarshal(t *testing.T) {
 		want         string
 	}{
 		{
-			name:     "JSON/empty",
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
-			data:     "",
-			errRegex: `^$`,
+			data:     "{}",
 			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
 			name:     "YAML/empty",
@@ -185,7 +194,7 @@ func TestOptions_Unmarshal(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSON/tags - []string",
+			name:   "JSON/tags/[]string",
 			format: "json",
 			data: test.TrimJSON(`{
 				"tags": [
@@ -201,7 +210,7 @@ func TestOptions_Unmarshal(t *testing.T) {
 			`),
 		},
 		{
-			name:   "YAML/tags - []string",
+			name:   "YAML/tags/[]string",
 			format: "yaml",
 			data: test.TrimYAML(`
 				tags:
@@ -216,7 +225,7 @@ func TestOptions_Unmarshal(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/tags - []dict",
+			name:   "JSON/tags/[]dict",
 			format: "json",
 			data: test.TrimJSON(`{
 				"tags": [
@@ -227,7 +236,7 @@ func TestOptions_Unmarshal(t *testing.T) {
 			errRegex: `^tags: expected a string inside the list, got .*$`,
 		},
 		{
-			name:   "YAML/tags - []dict",
+			name:   "YAML/tags/[]dict",
 			format: "yaml",
 			data: test.TrimYAML(`
 				tags:
@@ -237,7 +246,7 @@ func TestOptions_Unmarshal(t *testing.T) {
 			errRegex: `^tags: expected a string inside the list, got .*$`,
 		},
 		{
-			name:     "JSON/tags - string",
+			name:     "JSON/tags/string",
 			format:   "json",
 			data:     `{"tags": "foo"}`,
 			errRegex: `^$`,
@@ -247,7 +256,7 @@ func TestOptions_Unmarshal(t *testing.T) {
 			`),
 		},
 		{
-			name:     "YAML/tags - string",
+			name:     "YAML/tags/string",
 			format:   "yaml",
 			data:     `tags: foo`,
 			errRegex: `^$`,
@@ -257,7 +266,7 @@ func TestOptions_Unmarshal(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/tags - invalid",
+			name:   "JSON/tags/invalid",
 			format: "json",
 			data: test.TrimJSON(`{
 				"tags": {
@@ -267,7 +276,7 @@ func TestOptions_Unmarshal(t *testing.T) {
 			errRegex: `^tags: expected a string or a list of strings, got map\[string\]interface.*$`,
 		},
 		{
-			name:   "YAML/tags - invalid",
+			name:   "YAML/tags/invalid",
 			format: "yaml",
 			data: test.TrimYAML(`
 				tags:
@@ -281,14 +290,17 @@ func TestOptions_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var v Options
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*Options, error) {
+					var zero Options
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
 				tc.format, tc.data,
-				&v,
-				tc.errRegex,
 				func(v *Options) string { return decode.ToYAMLString(v, "") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"Options",
 			); testErr != nil {
@@ -335,7 +347,16 @@ func TestOptions_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "Icon",
+			name: "non-empty/AutoApprove",
+			opt: &Options{
+				OptionsBase: OptionsBase{
+					AutoApprove: test.Ptr(true),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Icon",
 			opt: &Options{
 				OptionsBase: OptionsBase{
 					Icon: "foo",
@@ -344,7 +365,7 @@ func TestOptions_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "IconLinkTo",
+			name: "non-empty/IconLinkTo",
 			opt: &Options{
 				OptionsBase: OptionsBase{
 					IconLinkTo: "foo",
@@ -353,7 +374,7 @@ func TestOptions_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "WebURL",
+			name: "non-empty/WebURL",
 			opt: &Options{
 				OptionsBase: OptionsBase{
 					WebURL: "foo",
@@ -362,19 +383,20 @@ func TestOptions_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "Tags",
+			name: "non-empty/Tags",
 			opt: &Options{
 				Tags: []string{"foo"},
 			},
 			want: false,
 		},
 		{
-			name: "Icon",
+			name: "non-empty/all",
 			opt: &Options{
 				OptionsBase: OptionsBase{
-					Icon:       "foo",
-					IconLinkTo: "bar",
-					WebURL:     "baz",
+					AutoApprove: test.Ptr(true),
+					Icon:        "foo",
+					IconLinkTo:  "bar",
+					WebURL:      "baz",
 				},
 				Tags: []string{"foo"},
 			},
@@ -633,7 +655,7 @@ func TestOptions_GetIcon(t *testing.T) {
 			want:         "notify-icon",
 		},
 		{
-			name:         "empty string returned if all nil/empty",
+			name:         "empty string returned if all nil or empty",
 			iconExpanded: nil,
 			icon:         "",
 			iconNotify:   nil,
@@ -688,7 +710,7 @@ func TestOptions_GetIconLinkTo(t *testing.T) {
 			want:               "default-icon-link",
 		},
 		{
-			name:               "empty string returned if both nil/empty",
+			name:               "empty string returned if both nil or empty",
 			iconLinkToExpanded: nil,
 			iconLinkTo:         "",
 			want:               "",
@@ -741,7 +763,7 @@ func TestOptions_GetWebURL(t *testing.T) {
 			want:           "default-web-url",
 		},
 		{
-			name:           "empty string returned if both nil/empty",
+			name:           "empty string returned if both nil or empty",
 			webURLExpanded: nil,
 			webURL:         "",
 			want:           "",
@@ -788,7 +810,7 @@ func TestOptions_SetDefaults(t *testing.T) {
 			options: &Options{},
 		},
 		{
-			name: "existing defaults/hardDefaults overwritten",
+			name: "existing defaults - hardDefaults overwritten",
 			options: &Options{
 				Defaults:     &Defaults{},
 				HardDefaults: &Defaults{},

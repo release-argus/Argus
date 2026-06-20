@@ -16,7 +16,7 @@ package logx
 
 import "io"
 
-// Default returns the package logger (Intended for test helpers such as test.CaptureLog).
+// Default returns the package logger.
 func Default() *Logger {
 	return logger
 }
@@ -51,7 +51,7 @@ func SetExitCodeChannel(exitCodeChannel chan string) {
 	loggerInstance().SetExitCodeChannel(exitCodeChannel)
 }
 
-// SetExitCodeChannel returns the exit code channel on the package logger.
+// ExitCodeChannel returns the exit code channel of the package logger.
 func ExitCodeChannel() chan string {
 	return loggerInstance().exitCodeChannel
 }

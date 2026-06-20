@@ -45,10 +45,6 @@ func (e *UnsupportedFormatError) Error() string {
 //
 // Supported formats: json | yaml.
 func Unmarshal(format string, data []byte, v any) error {
-	if len(data) == 0 && format == "json" {
-		data = []byte("{}")
-	}
-
 	switch format {
 	case "json":
 		if unmarshaler, ok := v.(json.Unmarshaler); ok {
@@ -58,9 +54,6 @@ func Unmarshal(format string, data []byte, v any) error {
 	case "yaml":
 		if unmarshaler, ok := v.(yaml.BytesUnmarshaler); ok {
 			return unmarshaler.UnmarshalYAML(data) //nolint:wrapcheck
-		}
-		if len(data) == 0 {
-			return nil
 		}
 		return yaml.Unmarshal(data, v) //nolint:wrapcheck
 	default:

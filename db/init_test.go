@@ -254,35 +254,35 @@ func TestAPI_Initialise(t *testing.T) {
 		paths []pathInfo
 	}{
 		{
-			name: "DB rw-r-r",
+			name: "DB/rw-r-r",
 			ok:   true,
 			paths: []pathInfo{
 				{path: "argus.db", perms: 0_644, itemType: "file"},
 			},
 		},
 		{
-			name: "DB -w--w--w-",
+			name: "DB/-w--w--w-",
 			ok:   false,
 			paths: []pathInfo{
 				{path: "argus.db", perms: 0_444, itemType: "file"},
 			},
 		},
 		{
-			name: "DB r--r--r--",
+			name: "DB/r--r--r--",
 			ok:   false,
 			paths: []pathInfo{
 				{path: "argus.db", perms: 0_222, itemType: "file"},
 			},
 		},
 		{
-			name: "DB --x--x--x",
+			name: "DB/--x--x--x",
 			ok:   false,
 			paths: []pathInfo{
 				{path: "argus.db", perms: 0_111, itemType: "file"},
 			},
 		},
 		{
-			name: "Dir not writable",
+			name: "Dir/not writable",
 			ok:   false,
 			paths: []pathInfo{
 				{path: "test", perms: 0_555, itemType: "dir"},
@@ -290,7 +290,7 @@ func TestAPI_Initialise(t *testing.T) {
 			},
 		},
 		{
-			name: "Dir not readable",
+			name: "Dir/not readable",
 			ok:   false,
 			paths: []pathInfo{
 				{path: "test", perms: 0_444, itemType: "dir"},

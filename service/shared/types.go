@@ -15,12 +15,12 @@
 // Package shared provides shared functionality for Latest Version and Deployed Version lookups.
 package shared
 
-// OldIntIndex to look at for any SecretValues used.
+// OldIntIndex is an integer index reference used when restoring SecretValues.
 type OldIntIndex struct {
 	OldIndex *int `json:"old_index,omitempty"`
 }
 
-// OldStringIndex to look at for any SecretValues used.
+// OldStringIndex is a named string index reference used when restoring SecretValues.
 type OldStringIndex struct {
 	Name     string `json:"name,omitempty"`
 	OldIndex string `json:"old_index,omitempty"`

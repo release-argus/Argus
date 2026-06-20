@@ -40,21 +40,21 @@ func TestContainerDetail_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "only Image",
+			name: "non-empty/Image",
 			data: ContainerDetail{
 				Image: "i",
 			},
 			want: false,
 		},
 		{
-			name: "only Tag",
+			name: "non-empty/Tag",
 			data: ContainerDetail{
 				Tag: "t",
 			},
 			want: false,
 		},
 		{
-			name: "Image and Tag",
+			name: "non-empty/all",
 			want: false,
 			data: ContainerDetail{
 				Image: "i",

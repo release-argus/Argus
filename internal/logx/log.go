@@ -40,9 +40,9 @@ func formatMsg(msg any) string {
 	return fmt.Sprint(msg)
 }
 
-// Init initialises the logging system with the specified log level.
-// The log level determines the severity of the messages that will be logged.
-// Valid log levels are "debug", "verbose", "info", "warn" and "error".
+// Init initialises the package logger once using the provided level and timestamp setting.
+// Subsequent calls have no effect and return the same shutdown channel.
+// The returned channel signals shutdown.
 func Init(level string, timestamps bool) chan string {
 	once.Do(func() {
 		logger = NewLogger(level, timestamps)
@@ -109,7 +109,7 @@ func NewLogger(level string, timestamps bool) *Logger {
 	return &newLogger
 }
 
-// SetExitCodeChannel sets the exit code to send to on 'Fatal' errors.
+// SetExitCodeChannel sets the channel used to signal a fatal shutdown.
 func (l *Logger) SetExitCodeChannel(exitCodeChannel chan string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -117,7 +117,7 @@ func (l *Logger) SetExitCodeChannel(exitCodeChannel chan string) {
 	l.exitCodeChannel = exitCodeChannel
 }
 
-// ExitCodeChannel returns the [Logger.exitCodeChannel].
+// ExitCodeChannel returns the channel used to signal a fatal shutdown.
 func (l *Logger) ExitCodeChannel() chan string {
 	return l.exitCodeChannel
 }
@@ -142,7 +142,7 @@ func (l *Logger) SetLevel(level string) {
 	}
 }
 
-// IsLevel checks if the [Logger.level] matches the provided `level`.
+// IsLevel reports whether the Logger is currently at the given level.
 func (l *Logger) IsLevel(level string) bool {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -155,7 +155,7 @@ func (l *Logger) IsLevel(level string) bool {
 	return l.Level.Load() == value
 }
 
-// SetTimestamps on the logs.
+// SetTimestamps enables or disables timestamps on log output.
 func (l *Logger) SetTimestamps(enable bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -207,8 +207,7 @@ func (l *Logger) GetOutput() io.Writer {
 	return l.out
 }
 
-// Fatal calls Error() followed by a message to the exit code channel
-// (which signals a shutdown of the process).
+// Fatal logs the message with a FATAL prefix and signals a shutdown via the exit code channel.
 func (l *Logger) Fatal(msg any, from LogFrom) {
 	fullMsg := fmt.Sprintf(
 		"FATAL: %s%s",
@@ -221,9 +220,7 @@ func (l *Logger) Fatal(msg any, from LogFrom) {
 	}
 }
 
-// Error will log the message if the log level is ERROR or higher.
-//
-// (if `otherCondition` true).
+// Error logs the message at ERROR level if otherCondition is true.
 func (l *Logger) Error(msg any, from LogFrom, otherCondition bool) {
 	if !otherCondition {
 		return
@@ -238,9 +235,7 @@ func (l *Logger) Error(msg any, from LogFrom, otherCondition bool) {
 	)
 }
 
-// Warn will log the message if the log level is WARN or higher.
-//
-// (if otherCondition true).
+// Warn logs the message at WARN level if otherCondition is true.
 func (l *Logger) Warn(msg any, from LogFrom, otherCondition bool) {
 	if l.Level.Load() == 0 || !otherCondition {
 		return
@@ -255,9 +250,7 @@ func (l *Logger) Warn(msg any, from LogFrom, otherCondition bool) {
 	)
 }
 
-// Info will log the message if the log level is INFO or higher.
-//
-// (if otherCondition true).
+// Info logs the message at INFO level if otherCondition is true.
 func (l *Logger) Info(msg any, from LogFrom, otherCondition bool) {
 	if l.Level.Load() < 2 || !otherCondition {
 		return
@@ -272,9 +265,7 @@ func (l *Logger) Info(msg any, from LogFrom, otherCondition bool) {
 	)
 }
 
-// Verbose will log the message if the log level is VERBOSE or higher.
-//
-// (if otherCondition true).
+// Verbose logs the message at VERBOSE level if otherCondition is true.
 func (l *Logger) Verbose(msg any, from LogFrom, otherCondition bool) {
 	if l.Level.Load() < 3 || !otherCondition {
 		return
@@ -292,9 +283,7 @@ func (l *Logger) Verbose(msg any, from LogFrom, otherCondition bool) {
 	)
 }
 
-// Debug will log the message if the log level is DEBUG.
-//
-// (if otherCondition true).
+// Debug logs the message at DEBUG level if otherCondition is true.
 func (l *Logger) Debug(msg any, from LogFrom, otherCondition bool) {
 	if l.Level.Load() != 4 || !otherCondition {
 		return
@@ -312,7 +301,7 @@ func (l *Logger) Debug(msg any, from LogFrom, otherCondition bool) {
 	)
 }
 
-// Deprecated will log the deprecation message.
+// Deprecated logs the deprecation message.
 func (l *Logger) Deprecated(msg any) {
 	// DEPRECATED: msg
 	l.logMessage(fmt.Sprintf("DEPRECATED: %v", msg))

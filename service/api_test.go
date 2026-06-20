@@ -199,15 +199,18 @@ func TestOldSecretRefs_UnmarshalJSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: UnmarshalJSON is called.
-			var v secretRefs
-			if _, testErr := test.AssertUnmarshal(
+			// WHEN: UnmarshalX is called.
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*secretRefs, error) {
+					var zero secretRefs
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
 				"json", tc.data,
-				&v,
-				tc.errRegex,
 				func(v *secretRefs) string { return decode.ToYAMLString(v, "") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"oldSecretRefs",
 			); testErr != nil {
@@ -243,9 +246,13 @@ func TestFromPayload(t *testing.T) {
 		errRegex         string
 	}{
 		{
-			name:     "empty payload",
-			payload:  "",
-			errRegex: `^latest_version and\/or deployed_version required$`,
+			name:    "empty payload",
+			payload: "",
+			errRegex: test.TrimYAML(`
+				^unmarshal service payload:
+					jsontext:
+						unexpected EOF$`,
+			),
 		},
 		{
 			name:    "invalid payload",
@@ -1550,7 +1557,7 @@ func TestService_CheckFetches(t *testing.T) {
 		errRegex                                  string
 	}{
 		{
-			name: "have LatestVersion, nil DeployedVersionLookup",
+			name: "have LatestVersion/nil DeployedVersionLookup",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -1568,7 +1575,7 @@ func TestService_CheckFetches(t *testing.T) {
 			errRegex:             `^$`,
 		},
 		{
-			name: "have LatestVersion, have DeployedVersionLookup",
+			name: "have LatestVersion/have DeployedVersionLookup",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -2170,7 +2177,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			`),
 		},
 		{
-			name: "unchanged LatestVersion.URL retains Status.LatestVersion",
+			name: "LatestVersion.URL/unchanged retains Status.LatestVersion",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -2196,7 +2203,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			`),
 		},
 		{
-			name: "changed LatestVersion.URL loses Status.LatestVersion",
+			name: "LatestVersion.URL/changed loses Status.LatestVersion",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -2231,7 +2238,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			`),
 		},
 		{
-			name: "unchanged DeployedVersion.URL retains Status.DeployedVersion",
+			name: "DeployedVersion.URL/unchanged retains Status.DeployedVersion",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -2268,7 +2275,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			`),
 		},
 		{
-			name: "changed DeployedVersion.URL loses Status.DeployedVersion",
+			name: "DeployedVersion.URL/changed loses Status.DeployedVersion",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -2314,7 +2321,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			`),
 		},
 		{
-			name: "unchanged WebHook retains Failed",
+			name: "WebHook/unchanged retains Failed",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -2368,7 +2375,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			},
 		},
 		{
-			name: "changed WebHook loses Failed",
+			name: "WebHook/changed loses Failed",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -2415,7 +2422,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			},
 		},
 		{
-			name: "unchanged Command retains Failed",
+			name: "Command/unchanged retains Failed",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -2465,7 +2472,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			},
 		},
 		{
-			name: "changed Command loses Failed",
+			name: "Command/changed loses Failed",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -2580,7 +2587,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 		otherData              otherData
 	}{
 		{
-			name: "nil oldLatestVersion",
+			name: "nil/oldLatestVersion",
 			latestVersion: test.Must(t, func() (latestver.Lookup, error) {
 				return latestver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -2758,7 +2765,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			}),
 		},
 		{
-			name: "nil Require",
+			name: "nil/Require",
 			latestVersion: test.Must(t, func() (latestver.Lookup, error) {
 				return latestver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -2982,7 +2989,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			}),
 		},
 		{
-			name: "githubData carried over if type still 'github'",
+			name: "githubData/carried over if type still 'github'",
 			latestVersion: test.Must(t, func() (latestver.Lookup, error) {
 				return latestver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -3022,7 +3029,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "githubData not carried over if type wasn't 'github'",
+			name: "githubData/not carried over if type wasn't 'github'",
 			latestVersion: test.Must(t, func() (latestver.Lookup, error) {
 				return latestver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -3062,7 +3069,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "githubData not carried over if type no longer 'github'",
+			name: "githubData/not carried over if type no longer 'github'",
 			latestVersion: test.Must(t, func() (latestver.Lookup, error) {
 				return latestver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -3151,7 +3158,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "referencing old Header value with no refs",
+			name: "secretRefs/Header value with no refs",
 			latestVersion: &lvweb.Lookup{
 				Headers: shared.Headers{
 					{Key: "foo", Value: util.SecretValue},
@@ -3203,7 +3210,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "referencing old Header value",
+			name: "secretRefs/Header value",
 			latestVersion: &lvweb.Lookup{
 				Headers: shared.Headers{
 					{Key: "foo", Value: util.SecretValue},
@@ -3229,7 +3236,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "referencing old Header value that doesn't exist",
+			name: "secretRefs/index not found",
 			latestVersion: &lvweb.Lookup{
 				Headers: shared.Headers{
 					{Key: "foo", Value: util.SecretValue},
@@ -3418,14 +3425,14 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 		want                     deployedver.Lookup
 	}{
 		{
-			name:            "nil DeployedVersion",
+			name:            "nil/DeployedVersion",
 			deployedVersion: nil,
 			otherDV:         &dvweb.Lookup{},
 			secretRefs:      shared.VSecretRef{},
 			want:            nil,
 		},
 		{
-			name: "nil OldDeployedVersion",
+			name: "nil/OldDeployedVersion",
 			deployedVersion: &dvweb.Lookup{
 				BasicAuth: &dvweb.BasicAuth{
 					Password: "foo",
@@ -3439,7 +3446,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "keep BasicAuth.Password",
+			name: "BasicAuth.Password/keep new value",
 			deployedVersion: &dvweb.Lookup{
 				BasicAuth: &dvweb.BasicAuth{
 					Password: "foo",
@@ -3457,7 +3464,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "give old BasicAuth.Password",
+			name: "BasicAuth.Password/inherit",
 			deployedVersion: &dvweb.Lookup{
 				BasicAuth: &dvweb.BasicAuth{
 					Password: util.SecretValue,
@@ -3475,7 +3482,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "referencing default BasicAuth.Password",
+			name: "BasicAuth.Password/referencing default",
 			deployedVersion: &dvweb.Lookup{
 				BasicAuth: &dvweb.BasicAuth{
 					Password: util.SecretValue,
@@ -3491,7 +3498,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "referencing BasicAuth.Password that doesn't exist",
+			name: "BasicAuth.Password/unknown secret",
 			deployedVersion: &dvweb.Lookup{
 				BasicAuth: &dvweb.BasicAuth{
 					Password: util.SecretValue,
@@ -3505,7 +3512,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "empty Headers",
+			name: "Headers/empty",
 			deployedVersion: &dvweb.Lookup{
 				Headers: shared.Headers{},
 			},
@@ -3541,7 +3548,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "Headers with index out of range",
+			name: "Headers/secretRefs index out of range",
 			deployedVersion: &dvweb.Lookup{
 				Headers: shared.Headers{
 					{Key: "bish", Value: util.SecretValue},
@@ -3565,7 +3572,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "Headers with SecretValue but nil index refs",
+			name: "Headers/SecretValue but nil index secretRefs",
 			deployedVersion: &dvweb.Lookup{
 				Headers: shared.Headers{
 					{Key: "bish", Value: util.SecretValue},
@@ -3592,7 +3599,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "only changed Headers",
+			name: "Headers/only changed",
 			deployedVersion: &dvweb.Lookup{
 				Headers: shared.Headers{
 					{Key: "foo", Value: "shazam"},
@@ -3615,33 +3622,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "only new/changed Headers",
-			deployedVersion: &dvweb.Lookup{
-				Headers: shared.Headers{
-					{Key: "foo", Value: "shazam"},
-					{Key: "bish", Value: "bash"},
-				},
-			},
-			otherDV: &dvweb.Lookup{
-				Headers: shared.Headers{
-					{Key: "foo", Value: "bar"},
-				},
-			},
-			want: &dvweb.Lookup{
-				Headers: shared.Headers{
-					{Key: "foo", Value: "shazam"},
-					{Key: "bish", Value: "bash"},
-				},
-			},
-			secretRefs: shared.VSecretRef{
-				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
-					{OldIndex: nil},
-				},
-			},
-		},
-		{
-			name: "only new/changed Headers with want refs",
+			name: "Headers/only new + changed",
 			deployedVersion: &dvweb.Lookup{
 				Headers: shared.Headers{
 					{Key: "foo", Value: "shazam"},
@@ -3667,7 +3648,33 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "only new/changed Headers with no refs",
+			name: "Headers/only new + changed with secretRefs unused",
+			deployedVersion: &dvweb.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "shazam"},
+					{Key: "bish", Value: "bash"},
+				},
+			},
+			otherDV: &dvweb.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "bar"},
+				},
+			},
+			want: &dvweb.Lookup{
+				Headers: shared.Headers{
+					{Key: "foo", Value: "shazam"},
+					{Key: "bish", Value: "bash"},
+				},
+			},
+			secretRefs: shared.VSecretRef{
+				Headers: []shared.OldIntIndex{
+					{OldIndex: test.Ptr(0)},
+					{OldIndex: nil},
+				},
+			},
+		},
+		{
+			name: "Headers/only new + changed with no secretRefs",
 			deployedVersion: &dvweb.Lookup{
 				Headers: shared.Headers{
 					{Key: "foo", Value: "shazam"},
@@ -3690,7 +3697,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "referencing old Header value with no refs",
+			name: "secretRefs/Header value with no refs",
 			deployedVersion: &dvweb.Lookup{
 				Headers: shared.Headers{
 					{Key: "foo", Value: util.SecretValue},
@@ -3742,7 +3749,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "referencing old Header value",
+			name: "secretRefs/Header value",
 			deployedVersion: &dvweb.Lookup{
 				Headers: shared.Headers{
 					{Key: "foo", Value: util.SecretValue},
@@ -3768,7 +3775,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "referencing old Header value that doesn't exist",
+			name: "secretRefs/index out of range",
 			deployedVersion: &dvweb.Lookup{
 				Headers: shared.Headers{
 					{Key: "foo", Value: util.SecretValue},
@@ -3926,7 +3933,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		expected            shoutrrr.Shoutrrrs
 	}{
 		{
-			name:   "nil NotifySlice",
+			name:   "nil/NotifySlice",
 			notify: nil,
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
@@ -3944,7 +3951,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			expected:   nil,
 		},
 		{
-			name: "nil oldNotifies",
+			name: "nil/oldNotifiers",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -3973,7 +3980,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "nil secretRefs",
+			name: "secretRefs/nil",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4013,7 +4020,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "no secretRefs",
+			name: "secretRefs/none",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4053,7 +4060,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "no matching secretRefs",
+			name: "secretRefs/no matches",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4095,7 +4102,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRef referencing empty index",
+			name: "secretRefs/referencing empty index",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4157,7 +4164,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRef referencing index that doesn't exist",
+			name: "secretRefs/referencing index that doesn't exist",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4219,7 +4226,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - url_fields.altid",
+			name: "secretRefs/url_fields.altid",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4281,7 +4288,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - url_fields.apikey",
+			name: "secretRefs/url_fields.apikey",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4343,7 +4350,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - url_fields.apikey swap vars",
+			name: "secretRefs/url_fields.apikey swap vars",
 			notify: shoutrrr.Shoutrrrs{
 				"bar": shoutrrr.New(
 					nil,
@@ -4416,7 +4423,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - url_fields.apikey swap vars ignores notify order",
+			name: "secretRefs/url_fields.apikey swap vars ignores notify order",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4489,7 +4496,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - url_fields.botkey",
+			name: "secretRefs/url_fields.botkey",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4551,7 +4558,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - url_fields.password",
+			name: "secretRefs/url_fields.password",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4613,7 +4620,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - url_fields.token",
+			name: "secretRefs/url_fields.token",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4675,7 +4682,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - url_fields.tokena",
+			name: "secretRefs/url_fields.tokena",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4737,7 +4744,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - url_fields.tokenb",
+			name: "secretRefs/url_fields.tokenb",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4799,7 +4806,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - url_fields.host ignored as SecretValue",
+			name: "secretRefs/url_fields.host ignored as SecretValue",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4861,7 +4868,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - params.devices",
+			name: "secretRefs/params.devices",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4921,7 +4928,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - params.avatar ignored as SecretValue",
+			name: "secretRefs/params.avatar ignored as SecretValue",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4983,7 +4990,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - ALL",
+			name: "secretRefs/ALL",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -5096,7 +5103,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		want                  webhook.WebHooks
 	}{
 		{
-			name:    "nil WebHookSlice",
+			name:    "nil/WebHookSlice",
 			webhook: nil,
 			otherWebhook: webhook.WebHooks{
 				"foo": webhook.New(
@@ -5115,7 +5122,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			want:       nil,
 		},
 		{
-			name: "nil otherWebHook",
+			name: "nil/otherWebHook",
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil, nil,
@@ -5146,7 +5153,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 		},
 		{
-			name: "nil secretRefs",
+			name: "nil/secretRefs",
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil, nil,
@@ -5277,7 +5284,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRef referencing empty index",
+			name: "secretRefs/empty index",
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil, nil,
@@ -5345,7 +5352,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRef referencing index that doesn't exist",
+			name: "secretRefs/index that doesn't exist",
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil, nil,
@@ -5413,7 +5420,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - secret",
+			name: "secretRefs/secret",
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil, nil,
@@ -5481,7 +5488,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - secret swap vars",
+			name: "secretRefs/secret swap vars",
 			webhook: webhook.WebHooks{
 				"bar": webhook.New(
 					nil, nil,
@@ -5560,7 +5567,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs - secret swap vars ignores order sent",
+			name: "secretRefs/secret swap vars ignores order sent",
 			webhook: webhook.WebHooks{
 				"bar": webhook.New(
 					nil, nil,
@@ -5639,7 +5646,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 		},
 		{
-			name: "headers - no secretRefs",
+			name: "headers/no secretRefs",
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
@@ -5733,7 +5740,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 		},
 		{
-			name: "headers - no header secretRefs",
+			name: "headers/no header secretRefs",
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
@@ -5830,7 +5837,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 		},
 		{
-			name: "headers - header secretRefs but old secrets unwanted",
+			name: "headers/old secrets unwanted",
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
@@ -5937,7 +5944,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 		},
 		{
-			name: "headers - header secretRefs, some indices out of range",
+			name: "headers/secretRefs some indices out of range",
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
@@ -6050,7 +6057,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 		},
 		{
-			name: "headers - header secretRefs use all secrets",
+			name: "headers/use all secrets",
 			webhook: webhook.WebHooks{
 				"foo": webhook.New(
 					nil,
@@ -6165,7 +6172,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 		},
 		{
-			name: "headers - header secretRefs, swap names of webhook",
+			name: "headers/secretRefs swap names of webhook",
 			webhook: webhook.WebHooks{
 				"bar": webhook.New(
 					nil,

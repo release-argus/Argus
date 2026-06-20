@@ -39,35 +39,35 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Type",
+			name: "non-empty/Type",
 			data: &Defaults{
 				Type: "a",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty AccessToken",
+			name: "non-empty/AccessToken",
 			data: &Defaults{
 				AccessToken: "foo",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty AllowInvalidCerts",
+			name: "non-empty/AllowInvalidCerts",
 			data: &Defaults{
 				AllowInvalidCerts: test.Ptr(true),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty UsePreRelease",
+			name: "non-empty/UsePreRelease",
 			data: &Defaults{
 				UsePreRelease: test.Ptr(true),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Require",
+			name: "non-empty/Require",
 			data: &Defaults{
 				Require: filter.RequireDefaults{
 					Docker: *test.Must(t, func() (*docker.Defaults, error) {
@@ -81,7 +81,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			data: &Defaults{
 				Type:              "a",
 				AccessToken:       "foo",
@@ -121,18 +121,21 @@ func TestDefaults_IsZero(t *testing.T) {
 func TestDecodeDefaults(t *testing.T) {
 	// GIVEN: data in a given format to Decode into Defaults.
 	tests := []struct {
-		name     string
-		format   string
-		data     string
-		want     string
-		errRegex string
+		name         string
+		format, data string
+		want         string
+		errRegex     string
 	}{
 		{
-			name:     "JSON/empty",
-			format:   "json",
-			data:     "",
-			want:     "{}\n",
-			errRegex: `^$`,
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				latest_version:
+					jsontext:
+						unexpected EOF$`,
+			),
 		},
 		{
 			name:     "JSON/empty object",
@@ -191,7 +194,7 @@ func TestDecodeDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, testErr := test.AssertDecode(
+			if _, _, testErr := test.AssertDecode(
 				t,
 				DecodeDefaults,
 				tc.format, tc.data,
@@ -200,8 +203,7 @@ func TestDecodeDefaults(t *testing.T) {
 				tc.errRegex,
 				packageName,
 				"DecodeDefaults",
-			)
-			if testErr != nil {
+			); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})

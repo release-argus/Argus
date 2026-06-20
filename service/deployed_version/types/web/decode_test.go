@@ -42,6 +42,13 @@ func TestLookup_DecodeSelf(t *testing.T) {
 		{
 			name:     "JSON/empty",
 			format:   "json",
+			data:     ``,
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
 			data:     `{}`,
 			errRegex: `^$`,
 			want:     "{}\n",
@@ -214,7 +221,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			errRegex: `unexpected`,
 		},
 		{
-			name: "override error - base.Lookup",
+			name: "override error/base.Lookup",
 			args: Args{
 				format: "json",
 				data:   `{"type": []}`,
@@ -223,7 +230,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			errRegex: `^json: .*unmarshal.*$`,
 		},
 		{
-			name: "override error - Lookup",
+			name: "override error/Lookup",
 			args: Args{
 				format: "json",
 				data:   `{"allow_invalid_certs": "true"}`,

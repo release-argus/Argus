@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/dashboard"
 	dvbase "github.com/release-argus/Argus/service/deployed_version/types/base"
@@ -43,7 +44,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty options",
+			name: "non-empty/Options",
 			opt: &Defaults{
 				Options: opt.Defaults{
 					Base: opt.Base{
@@ -54,7 +55,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty LatestVersion",
+			name: "non-empty/LatestVersion",
 			opt: &Defaults{
 				LatestVersion: lvbase.Defaults{
 					Type: "url",
@@ -63,7 +64,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty DeployedVersionLookup",
+			name: "non-empty/DeployedVersionLookup",
 			opt: &Defaults{
 				DeployedVersionLookup: dvbase.Defaults{
 					Type: "url",
@@ -72,7 +73,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Notify",
+			name: "non-empty/Notify",
 			opt: &Defaults{
 				Notify: map[string]struct{}{
 					"foo": {},
@@ -81,7 +82,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Command",
+			name: "non-empty/Command",
 			opt: &Defaults{
 				Command: command.Commands{
 					{"echo", "test"},
@@ -90,7 +91,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty WebHook",
+			name: "non-empty/WebHook",
 			opt: &Defaults{
 				WebHook: map[string]struct{}{
 					"bar": {},
@@ -99,7 +100,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Dashboard",
+			name: "non-empty/Dashboard",
 			opt: &Defaults{
 				Dashboard: *test.Must(t, func() (*dashboard.Defaults, error) {
 					return dashboard.DecodeDefaults("yaml", []byte("auto_approve: true"))
@@ -108,7 +109,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			opt: &Defaults{
 				Options: opt.Defaults{
 					Base: opt.Base{
@@ -165,9 +166,19 @@ func TestDefaults_Unmarshal(t *testing.T) {
 		errRegex     string
 	}{
 		{
-			name:     "JSON/empty",
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
-			data:     "",
+			data:     "{}",
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
@@ -280,14 +291,17 @@ func TestDefaults_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var zero Defaults
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*Defaults, error) {
+					var zero Defaults
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
 				tc.format, tc.data,
-				&zero,
-				tc.errRegex,
 				func(d *Defaults) string { return d.String("") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"Defaults",
 			); testErr != nil {
@@ -306,11 +320,15 @@ func TestDecodeDefaults(t *testing.T) {
 		errRegex     string
 	}{
 		{
-			name:     "JSON/empty",
-			format:   "json",
-			data:     "",
-			want:     "{}\n",
-			errRegex: `^$`,
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				service:
+					jsontext:
+						unexpected EOF$`,
+			),
 		},
 		{
 			name:     "JSON/empty object",
@@ -467,7 +485,7 @@ func TestDecodeDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, testErr := test.AssertDecode(
+			if _, _, testErr := test.AssertDecode(
 				t,
 				DecodeDefaults,
 				tc.format, tc.data,
@@ -476,8 +494,7 @@ func TestDecodeDefaults(t *testing.T) {
 				tc.errRegex,
 				packageName,
 				"DecodeDefaults",
-			)
-			if testErr != nil {
+			); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})

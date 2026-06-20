@@ -49,8 +49,7 @@ func TrimJSON(str string) string {
 	return replacer.Replace(strings.TrimSpace(str))
 }
 
-// TrimYAML removes unnecessary whitespace from a YAML string.
-// and converts leading tabs to spaces.
+// TrimYAML removes unnecessary whitespace from a YAML string and converts leading tabs to spaces.
 func TrimYAML(str string) string {
 	return normaliseLeadingWhitespace(str, "\n")
 }
@@ -96,10 +95,7 @@ func addPrefix(str, prefix string) string {
 	return str
 }
 
-// normaliseLeadingWhitespace normalises the leading whitespace of each line in the given string.
-// It trims any leading newline character from the input string, splits the string into lines,
-// and processes each line to remove or replace leading whitespace. It then joins the lines back
-// together with the given `joinWith` string.
+// normaliseLeadingWhitespace strips leading whitespace from the first line of str and re-indents subsequent lines, joining with joinWith.
 func normaliseLeadingWhitespace(str string, joinWith string) string {
 	str = strings.TrimPrefix(str, "\n")
 	lines := strings.Split(str, "\n")

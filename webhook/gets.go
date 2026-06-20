@@ -24,7 +24,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// BuildRequest returns the WebHook http.request, ready to be sent.
+// BuildRequest builds and returns a *http.Request for the WebHook.
 func (w *WebHook) BuildRequest() (req *http.Request) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
@@ -83,7 +83,7 @@ func (w *WebHook) GetDelay() string {
 	)
 }
 
-// GetDelayDuration resolves the delay to use before auto-approving the WebHook.
+// GetDelayDuration resolves the auto-approve delay as a time.Duration.
 func (w *WebHook) GetDelayDuration() (duration time.Duration) {
 	duration, _ = time.ParseDuration(w.GetDelay())
 	return duration
@@ -119,12 +119,7 @@ func (w *WebHook) SetNextRunnable(time time.Time) {
 	w.Failed.SetNextRunnable(w.ID, time)
 }
 
-// SetExecuting will set the time the WebHook can next run.
-//
-// Parameters:
-//
-//	addDelay: only used on auto_approved releases.
-//	received: whether the WebHook has received a response.
+// SetExecuting sets the next-runnable time based on the outcome, optionally adding the send delay or blocking for a pending response.
 func (w *WebHook) SetExecuting(addDelay bool, received bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -153,7 +148,7 @@ func (w *WebHook) SetExecuting(addDelay bool, received bool) {
 	w.SetNextRunnable(nextRunnable)
 }
 
-// GetMaxTries allowed for the receiver.
+// GetMaxTries resolves the maximum number of send attempts allowed.
 func (w *WebHook) GetMaxTries() uint8 {
 	return *util.FirstNonNilPtr(
 		w.MaxTries,
@@ -163,7 +158,7 @@ func (w *WebHook) GetMaxTries() uint8 {
 	)
 }
 
-// IsRunnable resolves whether the current time is before the next runnable time of this WebHook.
+// IsRunnable reports whether the WebHook can run now.
 func (w *WebHook) IsRunnable() bool {
 	return time.Now().UTC().After(w.NextRunnable())
 }

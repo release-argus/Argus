@@ -105,8 +105,7 @@ func (o *Options) String() string {
 	return decode.ToYAMLString(o, "")
 }
 
-// GetActive returns whether the service is active
-// (If Active is nil, it defaults to true).
+// GetActive reports whether the service is active, defaulting to true if unset.
 func (o *Options) GetActive() bool {
 	return util.DerefOr(o.Active, true)
 }
@@ -117,7 +116,7 @@ func (o *Options) SetDefaults(defaults, hardDefaults *Defaults) {
 	o.HardDefaults = hardDefaults
 }
 
-// GetInterval between queries for the latest/deployed version.
+// GetInterval returns the query interval between latest/deployed version checks.
 func (o *Options) GetInterval() string {
 	return util.FirstNonDefault(
 		o.Interval,
@@ -135,7 +134,7 @@ func (o *Options) GetSemanticVersioning() bool {
 	)
 }
 
-// VerifySemanticVersioning returns an error if the version is not following Semantic Versioning.
+// VerifySemanticVersioning parses version as a semantic version, returning an error if invalid.
 func (o *Options) VerifySemanticVersioning(version string, logFrom logx.LogFrom) (*semver.Version, error) {
 	semanticVersion, err := semver.NewVersion(version)
 	if err != nil {

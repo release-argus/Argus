@@ -50,21 +50,21 @@ func TestShoutrrrs_Send(t *testing.T) {
 			errRegex:  `^$`,
 		},
 		{
-			name: "single shoutrrr, no error",
+			name: "single shoutrrr/no error",
 			shoutrrrs: &Shoutrrrs{
 				"single": testShoutrrr(false, false),
 			},
 			errRegex: `^$`,
 		},
 		{
-			name: "single shoutrrr, with error",
+			name: "single shoutrrr/with error",
 			shoutrrrs: &Shoutrrrs{
 				"single": testShoutrrr(true, false),
 			},
 			errRegex: `^.*invalid gotify token.* x 1$`,
 		},
 		{
-			name: "multiple shoutrrr, mixed results",
+			name: "multiple shoutrrr/mixed results/2",
 			shoutrrrs: &Shoutrrrs{
 				"passing": testShoutrrr(false, false),
 				"failing": testShoutrrr(true, false),
@@ -72,7 +72,7 @@ func TestShoutrrrs_Send(t *testing.T) {
 			errRegex: `^.*invalid gotify token.* x 1$`,
 		},
 		{
-			name: "multiple shoutrrr, mixed results - more",
+			name: "multiple shoutrrr/mixed results/3",
 			shoutrrrs: &Shoutrrrs{
 				"passing":      testShoutrrr(false, false),
 				"failing":      testShoutrrr(true, false),

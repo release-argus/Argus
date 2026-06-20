@@ -47,7 +47,7 @@ type Controller struct {
 	ParentInterval *string        `json:"-" yaml:"-"` // Interval between the parent Service's queries.
 }
 
-// Notifiers to send failure notifications with when commands fail.
+// Notifiers holds the notifiers used when a command fails.
 type Notifiers struct {
 	Shoutrrr shoutrrr.Shoutrrrs
 }
@@ -96,7 +96,7 @@ func (c *Controller) CopyFailsFrom(target *Controller) {
 
 	// Loop through old fails.
 	for i := 0; i < target.Failed.Length(); i++ {
-		// Loop through new fails and find try to find this command.
+		// Loop through new commands and look for a match.
 		for j := 0; j < c.Failed.Length(); j++ {
 			// If the command has been run (has a failed state),
 			// and the commands match, copy the failed status.

@@ -76,37 +76,37 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 			},
 		},
 		{
-			name:     "known service_id, 0 command, 0 webhooks",
+			name:     "known service_id/0 command, 0 webhooks",
 			commands: command.Commands{},
 		},
 		{
-			name: "known service_id, 1 command, 0 webhooks",
+			name: "known service_id/1 command, 0 webhooks",
 			commands: command.Commands{
 				testCommand(true),
 			},
 		},
 		{
-			name: "known service_id, 2 command, 0 webhooks",
+			name: "known service_id/2 command, 0 webhooks",
 			commands: command.Commands{
 				testCommand(true),
 				testCommand(false),
 			},
 		},
 		{
-			name: "known service_id, 0 command, 1 webhooks",
+			name: "known service_id/0 command, 1 webhooks",
 			webhooks: webhook.WebHooks{
 				"fail0": whtest.WebHook(t, true, false, false),
 			},
 		},
 		{
-			name: "known service_id, 0 command, 2 webhooks",
+			name: "known service_id/0 command, 2 webhooks",
 			webhooks: webhook.WebHooks{
 				"fail0": whtest.WebHook(t, true, false, false),
 				"pass0": whtest.WebHook(t, false, false, false),
 			},
 		},
 		{
-			name: "known service_id, 2 command, 2 webhooks",
+			name: "known service_id/2 command, 2 webhooks",
 			commands: command.Commands{
 				testCommand(true),
 				testCommand(false),
@@ -321,14 +321,14 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:   "ARGUS_SKIP, known service_id",
+			name:   "ARGUS_SKIP/known service_id",
 			target: test.Ptr(ActionSkip),
 			wants: wants{
 				wantSkipMessage: true,
 			},
 		},
 		{
-			name:   "ARGUS_SKIP, inactive service_id",
+			name:   "ARGUS_SKIP/inactive service_id",
 			active: test.Ptr(false),
 			target: test.Ptr(ActionSkip),
 			wants: wants{
@@ -336,7 +336,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:      "ARGUS_SKIP, unknown service_id",
+			name:      "ARGUS_SKIP/unknown service_id",
 			serviceID: test.Ptr("unknown?"),
 			target:    test.Ptr(ActionSkip),
 			wants: wants{
@@ -344,7 +344,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:      "ARGUS_SKIP, no service_id provided",
+			name:      "ARGUS_SKIP/no service_id provided",
 			serviceID: test.Ptr(""),
 			target:    test.Ptr(ActionSkip),
 			wants: wants{
@@ -361,7 +361,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:   "ARGUS_ALL, known service_id with no commands/webhooks",
+			name:   "ARGUS_ALL/known service_id with no commands or webhooks",
 			target: test.Ptr(ActionAll),
 			wants: wants{
 				stdoutRegex: `"[^"]+" does not have any commands\/webhooks to approve`,
@@ -369,7 +369,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:   "ARGUS_ALL, known service_id with command",
+			name:   "ARGUS_ALL/known service_id with command",
 			target: test.Ptr(ActionAll),
 			commands: command.Commands{
 				{"false", "0"},
@@ -379,7 +379,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:   "ARGUS_ALL, known service_id with webhook",
+			name:   "ARGUS_ALL/known service_id with webhook",
 			target: test.Ptr(ActionAll),
 			webhooks: webhook.WebHooks{
 				"known-service-and-webhook": whtest.WebHook(t, true, false, false),
@@ -389,7 +389,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:   "ARGUS_ALL, known service_id with multiple webhooks",
+			name:   "ARGUS_ALL/known service_id with multiple webhooks",
 			target: test.Ptr(ActionAll),
 			webhooks: webhook.WebHooks{
 				"known-service-and-multiple-webhook-0": whtest.WebHook(t, true, false, false),
@@ -400,7 +400,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:   "ARGUS_ALL, known service_id with multiple commands",
+			name:   "ARGUS_ALL/known service_id with multiple commands",
 			target: test.Ptr(ActionAll),
 			commands: command.Commands{
 				{"ls", "-a"},
@@ -411,7 +411,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:   "ARGUS_ALL, known service_id with dvl and command and webhook that pass upgrades approved_version",
+			name:   "ARGUS_ALL/known service_id with dvl and command and webhook that pass upgrades approved_version",
 			target: test.Ptr(ActionAll),
 			commands: command.Commands{
 				{"ls", "-b"},
@@ -426,7 +426,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:   "ARGUS_ALL, known service_id with command and webhook that pass upgrades deployed_version",
+			name:   "ARGUS_ALL/known service_id with command and webhook that pass upgrades deployed_version",
 			target: test.Ptr(ActionAll),
 			commands: command.Commands{
 				{"ls", "-c"},
@@ -442,7 +442,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:   "ARGUS_ALL, known service_id with passing command and failing webhook doesn't upgrade any versions",
+			name:   "ARGUS_ALL/known service_id with passing command and failing webhook doesn't upgrade any versions",
 			target: test.Ptr(ActionAll),
 			commands: command.Commands{
 				{"ls", "-d"},
@@ -456,7 +456,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:   "ARGUS_ALL, known service_id with failing command and passing webhook doesn't upgrade any versions",
+			name:   "ARGUS_ALL/known service_id with failing command and passing webhook doesn't upgrade any versions",
 			target: test.Ptr(ActionAll),
 			commands: command.Commands{
 				{"fail"},
@@ -470,7 +470,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:   "webhook_NAME, known service_id with 1 webhook left to pass does upgrade deployed_version",
+			name:   "webhook_NAME/known service_id with 1 webhook left to pass does upgrade deployed_version",
 			target: test.Ptr("webhook_will_pass"),
 			commands: command.Commands{
 				{"ls", "-f"},
@@ -494,7 +494,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name:   "command_NAME, known service_id with 1 command left to pass does upgrade deployed_version",
+			name:   "command_NAME/known service_id with 1 command left to pass does upgrade deployed_version",
 			target: test.Ptr("command_ls -g"),
 			commands: command.Commands{
 				{"ls", "/root"},
@@ -518,7 +518,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 		},
 		{
-			name: "command_NAME, known service_id with multiple commands targeted individually (handle broadcast queue)",
+			name: "command_NAME/known service_id with multiple commands targeted individually, handle broadcast queue",
 			commands: command.Commands{
 				{"ls", "-h"},
 				{"false", "2"},

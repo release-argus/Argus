@@ -184,7 +184,7 @@ func TestLogger_SetLevel(t *testing.T) {
 
 	for _, tc := range tests {
 		name := fmt.Sprintf(
-			"%s - ok=%t",
+			"%s/ok=%t",
 			tc.level, tc.ok,
 		)
 		t.Run(name, func(t *testing.T) {
@@ -276,8 +276,8 @@ func TestLogger_IsLevel(t *testing.T) {
 
 	for _, tc := range tests {
 		name := fmt.Sprintf(
-			"level=%s, test=%s - want=%t",
-			tc.testLevel, tc.testLevel, tc.want,
+			"startLevel=%s/testLevel=%s/want=%t",
+			tc.startLevel, tc.testLevel, tc.want,
 		)
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -566,7 +566,7 @@ func TestLogger_Error(t *testing.T) {
 
 	for _, tc := range tests {
 		name := fmt.Sprintf(
-			"level=%s, timestamps=%t, otherCondition=%t - print=%t",
+			"level=%s/timestamps=%t/otherCondition=%t/print=%t",
 			tc.level, tc.timestamps, tc.otherCondition, tc.shouldPrint,
 		)
 		t.Run(name, func(t *testing.T) {
@@ -608,24 +608,29 @@ func TestLogger_Warn(t *testing.T) {
 	}{
 		{level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
 		{level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
+		{level: "ERROR", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
 		{level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
+		{level: "WARN", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
 		{level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
+		{level: "INFO", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
 		{level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		{level: "VERBOSE", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
 		{level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		{level: "DEBUG", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 	}
 
 	for _, tc := range tests {
 		name := fmt.Sprintf(
-			"level=%s, timestamps=%t, otherCondition=%t - print=%t",
+			"level=%s/timestamps=%t/otherCondition=%t/print=%t",
 			tc.level, tc.timestamps, tc.otherCondition, tc.shouldPrint,
 		)
 		t.Run(name, func(t *testing.T) {
@@ -667,24 +672,29 @@ func TestLogger_Info(t *testing.T) {
 	}{
 		{level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
 		{level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
+		{level: "ERROR", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
 		{level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
+		{level: "WARN", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
 		{level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
+		{level: "INFO", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
 		{level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		{level: "VERBOSE", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
 		{level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		{level: "DEBUG", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 	}
 
 	for _, tc := range tests {
 		name := fmt.Sprintf(
-			"level=%s, timestamps=%t, otherCondition=%t - print=%t",
+			"level=%s/timestamps=%t/otherCondition=%t/print=%t",
 			tc.level, tc.timestamps, tc.otherCondition, tc.shouldPrint,
 		)
 		t.Run(name, func(t *testing.T) {
@@ -726,25 +736,30 @@ func TestLogger_Verbose(t *testing.T) {
 	}{
 		{level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
 		{level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
+		{level: "ERROR", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
 		{level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
+		{level: "WARN", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "INFO", timestamps: true, otherCondition: true, shouldPrint: false},
 		{level: "INFO", timestamps: false, otherCondition: true, shouldPrint: false},
+		{level: "INFO", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
 		{level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		{level: "VERBOSE", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
 		{level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		{level: "DEBUG", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 	}
 
 	for _, tc := range tests {
 		name := fmt.Sprintf(
-			"level=%s, timestamps=%t, otherCondition=%t - print=%t",
-			tc.level, tc.timestamps, tc.otherCondition, tc.timestamps,
+			"level=%s/timestamps=%t/otherCondition=%t/print=%t",
+			tc.level, tc.timestamps, tc.otherCondition, tc.shouldPrint,
 		)
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
@@ -785,24 +800,29 @@ func TestLogger_Debug(t *testing.T) {
 	}{
 		{level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
 		{level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
+		{level: "ERROR", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
 		{level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
+		{level: "WARN", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "INFO", timestamps: true, otherCondition: true, shouldPrint: false},
 		{level: "INFO", timestamps: false, otherCondition: true, shouldPrint: false},
+		{level: "INFO", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: false},
 		{level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: false},
+		{level: "VERBOSE", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
 		{level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
 		{level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		{level: "DEBUG", timestamps: true, otherCondition: false, shouldPrint: false},
 		{level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 	}
 
 	for _, tc := range tests {
 		name := fmt.Sprintf(
-			"level=%s, timestamps=%t, otherCondition=%t - print=%t",
+			"level=%s/timestamps=%t/otherCondition=%t/print=%t",
 			tc.level, tc.timestamps, tc.otherCondition, tc.shouldPrint,
 		)
 		t.Run(name, func(t *testing.T) {

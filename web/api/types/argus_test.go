@@ -40,84 +40,84 @@ func TestServiceSummary_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty ID",
+			name: "non-empty/ID",
 			data: ServiceSummary{
 				ID: "foo",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Name",
+			name: "non-empty/Name",
 			data: ServiceSummary{
 				Name: test.Ptr("foo"),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Active",
+			name: "non-empty/Active",
 			data: ServiceSummary{
 				Active: test.Ptr(true),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Comment",
+			name: "non-empty/Comment",
 			data: ServiceSummary{
 				Comment: test.Ptr("foo"),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Type",
+			name: "non-empty/Type",
 			data: ServiceSummary{
 				Type: "foo",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty WebURL",
+			name: "non-empty/WebURL",
 			data: ServiceSummary{
 				WebURL: test.Ptr("https://example.com"),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Icon",
+			name: "non-empty/Icon",
 			data: ServiceSummary{
 				Icon: test.Ptr("https://example.com/icon.png"),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty IconLinkTo",
+			name: "non-empty/IconLinkTo",
 			data: ServiceSummary{
 				IconLinkTo: test.Ptr("https://example.com/somewhere"),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty HasDeployedVersionLookup",
+			name: "non-empty/HasDeployedVersionLookup",
 			data: ServiceSummary{
 				HasDeployedVersionLookup: test.Ptr(false),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Command",
+			name: "non-empty/Command",
 			data: ServiceSummary{
 				Command: test.Ptr(1),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty WebHook",
+			name: "non-empty/WebHook",
 			data: ServiceSummary{
 				WebHook: test.Ptr(2),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Status",
+			name: "non-empty/Status",
 			data: ServiceSummary{
 				Status: &Status{
 					ApprovedVersion: "1.2.3",
@@ -126,14 +126,14 @@ func TestServiceSummary_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Tags",
+			name: "non-empty/Tags",
 			data: ServiceSummary{
 				Tags: test.Ptr([]string{"foo"}),
 			},
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			data: ServiceSummary{
 				ID:                       "foo",
 				Name:                     test.Ptr("foo"),
@@ -521,7 +521,7 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			},
 		},
 		{
-			name: "same deployed_version",
+			name: "same deployed_version/bare",
 			old: &ServiceSummary{
 				Status: &Status{
 					DeployedVersion: "1.2.3",
@@ -535,7 +535,7 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			want: &ServiceSummary{},
 		},
 		{
-			name: "same deployed_version, different timestamps ignored",
+			name: "same deployed_version/different timestamps ignored",
 			old: &ServiceSummary{
 				Status: &Status{
 					DeployedVersion:          "1.2.3",
@@ -572,7 +572,7 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			},
 		},
 		{
-			name: "same latest_version",
+			name: "same latest_version/bare",
 			old: &ServiceSummary{
 				Status: &Status{
 					LatestVersion: "1.2.3",
@@ -586,7 +586,7 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			want: &ServiceSummary{},
 		},
 		{
-			name: "same latest_version, different timestamps ignored",
+			name: "same latest_version/different timestamps ignored",
 			old: &ServiceSummary{
 				Status: &Status{
 					LatestVersion:          "1.2.3",
@@ -808,7 +808,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Service",
+			name: "non-empty/Service",
 			defaults: Defaults{
 				Service: ServiceDefaults{
 					Comment: "a",
@@ -817,7 +817,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty notify",
+			name: "non-empty/Notify",
 			defaults: Defaults{
 				Notify: Notifiers{
 					"a": &Notify{
@@ -828,7 +828,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty webhook",
+			name: "non-empty/WebHook",
 			defaults: Defaults{
 				WebHook: WebHook{
 					Type: "a",
@@ -837,7 +837,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			defaults: Defaults{
 				Service: ServiceDefaults{
 					Comment: "a",
@@ -965,7 +965,7 @@ func TestSettings_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Log",
+			name: "non-empty/Log",
 			settings: Settings{
 				Log: LogSettings{
 					Level: "DEBUG",
@@ -974,7 +974,7 @@ func TestSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Web",
+			name: "non-empty/Web",
 			settings: Settings{
 				Web: WebSettings{
 					ListenPort: "9001",
@@ -983,7 +983,7 @@ func TestSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			settings: Settings{
 				Log: LogSettings{
 					Level: "DEBUG",
@@ -1030,21 +1030,21 @@ func TestLogSettings_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty timestamps",
+			name: "non-empty/Timestamps",
 			logSettings: LogSettings{
 				Timestamps: test.Ptr(true),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty timestamps",
+			name: "non-empty/Level",
 			logSettings: LogSettings{
-				Timestamps: test.Ptr(true),
+				Level: "DEBUG",
 			},
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			logSettings: LogSettings{
 				Timestamps: test.Ptr(true),
 				Level:      "DEBUG",
@@ -1091,42 +1091,42 @@ func TestWebSettings_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty ListenHost",
+			name: "non-empty/ListenHost",
 			webSettings: WebSettings{
 				ListenHost: "127.0.0.1",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty ListenPort",
+			name: "non-empty/ListenPort",
 			webSettings: WebSettings{
 				ListenPort: "9001",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty CertFile",
+			name: "non-empty/CertFile",
 			webSettings: WebSettings{
 				CertFile: "file.pem",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty KeyFile",
+			name: "non-empty/KeyFile",
 			webSettings: WebSettings{
 				KeyFile: "file.pem",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty RoutePrefix",
+			name: "non-empty/RoutePrefix",
 			webSettings: WebSettings{
 				RoutePrefix: "/",
 			},
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			webSettings: WebSettings{
 				ListenHost:  "127.0.0.1",
 				ListenPort:  "9001",
@@ -1419,110 +1419,6 @@ func TestNotifiers_Flatten(t *testing.T) {
 	}
 }
 
-func TestNotifiers_Censor(t *testing.T) {
-	// GIVEN: Notifiers.
-	tests := []struct {
-		name         string
-		notify, want *Notifiers
-	}{
-		{
-			name:   "nil",
-			notify: nil,
-			want:   nil,
-		},
-		{
-			name: "non-nil",
-			notify: &Notifiers{
-				"0": &Notify{
-					URLFields: map[string]string{
-						"password": "alpha",
-						"port":     "bravo",
-					},
-					Params: map[string]string{
-						"devices": "charlie",
-						"rooms":   "delta",
-					},
-				},
-				"1": &Notify{
-					URLFields: map[string]string{
-						"altid": "echo",
-						"port":  "foxtrot",
-					},
-					Params: map[string]string{
-						"devices": "hotel",
-						"rooms":   "golf",
-					},
-				},
-			},
-			want: &Notifiers{
-				"0": &Notify{
-					URLFields: map[string]string{
-						"password": util.SecretValue,
-						"port":     "bravo",
-					},
-					Params: map[string]string{
-						"devices": util.SecretValue,
-						"rooms":   "delta",
-					},
-				},
-				"1": &Notify{
-					URLFields: map[string]string{
-						"altid": util.SecretValue,
-						"port":  "foxtrot",
-					},
-					Params: map[string]string{
-						"devices": util.SecretValue,
-						"rooms":   "golf",
-					},
-				},
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN: Censor is called on it.
-			tc.notify.Censor()
-
-			// THEN: nil Notifiers are kept.
-			if tc.notify == tc.want {
-				return
-			}
-
-			// AND: defined fields are censored as expected.
-			for i := range *tc.notify {
-				prefix := fmt.Sprintf(
-					"%s\nNotifiers.Censor() Notify[%q]",
-					packageName, i,
-				)
-
-				gotNotify := (*tc.notify)[i]
-				wantNotify := (*tc.want)[i]
-				if testErr := test.AssertMapEqual(
-					t,
-					gotNotify.URLFields,
-					wantNotify.URLFields,
-					prefix,
-					"Params",
-				); testErr != nil {
-					t.Error(testErr)
-				}
-				if testErr := test.AssertMapEqual(
-					t,
-					gotNotify.Params,
-					wantNotify.Params,
-					prefix,
-					"URLFields",
-				); testErr != nil {
-					t.Error(testErr)
-				}
-			}
-		})
-	}
-}
-
 func TestNotify_Censor(t *testing.T) {
 	// GIVEN: a Notify.
 	tests := []struct {
@@ -1573,7 +1469,7 @@ func TestNotify_Censor(t *testing.T) {
 			},
 		},
 		{
-			name: "all censorable",
+			name: "all censorable/only",
 			notify: &Notify{
 				URLFields: map[string]string{
 					"altid":    "alpha",
@@ -1604,7 +1500,7 @@ func TestNotify_Censor(t *testing.T) {
 			},
 		},
 		{
-			name: "all censorable, plus non-censored",
+			name: "all censorable/plus non-censored",
 			notify: &Notify{
 				URLFields: map[string]string{
 					"altid":    "alpha",
@@ -1741,14 +1637,14 @@ func TestServiceDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Comment",
+			name: "non-empty/Comment",
 			defaults: ServiceDefaults{
 				Comment: "abc",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Options",
+			name: "non-empty/Options",
 			defaults: ServiceDefaults{
 				Options: ServiceOptions{
 					Interval: "1s",
@@ -1757,7 +1653,7 @@ func TestServiceDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty LatestVersion",
+			name: "non-empty/LatestVersion",
 			defaults: ServiceDefaults{
 				LatestVersion: LatestVersionDefaults{
 					AccessToken: "hi",
@@ -1766,14 +1662,14 @@ func TestServiceDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Notify",
+			name: "non-empty/Notify",
 			defaults: ServiceDefaults{
 				Notify: []string{"a"},
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Command",
+			name: "non-empty/Command",
 			defaults: ServiceDefaults{
 				Command: Commands{
 					{"ls"},
@@ -1782,14 +1678,14 @@ func TestServiceDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty WebHook",
+			name: "non-empty/WebHook",
 			defaults: ServiceDefaults{
 				WebHook: []string{"a"},
 			},
 			want: false,
 		},
 		{
-			name: "non-empty DeployedVersionLookup",
+			name: "non-empty/DeployedVersionLookup",
 			defaults: ServiceDefaults{
 				DeployedVersionLookup: DeployedVersionLookupDefaults{
 					Method: "GET",
@@ -1798,7 +1694,7 @@ func TestServiceDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty Dashboard",
+			name: "non-empty/Dashboard",
 			defaults: ServiceDefaults{
 				Dashboard: DashboardOptions{
 					Icon: "a",
@@ -1807,7 +1703,7 @@ func TestServiceDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			defaults: ServiceDefaults{
 				Comment: "abc",
 				Options: ServiceOptions{
@@ -1867,28 +1763,28 @@ func TestServiceOptions_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Active",
+			name: "non-empty/Active",
 			options: ServiceOptions{
 				Active: test.Ptr(false),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Interval",
+			name: "non-empty/Interval",
 			options: ServiceOptions{
 				Interval: "1s",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Semantic_versioning",
+			name: "non-empty/SemanticVersioning",
 			options: ServiceOptions{
 				SemanticVersioning: test.Ptr(false),
 			},
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			options: ServiceOptions{
 				Active:             test.Ptr(false),
 				Interval:           "1s",
@@ -1935,42 +1831,42 @@ func TestDashboardOptions_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty AutoApprove",
+			name: "non-empty/AutoApprove",
 			options: DashboardOptions{
 				AutoApprove: test.Ptr(false),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Icon",
+			name: "non-empty/Icon",
 			options: DashboardOptions{
 				Icon: "a",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty IconLinkTo",
+			name: "non-empty/IconLinkTo",
 			options: DashboardOptions{
 				IconLinkTo: "a",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty WebURL",
+			name: "non-empty/WebURL",
 			options: DashboardOptions{
 				WebURL: "a",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Tag",
+			name: "non-empty/Tag",
 			options: DashboardOptions{
 				Tags: []string{"a"},
 			},
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			options: DashboardOptions{
 				AutoApprove: test.Ptr(false),
 				Icon:        "a",
@@ -2092,35 +1988,35 @@ func TestLatestVersionDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty URL",
+			name: "non-empty/URL",
 			defaults: LatestVersionDefaults{
 				URL: "a",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty AccessToken",
+			name: "non-empty/AccessToken",
 			defaults: LatestVersionDefaults{
 				AccessToken: "a",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty AllowInvalidCerts",
+			name: "non-empty/AllowInvalidCerts",
 			defaults: LatestVersionDefaults{
 				AllowInvalidCerts: test.Ptr(false),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty UsePreRelease",
+			name: "non-empty/UsePreRelease",
 			defaults: LatestVersionDefaults{
 				UsePreRelease: test.Ptr(false),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Require",
+			name: "non-empty/Require",
 			defaults: LatestVersionDefaults{
 				Require: &LatestVersionRequireDefaults{
 					Docker: RequireDockerDefaults{
@@ -2131,7 +2027,7 @@ func TestLatestVersionDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			defaults: LatestVersionDefaults{
 				URL:               "a",
 				AccessToken:       "a",
@@ -2247,7 +2143,7 @@ func TestLatestVersionRequireDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Docker",
+			name: "non-empty",
 			defaults: LatestVersionRequireDefaults{
 				Docker: RequireDockerDefaults{
 					Image: "a",
@@ -2465,7 +2361,7 @@ func TestRequireDockerRegistryDefaultsAuthWithUsername_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Token",
+			name: "non-empty/Token",
 			defaults: RequireDockerRegistryDefaultsAuthWithUsername{
 				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
 					Token: "t",
@@ -2473,13 +2369,13 @@ func TestRequireDockerRegistryDefaultsAuthWithUsername_IsZero(t *testing.T) {
 			},
 		},
 		{
-			name: "non-empty Username",
+			name: "non-empty/Username",
 			defaults: RequireDockerRegistryDefaultsAuthWithUsername{
 				Username: "u",
 			},
 		},
 		{
-			name: "non-empty",
+			name: "non-empty/all",
 			defaults: RequireDockerRegistryDefaultsAuthWithUsername{
 				Username: "u",
 				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
@@ -2559,7 +2455,7 @@ func TestRequireDockerRegistryDefaultsToken_IsZero(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "non-empty RequireDockerRegistryDefaultsAuth",
+			name: "non-empty/RequireDockerRegistryDefaultsAuth",
 			defaults: RequireDockerRegistryDefaultsToken{
 				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
 					Token: "t",
@@ -2568,7 +2464,7 @@ func TestRequireDockerRegistryDefaultsToken_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty RequireDockerRegistryDefaultsBase",
+			name: "non-empty/RequireDockerRegistryDefaultsBase",
 			defaults: RequireDockerRegistryDefaultsToken{
 				RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
 					Image: "image",
@@ -2664,7 +2560,7 @@ func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_IsZero(t *testing.T
 			want:     true,
 		},
 		{
-			name: "non-empty RequireDockerRegistryDefaultsBase",
+			name: "non-empty/RequireDockerRegistryDefaultsBase",
 			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
 				RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
 					Image: "i",
@@ -2674,7 +2570,7 @@ func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_IsZero(t *testing.T
 			want: false,
 		},
 		{
-			name: "non-empty RequireDockerRegistryDefaultsAuthWithUsername",
+			name: "non-empty/RequireDockerRegistryDefaultsAuthWithUsername",
 			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
 				RequireDockerRegistryDefaultsAuthWithUsername: RequireDockerRegistryDefaultsAuthWithUsername{
 					Username: "u",
@@ -2782,28 +2678,28 @@ func TestRequireDockerDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty Type",
+			name: "non-empty/Type",
 			d: RequireDockerDefaults{
 				Type: "t",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Image",
+			name: "non-empty/Image",
 			d: RequireDockerDefaults{
 				Image: "i",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Tag",
+			name: "non-empty/Tag",
 			d: RequireDockerDefaults{
 				Tag: "t",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Registry",
+			name: "non-empty/Registry",
 			d: RequireDockerDefaults{
 				Registry: RequireDockerRegistriesDefaults{
 					GHCR: &RequireDockerRegistryDefaultsToken{
@@ -2820,7 +2716,7 @@ func TestRequireDockerDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			d: RequireDockerDefaults{
 				Type:  "t",
 				Image: "i",
@@ -2872,21 +2768,21 @@ func TestDeployedVersionLookupDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty AllowInvalidCerts",
+			name: "non-empty/AllowInvalidCerts",
 			d: DeployedVersionLookupDefaults{
 				AllowInvalidCerts: test.Ptr(true),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Method",
+			name: "non-empty/Method",
 			d: DeployedVersionLookupDefaults{
 				Method: "m",
 			},
 			want: false,
 		},
 		{
-			name: "filled",
+			name: "non-empty/all",
 			d: DeployedVersionLookupDefaults{
 				AllowInvalidCerts: test.Ptr(true),
 				Method:            "m",
@@ -3276,49 +3172,49 @@ func TestWebHook_IsZero(t *testing.T) {
 			want:    true,
 		},
 		{
-			name: "non-empty ServiceID",
+			name: "non-empty/ServiceID",
 			webhook: WebHook{
 				ServiceID: "alpha",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty ID",
+			name: "non-empty/ID",
 			webhook: WebHook{
 				ID: "alpha",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Type",
+			name: "non-empty/Type",
 			webhook: WebHook{
 				Type: "alpha",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty URL",
+			name: "non-empty/URL",
 			webhook: WebHook{
 				URL: "alpha",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty AllowInvalidCerts",
+			name: "non-empty/AllowInvalidCerts",
 			webhook: WebHook{
 				AllowInvalidCerts: test.Ptr(true),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Secret",
+			name: "non-empty/Secret",
 			webhook: WebHook{
 				Secret: "alpha",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Headers",
+			name: "non-empty/Headers",
 			webhook: WebHook{
 				Headers: []Header{
 					{
@@ -3330,34 +3226,34 @@ func TestWebHook_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty DesiredStatusCode",
+			name: "non-empty/DesiredStatusCode",
 			webhook: WebHook{
 				DesiredStatusCode: test.Ptr[uint16](200),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty Delay",
+			name: "non-empty/Delay",
 			webhook: WebHook{
 				Delay: "2s",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty MaxTries",
+			name: "non-empty/MaxTries",
 			webhook: WebHook{
 				MaxTries: test.Ptr[uint8](2),
 			},
 			want: false,
 		},
 		{
-			name: "non-empty SilentFails",
+			name: "non-empty/SilentFails",
 			webhook: WebHook{
 				SilentFails: test.Ptr(true),
 			},
 		},
 		{
-			name: "non-empty ServiceID",
+			name: "non-empty/all",
 			webhook: WebHook{
 				ServiceID:         "alpha",
 				ID:                "alpha",
@@ -3535,7 +3431,7 @@ func TestWebHook_Censor(t *testing.T) {
 				)
 			}
 
-			// AND: The headers are as expected.
+			// AND: the headers are as expected.
 			gotHeaders := tc.webhook.Headers
 			wantHeaders := tc.want.Headers
 			if testErr := test.AssertSlicesEqualFunc(
@@ -3561,31 +3457,31 @@ func TestNilIfUnchanged(t *testing.T) {
 		want     *int
 	}{
 		{
-			name:     "unchanged - nil->nil",
+			name:     "unchanged/nil->nil",
 			oldValue: nil,
 			newValue: nil,
 			want:     nil,
 		},
 		{
-			name:     "unchanged - value->value",
+			name:     "unchanged/value->value",
 			oldValue: test.Ptr(1),
 			newValue: test.Ptr(1),
 			want:     nil,
 		},
 		{
-			name:     "removed - non-nil->nil",
+			name:     "removed, non-nil->nil",
 			oldValue: test.Ptr(1),
 			newValue: nil,
 			want:     test.Ptr(0),
 		},
 		{
-			name:     "added - nil->non-nil",
+			name:     "added, nil->non-nil",
 			oldValue: nil,
 			newValue: test.Ptr(1),
 			want:     test.Ptr(1),
 		},
 		{
-			name:     "changed - non-nil->other-non-nil",
+			name:     "changed, non-nil->other-non-nil",
 			oldValue: test.Ptr(1),
 			newValue: test.Ptr(2),
 			want:     test.Ptr(2),

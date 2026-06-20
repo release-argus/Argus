@@ -39,9 +39,16 @@ func TestDecode(t *testing.T) {
 		{
 			name:     "JSON/empty",
 			format:   "json",
-			data:     `{}`,
-			errRegex: `^$`,
+			data:     "",
 			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     "{}",
+			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
 			name:     "YAML/empty",
@@ -93,7 +100,7 @@ func TestDecode(t *testing.T) {
 				"command": ["ls", "-lah"],
 				"docker": {
 					"type": "hub",
-					"image": "releaseargus/argus",
+					"image": "test/app",
 					"tag": "{{ version }}"
 				}
 			}`),
@@ -106,7 +113,7 @@ func TestDecode(t *testing.T) {
 					- -lah
 				docker:
 					type: hub
-					image: releaseargus/argus
+					image: test/app
 					tag: '{{ version }}'
 			`),
 		},
@@ -125,7 +132,7 @@ func TestDecode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, testErr := test.AssertDecode(
+			if _, _, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*Require, error) {
 					return Decode(
@@ -142,8 +149,7 @@ func TestDecode(t *testing.T) {
 				tc.errRegex,
 				packageName,
 				"Decode",
-			)
-			if testErr != nil {
+			); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})
@@ -203,7 +209,7 @@ func TestApplyOverrides(t *testing.T) {
 			want:     test.Ptr(""),
 		},
 		{
-			name: "invalid payload causes decode error",
+			name: "invalid payload, decode error",
 			args: Args{
 				format: "json",
 				data:   `{"`,
@@ -411,9 +417,16 @@ func TestDecodeDefaults(t *testing.T) {
 		{
 			name:     "JSON/empty",
 			format:   "json",
-			data:     `{}`,
-			errRegex: `^$`,
+			data:     "",
 			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     "{}",
+			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
 			name:     "YAML/empty",
@@ -465,7 +478,7 @@ func TestDecodeDefaults(t *testing.T) {
 				"command": ["ls", "-lah"],
 				"docker": {
 					"type": "hub",
-					"image": "releaseargus/argus",
+					"image": "test/app",
 					"tag": "{{ version }}"
 				}
 			}`),
@@ -473,7 +486,7 @@ func TestDecodeDefaults(t *testing.T) {
 			want: test.TrimYAML(`
 				docker:
 					type: hub
-					image: releaseargus/argus
+					image: test/app
 					tag: '{{ version }}'
 			`),
 		},
@@ -493,7 +506,7 @@ func TestDecodeDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, testErr := test.AssertDecode(
+			if _, _, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*RequireDefaults, error) {
 					return DecodeDefaults(format, data)
@@ -504,8 +517,7 @@ func TestDecodeDefaults(t *testing.T) {
 				tc.errRegex,
 				packageName,
 				"DecodeDefaults",
-			)
-			if testErr != nil {
+			); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})

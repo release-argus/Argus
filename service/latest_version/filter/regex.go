@@ -26,7 +26,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// RegexCheckVersion returns whether `version` matches the regex.
+// RegexCheckVersion returns an error if version does not match the RegexVersion requirement.
 func (r *Require) RegexCheckVersion(
 	version string,
 	logFrom logx.LogFrom,
@@ -53,7 +53,7 @@ func (r *Require) RegexCheckVersion(
 	return nil
 }
 
-// regexCheckString returns whether version matches RegexContent in any searchArea.
+// regexCheckString reports whether version matches RegexContent in any of the searchArea strings.
 func (r *Require) regexCheckString(
 	version string,
 	logFrom logx.LogFrom,
@@ -96,7 +96,8 @@ func (r *Require) regexCheckContentFail(version string, logFrom logx.LogFrom) er
 	return err
 }
 
-// RegexCheckContent of body with version.
+// RegexCheckContent returns an error if body does not contain a match for RegexContent
+// with version templated.
 func (r *Require) RegexCheckContent(
 	version string,
 	body string,
@@ -115,10 +116,8 @@ func (r *Require) RegexCheckContent(
 	return r.regexCheckContentFail(version, logFrom)
 }
 
-// RegexCheckContentGitHub checks the content of the GitHub release assets.
-// for a RegexContent match.
-//
-//	Returns the date of release.
+// RegexCheckContentGitHub returns the release date from the first GitHub asset matching RegexContent
+// with version templated, or an error if none match.
 func (r *Require) RegexCheckContentGitHub(
 	version string,
 	assets []ghtypes.Asset,

@@ -33,11 +33,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Query queries the source
-// and returns whether a new release was found, updating LatestVersion if so.
-//
-// Parameters:
-//   - metrics: if true, set Prometheus metrics based on the query.
+// Query queries GitHub releases, sets Prometheus metrics if requested, and returns whether a new version was found.
 func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) (bool, error) {
 	isNewVersion, err := l.query(logFrom)
 
@@ -48,8 +44,7 @@ func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) (bool, error) {
 	return isNewVersion, err
 }
 
-// Query queries the source
-// and returns whether a new release was found, updating LatestVersion if so.
+// query iterates pages of the GitHub releases API and returns whether a new version was found.
 func (l *Lookup) query(logFrom logx.LogFrom) (bool, error) {
 	page := 1
 	var newVersion bool
@@ -66,18 +61,8 @@ func (l *Lookup) query(logFrom logx.LogFrom) (bool, error) {
 	return false, err
 }
 
-// queryPage queries a specific page for the latest version information.
-//
-// Parameters:
-//   - page: the page number to query.
-//   - checkNumber: the current check iteration number.
-//     0 for first check, 1 for second check (if the first check found a new version).
-//   - logFrom: the source of the log for logging purposes.
-//
-// Returns:
-//   - A boolean indicating whether a new version was found.
-//   - An integer representing the next page to query (if applicable).
-//   - An error if any issues occurred during the query.
+// queryPage requests page of the GitHub releases API and returns whether a new version was found,
+// the next page to request, and any error.
 func (l *Lookup) queryPage(
 	checkNumber int,
 	page int,

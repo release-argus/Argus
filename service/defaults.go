@@ -150,7 +150,7 @@ func (d *Defaults) SetDefaults(dflts *Defaults) {
 	dflts.DeployedVersionLookup.Options = &dflts.Options
 }
 
-// Init will hand out the appropriate Defaults.X pointers between structs.
+// Init wires the appropriate Defaults pointers between structs.
 func (d *Defaults) Init() {
 	d.LatestVersion.Options = &d.Options
 	d.DeployedVersionLookup.Options = &d.Options

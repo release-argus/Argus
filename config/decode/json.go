@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/release-argus/Argus/util"
 )
 
 // JSONMarshalOpts are the options used when encoding JSON via [Marshal].
@@ -203,11 +201,10 @@ func GetValueByKey(body []byte, key string, jsonFrom string) (string, error) {
 	err := Unmarshal("json", body, &jsonData)
 	// If the JSON proves invalid, return an error.
 	if err != nil {
-		err := fmt.Errorf(
-			"failed to unmarshal response from %q into JSON: %q",
-			jsonFrom, util.TruncateMessage(string(body), 250),
+		return "", fmt.Errorf(
+			"failed to unmarshal response from %q into JSON: %w",
+			jsonFrom, err,
 		)
-		return "", err
 	}
 
 	value, err := navigateJSON(&jsonData, key)
@@ -218,7 +215,7 @@ func GetValueByKey(body []byte, key string, jsonFrom string) (string, error) {
 	return value, nil
 }
 
-// ToJSONString converts `data` to its JSON string representation.
+// ToJSONString converts input to its JSON string representation.
 func ToJSONString(input any) string {
 	bytes, err := Marshal("json", input)
 	if err != nil {

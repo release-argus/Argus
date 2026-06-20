@@ -50,9 +50,19 @@ func TestDecode(t *testing.T) {
 			name: "JSON/empty",
 			args: Args{
 				format: "json",
-				data:   `{}`,
+				data:   "",
 			},
-			want: "{}\n",
+			want:     "",
+			errRegex: `^$`,
+		},
+		{
+			name: "JSON/empty object",
+			args: Args{
+				format: "json",
+				data:   "{}",
+			},
+			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
 			name: "YAML/empty",
@@ -75,7 +85,7 @@ func TestDecode(t *testing.T) {
 			),
 		},
 		{
-			name: "valid payload, invalid type",
+			name: "valid payload/invalid type",
 			args: Args{
 				format: "json",
 				data:   `{"type": ["url"]}`,
@@ -83,7 +93,7 @@ func TestDecode(t *testing.T) {
 			errRegex: `^json: .*unmarshal.*$`,
 		},
 		{
-			name: "valid payload, no require",
+			name: "valid payload/no require",
 			args: Args{
 				format: "json",
 				data:   `{"type": "url"}`,
@@ -196,7 +206,37 @@ func TestApplyOverrides(t *testing.T) {
 		errRegex          string
 	}{
 		{
-			name: "JSON/new, fail to extract require",
+			name: "JSON/new/no data",
+			args: Args{
+				format: "json",
+				data:   "",
+				target: nil,
+			},
+			want:     "",
+			errRegex: `^$`,
+		},
+		{
+			name: "JSON/new/empty object",
+			args: Args{
+				format: "json",
+				data:   "{}",
+				target: nil,
+			},
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name: "YAML/new/no data",
+			args: Args{
+				format: "yaml",
+				data:   "",
+				target: nil,
+			},
+			want:     "",
+			errRegex: `^$`,
+		},
+		{
+			name: "JSON/new/fail to extract require",
 			args: Args{
 				format: "json",
 				data: test.TrimYAML(`
@@ -223,7 +263,7 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "YAML/new, fail to extract require",
+			name: "YAML/new/fail to extract require",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -246,7 +286,40 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "JSON/existing, fail to extract require",
+			name: "JSON/existing/no data",
+			args: Args{
+				format: "json",
+				data:   "",
+				target: &Lookup{},
+			},
+			want: "",
+			errRegex: test.TrimYAML(`
+					jsontext:
+						unexpected EOF`,
+			),
+		},
+		{
+			name: "JSON/existing/empty object",
+			args: Args{
+				format: "json",
+				data:   "{}",
+				target: &Lookup{},
+			},
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name: "YAML/existing/no data",
+			args: Args{
+				format: "yaml",
+				data:   "",
+				target: &Lookup{},
+			},
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name: "JSON/existing/fail to extract require",
 			args: Args{
 				format: "json",
 				data: test.TrimYAML(`
@@ -273,7 +346,7 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "YAML/existing, fail to extract require",
+			name: "YAML/existing/fail to extract require",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -296,7 +369,7 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "JSON/existing, no require",
+			name: "JSON/existing/no require",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -320,7 +393,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "YAML/existing, no require",
+			name: "YAML/existing/no require",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -344,27 +417,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "JSON/no data",
-			args: Args{
-				format: "json",
-				data:   "",
-				target: &Lookup{},
-			},
-			want:     "{}\n",
-			errRegex: `^$`,
-		},
-		{
-			name: "YAML/no data",
-			args: Args{
-				format: "yaml",
-				data:   "",
-				target: &Lookup{},
-			},
-			want:     "{}\n",
-			errRegex: `^$`,
-		},
-		{
-			name: "JSON/existing, remove Require",
+			name: "JSON/existing/remove Require",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -396,7 +449,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "YAML/existing, remove Require",
+			name: "YAML/existing/remove Require",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -428,7 +481,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "JSON/existing, remove Require.Docker",
+			name: "JSON/existing/remove Require.Docker",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -473,7 +526,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "YAML/existing, remove Require.Docker",
+			name: "YAML/existing/remove Require.Docker",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -517,7 +570,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "JSON/existing, change Require.x and Require.Docker.x",
+			name: "JSON/existing/change Require.x and Require.Docker.x",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -570,7 +623,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "YAML/existing, change Require.x and Require.Docker.x",
+			name: "YAML/existing/change Require.x and Require.Docker.x",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -621,7 +674,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "JSON/existing, change Require.x - type error",
+			name: "JSON/existing/change Require.x - type error",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -656,7 +709,7 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "YAML/existing, change Require.x - type error",
+			name: "YAML/existing/change Require.x - type error",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -690,7 +743,7 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "JSON/new, filled Require",
+			name: "JSON/new/filled Require",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -722,7 +775,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "YAML/new, filled Require",
+			name: "YAML/new/filled Require",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -752,7 +805,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "JSON/new - type error",
+			name: "JSON/new/type error",
 			args: Args{
 				format: "json",
 				data:   `{"url": ["https://example.com"]}`,
@@ -761,7 +814,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^json: .*unmarshal.*$`,
 		},
 		{
-			name: "YAML/new - type error",
+			name: "YAML/new/type error",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -773,7 +826,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^[^\s]+ .*unmarshal.*`,
 		},
 		{
-			name: "JSON/existing - type error",
+			name: "JSON/existing/type error",
 			args: Args{
 				format: "json",
 				data:   `{"url": ["https://example.com"]}`,
@@ -782,7 +835,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^json: .*unmarshal.*`,
 		},
 		{
-			name: "YAML/new, filled - type error",
+			name: "YAML/new/filled - type error",
 			args: Args{
 				format: "yaml",
 				data:   `url: [https://example.com]`,
@@ -890,6 +943,36 @@ func TestUnmarshalRequire(t *testing.T) {
 		errRegex string
 	}{
 		{
+			name: "JSON/no data",
+			args: Args{
+				format: "json",
+				data:   "",
+				lookup: &Lookup{},
+			},
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name: "JSON/empty object",
+			args: Args{
+				format: "json",
+				data:   "{}",
+				lookup: &Lookup{},
+			},
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name: "YAML/no data",
+			args: Args{
+				format: "yaml",
+				data:   "",
+				lookup: &Lookup{},
+			},
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
 			name: "JSON/fail to extract require",
 			args: Args{
 				format: "json",
@@ -966,27 +1049,7 @@ func TestUnmarshalRequire(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "JSON/no data",
-			args: Args{
-				format: "json",
-				data:   "",
-				lookup: &Lookup{},
-			},
-			want:     "{}\n",
-			errRegex: `^$`,
-		},
-		{
-			name: "YAML/no data",
-			args: Args{
-				format: "yaml",
-				data:   "",
-				lookup: &Lookup{},
-			},
-			want:     "{}\n",
-			errRegex: `^$`,
-		},
-		{
-			name: "JSON/existing, change Require.x and Require.Docker.x",
+			name: "JSON/existing/change Require.x and Require.Docker.x",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -1038,7 +1101,7 @@ func TestUnmarshalRequire(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "YAML/existing, change Require.x and Require.Docker.x",
+			name: "YAML/existing/change Require.x and Require.Docker.x",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -1089,7 +1152,7 @@ func TestUnmarshalRequire(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "JSON/existing, change Require.x - type error",
+			name: "JSON/existing/change Require.x - type error",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -1124,7 +1187,7 @@ func TestUnmarshalRequire(t *testing.T) {
 			),
 		},
 		{
-			name: "YAML/existing, change Require.x - type error",
+			name: "YAML/existing/change Require.x - type error",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -1158,7 +1221,7 @@ func TestUnmarshalRequire(t *testing.T) {
 			),
 		},
 		{
-			name: "JSON/new, filled",
+			name: "JSON/new, filled/bare",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -1190,7 +1253,7 @@ func TestUnmarshalRequire(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "YAML/new, filled",
+			name: "YAML/new, filled/bare",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -1220,7 +1283,7 @@ func TestUnmarshalRequire(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "JSON/new, filled - type error",
+			name: "JSON/new, filled/type error",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -1236,7 +1299,7 @@ func TestUnmarshalRequire(t *testing.T) {
 			),
 		},
 		{
-			name: "YAML/new, filled - type error",
+			name: "YAML/new, filled/type error",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`

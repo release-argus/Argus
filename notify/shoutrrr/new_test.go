@@ -44,7 +44,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 	typeOther := "slack"
 
 	// GIVEN: a bunch of 'service' notifiers.
-	serviceNotifies := &Shoutrrrs{
+	serviceNotifiers := &Shoutrrrs{
 		"no_main_no_type": &Shoutrrr{},
 		"no_main_with_type_and_defaults": &Shoutrrr{
 			Base: Base{
@@ -117,14 +117,14 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^name and/or name_previous are required`,
 		},
 		{
-			name: "no name",
+			name: "no name/only",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 			},
 			errRegex: `^name and/or name_previous are required`,
 		},
 		{
-			name: "no name, have name_previous",
+			name: "no name/have name_previous",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				NamePrevious:      "test",
@@ -132,7 +132,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^invalid type "[^"]+"$`,
 		},
 		{
-			name: "no Type",
+			name: "no type",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "no_main_no_defaults_no_hard_defaults",
@@ -141,7 +141,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^invalid type "[^"]+"$`,
 		},
 		{
-			name: "edit, no Main, no Defaults - No Type",
+			name: "edit/no Main/no Defaults/no type",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "no_main_no_type",
@@ -150,7 +150,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^invalid type "[^"]+"$`,
 		},
 		{
-			name: "edit, no Main, no Defaults - with Type",
+			name: "edit/no Main/no Defaults/with type",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "no_main_no_type",
@@ -166,7 +166,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "edit, no Main, no Defaults - had Type (missing name_previous)",
+			name: "edit/no Main/no Defaults/had type/missing name_previous",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "no_main_with_type_and_no_defaults",
@@ -175,7 +175,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^invalid type "[^"]+"$`,
 		},
 		{
-			name: "edit, no Main, no Defaults - had Type (have name_previous)",
+			name: "edit/no Main/no Defaults/had type/have name_previous",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				NamePrevious:      "no_main_with_type_and_no_defaults",
@@ -190,7 +190,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "edit, no Main, have Defaults",
+			name: "edit/no Main/have Defaults",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "no_main_with_type_and_defaults",
@@ -206,7 +206,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "edit, have Main, no Defaults - Give Type",
+			name: "edit/have Main/no Defaults/give type",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "main_no_type",
@@ -220,7 +220,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "edit, have Main, no Defaults - No Type",
+			name: "edit/have Main/no Defaults/no type",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "main_no_type",
@@ -228,7 +228,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^invalid type "[^"]+"$`,
 		},
 		{
-			name: "edit, have Main, have Defaults",
+			name: "edit/have Main/have Defaults/core",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "main_with_type_and_defaults",
@@ -242,7 +242,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "edit, have Main, have Defaults - Fail, Different Type to Main",
+			name: "edit/have Main/have Defaults/fail/different type to Main",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "main_with_type_and_defaults",
@@ -251,7 +251,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `type: "` + typeWithNoDefaults + `" <invalid> .*\(gotify\)\)`,
 		},
 		{
-			name: "edit, have Main, have Defaults - Fail, Invalid field",
+			name: "edit/have Main/have Defaults/fail/invalid field",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "main_with_type_and_defaults",
@@ -265,7 +265,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			),
 		},
 		{
-			name: "new, no Main, have Defaults, type from name",
+			name: "new/no Main, have Defaults, type from name",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              typeWithDefaults,
@@ -280,7 +280,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "new, no Main, no Defaults, type from name",
+			name: "new/no Main, no Defaults, type from name",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              typeWithNoDefaults,
@@ -295,7 +295,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "new, have Main, have Defaults",
+			name: "new/have Main, have Defaults/core",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "main_not_on_service_with_defaults",
@@ -308,7 +308,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "new, have Main, have Defaults - new service",
+			name: "new/have Main, have Defaults/new service",
 			payload: TestPayload{
 				ServiceIDPrevious: "",
 				ServiceID:         "something",
@@ -322,7 +322,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "new, have Main, have Defaults - Fail, Different Type to Main",
+			name: "new/have Main, have Defaults, fail, different type to Main",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
 				Name:              "main_not_on_service_with_defaults",
@@ -359,7 +359,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 
 			var testServiceNotify *Shoutrrr
 			if tc.payload.NamePrevious != "" {
-				testServiceNotify = (*serviceNotifies)[tc.payload.NamePrevious]
+				testServiceNotify = (*serviceNotifiers)[tc.payload.NamePrevious]
 			}
 			dash, _ := dashboard.Decode(
 				"yaml", nil,

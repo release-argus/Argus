@@ -16,7 +16,7 @@
 
 package test
 
-// Combinations will generate and return all possible combinations of the given input.
+// Combinations returns all possible combinations of the input elements.
 func Combinations[T comparable](input []T) [][]T {
 	var result [][]T
 

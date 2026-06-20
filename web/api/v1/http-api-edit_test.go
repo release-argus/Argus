@@ -79,7 +79,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid vars - Decode fail",
+			name: "invalid vars/Decode fail",
 			params: map[string]string{
 				"overrides": `{"type": "something"}`,
 			},
@@ -89,7 +89,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid vars - CheckValues fail",
+			name: "invalid vars/CheckValues fail",
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"type":         "url",
@@ -213,7 +213,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid vars - Decode fail",
+			name: "invalid vars/Decode fail",
 			params: map[string]string{
 				"overrides": `{"type": "something"}`,
 			},
@@ -223,7 +223,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid vars - CheckValues fail",
+			name: "invalid vars/CheckValues fail",
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"type":  "url",
@@ -361,7 +361,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "semantic_versioning=null - fail as default=true",
+			name: "semantic_versioning/null, fail as default=true",
 			params: map[string]string{
 				"semantic_versioning": "null",
 			},
@@ -386,7 +386,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "semantic_versioning=same - refreshes service",
+			name: "semantic_versioning/same refreshes service",
 			params: map[string]string{
 				"semantic_versioning": "false",
 			},
@@ -413,7 +413,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "semantic_versioning=diff - not applied to service",
+			name: "semantic_versioning/diff, not applied to service",
 			params: map[string]string{
 				"semantic_versioning": "true",
 			},
@@ -516,7 +516,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "use secretRefs",
+			name: "secretRefs/used",
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 						"headers": [
@@ -553,7 +553,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid secretRefs",
+			name: "secretRefs/invalid",
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 						"headers": [
@@ -712,7 +712,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 		wants              wants
 	}{
 		{
-			name:               "adding deployed version to service - success",
+			name:               "uncreated/success",
 			nilDeployedVersion: true,
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
@@ -729,7 +729,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name:               "adding deployed version to service - no overrides",
+			name:               "uncreated/no overrides",
 			nilDeployedVersion: true,
 			wants: wants{
 				bodyRegex:  `{"message":"missing required parameter: overrides"`,
@@ -760,7 +760,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "semantic_versioning=null - fail as default=true",
+			name: "semantic_versioning/null, fail as default=true",
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"url_commands": [
@@ -790,7 +790,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "semantic_versioning=diff - not applied to service",
+			name: "semantic_versioning/diff, not applied to service",
 			params: map[string]string{
 				"semantic_versioning": "true",
 			},
@@ -842,7 +842,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid JSON - existing DVL",
+			name: "existing DVL, invalid JSON",
 			params: map[string]string{
 				"overrides": `{"json": "x.y"}`,
 			},
@@ -852,7 +852,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name:               "JSON key not found - new DVL",
+			name:               "new DVL, JSON key not found",
 			nilDeployedVersion: true,
 			params: map[string]string{
 				"overrides": `{
@@ -870,7 +870,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid vars - CheckValues fail",
+			name: "invalid vars, CheckValues fail",
 			params: map[string]string{
 				"overrides": `{"regex": "v?([0-9.+)"}`,
 			},
@@ -900,7 +900,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "use secretRefs",
+			name: "secretRefs/used",
 			svc: test.Must(t, func() (*service.Service, error) {
 				base := testService(t, "TestHTTP_LatestVersionRefresh", "url", "url", false)
 				if dv, ok := base.DeployedVersionLookup.(*dvweb.Lookup); ok {
@@ -929,7 +929,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid secretRefs",
+			name: "secretRefs/invalid",
 			svc: test.Must(t, func() (*service.Service, error) {
 				base := testService(t, "TestHTTP_LatestVersionRefresh", "url", "url", false)
 				if dv, ok := base.DeployedVersionLookup.(*dvweb.Lookup); ok {
@@ -1285,7 +1285,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 			},
 		},
 		{
-			name: "missing required parameters - service_id",
+			name: "missing required parameters/service_id",
 			queryParams: map[string]string{
 				"template": "{{ service_name }}",
 			},
@@ -1295,7 +1295,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 			},
 		},
 		{
-			name: "missing required parameters - template",
+			name: "missing required parameters/template",
 			queryParams: map[string]string{
 				"service_id": test.ArgusGitHubRepo,
 			},
@@ -1331,7 +1331,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 			},
 		},
 		{
-			name: "valid template with default parameters",
+			name: "valid template/default parameters",
 			queryParams: map[string]string{
 				"service_id": testSVC.ID,
 				"template":   `{{service_name }} - {{ version }}`,
@@ -1345,7 +1345,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 			},
 		},
 		{
-			name: "valid template with overridden parameters",
+			name: "valid template/overridden parameters",
 			queryParams: map[string]string{
 				"service_id": testSVC.ID,
 				"template":   `{{ service_id}} - {{ version }}`,
@@ -1461,7 +1461,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			},
 		},
 		{
-			name: "new service - lv-github",
+			name: "lv-github",
 			payload: test.TrimJSON(`{
 				"id": "__name__-new",
 				"name": "__name__-foo",
@@ -1490,7 +1490,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 				statusCode: http.StatusOK,
 				bodyRegex:  `^{"message":"created service[^}]+"}`,
 				serviceYAML: test.TrimYAML(`
-					name: '__name__-foo'
+					name: __name__-foo
 					comment: hello
 					options:
 						semantic_versioning: true
@@ -1507,7 +1507,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			},
 		},
 		{
-			name: "new service - lv-url",
+			name: "lv-url",
 			payload: test.TrimJSON(`{
 				"id": "__name__-new",
 				"comment": "goodbye",
@@ -1553,7 +1553,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			},
 		},
 		{
-			name: "new service - dv-manual",
+			name: "dv-manual",
 			payload: test.TrimJSON(`{
 				"id": "__name__-new",
 				"name": "__name__-foo",
@@ -1572,7 +1572,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 				bodyRegex:       `{"message":"created service[^}]+"}`,
 				deployedVersion: "1.2.3",
 				serviceYAML: test.TrimYAML(`
-					name: '__name__-foo'
+					name: __name__-foo
 					comment: hi
 					options:
 						semantic_versioning: true
@@ -1582,7 +1582,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			},
 		},
 		{
-			name: "new service - dv-url",
+			name: "dv-url",
 			payload: test.TrimJSON(`{
 					"id": "__name__-new",
 					"comment": "bye",
@@ -1620,7 +1620,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, ID already taken",
+			name: "ID already taken",
 			payload: test.TrimJSON(`{
 					"id": "__name__",
 					"latest_version": {
@@ -1634,7 +1634,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, name already taken",
+			name: "name already taken",
 			payload: test.TrimJSON(`{
 					"id": "__name__-new",
 					"name": "__name__",
@@ -1649,7 +1649,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, invalid interval",
+			name: "invalid interval",
 			payload: test.TrimJSON(`{
 				"id": "__name__-new",
 				"latest_version": {
@@ -2713,6 +2713,13 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		wants       wants
 	}{
 		{
+			name: "no body",
+			wants: wants{
+				statusCode: http.StatusBadRequest,
+				bodyRegex:  "body required",
+			},
+		},
+		{
 			name: "body too large",
 			payload: `{
 				"test": "` + strings.Repeat(strings.Repeat("abcdefghijklmnopqrstuvwxyz", 100), 100) + `"}`,
@@ -2722,32 +2729,27 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "no bodyRegex",
-			wants: wants{
-				statusCode: http.StatusBadRequest,
-				bodyRegex:  "name and/or name_previous are required",
-			},
-		},
-		{
-			name: "no service, new notify",
+			name: "unknown notify ref",
 			payload: `{
-				"name": "new_notify"}`,
+				"name": "new_notify"
+			}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
 				bodyRegex:  `invalid type "[^"]+"`,
 			},
 		},
 		{
-			name: "new service, no new/old notify",
+			name: "no name or name_previous",
 			payload: `{
-				"service_id": "new_service"}`,
+				"service_id": "new_service"
+			}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
 				bodyRegex:  `name and/or name_previous are required`,
 			},
 		},
 		{
-			name: "new service, no main",
+			name: "new service/no main/topic required",
 			payload: `{
 				"service_id": "also_unknown",
 				"name": "test_notify",
@@ -2758,7 +2760,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, no main - no service_id",
+			name: "new service/no main/no service_id",
 			payload: `{
 				"name": "test_notify",
 				"type": "ntfy"}`,
@@ -2768,7 +2770,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, no main - invalid JSON, options",
+			name: "new service/no main/invalid JSON/options",
 			payload: `{
 				"service_id": "also_unknown",
 				"name": "test_notify",
@@ -2787,7 +2789,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, no main - options, invalid",
+			name: "new service/no main/options, invalid",
 			payload: `{
 				"service_id": "also_unknown",
 				"name": "test_notify",
@@ -2802,7 +2804,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, have main - options, applied, delay ignored",
+			name: "new service/have main/options applied, delay ignored",
 			payload: `{
 				"service_id": "also_unknown",
 				"name": "test",
@@ -2816,7 +2818,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, no main - invalid JSON, url_fields",
+			name: "new service/no main/invalid JSON/url_fields",
 			payload: `{
 				"service_id": "also_unknown",
 				"name": "test_notify",
@@ -2834,7 +2836,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, have main - url_fields, invalid",
+			name: "new service/have main/url_fields, invalid",
 			payload: `{
 				"service_id": "also_unknown",
 				"name": "test",
@@ -2848,7 +2850,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, no main - no type",
+			name: "new service/no main/no type",
 			payload: `{
 				"service_id": "also_unknown",
 				"name": "test_notify"}`,
@@ -2858,7 +2860,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, no main - unknown type",
+			name: "new service/no main/unknown type",
 			payload: `{
 				"service_id": "unknown",
 				"name": "test_notify",
@@ -2869,7 +2871,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, no main - type from ID",
+			name: "new service/no main/type from ID",
 			payload: `{
 				"service_id": "unknown",
 				"name": "` + validNotify.Type + `",
@@ -2885,7 +2887,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "new service, have main - type from Main",
+			name: "new service/have main/type from Main",
 			payload: `{
 				"service_id": "unknown",
 				"name": "test",
@@ -2901,7 +2903,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "same service, have main - type from original",
+			name: "same service/have main/type from original",
 			payload: `{
 				"service_id_previous": "test",
 				"service_id": "test",
@@ -2919,7 +2921,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "same service, no main - can remove vars",
+			name: "same service/no main/can remove vars",
 			payload: `{
 				"service_id_previous": "test",
 				"service_id": "test",
@@ -2940,7 +2942,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "same service, no main - unsent vars inherited",
+			name: "same service/no main/unsent vars inherited",
 			payload: `{
 				"service_id_previous": "test",
 				"service_id": "test",
@@ -2958,7 +2960,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "same service, have main - fail send",
+			name: "same service/have main/fail send",
 			payload: `{
 				"service_id_previous": "test",
 				"service_id": "test",
@@ -2977,7 +2979,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			},
 		},
 		{
-			name: "same service, have main - new name, also fail send",
+			name: "same service/have main/new name, also fail send",
 			payload: `{
 				"service_id_previous": "test",
 				"service_id": "new_name",

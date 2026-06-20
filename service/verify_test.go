@@ -262,7 +262,7 @@ func TestServices_CheckValues(t *testing.T) {
 			changed:  false,
 		},
 		{
-			name: "multiple valid services",
+			name: "multiple valid services/no changes",
 			input: test.Must(t, func() (Services, error) {
 				return DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -288,7 +288,7 @@ func TestServices_CheckValues(t *testing.T) {
 			changed:  false,
 		},
 		{
-			name: "multiple valid services, 1+ changed",
+			name: "multiple valid services/1+ changed",
 			input: test.Must(t, func() (Services, error) {
 				return DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -322,7 +322,7 @@ func TestServices_CheckValues(t *testing.T) {
 			changed:  true,
 		},
 		{
-			name: "multiple valid services, 1+ changed but some error",
+			name: "multiple valid services/1+ changed but some error",
 			input: test.Must(t, func() (Services, error) {
 				return DecodeServices(
 					"yaml", []byte(test.TrimYAML(`

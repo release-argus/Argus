@@ -36,7 +36,7 @@ type API struct {
 	RoutePrefix string
 }
 
-// NewAPI will create a new API with the provided config.
+// NewAPI creates a new API with the provided config.
 func NewAPI(cfg *config.Config) *API {
 	baseRouter := mux.NewRouter().StrictSlash(true)
 	routePrefix := cfg.Settings.WebRoutePrefix()

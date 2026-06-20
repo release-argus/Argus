@@ -37,15 +37,25 @@ import (
 func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 	// GIVEN: a CommonRegistryDefaults and JSON/YAML to unmarshal into it.
 	tests := []struct {
-		name     string
-		format   string
-		data     string
-		registry *CommonRegistryDefaults
-		errRegex string
-		want     string
+		name         string
+		format, data string
+		registry     *CommonRegistryDefaults
+		errRegex     string
+		want         string
 	}{
 		{
 			name:     "JSON/empty",
+			format:   "json",
+			data:     "",
+			registry: &CommonRegistryDefaults{},
+			errRegex: test.TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
+			want: "",
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
 			data:     "{}",
 			registry: &CommonRegistryDefaults{},
@@ -55,7 +65,7 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 		{
 			name:     "YAML/empty",
 			format:   "yaml",
-			data:     "{}",
+			data:     "",
 			registry: &CommonRegistryDefaults{},
 			errRegex: `^$`,
 			want:     "{}\n",
@@ -89,7 +99,7 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			errRegex: `^[^\s]+ .*unmarshal .*`,
 		},
 		{
-			name:   "JSON/invalid Auth",
+			name:   "JSON/auth invalid data type",
 			format: "json",
 			data:   `{"auth": []}`,
 			registry: &CommonRegistryDefaults{
@@ -97,11 +107,11 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
-					json: .*unmarshal.*`,
+					json: .*unmarshal.*$`,
 			),
 		},
 		{
-			name:   "YAML/invalid Auth",
+			name:   "YAML/auth invalid data type",
 			format: "yaml",
 			data:   `auth: []`,
 			registry: &CommonRegistryDefaults{
@@ -249,13 +259,16 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*CommonRegistryDefaults, error) {
+					err := decode.Unmarshal(format, data, tc.registry)
+					return tc.registry, err
+				},
 				tc.format, tc.data,
-				tc.registry,
-				tc.errRegex,
 				func(v *CommonRegistryDefaults) string { return decode.ToYAMLString(v, "") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"CommonRegistryDefaults",
 			); testErr != nil {
@@ -278,6 +291,17 @@ func TestCommonRegistry_Unmarshal(t *testing.T) {
 		{
 			name:     "JSON/empty",
 			format:   "json",
+			data:     "",
+			registry: &CommonRegistry{},
+			errRegex: test.TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
+			want: "",
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
 			data:     "{}",
 			registry: &CommonRegistry{},
 			errRegex: `^$`,
@@ -480,13 +504,16 @@ func TestCommonRegistry_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*CommonRegistry, error) {
+					err := decode.Unmarshal(format, data, tc.registry)
+					return tc.registry, err
+				},
 				tc.format, tc.data,
-				tc.registry,
-				tc.errRegex,
 				func(v *CommonRegistry) string { return v.String("") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"CommonRegistry",
 			); testErr != nil {
@@ -518,14 +545,14 @@ func TestCommonRegistry_IsZero(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "have type",
+			name: "non-empty/Type",
 			registry: &CommonRegistry{
 				Type: "hub",
 			},
 			want: false,
 		},
 		{
-			name: "have image",
+			name: "non-empty/Image",
 			registry: &CommonRegistry{
 				ContainerDetail: ContainerDetail{
 					Image: "test/app",
@@ -534,7 +561,7 @@ func TestCommonRegistry_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "have tag",
+			name: "non-empty/Tag",
 			registry: &CommonRegistry{
 				ContainerDetail: ContainerDetail{
 					Tag: "1.2.3",
@@ -543,7 +570,7 @@ func TestCommonRegistry_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "have image+tag",
+			name: "non-empty/ContainerDetail",
 			registry: &CommonRegistry{
 				ContainerDetail: ContainerDetail{
 					Image: "test/app",
@@ -553,7 +580,7 @@ func TestCommonRegistry_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "have auth",
+			name: "non-empty/Auth",
 			registry: &CommonRegistry{
 				Auth: &HubAuth{
 					HubAuthDefaults: HubAuthDefaults{
@@ -566,7 +593,7 @@ func TestCommonRegistry_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "have type, have image/tag, have auth",
+			name: "non-empty/all",
 			registry: &CommonRegistry{
 				Type: "hub",
 				ContainerDetail: ContainerDetail{
@@ -1337,7 +1364,7 @@ func TestCommonRegistry_GetImage(t *testing.T) {
 			want: "test/app-hardDefaults",
 		},
 		{
-			name: "Image from root, ignore defaults/hardDefaults",
+			name: "Image from root, ignore defaults and hardDefaults",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
 					Image: "test/app-root",
@@ -1563,7 +1590,7 @@ func TestCommonRegistry_GetTag(t *testing.T) {
 			want: "test/app-hardDefaults",
 		},
 		{
-			name: "Tag from root, ignore defaults/hardDefaults",
+			name: "Tag from root, ignore defaults and hardDefaults",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
 					Tag: "test/app-root",
@@ -2017,7 +2044,7 @@ func TestCommonRegistry_Detail(t *testing.T) {
 			},
 		},
 		{
-			name: "image from defaults, tag from root",
+			name: "image from defaults/tag from root",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
 					Image: "",
@@ -2038,7 +2065,7 @@ func TestCommonRegistry_Detail(t *testing.T) {
 			},
 		},
 		{
-			name: "image from defaults, tag from defaults",
+			name: "image from defaults/tag from defaults",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
 					Image: "",
@@ -2161,7 +2188,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 					},
 				},
 				ContainerDetail: ContainerDetail{
-					Image: "releaseargus/argus",
+					Image: "test/app",
 					Tag:   "{{ latest_version }}",
 				},
 			},
@@ -2180,7 +2207,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 					},
 				},
 				ContainerDetail: ContainerDetail{
-					Image: "releaseargus/argus",
+					Image: "test/app",
 					Tag:   "{{ latest_version }}",
 				},
 			},
@@ -2188,7 +2215,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			inherit: false,
 		},
 		{
-			name: "inherit from GHCR - same auth",
+			name: "inherit from GHCR/same auth",
 			registry: CommonRegistry{
 				Auth: &GHCRAuth{
 					GHCRAuthDefaults: GHCRAuthDefaults{
@@ -2198,7 +2225,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 					},
 				},
 				ContainerDetail: ContainerDetail{
-					Image: "releaseargus/argus",
+					Image: "test/app",
 					Tag:   "{{ latest_version }}",
 				},
 			},
@@ -2212,7 +2239,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 						},
 					},
 					ContainerDetail: ContainerDetail{
-						Image: "releaseargus/argus",
+						Image: "test/app",
 						Tag:   "{{ latest_version }}",
 					},
 				},
@@ -2220,7 +2247,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			inherit: true,
 		},
 		{
-			name: "inherit from GHCR - different auth",
+			name: "inherit from GHCR/different auth",
 			registry: CommonRegistry{
 				Auth: &GHCRAuth{
 					GHCRAuthDefaults: GHCRAuthDefaults{
@@ -2230,7 +2257,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 					},
 				},
 				ContainerDetail: ContainerDetail{
-					Image: "releaseargus/argus",
+					Image: "test/app",
 					Tag:   "{{ latest_version }}",
 				},
 			},
@@ -2244,7 +2271,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 						},
 					},
 					ContainerDetail: ContainerDetail{
-						Image: "releaseargus/argus",
+						Image: "test/app",
 						Tag:   "{{ latest_version }}",
 					},
 				},
@@ -2252,7 +2279,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			inherit: false,
 		},
 		{
-			name: "inherit from Hub - same auth",
+			name: "inherit from Hub/same auth",
 			registry: CommonRegistry{
 				Auth: &HubAuth{
 					HubAuthDefaults: HubAuthDefaults{
@@ -2263,7 +2290,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 					},
 				},
 				ContainerDetail: ContainerDetail{
-					Image: "releaseargus/argus",
+					Image: "test/app",
 					Tag:   "{{ latest_version }}",
 				},
 			},
@@ -2278,7 +2305,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 						},
 					},
 					ContainerDetail: ContainerDetail{
-						Image: "releaseargus/argus",
+						Image: "test/app",
 						Tag:   "{{ latest_version }}",
 					},
 				},
@@ -2286,7 +2313,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			inherit: true,
 		},
 		{
-			name: "inherit from Hub - different auth (different username, same token)",
+			name: "inherit from Hub/different auth/different username, same token",
 			registry: CommonRegistry{
 				Auth: &HubAuth{
 					HubAuthDefaults: HubAuthDefaults{
@@ -2297,7 +2324,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 					},
 				},
 				ContainerDetail: ContainerDetail{
-					Image: "releaseargus/argus",
+					Image: "test/app",
 					Tag:   "{{ latest_version }}",
 				},
 			},
@@ -2312,7 +2339,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 						},
 					},
 					ContainerDetail: ContainerDetail{
-						Image: "releaseargus/argus",
+						Image: "test/app",
 						Tag:   "{{ latest_version }}",
 					},
 				},
@@ -2320,7 +2347,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			inherit: false,
 		},
 		{
-			name: "inherit from Hub - different auth (same username, different token)",
+			name: "inherit from Hub/different auth/same username, different token",
 			registry: CommonRegistry{
 				Auth: &HubAuth{
 					HubAuthDefaults: HubAuthDefaults{
@@ -2331,7 +2358,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 					},
 				},
 				ContainerDetail: ContainerDetail{
-					Image: "releaseargus/argus",
+					Image: "test/app",
 					Tag:   "{{ latest_version }}",
 				},
 			},
@@ -2346,7 +2373,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 						},
 					},
 					ContainerDetail: ContainerDetail{
-						Image: "releaseargus/argus",
+						Image: "test/app",
 						Tag:   "{{ latest_version }}",
 					},
 				},
@@ -2354,7 +2381,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			inherit: false,
 		},
 		{
-			name: "inherit from Quay - same auth",
+			name: "inherit from Quay, same auth",
 			registry: CommonRegistry{
 				Auth: &QuayAuth{
 					QuayAuthDefaults: QuayAuthDefaults{
@@ -2362,7 +2389,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 					},
 				},
 				ContainerDetail: ContainerDetail{
-					Image: "releaseargus/argus",
+					Image: "test/app",
 					Tag:   "{{ latest_version }}",
 				},
 			},
@@ -2374,7 +2401,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 						},
 					},
 					ContainerDetail: ContainerDetail{
-						Image: "releaseargus/argus",
+						Image: "test/app",
 						Tag:   "{{ latest_version }}",
 					},
 				},
@@ -2450,7 +2477,7 @@ func TestCommonRegistryDefaults_GetAuth(t *testing.T) {
 			},
 		},
 		{
-			name: "ghcr auth",
+			name: "quay auth",
 			auth: &QuayAuthDefaults{
 				Token: "abc",
 			},
@@ -2507,7 +2534,7 @@ func TestCommonRegistry_GetAuth(t *testing.T) {
 			},
 		},
 		{
-			name: "ghcr auth",
+			name: "quay auth",
 			auth: &QuayAuth{
 				QuayAuthDefaults: QuayAuthDefaults{
 					Token: "abc",

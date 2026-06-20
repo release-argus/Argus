@@ -436,10 +436,13 @@ func TestGetValueByKey(t *testing.T) {
 		errRegex string
 	}{
 		{
-			name:     "fail unmarshal",
-			input:    "{",
-			key:      "foo",
-			errRegex: `failed to unmarshal response`,
+			name:  "fail unmarshal",
+			input: "{",
+			key:   "foo",
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal response from "[^"]+" into JSON:
+					jsontext: unexpected EOF`,
+			),
 		},
 		{
 			name:     "empty key",

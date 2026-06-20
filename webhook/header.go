@@ -22,7 +22,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Header to use in the HTTP request.
+// Header is a key-value pair for a HTTP request header.
 type Header struct {
 	Key   string `json:"key" yaml:"key"`     // Header key, e.g. X-Sig.
 	Value string `json:"value" yaml:"value"` // Value to give the key.
@@ -40,7 +40,7 @@ type Header struct {
 //
 // The shorthand is converted to the canonical key/val representation.
 func (h *Headers) UnmarshalYAML(data []byte) error {
-	// try and unmarshal as a Header list.
+	// Try to unmarshal as a Header list.
 	var headers []Header
 	if err := decode.Unmarshal("yaml", data, &headers); err == nil {
 		*h = headers

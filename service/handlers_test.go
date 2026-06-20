@@ -562,7 +562,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 		wantAnnounces                      int
 	}{
 		{
-			name:                  "no auto_approve and no webhooks/command does announce and update deployed_version",
+			name:                  "no auto_approve and no webhooks - command does announce and update deployed_version",
 			autoApprove:           false,
 			wantAnnounces:         1,
 			deployedBecomesLatest: true,
@@ -1166,7 +1166,7 @@ func TestService_ShouldRetryAll(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "commands that have failed/haven't run",
+			name: "commands that have failed, haven't run",
 			command: []*bool{
 				test.Ptr(true),
 				nil,
@@ -1207,7 +1207,7 @@ func TestService_ShouldRetryAll(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "webhooks that have failed/haven't run",
+			name: "webhook that has failed and webhook that hasn't run",
 			webhook: map[string]*bool{
 				"1": test.Ptr(true),
 				"2": nil,
@@ -1392,7 +1392,7 @@ func TestService_UpdatedVersion(t *testing.T) {
 			deployedBecomesLatest: true,
 		},
 		{
-			name:                  "no webhooks/command/deployedVersionLookup does announce and update deployed_version",
+			name:                  "no webhooks - command - deployedVersionLookup does announce and update deployed_version",
 			wantAnnounces:         1,
 			deployedBecomesLatest: true,
 		},
@@ -1519,7 +1519,7 @@ func TestService_UpdatedVersion(t *testing.T) {
 			},
 		},
 		{
-			name:                  "deployedVersionLookup with no commands/webhooks doesn't announce or update deployed_version/approved_version",
+			name:                  "deployedVersionLookup with no commands or webhooks doesn't announce or update deployed_version or approved_version",
 			wantAnnounces:         0,
 			deployedBecomesLatest: false,
 			deployedVersion:       &dvmanual.Lookup{},

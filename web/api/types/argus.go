@@ -42,6 +42,7 @@ type ServiceSummary struct {
 	Tags                     *[]string `json:"tags,omitempty" yaml:"tags,omitempty"`                                 // Tags for the Service.
 }
 
+// IsZero implements the yaml.IsZeroer interface.
 func (s *ServiceSummary) IsZero() bool {
 	return s.ID == "" &&
 		s.Name == nil &&
@@ -286,7 +287,7 @@ func (n *Notifiers) String() string {
 	return decode.ToJSONString(n)
 }
 
-// Flatten these Notifiers into a list.
+// Flatten returns the Notifiers as an ordered flat list.
 func (n *Notifiers) Flatten() []Notify {
 	if n == nil {
 		return nil
@@ -311,19 +312,6 @@ func (n *Notifiers) Flatten() []Notify {
 	return list
 }
 
-// Censor these Notifiers for sending externally.
-func (n *Notifiers) Censor() *Notifiers {
-	if n == nil {
-		return nil
-	}
-
-	notifiers := make(Notifiers, len(*n))
-	for i, notify := range *n {
-		notifiers[i] = notify.Censor()
-	}
-	return &notifiers
-}
-
 // Notify is a message notifier source.
 type Notify struct {
 	ID        string            `json:"name,omitempty" yaml:"name,omitempty"`             // ID for this Notify sender.
@@ -333,10 +321,10 @@ type Notify struct {
 	Params    map[string]string `json:"params,omitempty" yaml:"params,omitempty"`         // Param props.
 }
 
-// Censor this Notify for sending over a WebSocket.
-func (n *Notify) Censor() *Notify {
+// Censor redacts secret url_fields and params with [util.SecretValue].
+func (n *Notify) Censor() {
 	if n == nil {
-		return nil
+		return
 	}
 
 	// url_fields.
@@ -354,8 +342,6 @@ func (n *Notify) Censor() *Notify {
 			n.Params[param] = util.SecretValue
 		}
 	}
-
-	return n
 }
 
 // NotifyParams is a map of Notify parameters.
@@ -732,7 +718,7 @@ func (w *WebHooks) String() string {
 	return decode.ToJSONString(w)
 }
 
-// Flatten these WebHooks into a list.
+// Flatten returns the WebHooks as an ordered flat list.
 func (w *WebHooks) Flatten() []WebHook {
 	if w == nil {
 		return nil
@@ -788,7 +774,7 @@ func (w *WebHook) String(prefix string) string {
 	return decode.ToYAMLString(w, prefix)
 }
 
-// Censor this WebHook for sending to the web client.
+// Censor replaces the WebHook's secret and header values with [util.SecretValue].
 func (w *WebHook) Censor() {
 	if w == nil {
 		return
@@ -813,8 +799,7 @@ type CommandSummary struct {
 	NextRunnable time.Time `json:"next_runnable,omitempty" yaml:"next_runnable,omitempty"` // Time at which the Command can next run (for staggering).
 }
 
-// CommandStatusUpdate holds an update of the current state of the Command.
-// @ index.
+// CommandStatusUpdate holds the current state of a Command at a given index.
 type CommandStatusUpdate struct {
 	Command string `json:"command" yaml:"command"` // Index of the Command.
 	Failed  bool   `json:"failed" yaml:"failed"`   // Whether the last attempt of this command failed.

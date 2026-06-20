@@ -143,7 +143,7 @@ func TestHeaders_InheritSecrets(t *testing.T) {
 			},
 		},
 		{
-			name: "can't inherit secrets with nil secretRefs",
+			name: "don't inherit secrets with nil secretRefs",
 			h: Headers{
 				{Key: "X-Test", Value: util.SecretValue},
 			},
@@ -156,7 +156,7 @@ func TestHeaders_InheritSecrets(t *testing.T) {
 			},
 		},
 		{
-			name: "cam\t inherit secrets with nil OldIndex",
+			name: "don't inherit secrets with nil OldIndex",
 			h: Headers{
 				{Key: "X-Test", Value: util.SecretValue},
 			},
@@ -171,7 +171,7 @@ func TestHeaders_InheritSecrets(t *testing.T) {
 			},
 		},
 		{
-			name: "can't inherit secrets when OldIndex out of range",
+			name: "don't inherit secrets when OldIndex out of range",
 			h: Headers{
 				{Key: "X-Test", Value: util.SecretValue},
 			},

@@ -35,7 +35,7 @@ type Hub struct {
 	unregister chan *Client
 }
 
-// NewHub will create a new Hub.
+// NewHub creates a new Hub.
 func NewHub() *Hub {
 	return &Hub{
 		Broadcast:  make(chan []byte, 256),
@@ -51,7 +51,7 @@ type AnnounceMSG struct {
 	ServiceID string `json:"service_id"`
 }
 
-// Run will start the WebSocket Hub.
+// Run starts the WebSocket Hub.
 func (h *Hub) Run() {
 	for {
 		select {

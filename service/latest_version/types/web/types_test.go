@@ -54,6 +54,13 @@ func TestLookup_Unmarshal(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     "{}",
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
 			name:     "YAML/empty",
 			format:   "yaml",
 			data:     "",
@@ -166,19 +173,22 @@ func TestLookup_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			v := Lookup{
-				Lookup: base.Lookup{
-					Defaults:     lvCfg.Soft,
-					HardDefaults: lvCfg.Hard,
-				},
-			}
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*Lookup, error) {
+					v := Lookup{
+						Lookup: base.Lookup{
+							Defaults:     lvCfg.Soft,
+							HardDefaults: lvCfg.Hard,
+						},
+					}
+					err := decode.Unmarshal(format, data, &v)
+					return &v, err
+				},
 				tc.format, tc.data,
-				&v,
-				tc.errRegex,
 				func(t *Lookup) string { return t.String("") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"Lookup",
 			); testErr != nil {

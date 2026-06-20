@@ -30,7 +30,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Track the deployed version of the `parent`.
+// Track polls the URL at the configured interval, updating the deployed version on each query.
 func (l *Lookup) Track() {
 	logFrom := logx.LogFrom{Primary: l.GetServiceID()}
 
@@ -49,12 +49,7 @@ func (l *Lookup) Track() {
 	}
 }
 
-// Query queries the source
-// and returns whether a new release was found, updating LatestVersion if so.
-//
-// Parameters:
-//
-//	metrics: if true, set Prometheus metrics based on the query.
+// Query fetches the deployed version, sets Prometheus metrics if requested, and returns any error.
 func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) error {
 	err := l.query(metrics, logFrom)
 
@@ -65,8 +60,7 @@ func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) error {
 	return err
 }
 
-// Query queries the source
-// and returns whether a new release was found, updating LatestVersion if so.
+// query fetches the deployed version URL and updates DeployedVersion if changed.
 func (l *Lookup) query(writeToDB bool, logFrom logx.LogFrom) error {
 	body, err := l.httpRequest(logFrom)
 	if err != nil {

@@ -28,44 +28,51 @@ import (
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
 	statustest "github.com/release-argus/Argus/service/status/test"
-	"github.com/release-argus/Argus/util"
-	"github.com/release-argus/Argus/util/errfmt"
 )
 
 // ############
 // # DECODING #
 // ############
 
-func TestLookup_UnmarshalJSON(t *testing.T) {
+func TestLookup_Unmarshal(t *testing.T) {
 	// GIVEN: data to unmarshal into a Lookup.
 	tests := []struct {
-		name     string
-		format   string
-		data     []byte
-		want     string
-		errRegex string
+		name         string
+		format, data string
+		want         string
+		errRegex     string
 	}{
 		{
-			name:     "JSON/empty",
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
+		},
+		{
+			name:     "JSON/empty object",
 			format:   "json",
-			data:     []byte{},
+			data:     "{}",
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
 			name:     "YAML/empty",
 			format:   "yaml",
-			data:     []byte{},
+			data:     "",
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
 		{
 			name:   "JSON/filled",
 			format: "json",
-			data: []byte(test.TrimJSON(`{
+			data: test.TrimJSON(`{
 				"type": "manual",
 				"version": "1.2.3"
-			}`)),
+			}`),
 			want: test.TrimYAML(`
 				type: manual
 				version: 1.2.3
@@ -75,10 +82,10 @@ func TestLookup_UnmarshalJSON(t *testing.T) {
 		{
 			name:   "YAML/filled",
 			format: "yaml",
-			data: []byte(test.TrimYAML(`
+			data: test.TrimYAML(`
 				type: manual
 				version: "1.2.3"
-			`)),
+			`),
 			want: test.TrimYAML(`
 				type: manual
 				version: 1.2.3
@@ -88,10 +95,10 @@ func TestLookup_UnmarshalJSON(t *testing.T) {
 		{
 			name:   "JSON/invalid type - version",
 			format: "json",
-			data: []byte(test.TrimJSON(`{
+			data: test.TrimJSON(`{
 				"type": "manual",
 				"version": ["1.2.3"]
-			}`)),
+			}`),
 			want: test.TrimYAML(`
 				type: manual
 				version: "1.2.3"
@@ -101,7 +108,7 @@ func TestLookup_UnmarshalJSON(t *testing.T) {
 		{
 			name:   "YAML/invalid type - version",
 			format: "yaml",
-			data:   []byte(`version: ["https://example.com"]`),
+			data:   `version: ["https://example.com"]`,
 			errRegex: test.TrimYAML(`
 				^[^\s]+ .*unmarshal.*
 				\>  \d | .+$`,
@@ -113,35 +120,21 @@ func TestLookup_UnmarshalJSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a Lookup.
-			tgt := Lookup{}
-
-			// WHEN: the data is unmarshaled into that Service.
-			err := decode.Unmarshal(tc.format, tc.data, &tgt)
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup Unmarshal(format=%q, data=%q)",
-				packageName, tc.format, tc.data,
-			)
-
-			// THEN: The error is as expected.
-			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
-			}
-			if e != "" {
-				return
-			}
-
-			// AND: the Lookup is as expected.
-			if got := tgt.String(""); got != tc.want {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+			if _, _, testErr := test.AssertDecode(
+				t,
+				func(format string, data []byte) (*Lookup, error) {
+					var zero Lookup
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
+				tc.format, tc.data,
+				func(v *Lookup) string { return v.String("") },
+				tc.want,
+				tc.errRegex,
+				packageName,
+				"Lookup",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}

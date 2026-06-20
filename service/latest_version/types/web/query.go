@@ -30,12 +30,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Query queries the source
-// and returns whether a new release was found, updating LatestVersion if so.
-//
-// Parameters:
-//
-//	metrics: if true, set Prometheus metrics based on the query.
+// Query fetches the URL, sets Prometheus metrics if requested, and returns whether a new version was found.
 func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) (bool, error) {
 	isNewVersion, err := l.query(logFrom)
 
@@ -46,8 +41,7 @@ func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) (bool, error) {
 	return isNewVersion, err
 }
 
-// Query queries the source
-// and returns whether a new release was found, updating LatestVersion if so.
+// query fetches the URL and returns whether a new version was found, updating LatestVersion if so.
 func (l *Lookup) query(logFrom logx.LogFrom) (bool, error) {
 	body, err := l.httpRequest(logFrom)
 	if err != nil {
@@ -169,7 +163,7 @@ func (l *Lookup) getVersion(body string, logFrom logx.LogFrom) (string, error) {
 	return "", err
 }
 
-// versionMeetsRequirements checks whether `version` meets the requirements of the receiver.
+// versionMeetsRequirements returns an error if version does not satisfy all Require filters.
 func (l *Lookup) versionMeetsRequirements(version, body string, logFrom logx.LogFrom) error {
 	// No `Require` filters.
 	if l.Require == nil {

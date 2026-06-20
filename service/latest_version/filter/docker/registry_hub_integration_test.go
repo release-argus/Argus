@@ -43,7 +43,7 @@ func TestHubRegistry_Check(t *testing.T) {
 			registry: HubRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
-						Image: "releaseargus/argus",
+						Image: test.ArgusDockerHubRepo,
 						Tag:   "{{ version }}",
 					},
 					Auth: &HubAuth{},
@@ -57,7 +57,7 @@ func TestHubRegistry_Check(t *testing.T) {
 			registry: HubRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
-						Image: "releaseargus/argus",
+						Image: test.ArgusDockerHubRepo,
 						Tag:   "{{ version }}",
 					},
 					Auth: &HubAuth{
@@ -77,7 +77,7 @@ func TestHubRegistry_Check(t *testing.T) {
 			registry: HubRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
-						Image: "releaseargus/argus-unknown",
+						Image: test.ArgusDockerHubRepo + "-unknown",
 						Tag:   "{{ version }}",
 					},
 					Auth: &HubAuth{
@@ -89,7 +89,7 @@ func TestHubRegistry_Check(t *testing.T) {
 				},
 			},
 			version:  "latest",
-			errRegex: `^releaseargus/argus-unknown:latest - tag not found$`,
+			errRegex: `^` + test.ArgusDockerHubRepo + `-unknown:latest - tag not found$`,
 		},
 	}
 
@@ -123,12 +123,12 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 		errRegex        string
 	}{
 		{
-			name:            "GetQueryToken error - no token, no-op token req fails",
+			name:            "GetQueryToken error, no token (no-op token req fails)",
 			hubTokenAddress: "https://	example.com",
 			registry: HubRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
-						Image: "releaseargus/argus",
+						Image: test.ArgusDockerHubRepo,
 						Tag:   "{{ version }}",
 					},
 					Auth: &HubAuth{
@@ -149,12 +149,12 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 			),
 		},
 		{
-			name:        "newRequest error - invalid URL",
+			name:        "newRequest error, invalid URL",
 			hubQueryURL: "https://	example.com",
 			registry: HubRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
-						Image: "releaseargus/argus-unknown",
+						Image: test.ArgusDockerHubRepo + "-unknown",
 						Tag:   "{{ version }}",
 					},
 					Auth: &HubAuth{
@@ -174,12 +174,12 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 			),
 		},
 		{
-			name:        "http.client.Do error - invalid URL TLD",
+			name:        "http.client.Do error, invalid URL TLD",
 			hubQueryURL: "https://example.invalid/%s/%s",
 			registry: HubRegistry{
 				CommonRegistry: CommonRegistry{
 					ContainerDetail: ContainerDetail{
-						Image: "releaseargus/argus",
+						Image: test.ArgusDockerHubRepo,
 						Tag:   "{{ version }}",
 					},
 					Auth: &HubAuth{
@@ -194,7 +194,7 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 			},
 			version: "latest",
 			errRegex: test.TrimYAML(`
-				releaseargus/argus:latest
+				` + test.ArgusDockerHubRepo + `:latest
 					Get "https://.*
 						dial tcp:
 							lookup .* no such host$`,
@@ -349,7 +349,7 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 			errRegex:        `^$`,
 		},
 		{
-			name: "no username/token",
+			name: "no username, no token",
 			detail: ContainerDetail{
 				Image: test.ArgusDockerHubRepo,
 			},
@@ -357,7 +357,7 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 			errRegex:        `^$`,
 		},
 		{
-			name: "valid username/token",
+			name: "valid username, valid token",
 			detail: ContainerDetail{
 				Image: test.ArgusDockerHubRepo,
 			},
@@ -367,7 +367,7 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 			errRegex:        `^$`,
 		},
 		{
-			name: "invalid url",
+			name: "invalid/url",
 			detail: ContainerDetail{
 				Image: "",
 			},
@@ -377,7 +377,7 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 			errRegex:     `^create docker-hub token request`,
 		},
 		{
-			name: "invalid/expired cert",
+			name: "invalid, expired cert",
 			detail: ContainerDetail{
 				Image: "",
 			},

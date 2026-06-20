@@ -48,7 +48,7 @@ func (s *Service) IconURL() *string {
 	return nil
 }
 
-// Init will initialise the Service, giving the channels and command/notify/webhook defaults (where unset).
+// init initialises the Service, wiring channels and assigning command/notify/webhook defaults where unset.
 func (s *Service) init(
 	notifyCfg shoutrrr.Config,
 	whCfg webhook.Config,
@@ -136,7 +136,7 @@ func (s *Service) init(
 	)
 }
 
-// DeleteMetrics registers all Prometheus metrics for the Service.
+// initMetrics registers all Prometheus metrics for the Service.
 func (s *Service) initMetrics() {
 	metric.ServiceCountCurrentAdd(s.Options.Active, 1)
 	if !s.Options.GetActive() {

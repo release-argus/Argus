@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
@@ -50,28 +51,28 @@ func TestRequire_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "RegexContent set",
+			name: "non-empty/RegexContent",
 			req: &Require{
 				RegexContent: "abc",
 			},
 			want: false,
 		},
 		{
-			name: "RegexVersion set",
+			name: "non-empty/RegexVersion",
 			req: &Require{
 				RegexVersion: "abc",
 			},
 			want: false,
 		},
 		{
-			name: "Command set",
+			name: "non-empty/Command",
 			req: &Require{
 				Command: command.Command{"ls", "-lah"},
 			},
 			want: false,
 		},
 		{
-			name: "Docker.Image from defaults, no .Tag",
+			name: "non-empty/Docker/.Image from defaults, no .Tag",
 			req: test.Must(t, func() (*Require, error) {
 				data := []byte(test.TrimYAML(`
 					docker:
@@ -93,14 +94,14 @@ func TestRequire_IsZero(t *testing.T) {
 				req.Docker.(*docker.HubRegistry).Tag = ""
 
 				if req.Docker.GetImage() == "" {
-					t.Fatal("Docker.Image should not be empty")
+					t.Fatal("non-empty/Docker/.Image should not be empty")
 				}
 				return req, err
 			}),
 			want: true,
 		},
 		{
-			name: "Docker.Tag from defaults, no .Image",
+			name: "non-empty/Docker/.Tag from defaults, no .Image",
 			req: test.Must(t, func() (*Require, error) {
 				data := []byte(test.TrimYAML(`
 					docker:
@@ -129,7 +130,7 @@ func TestRequire_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "Docker.Tag from defaults, .Image set",
+			name: "non-empty/Docker/.Tag from defaults, .Image set",
 			req: test.Must(t, func() (*Require, error) {
 				data := []byte(test.TrimYAML(`
 					docker:
@@ -318,7 +319,7 @@ func TestRequire_Unmarshal(t *testing.T) {
 			errRegex: `^[^\s]+ .*unmarshal.*`,
 		},
 		{
-			name:   "YAML/invalid docker subtree - ignored",
+			name:   "YAML/invalid docker subtree, ignored",
 			format: "yaml",
 			data: test.TrimYAML(`
 				regex_content: a
@@ -346,14 +347,17 @@ func TestRequire_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var v Require
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*Require, error) {
+					var zero Require
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
 				tc.format, tc.data,
-				&v,
-				tc.errRegex,
 				func(val *Require) string { return val.String("") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"Require",
 			); testErr != nil {
@@ -696,7 +700,7 @@ func TestRequire_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "docker - no image:tag removes Docker",
+			name: "docker, no image:tag removes Docker",
 			input: test.Must(t, func() (*Require, error) {
 				svcStatus, _ := statustest.New("yaml", nil)
 				return Decode(
@@ -819,7 +823,7 @@ func TestRequire_Inherit(t *testing.T) {
 			},
 		},
 		{
-			name: "change of Type - no copy",
+			name: "change of Type, no copy",
 			from: overrides{
 				overrides: test.TrimYAML(`
 					docker:
@@ -835,7 +839,7 @@ func TestRequire_Inherit(t *testing.T) {
 			inheritDockerToken: false,
 		},
 		{
-			name: "change of Image - no copy",
+			name: "change of Image, no copy",
 			from: overrides{
 				overrides: test.TrimYAML(`
 					docker:
@@ -851,7 +855,7 @@ func TestRequire_Inherit(t *testing.T) {
 			inheritDockerToken: false,
 		},
 		{
-			name: "change of Username - no copy",
+			name: "change of Username, no copy",
 			from: overrides{
 				overrides: test.TrimYAML(`
 					docker:
@@ -867,7 +871,7 @@ func TestRequire_Inherit(t *testing.T) {
 			inheritDockerToken: false,
 		},
 		{
-			name: "change of Token - no copy",
+			name: "change of Token, no copy",
 			from: overrides{
 				overrides: test.TrimYAML(`
 					docker:
@@ -1044,7 +1048,7 @@ func TestRequire_RemoveUnusedRequireDocker(t *testing.T) {
 			nil: true,
 		},
 		{
-			name: "Docker with Image and Tag - kept",
+			name: "Docker/Image and Tag, kept",
 			require: test.Must(t, func() (*Require, error) {
 				svcStatus, _ := statustest.New("yaml", nil)
 				return Decode(
@@ -1061,7 +1065,7 @@ func TestRequire_RemoveUnusedRequireDocker(t *testing.T) {
 			nil: false,
 		},
 		{
-			name: "Docker with Image only",
+			name: "Docker/Image only",
 			require: test.Must(t, func() (*Require, error) {
 				svcStatus, _ := statustest.New("yaml", nil)
 				return Decode(
@@ -1074,10 +1078,10 @@ func TestRequire_RemoveUnusedRequireDocker(t *testing.T) {
 					defaults,
 				)
 			}),
-			nil: true,
+			nil: false,
 		},
 		{
-			name: "Docker with Tag only",
+			name: "Docker/Tag only",
 			require: test.Must(t, func() (*Require, error) {
 				svcStatus, _ := statustest.New("yaml", nil)
 				return Decode(
@@ -1090,10 +1094,10 @@ func TestRequire_RemoveUnusedRequireDocker(t *testing.T) {
 					defaults,
 				)
 			}),
-			nil: true,
+			nil: false,
 		},
 		{
-			name: "Docker with empty Image and Tag",
+			name: "Docker/empty Image and empty Tag",
 			require: test.Must(t, func() (*Require, error) {
 				svcStatus, _ := statustest.New("yaml", nil)
 				return Decode(

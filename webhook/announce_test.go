@@ -39,17 +39,17 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 			nilChannel: true,
 		},
 		{
-			name:           "not tried (failed=nil) does delay by 15s",
+			name:           "not tried (failed=nil) - does delay by 15s",
 			timeDifference: 15 * time.Second,
 			failed:         nil,
 		},
 		{
-			name:           "failed (failed=true) does delay by 15s",
+			name:           "failed (failed=true) - does delay by 15s",
 			timeDifference: 15 * time.Second,
 			failed:         test.Ptr(true),
 		},
 		{
-			name:           "success (failed=false) does delay by 2*Interval",
+			name:           "success (failed=false) - does delay by 2*Interval",
 			timeDifference: 24 * time.Minute,
 			failed:         test.Ptr(false),
 		},

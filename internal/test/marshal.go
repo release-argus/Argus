@@ -27,10 +27,6 @@ import (
 //
 // Supported formats: json | yaml
 func Unmarshal(format string, data []byte, v any) error {
-	if len(data) == 0 && format == "json" {
-		data = []byte("{}")
-	}
-
 	switch format {
 	case "json":
 		if unmarshaler, ok := v.(json.Unmarshaler); ok {

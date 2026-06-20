@@ -99,7 +99,7 @@ func (l *Lookup) CheckValues() error {
 	return nil
 }
 
-// Query will query the service for the deployed version.
+// Query queries the service for the deployed version.
 func (l *Lookup) Query(_ bool, _ logx.LogFrom) error {
 	return errors.New("not implemented")
 }

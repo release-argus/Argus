@@ -32,7 +32,7 @@ import (
 	"github.com/release-argus/Argus/util/polymorphic"
 )
 
-// TestSend will test the Shoutrrr by sending a test message.
+// TestSend sends a test notification to verify the Shoutrrr configuration.
 func (s *Shoutrrr) TestSend(serviceURL string) error {
 	if s == nil {
 		return errors.New("shoutrrr is nil")
@@ -257,7 +257,7 @@ func (d *Defaults) CheckValues(id string) (error, bool) {
 	return errors.Join(errs...), false
 }
 
-// Print the ShoutrrrsDefaults.
+// Print writes the ShoutrrrsDefaults to stdout with the given prefix.
 func (s *ShoutrrrsDefaults) Print(prefix string) {
 	if s == nil || len(*s) == 0 {
 		return
@@ -270,11 +270,7 @@ func (s *ShoutrrrsDefaults) Print(prefix string) {
 	)
 }
 
-// correctSelf will do a few corrections to user provided vars.
-//
-//	e.g. slack color wants $23 instead of #.
-//
-// Returns whether anything changed.
+// correctSelf normalises config values and reports whether anything changed.
 func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 	// Port, strip leading :
 	if port, ok := strings.CutPrefix(b.getURLField("port"), ":"); ok {
@@ -362,10 +358,8 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 	return
 }
 
-// normaliseParamSelect normalizes a Param with a case-insensitive match to an allowed set,
-// setting it to the cased value from the provided list and returning `true`.
-// If the current value is empty or not found in the allowed list (case-insensitive), it is left unchanged
-// and `false` returned.
+// normaliseParamSelect normalises a Param against allowed (case-insensitive),
+// setting it to the correctly-cased value and returning true, or leaving it unchanged and returning false.
 func (b *Base) normaliseParamSelect(key string, value string, allowed []string) bool {
 	lc := strings.ToLower(value)
 	for _, opt := range allowed {
@@ -377,7 +371,7 @@ func (b *Base) normaliseParamSelect(key string, value string, allowed []string) 
 	return false
 }
 
-// checkValuesType validates that fields of this Shoutrrr struct are valid for `Type`.
+// checkValuesType validates the Type field against supported notification types.
 func (s *Shoutrrr) checkValuesType() error {
 	// Check we have a Type.
 	sType := s.GetType()
@@ -416,7 +410,7 @@ func (s *Shoutrrr) checkValuesType() error {
 	return nil
 }
 
-// checkValuesOptions validates the `Options` of the Shoutrrr struct.
+// checkValuesOptions validates the Options field.
 func (b *Base) checkValuesOptions() error {
 	var errs []error
 	// Options.Delay.
@@ -508,7 +502,7 @@ func (b *Base) checkValuesOptions() error {
 	return errors.Join(errs...)
 }
 
-// checkValuesURLFields validates the `URLFields` of the Shoutrrr struct.
+// checkValuesURLFields validates the URLFields field.
 func (s *Shoutrrr) checkValuesURLFields() error {
 	var errs []error
 
@@ -898,7 +892,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 	return errors.Join(errs...)
 }
 
-// checkValuesParams validates the `Params` of the Shoutrrr struct.
+// checkValuesParams validates the Params field.
 func (s *Shoutrrr) checkValuesParams() error {
 	var errs []error
 	itemType := s.GetType()
@@ -980,7 +974,7 @@ func (s *Shoutrrr) checkValuesParams() error {
 	return errors.Join(errs...)
 }
 
-// checkValuesParams validates the `Params` of the Base struct.
+// checkValuesParams validates the Params field of Base.
 func (b *Base) checkValuesParams(itemType string) error {
 	var errs []error
 
@@ -1009,7 +1003,7 @@ func (b *Base) checkValuesParams(itemType string) error {
 	return errors.Join(errs...)
 }
 
-// checkValuesParamsSelects validates the `Params` field of the Base struct for specific `itemType` against allowed selections.
+// checkValuesParamsSelects validates Params that must match an allowed set for itemType.
 func (b *Base) checkValuesParamsSelects(itemType string) error {
 	var errs []error
 
@@ -1052,9 +1046,7 @@ func (b *Base) checkValuesParamsSelects(itemType string) error {
 	return errors.Join(errs...)
 }
 
-// validateParamSelect normalises a Param against an `allowed` set (case-insensitive) and
-// returns an error if the value is not within that set. On success, it sets the Param to
-// the cased value from `allowed` and returns nil.
+// validateParamSelect normalises key against allowed (case-insensitive), returning an error if not found.
 func (b *Base) validateParamSelect(key string, allowed []string) error {
 	value := b.GetParam(key)
 	if value == "" {

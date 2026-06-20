@@ -35,7 +35,7 @@ func FirstNonDefaultWithEnv(vars ...string) string {
 // envVarRegex matches environment variables using a regular expression.
 var envVarRegex = regexp.MustCompile(`\${([a-zA-Z]\w*)}`)
 
-// EvalEnvVars will evaluate the environment variables in the string.
+// EvalEnvVars evaluates environment variables in the string.
 func EvalEnvVars(input string) string {
 	// May contain an environment variable.
 	if strings.Contains(input, "${") {

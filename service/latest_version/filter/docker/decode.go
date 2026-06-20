@@ -32,6 +32,9 @@ func Decode(
 	if decode.IsNull(data) {
 		return nil, nil
 	}
+	if data == nil {
+		data = []byte("{}")
+	}
 
 	// Create.
 	fieldInheritable, err := polymorphic.Instantiate(
@@ -68,7 +71,7 @@ func Decode(
 	return field, nil
 }
 
-// ApplyOverrides applies format-encoded overrides to a [Registry] object.
+// ApplyOverrides applies format-encoded overrides to target.
 // If the target is nil, a new [Registry] is created.
 func ApplyOverrides(
 	format string,

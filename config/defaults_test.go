@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
@@ -170,7 +171,7 @@ func TestDecodeDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, testErr := test.AssertDecode(
+			if _, _, testErr := test.AssertDecode(
 				t,
 				DecodeDefaults,
 				tc.format, tc.data,
@@ -179,8 +180,7 @@ func TestDecodeDefaults(t *testing.T) {
 				tc.errRegex,
 				packageName,
 				"DecodeDefaults",
-			)
-			if testErr != nil {
+			); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})
@@ -196,11 +196,14 @@ func TestDefaults_Unmarshal(t *testing.T) {
 		errRegex     string
 	}{
 		{
-			name:     "JSON/empty",
-			format:   "json",
-			data:     "",
-			want:     "{}\n",
-			errRegex: `^$`,
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
+			errRegex: test.TrimYAML(`
+				^jsontext:
+					unexpected EOF$`,
+			),
 		},
 		{
 			name:     "JSON/empty object",
@@ -310,14 +313,17 @@ func TestDefaults_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var zero Defaults
-			if _, testErr := test.AssertUnmarshal(
+			if _, _, testErr := test.AssertDecode(
 				t,
+				func(format string, data []byte) (*Defaults, error) {
+					var zero Defaults
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
 				tc.format, tc.data,
-				&zero,
-				tc.errRegex,
 				func(v *Defaults) string { return v.String("") },
 				tc.want,
+				tc.errRegex,
 				packageName,
 				"Defaults",
 			); testErr != nil {
@@ -345,7 +351,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "non-zero Service",
+			name: "non-empty/Service",
 			defaults: &Defaults{
 				Service: service.Defaults{
 					Options: opt.Defaults{
@@ -358,7 +364,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-zero Notify",
+			name: "non-empty/Notify",
 			defaults: &Defaults{
 				Notify: shoutrrr.ShoutrrrsDefaults{
 					"foo": &shoutrrr.Defaults{
@@ -371,7 +377,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-zero WebHook",
+			name: "non-empty/WebHook",
 			defaults: &Defaults{
 				WebHook: webhook.Defaults{
 					Base: webhook.Base{
@@ -708,7 +714,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "service.options",
+			name: "service.options/valid",
 			env: map[string]string{
 				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99m",
 				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": "true",
@@ -727,7 +733,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "service.options - invalid time.duration - interval",
+			name: "service.options/invalid time.duration - interval",
 			env: map[string]string{
 				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99 something",
 				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": "true",
@@ -735,7 +741,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			errRegex: `ARGUS_SERVICE_OPTIONS_INTERVAL: "[^"]+" <invalid>`,
 		},
 		{
-			name: "service.options - invalid bool - semantic version",
+			name: "service.options/invalid bool - semantic version",
 			env: map[string]string{
 				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99",
 				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": "foo",
@@ -743,7 +749,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			errRegex: `ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING: "foo" <invalid>`,
 		},
 		{
-			name: "service.latest_version",
+			name: "service.latest_version/valid",
 			env: map[string]string{
 				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_something",
 				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "true",
@@ -760,7 +766,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "service.latest_version.require",
+			name: "service.latest_version.require/valid",
 			env: map[string]string{
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE":                        "ghcr",
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_IMAGE":                       "imageFallback",
@@ -815,7 +821,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "service.latest_version.require - invalid type",
+			name: "service.latest_version.require/invalid type",
 			env: map[string]string{
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE":                       "foo",
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_GHCR_AUTH_TOKEN":   "tokenForGHCR",
@@ -826,7 +832,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			errRegex: test.TrimYAML(`ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE: "foo" <invalid> .+`),
 		},
 		{
-			name: "service.latest_version - invalid bool - allow_invalid_certs",
+			name: "service.latest_version/invalid bool/allow_invalid_certs",
 			env: map[string]string{
 				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_something",
 				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "bar",
@@ -835,7 +841,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			errRegex: `ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS: "bar" <invalid>`,
 		},
 		{
-			name: "service.latest_version - invalid bool - use_prerelease",
+			name: "service.latest_version/invalid bool/use_prerelease",
 			env: map[string]string{
 				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_something",
 				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "true",
@@ -844,7 +850,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			errRegex: `ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE: "bop" <invalid>`,
 		},
 		{
-			name: "service.deployed_version",
+			name: "service.deployed_version/valid",
 			env: map[string]string{
 				"ARGUS_SERVICE_DEPLOYED_VERSION_ALLOW_INVALID_CERTS": "true",
 			},
@@ -857,14 +863,14 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "service.deployed_version - invalid bool - allow_invalid_certs",
+			name: "service.deployed_version/invalid bool - allow_invalid_certs",
 			env: map[string]string{
 				"ARGUS_SERVICE_DEPLOYED_VERSION_ALLOW_INVALID_CERTS": "bang",
 			},
 			errRegex: `ARGUS_SERVICE_DEPLOYED_VERSION_ALLOW_INVALID_CERTS: "bang" <invalid>`,
 		},
 		{
-			name: "service.dashboard",
+			name: "service.dashboard/valid",
 			env: map[string]string{
 				"ARGUS_SERVICE_DASHBOARD_AUTO_APPROVE": "true",
 			},
@@ -877,14 +883,14 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "service.dashboard - invalid bool - auto_approve",
+			name: "service.dashboard/invalid bool - auto_approve",
 			env: map[string]string{
 				"ARGUS_SERVICE_DASHBOARD_AUTO_APPROVE": "zap",
 			},
 			errRegex: `ARGUS_SERVICE_DASHBOARD_AUTO_APPROVE: "zap" <invalid>`,
 		},
 		{
-			name: "notify.discord",
+			name: "notify.discord/valid",
 			env: map[string]string{
 				"ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY":        "1h",
 				"ARGUS_NOTIFY_DISCORD_OPTIONS_MAX_TRIES":    "1",
@@ -932,7 +938,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "notify.discord - invalid options.delay",
+			name: "notify.discord/invalid options.delay",
 			env: map[string]string{
 				"ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY": "foo",
 			},
@@ -1524,7 +1530,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "webhook",
+			name: "webhook/valid",
 			env: map[string]string{
 				"ARGUS_WEBHOOK_ALLOW_INVALID_CERTS": "false",
 				"ARGUS_WEBHOOK_DELAY":               "99s",
@@ -1551,42 +1557,42 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "webhook - invalid str - type",
+			name: "webhook/invalid str, type",
 			env: map[string]string{
 				"ARGUS_WEBHOOK_TYPE": "pizza",
 			},
 			errRegex: `ARGUS_WEBHOOK_TYPE: "pizza" <invalid>`,
 		},
 		{
-			name: "webhook - invalid time.duration - delay",
+			name: "webhook/invalid time.duration, delay",
 			env: map[string]string{
 				"ARGUS_WEBHOOK_DELAY": "pasta",
 			},
 			errRegex: `ARGUS_WEBHOOK_DELAY: "[^"]+" <invalid>`,
 		},
 		{
-			name: "webhook - invalid uint - max_tries",
+			name: "webhook/invalid uint, max_tries",
 			env: map[string]string{
 				"ARGUS_WEBHOOK_MAX_TRIES": "-1",
 			},
 			errRegex: `ARGUS_WEBHOOK_MAX_TRIES: "-1" <invalid>`,
 		},
 		{
-			name: "webhook - invalid bool - allow_invalid_certs",
+			name: "webhook/invalid bool/allow_invalid_certs",
 			env: map[string]string{
 				"ARGUS_WEBHOOK_ALLOW_INVALID_CERTS": "foo",
 			},
 			errRegex: `ARGUS_WEBHOOK_ALLOW_INVALID_CERTS: "foo" <invalid>`,
 		},
 		{
-			name: "webhook - invalid int - desired_status_code",
+			name: "webhook/invalid int, desired_status_code",
 			env: map[string]string{
 				"ARGUS_WEBHOOK_DESIRED_STATUS_CODE": "okay",
 			},
 			errRegex: `ARGUS_WEBHOOK_DESIRED_STATUS_CODE: "okay" <invalid>`,
 		},
 		{
-			name: "webhook - invalid bool - silent_fails",
+			name: "webhook/invalid bool/silent_fails",
 			env: map[string]string{
 				"ARGUS_WEBHOOK_SILENT_FAILS": "bar",
 			},
@@ -1634,7 +1640,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 					LatestVersion: lvbase.Defaults{
 						Require: filter.RequireDefaults{
 							Docker: *test.Must(t, func() (*docker.Defaults, error) {
-								return docker.DecodeDefaults("json", nil, nil)
+								return docker.DecodeDefaults("json", []byte("{}"), nil)
 							}),
 						},
 					},

@@ -57,7 +57,10 @@ func TestLookup_Refresh(t *testing.T) {
 		announce bool
 	}{
 		{
-			name:     "nil Lookup",
+			name: "nil Lookup",
+			args: args{
+				ignoreSecretRefs: true,
+			},
 			errRegex: `lookup is nil`,
 		},
 		{
@@ -121,9 +124,10 @@ func TestLookup_Refresh(t *testing.T) {
 			errRegex: `x509 \(certificate invalid\)`,
 		},
 		{
-			name: "GitHub - Refresh new version",
+			name: "github, refresh new version",
 			args: args{
-				latestVersion: "0.0.0",
+				ignoreSecretRefs: true,
+				latestVersion:    "0.0.0",
 			},
 			previous: testLookup(t, "github", false),
 			errRegex: `^$`,
@@ -131,9 +135,10 @@ func TestLookup_Refresh(t *testing.T) {
 			announce: true,
 		},
 		{
-			name: "URL - Refresh new version",
+			name: "url, refresh new version",
 			args: args{
-				latestVersion: "0.0.0",
+				ignoreSecretRefs: true,
+				latestVersion:    "0.0.0",
 			},
 			previous: testLookup(t, "url", false),
 			errRegex: `^$`,

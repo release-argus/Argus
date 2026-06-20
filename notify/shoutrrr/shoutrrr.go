@@ -269,8 +269,7 @@ func (s *Shoutrrr) BuildURL() (url string) {
 	return
 }
 
-// BuildParams returns the params using everything from master>main>defaults>hardDefaults when
-// the key is not defined in the lower level.
+// BuildParams returns the merged Params, resolving each key from instance, Main, Defaults, and HardDefaults in order.
 func (s *Shoutrrr) BuildParams(info serviceinfo.ServiceInfo) *types.Params {
 	params := make(types.Params, len(s.Params)+len(s.Main.Params))
 
@@ -324,8 +323,7 @@ func (s *Shoutrrr) BuildParams(info serviceinfo.ServiceInfo) *types.Params {
 	return &params
 }
 
-// Send sends a notification with the given title and message to all Shoutrrrs in the Shoutrrrs.
-// It attempts to send each message up to max_tries times until they succeed or fail.
+// Send sends a notification to every Shoutrrr in the map concurrently.
 func (s *Shoutrrrs) Send(
 	title, message string,
 	serviceInfo serviceinfo.ServiceInfo,
@@ -337,12 +335,11 @@ func (s *Shoutrrrs) Send(
 
 	errChan := make(chan error, len(*s))
 	for _, shoutrrr := range *s {
-		// Send each message up to max_tries amount of times until they don't decode.
 		go func(shoutrrr *Shoutrrr) {
 			errChan <- shoutrrr.Send(title, message, serviceInfo, useDelay, true)
 		}(shoutrrr)
 
-		// Space out Shoutrrr send starts.
+		// Space out sends.
 		//#nosec G404 -- sleep does not need cryptographic security.
 		time.Sleep(time.Duration(100+rand.Intn(150)) * time.Millisecond)
 	}
@@ -415,7 +412,7 @@ func (s *Shoutrrr) Send(
 	)
 }
 
-// getSender returns the Shoutrrr sender, message, params, and url.
+// getSender returns the router, rendered message, params, and URL for the Shoutrrr.
 func (s *Shoutrrr) getSender(
 	title, msg string,
 	serviceInfo serviceinfo.ServiceInfo,
@@ -445,8 +442,7 @@ func (s *Shoutrrr) getSender(
 	return sender, message, params, url, nil
 }
 
-// send the message to the Shoutrrr service using the given sender and params.
-// It attempts to send the message up to max_tries times until it succeeds.
+// send delivers the message via the given sender and params, retrying up to max_tries times.
 func (s *Shoutrrr) send(
 	sender *router.ServiceRouter,
 	message string,
@@ -489,11 +485,7 @@ func (s *Shoutrrr) send(
 	return errors.Join(errs...)
 }
 
-// parseSend processes the errors encountered during the send operation,
-// updates the combined error counts, logs the errors, and updates the
-// Prometheus metrics based on the success or failure of the operation.
-//
-//	Returns true if the send operation failed over all attempts.
+// parseSend records send errors, updates Prometheus metrics, and reports whether the attempt failed.
 func (s *Shoutrrr) parseSend(
 	err []error,
 	combinedErrs map[string]int,

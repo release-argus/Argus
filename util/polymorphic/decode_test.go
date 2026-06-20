@@ -123,7 +123,7 @@ func TestResolveType(t *testing.T) {
 			errRegex: `invalid character`,
 		},
 		{
-			name: "no type / previous - use defaultType",
+			name: "no type, no previous, use defaultType",
 			args: Args{
 				format:      "json",
 				data:        []byte{},
@@ -134,7 +134,7 @@ func TestResolveType(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "no type - use previous",
+			name: "no type, use previous",
 			args: Args{
 				format:      "json",
 				data:        []byte(`{"name":"test"}`),
@@ -482,7 +482,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^[^\s]+ could not find flow .*`,
 		},
 		{
-			name: "type change - unknown type",
+			name: "type change/unknown type",
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -499,7 +499,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^type: "[^"]+" <invalid> .*$`,
 		},
 		{
-			name: "type change - known type - invalid data type",
+			name: "type change/known type/invalid data type",
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -514,7 +514,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^[^\s]+ .*unmarshal`,
 		},
 		{
-			name: "type change - known type",
+			name: "type change/known type/valid",
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -532,7 +532,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "no previous - create new struct",
+			name: "no previous, create new struct",
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -548,7 +548,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "type unchanged - all vars changed",
+			name: "type unchanged, all vars changed",
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`

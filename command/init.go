@@ -113,7 +113,7 @@ func (c *Controller) DeleteMetrics() {
 	}
 }
 
-// IsRunnable returns whether the current time at `index` is before nextRunnable.
+// IsRunnable reports whether the command at index has passed its next-runnable time.
 // If out of range, it returns false.
 func (c *Controller) IsRunnable(index int) bool {
 	c.mu.RLock()
@@ -127,8 +127,7 @@ func (c *Controller) IsRunnable(index int) bool {
 	return time.Now().UTC().After(c.nextRunnable[index])
 }
 
-// NextRunnable returns the next runnable time of the Command at `index`.
-// If out of range, it returns a zero time.
+// NextRunnable returns the next runnable time of the command at index, or a zero time if out of range.
 func (c *Controller) NextRunnable(index int) time.Time {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

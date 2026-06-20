@@ -100,9 +100,9 @@ func TestMapEnvToStruct(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "ignore env vars on/under '-' tags",
+			name: "ignore env vars under '-' tags",
 			env: map[string]string{
-				"ARGUS_TEST_DASH_ONE": "a",
+				"ARGUS_TEST_ONE": "a",
 			},
 			customStruct: &struct {
 				Test struct {
@@ -221,7 +221,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			`),
 		},
 		{
-			name: "uint8",
+			name: "uint8/valid",
 			env: map[string]string{
 				"ARGUS_TEST_UNSIGNED_INTEGER_8_PTR0": "0",
 				"ARGUS_TEST_UNSIGNED_INTEGER_8_PTR1": "1",
@@ -255,7 +255,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "uint8 - invalid",
+			name: "uint8/invalid",
 			env: map[string]string{
 				"ARGUS_TEST_UNSIGNED_INTEGER_8_PTR_INVALID": "1024",
 				"ARGUS_TEST_UNSIGNED_INTEGER_8_VAL_INVALID": "-1",
@@ -280,7 +280,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			),
 		},
 		{
-			name: "uint16",
+			name: "uint16/valid",
 			env: map[string]string{
 				"ARGUS_TEST_UNSIGNED_INTEGER_16_PTR0": "0",
 				"ARGUS_TEST_UNSIGNED_INTEGER_16_PTR1": "1",
@@ -314,7 +314,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "uint16 - invalid",
+			name: "uint16/invalid",
 			env: map[string]string{
 				"ARGUS_TEST_UNSIGNED_INTEGER_16_PTR_INVALID": "65536",
 				"ARGUS_TEST_UNSIGNED_INTEGER_16_VAL_INVALID": "-1",
@@ -351,7 +351,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			errRegex: `unsupported env var kind on ARGUS_TEST_FLOAT: float64`,
 		},
 		{
-			name: "inline struct",
+			name: "inline struct/valid",
 			env: map[string]string{
 				"ARGUS_TEST_INLINE_STRING": "foo",
 			},
@@ -369,7 +369,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "inline struct - error",
+			name: "inline struct/error",
 			env: map[string]string{
 				"ARGUS_TEST_INLINE_INT": "foo",
 			},
@@ -417,7 +417,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			errRegex: `ARGUS_STRUCT_BOOL: "sometimes" <invalid>`,
 		},
 		{
-			name: "interface",
+			name: "interface/valid",
 			env: map[string]string{
 				"ARGUS_IFACE_STRING": "foo",
 			},
@@ -432,7 +432,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "interface - invalid structure",
+			name: "interface/invalid structure",
 			env: map[string]string{
 				"ARGUS_IFACE_INT": "1.1",
 			},
@@ -444,7 +444,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			errRegex:    `^ARGUS_IFACE_INT: "1.1" <invalid>.*$`,
 		},
 		{
-			name: "interface - nil struct not mapped",
+			name: "interface/nil struct not mapped",
 			env: map[string]string{
 				"ARGUS_IFACE_STRING": "foo",
 				"ARGUS_IFACE_INT":    "1",

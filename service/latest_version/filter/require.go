@@ -126,7 +126,7 @@ func (r *Require) DockerTagCheck(
 	return r.Docker.Check(version) //nolint:wrapcheck
 }
 
-// Init will assign the status and defaults to the receiver.
+// Init assigns the status and defaults to the receiver.
 func (r *Require) Init(
 	status *status.Status,
 	defaults *RequireDefaults,
@@ -226,22 +226,23 @@ func (r *Require) CheckValues() error {
 	return errors.Join(errs...)
 }
 
-// Inherit will copy the Docker queryToken if it is what the provider would fetch.
-func (r *Require) Inherit(from *Require) {
+// Inherit copies the Docker query token from fromReq if both the receiver and fromReq have Docker set.
+func (r *Require) Inherit(fromReq *Require) {
 	if r != nil && r.Docker != nil &&
-		from != nil && from.Docker != nil {
-		r.Docker.Inherit(from.Docker)
+		fromReq != nil && fromReq.Docker != nil {
+		r.Docker.Inherit(fromReq.Docker)
 	}
 }
 
-// removeUnusedRequireDocker will nil the Docker requirement if there is no image or tag.
+// removeUnusedRequireDocker clears Docker if no image or tag is set.
 func (r *Require) removeUnusedRequireDocker() {
 	if r == nil || r.Docker == nil {
 		return
 	}
 
-	// Remove the Docker requirement if there's no image or tag.
-	if r.Docker.GetImage() == "" || r.Docker.GetTag() == "" {
+	// Remove the Docker requirement if there's no image:tag.
+	if (r.Docker.GetImage() == "" && r.Docker.GetTag() == "") ||
+		(r.Docker.GetImageSelf() == "" && r.Docker.GetTagSelf() == "") {
 		r.Docker = nil
 	}
 }

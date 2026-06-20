@@ -80,7 +80,6 @@ func (s *Status) AnnounceQuery() {
 func (s *Status) AnnounceQueryNewVersion() {
 	webURL := s.ServiceInfo.GetWebURL()
 
-	// Last query time update OR approval/approved.
 	s.sendAnnouncePayload(
 		apitype.WebSocketMessage{
 			Page:    "APPROVALS",

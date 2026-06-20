@@ -37,7 +37,7 @@ type BaseInterface interface {
 	// Query the receiver for the deployed version.
 	Query(metrics bool, logFrom logx.LogFrom) (err error)
 
-	// InheritSecrets will inherit secrets from the `otherLookup`.
+	// InheritSecrets copies secrets from otherLookup.
 	InheritSecrets(otherLookup BaseInterface, secretRefs *shared.VSecretRef)
 
 	// Helpers:
@@ -63,7 +63,7 @@ type Interface interface {
 
 	// String returns a string representation of the receiver with any given prefix.
 	String(prefix string) string
-	// Track the deployed version of the `parent`.
+	// Track monitors the deployed version of the parent service.
 	Track()
 	// Copy returns a deep copy of the receiver, with the given status.
 	Copy(svcStatus *status.Status) Interface

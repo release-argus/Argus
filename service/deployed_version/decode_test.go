@@ -60,7 +60,7 @@ func TestDecode(t *testing.T) {
 			want:   "",
 		},
 		{
-			name: "JSON/valid - type=URL - minimal",
+			name: "JSON/url, minimal",
 			data: test.TrimJSON(`{
 				"type": "url",
 				"url": "https://example.com"
@@ -72,7 +72,7 @@ func TestDecode(t *testing.T) {
 			`),
 		},
 		{
-			name: "YAML/valid - type=URL - minimal",
+			name: "YAML/url/minimal",
 			data: test.TrimYAML(`
 				type: url
 				url: https://example.com
@@ -84,7 +84,7 @@ func TestDecode(t *testing.T) {
 			`),
 		},
 		{
-			name:   "YAML/valid - type=URL - filled",
+			name:   "YAML/url/filled",
 			format: "yaml",
 			data: test.TrimYAML(`
 				type: url
@@ -384,7 +384,7 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "no previous, valid payload",
+			name: "valid payload/new",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -400,7 +400,7 @@ func TestApplyOverrides(t *testing.T) {
 			`),
 		},
 		{
-			name: "valid payload, keep same type",
+			name: "valid payload/edit/keep same type",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -420,7 +420,7 @@ func TestApplyOverrides(t *testing.T) {
 			`),
 		},
 		{
-			name: "valid payload, new type",
+			name: "valid payload/edit/new type",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
