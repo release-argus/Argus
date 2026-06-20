@@ -45,6 +45,13 @@ func TestUnmarshal(t *testing.T) {
 			),
 		},
 		{
+			name:     "YAML/no data",
+			data:     []byte{},
+			format:   "yaml",
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
 			name:     "unsupported format/no data",
 			data:     []byte{},
 			format:   "x",
@@ -123,6 +130,71 @@ func TestUnmarshal(t *testing.T) {
 				t.Errorf(
 					"%s stringified mismatch\ngot:  %q\nwant: %q",
 					prefix, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+type customUnmarshaler struct {
+	got []byte
+}
+
+func (c *customUnmarshaler) UnmarshalJSON(data []byte) error {
+	c.got = data
+	return nil
+}
+
+func (c *customUnmarshaler) UnmarshalYAML(data []byte) error {
+	c.got = data
+	return nil
+}
+
+func TestUnmarshal__customUnmarshaler(t *testing.T) {
+	// GIVEN: a struct implementing json.Unmarshaler and yaml.BytesUnmarshaler.
+	tests := []struct {
+		name   string
+		format string
+		data   []byte
+	}{
+		{
+			name:   "json.Unmarshaler",
+			format: "json",
+			data:   []byte(`{"key":"value"}`),
+		},
+		{
+			name:   "yaml.Unmarshaler",
+			format: "yaml",
+			data:   []byte("key: value\n"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: Unmarshal is called with a custom unmarshaler target.
+			target := &customUnmarshaler{}
+			err := Unmarshal(tc.format, tc.data, target)
+
+			prefix := fmt.Sprintf(
+				"%s\nUnmarshal(format=%s, data=%v)",
+				packageName, tc.format, tc.data,
+			)
+
+			// THEN: no error is returned.
+			if err != nil {
+				t.Fatalf(
+					"%s unexpected error: %q",
+					prefix, err,
+				)
+			}
+
+			// AND: the custom unmarshaler received the raw data.
+			if string(target.got) != string(tc.data) {
+				t.Errorf(
+					"%s custom unmarshaler data mismatch\ngot:  %q\nwant: %q",
+					prefix, target.got, tc.data,
 				)
 			}
 		})
