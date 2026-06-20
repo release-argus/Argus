@@ -30,6 +30,7 @@ type RefreshAPI struct {
 	Date    time.Time `json:"timestamp"`
 }
 
+// Response is a generic API response body.
 type Response struct {
 	Error   string `json:"error,omitempty"`
 	Message string `json:"message,omitempty"`

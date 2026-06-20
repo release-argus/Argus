@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,18 +25,19 @@ import (
 )
 
 func TestConfig_LoadOrdering(t *testing.T) {
-	// GIVEN we have configs to load.
-	tests := map[string]struct {
+	// GIVEN: we have configs to load.
+	tests := []struct {
+		name  string
 		file  func(path string)
 		order []string
 	}{
-		"with services": {
+		{
+			name:  "with services",
 			file:  testYAML_Ordering_0,
-			order: []string{"NoDefaults", "WantDefaults", "Disabled", "Gitea"}},
-		"no services": {
-			file:  testYAML_Ordering_1_no_services,
-			order: []string{}},
-		"obscure service names": {
+			order: []string{"NoDefaults", "WantDefaults", "Disabled", "Gitea"},
+		},
+		{
+			name: "obscure service names",
 			file: testYAML_Ordering_2_obscure_service_names,
 			order: []string{
 				`123`,
@@ -49,88 +50,119 @@ func TestConfig_LoadOrdering(t *testing.T) {
 				`'foo bar'`,
 				`foo "bar"`,
 				`foo: bar, baz`,
-			}},
-		"empty line after 'service:'": {
+			},
+		},
+		{
+			name:  "service block/none",
+			file:  testYAML_Ordering_1_no_services,
+			order: []string{},
+		},
+		{
+			name:  "service block/empty/single empty line",
 			file:  testYAML_Ordering_3_empty_line_after_service_line,
-			order: []string{"C", "B", "A"}},
-		"multiple empty lines after 'service:'": {
+			order: []string{"C", "B", "A"},
+		},
+		{
+			name:  "service block/empty/multiple empty lines",
 			file:  testYAML_Ordering_4_multiple_empty_lines_after_service_line,
-			order: []string{"P", "L", "S"}},
-		"eof on 'service:'": {
+			order: []string{"P", "L", "S"},
+		},
+		{
+			name:  "service block/empty/eof",
 			file:  testYAML_Ordering_5_eof_is_service_line,
-			order: []string{}},
-		"no services after 'service:' - another block": {
+			order: []string{},
+		},
+		{
+			name:  "service block/empty/more blocks",
 			file:  testYAML_Ordering_6_no_services_after_service_line_another_block,
-			order: []string{}},
-		"no services after 'service:'": {
+			order: []string{},
+		},
+		{
+			name:  "service block/empty/no more blocks",
 			file:  testYAML_Ordering_7_no_services_after_service_line,
-			order: []string{}},
+			order: []string{},
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're accessing flag env vars.
 			g, _ := errgroup.WithContext(t.Context())
 
 			file := filepath.Join(t.TempDir(), "config.yml")
 			tc.file(file)
 
-			// WHEN they are loaded.
+			// WHEN: they are loaded.
 			flags := make(map[string]bool)
 			var cfg Config
-			loadMutex.Lock() // Protect flag env vars.
+			loadMu.Lock() // Protect flag env vars.
 			cfg.Load(t.Context(), g, file, &flags)
 			t.Cleanup(func() {
 				_ = os.Remove(cfg.Settings.DataDatabaseFile())
-				loadMutex.Unlock()
+				loadMu.Unlock()
 			})
 
-			// THEN it gets the ordering correctly.
+			// THEN: it gets the ordering correctly.
 			gotOrder := cfg.Order
 			for i := range gotOrder {
 				if i >= len(gotOrder) ||
 					tc.order[i] != (gotOrder)[i] {
-					t.Fatalf("%s\n%q %s - order:\nwant: %v\ngot:  %v",
-						packageName, file, name, tc.order, gotOrder)
+					t.Fatalf(
+						"%s\nConfig LoadOrdering %q %s - order:\ngot:  %v\nwant: %v",
+						packageName, file, tc.name, gotOrder, tc.order,
+					)
 				}
 			}
 		})
 	}
 }
 
-func TestIndentationW(t *testing.T) {
-	// GIVEN lines of varying indentation.
-	tests := map[string]struct {
+func TestIndentation(t *testing.T) {
+	// GIVEN: lines of varying indentation.
+	tests := []struct {
+		name        string
 		input, want string
 	}{
-		"leading space": {
+		{
+			name:  "leading space",
 			input: "   abc",
-			want:  "   "},
-		"leading and trailing space": {
+			want:  "   ",
+		},
+		{
+			name:  "leading and trailing space",
 			input: "   abc      ",
-			want:  "   "},
-		"trailing space": {
+			want:  "   ",
+		},
+		{
+			name:  "trailing space",
 			input: "abc      ",
-			want:  ""},
-		"no indents": {
+			want:  "",
+		},
+		{
+			name:  "no indents",
 			input: "abc",
-			want:  ""},
-		"empty string": {
+			want:  "",
+		},
+		{
+			name:  "empty string",
 			input: "",
-			want:  ""},
+			want:  "",
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Indentation is called on it.
+			// WHEN: Indentation is called on it.
 			got := Indentation(tc.input)
 
-			// THEN we get the indentation.
+			// THEN: we get the indentation.
 			if got != tc.want {
-				t.Errorf("%s\n%s - %q:\nwant: %q\ngot:  %q",
-					packageName, name, tc.input, tc.want, got)
+				t.Errorf(
+					"%s\nIndentation(%q) mismatch:\ngot:  %q\nwant: %q",
+					packageName, tc.input, got, tc.want,
+				)
 			}
 		})
 	}

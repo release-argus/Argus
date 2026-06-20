@@ -27,7 +27,10 @@ type OpsGenieTargetType =
 	(typeof OPSGENIE_TARGET_TYPE)[keyof typeof OPSGENIE_TARGET_TYPE]['value'];
 export const OpsGenieTargetTypeOptions = Object.values(
 	OPSGENIE_TARGET_TYPE,
-).map((t) => ({ label: t.label, value: t.value }));
+).map((t) => ({
+	label: t.label,
+	value: t.value,
+}));
 // "team": "id" | "name" -- "user": "id" | "username"
 type SubTypeValues<T> = T extends {
 	SUB_TYPE: Record<string, { value: infer V }>;

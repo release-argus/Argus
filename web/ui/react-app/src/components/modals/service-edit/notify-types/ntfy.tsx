@@ -70,7 +70,7 @@ const NTFY = ({ name, main }: { name: string; main?: NotifyNtfySchema }) => {
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="URL Fields" />
 				<FieldText
-					colSize={{ xs: 9 }}
+					colSize={{ sm: 9, xs: 9 }}
 					defaultVal={defaults?.url_fields?.host}
 					label="Host"
 					name={`${name}.url_fields.host`}
@@ -81,7 +81,7 @@ const NTFY = ({ name, main }: { name: string; main?: NotifyNtfySchema }) => {
 					}}
 				/>
 				<FieldText
-					colSize={{ xs: 3 }}
+					colSize={{ sm: 3, xs: 3 }}
 					defaultVal={defaults?.url_fields?.port}
 					label="Port"
 					name={`${name}.url_fields.port`}
@@ -176,7 +176,7 @@ const NTFY = ({ name, main }: { name: string; main?: NotifyNtfySchema }) => {
 					name={`${name}.params.title`}
 				/>
 				<FieldText
-					colSize={{ sm: 12 }}
+					colSize={{ lg: 6, sm: 12 }}
 					defaultVal={defaults?.params?.click}
 					label="Click"
 					name={`${name}.params.click`}
@@ -186,6 +186,7 @@ const NTFY = ({ name, main }: { name: string; main?: NotifyNtfySchema }) => {
 					}}
 				/>
 				<FieldTextWithPreview
+					colSize={{ lg: 6 }}
 					defaultVal={defaults?.params?.icon}
 					label="Icon"
 					name={`${name}.params.icon`}

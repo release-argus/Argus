@@ -19,45 +19,54 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// InitMetrics for this Lookup.
+// InitMetrics registers Prometheus counters for deployed version lookup results.
 func (l *Lookup) InitMetrics(parentLookup Interface) {
 	lookupType := parentLookup.GetType()
 
 	// ############
 	// # Counters #
 	// ############
-	metric.InitPrometheusCounter(metric.DeployedVersionQueryResultTotal,
+	metric.InitPrometheusCounter(
+		metric.DeployedVersionQueryResultTotal,
 		l.GetServiceID(),
 		"",
 		lookupType,
-		metric.ActionResultSuccess)
-	metric.InitPrometheusCounter(metric.DeployedVersionQueryResultTotal,
+		metric.ActionResultSuccess,
+	)
+	metric.InitPrometheusCounter(
+		metric.DeployedVersionQueryResultTotal,
 		l.GetServiceID(),
 		"",
 		lookupType,
-		metric.ActionResultFail)
+		metric.ActionResultFail,
+	)
 }
 
-// DeleteMetrics for this Lookup.
+// DeleteMetrics removes all Prometheus metrics for deployed version lookup results.
 func (l *Lookup) DeleteMetrics(parentLookup Interface) {
 	lookupType := parentLookup.GetType()
 
 	// Liveness.
-	metric.DeletePrometheusGauge(metric.DeployedVersionQueryResultLast,
+	metric.DeletePrometheusGauge(
+		metric.DeployedVersionQueryResultLast,
 		l.GetServiceID(),
 		lookupType,
 	)
 	// Counters.
-	metric.DeletePrometheusCounter(metric.DeployedVersionQueryResultTotal,
+	metric.DeletePrometheusCounter(
+		metric.DeployedVersionQueryResultTotal,
 		l.GetServiceID(),
 		"",
 		lookupType,
-		metric.ActionResultSuccess)
-	metric.DeletePrometheusCounter(metric.DeployedVersionQueryResultTotal,
+		metric.ActionResultSuccess,
+	)
+	metric.DeletePrometheusCounter(
+		metric.DeployedVersionQueryResultTotal,
 		l.GetServiceID(),
 		"",
 		lookupType,
-		metric.ActionResultFail)
+		metric.ActionResultFail,
+	)
 }
 
 // QueryMetrics sets the Prometheus metrics for the DeployedVersion query.
@@ -77,13 +86,17 @@ func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
 	}
 
 	// Set liveness.
-	metric.SetPrometheusGauge(metric.DeployedVersionQueryResultLast,
+	metric.SetPrometheusGauge(
+		metric.DeployedVersionQueryResultLast,
 		serviceID, serviceType,
-		float64(liveness))
+		float64(liveness),
+	)
 	// Increase query result count.
-	metric.IncPrometheusCounter(metric.DeployedVersionQueryResultTotal,
+	metric.IncPrometheusCounter(
+		metric.DeployedVersionQueryResultTotal,
 		serviceID,
 		"",
 		serviceType,
-		result)
+		result,
+	)
 }

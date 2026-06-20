@@ -7,6 +7,9 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
+env:
+  GOEXPERIMENT: jsonv2
+
 permissions:
   contents: write
   packages: write

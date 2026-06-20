@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,17 +21,14 @@ import (
 	"os"
 	"testing"
 
-	dbtype "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/service/dashboard"
-	deployedver "github.com/release-argus/Argus/service/deployed_version"
-	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
-	latestver "github.com/release-argus/Argus/service/latest_version"
-	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
-	opt "github.com/release-argus/Argus/service/option"
-	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	logtest "github.com/release-argus/Argus/internal/test/log"
+	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
+	dvtest "github.com/release-argus/Argus/service/deployed_version/test"
+	lvtest "github.com/release-argus/Argus/service/latest_version/test"
+	statustest "github.com/release-argus/Argus/service/status/test"
+	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
 var packageName = "service"
@@ -43,9 +40,8 @@ func TestMain(m *testing.M) {
 	// Run other tests.
 	exitCode := m.Run()
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
@@ -53,206 +49,60 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testOptions() *opt.Options {
-	hardDefaults := opt.Defaults{}
-	hardDefaults.Default()
+func testService(t *testing.T, id string, lvType, dvType string) *Service {
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
 
-	return opt.New(
-		nil, "5s", test.BoolPtr(true),
-		&opt.Defaults{}, &hardDefaults)
-}
+	svc := test.Must(t, func() (*Service, error) {
+		return DecodeService(
+			"yaml", []byte(test.TrimYAML(`
+				latest_version:
+				`+lvtest.Lookup(t, lvType, false).String(" ")+`
+				deployed_version:
+				`+dvtest.Lookup(t, dvType, false, "").String("  ")+`
+				dashboard:
+					auto_approve: false
+					icon: "test"
+					icon_link_to: "https://release-argus.io"
+					web_url: "https://release-argus.io"
+			`)),
+			id,
+			svcCfg, notifyCfg, whCfg,
+		)
+	})
 
-func testStatus() *status.Status {
-	var (
-		announceChannel = make(chan []byte, 5)
-		saveChannel     = make(chan bool, 5)
-		databaseChannel = make(chan dbtype.Message, 5)
-	)
-
-	return status.New(
-		announceChannel, databaseChannel, saveChannel,
-		"",
-		"", "",
-		"", "",
-		"",
-		&dashboard.Options{})
-}
-
-func testService(t *testing.T, id string, sType string) *Service {
-	hardDefaults := Defaults{}
-	hardDefaults.Default()
-
-	svc := &Service{
-		ID:                    id,
-		LatestVersion:         testLatestVersion(t, sType, false),
-		DeployedVersionLookup: testDeployedVersionLookup(t, false),
-		Dashboard: *dashboard.NewOptions(
-			test.BoolPtr(false),
-			"test", "https://release-argus.io",
-			"https://release-argus.io",
-			nil,
-			&dashboard.OptionsDefaults{}, &dashboard.OptionsDefaults{}),
-		Status:       *testStatus(),
-		Options:      *testOptions(),
-		Defaults:     &Defaults{},
-		HardDefaults: &hardDefaults}
+	// Status.
+	svcStatus, _ := statustest.New("yaml", nil)
+	svc.Status = *svcStatus.Copy(true)
 	svc.HardDefaults.Status.AnnounceChannel = svc.Status.AnnounceChannel
 	svc.HardDefaults.Status.DatabaseChannel = svc.Status.DatabaseChannel
 	svc.HardDefaults.Status.SaveChannel = svc.Status.SaveChannel
-
-	// Status.
-	svc.Status.Init(
-		0, 0, 0,
-		svc.ID, svc.ID, svc.LatestVersion.ServiceURL(),
-		&svc.Dashboard)
-	svc.Status.SetApprovedVersion("1.1.1", false)
-	svc.Status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)
-	svc.Status.SetDeployedVersion("0.0.0", "2001-01-01T01:01:01Z", false)
-
-	svc.LatestVersion.Init(
-		&svc.Options,
-		&svc.Status,
-		svc.LatestVersion.GetDefaults(), &hardDefaults.LatestVersion)
-	svc.DeployedVersionLookup.Init(
-		&svc.Options,
-		&svc.Status,
-		&deployedver_base.Defaults{}, &hardDefaults.DeployedVersionLookup)
+	svc.Status.ServiceInfo.ID = svc.ID
 
 	// Check the values.
-	err := svc.LatestVersion.CheckValues("")
-	if err != nil {
-		t.Fatalf("%s\nlatest_version.CheckValues() error: %v",
-			packageName, err)
-	}
-	err = svc.DeployedVersionLookup.CheckValues("")
-	if err != nil {
-		t.Fatalf("%s\ndeployed_version.CheckValues() error: %v",
-			packageName, err)
+	if err, _ := svc.CheckValues(); err != nil {
+		t.Fatalf(
+			"%s\ntestService().CheckValues() error: %v",
+			packageName, err,
+		)
 	}
 
 	return svc
 }
 
-func testLatestVersionGitHub(t *testing.T, fail bool) latestver_base.Interface {
-	hardDefaults := latestver_base.Defaults{}
+// plainDefaultsConfig returns plain defaults and hardDefaults for testing.
+func plainDefaultsConfig(t *testing.T) DefaultsConfig {
+	t.Helper()
+
+	defaults := Defaults{}
+	hardDefaults := Defaults{}
 	hardDefaults.Default()
-	accessToken := os.Getenv("GITHUB_TOKEN")
-	if fail {
-		accessToken = "invalid"
+	hardDefaults.LatestVersion.AccessToken = test.GitHubToken(nil)
+
+	defaults.SetDefaults(&hardDefaults)
+	return DefaultsConfig{
+		Soft: &defaults,
+		Hard: &hardDefaults,
 	}
-
-	lv, _ := latestver.New(
-		"github",
-		"yaml", test.TrimYAML(`
-				url: release-argus/Argus
-				access_token: `+accessToken+`
-				require:
-					regex_content: content
-					regex_version: version
-			`),
-		testOptions(),
-		testStatus(),
-		&latestver_base.Defaults{}, &hardDefaults)
-
-	// Check the values.
-	err := lv.CheckValues("")
-	if err != nil {
-		t.Fatalf("%s\nunexpected error: %v",
-			packageName, err)
-	}
-
-	return lv
-}
-
-func testLatestVersionWeb(t *testing.T, fail bool) latestver_base.Interface {
-	hardDefaults := latestver_base.Defaults{}
-	hardDefaults.Default()
-
-	lv, _ := latestver.New(
-		"url",
-		"yaml", test.TrimYAML(`
-				url: `+test.LookupPlain["url_invalid"]+`
-				allow_invalid_certs: `+fmt.Sprint(!fail)+`
-				url_commands:
-					- type: regex
-						regex: ver([0-9.]+)
-				require:
-					regex_content: "{{ version }}-beta"
-					regex_version: "[0-9]+"
-			`),
-		testOptions(),
-		testStatus(),
-		&latestver_base.Defaults{}, &hardDefaults)
-
-	// Check the values.
-	err := lv.CheckValues("")
-	if err != nil {
-		t.Fatalf("%s\nunexpected error: %v",
-			packageName, err)
-	}
-
-	return lv
-}
-
-func testLatestVersion(t *testing.T, lvType string, fail bool) (lv latestver.Lookup) {
-	if lvType == "url" {
-		lv = testLatestVersionWeb(t, fail)
-	} else {
-		lv = testLatestVersionGitHub(t, fail)
-	}
-
-	lv.Init(
-		lv.GetOptions(),
-		lv.GetStatus(),
-		lv.GetDefaults(), lv.GetHardDefaults())
-	lv.GetStatus().ServiceInfo.ID = "TEST_LV"
-
-	// Check the values.
-	err := lv.CheckValues("")
-	if err != nil {
-		t.Fatalf("%s\nunexpected error: %v",
-			packageName, err)
-	}
-
-	return lv
-}
-
-func testDeployedVersionWeb(t *testing.T, fail bool) deployedver_base.Interface {
-	hardDefaults := deployedver_base.Defaults{}
-	hardDefaults.Default()
-
-	dv, _ := deployedver.New(
-		"url",
-		"yaml", test.TrimYAML(`
-				method: GET
-				url: `+test.LookupJSON["url_invalid"]+`
-				allow_invalid_certs: `+fmt.Sprint(!fail)+`
-				json: version
-				regex: '(\d+)\.(\d+)\.(\d+)'
-				regex_template: 1.$1.$1
-			`),
-		testOptions(),
-		testStatus(),
-		&deployedver_base.Defaults{}, &hardDefaults)
-
-	// Check the values.
-	err := dv.CheckValues("")
-	if err != nil {
-		t.Fatalf("%s\nunexpected error: %v",
-			packageName, err)
-	}
-
-	return dv
-}
-
-func testDeployedVersionLookup(t *testing.T, fail bool) deployedver.Lookup {
-	dv := testDeployedVersionWeb(t, fail)
-
-	dv.Init(
-		dv.GetOptions(),
-		dv.GetStatus(),
-		dv.GetDefaults(), dv.GetHardDefaults())
-	dv.GetStatus().ServiceInfo.ID = "TEST_DV"
-
-	return dv
 }

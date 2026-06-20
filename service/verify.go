@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,10 +19,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/util"
 )
 
-// Print each Service to stdout.
+// Print writes each Service to stdout with the given prefix.
 func (s *Services) Print(prefix string, order []string) {
 	if s == nil {
 		return
@@ -37,20 +38,39 @@ func (s *Services) Print(prefix string, order []string) {
 			if itemStr == "{}\n" {
 				delim = " "
 			}
-			fmt.Printf("%s  %s:%s%s",
-				prefix, serviceID, delim, itemStr)
+			fmt.Printf(
+				"%s  %s:%s%s",
+				prefix,
+				serviceID,
+				delim,
+				itemStr,
+			)
 		}
 	}
 }
 
-// CheckValues validates the fields of this Defaults struct.
-func (d *Defaults) CheckValues(prefix string) error {
+// CheckValues validates the fields of the receiver.
+func (d *Defaults) CheckValues() error {
 	var errs []error
 
-	util.AppendCheckError(&errs, prefix, "options",
-		d.Options.CheckValues(prefix+"  "))
-	util.AppendCheckError(&errs, prefix, "latest_version",
-		d.LatestVersion.CheckValues(prefix+"  "))
+	if err := d.Options.CheckValues(); err != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "options",
+				Err: err,
+			},
+		)
+	}
+	if err := d.LatestVersion.CheckValues(); err != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "latest_version",
+				Err: err,
+			},
+		)
+	}
 
 	if len(errs) == 0 {
 		return nil
@@ -58,8 +78,8 @@ func (d *Defaults) CheckValues(prefix string) error {
 	return errors.Join(errs...)
 }
 
-// CheckValues validates the fields of each Service.
-func (s *Services) CheckValues(prefix string) (error, bool) {
+// CheckValues validates the fields of each [Service].
+func (s *Services) CheckValues() (error, bool) {
 	if s == nil {
 		return nil, false
 	}
@@ -67,10 +87,17 @@ func (s *Services) CheckValues(prefix string) (error, bool) {
 	var errs []error
 	changed := false
 	keys := util.SortedKeys(*s)
-	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		err, keyChanged := (*s)[key].CheckValues(itemPrefix)
-		util.AppendCheckError(&errs, prefix, key, err)
+		err, keyChanged := (*s)[key].CheckValues()
+		if err != nil {
+			errs = append(
+				errs,
+				&decode.KeyFieldError{
+					Key: key,
+					Err: err,
+				},
+			)
+		}
 		changed = changed || keyChanged
 	}
 
@@ -80,35 +107,85 @@ func (s *Services) CheckValues(prefix string) (error, bool) {
 	return errors.Join(errs...), false
 }
 
-// CheckValues validates the fields of this Service struct.
-func (s *Service) CheckValues(prefix string) (error, bool) {
+// CheckValues validates the fields of the receiver.
+func (s *Service) CheckValues() (error, bool) {
 	if s == nil {
 		return nil, false
 	}
 
 	var errs []error
-	errPrefix := prefix + "  "
-	util.AppendCheckError(&errs, prefix, "options",
-		s.Options.CheckValues(errPrefix))
+	if err := s.Options.CheckValues(); err != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "options",
+				Err: err,
+			},
+		)
+	}
 	if s.LatestVersion != nil {
-		util.AppendCheckError(&errs, prefix, "latest_version",
-			s.LatestVersion.CheckValues(errPrefix))
-	} else {
-		util.AppendCheckError(&errs, prefix, "latest_version",
-			errors.New(errPrefix+"latest_version is nil"))
+		if err := s.LatestVersion.CheckValues(); err != nil {
+			errs = append(
+				errs,
+				&decode.KeyFieldError{
+					Key: "latest_version",
+					Err: err,
+				},
+			)
+		}
 	}
 	if s.DeployedVersionLookup != nil {
-		util.AppendCheckError(&errs, prefix, "deployed_version",
-			s.DeployedVersionLookup.CheckValues(errPrefix))
+		if err := s.DeployedVersionLookup.CheckValues(); err != nil {
+			errs = append(
+				errs,
+				&decode.KeyFieldError{
+					Key: "deployed_version",
+					Err: err,
+				},
+			)
+		}
 	}
-	notifyErr, notifyChanged := s.Notify.CheckValues(errPrefix)
-	util.AppendCheckError(&errs, prefix, "notify", notifyErr)
-	util.AppendCheckError(&errs, prefix, "command",
-		s.Command.CheckValues(errPrefix))
-	webhookErr, webhookChanged := s.WebHook.CheckValues(errPrefix)
-	util.AppendCheckError(&errs, prefix, "webhook", webhookErr)
-	util.AppendCheckError(&errs, prefix, "dashboard",
-		s.Dashboard.CheckValues(errPrefix))
+	if s.LatestVersion == nil && s.DeployedVersionLookup == nil {
+		return errors.New("latest_version and/or deployed_version required"), false
+	}
+	notifyErr, notifyChanged := s.Notify.CheckValues()
+	if notifyErr != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "notify",
+				Err: notifyErr,
+			},
+		)
+	}
+	if err := s.Command.CheckValues(); err != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "command",
+				Err: err,
+			},
+		)
+	}
+	webhookErr, webhookChanged := s.WebHook.CheckValues()
+	if webhookErr != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "webhook",
+				Err: webhookErr,
+			},
+		)
+	}
+	if err := s.Dashboard.CheckValues(); err != nil {
+		errs = append(
+			errs,
+			&decode.KeyFieldError{
+				Key: "dashboard",
+				Err: err,
+			},
+		)
+	}
 
 	if len(errs) == 0 {
 		return nil, notifyChanged || webhookChanged

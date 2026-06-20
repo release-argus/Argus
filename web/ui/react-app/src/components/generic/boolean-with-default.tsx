@@ -114,7 +114,7 @@ const BooleanWithDefault: FC<BooleanWithDefaultProps> = ({
 							<Separator className="mx-1" orientation="vertical" />
 
 							<ToggleGroupItem
-								className="border-l-1!"
+								className="border-l!"
 								value={optionsDefault.value}
 							>
 								<p>{optionsDefault.text}</p>

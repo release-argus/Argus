@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@
 package v1
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/internal/logx"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -31,37 +32,36 @@ import (
 //
 //	service_id: the ID of the Service to get the actions of.
 func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
-	logFrom := logutil.LogFrom{Primary: "httpServiceActions", Secondary: getIP(r)}
+	logFrom := logx.LogFrom{Primary: "httpServiceActions", Secondary: getIP(r)}
 	// Service to get actions of.
 	serviceID, ok := requireQueryParam(w, r, "service_id")
 	if !ok {
 		return
 	}
 
-	api.Config.OrderMutex.RLock()
+	api.Config.OrderMu.RLock()
 	svc := api.Config.Service[serviceID]
-	defer api.Config.OrderMutex.RUnlock()
+	defer api.Config.OrderMu.RUnlock()
 	if svc == nil {
-		err := fmt.Sprintf("service %q not found", serviceID)
-		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w,
-			err,
-			http.StatusNotFound)
+		err := fmt.Errorf("service %q not found", serviceID)
+		logx.Error(err, logFrom, true)
+		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
 
-	// Commands
+	// Commands.
 	commandSummary := make(map[string]apitype.CommandSummary, len(svc.Command))
 	if svc.CommandController != nil {
 		svcInfo := svc.Status.GetServiceInfo()
-		for i, cmd := range *svc.CommandController.Command {
+		for i, cmd := range svc.CommandController.Command {
 			command := cmd.ApplyTemplate(svcInfo)
 			commandSummary[command.String()] = apitype.CommandSummary{
 				Failed:       svc.Status.Fails.Command.Get(i),
-				NextRunnable: svc.CommandController.NextRunnable(i)}
+				NextRunnable: svc.CommandController.NextRunnable(i),
+			}
 		}
 	}
-	// WevHooks
+	// WebHooks.
 	webhookSummary := make(map[string]apitype.WebHookSummary, len(svc.WebHook))
 	for key, wh := range svc.WebHook {
 		webhookSummary[key] = apitype.WebHookSummary{
@@ -72,7 +72,8 @@ func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 
 	msg := apitype.ActionSummary{
 		Command: commandSummary,
-		WebHook: webhookSummary}
+		WebHook: webhookSummary,
+	}
 
 	api.writeJSON(w, msg, logFrom)
 }
@@ -102,7 +103,7 @@ const (
 //   - "webhook_<webhook_id>": approve a specific webhook.
 //   - "command_<command_id>": approve a specific command.
 func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
-	logFrom := logutil.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
+	logFrom := logx.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
 	// Service to run actions of.
 	serviceID, ok := requireQueryParam(w, r, "service_id")
 	if !ok {
@@ -110,76 +111,74 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the service exists.
-	api.Config.OrderMutex.RLock()
+	api.Config.OrderMu.RLock()
 	svc := api.Config.Service[serviceID]
-	defer api.Config.OrderMutex.RUnlock()
+	defer api.Config.OrderMu.RUnlock()
 	if svc == nil {
-		err := fmt.Sprintf("service %q not found", serviceID)
-		logutil.Log.Error(err, logFrom, true)
-		failRequest(&w,
-			err,
-			http.StatusNotFound)
+		err := fmt.Errorf("service %q not found", serviceID)
+		logx.Error(err, logFrom, true)
+		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
 
 	// Get target from the payload.
 	payloadBytes := http.MaxBytesReader(w, r.Body, 512)
 	var payload RunActionsPayload
-	err := json.NewDecoder(payloadBytes).Decode(&payload)
-	if err != nil {
-		logutil.Log.Error(
-			"Invalid payload - "+err.Error(),
-			logFrom, true)
-		failRequest(&w,
-			"invalid payload",
-			http.StatusBadRequest)
+	if err := json.UnmarshalRead(payloadBytes, &payload); err != nil {
+		err = fmt.Errorf("invalid payload: %w", err)
+		logx.Error(err, logFrom, true)
+		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
 	if payload.Target == "" {
-		errMsg := "invalid payload, target service not provided"
-		logutil.Log.Error(errMsg, logFrom, true)
-		failRequest(&w,
-			errMsg,
-			http.StatusBadRequest)
+		err := errors.New("invalid payload, target service not provided")
+		logx.Error(err, logFrom, true)
+		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
 	if !svc.Options.GetActive() {
-		errMsg := "service is inactive, actions can't be run for it"
-		logutil.Log.Error(errMsg, logFrom, true)
-		failRequest(&w,
-			errMsg,
-			http.StatusBadRequest)
+		err := errors.New("service is inactive, actions can't be run for it")
+		logx.Error(err, logFrom, true)
+		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
 
 	// SKIP this release.
 	if payload.Target == ActionSkip {
-		msg := fmt.Sprintf("%q release skip - %q",
-			serviceID, svc.Status.LatestVersion())
-		logutil.Log.Info(msg, logFrom, true)
+		msg := fmt.Sprintf(
+			"%q release skip - %q",
+			serviceID, svc.Status.LatestVersion(),
+		)
+		logx.Info(msg, logFrom, true)
 		svc.HandleSkip()
 		return
 	}
 
 	if svc.WebHook == nil && svc.Command == nil {
-		logutil.Log.Error(
+		logx.Warn(
 			fmt.Sprintf("%q does not have any commands/webhooks to approve", serviceID),
-			logFrom, true)
+			logFrom,
+			true,
+		)
 		return
 	}
 
 	// Send the WebHooks.
-	msg := fmt.Sprintf("%s %q Release actioned - %q",
+	msg := fmt.Sprintf(
+		"%s %q Release actioned - %q",
 		serviceID,
 		svc.Status.LatestVersion(),
 		strings.ReplaceAll(
 			strings.ReplaceAll(
-				strings.ReplaceAll(payload.Target,
-					ActionAll, "ALL"),
-				ActionFailed, "ALL UNSENT/FAILED"),
-			ActionSkip, "SKIP"),
+				strings.ReplaceAll(
+					payload.Target, ActionAll, "ALL",
+				),
+				ActionFailed, "ALL UNSENT/FAILED",
+			),
+			ActionSkip, "SKIP",
+		),
 	)
-	logutil.Log.Info(msg, logFrom, true)
+	logx.Info(msg, logFrom, true)
 	switch payload.Target {
 	case ActionAll, ActionFailed:
 		go svc.HandleFailedActions()
@@ -191,7 +190,11 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	api.writeJSON(w, apitype.Response{
-		Message: msg,
-	}, logFrom)
+	api.writeJSON(
+		w,
+		apitype.Response{
+			Message: msg,
+		},
+		logFrom,
+	)
 }

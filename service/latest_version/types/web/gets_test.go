@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,45 +20,88 @@ package web
 import (
 	"testing"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/internal/test"
 )
 
-func TestAllowInvalidCerts(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
+func TestLookup_GetType(t *testing.T) {
+	// GIVEN: a Lookup with a Type.
+	tests := []struct {
+		name  string
+		lType string
+	}{
+		{name: "empty", lType: ""},
+		{name: "test", lType: "test"},
+		{name: "x", lType: "x"},
+		{name: "y", lType: "y"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			l := &Lookup{}
+			l.Type = tc.lType
+
+			// WHEN: GetType is called.
+			got := l.GetType()
+
+			wantType := Type
+			// THEN: the Type is returned.
+			if got != wantType {
+				t.Errorf(
+					"%s\nLookup.GetType() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, wantType,
+				)
+			}
+		})
+	}
+}
+
+func TestLookup_AllowInvalidCerts(t *testing.T) {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name                                      string
 		rootValue, defaultValue, hardDefaultValue *bool
 		want                                      bool
 	}{
-		"root overrides all": {
+		{
+			name:             "root overrides all",
 			want:             true,
-			rootValue:        test.BoolPtr(true),
-			defaultValue:     test.BoolPtr(false),
-			hardDefaultValue: test.BoolPtr(false)},
-		"default overrides hardDefault": {
+			rootValue:        test.Ptr(true),
+			defaultValue:     test.Ptr(false),
+			hardDefaultValue: test.Ptr(false),
+		},
+		{
+			name:             "default overrides hardDefault",
 			want:             true,
-			defaultValue:     test.BoolPtr(true),
-			hardDefaultValue: test.BoolPtr(false)},
-		"hardDefault is last resort": {
+			defaultValue:     test.Ptr(true),
+			hardDefaultValue: test.Ptr(false),
+		},
+		{
+			name:             "hardDefault is last resort",
 			want:             true,
-			hardDefaultValue: test.BoolPtr(true)},
+			hardDefaultValue: test.Ptr(true),
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(false)
+			lookup := testLookup(t, false)
 			lookup.AllowInvalidCerts = tc.rootValue
 			lookup.Defaults.AllowInvalidCerts = tc.defaultValue
 			lookup.HardDefaults.AllowInvalidCerts = tc.hardDefaultValue
 
-			// WHEN allowInvalidCerts is called.
+			// WHEN: allowInvalidCerts is called.
 			got := lookup.allowInvalidCerts()
 
-			// THEN the function returns the correct result.
+			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("%s\nwant: %t\ngot:  %t",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s\nLookup.allowInvalidCerts() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}

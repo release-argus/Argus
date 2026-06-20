@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,105 +18,112 @@
 package github
 
 import (
-	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
 )
 
 func TestLookup_CheckValues(t *testing.T) {
-	// GIVEN a Lookup.
+	// GIVEN: a Lookup.
 	type args struct {
 		url         *string
 		require     *filter.Require
 		urlCommands *filter.URLCommands
 	}
-	tests := map[string]struct {
+	tests := []struct {
+		name     string
 		errRegex string
 		wantURL  *string
 		args     args
 	}{
-		"valid": {
+		{
+			name:     "valid",
 			errRegex: "^$",
 		},
-		"no url": {
+		{
+			name:     "no url",
 			errRegex: `^url: <required>.*$`,
 			args: args{
-				url: test.StringPtr("")},
+				url: test.Ptr(""),
+			},
 		},
-		"corrects github url": {
+		{
+			name:     "corrects github url",
 			errRegex: `^$`,
-			wantURL:  test.StringPtr("release-argus/Argus"),
+			wantURL:  &test.ArgusGitHubRepo,
 			args: args{
-				url: test.StringPtr("https://github.com/release-argus/Argus")},
+				url: test.Ptr("https://github.com/" + test.ArgusGitHubRepo),
+			},
 		},
-		"invalid require": {
+		{
+			name: "invalid require",
 			errRegex: test.TrimYAML(`
 				^require:
-					regex_content: "[^"]+" <invalid>.*$`),
+					regex_content: "[^"]+" <invalid>.*$`,
+			),
 			args: args{
-				require: &filter.Require{RegexContent: "[0-"}},
+				require: &filter.Require{
+					RegexContent: "[0-",
+				},
+			},
 		},
-		"invalid urlCommands": {
+		{
+			name: "invalid urlCommands",
 			errRegex: test.TrimYAML(`
 				^url_commands:
 					- item_0:
-						type: "[^"]+" <invalid>.*$`),
+						type: "[^"]+" <invalid>.*$`,
+			),
 			args: args{
-				urlCommands: &filter.URLCommands{{Type: "foo"}}},
+				urlCommands: &filter.URLCommands{
+					{Type: "foo"},
+				},
+			},
 		},
-		"all errs": {
+		{
+			name: "all decode",
 			errRegex: test.TrimYAML(`
 				^url: <required>.*
 				url_commands:
 					- item_0:
 						type: "[^"]+" <invalid>.*
 				require:
-					regex_content: "[^"]+" <invalid>.*$`),
+					regex_content: "[^"]+" <invalid>.*$`,
+			),
 			args: args{
-				url:         test.StringPtr(""),
-				require:     &filter.Require{RegexContent: "[0-"},
-				urlCommands: &filter.URLCommands{{Type: "foo"}}},
+				url: test.Ptr(""),
+				require: &filter.Require{
+					RegexContent: "[0-",
+				},
+				urlCommands: &filter.URLCommands{
+					{Type: "foo"},
+				},
+			},
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(false)
+			input := testLookup(t, false)
 			if tc.args.url != nil {
-				lookup.URL = *tc.args.url
+				input.URL = *tc.args.url
 			}
 			if tc.args.require != nil {
-				lookup.Require = tc.args.require
+				input.Require = tc.args.require
 			}
 			if tc.args.urlCommands != nil {
-				lookup.URLCommands = *tc.args.urlCommands
+				input.URLCommands = *tc.args.urlCommands
 			}
 
-			// WHEN CheckValues is called.
-			err := lookup.CheckValues("")
-
-			// THEN it errors when expected.
-			e := util.ErrorToString(err)
-			lines := strings.Split(e, "\n")
-			wantLines := strings.Count(tc.errRegex, "\n")
-			if wantLines > len(lines) {
-				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
-					packageName,
-					wantLines, tc.errRegex,
-					len(lines), lines,
-					e)
-				return
-			}
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
-				return
-			}
+			_ = test.AssertCheckValuesWithError(
+				t,
+				packageName,
+				tc.errRegex,
+				input.CheckValues,
+			)
 		})
 	}
 }

@@ -20,7 +20,7 @@ const ServiceImage: FC<ServiceImageProps> = ({ service }) => {
 	const delayedRender = useDelayedRender(500);
 	const {
 		type: serviceType,
-		icon: icon,
+		icon,
 		icon_link_to: iconLinkTo,
 		loading,
 	} = service ?? {};
@@ -29,7 +29,7 @@ const ServiceImage: FC<ServiceImageProps> = ({ service }) => {
 	const iconRender = useMemo(() => {
 		// URL icon.
 		if (icon)
-			return <img alt="" className="!size-full object-contain" src={icon} />;
+			return <img alt="" className="size-full! object-contain" src={icon} />;
 
 		// Loading spinner.
 		if (loading)
@@ -45,11 +45,11 @@ const ServiceImage: FC<ServiceImageProps> = ({ service }) => {
 		const ServiceIcon = LATEST_VERSION_LOOKUP_TYPE.GITHUB.value
 			? SiGithub
 			: AppWindow;
-		return <ServiceIcon className="!size-full object-contain" />;
+		return <ServiceIcon className="size-full! object-contain" />;
 	}, [serviceType, icon, loading]);
 
 	return (
-		<div className="relative my-auto flex aspect-[3/2] size-22 items-center justify-center">
+		<div className="relative my-auto flex aspect-3/2 size-22 items-center justify-center">
 			<a
 				className="flex size-full items-center justify-center"
 				href={iconLinkTo || undefined}

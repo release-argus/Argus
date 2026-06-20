@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,470 +17,188 @@
 package types
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestNotify_Censor(t *testing.T) {
-	// GIVEN a Notify.
-	tests := map[string]struct {
-		notify, want *Notify
+func TestServiceSummary_IsZero(t *testing.T) {
+	// GIVEN: a ServiceSummary struct.
+	tests := []struct {
+		name string
+		data ServiceSummary
+		want bool
 	}{
-		"nil": {
-			notify: nil,
-			want:   nil,
+		{
+			name: "empty",
+			data: ServiceSummary{},
+			want: true,
 		},
-		"url_fields": {
-			notify: &Notify{
-				URLFields: map[string]string{
-					"altid":    "alpha",
-					"apikey":   "bravo",
-					"botkey":   "charlie",
-					"password": "delta",
-					"token":    "echo",
-					"tokena":   "foxtrot",
-					"tokenb":   "golf"}},
-			want: &Notify{
-				URLFields: map[string]string{
-					"altid":    util.SecretValue,
-					"apikey":   util.SecretValue,
-					"botkey":   util.SecretValue,
-					"password": util.SecretValue,
-					"token":    util.SecretValue,
-					"tokena":   util.SecretValue,
-					"tokenb":   util.SecretValue}},
+		{
+			name: "non-empty/ID",
+			data: ServiceSummary{
+				ID: "foo",
+			},
+			want: false,
 		},
-		"params": {
-			notify: &Notify{
-				Params: map[string]string{
-					"devices": "foo"}},
-			want: &Notify{
-				Params: map[string]string{
-					"devices": util.SecretValue}},
+		{
+			name: "non-empty/Name",
+			data: ServiceSummary{
+				Name: test.Ptr("foo"),
+			},
+			want: false,
 		},
-		"all censorable": {
-			notify: &Notify{
-				URLFields: map[string]string{
-					"altid":    "alpha",
-					"apikey":   "bravo",
-					"botkey":   "charlie",
-					"password": "delta",
-					"token":    "echo",
-					"tokena":   "foxtrot",
-					"tokenb":   "golf"},
-				Params: map[string]string{
-					"devices": "hotel"}},
-			want: &Notify{
-				URLFields: map[string]string{
-					"altid":    util.SecretValue,
-					"apikey":   util.SecretValue,
-					"botkey":   util.SecretValue,
-					"password": util.SecretValue,
-					"token":    util.SecretValue,
-					"tokena":   util.SecretValue,
-					"tokenb":   util.SecretValue},
-				Params: map[string]string{
-					"devices": util.SecretValue}},
+		{
+			name: "non-empty/Active",
+			data: ServiceSummary{
+				Active: test.Ptr(true),
+			},
+			want: false,
 		},
-		"all censorable, plus non-censored": {
-			notify: &Notify{
-				URLFields: map[string]string{
-					"altid":    "alpha",
-					"apikey":   "bravo",
-					"botkey":   "charlie",
-					"password": "delta",
-					"token":    "echo",
-					"tokena":   "foxtrot",
-					"tokenb":   "golf",
-					"port":     "hotel",
-					"username": "india",
+		{
+			name: "non-empty/Comment",
+			data: ServiceSummary{
+				Comment: test.Ptr("foo"),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Type",
+			data: ServiceSummary{
+				Type: "foo",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/WebURL",
+			data: ServiceSummary{
+				WebURL: test.Ptr("https://example.com"),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Icon",
+			data: ServiceSummary{
+				Icon: test.Ptr("https://example.com/icon.png"),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/IconLinkTo",
+			data: ServiceSummary{
+				IconLinkTo: test.Ptr("https://example.com/somewhere"),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/HasDeployedVersionLookup",
+			data: ServiceSummary{
+				HasDeployedVersionLookup: test.Ptr(false),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Command",
+			data: ServiceSummary{
+				Command: test.Ptr(1),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/WebHook",
+			data: ServiceSummary{
+				WebHook: test.Ptr(2),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Status",
+			data: ServiceSummary{
+				Status: &Status{
+					ApprovedVersion: "1.2.3",
 				},
-				Params: map[string]string{
-					"devices": "juliette",
-					"rooms":   "kilo",
-					"events":  "lima"}},
-			want: &Notify{
-				URLFields: map[string]string{
-					"altid":    util.SecretValue,
-					"apikey":   util.SecretValue,
-					"botkey":   util.SecretValue,
-					"password": util.SecretValue,
-					"token":    util.SecretValue,
-					"tokena":   util.SecretValue,
-					"tokenb":   util.SecretValue,
-					"port":     "hotel",
-					"username": "india"},
-				Params: map[string]string{
-					"devices": util.SecretValue,
-					"rooms":   "kilo",
-					"events":  "lima"}},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN Censor is called on it.
-			tc.notify.Censor()
-
-			// THEN nil Notifiers are kept.
-			if tc.notify == tc.want {
-				return
-			}
-			// AND defined fields are censored as expected.
-			for k := range tc.want.URLFields {
-				if tc.notify.URLFields[k] != tc.want.URLFields[k] {
-					t.Errorf("%s\nURLField %q\nwant: %q\ngot:  %q",
-						packageName, k,
-						tc.want.URLFields[k], tc.notify.URLFields[k])
-				}
-			}
-			for k := range tc.want.Params {
-				if tc.notify.Params[k] != tc.want.Params[k] {
-					t.Errorf("%s\nParam %q\nwant: %q\ngot:  %q",
-						packageName, k,
-						tc.want.Params[k], tc.notify.Params[k])
-				}
-			}
-		})
-	}
-}
-
-func TestNotifiers_Censor(t *testing.T) {
-	// GIVEN Notifiers.
-	tests := map[string]struct {
-		notify, want *Notifiers
-	}{
-		"nil": {
-			notify: nil,
-			want:   nil,
-		},
-		"non-nil": {
-			notify: &Notifiers{
-				"0": &Notify{
-					URLFields: map[string]string{
-						"password": "alpha",
-						"port":     "bravo"},
-					Params: map[string]string{
-						"devices": "charlie",
-						"rooms":   "delta"}},
-				"1": &Notify{
-					URLFields: map[string]string{
-						"altid": "echo",
-						"port":  "foxtrot"},
-					Params: map[string]string{
-						"devices": "hotel",
-						"rooms":   "golf"}},
 			},
-			want: &Notifiers{
-				"0": &Notify{
-					URLFields: map[string]string{
-						"password": util.SecretValue,
-						"port":     "bravo"},
-					Params: map[string]string{
-						"devices": util.SecretValue,
-						"rooms":   "delta"}},
-				"1": &Notify{
-					URLFields: map[string]string{
-						"altid": util.SecretValue,
-						"port":  "foxtrot"},
-					Params: map[string]string{
-						"devices": util.SecretValue,
-						"rooms":   "golf"}},
+			want: false,
+		},
+		{
+			name: "non-empty/Tags",
+			data: ServiceSummary{
+				Tags: test.Ptr([]string{"foo"}),
 			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			data: ServiceSummary{
+				ID:                       "foo",
+				Name:                     test.Ptr("foo"),
+				Active:                   test.Ptr(true),
+				Comment:                  test.Ptr("foo"),
+				Type:                     "foo",
+				WebURL:                   test.Ptr("https://example.com"),
+				Icon:                     test.Ptr("https://example.com/icon.png"),
+				IconLinkTo:               test.Ptr("https://example.com/somewhere"),
+				HasDeployedVersionLookup: test.Ptr(false),
+				Command:                  test.Ptr(1),
+				WebHook:                  test.Ptr(2),
+				Status: &Status{
+					ApprovedVersion: "1.2.3",
+				},
+				Tags: test.Ptr([]string{"foo"}),
+			},
+			want: false,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Censor is called on it.
-			tc.notify.Censor()
+			// WHEN: IsZero is called on it.
+			got := tc.data.IsZero()
 
-			// THEN nil Notifiers are kept.
-			if tc.notify == tc.want {
-				return
-			}
-			// AND defined fields are censored as expected.
-			for i := range *tc.notify {
-				for k := range (*tc.want)[i].URLFields {
-					if (*tc.notify)[i].URLFields[k] != (*tc.want)[i].URLFields[k] {
-						t.Errorf("%s\nURLField %q\nwant: %q\ngot:  %q",
-							packageName, k,
-							(*tc.want)[i].URLFields[k], (*tc.notify)[i].URLFields[k])
-					}
-				}
-				for k := range (*tc.want)[i].Params {
-					if (*tc.notify)[i].Params[k] != (*tc.want)[i].Params[k] {
-						t.Errorf("%s\nParam %q\nwant: %q\ngot:  %q",
-							packageName, k,
-							(*tc.want)[i].Params[k], (*tc.notify)[i].Params[k])
-					}
-				}
-			}
-		})
-	}
-}
-
-func TestNotifiers_Flatten(t *testing.T) {
-	// GIVEN a Notifiers.
-	tests := map[string]struct {
-		notify *Notifiers
-		want   *[]Notify
-	}{
-		"nil": {
-			notify: nil,
-			want:   nil,
-		},
-		"empty": {
-			notify: &Notifiers{},
-			want:   &[]Notify{},
-		},
-		"ordered": {
-			notify: &Notifiers{
-				"zulu": &Notify{
-					URLFields: map[string]string{
-						"port": "alpha"},
-					Params: map[string]string{
-						"hosts": "bravo"}},
-				"yankee": &Notify{
-					URLFields: map[string]string{
-						"path": "charlie"},
-					Params: map[string]string{
-						"rooms": "delta"}}},
-			want: &[]Notify{
-				{ID: "yankee",
-					URLFields: map[string]string{
-						"path": "charlie"},
-					Params: map[string]string{
-						"rooms": "delta"}},
-				{ID: "zulu",
-					URLFields: map[string]string{
-						"port": "alpha"},
-					Params: map[string]string{
-						"hosts": "bravo"}}},
-		},
-		"ordered and censored": {
-			notify: &Notifiers{
-				"hotel": &Notify{
-					URLFields: map[string]string{
-						"port":  "alpha",
-						"altid": "echo"},
-					Params: map[string]string{
-						"hosts":   "bravo",
-						"devices": "foxtrot"}},
-				"golf": &Notify{
-					URLFields: map[string]string{
-						"path":   "charlie",
-						"botkey": "india"},
-					Params: map[string]string{
-						"rooms": "delta"}}},
-			want: &[]Notify{
-				{ID: "golf",
-					URLFields: map[string]string{
-						"path":   "charlie",
-						"botkey": util.SecretValue},
-					Params: map[string]string{
-						"rooms": "delta"}},
-				{ID: "hotel",
-					URLFields: map[string]string{
-						"port":  "alpha",
-						"altid": util.SecretValue},
-					Params: map[string]string{
-						"hosts":   "bravo",
-						"devices": util.SecretValue}}},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN Flatten is called on it.
-			got := tc.notify.Flatten()
-
-			// THEN nil Notifiers are kept.
-			if tc.notify == nil && tc.want == nil {
-				return
-			}
-			// AND defined fields are censored as expected.
-			for i := range *tc.want {
-				if got[i].ID != (*tc.want)[i].ID {
-					t.Errorf("%s\nID\nwant: %q\ngot:  %q",
-						packageName, (*tc.want)[i].ID, got[i].ID)
-				}
-				for k := range (*tc.want)[i].URLFields {
-					if got[i].URLFields[k] != (*tc.want)[i].URLFields[k] {
-						t.Errorf("%s\nURLField %q\nwant: %q\ngot:  %q",
-							packageName, k,
-							(*tc.want)[i].URLFields[k], got[i].URLFields[k])
-					}
-				}
-				for k := range (*tc.want)[i].Params {
-					if got[i].Params[k] != (*tc.want)[i].Params[k] {
-						t.Errorf("%s\nParam %q:\nwant: %q\ngot:  %q",
-							packageName, (*tc.want)[i].Params[k], k, got[i].Params[k])
-					}
-				}
-			}
-		})
-	}
-}
-
-func TestWebHook_Censor(t *testing.T) {
-	// GIVEN a WebHook.
-	tests := map[string]struct {
-		webhook, want *WebHook
-	}{
-		"nil": {
-			webhook: nil,
-			want:    nil,
-		},
-		"secret": {
-			webhook: &WebHook{
-				Secret: "shazam"},
-			want: &WebHook{
-				Secret: util.SecretValue},
-		},
-		"headers": {
-			webhook: &WebHook{
-				Headers: &[]Header{
-					{Key: "X-Header", Value: "something"},
-					{Key: "X-Bing", Value: "Bam"}}},
-			want: &WebHook{
-				Headers: &[]Header{
-					{Key: "X-Header", Value: util.SecretValue},
-					{Key: "X-Bing", Value: util.SecretValue}}},
-		},
-		"all": {
-			webhook: &WebHook{
-				Secret: "shazam",
-				Headers: &[]Header{
-					{Key: "X-Header", Value: "something"},
-					{Key: "X-Bing", Value: "Bam"}}},
-			want: &WebHook{
-				Secret: util.SecretValue,
-				Headers: &[]Header{
-					{Key: "X-Header", Value: util.SecretValue},
-					{Key: "X-Bing", Value: util.SecretValue}}},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN Censor is called on it.
-			tc.webhook.Censor()
-
-			// THEN nil WebHooks are kept.
-			if tc.webhook == tc.want {
-				return
-			}
-			// AND the Secret is censored.
-			if tc.webhook.Secret != tc.want.Secret {
-				t.Errorf("%s\nSecret uncensored\nwant: %q\ngot:  %q",
-					packageName, tc.want.Secret, tc.webhook.Secret)
-			}
-			if tc.webhook.Headers != nil {
-				for i := range *tc.want.Headers {
-					if (*tc.webhook.Headers)[i] != (*tc.want.Headers)[i] {
-						t.Errorf("%s\nHeader %d:\nwant: %v\ngot:  %v",
-							packageName, i,
-							(*tc.want.Headers)[i], (*tc.webhook.Headers)[i])
-					}
-				}
-			}
-		})
-	}
-}
-
-func TestWebHooks_Flatten(t *testing.T) {
-	// GIVEN a WebHook.
-	tests := map[string]struct {
-		webhook *WebHooks
-		want    []*WebHook
-	}{
-		"nil": {
-			webhook: nil,
-			want:    nil,
-		},
-		"empty": {
-			webhook: &WebHooks{},
-			want:    []*WebHook{},
-		},
-		"webhooks ordered": {
-			webhook: &WebHooks{
-				"alpha": &WebHook{URL: "https://example.com"},
-				"bravo": &WebHook{URL: "https://example.com/other"}},
-			want: []*WebHook{
-				{ID: "alpha", URL: "https://example.com"},
-				{ID: "bravo", URL: "https://example.com/other"}},
-		},
-		"webhooks ordered and censored": {
-			webhook: &WebHooks{
-				"alpha": &WebHook{
-					URL:    "https://example.com",
-					Secret: "foo"},
-				"bravo": &WebHook{
-					URL:    "https://example.com/other",
-					Secret: "bar"}},
-			want: []*WebHook{
-				{ID: "alpha",
-					URL:    "https://example.com",
-					Secret: util.SecretValue},
-				{ID: "bravo",
-					URL:    "https://example.com/other",
-					Secret: util.SecretValue}},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN Flatten is called on it.
-			got := tc.webhook.Flatten()
-
-			// THEN the map is flattened, ordered and censored.
-			gotBytes, _ := json.Marshal(got)
-			wantBytes, _ := json.Marshal(tc.want)
-			if string(gotBytes) != string(wantBytes) {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, string(wantBytes), string(gotBytes))
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nServiceSummary.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestServiceSummary_String(t *testing.T) {
-	// GIVEN a ServiceSummary.
-	tests := map[string]struct {
+	// GIVEN: a ServiceSummary.
+	tests := []struct {
+		name    string
 		summary *ServiceSummary
 		want    string
 	}{
-		"nil": {
+		{
+			name:    "nil",
 			summary: nil,
 			want:    "",
 		},
-		"empty": {
+		{
+			name:    "empty",
 			summary: &ServiceSummary{},
 			want:    "{}",
 		},
-		"some": {
+		{
+			name: "some",
 			summary: &ServiceSummary{
 				ID:      "foo",
-				Name:    test.StringPtr("bar"),
+				Name:    test.Ptr("bar"),
 				Type:    "github",
-				Command: test.IntPtr(1),
-				WebHook: test.IntPtr(2)},
+				Command: test.Ptr(1),
+				WebHook: test.Ptr(2),
+			},
 			want: `
 				{
 					"id": "foo",
@@ -490,21 +208,24 @@ func TestServiceSummary_String(t *testing.T) {
 					"webhook": 2
 				}`,
 		},
-		"full": {
+		{
+			name: "full",
 			summary: &ServiceSummary{
 				ID:                       "bar",
-				Name:                     test.StringPtr("foo"),
-				Active:                   test.BoolPtr(true),
-				Comment:                  "test",
+				Name:                     test.Ptr("foo"),
+				Active:                   test.Ptr(true),
+				Comment:                  test.Ptr("test"),
 				Type:                     "url",
-				WebURL:                   test.StringPtr("https://example.com"),
-				Icon:                     test.StringPtr("https://example.com/icon.png"),
-				IconLinkTo:               test.StringPtr("https://release-argus.io"),
-				HasDeployedVersionLookup: test.BoolPtr(true),
-				Command:                  test.IntPtr(2),
-				WebHook:                  test.IntPtr(1),
+				WebURL:                   test.Ptr("https://example.com"),
+				Icon:                     test.Ptr("https://example.com/icon.png"),
+				IconLinkTo:               test.Ptr("https://release-argus.io"),
+				HasDeployedVersionLookup: test.Ptr(true),
+				Command:                  test.Ptr(2),
+				WebHook:                  test.Ptr(1),
 				Status: &Status{
-					ApprovedVersion: "1.2.3"}},
+					ApprovedVersion: "1.2.3",
+				},
+			},
 			want: `
 				{
 					"id": "bar",
@@ -520,389 +241,516 @@ func TestServiceSummary_String(t *testing.T) {
 					"webhook": 1,
 					"status": {
 						"approved_version": "1.2.3"
-				}}`,
+					}
+				}`,
 		},
 	}
 
-	// WHEN String is called on it.
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	// WHEN: String is called on it.
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN the Summary is stringified with String.
+			// WHEN: the Summary is stringified with String.
 			got := tc.summary.String()
 
-			// THEN the result is as expected.
+			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestNilIfUnchanged(t *testing.T) {
-	// GIVEN two pointers to integers.
-	tests := map[string]struct {
-		oldValue *int
-		newValue *int
-		want     *int
-	}{
-		"unchanged - nil->nil": {
-			oldValue: nil,
-			newValue: nil,
-			want:     nil,
-		},
-		"unchanged - value->value": {
-			oldValue: test.IntPtr(1),
-			newValue: test.IntPtr(1),
-			want:     nil,
-		},
-		"removed - non-nil->nil": {
-			oldValue: test.IntPtr(1),
-			newValue: nil,
-			want:     test.IntPtr(0),
-		},
-		"added - nil->non-nil": {
-			oldValue: nil,
-			newValue: test.IntPtr(1),
-			want:     test.IntPtr(1),
-		},
-		"changed - non-nil->other-non-nil": {
-			oldValue: test.IntPtr(1),
-			newValue: test.IntPtr(2),
-			want:     test.IntPtr(2),
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN nilIfUnchanged is called.
-			tc.newValue = nilIfUnchanged(tc.oldValue, tc.newValue)
-
-			// THEN the newValue is nil\d if it's the same as oldValue.
-			if (tc.want == nil && tc.newValue != nil) ||
-				(tc.want != nil && tc.newValue == nil) ||
-				(tc.want != nil && tc.newValue != nil && *tc.newValue != *tc.want) {
-				t.Errorf("%s\nwant: %v\ngot:  %v",
-					packageName, tc.want, tc.newValue)
+				t.Errorf(
+					"%s\nServiceSummary.String() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestServiceSummary_RemoveUnchanged(t *testing.T) {
-	// GIVEN two ServiceSummaries.
-	tests := map[string]struct {
+	// GIVEN: two ServiceSummaries.
+	tests := []struct {
+		name           string
 		old, new, want *ServiceSummary
 	}{
-		"compare to nil": {
-			old: nil,
-			new: &ServiceSummary{ID: "foo"},
+		{
+			name: "compare to nil",
+			old:  nil,
+			new:  &ServiceSummary{ID: "foo"},
 			want: &ServiceSummary{
 				ID:     "foo",
-				Status: &Status{}},
+				Status: &Status{},
+			},
 		},
-		"same id": {
+		{
+			name: "same id",
 			old: &ServiceSummary{
-				ID: "foo"},
+				ID: "foo",
+			},
 			new: &ServiceSummary{
-				ID: "foo"},
+				ID: "foo",
+			},
 			want: &ServiceSummary{},
 		},
-		"different id": {
+		{
+			name: "different id",
 			old: &ServiceSummary{
-				ID: "foo"},
+				ID: "foo",
+			},
 			new: &ServiceSummary{
-				ID: "bar"},
+				ID: "bar",
+			},
 			want: &ServiceSummary{
-				ID: "bar"},
+				ID: "bar",
+			},
 		},
-		"name added": {
-			old: &ServiceSummary{},
+		{
+			name: "name added",
+			old:  &ServiceSummary{},
 			new: &ServiceSummary{
-				Name: test.StringPtr("foo")},
+				Name: test.Ptr("foo"),
+			},
 			want: &ServiceSummary{
-				Name: test.StringPtr("foo")},
+				Name: test.Ptr("foo"),
+			},
 		},
-		"name removed": {
+		{
+			name: "name removed",
 			old: &ServiceSummary{
-				Name: test.StringPtr("foo")},
+				Name: test.Ptr("foo"),
+			},
 			new: &ServiceSummary{},
 			want: &ServiceSummary{
-				Name: test.StringPtr("")},
+				Name: test.Ptr(""),
+			},
 		},
-		"same name": {
+		{
+			name: "same name",
 			old: &ServiceSummary{
-				Name: test.StringPtr("foo")},
+				Name: test.Ptr("foo"),
+			},
 			new: &ServiceSummary{
-				Name: test.StringPtr("foo")},
+				Name: test.Ptr("foo"),
+			},
 			want: &ServiceSummary{},
 		},
-		"different name": {
+		{
+			name: "different name",
 			old: &ServiceSummary{
-				Name: test.StringPtr("foo")},
+				Name: test.Ptr("foo"),
+			},
 			new: &ServiceSummary{
-				Name: test.StringPtr("bar")},
+				Name: test.Ptr("bar"),
+			},
 			want: &ServiceSummary{
-				Name: test.StringPtr("bar")},
+				Name: test.Ptr("bar"),
+			},
 		},
-		"same active": {
+		{
+			name: "same active",
 			old: &ServiceSummary{
-				Active: test.BoolPtr(false)},
+				Active: test.Ptr(false),
+			},
 			new: &ServiceSummary{
-				Active: test.BoolPtr(false)},
+				Active: test.Ptr(false),
+			},
 			want: &ServiceSummary{},
 		},
-		"different active": {
+		{
+			name: "different active",
 			old: &ServiceSummary{
-				Active: test.BoolPtr(true)},
+				Active: test.Ptr(true),
+			},
 			new: &ServiceSummary{
-				Active: test.BoolPtr(false)},
+				Active: test.Ptr(false),
+			},
 			want: &ServiceSummary{
-				Active: test.BoolPtr(false)},
+				Active: test.Ptr(false),
+			},
 		},
-		"same type": {
-			old: &ServiceSummary{
-				Type: "github"},
+		{
+			name: "comment added",
+			old:  &ServiceSummary{},
 			new: &ServiceSummary{
-				Type: "github"},
+				Comment: test.Ptr("foo"),
+			},
+			want: &ServiceSummary{
+				Comment: test.Ptr("foo"),
+			},
+		},
+		{
+			name: "comment changed",
+			old: &ServiceSummary{
+				Comment: test.Ptr("foo"),
+			},
+			new: &ServiceSummary{
+				Comment: test.Ptr("bar"),
+			},
+			want: &ServiceSummary{
+				Comment: test.Ptr("bar"),
+			},
+		},
+		{
+			name: "comment removed",
+			old: &ServiceSummary{
+				Comment: test.Ptr("foo"),
+			},
+			new: &ServiceSummary{},
+			want: &ServiceSummary{
+				Comment: test.Ptr(""),
+			},
+		},
+		{
+			name: "same type",
+			old: &ServiceSummary{
+				Type: "github",
+			},
+			new: &ServiceSummary{
+				Type: "github",
+			},
 			want: &ServiceSummary{},
 		},
-		"different type": {
+		{
+			name: "different type",
 			old: &ServiceSummary{
-				Type: "github"},
+				Type: "github",
+			},
 			new: &ServiceSummary{
-				Type: "url"},
+				Type: "url",
+			},
 			want: &ServiceSummary{
-				Type: "url"},
+				Type: "url",
+			},
 		},
-		"same icon": {
+		{
+			name: "same icon",
 			old: &ServiceSummary{
-				Icon: test.StringPtr("https://example.com/icon.png")},
+				Icon: test.Ptr("https://example.com/icon.png"),
+			},
 			new: &ServiceSummary{
-				Icon: test.StringPtr("https://example.com/icon.png")},
+				Icon: test.Ptr("https://example.com/icon.png"),
+			},
 			want: &ServiceSummary{},
 		},
-		"different icon": {
+		{
+			name: "different icon",
 			old: &ServiceSummary{
-				Icon: test.StringPtr("https://example.com/icon.png")},
+				Icon: test.Ptr("https://example.com/icon.png"),
+			},
 			new: &ServiceSummary{
-				Icon: test.StringPtr("https://example.com/icon2.png")},
+				Icon: test.Ptr("https://example.com/icon2.png"),
+			},
 			want: &ServiceSummary{
-				Icon: test.StringPtr("https://example.com/icon2.png")},
+				Icon: test.Ptr("https://example.com/icon2.png"),
+			},
 		},
-		"same icon_link_to": {
+		{
+			name: "same icon_link_to",
 			old: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io")},
+				IconLinkTo: test.Ptr("https://release-argus.io"),
+			},
 			new: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io")},
+				IconLinkTo: test.Ptr("https://release-argus.io"),
+			},
 			want: &ServiceSummary{},
 		},
-		"different icon_link_to": {
+		{
+			name: "different icon_link_to",
 			old: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io")},
+				IconLinkTo: test.Ptr("https://release-argus.io"),
+			},
 			new: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io/other")},
+				IconLinkTo: test.Ptr("https://release-argus.io/other"),
+			},
 			want: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io/other")},
+				IconLinkTo: test.Ptr("https://release-argus.io/other"),
+			},
 		},
-		"same has_deployed_version_lookup": {
+		{
+			name: "same has_deployed_version_lookup",
 			old: &ServiceSummary{
-				HasDeployedVersionLookup: test.BoolPtr(true)},
+				HasDeployedVersionLookup: test.Ptr(true),
+			},
 			new: &ServiceSummary{
-				HasDeployedVersionLookup: test.BoolPtr(true)},
+				HasDeployedVersionLookup: test.Ptr(true),
+			},
 			want: &ServiceSummary{},
 		},
-		"different has_deployed_version_lookup": {
+		{
+			name: "different has_deployed_version_lookup",
 			old: &ServiceSummary{
-				HasDeployedVersionLookup: test.BoolPtr(true)},
+				HasDeployedVersionLookup: test.Ptr(true),
+			},
 			new: &ServiceSummary{
-				HasDeployedVersionLookup: test.BoolPtr(false)},
+				HasDeployedVersionLookup: test.Ptr(false),
+			},
 			want: &ServiceSummary{
-				HasDeployedVersionLookup: test.BoolPtr(false)},
+				HasDeployedVersionLookup: test.Ptr(false),
+			},
 		},
-		"same approved_version": {
+		{
+			name: "same approved_version",
 			old: &ServiceSummary{
 				Status: &Status{
-					ApprovedVersion: "1.2.3"}},
+					ApprovedVersion: "1.2.3",
+				},
+			},
 			new: &ServiceSummary{
 				Status: &Status{
-					ApprovedVersion: "1.2.3"}},
+					ApprovedVersion: "1.2.3",
+				},
+			},
 			want: &ServiceSummary{},
 		},
-		"different approved_version": {
+		{
+			name: "different approved_version",
 			old: &ServiceSummary{
 				Status: &Status{
-					ApprovedVersion: "1.2.3"}},
+					ApprovedVersion: "1.2.3",
+				},
+			},
 			new: &ServiceSummary{
 				Status: &Status{
-					ApprovedVersion: "4.5.6"}},
+					ApprovedVersion: "4.5.6",
+				},
+			},
 			want: &ServiceSummary{
 				Status: &Status{
-					ApprovedVersion: "4.5.6"}},
+					ApprovedVersion: "4.5.6",
+				},
+			},
 		},
-		"same deployed_version": {
+		{
+			name: "same deployed_version/bare",
 			old: &ServiceSummary{
 				Status: &Status{
-					DeployedVersion: "1.2.3"}},
+					DeployedVersion: "1.2.3",
+				},
+			},
 			new: &ServiceSummary{
 				Status: &Status{
-					DeployedVersion: "1.2.3"}},
+					DeployedVersion: "1.2.3",
+				},
+			},
 			want: &ServiceSummary{},
 		},
-		"same deployed_version, different timestamps ignored": {
+		{
+			name: "same deployed_version/different timestamps ignored",
 			old: &ServiceSummary{
 				Status: &Status{
 					DeployedVersion:          "1.2.3",
-					DeployedVersionTimestamp: "2020-01-01T00:00:00Z"}},
+					DeployedVersionTimestamp: "2020-01-01T00:00:00Z",
+				},
+			},
 			new: &ServiceSummary{
 				Status: &Status{
 					DeployedVersion:          "1.2.3",
-					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
+					DeployedVersionTimestamp: "2020-02-02T00:00:00Z",
+				},
+			},
 			want: &ServiceSummary{},
 		},
-		"different deployed_version": {
+		{
+			name: "different deployed_version",
 			old: &ServiceSummary{
 				Status: &Status{
 					DeployedVersion:          "1.2.3",
-					DeployedVersionTimestamp: "2020-01-01T00:00:00Z"}},
+					DeployedVersionTimestamp: "2020-01-01T00:00:00Z",
+				},
+			},
 			new: &ServiceSummary{
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
-					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
+					DeployedVersionTimestamp: "2020-02-02T00:00:00Z",
+				},
+			},
 			want: &ServiceSummary{
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
-					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
+					DeployedVersionTimestamp: "2020-02-02T00:00:00Z",
+				},
+			},
 		},
-		"same latest_version": {
+		{
+			name: "same latest_version/bare",
 			old: &ServiceSummary{
 				Status: &Status{
-					LatestVersion: "1.2.3"}},
+					LatestVersion: "1.2.3",
+				},
+			},
 			new: &ServiceSummary{
 				Status: &Status{
-					LatestVersion: "1.2.3"}},
+					LatestVersion: "1.2.3",
+				},
+			},
 			want: &ServiceSummary{},
 		},
-		"same latest_version, different timestamps ignored": {
+		{
+			name: "same latest_version/different timestamps ignored",
 			old: &ServiceSummary{
 				Status: &Status{
 					LatestVersion:          "1.2.3",
-					LatestVersionTimestamp: "2020-01-01T00:00:00Z"}},
+					LatestVersionTimestamp: "2020-01-01T00:00:00Z",
+				},
+			},
 			new: &ServiceSummary{
 				Status: &Status{
 					LatestVersion:          "1.2.3",
-					LatestVersionTimestamp: "2020-02-02T00:00:00Z"}},
+					LatestVersionTimestamp: "2020-02-02T00:00:00Z",
+				},
+			},
 			want: &ServiceSummary{},
 		},
-		"different latest_version": {
+		{
+			name: "different latest_version",
 			old: &ServiceSummary{
 				Status: &Status{
 					LatestVersion:          "1.2.3",
-					LatestVersionTimestamp: "2020-01-01T00:00:00Z"}},
+					LatestVersionTimestamp: "2020-01-01T00:00:00Z",
+				},
+			},
 			new: &ServiceSummary{
 				Status: &Status{
 					LatestVersion:          "4.5.6",
-					LatestVersionTimestamp: "2020-02-02T00:00:00Z"}},
+					LatestVersionTimestamp: "2020-02-02T00:00:00Z",
+				},
+			},
 			want: &ServiceSummary{
 				Status: &Status{
 					LatestVersion:          "4.5.6",
-					LatestVersionTimestamp: "2020-02-02T00:00:00Z"}},
+					LatestVersionTimestamp: "2020-02-02T00:00:00Z",
+				},
+			},
 		},
-		"multiple differences": {
+		{
+			name: "multiple differences",
 			old: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io"),
+				IconLinkTo: test.Ptr("https://release-argus.io"),
 				Status: &Status{
 					DeployedVersion:          "1.2.3",
-					DeployedVersionTimestamp: "2020-01-01T00:00:00Z"}},
+					DeployedVersionTimestamp: "2020-01-01T00:00:00Z",
+				},
+			},
 			new: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io/other"),
+				IconLinkTo: test.Ptr("https://release-argus.io/other"),
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
-					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
+					DeployedVersionTimestamp: "2020-02-02T00:00:00Z",
+				},
+			},
 			want: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io/other"),
+				IconLinkTo: test.Ptr("https://release-argus.io/other"),
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
-					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
+					DeployedVersionTimestamp: "2020-02-02T00:00:00Z",
+				},
+			},
 		},
-		"tags added": {
-			old: &ServiceSummary{},
+		{
+			name: "tags added",
+			old:  &ServiceSummary{},
 			new: &ServiceSummary{
-				Tags: test.StringSlicePtr([]string{"foo"})},
+				Tags: test.Ptr([]string{"foo"}),
+			},
 			want: &ServiceSummary{
-				Tags: test.StringSlicePtr([]string{"foo"})},
+				Tags: test.Ptr([]string{"foo"}),
+			},
 		},
-		"tags removed": {
+		{
+			name: "tags removed",
 			old: &ServiceSummary{
-				Tags: test.StringSlicePtr([]string{"foo"})},
+				Tags: test.Ptr([]string{"foo"}),
+			},
 			new: &ServiceSummary{},
 			want: &ServiceSummary{
-				Tags: test.StringSlicePtr([]string{})},
+				Tags: test.Ptr([]string{}),
+			},
 		},
-		"same tags": {
+		{
+			name: "same tags",
 			old: &ServiceSummary{
-				Tags: test.StringSlicePtr([]string{"foo"})},
+				Tags: test.Ptr([]string{"foo"}),
+			},
 			new: &ServiceSummary{
-				Tags: test.StringSlicePtr([]string{"foo"})},
+				Tags: test.Ptr([]string{"foo"}),
+			},
 			want: &ServiceSummary{},
 		},
-		"different tags": {
+		{
+			name: "different tags",
 			old: &ServiceSummary{
-				Tags: test.StringSlicePtr([]string{"foo"})},
+				Tags: test.Ptr([]string{"foo"}),
+			},
 			new: &ServiceSummary{
-				Tags: test.StringSlicePtr([]string{"bar"})},
+				Tags: test.Ptr([]string{"bar"}),
+			},
 			want: &ServiceSummary{
-				Tags: test.StringSlicePtr([]string{"bar"})},
+				Tags: test.Ptr([]string{"bar"}),
+			},
 		},
-		"command added": {
-			old: &ServiceSummary{},
+		{
+			name: "command added",
+			old:  &ServiceSummary{},
 			new: &ServiceSummary{
-				Command: test.IntPtr(1)},
+				Command: test.Ptr(1),
+			},
 			want: &ServiceSummary{
-				Command: test.IntPtr(1)},
+				Command: test.Ptr(1),
+			},
 		},
-		"command removed": {
+		{
+			name: "command removed",
 			old: &ServiceSummary{
-				Command: test.IntPtr(1)},
+				Command: test.Ptr(1),
+			},
 			new: &ServiceSummary{},
 			want: &ServiceSummary{
-				Command: test.IntPtr(0)},
+				Command: test.Ptr(0),
+			},
 		},
-		"same command": {
+		{
+			name: "same command",
 			old: &ServiceSummary{
-				Command: test.IntPtr(1)},
+				Command: test.Ptr(1),
+			},
 			new: &ServiceSummary{
-				Command: test.IntPtr(1)},
+				Command: test.Ptr(1),
+			},
 			want: &ServiceSummary{
-				Command: nil},
+				Command: nil,
+			},
 		},
-		"webhook added": {
-			old: &ServiceSummary{},
+		{
+			name: "webhook added",
+			old:  &ServiceSummary{},
 			new: &ServiceSummary{
-				WebHook: test.IntPtr(1)},
+				WebHook: test.Ptr(1),
+			},
 			want: &ServiceSummary{
-				WebHook: test.IntPtr(1)},
+				WebHook: test.Ptr(1),
+			},
 		},
-		"webhook removed": {
+		{
+			name: "webhook removed",
 			old: &ServiceSummary{
-				WebHook: test.IntPtr(1)},
+				WebHook: test.Ptr(1),
+			},
 			new: &ServiceSummary{},
 			want: &ServiceSummary{
-				WebHook: test.IntPtr(0)},
+				WebHook: test.Ptr(0),
+			},
 		},
-		"same webhook": {
+		{
+			name: "same webhook",
 			old: &ServiceSummary{
-				WebHook: test.IntPtr(1)},
+				WebHook: test.Ptr(1),
+			},
 			new: &ServiceSummary{
-				WebHook: test.IntPtr(1)},
+				WebHook: test.Ptr(1),
+			},
 			want: &ServiceSummary{
-				WebHook: nil},
+				WebHook: nil,
+			},
 		},
 	}
 
@@ -912,8 +760,8 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		}
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			// Give them non-nil Status, Command and WebHook.
@@ -924,33 +772,2190 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 				initialiseFields(tc.new)
 			}
 
-			// WHEN RemoveUnchanged is called, comparing new to old.
+			// WHEN: RemoveUnchanged is called, comparing new to old.
 			tc.new.RemoveUnchanged(tc.old)
 
-			// THEN the values that are unchanged are removed.
-			if tc.new.String() != tc.want.String() {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want.String(), tc.new.String())
+			prefix := fmt.Sprintf(
+				"%s\nServiceSummary.RemoveUnchanged(%+v)",
+				packageName, tc.old,
+			)
+
+			// THEN: the values that are unchanged are removed.
+			if gotStr, wantStr := tc.new.String(), tc.want.String(); gotStr != wantStr {
+				t.Errorf(
+					"%s stringified mismatch\ngot:  %q\nwant: %q",
+					prefix, gotStr, wantStr,
+				)
+			}
+		})
+	}
+}
+
+func TestDefaults_IsZero(t *testing.T) {
+	// GIVEN: Defaults.
+	tests := []struct {
+		name     string
+		defaults Defaults
+		want     bool
+	}{
+		{
+			name: "empty",
+			defaults: Defaults{
+				Service: ServiceDefaults{},
+				Notify:  Notifiers{},
+				WebHook: WebHook{},
+			},
+			want: true,
+		},
+		{
+			name: "non-empty/Service",
+			defaults: Defaults{
+				Service: ServiceDefaults{
+					Comment: "a",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Notify",
+			defaults: Defaults{
+				Notify: Notifiers{
+					"a": &Notify{
+						Type: "a",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/WebHook",
+			defaults: Defaults{
+				WebHook: WebHook{
+					Type: "a",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			defaults: Defaults{
+				Service: ServiceDefaults{
+					Comment: "a",
+				},
+				Notify: Notifiers{
+					"a": &Notify{
+						Type: "a",
+					},
+				},
+				WebHook: WebHook{
+					Type: "a",
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestDefaults_String(t *testing.T) {
+	// GIVEN: Defaults.
+	tests := []struct {
+		name     string
+		defaults *Defaults
+		want     string
+	}{
+		{
+			name:     "nil",
+			defaults: nil,
+			want:     "",
+		},
+		{
+			name:     "empty",
+			defaults: &Defaults{},
+			want:     `{}`,
+		},
+		{
+			name: "all types",
+			defaults: &Defaults{
+				Service: ServiceDefaults{
+					LatestVersion: LatestVersionDefaults{
+						AccessToken: "foo",
+					},
+				},
+				Notify: Notifiers{
+					"gotify": &Notify{
+						URLFields: map[string]string{
+							"url": "https://gotify.example.com",
+						},
+					},
+				},
+				WebHook: WebHook{
+					Secret: "bar",
+				},
+			},
+			want: `
+				{
+					"service": {
+						"latest_version": {
+							"access_token": "foo"
+						}
+					},
+					"notify": {
+						"gotify": {
+							"url_fields": {
+								"url": "https://gotify.example.com"
+							}
+						}
+					},
+					"webhook": {
+						"secret": "bar"
+					}
+				}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: the Defaults are stringified with String.
+			got := tc.defaults.String()
+
+			// THEN: the result is as expected.
+			tc.want = test.TrimJSON(tc.want)
+			if got != tc.want {
+				t.Errorf(
+					"%s\nDefaults.String() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestSettings_IsZero(t *testing.T) {
+	// GIVEN: Settings.
+	tests := []struct {
+		name     string
+		settings Settings
+		want     bool
+	}{
+		{
+			name: "empty",
+			settings: Settings{
+				Log: LogSettings{},
+				Web: WebSettings{},
+			},
+			want: true,
+		},
+		{
+			name: "non-empty/Log",
+			settings: Settings{
+				Log: LogSettings{
+					Level: "DEBUG",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Web",
+			settings: Settings{
+				Web: WebSettings{
+					ListenPort: "9001",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			settings: Settings{
+				Log: LogSettings{
+					Level: "DEBUG",
+				},
+				Web: WebSettings{
+					ListenPort: "9001",
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.settings.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nSettings.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestLogSettings_IsZero(t *testing.T) {
+	// GIVEN: LogSettings.
+	tests := []struct {
+		name        string
+		logSettings LogSettings
+		want        bool
+	}{
+		{
+			name: "empty",
+			logSettings: LogSettings{
+				Timestamps: nil,
+				Level:      "",
+			},
+			want: true,
+		},
+		{
+			name: "non-empty/Timestamps",
+			logSettings: LogSettings{
+				Timestamps: test.Ptr(true),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Level",
+			logSettings: LogSettings{
+				Level: "DEBUG",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			logSettings: LogSettings{
+				Timestamps: test.Ptr(true),
+				Level:      "DEBUG",
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.logSettings.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nLogSettings.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestWebSettings_IsZero(t *testing.T) {
+	// GIVEN: WebSettings.
+	tests := []struct {
+		name        string
+		webSettings WebSettings
+		want        bool
+	}{
+		{
+			name: "empty",
+			webSettings: WebSettings{
+
+				ListenHost:  "",
+				ListenPort:  "",
+				CertFile:    "",
+				KeyFile:     "",
+				RoutePrefix: "",
+			},
+			want: true,
+		},
+		{
+			name: "non-empty/ListenHost",
+			webSettings: WebSettings{
+				ListenHost: "127.0.0.1",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/ListenPort",
+			webSettings: WebSettings{
+				ListenPort: "9001",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/CertFile",
+			webSettings: WebSettings{
+				CertFile: "file.pem",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/KeyFile",
+			webSettings: WebSettings{
+				KeyFile: "file.pem",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/RoutePrefix",
+			webSettings: WebSettings{
+				RoutePrefix: "/",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			webSettings: WebSettings{
+				ListenHost:  "127.0.0.1",
+				ListenPort:  "9001",
+				CertFile:    "file.pem",
+				KeyFile:     "file.pem",
+				RoutePrefix: "/",
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.webSettings.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nWebSettings.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestNotifiers_String(t *testing.T) {
+	// GIVEN: Notifiers.
+	tests := []struct {
+		name      string
+		notifiers *Notifiers
+		want      string
+	}{
+		{
+			name:      "nil",
+			notifiers: nil,
+			want:      "",
+		},
+		{
+			name:      "empty",
+			notifiers: &Notifiers{},
+			want:      "{}",
+		},
+		{
+			name: "one",
+			notifiers: &Notifiers{
+				"0": {
+					ID:   "foo",
+					Type: "discord",
+					Options: map[string]string{
+						"message": "hello world",
+					},
+					URLFields: map[string]string{
+						"username": "bing",
+					},
+					Params: map[string]string{
+						"devices": "bang",
+					},
+				},
+			},
+			want: `
+				{
+					"0": {
+						"name": "foo",
+						"type": "discord",
+						"options": {
+							"message": "hello world"
+						},
+						"url_fields": {
+							"username": "bing"
+						},
+						"params": {
+							"devices": "bang"
+						}
+					}
+				}`,
+		},
+		{
+			name: "multiple",
+			notifiers: &Notifiers{
+				"0": {
+					ID:   "foo",
+					Type: "discord",
+					Options: map[string]string{
+						"message": "hello world",
+					},
+					URLFields: map[string]string{
+						"username": "bing",
+					},
+					Params: map[string]string{
+						"devices": "bang",
+					},
+				},
+				"other": {
+					Type: "gotify",
+				},
+			},
+			want: `
+				{
+					"0": {
+						"name": "foo",
+						"type": "discord",
+						"options": {
+							"message": "hello world"
+						},
+						"url_fields": {
+							"username": "bing"
+						},
+						"params": {
+							"devices": "bang"
+						}
+					},
+					"other": {
+						"type": "gotify"
+					}
+				}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: the Notifiers is stringified with String.
+			got := tc.notifiers.String()
+
+			// THEN: the result is as expected.
+			tc.want = test.TrimJSON(tc.want)
+			if got != tc.want {
+				t.Errorf(
+					"%sNotifiers.String() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestNotifiers_Flatten(t *testing.T) {
+	// GIVEN: a Notifiers.
+	tests := []struct {
+		name   string
+		notify *Notifiers
+		want   *[]Notify
+	}{
+		{
+			name:   "nil",
+			notify: nil,
+			want:   nil,
+		},
+		{
+			name:   "empty",
+			notify: &Notifiers{},
+			want:   &[]Notify{},
+		},
+		{
+			name: "ordered",
+			notify: &Notifiers{
+				"zulu": &Notify{
+					URLFields: map[string]string{
+						"port": "alpha",
+					},
+					Params: map[string]string{
+						"hosts": "bravo",
+					},
+				},
+				"yankee": &Notify{
+					URLFields: map[string]string{
+						"path": "charlie",
+					},
+					Params: map[string]string{
+						"rooms": "delta",
+					},
+				},
+			},
+			want: &[]Notify{
+				{ID: "yankee",
+					URLFields: map[string]string{
+						"path": "charlie",
+					},
+					Params: map[string]string{
+						"rooms": "delta",
+					},
+				},
+				{ID: "zulu",
+					URLFields: map[string]string{
+						"port": "alpha",
+					},
+					Params: map[string]string{
+						"hosts": "bravo",
+					},
+				},
+			},
+		},
+		{
+			name: "ordered and censored",
+			notify: &Notifiers{
+				"hotel": &Notify{
+					URLFields: map[string]string{
+						"port":  "alpha",
+						"altid": "echo",
+					},
+					Params: map[string]string{
+						"hosts":   "bravo",
+						"devices": "foxtrot",
+					},
+				},
+				"golf": &Notify{
+					URLFields: map[string]string{
+						"path":   "charlie",
+						"botkey": "india",
+					},
+					Params: map[string]string{
+						"rooms": "delta",
+					},
+				},
+			},
+			want: &[]Notify{
+				{ID: "golf",
+					URLFields: map[string]string{
+						"path":   "charlie",
+						"botkey": util.SecretValue,
+					},
+					Params: map[string]string{
+						"rooms": "delta",
+					},
+				},
+				{ID: "hotel",
+					URLFields: map[string]string{
+						"port":  "alpha",
+						"altid": util.SecretValue,
+					},
+					Params: map[string]string{
+						"hosts":   "bravo",
+						"devices": util.SecretValue,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: Flatten is called on it.
+			got := tc.notify.Flatten()
+
+			// THEN: nil Notifiers are kept.
+			if tc.notify == nil && tc.want == nil {
+				return
+			}
+
+			// AND: defined fields are censored as expected.
+			for i := range *tc.want {
+				prefix := fmt.Sprintf(
+					"%s\nNotifiers.Flatten() Notify[%q]",
+					packageName, i,
+				)
+
+				if gotID, wantID := got[i].ID, (*tc.want)[i].ID; gotID != wantID {
+					t.Errorf(
+						"%s .ID mismatch\ngot:  %q\nwant: %q",
+						prefix, gotID, wantID,
+					)
+				}
+				if testErr := test.AssertMapEqual(
+					t,
+					got[i].URLFields,
+					(*tc.want)[i].URLFields,
+					prefix,
+					"URLFields",
+				); testErr != nil {
+					t.Error(testErr)
+				}
+				if testErr := test.AssertMapEqual(
+					t,
+					got[i].Params,
+					(*tc.want)[i].Params,
+					prefix,
+					"Params",
+				); testErr != nil {
+					t.Error(testErr)
+				}
+			}
+		})
+	}
+}
+
+func TestNotify_Censor(t *testing.T) {
+	// GIVEN: a Notify.
+	tests := []struct {
+		name         string
+		notify, want *Notify
+	}{
+		{
+			name:   "nil",
+			notify: nil,
+			want:   nil,
+		},
+		{
+			name: "url_fields",
+			notify: &Notify{
+				URLFields: map[string]string{
+					"altid":    "alpha",
+					"apikey":   "bravo",
+					"botkey":   "charlie",
+					"password": "delta",
+					"token":    "echo",
+					"tokena":   "foxtrot",
+					"tokenb":   "golf",
+				},
+			},
+			want: &Notify{
+				URLFields: map[string]string{
+					"altid":    util.SecretValue,
+					"apikey":   util.SecretValue,
+					"botkey":   util.SecretValue,
+					"password": util.SecretValue,
+					"token":    util.SecretValue,
+					"tokena":   util.SecretValue,
+					"tokenb":   util.SecretValue,
+				},
+			},
+		},
+		{
+			name: "params",
+			notify: &Notify{
+				Params: map[string]string{
+					"devices": "foo",
+				},
+			},
+			want: &Notify{
+				Params: map[string]string{
+					"devices": util.SecretValue,
+				},
+			},
+		},
+		{
+			name: "all censorable/only",
+			notify: &Notify{
+				URLFields: map[string]string{
+					"altid":    "alpha",
+					"apikey":   "bravo",
+					"botkey":   "charlie",
+					"password": "delta",
+					"token":    "echo",
+					"tokena":   "foxtrot",
+					"tokenb":   "golf",
+				},
+				Params: map[string]string{
+					"devices": "hotel",
+				},
+			},
+			want: &Notify{
+				URLFields: map[string]string{
+					"altid":    util.SecretValue,
+					"apikey":   util.SecretValue,
+					"botkey":   util.SecretValue,
+					"password": util.SecretValue,
+					"token":    util.SecretValue,
+					"tokena":   util.SecretValue,
+					"tokenb":   util.SecretValue,
+				},
+				Params: map[string]string{
+					"devices": util.SecretValue,
+				},
+			},
+		},
+		{
+			name: "all censorable/plus non-censored",
+			notify: &Notify{
+				URLFields: map[string]string{
+					"altid":    "alpha",
+					"apikey":   "bravo",
+					"botkey":   "charlie",
+					"password": "delta",
+					"token":    "echo",
+					"tokena":   "foxtrot",
+					"tokenb":   "golf",
+					"port":     "hotel",
+					"username": "india",
+				},
+				Params: map[string]string{
+					"devices": "juliette",
+					"rooms":   "kilo",
+					"events":  "lima",
+				},
+			},
+			want: &Notify{
+				URLFields: map[string]string{
+					"altid":    util.SecretValue,
+					"apikey":   util.SecretValue,
+					"botkey":   util.SecretValue,
+					"password": util.SecretValue,
+					"token":    util.SecretValue,
+					"tokena":   util.SecretValue,
+					"tokenb":   util.SecretValue,
+					"port":     "hotel",
+					"username": "india",
+				},
+				Params: map[string]string{
+					"devices": util.SecretValue,
+					"rooms":   "kilo",
+					"events":  "lima",
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: Censor is called on it.
+			tc.notify.Censor()
+
+			prefix := fmt.Sprintf("%s\nNotify.Censor()", packageName)
+
+			// THEN: nil Notifiers are kept.
+			if tc.notify == tc.want {
+				return
+			}
+
+			// AND: defined fields are censored as expected.
+			if testErr := test.AssertMapEqual(
+				t,
+				tc.want.URLFields,
+				tc.notify.URLFields,
+				prefix,
+				"URLFields",
+			); testErr != nil {
+				t.Error(testErr)
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				tc.want.Params,
+				tc.notify.Params,
+				prefix,
+				"Params",
+			); testErr != nil {
+				t.Error(testErr)
+			}
+		})
+	}
+}
+
+func TestService_String(t *testing.T) {
+	// GIVEN: a Service.
+	tests := []struct {
+		name  string
+		input *Service
+		want  string
+	}{
+		{
+			name:  "nil",
+			input: nil,
+			want:  "",
+		},
+		{
+			name:  "empty",
+			input: &Service{},
+			want:  `{}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: the Defaults are stringified with String.
+			got := tc.input.String()
+
+			// THEN: the result is as expected.
+			tc.want = strings.ReplaceAll(tc.want, "\n", "")
+			if got != tc.want {
+				t.Errorf(
+					"%s\nService.String() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestServiceDefaults_IsZero(t *testing.T) {
+	// GIVEN: ServiceDefaults.
+	tests := []struct {
+		name     string
+		defaults ServiceDefaults
+		want     bool
+	}{
+		{
+			name: "empty",
+			defaults: ServiceDefaults{
+				Comment:               "",
+				Options:               ServiceOptions{},
+				LatestVersion:         LatestVersionDefaults{},
+				Notify:                []string{},
+				Command:               Commands{},
+				WebHook:               []string{},
+				DeployedVersionLookup: DeployedVersionLookupDefaults{},
+				Dashboard:             DashboardOptions{},
+			},
+			want: true,
+		},
+		{
+			name: "non-empty/Comment",
+			defaults: ServiceDefaults{
+				Comment: "abc",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Options",
+			defaults: ServiceDefaults{
+				Options: ServiceOptions{
+					Interval: "1s",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/LatestVersion",
+			defaults: ServiceDefaults{
+				LatestVersion: LatestVersionDefaults{
+					AccessToken: "hi",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Notify",
+			defaults: ServiceDefaults{
+				Notify: []string{"a"},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Command",
+			defaults: ServiceDefaults{
+				Command: Commands{
+					{"ls"},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/WebHook",
+			defaults: ServiceDefaults{
+				WebHook: []string{"a"},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/DeployedVersionLookup",
+			defaults: ServiceDefaults{
+				DeployedVersionLookup: DeployedVersionLookupDefaults{
+					Method: "GET",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Dashboard",
+			defaults: ServiceDefaults{
+				Dashboard: DashboardOptions{
+					Icon: "a",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			defaults: ServiceDefaults{
+				Comment: "abc",
+				Options: ServiceOptions{
+					Interval: "1s",
+				},
+				LatestVersion: LatestVersionDefaults{
+					AccessToken: "hi",
+				},
+				Notify: []string{"a"},
+				Command: Commands{
+					{"ls"},
+				},
+				WebHook: []string{"a"},
+				DeployedVersionLookup: DeployedVersionLookupDefaults{
+					Method: "GET",
+				},
+				Dashboard: DashboardOptions{
+					Icon: "a",
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nServiceDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestServiceOptions_IsZero(t *testing.T) {
+	// GIVEN: ServiceOptions.
+	tests := []struct {
+		name    string
+		options ServiceOptions
+		want    bool
+	}{
+		{
+			name: "empty",
+			options: ServiceOptions{
+				Active:             nil,
+				Interval:           "",
+				SemanticVersioning: nil,
+			},
+			want: true,
+		},
+		{
+			name: "non-empty/Active",
+			options: ServiceOptions{
+				Active: test.Ptr(false),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Interval",
+			options: ServiceOptions{
+				Interval: "1s",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/SemanticVersioning",
+			options: ServiceOptions{
+				SemanticVersioning: test.Ptr(false),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			options: ServiceOptions{
+				Active:             test.Ptr(false),
+				Interval:           "1s",
+				SemanticVersioning: test.Ptr(false),
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.options.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nServiceOptions.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestDashboardOptions_IsZero(t *testing.T) {
+	// GIVEN: DashboardOptions.
+	tests := []struct {
+		name    string
+		options DashboardOptions
+		want    bool
+	}{
+		{
+			name: "empty",
+			options: DashboardOptions{
+				AutoApprove: nil,
+				Icon:        "",
+				IconLinkTo:  "",
+				WebURL:      "",
+				Tags:        []string{},
+			},
+			want: true,
+		},
+		{
+			name: "non-empty/AutoApprove",
+			options: DashboardOptions{
+				AutoApprove: test.Ptr(false),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Icon",
+			options: DashboardOptions{
+				Icon: "a",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/IconLinkTo",
+			options: DashboardOptions{
+				IconLinkTo: "a",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/WebURL",
+			options: DashboardOptions{
+				WebURL: "a",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Tag",
+			options: DashboardOptions{
+				Tags: []string{"a"},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			options: DashboardOptions{
+				AutoApprove: test.Ptr(false),
+				Icon:        "a",
+				IconLinkTo:  "a",
+				WebURL:      "a",
+				Tags:        []string{"a"},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.options.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nDashboardOptions.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestLatestVersion_String(t *testing.T) {
+	// GIVEN: a LatestVersion.
+	tests := []struct {
+		name  string
+		input *LatestVersion
+		want  string
+	}{
+		{
+			name:  "nil",
+			input: nil,
+			want:  "",
+		},
+		{
+			name:  "empty",
+			input: &LatestVersion{},
+			want:  `{}`,
+		},
+		{
+			name: "filled",
+			input: &LatestVersion{
+				Type:              "github",
+				URL:               "owner/repo",
+				AccessToken:       util.SecretValue,
+				AllowInvalidCerts: test.Ptr(true),
+				UsePreRelease:     test.Ptr(false),
+				URLCommands: URLCommands{
+					{Type: "replace", Old: "this", New: "withThis"},
+					{Type: "split", Text: "splitThis", Index: test.Ptr(8)},
+					{Type: "regex", Regex: `([0-9.]+)`},
+				},
+				Require: &LatestVersionRequire{
+					RegexContent: ".*",
+				},
+			},
+			want: `
+				{
+					"type": "github",
+					"url": "owner/repo",
+					"access_token": ` + secretValueMarshalled + `,
+					"allow_invalid_certs": true,
+					"use_prerelease": false,
+					"url_commands": [
+						{"type": "replace","new": "withThis","old": "this"},
+						{"type": "split","index": 8,"text": "splitThis"},
+						{"type": "regex","regex": "([0-9.]+)"}
+					],
+					"require": {
+						"regex_content": ".*"
+					}
+				}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			tc.want = test.TrimJSON(tc.want)
+
+			// WHEN: the LatestVersion is stringified with String.
+			got := tc.input.String()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nLatestVersion.String() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestLatestVersionDefaults_IsZero(t *testing.T) {
+	// GIVEN: LatestVersionDefaults.
+	tests := []struct {
+		name     string
+		defaults LatestVersionDefaults
+		want     bool
+	}{
+		{
+			name: "empty",
+			defaults: LatestVersionDefaults{
+				URL:               "",
+				AccessToken:       "",
+				AllowInvalidCerts: nil,
+				UsePreRelease:     nil,
+				Require:           nil,
+			},
+			want: true,
+		},
+		{
+			name: "non-empty/URL",
+			defaults: LatestVersionDefaults{
+				URL: "a",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/AccessToken",
+			defaults: LatestVersionDefaults{
+				AccessToken: "a",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/AllowInvalidCerts",
+			defaults: LatestVersionDefaults{
+				AllowInvalidCerts: test.Ptr(false),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/UsePreRelease",
+			defaults: LatestVersionDefaults{
+				UsePreRelease: test.Ptr(false),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Require",
+			defaults: LatestVersionDefaults{
+				Require: &LatestVersionRequireDefaults{
+					Docker: RequireDockerDefaults{
+						Image: "a",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			defaults: LatestVersionDefaults{
+				URL:               "a",
+				AccessToken:       "a",
+				AllowInvalidCerts: test.Ptr(false),
+				UsePreRelease:     test.Ptr(false),
+				Require: &LatestVersionRequireDefaults{
+					Docker: RequireDockerDefaults{
+						Image: "a",
+					},
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nLatestVersionDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestLatestVersionRequire_String(t *testing.T) {
+	// GIVEN: a LatestVersionRequire.
+	tests := []struct {
+		name  string
+		input *LatestVersionRequire
+		want  string
+	}{
+		{
+			name:  "nil",
+			input: nil,
+			want:  "",
+		},
+		{
+			name:  "empty",
+			input: &LatestVersionRequire{},
+			want:  `{}`,
+		},
+		{
+			name: "filled",
+			input: &LatestVersionRequire{
+				Command: []string{"echo", "hello"},
+				Docker: &RequireDocker{
+					Type:     "hub",
+					Image:    "test/app",
+					Tag:      "{{ version }}",
+					Username: "user",
+					Token:    util.SecretValue,
+				},
+				RegexContent: ".*",
+				RegexVersion: `([0-9.]+)`,
+			},
+			want: `
+				{
+					"command": ["echo","hello"],
+					"docker": {
+						"type": "hub",
+						"image": "test/app",
+						"tag": "{{ version }}",
+						"username": "user",
+						"token": ` + secretValueMarshalled + `
+					},
+					"regex_content": ".*",
+					"regex_version": "([0-9.]+)"
+				}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			tc.want = test.TrimJSON(tc.want)
+
+			// WHEN: the LatestVersionRequire is stringified with String.
+			got := tc.input.String()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nLatestVersionRequire.String() mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestLatestVersionRequireDefaults_IsZero(t *testing.T) {
+	// GIVEN: LatestVersionRequireDefaults.
+	tests := []struct {
+		name     string
+		defaults LatestVersionRequireDefaults
+		want     bool
+	}{
+		{
+			name: "empty",
+			defaults: LatestVersionRequireDefaults{
+				Docker: RequireDockerDefaults{},
+			},
+			want: true,
+		},
+		{
+			name: "non-empty",
+			defaults: LatestVersionRequireDefaults{
+				Docker: RequireDockerDefaults{
+					Image: "a",
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nLatestVersionRequireDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestLatestVersionRequireDefaults_String(t *testing.T) {
+	// GIVEN: a LatestVersionRequireDefaults.
+	tests := []struct {
+		name string
+		lvRD *LatestVersionRequireDefaults
+		want string
+	}{
+		{
+			name: "nil",
+			lvRD: nil,
+			want: "",
+		},
+		{
+			name: "empty",
+			lvRD: &LatestVersionRequireDefaults{},
+			want: `{}`,
+		},
+		{
+			name: "filled",
+			lvRD: &LatestVersionRequireDefaults{
+				Docker: RequireDockerDefaults{
+					Type: "ghcr",
+					Registry: RequireDockerRegistriesDefaults{
+						GHCR: &RequireDockerRegistryDefaultsToken{
+							RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+								Token: "tokenForGHCR",
+							},
+						},
+						Hub: &RequireDockerCheckRegistryDefaultsTokenWithUsername{
+							RequireDockerRegistryDefaultsAuthWithUsername: RequireDockerRegistryDefaultsAuthWithUsername{
+								Username: "userForHub",
+								RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+									Token: "tokenForHub",
+								},
+							},
+						},
+						Quay: &RequireDockerRegistryDefaultsToken{
+							RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+								Token: "tokenForQuay",
+							},
+						},
+					},
+				},
+			},
+			want: `
+				{
+					"docker": {
+						"type": "ghcr",
+						"registry": {
+							"ghcr": {
+								"auth": {
+									"token": "tokenForGHCR"
+								}
+							},
+							"hub": {
+								"auth": {
+									"username": "userForHub",
+									"token": "tokenForHub"
+								}
+							},
+							"quay": {
+								"auth": {
+									"token": "tokenForQuay"
+								}
+							}
+						}
+					}
+				}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			tc.want = test.TrimJSON(tc.want)
+
+			// WHEN: the LatestVersionRequireDefaults are stringified with String.
+			got := tc.lvRD.String()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nLatestVersionRequireDefaults.String() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestRequireDockerRegistriesDefaults_IsZero(t *testing.T) {
+	// GIVEN: RequireDockerRegistriesDefaults.
+	tests := []struct {
+		name     string
+		defaults RequireDockerRegistriesDefaults
+		want     bool
+	}{
+		{
+			name:     "empty",
+			defaults: RequireDockerRegistriesDefaults{},
+			want:     true,
+		},
+		{
+			name: "non-empty",
+			defaults: RequireDockerRegistriesDefaults{
+				GHCR: &RequireDockerRegistryDefaultsToken{
+					RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
+						Image: "image",
+						Tag:   "tag",
+					},
+					RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+						Token: "token",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nRequireDockerRegistriesDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestRequireDockerRegistryDefaultsAuth_IsZero(t *testing.T) {
+	// GIVEN: RequireDockerRegistryDefaultsAuth.
+	tests := []struct {
+		name     string
+		defaults RequireDockerRegistryDefaultsAuth
+		want     bool
+	}{
+		{
+			name:     "empty",
+			defaults: RequireDockerRegistryDefaultsAuth{},
+			want:     true,
+		},
+		{
+			name: "non-empty",
+			defaults: RequireDockerRegistryDefaultsAuth{
+				Token: "t",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nRequireDockerRegistryDefaultsAuth.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestRequireDockerRegistryDefaultsAuthWithUsername_IsZero(t *testing.T) {
+	// GIVEN: RequireDockerRegistryDefaultsAuthWithUsername.
+	tests := []struct {
+		name     string
+		defaults RequireDockerRegistryDefaultsAuthWithUsername
+		want     bool
+	}{
+		{
+			name: "empty",
+			defaults: RequireDockerRegistryDefaultsAuthWithUsername{
+				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{},
+			},
+			want: true,
+		},
+		{
+			name: "non-empty/Token",
+			defaults: RequireDockerRegistryDefaultsAuthWithUsername{
+				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+					Token: "t",
+				},
+			},
+		},
+		{
+			name: "non-empty/Username",
+			defaults: RequireDockerRegistryDefaultsAuthWithUsername{
+				Username: "u",
+			},
+		},
+		{
+			name: "non-empty/all",
+			defaults: RequireDockerRegistryDefaultsAuthWithUsername{
+				Username: "u",
+				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+					Token: "t",
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nRequireDockerRegistryDefaultsAuthWithUsername.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestRequireDockerRegistryDefaultsBase_IsZero(t *testing.T) {
+	// GIVEN: RequireDockerRegistryDefaultsBase.
+	tests := []struct {
+		name     string
+		defaults RequireDockerRegistryDefaultsBase
+		want     bool
+	}{
+		{
+			name:     "empty",
+			defaults: RequireDockerRegistryDefaultsBase{},
+			want:     true,
+		},
+		{
+			name: "non-empty",
+			defaults: RequireDockerRegistryDefaultsBase{
+				Image: "image",
+				Tag:   "tag",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nRequireDockerRegistryDefaultsBase.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestRequireDockerRegistryDefaultsToken_IsZero(t *testing.T) {
+	// GIVEN: RequireDockerRegistryDefaultsToken.
+	tests := []struct {
+		name     string
+		defaults RequireDockerRegistryDefaultsToken
+		want     bool
+	}{
+		{
+			name:     "empty",
+			defaults: RequireDockerRegistryDefaultsToken{},
+			want:     true,
+		},
+		{
+			name: "non-empty/RequireDockerRegistryDefaultsAuth",
+			defaults: RequireDockerRegistryDefaultsToken{
+				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+					Token: "t",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/RequireDockerRegistryDefaultsBase",
+			defaults: RequireDockerRegistryDefaultsToken{
+				RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
+					Image: "image",
+					Tag:   "tag",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty",
+			defaults: RequireDockerRegistryDefaultsToken{
+				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+					Token: "t",
+				},
+				RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
+					Image: "image",
+					Tag:   "tag",
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nRequireDockerRegistryDefaultsToken.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestRequireDockerRegistryDefaultsToken_GetToken(t *testing.T) {
+	// GIVEN: a RequireDockerRegistryDefaultsToken.
+	tests := []struct {
+		name     string
+		defaults RequireDockerRegistryDefaultsToken
+		want     string
+	}{
+		{
+			name:     "empty",
+			defaults: RequireDockerRegistryDefaultsToken{},
+			want:     "",
+		},
+		{
+			name: "non-empty",
+			defaults: RequireDockerRegistryDefaultsToken{
+				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+					Token: "t",
+				},
+			},
+			want: "t",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: GetToken() is called on it.
+			got := tc.defaults.GetToken()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nRequireDockerRegistryDefaultsToken.GetToken() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_IsZero(t *testing.T) {
+	// GIVEN: RequireDockerCheckRegistryDefaultsTokenWithUsername.
+	tests := []struct {
+		name     string
+		defaults RequireDockerCheckRegistryDefaultsTokenWithUsername
+		want     bool
+	}{
+		{
+			name:     "empty",
+			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{},
+			want:     true,
+		},
+		{
+			name: "non-empty/RequireDockerRegistryDefaultsBase",
+			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
+				RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
+					Image: "i",
+					Tag:   "t",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/RequireDockerRegistryDefaultsAuthWithUsername",
+			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
+				RequireDockerRegistryDefaultsAuthWithUsername: RequireDockerRegistryDefaultsAuthWithUsername{
+					Username: "u",
+					RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+						Token: "t",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty",
+			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
+				RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
+					Image: "i",
+					Tag:   "t",
+				},
+				RequireDockerRegistryDefaultsAuthWithUsername: RequireDockerRegistryDefaultsAuthWithUsername{
+					Username: "u",
+					RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+						Token: "t",
+					},
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nRequireDockerCheckRegistryDefaultsTokenWithUsername.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_GetToken(t *testing.T) {
+	// GIVEN: a RequireDockerCheckRegistryDefaultsTokenWithUsername.
+	tests := []struct {
+		name     string
+		defaults RequireDockerCheckRegistryDefaultsTokenWithUsername
+		want     string
+	}{
+		{
+			name:     "empty",
+			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{},
+			want:     "",
+		},
+		{
+			name: "non-empty",
+			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
+				RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
+					Image: "i",
+					Tag:   "t",
+				},
+				RequireDockerRegistryDefaultsAuthWithUsername: RequireDockerRegistryDefaultsAuthWithUsername{
+					Username: "u",
+					RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+						Token: "t",
+					},
+				},
+			},
+			want: "t",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: GetToken() is called on it.
+			got := tc.defaults.GetToken()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nRequireDockerRegistryDefaultsToken.GetToken() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestRequireDockerDefaults_IsZero(t *testing.T) {
+	// GIVEN: a RequireDockerDefaults.
+	tests := []struct {
+		name string
+		d    RequireDockerDefaults
+		want bool
+	}{
+		{
+			name: "empty",
+			d:    RequireDockerDefaults{},
+			want: true,
+		},
+		{
+			name: "non-empty/Type",
+			d: RequireDockerDefaults{
+				Type: "t",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Image",
+			d: RequireDockerDefaults{
+				Image: "i",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Tag",
+			d: RequireDockerDefaults{
+				Tag: "t",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Registry",
+			d: RequireDockerDefaults{
+				Registry: RequireDockerRegistriesDefaults{
+					GHCR: &RequireDockerRegistryDefaultsToken{
+						RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
+							Image: "i",
+							Tag:   "t",
+						},
+						RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+							Token: "token",
+						},
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			d: RequireDockerDefaults{
+				Type:  "t",
+				Image: "i",
+				Tag:   "t",
+				Registry: RequireDockerRegistriesDefaults{
+					GHCR: &RequireDockerRegistryDefaultsToken{
+						RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
+							Image: "i",
+							Tag:   "t",
+						},
+						RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
+							Token: "token",
+						},
+					},
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.d.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nRequireDockerDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestDeployedVersionLookupDefaults_IsZero(t *testing.T) {
+	// GIVEN: a DeployedVersionLookupDefaults.
+	tests := []struct {
+		name string
+		d    DeployedVersionLookupDefaults
+		want bool
+	}{
+		{
+			name: "empty",
+			d:    DeployedVersionLookupDefaults{},
+			want: true,
+		},
+		{
+			name: "non-empty/AllowInvalidCerts",
+			d: DeployedVersionLookupDefaults{
+				AllowInvalidCerts: test.Ptr(true),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Method",
+			d: DeployedVersionLookupDefaults{
+				Method: "m",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			d: DeployedVersionLookupDefaults{
+				AllowInvalidCerts: test.Ptr(true),
+				Method:            "m",
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.d.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nDeployedVersionLookupDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestDeployedVersionLookup_String(t *testing.T) {
+	// GIVEN: a DeployedVersionLookup.
+	tests := []struct {
+		name string
+		dvl  *DeployedVersionLookup
+		want string
+	}{
+		{
+			name: "nil",
+			dvl:  nil,
+			want: "",
+		},
+		{
+			name: "empty",
+			dvl:  &DeployedVersionLookup{},
+			want: "{}",
+		},
+		{
+			name: "filled",
+			dvl: &DeployedVersionLookup{
+				Method:            http.MethodPost,
+				URL:               "https://release-argus.io",
+				AllowInvalidCerts: test.Ptr(false),
+				BasicAuth: &BasicAuth{
+					Username: "user",
+					Password: "pass",
+				},
+				Headers: []Header{
+					{Key: "X-Header", Value: "bosh"},
+					{Key: "X-Other", Value: "bash"},
+				},
+				Body:         "what",
+				JSON:         "boo",
+				Regex:        `bam`,
+				HardDefaults: &DeployedVersionLookup{},
+				Defaults:     &DeployedVersionLookup{},
+			},
+			want: `
+				{
+					"method": "POST",
+					"url": "https://release-argus.io",
+					"allow_invalid_certs": false,
+					"basic_auth": {
+						"username": "user",
+						"password": "pass"
+					},
+					"headers": [
+						{"key": "X-Header","value": "bosh"},
+						{"key": "X-Other","value": "bash"}
+					],
+					"body": "what",
+					"json": "boo",
+					"regex": "bam"
+				}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: the DeployedVersionLookup is stringified with String.
+			got := tc.dvl.String()
+
+			// THEN: the result is as expected.
+			tc.want = test.TrimJSON(tc.want)
+			if got != tc.want {
+				t.Errorf(
+					"%s\nDeployedVersionLookup.String() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestURLCommands_String(t *testing.T) {
+	// GIVEN: URLCommands.
+	tests := []struct {
+		name        string
+		urlCommands *URLCommands
+		want        string
+	}{
+		{
+			name:        "nil",
+			urlCommands: nil,
+			want:        "",
+		},
+		{
+			name:        "empty",
+			urlCommands: &URLCommands{},
+			want:        "[]",
+		},
+		{
+			name: "one of each type",
+			urlCommands: &URLCommands{
+				{Type: "regex", Regex: `bam`},
+				{Type: "replace", Old: "want-rid", New: "replacement"},
+				{Type: "split", Text: "split on me", Index: test.Ptr(5)},
+			},
+			want: `
+				[
+					{"type": "regex","regex": "bam"},
+					{"type": "replace","new": "replacement","old": "want-rid"},
+					{"type": "split","index": 5,"text": "split on me"}
+				]`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: the URLCommands is stringified with String.
+			got := tc.urlCommands.String()
+
+			// THEN: the result is as expected.
+			tc.want = test.TrimJSON(tc.want)
+			if got != tc.want {
+				t.Errorf(
+					"%s\nURLCommands.String() value mismatch\ngot:  %qs\nwant: %q",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestStatus_String(t *testing.T) {
-	// GIVEN a Status.
-	tests := map[string]struct {
+	// GIVEN: a Status.
+	tests := []struct {
+		name   string
 		status *Status
 		want   string
 	}{
-		"nil": {
+		{
+			name:   "nil",
 			status: nil,
 			want:   "",
 		},
-		"empty": {
+		{
+			name:   "empty",
 			status: &Status{},
 			want:   "{}",
 		},
-		"all fields": {
+		{
+			name: "filled",
 			status: &Status{
 				ApprovedVersion:          "1.2.4",
 				DeployedVersion:          "1.2.3",
@@ -971,117 +2976,64 @@ func TestStatus_String(t *testing.T) {
 					"last_queried": "2022-01-01T01:01:01Z",
 					"regex_misses_content": 1,
 					"regex_misses_version": 2
-				}`},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			tc.want = test.TrimJSON(tc.want)
-
-			// WHEN the Status is stringified with String.
-			got := tc.status.String()
-
-			// THEN the result is as expected.
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestWebHook_String(t *testing.T) {
-	// GIVEN a WebHook.
-	tests := map[string]struct {
-		webhook *WebHook
-		want    string
-	}{
-		"nil": {
-			webhook: nil,
-			want:    "",
-		},
-		"empty": {
-			webhook: &WebHook{},
-			want:    "{}",
-		},
-		"all fields": {
-			webhook: &WebHook{
-				ServiceID:         "something",
-				ID:                "foobar",
-				Type:              "url",
-				URL:               "https://release-argus.io",
-				AllowInvalidCerts: test.BoolPtr(true),
-				Secret:            "secret",
-				Headers: &[]Header{
-					{Key: "X-Header", Value: "bosh"}},
-				DesiredStatusCode: test.UInt16Ptr(200),
-				Delay:             "1h",
-				MaxTries:          test.UInt8Ptr(7),
-				SilentFails:       test.BoolPtr(false),
-			},
-			want: `
-				{
-					"name": "foobar",
-					"type": "url",
-					"url": "https://release-argus.io",
-					"allow_invalid_certs": true,
-					"secret": "secret",
-					"headers": [{"key": "X-Header","value": "bosh"}],
-					"desired_status_code": 200,
-					"delay": "1h",
-					"max_tries": 7,
-					"silent_fails": false
 				}`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the WebHook is stringified with String.
-			got := tc.webhook.String()
-
-			// THEN the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
+
+			// WHEN: the Status is stringified with String.
+			got := tc.status.String()
+
+			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s\nStatus.String() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestWebHooks_String(t *testing.T) {
-	// GIVEN WebHooks.
-	tests := map[string]struct {
+	// GIVEN: WebHooks.
+	tests := []struct {
+		name     string
 		webhooks *WebHooks
 		want     string
 	}{
-		"nil": {
+		{
+			name:     "nil",
 			webhooks: nil,
 			want:     "",
 		},
-		"empty": {
+		{
+			name:     "empty",
 			webhooks: &WebHooks{},
 			want:     "{}",
 		},
-		"single webhook, all fields": {
+		{
+			name: "single webhook, filled",
 			webhooks: &WebHooks{
 				"0": {ServiceID: "something",
 					ID:                "foobar",
 					Type:              "url",
 					URL:               "https://release-argus.io",
-					AllowInvalidCerts: test.BoolPtr(true),
+					AllowInvalidCerts: test.Ptr(true),
 					Secret:            "secret",
-					Headers: &[]Header{
-						{Key: "X-Header", Value: "bosh"}},
-					DesiredStatusCode: test.UInt16Ptr(200),
+					Headers: []Header{
+						{Key: "X-Header", Value: "bosh"},
+					},
+					DesiredStatusCode: test.Ptr[uint16](200),
 					Delay:             "1h",
-					MaxTries:          test.UInt8Ptr(7),
-					SilentFails:       test.BoolPtr(false)},
+					MaxTries:          test.Ptr[uint8](7),
+					SilentFails:       test.Ptr(false),
+				},
 			},
 			want: `
 				{
@@ -1099,11 +3051,13 @@ func TestWebHooks_String(t *testing.T) {
 					}
 				}`,
 		},
-		"multiple webhooks": {
+		{
+			name: "multiple webhooks",
 			webhooks: &WebHooks{
 				"0": {URL: "bish"},
 				"1": {Secret: "bash"},
-				"2": {Type: "github"}},
+				"2": {Type: "github"},
+			},
 			want: `
 				{
 					"0": {"url": "bish"},
@@ -1113,483 +3067,447 @@ func TestWebHooks_String(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the WebHook is stringified with String.
+			// WHEN: the WebHook is stringified with String.
 			got := tc.webhooks.String()
 
-			// THEN the result is as expected.
+			// THEN: the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s\nWebHooks.String() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
-func TestNotifiers_String(t *testing.T) {
-	// GIVEN Notifiers.
-	tests := map[string]struct {
-		notifiers *Notifiers
-		want      string
+func TestWebHooks_Flatten(t *testing.T) {
+	// GIVEN: a WebHook.
+	tests := []struct {
+		name    string
+		webhook *WebHooks
+		want    []*WebHook
 	}{
-		"nil": {
-			notifiers: nil,
-			want:      "",
+		{
+			name:    "nil",
+			webhook: nil,
+			want:    nil,
 		},
-		"empty": {
-			notifiers: &Notifiers{},
-			want:      "{}",
+		{
+			name:    "empty",
+			webhook: &WebHooks{},
+			want:    []*WebHook{},
 		},
-		"one": {
-			notifiers: &Notifiers{
-				"0": {
-					ID:   "foo",
-					Type: "discord",
-					Options: map[string]string{
-						"message": "hello world"},
-					URLFields: map[string]string{
-						"username": "bing"},
-					Params: map[string]string{
-						"devices": "bang"},
-				}},
-			want: `
-				{
-					"0": {
-						"name": "foo",
-						"type": "discord",
-						"options": {
-							"message": "hello world"},
-						"url_fields": {
-							"username": "bing"},
-						"params": {
-							"devices": "bang"}
-					}
-				}`,
+		{
+			name: "webhooks ordered",
+			webhook: &WebHooks{
+				"alpha": WebHook{URL: "https://example.com"},
+				"bravo": WebHook{URL: "https://example.com/other"},
+			},
+			want: []*WebHook{
+				{ID: "alpha", URL: "https://example.com"},
+				{ID: "bravo", URL: "https://example.com/other"},
+			},
 		},
-		"multiple": {
-			notifiers: &Notifiers{
-				"0": {
-					ID:   "foo",
-					Type: "discord",
-					Options: map[string]string{
-						"message": "hello world"},
-					URLFields: map[string]string{
-						"username": "bing"},
-					Params: map[string]string{
-						"devices": "bang"},
+		{
+			name: "webhooks ordered and censored",
+			webhook: &WebHooks{
+				"alpha": WebHook{
+					URL:    "https://example.com",
+					Secret: "foo",
 				},
-				"other": {
-					Type: "gotify"}},
-			want: `
-				{
-					"0": {
-						"name": "foo",
-						"type": "discord",
-						"options": {
-							"message": "hello world"},
-						"url_fields": {
-							"username": "bing"},
-						"params": {
-							"devices": "bang"}
-					},
-					"other": {
-						"type": "gotify"
-					}
-				}`,
+				"bravo": WebHook{
+					URL:    "https://example.com/other",
+					Secret: "bar",
+				},
+			},
+			want: []*WebHook{
+				{ID: "alpha",
+					URL:    "https://example.com",
+					Secret: util.SecretValue,
+				},
+				{ID: "bravo",
+					URL:    "https://example.com/other",
+					Secret: util.SecretValue,
+				},
+			},
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the Notifiers is stringified with String.
-			got := tc.notifiers.String()
+			// WHEN: Flatten is called on it.
+			got := tc.webhook.Flatten()
 
-			// THEN the result is as expected.
-			tc.want = test.TrimJSON(tc.want)
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+			// THEN: the map is flattened, ordered and censored.
+			gotBytes, _ := decode.Marshal("json", got)
+			wantBytes, _ := decode.Marshal("json", tc.want)
+			if gotStr, wantStr := string(gotBytes), string(wantBytes); gotStr != wantStr {
+				t.Errorf(
+					"%s\nWebHooks.Flatten()\ngot:  %q\nwant: %q",
+					packageName, gotStr, wantStr,
+				)
 			}
 		})
 	}
 }
 
-func TestDeployedVersionLookup_String(t *testing.T) {
-	// GIVEN a DeployedVersionLookup.
-	tests := map[string]struct {
-		dvl  *DeployedVersionLookup
-		want string
+func TestWebHook_IsZero(t *testing.T) {
+	// GIVEN: a WebHook.
+	tests := []struct {
+		name    string
+		webhook WebHook
+		want    bool
 	}{
-		"nil": {
-			dvl:  nil,
-			want: "",
+		{
+			name:    "empty",
+			webhook: WebHook{},
+			want:    true,
 		},
-		"empty": {
-			dvl:  &DeployedVersionLookup{},
-			want: "{}",
+		{
+			name: "non-empty/ServiceID",
+			webhook: WebHook{
+				ServiceID: "alpha",
+			},
+			want: false,
 		},
-		"all fields": {
-			dvl: &DeployedVersionLookup{
-				Method:            http.MethodPost,
+		{
+			name: "non-empty/ID",
+			webhook: WebHook{
+				ID: "alpha",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Type",
+			webhook: WebHook{
+				Type: "alpha",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/URL",
+			webhook: WebHook{
+				URL: "alpha",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/AllowInvalidCerts",
+			webhook: WebHook{
+				AllowInvalidCerts: test.Ptr(true),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Secret",
+			webhook: WebHook{
+				Secret: "alpha",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Headers",
+			webhook: WebHook{
+				Headers: []Header{
+					{
+						Key:   "alpha",
+						Value: "alpha",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/DesiredStatusCode",
+			webhook: WebHook{
+				DesiredStatusCode: test.Ptr[uint16](200),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Delay",
+			webhook: WebHook{
+				Delay: "2s",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/MaxTries",
+			webhook: WebHook{
+				MaxTries: test.Ptr[uint8](2),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/SilentFails",
+			webhook: WebHook{
+				SilentFails: test.Ptr(true),
+			},
+		},
+		{
+			name: "non-empty/all",
+			webhook: WebHook{
+				ServiceID:         "alpha",
+				ID:                "alpha",
+				Type:              "alpha",
+				URL:               "alpha",
+				AllowInvalidCerts: test.Ptr(true),
+				Secret:            "alpha",
+				Headers: []Header{
+					{Key: "alpha", Value: "alpha"},
+				},
+				DesiredStatusCode: test.Ptr[uint16](200),
+				Delay:             "2s",
+				MaxTries:          test.Ptr[uint8](2),
+				SilentFails:       test.Ptr(true),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero is called on it.
+			got := tc.webhook.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nWebHook.IsZero() value mismatch\ngot:  %v\nwant: %v",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestWebHook_String(t *testing.T) {
+	// GIVEN: a WebHook.
+	tests := []struct {
+		name    string
+		webhook *WebHook
+		want    string
+	}{
+		{
+			name:    "nil",
+			webhook: nil,
+			want:    "",
+		},
+		{
+			name:    "empty",
+			webhook: &WebHook{},
+			want:    "{}\n",
+		},
+		{
+			name: "filled",
+			webhook: &WebHook{
+				ServiceID:         "something",
+				ID:                "foobar",
+				Type:              "url",
 				URL:               "https://release-argus.io",
-				AllowInvalidCerts: test.BoolPtr(false),
-				BasicAuth: &BasicAuth{
-					Username: "user",
-					Password: "pass"},
+				AllowInvalidCerts: test.Ptr(true),
+				Secret:            "secret",
 				Headers: []Header{
 					{Key: "X-Header", Value: "bosh"},
-					{Key: "X-Other", Value: "bash"}},
-				Body:         "what",
-				JSON:         "boo",
-				Regex:        `bam`,
-				HardDefaults: &DeployedVersionLookup{},
-				Defaults:     &DeployedVersionLookup{}},
-			want: `
-				{
-					"method": "POST",
-					"url": "https://release-argus.io",
-					"allow_invalid_certs": false,
-					"basic_auth": {
-						"username": "user",
-						"password": "pass"},
-					"headers": [
-						{"key": "X-Header","value": "bosh"},
-						{"key": "X-Other","value": "bash"}],
-					"body": "what",
-					"json": "boo",
-					"regex": "bam"
-				}`,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN the DeployedVersionLookup is stringified with String.
-			got := tc.dvl.String()
-
-			// THEN the result is as expected.
-			tc.want = test.TrimJSON(tc.want)
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestURLCommands_String(t *testing.T) {
-	// GIVEN URLCommands.
-	tests := map[string]struct {
-		urlCommands *URLCommands
-		want        string
-	}{
-		"nil": {
-			urlCommands: nil,
-			want:        "",
-		},
-		"empty": {
-			urlCommands: &URLCommands{},
-			want:        "[]",
-		},
-		"one of each type": {
-			urlCommands: &URLCommands{
-				{Type: "regex", Regex: `bam`},
-				{Type: "replace", Old: "want-rid", New: test.StringPtr("replacement")},
-				{Type: "split", Text: "split on me", Index: test.IntPtr(5)},
+				},
+				DesiredStatusCode: test.Ptr[uint16](200),
+				Delay:             "1h",
+				MaxTries:          test.Ptr[uint8](7),
+				SilentFails:       test.Ptr(false),
 			},
-			want: `
-				[
-					{"type": "regex","regex": "bam"},
-					{"type": "replace","new": "replacement","old": "want-rid"},
-					{"type": "split","index": 5,"text": "split on me"}
-				]`,
+			want: test.TrimYAML(`
+				name: foobar
+				type: url
+				url: https://release-argus.io
+				allow_invalid_certs: true
+				secret: secret
+				headers:
+					- key: X-Header
+						value: bosh
+				desired_status_code: 200
+				delay: 1h
+				max_tries: 7
+				silent_fails: false
+			`),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the URLCommands is stringified with String.
-			got := tc.urlCommands.String()
+			test.AssertStringWithPrefixes(
+				t,
+				packageName,
+				tc.webhook.String,
+				tc.want,
+			)
+		})
+	}
+}
 
-			// THEN the result is as expected.
-			tc.want = test.TrimJSON(tc.want)
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+func TestWebHook_Censor(t *testing.T) {
+	// GIVEN: a WebHook.
+	tests := []struct {
+		name          string
+		webhook, want *WebHook
+	}{
+		{
+			name:    "nil",
+			webhook: nil,
+			want:    nil,
+		},
+		{
+			name: "secret",
+			webhook: &WebHook{
+				Secret: "shazam",
+			},
+			want: &WebHook{
+				Secret: util.SecretValue,
+			},
+		},
+		{
+			name: "headers",
+			webhook: &WebHook{
+				Headers: []Header{
+					{Key: "X-Header", Value: "something"},
+					{Key: "X-Bing", Value: "Bam"},
+				},
+			},
+			want: &WebHook{
+				Headers: []Header{
+					{Key: "X-Header", Value: util.SecretValue},
+					{Key: "X-Bing", Value: util.SecretValue},
+				},
+			},
+		},
+		{
+			name: "all",
+			webhook: &WebHook{
+				Secret: "shazam",
+				Headers: []Header{
+					{Key: "X-Header", Value: "something"},
+					{Key: "X-Bing", Value: "Bam"},
+				},
+			},
+			want: &WebHook{
+				Secret: util.SecretValue,
+				Headers: []Header{
+					{Key: "X-Header", Value: util.SecretValue},
+					{Key: "X-Bing", Value: util.SecretValue},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: Censor is called on it.
+			tc.webhook.Censor()
+
+			prefix := fmt.Sprintf("%s\nWebHook.Censor()", packageName)
+
+			// THEN: nil WebHooks are kept.
+			if tc.webhook == tc.want {
+				return
+			}
+
+			// AND: the Secret is censored.
+			if tc.webhook.Secret != tc.want.Secret {
+				t.Errorf(
+					"%s .Secret uncensored\ngot:  %q\nwant: %q",
+					prefix, tc.webhook.Secret, tc.want.Secret,
+				)
+			}
+
+			// AND: the headers are as expected.
+			gotHeaders := tc.webhook.Headers
+			wantHeaders := tc.want.Headers
+			if testErr := test.AssertSlicesEqualFunc(
+				t,
+				gotHeaders,
+				wantHeaders,
+				func(a, b Header) bool { return a.Key == b.Key && a.Value == b.Value },
+				prefix,
+				"Headers",
+			); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
 }
 
-func TestDefaults_String(t *testing.T) {
-	// GIVEN Defaults.
-	tests := map[string]struct {
-		defaults *Defaults
-		want     string
+func TestNilIfUnchanged(t *testing.T) {
+	// GIVEN: two pointers to integers.
+	tests := []struct {
+		name     string
+		oldValue *int
+		newValue *int
+		want     *int
 	}{
-		"nil": {
-			defaults: nil,
-			want:     "",
+		{
+			name:     "unchanged/nil->nil",
+			oldValue: nil,
+			newValue: nil,
+			want:     nil,
 		},
-		"empty": {
-			defaults: &Defaults{},
-			want:     `{}`,
+		{
+			name:     "unchanged/value->value",
+			oldValue: test.Ptr(1),
+			newValue: test.Ptr(1),
+			want:     nil,
 		},
-		"all types": {
-			defaults: &Defaults{
-				Service: ServiceDefaults{
-					LatestVersion: &LatestVersionDefaults{
-						AccessToken: "foo"}},
-				Notify: Notifiers{
-					"gotify": &Notify{
-						URLFields: map[string]string{
-							"url": "https://gotify.example.com"}}},
-				WebHook: WebHook{
-					Secret: "bar"}},
-			want: `
-				{
-					"service": {
-						"latest_version": {
-							"access_token": "foo"}},
-					"notify": {
-						"gotify": {
-							"url_fields": {
-								"url": "https://gotify.example.com"}}},
-					"webhook": {
-						"secret": "bar"}
-				}`,
+		{
+			name:     "removed, non-nil->nil",
+			oldValue: test.Ptr(1),
+			newValue: nil,
+			want:     test.Ptr(0),
 		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN the Defaults are stringified with String.
-			got := tc.defaults.String()
-
-			// THEN the result is as expected.
-			tc.want = test.TrimJSON(tc.want)
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestService_String(t *testing.T) {
-	// GIVEN a Service.
-	tests := map[string]struct {
-		input *Service
-		want  string
-	}{
-		"nil": {
-			input: nil,
-			want:  "",
+		{
+			name:     "added, nil->non-nil",
+			oldValue: nil,
+			newValue: test.Ptr(1),
+			want:     test.Ptr(1),
 		},
-		"empty": {
-			input: &Service{},
-			want:  `{}`,
+		{
+			name:     "changed, non-nil->other-non-nil",
+			oldValue: test.Ptr(1),
+			newValue: test.Ptr(2),
+			want:     test.Ptr(2),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the Defaults are stringified with String.
-			got := tc.input.String()
+			// WHEN: nilIfUnchanged is called.
+			got := nilIfUnchanged(tc.oldValue, tc.newValue)
 
-			// THEN the result is as expected.
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
+			prefix := fmt.Sprintf(
+				"%s\nnilIfUnchanged(ptr=%v, val=%v)",
+				packageName, tc.oldValue, tc.newValue,
+			)
 
-func TestLatestVersion_String(t *testing.T) {
-	// GIVEN a LatestVersion.
-	tests := map[string]struct {
-		input *LatestVersion
-		want  string
-	}{
-		"nil": {
-			input: nil,
-			want:  ""},
-		"empty": {
-			input: &LatestVersion{},
-			want:  `{}`},
-		"all fields": {
-			input: &LatestVersion{
-				Type:              "github",
-				URL:               "release-argus/argus",
-				AccessToken:       util.SecretValue,
-				AllowInvalidCerts: test.BoolPtr(true),
-				UsePreRelease:     test.BoolPtr(false),
-				URLCommands: &URLCommands{
-					{Type: "replace", Old: "this", New: test.StringPtr("withThis")},
-					{Type: "split", Text: "splitThis", Index: test.IntPtr(8)},
-					{Type: "regex", Regex: `([0-9.]+)`}},
-				Require: &LatestVersionRequire{
-					RegexContent: ".*"}},
-			want: `
-				{
-					"type": "github",
-					"url": "release-argus/argus",
-					"access_token": ` + secretValueMarshalled + `,
-					"allow_invalid_certs": true,
-					"use_prerelease": false,
-					"url_commands": [
-						{"type": "replace","new": "withThis","old": "this"},
-						{"type": "split","index": 8,"text": "splitThis"},
-						{"type": "regex","regex": "([0-9.]+)"}
-					],
-					"require": {
-						"regex_content": ".*"
-					}
-				}`},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			tc.want = test.TrimJSON(tc.want)
-
-			// WHEN the LatestVersion is stringified with String.
-			got := tc.input.String()
-
-			// THEN the result is as expected.
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestLatestVersionRequireDefaults_String(t *testing.T) {
-	// GIVEN a LatestVersionRequireDefaults.
-	tests := map[string]struct {
-		lvRD *LatestVersionRequireDefaults
-		want string
-	}{
-		"nil": {
-			lvRD: nil,
-			want: ""},
-		"empty": {
-			lvRD: &LatestVersionRequireDefaults{},
-			want: `{}`},
-		"all fields": {
-			lvRD: &LatestVersionRequireDefaults{
-				Docker: RequireDockerCheckDefaults{
-					Type: "ghcr",
-					GHCR: &RequireDockerCheckRegistryDefaults{
-						Token: "tokenForGHCR"},
-					Hub: &RequireDockerCheckRegistryDefaultsWithUsername{
-						RequireDockerCheckRegistryDefaults: RequireDockerCheckRegistryDefaults{
-							Token: "tokenForHub"},
-						Username: "userForHub"},
-					Quay: &RequireDockerCheckRegistryDefaults{
-						Token: "tokenForQuay"}}},
-			want: `
-				{
-					"docker": {
-						"type": "ghcr",
-						"ghcr": {
-							"token": "tokenForGHCR"},
-						"hub": {
-							"token": "tokenForHub",
-							"username": "userForHub"},
-						"quay": {
-							"token": "tokenForQuay"}
-					}
-				}`},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			tc.want = test.TrimJSON(tc.want)
-
-			// WHEN the LatestVersionRequireDefaults are stringified with String.
-			got := tc.lvRD.String()
-
-			// THEN the result is as expected.
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestLatestVersionRequire_String(t *testing.T) {
-	// GIVEN a LatestVersionRequire.
-	tests := map[string]struct {
-		input *LatestVersionRequire
-		want  string
-	}{
-		"nil": {
-			input: nil,
-			want:  ""},
-		"empty": {
-			input: &LatestVersionRequire{},
-			want:  `{}`},
-		"all fields": {
-			input: &LatestVersionRequire{
-				Command: []string{"echo", "hello"},
-				Docker: &RequireDockerCheck{
-					Type:     "hub",
-					Image:    "release-argus/argus",
-					Tag:      "{{ version }}",
-					Username: "user",
-					Token:    util.SecretValue},
-				RegexContent: ".*",
-				RegexVersion: `([0-9.]+)`},
-			want: `
-				{
-					"command": ["echo","hello"],
-					"docker": {
-						"type": "hub",
-						"image": "release-argus/argus",
-						"tag": "{{ version }}",
-						"username": "user",
-						"token": ` + secretValueMarshalled + `
-					},
-					"regex_content": ".*",
-					"regex_version": "([0-9.]+)"
-				}`},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			tc.want = test.TrimJSON(tc.want)
-
-			// WHEN the LatestVersionRequire is stringified with String.
-			got := tc.input.String()
-
-			// THEN the result is as expected.
-			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+			// THEN: the newValue is nil'd if it's the same as oldValue.
+			gotStr := test.StringifyPtr(got)
+			wantStr := test.StringifyPtr(tc.want)
+			if gotStr != wantStr {
+				t.Errorf(
+					"%s value mismatch\ngot:  %q\nwant: %q",
+					prefix, gotStr, wantStr,
+				)
 			}
 		})
 	}

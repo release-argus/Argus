@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 package manual
 
 import (
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/internal/logx"
 )
 
-// CheckValues validates the fields of the Lookup struct.
-func (l *Lookup) CheckValues(prefix string) error {
-	logFrom := logutil.LogFrom{Primary: l.GetServiceID()}
+// CheckValues validates the fields of the receiver.
+func (l *Lookup) CheckValues() error {
+	logFrom := logx.LogFrom{Primary: l.GetServiceID()}
 	return l.Query(false, logFrom)
 }

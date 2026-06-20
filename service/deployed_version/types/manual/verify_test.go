@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,94 +17,73 @@
 package manual
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/service/deployed_version/types/base"
 )
 
 func TestLookup_CheckValues(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
-		lookupYAML         string
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name               string
+		version            string
 		wantVersion        string
 		semanticVersioning bool
 		errRegex           string
 	}{
-		"want semantic, valid": {
-			lookupYAML: test.TrimYAML(`
-				type: manual
-				version: 1.2.3
-			`),
+		{
+			name:               "want semantic, valid",
+			version:            "1.2.3",
 			wantVersion:        "1.2.3",
 			semanticVersioning: true,
 			errRegex:           `^$`,
 		},
-		"want semantic, fail": {
-			lookupYAML: test.TrimYAML(`
-				type: manual
-				version: 1_2_3
-			`),
+		{
+			name:               "want semantic, fail",
+			version:            "1_2_3",
 			wantVersion:        "",
 			semanticVersioning: true,
 			errRegex:           `^failed to convert "[^"]+" to a semantic version`,
 		},
-		"want non-semantic, valid": {
-			lookupYAML: test.TrimYAML(`
-				type: manual
-				version: 1_2_3
-			`),
+		{
+			name:               "want non-semantic, valid",
+			version:            "1_2_3",
 			wantVersion:        "1_2_3",
 			semanticVersioning: false,
 			errRegex:           `^$`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := &Lookup{}
-			yamlNode, err := test.YAMLToNode(tc.lookupYAML)
-			if err != nil {
-				t.Fatalf("%s\nfailed to convert YAML to yaml.Node: %v",
-					packageName, err)
-			}
-			err = lookup.UnmarshalYAML(yamlNode)
-			if err != nil {
-				t.Fatalf("%s\nfailed to unmarshal Lookup: %v",
-					packageName, err)
-			}
-			defaultLookup := testLookup("", false)
-			lookup.Options = defaultLookup.Options
-			lookup.Options.SemanticVersioning = &tc.semanticVersioning
-			lookup.Status = defaultLookup.Status
-			lookup.Defaults = defaultLookup.Defaults
-			lookup.HardDefaults = defaultLookup.HardDefaults
+			defaultLookup := testLookup(t, "")
+			input, _ := Decode("yaml", []byte("version: ''"),
+				defaultLookup.Options,
+				defaultLookup.Status,
+				base.DefaultsConfig{
+					Soft: defaultLookup.Defaults,
+					Hard: defaultLookup.HardDefaults,
+				},
+			)
+			defaultLookup.Options.SemanticVersioning = &tc.semanticVersioning
+			input.Version = tc.version
 
-			// WHEN CheckValues is called.
-			err = lookup.CheckValues("")
+			_ = test.AssertCheckValuesWithError(
+				t,
+				packageName,
+				tc.errRegex,
+				input.CheckValues,
+			)
 
-			// THEN it errors when expected.
-			e := util.ErrorToString(err)
-			lines := strings.Split(e, "\n")
-			wantLines := strings.Count(tc.errRegex, "\n")
-			if wantLines > len(lines) {
-				t.Fatalf("%s\nwant: %d lines of error:\n%q\ngot:  %d lines:\n%v\n\nstdout: %q",
-					packageName, wantLines, tc.errRegex, len(lines), lines, e)
-				return
-			}
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
-				return
-			}
-			// AND the version is set as expected.
-			gotVersion := lookup.Status.DeployedVersion()
-			if gotVersion != tc.wantVersion {
-				t.Errorf("%s\nversion mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wantVersion, gotVersion)
+			// AND: the version is set as expected.
+			if got := input.Status.DeployedVersion(); got != tc.wantVersion {
+				t.Errorf(
+					"%s\nLookup.CheckValues() .DeployedVersion() mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.wantVersion,
+				)
 			}
 		})
 	}

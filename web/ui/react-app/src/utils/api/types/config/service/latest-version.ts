@@ -95,14 +95,17 @@ type DockerFilterBase = {
 		| null;
 	image: string;
 	tag: string;
-	token: string;
-	username: string;
+	auth: {
+		token: string;
+	};
 };
 export type DockerFilterUsername = DockerFilterBase & {
-	type:
-		| typeof LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value
-		| null;
-	username: string;
+	auth: {
+		type:
+			| typeof LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value
+			| null;
+		username: string;
+	};
 };
 export type DockerFilterUsernameDefaults = Partial<DockerFilterUsername>;
 export type DockerType =
@@ -118,10 +121,14 @@ export type DockerFilterDefaults =
 
 export type RequireDockerFilterDefaults = {
 	type?: DockerFilterType;
+	image?: string;
+	tag?: string;
 
-	ghcr?: DockerFilterDefaults;
-	hub?: DockerFilterUsernameDefaults;
-	quay?: DockerFilterDefaults;
+	registry?: {
+		ghcr?: DockerFilterDefaults;
+		hub?: DockerFilterUsernameDefaults;
+		quay?: DockerFilterDefaults;
+	};
 };
 
 export type LatestVersionRequire = {

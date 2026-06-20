@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,103 +16,40 @@
 package service
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"strings"
-
-	"gopkg.in/yaml.v3"
-
 	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
-	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
+	dvbase "github.com/release-argus/Argus/service/deployed_version/types/base"
 	latestver "github.com/release-argus/Argus/service/latest_version"
-	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
+	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/polymorphic"
 	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
 
+// DefaultsConfig pairs soft and hard service defaults.
+type DefaultsConfig struct {
+	Soft *Defaults
+	Hard *Defaults
+}
+
 // Services is a string map of Service.
 type Services map[string]*Service
-
-// UnmarshalJSON handles unmarshalling of Services.
-// It unmarshals the JSON data into a map of string keys to Service pointers,
-// and then calls the giveIDs method to assign IDs to the services.
-func (s *Services) UnmarshalJSON(data []byte) error {
-	var aux map[string]*Service
-
-	if err := json.Unmarshal(data, &aux); err != nil {
-		errStr := util.FormatUnmarshalError("json", err)
-		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-		return errors.New("failed to unmarshal service.Services:\n  " + errStr)
-	}
-	*s = aux
-
-	s.giveIDs()
-
-	return nil
-}
-
-// UnmarshalYAML handles unmarshalling of Services.
-// It unmarshals the YAML data into a map of string keys to Service pointers,
-// and then calls the giveIDs method to assign IDs to the services.
-func (s *Services) UnmarshalYAML(value *yaml.Node) error {
-	var aux map[string]*Service
-
-	// Unmarshal YAML data.
-	if err := value.Decode(&aux); err != nil {
-		errStr := util.FormatUnmarshalError("yaml", err)
-		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-		return errors.New("failed to unmarshal service.Services:\n  " + errStr)
-	}
-	*s = aux
-
-	s.giveIDs()
-
-	return nil
-}
-
-// giveIDs gives the Services their IDs if they don't have one.
-func (s *Services) giveIDs() {
-	for id, svc := range *s {
-		// Remove the service if nil.
-		if svc == nil {
-			delete(*s, id)
-			continue
-		}
-
-		svc.ID = id
-	}
-}
-
-// Defaults are the default values for a Service.
-type Defaults struct {
-	Options               opt.Defaults              `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
-	LatestVersion         latestver_base.Defaults   `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Vars to scrape the latest version of the Service.
-	DeployedVersionLookup deployedver_base.Defaults `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Vars to scrape the Service's current deployed version.
-	Notify                map[string]struct{}       `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Default Notifiers to give a Service.
-	Command               command.Commands          `json:"command,omitempty" yaml:"command,omitempty"`                   // Default Commands to give a Service.
-	WebHook               map[string]struct{}       `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Default WebHooks to give a Service.
-	Dashboard             dashboard.OptionsDefaults `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`               // Dashboard defaults.
-
-	Status status.Defaults `json:"-" yaml:"-"` // Track the Status of this source (version and regex misses).
-}
 
 // Service is a source to track latest and deployed versions of a service.
 // It also has the ability to run commands, send notifications and send WebHooks on new releases.
 type Service struct {
-	ID                    string             `json:"-" yaml:"-"` // Key/Name of the Service.
-	Name                  string             `json:"-" yaml:"-"` // Name of the Service.
-	marshalName           bool               ``                  // Whether to marshal the Name.
-	Comment               string             `json:"-" yaml:"-"` // Comment on the Service.
-	Options               opt.Options        `json:"-" yaml:"-"` // Options to give the Service.
-	LatestVersion         latestver.Lookup   `json:"-" yaml:"-"` // Vars to scrape the latest version of the Service.
-	DeployedVersionLookup deployedver.Lookup `json:"-" yaml:"-"` // Vars to scrape the Service's current deployed version.
+	ID                    string             `json:"-" yaml:"-"`                                                   // Key/Name of the Service.
+	Name                  string             `json:"name,omitempty" yaml:"name,omitempty"`                         // Name of the Service.
+	Comment               string             `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Comment on the Service.
+	Options               opt.Options        `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
+	LatestVersion         latestver.Lookup   `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Vars to scrape the latest version of the Service.
+	DeployedVersionLookup deployedver.Lookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Vars to scrape the Service's current deployed version.
 
 	Notify             shoutrrr.Shoutrrrs `json:"notify,omitempty" yaml:"notify,omitempty"` // Service-specific Shoutrrr vars.
 	NotifyFromDefaults bool               `json:"-" yaml:"-"`
@@ -132,21 +69,201 @@ type Service struct {
 	HardDefaults *Defaults `json:"-" yaml:"-"` // Hardcoded default values.
 }
 
-// MarshalName returns whether the Name should be marshalled.
-// (explicitly set in the config).
-func (s *Service) MarshalName() bool {
-	return s.marshalName
+// serviceMarshal is a marshal-only helper for [Service].
+type serviceMarshal struct {
+	Name                  string             `json:"name,omitempty" yaml:"name,omitempty"`
+	Comment               string             `json:"comment,omitempty" yaml:"comment,omitempty"`
+	Options               opt.Options        `json:"options,omitempty" yaml:"options,omitempty"`
+	LatestVersion         latestver.Lookup   `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`
+	DeployedVersionLookup deployedver.Lookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"`
+	Notify                shoutrrr.Shoutrrrs `json:"notify,omitempty" yaml:"notify,omitempty"`
+	Command               command.Commands   `json:"command,omitempty" yaml:"command,omitempty"`
+	WebHook               webhook.WebHooks   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
+	Dashboard             dashboard.Options  `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`
 }
 
-// String returns a string representation of the Service.
+// serviceDecode is an unmarshal-only helper for [Service].
+type serviceDecode struct {
+	Name      string             `json:"name,omitempty" yaml:"name,omitempty"`
+	Comment   string             `json:"comment,omitempty" yaml:"comment,omitempty"`
+	Options   opt.Options        `json:"options,omitempty" yaml:"options,omitempty"`
+	Notify    shoutrrr.Shoutrrrs `json:"notify,omitempty" yaml:"notify,omitempty"`
+	Command   command.Commands   `json:"command,omitempty" yaml:"command,omitempty"`
+	WebHook   webhook.WebHooks   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
+	Dashboard dashboard.Options  `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (s *Service) MarshalJSON() ([]byte, error) {
+	return s.marshal("json")
+}
+
+// MarshalYAML implements the yaml.Marshaler interface.
+func (s *Service) MarshalYAML() ([]byte, error) {
+	return s.marshal("yaml")
+}
+
+// marshal implements the format.Marshaler interface.
+func (s *Service) marshal(format string) ([]byte, error) {
+	aux := serviceMarshal{
+		Name:                  s.Name,
+		Comment:               s.Comment,
+		Options:               s.Options,
+		LatestVersion:         s.LatestVersion,
+		DeployedVersionLookup: s.DeployedVersionLookup,
+		Dashboard:             s.Dashboard,
+	}
+
+	if !s.NotifyFromDefaults {
+		aux.Notify = s.Notify
+	}
+	if !s.CommandFromDefaults {
+		aux.Command = s.Command
+	}
+	if !s.WebHookFromDefaults {
+		aux.WebHook = s.WebHook
+	}
+
+	return decode.Marshal(format, aux) //nolint:wrapcheck
+}
+
+// UnmarshalJSON implements the json.Marshaler interface.
+// Use DecodeService for a full unmarshal.
+func (s *Service) UnmarshalJSON(data []byte) error {
+	return s.unmarshal("json", data)
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface.
+// Use DecodeService for a full unmarshal.
+func (s *Service) UnmarshalYAML(data []byte) error {
+	return s.unmarshal("yaml", data)
+}
+
+// unmarshal implements the format.Unmarshaler interface.
+func (s *Service) unmarshal(format string, data []byte) error {
+	aux := serviceDecode{
+		Name:      s.Name,
+		Comment:   s.Comment,
+		Options:   s.Options,
+		Notify:    s.Notify,
+		Command:   s.Command,
+		WebHook:   s.WebHook,
+		Dashboard: s.Dashboard,
+	}
+
+	// Unmarshal in the given format.
+	if err := decode.Unmarshal(format, data, &aux); err != nil {
+		return err //nolint:wrapcheck
+	}
+	s.Name = aux.Name
+	s.Comment = aux.Comment
+	s.Options = aux.Options
+	s.Options.SetDefaults(
+		&s.Defaults.Options,
+		&s.HardDefaults.Options,
+	)
+	s.Notify = aux.Notify
+	s.Command = aux.Command
+	s.WebHook = aux.WebHook
+	s.Dashboard = aux.Dashboard
+	s.Dashboard.SetDefaults(
+		&s.Defaults.Dashboard,
+		&s.HardDefaults.Dashboard,
+	)
+
+	// LatestVersion.
+	if err := s.unmarshalLatestVersion(format, data); err != nil {
+		return err
+	}
+
+	// DeployedVersionLookup.
+	if err := s.unmarshalDeployedVersion(format, data); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// unmarshalLatestVersion implements the format.Unmarshaler interface for [Service.LatestVersion].
+func (s *Service) unmarshalLatestVersion(format string, data []byte) error {
+	// Extract.
+	lvRaw, err := polymorphic.Extract(format, data, "latest_version")
+	if err != nil {
+		return &decode.KeyFieldError{
+			Key: "latest_version",
+			Err: err,
+		}
+	}
+	if len(lvRaw) == 0 {
+		return nil
+	}
+
+	// Overrides.
+	s.LatestVersion, err = latestver.ApplyOverrides(
+		format, lvRaw,
+		s.LatestVersion,
+		&s.Options,
+		&s.Status,
+		lvbase.DefaultsConfig{
+			Soft: &s.Defaults.LatestVersion,
+			Hard: &s.HardDefaults.LatestVersion,
+		},
+	)
+	if err != nil {
+		return err //nolint:wrapcheck
+	}
+	if s.LatestVersion != nil {
+		s.LatestVersion.SetStatus(&s.Status)
+	}
+
+	return nil
+}
+
+// unmarshalDeployedVersion implements the format.Unmarshaler interface for [Service.DeployedVersion].
+func (s *Service) unmarshalDeployedVersion(format string, data []byte) error {
+	// Extract.
+	dvRaw, err := polymorphic.Extract(format, data, "deployed_version")
+	if err != nil {
+		return &decode.KeyFieldError{
+			Key: "deployed_version",
+			Err: err,
+		}
+	}
+	if len(dvRaw) == 0 {
+		return nil
+	}
+
+	// Overrides.
+	s.DeployedVersionLookup, err = deployedver.ApplyOverrides(
+		format, dvRaw,
+		s.DeployedVersionLookup,
+		&s.Options,
+		&s.Status,
+		dvbase.DefaultsConfig{
+			Soft: &s.Defaults.DeployedVersionLookup,
+			Hard: &s.HardDefaults.DeployedVersionLookup,
+		},
+	)
+	if err != nil {
+		return err //nolint:wrapcheck
+	}
+
+	if s.DeployedVersionLookup != nil {
+		s.DeployedVersionLookup.SetStatus(&s.Status)
+	}
+
+	return nil
+}
+
+// String returns a string representation of the receiver.
 func (s *Service) String(prefix string) string {
 	if s == nil {
 		return ""
 	}
-	return util.ToYAMLString(s, prefix)
+	return decode.ToYAMLString(s, prefix)
 }
 
-// Summary returns a ServiceSummary for the Service.
+// Summary returns a [ServiceSummary] for the receiver.
 func (s *Service) Summary() *apitype.ServiceSummary {
 	if s == nil {
 		return nil
@@ -161,8 +278,13 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 	svcInfo := s.Status.GetServiceInfo()
 	summary := &apitype.ServiceSummary{
 		ID:                       s.ID,
+		Name:                     util.PtrIfNotZero(s.Name),
 		Active:                   s.Options.Active,
+		Comment:                  util.PtrIfNotZero(svcInfo.Comment),
 		Type:                     latestVersionType,
+		WebURL:                   util.PtrIfNotZero(svcInfo.WebURL),
+		Icon:                     util.PtrIfNotZero(svcInfo.Icon),
+		IconLinkTo:               util.PtrIfNotZero(svcInfo.IconLinkTo),
 		HasDeployedVersionLookup: &hasDeployedVersionLookup,
 		Status: &apitype.Status{
 			ApprovedVersion:          svcInfo.ApprovedVersion,
@@ -170,24 +292,8 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 			DeployedVersionTimestamp: s.Status.DeployedVersionTimestamp(),
 			LatestVersion:            svcInfo.LatestVersion,
 			LatestVersionTimestamp:   s.Status.LatestVersionTimestamp(),
-			LastQueried:              s.Status.LastQueried()}}
-
-	// Icon.
-	if svcInfo.Icon != "" {
-		summary.Icon = &svcInfo.Icon
-	}
-	// IconLinkTo.
-	if svcInfo.IconLinkTo != "" {
-		summary.IconLinkTo = &svcInfo.IconLinkTo
-	}
-	// WebURL.
-	if svcInfo.WebURL != "" {
-		summary.WebURL = &svcInfo.WebURL
-	}
-
-	// Name.
-	if s.MarshalName() {
-		summary.Name = &s.Name
+			LastQueried:              s.Status.LastQueried(),
+		},
 	}
 
 	// Tags.
@@ -209,7 +315,7 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 	return summary
 }
 
-// UsingDefaults returns whether the Service is using the Notifiers/Commands/WebHooks from Defaults.
+// UsingDefaults returns whether the receiver is using the Notifiers/Commands/WebHooks from Defaults.
 func (s *Service) UsingDefaults() (bool, bool, bool) {
 	if s == nil {
 		return false, false, false
@@ -217,232 +323,7 @@ func (s *Service) UsingDefaults() (bool, bool, bool) {
 	return s.NotifyFromDefaults, s.CommandFromDefaults, s.WebHookFromDefaults
 }
 
-// unmarshalVersionLookups handles the unmarshalling of LatestVersion and DeployedVersion fields.
-func (s *Service) unmarshalVersionLookups(
-	format string, // "json" | "yaml"
-	latestVersion, deployedVersion any,
-) error {
-	// -- Dynamic LatestVersion type --
-	if latestVersion != nil {
-		lookupType, err := extractLookupType(
-			format, latestVersion,
-			s.LatestVersion)
-		if err != nil {
-			errStr := util.FormatUnmarshalError(format, err)
-			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-			return errors.New("failed to unmarshal service.Service.LatestVersion:\n  " + errStr)
-		}
-		s.LatestVersion, err = latestver.New(
-			lookupType,
-			format, latestVersion,
-			nil,
-			nil,
-			nil, nil)
-		if err != nil {
-			return err //nolint:wrapcheck
-		}
-	}
-
-	// -- Dynamic DeployedVersion type --
-	if deployedVersion != nil {
-		lookupType, err := extractLookupType(
-			format, deployedVersion,
-			s.DeployedVersionLookup)
-		if err != nil {
-			errStr := util.FormatUnmarshalError(format, err)
-			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-			return errors.New("failed to unmarshal service.Service.DeployedVersion:\n  " + errStr)
-		}
-		if format == "yaml" && lookupType == "" {
-			// Default to url for YAML only
-			lookupType = "url"
-		}
-
-		s.DeployedVersionLookup, err = deployedver.New(
-			lookupType,
-			format, deployedVersion,
-			nil,
-			nil,
-			nil, nil)
-		if err != nil {
-			return err //nolint:wrapcheck
-		}
-	}
-
-	return nil
-}
-
-type structWithGetType interface {
-	GetType() string
-}
-
-// extractLookupType extracts the type field from the YAML,
-// or uses the GetType from the struct if it's not in the YAML,
-// and the struct is non-nil.
-func extractLookupType(
-	dataFormat string,
-	data any,
-	lookup structWithGetType,
-) (string, error) {
-	// Check for the type field in the YAML.
-	var typeField struct {
-		Type string `yaml:"type"`
-	}
-	var err error
-	switch v := data.(type) {
-	case *yaml.Node:
-		err = v.Decode(&typeField)
-	case json.RawMessage:
-		err = json.Unmarshal(v, &typeField)
-	}
-	if err != nil {
-		return "", fmt.Errorf("invalid %s:\n%s",
-			dataFormat, strings.TrimPrefix(err.Error(), dataFormat+": "))
-	}
-
-	if typeField.Type != "" {
-		return typeField.Type, nil
-	}
-
-	// If we don't have a type in the YAML, check if we already have a type in the struct.
-	if lookup != nil {
-		return lookup.GetType(), nil
-	}
-
-	// Invalid, but let the parent function handle it.
-	return "", nil
-}
-
-// UnmarshalJSON handles the unmarshalling of a Service.
-//
-// This addresses the dynamic Latest/Deployed Version types.
-func (s *Service) UnmarshalJSON(data []byte) error {
-	// Alias to avoid recursion.
-	type Alias Service
-	aux := &struct {
-		*Alias          `json:",inline"` // Embed the original struct.
-		Name            *string          `json:"name,omitempty"`             // Name of the Service.
-		Comment         *string          `json:"comment,omitempty"`          // Comment on the Service.
-		Options         *opt.Options     `json:"options,omitempty"`          // Options to give the Service.
-		LatestVersion   json.RawMessage  `json:"latest_version,omitempty"`   // Temp LatestVersion field to get Type.
-		DeployedVersion json.RawMessage  `json:"deployed_version,omitempty"` // Temp DeployedVersion field to get Type.
-	}{
-		Alias:   (*Alias)(s),
-		Name:    &s.Name,
-		Comment: &s.Comment,
-		Options: &s.Options,
-	}
-
-	// Unmarshal into aux to separate the latest_version field.
-	if err := json.Unmarshal(data, &aux); err != nil {
-		errStr := util.FormatUnmarshalError("json", err)
-		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-		return errors.New("failed to unmarshal service.Service:\n  " + errStr)
-	}
-
-	// Name.
-	if s.Name != "" {
-		s.marshalName = true
-	}
-
-	var latestVersionNode, deployedVersionNode any
-	if aux.LatestVersion != nil {
-		latestVersionNode = aux.LatestVersion
-	}
-	if aux.DeployedVersion != nil {
-		deployedVersionNode = aux.DeployedVersion
-	}
-
-	return s.unmarshalVersionLookups(
-		"json",
-		latestVersionNode,
-		deployedVersionNode)
-}
-
-// UnmarshalYAML handles the unmarshalling of a Service.
-//
-// This addresses the dynamic Latest/Deployed Version types.
-func (s *Service) UnmarshalYAML(value *yaml.Node) error {
-	// Alias to avoid recursion.
-	type Alias Service
-	aux := &struct {
-		*Alias          `yaml:",inline"` // Embed the original struct.
-		Name            *string          `yaml:"name,omitempty"`             // Name of the Service.
-		Comment         *string          `yaml:"comment,omitempty"`          // Comment on the Service.
-		Options         *opt.Options     `yaml:"options,omitempty"`          // Options to give the Service.
-		LatestVersion   util.RawNode     `yaml:"latest_version,omitempty"`   // Temp LatestVersion field to get Type.
-		DeployedVersion util.RawNode     `yaml:"deployed_version,omitempty"` // Temp DeployedVersion field to get Type.
-	}{
-		Alias:   (*Alias)(s),
-		Name:    &s.Name,
-		Comment: &s.Comment,
-		Options: &s.Options,
-	}
-
-	// Unmarshal into aux to separate the latest_version field.
-	if err := value.Decode(&aux); err != nil {
-		errStr := util.FormatUnmarshalError("yaml", err)
-		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-		return errors.New("failed to unmarshal service.Service:\n  " + errStr)
-	}
-
-	// Name.
-	if s.Name != "" {
-		s.marshalName = true
-	}
-
-	var latestVersionNode, deployedVersionNode any
-	if aux.LatestVersion.Node != nil {
-		latestVersionNode = aux.LatestVersion.Node
-	}
-	if aux.DeployedVersion.Node != nil {
-		deployedVersionNode = aux.DeployedVersion.Node
-	}
-
-	return s.unmarshalVersionLookups(
-		"yaml",
-		latestVersionNode,
-		deployedVersionNode)
-}
-
-// MarshalJSON handles the marshalling of a Service.
-func (s *Service) MarshalJSON() ([]byte, error) {
-	result, err := s.marshal(func(v any) (any, error) {
-		return json.Marshal(v) //nolint:wrapcheck
-	})
-	return result.([]byte), err
-}
-
-// MarshalYAML handles the marshalling of a Service.
-func (s *Service) MarshalYAML() (any, error) {
-	return s.marshal(func(v any) (any, error) {
-		return v, nil
-	})
-}
-
-// marshal is a shared function for marshalling a Service.
-func (s *Service) marshal(marshalFunc func(any) (any, error)) (any, error) {
-	// Alias to avoid recursion.
-	type Alias Service
-	aux := &struct {
-		Name            string                          `json:"name,omitempty" yaml:"name,omitempty"`                         // Name of the Service.
-		Comment         string                          `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Comment on the Service.
-		Options         opt.Options                     `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
-		LatestVersion   latestver.Lookup                `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Vars to scrape the latest version of the Service.
-		DeployedVersion deployedver.Lookup              `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Vars to scrape the deployed version of the Service.
-		*Alias          `json:",inline" yaml:",inline"` // Embed the original struct.
-	}{
-		Name:            s.Name,
-		Comment:         s.Comment,
-		Options:         s.Options,
-		LatestVersion:   s.LatestVersion,
-		DeployedVersion: s.DeployedVersionLookup,
-		Alias:           (*Alias)(s),
-	}
-
-	if !s.MarshalName() {
-		aux.Name = ""
-	}
-
-	return marshalFunc(aux)
+// GetName returns the [Service.Name] || [Service.ID].
+func (s *Service) GetName() string {
+	return util.ValueOr(s.Name, s.ID)
 }

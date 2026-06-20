@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,24 +17,27 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestConfig_Load(t *testing.T) {
+	prefix := fmt.Sprintf("%q\nConfig.Load()", packageName)
 	DebounceDuration = time.Second
-	// GIVEN a test file to load.
+	// GIVEN: a test file to load.
 	tests := []struct {
 		name        string
 		setupFile   func(path string)
-		envVars     map[string]string
+		env         map[string]string
 		validate    func(t *testing.T, config *Config, stdout string)
 		exitCode    *int
 		stdoutRegex string
@@ -42,35 +45,38 @@ func TestConfig_Load(t *testing.T) {
 		{
 			name:      "Environment variables loaded",
 			setupFile: testYAML_config_test,
-			envVars: map[string]string{
+			env: map[string]string{
 				"TEST_ENV_KEY": "1234",
 			},
 			validate: func(t *testing.T, config *Config, stdout string) {
-				checks := map[string]struct {
-					want, got string
-				}{
-					"Service.Options.Interval": {want: "123s", got: config.Defaults.Service.Options.Interval},
-					"Notify.slack.title":       {want: "defaultTitle", got: config.Defaults.Notify["slack"].GetParam("title")},
-					"WebHook.Delay":            {want: "2s", got: config.Defaults.WebHook.Delay},
-					"EmptyService.String('')":  {want: "", got: config.Service["EmptyService"].String("")},
+				fieldTests := []test.FieldAssertion{
+					{
+						Name: "Service.Options.Interval",
+						Got:  config.Defaults.Service.Options.Interval,
+						Want: "123s",
+						Mode: test.CompareEqual,
+					},
+					{
+						Name: "Notify.slack.title",
+						Got:  config.Defaults.Notify["slack"].GetParam("title"),
+						Want: "defaultTitle",
+						Mode: test.CompareEqual,
+					},
+					{
+						Name: "WebHook.Delay",
+						Got:  config.Defaults.WebHook.Delay,
+						Want: "2s",
+						Mode: test.CompareEqual,
+					},
+					{
+						Name: "EmptyService.String('')",
+						Got:  config.Service["EmptyService"].String(""),
+						Want: "",
+						Mode: test.CompareEqual,
+					},
 				}
-				for name, check := range checks {
-					if check.got != check.want {
-						t.Errorf("%s\nmismatch on %q\nwant: %q\ngot:  %q",
-							packageName, name, check.want, check.got)
-					}
-				}
-				if config.Defaults.Service.Options.Interval != "123s" {
-					t.Errorf("Expected interval 123s, got %s", config.Defaults.Service.Options.Interval)
-				}
-				if config.Defaults.Notify["slack"].GetParam("title") != "defaultTitle" {
-					t.Errorf("Expected defaultTitle, got %s", config.Defaults.Notify["slack"].GetParam("title"))
-				}
-				if config.Defaults.WebHook.Delay != "2s" {
-					t.Errorf("Expected WebHook.Delay 2s, got %s", config.Defaults.WebHook.Delay)
-				}
-				if config.Service["EmptyService"].String("") != "" {
-					t.Errorf("Expected EmptyService to be deleted or empty, got %s", config.Service["EmptyService"].String(""))
+				if err := test.AssertFields(t, fieldTests, prefix, "Config"); err != nil {
+					t.Fatal(err)
 				}
 			},
 		},
@@ -80,13 +86,17 @@ func TestConfig_Load(t *testing.T) {
 			validate: func(t *testing.T, config *Config, stdout string) {
 				for name, svc := range config.Service {
 					if svc == nil {
-						t.Errorf("%s\nService %q is nil",
-							packageName, name)
+						t.Errorf(
+							"%s should didn't delete nil Service %q",
+							prefix, name,
+						)
 					}
 				}
 				if len(config.Service) != 2 {
-					t.Errorf("%s\nExpected 2 services, got %d",
-						packageName, len(config.Service))
+					t.Errorf(
+						"%s got %d services. Expected 2",
+						prefix, len(config.Service),
+					)
 				}
 			},
 		},
@@ -94,11 +104,12 @@ func TestConfig_Load(t *testing.T) {
 			name:      "Defaults assigned to services",
 			setupFile: testYAML_config_test,
 			validate: func(t *testing.T, config *Config, stdout string) {
-				want := false
 				got := config.Service["WantDefaults"].Options.GetSemanticVersioning()
-				if got != want {
-					t.Errorf("%s\nService.X.Options.SemanticVersioning mismatch\nwant: %v\ngot:  %t",
-						packageName, want, *config.Service["WantDefaults"].Options.SemanticVersioning)
+				if got != false {
+					t.Errorf(
+						"%s Service.X.Options.SemanticVersioning value mismatch\ngot:  %t\nwant: false",
+						prefix, *config.Service["WantDefaults"].Options.SemanticVersioning,
+					)
 				}
 			},
 		},
@@ -107,8 +118,7 @@ func TestConfig_Load(t *testing.T) {
 			setupFile: testYAML_NilServiceMap,
 			validate: func(t *testing.T, config *Config, stdout string) {
 				if config.Service == nil {
-					t.Errorf("%s\nconfig.Service is nil after Load, want non-nil",
-						packageName)
+					t.Errorf("%s got a nil config.Service, want non-nil", prefix)
 				}
 			},
 		},
@@ -118,11 +128,13 @@ func TestConfig_Load(t *testing.T) {
 			validate: func(t *testing.T, config *Config, stdout string) {
 				wantRegex := `Unmarshal of "[^"]+" failed`
 				if !util.RegexCheck(wantRegex, stdout) {
-					t.Errorf("%s\nstdout mismatch:\nwant: %q\ngot:  %q",
-						packageName, wantRegex, stdout)
+					t.Errorf(
+						"%s stdout mismatch:\ngot:  %q\nwant: %q",
+						packageName, stdout, wantRegex,
+					)
 				}
 			},
-			exitCode: test.IntPtr(1),
+			exitCode: test.Ptr(1),
 		},
 		{
 			name: "Config that is unreadable",
@@ -130,14 +142,14 @@ func TestConfig_Load(t *testing.T) {
 				testYAML_config_test(path)
 				_ = os.Chmod(path, 0_222)
 			},
-			exitCode: test.IntPtr(1),
+			exitCode: test.Ptr(1),
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout and sharing log exitCodeChannel.
-			releaseStdout := test.CaptureLog(logutil.Log)
+			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			g, _ := errgroup.WithContext(t.Context())
 			flags := make(map[string]bool)
@@ -153,12 +165,9 @@ func TestConfig_Load(t *testing.T) {
 			})
 
 			// Set environment variables
-			for k, v := range tc.envVars {
-				_ = os.Setenv(k, v)
-				t.Cleanup(func() { _ = os.Unsetenv(k) })
-			}
+			test.SetEnv(t, tc.env)
 
-			// WHEN we Load this config.
+			// WHEN: we Load this config.
 			var config Config
 			config.Load(t.Context(), g, file, &flags)
 
@@ -168,21 +177,87 @@ func TestConfig_Load(t *testing.T) {
 				tc.validate(t, &config, stdout)
 			}
 
-			// THEN the exit code is as expected.
-			exitCodeChannel := logutil.ExitCodeChannel()
+			// THEN: the exit code is as expected.
+			exitCodeChannel := logx.ExitCodeChannel()
 			var exitCode *int
 			select {
 			case msg := <-exitCodeChannel:
 				t.Logf("%s\n%s", packageName, msg)
-				exitCode = test.IntPtr(1)
+				exitCode = test.Ptr(1)
 			default:
 			}
-			wantExitCode := test.StringifyPtr(tc.exitCode)
-			gotExitCode := test.StringifyPtr(exitCode)
-			if gotExitCode != wantExitCode {
-				t.Errorf("%s\nunexpected exit code\nwant: %s\ngot:  %s",
-					packageName, wantExitCode, gotExitCode)
+			got := test.StringifyPtr(tc.exitCode)
+			want := test.StringifyPtr(exitCode)
+			if got != want {
+				t.Errorf(
+					"%s unexpected exit code\ngot:  %s\nwant: %s",
+					packageName, got, want,
+				)
 			}
 		})
+	}
+}
+
+func TestConfig_InitDefaults(t *testing.T) {
+	// GIVEN: a Config.= with defined (empty) Defaults.
+	var cfg Config
+	defaults, _ := DecodeDefaults("yaml", nil)
+	cfg.Defaults = *defaults
+	var hardDefaults Defaults
+	cfg.HardDefaults = hardDefaults
+
+	// WHEN: we InitDefaults().
+	cfg.InitDefaults()
+
+	prefix := fmt.Sprintf("%s\nConfig InitDefaults()", packageName)
+
+	// THEN: HardDefaults...Docker.Type has a value.
+	if cfg.HardDefaults.Service.LatestVersion.Require.Docker.Type == "" {
+		t.Fatalf("%s got HardDefaults.Docker.Require=''. want value", packageName)
+	}
+
+	// AND: Defaults inherit from HardDefaults.
+	if cfg.Defaults.Service.LatestVersion.Require.Docker.Defaults !=
+		&cfg.HardDefaults.Service.LatestVersion.Require.Docker {
+		t.Fatalf("%s got Defaults....Docker.Defaults != HardDefaults...Docker.Defaults", packageName)
+	}
+
+	// AND: Options pointers are shared correctly.
+	fieldTests := []test.FieldAssertion{
+		{
+			Name: "Defaults: Service.LatestVersion.Options -> Service.Options",
+			Got:  cfg.Defaults.Service.LatestVersion.Options,
+			Want: &cfg.Defaults.Service.Options,
+			Mode: test.CompareSamePointer,
+		},
+		{
+			Name: "Defaults: Service.DeployedVersionLookup.Options -> Service.Options",
+			Got:  cfg.Defaults.Service.DeployedVersionLookup.Options,
+			Want: &cfg.Defaults.Service.Options,
+			Mode: test.CompareSamePointer,
+		},
+		{
+			Name: "HardDefaults: Service.LatestVersion.Options -> Service.Options",
+			Got:  cfg.HardDefaults.Service.LatestVersion.Options,
+			Want: &cfg.HardDefaults.Service.Options,
+			Mode: test.CompareSamePointer,
+		},
+		{
+			Name: "HardDefaults: Service.DeployedVersionLookup.Options -> Service.Options",
+			Got:  cfg.HardDefaults.Service.DeployedVersionLookup.Options,
+			Want: &cfg.HardDefaults.Service.Options,
+			Mode: test.CompareSamePointer,
+		},
+	}
+	if err := test.AssertFields(t, fieldTests, prefix, "Config"); err != nil {
+		t.Fatal(err)
+	}
+
+	// AND: SaveChannel propagated to HardDefaults.Status.
+	if cfg.HardDefaults.Service.Status.SaveChannel != cfg.SaveChannel {
+		t.Fatalf(
+			"%s\nConfig InitDefaults() wanted SaveChannel to be propagated to HardDefaults.Status",
+			packageName,
+		)
 	}
 }

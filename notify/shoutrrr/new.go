@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,35 +26,31 @@ import (
 
 // TestPayload is the payload for testing a Notify at httpNotifyTest.
 type TestPayload struct {
-	ServiceID         string                       `json:"service_id"`
-	ServiceIDPrevious string                       `json:"service_id_previous"`
-	ServiceName       string                       `json:"service_name"`
-	Name              string                       `json:"name"`
-	NamePrevious      string                       `json:"name_previous"`
-	Type              string                       `json:"type,omitempty"`
-	Options           util.MapStringStringOmitNull `json:"options"`
-	URLFields         util.MapStringStringOmitNull `json:"url_fields"`
-	Params            util.MapStringStringOmitNull `json:"params"`
-	ServiceURL        string                       `json:"service_url"`
-	WebURL            string                       `json:"web_url"`
+	ServiceID         string                  `json:"service_id"`
+	ServiceIDPrevious string                  `json:"service_id_previous"`
+	ServiceName       string                  `json:"service_name"`
+	Name              string                  `json:"name"`
+	NamePrevious      string                  `json:"name_previous"`
+	Type              string                  `json:"type,omitempty"`
+	Options           MapStringStringOmitNull `json:"options"`
+	URLFields         MapStringStringOmitNull `json:"url_fields"`
+	Params            MapStringStringOmitNull `json:"params"`
+	ServiceURL        string                  `json:"service_url"`
+	WebURL            string                  `json:"web_url"`
 }
 
-// FromPayload will create a Shoutrrr from a payload.
-// Replacing any undefined values with that of the previous Notify.
-//
-//	Returns the Notify, the ServiceURL, and any errors encountered.
+// FromPayload constructs a [Shoutrrr] from payload,
+// using serviceNotify as a fallback source for undefined fields.
 func FromPayload(
 	payload TestPayload,
 	serviceNotify *Shoutrrr, serviceStatus *status.Status,
-	mains ShoutrrrsDefaults,
-	defaults, hardDefaults ShoutrrrsDefaults,
+	cfg Config,
 ) (*Shoutrrr, error) {
 	// No `name` or `name_previous`.
-	if payload.NamePrevious == "" && payload.Name == "" {
+	name := util.FirstNonDefault(payload.Name, payload.NamePrevious)
+	if name == "" {
 		return nil, errors.New("name and/or name_previous are required")
 	}
-
-	name := util.FirstNonDefault(payload.Name, payload.NamePrevious)
 
 	// Original Notifier?
 	var original *Shoutrrr
@@ -67,19 +63,22 @@ func FromPayload(
 	// Get the Type, Main, Defaults, and HardDefaults for this Notify.
 	nType, main, typeDefaults, typeHardDefaults, err := resolveDefaults(
 		name, payload.Type,
-		mains[name], defaults, hardDefaults)
+		cfg.Root[name], cfg.Defaults, cfg.HardDefaults,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	// Merge the payload with the original.
-	util.InitMap(&payload.Options)
-	util.InitMap(&payload.URLFields)
-	util.InitMap(&payload.Params)
+	payload.Options = util.EnsureMap(payload.Options)
+	payload.URLFields = util.EnsureMap(payload.URLFields)
+	payload.Params = util.EnsureMap(payload.Params)
 	if original != nil {
-		payload.Options = util.MergeMaps(original.Options, payload.Options, []string{})
-		payload.URLFields = util.MergeMaps(original.URLFields, payload.URLFields, types.CensorableURLFields[:])
-		payload.Params = util.MergeMaps(original.Params, payload.Params, types.CensorableParams[:])
+		payload.Options = util.MergeMaps(original.Options, payload.Options)
+		payload.URLFields = util.MergeMaps(original.URLFields, payload.URLFields)
+		payload.URLFields = util.RestoreMaskedValues(original.URLFields, payload.URLFields, types.CensorableURLFields)
+		payload.Params = util.MergeMaps(original.Params, payload.Params)
+		payload.Params = util.RestoreMaskedValues(original.Params, payload.Params, types.CensorableParams)
 	}
 
 	// Create the Notify.
@@ -89,20 +88,20 @@ func FromPayload(
 		nType,
 		payload.Options, payload.URLFields, payload.Params,
 		main,
-		typeDefaults, typeHardDefaults)
+		typeDefaults, typeHardDefaults,
+	)
 	s.ServiceStatus = serviceStatus
 	s.Failed = &s.ServiceStatus.Fails.Shoutrrr
 
 	// Check the final Notify.
-	errs, _ := s.CheckValues("")
+	errs, _ := s.CheckValues()
 	if errs != nil {
 		return nil, errs
 	}
 	return s, nil
 }
 
-// resolveDefaults resolves the default values for a given name and/or type.
-// It returns the resolved type, main defaults, type-specific defaults, type-specific hard defaults, and an error if the type is invalid.
+// resolveDefaults returns the resolved type, Main, type-specific Defaults, and HardDefaults for the given name and type, or an error if the type is invalid.
 func resolveDefaults(
 	name, nType string,
 	main *Defaults,

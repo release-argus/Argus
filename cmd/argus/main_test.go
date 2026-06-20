@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,20 +23,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/release-argus/Argus/test"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
 )
 
 func resetFlags() {
-	configFile = test.StringPtr("")
-	configCheckFlag = test.BoolPtr(false)
-	testCommandsFlag = test.StringPtr("")
-	testNotifyFlag = test.StringPtr("")
-	testServiceFlag = test.StringPtr("")
+	configFile = test.Ptr("")
+	configCheckFlag = test.Ptr(false)
+	testCommandsFlag = test.Ptr("")
+	testNotifyFlag = test.Ptr("")
+	testServiceFlag = test.Ptr("")
 }
 
 func TestRun(t *testing.T) {
-	// GIVEN different Configs to test.
+	// GIVEN: different Configs to test.
 	tests := []struct {
 		name           string
 		file           func(path string)
@@ -53,50 +53,57 @@ func TestRun(t *testing.T) {
 				_ = os.WriteFile(dbFile, []byte("invalid format"), 0644)
 			},
 			outputContains: &[]string{
-				"file is not a database"},
-			exitCode: test.IntPtr(1)},
+				"file is not a database",
+			},
+			exitCode: test.Ptr(1),
+		},
 		{
 			name: "config with no services",
 			file: testYAML_NoServices,
 			outputContains: &[]string{
 				"Found 0 services to monitor",
-				"Listening on "}},
+				"Listening on ",
+			},
+		},
 		{
 			name: "config with services",
 			file: testYAML_Argus,
 			outputContains: &[]string{
 				"services to monitor:",
-				"release-argus/Argus, Latest Release - ",
-				"Listening on "}},
+				"SERVICE_NAME, Latest Release - ",
+				"Listening on ",
+			},
+		},
 		{
 			name: "config with services and some !active",
 			file: testYAML_Argus_SomeInactive,
 			outputContains: &[]string{
-				"Found 1 services to monitor:"}},
+				"Found 1 services to monitor:",
+			},
+		},
 	}
 
 	for _, tc := range tests {
-		name := tc.name
-		t.Run(name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout and sharing log resultChannel.
-			releaseStdout := test.CaptureLog(logutil.Log)
+			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			tempDir := t.TempDir()
 			file := filepath.Join(tempDir, "config.yml")
 			tc.file(file)
 			resetFlags()
 			configFile = &file
-			accessToken := os.Getenv("GITHUB_TOKEN")
-			_ = os.Setenv("ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN", accessToken)
-			// Add tempDir to database file path.
-			_ = os.Setenv("ARGUS_DATA_DATABASE_FILE", filepath.Join(tempDir, "argus.db"))
-			t.Cleanup(func() { _ = os.Unsetenv("ARGUS_DATA_DATABASE_FILE") })
+			env := map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN": test.GitHubToken(t),
+				"ARGUS_DATA_DATABASE_FILE":                  filepath.Join(tempDir, "argus.db"),
+			}
+			test.SetEnv(t, env)
 			if tc.preStartFunc != nil {
 				tc.preStartFunc(tempDir)
 			}
 
 			resultChannel := make(chan int)
-			// WHEN run is called.
+			// WHEN: run is called.
 			go func() {
 				resultChannel <- run()
 			}()
@@ -105,31 +112,34 @@ func TestRun(t *testing.T) {
 			select {
 			case code := <-resultChannel:
 				exitCode = &code
-			case <-time.After(3 * time.Second):
+			case <-time.After(6 * time.Second):
 				if tc.exitCode != nil {
-					t.Logf("%s\nrun timed out waiting for exit code",
-						packageName)
+					t.Logf("%s\nrun timed out waiting for exit code", packageName)
 				}
 			}
 
-			// THEN the program will have printed everything expected.
+			// THEN: the program will have printed everything expected.
 			stdout := releaseStdout()
-			t.Logf("%s\nstdout: %q",
-				packageName, stdout)
+			t.Logf("%s\nstdout: %q", packageName, stdout)
 			if tc.outputContains != nil {
 				for _, text := range *tc.outputContains {
 					if !strings.Contains(stdout, text) {
-						t.Errorf("%s\n%q couldn't be found in stdout:\n%s",
-							packageName, text, stdout)
+						t.Errorf(
+							"%s\n%q couldn't be found in stdout:\n%s",
+							packageName, text, stdout,
+						)
 					}
 				}
 			}
-			// AND the exit code is as expected.
+
+			// AND: the exit code is as expected.
 			wantCode := test.StringifyPtr(tc.exitCode)
 			gotCode := test.StringifyPtr(exitCode)
 			if wantCode != gotCode {
-				t.Errorf("%s\nexit code mismatch\nwant: %s\ngot:  %s",
-					packageName, wantCode, gotCode)
+				t.Errorf(
+					"%s\nexit code mismatch\ngot:  %s\nwant: %s",
+					packageName, gotCode, wantCode,
+				)
 			}
 		})
 	}

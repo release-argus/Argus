@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,507 +17,645 @@
 package dashboard
 
 import (
-	"strings"
+	"fmt"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestNewOptions(t *testing.T) {
-	// GIVEN a set of input values.
-	tests := map[string]struct {
-		autoApprove  *bool
-		icon         string
-		iconLinkTo   string
-		webURL       string
-		tags         []string
-		defaults     *OptionsDefaults
-		hardDefaults *OptionsDefaults
-		want         *Options
+// ############
+// # DECODING #
+// ############
+
+func TestDecode(t *testing.T) {
+	dashCfg := plainDefaultsConfig(t)
+
+	// GIVEN: data in a given format to Decode into Options.
+	tests := []struct {
+		name         string
+		format, data string
+		want         string
+		errRegex     string
 	}{
-		"all fields set": {
-			autoApprove:  test.BoolPtr(true),
-			icon:         "icon-url",
-			iconLinkTo:   "icon-link",
-			webURL:       "web-url",
-			tags:         []string{"tag1", "tag2"},
-			defaults:     &OptionsDefaults{OptionsBase: OptionsBase{AutoApprove: test.BoolPtr(false)}},
-			hardDefaults: &OptionsDefaults{OptionsBase: OptionsBase{AutoApprove: test.BoolPtr(false)}},
-			want: &Options{
-				OptionsBase:  OptionsBase{AutoApprove: test.BoolPtr(true)},
-				Icon:         "icon-url",
-				IconLinkTo:   "icon-link",
-				WebURL:       "web-url",
-				Tags:         []string{"tag1", "tag2"},
-				Defaults:     &OptionsDefaults{OptionsBase: OptionsBase{AutoApprove: test.BoolPtr(false)}},
-				HardDefaults: &OptionsDefaults{OptionsBase: OptionsBase{AutoApprove: test.BoolPtr(false)}},
-			},
+		{
+			name:   "JSON/filled",
+			format: "json",
+			data: test.TrimJSON(`{
+				"auto_approve": true,
+				"icon": "icon-url",
+				"icon_link_to": "icon-link",
+				"web_url": "web-url",
+				"tags": [
+					"tag1",
+					"tag2"
+				],
+				"other": "foo"
+			}`),
+			want: test.TrimYAML(`
+				auto_approve: true
+				icon: icon-url
+				icon_link_to: icon-link
+				web_url: web-url
+				tags:
+					- tag1
+					- tag2
+			`),
+			errRegex: `^$`,
 		},
-		"defaults": {
-			autoApprove:  nil,
-			icon:         "",
-			iconLinkTo:   "",
-			webURL:       "",
-			tags:         nil,
-			defaults:     nil,
-			hardDefaults: nil,
-			want: &Options{
-				OptionsBase:  OptionsBase{AutoApprove: nil},
-				Icon:         "",
-				IconLinkTo:   "",
-				WebURL:       "",
-				Tags:         nil,
-				Defaults:     nil,
-				HardDefaults: nil,
-			},
+		{
+			name:   "YAML/filled",
+			format: "yaml",
+			data: test.TrimYAML(`
+				auto_approve: true
+				icon: icon-url
+				icon_link_to: icon-link
+				web_url: web-url
+				tags:
+					- tag1
+					- tag2
+				other: foo
+			`),
+			want: test.TrimYAML(`
+				auto_approve: true
+				icon: icon-url
+				icon_link_to: icon-link
+				web_url: web-url
+				tags:
+					- tag1
+					- tag2
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name:   "YAML/bool type mismatch",
+			format: "yaml",
+			data:   `auto_approve: yah`,
+			errRegex: test.TrimYAML(`
+				^dashboard:
+					[^\s]+ .*unmarshal .*
+					[^\s]+ .*auto_approve: yah
+					\s+\^$`,
+			),
+		},
+		{
+			name:   "JSON/bool type mismatch",
+			format: "json",
+			data:   `{"auto_approve": "true"}`,
+			errRegex: test.TrimYAML(`
+				^dashboard:
+					json:.* unmarshal.*$`,
+			),
+		},
+		{
+			name:   "JSON/invalid (trailing comma)",
+			format: "json",
+			data:   `{"auto_approve": "true",}`,
+			errRegex: test.TrimYAML(`
+				^dashboard:
+					json:.* unmarshal.*$`,
+			),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN NewOptions is called with them.
-			got := NewOptions(
-				tc.autoApprove,
-				tc.icon, tc.iconLinkTo,
-				tc.webURL,
-				tc.tags,
-				tc.defaults, tc.hardDefaults)
-
-			// THEN the result is as expected.
-			gotStr := util.ToJSONString(got)
-			wantStr := util.ToJSONString(tc.want)
-			if gotStr != wantStr {
-				t.Errorf("%s\nwant: %q\ngot:  %v",
-					packageName, wantStr, gotStr)
+			if _, _, testErr := test.AssertDecode(
+				t,
+				func(format string, data []byte) (*Options, error) {
+					return Decode(
+						format, data,
+						dashCfg,
+					)
+				},
+				tc.format, tc.data,
+				func(v *Options) string { return decode.ToYAMLString(v, "") },
+				tc.want,
+				tc.errRegex,
+				packageName,
+				"Decode",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
 }
 
-func TestOptions_UnmarshalJSON(t *testing.T) {
-	// GIVEN a JSON string that represents a Options.
-	tests := map[string]struct {
-		jsonData string
-		errRegex string
-		want     *Options
+func TestOptions_Unmarshal(t *testing.T) {
+	// GIVEN: a string in a given format to unmarshal into Options.
+	tests := []struct {
+		name         string
+		format, data string
+		errRegex     string
+		want         string
 	}{
-		"invalid JSON": {
-			jsonData: `{invalid: json}`,
+		{
+			name:   "JSON/empty",
+			format: "json",
+			data:   "",
+			want:   "",
 			errRegex: test.TrimYAML(`
-				^failed to unmarshal service\.Dashboard:
-					invalid character.*$`),
-			want: &Options{},
+				^jsontext:
+					unexpected EOF$`,
+			),
 		},
-		"tags - []string": {
-			jsonData: `{
+		{
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     "{}",
+			want:     "{}\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "YAML/empty",
+			format:   "yaml",
+			data:     "",
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
+			name:     "JSON/invalid",
+			format:   "json",
+			data:     `{invalid: json}`,
+			errRegex: `invalid character`,
+			want:     "",
+		},
+		{
+			name:   "YAML/invalid",
+			format: "yaml",
+			data:   `notMappingHere`,
+			errRegex: test.TrimYAML(`
+				^[^\s]+.*string was used where mapping is expected
+				[^\s]+.*notMappingHere.*
+				\s+\^$`,
+			),
+		},
+		{
+			name:   "JSON/tags/[]string",
+			format: "json",
+			data: test.TrimJSON(`{
 				"tags": [
 					"foo",
 					"bar"
 				]
-			}`,
+			}`),
 			errRegex: `^$`,
-			want: &Options{
-				Tags: []string{"foo", "bar"},
-			},
+			want: test.TrimYAML(`
+				tags:
+					- foo
+					- bar
+			`),
 		},
-		"tags - string": {
-			jsonData: `{
-				"tags": "foo"
-			}`,
+		{
+			name:   "YAML/tags/[]string",
+			format: "yaml",
+			data: test.TrimYAML(`
+				tags:
+					- foo
+					- bar
+			`),
 			errRegex: `^$`,
-			want: &Options{
-				Tags: []string{"foo"},
-			},
+			want: test.TrimYAML(`
+				tags:
+					- foo
+					- bar
+			`),
 		},
-		"tags - invalid": {
-			jsonData: `{
+		{
+			name:   "JSON/tags/[]dict",
+			format: "json",
+			data: test.TrimJSON(`{
+				"tags": [
+					{"a": "foo"},
+					{"b": "bar"}
+				]
+			}`),
+			errRegex: `^tags: expected a string inside the list, got .*$`,
+		},
+		{
+			name:   "YAML/tags/[]dict",
+			format: "yaml",
+			data: test.TrimYAML(`
+				tags:
+				- {foo}
+				- {bar}
+			`),
+			errRegex: `^tags: expected a string inside the list, got .*$`,
+		},
+		{
+			name:     "JSON/tags/string",
+			format:   "json",
+			data:     `{"tags": "foo"}`,
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				tags:
+					- foo
+			`),
+		},
+		{
+			name:     "YAML/tags/string",
+			format:   "yaml",
+			data:     `tags: foo`,
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				tags:
+					- foo
+			`),
+		},
+		{
+			name:   "JSON/tags/invalid",
+			format: "json",
+			data: test.TrimJSON(`{
 				"tags": {
 					"foo": "bar"
 				}
-			}`,
-			errRegex: test.TrimYAML(`
-				^failed to unmarshal service\.Dashboard:
-					tags: <invalid>.*$`),
+			}`),
+			errRegex: `^tags: expected a string or a list of strings, got map\[string\]interface.*$`,
+		},
+		{
+			name:   "YAML/tags/invalid",
+			format: "yaml",
+			data: test.TrimYAML(`
+				tags:
+					foo: bar
+			`),
+			errRegex: `^tags: expected a string or a list of strings, got map\[string\]interface.*$`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Default to an empty Options.
-			dashboardOptions := &Options{}
-
-			// WHEN the JSON is unmarshalled into a Options.
-			err := dashboardOptions.UnmarshalJSON([]byte(test.TrimJSON(tc.jsonData)))
-
-			// THEN the error is as expected.
-			e := util.ErrorToString(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
-			}
-			// AND the result is as expected.
-			gotString := util.ToJSONString(dashboardOptions)
-			wantString := util.ToJSONString(tc.want)
-			if tc.want != nil && gotString != wantString {
-				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
-					packageName, wantString, gotString)
+			if _, _, testErr := test.AssertDecode(
+				t,
+				func(format string, data []byte) (*Options, error) {
+					var zero Options
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
+				tc.format, tc.data,
+				func(v *Options) string { return decode.ToYAMLString(v, "") },
+				tc.want,
+				tc.errRegex,
+				packageName,
+				"Options",
+			); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
 }
 
-func TestOptions_UnmarshalYAML(t *testing.T) {
-	tests := map[string]struct {
-		yamlData string
-		errRegex string
-		want     *Options
+// #########
+// # STATE #
+// #########
+
+func TestOptions_IsZero(t *testing.T) {
+	// GIVEN: Options.
+	tests := []struct {
+		name string
+		opt  *Options
+		want bool
 	}{
-		"invalid YAML": {
-			yamlData: `invalid yaml`,
-			errRegex: test.TrimYAML(`
-				^failed to unmarshal service\.Dashboard:
-					line \d: cannot unmarshal.*$`),
-			want: &Options{},
+		{
+			name: "empty",
+			opt:  &Options{},
+			want: true,
 		},
-		"tags - []string": {
-			yamlData: `
-				tags:
-				- foo
-				- bar
-			`,
-			errRegex: `^$`,
-			want: &Options{
-				Tags: []string{"foo", "bar"},
+		{
+			name: "ignored fields",
+			opt: &Options{
+				iconExpanded:       test.Ptr("foo"),
+				iconNotify:         test.Ptr("bar"),
+				iconLinkToExpanded: test.Ptr("baz"),
+				webURLExpanded:     test.Ptr("qux"),
+				Defaults: &Defaults{
+					OptionsBase{
+						Icon: "foo",
+					},
+				},
+				HardDefaults: &Defaults{
+					OptionsBase{
+						Icon: "foo",
+					},
+				},
 			},
+			want: true,
 		},
-		"tags - string": {
-			yamlData: `
-				tags: foo
-			`,
-			errRegex: `^$`,
-			want: &Options{
+		{
+			name: "non-empty/AutoApprove",
+			opt: &Options{
+				OptionsBase: OptionsBase{
+					AutoApprove: test.Ptr(true),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Icon",
+			opt: &Options{
+				OptionsBase: OptionsBase{
+					Icon: "foo",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/IconLinkTo",
+			opt: &Options{
+				OptionsBase: OptionsBase{
+					IconLinkTo: "foo",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/WebURL",
+			opt: &Options{
+				OptionsBase: OptionsBase{
+					WebURL: "foo",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Tags",
+			opt: &Options{
 				Tags: []string{"foo"},
 			},
+			want: false,
 		},
-		"tags - invalid": {
-			yamlData: `
-				tags:
-					foo: bar
-			`,
-			errRegex: test.TrimYAML(`
-				^failed to unmarshal service\.Dashboard:
-					tags: <invalid>.*$`),
+		{
+			name: "non-empty/all",
+			opt: &Options{
+				OptionsBase: OptionsBase{
+					AutoApprove: test.Ptr(true),
+					Icon:        "foo",
+					IconLinkTo:  "bar",
+					WebURL:      "baz",
+				},
+				Tags: []string{"foo"},
+			},
+			want: false,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Default to an empty Options.
-			dashboardOptions := &Options{}
+			// WHEN: IsZero() is called on it.
+			got := tc.opt.IsZero()
 
-			// WHEN the YAML is unmarshalled into a Options.
-			err := yaml.Unmarshal([]byte(test.TrimYAML(tc.yamlData)), &dashboardOptions)
-
-			// THEN the error is as expected.
-			e := util.ErrorToString(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
-			}
-			// AND the result is as expected.
-			gotStr := util.ToJSONString(dashboardOptions)
-			wantStr := util.ToJSONString(tc.want)
-			if tc.want != nil && gotStr != wantStr {
-				t.Errorf("%s\nstringified mismatch\nwant: %q\ngot:  %q",
-					packageName, wantStr, gotStr)
+			// THEN: it should return the expected value.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nOptions.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestOptions_Copy(t *testing.T) {
-	// GIVEN an Options.
-	tests := map[string]struct {
+	// GIVEN: an Options.
+	tests := []struct {
+		name    string
 		options *Options
 		want    *Options
 	}{
-		"nil options": {
+		{
+			name:    "nil options",
 			options: nil,
 			want:    nil,
 		},
-		"all fields set": {
+		{
+			name: "filled",
 			options: &Options{
 				OptionsBase: OptionsBase{
-					AutoApprove: test.BoolPtr(true),
+					AutoApprove: test.Ptr(true),
+					Icon:        "icon-url",
+					IconLinkTo:  "icon-link",
+					WebURL:      "web-url",
 				},
-				Icon:               "icon-url",
-				IconLinkTo:         "icon-link",
-				WebURL:             "web-url",
-				iconExpanded:       test.StringPtr("expanded-icon-url"),
-				iconNotify:         test.StringPtr("notify-icon-url"),
-				iconLinkToExpanded: test.StringPtr("expanded-icon-link"),
-				webURLExpanded:     test.StringPtr("expanded-web-url"),
+				iconExpanded:       test.Ptr("expanded-icon-url"),
+				iconNotify:         test.Ptr("notify-icon-url"),
+				iconLinkToExpanded: test.Ptr("expanded-icon-link"),
+				webURLExpanded:     test.Ptr("expanded-web-url"),
 			},
 			want: &Options{
 				OptionsBase: OptionsBase{
-					AutoApprove: test.BoolPtr(true),
+					AutoApprove: test.Ptr(true),
+					Icon:        "icon-url",
+					IconLinkTo:  "icon-link",
+					WebURL:      "web-url",
 				},
-				Icon:               "icon-url",
-				IconLinkTo:         "icon-link",
-				WebURL:             "web-url",
-				iconExpanded:       test.StringPtr("expanded-icon-url"),
-				iconNotify:         test.StringPtr("notify-icon-url"),
-				iconLinkToExpanded: test.StringPtr("expanded-icon-link"),
-				webURLExpanded:     test.StringPtr("expanded-web-url"),
+				iconExpanded:       test.Ptr("expanded-icon-url"),
+				iconNotify:         test.Ptr("notify-icon-url"),
+				iconLinkToExpanded: test.Ptr("expanded-icon-link"),
+				webURLExpanded:     test.Ptr("expanded-web-url"),
 			},
 		},
-		"some fields nil": {
+		{
+			name: "some fields nil",
 			options: &Options{
 				OptionsBase: OptionsBase{
 					AutoApprove: nil,
+					Icon:        "icon-url",
+					IconLinkTo:  "",
+					WebURL:      "web-url",
 				},
-				Icon:         "icon-url",
-				iconExpanded: test.StringPtr("hi"),
-				IconLinkTo:   "",
-				WebURL:       "web-url",
+				iconExpanded: test.Ptr("hi"),
 			},
 			want: &Options{
 				OptionsBase: OptionsBase{
 					AutoApprove: nil,
+					Icon:        "icon-url",
+					IconLinkTo:  "",
+					WebURL:      "web-url",
 				},
-				Icon:         "icon-url",
-				iconExpanded: test.StringPtr("hi"),
-				IconLinkTo:   "",
-				WebURL:       "web-url",
+				iconExpanded: test.Ptr("hi"),
 			},
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Copy is called.
-			got := tc.options.Copy()
+			// WHEN: Copy is called.
+			result := tc.options.Copy()
 
-			// THEN the copied Options matches the expected result.
-			gotStr := util.ToJSONString(got)
-			wantStr := util.ToJSONString(tc.want)
-			if gotStr != wantStr {
-				t.Errorf("%s'nCopy() mismatch\nwant: %q\ngot:  %q",
-					packageName, wantStr, gotStr)
+			prefix := fmt.Sprintf("%s\nOptions.Copy()", packageName)
+
+			// THEN: nil is returned if the Options are nil.
+			if result == nil {
+				if tc.options != nil {
+					t.Errorf(
+						"%s pointer mismatch\ngot: nil\nwant non-nil",
+						prefix,
+					)
+				}
+				return
+			}
+			// THEN: the returned struct is at a different address.
+			if result == tc.options {
+				t.Errorf(
+					"%s gave the same address\ngot:  %p\nwant: NOT %p",
+					prefix, result, tc.options,
+				)
+			}
+			// THEN: the copied Options matches the expected result.
+			want := decode.ToJSONString(tc.want)
+			if got := decode.ToJSONString(result); got != want {
+				t.Errorf(
+					"%s mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
 			}
 		})
 	}
 }
 
+// ##########
+// # VALUES #
+// ##########
+
 func TestOptions_GetAutoApprove(t *testing.T) {
-	// GIVEN a Options.
-	tests := map[string]struct {
+	// GIVEN: a Options.
+	tests := []struct {
+		name                                      string
 		rootValue, defaultValue, hardDefaultValue *bool
 		want                                      bool
 	}{
-		"root overrides all": {
+		{
+			name:             "root overrides all",
 			want:             true,
-			rootValue:        test.BoolPtr(true),
-			defaultValue:     test.BoolPtr(false),
-			hardDefaultValue: test.BoolPtr(false)},
-		"default overrides hardDefault": {
+			rootValue:        test.Ptr(true),
+			defaultValue:     test.Ptr(false),
+			hardDefaultValue: test.Ptr(false),
+		},
+		{
+			name:             "default overrides hardDefault",
 			want:             true,
-			defaultValue:     test.BoolPtr(true),
-			hardDefaultValue: test.BoolPtr(false)},
-		"hardDefault is last resort": {
+			defaultValue:     test.Ptr(true),
+			hardDefaultValue: test.Ptr(false),
+		},
+		{
+			name:             "hardDefault is last resort",
 			want:             true,
-			hardDefaultValue: test.BoolPtr(true)},
+			hardDefaultValue: test.Ptr(true),
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
 			dashboard := Options{}
 			dashboard.AutoApprove = tc.rootValue
-			defaults := NewOptionsDefaults(tc.defaultValue)
-			dashboard.Defaults = &defaults
-			hardDefaultValues := NewOptionsDefaults(tc.hardDefaultValue)
-			dashboard.HardDefaults = &hardDefaultValues
+			defaults, _ := DecodeDefaults("yaml", nil)
+			defaults.AutoApprove = tc.defaultValue
+			dashboard.Defaults = defaults
+			hardDefaults, _ := DecodeDefaults("yaml", nil)
+			hardDefaults.AutoApprove = tc.hardDefaultValue
+			dashboard.HardDefaults = hardDefaults
 
-			// WHEN GetAutoApprove is called.
+			// WHEN: GetAutoApprove is called.
 			got := dashboard.GetAutoApprove()
 
-			// THEN the function returns the correct result.
+			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Errorf("%s\nwant: %t\ngot:  %t",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s\nOptions.GetAutoApprove() mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestOptions_SetFallbackIcon(t *testing.T) {
-	// GIVEN an Options and a fallback icon URL.
-	tests := map[string]struct {
+	// GIVEN: an Options and a fallback icon URL.
+	tests := []struct {
+		name              string
 		initialIconNotify *string
 		newIconNotify     string
 		want              *string
 	}{
-		"set new fallback icon": {
+		{
+			name:              "set new fallback icon",
 			initialIconNotify: nil,
 			newIconNotify:     "new-icon-url",
-			want:              test.StringPtr("new-icon-url"),
+			want:              test.Ptr("new-icon-url"),
 		},
-		"overwrite existing fallback icon": {
-			initialIconNotify: test.StringPtr("old-icon-url"),
+		{
+			name:              "overwrite existing fallback icon",
+			initialIconNotify: test.Ptr("old-icon-url"),
 			newIconNotify:     "new-icon-url",
-			want:              test.StringPtr("new-icon-url"),
+			want:              test.Ptr("new-icon-url"),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			options := &Options{
 				iconNotify: tc.initialIconNotify,
 			}
 
-			// WHEN SetFallbackIcon is called with a new icon URL.
+			// WHEN: SetFallbackIcon is called with a new icon URL.
 			options.SetFallbackIcon(tc.newIconNotify)
 
-			// THEN the fallback icon is updated as expected.
+			// THEN: the fallback icon is updated as expected.
 			if options.iconNotify == nil || *options.iconNotify != *tc.want {
-				t.Errorf("%s\nvalue mismatch\nwant: %q\ngot:  %q",
-					packageName, *tc.want, util.DereferenceOrDefault(options.iconNotify))
-			}
-		})
-	}
-}
-
-func TestOptions_GetIconLinkTo(t *testing.T) {
-	// GIVEN an Options with various iconLinkTo-related fields set.
-	tests := map[string]struct {
-		iconLinkToExpanded *string
-		iconLinkTo         string
-		want               string
-	}{
-		"iconLinkToExpanded overrides all": {
-			iconLinkToExpanded: test.StringPtr("expanded-icon-link"),
-			iconLinkTo:         "default-icon-link",
-			want:               "expanded-icon-link",
-		},
-		"iconLinkTo is last resort": {
-			iconLinkToExpanded: nil,
-			iconLinkTo:         "default-icon-link",
-			want:               "default-icon-link",
-		},
-		"empty string returned if both nil/empty": {
-			iconLinkToExpanded: nil,
-			iconLinkTo:         "",
-			want:               "",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			options := &Options{
-				iconLinkToExpanded: tc.iconLinkToExpanded,
-				IconLinkTo:         tc.iconLinkTo,
-			}
-
-			// WHEN GetIconLinkTo is called.
-			got := options.GetIconLinkTo()
-
-			// THEN the returned icon link matches the expected result.
-			if got != tc.want {
-				t.Errorf("%s\nresult mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestOptions_GetWebURL(t *testing.T) {
-	// GIVEN an Options with various webURL-related fields set.
-	tests := map[string]struct {
-		webURLExpanded *string
-		webURL         string
-		want           string
-	}{
-		"webURLExpanded overrides all": {
-			webURLExpanded: test.StringPtr("expanded-web-url"),
-			webURL:         "default-web-url",
-			want:           "expanded-web-url",
-		},
-		"webURL is last resort": {
-			webURLExpanded: nil,
-			webURL:         "default-web-url",
-			want:           "default-web-url",
-		},
-		"empty string returned if both nil/empty": {
-			webURLExpanded: nil,
-			webURL:         "",
-			want:           "",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			options := &Options{
-				webURLExpanded: tc.webURLExpanded,
-				WebURL:         tc.webURL,
-			}
-
-			// WHEN GetWebURL is called.
-			got := options.GetWebURL()
-
-			// THEN the returned icon link matches the expected result.
-			if got != tc.want {
-				t.Errorf("%s\nresult mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s\nOptions.SetFallbackIcon(%q) value mismatch\ngot:  %q\nwant: %q",
+					packageName, tc.newIconNotify, util.DerefOrZero(options.iconNotify), *tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestOptions_GetIcon(t *testing.T) {
-	// GIVEN an Options with various icon-related fields set.
-	tests := map[string]struct {
+	// GIVEN: an Options with various icon-related fields set.
+	tests := []struct {
+		name         string
 		iconExpanded *string
 		icon         string
 		iconNotify   *string
 		want         string
 	}{
-		"iconExpanded overrides all": {
-			iconExpanded: test.StringPtr("expanded-icon"),
+		{
+			name:         "iconExpanded overrides all",
+			iconExpanded: test.Ptr("expanded-icon"),
 			icon:         "default-icon",
-			iconNotify:   test.StringPtr("notify-icon"),
+			iconNotify:   test.Ptr("notify-icon"),
 			want:         "expanded-icon",
 		},
-		"icon overrides iconNotify": {
+		{
+			name:         "icon overrides iconNotify",
 			iconExpanded: nil,
 			icon:         "default-icon",
-			iconNotify:   test.StringPtr("notify-icon"),
+			iconNotify:   test.Ptr("notify-icon"),
 			want:         "default-icon",
 		},
-		"iconNotify is last resort": {
+		{
+			name:         "iconNotify is last resort",
 			iconExpanded: nil,
 			icon:         "",
-			iconNotify:   test.StringPtr("notify-icon"),
+			iconNotify:   test.Ptr("notify-icon"),
 			want:         "notify-icon",
 		},
-		"empty string returned if all nil/empty": {
+		{
+			name:         "empty string returned if all nil or empty",
 			iconExpanded: nil,
 			icon:         "",
 			iconNotify:   nil,
@@ -525,65 +663,244 @@ func TestOptions_GetIcon(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			options := &Options{
+				OptionsBase: OptionsBase{
+					Icon: tc.icon,
+				},
 				iconExpanded: tc.iconExpanded,
-				Icon:         tc.icon,
 				iconNotify:   tc.iconNotify,
 			}
 
-			// WHEN GetIcon is called.
+			// WHEN: GetIcon is called.
 			got := options.GetIcon()
 
-			// THEN the returned icon matches the expected result.
+			// THEN: the returned icon matches the expected result.
 			if got != tc.want {
-				t.Errorf("%s\nresult mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s\nOptions.GetIcon() mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
-func TestOptions_CheckValues(t *testing.T) {
-	// GIVEN Options.
-	tests := map[string]struct {
-		dashboardOptions *Options
-		errRegex         string
+func TestOptions_GetIconLinkTo(t *testing.T) {
+	// GIVEN: an Options with various iconLinkTo-related fields set.
+	tests := []struct {
+		name               string
+		iconLinkToExpanded *string
+		iconLinkTo         string
+		want               string
 	}{
-		"nil": {
-			errRegex:         `^$`,
-			dashboardOptions: nil},
-		"invalid web_url template": {
-			errRegex:         `^web_url: ".*" <invalid>.*$`,
-			dashboardOptions: &Options{WebURL: "https://release-argus.io/{{ version }"}},
-		"valid web_url template": {
-			errRegex:         `^$`,
-			dashboardOptions: &Options{WebURL: "https://release-argus.io"}},
+		{
+			name:               "iconLinkToExpanded overrides all",
+			iconLinkToExpanded: test.Ptr("expanded-icon-link"),
+			iconLinkTo:         "default-icon-link",
+			want:               "expanded-icon-link",
+		},
+		{
+			name:               "iconLinkTo is last resort",
+			iconLinkToExpanded: nil,
+			iconLinkTo:         "default-icon-link",
+			want:               "default-icon-link",
+		},
+		{
+			name:               "empty string returned if both nil or empty",
+			iconLinkToExpanded: nil,
+			iconLinkTo:         "",
+			want:               "",
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-			// WHEN CheckValues is called on it.
-			err := tc.dashboardOptions.CheckValues("")
+			options := &Options{
+				OptionsBase: OptionsBase{
+					IconLinkTo: tc.iconLinkTo,
+				},
+				iconLinkToExpanded: tc.iconLinkToExpanded,
+			}
 
-			// THEN the err is what we expect.
-			e := util.ErrorToString(err)
-			lines := strings.Split(e, "\n")
-			wantLines := strings.Count(tc.errRegex, "\n")
-			if wantLines > len(lines) {
-				t.Fatalf("%s\nmismatch\nwant: %d lines of error:\n%q\ngot:  %d\n\nlines:\n%v\n\nstdout: %q",
-					packageName, wantLines, tc.errRegex, len(lines), lines, e)
-				return
+			// WHEN: GetIconLinkTo is called.
+			got := options.GetIconLinkTo()
+
+			// THEN: the returned icon link matches the expected result.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nOptions.GetIconLinkTo() mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
 			}
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
-				return
+		})
+	}
+}
+
+func TestOptions_GetWebURL(t *testing.T) {
+	// GIVEN: an Options with various webURL-related fields set.
+	tests := []struct {
+		name           string
+		webURLExpanded *string
+		webURL         string
+		want           string
+	}{
+		{
+			name:           "webURLExpanded overrides all",
+			webURLExpanded: test.Ptr("expanded-web-url"),
+			webURL:         "default-web-url",
+			want:           "expanded-web-url",
+		},
+		{
+			name:           "webURL is last resort",
+			webURLExpanded: nil,
+			webURL:         "default-web-url",
+			want:           "default-web-url",
+		},
+		{
+			name:           "empty string returned if both nil or empty",
+			webURLExpanded: nil,
+			webURL:         "",
+			want:           "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			options := &Options{
+				OptionsBase: OptionsBase{
+					WebURL: tc.webURL,
+				},
+				webURLExpanded: tc.webURLExpanded,
 			}
+
+			// WHEN: GetWebURL is called.
+			got := options.GetWebURL()
+
+			// THEN: the returned icon link matches the expected result.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nOptions.GetWebURL() mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+// ############
+// # DEFAULTS #
+// ############
+
+func TestOptions_SetDefaults(t *testing.T) {
+	// GIVEN: Options.
+	tests := []struct {
+		name    string
+		options *Options
+	}{
+		{
+			name:    "empty",
+			options: &Options{},
+		},
+		{
+			name: "existing defaults - hardDefaults overwritten",
+			options: &Options{
+				Defaults:     &Defaults{},
+				HardDefaults: &Defaults{},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND: two sets of Defaults.
+			var defaults, hardDefaults *Defaults
+
+			// WHEN: SetDefaults is called.
+			tc.options.SetDefaults(
+				defaults,
+				hardDefaults,
+			)
+
+			prefix := fmt.Sprintf(
+				"%s\nOptions SetDefaults(defaults=%p, hardDefaults=%p)",
+				packageName, defaults, hardDefaults,
+			)
+
+			// THEN: the defaults are set as expected.
+			if tc.options.Defaults != defaults {
+				t.Errorf(
+					"%s .Defaults pointer mismatch\ngot:  %v\nwant: %v",
+					prefix, tc.options.Defaults, defaults,
+				)
+			}
+
+			// AND: the hardDefaults are set as expected.
+			if tc.options.HardDefaults != hardDefaults {
+				t.Errorf(
+					"%s .HardDefaults pointer mismatch\ngot:  %v\nwant: %v",
+					prefix, tc.options.HardDefaults, hardDefaults,
+				)
+			}
+		})
+	}
+}
+
+// ##############
+// # VALIDATION #
+// ##############
+
+func TestOptions_CheckValues(t *testing.T) {
+	// GIVEN: Options.
+	tests := []struct {
+		name     string
+		input    *Options
+		errRegex string
+	}{
+		{
+			name:     "nil",
+			errRegex: `^$`,
+			input:    (*Options)(nil),
+		},
+		{
+			name:     "invalid web_url template",
+			errRegex: `^web_url: ".*" <invalid>.*$`,
+			input: &Options{
+				OptionsBase: OptionsBase{
+					WebURL: "https://release-argus.io/{{ version }",
+				},
+			},
+		},
+		{
+			name:     "valid web_url template",
+			errRegex: `^$`,
+			input: &Options{
+				OptionsBase: OptionsBase{
+					WebURL: "https://release-argus.io",
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_ = test.AssertCheckValuesWithError(
+				t,
+				packageName,
+				tc.errRegex,
+				tc.input.CheckValues,
+			)
 		})
 	}
 }

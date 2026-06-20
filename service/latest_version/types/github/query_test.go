@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,496 +18,219 @@
 package github
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"gopkg.in/yaml.v3"
+	"github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/util/errfmt"
 
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
-	"github.com/release-argus/Argus/test"
+	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/util/polymorphic"
 )
 
-func TestQuery(t *testing.T) {
-	tLookup := testLookup(false)
-	tLookup.URL = "release-argus/.github"
-	tLookup.Query(false, logutil.LogFrom{})
-	emptyReleasesETag := tLookup.data.eTag
-
-	type statusVars struct {
-		deployedVersion   string
-		latestVersion     string
-		wantLatestVersion *string
-	}
-	type want struct {
-		stdoutRegex string
-		errRegex    string
-	}
-	// GIVEN a Lookup.
-	tests := map[string]struct {
-		overrides             string
-		overrideETag          *string
-		nonSemanticVersioning bool
-		status                statusVars
-		want                  want
-	}{
-		"invalid url": {
-			overrides: test.TrimYAML(`
-				url: "release-argus	Argus"
-			`),
-			want: want{
-				errRegex: `invalid control character in URL`},
-		},
-		"query that gets a non-semantic version - not allowed": {
-			overrides: test.TrimYAML(`
-				url: release-argus/test
-				url_commands:
-					- type: regex
-						regex: 'ver[0-9.]+'
-			`),
-			want: want{
-				errRegex: `no releases were found matching the url_commands`},
-		},
-		"query that gets a non-semantic version - allowed": {
-			overrides: test.TrimYAML(`
-				url: release-argus/test
-				url_commands:
-					- type: regex
-						regex: 'ver[0-9.]+'
-			`),
-			nonSemanticVersioning: true,
-			status: statusVars{
-				wantLatestVersion: test.StringPtr("ver1.1.1")},
-			want: want{
-				errRegex: `^$`},
-		},
-		"changed to semantic_versioning but had a non-semantic deployed_version": {
-			status: statusVars{
-				deployedVersion: "1.2.3.4"},
-			want: want{
-				errRegex: `^$`},
-		},
-		"regex_content mismatch": {
-			overrides: test.TrimYAML(`
-				require:
-					regex_content: "argus[0-9]+.exe"
-			`),
-			want: want{
-				stdoutRegex: `regex "[^"]+" not matched on content for version`,
-				errRegex: test.TrimYAML(`
-					^no releases were found matching the require field.*
-					regex "[^"]+" not matched on content for version "[^"]+"$`)},
-		},
-		"regex_content match": {
-			overrides: test.TrimYAML(`
-				require:
-					regex_content: "{{ version }}.linux-amd64"
-			`),
-			nonSemanticVersioning: true,
-			want: want{
-				errRegex: `^$`},
-		},
-		"command fail": {
-			overrides: test.TrimYAML(`
-				require:
-					command: ["false"]
-			`),
-			want: want{
-				stdoutRegex: `exit status 1`,
-				errRegex: test.TrimYAML(`
-					^no releases were found matching the require field.*
-					command failed: .*`)},
-		},
-		"command pass": {
-			overrides: test.TrimYAML(`
-				require:
-					command: ["true"]
-			`),
-			want: want{
-				errRegex: `^$`},
-		},
-		"docker tag mismatch": {
-			overrides: test.TrimYAML(`
-				require:
-					docker:
-						type: ghcr
-						image: release-argus/argus
-						tag: 0.9.0-beta
-						token: ` + os.Getenv("GH_TOKEN") + `
-			`),
-			want: want{
-				stdoutRegex: `manifest unknown`,
-				errRegex: test.TrimYAML(`
-					^no releases were found matching the require field.*
-					release-argus/argus:0.9.0-beta .*`)},
-		},
-		"docker tag match": {
-			overrides: test.TrimYAML(`
-				require:
-					docker:
-						type: ghcr
-						image: release-argus/argus
-						tag: 0.9.0
-						token: ` + os.Getenv("GH_TOKEN") + `
-			`),
-			want: want{
-				errRegex: `^$`},
-		},
-		"regex_version mismatch": {
-			overrides: test.TrimYAML(`
-				require:
-					regex_version: "ver([0-9.]+)"
-			`),
-			want: want{
-				stdoutRegex: `regex "[^"]+" not matched on version`,
-				errRegex: test.TrimYAML(`
-					^no releases were found matching the require field.*
-					regex "[^"]+" not matched on version "[^"]+"$`)},
-		},
-		"urlCommand regex mismatch": {
-			overrides: test.TrimYAML(`
-				url_commands:
-					- type: regex
-						regex: 'x([0-9.]+)'
-			`),
-			want: want{
-				errRegex:    `no releases were found matching the url_commands`,
-				stdoutRegex: `regex "[^"]+" didn't return any matches`},
-		},
-		"valid semantic version query": {
-			overrides: test.TrimYAML(`
-				url: release-argus/test
-				url_commands:
-					- type: regex
-						regex: 'ver([0-9.]+)'
-			`),
-			want: want{
-				errRegex: `^$`},
-		},
-		"older version found": {
-			overrides: test.TrimYAML(`
-				url_commands:
-					- type: regex
-						regex: '([0-9.]+)'
-			`),
-			status: statusVars{
-				latestVersion:   "0.0.0",
-				deployedVersion: "9.9.9"},
-			want: want{
-				errRegex: `queried version .* is less than the deployed version`},
-		},
-		"newer version found": {
-			overrides: test.TrimYAML(`
-				url: release-argus/test
-				url_commands:
-					- type: regex
-						regex: '([0-9.]+)'
-			`),
-			status: statusVars{
-				latestVersion:     "1.1.0",
-				wantLatestVersion: test.StringPtr("1.1.1")},
-			want: want{
-				stdoutRegex: `New Release - "[^"]+"`,
-				errRegex:    `^$`},
-		},
-		"same version found": {
-			overrides: test.TrimYAML(`
-				url: release-argus/test
-				url_commands:
-					- type: regex
-						regex: '([0-9.]+)'
-			`),
-			status: statusVars{
-				latestVersion:     "1.1.1",
-				wantLatestVersion: test.StringPtr("1.1.1")},
-			want: want{
-				errRegex: `^$`},
-		},
-		"repo that uses tags, not releases - has tags": {
-			overrides: test.TrimYAML(`
-				url: "release-argus/test"
-			`),
-			status: statusVars{
-				wantLatestVersion: test.StringPtr("1.1.1")},
-			want: want{
-				errRegex:    `^$`,
-				stdoutRegex: `no tags found on /releases, trying /tags`},
-		},
-		"repo that uses tags, not releases - no tags": {
-			overrides: test.TrimYAML(`
-				url: "release-argus/.github"
-			`),
-			overrideETag: &emptyReleasesETag,
-			want: want{
-				errRegex:    `no releases were found matching the url_commands`,
-				stdoutRegex: `no tags found on /releases, trying /tags`},
-		},
-		"repo that uses tags, not releases - no tags - emptyListETag changed": {
-			overrides: test.TrimYAML(`
-				url: "release-argus/.github"
-			`),
-			overrideETag: test.StringPtr(""),
-			want: want{
-				errRegex:    `no releases were found`,
-				stdoutRegex: `/releases gave .*, trying /tags`},
-		},
-		"version from 2nd page": {
-			overrides: test.TrimYAML(`
-				url: "release-argus/test-pagination"
-			`),
-			overrideETag: test.StringPtr(""),
-			want: want{
-				stdoutRegex: `on page 1`},
-		},
-		"no access token": {
-			overrides: test.TrimYAML(`
-				access_token: null
-			`),
-			want: want{
-				errRegex: `^$`},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-
-			try := 0
-			temporaryFailureInNameResolution := true
-			for temporaryFailureInNameResolution != false {
-				releaseStdout := test.CaptureLog(logutil.Log)
-				try++
-				temporaryFailureInNameResolution = false
-				lookup := testLookup(false)
-				if strings.Contains(tc.overrides, "access_token: null") {
-					lookup.HardDefaults.AccessToken = ""
-				}
-				lookup.Status.ServiceInfo.ID = name
-				err := yaml.Unmarshal([]byte(tc.overrides), lookup)
-				if err != nil {
-					t.Fatalf("%s\nfailed to unmarshal overrides: %v",
-						packageName, err)
-				}
-				*lookup.Options.SemanticVersioning = !tc.nonSemanticVersioning
-				lookup.Status.SetLatestVersion(tc.status.latestVersion, "", false)
-				lookup.Status.SetDeployedVersion(tc.status.deployedVersion, "", false)
-				// In case require is non-nil, Init to give it Status.
-				lookup.Init(
-					lookup.Options,
-					lookup.Status,
-					lookup.Defaults, lookup.HardDefaults)
-				// Clear ETag/Releases if URL changed.
-				if tc.overrideETag != nil {
-					lookup.data.eTag = *tc.overrideETag
-				}
-
-				// WHEN Query is called on it.
-				_, err = lookup.Query(true, logutil.LogFrom{})
-
-				// THEN any err is expected.
-				stdout := releaseStdout()
-				e := util.ErrorToString(err)
-				if !util.RegexCheck(tc.want.errRegex, e) {
-					if strings.Contains(e, "context deadline exceeded") {
-						temporaryFailureInNameResolution = true
-						if try != 3 {
-							time.Sleep(time.Second)
-							continue
-						}
-					}
-					t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.want.errRegex, e)
-				}
-				// AND the stdout contains the expected strings.
-				if !util.RegexCheck(tc.want.stdoutRegex, stdout) {
-					t.Fatalf("%s\nstdout mismatch\n%q\nnot found in:\n%q",
-						packageName, tc.want.stdoutRegex, stdout)
-				}
-				// AND the LatestVersion is as expected.
-				if tc.status.wantLatestVersion != nil &&
-					*tc.status.wantLatestVersion != lookup.Status.LatestVersion() {
-					t.Fatalf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
-						packageName, *tc.status.wantLatestVersion, lookup.Status.LatestVersion())
-				}
-			}
-		})
-	}
-}
-
-func TestHTTPRequest(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
+func TestLookup_HTTPRequest(t *testing.T) {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name     string
 		failing  bool
 		url      string
 		eTag     *string
 		nextPage int
 		errRegex string
 	}{
-		"invalid url": {
+		{
+			name:     "invalid url",
 			url:      "invalid://	test",
 			errRegex: `invalid control character in URL`,
 		},
-		"unknown url": {
+		{
+			name:     "unknown url",
 			url:      "https://release-argus.invalid-tld",
 			errRegex: `no such host`,
 		},
-		"valid url": {
-			url:      "release-argus/Argus",
+		{
+			name:     "valid url",
+			url:      test.ArgusGitHubRepo,
 			errRegex: `^$`,
 			nextPage: 2,
 		},
-		"repo that uses tags, not releases - has tags": {
+		{
+			name:     "repo that uses tags, not releases/has tags",
 			url:      "release-argus/test",
 			errRegex: `^$`,
 		},
-		"repo that uses tags, not releases - no tags": {
+		{
+			name:     "repo that uses tags, not releases/no tags",
 			url:      "release-argus/.github",
 			errRegex: `^$`,
 		},
-		"repo that uses tags, not releases - update EmptyListETag if 200 on empty list": {
+		{
+			name:     "repo that uses tags, not releases/update EmptyListETag if 200 on empty list",
 			url:      "release-argus/.github",
-			eTag:     test.StringPtr(""),
+			eTag:     test.Ptr(""),
 			errRegex: `^$`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(false)
+			lookup := testLookup(t, false)
 			lookup.URL = tc.url
 			if tc.eTag != nil {
 				lookup.data.eTag = *tc.eTag
 			}
 
-			// WHEN httpRequest is called on it.
-			_, nextPage, err := lookup.httpRequest(1, logutil.LogFrom{})
+			// WHEN: httpRequest is called on it.
+			_, nextPage, err := lookup.httpRequest(1, logx.LogFrom{})
 
-			// THEN any err is expected.
-			e := util.ErrorToString(err)
+			// THEN: the error is as expected.
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
+				t.Errorf(
+					"%s\nLookup.httpRequest(%q) error mismatch\ngot:  %q\nwant: %q",
+					packageName, tc.url,
+					e, tc.errRegex,
+				)
 			}
-			// AND the nextPage is as expected.
-			if err == nil {
-				if nextPage != tc.nextPage {
-					t.Errorf("%s\nnextPage mismatch\nwant: %d\ngot:  %d",
-						packageName, tc.nextPage, nextPage)
-				}
-			} else if nextPage != tc.nextPage {
-				t.Errorf("%s\nnextPage mismatch\nwant: %d\ngot:  %d",
-					packageName, tc.nextPage, nextPage)
+			if e != "" {
+				return
+			}
+
+			// AND: the nextPage is as expected.
+			if nextPage != tc.nextPage {
+				t.Errorf(
+					"%s\nLookup.httpRequest(%q) nextPage value mismatch\ngot:  %d\nwant: %d",
+					packageName, tc.url,
+					nextPage, tc.nextPage,
+				)
 			}
 		})
 	}
 }
 
 func TestGetResponse_ReadError(t *testing.T) {
-	// GIVEN a server that closes the connection immediately to simulate a read error.
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Length", "10") // Set Content-Length without sending data.
-		w.WriteHeader(http.StatusOK)
-		// Immediately close the connection without writing any body.
-		conn, _, _ := w.(http.Hijacker).Hijack()
-		conn.Close()
-	}))
+	// GIVEN: a server that closes the connection immediately to simulate a read error.
+	server := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Length", "10") // Set Content-Length without sending data.
+			w.WriteHeader(http.StatusOK)
+			// Immediately close the connection without writing any body.
+			conn, _, _ := w.(http.Hijacker).Hijack()
+			conn.Close()
+		}),
+	)
 	t.Cleanup(server.Close)
 
-	// AND a request to the mock server's URL.
+	// AND: a request to the mock server's URL.
 	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
 	if err != nil {
-		t.Fatalf("%s\ncould not create request: %v",
-			packageName, err)
+		t.Fatalf(
+			"%s\ncould not create request: %v",
+			packageName, err,
+		)
 	}
 
-	// WHEN getResponse is called on that URL.
+	// WHEN: getResponse is called on that URL.
 	l := Lookup{}
-	_, _, err = l.getResponse(req, logutil.LogFrom{})
+	_, _, err = l.getResponse(req, logx.LogFrom{})
 
-	// THEN an error is expected from the read error.
+	// THEN: an error is expected from the read error.
 	if err == nil {
-		t.Fatalf("%s\nexpected an error when reading response body, got none",
-			packageName)
+		t.Fatalf("%s\nexpected an error when reading response body, got none", packageName)
 	}
 }
 
-func TestHandleResponse(t *testing.T) {
+func TestLookup_HandleResponse(t *testing.T) {
 	githubClientConnErr := `\/tags": http2: client conn could not be established`
 	type wants struct {
 		nilBody          bool
 		nextPage         int
-		errRegex         string
 		setEmptyListETag bool
+		errRegex         string
 	}
 	type conditions struct {
 		hadReleases           bool
 		hadDefaultAccessToken bool
 	}
 
-	// GIVEN a HTTP Response and an accompanying body.
-	tests := map[string]struct {
+	// GIVEN: a HTTP Response and an accompanying body.
+	tests := []struct {
+		name       string
 		conditions conditions
 		statusCode int
 		body       []byte
 		want       wants
 	}{
-		"200 OK - EmptyListETag set if default access_token": {
+		{
+			name: "200 OK/EmptyListETag set if default access_token",
 			conditions: conditions{
-				hadDefaultAccessToken: true},
+				hadDefaultAccessToken: true,
+			},
 			statusCode: http.StatusOK,
 			body:       []byte(`[]`),
 			want: wants{
 				nextPage:         2,
 				setEmptyListETag: true,
+				errRegex:         `^$`,
 			},
 		},
-		"200 OK - EmptyListETag not set if non-default access_token": {
+		{
+			name: "200 OK/EmptyListETag not set if non-default access_token",
 			conditions: conditions{
-				hadDefaultAccessToken: false},
+				hadDefaultAccessToken: false,
+			},
 			statusCode: http.StatusOK,
 			body:       []byte(`[]`),
 			want: wants{
 				nextPage:         2,
 				setEmptyListETag: false,
+				errRegex:         `^$`,
 			},
 		},
-		"200 OK - Get releases": {
+		{
+			name:       "200 OK/Get releases",
 			statusCode: http.StatusOK,
 			body:       []byte(`[{"tag_name":"v1.0.0"}]`),
 			want: wants{
 				nextPage: 0,
+				errRegex: `^$`,
 			},
 		},
-		"304 Not Modified - Tag fallback request": {
+		{
+			name:       "304 Not Modified/Tag fallback request",
 			statusCode: http.StatusNotModified,
 			want: wants{
 				nilBody:  false,
 				nextPage: 2,
+				errRegex: `^$`,
 			},
 		},
-		"304 Not Modified - Use old releases": {
+		{
+			name: "304 Not Modified/Use old releases",
 			conditions: conditions{
-				hadReleases: true},
+				hadReleases: true,
+			},
 			statusCode: http.StatusNotModified,
 			want: wants{
 				nilBody:  true,
 				nextPage: 2,
+				errRegex: `^$`,
 			},
 		},
-		"401 Unauthorized - Bad credentials": {
+		{
+			name:       "401 Unauthorized/bad credentials",
 			statusCode: http.StatusUnauthorized,
 			body:       []byte(`{"message":"Bad credentials"}`),
 			want: wants{
@@ -515,7 +238,8 @@ func TestHandleResponse(t *testing.T) {
 				nilBody:  true,
 			},
 		},
-		"401 Unauthorized - Unknown": {
+		{
+			name:       "401 Unauthorized/unknown",
 			statusCode: http.StatusUnauthorized,
 			body:       []byte(`{"message":"Something else"}`),
 			want: wants{
@@ -523,7 +247,8 @@ func TestHandleResponse(t *testing.T) {
 				nilBody:  true,
 			},
 		},
-		"403 Forbidden - rate limit": {
+		{
+			name:       "403 Forbidden/rate limit",
 			statusCode: http.StatusForbidden,
 			body:       []byte(`{"message":"API rate limit exceeded"}`),
 			want: wants{
@@ -531,7 +256,8 @@ func TestHandleResponse(t *testing.T) {
 				nilBody:  true,
 			},
 		},
-		"403 Forbidden - missing tag_name": {
+		{
+			name:       "403 Forbidden/missing tag_name",
 			statusCode: http.StatusForbidden,
 			body:       []byte(`{"message":"some other error"}`),
 			want: wants{
@@ -539,7 +265,8 @@ func TestHandleResponse(t *testing.T) {
 				nilBody:  true,
 			},
 		},
-		"403 Forbidden - unknown": {
+		{
+			name:       "403 Forbidden/unknown",
 			statusCode: http.StatusForbidden,
 			body:       []byte(`[{"tag_name":"v1.0.0"}]`),
 			want: wants{
@@ -547,7 +274,8 @@ func TestHandleResponse(t *testing.T) {
 				nilBody:  true,
 			},
 		},
-		"429 Too Many Requests - rate limit": {
+		{
+			name:       "429 Too Many Requests/rate limit",
 			statusCode: http.StatusTooManyRequests,
 			body:       []byte(`{"message":"something from GitHub"}`),
 			want: wants{
@@ -555,7 +283,8 @@ func TestHandleResponse(t *testing.T) {
 				nilBody:  true,
 			},
 		},
-		"429 Too Many Requests - unmarshal fail": {
+		{
+			name:       "429 Too Many Requests/unmarshal fail",
 			statusCode: http.StatusTooManyRequests,
 			body:       []byte(`{"message":}`),
 			want: wants{
@@ -563,7 +292,8 @@ func TestHandleResponse(t *testing.T) {
 				nilBody:  true,
 			},
 		},
-		"Unknown status code": {
+		{
+			name:       "Unknown status code",
 			statusCode: http.StatusTeapot,
 			body:       []byte(`{"message":"I'm a teapot"}`),
 			want: wants{
@@ -574,21 +304,25 @@ func TestHandleResponse(t *testing.T) {
 	}
 
 	// Ensure other tests that modify global state don't interfere.
-	releaseStdout := test.CaptureLog(logutil.Log)
+	releaseStdout := test.CaptureLog(t, logx.Default())
 	defer releaseStdout()
 	hadEmptyListETag := getEmptyListETag()
 	t.Cleanup(func() { setEmptyListETag(hadEmptyListETag) })
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're modifying global state.
+
+			prefix := fmt.Sprintf("%s\nLookup.handleResponse()", packageName)
 
 			// Retry up-to 3 times if we get a client conn error on GitHub requests.
 			for try := range 3 {
-				t.Logf("%s - attempt %d\n",
-					packageName, try+1)
+				t.Logf(
+					"%s - attempt %d\n",
+					prefix, try+1,
+				)
 
-				lookup := testLookup(false)
+				lookup := testLookup(t, false)
 				resp := &http.Response{
 					StatusCode: tc.statusCode,
 					Header:     http.Header{},
@@ -596,7 +330,7 @@ func TestHandleResponse(t *testing.T) {
 						URL: &url.URL{},
 					},
 				}
-				hadETag := name
+				hadETag := tc.name
 				resp.Header.Add("ETag", hadETag)
 				if tc.conditions.hadReleases {
 					lookup.data.releases = testBodyObject
@@ -607,50 +341,58 @@ func TestHandleResponse(t *testing.T) {
 					lookup.HardDefaults.AccessToken = "Something"
 				}
 
-				logFrom := logutil.LogFrom{Primary: "TestHandleResponse", Secondary: name}
+				logFrom := logx.LogFrom{Primary: "TestHandleResponse", Secondary: tc.name}
 
-				// WHEN handleResponse is called on it.
+				// WHEN: handleResponse is called on it.
 				gotBody, nextPage, err := lookup.handleResponse(resp, tc.body, logFrom)
 
 				// GitHub actions regularly fail /tags with:
 				//   'Get "https://api.github.com/repos/.../tags": http2: client conn could not be established'
-				e := util.ErrorToString(err)
+				e := errfmt.FormatError(err)
 				if util.RegexCheck(githubClientConnErr, e) {
-					t.Logf("%s\nretrying... %q\n",
-						packageName, e)
+					t.Logf(
+						"%s retrying... %q\n",
+						prefix, e,
+					)
 					time.Sleep(time.Duration(rand.Intn(25)) * time.Millisecond)
 					continue
 				}
 
-				// THEN any err is expected.
-				if tc.want.errRegex == "" && err != nil {
-					t.Errorf("%s\nunexpected error: %q",
-						packageName, e)
-				} else if !util.RegexCheck(tc.want.errRegex, e) {
-					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.want.errRegex, e)
+				// THEN: any error is as expected.
+				if !util.RegexCheck(tc.want.errRegex, e) {
+					t.Errorf(
+						"%s error mismatch\ngot:  %q\nwant: %q",
+						prefix, tc.want.errRegex, e,
+					)
 				}
-				// AND the body returned is as expected.
+
+				// AND: the body returned is as expected.
 				if tc.want.nilBody && len(gotBody) != 0 {
-					t.Errorf("%s\nbody mismatch\nwant: nil\ngot:  %q",
-						packageName, string(tc.body))
+					t.Errorf(
+						"%s body mismatch\ngot:  %q\nwant: nil",
+						prefix, string(tc.body),
+					)
 				} else if !tc.want.nilBody && len(gotBody) == 0 {
-					t.Errorf("%s\nbody mismatch\nwant: non-nil\ngot:  nil",
-						packageName)
+					t.Errorf("%s body mismatch\ngot:  nil\nwant: non-nil", prefix)
 				}
-				// AND the new EmptyListETag is as expected.
+
+				// AND: the new EmptyListETag is as expected.
 				emptyListETag := getEmptyListETag()
 				if tc.want.setEmptyListETag && emptyListETag != hadETag {
-					t.Errorf("%s\nempty list ETag not set\nwant: %q\ngot:  %q",
-						packageName, hadETag, emptyListETag)
+					t.Errorf(
+						"%s didn't set empty list ETag\ngot:  %q\nwant: %q",
+						prefix, hadETag, emptyListETag,
+					)
 				} else if !tc.want.setEmptyListETag && emptyListETag == hadETag {
-					t.Errorf("%s\nempty list ETag should not have been set",
-						packageName)
+					t.Errorf("%s empty list ETag should not have been set", prefix)
 				}
-				// AND the nextPage is as expected.
+
+				// AND: the nextPage is as expected.
 				if nextPage != tc.want.nextPage {
-					t.Errorf("%s\nnextPage mismatch\nwant: %d\ngot:  %d",
-						packageName, tc.want.nextPage, nextPage)
+					t.Errorf(
+						"%s nextPage mismatch\ngot:  %d\nwant: %d",
+						prefix, nextPage, tc.want.nextPage,
+					)
 				}
 				break
 			}
@@ -658,7 +400,9 @@ func TestHandleResponse(t *testing.T) {
 	}
 }
 
-func TestReleaseMeetsRequirements(t *testing.T) {
+func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
+	lvCfg := plainDefaultsConfig(t)
+
 	type wants struct {
 		version     string
 		releaseDate string
@@ -666,37 +410,47 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 	}
 
 	defaultRelease := testBodyObject[0]
-	// GIVEN a Lookup with different requirements.
-	tests := map[string]struct {
+	// GIVEN: a Lookup with different requirements.
+	tests := []struct {
+		name             string
 		overrides        string
-		releaseOverrides *github_types.Release
+		releaseOverrides *ghtypes.Release
 		want             wants
 	}{
-		"no requirements": {
+		{
+			name: "no requirements",
 			want: wants{
 				version:     defaultRelease.TagName,
-				releaseDate: defaultRelease.PublishedAt},
+				releaseDate: defaultRelease.PublishedAt,
+			},
 		},
-		"no requirements - use semantic version": {
-			releaseOverrides: &github_types.Release{
+		{
+			name: "no requirements - use semantic version",
+			releaseOverrides: &ghtypes.Release{
 				TagName:         "v1.0.0",
 				SemanticVersion: semver.MustParse("v1.0.0"),
-				PublishedAt:     "2021-01-01T00:00:00Z"},
+				PublishedAt:     "2021-01-01T00:00:00Z",
+			},
 			want: wants{
 				version:     "1.0.0",
 				releaseDate: "2021-01-01T00:00:00Z",
-				errRegex:    `^$`},
+				errRegex:    `^$`,
+			},
 		},
-		"invalid timestamp": {
-			releaseOverrides: &github_types.Release{
+		{
+			name: "invalid timestamp",
+			releaseOverrides: &ghtypes.Release{
 				TagName:     "v1.0.0",
-				PublishedAt: "invalid"},
+				PublishedAt: "invalid",
+			},
 			want: wants{
 				version:     "v1.0.0",
 				releaseDate: "",
-				errRegex:    `^$`},
+				errRegex:    `^$`,
+			},
 		},
-		"require.regex_version - match": {
+		{
+			name: "require.regex_version/match",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -704,30 +458,37 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 			want: wants{
 				version:     defaultRelease.TagName,
 				releaseDate: defaultRelease.PublishedAt,
-				errRegex:    `^$`},
+				errRegex:    `^$`,
+			},
 		},
-		"require.regex_version - match but timestamp of asset invalid": {
+		{
+			name: "require.regex_version/match, but timestamp of asset invalid",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
 			`),
-			releaseOverrides: &github_types.Release{
+			releaseOverrides: &ghtypes.Release{
 				TagName:     "v1.0.0",
-				PublishedAt: "invalid"},
+				PublishedAt: "invalid",
+			},
 			want: wants{
 				version:     "v1.0.0",
 				releaseDate: "",
-				errRegex:    `^$`},
+				errRegex:    `^$`,
+			},
 		},
-		"require.regex_version - no match": {
+		{
+			name: "require.regex_version/no match",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "x[0-9.]+"
 			`),
 			want: wants{
-				errRegex: `^regex "[^"]+" not matched on version "[^"]+"$`},
+				errRegex: `^regex "[^"]+" not matched on version "[^"]+"$`,
+			},
 		},
-		"require.regex_content - match": {
+		{
+			name: "require.regex_content/match",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -736,18 +497,22 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 			want: wants{
 				version:     defaultRelease.TagName,
 				releaseDate: defaultRelease.Assets[0].CreatedAt,
-				errRegex:    `^$`},
+				errRegex:    `^$`,
+			},
 		},
-		"require.regex_content - no match": {
+		{
+			name: "require.regex_content/no match",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
 					regex_content: "aArgus"
 			`),
 			want: wants{
-				errRegex: `^regex "[^"]+" not matched on content for version "[^"]+"$`},
+				errRegex: `^regex "[^"]+" not matched on content for version "[^"]+"$`,
+			},
 		},
-		"command - pass": {
+		{
+			name: "command/pass",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -757,9 +522,11 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 			want: wants{
 				version:     defaultRelease.TagName,
 				releaseDate: defaultRelease.Assets[0].CreatedAt,
-				errRegex:    `^$`},
+				errRegex:    `^$`,
+			},
 		},
-		"command - fail": {
+		{
+			name: "command/fail",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -767,9 +534,14 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 					command: ["false"]
 			`),
 			want: wants{
-				errRegex: `^command failed: .*$`},
+				errRegex: test.TrimYAML(`
+					^command failed:
+						exit status 1$`,
+				),
+			},
 		},
-		"docker tag - found": {
+		{
+			name: "docker tag/found",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -777,16 +549,18 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 					command: ["true"]
 					docker:
 						type: ghcr
-						image: "release-argus/argus"
+						image: ` + test.ArgusDockerGHCRRepo + `
 						tag: "{{ version }}"
-						token: ` + os.Getenv("GH_TOKEN") + `
+						token: ` + test.DockerHubToken(t) + `
 			`),
 			want: wants{
 				version:     defaultRelease.TagName,
 				releaseDate: defaultRelease.Assets[0].CreatedAt,
-				errRegex:    `^$`},
+				errRegex:    `^$`,
+			},
 		},
-		"docker tag - not found": {
+		{
+			name: "docker tag/not found",
 			overrides: test.TrimYAML(`
 				require:
 					regex_version: "[0-9.]+"
@@ -794,409 +568,399 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 					command: ["true"]
 					docker:
 						type: ghcr
-						image: "release-argus/argus"
+						image: "` + test.ArgusDockerGHCRRepo + `"
 						tag: "x{{ version }}"
-						token: ` + os.Getenv("GH_TOKEN") + `
+						token: ` + test.DockerHubToken(t) + `
 			`),
 			want: wants{
-				errRegex: `release-argus\/argus:x[0-9.]+ - .*manifest unknown`},
+				errRegex: `release-argus\/argus:x[0-9.]+ - .*tag not found`,
+			},
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(false)
-			err := yaml.Unmarshal([]byte(tc.overrides), lookup)
-			if err != nil {
-				t.Fatalf("%s\nfailed to unmarshal overrides: %v",
-					packageName, err)
+			lookup := testLookup(t, false)
+			// overrides.
+			if err := lookup.ApplyOverrides("yaml", []byte(tc.overrides)); err != nil {
+				t.Fatalf(
+					"%s\nfailed to unmarshal Lookup overrides: %v",
+					packageName, err,
+				)
 			}
+			requireData, _ := polymorphic.Extract("yaml", []byte(tc.overrides), "require")
+			req, err := filter.Decode(
+				"yaml", requireData,
+				lookup.Status,
+				&lvCfg.Soft.Require,
+			)
+			if err != nil {
+				t.Fatalf(
+					"%s\nfailed to unmarshal Require overrides: %v",
+					packageName, err,
+				)
+			}
+			lookup.SetRequire(req)
 			lookup.Init(
 				lookup.Options,
 				lookup.Status,
-				lookup.Defaults, lookup.HardDefaults)
+				base.DefaultsConfig{
+					Soft: lookup.Defaults,
+					Hard: lookup.HardDefaults,
+				},
+			)
 			testRelease := defaultRelease
 			if tc.releaseOverrides != nil {
 				testRelease = *tc.releaseOverrides
 			}
-			logFrom := logutil.LogFrom{Primary: "TestReleaseMeetsRequirements", Secondary: name}
+			logFrom := logx.LogFrom{Primary: "TestReleaseMeetsRequirements", Secondary: tc.name}
 
-			// WHEN releaseMeetsRequirements is called on it.
+			// WHEN: releaseMeetsRequirements is called on it.
 			version, releaseDate, err := lookup.releaseMeetsRequirements(testRelease, logFrom)
 
-			// THEN the version is as expected.
-			if version != tc.want.version {
-				t.Errorf("%s\nversion mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want.version, version)
-			}
-			// AND the releaseDate is as expected.
-			if releaseDate != tc.want.releaseDate {
-				t.Errorf("%s\nrelease date mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want.releaseDate, releaseDate)
-			}
-			// AND any err is as expected.
-			e := util.ErrorToString(err)
+			prefix := fmt.Sprintf(
+				"%s\nLookup.releaseMeetsRequirements(%+v)",
+				packageName, testRelease,
+			)
+
+			// THEN: any decode is as expected.
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want.errRegex, e)
+				t.Errorf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, tc.want.errRegex, e,
+				)
+			}
+			if e != "" {
+				return
+			}
+
+			// AND: the version is as expected.
+			if version != tc.want.version {
+				t.Errorf(
+					"%s version mismatch\ngot:  %q\nwant: %q",
+					prefix, version, tc.want.version,
+				)
+			}
+
+			// AND: the releaseDate is as expected.
+			if releaseDate != tc.want.releaseDate {
+				t.Errorf(
+					"%s release date mismatch\ngot:  %q\nwant: %q",
+					prefix, releaseDate, tc.want.releaseDate,
+				)
 			}
 		})
 	}
 }
 
-func TestGetVersion(t *testing.T) {
+func TestLookup_GetVersion(t *testing.T) {
 	type want struct {
 		version     string
 		releaseDate string
 		errRegex    string
 	}
 
-	// GIVEN a body from the GitHub API and a Lookup.
+	// GIVEN: a body from the GitHub API and a Lookup.
 	body := testBody
 	bodyObject := testBodyObject
-	tests := map[string]struct {
-		body        *string
-		overrides   string
-		hadReleases []github_types.Release
-		want        want
+	tests := []struct {
+		name            string
+		bodyOverride    *string
+		lookupOverrides string
+		hadReleases     []ghtypes.Release
+		want            want
 	}{
-		"no releases": {
-			overrides: test.TrimYAML(`
+		{
+			name: "no releases",
+			lookupOverrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
 						regex: 'ver[0-9.]+'
 			`),
 			want: want{
-				errRegex: `^no releases were found matching the url_commands on page \d+ of the API response$`},
+				errRegex: `^no releases were found matching the url_commands on page \d+ of the API response$`,
+			},
 		},
-		"invalid JSON": {
-			body: test.StringPtr("invalid"),
+		{
+			name:         "invalid JSON",
+			bodyOverride: test.Ptr("invalid"),
 			want: want{
-				errRegex: `unmarshal of GitHub API data failed`},
+				errRegex: `unmarshal of GitHub API data failed`,
+			},
 		},
-		"cached releases, used when empty body": {
-			body: test.StringPtr(""),
-			overrides: test.TrimYAML(`
-				use_prerelease: false
-			`),
-			hadReleases: bodyObject,
+		{
+			name:            "cached releases, used when empty body",
+			bodyOverride:    test.Ptr(""),
+			lookupOverrides: `use_prerelease: false`,
+			hadReleases:     bodyObject,
 			want: want{
 				version:     bodyObject[1].TagName,
 				releaseDate: bodyObject[1].PublishedAt,
-				errRegex:    `^$`},
+				errRegex:    `^$`,
+			},
 		},
-		"cached releases, var changes affect result": {
-			body: test.StringPtr(""),
-			overrides: test.TrimYAML(`
-				use_prerelease: true
-			`),
-			hadReleases: bodyObject,
+		{
+			name:            "cached releases, var changes affect result",
+			bodyOverride:    test.Ptr(""),
+			lookupOverrides: `use_prerelease: true`,
+			hadReleases:     bodyObject,
 			want: want{
 				version:     bodyObject[0].TagName,
 				releaseDate: bodyObject[0].PublishedAt,
-				errRegex:    `^$`},
+				errRegex:    `^$`,
+			},
 		},
-		"cached releases, ignored if body present": {
-			body: test.StringPtr(
-				test.TrimJSON(`
-				[{"tag_name":"v1.2.3","published_at":"2021-01-01T00:00:00Z"}]
-			`)),
-			hadReleases: bodyObject,
+		{
+			name:         "cached releases, ignored if body present",
+			bodyOverride: test.Ptr(`[{"tag_name":"v1.2.3","published_at":"2021-01-01T00:00:00Z"}]`),
+			hadReleases:  bodyObject,
 			want: want{
 				version:     "1.2.3",
 				releaseDate: "2021-01-01T00:00:00Z",
-				errRegex:    `^$`},
+				errRegex:    `^$`,
+			},
 		},
-		"no releases that meet requirements": {
-			overrides: test.TrimYAML(`
+		{
+			name: "no releases that meet requirements",
+			lookupOverrides: test.TrimYAML(`
 				require:
 					regex_version: "x[0-9.]+"
 			`),
 			want: want{
 				errRegex: test.TrimYAML(`
 					^no releases were found matching the require field.*
-					regex "[^"]+" not matched on version "[^"]+"$`)},
+						regex "[^"]+" not matched on version "[^"]+"$`,
+				),
+			},
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(false)
-			err := yaml.Unmarshal([]byte(tc.overrides), lookup)
-			if err != nil {
-				t.Fatalf("%s\nfailed to unmarshal overrides: %v",
-					packageName, err)
+			lookup := testLookup(t, false)
+			if err := lookup.ApplyOverrides("yaml", []byte(tc.lookupOverrides)); err != nil {
+				t.Fatalf(
+					"%s\nfailed to unmarshal Lookup overrides: %v",
+					packageName, err,
+				)
 			}
 			lookup.data.releases = tc.hadReleases
 			// Ensure the Status has been handed out.
 			lookup.Init(
 				lookup.Options,
 				lookup.Status,
-				lookup.Defaults, lookup.HardDefaults)
-			logFrom := logutil.LogFrom{Primary: "TestGetVersion", Secondary: name}
+				base.DefaultsConfig{
+					Soft: lookup.Defaults,
+					Hard: lookup.HardDefaults,
+				},
+			)
+			logFrom := logx.LogFrom{Primary: "TestGetVersion", Secondary: tc.name}
 			testBody := body
-			if tc.body != nil {
-				testBody = []byte(*tc.body)
+			if tc.bodyOverride != nil {
+				testBody = []byte(*tc.bodyOverride)
 			}
 
-			// WHEN getVersion is called on it.
+			// WHEN: getVersion is called on it.
 			version, releaseDate, err := lookup.getVersion(testBody, 1, logFrom)
 
-			// THEN any err is expected.
-			e := util.ErrorToString(err)
+			prefix := fmt.Sprintf(
+				"%s\nLookup.getVersion(%q)",
+				packageName, testBody,
+			)
+
+			// THEN: any decode is expected.
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want.errRegex, e)
+				t.Errorf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.want.errRegex,
+				)
 			}
-			if tc.want.errRegex != "^$" {
+			if e != "" {
 				return
 			}
-			// AND the version is as expected.
+
+			// AND: the version is as expected.
 			if version != tc.want.version {
-				t.Errorf("%s\nversion mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want.version, version)
+				t.Errorf(
+					"%s unexpected version returned\ngot:  %q\nwant: %q",
+					prefix, version, tc.want.version,
+				)
 			}
-			// AND the releaseDate is as expected.
+
+			// AND: the releaseDate is as expected.
 			if releaseDate != tc.want.releaseDate {
-				t.Errorf("%s\nrelease date mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want.releaseDate, releaseDate)
+				t.Errorf(
+					"%s unexpected release date returned\ngot:  %q\nwant: %q",
+					prefix, releaseDate, tc.want.releaseDate,
+				)
 			}
 		})
 	}
 }
 
-func TestSetReleases(t *testing.T) {
-	// GIVEN a body from the GitHub API and a Lookup.
+func TestLookup_SetReleases(t *testing.T) {
+	// GIVEN: a body from the GitHub API and a Lookup.
 	body := testBody
-	tests := map[string]struct {
+	tests := []struct {
+		name         string
 		overrides    string
 		body         string
 		wantReleases bool
 		errRegex     string
 	}{
-		"no pre-releases": {
-			overrides: test.TrimYAML(`
-				use_prerelease: false
-			`),
+		{
+			name:         "no pre-releases",
+			overrides:    `use_prerelease: false`,
 			wantReleases: true,
 			errRegex:     `^$`,
 		},
-		"want pre-releases": {
-			overrides: test.TrimYAML(`
-				use_prerelease: true
-			`),
+		{
+			name:         "want pre-releases",
+			overrides:    `use_prerelease: true`,
 			wantReleases: true,
 			errRegex:     `^$`,
 		},
-		"release body that's not valid JSON": {
-			body: test.TrimJSON(`
-				{"tag_name":"v1.2.3","published_at":"2021-01-01T00:00:00Z"}
-			`),
+		{
+			name:         "release body that's not valid JSON",
+			body:         `{"tag_name":"v1.2.3","published_at":"2021-01-01T00:00:00Z"}`,
 			wantReleases: false,
 			errRegex:     `unmarshal of GitHub API data failed`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(false)
-			err := yaml.Unmarshal([]byte(tc.overrides), lookup)
-			if err != nil {
-				t.Fatalf("%s\nailed to unmarshal overrides: %v",
-					packageName, err)
+			lookup := testLookup(t, false)
+			if err := lookup.ApplyOverrides("yaml", []byte(tc.overrides)); err != nil {
+				t.Fatalf(
+					"%s\nfailed to unmarshal Lookup overrides: %v",
+					packageName, err,
+				)
 			}
-			logFrom := logutil.LogFrom{Primary: "TestGetVersions", Secondary: name}
 			testBody := body
 			if tc.body != "" {
 				testBody = []byte(tc.body)
 			}
 
-			// WHEN setReleases is called on it.
-			err = lookup.setReleases(testBody, logFrom)
+			// WHEN: setReleases is called on it.
+			err := lookup.setReleases(testBody)
 
-			// THEN any err is expected.
-			e := util.ErrorToString(err)
+			prefix := fmt.Sprintf(
+				"%s\nLookup setReleases(%q)",
+				packageName, testBody,
+			)
+
+			// THEN: any decode is expected.
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
+				t.Errorf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
 			}
 			if tc.errRegex != "^$" {
 				return
 			}
-			// AND the versions are as expected.
+
+			// AND: the number of Releases is as expected.
 			gotReleases := lookup.data.Releases()
-			if !tc.wantReleases {
-				if len(gotReleases) != 0 {
-					t.Errorf("%s\nwant: no releases\ngot:  %v",
-						packageName, gotReleases)
-				}
-				return
-			} else if len(gotReleases) == 0 {
-				t.Errorf("%s\nwant: releases\ngot:  none",
-					packageName)
+			if len(gotReleases) == 0 {
+				t.Errorf("%s Data.Releases() result mismatch\ngot:  no releases\nwant: releases", prefix)
 				return
 			}
-			if len(gotReleases) != len(testBodyObject) {
-				t.Errorf("%s\nwant: %d releases\ngot:  %d",
-					packageName, len(testBodyObject), len(gotReleases))
+			if gotLen, wantLen := len(gotReleases), len(testBodyObject); gotLen != wantLen {
+				t.Errorf(
+					"%s Release count mismatch\ngot:  %d\nwant: %d",
+					prefix,
+					gotLen, wantLen,
+				)
 			}
-			for i, release := range testBodyObject {
-				for j, asset := range release.Assets {
+
+			// AND: the assets attached to each Release is as expected.
+			if err := test.AssertSlicesEqualFunc(
+				t,
+				gotReleases,
+				testBodyObject,
+				func(gotRelease ghtypes.Release, wantRelease ghtypes.Release) bool {
 					// Asset counts match.
-					if len(gotReleases[i].Assets) != len(release.Assets) {
-						t.Errorf("%s\nwant: %d assets for release %d\ngot:  %d",
-							packageName, len(release.Assets), i, len(gotReleases[i].Assets))
+					if len(gotRelease.Assets) != len(wantRelease.Assets) {
+						return false
 					}
-					// non-matching asset.
-					if gotReleases[i].Assets[j].Name != asset.Name {
-						t.Errorf("%s\nmismatch at asset [%d][%d]\nwant: %q\ngot:  %v",
-							packageName, i, j,
-							asset.Name, gotReleases[i].Assets[j])
+					// Asset names match
+					for i := range gotRelease.Assets {
+						if gotRelease.Assets[i].Name != wantRelease.Assets[i].Name {
+							return false
+						}
 					}
-				}
+					return true
+				},
+				prefix,
+				"Release",
+			); err != nil {
+				t.Fatal(err)
 			}
 		})
 	}
 }
 
-func TestQueryGitHubETag(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
-		attempts                           int
-		eTagChanged, eTagUnchangedUseCache int
-		initialRequireRegexVersion         string
-		urlCommands                        filter.URLCommands
-		errRegex                           string
+func TestLookup_HandleNoVersionChange(t *testing.T) {
+	// GIVEN: a Lookup that got an unchanged version on check X.
+	tests := []struct {
+		name      string
+		version   string
+		doesPrint bool
 	}{
-		// Keeps `.Releases` in case filters change.
-		"three requests only uses 1 api limit": {
-			attempts:              3,
-			eTagChanged:           1,
-			eTagUnchangedUseCache: 3, // 2 attempts + 1 recheck.
-			errRegex:              `^$`},
-		"if initial request fails filter, cached results will be used": {
-			attempts:                   3,
-			eTagChanged:                3, // page1+2, page1.
-			eTagUnchangedUseCache:      2, // 1 last attempt + 1 recheck.
-			initialRequireRegexVersion: `^FOO$`,
-			errRegex: test.TrimYAML(`
-				^no releases were found matching the require field.*
-				regex "[^"]+" not matched on version "[^"]+"$`)},
-		"invalid url_commands will catch no versions": {
-			attempts:              2,
-			eTagChanged:           4, // page1+2, page1+2.
-			eTagUnchangedUseCache: 0, // 0 recheck.
-			urlCommands: filter.URLCommands{
-				{Type: "regex", Regex: `^FOO$`}},
-			errRegex: test.TrimYAML(`
-				^no releases were found matching the url_commands on page 2 of the API response
-				no releases were found matching the url_commands on page 2 of the API response$`)},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureLog(logutil.Log)
-
-			lookup := testLookup(false)
-			lookup.URL = "release-argus/test-pagination"
-			lookup.UsePreRelease = test.BoolPtr(true)
-			lookup.GetGitHubData().SetETag("foo")
-			lookup.Status.ServiceInfo.ID = name
-			lookup.Require = &filter.Require{
-				RegexVersion: tc.initialRequireRegexVersion,
-				Status:       lookup.Status}
-			lookup.URLCommands = tc.urlCommands
-
-			attempt := 0
-			// WHEN Query is called on it 'attempts' number of times.
-			var errs []error
-			for tc.attempts != attempt {
-				attempt++
-				if attempt == 2 {
-					lookup.Require = &filter.Require{}
-				}
-
-				_, err := lookup.Query(true, logutil.LogFrom{})
-				if err != nil {
-					errs = append(errs, err)
-				}
-				t.Logf("%s - attempt %d, ETag: %s",
-					packageName, attempt, lookup.GetGitHubData().ETag())
-			}
-
-			// THEN any err is expected.
-			stdout := releaseStdout()
-			e := util.ErrorToString(errors.Join(errs...))
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
-			}
-			gotETagChanged := strings.Count(stdout, "new ETag")
-			if gotETagChanged != tc.eTagChanged {
-				t.Errorf("%s\nnew ETag\nwant: %d\ngot:  %d\n\nstdout: %q",
-					packageName, tc.eTagChanged, gotETagChanged, stdout)
-			}
-			gotETagUnchangedUseCache := strings.Count(stdout, "Using cached releases")
-			if gotETagUnchangedUseCache != tc.eTagUnchangedUseCache {
-				t.Errorf("%s\nETag unchanged use cache\nwant: %d\ngot:  %d\n\nstdout: %q",
-					packageName, tc.eTagUnchangedUseCache, gotETagUnchangedUseCache, stdout)
-			}
-		})
-	}
-}
-
-func TestHandleNoVersionChange(t *testing.T) {
-	// GIVEN a Lookup that got an unchanged version on check X.
-	type args struct {
-	}
-	tests := map[string]struct {
-		version     string
-		checkNumber int
-		doesPrint   bool
-	}{
-		"first check": {
-			version:     "a.b.c",
-			checkNumber: 0,
-			doesPrint:   false,
+		{
+			name:      "first check",
+			version:   "a.b.c",
+			doesPrint: false,
 		},
-		"second check": {
-			version:     "x.y.z",
-			checkNumber: 1,
-			doesPrint:   true,
+		{
+			name:      "second check",
+			version:   "x.y.z",
+			doesPrint: true,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for checkNumber, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureLog(logutil.Log)
+			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			lookup := testLookup(false)
+			lookup := testLookup(t, false)
 
-			// WHEN handleNoVersionChange is called on it.
-			lookup.handleNoVersionChange(tc.checkNumber, tc.version, logutil.LogFrom{})
+			// WHEN: handleNoVersionChange is called on it.
+			lookup.handleNoVersionChange(checkNumber, tc.version, logx.LogFrom{})
 
-			// THEN a message is printed when expected.
+			prefix := fmt.Sprintf(
+				"%s\nLookup.handleNoVersionChange(checkNumber=%d, version=%s)",
+				packageName, checkNumber, tc.version,
+			)
+
+			// THEN: a message is printed when expected.
 			stdout := releaseStdout()
+			wantRe := fmt.Sprintf(`Staying on %q as that's the latest version in the second check`, tc.version)
 			gotMessage := util.RegexCheck(
-				fmt.Sprintf(`Staying on %q as that's the latest version in the second check`,
-					tc.version),
-				stdout)
+				wantRe,
+				stdout,
+			)
 			if gotMessage != tc.doesPrint {
+				format := "%s printed message when not expected\ngot:  %q\nwant: %q"
 				if gotMessage {
-					t.Errorf("%s\nprinted message when not expected %s",
-						packageName, stdout)
-				} else {
-					t.Errorf("%s\ndid not print message when expected %s",
-						packageName, stdout)
+					format = "%s printed message when not expected\ngot:  %q\nwant: NOT %q"
 				}
+				t.Errorf(
+					format,
+					prefix, stdout, wantRe,
+				)
 			}
 		})
 	}

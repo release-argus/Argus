@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,14 +22,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
-var packageName = "webhook"
+var packageName = "defaults"
 
 func TestMain(m *testing.M) {
 	// Log.
@@ -38,9 +38,8 @@ func TestMain(m *testing.M) {
 	// Run other tests.
 	exitCode := m.Run()
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
@@ -52,27 +51,34 @@ func testWebHook(failing bool, selfSignedCert bool, headers bool) *WebHook {
 	desiredStatusCode := uint16(0)
 	whMaxTries := uint8(1)
 	webhook := New(
-		test.BoolPtr(false),
+		test.Ptr(false),
 		nil,
 		"0s",
 		&desiredStatusCode,
 		nil,
 		"test",
 		&whMaxTries,
-		nil,
-		test.StringPtr("12m"),
+		Notifiers{},
+		test.Ptr("12m"),
 		"argus",
-		test.BoolPtr(false),
+		test.Ptr(false),
 		"github",
-		test.LookupGitHub["url_valid"],
+		test.WebHookGitHub["url_valid"],
 		&Defaults{},
-		&Defaults{}, &Defaults{})
+		&Defaults{}, &Defaults{},
+	)
 	webhook.ServiceStatus = &status.Status{}
 	webhook.ServiceStatus.Init(
 		0, 1, 1,
-		"testServiceID", "", "",
+		status.ServiceInfo{
+			ID: "testWebHook",
+		},
 		&dashboard.Options{
-			WebURL: "https://example.com"})
+			OptionsBase: dashboard.OptionsBase{
+				WebURL: "https://example.com",
+			},
+		},
+	)
 	webhook.Failed = &webhook.ServiceStatus.Fails.WebHook
 	if selfSignedCert {
 		webhook.URL = strings.Replace(webhook.URL, "valid", "invalid", 1)
@@ -86,38 +92,62 @@ func testWebHook(failing bool, selfSignedCert bool, headers bool) *WebHook {
 		if failing {
 			testHeaderValue = "invalid"
 		}
-		webhook.Headers = &Headers{
-			{Key: "X-Test", Value: testHeaderValue}}
+		webhook.Headers = Headers{
+			{Key: "X-Test", Value: testHeaderValue},
+		}
 	}
 	webhook.initMetrics()
 	return webhook
 }
 
 func testDefaults(failing bool, headers bool) *Defaults {
-	desiredStatusCode := uint16(0)
-	whMaxTries := uint8(1)
-	webhook := NewDefaults(
-		test.BoolPtr(false),
-		nil,
-		"0s",
-		&desiredStatusCode,
-		&whMaxTries,
-		"argus",
-		test.BoolPtr(false),
-		"github",
-		test.LookupGitHub["url_valid"])
+	desiredStatusCode := "0"
+	whMaxTries := "1"
+
+	wh, _ := DecodeDefaults(
+		"yaml", []byte(test.TrimYAML(`
+			allow_invalid_certs: false
+			delay: 0s
+			desired_status_code: `+desiredStatusCode+`
+			max_tries: `+whMaxTries+`
+			secret: argus
+			silent_fails: false
+			type: github
+			url: `+test.WebHookGitHub["url_valid"]+`
+		`)),
+	)
+
 	if failing {
-		webhook.Secret = "invalid"
+		wh.Secret = "invalid"
 	}
+
 	if headers {
-		webhook.URL = strings.Replace(webhook.URL, "github-style", "single-header", 1)
+		wh.URL = strings.Replace(wh.URL, "github-style", "single-header", 1)
 		if failing {
-			webhook.Headers = &Headers{
-				{Key: "X-Test", Value: "invalid"}}
+			wh.Headers = Headers{
+				{Key: "X-Test", Value: "invalid"},
+			}
 		} else {
-			webhook.Headers = &Headers{
-				{Key: "X-Test", Value: "secret"}}
+			wh.Headers = Headers{
+				{Key: "X-Test", Value: "secret"},
+			}
 		}
 	}
-	return webhook
+
+	return wh
+}
+
+// plainConfig returns plain defaults and hardDefaults for testing.
+func plainConfig(t *testing.T) Config {
+	t.Helper()
+
+	defaults, _ := DecodeDefaults("yaml", nil)
+	hardDefaults, _ := DecodeDefaults("yaml", nil)
+	hardDefaults.Default()
+
+	return Config{
+		Root:         WebHooksDefaults{},
+		Defaults:     defaults,
+		HardDefaults: hardDefaults,
+	}
 }

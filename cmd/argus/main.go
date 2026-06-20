@@ -32,8 +32,8 @@ import (
 
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/db"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/testing"
-	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web"
 )
 
@@ -41,23 +41,28 @@ var (
 	configFile = flag.String(
 		"config.file",
 		"config.yml",
-		"Argus configuration file path.")
+		"Argus configuration file path.",
+	)
 	configCheckFlag = flag.Bool(
 		"config.check",
 		false,
-		"Print the fully-parsed config.")
+		"Print the fully-parsed config.",
+	)
 	testCommandsFlag = flag.String(
 		"test.commands",
 		"",
-		"Put the name of the Service to test the `commands` of.")
+		"Put the name of the Service to test the `commands` of.",
+	)
 	testNotifyFlag = flag.String(
 		"test.notify",
 		"",
-		"Put the name of the Notify service to send a test message.")
+		"Put the name of the Notify service to send a test message.",
+	)
 	testServiceFlag = flag.String(
 		"test.service",
 		"",
-		"Put the name of the Service to test the version query.")
+		"Put the name of the Service to test the version query.",
+	)
 )
 
 // run loads the config and then calls `service.Track` to monitor
@@ -67,14 +72,14 @@ func run() (exitCode int) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	g, gctx := errgroup.WithContext(ctx)
+	g, gCtx := errgroup.WithContext(ctx)
 
 	flag.Parse()
 	flags := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { flags[f.Name] = true })
 
 	// Initialise the Log.
-	exitCodeChannel := logutil.Init("ERROR", false)
+	exitCodeChannel := logx.Init("ERROR", false)
 
 	var cfg config.Config
 	_ = cfg.Load(ctx, g, *configFile, &flags)
@@ -87,7 +92,7 @@ func run() (exitCode int) {
 	testing.RunAndExit(testing.ServiceTest(testServiceFlag, &cfg), testServiceFlag)
 
 	// Count of active services to monitor (if log level INFO or above).
-	if logutil.Log.Level > 1 {
+	if logx.Level() > 1 {
 		// Count active services.
 		serviceCount := len(cfg.Order)
 		for _, key := range cfg.Order {
@@ -98,12 +103,12 @@ func run() (exitCode int) {
 
 		// Log active count.
 		msg := fmt.Sprintf("Found %d services to monitor:", serviceCount)
-		logutil.Log.Info(msg, logutil.LogFrom{}, true)
+		logx.Info(msg, logx.LogFrom{}, true)
 
 		// Log names of active services.
 		for _, key := range cfg.Order {
 			if cfg.Service[key].Options.GetActive() {
-				fmt.Printf("  - %s\n", cfg.Service[key].Name)
+				fmt.Printf("  - %s\n", cfg.Service[key].GetName())
 			}
 		}
 	}
@@ -115,16 +120,16 @@ func run() (exitCode int) {
 	if api != nil {
 		// DB message handler.
 		g.Go(func() error {
-			api.Handler(gctx)
+			api.Handler(gCtx)
 			return nil
 		})
 
 		// Track all targets for changes in version and act on any found changes.
-		go cfg.Service.Track(&cfg.Order, &cfg.OrderMutex)
+		go cfg.Service.Track(&cfg.Order, &cfg.OrderMu)
 
 		// Web server.
 		g.Go(func() error {
-			return web.Run(gctx, &cfg)
+			return web.Run(gCtx, &cfg)
 		})
 	}
 
@@ -138,8 +143,7 @@ func run() (exitCode int) {
 	}
 
 	// Begin shutdown.
-	logutil.Log.Info("Shutting down...",
-		logutil.LogFrom{}, true)
+	logx.Info("Shutting down...", logx.LogFrom{}, true)
 	// Give goroutines time to finish.
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
@@ -152,12 +156,9 @@ func run() (exitCode int) {
 
 	select {
 	case <-done:
-		logutil.Log.Info("Shutdown complete",
-			logutil.LogFrom{}, true)
+		logx.Info("Shutdown complete", logx.LogFrom{}, true)
 	case <-shutdownCtx.Done():
-		logutil.Log.Error(shutdownCtx.Err(),
-			logutil.LogFrom{}, true,
-		)
+		logx.Error(shutdownCtx.Err(), logx.LogFrom{}, true)
 		exitCode = 1
 	}
 

@@ -94,11 +94,12 @@ const buildNotifySchema = (
 ) => {
 	const itemType = defaults.type;
 
-	let schema;
+	let schema: z.ZodType<NotifySchemaValues> | null;
 	switch (itemType) {
 		case NOTIFY_TYPE_MAP.BARK.value:
 			schema = buildSuperRefine(notifyBarkSchema, mains, defaults, [
 				...defaultValidators,
+				{ path: ['url_fields', 'devicekey'], validator: validateRequired },
 				{ path: ['url_fields', 'host'], validator: validateRequired },
 				{ path: ['url_fields', 'port'], validator: validateNumberString },
 				{ path: ['params', 'badge'], validator: validateNumberString },
@@ -157,7 +158,10 @@ const buildNotifySchema = (
 					path: ['params', 'usemessageasvalue'],
 					validator: validateNumberString,
 				},
-				{ path: ['params', 'usetitlevalue'], validator: validateNumberString },
+				{
+					path: ['params', 'usetitleasvalue'],
+					validator: validateNumberString,
+				},
 			]);
 			break;
 		case NOTIFY_TYPE_MAP.JOIN.value:
@@ -276,14 +280,14 @@ const buildNotifySchema = (
 				{ path: ['url_fields', 'channel'], validator: validateRequired },
 				{ path: ['url_fields', 'host'], validator: validateRequired },
 				{ path: ['url_fields', 'port'], validator: validateNumberString },
-				{ path: ['params', 'path'], validator: validateRequired },
-				{ path: ['params', 'tokena'], validator: validateRequired },
-				{ path: ['params', 'tokenb'], validator: validateRequired },
+				{ path: ['url_fields', 'tokena'], validator: validateRequired },
+				{ path: ['url_fields', 'tokenb'], validator: validateRequired },
 			]);
 			break;
 		case NOTIFY_TYPE_MAP.SLACK.value:
 			schema = buildSuperRefine(notifySlackSchema, mains, defaults, [
 				...defaultValidators,
+				{ path: ['url_fields', 'channel'], validator: validateRequired },
 				{ path: ['url_fields', 'token'], validator: validateRequired },
 				{ path: ['params', 'color'], validator: validateHexString },
 			]);
@@ -292,6 +296,7 @@ const buildNotifySchema = (
 			schema = buildSuperRefine(notifyTeamsSchema, mains, defaults, [
 				...defaultValidators,
 				{ path: ['params', 'color'], validator: validateHexString },
+				{ path: ['url_fields', 'altid'], validator: validateRequired },
 				{
 					path: ['url_fields', 'altid'],
 					validator: validateStringLength({
@@ -300,6 +305,8 @@ const buildNotifySchema = (
 						min: 32,
 					}),
 				},
+				{ path: ['url_fields', 'extraid'], validator: validateRequired },
+				{ path: ['url_fields', 'group'], validator: validateRequired },
 				{
 					path: ['url_fields', 'group'],
 					validator: validateStringLength({
@@ -308,6 +315,7 @@ const buildNotifySchema = (
 						min: 36,
 					}),
 				},
+				{ path: ['url_fields', 'groupowner'], validator: validateRequired },
 				{
 					path: ['url_fields', 'groupowner'],
 					validator: validateStringLength({
@@ -316,6 +324,7 @@ const buildNotifySchema = (
 						min: 36,
 					}),
 				},
+				{ path: ['url_fields', 'tenant'], validator: validateRequired },
 				{
 					path: ['url_fields', 'tenant'],
 					validator: validateStringLength({
@@ -324,6 +333,7 @@ const buildNotifySchema = (
 						min: 36,
 					}),
 				},
+				{ path: ['params', 'host'], validator: validateRequired },
 			]);
 			break;
 		case NOTIFY_TYPE_MAP.TELEGRAM.value:
@@ -406,7 +416,7 @@ const buildNotifySchema = (
  */
 export const buildNotifySchemaWithFallbacks = (
 	data?: NotifyTypesValues[],
-	defaultItems?: Record<string, unknown>,
+	defaultItems?: string[],
 	mains?: NotifyMap,
 	defaults?: Partial<NotifyTypesMap>,
 	hardDefaults?: NotifyTypesMap,
@@ -467,9 +477,7 @@ export const buildNotifySchemaWithFallbacks = (
 	) as NotifyTypeSchema;
 
 	// Defaults for the schema.
-	const schemaDataDefaults: NotifySchemaValues[] = Object.keys(
-		defaultItems ?? {},
-	)
+	const schemaDataDefaults: NotifySchemaValues[] = (defaultItems ?? [])
 		.map((name) => {
 			const main = mains?.[name];
 			const nameLower = name.toLowerCase();
@@ -519,7 +527,7 @@ export const buildNotifySchemaWithFallbacks = (
 		.superRefine(superRefineNameUnique);
 
 	// Initial schema data.
-	let schemaData;
+	let schemaData: NotifySchemaValues[];
 	if (data) {
 		schemaData = safeParse({
 			data: dataDefaulted,

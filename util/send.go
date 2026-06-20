@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,14 +22,8 @@ import (
 	"time"
 )
 
-// RetryWithBackoff retries the operation with jitter and exponential backoff.
-//
-// Parameters:
-//   - operation: Function to execute.
-//   - maxTries: Maximum amount retries.
-//   - baseDelay: Initial delay before the first retry.
-//   - maxDelay: Maximum delay between retries (exponential backoff).
-//   - shouldStop: Function to check if the operation should stop.
+// RetryWithBackoff retries operation up to maxTries times with exponential backoff and jitter,
+// stopping early if shouldStop returns true.
 func RetryWithBackoff(
 	operation func() error,
 	maxTries uint8,
@@ -59,11 +53,14 @@ func RetryWithBackoff(
 			break
 		}
 		// Space out retries with exponential backoff and jitter.
-		delay := time.Duration(min(
-			float64(baseDelay)*math.Pow(2, float64(try)),
-			float64(maxDelay)))
+		delay := time.Duration(
+			min(
+				float64(baseDelay)*math.Pow(2, float64(try)),
+				float64(maxDelay),
+			),
+		)
 		//#nosec G404 -- jitter does not need cryptographic security.
-		jitter := time.Duration(rand.Int63n(int64(baseDelay))) // Add randomness to avoid synchronized retries.
+		jitter := time.Duration(rand.Int63n(int64(baseDelay))) // Add randomness to avoid synchronised retries.
 		delay += jitter
 
 		// Wait before retrying.

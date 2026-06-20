@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	dvweb "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
 	"github.com/release-argus/Argus/util"
@@ -37,34 +38,40 @@ import (
 //
 
 // convertAndCensorDefaults converts Defaults to API Type and censor secrets.
-func convertAndCensorDefaults(input *config.Defaults) *apitype.Defaults {
+func convertAndCensorDefaults(input *config.Defaults) apitype.Defaults {
 	if input == nil {
-		return nil
+		return apitype.Defaults{}
 	}
 
 	// Convert to API Type, censoring secrets.
-	apiRequire := apitype.Defaults{
+	apiDefaults := apitype.Defaults{
 		Service: apitype.ServiceDefaults{
-			Options: &apitype.ServiceOptions{
+			Options: apitype.ServiceOptions{
 				Interval:           input.Service.Options.Interval,
-				SemanticVersioning: input.Service.Options.SemanticVersioning},
-			LatestVersion: &apitype.LatestVersionDefaults{
-				AccessToken:       util.ValueUnlessDefault(input.Service.LatestVersion.AccessToken, util.SecretValue),
+				SemanticVersioning: input.Service.Options.SemanticVersioning,
+			},
+			LatestVersion: apitype.LatestVersionDefaults{
+				AccessToken:       util.ValueUnlessZero(input.Service.LatestVersion.AccessToken, util.SecretValue),
 				AllowInvalidCerts: input.Service.LatestVersion.AllowInvalidCerts,
 				UsePreRelease:     input.Service.LatestVersion.UsePreRelease,
-				Require:           convertAndCensorLatestVersionRequireDefaults(&input.Service.LatestVersion.Require)},
-			DeployedVersionLookup: &apitype.DeployedVersionLookup{
+				Require:           convertAndCensorLatestVersionRequireDefaults(&input.Service.LatestVersion.Require),
+			},
+			DeployedVersionLookup: apitype.DeployedVersionLookupDefaults{
 				AllowInvalidCerts: input.Service.DeployedVersionLookup.AllowInvalidCerts,
-				Method:            input.Service.DeployedVersionLookup.Method},
-			Dashboard: &apitype.DashboardOptions{
-				AutoApprove: input.Service.Dashboard.AutoApprove},
-			Command: convertCommands(&input.Service.Command),
-			Notify:  input.Service.Notify,
-			WebHook: input.Service.WebHook},
-		Notify:  *convertAndCensorNotifiersDefaults(&input.Notify),
-		WebHook: *convertAndCensorWebHookDefaults(&input.WebHook)}
+				Method:            input.Service.DeployedVersionLookup.Method,
+			},
+			Dashboard: apitype.DashboardOptions{
+				AutoApprove: input.Service.Dashboard.AutoApprove,
+			},
+			Command: convertCommands(input.Service.Command),
+			Notify:  util.SortedKeys(input.Service.Notify),
+			WebHook: util.SortedKeys(input.Service.WebHook),
+		},
+		Notify:  convertAndCensorNotifiersDefaults(input.Notify),
+		WebHook: convertAndCensorWebHookDefaults(input.WebHook),
+	}
 
-	return &apiRequire
+	return apiDefaults
 }
 
 //
@@ -79,42 +86,34 @@ func convertAndCensorService(input *service.Service) *apitype.Service {
 
 	apiService := apitype.Service{}
 
-	// Name.
-	if input.MarshalName() {
-		apiService.Name = input.Name
-	}
-	// Comment.
+	apiService.Name = input.Name
 	apiService.Comment = input.Comment
 
-	// Options.
-	apiService.Options = &apitype.ServiceOptions{
+	apiService.Options = apitype.ServiceOptions{
 		Active:             input.Options.Active,
 		Interval:           input.Options.Interval,
-		SemanticVersioning: input.Options.SemanticVersioning}
+		SemanticVersioning: input.Options.SemanticVersioning,
+	}
 
-	// LatestVersion.
 	apiService.LatestVersion = convertAndCensorLatestVersion(input.LatestVersion)
-	// DeployedVersionLookup.
 	apiService.DeployedVersionLookup = convertAndCensorDeployedVersionLookup(input.DeployedVersionLookup)
-	// Notify.
 	if !input.NotifyFromDefaults {
-		apiService.Notify = convertAndCensorNotifiers(&input.Notify)
+		apiService.Notify = convertAndCensorNotifiers(input.Notify)
 	}
-	// Command.
 	if !input.CommandFromDefaults {
-		apiService.Command = convertCommands(&input.Command)
+		apiService.Command = convertCommands(input.Command)
 	}
-	// WebHook.
 	if !input.WebHookFromDefaults {
-		apiService.WebHook = convertAndCensorWebHooks(&input.WebHook)
+		apiService.WebHook = convertAndCensorWebHooks(input.WebHook)
 	}
 
-	apiService.Dashboard = &apitype.DashboardOptions{
+	apiService.Dashboard = apitype.DashboardOptions{
 		AutoApprove: input.Dashboard.AutoApprove,
 		Icon:        input.Dashboard.Icon,
 		IconLinkTo:  input.Dashboard.IconLinkTo,
 		WebURL:      input.Dashboard.WebURL,
-		Tags:        input.Dashboard.Tags}
+		Tags:        input.Dashboard.Tags,
+	}
 
 	return &apiService
 }
@@ -134,9 +133,9 @@ func convertAndCensorLatestVersion(input latestver.Lookup) *apitype.LatestVersio
 		return &apitype.LatestVersion{
 			Type:          lv.Type,
 			URL:           lv.URL,
-			AccessToken:   util.ValueUnlessDefault(lv.AccessToken, util.SecretValue),
+			AccessToken:   util.ValueUnlessZero(lv.AccessToken, util.SecretValue),
 			UsePreRelease: lv.UsePreRelease,
-			URLCommands:   convertURLCommands(&lv.URLCommands),
+			URLCommands:   convertURLCommands(lv.URLCommands),
 			Require:       convertAndCensorLatestVersionRequire(lv.Require),
 		}
 	case *lvweb.Lookup:
@@ -144,7 +143,7 @@ func convertAndCensorLatestVersion(input latestver.Lookup) *apitype.LatestVersio
 			Type:              lv.Type,
 			URL:               lv.URL,
 			AllowInvalidCerts: lv.AllowInvalidCerts,
-			URLCommands:       convertURLCommands(&lv.URLCommands),
+			URLCommands:       convertURLCommands(lv.URLCommands),
 			Require:           convertAndCensorLatestVersionRequire(lv.Require),
 		}
 	}
@@ -159,29 +158,79 @@ func convertAndCensorLatestVersionRequireDefaults(input *filter.RequireDefaults)
 	}
 
 	apiRequire := &apitype.LatestVersionRequireDefaults{
-		Docker: apitype.RequireDockerCheckDefaults{
-			Type: input.Docker.Type}}
+		Docker: apitype.RequireDockerDefaults{
+			Type:  input.Docker.Type,
+			Image: input.Docker.Image,
+			Tag:   input.Docker.Tag,
+		},
+	}
 
-	// Docker:
-	//   GHCR.
-	if input.Docker.RegistryGHCR != nil {
-		apiRequire.Docker.GHCR = &apitype.RequireDockerCheckRegistryDefaults{
-			Token: util.ValueUnlessDefault(input.Docker.RegistryGHCR.Token, util.SecretValue)}
-	}
-	//   Docker Hub.
-	if input.Docker.RegistryHub != nil {
-		apiRequire.Docker.Hub = &apitype.RequireDockerCheckRegistryDefaultsWithUsername{
-			Username: input.Docker.RegistryHub.Username,
-			RequireDockerCheckRegistryDefaults: apitype.RequireDockerCheckRegistryDefaults{
-				Token: util.ValueUnlessDefault(input.Docker.RegistryHub.Token, util.SecretValue)}}
-	}
-	//   Quay.
-	if input.Docker.RegistryQuay != nil {
-		apiRequire.Docker.Quay = &apitype.RequireDockerCheckRegistryDefaults{
-			Token: util.ValueUnlessDefault(input.Docker.RegistryQuay.Token, util.SecretValue)}
+	if !input.Docker.Registry.IsZero() {
+		registry := apitype.RequireDockerRegistriesDefaults{}
+		if val := convertAndCensorRequireDockerRegistryDefaults(input.Docker.Registry.GHCR); val != nil {
+			registry.GHCR = val
+		}
+		if val := convertAndCensorRequireDockerRegistryDefaults(input.Docker.Registry.Hub); val != nil {
+			registry.Hub = val
+		}
+		if val := convertAndCensorRequireDockerRegistryDefaults(input.Docker.Registry.Quay); val != nil {
+			registry.Quay = val
+		}
+		apiRequire.Docker.Registry = registry
 	}
 
 	return apiRequire
+}
+
+// convertAndCensorRequireDockerRegistryDefaults converts docker registry defaults
+// to the API type, censoring any secrets.
+func convertAndCensorRequireDockerRegistryDefaults(input docker.RegistryDefaults) apitype.RequireDockerRegistryDefaults {
+	if input.IsZero() {
+		return nil
+	}
+
+	switch v := input.(type) {
+	case *docker.GHCRRegistryDefaults:
+		if auth, ok := v.GetAuth().(*docker.GHCRAuthDefaults); ok {
+			return &apitype.RequireDockerRegistryDefaultsToken{
+				RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
+					Image: v.Image,
+					Tag:   v.Tag,
+				},
+				RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
+					Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
+				},
+			}
+		}
+	case *docker.QuayRegistryDefaults:
+		if auth, ok := v.GetAuth().(*docker.QuayAuthDefaults); ok {
+			return &apitype.RequireDockerRegistryDefaultsToken{
+				RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
+					Image: v.Image,
+					Tag:   v.Tag,
+				},
+				RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
+					Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
+				},
+			}
+		}
+	case *docker.HubRegistryDefaults:
+		if auth, ok := v.GetAuth().(*docker.HubAuthDefaults); ok {
+			return &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
+				RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
+					Image: v.Image,
+					Tag:   v.Tag,
+				},
+				RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
+					Username: auth.GetUsernameSelf(),
+					RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
+						Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
+					},
+				},
+			}
+		}
+	}
+	return nil
 }
 
 // convertAndCensorLatestVersionRequire converts Require to API Type, censoring any secrets.
@@ -190,35 +239,39 @@ func convertAndCensorLatestVersionRequire(input *filter.Require) *apitype.Latest
 		return nil
 	}
 
-	// Docker.
-	var docker *apitype.RequireDockerCheck
+	var dockerResp *apitype.RequireDocker
 	if input.Docker != nil {
-		docker = &apitype.RequireDockerCheck{
-			Type:     input.Docker.Type,
-			Image:    input.Docker.Image,
-			Tag:      input.Docker.Tag,
-			Username: input.Docker.Username,
-			Token:    util.ValueUnlessDefault(input.Docker.Token, util.SecretValue)}
+		dockerInput := input.Docker
+		dockerAuth := dockerInput.GetAuth()
+		dockerResp = &apitype.RequireDocker{
+			Type:  dockerInput.GetTypeSelf(),
+			Image: dockerInput.GetImageSelf(),
+			Tag:   dockerInput.GetTagSelf(),
+			Token: util.ValueUnlessZero(dockerAuth.GetTokenSelf(), util.SecretValue),
+		}
+		if a, ok := dockerAuth.(*docker.HubAuth); ok {
+			dockerResp.Username = a.Username
+		}
 	}
 
-	// Require.
 	apiRequire := apitype.LatestVersionRequire{
 		Command:      input.Command,
-		Docker:       docker,
+		Docker:       dockerResp,
 		RegexContent: input.RegexContent,
-		RegexVersion: input.RegexVersion}
+		RegexVersion: input.RegexVersion,
+	}
 
 	return &apiRequire
 }
 
 // convertURLCommands converts URLCommands to API Type.
-func convertURLCommands(input *filter.URLCommands) *apitype.URLCommands {
-	if input == nil {
+func convertURLCommands(input filter.URLCommands) apitype.URLCommands {
+	if len(input) == 0 {
 		return nil
 	}
 
-	urlCommands := make(apitype.URLCommands, len(*input))
-	for i, cmd := range *input {
+	urlCommands := make(apitype.URLCommands, len(input))
+	for i, cmd := range input {
 		urlCommands[i] = apitype.URLCommand{
 			Type:     cmd.Type,
 			Regex:    cmd.Regex,
@@ -226,10 +279,11 @@ func convertURLCommands(input *filter.URLCommands) *apitype.URLCommands {
 			Template: cmd.Template,
 			Text:     cmd.Text,
 			Old:      cmd.Old,
-			New:      cmd.New}
+			New:      cmd.New,
+		}
 	}
 
-	return &urlCommands
+	return urlCommands
 }
 
 //
@@ -245,7 +299,7 @@ func convertAndCensorDeployedVersionLookup(input deployedver.Lookup) *apitype.De
 	switch dvl := input.(type) {
 	case *dvweb.Lookup:
 		apiDVL := apitype.DeployedVersionLookup{
-			Type:              dvl.Type,
+			Type:              input.GetType(),
 			Method:            dvl.Method,
 			URL:               dvl.URL,
 			AllowInvalidCerts: dvl.AllowInvalidCerts,
@@ -254,13 +308,15 @@ func convertAndCensorDeployedVersionLookup(input deployedver.Lookup) *apitype.De
 			Body:              dvl.Body,
 			JSON:              dvl.JSON,
 			Regex:             dvl.Regex,
-			RegexTemplate:     dvl.RegexTemplate}
+			RegexTemplate:     dvl.RegexTemplate,
+		}
 
 		// Basic auth.
 		if dvl.BasicAuth != nil {
 			apiDVL.BasicAuth = &apitype.BasicAuth{
 				Username: dvl.BasicAuth.Username,
-				Password: util.SecretValue}
+				Password: util.SecretValue,
+			}
 		}
 
 		// Headers.
@@ -268,13 +324,14 @@ func convertAndCensorDeployedVersionLookup(input deployedver.Lookup) *apitype.De
 		for i := range dvl.Headers {
 			apiDVL.Headers[i] = apitype.Header{
 				Key:   dvl.Headers[i].Key,
-				Value: util.SecretValue}
+				Value: util.SecretValue,
+			}
 		}
 
 		return &apiDVL
 	case *dvmanual.Lookup:
 		return &apitype.DeployedVersionLookup{
-			Type:    dvl.Type,
+			Type:    input.GetType(),
 			Version: dvl.Status.DeployedVersion(),
 		}
 	}
@@ -287,47 +344,45 @@ func convertAndCensorDeployedVersionLookup(input deployedver.Lookup) *apitype.De
 //
 
 // convertAndCensorNotifiersDefaults converts Shoutrrrs to Notifiers, censoring any secrets.
-func convertAndCensorNotifiersDefaults(input *shoutrrr.ShoutrrrsDefaults) *apitype.Notifiers {
+func convertAndCensorNotifiersDefaults(input shoutrrr.ShoutrrrsDefaults) apitype.Notifiers {
 	if input == nil {
 		return nil
 	}
 
-	// Convert to API Type, censoring secrets.
-	notifiers := make(apitype.Notifiers, len(*input))
-	for name, notify := range *input {
+	notifiers := make(apitype.Notifiers, len(input))
+	for name, notify := range input {
 		n := &apitype.Notify{
 			Type:      notify.Type,
 			Options:   notify.Options,
 			URLFields: notify.URLFields,
-			Params:    notify.Params}
-		// Censor and add to map.
+			Params:    notify.Params,
+		}
 		n.Censor()
 		notifiers[name] = n
 	}
 
-	return &notifiers
+	return notifiers
 }
 
 // convertAndCensorNotifiers converts Shoutrrrs to API Type, censoring any secrets.
-func convertAndCensorNotifiers(input *shoutrrr.Shoutrrrs) *apitype.Notifiers {
-	if input == nil {
+func convertAndCensorNotifiers(input shoutrrr.Shoutrrrs) apitype.Notifiers {
+	if len(input) == 0 {
 		return nil
 	}
 
-	// Convert to API Type, censoring secrets.
-	notifiers := make(apitype.Notifiers, len(*input))
-	for name, notify := range *input {
+	notifiers := make(apitype.Notifiers, len(input))
+	for name, notify := range input {
 		n := &apitype.Notify{
 			Type:      notify.Type,
 			Options:   notify.Options,
 			URLFields: notify.URLFields,
-			Params:    notify.Params}
-		// Censor and add to mapping.
+			Params:    notify.Params,
+		}
 		n.Censor()
 		notifiers[name] = n
 	}
 
-	return &notifiers
+	return notifiers
 }
 
 //
@@ -335,104 +390,101 @@ func convertAndCensorNotifiers(input *shoutrrr.Shoutrrrs) *apitype.Notifiers {
 //
 
 // convertCommands converts Commands to API type.
-func convertCommands(input *command.Commands) *apitype.Commands {
-	if input == nil {
+func convertCommands(input command.Commands) apitype.Commands {
+	if len(input) == 0 {
 		return nil
 	}
 
-	commands := make(apitype.Commands, len(*input))
-	for index, cmd := range *input {
+	commands := make(apitype.Commands, len(input))
+	for index, cmd := range input {
 		commands[index] = apitype.Command(cmd)
 	}
 
-	return &commands
+	return commands
 }
 
 //
 // WebHook.
 //
 
-// convertWebHookHeaders converts WebHook Headers to API type.
-func convertWebHookHeaders(input *webhook.Headers) *[]apitype.Header {
-	if input == nil {
-		return nil
-	}
-
-	apiHeaders := make([]apitype.Header, len(*input))
-	for index, header := range *input {
-		apiHeaders[index] = apitype.Header(header)
-	}
-
-	return &apiHeaders
-}
-
 // convertAndCensorWebHooksDefaults converts WebHooksDefaults to API Type, censoring any secrets.
-func convertAndCensorWebHooksDefaults(input *webhook.WebHooksDefaults) *apitype.WebHooks {
+func convertAndCensorWebHooksDefaults(input webhook.WebHooksDefaults) apitype.WebHooks {
 	if input == nil {
 		return nil
 	}
 
-	// Convert to API Type, censoring secrets.
-	webhooks := make(apitype.WebHooks, len(*input))
-	for name, wh := range *input {
-		webhooks[name] = convertAndCensorWebHookDefaults(wh)
+	webhooks := make(apitype.WebHooks, len(input))
+	for name, wh := range input {
+		webhooks[name] = convertAndCensorWebHookDefaults(*wh)
 	}
 
-	return &webhooks
+	return webhooks
 }
 
 // convertAndCensorWebHookDefaults converts Defaults to API type, censoring any secrets.
-func convertAndCensorWebHookDefaults(input *webhook.Defaults) *apitype.WebHook {
-	if input == nil {
-		return nil
-	}
-
-	apiElement := &apitype.WebHook{
+func convertAndCensorWebHookDefaults(input webhook.Defaults) apitype.WebHook {
+	apiElement := apitype.WebHook{
 		Type:              input.Type,
 		URL:               input.URL,
 		AllowInvalidCerts: input.AllowInvalidCerts,
-		Secret:            util.ValueUnlessDefault(input.Secret, util.SecretValue),
+		Secret:            util.ValueUnlessZero(input.Secret, util.SecretValue),
 		Headers:           convertWebHookHeaders(input.Headers),
 		DesiredStatusCode: input.DesiredStatusCode,
 		Delay:             input.Delay,
 		MaxTries:          input.MaxTries,
-		SilentFails:       input.SilentFails}
+		SilentFails:       input.SilentFails,
+	}
 	apiElement.Censor()
 
 	return apiElement
 }
 
 // convertAndCensorWebHooks converts WebHooks to API Type, censoring any secrets.
-func convertAndCensorWebHooks(input *webhook.WebHooks) *apitype.WebHooks {
+func convertAndCensorWebHooks(input webhook.WebHooks) apitype.WebHooks {
 	if input == nil {
 		return nil
 	}
 
-	webhooks := make(apitype.WebHooks, len(*input))
-	for index, wh := range *input {
+	webhooks := make(apitype.WebHooks, len(input))
+	for index, wh := range input {
 		webhooks[index] = convertAndCensorWebHook(wh)
 	}
 
-	return &webhooks
+	return webhooks
 }
 
 // convertAndCensorWebHook converts WebHook to API type, censoring any secrets.
-func convertAndCensorWebHook(input *webhook.WebHook) *apitype.WebHook {
+func convertAndCensorWebHook(input *webhook.WebHook) apitype.WebHook {
 	if input == nil {
-		return nil
+		return apitype.WebHook{}
 	}
 
-	apiElement := &apitype.WebHook{
+	apiElement := apitype.WebHook{
 		Type:              input.Type,
 		URL:               input.URL,
 		AllowInvalidCerts: input.AllowInvalidCerts,
-		Secret:            util.ValueUnlessDefault(input.Secret, util.SecretValue),
+		Secret:            util.ValueUnlessZero(input.Secret, util.SecretValue),
 		Headers:           convertWebHookHeaders(input.Headers),
 		DesiredStatusCode: input.DesiredStatusCode,
 		Delay:             input.Delay,
 		MaxTries:          input.MaxTries,
-		SilentFails:       input.SilentFails}
+		SilentFails:       input.SilentFails,
+	}
 	apiElement.Censor()
 
 	return apiElement
+}
+
+// convertWebHookHeaders converts WebHook Headers to API type.
+func convertWebHookHeaders(input webhook.Headers) []apitype.Header {
+	if len(input) == 0 {
+		return nil
+	}
+
+	apiHeaders := make([]apitype.Header, len(input))
+	for index, header := range input {
+		apiHeaders[index] = apitype.Header(header)
+	}
+
+	return apiHeaders
 }

@@ -19,9 +19,9 @@ export const mapCommandsSchemaToAPIPayload = (
 	// Omit if defaults used (lengths match, and all args empty on all commands).
 	if (
 		defaultValue &&
-		data.length == defaultValue.length &&
+		data.length === defaultValue.length &&
 		data.every((cmd, cmdIndex) => {
-			if (defaultValue[cmdIndex].length != cmd.length) return false;
+			if (defaultValue[cmdIndex].length !== cmd.length) return false;
 			return Object.values(cmd).every(({ arg }) => !arg);
 		})
 	) {

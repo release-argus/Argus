@@ -75,7 +75,7 @@ function NavigationMenuTrigger({
 			{children}{' '}
 			<ChevronDownIcon
 				aria-hidden="true"
-				className="relative top-[1px] ml-1 size-3 transition duration-300 group-data-[state=open]:rotate-180"
+				className="relative top-px ml-1 size-3 transition duration-300 group-data-[state=open]:rotate-180"
 			/>
 		</NavigationMenuPrimitive.Trigger>
 	);
@@ -111,7 +111,7 @@ function NavigationMenuViewport({
 		>
 			<NavigationMenuPrimitive.Viewport
 				className={cn(
-					'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-full origin-top-center overflow-hidden rounded-md border bg-popover text-popover-foreground shadow data-[state=closed]:animate-out data-[state=open]:animate-in md:w-[var(--radix-navigation-menu-viewport-width)]',
+					'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 relative mt-1.5 h-(--radix-navigation-menu-viewport-height) w-full origin-top-center overflow-hidden rounded-md border bg-popover text-popover-foreground shadow data-[state=closed]:animate-out data-[state=open]:animate-in md:w-(--radix-navigation-menu-viewport-width)',
 					className,
 				)}
 				data-slot="navigation-menu-viewport"
@@ -144,7 +144,7 @@ function NavigationMenuIndicator({
 	return (
 		<NavigationMenuPrimitive.Indicator
 			className={cn(
-				'data-[state=hidden]:fade-out data-[state=visible]:fade-in top-full z-[1] flex h-1.5 items-end justify-center overflow-hidden data-[state=hidden]:animate-out data-[state=visible]:animate-in',
+				'data-[state=hidden]:fade-out data-[state=visible]:fade-in top-full z-1 flex h-1.5 items-end justify-center overflow-hidden data-[state=hidden]:animate-out data-[state=visible]:animate-in',
 				className,
 			)}
 			data-slot="navigation-menu-indicator"
@@ -157,12 +157,12 @@ function NavigationMenuIndicator({
 
 export {
 	NavigationMenu,
-	NavigationMenuList,
-	NavigationMenuItem,
 	NavigationMenuContent,
-	NavigationMenuTrigger,
-	NavigationMenuLink,
 	NavigationMenuIndicator,
+	NavigationMenuItem,
+	NavigationMenuLink,
+	NavigationMenuList,
+	NavigationMenuTrigger,
 	NavigationMenuViewport,
 	navigationMenuTriggerStyle,
 };

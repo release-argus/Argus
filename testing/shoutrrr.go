@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,20 +21,21 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
-// NotifyTest will send a test Shoutrrr message to the Shoutrrr with this flag as its ID.
+// NotifyTest sends a test Shoutrrr message to the notifier identified by flag.
 func NotifyTest(flag *string, cfg *config.Config) bool {
 	// Only if flag provided.
 	if *flag == "" {
 		return true
 	}
-	logFrom := logutil.LogFrom{Primary: "Testing", Secondary: *flag}
+	logFrom := logx.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	// Find the Shoutrrr to test.
 	notify, ok := findShoutrrr(*flag, cfg, logFrom)
@@ -45,27 +46,30 @@ func NotifyTest(flag *string, cfg *config.Config) bool {
 	err := notify.TestSend("https://example.com/service_url")
 
 	if err == nil {
-		logutil.Log.Info(
-			fmt.Sprintf("Message sent successfully with %q config\n",
-				*flag),
+		logx.Info(
+			fmt.Sprintf("Message sent successfully with %q config\n", *flag),
 			logFrom,
-			true)
+			true,
+		)
 	} else {
-		logutil.Log.Fatal(
-			fmt.Sprintf("Message failed to send with %q config\n%s\n",
-				*flag, err),
-			logFrom)
+		logx.Fatal(
+			fmt.Sprintf(
+				"Message failed to send with %q config\n%s\n",
+				*flag, err,
+			),
+			logFrom,
+		)
 		return false
 	}
 
 	return true
 }
 
-// findShoutrrr with `name` from cfg.Service.Notify || cfg.Notify.
+// findShoutrrr returns the Shoutrrr named by name from cfg.Service.Notify or cfg.Notify.
 func findShoutrrr(
 	name string,
 	cfg *config.Config,
-	logFrom logutil.LogFrom,
+	logFrom logx.LogFrom,
 ) (notify *shoutrrr.Shoutrrr, ok bool) {
 	// Find in Service.X.Notify.name.
 	for _, svc := range cfg.Service {
@@ -89,7 +93,8 @@ func findShoutrrr(
 				main.Type,
 				main.Options, main.URLFields, main.Params,
 				&emptyShoutrrrs,
-				&emptyShoutrrrs, &emptyShoutrrrs)
+				&emptyShoutrrrs, &emptyShoutrrrs,
+			)
 			notify.InitMaps()
 			notify.Main.InitMaps()
 
@@ -105,25 +110,38 @@ func findShoutrrr(
 			serviceName := "service_name"
 			notify.ServiceStatus = &status.Status{}
 			notify.ServiceStatus.Init(
-				1, 0, 0,
-				serviceID, serviceName, "",
-				&dashboard.Options{})
+				0, 1, 0,
+				status.ServiceInfo{
+					ID:   serviceID,
+					Name: serviceName,
+				},
+				&dashboard.Options{},
+			)
 			notify.Failed = &notify.ServiceStatus.Fails.Shoutrrr
 
 			// Check whether all values set.
-			if err, _ := notify.CheckValues("    "); err != nil {
-				msg := fmt.Sprintf("notify:\n  %s:\n%s\n",
-					name, err)
-				logutil.Log.Fatal(msg, logFrom)
+			if err, _ := notify.CheckValues(); err != nil {
+				logx.Fatal(
+					&decode.KeyFieldError{
+						Key: "notify",
+						Err: &decode.KeyFieldError{
+							Key: name,
+							Err: err,
+						},
+					},
+					logFrom,
+				)
 				return
 			}
 
 			// Not found.
 		} else {
 			all := getAllShoutrrrNames(cfg)
-			msg := fmt.Sprintf("Notifier %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s",
-				name, strings.Join(all, "\n  - "))
-			logutil.Log.Fatal(msg, logFrom)
+			msg := fmt.Sprintf(
+				"Notifier %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s",
+				name, strings.Join(all, "\n  - "),
+			)
+			logx.Fatal(msg, logFrom)
 			return
 		}
 	}

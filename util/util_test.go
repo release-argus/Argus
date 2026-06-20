@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,500 +19,604 @@ package util
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestStringToBoolPtr(t *testing.T) {
-	// GIVEN a string.
-	tests := map[string]struct {
+	// GIVEN: a string.
+	tests := []struct {
+		name  string
 		input string
 		want  *bool
 	}{
-		"'true' gives true": {
-			input: "true", want: test.BoolPtr(true)},
-		"'false' gives false": {
-			input: "false", want: test.BoolPtr(false)},
-		"'' gives nil": {
-			input: "", want: nil},
+		{
+			name:  "'true' gives true",
+			input: "true", want: test.Ptr(true),
+		},
+		{
+			name:  "'false' gives false",
+			input: "false", want: test.Ptr(false),
+		},
+		{
+			name:  "'' gives nil",
+			input: "", want: nil,
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 
-			// WHEN StringToBoolPtr is called.
+			// WHEN: StringToBoolPtr is called.
 			got := StringToBoolPtr(tc.input)
 
-			// THEN the string is converted to a bool pointer.
+			prefix := fmt.Sprintf(
+				"%s\nStringToBoolPtr(%q)",
+				packageName, tc.input,
+			)
+
+			// THEN: the string is converted to a bool pointer.
 			if got == tc.want {
 				return
 			}
-			// One of them is nil, but the other is not.
-			if (tc.want != nil && got == nil) ||
-				(tc.want == nil && got != nil) {
-				t.Errorf("%s\nwant: %v\ngot:  %v",
-					packageName, tc.want, got)
-			}
-			// Not the same bool value.
-			if *got != *tc.want {
-				t.Errorf("%s\nwant: %v\ngot:  %v",
-					packageName, tc.want, got)
+			// One of them is nil, but the other is not. Or value mismatch.
+			if (tc.want != nil && got == nil) || (tc.want == nil && got != nil) ||
+				*got != *tc.want {
+				t.Errorf(
+					"%s value mismatch\ngot:  %v\nwant: %v",
+					prefix, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
-func TestValueUnlessDefault(t *testing.T) {
-	// GIVEN a value to check and a value we want when it's not default.
-	tests := map[string]struct {
+func TestValueUnlessZero(t *testing.T) {
+	// GIVEN: a value to check and a value we want when it's not the zero value.
+	tests := []struct {
+		name  string
 		check string
 		value string
 		want  string
 	}{
-		"default `check` value": {
+		{
+			name:  "default `check` value",
 			check: "", value: "foo",
-			want: ""},
-		"non-default `check` value": {
+			want: "",
+		},
+		{
+			name:  "non-default `check` value",
 			check: "foo", value: "bar",
-			want: "bar"},
+			want: "bar",
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ValueUnlessDefault is run on pointer and a value.
-			got := ValueUnlessDefault(tc.check, tc.value)
+			// WHEN: ValueUnlessZero is run on pointer and a value.
+			got := ValueUnlessZero(tc.check, tc.value)
 
-			// THEN the correct value is returned.
+			prefix := fmt.Sprintf(
+				"%s\nValueUnlessDefault(check=%q, value=%q)",
+				packageName, tc.check, tc.value,
+			)
+
+			// THEN: the correct value is returned.
 			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s value mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
-func TestValueOrValue(t *testing.T) {
-	// GIVEN two values.
-	tests := map[string]struct {
+func TestValueOr(t *testing.T) {
+	// GIVEN: two values.
+	tests := []struct {
+		name          string
 		first, second string
 		want          string
 	}{
-		"first value is non-default": {
+		{
+			name:   "first value is non-default",
 			first:  "foo",
 			second: "bar",
 			want:   "foo",
 		},
-		"first value is default": {
+		{
+			name:   "first value is default",
 			first:  "",
 			second: "bar",
 			want:   "bar",
 		},
-		"both values are default": {
+		{
+			name:   "both values are default",
 			first:  "",
 			second: "",
 			want:   "",
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ValueOrValue is called with two values.
-			got := ValueOrValue(tc.first, tc.second)
+			// WHEN: ValueOr is called with two values.
+			got := ValueOr(tc.first, tc.second)
 
-			// THEN the correct value is returned.
+			prefix := fmt.Sprintf(
+				"%s\nValueOr(a=%q, b=%q)",
+				packageName, tc.first, tc.second,
+			)
+
+			// THEN: the correct value is returned.
 			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s value mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
-func TestDereferenceOrDefault(t *testing.T) {
-	// GIVEN a value to check and a value we want when it's nil.
-	tests := map[string]struct {
+func TestDerefOrZero(t *testing.T) {
+	// GIVEN: a value to check and a value we want when it's nil.
+	tests := []struct {
+		name  string
 		check *string
 		value string
 		want  string
 	}{
-		"nil `check` pointer": {
+		{
+			name:  "nil `check` pointer",
 			check: nil,
-			want:  ""},
-		"non-nil `check` pointer": {
-			check: test.StringPtr("foo"),
-			want:  "foo"},
+			want:  "",
+		},
+		{
+			name:  "non-nil `check` pointer",
+			check: test.Ptr("foo"),
+			want:  "foo",
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN DereferenceOrDefault is run on pointer and a value.
-			got := DereferenceOrDefault(tc.check)
+			// WHEN: DerefOrZero is run on pointer and a value.
+			got := DerefOrZero(tc.check)
 
-			// THEN the correct value is returned.
+			prefix := fmt.Sprintf(
+				"%s\nDerefOrZero(%v)",
+				packageName, tc.check,
+			)
+
+			// THEN: the correct value is returned.
 			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s value mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
-func TestDereferenceOrValue(t *testing.T) {
-	// GIVEN a bunch of comparables pointers and values.
-	tests := map[string]struct {
+func TestDerefOr(t *testing.T) {
+	// GIVEN: a bunch of comparables pointers and values.
+	tests := []struct {
+		name       string
 		ptr, value any
 		want       any
 	}{
-		"nil string pointer": {
+		{
+			name:  "nil string pointer",
 			ptr:   (*string)(nil),
-			value: "argus", want: "argus"},
-		"non-nil string pointer": {
-			ptr:   test.StringPtr("foo"),
-			value: "bar", want: "foo"},
-		"nil bool pointer": {
+			value: "argus",
+			want:  "argus",
+		},
+		{
+			name:  "non-nil string pointer",
+			ptr:   test.Ptr("foo"),
+			value: "bar",
+			want:  "foo",
+		},
+		{
+			name:  "nil bool pointer",
 			ptr:   (*bool)(nil),
-			value: false, want: false},
-		"non-nil bool pointer": {
-			ptr:   test.BoolPtr(true),
-			value: false, want: true},
-		"nil int pointer": {
+			value: false,
+			want:  false,
+		},
+		{
+			name:  "non-nil bool pointer",
+			ptr:   test.Ptr(true),
+			value: false,
+			want:  true,
+		},
+		{
+			name:  "nil int pointer",
 			ptr:   (*int)(nil),
-			value: 1, want: 1},
-		"non-nil int pointer": {
-			ptr:   test.IntPtr(3),
-			value: 2, want: 3},
-		"nil string slice": {
+			value: 1,
+			want:  1,
+		},
+		{
+			name:  "non-nil int pointer",
+			ptr:   test.Ptr(3),
+			value: 2,
+			want:  3,
+		},
+		{
+			name:  "nil string slice",
 			ptr:   (*[]string)(nil),
-			value: []string{"baz"}, want: []string{"baz"}},
-		"non-nil string slice": {
-			ptr:   test.StringSlicePtr([]string{"foo", "bar"}),
-			value: []string{"baz"}, want: []string{"foo", "bar"}},
+			value: []string{"baz"},
+			want:  []string{"baz"},
+		},
+		{
+			name:  "non-nil string slice",
+			ptr:   test.Ptr([]string{"foo", "bar"}),
+			value: []string{"baz"},
+			want:  []string{"foo", "bar"},
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN DereferenceOrValue is called.
+			// WHEN: DerefOr is called.
 			var got any
 			switch v := tc.ptr.(type) {
 			case *string:
-				got = DereferenceOrValue(v, tc.value.(string))
+				got = DerefOr(v, tc.value.(string))
 			case *bool:
-				got = DereferenceOrValue(v, tc.value.(bool))
+				got = DerefOr(v, tc.value.(bool))
 			case *int:
-				got = DereferenceOrValue(v, tc.value.(int))
+				got = DerefOr(v, tc.value.(int))
 			case *[]string:
-				got = DereferenceOrValue(v, tc.value.([]string))
+				got = DerefOr(v, tc.value.([]string))
 			}
 
-			// THEN the pointer is returned if it's nil, otherwise the value.
+			prefix := fmt.Sprintf(
+				"%s\nDerefOr(ptr=%v, b=%v)",
+				packageName, tc.ptr, tc.value,
+			)
+
+			// THEN: the pointer is returned if it's nil, otherwise the value.
 			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("%s\nwant: %v\ngot:  %v",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s result mismatch\ngot:  %v\nwant: %v",
+					prefix, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestPtrIfNotZero(t *testing.T) {
+	// GIVEN: comparable values.
+	tests := []struct {
+		name  string
+		value int
+		want  *int
+	}{
+		{
+			name:  "zero value",
+			value: 0,
+			want:  nil,
+		},
+		{
+			name:  "non-zero value",
+			value: 42,
+			want:  test.Ptr(42),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: PtrIfNotZero is called.
+			got := PtrIfNotZero(tc.value)
+
+			prefix := fmt.Sprintf(
+				"%s\nPtrIfNotZero(%v)",
+				packageName, tc.value,
+			)
+
+			// THEN: nil is returned for zero values.
+			if tc.want == nil {
+				if got != nil {
+					t.Errorf(
+						"%s result mismatch\ngot:  %d\nwant: nil",
+						prefix, *got,
+					)
+				}
+				return
+			}
+			// AND: a pointer is returned for non-zero values.
+			if got == nil || *got != *tc.want {
+				t.Errorf(
+					"%s result mismatch\ngot:  %v\nwant: %d",
+					prefix, got, *tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestCopyPointer(t *testing.T) {
-	tests := map[string]struct {
+	tests := []struct {
+		name     string
 		input    any
 		doesCopy bool
 	}{
-		"nil pointer": {
-			input:    nil,
+		{
+			name:     "nil pointer",
+			input:    (*string)(nil),
 			doesCopy: false,
 		},
-		"non-nil int pointer": {
-			input:    test.IntPtr(6),
+		{
+			name:     "non-nil int pointer",
+			input:    test.Ptr(6),
 			doesCopy: true,
 		},
-		"non-nil string pointer": {
-			input:    test.StringPtr("foo"),
+		{
+			name:     "non-nil string pointer",
+			input:    test.Ptr("foo"),
 			doesCopy: true,
 		},
-		"non-nil bool pointer": {
-			input:    test.BoolPtr(true),
+		{
+			name:     "non-nil bool pointer",
+			input:    test.Ptr(true),
 			doesCopy: true,
 		},
-		"non-nil string slice pointer": {
-			input:    test.StringSlicePtr([]string{"foo", "bar"}),
+		{
+			name:     "non-nil string slice pointer",
+			input:    test.Ptr([]string{"foo", "bar"}),
 			doesCopy: true,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CopyPointer is called.
+			// WHEN: CopyPointer is called.
 			var got any
 			switch v := tc.input.(type) {
 			case *string:
-				got = CopyPointer(v)
+				got = ClonePtr(v)
 			case *bool:
-				got = CopyPointer(v)
+				got = ClonePtr(v)
 			case *int:
-				got = CopyPointer(v)
+				got = ClonePtr(v)
 			case *[]string:
-				got = CopyPointer(v)
+				got = ClonePtr(v)
 			}
 
-			// THEN the result should be a pointer to a copy of the value.
+			prefix := fmt.Sprintf(
+				"%s\nCopyPointer(%v)",
+				packageName, tc.input,
+			)
+
+			// THEN: the result should be a pointer to a copy of the value.
 			if (tc.doesCopy && got == nil) ||
 				(tc.doesCopy && !reflect.DeepEqual(got, tc.input)) ||
-				(!tc.doesCopy && got != nil) {
-				t.Errorf("%s\nwant %v, got %v",
-					packageName, tc.input, got)
+				(!tc.doesCopy && got != nil && !reflect.ValueOf(tc.input).IsNil()) {
+				t.Errorf(
+					"%s value mismatch\ngot  %v, want %v",
+					prefix, got, tc.input,
+				)
 			}
 		})
 	}
 }
 
-func TestCopySecretValues(t *testing.T) {
-	// GIVEN maps with secrets to be copied.
-	tests := map[string]struct {
+func TestRestoreMaskedValues(t *testing.T) {
+	// GIVEN: maps with secrets to be copied.
+	tests := []struct {
+		name                  string
 		input, copyFrom, want map[string]string
 		fields                []string
 	}{
-		"empty map": {
+		{
+			name:  "empty map",
 			input: map[string]string{},
 			copyFrom: map[string]string{
-				"foo": "bar"},
+				"foo": "bar",
+			},
 			want:   map[string]string{},
 			fields: []string{"foo"},
 		},
-		"copy only `SecretValue`s in fields": {
+		{
+			name: "copy only `SecretValue`s in fields",
 			input: map[string]string{
 				"test": SecretValue,
-				"foo":  SecretValue},
+				"foo":  SecretValue,
+			},
 			copyFrom: map[string]string{
 				"test": "123",
-				"foo":  "bar"},
+				"foo":  "bar",
+			},
 			want: map[string]string{
 				"test": "123",
-				"foo":  SecretValue},
+				"foo":  SecretValue,
+			},
 			fields: []string{"test"},
 		},
-		"copy only `SecretValue`s in fields that also exist in from": {
+		{
+			name: "copy only `SecretValue`s in fields that also exist in from",
 			input: map[string]string{
 				"test": SecretValue,
 				"foo":  SecretValue,
-				"bar":  SecretValue},
+				"bar":  SecretValue,
+			},
 			copyFrom: map[string]string{
 				"test": "123",
-				"foo":  "bar"},
+				"foo":  "bar",
+			},
 			want: map[string]string{
 				"test": "123",
 				"foo":  SecretValue,
-				"bar":  SecretValue},
+				"bar":  SecretValue,
+			},
 			fields: []string{"test", "bar"},
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CopySecretValues is called.
-			CopySecretValues(tc.copyFrom, tc.input, tc.fields)
+			// WHEN: RestoreMaskedValues is called.
+			RestoreMaskedValues(tc.copyFrom, tc.input, tc.fields)
 
-			// THEN the secrets are copied correctly.
-			if len(tc.input) != len(tc.want) {
-				t.Fatalf("%s\nwant: %v\ngot:  %v",
-					packageName, tc.want, tc.input)
-			}
-			for i := range tc.input {
-				if tc.input[i] != tc.want[i] {
-					t.Fatalf("%s\nwant: %v\ngot:  %v",
-						packageName, tc.want, tc.input)
-				}
+			prefix := fmt.Sprintf(
+				"%s\nRestoreMaskedValues(from=%+v, to=%+v, fields=%+v)",
+				packageName, tc.copyFrom, tc.input, tc.fields,
+			)
+
+			// THEN: the secrets are copied correctly.
+			if testErr := test.AssertMapEqual(
+				t,
+				tc.input,
+				tc.want,
+				prefix,
+				"",
+			); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
 }
 
-type CustomErrorMarshal struct{}
-
-func (c CustomErrorMarshal) MarshalYAML() (any, error) {
-	return nil, fmt.Errorf("intentional marshal error")
-}
-
-func TestTo____String(t *testing.T) {
-
-	// GIVEN a struct to print in YAML format.
-	tests := map[string]struct {
-		input              any
-		wantJSON, wantYAML string
-	}{
-		"invalid input": {
-			input:    CustomErrorMarshal{},
-			wantJSON: "{}",
-			wantYAML: "",
-		},
-		"empty struct": {
-			input:    struct{}{},
-			wantJSON: "{}",
-			wantYAML: "{}",
-		},
-		"simple struct": {
-			input: struct {
-				Test string `yaml:"test" json:"test"`
-			}{
-				Test: "test"},
-			wantJSON: `{"test":"test"}`,
-			wantYAML: "test: test",
-		},
-		"nested struct": {
-			input: struct {
-				Test struct {
-					Foo string `yaml:"foo" json:"foo"`
-				} `yaml:"test" json:"test"`
-			}{
-				Test: struct {
-					Foo string `yaml:"foo" json:"foo"`
-				}{
-					Foo: "bar"}},
-			wantJSON: `{"test":{"foo":"bar"}}`,
-			wantYAML: "test:\n  foo: bar",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			prefixes := []string{"", " ", "  ", "    ", "- "}
-			for _, prefix := range prefixes {
-				wantYAML := strings.TrimPrefix(tc.wantYAML, "\n")
-				if wantYAML != "" {
-					if wantYAML != "{}" {
-						wantYAML = prefix + strings.ReplaceAll(wantYAML, "\n", "\n"+prefix)
-					}
-					wantYAML += "\n"
-				}
-
-				// WHEN ToYAMLString is called.
-				gotYAML := ToYAMLString(tc.input, prefix)
-
-				// THEN the struct is printed in YAML format.
-				if gotYAML != wantYAML {
-					t.Fatalf("%s\nYAML mismatch (prefix=%q) want: %q\ngot:  %q",
-						packageName, prefix, wantYAML, gotYAML)
-				}
-			}
-
-			// WHEN ToJSONString is called.
-			gotJSON := ToJSONString(tc.input)
-
-			// THEN the struct is printed in JSON format.
-			if gotJSON != tc.wantJSON {
-				t.Fatalf("%s\nJSON mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wantJSON, gotJSON)
-			}
-		})
-	}
-}
-
-func TestGetIndentation(t *testing.T) {
-	// GIVEN a set of strings with varying indentation.
-	tests := map[string]struct {
+func TestIndentation(t *testing.T) {
+	// GIVEN: a string with/without indentation.
+	tests := []struct {
+		name       string
 		text       string
 		indentSize int
 		want       string
 	}{
-		"no indent": {
+		{
+			name:       "indent size 0",
+			text:       "foo: bar",
+			indentSize: 0,
+			want:       "",
+		},
+		{
+			name:       "no indent",
 			text:       "foo: bar",
 			indentSize: 2,
 			want:       "",
 		},
-		"indent 4, indent size 4": {
+		{
+			name:       "indent 4, indent size 4",
 			text:       "    foo: bar",
 			indentSize: 4,
 			want:       "    ",
 		},
-		"indent 4, indent size 2": {
+		{
+			name:       "indent 4, indent size 2",
 			text:       "    foo: bar",
 			indentSize: 2,
 			want:       "    ",
 		},
-		"indent 3, indent size 2": {
+		{
+			name:       "indent 3, indent size 2",
 			text:       "   foo: bar",
 			indentSize: 2,
 			want:       "  ",
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Indentation is called on a string.
+			// WHEN: Indentation is called on it.
 			got := Indentation(tc.text, uint8(tc.indentSize))
 
-			// THEN the expected indentation is returned.
+			prefix := fmt.Sprintf(
+				"%s\nIndentation(text=%q, indents=%d)",
+				packageName, tc.text, tc.indentSize,
+			)
+
+			// THEN: the expected indentation is returned.
 			if got != tc.want {
-				t.Fatalf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Fatalf(
+					"%s value mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestTruncateMessage(t *testing.T) {
-	// GIVEN a message and a maxLength to adhere to.
-	tests := map[string]struct {
+	// GIVEN: a message and a maxLength to adhere to.
+	tests := []struct {
+		name      string
 		msg       string
 		maxLength int
 		want      string
 	}{
-		"message shorter than maxLength": {
+		{
+			name:      "message shorter than maxLength",
 			msg:       "short message",
 			maxLength: 20,
 			want:      "short message",
 		},
-		"message equal to maxLength": {
+		{
+			name:      "message equal to maxLength",
 			msg:       "exact length msg",
 			maxLength: 16,
 			want:      "exact length msg",
 		},
-		"message longer than maxLength": {
+		{
+			name:      "message longer than maxLength",
 			msg:       "is this message too long",
 			maxLength: 10,
 			want:      "is this me...",
 		},
-		"empty message": {
+		{
+			name:      "empty message",
 			msg:       "",
 			maxLength: 10,
 			want:      "",
 		},
-		"maxLength zero": {
+		{
+			name:      "maxLength zero",
 			msg:       "message",
 			maxLength: 0,
 			want:      "...",
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN TruncateMessage is called.
+			// WHEN: TruncateMessage is called.
 			got := TruncateMessage(tc.msg, tc.maxLength)
 
-			// THEN the message is truncated only if it exceeds maxLength.
+			prefix := fmt.Sprintf(
+				"%s\ntruncateMessage(msg=%q, max=%d)",
+				packageName, tc.msg, tc.maxLength,
+			)
+
+			// THEN: the message is truncated only if it exceeds maxLength.
 			if got != tc.want {
-				t.Errorf("%s\ntruncateMessage(%q, %d)\nwant: %q\ngot:  %q",
-					packageName, tc.msg, tc.maxLength, tc.want, got)
+				t.Errorf(
+					"%s value mismatch\ngot:  %q\nwant: %q",
+					prefix, tc.msg, tc.want,
+				)
 			}
 		})
 	}

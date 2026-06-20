@@ -7,6 +7,7 @@ toolchain go1.26.2
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/flosch/pongo2/v6 v6.0.0
+	github.com/goccy/go-yaml v1.19.2
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/nicholas-fedor/shoutrrr v0.13.1
@@ -14,7 +15,6 @@ require (
 	github.com/prometheus/client_model v0.6.2
 	github.com/vearutop/statigz v1.5.0
 	golang.org/x/sync v0.20.0
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,43 +19,56 @@ package main
 import (
 	"testing"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 )
 
 var packageName = "healthcheck"
 
 func TestRun(t *testing.T) {
-	// GIVEN various arguments.
-	tests := map[string]struct {
+	// GIVEN: various arguments.
+	tests := []struct {
+		name        string
 		args        []string
 		stderrRegex string
 	}{
-		"missing arguments": {
+		{
+			name:        "missing arguments",
 			args:        []string{},
 			stderrRegex: `^expected URL as command-line argument$`,
 		},
-		"invalid URL": {
-			args:        []string{"http://invalid-url"},
-			stderrRegex: `^error: Get.*no such host$`,
+		{
+			name: "invalid URL",
+			args: []string{"http://invalid-url"},
+			stderrRegex: test.TrimYAML(`
+				^error:
+					Get "http://invalid-url":
+						dial tcp:
+							lookup .* no such host$`,
+			),
 		},
-		"valid URL": {
+		{
+			name:        "valid URL",
 			args:        []string{"https://www.google.com"},
 			stderrRegex: `^$`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN run is called with those arguments.
+			// WHEN: run is called with those arguments.
 			err := run(tc.args)
 
-			// THEN it errors when expected.
-			e := util.ErrorToString(err)
+			// THEN: it errors when expected.
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.stderrRegex, e) {
-				t.Errorf("%s\nstderr mismatch\nwant: %q:\ngot:  %s",
-					packageName, tc.stderrRegex, e)
+				t.Errorf(
+					"%s\nrun() stderr mismatch\ngot:  %q:\nwant: %q",
+					packageName, e, tc.stderrRegex,
+				)
 			}
 		})
 	}

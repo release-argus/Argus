@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,18 +17,35 @@ package shared
 
 import "github.com/release-argus/Argus/util"
 
-// Header to use in a HTTP request.
+// Header is a key/value pair sent with HTTP requests.
 type Header struct {
 	Key   string `json:"key" yaml:"key"`     // Header key, e.g. X-Sig.
 	Value string `json:"value" yaml:"value"` // Value to give the key.
 }
 
+// Headers is a slice of HTTP request headers.
 type Headers []Header
+
+// Copy returns a deep copy of the receiver.
+func (h *Headers) Copy() Headers {
+	if h == nil {
+		return nil
+	}
+
+	headers := *h
+	if len(headers) == 0 {
+		return nil
+	}
+
+	headersCopy := make(Headers, len(headers))
+	copy(headersCopy, headers)
+	return headersCopy
+}
 
 // InheritSecrets copies secret values from otherHeaders that are referenced in secretRefs.
 func (h *Headers) InheritSecrets(otherHeaders Headers, secretRefs []OldIntIndex) {
-	// If we don't have headers in both locations.
-	if len(*h) == 0 && len(otherHeaders) == 0 {
+	// If we have no headers in either location.
+	if len(*h) == 0 || len(otherHeaders) == 0 {
 		return
 	}
 

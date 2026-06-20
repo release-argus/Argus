@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,129 +21,134 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Init the WebHooks metrics and hand out the defaults/notifiers.
-func (wh *WebHooks) Init(
+// Init initialises each WebHook with the given status, config, notifiers, and parent interval.
+func (w *WebHooks) Init(
 	serviceStatus *status.Status,
-	mains *WebHooksDefaults,
-	defaults, hardDefaults *Defaults,
+	cfg Config,
 	shoutrrrNotifiers *shoutrrr.Shoutrrrs,
 	parentInterval *string,
 ) {
-	if wh == nil || len(*wh) == 0 {
+	if w == nil || len(*w) == 0 {
 		return
 	}
-	if mains == nil {
-		mains = &WebHooksDefaults{}
-	}
 
-	for id, webhook := range *wh {
+	for id, webhook := range *w {
 		if webhook == nil {
 			webhook = &WebHook{}
-			(*wh)[id] = webhook // Update the map.
+			(*w)[id] = webhook // Update the map.
 		}
+		main := cfg.Root[id]
+
 		webhook.ID = id
-		webhook.Init(
+		webhook.init(
 			serviceStatus,
-			(*mains)[id], defaults, hardDefaults,
+			main,
+			cfg,
 			shoutrrrNotifiers,
 			parentInterval,
 		)
 	}
 }
 
-// Init the WebHook metrics and give the defaults/notifiers.
-func (wh *WebHook) Init(
+// init wires status, defaults, failure tracking, and notifiers into the WebHook.
+func (w *WebHook) init(
 	serviceStatus *status.Status,
 	main *Defaults,
-	defaults, hardDefaults *Defaults,
+	cfg Config,
 	shoutrrrNotifiers *shoutrrr.Shoutrrrs,
 	parentInterval *string,
 ) {
-	wh.ParentInterval = parentInterval
-	wh.ServiceStatus = serviceStatus
+	w.ParentInterval = parentInterval
+	w.ServiceStatus = serviceStatus
 
-	// Give the matching main.
-	wh.Main = main
-	// Create an empty Main if nil.
-	if wh.Main == nil {
-		wh.Main = &Defaults{}
+	// Assign the matching main defaults.
+	w.Main = main
+	if w.Main == nil {
+		w.Main = &Defaults{}
 	}
 
-	wh.Failed = &wh.ServiceStatus.Fails.WebHook
-	wh.SetFail(nil)
+	w.Failed = &w.ServiceStatus.Fails.WebHook
+	w.SetFail(nil)
 
 	// Remove the type if it matches the main type or matches the ID.
-	if wh.Type == wh.Main.Type || wh.ID == wh.Type {
-		wh.Type = ""
+	if w.Type == w.Main.Type || w.ID == w.Type {
+		w.Type = ""
 	}
 
-	// Give the defaults.
-	wh.Defaults = defaults
-	wh.HardDefaults = hardDefaults
+	w.Defaults = cfg.Defaults
+	w.HardDefaults = cfg.HardDefaults
 
 	// WebHook fail notifiers.
-	wh.Notifiers = &Notifiers{
+	w.Notifiers = Notifiers{
 		Shoutrrr: shoutrrrNotifiers,
 	}
 }
 
-// InitMetrics of the WebHooks.
-func (wh *WebHooks) InitMetrics() {
-	if wh == nil {
+// InitMetrics registers Prometheus counters for all WebHook elements.
+func (w *WebHooks) InitMetrics() {
+	if w == nil {
 		return
 	}
 
-	for _, wh := range *wh {
+	for _, wh := range *w {
 		wh.initMetrics()
 	}
 }
 
-// initMetrics, giving them all a starting value.
-func (wh *WebHook) initMetrics() {
-	if wh == nil {
+// DeleteMetrics removes Prometheus counters for all WebHook elements.
+func (w *WebHooks) DeleteMetrics() {
+	if w == nil {
+		return
+	}
+
+	for _, wh := range *w {
+		wh.deleteMetrics()
+	}
+}
+
+// initMetrics registers Prometheus counters for WebHook success/failure results.
+func (w *WebHook) initMetrics() {
+	if w == nil {
 		return
 	}
 
 	// ############
 	// # Counters #
 	// ############
-	metric.InitPrometheusCounter(metric.WebHookResultTotal,
-		wh.ID,
-		wh.ServiceStatus.ServiceInfo.ID,
+	metric.InitPrometheusCounter(
+		metric.WebHookResultTotal,
+		w.ID,
+		w.ServiceStatus.ServiceInfo.ID,
 		"",
-		metric.ActionResultSuccess)
-	metric.InitPrometheusCounter(metric.WebHookResultTotal,
-		wh.ID,
-		wh.ServiceStatus.ServiceInfo.ID,
+		metric.ActionResultSuccess,
+	)
+	metric.InitPrometheusCounter(
+		metric.WebHookResultTotal,
+		w.ID,
+		w.ServiceStatus.ServiceInfo.ID,
 		"",
-		metric.ActionResultFail)
+		metric.ActionResultFail,
+	)
 }
 
-// DeleteMetrics of the WebHooks.
-func (wh *WebHooks) DeleteMetrics() {
-	if wh == nil {
+// deleteMetrics removes Prometheus counters for WebHook success/failure results.
+func (w *WebHook) deleteMetrics() {
+	if w == nil {
 		return
 	}
 
-	for _, wh := range *wh {
-		wh.deleteMetrics()
-	}
-}
-
-// deleteMetrics of the WebHook.
-func (wh *WebHook) deleteMetrics() {
-	if wh == nil {
-		return
-	}
-
-	metric.DeletePrometheusCounter(metric.WebHookResultTotal,
-		wh.ID,
-		wh.ServiceStatus.ServiceInfo.ID,
+	metric.DeletePrometheusCounter(
+		metric.WebHookResultTotal,
+		w.ID,
+		w.ServiceStatus.ServiceInfo.ID,
 		"",
-		metric.ActionResultSuccess)
-	metric.DeletePrometheusCounter(metric.WebHookResultTotal,
-		wh.ID,
-		wh.ServiceStatus.ServiceInfo.ID,
+		metric.ActionResultSuccess,
+	)
+	metric.DeletePrometheusCounter(
+		metric.WebHookResultTotal,
+		w.ID,
+		w.ServiceStatus.ServiceInfo.ID,
 		"",
-		metric.ActionResultFail)
+		metric.ActionResultFail,
+	)
 }

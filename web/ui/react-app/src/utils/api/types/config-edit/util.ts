@@ -14,7 +14,7 @@ const pickDefault = <T>(
 	defaults: Partial<T>[],
 	key: keyof T,
 ) => {
-	let chosen: unknown = undefined;
+	let chosen: unknown;
 
 	for (const d of defaults) {
 		const val = d[key];

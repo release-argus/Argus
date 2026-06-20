@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,16 +27,21 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// SetGitHubHeaders adds headers for a webhook that mimics GitHub.
+// SetGitHubHeaders adds headers for a request that mimics a GitHub push webhook.
 func SetGitHubHeaders(req *http.Request, payload []byte, secret string) {
 	req.Header.Set("X-Github-Event", "push")
 	req.Header.Set("X-Github-Hook-Id", util.RandNumeric(9))
-	req.Header.Set("X-Github-Delivery", fmt.Sprintf("%s-%s-%s-%s-%s",
-		util.RandAlphaNumericLower(8),
-		util.RandAlphaNumericLower(4),
-		util.RandAlphaNumericLower(4),
-		util.RandAlphaNumericLower(4),
-		util.RandAlphaNumericLower(12)))
+	req.Header.Set(
+		"X-Github-Delivery",
+		fmt.Sprintf(
+			"%s-%s-%s-%s-%s",
+			util.RandAlphaNumericLower(8),
+			util.RandAlphaNumericLower(4),
+			util.RandAlphaNumericLower(4),
+			util.RandAlphaNumericLower(4),
+			util.RandAlphaNumericLower(12),
+		),
+	)
 	req.Header.Set("X-Github-Hook-Installation-Target-Id", util.RandNumeric(9))
 	req.Header.Set("X-Github-Hook-Installation-Target-Type", "repository")
 

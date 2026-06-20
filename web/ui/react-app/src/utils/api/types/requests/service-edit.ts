@@ -26,6 +26,15 @@ export const serviceSummaryReducer = (
 	};
 	status.deployed_version ??= status?.latest_version;
 	status.deployed_version_timestamp ??= status?.latest_version_timestamp;
+	// Treat all version updates as both latest/deployed if no deployed version for this service.
+	if (oldData?.has_deployed_version === false && service?.status) {
+		service.status.deployed_version ??= service.status.latest_version;
+		service.status.deployed_version_timestamp ??=
+			service.status.latest_version_timestamp;
+		service.status.latest_version ??= service.status.deployed_version;
+		service.status.latest_version_timestamp ??=
+			service.status.deployed_version_timestamp;
+	}
 
 	return {
 		...oldData,

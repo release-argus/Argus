@@ -15,9 +15,9 @@ export type ServiceDefault = {
 	options?: ServiceOptions;
 	latest_version?: LatestVersionLookupDefaults;
 	deployed_version?: DeployedVersionLookup;
-	notify?: Record<string, unknown>;
+	notify?: string[];
 	command?: Command[];
-	webhook?: Record<string, unknown>;
+	webhook?: string[];
 	dashboard?: ServiceDashboardOptions;
 };
 

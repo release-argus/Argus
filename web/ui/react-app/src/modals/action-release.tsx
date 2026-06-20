@@ -187,10 +187,7 @@ const ActionReleaseModal = () => {
 			SKIP: {
 				ariaLabel: 'Skip this release',
 				buttonText: 'Skip release',
-				title: `Skip this release? (don't send any ${action.replace(
-					' and',
-					' or',
-				)})`,
+				title: `Skip this release? (don't send any ${action.replace(' and', ' or')})`,
 			},
 			SKIP_NO_WH: {
 				ariaLabel: 'Skip this release',

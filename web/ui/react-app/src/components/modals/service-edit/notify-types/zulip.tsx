@@ -33,12 +33,23 @@ const ZULIP_CHAT = ({
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="URL Fields" />
 				<FieldText
-					defaultVal={defaults?.url_fields?.botmail}
-					label="Bot Mail"
-					name={`${name}.url_fields.botmail`}
+					colSize={{ sm: 9, xs: 9 }}
+					defaultVal={defaults?.url_fields?.host}
+					label="Host"
+					name={`${name}.url_fields.host`}
 					required
 					tooltip={{
-						content: 'e.g. something@example.com',
+						content: 'e.g. zulip.example.com',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					colSize={{ sm: 3, xs: 3 }}
+					defaultVal={defaults?.url_fields?.port}
+					label="Port"
+					name={`${name}.url_fields.port`}
+					tooltip={{
+						content: 'e.g. 443',
 						type: 'string',
 					}}
 				/>
@@ -49,15 +60,10 @@ const ZULIP_CHAT = ({
 					required
 				/>
 				<FieldText
-					colSize={{ sm: 12 }}
-					defaultVal={defaults?.url_fields?.host}
-					label="Host"
-					name={`${name}.url_fields.host`}
+					defaultVal={defaults?.url_fields?.botmail}
+					label="Bot Mail"
+					name={`${name}.url_fields.botmail`}
 					required
-					tooltip={{
-						content: 'e.g. zulip.example.com',
-						type: 'string',
-					}}
 				/>
 			</FieldSet>
 			<FieldSet className="col-span-full grid grid-cols-subgrid">

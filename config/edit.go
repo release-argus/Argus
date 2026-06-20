@@ -17,24 +17,25 @@ package config
 
 import (
 	"fmt"
+	"strconv"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
-// AddService to the config (or replace/rename an existing service).
+// AddService adds or replaces a service and updates ordering, persistence, and tracking.
 func (c *Config) AddService(oldServiceID string, newService *service.Service) error {
-	c.OrderMutex.Lock()
-	defer c.OrderMutex.Unlock()
-	logFrom := logutil.LogFrom{Primary: "AddService"}
+	c.OrderMu.Lock()
+	defer c.OrderMu.Unlock()
+	logFrom := logx.LogFrom{Primary: "AddService"}
 
 	// Check a service does not already exist with the new id/name (if the name is changing).
 	if oldServiceID != newService.ID &&
 		(c.Service[newService.ID] != nil || c.ServiceWithNameExists(newService.ID, oldServiceID)) {
 		err := fmt.Errorf("service %q already exists", newService.ID)
-		logutil.Log.Error(err, logFrom, true)
+		logx.Error(err, logFrom, true)
 		return err
 	}
 
@@ -47,10 +48,9 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 		!c.Service[oldServiceID].Status.SameVersions(&newService.Status)
 	// New service.
 	if oldServiceID == "" || c.Service[oldServiceID] == nil {
-		logutil.Log.Info("Adding service", logFrom, true)
+		logx.Info("Adding service", logFrom, true)
 		c.Order = append(c.Order, newService.ID)
 		// Create the service map if it doesn't exist.
-		//nolint:typecheck
 		if c.Service == nil {
 			c.Service = make(map[string]*service.Service)
 		}
@@ -59,7 +59,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 	} else {
 		// Keeping the same ID.
 		if oldServiceID == newService.ID {
-			logutil.Log.Info("Replacing service", logFrom, true)
+			logx.Info("Replacing service", logFrom, true)
 			// Delete the old service.
 			c.Service[oldServiceID].PrepDelete(false)
 
@@ -87,7 +87,9 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 				{Column: "latest_version_timestamp", Value: newService.Status.LatestVersionTimestamp()},
 				{Column: "deployed_version", Value: newService.Status.DeployedVersion()},
 				{Column: "deployed_version_timestamp", Value: newService.Status.DeployedVersionTimestamp()},
-				{Column: "approved_version", Value: newService.Status.ApprovedVersion()}}}
+				{Column: "approved_version", Value: newService.Status.ApprovedVersion()},
+			},
+		}
 	}
 
 	// Start tracking the service.
@@ -96,7 +98,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 	return nil
 }
 
-// ServiceWithNameExists checks whether a Service with the given name exists.
+// ServiceWithNameExists reports whether a Service with the given name exists.
 func (c *Config) ServiceWithNameExists(name, oldServiceID string) bool {
 	// Have no name, so skip the check.
 	if name == "" {
@@ -113,7 +115,7 @@ func (c *Config) ServiceWithNameExists(name, oldServiceID string) bool {
 	return false
 }
 
-// RenameService in the config from `oldService` to `newService` and remove `oldService`.
+// RenameService changes a service ID in config, order, and the database.
 func (c *Config) RenameService(oldService string, newService *service.Service) {
 	// Check whether the target service doesn't exist,
 	// or a rename is not required (name is the same),
@@ -122,39 +124,43 @@ func (c *Config) RenameService(oldService string, newService *service.Service) {
 		return
 	}
 
-	logutil.Log.Info(
-		fmt.Sprintf("%q", newService.ID),
-		logutil.LogFrom{Primary: "RenameService", Secondary: oldService},
-		true)
+	logx.Info(
+		strconv.Quote(newService.ID),
+		logx.LogFrom{Primary: "RenameService", Secondary: oldService},
+		true,
+	)
 	// Replace the service in the order/config.
-	c.Order = util.ReplaceElement(c.Order, oldService, newService.ID)
+	c.Order = util.ReplaceFirst(c.Order, oldService, newService.ID)
 	c.Service[newService.ID] = newService
 	// Rename the primary key for this service in the database.
 	c.HardDefaults.Service.Status.DatabaseChannel <- dbtype.Message{
 		ServiceID: oldService,
 		Cells: []dbtype.Cell{
-			{Column: "id", Value: newService.ID}}}
+			{Column: "id", Value: newService.ID},
+		},
+	}
 	// Remove the old service.
 	c.Service[oldService].PrepDelete(false)
 	delete(c.Service, oldService)
 }
 
-// DeleteService from the config.
+// DeleteService removes a service from config and order and triggers a save.
 func (c *Config) DeleteService(serviceID string) {
-	c.OrderMutex.Lock()
-	defer c.OrderMutex.Unlock()
+	c.OrderMu.Lock()
+	defer c.OrderMu.Unlock()
 
 	// Check whether the service exists.
 	if c.Service[serviceID] == nil {
 		return
 	}
 
-	logutil.Log.Info(
+	logx.Info(
 		"Deleting service",
-		logutil.LogFrom{Primary: "DeleteService", Secondary: serviceID},
-		true)
+		logx.LogFrom{Primary: "DeleteService", Secondary: serviceID},
+		true,
+	)
 	// Remove the service from the Order.
-	c.Order = util.RemoveElement(c.Order, serviceID)
+	c.Order = util.RemoveFirst(c.Order, serviceID)
 
 	// nil the channels and set the `deleting` flag.
 	c.Service[serviceID].PrepDelete(true)

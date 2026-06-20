@@ -288,7 +288,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 												<>
 													{err.split(String.raw`\n`).map((line) => (
 														<pre
-															className="whitespace-pre-wrap break-words"
+															className="wrap-break-word whitespace-pre-wrap"
 															key={line}
 														>
 															{line}

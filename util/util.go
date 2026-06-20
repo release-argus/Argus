@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,15 +15,8 @@
 // Package util provides utility functions for the Argus project.
 package util
 
-import (
-	"bytes"
-	"strings"
-
-	"gopkg.in/yaml.v3"
-)
-
 // SecretValue defines the value used to represent a secret.
-var SecretValue = "<secret>"
+const SecretValue = "<secret>"
 
 // Field is a helper struct for String() methods.
 type Field struct {
@@ -31,7 +24,7 @@ type Field struct {
 	Value any
 }
 
-// StringToBoolPtr will take a string and convert it to a boolean pointer.
+// StringToBoolPtr converts a string to a *bool.
 //
 //	"" => nil
 //	"true" => true
@@ -44,46 +37,57 @@ func StringToBoolPtr(str string) *bool {
 	return &val
 }
 
-// ValueUnlessDefault returns `value` when `check` differs from the default value for its type,
-// otherwise default.
-func ValueUnlessDefault[T comparable](check T, value T) T {
-	var fresh T
-	if check == fresh {
-		return check
+// ValueUnlessZero returns value when condition differs from the zero value for its type,
+// otherwise zero value.
+func ValueUnlessZero[T comparable](condition T, value T) T {
+	var zero T
+	if condition == zero {
+		return condition
 	}
 	return value
 }
 
-// ValueOrValue returns `first` if it differs from the default,
-// otherwise `second`.
-func ValueOrValue[T comparable](first T, second T) T {
-	var fresh T
-	if first != fresh {
+// ValueOr returns first if it differs from the zero value,
+// otherwise second.
+func ValueOr[T comparable](first T, second T) T {
+	var zero T
+	if first != zero {
 		return first
 	}
 	return second
 }
 
-// DereferenceOrDefault returns the value of `ptr` if not nil,
-// otherwise default for the type.
-func DereferenceOrDefault[T any](ptr *T) T {
+// DerefOrZero returns the value of ptr if not nil,
+// otherwise zero value for the type.
+func DerefOrZero[T any](ptr *T) T {
 	if ptr == nil {
-		return *new(T)
+		var zero T
+		return zero
 	}
 	return *ptr
 }
 
-// DereferenceOrValue returns the value of 'ptr' if non-nil,
-// otherwise the 'fallback'.
-func DereferenceOrValue[T any](ptr *T, fallback T) T {
+// DerefOr returns the value of ptr if non-nil,
+// otherwise the fallback.
+func DerefOr[T any](ptr *T, fallback T) T {
 	if ptr != nil {
 		return *ptr
 	}
 	return fallback
 }
 
-// CopyPointer returns a pointer to a copy of the value of `ptr`.
-func CopyPointer[T any](ptr *T) *T {
+// PtrIfNotZero returns a pointer to v if v is not the zero value.
+// Otherwise it returns nil.
+func PtrIfNotZero[T comparable](v T) *T {
+	var zero T
+	if v == zero {
+		return nil
+	}
+	return &v
+}
+
+// ClonePtr returns a pointer to a copy of the value of ptr.
+func ClonePtr[T any](ptr *T) *T {
 	if ptr == nil {
 		return nil
 	}
@@ -92,53 +96,36 @@ func CopyPointer[T any](ptr *T) *T {
 	return &val
 }
 
-// CopySecretValues loops through 'fields' and replace values in 'to' of 'SecretValue' with values in 'from'.
+// RestoreMaskedValues loops through fields and replaces values in target equal to [SecretValue] with values from original
 // if non-empty.
-func CopySecretValues[K comparable](from, to map[K]string, fields []K) {
+func RestoreMaskedValues[K comparable](original, target map[K]string, fields []K) map[K]string {
 	for _, field := range fields {
-		if to[field] == SecretValue && from[field] != "" {
-			to[field] = from[field]
+		if target[field] == SecretValue && original[field] != "" {
+			target[field] = original[field]
 		}
 	}
-}
 
-// ToYAMLString returns a YAML string representation of `input`.
-func ToYAMLString(input any, prefix string) string {
-	buf := &bytes.Buffer{}
-	enc := yaml.NewEncoder(buf)
-	enc.SetIndent(2)
-	defer enc.Close()
-
-	err := enc.Encode(input)
-	if err != nil {
-		return ""
-	}
-
-	str := buf.String()
-
-	// Add prefix to each line.
-	if prefix != "" && str != "" && str != "{}\n" {
-		str = strings.Replace(str, "\n", "\n"+prefix,
-			strings.Count(str, "\n")-1)
-		str = prefix + str
-	}
-
-	return str
+	return target
 }
 
 // Indentation returns the indentation of a given line based on the specified indent size.
 func Indentation(line string, indentSize uint8) string {
-	indent := strings.Repeat(" ", int(indentSize))
-
-	var count int
-	for strings.HasPrefix(line, strings.Repeat(indent, count+1)) {
-		count++
+	if indentSize == 0 {
+		return ""
 	}
 
-	return strings.Repeat(indent, count)
+	prefix := 0
+
+	for prefix < len(line) && line[prefix] == ' ' {
+		prefix++
+	}
+
+	prefix = (prefix / int(indentSize)) * int(indentSize)
+
+	return line[:prefix]
 }
 
-// TruncateMessage shortens a message to `maxLength` and appends "..." if it exceeds the limit.
+// TruncateMessage shortens a message to maxLength and appends "..." if it exceeds the limit.
 func TruncateMessage(msg string, maxLength int) string {
 	if len(msg) > maxLength {
 		return msg[:maxLength] + "..."

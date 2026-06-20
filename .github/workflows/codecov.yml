@@ -9,6 +9,9 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
+env:
+  GOEXPERIMENT: jsonv2
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -34,11 +37,10 @@ jobs:
       - name: Test
         run: go test -v ./... -timeout 5m -coverpkg=./... -coverprofile ./coverage.out -covermode atomic --tags unit,integration
         env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+          DOCKER_HUB_USERNAME: ${{ vars.DOCKER_HUB_USERNAME_R }}
+          DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN_R }}
+          GITHUB_TOKEN: ${{ secrets.DOCKER_GHCR_TOKEN_R }}
+          DOCKER_QUAY_TOKEN: ${{ secrets.DOCKER_QUAY_TOKEN_R }}
 
       - name: Publish coverage
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6

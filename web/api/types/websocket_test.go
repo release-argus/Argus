@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,89 +17,97 @@
 package types
 
 import (
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestWebSocketMessage_String(t *testing.T) {
-	// GIVEN a WebSocketMessage.
-	tests := map[string]struct {
+	// GIVEN: a WebSocketMessage.
+	tests := []struct {
+		name             string
 		websocketMessage WebSocketMessage
 		want             string
 	}{
-		"empty": {
+		{
+			name:             "empty",
 			websocketMessage: WebSocketMessage{},
-			want: `
-				{
-					"page": "",
-					"type": ""
-				}`,
+			want: test.TrimJSON(`{
+				"page": "",
+				"type": ""
+			}`),
 		},
-		"filled": {
+		{
+			name: "filled",
 			websocketMessage: WebSocketMessage{
-				Version: test.IntPtr(1),
+				Version: test.Ptr(1),
 				Page:    "foo",
 				Type:    "bar",
 				SubType: "baz",
-				Target:  test.StringPtr("bish"),
-				Order: &[]string{
-					"zing", "zap", "wallop"},
+				Target:  test.Ptr("bish"),
+				Order:   &[]string{"zing", "zap", "wallop"},
 				ServiceData: &ServiceSummary{
-					ID: "summary id"},
+					ID: "summary id",
+				},
 				CommandData: map[string]*CommandSummary{
 					"alpha": {
-						Failed:       test.BoolPtr(true),
-						NextRunnable: time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)}},
+						Failed:       test.Ptr(true),
+						NextRunnable: time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
 				WebHookData: map[string]*WebHookSummary{
 					"omega": {
-						Failed:       test.BoolPtr(true),
-						NextRunnable: time.Date(2020, 2, 2, 0, 0, 0, 0, time.UTC)}}},
-			want: `
-				{
-					"version": 1,
-					"page": "foo",
-					"type": "bar",
-					"sub_type": "baz",
-					"target": "bish",
-					"order": [
-					"zing",
-					"zap",
-					"wallop"
-					],
-					"service_data": {
-						"id": "summary id"},
-					"command_data": {
-						"alpha": {"failed":
-						true,
-						"next_runnable": "2010-01-01T00:00:00Z"}},
-						"webhook_data": {
-							"omega": {
-								"failed": true,
-								"next_runnable": "2020-02-02T00:00:00Z"
-							}
-						}
-				}`,
+						Failed:       test.Ptr(true),
+						NextRunnable: time.Date(2020, 2, 2, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			want: test.TrimJSON(`{
+				"version": 1,
+				"page": "foo",
+				"type": "bar",
+				"sub_type": "baz",
+				"target": "bish",
+				"order": [
+				"zing",
+				"zap",
+				"wallop"
+				],
+				"service_data": {
+					"id": "summary id"
+				},
+				"command_data": {
+					"alpha": {
+						"failed": true,
+						"next_runnable": "2010-01-01T00:00:00Z"
+					}
+				},
+				"webhook_data": {
+					"omega": {
+						"failed": true,
+						"next_runnable": "2020-02-02T00:00:00Z"
+					}
+				}
+			}`),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN the Data is stringified with String.
+			// WHEN: the Data is stringified with String.
 			got := tc.websocketMessage.String()
 
-			// THEN the result is as expected.
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
-			tc.want = strings.ReplaceAll(tc.want, "\t", "")
+			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s\nWebSocketMessage String() value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}

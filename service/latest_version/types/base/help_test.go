@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,15 +22,15 @@ import (
 	"os"
 	"testing"
 
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	logtest "github.com/release-argus/Argus/internal/test/log"
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 )
 
-var packageName = "latestver_base"
-
-type testLookup struct {
-	Lookup `yaml:",inline" json:",inline"` // Base struct for a Lookup.
-}
+var packageName = "lvbase"
 
 func TestMain(m *testing.M) {
 	// Log.
@@ -39,12 +39,80 @@ func TestMain(m *testing.M) {
 	// Run other tests.
 	exitCode := m.Run()
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
 	// Exit.
 	os.Exit(exitCode)
+}
+
+type testLookup struct {
+	Lookup `yaml:",inline" json:",inline"`
+}
+
+// decodeTestLookup returns a new testLookup from a string in a given format (json/yaml).
+func decodeTestLookup(
+	t *testing.T,
+	format string,
+	data []byte,
+	options *opt.Options,
+	svcStatus *status.Status,
+	cfg DefaultsConfig,
+) (*testLookup, error) {
+	t.Helper()
+
+	field := testLookup{
+		Lookup: Lookup{
+			Defaults:     cfg.Soft,
+			HardDefaults: cfg.Hard,
+		},
+	}
+
+	// Unmarshal static fields.
+	if err := decode.Unmarshal(format, []byte(data), &field); err != nil {
+		return nil, err
+	}
+
+	// Require.
+	if err := UnmarshalRequire(
+		format, []byte(data),
+		&field,
+		svcStatus,
+		&cfg.Soft.Require,
+	); err != nil {
+		return nil, err
+	}
+
+	field.Init(
+		options,
+		svcStatus,
+		cfg,
+	)
+
+	return &field, nil
+}
+
+// plainDefaultsConfig returns plain defaults and hardDefaults for testing.
+func plainDefaultsConfig(t *testing.T) DefaultsConfig {
+	t.Helper()
+
+	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
+	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
+	optHardDefaults.Default()
+
+	defaults, _ := DecodeDefaults("yaml", nil)
+	defaults.Options = optDefaults
+	hardDefaults, _ := DecodeDefaults("yaml", nil)
+	hardDefaults.Default()
+	hardDefaults.AccessToken = test.GitHubToken(t)
+	hardDefaults.Options = optHardDefaults
+
+	defaults.Require.SetDefaults(&hardDefaults.Require)
+
+	return DefaultsConfig{
+		Soft: defaults,
+		Hard: hardDefaults,
+	}
 }

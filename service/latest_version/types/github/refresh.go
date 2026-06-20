@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,19 +18,22 @@ package github
 import (
 	"github.com/release-argus/Argus/service/latest_version/types/base"
 	"github.com/release-argus/Argus/service/shared"
+	"github.com/release-argus/Argus/util"
 )
 
-// Inherit values from `fromLookup` if the values should query the same source.
-//
-//	Values: githubData, Require.
-func (l *Lookup) InheritSecrets(fromLookup base.Interface, secretRefs *shared.VSecretRef) {
+// InheritSecrets copies the access token and GitHub data from fromLookup when querying the same repository,
+// then delegates to the base.
+func (l *Lookup) InheritSecrets(fromLookup base.BaseInterface, secretRefs *shared.VSecretRef) {
 	// Check whether inheriting from a GitHub Lookup.
-	if newGitHubLookup, ok := fromLookup.(*Lookup); ok && newGitHubLookup.URL == l.URL {
+	if oldGitHubLookup, ok := fromLookup.(*Lookup); ok {
+		// AccessToken
+		if l.AccessToken == util.SecretValue {
+			l.AccessToken = oldGitHubLookup.AccessToken
+		}
 		// Querying the same GitHub repo, and the ETag differs.
-		if l.URL == newGitHubLookup.URL &&
-			l.data.ETag() != newGitHubLookup.data.ETag() {
+		if l.URL == oldGitHubLookup.URL && l.data.ETag() != oldGitHubLookup.data.ETag() {
 			// Inherit the GitHub data.
-			l.data.CopyFrom(&newGitHubLookup.data)
+			l.data.CopyFrom(&oldGitHubLookup.data)
 		}
 	}
 

@@ -97,7 +97,9 @@ export const approvalsQueryCacheUpdater = ({
 				: null;
 			const orderData = queryClient.getQueryData<OrderAPIResponse>(
 				QUERY_KEYS.SERVICE.ORDER(),
-			) ?? { order: [] };
+			) ?? {
+				order: [],
+			};
 			const newOrder = [...orderData.order];
 
 			if (idHasChanged) {

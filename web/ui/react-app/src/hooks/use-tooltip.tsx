@@ -19,13 +19,13 @@ const TooltipContext = createContext<TooltipContextValue | null>(null);
 
 /* Hook to access the tooltip context. */
 export const useTooltipContext = () => {
-	const ctx = use(TooltipContext);
-	if (!ctx) {
+	const context = use(TooltipContext);
+	if (!context) {
 		throw new Error(
 			'useTooltipContext must be used within a TooltipProviderGlobal',
 		);
 	}
-	return ctx;
+	return context;
 };
 
 type TooltipProviderGlobalProps = {

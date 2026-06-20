@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,84 +20,125 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/release-argus/Argus/internal/test"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
-	"github.com/release-argus/Argus/test"
 )
 
 func TestTemplate_String(t *testing.T) {
 	svcInfo := testServiceInfo()
-	// GIVEN a variety of string templates.
-	tests := map[string]struct {
+	// GIVEN: a variety of string templates.
+	tests := []struct {
+		name        string
 		template    string
 		serviceInfo serviceinfo.ServiceInfo
 		panicRegex  *string
 		want        string
 	}{
-		"no django template": {
+		{
+			name:        "no django template",
 			template:    "testing 123",
 			want:        "testing 123",
-			serviceInfo: svcInfo},
-		"valid django template": {
+			serviceInfo: svcInfo,
+		},
+		{
+			name:     "valid django template",
 			template: "-{% if 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
-			want: fmt.Sprintf("-%s-%s-%s-%s",
-				svcInfo.ID, svcInfo.URL, svcInfo.WebURL, svcInfo.LatestVersion),
-			serviceInfo: svcInfo},
-		"valid django template with defaulting - had value": {
+			want: fmt.Sprintf(
+				"-%s-%s-%s-%s",
+				svcInfo.ID, svcInfo.URL, svcInfo.WebURL, svcInfo.LatestVersion,
+			),
+			serviceInfo: svcInfo,
+		},
+		{
+			name:     "valid django template with defaulting/had value",
 			template: "{{ service_name | default:service_id }} - {{ version }} released",
-			want: fmt.Sprintf("%s - %s released",
-				svcInfo.Name, svcInfo.LatestVersion),
-			serviceInfo: svcInfo},
-		"valid django template with defaulting - had no value (empty string)": {
+			want: fmt.Sprintf(
+				"%s - %s released",
+				svcInfo.Name, svcInfo.LatestVersion,
+			),
+			serviceInfo: svcInfo,
+		},
+		{
+			name:     "valid django template with defaulting/had no value/empty string",
 			template: "{{ service_name | default:service_id }} - {{ version }} released",
-			want: fmt.Sprintf("%s - %s released",
-				svcInfo.ID, svcInfo.LatestVersion),
+			want: fmt.Sprintf(
+				"%s - %s released",
+				svcInfo.ID, svcInfo.LatestVersion,
+			),
 			serviceInfo: serviceinfo.ServiceInfo{
 				ID:            svcInfo.ID,
 				Name:          "",
 				URL:           svcInfo.URL,
 				WebURL:        svcInfo.WebURL,
-				LatestVersion: svcInfo.LatestVersion},
+				LatestVersion: svcInfo.LatestVersion,
+			},
 		},
-		"valid django template with defaulting - had no value (nil)": {
+		{
+			name:     "valid django template with defaulting/had no value/nil",
 			template: "{{ service_name | default:service_id }} - {{ web_url }}",
-			want: fmt.Sprintf("%s - %s",
-				"", svcInfo.WebURL),
+			want:     fmt.Sprintf(" - %s", svcInfo.WebURL),
 			serviceInfo: serviceinfo.ServiceInfo{
 				ID:            "",
 				Name:          "",
 				URL:           svcInfo.URL,
 				WebURL:        svcInfo.WebURL,
-				LatestVersion: svcInfo.LatestVersion},
+				LatestVersion: svcInfo.LatestVersion,
+			},
 		},
-		"valid django template with array access": {
+		{
+			name:     "valid django template with array access",
 			template: "{{ tags | first }}-{{ tags.0 }}_{{ tags|slice:'1:2'|first }}-{{ tags | last }}-{{ tags.1 }}_{{ tags | join:',' }}",
-			want: fmt.Sprintf("%s-%s_%s-%s-%s_%s,%s",
+			want: fmt.Sprintf(
+				"%s-%s_%s-%s-%s_%s,%s",
 				svcInfo.Tags[0], svcInfo.Tags[0],
 				svcInfo.Tags[1], svcInfo.Tags[1], svcInfo.Tags[1],
-				svcInfo.Tags[0], svcInfo.Tags[1]),
-			serviceInfo: svcInfo},
-		"valid django template with array access out of bounds": {
+				svcInfo.Tags[0], svcInfo.Tags[1],
+			),
+			serviceInfo: svcInfo,
+		},
+		{
+			name:     "valid django template with array access out of bounds",
 			template: "{{ tags.0 }}-{{ tags.1 }}-{{ tags.2 }}-{{ tags.3 }}",
-			want: fmt.Sprintf("%s-%s--",
-				svcInfo.Tags[0], svcInfo.Tags[1]),
-			serviceInfo: svcInfo},
-		"invalid django template panic": {
+			want: fmt.Sprintf(
+				"%s-%s--",
+				svcInfo.Tags[0], svcInfo.Tags[1],
+			),
+			serviceInfo: svcInfo,
+		},
+		{
+			name:        "invalid django template panic",
 			template:    "-{% 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
-			panicRegex:  test.StringPtr("Tag name must be an identifier"),
-			serviceInfo: svcInfo},
-		"all django vars": {
+			panicRegex:  test.Ptr("Tag name must be an identifier"),
+			serviceInfo: svcInfo,
+		},
+		{
+			name:        "invalid django template execute panic",
+			template:    "{{ tags.0.bar }}",
+			panicRegex:  test.Ptr("can't access a field by name on type string"),
+			serviceInfo: svcInfo,
+		},
+		{
+			name:     "all django vars",
 			template: "{{ service_id }}-{{ service_name }}-{{ service_url }}--{{ icon }}-{{ icon_link_to }}-{{ web_url }}--{{ version }}-{{ approved_version }}-{{ deployed_version }}-{{ latest_version }}-{{ tags|first }}-{{ tags.1 }}",
-			want: fmt.Sprintf("%s-%s-%s--%s-%s-%s--%s-%s-%s-%s-%s-%s",
+			want: fmt.Sprintf(
+				"%s-%s-%s--%s-%s-%s--%s-%s-%s-%s-%s-%s",
 				svcInfo.ID, svcInfo.Name, svcInfo.URL,
 				svcInfo.Icon, svcInfo.IconLinkTo, svcInfo.WebURL,
 				svcInfo.LatestVersion, svcInfo.ApprovedVersion, svcInfo.DeployedVersion, svcInfo.LatestVersion,
-				svcInfo.Tags[0], svcInfo.Tags[1]),
-			serviceInfo: svcInfo},
+				svcInfo.Tags[0], svcInfo.Tags[1],
+			),
+			serviceInfo: svcInfo,
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
+			prefix := fmt.Sprintf(
+				"%s\nTemplateString(tmpl=%q, info=%+v)",
+				packageName, tc.template, tc.serviceInfo,
+			)
 
 			if tc.panicRegex != nil {
 				// Switch Fatal to panic and disable this panic.
@@ -106,46 +147,66 @@ func TestTemplate_String(t *testing.T) {
 
 					rStr := fmt.Sprint(r)
 					if !RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf("%s\npanic mismatch\nwant: %q\ngot:  %q",
-							packageName, *tc.panicRegex, rStr)
+						t.Errorf(
+							"%s panic mismatch\ngot:  %q\nwant: %q",
+							prefix, rStr, *tc.panicRegex,
+						)
 					}
 				}()
 			}
 
-			// WHEN TemplateString is called.
+			// WHEN: TemplateString is called.
 			got := TemplateString(tc.template, tc.serviceInfo)
 
-			// THEN the string stays the same.
+			// THEN: the string stays the same.
 			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestCheckTemplate(t *testing.T) {
-	// GIVEN a variety of string templates.
-	tests := map[string]struct {
+	// GIVEN: a variety of string templates.
+	tests := []struct {
+		name     string
 		template string
 		pass     bool
 	}{
-		"no django template":            {template: "testing 123", pass: true},
-		"valid django template":         {template: "{{ version }}-foo", pass: true},
-		"invalid django template panic": {template: "{{ version }", pass: false},
+		{
+			name:     "no django template",
+			template: "testing 123",
+			pass:     true,
+		},
+		{
+			name:     "valid django template",
+			template: "{{ version }}-foo",
+			pass:     true,
+		},
+		{
+			name:     "invalid django template panic",
+			template: "{{ version }",
+			pass:     false,
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN CheckTemplate is called.
+			// WHEN: CheckTemplate is called.
 			got := CheckTemplate(tc.template)
 
-			// THEN the string stays the same.
+			// THEN: the string stays the same.
 			if got != tc.pass {
-				t.Errorf("%s\nwant: %t\ngot:  %t",
-					packageName, tc.pass, got)
+				t.Errorf(
+					"%s\nCheckTemplate(%q) mismatch\ngot:  %t\nwant: %t",
+					packageName, tc.template,
+					got, tc.pass,
+				)
 			}
 		})
 	}

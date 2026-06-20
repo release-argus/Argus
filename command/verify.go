@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package command provides the cli command functionality for Argus.
+// Package command provides CLI command execution for services.
 package command
 
 import (
 	"errors"
 	"fmt"
 
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/util"
 )
 
 // CheckValues validates that each Command passes templating.
-func (s *Commands) CheckValues(prefix string) error {
+func (s *Commands) CheckValues() error {
 	if s == nil {
 		return nil
 	}
@@ -31,9 +32,13 @@ func (s *Commands) CheckValues(prefix string) error {
 	var errs []error
 	for i, cmd := range *s {
 		if err := cmd.CheckValues(); err != nil {
-			errs = append(errs,
-				fmt.Errorf("%sitem_%d: %w",
-					prefix, i, err))
+			errs = append(
+				errs,
+				&decode.KeyFieldError{
+					Key: fmt.Sprintf("- item_%d", i),
+					Err: err,
+				},
+			)
 		}
 	}
 
@@ -43,7 +48,7 @@ func (s *Commands) CheckValues(prefix string) error {
 	return errors.Join(errs...)
 }
 
-// CheckValues validates that the Command passes templating.
+// CheckValues validates that the receiver passes templating.
 func (c *Command) CheckValues() error {
 	if c == nil {
 		return nil
@@ -51,8 +56,10 @@ func (c *Command) CheckValues() error {
 
 	for _, arg := range *c {
 		if !util.CheckTemplate(arg) {
-			return fmt.Errorf("%s (%q) <invalid> (didn't pass templating)",
-				c.String(), arg)
+			return fmt.Errorf(
+				"%q (%q) <invalid> (didn't pass templating)",
+				c.String(), arg,
+			)
 		}
 	}
 	return nil

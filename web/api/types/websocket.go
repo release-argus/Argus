@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 // Package types provides the types for the Argus API.
 package types
 
-import "encoding/json"
+import "github.com/release-argus/Argus/config/decode"
 
 // WebSocketMessage is the message format to send/receive.
 type WebSocketMessage struct {
@@ -30,8 +30,7 @@ type WebSocketMessage struct {
 	WebHookData map[string]*WebHookSummary `json:"webhook_data,omitempty"`
 }
 
-// String returns a string representation of the WebSocketMessage.
+// String implements fmt.Stringer and returns a JSON representation.
 func (w *WebSocketMessage) String() string {
-	jsonBytes, _ := json.Marshal(w)
-	return string(jsonBytes)
+	return decode.ToJSONString(w)
 }

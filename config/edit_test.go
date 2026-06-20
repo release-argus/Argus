@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,20 +17,23 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/test"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestConfig_AddService(t *testing.T) {
-	// GIVEN a service to add/replace/rename, and a Config to act on.
-	tests := map[string]struct {
+	// GIVEN: a service to add/replace/rename, and a Config to act on.
+	tests := []struct {
+		name       string
 		newService *service.Service
 		oldService string
 		wantOrder  []string
@@ -38,40 +41,46 @@ func TestConfig_AddService(t *testing.T) {
 		dbMessages int
 		nilMap     bool
 	}{
-		"New service": {
-			newService: testServiceURL("test"),
+		{
+			name:       "New service",
+			newService: testServiceURL(t, "test"),
 			wantOrder:  []string{"alpha", "bravo", "charlie", "test"},
 			added:      true,
 			dbMessages: 1,
 		},
-		"Replace service": {
+		{
+			name:       "Replace service",
 			oldService: "bravo",
-			newService: testServiceURL("bravo"),
+			newService: testServiceURL(t, "bravo"),
 			wantOrder:  []string{"alpha", "bravo", "charlie"},
 			added:      true,
 			dbMessages: 1,
 		},
-		"Rename service": {
+		{
+			name:       "Rename service",
 			oldService: "bravo",
-			newService: testServiceURL("foo"),
+			newService: testServiceURL(t, "foo"),
 			wantOrder:  []string{"alpha", "foo", "charlie"},
 			added:      true,
 			dbMessages: 2, // 1 for change of ID, 1 for change of versions.
 		},
-		"ID already exists": {
-			newService: testServiceURL("alpha"),
+		{
+			name:       "ID already exists",
+			newService: testServiceURL(t, "alpha"),
 			wantOrder:  []string{"alpha", "bravo", "charlie"},
 			added:      false,
 			dbMessages: 0,
 		},
-		"Name already exists": {
-			newService: testServiceURL("a"),
+		{
+			name:       "Name already exists",
+			newService: testServiceURL(t, "a"),
 			wantOrder:  []string{"alpha", "bravo", "charlie"},
 			added:      false,
 			dbMessages: 0,
 		},
-		"Add to nil service map": {
-			newService: testServiceURL("test"),
+		{
+			name:       "Add to nil service map",
+			newService: testServiceURL(t, "test"),
 			wantOrder:  []string{"test"},
 			added:      true,
 			nilMap:     true,
@@ -79,10 +88,10 @@ func TestConfig_AddService(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using sharing global log state.
-			releaseStdout := test.CaptureLog(logutil.Log)
+			releaseStdout := test.CaptureLog(t, logx.Default())
 			t.Cleanup(func() { _ = releaseStdout() })
 
 			file := filepath.Join(t.TempDir(), "config.yml")
@@ -93,38 +102,53 @@ func TestConfig_AddService(t *testing.T) {
 				cfg.Order = []string{}
 			}
 
-			// WHEN AddService is called.
-			loadMutex.RLock()
+			// WHEN: AddService is called.
+			loadMu.RLock()
 			_ = cfg.AddService(tc.oldService, tc.newService)
-			loadMutex.RUnlock()
+			loadMu.RUnlock()
 
-			// THEN the service is:
+			prefix := fmt.Sprintf(
+				"%s\nConfig.AddService(oldID=%q, newService=%q)",
+				packageName, tc.oldService, tc.newService.ID,
+			)
+
+			// THEN: the service is:
 			// 	added/renamed/replaced.
-			cfg.OrderMutex.RLock()
+			cfg.OrderMu.RLock()
 			t.Cleanup(func() {
 				if tc.added {
 					cfg.Service[tc.newService.ID].PrepDelete(false)
 				}
-				cfg.OrderMutex.RUnlock()
+				cfg.OrderMu.RUnlock()
 			})
 			if tc.added && cfg.Service[tc.newService.ID] != tc.newService {
-				t.Fatalf("%s\noldService %q wasn't placed at config[%q]",
-					packageName, tc.oldService, tc.newService.ID)
+				t.Fatalf(
+					"%s oldService %q wasn't placed at config[%q]",
+					prefix, tc.oldService, tc.newService.ID,
+				)
 			}
 			if !tc.added && cfg.Service[tc.newService.ID] == tc.newService {
-				t.Fatalf("%s\nconfig[%q] shouldn't have been added",
-					packageName, tc.newService.ID)
+				t.Fatalf(
+					"%s config[%q] shouldn't have been added",
+					prefix, tc.newService.ID,
+				)
 			}
 			// Added to Order at the correct spot.
-			if !test.EqualSlices(cfg.Order, tc.wantOrder) {
-				t.Errorf("%s\nOrder mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wantOrder, cfg.Order)
+			if !util.AreSlicesEqual(cfg.Order, tc.wantOrder) {
+				t.Errorf(
+					"%s Order mismatch (added: %t)\ngot:  %q\nwant: %q",
+					prefix, tc.added,
+					cfg.Order, tc.wantOrder,
+				)
 			}
-			// AND the DatabaseChannel should have a message waiting if the service was added.
-			if len(cfg.HardDefaults.Service.Status.DatabaseChannel) != tc.dbMessages {
-				t.Errorf("%s\nDatabaseChannel mismatch\nwant: %d messages\ngot:  %d",
-					packageName, tc.dbMessages, len(cfg.HardDefaults.Service.Status.DatabaseChannel))
-				for i := 0; i <= len(cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
+
+			// AND: the DatabaseChannel should have a message waiting if the service was added.
+			if got := len(cfg.HardDefaults.Service.Status.DatabaseChannel); got != tc.dbMessages {
+				t.Errorf(
+					"%s DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
+					prefix, got, tc.dbMessages,
+				)
+				for i := 0; i < got; i++ {
 					msg := <-cfg.HardDefaults.Service.Status.DatabaseChannel
 					t.Log(msg)
 				}
@@ -134,7 +158,7 @@ func TestConfig_AddService(t *testing.T) {
 }
 
 func TestConfig_ServiceWithNameExists(t *testing.T) {
-	// GIVEN a Config to act on.
+	// GIVEN: a Config to act on.
 	tests := []struct {
 		name         string
 		config       *Config
@@ -143,7 +167,7 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 		want         bool
 	}{
 		{
-			name: "add - empty name",
+			name: "add/empty name",
 			config: &Config{
 				Service: map[string]*service.Service{
 					"service1": {Name: "a"},
@@ -154,7 +178,7 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 			want:         false,
 		},
 		{
-			name: "add - new name",
+			name: "add/new name",
 			config: &Config{
 				Service: map[string]*service.Service{
 					"service1": {Name: "a"},
@@ -165,7 +189,7 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 			want:         false,
 		},
 		{
-			name: "add - conflict",
+			name: "add/conflict",
 			config: &Config{
 				Service: map[string]*service.Service{
 					"service1": {Name: "a"},
@@ -176,7 +200,7 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 			want:         true,
 		},
 		{
-			name: "rename - unchanged",
+			name: "rename/unchanged",
 			config: &Config{
 				Service: map[string]*service.Service{
 					"service1": {Name: "a"},
@@ -187,7 +211,7 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 			want:         false,
 		},
 		{
-			name: "rename - conflict",
+			name: "rename/conflict",
 			config: &Config{
 				Service: map[string]*service.Service{
 					"service1": {Name: "a"},
@@ -204,98 +228,122 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ServiceWithNameExists is called.
+			// WHEN: ServiceWithNameExists is called.
 			got := tc.config.ServiceWithNameExists(tc.serviceName, tc.oldServiceID)
 
-			// THEN we receive the expected result.
+			// THEN: we receive the expected result.
 			if got != tc.want {
-				t.Errorf("%s\nmismatch\nwant: %t\ngot:  %t",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s\nConfig ServiceWithNameExists(id=%q, oldID=%q) result mismatch\ngot:  %t\nwant: %t",
+					packageName, tc.serviceName, tc.oldServiceID,
+					got, tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestConfig_RenameService(t *testing.T) {
-	// GIVEN a service to rename, and a Config to act on.
-	tests := map[string]struct {
-		oldName, newName string
-		wantOrder        []string
-		noChange, fail   bool
+	// GIVEN: a service to rename, and a Config to act on.
+	tests := []struct {
+		name           string
+		oldID, newID   string
+		wantOrder      []string
+		noChange, fail bool
 	}{
-		"Rename service": {
-			oldName: "bravo", newName: "foo",
+		{
+			name:  "Rename service",
+			oldID: "bravo", newID: "foo",
 			wantOrder: []string{"alpha", "foo", "charlie"},
 			fail:      false,
 		},
-		"Rename service to same name": {
-			oldName: "bravo", newName: "bravo",
+		{
+			name:  "Rename service to same name",
+			oldID: "bravo", newID: "bravo",
 			wantOrder: []string{"alpha", "bravo", "charlie"},
 			noChange:  true,
 			fail:      false,
 		},
-		"Rename service that doesn't exist": {
-			oldName: "test", newName: "foo",
+		{
+			name:  "Rename service that doesn't exist",
+			oldID: "test", newID: "foo",
 			wantOrder: []string{"alpha", "bravo", "charlie"},
 			fail:      true,
 		},
-		"Rename service to existing name": {
-			oldName: "bravo", newName: "alpha",
+		{
+			name:  "Rename service to existing name",
+			oldID: "bravo", newID: "alpha",
 			wantOrder: []string{"alpha", "bravo", "charlie"},
 			fail:      true,
 		},
 	}
-	logMutex := sync.Mutex{}
+	logMu := sync.Mutex{}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			file := filepath.Join(t.TempDir(), "config.yml")
 			testYAML_Edit(file)
 			t.Cleanup(func() { _ = os.Remove(file) })
-			logMutex.Lock()
+			logMu.Lock()
 			cfg := testLoadBasic(t, file)
-			newSVC := testServiceURL(tc.newName)
+			newSVC := testServiceURL(t, tc.newID)
 
-			// WHEN the service is renamed.
-			cfg.RenameService(tc.oldName, newSVC)
-			logMutex.Unlock()
+			// WHEN: the service is renamed.
+			cfg.RenameService(tc.oldID, newSVC)
+			logMu.Unlock()
 			time.Sleep(time.Second)
 
-			// THEN the order should be as expected.
-			cfg.OrderMutex.RLock()
+			prefix := fmt.Sprintf(
+				"%s\nConfig.RenameService(oldID=%q, newID=%q)",
+				packageName, tc.oldID, tc.newID,
+			)
+
+			// THEN: the order should be as expected.
+			cfg.OrderMu.RLock()
 			t.Cleanup(func() {
 				if !tc.fail {
-					cfg.Service[tc.newName].PrepDelete(false)
+					cfg.Service[tc.newID].PrepDelete(false)
 				}
-				cfg.OrderMutex.RUnlock()
+				cfg.OrderMu.RUnlock()
 			})
-			if !test.EqualSlices(cfg.Order, tc.wantOrder) {
-				t.Errorf("%s\nOrder mismatch:\nwant: %q\ngot:  %q",
-					packageName, tc.wantOrder, cfg.Order)
+			if !util.AreSlicesEqual(cfg.Order, tc.wantOrder) {
+				t.Errorf(
+					"%s Order mismatch:\ngot:  %q\nwant: %q",
+					prefix, cfg.Order, tc.wantOrder,
+				)
 			}
-			// AND the service should be removed if it was renamed.
-			if !tc.fail && tc.oldName != tc.newName && cfg.Service[tc.oldName] != nil {
-				t.Errorf("%s\n%q should have been removed, got %+v",
-					packageName, tc.oldName, cfg.Service[tc.oldName])
+
+			// AND: the service should be removed if it was renamed.
+			if !tc.fail && tc.oldID != tc.newID && cfg.Service[tc.oldID] != nil {
+				t.Errorf(
+					"%s: %q should have been removed, got %+v",
+					prefix, tc.oldID, cfg.Service[tc.oldID],
+				)
 			}
-			// AND the service should be at the address given.
-			if !tc.fail && cfg.Service[tc.newName] != newSVC {
+
+			// AND: the service should be at the address given.
+			if !tc.fail && cfg.Service[tc.newID] != newSVC {
 				if tc.noChange {
 					return
 				}
-				t.Errorf("%s\n%q should be at the given address, got\n%+v",
-					packageName, tc.newName, cfg.Service[tc.newName])
+				t.Errorf(
+					"%s %q should be at the given address, got\n%+v",
+					prefix, tc.newID, cfg.Service[tc.newID],
+				)
 			}
-			// AND the DatabaseChannel should have a message waiting if it didn't fail.
+
+			// AND: the DatabaseChannel should have a message waiting if it didn't fail.
 			want := 0
 			if !tc.fail {
 				want = 1
 			}
-			if len(cfg.HardDefaults.Service.Status.DatabaseChannel) != want {
-				t.Errorf("%s\nDatabaseChannel mismatch\nwant: %d messages\ngot:  %d",
-					packageName, want, len(cfg.HardDefaults.Service.Status.DatabaseChannel))
+			if got := len(cfg.HardDefaults.Service.Status.DatabaseChannel); got != want {
+				t.Errorf(
+					"%s DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
+					prefix, got, want,
+				)
 				for i := 0; i <= len(cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
 					msg := <-cfg.HardDefaults.Service.Status.DatabaseChannel
 					t.Log(msg)
@@ -306,58 +354,74 @@ func TestConfig_RenameService(t *testing.T) {
 }
 
 func TestConfig_DeleteService(t *testing.T) {
-	// GIVEN a service to delete, and a Config to act on.
-	tests := map[string]struct {
+	// GIVEN: a service to delete, and a Config to act on.
+	tests := []struct {
 		name      string
+		id        string
 		wantOrder []string
 		dbMessage bool
 	}{
-		"Delete service": {
-			name:      "bravo",
+		{
+			name:      "Delete service",
+			id:        "bravo",
 			wantOrder: []string{"alpha", "charlie"},
 			dbMessage: true,
 		},
-		"Delete service that doesn't exist": {
-			name:      "test",
+		{
+			name:      "Delete service that doesn't exist",
+			id:        "test",
 			wantOrder: []string{"alpha", "bravo", "charlie"},
 			dbMessage: false,
 		},
 	}
-	logMutex := sync.Mutex{}
+	logMu := sync.Mutex{}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			file := filepath.Join(t.TempDir(), "config.yml")
 			testYAML_Edit(file)
-			logMutex.Lock()
+			logMu.Lock()
 			cfg := testLoadBasic(t, file)
 
-			// WHEN the service is deleted.
-			cfg.DeleteService(tc.name)
-			logMutex.Unlock()
+			// WHEN: the service is deleted.
+			cfg.DeleteService(tc.id)
+			logMu.Unlock()
 
-			// THEN the service was removed.
-			cfg.OrderMutex.RLock()
-			t.Cleanup(cfg.OrderMutex.RUnlock)
-			if cfg.Service[tc.name] != nil {
-				t.Errorf("%s\n%q was not removed",
-					packageName, tc.name)
+			prefix := fmt.Sprintf(
+				"%s\nConfig.DeleteService(%q)",
+				packageName, tc.name,
+			)
+
+			// THEN: the service was removed.
+			cfg.OrderMu.RLock()
+			t.Cleanup(cfg.OrderMu.RUnlock)
+			if got := cfg.Service[tc.name]; got != nil {
+				t.Errorf(
+					"%s service was not removed\ngot:  %p\nwant: nil",
+					prefix, got,
+				)
 			}
-			// AND the Order was updated.
-			if !test.EqualSlices(cfg.Order, tc.wantOrder) {
-				t.Errorf("%s\nOrder mismatch:\nwant: %q\ngot:  %q",
-					packageName, tc.wantOrder, cfg.Order)
+
+			// AND: the Order was updated.
+			if !util.AreSlicesEqual(cfg.Order, tc.wantOrder) {
+				t.Errorf(
+					"%s Order mismatch:\ngot:  %q\nwant: %q",
+					prefix, cfg.Order, tc.wantOrder,
+				)
 			}
-			// AND the DatabaseChannel should have a message waiting if the service was deleted.
+
+			// AND: the DatabaseChannel should have a message waiting if the service was deleted.
 			want := 0
 			if tc.dbMessage {
 				want = 1
 			}
-			if len(cfg.HardDefaults.Service.Status.DatabaseChannel) != want {
-				t.Errorf("%s\nDatabaseChannel mismatch\nwant: %d messages\ngot:  %d",
-					packageName, want, len(cfg.HardDefaults.Service.Status.DatabaseChannel))
+			if got := len(cfg.HardDefaults.Service.Status.DatabaseChannel); got != want {
+				t.Errorf(
+					"%s DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
+					prefix, got, want,
+				)
 				for i := 0; i <= len(cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
 					msg := <-cfg.HardDefaults.Service.Status.DatabaseChannel
 					t.Log(msg)

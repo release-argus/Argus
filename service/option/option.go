@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,9 +22,16 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
+
+// DefaultsConfig pairs soft and hard service option defaults.
+type DefaultsConfig struct {
+	Soft *Defaults
+	Hard *Defaults
+}
 
 // Base is the base struct for Options.
 type Base struct {
@@ -32,33 +39,33 @@ type Base struct {
 	SemanticVersioning *bool  `json:"semantic_versioning,omitempty" yaml:"semantic_versioning,omitempty"` // Default - true = Version has to follow semantic versioning (https://semver.org/), and be greater than the previous to trigger anything.
 }
 
+// IsZero implements the yaml.IsZeroer interface.
+func (b Base) IsZero() bool {
+	return b.Interval == "" &&
+		b.SemanticVersioning == nil
+}
+
 // Defaults are the default values for Options.
 type Defaults struct {
 	Base `json:",inline" yaml:",inline"`
 }
 
-// NewDefaults returns a new Defaults.
-func NewDefaults(
-	interval string,
-	semanticVersioning *bool,
-) *Defaults {
-	return &Defaults{
-		Base: Base{
-			Interval:           interval,
-			SemanticVersioning: semanticVersioning}}
+// IsZero implements the yaml.IsZeroer interface.
+func (o Defaults) IsZero() bool {
+	return o.Base.IsZero()
 }
 
-// Default sets these Defaults to the default values.
-func (od *Defaults) Default() {
+// Default sets the values of the receiver to their default values.
+func (d *Defaults) Default() {
 	// interval.
-	od.Interval = "10m"
+	d.Interval = "10m"
 
 	// semantic_versioning.
 	semanticVersioning := true
-	od.SemanticVersioning = &semanticVersioning
+	d.SemanticVersioning = &semanticVersioning
 }
 
-// Options are the options for a Service.
+// Options are the options for a Service, with defaults.
 type Options struct {
 	Base `json:",inline" yaml:",inline"`
 
@@ -68,23 +75,12 @@ type Options struct {
 	HardDefaults *Defaults `json:"-" yaml:"-"` // Hard Defaults.
 }
 
-// New Options.
-func New(
-	active *bool,
-	interval string,
-	semanticVersioning *bool,
-	defaults, hardDefaults *Defaults,
-) *Options {
-	return &Options{
-		Base: Base{
-			Interval:           interval,
-			SemanticVersioning: semanticVersioning},
-		Active:       active,
-		Defaults:     defaults,
-		HardDefaults: hardDefaults}
+// IsZero implements the yaml.IsZeroer interface.
+func (o Options) IsZero() bool {
+	return o.Active == nil && o.Base.IsZero()
 }
 
-// Copy the Options.
+// Copy returns a deep copy of the receiver.
 func (o *Options) Copy() *Options {
 	if o == nil {
 		return nil
@@ -93,31 +89,40 @@ func (o *Options) Copy() *Options {
 	return &Options{
 		Base: Base{
 			Interval:           o.Interval,
-			SemanticVersioning: util.CopyPointer(o.SemanticVersioning)},
-		Active:       util.CopyPointer(o.Active),
+			SemanticVersioning: util.ClonePtr(o.SemanticVersioning),
+		},
+		Active:       util.ClonePtr(o.Active),
 		Defaults:     o.Defaults,
-		HardDefaults: o.HardDefaults}
+		HardDefaults: o.HardDefaults,
+	}
 }
 
-// String returns a string representation of the Options.
+// String implements fmt.Stringer and returns a YAML representation.
 func (o *Options) String() string {
 	if o == nil {
 		return ""
 	}
-	return util.ToYAMLString(o, "")
+	return decode.ToYAMLString(o, "")
 }
 
-// GetActive status of the Service.
+// GetActive reports whether the service is active, defaulting to true if unset.
 func (o *Options) GetActive() bool {
-	return util.DereferenceOrValue(o.Active, true)
+	return util.DerefOr(o.Active, true)
 }
 
-// GetInterval between queries for the latest/deployed version.
+// SetDefaults assigns defaults to the receiver.
+func (o *Options) SetDefaults(defaults, hardDefaults *Defaults) {
+	o.Defaults = defaults
+	o.HardDefaults = hardDefaults
+}
+
+// GetInterval returns the query interval between latest/deployed version checks.
 func (o *Options) GetInterval() string {
 	return util.FirstNonDefault(
 		o.Interval,
 		o.Defaults.Interval,
-		o.HardDefaults.Interval)
+		o.HardDefaults.Interval,
+	)
 }
 
 // GetSemanticVersioning returns whether the Service uses Semantic Versioning.
@@ -125,19 +130,21 @@ func (o *Options) GetSemanticVersioning() bool {
 	return *util.FirstNonNilPtr(
 		o.SemanticVersioning,
 		o.Defaults.SemanticVersioning,
-		o.HardDefaults.SemanticVersioning)
+		o.HardDefaults.SemanticVersioning,
+	)
 }
 
-// VerifySemanticVersioning returns an error if the version is not following Semantic Versioning.
-func (o *Options) VerifySemanticVersioning(version string, logFrom logutil.LogFrom) (*semver.Version, error) {
+// VerifySemanticVersioning parses version as a semantic version, returning an error if invalid.
+func (o *Options) VerifySemanticVersioning(version string, logFrom logx.LogFrom) (*semver.Version, error) {
 	semanticVersion, err := semver.NewVersion(version)
 	if err != nil {
 		err = fmt.Errorf(
 			"failed to convert %q to a semantic version. "+
 				"If all versions follow this format, consider adding url_commands to transform the version into the 'MAJOR.MINOR.PATCH' format (https://semver.org/). "+
 				"Alternatively, you can disable semantic versioning either globally with defaults.service.semantic_versioning or for this specific service using the options.semantic_versioning variable",
-			version)
-		logutil.Log.Error(err, logFrom, true)
+			version,
+		)
+		logx.Error(err, logFrom, true)
 		return nil, err
 	}
 
@@ -161,8 +168,8 @@ func (o *Options) GetIntervalDuration() time.Duration {
 	return d
 }
 
-// CheckValues validates the fields of the Base struct.
-func (b *Base) CheckValues(prefix string) error {
+// CheckValues validates the fields of the receiver.
+func (b *Base) CheckValues() error {
 	// interval.
 	if b.Interval != "" {
 		// Treat integers as seconds by default.
@@ -170,8 +177,11 @@ func (b *Base) CheckValues(prefix string) error {
 			b.Interval += "s"
 		}
 		if _, err := time.ParseDuration(b.Interval); err != nil {
-			return fmt.Errorf("%sinterval: %q <invalid> (Use 'AhBmCs' duration format)",
-				prefix, b.Interval)
+			return &decode.FieldError{
+				Key:         "interval",
+				Value:       b.Interval,
+				Description: "use 'AhBmCs' duration format",
+			}
 		}
 	}
 

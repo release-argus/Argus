@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,69 +17,44 @@
 package test
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/internal/test"
 )
 
-var packageName = "shoutrrr_test"
-
-func TestDefaults(t *testing.T) {
-	// GIVEN the failing and self-signed certificate flags.
-	tests := map[string]struct {
-		failing, selfSignedCert bool
-	}{
-		"passing, signed":      {failing: false, selfSignedCert: false},
-		"passing, self-signed": {failing: false, selfSignedCert: true},
-		"failing, signed":      {failing: true, selfSignedCert: false},
-		"failing, self-signed": {failing: true, selfSignedCert: true},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			wantToken := test.ShoutrrrGotifyToken()
-			if tc.failing {
-				wantToken = "invalid"
-			}
-			wantHost := test.ValidCertNoProtocol
-			if tc.selfSignedCert {
-				wantHost = test.InvalidCertNoProtocol
-			}
-
-			// WHEN Defaults is called.
-			got := Defaults(tc.failing, tc.selfSignedCert)
-
-			// THEN the token should be as expected.
-			key := "token"
-			if got.URLFields[key] != wantToken {
-				t.Errorf("%s\nmismatch on url_fields[%q]\nwant: %q\ngot:  %q",
-					packageName, key, wantToken, got.URLFields["token"])
-			}
-			// AND the host should be as expected.
-			key = "host"
-			if got.URLFields[key] != wantHost {
-				t.Errorf("%s\nmismatch on url_fields[%q]\nwant: %q\ngot:  %q",
-					packageName, key, wantHost, got.URLFields["host"])
-			}
-		})
-	}
-}
+var packageName = "shoutrrrtest"
 
 func TestShoutrrr(t *testing.T) {
-	// GIVEN the failing and self-signed certificate flags.
-	tests := map[string]struct {
+	// GIVEN: the failing and self-signed certificate flags.
+	tests := []struct {
+		name                    string
 		failing, selfSignedCert bool
 	}{
-		"passing, signed":      {failing: false, selfSignedCert: false},
-		"passing, self-signed": {failing: false, selfSignedCert: true},
-		"failing, signed":      {failing: true, selfSignedCert: false},
-		"failing, self-signed": {failing: true, selfSignedCert: true},
+		{
+			name:           "passing, signed",
+			failing:        false,
+			selfSignedCert: false,
+		},
+		{
+			name:           "passing, self-signed",
+			failing:        false,
+			selfSignedCert: true,
+		},
+		{
+			name:           "failing, signed",
+			failing:        true,
+			selfSignedCert: false,
+		},
+		{
+			name:           "failing, self-signed",
+			failing:        true,
+			selfSignedCert: true,
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			wantToken := test.ShoutrrrGotifyToken()
@@ -91,55 +66,62 @@ func TestShoutrrr(t *testing.T) {
 				wantHost = test.InvalidCertNoProtocol
 			}
 
-			// WHEN Shoutrrr is called.
-			got := Shoutrrr(tc.failing, tc.selfSignedCert)
+			// WHEN: Shoutrrr is called.
+			got := Shoutrrr(t, tc.failing, tc.selfSignedCert)
 
-			// THEN the token should be as expected.
+			prefix := fmt.Sprintf(
+				"%s\nTestShoutrrr(failing: %t, selfSigned: %t)",
+				packageName, tc.failing, tc.selfSignedCert,
+			)
+
+			// THEN: the token should be as expected.
 			key := "token"
 			if got.URLFields[key] != wantToken {
-				t.Errorf("%s\nmismatch on url_fields[%q]\nwant: %q\ngot:  %q",
-					packageName, key, wantToken, got.URLFields["token"])
+				t.Errorf(
+					"%s got a mismatch on url_fields[%q]\ngot:  %q\nwant: %q",
+					prefix, key,
+					got.URLFields["token"], wantToken,
+				)
 			}
-			// AND the host should be as expected.
+
+			// AND: the host should be as expected.
 			key = "host"
 			if got.URLFields[key] != wantHost {
-				t.Errorf("%s\nmismatch on url_fields[%q]\nwant: %q\ngot:  %q",
-					packageName, key, wantHost, got.URLFields["host"])
+				t.Errorf(
+					"%s got a mismatch on url_fields[%q]\ngot:  %q\nwant: %q",
+					prefix, key,
+					got.URLFields["host"], wantHost,
+				)
 			}
-			// AND the maps should be initialised.
+
+			// AND: the maps should be initialised.
 			if got.Options == nil {
-				t.Errorf("%s\nOptions not initialised",
-					packageName)
+				t.Errorf("%s Options not initialised. got nil", prefix)
 			}
 			if got.URLFields == nil {
-				t.Errorf("%s\nURLFields not initialised",
-					packageName)
+				t.Errorf("%s URLFields not initialised. got nil", prefix)
 			}
 			if got.Params == nil {
-				t.Errorf("%s\nParams not initialised",
-					packageName)
+				t.Errorf("%s Params not initialised. got nil", prefix)
 			}
-			// AND the defaults should be set.
+
+			// AND: the defaults should be set.
 			if got.Main == nil {
-				t.Errorf("%s\nMain not set",
-					packageName)
+				t.Errorf("%s Main not set", prefix)
 			}
 			if got.Defaults == nil {
-				t.Errorf("%s\nDefaults not set",
-					packageName)
+				t.Errorf("%s Defaults not set", prefix)
 			}
 			if got.HardDefaults == nil {
-				t.Errorf("%s\nHardDefaults not set",
-					packageName)
+				t.Errorf("%s HardDefaults not set", prefix)
 			}
-			// AND the fails are initialised and set.
+
+			// AND: the fails are initialised and set.
 			if got.ServiceStatus == nil || got.Failed == nil {
 				if got.ServiceStatus == nil {
-					t.Errorf("%s\nServiceStatus not set",
-						packageName)
+					t.Errorf("%s ServiceStatus not set", prefix)
 				} else {
-					t.Errorf("%s\nServiceStatus.Failed not set",
-						packageName)
+					t.Errorf("%s ServiceStatus.Failed not set", prefix)
 				}
 			}
 		})

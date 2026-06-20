@@ -21,28 +21,32 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// InitMetrics for this Lookup.
-func (l *Lookup) InitMetrics(parentLookup Interface) {
+// InitMetrics registers Prometheus counters for latest version lookup results.
+func (l *Lookup) InitMetrics(parentLookup BaseInterface) {
 	lookupType := parentLookup.GetType()
 	serviceID := l.GetServiceID()
 
 	// ############
 	// # Counters #
 	// ############
-	metric.InitPrometheusCounter(metric.LatestVersionQueryResultTotal,
+	metric.InitPrometheusCounter(
+		metric.LatestVersionQueryResultTotal,
 		serviceID,
 		"",
 		lookupType,
-		metric.ActionResultSuccess)
-	metric.InitPrometheusCounter(metric.LatestVersionQueryResultTotal,
+		metric.ActionResultSuccess,
+	)
+	metric.InitPrometheusCounter(
+		metric.LatestVersionQueryResultTotal,
 		serviceID,
 		"",
 		lookupType,
-		metric.ActionResultFail)
+		metric.ActionResultFail,
+	)
 }
 
-// DeleteMetrics for this Lookup.
-func (l *Lookup) DeleteMetrics(parentLookup Interface) {
+// DeleteMetrics removes Prometheus counters for latest version lookup results.
+func (l *Lookup) DeleteMetrics(parentLookup BaseInterface) {
 	lookupType := parentLookup.GetType()
 	serviceID := l.GetServiceID()
 
@@ -50,7 +54,8 @@ func (l *Lookup) DeleteMetrics(parentLookup Interface) {
 	// #  Gauges  #
 	// ############
 	// Liveness.
-	metric.DeletePrometheusGauge(metric.LatestVersionQueryResultLast,
+	metric.DeletePrometheusGauge(
+		metric.LatestVersionQueryResultLast,
 		serviceID,
 		lookupType,
 	)
@@ -58,20 +63,24 @@ func (l *Lookup) DeleteMetrics(parentLookup Interface) {
 	// ############
 	// # Counters #
 	// ############
-	metric.DeletePrometheusCounter(metric.LatestVersionQueryResultTotal,
+	metric.DeletePrometheusCounter(
+		metric.LatestVersionQueryResultTotal,
 		serviceID,
 		"",
 		lookupType,
-		metric.ActionResultSuccess)
-	metric.DeletePrometheusCounter(metric.LatestVersionQueryResultTotal,
+		metric.ActionResultSuccess,
+	)
+	metric.DeletePrometheusCounter(
+		metric.LatestVersionQueryResultTotal,
 		serviceID,
 		"",
 		lookupType,
-		metric.ActionResultFail)
+		metric.ActionResultFail,
+	)
 }
 
 // QueryMetrics sets the Prometheus metrics for the LatestVersion query.
-func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
+func (l *Lookup) QueryMetrics(parentLookup BaseInterface, err error) {
 	serviceID := l.GetServiceID()
 	serviceType := parentLookup.GetType()
 	// Default to success.
@@ -88,21 +97,23 @@ func (l *Lookup) QueryMetrics(parentLookup Interface, err error) {
 			liveness = metric.LatestVersionQueryResultNoMatch
 		case strings.HasPrefix(e, "failed to convert") && strings.Contains(e, " semantic version."):
 			liveness = metric.LatestVersionQueryResultSemanticVersionFail
-		case strings.HasPrefix(e, "queried version") && strings.Contains(e, " less than "):
-			liveness = metric.LatestVersionQueryResultProgressiveVersionFail
 		default:
 			liveness = metric.LatestVersionQueryResultFailed
 		}
 	}
 
 	// Set liveness.
-	metric.SetPrometheusGauge(metric.LatestVersionQueryResultLast,
+	metric.SetPrometheusGauge(
+		metric.LatestVersionQueryResultLast,
 		serviceID, serviceType,
-		float64(liveness))
+		float64(liveness),
+	)
 	// Increase query result count.
-	metric.IncPrometheusCounter(metric.LatestVersionQueryResultTotal,
+	metric.IncPrometheusCounter(
+		metric.LatestVersionQueryResultTotal,
 		serviceID,
 		"",
 		serviceType,
-		result)
+		result,
+	)
 }

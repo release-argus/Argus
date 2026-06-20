@@ -19,48 +19,49 @@ import "sync"
 
 // ServiceInfo holds information about a service.
 type ServiceInfo struct {
-	mutex *sync.RWMutex // Mutex for thread-safe access
+	mu *sync.RWMutex // Mutex for thread-safe access
 
-	ID   string `json:"id,omitempty"`   // Service ID
-	Name string `json:"name,omitempty"` // Service name
-	URL  string `json:"url,omitempty"`  // Service URL
+	ID      string `json:"id,omitempty"`      // Service ID.
+	Name    string `json:"name,omitempty"`    // Service Name.
+	Comment string `json:"comment,omitempty"` // Service Comment.
+	URL     string `json:"url,omitempty"`     // Service URL.
 
-	Icon       string `json:"icon,omitempty"`         // Icon URL
-	IconLinkTo string `json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to
-	WebURL     string `json:"web_url,omitempty"`      // Web URL
+	Icon       string `json:"icon,omitempty"`         // Icon URL.
+	IconLinkTo string `json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to.
+	WebURL     string `json:"web_url,omitempty"`      // Web URL.
 
 	ApprovedVersion string `json:"approved_version,omitempty"` // The version of the Service that has been approved for deployment.
-	DeployedVersion string `json:"deployed_version,omitempty"` // The version of the Service that is deployed.
-	LatestVersion   string `json:"latest_version,omitempty"`   // The latest version of the Service found from query().
+	DeployedVersion string `json:"deployed_version,omitempty"` // The deployed version of the Service.
+	LatestVersion   string `json:"latest_version,omitempty"`   // The latest version of the Service.
 
 	Tags []string `json:"tags,omitempty"` // Tags for the Service.
 }
 
 // SetMutex sets the mutex pointer for thread-safe access.
-func (s *ServiceInfo) SetMutex(m *sync.RWMutex) {
-	s.mutex = m
+func (s *ServiceInfo) SetMutex(mu *sync.RWMutex) {
+	s.mu = mu
 }
 
 // GetIcon returns the icon URL.
 func (s *ServiceInfo) GetIcon() string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.Icon
 }
 
 // GetIconLinkTo returns the URL to redirect Icon clicks to.
 func (s *ServiceInfo) GetIconLinkTo() string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.IconLinkTo
 }
 
 // GetWebURL returns the web URL.
 func (s *ServiceInfo) GetWebURL() string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.WebURL
 }

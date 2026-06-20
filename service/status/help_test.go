@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,15 +17,35 @@
 package status
 
 import (
+	"fmt"
+	"os"
 	"sync"
+	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/internal/logx"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/dashboard"
 )
 
-var (
-	metricsMutex sync.RWMutex
-)
+var metricsMu sync.RWMutex
+var packageName = "status"
+
+func TestMain(m *testing.M) {
+	// Log.
+	logtest.InitLog()
+
+	// Run other tests.
+	exitCode := m.Run()
+
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
+		exitCode = 1
+	}
+
+	// Exit.
+	os.Exit(exitCode)
+}
 
 func testStatus() (status *Status) {
 	var (
@@ -39,21 +59,30 @@ func testStatus() (status *Status) {
 		"", "",
 		"", "",
 		"",
-		&dashboard.Options{})
+		&dashboard.Options{},
+	)
 	status = svcStatus
 	status.ServiceInfo.ID = "test"
 	status.Init(
 		0, 0, 0,
-		"test-service", "test-service", "https://example.com/service-url",
+		ServiceInfo{
+			ID:         "test-service",
+			Name:       "test-service-name",
+			ServiceURL: "https://example.com/service/url",
+		},
 		&dashboard.Options{
-			Icon:       "https://example.com/icon.png",
-			IconLinkTo: "https://example.com/icon-link",
-			WebURL:     "https://example.com",
-			Tags:       []string{"foo", "bar"}})
+			OptionsBase: dashboard.OptionsBase{
+				Icon:       "https://example.com/icon.png",
+				IconLinkTo: "https://example.com/icon-link",
+				WebURL:     "https://example.com",
+			},
+			Tags: []string{"foo", "bar"},
+		},
+	)
 
-	status.SetApprovedVersion("1.1.1", false)
-	status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)
 	status.SetDeployedVersion("0.0.0", "2001-01-01T01:01:01Z", false)
+	status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)
+	status.SetApprovedVersion("1.1.1", false)
 	status.SetLastQueried("2002-02-02T00:00:00Z")
 
 	return status

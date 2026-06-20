@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package v1
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -24,7 +23,8 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/release-argus/Argus/config"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -36,7 +36,7 @@ type API struct {
 	RoutePrefix string
 }
 
-// NewAPI will create a new API with the provided config.
+// NewAPI creates a new API with the provided config.
 func NewAPI(cfg *config.Config) *API {
 	baseRouter := mux.NewRouter().StrictSlash(true)
 	routePrefix := cfg.Settings.WebRoutePrefix()
@@ -51,15 +51,20 @@ func NewAPI(cfg *config.Config) *API {
 	routePrefix = strings.TrimSuffix(routePrefix, "/")
 	// On baseRouter as Router may have basicAuth.
 	baseRouter.Path(routePrefix + "/api/v1/healthcheck").
-		Handler(loggerMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Connection", "close")
-			fmt.Fprintf(w, "Alive")
-		})))
+		Handler(
+			loggerMiddleware(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					fmt.Fprint(w, "Alive")
+				}),
+			),
+		)
 
 	api.Router = baseRouter.PathPrefix(routePrefix).Subrouter().StrictSlash(true)
 
-	baseRouter.Handle(routePrefix,
-		http.RedirectHandler(routePrefix+"/", http.StatusPermanentRedirect))
+	baseRouter.Handle(
+		routePrefix,
+		http.RedirectHandler(routePrefix+"/", http.StatusPermanentRedirect),
+	)
 	// Add basic auth middleware.
 	if api.Config.Settings.Web.BasicAuth != nil ||
 		api.Config.Settings.FromFlags.Web.BasicAuth != nil ||
@@ -69,19 +74,29 @@ func NewAPI(cfg *config.Config) *API {
 	return api
 }
 
-func (api *API) writeJSON(w http.ResponseWriter, v any, logFrom logutil.LogFrom) {
+// writeJSON marshals v as JSON and writes it to w with standard API response headers.
+func (api *API) writeJSON(w http.ResponseWriter, v any, logFrom logx.LogFrom) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 
-	if err := json.NewEncoder(w).Encode(v); err != nil {
+	b, err := decode.Marshal("json", v)
+	if err != nil {
 		// Encoding error, 500.
 		w.WriteHeader(http.StatusInternalServerError)
-		logutil.Log.Error(err, logFrom, true)
-		api.writeJSON(w,
+
+		logx.Error(err, logFrom, true)
+
+		api.writeJSON(
+			w,
 			apitype.Response{
 				Error: err.Error(),
 			},
-			logFrom)
+			logFrom,
+		)
 		return
+	}
+
+	if _, err := w.Write(append(b, '\n')); err != nil {
+		logx.Error(err, logFrom, true)
 	}
 }

@@ -25,37 +25,42 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"gopkg.in/yaml.v3"
+	"github.com/release-argus/Argus/config/decode"
+	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
+	svctest "github.com/release-argus/Argus/service/test"
+	whtest "github.com/release-argus/Argus/webhook/test"
 
 	"github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/service/dashboard"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
-	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/web/metric"
-	"github.com/release-argus/Argus/webhook"
 )
 
 var router *mux.Router
 
 func TestHTTP_Counts(t *testing.T) {
-	// GIVEN values of metrics.
-	tests := map[string]struct {
-		serviceCountCurrentActive   int
-		serviceCountCurrentInactive int
-		updatesCurrentAvailable     int
-		updatesCurrentSkipped       int
-		updateDetails               *[]UpdateDetails
-		updateDetailsOther          *[]UpdateDetails
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
+
+	// GIVEN: values of metrics.
+	tests := []struct {
+		name                                                   string
+		serviceCountCurrentActive, serviceCountCurrentInactive int
+		updatesCurrentAvailable, updatesCurrentSkipped         int
+		updateDetails, updateDetailsOther                      *[]UpdateDetails
 	}{
-		"empty": {},
-		"ServiceCount": {
+		{
+			name: "empty",
+		},
+		{
+			name:                        "ServiceCount",
 			serviceCountCurrentActive:   2,
 			serviceCountCurrentInactive: 1,
 		},
-		"UpdatesCurrent('AVAILABLE')": {
+		{
+			name:                      "UpdatesCurrent('AVAILABLE')",
 			serviceCountCurrentActive: 5,
 			updatesCurrentAvailable:   3,
 			updateDetails: &[]UpdateDetails{
@@ -88,7 +93,8 @@ func TestHTTP_Counts(t *testing.T) {
 				},
 			},
 		},
-		"UpdatesCurrent('SKIPPED')": {
+		{
+			name:                        "UpdatesCurrent('SKIPPED')",
 			serviceCountCurrentActive:   2,
 			serviceCountCurrentInactive: 4,
 			updatesCurrentSkipped:       1,
@@ -101,9 +107,11 @@ func TestHTTP_Counts(t *testing.T) {
 					AutoApprove:     false,
 					Approved:        false,
 					Skipped:         true,
-				}},
+				},
+			},
 		},
-		"all": {
+		{
+			name:                        "all",
 			serviceCountCurrentActive:   3,
 			serviceCountCurrentInactive: 2,
 			updatesCurrentAvailable:     2,
@@ -147,7 +155,8 @@ func TestHTTP_Counts(t *testing.T) {
 				},
 			},
 		},
-		"up-to-date services ignored": {
+		{
+			name:                        "up-to-date services ignored",
 			serviceCountCurrentActive:   1,
 			serviceCountCurrentInactive: 1,
 			updatesCurrentAvailable:     1,
@@ -162,12 +171,13 @@ func TestHTTP_Counts(t *testing.T) {
 					AutoApprove:     false,
 					Approved:        false,
 					Skipped:         false,
-				}},
+				},
+			},
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're testing metrics.
 
 			api := API{}
@@ -184,20 +194,19 @@ func TestHTTP_Counts(t *testing.T) {
 			updateDetailIndex := 0
 			for i := 0; i < serviceTotal; i++ {
 				id := fmt.Sprintf("test-%d", i)
-				var newService service.Service
-				if err := yaml.Unmarshal(tmpl, &newService); err != nil {
-					t.Fatalf("%s\nfailed to unmarshal service template: %v",
-						packageName, err)
+				newService, err := service.DecodeService(
+					"yaml", tmpl,
+					id,
+					svcCfg, notifyCfg, whCfg,
+				)
+				if err != nil {
+					t.Fatalf(
+						"%s\nfailed to unmarshal service template: %v",
+						packageName, err,
+					)
 				}
-				newService.Dashboard = *dashboard.NewOptions(
-					nil, "", "", "", nil,
-					&dashboard.OptionsDefaults{}, &dashboard.OptionsDefaults{})
-				newService.Init(
-					&service.Defaults{}, &service.Defaults{},
-					&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
-					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 
-				api.Config.Service[id] = &newService
+				api.Config.Service[id] = newService
 				api.Config.Order = append(api.Config.Order, id)
 
 				if tc.updateDetails == nil || updateDetailIndex >= len(*tc.updateDetails) {
@@ -233,8 +242,8 @@ func TestHTTP_Counts(t *testing.T) {
 			}
 
 			metric.ServiceCountCurrent.Reset()
-			metric.ServiceCountCurrentAdd(test.BoolPtr(true), tc.serviceCountCurrentActive)
-			metric.ServiceCountCurrentAdd(test.BoolPtr(false), tc.serviceCountCurrentInactive)
+			metric.ServiceCountCurrentAdd(test.Ptr(true), tc.serviceCountCurrentActive)
+			metric.ServiceCountCurrentAdd(test.Ptr(false), tc.serviceCountCurrentInactive)
 			t.Cleanup(func() {
 				metric.ServiceCountCurrent.Reset()
 			})
@@ -242,8 +251,10 @@ func TestHTTP_Counts(t *testing.T) {
 			metric.UpdatesCurrent.WithLabelValues("SKIPPED").Set(float64(tc.updatesCurrentSkipped))
 			var updateDetailsStr string
 			if tc.updateDetails != nil {
-				updateDetailsStr = fmt.Sprintf(`,"update_details": %v`,
-					util.ToJSONString(*tc.updateDetails))
+				updateDetailsStr = fmt.Sprintf(
+					`,"update_details": %v`,
+					decode.ToJSONString(*tc.updateDetails),
+				)
 			}
 			wantJSON := test.TrimJSON(fmt.Sprintf(`{
 				"service_count": %d,
@@ -260,18 +271,20 @@ func TestHTTP_Counts(t *testing.T) {
 				updateDetailsStr,
 			)) + "\n"
 
-			// WHEN a HTTP request is sent to the /counts endpoint.
+			// WHEN: a HTTP request is sent to the /counts endpoint.
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/counts", nil)
 			w := httptest.NewRecorder()
 			api.httpCounts(w, req)
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			// THEN the set values are returned in the JSON response.
+			// THEN: the set values are returned in the JSON response.
 			data, _ := io.ReadAll(res.Body)
-			if dataStr := string(data); dataStr != wantJSON {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, wantJSON, dataStr)
+			if got := string(data); got != wantJSON {
+				t.Errorf(
+					"%s\nAPI.httpCounts() response mismatch\ngot:  %q\nwant: %q",
+					packageName, got, wantJSON,
+				)
 			}
 		})
 	}

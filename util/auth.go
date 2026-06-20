@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,22 +24,24 @@ import (
 
 // BasicAuth returns the base64-encoded string of the username and password.
 func BasicAuth(username, password string) string {
-	encode := fmt.Sprintf("%s:%s",
-		username, password)
+	encode := fmt.Sprintf(
+		"%s:%s",
+		username, password,
+	)
 	return base64.StdEncoding.EncodeToString([]byte(encode))
 }
 
-// isHashed returns whether the string represents a hashed value.
+// isHashed reports whether the string uses the h__<hex> hashed-secret format.
 func isHashed(s string) bool {
 	return RegexCheck("^h__[a-f0-9]{64}$", s)
 }
 
-// Hash returns the SHA256 hash of the string.
+// hash returns the SHA256 digest of the string.
 func hash(s string) [32]byte {
 	return sha256.Sum256([]byte(s))
 }
 
-// HashFromString returns the byte slice of the hash string.
+// hashFromString decodes a hex-encoded digest into bytes.
 func hashFromString(s string) []byte {
 	hash, _ := hex.DecodeString(s)
 	return hash

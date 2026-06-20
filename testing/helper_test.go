@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,40 +18,45 @@
 package testing
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
 
 func TestRunAndExit(t *testing.T) {
-	// GIVEN various combinations of ok and flag.
+	// GIVEN: various combinations of ok and flag.
 	type args struct {
 		ok   bool
 		flag string
 	}
 
-	tests := map[string]struct {
+	tests := []struct {
+		name     string
 		args     args
 		wantExit bool
 		wantCode int
 	}{
-		"empty flag": {
+		{
+			name:     "empty flag",
 			args:     args{ok: true, flag: ""},
 			wantExit: false,
 		},
-		"ok=true, flag set": {
+		{
+			name:     "ok=true, flag set",
 			args:     args{ok: true, flag: "set"},
 			wantExit: true,
 			wantCode: 0,
 		},
-		"ok=false, flag set": {
+		{
+			name:     "ok=false, flag set",
 			args:     args{ok: false, flag: "set"},
 			wantExit: true,
 			wantCode: 1,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're sharing exitFunc.
 
 			flag := tc.args.flag
@@ -65,18 +70,25 @@ func TestRunAndExit(t *testing.T) {
 			}
 			defer func() { exitFunc = os.Exit }()
 
-			// WHEN ExitIfTestFails is called.
+			// WHEN: ExitIfTestFails is called.
 			RunAndExit(tc.args.ok, &flag)
 
-			// THEN it should exit as expected.
+			prefix := fmt.Sprintf("%s\nTestExit()", packageName)
+
+			// THEN: it should exit as expected.
 			if exited != tc.wantExit {
-				t.Fatalf("%s\nwant: exit=%v\ngot:  exit=%v",
-					packageName, tc.wantExit, exited)
+				t.Fatalf(
+					"%s exit mismatch\ngot:  exit=%v\nwant: exit=%v",
+					prefix, exited, tc.wantExit,
+				)
 			}
-			// AND with the expected code.
+
+			// AND: with the expected code.
 			if exited && code != tc.wantCode {
-				t.Fatalf("%s\nwant: exit=%d\ngot:  exit=%d",
-					packageName, tc.wantCode, code)
+				t.Fatalf(
+					"%s exit code mismatch\ngot:  exit=%d\nwant: exit=%d",
+					prefix, code, tc.wantCode,
+				)
 			}
 		})
 	}

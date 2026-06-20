@@ -55,6 +55,6 @@ export type ServiceRefreshResponse = {
 	/* The timestamp of the refresh. */
 	timestamp: string;
 
-	/* 'Route disabled' message. */
+	/* 'route disabled' message. */
 	message?: string;
 };

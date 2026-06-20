@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,48 +17,141 @@
 package service
 
 import (
-	"encoding/json"
+	"fmt"
+	"regexp"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"gopkg.in/yaml.v3"
+	"github.com/release-argus/Argus/config/decode"
+	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
+	whtest "github.com/release-argus/Argus/webhook/test"
 
-	"github.com/release-argus/Argus/notify/shoutrrr"
-	dv_web "github.com/release-argus/Argus/service/deployed_version/types/web"
-	lv_web "github.com/release-argus/Argus/service/latest_version/types/web"
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/web/metric"
-	"github.com/release-argus/Argus/webhook"
-	webhook_test "github.com/release-argus/Argus/webhook/test"
 )
 
+func TestServices_Track(t *testing.T) {
+	// GIVEN: a Services.
+	tests := []struct {
+		name     string
+		ordering []string
+		services []string
+		active   []bool
+	}{
+		{
+			name:     "empty Ordering does no queries",
+			ordering: []string{},
+			services: []string{"github", "url"},
+		},
+		{
+			name:     "only tracks active Services",
+			ordering: []string{"github", "url"},
+			services: []string{"github", "url"},
+			active:   []bool{false, true},
+		},
+	}
+
+	for _, tc := range tests {
+		var services *Services
+		if len(tc.services) != 0 {
+			services = &Services{}
+			i := 0
+			for _, j := range tc.services {
+				(*services)[j] = testService(t, tc.name, j, "url")
+				if len(tc.active) != 0 {
+					(*services)[j].Options.Active = test.Ptr(tc.active[i])
+				}
+				(*services)[j].Status.SetLatestVersion("", "", false)
+				(*services)[j].Status.SetDeployedVersion("", "", false)
+				i++
+			}
+		}
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			servicesBefore := decode.ToYAMLString(services, "")
+			t.Cleanup(func() {
+				// Set Deleting to stop the Track.
+				for _, s := range *services {
+					s.Status.SetDeleting()
+				}
+			})
+
+			// WHEN: Track is called on it.
+			services.Track(&tc.ordering, &sync.RWMutex{})
+
+			prefix := fmt.Sprintf("%s\nServices.Track()", packageName)
+
+			// THEN: the function exits straight away.
+			time.Sleep(2 * time.Second)
+			for i := range *services {
+				if !util.Contains(tc.ordering, i) {
+					if wantLatestVersion := ""; (*services)[i].Status.LatestVersion() != wantLatestVersion {
+						t.Fatalf(
+							"%s query on Services[%q] shouldn't have happened as not in ordering\ngot:  latest_version=%q\nwant: latest_version=%q\norder: %v",
+							prefix, i,
+							wantLatestVersion, (*services)[i].Status.String(),
+							tc.ordering,
+						)
+					}
+				} else if (*services)[i].Options.GetActive() {
+					if (*services)[i].Status.LatestVersion() == "" {
+						t.Fatalf(
+							"%s query on Services[%q] didn't find LatestVersion\ngot:  ''\nwant: %q",
+							prefix, i,
+							(*services)[i].Status.String(),
+						)
+					}
+				} else if (*services)[i].Status.LatestVersion() != "" {
+					t.Fatalf(
+						"%s query on Services[%q] shouldn't have updated LatestVersion\ngot:  %q\nwant: ''",
+						prefix, i,
+						(*services)[i].Status.String(),
+					)
+				}
+			}
+
+			// AND: the Services haven't changed.
+			// Clear 'options.active: true' as that's nil'd on Track.
+			servicesBefore = regexp.MustCompile(`\n +options:\n +active: true`).ReplaceAllString(servicesBefore, "")
+			servicesAfter := decode.ToYAMLString(services, "")
+			if servicesAfter != servicesBefore {
+				t.Fatalf(
+					"%s Services shouldn't have changed\ngot:  %q\nwant: %q",
+					prefix, servicesAfter, servicesBefore,
+				)
+			}
+		})
+	}
+}
+
 func TestService_Track(t *testing.T) {
-	testURLService := testService(t, "TestService_Track", "url")
-	testURLService.LatestVersion.Query(false, logutil.LogFrom{})
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
+
+	testURLService := testService(t, "TestService_Track", "url", "url")
+	_, _ = testURLService.LatestVersion.Query(false, logx.LogFrom{})
 	testURLLatestVersion := testURLService.Status.LatestVersion()
 
-	type overrides struct {
-		latestVersion    string
-		nilLatestVersion bool
-		deployedVersion  string
-		other            string
-	}
 	type versions struct {
 		startLatestVersion, wantLatestVersion     string
 		startDeployedVersion, wantDeployedVersion string
 	}
-	// GIVEN a Service.
-	tests := map[string]struct {
+	// GIVEN: a Service.
+	tests := []struct {
+		name                 string
 		latestVersionType    string
-		overrides            overrides
+		overrides            []byte
 		wantQueryIn          string
 		keepDeployedLookup   bool
-		livenessMetric       int
+		livenessMetric       metric.LatestVersionQueryResult
 		ignoreLivenessMetric bool
 		takesAtLeast         time.Duration
 		versions             versions
@@ -66,417 +159,428 @@ func TestService_Track(t *testing.T) {
 		wantDatabaseMessages int
 		deleting             bool
 	}{
-		"first query updates LatestVersion and DeployedVersion": {
+		{
+			name:              "first query updates LatestVersion and DeployedVersion",
 			latestVersionType: "url",
-			livenessMetric:    1,
+			livenessMetric:    metric.LatestVersionQueryResultSuccess,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion,
+			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
 			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
-		"first query updates LatestVersion and DeployedVersion - unchanged by active=true": {
+		{
+			name:              "first query updates LatestVersion and DeployedVersion - unchanged by active=true",
 			latestVersionType: "url",
-			overrides: overrides{
-				other: test.TrimYAML(`
-					options:
-						active: true
-				`),
-			},
-			livenessMetric: 1,
+			overrides: []byte(test.TrimYAML(`
+				options:
+					active: true
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion,
+			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
 			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
-		"query finds a newer version and updates LatestVersion and DeployedVersion - no commands/webhooks": {
+		{
+			name:              "query finds a newer version/updates LatestVersion and DeployedVersion - no commands or webhooks",
 			latestVersionType: "url",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
-					url_commands:
-						- type: regex
-							regex: 'ver([0-9.]+)'
-				`),
-			},
-			livenessMetric: 1,
+			overrides: []byte(test.TrimYAML(`
+				latest_version:
+					url: ` + test.LookupBare["url_valid"] + `/1.2.2
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
 				startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
-				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
+				wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
+			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
 			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
-		"query finds a newer version and updates LatestVersion and not DeployedVersion - has webhook": {
+		{
+			name:              "query finds a newer version/updates LatestVersion and not DeployedVersion - has webhook",
 			latestVersionType: "url",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
-					url_commands:
-						- type: regex
-							regex: 'ver([0-9.]+)'
-				`),
-				other: test.TrimYAML(`
-					webhook:
-						test:
-							` + test.Indent(
-					webhook_test.WebHook(false, false, false).String(), 4) + `
-				`),
-			},
-			livenessMetric: 1,
+			overrides: []byte(test.TrimYAML(`
+				latest_version:
+					url: ` + test.LookupBare["url_valid"] + `/1.2.2
+				webhook:
+					test:
+						` + test.Indent(whtest.WebHook(t, false, false, false).String(""), 4) + `
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
 				startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
-				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "1.2.1"},
+				wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.1",
+			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
 			wantDatabaseMessages: 1, // DB: 1 for latest.
 		},
-		"query finds a newer version does send webhooks if autoApprove enabled": {
+		{
+			name:              "query finds a newer version/does send webhooks if autoApprove enabled",
 			latestVersionType: "url",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
-					url_commands:
-						- type: regex
-							regex: 'ver([0-9.]+)'
-				`),
-				other: test.TrimYAML(`
-					webhook:
-						test:
-							` + test.Indent(
-					webhook_test.WebHook(false, false, false).String(), 4) + `
-					dashboard:
-						auto_approve: true
-				`),
-			},
-			livenessMetric: 1,
+			overrides: []byte(test.TrimYAML(`
+				latest_version:
+					url: ` + test.LookupBare["url_valid"] + `/1.2.2
+				webhook:
+					test:
+						` + test.Indent(whtest.WebHook(t, false, false, false).String(""), 4) + `
+				dashboard:
+					auto_approve: true
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
 				startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
-				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
+				wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
+			},
 			wantAnnounces:        2, // Announce: 1 for latest query, 1 for deployed.
 			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
-		"query doesn't update versions if it finds one that's older semantically": {
+		{
+			name:              "query does update versions if it finds one that's older semantically (version deleted?)",
 			latestVersionType: "url",
-			// would get '1.2.1', but stay on '1.2.2'.
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
-					url_commands:
-						- type: regex
-							regex: '"([0-9.]+)"'
-					require: null
-				`),
-			},
-			livenessMetric: 4,
+			overrides: []byte(test.TrimYAML(`
+				options:
+					semantic_versioning: true
+				latest_version:
+					url: ` + test.LookupBare["url_valid"] + `/1.2.0
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
-				startLatestVersion: testURLLatestVersion, startDeployedVersion: testURLLatestVersion,
-				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
-			wantAnnounces: 0, wantDatabaseMessages: 0,
-		},
-		"track on invalid cert allowed": {
-			latestVersionType: "url",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
-					url: ` + test.LookupPlain["url_invalid"] + `
-					allow_invalid_certs: true
-					url_commands:
-						- type: regex
-							regex: '"([0-9.]+)"'
-					require: null
-				`),
+				startLatestVersion: "1.2.3", startDeployedVersion: "1.2.3",
+				wantLatestVersion: "1.2.0", wantDeployedVersion: "1.2.0",
 			},
-			livenessMetric: 1,
-			versions: versions{
-				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1"},
 			wantAnnounces:        1, // Announce: 1 for latest query.
-			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
+			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
-		"track on signed cert allowed": {
+		{
+			name:              "cert/invalid disallowed",
 			latestVersionType: "url",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
-					url: ` + test.LookupPlain["url_valid"] + `
+			overrides: []byte(test.TrimYAML(`
+				latest_version:
+					url: ` + test.LookupBare["url_invalid"] + `/1.2.1
 					allow_invalid_certs: false
-					url_commands:
-						- type: regex
-							regex: '"([0-9.]+)"'
 					require: null
-				`),
-			},
-			livenessMetric: 1,
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultFailed,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1"},
+				wantLatestVersion: "", wantDeployedVersion: "",
+			},
+			wantAnnounces:        0, // Query fail.
+			wantDatabaseMessages: 0, // Query fail.
+		},
+		{
+			name:              "cert/invalid allowed",
+			latestVersionType: "url",
+			overrides: []byte(test.TrimYAML(`
+				latest_version:
+					url: ` + test.LookupBare["url_invalid"] + `/1.2.1
+					allow_invalid_certs: true
+					require: null
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultSuccess,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1",
+			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
 			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
-		"github - urlCommand, regex fail": {
+		{
+			name:              "cert/signed allowed",
+			latestVersionType: "url",
+			overrides: []byte(test.TrimYAML(`
+				latest_version:
+					url: ` + test.LookupBare["url_valid"] + `/1.2.1
+					allow_invalid_certs: false
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultSuccess,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1",
+			},
+			wantAnnounces:        1, // Announce: 1 for latest query.
+			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
+		},
+		{
+			name:              "github/urlCommand, regex fail",
 			latestVersionType: "github",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
+			overrides: []byte(test.TrimYAML(`
+				latest_version:
 					url_commands:
 						- type: regex
 							regex: 'ver([0-9.]+)foo'
-				`),
-			},
-			livenessMetric: 2,
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultNoMatch,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "", wantDeployedVersion: ""},
+				wantLatestVersion: "", wantDeployedVersion: "",
+			},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
-		"url - urlCommand, regex fail": {
+		{
+			name:              "url/urlCommand, regex fail",
 			latestVersionType: "url",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
+			overrides: []byte(test.TrimYAML(`
+				latest_version:
 					url_commands:
 						- type: regex
 							regex: 'ver([0-9.]+)foo'
-				`),
-			},
-			livenessMetric: 2,
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultNoMatch,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "", wantDeployedVersion: ""},
+				wantLatestVersion: "", wantDeployedVersion: "",
+			},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
-		"github - urlCommand, split fail": {
+		{
+			name:              "github/urlCommand, split fail",
 			latestVersionType: "github",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
+			overrides: []byte(test.TrimYAML(`
+				latest_version:
 					url_commands:
 						- type: split
 							text: '_-_'
-				`),
-			},
-			livenessMetric: 2,
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultNoMatch,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "", wantDeployedVersion: ""},
+				wantLatestVersion: "", wantDeployedVersion: "",
+			},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
-		"url - urlCommand, split fail": {
+		{
+			name:              "url/urlCommand, split fail",
 			latestVersionType: "url",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
+			overrides: []byte(test.TrimYAML(`
+				latest_version:
 					url_commands:
 						- type: split
 							text: '_-_'
-				`),
-			},
-			livenessMetric: 2,
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultNoMatch,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "", wantDeployedVersion: ""},
+				wantLatestVersion: "", wantDeployedVersion: "",
+			},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
-		"handle leading v's - semantic": {
+		{
+			name:              "handle leading v's/semantic",
 			latestVersionType: "url",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
-					url_commands:
-						- type: regex
-							regex: 'ver([0-9.]+)'
-							template: 'v$1'
-					require: null
-				`),
-			},
-			livenessMetric: 1,
+			overrides: []byte(test.TrimYAML(`
+				latest_version:
+					url: ` + test.LookupBare["url_valid"] + `/v1.2.2
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2"},
+				wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2",
+			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
 			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
-		"handle leading v's - non-semantic": {
+		{
+			name:              "handle leading v's/non-semantic",
 			latestVersionType: "url",
-			overrides: overrides{
-				other: test.TrimYAML(`
-					options:
-						semantic_versioning: false
-				`),
-				latestVersion: test.TrimYAML(`
-					url_commands:
-						- type: regex
-							regex: 'ver([0-9.]+)'
-							template: 'v$1'
-					require: null
-				`),
-			},
-			livenessMetric: 1,
+			overrides: []byte(test.TrimYAML(`
+				options:
+					semantic_versioning: false
+				latest_version:
+					url: ` + test.LookupBare["url_valid"] + `/v1.2.2
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2"},
+				wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2",
+			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
 			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
-		"non-semantic version fail": {
+		{
+			name:              "github/non-semantic version fail",
+			latestVersionType: "github",
+			overrides: []byte(test.TrimYAML(`
+				options:
+					semantic_versioning: true
+				latest_version:
+					url_commands:
+						- type: regex
+							regex: '[0-9.]+'
+							template: ver$1
+					require: null
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultNoMatch,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "", wantDeployedVersion: "",
+			},
+			wantAnnounces: 0, wantDatabaseMessages: 0,
+		},
+		{
+			name:              "url/non-semantic version fail",
 			latestVersionType: "url",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
+			overrides: []byte(test.TrimYAML(`
+				options:
+					semantic_versioning: true
+				latest_version:
+					url: ` + test.LookupBare["url_valid"] + `/ver1.2.3
 					url_commands:
 						- type: regex
 							regex: 'ver[0-9.]+'
 					require: null
-				`),
-			},
-			livenessMetric: 3,
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultSemanticVersionFail,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "", wantDeployedVersion: ""},
+				wantLatestVersion: "", wantDeployedVersion: "",
+			},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
-		"progressive version fail (got older version)": {
+		{
+			name:              "progressive versioning (get older version)",
 			latestVersionType: "url",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
-					url_commands:
-						- type: regex
-							regex: 'ver([0-9.]+)'
-					regexp_template: 'v$1'
-					require: null
-				`),
-			},
-			livenessMetric: 4,
+			overrides: []byte(test.TrimYAML(`
+				options:
+					semantic_versioning: true
+				latest_version:
+					url: ` + test.LookupBare["url_valid"] + `/1.2.2
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
 				startLatestVersion: "1.2.3", startDeployedVersion: "1.2.3",
-				wantLatestVersion: "1.2.3", wantDeployedVersion: "1.2.3"},
-			wantAnnounces: 0, wantDatabaseMessages: 0,
-		},
-		"other fail (invalid cert)": {
-			latestVersionType: "url",
-			overrides: overrides{
-				latestVersion: test.TrimYAML(`
-					url: ` + test.LookupPlain["url_invalid"] + `
-					allow_invalid_certs: false
-					url_commands:
-						- type: regex
-							regex: '([0-9.]+)'
-					require: null
-				`),
+				wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
 			},
-			livenessMetric: 0,
+			wantAnnounces:        1, // Announce: 1 for latest query.
+			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
+		},
+		{
+			name:              "track gets DeployedVersion/unchanged",
+			latestVersionType: "url",
+			overrides: []byte(test.TrimYAML(`
+				deployed_version:
+					url: ` + test.LookupBare["url_valid"] + `/1.2.4
+			`)),
+			keepDeployedLookup: true,
+			livenessMetric:     metric.LatestVersionQueryResultSuccess,
 			versions: versions{
-				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "", wantDeployedVersion: ""},
-			wantAnnounces: 0, wantDatabaseMessages: 0,
-		},
-		"track gets DeployedVersion": {
-			latestVersionType: "url",
-			overrides: overrides{
-				deployedVersion: test.TrimYAML(`
-					json: bar
-					regex: ""
-					regex_template: ""
-				`),
+				startLatestVersion: testURLLatestVersion, startDeployedVersion: "1.2.4",
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "1.2.4",
 			},
-			keepDeployedLookup: true, livenessMetric: 1,
-			versions: versions{
-				startLatestVersion: testURLLatestVersion, startDeployedVersion: "1.2.0",
-				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "1.2.2"},
-			wantAnnounces:        2, // Announce: 1 for latest query, 1 for deployed change.
-			wantDatabaseMessages: 1, // DB: 1 for deployed change.
+			wantAnnounces:        1, // Announce: 1 for latest query.
+			wantDatabaseMessages: 0,
 		},
-		"track gets DeployedVersion that is newer and does not change LatestVersion": {
+		{
+			name:              "track gets DeployedVersion/newer does not change LatestVersion",
 			latestVersionType: "url",
-			overrides: overrides{
-				deployedVersion: test.TrimYAML(`
-					json: foo.bar.version
-					regex: ""
-					regex_template: ""
-				`),
-			},
+			overrides: []byte(test.TrimYAML(`
+				deployed_version:
+					url: ` + test.LookupBare["url_valid"] + `/3.2.1
+			`)),
 			keepDeployedLookup:   true,
 			ignoreLivenessMetric: true, // Ignore as DeployedVersionLookup may be done before.
 			versions: versions{
 				startLatestVersion: testURLLatestVersion, startDeployedVersion: "0.0.0",
-				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "3.2.1"},
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "3.2.1",
+			},
 			wantAnnounces:        2, // Announce: 1 for latest query, 1 for deployed change.
 			wantDatabaseMessages: 1, // db: 1 for deployed change.
 		},
-		"track that last did a Query less than interval ago waits until interval": {
+		{
+			name:              "track that last did a Query less than interval ago waits until interval",
 			latestVersionType: "url",
-			overrides: overrides{
-				other: test.TrimYAML(`
-					deployed_version:
-						json: bar
-				`),
-			},
+			overrides: []byte(test.TrimYAML(`
+				deployed_version:
+					json: bar
+			`)),
 			wantQueryIn:        "5s",
 			keepDeployedLookup: false,
-			livenessMetric:     1,
+			livenessMetric:     metric.LatestVersionQueryResultSuccess,
 			takesAtLeast:       5 * time.Second,
 			versions: versions{
 				startLatestVersion: testURLLatestVersion,
-				wantLatestVersion:  testURLLatestVersion},
+				wantLatestVersion:  testURLLatestVersion,
+			},
 			wantAnnounces:        1, // announce: 1 for latest query.
 			wantDatabaseMessages: 0, // db: 0 for nothing changing.
 		},
-		"inactive service doesn't track": {
+		{
+			name:              "inactive service doesn't track",
 			latestVersionType: "url",
-			overrides: overrides{
-				other: test.TrimYAML(`
-					options:
-						active: false
-				`),
+			overrides: []byte(test.TrimYAML(`
+				options:
+					active: false
+			`)),
+			livenessMetric: metric.LatestVersionQueryResultFailed,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "", wantDeployedVersion: "",
 			},
-			livenessMetric: 0,
-			versions: versions{
-				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "", wantDeployedVersion: ""},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
-		"deleting service stops track": {
+		{
+			name:              "deleting service stops track",
 			latestVersionType: "url",
-			livenessMetric:    0, deleting: true,
+			livenessMetric:    metric.LatestVersionQueryResultFailed,
+			deleting:          true,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "", wantDeployedVersion: ""},
+				wantLatestVersion: "", wantDeployedVersion: "",
+			},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
-		"nil latest_version doesn't track": {
+		{
+			name:              "nil latest_version doesn't track",
 			latestVersionType: "url",
-			overrides: overrides{
-				nilLatestVersion: true},
-			livenessMetric: 0,
+			overrides:         []byte("latest_version: null"),
+			livenessMetric:    metric.LatestVersionQueryResultFailed,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
-				wantLatestVersion: "", wantDeployedVersion: ""},
+				wantLatestVersion: "", wantDeployedVersion: "",
+			},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := testService(t, name, tc.latestVersionType)
+			svc := testService(t, tc.name, tc.latestVersionType, "url")
+			svcStatus := svc.Status.Copy(true)
+			t.Cleanup(func() {
+				// Set Deleting to stop the Track.
+				svc.Status.SetDeleting()
+			})
 
-			// overrides - other.
-			err := yaml.Unmarshal([]byte(tc.overrides.other), &svc)
-			if err != nil {
-				t.Fatalf("%s\nfailed to unmarshal overrides: %s",
-					packageName, err)
-			}
-			// overrides - latest_version.
-			if lv, ok := svc.LatestVersion.(*lv_web.Lookup); ok {
-				err = yaml.Unmarshal([]byte(tc.overrides.latestVersion), lv)
+			// Overrides.
+			if tc.overrides != nil {
+				var err error
+				svc, err = ApplyOverrides(
+					"yaml", tc.overrides,
+					svc,
+					tc.name,
+					svcCfg, notifyCfg, whCfg,
+				)
 				if err != nil {
-					t.Fatalf("%s\nfailed to unmarshal overrides: %s",
-						packageName, err)
+					t.Fatalf(
+						"%s\nfailed to unmarshal overrides: %s",
+						packageName, err,
+					)
 				}
-			}
-			if tc.overrides.nilLatestVersion {
-				svc.LatestVersion = nil
-			}
-			// overrides - deployed_version.
-			if dv, ok := svc.DeployedVersionLookup.(*dv_web.Lookup); ok {
-				err = yaml.Unmarshal([]byte(tc.overrides.deployedVersion), dv)
-				if err != nil {
-					t.Fatalf("%s\nfailed to unmarshal overrides: %s",
-						packageName, err)
-				}
+				svc.Status.AnnounceChannel = svcStatus.AnnounceChannel
+				svc.Status.DatabaseChannel = svcStatus.DatabaseChannel
+				svc.Status.SaveChannel = svcStatus.SaveChannel
 			}
 
 			svc.Status.SetLatestVersion(tc.versions.startLatestVersion, "", false)
+			latestVersionTimestamp := svc.Status.LatestVersionTimestamp()
 			svc.Status.SetDeployedVersion(tc.versions.startDeployedVersion, "", false)
+			deployedVersionTimestamp := svc.Status.DeployedVersionTimestamp()
 			if tc.deleting {
 				svc.Status.SetDeleting()
 			}
@@ -488,39 +592,43 @@ func TestService_Track(t *testing.T) {
 			if tc.wantQueryIn != "" {
 				wantQueryIn, _ := time.ParseDuration(tc.wantQueryIn)
 				svc.Status.SetLastQueried(
-					time.Now().Add(-interval + wantQueryIn).UTC().Format(time.RFC3339))
+					time.Now().Add(-interval + wantQueryIn).UTC().Format(time.RFC3339),
+				)
 			}
-			latestVersionTimestamp := svc.Status.LatestVersionTimestamp()
-			deployedVersionTimestamp := svc.Status.DeployedVersionTimestamp()
-			shoutrrrHardDefaults := shoutrrr.ShoutrrrsDefaults{}
-			shoutrrrHardDefaults.Default()
-			webhookHardDefaults := webhook.Defaults{}
-			webhookHardDefaults.Default()
-			svc.Init(
-				svc.Defaults, svc.HardDefaults,
-				&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrrHardDefaults,
-				&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhookHardDefaults)
 			didFinish := make(chan bool, 1)
+			svcBefore := svc.String("")
 
-			// WHEN Track is called on it.
+			// WHEN: Track is called on it.
 			go func() {
 				svc.Track()
 				didFinish <- true
 			}()
 			for range 200 {
 				var passQ, failQ float64
-				if !tc.overrides.nilLatestVersion {
-					passQ = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-						svc.ID, svc.LatestVersion.GetType(), metric.ActionResultSuccess))
-					failQ = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-						svc.ID, svc.LatestVersion.GetType(), metric.ActionResultFail))
+				if svc.LatestVersion != nil {
+					passQ = testutil.ToFloat64(
+						metric.LatestVersionQueryResultTotal.WithLabelValues(
+							svc.ID, svc.LatestVersion.GetType(), metric.ActionResultSuccess,
+						),
+					)
+					failQ = testutil.ToFloat64(
+						metric.LatestVersionQueryResultTotal.WithLabelValues(
+							svc.ID, svc.LatestVersion.GetType(), metric.ActionResultFail,
+						),
+					)
 				}
 				if passQ != float64(0) || failQ != float64(0) {
 					if tc.keepDeployedLookup {
-						passQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-							svc.ID, svc.DeployedVersionLookup.GetType(), metric.ActionResultSuccess))
-						failQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(
-							svc.ID, svc.DeployedVersionLookup.GetType(), metric.ActionResultFail))
+						passQ := testutil.ToFloat64(
+							metric.DeployedVersionQueryResultTotal.WithLabelValues(
+								svc.ID, svc.DeployedVersionLookup.GetType(), metric.ActionResultSuccess,
+							),
+						)
+						failQ := testutil.ToFloat64(
+							metric.DeployedVersionQueryResultTotal.WithLabelValues(
+								svc.ID, svc.DeployedVersionLookup.GetType(), metric.ActionResultFail,
+							),
+						)
 						// if deployedVersionLookup hasn't queried, keep waiting.
 						if passQ != float64(0) || failQ != float64(0) {
 							break
@@ -531,8 +639,11 @@ func TestService_Track(t *testing.T) {
 				}
 				time.Sleep(50 * time.Millisecond)
 			}
-			time.Sleep(500 * time.Millisecond)
-			// Check that we waited until interval had gone since the last latestVersionLookup.
+			time.Sleep(1000 * time.Millisecond)
+
+			prefix := fmt.Sprintf("%s\nService.Track()", packageName)
+
+			// Check that we waited until interval had passed since the last latestVersionLookup.
 			if tc.wantQueryIn != "" {
 				// When we'd expect the query to be done after.
 				timeUntilInterval, _ := time.ParseDuration(tc.wantQueryIn)
@@ -541,144 +652,106 @@ func TestService_Track(t *testing.T) {
 				dvPreviousTimestamp, _ := time.Parse(time.RFC3339, deployedVersionTimestamp)
 				dvExpectedAfter := dvPreviousTimestamp.Add(timeUntilInterval)
 
-				// WHen we actually did the query.
+				// When we actually did the query.
 				didAt, _ := time.Parse(time.RFC3339, svc.Status.LastQueried())
 				if didAt.Before(lvExpectedAfter) {
-					t.Errorf("%s\nLatestVersionLookup happened too early\nwant: %s or later\ngot:  %s\nnow:  %s",
-						packageName, lvExpectedAfter, svc.Status.LastQueried(), time.Now().UTC())
+					t.Errorf(
+						"%s LatestVersionLookup happened too early\ngot:  %s\nwant: %s or later\nnow:  %s",
+						prefix,
+						svc.Status.LastQueried(), lvExpectedAfter,
+						time.Now().UTC(),
+					)
 				}
 				if didAt.Before(dvExpectedAfter) {
-					t.Errorf("%s\nDeployedVersionLookup happened too early\nwant: %s or later\ngot  %s\nnow:  %s",
-						packageName, dvExpectedAfter, svc.Status.LastQueried(), time.Now().UTC())
+					t.Errorf(
+						"%s DeployedVersionLookup happened too early\ngot  %s\nwant: %s or later\nnow:  %s",
+						prefix,
+						svc.Status.LastQueried(),
+						dvExpectedAfter,
+						time.Now().UTC(),
+					)
 				}
 			}
 
-			// THEN the scrape updates the Status correctly.
-			if svc.Status.LatestVersion() != tc.versions.wantLatestVersion ||
-				svc.Status.DeployedVersion() != tc.versions.wantDeployedVersion {
-				t.Fatalf("%s\nLatestVersion possible mismatch\nwant: %q\ngot  %q\nDeployedVersion possible mismatch\nwant: %q\ngot:  %q",
-					packageName,
-					tc.versions.wantLatestVersion, svc.Status.LatestVersion(),
-					tc.versions.wantDeployedVersion, svc.Status.DeployedVersion())
+			// THEN: the scrape updates the Status correctly.
+			if got := svc.Status.LatestVersion(); got != tc.versions.wantLatestVersion {
+				t.Fatalf(
+					"%s LatestVersion() mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.versions.wantLatestVersion,
+				)
+			}
+			if got := svc.Status.DeployedVersion(); got != tc.versions.wantDeployedVersion {
+				t.Fatalf(
+					"%s DeployedVersion() mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.versions.wantDeployedVersion,
+				)
 			}
 			// LatestVersionQueryResultTotal.
-			if !tc.overrides.nilLatestVersion {
-				gotMetric := testutil.ToFloat64(metric.LatestVersionQueryResultLast.WithLabelValues(svc.ID, svc.LatestVersion.GetType()))
-				if !tc.ignoreLivenessMetric && gotMetric != float64(tc.livenessMetric) {
-					t.Errorf("%s\nLatestVersionQueryResultLast mismatch\nwant: %d\ngot:  %f",
-						packageName, tc.livenessMetric, gotMetric)
+			if svc.LatestVersion != nil {
+				gotMetric := testutil.ToFloat64(
+					metric.LatestVersionQueryResultLast.WithLabelValues(
+						svc.ID, svc.LatestVersion.GetType(),
+					),
+				)
+				if gotMetric != float64(tc.livenessMetric) && !tc.ignoreLivenessMetric {
+					t.Errorf(
+						"%s LatestVersionQueryResultLast metric mismatch\ngot:  %d\nwant: %d",
+						prefix, int(gotMetric), tc.livenessMetric,
+					)
 				}
 			}
 			// AnnounceChannel.
 			if gotAnnounceMessages := len(svc.Status.AnnounceChannel); gotAnnounceMessages != tc.wantAnnounces {
-				t.Errorf("%s\nAnnounceChannel length mismatch\nwant: %d messages\ngot:  %d",
-					packageName, tc.wantAnnounces, gotAnnounceMessages)
+				t.Errorf(
+					"%s AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					prefix, gotAnnounceMessages, tc.wantAnnounces,
+				)
 				for gotAnnounceMessages > 0 {
 					var msg apitype.WebSocketMessage
 					msgBytes := <-svc.Status.AnnounceChannel
-					_ = json.Unmarshal(msgBytes, &msg)
-					t.Logf("%s - got message: {%+v}",
-						packageName, msg)
+					_ = decode.Unmarshal("json", msgBytes, &msg)
+					t.Logf(
+						"%s - AnnounceChannel message: {%+v}",
+						prefix, msg,
+					)
 					gotAnnounceMessages = len(svc.Status.AnnounceChannel)
 				}
 			}
 			// DatabaseChannel.
 			if gotDatabaseMessages := len(svc.Status.DatabaseChannel); gotDatabaseMessages != tc.wantDatabaseMessages {
-				t.Errorf("%s\nDatabaseChannel length mismatch\nwant: %d messages\ngot:  %d",
-					packageName, tc.wantDatabaseMessages, gotDatabaseMessages)
+				t.Errorf(
+					"%s DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
+					prefix, gotDatabaseMessages, tc.wantDatabaseMessages,
+				)
 				for gotDatabaseMessages > 0 {
-					var msg apitype.WebSocketMessage
-					msgBytes := <-svc.Status.AnnounceChannel
-					_ = json.Unmarshal(msgBytes, &msg)
-					t.Logf("%s - got message:\n{%v}\n",
-						packageName, msg)
+					msg := <-svc.Status.DatabaseChannel
+					t.Logf(
+						"%s - DatabaseChannel message:\n{%v}\n",
+						prefix, msg,
+					)
 					gotDatabaseMessages = len(svc.Status.DatabaseChannel)
 				}
 			}
 			// Track should finish if it is not Active and is not being deleted.
-			shouldFinish := !svc.Options.GetActive() || tc.deleting || tc.overrides.nilLatestVersion
+			shouldFinish := !svc.Options.GetActive() || tc.deleting || svc.LatestVersion == nil
 			// Didn't finish, but should have.
 			if shouldFinish && len(didFinish) == 0 {
-				t.Fatalf("%s\nexpected Track to finish when not active, deleting, or LatestVersion is nil",
-					packageName)
+				t.Fatalf(
+					"%s expected to finish when not active, deleting, or LatestVersion is nil",
+					prefix,
+				)
 			}
 			// Finished when it shouldn't have.
 			if !shouldFinish && len(didFinish) != 0 {
-				t.Fatalf("%s\ndidn't expect Track to finish",
-					packageName)
+				t.Fatalf("%s unexpected finish", prefix)
 			}
 
-			// Set Deleting to stop the Track.
-			svc.Status.SetDeleting()
-		})
-	}
-}
-
-func TestServices_Track(t *testing.T) {
-	// GIVEN a Services.
-	tests := map[string]struct {
-		ordering []string
-		services []string
-		active   []bool
-	}{
-		"empty Ordering does no queries": {
-			ordering: []string{},
-			services: []string{"github", "url"}},
-		"only tracks active Services": {
-			ordering: []string{"github", "url"},
-			services: []string{"github", "url"},
-			active:   []bool{false, true}},
-	}
-
-	for name, tc := range tests {
-		var services *Services
-		if len(tc.services) != 0 {
-			services = &Services{}
-			i := 0
-			for _, j := range tc.services {
-				switch j {
-				case "github":
-					(*services)[j] = testService(t, name, "github")
-				case "url":
-					(*services)[j] = testService(t, name, "url")
-				}
-				if len(tc.active) != 0 {
-					(*services)[j].Options.Active = test.BoolPtr(tc.active[i])
-				}
-				(*services)[j].Status.SetLatestVersion("", "", false)
-				(*services)[j].Status.SetDeployedVersion("", "", false)
-				i++
-			}
-		}
-
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN Track is called on it.
-			services.Track(&tc.ordering, &sync.RWMutex{})
-
-			// THEN the function exits straight away.
-			time.Sleep(2 * time.Second)
-			for i := range *services {
-				if !util.Contains(tc.ordering, i) {
-					if wantLatestVersion := ""; (*services)[i].Status.LatestVersion() != wantLatestVersion {
-						t.Fatalf("%s\nQuery on Services[%q] shouldn't have updated LatestVersion as not in ordering\nwant: %q\ngot:  %q\norder: %v",
-							packageName, i,
-							wantLatestVersion, (*services)[i].Status.String(),
-							tc.ordering)
-					}
-				} else if (*services)[i].Options.GetActive() {
-					if (*services)[i].Status.LatestVersion() == "" {
-						t.Fatalf("%s\nQuery on Services[%q] didn't find LatestVersion\nwant: %s\ngot:  %q",
-							packageName, i, (*services)[i].Status.String(), "")
-					}
-				} else if (*services)[i].Status.LatestVersion() != "" {
-					t.Fatalf("%s\nQuery on Services[%q] shouldn't have updated LatestVersion\nwant: %q\ngot:  %q",
-						packageName, i, "", (*services)[i].Status.String())
-				}
-
-				// Set Deleting to stop the Track.
-				(*services)[i].Status.SetDeleting()
+			// AND: the service should marshal the same.
+			if got := svc.String(""); got != svcBefore {
+				t.Errorf(
+					"%s String() mismatch\ngot:  %q\nwant: %q",
+					prefix, got, svcBefore,
+				)
 			}
 		})
 	}

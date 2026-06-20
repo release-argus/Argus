@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,53 +18,66 @@
 package github
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
 
-	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
-	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	opt "github.com/release-argus/Argus/service/option"
+	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
+	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
 var packageName = "latestver_github"
 var initialEmptyListETag string
-var testBody = []byte(test.TrimJSON(`
-[
-	{"tag_name":"0.18.0","name":"0.18.0","prerelease":true,"published_at":"2024-05-07T13:10:29Z",
-		"assets":[
-			{"id": 9,"name":"Argus-0.18.0.linux-amd64","created_at":"2024-05-07T13:11:30Z","browser_download_url":"https://github.com/release-argus/Argus/releases/download/0.18.0/Argus-0.18.0.darwin-amd64"},
-			{"id": 5,"name":"Argus-0.18.0.linux-arm64","created_at":"2024-05-07T13:11:39Z","browser_download_url":"https://github.com/release-argus/Argus/releases/download/0.18.0/Argus-0.18.0.darwin-arm64"}]},
-	{"tag_name":"0.17.4","name":"0.17.4","prerelease":false,"published_at":"2024-04-27T10:50:00Z",
-		"assets":[
-			{"id": 3,"name":"Argus-0.17.4.linux-amd64","created_at":"2024-04-27T10:50:53Z","browser_download_url":"https://github.com/release-argus/Argus/releases/download/0.17.4/Argus-0.17.4.linux-amd64"},
-			{"id": 7,"name":"Argus-0.17.4.linux-arm","created_at":"2024-04-27T10:50:59Z","browser_download_url":"https://github.com/release-argus/Argus/releases/download/0.17.4/Argus-0.17.4.linux-arm"}]}]
-`))
-var testBodyObject []github_types.Release
+var testBody = []byte(
+	test.TrimJSON(`[
+		{
+			"tag_name":"0.18.0",
+			"name":"0.18.0",
+			"prerelease":true,
+			"published_at":"2024-05-07T13:10:29Z",
+			"assets":[
+				{"id": 9,"name":"Argus-0.18.0.linux-amd64","created_at":"2024-05-07T13:11:30Z","browser_download_url":"https://github.com/release-argus/Argus/releases/download/0.18.0/Argus-0.18.0.darwin-amd64"},
+				{"id": 5,"name":"Argus-0.18.0.linux-arm64","created_at":"2024-05-07T13:11:39Z","browser_download_url":"https://github.com/release-argus/Argus/releases/download/0.18.0/Argus-0.18.0.darwin-arm64"}
+			]
+		},
+		{
+			"tag_name":"0.17.4",
+			"name":"0.17.4",
+			"prerelease":false,
+			"published_at":"2024-04-27T10:50:00Z",
+			"assets":[
+				{"id": 3,"name":"Argus-0.17.4.linux-amd64","created_at":"2024-04-27T10:50:53Z","browser_download_url":"https://github.com/release-argus/Argus/releases/download/0.17.4/Argus-0.17.4.linux-amd64"},
+				{"id": 7,"name":"Argus-0.17.4.linux-arm","created_at":"2024-04-27T10:50:59Z","browser_download_url":"https://github.com/release-argus/Argus/releases/download/0.17.4/Argus-0.17.4.linux-arm"}
+			]
+		}
+	]`),
+)
+var testBodyObject []ghtypes.Release
 
 func TestMain(m *testing.M) {
 	// Log.
 	logtest.InitLog()
 
-	SetEmptyListETag(os.Getenv("GITHUB_TOKEN"))
+	SetEmptyListETag(test.GitHubToken(nil))
 	initialEmptyListETag = getEmptyListETag()
 
 	// Unmarshal testBody.
-	_ = json.Unmarshal(testBody, &testBodyObject)
+	_ = decode.Unmarshal("json", testBody, &testBodyObject)
 
 	// Run other tests.
 	exitCode := m.Run()
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
@@ -75,71 +88,84 @@ func TestMain(m *testing.M) {
 // newData returns a new Data.
 func newData(
 	eTag string,
-	releases *[]github_types.Release,
+	releases *[]ghtypes.Release,
 ) *Data {
 	// ETag - https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests.
 	if eTag == "" {
 		eTag = getEmptyListETag()
 	}
 	// Releases.
-	var releasesDeref []github_types.Release
+	var releasesDeref []ghtypes.Release
 	if releases != nil {
 		releasesDeref = *releases
 	}
 
 	return &Data{
 		eTag:     eTag,
-		releases: releasesDeref}
+		releases: releasesDeref,
+	}
 }
 
-func testLookup(failing bool) *Lookup {
-	// HardDefaults.
-	hardDefaults := &base.Defaults{}
-	hardDefaults.AccessToken = os.Getenv("GITHUB_TOKEN")
-	hardDefaults.Default()
-	// Defaults.
-	defaults := &base.Defaults{}
+func testLookup(t *testing.T, failing bool) *Lookup {
+	lvCfg := plainDefaultsConfig(t)
+	optCfg := opttest.PlainDefaultsConfig(t)
+
 	// Options.
-	hardDefaultOptions := &opt.Defaults{}
-	hardDefaultOptions.Default()
-	options := opt.New(
-		nil, "", test.BoolPtr(true),
-		&opt.Defaults{}, hardDefaultOptions)
+	options, _ := opt.Decode(
+		"yaml", nil,
+		optCfg,
+	)
 	// Status.
-	announceChannel := make(chan []byte, 24)
-	saveChannel := make(chan bool, 5)
-	databaseChannel := make(chan dbtype.Message, 5)
-	svcStatus := status.New(
-		announceChannel, databaseChannel, saveChannel,
-		"",
-		"", "",
-		"", "",
-		"",
-		&dashboard.Options{})
+	svcStatus, _ := statustest.New("yaml", nil)
 	svcStatus.Init(
 		0, 0, 0,
-		"serviceID", "", "",
+		status.ServiceInfo{
+			ID: "github-testLookup",
+		},
 		&dashboard.Options{
-			WebURL: "https://example.com"})
+			OptionsBase: dashboard.OptionsBase{
+				WebURL: "https://example.com",
+			},
+		},
+	)
 
-	lookup, _ := New(
-		"yaml", test.TrimYAML(`
-				url: release-argus/Argus
-				url_commands:
-					- type: regex
-						regex: '[0-9.]+'
-			`),
+	lookup, _ := Decode(
+		"yaml", []byte(test.TrimYAML(`
+			url: `+test.ArgusGitHubRepo+`
+			url_commands:
+				- type: regex
+					regex: '[0-9.]+'
+		`)),
 		options,
 		svcStatus,
-		defaults, hardDefaults)
+		lvCfg,
+	)
 	if failing {
 		lookup.AccessToken = "invalid"
 	}
 
-	lookup.Init(
-		options,
-		svcStatus,
-		defaults, hardDefaults)
-
 	return lookup
+}
+
+// plainDefaultsConfig returns plain defaults and hardDefaults for testing.
+func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
+	t.Helper()
+
+	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
+	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
+	optHardDefaults.Default()
+
+	defaults, _ := base.DecodeDefaults("yaml", nil)
+	defaults.Options = optDefaults
+	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
+	hardDefaults.Default()
+	hardDefaults.AccessToken = test.GitHubToken(t)
+	hardDefaults.Options = optHardDefaults
+
+	defaults.Require.SetDefaults(&hardDefaults.Require)
+
+	return base.DefaultsConfig{
+		Soft: defaults,
+		Hard: hardDefaults,
+	}
 }

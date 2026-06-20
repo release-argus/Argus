@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,45 +23,55 @@ import (
 )
 
 func TestSetGitLabParameter(t *testing.T) {
-	// GIVEN a HTTP Request.
-	tests := map[string]struct {
+	// GIVEN: a HTTP Request.
+	tests := []struct {
+		name        string
 		secret      string
 		queryParams string
 		want        string
 	}{
-		"query param override ref": {
+		{
+			name:        "query param override ref",
 			secret:      "fizz",
 			queryParams: "?ref=main",
-			want:        "ref=main&token=fizz"},
-		"query param override secret as well as ref": {
+			want:        "ref=main&token=fizz",
+		},
+		{
+			name:        "query param override secret as well as ref",
 			secret:      "fizz",
 			queryParams: "?ref=main&token=bang",
-			want:        "ref=main&token=bang"},
-		"query param add other params": {
+			want:        "ref=main&token=bang",
+		},
+		{
+			name:        "query param add other params",
 			secret:      "fizz",
 			queryParams: "?ref=main&token=bang&foo=bar",
-			want:        "foo=bar&ref=main&token=bang"},
-		"no query params": {
+			want:        "foo=bar&ref=main&token=bang",
+		},
+		{
+			name:   "no query params",
 			secret: "bang",
-			want:   "ref=master&token=bang"},
+			want:   "ref=master&token=bang",
+		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodGet,
-				"/approvals"+tc.queryParams,
-				nil)
+			req := httptest.NewRequest(http.MethodGet, "/approvals"+tc.queryParams, nil)
 
-			// WHEN SetGitLabParameter is called.
+			// WHEN: SetGitLabParameter is called.
 			SetGitLabParameter(req, tc.secret)
 
-			// THEN the function correctly encodes URL.RawQuery.
+			// THEN: the function correctly encodes URL.RawQuery.
 			got := req.URL.RawQuery
 			if got != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Errorf(
+					"%s\nSetGitLabParameter(req, secret=%q) didn't put secret into RawQuery\ngot:  %q\nwant: %q",
+					packageName, tc.secret,
+					tc.want, got,
+				)
 			}
 		})
 	}

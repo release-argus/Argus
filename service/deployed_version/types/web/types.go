@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,22 +16,27 @@
 package web
 
 import (
-	"encoding/json"
-	"errors"
-	"strings"
-
-	"gopkg.in/yaml.v3"
-
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
-	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 )
 
+// #############
+// # CONSTANTS #
+// #############
+
+// Type is the lookup type identifier for URL deployed version lookups.
+var Type = "url"
+
+// #########
+// # TYPES #
+// #########
+
 // Lookup is a web-based lookup type.
 type Lookup struct {
-	base.Lookup `json:",inline" yaml:",inline"` // Base struct for a Lookup.
+	base.Lookup `json:",inline" yaml:",inline"`
 
 	Method            string `json:"method,omitempty" yaml:"method,omitempty"`                           // REQUIRED: HTTP method.
 	URL               string `json:"url,omitempty" yaml:"url,omitempty"`                                 // REQUIRED: url to query.
@@ -46,69 +51,99 @@ type Lookup struct {
 	RegexTemplate string         `json:"regex_template,omitempty" yaml:"regex_template,omitempty"` // OPTIONAL: template to apply to the RegEx match.
 }
 
-// New returns a new Lookup from a string in a given format (json/yaml).
-func New(
-	configFormat string, // "json" | "yaml"
-	configData any, // []byte | string | *yaml.Node | json.RawMessage.
-	options *opt.Options,
-	status *status.Status,
-	defaults, hardDefaults *base.Defaults,
-) (*Lookup, error) {
-	lookup := &Lookup{}
-
-	// Unmarshal.
-	if err := util.UnmarshalConfig(configFormat, configData, lookup); err != nil {
-		errStr := util.FormatUnmarshalError(configFormat, err)
-		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-		return nil, errors.New("failed to unmarshal web.Lookup:\n  " + errStr)
-	}
-
-	lookup.Init(
-		options,
-		status,
-		defaults, hardDefaults)
-
-	return lookup, nil
-}
-
-// UnmarshalJSON will unmarshal the Lookup.
-func (l *Lookup) UnmarshalJSON(data []byte) error {
-	return l.unmarshal(func(v interface{}) error {
-		return json.Unmarshal(data, v)
-	})
-}
-
-// UnmarshalYAML will unmarshal the Lookup.
-func (l *Lookup) UnmarshalYAML(value *yaml.Node) error {
-	return l.unmarshal(func(v interface{}) error {
-		return value.Decode(v)
-	})
-}
-
-// unmarshal will unmarshal the Lookup using the provided unmarshal function.
-func (l *Lookup) unmarshal(unmarshalFunc func(interface{}) error) error {
-	// Alias to avoid recursion.
-	type Alias Lookup
-	aux := &struct {
-		*Alias `json:",inline" yaml:",inline"`
-	}{Alias: (*Alias)(l)}
-
-	// Unmarshal using the provided function.
-	if err := unmarshalFunc(aux); err != nil {
-		return errors.New(strings.Replace(err.Error(), ".Alias", "", 1))
-	}
-	l.Type = "url"
-	return nil
-}
-
 // BasicAuth to use on the HTTP(s) request.
 type BasicAuth struct {
 	Username string `json:"username" yaml:"username"`
 	Password string `json:"password" yaml:"password"`
 }
 
-// InheritSecrets will inherit secrets from the `otherLookup`.
-func (l *Lookup) InheritSecrets(otherLookup base.Interface, secretRefs *shared.VSecretRef) {
+// ############
+// # DECODING #
+// ############
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+// Use [Decode] for a complete Lookup.
+func (l *Lookup) UnmarshalJSON(data []byte) error {
+	return l.unmarshal("json", data)
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface.
+// Use [Decode] for a complete Lookup.
+func (l *Lookup) UnmarshalYAML(data []byte) error {
+	return l.unmarshal("yaml", data)
+}
+
+// unmarshal implements the format.Unmarshaler interface.
+func (l *Lookup) unmarshal(format string, data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+
+	// Alias to avoid recursion.
+	type Alias Lookup
+	aux := (*Alias)(l)
+
+	// Unmarshal in the given format.
+	if err := decode.Unmarshal(format, data, aux); err != nil {
+		return err //nolint:wrapcheck
+	}
+
+	// Normalise Type.
+	if l.Type == "web" {
+		l.Type = Type
+	}
+
+	return nil
+}
+
+// #############
+// # STRINGIFY #
+// #############
+
+// String returns a string representation of the receiver.
+func (l *Lookup) String(prefix string) string {
+	return decode.ToYAMLString(l, prefix)
+}
+
+// #########
+// # STATE #
+// #########
+
+// Copy returns a deep copy of the receiver.
+func (l *Lookup) Copy(svcStatus *status.Status) base.Interface {
+	if l == nil {
+		return nil
+	}
+
+	return &Lookup{
+		Lookup:            *l.Lookup.Clone(svcStatus), //nolint:staticcheck
+		Method:            l.Method,
+		URL:               l.URL,
+		AllowInvalidCerts: util.ClonePtr(l.AllowInvalidCerts),
+		TargetHeader:      l.TargetHeader,
+		BasicAuth:         l.BasicAuth.Copy(),
+		Headers:           l.Headers.Copy(),
+		Body:              l.Body,
+		JSON:              l.JSON,
+		Regex:             l.Regex,
+		RegexTemplate:     l.RegexTemplate,
+	}
+}
+
+// Copy returns a deep copy of the receiver.
+func (b *BasicAuth) Copy() *BasicAuth {
+	if b == nil {
+		return nil
+	}
+
+	return &BasicAuth{
+		Username: b.Username,
+		Password: b.Password,
+	}
+}
+
+// InheritSecrets copies the BasicAuth password and header secrets from otherLookup.
+func (l *Lookup) InheritSecrets(otherLookup base.BaseInterface, secretRefs *shared.VSecretRef) {
 	if otherL, ok := otherLookup.(*Lookup); ok {
 		if l.BasicAuth != nil &&
 			l.BasicAuth.Password == util.SecretValue &&

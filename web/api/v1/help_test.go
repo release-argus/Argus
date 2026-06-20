@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,28 +18,33 @@ package v1
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/release-argus/Argus/config/decode"
+	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
+	dvtest "github.com/release-argus/Argus/service/deployed_version/test"
+	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/service/latest_version/filter/docker"
+	lvtest "github.com/release-argus/Argus/service/latest_version/test"
+	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
+	svctest "github.com/release-argus/Argus/service/test"
+	whtest "github.com/release-argus/Argus/webhook/test"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service"
-	deployedver "github.com/release-argus/Argus/service/deployed_version"
-	latestver "github.com/release-argus/Argus/service/latest_version"
-	opt "github.com/release-argus/Argus/service/option"
-	"github.com/release-argus/Argus/test"
-	logtest "github.com/release-argus/Argus/test/log"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
-	"github.com/release-argus/Argus/webhook"
 )
 
 var (
@@ -62,7 +67,7 @@ func TestMain(m *testing.M) {
 	cfg.Load(ctx, g, path, &flags)
 
 	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'.
-	secretValueMarshalledBytes, _ := json.Marshal(util.SecretValue)
+	secretValueMarshalledBytes, _ := decode.Marshal("json", util.SecretValue)
 	secretValueMarshalled = string(secretValueMarshalledBytes)
 
 	// Run other tests.
@@ -71,9 +76,8 @@ func TestMain(m *testing.M) {
 	_ = os.Remove(cfg.Settings.DataDatabaseFile())
 	cancel()
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
@@ -81,12 +85,61 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
+type failWriter struct {
+	header http.Header
+	code   int
+	body   string
+}
+
+func (f *failWriter) Header() http.Header {
+	if f.header == nil {
+		f.header = make(http.Header)
+	}
+	return f.header
+}
+
+func (f *failWriter) WriteHeader(code int) {
+	f.code = code
+}
+
+func (f *failWriter) Write([]byte) (int, error) {
+	if f.code == 0 {
+		f.code = http.StatusOK
+	}
+	return 0, errors.New("write failed")
+}
+
+// PlainDefaults returns plain defaults and hardDefaults for testing.
+func plainDefaults(t *testing.T) (*config.Defaults, *config.Defaults) {
+	t.Helper()
+
+	dockerDefaults, _ := docker.DecodeDefaults(
+		"yaml", nil,
+		nil,
+	)
+	defaults := config.Defaults{
+		Service: service.Defaults{
+			LatestVersion: lvbase.Defaults{
+				Require: filter.RequireDefaults{
+					Docker: *dockerDefaults,
+				},
+			},
+		},
+	}
+	hardDefaults := config.Defaults{}
+	hardDefaults.Default()
+	hardDefaults.Service.LatestVersion.AccessToken = test.GitHubToken(t)
+	defaults.SetDefaults(&hardDefaults)
+
+	return &defaults, &hardDefaults
+}
+
 func testClient() Client {
 	hub := NewHub()
 	return Client{
-		hub:  hub,
-		ip:   "1.1.1.1",
-		conn: &websocket.Conn{},
+		hub:            hub,
+		ip:             "1.1.1.1",
+		conn:           &websocket.Conn{},
 		send: make(chan []byte, 5),
 	}
 }
@@ -97,7 +150,6 @@ func testLoad(t *testing.T, file string) *config.Config {
 
 	flags := make(map[string]bool)
 	cfg.Load(t.Context(), g, file, &flags)
-	cfg.Init()
 	announceChannel := make(chan []byte, 8)
 	cfg.HardDefaults.Service.Status.AnnounceChannel = announceChannel
 
@@ -109,82 +161,56 @@ func testAPI(t *testing.T, path string) API {
 	testYAML_Argus(path)
 
 	cfg := testLoad(t, path)
-	cfg.HardDefaults.Service.LatestVersion.AccessToken = os.Getenv("GITHUB_TOKEN")
+	cfg.HardDefaults.Service.LatestVersion.AccessToken = test.GitHubToken(t)
+
+	t.Cleanup(func() {
+		_ = os.RemoveAll(cfg.Settings.Data.DatabaseFile)
+		_ = os.RemoveAll(cfg.File)
+	})
 
 	return API{Config: cfg}
 }
 
-func testService(id string, semVer bool) *service.Service {
+func testService(
+	t *testing.T,
+	id string,
+	lvType, dvType string,
+	semVer bool,
+) *service.Service {
+	if t != nil {
+		t.Helper()
+	}
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
+
+	svc := test.Must(t, func() (*service.Service, error) {
+		return service.DecodeService(
+			"yaml", []byte(test.TrimYAML(`
+			options:
+				semantic_versioning: `+fmt.Sprint(semVer)+`
+			latest_version:
+			`+lvtest.Lookup(t, lvType, false).String("  ")+`
+			deployed_version:
+			`+dvtest.Lookup(t, dvType, false, "").String("  ")+`
+			dashboard:
+				icon: https://example.com/icon.png
+				icon_link_to: https://example.com/icon-{{ version }}.png
+				web_url: https://example.com/{{ version }}
+		`)),
+			id,
+			svcCfg, notifyCfg, whCfg,
+		)
+	})
+
 	announceChannel := make(chan []byte, 8)
 	databaseChannel := make(chan dbtype.Message, 8)
-
-	lvRegex := `non-semantic: "([^"]+)"`
-	if semVer {
-		lvRegex = `stable version: "v?([0-9.]+)"`
-	}
-	lv, _ := latestver.New(
-		"url",
-		"yaml", test.TrimYAML(`
-			url: `+test.LookupPlain["url_invalid"]+`
-			url_commands:
-				- type: regex
-					regex: '`+lvRegex+`'
-			allow_invalid_certs: true
-		`),
-		nil,
-		nil,
-		nil, nil)
-
-	dvJSON := "nonSemVer"
-	if semVer {
-		dvJSON = "foo.bar.version"
-	}
-	dv, _ := deployedver.New(
-		"url",
-		"yaml", test.TrimYAML(`
-			method: GET
-			url: `+test.LookupJSON["url_invalid"]+`
-			json: `+dvJSON+`
-			allow_invalid_certs: true
-		`),
-		nil,
-		nil,
-		nil, nil)
-
-	options := opt.New(
-		nil, "", &semVer,
-		nil, nil)
-
-	svc := service.Service{
-		ID:                    id,
-		Comment:               "foo",
-		LatestVersion:         lv,
-		DeployedVersionLookup: dv,
-		Options:               *options}
-
-	// HardDefaults.
-	serviceHardDefaults := service.Defaults{}
-	serviceHardDefaults.Default()
-	shoutrrrHardDefaults := shoutrrr.ShoutrrrsDefaults{}
-	shoutrrrHardDefaults.Default()
-	webhookHardDefaults := webhook.Defaults{}
-	webhookHardDefaults.Default()
-
-	// Defaults.
-	serviceDefaults := service.Defaults{}
-	serviceDefaults.Init()
-
-	// Init with defaults/hardDefaults.
-	svc.Init(
-		&serviceDefaults, &serviceHardDefaults,
-		&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrrHardDefaults,
-		&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhookHardDefaults)
 
 	// Status channels.
 	svc.Status.AnnounceChannel = announceChannel
 	svc.Status.DatabaseChannel = databaseChannel
 
-	return &svc
+	return svc
 }
 
 func testCommand(failing bool) command.Command {
@@ -201,5 +227,6 @@ func testFaviconSettings(png string, svg string) *config.FaviconSettings {
 
 	return &config.FaviconSettings{
 		SVG: svg,
-		PNG: png}
+		PNG: png,
+	}
 }

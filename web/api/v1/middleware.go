@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import (
 
 	"github.com/gorilla/mux"
 
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/internal/logx"
 )
 
 // basicAuthMiddleware handles basic authentication with hashed credentials.
@@ -46,7 +46,6 @@ func (api *API) basicAuthMiddleware() mux.MiddlewareFunc {
 				}
 			}
 
-			w.Header().Set("Connection", "close")
 			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		})
@@ -58,12 +57,14 @@ func (api *API) basicAuthMiddleware() mux.MiddlewareFunc {
 func loggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Log the request.
-		logutil.Log.Verbose(
-			fmt.Sprintf("%s (%s), %s",
-				r.Method, getIP(r), r.URL.Path,
+		logx.Verbose(
+			fmt.Sprintf(
+				"%s (%s) %s %v",
+				r.Method, getIP(r), r.URL.Path, r.URL.Query(),
 			),
-			logutil.LogFrom{},
-			true)
+			logx.LogFrom{},
+			true,
+		)
 
 		// Process request.
 		next.ServeHTTP(w, r)

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,21 +16,25 @@
 package github
 
 import (
-	"encoding/json"
-	"errors"
-	"strings"
-
-	"gopkg.in/yaml.v3"
-
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
-	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 )
+
+// #############
+// # CONSTANTS #
+// #############
+
+// Type is the lookup type identifier for GitHub latest version lookups.
+var Type = "github"
+
+// #########
+// # TYPES #
+// #########
 
 // Lookup provides a GitHub-based lookup type.
 type Lookup struct {
-	base.Lookup `json:",inline" yaml:",inline"` // Base struct for a Lookup.
+	base.Lookup `json:",inline" yaml:",inline"`
 
 	AccessToken   string `json:"access_token,omitempty" yaml:"access_token,omitempty"`     // GitHub access token to use.
 	UsePreRelease *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"` // Whether releases with the prerelease tag should be considered.
@@ -38,59 +42,99 @@ type Lookup struct {
 	data Data // GitHub Conditional Request vars / Releases.
 }
 
-// New returns a new Lookup from a string in a given format (json/yaml).
-func New(
-	configFormat string, // "json" | "yaml"
-	configData any, // []byte | string | *yaml.Node | json.RawMessage.
-	options *opt.Options,
-	status *status.Status,
-	defaults, hardDefaults *base.Defaults,
-) (*Lookup, error) {
-	lookup := &Lookup{}
-
-	// Unmarshal.
-	if err := util.UnmarshalConfig(configFormat, configData, lookup); err != nil {
-		errStr := util.FormatUnmarshalError(configFormat, err)
-		errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-		return nil, errors.New("failed to unmarshal github.Lookup:\n  " + errStr)
-	}
-
-	lookup.Init(
-		options,
-		status,
-		defaults, hardDefaults)
-
-	return lookup, nil
+// LookupDecode is an unmarshal-only helper for [Lookup].
+type LookupDecode struct {
+	AccessToken   string `json:"access_token,omitempty" yaml:"access_token,omitempty"`
+	UsePreRelease *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"`
 }
 
-// UnmarshalJSON will unmarshal the Lookup.
+// ############
+// # DECODING #
+// ############
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+// Use [Decode] for a complete Lookup.
 func (l *Lookup) UnmarshalJSON(data []byte) error {
-	return l.unmarshal(func(v interface{}) error {
-		return json.Unmarshal(data, v)
-	})
+	return l.unmarshal("json", data)
 }
 
-// UnmarshalYAML will unmarshal the Lookup.
-func (l *Lookup) UnmarshalYAML(value *yaml.Node) error {
-	return l.unmarshal(func(v interface{}) error {
-		return value.Decode(v)
-	})
+// UnmarshalYAML implements the yaml.Unmarshaler interface.
+// Use [Decode] for a complete Lookup.
+func (l *Lookup) UnmarshalYAML(data []byte) error {
+	return l.unmarshal("yaml", data)
 }
 
-// unmarshal will unmarshal the Lookup using the provided unmarshal function.
-func (l *Lookup) unmarshal(unmarshalFunc func(interface{}) error) error {
-	// Alias to avoid recursion.
-	type Alias Lookup
-	aux := &struct {
-		*Alias `json:",inline" yaml:",inline"`
-	}{Alias: (*Alias)(l)}
-
-	// Unmarshal using the provided function.
-	if err := unmarshalFunc(aux); err != nil {
-		return errors.New(strings.Replace(err.Error(), ".Alias", "", 1))
+// unmarshal implements the format.Unmarshaler interface.
+func (l *Lookup) unmarshal(format string, data []byte) error {
+	if len(data) == 0 {
+		return nil
 	}
 
-	l.Type = "github"
+	aux := LookupDecode{
+		AccessToken:   l.AccessToken,
+		UsePreRelease: l.UsePreRelease,
+	}
 
+	// Unmarshal in the given format.
+	if err := decode.Unmarshal(format, data, &aux); err != nil {
+		return err //nolint:wrapcheck
+	}
+	l.AccessToken = aux.AccessToken
+	l.UsePreRelease = aux.UsePreRelease
+	l.data.SetETag(getEmptyListETag())
+
+	// Require.
+	if l.Defaults != nil && l.HardDefaults != nil {
+		if err := base.UnmarshalRequire(
+			format, data,
+			l,
+			l.Status,
+			&l.Defaults.Require,
+		); err != nil {
+			return err //nolint:wrapcheck
+		}
+	}
+
+	return nil
+}
+
+// #############
+// # STRINGIFY #
+// #############
+
+// String returns a string representation of the receiver.
+func (l *Lookup) String(prefix string) string {
+	return decode.ToYAMLString(l, prefix)
+}
+
+// #########
+// # STATE #
+// #########
+
+// Clone returns a deep copy of the receiver.
+func (l *Lookup) Clone(svcStatus *status.Status) *Lookup {
+	if l == nil {
+		return nil
+	}
+
+	var usePreRelease *bool
+	if l.UsePreRelease != nil {
+		value := *l.UsePreRelease
+		usePreRelease = &value
+	}
+
+	return &Lookup{
+		Lookup:        *l.Lookup.Clone(svcStatus), //nolint:staticcheck
+		AccessToken:   l.AccessToken,
+		UsePreRelease: usePreRelease,
+		data:          *l.data.Copy(),
+	}
+}
+
+// Copy returns a deep copy of the receiver as a [base.Interface].
+func (l *Lookup) Copy(svcStatus *status.Status) base.Interface {
+	if got := l.Clone(svcStatus); got != nil {
+		return got
+	}
 	return nil
 }

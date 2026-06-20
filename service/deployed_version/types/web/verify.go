@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,39 +17,43 @@ package web
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
 
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service/deployed_version/types/web/constants"
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/polymorphic"
 )
 
-// CheckValues validates the fields of the Lookup struct.
-func (l *Lookup) CheckValues(prefix string) error {
+// CheckValues validates the fields of the receiver.
+func (l *Lookup) CheckValues() error {
 	var errs []error
 
 	// URL.
-	if l.URL == "" && l.Defaults != nil {
-		errs = append(errs,
-			fmt.Errorf("%surl: <required> (URL to get the deployed_version is required)",
-				prefix))
+	if l.URL == "" {
+		errs = append(
+			errs,
+			&decode.FieldError{
+				Key:         "url",
+				Description: "URL to get the deployed_version from",
+			},
+		)
 	}
 
 	// Method.
 	l.Method = strings.ToUpper(l.Method)
 	method := l.method()
 	if !util.Contains(constants.SupportedMethods, method) {
-		if method == "" {
-			errs = append(errs,
-				fmt.Errorf("%smethod: <required> (supported methods = ['%s'])",
-					prefix, strings.Join(constants.SupportedMethods, "', '")))
-		} else {
-			errs = append(errs,
-				fmt.Errorf("%smethod: %q <invalid> (supported methods = ['%s'])",
-					prefix, method, strings.Join(constants.SupportedMethods, "', '")))
-		}
+		errs = append(
+			errs,
+			polymorphic.InvalidTypeError{
+				Key:     "method",
+				Value:   method,
+				Allowed: constants.SupportedMethods,
+			},
+		)
 	}
 	// Body unused in GET, ensure it is empty.
 	if method == http.MethodGet {
@@ -58,11 +62,16 @@ func (l *Lookup) CheckValues(prefix string) error {
 
 	// JSON.
 	if l.JSON != "" {
-		_, err := util.ParseKeys(l.JSON)
+		_, err := decode.ParseKeys(l.JSON)
 		if err != nil {
-			errs = append(errs,
-				fmt.Errorf("%sjson: %q <invalid> - %w",
-					prefix, l.JSON, err))
+			errs = append(
+				errs,
+				&decode.FieldError{
+					Key:         "json",
+					Value:       l.JSON,
+					Description: "JSON path to the version in the response",
+				},
+			)
 		}
 	}
 
@@ -70,9 +79,14 @@ func (l *Lookup) CheckValues(prefix string) error {
 	if l.Regex != "" {
 		_, err := regexp.Compile(l.Regex)
 		if err != nil {
-			errs = append(errs,
-				fmt.Errorf("%sregex: %q <invalid>",
-					prefix, l.Regex))
+			errs = append(
+				errs,
+				&decode.FieldError{
+					Key:         "regex",
+					Value:       l.Regex,
+					Description: "RegEx to extract the version from the response",
+				},
+			)
 		}
 	}
 	// Remove the RegExTemplate if no RegEx.

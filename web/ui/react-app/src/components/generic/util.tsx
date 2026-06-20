@@ -6,6 +6,6 @@
  * @returns The pluralised string (if count not 1).
  */
 export const pluralise = (str: string, count?: number): string => {
-	if (count !== 1) return str + 's';
+	if (count !== 1) return `${str}s`;
 	return str;
 };

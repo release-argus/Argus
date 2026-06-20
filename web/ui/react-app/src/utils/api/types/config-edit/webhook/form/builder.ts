@@ -72,7 +72,7 @@ const buildWebHookSchema = (
  */
 export const buildWebHooksSchemaWithFallbacks = (
 	data?: WebHook[],
-	defaultItems?: Record<string, unknown>,
+	defaultItems?: string[],
 	mains?: WebHookMap,
 	defaults?: WebHook,
 	hardDefaults?: WebHook,
@@ -105,7 +105,10 @@ export const buildWebHooksSchemaWithFallbacks = (
 	const combinedDefaults = applyDefaultsRecursive<WebHook>(
 		defaults ?? null,
 		hardDefaults,
-		{ headers: [], type: WEBHOOK_TYPE.GITHUB.value },
+		{
+			headers: [],
+			type: WEBHOOK_TYPE.GITHUB.value,
+		},
 	);
 	const schemaDataTypeDefaults = safeParse({
 		data: combinedDefaults,
@@ -120,39 +123,39 @@ export const buildWebHooksSchemaWithFallbacks = (
 	const typeDefault = schemaDataTypeDefaults.type;
 
 	// Default schema data.
-	const schemaDataDefaults: WebHookSchema[] = Object.keys(
-		defaultItems ?? {},
-	).map((name) => {
-		const main = mains?.[name];
-		const nameLower = name.toLowerCase();
-		const itemType =
-			main?.type ?? (isWebHookType(nameLower) ? nameLower : typeDefault);
-		// headers.
-		const headers = isEmptyArray(main?.headers)
-			? schemaDataTypeDefaults.headers
-			: main?.headers;
-		const headersHollow = headers?.map(() => ({
-			key: '',
-			value: '',
-		}));
+	const schemaDataDefaults: WebHookSchema[] = (defaultItems ?? []).map(
+		(name) => {
+			const main = mains?.[name];
+			const nameLower = name.toLowerCase();
+			const itemType =
+				main?.type ?? (isWebHookType(nameLower) ? nameLower : typeDefault);
+			// headers.
+			const headers = isEmptyArray(main?.headers)
+				? schemaDataTypeDefaults.headers
+				: main?.headers;
+			const headersHollow = headers?.map(() => ({
+				key: '',
+				value: '',
+			}));
 
-		const data = {
-			headers: headersHollow,
-			name: name,
-			old_index: null,
-			type: itemType,
-		};
-		return safeParse({
-			data: data,
-			fallback: {
-				desired_status_code: '',
-				max_tries: '',
+			const data = {
+				headers: headersHollow,
+				name: name,
+				old_index: null,
 				type: itemType,
-			},
-			path: `${path} (defaults)`,
-			schema: webhookSchema,
-		});
-	});
+			};
+			return safeParse({
+				data: data,
+				fallback: {
+					desired_status_code: '',
+					max_tries: '',
+					type: itemType,
+				},
+				path: `${path} (defaults)`,
+				schema: webhookSchema,
+			});
+		},
+	);
 
 	// Defaults for each type.
 	const schemaDataTypeDefaultsHollow = {
@@ -188,7 +191,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 		.superRefine(superRefineNameUnique);
 
 	// Initial schema data.
-	let schemaData;
+	let schemaData: WebHookSchema[];
 	if (data) {
 		schemaData = safeParse({
 			data: dataDefaulted,

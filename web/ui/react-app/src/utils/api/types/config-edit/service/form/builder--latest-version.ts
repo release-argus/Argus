@@ -20,7 +20,7 @@ import {
 import { buildCommandSchemaWithFallbacks } from '@/utils/api/types/config-edit/command/form/builder';
 import {
 	dockerFilterSchema,
-	type dockerFilterSchemaDefaults,
+	dockerFilterSchemaDefaults,
 	isLatestVersionType,
 	latestVersionLookupRequireDockerTypeSchema,
 	latestVersionLookupRequireDockerTypeSchemaDockerHub,
@@ -35,6 +35,7 @@ import {
 } from '@/utils/api/types/config-edit/service/types/latest-version';
 import { addZodIssuesToContext } from '@/utils/api/types/config-edit/shared/add-issues';
 import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
+import { stringDefault } from '@/utils/api/types/config-edit/shared/preprocess';
 import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse';
 import type { BuilderResponse } from '@/utils/api/types/config-edit/shared/types';
 import { applyDefaultsRecursive } from '@/utils/api/types/config-edit/util';
@@ -78,7 +79,7 @@ export const buildURLCommandsSchemaWithFallbacks = (
 		});
 
 		if (!result.success) {
-			addZodIssuesToContext({ ctx, error: result.error });
+			addZodIssuesToContext({ ctx: ctx, error: result.error });
 		}
 	});
 
@@ -123,26 +124,30 @@ export const buildDockerFilterSchemaWithFallbacks = (
 > => {
 	const path = 'latest_version.require.docker';
 	const defaultType =
-		defaults?.type ??
-		hardDefaults?.type ??
+		defaults?.type ||
+		hardDefaults?.type ||
 		LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value;
 
 	const dockerHubValue =
 		LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value;
 	const ghcrValue = LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.GHCR.value;
 	const quayValue = LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.QUAY.value;
-	const typeValues = [dockerHubValue, ghcrValue, quayValue] as const;
 
-	const combinedDefaults = [dockerHubValue, ghcrValue, quayValue].reduce(
-		(acc, type) => {
-			acc[type] = applyDefaultsRecursive(
-				defaults?.[type] ?? null,
-				hardDefaults?.[type],
-			);
-			return acc;
-		},
-		{} as Record<NonNullable<DockerFilterType>, Partial<DockerFilter>>,
-	);
+	const combinedDefaults = {
+		registry: [dockerHubValue, ghcrValue, quayValue].reduce(
+			(acc, type) => {
+				acc[type] = applyDefaultsRecursive(
+					defaults?.registry?.[type] ?? null,
+					{ image: defaults?.image, tag: defaults?.tag },
+					hardDefaults?.registry?.[type],
+					{ image: hardDefaults?.image, tag: hardDefaults?.tag },
+				);
+				return acc;
+			},
+			{} as Record<NonNullable<DockerFilterType>, Partial<DockerFilter>>,
+		),
+		type: defaultType,
+	};
 
 	// Docker registries that support username with tokens.
 	const usernameTypes = new Set<DockerFilterType>([dockerHubValue]);
@@ -186,12 +191,14 @@ export const buildDockerFilterSchemaWithFallbacks = (
 	// Add validation for required fields.
 	const schemaFinal = schema.superRefine((arg, ctx) => {
 		const schemaType = arg.type === nullString ? defaultType : arg.type;
-		const schemaDefaults = combinedDefaults[schemaType];
-		const hasImage = !!(arg.image || schemaDefaults.image)?.trim();
-		const hasTag = !!(arg.tag || schemaDefaults.tag)?.trim();
+		const schemaDefaults = combinedDefaults.registry[schemaType];
+		const hasImage = !!arg.image?.trim();
+		const hasImageDefaulted = hasImage || !!schemaDefaults.image?.trim();
+		const hasTag = !!arg.tag?.trim();
+		const hasTagDefaulted = hasTag || !!schemaDefaults.tag?.trim();
 
 		// If we have an image, we must have a tag, and vice versa.
-		if (hasImage !== hasTag) {
+		if (hasImage !== hasTag && hasImageDefaulted !== hasTagDefaulted) {
 			ctx.addIssue({
 				code: CUSTOM_ISSUE_CODE,
 				message: REQUIRED_MESSAGE,
@@ -199,24 +206,26 @@ export const buildDockerFilterSchemaWithFallbacks = (
 			});
 		}
 
-		// If we have an image specified and have a username field.
-		if (hasImage && usernameTypes.has(schemaType)) {
+		// If we have an image:tag specified and have a username field.
+		if (hasImageDefaulted && hasTagDefaulted && usernameTypes.has(schemaType)) {
 			type DockerUsernameTyped = z.infer<
 				typeof latestVersionLookupRequireDockerTypeSchemaDockerHub
 			>;
 			const argTyped = arg as DockerUsernameTyped;
 			const hasUsername = !!(
-				argTyped.username ||
-				(schemaDefaults as Partial<DockerFilterUsername>).username
+				argTyped.auth?.username ||
+				(schemaDefaults as Partial<DockerFilterUsername>).auth?.username
 			)?.trim();
-			const hasToken = !!(arg.token || schemaDefaults.token)?.trim();
+			const hasToken = !!(
+				arg.auth?.token || schemaDefaults.auth?.token
+			)?.trim();
 
 			// We must have a username and token, or neither.
 			if (hasUsername !== hasToken) {
 				ctx.addIssue({
 					code: CUSTOM_ISSUE_CODE,
 					message: REQUIRED_MESSAGE,
-					path: hasUsername ? ['token'] : ['username'],
+					path: hasUsername ? ['auth', 'token'] : ['auth', 'username'],
 				});
 			}
 		}
@@ -234,30 +243,13 @@ export const buildDockerFilterSchemaWithFallbacks = (
 		schema: schemaFinal,
 	});
 
-	// Type-specific defaults for the schema.
-	const schemaDataTypeDefaults = typeValues.reduce(
-		(acc, type) => {
-			acc[type] = safeParse({
-				data: {
-					type: type,
-					...combinedDefaults[type],
-				},
-				fallback: { type: type },
-				path: `${path}.${type} (defaults)`,
-				// 	'unknown' since we can't have dynamic {type: nullString, X} in the discriminated union.
-				schema: schema as unknown as typeof dockerFilterSchema,
-			});
-			return acc;
-		},
-		{} as Record<
-			(typeof typeValues)[number],
-			z.infer<typeof dockerFilterSchema>
-		>,
-	);
-	const schemaDataDefaults = {
-		type: defaultType as NonNull<DockerFilterType>,
-		...schemaDataTypeDefaults,
-	} as unknown as z.infer<typeof dockerFilterSchemaDefaults>;
+	// Defaults for the schema.
+	const schemaDataDefaults = safeParse({
+		data: combinedDefaults,
+		fallback: { type: defaultType },
+		path: `${path} (defaults)`,
+		schema: dockerFilterSchemaDefaults,
+	});
 
 	return {
 		schema: schemaFinal,
@@ -402,15 +394,12 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 	const schema = z.discriminatedUnion('type', [
 		latestVersionLookupSchemaGitHub.extend({
 			...sharedSchemas,
-			url: z
-				.string()
-				.default('')
-				.superRefine((arg, ctx) => {
-					const url = arg || (defaults?.url ?? hardDefaults?.url ?? '');
+			url: stringDefault.superRefine((arg, ctx) => {
+				const url = arg || (defaults?.url ?? hardDefaults?.url ?? '');
 
-					validateRequired({ arg: url, ctx: ctx });
-					validateGitHubRepo({ arg: url, ctx: ctx });
-				}),
+				validateRequired({ arg: url, ctx: ctx });
+				validateGitHubRepo({ arg: url, ctx: ctx });
+			}),
 		}),
 		latestVersionLookupSchemaURL.extend({
 			...sharedSchemas,

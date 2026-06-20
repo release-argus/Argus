@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 	"net/url"
 )
 
-// SetGitLabParameter of the req based on the secret.
+// SetGitLabParameter adds GitLab-style token and ref query parameters to req.
 func SetGitLabParameter(req *http.Request, secret string) {
 	q := url.Values{}
 	if req.URL.Query() != nil && len(req.URL.Query()) != 0 {

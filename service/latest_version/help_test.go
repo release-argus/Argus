@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,21 +17,21 @@
 package latestver
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
-	dbtype "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/service/dashboard"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
-	github "github.com/release-argus/Argus/service/latest_version/types/github"
-	"github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
+	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
+	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
 var packageName = "latestver"
@@ -43,9 +43,8 @@ func TestMain(m *testing.M) {
 	// Run other tests.
 	exitCode := m.Run()
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
@@ -53,80 +52,114 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testLookup(lookupType string, failing bool) Lookup {
-	lookup, _ := New(
-		lookupType,
-		"yaml", "",
-		nil,
-		nil,
-		nil, nil)
-
-	// HardDefaults.
-	hardDefaults := &base.Defaults{}
-	hardDefaults.Default()
-	// Defaults.
-	defaults := &base.Defaults{}
-	// Options.
-	hardDefaultOptions := &opt.Defaults{}
-	hardDefaultOptions.Default()
-	options := opt.New(
-		nil, "5m", test.BoolPtr(false),
-		&opt.Defaults{}, hardDefaultOptions)
-	// Status.
-	announceChannel := make(chan []byte, 24)
-	saveChannel := make(chan bool, 5)
-	databaseChannel := make(chan dbtype.Message, 5)
-	svcStatus := status.New(
-		announceChannel, databaseChannel, saveChannel,
-		"",
-		"", "",
-		"", "",
-		"",
-		&dashboard.Options{})
-	svcStatus.Init(
-		0, 0, 0,
-		"serviceID", "", "",
-		&dashboard.Options{
-			WebURL: "https://example.com"})
-
-	switch l := lookup.(type) {
-	case *github.Lookup:
-		l.URL = "release-argus/Argus"
-		l.URLCommands = filter.URLCommands{
-			{Type: "regex", Regex: `([0-9.]+)`}}
-		l.AccessToken = os.Getenv("GITHUB_TOKEN")
-		if failing {
-			l.AccessToken = "invalid"
-		}
-		l.UsePreRelease = test.BoolPtr(false)
-		l.Init(
-			options,
-			svcStatus,
-			defaults, hardDefaults)
-
-	case *web.Lookup:
-		l.URL = test.LookupPlain["url_invalid"]
-		l.AllowInvalidCerts = test.BoolPtr(true)
-		if failing {
-			*l.AllowInvalidCerts = false
-		}
-		l.URLCommands = filter.URLCommands{
-			{Type: "regex", Regex: `ver([0-9.]+)`}}
-		l.Init(
-			options,
-			svcStatus,
-			defaults, hardDefaults)
-	}
-
-	return lookup
+type mockLookup struct {
+	base.Lookup
+	OverrideErr string `json:"override_err,omitempty" yaml:"override_err,omitempty"`
 }
 
-func getType(lookup Lookup) string {
-	switch lookup.(type) {
-	case *github.Lookup:
-		return "github"
-	case *web.Lookup:
-		return "url"
+func (f *mockLookup) ApplyOverrides(format string, data []byte) error {
+	if f.OverrideErr != "" {
+		return errors.New(f.OverrideErr)
 	}
-	return "unknown"
+	return nil
+}
+func (f *mockLookup) Copy(*status.Status) base.Interface          { return f }
+func (f *mockLookup) DecodeSelf(format string, data []byte) error { return nil }
+func (f *mockLookup) GetRequire() *filter.Require                 { return f.Require }
+func (f *mockLookup) SetRequire(r *filter.Require)                { f.Require = r }
+func (f *mockLookup) String(prefix string) string                 { return decode.ToYAMLString(f, prefix) }
+
+func testLookup(t *testing.T, typ string, fail bool) (lv Lookup) {
+	if t != nil {
+		t.Helper()
+	}
+
+	lvCfg := plainDefaultsConfig(t)
+
+	switch typ {
+	case "github":
+		lv = testGitHub(t, fail)
+	case "url":
+		lv = testWeb(t, fail)
+	}
+
+	lv.Init(
+		lv.GetOptions(),
+		lv.GetStatus(),
+		lvCfg,
+	)
+	lv.GetStatus().ServiceInfo.ID = "TEST_LV"
+
+	// Check the values.
+	if err := lv.CheckValues(); err != nil {
+		t.Fatalf(
+			"%s.Lookup(type=%q, fail=%t).CheckValues() unexpected error: %v",
+			packageName, typ, fail, err,
+		)
+	}
+
+	return lv
+}
+
+func testGitHub(t *testing.T, fail bool) Lookup {
+	lvCfg := plainDefaultsConfig(t)
+	accessToken := test.GitHubToken(t)
+	if fail {
+		accessToken = "invalid"
+	}
+
+	svcStatus, _ := statustest.New("yaml", nil)
+	lv, _ := Decode(
+		"yaml", []byte(test.TrimYAML(`
+			type: github
+			url: `+test.ArgusGitHubRepo+`
+			access_token: `+accessToken+`
+		`)),
+		opttest.Options(t),
+		svcStatus,
+		lvCfg,
+	)
+
+	return lv
+}
+
+func testWeb(t *testing.T, fail bool) Lookup {
+	lvCfg := plainDefaultsConfig(t)
+
+	svcStatus, _ := statustest.New("yaml", nil)
+	lv, _ := Decode(
+		"yaml", []byte(test.TrimYAML(`
+			type: url
+			url: `+test.LookupBare["url_invalid"]+`/1.2.3
+			allow_invalid_certs: `+fmt.Sprint(!fail)+`
+		`)),
+		opttest.Options(t),
+		svcStatus,
+		lvCfg,
+	)
+
+	return lv
+}
+
+// plainDefaultsConfig returns plain defaults and hardDefaults for testing.
+func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
+	t.Helper()
+
+	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
+	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
+	optHardDefaults.Default()
+
+	defaults, _ := base.DecodeDefaults("yaml", nil)
+	defaults.Options = optDefaults
+	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
+	hardDefaults.Default()
+	hardDefaults.AccessToken = test.GitHubToken(nil)
+	hardDefaults.Options = optHardDefaults
+
+	defaults.Require.SetDefaults(&hardDefaults.Require)
+
+	return base.DefaultsConfig{
+		Soft: defaults,
+		Hard: hardDefaults,
+	}
 }

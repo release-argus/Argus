@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,44 +19,57 @@ package latestver
 import (
 	"testing"
 
-	"github.com/release-argus/Argus/service/latest_version/types/base"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 )
 
 func TestServiceMap(t *testing.T) {
-	tests := map[string]struct {
+	tests := []struct {
 		key      string
-		expected base.Interface
+		expected Lookup
 	}{
-		"github": {
+		{
 			key:      "github",
 			expected: &github.Lookup{},
 		},
-		"web": {
+		{
 			key:      "web",
 			expected: &web.Lookup{},
 		},
-		"url": {
+		{
 			key:      "url",
 			expected: &web.Lookup{},
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.key, func(t *testing.T) {
 			lookupFunc, exists := ServiceMap[tc.key]
 			if !exists {
-				t.Fatalf("%s\nServiceMap key %q does not exist",
-					packageName, tc.key)
+				t.Fatalf(
+					"%s\nServiceMap[%q] does not exist",
+					packageName, tc.key,
+				)
 			}
 
 			lookup := lookupFunc()
 			if getType(lookup) != getType(tc.expected) {
-				t.Errorf("%s\nServiceMap[%q]() mismatch\nwant: %T\ngot:  %T",
+				t.Errorf(
+					"%s\nServiceMap[%q]() mismatch\ngot:  %T\nwant: %T",
 					packageName, tc.key,
-					tc.expected, lookup)
+					lookup, tc.expected,
+				)
 			}
 		})
 	}
+}
+
+func getType(lookup Lookup) string {
+	switch lookup.(type) {
+	case *github.Lookup:
+		return "github"
+	case *web.Lookup:
+		return "url"
+	}
+	return "unknown"
 }

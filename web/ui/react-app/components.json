@@ -13,7 +13,7 @@
 	"tailwind": {
 		"baseColor": "slate",
 		"config": "",
-		"css": "app/globals.css",
+		"css": "src/app/globals.css",
 		"cssVariables": true,
 		"prefix": ""
 	},

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,62 +17,75 @@
 package service
 
 import (
+	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-
 	"github.com/release-argus/Argus/command"
+	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
-	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
-	"github.com/release-argus/Argus/service/dashboard"
-	latestver "github.com/release-argus/Argus/service/latest_version"
-	"github.com/release-argus/Argus/test"
+	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
+	dvtest "github.com/release-argus/Argus/service/deployed_version/test"
+	lvtest "github.com/release-argus/Argus/service/latest_version/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/web/metric"
-	"github.com/release-argus/Argus/webhook"
-	webhook_test "github.com/release-argus/Argus/webhook/test"
+	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
 func TestService_IconURL(t *testing.T) {
 	nilValue := "<nil>"
-	// GIVEN a Lookup.
-	tests := map[string]struct {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name          string
 		dashboardIcon string
 		want          string
 		notify        shoutrrr.Shoutrrrs
 	}{
-		"no dashboard.icon": {
+		{
+			name:          "no dashboard.icon",
 			want:          nilValue,
 			dashboardIcon: "",
 		},
-		"no icon anywhere": {
+		{
+			name:          "no icon anywhere",
 			want:          nilValue,
 			dashboardIcon: "",
-			notify: shoutrrr.Shoutrrrs{"test": {
-				Main:         &shoutrrr.Defaults{},
-				Defaults:     &shoutrrr.Defaults{},
-				HardDefaults: &shoutrrr.Defaults{},
-			}},
+			notify: shoutrrr.Shoutrrrs{
+				"test": {
+					Main:         &shoutrrr.Defaults{},
+					Defaults:     &shoutrrr.Defaults{},
+					HardDefaults: &shoutrrr.Defaults{},
+				},
+			},
 		},
-		"emoji icon": {
+		{
+			name:          "emoji icon",
 			want:          nilValue,
 			dashboardIcon: ":smile:",
 		},
-		"web icon": {
+		{
+			name:          "web icon",
 			want:          "https://example.com/icon.png",
 			dashboardIcon: "https://example.com/icon.png",
 		},
-		"notify icon only": {
+		{
+			name: "notify icon only",
 			want: "https://example.com/icon.png",
 			notify: shoutrrr.Shoutrrrs{"test": shoutrrr.New(
 				nil,
 				"", "",
 				nil, nil,
 				map[string]string{
-					"icon": "https://example.com/icon.png"},
-				&shoutrrr.Defaults{}, &shoutrrr.Defaults{}, &shoutrrr.Defaults{})},
+					"icon": "https://example.com/icon.png",
+				},
+				&shoutrrr.Defaults{}, &shoutrrr.Defaults{}, &shoutrrr.Defaults{},
+			),
+			},
 		},
-		"notify icon takes precedence over emoji": {
+		{
+			name:          "notify icon takes precedence over emoji",
 			want:          "https://example.com/icon.png",
 			dashboardIcon: ":smile:",
 			notify: shoutrrr.Shoutrrrs{"test": shoutrrr.New(
@@ -80,10 +93,14 @@ func TestService_IconURL(t *testing.T) {
 				"", "",
 				nil, nil,
 				map[string]string{
-					"icon": "https://example.com/icon.png"},
-				&shoutrrr.Defaults{}, &shoutrrr.Defaults{}, &shoutrrr.Defaults{})},
+					"icon": "https://example.com/icon.png",
+				},
+				&shoutrrr.Defaults{}, &shoutrrr.Defaults{}, &shoutrrr.Defaults{},
+			),
+			},
 		},
-		"dashboard icon takes precedence over notify icon": {
+		{
+			name:          "dashboard icon takes precedence over notify icon",
 			want:          "https://root.com/icon.png",
 			dashboardIcon: "https://root.com/icon.png",
 			notify: shoutrrr.Shoutrrrs{"test": shoutrrr.New(
@@ -91,432 +108,520 @@ func TestService_IconURL(t *testing.T) {
 				"", "",
 				nil, nil,
 				map[string]string{
-					"icon": "https://example.com/icon.png"},
-				&shoutrrr.Defaults{}, &shoutrrr.Defaults{}, &shoutrrr.Defaults{})},
+					"icon": "https://example.com/icon.png",
+				},
+				&shoutrrr.Defaults{}, &shoutrrr.Defaults{}, &shoutrrr.Defaults{},
+			),
+			},
 		},
 	}
 
-	for name, tc := range tests {
-		svc := testService(t, name, "github")
-
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+			svc := testService(t, tc.name, "github", "url")
 
 			svc.Dashboard.Icon = tc.dashboardIcon
 			svc.Notify = tc.notify
 
-			// WHEN IconURL is called.
+			// WHEN: IconURL is called.
 			got := svc.IconURL()
 
-			// THEN the function returns the correct result.
-			gotStr := util.DereferenceOrValue(got, nilValue)
-			if gotStr != tc.want {
-				t.Errorf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, gotStr)
+			// THEN: the function returns the correct result.
+			if gotStr := util.DerefOr(got, nilValue); gotStr != tc.want {
+				t.Errorf(
+					"%s\nService.IconURL() value mismatch\ngot:  %q\nwant: %q",
+					packageName, gotStr, tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestService_Init(t *testing.T) {
-	// GIVEN a Service.
-	tests := map[string]struct {
+	// GIVEN: defaults.
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
+
+	// AND: a Service.
+	tests := []struct {
+		name     string
 		svc      *Service
-		defaults *Defaults
 		wantIcon string
 	}{
-		"bare service - Name defaulted to ID": {
-			svc: &Service{
-				ID: "Init",
-				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-					return latestver.New("github",
-						"yaml", test.TrimYAML(`
-							url: release-argus/Argus
-						`),
-						nil,
-						nil,
-						nil, nil)
-				}),
-			},
+		{
+			name: "bare/Name defaulted to ID",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"service with Name": {
-			svc: &Service{
-				ID:   "Init",
-				Name: "other-name",
-				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-					return latestver.New("github",
-						"yaml", test.TrimYAML(`
-							url: release-argus/Argus
-						`),
-						nil,
-						nil,
-						nil, nil)
-				}),
-			},
+		{
+			name: "bare/Name",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						name: other-name
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"service with notify - doesn't set fallback when Service has a Dashboard.Icon": {
-			svc: &Service{
-				ID: "Init",
-				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-					return latestver.New("github",
-						"yaml", test.TrimYAML(`
-								url: release-argus/Argus
-							`),
-						nil,
-						nil,
-						nil, nil)
-				}),
-				Notify: shoutrrr.Shoutrrrs{
-					"test": shoutrrr.New(
-						nil,
-						"", "discord",
-						nil, nil,
-						map[string]string{
-							"icon": "notify-icon"},
-						nil, nil, nil)},
-				Dashboard: *dashboard.NewOptions(
-					nil,
-					"dashboard-icon", "",
-					"", nil,
-					nil, nil)},
+		{
+			name: "notify/doesn't set fallback when Service has a Dashboard.Icon",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+						notify:
+							test:
+								type: discord
+								params:
+									icon: notify-icon
+						dashboard:
+							icon: dashboard-icon
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 			wantIcon: "dashboard-icon",
 		},
-		"service with notify - does set fallback when Service has no Dashboard.Icon": {
-			svc: &Service{
-				ID: "Init",
-				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-					return latestver.New("github",
-						"yaml", test.TrimYAML(`
-								url: release-argus/Argus
-							`),
-						nil,
-						nil,
-						nil, nil)
-				}),
-				Notify: shoutrrr.Shoutrrrs{
-					"baz": nil,
-					"foo": shoutrrr.New(
-						nil,
-						"", "discord",
-						nil, nil,
-						map[string]string{
-							"icon": "example.com/notify-icon-1"},
-						nil, nil, nil),
-					"bar": shoutrrr.New(
-						nil,
-						"", "discord",
-						nil, nil,
-						map[string]string{
-							"icon": "https://example.com/notify-icon-2"},
-						nil, nil, nil)},
-				Dashboard: *dashboard.NewOptions(
-					nil,
-					"", "",
-					"", nil,
-					nil, nil)},
+		{
+			name: "notify/does set fallback when Service has no Dashboard.Icon",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+						notify:
+							foo:
+								type: discord
+								params:
+									icon: https://example.com/notify-icon-1
+							baz:
+							bar:
+								type: discord
+								params:
+									icon: https://example.com/notify-icon-2
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 			wantIcon: "https://example.com/notify-icon-2",
 		},
-		"service with notify, command and webhook": {
-			svc: &Service{
-				ID: "Init",
-				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-					return latestver.New("github",
-						"yaml", test.TrimYAML(`
-							url: release-argus/Argus
-						`),
-						nil,
-						nil,
-						nil, nil)
-				}),
-				Notify: shoutrrr.Shoutrrrs{
-					"test": shoutrrr.New(
-						nil,
-						"", "discord",
-						nil, nil, nil,
-						nil, nil, nil)},
-				Command: command.Commands{
-					{"ls"}},
-				WebHook: webhook.WebHooks{
-					"test": webhook_test.WebHook(false, false, false)}},
+		{
+			name: "notify + command + webhook",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+						notify:
+							test:
+								type: discord
+						command:
+							- - ls
+						webhook:
+							test:
+						`+whtest.WebHook(t, false, false, false).String(".   ")+`
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"service with notifies from defaults": {
-			svc: &Service{
-				ID: "Init",
-				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-					return latestver.New("github",
-						"yaml", test.TrimYAML(`
-							url: release-argus/Argus
-						`),
-						nil,
-						nil,
-						nil, nil)
-				})},
-			defaults: &Defaults{
-				Notify: map[string]struct{}{
-					"foo": {}}},
+		{
+			name: "notify/from defaults",
+			svc: test.Must(t, func() (*Service, error) {
+				svcCfg := plainDefaultsConfig(t)
+				svcCfg.Soft.Notify = map[string]struct{}{
+					"foo": {},
+				}
+
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"service with notifies not from defaults": {
-			svc: &Service{
-				ID: "Init",
-				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-					return latestver.New("github",
-						"yaml", test.TrimYAML(`
-							url: release-argus/Argus
-						`),
-						nil,
-						nil,
-						nil, nil)
-				}),
-				Notify: shoutrrr.Shoutrrrs{
-					"test": &shoutrrr.Shoutrrr{}}},
-			defaults: &Defaults{
-				Notify: map[string]struct{}{
-					"foo": {}}},
+		{
+			name: "notify/not from defaults",
+			svc: test.Must(t, func() (*Service, error) {
+				svcCfg := plainDefaultsConfig(t)
+				svcCfg.Soft.Notify = map[string]struct{}{
+					"foo": {},
+				}
+
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+						notify:
+							test: {}
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"service with commands from defaults": {
-			svc: &Service{
-				ID: "Init",
-				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-					return latestver.New("github",
-						"yaml", test.TrimYAML(`
-							url: release-argus/Argus
-						`),
-						nil,
-						nil,
-						nil, nil)
-				})},
-			defaults: &Defaults{
-				Command: command.Commands{
-					{"ls"}}},
+		{
+			name: "command/from defaults",
+			svc: test.Must(t, func() (*Service, error) {
+				svcCfg := plainDefaultsConfig(t)
+				svcCfg.Soft.Command = command.Commands{
+					{"ls"},
+				}
+
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"service with commands not from defaults": {
-			svc: &Service{
-				ID: "Init",
-				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-					return latestver.New("github",
-						"yaml", test.TrimYAML(`
-							url: release-argus/Argus
-						`),
-						nil,
-						nil,
-						nil, nil)
-				}),
-				Command: command.Commands{
-					{"test"}}},
-			defaults: &Defaults{
-				Command: command.Commands{
-					{"ls"}}},
+		{
+			name: "command/not from defaults",
+			svc: test.Must(t, func() (*Service, error) {
+				svcCfg := plainDefaultsConfig(t)
+				svcCfg.Soft.Command = command.Commands{
+					{"ls"},
+				}
+
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+						command:
+							- - test
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"service with webhooks from defaults": {
-			svc: &Service{
-				ID: "Init",
-				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-					return latestver.New("github",
-						"yaml", test.TrimYAML(`
-							url: release-argus/Argus
-						`),
-						nil,
-						nil,
-						nil, nil)
-				})},
-			defaults: &Defaults{
-				WebHook: map[string]struct{}{
-					"bar": {}}},
+		{
+			name: "webhook/from defaults",
+			svc: test.Must(t, func() (*Service, error) {
+				svcCfg := plainDefaultsConfig(t)
+				svcCfg.Soft.WebHook = map[string]struct{}{
+					"bar": {},
+				}
+
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"service with webhooks not from defaults": {
-			svc: &Service{
-				ID: "Init",
-				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-					return latestver.New("github",
-						"yaml", test.TrimYAML(`
-							url: release-argus/Argus
-						`),
-						nil,
-						nil,
-						nil, nil)
-				}),
-				WebHook: webhook.WebHooks{
-					"test": webhook_test.WebHook(false, false, false)}},
-			defaults: &Defaults{
-				WebHook: map[string]struct{}{
-					"bar": {}}},
+		{
+			name: "webhook/not from defaults",
+			svc: test.Must(t, func() (*Service, error) {
+				svcCfg := plainDefaultsConfig(t)
+				svcCfg.Soft.WebHook = map[string]struct{}{
+					"bar": {},
+				}
+
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+						webhook:
+							test:
+						`+whtest.WebHook(t, false, false, false).String(".   ")+`
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"service with webhooks/commands from defaults and notify overridden": {
-			svc: &Service{
-				ID: "Init",
-				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
-					return latestver.New("github",
-						"yaml", test.TrimYAML(`
-							url: release-argus/Argus
-						`),
-						nil,
-						nil,
-						nil, nil)
-				}),
-				Notify: shoutrrr.Shoutrrrs{
-					"test": &shoutrrr.Shoutrrr{}}},
-			defaults: &Defaults{
-				Notify: map[string]struct{}{
-					"foo": {}},
-				Command: command.Commands{
-					{"ls"}},
-				WebHook: map[string]struct{}{
-					"bar": {}}},
+		{
+			name: "webhook + command - from defaults and notify overridden",
+			svc: test.Must(t, func() (*Service, error) {
+				svcCfg := plainDefaultsConfig(t)
+				svcCfg.Soft.Notify = map[string]struct{}{
+					"foo": {},
+				}
+				svcCfg.Soft.Command = command.Commands{
+					{"ls"},
+				}
+				svcCfg.Soft.WebHook = map[string]struct{}{
+					"bar": {},
+				}
+
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+						notify:
+							test: {}
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+		},
+		{
+			name: "DeployedVersionLookup",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						deployed_version:
+							type: url
+							url: `+test.LookupPlain["url_valid"]+`
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.defaults == nil {
-				tc.defaults = &Defaults{}
-			}
-			var hardDefaults Defaults
-			tc.svc.ID = name
-			hadName := tc.svc.Name
-			hadNotify := util.SortedKeys(tc.svc.Notify)
-			hadWebHook := util.SortedKeys(tc.svc.WebHook)
-			hadCommand := make(command.Commands, len(tc.svc.Command))
-			copy(hadCommand, tc.svc.Command)
+			s := tc.svc
+			s.ID = tc.name
+			hadNotify := util.SortedKeys(s.Notify)
+			hadWebHook := util.SortedKeys(s.WebHook)
+			hadCommand := make(command.Commands, len(s.Command))
+			copy(hadCommand, s.Command)
 
-			// WHEN Init is called on it.
-			tc.svc.Init(
-				tc.defaults, &hardDefaults,
-				&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
-				&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
+			// AND: various channels.
+			announceChannel := make(chan []byte, 1)
+			databaseChannel := make(chan dbtype.Message, 1)
+			saveChannel := make(chan bool, 1)
 
-			// THEN the Name is set to the ID if not set.
-			if (hadName != "" && tc.svc.Name != hadName) || (hadName == "" && tc.svc.Name != tc.svc.ID) {
-				t.Errorf("%s\nName mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.svc.ID, tc.svc.Name)
-			}
-			// THEN pointers to those vars are handed out to the Lookup::
-			// 	Defaults.
-			if tc.svc.Defaults != tc.defaults {
-				t.Errorf("%s\nDefaults mismatch\nwant: %v\ngot:  %v",
-					packageName, tc.defaults, tc.svc.Defaults)
-			}
-			// 	Dashboard.Defaults.
-			if tc.svc.Dashboard.Defaults != &tc.defaults.Dashboard {
-				t.Errorf("%s\nDashboard.Defaults mismatch\nwant: %v\ngot:  %v",
-					packageName, &tc.defaults.Dashboard, tc.svc.Dashboard.Defaults)
-			}
-			// 	Options.defaults.
-			if tc.svc.Options.Defaults != &tc.defaults.Options {
-				t.Errorf("%s\nOptions.Defaults mismatch\nwant: %v\ngot:  %v",
-					packageName, &tc.defaults.Options, tc.svc.Options.Defaults)
-			}
-			// 	HardDefaults.
-			if tc.svc.HardDefaults != &hardDefaults {
-				t.Errorf("%s\nHardDefaults mismatch\nwant: %v\ngot:  %v",
-					packageName, &hardDefaults, tc.svc.HardDefaults)
-			}
-			// 	Dashboard.HardDefaults.
-			if tc.svc.Dashboard.HardDefaults != &hardDefaults.Dashboard {
-				t.Errorf("%s\nDashboard.HardDefaults mismatch\nwant: %v\ngot:  %v",
-					packageName, &hardDefaults.Dashboard, tc.svc.Dashboard.HardDefaults)
-			}
-			// 	Options.HardDefaults.
-			if tc.svc.Options.HardDefaults != &hardDefaults.Options {
-				t.Errorf("%s\nOptions.HardDefaults mismatch\nwant: %v\ngot:  %v",
-					packageName, &hardDefaults.Options, tc.svc.Options.HardDefaults)
-			}
-			// 	Notify.
-			if len(tc.svc.Notify) != 0 {
+			// WHEN: init is called on it.
+			tc.svc.init(
+				notifyCfg,
+				whCfg,
+				announceChannel,
+				databaseChannel,
+				saveChannel,
+			)
+
+			prefix := fmt.Sprintf(
+				"%s\nService.Init(notifyDefaults=%v, WebHookDefaults=%v)",
+				packageName, notifyCfg, whCfg,
+			)
+
+			// THEN: Mains/Defaults/HardDefaults are handed to each WebHook.
+			hadNotifyLength := len(hadNotify)
+			gotNotifyLength := len(tc.svc.Notify)
+			if gotNotifyLength != 0 {
 				for i := range tc.svc.Notify {
 					if tc.svc.Notify[i].Main == nil {
-						t.Errorf("%s\nNotify init didn't initialise the Main",
-							packageName)
+						t.Errorf("%s Notify[%q].Main is nil", prefix, i)
+					}
+					if tc.svc.Notify[i].Defaults == nil {
+						t.Errorf("%s Notify[%q].Defaults is nil", prefix, i)
+					}
+					if tc.svc.Notify[i].HardDefaults == nil {
+						t.Errorf("%s Notify[%q].HardDefaults is nil", prefix, i)
 					}
 				}
 			}
-			// 		Notifiers are not overridden if non-empty.
-			if len(hadNotify) != 0 && len(tc.svc.Notify) != len(hadNotify) {
-				t.Fatalf("%s\nNotify length mismatch\nwant: %d (%v)\ngot:  %d (%v)",
-					packageName,
-					len(hadNotify), hadNotify,
-					len(tc.svc.Notify), util.SortedKeys(tc.svc.Notify))
+
+			// AND: Notifiers are not overridden if non-empty originally.
+			if hadNotifyLength != 0 && gotNotifyLength != hadNotifyLength {
+				t.Fatalf(
+					"%s Notify length mismatch\ngot:  %d (%v)\nwant: %d (%v)",
+					prefix,
+					gotNotifyLength, util.SortedKeys(tc.svc.Notify),
+					hadNotifyLength, hadNotify,
+				)
 			}
+
+			// AND: Notify is set to the default values when empty.
 			wantNotify := hadNotify
-			if len(hadNotify) == 0 && tc.defaults != nil {
-				wantNotify = make([]string, len(tc.defaults.Notify))
-				wantNotify = util.SortedKeys(tc.defaults.Notify)
+			if defaultNotifiers := tc.svc.Defaults.Notify; defaultNotifiers != nil && hadNotifyLength == 0 {
+				wantNotify = make([]string, len(defaultNotifiers))
+				wantNotify = util.SortedKeys(defaultNotifiers)
 			}
 			for _, i := range wantNotify {
 				if tc.svc.Notify[i] == nil {
-					t.Errorf("%s - Notify[%s] was nil",
-						packageName, i)
+					t.Errorf(
+						"%s Notify[%q] is nil",
+						prefix, i,
+					)
 				}
 			}
-			// 	Command.
-			if len(tc.svc.Command) != 0 {
+
+			// THEN: CommandController is nil'd when we have no Command, non-nil otherwise.
+			hadCommandLength := len(hadCommand)
+			gotCommandLength := len(tc.svc.Command)
+			if gotCommandLength != 0 {
 				if tc.svc.CommandController == nil {
-					t.Errorf("%s\nCommandController is still nil with %v Commands present",
-						packageName, tc.svc.Command)
+					t.Errorf(
+						"%s CommandController is still nil with %v Commands present",
+						prefix, tc.svc.Command,
+					)
 				}
 			} else if tc.svc.CommandController != nil {
-				t.Errorf("%s\nCommandController should be nil with %v Commands present",
-					packageName, tc.svc.Command)
+				t.Errorf(
+					"%s CommandController should be nil with %v Commands present",
+					prefix, tc.svc.Command,
+				)
 			}
-			// 		Command is not overridden if non-empty.
-			if len(hadCommand) != 0 && len(tc.svc.Command) != len(hadCommand) {
-				t.Fatalf("%s\nCommand length changed\nwant: %d (%v)\ngot:  %d (%v)",
-					packageName,
-					len(hadCommand), hadCommand,
-					len(tc.svc.Command), tc.svc.Command)
+
+			// AND: Commands are not overridden if non-empty originally.
+			if hadCommandLength != 0 && gotCommandLength != hadCommandLength {
+				t.Fatalf(
+					"%s Command length changed unexpectedly\ngot:  %d (%v)\nwant: %d (%v)",
+					prefix,
+					gotCommandLength, tc.svc.Command,
+					hadCommandLength, hadCommand,
+				)
 			}
+
+			// AND: Command is set to the default values when empty.
 			wantCommand := hadCommand
-			if len(hadCommand) == 0 && tc.defaults != nil {
-				wantCommand = make(command.Commands, len(tc.defaults.Command))
-				wantCommand = tc.defaults.Command
+			if defaultCommands := tc.svc.Defaults.Command; defaultCommands != nil && hadCommandLength == 0 {
+				wantCommand = make(command.Commands, len(defaultCommands))
+				wantCommand = defaultCommands
 			}
 			for i := range wantCommand {
-				if tc.svc.Command[i].String() != wantCommand[i].String() {
-					t.Errorf("%s - Command[%d] changed\nwant: %q\ngot:  %q",
-						packageName, i,
-						wantCommand[i].String(), tc.svc.Command[i].String())
+				got := tc.svc.Command[i].String()
+				want := wantCommand[i].String()
+				if got != want {
+					t.Errorf(
+						"%s Command[%d] changed unexpected\ngot:  %q\nwant: %q",
+						prefix, i,
+						got, want,
+					)
 				}
 			}
-			// 	WebHook.
-			if len(tc.svc.WebHook) != 0 {
+
+			// THEN: Mains/Defaults/HardDefaults are handed to each WebHook.
+			hadWebHookLength := len(hadWebHook)
+			gotWebHookLength := len(tc.svc.WebHook)
+			if gotWebHookLength != 0 {
 				for i := range tc.svc.WebHook {
 					if tc.svc.WebHook[i].Main == nil {
-						t.Errorf("%s\nWebHook init didn't initialise the Main",
-							packageName)
+						t.Errorf("%s WebHook[%q].Main is nil", prefix, i)
+					}
+					if tc.svc.WebHook[i].Defaults == nil {
+						t.Errorf("%s WebHook[%q].Defaults is nil", prefix, i)
+					}
+					if tc.svc.WebHook[i].HardDefaults == nil {
+						t.Errorf("%s WebHook[%q].HardDefaults is nil", prefix, i)
 					}
 				}
 			}
-			// 		WebHooks are not overridden if non-empty.
-			if len(hadWebHook) != 0 && len(tc.svc.WebHook) != len(hadWebHook) {
-				t.Fatalf("%s\nWebHook length changed\nwant: %d (%v)\ngot:  %d (%v)",
-					packageName,
-					len(hadWebHook), hadWebHook,
-					len(tc.svc.WebHook), util.SortedKeys(tc.svc.WebHook))
+
+			// AND: WebHooks are not overridden if non-empty originally.
+			if hadWebHookLength > 0 && gotWebHookLength != hadWebHookLength {
+				t.Fatalf(
+					"%s WebHook length changed\ngot:  %d (%v)\nwant: %d (%v)",
+					prefix,
+					gotWebHookLength, util.SortedKeys(tc.svc.WebHook),
+					hadWebHookLength, hadWebHook,
+				)
 			}
+
+			// AND: WebHook is set to the default values when empty.
 			wantWebHook := hadWebHook
-			if len(hadWebHook) == 0 && tc.defaults != nil {
-				wantWebHook = make([]string, len(tc.defaults.WebHook))
-				wantWebHook = util.SortedKeys(tc.defaults.WebHook)
+			if defaultWebHooks := tc.svc.Defaults.WebHook; defaultWebHooks != nil && hadWebHookLength == 0 {
+				wantWebHook = make([]string, len(defaultWebHooks))
+				wantWebHook = util.SortedKeys(defaultWebHooks)
 			}
 			for _, i := range wantWebHook {
 				if tc.svc.WebHook[i] == nil {
-					t.Errorf("%s - hadWebHook[%s] was nil",
-						packageName, i)
+					t.Errorf("%s WebHook[%q] is nil", prefix, i)
 				}
 			}
 			// 	Dashboard
 			gotIcon := tc.svc.Dashboard.GetIcon()
 			if tc.wantIcon != gotIcon {
-				t.Errorf("%s\nDashboard icon fallback mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.wantIcon, gotIcon)
+				t.Errorf(
+					"%s Dashboard.GetIcon() value mismatch\ngot:  %q\nwant: %q",
+					prefix, gotIcon, tc.wantIcon,
+				)
+			}
+			// Status - Pointers.
+			fieldTests := []test.FieldAssertion{
+				{Name: "AnnounceChannel", Got: tc.svc.Status.AnnounceChannel, Want: announceChannel, Mode: test.CompareSamePointer},
+				{Name: "DatabaseChannel", Got: tc.svc.Status.DatabaseChannel, Want: databaseChannel, Mode: test.CompareSamePointer},
+				{Name: "SaveChannel", Got: tc.svc.Status.SaveChannel, Want: saveChannel, Mode: test.CompareSamePointer},
+				{Name: "Dashboard", Got: tc.svc.Status.Dashboard, Want: &tc.svc.Dashboard, Mode: test.CompareSamePointer},
+			}
+			if err := test.AssertFields(t, fieldTests, prefix, "Status"); err != nil {
+				t.Fatal(err)
+			}
+			// Status - ServiceInfo.
+			serviceInfo := tc.svc.Status.GetServiceInfo()
+			wantServiceInfoName := util.ValueOr(tc.svc.Name, tc.svc.ID)
+			fieldTests = []test.FieldAssertion{
+				{Name: "ID", Got: serviceInfo.ID, Want: tc.svc.ID, Mode: test.CompareEqual},
+				{Name: "Name", Got: serviceInfo.Name, Want: wantServiceInfoName, Mode: test.CompareEqual},
+				{Name: "Comment", Got: serviceInfo.Comment, Want: tc.svc.Comment, Mode: test.CompareEqual},
+				{Name: "Icon", Got: serviceInfo.Icon, Want: tc.wantIcon, Mode: test.CompareEqual},
+			}
+			if err := test.AssertFields(t, fieldTests, prefix, "Status.ServiceInfo"); err != nil {
+				t.Fatal(err)
+			}
+			if !util.AreSlicesEqual(serviceInfo.Tags, tc.svc.Dashboard.Tags) {
+				t.Errorf(
+					"%s Status.ServiceInfo.Tags mismatch\ngot:  %v\nwant: %v",
+					prefix, serviceInfo.Tags, tc.svc.Dashboard.Tags,
+				)
+			}
+			// Status - Fails.
+			fieldTests = []test.FieldAssertion{
+				{Name: "Command", Got: tc.svc.Status.Fails.Command.Length(), Want: len(tc.svc.Command), Mode: test.CompareEqual},
+				{Name: "Shoutrrr", Got: tc.svc.Status.Fails.Shoutrrr.Length(), Want: len(tc.svc.Notify), Mode: test.CompareEqual},
+				{Name: "WebHook", Got: tc.svc.Status.Fails.WebHook.Length(), Want: len(tc.svc.WebHook), Mode: test.CompareEqual},
+			}
+			if err := test.AssertFields(t, fieldTests, prefix, "Status.ServiceInfo"); err != nil {
+				t.Fatal(err)
 			}
 		})
 	}
 }
 
-func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
-	// GIVEN a Service.
+func TestService_InitMetrics_then_ResetMetrics_then_DeleteMetrics(t *testing.T) {
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
+
+	// GIVEN: a Service.
 	tests := []struct {
 		name               string
 		nilDeployedVersion bool
@@ -529,22 +634,27 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 		},
 		{
 			name:               "nil DeployedVersionLookup",
-			nilDeployedVersion: true},
+			nilDeployedVersion: true,
+		},
 		{
 			name:       "nil Command",
-			nilCommand: true},
+			nilCommand: true,
+		},
 		{
 			name:      "nil Notify",
-			nilNotify: true},
+			nilNotify: true,
+		},
 		{
 			name:       "nil WebHook",
-			nilWebHook: true},
+			nilWebHook: true,
+		},
 		{
 			name:               "nil all",
 			nilDeployedVersion: true,
 			nilCommand:         true,
 			nilNotify:          true,
-			nilWebHook:         true},
+			nilWebHook:         true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -554,27 +664,34 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			activeStates := []bool{true, false}
 			for _, active := range activeStates {
 				testCommand := command.Command{"ls"}
-				testNotify := shoutrrr_test.Shoutrrr(false, false)
-				testWebHook := webhook_test.WebHook(false, false, false)
-				svc := &Service{
-					ID:                    "TestService_InitMetrics_ResetMetrics_DeleteMetrics--" + tc.name,
-					LatestVersion:         testLatestVersion(t, "github", false),
-					DeployedVersionLookup: testDeployedVersionLookup(t, false),
-					Command: command.Commands{
-						testCommand},
-					Notify: shoutrrr.Shoutrrrs{
-						testNotify.ID: testNotify},
-					WebHook: webhook.WebHooks{
-						testWebHook.ID: testWebHook},
-				}
+				testNotify := shoutrrrtest.Shoutrrr(t, false, false)
+				testWebHook := whtest.WebHook(t, false, false, false)
+				svc := test.Must(t, func() (s *Service, err error) {
+					return DecodeService(
+						"yaml", []byte(test.TrimYAML(`
+							options:
+								active: `+strconv.FormatBool(active)+`
+							latest_version:
+							`+lvtest.Lookup(t, "github", false).String("  ")+`
+							deployed_version:
+							`+dvtest.Lookup(t, "url", false, "").String("  ")+`
+							command:
+							- `+testCommand.JSON()+`
+							notify:
+								`+testNotify.ID+`:
+							`+testNotify.String("    ")+`
+							webhook:
+								`+testWebHook.ID+`:
+							`+testWebHook.String("    ")+`
+						`)),
+						"TestService_InitMetrics_ResetMetrics_DeleteMetrics--"+tc.name,
+						svcCfg,
+						notifyCfg,
+						whCfg,
+					)
+				})
 
-				// Init the service.
-				svc.Init(
-					&Defaults{}, &Defaults{},
-					&shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{}, &shoutrrr.ShoutrrrsDefaults{},
-					&webhook.WebHooksDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
-				)
-				svc.Options.Active = &active
+				// Set the versions.
 				svc.Status.SetLatestVersion("0.0.2", "", false)
 				svc.Status.SetDeployedVersion("0.0.2", "", false)
 
@@ -598,33 +715,40 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 				// metrics:
 				// 	latest_version_query_result_total.
 				latestVersionMetric := metric.LatestVersionIsDeployed.WithLabelValues(
-					svc.ID)
+					svc.ID,
+				)
 				// 	deployed_version_query_result_last.
 				deployedVersionMetric := metric.DeployedVersionQueryResultLast.WithLabelValues(
-					svc.ID, deployedVersionType)
+					svc.ID, deployedVersionType,
+				)
 				// 	command_result_total.
 				commandMetric := metric.CommandResultTotal.WithLabelValues(
-					testCommand.String(), metric.ActionResultSuccess, svc.ID)
+					testCommand.String(), metric.ActionResultSuccess, svc.ID,
+				)
 				// 	notify_result_total.
 				notifyMetric := metric.NotifyResultTotal.WithLabelValues(
-					testNotify.ID, metric.ActionResultSuccess, svc.ID, testNotify.GetType())
+					testNotify.ID, metric.ActionResultSuccess, svc.ID, testNotify.GetType(),
+				)
 				// 	webhook_result_total.
 				webhookMetric := metric.WebHookResultTotal.WithLabelValues(
-					testWebHook.ID, metric.ActionResultSuccess, svc.ID)
+					testWebHook.ID, metric.ActionResultSuccess, svc.ID,
+				)
 				// 	service_count_current.
 				serviceCountCurrentActive := metric.ServiceCountCurrent.WithLabelValues(
-					metric.ServiceStateActive)
+					metric.ServiceStateActive,
+				)
 				initialServiceCountCurrentActive := testutil.ToFloat64(serviceCountCurrentActive)
 				serviceCountCurrentInactive := metric.ServiceCountCurrent.WithLabelValues(
-					metric.ServiceStateInactive)
+					metric.ServiceStateInactive,
+				)
 				initialServiceCountCurrentInactive := testutil.ToFloat64(serviceCountCurrentInactive)
 
-				// #################################
-				// WHEN initMetrics is called on it.
-				// #################################
+				// WHEN: initMetrics is called on it. #
 				svc.initMetrics()
 
-				// THEN the metrics are created:
+				prefix := fmt.Sprintf("%s\nService.initMetrics()", packageName)
+
+				// THEN: the metrics are created:
 				want := float64(3)
 				oldWant := want
 				// 	latest_version_is_deployed.
@@ -634,8 +758,10 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 					latestVersionMetric.Set(want)
 				}
 				if got := testutil.ToFloat64(latestVersionMetric); got != want {
-					t.Errorf("%s\nlatestVersionMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
-						packageName, want, got)
+					t.Errorf(
+						"%s latestVersionMetric mismatch\ngot:  %f\nwant: %f",
+						prefix, got, want,
+					)
 				}
 				// 	deployed_version_query_result_last.
 				if tc.nilDeployedVersion || !active {
@@ -644,8 +770,10 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 					deployedVersionMetric.Set(want)
 				}
 				if got := testutil.ToFloat64(deployedVersionMetric); got != want {
-					t.Errorf("%s\ndeployedVersionMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
-						packageName, want, got)
+					t.Errorf(
+						"%s deployedVersionMetric mismatch\ngot:  %f\nwant: %f",
+						prefix, got, want,
+					)
 				}
 				want = oldWant
 				// 	command_result_total.
@@ -655,8 +783,10 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 					commandMetric.Add(want)
 				}
 				if got := testutil.ToFloat64(commandMetric); got != want {
-					t.Errorf("%s\ncommandMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
-						packageName, want, got)
+					t.Errorf(
+						"%s commandMetric mismatch\ngot:  %f\nwant: %f",
+						prefix, got, want,
+					)
 				}
 				want = oldWant
 				// 	notify_result_total.
@@ -666,8 +796,10 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 					notifyMetric.Add(want)
 				}
 				if got := testutil.ToFloat64(notifyMetric); got != want {
-					t.Errorf("%s\nnotifyMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
-						packageName, want, got)
+					t.Errorf(
+						"%s notifyMetric mismatch\ngot:  %f\nwant: %f",
+						prefix, got, want,
+					)
 				}
 				want = oldWant
 				// 	webhook_result_total.
@@ -677,8 +809,10 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 					webhookMetric.Add(want)
 				}
 				if got := testutil.ToFloat64(webhookMetric); got != want {
-					t.Errorf("%s\nwebhookMetric mismatch after initMetrics()\nwant: %f\ngot:  %f",
-						packageName, want, got)
+					t.Errorf(
+						"%s webhookMetric mismatch\ngot:  %f\nwant: %f",
+						prefix, got, want,
+					)
 				}
 				// 	service_count_current (active=true).
 				want = initialServiceCountCurrentActive
@@ -686,8 +820,10 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 					want++
 				}
 				if got := testutil.ToFloat64(serviceCountCurrentActive); got != want {
-					t.Errorf("%s\nServiceCountCurrent (active=true) mismatch after initMetrics()\nwant: %f\ngot:  %f",
-						packageName, want, got)
+					t.Errorf(
+						"%s ServiceCountCurrent (active=true) mismatch\ngot:  %f\nwant: %f",
+						prefix, got, want,
+					)
 				}
 				// 	service_count_current (active=false).
 				want = initialServiceCountCurrentInactive
@@ -695,68 +831,61 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 					want++
 				}
 				if got := testutil.ToFloat64(serviceCountCurrentInactive); got != want {
-					t.Errorf("%s\nServiceCountCurrent (active=false) mismatch after initMetrics()\nwant: %f\ngot:  %f",
-						packageName, want, got)
+					t.Errorf(
+						"%s\nServiceCountCurrent (active=false) mismatch\ngot:  %f\nwant: %f",
+						prefix, got, want,
+					)
 				}
 				want = oldWant
 
-				// ###################################
-				// WHEN deleteMetrics is called on it.
-				// ###################################
+				// ------------------------------------
+
+				// WHEN: deleteMetrics is called on it.
 				svc.deleteMetrics()
 
 				// metrics:
 				// 	latest_version_is_deployed.
 				latestVersionMetric = metric.LatestVersionIsDeployed.WithLabelValues(
-					svc.ID)
+					svc.ID,
+				)
 				// 	deployed_version_query_result_last.
 				deployedVersionMetric = metric.DeployedVersionQueryResultLast.WithLabelValues(
-					svc.ID, deployedVersionType)
+					svc.ID, deployedVersionType,
+				)
 				// 	command_result_total.
 				commandMetric = metric.CommandResultTotal.WithLabelValues(
-					testCommand.String(), metric.ActionResultSuccess, svc.ID)
+					testCommand.String(), metric.ActionResultSuccess, svc.ID,
+				)
 				// 	notify_result_total.
 				notifyMetric = metric.NotifyResultTotal.WithLabelValues(
-					testNotify.ID, metric.ActionResultSuccess, svc.ID, testNotify.GetType())
+					testNotify.ID, metric.ActionResultSuccess, svc.ID, testNotify.GetType(),
+				)
 				// 	webhook_result_total.
 				webhookMetric = metric.WebHookResultTotal.WithLabelValues(
-					testWebHook.ID, metric.ActionResultSuccess, svc.ID)
+					testWebHook.ID, metric.ActionResultSuccess, svc.ID,
+				)
 
-				// THEN the metrics are deleted:
+				prefix = fmt.Sprintf("%s\nService.deleteMetrics()", packageName)
+
+				// THEN: the metrics are deleted:
 				want = 0
-				// 	latest_version_is_deployed.
-				if got := testutil.ToFloat64(latestVersionMetric); got != want {
-					t.Errorf("%s\nlatestVersionMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
-						packageName, want, got)
+				fieldTests := []test.FieldAssertion{
+					// 	latest_version_is_deployed.
+					{Name: "latestVersionMetric", Got: testutil.ToFloat64(latestVersionMetric), Want: want, Mode: test.CompareEqual},
+					// 	deployed_version_query_result_last.
+					{Name: "deployedVersionMetric", Got: testutil.ToFloat64(deployedVersionMetric), Want: want, Mode: test.CompareEqual},
+					// 	command_result_total.
+					{Name: "commandMetric", Got: testutil.ToFloat64(commandMetric), Want: want, Mode: test.CompareEqual},
+					// 	notify_result_total.
+					{Name: "notifyMetric", Got: testutil.ToFloat64(notifyMetric), Want: want, Mode: test.CompareEqual},
+					// 	webhook_result_total.
+					{Name: "webhookMetric", Got: testutil.ToFloat64(webhookMetric), Want: want, Mode: test.CompareEqual},
+					// 	service_count_current.
+					{Name: "ServiceCountCurrent (active=true)", Got: testutil.ToFloat64(serviceCountCurrentActive), Want: initialServiceCountCurrentActive, Mode: test.CompareEqual},
+					{Name: "ServiceCountCurrent (active=false)", Got: testutil.ToFloat64(serviceCountCurrentInactive), Want: initialServiceCountCurrentInactive, Mode: test.CompareEqual},
 				}
-				// 	deployed_version_query_result_last.
-				if got := testutil.ToFloat64(deployedVersionMetric); got != want {
-					t.Errorf("%s\ndeployedVersionMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
-						packageName, want, got)
-				}
-				// 	command_result_total.
-				if got := testutil.ToFloat64(commandMetric); got != want {
-					t.Errorf("%s\ncommandMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
-						packageName, want, got)
-				}
-				// 	notify_result_total.
-				if got := testutil.ToFloat64(notifyMetric); got != want {
-					t.Errorf("%s\nnotifyMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
-						packageName, want, got)
-				}
-				// 	webhook_result_total.
-				if got := testutil.ToFloat64(webhookMetric); got != want {
-					t.Errorf("%s\nwebhookMetric mismatch after deleteMetrics()\nwant: %f\ngot:  %f",
-						packageName, want, got)
-				}
-				// 	service_count_current.
-				if got := testutil.ToFloat64(serviceCountCurrentActive); got != initialServiceCountCurrentActive {
-					t.Errorf("%s\nServiceCountCurrent (active=true) (mismatch after initMetrics()\nwant: %f\ngot:  %f",
-						packageName, initialServiceCountCurrentActive, got)
-				}
-				if got := testutil.ToFloat64(serviceCountCurrentInactive); got != initialServiceCountCurrentInactive {
-					t.Errorf("%s\nServiceCountCurrent (active=false) (mismatch after initMetrics()\nwant: %f\ngot:  %f",
-						packageName, initialServiceCountCurrentInactive, got)
+				if err := test.AssertFields(t, fieldTests, prefix, ""); err != nil {
+					t.Fatal(err)
 				}
 			}
 		})

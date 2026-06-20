@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,11 +17,10 @@ package testing
 
 import "os"
 
+// exitFunc terminates the process (overridable for tests).
 var exitFunc = os.Exit
 
-// RunAndExit will exit the program with 0/1 depending on `ok` (true=0, false=1).
-//
-// If `flag` is empty, it will return immediately.
+// RunAndExit exits the process with code 0 on success or 1 on failure, unless flag is empty.
 func RunAndExit(ok bool, flag *string) {
 	if *flag == "" {
 		return

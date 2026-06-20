@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,117 +12,141 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
+//go:build integration
 
 // Package testing provides utilities for CLI-based testing.
 package testing
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
-	opt "github.com/release-argus/Argus/service/option"
-	"github.com/release-argus/Argus/test"
+	svctest "github.com/release-argus/Argus/service/test"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
+	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
 func TestCommandTest(t *testing.T) {
-	// GIVEN a Config with a Service containing a Command.
-	tests := map[string]struct {
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
+
+	// GIVEN: a Config with a Service containing a Command.
+	tests := []struct {
+		name        string
 		flag        string
 		services    service.Services
 		stdoutRegex *string
 		ok          bool
 	}{
-		"flag is empty": {
+		{
+			name:        "empty flag",
 			flag:        "",
 			ok:          true,
-			stdoutRegex: test.StringPtr("^$"),
-			services: service.Services{
-				"argus": {
-					ID: "argus",
-					Command: command.Commands{
-						{"true", "0"}},
-					CommandController: &command.Controller{},
-					Options: *opt.New(
-						nil, "0s", nil,
-						nil, nil)}},
+			stdoutRegex: test.Ptr("^$"),
+			services: test.Must(t, func() (service.Services, error) {
+				return service.DecodeServices(
+					"yaml", []byte(test.TrimYAML(`
+						argus:
+							options:
+								interval: 0s
+							command:
+								- - true
+									- 0
+					`)),
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"unknown service in flag": {
+		{
+			name:        "unknown service",
 			flag:        "something",
 			ok:          false,
-			stdoutRegex: test.StringPtr(" could not be found "),
-			services: service.Services{
-				"argus": {
-					ID: "argus",
-					Command: command.Commands{
-						{"true", "0"}},
-					CommandController: &command.Controller{},
-					Options: *opt.New(
-						nil, "0s", nil,
-						nil, nil)}},
+			stdoutRegex: test.Ptr(" could not be found "),
+			services: test.Must(t, func() (service.Services, error) {
+				return service.DecodeServices(
+					"yaml", []byte(test.TrimYAML(`
+						argus:
+							options:
+								interval: 0s
+							command:
+								- - true
+									- 0
+					`)),
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"known service in flag successful command": {
+		{
+			name:        "known service/successful command",
 			flag:        "argus",
 			ok:          true,
-			stdoutRegex: test.StringPtr(`Executing 'echo command did run'\s+.*command did run\s+`),
-			services: service.Services{
-				"argus": {
-					ID: "argus",
-					Command: command.Commands{
-						{"echo", "command did run"}},
-					CommandController: &command.Controller{},
-					Options: *opt.New(
-						nil, "0s", nil,
-						nil, nil)}},
+			stdoutRegex: test.Ptr(`Executing 'echo command did run'\s+.*command did run\s+`),
+			services: test.Must(t, func() (service.Services, error) {
+				return service.DecodeServices(
+					"yaml", []byte(test.TrimYAML(`
+						argus:
+							options:
+								interval: 0s
+							command:
+								- - 	echo
+									- command did run
+					`)),
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"known service in flag failing command": {
+		{
+			name:        "known service/failing command",
 			flag:        "argus",
 			ok:          true,
-			stdoutRegex: test.StringPtr(`.*Executing 'ls /root'\s+.*exit status [1-9]\s+`),
-			services: service.Services{
-				"argus": {
-					ID: "argus",
-					Command: command.Commands{
-						{"ls", "/root"}},
-					CommandController: &command.Controller{},
-					Options: *opt.New(
-						nil, "0s", nil,
-						nil, nil)}},
+			stdoutRegex: test.Ptr(`.*Executing 'false'\s+.*exit status [1-9]\s+`),
+			services: test.Must(t, func() (service.Services, error) {
+				return service.DecodeServices(
+					"yaml", []byte(test.TrimYAML(`
+						argus:
+							options:
+								interval: 0s
+							command:
+								- - false
+					`)),
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 		},
-		"service with no commands": {
+		{
+			name:        "known service/no commands",
 			flag:        "argus",
 			ok:          false,
-			stdoutRegex: test.StringPtr(" does not have any `command` defined"),
+			stdoutRegex: test.Ptr(" does not have any `command` defined"),
 			services: service.Services{
 				"argus": {
-					ID: "argus"}},
+					ID: "argus",
+				},
+			},
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureLog(logutil.Log)
+			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			if tc.services[tc.flag] != nil && tc.services[tc.flag].CommandController != nil {
-				tc.services[tc.flag].CommandController.Init(
+				tc.services[tc.flag].CommandController = command.NewController(
 					&tc.services[tc.flag].Status,
-					&tc.services[tc.flag].Command,
+					tc.services[tc.flag].Command,
 					nil,
-					&tc.services[tc.flag].Options.Interval)
+					&tc.services[tc.flag].Options.Interval,
+				)
 			}
-			defaults := service.Defaults{}
-			defaults.Default()
-			for _, svc := range tc.services {
-				svc.Init(
-					&defaults, &defaults,
-					nil, nil, nil,
-					nil, nil, nil)
-			}
+
 			order := make([]string, len(tc.services))
 			for i := range tc.services {
 				order = append(order, i)
@@ -133,21 +157,34 @@ func TestCommandTest(t *testing.T) {
 			}
 
 			resultChannel := make(chan bool, 1)
-			// WHEN CommandTest is called with the test Config.
+			// WHEN: CommandTest is called with the test Config.
 			resultChannel <- CommandTest(&tc.flag, &cfg)
 
-			// THEN we get the expected stdout.
+			prefix := fmt.Sprintf(
+				"%s\nCommandTest(%q)",
+				packageName, tc.flag,
+			)
+
+			// THEN: it succeeds/fails as expected.
+			if err := test.AssertChannelBool(
+				t,
+				tc.ok,
+				resultChannel,
+				logx.ExitCodeChannel(),
+				nil,
+			); err != nil {
+				t.Fatal(prefix + err.Error())
+			}
+
+			// AND: we get the expected stdout.
 			stdout := releaseStdout()
 			if tc.stdoutRegex != nil {
 				if !util.RegexCheck(*tc.stdoutRegex, stdout) {
-					t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-						packageName, *tc.stdoutRegex, stdout)
+					t.Errorf(
+						"%s error mismatch\ngot:  %q\nwant: %q",
+						prefix, stdout, *tc.stdoutRegex,
+					)
 				}
-			}
-			// AND it succeeds/fails as expected.
-			if err := test.OkMatch(t, tc.ok, resultChannel, logutil.ExitCodeChannel(), nil); err != nil {
-				t.Fatalf("%s\n%s",
-					packageName, err.Error())
 			}
 		})
 	}

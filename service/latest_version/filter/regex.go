@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,16 +20,16 @@ import (
 	"strings"
 	"time"
 
-	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	"github.com/release-argus/Argus/internal/logx"
+	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
-// RegexCheckVersion returns whether `version` matches the regex.
+// RegexCheckVersion returns an error if version does not match the RegexVersion requirement.
 func (r *Require) RegexCheckVersion(
 	version string,
-	logFrom logutil.LogFrom,
+	logFrom logx.LogFrom,
 ) error {
 	if r == nil {
 		return nil
@@ -41,28 +41,35 @@ func (r *Require) RegexCheckVersion(
 	}
 	regexMatch := util.RegexCheck(r.RegexVersion, version)
 	if !regexMatch {
-		err := fmt.Errorf("regex %q not matched on version %q",
-			r.RegexVersion, version)
+		err := fmt.Errorf(
+			"regex %q not matched on version %q",
+			r.RegexVersion, version,
+		)
 		r.Status.RegexMissVersion()
-		logutil.Log.Info(err, logFrom, r.Status.RegexMissesVersion() == 1)
+		logx.Info(err, logFrom, r.Status.RegexMissesVersion() == 1)
 		return err
 	}
 
 	return nil
 }
 
+// regexCheckString reports whether version matches RegexContent in any of the searchArea strings.
 func (r *Require) regexCheckString(
 	version string,
-	logFrom logutil.LogFrom,
+	logFrom logx.LogFrom,
 	searchArea ...string,
 ) bool {
 	for _, text := range searchArea {
 		regexMatch := util.RegexCheckWithVersion(r.RegexContent, text, version)
-		if logutil.Log.IsLevel("DEBUG") {
-			logutil.Log.Debug(
-				fmt.Sprintf("%q RegexContent on %q, match=%t",
-					r.RegexContent, text, regexMatch),
-				logFrom, true)
+		if logx.IsLevel("DEBUG") {
+			logx.Debug(
+				fmt.Sprintf(
+					"%q RegexContent on %q, match=%t",
+					r.RegexContent, text, regexMatch,
+				),
+				logFrom,
+				true,
+			)
 		}
 		if regexMatch {
 			return true
@@ -72,23 +79,29 @@ func (r *Require) regexCheckString(
 }
 
 // regexCheckContentFail simply returns an error for the RegexCheckContent* functions.
-func (r *Require) regexCheckContentFail(version string, logFrom logutil.LogFrom) error {
+func (r *Require) regexCheckContentFail(version string, logFrom logx.LogFrom) error {
 	// Escape all dots in the version.
-	regexStr := util.TemplateString(r.RegexContent,
+	regexStr := util.TemplateString(
+		r.RegexContent,
 		serviceinfo.ServiceInfo{
-			LatestVersion: strings.ReplaceAll(version, ".", `\.`)})
+			LatestVersion: strings.ReplaceAll(version, ".", `\.`),
+		},
+	)
 	r.Status.RegexMissContent()
-	err := fmt.Errorf("regex %q not matched on content for version %q",
-		regexStr, version)
-	logutil.Log.Info(err, logFrom, r.Status.RegexMissesContent() == 1)
+	err := fmt.Errorf(
+		"regex %q not matched on content for version %q",
+		regexStr, version,
+	)
+	logx.Info(err, logFrom, r.Status.RegexMissesContent() == 1)
 	return err
 }
 
-// RegexCheckContent of body with version.
+// RegexCheckContent returns an error if body does not contain a match for RegexContent
+// with version templated.
 func (r *Require) RegexCheckContent(
 	version string,
 	body string,
-	logFrom logutil.LogFrom,
+	logFrom logx.LogFrom,
 ) error {
 	if r == nil || r.RegexContent == "" {
 		return nil
@@ -103,29 +116,33 @@ func (r *Require) RegexCheckContent(
 	return r.regexCheckContentFail(version, logFrom)
 }
 
-// RegexCheckContentGitHub checks the content of the GitHub release assets.
-// for a RegexContent match.
-//
-//	Returns the date of release.
+// RegexCheckContentGitHub returns the release date from the first GitHub asset matching RegexContent
+// with version templated, or an error if none match.
 func (r *Require) RegexCheckContentGitHub(
 	version string,
-	assets []github_types.Asset,
-	logFrom logutil.LogFrom,
+	assets []ghtypes.Asset,
+	logFrom logx.LogFrom,
 ) (string, error) {
 	if r == nil || r.RegexContent == "" {
 		return "", nil
 	}
 
 	for _, asset := range assets {
-		match := r.regexCheckString(version, logFrom,
-			asset.Name, asset.BrowserDownloadURL)
+		match := r.regexCheckString(
+			version, logFrom,
+			asset.Name, asset.BrowserDownloadURL,
+		)
 		if match {
 			releaseDate := asset.CreatedAt
 			if _, err := time.Parse(time.RFC3339, releaseDate); err != nil && releaseDate != "" {
-				logutil.Log.Warn(
-					fmt.Errorf("ignoring release date of %q for version %q on %q as it's not in RFC3339 format\n%w",
-						releaseDate, version, r.Status.ServiceInfo.ID, err),
-					logFrom, true)
+				logx.Warn(
+					fmt.Errorf(
+						"ignoring release date of %q for version %q on %q as it's not in RFC3339 format: %w",
+						releaseDate, version, r.Status.ServiceInfo.ID, err,
+					),
+					logFrom,
+					true,
+				)
 				return "", nil
 			}
 			// Copy asset date as release date.

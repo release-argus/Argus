@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,11 +16,16 @@
 package base
 
 import (
-	"fmt"
-
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/option"
 )
+
+// DefaultsConfig pairs soft and hard latest version defaults.
+type DefaultsConfig struct {
+	Soft *Defaults
+	Hard *Defaults
+}
 
 // Defaults are the default values for a Lookup.
 type Defaults struct {
@@ -29,11 +34,42 @@ type Defaults struct {
 	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
 	UsePreRelease     *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"`           // Whether releases with prerelease tag are considered.
 
-	Options *opt.Defaults          `json:"-" yaml:"-"`             // Options for the Lookup.
-	Require filter.RequireDefaults `json:"require" yaml:"require"` // Requirements before release considered valid.
+	Options *opt.Defaults          `json:"-" yaml:"-"`                               // Options for the Lookup.
+	Require filter.RequireDefaults `json:"require,omitzero" yaml:"require,omitzero"` // Requirements before release considered valid.
 }
 
-// Default sets these Defaults to the default values.
+// IsZero implements the yaml.IsZeroer interface.
+func (d Defaults) IsZero() bool {
+	return d.Type == "" &&
+		d.AccessToken == "" &&
+		d.AllowInvalidCerts == nil &&
+		d.UsePreRelease == nil &&
+		d.Require.IsZero()
+}
+
+// DefaultsDecode is an unmarshal-only helper for [Defaults].
+type DefaultsDecode struct {
+	Type              string `json:"type,omitempty" yaml:"type,omitempty"`
+	AccessToken       string `json:"access_token,omitempty" yaml:"access_token,omitempty"`
+	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"`
+	UsePreRelease     *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"`
+}
+
+// DecodeDefaults creates and returns new [Defaults] from format-encoded data.
+func DecodeDefaults(format string, data []byte) (*Defaults, error) {
+	var field Defaults
+
+	if err := decode.Unmarshal(format, data, &field); err != nil {
+		return nil, &decode.KeyFieldError{
+			Key: "latest_version",
+			Err: err,
+		}
+	}
+
+	return &field, nil
+}
+
+// Default sets the values of the receiver to their default values.
 func (d *Defaults) Default() {
 	// allow_invalid_certs.
 	allowInvalidCerts := false
@@ -48,11 +84,18 @@ func (d *Defaults) Default() {
 	d.Require.Default()
 }
 
-// CheckValues validates the fields of the Defaults struct.
-func (d *Defaults) CheckValues(prefix string) error {
-	if requireErrs := d.Require.CheckValues(prefix + "  "); requireErrs != nil {
-		return fmt.Errorf("%srequire:\n%w",
-			prefix, requireErrs)
+// SetDefaults assigns defaults to the receiver.
+func (d *Defaults) SetDefaults(dflts *Defaults) {
+	d.Require.SetDefaults(&dflts.Require)
+}
+
+// CheckValues validates the fields of the receiver.
+func (d *Defaults) CheckValues() error {
+	if requireErrs := d.Require.CheckValues(); requireErrs != nil {
+		return &decode.KeyFieldError{
+			Key: "require",
+			Err: requireErrs,
+		}
 	}
 
 	return nil

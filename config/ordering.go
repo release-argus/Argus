@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,12 +20,11 @@ import (
 	"regexp"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/util"
 )
 
-// GetOrder of the Services from `c.File`.
+// GetOrder parses service block order from raw config bytes.
 func (c *Config) GetOrder(data []byte) {
 	data = util.NormaliseNewlines(data)
 	lines := strings.Split(string(data), "\n")
@@ -79,31 +78,36 @@ func (c *Config) GetOrder(data []byte) {
 					line = lines[index]
 
 					indentation = Indentation(lines[index])
-					c.Settings.Indentation = uint8(max(min(float64(len(indentation)), 16), 2))
+					c.Settings.Indentation = uint8(
+						max(
+							min(
+								float64(len(indentation)),
+								16,
+							),
+							2,
+						),
+					)
 				}
 			} else if afterService {
 				break
 			}
 		}
 
-		if afterService &&
-			util.RegexCheck(
-				fmt.Sprintf(`^%s[^ ].*:$`, indentation),
-				line) {
+		if afterService && util.RegexCheck(fmt.Sprintf(`^%s[^ ].*:$`, indentation), line) {
 			// Check whether it is a service and not a setting for a service.
 			yamlLine := strings.TrimSpace(strings.TrimRight(line, ":"))
 			var serviceName string
 			// Unmarshal YAML to handle any special characters.
-			_ = yaml.Unmarshal([]byte(yamlLine), &serviceName) // Unmarshal err caught earlier.
+			_ = decode.Unmarshal("yaml", []byte(yamlLine), &serviceName) // Unmarshal decode caught earlier.
 			if serviceName != "" && c.Service[serviceName] != nil {
 				order = append(order, serviceName)
 			}
 		}
 	}
 
-	c.OrderMutex.Lock()
+	c.OrderMu.Lock()
 	c.Order = order
-	c.OrderMutex.Unlock()
+	c.OrderMu.Unlock()
 }
 
 // Indentation returns the indentation (leading spaces) of the line.

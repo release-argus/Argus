@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@
 package types
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
 
-	logtest "github.com/release-argus/Argus/test/log"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
 var packageName = "api.types"
@@ -35,41 +35,17 @@ func TestMain(m *testing.M) {
 	logtest.InitLog()
 
 	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'.
-	secretValueMarshalledBytes, _ := json.Marshal(util.SecretValue)
+	secretValueMarshalledBytes, _ := decode.Marshal("json", util.SecretValue)
 	secretValueMarshalled = string(secretValueMarshalledBytes)
 
 	// Run other tests.
 	exitCode := m.Run()
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
 	// Exit.
 	os.Exit(exitCode)
-}
-
-func testNotify() Notify {
-	return Notify{
-		URLFields: map[string]string{
-			"username":  "a",
-			"apikey":    "bb",
-			"port":      "ccc",
-			"botkey":    "dddd",
-			"host":      "eeeee",
-			"password":  "ffffff",
-			"token":     "ggggggg",
-			"tokena":    "hhhhhhhh",
-			"tokenb":    "iiiiiiiii",
-			"webhookid": "jjjjjjjjjj",
-		},
-		Params: map[string]string{
-			"botname": "a",
-			"devices": "bb",
-			"color":   "ccc",
-			"host":    "dddd",
-		},
-	}
 }

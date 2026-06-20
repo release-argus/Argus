@@ -4,7 +4,10 @@ import {
 	GOTIFY_EXTRA_NAMESPACE,
 	gotifyExtraClientDisplayContentTypeOptions,
 } from '@/utils/api/types/config/notify/gotify.ts';
-import { makeDefaultsAwareListPreprocessor } from '@/utils/api/types/config-edit/shared/preprocess.ts';
+import {
+	makeDefaultsAwareListPreprocessor,
+	stringDefault,
+} from '@/utils/api/types/config-edit/shared/preprocess.ts';
 import { REQUIRED_MESSAGE } from '@/utils/api/types/config-edit/validators.ts';
 
 /* Extras */
@@ -18,7 +21,7 @@ const gotifyExtraAndroidActionSchema = z.object({
 	namespace: z.literal(GOTIFY_EXTRA_NAMESPACE.ANDROID_ACTION.value),
 	onReceive: z
 		.object({
-			intentUrl: z.string().default(''),
+			intentUrl: stringDefault,
 		})
 		.default({ intentUrl: '' }),
 });
@@ -37,10 +40,10 @@ const gotifyExtraClientDisplaySchema = z.object({
 
 // namespace: client::notification.
 const gotifyExtraClientNotificationSchema = z.object({
-	bigImageUrl: z.string().default(''),
+	bigImageUrl: stringDefault,
 	click: z
 		.object({
-			url: z.string().default(''),
+			url: stringDefault,
 		})
 		.default({ url: '' }),
 	namespace: z.literal(GOTIFY_EXTRA_NAMESPACE.CLIENT_NOTIFICATION.value),
@@ -57,9 +60,9 @@ const gotifyExtraClientNotificationSchemaWithValidation =
 
 // namespace: other.
 const gotifyExtraOtherSchema = z.object({
-	_namespace: z.string().default(''),
+	_namespace: stringDefault,
 	namespace: z.literal(GOTIFY_EXTRA_NAMESPACE.OTHER.value),
-	value: z.string().default(''),
+	value: stringDefault,
 });
 const gotifyExtraOtherSchemaWithValidation = gotifyExtraOtherSchema.extend({
 	_namespace: z.string().min(1, REQUIRED_MESSAGE).default(''),

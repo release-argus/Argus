@@ -10,7 +10,7 @@ import { removeEmptyValues } from '@/utils/index';
 import { isEmptyObject, isEmptyOrNull } from '@/utils/is-empty';
 import { replaceUndefinedWithNull } from '@/utils/json-stringify-helpers';
 
-// Helper to turn an object's shape into a "null" overlay (all leaf values null).
+// Helper to turn an object's shape into a "null" overlay (all leaves null).
 const nullifyObject = (obj: unknown): unknown => {
 	if (obj == null || Array.isArray(obj) || typeof obj !== 'object') return null;
 
@@ -31,22 +31,25 @@ const nullifyObject = (obj: unknown): unknown => {
  *
  * @param newObj - The new object to compare.
  * @param oldObj - The old object to compare.
+ * @param typeChanged - Whether the type of the object has changed (and all keys should be treated as new).
  * @returns The differences between the two objects.
  */
 export const deepDiff = <T extends Record<string, unknown>>(
 	newObj: T,
 	oldObj?: T | null,
+	typeChanged = false,
 ): Partial<T> => {
 	// If `oldObj` empty/undefined/null, return the newObj.
 	// e.g. DeployedVersion has no defaults.
 	if (isEmptyOrNull(oldObj)) return newObj;
 
 	// get all keys from both objects.
-	const allKeys = [
-		...new Set([...Object.keys(oldObj), ...Object.keys(newObj)]),
-	];
+	const allKeys = new Set([...Object.keys(oldObj), ...Object.keys(newObj)]);
+	typeChanged =
+		typeChanged || (allKeys.has('type') && newObj?.type !== oldObj?.type);
+	if (typeChanged) return newObj;
 
-	return allKeys.reduce<Partial<T>>((acc, key) => {
+	return Array.from(allKeys).reduce<Partial<T>>((acc, key) => {
 		const newValue = newObj[key];
 		const oldValue = oldObj[key];
 
@@ -67,12 +70,13 @@ export const deepDiff = <T extends Record<string, unknown>>(
 		const isOldObj =
 			oldValue && typeof oldValue === 'object' && !Array.isArray(oldValue);
 
-		let diffValue: T[keyof T] | undefined = undefined;
+		let diffValue: T[keyof T] | undefined;
 
 		if (isNewObj && isOldObj) {
 			const subDiff = deepDiff(
 				newValue as Record<string, unknown>,
 				oldValue as Record<string, unknown>,
+				typeChanged,
 			);
 			if (!isEmptyObject(subDiff)) diffValue = subDiff as T[keyof T];
 		} else if (Array.isArray(newValue) || Array.isArray(oldValue)) {
@@ -89,7 +93,7 @@ export const deepDiff = <T extends Record<string, unknown>>(
 						oldItem != null &&
 						typeof oldItem === 'object'
 					) {
-						return Object.keys(deepDiff(item, oldItem)).length > 0;
+						return Object.keys(deepDiff(item, oldItem, typeChanged)).length > 0;
 					}
 					return item !== oldItem;
 				});

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package command provides the cli command functionality for Argus.
+// Package command provides CLI command execution for services.
 package command
 
 import (
@@ -22,21 +22,31 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/release-argus/Argus/internal/logx"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Exec will execute every `Command` for the controller.
-func (c *Controller) Exec(logFrom logutil.LogFrom) error {
-	if c == nil || c.Command == nil || len(*c.Command) == 0 {
+// ApplyTemplate applies Django templating to the receiver and returns a new [Command].
+func (c *Command) ApplyTemplate(serviceInfo serviceinfo.ServiceInfo) Command {
+	command := Command(make([]string, len(*c)))
+	copy(command, *c)
+	for i, cmd := range command {
+		command[i] = util.TemplateString(cmd, serviceInfo)
+	}
+	return command
+}
+
+// Exec runs every command in the receiver, staggering starts across goroutines.
+func (c *Controller) Exec(logFrom logx.LogFrom) error {
+	if c == nil || c.Command == nil || len(c.Command) == 0 {
 		return nil
 	}
 
 	svcInfo := c.ServiceStatus.GetServiceInfo()
 	errChan := make(chan error)
-	for index := range *c.Command {
+	for index := range c.Command {
 		go func(controller *Controller, index int) {
 			errChan <- controller.ExecIndex(logFrom, index, svcInfo)
 		}(c, index)
@@ -48,7 +58,7 @@ func (c *Controller) Exec(logFrom logutil.LogFrom) error {
 
 	// Collect potential errors from all goroutines.
 	var errs []error
-	for range *c.Command {
+	for range c.Command {
 		if err := <-errChan; err != nil {
 			errs = append(errs, err)
 		}
@@ -60,20 +70,20 @@ func (c *Controller) Exec(logFrom logutil.LogFrom) error {
 	return errors.Join(errs...)
 }
 
-// ExecIndex will execute the `Command` at the given index.
+// ExecIndex executes the command at index and records metrics and failure state.
 func (c *Controller) ExecIndex(
-	logFrom logutil.LogFrom,
+	logFrom logx.LogFrom,
 	index int,
 	serviceInfo serviceinfo.ServiceInfo,
 ) error {
-	if index >= len(*c.Command) {
+	if index >= len(c.Command) {
 		return nil
 	}
 	// block reruns whilst running.
 	c.SetExecuting(index, true)
 
 	// Copy Command and apply Jinja templating.
-	command := (*c.Command)[index].ApplyTemplate(serviceInfo)
+	command := (c.Command)[index].ApplyTemplate(serviceInfo)
 
 	// Execute.
 	err := command.Exec(logFrom)
@@ -92,43 +102,38 @@ func (c *Controller) ExecIndex(
 		//nolint:errcheck // ^
 		c.Notifiers.Shoutrrr.Send(
 			fmt.Sprintf("Command failed for %q", serviceInfo.ID),
-			(*c.Command)[index].String()+"\n"+err.Error(),
+			(c.Command)[index].String()+"\n"+err.Error(),
 			serviceInfo,
-			true)
+			true,
+		)
 	}
-	metric.IncPrometheusCounter(metric.CommandResultTotal,
-		(*c.Command)[index].String(),
+	metric.IncPrometheusCounter(
+		metric.CommandResultTotal,
+		(c.Command)[index].String(),
 		serviceInfo.ID,
 		"",
-		metricResult)
+		metricResult,
+	)
 
 	return err
 }
 
-// Exec this Command and return any errors encountered.
-func (c *Command) Exec(logFrom logutil.LogFrom) error {
-	logutil.Log.Info(
+// Exec executes the command and returns any error encountered.
+func (c *Command) Exec(logFrom logx.LogFrom) error {
+	logx.Info(
 		fmt.Sprintf("Executing '%s'", c),
-		logFrom, true)
+		logFrom,
+		true,
+	)
 	//#nosec G204 -- Command is user defined.
 	out, err := exec.Command((*c)[0], (*c)[1:]...).Output()
 
 	if err != nil {
-		logutil.Log.Error(err, logFrom, true)
+		logx.Error(err, logFrom, true)
 	} else {
-		logutil.Log.Info(string(out), logFrom, string(out) != "")
+		logx.Info(string(out), logFrom, string(out) != "")
 	}
 
 	//nolint:wrapcheck
 	return err
-}
-
-// ApplyTemplate applies Django templating to the Command.
-func (c *Command) ApplyTemplate(serviceInfo serviceinfo.ServiceInfo) Command {
-	command := Command(make([]string, len(*c)))
-	copy(command, *c)
-	for i, cmd := range command {
-		command[i] = util.TemplateString(cmd, serviceInfo)
-	}
-	return command
 }

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,14 +19,15 @@ import (
 	"database/sql"
 
 	"github.com/release-argus/Argus/config"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/internal/logx"
 )
 
+// api holds database state and the config used to populate service status.
 type api struct {
 	config *config.Config
 	db     *sql.DB
 }
 
 var (
-	logFrom logutil.LogFrom = logutil.LogFrom{Primary: "db"}
+	logFrom logx.LogFrom = logx.LogFrom{Primary: "db"}
 )

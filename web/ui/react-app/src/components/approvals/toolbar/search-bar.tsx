@@ -1,7 +1,6 @@
 import { SearchIcon, X } from 'lucide-react';
 import { type FC, useEffect, useRef } from 'react';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
-import { Button } from '@/components/ui/button';
 import {
 	InputGroup,
 	InputGroupAddon,
@@ -9,7 +8,6 @@ import {
 	InputGroupInput,
 } from '@/components/ui/input-group';
 import { Kbd } from '@/components/ui/kbd';
-import { Separator } from '@/components/ui/separator';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 /**
@@ -79,7 +77,7 @@ const SearchBar: FC = () => {
 				</InputGroupAddon>
 			)}
 			{search && (
-				<InputGroupAddon align="inline-end" className="!py-0 !pr-1.5 gap-0">
+				<InputGroupAddon align="inline-end" className="gap-0 py-0! pr-1.5!">
 					<InputGroupButton
 						aria-label="Clear search"
 						className="order-last rounded-l-none border-l text-muted-foreground hover:text-foreground focus-visible:text-foreground"

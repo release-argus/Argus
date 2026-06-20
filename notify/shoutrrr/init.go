@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,62 +21,12 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Init the Shoutrrrs metrics and hand out the defaults.
-func (s *Shoutrrrs) Init(
-	serviceStatus *status.Status,
-	mains *ShoutrrrsDefaults,
-	defaults, hardDefaults *ShoutrrrsDefaults,
-) {
-	if s == nil {
-		return
-	}
-	if mains == nil || len(*mains) == 0 {
-		mains = &ShoutrrrsDefaults{}
-	}
-
-	for key, shoutrrr := range *s {
-		if shoutrrr == nil {
-			shoutrrr = &Shoutrrr{}
-			(*s)[key] = shoutrrr // Update the map.
-		}
-		shoutrrr.ID = key
-
-		main := (*mains)[key]
-		if main == nil {
-			main = &Defaults{}
-			main.InitMaps()
-		}
-
-		// Get Type from this, the associated Main, or the ID.
-		notifyType := util.FirstNonDefault(
-			shoutrrr.Type,
-			main.Type,
-			key)
-
-		// Ensure defaults aren't nil.
-		if len(*defaults) == 0 {
-			defaults = &ShoutrrrsDefaults{}
-		}
-		if (*defaults)[notifyType] == nil {
-			(*defaults)[notifyType] = &Defaults{}
-		}
-		if (*hardDefaults)[notifyType] == nil {
-			(*hardDefaults)[notifyType] = &Defaults{}
-		}
-
-		shoutrrr.Init(
-			serviceStatus,
-			main,
-			(*defaults)[notifyType], (*hardDefaults)[notifyType])
-	}
-}
-
-// Init the Shoutrrr.
+// Init initialises the receiver, ensuring maps are non-nil with lowercase keys.
 func (b *Base) Init() {
 	b.InitMaps()
 }
 
-// Init the Shoutrrr metrics and hand out the defaults.
+// Init wires defaults, status tracking, and failure state into the Shoutrrr.
 func (s *Shoutrrr) Init(
 	serviceStatus *status.Status,
 	main *Defaults,
@@ -89,9 +39,8 @@ func (s *Shoutrrr) Init(
 	s.InitMaps()
 	s.ServiceStatus = serviceStatus
 
-	// Give the matching main.
+	// Assign the matching main.
 	s.Main = main
-	// Create a new main if nil.
 	if main == nil {
 		s.Main = &Defaults{}
 	}
@@ -106,48 +55,76 @@ func (s *Shoutrrr) Init(
 
 	s.Main.Init()
 
-	// Give Defaults.
 	s.Defaults = defaults
-	s.Defaults.Init()
-
-	// Give Hard Defaults.
 	s.HardDefaults = hardDefaults
-	s.HardDefaults.Init()
 }
 
-// InitMaps will initialise all maps, converting all keys to lowercase.
+// Init assigns defaults and failure tracking to each Shoutrrr in the map.
+func (s *Shoutrrrs) Init(serviceStatus *status.Status, cfg Config) {
+	if s == nil {
+		return
+	}
+
+	for key, shoutrrr := range *s {
+		if shoutrrr == nil {
+			shoutrrr = &Shoutrrr{}
+			(*s)[key] = shoutrrr // Update the map.
+		}
+		shoutrrr.ID = key
+
+		main := cfg.Root[key]
+		if main == nil {
+			main = &Defaults{}
+			main.InitMaps()
+		}
+
+		// Get Type from this, the associated Main, or the ID.
+		notifyType := util.FirstNonDefault(
+			shoutrrr.Type,
+			main.Type,
+			key,
+		)
+
+		// Ensure defaults aren't nil.
+		if len(cfg.Defaults) == 0 {
+			cfg.Defaults = ShoutrrrsDefaults{}
+		}
+		if cfg.Defaults[notifyType] == nil {
+			cfg.Defaults[notifyType] = &Defaults{}
+		}
+		if cfg.HardDefaults[notifyType] == nil {
+			cfg.HardDefaults[notifyType] = &Defaults{}
+		}
+
+		shoutrrr.Init(
+			serviceStatus,
+			main,
+			(cfg.Defaults)[notifyType], (cfg.HardDefaults)[notifyType],
+		)
+	}
+}
+
+// InitMaps initialises all maps and lowercases all keys.
+func (b *Base) InitMaps() {
+	b.Options = util.EnsureMap(b.Options)
+	b.Options = util.LowercaseKeys(b.Options)
+
+	b.URLFields = util.EnsureMap(b.URLFields)
+	b.URLFields = util.LowercaseKeys(b.URLFields)
+
+	b.Params = util.EnsureMap(b.Params)
+	b.Params = util.LowercaseKeys(b.Params)
+}
+
+// InitMaps initialises all maps and lowercases all keys.
 func (s *Shoutrrr) InitMaps() {
 	if s == nil {
 		return
 	}
-	s.initOptions()
-	s.initURLFields()
-	s.initParams()
+	s.Base.InitMaps()
 }
 
-// initOptions mapping, converting all keys to lowercase.
-func (b *Base) initOptions() {
-	util.LowercaseStringStringMap(&b.Options)
-}
-
-// initURLFields mapping, converting all keys to lowercase.
-func (b *Base) initURLFields() {
-	util.LowercaseStringStringMap(&b.URLFields)
-}
-
-// initParams mapping, converting all keys to lowercase.
-func (b *Base) initParams() {
-	util.LowercaseStringStringMap(&b.Params)
-}
-
-// InitMaps will initialise all maps, converting all keys to lowercase.
-func (b *Base) InitMaps() {
-	b.initOptions()
-	b.initURLFields()
-	b.initParams()
-}
-
-// InitMetrics for this Shoutrrrs.
+// InitMetrics registers Prometheus counters for all Shoutrrr elements.
 func (s *Shoutrrrs) InitMetrics() {
 	if s == nil {
 		return
@@ -158,26 +135,7 @@ func (s *Shoutrrrs) InitMetrics() {
 	}
 }
 
-// initMetrics for this Shoutrrr.
-func (s *Shoutrrr) initMetrics() {
-	serviceID := s.ServiceStatus.ServiceInfo.ID
-
-	// ############
-	// # Counters #
-	// ############
-	metric.InitPrometheusCounter(metric.NotifyResultTotal,
-		s.ID,
-		serviceID,
-		s.GetType(),
-		metric.ActionResultSuccess)
-	metric.InitPrometheusCounter(metric.NotifyResultTotal,
-		s.ID,
-		serviceID,
-		s.GetType(),
-		metric.ActionResultFail)
-}
-
-// DeleteMetrics for this Shoutrrrs.
+// DeleteMetrics removes Prometheus counters for all Shoutrrr elements.
 func (s *Shoutrrrs) DeleteMetrics() {
 	if s == nil {
 		return
@@ -188,21 +146,48 @@ func (s *Shoutrrrs) DeleteMetrics() {
 	}
 }
 
-// deleteMetrics for this Shoutrrr.
+// initMetrics registers Prometheus counters for Shoutrrr success/failure results.
+func (s *Shoutrrr) initMetrics() {
+	serviceID := s.ServiceStatus.ServiceInfo.ID
+
+	// ############
+	// # Counters #
+	// ############
+	metric.InitPrometheusCounter(
+		metric.NotifyResultTotal,
+		s.ID,
+		serviceID,
+		s.GetType(),
+		metric.ActionResultSuccess,
+	)
+	metric.InitPrometheusCounter(
+		metric.NotifyResultTotal,
+		s.ID,
+		serviceID,
+		s.GetType(),
+		metric.ActionResultFail,
+	)
+}
+
+// deleteMetrics removes Prometheus counters for Notify success/failure results.
 func (s *Shoutrrr) deleteMetrics() {
 	serviceID := s.ServiceStatus.ServiceInfo.ID
 
 	// ############
 	// # Counters #
 	// ############
-	metric.DeletePrometheusCounter(metric.NotifyResultTotal,
+	metric.DeletePrometheusCounter(
+		metric.NotifyResultTotal,
 		s.ID,
 		serviceID,
 		s.GetType(),
-		metric.ActionResultSuccess)
-	metric.DeletePrometheusCounter(metric.NotifyResultTotal,
+		metric.ActionResultSuccess,
+	)
+	metric.DeletePrometheusCounter(
+		metric.NotifyResultTotal,
 		s.ID,
 		serviceID,
 		s.GetType(),
-		metric.ActionResultFail)
+		metric.ActionResultFail,
+	)
 }

@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package v1
 
 import (
-	"encoding/json"
+	"errors"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -25,19 +25,21 @@ import (
 	"github.com/vearutop/statigz"
 	"github.com/vearutop/statigz/brotli"
 
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/util/errfmt"
 	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/web/ui"
 )
 
-// SetupRoutesAPI will set up the HTTP API routes.
+// SetupRoutesAPI sets up the HTTP API routes.
 func (api *API) SetupRoutesAPI() {
 	// Create a subrouter for "/api/v1".
 	v1Router := api.Router.PathPrefix("/api/v1").Subrouter()
 
 	// Only if VERBOSE or DEBUG.
-	if logutil.Log.Level >= 3 {
+	if logx.Level() >= 3 {
 		// Apply loggerMiddleware to only the /api/v1 routes.
 		v1Router.Use(loggerMiddleware)
 	}
@@ -134,9 +136,11 @@ func (api *API) DisableRoutes() {
 		route.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			disabledMethod := disabledMethod
 			if r.Method == disabledMethod {
-				failRequest(&w,
-					"Route disabled",
-					http.StatusNotFound)
+				failRequest(
+					&w,
+					errors.New("route disabled"),
+					http.StatusNotFound,
+				)
 				return
 			}
 
@@ -148,7 +152,7 @@ func (api *API) DisableRoutes() {
 	})
 }
 
-// SetupRoutesNodeJS will set up the HTTP routes to the Node.js files.
+// SetupRoutesNodeJS sets up the HTTP routes to the Node.js files.
 func (api *API) SetupRoutesNodeJS() {
 	nodeRoutes := []string{
 		"/approvals",
@@ -159,16 +163,25 @@ func (api *API) SetupRoutesNodeJS() {
 	// Serve the Node.js files.
 	for _, route := range nodeRoutes {
 		prefix := strings.TrimRight(api.RoutePrefix, "/") + route
-		api.Router.Handle(route, http.StripPrefix(prefix,
-			statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding)))
+		api.Router.Handle(
+			route,
+			http.StripPrefix(
+				prefix,
+				statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding),
+			),
+		)
 	}
 
 	// Favicon override.
 	api.SetupRoutesFavicon()
 
 	// Catch-all for JS, CSS, etc...
-	api.Router.PathPrefix("/").Handler(http.StripPrefix(api.RoutePrefix,
-		statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding)))
+	api.Router.PathPrefix("/").Handler(
+		http.StripPrefix(
+			api.RoutePrefix,
+			statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding),
+		),
+	)
 }
 
 // SetupRoutesFavicon adds any favicon route overrides.
@@ -179,42 +192,57 @@ func (api *API) SetupRoutesFavicon() {
 
 	if api.Config.Settings.Web.Favicon.SVG != "" {
 		api.Router.HandleFunc("/favicon.svg", func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r,
+			http.Redirect(
+				w, r,
 				api.Config.Settings.Web.Favicon.SVG,
-				http.StatusPermanentRedirect)
+				http.StatusPermanentRedirect,
+			)
 		})
 	}
 	if api.Config.Settings.Web.Favicon.PNG != "" {
 		api.Router.HandleFunc("/apple-touch-icon.png", func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r,
+			http.Redirect(
+				w, r,
 				api.Config.Settings.Web.Favicon.PNG,
-				http.StatusPermanentRedirect)
+				http.StatusPermanentRedirect,
+			)
 		})
 	}
 }
 
 // httpVersion serves Argus version JSON over HTTP.
 func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
-	logFrom := logutil.LogFrom{Primary: "httpVersion", Secondary: getIP(r)}
+	logFrom := logx.LogFrom{Primary: "httpVersion", Secondary: getIP(r)}
 
-	api.writeJSON(w,
+	api.writeJSON(
+		w,
 		apitype.VersionAPI{
 			Version:   util.Version,
 			BuildDate: util.BuildDate,
 			GoVersion: util.GoVersion,
 		},
-		logFrom)
+		logFrom,
+	)
+}
+
+// marshalFailRequestBody serialises failRequest responses (overridable for tests).
+var marshalFailRequestBody = func(v map[string]string) ([]byte, error) {
+	return decode.Marshal("json", v)
 }
 
 // failRequest returns a JSON response containing a message and status code.
-func failRequest(w *http.ResponseWriter, message string, statusCode int) {
+func failRequest(w *http.ResponseWriter, err error, statusCode int) {
 	// Write the response.
 	(*w).WriteHeader(statusCode)
 	resp := map[string]string{
-		"message": message,
+		"message": errfmt.FormatError(err),
 	}
-	jsonResp, _ := json.Marshal(resp)
-	//#nosec G104 -- Disregard.
-	//nolint:errcheck // ^
-	(*w).Write(jsonResp)
+	jsonResp, marshalErr := marshalFailRequestBody(resp)
+	if marshalErr != nil {
+		logx.Error(marshalErr, logx.LogFrom{Primary: "failRequest"}, true)
+		jsonResp = []byte(`{"message":"failed to encode error response"}`)
+	}
+	if _, writeErr := (*w).Write(jsonResp); writeErr != nil {
+		logx.Error(writeErr, logx.LogFrom{Primary: "failRequest"}, true)
+	}
 }

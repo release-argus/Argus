@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package base provides the base struct for latest_version lookups.
-//go:build unit
+//go:build integration
 
 package base
 
@@ -28,54 +28,65 @@ import (
 )
 
 func TestLookup_Metrics(t *testing.T) {
-	// GIVEN a Lookup.
+	// GIVEN: a Lookup.
 	lookup := Lookup{
-		Type: "test"}
+		Type: "test",
+	}
 	lookup.Status = &status.Status{}
 	lookup.Status.ServiceInfo.ID = "TestLookup_Metrics"
 
-	// WHEN the Prometheus metrics are initialised with initMetrics.
+	// WHEN: the Prometheus metrics are initialised with initMetrics.
 	hadC := testutil.CollectAndCount(metric.LatestVersionQueryResultTotal)
 	hadG := testutil.CollectAndCount(metric.LatestVersionQueryResultLast)
 	lookup.InitMetrics(&lookup)
 
-	// THEN it can be collected.
+	// THEN: it can be collected.
 	// counters:
 	gotC := testutil.CollectAndCount(metric.LatestVersionQueryResultTotal)
 	wantC := 2 + hadC
 	if gotC != wantC {
-		t.Errorf("%s\nCounter metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
-			packageName, wantC, gotC)
+		t.Errorf(
+			"%s\nLookup.InitMetrics() Counter metrics mismatch\ngot:  %d\nwant: %d",
+			packageName, gotC, wantC,
+		)
 	}
 	// gauges:
 	gotG := testutil.CollectAndCount(metric.LatestVersionQueryResultLast)
 	wantG := 0 + hadG
 	if gotG != wantG {
-		t.Errorf("%s\nGauge metrics mismatch after InitMetrics()\nwant: %d\ngot:  %d",
-			packageName, wantG, gotG)
+		t.Errorf(
+			"%s\nLookup.InitMetrics() Gauge metrics mismatch\ngot:  %d\nwant: %d",
+			packageName, gotG, wantG,
+		)
 	}
 	// But can be added.
 	lookup.QueryMetrics(&lookup, nil)
 	gotG = testutil.CollectAndCount(metric.LatestVersionQueryResultLast)
 	wantG = 1 + hadG
 	if gotG != wantG {
-		t.Errorf("%s\nGauge metrics mismatch after QueryMetrics()\nwant: %d\ngot:  %d",
-			packageName, wantG, gotG)
+		t.Errorf(
+			"%s\nLookup.QueryMetrics() Gauge metrics mismatch\ngot:  %d\nwant: %d",
+			packageName, gotG, wantG,
+		)
 	}
 
-	// AND it can be deleted.
+	// AND: it can be deleted.
 	lookup.DeleteMetrics(&lookup)
 	// counters:
 	gotC = testutil.CollectAndCount(metric.LatestVersionQueryResultTotal)
 	if gotC != hadC {
-		t.Errorf("%s\nCounter metrics mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
-			packageName, hadC, gotC)
+		t.Errorf(
+			"%s\nLookup.DeleteMetrics() Counter metrics mismatch\ngot:  %d\nwant: %d",
+			packageName, gotC, hadC,
+		)
 	}
 	// gauges:
 	gotG = testutil.CollectAndCount(metric.LatestVersionQueryResultLast)
 	if gotG != hadG {
-		t.Errorf("%s\nGauge metrics mismatch after DeleteMetrics()\nwant: %d\ngot:  %d",
-			packageName, hadG, gotG)
+		t.Errorf(
+			"%s\nLookup.DeleteMetrics() Gauge metrics mismatch\ngot:  %d\nwant: %d",
+			packageName, gotG, hadG,
+		)
 	}
 }
 
@@ -83,65 +94,85 @@ func TestLookup_QueryMetrics(t *testing.T) {
 	type args struct {
 		err error
 	}
-	// GIVEN a Lookup and args for QueryMetrics.
-	tests := map[string]struct {
+	// GIVEN: a Lookup and args for QueryMetrics.
+	tests := []struct {
+		name     string
 		args     args
 		liveness metric.LatestVersionQueryResult
 	}{
-		"success": {
+		{
+			name: "success",
 			args: args{
-				err: nil},
+				err: nil,
+			},
 			liveness: metric.LatestVersionQueryResultSuccess,
 		},
-		"regex error": {
+		{
+			name: "regex error",
 			args: args{
-				err: errors.New("no releases were found matching the stuff")},
+				err: errors.New("no releases were found matching the stuff"),
+			},
 			liveness: metric.LatestVersionQueryResultNoMatch,
 		},
-		"semantic version error": {
+		{
+			name: "semantic version error",
 			args: args{
-				err: errors.New("failed to convert x to a semantic version.")},
+				err: errors.New("failed to convert \"x\" to a semantic version."),
+			},
 			liveness: metric.LatestVersionQueryResultSemanticVersionFail,
 		},
-		"version less than error": {
+		{
+			name: "other error",
 			args: args{
-				err: errors.New("queried version x is less than the deployed version")},
-			liveness: metric.LatestVersionQueryResultProgressiveVersionFail,
-		},
-		"other error": {
-			args: args{
-				err: errors.New("some other error")},
+				err: errors.New("some other error"),
+			},
 			liveness: metric.LatestVersionQueryResultFailed,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			lookup := Lookup{
 				Type:   "test",
-				Status: &status.Status{}}
-			serviceID := "TestLookup_QueryMetrics__" + name
+				Status: &status.Status{},
+			}
+			serviceID := "TestLookup_QueryMetrics__" + tc.name
 			lookup.Status.ServiceInfo.ID = serviceID
 			lookup.InitMetrics(&lookup)
+			t.Cleanup(func() {
+				lookup.DeleteMetrics(&lookup)
+			})
 
-			// AND the Prometheus metrics are initialised to 0.
-			counterSuccess := testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-				serviceID, lookup.GetType(), metric.ActionResultSuccess))
-			counterFail := testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-				serviceID, lookup.GetType(), metric.ActionResultFail))
-			gauge := testutil.ToFloat64(metric.LatestVersionQueryResultLast.WithLabelValues(
-				serviceID, lookup.GetType()))
+			// AND: the Prometheus metrics are initialised to 0.
+			counterSuccess := testutil.ToFloat64(
+				metric.LatestVersionQueryResultTotal.WithLabelValues(
+					serviceID, lookup.GetType(), metric.ActionResultSuccess,
+				),
+			)
+			counterFail := testutil.ToFloat64(
+				metric.LatestVersionQueryResultTotal.WithLabelValues(
+					serviceID, lookup.GetType(), metric.ActionResultFail,
+				),
+			)
+			gauge := testutil.ToFloat64(
+				metric.LatestVersionQueryResultLast.WithLabelValues(
+					serviceID, lookup.GetType(),
+				),
+			)
 			if counterSuccess != 0 || counterFail != 0 || gauge != 0 {
-				t.Errorf("%s\nMetrics were not initialised correctly. Got %f, %f, %f",
-					packageName, counterSuccess, counterFail, gauge)
+				t.Errorf(
+					"%s\nLookup.InitMetrics() did not initialise metrics correctly\n"+
+						"Got success_count=%f, fail_count=%f, last_query_result=%f",
+					packageName, counterSuccess, counterFail, gauge,
+				)
 			}
 
-			// WHEN QueryMetrics is called.
+			// WHEN: QueryMetrics is called.
 			lookup.QueryMetrics(&lookup, tc.args.err)
 
-			// THEN the Prometheus metrics are updated.
+			// THEN: the Prometheus metrics are updated.
 			wantSuccess := float64(0)
 			wantFail := float64(0)
 			wantGauge := float64(tc.liveness)
@@ -151,19 +182,32 @@ func TestLookup_QueryMetrics(t *testing.T) {
 				wantFail = 1
 			}
 
-			counterSuccess = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-				serviceID, lookup.GetType(), metric.ActionResultSuccess))
-			counterFail = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-				serviceID, lookup.GetType(), metric.ActionResultFail))
-			gauge = testutil.ToFloat64(metric.LatestVersionQueryResultLast.WithLabelValues(
-				serviceID, lookup.GetType()))
+			counterSuccess = testutil.ToFloat64(
+				metric.LatestVersionQueryResultTotal.WithLabelValues(
+					serviceID, lookup.GetType(), metric.ActionResultSuccess,
+				),
+			)
+			counterFail = testutil.ToFloat64(
+				metric.LatestVersionQueryResultTotal.WithLabelValues(
+					serviceID, lookup.GetType(), metric.ActionResultFail,
+				),
+			)
+			gauge = testutil.ToFloat64(
+				metric.LatestVersionQueryResultLast.WithLabelValues(
+					serviceID, lookup.GetType(),
+				),
+			)
 			if counterSuccess != wantSuccess ||
 				counterFail != wantFail ||
 				gauge != wantGauge {
-				t.Errorf("%s\nMetrics not updated correctly.\nwant: %f, %f, %f\ngot:  %f, %f, %f",
-					packageName,
+				t.Errorf(
+					"%s\nMetrics mismatch after Lookup QueryMetrics(%v)\n"+
+						"got:  success_count=%f, fail_count=%f, last_query_result=%f\n"+
+						"want: success_count=%f, fail_count=%f, last_query_result=%f",
+					packageName, tc.args.err,
+					counterSuccess, counterFail, gauge,
 					wantSuccess, wantFail, wantGauge,
-					counterSuccess, counterFail, gauge)
+				)
 			}
 		})
 	}

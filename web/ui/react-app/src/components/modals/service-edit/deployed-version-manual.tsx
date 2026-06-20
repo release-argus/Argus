@@ -105,7 +105,7 @@ const DeployedVersionManual = () => {
 				dataTarget: 'deployed_version',
 				original:
 					original?.type === DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value
-						? // Use live deployed-version.
+						? // Use live deployed version.
 							{
 								type: DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value,
 								version: serviceData?.status?.deployed_version ?? '',
@@ -145,7 +145,7 @@ const DeployedVersionManual = () => {
 									type="text"
 								/>
 								{canSave && field.value && (
-									<InputGroupAddon align="inline-end" className="!py-0 !pr-1.5">
+									<InputGroupAddon align="inline-end" className="py-0! pr-1.5!">
 										<InputGroupButton
 											aria-label="Save version"
 											className="rounded-l-none border-l"

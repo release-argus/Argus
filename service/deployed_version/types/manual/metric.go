@@ -17,17 +17,17 @@ package manual
 
 import "github.com/release-argus/Argus/service/deployed_version/types/base"
 
-// InitMetrics for this Lookup.
+// InitMetrics implements the base.Interface interface.
 func (l *Lookup) InitMetrics(parentLookup base.Interface) {
 	// No metrics.
 }
 
-// DeleteMetrics for this Lookup.
+// DeleteMetrics implements the base.Interface interface.
 func (l *Lookup) DeleteMetrics(parentLookup base.Interface) {
 	// No metrics.
 }
 
-// QueryMetrics sets the Prometheus metrics for the DeployedVersion query.
+// QueryMetrics implements the base.Interface interface.
 func (l *Lookup) QueryMetrics(parentLookup base.Interface, err error) {
 	// No queries or metrics.
 }

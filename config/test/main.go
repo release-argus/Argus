@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,11 +17,15 @@
 package test
 
 import (
+	"testing"
+
 	"github.com/release-argus/Argus/config"
 )
 
 // NilFlags sets all flags to nil in the given config.
-func NilFlags(cfg *config.Config) {
+func NilFlags(t *testing.T, cfg *config.Config) {
+	t.Helper()
+
 	flags := []string{
 		"log.level",
 		"log.timestamps",
@@ -42,19 +46,23 @@ func NilFlags(cfg *config.Config) {
 }
 
 // BareConfig returns a minimal config with no flags set.
-func BareConfig(nilFlags bool) (cfg *config.Config) {
+func BareConfig(t *testing.T, nilFlags bool) (cfg *config.Config) {
+	t.Helper()
 
 	cfg = &config.Config{
 		Settings: config.Settings{
 			SettingsBase: config.SettingsBase{
 				Web: config.WebSettings{
 					RoutePrefix: "",
-				}}},
-		Order: []string{}}
+				},
+			},
+		},
+		Order: []string{},
+	}
 
 	// NilFlags can be a RACE condition, so use it conditionally.
 	if nilFlags {
-		NilFlags(cfg)
+		NilFlags(t, cfg)
 	}
 
 	cfg.HardDefaults.Default()

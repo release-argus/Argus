@@ -170,7 +170,7 @@ const Header = () => {
 								>
 									<CollapsibleTrigger asChild>
 										<Button
-											className="!px-4 flex w-full items-center justify-between py-2 text-sm"
+											className="flex w-full items-center justify-between px-4! py-2 text-sm"
 											variant="ghost"
 										>
 											{option.name}

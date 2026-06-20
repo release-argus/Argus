@@ -17,6 +17,7 @@ import type { NonNull } from '@/types/util';
 import {
 	type DockerFilterType,
 	type DockerFilterUsername,
+	type DockerFilterUsernameDefaults,
 	type DockerType,
 	LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE,
 	LATEST_VERSION_LOOKUP_TYPE,
@@ -84,8 +85,7 @@ const EditServiceLatestVersionRequire = () => {
 	const showUsernameField =
 		selectedDockerRegistry ===
 		LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value;
-
-	const dockerDefaults = defaults?.docker?.[selectedDockerRegistry];
+	const dockerDefaults = defaults?.docker?.registry?.[selectedDockerRegistry];
 
 	// Target release assets or webpages.
 	const latestVersionType = useWatch({
@@ -98,6 +98,9 @@ const EditServiceLatestVersionRequire = () => {
 				: 'Webpage must contain a match',
 		type: 'string',
 	};
+	const hasContainer =
+		(!!values.docker.image.trim() || !!dockerDefaults?.image?.trim()) &&
+		(!!values.docker.tag.trim() || !!dockerDefaults?.tag?.trim());
 
 	return (
 		<Accordion className="col-span-full" collapsible type="single">
@@ -151,12 +154,14 @@ const EditServiceLatestVersionRequire = () => {
 						/>
 						<FieldText
 							colSize={{ xs: 6 }}
+							defaultVal={dockerDefaults?.image}
 							label="Image"
 							name={`${name}.docker.image`}
 							required={values?.docker?.tag}
 						/>
 						<FieldText
 							colSize={{ xs: 6 }}
+							defaultVal={dockerDefaults?.tag}
 							label="Tag"
 							name={`${name}.docker.tag`}
 							required={values?.docker?.image}
@@ -165,23 +170,30 @@ const EditServiceLatestVersionRequire = () => {
 							<FieldText
 								colSize={{ sm: 4 }}
 								defaultVal={
-									(dockerDefaults as DockerFilterUsername | undefined)?.username
+									(dockerDefaults?.auth as DockerFilterUsername | undefined)
+										?.auth?.username
 								}
 								key="username"
 								label="Username"
-								name={`${name}.docker.username`}
-								required={values?.docker?.token}
+								name={`${name}.docker.auth.username`}
+								required={
+									hasContainer &&
+									(values?.docker?.auth?.token || dockerDefaults?.auth?.token)
+								}
 							/>
 						)}
 						<FieldText
 							colSize={{ sm: showUsernameField ? 8 : 12 }}
-							defaultVal={dockerDefaults?.token}
+							defaultVal={dockerDefaults?.auth?.token}
 							key="token"
 							label="Token"
-							name={`${name}.docker.token`}
+							name={`${name}.docker.auth.token`}
 							required={
 								showUsernameField &&
-								(values.docker as DockerTypeDockerHub).username
+								hasContainer &&
+								((values.docker as DockerTypeDockerHub).auth?.username ||
+									(dockerDefaults as DockerFilterUsernameDefaults)?.auth
+										?.username)
 							}
 						/>
 					</FieldSet>

@@ -71,7 +71,7 @@
     "build": "tsc -b && vite build",
     "lint": "biome lint .",
     "preview": "vite preview",
-    "start": "vite"
+    "start": "vite --host"
   },
   "type": "module",
   "version": "0.29.4"

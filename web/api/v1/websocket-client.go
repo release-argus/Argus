@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package v1
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -27,7 +26,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -38,17 +38,38 @@ const (
 	// Time allowed to read the next pong message from the peer.
 	pongWait = 60 * time.Second
 
-	// Send pings to the peer at this interval. Must occur before pongWait.
-	pingPeriod = (pongWait * 9) / 10
-
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
 )
+
+// pingPeriod is the interval between WebSocket ping frames. Must occur before pongWait.
+var pingPeriod = (pongWait * 9) / 10
 
 var (
 	newline = []byte{'\n'}
 	space   = []byte{' '}
 )
+
+// ServeWs upgrades an HTTP connection to WebSocket and registers the client with the hub.
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	conn.RemoteAddr()
+	client := &Client{
+		hub:  hub,
+		ip:   getIP(r),
+		conn: conn,
+		send: make(chan []byte, 256),
+	}
+	client.hub.register <- client
+
+	go client.writePump()
+	go client.readPump()
+}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -58,7 +79,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(_ *http.Request) bool { return true },
 }
 
-// Client connects the websocket and the hub.
+// Client is a WebSocket connection registered with the Hub.
 type Client struct {
 	// The WebSocket hub.
 	hub *Hub
@@ -69,10 +90,11 @@ type Client struct {
 	// The WebSocket connection.
 	conn *websocket.Conn
 
-	// A buffered channel of outbound messages.
+	// send carries outbound messages from the hub/server to this client.
 	send chan []byte
 }
 
+// getIP returns the client IP from proxy headers or RemoteAddr.
 func getIP(r *http.Request) (ip string) {
 	// Get IP from the CF-Connecting-Ip header.
 	ip = r.Header.Get("CF-Connecting-Ip")
@@ -117,20 +139,14 @@ type serverMessageCheck struct {
 	Version int `json:"version"`
 }
 
-// readPump reads messages from the websocket connection to the hub.
+// readPump reads incoming WebSocket frames and handles connection teardown.
 //
-// The application runs readPump in a separate goroutine for each connection.
-// It ensures only one reader operates on a connection by running all
-// reads in this goroutine.
+// Must run in its own goroutine - concentrating all reads here ensures only
+// one reader operates on the connection at a time.
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
-		if err := c.conn.Close(); err != nil {
-			logutil.Log.Verbose(
-				"Closing the websocket connection failed (readPump)\n"+err.Error(),
-				logutil.LogFrom{},
-				true)
-		}
+		_ = c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
 	//#nosec G104 -- Disregard.
@@ -152,25 +168,30 @@ func (c *Client) readPump() {
 				websocket.CloseGoingAway,
 				websocket.CloseAbnormalClosure,
 			) {
-				logutil.Log.Error(err,
-					logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip}, true)
+				logx.Error(
+					err,
+					logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+					true,
+				)
 			}
 			break
 		}
 
-		if logutil.Log.IsLevel("DEBUG") {
-			logutil.Log.Debug(
-				fmt.Sprintf("READ %s", message),
-				logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip}, true)
+		if logx.IsLevel("DEBUG") {
+			logx.Debug(
+				fmt.Sprintf("READ %q", message),
+				logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+				true,
+			)
 		}
 
 		message = bytes.TrimSpace(bytes.ReplaceAll(message, newline, space))
 		// Ensure it meets client message format.
 		var validation serverMessageCheck
-		if err := json.Unmarshal(message, &validation); err != nil || validation.Version != 1 {
-			logutil.Log.Warn(
-				fmt.Sprintf("Invalid message (missing/invalid version key)\n%s", message),
-				logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+		if err := decode.Unmarshal("json", message, &validation); err != nil || validation.Version != 1 {
+			logx.Warn(
+				fmt.Sprintf("Invalid message (missing/invalid version key) - %q", message),
+				logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 				true,
 			)
 			continue
@@ -180,20 +201,82 @@ func (c *Client) readPump() {
 	}
 }
 
-// writePump sends messages from the hub to the websocket connection.
+// writeServerMessage decodes and writes an outbound WebSocket message, rejecting unknown types.
+func (c *Client) writeWebSocketMessage(message []byte) {
+	var msg apitype.WebSocketMessage
+	if err := decode.Unmarshal("json", message, &msg); err != nil {
+		logx.Error(
+			"failed to unmarshal Message: "+err.Error(),
+			logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+			true,
+		)
+		return
+	}
+
+	if msg.Page == "" || msg.Type == "" {
+		return
+	}
+
+	// If message came from the server (doesn't use version).
+	if msg.Version == nil {
+		switch msg.Type {
+		case "VERSION", "WEBHOOK", "COMMAND", "SERVICE", "EDIT", "DELETE":
+			if err := c.conn.WriteJSON(msg); err != nil {
+				logx.Error(
+					fmt.Sprintf(
+						"Writing JSON to the websocket failed for %s\n%s",
+						msg.Type, err,
+					),
+					logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+					true,
+				)
+			}
+		default:
+			logx.Error(
+				fmt.Sprintf(
+					"Unknown Type (%q) in %q",
+					msg.Type, string(message),
+				),
+				logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+				true,
+			)
+		}
+		return
+	}
+
+	if err := c.conn.WriteJSON(msg); err != nil {
+		logx.Error(
+			fmt.Sprintf("WriteJSON for the queued chat messages\n%s", err),
+			logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+			true,
+		)
+	}
+}
+
+// drainSendMessages writes all messages currently buffered in send without blocking.
+func (c *Client) drainSendMessages() {
+	for {
+		select {
+		default:
+			return
+		case queued, ok := <-c.send:
+			if !ok {
+				return
+			}
+			c.writeWebSocketMessage(queued)
+		}
+	}
+}
+
+// writePump sends messages from the hub to the WebSocket connection.
 //
-// The application starts a separate goroutine for each connection to run writePump.
-// It ensures only one writer handles the connection by executing all writes in this goroutine.
+// Must run in its own goroutine - concentrating all writes here ensures only
+// one writer operates on the connection at a time.
 func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		if err := c.conn.Close(); err != nil {
-			logutil.Log.Verbose(
-				"Closing the connection\n"+err.Error(),
-				logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-				true)
-		}
+		_ = c.conn.Close()
 	}()
 	for {
 		select {
@@ -205,58 +288,17 @@ func (c *Client) writePump() {
 			if !ok {
 				// The hub closed the channel.
 				if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-					logutil.Log.Verbose(
-						"Closing the connection (writePump)\n"+err.Error(),
-						logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-						true)
+					logx.Verbose(
+						fmt.Sprintf("Closing the connection (writePump) - %q", err),
+						logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+						true,
+					)
 					return
 				}
 			}
 
-			var msg apitype.WebSocketMessage
-			if err := json.Unmarshal(message, &msg); err != nil {
-				logutil.Log.Error(
-					"failed to unmarshal Message: "+err.Error(),
-					logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-					true)
-				continue
-			}
-
-			if msg.Page == "" || msg.Type == "" {
-				continue
-			}
-			// If message came from the server (doesn't use version).
-			if msg.Version == nil {
-				switch msg.Type {
-				case "VERSION", "WEBHOOK", "COMMAND", "SERVICE", "EDIT", "DELETE":
-					if err := c.conn.WriteJSON(msg); err != nil {
-						logutil.Log.Error(
-							fmt.Sprintf("Writing JSON to the websocket failed for %s\n%s",
-								msg.Type, err),
-							logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-							true)
-					}
-				default:
-					logutil.Log.Error(
-						fmt.Sprintf("Unknown Type %q\nFull message: %s",
-							msg.Type, string(message)),
-						logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-						true)
-					continue
-				}
-			}
-
-			// Send all queued chat messages.
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				if err := c.conn.WriteJSON(<-c.send); err != nil {
-					logutil.Log.Error(
-						fmt.Sprintf("WriteJSON for the queued chat messages\n%s\n",
-							err),
-						logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-						true)
-				}
-			}
+			c.writeWebSocketMessage(message)
+			c.drainSendMessages()
 
 		case <-ticker.C:
 			//#nosec G104 -- Disregard.
@@ -267,24 +309,4 @@ func (c *Client) writePump() {
 			}
 		}
 	}
-}
-
-// ServeWs handles websocket requests from the peer.
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	conn.RemoteAddr()
-	client := &Client{
-		hub:  hub,
-		ip:   getIP(r),
-		conn: conn,
-		send: make(chan []byte, 256)}
-	client.hub.register <- client
-
-	go client.writePump()
-	go client.readPump()
 }

@@ -21,6 +21,7 @@ import {
 	serviceOptionsSchema,
 	serviceOptionsSchemaDefaults,
 } from '@/utils/api/types/config-edit/service/types/options';
+import { stringDefault } from '@/utils/api/types/config-edit/shared/preprocess';
 import { stringWithFallback } from '@/utils/api/types/config-edit/validators';
 import {
 	webhooksSchema,
@@ -29,13 +30,13 @@ import {
 
 export const serviceSchema = z.object({
 	command: commandsSchema,
-	comment: z.string().default(''),
+	comment: stringDefault,
 	dashboard: serviceDashboardOptionsSchema,
 	deployed_version: deployedVersionLookupSchema,
 	id: stringWithFallback(),
 	id_name_separator: z.boolean().default(false),
 	latest_version: latestVersionLookupSchema,
-	name: z.string().default(''),
+	name: stringDefault,
 	notify: notifiersSchema,
 	options: serviceOptionsSchema,
 	webhook: webhooksSchema,

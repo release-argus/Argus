@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,56 +25,23 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/release-argus/Argus/config"
-	logutil "github.com/release-argus/Argus/util/log"
+	"github.com/release-argus/Argus/internal/logx"
 	v1 "github.com/release-argus/Argus/web/api/v1"
 )
 
-// NewRouter serves Prometheus metrics, WebSocket, and Node.js frontend at RoutePrefix.
-func NewRouter(cfg *config.Config, hub *v1.Hub) *mux.Router {
-	// Go
-	api := v1.NewAPI(cfg)
-
-	// Prometheus metrics
-	api.Router.Handle("/metrics", promhttp.Handler())
-
-	// WebSocket
-	api.Router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		// Connection header for the WebSocket handshake.
-		w.Header().Set("Connection", "keep-alive")
-		defer r.Body.Close()
-		v1.ServeWs(hub, w, r)
-	})
-
-	// HTTP API
-	api.SetupRoutesAPI()
-	// Node.js
-	api.SetupRoutesNodeJS()
-
-	return api.BaseRouter
-}
-
-// newWebUI will set up everything web-related for Argus.
-func newWebUI(cfg *config.Config) *mux.Router {
-	hub := v1.NewHub()
-	go hub.Run()
-	router := NewRouter(cfg, hub)
-
-	// Hand out the broadcast channel
-	cfg.HardDefaults.Service.Status.AnnounceChannel = hub.Broadcast
-	for _, svc := range cfg.Service {
-		svc.Status.SetAnnounceChannel(hub.Broadcast)
-	}
-
-	return router
-}
-
-// Run the web server.
+// Run starts the web server.
 func Run(ctx context.Context, cfg *config.Config) error {
 	router := newWebUI(cfg)
 
-	listenAddress := fmt.Sprintf("%s:%s",
-		cfg.Settings.WebListenHost(), cfg.Settings.WebListenPort())
-	logutil.Log.Info("Listening on "+listenAddress+cfg.Settings.WebRoutePrefix(), logutil.LogFrom{}, true)
+	listenAddress := fmt.Sprintf(
+		"%s:%s",
+		cfg.Settings.WebListenHost(), cfg.Settings.WebListenPort(),
+	)
+	logx.Info(
+		"Listening on "+listenAddress+cfg.Settings.WebRoutePrefix(),
+		logx.LogFrom{},
+		true,
+	)
 
 	srv := &http.Server{
 		Addr:         listenAddress,
@@ -106,4 +73,42 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	case err := <-errChan:
 		return err
 	}
+}
+
+// newRouter serves Prometheus metrics, WebSocket, and Node.js frontend at RoutePrefix.
+func newRouter(cfg *config.Config, hub *v1.Hub) *mux.Router {
+	// Go
+	api := v1.NewAPI(cfg)
+
+	// Prometheus metrics
+	api.Router.Handle("/metrics", promhttp.Handler())
+
+	// WebSocket
+	api.Router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		// Connection header for the WebSocket handshake.
+		w.Header().Set("Connection", "keep-alive")
+		defer r.Body.Close()
+		v1.ServeWs(hub, w, r)
+	})
+
+	// HTTP API
+	api.SetupRoutesAPI()
+	// Node.js
+	api.SetupRoutesNodeJS()
+
+	return api.BaseRouter
+}
+
+// newWebUI sets up everything web-related for Argus.
+func newWebUI(cfg *config.Config) *mux.Router {
+	hub := v1.NewHub()
+	go hub.Run()
+	router := newRouter(cfg, hub)
+
+	cfg.HardDefaults.Service.Status.AnnounceChannel = hub.Broadcast
+	for _, svc := range cfg.Service {
+		svc.Status.SetAnnounceChannel(hub.Broadcast)
+	}
+
+	return router
 }

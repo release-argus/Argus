@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,622 +18,130 @@ package shoutrrr
 
 import (
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/internal/test"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/util"
 )
 
-func TestShoutrrr_GetOption(t *testing.T) {
-	// GIVEN a Shoutrrr.
-	tests := map[string]struct {
-		env                                                  map[string]string
-		rootValue, mainValue, defaultValue, hardDefaultValue *string
+func TestShoutrrr_GetType(t *testing.T) {
+	// GIVEN: a Shoutrrr.
+	tests := []struct {
+		name                                                 string
+		rootValue, mainValue, defaultValue, hardDefaultValue string
 		want                                                 string
 	}{
-		"root overrides all": {
-			want:             "this",
-			rootValue:        test.StringPtr("this"),
-			defaultValue:     test.StringPtr("not_this"),
-			hardDefaultValue: test.StringPtr("not_this"),
+		{
+			name:             "root overrides all",
+			want:             "smtp",
+			rootValue:        "smtp",
+			mainValue:        "other",
+			defaultValue:     "other",
+			hardDefaultValue: "other",
 		},
-		"main overrides default and hardDefault": {
-			want:             "this",
-			mainValue:        test.StringPtr("this"),
-			defaultValue:     test.StringPtr("not_this"),
-			hardDefaultValue: test.StringPtr("not_this"),
+		{
+			name:             "main overrides default and hardDefault",
+			want:             "smtp",
+			mainValue:        "smtp",
+			defaultValue:     "other",
+			hardDefaultValue: "other",
 		},
-		"default overrides hardDefault": {
-			want:             "this",
-			defaultValue:     test.StringPtr("this"),
-			hardDefaultValue: test.StringPtr("not_this"),
+		{
+			name:         "default is ignored", // uses ID.
+			want:         "test",
+			defaultValue: "smtp",
 		},
-		"hardDefaultValue is last resort": {
-			want:             "this",
-			hardDefaultValue: test.StringPtr("this"),
-		},
-		"env var is used": {
-			want:      "this",
-			env:       map[string]string{"TEST_SHOUTRRR__GET_OPTION__ONE": "this"},
-			rootValue: test.StringPtr("${TEST_SHOUTRRR__GET_OPTION__ONE}"),
-		},
-		"env var partial is used": {
-			want:      "this",
-			env:       map[string]string{"TEST_SHOUTRRR__GET_OPTION__TWO": "is"},
-			rootValue: test.StringPtr("th${TEST_SHOUTRRR__GET_OPTION__TWO}"),
-		},
-		"empty env var is ignored": {
-			want:         "that",
-			env:          map[string]string{"TEST_SHOUTRRR__GET_OPTION__THREE": ""},
-			rootValue:    test.StringPtr("${TEST_SHOUTRRR__GET_OPTION__THREE}"),
-			defaultValue: test.StringPtr("that"),
-		},
-		"undefined env var is used": {
-			want:         "${TEST_SHOUTRRR__GET_OPTION__UNSET}",
-			rootValue:    test.StringPtr("${TEST_SHOUTRRR__GET_OPTION__UNSET}"),
-			defaultValue: test.StringPtr("that"),
+		{
+			name:             "hardDefaultValue is ignored", // uses ID.
+			want:             "test",
+			hardDefaultValue: "smtp",
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			key := "test"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Options[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Options[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Options[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
-			}
-			for k, v := range tc.env {
-				_ = os.Setenv(k, v)
-				t.Cleanup(func() { _ = os.Unsetenv(k) })
-			}
+			shoutrrr.Type = tc.rootValue
+			shoutrrr.Main.Type = tc.mainValue
 
-			// WHEN GetOption is called.
-			got := shoutrrr.GetOption(key)
+			// WHEN: GetType is called.
+			got := shoutrrr.GetType()
 
-			// THEN the function returns the correct result.
+			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-
-			// WHEN SetOption is called.
-			want := got + "-set-test"
-			shoutrrr.SetOption(key, want)
-
-			// THEN the Option is set and can be retrieved with a Get.
-			got = shoutrrr.GetOption(key)
-			if got != want {
-				t.Fatalf("%s\n\nwant: %q\ngot:  %q",
-					packageName, want, got)
-			}
-		})
-	}
-}
-
-func TestShoutrrr_GetURLField(t *testing.T) {
-	// GIVEN a Shoutrrr.
-	tests := map[string]struct {
-		env                                                  map[string]string
-		rootValue, mainValue, defaultValue, hardDefaultValue *string
-		want                                                 string
-	}{
-		"root overrides all": {
-			want:             "this",
-			rootValue:        test.StringPtr("this"),
-			defaultValue:     test.StringPtr("not_this"),
-			hardDefaultValue: test.StringPtr("not_this"),
-		},
-		"main overrides default and hardDefault": {
-			want:             "this",
-			mainValue:        test.StringPtr("this"),
-			defaultValue:     test.StringPtr("not_this"),
-			hardDefaultValue: test.StringPtr("not_this"),
-		},
-		"default overrides hardDefault": {
-			want:             "this",
-			defaultValue:     test.StringPtr("this"),
-			hardDefaultValue: test.StringPtr("not_this"),
-		},
-		"hardDefaultValue is last resort": {
-			want:             "this",
-			hardDefaultValue: test.StringPtr("this"),
-		},
-		"env var is used": {
-			want:      "this",
-			env:       map[string]string{"TEST_SHOUTRRR__GET_URL_FIELD__ONE": "this"},
-			rootValue: test.StringPtr("${TEST_SHOUTRRR__GET_URL_FIELD__ONE}"),
-		},
-		"env var partial is used": {
-			want:      "this",
-			env:       map[string]string{"TEST_SHOUTRRR__GET_URL_FIELD__TWO": "is"},
-			rootValue: test.StringPtr("th${TEST_SHOUTRRR__GET_URL_FIELD__TWO}"),
-		},
-		"empty env var is ignored": {
-			want:         "that",
-			env:          map[string]string{"TEST_SHOUTRRR__GET_URL_FIELD__THREE": ""},
-			rootValue:    test.StringPtr("${TEST_SHOUTRRR__GET_URL_FIELD__THREE}"),
-			defaultValue: test.StringPtr("that"),
-		},
-		"undefined env var is used": {
-			want:         "${TEST_SHOUTRRR__GET_URL_FIELD__UNSET}",
-			rootValue:    test.StringPtr("${TEST_SHOUTRRR__GET_URL_FIELD__UNSET}"),
-			defaultValue: test.StringPtr("that"),
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			key := "test"
-			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.URLFields[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.URLFields[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.URLFields[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.URLFields[key] = *tc.hardDefaultValue
-			}
-			for k, v := range tc.env {
-				_ = os.Setenv(k, v)
-				t.Cleanup(func() { _ = os.Unsetenv(k) })
-			}
-
-			// WHEN GetURLField is called.
-			got := shoutrrr.GetURLField(key)
-
-			// THEN the function returns the correct result.
-			if got != tc.want {
-				t.Fatalf("%s\nGetURLField() mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-
-			// WHEN SetURLField is called.
-			want := got + "-set-test"
-			shoutrrr.SetURLField(key, want)
-
-			// THEN the URLField is set and can be retrieved with a Get.
-			got = shoutrrr.GetURLField(key)
-			if got != want {
-				t.Fatalf("%s\nSetURLField() mismatch\nwant: %q\ngot:  %q",
-					packageName, want, got)
-			}
-		})
-	}
-}
-
-func TestShoutrrr_GetParam(t *testing.T) {
-	// GIVEN a Shoutrrr.
-	tests := map[string]struct {
-		env                                                  map[string]string
-		rootValue, mainValue, defaultValue, hardDefaultValue *string
-		want                                                 string
-	}{
-		"root overrides all": {
-			want:             "this",
-			rootValue:        test.StringPtr("this"),
-			defaultValue:     test.StringPtr("not_this"),
-			hardDefaultValue: test.StringPtr("not_this"),
-		},
-		"main overrides default and hardDefault": {
-			want:             "this",
-			mainValue:        test.StringPtr("this"),
-			defaultValue:     test.StringPtr("not_this"),
-			hardDefaultValue: test.StringPtr("not_this"),
-		},
-		"default overrides hardDefault": {
-			want:             "this",
-			defaultValue:     test.StringPtr("this"),
-			hardDefaultValue: test.StringPtr("not_this"),
-		},
-		"hardDefaultValue is last resort": {
-			want:             "this",
-			hardDefaultValue: test.StringPtr("this"),
-		},
-		"env var is used": {
-			want:      "this",
-			env:       map[string]string{"TEST_SHOUTRRR__GET_PARAM__ONE": "this"},
-			rootValue: test.StringPtr("${TEST_SHOUTRRR__GET_PARAM__ONE}"),
-		},
-		"env var partial is used": {
-			want:      "this",
-			env:       map[string]string{"TEST_SHOUTRRR__GET_PARAM__TWO": "is"},
-			rootValue: test.StringPtr("th${TEST_SHOUTRRR__GET_PARAM__TWO}"),
-		},
-		"empty env var is ignored": {
-			want:         "that",
-			env:          map[string]string{"TEST_SHOUTRRR__GET_PARAM__THREE": ""},
-			rootValue:    test.StringPtr("${TEST_SHOUTRRR__GET_PARAM__THREE}"),
-			defaultValue: test.StringPtr("that"),
-		},
-		"undefined env var is used": {
-			want:         "${TEST_SHOUTRRR__GET_PARAM__UNSET}",
-			rootValue:    test.StringPtr("${TEST_SHOUTRRR__GET_PARAM__UNSET}"),
-			defaultValue: test.StringPtr("that"),
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			key := "test"
-			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Params[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Params[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Params[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Params[key] = *tc.hardDefaultValue
-			}
-			for k, v := range tc.env {
-				_ = os.Setenv(k, v)
-				t.Cleanup(func() { _ = os.Unsetenv(k) })
-			}
-
-			// WHEN GetParam is called.
-			got := shoutrrr.GetParam(key)
-
-			// THEN the function returns the correct result.
-			if got != tc.want {
-				t.Fatalf("%s\nGetParam() mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-
-			// WHEN SetParam is called.
-			want := got + "-set-test"
-			shoutrrr.SetParam(key, want)
-
-			// THEN the Param is set and can be retrieved with a Get.
-			got = shoutrrr.GetParam(key)
-			if got != want {
-				t.Fatalf("%s\nSetParam() mismatch\nwant: %q\ngot:  %q",
-					packageName, want, got)
-			}
-		})
-	}
-}
-
-func TestShoutrrr_GetDelay(t *testing.T) {
-	// GIVEN a Shoutrrr.
-	tests := map[string]struct {
-		rootValue, mainValue, defaultValue, hardDefaultValue *string
-		want                                                 string
-	}{
-		"root overrides all": {
-			want:             "1s",
-			rootValue:        test.StringPtr("1s"),
-			mainValue:        test.StringPtr("2s"),
-			defaultValue:     test.StringPtr("2s"),
-			hardDefaultValue: test.StringPtr("2s"),
-		},
-		"main overrides default and hardDefault": {
-			want:             "1s",
-			mainValue:        test.StringPtr("1s"),
-			defaultValue:     test.StringPtr("2s"),
-			hardDefaultValue: test.StringPtr("2s"),
-		},
-		"default overrides hardDefault": {
-			want:             "1s",
-			defaultValue:     test.StringPtr("1s"),
-			hardDefaultValue: test.StringPtr("2s"),
-		},
-		"hardDefaultValue is last resort": {
-			want:             "1s",
-			hardDefaultValue: test.StringPtr("1s"),
-		},
-		"no delay anywhere defaults to 0s": {want: "0s",
-			rootValue:        nil,
-			defaultValue:     nil,
-			hardDefaultValue: nil},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			key := "delay"
-			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Options[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Options[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Options[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
-			}
-
-			// WHEN GetDelay is called.
-			got := shoutrrr.GetDelay()
-
-			// THEN the function returns the correct result.
-			if got != tc.want {
-				t.Fatalf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestShoutrrr_GetDelayDuration(t *testing.T) {
-	// GIVEN a Shoutrrr.
-	tests := map[string]struct {
-		rootValue, mainValue, defaultValue, hardDefaultValue *string
-		want                                                 time.Duration
-	}{
-		"root overrides all": {
-			want:             1 * time.Second,
-			rootValue:        test.StringPtr("1s"),
-			mainValue:        test.StringPtr("2s"),
-			defaultValue:     test.StringPtr("2s"),
-			hardDefaultValue: test.StringPtr("2s"),
-		},
-		"main overrides default and hardDefault": {
-			want:             1 * time.Second,
-			mainValue:        test.StringPtr("1s"),
-			defaultValue:     test.StringPtr("2s"),
-			hardDefaultValue: test.StringPtr("2s"),
-		},
-		"default overrides hardDefault": {
-			want:             1 * time.Second,
-			defaultValue:     test.StringPtr("1s"),
-			hardDefaultValue: test.StringPtr("2s"),
-		},
-		"hardDefaultValue is last resort": {
-			want:             1 * time.Second,
-			hardDefaultValue: test.StringPtr("1s"),
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			key := "delay"
-			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Options[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Options[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Options[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
-			}
-
-			// WHEN GetDelay is called.
-			got := shoutrrr.GetDelayDuration()
-
-			// THEN the function returns the correct result.
-			if got != tc.want {
-				t.Fatalf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestShoutrrr_GetMaxTries(t *testing.T) {
-	// GIVEN a Shoutrrr.
-	tests := map[string]struct {
-		rootValue, mainValue, defaultValue, hardDefaultValue *string
-		want                                                 int
-	}{
-		"root overrides all": {
-			want:             1,
-			rootValue:        test.StringPtr("1"),
-			mainValue:        test.StringPtr("2"),
-			defaultValue:     test.StringPtr("2"),
-			hardDefaultValue: test.StringPtr("2"),
-		},
-		"main overrides default and hardDefault": {
-			want:             1,
-			mainValue:        test.StringPtr("1"),
-			defaultValue:     test.StringPtr("2"),
-			hardDefaultValue: test.StringPtr("2"),
-		},
-		"default overrides hardDefault": {
-			want:             1,
-			defaultValue:     test.StringPtr("1"),
-			hardDefaultValue: test.StringPtr("2"),
-		},
-		"hardDefaultValue is last resort": {
-			want:             1,
-			hardDefaultValue: test.StringPtr("1"),
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			key := "max_tries"
-			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Options[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Options[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Options[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
-			}
-
-			// WHEN GetMaxTries is called.
-			got := shoutrrr.GetMaxTries()
-
-			// THEN the function returns the correct result.
-			if int(got) != tc.want {
-				t.Fatalf("%s\nwant: %d\ngot:  %d",
-					packageName, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestShoutrrr_Message(t *testing.T) {
-	// GIVEN a Shoutrrr.
-	svcInfo := serviceinfo.ServiceInfo{
-		ID:            "release-argus/Argus",
-		WebURL:        "https://release-argus.io/demo",
-		LatestVersion: "0.9.0",
-	}
-	tests := map[string]struct {
-		rootValue, mainValue, defaultValue, hardDefaultValue *string
-		want                                                 string
-	}{
-		"root overrides all": {
-			want:             "New version!",
-			rootValue:        test.StringPtr("New version!"),
-			mainValue:        test.StringPtr("something"),
-			defaultValue:     test.StringPtr("something"),
-			hardDefaultValue: test.StringPtr("something"),
-		},
-		"main overrides default and hardDefault": {
-			want:             "New version!",
-			mainValue:        test.StringPtr("New version!"),
-			defaultValue:     test.StringPtr("something"),
-			hardDefaultValue: test.StringPtr("something"),
-		},
-		"default overrides hardDefault": {
-			want:             "New version!",
-			defaultValue:     test.StringPtr("New version!"),
-			hardDefaultValue: test.StringPtr("something"),
-		},
-		"hardDefaultValue is last resort": {
-			want:             "New version!",
-			hardDefaultValue: test.StringPtr("New version!"),
-		},
-		"django templating": {
-			want:             "New version!",
-			rootValue:        test.StringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
-			defaultValue:     test.StringPtr("something"),
-			hardDefaultValue: test.StringPtr("something"),
-		},
-		"django vars": {
-			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
-				svcInfo.WebURL, svcInfo.URL, svcInfo.ID, svcInfo.LatestVersion),
-			rootValue:        test.StringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
-			defaultValue:     test.StringPtr("something"),
-			hardDefaultValue: test.StringPtr("something"),
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			key := "message"
-			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Options[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Options[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Options[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
-			}
-
-			// WHEN Message is called.
-			got := shoutrrr.Message(svcInfo)
-
-			// THEN the function returns the correct result.
-			if got != tc.want {
-				t.Fatalf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Fatalf(
+					"%s\nShoutrrr GetType() mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_Title(t *testing.T) {
-	// GIVEN a Shoutrrr.
+	// GIVEN: a Shoutrrr.
 	svcInfo := serviceinfo.ServiceInfo{
-		ID:            "release-argus/Argus",
+		ID:            test.ArgusGitHubRepo,
 		URL:           "https://github.com",
 		WebURL:        "https://release-argus.io/demo",
 		LatestVersion: "0.9.0",
 	}
-	tests := map[string]struct {
+	tests := []struct {
+		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue *string
 		want                                                 string
 	}{
-		"root overrides all": {
+		{
+			name:             "root overrides all",
 			want:             "New version!",
-			rootValue:        test.StringPtr("New version!"),
-			mainValue:        test.StringPtr("something"),
-			defaultValue:     test.StringPtr("something"),
-			hardDefaultValue: test.StringPtr("something"),
+			rootValue:        test.Ptr("New version!"),
+			mainValue:        test.Ptr("something"),
+			defaultValue:     test.Ptr("something"),
+			hardDefaultValue: test.Ptr("something"),
 		},
-		"main overrides default and hardDefault": {
+		{
+			name:             "main overrides default and hardDefault",
 			want:             "New version!",
-			mainValue:        test.StringPtr("New version!"),
-			defaultValue:     test.StringPtr("something"),
-			hardDefaultValue: test.StringPtr("something"),
+			mainValue:        test.Ptr("New version!"),
+			defaultValue:     test.Ptr("something"),
+			hardDefaultValue: test.Ptr("something"),
 		},
-		"default overrides hardDefault": {
+		{
+			name:             "default overrides hardDefault",
 			want:             "New version!",
-			defaultValue:     test.StringPtr("New version!"),
-			hardDefaultValue: test.StringPtr("something"),
+			defaultValue:     test.Ptr("New version!"),
+			hardDefaultValue: test.Ptr("something"),
 		},
-		"hardDefaultValue is last resort": {
+		{
+			name:             "hardDefaultValue is last resort",
 			want:             "New version!",
-			hardDefaultValue: test.StringPtr("New version!"),
+			hardDefaultValue: test.Ptr("New version!"),
 		},
-		"django templating": {
+		{
+			name:             "django templating",
 			want:             "New version!",
-			rootValue:        test.StringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
-			defaultValue:     test.StringPtr("something"),
-			hardDefaultValue: test.StringPtr("something"),
+			rootValue:        test.Ptr("{% if 'a' == 'a' %}New version!{% endif %}"),
+			defaultValue:     test.Ptr("something"),
+			hardDefaultValue: test.Ptr("something"),
 		},
-		"django vars": {
-			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
-				svcInfo.WebURL, svcInfo.URL, svcInfo.ID, svcInfo.LatestVersion),
-			rootValue:        test.StringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
-			defaultValue:     test.StringPtr("something"),
-			hardDefaultValue: test.StringPtr("something"),
+		{
+			name: "django vars",
+			want: fmt.Sprintf(
+				"%s or %s/%s/releases/tag/%s",
+				svcInfo.WebURL, svcInfo.URL, svcInfo.ID, svcInfo.LatestVersion,
+			),
+			rootValue:        test.Ptr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
+			defaultValue:     test.Ptr("something"),
+			hardDefaultValue: test.Ptr("something"),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			key := "title"
@@ -651,62 +159,875 @@ func TestShoutrrr_Title(t *testing.T) {
 				shoutrrr.HardDefaults.Params[key] = *tc.hardDefaultValue
 			}
 
-			// WHEN Title is called.
+			// WHEN: Title is called.
 			got := shoutrrr.Title(svcInfo)
 
-			// THEN the function returns the correct result.
+			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Fatalf(
+					"%s\nShoutrrr Title(%+v) mismatch\ngot:  %q\nwant: %q",
+					packageName, svcInfo, got, tc.want,
+				)
 			}
 		})
 	}
 }
 
-func TestShoutrrr_GetType(t *testing.T) {
-	// GIVEN a Shoutrrr.
-	tests := map[string]struct {
-		rootValue, mainValue, defaultValue, hardDefaultValue string
+func TestShoutrrr_Message(t *testing.T) {
+	// GIVEN: a Shoutrrr.
+	svcInfo := serviceinfo.ServiceInfo{
+		ID:            test.ArgusGitHubRepo,
+		WebURL:        "https://release-argus.io/demo",
+		LatestVersion: "0.9.0",
+	}
+	tests := []struct {
+		name                                                 string
+		rootValue, mainValue, defaultValue, hardDefaultValue *string
 		want                                                 string
 	}{
-		"root overrides all": {
-			want:             "smtp",
-			rootValue:        "smtp",
-			mainValue:        "other",
-			defaultValue:     "other",
-			hardDefaultValue: "other",
+		{
+			name:             "root overrides all",
+			want:             "New version!",
+			rootValue:        test.Ptr("New version!"),
+			mainValue:        test.Ptr("something"),
+			defaultValue:     test.Ptr("something"),
+			hardDefaultValue: test.Ptr("something"),
 		},
-		"main overrides default and hardDefault": {
-			want:             "smtp",
-			mainValue:        "smtp",
-			defaultValue:     "other",
-			hardDefaultValue: "other",
+		{
+			name:             "main overrides default and hardDefault",
+			want:             "New version!",
+			mainValue:        test.Ptr("New version!"),
+			defaultValue:     test.Ptr("something"),
+			hardDefaultValue: test.Ptr("something"),
 		},
-		"default is ignored": { // uses ID.
-			want:         "test",
-			defaultValue: "smtp",
+		{
+			name:             "default overrides hardDefault",
+			want:             "New version!",
+			defaultValue:     test.Ptr("New version!"),
+			hardDefaultValue: test.Ptr("something"),
 		},
-		"hardDefaultValue is ignored": { // uses ID.
-			want:             "test",
-			hardDefaultValue: "smtp",
+		{
+			name:             "hardDefaultValue is last resort",
+			want:             "New version!",
+			hardDefaultValue: test.Ptr("New version!"),
+		},
+		{
+			name:             "django templating",
+			want:             "New version!",
+			rootValue:        test.Ptr("{% if 'a' == 'a' %}New version!{% endif %}"),
+			defaultValue:     test.Ptr("something"),
+			hardDefaultValue: test.Ptr("something"),
+		},
+		{
+			name: "django vars",
+			want: fmt.Sprintf(
+				"%s or %s/%s/releases/tag/%s",
+				svcInfo.WebURL, svcInfo.URL, svcInfo.ID, svcInfo.LatestVersion,
+			),
+			rootValue:        test.Ptr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
+			defaultValue:     test.Ptr("something"),
+			hardDefaultValue: test.Ptr("something"),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			key := "message"
 			shoutrrr := testShoutrrr(false, false)
-			shoutrrr.Type = tc.rootValue
-			shoutrrr.Main.Type = tc.mainValue
+			if tc.rootValue != nil {
+				shoutrrr.Options[key] = *tc.rootValue
+			}
+			if tc.mainValue != nil {
+				shoutrrr.Main.Options[key] = *tc.mainValue
+			}
+			if tc.defaultValue != nil {
+				shoutrrr.Defaults.Options[key] = *tc.defaultValue
+			}
+			if tc.hardDefaultValue != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
+			}
 
-			// WHEN GetType is called.
-			got := shoutrrr.GetType()
+			// WHEN: Message is called.
+			got := shoutrrr.Message(svcInfo)
 
-			// THEN the function returns the correct result.
+			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf("%s\nwant: %q\ngot:  %q",
-					packageName, tc.want, got)
+				t.Fatalf(
+					"%s\nShoutrrr Message(%+v) mismatch\ngot:  %q\nwant: %q",
+					packageName, svcInfo, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestShoutrrr_GetOption(t *testing.T) {
+	// GIVEN: a Shoutrrr.
+	tests := []struct {
+		name                                                 string
+		env                                                  map[string]string
+		rootValue, mainValue, defaultValue, hardDefaultValue *string
+		want                                                 string
+	}{
+		{
+			name:             "root overrides all",
+			want:             "this",
+			rootValue:        test.Ptr("this"),
+			defaultValue:     test.Ptr("not_this"),
+			hardDefaultValue: test.Ptr("not_this"),
+		},
+		{
+			name:             "main overrides default and hardDefault",
+			want:             "this",
+			mainValue:        test.Ptr("this"),
+			defaultValue:     test.Ptr("not_this"),
+			hardDefaultValue: test.Ptr("not_this"),
+		},
+		{
+			name:             "default overrides hardDefault",
+			want:             "this",
+			defaultValue:     test.Ptr("this"),
+			hardDefaultValue: test.Ptr("not_this"),
+		},
+		{
+			name:             "hardDefaultValue is last resort",
+			want:             "this",
+			hardDefaultValue: test.Ptr("this"),
+		},
+		{
+			name: "env var is used",
+			want: "this",
+			env: map[string]string{
+				"TEST_SHOUTRRR__GET_OPTION__ONE": "this",
+			},
+			rootValue: test.Ptr("${TEST_SHOUTRRR__GET_OPTION__ONE}"),
+		},
+		{
+			name: "env var partial is used",
+			want: "this",
+			env: map[string]string{
+				"TEST_SHOUTRRR__GET_OPTION__TWO": "is",
+			},
+			rootValue: test.Ptr("th${TEST_SHOUTRRR__GET_OPTION__TWO}"),
+		},
+		{
+			name: "empty env var is ignored",
+			want: "that",
+			env: map[string]string{
+				"TEST_SHOUTRRR__GET_OPTION__THREE": "",
+			},
+			rootValue:    test.Ptr("${TEST_SHOUTRRR__GET_OPTION__THREE}"),
+			defaultValue: test.Ptr("that"),
+		},
+		{
+			name:         "undefined env var is used",
+			want:         "${TEST_SHOUTRRR__GET_OPTION__UNSET}",
+			rootValue:    test.Ptr("${TEST_SHOUTRRR__GET_OPTION__UNSET}"),
+			defaultValue: test.Ptr("that"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			key := "test"
+			shoutrrr := testShoutrrr(false, false)
+			if tc.rootValue != nil {
+				shoutrrr.Options[key] = *tc.rootValue
+			}
+			if tc.mainValue != nil {
+				shoutrrr.Main.Options[key] = *tc.mainValue
+			}
+			if tc.defaultValue != nil {
+				shoutrrr.Defaults.Options[key] = *tc.defaultValue
+			}
+			if tc.hardDefaultValue != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
+			}
+			test.SetEnv(t, tc.env)
+
+			// WHEN: GetOption is called.
+			got := shoutrrr.GetOption(key)
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Fatalf(
+					"%s\nShoutrrr GetOption(%q) mismatch:\ngot:  %q\nwant: %q",
+					packageName, key,
+					got, tc.want,
+				)
+			}
+
+			// WHEN: setOption is called.
+			want := got + "-set-test"
+			shoutrrr.setOption(key, want)
+
+			// THEN: the Option is set and can be retrieved with a Get.
+			got = shoutrrr.GetOption(key)
+			if got != want {
+				t.Fatalf(
+					"%s\nShoutrrr GetOption(%q) mismatch after setOption(%q):\ngot:  %q\nwant: %q",
+					packageName, key, want,
+					got, want,
+				)
+			}
+		})
+	}
+}
+func TestShoutrrr_GetURLField(t *testing.T) {
+	// GIVEN: a Shoutrrr.
+	tests := []struct {
+		name                                                 string
+		env                                                  map[string]string
+		rootValue, mainValue, defaultValue, hardDefaultValue *string
+		want                                                 string
+	}{
+		{
+			name:             "root overrides all",
+			want:             "this",
+			rootValue:        test.Ptr("this"),
+			defaultValue:     test.Ptr("not_this"),
+			hardDefaultValue: test.Ptr("not_this"),
+		},
+		{
+			name:             "main overrides default and hardDefault",
+			want:             "this",
+			mainValue:        test.Ptr("this"),
+			defaultValue:     test.Ptr("not_this"),
+			hardDefaultValue: test.Ptr("not_this"),
+		},
+		{
+			name:             "default overrides hardDefault",
+			want:             "this",
+			defaultValue:     test.Ptr("this"),
+			hardDefaultValue: test.Ptr("not_this"),
+		},
+		{
+			name:             "hardDefaultValue is last resort",
+			want:             "this",
+			hardDefaultValue: test.Ptr("this"),
+		},
+		{
+			name: "env var is used",
+			want: "this",
+			env: map[string]string{
+				"TEST_SHOUTRRR__GET_URL_FIELD__ONE": "this",
+			},
+			rootValue: test.Ptr("${TEST_SHOUTRRR__GET_URL_FIELD__ONE}"),
+		},
+		{
+			name: "env var partial is used",
+			want: "this",
+			env: map[string]string{
+				"TEST_SHOUTRRR__GET_URL_FIELD__TWO": "is",
+			},
+			rootValue: test.Ptr("th${TEST_SHOUTRRR__GET_URL_FIELD__TWO}"),
+		},
+		{
+			name: "empty env var is ignored",
+			want: "that",
+			env: map[string]string{
+				"TEST_SHOUTRRR__GET_URL_FIELD__THREE": "",
+			},
+			rootValue:    test.Ptr("${TEST_SHOUTRRR__GET_URL_FIELD__THREE}"),
+			defaultValue: test.Ptr("that"),
+		},
+		{
+			name:         "undefined env var is used",
+			want:         "${TEST_SHOUTRRR__GET_URL_FIELD__UNSET}",
+			rootValue:    test.Ptr("${TEST_SHOUTRRR__GET_URL_FIELD__UNSET}"),
+			defaultValue: test.Ptr("that"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			key := "test"
+			shoutrrr := testShoutrrr(false, false)
+			if tc.rootValue != nil {
+				shoutrrr.URLFields[key] = *tc.rootValue
+			}
+			if tc.mainValue != nil {
+				shoutrrr.Main.URLFields[key] = *tc.mainValue
+			}
+			if tc.defaultValue != nil {
+				shoutrrr.Defaults.URLFields[key] = *tc.defaultValue
+			}
+			if tc.hardDefaultValue != nil {
+				shoutrrr.HardDefaults.URLFields[key] = *tc.hardDefaultValue
+			}
+			test.SetEnv(t, tc.env)
+
+			// WHEN: GetURLField is called.
+			got := shoutrrr.GetURLField(key)
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Fatalf(
+					"%s\nShoutrrr,GetURLField(%q) mismatch before setURLField():\ngot:  %q\nwant: %q",
+					packageName, key,
+					got, tc.want,
+				)
+			}
+
+			// WHEN: setURLField is called.
+			want := got + "-set-test"
+			shoutrrr.setURLField(key, want)
+
+			// THEN: the URLField is set and can be retrieved with a Get.
+			got = shoutrrr.GetURLField(key)
+			if got != want {
+				t.Fatalf(
+					"%s\nShoutrrr.GetURLField(%q) mismatch after setURLField(%q):\ngot:  %q\nwant: %q",
+					packageName, key, want,
+					got, want,
+				)
+			}
+		})
+	}
+}
+func TestShoutrrr_GetParam(t *testing.T) {
+	// GIVEN: a Shoutrrr.
+	tests := []struct {
+		name                                                 string
+		env                                                  map[string]string
+		rootValue, mainValue, defaultValue, hardDefaultValue *string
+		want                                                 string
+	}{
+		{
+			name:             "root overrides all",
+			want:             "this",
+			rootValue:        test.Ptr("this"),
+			defaultValue:     test.Ptr("not_this"),
+			hardDefaultValue: test.Ptr("not_this"),
+		},
+		{
+			name:             "main overrides default and hardDefault",
+			want:             "this",
+			mainValue:        test.Ptr("this"),
+			defaultValue:     test.Ptr("not_this"),
+			hardDefaultValue: test.Ptr("not_this"),
+		},
+		{
+			name:             "default overrides hardDefault",
+			want:             "this",
+			defaultValue:     test.Ptr("this"),
+			hardDefaultValue: test.Ptr("not_this"),
+		},
+		{
+			name:             "hardDefaultValue is last resort",
+			want:             "this",
+			hardDefaultValue: test.Ptr("this"),
+		},
+		{
+			name: "env var is used",
+			want: "this",
+			env: map[string]string{
+				"TEST_SHOUTRRR__GET_PARAM__ONE": "this",
+			},
+			rootValue: test.Ptr("${TEST_SHOUTRRR__GET_PARAM__ONE}"),
+		},
+		{
+			name: "env var partial is used",
+			want: "this",
+			env: map[string]string{
+				"TEST_SHOUTRRR__GET_PARAM__TWO": "is",
+			},
+			rootValue: test.Ptr("th${TEST_SHOUTRRR__GET_PARAM__TWO}"),
+		},
+		{
+			name: "empty env var is ignored",
+			want: "that",
+			env: map[string]string{
+				"TEST_SHOUTRRR__GET_PARAM__THREE": "",
+			},
+			rootValue:    test.Ptr("${TEST_SHOUTRRR__GET_PARAM__THREE}"),
+			defaultValue: test.Ptr("that"),
+		},
+		{
+			name:         "undefined env var is used",
+			want:         "${TEST_SHOUTRRR__GET_PARAM__UNSET}",
+			rootValue:    test.Ptr("${TEST_SHOUTRRR__GET_PARAM__UNSET}"),
+			defaultValue: test.Ptr("that"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			key := "test"
+			shoutrrr := testShoutrrr(false, false)
+			if tc.rootValue != nil {
+				shoutrrr.Params[key] = *tc.rootValue
+			}
+			if tc.mainValue != nil {
+				shoutrrr.Main.Params[key] = *tc.mainValue
+			}
+			if tc.defaultValue != nil {
+				shoutrrr.Defaults.Params[key] = *tc.defaultValue
+			}
+			if tc.hardDefaultValue != nil {
+				shoutrrr.HardDefaults.Params[key] = *tc.hardDefaultValue
+			}
+			test.SetEnv(t, tc.env)
+
+			// WHEN: GetParam is called.
+			got := shoutrrr.GetParam(key)
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Fatalf(
+					"%s\nShoutrrr.GetParam(%q) mismatch before setParam():\ngot:  %q\nwant: %q",
+					packageName, key,
+					got, tc.want,
+				)
+			}
+
+			// WHEN: setParam is called.
+			want := got + "-set-test"
+			shoutrrr.setParam(key, want)
+
+			// THEN: the Param is set and can be retrieved with a Get.
+			got = shoutrrr.GetParam(key)
+			if got != want {
+				t.Fatalf(
+					"%s\nShoutrrr GetParam(%q) mismatch after setParam(%q):\ngot:  %q\nwant: %q",
+					packageName, key, want,
+					got, want,
+				)
+			}
+		})
+	}
+}
+
+func TestShoutrrr_GetDelay(t *testing.T) {
+	// GIVEN: a Shoutrrr.
+	tests := []struct {
+		name                                                 string
+		rootValue, mainValue, defaultValue, hardDefaultValue *string
+		want                                                 string
+	}{
+		{
+			name:             "root overrides all",
+			want:             "1s",
+			rootValue:        test.Ptr("1s"),
+			mainValue:        test.Ptr("2s"),
+			defaultValue:     test.Ptr("2s"),
+			hardDefaultValue: test.Ptr("2s"),
+		},
+		{
+			name:             "main overrides default and hardDefault",
+			want:             "1s",
+			mainValue:        test.Ptr("1s"),
+			defaultValue:     test.Ptr("2s"),
+			hardDefaultValue: test.Ptr("2s"),
+		},
+		{
+			name:             "default overrides hardDefault",
+			want:             "1s",
+			defaultValue:     test.Ptr("1s"),
+			hardDefaultValue: test.Ptr("2s"),
+		},
+		{
+			name:             "hardDefaultValue is last resort",
+			want:             "1s",
+			hardDefaultValue: test.Ptr("1s"),
+		},
+		{
+			name:             "no delay anywhere defaults to 0s",
+			want:             "0s",
+			rootValue:        nil,
+			defaultValue:     nil,
+			hardDefaultValue: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			key := "delay"
+			shoutrrr := testShoutrrr(false, false)
+			if tc.rootValue != nil {
+				shoutrrr.Options[key] = *tc.rootValue
+			}
+			if tc.mainValue != nil {
+				shoutrrr.Main.Options[key] = *tc.mainValue
+			}
+			if tc.defaultValue != nil {
+				shoutrrr.Defaults.Options[key] = *tc.defaultValue
+			}
+			if tc.hardDefaultValue != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
+			}
+
+			// WHEN: GetDelay is called.
+			got := shoutrrr.GetDelay()
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Fatalf(
+					"%s\nShoutrrr.GetDelay() mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+func TestShoutrrr_GetDelayDuration(t *testing.T) {
+	// GIVEN: a Shoutrrr.
+	tests := []struct {
+		name                                                 string
+		rootValue, mainValue, defaultValue, hardDefaultValue *string
+		want                                                 time.Duration
+	}{
+		{
+			name:             "root overrides all",
+			want:             1 * time.Second,
+			rootValue:        test.Ptr("1s"),
+			mainValue:        test.Ptr("2s"),
+			defaultValue:     test.Ptr("2s"),
+			hardDefaultValue: test.Ptr("2s"),
+		},
+		{
+			name:             "main overrides default and hardDefault",
+			want:             1 * time.Second,
+			mainValue:        test.Ptr("1s"),
+			defaultValue:     test.Ptr("2s"),
+			hardDefaultValue: test.Ptr("2s"),
+		},
+		{
+			name:             "default overrides hardDefault",
+			want:             1 * time.Second,
+			defaultValue:     test.Ptr("1s"),
+			hardDefaultValue: test.Ptr("2s"),
+		},
+		{
+			name:             "hardDefaultValue is last resort",
+			want:             1 * time.Second,
+			hardDefaultValue: test.Ptr("1s"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			key := "delay"
+			shoutrrr := testShoutrrr(false, false)
+			if tc.rootValue != nil {
+				shoutrrr.Options[key] = *tc.rootValue
+			}
+			if tc.mainValue != nil {
+				shoutrrr.Main.Options[key] = *tc.mainValue
+			}
+			if tc.defaultValue != nil {
+				shoutrrr.Defaults.Options[key] = *tc.defaultValue
+			}
+			if tc.hardDefaultValue != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
+			}
+
+			// WHEN: GetDelay is called.
+			got := shoutrrr.GetDelayDuration()
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Fatalf(
+					"%s\nShoutrrr.GetDelayDuration() mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestShoutrrr_GetMaxTries(t *testing.T) {
+	// GIVEN: a Shoutrrr.
+	tests := []struct {
+		name                                                 string
+		rootValue, mainValue, defaultValue, hardDefaultValue *string
+		want                                                 int
+	}{
+		{
+			name:             "root overrides all",
+			want:             1,
+			rootValue:        test.Ptr("1"),
+			mainValue:        test.Ptr("2"),
+			defaultValue:     test.Ptr("2"),
+			hardDefaultValue: test.Ptr("2"),
+		},
+		{
+			name:             "main overrides default and hardDefault",
+			want:             1,
+			mainValue:        test.Ptr("1"),
+			defaultValue:     test.Ptr("2"),
+			hardDefaultValue: test.Ptr("2"),
+		},
+		{
+			name:             "default overrides hardDefault",
+			want:             1,
+			defaultValue:     test.Ptr("1"),
+			hardDefaultValue: test.Ptr("2"),
+		},
+		{
+			name:             "hardDefaultValue is last resort",
+			want:             1,
+			hardDefaultValue: test.Ptr("1"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			key := "max_tries"
+			shoutrrr := testShoutrrr(false, false)
+			if tc.rootValue != nil {
+				shoutrrr.Options[key] = *tc.rootValue
+			}
+			if tc.mainValue != nil {
+				shoutrrr.Main.Options[key] = *tc.mainValue
+			}
+			if tc.defaultValue != nil {
+				shoutrrr.Defaults.Options[key] = *tc.defaultValue
+			}
+			if tc.hardDefaultValue != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
+			}
+
+			// WHEN: GetMaxTries is called.
+			got := shoutrrr.GetMaxTries()
+
+			// THEN: the function returns the correct result.
+			if int(got) != tc.want {
+				t.Fatalf(
+					"%s\nShoutrrr.GetMaxTries() value mismatch\ngot:  %d\nwant: %d",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestBase_X_Option(t *testing.T) {
+	// GIVEN: a map[string]string.
+	values := map[string]string{
+		"a":  "foo",
+		"b":  "bar",
+		"hi": "bye",
+	}
+
+	// AND: a set of keys to query for.
+	tests := []struct {
+		name      string
+		key, want string
+	}{
+		{
+			name: "unknown key",
+			key:  "foo",
+			want: "",
+		},
+		{
+			name: "value 1",
+			key:  "a",
+			want: "foo",
+		},
+		{
+			name: "value 2",
+			key:  "b",
+			want: "bar",
+		},
+		{
+			name: "value 3",
+			key:  "hi",
+			want: "bye",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND: a Base with this Options map.
+			base := Base{
+				Options: util.CopyMap(values),
+			}
+
+			// WHEN: GetOption is called.
+			got := base.getOption(tc.key)
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Fatalf(
+					"%s\nShoutrrr.GetOption(%q) mismatch before setOption():\ngot:  %q\nwant: %q",
+					packageName, tc.key,
+					got, tc.want,
+				)
+			}
+
+			// WHEN: setOption is called.
+			want := got + "-set-test"
+			base.setOption(tc.key, want)
+
+			// THEN: the Option is set and can be retrieved with a Get.
+			got = base.getOption(tc.key)
+			if got != want {
+				t.Fatalf(
+					"%s\nShoutrrr.GetOption(%q) mismatch after setOption(%q):\ngot:  %q\nwant: %q",
+					packageName, tc.key, want,
+					got, want,
+				)
+			}
+		})
+	}
+}
+func TestBase_X_URLField(t *testing.T) {
+	// GIVEN: a map[string]string.
+	values := map[string]string{
+		"a":  "foo",
+		"b":  "bar",
+		"hi": "bye",
+	}
+
+	// AND: a set of keys to query for.
+	tests := []struct {
+		name      string
+		key, want string
+	}{
+		{
+			name: "unknown key",
+			key:  "foo",
+			want: "",
+		},
+		{
+			name: "value 1",
+			key:  "a",
+			want: "foo",
+		},
+		{
+			name: "value 2",
+			key:  "b",
+			want: "bar",
+		},
+		{
+			name: "value 3",
+			key:  "hi",
+			want: "bye",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND: a Base with this URLFields map.
+			base := Base{
+				URLFields: util.CopyMap(values),
+			}
+
+			// WHEN: GetURLField is called.
+			got := base.getURLField(tc.key)
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Fatalf(
+					"%s\nShoutrrr.GetURLField(%q) mismatch before setURLField():\ngot:  %q\nwant: %q",
+					packageName, tc.key,
+					got, tc.want,
+				)
+			}
+
+			// WHEN: setURLField is called.
+			want := got + "-set-test"
+			base.setURLField(tc.key, want)
+
+			// THEN: the Option is set and can be retrieved with a Get.
+			got = base.getURLField(tc.key)
+			if got != want {
+				t.Fatalf(
+					"%s\nShoutrrr.GetURLField(%q) mismatch after setURLField(%q):\ngot:  %q\nwant: %q",
+					packageName, tc.key, want,
+					got, want,
+				)
+			}
+		})
+	}
+}
+func TestBase_X_Param(t *testing.T) {
+	// GIVEN: a map[string]string.
+	values := map[string]string{
+		"a":  "foo",
+		"b":  "bar",
+		"hi": "bye",
+	}
+
+	// AND: a set of keys to query for.
+	tests := []struct {
+		name      string
+		key, want string
+	}{
+		{
+			name: "unknown key",
+			key:  "foo",
+			want: "",
+		},
+		{
+			name: "value 1",
+			key:  "a",
+			want: "foo",
+		},
+		{
+			name: "value 2",
+			key:  "b",
+			want: "bar",
+		},
+		{
+			name: "value 3",
+			key:  "hi",
+			want: "bye",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND: a Base with this Params map.
+			base := Base{
+				Params: util.CopyMap(values),
+			}
+
+			// WHEN: GetParam is called.
+			got := base.GetParam(tc.key)
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Fatalf(
+					"%s\nShoutrrr.GetParam(%q) mismatch before setParam():\ngot:  %q\nwant: %q",
+					packageName, tc.key,
+					got, tc.want,
+				)
+			}
+
+			// WHEN: setParam is called.
+			want := got + "-set-test"
+			base.setParam(tc.key, want)
+
+			// THEN: the Option is set and can be retrieved with a Get.
+			got = base.GetParam(tc.key)
+			if got != want {
+				t.Fatalf(
+					"%s\nShoutrrr.GetParam(%q) mismatch after setParam(%q):\ngot:  %q\nwant: %q",
+					packageName, tc.key, want,
+					got, want,
+				)
 			}
 		})
 	}

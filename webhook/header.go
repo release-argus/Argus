@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,51 @@ package webhook
 import (
 	"net/http"
 
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/util"
 )
+
+// Header is a key-value pair for a HTTP request header.
+type Header struct {
+	Key   string `json:"key" yaml:"key"`     // Header key, e.g. X-Sig.
+	Value string `json:"value" yaml:"value"` // Value to give the key.
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface.
+//
+// It supports both the canonical form:
+//
+//	{key: "X", val: "Y"}
+//
+// and shorthand:
+//
+//	{X: Y}
+//
+// The shorthand is converted to the canonical key/val representation.
+func (h *Headers) UnmarshalYAML(data []byte) error {
+	// Try to unmarshal as a Header list.
+	var headers []Header
+	if err := decode.Unmarshal("yaml", data, &headers); err == nil {
+		*h = headers
+		return nil
+	}
+
+	// Treat it as a map.
+	var headersMap map[string]string
+	if err := decode.Unmarshal("yaml", data, &headersMap); err != nil {
+		return err //nolint:wrapcheck
+	}
+
+	// Sort the map keys.
+	keys := util.SortedKeys(headersMap)
+	*h = make([]Header, 0, len(keys))
+
+	// Convert map to list.
+	for _, key := range keys {
+		*h = append(*h, Header{Key: key, Value: headersMap[key]})
+	}
+	return nil
+}
 
 // GitHub is the WebHook payload to emulate GitHub.
 type GitHub struct {
@@ -28,24 +71,24 @@ type GitHub struct {
 	After  string `json:"after"`  // "RandAlphaNumericLower(40)".
 }
 
-// setHeaders of the req.
-func (wh *WebHook) setHeaders(req *http.Request) {
-	var headers *Headers
+// setHeaders applies configured custom headers to req.
+func (w *WebHook) setHeaders(req *http.Request) {
+	var headers Headers
 	switch {
-	case wh.Headers != nil:
-		headers = wh.Headers
-	case wh.Main.Headers != nil:
-		headers = wh.Main.Headers
-	case wh.Defaults.Headers != nil:
-		headers = wh.Defaults.Headers
-	case wh.HardDefaults.Headers != nil:
-		headers = wh.HardDefaults.Headers
+	case w.Headers != nil:
+		headers = w.Headers
+	case w.Main.Headers != nil:
+		headers = w.Main.Headers
+	case w.Defaults.Headers != nil:
+		headers = w.Defaults.Headers
+	case w.HardDefaults.Headers != nil:
+		headers = w.HardDefaults.Headers
 	default:
 		return
 	}
 
-	svcInfo := wh.ServiceStatus.GetServiceInfo()
-	for _, header := range *headers {
+	svcInfo := w.ServiceStatus.GetServiceInfo()
+	for _, header := range headers {
 		key := util.EvalEnvVars(header.Key)
 		value := util.TemplateString(util.EvalEnvVars(header.Value), svcInfo)
 		req.Header[key] = []string{value}

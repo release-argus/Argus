@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,137 +17,183 @@
 package test
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/webhook"
 )
 
-var packageName = "webhook_test"
+var packageName = "whtest"
 
 func TestWebHook(t *testing.T) {
-	// GIVEN the failing, self-signed certificate, and custom headers flags.
-	tests := map[string]struct {
+	// GIVEN: the failing, self-signed certificate, and custom headers flags.
+	tests := []struct {
+		name                             string
 		failing, selfSignedCert, headers bool
 		expectedURL, expectedSecret      string
 		expectedHeaders                  *webhook.Headers
 	}{
-		"passing, signed, no custom headers": {
+		{
+			name:            "passing, signed, no custom headers",
 			failing:         false,
 			selfSignedCert:  false,
 			headers:         false,
-			expectedURL:     test.LookupGitHub["url_valid"],
-			expectedSecret:  test.LookupGitHub["secret_pass"],
+			expectedURL:     test.WebHookGitHub["url_valid"],
+			expectedSecret:  test.WebHookGitHub["secret_pass"],
 			expectedHeaders: nil,
 		},
-		"passing, signed, with custom headers": {
+		{
+			name:           "passing, signed, with custom headers",
 			failing:        false,
 			selfSignedCert: false,
 			headers:        true,
 			expectedURL:    test.LookupWithHeaderAuth["url_valid"],
-			expectedSecret: test.LookupGitHub["secret_pass"],
+			expectedSecret: test.WebHookGitHub["secret_pass"],
 			expectedHeaders: &webhook.Headers{
-				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]}},
+				{
+					Key:   test.LookupWithHeaderAuth["header_key"],
+					Value: test.LookupWithHeaderAuth["header_value_pass"],
+				},
+			},
 		},
-		"passing, self-signed, no custom headers": {
+		{
+			name:            "passing, self-signed, no custom headers",
 			failing:         false,
 			selfSignedCert:  true,
 			headers:         false,
-			expectedURL:     test.LookupGitHub["url_invalid"],
-			expectedSecret:  test.LookupGitHub["secret_pass"],
+			expectedURL:     test.WebHookGitHub["url_invalid"],
+			expectedSecret:  test.WebHookGitHub["secret_pass"],
 			expectedHeaders: nil,
 		},
-		"passing, self-signed, with custom headers": {
+		{
+			name:           "passing, self-signed, with custom headers",
 			failing:        false,
 			selfSignedCert: true,
 			headers:        true,
 			expectedURL:    test.LookupWithHeaderAuth["url_invalid"],
-			expectedSecret: test.LookupGitHub["secret_pass"],
+			expectedSecret: test.WebHookGitHub["secret_pass"],
 			expectedHeaders: &webhook.Headers{
-				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]}},
+				{
+					Key:   test.LookupWithHeaderAuth["header_key"],
+					Value: test.LookupWithHeaderAuth["header_value_pass"],
+				},
+			},
 		},
-		"failing, signed, no custom headers": {
+		{
+			name:            "failing, signed, no custom headers",
 			failing:         true,
 			selfSignedCert:  false,
 			headers:         false,
-			expectedURL:     test.LookupGitHub["url_valid"],
-			expectedSecret:  test.LookupGitHub["secret_fail"],
+			expectedURL:     test.WebHookGitHub["url_valid"],
+			expectedSecret:  test.WebHookGitHub["secret_fail"],
 			expectedHeaders: nil,
 		},
-		"failing, signed, with custom headers": {
+		{
+			name:           "failing, signed, with custom headers",
 			failing:        true,
 			selfSignedCert: false,
 			headers:        true,
 			expectedURL:    test.LookupWithHeaderAuth["url_valid"],
-			expectedSecret: test.LookupGitHub["secret_fail"],
+			expectedSecret: test.WebHookGitHub["secret_fail"],
 			expectedHeaders: &webhook.Headers{
-				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_fail"]}},
+				{
+					Key:   test.LookupWithHeaderAuth["header_key"],
+					Value: test.LookupWithHeaderAuth["header_value_fail"],
+				},
+			},
 		},
-		"failing, self-signed, no custom headers": {
+		{
+			name:            "failing, self-signed, no custom headers",
 			failing:         true,
 			selfSignedCert:  true,
 			headers:         false,
-			expectedURL:     test.LookupGitHub["url_invalid"],
-			expectedSecret:  test.LookupGitHub["secret_fail"],
+			expectedURL:     test.WebHookGitHub["url_invalid"],
+			expectedSecret:  test.WebHookGitHub["secret_fail"],
 			expectedHeaders: nil,
 		},
-		"failing, self-signed, with custom headers": {
+		{
+			name:           "failing, self-signed, with custom headers",
 			failing:        true,
 			selfSignedCert: true,
 			headers:        true,
 			expectedURL:    test.LookupWithHeaderAuth["url_invalid"],
-			expectedSecret: test.LookupGitHub["secret_fail"],
+			expectedSecret: test.WebHookGitHub["secret_fail"],
 			expectedHeaders: &webhook.Headers{
-				{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_fail"]}},
+				{
+					Key:   test.LookupWithHeaderAuth["header_key"],
+					Value: test.LookupWithHeaderAuth["header_value_fail"],
+				},
+			},
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN WebHook is called.
-			got := WebHook(
+			// WHEN: WebHook is called.
+			result := WebHook(
+				t,
 				tc.failing,
 				tc.selfSignedCert,
-				tc.headers)
+				tc.headers,
+			)
 
-			// THEN the URL should be as expected.
-			if got.URL != tc.expectedURL {
-				t.Errorf("%s\nURL mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.expectedURL, got.URL)
+			prefix := fmt.Sprintf(
+				"%s\nWebHook(failed=%t, selfSigned=%t, headers=%t)",
+				packageName, tc.failing, tc.selfSignedCert, tc.headers,
+			)
+
+			// THEN: the URL should be as expected.
+			if result.URL != tc.expectedURL {
+				t.Errorf(
+					"%s URL mismatch\ngot:  %q\nwant: %q",
+					prefix, result.URL, tc.expectedURL,
+				)
 			}
 
-			// AND the secret should be as expected.
-			if got.Secret != tc.expectedSecret {
-				t.Errorf("%s\nSecret mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.expectedSecret, got.Secret)
+			// AND: the secret should be as expected.
+			if result.Secret != tc.expectedSecret {
+				t.Errorf(
+					"%s Secret mismatch\ngot:  %q\nwant: %q",
+					prefix, result.Secret, tc.expectedSecret,
+				)
 			}
 
-			// AND the custom headers should be as expected.
+			// AND: the custom headers should be as expected.
 			if tc.expectedHeaders == nil {
-				if got.Headers != nil {
-					t.Errorf("%s\nHeaders mismatch\nwant: nil\ngot:  %+v",
-						packageName, got.Headers)
+				if result.Headers != nil {
+					t.Errorf(
+						"%s Headers mismatch\ngot:  %+v\nwant: nil",
+						prefix, result.Headers,
+					)
 				}
 			} else {
-				if got.Headers == nil {
-					t.Errorf("%s\nHeaders mismatch\nwant: %+v\ngot:  nil",
-						packageName, tc.expectedHeaders)
+				if result.Headers == nil {
+					t.Errorf(
+						"%s Headers mismatch\ngot:  nil\nwant: %+v",
+						prefix, tc.expectedHeaders,
+					)
 				} else {
 					// Lengths differ.
-					if len(*got.Headers) != len(*tc.expectedHeaders) {
-						t.Errorf("%s\nHeaders length mismatch\nwant: %d\ngot:  %d",
-							packageName, len(*tc.expectedHeaders), len(*got.Headers))
+					if gotLen, wantLen := len(result.Headers), len(*tc.expectedHeaders); gotLen != wantLen {
+						t.Errorf(
+							"%s Headers length mismatch\ngot:  %d\nwant: %d",
+							prefix, gotLen, wantLen,
+						)
 					} else {
 						// Check each header.
 						for i := range *tc.expectedHeaders {
-							if (*tc.expectedHeaders)[i].Key != (*got.Headers)[i].Key ||
-								(*tc.expectedHeaders)[i].Value != (*got.Headers)[i].Value {
-								t.Errorf("%s\nHeaders mismatch\nwant: %v (%+v)\ngot:  %v (%+v)",
-									packageName,
-									(*tc.expectedHeaders)[i], *tc.expectedHeaders,
-									(*got.Headers)[i], *got.Headers)
+							got := (result.Headers)[i]
+							want := (*tc.expectedHeaders)[i]
+							if got.Key != want.Key || got.Value != want.Value {
+								t.Errorf(
+									"%s Headers mismatch\ngot:  %v (%+v)\nwant: %v (%+v)",
+									prefix,
+									got, result.Headers,
+									want, *tc.expectedHeaders,
+								)
 								break
 							}
 						}
@@ -155,106 +201,113 @@ func TestWebHook(t *testing.T) {
 				}
 			}
 
-			// AND the ID should be set.
+			// AND: the ID should be set.
 			wantID := "test"
-			if got.ID != wantID {
-				t.Errorf("%s\nID mismatch\nwant: %q\ngot:  %q",
-					packageName, wantID, got.ID)
+			if result.ID != wantID {
+				t.Errorf(
+					"%s .ID mismatch\ngot:  %q\nwant: %q",
+					prefix, result.ID, wantID,
+				)
 			}
 
-			// AND the ServiceStatus should be initialised.
-			if got.ServiceStatus == nil {
-				t.Errorf("%s\nServiceStatus not initialised",
-					packageName)
+			// AND: the ServiceStatus should be initialised.
+			if result.ServiceStatus == nil {
+				t.Errorf("%s ServiceStatus not initialised", prefix)
 			}
 
-			// AND the Fails should be set.
-			if got.ServiceStatus == nil || got.Failed == nil {
-				if got.Failed == nil {
-					t.Errorf("%s\nServiceStatus.Failed not set",
-						packageName)
+			// AND: the Fails should be set.
+			if result.ServiceStatus == nil || result.Failed == nil {
+				if result.Failed == nil {
+					t.Errorf("%s ServiceStatus.Failed not set", prefix)
 				} else {
-					t.Errorf("%s\nServiceStatus not set",
-						packageName)
+					t.Errorf("%s ServiceStatus not set", prefix)
 				}
 			}
 
-			// AND the DesiredStatusCode should be set.
+			// AND: the DesiredStatusCode should be set.
 			wantDesiredStatusCode := 0
-			if got.DesiredStatusCode == nil || *got.DesiredStatusCode != uint16(wantDesiredStatusCode) {
-				if got.DesiredStatusCode == nil {
-					t.Errorf("%s\nDesiredStatusCode not set",
-						packageName)
+			if result.DesiredStatusCode == nil || *result.DesiredStatusCode != uint16(wantDesiredStatusCode) {
+				if result.DesiredStatusCode == nil {
+					t.Errorf(
+						"%s DesiredStatusCode not set", prefix,
+					)
 				} else {
-					t.Errorf("%s\nDesiredStatusCode mismatch\nwant: %d\ngot:  %d",
-						packageName, wantDesiredStatusCode, *got.DesiredStatusCode)
+					t.Errorf(
+						"%s DesiredStatusCode mismatch\ngot:  %d\nwant: %d",
+						prefix, *result.DesiredStatusCode, wantDesiredStatusCode,
+					)
 				}
 			}
 
-			// AND the MaxTries should be set.
+			// AND: the MaxTries should be set.
 			wantMaxTries := 1
-			if got.MaxTries == nil || *got.MaxTries != uint8(wantMaxTries) {
-				if got.MaxTries == nil {
-					t.Errorf("%s\nMaxTries not set",
-						packageName)
+			if result.MaxTries == nil || *result.MaxTries != uint8(wantMaxTries) {
+				if result.MaxTries == nil {
+					t.Errorf("%s MaxTries not set", prefix)
 				} else {
-					t.Errorf("%s\nMaxTries mismatch\nwant: %d\ngot:  %d",
-						packageName, wantMaxTries, *got.MaxTries)
+					t.Errorf(
+						"%s MaxTries mismatch\ngot:  %d\nwant: %d",
+						prefix, *result.MaxTries, wantMaxTries,
+					)
 				}
 			}
 
-			// AND the Delay should be set.
+			// AND: the Delay should be set.
 			wantDelay := "0s"
-			if got.Delay != wantDelay {
-				if got.Delay == "" {
-					t.Errorf("%s\nDelay not set",
-						packageName)
+			if result.Delay != wantDelay {
+				if result.Delay == "" {
+					t.Errorf("%s Delay not set", prefix)
 				} else {
-					t.Errorf("%s\nDelay mismatch\nwant: %q\ngot:  %q",
-						packageName, wantDelay, got.Delay)
+					t.Errorf(
+						"%s Delay mismatch\ngot:  %q\nwant: %q",
+						prefix, result.Delay, wantDelay,
+					)
 				}
 			}
 
-			// AND the Main should be set.
-			if got.Main == nil {
-				t.Errorf("%s\nMain not set",
-					packageName)
+			// AND: the Main should be set.
+			if result.Main == nil {
+				t.Errorf("%s Main not set", prefix)
 			}
 
-			// AND the Defaults should be set.
-			if got.Defaults == nil {
-				t.Errorf("%s\nDefaults not set",
-					packageName)
+			// AND: the Defaults should be set.
+			if result.Defaults == nil {
+				t.Errorf("%s Defaults not set", prefix)
 			}
 
-			// AND the HardDefaults should be set.
-			if got.HardDefaults == nil {
-				t.Errorf("%s\nHardDefaults not set",
-					packageName)
+			// AND: the HardDefaults should be set.
+			if result.HardDefaults == nil {
+				t.Errorf("%s HardDefaults not set", prefix)
 			}
 
-			// AND the URL should be modified if selfSignedCert is true.
+			// AND: the URL should be modified if selfSignedCert is true.
 			if tc.selfSignedCert {
-				if got.URL != tc.expectedURL {
-					t.Errorf("%s\nSelfSignedCert: url mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.expectedURL, got.URL)
+				if result.URL != tc.expectedURL {
+					t.Errorf(
+						"%s URL mismatch when SelfSignedCert=true\ngot:  %q\nwant: %q",
+						prefix, result.URL, tc.expectedURL,
+					)
 				}
 			}
 
-			// AND the Secret should be modified if failing is true.
+			// AND: the Secret should be modified if failing is true.
 			if tc.failing {
-				expectedSecret := test.LookupGitHub["secret_fail"]
-				if got.Secret != expectedSecret {
-					t.Errorf("%s\nFailing webhook, secret mismatch\nwant: %q\ngot:  %q",
-						packageName, expectedSecret, got.Secret)
+				expectedSecret := test.WebHookGitHub["secret_fail"]
+				if result.Secret != expectedSecret {
+					t.Errorf(
+						"%s Secret mismatch for failing WebHook\ngot:  %q\nwant: %q",
+						prefix, result.Secret, expectedSecret,
+					)
 				}
 			}
 
-			// AND the URL should be modified and headers should be set if headers is true.
+			// AND: the URL should be modified and headers should be set if headers is true.
 			if tc.headers {
-				if got.URL != tc.expectedURL {
-					t.Errorf("%s\nHeaders, url mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.expectedURL, got.URL)
+				if result.URL != tc.expectedURL {
+					t.Errorf(
+						"%s URL mismatch for WebHook with Headers\ngot:  %q\nwant: %q",
+						packageName, result.URL, tc.expectedURL,
+					)
 				}
 			}
 		})

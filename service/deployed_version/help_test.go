@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,20 +17,22 @@
 package deployedver
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
-	dbtype "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/service/dashboard"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/service/deployed_version/types/manual"
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
+	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/test"
-	logtest "github.com/release-argus/Argus/test/log"
-	logutil "github.com/release-argus/Argus/util/log"
+	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
 var packageName = "deployedver"
@@ -42,9 +44,8 @@ func TestMain(m *testing.M) {
 	// Run other tests.
 	exitCode := m.Run()
 
-	if len(logutil.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty",
-			packageName)
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Printf("%s\nexit code channel not empty", packageName)
 		exitCode = 1
 	}
 
@@ -52,61 +53,105 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testLookup(lookupType string, failing bool) Lookup {
-	// HardDefaults.
-	hardDefaults := &base.Defaults{}
-	hardDefaults.Default()
-	// Defaults.
-	defaults := &base.Defaults{}
-	// Options.
-	hardDefaultOptions := &opt.Defaults{}
-	hardDefaultOptions.Default()
-	options := opt.New(
-		nil, "5m", test.BoolPtr(true),
-		&opt.Defaults{}, hardDefaultOptions)
-	// Status.
-	announceChannel := make(chan []byte, 24)
-	saveChannel := make(chan bool, 5)
-	databaseChannel := make(chan dbtype.Message, 5)
-	svcStatus := status.New(
-		announceChannel, databaseChannel, saveChannel,
-		"",
-		"", "",
-		"", "",
-		"",
-		&dashboard.Options{})
-	svcDashboard := &dashboard.Options{
-		WebURL: "https://example.com"}
-	svcStatus.Init(
-		0, 0, 0,
-		"serviceID", "", "",
-		svcDashboard)
+type mockLookup struct {
+	base.Lookup
+	OverrideErr string `json:"override_err,omitempty" yaml:"override_err,omitempty"`
+}
 
-	lookup, _ := New(
-		lookupType,
-		"yaml", "",
-		options,
-		svcStatus,
-		defaults, hardDefaults)
+func (f *mockLookup) ApplyOverrides(format string, data []byte) error {
+	if f.OverrideErr != "" {
+		return errors.New(f.OverrideErr)
+	}
+	return nil
+}
+func (f *mockLookup) Copy(*status.Status) base.Interface          { return f }
+func (f *mockLookup) DecodeSelf(format string, data []byte) error { return nil }
+func (f *mockLookup) GetType() string                             { return "fake" }
+func (f *mockLookup) String(prefix string) string                 { return decode.ToYAMLString(f, prefix) }
+func (f *mockLookup) Track()                                      {}
 
-	switch l := lookup.(type) {
-	case *web.Lookup:
-		l.URL = test.LookupJSON["url_invalid"]
-		l.AllowInvalidCerts = test.BoolPtr(!failing)
-		l.JSON = "version"
-		l.Init(
-			options,
-			svcStatus,
-			defaults, hardDefaults)
-	case *manual.Lookup:
-		l.Version = "1.0.0"
-		l.Init(
-			options,
-			svcStatus,
-			defaults, hardDefaults)
+func testLookup(t *testing.T, typ string, fail bool, version string) (dv Lookup) {
+	dvCfg := plainDefaultsConfig(t)
+
+	switch typ {
+	case "manual":
+		dv = testManual(t, version)
+	case "url":
+		dv = testWeb(t, fail, version)
 	}
 
-	return lookup
+	dv.Init(
+		dv.GetOptions(),
+		dv.GetStatus(),
+		dvCfg,
+	)
+	dv.GetStatus().ServiceInfo.ID = "TEST_DV"
+
+	// Check the values.
+	if err := dv.CheckValues(); err != nil {
+		t.Fatalf(
+			"%s.Lookup(type=%q, fail=%t).CheckValues() unexpected error: %v",
+			packageName, dv, fail, err,
+		)
+	}
+
+	return dv
+}
+
+func testManual(t *testing.T, version string) Lookup {
+	dvCfg := plainDefaultsConfig(t)
+
+	svcStatus, _ := statustest.New("yaml", nil)
+	dv, _ := Decode(
+		"yaml", []byte(test.TrimYAML(`
+			type: manual
+			version: `+version+`
+		`)),
+		opttest.Options(t),
+		svcStatus,
+		dvCfg,
+	)
+
+	return dv
+}
+
+func testWeb(t *testing.T, fail bool, version string) Lookup {
+	dvCfg := plainDefaultsConfig(t)
+
+	svcStatus, _ := statustest.New("yaml", nil)
+	dv, _ := Decode(
+		"yaml", []byte(test.TrimYAML(`
+			type: url
+			method: GET
+			url: `+test.LookupBare["url_invalid"]+`/`+version+`
+			allow_invalid_certs: `+fmt.Sprint(!fail)+`
+		`)),
+		opttest.Options(t),
+		svcStatus,
+		dvCfg,
+	)
+
+	return dv
+}
+
+// plainDefaults returns plain defaults and hardDefaults for testing.
+func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
+	t.Helper()
+
+	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
+	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
+	optHardDefaults.Default()
+
+	defaults, _ := base.DecodeDefaults("yaml", nil)
+	defaults.Options = optDefaults
+	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
+	hardDefaults.Default()
+	hardDefaults.Options = optHardDefaults
+
+	return base.DefaultsConfig{
+		Soft: defaults,
+		Hard: hardDefaults,
+	}
 }
 
 func getType(lookup Lookup) string {

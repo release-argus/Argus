@@ -36,7 +36,7 @@ export const mapWebHooksSchemaToAPIPayload = (
 	// Omit if all defaults used and unmodified.
 	if (
 		defaultValue &&
-		data.length == defaultValue.length &&
+		data.length === defaultValue.length &&
 		dataMinimised.every(
 			(i) =>
 				Object.keys(i).length === 2 && ['name', 'type'].every((k) => k in i),

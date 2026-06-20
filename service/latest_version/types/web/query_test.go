@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,183 +18,205 @@
 package web
 
 import (
-	"os"
-	"strings"
+	"fmt"
 	"testing"
-	"time"
 
-	"github.com/prometheus/client_golang/prometheus/testutil"
-	"gopkg.in/yaml.v3"
-
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
-	"github.com/release-argus/Argus/web/metric"
+	"github.com/release-argus/Argus/util/errfmt"
 )
 
-func TestHTTPRequest(t *testing.T) {
-	// GIVEN a Lookup.
-	tests := map[string]struct {
+func TestLookup_HTTPRequest(t *testing.T) {
+	// GIVEN: a Lookup.
+	tests := []struct {
+		name      string
 		failing   bool
 		overrides string
 		bodyRegex string
 		errRegex  string
 	}{
-		"invalid url": {
-			overrides: `
-				url: ` + "invalid://	test",
+		{
+			name:      "invalid url",
+			overrides: `url: "https://	test"`,
 			bodyRegex: `^$`,
 			errRegex:  `invalid control character in URL`,
 		},
-		"unknown url": {
-			overrides: `
-				url: https://release-argus.invalid-tld`,
+		{
+			name:      "unknown url",
+			overrides: `url: https://release-argus.invalid-tld`,
 			bodyRegex: `^$`,
 			errRegex:  `no such host`,
 		},
-		"valid url": {
-			overrides: `
-				url: https://release-argus.io`,
+		{
+			name:      "valid url",
+			overrides: `url: https://release-argus.io`,
 			bodyRegex: `.*`,
 			errRegex:  `^$`,
 		},
-		"invalid cert": {
+		{
+			name:      "invalid cert",
 			failing:   true,
 			bodyRegex: `^$`,
 			errRegex:  `x509`,
 		},
-		"headers - pass": {
-			overrides: `
+		{
+			name: "headers/pass",
+			overrides: test.TrimYAML(`
 				method: POST
 				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
 				headers:
 					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
-						value: ` + test.LookupWithHeaderAuth["header_value_pass"],
-			bodyRegex: `^$`,
+						value: ` + test.LookupWithHeaderAuth["header_value_pass"] + `
+			`),
+			bodyRegex: `^[\d.]+$`,
 			errRegex:  `^$`,
 		},
-		"headers - fail": {
-			overrides: `
+		{
+			name: "headers/fail",
+			overrides: test.TrimYAML(`
 				method: POST
 				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
 				headers:
 					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
-						value: ` + test.LookupWithHeaderAuth["header_value_fail"],
+						value: ` + test.LookupWithHeaderAuth["header_value_fail"] + `
+			`),
 			bodyRegex: `Hook rules were not satisfied\.`,
 			errRegex:  `^$`,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(tc.failing)
+			lookup := testLookup(t, tc.failing)
 			// Apply overrides.
-			tc.overrides = test.TrimYAML(tc.overrides)
-			err := yaml.Unmarshal([]byte(tc.overrides), lookup)
-			if err != nil {
-				t.Fatalf("%s\nfailed to unmarshal overrides: %s",
-					packageName, err)
+			if err := lookup.ApplyOverrides("yaml", []byte(tc.overrides)); err != nil {
+				t.Fatalf(
+					"%s\nfailed to unmarshal overrides: %s",
+					packageName, err,
+				)
 			}
 
-			// WHEN httpRequest is called on it.
-			body, err := lookup.httpRequest(logutil.LogFrom{})
+			// WHEN: httpRequest is called on it.
+			body, err := lookup.httpRequest(logx.LogFrom{})
 
-			// THEN any error is expected.
-			e := util.ErrorToString(err)
+			prefix := fmt.Sprintf("%s\nLookup.httpRequest", packageName)
+
+			// THEN: the error is as expected.
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.errRegex, e)
+				t.Errorf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
 			}
-			// AND the body matches the expected regex.
+
+			// AND: the body matches the expected regex.
 			if tc.bodyRegex != "" {
 				if !util.RegexCheck(tc.bodyRegex, string(body)) {
-					t.Errorf("%s\nbody mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.bodyRegex, string(body))
+					t.Errorf(
+						"%s body mismatch\ngot:  %q\nwant: %q",
+						prefix, string(body), tc.bodyRegex,
+					)
 				}
 			}
 		})
 	}
 }
 
-func TestGetVersion(t *testing.T) {
-	// GIVEN a Lookup and a Body to filter.
+func TestLookup_GetVersion(t *testing.T) {
+	// GIVEN: a Lookup and a Body to filter.
 	body := `
 		version 1 is "v0.0.0"
 		version 2 is "ver1.2.3-dev"
 		version 3 is "ver1.2.4"
 		version 4 is "ver1.2.5"
 	`
-	urlCommand := filter.URLCommand{
-		Type: "regex", Regex: `([0-9]\.[0-9.]+)`}
+	urlCommand := filter.URLCommand{Type: "regex", Regex: `([0-9]\.[0-9.]+)`}
 
 	type wantVars struct {
 		version  string
 		errRegex string
 	}
 
-	tests := map[string]struct {
+	tests := []struct {
+		name            string
 		bodyOverride    *string
 		lookupOverrides string
-		noSemVer        bool
+		semVer          bool
 		want            wantVars
 	}{
-		"nil url_commands": {
-			lookupOverrides: test.TrimYAML(`
-				url_commands: null
-			`),
+		{
+			name:            "nil url_commands",
+			lookupOverrides: `url_commands: []`,
+			semVer:          false,
 			want: wantVars{
 				version:  body,
-				errRegex: `^$`},
+				errRegex: `^$`,
+			},
 		},
-		"empty body": {
-			bodyOverride: test.StringPtr(""),
-			lookupOverrides: test.TrimYAML(`
-				url_commands: []
-			`),
+		{
+			name:            "empty body",
+			bodyOverride:    test.Ptr(""),
+			lookupOverrides: `url_commands: []`,
+			semVer:          true,
 			want: wantVars{
-				errRegex: `^no releases were found matching the url_commands$`},
+				errRegex: `^no releases were found matching the url_commands`,
+			},
 		},
-		"nil Require": {
-			noSemVer: true,
+		{
+			name:   "nil Require",
+			semVer: false,
 			want: wantVars{
 				version:  "0.0.0",
-				errRegex: `^$`},
+				errRegex: `^$`,
+			},
 		},
-		"url_commands that error": {
+		{
+			name: "url_commands that error",
 			lookupOverrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
 						regex: ver9
 						index: 9
 			`),
+			semVer: true,
 			want: wantVars{
-				errRegex: `regex "[^"]+" didn't return any matches`},
+				errRegex: `regex "[^"]+" didn't return any matches`,
+			},
 		},
-		"url_commands that pass": {
+		{
+			name: "url_commands that pass",
 			lookupOverrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
 						regex: '"ver([0-9][^"]+)"'
 			`),
-			noSemVer: true,
+			semVer: false,
 			want: wantVars{
 				version:  "1.2.3-dev",
-				errRegex: `^$`},
+				errRegex: `^$`,
+			},
 		},
-		"regex_version mismatch": {
+		{
+			name: "regex_version mismatch",
 			lookupOverrides: test.TrimYAML(`
 				require:
 					regex_version: ver(2\.[0-9.]+)
 			`),
+			semVer: true,
 			want: wantVars{
 				errRegex: test.TrimYAML(`
-				^no releases were found matching the require field.*
-				regex "[^"]+" not matched on version "[^"]+"$`)},
+					^no releases were found matching the require field.*
+						regex "[^"]+" not matched on version "[^"]+"$`,
+				),
+			},
 		},
-		"regex_version match": {
+		{
+			name: "regex_version match",
 			lookupOverrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
@@ -202,12 +224,14 @@ func TestGetVersion(t *testing.T) {
 				require:
 					regex_version: ^1\.[0-9.]+$
 			`),
-			noSemVer: true,
+			semVer: false,
 			want: wantVars{
 				version:  "1.2.4",
-				errRegex: `^$`},
+				errRegex: `^$`,
+			},
 		},
-		"regex_content mismatch": {
+		{
+			name: "regex_content mismatch",
 			lookupOverrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
@@ -216,12 +240,16 @@ func TestGetVersion(t *testing.T) {
 					regex_version: ^1\.[0-9.]+$
 					regex_content: ver[0-9]+.exe
 			`),
+			semVer: true,
 			want: wantVars{
 				errRegex: test.TrimYAML(`
-				^no releases were found matching the require field.*
-				regex "[^"]+" not matched on content for version "[^"]+"$`)},
+					^no releases were found matching the require field.*
+						regex "[^"]+" not matched on content for version "[^"]+"$`,
+				),
+			},
 		},
-		"regex_content match": {
+		{
+			name: "regex_content match",
 			lookupOverrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
@@ -230,11 +258,14 @@ func TestGetVersion(t *testing.T) {
 					regex_version: ^1\.[0-9.]+$
 					regex_content: 'version 4 is "ver{{ version }}"'
 			`),
+			semVer: true,
 			want: wantVars{
 				version:  "1.2.5",
-				errRegex: `^$`},
+				errRegex: `^$`,
+			},
 		},
-		"command fail": {
+		{
+			name: "command fail",
 			lookupOverrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
@@ -244,12 +275,17 @@ func TestGetVersion(t *testing.T) {
 					regex_content: 'version 4 is "ver{{ version }}"'
 					command: [false]
 			`),
+			semVer: true,
 			want: wantVars{
 				errRegex: test.TrimYAML(`
-				^no releases were found matching the require field.*
-				command failed: .*$`)},
+					^no releases were found matching the require field.*
+						command failed:
+							exit status 1$`,
+				),
+			},
 		},
-		"command pass": {
+		{
+			name: "command pass",
 			lookupOverrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
@@ -259,11 +295,14 @@ func TestGetVersion(t *testing.T) {
 					regex_content: 'version 4 is "ver{{ version }}"'
 					command: [true]
 			`),
+			semVer: true,
 			want: wantVars{
 				version:  "1.2.5",
-				errRegex: `^$`},
+				errRegex: `^$`,
+			},
 		},
-		"docker fail": {
+		{
+			name: "docker fail",
 			lookupOverrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
@@ -274,16 +313,20 @@ func TestGetVersion(t *testing.T) {
 					command: [true]
 					docker:
 						type: ghcr
-						image: release-argus/argus
+						image: ` + test.ArgusDockerGHCRRepo + `
 						tag: '{{ version }}-unknown'
-						token: ` + os.Getenv("GH_TOKEN") + `
+						token: ` + test.DockerHubToken(t) + `
 			`),
+			semVer: true,
 			want: wantVars{
 				errRegex: test.TrimYAML(`
-				^no releases were found matching the require field.*
-				release-argus\/argus:[^ ]+ - .*manifest unknown.*$`)},
+					^no releases were found matching the require field.*
+						` + test.ArgusDockerGHCRRepo + `:[^ ]+ - .*tag not found.*$`,
+				),
+			},
 		},
-		"docker pass": {
+		{
+			name: "docker pass",
 			lookupOverrides: test.TrimYAML(`
 				url_commands:
 					- type: regex
@@ -294,16 +337,51 @@ func TestGetVersion(t *testing.T) {
 					command: [true]
 					docker:
 						type: ghcr
-						image: release-argus/argus
+						image: ` + test.ArgusDockerGHCRRepo + `
 						tag: '0.8.0'
-						token: ` + os.Getenv("GH_TOKEN") + `
+						token: ` + test.GitHubToken(t) + `
 			`),
+			semVer: true,
 			want: wantVars{
 				version:  "1.2.5",
-				errRegex: `^$`},
+				errRegex: `^$`,
+			},
 		},
-		"sorts versions when semantic_versioning enabled": {
-			bodyOverride: test.StringPtr(`
+		{
+			name:         "version fails semver",
+			bodyOverride: test.Ptr("1_0_0"),
+			lookupOverrides: test.TrimYAML(`
+				url_commands: []
+			`),
+			semVer: true,
+			want: wantVars{
+				errRegex: `failed to convert "1_0_0" to a semantic version`,
+			},
+		},
+		{
+			name: "semver skips non-semver values",
+			bodyOverride: test.Ptr(`
+				bad "1_0_0"
+				good "v1.0.0"
+				good "v2.0.0"
+				bad "v3_0_0"
+			`),
+			lookupOverrides: test.TrimYAML(`
+				url_commands:
+					- type: regex
+						regex: '"(v?[0-9][^"]+)"'
+				require:
+					regex_version: ^v2\.[0-9.]+$
+			`),
+			semVer: true,
+			want: wantVars{
+				version:  "v2.0.0",
+				errRegex: `^$`,
+			},
+		},
+		{
+			name: "sorts versions when semantic_versioning enabled",
+			bodyOverride: test.Ptr(`
 				patch for older major "0.4.7"
 				patch for latest major "v1.0.1"
 				latest major "v1.0.0"
@@ -314,12 +392,15 @@ func TestGetVersion(t *testing.T) {
 					- type: regex
 						regex: '"(v?[0-9][^"]+)"'
 			`),
+			semVer: true,
 			want: wantVars{
 				version:  "v1.0.1",
-				errRegex: `^$`},
+				errRegex: `^$`,
+			},
 		},
-		"does not sort versions when semantic_versioning disabled": {
-			bodyOverride: test.StringPtr(`
+		{
+			name: "does not sort versions when semantic_versioning disabled",
+			bodyOverride: test.Ptr(`
 				patch for older major "0.4.7"
 				patch for latest major "v1.0.1"
 				latest major "v1.0.0"
@@ -331,389 +412,59 @@ func TestGetVersion(t *testing.T) {
 					- type: regex
 						regex: '"(v?[0-9][^"]+)"'
 			`),
-			noSemVer: true,
+			semVer: false,
 			want: wantVars{
 				version:  "0.4.7",
-				errRegex: `^$`},
+				errRegex: `^$`,
+			},
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(false)
+			lookup := testLookup(t, false)
+			// overrides.
 			lookup.URLCommands[0] = urlCommand
-			err := yaml.Unmarshal([]byte(tc.lookupOverrides), lookup)
-			if err != nil {
-				t.Fatalf("%s\nfailed to unmarshal lookupOverrides: %v",
-					packageName, err)
+			if err := lookup.ApplyOverrides("yaml", []byte(tc.lookupOverrides)); err != nil {
+				t.Fatalf(
+					"%s\nfailed to unmarshal Lookup overrides: %v",
+					packageName, err,
+				)
 			}
-			lookup.Init(
-				lookup.Options,
-				lookup.Status,
-				lookup.Defaults, lookup.HardDefaults)
-			if tc.noSemVer {
-				*lookup.Options.SemanticVersioning = false
+			lookup.Options.SemanticVersioning = &tc.semVer
+			if err := lookup.CheckValues(); err != nil {
+				t.Fatalf(
+					"%s\nfailed to check Lookup values after applying test overrides: %v",
+					packageName, err,
+				)
 			}
-			testBody := util.DereferenceOrValue(tc.bodyOverride, body)
+			testBody := util.DerefOr(tc.bodyOverride, body)
 
-			// WHEN getVersion is called on it.
-			version, err := lookup.getVersion(
-				testBody, logutil.LogFrom{})
+			// WHEN: getVersion is called on it.
+			version, err := lookup.getVersion(testBody, logx.LogFrom{})
 
-			// THEN any error is expected.
-			e := util.ErrorToString(err)
+			prefix := fmt.Sprintf(
+				"%s\nLookup.getVersion(%q)",
+				packageName, testBody,
+			)
+
+			// THEN: the error is as expected.
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Errorf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.want.errRegex, e)
+				t.Errorf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, tc.want.errRegex, e,
+				)
 			}
-			// AND the version is as expected.
+
+			// AND: the version is as expected.
 			if version != tc.want.version {
-				t.Errorf("%s\nversion mismatch:\nwant: %q\ngot:  %q",
-					packageName, tc.want.version, version)
-			}
-		})
-	}
-}
-
-func TestQuery(t *testing.T) {
-	testLookupVersions := testLookup(false)
-	_, _ = testLookupVersions.query(logutil.LogFrom{})
-
-	type statusVars struct {
-		latestVersion, latestVersionWant string
-		deployedVersion                  string
-	}
-	type wantVars struct {
-		announce    bool
-		newVersion  bool
-		stdoutRegex string
-		errRegex    string
-	}
-
-	// GIVEN a Lookup.
-	tests := map[string]struct {
-		overrides          string
-		semanticVersioning *bool
-		hadStatus          statusVars
-		want               wantVars
-	}{
-		"invalid url": {
-			overrides: test.TrimYAML(`
-				url: "invalid://	test"
-			`),
-			want: wantVars{
-				errRegex: `invalid control character in URL`},
-		},
-		"query that gets a non-semantic version": {
-			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_valid"] + `
-				url_commands:
-					- type: regex
-					  regex: ver[0-9.]+
-			`),
-			want: wantVars{
-				errRegex: `failed to convert "[^"]+" to a semantic version`},
-		},
-		"query on self-signed https works when allowed": {
-			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_invalid"] + `
-				url_commands:
-					- type: regex
-					  regex: ver([0-9.]+)
-				allow_invalid_certs: true
-			`),
-			want: wantVars{
-				errRegex: `^$`},
-		},
-		"query on self-signed https fails when not allowed": {
-			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_invalid"] + `
-				url_commands:
-					- type: regex
-					  regex: ver([0-9.]+)
-				allow_invalid_certs: false
-			`),
-			want: wantVars{
-				errRegex: `x509`},
-		},
-		"changed to semantic_versioning but had a non-semantic deployed_version": {
-			hadStatus: statusVars{
-				deployedVersion: "1.2.3.4"},
-			want: wantVars{
-				errRegex: `^$`},
-		},
-		"regex_content mismatch": {
-			overrides: test.TrimYAML(`
-				require:
-					regex_content: argus[0-9]+.exe
-			`),
-			want: wantVars{
-				errRegex: test.TrimYAML(`
-					^no releases were found matching the require field.*
-					regex "[^"]+" not matched on content for version "[^"]+"$`)},
-		},
-		"regex_content match": {
-			overrides: test.TrimYAML(`
-				require:
-					regex_content: ver{{ version }}
-			`),
-			want: wantVars{
-				errRegex: `^$`},
-		},
-		"command fail": {
-			overrides: test.TrimYAML(`
-				require:
-					command: [false]
-			`),
-			want: wantVars{
-				errRegex: test.TrimYAML(`
-					^no releases were found matching the require field.*
-					command failed: .*$`)},
-		},
-		"command pass": {
-			overrides: test.TrimYAML(`
-				require:
-					command: [true]
-			`),
-			want: wantVars{
-				errRegex: `^$`},
-		},
-		"docker tag mismatch": {
-			overrides: test.TrimYAML(`
-				require:
-					docker:
-						type: ghcr
-						image: release-argus/argus
-						tag: 0.9.0-beta
-						token: ` + os.Getenv("GH_TOKEN") + `
-			`),
-			want: wantVars{
-				errRegex: test.TrimYAML(`
-					^no releases were found matching the require field.*
-					release-argus\/argus:[^ ]+ - .*manifest unknown.*$`)},
-		},
-		"docker tag match": {
-			overrides: test.TrimYAML(`
-				require:
-					docker:
-						type: ghcr
-						image: release-argus/argus
-						tag: 0.9.0
-						token: ` + os.Getenv("GH_TOKEN") + `
-			`),
-			want: wantVars{
-				errRegex: `^$`},
-		},
-		"regex_version mismatch": {
-			overrides: test.TrimYAML(`
-				require:
-					regex_version: ver([0-9.]+)
-			`),
-			want: wantVars{
-				errRegex: test.TrimYAML(`
-					^no releases were found matching the require field.*
-					regex "[^"]+" not matched on version "[^"]+"$`)},
-		},
-		"urlCommand regex mismatch": {
-			overrides: test.TrimYAML(`
-				url_commands:
-					- type: regex
-						regex: ^[0-9]+$
-			`),
-			want: wantVars{
-				errRegex: `^no releases were found matching the url_commands\nregex "[^"]+" didn't return any matches on ".*"$`},
-		},
-		"valid semantic version query": {
-			overrides: test.TrimYAML(`
-				url_commands:
-					- type: regex
-						regex: ver([0-9.]+)
-			`),
-			want: wantVars{
-				errRegex: `^$`},
-		},
-		"older version found": {
-			overrides: test.TrimYAML(`
-				url_commands:
-					- type: regex
-						regex: ([0-9.]+)
-			`),
-			hadStatus: statusVars{
-				latestVersion:   "0.0.0",
-				deployedVersion: "9.9.9"},
-			want: wantVars{
-				errRegex: `queried version .* is less than the deployed version`},
-		},
-		"newer version found": {
-			overrides: test.TrimYAML(`
-				url_commands:
-					- type: regex
-						regex: ([0-9.]+)
-			`),
-			hadStatus: statusVars{
-				deployedVersion: "0.0.0"},
-			want: wantVars{
-				errRegex: `^$`},
-		},
-		"same version found": {
-			overrides: test.TrimYAML(`
-				url_commands:
-					- type: regex
-						regex: ([0-9.]+)
-			`),
-			hadStatus: statusVars{
-				deployedVersion: "1.2.1"},
-			want: wantVars{
-				errRegex: `^$`},
-		},
-		"non-semantic version lookup": {
-			overrides: test.TrimYAML(`
-				url_commands:
-					- type: regex
-						regex: ver[0-9.]+
-			`),
-			semanticVersioning: test.BoolPtr(false),
-			hadStatus: statusVars{
-				latestVersionWant: "ver1.2.2"},
-			want: wantVars{
-				errRegex: `^$`},
-		},
-		"url_command makes all versions non-semantic": {
-			overrides: test.TrimYAML(`
-				url_commands:
-					- type: regex
-						regex: '([0-9.]+\.)'
-			`),
-			want: wantVars{
-				errRegex: `failed to convert "[^"]+" to a semantic version`},
-		},
-		"no overrides, first version does announce new version (with channel)": {
-			hadStatus: statusVars{
-				latestVersion: ""},
-			want: wantVars{
-				announce:    true,
-				newVersion:  false,
-				stdoutRegex: `Latest Release -`,
-				errRegex:    `^$`},
-		},
-		"no overrides, new version does announce new version (with var)": {
-			hadStatus: statusVars{
-				latestVersion: "0.0.0"},
-			want: wantVars{
-				announce:    false,
-				newVersion:  true,
-				stdoutRegex: `New Release -`,
-				errRegex:    `^$`},
-		},
-		"no overrides, same version does not announce new version": {
-			hadStatus: statusVars{
-				latestVersion: testLookupVersions.Status.LatestVersion()},
-			want: wantVars{
-				announce:   true, // LastQueried announce.
-				newVersion: false,
-				errRegex:   `^$`},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-
-			serviceID := name
-			try := 0
-			temporaryFailureInNameResolution := true
-			for temporaryFailureInNameResolution != false {
-				releaseStdout := test.CaptureLog(logutil.Log)
-				try++
-				temporaryFailureInNameResolution = false
-				lookup := testLookup(false)
-				lookup.InitMetrics(lookup)
-				// Valid cert switch.
-				lookup.URL = strings.Replace(lookup.URL, "://invalid", "://valid", 1)
-				lookup.AllowInvalidCerts = nil
-				lookup.Status.ServiceInfo.ID = serviceID
-				lookup.Options.SemanticVersioning = tc.semanticVersioning
-				// hadStatus.
-				lookup.Status.SetLatestVersion(tc.hadStatus.latestVersion, "", false)
-				lookup.Status.SetDeployedVersion(tc.hadStatus.deployedVersion, "", false)
-				// overrides.
-				err := yaml.Unmarshal([]byte(tc.overrides), lookup)
-				if err != nil {
-					t.Fatalf("%s\nfailed to unmarshal overrides: %v",
-						packageName, err)
-				}
-				lookup.Init(
-					lookup.Options,
-					lookup.Status,
-					lookup.Defaults, lookup.HardDefaults)
-
-				// WHEN Query is called on it.
-				var newVersion bool
-				newVersion, err = lookup.Query(true, logutil.LogFrom{})
-
-				// THEN any error is expected.
-				stdout := releaseStdout()
-				e := util.ErrorToString(err)
-				if !util.RegexCheck(tc.want.errRegex, e) {
-					if strings.Contains(e, "context deadline exceeded") {
-						temporaryFailureInNameResolution = true
-						if try != 3 {
-							time.Sleep(time.Second)
-							continue
-						}
-					}
-					t.Fatalf("%s\nerror mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.want.errRegex, e)
-				}
-				// AND the stdout contains the expected strings.
-				if !util.RegexCheck(tc.want.stdoutRegex, stdout) {
-					t.Fatalf("%s\nstdout mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.want.stdoutRegex, stdout)
-				}
-				// AND the LatestVersion is as expected.
-				if tc.hadStatus.latestVersionWant != "" &&
-					tc.hadStatus.latestVersionWant != lookup.Status.LatestVersion() {
-					t.Fatalf("%s\nLatestVersion mismatch\nwant: %q\ngot:  %q",
-						packageName, tc.hadStatus.latestVersionWant, lookup.Status.LatestVersion())
-				}
-				if want := 1; tc.want.announce && len(lookup.Status.AnnounceChannel) != want {
-					t.Fatalf("%s\nannouncement mismatch\nwant: %d\ngot:  %d",
-						packageName, want, len(lookup.Status.AnnounceChannel))
-				}
-				if newVersion != tc.want.newVersion {
-					t.Fatalf("%s\nnewVersion mismatch\nwant: %t\ngot:  %t",
-						packageName, tc.want.newVersion, newVersion)
-				}
-				// AND the metrics are as expected.
-				// 	FAIL:
-				var want float64 = 0
-				if tc.want.errRegex != `^$` {
-					want = 1
-				}
-				got := testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-					serviceID,
-					lookup.Type,
-					metric.ActionResultFail))
-				if got != want {
-					t.Fatalf("%s\nLatestVersionQueryResultTotal - FAIL\nwant: %f\ngot:  %f",
-						packageName, want, got)
-				}
-				// 	SUCCESS:
-				want = 0
-				if tc.want.errRegex == `^$` {
-					want = 1
-				}
-				got = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
-					serviceID,
-					lookup.Type,
-					metric.ActionResultSuccess))
-				if got != want {
-					t.Fatalf("%s\nLatestVersionQueryResultTotal - SUCCESS\nwant: %f\ngot:  %f",
-						packageName, want, got)
-				}
-				lookup.DeleteMetrics(lookup)
+				t.Errorf(
+					"%s version mismatch:\ngot:  %q\nwant: %q",
+					prefix, version, tc.want.version,
+				)
 			}
 		})
 	}

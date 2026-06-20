@@ -78,7 +78,7 @@ const VersionWithLink: FC<VersionWithLinkProps> = ({
 		const keyDefaults =
 			schemaDataDefaults?.[key as keyof typeof schemaDataDefaults];
 
-		let typedKeyDefaults;
+		let typedKeyDefaults: LatestVersionLookupSchema | DeployedVersionURLSchema;
 		if (key === 'latest_version') {
 			typedKeyDefaults = keyDefaults as LatestVersionLookupSchema;
 		} else {

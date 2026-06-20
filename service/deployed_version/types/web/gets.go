@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,15 +22,21 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// allowInvalidCerts returns whether invalid HTTPS certs are allowed.
+// GetType returns the type of the receiver.
+func (l *Lookup) GetType() string {
+	return Type
+}
+
+// allowInvalidCerts resolves whether invalid TLS certificates are permitted.
 func (l *Lookup) allowInvalidCerts() bool {
 	return *util.FirstNonNilPtr(
 		l.AllowInvalidCerts,
 		l.Defaults.AllowInvalidCerts,
-		l.HardDefaults.AllowInvalidCerts)
+		l.HardDefaults.AllowInvalidCerts,
+	)
 }
 
-// body returns the Body of the Lookup.
+// body returns the stored query response Body.
 func (l *Lookup) body() io.Reader {
 	if l.Body == "" {
 		return nil
@@ -38,15 +44,16 @@ func (l *Lookup) body() io.Reader {
 	return strings.NewReader(l.Body)
 }
 
-// method returns the method of the Lookup.
+// method resolves the HTTP method to use for requests.
 func (l *Lookup) method() string {
 	return util.FirstNonDefault(
 		l.Method,
 		l.Defaults.Method,
-		l.HardDefaults.Method)
+		l.HardDefaults.Method,
+	)
 }
 
-// url returns the URL of the Lookup.
+// url returns the URL to use for requests.
 func (l *Lookup) url() string {
 	return util.EvalEnvVars(l.URL)
 }

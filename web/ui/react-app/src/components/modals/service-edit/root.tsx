@@ -23,7 +23,12 @@ const AdvancedToggle: FC<AdvancedToggleProps> = ({ name, onClick }) => {
 			delayDuration={500}
 			touchDelayDuration={250}
 		>
-			<Toggle className="h-6 w-10" onClick={onClick} pressed={!!state}>
+			<Toggle
+				aria-label="Toggle to separate ID (service key) and Name in the config YAML"
+				className="h-6 w-10"
+				onClick={onClick}
+				pressed={!!state}
+			>
 				<IdCard />
 			</Toggle>
 		</Tip>
@@ -95,6 +100,7 @@ const EditServiceRoot: FC<EditServiceRootProps> = ({ loading }) => {
 		<div className="relative mb-2 grid grid-cols-12 gap-2">
 			<FieldText
 				colSize={{ sm: separateName ? 6 : 12, xs: 12 }}
+				disabled={loading}
 				label={separateName ? 'ID' : 'Name'}
 				name="id"
 				required

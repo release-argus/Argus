@@ -9,17 +9,18 @@ import {
 } from '@/utils/api/types/config/service/deployed-version';
 import { headersSchema } from '@/utils/api/types/config-edit/shared/header/preprocess';
 import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
+import { stringDefault } from '@/utils/api/types/config-edit/shared/preprocess';
 import { regexStringWithFallback } from '@/utils/api/types/config-edit/validators';
 
 /* Type: manual */
 
 export const deployedVersionManualSchema = z.object({
 	type: z.literal(DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value),
-	version: z.string().default(''),
+	version: stringDefault,
 });
 
 const deployedVersionManualSchemaDefault = deployedVersionManualSchema.extend({
-	version: z.string().default(''),
+	version: stringDefault,
 });
 
 /* Type: url */
@@ -27,8 +28,8 @@ const deployedVersionManualSchemaDefault = deployedVersionManualSchema.extend({
 /* basic_auth */
 const basicAuthSchema = z
 	.object({
-		password: z.string().default(''),
-		username: z.string().default(''),
+		password: stringDefault,
+		username: stringDefault,
 	})
 	.default({ password: '', username: '' });
 
@@ -44,18 +45,18 @@ export type DeployedVersionURLMethod = z.infer<
 export const deployedVersionURLSchema = z.object({
 	allow_invalid_certs: z.boolean().nullable().default(null),
 	basic_auth: basicAuthSchema,
-	body: z.string().default(''),
+	body: stringDefault,
 	headers: headersSchema,
-	json: z.string().default(''),
+	json: stringDefault,
 	method: DeployedVersionURLMethodEnum.or(z.literal(nullString)).default(
 		nullString,
 	),
 	regex: regexStringWithFallback(false),
-	regex_template: z.string().default(''),
-	target_header: z.string().default(''),
+	regex_template: stringDefault,
+	target_header: stringDefault,
 	template_toggle: z.boolean().default(false),
 	type: z.literal(DEPLOYED_VERSION_LOOKUP_TYPE.URL.value),
-	url: z.string().default(''),
+	url: stringDefault,
 });
 export type DeployedVersionURLSchema = z.infer<typeof deployedVersionURLSchema>;
 
@@ -69,7 +70,7 @@ export const isDeployedVersionURLMethod = (
 
 const deployedVersionURLSchemaDefault = deployedVersionURLSchema.extend({
 	method: DeployedVersionURLMethodEnum.nullable().default(null),
-	url: z.string().default(''),
+	url: stringDefault,
 });
 
 /* All */

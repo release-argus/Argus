@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,23 +16,22 @@
 package deployedver
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/service/deployed_version/types/base"
+	dvmanual "github.com/release-argus/Argus/service/deployed_version/types/manual"
 	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 )
 
-// Refresh the Lookup with the provided overrides.
-//
-//	Returns: version, err.
+// Refresh queries the lookup with the provided overrides, returning the deployed version and any error.
 func Refresh(
 	lookup Lookup,
 	previousType string,
-	overrides *string,
+	overrides []byte,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
 	secretRefs *shared.VSecretRef,
 ) (string, error) {
@@ -40,7 +39,7 @@ func Refresh(
 		return "", errors.New("lookup is nil")
 	}
 
-	logFrom := logutil.LogFrom{Primary: "latest_version/refresh", Secondary: lookup.GetServiceID()}
+	logFrom := logx.LogFrom{Primary: "deployed_version/refresh", Secondary: lookup.GetServiceID()}
 
 	// Whether this new `semantic_version` resolves differently than the current one.
 	semanticVerDiff := semanticVersioning != nil && (
@@ -50,112 +49,81 @@ func Refresh(
 		lookup.GetHardDefaults().Options.SemanticVersioning)) ||
 		// semantic_versioning now resolves to a different value than the default.
 		(*semanticVersioning != "null" && *semanticVersioning == "true" != lookup.GetOptions().GetSemanticVersioning()))
-	// Create a new lookup if overrides provided for a non-manual type or if `semantic_versioning` changed.
-	usingOverrides := (overrides != nil && previousType != "manual") || semanticVerDiff
+	// Create a new lookup if overrides provided, or `semantic_versioning` changed.
+	usingOverrides := overrides != nil || semanticVerDiff
 
-	newLookup := lookup
 	// Create a new Lookup if overrides provided.
-	if usingOverrides {
-		var err error
-		newLookup, err = applyOverridesJSON(
-			lookup,
-			overrides,
-			semanticVerDiff,
-			semanticVersioning)
-		if err != nil {
-			return "", err
-		}
+	newLookup, err := applyOverridesJSON(
+		lookup,
+		overrides,
+		semanticVerDiff,
+		semanticVersioning,
+	)
+	if err != nil {
+		return "", err
+	}
+	if overrides != nil {
 		newLookup.InheritSecrets(lookup, secretRefs)
-	} else if previousType == "manual" && newLookup.GetType() == "manual" &&
-		overrides != nil {
-		if err := json.Unmarshal([]byte(*overrides), &lookup); err != nil {
-			errStr := util.FormatUnmarshalError("json", err)
-			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-			return "", errors.New("failed to unmarshal deployedver.Lookup:\n  " + errStr)
+		// Remove channels from Status when using overrides (if not manual).
+		if newLookup.GetType() != dvmanual.Type && previousType != dvmanual.Type {
+			newLookup.SetStatus(lookup.GetStatus().Copy(false))
+		}
+		// Check values as they may have changed.
+		if err := newLookup.CheckValues(); err != nil {
+			return "", err //nolint:wrapcheck
 		}
 	}
 
 	// Log the lookup in use.
-	if logutil.Log.IsLevel("DEBUG") {
-		logutil.Log.Debug(
-			fmt.Sprintf("Refreshing with:\n%q",
-				lookup.String(lookup, "")),
-			logFrom, true)
+	if logx.IsLevel("DEBUG") {
+		logx.Debug(
+			fmt.Sprintf("Refreshing with:\n%q", lookup.String("")),
+			logFrom,
+			true,
+		)
 	}
 
 	// Query the lookup.
-	err := newLookup.Query(!usingOverrides, logFrom)
-	if err != nil {
+	if err := newLookup.Query(!usingOverrides, logFrom); err != nil {
 		return "", err //nolint:wrapcheck
 	}
 
 	return newLookup.GetStatus().DeployedVersion(), nil
 }
 
-// LookupTypeExtractor is a struct that extracts the type from a JSON string.
-type LookupTypeExtractor struct {
-	Type string `json:"type"`
-}
-
-// applyOverridesJSON applies the JSON overrides to the Lookup.
+// applyOverridesJSON applies the JSON overrides to the lookup.
 func applyOverridesJSON(
 	lookup Lookup,
-	overrides *string,
+	overrides []byte,
 	semanticVerDiff bool,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
 ) (Lookup, error) {
-	var newLookup Lookup
-	var extractedOverrides *LookupTypeExtractor
-	if overrides != nil {
-		if err := json.Unmarshal([]byte(*overrides), &extractedOverrides); err != nil {
-			errStr := util.FormatUnmarshalError("json", err)
-			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-			return nil, errors.New("failed to unmarshal deployedver.Lookup:\n  " + errStr)
-		}
-	}
-	// Copy the existing Lookup.
-	if overrides == nil || (extractedOverrides.Type == "" || extractedOverrides.Type == lookup.GetType()) {
-		newLookup = Copy(lookup)
-	} else {
-		// Convert to the new type.
-		var err error
-		newLookup, err = New(
-			extractedOverrides.Type,
-			"yaml", "",
-			lookup.GetOptions(),
-			lookup.GetStatus(),
-			lookup.GetDefaults(), lookup.GetHardDefaults())
-		if err != nil {
-			return nil, err
-		}
+	newLookup, err := ApplyOverrides(
+		"yaml", overrides,
+		lookup,
+		lookup.GetOptions(),
+		lookup.GetStatus(),
+		base.DefaultsConfig{
+			Soft: lookup.GetDefaults(),
+			Hard: lookup.GetHardDefaults(),
+		},
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	// Apply the new semantic_versioning JSON value.
 	if semanticVerDiff {
-		semanticVersioningRoot := util.CopyPointer(lookup.GetOptions().SemanticVersioning)
+		semanticVersioningRoot := util.ClonePtr(lookup.GetOptions().SemanticVersioning)
 		// Apply the new semantic_versioning JSON value.
-		if err := json.Unmarshal([]byte(*semanticVersioning), &semanticVersioningRoot); err != nil {
-			errStr := util.FormatUnmarshalError("json", err)
-			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-			return nil, errors.New("failed to unmarshal deployedver.Lookup.Options.SemanticVersioning:\n  " + errStr)
+		if err := decode.Unmarshal("json", []byte(*semanticVersioning), &semanticVersioningRoot); err != nil {
+			return nil, &decode.KeyFieldError{
+				Key: "semantic_versioning",
+				Err: err,
+			}
 		}
 		newLookup.GetOptions().SemanticVersioning = semanticVersioningRoot
 	}
 
-	// Apply the overrides.
-	if overrides != nil {
-		if err := json.Unmarshal([]byte(*overrides), &newLookup); err != nil {
-			errStr := util.FormatUnmarshalError("json", err)
-			errStr = strings.ReplaceAll(errStr, "\n", "\n  ")
-			return nil, errors.New("failed to unmarshal deployedver.Lookup:\n  " + errStr)
-		}
-		newLookup.Init(
-			newLookup.GetOptions(),
-			newLookup.GetStatus().Copy(false),
-			newLookup.GetDefaults(), newLookup.GetHardDefaults())
-	}
-
-	// Check the overrides.
-	err := newLookup.CheckValues("")
-	return newLookup, err //nolint:wrapcheck
+	return newLookup, nil
 }
