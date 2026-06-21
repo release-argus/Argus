@@ -38,7 +38,7 @@ const Tip = ({
 }>) => {
 	const { register, unregister } = useTooltipContext();
 	const [open, setOpen] = useState(false);
-	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const timeoutRef = useRef<number | null>(null);
 	const [lastTouch, setLastTouch] = useState(0);
 
 	const openTooltip = () => {
