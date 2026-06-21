@@ -1,8 +1,7 @@
 import {
 	type ZodArray,
 	type ZodDefault,
-	type ZodPipe,
-	type ZodTransform,
+	type ZodPreprocess,
 	z,
 } from 'zod';
 import type { Headers } from '@/utils/api/types/config/shared';
@@ -67,7 +66,7 @@ export const preprocessStringFromHeaderArrayWithDefaults = (
  */
 export const preprocessToHeadersArray = <T extends z.ZodType>(
 	schema: T,
-): ZodDefault<ZodPipe<ZodTransform, ZodArray<T>>> =>
+): ZodDefault<ZodPreprocess<ZodArray<T>>> =>
 	z
 		.preprocess((arg) => {
 			// If string, try to parse as JSON.

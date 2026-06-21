@@ -1,19 +1,7 @@
 import { z } from 'zod';
 import { NUMBER_REQUIRED_MESSAGE } from '@/utils/api/types/config-edit/validators';
 
-type OptionalStringInput =
-	| z.ZodNumber
-	| z.ZodOptional<z.ZodNumber>
-	| z.ZodPipe<z.ZodNumber, z.ZodTransform<number, number>>;
-
-type ZodStringToNumber<P extends OptionalStringInput> = z.ZodPipe<
-	z.ZodPipe<
-		z.ZodOptional<
-			z.ZodPipe<z.ZodString, z.ZodTransform<string | undefined, string>>
-		>
-	>,
-	P
->;
+type OptionalStringInput = z.ZodNumber | z.ZodOptional<z.ZodNumber>;
 
 /**
  * Converts a Zod schema that accepts strings or numbers into a number, handling empty strings and validation.
@@ -37,4 +25,4 @@ export const zodStringToNumber = <P extends OptionalStringInput>(zodPipe: P) =>
 			NUMBER_REQUIRED_MESSAGE,
 		)
 		.transform((value) => (value === undefined ? undefined : Number(value)))
-		.pipe(zodPipe) as unknown as ZodStringToNumber<P>;
+		.pipe(zodPipe);
