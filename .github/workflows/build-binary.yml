@@ -52,7 +52,6 @@ jobs:
         env:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
-          GOEXPERIMENT: jsonv2
           OUTPUT_BINARY: ./bin/${{ github.event.release.tag_name }}_${{ matrix.os }}_${{ matrix.arch }}
         run: |
           make go-build
