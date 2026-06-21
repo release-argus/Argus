@@ -9,9 +9,6 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
-env:
-  GOEXPERIMENT: jsonv2
-
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -41,6 +38,7 @@ jobs:
           DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN_R }}
           GITHUB_TOKEN: ${{ secrets.DOCKER_GHCR_TOKEN_R }}
           DOCKER_QUAY_TOKEN: ${{ secrets.DOCKER_QUAY_TOKEN_R }}
+          GOEXPERIMENT: jsonv2
 
       - name: Publish coverage
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
