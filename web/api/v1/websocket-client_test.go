@@ -72,12 +72,12 @@ func TestGetIP(t *testing.T) {
 			remoteAddr: "4.4.4.4:123",
 		},
 		{
-			name:       "Invalid RemoteAddr (SplitHostPort fail)",
+			name:       "invalid RemoteAddr/SplitHostPort fail",
 			want:       "",
 			remoteAddr: "1111",
 		},
 		{
-			name:       "Invalid RemoteAddr (ParseIP fail)",
+			name:       "invalid RemoteAddr/ParseIP fail",
 			want:       "",
 			remoteAddr: "1111:123",
 		},
@@ -160,7 +160,7 @@ func setupWSTestClient(t *testing.T) *wsTestClient {
 	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		t.Fatalf(
-			"%s\ncould not open websocket connection: %v",
+			"%s\ncould not open WebSocket connection: %v",
 			packageName, err,
 		)
 	}
@@ -206,247 +206,31 @@ func (w *wsTestClient) closePeer(t *testing.T, code int) {
 	)
 }
 
-func TestClient_ReadPump__ForwardsValidMessages(t *testing.T) {
-	tests := []struct {
-		name            string
-		echoMessages    []string
-		clientPingAfter int
-		wantMessages    []string
-		stdoutRegex     string
-	}{
-		{
-			name: "valid message",
-			echoMessages: []string{
-				`{"version":1,"type":"test","page":"home"}`,
-			},
-			stdoutRegex: `^DEBUG:.*READ.*\s$`,
-			wantMessages: []string{
-				`{"version":1,"type":"test","page":"home"}`,
-			},
-		},
-		{
-			name: "trims whitespace and newlines",
-			echoMessages: []string{
-				"  {\"version\":1,\"type\":\"test\",\"page\":\"home\"}\n  ",
-			},
-			stdoutRegex: `DEBUG:.*READ.*version.*1.*type.*test.*page.*home`,
-			wantMessages: []string{
-				`{"version":1,"type":"test","page":"home"}`,
-			},
-		},
-		{
-			name: "multiple messages skips invalid",
-			echoMessages: []string{
-				`{"version":1,"type":"first","page":"home"}`,
-				`{"invalid`,
-				`{"version":1,"type":"second","page":"home"}`,
-			},
-			stdoutRegex: test.TrimYAML(`
-				^DEBUG: .* READ .*first.*
-				DEBUG: .* READ .*invalid.*
-				WARNING: .*Invalid message.*"{\\"invalid"
-				DEBUG: .* READ .*second.*`,
-			),
-			wantMessages: []string{
-				`{"version":1,"type":"first","page":"home"}`,
-				`{"version":1,"type":"second","page":"home"}`,
-			},
-		},
-		{
-			name: "client ping runs pong handler",
-			echoMessages: []string{
-				`{"version":1,"type":"first","page":"home"}`,
-				`{"version":1,"type":"second","page":"home"}`,
-			},
-			clientPingAfter: 1,
-			stdoutRegex:     `^DEBUG: .*READ`,
-			wantMessages: []string{
-				`{"version":1,"type":"first","page":"home"}`,
-				`{"version":1,"type":"second","page":"home"}`,
-			},
-		},
+func TestClient_ReadPump__pongHandler(t *testing.T) {
+	// GIVEN: a Hub with a registered client and a running readPump.
+	wsTest := setupWSHubClient(t)
+	t.Cleanup(func() { wsTest.cleanup(t) })
+	go wsTest.client.readPump()
+
+	prefix := fmt.Sprintf("%s\nClient.readPump()", packageName)
+
+	// WHEN: the client sends a Ping
+	if err := wsTest.client.conn.WriteControl(
+		websocket.PingMessage,
+		[]byte{},
+		time.Now().Add(time.Second),
+	); err != nil {
+		t.Fatalf("%s failed to write ping: %v", prefix, err)
 	}
+	time.Sleep(100 * time.Millisecond)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureLog(t, logx.Default())
-
-			// GIVEN: a Hub with a registered client.
-			wsTest := setupWSHubClient(t)
-			t.Cleanup(func() { wsTest.cleanup(t) })
-
-			prefix := fmt.Sprintf("%s\nClient.readPump()", packageName)
-
-			// AND: a collector is ready to receive forwarded messages.
-			receivedMessages := make([]string, 0)
-			done := make(chan struct{})
-			go func() {
-				for msg := range wsTest.client.send {
-					receivedMessages = append(receivedMessages, string(msg))
-					if len(receivedMessages) == len(tc.wantMessages) {
-						close(done)
-						return
-					}
-				}
-				close(done)
-			}()
-
-			// AND: a readPump is running for this client.
-			go wsTest.client.readPump()
-
-			// WHEN: valid messages are sent over the connection.
-			for i, msg := range tc.echoMessages {
-				if err := wsTest.client.conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-					t.Fatalf("%s failed to write message: %v", prefix, err)
-				}
-				if tc.clientPingAfter > 0 && i+1 == tc.clientPingAfter {
-					// AND: a PING is sent.
-					if err := wsTest.client.conn.WriteControl(
-						websocket.PingMessage,
-						[]byte{},
-						time.Now().Add(time.Second),
-					); err != nil {
-						t.Fatalf("%s failed to write client ping: %v", prefix, err)
-					}
-					time.Sleep(50 * time.Millisecond)
-				}
-			}
-
-			// THEN: all expected messages are forwarded before timeout.
-			select {
-			case <-done:
-			case <-time.After(2 * time.Second):
-				t.Errorf(
-					"%s timeout waiting for messages\ngot:  %d\nwant: %d",
-					prefix, len(receivedMessages), len(tc.wantMessages),
-				)
-			}
-
-			// AND: the number of messages received is as expected.
-			if got, want := len(receivedMessages), len(tc.wantMessages); got != want {
-				t.Errorf(
-					"%s message count mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
-				)
-			}
-
-			// AND: the message content is as expected.
-			for i, want := range tc.wantMessages {
-				if i >= len(receivedMessages) {
-					break
-				}
-				if got := receivedMessages[i]; got != want {
-					t.Errorf(
-						"%s mismatch on message [%d]\ngot:  %q\nwant: %q",
-						prefix, i, got, want,
-					)
-				}
-			}
-
-			// AND: the client remains registered to the hub.
-			if !wsTest.client.hub.clients[wsTest.client] {
-				t.Errorf("%s client should still be registered to hub", prefix)
-			}
-
-			// AND: stdout matches.
-			stdout := releaseStdout()
-			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
-			}
-		})
+	// THEN: the connection remains alive — pong handler ran without error.
+	if !wsTest.client.hub.clients[wsTest.client] {
+		t.Errorf("%s client should still be registered to hub after pong", prefix)
 	}
 }
 
-func TestClient_ReadPump__RejectsInvalidMessages(t *testing.T) {
-	tests := []struct {
-		name         string
-		echoMessages []string
-		stdoutRegex  string
-	}{
-		{
-			name:         "invalid JSON message",
-			echoMessages: []string{`{"invalid`},
-			stdoutRegex: test.TrimYAML(`
-				^DEBUG: .* READ .*invalid.*
-				WARNING: .*Invalid message.*"{\\"invalid`,
-			),
-		},
-		{
-			name:         "message missing version",
-			echoMessages: []string{`{"type":"test","page":"home"}`},
-			stdoutRegex: test.TrimYAML(`
-				^DEBUG: .*READ.*
-				WARNING: .*Invalid message.*"{.*}"`,
-			),
-		},
-		{
-			name:         "invalid version value",
-			echoMessages: []string{`{"version":2,"type":"test","page":"home"}`},
-			stdoutRegex: test.TrimYAML(`
-				^DEBUG: .*READ.*
-				WARNING: .*Invalid message.*"{.*}"`,
-			),
-		},
-		{
-			name:         "whitespace only message",
-			echoMessages: []string{"   \n  "},
-			stdoutRegex: test.TrimYAML(`
-				^DEBUG: .* READ .*
-				WARNING: .*Invalid message`,
-			),
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureLog(t, logx.Default())
-
-			// GIVEN: a Hub with a registered client.
-			wsTest := setupWSHubClient(t)
-			t.Cleanup(func() { wsTest.cleanup(t) })
-
-			prefix := fmt.Sprintf("%s\nClient.readPump()", packageName)
-
-			// AND: a readPump is running for this client.
-			go wsTest.client.readPump()
-
-			// WHEN: invalid messages are sent over the connection.
-			for _, msg := range tc.echoMessages {
-				if err := wsTest.client.conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-					t.Fatalf("%s failed to write message: %v", prefix, err)
-				}
-			}
-
-			// THEN: no message is forwarded to the hub.
-			time.Sleep(300 * time.Millisecond)
-			select {
-			case msg := <-wsTest.client.send:
-				t.Errorf("%s unexpected forwarded message\ngot: %q", prefix, msg)
-			default:
-			}
-
-			// AND: the client remains registered to the hub.
-			if !wsTest.client.hub.clients[wsTest.client] {
-				t.Errorf("%s client should still be registered to hub", prefix)
-			}
-			// AND: stdout matches.
-			stdout := releaseStdout()
-			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
-			}
-		})
-	}
-}
-
-func TestClient_ReadPump__Disconnects(t *testing.T) {
+func TestClient_ReadPump__disconnects(t *testing.T) {
 	tests := []struct {
 		name            string
 		peerMessages    []string
@@ -521,7 +305,7 @@ func TestClient_ReadPump__Disconnects(t *testing.T) {
 	}
 }
 
-func TestClient_WriteWebSocketMessage(t *testing.T) {
+func TestClient_WriteServerMessage(t *testing.T) {
 	tests := []struct {
 		name         string
 		messages     []string
@@ -530,7 +314,7 @@ func TestClient_WriteWebSocketMessage(t *testing.T) {
 		stdoutRegex  string
 	}{
 		{
-			name: "skips messages without type/page",
+			name: "skips messages without type or page",
 			messages: []string{
 				`{"version":null,"type":"VERSION"}`,
 				`{"version":null}`,
@@ -584,16 +368,7 @@ func TestClient_WriteWebSocketMessage(t *testing.T) {
 			},
 			wantMessages: []string{},
 			closeConn:    true,
-			stdoutRegex:  `^ERROR: .*, Writing JSON to the websocket failed for VERSION`,
-		},
-		{
-			name: "logs write failure for chat message",
-			messages: []string{
-				`{"version":1,"type":"chat","page":"home"}`,
-			},
-			wantMessages: []string{},
-			closeConn:    true,
-			stdoutRegex:  `^ERROR: .*, WriteJSON for the queued chat messages`,
+			stdoutRegex:  `^ERROR: .*, Writing JSON to the WebSocket failed for VERSION`,
 		},
 	}
 
@@ -602,11 +377,11 @@ func TestClient_WriteWebSocketMessage(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
+			prefix := fmt.Sprintf("%s\nClient.writeServerMessage()", packageName)
+
 			// GIVEN: a client with a WebSocket connection.
 			wsTest := setupWSTestClient(t)
 			t.Cleanup(func() { wsTest.cleanup(t) })
-
-			prefix := fmt.Sprintf("%s\nClient.writeWebSocketMessage()", packageName)
 
 			if tc.closeConn {
 				// AND: the client connection is closed.
@@ -618,13 +393,12 @@ func TestClient_WriteWebSocketMessage(t *testing.T) {
 				}
 			}
 
-			// WHEN: writeWebSocketMessage is called for each message.
+			// WHEN: writeServerMessage is called for each message.
 			for _, msg := range tc.messages {
-				wsTest.client.writeWebSocketMessage([]byte(msg))
+				wsTest.client.writeServerMessage([]byte(msg))
 			}
 
-			// THEN: expected messages are written to the WebSocket connection.
-			time.Sleep(250 * time.Millisecond)
+			// THEN: the expected messages are written to the WebSocket connection.
 			got := readConnMessages(t, wsTest.conn, prefix, len(tc.wantMessages))
 			assertConnMessages(t, prefix, got, tc.wantMessages)
 
@@ -716,7 +490,7 @@ func TestClient_DrainSendMessages(t *testing.T) {
 
 			// AND: a message is written to the client.
 			if tc.writeFirst != "" {
-				wsTest.client.writeWebSocketMessage([]byte(tc.writeFirst))
+				wsTest.client.writeServerMessage([]byte(tc.writeFirst))
 			}
 
 			// WHEN: drainSendMessages is called.
@@ -747,7 +521,7 @@ func TestClient_DrainSendMessages(t *testing.T) {
 	}
 }
 
-func TestClient_WritePump__Messages(t *testing.T) {
+func TestClient_WritePump__messages(t *testing.T) {
 	tests := []struct {
 		name         string
 		messages     []string
@@ -814,7 +588,7 @@ func TestClient_WritePump__Messages(t *testing.T) {
 	}
 }
 
-func TestClient_WritePump__Connection(t *testing.T) {
+func TestClient_WritePump__connection(t *testing.T) {
 	tests := []struct {
 		name                string
 		messages            []string
@@ -835,7 +609,7 @@ func TestClient_WritePump__Connection(t *testing.T) {
 				`{"version":null,"type":"VERSION","page":"home"}`,
 			},
 			closeConnBeforePump: true,
-			stdoutRegex:         `^ERROR:.*Writing JSON to the websocket failed for VERSION`,
+			stdoutRegex:         `^ERROR:.*Writing JSON to the WebSocket failed for VERSION`,
 		},
 		{
 			name:        "sends ping frames",
@@ -1050,7 +824,7 @@ func TestServeWs(t *testing.T) {
 			}
 			clientConn, resp, err := websocket.DefaultDialer.Dial(wsURL, dialHeader)
 			if err != nil {
-				t.Fatalf("%s failed to dial websocket: %v", prefix, err)
+				t.Fatalf("%s failed to dial WebSocket: %v", prefix, err)
 			}
 			t.Cleanup(func() { _ = clientConn.Close() })
 
@@ -1086,7 +860,7 @@ func TestServeWs(t *testing.T) {
 	}
 }
 
-func TestServeWs__Plain_HTTP(t *testing.T) {
+func TestServeWs__plain_HTTP(t *testing.T) {
 	// GIVEN: a Hub.
 	hub := NewHub()
 	go hub.Run()

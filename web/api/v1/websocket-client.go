@@ -16,7 +16,6 @@
 package v1
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -44,11 +43,6 @@ const (
 
 // pingPeriod is the interval between WebSocket ping frames. Must occur before pongWait.
 var pingPeriod = (pongWait * 9) / 10
-
-var (
-	newline = []byte{'\n'}
-	space   = []byte{' '}
-)
 
 // ServeWs upgrades an HTTP connection to WebSocket and registers the client with the hub.
 func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
@@ -134,12 +128,7 @@ func getIP(r *http.Request) (ip string) {
 	return ""
 }
 
-// serverMessageCheck checks whether the message came from the server.
-type serverMessageCheck struct {
-	Version int `json:"version"`
-}
-
-// readPump reads incoming WebSocket frames and handles connection teardown.
+// readPump drains incoming WebSocket frames and handles connection teardown.
 //
 // Must run in its own goroutine - concentrating all reads here ensures only
 // one reader operates on the connection at a time.
@@ -161,8 +150,7 @@ func (c *Client) readPump() {
 		},
 	)
 	for {
-		_, message, err := c.conn.ReadMessage()
-		if err != nil {
+		if _, _, err := c.conn.ReadMessage(); err != nil {
 			if websocket.IsUnexpectedCloseError(
 				err,
 				websocket.CloseGoingAway,
@@ -176,33 +164,11 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-
-		if logx.IsLevel("DEBUG") {
-			logx.Debug(
-				fmt.Sprintf("READ %q", message),
-				logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-				true,
-			)
-		}
-
-		message = bytes.TrimSpace(bytes.ReplaceAll(message, newline, space))
-		// Ensure it meets client message format.
-		var validation serverMessageCheck
-		if err := decode.Unmarshal("json", message, &validation); err != nil || validation.Version != 1 {
-			logx.Warn(
-				fmt.Sprintf("Invalid message (missing/invalid version key) - %q", message),
-				logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-				true,
-			)
-			continue
-		}
-
-		c.send <- message
 	}
 }
 
 // writeServerMessage decodes and writes an outbound WebSocket message, rejecting unknown types.
-func (c *Client) writeWebSocketMessage(message []byte) {
+func (c *Client) writeServerMessage(message []byte) {
 	var msg apitype.WebSocketMessage
 	if err := decode.Unmarshal("json", message, &msg); err != nil {
 		logx.Error(
@@ -217,36 +183,24 @@ func (c *Client) writeWebSocketMessage(message []byte) {
 		return
 	}
 
-	// If message came from the server (doesn't use version).
-	if msg.Version == nil {
-		switch msg.Type {
-		case "VERSION", "WEBHOOK", "COMMAND", "SERVICE", "EDIT", "DELETE":
-			if err := c.conn.WriteJSON(msg); err != nil {
-				logx.Error(
-					fmt.Sprintf(
-						"Writing JSON to the websocket failed for %s\n%s",
-						msg.Type, err,
-					),
-					logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-					true,
-				)
-			}
-		default:
+	switch msg.Type {
+	case "VERSION", "WEBHOOK", "COMMAND", "SERVICE", "EDIT", "DELETE":
+		if err := c.conn.WriteJSON(msg); err != nil {
 			logx.Error(
 				fmt.Sprintf(
-					"Unknown Type (%q) in %q",
-					msg.Type, string(message),
+					"Writing JSON to the WebSocket failed for %s: %s",
+					msg.Type, err,
 				),
 				logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 				true,
 			)
 		}
-		return
-	}
-
-	if err := c.conn.WriteJSON(msg); err != nil {
+	default:
 		logx.Error(
-			fmt.Sprintf("WriteJSON for the queued chat messages\n%s", err),
+			fmt.Sprintf(
+				"Unknown Type (%q) in %q",
+				msg.Type, string(message),
+			),
 			logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 			true,
 		)
@@ -263,7 +217,7 @@ func (c *Client) drainSendMessages() {
 			if !ok {
 				return
 			}
-			c.writeWebSocketMessage(queued)
+			c.writeServerMessage(queued)
 		}
 	}
 }
@@ -297,7 +251,7 @@ func (c *Client) writePump() {
 				}
 			}
 
-			c.writeWebSocketMessage(message)
+			c.writeServerMessage(message)
 			c.drainSendMessages()
 
 		case <-ticker.C:
