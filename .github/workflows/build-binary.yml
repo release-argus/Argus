@@ -49,11 +49,13 @@ jobs:
         run: echo "date=$(date -u +"%FT%TZ")" >> $GITHUB_OUTPUT
 
       - name: Build
-        run: >-
-          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }}
-          make
-          OUTPUT_BINARY=./bin/${{ github.event.release.tag_name }}_${{ matrix.os }}_${{ matrix.arch }}
-          go-build
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          GOEXPERIMENT: jsonv2
+          OUTPUT_BINARY: ./bin/${{ github.event.release.tag_name }}_${{ matrix.os }}_${{ matrix.arch }}
+        run: |
+          make go-build
 
       - name: Upload release asset
         id: upload-release-asset
