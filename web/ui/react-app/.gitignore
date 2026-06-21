@@ -1,0 +1,12 @@
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/results.json
+/playwright/.cache/
+/playwright/.auth/
+/tests/playwright-test-config.yml
+/tests/playwright-tests.db
+/tests/playwright-argus.pid
+/tests/playwright-test.log

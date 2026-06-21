@@ -50,6 +50,7 @@
     "@babel/preset-react": "8.0.1",
     "@babel/preset-typescript": "8.0.1",
     "@biomejs/biome": "2.5.0",
+    "@playwright/test": "^1.61.0",
     "@tanstack/react-query-devtools": "5.101.0",
     "@types/node": "26.0.0",
     "@types/react": "19.2.17",
@@ -71,7 +72,8 @@
     "build": "tsc -b && vite build",
     "lint": "biome lint .",
     "preview": "vite preview",
-    "start": "vite --host"
+    "start": "vite --host",
+    "typecheck:e2e": "tsc -p tsconfig.playwright.json"
   },
   "type": "module",
   "version": "0.29.4"
