@@ -25,9 +25,78 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 )
+
+func TestHTTP_HTTPWebSocketToken(t *testing.T) {
+	prefix := fmt.Sprintf("%q\nAPI.httpWebSocketToken()", packageName)
+	file := filepath.Join(t.TempDir(), "config.yml")
+
+	t.Run("no basic auth returns 204", func(t *testing.T) {
+		// GIVEN: an API without Basic Auth (wsTokens is nil).
+		api := testAPI(t, file)
+
+		// WHEN: a request is made for a WebSocket token.
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/ws-token", nil)
+		w := httptest.NewRecorder()
+		api.httpWebSocketToken(w, req)
+		res := w.Result()
+		t.Cleanup(func() { _ = res.Body.Close() })
+
+		// THEN: 204 is returned (no token needed, Basic Auth not configured).
+		if res.StatusCode != http.StatusNoContent {
+			t.Errorf(
+				"%s\nstatus code mismatch\ngot:  %d\nwant: %d",
+				prefix, res.StatusCode, http.StatusNoContent,
+			)
+		}
+	})
+
+	t.Run("with basic auth returns token", func(t *testing.T) {
+		// GIVEN: an API with Basic Auth (wsTokens set).
+		api := testAPI(t, file)
+		api.wsTokens = newWebSocketTokenStore()
+		bodyRegex := test.TrimJSON(`{"token":"[a-z0-9]{`+fmt.Sprint(webSocketTokenLength)+`}"}`) + "\n$"
+
+		// WHEN: a request is made for a WebSocket token.
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/ws-token", nil)
+		w := httptest.NewRecorder()
+		api.httpWebSocketToken(w, req)
+		res := w.Result()
+		t.Cleanup(func() { _ = res.Body.Close() })
+
+		// THEN: a token matching the expected format is returned.
+		data, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Fatalf(
+				"%s unexpected error:\n%v",
+				prefix, err,
+			)
+		}
+		if got := string(data); !util.RegexCheck(bodyRegex, got) {
+			t.Errorf(
+				"%s body mismatch\ngot:  %q\nwant: %q",
+				prefix, got, bodyRegex,
+			)
+		}
+
+		// AND: the returned token validates successfully against the store.
+		var tokenResp struct {
+			Token string `json:"token"`
+		}
+		if err := decode.Unmarshal("json", data, &tokenResp); err != nil {
+			t.Fatalf("%s failed to unmarshal response: %v", prefix, err)
+		}
+		if !api.wsTokens.Validate(tokenResp.Token) {
+			t.Errorf(
+				"%s returned token %q did not validate against the store",
+				prefix, tokenResp.Token,
+			)
+		}
+	})
+}
 
 func TestHTTP_HTTPRuntimeInfo(t *testing.T) {
 	// GIVEN: an API and a request for the runtime info.

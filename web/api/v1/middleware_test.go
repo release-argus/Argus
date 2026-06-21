@@ -75,7 +75,7 @@ func TestHTTP_BasicAuthMiddleware(t *testing.T) {
 			if cfg.Settings.Web.BasicAuth != nil {
 				cfg.Settings.Web.BasicAuth.CheckValues()
 			}
-			api := NewAPI(&cfg)
+			api, _ := NewAPI(&cfg)
 			api.Router.HandleFunc("/test", func(rw http.ResponseWriter, req *http.Request) {
 				rw.WriteHeader(http.StatusOK)
 			})

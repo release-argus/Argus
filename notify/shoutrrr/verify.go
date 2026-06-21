@@ -1086,8 +1086,7 @@ func (b *Base) validateParamSelect(key string, allowed []string) error {
 // The address may optionally include a URL scheme.
 // If the address cannot be parsed, it is returned unchanged with an empty port.
 func parseHostPort(input string) (string, string) {
-	address := input
-	address = strings.TrimSpace(address)
+	address := strings.TrimSpace(input)
 	// Add scheme if missing (required for net/url).
 	if !strings.Contains(address, "://") {
 		address = "https://" + address

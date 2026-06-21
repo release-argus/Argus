@@ -30,6 +30,11 @@ type RefreshAPI struct {
 	Date    time.Time `json:"timestamp"`
 }
 
+// WebSocketTokenAPI is the response given at the /api/v1/ws-token endpoint.
+type WebSocketTokenAPI struct {
+	Token string `json:"token"`
+}
+
 // Response is a generic API response body.
 type Response struct {
 	Error   string `json:"error,omitempty"`

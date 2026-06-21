@@ -261,7 +261,7 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 						routePrefix = "/test"
 						cfg.Settings.Web.RoutePrefix = routePrefix
 					}
-					api := NewAPI(cfg)
+					api, _ := NewAPI(cfg)
 					api.SetupRoutesAPI()
 					ts := httptest.NewServer(api.Router)
 					ts.Config.Handler = api.Router
@@ -387,7 +387,7 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := config_test.BareConfig(t, true)
-			api := NewAPI(cfg)
+			api, _ := NewAPI(cfg)
 			api.SetupRoutesNodeJS()
 			ts := httptest.NewServer(api.Router)
 			t.Cleanup(ts.Close)
@@ -456,7 +456,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 
 			cfg := config_test.BareConfig(t, true)
 			cfg.Settings.Web.Favicon = testFaviconSettings(tc.urlPNG, tc.urlSVG)
-			api := NewAPI(cfg)
+			api, _ := NewAPI(cfg)
 			api.SetupRoutesFavicon()
 			ts := httptest.NewServer(api.Router)
 			t.Cleanup(ts.Close)
@@ -524,6 +524,111 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 					"%s - redirect mismatch\ngot:  %s\nwant: %s",
 					prefix, got, tc.urlSVG,
 				)
+			}
+		})
+	}
+}
+
+func TestAPI_SetupWebSocket(t *testing.T) {
+	tests := map[string]struct {
+		basicAuth        bool
+		staticToken      string // literal '?token=X' value.
+		mintToken        bool   // mint a fresh token from wsTokens and use it.
+		wantUnauthorized bool
+	}{
+		"no basic auth, no token": {
+			basicAuth:        false,
+			wantUnauthorized: false,
+		},
+		"basic auth/no token": {
+			basicAuth:        true,
+			wantUnauthorized: true,
+		},
+		"basic auth/invalid token": {
+			basicAuth:        true,
+			staticToken:      "not-a-real-token",
+			wantUnauthorized: true,
+		},
+		"basic auth/valid token": {
+			basicAuth:        true,
+			mintToken:        true,
+			wantUnauthorized: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// GIVEN: an API with/without Basic Auth configured.
+			cfg := config.Config{}
+			if tc.basicAuth {
+				cfg.Settings.Web.BasicAuth = &config.WebSettingsBasicAuth{
+					Username: "test", Password: "123",
+				}
+				cfg.Settings.Web.BasicAuth.CheckValues()
+			}
+			api, wsRoute := NewAPI(&cfg)
+			api.SetupWebSocket(NewHub(), wsRoute)
+			ts := httptest.NewServer(api.BaseRouter)
+			t.Cleanup(ts.Close)
+
+			// AND: a request to the WebSocket endpoint.
+			token := tc.staticToken
+			if tc.mintToken {
+				token = api.wsTokens.New()
+			}
+			wsURL := ts.URL + "/ws"
+			if token != "" {
+				wsURL += "?token=" + token
+			}
+
+			// WHEN: that request is made.
+			resp, err := http.Get(wsURL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+
+			prefix := fmt.Sprintf(
+				"%s\nSetupWebSocket() %s",
+				packageName, name,
+			)
+
+			// THEN: the auth gate behaves as expected.
+			if tc.wantUnauthorized {
+				if resp.StatusCode != http.StatusUnauthorized {
+					t.Errorf(
+						"%s\nstatus code mismatch\ngot:  %d\nwant: %d",
+						prefix, resp.StatusCode, http.StatusUnauthorized,
+					)
+				}
+			} else if resp.StatusCode == http.StatusUnauthorized {
+				t.Errorf("%s\ngot 401, expected auth to pass", prefix)
+			}
+
+			// AND: the WWW-Authenticate header is absent (no Basic Auth re-prompt on the WebSocket handshake).
+			if got := resp.Header.Get("WWW-Authenticate"); got != "" {
+				t.Errorf(
+					"%s\nWWW-Authenticate should not be set, got %q",
+					prefix, got,
+				)
+			}
+
+			// AND: a valid token is single-use (a second request with it is rejected).
+			if tc.mintToken {
+				resp2, err := http.Get(wsURL)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer resp2.Body.Close()
+
+				if resp2.StatusCode != http.StatusUnauthorized {
+					t.Errorf(
+						"%s (re-use)\nstatus code mismatch\ngot:  %d\nwant: %d",
+						prefix, resp2.StatusCode, http.StatusUnauthorized,
+					)
+				}
 			}
 		})
 	}

@@ -39,7 +39,6 @@ func TestWebSocketHandler(t *testing.T) {
 	url := fmt.Sprintf("ws://%s:%s/ws", host, port)
 
 	t.Run("ConnectWebSocket", func(t *testing.T) {
-
 		// WHEN: we attempt to connect.
 		ws, resp, err := websocket.DefaultDialer.Dial(url, nil)
 		if err != nil {

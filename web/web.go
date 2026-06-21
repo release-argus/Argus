@@ -77,23 +77,12 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 // newRouter serves Prometheus metrics, WebSocket, and Node.js frontend at RoutePrefix.
 func newRouter(cfg *config.Config, hub *v1.Hub) *mux.Router {
-	// Go
-	api := v1.NewAPI(cfg)
+	api, wsRoute := v1.NewAPI(cfg)
 
-	// Prometheus metrics
 	api.Router.Handle("/metrics", promhttp.Handler())
 
-	// WebSocket
-	api.Router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		// Connection header for the WebSocket handshake.
-		w.Header().Set("Connection", "keep-alive")
-		defer r.Body.Close()
-		v1.ServeWs(hub, w, r)
-	})
-
-	// HTTP API
+	api.SetupWebSocket(hub, wsRoute)
 	api.SetupRoutesAPI()
-	// Node.js
 	api.SetupRoutesNodeJS()
 
 	return api.BaseRouter
