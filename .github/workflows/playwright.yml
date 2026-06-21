@@ -1,0 +1,142 @@
+name: Playwright Tests
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+permissions:
+  contents: read
+  pull-requests: write
+concurrency:
+  group: playwright-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+
+      - name: Use Node.js LTS
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: lts/*
+
+      - name: Build Argus (web + binary)
+        run: make build
+
+      - name: Start Argus test server
+        run: make playwright-tests-setup
+        env:
+          ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_USERNAME: ${{ vars.DOCKER_HUB_USERNAME_R }}
+          ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN_R }}
+          ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_GHCR_AUTH_TOKEN: ${{ secrets.DOCKER_GHCR_TOKEN_R }}
+          ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_QUAY_AUTH_TOKEN: ${{ secrets.DOCKER_QUAY_TOKEN_R }}
+
+      - name: Install Playwright dependencies
+        working-directory: web/ui/react-app
+        run: npm ci
+
+      - name: Type-check Playwright tests
+        working-directory: web/ui/react-app
+        run: npm run typecheck:e2e
+
+      - name: Install Playwright Browsers
+        working-directory: web/ui/react-app
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Run Playwright tests
+        run: make playwright-tests
+
+      - name: Upload test results (screenshots & traces)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-results
+          path: web/ui/react-app/test-results/
+          retention-days: 30
+
+      - name: Upload Playwright HTML report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: web/ui/react-app/playwright-report/
+          retention-days: 30
+
+      - name: Comment test results on PR
+        continue-on-error: true
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { owner, repo } = context.repo;
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+
+            let body;
+            try {
+              const { stats } = JSON.parse(fs.readFileSync('web/ui/react-app/results.json', 'utf8'));
+              const icon = stats.unexpected > 0 ? '❌' : '✅';
+              const rows = [
+                ['✅ Passed',   stats.expected],
+                ['❌ Failed',   stats.unexpected],
+                ['🔄 Flaky',    stats.flaky],
+                ['⏭️ Skipped',  stats.skipped],
+              ].map(([label, n]) => `| ${label} | ${n} |`).join('\n');
+              body = [
+                `## ${icon} Playwright Test Results`,
+                '',
+                '| | Count |',
+                '|---|---|',
+                rows,
+                '',
+                `Duration: ${(stats.duration / 1000).toFixed(1)}s`,
+                '',
+                `[View screenshots & full report](${runUrl})`,
+              ].join('\n');
+            } catch {
+              body = `## Playwright Test Results\n\nResults unavailable — [view run](${runUrl}).`;
+            }
+
+            const marker = '<!-- playwright-results -->';
+            body = `${marker}\n${body}`;
+            const issue_number = context.payload.pull_request.number;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.find(
+              (c) => c.user?.type === 'Bot' && c.body?.includes(marker),
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }
+
+
+      - name: Stop Argus test server
+        if: ${{ !cancelled() }}
+        run: make playwright-tests-teardown

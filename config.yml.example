@@ -1,8 +1,8 @@
 service:
-  release-argus/argus:
+  release-argus/Argus:
     latest_version:
       type: github
-      url: release-argus/argus
+      url: release-argus/Argus
     dashboard:
       icon: https://raw.githubusercontent.com/release-argus/Argus/master/web/ui/react-app/public/favicon.svg
       icon_link-to: https://release-argus.io
