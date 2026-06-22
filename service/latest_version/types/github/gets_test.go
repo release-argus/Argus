@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/service/latest_version/filter"
 )
 
 func TestLookup_GetType(t *testing.T) {
@@ -256,6 +257,87 @@ func TestLookup_UsePreRelease(t *testing.T) {
 				t.Errorf(
 					"%s\nLookup.usePreRelease() mismatch\ngot:  %q\nwant: %q",
 					packageName, wantStr, got,
+				)
+			}
+		})
+	}
+}
+
+func TestLookup_UseTagsAPI(t *testing.T) {
+	// GIVEN: a Lookup with various combinations of use_prerelease and require.
+	tests := []struct {
+		name          string
+		usePreRelease *bool
+		require       *filter.Require
+		want          bool
+	}{
+		{
+			name:    "require/nil - allowed",
+			require: nil,
+			want:    true,
+		},
+		{
+			name:    "require/empty - allowed",
+			require: &filter.Require{},
+			want:    true,
+		},
+		{
+			name:    "require/regex_content=empty - allowed",
+			require: &filter.Require{RegexContent: ""},
+			want:    true,
+		},
+		{
+			name:    "require/regex_content=set - blocked",
+			require: &filter.Require{RegexContent: "some-pattern"},
+			want:    false,
+		},
+		{
+			name:          "use_prerelease/false - allowed",
+			usePreRelease: test.Ptr(false),
+			want:          true,
+		},
+		{
+			name:          "use_prerelease/true - blocked",
+			usePreRelease: test.Ptr(true),
+			want:          false,
+		},
+		{
+			name:          "use_prerelease=false, regex_content=set - blocked",
+			usePreRelease: test.Ptr(false),
+			require:       &filter.Require{RegexContent: "some-pattern"},
+			want:          false,
+		},
+		{
+			name:          "use_prerelease=true, regex_content=empty - blocked",
+			usePreRelease: test.Ptr(true),
+			require:       &filter.Require{RegexContent: ""},
+			want:          false,
+		},
+		{
+			name:          "use_prerelease=true, regex_content=set - blocked",
+			usePreRelease: test.Ptr(true),
+			require:       &filter.Require{RegexContent: "some-pattern"},
+			want:          false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND: a Lookup with the specified use_prerelease and require.
+			lookup := testLookup(t, false)
+			lookup.UsePreRelease = tc.usePreRelease
+			lookup.Require = tc.require
+
+			// WHEN: useTagsAPI is called.
+			got := lookup.useTagsAPI()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nLookup.useTagsAPI() result mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
 				)
 			}
 		})

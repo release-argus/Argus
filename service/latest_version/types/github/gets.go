@@ -38,32 +38,31 @@ func (l *Lookup) accessToken() string {
 
 // url returns a GitHub API URL for the repository.
 func (l *Lookup) url(page int) string {
-	url := util.EvalEnvVars(l.URL)
-	// Convert "owner/repo" to the API path.
-	if strings.Count(url, "/") == 1 {
-		apiTarget := "releases"
-		if l.data.TagFallback() {
-			apiTarget = "tags"
-		}
-		url = fmt.Sprintf(
-			"https://api.github.com/repos/%s/%s",
-			url, apiTarget,
-		)
-
-		// Query params
-		params := make([]string, 0, 2)
-		if page > 1 {
-			params = append(params, fmt.Sprintf("page=%d", page))
-		}
-		if perPage := l.data.PerPage(); perPage != 0 {
-			params = append(params, fmt.Sprintf("per_page=%d", perPage))
-		}
-		if len(params) > 0 {
-			url += "?" + strings.Join(params, "&")
-		}
+	rawURL := util.EvalEnvVars(l.URL)
+	if strings.Count(rawURL, "/") != 1 {
+		return rawURL
 	}
 
-	return url
+	apiTarget := "releases"
+	if l.data.TagFallback() {
+		apiTarget = "tags"
+	}
+	base := fmt.Sprintf(
+		"https://api.github.com/repos/%s/%s",
+		rawURL, apiTarget,
+	)
+
+	params := make([]string, 0, 2)
+	if page > 1 {
+		params = append(params, fmt.Sprintf("page=%d", page))
+	}
+	if perPage := l.data.PerPage(); perPage != 0 {
+		params = append(params, fmt.Sprintf("per_page=%d", perPage))
+	}
+	if len(params) == 0 {
+		return base
+	}
+	return base + "?" + strings.Join(params, "&")
 }
 
 // usePreRelease resolves whether to consider GitHub PreReleases for new versions.
@@ -73,6 +72,15 @@ func (l *Lookup) usePreRelease() bool {
 		l.Defaults.UsePreRelease,
 		l.HardDefaults.UsePreRelease,
 	)
+}
+
+// useTagsAPI returns whether the /tags API may be used as a fallback.
+//
+// Cannot use /tags when:
+//   - filtering out pre-releases (tags have no pre-release labeling)
+//   - filtering on regex_content (tags have no release assets to match against)
+func (l *Lookup) useTagsAPI() bool {
+	return !l.usePreRelease() && (l.Require == nil || l.Require.RegexContent == "")
 }
 
 // ServiceURL translates possible `owner/repo` URLs, adding the github.com/ prefix.

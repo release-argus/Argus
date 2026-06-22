@@ -158,6 +158,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 		nilBody          bool
 		nextPage         int
 		setEmptyListETag bool
+		tagFallback      bool
 		errRegex         string
 	}
 	type conditions struct {
@@ -167,11 +168,12 @@ func TestLookup_HandleResponse(t *testing.T) {
 
 	// GIVEN: a HTTP Response and an accompanying body.
 	tests := []struct {
-		name       string
-		conditions conditions
-		statusCode int
-		body       []byte
-		want       wants
+		name        string
+		conditions  conditions
+		lookupSetup func(*Lookup)
+		statusCode  int
+		body        []byte
+		want        wants
 	}{
 		{
 			name: "200 OK/EmptyListETag set if default access_token",
@@ -183,6 +185,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			want: wants{
 				nextPage:         2,
 				setEmptyListETag: true,
+				tagFallback:      true,
 				errRegex:         `^$`,
 			},
 		},
@@ -196,6 +199,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			want: wants{
 				nextPage:         2,
 				setEmptyListETag: false,
+				tagFallback:      true,
 				errRegex:         `^$`,
 			},
 		},
@@ -204,17 +208,73 @@ func TestLookup_HandleResponse(t *testing.T) {
 			statusCode: http.StatusOK,
 			body:       []byte(`[{"tag_name":"v1.0.0"}]`),
 			want: wants{
-				nextPage: 0,
-				errRegex: `^$`,
+				nextPage:    0,
+				tagFallback: false,
+				errRegex:    `^$`,
+			},
+		},
+		{
+			name:       "200 OK/use_prerelease blocks tag fallback on empty list",
+			statusCode: http.StatusOK,
+			body:       []byte(`[]`),
+			lookupSetup: func(l *Lookup) {
+				l.UsePreRelease = test.Ptr(true)
+			},
+			want: wants{
+				nilBody:     false,
+				nextPage:    0,
+				tagFallback: false,
+				errRegex:    `^$`,
+			},
+		},
+		{
+			name:       "200 OK/require.regex_content blocks tag fallback on empty list",
+			statusCode: http.StatusOK,
+			body:       []byte(`[]`),
+			lookupSetup: func(l *Lookup) {
+				l.Require = &filter.Require{RegexContent: "some-pattern"}
+			},
+			want: wants{
+				nilBody:     false,
+				nextPage:    0,
+				tagFallback: false,
+				errRegex:    `^$`,
+			},
+		},
+		{
+			name:       "304 Not Modified/use_prerelease blocks tag fallback",
+			statusCode: http.StatusNotModified,
+			lookupSetup: func(l *Lookup) {
+				l.UsePreRelease = test.Ptr(true)
+			},
+			want: wants{
+				nilBody:     true,
+				nextPage:    0,
+				tagFallback: false,
+				errRegex:    `^$`,
+			},
+		},
+		{
+			name:       "304 Not Modified/require.regex_content blocks tag fallback",
+			statusCode: http.StatusNotModified,
+			lookupSetup: func(l *Lookup) {
+				l.Require = &filter.Require{RegexContent: "some-pattern"}
+			},
+			want: wants{
+				nilBody:     true,
+				nextPage:    0,
+				tagFallback: false,
+				errRegex:    `^$`,
 			},
 		},
 		{
 			name:       "304 Not Modified/Tag fallback request",
 			statusCode: http.StatusNotModified,
 			want: wants{
-				nilBody:  false,
-				nextPage: 2,
-				errRegex: `^$`,
+				nilBody:     false,
+				nextPage:    2,
+				tagFallback: true,
+				errRegex:    `^$`,
 			},
 		},
 		{
@@ -224,9 +284,10 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 			statusCode: http.StatusNotModified,
 			want: wants{
-				nilBody:  true,
-				nextPage: 2,
-				errRegex: `^$`,
+				nilBody:     true,
+				nextPage:    2,
+				tagFallback: false,
+				errRegex:    `^$`,
 			},
 		},
 		{
@@ -288,8 +349,8 @@ func TestLookup_HandleResponse(t *testing.T) {
 			statusCode: http.StatusTooManyRequests,
 			body:       []byte(`{"message":}`),
 			want: wants{
-				errRegex: `^too many requests made to GitHub$`,
 				nilBody:  true,
+				errRegex: `^too many requests made to GitHub$`,
 			},
 		},
 		{
@@ -297,8 +358,8 @@ func TestLookup_HandleResponse(t *testing.T) {
 			statusCode: http.StatusTeapot,
 			body:       []byte(`{"message":"I'm a teapot"}`),
 			want: wants{
-				errRegex: `unknown status code 418`,
 				nilBody:  true,
+				errRegex: `unknown status code 418`,
 			},
 		},
 	}
@@ -339,6 +400,9 @@ func TestLookup_HandleResponse(t *testing.T) {
 				if !tc.conditions.hadDefaultAccessToken {
 					lookup.Defaults.AccessToken = ""
 					lookup.HardDefaults.AccessToken = "Something"
+				}
+				if tc.lookupSetup != nil {
+					tc.lookupSetup(lookup)
 				}
 
 				logFrom := logx.LogFrom{Primary: "TestHandleResponse", Secondary: tc.name}
@@ -392,6 +456,14 @@ func TestLookup_HandleResponse(t *testing.T) {
 					t.Errorf(
 						"%s nextPage mismatch\ngot:  %d\nwant: %d",
 						prefix, nextPage, tc.want.nextPage,
+					)
+				}
+
+				// AND: TagFallback is as expected.
+				if got := lookup.data.TagFallback(); got != tc.want.tagFallback {
+					t.Errorf(
+						"%s TagFallback mismatch\ngot:  %t\nwant: %t",
+						prefix, got, tc.want.tagFallback,
 					)
 				}
 				break
