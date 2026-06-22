@@ -87,10 +87,16 @@ export const buildWebHooksSchemaWithFallbacks = (
 		const nameLower = item.name.toLowerCase();
 		const itemType =
 			main?.type ?? (isWebHookType(nameLower) ? nameLower : defaultType);
+		const itemHeaders = (item?.headers ?? []).map((h, i) => ({
+			...h,
+			old_index: i,
+		}));
 
 		return safeParse({
 			data: {
 				...item,
+				headers: itemHeaders,
+				old_index: item.name,
 				type: itemType,
 			},
 			fallback: {

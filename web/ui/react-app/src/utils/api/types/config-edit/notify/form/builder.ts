@@ -440,7 +440,6 @@ export const buildNotifySchemaWithFallbacks = (
 				type: itemType,
 			},
 			fallback: {
-				old_index: item.name,
 				type: defaultType,
 			},
 			path: path,
