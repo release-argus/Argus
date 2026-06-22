@@ -172,8 +172,8 @@ func (l *Lookup) getResponse(req *http.Request, logFrom logx.LogFrom) (*http.Res
 
 // handleResponse processes the HTTP response based on the status code and takes appropriate action.
 //   - 200 OK, if the response body contains one or more releases, it returns the body.
-//     Otherwise, it flips the 'tags' flag and performs a query on the "/tags" endpoint and returns that body.
-//   - 304 Not Modified, it flips the 'tags' flag, performs a query on the "/tags" endpoint, and returns that body.
+//     Otherwise, it conditionally falls back to the "/tags" endpoint (see [Lookup.useTagsAPI]).
+//   - 304 Not Modified, conditionally falls back to "/tags" when there are no cached releases.
 //   - 401 Unauthorized, 403 Forbidden, and 429 Too Many Requests, it logs the error and returns a nil body.
 //   - Unknown status code, it logs the error and returns a nil body along with an error.
 func (l *Lookup) handleResponse(resp *http.Response, body []byte, logFrom logx.LogFrom) ([]byte, int, error) {
@@ -221,15 +221,17 @@ func (l *Lookup) handleStatusOK(resp *http.Response, body []byte, logFrom logx.L
 		if firstPage && (l.AccessToken == "" || l.accessToken() == defaultAccessToken) {
 			setEmptyListETag(newETag)
 		}
-		// Flip the fallback flag.
-		l.data.SetTagFallback()
-		if l.data.TagFallback() {
-			logx.Verbose(
-				fmt.Sprintf("/releases gave %s, trying /tags", body),
-				logFrom,
-				true,
-			)
-			return l.httpRequest(0, logFrom)
+
+		if l.useTagsAPI() {
+			l.data.SetTagFallback()
+			if l.data.TagFallback() {
+				logx.Verbose(
+					fmt.Sprintf("/releases gave %s, trying /tags", body),
+					logFrom,
+					true,
+				)
+				return l.httpRequest(0, logFrom)
+			}
 		}
 
 		// Has tags/releases.
@@ -276,11 +278,13 @@ func getNextPage(linkHeader string) int {
 func (l *Lookup) handleStatusNotModified(logFrom logx.LogFrom) ([]byte, int, error) {
 	// Didn't find any releases before and nothing has changed?
 	if !l.data.hasReleases() {
-		// Flip the fallback flag for next time.
-		l.data.SetTagFallback()
-		if l.data.TagFallback() {
-			logx.Verbose("no tags found on /releases, trying /tags", logFrom, true)
-			return l.httpRequest(0, logFrom)
+		if l.useTagsAPI() {
+			// Flip the fallback flag for next time.
+			l.data.SetTagFallback()
+			if l.data.TagFallback() {
+				logx.Verbose("no tags found on /releases, trying /tags", logFrom, true)
+				return l.httpRequest(0, logFrom)
+			}
 		}
 		return nil, 0, nil
 	}
