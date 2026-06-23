@@ -25,7 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nicholas-fedor/shoutrrr/pkg/services/chat/teams"
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config/decode"
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
@@ -583,19 +582,13 @@ func TestFromPayload(t *testing.T) {
 						"old_index": "slack-initial"
 					},
 					{
-						"name": "teams",
-						"type": "teams",
+						"name": "gotify",
+						"type": "gotify",
 						"url_fields": {
-							"altid": "` + util.SecretValue + `",
-							"group":      "` + strings.Repeat("g", teams.UUID4Length) + `",
-							"groupowner": "` + strings.Repeat("o", teams.UUID4Length) + `",
-							"tenant":     "` + strings.Repeat("t", teams.UUID4Length) + `",
-							"extraid":     "eID"
+							"host":  "gotify.example.com",
+							"token": "` + util.SecretValue + `"
 						},
-						"params": {
-							"host": "example.webhook.office.com"
-						},
-						"old_index": "teams-initial"
+						"old_index": "gotify-initial"
 					},
 					{
 						"name": "zulip",
@@ -638,16 +631,10 @@ func TestFromPayload(t *testing.T) {
 								url_fields:
 									channel: ABC
 									token: xoxABCDEFGHI-012345678-abcdefghi01234567abcdefghi
-							teams:
-								type: teams
+							gotify:
 								url_fields:
-									altid: `+strings.Repeat("a", teams.HashLength)+`
-									group: `+strings.Repeat("g", teams.UUID4Length)+`
-									groupowner: `+strings.Repeat("o", teams.UUID4Length)+`
-									tenant: `+strings.Repeat("t", teams.UUID4Length)+`
-									extraid: eID
-								params:
-									host: example.webhook.office.com
+									host: gotify.example.com
+									token: gotifyToken
 							zulip:
 								url_fields:
 									botkey: zulipBotKey
@@ -694,10 +681,11 @@ func TestFromPayload(t *testing.T) {
 								type: slack
 								url_fields:
 									token: xoxABCDEFGHI-012345678-abcdefghi01234567abcdefghi
-							teams-initial:
-								type: teams
+							gotify-initial:
+								type: gotify
 								url_fields:
-									altid: `+strings.Repeat("a", teams.HashLength)+`
+									host: gotify.example.com
+									token: gotifyToken
 							zulip-initial:
 								type: zulip
 								url_fields:
@@ -881,19 +869,13 @@ func TestFromPayload(t *testing.T) {
 						"old_index": "slack-initial"
 					},
 					{
-						"name": "teams",
-						"type": "teams",
+						"name": "gotify",
+						"type": "gotify",
 						"url_fields": {
-							"altid": "` + util.SecretValue + `",
-							"group":      "` + strings.Repeat("g", teams.UUID4Length) + `",
-							"groupowner": "` + strings.Repeat("o", teams.UUID4Length) + `",
-							"tenant":     "` + strings.Repeat("t", teams.UUID4Length) + `",
-							"extraid":     "eID"
+							"host":  "gotify.example.com",
+							"token": "` + util.SecretValue + `"
 						},
-						"params": {
-							"host": "example.webhook.office.com"
-						},
-						"old_index": "teams-initial"
+						"old_index": "gotify-initial"
 					},
 					{
 						"name": "zulip",
@@ -981,16 +963,10 @@ func TestFromPayload(t *testing.T) {
 								url_fields:
 									channel: ABC
 									token: xoxABCDEFGHI-012345678-abcdefghi01234567abcdefghi
-							teams:
-								type: teams
+							gotify:
 								url_fields:
-									altid: `+strings.Repeat("a", teams.HashLength)+`
-									group: `+strings.Repeat("g", teams.UUID4Length)+`
-									groupowner: `+strings.Repeat("o", teams.UUID4Length)+`
-									tenant: `+strings.Repeat("t", teams.UUID4Length)+`
-									extraid: eID
-								params:
-									host: example.webhook.office.com
+									host: gotify.example.com
+									token: gotifyToken
 							zulip:
 								url_fields:
 									botkey: zulipBotKey
@@ -1061,10 +1037,11 @@ func TestFromPayload(t *testing.T) {
 								type: slack
 								url_fields:
 									token: xoxABCDEFGHI-012345678-abcdefghi01234567abcdefghi
-							teams-initial:
-								type: teams
+							gotify-initial:
+								type: gotify
 								url_fields:
-									altid: `+strings.Repeat("a", teams.HashLength)+`
+									host: gotify.example.com
+									token: gotifyToken
 							zulip-initial:
 								type: zulip
 								url_fields:

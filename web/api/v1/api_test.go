@@ -207,7 +207,7 @@ func TestWriteJSON(t *testing.T) {
 			name:         "successful JSON encoding",
 			response:     &http.Response{},
 			statusCode:   http.StatusOK,
-			expectedBody: `{"key":"value"}` + "\n",
+			expectedBody: `^{"key":"value"}` + "\n$",
 			input:        map[string]string{"key": "value"},
 			errRegex:     `^$`,
 		},
@@ -215,14 +215,14 @@ func TestWriteJSON(t *testing.T) {
 			name:         "JSON encoding failure",
 			response:     &http.Response{},
 			statusCode:   http.StatusInternalServerError,
-			expectedBody: `{"error":"json: cannot marshal from Go chan int"}` + "\n",
+			expectedBody: `^{"error":"json: (cannot|unable to) marshal from Go chan int"}` + "\n$",
 			input:        make(chan int), // Invalid type for JSON encoding.
-			errRegex:     `^ERROR: json: cannot marshal from Go chan int\s$`,
+			errRegex:     `^ERROR: json: (cannot|unable to) marshal from Go chan int\s$`,
 		},
 		{
 			name:          "response write failure",
 			statusCode:    http.StatusOK,
-			expectedBody:  "",
+			expectedBody:  "^$",
 			input:         map[string]string{"key": "value"},
 			errRegex:      `^ERROR: write failed\s$`,
 			useFailWriter: true,
@@ -262,7 +262,7 @@ func TestWriteJSON(t *testing.T) {
 				)
 			}
 
-			if body != tc.expectedBody {
+			if !util.RegexCheck(tc.expectedBody, body) {
 				t.Errorf(
 					"%s body mismatch\ngot:  %q\nwant: %q",
 					prefix, body, tc.expectedBody,

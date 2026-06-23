@@ -231,13 +231,13 @@ func (d *Defaults) CheckValues(id string) (error, bool) {
 	}
 
 	// Verify valid type.
-	if !util.Contains(supportedTypes, typeName) {
+	if !util.Contains(SupportedTypes, typeName) {
 		errs = append(
 			errs,
 			polymorphic.InvalidTypeError{
 				Key:     "type",
 				Value:   typeName,
-				Allowed: supportedTypes,
+				Allowed: SupportedTypes,
 			},
 		)
 	}
@@ -305,6 +305,35 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 			b.setURLField("custom_headers", "")
 			changed = true
 		}
+	case "discord":
+		// Deprecated: threadid -> thread_id.
+		if v := b.GetParam("threadid"); v != "" {
+			if b.GetParam("thread_id") == "" {
+				logx.Deprecated("Renaming 'notify.discord.params.threadid' to 'notify.discord.params.thread_id'")
+				b.setParam("thread_id", v)
+			}
+			b.setParam("threadid", "")
+			changed = true
+		}
+	case "ifttt":
+		// Deprecated: usemessageasvalue -> messagevalue.
+		if v := b.GetParam("usemessageasvalue"); v != "" {
+			if b.GetParam("messagevalue") == "" {
+				logx.Deprecated("Renaming 'notify.ifttt.params.usemessageasvalue' to 'notify.ifttt.params.messagevalue'")
+				b.setParam("messagevalue", v)
+			}
+			b.setParam("usemessageasvalue", "")
+			changed = true
+		}
+		// Deprecated: usetitleasvalue -> titlevalue.
+		if v := b.GetParam("usetitleasvalue"); v != "" {
+			if b.GetParam("titlevalue") == "" {
+				logx.Deprecated("Renaming 'notify.ifttt.params.usetitleasvalue' to 'notify.ifttt.params.titlevalue'")
+				b.setParam("titlevalue", v)
+			}
+			b.setParam("usetitleasvalue", "")
+			changed = true
+		}
 	case "matrix":
 		// Remove #'s in channel aliases.
 		if rooms := b.GetParam("rooms"); strings.Contains(rooms, "#") {
@@ -331,21 +360,31 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 			changed = true
 		}
 	case "slack":
-		// # -> %23
-		// https://containrrr.dev/shoutrrr/v0.5/services/slack/
-		// The format for the Color prop follows the slack docs but # needs to be escaped as %23 when passed in a URL.
-		// So #ff8000 would be %23ff8000 etc.
-		if color := b.GetParam("color"); strings.HasPrefix(color, "#") {
-			b.setParam("color", strings.Replace(color, "#", "%23", 1))
-			changed = true
-		}
-	case "teams":
-		// AltID / GroupOwner, strip leading '/'.
-		for _, key := range []string{"altid", "groupowner"} {
-			if value, ok := strings.CutPrefix(b.getURLField(key), "/"); ok {
-				b.setURLField(key, value)
+		// Ensure color is stored as #RRGGBB so BuildURL's queryParam encodes it correctly.
+		// Migrate %23 (old manual encoding) and bare hex to #-prefixed form.
+		if color := b.GetParam("color"); color != "" {
+			var newColor string
+			switch {
+			case strings.HasPrefix(color, "%23"):
+				// Migrate old URL-encoded format; queryParam will re-encode.
+				newColor = "#" + strings.TrimPrefix(color, "%23")
+			case util.RegexCheck(`^[a-fA-F0-9]{6}$`, color):
+				newColor = "#" + color
+			}
+			if newColor != "" {
+				b.setParam("color", newColor)
 				changed = true
 			}
+		}
+	case "smtp":
+		// Deprecated: skiptlsverification -> skiptlsverify.
+		if v := b.GetParam("skiptlsverification"); v != "" {
+			if b.GetParam("skiptlsverify") == "" {
+				logx.Deprecated("Renaming 'notify.smtp.params.skiptlsverification' to 'notify.smtp.params.skiptlsverify'")
+				b.setParam("skiptlsverify", v)
+			}
+			b.setParam("skiptlsverification", "")
+			changed = true
 		}
 	case "zulip":
 		// BotMail, replace the @ with a %40 - https://containrrr.dev/shoutrrr/v0.5/services/zulip/
@@ -375,7 +414,7 @@ func (b *Base) normaliseParamSelect(key string, value string, allowed []string) 
 func (s *Shoutrrr) checkValuesType() error {
 	// Check we have a Type.
 	sType := s.GetType()
-	if !util.Contains(supportedTypes, sType) {
+	if !util.Contains(SupportedTypes, sType) {
 		sTypeWithoutID := util.FirstNonDefault(s.Type, s.Main.Type)
 		if sTypeWithoutID == "" {
 			return &decode.FieldError{
@@ -398,11 +437,11 @@ func (s *Shoutrrr) checkValuesType() error {
 	}
 
 	// Invalid/Unknown type.
-	if !util.Contains(supportedTypes, sType) {
+	if !util.Contains(SupportedTypes, sType) {
 		return polymorphic.InvalidTypeError{
 			Key:     "type",
 			Value:   sType,
-			Allowed: supportedTypes,
+			Allowed: SupportedTypes,
 		}
 	}
 
@@ -659,6 +698,17 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 				},
 			)
 		}
+	case "notifiarr":
+		// notifiarr://apikey[?name=X&channel=X&thumbnail=X&image=X&color=X]
+		if s.GetURLField("apikey") == "" {
+			errs = append(
+				errs,
+				&decode.FieldError{
+					Key:         "apikey",
+					Description: "found on your Notifiarr account settings page",
+				},
+			)
+		}
 	case "opsgenie":
 		// opsgenie://host[:port]/apiKey
 		if s.GetURLField("apikey") == "" {
@@ -768,50 +818,14 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 				},
 			)
 		}
-	case "teams":
-		// teams://[group@][tenant][/altid][/groupowner]
-		if s.GetURLField("group") == "" {
+	case "shoutrrr":
+		// Raw shoutrrr URL passthrough.
+		if s.GetURLField("raw") == "" {
 			errs = append(
 				errs,
 				&decode.FieldError{
-					Key:         "group",
-					Description: "e.g. '<host>/webhookb2/<GROUP>@<tenant>/IncomingWebhook/<altId>/<groupOwner>/<extraId>'",
-				},
-			)
-		}
-		if s.GetURLField("tenant") == "" {
-			errs = append(
-				errs,
-				&decode.FieldError{
-					Key:         "tenant",
-					Description: "e.g. '<host>/webhookb2/<group>@<TENANT>/IncomingWebhook/<altId>/<groupOwner>/<extraId>'",
-				},
-			)
-		}
-		if s.GetURLField("altid") == "" {
-			errs = append(
-				errs,
-				&decode.FieldError{
-					Key:         "altid",
-					Description: "e.g. '<host>/webhookb2/<group>@<tenant>/IncomingWebhook/<ALT-ID>/<groupOwner>/<extraId>'",
-				},
-			)
-		}
-		if s.GetURLField("groupowner") == "" {
-			errs = append(
-				errs,
-				&decode.FieldError{
-					Key:         "groupowner",
-					Description: "e.g. '<host>/webhookb2/<group>@<tenant>/IncomingWebhook/<alt-id>/<GROUP-OWNER>/<extraId>'",
-				},
-			)
-		}
-		if s.GetURLField("extraid") == "" {
-			errs = append(
-				errs,
-				&decode.FieldError{
-					Key:         "extraid",
-					Description: "e.g. '<host>/webhookb2/<group>@<tenant>/IncomingWebhook/<altId>/<group-owner>/<EXTRA-ID>'",
+					Key:         "raw",
+					Description: "e.g. 'slack://TOKEN@CHANNEL'",
 				},
 			)
 		}
@@ -901,26 +915,6 @@ func (s *Shoutrrr) checkValuesParams() error {
 	}
 
 	switch itemType {
-	case "smtp":
-		// smtp://username:password@host[:port]/?fromaddress=X&toaddresses=Y[&fromname=X]
-		if s.GetParam("fromaddress") == "" {
-			errs = append(
-				errs,
-				&decode.FieldError{
-					Key:         "fromaddress",
-					Description: "e.g. 'service@gmail.com'",
-				},
-			)
-		}
-		if s.GetParam("toaddresses") == "" {
-			errs = append(
-				errs,
-				&decode.FieldError{
-					Key:         "toaddresses",
-					Description: "e.g. 'name@gmail.com'",
-				},
-			)
-		}
 	case "ifttt":
 		// ifttt://webhookid/?events=event1[,event2,...]&value1=value1&value2=value2&value3=value3
 		if s.GetParam("events") == "" {
@@ -943,14 +937,34 @@ func (s *Shoutrrr) checkValuesParams() error {
 				},
 			)
 		}
+	case "smtp":
+		// smtp://username:password@host[:port]/?fromaddress=X&toaddresses=Y[&fromname=X]
+		if s.GetParam("fromaddress") == "" {
+			errs = append(
+				errs,
+				&decode.FieldError{
+					Key:         "fromaddress",
+					Description: "e.g. 'service@gmail.com'",
+				},
+			)
+		}
+		if s.GetParam("toaddresses") == "" {
+			errs = append(
+				errs,
+				&decode.FieldError{
+					Key:         "toaddresses",
+					Description: "e.g. 'name@gmail.com'",
+				},
+			)
+		}
 	case "teams":
-		// teams://group@tenant/altId/groupOwner?host=organization.webhook.office.com
+		// teams://?host=fullPowerAutomateURL
 		if s.GetParam("host") == "" {
 			errs = append(
 				errs,
 				&decode.FieldError{
 					Key:         "host",
-					Description: "e.g. 'example.webhook.office.com'",
+					Description: "Full Power Automate workflow URL, e.g. 'https://prod-00.westus.logic.azure.com:443/workflows/...'",
 				},
 			)
 		}
@@ -1035,6 +1049,10 @@ func (b *Base) checkValuesParamsSelects(itemType string) error {
 		}
 	case "telegram":
 		if err := b.validateParamSelect("parsemode", telegramParamParsemode); err != nil {
+			errs = append(errs, err)
+		}
+	case "zulip":
+		if err := b.validateParamSelect("type", zulipParamType); err != nil {
 			errs = append(errs, err)
 		}
 	}

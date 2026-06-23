@@ -97,8 +97,6 @@ func TestShoutrrr_TestSend(t *testing.T) {
 }
 
 func TestShoutrrrs_CheckValues(t *testing.T) {
-	notifyCfg := plainConfig(t)
-
 	// GIVEN: Shoutrrrs.
 	tests := []struct {
 		name     string
@@ -196,6 +194,7 @@ func TestShoutrrrs_CheckValues(t *testing.T) {
 					},
 					&dashboard.Options{},
 				)
+				notifyCfg := plainConfig(t)
 				tc.input.Init(svcStatus, notifyCfg)
 			}
 
@@ -209,6 +208,7 @@ func TestShoutrrrs_CheckValues(t *testing.T) {
 		})
 	}
 }
+
 func TestShoutrrr_CheckValues(t *testing.T) {
 	// GIVEN: a Shoutrrr.
 	testS := testShoutrrr(false, false)
@@ -477,6 +477,32 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 				"token": "bish",
 			},
 			errRegex: `failed to parse URL`,
+			changed:  false,
+		},
+		{
+			name:      "teams/new-style (Power Automate URL)",
+			sType:     "teams",
+			urlFields: map[string]string{},
+			params: map[string]string{
+				"host": "https://prod-00.westus.logic.azure.com:443/workflows/abc",
+			},
+			errRegex: `^$`,
+			changed:  false,
+		},
+		{
+			name:  "teams/old-style (Office 365 Connectors) - validates without error",
+			sType: "teams",
+			urlFields: map[string]string{
+				"group":      "GROUP",
+				"tenant":     "TENANT",
+				"altid":      "ALTID",
+				"groupowner": "GROUPOWNER",
+				"extraid":    "EXTRAID",
+			},
+			params: map[string]string{
+				"host": "organization.webhook.office.com",
+			},
+			errRegex: `^$`,
 			changed:  false,
 		},
 	}
@@ -1158,6 +1184,31 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
+			name:      "discord/threadid -> thread_id",
+			sType:     "discord",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"threadid": "1234567890",
+			},
+			want: map[string]string{
+				"thread_id": "1234567890",
+			},
+			renamedVar: true,
+		},
+		{
+			name:      "discord/threadid -> thread_id (but thread_id already defined)",
+			sType:     "discord",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"threadid":  "1234567890",
+				"thread_id": "9876543210",
+			},
+			want: map[string]string{
+				"thread_id": "9876543210",
+			},
+			renamedVar: true,
+		},
+		{
 			name:      "generic/custom_headers -> headers",
 			sType:     "generic",
 			mapTarget: "url_fields",
@@ -1179,6 +1230,56 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 			want: map[string]string{
 				"headers": `{"foo":"baz"}`,
+			},
+			renamedVar: true,
+		},
+		{
+			name:      "ifttt/usemessageasvalue -> messagevalue",
+			sType:     "ifttt",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"usemessageasvalue": "2",
+			},
+			want: map[string]string{
+				"messagevalue": "2",
+			},
+			renamedVar: true,
+		},
+		{
+			name:      "ifttt/usemessageasvalue -> messagevalue (but messagevalue already defined)",
+			sType:     "ifttt",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"usemessageasvalue": "2",
+				"messagevalue":      "3",
+			},
+			want: map[string]string{
+				"messagevalue": "3",
+			},
+			renamedVar: true,
+		},
+		{
+			name:      "ifttt/usetitleasvalue -> titlevalue",
+			sType:     "ifttt",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"usetitleasvalue": "2",
+			},
+			want: map[string]string{
+				"titlevalue": "2",
+			},
+			renamedVar: true,
+		},
+		{
+			name:      "ifttt/usetitleasvalue -> titlevalue (but titlevalue already defined)",
+			sType:     "ifttt",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"usetitleasvalue": "2",
+				"titlevalue":      "3",
+			},
+			want: map[string]string{
+				"titlevalue": "3",
 			},
 			renamedVar: true,
 		},
@@ -1263,70 +1364,84 @@ func TestBase_CorrectSelf(t *testing.T) {
 			renamedVar: true,
 		},
 		{
-			name:      "slack/color, not urlEncoded",
+			name:      "slack/color, already #-prefixed",
 			sType:     "slack",
 			mapTarget: "params",
 			startAs: map[string]string{
 				"color": "#ffffff",
 			},
 			want: map[string]string{
-				"color": "%23ffffff",
+				"color": "#ffffff",
 			},
 		},
 		{
-			name:      "slack/color, valid",
+			name:      "slack/color, bare hex (no #)",
+			sType:     "slack",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"color": "ffffff",
+			},
+			want: map[string]string{
+				"color": "#ffffff",
+			},
+		},
+		{
+			name:      "slack/color, bare hex (no #), uppercase",
+			sType:     "slack",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"color": "FFFFFF",
+			},
+			want: map[string]string{
+				"color": "#FFFFFF",
+			},
+		},
+		{
+			name:      "slack/color, named color (non-hex, no # needed)",
+			sType:     "slack",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"color": "good",
+			},
+			want: map[string]string{
+				"color": "good",
+			},
+		},
+		{
+			name:      "slack/color, migrate old %23-encoded format",
 			sType:     "slack",
 			mapTarget: "params",
 			startAs: map[string]string{
 				"color": "%23ffffff",
 			},
 			want: map[string]string{
-				"color": "%23ffffff",
+				"color": "#ffffff",
 			},
 		},
 		{
-			name:      "teams/altid, leading slash",
-			sType:     "teams",
-			mapTarget: "url_fields",
+			name:      "smtp/skiptlsverification -> skiptlsverify",
+			sType:     "smtp",
+			mapTarget: "params",
 			startAs: map[string]string{
-				"altid": "/argus",
+				"skiptlsverification": "true",
 			},
 			want: map[string]string{
-				"altid": "argus",
+				"skiptlsverify": "true",
 			},
+			renamedVar: true,
 		},
 		{
-			name:      "teams/altid, valid",
-			sType:     "teams",
-			mapTarget: "url_fields",
+			name:      "smtp/skiptlsverification -> skiptlsverify (but skiptlsverify already defined)",
+			sType:     "smtp",
+			mapTarget: "params",
 			startAs: map[string]string{
-				"altid": "argus",
+				"skiptlsverification": "true",
+				"skiptlsverify":       "false",
 			},
 			want: map[string]string{
-				"altid": "argus",
+				"skiptlsverify": "false",
 			},
-		},
-		{
-			name:      "teams/groupowner, leading slash",
-			sType:     "teams",
-			mapTarget: "url_fields",
-			startAs: map[string]string{
-				"groupowner": "/argus",
-			},
-			want: map[string]string{
-				"groupowner": "argus",
-			},
-		},
-		{
-			name:      "teams/groupowner, valid",
-			sType:     "teams",
-			mapTarget: "url_fields",
-			startAs: map[string]string{
-				"groupowner": "argus",
-			},
-			want: map[string]string{
-				"groupowner": "argus",
-			},
+			renamedVar: true,
 		},
 		{
 			name:      "zulip/botmail, not urlEncoded",
@@ -1463,6 +1578,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 		})
 	}
 }
+
 
 func TestParseHostPort(t *testing.T) {
 	// GIVEN: an address that may contain a scheme, host, and/or port.
@@ -2225,6 +2341,31 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
+			name:     "notifiarr/invalid",
+			sType:    "notifiarr",
+			errRegex: `^apikey: <required>.*$`,
+		},
+		{
+			name:  "notifiarr/valid",
+			sType: "notifiarr",
+			urlFields: map[string]string{
+				"apikey": "abc123",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "notifiarr/valid with main",
+			sType: "notifiarr",
+			main: NewDefaults(
+				"", nil,
+				map[string]string{
+					"apikey": "abc123",
+				},
+				nil,
+			),
+			errRegex: `^$`,
+		},
+		{
 			name:     "ntfy/invalid",
 			sType:    "ntfy",
 			errRegex: `^topic: <required>.*$`,
@@ -2477,97 +2618,32 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:  "teams/invalid",
-			sType: "teams",
-			errRegex: test.TrimYAML(`
-				^group: <required>.*
-				tenant: <required>.*
-				altid: <required>.*
-				groupowner: <required>.*
-				extraid: <required>.*$`,
-			),
+			name:      "teams/no url_fields (Power Automate format - no url fields needed)",
+			sType:     "teams",
+			urlFields: map[string]string{},
+			errRegex:  `^$`,
 		},
 		{
-			name:  "teams/no group",
-			sType: "teams",
-			urlFields: map[string]string{
-				"tenant":     "bash",
-				"altid":      "bosh",
-				"groupowner": "bing",
-				"extraid":    "boop",
-			},
-			errRegex: `^group: <required>.*$`,
+			name:      "shoutrrr/no raw",
+			sType:     "shoutrrr",
+			urlFields: map[string]string{},
+			errRegex:  `^raw: <required>.*$`,
 		},
 		{
-			name:  "teams/no tenant",
-			sType: "teams",
+			name:  "shoutrrr/valid",
+			sType: "shoutrrr",
 			urlFields: map[string]string{
-				"group":      "bish",
-				"altid":      "bash",
-				"groupowner": "bing",
-				"extraid":    "boop",
-			},
-			errRegex: `^tenant: <required>.*$`,
-		},
-		{
-			name:  "teams/no altid",
-			sType: "teams",
-			urlFields: map[string]string{
-				"group":      "bish",
-				"tenant":     "bash",
-				"groupowner": "bing",
-				"extraid":    "boop",
-			},
-			errRegex: `^altid: <required>.*$`,
-		},
-		{
-			name:  "teams/no groupowner",
-			sType: "teams",
-			urlFields: map[string]string{
-				"group":   "bish",
-				"tenant":  "bash",
-				"altid":   "bosh",
-				"extraid": "boop",
-			},
-			errRegex: `^groupowner: <required>.*$`,
-		},
-		{
-			name:  "teams/no extraid",
-			sType: "teams",
-			urlFields: map[string]string{
-				"group":      "bish",
-				"tenant":     "bash",
-				"altid":      "bosh",
-				"groupowner": "bing",
-			},
-			errRegex: `^extraid: <required>.*$`,
-		},
-		{
-			name:  "teams/valid",
-			sType: "teams",
-			urlFields: map[string]string{
-				"group":      "bish",
-				"tenant":     "bash",
-				"altid":      "bosh",
-				"groupowner": "bing",
-				"extraid":    "boop",
+				"raw": "slack://TOKEN@CHANNEL",
 			},
 			errRegex: `^$`,
 		},
 		{
-			name:  "teams/valid with main",
-			sType: "teams",
+			name:  "shoutrrr/valid with main",
+			sType: "shoutrrr",
 			main: NewDefaults(
-				"",
+				"", nil,
 				map[string]string{
-					"host": "https://release-argus.io",
-				},
-				map[string]string{
-					"group":      "bish",
-					"tenant":     "bash",
-					"altid":      "bosh",
-					"groupowner": "bing",
-					"extraid":    "boop",
+					"raw": "slack://TOKEN@CHANNEL",
 				},
 				nil,
 			),
@@ -2787,55 +2863,6 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^a: "release! {{ version }" <invalid>.*$`,
 		},
 		{
-			name:  "smtp/invalid",
-			sType: "smtp",
-			errRegex: test.TrimYAML(`
-				^fromaddress: <required>.*
-				toaddresses: <required>.*$`,
-			),
-		},
-		{
-			name:  "smtp/no fromaddress",
-			sType: "smtp",
-			params: map[string]string{
-				"toaddresses": "bosh",
-			},
-			errRegex: `^fromaddress: <required>.*$`,
-		},
-		{
-			name:  "smtp/no toaddresses",
-			sType: "smtp",
-			params: map[string]string{
-				"fromaddress": "bash",
-			},
-			errRegex: `^toaddresses: <required>.*$`,
-		},
-		{
-			name:  "smtp/valid",
-			sType: "smtp",
-			params: map[string]string{
-				"fromaddress": "bash",
-				"toaddresses": "bosh",
-			},
-			errRegex: `^$`,
-		},
-		{
-			name:  "smtp/valid with main",
-			sType: "smtp",
-			params: map[string]string{
-				"fromaddress": "bash",
-			},
-			main: NewDefaults(
-				"",
-				nil,
-				nil,
-				map[string]string{
-					"toaddresses": "bosh",
-				},
-			),
-			errRegex: `^$`,
-		},
-		{
 			name:     "ifttt/no events",
 			sType:    "ifttt",
 			errRegex: `^events: <required>.*$`,
@@ -2889,16 +2916,65 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
+			name:  "smtp/invalid",
+			sType: "smtp",
+			errRegex: test.TrimYAML(`
+				^fromaddress: <required>.*
+				toaddresses: <required>.*$`,
+			),
+		},
+		{
+			name:  "smtp/no fromaddress",
+			sType: "smtp",
+			params: map[string]string{
+				"toaddresses": "bosh",
+			},
+			errRegex: `^fromaddress: <required>.*$`,
+		},
+		{
+			name:  "smtp/no toaddresses",
+			sType: "smtp",
+			params: map[string]string{
+				"fromaddress": "bash",
+			},
+			errRegex: `^toaddresses: <required>.*$`,
+		},
+		{
+			name:  "smtp/valid",
+			sType: "smtp",
+			params: map[string]string{
+				"fromaddress": "bash",
+				"toaddresses": "bosh",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "smtp/valid with main",
+			sType: "smtp",
+			params: map[string]string{
+				"fromaddress": "bash",
+			},
+			main: NewDefaults(
+				"",
+				nil,
+				nil,
+				map[string]string{
+					"toaddresses": "bosh",
+				},
+			),
+			errRegex: `^$`,
+		},
+		{
 			name:     "teams/no host",
 			sType:    "teams",
 			params:   map[string]string{},
 			errRegex: `^host: <required>.*$`,
 		},
 		{
-			name:  "teams/valid",
+			name:  "teams/valid (Power Automate URL)",
 			sType: "teams",
 			params: map[string]string{
-				"host": "https://release-argus.io",
+				"host": "https://prod-00.westus.logic.azure.com:443/workflows/abc",
 			},
 			errRegex: `^$`,
 		},
@@ -2910,7 +2986,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 				nil,
 				nil,
 				map[string]string{
-					"host": "https://release-argus.io",
+					"host": "https://prod-00.westus.logic.azure.com:443/workflows/abc",
 				},
 			),
 			errRegex: `^$`,
@@ -2939,6 +3015,38 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 					"chats": "chats",
 				},
 			),
+			errRegex: `^$`,
+		},
+		{
+			name:  "zulip/type=invalid",
+			sType: "zulip",
+			params: map[string]string{
+				"type": "bad",
+			},
+			errRegex: `^type: "bad" <invalid>.*$`,
+		},
+		{
+			name:  "zulip/type=channel",
+			sType: "zulip",
+			params: map[string]string{
+				"type": "channel",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "zulip/type=direct",
+			sType: "zulip",
+			params: map[string]string{
+				"type": "direct",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "zulip/type=empty",
+			sType: "zulip",
+			params: map[string]string{
+				"type": "",
+			},
 			errRegex: `^$`,
 		},
 	}

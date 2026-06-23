@@ -82,7 +82,7 @@ func TestShoutrrrsDefaults_Defaults(t *testing.T) {
 	prefix := fmt.Sprintf("%s\nShoutrrrsDefaults.Default()", packageName)
 
 	// THEN: the defaults is given keys of all shoutrrr types.
-	for _, typ := range supportedTypes {
+	for _, typ := range SupportedTypes {
 		if defaults[typ] == nil {
 			t.Errorf(
 				"%s didn't set defaults for %q",
@@ -93,7 +93,7 @@ func TestShoutrrrsDefaults_Defaults(t *testing.T) {
 
 	// AND: no unexpected types are initialised.
 	for typ := range defaults {
-		if !util.Contains(supportedTypes, typ) {
+		if !util.Contains(SupportedTypes, typ) {
 			t.Errorf(
 				"%s initialised an unexpected notify type: %q",
 				prefix, typ,

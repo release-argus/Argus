@@ -173,7 +173,7 @@ func TestShoutrrrs_UnmarshalJSON(t *testing.T) {
 			err := s.UnmarshalJSON([]byte(tc.data))
 
 			prefix := fmt.Sprintf(
-				"%s\nShoutrrs.UnmarshalJSON(%q)",
+				"%s\nShoutrrrs.UnmarshalJSON(%q)",
 				packageName, tc.data,
 			)
 
@@ -1319,7 +1319,7 @@ func TestShoutrrr_String(t *testing.T) {
 	}
 }
 
-func TestShoutrrsDefaults_String(t *testing.T) {
+func TestShoutrrrsDefaults_String(t *testing.T) {
 	// GIVEN: Shoutrrrs.
 	tests := []struct {
 		name              string

@@ -49,11 +49,17 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			util.ValueUnlessZero(path, "/"+path),
 		)
 	case "discord":
-		// discord://token@webhookid
+		// discord://token@webhookid[?thread_id=X]
+		threadID := s.GetParam("thread_id")
+		query := buildQuery(
+			queryParam("thread_id", threadID),
+		)
+
 		url = fmt.Sprintf(
-			"discord://%s@%s",
+			"discord://%s@%s%s",
 			s.GetURLField("token"),
 			s.GetURLField("webhookid"),
+			query,
 		)
 	case "smtp":
 		// smtp://username:password@host[:port]/?fromaddress=X&toaddresses=Y[&fromname=X]
@@ -64,9 +70,9 @@ func (s *Shoutrrr) BuildURL() (url string) {
 		fromName := s.GetParam("fromname")
 		toAddresses := s.GetParam("toaddresses")
 		query := buildQuery(
-			util.ValueUnlessZero(fromAddress, "fromaddress="+fromAddress),
-			util.ValueUnlessZero(toAddresses, "toaddresses="+toAddresses),
-			util.ValueUnlessZero(fromName, "fromname="+net_url.QueryEscape(fromName)),
+			queryParam("fromaddress", fromAddress),
+			queryParam("fromname", fromName),
+			queryParam("toaddresses", toAddresses),
 		)
 
 		url = fmt.Sprintf(
@@ -108,13 +114,13 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetParam("devices"),
 		)
 	case "matrix":
-		// matrix://user:password@host[:port]/[?rooms=!roomID1,roomAlias2]][&disableTLS=yes]
+		// matrix://user:password@host[:port]/[?disableTLS=yes][&rooms=!roomID1[,roomAlias2]]
 		port := s.GetURLField("port")
-		rooms := s.GetParam("rooms")
 		disableTLS := s.GetParam("disabletls")
+		rooms := s.GetParam("rooms")
 		query := buildQuery(
-			util.ValueUnlessZero(rooms, "rooms="+rooms),
-			util.ValueUnlessZero(disableTLS, "disableTLS="+disableTLS),
+			queryParam("disableTLS", disableTLS),
+			queryParam("rooms", rooms),
 		)
 
 		url = fmt.Sprintf(
@@ -139,14 +145,35 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetURLField("token"),
 			util.ValueUnlessZero(channel, "/"+channel),
 		)
+	case "notifiarr":
+		// notifiarr://apikey[?channel=X&color=X&image=X&name=X&thumbnail=X]
+		channel := s.GetParam("channel")
+		color := s.GetParam("color")
+		image := s.GetParam("image")
+		name := s.GetParam("name")
+		thumbnail := s.GetParam("thumbnail")
+		query := buildQuery(
+			queryParam("channel", channel),
+			queryParam("color", color),
+			queryParam("image", image),
+			queryParam("name", name),
+			queryParam("thumbnail", thumbnail),
+		)
+
+		url = fmt.Sprintf("notifiarr://%s%s",
+			s.GetURLField("apikey"),
+			query,
+		)
 	case "ntfy":
 		// ntfy://[username]:[password]@[host][:port]/topic
+		port := s.GetURLField("port")
+
 		url = fmt.Sprintf(
 			"ntfy://%s:%s@%s%s/%s",
 			s.GetURLField("username"),
 			s.GetURLField("password"),
 			s.GetURLField("host"),
-			util.ValueUnlessZero(s.GetURLField("port"), ":"+s.GetURLField("port")),
+			util.ValueUnlessZero(port, ":"+port),
 			s.GetURLField("topic"),
 		)
 	case "opsgenie": // TODO: OpsGenie permanently shut down April 5, 2027
@@ -167,7 +194,7 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetURLField("targets"),
 		)
 	case "pushover":
-		// pushover://shoutrrr:token@user/[?devices=device1,device2]
+		// pushover://shoutrrr:token@user/[?devices=device1[,device2]]
 		devices := s.GetParam("devices")
 
 		url = fmt.Sprintf(
@@ -191,29 +218,38 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetURLField("channel"),
 		)
 	case "slack":
-		// slack://token:token@channel
-		url = fmt.Sprintf(
-			"slack://%s@%s",
-			s.GetURLField("token"),
-			s.GetURLField("channel"),
+		// slack://token:token@channel[?botname=X][&color=X][&icon=X][&thread_ts=X][&title=X]
+		botName := s.GetParam("botname")
+		color := s.GetParam("color")
+		icon := s.GetParam("icon")
+		threadTS := s.GetParam("thread_ts")
+		title := s.GetParam("title")
+		query := buildQuery(
+			queryParam("botname", botName),
+			queryParam("color", color),
+			queryParam("icon", icon),
+			queryParam("thread_ts", threadTS),
+			queryParam("title", title),
 		)
-	case "teams":
-		// teams://[group@][tenant][/altID][/groupOwner][/extraID]?host=organization.webhook.office.com
-		group := s.GetURLField("group")
-		altID := strings.TrimPrefix(s.GetURLField("altid"), "/")
-		groupOwner := strings.TrimPrefix(s.GetURLField("groupowner"), "/")
-		extraID := strings.TrimPrefix(s.GetURLField("extraid"), "/")
 
 		url = fmt.Sprintf(
-			"teams://%s%s%s%s%s?host=%s",
-			util.ValueUnlessZero(group, group+"@"),
-			s.GetURLField("tenant"),
-			util.ValueUnlessZero(altID, "/"+altID),
-			util.ValueUnlessZero(groupOwner, "/"+groupOwner),
-			util.ValueUnlessZero(extraID, "/"+extraID),
-			s.GetParam("host"),
+			"slack://%s@%s%s",
+			s.GetURLField("token"),
+			s.GetURLField("channel"),
+			query,
 		)
-		url = strings.Replace(url, "///", "//", 1)
+	case "teams":
+		// teams://?host=fullPowerAutomateURL[&color=X][&title=X]
+		host := s.GetParam("host")
+		color := s.GetParam("color")
+		title := s.GetParam("title")
+		query := buildQuery(
+			queryParam("host", host),
+			queryParam("color", color),
+			queryParam("title", title),
+		)
+
+		url = "teams://" + query
 	case "telegram":
 		// telegram://token@telegram?chats=@chat1,@chat2
 		url = fmt.Sprintf(
@@ -222,13 +258,21 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetParam("chats"),
 		)
 	case "zulip":
-		// zulip://botMail:botKey@host[:port]?stream=STREAM&topic=TOPIC
+		// zulip://botMail:botKey@host[:port][?read_by_sender=true&stream=X&title=X&to=X&topic=X&type=X]
 		port := s.GetURLField("port")
+		readBySender := s.GetParam("read_by_sender")
 		stream := s.GetParam("stream")
+		title := s.GetParam("title")
+		to := s.GetParam("to")
 		topic := s.GetParam("topic")
+		msgType := s.GetParam("type")
 		query := buildQuery(
-			util.ValueUnlessZero(stream, "stream="+stream),
-			util.ValueUnlessZero(topic, "topic="+topic),
+			queryParam("read_by_sender", readBySender),
+			queryParam("stream", stream),
+			queryParam("title", title),
+			queryParam("to", to),
+			queryParam("topic", topic),
+			queryParam("type", msgType),
 		)
 
 		url = fmt.Sprintf(
@@ -302,15 +346,6 @@ func (s *Shoutrrr) BuildParams(info serviceinfo.ServiceInfo) *types.Params {
 		// Only overwrite if it doesn't exist in the levels below.
 		if !exist {
 			params[key] = value
-		}
-	}
-
-	// Deprecated: ntfy.params, disabletls -> disabletlsverification.
-	if s.GetType() == "ntfy" {
-		// Shoutrrr 13.1 has the disabletlsverification param as disabletls.
-		if disableTLSVerification, ok := params["disabletlsverification"]; ok {
-			params["disabletls"] = disableTLSVerification
-			delete(params, "disabletlsverification")
 		}
 	}
 
@@ -567,6 +602,14 @@ func jsonMapToString(param string, prefix string) string {
 		)
 	}
 	return builder.String()
+}
+
+// queryParam returns "key=url-encoded-val" when val is non-empty, otherwise "".
+func queryParam(key, val string) string {
+	if val == "" {
+		return ""
+	}
+	return key + "=" + net_url.QueryEscape(val)
 }
 
 // buildQuery joins the non-empty "key=value" parts into a URL query string,

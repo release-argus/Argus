@@ -74,7 +74,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 			wants: wants{
 				bodyRegex: `` +
 					`^{"message":"latest_version:\\n` +
-					`  .*cannot unmarshal[^"]+"}$`,
+					`  .*(cannot|unable to) unmarshal[^"]+"}$`,
 				statusCode: http.StatusBadRequest,
 			},
 		},
@@ -208,7 +208,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 			wants: wants{
 				bodyRegex: `` +
 					`^{"message":"deployed_version:\\n` +
-					`  .*cannot unmarshal[^"]+"}$`,
+					`  .*(cannot|unable to) unmarshal[^"]+"}$`,
 				statusCode: http.StatusBadRequest,
 			},
 		},
@@ -1817,7 +1817,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 				bodyRegex: `` +
 					`^{"message":"edit .* failed:\\n` +
 					`  unmarshal service payload:\\n` +
-					`    json: cannot unmarshal[^"]+"}`,
+					`    json: (cannot|unable to) unmarshal[^"]+"}`,
 			},
 		},
 		{

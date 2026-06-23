@@ -84,7 +84,7 @@ func TestShoutrrrs_Metrics(t *testing.T) {
 			}
 			if got != want {
 				t.Errorf(
-					"%s\nShoutrrs.InitMetrics() metrics count mismatch\ngot:  %d\nwant: %d",
+					"%s\nShoutrrrs.InitMetrics() metrics count mismatch\ngot:  %d\nwant: %d",
 					packageName, got, want,
 				)
 			}
@@ -94,7 +94,7 @@ func TestShoutrrrs_Metrics(t *testing.T) {
 			got = testutil.CollectAndCount(metric.NotifyResultTotal)
 			if got != had {
 				t.Errorf(
-					"%s\nShoutrrs.DeleteMetrics() metrics count mismatch\ngot:  %d\nwant: %d",
+					"%s\nShoutrrrs.DeleteMetrics() metrics count mismatch\ngot:  %d\nwant: %d",
 					packageName, got, had,
 				)
 			}
