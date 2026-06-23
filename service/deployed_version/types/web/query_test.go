@@ -18,6 +18,8 @@ package web
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -396,6 +398,7 @@ func TestLookup_Query(t *testing.T) {
 	tests := []struct {
 		name                        string
 		env                         map[string]string
+		serverSetup                 func() *httptest.Server
 		overrides, optionsOverrides string
 		errRegex                    string
 		wantVersion                 string
@@ -579,6 +582,28 @@ func TestLookup_Query(t *testing.T) {
 			`),
 			errRegex: `^target header "[^"]+" not found$`,
 		},
+		{
+			name: "version from header/non-2XX, header present",
+			serverSetup: func() *httptest.Server {
+				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("X-Version", "1.2.3")
+					w.WriteHeader(http.StatusForbidden)
+				}))
+			},
+			overrides:   `target_header: X-Version`,
+			wantVersion: `^1\.2\.3$`,
+			errRegex:    `^$`,
+		},
+		{
+			name: "version from header/non-2XX, header absent",
+			serverSetup: func() *httptest.Server {
+				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusForbidden)
+				}))
+			},
+			overrides: `target_header: X-Version`,
+			errRegex:  `^target header "X-Version" not found \(status: 403\)$`,
+		},
 	}
 
 	for _, tc := range tests {
@@ -588,7 +613,13 @@ func TestLookup_Query(t *testing.T) {
 			test.SetEnv(t, tc.env)
 			dvl := testLookup(t, false)
 			dvl.JSON = ""
-			if err := dvl.ApplyOverrides("yaml", []byte(tc.overrides)); err != nil {
+			overrides := tc.overrides
+			if tc.serverSetup != nil {
+				server := tc.serverSetup()
+				t.Cleanup(server.Close)
+				overrides = "url: " + server.URL + "\n" + overrides
+			}
+			if err := dvl.ApplyOverrides("yaml", []byte(overrides)); err != nil {
 				t.Fatalf(
 					"%s\nfailed to unmarshal Lookup overrides: %s",
 					packageName, err,
@@ -792,11 +823,12 @@ func TestLookup_GetVersion(t *testing.T) {
 func TestLookup_HTTPRequest(t *testing.T) {
 	// GIVEN: a Lookup.
 	tests := []struct {
-		name      string
-		env       map[string]string
-		overrides string
-		bodyRegex string
-		errRegex  string
+		name        string
+		env         map[string]string
+		serverSetup func() *httptest.Server
+		overrides   string
+		bodyRegex   string
+		errRegex    string
 	}{
 		{
 			name:      "url/invalid",
@@ -897,6 +929,48 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			`),
 			errRegex: `x509 \(certificate invalid\)`,
 		},
+		{
+			name: "target_header/2XX, header found",
+			serverSetup: func() *httptest.Server {
+				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("X-Version", "1.2.3")
+				}))
+			},
+			overrides: `target_header: X-Version`,
+			bodyRegex: `^1\.2\.3$`,
+			errRegex:  `^$`,
+		},
+		{
+			name: "target_header/2XX, header not found",
+			serverSetup: func() *httptest.Server {
+				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				}))
+			},
+			overrides: `target_header: X-Version`,
+			errRegex:  `^target header "X-Version" not found$`,
+		},
+		{
+			name: "target_header/non-2XX, header found",
+			serverSetup: func() *httptest.Server {
+				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("X-Version", "1.2.3")
+					w.WriteHeader(http.StatusForbidden)
+				}))
+			},
+			overrides: `target_header: X-Version`,
+			bodyRegex: `^1\.2\.3$`,
+			errRegex:  `^$`,
+		},
+		{
+			name: "target_header/non-2XX, header not found",
+			serverSetup: func() *httptest.Server {
+				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusInternalServerError)
+				}))
+			},
+			overrides: `target_header: X-Version`,
+			errRegex:  `^target header "X-Version" not found \(status: 500\)$`,
+		},
 	}
 
 	for _, tc := range tests {
@@ -905,8 +979,14 @@ func TestLookup_HTTPRequest(t *testing.T) {
 
 			test.SetEnv(t, tc.env)
 			lookup := testLookup(t, false)
+			overrides := tc.overrides
+			if tc.serverSetup != nil {
+				server := tc.serverSetup()
+				t.Cleanup(server.Close)
+				overrides = "url: " + server.URL + "\n" + overrides
+			}
 			// Apply overrides.
-			if err := lookup.UnmarshalYAML([]byte(tc.overrides)); err != nil {
+			if err := lookup.UnmarshalYAML([]byte(overrides)); err != nil {
 				t.Fatalf(
 					"%s\nfailed to unmarshal Lookup.overrides: %s",
 					packageName, err,
