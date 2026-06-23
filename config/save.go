@@ -30,6 +30,11 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+// openSaveFile opens (or creates) the named file for writing (overridable for tests).
+var openSaveFile = func(name string) (io.WriteCloser, error) {
+	return os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+}
+
 // encodeConfigYAML marshals the config to YAML (overridable for tests).
 var encodeConfigYAML = func(w io.Writer, indent int, c *Config) error {
 	yamlEncoder := decode.NewYAMLEncoder(w, indent)
@@ -109,7 +114,7 @@ func (c *Config) Save() (ok bool) {
 	lines = c.reorderYAML(lines)
 
 	// Open the file.
-	file, err := os.OpenFile(c.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	file, err := openSaveFile(c.File)
 	if err != nil {
 		logx.Fatal(
 			fmt.Sprintf("error opening %s: %v", c.File, err),

@@ -23,7 +23,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -239,13 +238,13 @@ func TestConfig_SaveHandler(t *testing.T) {
 func TestConfig_Save(t *testing.T) {
 	// GIVEN: we have a bunch of files that want to be Saved.
 	tests := []struct {
-		name          string
-		file          func(path string)
-		preSaveFunc   func(path string)
-		fileSizeLimit uint64
-		corrections   map[string]string
-		fatal         bool
-		stdoutRegex   string
+		name        string
+		file        func(path string)
+		preSaveFunc func(path string)
+		openFile    func(string) (io.WriteCloser, error)
+		corrections map[string]string
+		fatal       bool
+		stdoutRegex string
 	}{
 		{
 			name: "config test",
@@ -302,18 +301,22 @@ func TestConfig_Save(t *testing.T) {
 			stdoutRegex: `error opening`,
 		},
 		{
-			name:          "flush error",
-			file:          testYAML_config_test,
-			fileSizeLimit: 1,
-			fatal:         true,
-			stdoutRegex:   `error flushing`,
+			name: "flush error",
+			file: testYAML_config_test,
+			openFile: func(_ string) (io.WriteCloser, error) {
+				return &failWriter{}, nil
+			},
+			fatal:       true,
+			stdoutRegex: `error flushing`,
 		},
 		{
-			name:          "write error",
-			file:          testYAML_config_large,
-			fileSizeLimit: 10240,
-			fatal:         true,
-			stdoutRegex:   `error writing`,
+			name: "write error",
+			file: testYAML_config_large,
+			openFile: func(_ string) (io.WriteCloser, error) {
+				return &failAfterNBytesWriter{remaining: 10240}, nil
+			},
+			fatal:       true,
+			stdoutRegex: `error writing`,
 		},
 	}
 
@@ -338,9 +341,10 @@ func TestConfig_Save(t *testing.T) {
 			if tc.preSaveFunc != nil {
 				tc.preSaveFunc(file)
 			}
-			if tc.fileSizeLimit > 0 {
-				restoreFileSizeLimit := setFileSizeLimit(t, tc.fileSizeLimit)
-				defer restoreFileSizeLimit()
+			if tc.openFile != nil {
+				original := openSaveFile
+				openSaveFile = tc.openFile
+				t.Cleanup(func() { openSaveFile = original })
 			}
 
 			// WHEN: we Save it to a new location.
@@ -427,37 +431,34 @@ func TestConfig_Save__encodeError(t *testing.T) {
 	}
 }
 
-func setFileSizeLimit(t *testing.T, cur uint64) func() {
-	t.Helper()
+// failWriter is an io.WriteCloser whose Write always fails.
+// Used to trigger the "error flushing" path in Save() when all data fits in
+// bufio's buffer and the error surfaces at the final Flush().
+type failWriter struct{}
 
-	// Retrieve current Rlimit.
-	var rlimit syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_FSIZE, &rlimit); err != nil {
-		t.Fatalf(
-			"%s\nFailed to get RLIMIT_FSIZE: %v",
-			packageName, err,
-		)
-	}
-
-	// Set Rlimit to provided value.
-	if err := syscall.Setrlimit(
-		syscall.RLIMIT_FSIZE,
-		&syscall.Rlimit{
-			Cur: cur,
-			Max: rlimit.Max,
-		},
-	); err != nil {
-		t.Fatalf(
-			"%s\nFailed to set RLIMIT_FSIZE: %v",
-			packageName, err,
-		)
-	}
-
-	// Function to reset Rlimit.
-	return func() {
-		_ = syscall.Setrlimit(syscall.RLIMIT_FSIZE, &rlimit)
-	}
+func (f *failWriter) Write(_ []byte) (int, error) {
+	return 0, fmt.Errorf("simulated disk full")
 }
+func (f *failWriter) Close() error { return nil }
+
+// failAfterNBytesWriter is an io.WriteCloser that succeeds for the first
+// `remaining` bytes then fails. Used to trigger the "error writing" path in
+// Save() when the config is large enough to overflow bufio's buffer mid-loop.
+type failAfterNBytesWriter struct{ remaining int }
+
+func (f *failAfterNBytesWriter) Write(p []byte) (int, error) {
+	if f.remaining <= 0 {
+		return 0, fmt.Errorf("simulated disk full")
+	}
+	if len(p) > f.remaining {
+		n := f.remaining
+		f.remaining = 0
+		return n, fmt.Errorf("simulated disk full")
+	}
+	f.remaining -= len(p)
+	return len(p), nil
+}
+func (f *failAfterNBytesWriter) Close() error { return nil }
 
 func gotExitCodeDuringSave(saveDone <-chan struct{}, expectFatal bool) bool {
 	gotExit := false
