@@ -1,12 +1,22 @@
-import { useMemo } from 'react';
-import { FieldText } from '@/components/generic/field';
+import { useEffect, useMemo } from 'react';
+import { useFormContext } from 'react-hook-form';
+import { FieldSelect, FieldText } from '@/components/generic/field';
 import {
 	Heading,
 	NotifyOptions,
 } from '@/components/modals/service-edit/notify-types/shared';
+import { normaliseForSelect } from '@/components/modals/service-edit/util';
 import { FieldSet } from '@/components/ui/field';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
+import {
+	type IFTTTMessageValue,
+	type IFTTTTitleValue,
+	iftttMessageValueOptions,
+	iftttTitleValueOptions,
+} from '@/utils/api/types/config/notify/ifttt';
 import type { NotifyIFTTTSchema } from '@/utils/api/types/config-edit/notify/schemas';
+import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
+import { ensureValue } from '@/utils/form-utils';
 
 /**
  * The form fields for an `IFTTT` notifier.
@@ -15,11 +25,67 @@ import type { NotifyIFTTTSchema } from '@/utils/api/types/config-edit/notify/sch
  * @param main - The main values.
  */
 const IFTTT = ({ name, main }: { name: string; main?: NotifyIFTTTSchema }) => {
+	const { getValues, setValue } = useFormContext();
 	const { typeDataDefaults } = useSchemaContext();
 	const defaults = useMemo(
 		() => main ?? typeDataDefaults?.notify.ifttt,
 		[main, typeDataDefaults?.notify.ifttt],
 	);
+
+	// Ensure selects have a valid value.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: fallback on first load.
+	useEffect(() => {
+		ensureValue<IFTTTMessageValue>({
+			defaultValue: defaults?.params?.messagevalue,
+			fallback: iftttMessageValueOptions[0].value,
+			getValues,
+			path: `${name}.params.messagevalue`,
+			setValue,
+		});
+		ensureValue<IFTTTTitleValue>({
+			defaultValue: defaults?.params?.titlevalue,
+			fallback: iftttTitleValueOptions[0].value,
+			getValues,
+			path: `${name}.params.titlevalue`,
+			setValue,
+		});
+	}, [main]);
+
+	const messageValueOptionsNormalised = useMemo(() => {
+		const defaultMessageValue = normaliseForSelect(
+			iftttMessageValueOptions,
+			defaults?.params?.messagevalue,
+		);
+
+		if (defaultMessageValue)
+			return [
+				{
+					label: `${defaultMessageValue.label} (default)`,
+					value: nullString,
+				},
+				...iftttMessageValueOptions,
+			];
+
+		return iftttMessageValueOptions;
+	}, [defaults?.params?.messagevalue]);
+
+	const titleValueOptionsNormalised = useMemo(() => {
+		const defaultTitleValue = normaliseForSelect(
+			iftttTitleValueOptions,
+			defaults?.params?.titlevalue,
+		);
+
+		if (defaultTitleValue)
+			return [
+				{
+					label: `${defaultTitleValue.label} (default)`,
+					value: nullString,
+				},
+				...iftttTitleValueOptions,
+			];
+
+		return iftttTitleValueOptions;
+	}, [defaults?.params?.titlevalue]);
 
 	return (
 		<FieldSet className="col-span-full grid grid-cols-subgrid">
@@ -57,21 +123,22 @@ const IFTTT = ({ name, main }: { name: string; main?: NotifyIFTTTSchema }) => {
 						type: 'string',
 					}}
 				/>
-				<FieldText
-					defaultVal={defaults?.params?.usemessageasvalue}
-					label="Use Message As Value"
-					name={`${name}.params.usemessageasvalue`}
+				<FieldSelect
+					label="Message Value"
+					name={`${name}.params.messagevalue`}
+					options={messageValueOptionsNormalised}
 					tooltip={{
-						content: 'Set the corresponding value field to the message',
+						content: 'Value field (1-3) to use as the notification message',
 						type: 'string',
 					}}
 				/>
-				<FieldText
-					defaultVal={defaults?.params?.usetitleasvalue}
-					label="Use Title As Value"
-					name={`${name}.params.usetitleasvalue`}
+				<FieldSelect
+					label="Title Value"
+					name={`${name}.params.titlevalue`}
+					options={titleValueOptionsNormalised}
 					tooltip={{
-						content: 'Set the corresponding value field to the title',
+						content:
+							'Value field (1-3) to use as the notification title, or None to disable',
 						type: 'string',
 					}}
 				/>

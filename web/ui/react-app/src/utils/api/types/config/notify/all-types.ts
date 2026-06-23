@@ -8,6 +8,7 @@ export const NOTIFY_TYPE_MAP = {
 	JOIN: { label: 'Join', value: 'join' },
 	MATRIX: { label: 'Matrix', value: 'matrix' },
 	MATTERMOST: { label: 'MatterMost', value: 'mattermost' },
+	NOTIFIARR: { label: 'Notifiarr', value: 'notifiarr' },
 	NTFY: { label: 'Ntfy', value: 'ntfy' },
 	OPSGENIE: { label: 'OpsGenie', value: 'opsgenie' },
 	PUSHBULLET: { label: 'PushBullet', value: 'pushbullet' },
@@ -18,7 +19,11 @@ export const NOTIFY_TYPE_MAP = {
 	TEAMS: { label: 'Teams', value: 'teams' },
 	TELEGRAM: { label: 'Telegram', value: 'telegram' },
 	ZULIP: { label: 'Zulip Chat', value: 'zulip' },
+	// Hidden: deprecated raw shoutrrr URL passthrough for legacy configs.
+	SHOUTRRR: { label: 'Shoutrrr', value: 'shoutrrr', hidden: true },
 } as const;
 export type NotifyType =
 	(typeof NOTIFY_TYPE_MAP)[keyof typeof NOTIFY_TYPE_MAP]['value'];
-export const notifyTypeOptions = Object.values(NOTIFY_TYPE_MAP);
+export const notifyTypeOptions = Object.values(NOTIFY_TYPE_MAP).filter(
+	(t) => !('hidden' in t && t.hidden),
+);

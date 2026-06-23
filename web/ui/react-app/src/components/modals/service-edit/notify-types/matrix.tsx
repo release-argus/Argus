@@ -84,6 +84,12 @@ const MATRIX = ({
 						type: 'string',
 					}}
 				/>
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.title}
+					label="Title"
+					name={`${name}.params.title`}
+				/>
 				<BooleanWithDefault
 					defaultValue={defaults?.params?.disabletls}
 					label="Disable TLS"

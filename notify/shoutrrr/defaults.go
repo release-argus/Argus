@@ -26,7 +26,7 @@ func (s ShoutrrrsDefaults) Init() {
 
 // Default sets the values of the receiver to their default values.
 func (s *ShoutrrrsDefaults) Default() {
-	defaults := make(ShoutrrrsDefaults, len(supportedTypes))
+	defaults := make(ShoutrrrsDefaults, len(SupportedTypes))
 	defaults["bark"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
@@ -82,8 +82,8 @@ func (s *ShoutrrrsDefaults) Default() {
 		notifyDefaultOptions(),
 		nil,
 		map[string]string{
-			"usemessageasvalue": "2",
-			"usetitleasvalue":   "0",
+			"messagevalue": "2",
+			"titlevalue":   "0",
 		},
 	)
 	defaults["join"] = NewDefaults(
@@ -118,6 +118,12 @@ func (s *ShoutrrrsDefaults) Default() {
 		map[string]string{
 			"disabletls": "no",
 		},
+	)
+	defaults["notifiarr"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		nil,
+		nil,
 	)
 	defaults["ntfy"] = NewDefaults(
 		"",

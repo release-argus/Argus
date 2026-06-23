@@ -23,4 +23,5 @@ var (
 	smtpParamAuth             = []string{"None", "Unknown", "Plain", "CramMD5", "OAuth2"}
 	smtpParamEncryption       = []string{"Auto", "ExplicitTLS", "ImplicitTLS", "None"}
 	telegramParamParsemode    = []string{"None", "HTML", "Markdown"}
+	zulipParamType            = []string{"channel", "direct"}
 )

@@ -86,9 +86,9 @@ const DISCORD = ({
 					}}
 				/>
 				<FieldText
-					defaultVal={defaults?.params?.threadid}
+					defaultVal={defaults?.params?.thread_id}
 					label="Thread ID"
-					name={`${name}.params.threadid`}
+					name={`${name}.params.thread_id`}
 					tooltip={{
 						content: 'The Thread ID to send the message to',
 						type: 'string',

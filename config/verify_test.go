@@ -532,8 +532,8 @@ var configStr = test.TrimYAML(`
 					max_tries: '3'
 					message: '{{ service_name | default:service_id }} - {{ version }} released'
 				params:
-					usemessageasvalue: '2'
-					usetitleasvalue: '0'
+					messagevalue: '2'
+					titlevalue: '0'
 			join:
 				type: join
 				options:
@@ -561,6 +561,12 @@ var configStr = test.TrimYAML(`
 					username: Argus
 				params:
 					disabletls: 'no'
+			notifiarr:
+				type: notifiarr
+				options:
+					delay: 0s
+					max_tries: '3'
+					message: '{{ service_name | default:service_id }} - {{ version }} released'
 			ntfy:
 				type: ntfy
 				options:

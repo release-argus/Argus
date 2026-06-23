@@ -8,6 +8,10 @@ import type {
 } from '@/utils/api/types/config/notify/bark';
 import type { GenericRequestMethod } from '@/utils/api/types/config/notify/generic';
 import type {
+	IFTTTMessageValue,
+	IFTTTTitleValue,
+} from '@/utils/api/types/config/notify/ifttt';
+import type {
 	NTFYPriority,
 	NTFYScheme,
 } from '@/utils/api/types/config/notify/ntfy';
@@ -25,23 +29,25 @@ import type { EmptyObject, Headers } from '@/utils/api/types/config/shared';
 export type NotifyTypesMap = {
 	bark: NotifyBark;
 	discord: NotifyDiscord;
-	smtp: NotifySMTP;
 	googlechat: NotifyGoogleChat;
 	gotify: NotifyGotify;
 	ifttt: NotifyIFTTT;
 	join: NotifyJoin;
-	mattermost: NotifyMatterMost;
 	matrix: NotifyMatrix;
+	mattermost: NotifyMatterMost;
+	notifiarr: NotifyNotifiarr;
 	ntfy: NotifyNtfy;
 	opsgenie: NotifyOpsGenie;
 	pushbullet: NotifyPushbullet;
 	pushover: NotifyPushover;
 	rocketchat: NotifyRocketChat;
 	slack: NotifySlack;
+	smtp: NotifySMTP;
 	teams: NotifyTeams;
 	telegram: NotifyTelegram;
 	zulip: NotifyZulip;
 	generic: NotifyGeneric;
+	shoutrrr: NotifyShoutrrr;
 };
 
 export type NotifyTypesValues = NotifyTypesMap[NotifyType];
@@ -95,31 +101,32 @@ export type NotifyDiscord = NotifyBase & {
 	};
 	params?: {
 		avatar?: string;
+		splitlines?: string;
+		thread_id?: string;
 		title?: string;
 		username?: string;
-		splitlines?: string;
 	};
 };
 
-/* SMTP */
-export type NotifySMTP = NotifyBase & {
-	type: typeof NOTIFY_TYPE_MAP.SMTP.value;
+/* Generic */
+export type NotifyGeneric = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.GENERIC.value;
 	url_fields?: {
 		host?: string;
-		password?: string;
 		port?: string;
-		username?: string;
+		path?: string;
+		headers?: string;
+		json_payload_vars?: string;
+		query_vars?: string;
 	};
 	params?: {
-		auth?: (typeof smtpAuthOptions)[number]['value'];
-		clienthost?: string;
-		encryption?: (typeof smtpEncryptionOptions)[number]['value'];
-		fromaddress?: string;
-		fromname?: string;
-		subject?: string;
-		toaddresses?: string;
-		usehtml?: string;
-		usestarttls?: string;
+		contenttype?: string;
+		disabletls?: string;
+		messagekey?: string;
+		requestmethod?: GenericRequestMethod;
+		template?: string;
+		title?: string;
+		titlekey?: string;
 	};
 };
 
@@ -141,6 +148,7 @@ export type NotifyGotify = NotifyBase & {
 		token?: string;
 	};
 	params?: {
+		date?: string;
 		disabletls?: string;
 		priority?: string;
 		title?: string;
@@ -151,14 +159,13 @@ export type NotifyGotify = NotifyBase & {
 export type NotifyIFTTT = NotifyBase & {
 	type: typeof NOTIFY_TYPE_MAP.IFTTT.value;
 	url_fields?: {
-		usemessageasvalue?: string;
 		webhookid?: string;
 	};
 	params?: {
 		events?: string;
+		messagevalue?: IFTTTMessageValue;
 		title?: string;
-		usemessageasvalue?: string;
-		usetitleasvalue?: string;
+		titlevalue?: IFTTTTitleValue;
 		value1?: string;
 		value2?: string;
 		value3?: string;
@@ -178,6 +185,23 @@ export type NotifyJoin = NotifyBase & {
 	};
 };
 
+/* Matrix */
+export type NotifyMatrix = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.MATRIX.value;
+	url_fields?: {
+		host?: string;
+		password?: string;
+		port?: string;
+		username?: string;
+	};
+	params?: {
+		disabletls?: string;
+		rooms?: string;
+		title?: string;
+	};
+};
+
+/* MatterMost */
 export type NotifyMatterMost = NotifyBase & {
 	type: typeof NOTIFY_TYPE_MAP.MATTERMOST.value;
 	url_fields?: {
@@ -194,19 +218,18 @@ export type NotifyMatterMost = NotifyBase & {
 	};
 };
 
-/* Matrix */
-export type NotifyMatrix = NotifyBase & {
-	type: typeof NOTIFY_TYPE_MAP.MATRIX.value;
+/* Notifiarr */
+export type NotifyNotifiarr = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.NOTIFIARR.value;
 	url_fields?: {
-		host?: string;
-		password?: string;
-		port?: string;
-		username?: string;
+		apikey?: string;
 	};
 	params?: {
-		disabletls?: string;
-		rooms?: string;
-		title?: string;
+		channel?: string;
+		color?: string;
+		image?: string;
+		name?: string;
+		thumbnail?: string;
 	};
 };
 
@@ -313,7 +336,31 @@ export type NotifySlack = NotifyBase & {
 		botname?: string;
 		color?: string;
 		icon?: string;
+		threadts?: string;
 		title?: string;
+	};
+};
+
+/* SMTP */
+export type NotifySMTP = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.SMTP.value;
+	url_fields?: {
+		host?: string;
+		password?: string;
+		port?: string;
+		username?: string;
+	};
+	params?: {
+		auth?: (typeof smtpAuthOptions)[number]['value'];
+		clienthost?: string;
+		encryption?: (typeof smtpEncryptionOptions)[number]['value'];
+		fromaddress?: string;
+		fromname?: string;
+		skiptlsverify?: string;
+		subject?: string;
+		toaddresses?: string;
+		usehtml?: string;
+		usestarttls?: string;
 	};
 };
 
@@ -362,24 +409,10 @@ export type NotifyZulip = NotifyBase & {
 	};
 };
 
-/* Generic */
-export type NotifyGeneric = NotifyBase & {
-	type: typeof NOTIFY_TYPE_MAP.GENERIC.value;
+/* Shoutrrr (raw URL passthrough) */
+export type NotifyShoutrrr = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.SHOUTRRR.value;
 	url_fields?: {
-		host?: string;
-		port?: string;
-		path?: string;
-		headers?: string;
-		json_payload_vars?: string;
-		query_vars?: string;
-	};
-	params?: {
-		contenttype?: string;
-		disabletls?: string;
-		messagekey?: string;
-		requestmethod?: GenericRequestMethod;
-		template?: string;
-		title?: string;
-		titlekey?: string;
+		raw?: string;
 	};
 };

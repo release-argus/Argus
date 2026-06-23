@@ -20,12 +20,14 @@ import {
 	notifyJoinSchema,
 	notifyMatrixSchema,
 	notifyMatterMostSchema,
+	notifyNotifiarrSchema,
 	notifyNtfySchema,
 	notifyOpsGenieSchema,
 	notifyPushbulletSchema,
 	notifyPushoverSchema,
 	notifyRocketChatSchema,
 	notifySchemaMap,
+	notifyShoutrrrSchema,
 	notifySlackSchema,
 	notifySMTPSchema,
 	notifyTeamsSchema,
@@ -58,8 +60,6 @@ import {
 	atLeastTwo,
 } from '@/utils/api/types/config-edit/util';
 import {
-	EXPECTED_HASH_MESSAGE,
-	EXPECTED_UUID_MESSAGE,
 	validateArrayFieldWithSchemas,
 	validateDuration,
 	validateHexString,
@@ -67,7 +67,6 @@ import {
 	validateNumberInRange,
 	validateNumberString,
 	validateRequired,
-	validateStringLength,
 } from '@/utils/api/types/config-edit/validators';
 
 /* Validators shared by all notify types. */
@@ -154,14 +153,6 @@ const buildNotifySchema = (
 				...defaultValidators,
 				{ path: ['url_fields', 'webhookid'], validator: validateRequired },
 				{ path: ['params', 'events'], validator: validateRequired },
-				{
-					path: ['params', 'usemessageasvalue'],
-					validator: validateNumberString,
-				},
-				{
-					path: ['params', 'usetitleasvalue'],
-					validator: validateNumberString,
-				},
 			]);
 			break;
 		case NOTIFY_TYPE_MAP.JOIN.value:
@@ -171,20 +162,20 @@ const buildNotifySchema = (
 				{ path: ['params', 'devices'], validator: validateRequired },
 			]);
 			break;
-		case NOTIFY_TYPE_MAP.MATTERMOST.value:
-			schema = buildSuperRefine(notifyMatterMostSchema, mains, defaults, [
-				...defaultValidators,
-				{ path: ['url_fields', 'host'], validator: validateRequired },
-				{ path: ['url_fields', 'port'], validator: validateNumberString },
-				{ path: ['url_fields', 'token'], validator: validateRequired },
-			]);
-			break;
 		case NOTIFY_TYPE_MAP.MATRIX.value:
 			schema = buildSuperRefine(notifyMatrixSchema, mains, defaults, [
 				...defaultValidators,
 				{ path: ['url_fields', 'host'], validator: validateRequired },
 				{ path: ['url_fields', 'password'], validator: validateRequired },
 				{ path: ['url_fields', 'port'], validator: validateNumberString },
+			]);
+			break;
+		case NOTIFY_TYPE_MAP.MATTERMOST.value:
+			schema = buildSuperRefine(notifyMatterMostSchema, mains, defaults, [
+				...defaultValidators,
+				{ path: ['url_fields', 'host'], validator: validateRequired },
+				{ path: ['url_fields', 'port'], validator: validateNumberString },
+				{ path: ['url_fields', 'token'], validator: validateRequired },
 			]);
 			break;
 		case NOTIFY_TYPE_MAP.NTFY.value:
@@ -295,45 +286,19 @@ const buildNotifySchema = (
 		case NOTIFY_TYPE_MAP.TEAMS.value:
 			schema = buildSuperRefine(notifyTeamsSchema, mains, defaults, [
 				...defaultValidators,
-				{ path: ['params', 'color'], validator: validateHexString },
-				{ path: ['url_fields', 'altid'], validator: validateRequired },
-				{
-					path: ['url_fields', 'altid'],
-					validator: validateStringLength({
-						max: 32,
-						message: EXPECTED_HASH_MESSAGE,
-						min: 32,
-					}),
-				},
-				{ path: ['url_fields', 'extraid'], validator: validateRequired },
-				{ path: ['url_fields', 'group'], validator: validateRequired },
-				{
-					path: ['url_fields', 'group'],
-					validator: validateStringLength({
-						max: 36,
-						message: EXPECTED_UUID_MESSAGE,
-						min: 36,
-					}),
-				},
-				{ path: ['url_fields', 'groupowner'], validator: validateRequired },
-				{
-					path: ['url_fields', 'groupowner'],
-					validator: validateStringLength({
-						max: 36,
-						message: EXPECTED_UUID_MESSAGE,
-						min: 36,
-					}),
-				},
-				{ path: ['url_fields', 'tenant'], validator: validateRequired },
-				{
-					path: ['url_fields', 'tenant'],
-					validator: validateStringLength({
-						max: 36,
-						message: EXPECTED_UUID_MESSAGE,
-						min: 36,
-					}),
-				},
 				{ path: ['params', 'host'], validator: validateRequired },
+			]);
+			break;
+		case NOTIFY_TYPE_MAP.NOTIFIARR.value:
+			schema = buildSuperRefine(notifyNotifiarrSchema, mains, defaults, [
+				...defaultValidators,
+				{ path: ['url_fields', 'apikey'], validator: validateRequired },
+			]);
+			break;
+		case NOTIFY_TYPE_MAP.SHOUTRRR.value:
+			schema = buildSuperRefine(notifyShoutrrrSchema, mains, defaults, [
+				...defaultValidators,
+				{ path: ['url_fields', 'raw'], validator: validateRequired },
 			]);
 			break;
 		case NOTIFY_TYPE_MAP.TELEGRAM.value:
@@ -506,7 +471,8 @@ export const buildNotifySchemaWithFallbacks = (
 
 		acc[key] = safeParse({
 			data: data,
-			fallback: { type: itemType },
+			// biome-ignore lint/suspicious/noExplicitAny: itemType is narrowed to a valid notify key but TS can't prove the discriminant matches this schema.
+			fallback: { type: itemType } as any,
 			path: `${path} (mains-${key})`,
 			schema: notifySchemaMap[itemType],
 		});

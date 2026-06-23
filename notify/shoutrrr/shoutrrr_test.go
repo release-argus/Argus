@@ -59,7 +59,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "discord",
+			name:  "discord/base",
 			sType: "discord",
 			want:  "discord://TOKEN@WEBHOOKID",
 			urlFields: map[string]string{
@@ -68,44 +68,61 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "smtp/base",
-			sType: "smtp",
-			want:  "smtp://HOST/?fromaddress=FROMADDRESS&toaddresses=TO_ADDRESS1,TO_ADDRESS2",
+			name:  "discord/base + thread_id",
+			sType: "discord",
+			want:  "discord://TOKEN@WEBHOOKID?thread_id=1234567890",
+			urlFields: map[string]string{
+				"token":     "TOKEN",
+				"webhookid": "WEBHOOKID",
+			},
+			params: map[string]string{
+				"thread_id": "1234567890",
+			},
+		},
+		{
+			name:  "generic/base",
+			sType: "generic",
+			want:  "generic://HOST",
 			urlFields: map[string]string{
 				"host": "HOST",
 			},
-			params: map[string]string{
-				"fromaddress": "FROMADDRESS",
-				"toaddresses": "TO_ADDRESS1,TO_ADDRESS2",
+		},
+		{
+			name:  "generic/base + headers",
+			sType: "generic",
+			want:  "generic://HOST?@contentType=val2&@fooBar=val1",
+			urlFields: map[string]string{
+				"host":    "HOST",
+				"headers": `{"fooBar":"val1","contentType":"val2"}`,
 			},
 		},
 		{
-			name:  "smtp/base + login",
-			sType: "smtp",
-			want:  "smtp://USERNAME:PASSWORD@HOST/?fromaddress=FROMADDRESS&toaddresses=TO_ADDRESS1,TO_ADDRESS2",
+			name:  "generic/base + json_payload_vars",
+			sType: "generic",
+			want:  "generic://HOST?$key1=val1",
 			urlFields: map[string]string{
-				"host":     "HOST",
-				"username": "USERNAME",
-				"password": "PASSWORD",
-			},
-			params: map[string]string{
-				"fromaddress": "FROMADDRESS",
-				"toaddresses": "TO_ADDRESS1,TO_ADDRESS2",
+				"host":              "HOST",
+				"json_payload_vars": `{"key1":"val1"}`,
 			},
 		},
 		{
-			name:  "smtp/base + login + port",
-			sType: "smtp",
-			want:  "smtp://USERNAME:PASSWORD@HOST:587/?fromaddress=FROMADDRESS&toaddresses=TO_ADDRESS1,TO_ADDRESS2",
+			name:  "generic/base + query_vars",
+			sType: "generic",
+			want:  "generic://HOST?foo=bar",
 			urlFields: map[string]string{
-				"host":     "HOST",
-				"username": "USERNAME",
-				"password": "PASSWORD",
-				"port":     "587",
+				"host":       "HOST",
+				"query_vars": `{"foo":"bar"}`,
 			},
-			params: map[string]string{
-				"fromaddress": "FROMADDRESS",
-				"toaddresses": "TO_ADDRESS1,TO_ADDRESS2",
+		},
+		{
+			name:  "generic/base + headers + json_payload_vars + query_vars",
+			sType: "generic",
+			want:  "generic://HOST?@contentType=val2&@fooBar=val1&$key1=val1&foo=bar",
+			urlFields: map[string]string{
+				"host":              "HOST",
+				"headers":           `{"fooBar":"val1","contentType":"val2"}`,
+				"json_payload_vars": `{"key1":"val1"}`,
+				"query_vars":        `{"foo":"bar"}`,
 			},
 		},
 		{
@@ -258,7 +275,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 		{
 			name:  "matrix/base + user + port + rooms + disabletls",
 			sType: "matrix",
-			want:  "matrix://USER:PASSWORD@HOST:8443/?rooms=ROOMS&disableTLS=yes",
+			want:  "matrix://USER:PASSWORD@HOST:8443/?disableTLS=yes&rooms=ROOMS",
 			urlFields: map[string]string{
 				"host":     "HOST",
 				"password": "PASSWORD",
@@ -340,6 +357,25 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
+			name:  "notifiarr/base",
+			sType: "notifiarr",
+			want:  "notifiarr://APIKEY",
+			urlFields: map[string]string{
+				"apikey": "APIKEY",
+			},
+		},
+		{
+			name:  "notifiarr/base + channel",
+			sType: "notifiarr",
+			want:  "notifiarr://APIKEY?channel=CHANNEL",
+			urlFields: map[string]string{
+				"apikey": "APIKEY",
+			},
+			params: map[string]string{
+				"channel": "CHANNEL",
+			},
+		},
+		{
 			name:  "pushbullet/base",
 			sType: "pushbullet",
 			want:  "pushbullet://TOKEN/TARGETS",
@@ -393,7 +429,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "slack",
+			name:  "slack/base",
 			sType: "slack",
 			want:  "slack://TOKEN@CHANNEL",
 			urlFields: map[string]string{
@@ -402,17 +438,83 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "teams",
-			sType: "teams",
-			want:  "teams://GROUP@TENANT/ALTID/GROUPOWNER?host=HOST",
+			name:  "slack/base + thread_ts",
+			sType: "slack",
+			want:  "slack://TOKEN@CHANNEL?thread_ts=1609459200.000001",
 			urlFields: map[string]string{
-				"group":      "GROUP",
-				"tenant":     "TENANT",
-				"altid":      "ALTID",
-				"groupowner": "GROUPOWNER",
+				"token":   "TOKEN",
+				"channel": "CHANNEL",
 			},
 			params: map[string]string{
+				"thread_ts": "1609459200.000001",
+			},
+		},
+		{
+			name:  "smtp/base",
+			sType: "smtp",
+			want:  "smtp://HOST/?fromaddress=FROMADDRESS&toaddresses=TO_ADDRESS1%2CTO_ADDRESS2",
+			urlFields: map[string]string{
 				"host": "HOST",
+			},
+			params: map[string]string{
+				"fromaddress": "FROMADDRESS",
+				"toaddresses": "TO_ADDRESS1,TO_ADDRESS2",
+			},
+		},
+		{
+			name:  "smtp/base + login",
+			sType: "smtp",
+			want:  "smtp://USERNAME:PASSWORD@HOST/?fromaddress=FROMADDRESS&toaddresses=TO_ADDRESS1%2CTO_ADDRESS2",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"username": "USERNAME",
+				"password": "PASSWORD",
+			},
+			params: map[string]string{
+				"fromaddress": "FROMADDRESS",
+				"toaddresses": "TO_ADDRESS1,TO_ADDRESS2",
+			},
+		},
+		{
+			name:  "smtp/base + login + port",
+			sType: "smtp",
+			want:  "smtp://USERNAME:PASSWORD@HOST:587/?fromaddress=FROMADDRESS&toaddresses=TO_ADDRESS1%2CTO_ADDRESS2",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"username": "USERNAME",
+				"password": "PASSWORD",
+				"port":     "587",
+			},
+			params: map[string]string{
+				"fromaddress": "FROMADDRESS",
+				"toaddresses": "TO_ADDRESS1,TO_ADDRESS2",
+			},
+		},
+		{
+			name:  "teams/base",
+			sType: "teams",
+			want:  "teams://?host=https%3A%2F%2Fprod-00.westus.logic.azure.com%3A443%2Fworkflows%2Fabc",
+			params: map[string]string{
+				"host": "https://prod-00.westus.logic.azure.com:443/workflows/abc",
+			},
+		},
+		{
+			name:  "teams/base + color",
+			sType: "teams",
+			want:  "teams://?host=https%3A%2F%2Fprod-00.westus.logic.azure.com%3A443%2Fworkflows%2Fabc&color=blue",
+			params: map[string]string{
+				"host":  "https://prod-00.westus.logic.azure.com:443/workflows/abc",
+				"color": "blue",
+			},
+		},
+		{
+			name:  "teams/base + color + title",
+			sType: "teams",
+			want:  "teams://?host=https%3A%2F%2Fprod-00.westus.logic.azure.com%3A443%2Fworkflows%2Fabc&color=blue&title=My+Title",
+			params: map[string]string{
+				"host":  "https://prod-00.westus.logic.azure.com:443/workflows/abc",
+				"color": "blue",
+				"title": "My Title",
 			},
 		},
 		{
@@ -463,7 +565,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "zulip/base + token + stream",
+			name:  "zulip/base + stream + token ",
 			sType: "zulip",
 			want:  "zulip://BOTMAIL:BOTKEY@HOST?stream=STREAM&topic=TOPIC",
 			urlFields: map[string]string{
@@ -472,54 +574,51 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 				"botkey":  "BOTKEY",
 			},
 			params: map[string]string{
-				"topic":  "TOPIC",
 				"stream": "STREAM",
+				"topic":  "TOPIC",
 			},
 		},
 		{
-			name:  "generic/base",
-			sType: "generic",
-			want:  "generic://HOST",
-			urlFields: map[string]string{
-				"host": "HOST",
-			},
-		},
-		{
-			name:  "generic/base + headers",
-			sType: "generic",
-			want:  "generic://HOST?@contentType=val2&@fooBar=val1",
+			name:  "zulip//base + direct message",
+			sType: "zulip",
+			want:  "zulip://BOTMAIL:BOTKEY@HOST?to=user%40example.com&type=direct",
 			urlFields: map[string]string{
 				"host":    "HOST",
-				"headers": `{"fooBar":"val1","contentType":"val2"}`,
+				"botmail": "BOTMAIL",
+				"botkey":  "BOTKEY",
+			},
+			params: map[string]string{
+				"type": "direct",
+				"to":   "user@example.com",
 			},
 		},
 		{
-			name:  "generic/base + json_payload_vars",
-			sType: "generic",
-			want:  "generic://HOST?$key1=val1",
+			name:  "zulip/base + title",
+			sType: "zulip",
+			want:  "zulip://BOTMAIL:BOTKEY@HOST?title=My+Title",
 			urlFields: map[string]string{
-				"host":              "HOST",
-				"json_payload_vars": `{"key1":"val1"}`,
+				"host":    "HOST",
+				"botmail": "BOTMAIL",
+				"botkey":  "BOTKEY",
+			},
+			params: map[string]string{
+				"title": "My Title",
 			},
 		},
 		{
-			name:  "generic/base + query_vars",
-			sType: "generic",
-			want:  "generic://HOST?foo=bar",
+			name:  "zulip/base + stream + topic + title + read_by_sender",
+			sType: "zulip",
+			want:  "zulip://BOTMAIL:BOTKEY@HOST?read_by_sender=true&stream=STREAM&title=Alert&topic=TOPIC",
 			urlFields: map[string]string{
-				"host":       "HOST",
-				"query_vars": `{"foo":"bar"}`,
+				"host":    "HOST",
+				"botmail": "BOTMAIL",
+				"botkey":  "BOTKEY",
 			},
-		},
-		{
-			name:  "generic/base + headers + json_payload_vars + query_vars",
-			sType: "generic",
-			want:  "generic://HOST?@contentType=val2&@fooBar=val1&$key1=val1&foo=bar",
-			urlFields: map[string]string{
-				"host":              "HOST",
-				"headers":           `{"fooBar":"val1","contentType":"val2"}`,
-				"json_payload_vars": `{"key1":"val1"}`,
-				"query_vars":        `{"foo":"bar"}`,
+			params: map[string]string{
+				"stream":         "STREAM",
+				"topic":          "TOPIC",
+				"title":          "Alert",
+				"read_by_sender": "true",
 			},
 		},
 		{
@@ -684,35 +783,6 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 				)
 			}
 		})
-	}
-}
-
-func TestShoutrrr_BuildParams__ntfy(t *testing.T) {
-	// GIVEN: a ntfy Shoutrrr with params.disabletlsverification.
-	shoutrrr := testShoutrrr(false, false)
-	wantValue := "true"
-	shoutrrr.Type = "ntfy"
-	shoutrrr.Params["disabletlsverification"] = wantValue
-
-	// WHEN: BuildParams is called.
-	result := shoutrrr.BuildParams(serviceinfo.ServiceInfo{})
-
-	prefix := fmt.Sprintf("%s\nShoutrrr.BuildParams()", packageName)
-
-	// THEN: the 'disabletlsverification' param is not present.
-	if g, ok := (*result)["disabletlsverification"]; ok {
-		t.Errorf(
-			"%s 'disabletlsverification' param should not be present for 'ntfy'\ngot:  %q\nwant: \"\"",
-			prefix, g,
-		)
-	}
-
-	// AND: disabletls param is present.
-	if got := (*result)["disabletls"]; got != wantValue {
-		t.Errorf(
-			"%s 'disabletls' param mismatch\ngot:  %q\nwant: %q",
-			prefix, wantValue, got,
-		)
 	}
 }
 
@@ -950,6 +1020,83 @@ func TestShoutrrr_ParseSend(t *testing.T) {
 				"combinedErrs",
 			); testErr != nil {
 				t.Error(testErr)
+			}
+		})
+	}
+}
+
+func TestQueryParam(t *testing.T) {
+	// GIVEN: a key and value.
+	tests := []struct {
+		name string
+		key  string
+		val  string
+		want string
+	}{
+		{
+			name: "empty value returns empty string",
+			key:  "foo",
+			val:  "",
+			want: "",
+		},
+		{
+			name: "plain ASCII value",
+			key:  "foo",
+			val:  "bar",
+			want: "foo=bar",
+		},
+		{
+			name: "space is encoded as +",
+			key:  "title",
+			val:  "My Title",
+			want: "title=My+Title",
+		},
+		{
+			name: "@ is percent-encoded",
+			key:  "to",
+			val:  "user@example.com",
+			want: "to=user%40example.com",
+		},
+		{
+			name: "comma is percent-encoded",
+			key:  "toaddresses",
+			val:  "a@b.com,c@d.com",
+			want: "toaddresses=a%40b.com%2Cc%40d.com",
+		},
+		{
+			name: "& is percent-encoded",
+			key:  "q",
+			val:  "foo&bar",
+			want: "q=foo%26bar",
+		},
+		{
+			name: "= is percent-encoded",
+			key:  "q",
+			val:  "a=b",
+			want: "q=a%3Db",
+		},
+		{
+			name: "URL value is percent-encoded",
+			key:  "host",
+			val:  "https://example.com:443/path",
+			want: "host=https%3A%2F%2Fexample.com%3A443%2Fpath",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: queryParam is called.
+			got := queryParam(tc.key, tc.val)
+
+			// THEN: the expected string is returned.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nqueryParam(%q, %q) mismatch\ngot:  %q\nwant: %q",
+					packageName, tc.key, tc.val,
+					got, tc.want,
+				)
 			}
 		})
 	}

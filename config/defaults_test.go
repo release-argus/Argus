@@ -1021,17 +1021,17 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		{
 			name: "notify.ifttt",
 			env: map[string]string{
-				"ARGUS_NOTIFY_IFTTT_OPTIONS_DELAY":            "5m",
-				"ARGUS_NOTIFY_IFTTT_OPTIONS_MAX_TRIES":        "5",
-				"ARGUS_NOTIFY_IFTTT_OPTIONS_MESSAGE":          "pow",
-				"ARGUS_NOTIFY_IFTTT_URL_FIELDS_WEBHOOKID":     "secretWHID",
-				"ARGUS_NOTIFY_IFTTT_PARAMS_EVENTS":            "event1,event2",
-				"ARGUS_NOTIFY_IFTTT_PARAMS_TITLE":             "Argus IFTTT Notification",
-				"ARGUS_NOTIFY_IFTTT_PARAMS_USEMESSAGEASVALUE": "2",
-				"ARGUS_NOTIFY_IFTTT_PARAMS_USETITLEASVALUE":   "0",
-				"ARGUS_NOTIFY_IFTTT_PARAMS_VALUE1":            "bish",
-				"ARGUS_NOTIFY_IFTTT_PARAMS_VALUE2":            "bash",
-				"ARGUS_NOTIFY_IFTTT_PARAMS_VALUE3":            "bosh",
+				"ARGUS_NOTIFY_IFTTT_OPTIONS_DELAY":        "5m",
+				"ARGUS_NOTIFY_IFTTT_OPTIONS_MAX_TRIES":    "5",
+				"ARGUS_NOTIFY_IFTTT_OPTIONS_MESSAGE":      "pow",
+				"ARGUS_NOTIFY_IFTTT_URL_FIELDS_WEBHOOKID": "secretWHID",
+				"ARGUS_NOTIFY_IFTTT_PARAMS_EVENTS":        "event1,event2",
+				"ARGUS_NOTIFY_IFTTT_PARAMS_MESSAGEVALUE":  "2",
+				"ARGUS_NOTIFY_IFTTT_PARAMS_TITLE":         "Argus IFTTT Notification",
+				"ARGUS_NOTIFY_IFTTT_PARAMS_TITLEVALUE":    "0",
+				"ARGUS_NOTIFY_IFTTT_PARAMS_VALUE1":        "bish",
+				"ARGUS_NOTIFY_IFTTT_PARAMS_VALUE2":        "bash",
+				"ARGUS_NOTIFY_IFTTT_PARAMS_VALUE3":        "bosh",
 			},
 			want: &Defaults{
 				Notify: shoutrrr.ShoutrrrsDefaults{
@@ -1046,13 +1046,13 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 							"webhookid": "secretWHID",
 						},
 						map[string]string{
-							"events":            "event1,event2",
-							"title":             "Argus IFTTT Notification",
-							"usemessageasvalue": "2",
-							"usetitleasvalue":   "0",
-							"value1":            "bish",
-							"value2":            "bash",
-							"value3":            "bosh",
+							"events":       "event1,event2",
+							"messagevalue": "2",
+							"title":        "Argus IFTTT Notification",
+							"titlevalue":   "0",
+							"value1":       "bish",
+							"value2":       "bash",
+							"value3":       "bosh",
 						},
 					),
 				},
@@ -1358,7 +1358,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 						},
 						map[string]string{
 							"botname":  "Argus",
-							"color":    "%23ff8000",
+							"color":    "#ff8000",
 							"icon":     ":ghost:",
 							"threadts": "1234567890.123456",
 							"title":    "Argus Slack Notification",
@@ -1420,16 +1420,12 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		{
 			name: "notify.teams",
 			env: map[string]string{
-				"ARGUS_NOTIFY_TEAMS_OPTIONS_DELAY":         "14m",
-				"ARGUS_NOTIFY_TEAMS_OPTIONS_MAX_TRIES":     "14",
-				"ARGUS_NOTIFY_TEAMS_OPTIONS_MESSAGE":       "hi",
-				"ARGUS_NOTIFY_TEAMS_URL_FIELDS_GROUP":      "teamsGroup",
-				"ARGUS_NOTIFY_TEAMS_URL_FIELDS_TENANT":     "tenant",
-				"ARGUS_NOTIFY_TEAMS_URL_FIELDS_ALTID":      "otherID?",
-				"ARGUS_NOTIFY_TEAMS_URL_FIELDS_GROUPOWNER": "owner",
-				"ARGUS_NOTIFY_TEAMS_PARAMS_COLOR":          "#ff8000",
-				"ARGUS_NOTIFY_TEAMS_PARAMS_HOST":           "teams.example.com",
-				"ARGUS_NOTIFY_TEAMS_PARAMS_TITLE":          "Argus Teams Notification",
+				"ARGUS_NOTIFY_TEAMS_OPTIONS_DELAY":     "14m",
+				"ARGUS_NOTIFY_TEAMS_OPTIONS_MAX_TRIES": "14",
+				"ARGUS_NOTIFY_TEAMS_OPTIONS_MESSAGE":   "hi",
+				"ARGUS_NOTIFY_TEAMS_PARAMS_COLOR":      "#ff8000",
+				"ARGUS_NOTIFY_TEAMS_PARAMS_HOST":       "https://prod-00.westus.logic.azure.com:443/workflows/abc123/triggers/manual/paths/invoke?api-version=2016-06-00&sp=/triggers/manual/run&sv=1.0&sig=XXXXXXXX",
+				"ARGUS_NOTIFY_TEAMS_PARAMS_TITLE":      "Argus Teams Notification",
 			},
 			want: &Defaults{
 				Notify: shoutrrr.ShoutrrrsDefaults{
@@ -1437,18 +1433,13 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 						"",
 						map[string]string{
 							"delay":     "14m",
-							"message":   "hi",
 							"max_tries": "14",
+							"message":   "hi",
 						},
-						map[string]string{
-							"altid":      "otherID?",
-							"group":      "teamsGroup",
-							"groupowner": "owner",
-							"tenant":     "tenant",
-						},
+						nil,
 						map[string]string{
 							"color": "#ff8000",
-							"host":  "teams.example.com",
+							"host":  "https://prod-00.westus.logic.azure.com:443/workflows/abc123/triggers/manual/paths/invoke?api-version=2016-06-00&sp=/triggers/manual/run&sv=1.0&sig=XXXXXXXX",
 							"title": "Argus Teams Notification",
 						},
 					),
@@ -2002,8 +1993,8 @@ var hardDefaultsStr = test.TrimYAML(`
 					max_tries: '3'
 					message: '{{ service_name | default:service_id }} - {{ version }} released'
 				params:
-					usemessageasvalue: '2'
-					usetitleasvalue: '0'
+					messagevalue: '2'
+					titlevalue: '0'
 			join:
 				type: join
 				options:
@@ -2031,6 +2022,12 @@ var hardDefaultsStr = test.TrimYAML(`
 					username: Argus
 				params:
 					disabletls: 'no'
+			notifiarr:
+				type: notifiarr
+				options:
+					delay: 0s
+					max_tries: '3'
+					message: '{{ service_name | default:service_id }} - {{ version }} released'
 			ntfy:
 				type: ntfy
 				options:

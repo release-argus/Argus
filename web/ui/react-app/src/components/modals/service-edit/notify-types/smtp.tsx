@@ -237,7 +237,7 @@ const SMTP = ({ name, main }: { name: string; main?: NotifySMTPSchema }) => {
 					}}
 				/>
 				<BooleanWithDefault
-					defaultValue={defaults?.params?.skiptlsverification}
+					defaultValue={defaults?.params?.skiptlsverify}
 					label="Skip TLS Verification"
 					name={`${name}.params.skiptlsverify`}
 					tooltip={{
