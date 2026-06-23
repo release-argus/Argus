@@ -126,20 +126,25 @@ func (l *Lookup) httpRequest(logFrom logx.LogFrom) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
-	// Ignore non-2XX responses.
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		err = fmt.Errorf("non-2XX response code: %d", resp.StatusCode)
-		logx.Warn(err, logFrom, true)
-		return nil, err
-	}
-
-	// Read the response body.
-	// If we're targeting a specific header, ignore the body.
 	if l.TargetHeader != "" {
 		if headerValue := resp.Header.Get(l.TargetHeader); headerValue != "" {
 			return []byte(headerValue), nil
 		}
-		return nil, fmt.Errorf("target header %q not found", l.TargetHeader)
+		var err error
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			err = fmt.Errorf("target header %q not found (status: %d)", l.TargetHeader, resp.StatusCode)
+		} else {
+			err = fmt.Errorf("target header %q not found", l.TargetHeader)
+		}
+		logx.Warn(err, logFrom, true)
+		return nil, err
+	}
+
+	// Ignore non-2XX responses.
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		err := fmt.Errorf("non-2XX response code: %d", resp.StatusCode)
+		logx.Warn(err, logFrom, true)
+		return nil, err
 	}
 
 	// Return the body.
