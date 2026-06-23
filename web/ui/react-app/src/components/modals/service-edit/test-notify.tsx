@@ -108,9 +108,7 @@ const TestNotify: FC<TestNotifyProps> = ({ path, original, extras }) => {
 				setLastFetched(currentTime);
 				await testRefetch();
 			}
-		} catch (error) {
-			console.error('Failed to send notify:', error);
-		}
+		} catch (error) {}
 	};
 
 	// Icon for the test result.
