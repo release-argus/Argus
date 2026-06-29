@@ -225,7 +225,7 @@ func TestClient_ReadPump__pongHandler(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// THEN: the connection remains alive — pong handler ran without error.
-	if !wsTest.client.hub.clients[wsTest.client] {
+	if !wsTest.client.hub.hasClient(wsTest.client) {
 		t.Errorf("%s client should still be registered to hub after pong", prefix)
 	}
 }
@@ -595,7 +595,6 @@ func TestClient_WritePump__connection(t *testing.T) {
 		closeSend           bool
 		closeConnBeforePump bool
 		closeConnAfterPump  bool
-		shortenPing         bool
 		stdoutRegex         string
 	}{
 		{
@@ -613,12 +612,10 @@ func TestClient_WritePump__connection(t *testing.T) {
 		},
 		{
 			name:        "sends ping frames",
-			shortenPing: true,
 			stdoutRegex: `^$`,
 		},
 		{
 			name:               "ping write failure exits writePump",
-			shortenPing:        true,
 			closeConnAfterPump: true,
 			stdoutRegex:        `^$`,
 		},
@@ -628,12 +625,6 @@ func TestClient_WritePump__connection(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureLog(t, logx.Default())
-
-			if tc.shortenPing {
-				oldPingPeriod := pingPeriod
-				pingPeriod = 10 * time.Millisecond
-				t.Cleanup(func() { pingPeriod = oldPingPeriod })
-			}
 
 			// GIVEN: a Hub with a registered client.
 			wsTest := setupWSHubClient(t)
@@ -758,7 +749,7 @@ func waitForClientUnregistered(t *testing.T, hub *Hub, client *Client) {
 
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
-		if !hub.clients[client] {
+		if !hub.hasClient(client) {
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -893,19 +884,18 @@ func TestServeWs__plain_HTTP(t *testing.T) {
 	}
 }
 
+// hubClientForTest checks that hub has only 1 Client, and returns it if it does.
 func hubClientForTest(t *testing.T, hub *Hub) *Client {
 	t.Helper()
 
-	if len(hub.clients) == 0 {
+	clients := hub.clientList()
+	if len(clients) == 0 {
 		return nil
 	}
 
-	if len(hub.clients) > 1 {
-		t.Fatalf("%s\nexpected one registered client, got %d", packageName, len(hub.clients))
+	if len(clients) > 1 {
+		t.Fatalf("%s\nexpected one registered client, got %d", packageName, len(clients))
 	}
 
-	for client := range hub.clients {
-		return client
-	}
-	return nil
+	return clients[0]
 }

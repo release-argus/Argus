@@ -22,17 +22,18 @@ import (
 
 // Hub maintains the set of active clients and broadcasts messages to those clients.
 type Hub struct {
-	// Registered clients.
+	// Registered clients (owned by the Run goroutine).
 	clients map[*Client]bool
 
-	// Inbound messages from the clients.
-	Broadcast chan []byte
+	Broadcast  chan []byte                 // Inbound messages from the clients.
+	register   chan *Client                // Register requests from the clients.
+	unregister chan *Client                // Unregister requests from clients.
+	query      chan func(map[*Client]bool) // Observe clients on the Run goroutine.
+}
 
-	// Register requests from the clients.
-	register chan *Client
-
-	// Unregister requests from clients.
-	unregister chan *Client
+// clientCount returns the number of registered clients.
+func (h *Hub) clientCount() int {
+	return len(h.clients)
 }
 
 // NewHub creates a new Hub.
@@ -41,6 +42,7 @@ func NewHub() *Hub {
 		Broadcast:  make(chan []byte, 256),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
+		query:      make(chan func(map[*Client]bool)),
 		clients:    make(map[*Client]bool),
 	}
 }
@@ -51,49 +53,64 @@ type AnnounceMSG struct {
 	ServiceID string `json:"service_id"`
 }
 
-// Run starts the WebSocket Hub.
+// addClient registers client.
+func (h *Hub) addClient(client *Client) {
+	if _, ok := h.clients[client]; !ok {
+		h.clients[client] = true
+	}
+}
+
+// removeClient unregisters client and closes its send channel.
+func (h *Hub) removeClient(client *Client) {
+	if _, ok := h.clients[client]; ok {
+		delete(h.clients, client)
+		close(client.send)
+	}
+}
+
+// broadcast sends message to every client, dropping any whose buffer is full.
+func (h *Hub) broadcast(message []byte) {
+	if logx.IsLevel("DEBUG") {
+		logx.Debug(
+			"Broadcast "+string(message),
+			logx.LogFrom{Primary: "WebSocket"},
+			h.clientCount() > 0,
+		)
+	}
+
+	var msg AnnounceMSG
+	if err := decode.Unmarshal("json", message, &msg); err != nil {
+		logx.Warn(
+			"Invalid JSON broadcast to the WebSocket",
+			logx.LogFrom{Primary: "WebSocket"},
+			true,
+		)
+		return
+	}
+
+	// Non-blocking send; drop any client whose buffer is full.
+	for client := range h.clients {
+		select {
+		case client.send <- message:
+		default:
+			close(client.send)
+			delete(h.clients, client)
+		}
+	}
+}
+
+// Run starts the Hub. It owns the clients map; all access happens on this goroutine.
 func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			// Avoid unnecessary writes to the map.
-			if _, ok := h.clients[client]; !ok {
-				h.clients[client] = true
-			}
+			h.addClient(client)
 		case client := <-h.unregister:
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
-				close(client.send)
-			}
+			h.removeClient(client)
 		case message := <-h.Broadcast:
-			if logx.IsLevel("DEBUG") {
-				logx.Debug(
-					"Broadcast "+string(message),
-					logx.LogFrom{Primary: "WebSocket"},
-					len(h.clients) > 0,
-				)
-			}
-
-			// Validate JSON.
-			var msg AnnounceMSG
-			if err := decode.Unmarshal("json", message, &msg); err != nil {
-				logx.Warn(
-					"Invalid JSON broadcast to the WebSocket",
-					logx.LogFrom{Primary: "WebSocket"},
-					true,
-				)
-				continue
-			}
-
-			// Send message to all clients.
-			for client := range h.clients {
-				select {
-				case client.send <- message:
-				default:
-					close(client.send)
-					delete(h.clients, client)
-				}
-			}
+			h.broadcast(message)
+		case fn := <-h.query:
+			fn(h.clients) // Read the map on the owning goroutine.
 		}
 	}
 }

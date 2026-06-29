@@ -59,6 +59,9 @@ func TestMain(m *testing.M) {
 	ctx, cancel := context.WithCancel(context.Background())
 	g, _ := errgroup.WithContext(ctx)
 
+	// Shorten the WebSocket ping interval so writePump tests don't wait out the production default.
+	pingPeriod = 10 * time.Millisecond
+
 	config.DebounceDuration = 500 * time.Millisecond
 	flags := make(map[string]bool)
 	path := "TestWebAPIv1Main.yml"
@@ -137,9 +140,9 @@ func plainDefaults(t *testing.T) (*config.Defaults, *config.Defaults) {
 func testClient() Client {
 	hub := NewHub()
 	return Client{
-		hub:            hub,
-		ip:             "1.1.1.1",
-		conn:           &websocket.Conn{},
+		hub:  hub,
+		ip:   "1.1.1.1",
+		conn: &websocket.Conn{},
 		send: make(chan []byte, 5),
 	}
 }
