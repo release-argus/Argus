@@ -10,7 +10,7 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from '@/components/ui/accordion';
-import { FieldGroup, FieldLegend, FieldSet } from '@/components/ui/field';
+import { FieldLegend, FieldSet } from '@/components/ui/field';
 import { Separator } from '@/components/ui/separator';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import type { NonNull } from '@/types/util';
@@ -124,7 +124,7 @@ const EditServiceLatestVersionRequire = () => {
 						}}
 					/>
 
-					<FieldGroup className="col-span-full grid grid-cols-subgrid gap-3">
+					<div className="col-span-full grid grid-cols-subgrid gap-3">
 						<FieldLabel
 							text="Command"
 							tooltip={{
@@ -134,7 +134,7 @@ const EditServiceLatestVersionRequire = () => {
 							}}
 						/>
 						<Command name={`${name}.command`} />
-					</FieldGroup>
+					</div>
 
 					<Separator className="col-span-full my-4" />
 					<FieldSet className="col-span-full grid grid-cols-subgrid gap-2">

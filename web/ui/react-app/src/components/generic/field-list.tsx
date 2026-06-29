@@ -5,7 +5,7 @@ import { FieldLabel, FieldText } from '@/components/generic/field';
 import type { TooltipWithAriaProps } from '@/components/generic/tooltip';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
-import { FieldGroup, FieldSet } from '@/components/ui/field';
+import { FieldSet } from '@/components/ui/field';
 import type { StringFieldArray } from '@/types/util';
 import { isEmptyArray } from '@/utils';
 import { isUsingDefaults } from '@/utils/api/types/config-edit/validators';
@@ -98,8 +98,8 @@ const FieldList: FC<FieldListProps> = ({
 	}, [fields.length, usingDefaults]);
 
 	return (
-		<FieldSet className="col-span-full grid grid-cols-subgrid space-y-1">
-			<FieldGroup className="col-span-full flex w-full flex-row items-center justify-between">
+		<FieldSet className="col-span-full">
+			<div className="flex w-full flex-row items-center justify-between">
 				<FieldLabel text={label} tooltip={tooltip} />
 				<ButtonGroup>
 					<Button
@@ -120,18 +120,18 @@ const FieldList: FC<FieldListProps> = ({
 						<Minus />
 					</Button>
 				</ButtonGroup>
-			</FieldGroup>
-			<FieldGroup className="col-span-full grid grid-cols-subgrid gap-2">
+			</div>
+			<div className="grid grid-cols-12 gap-2">
 				{fields.map(({ id }, index) => (
 					<FieldText
-						className="grid"
+						colSize={{ sm: 6, xs: 12 }}
 						defaultVal={placeholder(index)}
 						key={id}
 						name={`${name}.${index}.arg`}
 						required
 					/>
 				))}
-			</FieldGroup>
+			</div>
 		</FieldSet>
 	);
 };
