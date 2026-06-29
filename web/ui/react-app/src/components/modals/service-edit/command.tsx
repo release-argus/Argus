@@ -4,7 +4,6 @@ import { useFieldArray } from 'react-hook-form';
 import { FieldText } from '@/components/generic/field';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
-import { FieldGroup } from '@/components/ui/field';
 import { isEmptyArray } from '@/utils';
 import type { CommandSchema } from '@/utils/api/types/config-edit/command/schemas';
 
@@ -51,7 +50,7 @@ const Command: FC<CommandProps> = ({ name, defaults, removeMe }) => {
 
 	return (
 		<div className="col-span-full grid grid-cols-subgrid">
-			<FieldGroup className="col-span-full grid grid-cols-subgrid gap-2">
+			<div className="col-span-full grid grid-cols-subgrid gap-2">
 				{fields.map(({ id }, argIndex) => (
 					<FieldText
 						className="py-0"
@@ -61,7 +60,7 @@ const Command: FC<CommandProps> = ({ name, defaults, removeMe }) => {
 						required
 					/>
 				))}
-			</FieldGroup>
+			</div>
 
 			<div className="col-span-full flex flex-row items-center pt-4">
 				{removeMe && (

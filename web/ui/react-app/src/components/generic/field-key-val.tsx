@@ -3,7 +3,6 @@ import type { FC } from 'react';
 import { FieldText } from '@/components/generic/field';
 import type { HeaderPlaceholders } from '@/components/generic/field-shared';
 import { Button } from '@/components/ui/button';
-import { FieldGroup } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { Header } from '@/utils/api/types/config/shared';
 
@@ -53,7 +52,7 @@ const FieldKeyVal: FC<FieldKeyValProps> = ({
 					<Trash2 />
 				</Button>
 			</div>
-			<FieldGroup
+			<div
 				className={cn(
 					`col-span-${colSpan - 1}`,
 					'grid grid-cols-subgrid gap-x-2',
@@ -73,7 +72,7 @@ const FieldKeyVal: FC<FieldKeyValProps> = ({
 					placeholder={placeholders?.value ?? 'e.g. value'}
 					required
 				/>
-			</FieldGroup>
+			</div>
 		</>
 	);
 };

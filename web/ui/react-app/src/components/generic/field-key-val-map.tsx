@@ -137,7 +137,7 @@ const FieldKeyValMap: FC<FieldKeyValMapProps> = ({
 						placeholders={placeholders}
 						removeMe={
 							// Disable 'remove' if one item, and it matches the defaults.
-							fieldValues.length === 1 ? removeLast() : removeItem(index)
+							fieldValues?.length === 1 ? removeLast() : removeItem(index)
 						}
 					/>
 				))}

@@ -4,15 +4,21 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
-function FieldSet({ className, ...props }: React.ComponentProps<'fieldset'>) {
+// Renders a `<div role="group">` rather than a `<fieldset>`: Chromium does not
+// propagate `subgrid` track sizing through a `<fieldset>` grid container (the
+// fieldset sizes correctly but its subgrid child collapses to min-content), and
+// the service-edit modal nests `grid grid-cols-subgrid` field-sets several
+// levels deep. A `<div>` carries the same grid classes without that limitation.
+function FieldSet({ className, ...props }: React.ComponentProps<'div'>) {
 	return (
-		<fieldset
+		<div
 			className={cn(
 				'flex flex-col gap-2',
 				'has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3',
 				className,
 			)}
 			data-slot="field-set"
+			role="group"
 			{...props}
 		/>
 	);
