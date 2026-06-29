@@ -12,7 +12,6 @@ import { toast } from 'sonner';
 import { useServiceOrder } from '@/hooks/use-service-order';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
-import diffLists from '@/utils/diff-lists';
 
 /**
  * Manage sortable services.
@@ -35,14 +34,27 @@ export const useSortableServices = () => {
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: orderData covers serverOrder.
 	useEffect(() => {
-		// Initialise from server order once available.
-		if (haveOrderData) {
-			// If a service was added/removed, reset the order to the server order.
-			const diffServiceIDs = diffLists({ listA: order, listB: serverOrder });
-			const shouldApplyOrder = !hasOrderChanged || diffServiceIDs;
+		// React to server-order changes (add/remove/reorder from elsewhere).
+		if (!haveOrderData) return;
 
-			if (order.length === 0 || shouldApplyOrder) setOrder(serverOrder);
-		}
+		setOrder((current) => {
+			// First load - adopt the server order as-is.
+			if (current.length === 0) return serverOrder;
+
+			// Reconcile membership without discarding an in-progress reorder: keep
+			// the user's order, drop ids the server no longer has, append new ids.
+			const serverSet = new Set(serverOrder);
+			const kept = current.filter((id) => serverSet.has(id));
+			const keptSet = new Set(kept);
+			const added = serverOrder.filter((id) => !keptSet.has(id));
+			const merged = [...kept, ...added];
+
+			// Skip a no-op update to avoid a re-render.
+			const unchanged =
+				merged.length === current.length &&
+				merged.every((id, index) => id === current[index]);
+			return unchanged ? current : merged;
+		});
 	}, [serverOrder]);
 
 	const sensors = useSensors(
