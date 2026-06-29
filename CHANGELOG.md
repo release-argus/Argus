@@ -540,10 +540,10 @@ New mascot! Thanks [@rexapex](https://github.com/rexapex)
 ### Features
 
 * **command:** apply version var templating to args ([5bf93b7](https://github.com/release-argus/Argus/commit/5bf93b7930978a4c65fe6fb3aaf57f4b9f0b7d56))
-* **config:** `active` var to disable a service ([#88](https://github.com/release-argus/argus/issues/88)) ([af756f4](https://github.com/release-argus/Argus/commit/af756f458cfbe9f379a96e338376d20c1702976c))
-* **config:** `comment` var for services ([#90](https://github.com/release-argus/argus/issues/90)) ([a6b68eb](https://github.com/release-argus/Argus/commit/a6b68eb72495f8ff450feba1b9cb2f47fe1523db))
-* **ui:** icons can be links - `icon_link_to` ([#92](https://github.com/release-argus/argus/issues/92)) ([8c3a9af](https://github.com/release-argus/Argus/commit/8c3a9af5c38a8ea3ce16fdf1c62ab0a730a16359))
-* **webhook:** add `gitlab` type ([#95](https://github.com/release-argus/argus/issues/95)) ([5a8ab55](https://github.com/release-argus/Argus/commit/5a8ab551e672f08e6a82fdcbd3e0d3bc8f498c0d))
+* **config:** `active` var to disable a service ([#88](https://github.com/release-argus/Argus/issues/88)) ([af756f4](https://github.com/release-argus/Argus/commit/af756f458cfbe9f379a96e338376d20c1702976c))
+* **config:** `comment` var for services ([#90](https://github.com/release-argus/Argus/issues/90)) ([a6b68eb](https://github.com/release-argus/Argus/commit/a6b68eb72495f8ff450feba1b9cb2f47fe1523db))
+* **ui:** icons can be links - `icon_link_to` ([#92](https://github.com/release-argus/Argus/issues/92)) ([8c3a9af](https://github.com/release-argus/Argus/commit/8c3a9af5c38a8ea3ce16fdf1c62ab0a730a16359))
+* **webhook:** add `gitlab` type ([#95](https://github.com/release-argus/Argus/issues/95)) ([5a8ab55](https://github.com/release-argus/Argus/commit/5a8ab551e672f08e6a82fdcbd3e0d3bc8f498c0d))
 * **webhook:** apply version var templating to custom headers + url ([e31f51b](https://github.com/release-argus/Argus/commit/e31f51bc9877a40101e74c9cb930f2adf9be564d))
 
 
