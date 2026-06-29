@@ -19,11 +19,44 @@ package v1
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 )
+
+// hubQuery runs fn against the clients map on the Run goroutine, so a live hub can
+// be read race-free. Requires Run() to be active.
+func hubQuery[T any](h *Hub, fn func(map[*Client]bool) T) T {
+	done := make(chan T, 1)
+	h.query <- func(clients map[*Client]bool) {
+		done <- fn(clients)
+	}
+	return <-done
+}
+
+// hasClient reports whether client is registered (via the Run loop, so safe on a live hub).
+func (h *Hub) hasClient(client *Client) bool {
+	return hubQuery(
+		h,
+		func(clients map[*Client]bool) bool {
+			return clients[client]
+		},
+	)
+}
+
+// clientList snapshots the registered clients (via the Run loop, so safe on a live hub).
+func (h *Hub) clientList() []*Client {
+	return hubQuery(
+		h,
+		func(clients map[*Client]bool) []*Client {
+			list := make([]*Client, 0, len(clients))
+			for client := range clients {
+				list = append(list, client)
+			}
+			return list
+		},
+	)
+}
 
 func TestNewHub(t *testing.T) {
 	// GIVEN: we want a WebSocket Hub.
@@ -38,6 +71,7 @@ func TestNewHub(t *testing.T) {
 		{Name: "Broadcast", Got: hub.Broadcast, Want: nil, Mode: test.CompareNotEqual},
 		{Name: "register", Got: hub.register, Want: nil, Mode: test.CompareNotEqual},
 		{Name: "unregister", Got: hub.unregister, Want: nil, Mode: test.CompareNotEqual},
+		{Name: "query", Got: hub.query, Want: nil, Mode: test.CompareNotEqual},
 		{Name: "clients", Got: hub.clients, Want: nil, Mode: test.CompareNotEqual},
 	}
 	if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
@@ -45,65 +79,62 @@ func TestNewHub(t *testing.T) {
 	}
 }
 
-func TestHub_Run__register(t *testing.T) {
-	// GIVEN: a Hub.
+func TestHub_AddClient(t *testing.T) {
+	// GIVEN: a Hub and two clients (not connected).
 	hub := NewHub()
-	go hub.Run()
-	time.Sleep(time.Second)
-
-	// AND: two clients (not connected).
 	client := testClient()
 	otherClient := testClient()
 
-	// WHEN: a new client connects.
-	hub.register <- &client
-	hub.register <- &otherClient
+	// WHEN: the clients register.
+	hub.addClient(&client)
+	hub.addClient(&otherClient)
 
-	// THEN: that client is registered to the Hub.
-	time.Sleep(time.Second)
+	// THEN: those client are both registered to the Hub.
 	if !hub.clients[&client] {
-		t.Errorf("%s\nclient wasn't registered to the Hub", packageName)
+		t.Errorf("%s\nclient 1 wasn't registered to the Hub with addClient", packageName)
+	}
+	if !hub.clients[&otherClient] {
+		t.Errorf("%s\nclient 2 wasn't registered to the Hub with addClient", packageName)
 	}
 }
 
-func TestHub_Run__unregister(t *testing.T) {
-	// GIVEN: a Hub.
+func TestHub_RemoveClient(t *testing.T) {
+	// GIVEN: a Hub with two registered clients.
 	hub := NewHub()
-	go hub.Run()
-	time.Sleep(time.Second)
-
-	// AND: a client.
 	client := testClient()
 	otherClient := testClient()
-	hub.register <- &client
-	hub.register <- &otherClient
-	if !hub.clients[&client] {
+	hub.addClient(&client)
+	hub.addClient(&otherClient)
+	if !hub.clients[&client] || !hub.clients[&otherClient] {
 		t.Errorf("%s\nclient wasn't registered to the Hub", packageName)
 	}
 
-	// WHEN: that client disconnects.
-	hub.unregister <- &client
-	hub.unregister <- &otherClient
+	// WHEN: the clients disconnect.
+	hub.removeClient(&client)
+	hub.removeClient(&otherClient)
 
-	// THEN: that client is unregistered to the Hub.
+	// THEN: those client are unregistered from the Hub.
 	if hub.clients[&client] {
 		t.Errorf(
-			"%s\nHub.Run() client should have been removed from the Hub after unregister\nclients: %v",
-			packageName, hub.clients,
+			"%s\nclient 1 should have been removed from the Hub after removeClient\nremaining clients: %d",
+			packageName, len(hub.clients),
+		)
+	}
+	if hub.clients[&otherClient] {
+		t.Errorf(
+			"%s\nclient 2 should have been removed from the Hub after removeClient\nremaining clients: %d",
+			packageName, len(hub.clients),
 		)
 	}
 }
 
-func TestHub_Run__broadcast(t *testing.T) {
-	// GIVEN: a Hub.
+func TestHub_Broadcast(t *testing.T) {
+	prefix := fmt.Sprintf("%s\nHub.broadcast()", packageName)
+
+	// GIVEN: a Hub with a registered client.
 	client := testClient()
 	hub := client.hub
-	go hub.Run()
-
-	// AND: a client.
-	time.Sleep(time.Second)
-	hub.register <- &client
-	time.Sleep(2 * time.Second)
+	hub.addClient(&client)
 
 	// AND: a valid message.
 	msg := AnnounceMSG{
@@ -112,9 +143,14 @@ func TestHub_Run__broadcast(t *testing.T) {
 	}
 
 	// WHEN: that message is broadcast.
-	data, _ := decode.Marshal("json", msg)
-	hub.Broadcast <- data
-	time.Sleep(time.Second)
+	data, err := decode.Marshal("json", msg)
+	if err != nil {
+		t.Fatalf(
+			"%s failed to marshal broadcast message: %v",
+			prefix, err,
+		)
+	}
+	hub.broadcast(data)
 
 	// THEN: that message is broadcast to the client.
 	got := <-client.send
@@ -122,26 +158,23 @@ func TestHub_Run__broadcast(t *testing.T) {
 	_ = decode.Unmarshal("json", got, &gotMsg)
 	if gotMsg != msg {
 		t.Errorf(
-			"%s\nHub.Run() message sent to Broadcast channel should have been received by the client channel\ngot:  %v\nwant: %v",
-			packageName, gotMsg, msg,
+			"%s message should have been received by the client channel\ngot:  %v\nwant: %v",
+			prefix, gotMsg, msg,
 		)
 	}
 }
 
-func TestHub_Run__broadcast_allClients(t *testing.T) {
-	// GIVEN: a Hub.
-	hub := NewHub()
-	go hub.Run()
-	time.Sleep(time.Second)
+func TestHub_Broadcast_allClients(t *testing.T) {
+	prefix := fmt.Sprintf("%s\nHub.broadcast()", packageName)
 
-	// AND: multiple clients.
+	// GIVEN: a Hub with multiple registered clients.
+	hub := NewHub()
 	clientA := testClient()
 	clientB := testClient()
 	clientC := testClient()
-	hub.register <- &clientA
-	hub.register <- &clientB
-	hub.register <- &clientC
-	time.Sleep(2 * time.Second)
+	hub.addClient(&clientA)
+	hub.addClient(&clientB)
+	hub.addClient(&clientC)
 
 	// AND: a valid message.
 	msg := AnnounceMSG{
@@ -150,14 +183,14 @@ func TestHub_Run__broadcast_allClients(t *testing.T) {
 	}
 	data, err := decode.Marshal("json", msg)
 	if err != nil {
-		t.Fatalf("%s\nHub.Run() failed to marshal broadcast message: %v", packageName, err)
+		t.Fatalf(
+			"%s failed to marshal broadcast message: %v",
+			prefix, err,
+		)
 	}
 
 	// WHEN: that message is broadcast.
-	hub.Broadcast <- data
-	time.Sleep(time.Second)
-
-	prefix := fmt.Sprintf("%s\nHub.Run()", packageName)
+	hub.broadcast(data)
 
 	// THEN: every registered client receives the message.
 	for name, client := range map[string]*Client{
@@ -184,22 +217,19 @@ func TestHub_Run__broadcast_allClients(t *testing.T) {
 	}
 }
 
-func TestHub_Run__broadcast_dropsFullClient(t *testing.T) {
-	// GIVEN: a hub.
-	hub := NewHub()
-	go hub.Run()
-	time.Sleep(time.Second)
+func TestHub_Broadcast__dropsFullClient(t *testing.T) {
+	prefix := fmt.Sprintf("%s\nHub.broadcast()", packageName)
 
-	// AND: a client with a full outbound buffer and another with capacity.
+	// GIVEN: a hub with a client whose outbound buffer is full and another with capacity.
+	hub := NewHub()
 	slowClient := Client{
 		ip:   "1.1.1.1",
 		send: make(chan []byte, 1),
 	}
 	slowClient.send <- []byte(`{"type":"test"}`)
 	readyClient := testClient()
-	hub.register <- &slowClient
-	hub.register <- &readyClient
-	time.Sleep(2 * time.Second)
+	hub.addClient(&slowClient)
+	hub.addClient(&readyClient)
 
 	// AND: a valid message.
 	msg := AnnounceMSG{
@@ -208,14 +238,14 @@ func TestHub_Run__broadcast_dropsFullClient(t *testing.T) {
 	}
 	data, err := decode.Marshal("json", msg)
 	if err != nil {
-		t.Fatalf("%s\nHub.Run() failed to marshal broadcast message: %v", packageName, err)
+		t.Fatalf(
+			"%s failed to marshal broadcast message: %v",
+			prefix, err,
+		)
 	}
 
 	// WHEN: that message is broadcast.
-	hub.Broadcast <- data
-	time.Sleep(time.Second)
-
-	prefix := fmt.Sprintf("%s\nHub.Run()", packageName)
+	hub.broadcast(data)
 
 	// THEN: the slow client is removed from the Hub.
 	if hub.clients[&slowClient] {
@@ -252,31 +282,25 @@ func TestHub_Run__broadcast_dropsFullClient(t *testing.T) {
 	}
 }
 
-func TestHub_Run__broadcast_invalid(t *testing.T) {
-	// GIVEN: a Hub.
+func TestHub_Broadcast__invalid(t *testing.T) {
+	// GIVEN: a Hub with a registered Client.
 	client := testClient()
 	hub := client.hub
-	go hub.Run()
-	time.Sleep(time.Second)
-
-	// AND: a Client.
-	hub.register <- &client
-	time.Sleep(2 * time.Second)
+	hub.addClient(&client)
 
 	// AND: an invalid message.
 	msg := []byte("key: value\nkey: value")
 
 	// WHEN: that message is broadcast.
 	data, _ := decode.Marshal("json", msg)
-	hub.Broadcast <- data
-	time.Sleep(time.Second)
+	hub.broadcast(data)
 
 	// THEN: that message is NOT sent to the client.
 	got := len(client.send)
 	want := 0
 	if got != want {
 		t.Errorf(
-			"%s\nHub.Run() message sent to the Broadcast channel should have failed Unmarshal and not been sent\n"+
+			"%s\nHub.broadcast() message should have failed Unmarshal and not been sent\n"+
 				"got:  %d\nwant: %d",
 			packageName, got, want,
 		)
