@@ -1,4 +1,4 @@
-import type { Command } from '@/utils/api/types/config/shared';
+import type { Command, Headers } from '@/utils/api/types/config/shared';
 import type { NullString } from '@/utils/api/types/config-edit/shared/null-string';
 
 export const LATEST_VERSION_LOOKUP_TYPE = {
@@ -29,6 +29,7 @@ export type LatestVersionLookupDefaults = {
 	access_token?: string;
 	use_prerelease?: boolean;
 	allow_invalid_certs?: boolean | null;
+	headers?: Headers;
 };
 
 /* URL Command */
@@ -152,4 +153,5 @@ export type LatestVersionLookupGitHub = LatestVersionLookupBase & {
 export type LatestVersionLookupURL = LatestVersionLookupBase & {
 	type: typeof LATEST_VERSION_LOOKUP_TYPE.URL.value | null;
 	allow_invalid_certs?: boolean;
+	headers?: Headers;
 };

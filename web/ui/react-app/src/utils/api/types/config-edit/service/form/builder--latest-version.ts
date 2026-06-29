@@ -10,10 +10,10 @@ import {
 	type LatestVersionLookup,
 	type LatestVersionLookupDefaults,
 	type LatestVersionLookupGitHub,
+	type LatestVersionLookupType,
 	type LatestVersionLookupURL,
 	type LatestVersionRequire,
 	type LatestVersionRequireDefaults,
-	latestVersionLookupTypeOptions,
 	type RequireDockerFilterDefaults,
 	type URLCommand,
 } from '@/utils/api/types/config/service/latest-version';
@@ -34,6 +34,7 @@ import {
 	urlCommandsSchemaWithValidation,
 } from '@/utils/api/types/config-edit/service/types/latest-version';
 import { addZodIssuesToContext } from '@/utils/api/types/config-edit/shared/add-issues';
+import { buildHeadersSchemaWithFallbacks } from '@/utils/api/types/config-edit/shared/header/builder';
 import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { stringDefault } from '@/utils/api/types/config-edit/shared/preprocess';
 import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse';
@@ -351,15 +352,13 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 	typeof latestVersionLookupSchemaDefault
 > => {
 	const path = 'latest_version';
-	const fallbackType = Object.values(latestVersionLookupTypeOptions)[0].value;
 	const combinedDefaults = applyDefaultsRecursive<LatestVersionLookupDefaults>(
 		defaults ?? null,
 		hardDefaults,
-		{ type: fallbackType },
 	);
 	const typeDefault = isLatestVersionType(combinedDefaults.type)
 		? combinedDefaults.type
-		: fallbackType;
+		: undefined;
 
 	// url_commands.
 	const {
@@ -379,6 +378,15 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 		data?.require,
 		combinedDefaults?.require,
 	);
+	// headers (URL-type only).
+	const {
+		schema: headersSchema,
+		schemaData: headersSchemaData,
+		schemaDataDefaults: headersSchemaDataDefaults,
+	} = buildHeadersSchemaWithFallbacks(
+		data && 'headers' in data ? data.headers : [],
+		'headers' in combinedDefaults ? combinedDefaults.headers : [],
+	);
 
 	// Schemas shared between multiple types.
 	const sharedSchemas = {
@@ -389,7 +397,10 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 	// Latest version schema.
 	const schemaRaw = z.discriminatedUnion('type', [
 		latestVersionLookupSchemaGitHub.extend(sharedSchemas),
-		latestVersionLookupSchemaURL.extend(sharedSchemas),
+		latestVersionLookupSchemaURL.extend({
+			...sharedSchemas,
+			headers: headersSchema,
+		}),
 	]);
 	const schema = z.discriminatedUnion('type', [
 		latestVersionLookupSchemaGitHub.extend({
@@ -403,6 +414,7 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 		}),
 		latestVersionLookupSchemaURL.extend({
 			...sharedSchemas,
+			headers: headersSchema,
 			url: z.string().superRefine((arg, ctx) => {
 				const url = arg || (defaults?.url ?? hardDefaults?.url ?? '');
 
@@ -412,15 +424,18 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 		}),
 	]);
 
+	// Initial type.
+	const schemaDataType = isLatestVersionType(data?.type)
+		? data.type
+		: typeDefault;
+	// Initial schema data.
 	const fallbackData: Partial<z.infer<typeof schemaRaw>> = {
 		require: requireSchemaData,
+		type: schemaDataType,
 		url_commands: urlCommandsSchemaData,
 	};
-	// Initial schema type.
-	const lvType = isLatestVersionType(data?.type) ? data.type : typeDefault;
-	fallbackData.type = lvType;
 	// Type-specific schema data.
-	if (lvType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value) {
+	if (schemaDataType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value) {
 		const typedLatestVersion = (data ?? {}) as LatestVersionLookupGitHub;
 		(fallbackData as LatestVersionLookupGitHub).use_prerelease =
 			typedLatestVersion.use_prerelease;
@@ -429,8 +444,8 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 		const typedLatestVersion = (data ?? {}) as LatestVersionLookupURL;
 		(fallbackData as LatestVersionLookupURL).allow_invalid_certs =
 			typedLatestVersion.allow_invalid_certs;
+		(fallbackData as LatestVersionLookupURL).headers = headersSchemaData;
 	}
-	// Initial schema data.
 	const schemaData = safeParse({
 		data: {
 			url: '',
@@ -447,13 +462,15 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 	const schemaDataDefaults = safeParse({
 		data: {
 			...combinedDefaults,
+			headers: headersSchemaDataDefaults,
 			require: requireSchemaDataDefaults,
 			type: typeDefault,
 			url_commands: urlCommandsSchemaDataDefaults,
 		},
 		fallback: {
+			headers: headersSchemaDataDefaults,
 			require: requireSchemaDataDefaults,
-			type: typeDefault,
+			type: fallbackData.type as LatestVersionLookupType,
 		},
 		path: path,
 		schema: latestVersionLookupSchemaDefault,

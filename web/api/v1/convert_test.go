@@ -453,6 +453,9 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 						type: url
 						allow_invalid_certs: true
 						url: https://example.com
+						headers:
+							- key: X-Foo
+								value: not_telling_you
 						url_commands:
 							- type: replace
 								old: this
@@ -479,6 +482,9 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 				Type:              "url",
 				URL:               "https://example.com",
 				AllowInvalidCerts: test.Ptr(true),
+				Headers: []apitype.Header{
+					{Key: "X-Foo", Value: util.SecretValue},
+				},
 				URLCommands: apitype.URLCommands{
 					{Type: "replace", Old: "this", New: "withThis"},
 					{Type: "split", Text: "splitThis", Index: test.Ptr(8)},
