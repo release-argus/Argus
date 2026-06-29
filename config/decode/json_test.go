@@ -18,11 +18,11 @@ package decode
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
@@ -121,7 +121,7 @@ func TestParseKeys(t *testing.T) {
 
 			// AND: the error is returned correctly.
 			e := errfmt.FormatError(err)
-			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf(
 					"%s error mismatch\ngot:  %q\nwant: %q",
 					prefix, e, tc.errRegex,
@@ -416,7 +416,7 @@ func TestNavigateJSON(t *testing.T) {
 
 			// AND: the error is returned correctly.
 			e := errfmt.FormatError(err)
-			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf(
 					"%s error mismatch\ngot:  %q\nwant: %q",
 					prefix, e, tc.errRegex,
@@ -550,7 +550,7 @@ func TestGetValueByKey(t *testing.T) {
 
 			// AND: the error is returned correctly.
 			e := errfmt.FormatError(err)
-			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf(
 					"%s error mismatch\ngot:  %q\nwant: %q",
 					prefix, e, tc.errRegex,

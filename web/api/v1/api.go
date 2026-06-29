@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/gorilla/mux"
 
@@ -34,6 +35,19 @@ type API struct {
 	BaseRouter  *mux.Router
 	Router      *mux.Router
 	RoutePrefix string
+
+	serviceOpMu sync.Mutex // Guards [API.serviceOps].
+	// serviceOps is a per-service-ID operation lock. Create/Edit/Delete take it
+	// exclusively (write), refreshes take it shared (read); a request that cannot
+	// take it is rejected with 409. Entries are reference-counted and removed once
+	// no request holds or is waiting on them.
+	serviceOps map[string]*serviceOp
+}
+
+// serviceOp is a reference-counted per-service operation lock.
+type serviceOp struct {
+	mu   sync.RWMutex
+	refs int // Live acquireServiceOp callers; guarded by [API.serviceOpMu].
 }
 
 // NewAPI creates a new API with the provided config.
@@ -72,6 +86,35 @@ func NewAPI(cfg *config.Config) *API {
 		api.Router.Use(api.basicAuthMiddleware())
 	}
 	return api
+}
+
+// acquireServiceOp returns serviceID's operation lock, creating it on first use,
+// and takes a reference so the entry survives until released. Pair every call
+// with a [API.releaseServiceOp].
+func (api *API) acquireServiceOp(serviceID string) *serviceOp {
+	api.serviceOpMu.Lock()
+	defer api.serviceOpMu.Unlock()
+	if api.serviceOps == nil {
+		api.serviceOps = make(map[string]*serviceOp)
+	}
+	op := api.serviceOps[serviceID]
+	if op == nil {
+		op = &serviceOp{}
+		api.serviceOps[serviceID] = op
+	}
+	op.refs++
+	return op
+}
+
+// releaseServiceOp drops a reference taken by acquireServiceOp, removing the entry
+// once the last reference is gone.
+func (api *API) releaseServiceOp(serviceID string, op *serviceOp) {
+	api.serviceOpMu.Lock()
+	defer api.serviceOpMu.Unlock()
+	op.refs--
+	if op.refs == 0 {
+		delete(api.serviceOps, serviceID)
+	}
 }
 
 // writeJSON marshals v as JSON and writes it to w with standard API response headers.

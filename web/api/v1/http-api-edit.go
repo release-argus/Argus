@@ -237,12 +237,26 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Refreshes take the per-service lock shared; reject if an edit/delete holds it.
+	op := api.acquireServiceOp(serviceID)
+	defer api.releaseServiceOp(serviceID, op)
+	if !op.mu.TryRLock() {
+		failRequest(
+			&w,
+			fmt.Errorf("refresh %q failed, another operation is in progress for this service", serviceID),
+			http.StatusConflict,
+		)
+		return
+	}
+	defer op.mu.RUnlock()
+
 	queryParams := r.URL.Query()
 
 	// Check whether service exists.
 	api.Config.OrderMu.RLock()
-	defer api.Config.OrderMu.RUnlock()
-	if api.Config.Service[serviceID] == nil {
+	svc := api.Config.Service[serviceID]
+	api.Config.OrderMu.RUnlock()
+	if svc == nil {
 		err := fmt.Errorf("service %q not found", serviceID)
 		logx.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
@@ -269,13 +283,13 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 
 	// Query the latest version lookup.
 	version, announce, err := latestver.Refresh(
-		api.Config.Service[serviceID].LatestVersion,
+		svc.LatestVersion,
 		overrideBytes,
 		semanticVersioning,
 		secretRefs,
 	)
 	if announce {
-		api.Config.Service[serviceID].HandleUpdateActions(true)
+		svc.HandleUpdateActions(true)
 	}
 	if err != nil {
 		failRequest(&w, err, http.StatusBadRequest)
@@ -315,12 +329,25 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Refreshes take the per-service lock shared; reject if an edit/delete holds it.
+	op := api.acquireServiceOp(serviceID)
+	defer api.releaseServiceOp(serviceID, op)
+	if !op.mu.TryRLock() {
+		failRequest(
+			&w,
+			fmt.Errorf("refresh %q failed, another operation is in progress for this service", serviceID),
+			http.StatusConflict,
+		)
+		return
+	}
+	defer op.mu.RUnlock()
+
 	queryParams := r.URL.Query()
 
 	// Check whether service exists.
 	api.Config.OrderMu.RLock()
-	defer api.Config.OrderMu.RUnlock()
 	svc := api.Config.Service[serviceID]
+	api.Config.OrderMu.RUnlock()
 	if svc == nil {
 		err := fmt.Errorf("service %q not found", serviceID)
 		logx.Error(err, logFrom, true)
@@ -369,7 +396,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 
 		dvl, _ = deployedver.Decode(
 			"json", overrideBytes,
-			&api.Config.Service[serviceID].Options,
+			&svc.Options,
 			&svcStatus,
 			dvbase.DefaultsConfig{
 				Soft: &api.Config.Defaults.Service.DeployedVersionLookup,
@@ -580,13 +607,24 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		reqType = "edit"
 	}
 
+	// EDIT: wait out any in-flight operations on this service (a refresh, another
+	// edit, or a delete) rather than failing fast, so a background refresh can't
+	// bounce a user's save. If the service was deleted or renamed while we waited,
+	// return 404.
+	if serviceID != "" {
+		op := api.acquireServiceOp(serviceID)
+		defer api.releaseServiceOp(serviceID, op)
+		op.mu.Lock()
+		defer op.mu.Unlock()
+	}
+
 	api.Config.OrderMu.RLock()
-	defer api.Config.OrderMu.RUnlock()
 
 	var oldServiceSummary *apitype.ServiceSummary
 	// EDIT the existing service.
 	if serviceID != "" {
 		if api.Config.Service[serviceID] == nil {
+			api.Config.OrderMu.RUnlock()
 			failRequest(
 				&w,
 				fmt.Errorf("edit %q failed, service could not be found", serviceID),
@@ -610,6 +648,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		svcDefaults, notifyDefaults, webhookDefaults,
 		logFrom,
 	)
+	api.Config.OrderMu.RUnlock()
 	if err != nil {
 		err = fmt.Errorf(
 			`%s %q failed: %w`,
@@ -620,9 +659,8 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// CREATE a new service, but one with this ID already exists.
+	// CREATE/EDIT: service with this ID/Name already exists.
 	if (serviceID == "" && api.Config.Service[newService.ID] != nil) ||
-		// CREATE/EDIT, but a service with this name already exists.
 		api.Config.ServiceWithNameExists(newService.Name, serviceID) {
 		failRequest(
 			&w,
@@ -630,6 +668,23 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 			http.StatusBadRequest,
 		)
 		return
+	}
+
+	// CREATE: new ID is known, reject a concurrent create of the same ID.
+	if serviceID == "" {
+		op := api.acquireServiceOp(newService.ID)
+		defer api.releaseServiceOp(newService.ID, op)
+		if !op.mu.TryLock() {
+			failRequest(
+				&w,
+				fmt.Errorf(
+					"create %q failed, another operation is in progress for this service",
+					newService.ID),
+				http.StatusConflict,
+			)
+			return
+		}
+		defer op.mu.Unlock()
 	}
 
 	// Ensure LatestVersion and DeployedVersion (if set) can fetch.
@@ -655,11 +710,16 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the new service to the config.
-	api.Config.OrderMu.RUnlock() // Locked above.
-	//#nosec G104 -- Fail for duplicate service name handled above.
-	//nolint:errcheck // ^
-	_ = api.Config.AddService(serviceID, newService)
-	api.Config.OrderMu.RLock() // Lock again for the defer.
+	if err := api.Config.AddService(serviceID, newService); err != nil {
+		err = fmt.Errorf(
+			`%s %q failed: %w`,
+			reqType, util.FirstNonDefault(serviceID, newService.ID),
+			err,
+		)
+		logx.Error(err, logFrom, true)
+		failRequest(&w, err, http.StatusBadRequest)
+		return
+	}
 
 	newServiceSummary := newService.Summary()
 	// Announce the edit.
@@ -701,8 +761,17 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If service doesn't exist, return 404.
-	if api.Config.Service[serviceID] == nil {
+	// Delete waits out any in-flight operations on this service, then takes the lock exclusively.
+	op := api.acquireServiceOp(serviceID)
+	defer api.releaseServiceOp(serviceID, op)
+	op.mu.Lock()
+	defer op.mu.Unlock()
+
+	// If the service no longer exists (e.g. an edit we waited out renamed it), then 404.
+	api.Config.OrderMu.RLock()
+	exists := api.Config.Service[serviceID] != nil
+	api.Config.OrderMu.RUnlock()
+	if !exists {
 		failRequest(
 			&w,
 			fmt.Errorf("delete %q failed, service not found", serviceID),

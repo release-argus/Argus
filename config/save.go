@@ -95,13 +95,12 @@ func drainAndDebounce[T any](ctx context.Context, channel chan T, duration time.
 
 // Save writes the configuration to c.File.
 func (c *Config) Save() (ok bool) {
-	// Lock the config.
-	c.OrderMu.Lock()
-	defer c.OrderMu.Unlock()
+	c.OrderMu.RLock()
 
 	// Encode to memory (Go-ordered slices, but with an order list for Services).
 	var buf bytes.Buffer
 	if err := encodeConfigYAML(&buf, int(c.Settings.Indentation), c); err != nil {
+		c.OrderMu.RUnlock()
 		logx.Fatal(
 			fmt.Sprintf("error encoding config: %v", err),
 			logx.LogFrom{},
@@ -112,6 +111,7 @@ func (c *Config) Save() (ok bool) {
 	// Reorder and clean the YAML in memory.
 	lines := strings.Split(string(util.NormaliseNewlines(buf.Bytes())), "\n")
 	lines = c.reorderYAML(lines)
+	c.OrderMu.RUnlock()
 
 	// Open the file.
 	file, err := openSaveFile(c.File)
