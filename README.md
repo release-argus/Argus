@@ -6,16 +6,16 @@
 
 Keeping an eye on releases.
 
-[![GitHub](https://img.shields.io/github/license/release-argus/argus)](https://github.com/release-argus/Argus/blob/master/LICENSE)
+[![GitHub](https://img.shields.io/github/license/release-argus/Argus)](https://github.com/release-argus/Argus/blob/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/release-argus/Argus)](https://goreportcard.com/report/github.com/release-argus/Argus)
-[![GitHub go.mod Go version (subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/release-argus/argus?filename=go.mod)](https://go.dev/dl/)
-[![GitHub package.json dependency version (subfolder of monorepo)](https://img.shields.io/github/package-json/dependency-version/release-argus/argus/react?filename=web%2Fui%2Freact-app%2Fpackage.json)](https://reactjs.org/)
-[![Codecov](https://img.shields.io/codecov/c/github/release-argus/argus)](https://app.codecov.io/gh/release-argus/Argus)
+[![GitHub go.mod Go version (subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/release-argus/Argus?filename=go.mod)](https://go.dev/dl/)
+[![GitHub package.json dependency version (subfolder of monorepo)](https://img.shields.io/github/package-json/dependency-version/release-argus/Argus/react?filename=web%2Fui%2Freact-app%2Fpackage.json)](https://reactjs.org/)
+[![Codecov](https://img.shields.io/codecov/c/github/release-argus/Argus)](https://app.codecov.io/gh/release-argus/Argus)
 <br>
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/release-argus/Argus/build-binary.yml)](https://github.com/release-argus/Argus/actions/workflows/build-binary.yml)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/release-argus/argus)](https://github.com/release-argus/Argus/releases)
-[![GitHub all releases](https://img.shields.io/github/downloads/release-argus/argus/total)](https://github.com/release-argus/Argus/releases)
-[![GitHub release (latest by SemVer)](https://img.shields.io/github/downloads/release-argus/argus/latest/total)](https://github.com/release-argus/Argus/releases/latest)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/release-argus/Argus)](https://github.com/release-argus/Argus/releases)
+[![GitHub all releases](https://img.shields.io/github/downloads/release-argus/Argus/total)](https://github.com/release-argus/Argus/releases)
+[![GitHub release (latest by SemVer)](https://img.shields.io/github/downloads/release-argus/Argus/latest/total)](https://github.com/release-argus/Argus/releases/latest)
 <br>
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/release-argus/Argus/build-docker.yml)](https://github.com/release-argus/Argus/actions/workflows/build-docker.yml)
 [![Docker Image Version (latest semver)](https://img.shields.io/docker/v/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
@@ -25,7 +25,7 @@ Keeping an eye on releases.
 </div>
 
 Argus will query websites at a user defined interval for new software releases and then trigger Gotify/Slack/Other notification(s) and/or WebHook(s) when one has been found.
-For example, you could set it to monitor the Argus repo ([release-argus/argus](https://github.com/release-argus/Argus)). This will query the [GitHub API](https://api.github.com/repos/release-argus/argus/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style WebHook could be sent that triggers something (like AWX) to update Argus on your server.
+For example, you could set it to monitor the Argus repo ([release-argus/Argus](https://github.com/release-argus/Argus)). This will query the [GitHub API](https://api.github.com/repos/release-argus/Argus/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style WebHook could be sent that triggers something (like AWX) to update Argus on your server.
 
 ##### Table of Contents
 
