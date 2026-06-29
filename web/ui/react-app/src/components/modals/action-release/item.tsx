@@ -142,7 +142,7 @@ export const Item: FC<ItemProps> = ({
 							<p>{`Can resend ${formatRelative(new Date(next_runnable), new Date())}`}</p>
 						}
 					>
-						<Hourglass className="size-5" />
+						<Hourglass aria-label="Resend timer" className="size-5" />
 					</Tip>
 				)}
 				{!sending && failed !== undefined && <StatusIcon failed={failed} />}
