@@ -139,13 +139,26 @@ func convertAndCensorLatestVersion(input latestver.Lookup) *apitype.LatestVersio
 			Require:       convertAndCensorLatestVersionRequire(lv.Require),
 		}
 	case *lvweb.Lookup:
-		return &apitype.LatestVersion{
+		apiLV := &apitype.LatestVersion{
 			Type:              lv.Type,
 			URL:               lv.URL,
 			AllowInvalidCerts: lv.AllowInvalidCerts,
 			URLCommands:       convertURLCommands(lv.URLCommands),
 			Require:           convertAndCensorLatestVersionRequire(lv.Require),
 		}
+
+		// Headers (censoring each value).
+		if len(lv.Headers) > 0 {
+			apiLV.Headers = make([]apitype.Header, len(lv.Headers))
+			for i := range lv.Headers {
+				apiLV.Headers[i] = apitype.Header{
+					Key:   lv.Headers[i].Key,
+					Value: util.SecretValue,
+				}
+			}
+		}
+
+		return apiLV
 	}
 
 	return nil

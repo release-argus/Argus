@@ -2,10 +2,12 @@ import { z } from 'zod';
 import {
 	DEPLOYED_VERSION_LOOKUP_TYPE,
 	type DeployedVersionLookup,
-	deployedVersionLookupTypeOptions,
+	type DeployedVersionLookupType,
+	type DeployedVersionLookupURL,
 } from '@/utils/api/types/config/service/deployed-version';
 import {
 	type deployedVersionLookupSchema,
+	deployedVersionLookupSchemaDefault,
 	deployedVersionManualSchema,
 	deployedVersionURLSchema,
 	isDeployedVersionType,
@@ -32,12 +34,18 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 	data?: DeployedVersionLookup,
 	defaults?: DeployedVersionLookup,
 	hardDefaults?: DeployedVersionLookup,
-): BuilderResponse<typeof deployedVersionLookupSchema> => {
+): BuilderResponse<
+	typeof deployedVersionLookupSchema,
+	typeof deployedVersionLookupSchemaDefault
+> => {
 	const path = 'deployed_version';
 	const combinedDefaults = applyDefaultsRecursive<DeployedVersionLookup>(
 		defaults ?? null,
 		hardDefaults,
 	);
+	const typeDefault = isDeployedVersionType(combinedDefaults.type)
+		? combinedDefaults.type
+		: undefined;
 
 	// Manual schema.
 	const dvManualSchema = deployedVersionManualSchema;
@@ -82,25 +90,26 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 	]);
 	const schema = z.discriminatedUnion('type', [dvManualSchema, dvURLSchema]);
 
-	// Initial type/method.
-	const fallbackType = Object.values(deployedVersionLookupTypeOptions)[1].value;
+	// Initial type.
 	const schemaDataType = isDeployedVersionType(data?.type)
 		? data.type
-		: fallbackType;
+		: typeDefault;
 	// Initial schema data.
-	const fallbackData = {
-		headers: headersSchemaData,
+	const fallbackData: Partial<z.infer<typeof schemaRaw>> = {
 		type: schemaDataType,
 	};
-	if (!isDeployedVersionType(fallbackData.type))
-		fallbackData.type = fallbackType;
+	// Type-specific schema data.
+	if (schemaDataType === DEPLOYED_VERSION_LOOKUP_TYPE.URL.value) {
+		(fallbackData as DeployedVersionLookupURL).headers = headersSchemaData;
+	}
 	const schemaData = safeParse({
 		data: {
 			allow_invalid_certs: null,
 			...data,
 			...fallbackData,
 		},
-		fallback: fallbackData,
+		// biome-ignore lint/suspicious/noExplicitAny: couldn't get the discriminated union type to work as fallback.
+		fallback: fallbackData as any,
 		path: path,
 		schema: schemaRaw,
 	});
@@ -114,10 +123,11 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 		},
 		fallback: {
 			headers: headersSchemaDataDefaults,
-			type: fallbackData.type,
+			method: null,
+			type: fallbackData.type as DeployedVersionLookupType,
 		},
 		path: `${path} (defaults)`,
-		schema: schemaRaw,
+		schema: deployedVersionLookupSchemaDefault,
 	});
 
 	return {

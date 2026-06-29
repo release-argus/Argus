@@ -235,6 +235,7 @@ export const latestVersionLookupSchemaDefault = z
 	.object({
 		access_token: stringDefault,
 		allow_invalid_certs: z.boolean().nullable().optional(),
+		headers: headersSchema.optional(),
 		require: latestVersionRequireSchemaDefaults.optional(),
 		type: LatestVersionTypeEnum.nullable().optional(),
 		url: stringDefault,
@@ -243,7 +244,7 @@ export const latestVersionLookupSchemaDefault = z
 	})
 	.optional();
 export type LatestVersionLookupSchemaDefault = z.infer<
-	typeof latestVersionLookupSchema
+	typeof latestVersionLookupSchemaDefault
 >;
 
 export const latestVersionLookupSchemaOutgoing = z.discriminatedUnion('type', [
