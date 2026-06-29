@@ -1,28 +1,30 @@
-import path from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'vite';
 import babel from 'vite-plugin-babel';
-import viteTsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
 	base: '',
 	plugins: [
 		react(),
 		tailwindcss(),
-		viteTsconfigPaths(),
+		babel({
+			babelConfig: {
+				plugins: ['babel-plugin-react-compiler', '@babel/plugin-syntax-jsx'],
+				presets: ['@babel/preset-typescript'],
+			},
+			include: /\.tsx$/,
+		}),
 		babel({
 			babelConfig: {
 				plugins: ['babel-plugin-react-compiler'],
 				presets: ['@babel/preset-typescript'],
 			},
-			filter: /\.tsx?$/,
+			include: /\.ts$/,
 		}),
 	],
 	resolve: {
-		alias: {
-			'@': path.resolve(__dirname, 'src'),
-		},
+		tsconfigPaths: true,
 	},
 	server: {
 		open: true,
