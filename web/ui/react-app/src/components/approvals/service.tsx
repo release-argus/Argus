@@ -110,6 +110,7 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 					: updateStatus.className,
 			)}
 			data-service-id={id}
+			data-update-available={updateStatus.warning && data?.active !== false}
 			key={data?.id}
 			ref={setNodeRef}
 			style={dragStyle}

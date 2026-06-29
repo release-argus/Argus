@@ -86,6 +86,7 @@ const FieldCheck: FC<FieldCheckProps> = ({
 							aria-invalid={fieldState.invalid}
 							checked={field.value}
 							className={cn('min-h-9 w-full', checkboxClassName)}
+							id={name}
 							name={field.name}
 							onCheckedChange={field.onChange}
 						/>
