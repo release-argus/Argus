@@ -192,6 +192,87 @@ func TestNewAPI(t *testing.T) {
 	}
 }
 
+func TestAPI__ServiceOp(t *testing.T) {
+	// GIVEN: an API with no in-flight service operations.
+	api := &API{}
+
+	// WHEN: the op lock is acquired twice for one id and once for another.
+	opA1 := api.acquireServiceOp("A")
+	opA2 := api.acquireServiceOp("A")
+	opB := api.acquireServiceOp("B")
+
+	// THEN: the same lock is returned for the same id, a distinct one otherwise.
+	if opA1 != opA2 {
+		t.Errorf(
+			"%s\nacquireServiceOp(%q) returned different locks for the same id",
+			packageName, "A",
+		)
+	}
+	if opA1 == opB {
+		t.Errorf("%s\nacquireServiceOp returned the same lock for different ids", packageName)
+	}
+
+	// AND: the map and reference counts reflect the acquisitions.
+	if got, want := len(api.serviceOps), 2; got != want {
+		t.Errorf(
+			"%s\nserviceOps length mismatch\ngot:  %d\nwant: %d",
+			packageName, got, want,
+		)
+	}
+	if got, want := opA1.refs, 2; got != want {
+		t.Errorf(
+			"%s\nrefs for %q mismatch\ngot:  %d\nwant: %d",
+			packageName, "A", got, want,
+		)
+	}
+
+	// WHEN: one of "A"'s two references is released.
+	api.releaseServiceOp("A", opA1)
+
+	// THEN: the entry survives (still referenced).
+	if _, ok := api.serviceOps["A"]; !ok {
+		t.Errorf(
+			"%s\nserviceOps[%q] removed while still referenced",
+			packageName, "A",
+		)
+	}
+	if got, want := opA2.refs, 1; got != want {
+		t.Errorf(
+			"%s\nrefs for %q mismatch\ngot:  %d\nwant: %d",
+			packageName, "A", got, want,
+		)
+	}
+
+	// WHEN: the last reference to "A" is released.
+	api.releaseServiceOp("A", opA2)
+	// THEN: the entry is removed.
+	if _, ok := api.serviceOps["A"]; ok {
+		t.Errorf(
+			"%s\nserviceOps[%q] not removed after last reference released",
+			packageName, "A",
+		)
+	}
+	// AND: a fresh acquire creates a new lock rather than reusing the removed one.
+	opA3 := api.acquireServiceOp("A")
+	if opA3 == opA1 {
+		t.Errorf(
+			"%s\nacquireServiceOp(%q) reused a removed lock",
+			packageName, "A",
+		)
+	}
+
+	// WHEN: every reference is released.
+	api.releaseServiceOp("A", opA3)
+	api.releaseServiceOp("B", opB)
+	// THEN: the map is empty.
+	if got := len(api.serviceOps); got != 0 {
+		t.Errorf(
+			"%s\nserviceOps not empty after all releases\ngot: %d",
+			packageName, got,
+		)
+	}
+}
+
 func TestWriteJSON(t *testing.T) {
 	// GIVEN: different input strings to write.
 	tests := []struct {

@@ -18,10 +18,10 @@ package test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/goccy/go-yaml"
-	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
@@ -111,7 +111,7 @@ func TestUnmarshal(t *testing.T) {
 
 			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errRegex, e) {
+			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
 				t.Errorf(
 					"%s error mismatch\ngot:  %q\nwant: %q",
 					prefix, e, tc.errRegex,

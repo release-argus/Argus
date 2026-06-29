@@ -1777,6 +1777,56 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 	}
 }
 
+func TestHTTP_ServiceEdit__create__concurrentConflict(t *testing.T) {
+	// GIVEN: an API where the op lock for a not-yet-created service ID is already
+	// held by an in-flight operation (e.g. a concurrent create of the same ID).
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
+	const serviceID = "TestHTTP_ServiceEdit_createConflict"
+
+	held := api.acquireServiceOp(serviceID)
+	held.mu.Lock()
+	t.Cleanup(func() {
+		held.mu.Unlock()
+		api.releaseServiceOp(serviceID, held)
+	})
+
+	// WHEN: a create request for a service with that ID is sent.
+	payload := bytes.NewReader([]byte(test.TrimJSON(`{
+		"id": "` + serviceID + `",
+		"options": {
+			"active": false
+		},
+		"latest_version": {
+			"type": "github",
+			"url": "` + test.ArgusGitHubRepo + `"
+		}
+	}`)))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/service/new", payload)
+	w := httptest.NewRecorder()
+	api.httpServiceEdit(w, req)
+	res := w.Result()
+	t.Cleanup(func() { _ = res.Body.Close() })
+
+	prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (create)", packageName)
+
+	// THEN: the create is rejected with 409 rather than racing the in-flight op.
+	if got, want := res.StatusCode, http.StatusConflict; got != want {
+		t.Errorf(
+			"%s status code mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+	// AND: the body explains the conflict.
+	body, _ := io.ReadAll(res.Body)
+	if got, want := string(body), `another operation is in progress`; !util.RegexCheck(want, got) {
+		t.Errorf(
+			"%s body mismatch\ngot:  %q\nwant: %q",
+			prefix, got, want,
+		)
+	}
+}
+
 func TestHTTP_ServiceEdit__edit(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig(t)
 	notifyCfg := shoutrrrtest.PlainConfig(t)
@@ -2136,6 +2186,64 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestHTTP_ServiceEdit__edit__renameToExistingID(t *testing.T) {
+	// GIVEN: an API with two services — one to edit, and one whose ID we rename onto.
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
+
+	const (
+		editID   = "TestHTTP_ServiceEdit_rename-source"
+		targetID = "TestHTTP_ServiceEdit_rename-target"
+	)
+	source := testService(t, editID, "url", "url", true)
+	source.Name = "rename-source-name"
+	target := testService(t, targetID, "url", "url", true)
+	target.Name = "rename-target-name"
+	api.Config.Service[source.ID] = source
+	api.Config.Service[target.ID] = target
+	api.Config.Order = append(api.Config.Order, source.ID, target.ID)
+
+	// WHEN: an edit renames the source service onto the target's existing ID,
+	// using a unique name so the name pre-check does not catch it first.
+	payload := bytes.NewReader([]byte(test.TrimJSON(`{
+		"id": "` + targetID + `",
+		"name": "rename-source-renamed",
+		"options": {
+			"active": false
+		},
+		"latest_version": {
+			"type": "github",
+			"url": "` + test.ArgusGitHubRepo + `"
+		}
+	}`)))
+	params := url.Values{}
+	params.Set("service_id", editID)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/service/update", payload)
+	req.URL.RawQuery = params.Encode()
+	w := httptest.NewRecorder()
+	api.httpServiceEdit(w, req)
+	res := w.Result()
+	t.Cleanup(func() { _ = res.Body.Close() })
+
+	prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (edit)", packageName)
+
+	// THEN: AddService rejects the collision and the edit fails with 400.
+	if got, want := res.StatusCode, http.StatusBadRequest; got != want {
+		t.Errorf(
+			"%s status code mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+	// AND: the body reports the existing service.
+	body, _ := io.ReadAll(res.Body)
+	if got, want := string(body), `already exists`; !util.RegexCheck(want, got) {
+		t.Errorf(
+			"%s body mismatch\ngot:  %q\nwant: %q",
+			prefix, got, want,
+		)
 	}
 }
 
@@ -2545,6 +2653,63 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestHTTP_ServiceEdit__edit__waitsForInFlightOp(t *testing.T) {
+	// GIVEN: an API and an absent service whose op lock is held by an in-flight
+	// operation (a refresh, or another edit/delete).
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
+	const serviceID = "TestHTTP_ServiceEdit_waits-absent"
+
+	held := api.acquireServiceOp(serviceID)
+	held.mu.Lock() // In-flight operation holds the lock.
+
+	// WHEN: an edit request for that service is sent while the lock is held.
+	params := url.Values{}
+	params.Set("service_id", serviceID)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/service/update", nil)
+	req.URL.RawQuery = params.Encode()
+
+	done := make(chan int, 1)
+	go func() {
+		w := httptest.NewRecorder()
+		api.httpServiceEdit(w, req)
+		done <- w.Result().StatusCode
+	}()
+
+	prefix := fmt.Sprintf(
+		"%s\n%s",
+		packageName, req.URL.RawPath,
+	)
+
+	// THEN: the edit blocks rather than failing fast with 409.
+	select {
+	case code := <-done:
+		t.Fatalf(
+			"%s completed (status %d) while the op lock was held; want it to block",
+			prefix, code,
+		)
+	case <-time.After(1 * time.Second):
+		// Still blocked, as expected.
+	}
+
+	// WHEN: the in-flight operation releases the lock.
+	held.mu.Unlock()
+	api.releaseServiceOp(serviceID, held)
+
+	// THEN: the edit proceeds past the lock; the service is absent, so it 404s.
+	select {
+	case code := <-done:
+		if code != http.StatusNotFound {
+			t.Errorf(
+				"%s status mismatch\ngot:  %d\nwant: %d",
+				prefix, code, http.StatusNotFound,
+			)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("%s did not complete after the op lock was released", prefix)
 	}
 }
 
@@ -3093,5 +3258,182 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
+	// hold describes how the test pre-holds a service's op lock before a request.
+	type hold int
+	const (
+		holdNone  hold = iota
+		holdWrite      // Simulate an in-flight edit/delete (exclusive).
+		holdRead       // Simulate an in-flight refresh (shared).
+	)
+
+	// GIVEN: an API.
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
+
+	tests := map[string]struct {
+		handler    func(http.ResponseWriter, *http.Request)
+		hold       hold
+		statusCode int
+		bodyRegex  string
+	}{
+		"latest-version refresh rejected while an exclusive op is in flight": {
+			handler:    api.httpLatestVersionRefresh,
+			hold:       holdWrite,
+			statusCode: http.StatusConflict,
+			bodyRegex:  `another operation is in progress`,
+		},
+		"latest-version refresh allowed alongside another refresh (shared)": {
+			handler:    api.httpLatestVersionRefresh,
+			hold:       holdRead,
+			statusCode: http.StatusNotFound, // Past the lock, then the absent service.
+			bodyRegex:  `not found`,
+		},
+		"deployed-version refresh rejected while an exclusive op is in flight": {
+			handler:    api.httpDeployedVersionRefresh,
+			hold:       holdWrite,
+			statusCode: http.StatusConflict,
+			bodyRegex:  `another operation is in progress`,
+		},
+		"deployed-version refresh allowed alongside another refresh (shared)": {
+			handler:    api.httpDeployedVersionRefresh,
+			hold:       holdRead,
+			statusCode: http.StatusNotFound,
+			bodyRegex:  `not found`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			serviceID := name
+
+			// GIVEN: the service's op lock is held as described.
+			held := api.acquireServiceOp(serviceID)
+			switch tc.hold {
+			case holdWrite:
+				held.mu.Lock()
+			case holdRead:
+				held.mu.RLock()
+			}
+			t.Cleanup(func() {
+				switch tc.hold {
+				case holdWrite:
+					held.mu.Unlock()
+				case holdRead:
+					held.mu.RUnlock()
+				}
+				api.releaseServiceOp(serviceID, held)
+			})
+
+			// WHEN: the handler is called for that service.
+			params := url.Values{}
+			params.Set("service_id", serviceID)
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/service", nil)
+			req.URL.RawQuery = params.Encode()
+			w := httptest.NewRecorder()
+			tc.handler(w, req)
+			res := w.Result()
+			t.Cleanup(func() { _ = res.Body.Close() })
+
+			prefix := fmt.Sprintf(
+				"%s\n%s",
+				packageName, req.URL.RawPath,
+			)
+
+			// THEN: the expected status code is returned.
+			if got := res.StatusCode; got != tc.statusCode {
+				t.Errorf(
+					"%s status code mismatch\ngot:  %d\nwant: %d",
+					prefix, got, tc.statusCode,
+				)
+			}
+			// AND: the body matches.
+			body, _ := io.ReadAll(res.Body)
+			if got := string(body); !util.RegexCheck(tc.bodyRegex, got) {
+				t.Errorf(
+					"%s body mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.bodyRegex,
+				)
+			}
+		})
+	}
+}
+
+func TestHTTP_ServiceDelete__waitsForInFlightOp(t *testing.T) {
+	// GIVEN: an API with a service whose op lock is held by an in-flight operation.
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
+	svc := testService(t, "TestHTTP_ServiceDelete_waits", "url", "url", true)
+	svc.HardDefaults.Status.DatabaseChannel = api.Config.DatabaseChannel
+	_ = api.Config.AddService("", svc)
+	<-api.Config.DatabaseChannel // Drain the addition.
+	t.Cleanup(func() {
+		// Give the post-delete config save time before TempDir cleanup.
+		time.Sleep(2 * config.DebounceDuration)
+	})
+
+	held := api.acquireServiceOp(svc.ID)
+	held.mu.Lock() // In-flight edit/refresh holds the lock.
+
+	// WHEN: a delete request is sent while the lock is held.
+	params := url.Values{}
+	params.Set("service_id", svc.ID)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/service/delete", nil)
+	req.URL.RawQuery = params.Encode()
+
+	done := make(chan int, 1)
+	go func() {
+		w := httptest.NewRecorder()
+		api.httpServiceDelete(w, req)
+		done <- w.Result().StatusCode
+	}()
+
+	prefix := fmt.Sprintf(
+		"%s\n%s",
+		packageName, req.URL.RawPath,
+	)
+
+	// THEN: the delete blocks rather than failing fast.
+	select {
+	case code := <-done:
+		t.Fatalf(
+			"%s delete completed (status %d) while the op lock was held; want it to block",
+			prefix, code,
+		)
+	case <-time.After(1 * time.Second):
+		// Still blocked, as expected.
+	}
+
+	// WHEN: the in-flight operation releases the lock.
+	held.mu.Unlock()
+	api.releaseServiceOp(svc.ID, held)
+
+	// THEN: the delete proceeds and succeeds.
+	select {
+	case code := <-done:
+		if code != http.StatusOK {
+			t.Errorf(
+				"%s delete status mismatch\ngot:  %d\nwant: %d",
+				prefix, code, http.StatusOK,
+			)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("%s delete did not complete after the op lock was released", prefix)
+	}
+
+	// AND: the op lock entry is cleaned up once idle.
+	api.serviceOpMu.Lock()
+	_, leaked := api.serviceOps[svc.ID]
+	api.serviceOpMu.Unlock()
+	if leaked {
+		t.Errorf(
+			"%s serviceOps[%q] leaked after the delete completed",
+			prefix, svc.ID,
+		)
 	}
 }
