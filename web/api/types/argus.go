@@ -450,6 +450,7 @@ func (r *LatestVersion) String() string {
 
 // LatestVersionDefaults are default values for a LatestVersion.
 type LatestVersionDefaults struct {
+	Type              string                        `json:"type,omitempty" yaml:"type,omitempty"`                               // "github" | "url".
 	URL               string                        `json:"url,omitempty" yaml:"url,omitempty"`                                 // URL to query.
 	AccessToken       string                        `json:"access_token,omitempty" yaml:"access_token,omitempty"`               // GitHub access token to use.
 	AllowInvalidCerts *bool                         `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
@@ -607,6 +608,7 @@ type RequireDocker struct {
 }
 
 type DeployedVersionLookupDefaults struct {
+	Type              string `json:"type,omitempty" yaml:"type,omitempty"`                               // "manual" | "url".
 	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Disallows invalid HTTPS certificates.
 	Method            string `json:"method,omitempty" yaml:"method,omitempty"`                           // HTTP method.
 }

@@ -51,12 +51,14 @@ func convertAndCensorDefaults(input *config.Defaults) apitype.Defaults {
 				SemanticVersioning: input.Service.Options.SemanticVersioning,
 			},
 			LatestVersion: apitype.LatestVersionDefaults{
+				Type:              input.Service.LatestVersion.Type,
 				AccessToken:       util.ValueUnlessZero(input.Service.LatestVersion.AccessToken, util.SecretValue),
 				AllowInvalidCerts: input.Service.LatestVersion.AllowInvalidCerts,
 				UsePreRelease:     input.Service.LatestVersion.UsePreRelease,
 				Require:           convertAndCensorLatestVersionRequireDefaults(&input.Service.LatestVersion.Require),
 			},
 			DeployedVersionLookup: apitype.DeployedVersionLookupDefaults{
+				Type:              input.Service.DeployedVersionLookup.Type,
 				AllowInvalidCerts: input.Service.DeployedVersionLookup.AllowInvalidCerts,
 				Method:            input.Service.DeployedVersionLookup.Method,
 			},

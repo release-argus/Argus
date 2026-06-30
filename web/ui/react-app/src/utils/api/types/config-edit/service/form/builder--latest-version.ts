@@ -124,10 +124,7 @@ export const buildDockerFilterSchemaWithFallbacks = (
 	typeof dockerFilterSchemaDefaults
 > => {
 	const path = 'latest_version.require.docker';
-	const defaultType =
-		defaults?.type ||
-		hardDefaults?.type ||
-		LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value;
+	const defaultType = defaults?.type || hardDefaults?.type || undefined;
 
 	const dockerHubValue =
 		LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value;
@@ -192,11 +189,11 @@ export const buildDockerFilterSchemaWithFallbacks = (
 	// Add validation for required fields.
 	const schemaFinal = schema.superRefine((arg, ctx) => {
 		const schemaType = arg.type === nullString ? defaultType : arg.type;
-		const schemaDefaults = combinedDefaults.registry[schemaType];
+		const schemaDefaults = schemaType && combinedDefaults.registry[schemaType];
 		const hasImage = !!arg.image?.trim();
-		const hasImageDefaulted = hasImage || !!schemaDefaults.image?.trim();
+		const hasImageDefaulted = hasImage || !!schemaDefaults?.image?.trim();
 		const hasTag = !!arg.tag?.trim();
-		const hasTagDefaulted = hasTag || !!schemaDefaults.tag?.trim();
+		const hasTagDefaulted = hasTag || !!schemaDefaults?.tag?.trim();
 
 		// If we have an image, we must have a tag, and vice versa.
 		if (hasImage !== hasTag && hasImageDefaulted !== hasTagDefaulted) {
@@ -208,7 +205,12 @@ export const buildDockerFilterSchemaWithFallbacks = (
 		}
 
 		// If we have an image:tag specified and have a username field.
-		if (hasImageDefaulted && hasTagDefaulted && usernameTypes.has(schemaType)) {
+		if (
+			hasImageDefaulted &&
+			hasTagDefaulted &&
+			schemaType &&
+			usernameTypes.has(schemaType)
+		) {
 			type DockerUsernameTyped = z.infer<
 				typeof latestVersionLookupRequireDockerTypeSchemaDockerHub
 			>;
@@ -218,7 +220,7 @@ export const buildDockerFilterSchemaWithFallbacks = (
 				(schemaDefaults as Partial<DockerFilterUsername>).auth?.username
 			)?.trim();
 			const hasToken = !!(
-				arg.auth?.token || schemaDefaults.auth?.token
+				arg.auth?.token || schemaDefaults?.auth?.token
 			)?.trim();
 
 			// We must have a username and token, or neither.
@@ -356,7 +358,7 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 		defaults ?? null,
 		hardDefaults,
 	);
-	const typeDefault = isLatestVersionType(combinedDefaults.type)
+	const defaultType = isLatestVersionType(combinedDefaults.type)
 		? combinedDefaults.type
 		: undefined;
 
@@ -427,7 +429,7 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 	// Initial type.
 	const schemaDataType = isLatestVersionType(data?.type)
 		? data.type
-		: typeDefault;
+		: defaultType;
 	// Initial schema data.
 	const fallbackData: Partial<z.infer<typeof schemaRaw>> = {
 		require: requireSchemaData,
@@ -464,7 +466,7 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 			...combinedDefaults,
 			headers: headersSchemaDataDefaults,
 			require: requireSchemaDataDefaults,
-			type: typeDefault,
+			type: defaultType,
 			url_commands: urlCommandsSchemaDataDefaults,
 		},
 		fallback: {
