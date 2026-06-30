@@ -545,19 +545,14 @@ func TestDefaults_String(t *testing.T) {
 									type: ghcr
 									registry:
 										ghcr:
-											image: imageGHCR
-											tag: tagGHCR
 											auth:
 												username: usernameGHCR
 												token: tokenGHCR
 										hub:
-											image: imageHub
-											tag: tagHub
 											auth:
 												username: usernameHub
 												token: tokenHub
 										quay:
-											image: imageQuay
 											auth:
 												username: usernameQuay
 												token: tokenQuay
@@ -568,19 +563,14 @@ func TestDefaults_String(t *testing.T) {
 											type: ghcr
 											registry:
 												ghcr:
-													image: imageGHCRother
-													tag: imageGHCRother
 													auth:
 														username: usernameGHCR_Other
 														token: tokenGHCR_Other
 												hub:
-													image: imageHub_Other
-													tag: tagHub_Other
 													auth:
 														username: usernameHub_Other
 														token: tokenHub_Other
 												quay:
-													image: imageQuay_Other
 													auth:
 														username: usernameQuay_Other
 														token: tokenQuay_Other
@@ -612,18 +602,13 @@ func TestDefaults_String(t *testing.T) {
 							type: ghcr
 							registry:
 								ghcr:
-									image: imageGHCR
-									tag: tagGHCR
 									auth:
 										token: tokenGHCR
 								hub:
-									image: imageHub
-									tag: tagHub
 									auth:
 										username: usernameHub
 										token: tokenHub
 								quay:
-									image: imageQuay
 									auth:
 										token: tokenQuay
 				deployed_version:
@@ -700,63 +685,27 @@ func TestDefaults_SetDefaults(t *testing.T) {
 	// THEN: the struct is populated with default values.
 	fieldTests := []test.FieldAssertion{
 		{
-			Name: "LatestVersion.Require.Docker.ContainerDetail.Defaults -> HardDefaults",
-			Got:  d.LatestVersion.Require.Docker.ContainerDetail.Defaults,
-			Want: &hd.LatestVersion.Require.Docker.ContainerDetail,
+			Name: "LatestVersion.Require.Docker.ContainerDetailDefaults.Defaults -> HardDefaults",
+			Got:  d.LatestVersion.Require.Docker.ContainerDetailDefaults.Defaults,
+			Want: &hd.LatestVersion.Require.Docker.ContainerDetailDefaults,
 			Mode: test.CompareSamePointer,
 		},
-		{ // Layer 1: Registry HardDefaults
-			Name: "L1: LatestVersion.Require.Docker.Registry.GHCR.ContainerDetail.Defaults -> HardDefaults...Registry.GHCR.ContainerDetail",
-			Got:  d.LatestVersion.Require.Docker.Registry.GHCR.ContainerDetail.Defaults,
-			Want: &hd.LatestVersion.Require.Docker.Registry.GHCR.ContainerDetail,
+		{
+			Name: "LatestVersion.Require.Docker.Registry.GHCR.Auth.Defaults -> HardDefaults...Registry.GHCR.Auth",
+			Got:  d.LatestVersion.Require.Docker.Registry.GHCR.GetAuth().Defaults(),
+			Want: hd.LatestVersion.Require.Docker.Registry.GHCR.GetAuth(),
 			Mode: test.CompareSamePointer,
 		},
-		{ // Layer 2: Root Defaults
-			Name: "L2: LatestVersion.Require.Docker.Registry.GHCR.ContainerDetail.Defaults.Defaults -> Defaults.ContainerDetail",
-			Got:  d.LatestVersion.Require.Docker.Registry.GHCR.ContainerDetail.Defaults.Defaults,
-			Want: &d.LatestVersion.Require.Docker.ContainerDetail,
+		{
+			Name: "LatestVersion.Require.Docker.Registry.Hub.Auth.Defaults -> HardDefaults...Registry.Hub.Auth",
+			Got:  d.LatestVersion.Require.Docker.Registry.Hub.GetAuth().Defaults(),
+			Want: hd.LatestVersion.Require.Docker.Registry.Hub.GetAuth(),
 			Mode: test.CompareSamePointer,
 		},
-		{ // Layer 3: Root HardDefaults
-			Name: "L3: LatestVersion.Require.Docker.Registry.GHCR.ContainerDetail.Defaults.Defaults.Defaults -> HardDefaults.ContainerDetail",
-			Got:  d.LatestVersion.Require.Docker.Registry.GHCR.ContainerDetail.Defaults.Defaults.Defaults,
-			Want: &hd.LatestVersion.Require.Docker.ContainerDetail,
-			Mode: test.CompareSamePointer,
-		},
-		{ // Layer 1: Registry HardDefaults
-			Name: "L1: LatestVersion.Require.Docker.Registry.Hub.ContainerDetail.Defaults -> HardDefaults...Registry.Hub.ContainerDetail",
-			Got:  d.LatestVersion.Require.Docker.Registry.Hub.ContainerDetail.Defaults,
-			Want: &hd.LatestVersion.Require.Docker.Registry.Hub.ContainerDetail,
-			Mode: test.CompareSamePointer,
-		},
-		{ // Layer 2: Root Defaults
-			Name: "L2: LatestVersion.Require.Docker.Registry.Hub.ContainerDetail.Defaults.Defaults -> Defaults.ContainerDetail",
-			Got:  d.LatestVersion.Require.Docker.Registry.Hub.ContainerDetail.Defaults.Defaults,
-			Want: &d.LatestVersion.Require.Docker.ContainerDetail,
-			Mode: test.CompareSamePointer,
-		},
-		{ // Layer 3: Root HardDefaults
-			Name: "L3: LatestVersion.Require.Docker.Registry.Hub.ContainerDetail.Defaults.Defaults.Defaults -> HardDefaults.ContainerDetail",
-			Got:  d.LatestVersion.Require.Docker.Registry.Hub.ContainerDetail.Defaults.Defaults.Defaults,
-			Want: &hd.LatestVersion.Require.Docker.ContainerDetail,
-			Mode: test.CompareSamePointer,
-		},
-		{ // Layer 1: Registry HardDefaults
-			Name: "L1: LatestVersion.Require.Docker.Registry.Quay.ContainerDetail.Defaults -> HardDefaults...Registry.Quay.ContainerDetail",
-			Got:  d.LatestVersion.Require.Docker.Registry.Quay.ContainerDetail.Defaults,
-			Want: &hd.LatestVersion.Require.Docker.Registry.Quay.ContainerDetail,
-			Mode: test.CompareSamePointer,
-		},
-		{ // Layer 2: Root Defaults
-			Name: "L2: LatestVersion.Require.Docker.Registry.Quay.ContainerDetail.Defaults.Defaults -> Defaults.ContainerDetail",
-			Got:  d.LatestVersion.Require.Docker.Registry.Quay.ContainerDetail.Defaults.Defaults,
-			Want: &d.LatestVersion.Require.Docker.ContainerDetail,
-			Mode: test.CompareSamePointer,
-		},
-		{ // Layer 3: Root HardDefaults
-			Name: "L3: LatestVersion.Require.Docker.Registry.Quay.ContainerDetail.Defaults.Defaults.Defaults -> HardDefaults.ContainerDetail",
-			Got:  d.LatestVersion.Require.Docker.Registry.Quay.ContainerDetail.Defaults.Defaults.Defaults,
-			Want: &hd.LatestVersion.Require.Docker.ContainerDetail,
+		{
+			Name: "LatestVersion.Require.Docker.Registry.Quay.Auth.Defaults -> HardDefaults...Registry.Quay.Auth",
+			Got:  d.LatestVersion.Require.Docker.Registry.Quay.GetAuth().Defaults(),
+			Want: hd.LatestVersion.Require.Docker.Registry.Quay.GetAuth(),
 			Mode: test.CompareSamePointer,
 		},
 		{

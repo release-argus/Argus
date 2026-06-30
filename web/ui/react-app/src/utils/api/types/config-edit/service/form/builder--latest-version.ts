@@ -134,11 +134,11 @@ export const buildDockerFilterSchemaWithFallbacks = (
 	const combinedDefaults = {
 		registry: [dockerHubValue, ghcrValue, quayValue].reduce(
 			(acc, type) => {
-				acc[type] = applyDefaultsRecursive(
-					defaults?.registry?.[type] ?? null,
-					{ image: defaults?.image, tag: defaults?.tag },
-					hardDefaults?.registry?.[type],
-					{ image: hardDefaults?.image, tag: hardDefaults?.tag },
+				acc[type] = applyDefaultsRecursive<Partial<DockerFilter>>(
+					(defaults?.registry?.[type] as Partial<DockerFilter>) ?? null,
+					{ tag: defaults?.tag },
+					hardDefaults?.registry?.[type] as Partial<DockerFilter> | undefined,
+					{ tag: hardDefaults?.tag },
 				);
 				return acc;
 			},
@@ -191,12 +191,11 @@ export const buildDockerFilterSchemaWithFallbacks = (
 		const schemaType = arg.type === nullString ? defaultType : arg.type;
 		const schemaDefaults = schemaType && combinedDefaults.registry[schemaType];
 		const hasImage = !!arg.image?.trim();
-		const hasImageDefaulted = hasImage || !!schemaDefaults?.image?.trim();
 		const hasTag = !!arg.tag?.trim();
 		const hasTagDefaulted = hasTag || !!schemaDefaults?.tag?.trim();
 
-		// If we have an image, we must have a tag, and vice versa.
-		if (hasImage !== hasTag && hasImageDefaulted !== hasTagDefaulted) {
+		// If we have an image/tag defined for this instance, we must have values for both.
+		if (hasImage !== hasTag && hasImage !== hasTagDefaulted) {
 			ctx.addIssue({
 				code: CUSTOM_ISSUE_CODE,
 				message: REQUIRED_MESSAGE,
@@ -206,7 +205,7 @@ export const buildDockerFilterSchemaWithFallbacks = (
 
 		// If we have an image:tag specified and have a username field.
 		if (
-			hasImageDefaulted &&
+			hasImage &&
 			hasTagDefaulted &&
 			schemaType &&
 			usernameTypes.has(schemaType)

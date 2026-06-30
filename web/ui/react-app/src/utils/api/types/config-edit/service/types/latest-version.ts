@@ -168,13 +168,29 @@ export const dockerFilterSchema = z.discriminatedUnion('type', [
 export type DockerTypeDockerHub = z.infer<
 	typeof latestVersionLookupRequireDockerTypeSchemaDockerHub
 >;
+export const latestVersionLookupRequireDockerDefaultsSchemaBase = z.object({
+	tag: stringDefault,
+});
+export const latestVersionLookupRequireDockerRegistryDefaultsSchema =
+	latestVersionLookupRequireDockerDefaultsSchemaBase.extend({
+		auth: latestVersionLookupRequireDockerAuthSchemaBase.default({
+			token: '',
+		}),
+	});
+export const latestVersionLookupRequireDockerRegistryDefaultsSchemaDockerHub =
+	latestVersionLookupRequireDockerDefaultsSchemaBase.extend({
+		auth: latestVersionLookupRequireDockerAuthSchemaDockerHubBase.default({
+			token: '',
+			username: '',
+		}),
+	});
 export const dockerFilterSchemaDefaults =
-	latestVersionLookupRequireDockerTypeSchemaBase.extend({
+	latestVersionLookupRequireDockerDefaultsSchemaBase.extend({
 		registry: z
 			.object({
-				ghcr: latestVersionLookupRequireDockerTypeSchema.partial(),
-				hub: latestVersionLookupRequireDockerTypeSchemaDockerHub.partial(),
-				quay: latestVersionLookupRequireDockerTypeSchema.partial(),
+				ghcr: latestVersionLookupRequireDockerRegistryDefaultsSchema.partial(),
+				hub: latestVersionLookupRequireDockerRegistryDefaultsSchemaDockerHub.partial(),
+				quay: latestVersionLookupRequireDockerRegistryDefaultsSchema.partial(),
 			})
 			.optional(),
 		type: z.literal(dockerFilterSchemaBase).optional(),

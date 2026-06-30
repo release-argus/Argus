@@ -448,24 +448,17 @@ func TestDefaults_String(t *testing.T) {
 								return docker.DecodeDefaults(
 									"yaml", []byte(test.TrimYAML(`
 										type: ghcr
-										image: imageFallback
 										tag: tagFallback
 										registry:
 											ghcr:
-												image: imageGHCR
-												tag: tagGHCR
 												auth:
 													username: usernameGHCR
 													token: tokenGHCR
 											hub:
-												image: imageHub
-												tag: tagHub
 												auth:
 													username: usernameHub
 													token: tokenHub
 											quay:
-												image: imageQuay
-												tag: tagQuay
 												auth:
 													username: usernameQuay
 													token: tokenQuay
@@ -475,18 +468,14 @@ func TestDefaults_String(t *testing.T) {
 											"yaml", []byte(test.TrimYAML(`
 												type: ghcr
 												ghcr:
-													image: imageGHCRother
 													auth:
 														username: usernameGHCRother
 														token: tokenGHCRother
 												hub:
-													image: imageHubOther
-													tag: tagHubOther
 													auth:
 														username: usernameHubOther
 														token: tokenHubOther
 												quay:
-													image: imageQuayOther
 													auth:
 														username: usernameQuayOther
 														token: tokenQuayOther
@@ -549,23 +538,16 @@ func TestDefaults_String(t *testing.T) {
 						require:
 							docker:
 								type: ghcr
-								image: imageFallback
 								tag: tagFallback
 								registry:
 									ghcr:
-										image: imageGHCR
-										tag: tagGHCR
 										auth:
 											token: tokenGHCR
 									hub:
-										image: imageHub
-										tag: tagHub
 										auth:
 											username: usernameHub
 											token: tokenHub
 									quay:
-										image: imageQuay
-										tag: tagQuay
 										auth:
 											token: tokenQuay
 					deployed_version:
@@ -792,23 +774,16 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 								return docker.DecodeDefaults(
 									"yaml", []byte(test.TrimYAML(`
 										type: ghcr
-										image: imageFallback
 										tag: tagFallback
 										registry:
 											ghcr:
-												image: imageForGHCR
-												tag: tagForGHCR
 												auth:
 													token: tokenForGHCR
 											hub:
-												image: imageForHub
-												tag: tagForHub
 												auth:
 													username: usernameForHub
 													token: tokenForHub
 											quay:
-												image: imageForQuay
-												tag: tagForQuay
 												auth:
 													token: tokenForQuay
 									`)),

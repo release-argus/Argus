@@ -99,7 +99,7 @@ const EditServiceLatestVersionRequire = () => {
 		type: 'string',
 	};
 	const hasContainer =
-		(!!values.docker.image.trim() || !!dockerDefaults?.image?.trim()) &&
+		!!values.docker.image.trim() &&
 		(!!values.docker.tag.trim() || !!dockerDefaults?.tag?.trim());
 
 	return (
@@ -154,7 +154,6 @@ const EditServiceLatestVersionRequire = () => {
 						/>
 						<FieldText
 							colSize={{ xs: 6 }}
-							defaultVal={dockerDefaults?.image}
 							label="Image"
 							name={`${name}.docker.image`}
 							required={values?.docker?.tag}

@@ -46,11 +46,8 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 			format:   "json",
 			data:     "",
 			registry: &HubRegistryDefaults{},
-			errRegex: test.TrimYAML(`
-				^jsontext:
-					unexpected EOF$`,
-			),
-			want: "",
+			errRegex: `^$`,
+			want:     "{}\n",
 		},
 		{
 			name:     "JSON/empty object",
@@ -81,28 +78,6 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 			data:     "foo",
 			registry: &HubRegistryDefaults{},
 			errRegex: `string was used where mapping is expected`,
-		},
-		{
-			name:   "JSON/invalid ContainerDetail",
-			format: "json",
-			data:   `{"image": []}`,
-			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{},
-				},
-			},
-			errRegex: `^json: .*unmarshal .*$`,
-		},
-		{
-			name:   "YAML/invalid ContainerDetail",
-			format: "yaml",
-			data:   `image: []`,
-			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{},
-				},
-			},
-			errRegex: `^[^\s]+ .*unmarshal .*`,
 		},
 		{
 			name:   "JSON/invalid Auth",
@@ -158,8 +133,6 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					username: hub-username
 					token: tOKEn
@@ -169,8 +142,6 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 			name:   "YAML/auth-hub",
 			format: "yaml",
 			data: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					username: hub-username
 					token: tOKEn
@@ -182,8 +153,6 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					username: hub-username
 					token: tOKEn
@@ -698,47 +667,9 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty/Image",
-			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/Tag",
-			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Tag: "t",
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/ContainerDetail",
-			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-						Tag:   "t",
-					},
-				},
-			},
-			want: false,
-		},
-		{
 			name: "non-empty/all",
 			registry: &HubRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-						Tag:   "t",
-					},
 					Auth: &HubAuthDefaults{
 						Username:   "u",
 						Token:      "foo",
@@ -957,14 +888,6 @@ func TestHubRegistryDefaults_String(t *testing.T) {
 			name: "filled",
 			data: &HubRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Image: "i1",
-						Tag:   "t1",
-						Defaults: &ContainerDetail{
-							Image: "i2",
-							Tag:   "t2",
-						},
-					},
 					Auth: &HubAuth{
 						HubAuthDefaults: HubAuthDefaults{
 							Username: "u1",
@@ -975,33 +898,9 @@ func TestHubRegistryDefaults_String(t *testing.T) {
 							},
 						},
 					},
-					defaults: &HubRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "i2",
-								Tag:   "t2",
-								Defaults: &ContainerDetail{
-									Image: "i3",
-									Tag:   "t3",
-								},
-							},
-							Auth: &HubAuth{
-								HubAuthDefaults: HubAuthDefaults{
-									Username: "u2",
-									Token:    "token2",
-									defaults: &HubAuthDefaults{
-										Username: "u3",
-										Token:    "token3",
-									},
-								},
-							},
-						},
-					},
 				},
 			},
 			want: test.TrimYAML(`
-				image: i1
-				tag: t1
 				auth:
 					username: u1
 					token: token1
@@ -1048,9 +947,8 @@ func TestHubRegistry_String(t *testing.T) {
 					ContainerDetail: ContainerDetail{
 						Image: "i1",
 						Tag:   "t1",
-						Defaults: &ContainerDetail{
-							Image: "i2",
-							Tag:   "t2",
+						Defaults: &ContainerDetailDefaults{
+							Tag: "t2",
 						},
 					},
 					Auth: &HubAuth{
@@ -1086,76 +984,6 @@ func TestHubRegistry_String(t *testing.T) {
 				tc.data.String,
 				tc.want,
 			)
-		})
-	}
-}
-
-// #######################
-// # REGISTRY | DEFAULTS #
-// #######################
-
-func TestHubRegistryDefaults_Defaults(t *testing.T) {
-	// GIVEN: a HubRegistryDefaults with defaults.
-	tests := []struct {
-		name     string
-		registry HubRegistryDefaults
-		wantNil  bool
-	}{
-		{
-			name:     "nil defaults",
-			registry: HubRegistryDefaults{},
-			wantNil:  true,
-		},
-		{
-			name: "GHCRRegistryDefaults",
-			registry: HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					defaults: &GHCRRegistryDefaults{},
-				},
-			},
-			wantNil: false,
-		},
-		{
-			name: "HubRegistryDefaults",
-			registry: HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					defaults: &HubRegistryDefaults{},
-				},
-			},
-			wantNil: false,
-		},
-		{
-			name: "QuayRegistryDefaults",
-			registry: HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					defaults: &QuayRegistryDefaults{},
-				},
-			},
-			wantNil: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN: Defaults is called on it.
-			got := tc.registry.Defaults()
-
-			// THEN: a pointer to the defaults is returned.
-			if got == nil != tc.wantNil {
-				want := "nil"
-				got := "nil"
-				if tc.wantNil {
-					want = "non-nil"
-				} else {
-					got = "non-nil"
-				}
-				t.Errorf(
-					"%s\nHubRegistryDefaults Defaults() mismatch\ngot:  %s\nwant: %s",
-					packageName, got, want,
-				)
-			}
 		})
 	}
 }

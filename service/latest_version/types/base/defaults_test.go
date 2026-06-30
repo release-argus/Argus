@@ -173,7 +173,6 @@ func TestDecodeDefaults(t *testing.T) {
 				foo: bar
 				require:
 					docker:
-						image: i
 						tag: t
 			`),
 			want: test.TrimYAML(`
@@ -183,7 +182,6 @@ func TestDecodeDefaults(t *testing.T) {
 				use_prerelease: true
 				require:
 					docker:
-						image: i
 						tag: t
 			`),
 			errRegex: `^$`,
@@ -220,7 +218,7 @@ func TestDefaults_Default(t *testing.T) {
 		Require: filter.RequireDefaults{
 			Docker: docker.Defaults{
 				Type: "hub",
-				ContainerDetail: docker.ContainerDetail{
+				ContainerDetailDefaults: docker.ContainerDetailDefaults{
 					Tag: "{{ version }}",
 				},
 			},

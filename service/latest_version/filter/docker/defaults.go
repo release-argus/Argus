@@ -26,10 +26,10 @@ import (
 
 // Defaults are the default values for DockerCheck.
 type Defaults struct {
-	Type            string                          `json:"type,omitempty" yaml:"type,omitempty"` // Type of the Docker registry.
-	ContainerDetail `json:",inline" yaml:",inline"` // Details about the container.
-	Registry        RegistryDefaultsSet             `json:"registry,omitzero" yaml:"registry,omitzero"` // Registry-specific defaults.
-	Defaults        *Defaults                       `json:"-" yaml:"-"`                                 // Defaults to fall back on.
+	Type                    string                          `json:"type,omitempty" yaml:"type,omitempty"` // Type of the Docker registry.
+	ContainerDetailDefaults `json:",inline" yaml:",inline"` // Default Tag template.
+	Registry                RegistryDefaultsSet             `json:"registry,omitzero" yaml:"registry,omitzero"` // Registry-specific defaults.
+	Defaults                *Defaults                       `json:"-" yaml:"-"`                                 // Defaults to fall back on.
 }
 
 // RegistryDefaultsSet holds per-registry default configuration.
@@ -78,7 +78,7 @@ func DecodeDefaults(
 // IsZero implements the yaml.IsZeroer interface.
 func (d *Defaults) IsZero() bool {
 	return d.Type == "" &&
-		d.ContainerDetail.IsZero() &&
+		d.ContainerDetailDefaults.IsZero() &&
 		d.Registry.IsZero()
 }
 
@@ -110,7 +110,7 @@ func (d *Defaults) String(prefix string) string {
 func (d *Defaults) Default() {
 	d.Type = "hub"
 	d.initRegistries()
-	d.ContainerDetail.Default()
+	d.ContainerDetailDefaults.Default()
 }
 
 // SetDefaults assigns defaults to the receiver.
@@ -120,12 +120,12 @@ func (d *Defaults) SetDefaults(defaults *Defaults) {
 		return
 	}
 	d.Defaults = defaults
-	d.ContainerDetail.Defaults = &defaults.ContainerDetail
+	d.ContainerDetailDefaults.Defaults = &defaults.ContainerDetailDefaults
 
 	defaults.initRegistries()
-	setRegistryDefaults(d.Registry.GHCR, defaults.Registry.GHCR, &d.ContainerDetail, &defaults.ContainerDetail)
-	setRegistryDefaults(d.Registry.Hub, defaults.Registry.Hub, &d.ContainerDetail, &defaults.ContainerDetail)
-	setRegistryDefaults(d.Registry.Quay, defaults.Registry.Quay, &d.ContainerDetail, &defaults.ContainerDetail)
+	setRegistryDefaults(d.Registry.GHCR, defaults.Registry.GHCR)
+	setRegistryDefaults(d.Registry.Hub, defaults.Registry.Hub)
+	setRegistryDefaults(d.Registry.Quay, defaults.Registry.Quay)
 }
 
 // ##########
@@ -203,19 +203,11 @@ func getRegistryDefaults(dType string, defaults *Defaults) RegistryDefaults {
 	return nil
 }
 
-// setRegistryDefaults links registry defaults and auth defaults to their parent defaults.
-func setRegistryDefaults(
-	registry RegistryDefaults,
-	defaultRegistry RegistryDefaults,
-	defaultDetail, hardDefaultDetail *ContainerDetail,
-) {
+// setRegistryDefaults links a registry's auth defaults to its parent defaults.
+func setRegistryDefaults(registry, defaultRegistry RegistryDefaults) {
 	if registry == nil || defaultRegistry == nil {
 		return
 	}
 
-	registry.SetDefaults(defaultRegistry, defaultDetail, hardDefaultDetail)
-
-	auth := registry.GetAuth()
-	defaultAuth := defaultRegistry.GetAuth()
-	auth.SetDefaults(defaultAuth)
+	registry.GetAuth().SetDefaults(defaultRegistry.GetAuth())
 }

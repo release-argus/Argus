@@ -174,9 +174,8 @@ func convertAndCensorLatestVersionRequireDefaults(input *filter.RequireDefaults)
 
 	apiRequire := &apitype.LatestVersionRequireDefaults{
 		Docker: apitype.RequireDockerDefaults{
-			Type:  input.Docker.Type,
-			Image: input.Docker.Image,
-			Tag:   input.Docker.Tag,
+			Type: input.Docker.Type,
+			Tag:  input.Docker.Tag,
 		},
 	}
 
@@ -208,10 +207,6 @@ func convertAndCensorRequireDockerRegistryDefaults(input docker.RegistryDefaults
 	case *docker.GHCRRegistryDefaults:
 		if auth, ok := v.GetAuth().(*docker.GHCRAuthDefaults); ok {
 			return &apitype.RequireDockerRegistryDefaultsToken{
-				RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-					Image: v.Image,
-					Tag:   v.Tag,
-				},
 				RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
 					Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
 				},
@@ -220,10 +215,6 @@ func convertAndCensorRequireDockerRegistryDefaults(input docker.RegistryDefaults
 	case *docker.QuayRegistryDefaults:
 		if auth, ok := v.GetAuth().(*docker.QuayAuthDefaults); ok {
 			return &apitype.RequireDockerRegistryDefaultsToken{
-				RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-					Image: v.Image,
-					Tag:   v.Tag,
-				},
 				RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
 					Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
 				},
@@ -232,10 +223,6 @@ func convertAndCensorRequireDockerRegistryDefaults(input docker.RegistryDefaults
 	case *docker.HubRegistryDefaults:
 		if auth, ok := v.GetAuth().(*docker.HubAuthDefaults); ok {
 			return &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
-				RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-					Image: v.Image,
-					Tag:   v.Tag,
-				},
 				RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
 					Username: auth.GetUsernameSelf(),
 					RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{

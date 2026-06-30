@@ -33,9 +33,7 @@ import (
 
 // CommonRegistryDefaults holds shared default fields for registry checkers.
 type CommonRegistryDefaults struct {
-	ContainerDetail `json:",inline" yaml:",inline"`
-	Auth            RegistryAuthDefaults `json:"auth,omitempty" yaml:"auth,omitempty"`
-	defaults        RegistryDefaults
+	Auth RegistryAuthDefaults `json:"auth,omitempty" yaml:"auth,omitempty"`
 }
 
 // CommonRegistry holds shared fields for a registry checkers.
@@ -74,11 +72,6 @@ func (r *CommonRegistryDefaults) UnmarshalYAML(data []byte) error {
 
 // unmarshal implements the format.Unmarshaler interface.
 func (r *CommonRegistryDefaults) unmarshal(format string, data []byte) error {
-	// ContainerDetail.
-	if err := decode.Unmarshal(format, data, &r.ContainerDetail); err != nil {
-		return err //nolint:wrapcheck
-	}
-
 	// Auth.
 	if err := polymorphic.Unmarshal(format, data, "auth", r.Auth); err != nil {
 		return err //nolint:wrapcheck
@@ -110,7 +103,8 @@ func (r *CommonRegistry) unmarshal(format string, data []byte) error {
 		return err //nolint:wrapcheck
 	}
 	r.Type = aux.Type
-	r.ContainerDetail = aux.ContainerDetail
+	r.Image = aux.ContainerDetail.Image
+	r.Tag = aux.ContainerDetail.Tag
 
 	// Auth.
 	if err := polymorphic.Unmarshal(format, data, "auth", r.Auth); err != nil {
@@ -171,50 +165,6 @@ func (r *CommonRegistry) String(prefix string) string {
 // #######################
 
 // Defaults returns the defaults for the registry.
-func (r *CommonRegistryDefaults) Defaults() RegistryDefaults {
-	if r.defaults == nil {
-		return nil
-	}
-
-	return r.defaults
-}
-
-// SetDefaults applies defaults to the receiver.
-// receiver -> rDefaults -> defaultDetail -> hardDefaultDetail.
-func (r *CommonRegistryDefaults) SetDefaults(rDefaults RegistryDefaults, defaultDetail, hardDefaultDetail *ContainerDetail) {
-	if rDefaults == nil {
-		return
-	}
-
-	r.defaults = rDefaults
-
-	// ContainerDetail linking.
-	linkContainerDetails(
-		r.GetContainerDetail(),
-		rDefaults.GetContainerDetail(),
-		defaultDetail,
-		hardDefaultDetail,
-	)
-}
-
-// linkContainerDetails builds the ContainerDetail inheritance chain.
-//
-// hierarchy:
-//
-//	registry
-//	    ↓
-//	registry defaults
-//	    ↓
-//	root
-//	    ↓
-//	root defaults
-func linkContainerDetails(registry, registryDefaults, root, rootDefaults *ContainerDetail) {
-	registry.Defaults = registryDefaults
-	registryDefaults.Defaults = root
-	root.Defaults = rootDefaults
-}
-
-// Defaults returns the defaults for the registry.
 func (r *CommonRegistry) Defaults() RegistryDefaults {
 	if r.defaults == nil {
 		return nil
@@ -235,7 +185,7 @@ func (r *CommonRegistry) SetDefaults(dType string, defaults *Defaults) {
 	}
 
 	r.defaults = rDefaults
-	r.ContainerDetail.Defaults = rDefaults.GetContainerDetail()
+	r.ContainerDetail.Defaults = &defaults.ContainerDetailDefaults
 	r.Auth.SetDefaults(r.defaults.GetAuth())
 }
 
@@ -253,19 +203,9 @@ func (r *CommonRegistry) GetImageSelf() string {
 	return r.Image
 }
 
-// GetImage returns the Image to use for this registry (include defaults).
+// GetImage returns the Image to query on.
 func (r *CommonRegistry) GetImage() string {
-	if image := r.ContainerDetail.GetImage(); image != "" {
-		return image
-	}
-
-	for registry := r.defaults; registry != nil; registry = registry.Defaults() {
-		if image := registry.GetImage(); image != "" {
-			return image
-		}
-	}
-
-	return ""
+	return r.ContainerDetail.GetImage()
 }
 
 // GetTagSelf returns the Tag to query for.
@@ -273,19 +213,9 @@ func (r *CommonRegistry) GetTagSelf() string {
 	return r.Tag
 }
 
-// GetTag returns the Tag.
+// GetTag returns the Tag to query for.
 func (r *CommonRegistry) GetTag() string {
-	if tag := r.ContainerDetail.GetTag(); tag != "" {
-		return tag
-	}
-
-	for registry := r.defaults; registry != nil; registry = registry.Defaults() {
-		if tag := registry.GetTag(); tag != "" {
-			return tag
-		}
-	}
-
-	return ""
+	return r.ContainerDetail.GetTag()
 }
 
 // #########################
@@ -385,11 +315,6 @@ func (r *CommonRegistry) parseBody(tag string, resp *http.Response) error {
 	}
 
 	return nil
-}
-
-// GetContainerDetail returns a pointer to the container detail on these defaults.
-func (r *CommonRegistryDefaults) GetContainerDetail() *ContainerDetail {
-	return &r.ContainerDetail
 }
 
 // Detail returns the resolved image and tag used for registry queries.

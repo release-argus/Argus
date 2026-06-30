@@ -238,24 +238,17 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 								"yaml", []byte(test.TrimYAML(`
 									docker:
 										type: hub
-										image: i
 										tag: t
 										registry:
 											ghcr:
-												image: iGHCR
-												tag: tGHCR
 												auth:
 													username: something
 													token: ghp_X
 											hub:
-												image: iHub
-												tag: tHub
 												auth:
 													username: something
 													token: hub_X
 											quay:
-												image: iQuay
-												tag: tQuay
 												auth:
 													username: something
 													token: quay_X
@@ -272,24 +265,15 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 						AccessToken: util.SecretValue,
 						Require: &apitype.LatestVersionRequireDefaults{
 							Docker: apitype.RequireDockerDefaults{
-								Type:  "hub",
-								Image: "i",
-								Tag:   "t",
+								Type: "hub",
+								Tag:  "t",
 								Registry: apitype.RequireDockerRegistriesDefaults{
 									GHCR: &apitype.RequireDockerRegistryDefaultsToken{
-										RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-											Image: "iGHCR",
-											Tag:   "tGHCR",
-										},
 										RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
 											Token: util.SecretValue,
 										},
 									},
 									Hub: &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
-										RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-											Image: "iHub",
-											Tag:   "tHub",
-										},
 										RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
 											Username: "something",
 											RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
@@ -298,10 +282,6 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 										},
 									},
 									Quay: &apitype.RequireDockerRegistryDefaultsToken{
-										RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-											Image: "iQuay",
-											Tag:   "tQuay",
-										},
 										RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
 											Token: util.SecretValue,
 										},
@@ -746,16 +726,14 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 					"yaml", []byte(test.TrimYAML(`
 						docker:
 							type: hub
-							image: i
 							tag: t
 					`)),
 				)
 			}),
 			want: &apitype.LatestVersionRequireDefaults{
 				Docker: apitype.RequireDockerDefaults{
-					Type:  "hub",
-					Image: "i",
-					Tag:   "t",
+					Type: "hub",
+					Tag:  "t",
 				},
 			},
 		},
@@ -767,8 +745,6 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 						docker:
 							registry:
 								ghcr:
-									image: iGHCR
-									tag: tGHCR
 									auth:
 										username: something
 										token: ghp_X
@@ -779,10 +755,6 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 				Docker: apitype.RequireDockerDefaults{
 					Registry: apitype.RequireDockerRegistriesDefaults{
 						GHCR: &apitype.RequireDockerRegistryDefaultsToken{
-							RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-								Image: "iGHCR",
-								Tag:   "tGHCR",
-							},
 							RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
 								Token: util.SecretValue,
 							},
@@ -799,8 +771,6 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 						docker:
 							registry:
 								hub:
-									image: iHub
-									tag: tHub
 									auth:
 										username: something
 										token: hub_X
@@ -811,10 +781,6 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 				Docker: apitype.RequireDockerDefaults{
 					Registry: apitype.RequireDockerRegistriesDefaults{
 						Hub: &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
-							RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-								Image: "iHub",
-								Tag:   "tHub",
-							},
 							RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
 								Username: "something",
 								RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
@@ -834,8 +800,6 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 						docker:
 							registry:
 								quay:
-									image: iQuay
-									tag: tQuay
 									auth:
 										username: something
 										token: ghp_X
@@ -846,10 +810,6 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 				Docker: apitype.RequireDockerDefaults{
 					Registry: apitype.RequireDockerRegistriesDefaults{
 						Quay: &apitype.RequireDockerRegistryDefaultsToken{
-							RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-								Image: "iQuay",
-								Tag:   "tQuay",
-							},
 							RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
 								Token: util.SecretValue,
 							},
@@ -865,24 +825,17 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 					"yaml", []byte(test.TrimYAML(`
 						docker:
 							type: hub
-							image: i
 							tag: t
 							registry:
 								ghcr:
-									image: iGHCR
-									tag: tGHCR
 									auth:
 										username: something
 										token: ghp_X
 								hub:
-									image: iHub
-									tag: tHub
 									auth:
 										username: something
 										token: hub_X
 								quay:
-									image: iQuay
-									tag: tQuay
 									auth:
 										username: something
 										token: quay_X
@@ -891,24 +844,15 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 			}),
 			want: &apitype.LatestVersionRequireDefaults{
 				Docker: apitype.RequireDockerDefaults{
-					Type:  "hub",
-					Image: "i",
-					Tag:   "t",
+					Type: "hub",
+					Tag:  "t",
 					Registry: apitype.RequireDockerRegistriesDefaults{
 						GHCR: &apitype.RequireDockerRegistryDefaultsToken{
-							RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-								Image: "iGHCR",
-								Tag:   "tGHCR",
-							},
 							RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
 								Token: util.SecretValue,
 							},
 						},
 						Hub: &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
-							RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-								Image: "iHub",
-								Tag:   "tHub",
-							},
 							RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
 								Username: "something",
 								RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
@@ -917,10 +861,6 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 							},
 						},
 						Quay: &apitype.RequireDockerRegistryDefaultsToken{
-							RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-								Image: "iQuay",
-								Tag:   "tQuay",
-							},
 							RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
 								Token: util.SecretValue,
 							},
@@ -1166,20 +1106,12 @@ func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
 			name: "docker/ghcr/converted",
 			input: &docker.GHCRRegistryDefaults{
 				CommonRegistryDefaults: docker.CommonRegistryDefaults{
-					ContainerDetail: docker.ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ version }}",
-					},
 					Auth: &docker.GHCRAuthDefaults{
 						Token: "ghcr_X",
 					},
 				},
 			},
 			want: &apitype.RequireDockerRegistryDefaultsToken{
-				RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-					Image: "test/app",
-					Tag:   "{{ version }}",
-				},
 				RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
 					Token: util.SecretValue,
 				},
@@ -1194,10 +1126,6 @@ func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
 			name: "docker/hub/converted",
 			input: &docker.HubRegistryDefaults{
 				CommonRegistryDefaults: docker.CommonRegistryDefaults{
-					ContainerDetail: docker.ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ version }}",
-					},
 					Auth: &docker.HubAuthDefaults{
 						Username: "something",
 						Token:    "ghcr_X",
@@ -1205,10 +1133,6 @@ func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
 				},
 			},
 			want: &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
-				RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-					Image: "test/app",
-					Tag:   "{{ version }}",
-				},
 				RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
 					Username: "something",
 					RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
@@ -1226,20 +1150,12 @@ func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
 			name: "docker/quay/converted",
 			input: &docker.QuayRegistryDefaults{
 				CommonRegistryDefaults: docker.CommonRegistryDefaults{
-					ContainerDetail: docker.ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ version }}",
-					},
 					Auth: &docker.QuayAuthDefaults{
 						Token: "quay_X",
 					},
 				},
 			},
 			want: &apitype.RequireDockerRegistryDefaultsToken{
-				RequireDockerRegistryDefaultsBase: apitype.RequireDockerRegistryDefaultsBase{
-					Image: "test/app",
-					Tag:   "{{ version }}",
-				},
 				RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
 					Token: util.SecretValue,
 				},

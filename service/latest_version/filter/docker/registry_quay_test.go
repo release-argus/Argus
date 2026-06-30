@@ -72,28 +72,6 @@ func TestQuayRegistryDefaults_Unmarshal(t *testing.T) {
 			errRegex: `string was used where mapping is expected`,
 		},
 		{
-			name:   "JSON/invalid ContainerDetail",
-			format: "json",
-			data:   `{"image": []}`,
-			registry: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &QuayAuthDefaults{},
-				},
-			},
-			errRegex: `^json: .*unmarshal .*$`,
-		},
-		{
-			name:   "YAML/invalid ContainerDetail",
-			format: "yaml",
-			data:   `image: []`,
-			registry: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &QuayAuthDefaults{},
-				},
-			},
-			errRegex: `^[^\s]+ .*unmarshal`,
-		},
-		{
 			name:   "JSON/invalid Auth",
 			format: "json",
 			data:   `{"auth": []}`,
@@ -147,8 +125,6 @@ func TestQuayRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					token: tOKEn
 			`),
@@ -157,8 +133,6 @@ func TestQuayRegistryDefaults_Unmarshal(t *testing.T) {
 			name:   "YAML/auth-quay",
 			format: "yaml",
 			data: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					username: quay-username
 					token: tOKEn
@@ -170,8 +144,6 @@ func TestQuayRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					token: tOKEn
 			`),
@@ -640,47 +612,9 @@ func TestQuayRegistryDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty/Image",
-			registry: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/Tag",
-			registry: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Tag: "t",
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/ContainerDetail",
-			registry: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-						Tag:   "t",
-					},
-				},
-			},
-			want: false,
-		},
-		{
 			name: "non-empty/all",
 			registry: &QuayRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-						Tag:   "t",
-					},
 					Auth: &QuayAuthDefaults{
 						Token: "foo",
 					},
@@ -891,14 +825,6 @@ func TestQuayRegistryDefaults_String(t *testing.T) {
 			name: "filled",
 			data: &QuayRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Image: "i1",
-						Tag:   "t1",
-						Defaults: &ContainerDetail{
-							Image: "i2",
-							Tag:   "t2",
-						},
-					},
 					Auth: &QuayAuth{
 						QuayAuthDefaults: QuayAuthDefaults{
 							Token: "token1",
@@ -907,31 +833,9 @@ func TestQuayRegistryDefaults_String(t *testing.T) {
 							},
 						},
 					},
-					defaults: &QuayRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "i2",
-								Tag:   "t2",
-								Defaults: &ContainerDetail{
-									Image: "i3",
-									Tag:   "t3",
-								},
-							},
-							Auth: &QuayAuth{
-								QuayAuthDefaults: QuayAuthDefaults{
-									Token: "token2",
-									defaults: &QuayAuthDefaults{
-										Token: "token3",
-									},
-								},
-							},
-						},
-					},
 				},
 			},
 			want: test.TrimYAML(`
-				image: i1
-				tag: t1
 				auth:
 					token: token1
 			`),
@@ -977,9 +881,8 @@ func TestQuayRegistry_String(t *testing.T) {
 					ContainerDetail: ContainerDetail{
 						Image: "i1",
 						Tag:   "t1",
-						Defaults: &ContainerDetail{
-							Image: "i2",
-							Tag:   "t2",
+						Defaults: &ContainerDetailDefaults{
+							Tag: "t2",
 						},
 					},
 					Auth: &QuayAuth{
@@ -1042,76 +945,6 @@ func TestQuayRegistry_GetType(t *testing.T) {
 	// THEN: the type is returned.
 	if want := "quay"; got != want {
 		t.Errorf("got %q, want %q", got, want)
-	}
-}
-
-// #######################
-// # REGISTRY | DEFAULTS #
-// #######################
-
-func TestQuayRegistryDefaults_Defaults(t *testing.T) {
-	// GIVEN: a QuayRegistryDefaults with defaults.
-	tests := []struct {
-		name     string
-		registry RegistryDefaults
-		wantNil  bool
-	}{
-		{
-			name:     "nil registry defaults",
-			registry: &QuayRegistryDefaults{},
-			wantNil:  true,
-		},
-		{
-			name: "GHCRRegistryDefaults",
-			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					defaults: &GHCRRegistryDefaults{},
-				},
-			},
-			wantNil: false,
-		},
-		{
-			name: "HubRegistryDefaults",
-			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					defaults: &HubRegistryDefaults{},
-				},
-			},
-			wantNil: false,
-		},
-		{
-			name: "QuayRegistryDefaults",
-			registry: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					defaults: &QuayRegistryDefaults{},
-				},
-			},
-			wantNil: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN: Defaults is called on it.
-			got := tc.registry.Defaults()
-
-			// THEN: a pointer to the defaults is returned.
-			if got == nil != tc.wantNil {
-				want := "nil"
-				got := "nil"
-				if tc.wantNil {
-					want = "non-nil"
-				} else {
-					got = "non-nil"
-				}
-				t.Errorf(
-					"%s\nQuayRegistryDefaults Defaults() mismatch\ngot:  %s\nwant: %s",
-					packageName, got, want,
-				)
-			}
-		})
 	}
 }
 

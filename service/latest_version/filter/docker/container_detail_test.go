@@ -81,6 +81,48 @@ func TestContainerDetail_IsZero(t *testing.T) {
 	}
 }
 
+func TestContainerDetailDefaults_IsZero(t *testing.T) {
+	// GIVEN: a ContainerDetailDefaults.
+	tests := []struct {
+		name string
+		data *ContainerDetailDefaults
+		want bool
+	}{
+		{
+			name: "nil",
+			data: nil,
+			want: true,
+		},
+		{
+			name: "empty",
+			data: &ContainerDetailDefaults{},
+			want: true,
+		},
+		{
+			name: "non-empty/Tag",
+			data: &ContainerDetailDefaults{Tag: "t"},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.data.IsZero()
+
+			// THEN: the expected result is returned.
+			if got != tc.want {
+				t.Fatalf(
+					"%s\nContainerDetailDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					tc.name, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
 func TestContainerDetail_Copy(t *testing.T) {
 	// GIVEN: a ContainerDetails
 	tests := []struct {
@@ -148,16 +190,16 @@ func TestContainerDetail_Copy(t *testing.T) {
 // # DEFAULTS #
 // ############
 
-func TestContainerDetail_Default(t *testing.T) {
-	// GIVEN: a ContainerDetail.
-	detail := ContainerDetail{}
+func TestContainerDetailDefaults_Default(t *testing.T) {
+	// GIVEN: a ContainerDetailDefaults.
+	detail := ContainerDetailDefaults{}
 
 	// WHEN: Default() is called on it.
 	detail.Default()
 
 	// THEN: .Tag is given a value.
 	if detail.Tag == "" {
-		t.Fatalf("%s\nContainerDetail.Default() mismatch\nTag is empty", packageName)
+		t.Fatalf("%s\nContainerDetailDefaults.Default() mismatch\nTag is empty", packageName)
 	}
 }
 
@@ -266,6 +308,14 @@ func TestContainerDetail_GetTag(t *testing.T) {
 			},
 			want: "",
 		},
+		{
+			name: "Tag from defaults",
+			data: ContainerDetail{
+				Image:    "i",
+				Defaults: &ContainerDetailDefaults{Tag: "t-default"},
+			},
+			want: "t-default",
+		},
 	}
 
 	for _, tc := range tests {
@@ -280,6 +330,50 @@ func TestContainerDetail_GetTag(t *testing.T) {
 			if got != tc.want {
 				t.Fatalf(
 					"%s\nContainerDetail.GetTag() mismatch\ngot:  %q\nwant: %q",
+					tc.name, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestContainerDetailDefaults_GetTag(t *testing.T) {
+	// GIVEN: a ContainerDetailDefaults chain.
+	tests := []struct {
+		name string
+		data *ContainerDetailDefaults
+		want string
+	}{
+		{
+			name: "nil",
+			data: nil,
+			want: "",
+		},
+		{
+			name: "own Tag",
+			data: &ContainerDetailDefaults{Tag: "t"},
+			want: "t",
+		},
+		{
+			name: "Tag from chain",
+			data: &ContainerDetailDefaults{
+				Defaults: &ContainerDetailDefaults{Tag: "t-deep"},
+			},
+			want: "t-deep",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: GetTag() is called on it.
+			got := tc.data.GetTag()
+
+			// THEN: the expected tag is returned.
+			if got != tc.want {
+				t.Fatalf(
+					"%s\nContainerDetailDefaults.GetTag() mismatch\ngot:  %q\nwant: %q",
 					tc.name, got, tc.want,
 				)
 			}

@@ -542,42 +542,26 @@ func (r RequireDockerRegistryDefaultsAuthWithUsername) IsZero() bool {
 		r.Token == ""
 }
 
-// RequireDockerRegistryDefaultsBase are the base default values for a RequireDocker.
-type RequireDockerRegistryDefaultsBase struct {
-	Image string `json:"image,omitempty" yaml:"image,omitempty"` // Image to check.
-	Tag   string `json:"tag,omitempty" yaml:"tag,omitempty"`     // Tag to check for.
-}
-
-// IsZero implements the yaml.IsZeroer interface.
-func (r RequireDockerRegistryDefaultsBase) IsZero() bool {
-	return r.Image == "" &&
-		r.Tag == ""
-}
-
 // RequireDockerRegistryDefaultsToken are the default values for a RequireDocker with just Token auth.
 type RequireDockerRegistryDefaultsToken struct {
-	RequireDockerRegistryDefaultsBase `json:",inline" yaml:",inline"`
 	RequireDockerRegistryDefaultsAuth `json:"auth" yaml:"auth"`
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (r *RequireDockerRegistryDefaultsToken) IsZero() bool {
-	return r.RequireDockerRegistryDefaultsAuth.IsZero() &&
-		r.RequireDockerRegistryDefaultsBase.IsZero()
+	return r.RequireDockerRegistryDefaultsAuth.IsZero()
 }
 
 func (r *RequireDockerRegistryDefaultsToken) GetToken() string { return r.Token }
 
 // RequireDockerCheckRegistryDefaultsTokenWithUsername are the default values for a RequireDocker with Token+Username auth.
 type RequireDockerCheckRegistryDefaultsTokenWithUsername struct {
-	RequireDockerRegistryDefaultsBase             `json:",inline" yaml:",inline"`
 	RequireDockerRegistryDefaultsAuthWithUsername `json:"auth" yaml:"auth"`
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (r *RequireDockerCheckRegistryDefaultsTokenWithUsername) IsZero() bool {
-	return r.RequireDockerRegistryDefaultsBase.IsZero() &&
-		r.RequireDockerRegistryDefaultsAuthWithUsername.IsZero()
+	return r.RequireDockerRegistryDefaultsAuthWithUsername.IsZero()
 }
 
 func (r *RequireDockerCheckRegistryDefaultsTokenWithUsername) GetToken() string { return r.Token }
@@ -585,7 +569,6 @@ func (r *RequireDockerCheckRegistryDefaultsTokenWithUsername) GetToken() string 
 // RequireDockerDefaults are default values for a RequireDocker.
 type RequireDockerDefaults struct {
 	Type     string                          `json:"type,omitempty" yaml:"type,omitempty"`       // Default DockerCheck Type.
-	Image    string                          `json:"image,omitempty" yaml:"image,omitempty"`     // Default Image template.
 	Tag      string                          `json:"tag,omitempty" yaml:"tag,omitempty"`         // Default Tag template.
 	Registry RequireDockerRegistriesDefaults `json:"registry,omitzero" yaml:"registry,omitzero"` // GHCR | Hub | Quay.
 }
@@ -593,7 +576,6 @@ type RequireDockerDefaults struct {
 // IsZero implements the yaml.IsZeroer interface.
 func (r RequireDockerDefaults) IsZero() bool {
 	return r.Type == "" &&
-		r.Image == "" &&
 		r.Tag == "" &&
 		r.Registry.IsZero()
 }

@@ -87,27 +87,20 @@ func TestDecodeDefaults(t *testing.T) {
 			format: "json",
 			data: test.TrimJSON(`{
 				"type": "ghcr",
-				"image": "{{ service_id }}",
 				"tag": "{{ version }}",
 				"registry": {
 					"ghcr": {
-						"image": "ghcr/{{ service_id }}",
-						"tag": "foo/ghcr",
 						"auth": {
 							"token": "ghcr-secret"
 						}
 					},
 					"hub": {
-						"image": "hub/{{ service_id }}",
-						"tag": "bar/hub",
 						"auth": {
 							"username": "hub-user",
 							"token": "hub-secret"
 						}
 					},
 					"quay": {
-						"image": "quay/{{ service_id }}",
-						"tag": "baz/quay",
 						"auth": {
 							"token": "quay-secret"
 						}
@@ -117,23 +110,16 @@ func TestDecodeDefaults(t *testing.T) {
 			errRegex: `^$`,
 			want: test.TrimYAML(`
 				type: ghcr
-				image: '{{ service_id }}'
 				tag: '{{ version }}'
 				registry:
 					ghcr:
-						image: ghcr/{{ service_id }}
-						tag: foo/ghcr
 						auth:
 							token: ghcr-secret
 					hub:
-						image: hub/{{ service_id }}
-						tag: bar/hub
 						auth:
 							username: hub-user
 							token: hub-secret
 					quay:
-						image: quay/{{ service_id }}
-						tag: baz/quay
 						auth:
 							token: quay-secret
 			`),
@@ -143,46 +129,32 @@ func TestDecodeDefaults(t *testing.T) {
 			format: "yaml",
 			data: test.TrimYAML(`
 				type: ghcr
-				image: '{{ service_id }}'
 				tag: '{{ version }}'
 				registry:
 					ghcr:
-						image: ghcr/{{ service_id }}
-						tag: foo/ghcr
 						auth:
 							token: ghcr-secret
 					hub:
-						image: ghcr/{{ service_id }}
-						tag: bar/hub
 						auth:
 							username: hub-user
 							token: hub-secret
 					quay:
-						image: ghcr/{{ service_id }}
-						tag: baz/quay
 						auth:
 							token: ghcr-secret
 			`),
 			errRegex: `^$`,
 			want: test.TrimYAML(`
 				type: ghcr
-				image: '{{ service_id }}'
 				tag: '{{ version }}'
 				registry:
 					ghcr:
-						image: ghcr/{{ service_id }}
-						tag: foo/ghcr
 						auth:
 							token: ghcr-secret
 					hub:
-						image: ghcr/{{ service_id }}
-						tag: bar/hub
 						auth:
 							username: hub-user
 							token: hub-secret
 					quay:
-						image: ghcr/{{ service_id }}
-						tag: baz/quay
 						auth:
 							token: ghcr-secret
 			`),
@@ -262,7 +234,6 @@ func TestDecodeDefaults(t *testing.T) {
 			var defaults Defaults
 			defaults.Default()
 			defaults.Type = ""
-			defaults.Image = ""
 			defaults.Tag = ""
 
 			// WHEN: DecodeDefaults is called.
@@ -293,11 +264,8 @@ func TestDecodeDefaults(t *testing.T) {
 			// THEN: The Defaults were passed over correctly.
 			fieldTests := []test.FieldAssertion{
 				{Name: "Defaults", Got: got.Defaults, Want: &defaults, Mode: test.CompareSamePointer},
-				{Name: "GHCR.Defaults", Got: got.Registry.GHCR.defaults, Want: defaults.Registry.GHCR, Mode: test.CompareSamePointer},
 				{Name: "GHCR.Auth.Defaults", Got: got.Registry.GHCR.GetAuth().Defaults(), Want: defaults.Registry.GHCR.GetAuth(), Mode: test.CompareSamePointer},
-				{Name: "Hub.Defaults", Got: got.Registry.Hub.defaults, Want: defaults.Registry.Hub, Mode: test.CompareSamePointer},
 				{Name: "Hub.Auth.Defaults", Got: got.Registry.Hub.GetAuth().Defaults(), Want: defaults.Registry.Hub.GetAuth(), Mode: test.CompareSamePointer},
-				{Name: "Quay.Defaults", Got: got.Registry.Quay.defaults, Want: defaults.Registry.Quay, Mode: test.CompareSamePointer},
 				{Name: "Quay.Auth.Defaults", Got: got.Registry.Quay.GetAuth().Defaults(), Want: defaults.Registry.Quay.GetAuth(), Mode: test.CompareSamePointer},
 			}
 			if err := test.AssertFields(t, fieldTests, prefix, "Defaults"); err != nil {
@@ -325,14 +293,12 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 			name: "static fields",
 			defaults: &Defaults{
 				Type: PossibleTypes[0],
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "1.2.3",
+				ContainerDetailDefaults: ContainerDetailDefaults{
+					Tag: "1.2.3",
 				},
 			},
 			want: test.TrimYAML(`
 				type: ` + PossibleTypes[0] + `
-				image: test/app
 				tag: 1.2.3
 			`),
 		},
@@ -342,10 +308,6 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 				Registry: RegistryDefaultsSet{
 					GHCR: &GHCRRegistryDefaults{
 						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "test/app-ghcr",
-								Tag:   "1.ghcr.2",
-							},
 							Auth: &GHCRAuth{
 								GHCRAuthDefaults: GHCRAuthDefaults{
 									Token: "ghcr-token",
@@ -355,10 +317,6 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 					},
 					Hub: &HubRegistryDefaults{
 						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "test/app-hub",
-								Tag:   "1.hub.2",
-							},
 							Auth: &HubAuthDefaults{
 								Username: "hub-username",
 								Token:    "hub-token",
@@ -367,10 +325,6 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 					},
 					Quay: &QuayRegistryDefaults{
 						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "test/app-quay",
-								Tag:   "1.quay.2",
-							},
 							Auth: &QuayAuthDefaults{
 								Token: "quay-token",
 							},
@@ -381,19 +335,13 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 			want: test.TrimYAML(`
 				registry:
 					ghcr:
-						image: test/app-ghcr
-						tag: 1.ghcr.2
 						auth:
 							token: ghcr-token
 					hub:
-						image: test/app-hub
-						tag: 1.hub.2
 						auth:
 							username: hub-username
 							token: hub-token
 					quay:
-						image: test/app-quay
-						tag: 1.quay.2
 						auth:
 							token: quay-token
 			`),
@@ -402,17 +350,12 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 			name: "filled",
 			defaults: &Defaults{
 				Type: PossibleTypes[0],
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "1.2.3",
+				ContainerDetailDefaults: ContainerDetailDefaults{
+					Tag: "1.2.3",
 				},
 				Registry: RegistryDefaultsSet{
 					GHCR: &GHCRRegistryDefaults{
 						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "test/app-ghcr",
-								Tag:   "1.ghcr.2",
-							},
 							Auth: &GHCRAuth{
 								GHCRAuthDefaults: GHCRAuthDefaults{
 									Token: "ghcr-token",
@@ -422,10 +365,6 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 					},
 					Hub: &HubRegistryDefaults{
 						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "test/app-hub",
-								Tag:   "1.hub.2",
-							},
 							Auth: &HubAuthDefaults{
 								Username: "hub-username",
 								Token:    "hub-token",
@@ -434,10 +373,6 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 					},
 					Quay: &QuayRegistryDefaults{
 						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "test/app-quay",
-								Tag:   "1.quay.2",
-							},
 							Auth: &QuayAuthDefaults{
 								Token: "quay-token",
 							},
@@ -447,23 +382,16 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 			},
 			want: test.TrimYAML(`
 				type: ` + PossibleTypes[0] + `
-				image: test/app
 				tag: 1.2.3
 				registry:
 					ghcr:
-						image: test/app-ghcr
-						tag: 1.ghcr.2
 						auth:
 							token: ghcr-token
 					hub:
-						image: test/app-hub
-						tag: 1.hub.2
 						auth:
 							username: hub-username
 							token: hub-token
 					quay:
-						image: test/app-quay
-						tag: 1.quay.2
 						auth:
 							token: quay-token
 			`),
@@ -535,10 +463,10 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty/ContainerDetail",
+			name: "non-empty/ContainerDetailDefaults",
 			data: &Defaults{
-				ContainerDetail: ContainerDetail{
-					Image: "a",
+				ContainerDetailDefaults: ContainerDetailDefaults{
+					Tag: "a",
 				},
 			},
 			want: false,
@@ -549,8 +477,8 @@ func TestDefaults_IsZero(t *testing.T) {
 				Registry: RegistryDefaultsSet{
 					GHCR: &GHCRRegistryDefaults{
 						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "a",
+							Auth: &GHCRAuthDefaults{
+								Token: "a",
 							},
 						},
 					},
@@ -600,8 +528,8 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 			data: &RegistryDefaultsSet{
 				GHCR: &GHCRRegistryDefaults{
 					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "ghcr-image",
+						Auth: &GHCRAuthDefaults{
+							Token: "ghcr-token",
 						},
 					},
 				},
@@ -613,8 +541,8 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 			data: &RegistryDefaultsSet{
 				Hub: &HubRegistryDefaults{
 					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "hub-image",
+						Auth: &HubAuthDefaults{
+							Token: "hub-token",
 						},
 					},
 				},
@@ -626,8 +554,8 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 			data: &RegistryDefaultsSet{
 				Quay: &QuayRegistryDefaults{
 					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "quay-image",
+						Auth: &QuayAuthDefaults{
+							Token: "quay-token",
 						},
 					},
 				},
@@ -639,22 +567,22 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 			data: &RegistryDefaultsSet{
 				GHCR: &GHCRRegistryDefaults{
 					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "ghcr-image",
+						Auth: &GHCRAuthDefaults{
+							Token: "ghcr-token",
 						},
 					},
 				},
 				Hub: &HubRegistryDefaults{
 					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "hub-image",
+						Auth: &HubAuthDefaults{
+							Token: "hub-token",
 						},
 					},
 				},
 				Quay: &QuayRegistryDefaults{
 					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "quay-image",
+						Auth: &QuayAuthDefaults{
+							Token: "quay-token",
 						},
 					},
 				},
@@ -706,17 +634,12 @@ func TestDefaults_String(t *testing.T) {
 			name: "filled",
 			rDefaults: &Defaults{
 				Type: "ghcr",
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "1.2.3",
+				ContainerDetailDefaults: ContainerDetailDefaults{
+					Tag: "1.2.3",
 				},
 				Registry: RegistryDefaultsSet{
 					GHCR: &GHCRRegistryDefaults{
 						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "a",
-								Tag:   "0",
-							},
 							Auth: &GHCRAuth{
 								GHCRAuthDefaults: GHCRAuthDefaults{
 									Token: "t1",
@@ -726,10 +649,6 @@ func TestDefaults_String(t *testing.T) {
 					},
 					Hub: &HubRegistryDefaults{
 						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "b",
-								Tag:   "1",
-							},
 							Auth: &HubAuthDefaults{
 								Username: "u1",
 								Token:    "t2",
@@ -738,10 +657,6 @@ func TestDefaults_String(t *testing.T) {
 					},
 					Quay: &QuayRegistryDefaults{
 						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "a",
-								Tag:   "0",
-							},
 							Auth: &QuayAuthDefaults{
 								Token: "t1",
 							},
@@ -750,31 +665,23 @@ func TestDefaults_String(t *testing.T) {
 				},
 				Defaults: &Defaults{
 					Type: "ghcr",
-					ContainerDetail: ContainerDetail{
-						Image: "foo",
-						Tag:   "Bar",
+					ContainerDetailDefaults: ContainerDetailDefaults{
+						Tag: "Bar",
 					},
 				},
 			},
 			want: test.TrimYAML(`
 				type: ghcr
-				image: test/app
 				tag: 1.2.3
 				registry:
 					ghcr:
-						image: a
-						tag: '0'
 						auth:
 							token: t1
 					hub:
-						image: b
-						tag: '1'
 						auth:
 							username: u1
 							token: t2
 					quay:
-						image: a
-						tag: '0'
 						auth:
 							token: t1
 			`),
@@ -830,9 +737,8 @@ func TestDefaults_Default(t *testing.T) {
 						},
 					},
 				},
-				ContainerDetail: ContainerDetail{
-					Image: "i",
-					Tag:   "t",
+				ContainerDetailDefaults: ContainerDetailDefaults{
+					Tag: "t",
 				},
 			},
 		},
@@ -878,10 +784,10 @@ func TestDefaults_Default(t *testing.T) {
 				)
 			}
 
-			// AND: the ContainerDetail Tag is defaulted.
-			if got := tc.data.ContainerDetail.Tag; got != defaultContainerDetailTag {
+			// AND: the ContainerDetailDefaults Tag is defaulted.
+			if got := tc.data.ContainerDetailDefaults.Tag; got != defaultContainerDetailTag {
 				t.Fatalf(
-					"%s .ContainerDetail.Tag value mismatch\ngot:  %q\nwant: %q",
+					"%s .ContainerDetailDefaults.Tag value mismatch\ngot:  %q\nwant: %q",
 					prefix, got, defaultContainerDetailTag,
 				)
 			}
@@ -945,11 +851,8 @@ func TestDefaults_Defaults(t *testing.T) {
 				return
 			}
 			fieldTests := []test.FieldAssertion{
-				{Name: "GHCR.Defaults", Got: defaults.Registry.GHCR.Defaults(), Want: tc.defaults.Registry.GHCR, Mode: test.CompareSamePointer},
 				{Name: "GHCR.Auth.Defaults", Got: defaults.Registry.GHCR.GetAuth().Defaults(), Want: tc.defaults.Registry.GHCR.GetAuth(), Mode: test.CompareSamePointer},
-				{Name: "Hub.Defaults", Got: defaults.Registry.Hub.Defaults(), Want: tc.defaults.Registry.Hub, Mode: test.CompareSamePointer},
 				{Name: "Hub.Auth.Defaults", Got: defaults.Registry.Hub.GetAuth().Defaults(), Want: tc.defaults.Registry.Hub.GetAuth(), Mode: test.CompareSamePointer},
-				{Name: "Quay.Defaults", Got: defaults.Registry.Quay.Defaults(), Want: tc.defaults.Registry.Quay, Mode: test.CompareSamePointer},
 				{Name: "Quay.Auth.Defaults", Got: defaults.Registry.Quay.GetAuth().Defaults(), Want: tc.defaults.Registry.Quay.GetAuth(), Mode: test.CompareSamePointer},
 			}
 			if err := test.AssertFields(t, fieldTests, prefix, "Defaults"); err != nil {
@@ -1280,34 +1183,20 @@ func TestSetRegistryDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// ContainerDetail above the 'tc.registry'.
-			defaultDetail := &ContainerDetail{}
-			// ContainerDetail above the 'tc.defaultRegistry'.
-			hardDefaultDetail := &ContainerDetail{}
-
 			// WHEN: setRegistryDefaults is called with these.
-			setRegistryDefaults(
-				tc.registry,
-				tc.defaultRegistry,
-				defaultDetail,
-				hardDefaultDetail,
-			)
+			setRegistryDefaults(tc.registry, tc.defaultRegistry)
 
 			if tc.registry == nil || tc.defaultRegistry == nil {
 				return
 			}
 			prefix := fmt.Sprintf(
-				"%s\nsetRegistryDefaults(registry=%p, defaultRegistry=%p, defaultDetail=%p, hardDefaultDetail=%p)",
-				packageName, tc.registry, tc.defaultRegistry, defaultDetail, hardDefaultDetail,
+				"%s\nsetRegistryDefaults(registry=%p, defaultRegistry=%p)",
+				packageName, tc.registry, tc.defaultRegistry,
 			)
 
-			// THEN: the defaults have been updated as expected.
+			// THEN: the auth defaults have been linked as expected.
 			fieldTests := []test.FieldAssertion{
-				{Name: "Defaults", Got: tc.registry.Defaults(), Want: tc.defaultRegistry, Mode: test.CompareSamePointer},
 				{Name: "Auth.Defaults", Got: tc.registry.GetAuth().Defaults(), Want: tc.defaultRegistry.GetAuth(), Mode: test.CompareSamePointer},
-				{Name: "Detail.Default (Registry defaults)", Got: tc.registry.GetContainerDetail().Defaults, Want: tc.defaultRegistry.GetContainerDetail(), Mode: test.CompareSamePointer},
-				{Name: "Detail.Default.Default (Root defaults)", Got: tc.registry.GetContainerDetail().Defaults.Defaults, Want: defaultDetail, Mode: test.CompareSamePointer},
-				{Name: "Detail.Default.Default.Default (Root hardDefaults)", Got: tc.registry.GetContainerDetail().Defaults.Defaults.Defaults, Want: hardDefaultDetail, Mode: test.CompareSamePointer},
 			}
 			if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
 				t.Fatal(testErr)
