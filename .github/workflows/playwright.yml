@@ -9,7 +9,7 @@ permissions:
   pull-requests: write
 concurrency:
   group: playwright-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 jobs:
   test:
     timeout-minutes: 60
