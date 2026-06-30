@@ -60,7 +60,8 @@ func TestHTTP_Config(t *testing.T) {
 			settings: &config.Settings{
 				SettingsBase: config.SettingsBase{
 					Web: config.WebSettings{
-						ListenHost: "127.0.0.1",
+						ListenHost:     "127.0.0.1",
+						DisabledRoutes: []string{"version", "websocket"},
 					},
 				},
 			},
@@ -68,7 +69,8 @@ func TestHTTP_Config(t *testing.T) {
 				{
 					"settings": {
 						"web": {
-							"listen_host": "127.0.0.1"
+							"listen_host": "127.0.0.1",
+							"disabled_routes": ["version", "websocket"]
 						}
 					}
 				}`,
