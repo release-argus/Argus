@@ -81,28 +81,6 @@ func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
 			errRegex: `string was used where mapping is expected`,
 		},
 		{
-			name:   "JSON/invalid ContainerDetail",
-			format: "json",
-			data:   `{"image": []}`,
-			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &GHCRAuth{},
-				},
-			},
-			errRegex: `^json: .*unmarshal .*$`,
-		},
-		{
-			name:   "YAML/invalid ContainerDetail",
-			format: "yaml",
-			data:   `image: []`,
-			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &GHCRAuth{},
-				},
-			},
-			errRegex: `^[^\s]+ .*unmarshal .*`,
-		},
-		{
 			name:   "JSON/invalid Auth",
 			format: "json",
 			data:   `{"auth": []}`,
@@ -156,8 +134,6 @@ func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					token: tOKEn
 			`),
@@ -166,8 +142,6 @@ func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
 			name:   "YAML/auth-ghcr",
 			format: "yaml",
 			data: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					username: ghcr-username
 					token: tOKEn
@@ -179,8 +153,6 @@ func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					token: tOKEn
 			`),
@@ -678,47 +650,9 @@ func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty/Image",
-			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/Tag",
-			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Tag: "t",
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/ContainerDetail",
-			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-						Tag:   "t",
-					},
-				},
-			},
-			want: false,
-		},
-		{
 			name: "non-empty/all",
 			registry: &GHCRRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-						Tag:   "t",
-					},
 					Auth: &GHCRAuth{
 						GHCRAuthDefaults: GHCRAuthDefaults{
 							Token:      "foo",
@@ -935,14 +869,6 @@ func TestGHCRRegistryDefaults_String(t *testing.T) {
 			name: "filled",
 			data: &GHCRRegistryDefaults{
 				CommonRegistryDefaults: CommonRegistryDefaults{
-					ContainerDetail: ContainerDetail{
-						Image: "i1",
-						Tag:   "t1",
-						Defaults: &ContainerDetail{
-							Image: "i2",
-							Tag:   "t2",
-						},
-					},
 					Auth: &GHCRAuth{
 						GHCRAuthDefaults: GHCRAuthDefaults{
 							Token: "token1",
@@ -951,31 +877,9 @@ func TestGHCRRegistryDefaults_String(t *testing.T) {
 							},
 						},
 					},
-					defaults: &GHCRRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							ContainerDetail: ContainerDetail{
-								Image: "i2",
-								Tag:   "t2",
-								Defaults: &ContainerDetail{
-									Image: "i3",
-									Tag:   "t3",
-								},
-							},
-							Auth: &GHCRAuth{
-								GHCRAuthDefaults: GHCRAuthDefaults{
-									Token: "token2",
-									defaults: &GHCRAuthDefaults{
-										Token: "token3",
-									},
-								},
-							},
-						},
-					},
 				},
 			},
 			want: test.TrimYAML(`
-				image: i1
-				tag: t1
 				auth:
 					token: token1
 			`),
@@ -1021,9 +925,8 @@ func TestGHCRRegistry_String(t *testing.T) {
 					ContainerDetail: ContainerDetail{
 						Image: "i1",
 						Tag:   "t1",
-						Defaults: &ContainerDetail{
-							Image: "i2",
-							Tag:   "t2",
+						Defaults: &ContainerDetailDefaults{
+							Tag: "t2",
 						},
 					},
 					Auth: &GHCRAuth{
@@ -1199,76 +1102,6 @@ func TestGHCRRegistry_NewRequest(t *testing.T) {
 						got, value,
 					)
 				}
-			}
-		})
-	}
-}
-
-// #######################
-// # REGISTRY | DEFAULTS #
-// #######################
-
-func TestGHCRRegistryDefaults_Defaults(t *testing.T) {
-	// GIVEN: a GHCRRegistryDefaults with defaults.
-	tests := []struct {
-		name     string
-		registry GHCRRegistryDefaults
-		wantNil  bool
-	}{
-		{
-			name:     "nil defaults",
-			registry: GHCRRegistryDefaults{},
-			wantNil:  true,
-		},
-		{
-			name: "GHCRRegistryDefaults",
-			registry: GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					defaults: &GHCRRegistryDefaults{},
-				},
-			},
-			wantNil: false,
-		},
-		{
-			name: "HubRegistryDefaults",
-			registry: GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					defaults: &HubRegistryDefaults{},
-				},
-			},
-			wantNil: false,
-		},
-		{
-			name: "QuayRegistryDefaults",
-			registry: GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					defaults: &QuayRegistryDefaults{},
-				},
-			},
-			wantNil: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN: Defaults is called on it.
-			got := tc.registry.Defaults()
-
-			// THEN: a pointer to the defaults is returned.
-			if got == nil != tc.wantNil {
-				want := "nil"
-				got := "nil"
-				if tc.wantNil {
-					want = "non-nil"
-				} else {
-					got = "non-nil"
-				}
-				t.Errorf(
-					"%s\nGHCRRegistryDefaults.Defaults() mismatch\ngot:  %s\nwant: %s",
-					packageName, got, want,
-				)
 			}
 		})
 	}

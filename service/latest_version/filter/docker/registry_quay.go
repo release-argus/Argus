@@ -134,9 +134,7 @@ func (r *QuayRegistryDefaults) IsZero() bool {
 		return true
 	}
 
-	return r.Image == "" &&
-		r.Tag == "" &&
-		(r.Auth == nil || r.Auth.IsZero())
+	return r.Auth == nil || r.Auth.IsZero()
 }
 
 // IsZero implements the yaml.IsZeroer interface.

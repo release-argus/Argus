@@ -2020,7 +2020,7 @@ func TestLatestVersionDefaults_IsZero(t *testing.T) {
 			defaults: LatestVersionDefaults{
 				Require: &LatestVersionRequireDefaults{
 					Docker: RequireDockerDefaults{
-						Image: "a",
+						Tag: "a",
 					},
 				},
 			},
@@ -2035,7 +2035,7 @@ func TestLatestVersionDefaults_IsZero(t *testing.T) {
 				UsePreRelease:     test.Ptr(false),
 				Require: &LatestVersionRequireDefaults{
 					Docker: RequireDockerDefaults{
-						Image: "a",
+						Tag: "a",
 					},
 				},
 			},
@@ -2146,7 +2146,7 @@ func TestLatestVersionRequireDefaults_IsZero(t *testing.T) {
 			name: "non-empty",
 			defaults: LatestVersionRequireDefaults{
 				Docker: RequireDockerDefaults{
-					Image: "a",
+					Tag: "a",
 				},
 			},
 			want: false,
@@ -2278,10 +2278,6 @@ func TestRequireDockerRegistriesDefaults_IsZero(t *testing.T) {
 			name: "non-empty",
 			defaults: RequireDockerRegistriesDefaults{
 				GHCR: &RequireDockerRegistryDefaultsToken{
-					RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
-						Image: "image",
-						Tag:   "tag",
-					},
 					RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
 						Token: "token",
 					},
@@ -2403,45 +2399,6 @@ func TestRequireDockerRegistryDefaultsAuthWithUsername_IsZero(t *testing.T) {
 	}
 }
 
-func TestRequireDockerRegistryDefaultsBase_IsZero(t *testing.T) {
-	// GIVEN: RequireDockerRegistryDefaultsBase.
-	tests := []struct {
-		name     string
-		defaults RequireDockerRegistryDefaultsBase
-		want     bool
-	}{
-		{
-			name:     "empty",
-			defaults: RequireDockerRegistryDefaultsBase{},
-			want:     true,
-		},
-		{
-			name: "non-empty",
-			defaults: RequireDockerRegistryDefaultsBase{
-				Image: "image",
-				Tag:   "tag",
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN: IsZero() is called on it.
-			got := tc.defaults.IsZero()
-
-			// THEN: the result is as expected.
-			if got != tc.want {
-				t.Errorf(
-					"%s\nRequireDockerRegistryDefaultsBase.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
-			}
-		})
-	}
-}
-
 func TestRequireDockerRegistryDefaultsToken_IsZero(t *testing.T) {
 	// GIVEN: RequireDockerRegistryDefaultsToken.
 	tests := []struct {
@@ -2459,29 +2416,6 @@ func TestRequireDockerRegistryDefaultsToken_IsZero(t *testing.T) {
 			defaults: RequireDockerRegistryDefaultsToken{
 				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
 					Token: "t",
-				},
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/RequireDockerRegistryDefaultsBase",
-			defaults: RequireDockerRegistryDefaultsToken{
-				RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
-					Image: "image",
-					Tag:   "tag",
-				},
-			},
-			want: false,
-		},
-		{
-			name: "non-empty",
-			defaults: RequireDockerRegistryDefaultsToken{
-				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-					Token: "t",
-				},
-				RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
-					Image: "image",
-					Tag:   "tag",
 				},
 			},
 			want: false,
@@ -2560,34 +2494,8 @@ func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_IsZero(t *testing.T
 			want:     true,
 		},
 		{
-			name: "non-empty/RequireDockerRegistryDefaultsBase",
-			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
-				RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
-					Image: "i",
-					Tag:   "t",
-				},
-			},
-			want: false,
-		},
-		{
 			name: "non-empty/RequireDockerRegistryDefaultsAuthWithUsername",
 			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
-				RequireDockerRegistryDefaultsAuthWithUsername: RequireDockerRegistryDefaultsAuthWithUsername{
-					Username: "u",
-					RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-						Token: "t",
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "non-empty",
-			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
-				RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
-					Image: "i",
-					Tag:   "t",
-				},
 				RequireDockerRegistryDefaultsAuthWithUsername: RequireDockerRegistryDefaultsAuthWithUsername{
 					Username: "u",
 					RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
@@ -2632,10 +2540,6 @@ func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_GetToken(t *testing
 		{
 			name: "non-empty",
 			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
-				RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
-					Image: "i",
-					Tag:   "t",
-				},
 				RequireDockerRegistryDefaultsAuthWithUsername: RequireDockerRegistryDefaultsAuthWithUsername{
 					Username: "u",
 					RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
@@ -2685,13 +2589,6 @@ func TestRequireDockerDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty/Image",
-			d: RequireDockerDefaults{
-				Image: "i",
-			},
-			want: false,
-		},
-		{
 			name: "non-empty/Tag",
 			d: RequireDockerDefaults{
 				Tag: "t",
@@ -2703,10 +2600,6 @@ func TestRequireDockerDefaults_IsZero(t *testing.T) {
 			d: RequireDockerDefaults{
 				Registry: RequireDockerRegistriesDefaults{
 					GHCR: &RequireDockerRegistryDefaultsToken{
-						RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
-							Image: "i",
-							Tag:   "t",
-						},
 						RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
 							Token: "token",
 						},
@@ -2718,15 +2611,10 @@ func TestRequireDockerDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			d: RequireDockerDefaults{
-				Type:  "t",
-				Image: "i",
-				Tag:   "t",
+				Type: "t",
+				Tag:  "t",
 				Registry: RequireDockerRegistriesDefaults{
 					GHCR: &RequireDockerRegistryDefaultsToken{
-						RequireDockerRegistryDefaultsBase: RequireDockerRegistryDefaultsBase{
-							Image: "i",
-							Tag:   "t",
-						},
 						RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
 							Token: "token",
 						},

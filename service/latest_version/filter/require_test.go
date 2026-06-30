@@ -72,35 +72,6 @@ func TestRequire_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty/Docker/.Image from defaults, no .Tag",
-			req: test.Must(t, func() (*Require, error) {
-				data := []byte(test.TrimYAML(`
-					docker:
-						type: hub
-						image: foo
-				`))
-				defaults, _ := DecodeDefaults("yaml", data)
-				hardDefaults, _ := DecodeDefaults("yaml", nil)
-				defaults.SetDefaults(hardDefaults)
-				svcStatus, _ := statustest.New("yaml", nil)
-
-				req, err := Decode(
-					"yaml", []byte(test.TrimYAML(`
-						docker: {}
-					`)),
-					svcStatus,
-					defaults,
-				)
-				req.Docker.(*docker.HubRegistry).Tag = ""
-
-				if req.Docker.GetImage() == "" {
-					t.Fatal("non-empty/Docker/.Image should not be empty")
-				}
-				return req, err
-			}),
-			want: true,
-		},
-		{
 			name: "non-empty/Docker/.Tag from defaults, no .Image",
 			req: test.Must(t, func() (*Require, error) {
 				data := []byte(test.TrimYAML(`

@@ -98,24 +98,17 @@ func TestHTTP_Config(t *testing.T) {
 								"yaml", []byte(test.TrimYAML(`
 									docker:
 										type: hub
-										image: i
 										tag: t
 										registry:
 											ghcr:
-												image: iGHCR
-												tag: tGHCR
 												auth:
 													username: something
 													token: ghp_X
 											hub:
-												image: iHub
-												tag: tHub
 												auth:
 													username: something
 													token: hub_X
 											quay:
-												image: iQuay
-												tag: tQuay
 												auth:
 													username: something
 													token: quay_X
@@ -144,27 +137,20 @@ func TestHTTP_Config(t *testing.T) {
 								"require": {
 									"docker": {
 										"type": "hub",
-										"image": "i",
 										"tag": "t",
 										"registry": {
 											"ghcr": {
-												"image": "iGHCR",
-												"tag": "tGHCR",
 												"auth": {
 													"token": ` + secretValueMarshalled + `
 												}
 											},
 											"hub": {
-												"image": "iHub",
-												"tag": "tHub",
 												"auth": {
 													"username": "something",
 													"token": ` + secretValueMarshalled + `
 												}
 											},
 											"quay": {
-												"image": "iQuay",
-												"tag": "tQuay",
 												"auth": {
 													"token": ` + secretValueMarshalled + `
 												}
@@ -202,24 +188,17 @@ func TestHTTP_Config(t *testing.T) {
 								"yaml", []byte(test.TrimYAML(`
 									docker:
 										type: hub
-										image: i
 										tag: t
 										registry:
 											ghcr:
-												image: iGHCR
-												tag: tGHCR
 												auth:
 													username: something
 													token: ghp_X
 											hub:
-												image: iHub
-												tag: tHub
 												auth:
 													username: something
 													token: hub_X
 											quay:
-												image: iQuay
-												tag: tQuay
 												auth:
 													username: something
 													token: quay_X
@@ -260,27 +239,20 @@ func TestHTTP_Config(t *testing.T) {
 								"require": {
 									"docker": {
 										"type": "hub",
-										"image": "i",
 										"tag": "t",
 										"registry": {
 											"ghcr": {
-												"image": "iGHCR",
-												"tag": "tGHCR",
 												"auth": {
 													"token": ` + secretValueMarshalled + `
 												}
 											},
 											"hub": {
-												"image": "iHub",
-												"tag": "tHub",
 												"auth": {
 													"username": "something",
 													"token": ` + secretValueMarshalled + `
 												}
 											},
 											"quay": {
-												"image": "iQuay",
-												"tag": "tQuay",
 												"auth": {
 													"token": ` + secretValueMarshalled + `
 												}
@@ -328,24 +300,17 @@ func TestHTTP_Config(t *testing.T) {
 								"yaml", []byte(test.TrimYAML(`
 									docker:
 										type: hub
-										image: i
 										tag: t
 										registry:
 											ghcr:
-												image: iGHCR
-												tag: tGHCR
 												auth:
 													username: something
 													token: ghp_X
 											hub:
-												image: iHub
-												tag: tHub
 												auth:
 													username: something
 													token: hub_X
 											quay:
-												image: iQuay
-												tag: tQuay
 												auth:
 													username: something
 													token: quay_X
@@ -400,27 +365,20 @@ func TestHTTP_Config(t *testing.T) {
 								"require": {
 									"docker": {
 										"type": "hub",
-										"image": "i",
 										"tag": "t",
 										"registry": {
 											"ghcr": {
-												"image": "iGHCR",
-												"tag": "tGHCR",
 												"auth": {
 													"token": ` + secretValueMarshalled + `
 												}
 											},
 											"hub": {
-												"image": "iHub",
-												"tag": "tHub",
 												"auth": {
 													"username": "something",
 													"token": ` + secretValueMarshalled + `
 												}
 											},
 											"quay": {
-												"image": "iQuay",
-												"tag": "tQuay",
 												"auth": {
 													"token": ` + secretValueMarshalled + `
 												}
@@ -494,27 +452,20 @@ func TestHTTP_Config(t *testing.T) {
 								"require": {
 									"docker": {
 										"type": "hub",
-										"image": "i",
 										"tag": "t",
 										"registry": {
 											"ghcr": {
-												"image": "iGHCR",
-												"tag": "tGHCR",
 												"auth": {
 													"token": ` + secretValueMarshalled + `
 												}
 											},
 											"hub": {
-												"image": "iHub",
-												"tag": "tHub",
 												"auth": {
 													"username": "something",
 													"token": ` + secretValueMarshalled + `
 												}
 											},
 											"quay": {
-												"image": "iQuay",
-												"tag": "tQuay",
 												"auth": {
 													"token": ` + secretValueMarshalled + `
 												}
@@ -618,27 +569,20 @@ func TestHTTP_Config(t *testing.T) {
 								"require": {
 									"docker": {
 										"type": "hub",
-										"image": "i",
 										"tag": "t",
 										"registry": {
 											"ghcr": {
-												"image": "iGHCR",
-												"tag": "tGHCR",
 												"auth": {
 													"token": ` + secretValueMarshalled + `
 												}
 											},
 											"hub": {
-												"image": "iHub",
-												"tag": "tHub",
 												"auth": {
 													"username": "something",
 													"token": ` + secretValueMarshalled + `
 												}
 											},
 											"quay": {
-												"image": "iQuay",
-												"tag": "tQuay",
 												"auth": {
 													"token": ` + secretValueMarshalled + `
 												}

@@ -20,11 +20,17 @@ import "github.com/release-argus/Argus/util"
 // # TYPES #
 // #########
 
-// ContainerDetail holds details about a Docker container.
+// ContainerDetail holds the image and tag for a Docker registry query.
 type ContainerDetail struct {
-	Image    string           `json:"image,omitempty" yaml:"image,omitempty"` // Image of the container.
-	Tag      string           `json:"tag,omitempty" yaml:"tag,omitempty"`     // Tag of the Image.
-	Defaults *ContainerDetail `json:"-" yaml:"-"`                             // Default values for ContainerDetail.
+	Image    string                   `json:"image,omitempty" yaml:"image,omitempty"` // Image of the container.
+	Tag      string                   `json:"tag,omitempty" yaml:"tag,omitempty"`     // Tag of the Image.
+	Defaults *ContainerDetailDefaults `json:"-" yaml:"-"`                             // Tag default chain.
+}
+
+// ContainerDetailDefaults holds default container values.
+type ContainerDetailDefaults struct {
+	Tag      string                   `json:"tag,omitempty" yaml:"tag,omitempty"` // Default Tag template.
+	Defaults *ContainerDetailDefaults `json:"-" yaml:"-"`                         // Next link in the defaults chain.
 }
 
 // #########
@@ -35,6 +41,11 @@ type ContainerDetail struct {
 func (c *ContainerDetail) IsZero() bool {
 	return c.Image == "" &&
 		c.Tag == ""
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (c *ContainerDetailDefaults) IsZero() bool {
+	return c == nil || c.Tag == ""
 }
 
 // Copy returns a deep copy of the receiver.
@@ -51,7 +62,7 @@ func (c *ContainerDetail) Copy() ContainerDetail {
 // ############
 
 // Default sets the values of the receiver to their default values.
-func (c *ContainerDetail) Default() {
+func (c *ContainerDetailDefaults) Default() {
 	c.Tag = "{{ version }}"
 }
 
@@ -59,19 +70,22 @@ func (c *ContainerDetail) Default() {
 // # VALUES #
 // ##########
 
-// GetImage returns the container image, resolving defaults and environment variables.
+// GetImage returns the container image, resolving environment variables.
 func (c *ContainerDetail) GetImage() string {
-	for detail := c; detail != nil; detail = detail.Defaults {
-		if detail.Image != "" {
-			return util.EvalEnvVars(detail.Image)
-		}
-	}
-
-	return ""
+	return util.EvalEnvVars(c.Image)
 }
 
 // GetTag returns the container tag, resolving defaults and environment variables.
 func (c *ContainerDetail) GetTag() string {
+	if c.Tag != "" {
+		return util.EvalEnvVars(c.Tag)
+	}
+
+	return c.Defaults.GetTag()
+}
+
+// GetTag returns the default container tag, resolving defaults and environment variables.
+func (c *ContainerDetailDefaults) GetTag() string {
 	for detail := c; detail != nil; detail = detail.Defaults {
 		if detail.Tag != "" {
 			return util.EvalEnvVars(detail.Tag)

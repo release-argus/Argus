@@ -70,17 +70,7 @@ type RegistryDefaults interface {
 	// GetType returns the fixed registry kind (e.g. "hub", "ghcr", "quay").
 	GetType() string
 
-	GetContainerDetail() *ContainerDetail
 	GetAuth() RegistryAuthDefaults
-	GetImage() string
-	GetTag() string
-
-	// Defaults returns the next link in the registry defaults chain.
-	Defaults() RegistryDefaults
-
-	// SetDefaults applies defaults to the receiver.
-	// receiver -> rDefaults -> defaultDetail -> hardDefaultDetail.
-	SetDefaults(rDefaults RegistryDefaults, defaultDetail, hardDefaultDetail *ContainerDetail)
 
 	// String returns a YAML string representation of the receiver.
 	String(prefix string) string

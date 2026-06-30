@@ -48,11 +48,8 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			format:   "json",
 			data:     "",
 			registry: &CommonRegistryDefaults{},
-			errRegex: test.TrimYAML(`
-				^jsontext:
-					unexpected EOF$`,
-			),
-			want: "",
+			errRegex: `^$`,
+			want:     "{}\n",
 		},
 		{
 			name:     "JSON/empty object",
@@ -83,20 +80,6 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			data:     "foo",
 			registry: &CommonRegistryDefaults{},
 			errRegex: `string was used where mapping is expected`,
-		},
-		{
-			name:     "JSON/invalid ContainerDetail",
-			format:   "json",
-			data:     `{"image": []}`,
-			registry: &CommonRegistryDefaults{},
-			errRegex: `^json: .*unmarshal.*`,
-		},
-		{
-			name:     "YAML/invalid ContainerDetail",
-			format:   "yaml",
-			data:     `image: []`,
-			registry: &CommonRegistryDefaults{},
-			errRegex: `^[^\s]+ .*unmarshal .*`,
 		},
 		{
 			name:   "JSON/auth invalid data type",
@@ -138,8 +121,6 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					token: tOKEn
 			`),
@@ -148,8 +129,6 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			name:   "YAML/auth-ghcr",
 			format: "yaml",
 			data: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					username: ghcr-username
 					token: tOKEn
@@ -159,8 +138,6 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					token: tOKEn
 			`),
@@ -181,8 +158,6 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					username: hub-username
 					token: tOKEn
@@ -192,8 +167,6 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			name:   "YAML/auth-hub",
 			format: "yaml",
 			data: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					username: hub-username
 					token: tOKEn
@@ -203,8 +176,6 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					username: hub-username
 					token: tOKEn
@@ -226,8 +197,6 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					token: tOKEn
 			`),
@@ -236,8 +205,6 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			name:   "YAML/auth-quay",
 			format: "yaml",
 			data: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					username: quay-username
 					token: tOKEn
@@ -247,8 +214,6 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				image: i
-				tag: t
 				auth:
 					token: tOKEn
 			`),
@@ -328,20 +293,6 @@ func TestCommonRegistry_Unmarshal(t *testing.T) {
 			data:     "foo",
 			registry: &CommonRegistry{},
 			errRegex: `string was used where mapping is expected`,
-		},
-		{
-			name:     "JSON/invalid ContainerDetail",
-			format:   "json",
-			data:     `{"image": []}`,
-			registry: &CommonRegistry{},
-			errRegex: `^json: .*unmarshal.*`,
-		},
-		{
-			name:     "YAML/invalid ContainerDetail",
-			format:   "yaml",
-			data:     `image: []`,
-			registry: &CommonRegistry{},
-			errRegex: `^[^\s]+ .*unmarshal .*`,
 		},
 		{
 			name:   "JSON/invalid Auth",
@@ -497,6 +448,20 @@ func TestCommonRegistry_Unmarshal(t *testing.T) {
 				auth:
 					token: tOKEn
 			`),
+		},
+		{
+			name:     "JSON/invalid ContainerDetail",
+			format:   "json",
+			data:     `{"image": []}`,
+			registry: &CommonRegistry{},
+			errRegex: `^json: .*unmarshal.*`,
+		},
+		{
+			name:     "YAML/invalid ContainerDetail",
+			format:   "yaml",
+			data:     `image: []`,
+			registry: &CommonRegistry{},
+			errRegex: `^[^\s]+ .*unmarshal .*`,
 		},
 	}
 
@@ -790,201 +755,6 @@ func TestCommonRegistry_String(t *testing.T) {
 // # REGISTRY | DEFAULTS #
 // #######################
 
-func TestCommonRegistryDefaults_Defaults(t *testing.T) {
-	// GIVEN: a fresh CommonRegistryDefaults.
-	var registry CommonRegistryDefaults
-
-	// WHEN: Defaults is called on it.
-	got := registry.Defaults()
-
-	// THEN: nil is received.
-	if got != nil {
-		t.Errorf(
-			"%s\nfresh CommonRegistryDefaults\ngot:  %v\nwant: nil",
-			packageName, got,
-		)
-	}
-
-	for _, dType := range PossibleTypes {
-		t.Run(dType, func(t *testing.T) {
-			// GIVEN: Defaults.
-			defaults := Defaults{
-				Registry: RegistryDefaultsSet{
-					GHCR: &GHCRRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &HubAuthDefaults{
-								Token: "ghcr-token",
-							},
-						},
-					},
-					Hub: &HubRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &HubAuthDefaults{
-								Token:    "hub-token",
-								Username: "hub-username",
-							},
-						},
-					},
-					Quay: &QuayRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &HubAuthDefaults{
-								Token: "hub-token",
-							},
-						},
-					},
-				},
-			}
-			registry.Auth = RegistryMap[dType]().GetAuth()
-			rDefaults := getRegistryDefaults(dType, &defaults)
-			rootContainerDetail := ContainerDetail{}
-
-			// WHEN: SetDefaults is called with them.
-			registry.SetDefaults(rDefaults, &rootContainerDetail, &defaults.ContainerDetail)
-
-			prefix := fmt.Sprintf(
-				"%s\nSetDefaults(type=%q, defaults=%+v)\n",
-				packageName, dType, defaults,
-			)
-
-			// THEN: Defaults is set to the corresponding type defaults.
-			got := registry.Defaults()
-			var want RegistryDefaults
-			if want = getRegistryDefaults(dType, &defaults); want == nil {
-				t.Fatalf(
-					"%s expected defaults for registry type %q, but none found in %+v",
-					prefix, dType, defaults,
-				)
-			}
-			if got != want {
-				t.Fatalf(
-					"%s .Defaults() pointer mismatch\ngot:  %p\nwant: %p",
-					prefix, got, want,
-				)
-			}
-
-			// AND: Defaults are handed out as expected.
-			fieldTests := []test.FieldAssertion{
-				{Name: "GetContainerDetail()", Got: got.GetContainerDetail(), Want: want.GetContainerDetail(), Mode: test.CompareSamePointer},
-				{Name: "GetContainerDetail().Defaults", Got: got.GetContainerDetail().Defaults, Want: want.GetContainerDetail().Defaults, Mode: test.CompareSamePointer},
-				{Name: "GetAuth()", Got: got.GetAuth(), Want: want.GetAuth(), Mode: test.CompareSamePointer},
-			}
-			if err := test.AssertFields(t, fieldTests, prefix, "CommonRegistryDefaults"); err != nil {
-				t.Fatal(err)
-			}
-
-			// AND: ContainerDetail is chained as expected.
-			fieldTests = []test.FieldAssertion{
-				{ // Layer 1: Registry HardDefaults
-					Name: "L1: Registry.ContainerDetail.Defaults -> HardDefaults.Registry.ContainerDetail",
-					Got:  registry.ContainerDetail.Defaults,
-					Want: rDefaults.GetContainerDetail(),
-					Mode: test.CompareSamePointer,
-				},
-				{ // Layer 2: Root Defaults
-					Name: "L2: LatestVersion.Require.Docker.Registry.GHCR.ContainerDetail.Defaults.Defaults -> Defaults.ContainerDetail",
-					Got:  registry.ContainerDetail.Defaults.Defaults,
-					Want: &rootContainerDetail,
-					Mode: test.CompareSamePointer,
-				},
-				{ // Layer 3: Root HardDefaults
-					Name: "L3: LatestVersion.Require.Docker.Registry.GHCR.ContainerDetail.Defaults.Defaults.Defaults -> HardDefaults.ContainerDetail",
-					Got:  registry.ContainerDetail.Defaults.Defaults.Defaults,
-					Want: &defaults.ContainerDetail,
-					Mode: test.CompareSamePointer,
-				},
-			}
-			if err := test.AssertFields(t, fieldTests, prefix, "CommonRegistryDefaults.ContainerDetail"); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestCommonRegistryDefaults_Defaults__nil(t *testing.T) {
-	// GIVEN: a fresh CommonRegistryDefaults.
-	var registry CommonRegistryDefaults
-
-	// WHEN: Defaults is called on it.
-	got := registry.Defaults()
-
-	// THEN: nil is received.
-	if got != nil {
-		t.Errorf(
-			"%s\nfresh CommonRegistryDefaults\ngot:  %v\nwant: nil",
-			packageName, got,
-		)
-	}
-
-	// ---
-
-	// GIVEN: nil Defaults.
-	var defaults *Defaults
-
-	for _, dType := range PossibleTypes {
-		var rDefaults RegistryDefaults
-		registry.Auth = RegistryMap[dType]().GetAuth()
-
-		// WHEN: SetDefaults is called with them.
-		registry.SetDefaults(
-			rDefaults,
-			&ContainerDetail{},
-			&ContainerDetail{},
-		)
-
-		prefix := fmt.Sprintf(
-			"%s\nSetDefaults(%q)",
-			packageName, dType,
-		)
-
-		// THEN: Defaults remain nil.
-		if registry.Defaults(); got != nil {
-			t.Fatalf(
-				"%s Registry defaults mismatch\ngot:  %v\nwant: nil",
-				prefix, got,
-			)
-		}
-	}
-
-	// ---
-
-	// GIVEN: Defaults with nil Registry.* values.
-	defaults = &Defaults{
-		Registry: RegistryDefaultsSet{
-			GHCR: nil,
-			Hub:  nil,
-			Quay: nil,
-		},
-	}
-	for _, dType := range PossibleTypes {
-		registry.Auth = RegistryMap[dType]().GetAuth()
-
-		rDefaults := getRegistryDefaults(dType, defaults)
-
-		// WHEN: SetDefaults is called with them.
-		registry.SetDefaults(
-			rDefaults,
-			&ContainerDetail{},
-			&ContainerDetail{},
-		)
-
-		// THEN: Defaults is set to the corresponding type defaults.
-		if got := registry.Defaults(); got != nil {
-			t.Fatalf(
-				"%s\nDefaults mismatch after SetDefaults(%q)\ngot:  %v\nwant: nil",
-				packageName, dType, got,
-			)
-		}
-
-		// AND: Defaults of Auth are set to the corresponding type defaults.
-		if got := registry.Auth.Defaults(); got != nil {
-			t.Fatalf(
-				"%s\nAuth defaults mismatch after SetDefaults(%q)\ngot:  %v\nwant: nil",
-				packageName, dType, got,
-			)
-		}
-	}
-}
-
 func TestCommonRegistry_Defaults(t *testing.T) {
 	// GIVEN: a fresh CommonRegistry.
 	var registry CommonRegistry
@@ -1211,49 +981,15 @@ func TestCommonRegistry_GetImageSelf(t *testing.T) {
 		want     string
 	}{
 		{
-			name: "GHCR",
-			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "image-here",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "other-image-here",
-						},
-					},
-				},
-			},
-			want: "image-here",
+			name:     "empty",
+			registry: CommonRegistry{},
+			want:     "",
 		},
 		{
-			name: "Hub",
+			name: "image set",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
 					Image: "image-here",
-				},
-				defaults: &HubRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "other-image-here",
-						},
-					},
-				},
-			},
-			want: "image-here",
-		},
-		{
-			name: "Quay",
-			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "image-here",
-				},
-				defaults: &QuayRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "other-image-here",
-						},
-					},
 				},
 			},
 			want: "image-here",
@@ -1279,135 +1015,25 @@ func TestCommonRegistry_GetImageSelf(t *testing.T) {
 }
 
 func TestCommonRegistry_GetImage(t *testing.T) {
-	// GIVEN: a DockerCheck with an image.
+	// GIVEN: a CommonRegistry with an image.
 	tests := []struct {
 		name     string
 		registry CommonRegistry
 		want     string
 	}{
 		{
-			name: "empty image",
-			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "",
-						},
-					},
-				},
-			},
-			want: "",
+			name:     "empty image",
+			registry: CommonRegistry{},
+			want:     "",
 		},
 		{
-			name: "Image from root",
+			name: "image set",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
-					Image: "test/app-root",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "",
-						},
-					},
+					Image: "test/app",
 				},
 			},
-			want: "test/app-root",
-		},
-		{
-			name: "Image from defaults",
-			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "test/app-defaults",
-						},
-						defaults: &GHCRRegistryDefaults{
-							CommonRegistryDefaults: CommonRegistryDefaults{
-								ContainerDetail: ContainerDetail{
-									Image: "",
-								},
-							},
-						},
-					},
-				},
-			},
-			want: "test/app-defaults",
-		},
-		{
-			name: "Image from hardDefaults",
-			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "",
-						},
-						defaults: &GHCRRegistryDefaults{
-							CommonRegistryDefaults: CommonRegistryDefaults{
-								ContainerDetail: ContainerDetail{
-									Image: "test/app-hardDefaults",
-								},
-							},
-						},
-					},
-				},
-			},
-			want: "test/app-hardDefaults",
-		},
-		{
-			name: "Image from root, ignore defaults and hardDefaults",
-			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "test/app-root",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "test/app-defaults",
-						},
-						defaults: &GHCRRegistryDefaults{
-							CommonRegistryDefaults: CommonRegistryDefaults{
-								ContainerDetail: ContainerDetail{
-									Image: "test/app-hardDefaults",
-								},
-							},
-						},
-					},
-				},
-			},
-			want: "test/app-root",
-		},
-		{
-			name: "Image from defaults, ignore hardDefaults",
-			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "test/app-defaults",
-						},
-						defaults: &GHCRRegistryDefaults{
-							CommonRegistryDefaults: CommonRegistryDefaults{
-								ContainerDetail: ContainerDetail{
-									Image: "test/app-hardDefaults",
-								},
-							},
-						},
-					},
-				},
-			},
-			want: "test/app-defaults",
+			want: "test/app",
 		},
 	}
 
@@ -1418,7 +1044,7 @@ func TestCommonRegistry_GetImage(t *testing.T) {
 			// WHEN: GetImage is called on it.
 			got := tc.registry.GetImage()
 
-			// THEN: the expected Tag is returned.
+			// THEN: the expected image is returned.
 			if got != tc.want {
 				t.Errorf(
 					"%s\nCommonRegistry.GetImage() mismatch\ngot:  %q\nwant: %q",
@@ -1437,52 +1063,29 @@ func TestCommonRegistry_GetTagSelf(t *testing.T) {
 		want     string
 	}{
 		{
-			name: "GHCR",
+			name:     "empty",
+			registry: CommonRegistry{},
+			want:     "",
+		},
+		{
+			name: "tag set",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
 					Tag: "tag-here",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "other-tag-here",
-						},
-					},
 				},
 			},
 			want: "tag-here",
 		},
 		{
-			name: "Hub",
+			name: "tag ignored in defaults",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
-					Tag: "tag-here",
-				},
-				defaults: &HubRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "other-tag-here",
-						},
+					Defaults: &ContainerDetailDefaults{
+						Tag: "tag-defaults",
 					},
 				},
 			},
-			want: "tag-here",
-		},
-		{
-			name: "Quay",
-			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Tag: "tag-here",
-				},
-				defaults: &QuayRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "other-tag-here",
-						},
-					},
-				},
-			},
-			want: "tag-here",
+			want: "",
 		},
 	}
 
@@ -1505,135 +1108,78 @@ func TestCommonRegistry_GetTagSelf(t *testing.T) {
 }
 
 func TestCommonRegistry_GetTag(t *testing.T) {
-	// GIVEN: a DockerCheck with a tag.
+	// GIVEN: a CommonRegistry with a tag default chain.
 	tests := []struct {
 		name     string
 		registry CommonRegistry
 		want     string
 	}{
 		{
-			name: "empty tag",
-			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Tag: "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "",
-						},
-					},
-				},
-			},
-			want: "",
+			name:     "empty tag",
+			registry: CommonRegistry{},
+			want:     "",
 		},
 		{
-			name: "Tag from root",
+			name: "Tag from instance",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
-					Tag: "test/app-root",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "",
-						},
-					},
+					Tag: "t-instance",
 				},
 			},
-			want: "test/app-root",
+			want: "t-instance",
 		},
 		{
 			name: "Tag from defaults",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
-					Tag: "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "test/app-defaults",
-						},
-						defaults: &GHCRRegistryDefaults{
-							CommonRegistryDefaults: CommonRegistryDefaults{
-								ContainerDetail: ContainerDetail{
-									Tag: "",
-								},
-							},
-						},
+					Defaults: &ContainerDetailDefaults{
+						Tag: "t-defaults",
 					},
 				},
 			},
-			want: "test/app-defaults",
+			want: "t-defaults",
 		},
 		{
 			name: "Tag from hardDefaults",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
-					Tag: "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "",
-						},
-						defaults: &GHCRRegistryDefaults{
-							CommonRegistryDefaults: CommonRegistryDefaults{
-								ContainerDetail: ContainerDetail{
-									Tag: "test/app-hardDefaults",
-								},
-							},
+					Defaults: &ContainerDetailDefaults{
+						Defaults: &ContainerDetailDefaults{
+							Tag: "t-hardDefaults",
 						},
 					},
 				},
 			},
-			want: "test/app-hardDefaults",
+			want: "t-hardDefaults",
 		},
 		{
-			name: "Tag from root, ignore defaults and hardDefaults",
+			name: "Tag from instance, ignore defaults and hardDefaults",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
-					Tag: "test/app-root",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "test/app-defaults",
-						},
-						defaults: &GHCRRegistryDefaults{
-							CommonRegistryDefaults: CommonRegistryDefaults{
-								ContainerDetail: ContainerDetail{
-									Tag: "test/app-hardDefaults",
-								},
-							},
+					Tag: "t-instance",
+					Defaults: &ContainerDetailDefaults{
+						Tag: "t-defaults",
+						Defaults: &ContainerDetailDefaults{
+							Tag: "t-hardDefaults",
 						},
 					},
 				},
 			},
-			want: "test/app-root",
+			want: "t-instance",
 		},
 		{
 			name: "Tag from defaults, ignore hardDefaults",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
-					Tag: "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "test/app-defaults",
-						},
-						defaults: &GHCRRegistryDefaults{
-							CommonRegistryDefaults: CommonRegistryDefaults{
-								ContainerDetail: ContainerDetail{
-									Tag: "test/app-hardDefaults",
-								},
-							},
+					Defaults: &ContainerDetailDefaults{
+						Tag: "t-defaults",
+						Defaults: &ContainerDetailDefaults{
+							Tag: "t-hardDefaults",
 						},
 					},
 				},
 			},
-			want: "test/app-defaults",
+			want: "t-defaults",
 		},
 	}
 
@@ -1676,23 +1222,6 @@ func TestCommonRegistry_CheckValues(t *testing.T) {
 					Tag:   "1.2.3",
 				},
 				defaults: nil,
-			},
-		},
-		{
-			name:     "image in defaults",
-			errRegex: `^$`,
-			input: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "",
-					Tag:   "1.2.3",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "test/app",
-						},
-					},
-				},
 			},
 		},
 		{
@@ -1768,12 +1297,8 @@ func TestCommonRegistry_CheckValues(t *testing.T) {
 				ContainerDetail: ContainerDetail{
 					Image: "test/app",
 					Tag:   "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "1.2.3",
-						},
+					Defaults: &ContainerDetailDefaults{
+						Tag: "1.2.3",
 					},
 				},
 			},
@@ -1827,13 +1352,6 @@ func TestCommonRegistry_GetTagForVersion(t *testing.T) {
 				ContainerDetail: ContainerDetail{
 					Tag: "",
 				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "",
-						},
-					},
-				},
 			},
 			version: "3.2.1",
 			want:    "",
@@ -1844,13 +1362,6 @@ func TestCommonRegistry_GetTagForVersion(t *testing.T) {
 				ContainerDetail: ContainerDetail{
 					Tag: "1.2.3",
 				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "1.2.3",
-						},
-					},
-				},
 			},
 			version: "3.2.1",
 			want:    "1.2.3",
@@ -1860,13 +1371,6 @@ func TestCommonRegistry_GetTagForVersion(t *testing.T) {
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
 					Tag: "{{ version }}.1",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Tag: "{{ version }}.1",
-						},
-					},
 				},
 			},
 			version: "3.2",
@@ -1952,49 +1456,6 @@ func TestCommonRegistry_ParseBody(t *testing.T) {
 	}
 }
 
-func TestCommonRegistryDefaults_GetContainerDetail(t *testing.T) {
-	// GIVEN: a ContainerDetail.
-	tests := []struct {
-		name   string
-		detail ContainerDetail
-	}{
-		{
-			name:   "empty",
-			detail: ContainerDetail{},
-		},
-		{
-			name: "image and tag",
-			detail: ContainerDetail{
-				Image: "foo",
-				Tag:   "bar",
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// AND: a CommonRegistryDefaults with this ContainerDetail.
-			defaults := CommonRegistryDefaults{
-				ContainerDetail: tc.detail,
-			}
-			want := &defaults.ContainerDetail
-
-			// WHEN: GetContainerDetail is called on it.
-			got := defaults.GetContainerDetail()
-
-			// THEN: a pointer to this ContainerDetail is returned.
-			if got != want {
-				t.Errorf(
-					"%s\nCommonRegistryDefaults.GetContainerDetail() pointer mismatch\ngot:  %p\nwant: %p",
-					packageName, got, want,
-				)
-			}
-		})
-	}
-}
-
 func TestCommonRegistry_Detail(t *testing.T) {
 	// GIVEN: a CommonRegistry.
 	tests := []struct {
@@ -2027,14 +1488,8 @@ func TestCommonRegistry_Detail(t *testing.T) {
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
 					Image: "foo",
-					Tag:   "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "default-foo",
-							Tag:   "default-bar",
-						},
+					Defaults: &ContainerDetailDefaults{
+						Tag: "default-bar",
 					},
 				},
 			},
@@ -2044,103 +1499,51 @@ func TestCommonRegistry_Detail(t *testing.T) {
 			},
 		},
 		{
-			name: "image from defaults/tag from root",
+			name: "tag from root, no image",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
-					Image: "",
-					Tag:   "bar",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "default-foo",
-							Tag:   "default-bar",
-						},
+					Tag: "bar",
+					Defaults: &ContainerDetailDefaults{
+						Tag: "default-bar",
 					},
 				},
 			},
 			want: ContainerDetail{
-				Image: "default-foo",
+				Image: "",
 				Tag:   "bar",
 			},
 		},
 		{
-			name: "image from defaults/tag from defaults",
-			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "",
-					Tag:   "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "default-foo",
-							Tag:   "default-bar",
-						},
-					},
-				},
-			},
-			want: ContainerDetail{
-				Image: "default-foo",
-				Tag:   "default-bar",
-			},
-		},
-		{
-			name: "image from defaults of defaults, tag from defaults",
-			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "",
-					Tag:   "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "default-foo",
-							Tag:   "",
-						},
-						defaults: &GHCRRegistryDefaults{
-							CommonRegistryDefaults: CommonRegistryDefaults{
-								ContainerDetail: ContainerDetail{
-									Image: "",
-									Tag:   "default-default-bar",
-								},
-							},
-						},
-					},
-				},
-			},
-			want: ContainerDetail{
-				Image: "default-foo",
-				Tag:   "default-default-bar",
-			},
-		},
-		{
-			name: "ignore defaults when found value",
+			name: "tag from defaults of defaults",
 			registry: CommonRegistry{
 				ContainerDetail: ContainerDetail{
 					Image: "foo",
-					Tag:   "",
-				},
-				defaults: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						ContainerDetail: ContainerDetail{
-							Image: "default-foo",
-							Tag:   "default-bar",
-						},
-						defaults: &GHCRRegistryDefaults{
-							CommonRegistryDefaults: CommonRegistryDefaults{
-								ContainerDetail: ContainerDetail{
-									Image: "default-default-foo",
-									Tag:   "default-default-bar",
-								},
-							},
+					Defaults: &ContainerDetailDefaults{
+						Defaults: &ContainerDetailDefaults{
+							Tag: "default-default-bar",
 						},
 					},
 				},
 			},
 			want: ContainerDetail{
 				Image: "foo",
-				Tag:   "default-bar",
+				Tag:   "default-default-bar",
+			},
+		},
+		{
+			name: "root tag wins over defaults",
+			registry: CommonRegistry{
+				ContainerDetail: ContainerDetail{
+					Image: "foo",
+					Tag:   "bar",
+					Defaults: &ContainerDetailDefaults{
+						Tag: "default-bar",
+					},
+				},
+			},
+			want: ContainerDetail{
+				Image: "foo",
+				Tag:   "bar",
 			},
 		},
 	}

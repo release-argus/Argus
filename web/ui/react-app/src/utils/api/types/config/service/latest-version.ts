@@ -116,19 +116,22 @@ export type DockerType =
 	| NullString;
 
 export type DockerFilter = DockerFilterBase | DockerFilterUsername;
-export type DockerFilterDefaults =
-	| Partial<DockerFilterBase>
-	| DockerFilterUsernameDefaults;
+
+export type DockerRegistryDefaults = {
+	auth?: { token?: string };
+};
+export type DockerRegistryUsernameDefaults = {
+	auth?: { token?: string; username?: string };
+};
 
 export type RequireDockerFilterDefaults = {
 	type?: DockerFilterType;
-	image?: string;
 	tag?: string;
 
 	registry?: {
-		ghcr?: DockerFilterDefaults;
-		hub?: DockerFilterUsernameDefaults;
-		quay?: DockerFilterDefaults;
+		ghcr?: DockerRegistryDefaults;
+		hub?: DockerRegistryUsernameDefaults;
+		quay?: DockerRegistryDefaults;
 	};
 };
 

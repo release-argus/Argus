@@ -78,11 +78,8 @@ func TestRequireDefaults_SetDefaults(t *testing.T) {
 	// THEN: defaults are set.
 	fieldTests := []test.FieldAssertion{
 		{Name: "Docker.Defaults", Got: req.Docker.Defaults, Want: &defaults.Docker, Mode: test.CompareSamePointer},
-		{Name: "Docker.Registry.GHCR.Defaults", Got: req.Docker.Registry.GHCR.Defaults(), Want: defaults.Docker.Registry.GHCR, Mode: test.CompareSamePointer},
 		{Name: "Docker.Registry.GHCR.Auth.Defaults", Got: req.Docker.Registry.GHCR.Auth.Defaults(), Want: defaults.Docker.Registry.GHCR.Auth, Mode: test.CompareSamePointer},
-		{Name: "Docker.Registry.Hub.Defaults", Got: req.Docker.Registry.Hub.Defaults(), Want: defaults.Docker.Registry.Hub, Mode: test.CompareSamePointer},
 		{Name: "Docker.Registry.Hub.Auth.Defaults", Got: req.Docker.Registry.Hub.Auth.Defaults(), Want: defaults.Docker.Registry.Hub.Auth, Mode: test.CompareSamePointer},
-		{Name: "Docker.Registry.Quay.Defaults", Got: req.Docker.Registry.Quay.Defaults(), Want: defaults.Docker.Registry.Quay, Mode: test.CompareSamePointer},
 		{Name: "Docker.Registry.Quay.Auth.Defaults", Got: req.Docker.Registry.Quay.Auth.Defaults(), Want: defaults.Docker.Registry.Quay.Auth, Mode: test.CompareSamePointer},
 	}
 	if err := test.AssertFields(t, fieldTests, prefix, "RequireDefaults"); err != nil {

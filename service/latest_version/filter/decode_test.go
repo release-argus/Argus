@@ -478,7 +478,6 @@ func TestDecodeDefaults(t *testing.T) {
 				"command": ["ls", "-lah"],
 				"docker": {
 					"type": "hub",
-					"image": "test/app",
 					"tag": "{{ version }}"
 				}
 			}`),
@@ -486,7 +485,6 @@ func TestDecodeDefaults(t *testing.T) {
 			want: test.TrimYAML(`
 				docker:
 					type: hub
-					image: test/app
 					tag: '{{ version }}'
 			`),
 		},
