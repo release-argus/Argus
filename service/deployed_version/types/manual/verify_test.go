@@ -17,6 +17,7 @@
 package manual
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -78,11 +79,20 @@ func TestLookup_CheckValues(t *testing.T) {
 				input.CheckValues,
 			)
 
+			prefix := fmt.Sprintf("%s\nLookup.CheckValues()", packageName)
+
 			// AND: the version is set as expected.
 			if got := input.Status.DeployedVersion(); got != tc.wantVersion {
 				t.Errorf(
-					"%s\nLookup.CheckValues() .DeployedVersion() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.wantVersion,
+					"%s .DeployedVersion() mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.wantVersion,
+				)
+			}
+			// AND: nothing was broadcast to the Announce channel.
+			if got, want := len(input.Status.AnnounceChannel), 0; got != want {
+				t.Errorf(
+					"%s Announce channel length mismatch\ngot:  %d\nwant: %d",
+					prefix, got, want,
 				)
 			}
 		})

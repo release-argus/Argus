@@ -22,5 +22,11 @@ import (
 // CheckValues validates the fields of the receiver.
 func (l *Lookup) CheckValues() error {
 	logFrom := logx.LogFrom{Primary: l.GetServiceID()}
+
+	// Apply/validate the version without broadcasting it.
+	announceChannel := l.Status.AnnounceChannel
+	l.Status.AnnounceChannel = nil
+	defer func() { l.Status.AnnounceChannel = announceChannel }()
+
 	return l.Query(false, logFrom)
 }
