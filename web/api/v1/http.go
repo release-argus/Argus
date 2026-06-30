@@ -40,7 +40,7 @@ func (api *API) SetupRoutesAPI() {
 
 	// Only if VERBOSE or DEBUG.
 	if logx.Level() >= 3 {
-		// Apply loggerMiddleware to only the /api/v1 routes.
+		// Apply loggerMiddleware to only the "/api/v1" routes.
 		v1Router.Use(loggerMiddleware)
 	}
 
@@ -53,6 +53,8 @@ func (api *API) SetupRoutesAPI() {
 	v1Router.HandleFunc("/status/runtime", api.httpRuntimeInfo).Methods(http.MethodGet)
 	//   GET, build info.
 	v1Router.HandleFunc("/version", api.httpVersion).Methods(http.MethodGet)
+	//   GET, short-lived token for authenticating the "/ws" WebSocket handshake (only used when basic_auth is enabled).
+	v1Router.HandleFunc("/ws-token", api.httpWebSocketToken).Methods(http.MethodGet)
 	// /flags
 	//   GET, flags.
 	v1Router.HandleFunc("/flags", api.httpFlags).Methods(http.MethodGet)
@@ -149,6 +151,23 @@ func (api *API) DisableRoutes() {
 		})
 
 		return nil
+	})
+}
+
+// SetupWebSocket fills the handler for the "/ws" route.
+// The route must be outside the basic-auth subrouter because Safari/WebKit
+// doesn't forward cached credentials on WebSocket handshakes.
+// When Basic Auth is enabled the client instead passes a short-lived token
+// as a query parameter.
+func (api *API) SetupWebSocket(hub *Hub, wsRoute *mux.Route) {
+	wsRoute.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if api.wsTokens != nil && !api.wsTokens.Validate(r.URL.Query().Get("token")) {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Connection", "keep-alive")
+		defer r.Body.Close()
+		ServeWs(hub, w, r)
 	})
 }
 

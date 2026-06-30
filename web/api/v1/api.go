@@ -42,6 +42,10 @@ type API struct {
 	// take it is rejected with 409. Entries are reference-counted and removed once
 	// no request holds or is waiting on them.
 	serviceOps map[string]*serviceOp
+
+	// wsTokens is non-nil only when Basic Auth is enabled; SetupWebSocket
+	// uses it to gate the "/ws" handshake with a short-lived token.
+	wsTokens *webSocketTokenStore
 }
 
 // serviceOp is a reference-counted per-service operation lock.
@@ -51,7 +55,8 @@ type serviceOp struct {
 }
 
 // NewAPI creates a new API with the provided config.
-func NewAPI(cfg *config.Config) *API {
+// The returned *mux.Route is the "/ws" slot on BaseRouter, sitting outside of basic auth.
+func NewAPI(cfg *config.Config) (*API, *mux.Route) {
 	baseRouter := mux.NewRouter().StrictSlash(true)
 	routePrefix := cfg.Settings.WebRoutePrefix()
 
@@ -73,19 +78,22 @@ func NewAPI(cfg *config.Config) *API {
 			),
 		)
 
+	wsRoute := baseRouter.Path(routePrefix + "/ws")
+
 	api.Router = baseRouter.PathPrefix(routePrefix).Subrouter().StrictSlash(true)
 
 	baseRouter.Handle(
 		routePrefix,
 		http.RedirectHandler(routePrefix+"/", http.StatusPermanentRedirect),
 	)
-	// Add basic auth middleware.
+	// Add basic auth middleware (and a token store for the /ws route).
 	if api.Config.Settings.Web.BasicAuth != nil ||
 		api.Config.Settings.FromFlags.Web.BasicAuth != nil ||
 		api.Config.Settings.HardDefaults.Web.BasicAuth != nil {
+		api.wsTokens = newWebSocketTokenStore()
 		api.Router.Use(api.basicAuthMiddleware())
 	}
-	return api
+	return api, wsRoute
 }
 
 // acquireServiceOp returns serviceID's operation lock, creating it on first use,

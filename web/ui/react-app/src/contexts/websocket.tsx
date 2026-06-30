@@ -8,6 +8,7 @@ import { QUERY_KEYS } from '@/lib/query-keys';
 import type { WebSocketResponse } from '@/types/websocket';
 import { getBasename } from '@/utils';
 import approvalsQueryCacheUpdater from '@/utils/api/query-cache';
+import { API_BASE } from '@/utils/api/types/api-request';
 
 type WebSocketContextProps = {
 	/* The WebSocket connection. */
@@ -35,7 +36,37 @@ type WebSocketProviderProps = {
 	children: ReactNode;
 };
 
-const ws = new WebSocket(`${WS_ADDRESS}${getBasename()}/ws`);
+/**
+ * Resolves the URL for the "/ws" WebSocket endpoint.
+ *
+ * Safari/WebKit doesn't forward cached HTTP Basic Auth credentials on
+ * WebSocket handshake requests, so a short-lived token is fetched from the
+ * (Basic Auth protected) "/api/v1/ws-token" endpoint via a normal
+ * authenticated request, and passed as a "token" query parameter instead.
+ *
+ * 204 from "/ws-token" means Basic Auth is not configured.
+ *
+ * Called on every (re)connection attempt, so a fresh token is used each time.
+ */
+const getWebSocketURL = async (): Promise<string> => {
+	const wsURL = `${WS_ADDRESS}${getBasename()}/ws`;
+
+	try {
+		const resp = await fetch(`${API_BASE}/ws-token`);
+		// 204 = Basic Auth not configured; connect without a token.
+		if (resp.status === 204) return wsURL;
+		if (!resp.ok) {
+			throw new Error(`Failed to fetch WebSocket token: HTTP ${resp.status}`);
+		}
+		const { token } = (await resp.json()) as { token: string };
+		return `${wsURL}?token=${encodeURIComponent(token)}`;
+	} catch (error) {
+		console.error('Failed to fetch WebSocket token:', error);
+		return wsURL;
+	}
+};
+
+const ws = new WebSocket(getWebSocketURL);
 /**
  * @returns The WebSocket connection and monitor data.
  */

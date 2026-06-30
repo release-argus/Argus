@@ -94,7 +94,7 @@ func TestNewAPI(t *testing.T) {
 				tc.routePrefix = strings.TrimSuffix(tc.routePrefix, "/")
 
 				// WHEN: a new API is created.
-				api := NewAPI(cfg)
+				api, _ := NewAPI(cfg)
 
 				// THEN: the healthcheck endpoint is accessible.
 				req, _ := http.NewRequest(
