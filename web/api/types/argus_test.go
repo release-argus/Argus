@@ -1126,13 +1126,21 @@ func TestWebSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "non-empty/DisabledRoutes",
+			webSettings: WebSettings{
+				DisabledRoutes: []string{"route1", "route2"},
+			},
+			want: false,
+		},
+		{
 			name: "non-empty/all",
 			webSettings: WebSettings{
-				ListenHost:  "127.0.0.1",
-				ListenPort:  "9001",
-				CertFile:    "file.pem",
-				KeyFile:     "file.pem",
-				RoutePrefix: "/",
+				ListenHost:     "127.0.0.1",
+				ListenPort:     "9001",
+				CertFile:       "file.pem",
+				KeyFile:        "file.pem",
+				RoutePrefix:    "/",
+				DisabledRoutes: []string{"route1", "route2"},
 			},
 			want: false,
 		},

@@ -36,11 +36,12 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 			Level:      api.Config.Settings.Log.Level,
 		},
 		Web: apitype.WebSettings{
-			ListenHost:  api.Config.Settings.Web.ListenHost,
-			ListenPort:  api.Config.Settings.Web.ListenPort,
-			CertFile:    api.Config.Settings.Web.CertFile,
-			KeyFile:     api.Config.Settings.Web.KeyFile,
-			RoutePrefix: api.Config.Settings.Web.RoutePrefix,
+			ListenHost:     api.Config.Settings.Web.ListenHost,
+			ListenPort:     api.Config.Settings.Web.ListenPort,
+			CertFile:       api.Config.Settings.Web.CertFile,
+			KeyFile:        api.Config.Settings.Web.KeyFile,
+			RoutePrefix:    api.Config.Settings.Web.RoutePrefix,
+			DisabledRoutes: api.Config.Settings.Web.DisabledRoutes,
 		},
 	}
 

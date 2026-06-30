@@ -260,11 +260,12 @@ func (l LogSettings) IsZero() bool {
 
 // WebSettings contains web settings for the program.
 type WebSettings struct {
-	ListenHost  string `json:"listen_host,omitempty" yaml:"listen_host,omitempty"`   // Web listen host.
-	ListenPort  string `json:"listen_port,omitempty" yaml:"listen_port,omitempty"`   // Web listen port.
-	CertFile    string `json:"cert_file,omitempty" yaml:"cert_file,omitempty"`       // HTTPS certificate path.
-	KeyFile     string `json:"pkey_file,omitempty" yaml:"pkey_file,omitempty"`       // HTTPS privkey path.
-	RoutePrefix string `json:"route_prefix,omitempty" yaml:"route_prefix,omitempty"` // Web endpoint prefix.
+	ListenHost     string   `json:"listen_host,omitempty" yaml:"listen_host,omitempty"`         // Web listen host.
+	ListenPort     string   `json:"listen_port,omitempty" yaml:"listen_port,omitempty"`         // Web listen port.
+	CertFile       string   `json:"cert_file,omitempty" yaml:"cert_file,omitempty"`             // HTTPS certificate path.
+	KeyFile        string   `json:"pkey_file,omitempty" yaml:"pkey_file,omitempty"`             // HTTPS privkey path.
+	RoutePrefix    string   `json:"route_prefix,omitempty" yaml:"route_prefix,omitempty"`       // Web endpoint prefix.
+	DisabledRoutes []string `json:"disabled_routes,omitempty" yaml:"disabled_routes,omitempty"` // Disabled API routes.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -273,7 +274,8 @@ func (w WebSettings) IsZero() bool {
 		w.ListenPort == "" &&
 		w.CertFile == "" &&
 		w.KeyFile == "" &&
-		w.RoutePrefix == ""
+		w.RoutePrefix == "" &&
+		len(w.DisabledRoutes) == 0
 }
 
 // Notifiers is a string map of Notify.
