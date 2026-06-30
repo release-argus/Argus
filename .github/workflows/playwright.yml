@@ -140,4 +140,3 @@ jobs:
       - name: Stop Argus test server
         if: ${{ !cancelled() }}
         run: make playwright-tests-teardown
-
