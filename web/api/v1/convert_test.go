@@ -93,11 +93,145 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 			},
 		},
 		{
+			name: "censor service.deployed_version",
+			input: &config.Defaults{
+				Service: service.Defaults{
+					DeployedVersionLookup: dvbase.Defaults{
+						Type:              "url",
+						AllowInvalidCerts: test.Ptr(true),
+						Method:            "GET",
+					},
+				},
+			},
+			want: apitype.Defaults{
+				Service: apitype.ServiceDefaults{
+					DeployedVersionLookup: apitype.DeployedVersionLookupDefaults{
+						Type:              "url",
+						AllowInvalidCerts: test.Ptr(true),
+						Method:            "GET",
+					},
+				},
+			},
+		},
+		{
+			name: "service.dashboard",
+			input: &config.Defaults{
+				Service: service.Defaults{
+					Dashboard: dashboard.Defaults{
+						OptionsBase: dashboard.OptionsBase{
+							AutoApprove: test.Ptr(true),
+							Icon:        "https://example.com/icon.png",
+							IconLinkTo:  "https://example.com",
+							WebURL:      "https://example.com/other",
+						},
+					},
+				},
+			},
+			want: apitype.Defaults{
+				Service: apitype.ServiceDefaults{
+					Dashboard: apitype.DashboardOptions{
+						AutoApprove: test.Ptr(true),
+					},
+				},
+			},
+		},
+		{
+			name: "service.command",
+			input: &config.Defaults{
+				Service: service.Defaults{
+					Command: command.Commands{
+						{"echo", "hello"},
+					},
+				},
+			},
+			want: apitype.Defaults{
+				Service: apitype.ServiceDefaults{
+					Command: apitype.Commands{
+						{"echo", "hello"},
+					},
+				},
+			},
+		},
+		{
+			name: "service.notify",
+			input: &config.Defaults{
+				Service: service.Defaults{
+					Notify: map[string]struct{}{
+						"foo": {},
+						"bar": {},
+					},
+				},
+			},
+			want: apitype.Defaults{
+				Service: apitype.ServiceDefaults{
+					Notify: []string{"bar", "foo"},
+				},
+			},
+		},
+		{
+			name: "censor notify",
+			input: &config.Defaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
+					"other": shoutrrr.NewDefaults(
+						"discord",
+						map[string]string{
+							"message": "release {{ version }} is available",
+						},
+						map[string]string{
+							"apikey": "censor?",
+						},
+						map[string]string{
+							"devices": "censor this too",
+							"avatar":  "https://example.com",
+						},
+					),
+				},
+			},
+			want: apitype.Defaults{
+				Notify: apitype.Notifiers{
+					"other": {
+						Type: "discord",
+						Options: map[string]string{
+							"message": "release {{ version }} is available",
+						},
+						URLFields: map[string]string{
+							"apikey": util.SecretValue,
+						},
+						Params: map[string]string{
+							"devices": util.SecretValue,
+							"avatar":  "https://example.com",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "censor webhook",
+			input: &config.Defaults{
+				WebHook: *test.Must(t, func() (*webhook.Defaults, error) {
+					return webhook.DecodeDefaults(
+						"yaml", []byte(test.TrimYAML(`
+							type: github
+							url: https://example.com
+							secret: censor
+						`)),
+					)
+				}),
+			},
+			want: apitype.Defaults{
+				WebHook: apitype.WebHook{
+					Type:   "github",
+					URL:    "https://example.com",
+					Secret: util.SecretValue,
+				},
+			},
+		},
+		{
 			name: "censor service.latest_version",
 			input: &config.Defaults{
 				Service: service.Defaults{
-					Options: opt.Defaults{},
 					LatestVersion: lvbase.Defaults{
+						Type:        "github",
 						AccessToken: "censor",
 						Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
 							return filter.DecodeDefaults(
@@ -129,14 +263,12 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 							)
 						}),
 					},
-					DeployedVersionLookup: dvbase.Defaults{},
-					Dashboard:             dashboard.Defaults{},
 				},
 			},
 			want: apitype.Defaults{
 				Service: apitype.ServiceDefaults{
-					Options: apitype.ServiceOptions{},
 					LatestVersion: apitype.LatestVersionDefaults{
+						Type:        "github",
 						AccessToken: util.SecretValue,
 						Require: &apitype.LatestVersionRequireDefaults{
 							Docker: apitype.RequireDockerDefaults{
@@ -178,9 +310,6 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 							},
 						},
 					},
-					Command:               apitype.Commands{},
-					DeployedVersionLookup: apitype.DeployedVersionLookupDefaults{},
-					Dashboard:             apitype.DashboardOptions{},
 				},
 			},
 		},
@@ -215,6 +344,35 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestConvertAndCensorDefaults__Default(t *testing.T) {
+	// GIVEN: a bare config.Defaults populated with its hard-coded defaults.
+	defaults := &config.Defaults{}
+	defaults.Default()
+	had := defaults.String("")
+
+	// WHEN: convertAndCensorDefaults is called.
+	result := convertAndCensorDefaults(defaults)
+
+	prefix := fmt.Sprintf("%s\nconvertAndCensorDefaults()", packageName)
+
+	// THEN: the Defaults are converted as expected.
+	got := result.String()
+	if got != stringifiedConvertedDefaults {
+		t.Fatalf(
+			"%s .Defaults() stringified mismatch\ngot:  %q\nwant: %q",
+			prefix, got, stringifiedConvertedDefaults,
+		)
+	}
+
+	// AND: the Defaults are unchanged.
+	if got := defaults.String(""); got != had {
+		t.Fatalf(
+			"%s input changed\ngot: %q\nhad: %q",
+			prefix, got, had,
+		)
 	}
 }
 
@@ -2380,3 +2538,279 @@ func TestConvertWebHookHeaders(t *testing.T) {
 		})
 	}
 }
+
+var stringifiedConvertedDefaults = test.TrimJSON(`{
+	"service": {
+		"options": {
+			"interval": "10m",
+			"semantic_versioning": true
+		},
+		"latest_version": {
+			"type": "github",
+			"allow_invalid_certs": false,
+			"use_prerelease": false,
+			"require": {
+				"docker": {
+					"type": "hub",
+					"tag": "{{ version }}"
+				}
+			}
+		},
+		"deployed_version": {
+			"type": "url",
+			"allow_invalid_certs": false,
+			"method": "GET"
+		},
+		"dashboard": {
+			"auto_approve": false
+		}
+	},
+	"notify": {
+		"bark": {
+			"type": "bark",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"url_fields": {
+				"port": "443"
+			},
+			"params": {
+				"title": "Argus"
+			}
+		},
+		"discord": {
+			"type": "discord",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"params": {
+				"splitlines": "yes",
+				"username": "Argus"
+			}
+		},
+		"generic": {
+			"type": "generic",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"params": {
+				"contenttype": "application/json",
+				"disabletls": "no",
+				"messagekey": "message",
+				"requestmethod": "POST",
+				"titlekey": "title"
+			}
+		},
+		"googlechat": {
+			"type": "googlechat",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			}
+		},
+		"gotify": {
+			"type": "gotify",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"url_fields": {
+				"port": "443"
+			},
+			"params": {
+				"disabletls": "no",
+				"insecureskipverify": "no",
+				"priority": "0",
+				"title": "Argus",
+				"useheader": "no"
+			}
+		},
+		"ifttt": {
+			"type": "ifttt",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"params": {
+				"messagevalue": "2",
+				"titlevalue": "0"
+			}
+		},
+		"join": {
+			"type": "join",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			}
+		},
+		"matrix": {
+			"type": "matrix",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"url_fields": {
+				"port": "443"
+			},
+			"params": {
+				"disabletls": "no"
+			}
+		},
+		"mattermost": {
+			"type": "mattermost",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "<{{ service_url }}|{{ service_name | default:service_id }}> - {{ version }} released{% if web_url %} (<{{ web_url }}|changelog>){% endif %}"
+			},
+			"url_fields": {
+				"port": "443",
+				"username": "Argus"
+			},
+			"params": {
+				"disabletls": "no"
+			}
+		},
+		"notifiarr": {
+			"type": "notifiarr",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			}
+		},
+		"ntfy": {
+			"type": "ntfy",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"url_fields": {
+				"host": "ntfy.sh"
+			},
+			"params": {
+				"disabletlsverification": "no",
+				"title": "Argus"
+			}
+		},
+		"opsgenie": {
+			"type": "opsgenie",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			}
+		},
+		"pushbullet": {
+			"type": "pushbullet",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"params": {
+				"title": "Argus"
+			}
+		},
+		"pushover": {
+			"type": "pushover",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			}
+		},
+		"rocketchat": {
+			"type": "rocketchat",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"url_fields": {
+				"port": "443"
+			}
+		},
+		"shoutrrr": {
+			"type": "shoutrrr",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			}
+		},
+		"slack": {
+			"type": "slack",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"params": {
+				"botname": "Argus"
+			}
+		},
+		"smtp": {
+			"type": "smtp",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"params": {
+				"requirestarttls": "no",
+				"skiptlsverify": "no",
+				"usehtml": "no",
+				"usestarttls": "yes"
+			}
+		},
+		"teams": {
+			"type": "teams",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			}
+		},
+		"telegram": {
+			"type": "telegram",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"params": {
+				"notification": "yes",
+				"preview": "yes"
+			}
+		},
+		"zulip": {
+			"type": "zulip",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			}
+		}
+	},
+	"webhook": {
+		"type": "github",
+		"allow_invalid_certs": false,
+		"desired_status_code": 0,
+		"delay": "0s",
+		"max_tries": 3,
+		"silent_fails": false
+	}
+}`)

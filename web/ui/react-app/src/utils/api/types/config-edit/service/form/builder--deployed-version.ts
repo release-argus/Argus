@@ -43,7 +43,7 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 		defaults ?? null,
 		hardDefaults,
 	);
-	const typeDefault = isDeployedVersionType(combinedDefaults.type)
+	const defaultType = isDeployedVersionType(combinedDefaults.type)
 		? combinedDefaults.type
 		: undefined;
 
@@ -93,7 +93,7 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 	// Initial type.
 	const schemaDataType = isDeployedVersionType(data?.type)
 		? data.type
-		: typeDefault;
+		: defaultType;
 	// Initial schema data.
 	const fallbackData: Partial<z.infer<typeof schemaRaw>> = {
 		type: schemaDataType,

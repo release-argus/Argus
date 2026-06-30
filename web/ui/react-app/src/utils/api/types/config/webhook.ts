@@ -7,16 +7,13 @@ export const WEBHOOK_TYPE = {
 export type WebHookType =
 	(typeof WEBHOOK_TYPE)[keyof typeof WEBHOOK_TYPE]['value'];
 export const webhookTypeOptions = Object.values(WEBHOOK_TYPE);
-const webhookTypeValues: WebHookType[] = webhookTypeOptions.map(
-	(option) => option.value,
-);
-export const isWebHookType = (key: string): key is WebHookType =>
-	(webhookTypeValues as string[]).includes(key.toLowerCase());
+export const isWebHookType = (value?: string | null): value is WebHookType =>
+	value != null && webhookTypeOptions.some((v) => v.value === value);
 
 export type WebHook = {
 	name: string;
 
-	type?: WebHookType;
+	type?: WebHookType | null;
 	url?: string;
 	allow_invalid_certs?: boolean | null;
 	headers?: Headers;

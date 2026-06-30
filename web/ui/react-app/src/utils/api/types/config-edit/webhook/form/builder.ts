@@ -2,10 +2,9 @@ import { z } from 'zod';
 import { isEmptyArray } from '@/utils';
 import {
 	isWebHookType,
-	WEBHOOK_TYPE,
 	type WebHook,
 	type WebHookMap,
-	webhookTypeOptions,
+	type WebHookType,
 } from '@/utils/api/types/config/webhook';
 import { buildSuperRefine } from '@/utils/api/types/config-edit/shared/builder--super-refine';
 import {
@@ -78,10 +77,14 @@ export const buildWebHooksSchemaWithFallbacks = (
 	hardDefaults?: WebHook,
 ) => {
 	const path = 'webhook';
-	const defaultType =
-		defaults?.type ??
-		hardDefaults?.type ??
-		Object.values(webhookTypeOptions)[0].value;
+	const combinedDefaults = applyDefaultsRecursive<WebHook>(
+		defaults ?? null,
+		hardDefaults,
+	);
+	const defaultType = isWebHookType(combinedDefaults.type)
+		? combinedDefaults.type
+		: undefined;
+
 	const dataDefaulted = (data ?? []).map((item) => {
 		const main = mains?.[item.name];
 		const nameLower = item.name.toLowerCase();
@@ -102,31 +105,22 @@ export const buildWebHooksSchemaWithFallbacks = (
 			fallback: {
 				desired_status_code: '',
 				max_tries: '',
-				type: defaultType,
+				type: defaultType as WebHookType,
 			},
 			path: `${path} (defaults-${item.name})`,
 			schema: webhookSchema,
 		});
 	});
-	const combinedDefaults = applyDefaultsRecursive<WebHook>(
-		defaults ?? null,
-		hardDefaults,
-		{
-			headers: [],
-			type: WEBHOOK_TYPE.GITHUB.value,
-		},
-	);
 	const schemaDataTypeDefaults = safeParse({
 		data: combinedDefaults,
 		fallback: {
 			desired_status_code: '',
 			max_tries: '',
-			type: defaultType,
+			type: defaultType as WebHookType,
 		},
 		path: `${path} (defaults)`,
 		schema: webhookSchemaDefault,
 	});
-	const typeDefault = schemaDataTypeDefaults.type;
 
 	// Default schema data.
 	const schemaDataDefaults: WebHookSchema[] = (defaultItems ?? []).map(
@@ -134,7 +128,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 			const main = mains?.[name];
 			const nameLower = name.toLowerCase();
 			const itemType =
-				main?.type ?? (isWebHookType(nameLower) ? nameLower : typeDefault);
+				main?.type ?? (isWebHookType(nameLower) ? nameLower : defaultType);
 			// headers.
 			const headers = isEmptyArray(main?.headers)
 				? schemaDataTypeDefaults.headers
@@ -155,7 +149,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 				fallback: {
 					desired_status_code: '',
 					max_tries: '',
-					type: itemType,
+					type: itemType as WebHookType,
 				},
 				path: `${path} (defaults)`,
 				schema: webhookSchema,
@@ -181,7 +175,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 				desired_status_code: '',
 				max_tries: '',
 				name: name,
-				type: main.type ?? typeDefault,
+				type: (main.type ?? defaultType) as WebHookType,
 			},
 			path: `${path} (mains-${name}`,
 			schema: webhookSchema,
