@@ -1,15 +1,19 @@
 name: Playwright Tests
+
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+
 permissions:
   contents: read
   pull-requests: write
+
 concurrency:
   group: playwright-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
 jobs:
   test:
     timeout-minutes: 60
