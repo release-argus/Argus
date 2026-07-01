@@ -36,6 +36,8 @@ func Require(t *testing.T, dockerType string) *filter.Require {
 
 	var image string
 	switch dockerType {
+	case "ecr":
+		image = test.ArgusDockerECRRepo
 	case "ghcr":
 		image = test.ArgusDockerGHCRRepo
 	case "hub":

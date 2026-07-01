@@ -258,6 +258,102 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
+			name:   "ecr -> ghcr",
+			format: "json",
+			data: test.TrimJSON(`{
+				"type": "ghcr",
+				"image": "test/app-ghcr",
+				"tag": "{{ version }}"
+			}`),
+			previous: &ECRRegistry{
+				CommonRegistry: CommonRegistry{
+					Type: "ecr",
+					ContainerDetail: ContainerDetail{
+						Image: "something",
+						Tag:   "else",
+					},
+				},
+			},
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: ghcr
+				image: test/app-ghcr
+				tag: '{{ version }}'
+			`),
+		},
+		{
+			name:   "ecr -> hub",
+			format: "json",
+			data: test.TrimJSON(`{
+				"type": "hub",
+				"image": "test/app-hub",
+				"tag": "{{ version }}"
+			}`),
+			previous: &ECRRegistry{
+				CommonRegistry: CommonRegistry{
+					Type: "ecr",
+					ContainerDetail: ContainerDetail{
+						Image: "something",
+						Tag:   "else",
+					},
+				},
+			},
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: hub
+				image: test/app-hub
+				tag: '{{ version }}'
+			`),
+		},
+		{
+			name:   "ecr -> quay",
+			format: "json",
+			data: test.TrimJSON(`{
+				"type": "quay",
+				"image": "test/app-quay",
+				"tag": "{{ version }}"
+			}`),
+			previous: &ECRRegistry{
+				CommonRegistry: CommonRegistry{
+					Type: "ecr",
+					ContainerDetail: ContainerDetail{
+						Image: "something",
+						Tag:   "else",
+					},
+				},
+			},
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: quay
+				image: test/app-quay
+				tag: '{{ version }}'
+			`),
+		},
+		{
+			name:   "ghcr -> ecr",
+			format: "json",
+			data: test.TrimJSON(`{
+				"type": "ecr",
+				"image": "test/app-ecr",
+				"tag": "{{ version }}"
+			}`),
+			previous: &GHCRRegistry{
+				CommonRegistry: CommonRegistry{
+					Type: "ghcr",
+					ContainerDetail: ContainerDetail{
+						Image: "something",
+						Tag:   "else",
+					},
+				},
+			},
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: ecr
+				image: test/app-ecr
+				tag: '{{ version }}'
+			`),
+		},
+		{
 			name:   "ghcr -> hub",
 			format: "json",
 			data: test.TrimJSON(`{
@@ -306,6 +402,30 @@ func TestApplyOverrides(t *testing.T) {
 			`),
 		},
 		{
+			name:   "hub -> ecr",
+			format: "json",
+			data: test.TrimJSON(`{
+				"type": "ecr",
+				"image": "test/app-ecr",
+				"tag": "{{ version }}"
+			}`),
+			previous: &HubRegistry{
+				CommonRegistry: CommonRegistry{
+					Type: "hub",
+					ContainerDetail: ContainerDetail{
+						Image: "something",
+						Tag:   "else",
+					},
+				},
+			},
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: ecr
+				image: test/app-ecr
+				tag: '{{ version }}'
+			`),
+		},
+		{
 			name:   "hub -> ghcr",
 			format: "json",
 			data: test.TrimJSON(`{
@@ -345,6 +465,30 @@ func TestApplyOverrides(t *testing.T) {
 			want: test.TrimYAML(`
 				type: quay
 				image: test/app-quay
+			`),
+		},
+		{
+			name:   "quay -> ecr",
+			format: "json",
+			data: test.TrimJSON(`{
+				"type": "ecr",
+				"image": "test/app-ecr",
+				"tag": "{{ version }}"
+			}`),
+			previous: &QuayRegistry{
+				CommonRegistry: CommonRegistry{
+					Type: "quay",
+					ContainerDetail: ContainerDetail{
+						Image: "something",
+						Tag:   "else",
+					},
+				},
+			},
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: ecr
+				image: test/app-ecr
+				tag: '{{ version }}'
 			`),
 		},
 		{
@@ -443,6 +587,8 @@ func TestApplyOverrides(t *testing.T) {
 
 			if tc.previous != nil {
 				switch v := tc.previous.(type) {
+				case *ECRRegistry:
+					v.Auth = RegistryMapInheritable["ecr"]().(Registry).GetAuth()
 				case *GHCRRegistry:
 					v.Auth = RegistryMapInheritable["ghcr"]().(Registry).GetAuth()
 				case *HubRegistry:

@@ -39,6 +39,28 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 		errRegex string
 	}{
 		{
+			name: "ECR/tag found",
+			yaml: test.TrimYAML(`
+				docker:
+					type: ecr
+					image: ` + test.ArgusDockerECRRepo + `
+					tag: "{{ version }}"
+			`),
+			version:  "latest",
+			errRegex: `^$`,
+		},
+		{
+			name: "ECR/tag not found",
+			yaml: test.TrimYAML(`
+				docker:
+					type: ecr
+					image: ` + test.ArgusDockerECRRepo + `
+					tag: "{{ version }}-unknown"
+			`),
+			version:  "latest",
+			errRegex: `tag not found`,
+		},
+		{
 			name: "GHCR/tag found",
 			yaml: test.TrimYAML(`
 				docker:

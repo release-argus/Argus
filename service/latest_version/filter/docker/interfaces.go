@@ -67,7 +67,7 @@ type RegistryAuth interface {
 type RegistryDefaults interface {
 	yaml.IsZeroer
 
-	// GetType returns the fixed registry kind (e.g. "hub", "ghcr", "quay").
+	// GetType returns the fixed registry kind (e.g. "ecr", "ghcr", "hub", "quay").
 	GetType() string
 
 	GetAuth() RegistryAuthDefaults
@@ -103,7 +103,7 @@ type Registry interface {
 	Inherit(from Registry)
 
 	// GetTypeSelf returns the configured type field; GetType (from polymorphic.Inheritable)
-	// returns the fixed registry kind (e.g. "hub", "ghcr", "quay").
+	// returns the fixed registry kind (e.g. "ecr", "ghcr", "hub", "quay").
 	GetTypeSelf() string
 	GetImage() string
 	GetImageSelf() string

@@ -1033,6 +1033,10 @@ func TestGetRegistryDefaults(t *testing.T) {
 		dType string
 	}{
 		{
+			name:  "known: ecr",
+			dType: "ecr",
+		},
+		{
 			name:  "known: ghcr",
 			dType: "ghcr",
 		},
@@ -1059,6 +1063,8 @@ func TestGetRegistryDefaults(t *testing.T) {
 
 			var want RegistryDefaults
 			switch tc.dType {
+			case "ecr":
+				want = defaults.Registry.ECR
 			case "ghcr":
 				want = defaults.Registry.GHCR
 			case "hub":
@@ -1093,6 +1099,10 @@ func TestGetRegistryDefaults_NilDefaults(t *testing.T) {
 		dType string
 	}{
 		{
+			name:  "known: ecr",
+			dType: "ecr",
+		},
+		{
 			name:  "known: ghcr",
 			dType: "ghcr",
 		},
@@ -1118,6 +1128,8 @@ func TestGetRegistryDefaults_NilDefaults(t *testing.T) {
 			_, defaults := plainDefaults(t)
 
 			switch tc.dType {
+			case "ecr":
+				defaults.Registry.ECR = nil
 			case "ghcr":
 				defaults.Registry.GHCR = nil
 			case "hub":
