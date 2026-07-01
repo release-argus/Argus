@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.30.0](https://github.com/release-argus/Argus/compare/0.29.4...0.30.0) (2026-07-01)
+
+
+### Features
+
+* **api:** include disabled_routes in /config response ([#906](https://github.com/release-argus/Argus/issues/906)) ([56cf1ea](https://github.com/release-argus/Argus/commit/56cf1ea23cb5afcdcee15fbdf7ee679cecf695c3))
+* **config:** expose default latest_version/deployed_version type ([2d20627](https://github.com/release-argus/Argus/commit/2d2062712df98ba037ccaf027d5f06cfe55c9204))
+* **notify:** adapt to shoutrrr v1.16.1 API changes ([1b8db9d](https://github.com/release-argus/Argus/commit/1b8db9d30b2f81849f1fad4b5a6857dd0715e130))
+* **ui:** allow notify raw `shoutrrr` types ([#909](https://github.com/release-argus/Argus/issues/909)) ([07f92c5](https://github.com/release-argus/Argus/commit/07f92c54f8276c5b3851becde4a9a603b212ccf7))
+* **ui:** error toast for failed service deletion ([#784](https://github.com/release-argus/Argus/issues/784)) ([76363a3](https://github.com/release-argus/Argus/commit/76363a3017686b5708e24f1d567ee4fbea84bf38))
+* **web:** auth /ws via short-lived token when basic auth is enabled ([#889](https://github.com/release-argus/Argus/issues/889)) ([19be4f4](https://github.com/release-argus/Argus/commit/19be4f4ae6f9b5336f924594935719e4fae1b3a2))
+
+
+### Bug Fixes
+
+* **api:** serialise concurrent ops per service ([dc84d05](https://github.com/release-argus/Argus/commit/dc84d0526499fa303e994ff5c6ba67d6750fefc2))
+* **dv-url:** check `target_header` regardless of status code ([#896](https://github.com/release-argus/Argus/issues/896)) ([955390e](https://github.com/release-argus/Argus/commit/955390ea48f966f2f59898d9bbf244c38fb842d4))
+* **lv-github:** gate /tags fallback on use_prerelease/regex_content ([#892](https://github.com/release-argus/Argus/issues/892)) ([2d8f1f9](https://github.com/release-argus/Argus/commit/2d8f1f961bd334b7b5894745d358b50884299bdf))
+* **lv-url:** keep url lookup headers across edits ([4e21b99](https://github.com/release-argus/Argus/commit/4e21b9983b86df46b8c0f29bff5209457d89bfed))
+* **ui:** include 'old_index' on webhook edits for secret refs ([#887](https://github.com/release-argus/Argus/issues/887)) ([10738c7](https://github.com/release-argus/Argus/commit/10738c7ba9835e81c939353a6fd5448ec66030ae))
+* **ui:** keep in-progress reorder when server order changes ([6be5184](https://github.com/release-argus/Argus/commit/6be5184c226addf8c1a74ea5b4a3e2bb18904938))
+* **ui:** render FieldSet as a div to fix nested subgrid sizing ([148c82c](https://github.com/release-argus/Argus/commit/148c82cc4310fe7137aeae6b7c4a16a02a92ba2d))
+
 ## [0.29.4](https://github.com/release-argus/Argus/compare/0.29.3...0.29.4) (2026-03-31)
 
 
