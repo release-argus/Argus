@@ -959,7 +959,8 @@ func (s *Shoutrrr) checkValuesParams() error {
 		}
 	case "teams":
 		// teams://?host=fullPowerAutomateURL
-		if s.GetParam("host") == "" {
+		// don't fail on old, no-longer functional instances.
+		if s.GetParam("host") == "" && s.GetURLField("group") == "" {
 			errs = append(
 				errs,
 				&decode.FieldError{
