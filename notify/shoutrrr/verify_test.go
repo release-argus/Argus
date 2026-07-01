@@ -2837,11 +2837,12 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 func TestShoutrrr_CheckValuesParams(t *testing.T) {
 	// GIVEN: a Shoutrrr with Params.
 	tests := []struct {
-		name     string
-		sType    string
-		params   map[string]string
-		main     *Defaults
-		errRegex string
+		name      string
+		sType     string
+		params    map[string]string
+		urlFields map[string]string
+		main      *Defaults
+		errRegex  string
 	}{
 		{
 			name:     "no params",
@@ -2971,6 +2972,19 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^host: <required>.*$`,
 		},
 		{
+			name:  "teams/old-style (no host) - no error",
+			sType: "teams",
+			urlFields: map[string]string{
+				"group":      "GROUP",
+				"tenant":     "TENANT",
+				"altid":      "ALTID",
+				"groupowner": "GROUPOWNER",
+				"extraid":    "EXTRAID",
+			},
+			params:   map[string]string{},
+			errRegex: `^$`,
+		},
+		{
 			name:  "teams/valid (Power Automate URL)",
 			sType: "teams",
 			params: map[string]string{
@@ -3058,6 +3072,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			input := testShoutrrr(false, false)
 			input.Type = tc.sType
 			input.Params = tc.params
+			input.URLFields = tc.urlFields
 			svcStatus, _ := statustest.New("yaml", nil)
 			svcStatus.Init(
 				0, 1, 0,
