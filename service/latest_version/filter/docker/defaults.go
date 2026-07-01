@@ -34,7 +34,7 @@ type Defaults struct {
 
 // RegistryDefaultsSet holds per-registry default configuration.
 type RegistryDefaultsSet struct {
-	ECR  *ECRRegistryDefaults  `json:"-" yaml:"-"`                         // Amazon ECR Public Gallery (anonymous: no serialisable config).
+	ECR  *ECRRegistryDefaults  `json:"ecr,omitzero" yaml:"ecr,omitzero"`   // Amazon ECR Public Gallery (anonymous: no serialisable config).
 	GHCR *GHCRRegistryDefaults `json:"ghcr,omitzero" yaml:"ghcr,omitzero"` // GitHub Container Registry.
 	Hub  *HubRegistryDefaults  `json:"hub,omitzero" yaml:"hub,omitzero"`   // Docker Hub.
 	Quay *QuayRegistryDefaults `json:"quay,omitzero" yaml:"quay,omitzero"` // Quay.
