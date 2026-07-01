@@ -1,8 +1,8 @@
 {
 	"author": "",
 	"dependencies": {
-		"@commitlint/cli": "^21.1.0",
-		"@commitlint/config-conventional": "^21.1.0"
+		"@commitlint/cli": "^21.2.0",
+		"@commitlint/config-conventional": "^21.2.0"
 	},
 	"description": "",
 	"devDependencies": {

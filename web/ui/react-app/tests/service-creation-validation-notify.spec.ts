@@ -1052,6 +1052,30 @@ test.describe('Service creation modal - field validation', () => {
 			});
 		});
 
+		test.describe('Shoutrrr', () => {
+			test('raw is required', async ({ page }, testInfo) => {
+				const shot = screenshotsUnder(
+					page,
+					testInfo.project.name,
+					'service-creation-validation/notify/shoutrrr',
+				);
+				const dialog = await openCreateServiceModal(page);
+				const section = await openSection(dialog, 'Notify:');
+
+				// GIVEN: a new "Shoutrrr" notifier is added.
+				await addNotify(section, dialog, 'Shoutrrr');
+
+				// WHEN/THEN: Raw is blurred empty then valid.
+				await runValidations(section, shot, [
+					required({
+						good: 'slack://xoxb:token@channel',
+						input: 'Raw',
+						slug: 'raw',
+					}),
+				]);
+			});
+		});
+
 		test.describe('Slack', () => {
 			test('token and channel are required; color must be a valid hex string', async ({
 				page,

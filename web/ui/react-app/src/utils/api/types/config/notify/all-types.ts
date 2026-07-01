@@ -14,16 +14,13 @@ export const NOTIFY_TYPE_MAP = {
 	PUSHBULLET: { label: 'PushBullet', value: 'pushbullet' },
 	PUSHOVER: { label: 'PushOver', value: 'pushover' },
 	ROCKET_CHAT: { label: 'Rocket.Chat', value: 'rocketchat' },
+	SHOUTRRR: { label: 'Shoutrrr', value: 'shoutrrr' },
 	SLACK: { label: 'Slack', value: 'slack' },
 	SMTP: { label: 'Email (SMTP)', value: 'smtp' },
 	TEAMS: { label: 'Teams', value: 'teams' },
 	TELEGRAM: { label: 'Telegram', value: 'telegram' },
 	ZULIP: { label: 'Zulip Chat', value: 'zulip' },
-	// Hidden: deprecated raw shoutrrr URL passthrough for legacy configs.
-	SHOUTRRR: { label: 'Shoutrrr', value: 'shoutrrr', hidden: true },
 } as const;
 export type NotifyType =
 	(typeof NOTIFY_TYPE_MAP)[keyof typeof NOTIFY_TYPE_MAP]['value'];
-export const notifyTypeOptions = Object.values(NOTIFY_TYPE_MAP).filter(
-	(t) => !('hidden' in t && t.hidden),
-);
+export const notifyTypeOptions = Object.values(NOTIFY_TYPE_MAP);
