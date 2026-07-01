@@ -793,6 +793,10 @@ func TestHubRegistry_Copy(t *testing.T) {
 			name: "filled",
 			registry: &HubRegistry{
 				CommonRegistry: CommonRegistry{
+					ContainerDetail: ContainerDetail{
+						Image: "i1",
+						Tag:   "t1",
+					},
 					Auth: &HubAuth{
 						HubAuthDefaults: HubAuthDefaults{
 							Username: "u1",
@@ -803,6 +807,8 @@ func TestHubRegistry_Copy(t *testing.T) {
 				},
 			},
 			want: test.TrimYAML(`
+				image: i1
+				tag: t1
 				auth:
 					username: u1
 					token: t1
@@ -1001,7 +1007,10 @@ func TestHubRegistryDefaults_GetType(t *testing.T) {
 
 	// THEN: the type is returned.
 	if want := "hub"; got != want {
-		t.Errorf("got %q, want %q", got, want)
+		t.Errorf(
+			"%s\ngot %q, want %q",
+			packageName, got, want,
+		)
 	}
 }
 
@@ -1034,7 +1043,10 @@ func TestHubRegistry_GetType(t *testing.T) {
 
 			// THEN: the type is returned.
 			if want := "hub"; got != want {
-				t.Errorf("got %q, want %q", got, want)
+				t.Errorf(
+					"%s\ngot %q, want %q",
+					packageName, got, want,
+				)
 			}
 		})
 	}
@@ -1230,7 +1242,7 @@ func TestHubRegistry_NewRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: getQueryURL() is called on it.
+			// WHEN: newRequest() is called on it.
 			_, err := tc.registry.newRequest(tc.tag)
 
 			prefix := fmt.Sprintf(
@@ -1498,7 +1510,7 @@ func TestHubAuthDefaults_Defaults(t *testing.T) {
 }
 
 func TestHubAuthDefaults_SetDefaults(t *testing.T) {
-	// GIVEN: a RegistryAuth.
+	// GIVEN: a RegistryAuthDefaults.
 	tests := []struct {
 		name        string
 		newDefaults RegistryAuthDefaults
@@ -1508,6 +1520,11 @@ func TestHubAuthDefaults_SetDefaults(t *testing.T) {
 			name:        "give HubAuthDefaults",
 			newDefaults: &HubAuthDefaults{},
 			doesSet:     true,
+		},
+		{
+			name:        "doesn't give ECRAuthDefaults",
+			newDefaults: &ECRAuthDefaults{},
+			doesSet:     false,
 		},
 		{
 			name:        "doesn't give GHCRAuthDefaults",

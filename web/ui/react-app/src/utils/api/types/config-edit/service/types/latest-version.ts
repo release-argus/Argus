@@ -117,6 +117,7 @@ export const urlCommandsSchemaOutgoing = z
 
 /* require.docker */
 const dockerFilterSchemaBase = [
+	LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.AMAZON_ECR.value,
 	LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value,
 	LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.GHCR.value,
 	LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.QUAY.value,
@@ -161,8 +162,16 @@ export const latestVersionLookupRequireDockerTypeSchemaDockerHub =
 		),
 	});
 
+export const latestVersionLookupRequireDockerTypeSchemaAmazonECR =
+	latestVersionLookupRequireDockerTypeSchemaBase.extend({
+		type: z.literal(
+			LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.AMAZON_ECR.value,
+		),
+	});
+
 export const dockerFilterSchema = z.discriminatedUnion('type', [
 	latestVersionLookupRequireDockerTypeSchema,
+	latestVersionLookupRequireDockerTypeSchemaAmazonECR,
 	latestVersionLookupRequireDockerTypeSchemaDockerHub,
 ]);
 export type DockerTypeDockerHub = z.infer<
@@ -188,6 +197,7 @@ export const dockerFilterSchemaDefaults =
 	latestVersionLookupRequireDockerDefaultsSchemaBase.extend({
 		registry: z
 			.object({
+				ecr: latestVersionLookupRequireDockerDefaultsSchemaBase.partial(),
 				ghcr: latestVersionLookupRequireDockerRegistryDefaultsSchema.partial(),
 				hub: latestVersionLookupRequireDockerRegistryDefaultsSchemaDockerHub.partial(),
 				quay: latestVersionLookupRequireDockerRegistryDefaultsSchema.partial(),

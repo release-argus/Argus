@@ -775,6 +775,11 @@ func TestCommonRegistry_Defaults(t *testing.T) {
 			// GIVEN: registryDefaults.
 			defaults := Defaults{
 				Registry: RegistryDefaultsSet{
+					ECR: &ECRRegistryDefaults{
+						CommonRegistryDefaults: CommonRegistryDefaults{
+							Auth: &ECRAuthDefaults{},
+						},
+					},
 					GHCR: &GHCRRegistryDefaults{
 						CommonRegistryDefaults: CommonRegistryDefaults{
 							Auth: &HubAuthDefaults{

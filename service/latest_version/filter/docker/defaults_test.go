@@ -264,6 +264,7 @@ func TestDecodeDefaults(t *testing.T) {
 			// THEN: The Defaults were passed over correctly.
 			fieldTests := []test.FieldAssertion{
 				{Name: "Defaults", Got: got.Defaults, Want: &defaults, Mode: test.CompareSamePointer},
+				{Name: "ECR.Auth.Defaults", Got: got.Registry.ECR.GetAuth().Defaults(), Want: defaults.Registry.ECR.GetAuth(), Mode: test.CompareSamePointer},
 				{Name: "GHCR.Auth.Defaults", Got: got.Registry.GHCR.GetAuth().Defaults(), Want: defaults.Registry.GHCR.GetAuth(), Mode: test.CompareSamePointer},
 				{Name: "Hub.Auth.Defaults", Got: got.Registry.Hub.GetAuth().Defaults(), Want: defaults.Registry.Hub.GetAuth(), Mode: test.CompareSamePointer},
 				{Name: "Quay.Auth.Defaults", Got: got.Registry.Quay.GetAuth().Defaults(), Want: defaults.Registry.Quay.GetAuth(), Mode: test.CompareSamePointer},
@@ -851,6 +852,7 @@ func TestDefaults_Defaults(t *testing.T) {
 				return
 			}
 			fieldTests := []test.FieldAssertion{
+				{Name: "ECR.Auth.Defaults", Got: defaults.Registry.ECR.GetAuth().Defaults(), Want: tc.defaults.Registry.ECR.GetAuth(), Mode: test.CompareSamePointer},
 				{Name: "GHCR.Auth.Defaults", Got: defaults.Registry.GHCR.GetAuth().Defaults(), Want: tc.defaults.Registry.GHCR.GetAuth(), Mode: test.CompareSamePointer},
 				{Name: "Hub.Auth.Defaults", Got: defaults.Registry.Hub.GetAuth().Defaults(), Want: tc.defaults.Registry.Hub.GetAuth(), Mode: test.CompareSamePointer},
 				{Name: "Quay.Auth.Defaults", Got: defaults.Registry.Quay.GetAuth().Defaults(), Want: tc.defaults.Registry.Quay.GetAuth(), Mode: test.CompareSamePointer},
@@ -999,7 +1001,8 @@ func TestDefaults_InitRegistries(t *testing.T) {
 	var d Defaults
 
 	// THEN: all registries are nil
-	if d.Registry.GHCR != nil ||
+	if d.Registry.ECR != nil ||
+		d.Registry.GHCR != nil ||
 		d.Registry.Hub != nil ||
 		d.Registry.Quay != nil {
 		t.Fatalf(
@@ -1012,7 +1015,8 @@ func TestDefaults_InitRegistries(t *testing.T) {
 	d.initRegistries()
 
 	// THEN: all registries are initialised
-	if d.Registry.GHCR == nil ||
+	if d.Registry.ECR == nil ||
+		d.Registry.GHCR == nil ||
 		d.Registry.Hub == nil ||
 		d.Registry.Quay == nil {
 		t.Fatalf(

@@ -776,6 +776,10 @@ func TestGHCRRegistry_Copy(t *testing.T) {
 			name: "filled",
 			registry: &GHCRRegistry{
 				CommonRegistry: CommonRegistry{
+					ContainerDetail: ContainerDetail{
+						Image: "i1",
+						Tag:   "t1",
+					},
 					Auth: &GHCRAuth{
 						GHCRAuthDefaults: GHCRAuthDefaults{
 							Token:    "t1",
@@ -785,6 +789,8 @@ func TestGHCRRegistry_Copy(t *testing.T) {
 				},
 			},
 			want: test.TrimYAML(`
+				image: i1
+				tag: t1
 				auth:
 					token: t1
 			`),
@@ -976,7 +982,10 @@ func TestGHCRRegistryDefaults_GetType(t *testing.T) {
 
 	// THEN: the type is returned.
 	if want := "ghcr"; got != want {
-		t.Errorf("got %q, want %q", got, want)
+		t.Errorf(
+			"%s\ngot %q, want %q",
+			packageName, got, want,
+		)
 	}
 }
 
@@ -989,7 +998,10 @@ func TestGHCRRegistry_GetType(t *testing.T) {
 
 	// THEN: the type is returned.
 	if want := "ghcr"; got != want {
-		t.Errorf("got %q, want %q", got, want)
+		t.Errorf(
+			"%s\ngot %q, want %q",
+			packageName, got, want,
+		)
 	}
 }
 
@@ -1073,7 +1085,7 @@ func TestGHCRRegistry_NewRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: getQueryURL() is called on it.
+			// WHEN: newRequest() is called on it.
 			req, err := tc.registry.newRequest(tc.tag)
 
 			prefix := fmt.Sprintf(
@@ -1450,7 +1462,7 @@ func TestGHCRAuthDefaults_Defaults(t *testing.T) {
 }
 
 func TestGHCRAuthDefaults_SetDefaults(t *testing.T) {
-	// GIVEN: a RegistryAuth.
+	// GIVEN: a RegistryAuthDefaults.
 	tests := []struct {
 		name        string
 		newDefaults RegistryAuthDefaults
@@ -1460,6 +1472,11 @@ func TestGHCRAuthDefaults_SetDefaults(t *testing.T) {
 			name:        "give GHCRAuthDefaults",
 			newDefaults: &GHCRAuthDefaults{},
 			doesSet:     true,
+		},
+		{
+			name:        "doesn't give ECRAuthDefaults",
+			newDefaults: &ECRAuthDefaults{},
+			doesSet:     false,
 		},
 		{
 			name:        "doesn't give HubAuthDefaults",

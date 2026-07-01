@@ -20,6 +20,7 @@ import (
 
 // PossibleTypes for the docker Lookup.
 var PossibleTypes = []string{
+	"ecr",
 	"ghcr",
 	"hub",
 	"quay",
@@ -27,6 +28,13 @@ var PossibleTypes = []string{
 
 // RegistryMap maps a registry type to a Registry constructor.
 var RegistryMap = map[string]func() Registry{
+	"ecr": func() Registry {
+		return &ECRRegistry{
+			CommonRegistry: CommonRegistry{
+				Auth: &ECRAuth{},
+			},
+		}
+	},
 	"ghcr": func() Registry {
 		return &GHCRRegistry{
 			CommonRegistry: CommonRegistry{
@@ -53,6 +61,13 @@ var RegistryMapInheritable = polymorphic.ToInheritableMap(RegistryMap)
 
 // RegistryDefaultsMap maps a registry type to a RegistryDefaults constructor.
 var RegistryDefaultsMap = map[string]func() RegistryDefaults{
+	"ecr": func() RegistryDefaults {
+		return &ECRRegistryDefaults{
+			CommonRegistryDefaults: CommonRegistryDefaults{
+				Auth: &ECRAuthDefaults{},
+			},
+		}
+	},
 	"ghcr": func() RegistryDefaults {
 		return &GHCRRegistryDefaults{
 			CommonRegistryDefaults: CommonRegistryDefaults{

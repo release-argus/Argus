@@ -60,8 +60,9 @@ func plainDefaults(t *testing.T) (*Defaults, *Defaults) {
 func getTokenData(t *testing.T, auth RegistryAuth) (token, queryToken string, validUntil time.Time) {
 	t.Helper()
 	switch a := auth.(type) {
-	case *QuayAuth:
-		token = a.GetToken()
+	case *ECRAuth:
+		queryToken = a.queryToken
+		validUntil = a.validUntil
 	case *GHCRAuth:
 		token = a.GetToken()
 		queryToken = a.queryToken
@@ -70,6 +71,8 @@ func getTokenData(t *testing.T, auth RegistryAuth) (token, queryToken string, va
 		token = a.GetToken()
 		queryToken = a.queryToken
 		validUntil = a.validUntil
+	case *QuayAuth:
+		token = a.GetToken()
 	}
 	return
 }

@@ -4,7 +4,7 @@ import type { NonNull } from '@/types/util';
 import {
 	type DockerFilter,
 	type DockerFilterType,
-	type DockerFilterUsername,
+	type DockerFilterUsernameToken,
 	LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE,
 	LATEST_VERSION_LOOKUP_TYPE,
 	type LatestVersionLookup,
@@ -23,6 +23,7 @@ import {
 	dockerFilterSchemaDefaults,
 	isLatestVersionType,
 	latestVersionLookupRequireDockerTypeSchema,
+	latestVersionLookupRequireDockerTypeSchemaAmazonECR,
 	latestVersionLookupRequireDockerTypeSchemaDockerHub,
 	type latestVersionLookupSchema,
 	latestVersionLookupSchemaDefault,
@@ -126,13 +127,13 @@ export const buildDockerFilterSchemaWithFallbacks = (
 	const path = 'latest_version.require.docker';
 	const defaultType = defaults?.type || hardDefaults?.type || undefined;
 
-	const dockerHubValue =
-		LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value;
+	const ecrValue = LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.AMAZON_ECR.value;
 	const ghcrValue = LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.GHCR.value;
+	const hubValue = LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value;
 	const quayValue = LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.QUAY.value;
 
 	const combinedDefaults = {
-		registry: [dockerHubValue, ghcrValue, quayValue].reduce(
+		registry: [ecrValue, ghcrValue, hubValue, quayValue].reduce(
 			(acc, type) => {
 				acc[type] = applyDefaultsRecursive<Partial<DockerFilter>>(
 					(defaults?.registry?.[type] as Partial<DockerFilter>) ?? null,
@@ -148,7 +149,7 @@ export const buildDockerFilterSchemaWithFallbacks = (
 	};
 
 	// Docker registries that support username with tokens.
-	const usernameTypes = new Set<DockerFilterType>([dockerHubValue]);
+	const usernameTypes = new Set<DockerFilterType>([hubValue]);
 
 	// Docker schema.
 	const schema = z.preprocess(
@@ -165,17 +166,23 @@ export const buildDockerFilterSchemaWithFallbacks = (
 			return data;
 		},
 		z.discriminatedUnion('type', [
-			latestVersionLookupRequireDockerTypeSchemaDockerHub.extend({
+			latestVersionLookupRequireDockerTypeSchemaAmazonECR.extend({
 				type:
-					defaultType === dockerHubValue
-						? z.literal([dockerHubValue, nullString])
-						: z.literal(dockerHubValue),
+					defaultType === ecrValue
+						? z.literal([ecrValue, nullString])
+						: z.literal(ecrValue),
 			}),
 			latestVersionLookupRequireDockerTypeSchema.extend({
 				type:
 					defaultType === ghcrValue
 						? z.literal([ghcrValue, nullString])
 						: z.literal(ghcrValue),
+			}),
+			latestVersionLookupRequireDockerTypeSchemaDockerHub.extend({
+				type:
+					defaultType === hubValue
+						? z.literal([hubValue, nullString])
+						: z.literal(hubValue),
 			}),
 			latestVersionLookupRequireDockerTypeSchema.extend({
 				type:
@@ -214,12 +221,12 @@ export const buildDockerFilterSchemaWithFallbacks = (
 				typeof latestVersionLookupRequireDockerTypeSchemaDockerHub
 			>;
 			const argTyped = arg as DockerUsernameTyped;
+			const defaultsTyped = schemaDefaults as Partial<DockerFilterUsernameToken>;
 			const hasUsername = !!(
-				argTyped.auth?.username ||
-				(schemaDefaults as Partial<DockerFilterUsername>).auth?.username
+				argTyped.auth?.username || defaultsTyped.auth?.username
 			)?.trim();
 			const hasToken = !!(
-				arg.auth?.token || schemaDefaults?.auth?.token
+				argTyped.auth?.token || defaultsTyped?.auth?.token
 			)?.trim();
 
 			// We must have a username and token, or neither.
