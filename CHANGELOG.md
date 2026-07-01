@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file. See [standa
 * **api:** include disabled_routes in /config response ([#906](https://github.com/release-argus/Argus/issues/906)) ([56cf1ea](https://github.com/release-argus/Argus/commit/56cf1ea23cb5afcdcee15fbdf7ee679cecf695c3))
 * **config:** expose default latest_version/deployed_version type ([2d20627](https://github.com/release-argus/Argus/commit/2d2062712df98ba037ccaf027d5f06cfe55c9204))
 * **notify:** adapt to shoutrrr v1.16.1 API changes ([1b8db9d](https://github.com/release-argus/Argus/commit/1b8db9d30b2f81849f1fad4b5a6857dd0715e130))
+* **ui:** allow notify raw `shoutrrr` types ([#909](https://github.com/release-argus/Argus/issues/909)) ([07f92c5](https://github.com/release-argus/Argus/commit/07f92c54f8276c5b3851becde4a9a603b212ccf7))
 * **ui:** error toast for failed service deletion ([#784](https://github.com/release-argus/Argus/issues/784)) ([76363a3](https://github.com/release-argus/Argus/commit/76363a3017686b5708e24f1d567ee4fbea84bf38))
 * **web:** auth /ws via short-lived token when basic auth is enabled ([#889](https://github.com/release-argus/Argus/issues/889)) ([19be4f4](https://github.com/release-argus/Argus/commit/19be4f4ae6f9b5336f924594935719e4fae1b3a2))
 
