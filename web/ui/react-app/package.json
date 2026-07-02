@@ -76,5 +76,5 @@
     "typecheck:e2e": "tsc -p tsconfig.playwright.json"
   },
   "type": "module",
-  "version": "0.30.0"
+  "version": "0.31.0"
 }
