@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.31.1](https://github.com/release-argus/Argus/compare/0.31.0...0.31.1) (2026-07-02)
+
+
+### Bug Fixes
+
+* **config:** stop save corrupting configs not indented with 2 spaces ([#914](https://github.com/release-argus/Argus/issues/914)) ([c0dd0f8](https://github.com/release-argus/Argus/commit/c0dd0f8e9d226792626a239e9040c47c90191642))
+
 ## [0.31.0](https://github.com/release-argus/Argus/compare/0.30.0...0.31.0) (2026-07-02)
 
 
