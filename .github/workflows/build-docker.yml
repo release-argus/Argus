@@ -29,7 +29,7 @@ jobs:
           repository_owner: '${{ github.repository_owner }}'
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4
 
       - name: Set up Docker Buildx
         id: buildx
@@ -58,7 +58,7 @@ jobs:
       - name: Build and push (release)
         id: docker_build_release
         if: github.event_name == 'release'
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: Dockerfile
@@ -83,7 +83,7 @@ jobs:
       - name: Build and push (master)
         id: docker_build_master
         if: github.event_name != 'release'
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: Dockerfile
