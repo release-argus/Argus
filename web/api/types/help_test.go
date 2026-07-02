@@ -28,15 +28,15 @@ import (
 )
 
 var packageName = "api.types"
-var secretValueMarshalled string
+var secretValueMarshaled string
 
 func TestMain(m *testing.M) {
 	// Log.
 	logtest.InitLog()
 
 	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'.
-	secretValueMarshalledBytes, _ := decode.Marshal("json", util.SecretValue)
-	secretValueMarshalled = string(secretValueMarshalledBytes)
+	secretValueMarshaledBytes, _ := decode.Marshal("json", util.SecretValue)
+	secretValueMarshaled = string(secretValueMarshaledBytes)
 
 	// Run other tests.
 	exitCode := m.Run()

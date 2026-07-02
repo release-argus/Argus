@@ -88,6 +88,70 @@ func TestNewYAMLEncoder_Indent(t *testing.T) {
 	}
 }
 
+// testInterfaceMarshaler substitutes itself with another value to marshal
+// (yaml.InterfaceMarshaler), like service.Service does.
+type testInterfaceMarshaler struct{}
+
+func (m testInterfaceMarshaler) MarshalYAML() (any, error) {
+	return testParent{
+		A: "hello",
+		B: testChild{
+			C: "hello",
+		},
+	}, nil
+}
+
+func TestNewYAMLEncoder__NestedMarshaler(t *testing.T) {
+	// GIVEN: an amount of spaces to indent with.
+	tests := []struct {
+		spaces int
+	}{
+		{spaces: 2},
+		{spaces: 4},
+		{spaces: 8},
+	}
+
+	for _, tc := range tests {
+		name := fmt.Sprintf("%d spaces", tc.spaces)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND: a NewYAMLEncoder created with this indent count.
+			var buf bytes.Buffer
+			enc := NewYAMLEncoder(&buf, tc.spaces)
+
+			// AND: a struct containing a type with a custom yaml.Marshaler.
+			a := struct {
+				Service testInterfaceMarshaler `yaml:"service"`
+			}{}
+
+			prefix := fmt.Sprintf("%s\nNewYAMLEncoder.Encode()", packageName)
+
+			// WHEN: the struct is encoded.
+			if err := enc.Encode(a); err != nil {
+				t.Fatalf(
+					"%s error = %v",
+					prefix, err,
+				)
+			}
+
+			// THEN: the custom-marshaled subtree indents uniformly with the document.
+			indent := strings.Repeat(" ", tc.spaces)
+			got := buf.String()
+			want := "service:\n" +
+				indent + "a: hello\n" +
+				indent + "b:\n" +
+				indent + indent + "c: hello\n"
+			if got != want {
+				t.Errorf(
+					"%s mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+		})
+	}
+}
+
 func TestNewYAMLEncoder_IndentSequence(t *testing.T) {
 	// GIVEN: a YAML encoder.
 	var buf bytes.Buffer

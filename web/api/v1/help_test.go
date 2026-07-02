@@ -48,8 +48,8 @@ import (
 )
 
 var (
-	packageName           = "api_v1"
-	secretValueMarshalled string
+	packageName          = "api_v1"
+	secretValueMarshaled string
 )
 
 func TestMain(m *testing.M) {
@@ -70,8 +70,8 @@ func TestMain(m *testing.M) {
 	cfg.Load(ctx, g, path, &flags)
 
 	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'.
-	secretValueMarshalledBytes, _ := decode.Marshal("json", util.SecretValue)
-	secretValueMarshalled = string(secretValueMarshalledBytes)
+	secretValueMarshaledBytes, _ := decode.Marshal("json", util.SecretValue)
+	secretValueMarshaled = string(secretValueMarshaledBytes)
 
 	// Run other tests.
 	exitCode := m.Run()
