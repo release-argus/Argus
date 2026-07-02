@@ -275,6 +275,41 @@ func testYAML_config_small(path string) {
 	writeFile(path, data)
 }
 
+// testYAML_config_indent4 is for `save.go`.
+//
+// A config indented with 4 spaces rather than the marshal-default 2
+func testYAML_config_indent4(path string) {
+	data := test.TrimYAML(`
+		notify:
+				gotify:
+						type: gotify
+						url_fields:
+								host: example.com
+								token: super-secret
+		service:
+				awesome:
+						options:
+								semantic_versioning: false
+						latest_version:
+								type: url
+								url: https://example.com/releases
+								url_commands:
+										- type: regex
+											regex: '[0-9.]+'
+						notify:
+								gotify: {}
+						command:
+								- - /bin/echo
+									- hello
+						dashboard:
+								icon: https://example.com/icon.webp
+								tags:
+										- NEWS
+		`)
+
+	writeFile(path, data)
+}
+
 func testYAML_Ordering_0(path string) {
 	data := test.TrimYAML(`
 		settings:

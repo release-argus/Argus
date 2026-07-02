@@ -320,7 +320,7 @@ func TestService_Marshal(t *testing.T) {
 			for _, typ := range util.SortedKeys(results) {
 				want := results[typ]
 
-				// WHEN: the Service is marshalled to
+				// WHEN: the Service is marshaled to
 				bytes, err := decode.Marshal(typ, tc.svc)
 
 				prefix := fmt.Sprintf(

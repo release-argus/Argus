@@ -1942,7 +1942,7 @@ func TestLatestVersion_String(t *testing.T) {
 				{
 					"type": "github",
 					"url": "owner/repo",
-					"access_token": ` + secretValueMarshalled + `,
+					"access_token": ` + secretValueMarshaled + `,
 					"allow_invalid_certs": true,
 					"use_prerelease": false,
 					"url_commands": [
@@ -2108,7 +2108,7 @@ func TestLatestVersionRequire_String(t *testing.T) {
 						"image": "test/app",
 						"tag": "{{ version }}",
 						"username": "user",
-						"token": ` + secretValueMarshalled + `
+						"token": ` + secretValueMarshaled + `
 					},
 					"regex_content": ".*",
 					"regex_version": "([0-9.]+)"

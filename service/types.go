@@ -95,16 +95,16 @@ type serviceDecode struct {
 
 // MarshalJSON implements the json.Marshaler interface.
 func (s *Service) MarshalJSON() ([]byte, error) {
-	return s.marshal("json")
+	return decode.Marshal("json", s.marshalAux()) //nolint:wrapcheck
 }
 
-// MarshalYAML implements the yaml.Marshaler interface.
-func (s *Service) MarshalYAML() ([]byte, error) {
-	return s.marshal("yaml")
+// MarshalYAML implements the yaml.InterfaceMarshaler interface.
+func (s *Service) MarshalYAML() (any, error) {
+	return s.marshalAux(), nil
 }
 
-// marshal implements the format.Marshaler interface.
-func (s *Service) marshal(format string) ([]byte, error) {
+// marshalAux converts the Service to its marshal-only helper representation.
+func (s *Service) marshalAux() serviceMarshal {
 	aux := serviceMarshal{
 		Name:                  s.Name,
 		Comment:               s.Comment,
@@ -124,7 +124,7 @@ func (s *Service) marshal(format string) ([]byte, error) {
 		aux.WebHook = s.WebHook
 	}
 
-	return decode.Marshal(format, aux) //nolint:wrapcheck
+	return aux
 }
 
 // UnmarshalJSON implements the json.Marshaler interface.

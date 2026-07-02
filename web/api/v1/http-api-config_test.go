@@ -133,7 +133,7 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": ` + secretValueMarshalled + `,
+								"access_token": ` + secretValueMarshaled + `,
 								"allow_invalid_certs": true,
 								"use_prerelease": false,
 								"require": {
@@ -143,18 +143,18 @@ func TestHTTP_Config(t *testing.T) {
 										"registry": {
 											"ghcr": {
 												"auth": {
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											},
 											"hub": {
 												"auth": {
 													"username": "something",
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											},
 											"quay": {
 												"auth": {
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											}
 										}
@@ -235,7 +235,7 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": ` + secretValueMarshalled + `,
+								"access_token": ` + secretValueMarshaled + `,
 								"allow_invalid_certs": true,
 								"use_prerelease": false,
 								"require": {
@@ -245,18 +245,18 @@ func TestHTTP_Config(t *testing.T) {
 										"registry": {
 											"ghcr": {
 												"auth": {
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											},
 											"hub": {
 												"auth": {
 													"username": "something",
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											},
 											"quay": {
 												"auth": {
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											}
 										}
@@ -361,7 +361,7 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": ` + secretValueMarshalled + `,
+								"access_token": ` + secretValueMarshaled + `,
 								"allow_invalid_certs": true,
 								"use_prerelease": false,
 								"require": {
@@ -371,18 +371,18 @@ func TestHTTP_Config(t *testing.T) {
 										"registry": {
 											"ghcr": {
 												"auth": {
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											},
 											"hub": {
 												"auth": {
 													"username": "something",
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											},
 											"quay": {
 												"auth": {
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											}
 										}
@@ -408,7 +408,7 @@ func TestHTTP_Config(t *testing.T) {
 								"message": "hello world"
 							},
 							"url_fields": {
-								"token": ` + secretValueMarshalled + `
+								"token": ` + secretValueMarshaled + `
 							},
 							"params": {
 								"title": "UPDATE"
@@ -448,7 +448,7 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": ` + secretValueMarshalled + `,
+								"access_token": ` + secretValueMarshaled + `,
 								"allow_invalid_certs": true,
 								"use_prerelease": false,
 								"require": {
@@ -458,18 +458,18 @@ func TestHTTP_Config(t *testing.T) {
 										"registry": {
 											"ghcr": {
 												"auth": {
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											},
 											"hub": {
 												"auth": {
 													"username": "something",
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											},
 											"quay": {
 												"auth": {
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											}
 										}
@@ -495,7 +495,7 @@ func TestHTTP_Config(t *testing.T) {
 								"message": "hello world"
 							},
 							"url_fields": {
-								"token": ` + secretValueMarshalled + `
+								"token": ` + secretValueMarshaled + `
 							},
 							"params": {
 								"title": "UPDATE"
@@ -507,11 +507,11 @@ func TestHTTP_Config(t *testing.T) {
 							"type": "github",
 							"url": "https://example.com",
 							"allow_invalid_certs": true,
-							"secret": ` + secretValueMarshalled + `,
+							"secret": ` + secretValueMarshaled + `,
 							"headers": [
 								{
 									"key": "X-Header",
-									"value": ` + secretValueMarshalled + `
+									"value": ` + secretValueMarshaled + `
 								}
 							],
 							"delay": "4s"
@@ -565,7 +565,7 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": ` + secretValueMarshalled + `,
+								"access_token": ` + secretValueMarshaled + `,
 								"allow_invalid_certs": true,
 								"use_prerelease": false,
 								"require": {
@@ -575,18 +575,18 @@ func TestHTTP_Config(t *testing.T) {
 										"registry": {
 											"ghcr": {
 												"auth": {
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											},
 											"hub": {
 												"auth": {
 													"username": "something",
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											},
 											"quay": {
 												"auth": {
-													"token": ` + secretValueMarshalled + `
+													"token": ` + secretValueMarshaled + `
 												}
 											}
 										}
@@ -612,7 +612,7 @@ func TestHTTP_Config(t *testing.T) {
 								"message": "hello world"
 							},
 							"url_fields": {
-								"token": ` + secretValueMarshalled + `
+								"token": ` + secretValueMarshaled + `
 							},
 							"params": {
 								"title": "UPDATE"
@@ -624,11 +624,11 @@ func TestHTTP_Config(t *testing.T) {
 							"type": "github",
 							"url": "https://example.com",
 							"allow_invalid_certs": true,
-							"secret": ` + secretValueMarshalled + `,
+							"secret": ` + secretValueMarshaled + `,
 							"headers": [
 								{
 									"key": "X-Header",
-									"value": ` + secretValueMarshalled + `
+									"value": ` + secretValueMarshaled + `
 								}
 							],
 							"delay": "4s"
@@ -639,7 +639,7 @@ func TestHTTP_Config(t *testing.T) {
 							"latest_version": {
 								"type": "github",
 								"url": "` + test.ArgusGitHubRepo + `",
-								"access_token": ` + secretValueMarshalled + `
+								"access_token": ` + secretValueMarshaled + `
 							}
 						},
 						"bravo": {

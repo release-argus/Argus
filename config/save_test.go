@@ -393,6 +393,118 @@ func TestConfig_Save(t *testing.T) {
 	}
 }
 
+// reindentLines converts the leading whitespace of lines from indent size
+// `from` to `to`, preserving any partial offset (e.g. the 2-space alignment
+// of sequence continuation lines).
+func reindentLines(lines []string, from, to int) []string {
+	out := make([]string, len(lines))
+	for i, line := range lines {
+		spaces := len(line) - len(strings.TrimLeft(line, " "))
+		levels := spaces / from
+		offset := spaces % from
+		out[i] = strings.Repeat(" ", levels*to+offset) + line[spaces:]
+	}
+	return out
+}
+
+func TestConfig_Save__indentation(t *testing.T) {
+	// GIVEN: a valid config file and an indentation count to save with.
+	tests := []struct {
+		indentation uint8
+	}{
+		{indentation: 2},
+		{indentation: 4},
+		{indentation: 6},
+	}
+
+	for _, tc := range tests {
+		name := fmt.Sprintf("%d spaces", tc.indentation)
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseStdout := test.CaptureLog(t, logx.Default())
+
+			file := filepath.Join(t.TempDir(), "config.yml")
+			testYAML_config_indent4(file)
+			hadData, _ := os.ReadFile(file)
+			cfg := testLoadBasic(t, file)
+			hadIndentation := cfg.Settings.Indentation
+
+			// AND: the indentation replaced with the test count.
+			cfg.Settings.Indentation = tc.indentation
+
+			// WHEN: the config is saved.
+			saveDone := make(chan struct{})
+			go func() {
+				loadMu.RLock()
+				cfg.Save()
+				loadMu.RUnlock()
+				close(saveDone)
+			}()
+			gotExit := gotExitCodeDuringSave(saveDone, false)
+
+			releaseStdout()
+			prefix := fmt.Sprintf("%s\nConfig.Save()", packageName)
+
+			// THEN: the save succeeds.
+			if gotExit {
+				t.Fatalf("%s unexpected Fatal log to ExitCodeChannel", prefix)
+			}
+
+			// AND: the file uses this indentation with the service subtree intact.
+			newData, err := os.ReadFile(cfg.File)
+			if err != nil {
+				t.Fatalf(
+					"%s\nfailed opening the file - %s",
+					packageName, err,
+				)
+			}
+			gotLines := strings.Split(string(newData), "\n")
+			wantLines := reindentLines(
+				strings.Split(string(hadData), "\n"),
+				int(hadIndentation), int(tc.indentation),
+			)
+			if testErr := test.AssertSlicesEqualFunc(
+				t,
+				gotLines,
+				wantLines,
+				func(a, b string) bool { return a == b },
+				prefix,
+				"",
+			); testErr != nil {
+				t.Fatal(testErr)
+			}
+
+			// AND: the saved config still decodes to the same service structure.
+			var cfg2 Config
+			if err := cfg2.Decode(newData); err != nil {
+				t.Fatalf(
+					"%s saved config failed to decode: %v",
+					prefix, err,
+				)
+			}
+			svc := cfg2.Service["awesome"]
+			if svc == nil {
+				t.Fatalf("%s service %q lost on save", prefix, "awesome")
+			}
+			if svc.LatestVersion == nil {
+				t.Errorf("%s latest_version lost on save", prefix)
+			}
+			if svc.Options.SemanticVersioning == nil {
+				t.Errorf("%s options.semantic_versioning lost on save", prefix)
+			}
+			if svc.Dashboard.Icon == "" {
+				t.Errorf("%s dashboard.icon lost on save", prefix)
+			}
+			if len(svc.Command) != 1 {
+				t.Errorf(
+					"%s command lost on save\ngot:  %d commands\nwant: 1",
+					prefix, len(svc.Command),
+				)
+			}
+		})
+	}
+}
+
 func TestConfig_Save__encodeError(t *testing.T) {
 	// GIVEN: a failing YAML encode.
 	original := encodeConfigYAML
