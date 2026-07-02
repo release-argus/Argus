@@ -31,6 +31,8 @@ func GetDefaultOfDockerType(t *testing.T, dType string, defaults *docker.Default
 	t.Helper()
 
 	switch dType {
+	case "ecr":
+		return defaults.Registry.ECR, nil
 	case "ghcr":
 		return defaults.Registry.GHCR, nil
 	case "hub":

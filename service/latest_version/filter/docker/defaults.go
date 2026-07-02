@@ -34,6 +34,7 @@ type Defaults struct {
 
 // RegistryDefaultsSet holds per-registry default configuration.
 type RegistryDefaultsSet struct {
+	ECR  *ECRRegistryDefaults  `json:"ecr,omitzero" yaml:"ecr,omitzero"`   // Amazon ECR Public Gallery (anonymous: no serialisable config).
 	GHCR *GHCRRegistryDefaults `json:"ghcr,omitzero" yaml:"ghcr,omitzero"` // GitHub Container Registry.
 	Hub  *HubRegistryDefaults  `json:"hub,omitzero" yaml:"hub,omitzero"`   // Docker Hub.
 	Quay *QuayRegistryDefaults `json:"quay,omitzero" yaml:"quay,omitzero"` // Quay.
@@ -88,7 +89,8 @@ func (r *RegistryDefaultsSet) IsZero() bool {
 		return true
 	}
 
-	return r.GHCR.IsZero() &&
+	return r.ECR.IsZero() &&
+		r.GHCR.IsZero() &&
 		r.Hub.IsZero() &&
 		r.Quay.IsZero()
 }
@@ -123,6 +125,7 @@ func (d *Defaults) SetDefaults(defaults *Defaults) {
 	d.ContainerDetailDefaults.Defaults = &defaults.ContainerDetailDefaults
 
 	defaults.initRegistries()
+	setRegistryDefaults(d.Registry.ECR, defaults.Registry.ECR)
 	setRegistryDefaults(d.Registry.GHCR, defaults.Registry.GHCR)
 	setRegistryDefaults(d.Registry.Hub, defaults.Registry.Hub)
 	setRegistryDefaults(d.Registry.Quay, defaults.Registry.Quay)
@@ -170,6 +173,9 @@ func (d *Defaults) CheckValues() error {
 
 // initRegistries ensures each registry-specific defaults slot is non-nil.
 func (d *Defaults) initRegistries() {
+	if d.Registry.ECR == nil {
+		d.Registry.ECR = RegistryDefaultsMap["ecr"]().(*ECRRegistryDefaults)
+	}
 	if d.Registry.GHCR == nil {
 		d.Registry.GHCR = RegistryDefaultsMap["ghcr"]().(*GHCRRegistryDefaults)
 	}
@@ -184,6 +190,11 @@ func (d *Defaults) initRegistries() {
 // getRegistryDefaults returns the defaults for dType from defaults, or nil if unset.
 func getRegistryDefaults(dType string, defaults *Defaults) RegistryDefaults {
 	switch dType {
+	case "ecr":
+		if defaults.Registry.ECR == nil {
+			return nil
+		}
+		return defaults.Registry.ECR
 	case "ghcr":
 		if defaults.Registry.GHCR == nil {
 			return nil

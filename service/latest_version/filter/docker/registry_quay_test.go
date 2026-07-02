@@ -735,6 +735,10 @@ func TestQuayRegistry_Copy(t *testing.T) {
 			name: "filled",
 			registry: &QuayRegistry{
 				CommonRegistry: CommonRegistry{
+					ContainerDetail: ContainerDetail{
+						Image: "i1",
+						Tag:   "t1",
+					},
 					Auth: &QuayAuth{
 						QuayAuthDefaults: QuayAuthDefaults{
 							Token:    "t1",
@@ -744,6 +748,8 @@ func TestQuayRegistry_Copy(t *testing.T) {
 				},
 			},
 			want: test.TrimYAML(`
+				image: i1
+				tag: t1
 				auth:
 					token: t1
 			`),
@@ -932,7 +938,10 @@ func TestQuayRegistryDefaults_GetType(t *testing.T) {
 
 	// THEN: the type is returned.
 	if want := "quay"; got != want {
-		t.Errorf("got %q, want %q", got, want)
+		t.Errorf(
+			"%s\ngot %q, want %q",
+			packageName, got, want,
+		)
 	}
 }
 func TestQuayRegistry_GetType(t *testing.T) {
@@ -944,7 +953,10 @@ func TestQuayRegistry_GetType(t *testing.T) {
 
 	// THEN: the type is returned.
 	if want := "quay"; got != want {
-		t.Errorf("got %q, want %q", got, want)
+		t.Errorf(
+			"%s\ngot %q, want %q",
+			packageName, got, want,
+		)
 	}
 }
 
@@ -1023,11 +1035,11 @@ func TestQuayRegistry_NewRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: getQueryURL() is called on it.
+			// WHEN: newRequest() is called on it.
 			_, err := tc.registry.newRequest(tc.tag)
 
 			prefix := fmt.Sprintf(
-				"%s\nHubRegistry newRequest(%s)",
+				"%s\nQuayRegistry newRequest(%s)",
 				packageName, tc.tag,
 			)
 
@@ -1272,6 +1284,11 @@ func TestQuayAuthDefaults_SetDefaults(t *testing.T) {
 			name:        "give QuayAuthDefaults",
 			newDefaults: &QuayAuthDefaults{},
 			doesSet:     true,
+		},
+		{
+			name:        "doesn't give ECRAuthDefaults",
+			newDefaults: &ECRAuthDefaults{},
+			doesSet:     false,
 		},
 		{
 			name: "doesn't give GHCRAuthDefaults",

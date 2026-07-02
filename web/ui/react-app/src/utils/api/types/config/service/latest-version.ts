@@ -78,6 +78,7 @@ type FormURLCommandSplit = URLCommandSplit & {
 
 /* Require */
 export const LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE = {
+	AMAZON_ECR: { label: 'Amazon ECR Public Gallery', value: 'ecr' },
 	DOCKER_HUB: { label: 'Docker Hub', value: 'hub' },
 	GHCR: { label: 'GHCR', value: 'ghcr' },
 	QUAY: { label: 'Quay', value: 'quay' },
@@ -89,33 +90,48 @@ export const latestVersionRequireDockerTypeOptions = Object.values(
 	LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE,
 );
 
-type DockerFilterBase = {
+// Fields shared by every docker registry filter.
+type DockerFilterFields = {
+	image: string;
+	tag: string;
+};
+// Amazon ECR Public Gallery — anonymous, no auth.
+export type DockerFilterBase = DockerFilterFields & {
+	type:
+		| typeof LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.AMAZON_ECR.value
+		| null;
+};
+// GHCR / Quay — token auth.
+export type DockerFilterToken = DockerFilterFields & {
 	type:
 		| typeof LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.GHCR.value
 		| typeof LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.QUAY.value
 		| null;
-	image: string;
-	tag: string;
 	auth: {
-		token: string;
+		token?: string;
 	};
 };
-export type DockerFilterUsername = DockerFilterBase & {
+// Docker Hub — username + token auth.
+export type DockerFilterUsernameToken = DockerFilterFields & {
+	type:
+		| typeof LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value
+		| null;
 	auth: {
-		type:
-			| typeof LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value
-			| null;
-		username: string;
+		username?: string;
+		token?: string;
 	};
 };
-export type DockerFilterUsernameDefaults = Partial<DockerFilterUsername>;
 export type DockerType =
+	| typeof LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.AMAZON_ECR.value
+	| typeof LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value
 	| typeof LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.GHCR.value
 	| typeof LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.QUAY.value
-	| typeof LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value
 	| NullString;
 
-export type DockerFilter = DockerFilterBase | DockerFilterUsername;
+export type DockerFilter =
+	| DockerFilterBase
+	| DockerFilterToken
+	| DockerFilterUsernameToken;
 
 export type DockerRegistryDefaults = {
 	auth?: { token?: string };
@@ -123,12 +139,15 @@ export type DockerRegistryDefaults = {
 export type DockerRegistryUsernameDefaults = {
 	auth?: { token?: string; username?: string };
 };
+// Amazon ECR Public Gallery is anonymous — no auth defaults.
+export type DockerRegistryNoAuthDefaults = { auth?: never };
 
 export type RequireDockerFilterDefaults = {
 	type?: DockerFilterType;
 	tag?: string;
 
 	registry?: {
+		ecr?: DockerRegistryNoAuthDefaults;
 		ghcr?: DockerRegistryDefaults;
 		hub?: DockerRegistryUsernameDefaults;
 		quay?: DockerRegistryDefaults;

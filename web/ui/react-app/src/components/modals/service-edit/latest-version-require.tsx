@@ -16,8 +16,7 @@ import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import type { NonNull } from '@/types/util';
 import {
 	type DockerFilterType,
-	type DockerFilterUsername,
-	type DockerFilterUsernameDefaults,
+	type DockerFilterUsernameToken,
 	type DockerType,
 	LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE,
 	LATEST_VERSION_LOOKUP_TYPE,
@@ -25,14 +24,14 @@ import {
 	latestVersionRequireDockerTypeOptions,
 	type RequireDockerFilterDefaults,
 } from '@/utils/api/types/config/service/latest-version';
-import type {
-	DockerTypeDockerHub,
-	LatestVersionRequire,
-} from '@/utils/api/types/config-edit/service/types/latest-version';
+import type { LatestVersionRequire } from '@/utils/api/types/config-edit/service/types/latest-version';
 import {
 	type NullString,
 	nullString,
 } from '@/utils/api/types/config-edit/shared/null-string';
+
+// Widest auth shape across the registry union (ECR has none).
+type WithDockerAuth = { auth?: DockerFilterUsernameToken['auth'] | null };
 
 /**
  * The `latest_version.require` form fields.
@@ -82,10 +81,19 @@ const EditServiceLatestVersionRequire = () => {
 		dockerRegistry === nullString
 			? (defaultDockerRegistry as NonNull<DockerFilterType>)
 			: dockerRegistry;
+	// Only Docker Hub has a username field.
 	const showUsernameField =
 		selectedDockerRegistry ===
 		LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.DOCKER_HUB.value;
+	// Amazon ECR Public Gallery is anonymous with no auth fields.
+	const showTokenField =
+		selectedDockerRegistry !==
+		LATEST_VERSION_LOOKUP__REQUIRE_DOCKER_TYPE.AMAZON_ECR.value;
 	const dockerDefaults = defaults?.docker?.registry?.[selectedDockerRegistry];
+	// `auth` varies by registry (token / token+username / none for ECR), so read
+	// it through the widest shape — every field is optional.
+	const dockerAuth = (values.docker as WithDockerAuth)?.auth;
+	const dockerDefaultsAuth = (dockerDefaults as WithDockerAuth | undefined)?.auth;
 
 	// Target release assets or webpages.
 	const latestVersionType = useWatch({
@@ -168,33 +176,30 @@ const EditServiceLatestVersionRequire = () => {
 						{showUsernameField && (
 							<FieldText
 								colSize={{ sm: 4 }}
-								defaultVal={
-									(dockerDefaults?.auth as DockerFilterUsername | undefined)
-										?.auth?.username
-								}
+								defaultVal={dockerDefaultsAuth?.username}
 								key="username"
 								label="Username"
 								name={`${name}.docker.auth.username`}
 								required={
 									hasContainer &&
-									(values?.docker?.auth?.token || dockerDefaults?.auth?.token)
+									(dockerAuth?.token || dockerDefaultsAuth?.token)
 								}
 							/>
 						)}
-						<FieldText
-							colSize={{ sm: showUsernameField ? 8 : 12 }}
-							defaultVal={dockerDefaults?.auth?.token}
-							key="token"
-							label="Token"
-							name={`${name}.docker.auth.token`}
-							required={
-								showUsernameField &&
-								hasContainer &&
-								((values.docker as DockerTypeDockerHub).auth?.username ||
-									(dockerDefaults as DockerFilterUsernameDefaults)?.auth
-										?.username)
-							}
-						/>
+						{showTokenField && (
+							<FieldText
+								colSize={{ sm: showUsernameField ? 8 : 12 }}
+								defaultVal={dockerDefaultsAuth?.token}
+								key="token"
+								label="Token"
+								name={`${name}.docker.auth.token`}
+								required={
+									showUsernameField &&
+									hasContainer &&
+									(dockerAuth?.username || dockerDefaultsAuth?.username)
+								}
+							/>
+						)}
 					</FieldSet>
 				</AccordionContent>
 			</AccordionItem>

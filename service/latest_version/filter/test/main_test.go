@@ -28,6 +28,7 @@ func TestRequire(t *testing.T) {
 	tests := []struct {
 		dockerType string
 	}{
+		{dockerType: "ecr"},
 		{dockerType: "ghcr"},
 		{dockerType: "hub"},
 		{dockerType: "quay"},
@@ -47,6 +48,13 @@ func TestRequire(t *testing.T) {
 
 			// THEN: the expected Docker type is returned.
 			switch tc.dockerType {
+			case "ecr":
+				if _, ok := got.Docker.(*docker.ECRRegistry); !ok {
+					t.Errorf(
+						"%s type mismatch\ngot:  %t\nwant: %q",
+						prefix, got.Docker, "ECRRegistry",
+					)
+				}
 			case "ghcr":
 				if _, ok := got.Docker.(*docker.GHCRRegistry); !ok {
 					t.Errorf(

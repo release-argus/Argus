@@ -33,6 +33,11 @@ func TestGetDefaultOfDockerType(t *testing.T) {
 		err    bool
 	}{
 		{
+			name:   "ecr",
+			dType:  "ecr",
+			expect: defaults.Registry.ECR,
+		},
+		{
 			name:   "ghcr",
 			dType:  "ghcr",
 			expect: defaults.Registry.GHCR,

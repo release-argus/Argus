@@ -46,6 +46,9 @@ func ShoutrrrGotifyToken() (token string) {
 
 var ArgusGitHubRepo = "release-argus/Argus"
 
+// Amazon ECR Public Gallery Repo used for tests (AWS-owned, long-lived).
+var ArgusDockerECRRepo = "docker/library/busybox"
+
 // GHCR Repo for Argus.
 var ArgusDockerGHCRRepo = "release-argus/argus"
 
