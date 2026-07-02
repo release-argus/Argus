@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.31.0](https://github.com/release-argus/Argus/compare/0.30.0...0.31.0) (2026-07-02)
+
+
+### Features
+
+* **docker:** add Amazon ECR Public Gallery registry type ([#911](https://github.com/release-argus/Argus/issues/911)) ([0f9e132](https://github.com/release-argus/Argus/commit/0f9e1324c1b42600dc7b809470f4c87f12d86143))
+
 ## [0.30.0](https://github.com/release-argus/Argus/compare/0.29.4...0.30.0) (2026-07-01)
 
 
