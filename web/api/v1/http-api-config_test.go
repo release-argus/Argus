@@ -59,6 +59,10 @@ func TestHTTP_Config(t *testing.T) {
 			name: "settings/only",
 			settings: &config.Settings{
 				SettingsBase: config.SettingsBase{
+					Data: config.DataSettings{
+						DatabaseFile: "somewhere.db",
+						Readonly:     test.Ptr(true),
+					},
 					Web: config.WebSettings{
 						ListenHost:     "127.0.0.1",
 						DisabledRoutes: []string{"version", "websocket"},
@@ -68,6 +72,10 @@ func TestHTTP_Config(t *testing.T) {
 			wantBody: `
 				{
 					"settings": {
+						"data": {
+							"database_file": "somewhere.db",
+							"readonly": true
+						},
 						"web": {
 							"listen_host": "127.0.0.1",
 							"disabled_routes": ["version", "websocket"]

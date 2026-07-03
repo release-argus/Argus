@@ -116,7 +116,7 @@ func (s *Status) AnnounceUpdate() {
 }
 
 // announceApproved broadcasts an approval or skip action to WebSocket clients.
-func (s *Status) announceApproved() {
+func (s *Status) announceApproved(approvedVersion string) {
 	s.sendAnnouncePayload(
 		apitype.WebSocketMessage{
 			Page:    "APPROVALS",
@@ -125,7 +125,7 @@ func (s *Status) announceApproved() {
 			ServiceData: &apitype.ServiceSummary{
 				ID: s.ServiceInfo.ID,
 				Status: &apitype.Status{
-					ApprovedVersion: s.ServiceInfo.ApprovedVersion,
+					ApprovedVersion: approvedVersion,
 				},
 			},
 		},

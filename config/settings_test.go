@@ -47,6 +47,13 @@ func TestDataSettings_IsZero(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "non-empty/Readonly",
+			data: DataSettings{
+				Readonly: test.Ptr(true),
+			},
+			want: false,
+		},
 	}
 
 	for _, tc := range tests {
@@ -1163,6 +1170,20 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			ok:   true,
 		},
 		{
+			name: "data.readonly",
+			env: map[string]string{
+				"ARGUS_DATA_READONLY": "true",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Data: DataSettings{
+						Readonly: test.Ptr(true),
+					},
+				},
+			},
+			ok: true,
+		},
+		{
 			name: "log.level",
 			env: map[string]string{
 				"ARGUS_LOG_LEVEL": "ERROR",
@@ -1572,6 +1593,85 @@ func TestSettings_Default(t *testing.T) {
 	}
 }
 
+func TestSettings_Default__BasicAuthFromFlags(t *testing.T) {
+	// GIVEN: the web.basic-auth.username/password flags may or may not be provided.
+	tests := []struct {
+		name         string
+		usernameFlag *string
+		passwordFlag *string
+		want         *WebSettingsBasicAuth
+	}{
+		{
+			name:         "neither flag provided",
+			usernameFlag: nil,
+			passwordFlag: nil,
+			want:         nil,
+		},
+		{
+			name:         "only username flag provided",
+			usernameFlag: test.Ptr("test-user"),
+			passwordFlag: nil,
+			want: &WebSettingsBasicAuth{
+				Username: "test-user",
+				Password: util.FmtHash(util.GetHash("")),
+			},
+		},
+		{
+			name:         "only password flag provided",
+			usernameFlag: nil,
+			passwordFlag: test.Ptr("test-pass"),
+			want: &WebSettingsBasicAuth{
+				Password: util.FmtHash(util.GetHash("test-pass")),
+			},
+		},
+		{
+			name:         "both flags provided",
+			usernameFlag: test.Ptr("test-user"),
+			passwordFlag: test.Ptr("test-pass"),
+			want: &WebSettingsBasicAuth{
+				Username: "test-user",
+				Password: util.FmtHash(util.GetHash("test-pass")),
+			},
+		},
+	}
+
+	loadMu.Lock() // Protect flag vars.
+	t.Cleanup(loadMu.Unlock)
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're sharing flag vars.
+
+			hadUsername, hadPassword := WebBasicAuthUsername, WebBasicAuthPassword
+			WebBasicAuthUsername, WebBasicAuthPassword = tc.usernameFlag, tc.passwordFlag
+			t.Cleanup(func() {
+				WebBasicAuthUsername, WebBasicAuthPassword = hadUsername, hadPassword
+			})
+
+			settings := Settings{}
+
+			// WHEN: Default is called.
+			settings.Default()
+
+			// THEN: FromFlags.Web.BasicAuth is only populated when a flag was provided.
+			got := settings.FromFlags.Web.BasicAuth
+			switch {
+			case tc.want == nil:
+				if got != nil {
+					t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  %v\nwant: nil",
+						packageName, got)
+				}
+			case got == nil:
+				t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  nil\nwant: %v",
+					packageName, tc.want)
+			case got.Username != tc.want.Username || got.Password != tc.want.Password:
+				t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  %v\nwant: %v",
+					packageName, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestSettings_GetStrings(t *testing.T) {
 	// GIVEN: different flags/env vars are set that may impact the result of .Default().
 	settings := testSettings(t)
@@ -1790,7 +1890,7 @@ func TestSettings_GetStrings(t *testing.T) {
 }
 
 func TestSettings_GetBool(t *testing.T) {
-	// GIVEN: vars set in dif	// GIVEN: different flags/env vars are set that may impact the result of .Default().
+	// GIVEN: different flags/env vars are set that may impact the result of .Default().
 	settings := testSettings(t)
 	tests := []struct {
 		name       string
@@ -1802,6 +1902,27 @@ func TestSettings_GetBool(t *testing.T) {
 		getFunc    func() bool
 		getFuncPtr func() *bool
 	}{
+		{
+			name:      "data.readonly hard default",
+			getFunc:   settings.DataReadonly,
+			flag:      &DataReadonly,
+			want:      "false",
+			nilConfig: true,
+			configPtr: &settings.Data.Readonly,
+		},
+		{
+			name:    "data.readonly config",
+			getFunc: settings.DataReadonly,
+			flag:    &DataReadonly,
+			want:    "true",
+		},
+		{
+			name:    "data.readonly flag",
+			getFunc: settings.DataReadonly,
+			flag:    &DataReadonly,
+			flagVal: test.Ptr(false),
+			want:    "false",
+		},
 		{
 			name:       "log.timestamps hard default",
 			getFuncPtr: settings.LogTimestamps,
@@ -1820,8 +1941,8 @@ func TestSettings_GetBool(t *testing.T) {
 			name:       "log.timestamps flag",
 			getFuncPtr: settings.LogTimestamps,
 			flag:       &LogTimestamps,
-			flagVal:    test.Ptr(true),
-			want:       "true",
+			flagVal:    test.Ptr(false),
+			want:       "false",
 		},
 	}
 

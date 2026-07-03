@@ -11,7 +11,7 @@ import { mapRequest } from '@/utils/api/types/api-request-handler';
 const titleMappings: Record<string, string> = {
 	cwd: 'Working directory',
 };
-const ignoreCapitalise = new Set(['GOMAXPROCS', 'GOGC', 'GODEBUG']);
+const ignoreCapitalize = new Set(['GOMAXPROCS', 'GOGC', 'GODEBUG']);
 
 /**
  * @returns The status page, which includes tables of runtime info and of build info.
@@ -56,8 +56,8 @@ export const Status = (): ReactElement => {
 										<TableRow className="odd:bg-muted/30" key={k}>
 											<TableCell
 												className={cn(
-													'w-1/3 border-r py-4',
-													!ignoreCapitalise.has(k) && 'capitalize',
+													'w-1/3 border-r px-4 py-2',
+													!ignoreCapitalize.has(k) && 'capitalize',
 												)}
 											>
 												{title}
@@ -67,13 +67,13 @@ export const Status = (): ReactElement => {
 									);
 								})
 							: Array.from(new Array(4).keys()).map((num) => (
-									<TableRow className="odd:bg-muted/30" key={num}>
-										<TableCell className="w-1/3 border-r py-2">
+									<TableRow className="h-7 odd:bg-muted/30" key={num}>
+										<TableCell className="w-1/3 border-r px-4 py-2">
 											{delayedRender(() => (
 												<Skeleton className="h-5 w-full" />
 											))}
 										</TableCell>
-										<TableCell>
+										<TableCell className="px-4 py-2">
 											{delayedRender(() => (
 												<Skeleton className="h-5 w-full" />
 											))}
@@ -105,8 +105,8 @@ export const Status = (): ReactElement => {
 										<TableRow className="odd:bg-muted/30" key={k}>
 											<TableCell
 												className={cn(
-													'border-r px-4 py-2 font-bold',
-													!ignoreCapitalise.has(k) && 'capitalize',
+													'w-1/3 border-r px-4 py-2 font-bold',
+													!ignoreCapitalize.has(k) && 'capitalize',
 												)}
 											>
 												{title}
@@ -116,11 +116,13 @@ export const Status = (): ReactElement => {
 									);
 								})
 							: Array.from(new Array(3).keys()).map((num) => (
-									<TableRow className="odd:bg-muted/30" key={num}>
-										<TableCell className="flex w-1/3 flex-row border-r py-2">
-											&nbsp;
+									<TableRow className="h-7 odd:bg-muted/30" key={num}>
+										<TableCell className="w-1/3 border-r px-4 py-2">
+											{delayedRender(() => (
+												<Skeleton className="h-5 w-full" />
+											))}
 										</TableCell>
-										<TableCell>
+										<TableCell className="px-4 py-2">
 											{delayedRender(() => (
 												<Skeleton className="h-5 w-full" />
 											))}

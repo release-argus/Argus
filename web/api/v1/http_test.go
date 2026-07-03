@@ -92,6 +92,7 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 				"log.level":"DEBUG",
 				"log.timestamps":false,
 				"data.database-file":"[^"]+",
+				"data.readonly":false,
 				"web.listen-host":"[\d.]+",
 				"web.listen-port":"\d+",
 				"web.cert-file":"",

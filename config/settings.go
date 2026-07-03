@@ -43,6 +43,11 @@ var (
 		"data/argus.db",
 		"Database file path (env_var=ARGUS_DATA_DATABASE_FILE)",
 	)
+	DataReadonly = flag.Bool(
+		"data.readonly",
+		false,
+		"Disable persisting config changes back to the config file (env_var=ARGUS_DATA_READONLY)",
+	)
 	WebListenHost = flag.String(
 		"web.listen-host",
 		"0.0.0.0",
@@ -82,8 +87,8 @@ var (
 
 // SettingsBase holds the base settings for the binary.
 type SettingsBase struct {
-	Log  LogSettings  `json:"log,omitempty" yaml:"log,omitempty"`   // Log settings
 	Data DataSettings `json:"data,omitempty" yaml:"data,omitempty"` // Data settings
+	Log  LogSettings  `json:"log,omitempty" yaml:"log,omitempty"`   // Log settings
 	Web  WebSettings  `json:"web,omitempty" yaml:"web,omitempty"`   // Web settings
 }
 
@@ -144,18 +149,20 @@ func (s *SettingsBase) MapEnvToStruct() error {
 
 // DataSettings holds data-related settings for the binary.
 type DataSettings struct {
-	DatabaseFile string `json:"database_file,omitempty" yaml:"database_file,omitempty"` // Database path
+	DatabaseFile string `json:"database_file,omitempty" yaml:"database_file,omitempty"` // Database path.
+	Readonly     *bool  `json:"readonly,omitempty" yaml:"readonly,omitempty"`           // Disable saving config changes to disk.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (s DataSettings) IsZero() bool {
-	return s.DatabaseFile == ""
+	return s.DatabaseFile == "" &&
+		s.Readonly == nil
 }
 
 // LogSettings holds log-related settings for the binary.
 type LogSettings struct {
-	Timestamps *bool  `json:"timestamps,omitempty" yaml:"timestamps,omitempty"` // Timestamps in CLI output
-	Level      string `json:"level,omitempty" yaml:"level,omitempty"`           // Log level
+	Timestamps *bool  `json:"timestamps,omitempty" yaml:"timestamps,omitempty"` // Timestamps in CLI output.
+	Level      string `json:"level,omitempty" yaml:"level,omitempty"`           // Log level.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -322,6 +329,7 @@ func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 		{"log.level", &LogLevel},
 		{"log.timestamps", &LogTimestamps},
 		{"data.database-file", &DataDatabaseFile},
+		{"data.readonly", &DataReadonly},
 		{"web.listen-host", &WebListenHost},
 		{"web.listen-port", &WebListenPort},
 		{"web.cert-file", &WebCertFile},
@@ -364,6 +372,11 @@ func (s *Settings) Default() bool {
 	// DatabaseFile.
 	s.FromFlags.Data.DatabaseFile = util.DerefOrZero(DataDatabaseFile)
 	s.HardDefaults.Data.DatabaseFile = "data/argus.db"
+
+	// Readonly.
+	s.FromFlags.Data.Readonly = DataReadonly
+	dataReadonly := false
+	s.HardDefaults.Data.Readonly = &dataReadonly
 
 	// #######
 	// # WEB #
@@ -431,6 +444,17 @@ func (s *Settings) DataDatabaseFile() string {
 		s.FromFlags.Data.DatabaseFile,
 		s.Data.DatabaseFile,
 		s.HardDefaults.Data.DatabaseFile,
+	)
+}
+
+// DataReadonly resolves whether config changes should be withheld from disk.
+func (s *Settings) DataReadonly() bool {
+	return util.DerefOrZero(
+		util.FirstNonNilPtr(
+			s.FromFlags.Data.Readonly,
+			s.Data.Readonly,
+			s.HardDefaults.Data.Readonly,
+		),
 	)
 }
 

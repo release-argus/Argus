@@ -30,6 +30,7 @@ func NilFlags(t *testing.T, cfg *config.Config) {
 		"log.level",
 		"log.timestamps",
 		"data.database-file",
+		"data.readonly",
 		"web.listen-host",
 		"web.listen-port",
 		"web.cert-file",

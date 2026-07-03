@@ -192,6 +192,7 @@ type Flags struct {
 	LogLevel         string `json:"log.level,omitempty" yaml:"log.level,omitempty"`
 	LogTimestamps    *bool  `json:"log.timestamps,omitempty" yaml:"log.timestamps,omitempty"`
 	DataDatabaseFile string `json:"data.database-file,omitempty" yaml:"data.database-file,omitempty"`
+	DataReadonly     bool   `json:"data.readonly,omitempty" yaml:"data.readonly,omitempty"`
 	WebListenHost    string `json:"web.listen-host,omitempty" yaml:"web.listen-host,omitempty"`
 	WebListenPort    string `json:"web.listen-port,omitempty" yaml:"web.listen-port,omitempty"`
 	WebCertFile      string `json:"web.cert-file" yaml:"web.cert-file"`
@@ -236,14 +237,28 @@ type Config struct {
 
 // Settings contain settings for the program.
 type Settings struct {
-	Log LogSettings `json:"log,omitzero" yaml:"log,omitzero"`
-	Web WebSettings `json:"web,omitzero" yaml:"web,omitzero"`
+	Data DataSettings `json:"data,omitzero" yaml:"data,omitzero"`
+	Log  LogSettings  `json:"log,omitzero" yaml:"log,omitzero"`
+	Web  WebSettings  `json:"web,omitzero" yaml:"web,omitzero"`
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (s *Settings) IsZero() bool {
 	return s.Log.IsZero() &&
+		s.Data.IsZero() &&
 		s.Web.IsZero()
+}
+
+// DataSettings contains data settings for the program.
+type DataSettings struct {
+	DatabaseFile string `json:"database_file,omitempty" yaml:"database_file,omitempty"` // Database file path.
+	Readonly     *bool  `json:"readonly,omitempty" yaml:"readonly,omitempty"`           // Disable saving config changes to disk.
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (d DataSettings) IsZero() bool {
+	return d.DatabaseFile == "" &&
+		d.Readonly == nil
 }
 
 // LogSettings contains web settings for the program.

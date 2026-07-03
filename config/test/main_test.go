@@ -50,6 +50,7 @@ func TestBareConfig(t *testing.T) {
 		flag *bool
 		cfg  *bool
 	}{
+		"data.readonly":  {flag: config.DataReadonly},
 		"log.timestamps": {flag: config.LogTimestamps},
 	}
 	for key, value := range boolFlags {
@@ -94,6 +95,7 @@ func TestBareConfig(t *testing.T) {
 		flag *bool
 		cfg  *bool
 	}{
+		"data.readonly":  {cfg: cfg.Settings.FromFlags.Data.Readonly},
 		"log.timestamps": {cfg: cfg.Settings.FromFlags.Log.Timestamps},
 	}
 	webBasicAuthFlags = map[string]struct {

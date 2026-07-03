@@ -293,7 +293,7 @@ func TestStatus_AnnounceApproved(t *testing.T) {
 			wantApprovedVersion := status.ApprovedVersion()
 
 			// WHEN: announceApproved is called on it.
-			status.announceApproved()
+			status.announceApproved(wantApprovedVersion)
 
 			prefix := fmt.Sprintf("%s\nStatus.announceApproved()", packageName)
 

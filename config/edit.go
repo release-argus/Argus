@@ -163,7 +163,7 @@ func (c *Config) DeleteService(serviceID string) {
 	c.Order = util.RemoveFirst(c.Order, serviceID)
 
 	// nil the channels and set the `deleting` flag.
-	c.Service[serviceID].PrepDelete(true)
+	c.Service[serviceID].PrepDelete(!c.Settings.DataReadonly())
 
 	// Remove the service from the config.
 	delete(c.Service, serviceID)

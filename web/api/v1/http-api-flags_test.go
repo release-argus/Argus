@@ -42,6 +42,7 @@ func TestHTTP_HTTPFlags(t *testing.T) {
 			"log.level": "`+api.Config.Settings.LogLevel()+`",
 			"log.timestamps": `+strconv.FormatBool(*api.Config.Settings.LogTimestamps())+`,
 			"data.database-file": "`+api.Config.Settings.DataDatabaseFile()+`",
+			"data.readonly": `+strconv.FormatBool(api.Config.Settings.DataReadonly())+`,
 			"web.listen-host": "`+api.Config.Settings.WebListenHost()+`",
 			"web.listen-port": "[0-9]{1,5}",
 			"web.cert-file": "",
