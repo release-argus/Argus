@@ -356,8 +356,6 @@ func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 
 	newServiceInfo := s.ServiceInfo
 	s.mu.Unlock()
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 
 	// Metrics.
 	setLatestVersionIsDeployedMetric(newServiceInfo)
@@ -379,7 +377,7 @@ func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 	}
 
 	// WebSocket.
-	s.announceApproved()
+	s.announceApproved(newServiceInfo.ApprovedVersion)
 
 	// Database.
 	message := dbtype.Message{

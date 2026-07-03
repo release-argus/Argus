@@ -974,6 +974,15 @@ func TestSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "non-empty/Data",
+			settings: Settings{
+				Data: DataSettings{
+					Readonly: test.Ptr(true),
+				},
+			},
+			want: false,
+		},
+		{
 			name: "non-empty/Web",
 			settings: Settings{
 				Web: WebSettings{
@@ -987,6 +996,9 @@ func TestSettings_IsZero(t *testing.T) {
 			settings: Settings{
 				Log: LogSettings{
 					Level: "DEBUG",
+				},
+				Data: DataSettings{
+					Readonly: test.Ptr(true),
 				},
 				Web: WebSettings{
 					ListenPort: "9001",
@@ -1007,6 +1019,63 @@ func TestSettings_IsZero(t *testing.T) {
 			if got != tc.want {
 				t.Errorf(
 					"%s\nSettings.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestDataSettings_IsZero(t *testing.T) {
+	// GIVEN: DataSettings.
+	tests := []struct {
+		name         string
+		dataSettings DataSettings
+		want         bool
+	}{
+		{
+			name: "empty",
+			dataSettings: DataSettings{
+				DatabaseFile: "",
+				Readonly:     nil,
+			},
+			want: true,
+		},
+		{
+			name: "non-empty/DatabaseFile",
+			dataSettings: DataSettings{
+				DatabaseFile: "somewhere.db",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Readonly",
+			dataSettings: DataSettings{
+				Readonly: test.Ptr(true),
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/all",
+			dataSettings: DataSettings{
+				DatabaseFile: "somewhere.db",
+				Readonly:     test.Ptr(true),
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero() is called on it.
+			got := tc.dataSettings.IsZero()
+
+			// THEN: the result is as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nDataSettings.IsZero() value mismatch\ngot:  %t\nwant: %t",
 					packageName, got, tc.want,
 				)
 			}

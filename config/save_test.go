@@ -543,6 +543,55 @@ func TestConfig_Save__encodeError(t *testing.T) {
 	}
 }
 
+func TestConfig_Save__readonly(t *testing.T) {
+	// GIVEN: a Config loaded in readonly mode.
+	file := filepath.Join(t.TempDir(), "config.yml")
+	testYAML_config_small(file)
+	cfg := testLoadBasic(t, file)
+	cfg.Settings.Data.Readonly = test.Ptr(true)
+
+	// AND: openSaveFile is spied so any write attempt is detected.
+	opened := false
+	original := openSaveFile
+	openSaveFile = func(name string) (io.WriteCloser, error) {
+		opened = true
+		return original(name)
+	}
+	t.Cleanup(func() { openSaveFile = original })
+
+	releaseStdout := test.CaptureLog(t, logx.Default())
+
+	// WHEN: Save is called.
+	loadMu.RLock()
+	got := cfg.Save()
+	loadMu.RUnlock()
+
+	stdout := releaseStdout()
+	prefix := fmt.Sprintf("%s\nConfig.Save()", packageName)
+
+	// THEN: the file is never opened
+	if opened {
+		t.Errorf("%s in readonly mode should not open the file for writing", prefix)
+	}
+
+	// AND: ok is reported
+	if !got {
+		t.Errorf(
+			"%s response mismatch in readonly mode\ngot:  %t\nwant: ok=true",
+			prefix, got,
+		)
+	}
+
+	// AND: a readonly log is emitted.
+	wantRegex := `Readonly mode: not saving`
+	if !util.RegexCheck(wantRegex, stdout) {
+		t.Errorf(
+			"%s stdout mismatch\ngot:  %q\nwant: %q",
+			prefix, stdout, wantRegex,
+		)
+	}
+}
+
 // failWriter is an io.WriteCloser whose Write always fails.
 // Used to trigger the "error flushing" path in Save() when all data fits in
 // bufio's buffer and the error surfaces at the final Flush().

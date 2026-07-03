@@ -31,6 +31,10 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 
 	// Settings.
 	cfg.Settings = apitype.Settings{
+		Data: apitype.DataSettings{
+			DatabaseFile: api.Config.Settings.Data.DatabaseFile,
+			Readonly:     api.Config.Settings.Data.Readonly,
+		},
 		Log: apitype.LogSettings{
 			Timestamps: api.Config.Settings.Log.Timestamps,
 			Level:      api.Config.Settings.Log.Level,

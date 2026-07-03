@@ -3,6 +3,11 @@ export type SettingsLog = {
 	timestamps?: boolean;
 };
 
+export type SettingsData = {
+	database_file?: string;
+	readonly?: boolean;
+};
+
 export type SettingsWeb = {
 	cert_file: string;
 	pkey_file: string;
@@ -12,6 +17,7 @@ export type SettingsWeb = {
 };
 
 export type Settings = {
+	data?: SettingsData;
 	log?: SettingsLog;
 	web?: SettingsWeb;
 };

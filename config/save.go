@@ -95,6 +95,12 @@ func drainAndDebounce[T any](ctx context.Context, channel chan T, duration time.
 
 // Save writes the configuration to c.File.
 func (c *Config) Save() (ok bool) {
+	// Readonly mode: never persist changes to disk.
+	if c.Settings.DataReadonly() {
+		logx.Info("Readonly mode: not saving changes to "+c.File, logx.LogFrom{}, true)
+		return true
+	}
+
 	c.OrderMu.RLock()
 
 	// Encode to memory (Go-ordered slices, but with an order list for Services).

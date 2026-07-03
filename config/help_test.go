@@ -103,15 +103,15 @@ func testConfig(t *testing.T) *Config {
 func testSettings(t *testing.T) Settings {
 	t.Helper()
 
-	logTimestamps := true
 	return Settings{
 		SettingsBase: SettingsBase{
 			Log: LogSettings{
-				Timestamps: &logTimestamps,
+				Timestamps: test.Ptr(true),
 				Level:      "DEBUG",
 			},
 			Data: DataSettings{
 				DatabaseFile: "somewhere.db",
+				Readonly:     test.Ptr(true),
 			},
 			Web: WebSettings{
 				ListenHost:  "test",
@@ -128,6 +128,34 @@ var loadMu sync.RWMutex
 
 func testLoadBasic(t *testing.T, file string) *Config {
 	cfg := &Config{}
+
+	strFlags := []**string{
+		&LogLevel, &DataDatabaseFile,
+		&WebListenHost, &WebListenPort, &WebCertFile, &WebPKeyFile, &WebRoutePrefix,
+		&WebBasicAuthUsername, &WebBasicAuthPassword,
+	}
+	boolFlags := []**bool{&LogTimestamps, &DataReadonly}
+	strHad := make([]*string, len(strFlags))
+	boolHad := make([]*bool, len(boolFlags))
+	loadMu.Lock()
+	for i, flag := range strFlags {
+		strHad[i] = *flag
+	}
+	for i, flag := range boolFlags {
+		boolHad[i] = *flag
+	}
+
+	cfg.Settings.NilUndefinedFlags(&map[string]bool{})
+
+	t.Cleanup(func() {
+		for i, flag := range strFlags {
+			*flag = strHad[i]
+		}
+		for i, flag := range boolFlags {
+			*flag = boolHad[i]
+		}
+		loadMu.Unlock()
+	})
 
 	cfg.File = file
 

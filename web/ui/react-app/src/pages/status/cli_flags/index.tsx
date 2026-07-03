@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/table';
 import { useDelayedRender } from '@/hooks/use-delayed-render';
 import { QUERY_KEYS } from '@/lib/query-keys';
+import { isEmptyOrNull } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
 
 /**
@@ -53,20 +54,20 @@ export const Flags = (): ReactElement => {
 								<TableRow className="odd:bg-muted/30" key={k}>
 									<TableCell className="border-r px-4 py-2 font-bold">{`-${k}`}</TableCell>
 									<TableCell className="px-4 py-2 font-bold">
-										{v == undefined ? '' : v.toString()}
+										{isEmptyOrNull(v) ? '' : v.toString()}
 									</TableCell>
 								</TableRow>
 							))
-						: Array.from(new Array(9).keys()).map((num) => (
+						: Array.from(new Array(10).keys()).map((num) => (
 								<TableRow className="odd:bg-muted/30" key={num}>
-									<TableCell className="border-r py-3">
+									<TableCell className="h-7 border-r px-4 py-2">
 										{delayedRender(() => (
-											<Skeleton className="h-4 w-full" />
+											<Skeleton className="h-5 w-full" />
 										))}
 									</TableCell>
-									<TableCell>
+									<TableCell className="h-7 px-4 py-2">
 										{delayedRender(() => (
-											<Skeleton className="h-4 w-full" />
+											<Skeleton className="h-5 w-full" />
 										))}
 									</TableCell>
 								</TableRow>

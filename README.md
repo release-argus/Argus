@@ -53,6 +53,8 @@ Usage of /usr/local/bin/argus:
         Argus configuration file path (env_var=ARGUS_CONFIG_FILE) (default "config.yml")
   -data.database-file string
         Database file path (env_var=ARGUS_DATA_DATABASE_FILE) (default "data/argus.db")
+  -data.readonly
+        Disable persisting config changes back to the config file (env_var=ARGUS_DATA_READONLY)
   -log.level string
         ERROR, WARN, INFO, VERBOSE or DEBUG (env_var=ARGUS_LOG_LEVEL) (default "INFO")
   -log.timestamps

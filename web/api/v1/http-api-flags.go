@@ -32,6 +32,7 @@ func (api *API) httpFlags(w http.ResponseWriter, r *http.Request) {
 		LogLevel:         api.Config.Settings.LogLevel(),
 		LogTimestamps:    api.Config.Settings.LogTimestamps(),
 		DataDatabaseFile: api.Config.Settings.DataDatabaseFile(),
+		DataReadonly:     api.Config.Settings.DataReadonly(),
 		WebListenHost:    api.Config.Settings.WebListenHost(),
 		WebListenPort:    api.Config.Settings.WebListenPort(),
 		WebCertFile:      api.Config.Settings.WebCertFile(),
