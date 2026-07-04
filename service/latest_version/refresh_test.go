@@ -52,7 +52,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 		{
 			name: "no overrides, no semantic versioning change",
 			args: args{
-				lookup:             tLookup,
+				lookup:             testLookup(t, "url", false),
 				overrides:          nil,
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
@@ -63,7 +63,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 		{
 			name: "invalid semantic versioning JSON",
 			args: args{
-				lookup:             tLookup,
+				lookup:             testLookup(t, "url", false),
 				overrides:          nil,
 				semanticVerDiff:    true,
 				semanticVersioning: test.Ptr("invalid"),
@@ -77,7 +77,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 		{
 			name: "valid semantic versioning change",
 			args: args{
-				lookup:             tLookup,
+				lookup:             testLookup(t, "url", false),
 				overrides:          nil,
 				semanticVerDiff:    true,
 				semanticVersioning: test.Ptr("true"),
@@ -88,7 +88,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 		{
 			name: "valid overrides JSON",
 			args: args{
-				lookup:             tLookup,
+				lookup:             testLookup(t, "url", false),
 				overrides:          []byte(`{"url": "https://example.com"}`),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
@@ -103,7 +103,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 		{
 			name: "invalid overrides JSON/Invalid JSON",
 			args: args{
-				lookup:             tLookup,
+				lookup:             testLookup(t, "url", false),
 				overrides:          []byte(`{"url": "}`),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
@@ -116,7 +116,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 		{
 			name: "invalid overrides JSON/different var type",
 			args: args{
-				lookup:             tLookup,
+				lookup:             testLookup(t, "url", false),
 				overrides:          []byte(`{"url": ["newType"]}`),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
@@ -129,7 +129,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 		{
 			name: "change type with valid overrides",
 			args: args{
-				lookup: tLookup,
+				lookup: testLookup(t, "url", false),
 				overrides: []byte(test.TrimJSON(`{
 					"type": "github",
 					"url": "` + test.ArgusGitHubRepo + `",
@@ -148,7 +148,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 		{
 			name: "change type to unknown type",
 			args: args{
-				lookup: tLookup,
+				lookup: testLookup(t, "url", false),
 				overrides: []byte(test.TrimJSON(`{
 					"type": "newType",
 					"url": []

@@ -29,10 +29,7 @@ type Logger interface {
 	SetOutput(io.Writer)
 }
 
-var (
-	logMu               sync.Mutex // Only one test should write to log at a time.
-	testHoldingLogMutex string     // Name of the test holding the log mutex.
-)
+var logMu sync.Mutex // Only one test should write to log at a time.
 
 // CaptureLog temporarily captures all output written to the log
 // and returns a function that, when called, restores the original log and
@@ -40,18 +37,18 @@ var (
 func CaptureLog(t *testing.T, log Logger) func() string {
 	var buf bytes.Buffer
 	logMu.Lock()
-	testHoldingLogMutex = t.Name()
 	old := log.GetOutput()
 	log.SetOutput(&buf)
 
+	var released bool
 	cleanup := func() string {
-		if testHoldingLogMutex == t.Name() {
-			testHoldingLogMutex = ""
-			log.SetOutput(old)
-			logMu.Unlock()
-			return buf.String()
+		if released {
+			return ""
 		}
-		return ""
+		released = true
+		log.SetOutput(old)
+		logMu.Unlock()
+		return buf.String()
 	}
 
 	// Ensure the log is restored when the test ends.
@@ -62,10 +59,7 @@ func CaptureLog(t *testing.T, log Logger) func() string {
 	return cleanup
 }
 
-var (
-	stdoutMu               sync.Mutex // Only one test should write to stdout at a time.
-	testHoldingStdoutMutex string     // Name of the test holding the stdout mutex.
-)
+var stdoutMu sync.Mutex // Only one test should write to stdout at a time.
 
 // CaptureStdout temporarily captures all output written to the standard output
 // and returns a function that, when called, restores the original standard output and
@@ -75,7 +69,6 @@ func CaptureStdout(t *testing.T) func() string {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 	stdoutMu.Lock()
-	testHoldingStdoutMutex = t.Name()
 
 	var buf bytes.Buffer
 	done := make(chan struct{})
@@ -86,17 +79,18 @@ func CaptureStdout(t *testing.T) func() string {
 		close(done)
 	}()
 
+	var released bool
 	cleanup := func() string {
-		if testHoldingStdoutMutex == t.Name() {
-			testHoldingStdoutMutex = ""
-			_ = w.Close()
-			<-done
-
-			os.Stdout = stdout
-			stdoutMu.Unlock()
-			return buf.String()
+		if released {
+			return ""
 		}
-		return ""
+		released = true
+		_ = w.Close()
+		<-done
+
+		os.Stdout = stdout
+		stdoutMu.Unlock()
+		return buf.String()
 	}
 
 	// Ensure stdout is restored when the test ends.

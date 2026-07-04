@@ -22,17 +22,16 @@ import (
 )
 
 func TestAssertChannelBool(t *testing.T) {
-	calledStdout := make(map[string]bool)
 	// GIVEN: a result channel with a possible bool result,
 	// the exit channel state, and the releaseStdout function.
 	tests := []struct {
-		name               string
-		sendResult         *bool
-		want               bool
-		exitCodeMsgs       []string
-		releaseStdout      func() string
-		checkReleaseStdout func() bool
-		expectError        bool
+		name                    string
+		sendResult              *bool
+		want                    bool
+		exitCodeMsgs            []string // Messages to pre-fill the exitCodeChannel with.
+		provideReleaseStdout    bool     // Whether to provide a releaseStdout function to AssertChannelBool.
+		wantReleaseStdoutCalled bool     // Whether releaseStdout is expected to be called.
+		expectError             bool     // Whether an error is expected from AssertChannelBool.
 	}{
 		{
 			name:        "ok matches want",
@@ -53,17 +52,12 @@ func TestAssertChannelBool(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:       "timeout waiting for result, releaseStdout",
-			sendResult: nil,
-			want:       true,
-			releaseStdout: func() string {
-				calledStdout["1"] = true
-				return ""
-			},
-			checkReleaseStdout: func() bool {
-				return calledStdout["1"] == true
-			},
-			expectError: true,
+			name:                    "timeout waiting for result, releaseStdout",
+			sendResult:              nil,
+			want:                    true,
+			provideReleaseStdout:    true,
+			wantReleaseStdoutCalled: true,
+			expectError:             true,
 		},
 		{
 			name:         "exitCodeChannel drained on success",
@@ -80,30 +74,20 @@ func TestAssertChannelBool(t *testing.T) {
 			expectError:  true,
 		},
 		{
-			name:       "releaseStdout called when result!=want",
-			sendResult: Ptr(false),
-			want:       true,
-			releaseStdout: func() string {
-				calledStdout["1"] = true
-				return ""
-			},
-			checkReleaseStdout: func() bool {
-				return calledStdout["1"] == true
-			},
-			expectError: true,
+			name:                    "releaseStdout called when result!=want",
+			sendResult:              Ptr(false),
+			want:                    true,
+			provideReleaseStdout:    true,
+			wantReleaseStdoutCalled: true,
+			expectError:             true,
 		},
 		{
-			name:       "releaseStdout not called when result==want",
-			sendResult: Ptr(true),
-			want:       true,
-			releaseStdout: func() string {
-				calledStdout["2"] = true
-				return ""
-			},
-			checkReleaseStdout: func() bool {
-				return calledStdout["2"] == false
-			},
-			expectError: false,
+			name:                    "releaseStdout not called when result==want",
+			sendResult:              Ptr(true),
+			want:                    true,
+			provideReleaseStdout:    true,
+			wantReleaseStdoutCalled: false,
+			expectError:             false,
 		},
 	}
 
@@ -123,13 +107,23 @@ func TestAssertChannelBool(t *testing.T) {
 				resultCh <- *tc.sendResult
 			}
 
+			// AND: a releaseStdout function local to this subtest.
+			var releaseStdoutCalled bool
+			var releaseStdout func() string
+			if tc.provideReleaseStdout {
+				releaseStdout = func() string {
+					releaseStdoutCalled = true
+					return ""
+				}
+			}
+
 			// WHEN: AssertChannelBool is called.
 			err := AssertChannelBool(
 				t,
 				tc.want,
 				resultCh,
 				exitCh,
-				tc.releaseStdout,
+				releaseStdout,
 			)
 
 			prefix := fmt.Sprintf("%s\nAssertChannelBool()", packageName)
@@ -152,11 +146,11 @@ func TestAssertChannelBool(t *testing.T) {
 			}
 
 			// AND: releaseStdout is called when expected.
-			if tc.checkReleaseStdout != nil {
-				if val := tc.checkReleaseStdout(); !val {
+			if tc.provideReleaseStdout {
+				if releaseStdoutCalled != tc.wantReleaseStdoutCalled {
 					t.Errorf(
-						"%s checkReleaseStdout mismatch\ngot:  %v\nwant: true",
-						prefix, val,
+						"%s releaseStdout called mismatch\ngot:  %v\nwant: %v",
+						prefix, releaseStdoutCalled, tc.wantReleaseStdoutCalled,
 					)
 				}
 			}
