@@ -19,6 +19,7 @@ package web
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/logx"
@@ -380,6 +381,44 @@ func TestLookup_GetVersion(t *testing.T) {
 			},
 		},
 		{
+			name: "mixed semver/non-semver picks same winner regardless of candidate order (order A)",
+			bodyOverride: test.Ptr(`
+				bad "1_0_0"
+				good "v1.0.0"
+				good "v2.0.0"
+				bad "v3_0_0"
+			`),
+			lookupOverrides: test.TrimYAML(`
+				url_commands:
+					- type: regex
+						regex: '"(v?[0-9][^"]+)"'
+			`),
+			semVer: true,
+			want: wantVars{
+				version:  "v2.0.0",
+				errRegex: `^$`,
+			},
+		},
+		{
+			name: "mixed semver/non-semver picks same winner regardless of candidate order (order B)",
+			bodyOverride: test.Ptr(`
+				bad "v3_0_0"
+				good "v2.0.0"
+				bad "1_0_0"
+				good "v1.0.0"
+			`),
+			lookupOverrides: test.TrimYAML(`
+				url_commands:
+					- type: regex
+						regex: '"(v?[0-9][^"]+)"'
+			`),
+			semVer: true,
+			want: wantVars{
+				version:  "v2.0.0",
+				errRegex: `^$`,
+			},
+		},
+		{
 			name: "sorts versions when semantic_versioning enabled",
 			bodyOverride: test.Ptr(`
 				patch for older major "0.4.7"
@@ -464,6 +503,152 @@ func TestLookup_GetVersion(t *testing.T) {
 				t.Errorf(
 					"%s version mismatch:\ngot:  %q\nwant: %q",
 					prefix, version, tc.want.version,
+				)
+			}
+		})
+	}
+}
+
+func TestVersionSortsBefore(t *testing.T) {
+	// GIVEN: two version strings.
+	tests := []struct {
+		name string
+		a    string
+		b    string
+		want bool
+	}{
+		{
+			name: "higher semver sorts before lower semver",
+			a:    "1.10.0",
+			b:    "1.2.3",
+			want: true,
+		},
+		{
+			name: "lower semver does not sort before higher semver",
+			a:    "1.2.3",
+			b:    "1.10.0",
+			want: false,
+		},
+		{
+			name: "release sorts before its own pre-release",
+			a:    "1.2.3",
+			b:    "1.2.3-rc.1",
+			want: true,
+		},
+		{
+			name: "pre-release does not sort before its own release",
+			a:    "1.2.3-rc.1",
+			b:    "1.2.3",
+			want: false,
+		},
+		{
+			name: "pre-release with more identifiers sorts before one with fewer",
+			a:    "1.2.3-alpha.1",
+			b:    "1.2.3-alpha",
+			want: true,
+		},
+		{
+			name: "alphanumeric pre-release identifier sorts before numeric identifier",
+			a:    "1.2.3-alpha",
+			b:    "1.2.3-1",
+			want: true,
+		},
+		{
+			name: "numeric pre-release identifiers compare numerically, not lexically",
+			a:    "1.2.3-rc.10",
+			b:    "1.2.3-rc.2",
+			want: true,
+		},
+		{
+			name: "v-prefixed and bare versions of equal precedence are not ordered",
+			a:    "v1.2.3",
+			b:    "1.2.3",
+			want: false,
+		},
+		{
+			name: "bare and v-prefixed versions of equal precedence are not ordered (reverse)",
+			a:    "1.2.3",
+			b:    "v1.2.3",
+			want: false,
+		},
+		{
+			name: "build metadata is ignored for precedence",
+			a:    "1.2.3+build.1",
+			b:    "1.2.3+build.2",
+			want: false,
+		},
+		{
+			name: "coerced partial versions of equal precedence are not ordered",
+			a:    "1.2",
+			b:    "1.2.0",
+			want: false,
+		},
+		{
+			name: "a parseable version sorts before an unparseable one",
+			a:    "1.2.3",
+			b:    "latest",
+			want: true,
+		},
+		{
+			name: "an unparseable version does not sort before a parseable one",
+			a:    "latest",
+			b:    "1.2.3",
+			want: false,
+		},
+		{
+			name: "unparseable versions fall back to a deterministic lexical tiebreak",
+			a:    "latest",
+			b:    "nightly",
+			want: true,
+		},
+		{
+			name: "unparseable versions fall back to a deterministic lexical tiebreak (reverse)",
+			a:    "nightly",
+			b:    "latest",
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: versionSortsBefore is called on the pair.
+			got := versionSortsBefore(tc.a, tc.b)
+
+			// THEN: it should return the expected value.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nversionSortsBefore(%q, %q) mismatch\ngot:  %t\nwant: %t",
+					packageName, tc.a, tc.b, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestVersionSortsBefore__OrderIndependence(t *testing.T) {
+	// GIVEN: the same set of semver and non-semver candidates, supplied in all input orders.
+	want := []string{"1.10.0", "1.9.9", "1.2.3", "latest", "nightly"}
+	permutations := test.Permutations(want)
+
+	for i, perm := range permutations {
+		name := fmt.Sprintf("permutation %d", i)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := append([]string{}, perm...)
+
+			// WHEN: the set is sorted using versionSortsBefore.
+			sort.Slice(got, func(i, j int) bool {
+				return versionSortsBefore(got[i], got[j])
+			})
+
+			// THEN: the output order is identical regardless of the input order.
+			if !util.AreSlicesEqual(got, want) {
+				t.Errorf(
+					"%s\nsort.Slice(%v, versionSortsBefore) mismatch\ngot:  %v\nwant: %v",
+					packageName, perm, got, want,
 				)
 			}
 		})
