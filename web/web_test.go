@@ -26,13 +26,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 
 	"github.com/release-argus/Argus/util"
 )
-
-var router *mux.Router
 
 func TestWebSocketHandler(t *testing.T) {
 	// GIVEN: a WebSocket is running (TestMain) and we have the URL.
