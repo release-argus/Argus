@@ -137,13 +137,7 @@ func (l *Lookup) getVersion(body string, logFrom logx.LogFrom) (string, error) {
 			}
 		} else {
 			sort.Slice(filteredVersions, func(i, j int) bool {
-				vI, errI := semver.NewVersion(filteredVersions[i])
-				vJ, errJ := semver.NewVersion(filteredVersions[j])
-
-				if errI != nil || errJ != nil {
-					return false
-				}
-				return vI.GreaterThan(vJ)
+				return versionSortsBefore(filteredVersions[i], filteredVersions[j])
 			})
 		}
 	}
@@ -161,6 +155,28 @@ func (l *Lookup) getVersion(body string, logFrom logx.LogFrom) (string, error) {
 	err = fmt.Errorf("no releases were found matching the require fields %w", firstErr)
 	logx.Error(err, logFrom, true)
 	return "", err
+}
+
+// versionSortsBefore reports whether version `a` should sort ahead of version `b` when ordering
+// candidates from newest to oldest.
+//
+// A version that parses as semver always sorts ahead of one that does not; when neither parses,
+// a fixed lexical order is used so the result never depends on the order
+// candidates were found in.
+func versionSortsBefore(a, b string) bool {
+	semverA, errA := semver.NewVersion(a)
+	semverB, errB := semver.NewVersion(b)
+
+	switch {
+	case errA == nil && errB == nil:
+		return semverA.GreaterThan(semverB)
+	case errA == nil: // a parses, b does not - a sorts first.
+		return true
+	case errB == nil: // b parses, a does not - b sorts first.
+		return false
+	default: // Neither parses - fall back to lexical order.
+		return strings.Compare(a, b) < 0
+	}
 }
 
 // versionMeetsRequirements returns an error if version does not satisfy all Require filters.
