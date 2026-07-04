@@ -33,6 +33,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/mux"
+
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/internal/logx"
 	whtest "github.com/release-argus/Argus/webhook/test"
@@ -52,6 +54,7 @@ var (
 	mainCfg     *config.Config
 	host        = "localhost"
 	port        string
+	router      *mux.Router
 )
 
 func TestMain(m *testing.M) {
