@@ -1230,8 +1230,9 @@ func TestStatus_LatestVersion(t *testing.T) {
 					},
 					status.Dashboard,
 				)
-				if tc.want == nil {
-					tc.want = &tc.args
+				wantValues := tc.want
+				if wantValues == nil {
+					wantValues = &tc.args
 				}
 
 				// WHEN: SetLatestVersion is called on it.
@@ -1244,8 +1245,8 @@ func TestStatus_LatestVersion(t *testing.T) {
 
 				// THEN: LatestVersion is set to this version.
 				fieldTests := []test.FieldAssertion{
-					{Name: "LatestVersion", Got: status.LatestVersion(), Want: tc.want.version, Mode: test.CompareEqual},
-					{Name: "LatestVersionTimestamp", Got: status.LatestVersionTimestamp(), Want: tc.want.timestamp, Mode: test.CompareEqual},
+					{Name: "LatestVersion", Got: status.LatestVersion(), Want: wantValues.version, Mode: test.CompareEqual},
+					{Name: "LatestVersionTimestamp", Got: status.LatestVersionTimestamp(), Want: wantValues.timestamp, Mode: test.CompareEqual},
 				}
 				if err := test.AssertFields(t, fieldTests, prefix, "Status"); err != nil {
 					t.Fatal(err)
@@ -1619,20 +1620,19 @@ func FuzzSetVersions(f *testing.F) {
 	testStatus.DatabaseChannel = databaseChan
 	saveChan := make(chan bool, 4)
 	testStatus.SaveChannel = saveChan
-	running := true
+	stopDrain := make(chan struct{})
 	f.Cleanup(func() {
-		running = false
+		close(stopDrain)
 	})
 	// Drain to prevent blocking.
 	go func() {
-		for running {
+		for {
 			select {
 			case <-announceChan:
-				continue
 			case <-databaseChan:
-				continue
 			case <-saveChan:
-				continue
+			case <-stopDrain:
+				return
 			}
 		}
 	}()

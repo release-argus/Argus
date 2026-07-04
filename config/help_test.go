@@ -138,6 +138,7 @@ func testLoadBasic(t *testing.T, file string) *Config {
 	strHad := make([]*string, len(strFlags))
 	boolHad := make([]*bool, len(boolFlags))
 	loadMu.Lock()
+	defer loadMu.Unlock()
 	for i, flag := range strFlags {
 		strHad[i] = *flag
 	}
@@ -148,13 +149,14 @@ func testLoadBasic(t *testing.T, file string) *Config {
 	cfg.Settings.NilUndefinedFlags(&map[string]bool{})
 
 	t.Cleanup(func() {
+		loadMu.Lock()
+		defer loadMu.Unlock()
 		for i, flag := range strFlags {
 			*flag = strHad[i]
 		}
 		for i, flag := range boolFlags {
 			*flag = boolHad[i]
 		}
-		loadMu.Unlock()
 	})
 
 	cfg.File = file

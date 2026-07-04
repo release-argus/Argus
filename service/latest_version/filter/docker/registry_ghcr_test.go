@@ -19,6 +19,7 @@ package docker
 import (
 	"encoding/base64"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -1741,6 +1742,7 @@ func TestGHCRAuthDefaults_GetQueryTokenSelf__parallel(t *testing.T) {
 		queryToken: "query-token",
 		validUntil: time.Now().Add(-10 * time.Second),
 	}
+	originalQueryToken := data.queryToken
 
 	// AND: the mutex is held.
 	data.mu.Lock()
@@ -1750,27 +1752,31 @@ func TestGHCRAuthDefaults_GetQueryTokenSelf__parallel(t *testing.T) {
 	}()
 
 	// WHEN: GetQueryTokenSelf() is queued on it by many goroutines.
+	var wg sync.WaitGroup
 	for range 10 {
-		go func() { _, _ = data.GetQueryTokenSelf() }()
+		wg.Go(func() {
+			_, _ = data.GetQueryTokenSelf()
+		})
 	}
 	// Call again to verify we still get a queryToken.
 	queryToken, validUntil := data.GetQueryTokenSelf()
+	wg.Wait()
 
 	prefix := fmt.Sprintf("%s\nGHCRAuthDefaults.GetQueryTokenSelf()", packageName)
 
 	// THEN: the query token is returned as expected.
-	if queryToken != data.queryToken {
+	if queryToken != originalQueryToken {
 		t.Errorf(
 			"%s queryToken mismatch\ngot:  %q\nwant: %q",
-			prefix, queryToken, data.queryToken,
+			prefix, queryToken, originalQueryToken,
 		)
 	}
 
-	// AND: the validUntil is returned as before if it was usable.
-	if !validUntil.Equal(data.validUntil) {
+	// AND: the validUntil is refreshed to a usable (future) time.
+	if !isUsable(queryToken, validUntil) {
 		t.Errorf(
-			"%s validUntil mismatch\ngot:  %q\nwant: %q",
-			prefix, validUntil, data.validUntil,
+			"%s validUntil not usable\ngot: %s\nnow: %s",
+			prefix, validUntil, time.Now(),
 		)
 	}
 }

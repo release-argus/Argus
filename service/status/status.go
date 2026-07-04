@@ -386,6 +386,8 @@ func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 			{Column: "approved_version", Value: version},
 		},
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	s.sendDatabase(&message)
 }
 
