@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.32.0](https://github.com/release-argus/Argus/compare/0.31.1...0.32.0) (2026-07-05)
+
+
+### Features
+
+* **config:** add read-only configuration mode ([5b464bb](https://github.com/release-argus/Argus/commit/5b464bbf152fa75b7d786ff1988c3bac3cd1b316))
+* **ui:** add approve/skip actions for manual deployed_version services ([#920](https://github.com/release-argus/Argus/issues/920)) ([88878b6](https://github.com/release-argus/Argus/commit/88878b6c45e43f59e80518a256494c9fccba43f5))
+
+
+### Bug Fixes
+
+* **argus:** exit with error code when config fails to load ([879c2fd](https://github.com/release-argus/Argus/commit/879c2fd261a8558c7ae3f0daa3e13c2dc2f4eb7d))
+* **lv-url:** deterministic sort for semver/non-semver versions ([4ee4e8a](https://github.com/release-argus/Argus/commit/4ee4e8a84e47a6e359832794f5889498d6342086))
+
 ## [0.31.1](https://github.com/release-argus/Argus/compare/0.31.0...0.31.1) (2026-07-02)
 
 
