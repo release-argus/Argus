@@ -28,12 +28,12 @@ const ServiceInfo: FC<ServiceInfoProps> = ({
 		<div className="flex size-full min-h-22 flex-col gap-y-2">
 			<ul className="wrap-anywhere mb-auto flex w-full flex-col gap-1">
 				<ServiceInfoDeployedVersion
-					hasDeployedVersion={!!service?.has_deployed_version}
+					hasDeployedVersion={!!service?.deployed_version_type}
 					status={service?.status}
 					updateAvailable={updateAvailable}
 				/>
 				<ServiceInfoLatestVersion
-					hasDeployedVersion={!!service?.has_deployed_version}
+					hasDeployedVersion={!!service?.deployed_version_type}
 					status={service?.status}
 					updateAvailable={updateAvailable}
 				/>

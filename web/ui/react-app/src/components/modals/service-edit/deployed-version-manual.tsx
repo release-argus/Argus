@@ -15,12 +15,11 @@ import {
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import { useServiceSummary } from '@/hooks/use-service-summary';
 import useValuesRefetch from '@/hooks/values-refetch';
-import { QUERY_KEYS } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { beautifyGoErrors } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
 import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version';
-import type { ServiceSummary } from '@/utils/api/types/config/summary';
+import { applyDeployedVersionUpdate } from '@/utils/api/types/requests/service-edit';
 
 /* The throttle time for saving the version. */
 const SAVE_THROTTLE_MS = 1000;
@@ -63,26 +62,10 @@ const DeployedVersionManual = () => {
 		setLastFetched(currentTime);
 		try {
 			const data = await saveVersion();
-			queryClient.setQueryData<ServiceSummary>(
-				QUERY_KEYS.SERVICE.SUMMARY_ITEM(serviceID),
-				(_oldData) => {
-					const oldData = _oldData ?? {
-						id: serviceID,
-						status: {},
-					};
-
-					return {
-						...oldData,
-						status: {
-							...oldData.status,
-							deployed_version: data.version,
-						},
-					};
-				},
-			);
-		} catch (error) {
+			applyDeployedVersionUpdate(queryClient, serviceID, data.version || '');
+		} catch (error: unknown) {
 			toast.error('Failed to save version:', {
-				description: mutationError?.message,
+				description: `Error: ${error instanceof Error ? error.message : String(error)}`,
 			});
 		} finally {
 			document.getElementById('version')?.focus();

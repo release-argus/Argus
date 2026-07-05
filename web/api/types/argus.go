@@ -27,19 +27,19 @@ import (
 
 // ServiceSummary is the Summary of a Service.
 type ServiceSummary struct {
-	ID                       string    `json:"id,omitempty" yaml:"id,omitempty"`
-	Name                     *string   `json:"name,omitempty" yaml:"name,omitempty"`                                 // Name for this Service.
-	Active                   *bool     `json:"active,omitempty" yaml:"active,omitempty"`                             // Active Service?
-	Comment                  *string   `json:"comment,omitempty" yaml:"comment,omitempty"`                           // Comment on the Service.
-	Type                     string    `json:"type,omitempty" yaml:"type,omitempty"`                                 // "github"/"URL".
-	WebURL                   *string   `json:"url,omitempty" yaml:"url,omitempty"`                                   // URL to provide on the Web UI.
-	Icon                     *string   `json:"icon,omitempty" yaml:"icon,omitempty"`                                 // Service.Dashboard.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon.
-	IconLinkTo               *string   `json:"icon_link_to,omitempty" yaml:"icon_link_to,omitempty"`                 // URL to redirect Icon clicks to.
-	HasDeployedVersionLookup *bool     `json:"has_deployed_version,omitempty" yaml:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup.
-	Command                  *int      `json:"command,omitempty" yaml:"command,omitempty"`                           // Amount of Commands to send on a new release.
-	WebHook                  *int      `json:"webhook,omitempty" yaml:"webhook,omitempty"`                           // Amount of WebHooks to send on a new release.
-	Status                   *Status   `json:"status,omitempty" yaml:"status,omitempty"`                             // Track the Status of this source (version and regex misses).
-	Tags                     *[]string `json:"tags,omitempty" yaml:"tags,omitempty"`                                 // Tags for the Service.
+	ID                  string    `json:"id,omitempty" yaml:"id,omitempty"`
+	Name                *string   `json:"name,omitempty" yaml:"name,omitempty"`                                   // Name for this Service.
+	Active              *bool     `json:"active,omitempty" yaml:"active,omitempty"`                               // Active Service?
+	Comment             *string   `json:"comment,omitempty" yaml:"comment,omitempty"`                             // Comment on the Service.
+	Type                string    `json:"type,omitempty" yaml:"type,omitempty"`                                   // "github"|"URL".
+	WebURL              *string   `json:"url,omitempty" yaml:"url,omitempty"`                                     // URL to provide on the Web UI.
+	Icon                *string   `json:"icon,omitempty" yaml:"icon,omitempty"`                                   // Service.Dashboard.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon.
+	IconLinkTo          *string   `json:"icon_link_to,omitempty" yaml:"icon_link_to,omitempty"`                   // URL to redirect Icon clicks to.
+	DeployedVersionType *string   `json:"deployed_version_type,omitempty" yaml:"deployed_version_type,omitempty"` // "manual"|"url", empty string if no DeployedVersionLookup.
+	Command             *int      `json:"command,omitempty" yaml:"command,omitempty"`                             // Amount of Commands to send on a new release.
+	WebHook             *int      `json:"webhook,omitempty" yaml:"webhook,omitempty"`                             // Amount of WebHooks to send on a new release.
+	Status              *Status   `json:"status,omitempty" yaml:"status,omitempty"`                               // Track the Status of this source (version and regex misses).
+	Tags                *[]string `json:"tags,omitempty" yaml:"tags,omitempty"`                                   // Tags for the Service.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -52,7 +52,7 @@ func (s *ServiceSummary) IsZero() bool {
 		s.WebURL == nil &&
 		s.Icon == nil &&
 		s.IconLinkTo == nil &&
-		s.HasDeployedVersionLookup == nil &&
+		s.DeployedVersionType == nil &&
 		s.Command == nil &&
 		s.WebHook == nil &&
 		s.Status == nil &&
@@ -100,11 +100,8 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 	s.Icon = nilIfUnchanged(oldData.Icon, s.Icon)
 	// IconLinkTo.
 	s.IconLinkTo = nilIfUnchanged(oldData.IconLinkTo, s.IconLinkTo)
-	// Has DeployedVersionLookup?
-	if util.DerefOr(oldData.HasDeployedVersionLookup, false) ==
-		util.DerefOr(s.HasDeployedVersionLookup, false) {
-		s.HasDeployedVersionLookup = nil
-	}
+	// DeployedVersionType.
+	s.DeployedVersionType = nilIfUnchanged(oldData.DeployedVersionType, s.DeployedVersionType)
 
 	// Status.
 	statusSameCount := 0

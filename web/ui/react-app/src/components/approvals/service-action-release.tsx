@@ -1,6 +1,7 @@
 import { type FC, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import useModal from '@/hooks/use-modal';
+import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version';
 import type {
 	ModalType,
 	ServiceSummary,
@@ -49,8 +50,15 @@ const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 
 		const haveUpdateAction = service.webhook || service.command;
 
+		const canApproveManually: boolean =
+			!haveUpdateAction &&
+			(updateAvailable || updateSkipped) &&
+			service.deployed_version_type ===
+				DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value;
+
 		return {
 			actionType,
+			canApproveManually,
 			haveUpdateAction,
 		};
 	}, [service]);
@@ -81,6 +89,17 @@ const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 					variant={updateAvailable && !updateSkipped ? 'default' : 'secondary'}
 				>
 					{updateAvailable ? 'Approve' : 'Resend'}
+				</Button>
+			)}
+			{info.canApproveManually && (
+				<Button
+					aria-label="Approve release"
+					key="approve-manual"
+					onClick={() => showModal('APPROVE_MANUAL', service)}
+					size="xs"
+					variant={updateSkipped ? 'secondary' : 'default'}
+				>
+					Approve
 				</Button>
 			)}
 		</div>

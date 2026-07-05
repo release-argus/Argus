@@ -27,6 +27,12 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+// Deployed-version lookup type strings.
+const (
+	dvManualType = "manual"
+	dvURLType    = "url"
+)
+
 func TestServiceSummary_IsZero(t *testing.T) {
 	// GIVEN: a ServiceSummary struct.
 	tests := []struct {
@@ -96,9 +102,9 @@ func TestServiceSummary_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty/HasDeployedVersionLookup",
+			name: "non-empty/DeployedVersionType",
 			data: ServiceSummary{
-				HasDeployedVersionLookup: test.Ptr(false),
+				DeployedVersionType: test.Ptr(dvManualType),
 			},
 			want: false,
 		},
@@ -135,17 +141,17 @@ func TestServiceSummary_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			data: ServiceSummary{
-				ID:                       "foo",
-				Name:                     test.Ptr("foo"),
-				Active:                   test.Ptr(true),
-				Comment:                  test.Ptr("foo"),
-				Type:                     "foo",
-				WebURL:                   test.Ptr("https://example.com"),
-				Icon:                     test.Ptr("https://example.com/icon.png"),
-				IconLinkTo:               test.Ptr("https://example.com/somewhere"),
-				HasDeployedVersionLookup: test.Ptr(false),
-				Command:                  test.Ptr(1),
-				WebHook:                  test.Ptr(2),
+				ID:                  "foo",
+				Name:                test.Ptr("foo"),
+				Active:              test.Ptr(true),
+				Comment:             test.Ptr("foo"),
+				Type:                "foo",
+				WebURL:              test.Ptr("https://example.com"),
+				Icon:                test.Ptr("https://example.com/icon.png"),
+				IconLinkTo:          test.Ptr("https://example.com/somewhere"),
+				DeployedVersionType: test.Ptr(dvManualType),
+				Command:             test.Ptr(1),
+				WebHook:             test.Ptr(2),
 				Status: &Status{
 					ApprovedVersion: "1.2.3",
 				},
@@ -211,17 +217,17 @@ func TestServiceSummary_String(t *testing.T) {
 		{
 			name: "full",
 			summary: &ServiceSummary{
-				ID:                       "bar",
-				Name:                     test.Ptr("foo"),
-				Active:                   test.Ptr(true),
-				Comment:                  test.Ptr("test"),
-				Type:                     "url",
-				WebURL:                   test.Ptr("https://example.com"),
-				Icon:                     test.Ptr("https://example.com/icon.png"),
-				IconLinkTo:               test.Ptr("https://release-argus.io"),
-				HasDeployedVersionLookup: test.Ptr(true),
-				Command:                  test.Ptr(2),
-				WebHook:                  test.Ptr(1),
+				ID:                  "bar",
+				Name:                test.Ptr("foo"),
+				Active:              test.Ptr(true),
+				Comment:             test.Ptr("test"),
+				Type:                "url",
+				WebURL:              test.Ptr("https://example.com"),
+				Icon:                test.Ptr("https://example.com/icon.png"),
+				IconLinkTo:          test.Ptr("https://release-argus.io"),
+				DeployedVersionType: test.Ptr(dvManualType),
+				Command:             test.Ptr(2),
+				WebHook:             test.Ptr(1),
 				Status: &Status{
 					ApprovedVersion: "1.2.3",
 				},
@@ -236,7 +242,7 @@ func TestServiceSummary_String(t *testing.T) {
 					"url": "https://example.com",
 					"icon": "https://example.com/icon.png",
 					"icon_link_to": "https://release-argus.io",
-					"has_deployed_version": true,
+					"deployed_version_type": "manual",
 					"command": 2,
 					"webhook": 1,
 					"status": {
@@ -467,25 +473,25 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			},
 		},
 		{
-			name: "same has_deployed_version_lookup",
+			name: "same deployed_version_type",
 			old: &ServiceSummary{
-				HasDeployedVersionLookup: test.Ptr(true),
+				DeployedVersionType: test.Ptr(dvManualType),
 			},
 			new: &ServiceSummary{
-				HasDeployedVersionLookup: test.Ptr(true),
+				DeployedVersionType: test.Ptr(dvManualType),
 			},
 			want: &ServiceSummary{},
 		},
 		{
-			name: "different has_deployed_version_lookup",
+			name: "different deployed_version_type",
 			old: &ServiceSummary{
-				HasDeployedVersionLookup: test.Ptr(true),
+				DeployedVersionType: test.Ptr(dvManualType),
 			},
 			new: &ServiceSummary{
-				HasDeployedVersionLookup: test.Ptr(false),
+				DeployedVersionType: test.Ptr(dvURLType),
 			},
 			want: &ServiceSummary{
-				HasDeployedVersionLookup: test.Ptr(false),
+				DeployedVersionType: test.Ptr(dvURLType),
 			},
 		},
 		{

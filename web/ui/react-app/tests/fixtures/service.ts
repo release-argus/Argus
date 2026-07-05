@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { bareEndpoint } from './test-endpoints';
+import { openSection } from './validation';
 
 export type KeyVal = { key: string; value: string };
 
@@ -481,6 +482,50 @@ export const createService = async (
 	// The server verifies the lookup via a real network call before
 	// responding, so the modal can take longer than the default 5s to close.
 	await expect(dialog).not.toBeVisible({ timeout: 30_000 });
+};
+
+/**
+ * Opens a service's edit modal and uses the inline 'Save version' action next
+ * to the `deployed_version.version` field to persist a new manual deployed
+ * version, then closes the modal without submitting the rest of the form.
+ *
+ * @param page - The dashboard page (edit mode must already be on).
+ * @param serviceID - The ID of the service to edit (must have a manual
+ *   `deployed_version`).
+ * @param version - The new deployed version to save.
+ */
+export const saveDeployedVersionManual = async (
+	page: Page,
+	serviceID: string,
+	version: string,
+) => {
+	const serviceCard = page.locator(`[data-service-id="${serviceID}"]`);
+	await serviceCard.getByRole('button', { name: /edit/i }).click();
+
+	const dialog = page.getByRole('dialog');
+	await expect(dialog).toBeVisible();
+	const section = await openSection(dialog, 'Deployed Version');
+	await section.locator('input[name="deployed_version.version"]').fill(version);
+
+	const saveButton = section.getByRole('button', { name: 'Save version' });
+	await expect(saveButton).toBeEnabled();
+	// Manual deployed_version updates are server-side rate-limited
+	// - retry the click until it lands outside that window.
+	await expect(async () => {
+		const [response] = await Promise.all([
+			page.waitForResponse(
+				(res) =>
+					res.url().includes('/api/v1/deployed_version/refresh') &&
+					res.request().method() === 'GET',
+			),
+			saveButton.click(),
+		]);
+		expect(response.ok()).toBeTruthy();
+	}).toPass();
+
+	// Close the modal without submitting the rest of the form.
+	await page.keyboard.press('Escape');
+	await expect(dialog).not.toBeVisible();
 };
 
 /**

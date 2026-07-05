@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import Tip from '@/components/ui/tip';
 import { addMessageHandler, removeMessageHandler } from '@/contexts/websocket';
+import { useApproveManualDeployedVersion } from '@/hooks/use-approve-deployed-version-manual';
 import useModal from '@/hooks/use-modal';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import reducerActionModal from '@/reducers/action-release';
@@ -88,11 +89,13 @@ const isActionRunnable = (
  */
 const ActionReleaseModal = () => {
 	// modal.actionType:
-	//   RESEND - 0 WebHooks failed. 'Resend' Modal.
-	//   SEND   - Send WebHooks for this new version. 'New release' Modal.
-	//   SKIP   - Release not wanted. 'Skip' Modal.
-	//   RETRY  - 1+ WebHooks failed sending. 'Retry' Modal.
+	//   RESEND             - 0 WebHooks failed. 'Resend' Modal.
+	//   SEND               - Send WebHooks for this new version. 'New release' Modal.
+	//   SKIP | SKIP_NO_WH  - Release not wanted. 'Skip' Modal.
+	//   RETRY              - 1+ WebHooks failed sending. 'Retry' Modal.
+	//   APPROVE_MANUAL - Approve a release for a service with no WebHooks/Commands and a manual deployed_version. 'Approve' Modal.
 	const { modal, hideModal: hideModalDialog } = useModal();
+	const { mutate: approveManualVersion } = useApproveManualDeployedVersion();
 	const [modalData, setModalData] = useReducer(reducerActionModal, {
 		commands: {},
 		sentC: [],
@@ -164,6 +167,11 @@ const ActionReleaseModal = () => {
 			string,
 			{ title: string; ariaLabel: string; buttonText: string }
 		> = {
+			APPROVE_MANUAL: {
+				ariaLabel: 'Approve this release',
+				buttonText: 'Approve',
+				title: 'Approve this release?',
+			},
 			DEFAULT: {
 				ariaLabel: 'Skip this release',
 				buttonText: 'Skip release',
@@ -461,11 +469,18 @@ const ActionReleaseModal = () => {
 								return;
 							}
 							switch (modal.actionType) {
+								case 'APPROVE_MANUAL':
+									approveManualVersion({
+										serviceID: modal.service.id,
+										targetVersion: modal.service.status?.latest_version ?? '',
+									});
+									hideModal();
+									break;
 								case 'RESEND':
 									onClickAcknowledge('ARGUS_ALL');
 									break;
-								case 'SEND':
 								case 'RETRY':
+								case 'SEND':
 									onClickAcknowledge('ARGUS_FAILED');
 									break;
 								case 'SKIP':
