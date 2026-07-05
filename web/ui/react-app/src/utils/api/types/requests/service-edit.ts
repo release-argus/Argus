@@ -71,6 +71,11 @@ export const applyDeployedVersionUpdate = (
 				{
 					id: serviceID,
 					status: {
+						// Clear approved_version only when the current latest version is being deployed.
+						approved_version:
+							version === oldData?.status?.latest_version
+								? ''
+								: oldData?.status?.approved_version,
 						deployed_version: version,
 						deployed_version_timestamp: formatRFC3339(new Date()),
 					},
