@@ -42,8 +42,21 @@ func TestRun(t *testing.T) {
 		file           func(path string)
 		preStartFunc   func(baseDir string)
 		outputContains *[]string
+		outputExcludes *[]string
 		exitCode       *int
 	}{
+		{
+			name: "config fails to load - exits immediately without starting the server",
+			file: testYAML_Invalid,
+			outputContains: &[]string{
+				"Unmarshal of",
+			},
+			outputExcludes: &[]string{
+				"services to monitor",
+				"Listening on ",
+			},
+			exitCode: test.Ptr(1),
+		},
 		{
 			name: "config with services, db invalid format",
 			file: testYAML_Argus,
@@ -126,6 +139,18 @@ func TestRun(t *testing.T) {
 					if !strings.Contains(stdout, text) {
 						t.Errorf(
 							"%s\n%q couldn't be found in stdout:\n%s",
+							packageName, text, stdout,
+						)
+					}
+				}
+			}
+
+			// AND: the program will not have printed anything unexpected.
+			if tc.outputExcludes != nil {
+				for _, text := range *tc.outputExcludes {
+					if strings.Contains(stdout, text) {
+						t.Errorf(
+							"%s\n%q unexpectedly found in stdout:\n%s",
 							packageName, text, stdout,
 						)
 					}
