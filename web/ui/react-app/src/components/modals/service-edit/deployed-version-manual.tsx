@@ -63,10 +63,8 @@ const DeployedVersionManual = () => {
 		try {
 			const data = await saveVersion();
 			applyDeployedVersionUpdate(queryClient, serviceID, data.version || '');
-		} catch (error: unknown) {
-			toast.error('Failed to save version:', {
-				description: `Error: ${error instanceof Error ? error.message : String(error)}`,
-			});
+		} catch (_) {
+			// Ignore.
 		} finally {
 			document.getElementById('version')?.focus();
 		}
