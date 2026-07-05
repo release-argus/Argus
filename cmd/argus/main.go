@@ -82,7 +82,10 @@ func run() (exitCode int) {
 	exitCodeChannel := logx.Init("ERROR", false)
 
 	var cfg config.Config
-	_ = cfg.Load(ctx, g, *configFile, &flags)
+	if ok := cfg.Load(ctx, g, *configFile, &flags); !ok {
+		<-exitCodeChannel
+		return 1
+	}
 
 	// config.check
 	cfg.Print(configCheckFlag)

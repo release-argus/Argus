@@ -81,6 +81,15 @@ func testYAML_NoServices(path string) {
 	writeFile(path, data)
 }
 
+func testYAML_Invalid(path string) {
+	data := test.TrimYAML(`
+		service:
+		  SERVICE_NAME: [
+	`)
+
+	writeFile(path, data)
+}
+
 func testYAML_Argus(path string) {
 	data := test.TrimYAML(`
 		defaults:
