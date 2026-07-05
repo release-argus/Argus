@@ -1,3 +1,4 @@
+import type { DeployedVersionLookupType } from '@/utils/api/types/config/service/deployed-version';
 import type { LatestVersionLookupType } from '@/utils/api/types/config/service/latest-version';
 
 export type OrderAPIResponse = {
@@ -21,7 +22,8 @@ export type ServiceSummary = {
 	url?: string;
 	icon?: string;
 	icon_link_to?: string;
-	has_deployed_version?: boolean;
+	// '' if no DeployedVersionLookup, undefined if not yet loaded.
+	deployed_version_type?: DeployedVersionLookupType | '';
 	notify?: boolean;
 	webhook?: number;
 	command?: number;
@@ -41,6 +43,7 @@ export type ModalType =
 	| 'SEND'
 	| 'SKIP'
 	| 'SKIP_NO_WH'
+	| 'APPROVE_MANUAL'
 	| '';
 
 export type ActionModalData = {

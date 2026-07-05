@@ -193,12 +193,14 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 						() => ({
 							active: dataPayload.options.active,
 							command: dataPayload.command?.length,
-							has_deployed_version:
+							deployed_version_type:
 								dataPayload.deployed_version &&
 								(dataPayload.deployed_version.type ===
 								DEPLOYED_VERSION_LOOKUP_TYPE.URL.value
 									? !!dataPayload.deployed_version.url
-									: !!dataPayload.deployed_version.version),
+									: !!dataPayload.deployed_version.version)
+									? dataPayload.deployed_version.type
+									: undefined,
 							icon: dataPayload.dashboard?.icon,
 							icon_link_to: dataPayload.dashboard?.icon_link_to,
 							id: dataPayload.id,

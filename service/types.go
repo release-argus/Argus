@@ -273,19 +273,22 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 	if s.LatestVersion != nil {
 		latestVersionType = s.LatestVersion.GetType()
 	}
-	hasDeployedVersionLookup := s.DeployedVersionLookup != nil
+	var deployedVersionType string
+	if s.DeployedVersionLookup != nil {
+		deployedVersionType = s.DeployedVersionLookup.GetType()
+	}
 
 	svcInfo := s.Status.GetServiceInfo()
 	summary := &apitype.ServiceSummary{
-		ID:                       s.ID,
-		Name:                     util.PtrIfNotZero(s.Name),
-		Active:                   s.Options.Active,
-		Comment:                  util.PtrIfNotZero(svcInfo.Comment),
-		Type:                     latestVersionType,
-		WebURL:                   util.PtrIfNotZero(svcInfo.WebURL),
-		Icon:                     util.PtrIfNotZero(svcInfo.Icon),
-		IconLinkTo:               util.PtrIfNotZero(svcInfo.IconLinkTo),
-		HasDeployedVersionLookup: &hasDeployedVersionLookup,
+		ID:                  s.ID,
+		Name:                util.PtrIfNotZero(s.Name),
+		Active:              s.Options.Active,
+		Comment:             util.PtrIfNotZero(svcInfo.Comment),
+		Type:                latestVersionType,
+		WebURL:              util.PtrIfNotZero(svcInfo.WebURL),
+		Icon:                util.PtrIfNotZero(svcInfo.Icon),
+		IconLinkTo:          util.PtrIfNotZero(svcInfo.IconLinkTo),
+		DeployedVersionType: &deployedVersionType,
 		Status: &apitype.Status{
 			ApprovedVersion:          svcInfo.ApprovedVersion,
 			DeployedVersion:          svcInfo.DeployedVersion,

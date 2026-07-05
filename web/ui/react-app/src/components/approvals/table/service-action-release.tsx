@@ -4,6 +4,7 @@ import { type FC, useCallback } from 'react';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
 import { Button } from '@/components/ui/button';
 import useModal from '@/hooks/use-modal';
+import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version';
 import type {
 	ModalType,
 	ServiceSummary,
@@ -48,6 +49,10 @@ export const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 		(service.command ?? 0) > 0 || (service.webhook ?? 0) > 0;
 	const updateAvailable = service.status?.state === 'AVAILABLE';
 	const updateSkipped = service.status?.state === 'SKIPPED';
+	const canApproveManually =
+		!haveUpdateAction &&
+		service.status?.state !== 'UP_TO_DATE' &&
+		service.deployed_version_type === DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value;
 
 	return (
 		<div className="flex flex-row items-center gap-x-2">
@@ -84,6 +89,17 @@ export const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 					variant={updateAvailable && !updateSkipped ? 'default' : 'secondary'}
 				>
 					{updateAvailable ? 'Approve' : 'Resend'}
+				</Button>
+			)}
+			{canApproveManually && (
+				<Button
+					aria-label="Approve release"
+					key="approve-manual"
+					onClick={() => showModal('APPROVE_MANUAL')}
+					size="xs"
+					variant={updateSkipped ? 'secondary' : 'default'}
+				>
+					Approve
 				</Button>
 			)}
 		</div>

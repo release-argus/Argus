@@ -40,9 +40,9 @@ export const columns: ColumnDefWithMeta<ServiceSummary>[] = [
 	},
 	{
 		accessorFn: (row) =>
-			row.has_deployed_version ? row.status?.deployed_version : null,
+			row.deployed_version_type ? row.status?.deployed_version : null,
 		cell: ({ row }) =>
-			row.original.has_deployed_version
+			row.original.deployed_version_type
 				? row.original.status?.deployed_version
 				: null,
 		enableSorting: true,
@@ -58,10 +58,10 @@ export const columns: ColumnDefWithMeta<ServiceSummary>[] = [
 	},
 	{
 		accessorFn: (row) =>
-			row.has_deployed_version ? row.status?.deployed_version_timestamp : null,
+			row.deployed_version_type ? row.status?.deployed_version_timestamp : null,
 		cell: ({ row }) => (
 			<div>
-				{row.original.has_deployed_version &&
+				{row.original.deployed_version_type &&
 				row.original.status?.deployed_version_timestamp
 					? formatISO9075(
 							new Date(row.original.status.deployed_version_timestamp),
