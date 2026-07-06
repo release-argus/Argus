@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 )
@@ -39,7 +40,10 @@ func TestLookup_Init(t *testing.T) {
 	lookup.Init(
 		&options,
 		&svcStatus,
-		lvCfg,
+		base.DefaultsConfig{
+			Soft: &lvCfg.Soft.Common,
+			Hard: &lvCfg.Hard.Common,
+		},
 	)
 
 	prefix := fmt.Sprintf("%s\nLookup.Init()", packageName)
@@ -48,8 +52,8 @@ func TestLookup_Init(t *testing.T) {
 	fieldTests := []test.FieldAssertion{
 		{Name: "Options", Got: lookup.GetOptions(), Want: &options, Mode: test.CompareSamePointer},
 		{Name: "Status", Got: lookup.GetStatus(), Want: &svcStatus, Mode: test.CompareSamePointer},
-		{Name: "Defaults", Got: lookup.GetDefaults(), Want: lvCfg.Soft, Mode: test.CompareSamePointer},
-		{Name: "HardDefaults", Got: lookup.GetHardDefaults(), Want: lvCfg.Hard, Mode: test.CompareSamePointer},
+		{Name: "Defaults", Got: lookup.GetDefaults(), Want: &lvCfg.Soft.Common, Mode: test.CompareSamePointer},
+		{Name: "HardDefaults", Got: lookup.GetHardDefaults(), Want: &lvCfg.Hard.Common, Mode: test.CompareSamePointer},
 	}
 	if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
 		t.Fatal(err)

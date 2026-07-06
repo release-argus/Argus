@@ -39,54 +39,8 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "non-empty/Type",
-			data: &Defaults{
-				Type: "a",
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/AccessToken",
-			data: &Defaults{
-				AccessToken: "foo",
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/AllowInvalidCerts",
-			data: &Defaults{
-				AllowInvalidCerts: test.Ptr(true),
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/UsePreRelease",
-			data: &Defaults{
-				UsePreRelease: test.Ptr(true),
-			},
-			want: false,
-		},
-		{
 			name: "non-empty/Require",
 			data: &Defaults{
-				Require: filter.RequireDefaults{
-					Docker: *test.Must(t, func() (*docker.Defaults, error) {
-						return docker.DecodeDefaults(
-							"yaml", []byte(`type: ghcr`),
-							nil,
-						)
-					}),
-				},
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/all",
-			data: &Defaults{
-				Type:              "a",
-				AccessToken:       "foo",
-				AllowInvalidCerts: test.Ptr(true),
-				UsePreRelease:     test.Ptr(true),
 				Require: filter.RequireDefaults{
 					Docker: *test.Must(t, func() (*docker.Defaults, error) {
 						return docker.DecodeDefaults(
@@ -154,10 +108,10 @@ func TestDecodeDefaults(t *testing.T) {
 		{
 			name:   "YAML/invalid data types",
 			format: "yaml",
-			data:   `type: ['github']`,
+			data:   `require: ['docker']`,
 			errRegex: test.TrimYAML(`
 					^latest_version:
-						[^\s]+ .*unmarshal.*
+						[^\s]+ sequence was used where mapping is expected
 						[^\s]+.*
 						\s+\^$`,
 			),
@@ -166,20 +120,12 @@ func TestDecodeDefaults(t *testing.T) {
 			name:   "YAML/full",
 			format: "yaml",
 			data: test.TrimYAML(`
-				type: github
-				access_token: foo
-				allow_invalid_certs: false
-				use_prerelease: true
 				foo: bar
 				require:
 					docker:
 						tag: t
 			`),
 			want: test.TrimYAML(`
-				type: github
-				access_token: foo
-				allow_invalid_certs: false
-				use_prerelease: true
 				require:
 					docker:
 						tag: t
@@ -212,9 +158,6 @@ func TestDefaults_Default(t *testing.T) {
 	// GIVEN: a LookupDefault.
 	defaults := Defaults{}
 	want := Defaults{
-		Type:              "github",
-		AllowInvalidCerts: test.Ptr(false),
-		UsePreRelease:     test.Ptr(false),
 		Require: filter.RequireDefaults{
 			Docker: docker.Defaults{
 				Type: "hub",

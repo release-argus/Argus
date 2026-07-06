@@ -45,6 +45,9 @@ func SetEmptyListETag(accessToken string) {
 			Hard: &hardDefaults,
 		},
 	)
+	var typeHardDefaults Defaults
+	typeHardDefaults.Default()
+	lookup.SetTypeDefaults(&Defaults{}, &typeHardDefaults)
 	lookup.AccessToken = accessToken
 
 	// Fallback to /tags to stop the /tags fallback query if on /releases.

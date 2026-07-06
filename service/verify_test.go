@@ -23,6 +23,7 @@ import (
 
 	"github.com/release-argus/Argus/internal/test"
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
+	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
@@ -128,7 +129,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 	tests := []struct {
 		name          string
 		options       opt.Defaults
-		latestVersion lvbase.Defaults
+		latestVersion latestver.Defaults
 		errRegex      string
 	}{
 		{
@@ -136,14 +137,16 @@ func TestDefaults_CheckValues(t *testing.T) {
 			options: *test.Must(t, func() (*opt.Defaults, error) {
 				return opt.DecodeDefaults("yaml", []byte("interval: 10s"))
 			}),
-			latestVersion: lvbase.Defaults{
-				Require: filter.RequireDefaults{
-					Docker: *test.Must(t, func() (*docker.Defaults, error) {
-						return docker.DecodeDefaults(
-							"yaml", []byte("type: ghcr"),
-							nil,
-						)
-					}),
+			latestVersion: latestver.Defaults{
+				Common: lvbase.Defaults{
+					Require: filter.RequireDefaults{
+						Docker: *test.Must(t, func() (*docker.Defaults, error) {
+							return docker.DecodeDefaults(
+								"yaml", []byte("type: ghcr"),
+								nil,
+							)
+						}),
+					},
 				},
 			},
 		},
@@ -162,14 +165,16 @@ func TestDefaults_CheckValues(t *testing.T) {
 			options: *test.Must(t, func() (*opt.Defaults, error) {
 				return opt.DecodeDefaults("yaml", []byte("interval: 10s"))
 			}),
-			latestVersion: lvbase.Defaults{
-				Require: filter.RequireDefaults{
-					Docker: *test.Must(t, func() (*docker.Defaults, error) {
-						return docker.DecodeDefaults(
-							"yaml", []byte("type: randomType"),
-							nil,
-						)
-					}),
+			latestVersion: latestver.Defaults{
+				Common: lvbase.Defaults{
+					Require: filter.RequireDefaults{
+						Docker: *test.Must(t, func() (*docker.Defaults, error) {
+							return docker.DecodeDefaults(
+								"yaml", []byte("type: randomType"),
+								nil,
+							)
+						}),
+					},
 				},
 			},
 			errRegex: test.TrimYAML(`
@@ -184,14 +189,16 @@ func TestDefaults_CheckValues(t *testing.T) {
 			options: *test.Must(t, func() (*opt.Defaults, error) {
 				return opt.DecodeDefaults("yaml", []byte("interval: 10x"))
 			}),
-			latestVersion: lvbase.Defaults{
-				Require: filter.RequireDefaults{
-					Docker: *test.Must(t, func() (*docker.Defaults, error) {
-						return docker.DecodeDefaults(
-							"yaml", []byte("type: randomType"),
-							nil,
-						)
-					}),
+			latestVersion: latestver.Defaults{
+				Common: lvbase.Defaults{
+					Require: filter.RequireDefaults{
+						Docker: *test.Must(t, func() (*docker.Defaults, error) {
+							return docker.DecodeDefaults(
+								"yaml", []byte("type: randomType"),
+								nil,
+							)
+						}),
+					},
 				},
 			},
 			errRegex: test.TrimYAML(`

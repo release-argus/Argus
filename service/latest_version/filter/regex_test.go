@@ -241,7 +241,7 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 			releaseDate, err := tc.require.RegexCheckContentGitHub(v, tc.body, logx.LogFrom{})
 
 			prefix := fmt.Sprintf(
-				"%s\nRequire.RegexCheckContentGitHub(version=%q, body=%q)",
+				"%s\nRequire.RegexCheckContentGitHub(version=%q, body=%v)",
 				packageName, v, tc.body,
 			)
 

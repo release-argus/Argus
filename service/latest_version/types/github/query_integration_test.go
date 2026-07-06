@@ -327,7 +327,7 @@ func TestLookup_Query(t *testing.T) {
 			overrides: `access_token: null`,
 			semVer:    true,
 			want: want{
-				errRegex: `^$`,
+				errRegex: `^$|rate limit reached for GitHub`,
 			},
 		},
 	}
@@ -344,7 +344,7 @@ func TestLookup_Query(t *testing.T) {
 				temporaryFailureInNameResolution = false
 				lookup := testLookup(t, false)
 				if strings.Contains(tc.overrides, "access_token: null") {
-					lookup.HardDefaults.AccessToken = ""
+					lookup.typeHardDefaults.AccessToken = ""
 				}
 				lookup.Status.ServiceInfo.ID = tc.name
 				if err := lookup.ApplyOverrides("yaml", []byte(tc.overrides)); err != nil {
@@ -388,7 +388,7 @@ func TestLookup_Query(t *testing.T) {
 					}
 					t.Fatalf(
 						"%s error mismatch\ngot:  %q\nwant: %q",
-						prefix, tc.want.errRegex, e,
+						prefix, e, tc.want.errRegex,
 					)
 				}
 

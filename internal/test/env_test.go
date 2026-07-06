@@ -17,6 +17,7 @@
 package test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
@@ -96,6 +97,59 @@ func TestSetEnv(t *testing.T) {
 						packageName, got, ok, k, expected,
 					)
 				}
+			}
+		})
+	}
+}
+
+func TestSplitEnvVars(t *testing.T) {
+	// GIVEN: a slice of env vars in the form "KEY=VALUE".
+	tests := []struct {
+		name string
+		env  []string
+		want map[string]string
+	}{
+		{
+			name: "simple",
+			env: []string{
+				"FOO=bar",
+				"BAZ=qux",
+			},
+			want: map[string]string{
+				"FOO": "bar",
+				"BAZ": "qux",
+			},
+		},
+		{
+			name: "empty value",
+			env:  []string{"FOO="},
+			want: map[string]string{"FOO": ""},
+		},
+		{
+			name: "no equals sign",
+			env:  []string{"FOO"},
+			want: map[string]string{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: SplitEnvVars is called.
+			got := SplitEnvVars(tc.env)
+
+			prefix := fmt.Sprintf("%s\nSplitEnvVars()", packageName)
+
+			// THEN: the result is as expected.
+			if testErr := AssertMapEqual(
+				t,
+				got,
+				tc.want,
+				prefix,
+				"",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}

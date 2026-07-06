@@ -27,7 +27,6 @@ import (
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
 	latestver "github.com/release-argus/Argus/service/latest_version"
-	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	svctest "github.com/release-argus/Argus/service/test"
 	"github.com/release-argus/Argus/util"
@@ -73,7 +72,7 @@ func testVerify(t *testing.T) *Config {
 					`)),
 					nil,
 					nil,
-					lvbase.DefaultsConfig{
+					latestver.DefaultsConfig{
 						Soft: &cfg.Defaults.Service.LatestVersion,
 						Hard: &cfg.HardDefaults.Service.LatestVersion,
 					},
@@ -461,12 +460,15 @@ var configStr = test.TrimYAML(`
 				semantic_versioning: true
 			latest_version:
 				type: github
-				allow_invalid_certs: false
-				use_prerelease: false
-				require:
-					docker:
-						type: hub
-						tag: '{{ version }}'
+				common:
+					require:
+						docker:
+							type: hub
+							tag: '{{ version }}'
+				github:
+					use_prerelease: false
+				url:
+					allow_invalid_certs: false
 			deployed_version:
 				type: url
 				allow_invalid_certs: false

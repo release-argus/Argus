@@ -212,13 +212,13 @@ func TestConfig_InitDefaults(t *testing.T) {
 	prefix := fmt.Sprintf("%s\nConfig InitDefaults()", packageName)
 
 	// THEN: HardDefaults...Docker.Type has a value.
-	if cfg.HardDefaults.Service.LatestVersion.Require.Docker.Type == "" {
+	if cfg.HardDefaults.Service.LatestVersion.Common.Require.Docker.Type == "" {
 		t.Fatalf("%s got HardDefaults.Docker.Require=''. want value", packageName)
 	}
 
 	// AND: Defaults inherit from HardDefaults.
-	if cfg.Defaults.Service.LatestVersion.Require.Docker.Defaults !=
-		&cfg.HardDefaults.Service.LatestVersion.Require.Docker {
+	if cfg.Defaults.Service.LatestVersion.Common.Require.Docker.Defaults !=
+		&cfg.HardDefaults.Service.LatestVersion.Common.Require.Docker {
 		t.Fatalf("%s got Defaults....Docker.Defaults != HardDefaults...Docker.Defaults", packageName)
 	}
 
@@ -226,7 +226,7 @@ func TestConfig_InitDefaults(t *testing.T) {
 	fieldTests := []test.FieldAssertion{
 		{
 			Name: "Defaults: Service.LatestVersion.Options -> Service.Options",
-			Got:  cfg.Defaults.Service.LatestVersion.Options,
+			Got:  cfg.Defaults.Service.LatestVersion.Common.Options,
 			Want: &cfg.Defaults.Service.Options,
 			Mode: test.CompareSamePointer,
 		},
@@ -238,7 +238,7 @@ func TestConfig_InitDefaults(t *testing.T) {
 		},
 		{
 			Name: "HardDefaults: Service.LatestVersion.Options -> Service.Options",
-			Got:  cfg.HardDefaults.Service.LatestVersion.Options,
+			Got:  cfg.HardDefaults.Service.LatestVersion.Common.Options,
 			Want: &cfg.HardDefaults.Service.Options,
 			Mode: test.CompareSamePointer,
 		},

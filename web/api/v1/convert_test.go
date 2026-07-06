@@ -75,7 +75,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 			input: &config.Defaults{
 				Service: service.Defaults{
 					Options:               opt.Defaults{},
-					LatestVersion:         lvbase.Defaults{},
+					LatestVersion:         latestver.Defaults{},
 					DeployedVersionLookup: dvbase.Defaults{},
 					Dashboard:             dashboard.Defaults{},
 				},
@@ -84,7 +84,9 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 				Service: apitype.ServiceDefaults{
 					Options: apitype.ServiceOptions{},
 					LatestVersion: apitype.LatestVersionDefaults{
-						Require: &apitype.LatestVersionRequireDefaults{},
+						Common: apitype.LatestVersionCommonDefaults{
+							Require: &apitype.LatestVersionRequireDefaults{},
+						},
 					},
 					Command:               apitype.Commands{},
 					DeployedVersionLookup: apitype.DeployedVersionLookupDefaults{},
@@ -230,60 +232,68 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 			name: "censor service.latest_version",
 			input: &config.Defaults{
 				Service: service.Defaults{
-					LatestVersion: lvbase.Defaults{
-						Type:        "github",
-						AccessToken: "censor",
-						Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
-							return filter.DecodeDefaults(
-								"yaml", []byte(test.TrimYAML(`
-									docker:
-										type: hub
-										tag: t
-										registry:
-											ghcr:
-												auth:
-													username: something
-													token: ghp_X
-											hub:
-												auth:
-													username: something
-													token: hub_X
-											quay:
-												auth:
-													username: something
-													token: quay_X
-								`)),
-							)
-						}),
+					LatestVersion: latestver.Defaults{
+						Type: "github",
+						GitHub: lvgithub.Defaults{
+							AccessToken: "censor",
+						},
+						Common: lvbase.Defaults{
+							Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
+								return filter.DecodeDefaults(
+									"yaml", []byte(test.TrimYAML(`
+										docker:
+											type: hub
+											tag: t
+											registry:
+												ghcr:
+													auth:
+														username: something
+														token: ghp_X
+												hub:
+													auth:
+														username: something
+														token: hub_X
+												quay:
+													auth:
+														username: something
+														token: quay_X
+									`)),
+								)
+							}),
+						},
 					},
 				},
 			},
 			want: apitype.Defaults{
 				Service: apitype.ServiceDefaults{
 					LatestVersion: apitype.LatestVersionDefaults{
-						Type:        "github",
-						AccessToken: util.SecretValue,
-						Require: &apitype.LatestVersionRequireDefaults{
-							Docker: apitype.RequireDockerDefaults{
-								Type: "hub",
-								Tag:  "t",
-								Registry: apitype.RequireDockerRegistriesDefaults{
-									GHCR: &apitype.RequireDockerRegistryDefaultsToken{
-										RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-											Token: util.SecretValue,
-										},
-									},
-									Hub: &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
-										RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
-											Username: "something",
+						Type: "github",
+						GitHub: apitype.LatestVersionGitHubDefaults{
+							AccessToken: util.SecretValue,
+						},
+						Common: apitype.LatestVersionCommonDefaults{
+							Require: &apitype.LatestVersionRequireDefaults{
+								Docker: apitype.RequireDockerDefaults{
+									Type: "hub",
+									Tag:  "t",
+									Registry: apitype.RequireDockerRegistriesDefaults{
+										GHCR: &apitype.RequireDockerRegistryDefaultsToken{
 											RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
 												Token: util.SecretValue,
 											},
 										},
-									},
-									Quay: &apitype.RequireDockerRegistryDefaultsToken{
-										RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-											Token: util.SecretValue,
+										Hub: &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
+											RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
+												Username: "something",
+												RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
+													Token: util.SecretValue,
+												},
+											},
+										},
+										Quay: &apitype.RequireDockerRegistryDefaultsToken{
+											RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
+												Token: util.SecretValue,
+											},
 										},
 									},
 								},
@@ -903,7 +913,7 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 
 func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 	configDefaults, _ := plainDefaults(t)
-	defaults := configDefaults.Service.LatestVersion.Require
+	defaults := configDefaults.Service.LatestVersion.Common.Require
 	// GIVEN: a filter.Require.
 	tests := []struct {
 		name  string
@@ -2463,13 +2473,19 @@ var stringifiedConvertedDefaults = test.TrimJSON(`{
 		},
 		"latest_version": {
 			"type": "github",
-			"allow_invalid_certs": false,
-			"use_prerelease": false,
-			"require": {
-				"docker": {
-					"type": "hub",
-					"tag": "{{ version }}"
+			"common": {
+				"require": {
+					"docker": {
+						"type": "hub",
+						"tag": "{{ version }}"
+					}
 				}
+			},
+			"github": {
+				"use_prerelease": false
+			},
+			"url": {
+				"allow_invalid_certs": false
 			}
 		},
 		"deployed_version": {

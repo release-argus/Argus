@@ -462,23 +462,53 @@ func (r *LatestVersion) String() string {
 	return decode.ToJSONString(r)
 }
 
-// LatestVersionDefaults are default values for a LatestVersion.
+// LatestVersionDefaults are default values for a LatestVersion - fields common to
+// every registered type live under 'common', and fields specific to a single type
+// live under that type's own key.
 type LatestVersionDefaults struct {
-	Type              string                        `json:"type,omitempty" yaml:"type,omitempty"`                               // "github" | "url".
-	URL               string                        `json:"url,omitempty" yaml:"url,omitempty"`                                 // URL to query.
-	AccessToken       string                        `json:"access_token,omitempty" yaml:"access_token,omitempty"`               // GitHub access token to use.
-	AllowInvalidCerts *bool                         `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
-	UsePreRelease     *bool                         `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"`           // Whether to use GitHub prereleases.
-	Require           *LatestVersionRequireDefaults `json:"require,omitzero" yaml:"require,omitzero"`
+	Type   string                      `json:"type,omitempty" yaml:"type,omitempty"` // "github" | "url".
+	Common LatestVersionCommonDefaults `json:"common,omitzero" yaml:"common,omitzero"`
+	GitHub LatestVersionGitHubDefaults `json:"github,omitzero" yaml:"github,omitzero"`
+	URL    LatestVersionURLDefaults    `json:"url,omitzero" yaml:"url,omitzero"`
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (l LatestVersionDefaults) IsZero() bool {
-	return l.URL == "" &&
-		l.AccessToken == "" &&
-		l.AllowInvalidCerts == nil &&
-		l.UsePreRelease == nil &&
-		(l.Require == nil || l.Require.IsZero())
+	return l.Type == "" &&
+		l.Common.IsZero() &&
+		l.GitHub.IsZero() &&
+		l.URL.IsZero()
+}
+
+// LatestVersionCommonDefaults are default values common to every latest_version type.
+type LatestVersionCommonDefaults struct {
+	Require *LatestVersionRequireDefaults `json:"require,omitzero" yaml:"require,omitzero"`
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (l LatestVersionCommonDefaults) IsZero() bool {
+	return l.Require == nil || l.Require.IsZero()
+}
+
+// LatestVersionGitHubDefaults are GitHub-specific default values for a LatestVersion.
+type LatestVersionGitHubDefaults struct {
+	AccessToken   string `json:"access_token,omitempty" yaml:"access_token,omitempty"`     // GitHub access token to use.
+	UsePreRelease *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"` // Whether to use GitHub prereleases.
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (l LatestVersionGitHubDefaults) IsZero() bool {
+	return l.AccessToken == "" && l.UsePreRelease == nil
+}
+
+// LatestVersionURLDefaults are URL-specific default values for a LatestVersion.
+type LatestVersionURLDefaults struct {
+	AllowInvalidCerts *bool `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (l LatestVersionURLDefaults) IsZero() bool {
+	return l.AllowInvalidCerts == nil
 }
 
 // LatestVersionRequire contains commands, regex, etc. that must pass before considering a release valid.

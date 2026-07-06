@@ -33,6 +33,8 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	lvtest "github.com/release-argus/Argus/service/latest_version/test"
 	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
+	lvgithub "github.com/release-argus/Argus/service/latest_version/types/github"
+	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -99,32 +101,39 @@ func TestHTTP_Config(t *testing.T) {
 							Interval: "1h",
 						},
 					},
-					LatestVersion: lvbase.Defaults{
-						AccessToken:       "foo",
-						AllowInvalidCerts: test.Ptr(true),
-						UsePreRelease:     test.Ptr(false),
-						Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
-							return filter.DecodeDefaults(
-								"yaml", []byte(test.TrimYAML(`
-									docker:
-										type: hub
-										tag: t
-										registry:
-											ghcr:
-												auth:
-													username: something
-													token: ghp_X
-											hub:
-												auth:
-													username: something
-													token: hub_X
-											quay:
-												auth:
-													username: something
-													token: quay_X
-								`)),
-							)
-						}),
+					LatestVersion: latestver.Defaults{
+						Type: "github",
+						GitHub: lvgithub.Defaults{
+							AccessToken:   "foo",
+							UsePreRelease: test.Ptr(false),
+						},
+						URL: lvweb.Defaults{
+							AllowInvalidCerts: test.Ptr(true),
+						},
+						Common: lvbase.Defaults{
+							Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
+								return filter.DecodeDefaults(
+									"yaml", []byte(test.TrimYAML(`
+										docker:
+											type: hub
+											tag: t
+											registry:
+												ghcr:
+													auth:
+														username: something
+														token: ghp_X
+												hub:
+													auth:
+														username: something
+														token: hub_X
+												quay:
+													auth:
+														username: something
+														token: quay_X
+									`)),
+								)
+							}),
+						},
 					},
 				},
 			},
@@ -141,32 +150,39 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": ` + secretValueMarshaled + `,
-								"allow_invalid_certs": true,
-								"use_prerelease": false,
-								"require": {
-									"docker": {
-										"type": "hub",
-										"tag": "t",
-										"registry": {
-											"ghcr": {
-												"auth": {
-													"token": ` + secretValueMarshaled + `
-												}
-											},
-											"hub": {
-												"auth": {
-													"username": "something",
-													"token": ` + secretValueMarshaled + `
-												}
-											},
-											"quay": {
-												"auth": {
-													"token": ` + secretValueMarshaled + `
+								"type": "github",
+								"common": {
+									"require": {
+										"docker": {
+											"type": "hub",
+											"tag": "t",
+											"registry": {
+												"ghcr": {
+													"auth": {
+														"token": ` + secretValueMarshaled + `
+													}
+												},
+												"hub": {
+													"auth": {
+														"username": "something",
+														"token": ` + secretValueMarshaled + `
+													}
+												},
+												"quay": {
+													"auth": {
+														"token": ` + secretValueMarshaled + `
+													}
 												}
 											}
 										}
 									}
+								},
+								"github": {
+									"access_token": ` + secretValueMarshaled + `,
+									"use_prerelease": false
+								},
+								"url": {
+									"allow_invalid_certs": true
 								}
 							}
 						}
@@ -189,32 +205,38 @@ func TestHTTP_Config(t *testing.T) {
 							Interval: "1h",
 						},
 					},
-					LatestVersion: lvbase.Defaults{
-						AccessToken:       "foo",
-						AllowInvalidCerts: test.Ptr(true),
-						UsePreRelease:     test.Ptr(false),
-						Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
-							return filter.DecodeDefaults(
-								"yaml", []byte(test.TrimYAML(`
-									docker:
-										type: hub
-										tag: t
-										registry:
-											ghcr:
-												auth:
-													username: something
-													token: ghp_X
-											hub:
-												auth:
-													username: something
-													token: hub_X
-											quay:
-												auth:
-													username: something
-													token: quay_X
-								`)),
-							)
-						}),
+					LatestVersion: latestver.Defaults{
+						GitHub: lvgithub.Defaults{
+							AccessToken:   "foo",
+							UsePreRelease: test.Ptr(false),
+						},
+						URL: lvweb.Defaults{
+							AllowInvalidCerts: test.Ptr(true),
+						},
+						Common: lvbase.Defaults{
+							Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
+								return filter.DecodeDefaults(
+									"yaml", []byte(test.TrimYAML(`
+										docker:
+											type: hub
+											tag: t
+											registry:
+												ghcr:
+													auth:
+														username: something
+														token: ghp_X
+												hub:
+													auth:
+														username: something
+														token: hub_X
+												quay:
+													auth:
+														username: something
+														token: quay_X
+									`)),
+								)
+							}),
+						},
 					},
 					Notify: map[string]struct{}{
 						"n1": {},
@@ -243,32 +265,38 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": ` + secretValueMarshaled + `,
-								"allow_invalid_certs": true,
-								"use_prerelease": false,
-								"require": {
-									"docker": {
-										"type": "hub",
-										"tag": "t",
-										"registry": {
-											"ghcr": {
-												"auth": {
-													"token": ` + secretValueMarshaled + `
-												}
-											},
-											"hub": {
-												"auth": {
-													"username": "something",
-													"token": ` + secretValueMarshaled + `
-												}
-											},
-											"quay": {
-												"auth": {
-													"token": ` + secretValueMarshaled + `
+								"common": {
+									"require": {
+										"docker": {
+											"type": "hub",
+											"tag": "t",
+											"registry": {
+												"ghcr": {
+													"auth": {
+														"token": ` + secretValueMarshaled + `
+													}
+												},
+												"hub": {
+													"auth": {
+														"username": "something",
+														"token": ` + secretValueMarshaled + `
+													}
+												},
+												"quay": {
+													"auth": {
+														"token": ` + secretValueMarshaled + `
+													}
 												}
 											}
 										}
 									}
+								},
+								"github": {
+									"access_token": ` + secretValueMarshaled + `,
+									"use_prerelease": false
+								},
+								"url": {
+									"allow_invalid_certs": true
 								}
 							},
 							"notify": ["n1"],
@@ -301,32 +329,38 @@ func TestHTTP_Config(t *testing.T) {
 							Interval: "1h",
 						},
 					},
-					LatestVersion: lvbase.Defaults{
-						AccessToken:       "foo",
-						AllowInvalidCerts: test.Ptr(true),
-						UsePreRelease:     test.Ptr(false),
-						Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
-							return filter.DecodeDefaults(
-								"yaml", []byte(test.TrimYAML(`
-									docker:
-										type: hub
-										tag: t
-										registry:
-											ghcr:
-												auth:
-													username: something
-													token: ghp_X
-											hub:
-												auth:
-													username: something
-													token: hub_X
-											quay:
-												auth:
-													username: something
-													token: quay_X
-								`)),
-							)
-						}),
+					LatestVersion: latestver.Defaults{
+						GitHub: lvgithub.Defaults{
+							AccessToken:   "foo",
+							UsePreRelease: test.Ptr(false),
+						},
+						URL: lvweb.Defaults{
+							AllowInvalidCerts: test.Ptr(true),
+						},
+						Common: lvbase.Defaults{
+							Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
+								return filter.DecodeDefaults(
+									"yaml", []byte(test.TrimYAML(`
+										docker:
+											type: hub
+											tag: t
+											registry:
+												ghcr:
+													auth:
+														username: something
+														token: ghp_X
+												hub:
+													auth:
+														username: something
+														token: hub_X
+												quay:
+													auth:
+														username: something
+														token: quay_X
+									`)),
+								)
+							}),
+						},
 					},
 					Notify: map[string]struct{}{
 						"n1": {},
@@ -369,32 +403,38 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": ` + secretValueMarshaled + `,
-								"allow_invalid_certs": true,
-								"use_prerelease": false,
-								"require": {
-									"docker": {
-										"type": "hub",
-										"tag": "t",
-										"registry": {
-											"ghcr": {
-												"auth": {
-													"token": ` + secretValueMarshaled + `
-												}
-											},
-											"hub": {
-												"auth": {
-													"username": "something",
-													"token": ` + secretValueMarshaled + `
-												}
-											},
-											"quay": {
-												"auth": {
-													"token": ` + secretValueMarshaled + `
+								"common": {
+									"require": {
+										"docker": {
+											"type": "hub",
+											"tag": "t",
+											"registry": {
+												"ghcr": {
+													"auth": {
+														"token": ` + secretValueMarshaled + `
+													}
+												},
+												"hub": {
+													"auth": {
+														"username": "something",
+														"token": ` + secretValueMarshaled + `
+													}
+												},
+												"quay": {
+													"auth": {
+														"token": ` + secretValueMarshaled + `
+													}
 												}
 											}
 										}
 									}
+								},
+								"github": {
+									"access_token": ` + secretValueMarshaled + `,
+									"use_prerelease": false
+								},
+								"url": {
+									"allow_invalid_certs": true
 								}
 							},
 							"notify": ["n1"],
@@ -456,32 +496,38 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": ` + secretValueMarshaled + `,
-								"allow_invalid_certs": true,
-								"use_prerelease": false,
-								"require": {
-									"docker": {
-										"type": "hub",
-										"tag": "t",
-										"registry": {
-											"ghcr": {
-												"auth": {
-													"token": ` + secretValueMarshaled + `
-												}
-											},
-											"hub": {
-												"auth": {
-													"username": "something",
-													"token": ` + secretValueMarshaled + `
-												}
-											},
-											"quay": {
-												"auth": {
-													"token": ` + secretValueMarshaled + `
+								"common": {
+									"require": {
+										"docker": {
+											"type": "hub",
+											"tag": "t",
+											"registry": {
+												"ghcr": {
+													"auth": {
+														"token": ` + secretValueMarshaled + `
+													}
+												},
+												"hub": {
+													"auth": {
+														"username": "something",
+														"token": ` + secretValueMarshaled + `
+													}
+												},
+												"quay": {
+													"auth": {
+														"token": ` + secretValueMarshaled + `
+													}
 												}
 											}
 										}
 									}
+								},
+								"github": {
+									"access_token": ` + secretValueMarshaled + `,
+									"use_prerelease": false
+								},
+								"url": {
+									"allow_invalid_certs": true
 								}
 							},
 							"notify": ["n1"],
@@ -573,32 +619,38 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": ` + secretValueMarshaled + `,
-								"allow_invalid_certs": true,
-								"use_prerelease": false,
-								"require": {
-									"docker": {
-										"type": "hub",
-										"tag": "t",
-										"registry": {
-											"ghcr": {
-												"auth": {
-													"token": ` + secretValueMarshaled + `
-												}
-											},
-											"hub": {
-												"auth": {
-													"username": "something",
-													"token": ` + secretValueMarshaled + `
-												}
-											},
-											"quay": {
-												"auth": {
-													"token": ` + secretValueMarshaled + `
+								"common": {
+									"require": {
+										"docker": {
+											"type": "hub",
+											"tag": "t",
+											"registry": {
+												"ghcr": {
+													"auth": {
+														"token": ` + secretValueMarshaled + `
+													}
+												},
+												"hub": {
+													"auth": {
+														"username": "something",
+														"token": ` + secretValueMarshaled + `
+													}
+												},
+												"quay": {
+													"auth": {
+														"token": ` + secretValueMarshaled + `
+													}
 												}
 											}
 										}
 									}
+								},
+								"github": {
+									"access_token": ` + secretValueMarshaled + `,
+									"use_prerelease": false
+								},
+								"url": {
+									"allow_invalid_certs": true
 								}
 							},
 							"notify": ["n1"],

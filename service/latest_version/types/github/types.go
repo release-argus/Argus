@@ -40,6 +40,9 @@ type Lookup struct {
 	UsePreRelease *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"` // Whether releases with the prerelease tag should be considered.
 
 	data Data // GitHub Conditional Request vars / Releases.
+
+	typeDefaults     *Defaults // GitHub-specific Defaults.
+	typeHardDefaults *Defaults // GitHub-specific Hard Defaults.
 }
 
 // LookupDecode is an unmarshal-only helper for [Lookup].
@@ -124,10 +127,12 @@ func (l *Lookup) Clone(svcStatus *status.Status) *Lookup {
 	}
 
 	return &Lookup{
-		Lookup:        *l.Lookup.Clone(svcStatus), //nolint:staticcheck
-		AccessToken:   l.AccessToken,
-		UsePreRelease: usePreRelease,
-		data:          *l.data.Copy(),
+		Lookup:           *l.Lookup.Clone(svcStatus), //nolint:staticcheck
+		AccessToken:      l.AccessToken,
+		UsePreRelease:    usePreRelease,
+		data:             *l.data.Copy(),
+		typeDefaults:     l.typeDefaults,
+		typeHardDefaults: l.typeHardDefaults,
 	}
 }
 
@@ -137,4 +142,19 @@ func (l *Lookup) Copy(svcStatus *status.Status) base.Interface {
 		return got
 	}
 	return nil
+}
+
+// ############
+// # DEFAULTS #
+// ############
+
+// SetTypeDefaults assigns the GitHub-specific Defaults/HardDefaults to the receiver.
+func (l *Lookup) SetTypeDefaults(defaults, hardDefaults *Defaults) {
+	l.typeDefaults = defaults
+	l.typeHardDefaults = hardDefaults
+}
+
+// GetTypeDefaults returns the receiver's GitHub-specific Defaults/HardDefaults.
+func (l *Lookup) GetTypeDefaults() (defaults, hardDefaults *Defaults) {
+	return l.typeDefaults, l.typeHardDefaults
 }

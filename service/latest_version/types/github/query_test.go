@@ -398,8 +398,8 @@ func TestLookup_HandleResponse(t *testing.T) {
 				}
 				lookup.AccessToken = lookup.accessToken()
 				if !tc.conditions.hadDefaultAccessToken {
-					lookup.Defaults.AccessToken = ""
-					lookup.HardDefaults.AccessToken = "Something"
+					lookup.typeDefaults.AccessToken = ""
+					lookup.typeHardDefaults.AccessToken = "Something"
 				}
 				if tc.lookupSetup != nil {
 					tc.lookupSetup(lookup)

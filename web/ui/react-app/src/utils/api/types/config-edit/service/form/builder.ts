@@ -66,6 +66,7 @@ export const buildServiceSchemaWithFallbacks = (
 		schema: latestVersionSchema,
 		schemaData: latestVersionSchemaData,
 		schemaDataDefaults: latestVersionSchemaDataDefaults,
+		schemaDataTypeDefaults: latestVersionTypeDataDefaults,
 	} = buildLatestVersionLookupSchemaWithFallbacks(
 		data?.latest_version,
 		defaults?.service.latest_version,
@@ -231,6 +232,7 @@ export const buildServiceSchemaWithFallbacks = (
 
 	// Type-specific defaults.
 	const typeDataDefaults = {
+		latest_version: latestVersionTypeDataDefaults,
 		notify: notifyTypeDataDefaults,
 		webhook: webhookTypeDataDefaults,
 	};

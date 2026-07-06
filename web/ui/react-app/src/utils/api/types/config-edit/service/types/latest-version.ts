@@ -264,7 +264,6 @@ export const latestVersionLookupSchemaDefault = z
 		headers: headersSchema.optional(),
 		require: latestVersionRequireSchemaDefaults.optional(),
 		type: LatestVersionTypeEnum.nullable().optional(),
-		url: stringDefault,
 		url_commands: urlCommandsSchema.optional(),
 		use_prerelease: z.boolean().nullable().optional(),
 	})

@@ -90,8 +90,8 @@ func TestLookup_AllowInvalidCerts(t *testing.T) {
 
 			lookup := testLookup(t, false)
 			lookup.AllowInvalidCerts = tc.rootValue
-			lookup.Defaults.AllowInvalidCerts = tc.defaultValue
-			lookup.HardDefaults.AllowInvalidCerts = tc.hardDefaultValue
+			lookup.typeDefaults.AllowInvalidCerts = tc.defaultValue
+			lookup.typeHardDefaults.AllowInvalidCerts = tc.hardDefaultValue
 
 			// WHEN: allowInvalidCerts is called.
 			got := lookup.allowInvalidCerts()

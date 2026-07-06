@@ -230,7 +230,9 @@ const fillLatestVersion = async (
 		.first();
 
 	await section.locator('#latest_version\\.type').click();
-	await dialog.getByRole('option', { name: type }).click();
+	await dialog
+		.getByRole('option', { name: new RegExp(`^${type}$`, 'i') })
+		.click();
 
 	if (type === 'github') {
 		await section

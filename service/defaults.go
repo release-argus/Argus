@@ -20,7 +20,7 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service/dashboard"
 	deployedver_base "github.com/release-argus/Argus/service/deployed_version/types/base"
-	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
+	latestver "github.com/release-argus/Argus/service/latest_version"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util/polymorphic"
@@ -29,7 +29,7 @@ import (
 // Defaults are the default values for a Service.
 type Defaults struct {
 	Options               opt.Defaults              `json:"options,omitzero" yaml:"options,omitzero"`                   // Options to give the Service.
-	LatestVersion         latestver_base.Defaults   `json:"latest_version,omitzero" yaml:"latest_version,omitzero"`     // Vars to scrape the latest version of the Service.
+	LatestVersion         latestver.Defaults        `json:"latest_version,omitzero" yaml:"latest_version,omitzero"`     // Vars to scrape the latest version of the Service.
 	DeployedVersionLookup deployedver_base.Defaults `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"` // Vars to scrape the Service's current deployed version.
 	Notify                map[string]struct{}       `json:"notify,omitempty" yaml:"notify,omitempty"`                   // Default Notifiers to give a Service.
 	Command               command.Commands          `json:"command,omitempty" yaml:"command,omitempty"`                 // Default Commands to give a Service.
@@ -144,14 +144,14 @@ func (d *Defaults) SetDefaults(dflts *Defaults) {
 	d.LatestVersion.SetDefaults(&dflts.LatestVersion)
 
 	// Options.
-	d.LatestVersion.Options = &d.Options
+	d.LatestVersion.Common.Options = &d.Options
 	d.DeployedVersionLookup.Options = &d.Options
-	dflts.LatestVersion.Options = &dflts.Options
+	dflts.LatestVersion.Common.Options = &dflts.Options
 	dflts.DeployedVersionLookup.Options = &dflts.Options
 }
 
 // Init wires the appropriate Defaults pointers between structs.
 func (d *Defaults) Init() {
-	d.LatestVersion.Options = &d.Options
+	d.LatestVersion.Common.Options = &d.Options
 	d.DeployedVersionLookup.Options = &d.Options
 }

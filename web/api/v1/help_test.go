@@ -29,6 +29,7 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	dvtest "github.com/release-argus/Argus/service/deployed_version/test"
+	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 	lvtest "github.com/release-argus/Argus/service/latest_version/test"
@@ -122,16 +123,18 @@ func plainDefaults(t *testing.T) (*config.Defaults, *config.Defaults) {
 	)
 	defaults := config.Defaults{
 		Service: service.Defaults{
-			LatestVersion: lvbase.Defaults{
-				Require: filter.RequireDefaults{
-					Docker: *dockerDefaults,
+			LatestVersion: latestver.Defaults{
+				Common: lvbase.Defaults{
+					Require: filter.RequireDefaults{
+						Docker: *dockerDefaults,
+					},
 				},
 			},
 		},
 	}
 	hardDefaults := config.Defaults{}
 	hardDefaults.Default()
-	hardDefaults.Service.LatestVersion.AccessToken = test.GitHubToken(t)
+	hardDefaults.Service.LatestVersion.GitHub.AccessToken = test.GitHubToken(t)
 	defaults.SetDefaults(&hardDefaults)
 
 	return &defaults, &hardDefaults
@@ -164,7 +167,7 @@ func testAPI(t *testing.T, path string) API {
 	testYAML_Argus(path)
 
 	cfg := testLoad(t, path)
-	cfg.HardDefaults.Service.LatestVersion.AccessToken = test.GitHubToken(t)
+	cfg.HardDefaults.Service.LatestVersion.GitHub.AccessToken = test.GitHubToken(t)
 
 	t.Cleanup(func() {
 		_ = os.RemoveAll(cfg.Settings.Data.DatabaseFile)

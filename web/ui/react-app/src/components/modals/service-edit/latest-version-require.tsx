@@ -4,6 +4,7 @@ import { HelpTooltip } from '@/components/generic';
 import { FieldLabel, FieldSelect, FieldText } from '@/components/generic/field';
 import type { TooltipWithAriaProps } from '@/components/generic/tooltip';
 import Command from '@/components/modals/service-edit/command';
+import { normaliseForSelect } from '@/components/modals/service-edit/util';
 import {
 	Accordion,
 	AccordionContent,
@@ -43,35 +44,24 @@ const EditServiceLatestVersionRequire = () => {
 	const values = useWatch({ name: name }) as LatestVersionRequire;
 
 	const defaults = schemaDataDefaults?.latest_version?.require;
-	const defaultDockerRegistry: RequireDockerFilterDefaults['type'] =
+	const defaultType: RequireDockerFilterDefaults['type'] =
 		defaults?.docker?.type ?? nullString;
 
 	// Add default to docker registry options.
 	const dockerRegistryOptions = useMemo(() => {
-		// No default.
-		if (defaultDockerRegistry === nullString)
-			return latestVersionRequireDockerTypeOptions;
+		const defaultScheme = normaliseForSelect(
+			latestVersionRequireDockerTypeOptions,
+			defaultType,
+		);
 
-		// Find default value.
-		const defaultLower = defaultDockerRegistry.toLowerCase();
-		const defaultDockerRegistryLabel =
-			latestVersionRequireDockerTypeOptions.find(
-				(option) => option.value.toLowerCase() === defaultLower,
-			);
-
-		// Known default registry.
-		if (defaultDockerRegistryLabel)
+		if (defaultScheme)
 			return [
-				{
-					label: `${defaultDockerRegistryLabel.label} (default)`,
-					value: nullString,
-				},
+				{ label: `${defaultScheme.label} (default)`, value: nullString },
 				...latestVersionRequireDockerTypeOptions,
 			];
 
-		// Unknown default registry, return without this default.
 		return latestVersionRequireDockerTypeOptions;
-	}, [defaultDockerRegistry]);
+	}, [defaultType]);
 
 	// Show the 'username' field if 'Docker Hub' type.
 	const dockerRegistry = useWatch({
@@ -79,7 +69,7 @@ const EditServiceLatestVersionRequire = () => {
 	}) as DockerType | NullString;
 	const selectedDockerRegistry =
 		dockerRegistry === nullString
-			? (defaultDockerRegistry as NonNull<DockerFilterType>)
+			? (defaultType as NonNull<DockerFilterType>)
 			: dockerRegistry;
 	// Only Docker Hub has a username field.
 	const showUsernameField =
@@ -93,7 +83,8 @@ const EditServiceLatestVersionRequire = () => {
 	// `auth` varies by registry (token / token+username / none for ECR), so read
 	// it through the widest shape — every field is optional.
 	const dockerAuth = (values.docker as WithDockerAuth)?.auth;
-	const dockerDefaultsAuth = (dockerDefaults as WithDockerAuth | undefined)?.auth;
+	const dockerDefaultsAuth = (dockerDefaults as WithDockerAuth | undefined)
+		?.auth;
 
 	// Target release assets or webpages.
 	const latestVersionType = useWatch({

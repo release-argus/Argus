@@ -68,7 +68,7 @@ func (api *api) initialise() (ok bool) {
 	if ok := checkFile(databaseFile); !ok {
 		return ok
 	}
-	db, err := openDatabase("sqlite", databaseFile)
+	db, err := openDatabase("sqlite", databaseFile+"?_pragma=busy_timeout(5000)")
 	if err != nil {
 		logx.Fatal(err, logFrom)
 		return

@@ -901,7 +901,9 @@ func TestDefaults_String(t *testing.T) {
 			defaults: &Defaults{
 				Service: ServiceDefaults{
 					LatestVersion: LatestVersionDefaults{
-						AccessToken: "foo",
+						GitHub: LatestVersionGitHubDefaults{
+							AccessToken: "foo",
+						},
 					},
 				},
 				Notify: Notifiers{
@@ -919,7 +921,9 @@ func TestDefaults_String(t *testing.T) {
 				{
 					"service": {
 						"latest_version": {
-							"access_token": "foo"
+							"github": {
+								"access_token": "foo"
+							}
 						}
 					},
 					"notify": {
@@ -1469,7 +1473,7 @@ func TestNotifiers_Flatten(t *testing.T) {
 			// AND: defined fields are censored as expected.
 			for i := range *tc.want {
 				prefix := fmt.Sprintf(
-					"%s\nNotifiers.Flatten() Notify[%q]",
+					"%s\nNotifiers.Flatten() Notify[%d]",
 					packageName, i,
 				)
 
@@ -1739,7 +1743,9 @@ func TestServiceDefaults_IsZero(t *testing.T) {
 			name: "non-empty/LatestVersion",
 			defaults: ServiceDefaults{
 				LatestVersion: LatestVersionDefaults{
-					AccessToken: "hi",
+					GitHub: LatestVersionGitHubDefaults{
+						AccessToken: "hi",
+					},
 				},
 			},
 			want: false,
@@ -1793,7 +1799,9 @@ func TestServiceDefaults_IsZero(t *testing.T) {
 					Interval: "1s",
 				},
 				LatestVersion: LatestVersionDefaults{
-					AccessToken: "hi",
+					GitHub: LatestVersionGitHubDefaults{
+						AccessToken: "hi",
+					},
 				},
 				Notify: []string{"a"},
 				Command: Commands{
@@ -2060,50 +2068,52 @@ func TestLatestVersionDefaults_IsZero(t *testing.T) {
 		want     bool
 	}{
 		{
-			name: "empty",
-			defaults: LatestVersionDefaults{
-				URL:               "",
-				AccessToken:       "",
-				AllowInvalidCerts: nil,
-				UsePreRelease:     nil,
-				Require:           nil,
-			},
-			want: true,
+			name:     "empty",
+			defaults: LatestVersionDefaults{},
+			want:     true,
 		},
 		{
-			name: "non-empty/URL",
+			name: "non-empty/Type",
 			defaults: LatestVersionDefaults{
-				URL: "a",
+				Type: "github",
 			},
 			want: false,
 		},
 		{
-			name: "non-empty/AccessToken",
+			name: "non-empty/GitHub.AccessToken",
 			defaults: LatestVersionDefaults{
-				AccessToken: "a",
+				GitHub: LatestVersionGitHubDefaults{
+					AccessToken: "a",
+				},
 			},
 			want: false,
 		},
 		{
-			name: "non-empty/AllowInvalidCerts",
+			name: "non-empty/GitHub.UsePreRelease",
 			defaults: LatestVersionDefaults{
-				AllowInvalidCerts: test.Ptr(false),
+				GitHub: LatestVersionGitHubDefaults{
+					UsePreRelease: test.Ptr(false),
+				},
 			},
 			want: false,
 		},
 		{
-			name: "non-empty/UsePreRelease",
+			name: "non-empty/URL.AllowInvalidCerts",
 			defaults: LatestVersionDefaults{
-				UsePreRelease: test.Ptr(false),
+				URL: LatestVersionURLDefaults{
+					AllowInvalidCerts: test.Ptr(false),
+				},
 			},
 			want: false,
 		},
 		{
-			name: "non-empty/Require",
+			name: "non-empty/Common.Require",
 			defaults: LatestVersionDefaults{
-				Require: &LatestVersionRequireDefaults{
-					Docker: RequireDockerDefaults{
-						Tag: "a",
+				Common: LatestVersionCommonDefaults{
+					Require: &LatestVersionRequireDefaults{
+						Docker: RequireDockerDefaults{
+							Tag: "a",
+						},
 					},
 				},
 			},
@@ -2112,13 +2122,19 @@ func TestLatestVersionDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			defaults: LatestVersionDefaults{
-				URL:               "a",
-				AccessToken:       "a",
-				AllowInvalidCerts: test.Ptr(false),
-				UsePreRelease:     test.Ptr(false),
-				Require: &LatestVersionRequireDefaults{
-					Docker: RequireDockerDefaults{
-						Tag: "a",
+				Type: "github",
+				GitHub: LatestVersionGitHubDefaults{
+					AccessToken:   "a",
+					UsePreRelease: test.Ptr(false),
+				},
+				URL: LatestVersionURLDefaults{
+					AllowInvalidCerts: test.Ptr(false),
+				},
+				Common: LatestVersionCommonDefaults{
+					Require: &LatestVersionRequireDefaults{
+						Docker: RequireDockerDefaults{
+							Tag: "a",
+						},
 					},
 				},
 			},

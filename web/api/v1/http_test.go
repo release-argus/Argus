@@ -34,7 +34,6 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	latestver "github.com/release-argus/Argus/service/latest_version"
-	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
 	"github.com/release-argus/Argus/service/option"
 	statustest "github.com/release-argus/Argus/service/status/test"
 	"github.com/release-argus/Argus/util"
@@ -246,7 +245,7 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 						"yaml", []byte(`url: `+test.ArgusGitHubRepo),
 						&option.Options{},
 						svcStatus,
-						lvbase.DefaultsConfig{
+						latestver.DefaultsConfig{
 							Soft: &cfg.Defaults.Service.LatestVersion,
 							Hard: &cfg.HardDefaults.Service.LatestVersion,
 						},

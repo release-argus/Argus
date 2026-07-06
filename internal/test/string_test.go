@@ -71,7 +71,7 @@ func TestIndent(t *testing.T) {
 			// THEN: the result should be the string with each line indented by the given number of spaces.
 			if result != tc.want {
 				t.Errorf(
-					"%s\nIndent(str=%q, indents=%q) mismatch\ngot:  %q\nwant: %q",
+					"%s\nIndent(str=%q, indents=%d) mismatch\ngot:  %q\nwant: %q",
 					packageName, tc.str, tc.indent,
 					result, tc.want,
 				)
