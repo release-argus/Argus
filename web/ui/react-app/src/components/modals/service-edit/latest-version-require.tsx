@@ -4,7 +4,7 @@ import { HelpTooltip } from '@/components/generic';
 import { FieldLabel, FieldSelect, FieldText } from '@/components/generic/field';
 import type { TooltipWithAriaProps } from '@/components/generic/tooltip';
 import Command from '@/components/modals/service-edit/command';
-import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import { withDefaultOption } from '@/components/modals/service-edit/util';
 import {
 	Accordion,
 	AccordionContent,
@@ -45,23 +45,13 @@ const EditServiceLatestVersionRequire = () => {
 
 	const defaults = schemaDataDefaults?.latest_version?.require;
 	const defaultType: RequireDockerFilterDefaults['type'] =
-		defaults?.docker?.type ?? nullString;
+		defaults?.docker?.type;
 
 	// Add default to docker registry options.
-	const dockerRegistryOptions = useMemo(() => {
-		const defaultScheme = normaliseForSelect(
-			latestVersionRequireDockerTypeOptions,
-			defaultType,
-		);
-
-		if (defaultScheme)
-			return [
-				{ label: `${defaultScheme.label} (default)`, value: nullString },
-				...latestVersionRequireDockerTypeOptions,
-			];
-
-		return latestVersionRequireDockerTypeOptions;
-	}, [defaultType]);
+	const dockerRegistryOptions = useMemo(
+		() => withDefaultOption(latestVersionRequireDockerTypeOptions, defaultType),
+		[defaultType],
+	);
 
 	// Show the 'username' field if 'Docker Hub' type.
 	const dockerRegistry = useWatch({

@@ -10,7 +10,7 @@ import {
 	Heading,
 	NotifyOptions,
 } from '@/components/modals/service-edit/notify-types/shared';
-import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import { withDefaultOption } from '@/components/modals/service-edit/util';
 import { FieldSet } from '@/components/ui/field';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import {
@@ -18,7 +18,6 @@ import {
 	genericRequestMethodOptions,
 } from '@/utils/api/types/config/notify/generic';
 import type { NotifyGenericSchema } from '@/utils/api/types/config-edit/notify/schemas';
-import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { ensureValue } from '@/utils/form-utils';
 
 /**
@@ -57,20 +56,14 @@ const GENERIC = ({
 		});
 	}, [main]);
 
-	const genericRequestMethodOptionsNormalised = useMemo(() => {
-		const defaultRequestMethod = normaliseForSelect(
-			genericRequestMethodOptions,
-			defaults?.params?.requestmethod,
-		);
-
-		if (defaultRequestMethod)
-			return [
-				{ label: `${defaultRequestMethod.label} (default)`, value: nullString },
-				...genericRequestMethodOptions,
-			];
-
-		return genericRequestMethodOptions;
-	}, [defaults?.params?.requestmethod]);
+	const genericRequestMethodOptionsNormalised = useMemo(
+		() =>
+			withDefaultOption(
+				genericRequestMethodOptions,
+				defaults?.params?.requestmethod,
+			),
+		[defaults?.params?.requestmethod],
+	);
 
 	return (
 		<FieldSet className="col-span-full grid grid-cols-subgrid">

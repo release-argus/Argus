@@ -8,7 +8,7 @@ import {
 	FieldText,
 	FieldTextArea,
 } from '@/components/generic/field';
-import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import { withDefaultOption } from '@/components/modals/service-edit/util';
 import VersionWithLink from '@/components/modals/service-edit/version-with-link';
 import VersionWithRefresh from '@/components/modals/service-edit/version-with-refresh';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
@@ -20,7 +20,6 @@ import type {
 	DeployedVersionURLMethod,
 	DeployedVersionURLSchema,
 } from '@/utils/api/types/config-edit/service/types/deployed-version';
-import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { ensureValue } from '@/utils/form-utils';
 
 /**
@@ -59,20 +58,14 @@ const DeployedVersionURL = () => {
 		name: templateToggleFormName,
 	}) ?? false) as boolean;
 
-	const deployedVersionLookupURLMethodNormalised = useMemo(() => {
-		const defaultMethod = normaliseForSelect(
-			deployedVersionLookupURLMethodOptions,
-			defaults?.method,
-		);
-
-		if (defaultMethod)
-			return [
-				{ label: `${defaultMethod.label} (default)`, value: nullString },
-				...deployedVersionLookupURLMethodOptions,
-			];
-
-		return deployedVersionLookupURLMethodOptions;
-	}, [defaults?.method]);
+	const deployedVersionLookupURLMethodNormalised = useMemo(
+		() =>
+			withDefaultOption(
+				deployedVersionLookupURLMethodOptions,
+				defaults?.method,
+			),
+		[defaults?.method],
+	);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: setValue stable
 	useEffect(() => {

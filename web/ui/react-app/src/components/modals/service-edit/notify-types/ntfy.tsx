@@ -10,7 +10,7 @@ import {
 	Heading,
 	NotifyOptions,
 } from '@/components/modals/service-edit/notify-types/shared';
-import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import { withDefaultOption } from '@/components/modals/service-edit/util';
 import { FieldSet } from '@/components/ui/field';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import {
@@ -18,7 +18,6 @@ import {
 	ntfySchemeOptions,
 } from '@/utils/api/types/config/notify/ntfy';
 import type { NotifyNtfySchema } from '@/utils/api/types/config-edit/notify/schemas';
-import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { applyDefaultsRecursive } from '@/utils/api/types/config-edit/util';
 
 /**
@@ -34,35 +33,15 @@ const NTFY = ({ name, main }: { name: string; main?: NotifyNtfySchema }) => {
 		[main, typeDataDefaults?.notify.ntfy],
 	);
 
-	const ntfyPriorityOptionsNormalised = useMemo(() => {
-		const defaultPriority = normaliseForSelect(
-			ntfyPriorityOptions,
-			defaults?.params?.priority,
-		);
+	const ntfyPriorityOptionsNormalised = useMemo(
+		() => withDefaultOption(ntfyPriorityOptions, defaults?.params?.priority),
+		[defaults?.params?.priority],
+	);
 
-		if (defaultPriority)
-			return [
-				{ label: `${defaultPriority.label} (default)`, value: nullString },
-				...ntfyPriorityOptions,
-			];
-
-		return ntfyPriorityOptions;
-	}, [defaults?.params?.priority]);
-
-	const ntfySchemeOptionsNormalised = useMemo(() => {
-		const defaultScheme = normaliseForSelect(
-			ntfySchemeOptions,
-			defaults?.params?.scheme,
-		);
-
-		if (defaultScheme)
-			return [
-				{ label: `${defaultScheme.label} (default)`, value: nullString },
-				...ntfySchemeOptions,
-			];
-
-		return ntfySchemeOptions;
-	}, [defaults?.params?.scheme]);
+	const ntfySchemeOptionsNormalised = useMemo(
+		() => withDefaultOption(ntfySchemeOptions, defaults?.params?.scheme),
+		[defaults?.params?.scheme],
+	);
 
 	return (
 		<FieldSet className="col-span-full grid grid-cols-subgrid">

@@ -6,7 +6,7 @@ import {
 	Heading,
 	NotifyOptions,
 } from '@/components/modals/service-edit/notify-types/shared';
-import { normaliseForSelect } from '@/components/modals/service-edit/util/normalise';
+import { withDefaultOption } from '@/components/modals/service-edit/util';
 import { FieldSet } from '@/components/ui/field';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import {
@@ -16,7 +16,6 @@ import {
 	smtpEncryptionOptions,
 } from '@/utils/api/types/config/notify/smtp';
 import type { NotifySMTPSchema } from '@/utils/api/types/config-edit/notify/schemas';
-import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { ensureValue } from '@/utils/form-utils';
 
 /**
@@ -52,41 +51,16 @@ const SMTP = ({ name, main }: { name: string; main?: NotifySMTPSchema }) => {
 		});
 	}, [main]);
 
-	const smtpAuthOptionsNormalised = useMemo(() => {
-		const defaultParamsAuthLabel = normaliseForSelect(
-			smtpAuthOptions,
-			defaults?.params?.auth,
-		);
+	const smtpAuthOptionsNormalised = useMemo(
+		() => withDefaultOption(smtpAuthOptions, defaults?.params?.auth),
+		[defaults?.params?.auth],
+	);
 
-		if (defaultParamsAuthLabel)
-			return [
-				{
-					label: `${defaultParamsAuthLabel.label} (default)`,
-					value: nullString,
-				},
-				...smtpAuthOptions,
-			];
-
-		return smtpAuthOptions;
-	}, [defaults?.params?.auth]);
-
-	const smtpEncryptionOptionsNormalised = useMemo(() => {
-		const defaultParamsEncryptionLabel = normaliseForSelect(
-			smtpEncryptionOptions,
-			defaults?.params?.encryption,
-		);
-
-		if (defaultParamsEncryptionLabel)
-			return [
-				{
-					label: `${defaultParamsEncryptionLabel.label} (default)`,
-					value: nullString,
-				},
-				...smtpEncryptionOptions,
-			];
-
-		return smtpEncryptionOptions;
-	}, [defaults?.params?.encryption]);
+	const smtpEncryptionOptionsNormalised = useMemo(
+		() =>
+			withDefaultOption(smtpEncryptionOptions, defaults?.params?.encryption),
+		[defaults?.params?.encryption],
+	);
 
 	return (
 		<FieldSet className="col-span-full grid grid-cols-subgrid">
