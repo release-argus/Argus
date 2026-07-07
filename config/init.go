@@ -74,8 +74,8 @@ func (c *Config) Load(
 
 	// Default Empty List ETag as it depends on default access_token.
 	accessTokenDefault := util.FirstNonDefaultWithEnv(
-		c.Defaults.Service.LatestVersion.AccessToken,
-		c.HardDefaults.Service.LatestVersion.AccessToken,
+		c.Defaults.Service.LatestVersion.GitHub.AccessToken,
+		c.HardDefaults.Service.LatestVersion.GitHub.AccessToken,
 	)
 	github.SetEmptyListETag(accessTokenDefault)
 

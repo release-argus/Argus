@@ -2389,7 +2389,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 								- key: X-C
 								  value: c
 					`)),
-					"lv-github",
+					"lv-url",
 					svcCfg,
 					notifyCfg,
 					whCfg,
@@ -2415,7 +2415,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 			wants: wants{
 				statusCode: http.StatusOK,
 				serviceYAML: test.TrimYAML(`
-					name: lv-github
+					name: lv-url
 					comment: foo
 					latest_version:
 						type: url

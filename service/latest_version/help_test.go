@@ -86,8 +86,12 @@ func testLookup(t *testing.T, typ string, fail bool) (lv Lookup) {
 	lv.Init(
 		lv.GetOptions(),
 		lv.GetStatus(),
-		lvCfg,
+		base.DefaultsConfig{
+			Soft: &lvCfg.Soft.Common,
+			Hard: &lvCfg.Hard.Common,
+		},
 	)
+	applyTypeDefaults(lv, lvCfg)
 	lv.GetStatus().ServiceInfo.ID = "TEST_LV"
 
 	// Check the values.
@@ -142,23 +146,23 @@ func testWeb(t *testing.T, fail bool) Lookup {
 }
 
 // plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
+func plainDefaultsConfig(t *testing.T) DefaultsConfig {
 	t.Helper()
 
 	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
 	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
 	optHardDefaults.Default()
 
-	defaults, _ := base.DecodeDefaults("yaml", nil)
-	defaults.Options = optDefaults
-	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
+	defaults, _ := DecodeDefaults("yaml", nil)
+	defaults.Common.Options = optDefaults
+	hardDefaults, _ := DecodeDefaults("yaml", nil)
 	hardDefaults.Default()
-	hardDefaults.AccessToken = test.GitHubToken(nil)
-	hardDefaults.Options = optHardDefaults
+	hardDefaults.GitHub.AccessToken = test.GitHubToken(nil)
+	hardDefaults.Common.Options = optHardDefaults
 
-	defaults.Require.SetDefaults(&hardDefaults.Require)
+	defaults.Common.Require.SetDefaults(&hardDefaults.Common.Require)
 
-	return base.DefaultsConfig{
+	return DefaultsConfig{
 		Soft: defaults,
 		Hard: hardDefaults,
 	}

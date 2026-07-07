@@ -39,6 +39,9 @@ type Lookup struct {
 
 	AllowInvalidCerts *bool          `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Allow invalid SSL certificates.
 	Headers           shared.Headers `json:"headers,omitempty" yaml:"headers,omitempty"`                         // OPTIONAL: request headers.
+
+	typeDefaults     *Defaults // URL-specific Defaults.
+	typeHardDefaults *Defaults // URL-specific Hard Defaults.
 }
 
 // LookupDecode is an unmarshal-only helper for [Lookup].
@@ -124,6 +127,8 @@ func (l *Lookup) Clone(svcStatus *status.Status) *Lookup {
 		Lookup:            *l.Lookup.Clone(svcStatus), //nolint:staticcheck
 		AllowInvalidCerts: l.AllowInvalidCerts,
 		Headers:           l.Headers.Copy(),
+		typeDefaults:      l.typeDefaults,
+		typeHardDefaults:  l.typeHardDefaults,
 	}
 }
 
@@ -142,4 +147,19 @@ func (l *Lookup) InheritSecrets(otherLookup base.BaseInterface, secretRefs *shar
 	}
 
 	l.Lookup.InheritSecrets(otherLookup, secretRefs)
+}
+
+// ############
+// # DEFAULTS #
+// ############
+
+// SetTypeDefaults assigns the URL-specific Defaults/HardDefaults to the receiver.
+func (l *Lookup) SetTypeDefaults(defaults, hardDefaults *Defaults) {
+	l.typeDefaults = defaults
+	l.typeHardDefaults = hardDefaults
+}
+
+// GetTypeDefaults returns the receiver's URL-specific Defaults/HardDefaults.
+func (l *Lookup) GetTypeDefaults() (defaults, hardDefaults *Defaults) {
+	return l.typeDefaults, l.typeHardDefaults
 }

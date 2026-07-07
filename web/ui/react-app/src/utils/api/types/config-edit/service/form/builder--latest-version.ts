@@ -25,7 +25,6 @@ import {
 	latestVersionLookupRequireDockerTypeSchema,
 	latestVersionLookupRequireDockerTypeSchemaAmazonECR,
 	latestVersionLookupRequireDockerTypeSchemaDockerHub,
-	type latestVersionLookupSchema,
 	latestVersionLookupSchemaDefault,
 	latestVersionLookupSchemaGitHub,
 	latestVersionLookupSchemaURL,
@@ -221,7 +220,8 @@ export const buildDockerFilterSchemaWithFallbacks = (
 				typeof latestVersionLookupRequireDockerTypeSchemaDockerHub
 			>;
 			const argTyped = arg as DockerUsernameTyped;
-			const defaultsTyped = schemaDefaults as Partial<DockerFilterUsernameToken>;
+			const defaultsTyped =
+				schemaDefaults as Partial<DockerFilterUsernameToken>;
 			const hasUsername = !!(
 				argTyped.auth?.username || defaultsTyped.auth?.username
 			)?.trim();
@@ -355,10 +355,7 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 	data?: LatestVersionLookup,
 	defaults?: LatestVersionLookupDefaults,
 	hardDefaults?: LatestVersionLookupDefaults,
-): BuilderResponse<
-	typeof latestVersionLookupSchema,
-	typeof latestVersionLookupSchemaDefault
-> => {
+) => {
 	const path = 'latest_version';
 	const combinedDefaults = applyDefaultsRecursive<LatestVersionLookupDefaults>(
 		defaults ?? null,
@@ -369,14 +366,8 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 		: undefined;
 
 	// url_commands.
-	const {
-		schema: urlCommandsSchema,
-		schemaData: urlCommandsSchemaData,
-		schemaDataDefaults: urlCommandsSchemaDataDefaults,
-	} = buildURLCommandsSchemaWithFallbacks(
-		data?.url_commands,
-		combinedDefaults?.url_commands,
-	);
+	const { schema: urlCommandsSchema, schemaData: urlCommandsSchemaData } =
+		buildURLCommandsSchemaWithFallbacks(data?.url_commands, []);
 	// require.
 	const {
 		schema: requireSchema,
@@ -384,17 +375,43 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 		schemaDataDefaults: requireSchemaDataDefaults,
 	} = buildLatestVersionRequireSchemaWithFallbacks(
 		data?.require,
-		combinedDefaults?.require,
+		combinedDefaults.common?.require,
 	);
 	// headers (URL-type only).
-	const {
-		schema: headersSchema,
-		schemaData: headersSchemaData,
-		schemaDataDefaults: headersSchemaDataDefaults,
-	} = buildHeadersSchemaWithFallbacks(
-		data && 'headers' in data ? data.headers : [],
-		'headers' in combinedDefaults ? combinedDefaults.headers : [],
-	);
+	const { schema: headersSchema, schemaData: headersSchemaData } =
+		buildHeadersSchemaWithFallbacks(
+			data && 'headers' in data ? data.headers : [],
+			[],
+		);
+
+	const buildTypeDefaults = <T extends LatestVersionLookupType>(
+		type: T,
+		typeDefaults: LatestVersionLookupDefaults[T],
+	) =>
+		safeParse({
+			data: {
+				...typeDefaults,
+				require: requireSchemaDataDefaults,
+				type: type,
+			},
+			fallback: {
+				require: requireSchemaDataDefaults,
+				type: type,
+			},
+			path: `${path} (defaults-${type})`,
+			schema: latestVersionLookupSchemaDefault,
+		});
+
+	const schemaDataTypeDefaults = {
+		[LATEST_VERSION_LOOKUP_TYPE.GITHUB.value]: buildTypeDefaults(
+			LATEST_VERSION_LOOKUP_TYPE.GITHUB.value,
+			combinedDefaults.github,
+		),
+		[LATEST_VERSION_LOOKUP_TYPE.URL.value]: buildTypeDefaults(
+			LATEST_VERSION_LOOKUP_TYPE.URL.value,
+			combinedDefaults.url,
+		),
+	};
 
 	// Schemas shared between multiple types.
 	const sharedSchemas = {
@@ -414,20 +431,16 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 		latestVersionLookupSchemaGitHub.extend({
 			...sharedSchemas,
 			url: stringDefault.superRefine((arg, ctx) => {
-				const url = arg || (defaults?.url ?? hardDefaults?.url ?? '');
-
-				validateRequired({ arg: url, ctx: ctx });
-				validateGitHubRepo({ arg: url, ctx: ctx });
+				validateRequired({ arg: arg, ctx: ctx });
+				validateGitHubRepo({ arg: arg, ctx: ctx });
 			}),
 		}),
 		latestVersionLookupSchemaURL.extend({
 			...sharedSchemas,
 			headers: headersSchema,
 			url: z.string().superRefine((arg, ctx) => {
-				const url = arg || (defaults?.url ?? hardDefaults?.url ?? '');
-
-				validateRequired({ arg: url, ctx: ctx });
-				validateURL({ arg: url, ctx: ctx });
+				validateRequired({ arg: arg, ctx: ctx });
+				validateURL({ arg: arg, ctx: ctx });
 			}),
 		}),
 	]);
@@ -466,27 +479,13 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 		schema: schemaRaw,
 	});
 
-	// Defaults for the schema.
-	const schemaDataDefaults = safeParse({
-		data: {
-			...combinedDefaults,
-			headers: headersSchemaDataDefaults,
-			require: requireSchemaDataDefaults,
-			type: defaultType,
-			url_commands: urlCommandsSchemaDataDefaults,
-		},
-		fallback: {
-			headers: headersSchemaDataDefaults,
-			require: requireSchemaDataDefaults,
-			type: fallbackData.type as LatestVersionLookupType,
-		},
-		path: path,
-		schema: latestVersionLookupSchemaDefault,
-	});
-
 	return {
 		schema: schema,
 		schemaData: schemaData,
-		schemaDataDefaults: schemaDataDefaults,
+		schemaDataDefaults: {
+			require: requireSchemaDataDefaults,
+			type: defaultType,
+		},
+		schemaDataTypeDefaults: schemaDataTypeDefaults,
 	};
 };

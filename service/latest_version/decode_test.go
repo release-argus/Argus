@@ -24,6 +24,8 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/service/latest_version/types/github"
+	"github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	statustest "github.com/release-argus/Argus/service/status/test"
@@ -293,10 +295,30 @@ func TestDecode(t *testing.T) {
 			fieldTests := []test.FieldAssertion{
 				{Name: "Options", Got: lookup.GetOptions(), Want: options, Mode: test.CompareSamePointer},
 				{Name: "Status", Got: lookup.GetStatus(), Want: svcStatus, Mode: test.CompareSamePointer},
-				{Name: "Defaults", Got: lookup.GetDefaults(), Want: lvCfg.Soft, Mode: test.CompareSamePointer},
-				{Name: "HardDefaults", Got: lookup.GetHardDefaults(), Want: lvCfg.Hard, Mode: test.CompareSamePointer},
+				{Name: "Defaults", Got: lookup.GetDefaults(), Want: &lvCfg.Soft.Common, Mode: test.CompareSamePointer},
+				{Name: "HardDefaults", Got: lookup.GetHardDefaults(), Want: &lvCfg.Hard.Common, Mode: test.CompareSamePointer},
 			}
 			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
+				t.Fatal(err)
+			}
+
+			// AND: the type-specific Defaults/HardDefaults are wired correctly.
+			var typeFieldTests []test.FieldAssertion
+			switch v := lookup.(type) {
+			case *github.Lookup:
+				gotSoft, gotHard := v.GetTypeDefaults()
+				typeFieldTests = []test.FieldAssertion{
+					{Name: "GitHub typeDefaults", Got: gotSoft, Want: &lvCfg.Soft.GitHub, Mode: test.CompareSamePointer},
+					{Name: "GitHub typeHardDefaults", Got: gotHard, Want: &lvCfg.Hard.GitHub, Mode: test.CompareSamePointer},
+				}
+			case *web.Lookup:
+				gotSoft, gotHard := v.GetTypeDefaults()
+				typeFieldTests = []test.FieldAssertion{
+					{Name: "URL typeDefaults", Got: gotSoft, Want: &lvCfg.Soft.URL, Mode: test.CompareSamePointer},
+					{Name: "URL typeHardDefaults", Got: gotHard, Want: &lvCfg.Hard.URL, Mode: test.CompareSamePointer},
+				}
+			}
+			if err := test.AssertFields(t, typeFieldTests, prefix, "Lookup"); err != nil {
 				t.Fatal(err)
 			}
 		})

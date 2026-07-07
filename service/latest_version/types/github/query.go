@@ -215,7 +215,7 @@ func (l *Lookup) handleStatusOK(resp *http.Response, body []byte, logFrom logx.L
 
 	// []byte{91, 93} == []byte("[]") == empty JSON array.
 	if len(body) == 2 && bytes.Equal(body, []byte{91, 93}) {
-		defaultAccessToken := util.FirstNonDefaultWithEnv(l.Defaults.AccessToken, l.HardDefaults.AccessToken)
+		defaultAccessToken := util.FirstNonDefaultWithEnv(l.typeDefaults.AccessToken, l.typeHardDefaults.AccessToken)
 		firstPage := !strings.HasPrefix(resp.Request.URL.RawQuery, "page=")
 		// Update the default empty list ETag if we used the default access_token.
 		if firstPage && (l.AccessToken == "" || l.accessToken() == defaultAccessToken) {

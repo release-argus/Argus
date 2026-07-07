@@ -25,9 +25,12 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/dashboard"
 	dvbase "github.com/release-argus/Argus/service/deployed_version/types/base"
+	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/service/latest_version/types/github"
+	"github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 )
 
@@ -57,7 +60,7 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/LatestVersion",
 			opt: &Defaults{
-				LatestVersion: lvbase.Defaults{
+				LatestVersion: latestver.Defaults{
 					Type: "url",
 				},
 			},
@@ -116,7 +119,7 @@ func TestDefaults_IsZero(t *testing.T) {
 						Interval: "1m",
 					},
 				},
-				LatestVersion: lvbase.Defaults{
+				LatestVersion: latestver.Defaults{
 					Type: "url",
 				},
 				DeployedVersionLookup: dvbase.Defaults{
@@ -529,57 +532,63 @@ func TestDefaults_String(t *testing.T) {
 						`)),
 					)
 				}),
-				LatestVersion: lvbase.Defaults{
-					AccessToken:       "foo",
-					AllowInvalidCerts: test.Ptr(true),
-					UsePreRelease:     test.Ptr(false),
-					Options: &opt.Defaults{
-						Base: opt.Base{
-							Interval: "1m",
-						},
+				LatestVersion: latestver.Defaults{
+					GitHub: github.Defaults{
+						AccessToken:   "foo",
+						UsePreRelease: test.Ptr(false),
 					},
-					Require: filter.RequireDefaults{
-						Docker: *test.Must(t, func() (*docker.Defaults, error) {
-							return docker.DecodeDefaults(
-								"yaml", []byte(test.TrimYAML(`
-									type: ghcr
-									registry:
-										ghcr:
-											auth:
-												username: usernameGHCR
-												token: tokenGHCR
-										hub:
-											auth:
-												username: usernameHub
-												token: tokenHub
-										quay:
-											auth:
-												username: usernameQuay
-												token: tokenQuay
-								`)),
-								test.Must(t, func() (*docker.Defaults, error) {
-									return docker.DecodeDefaults(
-										"yaml", []byte(test.TrimYAML(`
-											type: ghcr
-											registry:
-												ghcr:
-													auth:
-														username: usernameGHCR_Other
-														token: tokenGHCR_Other
-												hub:
-													auth:
-														username: usernameHub_Other
-														token: tokenHub_Other
-												quay:
-													auth:
-														username: usernameQuay_Other
-														token: tokenQuay_Other
-										`)),
-										nil,
-									)
-								}),
-							)
-						}),
+					URL: web.Defaults{
+						AllowInvalidCerts: test.Ptr(true),
+					},
+					Common: lvbase.Defaults{
+						Options: &opt.Defaults{
+							Base: opt.Base{
+								Interval: "1m",
+							},
+						},
+						Require: filter.RequireDefaults{
+							Docker: *test.Must(t, func() (*docker.Defaults, error) {
+								return docker.DecodeDefaults(
+									"yaml", []byte(test.TrimYAML(`
+										type: ghcr
+										registry:
+											ghcr:
+												auth:
+													username: usernameGHCR
+													token: tokenGHCR
+											hub:
+												auth:
+													username: usernameHub
+													token: tokenHub
+											quay:
+												auth:
+													username: usernameQuay
+													token: tokenQuay
+									`)),
+									test.Must(t, func() (*docker.Defaults, error) {
+										return docker.DecodeDefaults(
+											"yaml", []byte(test.TrimYAML(`
+												type: ghcr
+												registry:
+													ghcr:
+														auth:
+															username: usernameGHCR_Other
+															token: tokenGHCR_Other
+													hub:
+														auth:
+															username: usernameHub_Other
+															token: tokenHub_Other
+													quay:
+														auth:
+															username: usernameQuay_Other
+															token: tokenQuay_Other
+											`)),
+											nil,
+										)
+									}),
+								)
+							}),
+						},
 					},
 				},
 				DeployedVersionLookup: dvbase.Defaults{
@@ -594,23 +603,26 @@ func TestDefaults_String(t *testing.T) {
 					interval: 1m
 					semantic_versioning: false
 				latest_version:
-					access_token: foo
-					allow_invalid_certs: true
-					use_prerelease: false
-					require:
-						docker:
-							type: ghcr
-							registry:
-								ghcr:
-									auth:
-										token: tokenGHCR
-								hub:
-									auth:
-										username: usernameHub
-										token: tokenHub
-								quay:
-									auth:
-										token: tokenQuay
+					common:
+						require:
+							docker:
+								type: ghcr
+								registry:
+									ghcr:
+										auth:
+											token: tokenGHCR
+									hub:
+										auth:
+											username: usernameHub
+											token: tokenHub
+									quay:
+										auth:
+											token: tokenQuay
+					github:
+						access_token: foo
+						use_prerelease: false
+					url:
+						allow_invalid_certs: true
 				deployed_version:
 					allow_invalid_certs: false
 				dashboard:
@@ -655,10 +667,10 @@ func TestDefaults_Default(t *testing.T) {
 	}
 
 	// AND: the X.Options vars are pointing to the Options struct.
-	if d.LatestVersion.Options != &d.Options {
+	if d.LatestVersion.Common.Options != &d.Options {
 		t.Errorf(
 			"%s invalid .LatestVersion.Options pointer:\ngot:  %p\nwant: %p",
-			packageName, d.LatestVersion.Options, &d.Options,
+			packageName, d.LatestVersion.Common.Options, &d.Options,
 		)
 	}
 	if d.DeployedVersionLookup.Options != &d.Options {
@@ -686,31 +698,31 @@ func TestDefaults_SetDefaults(t *testing.T) {
 	fieldTests := []test.FieldAssertion{
 		{
 			Name: "LatestVersion.Require.Docker.ContainerDetailDefaults.Defaults -> HardDefaults",
-			Got:  d.LatestVersion.Require.Docker.ContainerDetailDefaults.Defaults,
-			Want: &hd.LatestVersion.Require.Docker.ContainerDetailDefaults,
+			Got:  d.LatestVersion.Common.Require.Docker.ContainerDetailDefaults.Defaults,
+			Want: &hd.LatestVersion.Common.Require.Docker.ContainerDetailDefaults,
 			Mode: test.CompareSamePointer,
 		},
 		{
 			Name: "LatestVersion.Require.Docker.Registry.GHCR.Auth.Defaults -> HardDefaults...Registry.GHCR.Auth",
-			Got:  d.LatestVersion.Require.Docker.Registry.GHCR.GetAuth().Defaults(),
-			Want: hd.LatestVersion.Require.Docker.Registry.GHCR.GetAuth(),
+			Got:  d.LatestVersion.Common.Require.Docker.Registry.GHCR.GetAuth().Defaults(),
+			Want: hd.LatestVersion.Common.Require.Docker.Registry.GHCR.GetAuth(),
 			Mode: test.CompareSamePointer,
 		},
 		{
 			Name: "LatestVersion.Require.Docker.Registry.Hub.Auth.Defaults -> HardDefaults...Registry.Hub.Auth",
-			Got:  d.LatestVersion.Require.Docker.Registry.Hub.GetAuth().Defaults(),
-			Want: hd.LatestVersion.Require.Docker.Registry.Hub.GetAuth(),
+			Got:  d.LatestVersion.Common.Require.Docker.Registry.Hub.GetAuth().Defaults(),
+			Want: hd.LatestVersion.Common.Require.Docker.Registry.Hub.GetAuth(),
 			Mode: test.CompareSamePointer,
 		},
 		{
 			Name: "LatestVersion.Require.Docker.Registry.Quay.Auth.Defaults -> HardDefaults...Registry.Quay.Auth",
-			Got:  d.LatestVersion.Require.Docker.Registry.Quay.GetAuth().Defaults(),
-			Want: hd.LatestVersion.Require.Docker.Registry.Quay.GetAuth(),
+			Got:  d.LatestVersion.Common.Require.Docker.Registry.Quay.GetAuth().Defaults(),
+			Want: hd.LatestVersion.Common.Require.Docker.Registry.Quay.GetAuth(),
 			Mode: test.CompareSamePointer,
 		},
 		{
 			Name: "LatestVersion.Options -> Options",
-			Got:  d.LatestVersion.Options,
+			Got:  d.LatestVersion.Common.Options,
 			Want: &d.Options,
 			Mode: test.CompareSamePointer,
 		},
@@ -722,7 +734,7 @@ func TestDefaults_SetDefaults(t *testing.T) {
 		},
 		{
 			Name: "LatestVersion.Options.Defaults -> HardDefaults.Options",
-			Got:  hd.LatestVersion.Options,
+			Got:  hd.LatestVersion.Common.Options,
 			Want: &hd.Options,
 			Mode: test.CompareSamePointer,
 		},

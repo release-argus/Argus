@@ -18,6 +18,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -28,9 +29,12 @@ import (
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/dashboard"
 	dvbase "github.com/release-argus/Argus/service/deployed_version/types/base"
+	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/service/latest_version/types/github"
+	"github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
@@ -436,55 +440,61 @@ func TestDefaults_String(t *testing.T) {
 							`)),
 						)
 					}),
-					LatestVersion: lvbase.Defaults{
-						AccessToken:       "foo",
-						AllowInvalidCerts: test.Ptr(true),
-						UsePreRelease:     test.Ptr(false),
-						Options: test.Must(t, func() (*opt.Defaults, error) {
-							return opt.DecodeDefaults("yaml", []byte("interval: 1m"))
-						}),
-						Require: filter.RequireDefaults{
-							Docker: *test.Must(t, func() (*docker.Defaults, error) {
-								return docker.DecodeDefaults(
-									"yaml", []byte(test.TrimYAML(`
-										type: ghcr
-										tag: tagFallback
-										registry:
-											ghcr:
-												auth:
-													username: usernameGHCR
-													token: tokenGHCR
-											hub:
-												auth:
-													username: usernameHub
-													token: tokenHub
-											quay:
-												auth:
-													username: usernameQuay
-													token: tokenQuay
-									`)),
-									test.Must(t, func() (*docker.Defaults, error) {
-										return docker.DecodeDefaults(
-											"yaml", []byte(test.TrimYAML(`
-												type: ghcr
+					LatestVersion: latestver.Defaults{
+						GitHub: github.Defaults{
+							AccessToken:   "foo",
+							UsePreRelease: test.Ptr(false),
+						},
+						URL: web.Defaults{
+							AllowInvalidCerts: test.Ptr(true),
+						},
+						Common: lvbase.Defaults{
+							Options: test.Must(t, func() (*opt.Defaults, error) {
+								return opt.DecodeDefaults("yaml", []byte("interval: 1m"))
+							}),
+							Require: filter.RequireDefaults{
+								Docker: *test.Must(t, func() (*docker.Defaults, error) {
+									return docker.DecodeDefaults(
+										"yaml", []byte(test.TrimYAML(`
+											type: ghcr
+											tag: tagFallback
+											registry:
 												ghcr:
 													auth:
-														username: usernameGHCRother
-														token: tokenGHCRother
+														username: usernameGHCR
+														token: tokenGHCR
 												hub:
 													auth:
-														username: usernameHubOther
-														token: tokenHubOther
+														username: usernameHub
+														token: tokenHub
 												quay:
 													auth:
-														username: usernameQuayOther
-														token: tokenQuayOther
-											`)),
-											nil,
-										)
-									}),
-								)
-							}),
+														username: usernameQuay
+														token: tokenQuay
+										`)),
+										test.Must(t, func() (*docker.Defaults, error) {
+											return docker.DecodeDefaults(
+												"yaml", []byte(test.TrimYAML(`
+													type: ghcr
+													ghcr:
+														auth:
+															username: usernameGHCRother
+															token: tokenGHCRother
+													hub:
+														auth:
+															username: usernameHubOther
+															token: tokenHubOther
+													quay:
+														auth:
+															username: usernameQuayOther
+															token: tokenQuayOther
+												`)),
+												nil,
+											)
+										}),
+									)
+								}),
+							},
 						},
 					},
 					DeployedVersionLookup: dvbase.Defaults{
@@ -532,24 +542,27 @@ func TestDefaults_String(t *testing.T) {
 						interval: 1m
 						semantic_versioning: false
 					latest_version:
-						access_token: foo
-						allow_invalid_certs: true
-						use_prerelease: false
-						require:
-							docker:
-								type: ghcr
-								tag: tagFallback
-								registry:
-									ghcr:
-										auth:
-											token: tokenGHCR
-									hub:
-										auth:
-											username: usernameHub
-											token: tokenHub
-									quay:
-										auth:
-											token: tokenQuay
+						common:
+							require:
+								docker:
+									type: ghcr
+									tag: tagFallback
+									registry:
+										ghcr:
+											auth:
+												token: tokenGHCR
+										hub:
+											auth:
+												username: usernameHub
+												token: tokenHub
+										quay:
+											auth:
+												token: tokenQuay
+						github:
+							access_token: foo
+							use_prerelease: false
+						url:
+							allow_invalid_certs: true
 					deployed_version:
 						allow_invalid_certs: false
 					dashboard:
@@ -676,10 +689,11 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 	unmodifiedDefaults.Default()
 	// GIVEN: Defaults and a bunch of env vars.
 	tests := []struct {
-		name     string
-		env      map[string]string
-		want     *Defaults
-		errRegex string
+		name       string
+		env        map[string]string
+		envCleanup []string
+		want       *Defaults
+		errRegex   string
 	}{
 		{
 			name: "empty vars ignored",
@@ -733,16 +747,82 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		{
 			name: "service.latest_version/valid",
 			env: map[string]string{
-				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_something",
-				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "true",
-				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "true",
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN":     "ghp_something",
+				"ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS": "true",
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE":   "true",
 			},
 			want: &Defaults{
 				Service: service.Defaults{
-					LatestVersion: lvbase.Defaults{
-						AccessToken:       "ghp_something",
-						AllowInvalidCerts: test.Ptr(true),
-						UsePreRelease:     test.Ptr(true),
+					LatestVersion: latestver.Defaults{
+						GitHub: github.Defaults{
+							AccessToken:   "ghp_something",
+							UsePreRelease: test.Ptr(true),
+						},
+						URL: web.Defaults{
+							AllowInvalidCerts: test.Ptr(true),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "service.latest_version/deprecated env vars, old only",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_deprecated",
+				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "true",
+				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "true",
+			},
+			envCleanup: []string{
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN",
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE",
+				"ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS",
+			},
+			want: &Defaults{
+				Service: service.Defaults{
+					LatestVersion: latestver.Defaults{
+						GitHub: github.Defaults{
+							AccessToken:   "ghp_deprecated",
+							UsePreRelease: test.Ptr(true),
+						},
+						URL: web.Defaults{
+							AllowInvalidCerts: test.Ptr(true),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "service.latest_version/deprecated env vars, old and new set, new wins",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":            "ghp_deprecated",
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN":     "ghp_canonical",
+				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS":     "true",
+				"ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS": "false",
+			},
+			want: &Defaults{
+				Service: service.Defaults{
+					LatestVersion: latestver.Defaults{
+						GitHub: github.Defaults{
+							AccessToken: "ghp_canonical",
+						},
+						URL: web.Defaults{
+							AllowInvalidCerts: test.Ptr(false),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "service.latest_version/canonical env vars only, no deprecation",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN": "ghp_canonical",
+			},
+			want: &Defaults{
+				Service: service.Defaults{
+					LatestVersion: latestver.Defaults{
+						GitHub: github.Defaults{
+							AccessToken: "ghp_canonical",
+						},
 					},
 				},
 			},
@@ -750,46 +830,48 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		{
 			name: "service.latest_version.require/valid",
 			env: map[string]string{
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE":                        "ghcr",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_IMAGE":                       "imageFallback",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TAG":                         "tagFallback",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_GHCR_IMAGE":         "imageForGHCR",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_GHCR_TAG":           "tagForGHCR",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_GHCR_AUTH_TOKEN":    "tokenForGHCR",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_GHCR_AUTH_USERNAME": "usernameForGHCR",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_HUB_IMAGE":          "imageForHub",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_HUB_TAG":            "tagForHub",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_TOKEN":     "tokenForHub",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_USERNAME":  "usernameForHub",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_QUAY_IMAGE":         "imageForQuay",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_QUAY_TAG":           "tagForQuay",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_QUAY_AUTH_TOKEN":    "tokenForQuay",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_QUAY_AUTH_USERNAME": "usernameForQuay",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE":                        "ghcr",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_IMAGE":                       "imageFallback",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TAG":                         "tagFallback",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_IMAGE":         "imageForGHCR",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_TAG":           "tagForGHCR",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_AUTH_TOKEN":    "tokenForGHCR",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_AUTH_USERNAME": "usernameForGHCR",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_IMAGE":          "imageForHub",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_TAG":            "tagForHub",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_TOKEN":     "tokenForHub",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_USERNAME":  "usernameForHub",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_IMAGE":         "imageForQuay",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_TAG":           "tagForQuay",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_AUTH_TOKEN":    "tokenForQuay",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_AUTH_USERNAME": "usernameForQuay",
 			},
 			want: &Defaults{
 				Service: service.Defaults{
-					LatestVersion: lvbase.Defaults{
-						Require: filter.RequireDefaults{
-							Docker: *test.Must(t, func() (*docker.Defaults, error) {
-								return docker.DecodeDefaults(
-									"yaml", []byte(test.TrimYAML(`
-										type: ghcr
-										tag: tagFallback
-										registry:
-											ghcr:
-												auth:
-													token: tokenForGHCR
-											hub:
-												auth:
-													username: usernameForHub
-													token: tokenForHub
-											quay:
-												auth:
-													token: tokenForQuay
-									`)),
-									nil,
-								)
-							}),
+					LatestVersion: latestver.Defaults{
+						Common: lvbase.Defaults{
+							Require: filter.RequireDefaults{
+								Docker: *test.Must(t, func() (*docker.Defaults, error) {
+									return docker.DecodeDefaults(
+										"yaml", []byte(test.TrimYAML(`
+											type: ghcr
+											tag: tagFallback
+											registry:
+												ghcr:
+													auth:
+														token: tokenForGHCR
+												hub:
+													auth:
+														username: usernameForHub
+														token: tokenForHub
+												quay:
+													auth:
+														token: tokenForQuay
+										`)),
+										nil,
+									)
+								}),
+							},
 						},
 					},
 				},
@@ -798,31 +880,31 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		{
 			name: "service.latest_version.require/invalid type",
 			env: map[string]string{
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE":                       "foo",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_GHCR_AUTH_TOKEN":   "tokenForGHCR",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_TOKEN":    "tokenForDockerHub",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_USERNAME": "usernameForDockerHub",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_REGISTRY_QUAY_AUTH_TOKEN":   "tokenForQuay",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE":                       "foo",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_AUTH_TOKEN":   "tokenForGHCR",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_TOKEN":    "tokenForDockerHub",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_USERNAME": "usernameForDockerHub",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_AUTH_TOKEN":   "tokenForQuay",
 			},
-			errRegex: test.TrimYAML(`ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE: "foo" <invalid> .+`),
+			errRegex: test.TrimYAML(`ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE: "foo" <invalid> .+`),
 		},
 		{
 			name: "service.latest_version/invalid bool/allow_invalid_certs",
 			env: map[string]string{
-				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_something",
-				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "bar",
-				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "true",
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN":     "ghp_something",
+				"ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS": "bar",
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE":   "true",
 			},
-			errRegex: `ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS: "bar" <invalid>`,
+			errRegex: `ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS: "bar" <invalid>`,
 		},
 		{
 			name: "service.latest_version/invalid bool/use_prerelease",
 			env: map[string]string{
-				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_something",
-				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "true",
-				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "bop",
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN":     "ghp_something",
+				"ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS": "true",
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE":   "bop",
 			},
-			errRegex: `ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE: "bop" <invalid>`,
+			errRegex: `ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE: "bop" <invalid>`,
 		},
 		{
 			name: "service.deployed_version/valid",
@@ -1567,15 +1649,15 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		{
 			name: "multiple fails",
 			env: map[string]string{
-				"ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY":               "foo",
-				"ARGUS_NOTIFY_SLACK_OPTIONS_DELAY":                 "bar",
-				"ARGUS_NOTIFY_TEAMS_OPTIONS_DELAY":                 "baz",
-				"ARGUS_WEBHOOK_DELAY":                              "pasta",
-				"ARGUS_WEBHOOK_TYPE":                               "pizza",
-				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE": "pizza",
+				"ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY":                      "foo",
+				"ARGUS_NOTIFY_SLACK_OPTIONS_DELAY":                        "bar",
+				"ARGUS_NOTIFY_TEAMS_OPTIONS_DELAY":                        "baz",
+				"ARGUS_WEBHOOK_DELAY":                                     "pasta",
+				"ARGUS_WEBHOOK_TYPE":                                      "pizza",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE": "pizza",
 			},
 			errRegex: test.TrimYAML(`
-				ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE: "pizza" <invalid> .+
+				ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE: "pizza" <invalid> .+
 				ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY: "foo" <invalid> .+
 				ARGUS_NOTIFY_SLACK_OPTIONS_DELAY: "bar" <invalid> .+
 				ARGUS_NOTIFY_TEAMS_OPTIONS_DELAY: "baz" <invalid> .+
@@ -1603,11 +1685,13 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 
 			defaults := Defaults{
 				Service: service.Defaults{
-					LatestVersion: lvbase.Defaults{
-						Require: filter.RequireDefaults{
-							Docker: *test.Must(t, func() (*docker.Defaults, error) {
-								return docker.DecodeDefaults("json", []byte("{}"), nil)
-							}),
+					LatestVersion: latestver.Defaults{
+						Common: lvbase.Defaults{
+							Require: filter.RequireDefaults{
+								Docker: *test.Must(t, func() (*docker.Defaults, error) {
+									return docker.DecodeDefaults("json", []byte("{}"), nil)
+								}),
+							},
 						},
 					},
 					DeployedVersionLookup: dvbase.Defaults{},
@@ -1636,6 +1720,13 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 						}
 					}
 				}
+			}
+			for _, k := range tc.envCleanup {
+				if v, ok := os.LookupEnv(k); ok {
+					os.Unsetenv(k)
+					t.Cleanup(func() { _ = os.Setenv(k, v) })
+				}
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 			test.SetEnv(t, tc.env)
 			wantOk := tc.errRegex == ""
@@ -1711,14 +1802,16 @@ func TestDefaults_CheckValues(t *testing.T) {
 			name: "Service.LatestVersion.Require.Docker.Type",
 			input: &Defaults{
 				Service: service.Defaults{
-					LatestVersion: lvbase.Defaults{
-						Require: filter.RequireDefaults{
-							Docker: *test.Must(t, func() (*docker.Defaults, error) {
-								return docker.DecodeDefaults(
-									"yaml", []byte("type: pizza"),
-									nil,
-								)
-							}),
+					LatestVersion: latestver.Defaults{
+						Common: lvbase.Defaults{
+							Require: filter.RequireDefaults{
+								Docker: *test.Must(t, func() (*docker.Defaults, error) {
+									return docker.DecodeDefaults(
+										"yaml", []byte("type: pizza"),
+										nil,
+									)
+								}),
+							},
 						},
 					},
 				},
@@ -1739,14 +1832,16 @@ func TestDefaults_CheckValues(t *testing.T) {
 					Options: *test.Must(t, func() (*opt.Defaults, error) {
 						return opt.DecodeDefaults("yaml", []byte("interval: 10x"))
 					}),
-					LatestVersion: lvbase.Defaults{
-						Require: filter.RequireDefaults{
-							Docker: *test.Must(t, func() (*docker.Defaults, error) {
-								return docker.DecodeDefaults(
-									"yaml", []byte("type: pizza"),
-									nil,
-								)
-							}),
+					LatestVersion: latestver.Defaults{
+						Common: lvbase.Defaults{
+							Require: filter.RequireDefaults{
+								Docker: *test.Must(t, func() (*docker.Defaults, error) {
+									return docker.DecodeDefaults(
+										"yaml", []byte("type: pizza"),
+										nil,
+									)
+								}),
+							},
 						},
 					},
 				},
@@ -1897,12 +1992,15 @@ var hardDefaultsStr = test.TrimYAML(`
 				semantic_versioning: true
 			latest_version:
 				type: github
-				allow_invalid_certs: false
-				use_prerelease: false
-				require:
-					docker:
-						type: hub
-						tag: '{{ version }}'
+				common:
+					require:
+						docker:
+							type: hub
+							tag: '{{ version }}'
+				github:
+					use_prerelease: false
+				url:
+					allow_invalid_certs: false
 			deployed_version:
 				type: url
 				allow_invalid_certs: false

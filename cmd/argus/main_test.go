@@ -107,8 +107,8 @@ func TestRun(t *testing.T) {
 			resetFlags()
 			configFile = &file
 			env := map[string]string{
-				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN": test.GitHubToken(t),
-				"ARGUS_DATA_DATABASE_FILE":                  filepath.Join(tempDir, "argus.db"),
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN": test.GitHubToken(t),
+				"ARGUS_DATA_DATABASE_FILE":                         filepath.Join(tempDir, "argus.db"),
 			}
 			test.SetEnv(t, env)
 			if tc.preStartFunc != nil {

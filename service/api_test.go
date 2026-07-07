@@ -430,11 +430,13 @@ func TestFromPayload(t *testing.T) {
 			}`,
 			svcCfg: DefaultsConfig{
 				Hard: &Defaults{
-					LatestVersion: lvbase.Defaults{
+					LatestVersion: latestver.Defaults{
 						Type: lvgithub.Type,
-						Require: filter.RequireDefaults{
-							Docker: docker.Defaults{
-								Type: "ghcr",
+						Common: lvbase.Defaults{
+							Require: filter.RequireDefaults{
+								Docker: docker.Defaults{
+									Type: "ghcr",
+								},
 							},
 						},
 					},

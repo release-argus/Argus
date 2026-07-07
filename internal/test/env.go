@@ -18,6 +18,7 @@ package test
 
 import (
 	"os"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -57,4 +58,18 @@ func SetEnv(t *testing.T, vars map[string]string) {
 		}
 		envMu.Unlock()
 	})
+}
+
+func SplitEnvVars(envVars []string) map[string]string {
+	result := make(map[string]string, len(envVars))
+
+	for _, kv := range envVars {
+		key, value, ok := strings.Cut(kv, "=")
+		if !ok {
+			continue // Skip invalid env var format.
+		}
+		result[key] = value
+	}
+
+	return result
 }

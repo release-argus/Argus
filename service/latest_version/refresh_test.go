@@ -181,7 +181,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 								token: pass
 					`)),
 					svcStatus,
-					&lvCfg.Soft.Require,
+					&lvCfg.Soft.Common.Require,
 				)
 			}),
 			wantRequireInherit: true,
@@ -228,7 +228,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 								token: 'pass'
 					`)),
 					svcStatus,
-					&lvCfg.Soft.Require,
+					&lvCfg.Soft.Common.Require,
 				)
 			}),
 			wantRequireInherit: false,
@@ -278,7 +278,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 								token: 'pass'
 					`)),
 					svcStatus,
-					&lvCfg.Soft.Require,
+					&lvCfg.Soft.Common.Require,
 				)
 			}),
 			wantRequireInherit: true,
@@ -316,6 +316,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 				tc.args.overrides,
 				tc.args.semanticVerDiff,
 				tc.args.semanticVersioning,
+				lvCfg,
 			)
 
 			prefix := fmt.Sprintf(

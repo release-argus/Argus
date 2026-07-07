@@ -90,6 +90,10 @@ func testLookup(t *testing.T, failing bool) *Lookup {
 		lvCfg,
 	)
 
+	var typeHardDefaults Defaults
+	typeHardDefaults.Default()
+	lookup.SetTypeDefaults(&Defaults{}, &typeHardDefaults)
+
 	if failing {
 		*lookup.AllowInvalidCerts = false
 	}
@@ -109,7 +113,6 @@ func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
 	defaults.Options = optDefaults
 	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
 	hardDefaults.Default()
-	hardDefaults.AccessToken = test.GitHubToken(t)
 	hardDefaults.Options = optHardDefaults
 
 	defaults.Require.SetDefaults(&hardDefaults.Require)

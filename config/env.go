@@ -27,9 +27,114 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
+
+// deprecatedConfigEnvVars maps deprecated 'ARGUS_*' env vars to their new name.
+var deprecatedConfigEnvVars = map[string]string{
+	"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN",
+	"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE",
+	"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS",
+}
+
+// deprecatedConfigEnvVarPrefixes maps deprecated 'ARGUS_*' env var prefixes to their new prefix.
+var deprecatedConfigEnvVarPrefixes = map[string]string{
+	"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_": "ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_",
+}
+
+// migrateDeprecatedEnvVars renames deprecated env var keys [deprecatedConfigEnvVars]
+// in envVars to their new name, logging a deprecation notice for each rename.
+func migrateDeprecatedEnvVars(envVars []string) []string {
+	for oldName, newName := range deprecatedConfigEnvVars {
+		oldPrefix := oldName + "="
+		newPrefix := newName + "="
+
+		oldIdx := -1
+		hasNew := false
+		for i, envVar := range envVars {
+			switch {
+			case strings.HasPrefix(envVar, oldPrefix):
+				oldIdx = i
+			case strings.HasPrefix(envVar, newPrefix):
+				hasNew = true
+			}
+		}
+		if oldIdx == -1 {
+			continue
+		}
+
+		if hasNew {
+			// The new name is already set explicitly - drop the deprecated one, new wins.
+			logx.Deprecated(fmt.Sprintf(
+				"Dropping deprecated env var '%s' ('%s' already set)",
+				oldName, newName,
+			))
+			os.Unsetenv(oldName) //nolint:errcheck // best-effort; avoid leaving a stale duplicate.
+			envVars = append(envVars[:oldIdx], envVars[oldIdx+1:]...)
+			continue
+		}
+		logx.Deprecated(fmt.Sprintf(
+			"Renaming env var '%s' to '%s'",
+			oldName, newName,
+		))
+		value := strings.TrimPrefix(envVars[oldIdx], oldPrefix)
+		os.Setenv(newName, value) //nolint:errcheck // best-effort; value/key are known-valid.
+		os.Unsetenv(oldName)      //nolint:errcheck // best-effort; avoid leaving a stale duplicate.
+		envVars[oldIdx] = newName + "=" + value
+	}
+
+	return migrateDeprecatedEnvVarPrefixes(envVars)
+}
+
+// migrateDeprecatedEnvVarPrefixes renames every envVars entry whose key starts with
+// a deprecated prefix [deprecatedConfigEnvVarPrefixes] to use the new prefix,
+// logging one deprecation notice per old/new prefix pair observed.
+func migrateDeprecatedEnvVarPrefixes(envVars []string) []string {
+	existingKeys := make(map[string]bool, len(envVars))
+	for _, envVar := range envVars {
+		key, _, _ := strings.Cut(envVar, "=")
+		existingKeys[key] = true
+	}
+
+	logged := make(map[string]bool, len(deprecatedConfigEnvVarPrefixes))
+	result := make([]string, 0, len(envVars))
+	for _, envVar := range envVars {
+		key, value, _ := strings.Cut(envVar, "=")
+
+		var oldPrefix, newPrefix string
+		for old, new := range deprecatedConfigEnvVarPrefixes {
+			if strings.HasPrefix(key, old) {
+				oldPrefix, newPrefix = old, new
+				break
+			}
+		}
+		if oldPrefix == "" {
+			result = append(result, envVar)
+			continue
+		}
+
+		if !logged[oldPrefix] {
+			logx.Deprecated(fmt.Sprintf(
+				"Migrating env vars '%s*' to '%s*'",
+				oldPrefix, newPrefix,
+			))
+			logged[oldPrefix] = true
+		}
+		newKey := newPrefix + strings.TrimPrefix(key, oldPrefix)
+		if existingKeys[newKey] {
+			// The new name is already set explicitly - drop the deprecated one, new wins.
+			os.Unsetenv(key) //nolint:errcheck // best-effort; avoid leaving a stale duplicate.
+			continue
+		}
+		os.Setenv(newKey, value) //nolint:errcheck // best-effort; value/key are known-valid.
+		os.Unsetenv(key)         //nolint:errcheck // best-effort; avoid leaving a stale duplicate.
+		result = append(result, newKey+"="+value)
+	}
+
+	return result
+}
 
 // mapEnvToStruct maps environment variables to a struct.
 func mapEnvToStruct(src any, prefix string, envVars []string) error {
@@ -49,6 +154,7 @@ func mapEnvToStruct(src any, prefix string, envVars []string) error {
 				envVars = append(envVars, envVar)
 			}
 		}
+		envVars = migrateDeprecatedEnvVars(envVars)
 		// Have no env vars to map.
 		if len(envVars) == 0 {
 			return nil

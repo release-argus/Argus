@@ -59,7 +59,8 @@ func testYAML_config_test(path string) {
 					interval: 123
 					semantic_versioning: false
 				latest_version:
-					access_token: ghp_default
+					github:
+						access_token: ghp_default
 				notify:
 					default: {}
 				command:

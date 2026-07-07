@@ -21,15 +21,25 @@ export type LatestVersionLookupBase = {
 	require?: LatestVersionRequire;
 };
 
-export type LatestVersionLookupDefaults = {
-	type?: LatestVersionLookupType | null;
-	url?: string;
-	url_commands?: URLCommand[];
+// Fields common to latest_version types.
+export type LatestVersionLookupCommonDefaults = {
 	require?: LatestVersionRequireDefaults;
+};
+// GitHub-specific defaults.
+export type LatestVersionLookupGitHubDefaults = {
 	access_token?: string;
 	use_prerelease?: boolean;
+};
+// URL-specific defaults.
+export type LatestVersionLookupURLDefaults = {
 	allow_invalid_certs?: boolean | null;
-	headers?: Headers;
+};
+
+export type LatestVersionLookupDefaults = {
+	type?: LatestVersionLookupType | null;
+	common?: LatestVersionLookupCommonDefaults;
+	github?: LatestVersionLookupGitHubDefaults;
+	url?: LatestVersionLookupURLDefaults;
 };
 
 /* URL Command */

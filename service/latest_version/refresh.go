@@ -21,7 +21,6 @@ import (
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
 	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/util"
 )
@@ -32,6 +31,7 @@ func Refresh(
 	overrides []byte,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
 	secretRefs *shared.VSecretRef,
+	cfg DefaultsConfig,
 ) (string, bool, error) {
 	if lookup == nil {
 		return "", false, errors.New("lookup is nil")
@@ -56,6 +56,7 @@ func Refresh(
 		overrides,
 		semanticVerDiff,
 		semanticVersioning,
+		cfg,
 	)
 	if err != nil {
 		return "", false, err
@@ -101,16 +102,14 @@ func applyOverridesJSON(
 	overrides []byte,
 	semanticVerDiff bool,
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
+	cfg DefaultsConfig,
 ) (Lookup, error) {
 	newLookup, err := ApplyOverrides(
 		"yaml", overrides,
 		lookup,
 		lookup.GetOptions(),
 		lookup.GetStatus(),
-		base.DefaultsConfig{
-			Soft: lookup.GetDefaults(),
-			Hard: lookup.GetHardDefaults(),
-		},
+		cfg,
 	)
 	if err != nil {
 		return nil, err

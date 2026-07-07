@@ -310,7 +310,7 @@ func TestLookup_Copy(t *testing.T) {
 			name: "filled",
 			lookup: test.Must(t, func() (*Lookup, error) {
 				svcStatus, _ := statustest.New("yaml", nil)
-				return Decode(
+				lv, err := Decode(
 					"yaml", []byte(test.TrimYAML(`
 						type: test
 						url: https://example.com
@@ -341,6 +341,14 @@ func TestLookup_Copy(t *testing.T) {
 					svcStatus,
 					lvCfg,
 				)
+				if err == nil {
+					lv.SetTypeDefaults(
+						&Defaults{AllowInvalidCerts: test.Ptr(true)},
+						&Defaults{AllowInvalidCerts: test.Ptr(false)},
+					)
+				}
+
+				return lv, err
 			}),
 			status: test.Must(t, func() (*status.Status, error) {
 				return statustest.New("yaml", nil)
@@ -436,6 +444,8 @@ func TestLookup_Copy(t *testing.T) {
 			err = []test.FieldAssertion{
 				{Name: "Defaults", Got: got.Defaults, Want: tc.lookup.Defaults, Mode: test.CompareSamePointer},
 				{Name: "HardDefaults", Got: got.HardDefaults, Want: tc.lookup.HardDefaults, Mode: test.CompareSamePointer},
+				{Name: "typeDefaults", Got: got.typeDefaults, Want: tc.lookup.typeDefaults, Mode: test.CompareSamePointer},
+				{Name: "typeHardDefaults", Got: got.typeHardDefaults, Want: tc.lookup.typeHardDefaults, Mode: test.CompareSamePointer},
 			}
 			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
 				t.Fatal(testErr)
@@ -558,6 +568,58 @@ func TestLookup_InheritSecrets(t *testing.T) {
 			if got := tc.lookup.String(""); got != tc.want {
 				t.Errorf("%s\nLookup.InheritSecrets(secrets=%+v) mismatch\ngot:  %q\nwant: %q",
 					packageName, tc.secretRefs, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+// ############
+// # DEFAULTS #
+// ############
+
+func TestLookup_TypeDefaults(t *testing.T) {
+	// GIVEN: a Lookup and a pair of type-specific Defaults.
+	tests := []struct {
+		name         string
+		defaults     *Defaults
+		hardDefaults *Defaults
+	}{
+		{
+			name:         "nil, nil",
+			defaults:     nil,
+			hardDefaults: nil,
+		},
+		{
+			name:         "non-nil, non-nil",
+			defaults:     &Defaults{AllowInvalidCerts: test.Ptr(true)},
+			hardDefaults: &Defaults{AllowInvalidCerts: test.Ptr(false)},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := &Lookup{}
+
+			// WHEN: SetTypeDefaults is called.
+			lookup.SetTypeDefaults(tc.defaults, tc.hardDefaults)
+
+			prefix := fmt.Sprintf("%s\nLookup.GetTypeDefaults()", packageName)
+
+			// THEN: GetTypeDefaults returns the exact pointers that were set.
+			gotDefaults, gotHardDefaults := lookup.GetTypeDefaults()
+			if gotDefaults != tc.defaults {
+				t.Errorf(
+					"%s Defaults pointer mismatch\ngot:  %p\nwant: %p",
+					prefix, gotDefaults, tc.defaults,
+				)
+			}
+			if gotHardDefaults != tc.hardDefaults {
+				t.Errorf(
+					"%s HardDefaults pointer mismatch\ngot:  %p\nwant: %p",
+					prefix, gotHardDefaults, tc.hardDefaults,
 				)
 			}
 		})

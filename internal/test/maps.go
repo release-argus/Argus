@@ -12,23 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package web provides a web-based lookup type.
-package web
+//go:build unit || integration
 
-import (
-	"github.com/release-argus/Argus/util"
-)
+package test
 
-// GetType returns the type of the receiver.
-func (l *Lookup) GetType() string {
-	return Type
-}
+import "slices"
 
-// allowInvalidCerts resolves whether invalid TLS certificates are permitted.
-func (l *Lookup) allowInvalidCerts() bool {
-	return *util.FirstNonNilPtr(
-		l.AllowInvalidCerts,
-		l.typeDefaults.AllowInvalidCerts,
-		l.typeHardDefaults.AllowInvalidCerts,
-	)
+// MapJoin returns a slice containing each key-value pair in m joined by sep.
+// The returned elements are sorted by key.
+func MapJoin[K, V ~string](m map[K]V, sep string) []string {
+	out := make([]string, 0, len(m))
+
+	for k, v := range m {
+		out = append(out, string(k)+sep+string(v))
+	}
+	slices.Sort(out)
+
+	return out
 }

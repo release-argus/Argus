@@ -32,7 +32,7 @@ func Decode(
 	data []byte,
 	options *opt.Options,
 	status *status.Status,
-	cfg base.DefaultsConfig,
+	cfg DefaultsConfig,
 ) (Lookup, error) {
 	if len(data) == 0 {
 		return nil, nil
@@ -68,7 +68,15 @@ func Decode(
 		}
 	}
 
-	field.Init(options, status, cfg)
+	field.Init(
+		options,
+		status,
+		base.DefaultsConfig{
+			Soft: &cfg.Soft.Common,
+			Hard: &cfg.Hard.Common,
+		},
+	)
+	applyTypeDefaults(field, cfg)
 	if err := field.DecodeSelf(format, data); err != nil {
 		return nil, &decode.KeyFieldError{
 			Key: "latest_version",
@@ -87,7 +95,7 @@ func ApplyOverrides(
 	target Lookup,
 	options *opt.Options,
 	status *status.Status,
-	cfg base.DefaultsConfig,
+	cfg DefaultsConfig,
 ) (Lookup, error) {
 	// No overrides.
 	if len(data) == 0 {

@@ -92,8 +92,8 @@ func TestLookup_AccessToken(t *testing.T) {
 
 			lookup := testLookup(t, false)
 			lookup.AccessToken = tc.rootValue
-			lookup.Defaults.AccessToken = tc.defaultValue
-			lookup.HardDefaults.AccessToken = tc.hardDefaultValue
+			lookup.typeDefaults.AccessToken = tc.defaultValue
+			lookup.typeHardDefaults.AccessToken = tc.hardDefaultValue
 
 			// WHEN: accessToken is called.
 			got := lookup.accessToken()
@@ -245,8 +245,8 @@ func TestLookup_UsePreRelease(t *testing.T) {
 
 			lookup := testLookup(t, false)
 			lookup.UsePreRelease = tc.rootValue
-			lookup.Defaults.UsePreRelease = tc.defaultValue
-			lookup.HardDefaults.UsePreRelease = tc.hardDefaultValue
+			lookup.typeDefaults.UsePreRelease = tc.defaultValue
+			lookup.typeHardDefaults.UsePreRelease = tc.hardDefaultValue
 
 			// WHEN: usePreRelease is called.
 			result := lookup.usePreRelease()

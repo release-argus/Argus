@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { BooleanWithDefault } from '@/components/generic';
 import {
@@ -8,6 +8,7 @@ import {
 } from '@/components/generic/field';
 import EditServiceLatestVersionRequire from '@/components/modals/service-edit/latest-version-require';
 import FormURLCommands from '@/components/modals/service-edit/latest-version-urlcommands';
+import { normaliseForSelect } from '@/components/modals/service-edit/util';
 import VersionWithLink from '@/components/modals/service-edit/version-with-link';
 import VersionWithRefresh from '@/components/modals/service-edit/version-with-refresh';
 import {
@@ -21,6 +22,7 @@ import {
 	type LatestVersionLookupType,
 	latestVersionLookupTypeOptions,
 } from '@/utils/api/types/config/service/latest-version';
+import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 
 /**
  * The `latest_version` form fields.
@@ -29,7 +31,7 @@ const EditServiceLatestVersion = () => {
 	const name = 'latest_version';
 	const urlFieldName = `${name}.url`;
 	const { getValues, trigger } = useFormContext();
-	const { schemaDataDefaults } = useSchemaContext();
+	const { schemaDataDefaults, typeDataDefaults } = useSchemaContext();
 
 	const latestVersionType = useWatch({
 		name: `${name}.type`,
@@ -41,7 +43,24 @@ const EditServiceLatestVersion = () => {
 		if (getValues(urlFieldName)) void trigger(urlFieldName);
 	}, [latestVersionType]);
 
-	const defaults = schemaDataDefaults?.latest_version;
+	const typeDefaults = typeDataDefaults?.latest_version?.[latestVersionType];
+	const defaultType = schemaDataDefaults?.latest_version?.type;
+
+	// Add default to type options.
+	const typeOptions = useMemo(() => {
+		const defaultScheme = normaliseForSelect(
+			latestVersionLookupTypeOptions,
+			defaultType,
+		);
+
+		if (defaultScheme)
+			return [
+				{ label: `${defaultScheme.label} (default)`, value: nullString },
+				...latestVersionLookupTypeOptions,
+			];
+
+		return latestVersionLookupTypeOptions;
+	}, [defaultType]);
 
 	const urlTooltipText =
 		latestVersionType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value
@@ -56,7 +75,7 @@ const EditServiceLatestVersion = () => {
 					colSize={{ sm: 4, xs: 4 }}
 					label="Type"
 					name={`${name}.type`}
-					options={latestVersionLookupTypeOptions}
+					options={typeOptions}
 				/>
 				<VersionWithLink
 					colSize={{ sm: 8, xs: 8 }}
@@ -72,7 +91,7 @@ const EditServiceLatestVersion = () => {
 					<>
 						<FieldText
 							colSize={{ sm: 12 }}
-							defaultVal={defaults?.access_token}
+							defaultVal={typeDefaults?.access_token}
 							key="access_token"
 							label="Access Token"
 							name={`${name}.access_token`}
@@ -83,7 +102,7 @@ const EditServiceLatestVersion = () => {
 							}}
 						/>
 						<BooleanWithDefault
-							defaultValue={defaults?.use_prerelease}
+							defaultValue={typeDefaults?.use_prerelease}
 							label="Use pre-releases"
 							name={`${name}.use_prerelease`}
 							tooltip={{
@@ -96,7 +115,7 @@ const EditServiceLatestVersion = () => {
 				) : (
 					<>
 						<BooleanWithDefault
-							defaultValue={defaults?.allow_invalid_certs}
+							defaultValue={typeDefaults?.allow_invalid_certs}
 							label="Allow Invalid Certs"
 							name={`${name}.allow_invalid_certs`}
 						/>

@@ -31,8 +31,8 @@ func TestPlainDefaultsConfig(t *testing.T) {
 	}
 
 	// AND: the defaults of the defaults.Require are the hardDefaults.Require.
-	want := &lvCfg.Hard.Require.Docker
-	if got := lvCfg.Soft.Require.Docker.Defaults; got != want {
+	want := &lvCfg.Hard.Common.Require.Docker
+	if got := lvCfg.Soft.Common.Require.Docker.Defaults; got != want {
 		t.Errorf(
 			"%s\nPlainDefaultsConfig() defaults.Require.Default() not set to expected HardDefaults mismatch\ngot:  %p\nwant %p",
 			packageName, got, want,

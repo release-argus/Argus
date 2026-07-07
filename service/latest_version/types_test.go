@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 )
 
@@ -41,25 +40,21 @@ func TestIsEqual(t *testing.T) {
 		},
 		{
 			name: "defaults ignored",
-			a: &web.Lookup{
-				Lookup: base.Lookup{
-					Defaults: &base.Defaults{
-						AllowInvalidCerts: test.Ptr(false),
-					},
-				},
-			},
+			a: func() Lookup {
+				l := &web.Lookup{}
+				l.SetTypeDefaults(&web.Defaults{AllowInvalidCerts: test.Ptr(false)}, nil)
+				return l
+			}(),
 			b:    &web.Lookup{},
 			want: true,
 		},
 		{
 			name: "hard_defaults ignored",
-			a: &web.Lookup{
-				Lookup: base.Lookup{
-					Defaults: &base.Defaults{
-						AllowInvalidCerts: test.Ptr(false),
-					},
-				},
-			},
+			a: func() Lookup {
+				l := &web.Lookup{}
+				l.SetTypeDefaults(nil, &web.Defaults{AllowInvalidCerts: test.Ptr(false)})
+				return l
+			}(),
 			b:    &web.Lookup{},
 			want: true,
 		},

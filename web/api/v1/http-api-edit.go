@@ -30,7 +30,6 @@ import (
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	dvbase "github.com/release-argus/Argus/service/deployed_version/types/base"
 	latestver "github.com/release-argus/Argus/service/latest_version"
-	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
@@ -80,21 +79,23 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	options, _ := opt.Decode(
 		"json", []byte("{}"),
 		opt.DefaultsConfig{
-			Soft: api.Config.Defaults.Service.LatestVersion.Options,
-			Hard: api.Config.HardDefaults.Service.LatestVersion.Options,
+			Soft: api.Config.Defaults.Service.LatestVersion.Common.Options,
+			Hard: api.Config.HardDefaults.Service.LatestVersion.Common.Options,
 		},
 	)
 	options.SemanticVersioning = util.StringToBoolPtr(queryParams.Get("semantic_versioning"))
+
+	lvDefaults := latestver.DefaultsConfig{
+		Soft: &api.Config.Defaults.Service.LatestVersion,
+		Hard: &api.Config.HardDefaults.Service.LatestVersion,
+	}
 
 	// Create the LatestVersionLookup.
 	lv, err := latestver.Decode(
 		"json", []byte(overrides),
 		options,
 		&svcStatus,
-		lvbase.DefaultsConfig{
-			Soft: &api.Config.Defaults.Service.LatestVersion,
-			Hard: &api.Config.HardDefaults.Service.LatestVersion,
-		},
+		lvDefaults,
 	)
 	if err == nil {
 		err = lv.CheckValues()
@@ -110,6 +111,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	version, _, err := latestver.Refresh(
 		lv,
 		nil, nil, nil,
+		lvDefaults,
 	)
 	if err != nil {
 		failRequest(&w, err, http.StatusBadRequest)
@@ -168,8 +170,8 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	options, _ := opt.Decode(
 		"json", []byte("{}"),
 		opt.DefaultsConfig{
-			Soft: api.Config.Defaults.Service.LatestVersion.Options,
-			Hard: api.Config.HardDefaults.Service.LatestVersion.Options,
+			Soft: api.Config.Defaults.Service.LatestVersion.Common.Options,
+			Hard: api.Config.HardDefaults.Service.LatestVersion.Common.Options,
 		},
 	)
 	options.SemanticVersioning = util.StringToBoolPtr(queryParams.Get("semantic_versioning"))
@@ -287,6 +289,10 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 		overrideBytes,
 		semanticVersioning,
 		secretRefs,
+		latestver.DefaultsConfig{
+			Soft: &api.Config.Defaults.Service.LatestVersion,
+			Hard: &api.Config.HardDefaults.Service.LatestVersion,
+		},
 	)
 	if announce {
 		svc.HandleUpdateActions(true)

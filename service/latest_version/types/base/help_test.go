@@ -24,7 +24,6 @@ import (
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
-	"github.com/release-argus/Argus/internal/test"
 	logtest "github.com/release-argus/Argus/internal/test/log"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
@@ -106,7 +105,6 @@ func plainDefaultsConfig(t *testing.T) DefaultsConfig {
 	defaults.Options = optDefaults
 	hardDefaults, _ := DecodeDefaults("yaml", nil)
 	hardDefaults.Default()
-	hardDefaults.AccessToken = test.GitHubToken(t)
 	hardDefaults.Options = optHardDefaults
 
 	defaults.Require.SetDefaults(&hardDefaults.Require)

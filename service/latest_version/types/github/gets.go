@@ -31,8 +31,8 @@ func (l *Lookup) GetType() string {
 func (l *Lookup) accessToken() string {
 	return util.FirstNonDefaultWithEnv(
 		l.AccessToken,
-		l.Defaults.AccessToken,
-		l.HardDefaults.AccessToken,
+		l.typeDefaults.AccessToken,
+		l.typeHardDefaults.AccessToken,
 	)
 }
 
@@ -69,8 +69,8 @@ func (l *Lookup) url(page int) string {
 func (l *Lookup) usePreRelease() bool {
 	return *util.FirstNonDefault(
 		l.UsePreRelease,
-		l.Defaults.UsePreRelease,
-		l.HardDefaults.UsePreRelease,
+		l.typeDefaults.UsePreRelease,
+		l.typeHardDefaults.UsePreRelease,
 	)
 }
 

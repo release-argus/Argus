@@ -12,23 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package web provides a web-based lookup type.
 package web
 
-import (
-	"github.com/release-argus/Argus/util"
-)
-
-// GetType returns the type of the receiver.
-func (l *Lookup) GetType() string {
-	return Type
+// Defaults are the URL-specific default values for a Lookup.
+type Defaults struct {
+	AllowInvalidCerts *bool `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
 }
 
-// allowInvalidCerts resolves whether invalid TLS certificates are permitted.
-func (l *Lookup) allowInvalidCerts() bool {
-	return *util.FirstNonNilPtr(
-		l.AllowInvalidCerts,
-		l.typeDefaults.AllowInvalidCerts,
-		l.typeHardDefaults.AllowInvalidCerts,
-	)
+// IsZero implements the yaml.IsZeroer interface.
+func (d Defaults) IsZero() bool {
+	return d.AllowInvalidCerts == nil
+}
+
+// Default sets the values of the receiver to their default values.
+func (d *Defaults) Default() {
+	allowInvalidCerts := false
+	d.AllowInvalidCerts = &allowInvalidCerts
 }

@@ -22,6 +22,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 
@@ -44,6 +46,201 @@ type testStructChild struct {
 	Float  float64 `yaml:"float,omitempty"`
 }
 
+func TestMigrateDeprecatedEnvVars(t *testing.T) {
+	// GIVEN: a slice of env vars, possibly containing deprecated names.
+	tests := []struct {
+		name    string
+		envVars []string
+		want    map[string]string
+	}{
+		{
+			name: "no deprecated vars present",
+			envVars: []string{
+				"ARGUS_FOO=bar",
+			},
+			want: map[string]string{
+				"ARGUS_FOO": "bar",
+			},
+		},
+		{
+			name: "deprecated var present, canonical absent - renamed",
+			envVars: []string{
+				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN=ghp_deprecated",
+			},
+			want: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN": "ghp_deprecated",
+			},
+		},
+		{
+			name: "deprecated and canonical both present - canonical wins, deprecated dropped",
+			envVars: []string{
+				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN=ghp_deprecated",
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN=ghp_canonical",
+			},
+			want: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN": "ghp_canonical",
+			},
+		},
+		{
+			name: "all exact-name deprecated vars are renamed",
+			envVars: []string{
+				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN=ghp_deprecated",
+				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE=true",
+				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS=true",
+				"ARGUS_UNRELATED=untouched",
+				"other=also_untouched",
+			},
+			want: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN":     "ghp_deprecated",
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE":   "true",
+				"ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS": "true",
+				"ARGUS_UNRELATED": "untouched",
+				"other":           "also_untouched",
+			},
+		},
+		{
+			name: "deprecated 'require' prefix var is delegated to the prefix migration",
+			envVars: []string{
+				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE=hub",
+			},
+			want: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE": "hub",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
+
+			for k := range tc.want {
+				if v, ok := os.LookupEnv(k); ok {
+					os.Unsetenv(k)
+					t.Cleanup(func() { _ = os.Setenv(k, v) })
+				}
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
+			}
+			envVars := test.SplitEnvVars(tc.envVars)
+			test.SetEnv(t, envVars)
+
+			// WHEN: migrateDeprecatedEnvVars is called.
+			got := migrateDeprecatedEnvVars(tc.envVars)
+
+			prefix := fmt.Sprintf(
+				"%s\nmigrateDeprecatedEnvVars(%v)",
+				packageName, tc.envVars,
+			)
+
+			// THEN: the returned slice has the deprecated vars renamed/dropped as expected.
+			gotSorted, wantSorted := append([]string{}, got...), test.MapJoin(tc.want, "=")
+			sort.Strings(gotSorted)
+			if !slices.Equal(gotSorted, wantSorted) {
+				t.Errorf(
+					"%s mismatch\ngot:  %v\nwant: %v",
+					prefix, gotSorted, wantSorted,
+				)
+			}
+
+			// AND: any renamed var was also set for real.
+			for k, v := range tc.want {
+				if got := os.Getenv(k); got != v {
+					t.Errorf(
+						"%s real env var %q mismatch\ngot:  %q\nwant: %q",
+						prefix, k, got, v,
+					)
+				}
+			}
+		})
+	}
+}
+
+func TestMigrateDeprecatedEnvVarPrefixes(t *testing.T) {
+	// GIVEN: a slice of env vars, possibly prefixed with a deprecated prefix.
+	tests := []struct {
+		name    string
+		envVars []string
+		want    map[string]string
+	}{
+		{
+			name: "no deprecated prefix present",
+			envVars: []string{
+				"ARGUS_FOO=bar",
+			},
+			want: map[string]string{
+				"ARGUS_FOO": "bar",
+			},
+		},
+		{
+			name: "multiple sub-keys under the deprecated prefix are all renamed",
+			envVars: []string{
+				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE=hub",
+				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_IMAGE=foo/bar",
+				"UNRELATED=untouched",
+			},
+			want: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE":  "hub",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_IMAGE": "foo/bar",
+				"UNRELATED": "untouched",
+			},
+		},
+		{
+			name: "deprecated and canonical sub-key both present - canonical wins, deprecated dropped",
+			envVars: []string{
+				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE=deprecated_value",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE=canonical_value",
+			},
+			want: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE": "canonical_value",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
+
+			for k := range tc.want {
+				if v, ok := os.LookupEnv(k); ok {
+					os.Unsetenv(k)
+					t.Cleanup(func() { _ = os.Setenv(k, v) })
+				}
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
+			}
+			envVars := test.SplitEnvVars(tc.envVars)
+			test.SetEnv(t, envVars)
+
+			// WHEN: migrateDeprecatedEnvVarPrefixes is called.
+			got := migrateDeprecatedEnvVarPrefixes(tc.envVars)
+
+			prefix := fmt.Sprintf(
+				"%s\nmigrateDeprecatedEnvVarPrefixes(%v)",
+				packageName, tc.envVars,
+			)
+
+			// THEN: the returned slice has the deprecated-prefixed vars renamed/dropped
+			// as expected.
+			gotSorted, wantSorted := append([]string{}, got...), test.MapJoin(tc.want, "=")
+			sort.Strings(gotSorted)
+			if !slices.Equal(gotSorted, wantSorted) {
+				t.Errorf(
+					"%s mismatch\ngot:  %v\nwant: %v",
+					prefix, gotSorted, wantSorted,
+				)
+			}
+
+			// AND: any renamed var was also set for real.
+			for k, v := range tc.want {
+				if got := os.Getenv(k); got != v {
+					t.Errorf(
+						"%s real env var %q mismatch\ngot:  %q\nwant: %q",
+						prefix, k, got, v,
+					)
+				}
+			}
+		})
+	}
+}
+
 func TestMapEnvToStruct(t *testing.T) {
 	// GIVEN: a struct and a bunch of env vars.
 	tests := []struct {
@@ -52,6 +249,7 @@ func TestMapEnvToStruct(t *testing.T) {
 		customStructBuilder *func() any
 		prefix              string
 		env                 map[string]string
+		envCleanup          []string
 		marshalWant         bool
 		want                string
 		errRegex            string
@@ -520,12 +718,91 @@ func TestMapEnvToStruct(t *testing.T) {
 			}(),
 			errRegex: `^$`,
 		},
+		{
+			name: "deprecated service.latest_version env vars are migrated before mapping",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_deprecated",
+				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "true",
+				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "true",
+			},
+			envCleanup: []string{
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN",
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE",
+				"ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS",
+			},
+			customStruct: &Defaults{},
+			want: test.TrimYAML(`
+				service:
+					latest_version:
+						github:
+							access_token: ghp_deprecated
+							use_prerelease: true
+						url:
+							allow_invalid_certs: true
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name: "canonical service.latest_version env vars need no migration",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN": "ghp_canonical",
+			},
+			customStruct: &Defaults{},
+			want: test.TrimYAML(`
+				service:
+					latest_version:
+						github:
+							access_token: ghp_canonical
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name: "deprecated and canonical service.latest_version env vars both set, canonical wins",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_deprecated",
+				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN": "ghp_canonical",
+			},
+			customStruct: &Defaults{},
+			want: test.TrimYAML(`
+				service:
+					latest_version:
+						github:
+							access_token: ghp_canonical
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name: "deprecated service.latest_version.require env vars (prefix-mapped) are migrated before mapping",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE": "hub",
+			},
+			envCleanup: []string{
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE",
+			},
+			customStruct: &Defaults{},
+			want: test.TrimYAML(`
+				service:
+					latest_version:
+						common:
+							require:
+								docker:
+									type: hub
+			`),
+			errRegex: `^$`,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
 
+			for _, k := range tc.envCleanup {
+				if v, ok := os.LookupEnv(k); ok {
+					os.Unsetenv(k)
+					t.Cleanup(func() { _ = os.Setenv(k, v) })
+				}
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
+			}
 			test.SetEnv(t, tc.env)
 
 			// WHEN: mapEnvToStruct is called on it.

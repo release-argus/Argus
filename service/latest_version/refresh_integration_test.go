@@ -287,6 +287,7 @@ func TestLookup_Refresh(t *testing.T) {
 				tc.args.overrides,
 				tc.args.semanticVersioning,
 				&secretRefs,
+				plainDefaultsConfig(t),
 			)
 
 			prefix := fmt.Sprintf("%s\nRefresh()", packageName)

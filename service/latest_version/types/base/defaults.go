@@ -27,32 +27,15 @@ type DefaultsConfig struct {
 	Hard *Defaults
 }
 
-// Defaults are the default values for a Lookup.
+// Defaults are the default values common to Lookup types.
 type Defaults struct {
-	Type              string `json:"type,omitempty" yaml:"type,omitempty"`                               // "github" | "url".
-	AccessToken       string `json:"access_token,omitempty" yaml:"access_token,omitempty"`               // GitHub access token to use.
-	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
-	UsePreRelease     *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"`           // Whether releases with prerelease tag are considered.
-
 	Options *opt.Defaults          `json:"-" yaml:"-"`                               // Options for the Lookup.
 	Require filter.RequireDefaults `json:"require,omitzero" yaml:"require,omitzero"` // Requirements before release considered valid.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (d Defaults) IsZero() bool {
-	return d.Type == "" &&
-		d.AccessToken == "" &&
-		d.AllowInvalidCerts == nil &&
-		d.UsePreRelease == nil &&
-		d.Require.IsZero()
-}
-
-// DefaultsDecode is an unmarshal-only helper for [Defaults].
-type DefaultsDecode struct {
-	Type              string `json:"type,omitempty" yaml:"type,omitempty"`
-	AccessToken       string `json:"access_token,omitempty" yaml:"access_token,omitempty"`
-	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"`
-	UsePreRelease     *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"`
+	return d.Require.IsZero()
 }
 
 // DecodeDefaults creates and returns new [Defaults] from format-encoded data.
@@ -71,16 +54,6 @@ func DecodeDefaults(format string, data []byte) (*Defaults, error) {
 
 // Default sets the values of the receiver to their default values.
 func (d *Defaults) Default() {
-	// allow_invalid_certs.
-	allowInvalidCerts := false
-	d.AllowInvalidCerts = &allowInvalidCerts
-	// use_prerelease.
-	usePreRelease := false
-	d.UsePreRelease = &usePreRelease
-
-	// type.
-	d.Type = "github"
-
 	d.Require.Default()
 }
 

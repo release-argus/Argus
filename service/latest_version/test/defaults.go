@@ -21,28 +21,28 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
+	latestver "github.com/release-argus/Argus/service/latest_version"
 	opt "github.com/release-argus/Argus/service/option"
 )
 
 // PlainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func PlainDefaultsConfig(t *testing.T) base.DefaultsConfig {
+func PlainDefaultsConfig(t *testing.T) latestver.DefaultsConfig {
 	t.Helper()
 
 	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
 	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
 	optHardDefaults.Default()
 
-	defaults, _ := base.DecodeDefaults("yaml", nil)
-	defaults.Options = optDefaults
-	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
+	defaults, _ := latestver.DecodeDefaults("yaml", nil)
+	defaults.Common.Options = optDefaults
+	hardDefaults, _ := latestver.DecodeDefaults("yaml", nil)
 	hardDefaults.Default()
-	hardDefaults.AccessToken = test.GitHubToken(t)
-	hardDefaults.Options = optHardDefaults
+	hardDefaults.GitHub.AccessToken = test.GitHubToken(t)
+	hardDefaults.Common.Options = optHardDefaults
 
-	defaults.Require.SetDefaults(&hardDefaults.Require)
+	defaults.Common.Require.SetDefaults(&hardDefaults.Common.Require)
 
-	return base.DefaultsConfig{
+	return latestver.DefaultsConfig{
 		Soft: defaults,
 		Hard: hardDefaults,
 	}

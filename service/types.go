@@ -23,7 +23,6 @@ import (
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	dvbase "github.com/release-argus/Argus/service/deployed_version/types/base"
 	latestver "github.com/release-argus/Argus/service/latest_version"
-	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
@@ -204,7 +203,7 @@ func (s *Service) unmarshalLatestVersion(format string, data []byte) error {
 		s.LatestVersion,
 		&s.Options,
 		&s.Status,
-		lvbase.DefaultsConfig{
+		latestver.DefaultsConfig{
 			Soft: &s.Defaults.LatestVersion,
 			Hard: &s.HardDefaults.LatestVersion,
 		},
