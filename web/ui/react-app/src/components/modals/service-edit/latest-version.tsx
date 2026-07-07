@@ -22,6 +22,7 @@ import {
 	type LatestVersionLookupType,
 	latestVersionLookupTypeOptions,
 } from '@/utils/api/types/config/service/latest-version';
+import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 
 /**
  * The `latest_version` form fields.
