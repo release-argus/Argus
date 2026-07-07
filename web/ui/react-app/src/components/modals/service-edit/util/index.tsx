@@ -1,4 +1,7 @@
-export { normaliseForSelect } from './normalise';
+export {
+	normaliseForSelect,
+	withDefaultOption,
+} from './normalise';
 export {
 	urlCommandsTrim,
 	urlCommandsTrimArray,

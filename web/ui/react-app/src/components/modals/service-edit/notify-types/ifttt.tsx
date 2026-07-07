@@ -5,7 +5,7 @@ import {
 	Heading,
 	NotifyOptions,
 } from '@/components/modals/service-edit/notify-types/shared';
-import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import { withDefaultOption } from '@/components/modals/service-edit/util';
 import { FieldSet } from '@/components/ui/field';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import {
@@ -15,7 +15,6 @@ import {
 	iftttTitleValueOptions,
 } from '@/utils/api/types/config/notify/ifttt';
 import type { NotifyIFTTTSchema } from '@/utils/api/types/config-edit/notify/schemas';
-import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { ensureValue } from '@/utils/form-utils';
 
 /**
@@ -51,41 +50,20 @@ const IFTTT = ({ name, main }: { name: string; main?: NotifyIFTTTSchema }) => {
 		});
 	}, [main]);
 
-	const messageValueOptionsNormalised = useMemo(() => {
-		const defaultMessageValue = normaliseForSelect(
-			iftttMessageValueOptions,
-			defaults?.params?.messagevalue,
-		);
+	const messageValueOptionsNormalised = useMemo(
+		() =>
+			withDefaultOption(
+				iftttMessageValueOptions,
+				defaults?.params?.messagevalue,
+			),
+		[defaults?.params?.messagevalue],
+	);
 
-		if (defaultMessageValue)
-			return [
-				{
-					label: `${defaultMessageValue.label} (default)`,
-					value: nullString,
-				},
-				...iftttMessageValueOptions,
-			];
-
-		return iftttMessageValueOptions;
-	}, [defaults?.params?.messagevalue]);
-
-	const titleValueOptionsNormalised = useMemo(() => {
-		const defaultTitleValue = normaliseForSelect(
-			iftttTitleValueOptions,
-			defaults?.params?.titlevalue,
-		);
-
-		if (defaultTitleValue)
-			return [
-				{
-					label: `${defaultTitleValue.label} (default)`,
-					value: nullString,
-				},
-				...iftttTitleValueOptions,
-			];
-
-		return iftttTitleValueOptions;
-	}, [defaults?.params?.titlevalue]);
+	const titleValueOptionsNormalised = useMemo(
+		() =>
+			withDefaultOption(iftttTitleValueOptions, defaults?.params?.titlevalue),
+		[defaults?.params?.titlevalue],
+	);
 
 	return (
 		<FieldSet className="col-span-full grid grid-cols-subgrid">

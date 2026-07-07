@@ -9,7 +9,7 @@ import {
 	Heading,
 	NotifyOptions,
 } from '@/components/modals/service-edit/notify-types/shared';
-import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import { withDefaultOption } from '@/components/modals/service-edit/util';
 import { FieldSet } from '@/components/ui/field';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import {
@@ -19,7 +19,6 @@ import {
 	barkSoundOptions,
 } from '@/utils/api/types/config/notify/bark';
 import type { NotifyBarkSchema } from '@/utils/api/types/config-edit/notify/schemas';
-import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { ensureValue } from '@/utils/form-utils';
 
 /**
@@ -55,35 +54,20 @@ const BARK = ({ name, main }: { name: string; main?: NotifyBarkSchema }) => {
 		});
 	}, [main]);
 
-	const barkSchemeOptionsNormalised = useMemo(() => {
-		const defaultScheme = normaliseForSelect(
-			barkSchemeOptions,
-			defaults?.params?.scheme,
-		);
+	const barkSchemeOptionsNormalised = useMemo(
+		() => withDefaultOption(barkSchemeOptions, defaults?.params?.scheme),
+		[defaults?.params?.scheme],
+	);
 
-		if (defaultScheme)
-			return [
-				{ label: `${defaultScheme.label} (default)`, value: nullString },
-				...barkSchemeOptions,
-			];
-
-		return barkSchemeOptions;
-	}, [defaults?.params?.scheme]);
-
-	const barkSoundOptionsNormalised = useMemo(() => {
-		const defaultSound = normaliseForSelect(
-			barkSoundOptions,
-			defaults?.params?.sound,
-		);
-
-		if (defaultSound)
-			return [
-				{ label: `${defaultSound.label} (default)`, value: nullString },
-				...barkSoundOptions.filter((option) => option.value !== ''),
-			];
-
-		return barkSoundOptions;
-	}, [defaults?.params?.sound]);
+	const barkSoundOptionsNormalised = useMemo(
+		() =>
+			withDefaultOption(
+				barkSoundOptions,
+				defaults?.params?.sound,
+				barkSoundOptions.filter((option) => option.value !== ''),
+			),
+		[defaults?.params?.sound],
+	);
 
 	return (
 		<FieldSet className="col-span-full grid grid-cols-subgrid">

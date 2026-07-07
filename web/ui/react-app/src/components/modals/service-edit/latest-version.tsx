@@ -8,7 +8,7 @@ import {
 } from '@/components/generic/field';
 import EditServiceLatestVersionRequire from '@/components/modals/service-edit/latest-version-require';
 import FormURLCommands from '@/components/modals/service-edit/latest-version-urlcommands';
-import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import { withDefaultOption } from '@/components/modals/service-edit/util';
 import VersionWithLink from '@/components/modals/service-edit/version-with-link';
 import VersionWithRefresh from '@/components/modals/service-edit/version-with-refresh';
 import {
@@ -47,20 +47,10 @@ const EditServiceLatestVersion = () => {
 	const defaultType = schemaDataDefaults?.latest_version?.type;
 
 	// Add default to type options.
-	const typeOptions = useMemo(() => {
-		const defaultScheme = normaliseForSelect(
-			latestVersionLookupTypeOptions,
-			defaultType,
-		);
-
-		if (defaultScheme)
-			return [
-				{ label: `${defaultScheme.label} (default)`, value: nullString },
-				...latestVersionLookupTypeOptions,
-			];
-
-		return latestVersionLookupTypeOptions;
-	}, [defaultType]);
+	const typeOptions = useMemo(
+		() => withDefaultOption(latestVersionLookupTypeOptions, defaultType),
+		[defaultType],
+	);
 
 	const urlTooltipText =
 		latestVersionType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value

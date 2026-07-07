@@ -6,7 +6,7 @@ import {
 	Heading,
 	NotifyOptions,
 } from '@/components/modals/service-edit/notify-types/shared';
-import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import { withDefaultOption } from '@/components/modals/service-edit/util';
 import { FieldSet } from '@/components/ui/field';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import {
@@ -14,7 +14,6 @@ import {
 	zulipTypeOptions,
 } from '@/utils/api/types/config/notify/zulip';
 import type { NotifyZulipSchema } from '@/utils/api/types/config-edit/notify/schemas';
-import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { ensureValue } from '@/utils/form-utils';
 
 /**
@@ -49,20 +48,10 @@ const ZULIP_CHAT = ({
 		});
 	}, [main]);
 
-	const zulipTypeOptionsNormalised = useMemo(() => {
-		const defaultType = normaliseForSelect(
-			zulipTypeOptions,
-			defaults?.params?.type,
-		);
-
-		if (defaultType)
-			return [
-				{ label: `${defaultType.label} (default)`, value: nullString },
-				...zulipTypeOptions,
-			];
-
-		return zulipTypeOptions;
-	}, [defaults?.params?.type]);
+	const zulipTypeOptionsNormalised = useMemo(
+		() => withDefaultOption(zulipTypeOptions, defaults?.params?.type),
+		[defaults?.params?.type],
+	);
 
 	return (
 		<FieldSet className="col-span-full grid grid-cols-subgrid">

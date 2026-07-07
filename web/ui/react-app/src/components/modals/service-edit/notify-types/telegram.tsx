@@ -6,7 +6,7 @@ import {
 	Heading,
 	NotifyOptions,
 } from '@/components/modals/service-edit/notify-types/shared';
-import { normaliseForSelect } from '@/components/modals/service-edit/util';
+import { withDefaultOption } from '@/components/modals/service-edit/util';
 import { FieldSet } from '@/components/ui/field';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import {
@@ -48,20 +48,11 @@ const TELEGRAM = ({
 		});
 	}, [main]);
 
-	const telegramParseModeOptions = useMemo(() => {
-		const defaultParseMode = normaliseForSelect(
-			telegramParsemodeOptions,
-			defaults?.params?.parsemode,
-		);
-
-		if (defaultParseMode)
-			return [
-				{ label: `${defaultParseMode.label} (default)`, value: '' },
-				...telegramParsemodeOptions,
-			];
-
-		return telegramParsemodeOptions;
-	}, [defaults?.params?.parsemode]);
+	const telegramParseModeOptions = useMemo(
+		() =>
+			withDefaultOption(telegramParsemodeOptions, defaults?.params?.parsemode),
+		[defaults?.params?.parsemode],
+	);
 
 	return (
 		<FieldSet className="col-span-full grid grid-cols-subgrid">
