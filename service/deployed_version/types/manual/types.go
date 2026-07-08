@@ -39,7 +39,7 @@ type Lookup struct {
 	base.Lookup `json:",inline" yaml:",inline"`
 
 	mu      sync.RWMutex // Lock for the Lookup.
-	Version string       `json:"version,omitempty" yaml:"version,omitempty"` // OPTIONAL: Version to initialise with/set to.
+	Version string       `json:"version,omitzero" yaml:"version,omitzero"` // OPTIONAL: Version to initialise with/set to.
 }
 
 // #########

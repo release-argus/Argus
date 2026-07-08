@@ -22,15 +22,15 @@ import "github.com/release-argus/Argus/util"
 
 // ContainerDetail holds the image and tag for a Docker registry query.
 type ContainerDetail struct {
-	Image    string                   `json:"image,omitempty" yaml:"image,omitempty"` // Image of the container.
-	Tag      string                   `json:"tag,omitempty" yaml:"tag,omitempty"`     // Tag of the Image.
-	Defaults *ContainerDetailDefaults `json:"-" yaml:"-"`                             // Tag default chain.
+	Image    string                   `json:"image,omitzero" yaml:"image,omitzero"` // Image of the container.
+	Tag      string                   `json:"tag,omitzero" yaml:"tag,omitzero"`     // Tag of the Image.
+	Defaults *ContainerDetailDefaults `json:"-" yaml:"-"`                           // Tag default chain.
 }
 
 // ContainerDetailDefaults holds default container values.
 type ContainerDetailDefaults struct {
-	Tag      string                   `json:"tag,omitempty" yaml:"tag,omitempty"` // Default Tag template.
-	Defaults *ContainerDetailDefaults `json:"-" yaml:"-"`                         // Next link in the defaults chain.
+	Tag      string                   `json:"tag,omitzero" yaml:"tag,omitzero"` // Default Tag template.
+	Defaults *ContainerDetailDefaults `json:"-" yaml:"-"`                       // Next link in the defaults chain.
 }
 
 // #########

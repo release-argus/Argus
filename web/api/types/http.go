@@ -37,6 +37,6 @@ type WebSocketTokenAPI struct {
 
 // Response is a generic API response body.
 type Response struct {
-	Error   string `json:"error,omitempty"`
-	Message string `json:"message,omitempty"`
+	Error   string `json:"error,omitzero"`
+	Message string `json:"message,omitzero"`
 }

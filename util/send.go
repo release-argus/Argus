@@ -32,7 +32,7 @@ func RetryWithBackoff(
 ) error {
 	var errs []error
 
-	for try := uint8(0); try < maxTries; try++ {
+	for try := range maxTries {
 		// Stop retrying?
 		if shouldStop != nil && shouldStop() {
 			return nil

@@ -15,8 +15,9 @@
 package docker
 
 import (
+	"slices"
+
 	"github.com/release-argus/Argus/config/decode"
-	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/polymorphic"
 )
 
@@ -26,7 +27,7 @@ import (
 
 // Defaults are the default values for DockerCheck.
 type Defaults struct {
-	Type                    string                          `json:"type,omitempty" yaml:"type,omitempty"` // Type of the Docker registry.
+	Type                    string                          `json:"type,omitzero" yaml:"type,omitzero"` // Type of the Docker registry.
 	ContainerDetailDefaults `json:",inline" yaml:",inline"` // Default Tag template.
 	Registry                RegistryDefaultsSet             `json:"registry,omitzero" yaml:"registry,omitzero"` // Registry-specific defaults.
 	Defaults                *Defaults                       `json:"-" yaml:"-"`                                 // Defaults to fall back on.
@@ -156,7 +157,7 @@ func (d *Defaults) CheckValues() error {
 	}
 
 	// Type.
-	if d.Type != "" && !util.Contains(PossibleTypes, d.Type) {
+	if d.Type != "" && !slices.Contains(PossibleTypes, d.Type) {
 		return polymorphic.InvalidTypeError{
 			Key:     "type",
 			Value:   d.Type,

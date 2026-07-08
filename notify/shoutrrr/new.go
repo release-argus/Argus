@@ -31,7 +31,7 @@ type TestPayload struct {
 	ServiceName       string                  `json:"service_name"`
 	Name              string                  `json:"name"`
 	NamePrevious      string                  `json:"name_previous"`
-	Type              string                  `json:"type,omitempty"`
+	Type              string                  `json:"type"`
 	Options           MapStringStringOmitNull `json:"options"`
 	URLFields         MapStringStringOmitNull `json:"url_fields"`
 	Params            MapStringStringOmitNull `json:"params"`

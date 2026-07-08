@@ -16,6 +16,7 @@
 package status
 
 import (
+	"maps"
 	"strconv"
 	"strings"
 	"sync"
@@ -330,9 +331,7 @@ func (f *Fails) Copy(from *Fails) {
 	defer from.Shoutrrr.mu.RUnlock()
 
 	f.Shoutrrr.fails = make(map[string]*bool, len(from.Shoutrrr.fails))
-	for key, fail := range from.Shoutrrr.fails {
-		f.Shoutrrr.fails[key] = fail
-	}
+	maps.Copy(f.Shoutrrr.fails, from.Shoutrrr.fails)
 
 	// WebHook.
 	f.WebHook.mu.Lock()
@@ -341,9 +340,7 @@ func (f *Fails) Copy(from *Fails) {
 	defer from.WebHook.mu.RUnlock()
 
 	f.WebHook.fails = make(map[string]*bool, len(from.WebHook.fails))
-	for key, fail := range from.WebHook.fails {
-		f.WebHook.fails[key] = fail
-	}
+	maps.Copy(f.WebHook.fails, from.WebHook.fails)
 }
 
 // resetFails clears command, shoutrrr, and webhook failure tracking.

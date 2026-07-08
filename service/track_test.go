@@ -19,6 +19,7 @@ package service
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -30,7 +31,6 @@ import (
 
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
-	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/web/metric"
 )
@@ -91,7 +91,7 @@ func TestServices_Track(t *testing.T) {
 			// THEN: the function exits straight away.
 			time.Sleep(2 * time.Second)
 			for i := range *services {
-				if !util.Contains(tc.ordering, i) {
+				if !slices.Contains(tc.ordering, i) {
 					if wantLatestVersion := ""; (*services)[i].Status.LatestVersion() != wantLatestVersion {
 						t.Fatalf(
 							"%s query on Services[%q] shouldn't have happened as not in ordering\ngot:  latest_version=%q\nwant: latest_version=%q\norder: %v",

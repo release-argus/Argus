@@ -16,8 +16,8 @@ package github
 
 // Defaults are the GitHub-specific default values for a Lookup.
 type Defaults struct {
-	AccessToken   string `json:"access_token,omitempty" yaml:"access_token,omitempty"`     // Access token to use.
-	UsePreRelease *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"` // Whether releases with prerelease tag are considered.
+	AccessToken   string `json:"access_token,omitzero" yaml:"access_token,omitzero"`     // Access token to use.
+	UsePreRelease *bool  `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"` // Whether releases with prerelease tag are considered.
 }
 
 // IsZero implements the yaml.IsZeroer interface.

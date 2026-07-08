@@ -52,12 +52,12 @@ func (d Defaults) IsZero() bool {
 
 // DefaultsDecode is an unmarshal-only helper for [Defaults].
 type DefaultsDecode struct {
-	Options               opt.Defaults              `json:"options,omitempty" yaml:"options,omitempty"`
-	DeployedVersionLookup deployedver_base.Defaults `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"`
+	Options               opt.Defaults              `json:"options,omitzero" yaml:"options,omitzero"`
+	DeployedVersionLookup deployedver_base.Defaults `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"`
 	Notify                map[string]struct{}       `json:"notify,omitempty" yaml:"notify,omitempty"`
 	Command               command.Commands          `json:"command,omitempty" yaml:"command,omitempty"`
 	WebHook               map[string]struct{}       `json:"webhook,omitempty" yaml:"webhook,omitempty"`
-	Dashboard             dashboard.Defaults        `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`
+	Dashboard             dashboard.Defaults        `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.

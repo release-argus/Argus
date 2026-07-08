@@ -17,6 +17,7 @@ package testing
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -161,7 +162,7 @@ func getAllShoutrrrNames(cfg *config.Config) (all []string) {
 	if cfg.Service != nil {
 		for _, svc := range cfg.Service {
 			for key := range svc.Notify {
-				if !util.Contains(all, key) {
+				if !slices.Contains(all, key) {
 					all = append(all, key)
 				}
 			}

@@ -49,7 +49,7 @@ type Shoutrrrs map[string]*Shoutrrr
 
 // Base is the base Shoutrrr.
 type Base struct {
-	Type      string                  `json:"type,omitempty" yaml:"type,omitempty"`             // Notification type, e.g. slack.
+	Type      string                  `json:"type,omitzero" yaml:"type,omitzero"`               // Notification type, e.g. slack.
 	Options   MapStringStringOmitNull `json:"options,omitempty" yaml:"options,omitempty"`       // Options.
 	URLFields MapStringStringOmitNull `json:"url_fields,omitempty" yaml:"url_fields,omitempty"` // URL Fields.
 	Params    MapStringStringOmitNull `json:"params,omitempty" yaml:"params,omitempty"`         // Query/Param Props.
@@ -59,7 +59,7 @@ type Base struct {
 type Shoutrrr struct {
 	Base `json:",inline" yaml:",inline"`
 
-	ID string `json:"name,omitempty" yaml:"-"` // ID for this Shoutrrr sender.
+	ID string `json:"name,omitzero" yaml:"-"` // ID for this Shoutrrr sender.
 
 	Failed        *status.FailsShoutrrr `json:"-" yaml:"-"` // Whether the last send attempt failed.
 	ServiceStatus *status.Status        `json:"-" yaml:"-"` // Status of the Service (used for templating commands).

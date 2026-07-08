@@ -17,13 +17,13 @@ package shared
 
 // OldIntIndex is an integer index reference used when restoring SecretValues.
 type OldIntIndex struct {
-	OldIndex *int `json:"old_index,omitempty"`
+	OldIndex *int `json:"old_index,omitzero"`
 }
 
 // OldStringIndex is a named string index reference used when restoring SecretValues.
 type OldStringIndex struct {
-	Name     string `json:"name,omitempty"`
-	OldIndex string `json:"old_index,omitempty"`
+	Name     string `json:"name,omitzero"`
+	OldIndex string `json:"old_index,omitzero"`
 }
 
 // VSecretRef contains the reference for the Headers SecretValues.
@@ -33,7 +33,7 @@ type VSecretRef struct {
 
 // WHSecretRef contains the reference for the WebHook SecretValues.
 type WHSecretRef struct {
-	Name     string        `json:"name,omitempty"`
-	OldIndex string        `json:"old_index,omitempty"`
+	Name     string        `json:"name,omitzero"`
+	OldIndex string        `json:"old_index,omitzero"`
 	Headers  []OldIntIndex `json:"headers,omitempty"`
 }

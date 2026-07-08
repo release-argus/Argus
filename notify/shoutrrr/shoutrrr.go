@@ -18,6 +18,7 @@ package shoutrrr
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math/rand"
 	net_url "net/url"
 	"strings"
@@ -318,9 +319,7 @@ func (s *Shoutrrr) BuildParams(info serviceinfo.ServiceInfo) *types.Params {
 	params := make(types.Params, len(s.Params)+len(s.Main.Params))
 
 	// Service Params.
-	for key, value := range s.Params {
-		params[key] = value
-	}
+	maps.Copy(params, s.Params)
 
 	// Main Params.
 	for key, value := range s.Main.Params {

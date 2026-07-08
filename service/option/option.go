@@ -35,8 +35,8 @@ type DefaultsConfig struct {
 
 // Base is the base struct for Options.
 type Base struct {
-	Interval           string `json:"interval,omitempty" yaml:"interval,omitempty"`                       // AhBmCs = Sleep A hours, B minutes, and C seconds between queries.
-	SemanticVersioning *bool  `json:"semantic_versioning,omitempty" yaml:"semantic_versioning,omitempty"` // Default - true = Version has to follow semantic versioning (https://semver.org/), and be greater than the previous to trigger anything.
+	Interval           string `json:"interval,omitzero" yaml:"interval,omitzero"`                       // AhBmCs = Sleep A hours, B minutes, and C seconds between queries.
+	SemanticVersioning *bool  `json:"semantic_versioning,omitzero" yaml:"semantic_versioning,omitzero"` // Default - true = Version has to follow semantic versioning (https://semver.org/), and be greater than the previous to trigger anything.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -69,7 +69,7 @@ func (d *Defaults) Default() {
 type Options struct {
 	Base `json:",inline" yaml:",inline"`
 
-	Active *bool `json:"active,omitempty" yaml:"active,omitempty"` // Disable the service.
+	Active *bool `json:"active,omitzero" yaml:"active,omitzero"` // Disable the service.
 
 	Defaults     *Defaults `json:"-" yaml:"-"` // Defaults.
 	HardDefaults *Defaults `json:"-" yaml:"-"` // Hard Defaults.

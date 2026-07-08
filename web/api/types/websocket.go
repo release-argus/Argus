@@ -19,13 +19,13 @@ import "github.com/release-argus/Argus/config/decode"
 
 // WebSocketMessage is the message format to send/receive.
 type WebSocketMessage struct {
-	Version     *int                       `json:"version,omitempty"`
+	Version     *int                       `json:"version,omitzero"`
 	Page        string                     `json:"page"`
 	Type        string                     `json:"type"`
-	SubType     string                     `json:"sub_type,omitempty"`
-	Target      *string                    `json:"target,omitempty"`
+	SubType     string                     `json:"sub_type,omitzero"`
+	Target      *string                    `json:"target,omitzero"`
 	Order       *[]string                  `json:"order,omitempty"`
-	ServiceData *ServiceSummary            `json:"service_data,omitempty"`
+	ServiceData *ServiceSummary            `json:"service_data,omitzero"`
 	CommandData map[string]*CommandSummary `json:"command_data,omitempty"`
 	WebHookData map[string]*WebHookSummary `json:"webhook_data,omitempty"`
 }

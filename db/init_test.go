@@ -23,6 +23,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -536,7 +537,7 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 				)
 				err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
 				svc := tAPI.config.Service[id]
-				if svc == nil || !util.Contains(tAPI.config.Order, id) {
+				if svc == nil || !slices.Contains(tAPI.config.Order, id) {
 					t.Errorf(
 						"%s %q should have been removed from the table",
 						prefix, id,

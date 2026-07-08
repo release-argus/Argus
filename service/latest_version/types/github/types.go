@@ -36,8 +36,8 @@ var Type = "github"
 type Lookup struct {
 	base.Lookup `json:",inline" yaml:",inline"`
 
-	AccessToken   string `json:"access_token,omitempty" yaml:"access_token,omitempty"`     // GitHub access token to use.
-	UsePreRelease *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"` // Whether releases with the prerelease tag should be considered.
+	AccessToken   string `json:"access_token,omitzero" yaml:"access_token,omitzero"`     // GitHub access token to use.
+	UsePreRelease *bool  `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"` // Whether releases with the prerelease tag should be considered.
 
 	data Data // GitHub Conditional Request vars / Releases.
 
@@ -47,8 +47,8 @@ type Lookup struct {
 
 // LookupDecode is an unmarshal-only helper for [Lookup].
 type LookupDecode struct {
-	AccessToken   string `json:"access_token,omitempty" yaml:"access_token,omitempty"`
-	UsePreRelease *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"`
+	AccessToken   string `json:"access_token,omitzero" yaml:"access_token,omitzero"`
+	UsePreRelease *bool  `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"`
 }
 
 // ############

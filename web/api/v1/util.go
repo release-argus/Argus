@@ -101,7 +101,7 @@ func (api *API) announceOrder() {
 func ConstantTimeCompare(x, y [32]byte) bool {
 	var result byte
 
-	for i := 0; i < len(x); i++ {
+	for i := range len(x) {
 		result |= x[i] ^ y[i]
 	}
 

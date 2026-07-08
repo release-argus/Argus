@@ -32,12 +32,12 @@ var extractServiceSubtree = polymorphic.Extract
 
 // Config for Argus.
 type Config struct {
-	File         string                     `json:"-" yaml:"-"`                                   // Path to the config file (--config.file='').
-	Settings     Settings                   `json:"settings,omitempty" yaml:"settings,omitempty"` // Settings for the program.
-	HardDefaults Defaults                   `json:"-" yaml:"-"`                                   // Hardcoded default values for the various parameters.
-	Defaults     Defaults                   `json:"defaults,omitempty" yaml:"defaults,omitempty"` // Default values for the various parameters.
-	Notify       shoutrrr.ShoutrrrsDefaults `json:"notify,omitempty" yaml:"notify,omitempty"`     // Shoutrrr messages to send on a new release.
-	WebHook      webhook.WebHooksDefaults   `json:"webhook,omitempty" yaml:"webhook,omitempty"`   // WebHooks to send on a new release.
+	File         string                     `json:"-" yaml:"-"`                                 // Path to the config file (--config.file='').
+	Settings     Settings                   `json:"settings,omitzero" yaml:"settings,omitzero"` // Settings for the program.
+	HardDefaults Defaults                   `json:"-" yaml:"-"`                                 // Hardcoded default values for the various parameters.
+	Defaults     Defaults                   `json:"defaults,omitzero" yaml:"defaults,omitzero"` // Default values for the various parameters.
+	Notify       shoutrrr.ShoutrrrsDefaults `json:"notify,omitempty" yaml:"notify,omitempty"`   // Shoutrrr messages to send on a new release.
+	WebHook      webhook.WebHooksDefaults   `json:"webhook,omitempty" yaml:"webhook,omitempty"` // WebHooks to send on a new release.
 
 	OrderMu sync.RWMutex     `json:"-" yaml:"-"`                                 // Mutex for the Order/Service slice.
 	Order   []string         `json:"-" yaml:"-"`                                 // Ordered slice of all Service id's.
@@ -49,10 +49,10 @@ type Config struct {
 
 // ConfigDecode is an unmarshal-only helper for [Config].
 type ConfigDecode struct {
-	Settings Settings                   `json:"settings,omitempty" yaml:"settings,omitempty"`
+	Settings Settings                   `json:"settings,omitzero" yaml:"settings,omitzero"`
 	Notify   shoutrrr.ShoutrrrsDefaults `json:"notify,omitempty" yaml:"notify,omitempty"`
 	WebHook  webhook.WebHooksDefaults   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
-	Defaults Defaults                   `json:"defaults,omitempty" yaml:"defaults,omitempty"`
+	Defaults Defaults                   `json:"defaults,omitzero" yaml:"defaults,omitzero"`
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.

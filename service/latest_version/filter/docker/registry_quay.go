@@ -237,7 +237,7 @@ func (r *QuayRegistry) Check(version string) error {
 
 // QuayAuthDefaults holds authentication defaults for Quay.
 type QuayAuthDefaults struct {
-	Token string `json:"token,omitempty" yaml:"token,omitempty"` // Token for registry queries.
+	Token string `json:"token,omitzero" yaml:"token,omitzero"` // Token for registry queries.
 
 	// defaults form a fallback chain:
 	//

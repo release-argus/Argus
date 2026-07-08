@@ -28,10 +28,10 @@ import (
 
 // OptionsBase are the base options for the Dashboard.
 type OptionsBase struct {
-	AutoApprove *bool  `json:"auto_approve,omitempty" yaml:"auto_approve,omitempty"` // Default - true = Require approval before sending WebHooks for new releases.
-	Icon        string `json:"icon,omitempty" yaml:"icon,omitempty"`                 // Icon URL to use for messages/Web UI.
-	IconLinkTo  string `json:"icon_link_to,omitempty" yaml:"icon_link_to,omitempty"` // URL to redirect Icon clicks to.
-	WebURL      string `json:"web_url,omitempty" yaml:"web_url,omitempty"`           // URL to provide on the Web UI.
+	AutoApprove *bool  `json:"auto_approve,omitzero" yaml:"auto_approve,omitzero"` // Default - true = Require approval before sending WebHooks for new releases.
+	Icon        string `json:"icon,omitzero" yaml:"icon,omitzero"`                 // Icon URL to use for messages/Web UI.
+	IconLinkTo  string `json:"icon_link_to,omitzero" yaml:"icon_link_to,omitzero"` // URL to redirect Icon clicks to.
+	WebURL      string `json:"web_url,omitzero" yaml:"web_url,omitzero"`           // URL to provide on the Web UI.
 }
 
 // Options are options for the Dashboard.

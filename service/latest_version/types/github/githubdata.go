@@ -71,7 +71,7 @@ type Data struct {
 
 // DataJSON is the JSON representation of cached GitHub release data.
 type DataJSON struct {
-	ETag     string            `json:"etag,omitempty"`
+	ETag     string            `json:"etag,omitzero"`
 	Releases []ghtypes.Release `json:"releases,omitempty"`
 }
 

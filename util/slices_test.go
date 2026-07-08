@@ -24,52 +24,6 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 )
 
-func TestContains(t *testing.T) {
-	// GIVEN: lists of strings.
-	tests := []struct {
-		name        string
-		list        []string
-		contain     string
-		doesContain bool
-	}{
-		{
-			name:        "[]string does contain",
-			list:        []string{"hello", "hi", "hiya"},
-			contain:     "hi",
-			doesContain: true,
-		},
-		{
-			name:        "[]string does not contain",
-			list:        []string{"hello", "hi", "hiya"},
-			contain:     "howdy",
-			doesContain: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN: Contains is run on this slice.
-			var found bool
-			found = Contains(tc.list, tc.contain)
-
-			prefix := fmt.Sprintf(
-				"%s\nContains(list=%v, contain=%q)",
-				packageName, tc.list, tc.contain,
-			)
-
-			// THEN: true is returned if it does contain the item.
-			if found != tc.doesContain {
-				t.Errorf(
-					"%s mismatch\ngot:  %t\nwant: %t",
-					prefix, found, tc.doesContain,
-				)
-			}
-		})
-	}
-}
-
 func TestCopySlice(t *testing.T) {
 	// GIVEN: a set of int slices.
 	tests := []struct {

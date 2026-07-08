@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -2819,7 +2820,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 					packageName, tc.serviceID,
 				)
 			}
-			if util.Contains(api.Config.Order, tc.serviceID) {
+			if slices.Contains(api.Config.Order, tc.serviceID) {
 				t.Errorf(
 					"%s\nservice %q not removed from Order",
 					packageName, tc.serviceID,

@@ -18,6 +18,7 @@ package webhook
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"time"
 
@@ -166,7 +167,7 @@ func (b *Base) CheckValues() (error, bool) {
 	errs := make([]error, 0, 2)
 	changed := false
 	// type
-	if b.Type != "" && !util.Contains(supportedTypes, b.Type) {
+	if b.Type != "" && !slices.Contains(supportedTypes, b.Type) {
 		errs = append(
 			errs,
 			polymorphic.InvalidTypeError{

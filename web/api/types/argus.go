@@ -27,19 +27,19 @@ import (
 
 // ServiceSummary is the Summary of a Service.
 type ServiceSummary struct {
-	ID                  string    `json:"id,omitempty" yaml:"id,omitempty"`
-	Name                *string   `json:"name,omitempty" yaml:"name,omitempty"`                                   // Name for this Service.
-	Active              *bool     `json:"active,omitempty" yaml:"active,omitempty"`                               // Active Service?
-	Comment             *string   `json:"comment,omitempty" yaml:"comment,omitempty"`                             // Comment on the Service.
-	Type                string    `json:"type,omitempty" yaml:"type,omitempty"`                                   // "github"|"URL".
-	WebURL              *string   `json:"url,omitempty" yaml:"url,omitempty"`                                     // URL to provide on the Web UI.
-	Icon                *string   `json:"icon,omitempty" yaml:"icon,omitempty"`                                   // Service.Dashboard.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon.
-	IconLinkTo          *string   `json:"icon_link_to,omitempty" yaml:"icon_link_to,omitempty"`                   // URL to redirect Icon clicks to.
-	DeployedVersionType *string   `json:"deployed_version_type,omitempty" yaml:"deployed_version_type,omitempty"` // "manual"|"url", empty string if no DeployedVersionLookup.
-	Command             *int      `json:"command,omitempty" yaml:"command,omitempty"`                             // Amount of Commands to send on a new release.
-	WebHook             *int      `json:"webhook,omitempty" yaml:"webhook,omitempty"`                             // Amount of WebHooks to send on a new release.
-	Status              *Status   `json:"status,omitempty" yaml:"status,omitempty"`                               // Track the Status of this source (version and regex misses).
-	Tags                *[]string `json:"tags,omitempty" yaml:"tags,omitempty"`                                   // Tags for the Service.
+	ID                  string    `json:"id,omitzero" yaml:"id,omitzero"`
+	Name                *string   `json:"name,omitzero" yaml:"name,omitzero"`                                   // Name for this Service.
+	Active              *bool     `json:"active,omitzero" yaml:"active,omitzero"`                               // Active Service?
+	Comment             *string   `json:"comment,omitzero" yaml:"comment,omitzero"`                             // Comment on the Service.
+	Type                string    `json:"type,omitzero" yaml:"type,omitzero"`                                   // "github"|"URL".
+	WebURL              *string   `json:"url,omitzero" yaml:"url,omitzero"`                                     // URL to provide on the Web UI.
+	Icon                *string   `json:"icon,omitzero" yaml:"icon,omitzero"`                                   // Service.Dashboard.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon.
+	IconLinkTo          *string   `json:"icon_link_to,omitzero" yaml:"icon_link_to,omitzero"`                   // URL to redirect Icon clicks to.
+	DeployedVersionType *string   `json:"deployed_version_type,omitzero" yaml:"deployed_version_type,omitzero"` // "manual"|"url", empty string if no DeployedVersionLookup.
+	Command             *int      `json:"command,omitzero" yaml:"command,omitzero"`                             // Amount of Commands to send on a new release.
+	WebHook             *int      `json:"webhook,omitzero" yaml:"webhook,omitzero"`                             // Amount of WebHooks to send on a new release.
+	Status              *Status   `json:"status,omitempty" yaml:"status,omitempty"`                             // Track the Status of this source (version and regex misses).
+	Tags                *[]string `json:"tags,omitzero" yaml:"tags,omitzero"`                                   // Tags for the Service.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -142,18 +142,6 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 	s.WebHook = nilIfUnchanged(oldData.WebHook, s.WebHook)
 }
 
-// StatusFails is the fail status of each notifier/webhook.
-type StatusFails struct {
-	Notify  *[]bool `json:"notify,omitempty" yaml:"notify,omitempty"`   // Track whether any of the Notifiers failed.
-	WebHook *[]bool `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Track whether any of the WebHooks failed.
-}
-
-// StatusFailsSummary is the overall fail status of notifiers/webhooks.
-type StatusFailsSummary struct {
-	Notify  *bool `json:"notify,omitempty" yaml:"notify,omitempty"`   // Track whether any of the Notifiers failed.
-	WebHook *bool `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Track whether any of the WebHooks failed.
-}
-
 // ActionSummary is the summary of all Actions for a Service.
 type ActionSummary struct {
 	Command map[string]CommandSummary `json:"command" yaml:"command"` // Summary of all Commands.
@@ -162,39 +150,39 @@ type ActionSummary struct {
 
 // WebHookSummary is the summary of a WebHook.
 type WebHookSummary struct {
-	Failed       *bool     `json:"failed,omitempty" yaml:"failed,omitempty"`               // Whether this WebHook failed to send successfully for the LatestVersion.
+	Failed       *bool     `json:"failed,omitzero" yaml:"failed,omitzero"`                 // Whether this WebHook failed to send successfully for the LatestVersion.
 	NextRunnable time.Time `json:"next_runnable,omitempty" yaml:"next_runnable,omitempty"` // Time the WebHook can next run (for staggering).
 }
 
 // BuildInfo is information from build time.
 type BuildInfo struct {
-	Version   string `json:"version,omitempty" yaml:"version,omitempty"`
-	BuildDate string `json:"build_date,omitempty" yaml:"build_date,omitempty"`
-	GoVersion string `json:"go_version,omitempty" yaml:"go_version,omitempty"`
+	Version   string `json:"version,omitzero" yaml:"version,omitzero"`
+	BuildDate string `json:"build_date,omitzero" yaml:"build_date,omitzero"`
+	GoVersion string `json:"go_version,omitzero" yaml:"go_version,omitzero"`
 }
 
 // RuntimeInfo defines current runtime information.
 type RuntimeInfo struct {
-	StartTime      time.Time `json:"start_time,omitempty" yaml:"start_time,omitempty"`
-	CWD            string    `json:"cwd,omitempty" yaml:"cwd,omitempty"`
-	GoRoutineCount int       `json:"goroutines,omitempty" yaml:"goroutines,omitempty"`
-	GOMAXPROCS     int       `json:"GOMAXPROCS,omitempty" yaml:"GOMAXPROCS,omitempty"`
-	GoGC           string    `json:"GOGC,omitempty" yaml:"GOGC,omitempty"`
-	GoDebug        string    `json:"GODEBUG,omitempty" yaml:"GODEBUG,omitempty"`
+	StartTime      time.Time `json:"start_time,omitzero" yaml:"start_time,omitzero"`
+	CWD            string    `json:"cwd,omitzero" yaml:"cwd,omitzero"`
+	GoRoutineCount int       `json:"goroutines,omitzero" yaml:"goroutines,omitzero"`
+	GOMAXPROCS     int       `json:"GOMAXPROCS,omitzero" yaml:"GOMAXPROCS,omitzero"`
+	GoGC           string    `json:"GOGC,omitzero" yaml:"GOGC,omitzero"`
+	GoDebug        string    `json:"GODEBUG,omitzero" yaml:"GODEBUG,omitzero"`
 }
 
 // Flags define the runtime flags.
 type Flags struct {
-	ConfigFile       string `json:"config.file,omitempty" yaml:"config.file,omitempty"`
-	LogLevel         string `json:"log.level,omitempty" yaml:"log.level,omitempty"`
-	LogTimestamps    *bool  `json:"log.timestamps,omitempty" yaml:"log.timestamps,omitempty"`
-	DataDatabaseFile string `json:"data.database-file,omitempty" yaml:"data.database-file,omitempty"`
-	DataReadonly     bool   `json:"data.readonly,omitempty" yaml:"data.readonly,omitempty"`
-	WebListenHost    string `json:"web.listen-host,omitempty" yaml:"web.listen-host,omitempty"`
-	WebListenPort    string `json:"web.listen-port,omitempty" yaml:"web.listen-port,omitempty"`
+	ConfigFile       string `json:"config.file,omitzero" yaml:"config.file,omitzero"`
+	LogLevel         string `json:"log.level,omitzero" yaml:"log.level,omitzero"`
+	LogTimestamps    *bool  `json:"log.timestamps,omitzero" yaml:"log.timestamps,omitzero"`
+	DataDatabaseFile string `json:"data.database-file,omitzero" yaml:"data.database-file,omitzero"`
+	DataReadonly     bool   `json:"data.readonly" yaml:"data.readonly"`
+	WebListenHost    string `json:"web.listen-host,omitzero" yaml:"web.listen-host,omitzero"`
+	WebListenPort    string `json:"web.listen-port,omitzero" yaml:"web.listen-port,omitzero"`
 	WebCertFile      string `json:"web.cert-file" yaml:"web.cert-file"`
 	WebPKeyFile      string `json:"web.pkey-file" yaml:"web.pkey-file"`
-	WebRoutePrefix   string `json:"web.route-prefix,omitempty" yaml:"web.route-prefix,omitempty"`
+	WebRoutePrefix   string `json:"web.route-prefix,omitzero" yaml:"web.route-prefix,omitzero"`
 }
 
 // Defaults are the global defaults for vars.
@@ -248,8 +236,8 @@ func (s *Settings) IsZero() bool {
 
 // DataSettings contains data settings for the program.
 type DataSettings struct {
-	DatabaseFile string `json:"database_file,omitempty" yaml:"database_file,omitempty"` // Database file path.
-	Readonly     *bool  `json:"readonly,omitempty" yaml:"readonly,omitempty"`           // Disable saving config changes to disk.
+	DatabaseFile string `json:"database_file,omitzero" yaml:"database_file,omitzero"` // Database file path.
+	Readonly     *bool  `json:"readonly,omitzero" yaml:"readonly,omitzero"`           // Disable saving config changes to disk.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -260,8 +248,8 @@ func (d DataSettings) IsZero() bool {
 
 // LogSettings contains web settings for the program.
 type LogSettings struct {
-	Timestamps *bool  `json:"timestamps,omitempty" yaml:"timestamps,omitempty"` // Timestamps in command-line tool output.
-	Level      string `json:"level,omitempty" yaml:"level,omitempty"`           // Log level.
+	Timestamps *bool  `json:"timestamps,omitzero" yaml:"timestamps,omitzero"` // Timestamps in command-line tool output.
+	Level      string `json:"level,omitzero" yaml:"level,omitzero"`           // Log level.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -272,11 +260,11 @@ func (l LogSettings) IsZero() bool {
 
 // WebSettings contains web settings for the program.
 type WebSettings struct {
-	ListenHost     string   `json:"listen_host,omitempty" yaml:"listen_host,omitempty"`         // Web listen host.
-	ListenPort     string   `json:"listen_port,omitempty" yaml:"listen_port,omitempty"`         // Web listen port.
-	CertFile       string   `json:"cert_file,omitempty" yaml:"cert_file,omitempty"`             // HTTPS certificate path.
-	KeyFile        string   `json:"pkey_file,omitempty" yaml:"pkey_file,omitempty"`             // HTTPS privkey path.
-	RoutePrefix    string   `json:"route_prefix,omitempty" yaml:"route_prefix,omitempty"`       // Web endpoint prefix.
+	ListenHost     string   `json:"listen_host,omitzero" yaml:"listen_host,omitzero"`           // Web listen host.
+	ListenPort     string   `json:"listen_port,omitzero" yaml:"listen_port,omitzero"`           // Web listen port.
+	CertFile       string   `json:"cert_file,omitzero" yaml:"cert_file,omitzero"`               // HTTPS certificate path.
+	KeyFile        string   `json:"pkey_file,omitzero" yaml:"pkey_file,omitzero"`               // HTTPS privkey path.
+	RoutePrefix    string   `json:"route_prefix,omitzero" yaml:"route_prefix,omitzero"`         // Web endpoint prefix.
 	DisabledRoutes []string `json:"disabled_routes,omitempty" yaml:"disabled_routes,omitempty"` // Disabled API routes.
 }
 
@@ -328,8 +316,8 @@ func (n *Notifiers) Flatten() []Notify {
 
 // Notify is a message notifier source.
 type Notify struct {
-	ID        string            `json:"name,omitempty" yaml:"name,omitempty"`             // ID for this Notify sender.
-	Type      string            `json:"type,omitempty" yaml:"type,omitempty"`             // Notification type, e.g. slack.
+	ID        string            `json:"name,omitzero" yaml:"name,omitzero"`               // ID for this Notify sender.
+	Type      string            `json:"type,omitzero" yaml:"type,omitzero"`               // Notification type, e.g. slack.
 	Options   map[string]string `json:"options,omitempty" yaml:"options,omitempty"`       // Options.
 	URLFields map[string]string `json:"url_fields,omitempty" yaml:"url_fields,omitempty"` // URL Fields.
 	Params    map[string]string `json:"params,omitempty" yaml:"params,omitempty"`         // Param props.
@@ -366,16 +354,16 @@ type Services map[string]*Service
 
 // Service defines a software source to track and where/what to notify.
 type Service struct {
-	Name                  string                 `json:"name,omitempty" yaml:"name,omitempty"`                         // Name for this Service.
-	Comment               string                 `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Extra detail on the Service..
-	Options               ServiceOptions         `json:"options,omitzero" yaml:"options,omitzero"`                     // Options to give the Service Lookup's.
-	LatestVersion         *LatestVersion         `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Latest version lookup for the Service.
-	Notify                Notifiers              `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Service-specific Notify configuration.
-	Command               Commands               `json:"command,omitempty" yaml:"command,omitempty"`                   // CLI Commands to run on new release.
-	WebHook               WebHooks               `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Service-specific WebHook configuration.
-	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Configuration to scrape the Service's current deployed version.
-	Dashboard             DashboardOptions       `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`                 // Dashboard options.
-	Status                *Status                `json:"status,omitempty" yaml:"status,omitempty"`                     // Track the Status of this source (version and regex misses).
+	Name                  string                 `json:"name,omitzero" yaml:"name,omitzero"`                         // Name for this Service.
+	Comment               string                 `json:"comment,omitzero" yaml:"comment,omitzero"`                   // Extra detail on the Service..
+	Options               ServiceOptions         `json:"options,omitzero" yaml:"options,omitzero"`                   // Options to give the Service Lookup's.
+	LatestVersion         *LatestVersion         `json:"latest_version,omitzero" yaml:"latest_version,omitzero"`     // Latest version lookup for the Service.
+	Notify                Notifiers              `json:"notify,omitempty" yaml:"notify,omitempty"`                   // Service-specific Notify configuration.
+	Command               Commands               `json:"command,omitempty" yaml:"command,omitempty"`                 // CLI Commands to run on new release.
+	WebHook               WebHooks               `json:"webhook,omitempty" yaml:"webhook,omitempty"`                 // Service-specific WebHook configuration.
+	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"` // Configuration to scrape the Service's current deployed version.
+	Dashboard             DashboardOptions       `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`               // Dashboard options.
+	Status                *Status                `json:"status,omitempty" yaml:"status,omitempty"`                   // Track the Status of this source (version and regex misses).
 }
 
 // String implements fmt.Stringer and returns a JSON representation.
@@ -388,7 +376,7 @@ func (r *Service) String() string {
 
 // ServiceDefaults defines default values for a Service.
 type ServiceDefaults struct {
-	Comment               string                        `json:"comment,omitempty" yaml:"comment,omitempty"`                 // Comment on the Service.
+	Comment               string                        `json:"comment,omitzero" yaml:"comment,omitzero"`                   // Comment on the Service.
 	Options               ServiceOptions                `json:"options,omitzero" yaml:"options,omitzero"`                   // Options to give the Service.
 	LatestVersion         LatestVersionDefaults         `json:"latest_version,omitzero" yaml:"latest_version,omitzero"`     // Latest version lookup for the Service.
 	Notify                []string                      `json:"notify,omitempty" yaml:"notify,omitempty"`                   // Service-specific Notify configuration.
@@ -412,9 +400,9 @@ func (d ServiceDefaults) IsZero() bool {
 
 // ServiceOptions defines configuration options for a service.
 type ServiceOptions struct {
-	Active             *bool  `json:"active,omitempty" yaml:"active,omitempty"`                           // Active Service?.
-	Interval           string `json:"interval,omitempty" yaml:"interval,omitempty"`                       // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
-	SemanticVersioning *bool  `json:"semantic_versioning,omitempty" yaml:"semantic_versioning,omitempty"` // Default - true = Version must exceed the previous version to trigger alerts/Commands/WebHooks.
+	Active             *bool  `json:"active,omitzero" yaml:"active,omitzero"`                           // Active Service?.
+	Interval           string `json:"interval,omitzero" yaml:"interval,omitzero"`                       // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
+	SemanticVersioning *bool  `json:"semantic_versioning,omitzero" yaml:"semantic_versioning,omitzero"` // Default - true = Version must exceed the previous version to trigger alerts/Commands/WebHooks.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -426,11 +414,11 @@ func (o ServiceOptions) IsZero() bool {
 
 // DashboardOptions defines configuration options for a service on the Web UI dashboard.
 type DashboardOptions struct {
-	AutoApprove *bool    `json:"auto_approve,omitempty" yaml:"auto_approve,omitempty"` // Default - true = Require approval before actioning new releases.
-	Icon        string   `json:"icon,omitempty" yaml:"icon,omitempty"`                 // Icon URL to use for messages/Web UI.
-	IconLinkTo  string   `json:"icon_link_to,omitempty" yaml:"icon_link_to,omitempty"` // URL to redirect Icon clicks to.
-	WebURL      string   `json:"web_url,omitempty" yaml:"web_url,omitempty"`           // URL to provide on the Web UI.
-	Tags        []string `json:"tags,omitempty" yaml:"tags,omitempty"`                 // Tags for the Service.
+	AutoApprove *bool    `json:"auto_approve,omitzero" yaml:"auto_approve,omitzero"` // Default - true = Require approval before actioning new releases.
+	Icon        string   `json:"icon,omitzero" yaml:"icon,omitzero"`                 // Icon URL to use for messages/Web UI.
+	IconLinkTo  string   `json:"icon_link_to,omitzero" yaml:"icon_link_to,omitzero"` // URL to redirect Icon clicks to.
+	WebURL      string   `json:"web_url,omitzero" yaml:"web_url,omitzero"`           // URL to provide on the Web UI.
+	Tags        []string `json:"tags,omitempty" yaml:"tags,omitempty"`               // Tags for the Service.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -444,14 +432,14 @@ func (d DashboardOptions) IsZero() bool {
 
 // LatestVersion lookup of the service.
 type LatestVersion struct {
-	Type              string                `json:"type,omitempty" yaml:"type,omitempty"`                               // Service Type, github/url.
-	URL               string                `json:"url,omitempty" yaml:"url,omitempty"`                                 // URL to query.
-	AccessToken       string                `json:"access_token,omitempty" yaml:"access_token,omitempty"`               // GitHub access token to use.
-	AllowInvalidCerts *bool                 `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
-	UsePreRelease     *bool                 `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"`           // Whether to use GitHub prereleases.
-	URLCommands       URLCommands           `json:"url_commands,omitempty" yaml:"url_commands,omitempty"`               // Commands to filter the release from the URL request.
-	Headers           []Header              `json:"headers,omitempty" yaml:"headers,omitempty"`                         // Request Headers.
-	Require           *LatestVersionRequire `json:"require,omitempty" yaml:"require,omitempty"`                         // Requirements before treating a release as valid.
+	Type              string                `json:"type,omitzero" yaml:"type,omitzero"`                               // Service Type, github/url.
+	URL               string                `json:"url,omitzero" yaml:"url,omitzero"`                                 // URL to query.
+	AccessToken       string                `json:"access_token,omitzero" yaml:"access_token,omitzero"`               // GitHub access token to use.
+	AllowInvalidCerts *bool                 `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Default - false = Disallows invalid HTTPS certificates.
+	UsePreRelease     *bool                 `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"`           // Whether to use GitHub prereleases.
+	URLCommands       URLCommands           `json:"url_commands,omitempty" yaml:"url_commands,omitempty"`             // Commands to filter the release from the URL request.
+	Headers           []Header              `json:"headers,omitempty" yaml:"headers,omitempty"`                       // Request Headers.
+	Require           *LatestVersionRequire `json:"require,omitzero" yaml:"require,omitzero"`                         // Requirements before treating a release as valid.
 }
 
 // String implements fmt.Stringer and returns a JSON representation.
@@ -466,7 +454,7 @@ func (r *LatestVersion) String() string {
 // every registered type live under 'common', and fields specific to a single type
 // live under that type's own key.
 type LatestVersionDefaults struct {
-	Type   string                      `json:"type,omitempty" yaml:"type,omitempty"` // "github" | "url".
+	Type   string                      `json:"type,omitzero" yaml:"type,omitzero"` // "github" | "url".
 	Common LatestVersionCommonDefaults `json:"common,omitzero" yaml:"common,omitzero"`
 	GitHub LatestVersionGitHubDefaults `json:"github,omitzero" yaml:"github,omitzero"`
 	URL    LatestVersionURLDefaults    `json:"url,omitzero" yaml:"url,omitzero"`
@@ -492,8 +480,8 @@ func (l LatestVersionCommonDefaults) IsZero() bool {
 
 // LatestVersionGitHubDefaults are GitHub-specific default values for a LatestVersion.
 type LatestVersionGitHubDefaults struct {
-	AccessToken   string `json:"access_token,omitempty" yaml:"access_token,omitempty"`     // GitHub access token to use.
-	UsePreRelease *bool  `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"` // Whether to use GitHub prereleases.
+	AccessToken   string `json:"access_token,omitzero" yaml:"access_token,omitzero"`     // GitHub access token to use.
+	UsePreRelease *bool  `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"` // Whether to use GitHub prereleases.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -503,7 +491,7 @@ func (l LatestVersionGitHubDefaults) IsZero() bool {
 
 // LatestVersionURLDefaults are URL-specific default values for a LatestVersion.
 type LatestVersionURLDefaults struct {
-	AllowInvalidCerts *bool `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
+	AllowInvalidCerts *bool `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Default - false = Disallows invalid HTTPS certificates.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -513,10 +501,10 @@ func (l LatestVersionURLDefaults) IsZero() bool {
 
 // LatestVersionRequire contains commands, regex, etc. that must pass before considering a release valid.
 type LatestVersionRequire struct {
-	Command      []string       `json:"command,omitempty" yaml:"command,omitempty"`             // Require Command to pass.
-	Docker       *RequireDocker `json:"docker,omitempty" yaml:"docker,omitempty"`               // Docker image tag requirements.
-	RegexContent string         `json:"regex_content,omitempty" yaml:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
-	RegexVersion string         `json:"regex_version,omitempty" yaml:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions/.
+	Command      []string       `json:"command,omitempty" yaml:"command,omitempty"`           // Require Command to pass.
+	Docker       *RequireDocker `json:"docker,omitempty" yaml:"docker,omitempty"`             // Docker image tag requirements.
+	RegexContent string         `json:"regex_content,omitzero" yaml:"regex_content,omitzero"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
+	RegexVersion string         `json:"regex_version,omitzero" yaml:"regex_version,omitzero"` // "v*[0-9.]+" The version found must match this release to trigger new version actions/.
 }
 
 // String implements fmt.Stringer and returns a JSON representation.
@@ -566,7 +554,7 @@ type RequireDockerRegistryDefaults interface {
 
 // RequireDockerRegistryDefaultsAuth are the auth values for a RequireDocker that takes a Token.
 type RequireDockerRegistryDefaultsAuth struct {
-	Token string `json:"token,omitempty" yaml:"token,omitempty"` // Token to get the token for the queries.
+	Token string `json:"token,omitzero" yaml:"token,omitzero"` // Token to get the token for the queries.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -576,7 +564,7 @@ func (r RequireDockerRegistryDefaultsAuth) IsZero() bool {
 
 // RequireDockerRegistryDefaultsAuthWithUsername are the auth values for a RequireDocker that takes a Username with Token.
 type RequireDockerRegistryDefaultsAuthWithUsername struct {
-	Username                          string `json:"username,omitempty" yaml:"username,omitempty"` // Username to get a new token.
+	Username                          string `json:"username,omitzero" yaml:"username,omitzero"` // Username to get a new token.
 	RequireDockerRegistryDefaultsAuth `json:",inline" yaml:",inline"`
 }
 
@@ -612,8 +600,8 @@ func (r *RequireDockerCheckRegistryDefaultsTokenWithUsername) GetToken() string 
 
 // RequireDockerDefaults are default values for a RequireDocker.
 type RequireDockerDefaults struct {
-	Type     string                          `json:"type,omitempty" yaml:"type,omitempty"`       // Default DockerCheck Type.
-	Tag      string                          `json:"tag,omitempty" yaml:"tag,omitempty"`         // Default Tag template.
+	Type     string                          `json:"type,omitzero" yaml:"type,omitzero"`         // Default DockerCheck Type.
+	Tag      string                          `json:"tag,omitzero" yaml:"tag,omitzero"`           // Default Tag template.
 	Registry RequireDockerRegistriesDefaults `json:"registry,omitzero" yaml:"registry,omitzero"` // GHCR | Hub | Quay.
 }
 
@@ -626,17 +614,17 @@ func (r RequireDockerDefaults) IsZero() bool {
 
 // RequireDocker points to a Docker repository for a release to qualify as valid.
 type RequireDocker struct {
-	Type     string `json:"type,omitempty" yaml:"type,omitempty"`         // Where to check, e.g. hub (Docker Hub), GHCR, Quay).
-	Image    string `json:"image,omitempty" yaml:"image,omitempty"`       // Image to check.
-	Tag      string `json:"tag,omitempty" yaml:"tag,omitempty"`           // Tag to check for.
-	Username string `json:"username,omitempty" yaml:"username,omitempty"` // Username to get a new token.
-	Token    string `json:"token,omitempty" yaml:"token,omitempty"`       // Token to get the token for the queries.
+	Type     string `json:"type,omitzero" yaml:"type,omitzero"`         // Where to check, e.g. hub (Docker Hub), GHCR, Quay).
+	Image    string `json:"image,omitzero" yaml:"image,omitzero"`       // Image to check.
+	Tag      string `json:"tag,omitzero" yaml:"tag,omitzero"`           // Tag to check for.
+	Username string `json:"username,omitzero" yaml:"username,omitzero"` // Username to get a new token.
+	Token    string `json:"token,omitzero" yaml:"token,omitzero"`       // Token to get the token for the queries.
 }
 
 type DeployedVersionLookupDefaults struct {
-	Type              string `json:"type,omitempty" yaml:"type,omitempty"`                               // "manual" | "url".
-	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Disallows invalid HTTPS certificates.
-	Method            string `json:"method,omitempty" yaml:"method,omitempty"`                           // HTTP method.
+	Type              string `json:"type,omitzero" yaml:"type,omitzero"`                               // "manual" | "url".
+	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Disallows invalid HTTPS certificates.
+	Method            string `json:"method,omitzero" yaml:"method,omitzero"`                           // HTTP method.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -647,24 +635,24 @@ func (d DeployedVersionLookupDefaults) IsZero() bool {
 
 // DeployedVersionLookup of the service.
 type DeployedVersionLookup struct {
-	Type string `json:"type,omitempty" yaml:"type,omitempty"` // Service Type, url/manual.
+	Type string `json:"type,omitzero" yaml:"type,omitzero"` // Service Type, url/manual.
 
 	// manual
-	Version string `json:"version,omitempty" yaml:"version,omitempty"` // Deployed version.
+	Version string `json:"version,omitzero" yaml:"version,omitzero"` // Deployed version.
 
 	// url
-	Method            string                 `json:"method,omitempty" yaml:"method,omitempty"`                           // HTTP method.
-	URL               string                 `json:"url,omitempty" yaml:"url,omitempty"`                                 // URL to query.
-	AllowInvalidCerts *bool                  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
-	TargetHeader      string                 `json:"target_header,omitempty" yaml:"target_header,omitempty"`             // Header to target for the version.
-	BasicAuth         *BasicAuth             `json:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`                   // Basic Auth credentials.
-	Headers           []Header               `json:"headers,omitempty" yaml:"headers,omitempty"`                         // Request Headers.
-	Body              string                 `json:"body,omitempty" yaml:"body,omitempty"`                               // Request Body.
-	JSON              string                 `json:"json,omitempty" yaml:"json,omitempty"`                               // JSON key to use e.g. version_current.
-	Regex             string                 `json:"regex,omitempty" yaml:"regex,omitempty"`                             // Regex for the version.
-	RegexTemplate     string                 `json:"regex_template,omitempty" yaml:"regex_template,omitempty"`           // Template to apply to the RegEx match.
-	HardDefaults      *DeployedVersionLookup `json:"-" yaml:"-"`                                                         // Hardcoded default values.
-	Defaults          *DeployedVersionLookup `json:"-" yaml:"-"`                                                         // Default values.
+	Method            string                 `json:"method,omitzero" yaml:"method,omitzero"`                           // HTTP method.
+	URL               string                 `json:"url,omitzero" yaml:"url,omitzero"`                                 // URL to query.
+	AllowInvalidCerts *bool                  `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Default - false = Disallows invalid HTTPS certificates.
+	TargetHeader      string                 `json:"target_header,omitzero" yaml:"target_header,omitzero"`             // Header to target for the version.
+	BasicAuth         *BasicAuth             `json:"basic_auth,omitzero" yaml:"basic_auth,omitzero"`                   // Basic Auth credentials.
+	Headers           []Header               `json:"headers,omitempty" yaml:"headers,omitempty"`                       // Request Headers.
+	Body              string                 `json:"body,omitzero" yaml:"body,omitzero"`                               // Request Body.
+	JSON              string                 `json:"json,omitzero" yaml:"json,omitzero"`                               // JSON key to use e.g. version_current.
+	Regex             string                 `json:"regex,omitzero" yaml:"regex,omitzero"`                             // Regex for the version.
+	RegexTemplate     string                 `json:"regex_template,omitzero" yaml:"regex_template,omitzero"`           // Template to apply to the RegEx match.
+	HardDefaults      *DeployedVersionLookup `json:"-" yaml:"-"`                                                       // Hardcoded default values.
+	Defaults          *DeployedVersionLookup `json:"-" yaml:"-"`                                                       // Default values.
 }
 
 // String implements fmt.Stringer and returns a JSON representation.
@@ -700,25 +688,25 @@ func (slice *URLCommands) String() string {
 
 // URLCommand is a command to run to filter versions from the URL body.
 type URLCommand struct {
-	Type     string `json:"type,omitempty" yaml:"type,omitempty"`         // regex/replace/split.
-	Regex    string `json:"regex,omitempty" yaml:"regex,omitempty"`       // regex: regexp.MustCompile(Regex).
-	Index    *int   `json:"index,omitempty" yaml:"index,omitempty"`       // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index].
-	Template string `json:"template,omitempty" yaml:"template,omitempty"` // regex: template.
-	Text     string `json:"text,omitempty" yaml:"text,omitempty"`         // split:       strings.Split(tgtString, "Text").
-	New      string `json:"new,omitempty" yaml:"new,omitempty"`           // replace:     strings.ReplaceAll(tgtString, "Old", "New").
-	Old      string `json:"old,omitempty" yaml:"old,omitempty"`           // replace:     strings.ReplaceAll(tgtString, "Old", "New").
+	Type     string `json:"type,omitzero" yaml:"type,omitzero"`         // regex/replace/split.
+	Regex    string `json:"regex,omitzero" yaml:"regex,omitzero"`       // regex: regexp.MustCompile(Regex).
+	Index    *int   `json:"index,omitzero" yaml:"index,omitzero"`       // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index].
+	Template string `json:"template,omitzero" yaml:"template,omitzero"` // regex: template.
+	Text     string `json:"text,omitzero" yaml:"text,omitzero"`         // split:       strings.Split(tgtString, "Text").
+	New      string `json:"new,omitzero" yaml:"new,omitzero"`           // replace:     strings.ReplaceAll(tgtString, "Old", "New").
+	Old      string `json:"old,omitzero" yaml:"old,omitzero"`           // replace:     strings.ReplaceAll(tgtString, "Old", "New").
 }
 
 // Status is the Status of a Service.
 type Status struct {
-	ApprovedVersion          string `json:"approved_version,omitempty" yaml:"approved_version,omitempty"`                     // The approved version.
-	DeployedVersion          string `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"`                     // Deployed version of the Service.
-	DeployedVersionTimestamp string `json:"deployed_version_timestamp,omitempty" yaml:"deployed_version_timestamp,omitempty"` // UTC timestamp that the deployed version changed.
-	LatestVersion            string `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`                         // Latest version of the Service.
-	LatestVersionTimestamp   string `json:"latest_version_timestamp,omitempty" yaml:"latest_version_timestamp,omitempty"`     // UTC timestamp that the latest version last changed.
-	LastQueried              string `json:"last_queried,omitempty" yaml:"last_queried,omitempty"`                             // UTC timestamp of the last query.
-	RegexMissesContent       uint   `json:"regex_misses_content,omitzero" yaml:"regex_misses_content,omitzero"`               // Counter for the number of regular expression misses on URL content.
-	RegexMissesVersion       uint   `json:"regex_misses_version,omitzero" yaml:"regex_misses_version,omitzero"`               // Counter for the number of regular expression misses on version.
+	ApprovedVersion          string `json:"approved_version,omitzero" yaml:"approved_version,omitzero"`                     // The approved version.
+	DeployedVersion          string `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"`                     // Deployed version of the Service.
+	DeployedVersionTimestamp string `json:"deployed_version_timestamp,omitzero" yaml:"deployed_version_timestamp,omitzero"` // UTC timestamp that the deployed version changed.
+	LatestVersion            string `json:"latest_version,omitzero" yaml:"latest_version,omitzero"`                         // Latest version of the Service.
+	LatestVersionTimestamp   string `json:"latest_version_timestamp,omitzero" yaml:"latest_version_timestamp,omitzero"`     // UTC timestamp that the latest version last changed.
+	LastQueried              string `json:"last_queried,omitzero" yaml:"last_queried,omitzero"`                             // UTC timestamp of the last query.
+	RegexMissesContent       uint   `json:"regex_misses_content,omitzero" yaml:"regex_misses_content,omitzero"`             // Counter for the number of regular expression misses on URL content.
+	RegexMissesVersion       uint   `json:"regex_misses_version,omitzero" yaml:"regex_misses_version,omitzero"`             // Counter for the number of regular expression misses on version.
 }
 
 // String implements fmt.Stringer and returns a JSON representation.
@@ -766,17 +754,17 @@ func (w *WebHooks) Flatten() []WebHook {
 
 // WebHook is a WebHook to send.
 type WebHook struct {
-	ServiceID         string   `json:"-" yaml:"-"`                                                         // ID of the service this WebHook belongs to.
-	ID                string   `json:"name,omitempty" yaml:"name,omitempty"`                               // Name of this WebHook.
-	Type              string   `json:"type,omitempty" yaml:"type,omitempty"`                               // "github"/"url".
-	URL               string   `json:"url,omitempty" yaml:"url,omitempty"`                                 // "https://example.com".
-	AllowInvalidCerts *bool    `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
-	Secret            string   `json:"secret,omitempty" yaml:"secret,omitempty"`                           // "SECRET".
-	Headers           []Header `json:"headers,omitempty" yaml:"headers,omitempty"`                         // Custom Headers for the WebHook.
-	DesiredStatusCode *uint16  `json:"desired_status_code,omitempty" yaml:"desired_status_code,omitempty"` // e.g. 202.
-	Delay             string   `json:"delay,omitempty" yaml:"delay,omitempty"`                             // The delay before sending the WebHook.
-	MaxTries          *uint8   `json:"max_tries,omitempty" yaml:"max_tries,omitempty"`                     // Number of times to send the WebHook until we receive the desired status code.
-	SilentFails       *bool    `json:"silent_fails,omitempty" yaml:"silent_fails,omitempty"`               // Whether to notify if this WebHook fails MaxTries times.
+	ServiceID         string   `json:"-" yaml:"-"`                                                       // ID of the service this WebHook belongs to.
+	ID                string   `json:"name,omitzero" yaml:"name,omitzero"`                               // Name of this WebHook.
+	Type              string   `json:"type,omitzero" yaml:"type,omitzero"`                               // "github"/"url".
+	URL               string   `json:"url,omitzero" yaml:"url,omitzero"`                                 // "https://example.com".
+	AllowInvalidCerts *bool    `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Default - false = Disallows invalid HTTPS certificates.
+	Secret            string   `json:"secret,omitzero" yaml:"secret,omitzero"`                           // "SECRET".
+	Headers           []Header `json:"headers,omitempty" yaml:"headers,omitempty"`                       // Custom Headers for the WebHook.
+	DesiredStatusCode *uint16  `json:"desired_status_code,omitzero" yaml:"desired_status_code,omitzero"` // e.g. 202.
+	Delay             string   `json:"delay,omitzero" yaml:"delay,omitzero"`                             // The delay before sending the WebHook.
+	MaxTries          *uint8   `json:"max_tries,omitzero" yaml:"max_tries,omitzero"`                     // Number of times to send the WebHook until we receive the desired status code.
+	SilentFails       *bool    `json:"silent_fails,omitzero" yaml:"silent_fails,omitzero"`               // Whether to notify if this WebHook fails MaxTries times.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -823,7 +811,7 @@ func (w *WebHook) Censor() {
 
 // CommandSummary holds the summary of a Command.
 type CommandSummary struct {
-	Failed       *bool     `json:"failed,omitempty" yaml:"failed,omitempty"`               // Whether the last run failed.
+	Failed       *bool     `json:"failed,omitzero" yaml:"failed,omitzero"`                 // Whether the last run failed.
 	NextRunnable time.Time `json:"next_runnable,omitempty" yaml:"next_runnable,omitempty"` // Time at which the Command can next run (for staggering).
 }
 
@@ -839,21 +827,21 @@ type CommandStatusUpdate struct {
 
 // CommandEdit for JSON react-hook-form.
 type CommandEdit struct {
-	Arg string `json:"arg,omitempty" yaml:"arg,omitempty"` // Command argument.
+	Arg string `json:"arg,omitzero" yaml:"arg,omitzero"` // Command argument.
 }
 
 // ServiceEdit is a Service in API format.
 type ServiceEdit struct {
-	Name                  string                 `json:"name,omitempty" yaml:"name,omitempty"`                         // Name of the Service.
-	Comment               string                 `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Comment on the Service.
-	Options               ServiceOptions         `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
-	LatestVersion         *LatestVersion         `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Latest version lookup for the Service.
-	Notify                []Notify               `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Service-specific Notify vars.
-	Command               Commands               `json:"command,omitempty" yaml:"command,omitempty"`                   // OS Commands to run on new release.
-	WebHook               []WebHook              `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Service-specific WebHook vars.
-	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Deployed version lookup for the Service.
-	Dashboard             DashboardOptions       `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`               // Dashboard options.
-	Status                *Status                `json:"status,omitempty" yaml:"status,omitempty"`                     // Track the Status of this source (version and regex misses).
+	Name                  string                 `json:"name,omitzero" yaml:"name,omitzero"`                         // Name of the Service.
+	Comment               string                 `json:"comment,omitzero" yaml:"comment,omitzero"`                   // Comment on the Service.
+	Options               ServiceOptions         `json:"options,omitzero" yaml:"options,omitzero"`                   // Options to give the Service.
+	LatestVersion         *LatestVersion         `json:"latest_version,omitzero" yaml:"latest_version,omitzero"`     // Latest version lookup for the Service.
+	Notify                []Notify               `json:"notify,omitempty" yaml:"notify,omitempty"`                   // Service-specific Notify vars.
+	Command               Commands               `json:"command,omitempty" yaml:"command,omitempty"`                 // OS Commands to run on new release.
+	WebHook               []WebHook              `json:"webhook,omitempty" yaml:"webhook,omitempty"`                 // Service-specific WebHook vars.
+	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"` // Deployed version lookup for the Service.
+	Dashboard             DashboardOptions       `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`               // Dashboard options.
+	Status                *Status                `json:"status,omitempty" yaml:"status,omitempty"`                   // Track the Status of this source (version and regex misses).
 }
 
 // nilIfUnchanged compares two pointers; returns nil if values are equal, newValue if different, or a zero value if removed.

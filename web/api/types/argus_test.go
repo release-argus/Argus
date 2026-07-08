@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
@@ -32,6 +33,243 @@ const (
 	dvManualType = "manual"
 	dvURLType    = "url"
 )
+
+func TestServiceEdit_Marshal(t *testing.T) {
+	// GIVEN: a ServiceEdit.
+	tests := []struct {
+		name  string
+		input ServiceEdit
+		want  string
+	}{
+		{
+			name:  "empty",
+			input: ServiceEdit{},
+			want:  `{}`,
+		},
+		{
+			name:  "non-nil empty Status is omitted",
+			input: ServiceEdit{Name: "foo", Status: &Status{}},
+			want:  `{"name":"foo"}`,
+		},
+		{
+			name:  "non-nil empty Command is omitted",
+			input: ServiceEdit{Name: "foo", Command: Commands{}},
+			want:  `{"name":"foo"}`,
+		},
+		{
+			name: "filled",
+			input: ServiceEdit{
+				Name:    "foo",
+				Comment: "a comment",
+				Options: ServiceOptions{
+					Active:             test.Ptr(true),
+					Interval:           "10m",
+					SemanticVersioning: test.Ptr(true),
+				},
+				LatestVersion: &LatestVersion{
+					Type: "github",
+					URL:  "release-argus/argus",
+				},
+				Notify: []Notify{
+					{ID: "discord"},
+				},
+				Command: Commands{
+					{"echo", "hello"},
+				},
+				WebHook: []WebHook{
+					{
+						ID: "wh1",
+						Type: "github",
+						URL: "https://example.com",
+					},
+				},
+				DeployedVersionLookup: &DeployedVersionLookup{
+					Type: "url",
+					URL:  "https://example.com/version",
+				},
+				Dashboard: DashboardOptions{
+					AutoApprove: test.Ptr(false),
+					Icon:        "https://example.com/icon.png",
+				},
+				Status: &Status{
+					ApprovedVersion: "1.2.3",
+				},
+			},
+			want: test.TrimJSON(`{
+				"name": "foo",
+				"comment": "a comment",
+				"options": {
+					"active": true,
+					"interval": "10m",
+					"semantic_versioning": true
+				},
+				"latest_version": {
+					"type": "github",
+					"url": "release-argus/argus"
+				},
+				"notify": [
+					{
+						"name": "discord"
+					}
+				],
+				"command": [
+					["echo", "hello"]
+				],
+				"webhook": [
+					{
+						"name": "wh1",
+						"type": "github",
+						"url": "https://example.com"
+					}
+				],
+				"deployed_version": {
+					"type": "url",
+					"url": "https://example.com/version"
+				},
+				"dashboard": {
+					"auto_approve": false,
+					"icon":"https://example.com/icon.png"
+				},
+				"status": {
+					"approved_version": "1.2.3"
+				}
+			}`),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: the ServiceEdit is marshaled to JSON.
+			got, err := decode.Marshal("json", tc.input)
+
+			// THEN: the result is as expected.
+			if err != nil {
+				t.Fatalf(
+					"%s\nServiceEdit marshal errored: %v",
+					packageName, err,
+				)
+			}
+
+			if string(got) != tc.want {
+				t.Errorf(
+					"%s\nServiceEdit marshal value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestWebHookSummary_Marshal(t *testing.T) {
+	// GIVEN: a WebHookSummary.
+	tests := []struct {
+		name  string
+		input *WebHookSummary
+		want  string
+	}{
+		{
+			name:  "nil",
+			input: nil,
+			want:  `null`,
+		},
+		{
+			name:  "empty",
+			input: &WebHookSummary{},
+			want:  `{"next_runnable":"0001-01-01T00:00:00Z"}`,
+		},
+		{
+			name: "filled",
+			input: &WebHookSummary{
+				Failed:       test.Ptr(true),
+				NextRunnable: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			want: test.TrimJSON(`{
+				"failed": true,
+				"next_runnable": "2025-01-01T00:00:00Z"
+			}`),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: the WebHookSummary is marshaled to JSON.
+			got, err := decode.Marshal("json", tc.input)
+
+			// THEN: the result is as expected.
+			if err != nil {
+				t.Fatalf(
+					"%s\nWebHookSummary marshal errored: %v",
+					packageName, err,
+				)
+			}
+			if string(got) != tc.want {
+				t.Errorf(
+					"%s\nWebHookSummary marshal value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestCommandSummary_Marshal(t *testing.T) {
+	// GIVEN: a CommandSummary.
+	tests := []struct {
+		name  string
+		input *CommandSummary
+		want  string
+	}{
+		{
+			name:  "nil",
+			input: nil,
+			want:  `null`,
+		},
+		{
+			name:  "empty",
+			input: &CommandSummary{},
+			want:  `{"next_runnable":"0001-01-01T00:00:00Z"}`,
+		},
+		{
+			name: "filled",
+			input: &CommandSummary{
+				Failed:       test.Ptr(true),
+				NextRunnable: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			want: test.TrimJSON(`{
+				"failed": true,
+				"next_runnable": "2025-01-01T00:00:00Z"
+			}`),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: the CommandSummary is marshaled to JSON.
+			got, err := decode.Marshal("json", tc.input)
+
+			// THEN: the result is as expected.
+			if err != nil {
+				t.Fatalf(
+					"%s\nCommandSummary marshal errored: %v",
+					packageName, err,
+				)
+			}
+
+			if string(got) != tc.want {
+				t.Errorf(
+					"%s\nCommandSummary marshal value mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
 
 func TestServiceSummary_IsZero(t *testing.T) {
 	// GIVEN: a ServiceSummary struct.
@@ -248,6 +486,17 @@ func TestServiceSummary_String(t *testing.T) {
 					"status": {
 						"approved_version": "1.2.3"
 					}
+				}`,
+		},
+		{
+			name: "non-nil empty Status is omitted",
+			summary: &ServiceSummary{
+				ID:     "foo",
+				Status: &Status{},
+			},
+			want: `
+				{
+					"id": "foo"
 				}`,
 		},
 	}
@@ -1680,6 +1929,90 @@ func TestService_String(t *testing.T) {
 			name:  "empty",
 			input: &Service{},
 			want:  `{}`,
+		},
+		{
+			name:  "non-nil empty Status is omitted",
+			input: &Service{Name: "foo", Status: &Status{}},
+			want:  `{"name":"foo"}`,
+		},
+		{
+			name: "filled",
+			input: &Service{
+				Name:    "foo",
+				Comment: "a comment",
+				Options: ServiceOptions{
+					Active:             test.Ptr(true),
+					Interval:           "10m",
+					SemanticVersioning: test.Ptr(true),
+				},
+				LatestVersion: &LatestVersion{
+					Type: "github",
+					URL:  "release-argus/argus",
+				},
+				Notify: Notifiers{
+					"discord": {ID: "discord"},
+				},
+				Command: Commands{
+					{"echo", "hello"},
+				},
+				WebHook: WebHooks{
+					"wh1": {
+						ID: "wh1",
+						Type: "github",
+						URL: "https://example.com",
+					},
+				},
+				DeployedVersionLookup: &DeployedVersionLookup{
+					Type: "url",
+					URL:  "https://example.com/version",
+				},
+				Dashboard: DashboardOptions{
+					AutoApprove: test.Ptr(false),
+					Icon:        "https://example.com/icon.png",
+				},
+				Status: &Status{
+					ApprovedVersion: "1.2.3",
+				},
+			},
+			want: test.TrimJSON(`{
+				"name": "foo",
+				"comment": "a comment",
+				"options": {
+					"active": true,
+					"interval": "10m",
+					"semantic_versioning": true
+				},
+				"latest_version": {
+					"type": "github",
+					"url": "release-argus/argus"
+				},
+				"notify": {
+					"discord": {
+						"name": "discord"
+					}
+				},
+				"command": [
+					["echo", "hello"]
+				],
+				"webhook": {
+					"wh1": {
+						"name": "wh1",
+						"type": "github",
+						"url": "https://example.com"
+					}
+				},
+				"deployed_version": {
+					"type": "url",
+					"url": "https://example.com/version"
+				},
+				"dashboard": {
+					"auto_approve": false,
+					"icon": "https://example.com/icon.png"
+				},
+				"status": {
+					"approved_version": "1.2.3"
+				}
+			}`),
 		},
 	}
 

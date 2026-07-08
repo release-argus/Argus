@@ -29,7 +29,7 @@ import (
 // Defaults holds default configuration for services, notifiers, and webhooks.
 type Defaults struct {
 	Service service.Defaults           `json:"service,omitzero" yaml:"service,omitzero"`
-	Notify  shoutrrr.ShoutrrrsDefaults `json:"notify,omitzero" yaml:"notify,omitzero"`
+	Notify  shoutrrr.ShoutrrrsDefaults `json:"notify,omitempty" yaml:"notify,omitempty"`
 	WebHook webhook.Defaults           `json:"webhook,omitzero" yaml:"webhook,omitzero"`
 }
 

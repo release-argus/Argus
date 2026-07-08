@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -231,7 +232,7 @@ func (d *Defaults) CheckValues(id string) (error, bool) {
 	}
 
 	// Verify valid type.
-	if !util.Contains(SupportedTypes, typeName) {
+	if !slices.Contains(SupportedTypes, typeName) {
 		errs = append(
 			errs,
 			polymorphic.InvalidTypeError{
@@ -414,7 +415,7 @@ func (b *Base) normaliseParamSelect(key string, value string, allowed []string) 
 func (s *Shoutrrr) checkValuesType() error {
 	// Check we have a Type.
 	sType := s.GetType()
-	if !util.Contains(SupportedTypes, sType) {
+	if !slices.Contains(SupportedTypes, sType) {
 		sTypeWithoutID := util.FirstNonDefault(s.Type, s.Main.Type)
 		if sTypeWithoutID == "" {
 			return &decode.FieldError{
@@ -437,7 +438,7 @@ func (s *Shoutrrr) checkValuesType() error {
 	}
 
 	// Invalid/Unknown type.
-	if !util.Contains(SupportedTypes, sType) {
+	if !slices.Contains(SupportedTypes, sType) {
 		return polymorphic.InvalidTypeError{
 			Key:     "type",
 			Value:   sType,

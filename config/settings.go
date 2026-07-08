@@ -87,9 +87,9 @@ var (
 
 // SettingsBase holds the base settings for the binary.
 type SettingsBase struct {
-	Data DataSettings `json:"data,omitempty" yaml:"data,omitempty"` // Data settings
-	Log  LogSettings  `json:"log,omitempty" yaml:"log,omitempty"`   // Log settings
-	Web  WebSettings  `json:"web,omitempty" yaml:"web,omitempty"`   // Web settings
+	Data DataSettings `json:"data,omitzero" yaml:"data,omitzero"` // Data settings
+	Log  LogSettings  `json:"log,omitzero" yaml:"log,omitzero"`   // Log settings
+	Web  WebSettings  `json:"web,omitzero" yaml:"web,omitzero"`   // Web settings
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -149,8 +149,8 @@ func (s *SettingsBase) MapEnvToStruct() error {
 
 // DataSettings holds data-related settings for the binary.
 type DataSettings struct {
-	DatabaseFile string `json:"database_file,omitempty" yaml:"database_file,omitempty"` // Database path.
-	Readonly     *bool  `json:"readonly,omitempty" yaml:"readonly,omitempty"`           // Disable saving config changes to disk.
+	DatabaseFile string `json:"database_file,omitzero" yaml:"database_file,omitzero"` // Database path.
+	Readonly     *bool  `json:"readonly,omitzero" yaml:"readonly,omitzero"`           // Disable saving config changes to disk.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -161,8 +161,8 @@ func (s DataSettings) IsZero() bool {
 
 // LogSettings holds log-related settings for the binary.
 type LogSettings struct {
-	Timestamps *bool  `json:"timestamps,omitempty" yaml:"timestamps,omitempty"` // Timestamps in CLI output.
-	Level      string `json:"level,omitempty" yaml:"level,omitempty"`           // Log level.
+	Timestamps *bool  `json:"timestamps,omitzero" yaml:"timestamps,omitzero"` // Timestamps in CLI output.
+	Level      string `json:"level,omitzero" yaml:"level,omitzero"`           // Log level.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -173,9 +173,9 @@ func (s LogSettings) IsZero() bool {
 
 // WebSettingsBasicAuth contains the basic auth credentials to use (if any).
 type WebSettingsBasicAuth struct {
-	Username     string   `json:"username,omitempty" yaml:"username,omitempty"`
+	Username     string   `json:"username,omitzero" yaml:"username,omitzero"`
 	UsernameHash [32]byte `json:"-" yaml:"-"` // SHA256 hash.
-	Password     string   `json:"password,omitempty" yaml:"password,omitempty"`
+	Password     string   `json:"password,omitzero" yaml:"password,omitzero"`
 	PasswordHash [32]byte `json:"-" yaml:"-"` // SHA256 hash.
 }
 
@@ -203,20 +203,20 @@ func (b *WebSettingsBasicAuth) CheckValues() {
 
 // FaviconSettings contains the favicon override settings.
 type FaviconSettings struct {
-	SVG string `json:"svg,omitempty" yaml:"svg,omitempty"`
-	PNG string `json:"png,omitempty" yaml:"png,omitempty"`
+	SVG string `json:"svg,omitzero" yaml:"svg,omitzero"`
+	PNG string `json:"png,omitzero" yaml:"png,omitzero"`
 }
 
 // WebSettings holds web server settings for the binary.
 type WebSettings struct {
-	ListenHost     string                `json:"listen_host,omitempty" yaml:"listen_host,omitempty"`         // Web listen host.
-	ListenPort     string                `json:"listen_port,omitempty" yaml:"listen_port,omitempty"`         // Web listen port.
-	RoutePrefix    string                `json:"route_prefix,omitempty" yaml:"route_prefix,omitempty"`       // Web endpoint prefix.
-	CertFile       string                `json:"cert_file,omitempty" yaml:"cert_file,omitempty"`             // HTTPS certificate path.
-	KeyFile        string                `json:"pkey_file,omitempty" yaml:"pkey_file,omitempty"`             // HTTPS privkey path.
-	BasicAuth      *WebSettingsBasicAuth `json:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`           // Basic auth creds.
+	ListenHost     string                `json:"listen_host,omitzero" yaml:"listen_host,omitzero"`           // Web listen host.
+	ListenPort     string                `json:"listen_port,omitzero" yaml:"listen_port,omitzero"`           // Web listen port.
+	RoutePrefix    string                `json:"route_prefix,omitzero" yaml:"route_prefix,omitzero"`         // Web endpoint prefix.
+	CertFile       string                `json:"cert_file,omitzero" yaml:"cert_file,omitzero"`               // HTTPS certificate path.
+	KeyFile        string                `json:"pkey_file,omitzero" yaml:"pkey_file,omitzero"`               // HTTPS privkey path.
+	BasicAuth      *WebSettingsBasicAuth `json:"basic_auth,omitzero" yaml:"basic_auth,omitzero"`             // Basic auth creds.
 	DisabledRoutes []string              `json:"disabled_routes,omitempty" yaml:"disabled_routes,omitempty"` // Disabled API routes.
-	Favicon        *FaviconSettings      `json:"favicon,omitempty" yaml:"favicon,omitempty"`                 // Favicon settings.
+	Favicon        *FaviconSettings      `json:"favicon,omitzero" yaml:"favicon,omitzero"`                   // Favicon settings.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
