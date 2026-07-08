@@ -116,6 +116,9 @@ func (c *Config) Decode(raw []byte) error {
 		return err //nolint:wrapcheck
 	}
 
+	// Migrate deprecated keys before wiring the defaults chain / decoding services.
+	c.Defaults.MigrateDeprecated()
+
 	// Set defaults/hardDefaults.
 	c.InitDefaults()
 

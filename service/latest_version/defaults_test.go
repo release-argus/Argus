@@ -325,7 +325,7 @@ func TestDefaults_SetDefaults(t *testing.T) {
 	}
 }
 
-func TestDefaults_CheckValues(t *testing.T) {
+func TestDefaults_MigrateDeprecated(t *testing.T) {
 	// GIVEN: a Defaults, possibly with deprecated fields set.
 	tests := []struct {
 		name                 string
@@ -425,15 +425,10 @@ func TestDefaults_CheckValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf("%s\nDefaults.CheckValues()", packageName)
+			prefix := fmt.Sprintf("%s\nDefaults.MigrateDeprecated()", packageName)
 
-			// WHEN: CheckValues is called.
-			if err := tc.input.CheckValues(); err != nil {
-				t.Fatalf(
-					"%s unexpected error: %v",
-					prefix, err,
-				)
-			}
+			// WHEN: MigrateDeprecated is called.
+			tc.input.MigrateDeprecated()
 
 			// THEN: the deprecated fields were migrated to their new home.
 			if tc.wantAccessToken != "" && tc.input.GitHub.AccessToken != tc.wantAccessToken {
@@ -459,7 +454,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 				}
 			}
 			if tc.wantRequire != nil {
-				if got, want := test.StringifyPtr(&tc.input.Common.Require), test.StringifyPtr(tc.wantRequire); got != want {
+				if got, want := tc.input.Common.Require.Docker.String(""), tc.wantRequire.Docker.String(""); got != want {
 					t.Errorf(
 						"%s Require mismatch\ngot:  %v\nwant: %v",
 						prefix, got, want,
@@ -489,6 +484,55 @@ func TestDefaults_CheckValues(t *testing.T) {
 					prefix, tc.input.RequireDeprecated)
 			}
 		})
+	}
+}
+
+func TestDefaults_MigrateDeprecated__PreservesDefaultsChainForSetDefaults(t *testing.T) {
+	// GIVEN: HardDefaults with the Docker tag template set, and the deprecated
+	// 'latest_version.require' key still in its old (pre-'common.require')
+	// spot, as a user upgrading from an old config would have:
+	hd := &Defaults{}
+	hd.Default()
+
+	d := &Defaults{
+		RequireDeprecated: &filter.RequireDefaults{
+			Docker: docker.Defaults{
+				Type: "quay",
+			},
+		},
+	}
+
+	// WHEN: MigrateDeprecated runs on it and SetDefaults wires the (now-migrated) chain.
+	d.MigrateDeprecated()
+	d.SetDefaults(hd)
+
+	prefix := fmt.Sprintf("%s\nDefaults.MigrateDeprecated()+SetDefaults()", packageName)
+
+	// THEN: the migrated Common.Require.Docker must chain to the hard defaults.
+	if d.Common.Require.Docker.Defaults != &hd.Common.Require.Docker {
+		t.Errorf(
+			"%s broke the Require defaults chain\ngot:  %p\nwant: %p",
+			prefix, d.Common.Require.Docker.Defaults, &hd.Common.Require.Docker,
+		)
+	}
+	want := hd.Common.Require.Docker.Tag
+	if want == "" {
+		t.Errorf("%s HardDefaults.Common.Require.Docker.Tag should be set! got an empty string", prefix)
+	}
+	if got := d.Common.Require.Docker.GetTag(); got != want {
+		t.Errorf(
+			"%s lost the hard-default Docker tag template\ngot:  %q\nwant: %q",
+			prefix, got, want,
+		)
+	}
+
+	// AND: the migrated Type ('quay', not the hard default 'hub') must be
+	// what a per-service require.docker inherits when it omits its own type.
+	if got, want := d.Common.Require.Docker.GetType(), "quay"; got != want {
+		t.Errorf(
+			"%s lost the migrated Docker type\ngot:  %q\nwant: %q",
+			prefix, got, want,
+		)
 	}
 }
 
