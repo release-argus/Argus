@@ -82,6 +82,11 @@ func (d *Defaults) Default() bool {
 	return true
 }
 
+// MigrateDeprecated renames deprecated fields to their new locations.
+func (d *Defaults) MigrateDeprecated() {
+	d.Service.MigrateDeprecated()
+}
+
 // SetDefaults assigns defaults to the receiver.
 func (d *Defaults) SetDefaults(dflts *Defaults) {
 	// TODO: Store HardDefaults inside Defaults.

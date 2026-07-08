@@ -139,6 +139,11 @@ func (d *Defaults) Default() {
 	d.Init()
 }
 
+// MigrateDeprecated renames deprecated fields to their new locations.
+func (d *Defaults) MigrateDeprecated() {
+	d.LatestVersion.MigrateDeprecated()
+}
+
 // SetDefaults assigns defaults to the receiver.
 func (d *Defaults) SetDefaults(dflts *Defaults) {
 	d.LatestVersion.SetDefaults(&dflts.LatestVersion)

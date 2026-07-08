@@ -89,8 +89,8 @@ func (d *Defaults) SetDefaults(dflts *Defaults) {
 	d.Common.SetDefaults(&dflts.Common)
 }
 
-// CheckValues migrates deprecated fields, then validates the fields of the receiver.
-func (d *Defaults) CheckValues() error {
+// MigrateDeprecated renames deprecated fields to their new locations.
+func (d *Defaults) MigrateDeprecated() {
 	// Deprecated: access_token -> github.access_token.
 	if d.AccessTokenDeprecated != "" && d.GitHub.AccessToken == "" {
 		d.GitHub.AccessToken = d.AccessTokenDeprecated
@@ -118,7 +118,10 @@ func (d *Defaults) CheckValues() error {
 		logx.Deprecated("Renaming 'defaults.service.latest_version.require' to 'defaults.service.latest_version.common.require'")
 	}
 	d.RequireDeprecated = nil
+}
 
+// CheckValues validates the fields of the receiver.
+func (d *Defaults) CheckValues() error {
 	return d.Common.CheckValues() //nolint:wrapcheck
 }
 
