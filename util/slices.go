@@ -17,16 +17,6 @@ package util
 
 import "bytes"
 
-// Contains returns whether `s` contains `e`.
-func Contains[T comparable](s []T, e T) bool {
-	for _, v := range s {
-		if v == e {
-			return true
-		}
-	}
-	return false
-}
-
 // CopySlice returns a copy of the slice.
 func CopySlice[T any](s []T) []T {
 	newList := make([]T, len(s))

@@ -124,9 +124,9 @@ func TestUnsupportedFormatError_Error(t *testing.T) {
 }
 
 type testStruct struct {
-	A string `json:"a,omitempty" yaml:"a,omitempty"`
-	B int    `json:"b,omitempty" yaml:"b,omitempty"`
-	C bool   `json:"c,omitempty" yaml:"c,omitempty"`
+	A string `json:"a,omitzero" yaml:"a,omitzero"`
+	B int    `json:"b,omitzero" yaml:"b,omitzero"`
+	C bool   `json:"c,omitzero" yaml:"c,omitzero"`
 }
 
 func TestUnmarshal(t *testing.T) {

@@ -29,11 +29,11 @@ import (
 
 // Require defines validation requirements that must be met for a version to be considered valid.
 type Require struct {
-	Status       *status.Status  `json:"-" yaml:"-"`                                             // Service Status.
-	RegexContent string          `json:"regex_content,omitempty" yaml:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
-	RegexVersion string          `json:"regex_version,omitempty" yaml:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions.
-	Command      command.Command `json:"command,omitempty" yaml:"command,omitempty"`             // Require Command to pass.
-	Docker       docker.Registry `json:"docker,omitempty" yaml:"docker,omitempty"`               // Docker image tag requirements.
+	Status       *status.Status  `json:"-" yaml:"-"`                                           // Service Status.
+	RegexContent string          `json:"regex_content,omitzero" yaml:"regex_content,omitzero"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
+	RegexVersion string          `json:"regex_version,omitzero" yaml:"regex_version,omitzero"` // "v*[0-9.]+" The version found must match this release to trigger new version actions.
+	Command      command.Command `json:"command,omitempty" yaml:"command,omitempty"`           // Require Command to pass.
+	Docker       docker.Registry `json:"docker,omitzero" yaml:"docker,omitzero"`               // Docker image tag requirements.
 
 	defaults *RequireDefaults // Defaults for Require.
 }
@@ -46,9 +46,9 @@ func (r *Require) IsZero() bool {
 
 // RequireDecode is an unmarshal-only helper for [Require].
 type RequireDecode struct {
-	RegexContent string          `json:"regex_content,omitempty" yaml:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
-	RegexVersion string          `json:"regex_version,omitempty" yaml:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions.
-	Command      command.Command `json:"command,omitempty" yaml:"command,omitempty"`             // Require Command to pass.
+	RegexContent string          `json:"regex_content,omitzero" yaml:"regex_content,omitzero"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
+	RegexVersion string          `json:"regex_version,omitzero" yaml:"regex_version,omitzero"` // "v*[0-9.]+" The version found must match this release to trigger new version actions.
+	Command      command.Command `json:"command,omitempty" yaml:"command,omitempty"`           // Require Command to pass.
 }
 
 // String returns a string representation of the receiver.

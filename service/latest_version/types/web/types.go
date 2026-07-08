@@ -37,8 +37,8 @@ var Type = "url"
 type Lookup struct {
 	base.Lookup `json:",inline" yaml:",inline"`
 
-	AllowInvalidCerts *bool          `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Allow invalid SSL certificates.
-	Headers           shared.Headers `json:"headers,omitempty" yaml:"headers,omitempty"`                         // OPTIONAL: request headers.
+	AllowInvalidCerts *bool          `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Allow invalid SSL certificates.
+	Headers           shared.Headers `json:"headers,omitempty" yaml:"headers,omitempty"`                       // OPTIONAL: request headers.
 
 	typeDefaults     *Defaults // URL-specific Defaults.
 	typeHardDefaults *Defaults // URL-specific Hard Defaults.
@@ -46,7 +46,7 @@ type Lookup struct {
 
 // LookupDecode is an unmarshal-only helper for [Lookup].
 type LookupDecode struct {
-	AllowInvalidCerts *bool          `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"`
+	AllowInvalidCerts *bool          `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"`
 	Headers           shared.Headers `json:"headers,omitempty" yaml:"headers,omitempty"`
 }
 

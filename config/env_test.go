@@ -41,9 +41,9 @@ type testStruct struct {
 	Int testInterface `yaml:"iface"`
 }
 type testStructChild struct {
-	String string  `yaml:"string,omitempty"`
-	Int    int     `yaml:"int,omitempty"`
-	Float  float64 `yaml:"float,omitempty"`
+	String string  `yaml:"string,omitzero"`
+	Int    int     `yaml:"int,omitzero"`
+	Float  float64 `yaml:"float,omitzero"`
 }
 
 func TestMigrateDeprecatedEnvVars(t *testing.T) {

@@ -183,8 +183,8 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	case ActionAll, ActionFailed:
 		go svc.HandleFailedActions()
 	default:
-		if strings.HasPrefix(payload.Target, "webhook_") {
-			go svc.HandleWebHook(strings.TrimPrefix(payload.Target, "webhook_"))
+		if after, ok := strings.CutPrefix(payload.Target, "webhook_"); ok {
+			go svc.HandleWebHook(after)
 		} else {
 			go svc.HandleCommand(strings.TrimPrefix(payload.Target, "command_"))
 		}

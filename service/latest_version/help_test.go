@@ -54,7 +54,7 @@ func TestMain(m *testing.M) {
 
 type mockLookup struct {
 	base.Lookup
-	OverrideErr string `json:"override_err,omitempty" yaml:"override_err,omitempty"`
+	OverrideErr string `json:"override_err,omitzero" yaml:"override_err,omitzero"`
 }
 
 func (f *mockLookup) ApplyOverrides(format string, data []byte) error {

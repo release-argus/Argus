@@ -31,9 +31,9 @@ func (o *oldDockerRegistryDefaults) IsZero() bool {
 
 // Deprecated: oldDockerDefaults captures all old Docker registry defaults (<=0.29.4).
 type oldDockerDefaults struct {
-	RegistryGHCR *oldDockerRegistryDefaults `json:"ghcr,omitempty" yaml:"ghcr,omitempty"`
-	RegistryHub  *oldDockerRegistryDefaults `json:"hub,omitempty" yaml:"hub,omitempty"`
-	RegistryQuay *oldDockerRegistryDefaults `json:"quay,omitempty" yaml:"quay,omitempty"`
+	RegistryGHCR *oldDockerRegistryDefaults `json:"ghcr,omitzero" yaml:"ghcr,omitzero"`
+	RegistryHub  *oldDockerRegistryDefaults `json:"hub,omitzero" yaml:"hub,omitzero"`
+	RegistryQuay *oldDockerRegistryDefaults `json:"quay,omitzero" yaml:"quay,omitzero"`
 }
 
 // IsZero implements the yaml.IsZeroer interface.

@@ -39,9 +39,7 @@ func MergeMaps[K comparable](m1, m2 map[K]string) map[K]string {
 // CopyMap returns a copy of the map.
 func CopyMap[K comparable, V any](m map[K]V) map[K]V {
 	out := make(map[K]V, len(m))
-	for k, v := range m {
-		out[k] = v
-	}
+	maps.Copy(out, m)
 	return out
 }
 

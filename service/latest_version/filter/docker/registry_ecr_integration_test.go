@@ -65,7 +65,7 @@ func TestECRRegistry_Check(t *testing.T) {
 				},
 			},
 			version:  "latest",
-			errRegex: `^` + test.ArgusDockerECRRepo + `:latest-unknown - tag not found$`,
+			errRegex: `^` + test.ArgusDockerECRRepo + `:latest-unknown - (tag not found|\{.*Rate exceeded.*\})$`,
 		},
 		{
 			name: "unknown image",

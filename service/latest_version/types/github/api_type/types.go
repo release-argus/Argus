@@ -23,13 +23,13 @@ import (
 
 // Release is the format of a Release on api.github.com/repos/OWNER/REPO/releases.
 type Release struct {
-	URL             string          `json:"url,omitempty"`
-	AssetsURL       string          `json:"assets_url,omitempty"`
+	URL             string          `json:"url,omitzero"`
+	AssetsURL       string          `json:"assets_url,omitzero"`
 	SemanticVersion *semver.Version `json:"-"`
-	TagName         string          `json:"tag_name,omitempty"`
-	Name            string          `json:"name,omitempty"` // Tag name on /tags queries.
+	TagName         string          `json:"tag_name,omitzero"`
+	Name            string          `json:"name,omitzero"` // Tag name on /tags queries.
 	PreRelease      bool            `json:"prerelease"`
-	PublishedAt     string          `json:"published_at,omitempty"`
+	PublishedAt     string          `json:"published_at,omitzero"`
 	Assets          []Asset         `json:"assets,omitempty"`
 }
 
@@ -48,11 +48,11 @@ func ReleaseSort(a, b Release) bool {
 
 // Asset is the format of an Asset on api.github.com/repos/OWNER/REPO/releases.
 type Asset struct {
-	URL                string `json:"url,omitempty"`
+	URL                string `json:"url,omitzero"`
 	ID                 uint   `json:"id"`
-	Name               string `json:"name,omitempty"`
-	CreatedAt          string `json:"created_at,omitempty"`
-	BrowserDownloadURL string `json:"browser_download_url,omitempty"`
+	Name               string `json:"name,omitzero"`
+	CreatedAt          string `json:"created_at,omitzero"`
+	BrowserDownloadURL string `json:"browser_download_url,omitzero"`
 }
 
 // String implements fmt.Stringer and returns a JSON representation.
@@ -65,5 +65,5 @@ func (a *Asset) String() string {
 
 // Message is the format of a Message from a GitHub API response.
 type Message struct {
-	Message string `json:"message,omitempty"`
+	Message string `json:"message,omitzero"`
 }

@@ -21,9 +21,9 @@ import "github.com/goccy/go-yaml"
 var packageName = "test"
 
 type testStruct struct {
-	String string `json:"string,omitempty" yaml:"string,omitempty"`
-	Int    int    `json:"int,omitempty" yaml:"int,omitempty"`
-	Bool   bool   `json:"bool,omitempty" yaml:"bool,omitempty"`
+	String string `json:"string,omitzero" yaml:"string,omitzero"`
+	Int    int    `json:"int,omitzero" yaml:"int,omitzero"`
+	Bool   bool   `json:"bool,omitzero" yaml:"bool,omitzero"`
 }
 
 func (t *testStruct) Foo() string { return t.String }

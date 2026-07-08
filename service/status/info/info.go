@@ -21,18 +21,18 @@ import "sync"
 type ServiceInfo struct {
 	mu *sync.RWMutex // Mutex for thread-safe access
 
-	ID      string `json:"id,omitempty"`      // Service ID.
-	Name    string `json:"name,omitempty"`    // Service Name.
-	Comment string `json:"comment,omitempty"` // Service Comment.
-	URL     string `json:"url,omitempty"`     // Service URL.
+	ID      string `json:"id,omitzero"`      // Service ID.
+	Name    string `json:"name,omitzero"`    // Service Name.
+	Comment string `json:"comment,omitzero"` // Service Comment.
+	URL     string `json:"url,omitzero"`     // Service URL.
 
-	Icon       string `json:"icon,omitempty"`         // Icon URL.
-	IconLinkTo string `json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to.
-	WebURL     string `json:"web_url,omitempty"`      // Web URL.
+	Icon       string `json:"icon,omitzero"`         // Icon URL.
+	IconLinkTo string `json:"icon_link_to,omitzero"` // URL to redirect Icon clicks to.
+	WebURL     string `json:"web_url,omitzero"`      // Web URL.
 
-	ApprovedVersion string `json:"approved_version,omitempty"` // The version of the Service that has been approved for deployment.
-	DeployedVersion string `json:"deployed_version,omitempty"` // The deployed version of the Service.
-	LatestVersion   string `json:"latest_version,omitempty"`   // The latest version of the Service.
+	ApprovedVersion string `json:"approved_version,omitzero"` // The version of the Service that has been approved for deployment.
+	DeployedVersion string `json:"deployed_version,omitzero"` // The deployed version of the Service.
+	LatestVersion   string `json:"latest_version,omitzero"`   // The latest version of the Service.
 
 	Tags []string `json:"tags,omitempty"` // Tags for the Service.
 }

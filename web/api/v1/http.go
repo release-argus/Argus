@@ -19,6 +19,7 @@ import (
 	"errors"
 	"io/fs"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -118,7 +119,7 @@ func (api *API) DisableRoutes() {
 		webRoutePrefix + "/api/v1/service/actions":                    {name: "service_actions", method: http.MethodPost},
 	}
 	for _, r := range routes {
-		r.disabled = util.Contains(api.Config.Settings.Web.DisabledRoutes, r.name)
+		r.disabled = slices.Contains(api.Config.Settings.Web.DisabledRoutes, r.name)
 	}
 
 	_ = api.Router.Walk(func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {

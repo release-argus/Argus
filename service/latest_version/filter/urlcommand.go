@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -34,13 +35,13 @@ type URLCommands []URLCommand
 
 // URLCommand is a command to filter versions from the URL body.
 type URLCommand struct {
-	Type     string `json:"type" yaml:"type"`                             // regex/replace/split.
-	Regex    string `json:"regex,omitempty" yaml:"regex,omitempty"`       // regex: regexp.MustCompile(Regex).
-	Text     string `json:"text,omitempty" yaml:"text,omitempty"`         // split: strings.Split(tgtString, "Text").
-	Old      string `json:"old,omitempty" yaml:"old,omitempty"`           // replace: strings.ReplaceAll(tgtString, "Old", "New").
-	New      string `json:"new,omitempty" yaml:"new,omitempty"`           // replace: strings.ReplaceAll(tgtString, "Old", "New").
-	Index    *int   `json:"index,omitempty" yaml:"index,omitempty"`       // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index].
-	Template string `json:"template,omitempty" yaml:"template,omitempty"` // regex: template.
+	Type     string `json:"type" yaml:"type"`                           // regex/replace/split.
+	Regex    string `json:"regex,omitzero" yaml:"regex,omitzero"`       // regex: regexp.MustCompile(Regex).
+	Text     string `json:"text,omitzero" yaml:"text,omitzero"`         // split: strings.Split(tgtString, "Text").
+	Old      string `json:"old,omitzero" yaml:"old,omitzero"`           // replace: strings.ReplaceAll(tgtString, "Old", "New").
+	New      string `json:"new,omitzero" yaml:"new,omitzero"`           // replace: strings.ReplaceAll(tgtString, "Old", "New").
+	Index    *int   `json:"index,omitzero" yaml:"index,omitzero"`       // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index].
+	Template string `json:"template,omitzero" yaml:"template,omitzero"` // regex: template.
 }
 
 // ############
@@ -170,7 +171,7 @@ func (s *URLCommands) CheckValues() error {
 
 // CheckValues validates the fields of the receiver.
 func (c *URLCommand) CheckValues() error {
-	if !util.Contains(urlCommandTypes, c.Type) {
+	if !slices.Contains(urlCommandTypes, c.Type) {
 		return polymorphic.InvalidTypeError{
 			Key:     "type",
 			Value:   c.Type,

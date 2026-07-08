@@ -18,12 +18,12 @@ package base
 import (
 	"errors"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service/deployed_version/types/web/constants"
 	opt "github.com/release-argus/Argus/service/option"
-	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/polymorphic"
 )
 
@@ -39,9 +39,9 @@ type DefaultsConfig struct {
 
 // Defaults are the default values for a Lookup.
 type Defaults struct {
-	Type              string `json:"type,omitempty" yaml:"type,omitempty"`                               // "manual" | "url".
-	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // False = Disallows invalid HTTPS certificates.
-	Method            string `json:"method,omitempty" yaml:"method,omitempty"`                           // HTTP method.
+	Type              string `json:"type,omitzero" yaml:"type,omitzero"`                               // "manual" | "url".
+	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // False = Disallows invalid HTTPS certificates.
+	Method            string `json:"method,omitzero" yaml:"method,omitzero"`                           // HTTP method.
 
 	Options *opt.Defaults `json:"-" yaml:"-"` // Options for the Lookup.
 }
@@ -101,7 +101,7 @@ func (d *Defaults) CheckValues() error {
 	var errs []error
 	// Method.
 	d.Method = strings.ToUpper(d.Method)
-	if d.Method != "" && !util.Contains(constants.SupportedMethods, d.Method) {
+	if d.Method != "" && !slices.Contains(constants.SupportedMethods, d.Method) {
 		errs = append(
 			errs,
 			polymorphic.InvalidTypeError{

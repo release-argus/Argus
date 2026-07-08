@@ -30,7 +30,7 @@ import (
 
 // Lookup is the base struct for an [Interface].
 type Lookup struct {
-	Type string `json:"type,omitempty" yaml:"type,omitempty"` // "url".
+	Type string `json:"type,omitzero" yaml:"type,omitzero"` // "url".
 
 	Options *opt.Options   `json:"-" yaml:"-"` // Options.
 	Status  *status.Status `json:"-" yaml:"-"` // Service Status.

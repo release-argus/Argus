@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -277,7 +278,7 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 							<-(saveChannel)
 						}
 
-						if !strings.HasPrefix(name, "-") && util.Contains(disabledRoutes, name) {
+						if !strings.HasPrefix(name, "-") && slices.Contains(disabledRoutes, name) {
 							tc.wantStatus = http.StatusNotFound
 							tc.wantBody = "route disabled"
 						}

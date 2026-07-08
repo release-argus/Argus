@@ -34,18 +34,18 @@ type DefaultsConfig struct {
 // type live under 'common', and fields specific to a single type live under that
 // type's own key.
 type Defaults struct {
-	Type string `json:"type,omitempty" yaml:"type,omitempty"` // "github" | "url".
+	Type string `json:"type,omitzero" yaml:"type,omitzero"` // "github" | "url".
 
 	Common base.Defaults   `json:"common,omitzero" yaml:"common,omitzero"`
 	GitHub github.Defaults `json:"github,omitzero" yaml:"github,omitzero"`
 	URL    web.Defaults    `json:"url,omitzero" yaml:"url,omitzero"`
 
 	// Deprecated: moved to 'github.access_token'.
-	AccessTokenDeprecated string `json:"access_token,omitempty" yaml:"access_token,omitempty"`
+	AccessTokenDeprecated string `json:"access_token,omitzero" yaml:"access_token,omitzero"`
 	// Deprecated: moved to 'github.use_prerelease'.
-	UsePreReleaseDeprecated *bool `json:"use_prerelease,omitempty" yaml:"use_prerelease,omitempty"`
+	UsePreReleaseDeprecated *bool `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"`
 	// Deprecated: moved to 'url.allow_invalid_certs'.
-	AllowInvalidCertsDeprecated *bool `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"`
+	AllowInvalidCertsDeprecated *bool `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"`
 	// Deprecated: moved to 'common.require'.
 	RequireDeprecated *filter.RequireDefaults `json:"require,omitzero" yaml:"require,omitzero"`
 }

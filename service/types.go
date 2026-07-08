@@ -43,12 +43,12 @@ type Services map[string]*Service
 // Service is a source to track latest and deployed versions of a service.
 // It also has the ability to run commands, send notifications and send WebHooks on new releases.
 type Service struct {
-	ID                    string             `json:"-" yaml:"-"`                                                   // Key/Name of the Service.
-	Name                  string             `json:"name,omitempty" yaml:"name,omitempty"`                         // Name of the Service.
-	Comment               string             `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Comment on the Service.
-	Options               opt.Options        `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
-	LatestVersion         latestver.Lookup   `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Vars to scrape the latest version of the Service.
-	DeployedVersionLookup deployedver.Lookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Vars to scrape the Service's current deployed version.
+	ID                    string             `json:"-" yaml:"-"`                                                 // Key/Name of the Service.
+	Name                  string             `json:"name,omitzero" yaml:"name,omitzero"`                         // Name of the Service.
+	Comment               string             `json:"comment,omitzero" yaml:"comment,omitzero"`                   // Comment on the Service.
+	Options               opt.Options        `json:"options,omitzero" yaml:"options,omitzero"`                   // Options to give the Service.
+	LatestVersion         latestver.Lookup   `json:"latest_version,omitzero" yaml:"latest_version,omitzero"`     // Vars to scrape the latest version of the Service.
+	DeployedVersionLookup deployedver.Lookup `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"` // Vars to scrape the Service's current deployed version.
 
 	Notify             shoutrrr.Shoutrrrs `json:"notify,omitempty" yaml:"notify,omitempty"` // Service-specific Shoutrrr vars.
 	NotifyFromDefaults bool               `json:"-" yaml:"-"`
@@ -60,7 +60,7 @@ type Service struct {
 	WebHook             webhook.WebHooks `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Service-specific WebHook vars.
 	WebHookFromDefaults bool             `json:"-" yaml:"-"`
 
-	Dashboard dashboard.Options `json:"dashboard,omitempty" yaml:"dashboard,omitempty"` // Options for the dashboard.
+	Dashboard dashboard.Options `json:"dashboard,omitzero" yaml:"dashboard,omitzero"` // Options for the dashboard.
 
 	Status status.Status `json:"-" yaml:"-"` // Track the Status of this source (version and regex misses).
 
@@ -70,26 +70,26 @@ type Service struct {
 
 // serviceMarshal is a marshal-only helper for [Service].
 type serviceMarshal struct {
-	Name                  string             `json:"name,omitempty" yaml:"name,omitempty"`
-	Comment               string             `json:"comment,omitempty" yaml:"comment,omitempty"`
-	Options               opt.Options        `json:"options,omitempty" yaml:"options,omitempty"`
-	LatestVersion         latestver.Lookup   `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`
-	DeployedVersionLookup deployedver.Lookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"`
+	Name                  string             `json:"name,omitzero" yaml:"name,omitzero"`
+	Comment               string             `json:"comment,omitzero" yaml:"comment,omitzero"`
+	Options               opt.Options        `json:"options,omitzero" yaml:"options,omitzero"`
+	LatestVersion         latestver.Lookup   `json:"latest_version,omitzero" yaml:"latest_version,omitzero"`
+	DeployedVersionLookup deployedver.Lookup `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"`
 	Notify                shoutrrr.Shoutrrrs `json:"notify,omitempty" yaml:"notify,omitempty"`
 	Command               command.Commands   `json:"command,omitempty" yaml:"command,omitempty"`
 	WebHook               webhook.WebHooks   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
-	Dashboard             dashboard.Options  `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`
+	Dashboard             dashboard.Options  `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`
 }
 
 // serviceDecode is an unmarshal-only helper for [Service].
 type serviceDecode struct {
-	Name      string             `json:"name,omitempty" yaml:"name,omitempty"`
-	Comment   string             `json:"comment,omitempty" yaml:"comment,omitempty"`
-	Options   opt.Options        `json:"options,omitempty" yaml:"options,omitempty"`
+	Name      string             `json:"name,omitzero" yaml:"name,omitzero"`
+	Comment   string             `json:"comment,omitzero" yaml:"comment,omitzero"`
+	Options   opt.Options        `json:"options,omitzero" yaml:"options,omitzero"`
 	Notify    shoutrrr.Shoutrrrs `json:"notify,omitempty" yaml:"notify,omitempty"`
 	Command   command.Commands   `json:"command,omitempty" yaml:"command,omitempty"`
 	WebHook   webhook.WebHooks   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
-	Dashboard dashboard.Options  `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`
+	Dashboard dashboard.Options  `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`
 }
 
 // MarshalJSON implements the json.Marshaler interface.

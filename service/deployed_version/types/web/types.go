@@ -38,17 +38,17 @@ var Type = "url"
 type Lookup struct {
 	base.Lookup `json:",inline" yaml:",inline"`
 
-	Method            string `json:"method,omitempty" yaml:"method,omitempty"`                           // REQUIRED: HTTP method.
-	URL               string `json:"url,omitempty" yaml:"url,omitempty"`                                 // REQUIRED: url to query.
-	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
-	TargetHeader      string `json:"target_header,omitempty" yaml:"target_header,omitempty"`             // OPTIONAL: header to target for the version.
+	Method            string `json:"method,omitzero" yaml:"method,omitzero"`                           // REQUIRED: HTTP method.
+	URL               string `json:"url,omitzero" yaml:"url,omitzero"`                                 // REQUIRED: url to query.
+	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Default - false = Disallows invalid HTTPS certificates.
+	TargetHeader      string `json:"target_header,omitzero" yaml:"target_header,omitzero"`             // OPTIONAL: header to target for the version.
 
-	BasicAuth     *BasicAuth     `json:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`         // OPTIONAL: basic auth credentials.
-	Headers       shared.Headers `json:"headers,omitempty" yaml:"headers,omitempty"`               // OPTIONAL: request headers.
-	Body          string         `json:"body,omitempty" yaml:"body,omitempty"`                     // OPTIONAL: request body.
-	JSON          string         `json:"json,omitempty" yaml:"json,omitempty"`                     // OPTIONAL: JSON key to use e.g. version_current.
-	Regex         string         `json:"regex,omitempty" yaml:"regex,omitempty"`                   // OPTIONAL: regex for the version.
-	RegexTemplate string         `json:"regex_template,omitempty" yaml:"regex_template,omitempty"` // OPTIONAL: template to apply to the RegEx match.
+	BasicAuth     *BasicAuth     `json:"basic_auth,omitzero" yaml:"basic_auth,omitzero"`         // OPTIONAL: basic auth credentials.
+	Headers       shared.Headers `json:"headers,omitempty" yaml:"headers,omitempty"`             // OPTIONAL: request headers.
+	Body          string         `json:"body,omitzero" yaml:"body,omitzero"`                     // OPTIONAL: request body.
+	JSON          string         `json:"json,omitzero" yaml:"json,omitzero"`                     // OPTIONAL: JSON key to use e.g. version_current.
+	Regex         string         `json:"regex,omitzero" yaml:"regex,omitzero"`                   // OPTIONAL: regex for the version.
+	RegexTemplate string         `json:"regex_template,omitzero" yaml:"regex_template,omitzero"` // OPTIONAL: template to apply to the RegEx match.
 }
 
 // BasicAuth to use on the HTTP(s) request.

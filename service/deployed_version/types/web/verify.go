@@ -19,11 +19,11 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service/deployed_version/types/web/constants"
-	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/polymorphic"
 )
 
@@ -45,7 +45,7 @@ func (l *Lookup) CheckValues() error {
 	// Method.
 	l.Method = strings.ToUpper(l.Method)
 	method := l.method()
-	if !util.Contains(constants.SupportedMethods, method) {
+	if !slices.Contains(constants.SupportedMethods, method) {
 		errs = append(
 			errs,
 			polymorphic.InvalidTypeError{

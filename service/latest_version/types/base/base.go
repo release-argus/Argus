@@ -28,10 +28,10 @@ import (
 
 // Lookup is the base struct for an [Interface].
 type Lookup struct {
-	Type        string             `json:"type,omitempty" yaml:"type,omitempty"`                 // "github" | "url".
-	URL         string             `json:"url,omitempty" yaml:"url,omitempty"`                   // "owner/repo" or "https://github.com/owner/repo".
+	Type        string             `json:"type,omitzero" yaml:"type,omitzero"`                   // "github" | "url".
+	URL         string             `json:"url,omitzero" yaml:"url,omitzero"`                     // "owner/repo" or "https://github.com/owner/repo".
 	URLCommands filter.URLCommands `json:"url_commands,omitempty" yaml:"url_commands,omitempty"` // Commands to filter the release from the URL request.
-	Require     *filter.Require    `json:"require,omitempty" yaml:"require,omitempty"`           // Options to require before considering a release valid.
+	Require     *filter.Require    `json:"require,omitzero" yaml:"require,omitzero"`             // Options to require before considering a release valid.
 
 	Options *opt.Options   `json:"-" yaml:"-"` // Options.
 	Status  *status.Status `json:"-" yaml:"-"` // Service Status.
@@ -42,8 +42,8 @@ type Lookup struct {
 
 // LookupDecode is an unmarshal-only helper for [Lookup].
 type LookupDecode struct {
-	Type        string             `json:"type,omitempty" yaml:"type,omitempty"`
-	URL         string             `json:"url,omitempty" yaml:"url,omitempty"`
+	Type        string             `json:"type,omitzero" yaml:"type,omitzero"`
+	URL         string             `json:"url,omitzero" yaml:"url,omitzero"`
 	URLCommands filter.URLCommands `json:"url_commands,omitempty" yaml:"url_commands,omitempty"`
 }
 

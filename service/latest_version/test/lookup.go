@@ -35,7 +35,7 @@ import (
 // MockLookup is a configurable latest version lookup stub for tests.
 type MockLookup struct {
 	base.Lookup
-	OverrideErr string `json:"override_err,omitempty" yaml:"override_err,omitempty"`
+	OverrideErr string `json:"override_err,omitzero" yaml:"override_err,omitzero"`
 }
 
 func (f *MockLookup) ApplyOverrides(format string, data []byte) error {

@@ -234,7 +234,7 @@ func (r *GHCRRegistry) Check(version string) error {
 
 // GHCRAuthDefaults holds authentication defaults for GHCR.
 type GHCRAuthDefaults struct {
-	Token      string       `json:"token,omitempty" yaml:"token,omitempty"` // Personal access token used to obtain GHCR query tokens.
+	Token      string       `json:"token,omitzero" yaml:"token,omitzero"` // Personal access token used to obtain GHCR query tokens.
 	mu         sync.RWMutex // Protects query token cache state.
 	queryToken string       // Cached GHCR bearer token used for registry queries.
 	validUntil time.Time    // Expiry time for the cached bearer token.

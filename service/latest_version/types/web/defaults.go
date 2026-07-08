@@ -16,7 +16,7 @@ package web
 
 // Defaults are the URL-specific default values for a Lookup.
 type Defaults struct {
-	AllowInvalidCerts *bool `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
+	AllowInvalidCerts *bool `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Default - false = Disallows invalid HTTPS certificates.
 }
 
 // IsZero implements the yaml.IsZeroer interface.

@@ -17,11 +17,11 @@ package testing
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/internal/logx"
-	"github.com/release-argus/Argus/util"
 )
 
 // ServiceTest queries the service and returns the found version.
@@ -40,7 +40,7 @@ func ServiceTest(flag *string, cfg *config.Config) bool {
 	)
 
 	// Check service exists.
-	if !util.Contains(cfg.Order, *flag) {
+	if !slices.Contains(cfg.Order, *flag) {
 		logx.Fatal(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",

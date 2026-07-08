@@ -257,8 +257,8 @@ func (r *HubRegistry) Check(version string) error {
 
 // HubAuthDefaults holds authentication defaults for Docker Hub.
 type HubAuthDefaults struct {
-	Username string `json:"username,omitempty" yaml:"username,omitempty"` // Username to get a new token for.
-	Token    string `json:"token,omitempty" yaml:"token,omitempty"`       // Personal access token used to obtain Docker Hub query tokens.
+	Username string `json:"username,omitzero" yaml:"username,omitzero"` // Username to get a new token for.
+	Token    string `json:"token,omitzero" yaml:"token,omitzero"`       // Personal access token used to obtain Docker Hub query tokens.
 
 	mu         sync.RWMutex // Protects query token cache state.
 	queryToken string       // Cached Docker Hub bearer token used for registry queries.

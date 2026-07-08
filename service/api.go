@@ -34,16 +34,16 @@ import (
 // secretRefs contains the indexes to use for SecretValues.
 type secretRefs struct {
 	ID                    string                           `json:"id"`
-	LatestVersion         shared.VSecretRef                `json:"latest_version,omitempty"`
-	DeployedVersionLookup shared.VSecretRef                `json:"deployed_version,omitempty"`
+	LatestVersion         shared.VSecretRef                `json:"latest_version,omitzero"`
+	DeployedVersionLookup shared.VSecretRef                `json:"deployed_version,omitzero"`
 	Notify                map[string]shared.OldStringIndex `json:"notify,omitempty"`
 	WebHook               map[string]shared.WHSecretRef    `json:"webhook,omitempty"`
 }
 
 type secretRefsIncoming struct {
 	ID                    string                  `json:"id"`
-	LatestVersion         shared.VSecretRef       `json:"latest_version,omitempty"`
-	DeployedVersionLookup shared.VSecretRef       `json:"deployed_version,omitempty"`
+	LatestVersion         shared.VSecretRef       `json:"latest_version,omitzero"`
+	DeployedVersionLookup shared.VSecretRef       `json:"deployed_version,omitzero"`
 	Notify                []shared.OldStringIndex `json:"notify,omitempty"`
 	WebHook               []shared.WHSecretRef    `json:"webhook,omitempty"`
 }

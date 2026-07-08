@@ -106,8 +106,8 @@ func getIP(r *http.Request) (ip string) {
 
 	// Get IP from X-Forwarded-For header.
 	ips := r.Header.Get("X-Forwarded-For")
-	splitIps := strings.Split(ips, ",")
-	for _, ip = range splitIps {
+	splitIps := strings.SplitSeq(ips, ",")
+	for ip = range splitIps {
 		netIP := net.ParseIP(ip)
 		if netIP != nil {
 			return

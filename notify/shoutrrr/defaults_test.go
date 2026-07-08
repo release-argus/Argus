@@ -18,9 +18,8 @@ package shoutrrr
 
 import (
 	"fmt"
+	"slices"
 	"testing"
-
-	"github.com/release-argus/Argus/util"
 )
 
 func TestShoutrrrsDefaults_Init(t *testing.T) {
@@ -93,7 +92,7 @@ func TestShoutrrrsDefaults_Defaults(t *testing.T) {
 
 	// AND: no unexpected types are initialised.
 	for typ := range defaults {
-		if !util.Contains(SupportedTypes, typ) {
+		if !slices.Contains(SupportedTypes, typ) {
 			t.Errorf(
 				"%s initialised an unexpected notify type: %q",
 				prefix, typ,
