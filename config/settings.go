@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/goccy/go-yaml"
+
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
@@ -318,6 +320,15 @@ func (s *Settings) String(prefix string) string {
 		return ""
 	}
 	return decode.ToYAMLString(s, prefix)
+}
+
+// CheckValues validates the fields of the receiver.
+func (s *Settings) CheckValues() error {
+	if s.Indentation == 0 {
+		s.Indentation = yaml.DefaultIndentSpaces
+	}
+
+	return s.SettingsBase.CheckValues()
 }
 
 // NilUndefinedFlags sets the flags to nil if they are not set.

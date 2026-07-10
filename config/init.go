@@ -34,7 +34,7 @@ func (c *Config) Load(
 	g *errgroup.Group,
 	file string,
 	flagset *map[string]bool,
-) bool {
+) (ok bool) {
 	// Initialise the Log if it hasn't been already.
 	logx.Init("ERROR", false)
 
@@ -48,7 +48,7 @@ func (c *Config) Load(
 
 	//#nosec G304 -- Loading the file asked for by the user.
 	data, err := os.ReadFile(file)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		logx.Fatal(
 			fmt.Sprintf(
 				"Error reading %q\n%s",
