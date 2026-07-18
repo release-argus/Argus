@@ -8,6 +8,7 @@ import ServiceImage from '@/components/approvals/service-image';
 import ServiceInfo from '@/components/approvals/service-info';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { useAuth } from '@/contexts/auth';
 import { useDelayedRender } from '@/hooks/use-delayed-render';
 import useModal from '@/hooks/use-modal';
 import { QUERY_KEYS } from '@/lib/query-keys';
@@ -34,6 +35,7 @@ type ServiceProps = {
 const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 	const delayedRender = useDelayedRender(250);
 	const { setModal } = useModal();
+	const { hasPermission } = useAuth();
 
 	// Service summary.
 	const { data } = useQuery({
@@ -42,6 +44,11 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 		queryKey: QUERY_KEYS.SERVICE.SUMMARY_ITEM(id),
 		staleTime: Infinity,
 	});
+
+	const canEdit =
+		editable &&
+		hasPermission('service', 'update', { serviceID: id, tags: data?.tags });
+	const canOrder = editable && hasPermission('service_order', 'update');
 
 	// Sortable cards.
 	const {
@@ -52,7 +59,7 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 		transition,
 		isDragging,
 	} = useSortable({
-		disabled: !editable,
+		disabled: !canOrder,
 		id,
 	});
 
@@ -125,27 +132,31 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 						{data?.name ?? data?.id}
 					</h4>
 				)}
-				{editable && (
+				{(canEdit || canOrder) && (
 					<div className="-top-2.5 absolute right-0.5 z-1 flex flex-col">
-						<Button
-							aria-label="Edit service"
-							className="size-6"
-							onClick={() => data && showModal('EDIT', data)}
-							size="sm"
-							variant="secondary"
-						>
-							<Pencil />
-						</Button>
-						<Button
-							{...listeners}
-							{...attributes}
-							aria-label="Drag handle"
-							className="cursor-grab touch-none px-0! py-2 text-muted-foreground"
-							size="sm"
-							variant="ghost"
-						>
-							<GripVertical />
-						</Button>
+						{canEdit && (
+							<Button
+								aria-label="Edit service"
+								className="size-6"
+								onClick={() => data && showModal('EDIT', data)}
+								size="sm"
+								variant="secondary"
+							>
+								<Pencil />
+							</Button>
+						)}
+						{canOrder && (
+							<Button
+								{...listeners}
+								{...attributes}
+								aria-label="Drag handle"
+								className="cursor-grab touch-none px-0! py-2 text-muted-foreground"
+								size="sm"
+								variant="ghost"
+							>
+								<GripVertical />
+							</Button>
+						)}
 					</div>
 				)}
 			</CardHeader>

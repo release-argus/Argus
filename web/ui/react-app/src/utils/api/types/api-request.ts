@@ -190,12 +190,10 @@ export const RequestMap: RequestFns = {
 			let defaults = original;
 			if (
 				defaults &&
-				Boolean(
-					('url' in (defaults as LatestVersionLookupSchema) &&
-						!(defaults as LatestVersionLookupSchema).url) ||
-						('version' in (defaults as DeployedVersionLookupSchema) &&
-							!(defaults as DeployedVersionLookupManual).version),
-				)
+				(('url' in (defaults as LatestVersionLookupSchema) &&
+					!(defaults as LatestVersionLookupSchema).url) ||
+					('version' in (defaults as DeployedVersionLookupSchema) &&
+						!(defaults as DeployedVersionLookupManual).version))
 			) {
 				defaults = { ...defaults, type: '' };
 			}

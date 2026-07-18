@@ -33,14 +33,14 @@ export const DeleteModal: FC<DeleteModalProps> = ({ disabled }) => {
 	const { hideModal } = useModal();
 
 	const { mutate, isPending } = useServiceDelete(schema, {
-		onSettled: () => {
-			setOpen(false);
-			hideModal();
-		},
 		onError: (error) => {
 			toast.error('Failed to delete service.', {
 				description: `Error: ${error instanceof Error ? error.message : String(error)}`,
 			});
+		},
+		onSettled: () => {
+			setOpen(false);
+			hideModal();
 		},
 	});
 

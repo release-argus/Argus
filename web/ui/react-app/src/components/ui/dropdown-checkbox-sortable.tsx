@@ -1,9 +1,9 @@
-import { Button } from '@/components/ui/button.tsx';
-import { DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import type { FC } from 'react';
+import { Button } from '@/components/ui/button.tsx';
+import { DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu';
 
 type DropdownMenuCheckboxItemSortableProps = {
 	/* ID of the checkbox */

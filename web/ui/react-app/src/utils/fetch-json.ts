@@ -7,7 +7,7 @@ import {
 
 type Props = {
 	url: string;
-	method?: 'DELETE' | 'GET' | 'POST' | 'PUT';
+	method?: 'DELETE' | 'GET' | 'PATCH' | 'POST' | 'PUT';
 	headers?: Record<string, string>;
 	body?: string;
 	timeout?: number;

@@ -20,8 +20,6 @@ export const INVALID_GITHUB_REPO_MESSAGE = 'Invalid GitHub repository.';
 export const INVALID_URL_MESSAGE =
 	"Invalid URL (Must start with 'http://' or 'https://').";
 export const UNIQUE_MESSAGE = 'Must be unique.';
-export const EXPECTED_UUID_MESSAGE = 'Expected a 36-character UUID string.';
-export const EXPECTED_HASH_MESSAGE = 'Expected a 32-character hex string.';
 
 const GITHUB_REPO_REGEX = /^[a-zA-Z0-9-_.]+\/[a-zA-Z0-9-_.]+$/;
 /**
@@ -184,7 +182,7 @@ export const validateStringLength =
 		const errorMessage =
 			message ??
 			(min === max
-				? `Must be ${min} characters.`
+				? `Minimum ${min} characters.`
 				: `Must be between ${min} and ${max} characters.`);
 
 		if (

@@ -1,5 +1,12 @@
 /* Query keys for React Query. */
 export const QUERY_KEYS = {
+	AUTH: {
+		GROUPS: () => ['auth', 'groups'],
+		ME: () => ['auth', 'me'],
+		PERMISSIONS: () => ['auth', 'permissions'],
+		TOKENS: () => ['auth', 'tokens'],
+		USERS: () => ['auth', 'users'],
+	},
 	CONFIG: {
 		BUILD_INFO: () => ['config', 'build'],
 		CLI_FLAGS: () => ['config', 'flags'],
