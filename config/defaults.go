@@ -42,7 +42,7 @@ func (d *Defaults) IsZero() bool {
 func DecodeDefaults(format string, data []byte) (*Defaults, error) {
 	var field Defaults
 	if err := decode.Unmarshal(format, data, &field); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "defaults",
 			Err: err,
 		}
@@ -124,7 +124,7 @@ func (d *Defaults) CheckValues() (error, bool) {
 	if err := d.Service.CheckValues(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "service",
 				Err: err,
 			},
@@ -135,7 +135,7 @@ func (d *Defaults) CheckValues() (error, bool) {
 	if notifyErr != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "notify",
 				Err: notifyErr,
 			},
@@ -146,7 +146,7 @@ func (d *Defaults) CheckValues() (error, bool) {
 	if webhookErr != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "webhook",
 				Err: webhookErr,
 			},

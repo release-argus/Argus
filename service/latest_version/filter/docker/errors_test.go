@@ -20,16 +20,16 @@ import (
 	"testing"
 )
 
-func TestTagNotFoundError_Error(t *testing.T) {
-	// GIVEN: a TagNotFoundError.
+func TestErrTagNotFound_Error(t *testing.T) {
+	// GIVEN: a ErrTagNotFound.
 	tests := []struct {
 		name  string
-		input TagNotFoundError
+		input ErrTagNotFound
 		want  string
 	}{
 		{
 			name: "basic error",
-			input: TagNotFoundError{
+			input: ErrTagNotFound{
 				Image: "test/app",
 				Tag:   "9001",
 			},
@@ -37,7 +37,7 @@ func TestTagNotFoundError_Error(t *testing.T) {
 		},
 		{
 			name: "empty fields",
-			input: TagNotFoundError{
+			input: ErrTagNotFound{
 				Image: "",
 				Tag:   "",
 			},
@@ -45,7 +45,7 @@ func TestTagNotFoundError_Error(t *testing.T) {
 		},
 		{
 			name: "image only",
-			input: TagNotFoundError{
+			input: ErrTagNotFound{
 				Image: "test/app",
 				Tag:   "",
 			},
@@ -53,7 +53,7 @@ func TestTagNotFoundError_Error(t *testing.T) {
 		},
 		{
 			name: "tag only",
-			input: TagNotFoundError{
+			input: ErrTagNotFound{
 				Image: "",
 				Tag:   "latest",
 			},
@@ -71,7 +71,7 @@ func TestTagNotFoundError_Error(t *testing.T) {
 			// THEN: the expected error message is returned.
 			if got != tc.want {
 				t.Fatalf(
-					"%s\nTagNotFoundError.Error() mismatch\ngot:  %q\nwant: %q",
+					"%s\nErrTagNotFound.Error() mismatch\ngot:  %q\nwant: %q",
 					packageName, got, tc.want,
 				)
 			}

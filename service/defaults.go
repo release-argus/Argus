@@ -106,7 +106,7 @@ func (d *Defaults) unmarshal(format string, data []byte) error {
 func DecodeDefaults(format string, data []byte) (*Defaults, error) {
 	var field Defaults
 	if err := decode.Unmarshal(format, data, &field); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "service",
 			Err: err,
 		}

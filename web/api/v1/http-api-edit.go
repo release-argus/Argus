@@ -675,7 +675,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		err := fmt.Errorf(
 			"%s %q failed: %w",
 			reqType, serviceID,
-			&decode.FieldError{Key: "id"},
+			&decode.ErrField{Key: "id"},
 		)
 		logx.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)

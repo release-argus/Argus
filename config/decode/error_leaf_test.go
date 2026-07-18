@@ -18,23 +18,23 @@ package decode
 
 import "testing"
 
-func TestFieldError_Error(t *testing.T) {
-	// GIVEN: a FieldError.
+func TestErrField_Error(t *testing.T) {
+	// GIVEN: a ErrField.
 	tests := []struct {
 		name     string
-		err      FieldError
+		err      ErrField
 		expected string
 	}{
 		{
 			name: "key",
-			err: FieldError{
+			err: ErrField{
 				Key: "testKey",
 			},
 			expected: `testKey: <required>`,
 		},
 		{
 			name: "key + description",
-			err: FieldError{
+			err: ErrField{
 				Key:         "testKey",
 				Description: "must be set",
 			},
@@ -42,7 +42,7 @@ func TestFieldError_Error(t *testing.T) {
 		},
 		{
 			name: "key-value",
-			err: FieldError{
+			err: ErrField{
 				Key:   "testKey",
 				Value: "foo",
 			},
@@ -50,7 +50,7 @@ func TestFieldError_Error(t *testing.T) {
 		},
 		{
 			name: "key-value + description",
-			err: FieldError{
+			err: ErrField{
 				Key:         "type",
 				Value:       "foo",
 				Description: "should be X",
@@ -59,7 +59,7 @@ func TestFieldError_Error(t *testing.T) {
 		},
 		{
 			name: "key-value + description + allowed values",
-			err: FieldError{
+			err: ErrField{
 				Key:         "type",
 				Value:       "foo",
 				Description: "description goes here",
@@ -78,7 +78,7 @@ func TestFieldError_Error(t *testing.T) {
 			// THEN: the error is formatted as expected.
 			if got != tc.expected {
 				t.Fatalf(
-					"%s\nstringified FieldError mismatch\ngot:  %q\nwant: %q",
+					"%s\nstringified ErrField mismatch\ngot:  %q\nwant: %q",
 					packageName, got, tc.expected,
 				)
 			}

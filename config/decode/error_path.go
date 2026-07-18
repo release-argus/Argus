@@ -18,8 +18,8 @@ import (
 	"fmt"
 )
 
-// KeyFieldError groups one or more errors under a field key.
-type KeyFieldError struct {
+// ErrKeyField groups one or more errors under a field key.
+type ErrKeyField struct {
 	Key string
 	Err error
 }
@@ -29,7 +29,7 @@ type KeyFieldError struct {
 // Output format:
 //
 //	KEY: ERR
-func (e *KeyFieldError) Error() string {
+func (e *ErrKeyField) Error() string {
 	return fmt.Sprintf(
 		"%s: %v",
 		e.Key, e.Err,
@@ -37,6 +37,6 @@ func (e *KeyFieldError) Error() string {
 }
 
 // Unwrap returns the underlying error.
-func (e *KeyFieldError) Unwrap() error {
+func (e *ErrKeyField) Unwrap() error {
 	return e.Err
 }

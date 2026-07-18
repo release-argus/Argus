@@ -18,14 +18,14 @@ import (
 	"fmt"
 )
 
-// TagNotFoundError is returned when a registry reports that an image tag could not be found.
-type TagNotFoundError struct {
+// ErrTagNotFound is returned when a registry reports that an image tag could not be found.
+type ErrTagNotFound struct {
 	Image string
 	Tag   string
 }
 
 // Error implements the [error] interface.
-func (e TagNotFoundError) Error() string {
+func (e ErrTagNotFound) Error() string {
 	return fmt.Sprintf(
 		"%s:%s - tag not found",
 		e.Image, e.Tag,

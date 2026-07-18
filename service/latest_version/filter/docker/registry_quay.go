@@ -220,7 +220,7 @@ func (r *QuayRegistry) parseBody(tag string, resp *http.Response) error {
 
 	// Quay will give a 200 even when the tag does not exist.
 	if strings.Contains(string(body), `"tags": []`) {
-		return TagNotFoundError{Image: r.GetImage(), Tag: tag}
+		return ErrTagNotFound{Image: r.GetImage(), Tag: tag}
 	}
 
 	return nil

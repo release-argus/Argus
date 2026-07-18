@@ -32,7 +32,7 @@ type Defaults struct {
 func DecodeDefaults(format string, data []byte) (*Defaults, error) {
 	var field Defaults
 	if err := decode.Unmarshal(format, data, &field); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "dashboard",
 			Err: err,
 		}

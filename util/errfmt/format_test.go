@@ -277,7 +277,7 @@ func TestAppendFormattedErrorLines(t *testing.T) {
 		},
 		{
 			name: "wrapped custom error",
-			err: &decode.KeyFieldError{
+			err: &decode.ErrKeyField{
 				Key: "key",
 				Err: fmt.Errorf("error"),
 			},

@@ -37,7 +37,7 @@ func (c *Config) CheckValues() bool {
 	if err := c.Settings.CheckValues(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "settings",
 				Err: err,
 			},
@@ -48,7 +48,7 @@ func (c *Config) CheckValues() bool {
 	if defaultsErr != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "defaults",
 				Err: defaultsErr,
 			},
@@ -59,7 +59,7 @@ func (c *Config) CheckValues() bool {
 	if notifyErr != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "notify",
 				Err: notifyErr,
 			},
@@ -70,7 +70,7 @@ func (c *Config) CheckValues() bool {
 	if webhookErr != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "webhook",
 				Err: webhookErr,
 			},
@@ -81,7 +81,7 @@ func (c *Config) CheckValues() bool {
 	if serviceErr != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "service",
 				Err: serviceErr,
 			},

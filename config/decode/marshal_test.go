@@ -82,23 +82,23 @@ func TestIsNull(t *testing.T) {
 	}
 }
 
-func TestUnsupportedFormatError_Error(t *testing.T) {
-	// GIVEN: a UnsupportedFormatError.
+func TestErrUnsupportedFormat_Error(t *testing.T) {
+	// GIVEN: a ErrUnsupportedFormat.
 	tests := []struct {
 		name     string
-		err      UnsupportedFormatError
+		err      ErrUnsupportedFormat
 		expected string
 	}{
 		{
 			name: "xml",
-			err: UnsupportedFormatError{
+			err: ErrUnsupportedFormat{
 				Format: "xml",
 			},
 			expected: `unsupported format: "xml"`,
 		},
 		{
 			name: "html",
-			err: UnsupportedFormatError{
+			err: ErrUnsupportedFormat{
 				Format: "html",
 			},
 			expected: `unsupported format: "html"`,
@@ -115,7 +115,7 @@ func TestUnsupportedFormatError_Error(t *testing.T) {
 			// THEN: the error is formatted as expected.
 			if got != tc.expected {
 				t.Fatalf(
-					"%s\nUnsupportedFormatError stringified mismatch\ngot:  %q\nwant: %q",
+					"%s\nErrUnsupportedFormat stringified mismatch\ngot:  %q\nwant: %q",
 					packageName, got, tc.expected,
 				)
 			}

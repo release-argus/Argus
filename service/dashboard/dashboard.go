@@ -114,7 +114,7 @@ func Decode(
 	}
 
 	if err := decode.Unmarshal(format, data, &field); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "dashboard",
 			Err: err,
 		}
@@ -266,7 +266,7 @@ func (o *Options) CheckValues() error {
 	}
 
 	if !util.CheckTemplate(o.WebURL) {
-		return &decode.FieldError{
+		return &decode.ErrField{
 			Key:         "web_url",
 			Value:       o.WebURL,
 			Description: "didn't pass templating",

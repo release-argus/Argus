@@ -43,7 +43,7 @@ func DecodeDefaults(format string, data []byte) (*Defaults, error) {
 	var field Defaults
 
 	if err := decode.Unmarshal(format, data, &field); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "latest_version",
 			Err: err,
 		}
@@ -65,7 +65,7 @@ func (d *Defaults) SetDefaults(dflts *Defaults) {
 // CheckValues validates the fields of the receiver.
 func (d *Defaults) CheckValues() error {
 	if requireErrs := d.Require.CheckValues(); requireErrs != nil {
-		return &decode.KeyFieldError{
+		return &decode.ErrKeyField{
 			Key: "require",
 			Err: requireErrs,
 		}

@@ -371,7 +371,7 @@ func TestDecodeServices__marshalError(t *testing.T) {
 
 	// THEN: the marshal error is returned.
 	got := errfmt.FormatError(err)
-	wantErr := &decode.KeyFieldError{
+	wantErr := &decode.ErrKeyField{
 		Key: "service",
 		Err: customErr,
 	}

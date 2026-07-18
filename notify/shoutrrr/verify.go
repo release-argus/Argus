@@ -85,7 +85,7 @@ func (s *Shoutrrrs) CheckValues() (error, bool) {
 		if err != nil {
 			errs = append(
 				errs,
-				&decode.KeyFieldError{
+				&decode.ErrKeyField{
 					Key: key,
 					Err: err,
 				},
@@ -117,7 +117,7 @@ func (s *Shoutrrr) CheckValues() (error, bool) {
 	if err := s.checkValuesOptions(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "options",
 				Err: err,
 			},
@@ -126,7 +126,7 @@ func (s *Shoutrrr) CheckValues() (error, bool) {
 	if err := s.checkValuesURLFields(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "url_fields",
 				Err: err,
 			},
@@ -135,7 +135,7 @@ func (s *Shoutrrr) CheckValues() (error, bool) {
 	if err := s.checkValuesParams(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "params",
 				Err: err,
 			},
@@ -171,7 +171,7 @@ func (b *Base) CheckValues(id string) (error, bool) {
 	if err := b.checkValuesOptions(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "options",
 				Err: err,
 			},
@@ -180,7 +180,7 @@ func (b *Base) CheckValues(id string) (error, bool) {
 	if err := b.checkValuesParams(itemType); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "params",
 				Err: err,
 			},
@@ -208,7 +208,7 @@ func (s *ShoutrrrsDefaults) CheckValues() (error, bool) {
 		if err != nil {
 			errs = append(
 				errs,
-				&decode.KeyFieldError{
+				&decode.ErrKeyField{
 					Key: key,
 					Err: err,
 				},
@@ -236,7 +236,7 @@ func (d *Defaults) CheckValues(id string) (error, bool) {
 	if !slices.Contains(SupportedTypes, typeName) {
 		errs = append(
 			errs,
-			polymorphic.InvalidTypeError{
+			polymorphic.ErrInvalidType{
 				Key:     "type",
 				Value:   typeName,
 				Allowed: SupportedTypes,
@@ -419,7 +419,7 @@ func (s *Shoutrrr) checkValuesType() error {
 	if !slices.Contains(SupportedTypes, sType) {
 		sTypeWithoutID := util.FirstNonDefault(s.Type, s.Main.Type)
 		if sTypeWithoutID == "" {
-			return &decode.FieldError{
+			return &decode.ErrField{
 				Key:         "type",
 				Description: "e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify",
 			}
@@ -428,7 +428,7 @@ func (s *Shoutrrr) checkValuesType() error {
 
 	// Check the Type doesn't differ in the Main.
 	if s.Main.Type != "" && sType != s.Main.Type {
-		return &decode.FieldError{
+		return &decode.ErrField{
 			Key:   "type",
 			Value: sType,
 			Description: fmt.Sprintf(
@@ -440,7 +440,7 @@ func (s *Shoutrrr) checkValuesType() error {
 
 	// Invalid/Unknown type.
 	if !slices.Contains(SupportedTypes, sType) {
-		return polymorphic.InvalidTypeError{
+		return polymorphic.ErrInvalidType{
 			Key:     "type",
 			Value:   sType,
 			Allowed: SupportedTypes,
@@ -463,7 +463,7 @@ func (b *Base) checkValuesOptions() error {
 		if _, err := time.ParseDuration(b.Options["delay"]); err != nil {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "delay",
 					Value:       optionDelay,
 					Description: "use 'AhBmCs' duration format",
@@ -479,7 +479,7 @@ func (b *Base) checkValuesOptions() error {
 			if maxTries > math.MaxUint8 {
 				errs = append(
 					errs,
-					&decode.FieldError{
+					&decode.ErrField{
 						Key:         "max_tries",
 						Value:       maxTriesStr,
 						Description: fmt.Sprintf("must be <= %d", math.MaxUint8),
@@ -493,7 +493,7 @@ func (b *Base) checkValuesOptions() error {
 				if strings.HasPrefix(maxTriesStr, "-") {
 					errs = append(
 						errs,
-						&decode.FieldError{
+						&decode.ErrField{
 							Key:         "max_tries",
 							Value:       maxTriesStr,
 							Description: "must be positive",
@@ -503,7 +503,7 @@ func (b *Base) checkValuesOptions() error {
 				} else {
 					errs = append(
 						errs,
-						&decode.FieldError{
+						&decode.ErrField{
 							Key:         "max_tries",
 							Value:       maxTriesStr,
 							Description: fmt.Sprintf("must be <= %d", math.MaxUint8),
@@ -514,7 +514,7 @@ func (b *Base) checkValuesOptions() error {
 				// Not an integer.
 				errs = append(
 					errs,
-					&decode.FieldError{
+					&decode.ErrField{
 						Key:         "max_tries",
 						Value:       maxTriesStr,
 						Description: "must be an integer",
@@ -529,7 +529,7 @@ func (b *Base) checkValuesOptions() error {
 	if !util.CheckTemplate(optionMessage) {
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key:         "message",
 				Value:       optionMessage,
 				Description: "didn't pass templating",
@@ -553,7 +553,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("devicekey") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key: "devicekey",
 				},
 			)
@@ -561,7 +561,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key: "host",
 				},
 			)
@@ -571,7 +571,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("token") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "token",
 					Description: "e.g. 'https://discord.com/api/webhooks/[ 975870285909737583 <- webhookid ]/[ QEdyk-Qi5AiMXoZdxQFpWNcwEfmz5oOm_1Rni9DnjQAUap4zWcurM4IquamVrDIyNgBG <- TOKEN ]'",
 				},
@@ -580,7 +580,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("webhookid") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "webhookid",
 					Description: "e.g. 'https://discord.com/api/webhooks/[ 975870285909737583 <- WEBHOOKID ]/[ QEdyk-Qi5AiMXoZdxQFpWNcwEfmz5oOm_1Rni9DnjQAUap4zWcurM4IquamVrDIyNgBG <- token ]'",
 				},
@@ -591,7 +591,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "host",
 					Description: "e.g. 'smtp.example.com'",
 				},
@@ -602,7 +602,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "host",
 					Description: "e.g. 'gotify.example.com'",
 				},
@@ -611,7 +611,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("token") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "token",
 					Description: "e.g. 'Aod9Cb0zXCeOrnD'",
 				},
@@ -622,7 +622,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("raw") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "raw",
 					Description: "e.g. 'https://chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz'",
 				},
@@ -633,7 +633,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("webhookid") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "webhookid",
 					Description: "e.g. 'h1fyLh42h7lDI2L11T-bv'",
 				},
@@ -644,7 +644,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("apikey") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "apikey",
 					Description: "e.g. 'f8eae56127864015b0d2f4d8db6ff53f'",
 				},
@@ -655,7 +655,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "host",
 					Description: "e.g. 'matrix.example.com'",
 				},
@@ -664,7 +664,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("password") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "password",
 					Description: "e.g. 'pass123' (with user) OR 'access_token' (no user)",
 				},
@@ -675,7 +675,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "host",
 					Description: "e.g. 'mattermost.example.com'",
 				},
@@ -684,7 +684,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("token") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "token",
 					Description: "e.g. 'Aod9Cb0zXCeOrnD'",
 				},
@@ -695,7 +695,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("topic") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key: "topic",
 				},
 			)
@@ -705,7 +705,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("apikey") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "apikey",
 					Description: "found on your Notifiarr account settings page",
 				},
@@ -716,7 +716,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("apikey") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "apikey",
 					Description: "e.g. 'xxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx'",
 				},
@@ -727,7 +727,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("token") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "token",
 					Description: "e.g. 'o.5NfxzU9yH4xBZlEXZArRtyUB4S4Ua8Hd'",
 				},
@@ -736,7 +736,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("targets") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "targets",
 					Description: "e.g. 'fpwfXzDCYsTxw4VfAAoHiR,5eAzVLKp5VRUMJeYehwbzv,XR7VKoK5b2MYWDpstD3Hfq'",
 				},
@@ -747,7 +747,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("token") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "token",
 					Description: "e.g. 'aayohdg8gqjj3ssszuqwwmuipt5gcd'",
 				},
@@ -756,7 +756,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("user") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "user",
 					Description: "e.g. '2QypyiVSnURsw72cpnXCuVAQMJpKKY'",
 				},
@@ -767,7 +767,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "host",
 					Description: "e.g. 'rocket-chat.example.com'",
 				},
@@ -776,7 +776,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("tokena") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "tokena",
 					Description: "e.g. '8eGdRzc9r4YYNyvge'",
 				},
@@ -785,7 +785,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("tokenb") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "tokenb",
 					Description: "e.g. '2XYQcX9NBwJBKfQnphpebPcnXZcPEi32Nt4NKJfrnbhsbRfX'",
 				},
@@ -794,7 +794,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("channel") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "channel",
 					Description: "e.g. 'argusChannel' or '@user'",
 				},
@@ -805,7 +805,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("token") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "token",
 					Description: "e.g. '123456789012-1234567890123-4mt0t4l1YL3g1T5L4cK70k3N'",
 				},
@@ -814,7 +814,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("channel") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "channel",
 					Description: "e.g. 'C001CH4NN3L' or 'webhook'",
 				},
@@ -825,7 +825,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("raw") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "raw",
 					Description: "e.g. 'slack://TOKEN@CHANNEL'",
 				},
@@ -836,7 +836,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("token") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "token",
 					Description: "e.g. '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'",
 				},
@@ -847,7 +847,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "host",
 					Description: "e.g. 'zulipchat.example.com'",
 				},
@@ -856,7 +856,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("botmail") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "botmail",
 					Description: "e.g. 'my-bot@zulipchat.com'",
 				},
@@ -865,7 +865,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("botkey") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "botkey",
 					Description: "e.g. 'correcthorsebatterystable'",
 				},
@@ -876,7 +876,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "host",
 					Description: "e.g. 'example.com'",
 				},
@@ -890,7 +890,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 				if converted == "" {
 					errs = append(
 						errs,
-						&decode.FieldError{
+						&decode.ErrField{
 							Key:         jsonMap,
 							Value:       value,
 							Description: "must be a JSON map",
@@ -922,7 +922,7 @@ func (s *Shoutrrr) checkValuesParams() error {
 		if s.GetParam("events") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "events",
 					Description: "e.g. 'event1,event2'",
 				},
@@ -933,7 +933,7 @@ func (s *Shoutrrr) checkValuesParams() error {
 		if s.GetParam("devices") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "devices",
 					Description: "e.g. '550ddc132c2b4fd28b8b89f735860db1,7294feb73974e5c99d7479ab7b73ba39,d2d775a2f453237d733aa2b7ea2c3ecd'",
 				},
@@ -944,7 +944,7 @@ func (s *Shoutrrr) checkValuesParams() error {
 		if s.GetParam("fromaddress") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "fromaddress",
 					Description: "e.g. 'service@gmail.com'",
 				},
@@ -953,7 +953,7 @@ func (s *Shoutrrr) checkValuesParams() error {
 		if s.GetParam("toaddresses") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "toaddresses",
 					Description: "e.g. 'name@gmail.com'",
 				},
@@ -965,7 +965,7 @@ func (s *Shoutrrr) checkValuesParams() error {
 		if s.GetParam("host") == "" && s.GetURLField("group") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "host",
 					Description: "Full Power Automate workflow URL, e.g. 'https://prod-00.westus.logic.azure.com:443/workflows/...'",
 				},
@@ -976,7 +976,7 @@ func (s *Shoutrrr) checkValuesParams() error {
 		if s.GetParam("chats") == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "chats",
 					Description: "e.g. '@channelName' or 'chatID'",
 				},
@@ -1005,7 +1005,7 @@ func (b *Base) checkValuesParams(itemType string) error {
 		if !util.CheckTemplate(value) {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         key,
 					Value:       value,
 					Description: "didn't pass templating",
@@ -1078,7 +1078,7 @@ func (b *Base) validateParamSelect(key string, allowed []string) error {
 		return nil
 	}
 
-	return polymorphic.InvalidTypeError{
+	return polymorphic.ErrInvalidType{
 		Key:     key,
 		Value:   value,
 		Allowed: allowed,

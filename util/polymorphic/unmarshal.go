@@ -41,7 +41,7 @@ func Unmarshal(
 
 	// Unmarshal the key value into the interface.
 	if err := decode.Unmarshal(format, keyVal, v); err != nil {
-		return &decode.KeyFieldError{
+		return &decode.ErrKeyField{
 			Key: key,
 			Err: err,
 		}

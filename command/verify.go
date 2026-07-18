@@ -34,7 +34,7 @@ func (s *Commands) CheckValues() error {
 		if err := cmd.CheckValues(); err != nil {
 			errs = append(
 				errs,
-				&decode.KeyFieldError{
+				&decode.ErrKeyField{
 					Key: fmt.Sprintf("- item_%d", i),
 					Err: err,
 				},

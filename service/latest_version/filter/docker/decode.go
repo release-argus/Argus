@@ -44,7 +44,7 @@ func Decode(
 		RegistryMapInheritable,
 	)
 	if err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "docker",
 			Err: err,
 		}
@@ -54,7 +54,7 @@ func Decode(
 	field, ok := fieldInheritable.(Registry)
 	if !ok {
 		err := fmt.Errorf("expected Registry, got %T", field)
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "docker",
 			Err: err,
 		}
@@ -62,7 +62,7 @@ func Decode(
 
 	field.SetDefaults(field.GetType(), defaults)
 	if err := field.DecodeSelf(format, data); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "docker",
 			Err: err,
 		}
@@ -107,7 +107,7 @@ func ApplyOverrides(
 		RegistryMapInheritable,
 	)
 	if err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "docker",
 			Err: err,
 		}
@@ -116,7 +116,7 @@ func ApplyOverrides(
 	// Assert back to Registry.
 	field, ok := newTarget.(Registry)
 	if !ok {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "docker",
 			Err: fmt.Errorf("expected Registry, got %T", field),
 		}

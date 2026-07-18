@@ -362,7 +362,7 @@ func (a *HubAuth) CheckValues() error {
 		if username == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "username",
 					Description: "user for the token",
 				},
@@ -370,7 +370,7 @@ func (a *HubAuth) CheckValues() error {
 		} else {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "token",
 					Description: "token for " + username,
 				},

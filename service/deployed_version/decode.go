@@ -48,12 +48,12 @@ func Decode(
 		ServiceMapInheritable,
 	)
 	if err != nil {
-		var ite *polymorphic.InvalidTypeError
+		var ite *polymorphic.ErrInvalidType
 		// Override constructor type names.
 		if errors.As(err, &ite) {
 			ite.Allowed = PossibleTypes
 		}
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "deployed_version",
 			Err: err,
 		}
@@ -63,7 +63,7 @@ func Decode(
 	field, ok := fieldInheritable.(Lookup)
 	if !ok {
 		err := fmt.Errorf("expected deployedver.Lookup, got %T", fieldInheritable)
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "deployed_version",
 			Err: err,
 		}
@@ -71,7 +71,7 @@ func Decode(
 
 	field.Init(options, status, cfg)
 	if err := field.DecodeSelf(format, data); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "deployed_version",
 			Err: err,
 		}
@@ -115,7 +115,7 @@ func ApplyOverrides(
 		defaultType,
 	)
 	if err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "deployed_version",
 			Err: err,
 		}
@@ -134,7 +134,7 @@ func ApplyOverrides(
 	target = target.Copy(svcStatus)
 
 	if err := target.ApplyOverrides(format, data); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "deployed_version",
 			Err: err,
 		}

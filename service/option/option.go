@@ -177,7 +177,7 @@ func (b *Base) CheckValues() error {
 			b.Interval += "s"
 		}
 		if _, err := time.ParseDuration(b.Interval); err != nil {
-			return &decode.FieldError{
+			return &decode.ErrField{
 				Key:         "interval",
 				Value:       b.Interval,
 				Description: "use 'AhBmCs' duration format",

@@ -56,7 +56,7 @@ func DecodeDefaults(
 
 	// Unmarshal static fields.
 	if err := decode.Unmarshal(format, data, &field); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "docker",
 			Err: err,
 		}
@@ -158,7 +158,7 @@ func (d *Defaults) CheckValues() error {
 
 	// Type.
 	if d.Type != "" && !slices.Contains(PossibleTypes, d.Type) {
-		return polymorphic.InvalidTypeError{
+		return polymorphic.ErrInvalidType{
 			Key:     "type",
 			Value:   d.Type,
 			Allowed: PossibleTypes,

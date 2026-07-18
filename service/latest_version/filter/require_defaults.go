@@ -44,7 +44,7 @@ func (r *RequireDefaults) SetDefaults(dflts *RequireDefaults) {
 // CheckValues validates the fields of the receiver.
 func (r *RequireDefaults) CheckValues() error {
 	if dockerErr := r.Docker.CheckValues(); dockerErr != nil {
-		return &decode.KeyFieldError{
+		return &decode.ErrKeyField{
 			Key: "docker",
 			Err: dockerErr,
 		}

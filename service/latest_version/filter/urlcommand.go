@@ -155,7 +155,7 @@ func (s *URLCommands) CheckValues() error {
 		if err := urlCommand.CheckValues(); err != nil {
 			errs = append(
 				errs,
-				&decode.KeyFieldError{
+				&decode.ErrKeyField{
 					Key: fmt.Sprintf("- item_%d", index),
 					Err: err,
 				},
@@ -172,7 +172,7 @@ func (s *URLCommands) CheckValues() error {
 // CheckValues validates the fields of the receiver.
 func (c *URLCommand) CheckValues() error {
 	if !slices.Contains(urlCommandTypes, c.Type) {
-		return polymorphic.InvalidTypeError{
+		return polymorphic.ErrInvalidType{
 			Key:     "type",
 			Value:   c.Type,
 			Allowed: urlCommandTypes,
@@ -187,7 +187,7 @@ func (c *URLCommand) CheckValues() error {
 		if c.Regex == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "regex",
 					Description: "regular expression to use",
 				},
@@ -197,7 +197,7 @@ func (c *URLCommand) CheckValues() error {
 			if err != nil {
 				errs = append(
 					errs,
-					&decode.FieldError{
+					&decode.ErrField{
 						Key:         "regex",
 						Value:       c.Regex,
 						Description: err.Error(),
@@ -209,7 +209,7 @@ func (c *URLCommand) CheckValues() error {
 		if c.Old == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "old",
 					Description: "text to replace",
 				},
@@ -219,7 +219,7 @@ func (c *URLCommand) CheckValues() error {
 		if c.Text == "" {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "text",
 					Description: "text to split on",
 				},

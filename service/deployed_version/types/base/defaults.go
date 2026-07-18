@@ -55,7 +55,7 @@ func DecodeDefaults(format string, data []byte) (*Defaults, error) {
 	var field Defaults
 
 	if err := decode.Unmarshal(format, data, &field); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "deployed_version",
 			Err: err,
 		}
@@ -104,7 +104,7 @@ func (d *Defaults) CheckValues() error {
 	if d.Method != "" && !slices.Contains(constants.SupportedMethods, d.Method) {
 		errs = append(
 			errs,
-			polymorphic.InvalidTypeError{
+			polymorphic.ErrInvalidType{
 				Key:     "method",
 				Value:   d.Method,
 				Allowed: constants.SupportedMethods,

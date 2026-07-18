@@ -25,14 +25,14 @@ type dataExtract map[string]any
 // marshalExtractSubtree serialises an extracted subtree (overridable for tests).
 var marshalExtractSubtree = decode.Marshal
 
-// ExtractError reports a failure while extracting a configuration subtree by key.
-type ExtractError struct {
+// ErrExtract reports a failure while extracting a configuration subtree by key.
+type ErrExtract struct {
 	Key string
 	Err error
 }
 
 // Error implements the [error] interface.
-func (e *ExtractError) Error() string {
+func (e *ErrExtract) Error() string {
 	return fmt.Sprintf(
 		"extract %q: %v",
 		e.Key, e.Err,
@@ -40,7 +40,7 @@ func (e *ExtractError) Error() string {
 }
 
 // Unwrap returns the underlying error.
-func (e *ExtractError) Unwrap() error {
+func (e *ErrExtract) Unwrap() error {
 	return e.Err
 }
 
@@ -58,7 +58,7 @@ func Extract(
 	// Unmarshal into a map.
 	var m dataExtract
 	if err := decode.Unmarshal(format, data, &m); err != nil {
-		return nil, &ExtractError{
+		return nil, &ErrExtract{
 			Key: key,
 			Err: err,
 		}
@@ -68,7 +68,7 @@ func Extract(
 	if n, ok := m[key]; ok {
 		b, err := marshalExtractSubtree(format, n)
 		if err != nil {
-			return nil, &decode.KeyFieldError{
+			return nil, &decode.ErrKeyField{
 				Key: key,
 				Err: err,
 			}

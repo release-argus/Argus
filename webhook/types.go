@@ -150,7 +150,7 @@ func (w *WebHooks) UnmarshalJSON(data []byte) error {
 	for i := range arr {
 		id := arr[i].ID
 		if id == "" || webhooks[id] != nil {
-			err := &decode.FieldError{
+			err := &decode.ErrField{
 				Key:   "name",
 				Value: id,
 			}
@@ -158,7 +158,7 @@ func (w *WebHooks) UnmarshalJSON(data []byte) error {
 				err.Description = "must be unique"
 			}
 
-			return &decode.KeyFieldError{
+			return &decode.ErrKeyField{
 				Key: fmt.Sprintf("webhook[%d]", i),
 				Err: err,
 			}
