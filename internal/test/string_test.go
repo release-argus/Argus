@@ -378,7 +378,7 @@ func TestAddPrefix(t *testing.T) {
 			// THEN: the prefix is added, as expected.
 			if got != tc.expect {
 				t.Fatalf(
-					"%s\naddPrefix(str=%q, prefix=%q) mismatch\ngot:  %q\nwant: %q",
+					"%s addPrefix(str=%q, prefix=%q) mismatch\ngot:  %q\nwant: %q",
 					packageName,
 					tc.want, tc.prefix,
 					got, tc.expect,

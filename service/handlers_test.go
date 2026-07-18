@@ -272,14 +272,14 @@ func TestService_HandleCommand(t *testing.T) {
 				}
 				if actionsRan {
 					t.Logf(
-						"%s\nfinished running after %v",
+						"%s finished running after %v",
 						prefix, time.Duration(i*10)*time.Microsecond,
 					)
 					break
 				}
 			}
 			if !actionsRan {
-				t.Errorf("%s\nactions didn't finish running or gave unexpected results", prefix)
+				t.Errorf("%s actions didn't finish running or gave unexpected results", prefix)
 			}
 			time.Sleep(500 * time.Millisecond)
 
