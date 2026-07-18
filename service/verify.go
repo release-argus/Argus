@@ -56,7 +56,7 @@ func (d *Defaults) CheckValues() error {
 	if err := d.Options.CheckValues(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "options",
 				Err: err,
 			},
@@ -65,7 +65,7 @@ func (d *Defaults) CheckValues() error {
 	if err := d.LatestVersion.CheckValues(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "latest_version",
 				Err: err,
 			},
@@ -92,7 +92,7 @@ func (s *Services) CheckValues() (error, bool) {
 		if err != nil {
 			errs = append(
 				errs,
-				&decode.KeyFieldError{
+				&decode.ErrKeyField{
 					Key: key,
 					Err: err,
 				},
@@ -117,7 +117,7 @@ func (s *Service) CheckValues() (error, bool) {
 	if err := s.Options.CheckValues(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "options",
 				Err: err,
 			},
@@ -127,7 +127,7 @@ func (s *Service) CheckValues() (error, bool) {
 		if err := s.LatestVersion.CheckValues(); err != nil {
 			errs = append(
 				errs,
-				&decode.KeyFieldError{
+				&decode.ErrKeyField{
 					Key: "latest_version",
 					Err: err,
 				},
@@ -138,7 +138,7 @@ func (s *Service) CheckValues() (error, bool) {
 		if err := s.DeployedVersionLookup.CheckValues(); err != nil {
 			errs = append(
 				errs,
-				&decode.KeyFieldError{
+				&decode.ErrKeyField{
 					Key: "deployed_version",
 					Err: err,
 				},
@@ -152,7 +152,7 @@ func (s *Service) CheckValues() (error, bool) {
 	if notifyErr != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "notify",
 				Err: notifyErr,
 			},
@@ -161,7 +161,7 @@ func (s *Service) CheckValues() (error, bool) {
 	if err := s.Command.CheckValues(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "command",
 				Err: err,
 			},
@@ -171,7 +171,7 @@ func (s *Service) CheckValues() (error, bool) {
 	if webhookErr != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "webhook",
 				Err: webhookErr,
 			},
@@ -180,7 +180,7 @@ func (s *Service) CheckValues() (error, bool) {
 	if err := s.Dashboard.CheckValues(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "dashboard",
 				Err: err,
 			},

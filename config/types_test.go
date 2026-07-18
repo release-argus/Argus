@@ -509,7 +509,7 @@ func TestConfig_Decode__serviceExtractError(t *testing.T) {
 	// GIVEN: a failing service extract.
 	original := extractServiceSubtree
 	extractServiceSubtree = func(format string, data []byte, key string) ([]byte, error) {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "service",
 			Err: fmt.Errorf("ERROR MESSAGE"),
 		}

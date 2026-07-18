@@ -155,7 +155,7 @@ func (r *Require) CheckValues() error {
 		if !util.CheckTemplate(r.RegexContent) {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "regex_content",
 					Value:       r.RegexContent,
 					Description: "didn't pass templating",
@@ -166,7 +166,7 @@ func (r *Require) CheckValues() error {
 			if err != nil {
 				errs = append(
 					errs,
-					&decode.FieldError{
+					&decode.ErrField{
 						Key:         "regex_content",
 						Value:       r.RegexContent,
 						Description: "invalid RegEx",
@@ -181,7 +181,7 @@ func (r *Require) CheckValues() error {
 		if _, err := regexp.Compile(r.RegexVersion); err != nil {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "regex_version",
 					Value:       r.RegexVersion,
 					Description: "invalid RegEx",
@@ -194,7 +194,7 @@ func (r *Require) CheckValues() error {
 		if !util.CheckTemplate(cmd) {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "command",
 					Value:       r.Command.String(),
 					Description: fmt.Sprintf("(%q) didn't pass templating", cmd),
@@ -212,7 +212,7 @@ func (r *Require) CheckValues() error {
 		} else if err := r.Docker.CheckValues(); err != nil {
 			errs = append(
 				errs,
-				&decode.KeyFieldError{
+				&decode.ErrKeyField{
 					Key: "docker",
 					Err: err,
 				},

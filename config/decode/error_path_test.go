@@ -21,23 +21,23 @@ import (
 	"testing"
 )
 
-func TestKeyFieldError_Error(t *testing.T) {
-	// GIVEN: a KeyFieldError.
+func TestErrKeyField_Error(t *testing.T) {
+	// GIVEN: a ErrKeyField.
 	tests := []struct {
 		name     string
-		err      KeyFieldError
+		err      ErrKeyField
 		expected string
 	}{
 		{
 			name: "key, no error wrapped",
-			err: KeyFieldError{
+			err: ErrKeyField{
 				Key: "testKey",
 			},
 			expected: `testKey: <nil>`,
 		},
 		{
 			name: "key + error wrapped",
-			err: KeyFieldError{
+			err: ErrKeyField{
 				Key: "testKey",
 				Err: fmt.Errorf("foo"),
 			},
@@ -55,7 +55,7 @@ func TestKeyFieldError_Error(t *testing.T) {
 			// THEN: the error is formatted as expected.
 			if got != tc.expected {
 				t.Fatalf(
-					"%s\nstringified KeyFieldError mismatch\ngot:  %q\nwant: %q",
+					"%s\nstringified ErrKeyField mismatch\ngot:  %q\nwant: %q",
 					packageName, got, tc.expected,
 				)
 			}
@@ -63,23 +63,23 @@ func TestKeyFieldError_Error(t *testing.T) {
 	}
 }
 
-func TestKeyFieldError_Unwrap(t *testing.T) {
-	// GIVEN: a KeyFieldError.
+func TestErrKeyField_Unwrap(t *testing.T) {
+	// GIVEN: a ErrKeyField.
 	tests := []struct {
 		name     string
-		err      KeyFieldError
+		err      ErrKeyField
 		expected error
 	}{
 		{
 			name: "no error wrapped",
-			err: KeyFieldError{
+			err: ErrKeyField{
 				Key: "testKey",
 			},
 			expected: nil,
 		},
 		{
 			name: "error wrapped",
-			err: KeyFieldError{
+			err: ErrKeyField{
 				Key: "testKey",
 				Err: fmt.Errorf("foo"),
 			},
@@ -98,7 +98,7 @@ func TestKeyFieldError_Unwrap(t *testing.T) {
 			if (got != nil && tc.expected != nil) &&
 				got.Error() != tc.expected.Error() {
 				t.Fatalf(
-					"%s\nKeyFieldError unwrapped error mismatch\ngot:  %q\nwant:  %q",
+					"%s\nErrKeyField unwrapped error mismatch\ngot:  %q\nwant:  %q",
 					packageName, got, tc.expected,
 				)
 			}

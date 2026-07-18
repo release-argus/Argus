@@ -123,9 +123,9 @@ func findShoutrrr(
 			// Check whether all values set.
 			if err, _ := notify.CheckValues(); err != nil {
 				logx.Fatal(
-					&decode.KeyFieldError{
+					&decode.ErrKeyField{
 						Key: "notify",
-						Err: &decode.KeyFieldError{
+						Err: &decode.ErrKeyField{
 							Key: name,
 							Err: err,
 						},

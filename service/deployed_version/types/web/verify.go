@@ -35,7 +35,7 @@ func (l *Lookup) CheckValues() error {
 	if l.URL == "" {
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key:         "url",
 				Description: "URL to get the deployed_version from",
 			},
@@ -48,7 +48,7 @@ func (l *Lookup) CheckValues() error {
 	if !slices.Contains(constants.SupportedMethods, method) {
 		errs = append(
 			errs,
-			polymorphic.InvalidTypeError{
+			polymorphic.ErrInvalidType{
 				Key:     "method",
 				Value:   method,
 				Allowed: constants.SupportedMethods,
@@ -66,7 +66,7 @@ func (l *Lookup) CheckValues() error {
 		if err != nil {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "json",
 					Value:       l.JSON,
 					Description: "JSON path to the version in the response",
@@ -81,7 +81,7 @@ func (l *Lookup) CheckValues() error {
 		if err != nil {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "regex",
 					Value:       l.Regex,
 					Description: "RegEx to extract the version from the response",

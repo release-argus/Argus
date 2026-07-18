@@ -136,7 +136,7 @@ func (s *Shoutrrrs) UnmarshalJSON(data []byte) error {
 	for i := range arr {
 		id := arr[i].ID
 		if id == "" || shoutrrrs[id] != nil {
-			err := &decode.FieldError{
+			err := &decode.ErrField{
 				Key:   "name",
 				Value: id,
 			}
@@ -144,7 +144,7 @@ func (s *Shoutrrrs) UnmarshalJSON(data []byte) error {
 				err.Description = "must be unique"
 			}
 
-			return &decode.KeyFieldError{
+			return &decode.ErrKeyField{
 				Key: fmt.Sprintf("notify[%d]", i),
 				Err: err,
 			}

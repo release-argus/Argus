@@ -43,7 +43,7 @@ func (whd *WebHooksDefaults) CheckValues() (error, bool) {
 		if err != nil {
 			errs = append(
 				errs,
-				&decode.KeyFieldError{
+				&decode.ErrKeyField{
 					Key: key,
 					Err: err,
 				},
@@ -73,7 +73,7 @@ func (w *WebHooks) CheckValues() (error, bool) {
 		if err != nil {
 			errs = append(
 				errs,
-				&decode.KeyFieldError{
+				&decode.ErrKeyField{
 					Key: key,
 					Err: err,
 				},
@@ -98,7 +98,7 @@ func (w *WebHook) CheckValues() (error, bool) {
 	if whType == "" {
 		errs = append(
 			errs,
-			polymorphic.InvalidTypeError{
+			polymorphic.ErrInvalidType{
 				Key:     "type",
 				Allowed: supportedTypes,
 			},
@@ -107,7 +107,7 @@ func (w *WebHook) CheckValues() (error, bool) {
 	} else if w.Main.Type != "" && whType != w.Main.Type {
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key:   "type",
 				Value: whType,
 				Description: fmt.Sprintf(
@@ -132,7 +132,7 @@ func (w *WebHook) CheckValues() (error, bool) {
 	) == "" {
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key: "url",
 				Description: fmt.Sprintf(
 					"here, in root.defaults.%s, or in defaults",
@@ -145,7 +145,7 @@ func (w *WebHook) CheckValues() (error, bool) {
 	if w.GetSecret() == "" {
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key: "secret",
 				Description: fmt.Sprintf(
 					"here, in root.defaults.%s, or in defaults",
@@ -170,7 +170,7 @@ func (b *Base) CheckValues() (error, bool) {
 	if b.Type != "" && !slices.Contains(supportedTypes, b.Type) {
 		errs = append(
 			errs,
-			polymorphic.InvalidTypeError{
+			polymorphic.ErrInvalidType{
 				Key:     "type",
 				Value:   b.Type,
 				Allowed: supportedTypes,
@@ -181,7 +181,7 @@ func (b *Base) CheckValues() (error, bool) {
 	if !util.CheckTemplate(b.URL) {
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key:         "url",
 				Value:       b.URL,
 				Description: "didn't pass templating",
@@ -199,7 +199,7 @@ func (b *Base) CheckValues() (error, bool) {
 		if err := b.checkValuesHeaders(); err != nil {
 			errs = append(
 				errs,
-				&decode.KeyFieldError{
+				&decode.ErrKeyField{
 					Key: "headers",
 					Err: err,
 				},
@@ -215,7 +215,7 @@ func (b *Base) CheckValues() (error, bool) {
 		if _, err := time.ParseDuration(b.Delay); err != nil {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "delay",
 					Value:       b.Delay,
 					Description: "use 'AhBmCs' duration format",
@@ -251,7 +251,7 @@ func (b *Base) checkValuesHeaders() error {
 		if !util.CheckTemplate(header.Value) {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         header.Key,
 					Value:       header.Value,
 					Description: "didn't pass templating",

@@ -3194,12 +3194,12 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			errRegex: "^" + test.RegexBracketEscaper.Replace(
 				errfmt.FormatError(
 					errors.Join(
-						polymorphic.InvalidTypeError{
+						polymorphic.ErrInvalidType{
 							Key:     "scheme",
 							Value:   "-",
 							Allowed: barkNtfyParamScheme,
 						},
-						polymorphic.InvalidTypeError{
+						polymorphic.ErrInvalidType{
 							Key:     "sound",
 							Value:   "nope",
 							Allowed: barkParamSound,
@@ -3227,7 +3227,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 				"requestmethod": "FETCH",
 			},
 			errRegex: "^" + test.RegexBracketEscaper.Replace(
-				polymorphic.InvalidTypeError{
+				polymorphic.ErrInvalidType{
 					Key:     "requestmethod",
 					Value:   "FETCH",
 					Allowed: genericParamRequestmethod,
@@ -3258,12 +3258,12 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			errRegex: "^" + test.RegexBracketEscaper.Replace(
 				errfmt.FormatError(
 					errors.Join(
-						polymorphic.InvalidTypeError{
+						polymorphic.ErrInvalidType{
 							Key:     "priority",
 							Value:   "urgENT",
 							Allowed: ntfyParamPriority,
 						},
-						polymorphic.InvalidTypeError{
+						polymorphic.ErrInvalidType{
 							Key:     "scheme",
 							Value:   "ftp",
 							Allowed: barkNtfyParamScheme,
@@ -3296,12 +3296,12 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			errRegex: "^" + test.RegexBracketEscaper.Replace(
 				errfmt.FormatError(
 					errors.Join(
-						polymorphic.InvalidTypeError{
+						polymorphic.ErrInvalidType{
 							Key:     "auth",
 							Value:   "basic",
 							Allowed: smtpParamAuth,
 						},
-						polymorphic.InvalidTypeError{
+						polymorphic.ErrInvalidType{
 							Key:     "encryption",
 							Value:   "tls1.3",
 							Allowed: smtpParamEncryption,
@@ -3329,7 +3329,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 				"parsemode": "mdx",
 			},
 			errRegex: "^" + test.RegexBracketEscaper.Replace(
-				polymorphic.InvalidTypeError{
+				polymorphic.ErrInvalidType{
 					Key:     "parsemode",
 					Value:   "mdx",
 					Allowed: telegramParamParsemode,

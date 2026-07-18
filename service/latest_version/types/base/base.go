@@ -134,7 +134,7 @@ func (l *Lookup) CheckValues() error {
 	if err := l.URLCommands.CheckValues(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "url_commands",
 				Err: err,
 			},
@@ -144,7 +144,7 @@ func (l *Lookup) CheckValues() error {
 	if err := l.Require.CheckValues(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "require",
 				Err: err,
 			},

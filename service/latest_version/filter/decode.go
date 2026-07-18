@@ -42,7 +42,7 @@ func Decode(
 	//   Docker.
 	dockerRaw, err := polymorphic.Extract(format, data, "docker")
 	if err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "require",
 			Err: err,
 		}
@@ -52,7 +52,7 @@ func Decode(
 		&defaults.Docker,
 	)
 	if err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "require",
 			Err: err,
 		}
@@ -60,7 +60,7 @@ func Decode(
 
 	// Static fields.
 	if err := decode.Unmarshal(format, data, &field); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "require",
 			Err: err,
 		}
@@ -99,7 +99,7 @@ func (r *Require) ApplyOverrides(
 	// Polymorphic fields.
 	dockerRaw, err := polymorphic.Extract(format, data, "docker")
 	if err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "require",
 			Err: err,
 		}
@@ -113,7 +113,7 @@ func (r *Require) ApplyOverrides(
 			&defaults.Docker,
 		)
 		if err != nil {
-			return nil, &decode.KeyFieldError{
+			return nil, &decode.ErrKeyField{
 				Key: "require",
 				Err: err,
 			}
@@ -122,7 +122,7 @@ func (r *Require) ApplyOverrides(
 
 	// Static fields.
 	if err := decode.Unmarshal(format, data, r); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "require",
 			Err: err,
 		}
@@ -142,7 +142,7 @@ func DecodeDefaults(format string, data []byte) (*RequireDefaults, error) {
 
 	dockerRaw, err := polymorphic.Extract(format, data, "docker")
 	if err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "require",
 			Err: err,
 		}
@@ -150,7 +150,7 @@ func DecodeDefaults(format string, data []byte) (*RequireDefaults, error) {
 	if len(dockerRaw) != 0 {
 		dockerDefaults, err := docker.DecodeDefaults(format, dockerRaw, nil)
 		if err != nil {
-			return nil, &decode.KeyFieldError{
+			return nil, &decode.ErrKeyField{
 				Key: "require",
 				Err: err,
 			}

@@ -125,7 +125,7 @@ func applyOverridesJSON(
 		semanticVersioningRoot := util.ClonePtr(lookup.GetOptions().SemanticVersioning)
 		// Apply the new semantic_versioning JSON value.
 		if err := decode.Unmarshal("json", []byte(*semanticVersioning), &semanticVersioningRoot); err != nil {
-			return nil, &decode.KeyFieldError{
+			return nil, &decode.ErrKeyField{
 				Key: "semantic_versioning",
 				Err: err,
 			}

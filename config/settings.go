@@ -109,7 +109,7 @@ func (s *SettingsBase) CheckValues() error {
 	if err := s.Web.CheckValues(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "web",
 				Err: err,
 			},
@@ -133,9 +133,9 @@ func (s *SettingsBase) MapEnvToStruct() error {
 	if err := s.CheckValues(); err != nil {
 		errs = append(
 			errs,
-			&decode.KeyFieldError{
+			&decode.ErrKeyField{
 				Key: "hard_defaults",
-				Err: &decode.KeyFieldError{
+				Err: &decode.ErrKeyField{
 					Key: "settings",
 					Err: err,
 				},
@@ -274,7 +274,7 @@ func (s *WebSettings) CheckValues() error {
 	if err := util.CheckFileReadable(s.CertFile); err != nil {
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key:         "cert_file",
 				Value:       s.CertFile,
 				Description: err.Error(),
@@ -286,7 +286,7 @@ func (s *WebSettings) CheckValues() error {
 	if err := util.CheckFileReadable(s.KeyFile); err != nil {
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key:         "pkey_file",
 				Value:       s.KeyFile,
 				Description: err.Error(),

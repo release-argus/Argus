@@ -19,8 +19,8 @@ import (
 	"strings"
 )
 
-// FieldError represents an error associated with a specific field.
-type FieldError struct {
+// ErrField represents an error associated with a specific field.
+type ErrField struct {
 	Key         string
 	Value       string
 	Description string
@@ -39,7 +39,7 @@ type FieldError struct {
 //
 //	KEY: <required>
 //	KEY: <required> (DESCRIPTION)
-func (e *FieldError) Error() string {
+func (e *ErrField) Error() string {
 	var builder strings.Builder
 
 	// Key.

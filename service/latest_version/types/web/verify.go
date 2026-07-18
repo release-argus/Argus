@@ -27,7 +27,7 @@ func (l *Lookup) CheckValues() error {
 	if l.URL == "" {
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key:         "url",
 				Description: "e.g. https://example.com",
 			},

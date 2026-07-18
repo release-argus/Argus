@@ -188,7 +188,7 @@ func (s *Service) unmarshalLatestVersion(format string, data []byte) error {
 	// Extract.
 	lvRaw, err := polymorphic.Extract(format, data, "latest_version")
 	if err != nil {
-		return &decode.KeyFieldError{
+		return &decode.ErrKeyField{
 			Key: "latest_version",
 			Err: err,
 		}
@@ -223,7 +223,7 @@ func (s *Service) unmarshalDeployedVersion(format string, data []byte) error {
 	// Extract.
 	dvRaw, err := polymorphic.Extract(format, data, "deployed_version")
 	if err != nil {
-		return &decode.KeyFieldError{
+		return &decode.ErrKeyField{
 			Key: "deployed_version",
 			Err: err,
 		}

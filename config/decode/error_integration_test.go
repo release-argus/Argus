@@ -24,8 +24,8 @@ import (
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
-func TestFieldError__formatError(t *testing.T) {
-	// GIVEN: a KeyFieldError.
+func TestErrField__formatError(t *testing.T) {
+	// GIVEN: a ErrKeyField.
 	tests := []struct {
 		name string
 		err  error
@@ -33,16 +33,16 @@ func TestFieldError__formatError(t *testing.T) {
 	}{
 		{
 			name: "single error",
-			err: &KeyFieldError{
+			err: &ErrKeyField{
 				Key: "type",
 			},
 			want: "type: <nil>",
 		},
 		{
 			name: "single wrap",
-			err: &KeyFieldError{
+			err: &ErrKeyField{
 				Key: "another_one",
-				Err: &KeyFieldError{
+				Err: &ErrKeyField{
 					Key: "and_another_one",
 				},
 			},
@@ -52,12 +52,12 @@ func TestFieldError__formatError(t *testing.T) {
 			),
 		},
 		{
-			name: "double KeyFieldError wrap",
-			err: &KeyFieldError{
+			name: "double ErrKeyField wrap",
+			err: &ErrKeyField{
 				Key: "another_one",
-				Err: &KeyFieldError{
+				Err: &ErrKeyField{
 					Key: "and_another_one",
-					Err: &KeyFieldError{
+					Err: &ErrKeyField{
 						Key: "and_another_one",
 					},
 				},
@@ -69,10 +69,10 @@ func TestFieldError__formatError(t *testing.T) {
 			),
 		},
 		{
-			name: "KeyFieldError wrapping FieldError",
-			err: &KeyFieldError{
+			name: "ErrKeyField wrapping ErrField",
+			err: &ErrKeyField{
 				Key: "hello",
-				Err: &FieldError{
+				Err: &ErrField{
 					Key:         "type",
 					Value:       "foo",
 					Description: "description goes here",
@@ -84,21 +84,21 @@ func TestFieldError__formatError(t *testing.T) {
 			),
 		},
 		{
-			name: "KeyFieldError wrapping joined FieldError's",
-			err: &KeyFieldError{
+			name: "ErrKeyField wrapping joined ErrField's",
+			err: &ErrKeyField{
 				Key: "hello",
 				Err: errors.Join(
-					&FieldError{
+					&ErrField{
 						Key:         "type",
 						Value:       "mysql",
 						Description: "description goes here",
 					},
-					&FieldError{
+					&ErrField{
 						Key:         "field",
 						Value:       "val",
 						Description: "DESCRIPTION",
 					},
-					&FieldError{
+					&ErrField{
 						Key: "other_field",
 					},
 				),
@@ -111,25 +111,25 @@ func TestFieldError__formatError(t *testing.T) {
 			),
 		},
 		{
-			name: "joined KeyFieldError's wrapping joined FieldError's",
+			name: "joined ErrKeyField's wrapping joined ErrField's",
 			err: errors.Join(
-				&KeyFieldError{
+				&ErrKeyField{
 					Key: "hello",
 					Err: errors.Join(
-						&FieldError{
+						&ErrField{
 							Key:         "field",
 							Value:       "val",
 							Description: "DESCRIPTION",
 						},
-						&FieldError{
+						&ErrField{
 							Key: "other_field",
 						},
 					),
 				},
-				&KeyFieldError{
+				&ErrKeyField{
 					Key: "there",
 					Err: errors.Join(
-						&FieldError{
+						&ErrField{
 							Key: "foo",
 						},
 					),

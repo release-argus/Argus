@@ -42,7 +42,7 @@ func DecodeServices(
 	// Extract Services.
 	var tmp map[string]any
 	if err := decode.Unmarshal(format, data, &tmp); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: "service",
 			Err: err,
 		}
@@ -66,7 +66,7 @@ func DecodeServices(
 		// Create each Service.
 		raw, err := marshalServiceRaw(format, svcRaw)
 		if err != nil {
-			return nil, &decode.KeyFieldError{
+			return nil, &decode.ErrKeyField{
 				Key: "service",
 				Err: err,
 			}
@@ -77,7 +77,7 @@ func DecodeServices(
 			defaultsCfg, notifyCfg, whCfg,
 		)
 		if err != nil {
-			return nil, &decode.KeyFieldError{
+			return nil, &decode.ErrKeyField{
 				Key: "service",
 				Err: err,
 			}
@@ -106,7 +106,7 @@ func DecodeService(
 	// Unmarshal.
 	if err := decode.Unmarshal(format, data, &field); err != nil {
 		if id != "" {
-			return nil, &decode.KeyFieldError{
+			return nil, &decode.ErrKeyField{
 				Key: strconv.Quote(field.ID),
 				Err: err,
 			}
@@ -158,7 +158,7 @@ func ApplyOverrides(
 
 	// Apply overrides.
 	if err := decode.Unmarshal(format, data, target); err != nil {
-		return nil, &decode.KeyFieldError{
+		return nil, &decode.ErrKeyField{
 			Key: strconv.Quote(id),
 			Err: err,
 		}

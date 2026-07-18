@@ -31,7 +31,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 	logFrom := logx.LogFrom{Primary: "AddService"}
 
 	if newService.ID == "" {
-		err := &decode.FieldError{Key: "id"}
+		err := &decode.ErrField{Key: "id"}
 		logx.Error(err, logFrom, true)
 		return err
 	}

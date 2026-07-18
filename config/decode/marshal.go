@@ -31,13 +31,13 @@ func IsNull(data []byte) bool {
 	return bytes.EqualFold(bytes.TrimSpace(data), nullBytes)
 }
 
-// UnsupportedFormatError represents an error for an unsupported [Marshal]/[Unmarshal] format.
-type UnsupportedFormatError struct {
+// ErrUnsupportedFormat represents an error for an unsupported [Marshal]/[Unmarshal] format.
+type ErrUnsupportedFormat struct {
 	Format string
 }
 
 // Error implements the [error] interface.
-func (e *UnsupportedFormatError) Error() string {
+func (e *ErrUnsupportedFormat) Error() string {
 	return fmt.Sprintf("unsupported format: %q", e.Format)
 }
 
@@ -57,7 +57,7 @@ func Unmarshal(format string, data []byte, v any) error {
 		}
 		return yaml.Unmarshal(data, v) //nolint:wrapcheck
 	default:
-		return &UnsupportedFormatError{Format: format} //nolint:wrapcheck
+		return &ErrUnsupportedFormat{Format: format} //nolint:wrapcheck
 	}
 }
 
@@ -69,6 +69,6 @@ func Marshal(format string, m any) ([]byte, error) {
 	case "yaml":
 		return yaml.MarshalWithOptions(m, YAMLMarshalOpts...) //nolint:wrapcheck
 	default:
-		return nil, &UnsupportedFormatError{Format: format} //nolint:wrapcheck
+		return nil, &ErrUnsupportedFormat{Format: format} //nolint:wrapcheck
 	}
 }

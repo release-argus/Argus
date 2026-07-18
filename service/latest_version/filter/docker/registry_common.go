@@ -231,7 +231,7 @@ func (r *CommonRegistry) CheckValues() error {
 	case image == "":
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key:         "image",
 				Description: "image to check tags for",
 			},
@@ -240,7 +240,7 @@ func (r *CommonRegistry) CheckValues() error {
 	case !util.RegexCheck(`^[\w\-\.\/]+$`, image):
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key:         "image",
 				Value:       image,
 				Description: "ASCII required, input was non-ASCII",
@@ -253,7 +253,7 @@ func (r *CommonRegistry) CheckValues() error {
 	case tag == "":
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key:         "tag",
 				Description: "tag of image to check for existence",
 			},
@@ -261,7 +261,7 @@ func (r *CommonRegistry) CheckValues() error {
 	case !util.CheckTemplate(tag):
 		errs = append(
 			errs,
-			&decode.FieldError{
+			&decode.ErrField{
 				Key:         "tag",
 				Value:       tag,
 				Description: "didn't pass templating",
@@ -271,7 +271,7 @@ func (r *CommonRegistry) CheckValues() error {
 		if _, err := url.Parse("https://example.com/" + tag); err != nil {
 			errs = append(
 				errs,
-				&decode.FieldError{
+				&decode.ErrField{
 					Key:         "tag",
 					Value:       tag,
 					Description: "invalid for URL formatting",
@@ -304,7 +304,7 @@ func (r *CommonRegistry) GetTagForVersion(version string) string {
 // parseBody parses the body of the response.
 func (r *CommonRegistry) parseBody(tag string, resp *http.Response) error {
 	if resp.StatusCode == http.StatusNotFound {
-		return TagNotFoundError{Image: r.GetImage(), Tag: tag}
+		return ErrTagNotFound{Image: r.GetImage(), Tag: tag}
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
