@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * The service seeded from config.yml.example.
+ * The service seeded from fixtures/noauth-config.yml.
  * It has an icon, an icon link, and a web URL.
  */
 const EXAMPLE_SERVICE = {

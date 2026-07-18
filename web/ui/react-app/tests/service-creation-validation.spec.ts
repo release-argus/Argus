@@ -77,7 +77,7 @@ test.describe('Service creation modal - field validation', () => {
 	});
 
 	test.describe('Service ID / Name', () => {
-		// The seeded service in `config.yml.example`, reused as the existing
+		// The seeded service in `fixtures/noauth-config.yml`, reused as the existing
 		// ID/Name to collide against. Matched case-sensitively, so this must be
 		// the exact seeded id.
 		const EXISTING_ID = 'release-argus/Argus';
