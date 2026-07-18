@@ -8,7 +8,6 @@ import { isEmptyOrNull } from '@/utils';
 import { addZodIssuesToContext } from '@/utils/api/types/config-edit/shared/add-issues';
 import { stringDefault } from '@/utils/api/types/config-edit/shared/preprocess';
 import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse';
-import { SecretValue } from '@/utils/api/types/config-edit/shared/secret-value';
 import { isEmpty } from '@/utils/is-empty';
 
 /* Field validation */
@@ -20,8 +19,6 @@ export const INVALID_GITHUB_REPO_MESSAGE = 'Invalid GitHub repository.';
 export const INVALID_URL_MESSAGE =
 	"Invalid URL (Must start with 'http://' or 'https://').";
 export const UNIQUE_MESSAGE = 'Must be unique.';
-export const EXPECTED_UUID_MESSAGE = 'Expected a 36-character UUID string.';
-export const EXPECTED_HASH_MESSAGE = 'Expected a 32-character hex string.';
 
 const GITHUB_REPO_REGEX = /^[a-zA-Z0-9-_.]+\/[a-zA-Z0-9-_.]+$/;
 /**
@@ -165,37 +162,6 @@ export const validateNumberInRange =
 			ctx.addIssue({
 				code: CUSTOM_ISSUE_CODE,
 				message: `Must be between ${min} and ${max}.`,
-				path: path,
-			});
-		}
-	};
-
-/**
- * Creates a field validator that ensures a string length is within a specified range.
- *
- * @param min - Minimum allowed value (inclusive).
- * @param max - Maximum allowed value (inclusive).
- * @param message - Optional custom error message to use if the value is out of range.
- * @returns A validator function that checks if `arg` is a string within [min, max.
- */
-export const validateStringLength =
-	({ min, max, message }: { min: number; max: number; message?: string }) =>
-	({ arg, ctx, path }: FieldValidatorProps) => {
-		const errorMessage =
-			message ??
-			(min === max
-				? `Must be ${min} characters.`
-				: `Must be between ${min} and ${max} characters.`);
-
-		if (
-			arg &&
-			typeof arg === 'string' &&
-			arg !== SecretValue &&
-			(arg.length < min || arg.length > max)
-		) {
-			ctx.addIssue({
-				code: CUSTOM_ISSUE_CODE,
-				message: errorMessage,
 				path: path,
 			});
 		}

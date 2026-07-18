@@ -1,5 +1,6 @@
 import { type FC, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/auth';
 import useModal from '@/hooks/use-modal';
 import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version';
 import type {
@@ -28,6 +29,7 @@ const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 	updateSkipped,
 }) => {
 	const { setModal } = useModal();
+	const { hasPermission } = useAuth();
 
 	const showModal = useCallback(
 		(type: ModalType, service: ServiceSummary) => {
@@ -61,7 +63,16 @@ const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 			canApproveManually,
 			haveUpdateAction,
 		};
-	}, [service]);
+	}, [service, updateAvailable, updateSkipped]);
+
+	if (
+		!hasPermission('service_action', 'execute', {
+			serviceID: service.id,
+			tags: service.tags,
+		})
+	) {
+		return null;
+	}
 
 	return (
 		<div className="flex flex-row items-center gap-x-2">

@@ -62,7 +62,8 @@ export const deepDiff = <T extends Record<string, unknown>>(
 				oldValue && typeof oldValue === 'object' && !Array.isArray(oldValue)
 					? (nullifyObject(oldValue) as T[keyof T])
 					: (null as T[keyof T]);
-			return { ...acc, [key]: valueToSet };
+			acc[key as keyof T] = valueToSet;
+			return acc;
 		}
 
 		const isNewObj =
@@ -105,7 +106,8 @@ export const deepDiff = <T extends Record<string, unknown>>(
 		}
 
 		if (diffValue !== undefined) {
-			return { ...acc, [key]: diffValue };
+			acc[key as keyof T] = diffValue;
+			return acc;
 		}
 		return acc;
 	}, {});

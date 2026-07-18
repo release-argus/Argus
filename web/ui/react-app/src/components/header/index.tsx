@@ -1,6 +1,7 @@
 import { ChevronDown, Menu } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { UserMenu } from '@/components/auth/user-menu';
 import { ThemeModeToggle } from '@/components/theme-mode-toggle';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +17,7 @@ import {
 	NavigationMenuList,
 	NavigationMenuTrigger,
 } from '@/components/ui/navigation-menu';
+import { useAuth } from '@/contexts/auth';
 import { cn } from '@/lib/utils';
 
 const ArgusGitHubRepo = 'https://github.com/release-argus/Argus';
@@ -66,6 +68,11 @@ const headerOptions = [
 const Header = () => {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [expandedItem, setExpandedItem] = useState<string | null>(null);
+	const { hasPermission } = useAuth();
+
+	const navOptions = headerOptions.filter(
+		(option) => option.name !== 'Status' || hasPermission('config', 'read'),
+	);
 
 	const closeMobileMenu = () => {
 		setMobileMenuOpen(false);
@@ -103,7 +110,7 @@ const Header = () => {
 					</Link>
 					<NavigationMenu delayDuration={0} viewport={false}>
 						<NavigationMenuList className="hidden gap-2 lg:flex">
-							{headerOptions.map((option) =>
+							{navOptions.map((option) =>
 								option.children ? (
 									<NavigationMenuItem key={option.name}>
 										<NavigationMenuTrigger>{option.name}</NavigationMenuTrigger>
@@ -144,7 +151,8 @@ const Header = () => {
 						</NavigationMenuList>
 					</NavigationMenu>
 				</span>
-				<span>
+				<span className="flex flex-row gap-2">
+					<UserMenu />
 					<ThemeModeToggle />
 				</span>
 			</div>
@@ -157,7 +165,7 @@ const Header = () => {
 						'data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down',
 					)}
 				>
-					{headerOptions.map((option) => (
+					{navOptions.map((option) => (
 						<div className="last:border-b" key={option.name}>
 							{option.children ? (
 								<Collapsible

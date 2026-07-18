@@ -1,10 +1,17 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { WebSocket } from 'partysocket';
-import { createContext, type ReactNode, use, useMemo, useState } from 'react';
+import {
+	createContext,
+	type ReactNode,
+	use,
+	useEffect,
+	useMemo,
+	useState,
+} from 'react';
 import { WebSocketStatus } from '@/components/websocket/status';
 import { WS_ADDRESS } from '@/config';
 import { handleMessage } from '@/handlers/websocket';
-import { QUERY_KEYS } from '@/lib/query-keys';
+import { notifyUnauthorised } from '@/lib/auth-events';
 import type { WebSocketResponse } from '@/types/websocket';
 import { getBasename } from '@/utils';
 import approvalsQueryCacheUpdater from '@/utils/api/query-cache';
@@ -55,6 +62,11 @@ const getWebSocketURL = async (): Promise<string> => {
 		const resp = await fetch(`${API_BASE}/ws-token`);
 		// 204 = Basic Auth not configured; connect without a token.
 		if (resp.status === 204) return wsURL;
+		// 401/403 = the session is dead (revoked, kicked, or expired).
+		if (resp.status === 401 || resp.status === 403) {
+			notifyUnauthorised();
+			return wsURL;
+		}
 		if (!resp.ok) {
 			throw new Error(`Failed to fetch WebSocket token: HTTP ${resp.status}`);
 		}
@@ -66,7 +78,7 @@ const getWebSocketURL = async (): Promise<string> => {
 	}
 };
 
-const ws = new WebSocket(getWebSocketURL);
+const ws = new WebSocket(getWebSocketURL, undefined, { startClosed: true });
 /**
  * @returns The WebSocket connection and monitor data.
  */
@@ -82,35 +94,58 @@ export const WebSocketProvider = (props: WebSocketProviderProps) => {
 		[connected],
 	);
 
-	ws.onopen = () => {
-		// Invalidate the cache if not the first 'connect' event.
-		if (connected !== undefined) {
-			void queryClient.invalidateQueries({
-				queryKey: QUERY_KEYS.SERVICE.ORDER(),
-			});
-		}
-		setConnected(true);
-	};
+	// Open on mount, and close on unmount.
+	useEffect(() => {
+		ws.reconnect();
+		return () => {
+			ws.close();
+		};
+	}, []);
 
-	ws.onmessage = (event: MessageEvent) => {
-		if (typeof event.data !== 'string' || event.data === '') return;
-		// Validate the JSON
-		if (event.data.length > 1 && event.data.startsWith('{')) {
-			const msg = JSON.parse(event.data.trim()) as WebSocketResponse;
-			handleMessage(msg, (msg) =>
-				approvalsQueryCacheUpdater({ msg, queryClient }),
-			);
-
-			for (const { handler, params } of messageHandlers.values()) {
-				handler(msg, params);
+	// Reattached whenever `connected` state changes so the handlers see its current
+	// value, and detached on unmount so a stale closure cannot outlive them.
+	useEffect(() => {
+		ws.onopen = () => {
+			// Invalidate the whole cache if not the first 'connect' event:
+			// anything broadcast while disconnected was missed,
+			// and a server-initiated kick means permissions/services changed.
+			if (connected !== undefined) {
+				void queryClient.invalidateQueries();
 			}
-		}
-	};
+			setConnected(true);
+		};
 
-	ws.onerror = (event: unknown) => {
-		if (connected) setConnected(false);
-		console.error('ws err', event);
-	};
+		ws.onmessage = (event: MessageEvent) => {
+			if (typeof event.data !== 'string' || event.data === '') return;
+			// Validate the JSON.
+			if (event.data.length > 1 && event.data.startsWith('{')) {
+				const msg = JSON.parse(event.data.trim()) as WebSocketResponse;
+				handleMessage(msg, (msg) =>
+					approvalsQueryCacheUpdater({ msg, queryClient }),
+				);
+
+				for (const { handler, params } of messageHandlers.values()) {
+					handler(msg, params);
+				}
+			}
+		};
+
+		ws.onerror = (event: unknown) => {
+			if (connected) setConnected(false);
+			console.error('ws err', event);
+		};
+
+		ws.onclose = () => {
+			if (connected) setConnected(false);
+		};
+
+		return () => {
+			ws.onopen = null;
+			ws.onmessage = null;
+			ws.onerror = null;
+			ws.onclose = null;
+		};
+	}, [connected, queryClient]);
 
 	return (
 		<WebSocketContext value={contextValue}>
@@ -122,6 +157,14 @@ export const WebSocketProvider = (props: WebSocketProviderProps) => {
 
 export const sendMessage = (data: string) => {
 	ws.send(data);
+};
+
+/**
+ * Closes the connection and keeps it closed (no automatic retries) - used
+ * when a session ends so its socket cannot keep receiving broadcasts.
+ */
+export const disconnectWebSocket = () => {
+	ws.close();
 };
 
 export type MessageHandler<P = undefined> = {

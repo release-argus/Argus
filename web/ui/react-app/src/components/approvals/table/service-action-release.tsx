@@ -3,6 +3,7 @@ import { Pencil } from 'lucide-react';
 import { type FC, useCallback } from 'react';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/auth';
 import useModal from '@/hooks/use-modal';
 import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version';
 import type {
@@ -32,6 +33,7 @@ export const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 	row,
 }) => {
 	const { setModal } = useModal();
+	const { hasPermission } = useAuth();
 	const {
 		values: { editMode },
 	} = useToolbar();
@@ -45,6 +47,10 @@ export const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 		[setModal],
 	);
 
+	const scope = { serviceID: service.id, tags: service.tags };
+	const canEdit = hasPermission('service', 'update', scope);
+	const canAction = hasPermission('service_action', 'execute', scope);
+
 	const haveUpdateAction =
 		(service.command ?? 0) > 0 || (service.webhook ?? 0) > 0;
 	const updateAvailable = service.status?.state === 'AVAILABLE';
@@ -56,7 +62,7 @@ export const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 
 	return (
 		<div className="flex flex-row items-center gap-x-2">
-			{editMode && (
+			{editMode && canEdit && (
 				<div className="flex flex-row items-center gap-x-4">
 					<Button
 						aria-label="Edit service"
@@ -69,7 +75,7 @@ export const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 					</Button>
 				</div>
 			)}
-			{updateAvailable && !updateSkipped && (
+			{canAction && updateAvailable && !updateSkipped && (
 				<Button
 					aria-label="Reject release"
 					key="reject"
@@ -80,7 +86,7 @@ export const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 					Skip
 				</Button>
 			)}
-			{haveUpdateAction && (
+			{canAction && haveUpdateAction && (
 				<Button
 					aria-label={updateSkipped ? 'Approve release' : 'Resend actions'}
 					key="approve"
@@ -91,7 +97,7 @@ export const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 					{updateAvailable ? 'Approve' : 'Resend'}
 				</Button>
 			)}
-			{canApproveManually && (
+			{canAction && canApproveManually && (
 				<Button
 					aria-label="Approve release"
 					key="approve-manual"
