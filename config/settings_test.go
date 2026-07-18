@@ -70,6 +70,38 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			ok: true,
 		},
 		{
+			name: "auth.session.idle_timeout",
+			env: map[string]string{
+				"ARGUS_AUTH_SESSION_IDLE_TIMEOUT": "15m",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Auth: AuthSettings{
+						Session: AuthSessionSettings{
+							IdleTimeout: "15m",
+						},
+					},
+				},
+			},
+			ok: true,
+		},
+		{
+			name: "auth.session.lifetime",
+			env: map[string]string{
+				"ARGUS_AUTH_SESSION_LIFETIME": "48h",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Auth: AuthSettings{
+						Session: AuthSessionSettings{
+							Lifetime: "48h",
+						},
+					},
+				},
+			},
+			ok: true,
+		},
+		{
 			name: "log.level",
 			env: map[string]string{
 				"ARGUS_LOG_LEVEL": "ERROR",
@@ -1140,71 +1172,6 @@ func TestSettings_String(t *testing.T) {
 	}
 }
 
-func TestSettings_NilUndefinedFlags(t *testing.T) {
-	// GIVEN: tests with flags set/unset.
-	var settings Settings
-	tests := []struct {
-		name      string
-		flagSet   bool
-		setStrTo  *string
-		setBoolTo *bool
-	}{
-		{
-			name:      "flag set",
-			flagSet:   true,
-			setStrTo:  new("test"),
-			setBoolTo: new(true),
-		},
-		{
-			name:      "flag not set",
-			flagSet:   false,
-			setStrTo:  new("foo"),
-			setBoolTo: new(false),
-		},
-	}
-	flagStr := "log.level"
-	flagBool := "log.timestamps"
-	flagset := map[string]bool{
-		flagStr:  false,
-		flagBool: false,
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
-
-			// WHEN: flags are set/unset and NilUndefinedFlags is called.
-			flagset[flagStr] = tc.flagSet
-			flagset[flagBool] = tc.flagSet
-			LogLevel = tc.setStrTo
-			LogTimestamps = tc.setBoolTo
-			settings.NilUndefinedFlags(&flagset)
-
-			prefix := fmt.Sprintf("%s\nSettings.NilUndefinedFlags()", packageName)
-
-			// THEN: the flags are defined/undefined correctly.
-			gotStr := LogLevel
-			if (tc.flagSet && gotStr == nil) ||
-				(!tc.flagSet && gotStr != nil) {
-				t.Errorf(
-					"%s mismatch on %s - %s:\ngot:  %v\nwant: %s",
-					prefix, flagStr, tc.name,
-					util.DerefOr(gotStr, "<nil>"), *tc.setStrTo,
-				)
-			}
-			gotBool := LogTimestamps
-			if (tc.flagSet && gotBool == nil) ||
-				(!tc.flagSet && gotBool != nil) {
-				t.Errorf(
-					"%s mismatch on %s - %s:\ngot:  %v\nwant: %v",
-					prefix, flagBool, tc.name,
-					gotBool, *tc.setBoolTo,
-				)
-			}
-		})
-	}
-}
-
 func TestSettings_Default(t *testing.T) {
 	// GIVEN: a set of env vars.
 	tests := []struct {
@@ -1282,85 +1249,6 @@ func TestSettings_Default(t *testing.T) {
 					"%s stdout mismatch\ngot:  %q\nwant: %q",
 					prefix, stdout, tc.stdoutRegex,
 				)
-			}
-		})
-	}
-}
-
-func TestSettings_Default__BasicAuthFromFlags(t *testing.T) {
-	// GIVEN: the web.basic-auth.username/password flags may or may not be provided.
-	tests := []struct {
-		name         string
-		usernameFlag *string
-		passwordFlag *string
-		want         *WebSettingsBasicAuth
-	}{
-		{
-			name:         "neither flag provided",
-			usernameFlag: nil,
-			passwordFlag: nil,
-			want:         nil,
-		},
-		{
-			name:         "only username flag provided",
-			usernameFlag: new("test-user"),
-			passwordFlag: nil,
-			want: &WebSettingsBasicAuth{
-				Username: "test-user",
-				Password: util.FmtHash(util.GetHash("")),
-			},
-		},
-		{
-			name:         "only password flag provided",
-			usernameFlag: nil,
-			passwordFlag: new("test-pass"),
-			want: &WebSettingsBasicAuth{
-				Password: util.FmtHash(util.GetHash("test-pass")),
-			},
-		},
-		{
-			name:         "both flags provided",
-			usernameFlag: new("test-user"),
-			passwordFlag: new("test-pass"),
-			want: &WebSettingsBasicAuth{
-				Username: "test-user",
-				Password: util.FmtHash(util.GetHash("test-pass")),
-			},
-		},
-	}
-
-	loadMu.Lock() // Protect flag vars.
-	t.Cleanup(loadMu.Unlock)
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing flag vars.
-
-			hadUsername, hadPassword := WebBasicAuthUsername, WebBasicAuthPassword
-			WebBasicAuthUsername, WebBasicAuthPassword = tc.usernameFlag, tc.passwordFlag
-			t.Cleanup(func() {
-				WebBasicAuthUsername, WebBasicAuthPassword = hadUsername, hadPassword
-			})
-
-			settings := Settings{}
-
-			// WHEN: Default is called.
-			settings.Default()
-
-			// THEN: FromFlags.Web.BasicAuth is only populated when a flag was provided.
-			got := settings.FromFlags.Web.BasicAuth
-			switch {
-			case tc.want == nil:
-				if got != nil {
-					t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  %v\nwant: nil",
-						packageName, got)
-				}
-			case got == nil:
-				t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  nil\nwant: %v",
-					packageName, tc.want)
-			case got.Username != tc.want.Username || got.Password != tc.want.Password:
-				t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  %v\nwant: %v",
-					packageName, got, tc.want)
 			}
 		})
 	}
@@ -1721,6 +1609,150 @@ func TestSettings_CheckValues(t *testing.T) {
 						prefix, got, wantPasswordHash,
 					)
 				}
+			}
+		})
+	}
+}
+
+func TestSettings_NilUndefinedFlags(t *testing.T) {
+	// GIVEN: tests with flags set/unset.
+	var settings Settings
+	tests := []struct {
+		name      string
+		flagSet   bool
+		setStrTo  *string
+		setBoolTo *bool
+	}{
+		{
+			name:      "flag set",
+			flagSet:   true,
+			setStrTo:  new("test"),
+			setBoolTo: new(true),
+		},
+		{
+			name:      "flag not set",
+			flagSet:   false,
+			setStrTo:  new("foo"),
+			setBoolTo: new(false),
+		},
+	}
+	flagStr := "log.level"
+	flagBool := "log.timestamps"
+	flagset := map[string]bool{
+		flagStr:  false,
+		flagBool: false,
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
+
+			// WHEN: flags are set/unset and NilUndefinedFlags is called.
+			flagset[flagStr] = tc.flagSet
+			flagset[flagBool] = tc.flagSet
+			LogLevel = tc.setStrTo
+			LogTimestamps = tc.setBoolTo
+			settings.NilUndefinedFlags(&flagset)
+
+			prefix := fmt.Sprintf("%s\nSettings.NilUndefinedFlags()", packageName)
+
+			// THEN: the flags are defined/undefined correctly.
+			gotStr := LogLevel
+			if (tc.flagSet && gotStr == nil) ||
+				(!tc.flagSet && gotStr != nil) {
+				t.Errorf(
+					"%s mismatch on %s - %s:\ngot:  %v\nwant: %s",
+					prefix, flagStr, tc.name,
+					util.DerefOr(gotStr, "<nil>"), *tc.setStrTo,
+				)
+			}
+			gotBool := LogTimestamps
+			if (tc.flagSet && gotBool == nil) ||
+				(!tc.flagSet && gotBool != nil) {
+				t.Errorf(
+					"%s mismatch on %s - %s:\ngot:  %v\nwant: %v",
+					prefix, flagBool, tc.name,
+					gotBool, *tc.setBoolTo,
+				)
+			}
+		})
+	}
+}
+
+func TestSettings_Default__BasicAuthFromFlags(t *testing.T) {
+	// GIVEN: the web.basic-auth.username/password flags may or may not be provided.
+	tests := []struct {
+		name         string
+		usernameFlag *string
+		passwordFlag *string
+		want         *WebSettingsBasicAuth
+	}{
+		{
+			name:         "neither flag provided",
+			usernameFlag: nil,
+			passwordFlag: nil,
+			want:         nil,
+		},
+		{
+			name:         "only username flag provided",
+			usernameFlag: new("test-user"),
+			passwordFlag: nil,
+			want: &WebSettingsBasicAuth{
+				Username: "test-user",
+				Password: util.FmtHash(util.GetHash("")),
+			},
+		},
+		{
+			name:         "only password flag provided",
+			usernameFlag: nil,
+			passwordFlag: new("test-pass"),
+			want: &WebSettingsBasicAuth{
+				Password: util.FmtHash(util.GetHash("test-pass")),
+			},
+		},
+		{
+			name:         "both flags provided",
+			usernameFlag: new("test-user"),
+			passwordFlag: new("test-pass"),
+			want: &WebSettingsBasicAuth{
+				Username: "test-user",
+				Password: util.FmtHash(util.GetHash("test-pass")),
+			},
+		},
+	}
+
+	loadMu.Lock() // Protect flag vars.
+	t.Cleanup(loadMu.Unlock)
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're sharing flag vars.
+
+			hadUsername, hadPassword := WebBasicAuthUsername, WebBasicAuthPassword
+			WebBasicAuthUsername, WebBasicAuthPassword = tc.usernameFlag, tc.passwordFlag
+			t.Cleanup(func() {
+				WebBasicAuthUsername, WebBasicAuthPassword = hadUsername, hadPassword
+			})
+
+			settings := Settings{}
+
+			// WHEN: Default is called.
+			settings.Default()
+
+			// THEN: FromFlags.Web.BasicAuth is only populated when a flag was provided.
+			got := settings.FromFlags.Web.BasicAuth
+			switch {
+			case tc.want == nil:
+				if got != nil {
+					t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  %v\nwant: nil",
+						packageName, got)
+				}
+			case got == nil:
+				t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  nil\nwant: %v",
+					packageName, tc.want)
+			case got.Username != tc.want.Username || got.Password != tc.want.Password:
+				t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  %v\nwant: %v",
+					packageName, got, tc.want)
 			}
 		})
 	}

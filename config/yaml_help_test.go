@@ -276,9 +276,35 @@ func testYAML_config_small(path string) {
 	writeFile(path, data)
 }
 
+// testYAML_config_auth is for `save.go`
+//
+// a settings.auth block.
+func testYAML_config_auth(path string) {
+	data := test.TrimYAML(`
+		settings:
+			auth:
+				enabled: true
+				session:
+					lifetime: 720h
+					idle_timeout: 168h
+					secure_cookie: true
+				local:
+					enabled: true
+		service:
+			some-service:
+				options: {}
+				latest_version:
+					type: github
+					url: ` + test.ArgusGitHubRepo + `
+				dashboard: {}
+	`)
+
+	writeFile(path, data)
+}
+
 // testYAML_config_indent4 is for `save.go`.
 //
-// A config indented with 4 spaces rather than the marshal-default 2
+// A config indented with 4 spaces rather than the marshal-default 2.
 func testYAML_config_indent4(path string) {
 	data := test.TrimYAML(`
 		notify:

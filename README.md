@@ -30,6 +30,7 @@ For example, you could set it to monitor the Argus repo ([release-argus/Argus](h
 
 - [Demo](#demo)
 - [Command-line arguments](#command-line-arguments)
+- [Authentication](#authentication)
 - [Building from source](#building-from-source)
   - [Prerequisites](#prerequisites)
   - [Go changes](#go-changes)
@@ -46,6 +47,8 @@ A demo of Argus can be seen on our website [here](https://release-argus.io/demo)
 ```bash
 $ argus -h
 Usage of /usr/local/bin/argus:
+  -auth.reset-password string
+        Username whose password to reset at startup (a new password is generated and printed to stdout); their sessions are revoked, but their API tokens are unchanged
   -config.check
         Print the fully-parsed config.
   -config.file string
@@ -79,6 +82,35 @@ Usage of /usr/local/bin/argus:
   -web.route-prefix string
         Prefix for web endpoints (env_var=ARGUS_WEB_ROUTE_PREFIX) (default "/")
 ```
+
+## Authentication
+
+Argus can require a login for the web UI and API. It is **disabled by default**, so an existing `config.yml` keeps working unchanged on upgrade.
+
+```yaml
+settings:
+  auth:
+    enabled: true # ARGUS_AUTH_ENABLED
+    local:
+      enabled: true # ARGUS_AUTH_LOCAL_ENABLED - username/password logins.
+    session:
+      lifetime: 720h # ARGUS_AUTH_SESSION_LIFETIME - absolute cap.
+      idle_timeout: 168h # ARGUS_AUTH_SESSION_IDLE_TIMEOUT - sliding window.
+      max_per_user: 10 # ARGUS_AUTH_SESSION_MAX_PER_USER - concurrent sessions.
+      secure_cookie: true # ARGUS_AUTH_SESSION_SECURE_COOKIE - override the cookie's Secure attribute.
+  web:
+    trusted_proxies: # ARGUS_WEB_TRUSTED_PROXIES - IPs/CIDRs whose forwarded headers are trusted.
+      - 10.0.0.1
+```
+
+Notes:
+
+- `settings.auth` and `settings.web.basic_auth` are mutually exclusive.
+- The **first administrator** is created through the UI's first-run setup page, which is reachable without credentials until an account exists. Complete setup before exposing a freshly auth-enabled instance to an untrusted network.
+- API tokens cannot create or revoke API tokens; token management needs a browser session.
+- Locked out? `argus -auth.reset-password <username>` generates a new password, prints it to stdout and revokes that user's sessions (their API tokens are left intact).
+- With auth on, RBAC grants govern access. `/metrics` and `/api/v1/counts` require `metric:read`, so Prometheus scrapers and Heimdall need a token with that permission.
+- Behind a reverse proxy, set `trusted_proxies`: `X-Forwarded-For` and `X-Forwarded-Host` are ignored otherwise, and the client IP used for rate limiting and logging falls back to the peer address. `X-Forwarded-Proto: https` is honoured from any peer, so the session cookie is marked `Secure` even before `trusted_proxies` is set; a proxy that omits it needs `auth.session.secure_cookie: true`.
 
 ## Building from source
 
