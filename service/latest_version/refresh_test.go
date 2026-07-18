@@ -364,7 +364,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 					prefix, e, tc.errRegex,
 				)
 			}
-			if tc.errRegex != `^$` {
+			if err != nil {
 				return
 			}
 

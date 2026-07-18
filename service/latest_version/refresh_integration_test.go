@@ -70,7 +70,7 @@ func TestLookup_Refresh(t *testing.T) {
 			},
 			previous: testLookup(t, "url", true),
 			errRegex: `^$`,
-			want:     testVersionURL,
+			want:     "5.0.0",
 		},
 		{
 			name: "Fail applyOverridesJSON",
@@ -113,7 +113,7 @@ func TestLookup_Refresh(t *testing.T) {
 			},
 			previous: testLookup(t, "url", false),
 			errRegex: `^$`,
-			want:     testVersionURL + "-beta",
+			want:     "1.2.2-beta",
 		},
 		{
 			name: "Change of vars that fail Query",
@@ -151,7 +151,7 @@ func TestLookup_Refresh(t *testing.T) {
 			args: args{
 				overrides: []byte(test.TrimJSON(`{
 					"type": "url",
-					"url": "` + test.LookupPlain["url_valid"] + `",
+					"url": "` + test.LookupBare["url_valid"] + `/ver1.2.2",
 					"url_commands": [
 						{
 							"type": "regex",
@@ -160,10 +160,10 @@ func TestLookup_Refresh(t *testing.T) {
 					]
 				}`)),
 				semanticVersioning: test.Ptr("false"),
-				latestVersion:      "0.0.0",
+				latestVersion:      "1.2.3",
 			},
 			errRegex: `^$`,
-			want:     testVersionURL,
+			want:     "1.2.2",
 			announce: false,
 		},
 		{
@@ -293,14 +293,14 @@ func TestLookup_Refresh(t *testing.T) {
 			prefix := fmt.Sprintf("%s\nRefresh()", packageName)
 
 			// THEN: we get an error if expected.
-			if tc.errRegex != "" || err != nil {
-				e := errfmt.FormatError(err)
-				if !util.RegexCheck(tc.errRegex, e) {
-					t.Fatalf(
-						"%s error mismatch\ngot:  %q\nwant: %q",
-						prefix, e, tc.errRegex,
-					)
-				}
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
+			}
+			if err != nil {
 				return
 			}
 

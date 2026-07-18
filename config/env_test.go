@@ -263,7 +263,11 @@ func TestMapEnvToStruct(t *testing.T) {
 					Int    int    `yaml:"int"`
 				} `yaml:"test"`
 			}{},
-			want: "",
+			want: test.TrimYAML(`
+				test:
+					string: ''
+					int: 0
+			`),
 		},
 		{
 			name: "no ARGUS_ env vars",
@@ -277,7 +281,11 @@ func TestMapEnvToStruct(t *testing.T) {
 					Int    int    `yaml:"int"`
 				} `yaml:"test"`
 			}{},
-			want: "",
+			want: test.TrimYAML(`
+				test:
+					string: ''
+					int: 0
+			`),
 		},
 		{
 			name: "nil non-comparable pointer",
@@ -295,7 +303,13 @@ func TestMapEnvToStruct(t *testing.T) {
 					PtrToInt   *int            `yaml:"int"`
 				} `yaml:"test"`
 			}{},
-			want: "",
+			want: test.TrimYAML(`
+				test:
+					slice: null
+					map: null
+					func: null
+					int: 1
+			`),
 		},
 		{
 			name: "ignore env vars under '-' tags",
@@ -809,14 +823,15 @@ func TestMapEnvToStruct(t *testing.T) {
 			err := mapEnvToStruct(tc.customStruct, tc.prefix, nil)
 
 			// THEN: any error is as expected.
+			errRegex := util.ValueOr(tc.errRegex, `^$`)
 			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errRegex, e) { // Expected a FATAL panic to be caught above.
+			if !util.RegexCheck(errRegex, e) { // Expected a FATAL panic to be caught above.
 				t.Errorf(
 					"%s\nMapEnvToStruct() error mismatch\ngot:  %q\nwant: %q",
-					packageName, e, tc.errRegex,
+					packageName, e, errRegex,
 				)
 			}
-			if tc.errRegex != "^$" {
+			if err != nil {
 				return
 			}
 
