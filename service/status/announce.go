@@ -22,6 +22,7 @@ import (
 )
 
 // marshalAnnouncePayload serialises WebSocket announce payloads (overridable for tests).
+// see [decode.Marshal].
 var marshalAnnouncePayload = func(v any) ([]byte, error) {
 	return decode.Marshal("json", v)
 }

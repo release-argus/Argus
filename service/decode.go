@@ -24,6 +24,7 @@ import (
 )
 
 // marshalServiceRaw re-encodes a service subtree (overridable for tests).
+// see [decode.Marshal].
 var marshalServiceRaw = decode.Marshal
 
 // DecodeServices creates and returns a new [Services] from format-encoded data.

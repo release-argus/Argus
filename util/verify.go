@@ -24,6 +24,7 @@ import (
 )
 
 // fileStat returns file metadata for an open file (overridable for tests).
+// see [os.File.Stat].
 var fileStat = func(f *os.File) (os.FileInfo, error) {
 	return f.Stat() //nolint:wrapcheck
 }

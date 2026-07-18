@@ -22,6 +22,7 @@ import (
 )
 
 // marshalWebhookPayload serialises WebHook payloads (overridable for tests).
+// see [decode.Marshal].
 var marshalWebhookPayload = func(v any) ([]byte, error) {
 	return decode.Marshal("json", v)
 }
