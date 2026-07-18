@@ -73,4 +73,4 @@ const ModalProvider: FC<ModalProviderProps> = ({ children }) => {
 	);
 };
 
-export { ModalProviderContext, ModalProvider };
+export { ModalProvider, ModalProviderContext };

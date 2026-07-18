@@ -22,8 +22,8 @@ import {
 } from '@/contexts/service-edit-zod-type';
 import useModal from '@/hooks/use-modal';
 import { useServiceEditDetail } from '@/hooks/use-service-edit-detail';
-import useServiceForm from '@/hooks/use-service-form';
 import { useServiceEdit } from '@/hooks/use-service-mutation';
+import useZodForm from '@/hooks/use-zod-form';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { DeleteModal } from '@/modals/delete-confirm';
 import { extractErrors } from '@/utils';
@@ -145,7 +145,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 		serviceID: sID,
 	} = useSchemaContext();
 
-	const form = useServiceForm({
+	const form = useZodForm({
 		defaultValues: {
 			comment: '',
 			id: '',
@@ -290,16 +290,14 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 										<AlertDescription>
 											{/* Render either the server error or form validation error */}
 											{err ? (
-												<>
-													{err.split(String.raw`\n`).map((line) => (
-														<pre
-															className="wrap-break-word whitespace-pre-wrap"
-															key={line}
-														>
-															{line}
-														</pre>
-													))}
-												</>
+												err.split(String.raw`\n`).map((line) => (
+													<pre
+														className="wrap-break-word whitespace-pre-wrap"
+														key={line}
+													>
+														{line}
+													</pre>
+												))
 											) : (
 												<ul className="list-inside list-disc">
 													{Object.entries(extractErrors(errors) ?? []).map(

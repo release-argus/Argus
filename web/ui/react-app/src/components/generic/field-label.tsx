@@ -31,6 +31,16 @@ type BaseProps = {
 
 export type FieldLabelSize = VariantProps<typeof fieldLabelVariants>['size'];
 
+/**
+ * The marker appended to a required field's label. Decorative - the control
+ * itself carries `required` for assistive tech.
+ */
+export const RequiredMark: FC = () => (
+	<span aria-hidden className="text-destructive">
+		*
+	</span>
+);
+
 type FieldLabelProps = BaseProps & {
 	/* The size variant for the form label. */
 	size?: FieldLabelSize;
@@ -68,7 +78,7 @@ const FieldLabelWithTooltip: FC<FieldLabelProps> = ({
 			id={id}
 		>
 			{text}
-			{required && <span className="text-destructive">*</span>}
+			{required && <RequiredMark />}
 			{tooltip && (
 				<HelpTooltip id={htmlFor && `${htmlFor}-tooltip`} {...tooltip} />
 			)}

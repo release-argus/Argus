@@ -101,7 +101,8 @@ const GOTIFY = ({
 					label="Date"
 					name={`${name}.params.date`}
 					tooltip={{
-						content: 'Custom timestamp in ISO 8601 format (e.g. 2006-01-02T15:04:05Z)',
+						content:
+							'Custom timestamp in ISO 8601 format (e.g. 2006-01-02T15:04:05Z)',
 						type: 'string',
 					}}
 				/>
