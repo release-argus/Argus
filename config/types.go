@@ -28,6 +28,7 @@ import (
 
 // extractServiceSubtree extracts the service subtree from raw config bytes.
 // (overridable for tests).
+// see [polymorphic.Extract].
 var extractServiceSubtree = polymorphic.Extract
 
 // Config for Argus.

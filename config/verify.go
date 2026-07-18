@@ -27,6 +27,7 @@ import (
 
 // exitAfterPrint terminates the process after printing config
 // (overridable for tests).
+// see [os.Exit].
 var exitAfterPrint = os.Exit
 
 // CheckValues validates the fields of the receiver.

@@ -23,6 +23,7 @@ import (
 type dataExtract map[string]any
 
 // marshalExtractSubtree serialises an extracted subtree (overridable for tests).
+// see [decode.Marshal].
 var marshalExtractSubtree = decode.Marshal
 
 // ErrExtract reports a failure while extracting a configuration subtree by key.

@@ -83,6 +83,7 @@ func (o *secretRefs) UnmarshalJSON(data []byte) error {
 }
 
 // decodeServiceFromPayload decodes a Service from JSON (overridable for tests).
+// see [DecodeService].
 var decodeServiceFromPayload = DecodeService
 
 // FromPayload creates a new/edited Service from a payload.
