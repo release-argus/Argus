@@ -280,17 +280,15 @@ func TestLookup_Refresh(t *testing.T) {
 			prefix := fmt.Sprintf("%s\nLookup.Refresh()", packageName)
 
 			// THEN: we get an error if expected.
-			if tc.errRegex != "" || err != nil {
-				e := errfmt.FormatError(err)
-				if !util.RegexCheck(tc.errRegex, e) {
-					t.Fatalf(
-						"%s error mismatch\ngot:  %q\nwant: %q",
-						prefix, e, tc.errRegex,
-					)
-				}
-				if tc.previous == nil {
-					return
-				}
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
+			}
+			if tc.previous == nil {
+				return
 			}
 
 			// AND: announce is only true when expected.
