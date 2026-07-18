@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/auth/rbac"
-	"github.com/release-argus/Argus/internal/test"
 )
 
 // TestStore_FaultInjection drives every repository error branch that only a
@@ -116,7 +115,7 @@ func TestStore__faultInjection(t *testing.T) {
 			invoke: func(t *testing.T, store *Store) error {
 				user, _ := store.LocalCredentials(t.Context(), "target")
 				_, err := store.UpdateUser(t.Context(), user.UserID,
-					UserPatch{DisplayName: test.Ptr("x")})
+					UserPatch{DisplayName: new("x")})
 				return err
 			},
 		},
@@ -129,7 +128,7 @@ func TestStore__faultInjection(t *testing.T) {
 			invoke: func(t *testing.T, store *Store) error {
 				user, _ := store.LocalCredentials(t.Context(), "target")
 				_, err := store.UpdateUser(t.Context(), user.UserID,
-					UserPatch{Email: test.Ptr("x@example.com")})
+					UserPatch{Email: new("x@example.com")})
 				return err
 			},
 		},
@@ -156,7 +155,7 @@ func TestStore__faultInjection(t *testing.T) {
 			invoke: func(t *testing.T, store *Store) error {
 				user, _ := store.LocalCredentials(t.Context(), "target")
 				_, err := store.UpdateUser(t.Context(), user.UserID,
-					UserPatch{PasswordHash: test.Ptr("x")})
+					UserPatch{PasswordHash: new("x")})
 				return err
 			},
 		},
@@ -169,7 +168,7 @@ func TestStore__faultInjection(t *testing.T) {
 			invoke: func(t *testing.T, store *Store) error {
 				user, _ := store.LocalCredentials(t.Context(), "target")
 				_, err := store.UpdateUser(t.Context(), user.UserID,
-					UserPatch{Groups: test.Ptr([]string{GroupViewer})})
+					UserPatch{Groups: new([]string{GroupViewer})})
 				return err
 			},
 		},
@@ -313,7 +312,7 @@ func TestStore__faultInjection(t *testing.T) {
 			invoke: func(t *testing.T, store *Store) error {
 				group := findGroup(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID,
-					GroupPatch{Name: test.Ptr("renamed")})
+					GroupPatch{Name: new("renamed")})
 				return err
 			},
 		},
@@ -326,7 +325,7 @@ func TestStore__faultInjection(t *testing.T) {
 			invoke: func(t *testing.T, store *Store) error {
 				group := findGroup(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID,
-					GroupPatch{Name: test.Ptr("renamed")})
+					GroupPatch{Name: new("renamed")})
 				return err
 			},
 		},
@@ -339,7 +338,7 @@ func TestStore__faultInjection(t *testing.T) {
 			invoke: func(t *testing.T, store *Store) error {
 				group := findGroup(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID,
-					GroupPatch{Description: test.Ptr("x")})
+					GroupPatch{Description: new("x")})
 				return err
 			},
 		},
@@ -352,7 +351,7 @@ func TestStore__faultInjection(t *testing.T) {
 			invoke: func(t *testing.T, store *Store) error {
 				group := findGroup(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID,
-					GroupPatch{Grants: test.Ptr([]rbac.Grant{})})
+					GroupPatch{Grants: new([]rbac.Grant{})})
 				return err
 			},
 		},
@@ -365,7 +364,7 @@ func TestStore__faultInjection(t *testing.T) {
 			invoke: func(t *testing.T, store *Store) error {
 				group := findGroup(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID,
-					GroupPatch{Grants: test.Ptr([]rbac.Grant{
+					GroupPatch{Grants: new([]rbac.Grant{
 						globalGrant(rbac.ResourceService, rbac.ActionRead),
 					})})
 				return err
@@ -380,7 +379,7 @@ func TestStore__faultInjection(t *testing.T) {
 			invoke: func(t *testing.T, store *Store) error {
 				group := findGroup(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID,
-					GroupPatch{Grants: test.Ptr([]rbac.Grant{
+					GroupPatch{Grants: new([]rbac.Grant{
 						globalGrant(rbac.ResourceService, rbac.ActionRead),
 					})})
 				return err

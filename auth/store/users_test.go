@@ -374,7 +374,7 @@ func TestStore_UpdateUser(t *testing.T) {
 	}{
 		{
 			name:  "update display name",
-			patch: UserPatch{DisplayName: test.Ptr("Renamed")},
+			patch: UserPatch{DisplayName: new("Renamed")},
 			check: func(t *testing.T, store *Store, prefix, userID string) {
 				user, _ := store.UserByID(t.Context(), userID)
 				if user.DisplayName != "Renamed" {
@@ -387,7 +387,7 @@ func TestStore_UpdateUser(t *testing.T) {
 		},
 		{
 			name:  "update email",
-			patch: UserPatch{Email: test.Ptr("new@example.com")},
+			patch: UserPatch{Email: new("new@example.com")},
 			check: func(t *testing.T, store *Store, prefix, userID string) {
 				user, _ := store.UserByID(t.Context(), userID)
 				if user.Email != "new@example.com" {
@@ -401,7 +401,7 @@ func TestStore_UpdateUser(t *testing.T) {
 		{
 			name:         "replace groups",
 			targetGroups: []string{GroupViewer},
-			patch:        UserPatch{Groups: test.Ptr([]string{GroupOperator})},
+			patch:        UserPatch{Groups: new([]string{GroupOperator})},
 			check: func(t *testing.T, store *Store, prefix, userID string) {
 				user, _ := store.UserByID(t.Context(), userID)
 				if !slices.Equal(user.Groups, []string{GroupOperator}) {
@@ -415,7 +415,7 @@ func TestStore_UpdateUser(t *testing.T) {
 		{
 			name:         "clear groups",
 			targetGroups: []string{GroupViewer},
-			patch:        UserPatch{Groups: test.Ptr([]string{})},
+			patch:        UserPatch{Groups: new([]string{})},
 			check: func(t *testing.T, store *Store, prefix, userID string) {
 				user, _ := store.UserByID(t.Context(), userID)
 				if len(user.Groups) != 0 {
@@ -428,7 +428,7 @@ func TestStore_UpdateUser(t *testing.T) {
 		},
 		{
 			name:  "set password hash",
-			patch: UserPatch{PasswordHash: test.Ptr("$argon2id$new")},
+			patch: UserPatch{PasswordHash: new("$argon2id$new")},
 			check: func(t *testing.T, store *Store, prefix, userID string) {
 				creds, _ := store.LocalCredentials(t.Context(), "target")
 				if creds.PasswordHash != "$argon2id$new" {
@@ -441,12 +441,12 @@ func TestStore_UpdateUser(t *testing.T) {
 		},
 		{
 			name:    "unknown group rejected",
-			patch:   UserPatch{Groups: test.Ptr([]string{"no-such-group"})},
+			patch:   UserPatch{Groups: new([]string{"no-such-group"})},
 			wantErr: ErrUnknownGroup,
 		},
 		{
 			name:  "disable non-admin",
-			patch: UserPatch{Enabled: test.Ptr(false)},
+			patch: UserPatch{Enabled: new(false)},
 			check: func(t *testing.T, store *Store, prefix, userID string) {
 				user, _ := store.UserByID(t.Context(), userID)
 				if user.Enabled {
@@ -457,20 +457,20 @@ func TestStore_UpdateUser(t *testing.T) {
 		{
 			name:         "disable last admin rejected",
 			targetGroups: []string{GroupAdmin},
-			patch:        UserPatch{Enabled: test.Ptr(false)},
+			patch:        UserPatch{Enabled: new(false)},
 			wantErr:      ErrLastAdmin,
 		},
 		{
 			name:         "demote last admin rejected",
 			targetGroups: []string{GroupAdmin},
-			patch:        UserPatch{Groups: test.Ptr([]string{GroupViewer})},
+			patch:        UserPatch{Groups: new([]string{GroupViewer})},
 			wantErr:      ErrLastAdmin,
 		},
 		{
 			name:         "disable admin with another admin present",
 			targetGroups: []string{GroupAdmin},
 			otherAdmin:   true,
-			patch:        UserPatch{Enabled: test.Ptr(false)},
+			patch:        UserPatch{Enabled: new(false)},
 			check: func(t *testing.T, store *Store, prefix, userID string) {
 				user, _ := store.UserByID(t.Context(), userID)
 				if user.Enabled {
@@ -482,7 +482,7 @@ func TestStore_UpdateUser(t *testing.T) {
 			name:         "demote admin with another admin present",
 			targetGroups: []string{GroupAdmin},
 			otherAdmin:   true,
-			patch:        UserPatch{Groups: test.Ptr([]string{})},
+			patch:        UserPatch{Groups: new([]string{})},
 			check: func(t *testing.T, store *Store, prefix, userID string) {
 				user, _ := store.UserByID(t.Context(), userID)
 				if len(user.Groups) != 0 {

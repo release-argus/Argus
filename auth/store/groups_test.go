@@ -361,7 +361,7 @@ func TestStore_UpdateGroup(t *testing.T) {
 		{
 			name:   "rename custom group",
 			target: customTarget,
-			patch:  GroupPatch{Name: test.Ptr("renamed")},
+			patch:  GroupPatch{Name: new("renamed")},
 			check: func(t *testing.T, store *Store, prefix, groupID string) {
 				group, _ := store.GroupByID(t.Context(), groupID)
 				if group.Name != "renamed" {
@@ -376,18 +376,18 @@ func TestStore_UpdateGroup(t *testing.T) {
 			name:    "rename to existing name rejected",
 			target:  customTarget,
 			preset:  "occupied",
-			patch:   GroupPatch{Name: test.Ptr("occupied")},
+			patch:   GroupPatch{Name: new("occupied")},
 			wantErr: ErrGroupNameTaken,
 		},
 		{
 			name:   "rename to own name is a no-op",
 			target: customTarget,
-			patch:  GroupPatch{Name: test.Ptr(customTarget)},
+			patch:  GroupPatch{Name: new(customTarget)},
 		},
 		{
 			name:   "update description",
 			target: customTarget,
-			patch:  GroupPatch{Description: test.Ptr("updated")},
+			patch:  GroupPatch{Description: new("updated")},
 			check: func(t *testing.T, store *Store, prefix, groupID string) {
 				group, _ := store.GroupByID(t.Context(), groupID)
 				if group.Description != "updated" {
@@ -401,7 +401,7 @@ func TestStore_UpdateGroup(t *testing.T) {
 		{
 			name:   "replace grants",
 			target: customTarget,
-			patch: GroupPatch{Grants: test.Ptr([]rbac.Grant{
+			patch: GroupPatch{Grants: new([]rbac.Grant{
 				serviceGrant(rbac.ResourceVersionRefresh, rbac.ActionExecute, "argus"),
 			})},
 			check: func(t *testing.T, store *Store, prefix, groupID string) {
@@ -418,7 +418,7 @@ func TestStore_UpdateGroup(t *testing.T) {
 		{
 			name:   "invalid grant rejected",
 			target: customTarget,
-			patch: GroupPatch{Grants: test.Ptr([]rbac.Grant{
+			patch: GroupPatch{Grants: new([]rbac.Grant{
 				{Permission: rbac.Permission{Resource: rbac.Resource("user"), Action: rbac.ActionRead},
 					Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "argus"}},
 			})},
@@ -427,13 +427,13 @@ func TestStore_UpdateGroup(t *testing.T) {
 		{
 			name:    "rename admin rejected",
 			target:  GroupAdmin,
-			patch:   GroupPatch{Name: test.Ptr("superusers")},
+			patch:   GroupPatch{Name: new("superusers")},
 			wantErr: ErrSystemGroup,
 		},
 		{
 			name:   "starter group renameable",
 			target: GroupViewer,
-			patch:  GroupPatch{Name: test.Ptr("watchers")},
+			patch:  GroupPatch{Name: new("watchers")},
 			check: func(t *testing.T, store *Store, prefix, groupID string) {
 				group, _ := store.GroupByID(t.Context(), groupID)
 				if group.Name != "watchers" {
@@ -454,7 +454,7 @@ func TestStore_UpdateGroup(t *testing.T) {
 		{
 			name:   "starter group description editable",
 			target: GroupViewer,
-			patch:  GroupPatch{Description: test.Ptr("customised")},
+			patch:  GroupPatch{Description: new("customised")},
 			check: func(t *testing.T, store *Store, prefix, groupID string) {
 				group, _ := store.GroupByID(t.Context(), groupID)
 				if group.Description != "customised" {
@@ -468,7 +468,7 @@ func TestStore_UpdateGroup(t *testing.T) {
 		{
 			name:   "starter group grants editable",
 			target: GroupOperator,
-			patch: GroupPatch{Grants: test.Ptr([]rbac.Grant{
+			patch: GroupPatch{Grants: new([]rbac.Grant{
 				globalGrant(rbac.ResourceService, rbac.ActionRead),
 			})},
 			check: func(t *testing.T, store *Store, prefix, groupID string) {
@@ -484,7 +484,7 @@ func TestStore_UpdateGroup(t *testing.T) {
 		{
 			name:   "admin grants immutable",
 			target: GroupAdmin,
-			patch: GroupPatch{Grants: test.Ptr([]rbac.Grant{
+			patch: GroupPatch{Grants: new([]rbac.Grant{
 				globalGrant(rbac.ResourceService, rbac.ActionRead),
 			})},
 			wantErr: ErrSystemGroup,
@@ -564,7 +564,7 @@ func TestStore_UpdateGroup__permissionLoadRowsErr(t *testing.T) {
 
 	// WHEN: grants are set (permissionIDsByPair iterates the permissions).
 	_, err := store.UpdateGroup(t.Context(), group.ID,
-		GroupPatch{Grants: test.Ptr([]rbac.Grant{
+		GroupPatch{Grants: new([]rbac.Grant{
 			globalGrant(rbac.ResourceService, rbac.ActionRead),
 		})})
 

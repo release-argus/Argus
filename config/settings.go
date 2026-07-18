@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/goccy/go-yaml"
 
@@ -85,18 +86,25 @@ var (
 		"",
 		"Password for basic auth (env_var=ARGUS_WEB_BASIC_AUTH_PASSWORD)",
 	)
+	AuthResetPassword = flag.String(
+		"auth.reset-password",
+		"",
+		"Username whose password to reset at startup (a new password is generated and printed to stdout); their sessions are revoked",
+	)
 )
 
 // SettingsBase holds the base settings for the binary.
 type SettingsBase struct {
-	Data DataSettings `json:"data,omitzero" yaml:"data,omitzero"` // Data settings
-	Log  LogSettings  `json:"log,omitzero" yaml:"log,omitzero"`   // Log settings
-	Web  WebSettings  `json:"web,omitzero" yaml:"web,omitzero"`   // Web settings
+	Auth AuthSettings `json:"auth,omitzero" yaml:"auth,omitzero"` // Auth settings.
+	Data DataSettings `json:"data,omitzero" yaml:"data,omitzero"` // Data settings.
+	Log  LogSettings  `json:"log,omitzero" yaml:"log,omitzero"`   // Log settings.
+	Web  WebSettings  `json:"web,omitzero" yaml:"web,omitzero"`   // Web settings.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (s SettingsBase) IsZero() bool {
-	return s.Log.IsZero() &&
+	return s.Auth.IsZero() &&
+		s.Log.IsZero() &&
 		s.Data.IsZero() &&
 		s.Web.IsZero()
 }
@@ -104,6 +112,17 @@ func (s SettingsBase) IsZero() bool {
 // CheckValues validates the fields of the receiver.
 func (s *SettingsBase) CheckValues() error {
 	var errs []error
+
+	// Auth.
+	if err := s.Auth.CheckValues(); err != nil {
+		errs = append(
+			errs,
+			&decode.ErrKeyField{
+				Key: "auth",
+				Err: err,
+			},
+		)
+	}
 
 	// Web.
 	if err := s.Web.CheckValues(); err != nil {
@@ -147,6 +166,94 @@ func (s *SettingsBase) MapEnvToStruct() error {
 		return nil
 	}
 	return errors.Join(errs...)
+}
+
+// AuthSettings holds authentication/authorisation settings for the binary.
+type AuthSettings struct {
+	Enabled *bool               `json:"enabled,omitzero" yaml:"enabled,omitzero"` // Enable user/RBAC auth.
+	Session AuthSessionSettings `json:"session,omitzero" yaml:"session,omitzero"` // Session bounds.
+	Local   AuthLocalSettings   `json:"local,omitzero" yaml:"local,omitzero"`     // Local provider.
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (a AuthSettings) IsZero() bool {
+	return a.Enabled == nil &&
+		a.Session.IsZero() &&
+		a.Local.IsZero()
+}
+
+// CheckValues validates the fields of the receiver.
+func (a *AuthSettings) CheckValues() error {
+	var errs []error
+
+	// Session durations.
+	for _, field := range []struct {
+		key   string
+		value string
+	}{
+		{"lifetime", a.Session.Lifetime},
+		{"idle_timeout", a.Session.IdleTimeout},
+	} {
+		if field.value == "" {
+			continue
+		}
+		duration, err := time.ParseDuration(field.value)
+		if err != nil {
+			errs = append(
+				errs,
+				&decode.ErrKeyField{
+					Key: "session",
+					Err: &decode.ErrField{
+						Key:         field.key,
+						Value:       field.value,
+						Description: "invalid duration (e.g. '720h')",
+					},
+				},
+			)
+			continue
+		}
+		// Non-positive durations expire every session the moment it is minted.
+		if duration <= 0 {
+			errs = append(
+				errs,
+				&decode.ErrKeyField{
+					Key: "session",
+					Err: &decode.ErrField{
+						Key:         field.key,
+						Value:       field.value,
+						Description: "must be a positive duration (e.g. '720h')",
+					},
+				},
+			)
+		}
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return errors.Join(errs...)
+}
+
+// AuthSessionSettings bounds login session validity.
+type AuthSessionSettings struct {
+	Lifetime    string `json:"lifetime,omitzero" yaml:"lifetime,omitzero"`         // Absolute cap.
+	IdleTimeout string `json:"idle_timeout,omitzero" yaml:"idle_timeout,omitzero"` // Sliding window.
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (a AuthSessionSettings) IsZero() bool {
+	return a.Lifetime == "" &&
+		a.IdleTimeout == ""
+}
+
+// AuthLocalSettings configures the local (username/password) auth provider.
+type AuthLocalSettings struct {
+	Enabled *bool `json:"enabled,omitzero" yaml:"enabled,omitzero"`
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (a AuthLocalSettings) IsZero() bool {
+	return a.Enabled == nil
 }
 
 // DataSettings holds data-related settings for the binary.
@@ -322,13 +429,50 @@ func (s *Settings) String(prefix string) string {
 	return decode.ToYAMLString(s, prefix)
 }
 
-// CheckValues validates the fields of the receiver.
+// CheckValues validates the fields of the receiver,
+// including rules that span the flag/YAML/env layers.
 func (s *Settings) CheckValues() error {
 	if s.Indentation == 0 {
 		s.Indentation = yaml.DefaultIndentSpaces
 	}
 
-	return s.SettingsBase.CheckValues()
+	var errs []error
+
+	if err := s.SettingsBase.CheckValues(); err != nil {
+		errs = append(errs, err)
+	}
+
+	if s.AuthEnabled() {
+		// auth and web.basic_auth are mutually exclusive - fail fast rather
+		// than letting one silently take precedence.
+		if s.Web.BasicAuth != nil ||
+			s.FromFlags.Web.BasicAuth != nil ||
+			s.HardDefaults.Web.BasicAuth != nil {
+			errs = append(
+				errs,
+				&decode.ErrKeyField{
+					Key: "auth",
+					Err: errors.New("cannot be enabled together with web.basic_auth; remove one"),
+				},
+			)
+		}
+
+		// At least one provider must be enabled.
+		if !s.AuthLocalEnabled() {
+			errs = append(
+				errs,
+				&decode.ErrKeyField{
+					Key: "auth",
+					Err: errors.New("enabled, but every provider is disabled (enable auth.local)"),
+				},
+			)
+		}
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return errors.Join(errs...)
 }
 
 // NilUndefinedFlags sets the flags to nil if they are not set.
@@ -348,6 +492,7 @@ func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 		{"web.route-prefix", &WebRoutePrefix},
 		{"web.basic-auth.username", &WebBasicAuthUsername},
 		{"web.basic-auth.password", &WebBasicAuthPassword},
+		{"auth.reset-password", &AuthResetPassword},
 	} {
 		if !(*flagset)[f.Flag] {
 			if strPtr, ok := f.Variable.(**string); ok {
@@ -361,6 +506,22 @@ func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 
 // Default sets the values of the receiver to their default values.
 func (s *Settings) Default() bool {
+	// ########
+	// # AUTH #
+	// ########
+
+	// Enabled.
+	authEnabled := false
+	s.HardDefaults.Auth.Enabled = &authEnabled
+
+	// Session bounds.
+	s.HardDefaults.Auth.Session.Lifetime = "720h"    // 30 days.
+	s.HardDefaults.Auth.Session.IdleTimeout = "168h" // 7 days.
+
+	// Local provider.
+	authLocalEnabled := true
+	s.HardDefaults.Auth.Local.Enabled = &authLocalEnabled
+
 	// #######
 	// # LOG #
 	// #######
@@ -427,6 +588,53 @@ func (s *Settings) Default() bool {
 	}
 
 	return true
+}
+
+// AuthEnabled reports whether user/RBAC authentication is enabled.
+func (s *Settings) AuthEnabled() bool {
+	return util.DerefOrZero(
+		util.FirstNonNilPtr(
+			s.Auth.Enabled,
+			s.HardDefaults.Auth.Enabled,
+		),
+	)
+}
+
+// AuthLocalEnabled reports whether the local auth provider is enabled.
+func (s *Settings) AuthLocalEnabled() bool {
+	return util.DerefOrZero(
+		util.FirstNonNilPtr(
+			s.Auth.Local.Enabled,
+			s.HardDefaults.Auth.Local.Enabled,
+		),
+	)
+}
+
+// AuthSessionLifetime resolves the absolute session lifetime.
+func (s *Settings) AuthSessionLifetime() time.Duration {
+	return s.authDuration(
+		s.Auth.Session.Lifetime,
+		s.HardDefaults.Auth.Session.Lifetime,
+	)
+}
+
+// AuthSessionIdleTimeout resolves the sliding session idle window.
+func (s *Settings) AuthSessionIdleTimeout() time.Duration {
+	return s.authDuration(
+		s.Auth.Session.IdleTimeout,
+		s.HardDefaults.Auth.Session.IdleTimeout,
+	)
+}
+
+// authDuration parses the first non-default (must-be-valid) duration string,
+// falling back to the hard default on a parse failure.
+func (s *Settings) authDuration(value, hardDefault string) time.Duration {
+	resolved := util.FirstNonDefault(value, hardDefault)
+	duration, err := time.ParseDuration(resolved)
+	if err != nil {
+		duration, _ = time.ParseDuration(hardDefault)
+	}
+	return duration
 }
 
 // LogTimestamps returns the log timestamps setting.
