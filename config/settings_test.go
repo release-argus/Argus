@@ -1433,7 +1433,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 					)
 				}
 			default:
-				t.Fatalf("%s\nerror expected but not returned", prefix)
+				t.Fatalf("%s error expected but not returned", prefix)
 			}
 
 			// AND: the settings are set to the appropriate env vars.
