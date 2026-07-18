@@ -30,6 +30,13 @@ const SERIAL_SPECS = [
  * verifying the lookup upstream. */
 const MUTATING_TEST_TIMEOUT = 90_000;
 
+/**
+ * Auth specs run against a second, auth-enabled Argus instance
+ * (AUTH_BASE_URL; `make playwright-tests-setup` starts it on :8081), so they
+ * get their own project and are excluded from every other one.
+ */
+const AUTH_SPECS = ['auth.spec.ts', 'auth-permissions.spec.ts'];
+
 const BROWSERS = {
 	chromium: devices['Desktop Chrome'],
 	firefox: devices['Desktop Firefox'],
@@ -56,7 +63,7 @@ export default defineConfig({
 		...Object.entries(BROWSERS).flatMap(([name, use], i, browsers) => [
 			{
 				name,
-				testIgnore: SERIAL_SPECS,
+				testIgnore: [...SERIAL_SPECS, ...AUTH_SPECS],
 				use,
 			},
 			{
@@ -73,16 +80,29 @@ export default defineConfig({
 			},
 		]),
 
+		/* Auth specs: stateful (users/groups/tokens CRUD on a shared
+		 * auth-enabled backend) and rate-limited on login, so single-browser,
+		 * single-worker against the auth-enabled instance. */
+		{
+			name: 'chromium-auth',
+			testMatch: AUTH_SPECS,
+			use: {
+				...devices['Desktop Chrome'],
+				baseURL: process.env.AUTH_BASE_URL ?? 'http://localhost:8081',
+			},
+			workers: 1,
+		},
+
 		/* Mobile viewports run the read-only/validation specs only, to avoid
 		 * cross-project contention. Skip navigation since navbar differs on mobile */
 		{
 			name: 'mobile--google-chrome',
-			testIgnore: [...SERIAL_SPECS, 'navigation.spec.ts'],
+			testIgnore: [...SERIAL_SPECS, ...AUTH_SPECS, 'navigation.spec.ts'],
 			use: devices['Pixel 8'],
 		},
 		{
 			name: 'mobile--safari',
-			testIgnore: [...SERIAL_SPECS, 'navigation.spec.ts'],
+			testIgnore: [...SERIAL_SPECS, ...AUTH_SPECS, 'navigation.spec.ts'],
 			use: devices['iPhone 16'],
 		},
 	],
