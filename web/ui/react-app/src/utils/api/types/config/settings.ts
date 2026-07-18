@@ -16,8 +16,25 @@ export type SettingsWeb = {
 	listen_port: string;
 };
 
+export type SettingsAuthSession = {
+	lifetime?: string;
+	idle_timeout?: string;
+	secure_cookie?: boolean;
+};
+
+export type SettingsAuthLocal = {
+	enabled?: boolean;
+};
+
+export type SettingsAuth = {
+	enabled?: boolean;
+	session?: SettingsAuthSession;
+	local?: SettingsAuthLocal;
+};
+
 export type Settings = {
 	data?: SettingsData;
 	log?: SettingsLog;
 	web?: SettingsWeb;
+	auth?: SettingsAuth;
 };
