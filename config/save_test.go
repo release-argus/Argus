@@ -274,6 +274,14 @@ func TestConfig_Save(t *testing.T) {
 			},
 		},
 		{
+			name: "settings.auth",
+			file: testYAML_config_auth,
+			corrections: map[string]string{
+				"    options: {}\n":   "",
+				"    dashboard: {}\n": "",
+			},
+		},
+		{
 			name: "unreadable file",
 			file: testYAML_Argus,
 			preSaveFunc: func(path string) {

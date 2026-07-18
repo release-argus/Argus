@@ -47,6 +47,17 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 			RoutePrefix:    api.Config.Settings.Web.RoutePrefix,
 			DisabledRoutes: api.Config.Settings.Web.DisabledRoutes,
 		},
+		Auth: apitype.AuthSettings{
+			Enabled: api.Config.Settings.Auth.Enabled,
+			Session: apitype.AuthSessionSettings{
+				Lifetime:     api.Config.Settings.Auth.Session.Lifetime,
+				IdleTimeout:  api.Config.Settings.Auth.Session.IdleTimeout,
+				SecureCookie: api.Config.Settings.Auth.Session.SecureCookie,
+			},
+			Local: apitype.AuthLocalSettings{
+				Enabled: api.Config.Settings.Auth.Local.Enabled,
+			},
+		},
 	}
 
 	// Defaults.Service.LatestVersion.Common.Require.

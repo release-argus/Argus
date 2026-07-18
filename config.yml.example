@@ -1,3 +1,9 @@
+# Require a login, with users, groups and API tokens. Uncomment to enable, then
+# create the first administrator on the setup page, or up front with
+# `argus -auth.create-admin <username>`.
+#settings:
+#  auth:
+#    enabled: true
 service:
   release-argus/Argus:
     latest_version:
