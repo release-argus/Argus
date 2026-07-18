@@ -1,10 +1,17 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { WebSocket } from 'partysocket';
-import { createContext, type ReactNode, use, useMemo, useState } from 'react';
+import {
+	createContext,
+	type ReactNode,
+	use,
+	useEffect,
+	useMemo,
+	useState,
+} from 'react';
 import { WebSocketStatus } from '@/components/websocket/status';
 import { WS_ADDRESS } from '@/config';
+import { notifyUnauthorised } from '@/contexts/auth';
 import { handleMessage } from '@/handlers/websocket';
-import { QUERY_KEYS } from '@/lib/query-keys';
 import type { WebSocketResponse } from '@/types/websocket';
 import { getBasename } from '@/utils';
 import approvalsQueryCacheUpdater from '@/utils/api/query-cache';
@@ -55,6 +62,11 @@ const getWebSocketURL = async (): Promise<string> => {
 		const resp = await fetch(`${API_BASE}/ws-token`);
 		// 204 = Basic Auth not configured; connect without a token.
 		if (resp.status === 204) return wsURL;
+		// 401/403 = the session is dead (revoked, kicked, or expired).
+		if (resp.status === 401 || resp.status === 403) {
+			notifyUnauthorised();
+			return wsURL;
+		}
 		if (!resp.ok) {
 			throw new Error(`Failed to fetch WebSocket token: HTTP ${resp.status}`);
 		}
@@ -66,7 +78,7 @@ const getWebSocketURL = async (): Promise<string> => {
 	}
 };
 
-const ws = new WebSocket(getWebSocketURL);
+const ws = new WebSocket(getWebSocketURL, undefined, { startClosed: true });
 /**
  * @returns The WebSocket connection and monitor data.
  */
@@ -82,12 +94,17 @@ export const WebSocketProvider = (props: WebSocketProviderProps) => {
 		[connected],
 	);
 
+	useEffect(() => {
+		ws.reconnect();
+	}, []);
+
 	ws.onopen = () => {
-		// Invalidate the cache if not the first 'connect' event.
+		// Invalidate the whole cache if not the first 'connect' event:
+		// anything broadcast while disconnected was missed (service summaries
+		// cache with staleTime: Infinity, so they never recover on their own),
+		// and a server-initiated kick means permissions/services changed.
 		if (connected !== undefined) {
-			void queryClient.invalidateQueries({
-				queryKey: QUERY_KEYS.SERVICE.ORDER(),
-			});
+			void queryClient.invalidateQueries();
 		}
 		setConnected(true);
 	};
@@ -122,6 +139,23 @@ export const WebSocketProvider = (props: WebSocketProviderProps) => {
 
 export const sendMessage = (data: string) => {
 	ws.send(data);
+};
+
+/**
+ * Forces an immediate reconnect - used after login so the new handshake
+ * carries the fresh session cookie instead of waiting out the retry backoff.
+ */
+export const reconnectWebSocket = () => {
+	ws.reconnect();
+};
+
+/**
+ * Closes the connection and keeps it closed (no automatic retries) - used
+ * when a session ends so its socket cannot keep receiving broadcasts. The
+ * next login's reconnectWebSocket() re-opens it.
+ */
+export const disconnectWebSocket = () => {
+	ws.close();
 };
 
 export type MessageHandler<P = undefined> = {

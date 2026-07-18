@@ -108,7 +108,9 @@ const TestNotify: FC<TestNotifyProps> = ({ path, original, extras }) => {
 				setLastFetched(currentTime);
 				await testRefetch();
 			}
-		} catch (error) {}
+		} catch (_error) {
+			// Failure surfaces through the mutation/UI state.
+		}
 	};
 
 	// Icon for the test result.
