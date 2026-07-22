@@ -303,10 +303,7 @@ func TestVerify(t *testing.T) {
 			)
 
 			// THEN: errors match expectations.
-			errRegex := tc.errRegex
-			if errRegex == "" {
-				errRegex = `^$`
-			}
+			errRegex := util.ValueOr(tc.errRegex, `^$`)
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(errRegex, e) {
 				t.Fatalf(

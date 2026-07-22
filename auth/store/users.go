@@ -125,7 +125,6 @@ func (s *Store) UserByID(ctx context.Context, id string) (*auth.User, error) {
 }
 
 // CreateUser creates a user with the given group memberships.
-// Every account authenticates locally, so passwordHash is required.
 func (s *Store) CreateUser(
 	ctx context.Context,
 	username, displayName, email, passwordHash string,

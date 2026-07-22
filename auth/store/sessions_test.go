@@ -189,7 +189,7 @@ func TestStore_SessionByTokenHash__errors(t *testing.T) {
 			)
 
 			// THEN: the failure is surfaced.
-			errRegex := tc.errRegex
+			errRegex := util.ValueOr(tc.errRegex, `^$`)
 			if tc.wantErr != nil {
 				if !errors.Is(err, tc.wantErr) {
 					t.Errorf(
@@ -249,7 +249,8 @@ func TestStore_DeleteSessionsForUser(t *testing.T) {
 	beta := mustCreateUser(t, store, "beta", "")
 	expiresAt := timeNow().Add(time.Hour)
 	for i, userID := range []string{alpha.ID, alpha.ID, beta.ID} {
-		if err := store.InsertSession(t.Context(),
+		if err := store.InsertSession(
+			t.Context(),
 			testSession(fmt.Sprintf("hash-%d", i), userID, expiresAt),
 		); err != nil {
 			t.Fatalf(
@@ -300,7 +301,8 @@ func TestStore_DeleteExpiredSessions(t *testing.T) {
 		"expired-2": now.Add(-time.Minute),
 		"live":      now.Add(time.Hour),
 	} {
-		if err := store.InsertSession(t.Context(),
+		if err := store.InsertSession(
+			t.Context(),
 			testSession(hash, user.ID, expiresAt),
 		); err != nil {
 			t.Fatalf(

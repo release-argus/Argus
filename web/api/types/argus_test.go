@@ -78,9 +78,9 @@ func TestServiceEdit_Marshal(t *testing.T) {
 				},
 				WebHook: []WebHook{
 					{
-						ID: "wh1",
+						ID:   "wh1",
 						Type: "github",
-						URL: "https://example.com",
+						URL:  "https://example.com",
 					},
 				},
 				DeployedVersionLookup: &DeployedVersionLookup{
@@ -1957,9 +1957,9 @@ func TestService_String(t *testing.T) {
 				},
 				WebHook: WebHooks{
 					"wh1": {
-						ID: "wh1",
+						ID:   "wh1",
 						Type: "github",
-						URL: "https://example.com",
+						URL:  "https://example.com",
 					},
 				},
 				DeployedVersionLookup: &DeployedVersionLookup{

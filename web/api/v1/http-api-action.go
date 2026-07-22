@@ -26,11 +26,17 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// httpServiceActions returns all Commands/WebHooks of a service.
+// httpServiceGetActions handles GET /api/v1/service/actions: returns a list of
+// all Commands/WebHooks attached to a service.
 //
 // Query parameters:
 //
 //	service_id: the ID of the Service to get the actions of.
+//
+// Response:
+//
+//	200 OK: JSON object containing the service's Commands/WebHooks.
+//	404 Not Found: on an unknown service.
 func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpServiceActions", Secondary: getIP(r)}
 	// Service to get actions of.
@@ -90,18 +96,24 @@ const (
 	ActionFailed = "ARGUS_FAILED"
 )
 
-// httpServiceRunActions handles approvals/rejections of the latest version of a service.
+// httpServiceRunActions handles POST /api/v1/service/actions: approvals/rejections
+// of Commands/WebHooks on the latest version of a service.
 //
-// Query Parameters:
+// Query parameters:
 //
-// - service_id: the ID of the Service to target.
+//	service_id: ID of the Service to target.
+//	target: Action to take. Supported values:
+//	  ActionAll: approve all actions.
+//	  ActionFailed: approve all failed actions.
+//	  ActionSkip: skip this release.
+//	  webhook_<webhook_id>: approve a specific webhook.
+//	  command_<command_id>: approve a specific command.
 //
-// - target: the action to take. One of:
-//   - ActionAll: approve all actions.
-//   - ActionFailed: approve all failed actions.
-//   - ActionSkip: skip this release.
-//   - "webhook_<webhook_id>": approve a specific webhook.
-//   - "command_<command_id>": approve a specific command.
+// Response:
+//
+//	200 OK: on success.
+//	400 Bad Request: on a malformed payload, missing target, or inactive service.
+//	404 Not Found: on an unknown service.
 func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
 	// Service to run actions of.

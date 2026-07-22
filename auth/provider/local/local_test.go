@@ -141,7 +141,7 @@ func TestProvider_Authenticate(t *testing.T) {
 			)
 
 			// THEN: errors match expectations.
-			errRegex := tc.errRegex
+			errRegex := util.ValueOr(tc.errRegex, `^$`)
 			if tc.wantErr != nil {
 				if !errors.Is(err, tc.wantErr) {
 					t.Fatalf(

@@ -54,7 +54,10 @@ func TestStringifyPtr(t *testing.T) {
 				var nilPtr *int
 				result = StringifyPtr(nilPtr)
 			default:
-				t.Fatalf("%s\nunexpected type %T", packageName, tc.ptr)
+				t.Fatalf(
+					"%s\nunexpected type %T",
+					packageName, tc.ptr,
+				)
 			}
 
 			// THEN: the result should be a string representation of the value.

@@ -40,7 +40,10 @@ func testFaultStore(t *testing.T) (*Store, *storetest.FaultState) {
 	db, state := testFaultDB(t)
 	store, err := New(t.Context(), db)
 	if err != nil {
-		t.Fatalf("%s\nNew() on fault DB failed: %v", packageName, err)
+		t.Fatalf(
+			"%s\nNew() on fault DB failed: %v",
+			packageName, err,
+		)
 	}
 	return store, state
 }

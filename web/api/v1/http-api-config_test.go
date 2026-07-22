@@ -758,7 +758,10 @@ func TestHTTP_Config(t *testing.T) {
 			// THEN: the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("%s unexpected error:\n%v", prefix, err)
+				t.Fatalf(
+					"%s unexpected error:\n%v",
+					prefix, err,
+				)
 			}
 			if got := string(data); got != tc.wantBody {
 				t.Errorf(

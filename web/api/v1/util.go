@@ -16,14 +16,22 @@
 package v1
 
 import (
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
 	"net/url"
+	"strings"
 
+	"github.com/release-argus/Argus/auth/store"
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 // marshalAnnouncePayload serialises WebSocket announce payloads (overridable for tests).
+// see [decode.Marshal].
 var marshalAnnouncePayload = func(v any) ([]byte, error) {
 	return decode.Marshal("json", v)
 }
@@ -93,6 +101,101 @@ func (api *API) announceOrder() {
 			Order:   &api.Config.Order,
 		},
 	)
+}
+
+// maxFieldLength bounds the free-text user and group fields.
+//
+// 254 is the longest deliverable email address:
+// RFC 5321 caps an SMTP Path at 256 octets including its angle brackets.
+// Usernames share the bound so an address can be used as one.
+const maxFieldLength = 254
+
+// normaliseName trims surrounding whitespace from a user/group name and
+// validates the result. Uniqueness is case-insensitive but not
+// whitespace-insensitive, so an untrimmed name could otherwise shadow one
+// that renders identically.
+func normaliseName(key, name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", &decode.ErrField{Key: key}
+	}
+	if err := validateFieldLength(key, name); err != nil {
+		return "", err
+	}
+	return name, nil
+}
+
+// validateFieldLength reports whether an optional free-text field is within
+// [maxFieldLength], returning a user-facing [error] when it is not.
+func validateFieldLength(key, value string) error {
+	if len(value) <= maxFieldLength {
+		return nil
+	}
+	return &decode.ErrField{
+		Key:         key,
+		Value:       util.ValueUnlessZero(value[:maxFieldLength], "*"),
+		Description: fmt.Sprintf("must be at most %d characters", maxFieldLength),
+	}
+}
+
+// Accepted password length bounds.
+const (
+	minPasswordLength = 8
+	maxPasswordLength = 1024
+)
+
+// validatePassword reports whether plaintext meets the password policy,
+// returning a user-facing [error] when it does not.
+func validatePassword(plaintext string) error {
+	var description string
+	switch {
+	case len(plaintext) < minPasswordLength:
+		description = fmt.Sprintf("must be at least %d characters", minPasswordLength)
+	case len(plaintext) > maxPasswordLength:
+		description = fmt.Sprintf("must be at most %d characters", maxPasswordLength)
+	default:
+		return nil
+	}
+
+	return &decode.ErrField{
+		Key:         "password",
+		Value:       util.ValueUnlessZero(plaintext, "*"),
+		Description: description,
+	}
+}
+
+// decodeAuthBody decodes a JSON request body into v,
+// failing the request (and reporting false) on error.
+func (api *API) decodeAuthBody(w http.ResponseWriter, r *http.Request, v any) bool {
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxAuthBodySize))
+	if err != nil {
+		failRequest(&w, fmt.Errorf("read request: %w", err), http.StatusBadRequest)
+		return false
+	}
+	if err := decode.Unmarshal("json", body, v); err != nil {
+		failRequest(&w, fmt.Errorf("parse request: %w", err), http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
+// failAuthStoreRequest maps auth store errors onto HTTP statuses.
+func (api *API) failAuthStoreRequest(w http.ResponseWriter, err error, logFrom logx.LogFrom, action string) {
+	switch {
+	case errors.Is(err, store.ErrNotFound):
+		failRequest(&w, fmt.Errorf("%s failed: not found", action), http.StatusNotFound)
+	case errors.Is(err, store.ErrUnknownGroup),
+		errors.Is(err, store.ErrInvalidGrant):
+		failRequest(&w, fmt.Errorf("%s failed: %w", action, err), http.StatusBadRequest)
+	case errors.Is(err, store.ErrUsernameTaken),
+		errors.Is(err, store.ErrGroupNameTaken),
+		errors.Is(err, store.ErrLastAdmin),
+		errors.Is(err, store.ErrSystemGroup):
+		failRequest(&w, fmt.Errorf("%s failed: %w", action, err), http.StatusConflict)
+	default:
+		logx.Error(err, logFrom, true)
+		failRequest(&w, fmt.Errorf("%s failed", action), http.StatusInternalServerError)
+	}
 }
 
 // ConstantTimeCompare reports whether the arrays x and y have equal contents.

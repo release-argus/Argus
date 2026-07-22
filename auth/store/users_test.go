@@ -88,7 +88,7 @@ func TestStore_Users(t *testing.T) {
 	}
 }
 
-func TestStore_Users__Errors(t *testing.T) {
+func TestStore_Users__errors(t *testing.T) {
 	// GIVEN: stores in states that break listing.
 	tests := []struct {
 		name  string
@@ -160,7 +160,7 @@ func TestStore_Users__Errors(t *testing.T) {
 	}
 }
 
-func TestStore_Users__RowsErr(t *testing.T) {
+func TestStore_Users__rowsErr(t *testing.T) {
 	// GIVEN: a Store whose row iteration fails.
 	store := testStore(t)
 	rowsErrHad := rowsErr
@@ -309,7 +309,7 @@ func TestStore_CreateUser_And_UserByID(t *testing.T) {
 	}
 }
 
-func TestStore_UserByID__NotFound(t *testing.T) {
+func TestStore_UserByID__notFound(t *testing.T) {
 	// GIVEN: a Store.
 	store := testStore(t)
 
@@ -346,14 +346,15 @@ func TestStore_CreateUser__requiresPassword(t *testing.T) {
 	}
 }
 
-func TestStore_CreateUser__DuplicateGroupNames(t *testing.T) {
+func TestStore_CreateUser__duplicateGroupNames(t *testing.T) {
 	// GIVEN: a create request naming the same group twice.
 	store := testStore(t)
 
 	prefix := fmt.Sprintf("%s\nCreateUser() with duplicate group names", packageName)
 
 	// WHEN: the user is created.
-	user, err := store.CreateUser(t.Context(),
+	user, err := store.CreateUser(
+		t.Context(),
 		"argus",
 		"",
 		"",
@@ -570,7 +571,7 @@ func TestStore_UpdateUser(t *testing.T) {
 	}
 }
 
-func TestStore_UpdateUser__NotFound(t *testing.T) {
+func TestStore_UpdateUser__notFound(t *testing.T) {
 	// GIVEN: a Store.
 	store := testStore(t)
 
@@ -727,7 +728,7 @@ func TestStore_DeleteUser(t *testing.T) {
 	}
 }
 
-func TestStore_DeleteUser__NotFound(t *testing.T) {
+func TestStore_DeleteUser__notFound(t *testing.T) {
 	// GIVEN: a Store.
 	store := testStore(t)
 
@@ -907,7 +908,11 @@ func TestStore_CreateFirstAdmin(t *testing.T) {
 
 			// WHEN: CreateFirstAdmin is called.
 			user, err := store.CreateFirstAdmin(
-				t.Context(), "root", "Rooty", "setup-password")
+				t.Context(),
+				"root",
+				"Rooty",
+				"setup-password",
+			)
 
 			prefix := fmt.Sprintf("%s\nCreateFirstAdmin()", packageName)
 
@@ -932,7 +937,10 @@ func TestStore_CreateFirstAdmin(t *testing.T) {
 				return
 			}
 			if err != nil {
-				t.Fatalf("%s unexpected error: %v", prefix, err)
+				t.Fatalf(
+					"%s unexpected error: %v",
+					prefix, err,
+				)
 			}
 
 			// AND: the admin is an enabled admin member whose password verifies.
@@ -961,7 +969,10 @@ func TestStore_CreateFirstAdmin(t *testing.T) {
 
 			// AND: a second call is rejected - setup happens exactly once.
 			if _, err := store.CreateFirstAdmin(
-				t.Context(), "root2", "", "another-password",
+				t.Context(),
+				"root2",
+				"",
+				"another-password",
 			); !errors.Is(err, ErrSetupComplete) {
 				t.Errorf(
 					"%s second call error mismatch\ngot:  %v\nwant: %v",
@@ -1050,7 +1061,7 @@ func TestStore_ResetUserPassword(t *testing.T) {
 			prefix := fmt.Sprintf("%s\nResetUserPassword()", packageName)
 
 			// THEN: errors match expectations.
-			errRegex := tc.errRegex
+			errRegex := util.ValueOr(tc.errRegex, `^$`)
 			if tc.wantErr != nil {
 				if !errors.Is(err, tc.wantErr) {
 					t.Fatalf(
@@ -1059,8 +1070,6 @@ func TestStore_ResetUserPassword(t *testing.T) {
 					)
 				}
 				return
-			} else if tc.errRegex == "" {
-				errRegex = `^$`
 			}
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(errRegex, e) {

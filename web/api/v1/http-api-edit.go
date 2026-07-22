@@ -17,11 +17,13 @@ package v1
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/notify/shoutrrr"
@@ -38,19 +40,22 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// httpLatestVersionRefreshUncreated creates a latest version lookup and queries it.
+// scopeRefTimeout bounds the permission-grant cleanup writes that must finish
+// even if the client that triggered them has gone away.
+const scopeRefTimeout = 5 * time.Second
+
+// httpLatestVersionRefreshUncreated handles GET /api/v1/latest_version/refresh_uncreated:
+// creating a latest version lookup and querying it.
 //
-// Method: GET
-//
-// Query Parameters:
+// Query parameters:
 //
 //	semantic_versioning: Optional boolean parameter to override semantic versioning defaults.
 //	overrides: Required parameter to provide parameters for the version lookup.
 //
 // Response:
 //
-//	On success: JSON object containing the refreshed version and the current UTC datetime.
-//	On error: HTTP 400 Bad Request with an error message.
+//	200 OK: JSON object containing the refreshed version and the current UTC datetime.
+//	400 Bad Request: Error message.
 func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpVersionRefreshUncreated_Latest", Secondary: getIP(r)}
 
@@ -129,19 +134,18 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	)
 }
 
-// httpDeployedVersionRefreshUncreated creates a deployed version lookup and queries it.
+// httpDeployedVersionRefreshUncreated handles GET /api/v1/deployed_version/refresh_uncreated:
+// creating a deployed version lookup and querying it.
 //
-// Method: GET
-//
-// Query Parameters:
+// Query parameters:
 //
 //	semantic_versioning: Optional boolean parameter to override semantic versioning defaults.
 //	overrides: Required parameter to provide parameters for the version lookup.
 //
 // Response:
 //
-//	On success: JSON object containing the refreshed version and the current UTC datetime.
-//	On error: HTTP 400 Bad Request with an error message.
+//	200 OK: JSON object containing the refreshed version and the current UTC datetime.
+//	400 Bad Request: Error message.
 func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpVersionRefreshUncreated_Deployed", Secondary: getIP(r)}
 
@@ -217,11 +221,10 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	)
 }
 
-// httpLatestVersionRefresh refreshes the latest version of the target service.
+// httpLatestVersionRefresh handles GET /api/v1/latest_version/refresh:
+// refreshing the latest version of the target service.
 //
-// Method: GET
-//
-// Query Parameters:
+// Query parameters:
 //
 //	service_id: The ID of the Service to refresh the LatestVersion of.
 //	overrides: Optional parameter to provide parameters for the version lookup.
@@ -229,8 +232,8 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 //
 // Response:
 //
-//	On success: JSON object containing the refreshed version and the current UTC datetime.
-//	On error: HTTP 400 Bad Request with an error message.
+//	200 OK: JSON object containing the refreshed version and the current UTC datetime.
+//	400 Bad Request: Error message.
 func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpVersionRefresh_Latest", Secondary: getIP(r)}
 	// Service to refresh.
@@ -313,11 +316,10 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 	)
 }
 
-// httpDeployedVersionRefresh refreshes the deployed version of the target service.
+// httpDeployedVersionRefresh handles GET /api/v1/deployed_version/refresh:
+// refreshing the deployed version of the target service.
 //
-// Method: GET
-//
-// Query Parameters:
+// Query parameters:
 //
 //	service_id: The ID of the Service to refresh the DeployedVersion of.
 //	overrides: Optional parameter to provide parameters for the version lookup.
@@ -325,8 +327,8 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 //
 // Response:
 //
-//	On success: JSON object containing the refreshed version and the current UTC datetime.
-//	On error: HTTP 400 Bad Request with an error message.
+//	200 OK: JSON object containing the refreshed version and the current UTC datetime.
+//	400 Bad Request: Error message.
 func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpVersionRefresh_Deployed", Secondary: getIP(r)}
 	// Service to refresh.
@@ -437,17 +439,16 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 	)
 }
 
-// httpServiceDetail handles sending details about a Service.
+// httpServiceDetail handles GET /api/v1/service/config: sending details about
+// a Service.
 //
-// Method: GET
-//
-// Query Parameters:
+// Query parameters:
 //
 //	service_id: The ID of the Service to get details for.
 //
 // Response:
 //
-//	JSON object containing the service details.
+//	200 OK: JSON object containing the service details.
 func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpServiceDetail", Secondary: getIP(r)}
 	// Service to get details of.
@@ -487,13 +488,12 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 	api.writeJSON(w, serviceJSON, logFrom)
 }
 
-// httpOtherServiceDetails handles sending details about the global notify/webhooks, defaults and hard defaults.
-//
-// Method: GET
+// httpOtherServiceDetails handles GET /api/v1/service/defaults: sending details
+// about the global notify/webhooks, defaults and hard defaults.
 //
 // Response:
 //
-//	JSON object containing the global details.
+//	200 OK: JSON object containing the global details.
 func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpOtherServiceDetails", Secondary: getIP(r)}
 
@@ -510,11 +510,10 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 	)
 }
 
-// httpTemplateParse parses a template with provided or default parameters.
+// httpTemplateParse handles GET /api/v1/template: parsing a template
+// with the provided (or default parameters).
 //
-// Method: GET
-//
-// Query Parameters:
+// Query parameters:
 //
 //	service_id: The ID of the Service to get the default parameters from.
 //	template: The template to parse.
@@ -531,7 +530,7 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 //
 // Response:
 //
-//	JSON object containing the parsed template.
+//	200 OK: JSON object containing the parsed template.
 func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpTemplateParse", Secondary: getIP(r)}
 
@@ -588,7 +587,16 @@ func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
 	api.writeJSON(w, map[string]string{"parsed": parsed}, logFrom)
 }
 
-// httpServiceEdit handles creating/editing a Service.
+// serviceAction distinguishes a create from an edit in [API.httpServiceEdit].
+type serviceAction string
+
+const (
+	actionCreate serviceAction = "create"
+	actionEdit   serviceAction = "edit"
+)
+
+// httpServiceEdit handles PUT /api/v1/service/(config|new): creating/editing a
+// Service.
 //
 // The body is a full replacement, not a merge. The payload builds an entirely new
 // Service, so any field it omits is dropped rather than carried over from the
@@ -598,7 +606,7 @@ func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
 //
 // Method: PUT
 //
-// Query Parameters:
+// Query parameters:
 //
 //	service_id: The ID of the Service to edit (empty for a new service).
 //
@@ -608,22 +616,22 @@ func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
 //
 // Response:
 //
-//	On success: HTTP 200 OK
-//	On error: HTTP 400 Bad Request with an error message.
+//	200 OK: Created/Edited
+//	400 Bad Request: Error message.
 func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
 	// Service to modify (empty for create new).
 	serviceID := r.URL.Query().Get("service_id")
-	reqType := "create"
+	reqType := actionCreate
 	if serviceID != "" {
-		reqType = "edit"
+		reqType = actionEdit
 	}
 
 	// EDIT: wait out any in-flight operations on this service (a refresh, another
 	// edit, or a delete) rather than failing fast, so a background refresh can't
 	// bounce a user's save. If the service was deleted or renamed while we waited,
 	// return 404.
-	if serviceID != "" {
+	if reqType == actionEdit {
 		op := api.acquireServiceOp(serviceID)
 		defer api.releaseServiceOp(serviceID, op)
 		op.mu.Lock()
@@ -634,7 +642,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 
 	var oldServiceSummary *apitype.ServiceSummary
 	// EDIT the existing service.
-	if serviceID != "" {
+	if reqType == actionEdit {
 		if api.Config.Service[serviceID] == nil {
 			api.Config.OrderMu.RUnlock()
 			failRequest(
@@ -682,9 +690,26 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// EDIT: ensure the user has access to the new service.
+	if reqType == actionEdit && api.auth != nil {
+		authCtx := authContextFrom(r)
+		target := rbac.Target{
+			ServiceID: newService.ID,
+			Tags:      newService.Dashboard.Tags,
+		}
+		if authCtx == nil ||
+			!authCtx.Permissions.Allowed(rbac.ResourceService, rbac.ActionUpdate, &target) {
+			failRequest(&w, fmt.Errorf(
+				"edit %q failed, the resulting id/tags are outside the scope you may edit",
+				serviceID,
+			), http.StatusForbidden)
+			return
+		}
+	}
+
 	// CREATE/EDIT: service with this ID/Name already exists.
 	api.Config.OrderMu.RLock()
-	nameTaken := (serviceID == "" && api.Config.Service[newService.ID] != nil) ||
+	nameTaken := (reqType == actionCreate && api.Config.Service[newService.ID] != nil) ||
 		api.Config.ServiceWithNameExists(newService.Name, serviceID)
 	api.Config.OrderMu.RUnlock()
 	if nameTaken {
@@ -697,7 +722,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// CREATE: new ID is known, reject a concurrent create of the same ID.
-	if serviceID == "" {
+	if reqType == actionCreate {
 		op := api.acquireServiceOp(newService.ID)
 		defer api.releaseServiceOp(newService.ID, op)
 		if !op.mu.TryLock() {
@@ -735,6 +760,23 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
+	// Rename any service-scoped permission grants before moving the service.
+	if api.auth != nil && reqType == actionEdit && newService.ID != serviceID {
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), scopeRefTimeout)
+		defer cancel()
+		if err := api.auth.Store.RenameServiceScopeRefs(ctx, serviceID, newService.ID); err != nil {
+			logx.Error(err, logFrom, true)
+			failRequest(
+				&w,
+				fmt.Errorf(
+					"edit %q failed, could not move its permission grants to %q",
+					serviceID, newService.ID),
+				http.StatusInternalServerError,
+			)
+			return
+		}
+	}
+
 	// Add the new service to the config.
 	if err := api.Config.AddService(serviceID, newService); err != nil {
 		err = fmt.Errorf(
@@ -747,12 +789,15 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// IDs/tags may have changed.
+	api.kickWebSocketClients()
+
 	newServiceSummary := newService.Summary()
 	// Announce the edit.
 	api.announceEdit(oldServiceSummary, newServiceSummary)
 
 	msg := "created"
-	if serviceID != "" {
+	if reqType == actionEdit {
 		msg = "edited"
 	}
 	api.writeJSON(
@@ -767,11 +812,9 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-// httpServiceDelete handles deleting a Service.
+// httpServiceDelete handles DELETE /api/v1/service/delete: deleting a Service.
 //
-// Method: DELETE
-//
-// Query Parameters:
+// Query parameters:
 //
 //	service_id: The ID of the Service to delete.
 //
@@ -806,6 +849,21 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Prune service-scoped grants before removing the service.
+	if api.auth != nil {
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), scopeRefTimeout)
+		defer cancel()
+		if err := api.auth.Store.DeleteServiceScopeRefs(ctx, serviceID); err != nil {
+			logx.Error(err, logFrom, true)
+			failRequest(
+				&w,
+				fmt.Errorf("delete %q failed, could not prune its permission grants", serviceID),
+				http.StatusInternalServerError,
+			)
+			return
+		}
+	}
+
 	api.Config.DeleteService(serviceID)
 
 	// Announce deletion.
@@ -820,9 +878,7 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-// httpNotifyTest handles testing a Notify.
-//
-// Method: POST
+// httpNotifyTest handles POST /api/v1/notify/test: testing a Notify.
 //
 // Body:
 //
@@ -837,6 +893,11 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 //	params?: map[string]string
 //	service_url?: string
 //	web_url?: string
+//
+// Response:
+//
+//	200 OK: JSON object containing the test result.
+//	400 Bad Request: on a missing/malformed body or a failed test send.
 func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
 
@@ -873,6 +934,19 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 		// Check whether service exists.
 		svc := api.Config.Service[parsedPayload.ServiceIDPrevious]
 		if svc != nil {
+			// Require service:update to inherit secrets.
+			if api.auth != nil {
+				authCtx := authContextFrom(r)
+				target := rbac.Target{
+					ServiceID: parsedPayload.ServiceIDPrevious,
+					Tags:      svc.Dashboard.Tags,
+				}
+				if authCtx == nil ||
+					!authCtx.Permissions.Allowed(rbac.ResourceService, rbac.ActionUpdate, &target) {
+					failRequest(&w, errForbidden, http.StatusForbidden)
+					return
+				}
+			}
 			// Check whether notifier exists.
 			if svc.Notify != nil {
 				serviceNotify = svc.Notify[parsedPayload.NamePrevious]

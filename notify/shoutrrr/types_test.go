@@ -1028,7 +1028,10 @@ func TestShoutrrrs_Copy(t *testing.T) {
 			for key, want := range orig {
 				gotEntry := got[key]
 				if gotEntry == nil {
-					t.Fatalf("%s missing copied entry %q", prefix, key)
+					t.Fatalf(
+						"%s missing copied entry %q",
+						prefix, key,
+					)
 				}
 				if gotEntry == want {
 					t.Fatalf("%s entry %q should be a distinct copy\ngot:  %p\nwant: %p",
@@ -1094,7 +1097,10 @@ func TestShoutrrrs_Copy(t *testing.T) {
 					}
 					orig[tc.reassignOriginalKey] = reassignTo
 					if _, ok := got[tc.reassignOriginalKey]; !ok {
-						t.Fatalf("%s missing entry %q after reassigning original", prefix, tc.reassignOriginalKey)
+						t.Fatalf(
+							"%s missing entry %q after reassigning original",
+							prefix, tc.reassignOriginalKey,
+						)
 					}
 					if got[tc.reassignOriginalKey] == reassignTo {
 						t.Fatalf(

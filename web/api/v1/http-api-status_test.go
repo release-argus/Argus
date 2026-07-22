@@ -52,7 +52,7 @@ func TestHTTP_HTTPWebSocketToken(t *testing.T) {
 	}
 }
 
-func TestHTTP_HTTPWebSocketToken__AuthGated(t *testing.T) {
+func TestHTTP_HTTPWebSocketToken__authGated(t *testing.T) {
 	// GIVEN: an API with Basic Auth, routed through SetupRoutesAPI so that
 	// "/api/v1/ws-token" sits behind the basic-auth middleware.
 	cfg := config.Config{}
@@ -67,19 +67,23 @@ func TestHTTP_HTTPWebSocketToken__AuthGated(t *testing.T) {
 
 	tokenURL := ts.URL + "/api/v1/ws-token"
 
-	tests := map[string]struct {
+	tests := []struct {
+		name             string
 		authHeader       string // raw "Authorization" header value ("" to omit it).
 		wantUnauthorized bool
 	}{
-		"rejects request without basic auth": {
+		{
+			name:             "rejects request without basic auth",
 			authHeader:       "",
 			wantUnauthorized: true,
 		},
-		"rejects request with invalid basic auth": {
+		{
+			name:             "rejects request with invalid basic auth",
 			authHeader:       "Basic dGVzdDp3cm9uZw==", // "test:wrong".
 			wantUnauthorized: true,
 		},
-		"issues a token with valid basic auth": {
+		{
+			name:             "issues a token with valid basic auth",
 			authHeader:       "Basic dGVzdDoxMjM=", // "test:123".
 			wantUnauthorized: false,
 		},
@@ -87,8 +91,8 @@ func TestHTTP_HTTPWebSocketToken__AuthGated(t *testing.T) {
 
 	prefix := fmt.Sprintf("%q\nAPI.httpWebSocketToken() (auth-gated)", packageName)
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			// WHEN: "/ws-token" is requested with the given credentials.
@@ -147,7 +151,10 @@ func TestHTTP_HTTPWebSocketToken__AuthGated(t *testing.T) {
 				Token string `json:"token"`
 			}
 			if err := decode.Unmarshal("json", data, &tokenResp); err != nil {
-				t.Fatalf("%s failed to unmarshal response: %v", prefix, err)
+				t.Fatalf(
+					"%s failed to unmarshal response: %v",
+					prefix, err,
+				)
 			}
 			if !api.wsTokens.Validate(tokenResp.Token) {
 				t.Errorf(

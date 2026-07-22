@@ -55,7 +55,10 @@ func testDB(t *testing.T) *sql.DB {
 
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
-		t.Fatalf("%s\nopen test database: %v", packageName, err)
+		t.Fatalf(
+			"%s\nopen test database: %v",
+			packageName, err,
+		)
 	}
 	// In-memory SQLite gives each connection its own database;
 	// pin the pool to one connection so all queries share it.
@@ -71,13 +74,15 @@ func testStore(t *testing.T) *Store {
 
 	store, err := New(t.Context(), testDB(t))
 	if err != nil {
-		t.Fatalf("%s\nNew() failed: %v", packageName, err)
+		t.Fatalf(
+			"%s\nNew() failed: %v",
+			packageName, err,
+		)
 	}
 	return store
 }
 
-// testPasswordHash stands in for a real hash where the test does not care
-// about the password - every account must carry one.
+// testPasswordHash is a dummy argon2id hash.
 const testPasswordHash = "$argon2id$v=19$m=65536,t=2,p=1$c2FsdHNhbHRzYWx0$aGFzaGhhc2hoYXNoaGFzaA"
 
 // mustCreateUser creates a user, failing the test on error.
@@ -178,7 +183,10 @@ func seedGrantCount(t *testing.T, key string) int {
 		return count
 	}
 
-	t.Fatalf("%s\nunknown seed group %q", packageName, key)
+	t.Fatalf(
+		"%s\nunknown seed group %q",
+		packageName, key,
+	)
 	return -1
 }
 
@@ -193,7 +201,10 @@ func mustExec(t *testing.T, store *Store, statement string) {
 	t.Helper()
 
 	if _, err := store.db.Exec(statement); err != nil {
-		t.Fatalf("%s\nexec failed: %v\n%s", packageName, err, statement)
+		t.Fatalf(
+			"%s\nexec failed: %v\n%s",
+			packageName, err, statement,
+		)
 	}
 }
 

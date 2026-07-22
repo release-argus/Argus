@@ -307,7 +307,10 @@ func TestService_HandleCommand(t *testing.T) {
 						i, test.StringifyPtr(svc.Status.Fails.Command.Get(i)),
 					)
 				}
-				t.Logf("%s commandFails: {%s}", prefix, fails[:len(fails)-2])
+				t.Logf(
+					"%s commandFails: {%s}",
+					prefix, fails[:len(fails)-2],
+				)
 				for len(svc.Status.AnnounceChannel) != 0 {
 					msg := <-svc.Status.AnnounceChannel
 					t.Logf(

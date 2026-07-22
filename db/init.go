@@ -30,9 +30,11 @@ import (
 var once sync.Once
 
 // openDatabase opens the SQLite database (overridable for tests).
+// see [sql.Open].
 var openDatabase = sql.Open
 
 // serviceStatusRowsErr reports iteration errors from a status query (overridable for tests).
+// see [sql.Rows.Err].
 var serviceStatusRowsErr = func(rows *sql.Rows) error {
 	return rows.Err()
 }
@@ -62,6 +64,22 @@ func Get(cfg *config.Config) *api {
 	return &api
 }
 
+// DB returns the underlying database handle
+// (shared with the auth store when auth is enabled).
+func (api *api) DB() *sql.DB {
+	return api.db
+}
+
+// CloseDB closes the database handle.
+func (api *api) CloseDB() {
+	if api.db == nil {
+		return
+	}
+	if err := api.db.Close(); err != nil {
+		logx.Error(err, logFrom, true)
+	}
+}
+
 // initialise opens the SQLite database and ensures the status table exists.
 func (api *api) initialise() (ok bool) {
 	databaseFile := api.config.Settings.DataDatabaseFile()
@@ -73,6 +91,9 @@ func (api *api) initialise() (ok bool) {
 		logx.Fatal(err, logFrom)
 		return
 	}
+
+	// Serialise all access to the single SQLite file.
+	db.SetMaxOpenConns(1)
 
 	// Create the table.
 	if _, err := db.Exec(`

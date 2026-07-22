@@ -68,7 +68,8 @@ func TestAssertMapEqual(t *testing.T) {
 			// THEN: The error is as expected.
 			e := errfmt.FormatError(err)
 			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
-				t.Fatalf("%s\nAssertMapEqual(a=%v, b=%v) error mismatch\ngot:  %q\nwant: %q",
+				t.Fatalf(
+					"%s\nAssertMapEqual(a=%v, b=%v) error mismatch\ngot:  %q\nwant: %q",
 					packageName, tc.a, tc.b,
 					e, tc.errRegex,
 				)
