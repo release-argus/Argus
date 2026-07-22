@@ -75,7 +75,7 @@ func TestServeWs(t *testing.T) {
 
 			// AND: a HTTP server with a WebSocket endpoint.
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				ServeWs(hub, w, r)
+				ServeWs(hub, w, r, nil)
 			}))
 			t.Cleanup(server.Close)
 
@@ -89,13 +89,19 @@ func TestServeWs(t *testing.T) {
 			}
 			clientConn, resp, err := websocket.DefaultDialer.Dial(wsURL, dialHeader)
 			if err != nil {
-				t.Fatalf("%s failed to dial WebSocket: %v", prefix, err)
+				t.Fatalf(
+					"%s failed to dial WebSocket: %v",
+					prefix, err,
+				)
 			}
 			t.Cleanup(func() { _ = clientConn.Close() })
 
 			// THEN: the upgrade succeeds.
 			if got, want := resp.StatusCode, tc.wantStatus; got != want {
-				t.Errorf("%s status mismatch\ngot:  %d\nwant: %d", prefix, got, want)
+				t.Errorf(
+					"%s status mismatch\ngot:  %d\nwant: %d",
+					prefix, got, want,
+				)
 			}
 			time.Sleep(time.Second)
 
@@ -105,7 +111,10 @@ func TestServeWs(t *testing.T) {
 				t.Fatalf("%s expected a registered client", prefix)
 			}
 			if !tc.wantRegistered && registered != nil {
-				t.Fatalf("%s expected no registered client, got %p", prefix, registered)
+				t.Fatalf(
+					"%s expected no registered client, got %p",
+					prefix, registered,
+				)
 			}
 			if registered == nil {
 				return
@@ -219,7 +228,7 @@ func TestServeWs__plain_HTTP(t *testing.T) {
 
 	// AND: a HTTP server with a WebSocket endpoint.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ServeWs(hub, w, r)
+		ServeWs(hub, w, r, nil)
 	}))
 	t.Cleanup(server.Close)
 
@@ -230,18 +239,24 @@ func TestServeWs__plain_HTTP(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	// WHEN: a plain HTTP request is served.
-	ServeWs(hub, rec, req)
+	ServeWs(hub, rec, req, nil)
 
 	// THEN: the upgrade fails.
 	if got, want := rec.Code, http.StatusBadRequest; got != want {
-		t.Errorf("%s status mismatch\ngot:  %d\nwant: %d", prefix, got, want)
+		t.Errorf(
+			"%s status mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
 	}
 
 	time.Sleep(100 * time.Millisecond)
 
 	// AND: no client is registered.
 	if registered := hubClientForTest(t, hub); registered != nil {
-		t.Errorf("%s expected no registered client, got %p", prefix, registered)
+		t.Errorf(
+			"%s expected no registered client, got %p",
+			prefix, registered,
+		)
 	}
 }
 
@@ -347,7 +362,10 @@ func TestClient_ReadPump__pongHandler(t *testing.T) {
 		[]byte{},
 		time.Now().Add(time.Second),
 	); err != nil {
-		t.Fatalf("%s failed to write ping: %v", prefix, err)
+		t.Fatalf(
+			"%s failed to write ping: %v",
+			prefix, err,
+		)
 	}
 	time.Sleep(100 * time.Millisecond)
 
@@ -416,7 +434,10 @@ func TestClient_ReadPump__disconnects(t *testing.T) {
 			// WHEN: the connection is disrupted.
 			for _, msg := range tc.peerMessages {
 				if err := wsTest.peer.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-					t.Fatalf("%s failed to write message from peer: %v", prefix, err)
+					t.Fatalf(
+						"%s failed to write message from peer: %v",
+						prefix, err,
+					)
 				}
 			}
 			switch {
@@ -663,7 +684,10 @@ func readConnMessages(t *testing.T, conn *websocket.Conn, prefix string, count i
 
 	got, err := tryReadConnMessages(conn, count)
 	if err != nil {
-		t.Fatalf("%s %v", prefix, err)
+		t.Fatalf(
+			"%s %v",
+			prefix, err,
+		)
 	}
 	return got
 }
@@ -690,7 +714,10 @@ func assertConnMessages(t *testing.T, prefix string, got, want []string) {
 	t.Helper()
 
 	if gotLen, wantLen := len(got), len(want); gotLen != wantLen {
-		t.Errorf("%s message count mismatch\ngot:  %d\nwant: %d", prefix, gotLen, wantLen)
+		t.Errorf(
+			"%s message count mismatch\ngot:  %d\nwant: %d",
+			prefix, gotLen, wantLen,
+		)
 	}
 	for i, wantMsg := range want {
 		if i >= len(got) {
@@ -847,7 +874,10 @@ func TestClient_WritePump__connection(t *testing.T) {
 			// AND: the client connection is closed before the writePump starts.
 			if tc.closeConnBeforePump {
 				if err := wsTest.conn.Close(); err != nil {
-					t.Fatalf("%s failed to close connection: %v", prefix, err)
+					t.Fatalf(
+						"%s failed to close connection: %v",
+						prefix, err,
+					)
 				}
 			}
 
@@ -876,7 +906,10 @@ func TestClient_WritePump__connection(t *testing.T) {
 				// AND: the connection is closed after the writePump starts.
 				if tc.closeConnAfterPump {
 					if err := wsTest.conn.Close(); err != nil {
-						t.Fatalf("%s failed to close connection: %v", prefix, err)
+						t.Fatalf(
+							"%s failed to close connection: %v",
+							prefix, err,
+						)
 					}
 				}
 			}
@@ -904,7 +937,10 @@ func hubClientForTest(t *testing.T, hub *Hub) *Client {
 	}
 
 	if len(clients) > 1 {
-		t.Fatalf("%s\nexpected one registered client, got %d", packageName, len(clients))
+		t.Fatalf(
+			"%s\nexpected one registered client, got %d",
+			packageName, len(clients),
+		)
 	}
 
 	return clients[0]

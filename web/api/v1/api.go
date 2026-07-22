@@ -46,6 +46,15 @@ type API struct {
 	// wsTokens is non-nil only when Basic Auth is enabled; SetupWebSocket
 	// uses it to gate the "/ws" handshake with a short-lived token.
 	wsTokens *webSocketTokenStore
+
+	// auth is non-nil only when auth is enabled (see EnableAuth);
+	// it switches the API to session/RBAC authentication.
+	auth         *AuthDeps
+	loginLimiter *loginLimiter // Login brute-force limiter.
+
+	// hub is the WebSocket hub (set by SetupWebSocket); used to kick clients
+	// when permission-relevant state changes.
+	hub *Hub
 }
 
 // serviceOp is a reference-counted per-service operation lock.
@@ -125,7 +134,27 @@ func (api *API) releaseServiceOp(serviceID string, op *serviceOp) {
 	}
 }
 
-// writeJSON marshals v as JSON and writes it to w with standard API response headers.
+// writeJSONStatus writes v as JSON with the given status code.
+func (api *API) writeJSONStatus(
+	w http.ResponseWriter, status int, v any, logFrom logx.LogFrom,
+) {
+	b, err := decode.Marshal("json", v)
+	if err != nil {
+		logx.Error(err, logFrom, true)
+		failRequest(&w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(status)
+
+	if _, err := w.Write(append(b, '\n')); err != nil {
+		logx.Error(err, logFrom, true)
+	}
+}
+
+// writeJSON writes v as JSON and writes it to w with standard API response headers.
 func (api *API) writeJSON(w http.ResponseWriter, v any, logFrom logx.LogFrom) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")

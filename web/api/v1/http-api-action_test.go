@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
@@ -189,7 +190,10 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 			if tc.wants.stdoutRegex != "" {
 				tc.wants.stdoutRegex = strings.ReplaceAll(tc.wants.stdoutRegex, "__name__", tc.name)
 				if !util.RegexCheck(tc.wants.stdoutRegex, stdout) {
-					t.Errorf("%s stdout mismatch\ngot:  %q\nwant: %q", prefix, stdout, tc.wants.stdoutRegex)
+					t.Errorf(
+						"%s stdout mismatch\ngot:  %q\nwant: %q",
+						prefix, stdout, tc.wants.stdoutRegex,
+					)
 				}
 			}
 			message, _ := io.ReadAll(res.Body)
@@ -240,7 +244,10 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 						}
 					}
 					if !found {
-						t.Fatalf("%s command %q wasn't found in response\nbody: %q", prefix, cmd, message)
+						t.Fatalf(
+							"%s command %q wasn't found in response\nbody: %q",
+							prefix, cmd, message,
+						)
 					}
 				}
 			}
@@ -655,7 +662,10 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				expecting++
 			}
 			messages := make([]apitype.WebSocketMessage, expecting)
-			t.Logf("%s expecting %d messages", prefix, expecting)
+			t.Logf(
+				"%s expecting %d messages",
+				prefix, expecting,
+			)
 			got := 0
 			for expecting != 0 {
 				var message []byte
@@ -801,10 +811,119 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 						}
 						raw, _ := decode.Marshal("json", message)
 						if string(raw) != `{"page":"","type":""}` {
-							t.Fatalf("%s Unexpected message\n%#v\n%s", prefix, message, raw)
+							t.Fatalf(
+								"%s Unexpected message\n%#v\n%s",
+								prefix, message, raw,
+							)
 						}
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestHTTP_HTTPServiceRunActions__requiresServiceRead(t *testing.T) {
+	// GIVEN: an auth-enabled API with two services, only one of which a
+	// scope-limited user can read.
+	file := "TestHTTP_HTTPServiceRunActions__requiresServiceRead.yml"
+	api, deps, _ := testAuthServer(t, file)
+
+	for _, serviceID := range []string{"readable", "hidden"} {
+		svc := testService(t, serviceID, "url", "url", true)
+		svc.Defaults = &api.Config.Defaults.Service
+		svc.HardDefaults = &api.Config.HardDefaults.Service
+		svc.Command = command.Commands{{"true"}}
+		svc.CommandController = command.NewController(
+			&svc.Status,
+			svc.Command,
+			svc.Notify,
+			new("10m"),
+		)
+		svc.Status.SetAnnounceChannel(api.Config.HardDefaults.Service.Status.AnnounceChannel)
+		svc.Status.SetDeployedVersion("2.0.0", "", false)
+		svc.Status.SetLatestVersion("3.0.0", "", false)
+		svc.Status.SetApprovedVersion("2.0.0", false)
+
+		api.Config.OrderMu.Lock()
+		api.Config.Service[serviceID] = svc
+		api.Config.Order = append(api.Config.Order, serviceID)
+		api.Config.OrderMu.Unlock()
+		t.Cleanup(func() { api.Config.DeleteService(serviceID) })
+	}
+
+	// AND: a group with GLOBAL service_action:execute, but service:read
+	// scoped only to "readable".
+	if _, err := deps.Store.CreateGroup(t.Context(),
+		"actioners", "",
+		[]rbac.Grant{
+			{
+				Permission: rbac.Permission{
+					Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
+				},
+				Scope: rbac.Scope{Type: rbac.ScopeGlobal},
+			},
+			{
+				Permission: rbac.Permission{
+					Resource: rbac.ResourceService, Action: rbac.ActionRead,
+				},
+				Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "readable"},
+			},
+		},
+	); err != nil {
+		t.Fatalf(
+			"%s\ncreate group: %v",
+			packageName, err,
+		)
+	}
+	createAuthUser(t, deps, "actioner", "actioner-password", "actioners")
+	actionerCookie := loginCookie(t, api, "actioner", "actioner-password")
+	adminCookie := loginCookie(t, api, "admin", "admin-password")
+
+	tests := []struct {
+		name       string
+		serviceID  string
+		cookie     *http.Cookie
+		wantStatus int
+	}{
+		{
+			name:      "valid/global execute on a readable service",
+			serviceID: "readable",
+			cookie:    actionerCookie, wantStatus: http.StatusOK,
+		},
+		{
+			name:      "invalid/global execute cannot reach an unreadable service",
+			serviceID: "hidden",
+			cookie:    actionerCookie, wantStatus: http.StatusForbidden,
+		},
+		{
+			name:      "valid/admin reads every service",
+			serviceID: "hidden",
+			cookie:    adminCookie, wantStatus: http.StatusOK,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// WHEN: the actions are run against that service.
+			req := authedRequest(http.MethodPost,
+				"/api/v1/service/actions?service_id="+tc.serviceID,
+				`{"target":"`+ActionSkip+`"}`,
+				tc.cookie,
+			)
+			w := serveAuth(api, req)
+
+			prefix := fmt.Sprintf(
+				"%s\nhttpServiceRunActions() service_id=%q",
+				packageName, tc.serviceID,
+			)
+
+			// THEN: service:read on the target decides the outcome.
+			if w.Code != tc.wantStatus {
+				t.Errorf(
+					"%s status mismatch\ngot:  %d - %s\nwant: %d",
+					prefix, w.Code, w.Body.String(), tc.wantStatus,
+				)
 			}
 		})
 	}

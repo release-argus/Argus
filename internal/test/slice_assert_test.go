@@ -80,7 +80,8 @@ func TestAssertSlicesEqualFunc(t *testing.T) {
 			// THEN: The error is as expected.
 			e := errfmt.FormatError(err)
 			if !regexp.MustCompile(tc.noTargetErrRegex).MatchString(e) {
-				t.Errorf("%s\nAssertSlicesEqualFunc(a=%v, b=%v, target=%q) error mismatch\ngot:  %q\nwant: %q",
+				t.Errorf(
+					"%s\nAssertSlicesEqualFunc(a=%v, b=%v, target=%q) error mismatch\ngot:  %q\nwant: %q",
 					packageName, tc.a, tc.b, target,
 					e, tc.noTargetErrRegex,
 				)
@@ -95,7 +96,8 @@ func TestAssertSlicesEqualFunc(t *testing.T) {
 			// THEN: The error is as expected.
 			e = errfmt.FormatError(err)
 			if !regexp.MustCompile(tc.targetErrRegex).MatchString(e) {
-				t.Errorf("%s\nAssertSlicesEqualFunc(a=%v, b=%v, target=%q) error mismatch\ngot:  %q\nwant: %q",
+				t.Errorf(
+					"%s\nAssertSlicesEqualFunc(a=%v, b=%v, target=%q) error mismatch\ngot:  %q\nwant: %q",
 					packageName, tc.a, tc.b, target,
 					e, tc.targetErrRegex,
 				)

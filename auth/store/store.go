@@ -122,8 +122,9 @@ type Store struct {
 	db *sql.DB
 }
 
-// New creates a [Store] on db, applying pending schema migrations,
-// syncing the permission catalogue, and seeding the system groups.
+// New creates a [Store] on db, applying pending schema migrations, syncing the
+// permission catalogue, and seeding the built-in groups (admin re-synced every
+// start; operator/viewer seeded once on first install).
 func New(ctx context.Context, db *sql.DB) (*Store, error) {
 	s := &Store{db: db}
 

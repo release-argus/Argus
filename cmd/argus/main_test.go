@@ -133,7 +133,10 @@ func TestRun(t *testing.T) {
 
 			// THEN: the program will have printed everything expected.
 			stdout := releaseStdout()
-			t.Logf("%s\nstdout: %q", packageName, stdout)
+			t.Logf(
+				"%s\nstdout: %q",
+				packageName, stdout,
+			)
 			if tc.outputContains != nil {
 				for _, text := range *tc.outputContains {
 					if !strings.Contains(stdout, text) {

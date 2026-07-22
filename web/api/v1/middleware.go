@@ -47,7 +47,7 @@ func (api *API) basicAuthMiddleware() mux.MiddlewareFunc {
 			}
 
 			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			http.Error(w, errUnauthorised.Error(), http.StatusUnauthorized)
 		})
 	}
 }

@@ -47,10 +47,28 @@ func NewHub() *Hub {
 	}
 }
 
-// AnnounceMSG is minimal JSON to validate the incoming message.
+// AnnounceMSG is minimal JSON to validate the incoming message and identify
+// which service (if any) it concerns.
 type AnnounceMSG struct {
-	Type      string `json:"type"`
-	ServiceID string `json:"service_id"`
+	Type        string `json:"type"`
+	SubType     string `json:"sub_type"`
+	ServiceID   string `json:"service_id"`
+	ServiceData *struct {
+		ID string `json:"id"`
+	} `json:"service_data"`
+}
+
+// serviceID returns the ID of the service the message concerns
+// ("" for messages not tied to a single service, e.g. the full ordering).
+func (m *AnnounceMSG) serviceID() string {
+	if m.ServiceData != nil && m.ServiceData.ID != "" {
+		return m.ServiceData.ID
+	}
+	// DELETE and EDIT messages carry the service ID as their sub-type.
+	if m.Type == "DELETE" || m.Type == "EDIT" {
+		return m.SubType
+	}
+	return m.ServiceID
 }
 
 // addClient registers client.
@@ -87,14 +105,32 @@ func (h *Hub) broadcast(message []byte) {
 		)
 		return
 	}
+	serviceID := msg.serviceID()
 
 	// Non-blocking send; drop any client whose buffer is full.
 	for client := range h.clients {
+		// Only send messages the client is permitted to see.
+		if !client.mayReceive(serviceID) {
+			continue
+		}
 		select {
 		case client.send <- message:
 		default:
 			close(client.send)
 			delete(h.clients, client)
+		}
+	}
+}
+
+// KickClients disconnects every client. Clients auto-reconnect, re-deriving
+// their permitted-service sets - call after anything that may change who can
+// see which service (grant/membership edits, service renames/deletes/tags).
+func (h *Hub) KickClients() {
+	h.query <- func(clients map[*Client]bool) {
+		// Runs on the Hub goroutine, so mutating the map is safe.
+		for client := range clients {
+			delete(clients, client)
+			close(client.send)
 		}
 	}
 }

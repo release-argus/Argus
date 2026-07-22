@@ -946,7 +946,9 @@ func TestSetGroupGrants__lookupError(t *testing.T) {
 
 	// WHEN: a group is created with a catalogue-valid grant.
 	_, err := store.CreateGroup(
-		t.Context(), "custom", "",
+		t.Context(),
+		"custom",
+		"",
 		[]rbac.Grant{
 			globalGrant(rbac.ResourceService, rbac.ActionRead),
 		},

@@ -238,7 +238,7 @@ func TestManager_Validate(t *testing.T) {
 			)
 
 			// THEN: errors match expectations.
-			errRegex := tc.errRegex
+			errRegex := util.ValueOr(tc.errRegex, `^$`)
 			if tc.wantErr != nil {
 				if !errors.Is(err, tc.wantErr) {
 					t.Fatalf(
@@ -247,8 +247,6 @@ func TestManager_Validate(t *testing.T) {
 					)
 				}
 				return
-			} else if errRegex == "" {
-				errRegex = `^$`
 			}
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(errRegex, e) {

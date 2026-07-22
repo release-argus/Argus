@@ -104,32 +104,36 @@ func TestWebSocketTokenStore_New_MaxSize(t *testing.T) {
 
 func TestWebSocketTokenStore_Validate(t *testing.T) {
 	// GIVEN: a webSocketTokenStore.
-	tests := map[string]struct {
+	tests := []struct {
+		name  string
 		setup func(store *webSocketTokenStore) string
 		want  bool
 	}{
-		"valid, unused token": {
+		{
+			name: "valid, unused token",
 			setup: func(store *webSocketTokenStore) string {
 				return store.New()
 			},
 			want: true,
 		},
-		"empty token": {
+		{
+			name: "empty token",
 			setup: func(_ *webSocketTokenStore) string {
 				return ""
 			},
 			want: false,
 		},
-		"unknown token": {
+		{
+			name: "unknown token",
 			setup: func(_ *webSocketTokenStore) string {
 				return "unknown-token-that-was-never-issued"
 			},
 			want: false,
 		},
-		"expired token": {
+		{
+			name: "expired token",
 			setup: func(store *webSocketTokenStore) string {
 				token := store.New()
-				// Force the token to have already expired.
 				store.mu.Lock()
 				store.tokens[token] = time.Now().Add(-time.Second)
 				store.mu.Unlock()
@@ -139,14 +143,14 @@ func TestWebSocketTokenStore_Validate(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			store := newWebSocketTokenStore()
 			token := tc.setup(store)
 
-			prefix := fmt.Sprintf("%s\nwebSocketTokenStore.Validate(%q)", packageName, name)
+			prefix := fmt.Sprintf("%s\nwebSocketTokenStore.Validate", packageName)
 
 			// WHEN: Validate is called.
 			got := store.Validate(token)

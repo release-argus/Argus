@@ -180,7 +180,8 @@ func TestStore_APITokensForUser(t *testing.T) {
 	}
 
 	for i, userID := range []string{alpha.ID, alpha.ID, beta.ID} {
-		if _, _, err := store.CreateAPIToken(t.Context(),
+		if _, _, err := store.CreateAPIToken(
+			t.Context(),
 			userID, fmt.Sprintf("token-%d", i), nil); err != nil {
 			t.Fatalf(
 				"%s\nsetup CreateAPIToken failed: %v",

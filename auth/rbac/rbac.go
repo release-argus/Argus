@@ -58,8 +58,8 @@ const (
 
 // Scope bounds a [Grant] to a set of targets.
 type Scope struct {
-	Type ScopeType `json:"type" yaml:"type"`
-	Ref  string    `json:"ref,omitzero" yaml:"ref,omitzero"` // Service ID (Empty for global scope).
+	Type ScopeType `json:"type" yaml:"type"`                 // global | service | service_tag
+	Ref  string    `json:"ref,omitzero" yaml:"ref,omitzero"` // Service ID (service scope) or dashboard tag (service_tag scope); empty for global scope.
 }
 
 // Permission pairs a [Resource] with an [Action].

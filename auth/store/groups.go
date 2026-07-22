@@ -280,9 +280,12 @@ func (s *Store) GrantsForUser(ctx context.Context, userID string) ([]rbac.Grant,
 	defer rows.Close()
 
 	var grants []rbac.Grant
-	if err := collectGrants(rows, func(_ string, grant rbac.Grant) {
-		grants = append(grants, grant)
-	}); err != nil {
+	if err := collectGrants(
+		rows,
+		func(_ string, grant rbac.Grant) {
+			grants = append(grants, grant)
+		},
+	); err != nil {
 		return nil, fmt.Errorf("iterate user's grants: %w", err)
 	}
 

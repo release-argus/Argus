@@ -45,7 +45,8 @@ const (
 var pingPeriod = (pongWait * 9) / 10
 
 // ServeWs upgrades an HTTP connection to WebSocket and registers the client with the hub.
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+// allowedServices limits which services' broadcasts the client receives (nil = unrestricted).
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, allowedServices map[string]bool) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
@@ -54,10 +55,11 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 	conn.RemoteAddr()
 	client := &Client{
-		hub:  hub,
-		ip:   getIP(r),
-		conn: conn,
-		send: make(chan []byte, 256),
+		hub:             hub,
+		ip:              getIP(r),
+		conn:            conn,
+		send:            make(chan []byte, 256),
+		allowedServices: allowedServices,
 	}
 	client.hub.register <- client
 
@@ -86,6 +88,20 @@ type Client struct {
 
 	// send carries outbound messages from the hub/server to this client.
 	send chan []byte
+
+	// allowedServices limits which services' broadcasts this client receives
+	// (nil = unrestricted). Derived from the user's permission grants at handshake.
+	allowedServices map[string]bool
+}
+
+// mayReceive reports whether the client may receive a broadcast about serviceID
+// ("" = a message not tied to a single service, e.g. the full service ordering
+// - restricted clients never receive those).
+func (c *Client) mayReceive(serviceID string) bool {
+	if c.allowedServices == nil {
+		return true
+	}
+	return serviceID != "" && c.allowedServices[serviceID]
 }
 
 // getIP returns the client IP from proxy headers or RemoteAddr.
@@ -242,15 +258,15 @@ func (c *Client) writePump() {
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			if !ok {
-				// The hub closed the channel.
-				if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-					logx.Verbose(
-						fmt.Sprintf("Closing the connection (writePump) - %q", err),
-						logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-						true,
-					)
-					return
-				}
+				// The hub closed the channel: log, close and return.
+				logx.Verbose(
+					"Closing the connection (writePump)",
+					logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+					true,
+				)
+				//nolint:errcheck // Best-effort close frame; the channel is gone.
+				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
 			}
 
 			c.writeServerMessage(message)

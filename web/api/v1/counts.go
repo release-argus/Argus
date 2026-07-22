@@ -48,7 +48,12 @@ type CountsResponse struct {
 	UpdateDetails           []UpdateDetails `json:"update_details,omitempty"`
 }
 
-// httpCounts returns service and update counts for external dashboards.
+// httpCounts handles GET /api/v1/counts: returning service and update counts
+// for external dashboards.
+//
+// Response:
+//
+//	200 OK: JSON object containing the service and update counts.
 func (api *API) httpCounts(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
 

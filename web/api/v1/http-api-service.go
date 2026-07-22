@@ -30,28 +30,49 @@ type ServiceOrderAPI struct {
 	Order []string `json:"order"`
 }
 
-// httpServiceOrderGet returns the current service ordering.
-//
-// Method: GET
+// httpServiceOrderGet handles GET /api/v1/service/order: returning the current
+// service ordering (filtered to the services the caller may read).
 //
 // Response:
 //
-//	JSON object containing the current ordering.
+//	200 OK: JSON object containing the current ordering.
 func (api *API) httpServiceOrderGet(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpServiceOrderGet", Secondary: getIP(r)}
 
+	// Users without global service:read see only the services their scoped
+	// grants allow (possibly none).
+	var allowed map[string]bool
+	if api.auth != nil {
+		if authCtx := authContextFrom(r); authCtx != nil {
+			allowed = api.allowedServices(authCtx)
+		}
+	}
+
 	api.Config.OrderMu.RLock()
 	defer api.Config.OrderMu.RUnlock()
-	api.writeJSON(w, ServiceOrderAPI{Order: api.Config.Order}, logFrom)
+	order := api.Config.Order
+	if allowed != nil {
+		filtered := make([]string, 0, len(allowed))
+		for _, serviceID := range order {
+			if allowed[serviceID] {
+				filtered = append(filtered, serviceID)
+			}
+		}
+		order = filtered
+	}
+	api.writeJSON(w, ServiceOrderAPI{Order: order}, logFrom)
 }
 
-// httpServiceOrderSet sets the ordering of services.
-//
-// Method: POST
+// httpServiceOrderSet handles PUT /api/v1/service/order: setting the ordering of services.
 //
 // Body:
 //
 //	JSON object containing the new order.
+//
+// Response:
+//
+//	200 OK: Success message.
+//	400 Bad Request: Error message.
 func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpServiceOrderSet", Secondary: getIP(r)}
 
@@ -103,17 +124,16 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 	api.Config.HardDefaults.Service.Status.SaveChannel <- true
 }
 
-// httpServiceSummary returns the ServiceSummary for the given service.
+// httpServiceSummary handles GET /api/v1/service/summary: returning the
+// [apitype.ServiceSummary] for the given service.
 //
-// Method: GET
-//
-// Query Parameters:
+// Query parameters:
 //
 //	service_id: The ID of the Service to get details for.
 //
 // Response:
 //
-//	JSON object containing the service details.
+//	200 OK: JSON object containing the service details.
 func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
 	serviceID, ok := requireQueryParam(w, r, "service_id")

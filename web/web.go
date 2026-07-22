@@ -30,8 +30,9 @@ import (
 )
 
 // Run starts the web server.
-func Run(ctx context.Context, cfg *config.Config) error {
-	router := newWebUI(cfg)
+// authDeps is non-nil only when auth is enabled.
+func Run(ctx context.Context, cfg *config.Config, authDeps *v1.AuthDeps) error {
+	router := newWebUI(cfg, authDeps)
 
 	listenAddress := fmt.Sprintf(
 		"%s:%s",
@@ -76,10 +77,13 @@ func Run(ctx context.Context, cfg *config.Config) error {
 }
 
 // newRouter serves Prometheus metrics, WebSocket, and Node.js frontend at RoutePrefix.
-func newRouter(cfg *config.Config, hub *v1.Hub) *mux.Router {
+func newRouter(cfg *config.Config, hub *v1.Hub, authDeps *v1.AuthDeps) *mux.Router {
 	api, wsRoute := v1.NewAPI(cfg)
+	if authDeps != nil {
+		api.EnableAuth(authDeps)
+	}
 
-	api.Router.Handle("/metrics", promhttp.Handler())
+	api.Router.Handle("/metrics", api.GuardMetrics(promhttp.Handler()))
 
 	api.SetupWebSocket(hub, wsRoute)
 	api.SetupRoutesAPI()
@@ -89,10 +93,10 @@ func newRouter(cfg *config.Config, hub *v1.Hub) *mux.Router {
 }
 
 // newWebUI sets up everything web-related for Argus.
-func newWebUI(cfg *config.Config) *mux.Router {
+func newWebUI(cfg *config.Config, authDeps *v1.AuthDeps) *mux.Router {
 	hub := v1.NewHub()
 	go hub.Run()
-	router := newRouter(cfg, hub)
+	router := newRouter(cfg, hub, authDeps)
 
 	cfg.HardDefaults.Service.Status.AnnounceChannel = hub.Broadcast
 	for _, svc := range cfg.Service {

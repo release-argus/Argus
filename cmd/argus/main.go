@@ -121,6 +121,13 @@ func run() (exitCode int) {
 
 	// If we have an API, we've loaded previous status' from the DB.
 	if api != nil {
+		// Authentication/authorisation.
+		authDeps, ok := setupAuth(gCtx, g, &cfg, api.DB())
+		if !ok {
+			<-exitCodeChannel
+			return 1
+		}
+
 		// DB message handler.
 		g.Go(func() error {
 			api.Handler(gCtx)
@@ -132,7 +139,7 @@ func run() (exitCode int) {
 
 		// Web server.
 		g.Go(func() error {
-			return web.Run(gCtx, &cfg)
+			return web.Run(gCtx, &cfg, authDeps)
 		})
 	}
 

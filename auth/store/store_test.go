@@ -404,7 +404,10 @@ func TestNew__permissionsIntroducedLater(t *testing.T) {
 							(SELECT id FROM permissions WHERE resource = ? AND action = ?);`,
 					GroupOperator, string(rbac.ResourceService), string(rbac.ActionCreate),
 				); err != nil {
-					t.Fatalf("%s\nsetup strip failed: %v", packageName, err)
+					t.Fatalf(
+						"%s\nsetup strip failed: %v",
+						packageName, err,
+					)
 				}
 			},
 			check: func(t *testing.T, prefix string, byName map[string]Group) {
@@ -420,7 +423,10 @@ func TestNew__permissionsIntroducedLater(t *testing.T) {
 				removePermission(t, store.db, rbac.ResourceNotify, rbac.ActionExecute)
 				operator := groupsByName(t, store)[GroupOperator]
 				if err := store.DeleteGroup(t.Context(), operator.ID); err != nil {
-					t.Fatalf("%s\nsetup DeleteGroup failed: %v", packageName, err)
+					t.Fatalf(
+						"%s\nsetup DeleteGroup failed: %v",
+						packageName, err,
+					)
 				}
 			},
 			check: func(t *testing.T, prefix string, byName map[string]Group) {
@@ -440,7 +446,10 @@ func TestNew__permissionsIntroducedLater(t *testing.T) {
 					operator.ID,
 					GroupPatch{Name: &newName},
 				); err != nil {
-					t.Fatalf("%s\nsetup UpdateGroup failed: %v", packageName, err)
+					t.Fatalf(
+						"%s\nsetup UpdateGroup failed: %v",
+						packageName, err,
+					)
 				}
 			},
 			check: func(t *testing.T, prefix string, byName map[string]Group) {
