@@ -31,6 +31,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
@@ -2288,7 +2289,7 @@ func TestHTTP_ServiceEdit__edit__missingID(t *testing.T) {
 }
 
 func TestHTTP_ServiceEdit__edit__renameToExistingID(t *testing.T) {
-	// GIVEN: an API with two services — one to edit, and one whose ID we rename onto.
+	// GIVEN: an API with two services - one to edit, and one whose ID we rename to.
 	file := "TestHTTP_ServiceEdit__edit__renameToExistingID.yml"
 	api := testAPI(t, file)
 
@@ -2342,6 +2343,149 @@ func TestHTTP_ServiceEdit__edit__renameToExistingID(t *testing.T) {
 			"%s body mismatch\ngot:  %q\nwant: %q",
 			prefix, got, want,
 		)
+	}
+}
+
+func TestHTTP_ServiceEdit__edit__renameToExistingName(t *testing.T) {
+	// GIVEN: an API with two services - one to edit, and one whose Name we rename another ID to.
+	file := "TestHTTP_ServiceEdit__edit__renameToExistingName.yml"
+	api := testAPI(t, file)
+
+	const (
+		editID    = "TestHTTP_ServiceEdit_rename-to-name-source"
+		holderID  = "TestHTTP_ServiceEdit_rename-to-name-holder"
+		takenName = "TestHTTP_ServiceEdit_rename-to-name-taken"
+	)
+	source := testService(t, editID, "url", "url", true)
+	source.Name = "rename-to-name-source"
+	holder := testService(t, holderID, "url", "url", true)
+	holder.Name = takenName
+	api.Config.Service[source.ID] = source
+	api.Config.Service[holder.ID] = holder
+	api.Config.Order = append(api.Config.Order, source.ID, holder.ID)
+
+	// WHEN: the source takes an ID matching the other service's name, under a
+	// name of its own.
+	payload := bytes.NewReader([]byte(test.TrimJSON(`{
+		"id": "` + takenName + `",
+		"name": "rename-to-name-renamed",
+		"options": {
+			"active": false
+		},
+		"latest_version": {
+			"type": "github",
+			"url": "` + test.ArgusGitHubRepo + `"
+		}
+	}`)))
+	params := url.Values{}
+	params.Set("service_id", editID)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/service/update", payload)
+	req.URL.RawQuery = params.Encode()
+	w := httptest.NewRecorder()
+	api.httpServiceEdit(w, req, actionEdit)
+	res := w.Result()
+	t.Cleanup(func() { _ = res.Body.Close() })
+
+	prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (edit)", packageName)
+
+	// THEN: the request is rejected and the edit fails with 400.
+	if got, want := res.StatusCode, http.StatusBadRequest; got != want {
+		t.Errorf(
+			"%s status code mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+	body, _ := io.ReadAll(res.Body)
+	if got, want := string(body), `already exists`; !util.RegexCheck(want, got) {
+		t.Errorf(
+			"%s body mismatch\ngot:  %q\nwant: %q",
+			prefix, got, want,
+		)
+	}
+}
+
+func TestHTTP_ServiceEdit__edit__restoresGrantsWhenAddServiceFails(t *testing.T) {
+	// GIVEN: an auth-enabled API, a group holding a service-scoped grant, and a
+	// second service named after the ID the first is about to take.
+	file := "TestHTTP_ServiceEdit__edit__restoresGrants.yml"
+	api, deps, _ := testAuthServer(t, file)
+
+	const (
+		editID    = "restore-grants-source"
+		holderID  = "restore-grants-holder"
+		takenName = "restore-grants-taken-name"
+	)
+	source := testService(t, editID, "url", "url", true)
+	source.Name = "restore-grants-source-name"
+	holder := testService(t, holderID, "url", "url", true)
+	holder.Name = takenName
+	api.Config.Service[source.ID] = source
+	api.Config.Service[holder.ID] = holder
+	api.Config.Order = append(api.Config.Order, source.ID, holder.ID)
+
+	group, err := deps.Store.CreateGroup(t.Context(), "scoped", "", []rbac.Grant{{
+		Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
+		Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: editID},
+	}})
+	if err != nil {
+		t.Fatalf(
+			"%s\ncreate scoped group: %v",
+			packageName, err,
+		)
+	}
+
+	// WHEN: the edit takes an ID matching the other service's name, so the
+	// handler's pre-check passes but AddService rejects it.
+	payload := bytes.NewReader([]byte(test.TrimJSON(`{
+		"id": "` + takenName + `",
+		"name": "restore-grants-renamed",
+		"options": {
+			"active": false
+		},
+		"latest_version": {
+			"type": "github",
+			"url": "` + test.ArgusGitHubRepo + `"
+		}
+	}`)))
+	params := url.Values{}
+	params.Set("service_id", editID)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/service/update", payload)
+	req.URL.RawQuery = params.Encode()
+	req = withAuthCtx(req, adminContext(t, api, deps))
+	w := httptest.NewRecorder()
+	api.httpServiceEdit(w, req, actionEdit)
+
+	prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (edit)", packageName)
+
+	// THEN: the edit is rejected.
+	if got, want := w.Code, http.StatusBadRequest; got != want {
+		t.Fatalf(
+			"%s status code mismatch\ngot:  %d - %s\nwant: %d",
+			prefix, got, w.Body.String(), want,
+		)
+	}
+
+	// AND: the service kept its ID, so its grants must point at it still.
+	if _, ok := api.Config.Service[editID]; !ok {
+		t.Fatalf(
+			"%s the service should still be under %q",
+			prefix, editID,
+		)
+	}
+	got, err := deps.Store.GroupByID(t.Context(), group.ID)
+	if err != nil {
+		t.Fatalf(
+			"%s\nload group: %v",
+			packageName, err,
+		)
+	}
+	for _, grant := range got.Grants {
+		if grant.Scope.Ref != editID {
+			t.Errorf(
+				"%s grant left pointing at a service that does not exist\ngot:  %q\nwant: %q",
+				prefix, grant.Scope.Ref, editID,
+			)
+		}
 	}
 }
 
@@ -3337,7 +3481,10 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			// AND: the expected message is contained in the bodyRegex.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("%s unexpected error:\n%v", packageName, err)
+				t.Fatalf(
+					"%s unexpected error:\n%v",
+					packageName, err,
+				)
 			}
 			// Marshal message out of JSON data {"message": text}.
 			var body map[string]string
@@ -3365,31 +3512,36 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 	file := "TestHTTP_ServiceOpLock__conflict.yml"
 	api := testAPI(t, file)
 
-	tests := map[string]struct {
+	tests := []struct {
+		name       string
 		handler    func(http.ResponseWriter, *http.Request)
 		hold       hold
 		statusCode int
 		bodyRegex  string
 	}{
-		"latest-version refresh rejected while an exclusive op is in flight": {
+		{
+			name:       "latest-version refresh rejected while an exclusive op is in flight",
 			handler:    api.httpLatestVersionRefresh,
 			hold:       holdWrite,
 			statusCode: http.StatusConflict,
 			bodyRegex:  `another operation is in progress`,
 		},
-		"latest-version refresh allowed alongside another refresh (shared)": {
+		{
+			name:       "latest-version refresh allowed alongside another refresh (shared)",
 			handler:    api.httpLatestVersionRefresh,
 			hold:       holdRead,
 			statusCode: http.StatusNotFound, // Past the lock, then the absent service.
 			bodyRegex:  `not found`,
 		},
-		"deployed-version refresh rejected while an exclusive op is in flight": {
+		{
+			name:       "deployed-version refresh rejected while an exclusive op is in flight",
 			handler:    api.httpDeployedVersionRefresh,
 			hold:       holdWrite,
 			statusCode: http.StatusConflict,
 			bodyRegex:  `another operation is in progress`,
 		},
-		"deployed-version refresh allowed alongside another refresh (shared)": {
+		{
+			name:       "deployed-version refresh allowed alongside another refresh (shared)",
 			handler:    api.httpDeployedVersionRefresh,
 			hold:       holdRead,
 			statusCode: http.StatusNotFound,
@@ -3397,11 +3549,11 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			serviceID := name
+			serviceID := tc.name
 
 			// GIVEN: the service's op lock is held as described.
 			held := api.acquireServiceOp(serviceID)

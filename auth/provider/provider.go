@@ -34,11 +34,9 @@ type Provider interface {
 	Authenticate(ctx context.Context, username, password string) (*auth.Identity, error)
 }
 
-// Registry holds the configured [Provider]s, keyed by name,
-// preserving registration order.
+// Registry holds the configured [Provider]s, keyed by name.
 type Registry struct {
 	providers map[string]Provider
-	order     []string
 }
 
 // NewRegistry creates an empty [Registry].
@@ -56,15 +54,9 @@ func (r *Registry) Register(p Provider) {
 	}
 
 	r.providers[name] = p
-	r.order = append(r.order, name)
 }
 
 // Get returns the [Provider] registered under name (nil if unknown).
 func (r *Registry) Get(name string) Provider {
 	return r.providers[name]
-}
-
-// Names returns the registered [Provider] names, in registration order.
-func (r *Registry) Names() []string {
-	return append([]string(nil), r.order...)
 }

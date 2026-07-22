@@ -17,7 +17,10 @@
 package db
 
 import (
+	"context"
 	"database/sql"
+	"database/sql/driver"
+	"errors"
 	"fmt"
 	"io/fs"
 	"math/rand"
@@ -107,7 +110,7 @@ func TestAPI_Get__fail(t *testing.T) {
 				fmt.Println()
 			},
 			ok:       false,
-			errRegex: `^FATAL: db .+ path "[^"]+" .*is a directory, not a file` + "\n$",
+			errRegex: `^(?:INFO: [^\n]*\n)*FATAL: db .+ path "[^"]+" .*is a directory, not a file` + "\n$",
 		},
 		{
 			name: "removeUnknownServices fails",
@@ -118,7 +121,10 @@ func TestAPI_Get__fail(t *testing.T) {
 				tAPI.initialise()
 				defer tAPI.db.Close()
 				if _, err := tAPI.db.Exec("DROP TABLE status"); err != nil {
-					t.Fatalf("%s\nerror dropping table in setupDB:\n%v", packageName, err)
+					t.Fatalf(
+						"%s\nerror dropping table in setupDB:\n%v",
+						packageName, err,
+					)
 				}
 				if _, err := tAPI.db.Exec(`
 					CREATE TABLE IF NOT EXISTS status (
@@ -130,7 +136,10 @@ func TestAPI_Get__fail(t *testing.T) {
 						approved_version TEXT
 					);`,
 				); err != nil {
-					t.Fatalf("%s\nerror creating table in setupDB:\n%v", packageName, err)
+					t.Fatalf(
+						"%s\nerror creating table in setupDB:\n%v",
+						packageName, err,
+					)
 				}
 				if _, err := tAPI.db.Exec(`
 					INSERT INTO status (
@@ -154,7 +163,7 @@ func TestAPI_Get__fail(t *testing.T) {
 				cfg.Settings.Data.DatabaseFile = tAPI.config.Settings.Data.DatabaseFile
 			},
 			ok:       false,
-			errRegex: `^FATAL: db .*no such column.*` + "\n$",
+			errRegex: `^(?:INFO: [^\n]*\n)*FATAL: db .*no such column.*` + "\n$",
 		},
 		{
 			name: "extractServiceStatus fails",
@@ -165,7 +174,10 @@ func TestAPI_Get__fail(t *testing.T) {
 				tAPI.initialise()
 				defer tAPI.db.Close()
 				if _, err := tAPI.db.Exec("ALTER TABLE status DROP COLUMN deployed_version;"); err != nil {
-					t.Fatalf("%s\nerror dropping column in setupDB:\n%v", packageName, err)
+					t.Fatalf(
+						"%s\nerror dropping column in setupDB:\n%v",
+						packageName, err,
+					)
 				}
 				if _, err := tAPI.db.Exec(`
 					INSERT INTO status (
@@ -189,13 +201,13 @@ func TestAPI_Get__fail(t *testing.T) {
 				cfg.Settings.Data.DatabaseFile = tAPI.config.Settings.Data.DatabaseFile
 			},
 			ok:       false,
-			errRegex: `^FATAL: db .* no such column.*` + "\n$",
+			errRegex: `^(?:INFO: [^\n]*\n)*FATAL: db .* no such column.*` + "\n$",
 		},
 		{
 			name:     "success",
 			setupDB:  func(cfg *config.Config) {},
 			ok:       true,
-			errRegex: `^$`,
+			errRegex: `^(?:INFO: [^\n]*\n)*$`,
 		},
 	}
 
@@ -393,6 +405,135 @@ func TestAPI_Initialise(t *testing.T) {
 	}
 }
 
+func TestAPI_dbHandles(t *testing.T) {
+	// GIVEN: an API with an initialised database.
+	tAPI := testAPI(t)
+	tAPI.initialise()
+
+	// WHEN/THEN: DB() hands back the open handle to the DB.
+	if got := tAPI.DB(); got != tAPI.db {
+		t.Errorf(
+			"%s\napi.DB() should return the open handle\ngot: %v",
+			packageName, got,
+		)
+	}
+
+	// AND: CloseDB() closes it.
+	tAPI.CloseDB()
+	if err := tAPI.db.Ping(); err == nil {
+		t.Errorf("%s\napi.CloseDB() left the handle usable", packageName)
+	}
+
+	// AND: an API that never opened a DB closes without complaint.
+	unopened := &api{}
+	unopened.CloseDB()
+	if got := unopened.DB(); got != nil {
+		t.Errorf(
+			"%s\napi.DB() without a database\ngot:  %v\nwant: nil",
+			packageName, got,
+		)
+	}
+}
+
+// closeFailConn is a connection that cannot be closed.
+type closeFailConn struct {
+	driver.Conn
+}
+
+func (closeFailConn) Close() error { return errors.New("close failed") }
+
+// closeFailConnector hands out connections that cannot be closed.
+type closeFailConnector struct {
+	inner driver.Driver
+}
+
+func (c closeFailConnector) Connect(context.Context) (driver.Conn, error) {
+	conn, err := c.inner.Open(":memory:")
+	if err != nil {
+		return nil, err
+	}
+	return closeFailConn{Conn: conn}, nil
+}
+
+func (c closeFailConnector) Driver() driver.Driver { return c.inner }
+
+func TestAPI_CloseDB__error(t *testing.T) {
+	releaseStdout := test.CaptureLog(t, logx.Default())
+
+	// GIVEN: an API holding a database whose connections fail to close.
+	probe, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf(
+			"%s\nsql.Open() for db driver lookup: %v",
+			packageName, err,
+		)
+	}
+	tAPI := &api{db: sql.OpenDB(closeFailConnector{inner: probe.Driver()})}
+	_ = probe.Close()
+
+	// AND: a connection is established to the DB.
+	if err := tAPI.db.Ping(); err != nil {
+		t.Fatalf(
+			"%s\nping: %v",
+			packageName, err,
+		)
+	}
+
+	// WHEN: the database is closed.
+	tAPI.CloseDB()
+
+	// THEN: the failure is logged rather than returned.
+	stdout := releaseStdout()
+	if !util.RegexCheck(`close failed`, stdout) {
+		t.Errorf(
+			"%s\napi.CloseDB() should log the close failure\ngot: %q",
+			packageName, stdout,
+		)
+	}
+}
+
+func TestAPI_Initialise__chmodError(t *testing.T) {
+	releaseStdout := test.CaptureLog(t, logx.Default())
+
+	// GIVEN: a chmod that fails.
+	original := chmodFile
+	customErr := fmt.Errorf("chmod failed")
+	chmodFile = func(_ string, _ os.FileMode) error {
+		return customErr
+	}
+	t.Cleanup(func() { chmodFile = original })
+	errRegex := `^ERROR: db .*` + customErr.Error()
+
+	// AND: an API.
+	tAPI := testAPI(t)
+
+	// WHEN: the DB is initialised.
+	resultChannel := make(chan bool, 1)
+	resultChannel <- tAPI.initialise()
+
+	prefix := fmt.Sprintf("%s\napi.initialise()", packageName)
+
+	// THEN: the failure is logged, but initialisation still succeeds.
+	if err := test.AssertChannelBool(
+		t,
+		true,
+		resultChannel,
+		logx.ExitCodeChannel(),
+		releaseStdout,
+	); err != nil {
+		t.Fatal(prefix + err.Error())
+	}
+
+	// AND: stdout recorded the error rather than the tightened-permissions line.
+	stdout := releaseStdout()
+	if !util.RegexCheck(errRegex, stdout) {
+		t.Errorf(
+			"%s stdout mismatch\ngot:  %q\nwant: %q",
+			prefix, stdout, errRegex,
+		)
+	}
+}
+
 func TestAPI_Initialise__openError(t *testing.T) {
 	releaseStdout := test.CaptureLog(t, logx.Default())
 
@@ -415,6 +556,48 @@ func TestAPI_Initialise__openError(t *testing.T) {
 	prefix := fmt.Sprintf("%s\napi.initialise()", packageName)
 
 	// THEN: initialisation fails with a fatal open error.
+	if err := test.AssertChannelBool(
+		t,
+		false,
+		resultChannel,
+		logx.ExitCodeChannel(),
+		releaseStdout,
+	); err != nil {
+		t.Fatal(prefix + err.Error())
+	}
+
+	// AND: stdout recorded the error.
+	stdout := releaseStdout()
+	if !util.RegexCheck(errRegex, stdout) {
+		t.Errorf(
+			"%s stdout mismatch\ngot:  %q\nwant: %q",
+			prefix, stdout, errRegex,
+		)
+	}
+}
+
+func TestAPI_Initialise__pingError(t *testing.T) {
+	releaseStdout := test.CaptureLog(t, logx.Default())
+
+	// GIVEN: an open that succeeds lazily but cannot reach the file.
+	original := openDatabase
+	openDatabase = func(_, _ string) (*sql.DB, error) {
+		// sql.Open is lazy, so this only fails once Ping forces a connection.
+		return sql.Open("sqlite", filepath.Join(t.TempDir(), "absent-dir", "x.db"))
+	}
+	t.Cleanup(func() { openDatabase = original })
+	errRegex := `^FATAL: db .* unable to open database file`
+
+	// AND: an API.
+	tAPI := testAPI(t)
+
+	// WHEN: the DB is initialised.
+	resultChannel := make(chan bool, 1)
+	resultChannel <- tAPI.initialise()
+
+	prefix := fmt.Sprintf("%s\napi.initialise()", packageName)
+
+	// THEN: initialisation fails with a fatal ping error.
 	if err := test.AssertChannelBool(
 		t,
 		false,
@@ -564,7 +747,7 @@ func TestAPI_RemoveUnknownServices__fail(t *testing.T) {
 	}{
 		{
 			name:     "id missing",
-			errRegex: `^FATAL: db.*no such column: id`,
+			errRegex: `^(?:INFO: [^\n]*\n)*FATAL: db.*no such column: id`,
 			tableCreateStmt: `
 				CREATE TABLE IF NOT EXISTS status (
 					name TEXT PRIMARY KEY,
@@ -745,7 +928,7 @@ func TestAPI_ExtractServiceStatus__fail(t *testing.T) {
 	}{
 		{
 			name:     "latest_version missing",
-			errRegex: `^FATAL: db.*no such column: latest_version`,
+			errRegex: `^(?:INFO: [^\n]*\n)*FATAL: db.*no such column: latest_version`,
 			tableCreateStmt: `
 				CREATE TABLE IF NOT EXISTS status (
 					id TEXT PRIMARY KEY,
@@ -757,7 +940,7 @@ func TestAPI_ExtractServiceStatus__fail(t *testing.T) {
 		},
 		{
 			name:     "latest_version unexpected type",
-			errRegex: `^FATAL: db.*converting NULL to string is unsupported`,
+			errRegex: `^(?:INFO: [^\n]*\n)*FATAL: db.*converting NULL to string is unsupported`,
 			tableCreateStmt: `
 				CREATE TABLE IF NOT EXISTS status (
 					id TEXT PRIMARY KEY,
@@ -1248,7 +1431,10 @@ func TestUpdateTypes(t *testing.T) {
 				deployedVersion, deployedVersionTimestamp,
 				approvedVersion,
 			); err != nil {
-				t.Fatalf("%s: failed to insert row: %v", packageName, err)
+				t.Fatalf(
+					"%s: failed to insert row: %v",
+					packageName, err,
+				)
 			}
 
 			// Apply test-specific setup.

@@ -18,7 +18,6 @@ package provider
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 )
 
@@ -27,28 +26,24 @@ func TestRegistry_Register_and_Get(t *testing.T) {
 	tests := []struct {
 		name       string
 		register   []string
-		wantNames  []string
 		getKnown   string
 		getUnknown string
 	}{
 		{
 			name:       "empty registry",
 			register:   []string{},
-			wantNames:  []string{},
 			getUnknown: "local",
 		},
 		{
 			name:       "single provider",
 			register:   []string{"local"},
-			wantNames:  []string{"local"},
 			getKnown:   "local",
-			getUnknown: "ldap",
+			getUnknown: "unregistered",
 		},
 		{
-			name:      "multiple providers preserve registration order",
-			register:  []string{"local", "ldap", "oidc"},
-			wantNames: []string{"local", "ldap", "oidc"},
-			getKnown:  "ldap",
+			name:     "multiple providers",
+			register: []string{"local", "provider-a", "provider-b"},
+			getKnown: "provider-a",
 		},
 	}
 
@@ -67,14 +62,6 @@ func TestRegistry_Register_and_Get(t *testing.T) {
 				"%s\nRegistry(%v)",
 				packageName, tc.register,
 			)
-
-			// AND: Names returns registration order.
-			if gotNames := registry.Names(); !slices.Equal(gotNames, tc.wantNames) {
-				t.Errorf(
-					"%s Names() mismatch\ngot:  %v\nwant: %v",
-					prefix, gotNames, tc.wantNames,
-				)
-			}
 
 			// AND: Get returns registered providers by name.
 			if tc.getKnown != "" {
@@ -113,23 +100,4 @@ func TestRegistry_Register__duplicateNamePanics(t *testing.T) {
 		}
 	}()
 	registry.Register(&fakeProvider{name: "local"})
-}
-
-func TestRegistry_Names__copy(t *testing.T) {
-	// GIVEN: a registry with a provider.
-	registry := NewRegistry()
-	registryName := "local"
-	registry.Register(&fakeProvider{name: registryName})
-
-	// WHEN: the returned slice is mutated.
-	names := registry.Names()
-	names[0] = "mutated"
-
-	// THEN: the registry's internal order is unaffected.
-	if got := registry.Names(); got[0] != "local" {
-		t.Errorf(
-			"%s\nRegistry.Names() mutating the returned slice changed the registry\ngot:  %v\nwant: [%s]",
-			packageName, got, registryName,
-		)
-	}
 }

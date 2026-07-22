@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/auth/password"
+	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
@@ -88,7 +89,7 @@ func TestStore_Users(t *testing.T) {
 	}
 }
 
-func TestStore_Users__Errors(t *testing.T) {
+func TestStore_Users__errors(t *testing.T) {
 	// GIVEN: stores in states that break listing.
 	tests := []struct {
 		name  string
@@ -160,7 +161,7 @@ func TestStore_Users__Errors(t *testing.T) {
 	}
 }
 
-func TestStore_Users__RowsErr(t *testing.T) {
+func TestStore_Users__rowsErr(t *testing.T) {
 	// GIVEN: a Store whose row iteration fails.
 	store := testStore(t)
 	rowsErrHad := rowsErr
@@ -313,7 +314,7 @@ func TestStore_CreateUser_And_UserByID(t *testing.T) {
 	}
 }
 
-func TestStore_UserByID__NotFound(t *testing.T) {
+func TestStore_UserByID__notFound(t *testing.T) {
 	// GIVEN: a Store.
 	store := testStore(t)
 
@@ -350,14 +351,15 @@ func TestStore_CreateUser__requiresPassword(t *testing.T) {
 	}
 }
 
-func TestStore_CreateUser__DuplicateGroupNames(t *testing.T) {
+func TestStore_CreateUser__duplicateGroupNames(t *testing.T) {
 	// GIVEN: a create request naming the same group twice.
 	store := testStore(t)
 
 	prefix := fmt.Sprintf("%s\nCreateUser() with duplicate group names", packageName)
 
 	// WHEN: the user is created.
-	user, err := store.CreateUser(t.Context(),
+	user, err := store.CreateUser(
+		t.Context(),
 		"argus",
 		"",
 		"",
@@ -579,7 +581,7 @@ func TestStore_UpdateUser(t *testing.T) {
 	}
 }
 
-func TestStore_UpdateUser__NotFound(t *testing.T) {
+func TestStore_UpdateUser__notFound(t *testing.T) {
 	// GIVEN: a Store.
 	store := testStore(t)
 
@@ -736,7 +738,7 @@ func TestStore_DeleteUser(t *testing.T) {
 	}
 }
 
-func TestStore_DeleteUser__NotFound(t *testing.T) {
+func TestStore_DeleteUser__notFound(t *testing.T) {
 	// GIVEN: a Store.
 	store := testStore(t)
 
@@ -971,7 +973,11 @@ func TestStore_CreateFirstAdmin(t *testing.T) {
 
 			// WHEN: CreateFirstAdmin is called.
 			user, err := store.CreateFirstAdmin(
-				t.Context(), "root", "Rooty", "setup-password")
+				t.Context(),
+				"root",
+				"Rooty",
+				"setup-password",
+			)
 
 			prefix := fmt.Sprintf("%s\nCreateFirstAdmin()", packageName)
 
@@ -996,7 +1002,10 @@ func TestStore_CreateFirstAdmin(t *testing.T) {
 				return
 			}
 			if err != nil {
-				t.Fatalf("%s unexpected error: %v", prefix, err)
+				t.Fatalf(
+					"%s unexpected error: %v",
+					prefix, err,
+				)
 			}
 
 			// AND: the admin is an enabled admin member whose password verifies.
@@ -1025,7 +1034,10 @@ func TestStore_CreateFirstAdmin(t *testing.T) {
 
 			// AND: a second call is rejected - setup happens exactly once.
 			if _, err := store.CreateFirstAdmin(
-				t.Context(), "root2", "", "another-password",
+				t.Context(),
+				"root2",
+				"",
+				"another-password",
 			); !errors.Is(err, ErrSetupComplete) {
 				t.Errorf(
 					"%s second call error mismatch\ngot:  %v\nwant: %v",
@@ -1114,7 +1126,7 @@ func TestStore_ResetUserPassword(t *testing.T) {
 			prefix := fmt.Sprintf("%s\nResetUserPassword()", packageName)
 
 			// THEN: errors match expectations.
-			errRegex := tc.errRegex
+			errRegex := util.ValueOr(tc.errRegex, `^$`)
 			if tc.wantErr != nil {
 				if !errors.Is(err, tc.wantErr) {
 					t.Fatalf(
@@ -1123,8 +1135,6 @@ func TestStore_ResetUserPassword(t *testing.T) {
 					)
 				}
 				return
-			} else if tc.errRegex == "" {
-				errRegex = `^$`
 			}
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(errRegex, e) {
@@ -1173,5 +1183,199 @@ func TestStore_ResetUserPassword(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestStore_UserWithGrants__matchesTheSeparateQueries(t *testing.T) {
+	// GIVEN: users spanning the join's edge cases.
+	store := testStore(t)
+
+	readGlobal := rbac.Grant{
+		Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
+		Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+	}
+	updateScoped := rbac.Grant{
+		Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionUpdate},
+		Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "svc-a"},
+	}
+	mustCreateGroup(t, store, "readers", readGlobal)
+	mustCreateGroup(t, store, "editors", updateScoped)
+	mustCreateGroup(t, store, "empty-group")
+
+	mustCreateUser(t, store, "no-groups", "")
+	mustCreateUser(t, store, "one-group", "", "readers")
+	mustCreateUser(t, store, "two-groups", "", "readers", "editors")
+	mustCreateUser(t, store, "grantless-group", "", "empty-group")
+
+	tests := []struct {
+		name       string
+		username   string
+		wantGroups []string
+		wantGrants int
+	}{
+		{
+			name:       "valid/user in no groups",
+			username:   "no-groups",
+			wantGroups: nil,
+			wantGrants: 0,
+		},
+		{
+			name:       "valid/user in one group",
+			username:   "one-group",
+			wantGroups: []string{"readers"},
+			wantGrants: 1,
+		},
+		{
+			name:       "valid/user in two groups",
+			username:   "two-groups",
+			wantGroups: []string{"editors", "readers"},
+			wantGrants: 2,
+		},
+		{
+			name:       "valid/group carrying no grants",
+			username:   "grantless-group",
+			wantGroups: []string{"empty-group"},
+			wantGrants: 0,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			users, err := store.Users(t.Context())
+			if err != nil {
+				t.Fatalf(
+					"%s\nUsers() failed: %v",
+					packageName, err,
+				)
+			}
+			var id string
+			for _, u := range users {
+				if u.Username == tc.username {
+					id = u.ID
+					break
+				}
+			}
+			if id == "" {
+				t.Fatalf(
+					"%s\nno user %q",
+					packageName, tc.username,
+				)
+			}
+
+			prefix := fmt.Sprintf("%s\nUserWithGrants(%q)", packageName, tc.username)
+
+			// WHEN: the combined query and the two it replaces both run.
+			gotUser, gotGrants, err := store.UserWithGrants(t.Context(), id)
+			if err != nil {
+				t.Fatalf(
+					"%s\nunexpected error: %v",
+					prefix, err,
+				)
+			}
+			wantUser, err := store.UserByID(t.Context(), id)
+			if err != nil {
+				t.Fatalf(
+					"%s\nUserByID() failed: %v",
+					prefix, err,
+				)
+			}
+			wantGrants, err := store.GrantsForUser(t.Context(), id)
+			if err != nil {
+				t.Fatalf(
+					"%s\nGrantsForUser() failed: %v",
+					prefix, err,
+				)
+			}
+
+			// THEN: the user record matches, group memberships included.
+			if gotUser.ID != wantUser.ID || gotUser.Username != wantUser.Username {
+				t.Errorf(
+					"%s\nuser mismatch\ngot:  %q/%q\nwant: %q/%q",
+					prefix, gotUser.ID, gotUser.Username, wantUser.ID, wantUser.Username,
+				)
+			}
+			if !slices.Equal(gotUser.Groups, wantUser.Groups) {
+				t.Errorf(
+					"%s\ngroups mismatch\ngot:  %v\nwant: %v",
+					prefix, gotUser.Groups, wantUser.Groups,
+				)
+			}
+			if !slices.Equal(gotUser.Groups, tc.wantGroups) {
+				t.Errorf(
+					"%s\ngroups mismatch\ngot:  %v\nwant: %v",
+					prefix, gotUser.Groups, tc.wantGroups,
+				)
+			}
+
+			// AND: the same grants come back, order aside.
+			if len(gotGrants) != tc.wantGrants {
+				t.Errorf(
+					"%s\ngrant count mismatch\ngot:  %d (%v)\nwant: %d",
+					prefix, len(gotGrants), gotGrants, tc.wantGrants,
+				)
+			}
+			if len(gotGrants) != len(wantGrants) {
+				t.Errorf(
+					"%s\ngrant count differs from GrantsForUser\ngot:  %d\nwant: %d",
+					prefix, len(gotGrants), len(wantGrants),
+				)
+			}
+			for _, want := range wantGrants {
+				if !slices.Contains(gotGrants, want) {
+					t.Errorf(
+						"%s\nmissing grant %v\ngot: %v",
+						prefix, want, gotGrants,
+					)
+				}
+			}
+		})
+	}
+}
+
+func TestStore_UserWithGrants__errors(t *testing.T) {
+	// GIVEN: a store holding one disabled user with a grant.
+	store := testStore(t)
+	mustCreateGroup(t, store, "readers", rbac.Grant{
+		Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
+		Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+	})
+	user := mustCreateUser(t, store, "disabled-user", "", "readers")
+	disabled := false
+	if _, err := store.UpdateUser(t.Context(), user.ID, UserPatch{Enabled: &disabled}); err != nil {
+		t.Fatalf(
+			"%s\nUpdateUser() failed: %v",
+			packageName, err,
+		)
+	}
+
+	prefix := fmt.Sprintf("%s\nUserWithGrants()", packageName)
+
+	// WHEN: an unknown id is looked up.
+	// THEN: it reports [ErrNotFound].
+	if _, _, err := store.UserWithGrants(t.Context(), "does-not-exist"); !errors.Is(err, ErrNotFound) {
+		t.Errorf(
+			"%s\nunknown id error mismatch\ngot:  %v\nwant: %v",
+			prefix, err, ErrNotFound,
+		)
+	}
+
+	// WHEN: the disabled user is looked up.
+	got, grants, err := store.UserWithGrants(t.Context(), user.ID)
+	if err != nil {
+		t.Fatalf(
+			"%s\nunexpected error: %v",
+			prefix, err,
+		)
+	}
+
+	// THEN: the row still loads with its grants, and the caller gates on Enabled.
+	if got.Enabled {
+		t.Errorf("%s\ndisabled user reported as enabled", prefix)
+	}
+	if len(grants) != 1 {
+		t.Errorf(
+			"%s\ndisabled user's grants\ngot:  %d (%v)\nwant: 1",
+			prefix, len(grants), grants,
+		)
 	}
 }

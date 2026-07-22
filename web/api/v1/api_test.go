@@ -296,7 +296,7 @@ func TestWriteJSON(t *testing.T) {
 			name:         "JSON encoding failure",
 			response:     &http.Response{},
 			statusCode:   http.StatusInternalServerError,
-			expectedBody: `^{"error":"json: (cannot|unable to) marshal from Go chan int"}` + "\n$",
+			expectedBody: `^{"message":"json: (cannot|unable to) marshal from Go chan int"}$`,
 			input:        make(chan int), // Invalid type for JSON encoding.
 			errRegex:     `^ERROR: json: (cannot|unable to) marshal from Go chan int\s$`,
 		},

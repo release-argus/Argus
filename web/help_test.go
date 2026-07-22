@@ -30,6 +30,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -72,8 +73,8 @@ func TestMain(m *testing.M) {
 	defer cancel()
 
 	// WHEN: the Router is fetched for this Config.
-	router = newWebUI(mainCfg)
-	go Run(ctx, mainCfg)
+	router = newWebUI(mainCfg, nil)
+	go Run(ctx, mainCfg, nil)
 	url := fmt.Sprintf(
 		"http://%s:%s%s",
 		host, port, mainCfg.Settings.Web.RoutePrefix,
@@ -95,6 +96,29 @@ func TestMain(m *testing.M) {
 
 	// Exit.
 	os.Exit(exitCode)
+}
+
+// hasRoute reports whether router serves a route ending in path,
+// ignoring the configured route prefix.
+func hasRoute(t *testing.T, router *mux.Router, path string) bool {
+	t.Helper()
+
+	found := false
+	if err := router.Walk(
+		func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {
+			if template, err := route.GetPathTemplate(); err == nil &&
+				strings.HasSuffix(template, path) {
+				found = true
+			}
+			return nil
+		},
+	); err != nil {
+		t.Fatalf(
+			"%s\nWalk() failed: %v",
+			packageName, err,
+		)
+	}
+	return found
 }
 
 func getFreePort(t *testing.T) (int, error) {

@@ -630,7 +630,10 @@ func TestSeedGroups__newPermissionGrantError(t *testing.T) {
 
 	db, state := testFaultDB(t)
 	if _, err := New(t.Context(), db); err != nil {
-		t.Fatalf("%s\nsetup New() failed: %v", packageName, err)
+		t.Fatalf(
+			"%s\nsetup New() failed: %v",
+			packageName, err,
+		)
 	}
 	removePermission(t, db, rbac.ResourceConfig, rbac.ActionRead)
 
@@ -667,7 +670,10 @@ func presetStalePermission(t *testing.T, db *sql.DB) {
 	t.Helper()
 
 	if _, err := New(t.Context(), db); err != nil {
-		t.Fatalf("%s\nsetup New() failed: %v", packageName, err)
+		t.Fatalf(
+			"%s\nsetup New() failed: %v",
+			packageName, err,
+		)
 	}
 	for _, statement := range []string{
 		`INSERT INTO permissions (resource, action) VALUES ('legacy', 'something');`,
@@ -678,7 +684,10 @@ func presetStalePermission(t *testing.T, db *sql.DB) {
 				'global', '');`,
 	} {
 		if _, err := db.Exec(statement); err != nil {
-			t.Fatalf("%s\nsetup failed: %v", packageName, err)
+			t.Fatalf(
+				"%s\nsetup failed: %v",
+				packageName, err,
+			)
 		}
 	}
 }
@@ -824,7 +833,10 @@ func TestStore__corruptRows(t *testing.T) {
 				if err := store.db.QueryRow(
 					`SELECT id FROM groups WHERE name = 'custom';`,
 				).Scan(&id); err != nil {
-					t.Fatalf("%s\nlookup failed: %v", packageName, err)
+					t.Fatalf(
+						"%s\nlookup failed: %v",
+						packageName, err,
+					)
 				}
 				_, err := store.GroupByID(t.Context(), id)
 				return err
@@ -961,7 +973,10 @@ func TestStore__rowsErrOnSecondPass(t *testing.T) {
 				if err := store.db.QueryRow(
 					`SELECT id FROM groups WHERE name = 'custom';`,
 				).Scan(&id); err != nil {
-					t.Fatalf("%s\nlookup failed: %v", packageName, err)
+					t.Fatalf(
+						"%s\nlookup failed: %v",
+						packageName, err,
+					)
 				}
 				_, err := store.GroupByID(t.Context(), id)
 				return err
@@ -1021,7 +1036,10 @@ func TestStore_InTx__beginError(t *testing.T) {
 	db := testDB(t)
 	store, err := New(t.Context(), db)
 	if err != nil {
-		t.Fatalf("%s\nNew() failed: %v", packageName, err)
+		t.Fatalf(
+			"%s\nNew() failed: %v",
+			packageName, err,
+		)
 	}
 	_ = db.Close()
 
@@ -1042,13 +1060,19 @@ func findGroup(t *testing.T, store *Store, name string) *Group {
 
 	groups, err := store.Groups(t.Context())
 	if err != nil {
-		t.Fatalf("%s\nGroups() failed: %v", packageName, err)
+		t.Fatalf(
+			"%s\nGroups() failed: %v",
+			packageName, err,
+		)
 	}
 	for i := range groups {
 		if groups[i].Name == name {
 			return &groups[i]
 		}
 	}
-	t.Fatalf("%s\ngroup %q not found", packageName, name)
+	t.Fatalf(
+		"%s\ngroup %q not found",
+		packageName, name,
+	)
 	return nil
 }

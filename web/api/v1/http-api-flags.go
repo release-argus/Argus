@@ -22,7 +22,12 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// httpFlags retrieves the values of vars that may get set with flags.
+// httpFlags handles GET /api/v1/flags: returning the values of vars that may
+// be set with flags.
+//
+// Response:
+//
+//	200 OK: JSON object containing the flag values.
 func (api *API) httpFlags(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpFlags", Secondary: getIP(r)}
 

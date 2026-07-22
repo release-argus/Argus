@@ -18,17 +18,35 @@ package v1
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
+	_ "modernc.org/sqlite"
+
+	"github.com/release-argus/Argus/auth"
+	"github.com/release-argus/Argus/auth/password"
+	"github.com/release-argus/Argus/auth/provider"
+	"github.com/release-argus/Argus/auth/provider/local"
+	"github.com/release-argus/Argus/auth/session"
+	"github.com/release-argus/Argus/auth/store"
+	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/config/decode"
+	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
+	logtest "github.com/release-argus/Argus/internal/test/log"
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
+	"github.com/release-argus/Argus/service"
 	dvtest "github.com/release-argus/Argus/service/deployed_version/test"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
@@ -36,17 +54,9 @@ import (
 	lvtest "github.com/release-argus/Argus/service/latest_version/test"
 	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
 	svctest "github.com/release-argus/Argus/service/test"
+	"github.com/release-argus/Argus/util"
 	whtest "github.com/release-argus/Argus/webhook/test"
 	"golang.org/x/sync/errgroup"
-
-	"github.com/release-argus/Argus/command"
-	"github.com/release-argus/Argus/config"
-	dbtype "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/internal/logx"
-	"github.com/release-argus/Argus/internal/test"
-	logtest "github.com/release-argus/Argus/internal/test/log"
-	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/util"
 )
 
 var (
@@ -89,7 +99,7 @@ func TestMain(m *testing.M) {
 
 	// Run other tests.
 	exitCode := m.Run()
-	_ = os.Remove(path)
+	_ = os.RemoveAll(tempDir)
 	_ = os.Remove(cfg.Settings.DataDatabaseFile())
 	cancel()
 
@@ -186,7 +196,6 @@ func testAPI(t *testing.T, path string) API {
 
 	t.Cleanup(func() {
 		_ = os.RemoveAll(cfg.Settings.Data.DatabaseFile)
-		_ = os.RemoveAll(cfg.File)
 	})
 
 	return API{Config: cfg}
@@ -250,4 +259,218 @@ func testFaviconSettings(png string, svg string) *config.FaviconSettings {
 		SVG: svg,
 		PNG: png,
 	}
+}
+
+// testAuthServerPendingSetup builds a routed API with session/RBAC auth
+// enabled, backed by an in-memory auth store with NO users yet (first-run
+// setup pending). The returned *sql.DB is the auth store's handle (close to
+// simulate infrastructure failure).
+func testAuthServerPendingSetup(t *testing.T, path string) (*API, *AuthDeps, *sql.DB) {
+	t.Helper()
+
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(testTempDir, path)
+	}
+	testYAML_Argus(path)
+	cfg := testLoad(t, path)
+	t.Cleanup(func() { _ = os.RemoveAll(cfg.Settings.DataDatabaseFile()) })
+
+	dbConn, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf(
+			"%s\nopen auth db: %v",
+			packageName, err,
+		)
+	}
+	dbConn.SetMaxOpenConns(1)
+	t.Cleanup(func() { _ = dbConn.Close() })
+
+	authStore, err := store.New(t.Context(), dbConn)
+	if err != nil {
+		t.Fatalf(
+			"%s\nauth store: %v",
+			packageName, err,
+		)
+	}
+
+	sessions := session.New(
+		authStore,
+		session.Config{
+			Lifetime:    time.Hour,
+			IdleTimeout: time.Hour,
+		},
+	)
+	registry := provider.NewRegistry()
+	registry.Register(local.New(authStore))
+
+	deps := &AuthDeps{Store: authStore, Sessions: sessions, Providers: registry}
+	api, wsRoute := NewAPI(cfg)
+	api.EnableAuth(deps)
+	hub := NewHub()
+	go hub.Run()
+	api.SetupWebSocket(hub, wsRoute)
+	api.SetupRoutesAPI()
+
+	return api, deps, dbConn
+}
+
+// testAuthServer builds a routed API with session/RBAC auth enabled,
+// backed by an in-memory auth store (bootstrap admin created).
+// The returned *sql.DB is the auth store's handle (close to simulate
+// infrastructure failure).
+func testAuthServer(t *testing.T, path string) (*API, *AuthDeps, *sql.DB) {
+	t.Helper()
+
+	api, deps, dbConn := testAuthServerPendingSetup(t, path)
+	if _, err := deps.Store.CreateFirstAdmin(
+		t.Context(),
+		"admin",
+		"Administrator",
+		"admin-password",
+	); err != nil {
+		t.Fatalf(
+			"%s\nbootstrap admin: %v",
+			packageName, err,
+		)
+	}
+	return api, deps, dbConn
+}
+
+// createAuthUser creates a user with the given password and groups.
+func createAuthUser(
+	t *testing.T,
+	deps *AuthDeps,
+	username, plaintext string,
+	groups ...string,
+) *auth.User {
+	t.Helper()
+
+	hash, err := password.Hash(plaintext)
+	if err != nil {
+		t.Fatalf(
+			"%s\nhash password: %v",
+			packageName, err,
+		)
+	}
+
+	user, err := deps.Store.CreateUser(
+		t.Context(),
+		username, "", "", hash, groups,
+	)
+	if err != nil {
+		t.Fatalf(
+			"%s\ncreate user %q: %v",
+			packageName, username, err,
+		)
+	}
+
+	return user
+}
+
+// serveAuth routes a request through the API's base router.
+func serveAuth(api *API, r *http.Request) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	api.BaseRouter.ServeHTTP(w, r)
+	return w
+}
+
+// loginCookie logs username in, returning the session cookie.
+func loginCookie(t *testing.T, api *API, username, plaintext string) *http.Cookie {
+	t.Helper()
+
+	body := fmt.Sprintf(`{"username":%q,"password":%q}`, username, plaintext)
+	w := serveAuth(api,
+		httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(body)))
+	if got, want := w.Code, http.StatusOK; got != want {
+		t.Fatalf(
+			"%s\nlogin as %q failed\ngot:  %d - %s",
+			packageName, username, got, w.Body.String(),
+		)
+	}
+	for _, cookie := range w.Result().Cookies() {
+		if cookie.Name == authCookieName {
+			return cookie
+		}
+	}
+
+	t.Fatalf("%s\nlogin response missing the session cookie", packageName)
+	return nil
+}
+
+// authedRequest builds a request carrying the session cookie.
+func authedRequest(
+	method, target string,
+	body string,
+	cookie *http.Cookie,
+) *http.Request {
+	var reader *strings.Reader
+	if body == "" {
+		reader = strings.NewReader("")
+	} else {
+		reader = strings.NewReader(body)
+	}
+
+	req := httptest.NewRequest(method, target, reader)
+	if cookie != nil {
+		req.AddCookie(cookie)
+	}
+
+	return req
+}
+
+// adminContext resolves the bootstrap admin's [auth.Context].
+func adminContext(t *testing.T, api *API, deps *AuthDeps) *auth.Context {
+	t.Helper()
+
+	creds, err := deps.Store.LocalCredentials(t.Context(), "admin")
+	if err != nil || creds == nil {
+		t.Fatalf(
+			"%s\nadmin lookup failed: %v",
+			packageName, err,
+		)
+	}
+
+	authCtx, err := api.contextForUser(t.Context(), creds.UserID, "local")
+	if err != nil {
+		t.Fatalf(
+			"%s\nadmin context failed: %v",
+			packageName, err,
+		)
+	}
+
+	return authCtx
+}
+
+// withAuthCtx attaches an [auth.Context] to a request, as the middleware would.
+func withAuthCtx(r *http.Request, authCtx *auth.Context) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), authCtxKey{}, authCtx))
+}
+
+// failingSessionStore is a [session.Store] whose every method fails.
+type failingSessionStore struct{}
+
+var errSessionStore = errors.New("session store broke")
+
+func (failingSessionStore) InsertSession(_ context.Context, _ store.Session) error {
+	return errSessionStore
+}
+
+func (failingSessionStore) SessionByTokenHash(_ context.Context, _ string) (*store.Session, error) {
+	return nil, errSessionStore
+}
+
+func (failingSessionStore) TouchSession(_ context.Context, _ string, _ time.Time) error {
+	return errSessionStore
+}
+
+func (failingSessionStore) DeleteSession(_ context.Context, _ string) error {
+	return errSessionStore
+}
+
+func (failingSessionStore) DeleteSessionsForUser(_ context.Context, _ string) error {
+	return errSessionStore
+}
+
+func (failingSessionStore) DeleteExpiredSessions(_ context.Context, _ time.Time) error {
+	return errSessionStore
 }

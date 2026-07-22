@@ -30,7 +30,10 @@ func TestMockLookup_ApplyOverrides(t *testing.T) {
 	err := fake.ApplyOverrides("", nil)
 	// THEN: no error is returned.
 	if err != nil {
-		t.Errorf("MockLookup.ApplyOverrides(format=\"\", data=nil) error mismatch\ngot:  %v\nwant: nil", err)
+		t.Errorf(
+			"MockLookup.ApplyOverrides(format=\"\", data=nil) error mismatch\ngot:  %v\nwant: nil",
+			err,
+		)
 	}
 }
 func TestMockLookup_ApplyOverrides__error(t *testing.T) {
@@ -66,7 +69,10 @@ func TestMockLookup_DecodeSelf(t *testing.T) {
 	err := fake.DecodeSelf("", nil)
 	// THEN: no error is returned.
 	if err != nil {
-		t.Errorf("MockLookup.DecodeSelf(format=\"\", data=nil) error mismatch\ngot:  %v\nwant: nil", err)
+		t.Errorf(
+			"MockLookup.DecodeSelf(format=\"\", data=nil) error mismatch\ngot:  %v\nwant: nil",
+			err,
+		)
 	}
 }
 func TestMockLookup_GetType(t *testing.T) {
