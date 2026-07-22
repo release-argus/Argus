@@ -17,6 +17,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"testing"
@@ -41,4 +42,21 @@ func TestMain(m *testing.M) {
 
 	// Exit.
 	os.Exit(exitCode)
+}
+
+// countRows counts the rows of a table.
+func countRows(t *testing.T, db *sql.DB, table string) int {
+	t.Helper()
+
+	var count int
+	//#nosec G201 -- table names come from the tests themselves.
+	if err := db.QueryRow(
+		fmt.Sprintf(`SELECT COUNT(*) FROM %s;`, table),
+	).Scan(&count); err != nil {
+		t.Fatalf(
+			"%s count %s: %v",
+			packageName, table, err,
+		)
+	}
+	return count
 }

@@ -30,10 +30,6 @@ func writeFile(path string, data string) {
 
 func testYAML_NoServices(path string) {
 	data := test.TrimYAML(`
-		settings:
-			web:
-				listen_port: "0"
-
 		defaults:
 			service:
 				options:
@@ -95,10 +91,8 @@ func testYAML_Argus(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ${GITHUB_TOKEN}
-		settings:
-			web:
-				listen_port: 0
+					github:
+						access_token: ${GITHUB_TOKEN}
 		service:
 			SERVICE_NAME:
 				latest_version:
@@ -109,15 +103,23 @@ func testYAML_Argus(path string) {
 	writeFile(path, data)
 }
 
+func testYAML_AuthEnabled(path string) {
+	data := test.TrimYAML(`
+		settings:
+			auth:
+				enabled: true
+	`)
+
+	writeFile(path, data)
+}
+
 func testYAML_Argus_SomeInactive(path string) {
 	data := test.TrimYAML(`
 		defaults:
 			service:
 				latest_version:
-					access_token: ${GITHUB_TOKEN}
-		settings:
-				web:
-						listen_port: 0
+					github:
+						access_token: ${GITHUB_TOKEN}
 		service:
 				SERVICE_NAME:
 						latest_version:

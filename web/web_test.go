@@ -29,6 +29,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/release-argus/Argus/util"
+	v1 "github.com/release-argus/Argus/web/api/v1"
 )
 
 func TestWebSocketHandler(t *testing.T) {
@@ -39,7 +40,10 @@ func TestWebSocketHandler(t *testing.T) {
 		// WHEN: we attempt to connect.
 		ws, resp, err := websocket.DefaultDialer.Dial(url, nil)
 		if err != nil {
-			t.Fatalf("failed to connect to WebSocket: %v (HTTP status %d)", err, resp.StatusCode)
+			t.Fatalf(
+				"failed to connect to WebSocket: %v (HTTP status %d)",
+				err, resp.StatusCode,
+			)
 		}
 		defer ws.Close()
 
@@ -65,7 +69,7 @@ func TestRun_Error(t *testing.T) {
 	// WHEN: Run is called.
 	errChan := make(chan error, 1)
 	go func() {
-		errChan <- Run(t.Context(), cfg)
+		errChan <- Run(t.Context(), cfg, nil)
 	}()
 
 	prefix := fmt.Sprintf("%s\nRun()", packageName)
@@ -99,7 +103,7 @@ func TestMainWithRoutePrefix(t *testing.T) {
 	// WHEN: the Web UI is started with this Config.
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- Run(ctx, cfg)
+		errCh <- Run(ctx, cfg, nil)
 	}()
 
 	// THEN: Web UI is accessible.
@@ -224,10 +228,10 @@ func TestAccessibleHTTPS(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	router = newWebUI(cfg)
+	router = newWebUI(cfg, nil)
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- Run(ctx, cfg)
+		errCh <- Run(ctx, cfg, nil)
 	}()
 
 	if err := waitForServer(address, time.Second); err != nil {
@@ -269,4 +273,44 @@ func TestAccessibleHTTPS(t *testing.T) {
 
 	// AND: the server shuts down cleanly.
 	assertServerShutdown(t, cancel, errCh, address)
+}
+
+func TestNewWebUI__auth(t *testing.T) {
+	// GIVEN: web UIs built with and without auth.
+	tests := []struct {
+		name     string
+		authDeps *v1.AuthDeps
+		wantAuth bool
+	}{
+		{
+			name:     "no deps/auth routes are not served",
+			authDeps: nil,
+			wantAuth: false,
+		},
+		{
+			name:     "deps/auth routes are served",
+			authDeps: &v1.AuthDeps{},
+			wantAuth: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := testConfig(t, filepath.Join(t.TempDir(), "config.yml"))
+
+			// WHEN: the web UI is built.
+			router := newWebUI(cfg, tc.authDeps)
+
+			// THEN: the login route is served only when auth is enabled.
+			got := hasRoute(t, router, "/api/v1/auth/login")
+			if got != tc.wantAuth {
+				t.Errorf(
+					"%s\nauth routing mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.wantAuth,
+				)
+			}
+		})
+	}
 }

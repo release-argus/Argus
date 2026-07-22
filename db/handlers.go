@@ -32,9 +32,8 @@ func writeQuoted(b *strings.Builder, s string) {
 }
 
 // Handler processes database update and delete messages until ctx is cancelled.
+// Closing the db ([api.CloseDB]) belongs to the caller.
 func (api *api) Handler(ctx context.Context) {
-	defer api.db.Close()
-
 	for {
 		select {
 		case message, ok := <-api.config.DatabaseChannel:

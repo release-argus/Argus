@@ -18,7 +18,9 @@ package v1
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
@@ -77,6 +79,69 @@ func (h *Hub) clientList() []*Client {
 			return list
 		},
 	)
+}
+
+func TestAnnounceMSG_ServiceID(t *testing.T) {
+	// GIVEN: announce messages of every shape.
+	tests := []struct {
+		name string
+		msg  AnnounceMSG
+		want string
+	}{
+		{
+			name: "VERSION-style message carries service_data.id",
+			msg: AnnounceMSG{
+				Type: "VERSION", SubType: "QUERY",
+				ServiceData: &struct {
+					ID string `json:"id"`
+				}{
+					ID: "argus",
+				},
+			},
+			want: "argus",
+		},
+		{
+			name: "DELETE message carries the ID as its sub-type",
+			msg:  AnnounceMSG{Type: "DELETE", SubType: "argus"},
+			want: "argus",
+		},
+		{
+			name: "EDIT message carries the ID as its sub-type (unchanged ID stripped from service_data)",
+			msg: AnnounceMSG{
+				Type: "EDIT", SubType: "argus",
+				ServiceData: &struct {
+					ID string `json:"id"`
+				}{
+					ID: "",
+				},
+			},
+			want: "argus",
+		},
+		{
+			name: "ORDER message concerns no single service",
+			msg:  AnnounceMSG{Type: "SERVICE", SubType: "ORDER"},
+			want: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			prefix := fmt.Sprintf("%s\nAnnounceMSG.serviceID()", packageName)
+
+			// WHEN: the service ID is extracted.
+			got := tc.msg.serviceID()
+
+			// THEN: it matches expectations.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nresult mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.want,
+				)
+			}
+		})
+	}
 }
 
 func TestHub_AddClient(t *testing.T) {
@@ -138,8 +203,8 @@ func TestHub_Broadcast(t *testing.T) {
 
 	// AND: a valid message.
 	msg := AnnounceMSG{
-		Type:      "test",
-		ServiceID: "something",
+		Type:    "test",
+		SubType: "something",
 	}
 
 	// WHEN: that message is broadcast.
@@ -178,8 +243,8 @@ func TestHub_Broadcast_allClients(t *testing.T) {
 
 	// AND: a valid message.
 	msg := AnnounceMSG{
-		Type:      "test",
-		ServiceID: "something",
+		Type:    "test",
+		SubType: "something",
 	}
 	data, err := decode.Marshal("json", msg)
 	if err != nil {
@@ -202,7 +267,10 @@ func TestHub_Broadcast_allClients(t *testing.T) {
 		case got := <-client.send:
 			var gotMsg AnnounceMSG
 			if unmarshalErr := decode.Unmarshal("json", got, &gotMsg); unmarshalErr != nil {
-				t.Errorf("%s client %q failed to unmarshal broadcast: %v", prefix, name, unmarshalErr)
+				t.Errorf(
+					"%s client %q failed to unmarshal broadcast: %v",
+					prefix, name, unmarshalErr,
+				)
 				continue
 			}
 			if gotMsg != msg {
@@ -212,7 +280,10 @@ func TestHub_Broadcast_allClients(t *testing.T) {
 				)
 			}
 		default:
-			t.Errorf("%s client %q did not receive the broadcast", prefix, name)
+			t.Errorf(
+				"%s client %q did not receive the broadcast",
+				prefix, name,
+			)
 		}
 	}
 }
@@ -233,8 +304,8 @@ func TestHub_Broadcast__dropsFullClient(t *testing.T) {
 
 	// AND: a valid message.
 	msg := AnnounceMSG{
-		Type:      "test",
-		ServiceID: "something",
+		Type:    "test",
+		SubType: "something",
 	}
 	data, err := decode.Marshal("json", msg)
 	if err != nil {
@@ -304,5 +375,106 @@ func TestHub_Broadcast__invalid(t *testing.T) {
 				"got:  %d\nwant: %d",
 			packageName, got, want,
 		)
+	}
+}
+
+func TestHub_Broadcast__filtering(t *testing.T) {
+	// GIVEN: a running hub with an unrestricted and a restricted client.
+	hub := NewHub()
+	go hub.Run()
+
+	unrestricted := &Client{
+		hub:  hub,
+		send: make(chan []byte, 8),
+	}
+	restricted := &Client{
+		hub:             hub,
+		send:            make(chan []byte, 8),
+		allowedServices: map[string]bool{"allowed-svc": true},
+	}
+	hub.register <- unrestricted
+	hub.register <- restricted
+
+	prefix := fmt.Sprintf("%s\nHub broadcast filtering", packageName)
+
+	// WHEN: messages about different services are broadcast.
+	messages := [][]byte{
+		[]byte(`{"page":"APPROVALS","type":"VERSION","sub_type":"QUERY","service_data":{"id":"allowed-svc"}}`),
+		[]byte(`{"page":"APPROVALS","type":"VERSION","sub_type":"QUERY","service_data":{"id":"secret-svc"}}`),
+		[]byte(`{"page":"APPROVALS","type":"SERVICE","sub_type":"ORDER","order":["allowed-svc","secret-svc"]}`),
+		[]byte(`{"page":"APPROVALS","type":"DELETE","sub_type":"secret-svc"}`),
+	}
+	for _, message := range messages {
+		hub.Broadcast <- message
+	}
+	// Wait for the hub to work through the (buffered) broadcasts.
+	for i := 0; i < 200 && len(unrestricted.send) < len(messages); i++ {
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	// THEN: the unrestricted client received everything.
+	if got := len(unrestricted.send); got != len(messages) {
+		t.Errorf(
+			"%s\nunrestricted message count mismatch\ngot:  %d\nwant: %d",
+			prefix, got, len(messages),
+		)
+	}
+
+	// AND: the restricted client received only its service's message.
+	if got := len(restricted.send); got != 1 {
+		t.Fatalf(
+			"%s\nrestricted message count mismatch\ngot:  %d\nwant: 1",
+			prefix, got,
+		)
+	}
+	received := <-restricted.send
+	if !strings.Contains(string(received), "allowed-svc") {
+		t.Errorf(
+			"%s\nrestricted client received the wrong message: %s",
+			prefix, received,
+		)
+	}
+}
+
+func TestHub_KickClients(t *testing.T) {
+	// GIVEN: a running hub with clients.
+	hub := NewHub()
+	go hub.Run()
+	clients := []*Client{
+		{hub: hub, send: make(chan []byte, 8)},
+		{hub: hub, send: make(chan []byte, 8), allowedServices: map[string]bool{}},
+	}
+	for _, client := range clients {
+		hub.register <- client
+	}
+
+	prefix := fmt.Sprintf("%s\nHub.KickClients()", packageName)
+
+	// WHEN: every client is kicked.
+	hub.KickClients()
+
+	// THEN: the hub holds no clients.
+	count := -1
+	done := make(chan struct{})
+	hub.query <- func(m map[*Client]bool) {
+		count = len(m)
+		close(done)
+	}
+	<-done
+	if count != 0 {
+		t.Errorf(
+			"%s\nclient count mismatch\ngot:  %d\nwant: 0",
+			prefix, count,
+		)
+	}
+
+	// AND: every send channel was closed (writePump exits -> disconnect).
+	for i, client := range clients {
+		if _, open := <-client.send; open {
+			t.Errorf(
+				"%s\nclient %d's send channel should be closed",
+				prefix, i,
+			)
+		}
 	}
 }

@@ -25,13 +25,18 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// httpWebSocketToken issues a short-lived, single-use token for authenticating
-// the "/ws" WebSocket handshake.
+// httpWebSocketToken handles GET /api/v1/ws-token: issuing a short-lived,
+// single-use token for authenticating the "/ws" WebSocket handshake.
 //
 // Safari/WebKit doesn't forward cached HTTP Basic Auth credentials on
 // WebSocket handshake requests, so when Basic Auth is configured, clients
 // fetch a token from this (Basic Auth protected) endpoint and pass it as a
 // "token" query parameter when connecting to "/ws".
+//
+// Response:
+//
+//	200 OK: JSON object containing a short-lived WebSocket token.
+//	204 No Content: when Basic Auth is not enabled (no token needed).
 func (api *API) httpWebSocketToken(w http.ResponseWriter, r *http.Request) {
 	if api.wsTokens == nil {
 		w.WriteHeader(http.StatusNoContent)
@@ -49,7 +54,12 @@ func (api *API) httpWebSocketToken(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-// httpRuntimeInfo returns runtime info about the server.
+// httpRuntimeInfo handles GET /api/v1/status/runtime: returning runtime info
+// about the server.
+//
+// Response:
+//
+//	200 OK: JSON object containing the runtime info.
 func (api *API) httpRuntimeInfo(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpBuildInfo", Secondary: getIP(r)}
 

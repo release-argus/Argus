@@ -20,6 +20,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/auth/rbac"
@@ -406,7 +407,10 @@ func TestNew__permissionsIntroducedLater(t *testing.T) {
 							(SELECT id FROM permissions WHERE resource = ? AND action = ?);`,
 					GroupOperator, string(rbac.ResourceService), string(rbac.ActionCreate),
 				); err != nil {
-					t.Fatalf("%s\nsetup strip failed: %v", packageName, err)
+					t.Fatalf(
+						"%s\nsetup strip failed: %v",
+						packageName, err,
+					)
 				}
 			},
 			check: func(t *testing.T, prefix string, byName map[string]Group) {
@@ -422,7 +426,10 @@ func TestNew__permissionsIntroducedLater(t *testing.T) {
 				removePermission(t, store.db, rbac.ResourceNotify, rbac.ActionExecute)
 				operator := groupsByName(t, store)[GroupOperator]
 				if err := store.DeleteGroup(t.Context(), operator.ID); err != nil {
-					t.Fatalf("%s\nsetup DeleteGroup failed: %v", packageName, err)
+					t.Fatalf(
+						"%s\nsetup DeleteGroup failed: %v",
+						packageName, err,
+					)
 				}
 			},
 			check: func(t *testing.T, prefix string, byName map[string]Group) {
@@ -442,7 +449,10 @@ func TestNew__permissionsIntroducedLater(t *testing.T) {
 					operator.ID,
 					GroupPatch{Name: &newName},
 				); err != nil {
-					t.Fatalf("%s\nsetup UpdateGroup failed: %v", packageName, err)
+					t.Fatalf(
+						"%s\nsetup UpdateGroup failed: %v",
+						packageName, err,
+					)
 				}
 			},
 			check: func(t *testing.T, prefix string, byName map[string]Group) {
@@ -846,5 +856,98 @@ func TestParseTime__invalid(t *testing.T) {
 	// THEN: it errors.
 	if err == nil {
 		t.Errorf("%s expected an error\ngot: nil", prefix)
+	}
+}
+
+func TestMigrate__hotQueriesUseAnIndex(t *testing.T) {
+	// GIVEN: a migrated store, and the queries that run on the growing tables.
+	store := testStore(t)
+
+	tests := []struct {
+		name      string
+		query     string
+		args      []any
+		wantIndex string
+	}{
+		{
+			name: "sessions/trim over the per-user cap",
+			query: `SELECT token_hash FROM sessions WHERE user_id = ?
+				ORDER BY last_seen_at DESC, created_at DESC, rowid DESC
+				LIMIT -1 OFFSET ?;`,
+			args:      []any{"user", 10},
+			wantIndex: "idx_sessions_user_id",
+		},
+		{
+			name:      "sessions/delete every session of a user",
+			query:     `DELETE FROM sessions WHERE user_id = ?;`,
+			args:      []any{"user"},
+			wantIndex: "idx_sessions_user_id",
+		},
+		{
+			name:      "sessions/prune the expired",
+			query:     `DELETE FROM sessions WHERE expires_at < ?;`,
+			args:      []any{"2026-01-01T00:00:00.000000000Z"},
+			wantIndex: "idx_sessions_expires_at",
+		},
+		{
+			name:      "api_tokens/list a user's tokens",
+			query:     `SELECT id FROM api_tokens WHERE user_id = ? ORDER BY created_at DESC;`,
+			args:      []any{"user"},
+			wantIndex: "idx_api_tokens_user_id",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			prefix := fmt.Sprintf("%s\nEXPLAIN QUERY PLAN", packageName)
+
+			// WHEN: SQLite plans the query.
+			rows, err := store.db.QueryContext(
+				t.Context(),
+				"EXPLAIN QUERY PLAN "+tc.query,
+				tc.args...,
+			)
+			if err != nil {
+				t.Fatalf(
+					"%s\nEXPLAIN QUERY PLAN	%q: %v",
+					prefix, tc.query, err,
+				)
+			}
+			defer rows.Close()
+
+			var plan string
+			for rows.Next() {
+				var id, parent, notUsed int
+				var detail string
+				if err := rows.Scan(&id, &parent, &notUsed, &detail); err != nil {
+					t.Fatalf(
+						"%s\nscan: %v",
+						prefix, err,
+					)
+				}
+				plan += detail + "\n"
+			}
+			if err := rows.Err(); err != nil {
+				t.Fatalf(
+					"%s\niterate: %v",
+					prefix, err,
+				)
+			}
+
+			// THEN: it searches the index rather than scanning the table.
+			if !strings.Contains(plan, tc.wantIndex) {
+				t.Errorf(
+					"%s\nindex not used\nquery: %s\ngot plan:\n%s\nwant it to use: %s",
+					prefix, tc.query, plan, tc.wantIndex,
+				)
+			}
+			if strings.Contains(plan, "SCAN sessions") ||
+				strings.Contains(plan, "SCAN api_tokens") {
+				t.Errorf(
+					"%s\nfull table scan\nquery: %s\ngot plan:\n%s",
+					prefix, tc.query, plan,
+				)
+			}
+		})
 	}
 }

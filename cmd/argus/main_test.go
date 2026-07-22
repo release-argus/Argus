@@ -17,14 +17,23 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 func resetFlags() {
@@ -33,6 +42,7 @@ func resetFlags() {
 	testCommandsFlag = new("")
 	testNotifyFlag = new("")
 	testServiceFlag = new("")
+	config.AuthResetPassword = new("")
 }
 
 func TestRun(t *testing.T) {
@@ -41,6 +51,9 @@ func TestRun(t *testing.T) {
 		name           string
 		file           func(path string)
 		preStartFunc   func(baseDir string)
+		resetPassword  string // Username for -auth.reset-password.
+		serverStarts   bool   // The web server comes up.
+		awaitService   string // Wait for this service's first query before shutting down.
 		outputContains *[]string
 		outputExcludes *[]string
 		exitCode       *int
@@ -71,28 +84,50 @@ func TestRun(t *testing.T) {
 			exitCode: new(1),
 		},
 		{
-			name: "config with no services",
-			file: testYAML_NoServices,
+			name:          "auth setup fails - exits without starting the server",
+			file:          testYAML_AuthEnabled,
+			resetPassword: "ghost",
+			outputContains: &[]string{
+				`not found: user "ghost"`,
+			},
+			outputExcludes: &[]string{
+				"Listening on ",
+			},
+			exitCode: new(1),
+		},
+		{
+			name:         "config with no services",
+			file:         testYAML_NoServices,
+			serverStarts: true,
 			outputContains: &[]string{
 				"Found 0 services to monitor",
 				"Listening on ",
+				"Shutdown complete",
 			},
+			exitCode: new(0),
 		},
 		{
-			name: "config with services",
-			file: testYAML_Argus,
+			name:         "config with services",
+			file:         testYAML_Argus,
+			serverStarts: true,
+			awaitService: "SERVICE_NAME",
 			outputContains: &[]string{
 				"services to monitor:",
 				"SERVICE_NAME, Latest Release - ",
 				"Listening on ",
+				"Shutdown complete",
 			},
+			exitCode: new(0),
 		},
 		{
-			name: "config with services and some !active",
-			file: testYAML_Argus_SomeInactive,
+			name:         "config with services and some !active",
+			file:         testYAML_Argus_SomeInactive,
+			serverStarts: true,
 			outputContains: &[]string{
 				"Found 1 services to monitor:",
+				"Shutdown complete",
 			},
+			exitCode: new(0),
 		},
 	}
 
@@ -106,13 +141,30 @@ func TestRun(t *testing.T) {
 			tc.file(file)
 			resetFlags()
 			configFile = &file
+			if tc.resetPassword != "" {
+				config.AuthResetPassword = new(tc.resetPassword)
+				if err := flag.Set("auth.reset-password", tc.resetPassword); err != nil {
+					t.Fatalf(
+						"%s\nset auth.reset-password: %v",
+						packageName, err,
+					)
+				}
+				t.Cleanup(func() { _ = flag.Set("auth.reset-password", "") })
+			}
 			env := map[string]string{
 				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN": test.GitHubToken(t),
 				"ARGUS_DATA_DATABASE_FILE":                         filepath.Join(tempDir, "argus.db"),
 			}
+			port := freePort(t)
+			env["ARGUS_WEB_LISTEN_PORT"] = strconv.Itoa(port)
 			test.SetEnv(t, env)
 			if tc.preStartFunc != nil {
 				tc.preStartFunc(tempDir)
+			}
+
+			if tc.awaitService != "" {
+				// Process-global, so a repeat run would see the last value.
+				metric.LatestVersionQueryResultLast.Reset()
 			}
 
 			resultChannel := make(chan int)
@@ -121,19 +173,34 @@ func TestRun(t *testing.T) {
 				resultChannel <- run()
 			}()
 
+			// Shut the run down once it is serving, rather than leaking it.
+			if tc.serverStarts {
+				waitForListener(t, port)
+				if tc.awaitService != "" {
+					waitForServiceQuery(t, port, tc.awaitService)
+				}
+				if err := syscall.Kill(os.Getpid(), syscall.SIGTERM); err != nil {
+					t.Fatalf(
+						"%s\nSIGTERM failed: %v",
+						packageName, err,
+					)
+				}
+			}
+
 			var exitCode *int
 			select {
 			case code := <-resultChannel:
 				exitCode = &code
-			case <-time.After(6 * time.Second):
-				if tc.exitCode != nil {
-					t.Logf("%s\nrun timed out waiting for exit code", packageName)
-				}
+			case <-time.After(15 * time.Second):
+				t.Errorf("%s\nrun timed out waiting for exit code", packageName)
 			}
 
 			// THEN: the program will have printed everything expected.
 			stdout := releaseStdout()
-			t.Logf("%s\nstdout: %q", packageName, stdout)
+			t.Logf(
+				"%s\nstdout: %q",
+				packageName, stdout,
+			)
 			if tc.outputContains != nil {
 				for _, text := range *tc.outputContains {
 					if !strings.Contains(stdout, text) {
@@ -168,4 +235,77 @@ func TestRun(t *testing.T) {
 			}
 		})
 	}
+}
+
+// freePort returns a port that is free at the time of the call.
+func freePort(t *testing.T) int {
+	t.Helper()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf(
+			"%s\nreserve a port: %v",
+			packageName, err,
+		)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	_ = listener.Close()
+	return port
+}
+
+// waitForListener blocks until port accepts connections.
+func waitForListener(t *testing.T, port int) {
+	t.Helper()
+
+	address := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("tcp", address, time.Second)
+		if err == nil {
+			_ = conn.Close()
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf(
+		"%s\nnothing listening on %s within the deadline",
+		packageName, address,
+	)
+}
+
+// waitForServiceQuery blocks until the running instance has completed a
+// latest-version query for serviceID.
+func waitForServiceQuery(t *testing.T, port int, serviceID string) {
+	t.Helper()
+
+	want := fmt.Sprintf(`latest_version_query_result_last{id="%s"`, serviceID)
+	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", port)
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		if strings.Contains(fetch(t, url), want) {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf(
+		"%s\n%s never reported a query at %s",
+		packageName, serviceID, url,
+	)
+}
+
+// fetch GETs url, returning an empty body on any failure.
+func fetch(t *testing.T, url string) string {
+	t.Helper()
+
+	//#nosec G107 -- the URL is the test's own listener.
+	resp, err := http.Get(url)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ""
+	}
+	return string(body)
 }
