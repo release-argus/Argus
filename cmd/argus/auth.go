@@ -59,10 +59,19 @@ func setupAuth(
 	cfg *config.Config,
 	dbHandle *sql.DB,
 ) (*v1.AuthDeps, bool) {
+	logFrom := logx.LogFrom{Primary: "auth"}
 	if !cfg.Settings.AuthEnabled() {
+		// The recovery flag has no store to act on, so say so rather than
+		// booting as if it had run.
+		if config.AuthResetPassword != nil && *config.AuthResetPassword != "" {
+			logx.Fatal(
+				"auth is not enabled, so -auth.reset-password has nothing to reset",
+				logFrom,
+			)
+			return nil, false
+		}
 		return nil, true
 	}
-	logFrom := logx.LogFrom{Primary: "auth"}
 
 	authStore, err := store.New(ctx, dbHandle)
 	if err != nil {
@@ -93,6 +102,7 @@ func setupAuth(
 		session.Config{
 			Lifetime:    cfg.Settings.AuthSessionLifetime(),
 			IdleTimeout: cfg.Settings.AuthSessionIdleTimeout(),
+			MaxPerUser:  cfg.Settings.AuthSessionMaxPerUser(),
 		},
 	)
 	g.Go(func() error {

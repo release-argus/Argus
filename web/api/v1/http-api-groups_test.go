@@ -24,9 +24,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gorilla/mux"
+
 	"github.com/release-argus/Argus/auth"
 	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/auth/store"
+	storetest "github.com/release-argus/Argus/auth/store/test"
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	apitype "github.com/release-argus/Argus/web/api/types"
@@ -621,6 +624,83 @@ func TestAPI_HTTPGroupUpdate(t *testing.T) {
 	}
 }
 
+func TestAPI_HTTPGroupUpdate__kicks(t *testing.T) {
+	// GIVEN: an auth-enabled API with WebSocket clients for the admin,
+	// a group member, and an outsider.
+	file := "TestAPI_HTTPGroupUpdate__kicks.yml"
+	api, deps, _ := testAuthServer(t, file)
+	adminCookie := loginCookie(t, api, "admin", "admin-password")
+	group, err := deps.Store.CreateGroup(t.Context(), "crew", "", nil)
+	if err != nil {
+		t.Fatalf(
+			"%s\ncreate crew group: %v",
+			packageName, err,
+		)
+	}
+	member := createAuthUser(t, deps, "member", "member-password", "crew")
+	outsider := createAuthUser(t, deps, "outsider", "outsider-password")
+	adminID := adminContext(t, api, deps).User.ID
+	connect := wireHub(t, api)
+	adminClient := connect(adminID, "admin-session")
+	memberClient := connect(member.ID, "member-session")
+	outsiderClient := connect(outsider.ID, "outsider-session")
+
+	prefix := fmt.Sprintf("%s\nhttpGroupUpdate() kicks", packageName)
+
+	// WHEN: only the group's name/description change.
+	w := serveAuth(api,
+		authedRequest(http.MethodPatch, "/api/v1/groups/"+group.ID,
+			`{"name":"crew-renamed","description":"renamed"}`,
+			adminCookie,
+		),
+	)
+	if got, want := w.Code, http.StatusOK; got != want {
+		t.Fatalf(
+			"%s\nrename patch\ngot:  %d - %s\nwant: 200",
+			prefix, got, w.Body.String(),
+		)
+	}
+
+	// THEN: nobody's grants changed - nobody is kicked.
+	if !api.hub.hasClient(memberClient) ||
+		!api.hub.hasClient(outsiderClient) ||
+		!api.hub.hasClient(adminClient) {
+		t.Errorf(
+			"%s\nrename/description-only patch should kick nobody",
+			prefix,
+		)
+	}
+
+	// WHEN: the group's grants change.
+	w = serveAuth(api,
+		authedRequest(http.MethodPatch, "/api/v1/groups/"+group.ID,
+			test.TrimJSON(`{
+				"permissions": [
+					{"resource": "service", "action": "read", "scope": {"type": "service_tag", "ref": "prod"}}
+				]
+			}`),
+			adminCookie,
+		),
+	)
+	if got, want := w.Code, http.StatusOK; got != want {
+		t.Fatalf(
+			"%s\ngrants patch\ngot:  %d - %s\nwant: 200",
+			prefix, got, w.Body.String(),
+		)
+	}
+
+	// THEN: only the member's client is kicked - not the outsider's,
+	// nor the editing admin's.
+	if api.hub.hasClient(memberClient) ||
+		!api.hub.hasClient(outsiderClient) ||
+		!api.hub.hasClient(adminClient) {
+		t.Errorf(
+			"%s\ngrants patch should kick exactly the members' clients",
+			prefix,
+		)
+	}
+}
+
 func TestAPI_HTTPGroupDelete(t *testing.T) {
 	// GIVEN: an auth-enabled API.
 	file := "TestAPI_HTTPGroupDelete.yml"
@@ -683,6 +763,127 @@ func TestAPI_HTTPGroupDelete(t *testing.T) {
 		t.Errorf(
 			"%s\ngroup should be deleted\ngot: %v",
 			prefix, err,
+		)
+	}
+}
+
+func TestAPI_HTTPGroupDelete__kicks(t *testing.T) {
+	// GIVEN: an auth-enabled API with WebSocket clients for the admin,
+	// a group member, and an outsider.
+	file := "TestAPI_HTTPGroupDelete__kicks.yml"
+	api, deps, _ := testAuthServer(t, file)
+	adminCookie := loginCookie(t, api, "admin", "admin-password")
+	group, err := deps.Store.CreateGroup(t.Context(), "crew", "", nil)
+	if err != nil {
+		t.Fatalf(
+			"%s\ncreate crew group: %v",
+			packageName, err,
+		)
+	}
+	member := createAuthUser(t, deps, "member", "member-password", "crew")
+	outsider := createAuthUser(t, deps, "outsider", "outsider-password")
+	adminID := adminContext(t, api, deps).User.ID
+	connect := wireHub(t, api)
+	adminClient := connect(adminID, "admin-session")
+	memberClient := connect(member.ID, "member-session")
+	outsiderClient := connect(outsider.ID, "outsider-session")
+
+	prefix := fmt.Sprintf("%s\nhttpGroupDelete() kicks", packageName)
+
+	// WHEN: the admin deletes the group.
+	w := serveAuth(api,
+		authedRequest(http.MethodDelete, "/api/v1/groups/"+group.ID, "", adminCookie))
+	if got, want := w.Code, http.StatusNoContent; got != want {
+		t.Fatalf(
+			"%s\ndelete\ngot:  %d - %s\nwant: 204",
+			prefix, got, w.Body.String(),
+		)
+	}
+
+	// THEN: only the member's client is kicked (membership captured before
+	// the delete's cascade) - not the outsider's, nor the editing admin's.
+	if api.hub.hasClient(memberClient) ||
+		!api.hub.hasClient(outsiderClient) ||
+		!api.hub.hasClient(adminClient) {
+		t.Errorf(
+			"%s\ndelete should kick exactly the members' clients",
+			prefix,
+		)
+	}
+}
+
+func TestAPI_HTTPGroupDelete__membershipLookupFailure(t *testing.T) {
+	// GIVEN: an auth-enabled API whose membership table has gone away.
+	file := "TestAPI_HTTPGroupDelete__membershipLookupFailure.yml"
+	api, deps, dbConn := testAuthServer(t, file)
+	authCtx := adminContext(t, api, deps)
+	target, err := deps.Store.CreateGroup(t.Context(), "doomed", "", nil)
+	if err != nil {
+		t.Fatalf(
+			"%s\ncreate target group: %v",
+			packageName, err,
+		)
+	}
+	if _, err := dbConn.Exec(`DROP TABLE user_groups;`); err != nil {
+		t.Fatalf(
+			"%s\ndrop user_groups: %v",
+			packageName, err,
+		)
+	}
+
+	// WHEN: a group is deleted.
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/"+target.ID, nil)
+	req = mux.SetURLVars(withAuthCtx(req, authCtx), map[string]string{"id": target.ID})
+	recorder := httptest.NewRecorder()
+	api.httpGroupDelete(recorder, req)
+
+	// THEN: the lookup failure reads as 500.
+	if got, want := recorder.Code, http.StatusInternalServerError; got != want {
+		t.Errorf(
+			"%s\nhttpGroupDelete() with an unreadable membership table\ngot:  %d - %s\nwant: %d",
+			packageName, got, recorder.Body.String(), want,
+		)
+	}
+}
+
+func TestAPI_HTTPGroupUpdate__kickLookupFailure(t *testing.T) {
+	// GIVEN: an auth-enabled API on a store whose membership listing fails
+	// whist the group update itself still succeeds.
+	file := "TestAPI_HTTPGroupUpdate__kickLookupFailure.yml"
+	api, deps, _ := testAuthServer(t, file)
+	authCtx := adminContext(t, api, deps)
+
+	faultDB, state := storetest.FaultDB(t)
+	faultStore, err := store.New(t.Context(), faultDB)
+	if err != nil {
+		t.Fatalf(
+			"%s\nfault store: %v",
+			packageName, err,
+		)
+	}
+	target, err := faultStore.CreateGroup(t.Context(), "kicked", "", nonAdminGrants())
+	if err != nil {
+		t.Fatalf(
+			"%s\ncreate target group: %v",
+			packageName, err,
+		)
+	}
+	api.auth.Store = faultStore
+
+	// WHEN: the group's grants are patched, and listing its members fails.
+	state.Set(`ORDER BY user_id`)
+	t.Cleanup(func() { state.Set("") })
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/groups/"+target.ID,
+		strings.NewReader(`{"permissions":[]}`))
+	req = mux.SetURLVars(withAuthCtx(req, authCtx), map[string]string{"id": target.ID})
+	recorder := httptest.NewRecorder()
+	api.httpGroupUpdate(recorder, req)
+
+	// THEN: the patch still succeeds - failing to kick members is only logged.
+	if got, want := recorder.Code, http.StatusOK; got != want {
+		t.Errorf(
+			"%s\nhttpGroupUpdate() with an unreadable membership table\ngot:  %d - %s\nwant: %d",
+			packageName, got, recorder.Body.String(), want,
 		)
 	}
 }

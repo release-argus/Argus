@@ -16,7 +16,7 @@ const DESCRIPTIONS: Partial<Record<`${Resource}:${Action}`, string>> = {
 	'service:delete': 'Delete services.',
 	'service:read': 'View services and their versions.',
 	'service:update':
-		'Edit existing services, including the commands they run on a new release, so this is equivalent to shell access on the Argus host.',
+		'Edit existing services, including the commands they run on a new release.',
 	'version_refresh:execute':
 		'Re-query the latest and deployed versions on demand. Refreshing with overrides can execute commands, so this is equivalent to shell access on the Argus host.',
 };

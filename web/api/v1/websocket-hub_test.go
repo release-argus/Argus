@@ -57,6 +57,20 @@ func hubQuery[T any](h *Hub, fn func(map[*Client]bool) T) T {
 	return <-done
 }
 
+// drainBroadcasts waits for [Hub.Run] to dequeue every queued broadcast, then
+// syncs with its goroutine so the last broadcast() has finished sending.
+func drainBroadcasts(t *testing.T, h *Hub) {
+	t.Helper()
+
+	for range 200 {
+		if len(h.Broadcast) == 0 {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	hubQuery(h, func(map[*Client]bool) bool { return true })
+}
+
 // hasClient reports whether client is registered (via the Run loop, so safe on a live hub).
 func (h *Hub) hasClient(client *Client) bool {
 	return hubQuery(
@@ -378,7 +392,7 @@ func TestHub_Broadcast__invalid(t *testing.T) {
 	}
 }
 
-func TestHub_Broadcast__filtering(t *testing.T) {
+func TestHub_Broadcast__readableFiltering(t *testing.T) {
 	// GIVEN: a running hub with an unrestricted and a restricted client.
 	hub := NewHub()
 	go hub.Run()
@@ -388,9 +402,9 @@ func TestHub_Broadcast__filtering(t *testing.T) {
 		send: make(chan []byte, 8),
 	}
 	restricted := &Client{
-		hub:             hub,
-		send:            make(chan []byte, 8),
-		allowedServices: map[string]bool{"allowed-svc": true},
+		hub:              hub,
+		send:             make(chan []byte, 8),
+		readableServices: map[string]bool{"allowed-svc": true},
 	}
 	hub.register <- unrestricted
 	hub.register <- restricted
@@ -407,10 +421,7 @@ func TestHub_Broadcast__filtering(t *testing.T) {
 	for _, message := range messages {
 		hub.Broadcast <- message
 	}
-	// Wait for the hub to work through the (buffered) broadcasts.
-	for i := 0; i < 200 && len(unrestricted.send) < len(messages); i++ {
-		time.Sleep(5 * time.Millisecond)
-	}
+	drainBroadcasts(t, hub)
 
 	// THEN: the unrestricted client received everything.
 	if got := len(unrestricted.send); got != len(messages) {
@@ -436,45 +447,268 @@ func TestHub_Broadcast__filtering(t *testing.T) {
 	}
 }
 
-func TestHub_KickClients(t *testing.T) {
-	// GIVEN: a running hub with clients.
+func TestHub_Broadcast__actionableFiltering(t *testing.T) {
+	// GIVEN: a running hub with clients of differing service_action grants.
 	hub := NewHub()
 	go hub.Run()
-	clients := []*Client{
-		{hub: hub, send: make(chan []byte, 8)},
-		{hub: hub, send: make(chan []byte, 8), allowedServices: map[string]bool{}},
+
+	unrestricted := &Client{
+		hub:  hub,
+		send: make(chan []byte, 8),
 	}
-	for _, client := range clients {
+	readOnly := &Client{
+		hub:                hub,
+		send:               make(chan []byte, 8),
+		readableServices:   map[string]bool{"svc": true},
+		actionableServices: map[string]bool{},
+	}
+	actioner := &Client{
+		hub:                hub,
+		send:               make(chan []byte, 8),
+		readableServices:   map[string]bool{"svc": true},
+		actionableServices: map[string]bool{"svc": true},
+	}
+	for _, client := range []*Client{unrestricted, readOnly, actioner} {
 		hub.register <- client
 	}
 
-	prefix := fmt.Sprintf("%s\nHub.KickClients()", packageName)
+	prefix := fmt.Sprintf("%s\nHub broadcast action filtering", packageName)
 
-	// WHEN: every client is kicked.
-	hub.KickClients()
-
-	// THEN: the hub holds no clients.
-	count := -1
-	done := make(chan struct{})
-	hub.query <- func(m map[*Client]bool) {
-		count = len(m)
-		close(done)
+	// WHEN: version and action messages about a visible service are broadcast.
+	messages := [][]byte{
+		[]byte(`{"page":"APPROVALS","type":"VERSION","sub_type":"QUERY","service_data":{"id":"svc"}}`),
+		[]byte(`{"page":"APPROVALS","type":"COMMAND","sub_type":"EVENT","service_data":{"id":"svc"},"command_data":{"bash -c true":{"failed":false}}}`),
+		[]byte(`{"page":"APPROVALS","type":"WEBHOOK","sub_type":"EVENT","service_data":{"id":"svc"},"webhook_data":{"wh":{"failed":false}}}`),
 	}
-	<-done
-	if count != 0 {
-		t.Errorf(
-			"%s\nclient count mismatch\ngot:  %d\nwant: 0",
-			prefix, count,
+	for _, message := range messages {
+		hub.Broadcast <- message
+	}
+	drainBroadcasts(t, hub)
+
+	// THEN: clients holding the service_action:execute grant received every message.
+	for _, tc := range []struct {
+		name   string
+		client *Client
+	}{
+		{name: "unrestricted", client: unrestricted},
+		{name: "actioner", client: actioner},
+	} {
+		if got := len(tc.client.send); got != len(messages) {
+			t.Errorf(
+				"%s\n%s message count mismatch\ngot:  %d\nwant: %d",
+				prefix, tc.name, got, len(messages),
+			)
+		}
+	}
+
+	// AND: the read-only client received only the VERSION message.
+	if got := len(readOnly.send); got != 1 {
+		t.Fatalf(
+			"%s\nread-only message count mismatch\ngot:  %d\nwant: 1",
+			prefix, got,
 		)
 	}
+	received := <-readOnly.send
+	if !strings.Contains(string(received), `"type":"VERSION"`) {
+		t.Errorf(
+			"%s\nread-only client message mismatch (not VERSION): %s",
+			prefix, received,
+		)
+	}
+}
 
-	// AND: every send channel was closed (writePump exits -> disconnect).
-	for i, client := range clients {
+func TestNonEmptySet(t *testing.T) {
+	// GIVEN: sets of values to collect.
+	// Some carrying the blank identity a client has when auth is disabled.
+	tests := []struct {
+		name   string
+		values []string
+		want   map[string]bool
+	}{
+		{
+			name:   "empty/nil",
+			values: nil,
+			want:   map[string]bool{},
+		},
+		{
+			name:   "empty/no values",
+			values: []string{},
+			want:   map[string]bool{},
+		},
+		{
+			name:   "empty/only blanks",
+			values: []string{"", "", ""},
+			want:   map[string]bool{},
+		},
+		{
+			name:   "collects/single value",
+			values: []string{"user-a"},
+			want:   map[string]bool{"user-a": true},
+		},
+		{
+			name:   "collects/several values",
+			values: []string{"user-a", "user-b"},
+			want:   map[string]bool{"user-a": true, "user-b": true},
+		},
+		{
+			name:   "collects/drops the blanks between them",
+			values: []string{"", "user-a", "", "user-b", ""},
+			want:   map[string]bool{"user-a": true, "user-b": true},
+		},
+		{
+			name:   "collects/deduplicates repeats",
+			values: []string{"user-a", "user-a", "user-a"},
+			want:   map[string]bool{"user-a": true},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: the set is built.
+			got := nonEmptySet(tc.values)
+
+			prefix := fmt.Sprintf(
+				"%s\nnonEmptySet(%v)",
+				packageName, tc.values,
+			)
+
+			// THEN: it holds exactly the non-blank values.
+			if testErr := test.AssertMapEqual(t, got, tc.want, prefix, "set"); testErr != nil {
+				t.Error(testErr)
+			}
+
+			// AND: the blank identity never becomes a member, so a client with
+			// no user/session can never be matched by a kick.
+			if got[""] {
+				t.Errorf(
+					"%s\nthe blank value became a member\ngot: %+v",
+					prefix, got,
+				)
+			}
+		})
+	}
+}
+
+// assertKicked checks which clients were kicked (send channel closed and
+// deregistered) and which were spared, after a Kick*Clients call.
+func assertKicked(t *testing.T, hub *Hub, prefix string, kicked, spared []*Client) {
+	t.Helper()
+
+	for i, client := range kicked {
+		if hub.hasClient(client) {
+			t.Errorf(
+				"%s\nkicked client %d should be deregistered",
+				prefix, i,
+			)
+		}
 		if _, open := <-client.send; open {
 			t.Errorf(
-				"%s\nclient %d's send channel should be closed",
+				"%s\nkicked client %d's send channel should be closed",
 				prefix, i,
 			)
 		}
 	}
+	for i, client := range spared {
+		if !hub.hasClient(client) {
+			t.Errorf(
+				"%s\nspared client %d should stay registered",
+				prefix, i,
+			)
+		}
+	}
+}
+
+func TestHub_KickUserClients(t *testing.T) {
+	// GIVEN: a running hub with clients of several users,
+	// plus one with no user identity (auth disabled).
+	hub := NewHub()
+	go hub.Run()
+	targetTab1 := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-a"}
+	targetTab2 := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-a"}
+	otherUser := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-b"}
+	anonymous := &Client{hub: hub, send: make(chan []byte, 8)}
+	for _, client := range []*Client{targetTab1, targetTab2, otherUser, anonymous} {
+		hub.register <- client
+	}
+
+	prefix := fmt.Sprintf("%s\nHub.KickUserClients()", packageName)
+
+	// WHEN: one user's clients are kicked
+	// (an empty ID must never match the anonymous client).
+	hub.KickUserClients("user-a", "")
+
+	// THEN: only that user's clients are kicked; the rest are spared.
+	assertKicked(t, hub, prefix,
+		[]*Client{targetTab1, targetTab2},
+		[]*Client{otherUser, anonymous},
+	)
+
+	// AND: kicking no users is a no-op.
+	hub.KickUserClients()
+	hub.KickUserClients("")
+	assertKicked(t, hub, prefix,
+		nil,
+		[]*Client{otherUser, anonymous},
+	)
+}
+
+func TestHub_KickSessionClients(t *testing.T) {
+	// GIVEN: a running hub with clients of several sessions,
+	// plus one with no session (auth disabled).
+	hub := NewHub()
+	go hub.Run()
+	target := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-a", sessionHash: "hash-1"}
+	sameUserOtherSession := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-a", sessionHash: "hash-2"}
+	otherUser := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-b", sessionHash: "hash-3"}
+	anonymous := &Client{hub: hub, send: make(chan []byte, 8)}
+	for _, client := range []*Client{target, sameUserOtherSession, otherUser, anonymous} {
+		hub.register <- client
+	}
+
+	prefix := fmt.Sprintf("%s\nHub.KickSessionClients()", packageName)
+
+	// WHEN: one session's clients are kicked
+	// (an empty hash must never match the anonymous client).
+	hub.KickSessionClients("hash-1", "")
+
+	// THEN: only that session's client is kicked - even the same user's
+	// other session survives.
+	assertKicked(t, hub, prefix,
+		[]*Client{target},
+		[]*Client{sameUserOtherSession, otherUser, anonymous},
+	)
+
+	// AND: kicking no sessions is a no-op.
+	hub.KickSessionClients()
+	hub.KickSessionClients("")
+	assertKicked(t, hub, prefix,
+		nil,
+		[]*Client{sameUserOtherSession, otherUser, anonymous},
+	)
+}
+
+func TestHub_KickRestrictedClients(t *testing.T) {
+	// GIVEN: a running hub with restricted and unrestricted clients.
+	hub := NewHub()
+	go hub.Run()
+	unrestricted := &Client{hub: hub, send: make(chan []byte, 8)}
+	restricted := &Client{hub: hub, send: make(chan []byte, 8), readableServices: map[string]bool{"svc": true}}
+	restrictedToNothing := &Client{hub: hub, send: make(chan []byte, 8), readableServices: map[string]bool{}}
+	actionRestricted := &Client{hub: hub, send: make(chan []byte, 8), actionableServices: map[string]bool{"svc": true}}
+	for _, client := range []*Client{unrestricted, restricted, restrictedToNothing, actionRestricted} {
+		hub.register <- client
+	}
+
+	prefix := fmt.Sprintf("%s\nHub.KickRestrictedClients()", packageName)
+
+	// WHEN: the restricted clients are kicked.
+	hub.KickRestrictedClients()
+
+	// THEN: only clients with a permitted-service set are kicked.
+	assertKicked(t, hub, prefix,
+		[]*Client{restricted, restrictedToNothing, actionRestricted},
+		[]*Client{unrestricted},
+	)
 }

@@ -192,13 +192,17 @@ func (api *API) httpUserUpdate(w http.ResponseWriter, r *http.Request) {
 	// Password change or disable ends every session of the user.
 	if request.Password != nil ||
 		(request.Enabled != nil && !*request.Enabled) {
-		if err := api.auth.Sessions.RevokeUser(r.Context(), userID); err != nil {
+		ctx, cancel := detachedContext(r)
+		defer cancel()
+		if err := api.auth.Sessions.RevokeUser(ctx, userID); err != nil {
 			logx.Error(err, logFrom, true)
 		}
 	}
 
-	// Memberships/enabled state may have changed the user's permissions.
-	api.kickWebSocketClients()
+	// Password/enabled/group changes affect only this user - kick just their clients.
+	if request.Password != nil || request.Enabled != nil || request.Groups != nil {
+		api.kickUserWebSocketClients(userID)
+	}
 
 	api.writeJSON(w, user, logFrom)
 }
@@ -221,11 +225,13 @@ func (api *API) httpUserDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := api.auth.Sessions.RevokeUser(r.Context(), userID); err != nil {
+	ctx, cancel := detachedContext(r)
+	defer cancel()
+	if err := api.auth.Sessions.RevokeUser(ctx, userID); err != nil {
 		logx.Error(err, logFrom, true)
 	}
 
-	api.kickWebSocketClients()
+	api.kickUserWebSocketClients(userID)
 
 	w.WriteHeader(http.StatusNoContent)
 }

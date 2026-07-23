@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/release-argus/Argus/auth/rbac"
 )
@@ -85,24 +86,11 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 		},
 		{
-			name: "UpdateUser/admin-membership check fails",
-			setup: func(t *testing.T, store *Store) {
-				mustCreateUser(t, store, "target", "")
-			},
-			pattern: `AND u.id = ?`,
-			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
-				_, err := store.UpdateUser(t.Context(), user.UserID,
-					UserPatch{Enabled: &disabled})
-				return err
-			},
-		},
-		{
-			name: "UpdateUser/other-admin count fails",
+			name: "UpdateUser/admin-status check fails",
 			setup: func(t *testing.T, store *Store) {
 				mustCreateUser(t, store, "target", "", GroupAdmin)
 			},
-			pattern: `AND u.id != ?`,
+			pattern: `SUM(u.id = ?)`,
 			invoke: func(t *testing.T, store *Store) error {
 				user, _ := store.LocalCredentials(t.Context(), "target")
 				_, err := store.UpdateUser(t.Context(), user.UserID,
@@ -196,22 +184,11 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 		},
 		{
-			name: "DeleteUser/admin-membership check fails",
-			setup: func(t *testing.T, store *Store) {
-				mustCreateUser(t, store, "target", "")
-			},
-			pattern: `AND u.id = ?`,
-			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
-				return store.DeleteUser(t.Context(), user.UserID)
-			},
-		},
-		{
-			name: "DeleteUser/other-admin count fails",
+			name: "DeleteUser/admin-status check fails",
 			setup: func(t *testing.T, store *Store) {
 				mustCreateUser(t, store, "target", "", GroupAdmin)
 			},
-			pattern: `AND u.id != ?`,
+			pattern: `SUM(u.id = ?)`,
 			invoke: func(t *testing.T, store *Store) error {
 				user, _ := store.LocalCredentials(t.Context(), "target")
 				return store.DeleteUser(t.Context(), user.UserID)
@@ -289,6 +266,14 @@ func TestStore__faultInjection(t *testing.T) {
 			pattern: `DELETE FROM sessions WHERE user_id`,
 			invoke: func(t *testing.T, store *Store) error {
 				return store.ResetUserPassword(t.Context(), "target", "new")
+			},
+		},
+		{
+			name:    "UserWithGrants/query fails",
+			pattern: `LEFT JOIN group_permissions gp ON gp.group_id = ug.group_id`,
+			invoke: func(t *testing.T, store *Store) error {
+				_, _, err := store.UserWithGrants(t.Context(), "any")
+				return err
 			},
 		},
 		// groups.go
@@ -429,12 +414,76 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 		},
 		{
+			name: "RenameServiceScopeRefs/rename fails",
+			setup: func(t *testing.T, store *Store) {
+				mustCreateGroup(t, store, "scoped",
+					serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "old-name"))
+			},
+			pattern: `UPDATE OR REPLACE group_permissions`,
+			invoke: func(t *testing.T, store *Store) error {
+				_, err := store.RenameServiceScopeRefs(t.Context(), "old-name", "new-name")
+				return err
+			},
+		},
+		{
+			name: "UndoServiceScopeMove/repoint fails",
+			setup: func(t *testing.T, store *Store) {
+				mustCreateGroup(t, store, "scoped",
+					serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "old-name"))
+			},
+			pattern: `AND group_id = ? AND permission_id = ?`,
+			invoke: func(t *testing.T, store *Store) error {
+				move, err := store.RenameServiceScopeRefs(t.Context(), "old-name", "new-name")
+				if err != nil {
+					return err
+				}
+				return store.UndoServiceScopeMove(t.Context(), move)
+			},
+		},
+		{
+			name: "UndoServiceScopeMove/absorbed grant restore fails",
+			setup: func(t *testing.T, store *Store) {
+				mustCreateGroup(t, store, "collide",
+					serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "old-name"),
+					serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "new-name"))
+			},
+			pattern: `INSERT OR IGNORE INTO group_permissions`,
+			invoke: func(t *testing.T, store *Store) error {
+				move, err := store.RenameServiceScopeRefs(t.Context(), "old-name", "new-name")
+				if err != nil {
+					return err
+				}
+				return store.UndoServiceScopeMove(t.Context(), move)
+			},
+		},
+		{
 			name:         "CreateFirstAdmin/insert row count fails",
 			pattern:      `INSERT INTO users`,
 			rowsAffected: true,
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.CreateFirstAdmin(t.Context(), "root", "", "setup-password")
 				return err
+			},
+		},
+
+		// sessions.go
+		{
+			name: "TrimSessionsForUser/delete fails",
+			setup: func(t *testing.T, store *Store) {
+				mustCreateSessions(t, store, "target", 2)
+			},
+			pattern: `DELETE FROM sessions WHERE token_hash`,
+			invoke: func(t *testing.T, store *Store) error {
+				_, err := store.TrimSessionsForUser(t.Context(), mustUserID(t, store, "target"), 1)
+				return err
+			},
+			wantRolledBack: func(t *testing.T, store *Store) {
+				if got, want := countRows(t, store, "sessions"), 2; got != want {
+					t.Errorf(
+						"%s\nsession deleted despite the failure\ngot:  %d\nwant: %d",
+						packageName, got, want,
+					)
+				}
 			},
 		},
 
@@ -653,6 +702,28 @@ func TestSeedGroups__newPermissionGrantError(t *testing.T) {
 	}
 }
 
+// mustCreateSessions creates username with count sessions, oldest first.
+func mustCreateSessions(t *testing.T, store *Store, username string, count int) {
+	t.Helper()
+
+	user := mustCreateUser(t, store, username, "")
+	now := timeNow()
+	for i := range count {
+		session := testSession(
+			fmt.Sprintf("%s-%d", username, i),
+			user.ID,
+			now.Add(time.Hour),
+		)
+		session.LastSeenAt = now.Add(time.Duration(i) * time.Minute)
+		if err := store.InsertSession(t.Context(), session); err != nil {
+			t.Fatalf(
+				"%s\nInsertSession(%d) failed: %v",
+				packageName, i, err,
+			)
+		}
+	}
+}
+
 // reverseSeedOrder puts a starter group ahead of admin, so its grant insert
 // fires before admin's re-sync.
 func reverseSeedOrder(t *testing.T, _ *sql.DB) {
@@ -703,8 +774,10 @@ func TestStore__corruptRows(t *testing.T) {
 			name: "UserByID/corrupt timestamps",
 			setup: func(t *testing.T, store *Store) {
 				mustExec(t, store, `
-					INSERT INTO users (id, username, password_hash, created_at, updated_at)
-					VALUES ('corrupt', 'corrupt', 'x', 'not-a-time', 'not-a-time');`)
+					INSERT INTO users
+						(id, username, password_hash, created_at, updated_at)
+					VALUES
+						('corrupt', 'corrupt', 'x', 'not-a-time', 'not-a-time');`)
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.UserByID(t.Context(), "corrupt")
@@ -715,8 +788,10 @@ func TestStore__corruptRows(t *testing.T) {
 			name: "Users/corrupt updated_at only",
 			setup: func(t *testing.T, store *Store) {
 				mustExec(t, store, fmt.Sprintf(`
-					INSERT INTO users (id, username, password_hash, created_at, updated_at)
-					VALUES ('corrupt', 'corrupt', 'x', '%s', 'not-a-time');`,
+					INSERT INTO users
+						(id, username, password_hash, created_at, updated_at)
+					VALUES
+						('corrupt', 'corrupt', 'x', '%s', 'not-a-time');`,
 					timeNow().Format(timeFormat)))
 			},
 			invoke: func(t *testing.T, store *Store) error {
@@ -729,10 +804,23 @@ func TestStore__corruptRows(t *testing.T) {
 			setup: func(t *testing.T, store *Store) {
 				user := mustCreateUser(t, store, "target", "")
 				dropTable(t, store, "groups")
-				mustExec(t, store, `CREATE TABLE groups (id TEXT, name TEXT, system INTEGER DEFAULT 0);`)
-				mustExec(t, store, `INSERT INTO groups (id, name) VALUES ('gid', NULL);`)
-				mustExec(t, store,
-					fmt.Sprintf(`INSERT INTO user_groups (user_id, group_id) VALUES ('%s', 'gid');`, user.ID))
+				mustExec(t, store, `
+					CREATE TABLE groups
+						(id TEXT, name TEXT, system INTEGER DEFAULT 0);`,
+				)
+				mustExec(t, store, `
+					INSERT INTO groups
+						(id, name)
+					VALUES
+						('gid', NULL);`,
+				)
+				mustExec(t, store, fmt.Sprintf(`
+					INSERT INTO user_groups
+						(user_id, group_id)
+					VALUES
+						('%s', 'gid');`,
+					user.ID,
+				))
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				creds, err := store.LocalCredentials(t.Context(), "target")
@@ -747,9 +835,12 @@ func TestStore__corruptRows(t *testing.T) {
 			name: "Groups/corrupt updated_at only",
 			setup: func(t *testing.T, store *Store) {
 				mustExec(t, store, fmt.Sprintf(`
-					INSERT INTO groups (id, name, created_at, updated_at)
-					VALUES ('corrupt', 'corrupt', '%s', 'not-a-time');`,
-					timeNow().Format(timeFormat)))
+					INSERT INTO groups
+						(id, name, created_at, updated_at)
+					VALUES
+						('corrupt', 'corrupt', '%s', 'not-a-time');`,
+					timeNow().Format(timeFormat),
+				))
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.Groups(t.Context())
@@ -760,8 +851,11 @@ func TestStore__corruptRows(t *testing.T) {
 			name: "GroupByID/corrupt timestamps",
 			setup: func(t *testing.T, store *Store) {
 				mustExec(t, store, `
-					INSERT INTO groups (id, name, created_at, updated_at)
-					VALUES ('corrupt', 'corrupt', 'not-a-time', 'not-a-time');`)
+					INSERT INTO groups
+						(id, name, created_at, updated_at)
+					VALUES
+						('corrupt', 'corrupt', 'not-a-time', 'not-a-time');`,
+				)
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.GroupByID(t.Context(), "corrupt")
@@ -773,10 +867,16 @@ func TestStore__corruptRows(t *testing.T) {
 			setup: func(t *testing.T, store *Store) {
 				user := mustCreateUser(t, store, "target", "", GroupViewer)
 				dropTable(t, store, "group_permissions")
-				mustExec(t, store, `CREATE TABLE group_permissions (group_id TEXT, permission_id INTEGER, scope_type TEXT, scope_ref TEXT);`)
+				mustExec(t, store, `
+					CREATE TABLE group_permissions
+						(group_id TEXT, permission_id INTEGER, scope_type TEXT, scope_ref TEXT);`,
+				)
 				mustExec(t, store, fmt.Sprintf(`
-					INSERT INTO group_permissions (group_id, permission_id, scope_type, scope_ref)
-					SELECT g.id, p.id, 'global', NULL FROM groups g, permissions p
+					INSERT INTO group_permissions
+						(group_id, permission_id, scope_type, scope_ref)
+					SELECT
+						g.id, p.id, 'global', NULL
+					FROM groups g, permissions p
 					WHERE g.name = '%s' LIMIT 1;`, GroupViewer))
 				_ = user
 			},
@@ -794,8 +894,10 @@ func TestStore__corruptRows(t *testing.T) {
 			setup: func(t *testing.T, store *Store) {
 				user := mustCreateUser(t, store, "target", "")
 				mustExec(t, store, fmt.Sprintf(`
-					INSERT INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at)
-					VALUES ('corrupt', '%s', '%s', 'not-a-time', '%s');`,
+					INSERT INTO sessions
+						(token_hash, user_id, created_at, expires_at, last_seen_at)
+					VALUES
+						('corrupt', '%s', '%s', 'not-a-time', '%s');`,
 					user.ID, timeNow().Format(timeFormat), timeNow().Format(timeFormat)))
 			},
 			invoke: func(t *testing.T, store *Store) error {
@@ -808,8 +910,10 @@ func TestStore__corruptRows(t *testing.T) {
 			setup: func(t *testing.T, store *Store) {
 				user := mustCreateUser(t, store, "target", "")
 				mustExec(t, store, fmt.Sprintf(`
-					INSERT INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at)
-					VALUES ('corrupt', '%s', '%s', '%s', 'not-a-time');`,
+					INSERT INTO sessions
+						(token_hash, user_id, created_at, expires_at, last_seen_at)
+					VALUES
+						('corrupt', '%s', '%s', '%s', 'not-a-time');`,
 					user.ID, timeNow().Format(timeFormat), timeNow().Format(timeFormat)))
 			},
 			invoke: func(t *testing.T, store *Store) error {
@@ -822,10 +926,15 @@ func TestStore__corruptRows(t *testing.T) {
 			setup: func(t *testing.T, store *Store) {
 				mustCreateGroup(t, store, "custom")
 				dropTable(t, store, "group_permissions")
-				mustExec(t, store, `CREATE TABLE group_permissions (group_id TEXT, permission_id INTEGER, scope_type TEXT, scope_ref TEXT);`)
 				mustExec(t, store, `
-					INSERT INTO group_permissions (group_id, permission_id, scope_type, scope_ref)
-					SELECT g.id, p.id, 'global', NULL FROM groups g, permissions p
+					CREATE TABLE group_permissions
+						(group_id TEXT, permission_id INTEGER, scope_type TEXT, scope_ref TEXT);`,
+				)
+				mustExec(t, store, `
+					INSERT INTO group_permissions
+						(group_id, permission_id, scope_type, scope_ref)
+					SELECT
+						g.id, p.id, 'global', NULL FROM groups g, permissions p
 					WHERE g.name = 'custom' LIMIT 1;`)
 			},
 			invoke: func(t *testing.T, store *Store) error {
@@ -856,8 +965,11 @@ func TestStore__corruptRows(t *testing.T) {
 						updated_at DATETIME
 					);`,
 				)
-				mustExec(t, store, fmt.Sprintf(
-					`INSERT INTO groups (id, name, created_at, updated_at) VALUES ('gid', NULL, '%s', '%s');`,
+				mustExec(t, store, fmt.Sprintf(`
+					INSERT INTO groups
+						(id, name, created_at, updated_at)
+					VALUES
+						('gid', NULL, '%s', '%s');`,
 					timeNow().Format(timeFormat), timeNow().Format(timeFormat)))
 			},
 			invoke: func(t *testing.T, store *Store) error {
@@ -881,8 +993,11 @@ func TestStore__corruptRows(t *testing.T) {
 						updated_at DATETIME
 					);`,
 				)
-				mustExec(t, store, fmt.Sprintf(
-					`INSERT INTO users (id, username, password_hash, created_at, updated_at) VALUES ('uid', NULL, 'x', '%s', '%s');`,
+				mustExec(t, store, fmt.Sprintf(`
+					INSERT INTO users
+						(id, username, password_hash, created_at, updated_at)
+					VALUES
+						('uid', NULL, 'x', '%s', '%s');`,
 					timeNow().Format(timeFormat), timeNow().Format(timeFormat)))
 			},
 			invoke: func(t *testing.T, store *Store) error {
@@ -891,11 +1006,56 @@ func TestStore__corruptRows(t *testing.T) {
 			},
 		},
 		{
+			name: "UserWithGrants/corrupt timestamps",
+			setup: func(t *testing.T, store *Store) {
+				mustExec(t, store, `
+					INSERT INTO users
+						(id, username, password_hash, created_at, updated_at)
+					VALUES
+						('corrupt', 'corrupt', 'x', 'not-a-time', 'not-a-time');`)
+			},
+			invoke: func(t *testing.T, store *Store) error {
+				_, _, err := store.UserWithGrants(t.Context(), "corrupt")
+				return err
+			},
+		},
+		{
+			name: "RenameServiceScopeRefs/NULL grant group_id",
+			setup: func(t *testing.T, store *Store) {
+				dropTable(t, store, "group_permissions")
+				mustExec(t, store, `
+					CREATE TABLE group_permissions (
+						group_id TEXT,
+						permission_id INTEGER,
+						scope_type TEXT,
+						scope_ref TEXT
+					);`,
+				)
+				mustExec(t, store, `
+					INSERT INTO group_permissions
+						(group_id, permission_id, scope_type, scope_ref)
+					VALUES
+						(NULL, 1, 'service', 'old-name');`)
+			},
+			invoke: func(t *testing.T, store *Store) error {
+				_, err := store.RenameServiceScopeRefs(t.Context(), "old-name", "new-name")
+				return err
+			},
+		},
+		{
 			name: "New/NULL permission row",
 			setup: func(t *testing.T, store *Store) {
 				dropTable(t, store, "permissions")
-				mustExec(t, store, `CREATE TABLE permissions (id INTEGER PRIMARY KEY AUTOINCREMENT, resource TEXT, action TEXT);`)
-				mustExec(t, store, `INSERT INTO permissions (resource, action) VALUES (NULL, NULL);`)
+				mustExec(t, store, `
+				CREATE TABLE permissions
+					(id INTEGER PRIMARY KEY AUTOINCREMENT, resource TEXT, action TEXT);`,
+				)
+				mustExec(t, store, `
+					INSERT INTO permissions
+						(resource, action)
+					VALUES
+						(NULL, NULL);`,
+				)
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := New(t.Context(), store.db)
@@ -994,6 +1154,47 @@ func TestStore__rowsErrOnSecondPass(t *testing.T) {
 					return err
 				}
 				_, err = store.GrantsForUser(t.Context(), creds.UserID)
+				return err
+			},
+		},
+		{
+			name:       "TrimSessionsForUser/over-cap iteration fails",
+			failOnCall: 1,
+			setup: func(t *testing.T, store *Store) {
+				mustCreateSessions(t, store, "target", 2)
+			},
+			invoke: func(t *testing.T, store *Store) error {
+				// Resolve the ID without iterating rows (the fault is armed).
+				_, err := store.TrimSessionsForUser(t.Context(),
+					mustUserID(t, store, "target"), 1)
+				return err
+			},
+		},
+		{
+			name:       "UserWithGrants/iteration fails",
+			failOnCall: 1,
+			setup: func(t *testing.T, store *Store) {
+				mustCreateUser(t, store, "target", "", GroupViewer)
+			},
+			invoke: func(t *testing.T, store *Store) error {
+				_, _, err := store.UserWithGrants(t.Context(),
+					mustUserID(t, store, "target"))
+				return err
+			},
+		},
+		{
+			name:       "RenameServiceScopeRefs/source iteration fails",
+			failOnCall: 1,
+			invoke: func(t *testing.T, store *Store) error {
+				_, err := store.RenameServiceScopeRefs(t.Context(), "old-name", "new-name")
+				return err
+			},
+		},
+		{
+			name:       "RenameServiceScopeRefs/target iteration fails",
+			failOnCall: 2, // 1st: the source scope; 2nd: the target scope.
+			invoke: func(t *testing.T, store *Store) error {
+				_, err := store.RenameServiceScopeRefs(t.Context(), "old-name", "new-name")
 				return err
 			},
 		},

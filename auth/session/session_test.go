@@ -19,10 +19,12 @@ package session
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/auth"
 	"github.com/release-argus/Argus/auth/store"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
@@ -39,7 +41,7 @@ func TestManager_Start(t *testing.T) {
 
 	// WHEN: a session is started.
 	userID, ip, userAgent := "user-1", "127.0.0.1", "go-test"
-	token, err := manager.Start(t.Context(), userID, ip, userAgent)
+	token, evicted, err := manager.Start(t.Context(), userID, ip, userAgent)
 	if err != nil {
 		t.Fatalf(
 			"%s unexpected error: %v",
@@ -55,11 +57,27 @@ func TestManager_Start(t *testing.T) {
 		)
 	}
 
+	// AND: nothing was evicted below the cap.
+	if evicted != nil {
+		t.Errorf(
+			"%s below-cap start should evict nothing\ngot:  %v",
+			prefix, evicted,
+		)
+	}
+
+	// AND: gen stayed put.
+	if got := genOf(t, manager); got != 0 {
+		t.Errorf(
+			"%s gen mismatch\ngot:  %d\nwant: 0",
+			prefix, got,
+		)
+	}
+
 	// AND: only the token's hash is stored, with the configured bounds.
 	if _, ok := fake.sessions[token]; ok {
 		t.Errorf("%s the raw token must never be a storage key", prefix)
 	}
-	stored, ok := fake.sessions[hashToken(token)]
+	stored, ok := fake.sessions[auth.HashToken(token)]
 	if !ok {
 		t.Fatalf("%s session not persisted under the token's hash", prefix)
 	}
@@ -76,7 +94,7 @@ func TestManager_Start(t *testing.T) {
 	}
 
 	// AND: subsequent sessions don't share a token.
-	other, err := manager.Start(t.Context(), userID, ip, userAgent)
+	other, _, err := manager.Start(t.Context(), userID, ip, userAgent)
 	if err != nil || other == token {
 		t.Errorf(
 			"%s tokens must be unique\ngot:  %q twice, err=%v",
@@ -114,7 +132,7 @@ func TestManager_Start__errors(t *testing.T) {
 			manager := New(fake, testConfig())
 
 			// WHEN: a session is started.
-			_, err := manager.Start(t.Context(), "user-1", "", "")
+			_, _, err := manager.Start(t.Context(), "user-1", "", "")
 
 			prefix := fmt.Sprintf(
 				"%s\nManager.Start()",
@@ -129,6 +147,377 @@ func TestManager_Start__errors(t *testing.T) {
 	}
 }
 
+func TestManager_Start__capEvictsOldest(t *testing.T) {
+	// GIVEN: user-b's old session, and user-a already at the session cap.
+	clock := &fakeClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
+	clock.use(t)
+	fake := newFakeStore()
+	manager := New(fake, testConfig())
+	tokenOtherUser := mustStartFor(t, manager, "user-b")
+	tokens := make([]string, DefaultMaxSessionsPerUser)
+	for i := range tokens {
+		clock.advance(time.Minute)
+		tokens[i] = mustStartFor(t, manager, "user-a")
+	}
+
+	prefix := fmt.Sprintf("%s\nManager.Start() at the cap", packageName)
+	genBefore := genOf(t, manager)
+
+	// WHEN: one more session is started for the capped user-a.
+	clock.advance(time.Minute)
+	token, evicted, err := manager.Start(t.Context(), "user-a", "127.0.0.1", "go-test")
+	if err != nil {
+		t.Fatalf(
+			"%s unexpected error: %v",
+			prefix, err,
+		)
+	}
+
+	// THEN: only their least-recently active session was evicted.
+	want := []string{auth.HashToken(tokens[0])}
+	if !slices.Equal(evicted, want) {
+		t.Fatalf(
+			"%s evicted mismatch\ngot:  %v\nwant: %v",
+			prefix, evicted, want,
+		)
+	}
+
+	// AND: gen was bumped once for the eviction, however many it covered.
+	if got, want := genOf(t, manager), genBefore+1; got != want {
+		t.Errorf(
+			"%s gen mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+
+	// AND: the evicted token no longer validates.
+	if _, err := manager.Validate(t.Context(), tokens[0]); !errors.Is(err, ErrInvalidSession) {
+		t.Errorf(
+			"%s evicted session should be invalid\ngot: %v",
+			prefix, err,
+		)
+	}
+
+	// AND: the remaining and new sessions do, as does user-b's
+	// (older than all of user-a's - the cap is per-user).
+	for _, token := range append(append([]string{}, tokens[1:]...), token, tokenOtherUser) {
+		if _, err := manager.Validate(t.Context(), token); err != nil {
+			t.Errorf(
+				"%s surviving session should stay valid\ngot: %v",
+				prefix, err,
+			)
+		}
+	}
+
+	// AND: a trim failure does not fail the login.
+	fake.trimErr = errors.New("trim broke")
+	genBefore = genOf(t, manager)
+	if _, evicted, err := manager.Start(
+		t.Context(),
+		"user-a",
+		"127.0.0.1",
+		"go-test",
+	); err != nil || evicted != nil {
+		t.Errorf(
+			"%s trim failure should not fail Start\ngot:  evicted=%v, err=%v",
+			prefix, evicted, err,
+		)
+	}
+
+	// AND: evicts nothing to bump gen for.
+	if got := genOf(t, manager); got != genBefore {
+		t.Errorf(
+			"%s gen mismatch after a failed trim\ngot:  %d\nwant: %d",
+			prefix, got, genBefore,
+		)
+	}
+}
+
+func TestManager_Start__configuredCapOverridesDefault(t *testing.T) {
+	// GIVEN: a manager configured with a cap of 2 (below the default of 10).
+	clock := &fakeClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
+	clock.use(t)
+	cfg := testConfig()
+	cfg.MaxPerUser = 2
+	manager := New(newFakeStore(), cfg)
+	prefix := fmt.Sprintf("%s\nManager.Start() with MaxPerUser=2", packageName)
+
+	first := mustStartFor(t, manager, "user-a")
+	clock.advance(time.Minute)
+	second := mustStartFor(t, manager, "user-a")
+
+	// WHEN: a third session is started, exceeding the configured cap.
+	clock.advance(time.Minute)
+	third, evicted, err := manager.Start(t.Context(), "user-a", "127.0.0.1", "go-test")
+	if err != nil {
+		t.Fatalf(
+			"%s unexpected error: %v",
+			prefix, err,
+		)
+	}
+
+	// THEN: the cap is 2, not [DefaultMaxSessionsPerUser], so the oldest is evicted.
+	if want := []string{auth.HashToken(first)}; !slices.Equal(evicted, want) {
+		t.Fatalf(
+			"%s evicted mismatch\ngot:  %v\nwant: %v",
+			prefix, evicted, want,
+		)
+	}
+
+	// AND: the evicted session no longer validates.
+	if _, err := manager.Validate(t.Context(), first); !errors.Is(err, ErrInvalidSession) {
+		t.Errorf(
+			"%s evicted session should be invalid\ngot: %v",
+			prefix, err,
+		)
+	}
+
+	// AND: the remaining sessions do.
+	for _, token := range map[string]string{
+		"second": second,
+		"third":  third,
+	} {
+		if _, err := manager.Validate(t.Context(), token); err != nil {
+			t.Errorf("%s surviving session (%s) should stay valid\ngot: %v",
+				prefix, token, err,
+			)
+		}
+	}
+}
+
+func TestManager_Start__revokeDuringInsertDoesNotResurrect(t *testing.T) {
+	// GIVEN: a manager whose store revokes the user mid-Start, between the
+	// session insert and the cache write.
+	clock := &fakeClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
+	clock.use(t)
+	fake := newFakeStore()
+	manager := New(fake, testConfig())
+
+	userID := "user-a"
+	revoked := false
+	fake.onTrim = func() {
+		if revoked {
+			return
+		}
+		revoked = true
+		if err := manager.RevokeUser(t.Context(), userID); err != nil {
+			t.Errorf(
+				"%s RevokeUser() failed: %v",
+				packageName, err,
+			)
+		}
+	}
+
+	// WHEN: a session is started for that user.
+	token := mustStartFor(t, manager, userID)
+
+	// THEN: the revoke wins - the token does not validate from the cache.
+	if _, err := manager.Validate(t.Context(), token); !errors.Is(err, ErrInvalidSession) {
+		t.Errorf(
+			"%s Validate() after a mid-Start revoke\ngot:  %v\nwant: %v",
+			packageName, err, ErrInvalidSession,
+		)
+	}
+
+	// AND: the store holds no session for the user.
+	if _, err := fake.SessionByTokenHash(t.Context(), auth.HashToken(token)); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf(
+			"%s SessionByTokenHash() after a mid-Start revoke\ngot:  %v\nwant: %v",
+			packageName, err, store.ErrNotFound,
+		)
+	}
+}
+
+func TestManager_Validate__revokeDuringLoadDoesNotResurrect(t *testing.T) {
+	// GIVEN: a live session that is no longer cached, whose store revokes it
+	// mid-Validate, between the load and the cache write.
+	clock := &fakeClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
+	clock.use(t)
+	fake := newFakeStore()
+	manager := New(fake, testConfig())
+
+	userID := "user-a"
+	token := mustStartFor(t, manager, userID)
+	tokenHash := auth.HashToken(token)
+	dropFromCache(t, manager, tokenHash)
+
+	revoked := false
+	fake.onLookup = func() {
+		if revoked {
+			return
+		}
+		revoked = true
+		if err := manager.Revoke(t.Context(), token); err != nil {
+			t.Errorf(
+				"%s Revoke() failed: %v",
+				packageName, err,
+			)
+		}
+	}
+
+	// WHEN: the token is validated, so the load races the revoke. The row was
+	// live when it was read, so this call may legitimately succeed.
+	_, _ = manager.Validate(t.Context(), token)
+
+	// THEN: the revoked session was not written back to the cache, so the next
+	// validation refuses rather than serving it until expiry.
+	manager.mu.Lock()
+	_, cached := manager.cache[tokenHash]
+	manager.mu.Unlock()
+	if cached {
+		t.Errorf(
+			"%s\na session revoked mid-load was repopulated into the cache",
+			packageName,
+		)
+	}
+	if _, err := manager.Validate(t.Context(), token); !errors.Is(err, ErrInvalidSession) {
+		t.Errorf(
+			"%s Validate() after a mid-load revoke\ngot:  %v\nwant: %v",
+			packageName, err, ErrInvalidSession,
+		)
+	}
+}
+
+func TestManager_Expired(t *testing.T) {
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	config := testConfig()
+
+	// GIVEN: sessions at various points in their lifetime
+	// (all offsets are from base).
+	tests := []struct {
+		name       string
+		expiresAt  time.Duration
+		lastSeenAt time.Duration
+		now        time.Duration
+		want       bool
+	}{
+		{
+			name:       "live/well within both windows",
+			expiresAt:  config.Lifetime,
+			lastSeenAt: 0,
+			now:        time.Hour,
+			want:       false,
+		},
+		{
+			name:       "live/exactly at the absolute expiry",
+			expiresAt:  config.Lifetime,
+			lastSeenAt: config.Lifetime,
+			now:        config.Lifetime,
+			want:       false,
+		},
+		{
+			name:       "expired/a moment past the absolute expiry",
+			expiresAt:  config.Lifetime,
+			lastSeenAt: config.Lifetime,
+			now:        config.Lifetime + time.Nanosecond,
+			want:       true,
+		},
+		{
+			name:      "live/exactly at the idle deadline",
+			expiresAt: config.Lifetime,
+			now:       config.IdleTimeout,
+			want:      false,
+		},
+		{
+			name:      "expired/a moment past the idle deadline",
+			expiresAt: config.Lifetime,
+			now:       config.IdleTimeout + time.Nanosecond,
+			want:      true,
+		},
+		{
+			name:      "expired/past both windows",
+			expiresAt: time.Hour,
+			now:       2 * config.Lifetime,
+			want:      true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			manager := New(newFakeStore(), config)
+			session := store.Session{
+				ExpiresAt:  base.Add(tc.expiresAt),
+				LastSeenAt: base.Add(tc.lastSeenAt),
+			}
+
+			// WHEN: the session is checked for expiry.
+			got := manager.expired(session, base.Add(tc.now))
+
+			prefix := fmt.Sprintf(
+				"%s Manager.expired(expiresAt=%s, lastSeenAt=%s, now=%s)",
+				packageName, tc.expiresAt, tc.lastSeenAt, tc.now,
+			)
+
+			// THEN: it reads as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s expiry mismatch\ngot:  %t\nwant: %t",
+					prefix, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestManager_Evict(t *testing.T) {
+	// GIVEN: two live sessions.
+	fake := newFakeStore()
+	manager := New(fake, testConfig())
+	token := mustStartFor(t, manager, "user-a")
+	other := mustStartFor(t, manager, "user-b")
+	tokenHash, otherHash := auth.HashToken(token), auth.HashToken(other)
+	genBefore := genOf(t, manager)
+
+	prefix := fmt.Sprintf("%s\nManager.evict()", packageName)
+
+	// WHEN: one of them is evicted.
+	manager.evict(t.Context(), tokenHash)
+
+	// THEN: it left both the cache and the store.
+	if _, ok := manager.cache[tokenHash]; ok {
+		t.Errorf("%s evicted session should leave the cache", prefix)
+	}
+	if _, ok := fake.sessions[tokenHash]; ok {
+		t.Errorf("%s evicted session should leave the store", prefix)
+	}
+
+	// AND: gen was bumped.
+	if got, want := genOf(t, manager), genBefore+1; got != want {
+		t.Errorf(
+			"%s gen mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+
+	// AND: the other session is untouched.
+	if _, err := manager.Validate(t.Context(), other); err != nil {
+		t.Errorf(
+			"%s bystander session should stay valid\ngot: %v",
+			prefix, err,
+		)
+	}
+
+	// AND: a store delete failure is swallowed, and still drops the cache entry.
+	fake.deleteErr = errors.New("delete broke")
+	manager.evict(t.Context(), otherHash)
+	if _, ok := manager.cache[otherHash]; ok {
+		t.Errorf("%s cache entry should go even when the store delete fails", prefix)
+	}
+
+	// AND: evicting an unknown hash does nothing beyond bumping gen.
+	fake.deleteErr = nil
+	genBefore = genOf(t, manager)
+	manager.evict(t.Context(), "never-issued")
+	if got, want := genOf(t, manager), genBefore+1; got != want {
+		t.Errorf(
+			"%s gen mismatch for an unknown hash\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+}
+
 func TestManager_Validate(t *testing.T) {
 	userID := "user-a"
 
@@ -136,12 +525,13 @@ func TestManager_Validate(t *testing.T) {
 	config := testConfig()
 
 	tests := []struct {
-		name      string
-		token     func(t *testing.T, m *Manager, clock *fakeClock) string
-		fromStore bool // Empty the cache so validation hits the store.
-		loadErr   bool
-		wantErr   error
-		errRegex  string
+		name        string
+		token       func(t *testing.T, m *Manager, clock *fakeClock) string
+		fromStore   bool // Empty the cache so validation hits the store.
+		loadErr     bool
+		wantTouches int // Expected last-seen flushes to the store.
+		wantErr     error
+		errRegex    string
 	}{
 		{
 			name: "valid session/cache hit",
@@ -178,13 +568,33 @@ func TestManager_Validate(t *testing.T) {
 			wantErr: ErrInvalidSession,
 		},
 		{
-			name: "idle-expired session",
+			name: "idle-expired session/cache hit",
 			token: func(t *testing.T, m *Manager, clock *fakeClock) string {
 				token := mustStartFor(t, m, userID)
 				clock.advance(config.IdleTimeout + time.Minute)
 				return token
 			},
 			wantErr: ErrInvalidSession,
+		},
+		{
+			name: "idle-expired session/store hit",
+			token: func(t *testing.T, m *Manager, clock *fakeClock) string {
+				token := mustStartFor(t, m, userID)
+				clock.advance(config.IdleTimeout + time.Minute)
+				return token
+			},
+			fromStore: true,
+			wantErr:   ErrInvalidSession,
+		},
+		{
+			name: "stale last-seen/store hit flushes it",
+			token: func(t *testing.T, m *Manager, clock *fakeClock) string {
+				token := mustStartFor(t, m, userID)
+				clock.advance(touchInterval + time.Minute)
+				return token
+			},
+			fromStore:   true,
+			wantTouches: 1,
 		},
 		{
 			name: "activity slides the idle window",
@@ -202,6 +612,7 @@ func TestManager_Validate(t *testing.T) {
 				clock.advance(time.Minute + config.IdleTimeout/2)
 				return token
 			},
+			wantTouches: 2,
 		},
 		{
 			name: "store load failure is not an auth failure",
@@ -266,6 +677,14 @@ func TestManager_Validate(t *testing.T) {
 					prefix, got, want,
 				)
 			}
+
+			// AND: the last-seen time was flushed as often as expected.
+			if got, want := fake.touches, tc.wantTouches; got != want {
+				t.Errorf(
+					"%s flush count mismatch\ngot:  %d\nwant: %d",
+					prefix, got, want,
+				)
+			}
 		})
 	}
 }
@@ -280,6 +699,7 @@ func TestManager_Validate__expiryDeletes(t *testing.T) {
 	clock.advance(testConfig().IdleTimeout + time.Minute)
 
 	prefix := fmt.Sprintf("%s\nManager.Validate() expiry cleanup", packageName)
+	genBefore := genOf(t, manager)
 
 	// WHEN: the expired token is validated.
 	if _, err := manager.Validate(t.Context(), token); !errors.Is(err, ErrInvalidSession) {
@@ -297,15 +717,57 @@ func TestManager_Validate__expiryDeletes(t *testing.T) {
 		)
 	}
 
+	// AND: the eviction bumped gen.
+	if got, want := genOf(t, manager), genBefore+1; got != want {
+		t.Errorf(
+			"%s gen mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+
 	// AND: a delete failure on drop is swallowed.
 	token = mustStartFor(t, manager, "user-a")
 	clock.advance(testConfig().IdleTimeout + time.Minute)
 	fake.deleteErr = errors.New("delete broke")
+	genBefore = genOf(t, manager)
 	if _, err := manager.Validate(t.Context(), token); !errors.Is(err, ErrInvalidSession) {
 		t.Errorf(
 			"%s expected ErrInvalidSession despite delete failure, got %v",
 			prefix, err,
 		)
+	}
+
+	// AND: still bumped gen.
+	if got, want := genOf(t, manager), genBefore+1; got != want {
+		t.Errorf(
+			"%s gen mismatch after a failed delete\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+}
+
+func TestManager_Validate__shortIdleTimeout(t *testing.T) {
+	// GIVEN: an idle timeout shorter than [touchInterval], which the config
+	// validator accepts.
+	clock := &fakeClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
+	clock.use(t)
+	fake := newFakeStore()
+	const idleTimeout = time.Minute
+	manager := New(fake, Config{Lifetime: time.Hour, IdleTimeout: idleTimeout})
+	token := mustStartFor(t, manager, "user-a")
+
+	prefix := fmt.Sprintf("%s\nManager.Validate() with a short idle timeout", packageName)
+
+	// WHEN: the session is used continuously, well inside the idle window.
+	for elapsed := 20 * time.Second; elapsed <= 3*idleTimeout; elapsed += 20 * time.Second {
+		clock.advance(20 * time.Second)
+		if _, err := manager.Validate(t.Context(), token); err != nil {
+			// THEN: it never expires - the flush keeps pace with the window.
+			t.Fatalf(
+				"%s expired after %s of continuous use: %v",
+				prefix, elapsed, err,
+			)
+		}
 	}
 }
 
@@ -318,6 +780,7 @@ func TestManager_Validate__touchFlush(t *testing.T) {
 	token := mustStartFor(t, manager, "user-a")
 
 	prefix := fmt.Sprintf("%s\nManager.Validate() touch flushing", packageName)
+	genBefore := genOf(t, manager)
 
 	// WHEN: the session is validated within the touch interval.
 	clock.advance(touchInterval / 2)
@@ -352,7 +815,7 @@ func TestManager_Validate__touchFlush(t *testing.T) {
 			prefix, fake.touches,
 		)
 	}
-	if got := fake.sessions[hashToken(token)].LastSeenAt; !got.Equal(clock.now) {
+	if got := fake.sessions[auth.HashToken(token)].LastSeenAt; !got.Equal(clock.now) {
 		t.Errorf(
 			"%s flushed last-seen mismatch\ngot:  %v\nwant: %v",
 			prefix, got, clock.now,
@@ -368,6 +831,54 @@ func TestManager_Validate__touchFlush(t *testing.T) {
 			prefix, err,
 		)
 	}
+
+	// AND: sliding the window never bumps gen.
+	if got := genOf(t, manager); got != genBefore {
+		t.Errorf(
+			"%s gen mismatch\ngot:  %d\nwant: %d",
+			prefix, got, genBefore,
+		)
+	}
+}
+
+func TestManager_Validate__touchFlushFrequentAccess(t *testing.T) {
+	// GIVEN: a valid session accessed more often than [touchInterval]
+	// (no two consecutive accesses are a full interval apart)
+	clock := &fakeClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
+	loginTime := clock.now
+	clock.use(t)
+	fake := newFakeStore()
+	manager := New(fake, testConfig())
+	token := mustStartFor(t, manager, "user-a")
+
+	prefix := fmt.Sprintf("%s\nManager.Validate() frequent-access flushing", packageName)
+
+	// WHEN: it is validated four times, each half a [touchInterval] after the last.
+	for range 4 {
+		clock.advance(touchInterval / 2)
+		if _, err := manager.Validate(t.Context(), token); err != nil {
+			t.Fatalf(
+				"%s validate failed: %v",
+				prefix, err,
+			)
+		}
+	}
+
+	// THEN: the store was still flushed (once per elapsed [touchInterval]).
+	if fake.touches != 2 {
+		t.Errorf(
+			"%s flush count mismatch\ngot:  %d\nwant: 2",
+			prefix, fake.touches,
+		)
+	}
+
+	// AND: the persisted last-seen advanced past the login time.
+	if got := fake.sessions[auth.HashToken(token)].LastSeenAt; !got.After(loginTime) {
+		t.Errorf(
+			"%s persisted last-seen should have advanced past login:\ngot:  %v\nwant: %v",
+			prefix, got, loginTime,
+		)
+	}
 }
 
 func TestManager_Validate__concurrent(t *testing.T) {
@@ -381,6 +892,7 @@ func TestManager_Validate__concurrent(t *testing.T) {
 	revoked := tokens[len(tokens)-1]
 
 	prefix := fmt.Sprintf("%s\nManager.Validate() concurrently", packageName)
+	genBefore := genOf(t, manager)
 
 	// WHEN: the sessions are validated concurrently while one is revoked.
 	var wg sync.WaitGroup
@@ -400,7 +912,15 @@ func TestManager_Validate__concurrent(t *testing.T) {
 	close(start)
 	wg.Wait()
 
-	// THEN: unrevoked sessions still validate.
+	// THEN: gen moved exactly once.
+	if got, want := genOf(t, manager), genBefore+1; got != want {
+		t.Errorf(
+			"%s gen mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+
+	// AND: unrevoked sessions still validate.
 	if _, err := manager.Validate(t.Context(), tokens[0]); err != nil {
 		t.Errorf(
 			"%s live session should stay valid\ngot: %v",
@@ -452,6 +972,138 @@ func TestManager_Validate__tamperedToken(t *testing.T) {
 	}
 }
 
+func TestManager_Alive(t *testing.T) {
+	userID := "user-a"
+
+	// GIVEN: sessions in various lifecycle states.
+	config := testConfig()
+
+	tests := []struct {
+		name      string
+		tokenHash func(t *testing.T, m *Manager, clock *fakeClock) string
+		fromStore bool // Empty the cache so the check hits the store.
+		loadErr   bool
+		want      bool
+	}{
+		{
+			name: "live/cache hit",
+			tokenHash: func(t *testing.T, m *Manager, _ *fakeClock) string {
+				return auth.HashToken(mustStartFor(t, m, userID))
+			},
+			want: true,
+		},
+		{
+			name: "live/store hit after restart",
+			tokenHash: func(t *testing.T, m *Manager, _ *fakeClock) string {
+				return auth.HashToken(mustStartFor(t, m, userID))
+			},
+			fromStore: true,
+			want:      true,
+		},
+		{
+			name: "revoked session",
+			tokenHash: func(t *testing.T, m *Manager, _ *fakeClock) string {
+				token := mustStartFor(t, m, userID)
+				if err := m.Revoke(t.Context(), token); err != nil {
+					t.Fatalf(
+						"%s\nsetup Revoke failed: %v",
+						packageName, err,
+					)
+				}
+				return auth.HashToken(token)
+			},
+			want: false,
+		},
+		{
+			name: "absolutely expired session",
+			tokenHash: func(t *testing.T, m *Manager, clock *fakeClock) string {
+				token := mustStartFor(t, m, userID)
+				clock.advance(config.Lifetime + time.Minute)
+				return auth.HashToken(token)
+			},
+			want: false,
+		},
+		{
+			name: "idle-expired session",
+			tokenHash: func(t *testing.T, m *Manager, clock *fakeClock) string {
+				token := mustStartFor(t, m, userID)
+				clock.advance(config.IdleTimeout + time.Minute)
+				return auth.HashToken(token)
+			},
+			want: false,
+		},
+		{
+			name: "check does not slide the idle window",
+			tokenHash: func(t *testing.T, m *Manager, clock *fakeClock) string {
+				token := mustStartFor(t, m, userID)
+				// Halfway to idle expiry, a check, then past the rest of the
+				// window: dead only if the check did not slide it.
+				clock.advance(config.IdleTimeout / 2)
+				if !m.Alive(t.Context(), auth.HashToken(token)) {
+					t.Fatalf(
+						"%s\nmid-window check should read alive",
+						packageName,
+					)
+				}
+				clock.advance(time.Minute + config.IdleTimeout/2)
+				return auth.HashToken(token)
+			},
+			want: false,
+		},
+		{
+			name: "unknown hash",
+			tokenHash: func(_ *testing.T, _ *Manager, _ *fakeClock) string {
+				return "never-issued"
+			},
+			want: false,
+		},
+		{
+			name: "store failure reads as alive",
+			tokenHash: func(t *testing.T, m *Manager, _ *fakeClock) string {
+				return auth.HashToken(mustStartFor(t, m, userID))
+			},
+			fromStore: true,
+			loadErr:   true,
+			want:      true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're modifying shared vars.
+
+			clock := &fakeClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
+			clock.use(t)
+			fake := newFakeStore()
+			manager := New(fake, config)
+
+			tokenHash := tc.tokenHash(t, manager, clock)
+			if tc.fromStore {
+				manager.cache = make(map[string]store.Session)
+			}
+			if tc.loadErr {
+				fake.loadErr = errors.New("load broke")
+			}
+
+			// WHEN: the session's liveness is checked.
+			got := manager.Alive(t.Context(), tokenHash)
+
+			prefix := fmt.Sprintf(
+				"%s Manager.Alive(%q)",
+				packageName, tokenHash,
+			)
+
+			// THEN: it reads as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s liveness mismatch\ngot:  %t\nwant: %t",
+					prefix, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
 func TestManager_Revoke(t *testing.T) {
 	// GIVEN: a live session.
 	fake := newFakeStore()
@@ -459,6 +1111,7 @@ func TestManager_Revoke(t *testing.T) {
 	token := mustStartFor(t, manager, "user-a")
 
 	prefix := fmt.Sprintf("%s\nManager.Revoke()", packageName)
+	genBefore := genOf(t, manager)
 
 	// WHEN: it is revoked.
 	if err := manager.Revoke(t.Context(), token); err != nil {
@@ -476,10 +1129,26 @@ func TestManager_Revoke(t *testing.T) {
 		)
 	}
 
-	// AND: a store failure is surfaced.
+	// AND: gen was bumped.
+	if got, want := genOf(t, manager), genBefore+1; got != want {
+		t.Errorf(
+			"%s gen mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+
+	// AND: a store failure is surfaced,.
 	fake.deleteErr = errors.New("delete broke")
+	genBefore = genOf(t, manager)
 	if err := manager.Revoke(t.Context(), token); err == nil {
 		t.Errorf("%s expected an error from a failing store", prefix)
+	}
+	// AND: gen is bumped.
+	if got, want := genOf(t, manager), genBefore+1; got != want {
+		t.Errorf(
+			"%s gen mismatch after a failed delete\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
 	}
 }
 
@@ -492,6 +1161,7 @@ func TestManager_RevokeUser(t *testing.T) {
 	tokenB := mustStartFor(t, manager, "user-b")
 
 	prefix := fmt.Sprintf("%s\nManager.RevokeUser()", packageName)
+	genBefore := genOf(t, manager)
 
 	// WHEN: user-a's sessions are revoked.
 	if err := manager.RevokeUser(t.Context(), "user-a"); err != nil {
@@ -519,6 +1189,14 @@ func TestManager_RevokeUser(t *testing.T) {
 		)
 	}
 
+	// AND: gen was bumped once for the sweep, not once per session.
+	if got, want := genOf(t, manager), genBefore+1; got != want {
+		t.Errorf(
+			"%s gen mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+
 	// AND: a store failure is surfaced.
 	fake.deleteErr = errors.New("delete broke")
 	if err := manager.RevokeUser(t.Context(), "user-b"); err == nil {
@@ -537,6 +1215,7 @@ func TestManager_PruneExpired(t *testing.T) {
 	live := mustStartFor(t, manager, "user-a")
 
 	prefix := fmt.Sprintf("%s\nManager.PruneExpired()", packageName)
+	genBefore := genOf(t, manager)
 
 	// WHEN: expired sessions are pruned.
 	if err := manager.PruneExpired(t.Context()); err != nil {
@@ -553,13 +1232,21 @@ func TestManager_PruneExpired(t *testing.T) {
 			prefix, len(fake.sessions), len(manager.cache),
 		)
 	}
-	if _, ok := manager.cache[hashToken(expired)]; ok {
+	if _, ok := manager.cache[auth.HashToken(expired)]; ok {
 		t.Errorf("%s expired session should leave the cache", prefix)
 	}
 	if _, err := manager.Validate(t.Context(), live); err != nil {
 		t.Errorf(
 			"%s live session should survive\ngot: %v",
 			prefix, err,
+		)
+	}
+
+	// AND: gen was bumped once for the sweep, not once per session.
+	if got, want := genOf(t, manager), genBefore+1; got != want {
+		t.Errorf(
+			"%s gen mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
 		)
 	}
 

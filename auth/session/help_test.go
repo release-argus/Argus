@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -75,9 +76,29 @@ type fakeStore struct {
 	loadErr   error
 	touchErr  error
 	deleteErr error
+	trimErr   error
 
 	touches int // TouchSession calls.
 	deletes int // DeleteSession calls.
+
+	// onTrim fires before [Store.TrimSessionsForUser] locks, to drive actions
+	// between [Manager.Start]'s insert and its cache write.
+	onTrim func()
+
+	// onLookup fires after [Store.SessionByTokenHash] reads the row and releases
+	// the lock, to drive actions between [Manager.Validate]'s load and its cache
+	// write.
+	onLookup func()
+}
+
+// dropFromCache forgets tokenHash, so the next Validate loads from the store.
+func dropFromCache(t *testing.T, manager *Manager, tokenHash string) {
+	t.Helper()
+
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
+	delete(manager.cache, tokenHash)
 }
 
 func newFakeStore() *fakeStore {
@@ -97,14 +118,18 @@ func (f *fakeStore) InsertSession(_ context.Context, session store.Session) erro
 
 func (f *fakeStore) SessionByTokenHash(_ context.Context, tokenHash string) (*store.Session, error) {
 	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	if f.loadErr != nil {
-		return nil, f.loadErr
-	}
+	loadErr := f.loadErr
 	session, ok := f.sessions[tokenHash]
+	f.mu.Unlock()
+
+	if loadErr != nil {
+		return nil, loadErr
+	}
 	if !ok {
 		return nil, store.ErrNotFound
+	}
+	if f.onLookup != nil {
+		f.onLookup()
 	}
 	return &session, nil
 }
@@ -165,6 +190,40 @@ func (f *fakeStore) DeleteExpiredSessions(_ context.Context, now time.Time) erro
 	return nil
 }
 
+func (f *fakeStore) TrimSessionsForUser(_ context.Context, userID string, keep int) ([]string, error) {
+	if f.onTrim != nil {
+		f.onTrim()
+	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.trimErr != nil {
+		return nil, f.trimErr
+	}
+
+	var sessions []store.Session
+	for _, session := range f.sessions {
+		if session.UserID == userID {
+			sessions = append(sessions, session)
+		}
+	}
+	// Most-recently active first.
+	slices.SortFunc(sessions, func(a, b store.Session) int {
+		if c := b.LastSeenAt.Compare(a.LastSeenAt); c != 0 {
+			return c
+		}
+		return b.CreatedAt.Compare(a.CreatedAt)
+	})
+
+	var evicted []string
+	for _, session := range sessions[min(keep, len(sessions)):] {
+		delete(f.sessions, session.TokenHash)
+		evicted = append(evicted, session.TokenHash)
+	}
+	return evicted, nil
+}
+
 // testConfig is a week of idle inside a month of lifetime.
 func testConfig() Config {
 	return Config{
@@ -173,11 +232,21 @@ func testConfig() Config {
 	}
 }
 
+// genOf reads the Manager's cache generation under its lock.
+func genOf(t *testing.T, manager *Manager) uint64 {
+	t.Helper()
+
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
+	return manager.gen
+}
+
 // mustStartFor starts a session for userID, failing the test on error.
 func mustStartFor(t *testing.T, manager *Manager, userID string) string {
 	t.Helper()
 
-	token, err := manager.Start(t.Context(), userID, "127.0.0.1", "go-test")
+	token, _, err := manager.Start(t.Context(), userID, "127.0.0.1", "go-test")
 	if err != nil {
 		t.Fatalf(
 			"%s Start(%q) failed: %v",

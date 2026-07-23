@@ -27,7 +27,7 @@ import (
 	"github.com/release-argus/Argus/auth/rbac"
 )
 
-// ErrInvalidCredentials is returned for every authentication failure.
+// ErrInvalidCredentials is returned for every credential failure.
 var ErrInvalidCredentials = errors.New("invalid credentials")
 
 // HashToken returns the hex-encoded SHA-256 of an opaque secret, used as its

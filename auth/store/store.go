@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package store persists the authentication and authorisation entities
-// (users, groups, permission grants, sessions) in the
+// (users, groups, permission grants, sessions, API tokens) in the
 // Argus SQLite database, and owns their schema migrations.
 //
 // Deletions cascade explicitly inside transactions rather than relying on
@@ -158,6 +158,9 @@ var migrations = []migration{
 			expires_at   DATETIME,
 			last_used_at DATETIME
 		);`,
+		`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id, last_seen_at DESC);`,
+		`CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions (expires_at);`,
+		`CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens (user_id, created_at DESC);`,
 	}},
 }
 

@@ -102,23 +102,17 @@ func (s *Store) Groups(ctx context.Context) ([]Group, error) {
 	}
 
 	// Attach grants.
-	grants, err := s.db.QueryContext(ctx, `
+	if err := s.queryGrants(ctx, `
 		SELECT gp.group_id, p.resource, p.action, gp.scope_type, gp.scope_ref
 		FROM group_permissions gp
 		JOIN permissions p ON p.id = gp.permission_id
 		ORDER BY p.resource, p.action, gp.scope_type, gp.scope_ref;`,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("list grants: %w", err)
-	}
-	defer grants.Close()
-
-	if err := collectGrants(grants, func(groupID string, grant rbac.Grant) {
-		if i, ok := index[groupID]; ok {
-			groups[i].Grants = append(groups[i].Grants, grant)
-		}
-	}); err != nil {
-		return nil, fmt.Errorf("iterate grants: %w", err)
+		func(groupID string, grant rbac.Grant) {
+			if i, ok := index[groupID]; ok {
+				groups[i].Grants = append(groups[i].Grants, grant)
+			}
+		}); err != nil {
+		return nil, fmt.Errorf("attach grants: %w", err)
 	}
 
 	return groups, nil
@@ -144,23 +138,16 @@ func (s *Store) GroupByID(ctx context.Context, id string) (*Group, error) {
 		return nil, err
 	}
 
-	grants, err := s.db.QueryContext(ctx, `
+	if err := s.queryGrants(ctx, `
 		SELECT gp.group_id, p.resource, p.action, gp.scope_type, gp.scope_ref
 		FROM group_permissions gp
 		JOIN permissions p ON p.id = gp.permission_id
 		WHERE gp.group_id = ?
 		ORDER BY p.resource, p.action, gp.scope_type, gp.scope_ref;`,
-		id,
-	)
-	if err != nil {
+		func(_ string, grant rbac.Grant) {
+			group.Grants = append(group.Grants, grant)
+		}, id); err != nil {
 		return nil, fmt.Errorf("list group's grants: %w", err)
-	}
-	defer grants.Close()
-
-	if err := collectGrants(grants, func(_ string, grant rbac.Grant) {
-		group.Grants = append(group.Grants, grant)
-	}); err != nil {
-		return nil, fmt.Errorf("iterate group's grants: %w", err)
 	}
 
 	return group, nil
@@ -255,10 +242,28 @@ func (s *Store) DeleteGroup(ctx context.Context, id string) error {
 	})
 }
 
+// UserIDsInGroup returns the IDs of the users belonging to the group with id.
+func (s *Store) UserIDsInGroup(ctx context.Context, id string) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT user_id
+		FROM user_groups
+		WHERE group_id = ?
+		ORDER BY user_id;`,
+		id,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list group's users: %w", err)
+	}
+	defer rows.Close()
+
+	return scanColumn[string](rows, "group's users")
+}
+
 // GrantsForUser returns the union of the grants of every group userID
 // belongs to (Disabled users get no grants).
 func (s *Store) GrantsForUser(ctx context.Context, userID string) ([]rbac.Grant, error) {
-	rows, err := s.db.QueryContext(ctx, `
+	grants := []rbac.Grant{}
+	if err := s.queryGrants(ctx, `
 		SELECT gp.group_id, p.resource, p.action, gp.scope_type, gp.scope_ref
 		FROM user_groups ug
 		JOIN users u              ON u.id = ug.user_id
@@ -266,35 +271,148 @@ func (s *Store) GrantsForUser(ctx context.Context, userID string) ([]rbac.Grant,
 		JOIN permissions p        ON p.id = gp.permission_id
 		WHERE ug.user_id = ? AND u.enabled = 1
 		ORDER BY p.resource, p.action, gp.scope_type, gp.scope_ref;`,
-		userID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("list user's grants: %w", err)
-	}
-	defer rows.Close()
-
-	var grants []rbac.Grant
-	if err := collectGrants(
-		rows,
 		func(_ string, grant rbac.Grant) {
 			grants = append(grants, grant)
-		},
-	); err != nil {
-		return nil, fmt.Errorf("iterate user's grants: %w", err)
+		}, userID); err != nil {
+		return nil, fmt.Errorf("list user's grants: %w", err)
 	}
 
 	return grants, nil
 }
 
-// RenameServiceScopeRefs points service-scoped grants at a service's new ID.
-func (s *Store) RenameServiceScopeRefs(ctx context.Context, oldServiceID, newServiceID string) error {
-	if _, err := s.db.ExecContext(ctx,
-		`UPDATE OR REPLACE group_permissions SET scope_ref = ? WHERE scope_type = ? AND scope_ref = ?;`,
-		newServiceID, string(rbac.ScopeService), oldServiceID,
-	); err != nil {
-		return fmt.Errorf("rename service scope refs: %w", err)
+// scopedGrantKey identifies one grant row within a scope.
+type scopedGrantKey struct {
+	groupID      string
+	permissionID int64
+}
+
+// ServiceScopeMove records what a rename repointed, so [Store.UndoServiceScopeMove]
+// can put it back without disturbing grants the target already held.
+type ServiceScopeMove struct {
+	from, to string
+	moved    []scopedGrantKey // Repointed by the rename.
+	merged   []scopedGrantKey // Absorbed into a row the target already held.
+}
+
+// From returns the service ID the grants were moved from.
+func (m *ServiceScopeMove) From() string { return m.from }
+
+// To returns the service ID the grants were moved to.
+func (m *ServiceScopeMove) To() string { return m.to }
+
+// scopedGrantKeys returns the grants of a service scope, keyed within it.
+func scopedGrantKeys(
+	ctx context.Context,
+	tx *sql.Tx,
+	serviceID string,
+) ([]scopedGrantKey, error) {
+	rows, err := tx.QueryContext(ctx, `
+		SELECT group_id, permission_id
+		FROM group_permissions
+		WHERE scope_type = ? AND scope_ref = ?;`,
+		string(rbac.ScopeService), serviceID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list service-scoped grants: %w", err)
 	}
-	return nil
+	defer rows.Close()
+
+	var keys []scopedGrantKey
+	for rows.Next() {
+		var key scopedGrantKey
+		if err := rows.Scan(&key.groupID, &key.permissionID); err != nil {
+			return nil, fmt.Errorf("scan service-scoped grant: %w", err)
+		}
+		keys = append(keys, key)
+	}
+	if err := rowsErr(rows); err != nil {
+		return nil, fmt.Errorf("iterate service-scoped grants: %w", err)
+	}
+
+	return keys, nil
+}
+
+// RenameServiceScopeRefs points service-scoped grants at a service's new ID,
+// returning what it moved. Grants the new ID already held are absorbed, since
+// after the rename both IDs name the same service.
+func (s *Store) RenameServiceScopeRefs(
+	ctx context.Context, oldServiceID, newServiceID string,
+) (*ServiceScopeMove, error) {
+	move := &ServiceScopeMove{from: oldServiceID, to: newServiceID}
+
+	if err := s.inTx(ctx, func(tx *sql.Tx) error {
+		moved, err := scopedGrantKeys(ctx, tx, oldServiceID)
+		if err != nil {
+			return err
+		}
+		held, err := scopedGrantKeys(ctx, tx, newServiceID)
+		if err != nil {
+			return err
+		}
+
+		heldKeys := make(map[scopedGrantKey]bool, len(held))
+		for _, key := range held {
+			heldKeys[key] = true
+		}
+		for _, key := range moved {
+			if heldKeys[key] {
+				move.merged = append(move.merged, key)
+			}
+		}
+		move.moved = moved
+
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE OR REPLACE group_permissions
+			SET scope_ref = ?
+			WHERE scope_type = ? AND scope_ref = ?;`,
+			newServiceID,
+			string(rbac.ScopeService), oldServiceID,
+		); err != nil {
+			return fmt.Errorf("rename service scope refs: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return move, nil
+}
+
+// UndoServiceScopeMove reverses a [Store.RenameServiceScopeRefs], restoring the
+// rows it absorbed. Only the rows that move recorded are touched, so grants the
+// target held beforehand keep their scope.
+func (s *Store) UndoServiceScopeMove(ctx context.Context, move *ServiceScopeMove) error {
+	if move == nil || len(move.moved) == 0 {
+		return nil
+	}
+
+	return s.inTx(ctx, func(tx *sql.Tx) error {
+		for _, key := range move.moved {
+			if _, err := tx.ExecContext(ctx, `
+				UPDATE group_permissions
+				SET scope_ref = ?
+				WHERE scope_type = ? AND scope_ref = ?
+					AND group_id = ? AND permission_id = ?;`,
+				move.from,
+				string(rbac.ScopeService), move.to,
+				key.groupID, key.permissionID,
+			); err != nil {
+				return fmt.Errorf("undo service scope move: %w", err)
+			}
+		}
+		// Absorbed rows were deleted by the rename, so re-create them.
+		for _, key := range move.merged {
+			if _, err := tx.ExecContext(ctx, `
+				INSERT OR IGNORE INTO group_permissions
+					(group_id, permission_id, scope_type, scope_ref)
+				VALUES (?, ?, ?, ?);`,
+				key.groupID, key.permissionID, string(rbac.ScopeService), move.to,
+			); err != nil {
+				return fmt.Errorf("restore absorbed service scope grants: %w", err)
+			}
+		}
+		return nil
+	})
 }
 
 // DeleteServiceScopeRefs prunes service-scoped grants for a deleted service.
@@ -356,6 +474,21 @@ func groupIDByName(ctx context.Context, tx *sql.Tx, name string) (string, error)
 		return "", fmt.Errorf("look up group %q: %w", name, err)
 	}
 	return id, nil
+}
+
+// queryGrants runs query and invokes fn for each scanned (group_id, grant) row.
+func (s *Store) queryGrants(
+	ctx context.Context,
+	query string,
+	fn func(groupID string, grant rbac.Grant),
+	args ...any,
+) error {
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return err //nolint:wrapcheck // Callers add context.
+	}
+	defer rows.Close()
+	return collectGrants(rows, fn)
 }
 
 // collectGrants scans (group_id, grant) rows, invoking fn for each.
@@ -458,7 +591,8 @@ func insertGroupGrants(
 		}
 
 		if _, err := tx.ExecContext(ctx, `
-			INSERT OR IGNORE INTO group_permissions (group_id, permission_id, scope_type, scope_ref)
+			INSERT OR IGNORE INTO group_permissions
+				(group_id, permission_id, scope_type, scope_ref)
 			VALUES (?, ?, ?, ?);`,
 			groupID, permissionID, string(grant.Scope.Type), grant.Scope.Ref,
 		); err != nil {
