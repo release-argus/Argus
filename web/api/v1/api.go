@@ -41,6 +41,8 @@ type API struct {
 	trustedProxies []netip.Prefix
 	// untrustedProxyWarning bounds [API.warnUntrustedProxy] to one log line.
 	untrustedProxyWarning sync.Once
+	// originMismatchWarning bounds [API.warnOriginMismatch] to one log line.
+	originMismatchWarning sync.Once
 
 	serviceOpMu sync.Mutex // Guards [API.serviceOps].
 	// serviceOps is a per-service-ID operation lock. Create/Edit/Delete take it

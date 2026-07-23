@@ -17,6 +17,7 @@ package v1
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -263,17 +264,78 @@ func (api *API) contextForUser(
 
 // originCheckMiddleware rejects requests whose Origin header disagrees with
 // the request Host - CSRF.
-func originCheckMiddleware(next http.Handler) http.Handler {
+func (api *API) originCheckMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if origin := r.Header.Get("Origin"); origin != "" && origin != "null" {
-			parsed, err := url.Parse(origin)
-			if err != nil || parsed.Host != r.Host {
+		// Sec-Fetch-Site is set by the browser and cannot be forged by a page.
+		if site := r.Header.Get("Sec-Fetch-Site"); site != "" &&
+			site != "same-origin" &&
+			site != "none" {
+			api.warnOriginMismatch(r, "Sec-Fetch-Site: "+site)
+			failRequest(&w, errForbidden, http.StatusForbidden)
+			return
+		}
+
+		switch origin := r.Header.Get("Origin"); origin {
+		case "":
+			// No Origin header (same-origin, or non-browser client).
+		case "null":
+			// Opaque origin (sandboxed iframe, data:/file: context) - untrusted
+			// for state-changing requests.
+			if !safeMethod(r.Method) {
+				failRequest(&w, errForbidden, http.StatusForbidden)
+				return
+			}
+		default:
+			if !api.originMatchesHost(r, origin) {
+				api.warnOriginMismatch(r, origin)
 				failRequest(&w, errForbidden, http.StatusForbidden)
 				return
 			}
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// warnOriginMismatch logs, once, that a request was refused for disagreeing
+// with the host it was addressed to. A proxy that rewrites Host (rather than
+// preserving it) trips this for every request, and the 403 body alone gives an
+// operator nothing to go on.
+func (api *API) warnOriginMismatch(r *http.Request, origin string) {
+	api.originMismatchWarning.Do(func() {
+		msg := fmt.Sprintf(
+			"refused %q: its Origin disagrees with the requested host %q",
+			origin, r.Host,
+		)
+		if len(api.trustedProxies) == 0 {
+			msg += " - if a reverse proxy rewrites Host, list it in" +
+				" settings.web.trusted_proxies so X-Forwarded-Host is honoured"
+		}
+		logx.Warn(msg, logx.LogFrom{Primary: "web"}, true)
+	})
+}
+
+// originMatchesHost reports whether origin's host is the one the request was
+// addressed to. Trusted proxies may override the host they front via
+// X-Forwarded-Host.
+func (api *API) originMatchesHost(r *http.Request, origin string) bool {
+	host := r.Host
+	if api.fromTrustedProxy(r) {
+		if forwardedHost := r.Header.Get("X-Forwarded-Host"); forwardedHost != "" {
+			host = forwardedHost
+		}
+	}
+
+	parsed, err := url.Parse(origin)
+	return err == nil && parsed.Host == host
+}
+
+// safeMethod reports whether method is read-only (no CSRF risk).
+func safeMethod(method string) bool {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return true
+	}
+	return false
 }
 
 // authGuard enforces authentication before calling handler and delegates the

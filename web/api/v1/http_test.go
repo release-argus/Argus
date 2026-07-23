@@ -672,6 +672,88 @@ func TestAPI_SetupWebSocket(t *testing.T) {
 	}
 }
 
+func TestAPI_SetupWebSocket__originCheck(t *testing.T) {
+	// GIVEN: an auth-enabled API, and a logged-in admin.
+	file := "TestAPI_SetupWebSocket__originCheck.yml"
+	api, _, _ := testAuthServer(t, file)
+	cookie := loginCookie(t, api, "admin", "admin-password")
+	server := httptest.NewServer(api.BaseRouter)
+	t.Cleanup(server.Close)
+	wsURL := strings.Replace(server.URL, "http:", "ws:", 1) + "/ws"
+
+	tests := []struct {
+		name        string
+		origin      string
+		wantRefused bool
+	}{
+		{
+			name:        "valid/absent Origin - non-browser client",
+			origin:      "",
+			wantRefused: false,
+		},
+		{
+			name:        "valid/same-origin handshake",
+			origin:      server.URL,
+			wantRefused: false,
+		},
+		{
+			name:        "invalid/cross-site Origin",
+			origin:      "http://evil.example.com",
+			wantRefused: true,
+		},
+		{
+			name:        "invalid/opaque null Origin",
+			origin:      "null",
+			wantRefused: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			header := http.Header{"Cookie": {cookie.String()}}
+			if tc.origin != "" {
+				header.Set("Origin", tc.origin)
+			}
+
+			// WHEN: a WebSocket handshake is attempted carrying that Origin.
+			conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
+			if conn != nil {
+				t.Cleanup(func() { _ = conn.Close() })
+			}
+			if resp != nil {
+				t.Cleanup(func() { _ = resp.Body.Close() })
+			}
+
+			prefix := fmt.Sprintf(
+				"%s\nSetupWebSocket() origin=%q",
+				packageName, tc.origin,
+			)
+
+			// THEN: only a same-origin or non-browser handshake is upgraded.
+			if !tc.wantRefused {
+				if err != nil {
+					t.Errorf(
+						"%s should have connected\ngot: %v",
+						prefix, err,
+					)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("%s should have been refused, but connected", prefix)
+			}
+			if resp == nil || resp.StatusCode != http.StatusForbidden {
+				t.Errorf(
+					"%s status mismatch\ngot:  %v\nwant: %d",
+					prefix, resp, http.StatusForbidden,
+				)
+			}
+		})
+	}
+}
+
 func TestAPI_SetupWebSocket__originUncheckedWithoutAuth(t *testing.T) {
 	// GIVEN: an API with auth disabled.
 	cfg := config.Config{}
