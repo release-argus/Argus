@@ -88,21 +88,21 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 			size:       0,
 			setAtArray: map[int]*bool{},
 			setAtMap: map[string]*bool{
-				"test": test.Ptr(true),
+				"test": new(true),
 			},
 		},
 		{
 			name: "can add to non-empty map or edit array",
 			size: 3,
 			setAtArray: map[int]*bool{
-				0: test.Ptr(true),
-				1: test.Ptr(false),
-				2: test.Ptr(true),
+				0: new(true),
+				1: new(false),
+				2: new(true),
 			},
 			setAtMap: map[string]*bool{
-				"bish": test.Ptr(true),
-				"bash": test.Ptr(false),
-				"bosh": test.Ptr(true),
+				"bish": new(true),
+				"bash": new(false),
+				"bosh": new(true),
 			},
 		},
 	}
@@ -209,18 +209,18 @@ func TestFailsBase_AllPassed(t *testing.T) {
 		{
 			name: "all true (failed)",
 			fails: map[int]*bool{
-				0: test.Ptr(true),
-				1: test.Ptr(true),
-				2: test.Ptr(true),
+				0: new(true),
+				1: new(true),
+				2: new(true),
 			},
 			want: false,
 		},
 		{
 			name: "all false (passed)",
 			fails: map[int]*bool{
-				0: test.Ptr(false),
-				1: test.Ptr(false),
-				2: test.Ptr(false),
+				0: new(false),
+				1: new(false),
+				2: new(false),
 			},
 			want: true,
 		},
@@ -236,8 +236,8 @@ func TestFailsBase_AllPassed(t *testing.T) {
 		{
 			name: "mixed",
 			fails: map[int]*bool{
-				0: test.Ptr(true),
-				1: test.Ptr(false),
+				0: new(true),
+				1: new(false),
 				2: nil,
 			},
 			want: false,
@@ -304,17 +304,17 @@ func TestFailsBase_Reset(t *testing.T) {
 		{
 			name: "all true (failed)",
 			fails: map[int]*bool{
-				0: test.Ptr(true),
-				1: test.Ptr(true),
-				2: test.Ptr(true),
+				0: new(true),
+				1: new(true),
+				2: new(true),
 			},
 		},
 		{
 			name: "all false (passed)",
 			fails: map[int]*bool{
-				0: test.Ptr(false),
-				1: test.Ptr(false),
-				2: test.Ptr(false),
+				0: new(false),
+				1: new(false),
+				2: new(false),
 			},
 		},
 		{
@@ -328,8 +328,8 @@ func TestFailsBase_Reset(t *testing.T) {
 		{
 			name: "mixed",
 			fails: map[int]*bool{
-				0: test.Ptr(true),
-				1: test.Ptr(false),
+				0: new(true),
+				1: new(false),
 				2: nil,
 			},
 		},
@@ -401,33 +401,33 @@ func TestFailsBase_Length(t *testing.T) {
 			size:       0,
 			setAtArray: map[int]*bool{},
 			setAtMap: map[string]*bool{
-				"test": test.Ptr(true),
+				"test": new(true),
 			},
 		},
 		{
 			name: "can add to non-empty map or edit array",
 			size: 3,
 			setAtArray: map[int]*bool{
-				0: test.Ptr(true),
-				1: test.Ptr(false),
-				2: test.Ptr(true),
+				0: new(true),
+				1: new(false),
+				2: new(true),
 			},
 			setAtMap: map[string]*bool{
-				"bish": test.Ptr(true),
-				"bash": test.Ptr(false),
-				"bosh": test.Ptr(true),
+				"bish": new(true),
+				"bash": new(false),
+				"bosh": new(true),
 			},
 		},
 		{
 			name: "length gives number of elements in map, not make size",
 			size: 3,
 			setAtArray: map[int]*bool{
-				0: test.Ptr(true),
-				1: test.Ptr(false),
+				0: new(true),
+				1: new(false),
 			},
 			setAtMap: map[string]*bool{
-				"bish": test.Ptr(true),
-				"bash": test.Ptr(false),
+				"bish": new(true),
+				"bash": new(false),
 			},
 		},
 	}
@@ -499,15 +499,15 @@ func TestFails_String(t *testing.T) {
 		{
 			name: "no fails",
 			commandFails: []*bool{
-				nil, test.Ptr(false),
+				nil, new(false),
 			},
 			shoutrrrFails: map[string]*bool{
-				"bar": test.Ptr(false),
+				"bar": new(false),
 				"foo": nil,
 			},
 			webhookFails: map[string]*bool{
 				"bar": nil,
-				"foo": test.Ptr(false),
+				"foo": new(false),
 			},
 			want: test.TrimYAML(`
 				shoutrrr:
@@ -524,9 +524,9 @@ func TestFails_String(t *testing.T) {
 		{
 			name: "only shoutrrr",
 			shoutrrrFails: map[string]*bool{
-				"bash": test.Ptr(false),
+				"bash": new(false),
 				"bish": nil,
-				"bosh": test.Ptr(true),
+				"bosh": new(true),
 			},
 			want: test.TrimYAML(`
 				shoutrrr:
@@ -539,8 +539,8 @@ func TestFails_String(t *testing.T) {
 			name: "only command",
 			commandFails: []*bool{
 				nil,
-				test.Ptr(false),
-				test.Ptr(true),
+				new(false),
+				new(true),
 			},
 			want: test.TrimYAML(`
 				command:
@@ -552,8 +552,8 @@ func TestFails_String(t *testing.T) {
 		{
 			name: "only webhook",
 			webhookFails: map[string]*bool{
-				"bash": test.Ptr(true),
-				"bish": test.Ptr(false),
+				"bash": new(true),
+				"bish": new(false),
 				"bosh": nil,
 			},
 			want: test.TrimYAML(`
@@ -566,19 +566,19 @@ func TestFails_String(t *testing.T) {
 		{
 			name: "all",
 			shoutrrrFails: map[string]*bool{
-				"bash": test.Ptr(false),
-				"bish": test.Ptr(true),
+				"bash": new(false),
+				"bish": new(true),
 				"bosh": nil,
 			},
 			commandFails: []*bool{
 				nil,
-				test.Ptr(false),
-				test.Ptr(true),
+				new(false),
+				new(true),
 			},
 			webhookFails: map[string]*bool{
-				"bash": test.Ptr(false),
+				"bash": new(false),
 				"bish": nil,
-				"bosh": test.Ptr(true),
+				"bosh": new(true),
 			},
 			want: test.TrimYAML(`
 				shoutrrr:
@@ -598,19 +598,19 @@ func TestFails_String(t *testing.T) {
 		{
 			name: "maps are alphabetical",
 			shoutrrrFails: map[string]*bool{
-				"bish": test.Ptr(true),
-				"bash": test.Ptr(true),
-				"bosh": test.Ptr(true),
+				"bish": new(true),
+				"bash": new(true),
+				"bosh": new(true),
 			},
 			commandFails: []*bool{
 				nil,
-				test.Ptr(true),
-				test.Ptr(false),
+				new(true),
+				new(false),
 			},
 			webhookFails: map[string]*bool{
-				"zip": test.Ptr(true),
-				"zap": test.Ptr(true),
-				"zop": test.Ptr(true),
+				"zip": new(true),
+				"zap": new(true),
+				"zop": new(true),
 			},
 			want: test.TrimYAML(`
 				shoutrrr:
@@ -746,82 +746,82 @@ func TestFails_Copy(t *testing.T) {
 			name: "copy non-empty fails",
 			fromCommandFails: []*bool{
 				nil,
-				test.Ptr(false),
-				test.Ptr(true),
+				new(false),
+				new(true),
 			},
 			toCommandFails: []*bool{
-				test.Ptr(true),
+				new(true),
 				nil,
-				test.Ptr(false),
+				new(false),
 			},
 			fromShoutrrrFails: map[string]*bool{
-				"foo": test.Ptr(false),
-				"bar": test.Ptr(true),
+				"foo": new(false),
+				"bar": new(true),
 			},
 			toShoutrrrFails: map[string]*bool{
-				"baz": test.Ptr(true),
+				"baz": new(true),
 			},
 			fromWebHookFails: map[string]*bool{
-				"foo": test.Ptr(true),
-				"bar": test.Ptr(false),
+				"foo": new(true),
+				"bar": new(false),
 			},
 			toWebHookFails: map[string]*bool{
-				"baz": test.Ptr(false),
+				"baz": new(false),
 			},
 		},
 		{
 			name: "copy to smaller fails",
 			fromCommandFails: []*bool{
 				nil,
-				test.Ptr(false),
-				test.Ptr(true),
+				new(false),
+				new(true),
 			},
 			toCommandFails: []*bool{
-				test.Ptr(true),
+				new(true),
 				nil,
 			},
 			fromShoutrrrFails: map[string]*bool{
-				"foo": test.Ptr(false),
-				"bar": test.Ptr(true),
+				"foo": new(false),
+				"bar": new(true),
 			},
 			toShoutrrrFails: map[string]*bool{
-				"baz": test.Ptr(true),
+				"baz": new(true),
 			},
 			fromWebHookFails: map[string]*bool{
-				"foo": test.Ptr(true),
-				"bar": test.Ptr(false),
+				"foo": new(true),
+				"bar": new(false),
 			},
 			toWebHookFails: map[string]*bool{
-				"baz": test.Ptr(false),
+				"baz": new(false),
 			},
 		},
 		{
 			name: "copy to larger fails",
 			fromCommandFails: []*bool{
 				nil,
-				test.Ptr(false),
-				test.Ptr(true),
+				new(false),
+				new(true),
 			},
 			toCommandFails: []*bool{
-				test.Ptr(true),
+				new(true),
 				nil,
-				test.Ptr(false),
+				new(false),
 				nil,
 			},
 			fromShoutrrrFails: map[string]*bool{
-				"foo": test.Ptr(false),
-				"bar": test.Ptr(true),
+				"foo": new(false),
+				"bar": new(true),
 			},
 			toShoutrrrFails: map[string]*bool{
-				"baz":  test.Ptr(true),
+				"baz":  new(true),
 				"bosh": nil,
 			},
 			fromWebHookFails: map[string]*bool{
-				"foo": test.Ptr(true),
-				"bar": test.Ptr(false),
+				"foo": new(true),
+				"bar": new(false),
 			},
 			toWebHookFails: map[string]*bool{
-				"baz":  test.Ptr(false),
+				"baz":  new(false),
 				"bosh": nil,
 			},
 		},
@@ -954,42 +954,42 @@ func TestFails_ResetFails(t *testing.T) {
 			name: "only notifiers",
 			shoutrrrFails: &map[string]*bool{
 				"0": nil,
-				"1": test.Ptr(false),
-				"3": test.Ptr(true),
+				"1": new(false),
+				"3": new(true),
 			},
 		},
 		{
 			name: "only commands",
 			commandFails: &[]*bool{
 				nil,
-				test.Ptr(false),
-				test.Ptr(true),
+				new(false),
+				new(true),
 			},
 		},
 		{
 			name: "only webhooks",
 			webhookFails: &map[string]*bool{
 				"0": nil,
-				"1": test.Ptr(false),
-				"3": test.Ptr(true),
+				"1": new(false),
+				"3": new(true),
 			},
 		},
 		{
 			name: "all filled",
 			shoutrrrFails: &map[string]*bool{
 				"0": nil,
-				"1": test.Ptr(false),
-				"3": test.Ptr(true),
+				"1": new(false),
+				"3": new(true),
 			},
 			commandFails: &[]*bool{
 				nil,
-				test.Ptr(false),
-				test.Ptr(true),
+				new(false),
+				new(true),
 			},
 			webhookFails: &map[string]*bool{
 				"0": nil,
-				"1": test.Ptr(false),
-				"3": test.Ptr(true),
+				"1": new(false),
+				"3": new(true),
 			},
 		},
 	}
@@ -1061,31 +1061,31 @@ func TestFailsShoutrrr_Copy(t *testing.T) {
 			name:           "nil receiver",
 			initOriginal:   false,
 			original:       nil,
-			mutateOriginal: map[string]*bool{"a": test.Ptr(true)},
-			mutateCopy:     map[string]*bool{"a": test.Ptr(false)},
+			mutateOriginal: map[string]*bool{"a": new(true)},
+			mutateCopy:     map[string]*bool{"a": new(false)},
 		},
 		{
 			name:           "empty receiver",
 			initOriginal:   true,
 			original:       map[string]*bool{},
-			mutateOriginal: map[string]*bool{"a": test.Ptr(true)},
-			mutateCopy:     map[string]*bool{"b": test.Ptr(false)},
+			mutateOriginal: map[string]*bool{"a": new(true)},
+			mutateCopy:     map[string]*bool{"b": new(false)},
 		},
 		{
 			name:         "filled receiver",
 			initOriginal: true,
 			original: map[string]*bool{
-				"foo": test.Ptr(false),
+				"foo": new(false),
 				"bar": nil,
-				"baz": test.Ptr(true),
+				"baz": new(true),
 			},
 			mutateOriginal: map[string]*bool{
-				"foo": test.Ptr(true),  // replace value
-				"baz": test.Ptr(false), // add new key
+				"foo": new(true),  // replace value
+				"baz": new(false), // add new key
 			},
 			mutateCopy: map[string]*bool{
-				"foo": test.Ptr(false), // mutate copy
-				"qux": nil,             // add nil entry
+				"foo": new(false), // mutate copy
+				"qux": nil,        // add nil entry
 			},
 		},
 	}
@@ -1206,43 +1206,43 @@ func TestFailsWebHook_Copy(t *testing.T) {
 			name:                       "nil receiver",
 			initOriginal:               false,
 			originalFails:              nil,
-			mutateOriginalFails:        map[string]*bool{"a": test.Ptr(true)},
+			mutateOriginalFails:        map[string]*bool{"a": new(true)},
 			mutateOriginalNextRunnable: map[string]time.Time{"a": time2022},
-			mutateCopyFails:            map[string]*bool{"a": test.Ptr(false)},
+			mutateCopyFails:            map[string]*bool{"a": new(false)},
 			mutateCopyNextRunnable:     map[string]time.Time{"b": time2023},
 		},
 		{
 			name:                       "empty receiver",
 			initOriginal:               true,
 			originalFails:              map[string]*bool{},
-			mutateOriginalFails:        map[string]*bool{"a": test.Ptr(true)},
+			mutateOriginalFails:        map[string]*bool{"a": new(true)},
 			mutateOriginalNextRunnable: map[string]time.Time{"a": time2022},
-			mutateCopyFails:            map[string]*bool{"b": test.Ptr(false)},
+			mutateCopyFails:            map[string]*bool{"b": new(false)},
 			mutateCopyNextRunnable:     map[string]time.Time{"b": time2023},
 		},
 		{
 			name:         "filled receiver",
 			initOriginal: true,
 			originalFails: map[string]*bool{
-				"foo": test.Ptr(false),
+				"foo": new(false),
 				"bar": nil,
-				"baz": test.Ptr(true),
+				"baz": new(true),
 			},
 			originalNextRunnable: map[string]time.Time{
 				"foo": time2021,
 				"bar": time2022,
 			},
 			mutateOriginalFails: map[string]*bool{
-				"foo": test.Ptr(true),  // replace value
-				"baz": test.Ptr(false), // add new key
+				"foo": new(true),  // replace value
+				"baz": new(false), // add new key
 			},
 			mutateOriginalNextRunnable: map[string]time.Time{
 				"foo": time2023,
 				"baz": time2024,
 			},
 			mutateCopyFails: map[string]*bool{
-				"foo": test.Ptr(false), // mutate copy
-				"qux": nil,             // add nil entry
+				"foo": new(false), // mutate copy
+				"qux": nil,        // add nil entry
 			},
 			mutateCopyNextRunnable: map[string]time.Time{
 				"foo": time2024,

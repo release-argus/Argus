@@ -373,7 +373,7 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 			},
 			username:     "u",
 			token:        "t",
-			tokenAddress: test.Ptr(test.LookupPlain["url_valid"] + "	123"),
+			tokenAddress: new(test.LookupPlain["url_valid"] + "	123"),
 			errRegex:     `^create docker-hub token request`,
 		},
 		{
@@ -383,7 +383,7 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 			},
 			username:     "u",
 			token:        "t",
-			tokenAddress: test.Ptr(test.LookupPlain["url_invalid"]),
+			tokenAddress: new(test.LookupPlain["url_invalid"]),
 			errRegex:     `^docker-hub token request failed`,
 		},
 		{
@@ -393,7 +393,7 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 			},
 			username:     "u",
 			token:        "t",
-			tokenAddress: test.Ptr(test.WebHookGitHub["url_valid"] + "/123"),
+			tokenAddress: new(test.WebHookGitHub["url_valid"] + "/123"),
 			errRegex:     `^docker-hub token request failed \(status=404\)`,
 		},
 		{
@@ -403,7 +403,7 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 			},
 			username:     "u",
 			token:        "t",
-			tokenAddress: test.Ptr(test.LookupPlain["url_valid"]),
+			tokenAddress: new(test.LookupPlain["url_valid"]),
 			errRegex:     `^failed to parse docker-hub token response`,
 		},
 	}

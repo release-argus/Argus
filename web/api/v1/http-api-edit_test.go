@@ -491,7 +491,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 		},
 		{
 			name:      "unknown service",
-			serviceID: test.Ptr("bash-bosh"),
+			serviceID: new("bash-bosh"),
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"url_commands": [
@@ -508,7 +508,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 		},
 		{
 			name:      "no service_id provided",
-			serviceID: test.Ptr(""),
+			serviceID: new(""),
 			wants: wants{
 				bodyRegex:     `{"message":"missing required query parameter: service_id"}`,
 				statusCode:    http.StatusBadRequest,
@@ -881,7 +881,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 		},
 		{
 			name:      "unknown service",
-			serviceID: test.Ptr("bish-bash-bosh"),
+			serviceID: new("bish-bash-bosh"),
 			params: map[string]string{
 				"semantic_versioning": "false",
 			},
@@ -892,7 +892,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 		},
 		{
 			name:      "no service_id provided",
-			serviceID: test.Ptr(""),
+			serviceID: new(""),
 			wants: wants{
 				bodyRegex:       `{"message":"missing required query parameter: service_id"}`,
 				statusCode:      http.StatusBadRequest,
@@ -1106,7 +1106,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 		},
 		{
 			name:      "unknown service",
-			serviceID: test.Ptr("bish-bash-bosh"),
+			serviceID: new("bish-bash-bosh"),
 			wants: wants{
 				bodyRegex:  `{"message":"service .+ not found"`,
 				statusCode: http.StatusNotFound,
@@ -1114,7 +1114,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 		},
 		{
 			name:      "no service_id provided",
-			serviceID: test.Ptr(""),
+			serviceID: new(""),
 			wants: wants{
 				bodyRegex:  `{"message":"missing required query parameter: service_id"}`,
 				statusCode: http.StatusBadRequest,

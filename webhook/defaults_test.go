@@ -30,10 +30,10 @@ func TestDefaults_Default(t *testing.T) {
 		Base: Base{
 			Type:              "github",
 			Delay:             "0s",
-			AllowInvalidCerts: test.Ptr(false),
-			DesiredStatusCode: test.Ptr[uint16](0),
-			MaxTries:          test.Ptr[uint8](3),
-			SilentFails:       test.Ptr(false),
+			AllowInvalidCerts: new(false),
+			DesiredStatusCode: new(uint16(0)),
+			MaxTries:          new(uint8(3)),
+			SilentFails:       new(false),
 		},
 	}
 

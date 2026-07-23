@@ -49,7 +49,7 @@ func TestCommandTest(t *testing.T) {
 			name:        "empty flag",
 			flag:        "",
 			ok:          true,
-			stdoutRegex: test.Ptr("^$"),
+			stdoutRegex: new("^$"),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -68,7 +68,7 @@ func TestCommandTest(t *testing.T) {
 			name:        "unknown service",
 			flag:        "something",
 			ok:          false,
-			stdoutRegex: test.Ptr(" could not be found "),
+			stdoutRegex: new(" could not be found "),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -87,7 +87,7 @@ func TestCommandTest(t *testing.T) {
 			name:        "known service/successful command",
 			flag:        "argus",
 			ok:          true,
-			stdoutRegex: test.Ptr(`Executing 'echo command did run'\s+.*command did run\s+`),
+			stdoutRegex: new(`Executing 'echo command did run'\s+.*command did run\s+`),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -106,7 +106,7 @@ func TestCommandTest(t *testing.T) {
 			name:        "known service/failing command",
 			flag:        "argus",
 			ok:          true,
-			stdoutRegex: test.Ptr(`.*Executing 'false'\s+.*exit status [1-9]\s+`),
+			stdoutRegex: new(`.*Executing 'false'\s+.*exit status [1-9]\s+`),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -124,7 +124,7 @@ func TestCommandTest(t *testing.T) {
 			name:        "known service/no commands",
 			flag:        "argus",
 			ok:          false,
-			stdoutRegex: test.Ptr(" does not have any `command` defined"),
+			stdoutRegex: new(" does not have any `command` defined"),
 			services: service.Services{
 				"argus": {
 					ID: "argus",

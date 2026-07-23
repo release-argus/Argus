@@ -109,7 +109,7 @@ func TestLookup_Refresh(t *testing.T) {
 						}
 					]
 				}`)),
-				semanticVersioning: test.Ptr("false"),
+				semanticVersioning: new("false"),
 			},
 			previous: testLookup(t, "url", false),
 			errRegex: `^$`,
@@ -159,7 +159,7 @@ func TestLookup_Refresh(t *testing.T) {
 						}
 					]
 				}`)),
-				semanticVersioning: test.Ptr("false"),
+				semanticVersioning: new("false"),
 				latestVersion:      "1.2.3",
 			},
 			errRegex: `^$`,
@@ -173,7 +173,7 @@ func TestLookup_Refresh(t *testing.T) {
 				overrides: []byte(`{
 					"type": "unknown"
 				}`),
-				semanticVersioning: test.Ptr("false"),
+				semanticVersioning: new("false"),
 				latestVersion:      "0.0.0",
 			},
 			errRegex: `type: "unknown" <invalid>.*$`,

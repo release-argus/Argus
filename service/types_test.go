@@ -77,7 +77,7 @@ func TestService_Marshal(t *testing.T) {
 			name: "service with options",
 			svc: &Service{
 				Options: opt.Options{
-					Active: test.Ptr(true),
+					Active: new(true),
 				},
 			},
 			wantJSON: test.TrimJSON(`{
@@ -904,7 +904,7 @@ func TestService_String(t *testing.T) {
 			svc: &Service{
 				Comment: "svc for blah",
 				Options: opt.Options{
-					Active: test.Ptr(false),
+					Active: new(false),
 				},
 				LatestVersion: test.Must(t, func() (latestver.Lookup, error) {
 					return latestver.Decode(
@@ -1080,7 +1080,7 @@ func TestService_Summary(t *testing.T) {
 				Type:                "",
 				Icon:                nil,
 				IconLinkTo:          nil,
-				DeployedVersionType: test.Ptr(""),
+				DeployedVersionType: new(""),
 				Command:             nil,
 				WebHook:             nil,
 				Status:              &apitype.Status{},
@@ -1097,7 +1097,7 @@ func TestService_Summary(t *testing.T) {
 			}),
 			want: &apitype.ServiceSummary{
 				ID:                  "foo",
-				DeployedVersionType: test.Ptr(""),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1113,8 +1113,8 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				Name:                test.Ptr("bar"),
-				DeployedVersionType: test.Ptr(""),
+				Name:                new("bar"),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1131,8 +1131,8 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				Active:              test.Ptr(false),
-				DeployedVersionType: test.Ptr(""),
+				Active:              new(false),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1150,7 +1150,7 @@ func TestService_Summary(t *testing.T) {
 			}),
 			want: &apitype.ServiceSummary{
 				Type:                "github",
-				DeployedVersionType: test.Ptr(""),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1167,8 +1167,8 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				Icon:                test.Ptr("https://example.com/icon.png"),
-				DeployedVersionType: test.Ptr(""),
+				Icon:                new("https://example.com/icon.png"),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1185,8 +1185,8 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				Icon:                test.Ptr("smile"),
-				DeployedVersionType: test.Ptr(""),
+				Icon:                new("smile"),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1206,8 +1206,8 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				Icon:                test.Ptr("https://example.com/notify.png"),
-				DeployedVersionType: test.Ptr(""),
+				Icon:                new("https://example.com/notify.png"),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1229,8 +1229,8 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				Icon:                test.Ptr("https://example.com/icon.png"),
-				DeployedVersionType: test.Ptr(""),
+				Icon:                new("https://example.com/icon.png"),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1247,8 +1247,8 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				IconLinkTo:          test.Ptr("https://example.com"),
-				DeployedVersionType: test.Ptr(""),
+				IconLinkTo:          new("https://example.com"),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1265,8 +1265,8 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				WebURL:              test.Ptr("https://example.com"),
-				DeployedVersionType: test.Ptr(""),
+				WebURL:              new("https://example.com"),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1284,7 +1284,7 @@ func TestService_Summary(t *testing.T) {
 			}),
 			want: &apitype.ServiceSummary{
 				Tags:                &[]string{"hello", "there"},
-				DeployedVersionType: test.Ptr(""),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1300,7 +1300,7 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				DeployedVersionType: test.Ptr(dvweb.Type),
+				DeployedVersionType: new(dvweb.Type),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1316,7 +1316,7 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				DeployedVersionType: test.Ptr(""),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1335,8 +1335,8 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				DeployedVersionType: test.Ptr(""),
-				Command:             test.Ptr(3),
+				DeployedVersionType: new(""),
+				Command:             new(3),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1352,7 +1352,7 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				DeployedVersionType: test.Ptr(""),
+				DeployedVersionType: new(""),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1374,8 +1374,8 @@ func TestService_Summary(t *testing.T) {
 				)
 			}),
 			want: &apitype.ServiceSummary{
-				DeployedVersionType: test.Ptr(""),
-				WebHook:             test.Ptr(3),
+				DeployedVersionType: new(""),
+				WebHook:             new(3),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1392,7 +1392,7 @@ func TestService_Summary(t *testing.T) {
 				),
 			},
 			want: &apitype.ServiceSummary{
-				DeployedVersionType: test.Ptr(""),
+				DeployedVersionType: new(""),
 				Status: &apitype.Status{
 					ApprovedVersion:          "1",
 					DeployedVersion:          "2",
@@ -1490,16 +1490,16 @@ func TestService_Summary(t *testing.T) {
 			}),
 			want: &apitype.ServiceSummary{
 				ID:                  "foo",
-				Name:                test.Ptr("bar"),
-				Active:              test.Ptr(false),
-				Comment:             test.Ptr("svc for blah"),
+				Name:                new("bar"),
+				Active:              new(false),
+				Comment:             new("svc for blah"),
 				Type:                "github",
-				WebURL:              test.Ptr("https://example.com"),
-				Icon:                test.Ptr("https://example.com/icon.png"),
-				IconLinkTo:          test.Ptr("https://example.com"),
-				DeployedVersionType: test.Ptr(dvweb.Type),
-				Command:             test.Ptr(2),
-				WebHook:             test.Ptr(3),
+				WebURL:              new("https://example.com"),
+				Icon:                new("https://example.com/icon.png"),
+				IconLinkTo:          new("https://example.com"),
+				DeployedVersionType: new(dvweb.Type),
+				Command:             new(2),
+				WebHook:             new(3),
 				Status: &apitype.Status{
 					ApprovedVersion:          "1",
 					DeployedVersion:          "2",

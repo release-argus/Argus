@@ -632,7 +632,7 @@ func testShoutrrrForCopy(t *testing.T, svcStatus *status.Status, id string) *Sho
 		hardDefaults,
 	)
 	shoutrrr.ServiceStatus = svcStatus
-	shoutrrr.Failed.Set(id, test.Ptr(false))
+	shoutrrr.Failed.Set(id, new(false))
 
 	return shoutrrr
 }
@@ -683,8 +683,8 @@ func TestShoutrrr_Copy(t *testing.T) {
 			mutateCopyURLFields:     map[string]string{"host": "copy-mutated"},
 			mutateOriginalParams:    map[string]string{"title": "mutated"},
 			mutateCopyParams:        map[string]string{"title": "copy-mutated"},
-			mutateOriginalFails:     map[string]*bool{"notify": test.Ptr(true)},
-			mutateCopyFails:         map[string]*bool{"notify": test.Ptr(false)},
+			mutateOriginalFails:     map[string]*bool{"notify": new(true)},
+			mutateCopyFails:         map[string]*bool{"notify": new(false)},
 		},
 	}
 
@@ -773,7 +773,7 @@ func TestShoutrrr_Copy(t *testing.T) {
 			assertFailsShoutrrrState(
 				t,
 				got.Failed,
-				map[string]*bool{"notify": test.Ptr(false)},
+				map[string]*bool{"notify": new(false)},
 				prefix,
 				"Failed",
 			)
@@ -832,7 +832,7 @@ func TestShoutrrr_Copy(t *testing.T) {
 			assertFailsShoutrrrState(
 				t,
 				got.Failed,
-				map[string]*bool{"notify": test.Ptr(false)},
+				map[string]*bool{"notify": new(false)},
 				fmt.Sprintf("%s after mutating original", prefix),
 				"Failed",
 			)

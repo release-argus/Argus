@@ -62,9 +62,9 @@ func TestServiceEdit_Marshal(t *testing.T) {
 				Name:    "foo",
 				Comment: "a comment",
 				Options: ServiceOptions{
-					Active:             test.Ptr(true),
+					Active:             new(true),
 					Interval:           "10m",
-					SemanticVersioning: test.Ptr(true),
+					SemanticVersioning: new(true),
 				},
 				LatestVersion: &LatestVersion{
 					Type: "github",
@@ -88,7 +88,7 @@ func TestServiceEdit_Marshal(t *testing.T) {
 					URL:  "https://example.com/version",
 				},
 				Dashboard: DashboardOptions{
-					AutoApprove: test.Ptr(false),
+					AutoApprove: new(false),
 					Icon:        "https://example.com/icon.png",
 				},
 				Status: &Status{
@@ -182,7 +182,7 @@ func TestWebHookSummary_Marshal(t *testing.T) {
 		{
 			name: "filled",
 			input: &WebHookSummary{
-				Failed:       test.Ptr(true),
+				Failed:       new(true),
 				NextRunnable: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
 			want: test.TrimJSON(`{
@@ -236,7 +236,7 @@ func TestCommandSummary_Marshal(t *testing.T) {
 		{
 			name: "filled",
 			input: &CommandSummary{
-				Failed:       test.Ptr(true),
+				Failed:       new(true),
 				NextRunnable: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
 			want: test.TrimJSON(`{
@@ -293,21 +293,21 @@ func TestServiceSummary_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Name",
 			data: ServiceSummary{
-				Name: test.Ptr("foo"),
+				Name: new("foo"),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Active",
 			data: ServiceSummary{
-				Active: test.Ptr(true),
+				Active: new(true),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Comment",
 			data: ServiceSummary{
-				Comment: test.Ptr("foo"),
+				Comment: new("foo"),
 			},
 			want: false,
 		},
@@ -321,42 +321,42 @@ func TestServiceSummary_IsZero(t *testing.T) {
 		{
 			name: "non-empty/WebURL",
 			data: ServiceSummary{
-				WebURL: test.Ptr("https://example.com"),
+				WebURL: new("https://example.com"),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Icon",
 			data: ServiceSummary{
-				Icon: test.Ptr("https://example.com/icon.png"),
+				Icon: new("https://example.com/icon.png"),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/IconLinkTo",
 			data: ServiceSummary{
-				IconLinkTo: test.Ptr("https://example.com/somewhere"),
+				IconLinkTo: new("https://example.com/somewhere"),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/DeployedVersionType",
 			data: ServiceSummary{
-				DeployedVersionType: test.Ptr(dvManualType),
+				DeployedVersionType: new(dvManualType),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Command",
 			data: ServiceSummary{
-				Command: test.Ptr(1),
+				Command: new(1),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/WebHook",
 			data: ServiceSummary{
-				WebHook: test.Ptr(2),
+				WebHook: new(2),
 			},
 			want: false,
 		},
@@ -372,7 +372,7 @@ func TestServiceSummary_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Tags",
 			data: ServiceSummary{
-				Tags: test.Ptr([]string{"foo"}),
+				Tags: new([]string{"foo"}),
 			},
 			want: false,
 		},
@@ -380,20 +380,20 @@ func TestServiceSummary_IsZero(t *testing.T) {
 			name: "non-empty/all",
 			data: ServiceSummary{
 				ID:                  "foo",
-				Name:                test.Ptr("foo"),
-				Active:              test.Ptr(true),
-				Comment:             test.Ptr("foo"),
+				Name:                new("foo"),
+				Active:              new(true),
+				Comment:             new("foo"),
 				Type:                "foo",
-				WebURL:              test.Ptr("https://example.com"),
-				Icon:                test.Ptr("https://example.com/icon.png"),
-				IconLinkTo:          test.Ptr("https://example.com/somewhere"),
-				DeployedVersionType: test.Ptr(dvManualType),
-				Command:             test.Ptr(1),
-				WebHook:             test.Ptr(2),
+				WebURL:              new("https://example.com"),
+				Icon:                new("https://example.com/icon.png"),
+				IconLinkTo:          new("https://example.com/somewhere"),
+				DeployedVersionType: new(dvManualType),
+				Command:             new(1),
+				WebHook:             new(2),
 				Status: &Status{
 					ApprovedVersion: "1.2.3",
 				},
-				Tags: test.Ptr([]string{"foo"}),
+				Tags: new([]string{"foo"}),
 			},
 			want: false,
 		},
@@ -438,10 +438,10 @@ func TestServiceSummary_String(t *testing.T) {
 			name: "some",
 			summary: &ServiceSummary{
 				ID:      "foo",
-				Name:    test.Ptr("bar"),
+				Name:    new("bar"),
 				Type:    "github",
-				Command: test.Ptr(1),
-				WebHook: test.Ptr(2),
+				Command: new(1),
+				WebHook: new(2),
 			},
 			want: `
 				{
@@ -456,16 +456,16 @@ func TestServiceSummary_String(t *testing.T) {
 			name: "full",
 			summary: &ServiceSummary{
 				ID:                  "bar",
-				Name:                test.Ptr("foo"),
-				Active:              test.Ptr(true),
-				Comment:             test.Ptr("test"),
+				Name:                new("foo"),
+				Active:              new(true),
+				Comment:             new("test"),
 				Type:                "url",
-				WebURL:              test.Ptr("https://example.com"),
-				Icon:                test.Ptr("https://example.com/icon.png"),
-				IconLinkTo:          test.Ptr("https://release-argus.io"),
-				DeployedVersionType: test.Ptr(dvManualType),
-				Command:             test.Ptr(2),
-				WebHook:             test.Ptr(1),
+				WebURL:              new("https://example.com"),
+				Icon:                new("https://example.com/icon.png"),
+				IconLinkTo:          new("https://release-argus.io"),
+				DeployedVersionType: new(dvManualType),
+				Command:             new(2),
+				WebHook:             new(1),
 				Status: &Status{
 					ApprovedVersion: "1.2.3",
 				},
@@ -563,96 +563,96 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			name: "name added",
 			old:  &ServiceSummary{},
 			new: &ServiceSummary{
-				Name: test.Ptr("foo"),
+				Name: new("foo"),
 			},
 			want: &ServiceSummary{
-				Name: test.Ptr("foo"),
+				Name: new("foo"),
 			},
 		},
 		{
 			name: "name removed",
 			old: &ServiceSummary{
-				Name: test.Ptr("foo"),
+				Name: new("foo"),
 			},
 			new: &ServiceSummary{},
 			want: &ServiceSummary{
-				Name: test.Ptr(""),
+				Name: new(""),
 			},
 		},
 		{
 			name: "same name",
 			old: &ServiceSummary{
-				Name: test.Ptr("foo"),
+				Name: new("foo"),
 			},
 			new: &ServiceSummary{
-				Name: test.Ptr("foo"),
+				Name: new("foo"),
 			},
 			want: &ServiceSummary{},
 		},
 		{
 			name: "different name",
 			old: &ServiceSummary{
-				Name: test.Ptr("foo"),
+				Name: new("foo"),
 			},
 			new: &ServiceSummary{
-				Name: test.Ptr("bar"),
+				Name: new("bar"),
 			},
 			want: &ServiceSummary{
-				Name: test.Ptr("bar"),
+				Name: new("bar"),
 			},
 		},
 		{
 			name: "same active",
 			old: &ServiceSummary{
-				Active: test.Ptr(false),
+				Active: new(false),
 			},
 			new: &ServiceSummary{
-				Active: test.Ptr(false),
+				Active: new(false),
 			},
 			want: &ServiceSummary{},
 		},
 		{
 			name: "different active",
 			old: &ServiceSummary{
-				Active: test.Ptr(true),
+				Active: new(true),
 			},
 			new: &ServiceSummary{
-				Active: test.Ptr(false),
+				Active: new(false),
 			},
 			want: &ServiceSummary{
-				Active: test.Ptr(false),
+				Active: new(false),
 			},
 		},
 		{
 			name: "comment added",
 			old:  &ServiceSummary{},
 			new: &ServiceSummary{
-				Comment: test.Ptr("foo"),
+				Comment: new("foo"),
 			},
 			want: &ServiceSummary{
-				Comment: test.Ptr("foo"),
+				Comment: new("foo"),
 			},
 		},
 		{
 			name: "comment changed",
 			old: &ServiceSummary{
-				Comment: test.Ptr("foo"),
+				Comment: new("foo"),
 			},
 			new: &ServiceSummary{
-				Comment: test.Ptr("bar"),
+				Comment: new("bar"),
 			},
 			want: &ServiceSummary{
-				Comment: test.Ptr("bar"),
+				Comment: new("bar"),
 			},
 		},
 		{
 			name: "comment removed",
 			old: &ServiceSummary{
-				Comment: test.Ptr("foo"),
+				Comment: new("foo"),
 			},
 			new: &ServiceSummary{},
 			want: &ServiceSummary{
-				Comment: test.Ptr(""),
+				Comment: new(""),
 			},
 		},
 		{
@@ -680,67 +680,67 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		{
 			name: "same icon",
 			old: &ServiceSummary{
-				Icon: test.Ptr("https://example.com/icon.png"),
+				Icon: new("https://example.com/icon.png"),
 			},
 			new: &ServiceSummary{
-				Icon: test.Ptr("https://example.com/icon.png"),
+				Icon: new("https://example.com/icon.png"),
 			},
 			want: &ServiceSummary{},
 		},
 		{
 			name: "different icon",
 			old: &ServiceSummary{
-				Icon: test.Ptr("https://example.com/icon.png"),
+				Icon: new("https://example.com/icon.png"),
 			},
 			new: &ServiceSummary{
-				Icon: test.Ptr("https://example.com/icon2.png"),
+				Icon: new("https://example.com/icon2.png"),
 			},
 			want: &ServiceSummary{
-				Icon: test.Ptr("https://example.com/icon2.png"),
+				Icon: new("https://example.com/icon2.png"),
 			},
 		},
 		{
 			name: "same icon_link_to",
 			old: &ServiceSummary{
-				IconLinkTo: test.Ptr("https://release-argus.io"),
+				IconLinkTo: new("https://release-argus.io"),
 			},
 			new: &ServiceSummary{
-				IconLinkTo: test.Ptr("https://release-argus.io"),
+				IconLinkTo: new("https://release-argus.io"),
 			},
 			want: &ServiceSummary{},
 		},
 		{
 			name: "different icon_link_to",
 			old: &ServiceSummary{
-				IconLinkTo: test.Ptr("https://release-argus.io"),
+				IconLinkTo: new("https://release-argus.io"),
 			},
 			new: &ServiceSummary{
-				IconLinkTo: test.Ptr("https://release-argus.io/other"),
+				IconLinkTo: new("https://release-argus.io/other"),
 			},
 			want: &ServiceSummary{
-				IconLinkTo: test.Ptr("https://release-argus.io/other"),
+				IconLinkTo: new("https://release-argus.io/other"),
 			},
 		},
 		{
 			name: "same deployed_version_type",
 			old: &ServiceSummary{
-				DeployedVersionType: test.Ptr(dvManualType),
+				DeployedVersionType: new(dvManualType),
 			},
 			new: &ServiceSummary{
-				DeployedVersionType: test.Ptr(dvManualType),
+				DeployedVersionType: new(dvManualType),
 			},
 			want: &ServiceSummary{},
 		},
 		{
 			name: "different deployed_version_type",
 			old: &ServiceSummary{
-				DeployedVersionType: test.Ptr(dvManualType),
+				DeployedVersionType: new(dvManualType),
 			},
 			new: &ServiceSummary{
-				DeployedVersionType: test.Ptr(dvURLType),
+				DeployedVersionType: new(dvURLType),
 			},
 			want: &ServiceSummary{
-				DeployedVersionType: test.Ptr(dvURLType),
+				DeployedVersionType: new(dvURLType),
 			},
 		},
 		{
@@ -880,21 +880,21 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		{
 			name: "multiple differences",
 			old: &ServiceSummary{
-				IconLinkTo: test.Ptr("https://release-argus.io"),
+				IconLinkTo: new("https://release-argus.io"),
 				Status: &Status{
 					DeployedVersion:          "1.2.3",
 					DeployedVersionTimestamp: "2020-01-01T00:00:00Z",
 				},
 			},
 			new: &ServiceSummary{
-				IconLinkTo: test.Ptr("https://release-argus.io/other"),
+				IconLinkTo: new("https://release-argus.io/other"),
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
 					DeployedVersionTimestamp: "2020-02-02T00:00:00Z",
 				},
 			},
 			want: &ServiceSummary{
-				IconLinkTo: test.Ptr("https://release-argus.io/other"),
+				IconLinkTo: new("https://release-argus.io/other"),
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
 					DeployedVersionTimestamp: "2020-02-02T00:00:00Z",
@@ -905,71 +905,71 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			name: "tags added",
 			old:  &ServiceSummary{},
 			new: &ServiceSummary{
-				Tags: test.Ptr([]string{"foo"}),
+				Tags: new([]string{"foo"}),
 			},
 			want: &ServiceSummary{
-				Tags: test.Ptr([]string{"foo"}),
+				Tags: new([]string{"foo"}),
 			},
 		},
 		{
 			name: "tags removed",
 			old: &ServiceSummary{
-				Tags: test.Ptr([]string{"foo"}),
+				Tags: new([]string{"foo"}),
 			},
 			new: &ServiceSummary{},
 			want: &ServiceSummary{
-				Tags: test.Ptr([]string{}),
+				Tags: new([]string{}),
 			},
 		},
 		{
 			name: "same tags",
 			old: &ServiceSummary{
-				Tags: test.Ptr([]string{"foo"}),
+				Tags: new([]string{"foo"}),
 			},
 			new: &ServiceSummary{
-				Tags: test.Ptr([]string{"foo"}),
+				Tags: new([]string{"foo"}),
 			},
 			want: &ServiceSummary{},
 		},
 		{
 			name: "different tags",
 			old: &ServiceSummary{
-				Tags: test.Ptr([]string{"foo"}),
+				Tags: new([]string{"foo"}),
 			},
 			new: &ServiceSummary{
-				Tags: test.Ptr([]string{"bar"}),
+				Tags: new([]string{"bar"}),
 			},
 			want: &ServiceSummary{
-				Tags: test.Ptr([]string{"bar"}),
+				Tags: new([]string{"bar"}),
 			},
 		},
 		{
 			name: "command added",
 			old:  &ServiceSummary{},
 			new: &ServiceSummary{
-				Command: test.Ptr(1),
+				Command: new(1),
 			},
 			want: &ServiceSummary{
-				Command: test.Ptr(1),
+				Command: new(1),
 			},
 		},
 		{
 			name: "command removed",
 			old: &ServiceSummary{
-				Command: test.Ptr(1),
+				Command: new(1),
 			},
 			new: &ServiceSummary{},
 			want: &ServiceSummary{
-				Command: test.Ptr(0),
+				Command: new(0),
 			},
 		},
 		{
 			name: "same command",
 			old: &ServiceSummary{
-				Command: test.Ptr(1),
+				Command: new(1),
 			},
 			new: &ServiceSummary{
-				Command: test.Ptr(1),
+				Command: new(1),
 			},
 			want: &ServiceSummary{
 				Command: nil,
@@ -979,29 +979,29 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			name: "webhook added",
 			old:  &ServiceSummary{},
 			new: &ServiceSummary{
-				WebHook: test.Ptr(1),
+				WebHook: new(1),
 			},
 			want: &ServiceSummary{
-				WebHook: test.Ptr(1),
+				WebHook: new(1),
 			},
 		},
 		{
 			name: "webhook removed",
 			old: &ServiceSummary{
-				WebHook: test.Ptr(1),
+				WebHook: new(1),
 			},
 			new: &ServiceSummary{},
 			want: &ServiceSummary{
-				WebHook: test.Ptr(0),
+				WebHook: new(0),
 			},
 		},
 		{
 			name: "same webhook",
 			old: &ServiceSummary{
-				WebHook: test.Ptr(1),
+				WebHook: new(1),
 			},
 			new: &ServiceSummary{
-				WebHook: test.Ptr(1),
+				WebHook: new(1),
 			},
 			want: &ServiceSummary{
 				WebHook: nil,
@@ -1236,7 +1236,7 @@ func TestSettings_IsZero(t *testing.T) {
 			name: "non-empty/Data",
 			settings: Settings{
 				Data: DataSettings{
-					Readonly: test.Ptr(true),
+					Readonly: new(true),
 				},
 			},
 			want: false,
@@ -1257,7 +1257,7 @@ func TestSettings_IsZero(t *testing.T) {
 					Level: "DEBUG",
 				},
 				Data: DataSettings{
-					Readonly: test.Ptr(true),
+					Readonly: new(true),
 				},
 				Web: WebSettings{
 					ListenPort: "9001",
@@ -1310,7 +1310,7 @@ func TestDataSettings_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Readonly",
 			dataSettings: DataSettings{
-				Readonly: test.Ptr(true),
+				Readonly: new(true),
 			},
 			want: false,
 		},
@@ -1318,7 +1318,7 @@ func TestDataSettings_IsZero(t *testing.T) {
 			name: "non-empty/all",
 			dataSettings: DataSettings{
 				DatabaseFile: "somewhere.db",
-				Readonly:     test.Ptr(true),
+				Readonly:     new(true),
 			},
 			want: false,
 		},
@@ -1360,7 +1360,7 @@ func TestLogSettings_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Timestamps",
 			logSettings: LogSettings{
-				Timestamps: test.Ptr(true),
+				Timestamps: new(true),
 			},
 			want: false,
 		},
@@ -1374,7 +1374,7 @@ func TestLogSettings_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			logSettings: LogSettings{
-				Timestamps: test.Ptr(true),
+				Timestamps: new(true),
 				Level:      "DEBUG",
 			},
 			want: false,
@@ -1941,9 +1941,9 @@ func TestService_String(t *testing.T) {
 				Name:    "foo",
 				Comment: "a comment",
 				Options: ServiceOptions{
-					Active:             test.Ptr(true),
+					Active:             new(true),
 					Interval:           "10m",
-					SemanticVersioning: test.Ptr(true),
+					SemanticVersioning: new(true),
 				},
 				LatestVersion: &LatestVersion{
 					Type: "github",
@@ -1967,7 +1967,7 @@ func TestService_String(t *testing.T) {
 					URL:  "https://example.com/version",
 				},
 				Dashboard: DashboardOptions{
-					AutoApprove: test.Ptr(false),
+					AutoApprove: new(false),
 					Icon:        "https://example.com/icon.png",
 				},
 				Status: &Status{
@@ -2189,7 +2189,7 @@ func TestServiceOptions_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Active",
 			options: ServiceOptions{
-				Active: test.Ptr(false),
+				Active: new(false),
 			},
 			want: false,
 		},
@@ -2203,16 +2203,16 @@ func TestServiceOptions_IsZero(t *testing.T) {
 		{
 			name: "non-empty/SemanticVersioning",
 			options: ServiceOptions{
-				SemanticVersioning: test.Ptr(false),
+				SemanticVersioning: new(false),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/all",
 			options: ServiceOptions{
-				Active:             test.Ptr(false),
+				Active:             new(false),
 				Interval:           "1s",
-				SemanticVersioning: test.Ptr(false),
+				SemanticVersioning: new(false),
 			},
 			want: false,
 		},
@@ -2257,7 +2257,7 @@ func TestDashboardOptions_IsZero(t *testing.T) {
 		{
 			name: "non-empty/AutoApprove",
 			options: DashboardOptions{
-				AutoApprove: test.Ptr(false),
+				AutoApprove: new(false),
 			},
 			want: false,
 		},
@@ -2292,7 +2292,7 @@ func TestDashboardOptions_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			options: DashboardOptions{
-				AutoApprove: test.Ptr(false),
+				AutoApprove: new(false),
 				Icon:        "a",
 				IconLinkTo:  "a",
 				WebURL:      "a",
@@ -2343,11 +2343,11 @@ func TestLatestVersion_String(t *testing.T) {
 				Type:              "github",
 				URL:               "owner/repo",
 				AccessToken:       util.SecretValue,
-				AllowInvalidCerts: test.Ptr(true),
-				UsePreRelease:     test.Ptr(false),
+				AllowInvalidCerts: new(true),
+				UsePreRelease:     new(false),
 				URLCommands: URLCommands{
 					{Type: "replace", Old: "this", New: "withThis"},
-					{Type: "split", Text: "splitThis", Index: test.Ptr(8)},
+					{Type: "split", Text: "splitThis", Index: new(8)},
 					{Type: "regex", Regex: `([0-9.]+)`},
 				},
 				Require: &LatestVersionRequire{
@@ -2425,7 +2425,7 @@ func TestLatestVersionDefaults_IsZero(t *testing.T) {
 			name: "non-empty/GitHub.UsePreRelease",
 			defaults: LatestVersionDefaults{
 				GitHub: LatestVersionGitHubDefaults{
-					UsePreRelease: test.Ptr(false),
+					UsePreRelease: new(false),
 				},
 			},
 			want: false,
@@ -2434,7 +2434,7 @@ func TestLatestVersionDefaults_IsZero(t *testing.T) {
 			name: "non-empty/URL.AllowInvalidCerts",
 			defaults: LatestVersionDefaults{
 				URL: LatestVersionURLDefaults{
-					AllowInvalidCerts: test.Ptr(false),
+					AllowInvalidCerts: new(false),
 				},
 			},
 			want: false,
@@ -2458,10 +2458,10 @@ func TestLatestVersionDefaults_IsZero(t *testing.T) {
 				Type: "github",
 				GitHub: LatestVersionGitHubDefaults{
 					AccessToken:   "a",
-					UsePreRelease: test.Ptr(false),
+					UsePreRelease: new(false),
 				},
 				URL: LatestVersionURLDefaults{
-					AllowInvalidCerts: test.Ptr(false),
+					AllowInvalidCerts: new(false),
 				},
 				Common: LatestVersionCommonDefaults{
 					Require: &LatestVersionRequireDefaults{
@@ -3090,7 +3090,7 @@ func TestDeployedVersionLookupDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/AllowInvalidCerts",
 			d: DeployedVersionLookupDefaults{
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 			},
 			want: false,
 		},
@@ -3104,7 +3104,7 @@ func TestDeployedVersionLookupDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			d: DeployedVersionLookupDefaults{
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 				Method:            "m",
 			},
 			want: false,
@@ -3151,7 +3151,7 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 			dvl: &DeployedVersionLookup{
 				Method:            http.MethodPost,
 				URL:               "https://release-argus.io",
-				AllowInvalidCerts: test.Ptr(false),
+				AllowInvalidCerts: new(false),
 				BasicAuth: &BasicAuth{
 					Username: "user",
 					Password: "pass",
@@ -3227,7 +3227,7 @@ func TestURLCommands_String(t *testing.T) {
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `bam`},
 				{Type: "replace", Old: "want-rid", New: "replacement"},
-				{Type: "split", Text: "split on me", Index: test.Ptr(5)},
+				{Type: "split", Text: "split on me", Index: new(5)},
 			},
 			want: `
 				[
@@ -3344,15 +3344,15 @@ func TestWebHooks_String(t *testing.T) {
 					ID:                "foobar",
 					Type:              "url",
 					URL:               "https://release-argus.io",
-					AllowInvalidCerts: test.Ptr(true),
+					AllowInvalidCerts: new(true),
 					Secret:            "secret",
 					Headers: []Header{
 						{Key: "X-Header", Value: "bosh"},
 					},
-					DesiredStatusCode: test.Ptr[uint16](200),
+					DesiredStatusCode: new(uint16(200)),
 					Delay:             "1h",
-					MaxTries:          test.Ptr[uint8](7),
-					SilentFails:       test.Ptr(false),
+					MaxTries:          new(uint8(7)),
+					SilentFails:       new(false),
 				},
 			},
 			want: `
@@ -3522,7 +3522,7 @@ func TestWebHook_IsZero(t *testing.T) {
 		{
 			name: "non-empty/AllowInvalidCerts",
 			webhook: WebHook{
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 			},
 			want: false,
 		},
@@ -3548,7 +3548,7 @@ func TestWebHook_IsZero(t *testing.T) {
 		{
 			name: "non-empty/DesiredStatusCode",
 			webhook: WebHook{
-				DesiredStatusCode: test.Ptr[uint16](200),
+				DesiredStatusCode: new(uint16(200)),
 			},
 			want: false,
 		},
@@ -3562,14 +3562,14 @@ func TestWebHook_IsZero(t *testing.T) {
 		{
 			name: "non-empty/MaxTries",
 			webhook: WebHook{
-				MaxTries: test.Ptr[uint8](2),
+				MaxTries: new(uint8(2)),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/SilentFails",
 			webhook: WebHook{
-				SilentFails: test.Ptr(true),
+				SilentFails: new(true),
 			},
 		},
 		{
@@ -3579,15 +3579,15 @@ func TestWebHook_IsZero(t *testing.T) {
 				ID:                "alpha",
 				Type:              "alpha",
 				URL:               "alpha",
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 				Secret:            "alpha",
 				Headers: []Header{
 					{Key: "alpha", Value: "alpha"},
 				},
-				DesiredStatusCode: test.Ptr[uint16](200),
+				DesiredStatusCode: new(uint16(200)),
 				Delay:             "2s",
-				MaxTries:          test.Ptr[uint8](2),
-				SilentFails:       test.Ptr(true),
+				MaxTries:          new(uint8(2)),
+				SilentFails:       new(true),
 			},
 		},
 	}
@@ -3634,15 +3634,15 @@ func TestWebHook_String(t *testing.T) {
 				ID:                "foobar",
 				Type:              "url",
 				URL:               "https://release-argus.io",
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 				Secret:            "secret",
 				Headers: []Header{
 					{Key: "X-Header", Value: "bosh"},
 				},
-				DesiredStatusCode: test.Ptr[uint16](200),
+				DesiredStatusCode: new(uint16(200)),
 				Delay:             "1h",
-				MaxTries:          test.Ptr[uint8](7),
-				SilentFails:       test.Ptr(false),
+				MaxTries:          new(uint8(7)),
+				SilentFails:       new(false),
 			},
 			want: test.TrimYAML(`
 				name: foobar
@@ -3784,27 +3784,27 @@ func TestNilIfUnchanged(t *testing.T) {
 		},
 		{
 			name:     "unchanged/value->value",
-			oldValue: test.Ptr(1),
-			newValue: test.Ptr(1),
+			oldValue: new(1),
+			newValue: new(1),
 			want:     nil,
 		},
 		{
 			name:     "removed, non-nil->nil",
-			oldValue: test.Ptr(1),
+			oldValue: new(1),
 			newValue: nil,
-			want:     test.Ptr(0),
+			want:     new(0),
 		},
 		{
 			name:     "added, nil->non-nil",
 			oldValue: nil,
-			newValue: test.Ptr(1),
-			want:     test.Ptr(1),
+			newValue: new(1),
+			want:     new(1),
 		},
 		{
 			name:     "changed, non-nil->other-non-nil",
-			oldValue: test.Ptr(1),
-			newValue: test.Ptr(2),
-			want:     test.Ptr(2),
+			oldValue: new(1),
+			newValue: new(2),
+			want:     new(2),
 		},
 	}
 

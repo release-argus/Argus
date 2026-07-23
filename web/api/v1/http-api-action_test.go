@@ -59,7 +59,7 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 	}{
 		{
 			name:      "service_id=unknown",
-			serviceID: test.Ptr("unknown?"),
+			serviceID: new("unknown?"),
 			wants: wants{
 				stdoutRegex: `service "unknown\?" not found`,
 				statusCode:  http.StatusNotFound,
@@ -67,7 +67,7 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 		},
 		{
 			name:      "service_id=nil",
-			serviceID: test.Ptr(""),
+			serviceID: new(""),
 			wants: wants{
 				bodyRegex:  `{"message":"missing required query parameter: service_id"}`,
 				statusCode: http.StatusBadRequest,
@@ -135,7 +135,7 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 				&svc.Status,
 				svc.Command,
 				svc.Notify,
-				test.Ptr("10m"),
+				new("10m"),
 			)
 
 			svc.WebHook = tc.webhooks
@@ -306,7 +306,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 	}{
 		{
 			name:    "invalid payload",
-			payload: test.Ptr("target: foo"),
+			payload: new("target: foo"),
 			wants: wants{
 				stdoutRegex: test.TrimYAML(`
 					invalid payload:
@@ -316,31 +316,31 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		},
 		{
 			name:   "ARGUS_SKIP/known service_id",
-			target: test.Ptr(ActionSkip),
+			target: new(ActionSkip),
 			wants: wants{
 				wantSkipMessage: true,
 			},
 		},
 		{
 			name:   "ARGUS_SKIP/inactive service_id",
-			active: test.Ptr(false),
-			target: test.Ptr(ActionSkip),
+			active: new(false),
+			target: new(ActionSkip),
 			wants: wants{
 				wantSkipMessage: false,
 			},
 		},
 		{
 			name:      "ARGUS_SKIP/unknown service_id",
-			serviceID: test.Ptr("unknown?"),
-			target:    test.Ptr(ActionSkip),
+			serviceID: new("unknown?"),
+			target:    new(ActionSkip),
 			wants: wants{
 				stdoutRegex: `service "unknown\?" not found`,
 			},
 		},
 		{
 			name:      "ARGUS_SKIP/no service_id provided",
-			serviceID: test.Ptr(""),
-			target:    test.Ptr(ActionSkip),
+			serviceID: new(""),
+			target:    new(ActionSkip),
 			wants: wants{
 				bodyRegex:  `service "" not found`,
 				statusCode: http.StatusBadRequest,
@@ -356,7 +356,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		},
 		{
 			name:   "ARGUS_ALL/known service_id with no commands or webhooks",
-			target: test.Ptr(ActionAll),
+			target: new(ActionAll),
 			wants: wants{
 				stdoutRegex: `"[^"]+" does not have any commands\/webhooks to approve`,
 				statusCode:  http.StatusOK,
@@ -364,7 +364,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		},
 		{
 			name:   "ARGUS_ALL/known service_id with command",
-			target: test.Ptr(ActionAll),
+			target: new(ActionAll),
 			commands: command.Commands{
 				{"false", "0"},
 			},
@@ -374,7 +374,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		},
 		{
 			name:   "ARGUS_ALL/known service_id with webhook",
-			target: test.Ptr(ActionAll),
+			target: new(ActionAll),
 			webhooks: webhook.WebHooks{
 				"known-service-and-webhook": whtest.WebHook(t, true, false, false),
 			},
@@ -384,7 +384,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		},
 		{
 			name:   "ARGUS_ALL/known service_id with multiple webhooks",
-			target: test.Ptr(ActionAll),
+			target: new(ActionAll),
 			webhooks: webhook.WebHooks{
 				"known-service-and-multiple-webhook-0": whtest.WebHook(t, true, false, false),
 				"known-service-and-multiple-webhook-1": whtest.WebHook(t, true, false, false),
@@ -395,7 +395,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		},
 		{
 			name:   "ARGUS_ALL/known service_id with multiple commands",
-			target: test.Ptr(ActionAll),
+			target: new(ActionAll),
 			commands: command.Commands{
 				{"ls", "-a"},
 				{"false", "1"},
@@ -406,7 +406,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		},
 		{
 			name:   "ARGUS_ALL/known service_id with dvl and command and webhook that pass upgrades approved_version",
-			target: test.Ptr(ActionAll),
+			target: new(ActionAll),
 			commands: command.Commands{
 				{"ls", "-b"},
 			},
@@ -421,7 +421,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		},
 		{
 			name:   "ARGUS_ALL/known service_id with command and webhook that pass upgrades deployed_version",
-			target: test.Ptr(ActionAll),
+			target: new(ActionAll),
 			commands: command.Commands{
 				{"ls", "-c"},
 			},
@@ -437,7 +437,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		},
 		{
 			name:   "ARGUS_ALL/known service_id with passing command and failing webhook doesn't upgrade any versions",
-			target: test.Ptr(ActionAll),
+			target: new(ActionAll),
 			commands: command.Commands{
 				{"ls", "-d"},
 			},
@@ -451,7 +451,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		},
 		{
 			name:   "ARGUS_ALL/known service_id with failing command and passing webhook doesn't upgrade any versions",
-			target: test.Ptr(ActionAll),
+			target: new(ActionAll),
 			commands: command.Commands{
 				{"fail"},
 			},
@@ -465,20 +465,20 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		},
 		{
 			name:   "webhook_NAME/known service_id with 1 webhook left to pass does upgrade deployed_version",
-			target: test.Ptr("webhook_will_pass"),
+			target: new("webhook_will_pass"),
 			commands: command.Commands{
 				{"ls", "-f"},
 			},
 			commandFails: []*bool{
-				test.Ptr(false),
+				new(false),
 			},
 			webhooks: webhook.WebHooks{
 				"will_pass":  whtest.WebHook(t, false, false, false),
 				"would_fail": whtest.WebHook(t, true, false, false),
 			},
 			webhookFails: map[string]*bool{
-				"will_pass":  test.Ptr(true),
-				"would_fail": test.Ptr(false),
+				"will_pass":  new(true),
+				"would_fail": new(false),
 			},
 			removeDVL:     true,
 			latestVersion: "0.9.0",
@@ -489,20 +489,20 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		},
 		{
 			name:   "command_NAME/known service_id with 1 command left to pass does upgrade deployed_version",
-			target: test.Ptr("command_ls -g"),
+			target: new("command_ls -g"),
 			commands: command.Commands{
 				{"ls", "/root"},
 				{"ls", "-g"},
 			},
 			commandFails: []*bool{
-				test.Ptr(false),
-				test.Ptr(true),
+				new(false),
+				new(true),
 			},
 			webhooks: webhook.WebHooks{
 				"would_fail": whtest.WebHook(t, true, false, false),
 			},
 			webhookFails: map[string]*bool{
-				"would_fail": test.Ptr(false),
+				"would_fail": new(false),
 			},
 			removeDVL:     true,
 			latestVersion: "0.9.0",
@@ -545,7 +545,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				&svc.Status,
 				svc.Command,
 				svc.Notify,
-				test.Ptr("10m"),
+				new("10m"),
 			)
 			if len(tc.commandFails) != 0 {
 				for i := range tc.commandFails {

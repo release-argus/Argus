@@ -41,7 +41,7 @@ func TestSetEnv(t *testing.T) {
 		{
 			name: "restore existing",
 			initial: map[string]*string{
-				"ARGUS_TEST__FOO": Ptr("orig"),
+				"ARGUS_TEST__FOO": new("orig"),
 			},
 			input: map[string]string{
 				"ARGUS_TEST__FOO": "new",

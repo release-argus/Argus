@@ -548,7 +548,7 @@ func TestConfig_Save__readonly(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "config.yml")
 	testYAML_config_small(file)
 	cfg := testLoadBasic(t, file)
-	cfg.Settings.Data.Readonly = test.Ptr(true)
+	cfg.Settings.Data.Readonly = new(true)
 
 	// AND: openSaveFile is spied so any write attempt is detected.
 	opened := false

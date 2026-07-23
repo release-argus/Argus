@@ -19,8 +19,6 @@ package web
 
 import (
 	"testing"
-
-	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestLookup_GetType(t *testing.T) {
@@ -67,20 +65,20 @@ func TestLookup_AllowInvalidCerts(t *testing.T) {
 		{
 			name:             "root overrides all",
 			want:             true,
-			rootValue:        test.Ptr(true),
-			defaultValue:     test.Ptr(false),
-			hardDefaultValue: test.Ptr(false),
+			rootValue:        new(true),
+			defaultValue:     new(false),
+			hardDefaultValue: new(false),
 		},
 		{
 			name:             "default overrides hardDefault",
 			want:             true,
-			defaultValue:     test.Ptr(true),
-			hardDefaultValue: test.Ptr(false),
+			defaultValue:     new(true),
+			hardDefaultValue: new(false),
 		},
 		{
 			name:             "hardDefault is last resort",
 			want:             true,
-			hardDefaultValue: test.Ptr(true),
+			hardDefaultValue: new(true),
 		},
 	}
 

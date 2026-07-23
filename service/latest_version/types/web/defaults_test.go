@@ -18,8 +18,6 @@ package web
 
 import (
 	"testing"
-
-	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestDefaults_IsZero(t *testing.T) {
@@ -37,7 +35,7 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/AllowInvalidCerts",
 			data: &Defaults{
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 			},
 			want: false,
 		},
@@ -65,7 +63,7 @@ func TestDefaults_Default(t *testing.T) {
 	// GIVEN: a Defaults.
 	defaults := Defaults{}
 	want := Defaults{
-		AllowInvalidCerts: test.Ptr(false),
+		AllowInvalidCerts: new(false),
 	}
 
 	// WHEN: Default is called.

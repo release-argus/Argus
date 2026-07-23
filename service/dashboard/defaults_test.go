@@ -173,7 +173,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			name: "non-empty/AutoApprove",
 			opt: &Defaults{
 				OptionsBase: OptionsBase{
-					AutoApprove: test.Ptr(true),
+					AutoApprove: new(true),
 				},
 			},
 			want: false,
@@ -209,7 +209,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			name: "non-empty/all",
 			opt: &Defaults{
 				OptionsBase: OptionsBase{
-					AutoApprove: test.Ptr(true),
+					AutoApprove: new(true),
 					Icon:        "icon-url",
 					IconLinkTo:  "icon-link",
 					WebURL:      "web-url",

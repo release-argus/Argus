@@ -41,24 +41,24 @@ func TestWebSocketMessage_String(t *testing.T) {
 		{
 			name: "filled",
 			websocketMessage: WebSocketMessage{
-				Version: test.Ptr(1),
+				Version: new(1),
 				Page:    "foo",
 				Type:    "bar",
 				SubType: "baz",
-				Target:  test.Ptr("bish"),
+				Target:  new("bish"),
 				Order:   &[]string{"zing", "zap", "wallop"},
 				ServiceData: &ServiceSummary{
 					ID: "summary id",
 				},
 				CommandData: map[string]*CommandSummary{
 					"alpha": {
-						Failed:       test.Ptr(true),
+						Failed:       new(true),
 						NextRunnable: time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC),
 					},
 				},
 				WebHookData: map[string]*WebHookSummary{
 					"omega": {
-						Failed:       test.Ptr(true),
+						Failed:       new(true),
 						NextRunnable: time.Date(2020, 2, 2, 0, 0, 0, 0, time.UTC),
 					},
 				},

@@ -95,7 +95,7 @@ func TestAssertFields(t *testing.T) {
 				return val, val2, false
 			}},
 			errRegex:       `NAME mismatch\ngot:  .*\nwant: .*`,
-			targetOverride: Ptr(""),
+			targetOverride: new(""),
 		},
 		{
 			name: "FieldAssertion.Target overrides target param",
@@ -112,19 +112,19 @@ func TestAssertFields(t *testing.T) {
 			name:           "CompareNotEqual mismatch, no target",
 			fieldTest:      FieldAssertion{Name: "NAME", Got: val, Want: val, Mode: CompareNotEqual},
 			errRegex:       `NAME mismatch\ngot:  .*\nwant: NOT .*`,
-			targetOverride: Ptr(""),
+			targetOverride: new(""),
 		},
 		{
 			name:           "CompareSamePointer mismatch, no target",
 			fieldTest:      FieldAssertion{Name: "NAME", Got: ptr, Want: ptr2, Mode: CompareSamePointer},
 			errRegex:       `NAME mismatch\ngot:  .*\nwant: .*`,
-			targetOverride: Ptr(""),
+			targetOverride: new(""),
 		},
 		{
 			name:           "CompareDifferentPointer mismatch, no target",
 			fieldTest:      FieldAssertion{Name: "NAME", Got: ptr, Want: ptr, Mode: CompareDifferentPointer},
 			errRegex:       `NAME mismatch\ngot:  .*\nwant: NOT .*`,
-			targetOverride: Ptr(""),
+			targetOverride: new(""),
 		},
 	}
 

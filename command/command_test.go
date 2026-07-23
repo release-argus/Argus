@@ -198,7 +198,7 @@ func TestController_ExecIndex(t *testing.T) {
 			{"false"},
 		},
 		nil,
-		test.Ptr("13m"),
+		new("13m"),
 	)
 
 	tests := []struct {

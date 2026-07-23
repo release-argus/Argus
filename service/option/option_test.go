@@ -49,7 +49,7 @@ func TestBase_IsZero(t *testing.T) {
 		{
 			name: "non-empty/SemanticVersioning",
 			base: &Base{
-				SemanticVersioning: test.Ptr(true),
+				SemanticVersioning: new(true),
 			},
 			want: false,
 		},
@@ -57,7 +57,7 @@ func TestBase_IsZero(t *testing.T) {
 			name: "non-empty/all",
 			base: &Base{
 				Interval:           "10s",
-				SemanticVersioning: test.Ptr(true),
+				SemanticVersioning: new(true),
 			},
 			want: false,
 		},
@@ -106,7 +106,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			name: "non-empty/SemanticVersioning",
 			defaults: &Defaults{
 				Base: Base{
-					SemanticVersioning: test.Ptr(true),
+					SemanticVersioning: new(true),
 				},
 			},
 			want: false,
@@ -116,7 +116,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			defaults: &Defaults{
 				Base: Base{
 					Interval:           "10s",
-					SemanticVersioning: test.Ptr(true),
+					SemanticVersioning: new(true),
 				},
 			},
 			want: false,
@@ -156,7 +156,7 @@ func TestDefaults_Default(t *testing.T) {
 			defaults: &Defaults{
 				Base: Base{
 					Interval:           "1m",
-					SemanticVersioning: test.Ptr(false),
+					SemanticVersioning: new(false),
 				},
 			},
 		},
@@ -222,7 +222,7 @@ func TestOptions_IsZero(t *testing.T) {
 			name: "non-empty/SemanticVersioning",
 			options: &Options{
 				Base: Base{
-					SemanticVersioning: test.Ptr(false),
+					SemanticVersioning: new(false),
 				},
 			},
 			want: false,
@@ -230,17 +230,17 @@ func TestOptions_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Active",
 			options: &Options{
-				Active: test.Ptr(false),
+				Active: new(false),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/all",
 			options: &Options{
-				Active: test.Ptr(false),
+				Active: new(false),
 				Base: Base{
 					Interval:           "1m",
-					SemanticVersioning: test.Ptr(false),
+					SemanticVersioning: new(false),
 				},
 			},
 			want: false,
@@ -286,9 +286,9 @@ func TestOptions_Copy(t *testing.T) {
 			options: &Options{
 				Base: Base{
 					Interval:           "10s",
-					SemanticVersioning: test.Ptr(true),
+					SemanticVersioning: new(true),
 				},
-				Active:       test.Ptr(true),
+				Active:       new(true),
 				Defaults:     defaults,
 				HardDefaults: hardDefaults,
 			},
@@ -460,12 +460,12 @@ func TestOptions_GetActive(t *testing.T) {
 		},
 		{
 			name:   "true",
-			active: test.Ptr(true),
+			active: new(true),
 			want:   true,
 		},
 		{
 			name:   "false",
-			active: test.Ptr(false),
+			active: new(false),
 			want:   false,
 		},
 	}
@@ -610,20 +610,20 @@ func TestOptions_GetSemanticVersioning(t *testing.T) {
 		{
 			name:             "root overrides all",
 			wantBool:         true,
-			rootValue:        test.Ptr(true),
-			defaultValue:     test.Ptr(false),
-			hardDefaultValue: test.Ptr(false),
+			rootValue:        new(true),
+			defaultValue:     new(false),
+			hardDefaultValue: new(false),
 		},
 		{
 			name:             "default overrides hardDefault",
 			wantBool:         true,
-			defaultValue:     test.Ptr(true),
-			hardDefaultValue: test.Ptr(false),
+			defaultValue:     new(true),
+			hardDefaultValue: new(false),
 		},
 		{
 			name:             "hardDefault is last resort",
 			wantBool:         true,
-			hardDefaultValue: test.Ptr(true),
+			hardDefaultValue: new(true),
 		},
 	}
 

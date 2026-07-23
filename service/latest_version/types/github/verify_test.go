@@ -45,7 +45,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			name:     "no url",
 			errRegex: `^url: <required>.*$`,
 			args: args{
-				url: test.Ptr(""),
+				url: new(""),
 			},
 		},
 		{
@@ -53,7 +53,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 			wantURL:  &test.ArgusGitHubRepo,
 			args: args{
-				url: test.Ptr("https://github.com/" + test.ArgusGitHubRepo),
+				url: new("https://github.com/" + test.ArgusGitHubRepo),
 			},
 		},
 		{
@@ -92,7 +92,7 @@ func TestLookup_CheckValues(t *testing.T) {
 					regex_content: "[^"]+" <invalid>.*$`,
 			),
 			args: args{
-				url: test.Ptr(""),
+				url: new(""),
 				require: &filter.Require{
 					RegexContent: "[0-",
 				},

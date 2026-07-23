@@ -48,7 +48,7 @@ func TestShoutrrr_TestSend(t *testing.T) {
 		},
 		{
 			name:  "invalid type",
-			sType: test.Ptr("somethingUnknown"),
+			sType: new("somethingUnknown"),
 			errRegex: test.TrimYAML(`
 				^failed to create Shoutrrr sender:
 					creating sender with options for URLs \[\]:

@@ -28,11 +28,11 @@ import (
 )
 
 func resetFlags() {
-	configFile = test.Ptr("")
-	configCheckFlag = test.Ptr(false)
-	testCommandsFlag = test.Ptr("")
-	testNotifyFlag = test.Ptr("")
-	testServiceFlag = test.Ptr("")
+	configFile = new("")
+	configCheckFlag = new(false)
+	testCommandsFlag = new("")
+	testNotifyFlag = new("")
+	testServiceFlag = new("")
 }
 
 func TestRun(t *testing.T) {
@@ -55,7 +55,7 @@ func TestRun(t *testing.T) {
 				"services to monitor",
 				"Listening on ",
 			},
-			exitCode: test.Ptr(1),
+			exitCode: new(1),
 		},
 		{
 			name: "config with services, db invalid format",
@@ -68,7 +68,7 @@ func TestRun(t *testing.T) {
 			outputContains: &[]string{
 				"file is not a database",
 			},
-			exitCode: test.Ptr(1),
+			exitCode: new(1),
 		},
 		{
 			name: "config with no services",

@@ -42,7 +42,7 @@ func TestIsEqual(t *testing.T) {
 			name: "defaults ignored",
 			a: func() Lookup {
 				l := &web.Lookup{}
-				l.SetTypeDefaults(&web.Defaults{AllowInvalidCerts: test.Ptr(false)}, nil)
+				l.SetTypeDefaults(&web.Defaults{AllowInvalidCerts: new(false)}, nil)
 				return l
 			}(),
 			b:    &web.Lookup{},
@@ -52,7 +52,7 @@ func TestIsEqual(t *testing.T) {
 			name: "hard_defaults ignored",
 			a: func() Lookup {
 				l := &web.Lookup{}
-				l.SetTypeDefaults(nil, &web.Defaults{AllowInvalidCerts: test.Ptr(false)})
+				l.SetTypeDefaults(nil, &web.Defaults{AllowInvalidCerts: new(false)})
 				return l
 			}(),
 			b:    &web.Lookup{},

@@ -375,7 +375,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 						URL:  "https://example.com",
 					},
 					AccessToken:   "abc",
-					UsePreRelease: test.Ptr(true),
+					UsePreRelease: new(true),
 				},
 			},
 			want: test.TrimYAML(`

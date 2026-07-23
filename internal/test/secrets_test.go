@@ -33,13 +33,13 @@ func TestGet(t *testing.T) {
 		{
 			name:     "env var set",
 			envKey:   "ARGUS_TEST_GET_VALUE",
-			envValue: Ptr("hello"),
+			envValue: new("hello"),
 			panic:    false,
 		},
 		{
 			name:     "empty env var set",
 			envKey:   "ARGUS_TEST_GET_EMPTY",
-			envValue: Ptr(""),
+			envValue: new(""),
 			panic:    true,
 		},
 		{

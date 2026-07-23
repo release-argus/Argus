@@ -273,10 +273,10 @@ func TestRefresh__previewKeepsLiveStatus(t *testing.T) {
 		semanticVersioning *string
 	}{
 		"semantic_versioning toggled off": {
-			semanticVersioning: test.Ptr("false"),
+			semanticVersioning: new("false"),
 		},
 		"semantic_versioning reset to the default": {
-			semanticVersioning: test.Ptr("null"),
+			semanticVersioning: new("null"),
 		},
 	}
 
@@ -383,7 +383,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 				lookup:             testLookup(t, web.Type, false, ""),
 				overrides:          nil,
 				semanticVerDiff:    true,
-				semanticVersioning: test.Ptr("invalid"),
+				semanticVersioning: new("invalid"),
 			},
 			errRegex: test.TrimYAML(`
 				^semantic_versioning:
@@ -397,7 +397,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 				lookup:             testLookup(t, web.Type, false, ""),
 				overrides:          nil,
 				semanticVerDiff:    true,
-				semanticVersioning: test.Ptr("true"),
+				semanticVersioning: new("true"),
 			},
 			errRegex: `^$`,
 		},

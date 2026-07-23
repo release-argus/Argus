@@ -180,28 +180,28 @@ func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
 		{
 			name:             "root overrides all",
 			want:             true,
-			rootValue:        test.Ptr(true),
-			mainValue:        test.Ptr(false),
-			defaultValue:     test.Ptr(false),
-			hardDefaultValue: test.Ptr(false),
+			rootValue:        new(true),
+			mainValue:        new(false),
+			defaultValue:     new(false),
+			hardDefaultValue: new(false),
 		},
 		{
 			name:             "main overrides default+hardDefault",
 			want:             true,
-			mainValue:        test.Ptr(true),
-			defaultValue:     test.Ptr(false),
-			hardDefaultValue: test.Ptr(false),
+			mainValue:        new(true),
+			defaultValue:     new(false),
+			hardDefaultValue: new(false),
 		},
 		{
 			name:             "default overrides hardDefault",
 			want:             true,
-			defaultValue:     test.Ptr(true),
-			hardDefaultValue: test.Ptr(false),
+			defaultValue:     new(true),
+			hardDefaultValue: new(false),
 		},
 		{
 			name:             "hardDefaultValue is last resort",
 			want:             true,
-			hardDefaultValue: test.Ptr(true),
+			hardDefaultValue: new(true),
 		},
 	}
 
@@ -357,28 +357,28 @@ func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 		{
 			name:             "root overrides all",
 			want:             1,
-			rootValue:        test.Ptr[uint16](1),
-			mainValue:        test.Ptr[uint16](2),
-			defaultValue:     test.Ptr[uint16](2),
-			hardDefaultValue: test.Ptr[uint16](2),
+			rootValue:        new(uint16(1)),
+			mainValue:        new(uint16(2)),
+			defaultValue:     new(uint16(2)),
+			hardDefaultValue: new(uint16(2)),
 		},
 		{
 			name:             "main overrides default+hardDefault",
 			want:             1,
-			mainValue:        test.Ptr[uint16](1),
-			defaultValue:     test.Ptr[uint16](2),
-			hardDefaultValue: test.Ptr[uint16](2),
+			mainValue:        new(uint16(1)),
+			defaultValue:     new(uint16(2)),
+			hardDefaultValue: new(uint16(2)),
 		},
 		{
 			name:             "default overrides hardDefault",
 			want:             1,
-			defaultValue:     test.Ptr[uint16](1),
-			hardDefaultValue: test.Ptr[uint16](2),
+			defaultValue:     new(uint16(1)),
+			hardDefaultValue: new(uint16(2)),
 		},
 		{
 			name:             "hardDefaultValue is last resort",
 			want:             1,
-			hardDefaultValue: test.Ptr[uint16](1),
+			hardDefaultValue: new(uint16(1)),
 		},
 	}
 
@@ -417,17 +417,17 @@ func TestWebHook_SetAndGetFail(t *testing.T) {
 		{
 			name:         "initial nil, set true",
 			initialState: nil,
-			newState:     test.Ptr(true),
+			newState:     new(true),
 		},
 		{
 			name:         "initial false, set true",
-			initialState: test.Ptr(false),
-			newState:     test.Ptr(true),
+			initialState: new(false),
+			newState:     new(true),
 		},
 		{
 			name:         "initial true, set false",
-			initialState: test.Ptr(true),
-			newState:     test.Ptr(false),
+			initialState: new(true),
+			newState:     new(false),
 		},
 		{
 			name:         "initial nil, set nil",
@@ -571,12 +571,12 @@ func TestWebHook_SetExecuting(t *testing.T) {
 		{
 			name:           "failed (failed=true) - does delay by 15s",
 			timeDifference: 15 * time.Second,
-			failed:         test.Ptr(true),
+			failed:         new(true),
 		},
 		{
 			name:           "success (failed=false) - does delay by 2*Interval",
 			timeDifference: 24 * time.Minute,
-			failed:         test.Ptr(false),
+			failed:         new(false),
 		},
 	}
 
@@ -587,7 +587,7 @@ func TestWebHook_SetExecuting(t *testing.T) {
 			webhook := testWebHook(true, false, false)
 			webhook.Failed.Set(webhook.ID, tc.failed)
 			webhook.Delay = tc.delay
-			webhook.MaxTries = test.Ptr(tc.maxTries)
+			webhook.MaxTries = new(tc.maxTries)
 
 			// WHEN: SetExecuting is run.
 			webhook.SetExecuting(tc.addDelay, tc.sending)
@@ -621,28 +621,28 @@ func TestWebHook_GetMaxTries(t *testing.T) {
 		{
 			name:             "root overrides all",
 			want:             uint8(1),
-			rootValue:        test.Ptr[uint8](1),
-			mainValue:        test.Ptr[uint8](2),
-			defaultValue:     test.Ptr[uint8](2),
-			hardDefaultValue: test.Ptr[uint8](2),
+			rootValue:        new(uint8(1)),
+			mainValue:        new(uint8(2)),
+			defaultValue:     new(uint8(2)),
+			hardDefaultValue: new(uint8(2)),
 		},
 		{
 			name:             "main overrides default+hardDefault",
 			want:             uint8(1),
-			mainValue:        test.Ptr[uint8](1),
-			defaultValue:     test.Ptr[uint8](2),
-			hardDefaultValue: test.Ptr[uint8](2),
+			mainValue:        new(uint8(1)),
+			defaultValue:     new(uint8(2)),
+			hardDefaultValue: new(uint8(2)),
 		},
 		{
 			name:             "default overrides hardDefault",
 			want:             uint8(1),
-			defaultValue:     test.Ptr[uint8](1),
-			hardDefaultValue: test.Ptr[uint8](2),
+			defaultValue:     new(uint8(1)),
+			hardDefaultValue: new(uint8(2)),
 		},
 		{
 			name:             "hardDefaultValue is last resort",
 			want:             uint8(1),
-			hardDefaultValue: test.Ptr[uint8](1),
+			hardDefaultValue: new(uint8(1)),
 		},
 	}
 
@@ -817,28 +817,28 @@ func TestWebHook_GetSilentFails(t *testing.T) {
 		{
 			name:             "root overrides all",
 			want:             true,
-			rootValue:        test.Ptr(true),
-			mainValue:        test.Ptr(false),
-			defaultValue:     test.Ptr(false),
-			hardDefaultValue: test.Ptr(false),
+			rootValue:        new(true),
+			mainValue:        new(false),
+			defaultValue:     new(false),
+			hardDefaultValue: new(false),
 		},
 		{
 			name:             "main overrides default+hardDefault",
 			want:             true,
-			mainValue:        test.Ptr(true),
-			defaultValue:     test.Ptr(false),
-			hardDefaultValue: test.Ptr(false),
+			mainValue:        new(true),
+			defaultValue:     new(false),
+			hardDefaultValue: new(false),
 		},
 		{
 			name:             "default overrides hardDefault",
 			want:             true,
-			defaultValue:     test.Ptr(true),
-			hardDefaultValue: test.Ptr(false),
+			defaultValue:     new(true),
+			hardDefaultValue: new(false),
 		},
 		{
 			name:             "hardDefaultValue is last resort",
 			want:             true,
-			hardDefaultValue: test.Ptr(true),
+			hardDefaultValue: new(true),
 		},
 	}
 

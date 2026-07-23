@@ -181,7 +181,7 @@ func TestApplyOverrides(t *testing.T) {
 				}`),
 				target: nil,
 			},
-			want: test.Ptr(
+			want: new(
 				test.TrimYAML(`
 					docker:
 						type: ghcr
@@ -206,7 +206,7 @@ func TestApplyOverrides(t *testing.T) {
 				target: &Require{},
 			},
 			errRegex: `^$`,
-			want:     test.Ptr(""),
+			want:     new(""),
 		},
 		{
 			name: "invalid payload, decode error",
@@ -229,7 +229,7 @@ func TestApplyOverrides(t *testing.T) {
 				target: &Require{},
 			},
 			errRegex: `^$`,
-			want:     test.Ptr("regex_content: 'v?\\d+'\n"),
+			want:     new("regex_content: 'v?\\d+'\n"),
 		},
 		{
 			name: "docker extraction, invalid data type",
@@ -261,7 +261,7 @@ func TestApplyOverrides(t *testing.T) {
 				target: &Require{},
 			},
 			errRegex: `^$`,
-			want: test.Ptr(
+			want: new(
 				test.TrimYAML(`
 					regex_content: content-v?
 					regex_version: v?
@@ -285,7 +285,7 @@ func TestApplyOverrides(t *testing.T) {
 				},
 			},
 			errRegex: `^$`,
-			want: test.Ptr(
+			want: new(
 				test.TrimYAML(`
 					regex_content: v?
 					regex_version: '-'
@@ -311,7 +311,7 @@ func TestApplyOverrides(t *testing.T) {
 					},
 				},
 			},
-			want: test.Ptr(
+			want: new(
 				test.TrimYAML(`
 					regex_content: content-v?
 					regex_version: v?
@@ -342,7 +342,7 @@ func TestApplyOverrides(t *testing.T) {
 					},
 				},
 			},
-			want: test.Ptr(
+			want: new(
 				test.TrimYAML(`
 					regex_content: content-v?
 					regex_version: v?

@@ -393,7 +393,7 @@ func assertFailsWebHookState(
 			)
 		}
 		// And mutating the fail should not affect the original map.
-		wantFails[key] = test.Ptr(!*wantFail)
+		wantFails[key] = new(!*wantFail)
 		gotFail = got.Get(key)
 		gotStr = test.StringifyPtr(gotFail)
 		if gotStr != wantStr {
@@ -433,20 +433,20 @@ func testWebHookForCopy(t *testing.T, svcStatus *status.Status, id string) *WebH
 	}
 
 	wh := New(
-		test.Ptr(true),
+		new(true),
 		Headers{
 			{Key: "X-Header", Value: "A"},
 			{Key: "X-Other", Value: "B"},
 		},
 		"1s",
-		test.Ptr(uint16(202)),
+		new(uint16(202)),
 		&svcStatus.Fails.WebHook,
 		id,
-		test.Ptr(uint8(3)),
+		new(uint8(3)),
 		notifiers,
-		test.Ptr("5m"),
+		new("5m"),
 		"secret",
-		test.Ptr(false),
+		new(false),
 		"github",
 		"https://example.com",
 		main,
@@ -454,7 +454,7 @@ func testWebHookForCopy(t *testing.T, svcStatus *status.Status, id string) *WebH
 		hardDefaults,
 	)
 	wh.ServiceStatus = svcStatus
-	wh.Failed.Set(id, test.Ptr(false))
+	wh.Failed.Set(id, new(false))
 	wh.Failed.SetNextRunnable(id, time.Unix(123, 0))
 
 	return wh
@@ -475,7 +475,7 @@ func TestWebHook_Copy(t *testing.T) {
 		},
 		{
 			name:                      "copies fields and deep-copies pointers, slices, and fails",
-			wantFail:                  map[string]*bool{"notify": test.Ptr(false)},
+			wantFail:                  map[string]*bool{"notify": new(false)},
 			mutateOriginalHeaderValue: "mutated",
 			mutateCopyHeaderValue:     "copy-mutated",
 		},
@@ -593,7 +593,7 @@ func TestWebHook_Copy(t *testing.T) {
 			assertFailsWebHookState(
 				t,
 				got.Failed,
-				map[string]*bool{"notify": test.Ptr(false)},
+				map[string]*bool{"notify": new(false)},
 				prefix,
 				"Failed",
 			)
@@ -848,7 +848,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			name: "non-empty/AllowInvalidCerts",
 			defaults: &Defaults{
 				Base: Base{
-					AllowInvalidCerts: test.Ptr(false),
+					AllowInvalidCerts: new(false),
 				},
 			},
 			want: false,
@@ -878,7 +878,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			name: "non-empty/DesiredStatusCode",
 			defaults: &Defaults{
 				Base: Base{
-					DesiredStatusCode: test.Ptr[uint16](200),
+					DesiredStatusCode: new(uint16(200)),
 				},
 			},
 			want: false,
@@ -896,7 +896,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			name: "non-empty/MaxTries",
 			defaults: &Defaults{
 				Base: Base{
-					MaxTries: test.Ptr[uint8](4),
+					MaxTries: new(uint8(4)),
 				},
 			},
 			want: false,
@@ -905,7 +905,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			name: "non-empty/SilentFails",
 			defaults: &Defaults{
 				Base: Base{
-					SilentFails: test.Ptr(true),
+					SilentFails: new(true),
 				},
 			},
 			want: false,
@@ -916,16 +916,16 @@ func TestDefaults_IsZero(t *testing.T) {
 				Base: Base{
 					Type:              "github",
 					URL:               "https://example.com",
-					AllowInvalidCerts: test.Ptr(false),
+					AllowInvalidCerts: new(false),
 					Headers: Headers{
 						{Key: "X-Header", Value: "val"},
 						{Key: "X-Another", Value: "val2"},
 					},
 					Secret:            "foobar",
-					DesiredStatusCode: test.Ptr[uint16](200),
+					DesiredStatusCode: new(uint16(200)),
 					Delay:             "1h2m3s",
-					MaxTries:          test.Ptr[uint8](4),
-					SilentFails:       test.Ptr(true),
+					MaxTries:          new(uint8(4)),
+					SilentFails:       new(true),
 				},
 			},
 			want: false,
@@ -1032,7 +1032,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			name: "non-empty/AllowInvalidCerts",
 			webhook: &WebHook{
 				Base: Base{
-					AllowInvalidCerts: test.Ptr(false),
+					AllowInvalidCerts: new(false),
 				},
 			},
 			want: false,
@@ -1062,7 +1062,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			name: "non-empty/DesiredStatusCode",
 			webhook: &WebHook{
 				Base: Base{
-					DesiredStatusCode: test.Ptr[uint16](200),
+					DesiredStatusCode: new(uint16(200)),
 				},
 			},
 			want: false,
@@ -1080,7 +1080,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			name: "non-empty/MaxTries",
 			webhook: &WebHook{
 				Base: Base{
-					MaxTries: test.Ptr[uint8](4),
+					MaxTries: new(uint8(4)),
 				},
 			},
 			want: false,
@@ -1089,7 +1089,7 @@ func TestWebHook_IsDefault(t *testing.T) {
 			name: "non-empty/SilentFails",
 			webhook: &WebHook{
 				Base: Base{
-					SilentFails: test.Ptr(true),
+					SilentFails: new(true),
 				},
 			},
 			want: false,
@@ -1100,16 +1100,16 @@ func TestWebHook_IsDefault(t *testing.T) {
 				Base: Base{
 					Type:              "github",
 					URL:               "https://example.com",
-					AllowInvalidCerts: test.Ptr(false),
+					AllowInvalidCerts: new(false),
 					Headers: Headers{
 						{Key: "X-Header", Value: "val"},
 						{Key: "X-Another", Value: "val2"},
 					},
 					Secret:            "foobar",
-					DesiredStatusCode: test.Ptr[uint16](200),
+					DesiredStatusCode: new(uint16(200)),
 					Delay:             "1h2m3s",
-					MaxTries:          test.Ptr[uint8](4),
-					SilentFails:       test.Ptr(true),
+					MaxTries:          new(uint8(4)),
+					SilentFails:       new(true),
 				},
 			},
 			want: false,
@@ -1469,16 +1469,16 @@ func TestWebHook_String(t *testing.T) {
 		{
 			name: "filled",
 			webhook: New(
-				test.Ptr(false),
+				new(false),
 				Headers{
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"},
 				},
 				"1h1m1s",
-				test.Ptr[uint16](200),
+				new(uint16(200)),
 				nil,
 				"filled",
-				test.Ptr[uint8](4),
+				new(uint8(4)),
 				Notifiers{
 					Shoutrrr: &shoutrrr.Shoutrrrs{
 						"foo": shoutrrr.New(
@@ -1489,9 +1489,9 @@ func TestWebHook_String(t *testing.T) {
 						),
 					},
 				},
-				test.Ptr("3h2m1s"),
+				new("3h2m1s"),
 				"foobar",
-				test.Ptr(true),
+				new(true),
 				"github", "https://example.com",
 				test.Must(t, func() (*Defaults, error) {
 					return DecodeDefaults("yaml", []byte("allow_invalid_certs: false"))

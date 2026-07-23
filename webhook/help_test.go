@@ -51,7 +51,7 @@ func testWebHook(failing bool, selfSignedCert bool, headers bool) *WebHook {
 	desiredStatusCode := uint16(0)
 	whMaxTries := uint8(1)
 	webhook := New(
-		test.Ptr(false),
+		new(false),
 		nil,
 		"0s",
 		&desiredStatusCode,
@@ -59,9 +59,9 @@ func testWebHook(failing bool, selfSignedCert bool, headers bool) *WebHook {
 		"test",
 		&whMaxTries,
 		Notifiers{},
-		test.Ptr("12m"),
+		new("12m"),
 		"argus",
-		test.Ptr(false),
+		new(false),
 		"github",
 		test.WebHookGitHub["url_valid"],
 		&Defaults{},

@@ -33,11 +33,11 @@ func TestStringToBoolPtr(t *testing.T) {
 	}{
 		{
 			name:  "'true' gives true",
-			input: "true", want: test.Ptr(true),
+			input: "true", want: new(true),
 		},
 		{
 			name:  "'false' gives false",
-			input: "false", want: test.Ptr(false),
+			input: "false", want: new(false),
 		},
 		{
 			name:  "'' gives nil",
@@ -180,7 +180,7 @@ func TestDerefOrZero(t *testing.T) {
 		},
 		{
 			name:  "non-nil `check` pointer",
-			check: test.Ptr("foo"),
+			check: new("foo"),
 			want:  "foo",
 		},
 	}
@@ -223,7 +223,7 @@ func TestDerefOr(t *testing.T) {
 		},
 		{
 			name:  "non-nil string pointer",
-			ptr:   test.Ptr("foo"),
+			ptr:   new("foo"),
 			value: "bar",
 			want:  "foo",
 		},
@@ -235,7 +235,7 @@ func TestDerefOr(t *testing.T) {
 		},
 		{
 			name:  "non-nil bool pointer",
-			ptr:   test.Ptr(true),
+			ptr:   new(true),
 			value: false,
 			want:  true,
 		},
@@ -247,7 +247,7 @@ func TestDerefOr(t *testing.T) {
 		},
 		{
 			name:  "non-nil int pointer",
-			ptr:   test.Ptr(3),
+			ptr:   new(3),
 			value: 2,
 			want:  3,
 		},
@@ -259,7 +259,7 @@ func TestDerefOr(t *testing.T) {
 		},
 		{
 			name:  "non-nil string slice",
-			ptr:   test.Ptr([]string{"foo", "bar"}),
+			ptr:   new([]string{"foo", "bar"}),
 			value: []string{"baz"},
 			want:  []string{"foo", "bar"},
 		},
@@ -313,7 +313,7 @@ func TestPtrIfNotZero(t *testing.T) {
 		{
 			name:  "non-zero value",
 			value: 42,
-			want:  test.Ptr(42),
+			want:  new(42),
 		},
 	}
 
@@ -363,22 +363,22 @@ func TestCopyPointer(t *testing.T) {
 		},
 		{
 			name:     "non-nil int pointer",
-			input:    test.Ptr(6),
+			input:    new(6),
 			doesCopy: true,
 		},
 		{
 			name:     "non-nil string pointer",
-			input:    test.Ptr("foo"),
+			input:    new("foo"),
 			doesCopy: true,
 		},
 		{
 			name:     "non-nil bool pointer",
-			input:    test.Ptr(true),
+			input:    new(true),
 			doesCopy: true,
 		},
 		{
 			name:     "non-nil string slice pointer",
-			input:    test.Ptr([]string{"foo", "bar"}),
+			input:    new([]string{"foo", "bar"}),
 			doesCopy: true,
 		},
 	}

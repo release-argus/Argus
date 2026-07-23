@@ -24,7 +24,6 @@ import (
 
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/config/decode"
-	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
@@ -85,7 +84,7 @@ func TestGetParam(t *testing.T) {
 			name:        "param exists",
 			queryParams: url.Values{"key": {"value"}},
 			param:       "key",
-			want:        test.Ptr("value"),
+			want:        new("value"),
 		},
 		{
 			name:        "param does not exist",
@@ -97,7 +96,7 @@ func TestGetParam(t *testing.T) {
 			name:        "empty param",
 			queryParams: url.Values{"key": {""}},
 			param:       "key",
-			want:        test.Ptr(""),
+			want:        new(""),
 		},
 	}
 
@@ -154,26 +153,26 @@ func TestAPI_AnnounceEdit(t *testing.T) {
 			name: "edit with old data/all change",
 			oldData: &apitype.ServiceSummary{
 				ID:   "service-1",
-				Icon: test.Ptr("Service 1"),
+				Icon: new("Service 1"),
 			},
 			newData: apitype.ServiceSummary{
 				ID:   "service-2",
-				Icon: test.Ptr("Service 1 Updated"),
+				Icon: new("Service 1 Updated"),
 			},
 			wantedServiceData: &apitype.ServiceSummary{
 				ID:   "service-2",
-				Icon: test.Ptr("Service 1 Updated"),
+				Icon: new("Service 1 Updated"),
 			},
 		},
 		{
 			name: "edit with old data/no changes",
 			oldData: &apitype.ServiceSummary{
 				ID:   "service-1",
-				Icon: test.Ptr("Service 1"),
+				Icon: new("Service 1"),
 			},
 			newData: apitype.ServiceSummary{
 				ID:   "service-1",
-				Icon: test.Ptr("Service 1"),
+				Icon: new("Service 1"),
 			},
 			wantedServiceData: nil,
 		},
@@ -181,12 +180,12 @@ func TestAPI_AnnounceEdit(t *testing.T) {
 			name: "edit with old data/only changes sent",
 			oldData: &apitype.ServiceSummary{
 				ID:   "service-1",
-				Icon: test.Ptr("Service 1"),
+				Icon: new("Service 1"),
 				Type: "github",
 			},
 			newData: apitype.ServiceSummary{
 				ID:   "service-1",
-				Icon: test.Ptr("Service 1"),
+				Icon: new("Service 1"),
 				Type: "url",
 			},
 			wantedServiceData: &apitype.ServiceSummary{
@@ -198,11 +197,11 @@ func TestAPI_AnnounceEdit(t *testing.T) {
 			oldData: nil,
 			newData: apitype.ServiceSummary{
 				ID:   "service-2",
-				Icon: test.Ptr("Service 2"),
+				Icon: new("Service 2"),
 			},
 			wantedServiceData: &apitype.ServiceSummary{
 				ID:   "service-2",
-				Icon: test.Ptr("Service 2"),
+				Icon: new("Service 2"),
 			},
 		},
 	}

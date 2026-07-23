@@ -389,7 +389,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 					Type: "url",
 					URL:  "https://example.com",
 				},
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 				Headers: shared.Headers{
 					{Key: "X-Foo", Value: "bar"},
 				},

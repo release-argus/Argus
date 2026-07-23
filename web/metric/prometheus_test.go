@@ -22,7 +22,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/release-argus/Argus/internal/test"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 )
 
@@ -313,7 +312,7 @@ func TestServiceCountCurrentAdd(t *testing.T) {
 			hadValue := testutil.ToFloat64(targetMetric)
 
 			// WHEN: ServiceCountCurrentAdd is called with the active state and the delta amount.
-			ServiceCountCurrentAdd(test.Ptr(tc.active), tc.delta)
+			ServiceCountCurrentAdd(new(tc.active), tc.delta)
 
 			// THEN: the metric should be incremented by this delta.
 			gotValue := testutil.ToFloat64(targetMetric)
@@ -327,7 +326,7 @@ func TestServiceCountCurrentAdd(t *testing.T) {
 			}
 
 			// WHEN: ServiceCountCurrentAdd is called again with the inverse delta.
-			ServiceCountCurrentAdd(test.Ptr(tc.active), -tc.delta)
+			ServiceCountCurrentAdd(new(tc.active), -tc.delta)
 
 			// THEN: the metric should be decremented by this delta.
 			hadValue = gotValue

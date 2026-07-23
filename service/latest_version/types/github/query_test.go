@@ -77,7 +77,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		{
 			name:     "repo that uses tags, not releases/update EmptyListETag if 200 on empty list",
 			url:      "release-argus/.github",
-			eTag:     test.Ptr(""),
+			eTag:     new(""),
 			errRegex: `^$`,
 		},
 	}
@@ -218,7 +218,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			statusCode: http.StatusOK,
 			body:       []byte(`[]`),
 			lookupSetup: func(l *Lookup) {
-				l.UsePreRelease = test.Ptr(true)
+				l.UsePreRelease = new(true)
 			},
 			want: wants{
 				nilBody:     false,
@@ -245,7 +245,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			name:       "304 Not Modified/use_prerelease blocks tag fallback",
 			statusCode: http.StatusNotModified,
 			lookupSetup: func(l *Lookup) {
-				l.UsePreRelease = test.Ptr(true)
+				l.UsePreRelease = new(true)
 			},
 			want: wants{
 				nilBody:     true,
@@ -758,14 +758,14 @@ func TestLookup_GetVersion(t *testing.T) {
 		},
 		{
 			name:         "invalid JSON",
-			bodyOverride: test.Ptr("invalid"),
+			bodyOverride: new("invalid"),
 			want: want{
 				errRegex: `unmarshal of GitHub API data failed`,
 			},
 		},
 		{
 			name:            "cached releases, used when empty body",
-			bodyOverride:    test.Ptr(""),
+			bodyOverride:    new(""),
 			lookupOverrides: `use_prerelease: false`,
 			hadReleases:     bodyObject,
 			want: want{
@@ -776,7 +776,7 @@ func TestLookup_GetVersion(t *testing.T) {
 		},
 		{
 			name:            "cached releases, var changes affect result",
-			bodyOverride:    test.Ptr(""),
+			bodyOverride:    new(""),
 			lookupOverrides: `use_prerelease: true`,
 			hadReleases:     bodyObject,
 			want: want{
@@ -787,7 +787,7 @@ func TestLookup_GetVersion(t *testing.T) {
 		},
 		{
 			name:         "cached releases, ignored if body present",
-			bodyOverride: test.Ptr(`[{"tag_name":"v1.2.3","published_at":"2021-01-01T00:00:00Z"}]`),
+			bodyOverride: new(`[{"tag_name":"v1.2.3","published_at":"2021-01-01T00:00:00Z"}]`),
 			hadReleases:  bodyObject,
 			want: want{
 				version:     "1.2.3",

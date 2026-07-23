@@ -978,20 +978,20 @@ func TestLoadEnvFile(t *testing.T) {
 		},
 		{
 			name:     "empty file",
-			content:  test.Ptr(""),
+			content:  new(""),
 			want:     map[string]string{},
 			errRegex: "^$",
 		},
 		{
 			name:           "cannot read file",
-			content:        test.Ptr("FOO=bar"),
+			content:        new("FOO=bar"),
 			cannotReadFile: true,
 			doNotWant:      []string{"FOO"},
 			errRegex:       `failed to open env file `,
 		},
 		{
 			name: "comments and empty lines",
-			content: test.Ptr(test.TrimYAML(`
+			content: new(test.TrimYAML(`
 				# comment
 
 					# indented comment
@@ -1006,7 +1006,7 @@ func TestLoadEnvFile(t *testing.T) {
 		},
 		{
 			name: "basic key-value pairs",
-			content: test.Ptr(test.TrimYAML(`
+			content: new(test.TrimYAML(`
 				FOO=bar
 				BAR=baz
 			`)),
@@ -1018,7 +1018,7 @@ func TestLoadEnvFile(t *testing.T) {
 		},
 		{
 			name: "export prefix",
-			content: test.Ptr(test.TrimYAML(`
+			content: new(test.TrimYAML(`
 				export FOO=bar
 				export  BAR=test
 				export=argus
@@ -1032,7 +1032,7 @@ func TestLoadEnvFile(t *testing.T) {
 		},
 		{
 			name: "quoted values",
-			content: test.Ptr(test.TrimYAML(`
+			content: new(test.TrimYAML(`
 				FOO="bar"
 				BAR='123'
 			`)),
@@ -1044,7 +1044,7 @@ func TestLoadEnvFile(t *testing.T) {
 		},
 		{
 			name: "env var expansion",
-			content: test.Ptr(test.TrimYAML(`
+			content: new(test.TrimYAML(`
 				FOO=bar
 				BAR=${FOO}
 			`)),
@@ -1056,7 +1056,7 @@ func TestLoadEnvFile(t *testing.T) {
 		},
 		{
 			name: "invalid line format",
-			content: test.Ptr(test.TrimYAML(`
+			content: new(test.TrimYAML(`
 				FOO=bar
 				invalid_line
 			`)),
@@ -1064,7 +1064,7 @@ func TestLoadEnvFile(t *testing.T) {
 		},
 		{
 			name: "invalid env var key",
-			content: test.Ptr(test.TrimYAML(`
+			content: new(test.TrimYAML(`
 				FOO=bar
 				=baz
 			`)),

@@ -443,10 +443,10 @@ func TestDefaults_String(t *testing.T) {
 					LatestVersion: latestver.Defaults{
 						GitHub: github.Defaults{
 							AccessToken:   "foo",
-							UsePreRelease: test.Ptr(false),
+							UsePreRelease: new(false),
 						},
 						URL: web.Defaults{
-							AllowInvalidCerts: test.Ptr(true),
+							AllowInvalidCerts: new(true),
 						},
 						Common: lvbase.Defaults{
 							Options: test.Must(t, func() (*opt.Defaults, error) {
@@ -498,7 +498,7 @@ func TestDefaults_String(t *testing.T) {
 						},
 					},
 					DeployedVersionLookup: dvbase.Defaults{
-						AllowInvalidCerts: test.Ptr(false),
+						AllowInvalidCerts: new(false),
 					},
 					Dashboard: *test.Must(t, func() (*dashboard.Defaults, error) {
 						return dashboard.DecodeDefaults("yaml", []byte("auto_approve: true"))
@@ -756,10 +756,10 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 					LatestVersion: latestver.Defaults{
 						GitHub: github.Defaults{
 							AccessToken:   "ghp_something",
-							UsePreRelease: test.Ptr(true),
+							UsePreRelease: new(true),
 						},
 						URL: web.Defaults{
-							AllowInvalidCerts: test.Ptr(true),
+							AllowInvalidCerts: new(true),
 						},
 					},
 				},
@@ -782,10 +782,10 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 					LatestVersion: latestver.Defaults{
 						GitHub: github.Defaults{
 							AccessToken:   "ghp_deprecated",
-							UsePreRelease: test.Ptr(true),
+							UsePreRelease: new(true),
 						},
 						URL: web.Defaults{
-							AllowInvalidCerts: test.Ptr(true),
+							AllowInvalidCerts: new(true),
 						},
 					},
 				},
@@ -806,7 +806,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 							AccessToken: "ghp_canonical",
 						},
 						URL: web.Defaults{
-							AllowInvalidCerts: test.Ptr(false),
+							AllowInvalidCerts: new(false),
 						},
 					},
 				},
@@ -914,7 +914,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			want: &Defaults{
 				Service: service.Defaults{
 					DeployedVersionLookup: dvbase.Defaults{
-						AllowInvalidCerts: test.Ptr(true),
+						AllowInvalidCerts: new(true),
 					},
 				},
 			},

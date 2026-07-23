@@ -535,10 +535,10 @@ func TestDefaults_String(t *testing.T) {
 				LatestVersion: latestver.Defaults{
 					GitHub: github.Defaults{
 						AccessToken:   "foo",
-						UsePreRelease: test.Ptr(false),
+						UsePreRelease: new(false),
 					},
 					URL: web.Defaults{
-						AllowInvalidCerts: test.Ptr(true),
+						AllowInvalidCerts: new(true),
 					},
 					Common: lvbase.Defaults{
 						Options: &opt.Defaults{
@@ -592,7 +592,7 @@ func TestDefaults_String(t *testing.T) {
 					},
 				},
 				DeployedVersionLookup: dvbase.Defaults{
-					AllowInvalidCerts: test.Ptr(false),
+					AllowInvalidCerts: new(false),
 				},
 				Dashboard: *test.Must(t, func() (*dashboard.Defaults, error) {
 					return dashboard.DecodeDefaults("yaml", []byte("auto_approve: true"))

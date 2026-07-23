@@ -242,7 +242,7 @@ func TestECRAuth_RefreshQueryToken__integration(t *testing.T) {
 		},
 		{
 			name:         "invalid token URL",
-			tokenAddress: test.Ptr("https://	example.com"),
+			tokenAddress: new("https://	example.com"),
 			errRegex:     `^ecr token refresh fail`,
 		},
 	}

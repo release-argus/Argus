@@ -226,7 +226,7 @@ func TestConfig_CheckValues(t *testing.T) {
 
 				return cfg, nil
 			}),
-			logRegex: test.Ptr(`^DEPRECATED: .*\s$`),
+			logRegex: new(`^DEPRECATED: .*\s$`),
 			ok:       true,
 			wantSave: true,
 		},
@@ -296,7 +296,7 @@ func TestConfig_CheckValues(t *testing.T) {
 						options:
 							interval: "10x" <invalid>.*\s$`,
 			),
-			logRegex: test.Ptr(test.TrimYAML(`
+			logRegex: new(test.TrimYAML(`
 				^DEPRECATED: .*webhook.custom_headers.*
 				DEPRECATED: .*notify.generic.url_fields.custom_headers.*
 				DEPRECATED: .*webhook.custom_headers.*

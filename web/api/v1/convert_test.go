@@ -100,7 +100,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 				Service: service.Defaults{
 					DeployedVersionLookup: dvbase.Defaults{
 						Type:              "url",
-						AllowInvalidCerts: test.Ptr(true),
+						AllowInvalidCerts: new(true),
 						Method:            "GET",
 					},
 				},
@@ -109,7 +109,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 				Service: apitype.ServiceDefaults{
 					DeployedVersionLookup: apitype.DeployedVersionLookupDefaults{
 						Type:              "url",
-						AllowInvalidCerts: test.Ptr(true),
+						AllowInvalidCerts: new(true),
 						Method:            "GET",
 					},
 				},
@@ -121,7 +121,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 				Service: service.Defaults{
 					Dashboard: dashboard.Defaults{
 						OptionsBase: dashboard.OptionsBase{
-							AutoApprove: test.Ptr(true),
+							AutoApprove: new(true),
 							Icon:        "https://example.com/icon.png",
 							IconLinkTo:  "https://example.com",
 							WebURL:      "https://example.com/other",
@@ -132,7 +132,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 			want: apitype.Defaults{
 				Service: apitype.ServiceDefaults{
 					Dashboard: apitype.DashboardOptions{
-						AutoApprove: test.Ptr(true),
+						AutoApprove: new(true),
 					},
 				},
 			},
@@ -449,7 +449,7 @@ func TestConvertAndCensorService(t *testing.T) {
 				Name:    "Something",
 				Comment: "Comment on the Service",
 				Options: apitype.ServiceOptions{
-					Active: test.Ptr(false),
+					Active: new(false),
 				},
 				LatestVersion: &apitype.LatestVersion{
 					Type:        "github",
@@ -470,14 +470,14 @@ func TestConvertAndCensorService(t *testing.T) {
 				WebHook: apitype.WebHooks{
 					"test_wh": apitype.WebHook{
 						URL:               "https://example.com",
-						AllowInvalidCerts: test.Ptr(true),
+						AllowInvalidCerts: new(true),
 						Secret:            util.SecretValue,
 					},
 				},
 				DeployedVersionLookup: &apitype.DeployedVersionLookup{
 					Type:              "url",
 					URL:               "https://example.com",
-					AllowInvalidCerts: test.Ptr(true),
+					AllowInvalidCerts: new(true),
 				},
 				Dashboard: apitype.DashboardOptions{
 					Icon: "https://example.com/icon.png",
@@ -577,10 +577,10 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 				Type:          "github",
 				URL:           "owner/repo",
 				AccessToken:   util.SecretValue,
-				UsePreRelease: test.Ptr(false),
+				UsePreRelease: new(false),
 				URLCommands: apitype.URLCommands{
 					{Type: "replace", Old: "this", New: "withThis"},
-					{Type: "split", Text: "splitThis", Index: test.Ptr(8)},
+					{Type: "split", Text: "splitThis", Index: new(8)},
 					{Type: "regex", Regex: `([0-9.]+)`},
 				},
 				Require: &apitype.LatestVersionRequire{
@@ -629,13 +629,13 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 			want: &apitype.LatestVersion{
 				Type:              "url",
 				URL:               "https://example.com",
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 				Headers: []apitype.Header{
 					{Key: "X-Foo", Value: util.SecretValue},
 				},
 				URLCommands: apitype.URLCommands{
 					{Type: "replace", Old: "this", New: "withThis"},
-					{Type: "split", Text: "splitThis", Index: test.Ptr(8)},
+					{Type: "split", Text: "splitThis", Index: new(8)},
 					{Type: "regex", Regex: `([0-9.]+)`},
 				},
 				Require: &apitype.LatestVersionRequire{
@@ -1260,10 +1260,10 @@ func TestConvertURLCommands(t *testing.T) {
 		{
 			name: "split",
 			input: filter.URLCommands{
-				{Type: "split", Index: test.Ptr(7)},
+				{Type: "split", Index: new(7)},
 			},
 			want: apitype.URLCommands{
-				{Type: "split", Index: test.Ptr(7)},
+				{Type: "split", Index: new(7)},
 			},
 		},
 		{
@@ -1271,12 +1271,12 @@ func TestConvertURLCommands(t *testing.T) {
 			input: filter.URLCommands{
 				{Type: "regex", Regex: "[0-9.]+"},
 				{Type: "replace", Old: "foo", New: "bar"},
-				{Type: "split", Index: test.Ptr(7)},
+				{Type: "split", Index: new(7)},
 			},
 			want: apitype.URLCommands{
 				{Type: "regex", Regex: "[0-9.]+"},
 				{Type: "replace", Old: "foo", New: "bar"},
-				{Type: "split", Index: test.Ptr(7)},
+				{Type: "split", Index: new(7)},
 			},
 		},
 	}
@@ -1465,7 +1465,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				Type:              "url",
 				Method:            http.MethodPost,
 				URL:               "https://release-argus.io",
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 				TargetHeader:      "X-Version",
 				BasicAuth: &apitype.BasicAuth{
 					Username: "jim",
@@ -2137,15 +2137,15 @@ func TestConvertAndCensorWebHookDefaults(t *testing.T) {
 			want: apitype.WebHook{
 				Type:              "github",
 				URL:               "https://example.com",
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 				Secret:            util.SecretValue,
 				Headers: []apitype.Header{
 					{Key: "X-Test", Value: util.SecretValue},
 				},
-				DesiredStatusCode: test.Ptr[uint16](200),
+				DesiredStatusCode: new(uint16(200)),
 				Delay:             "1s",
-				MaxTries:          test.Ptr[uint8](3),
-				SilentFails:       test.Ptr(true),
+				MaxTries:          new(uint8(3)),
+				SilentFails:       new(true),
 			},
 		},
 	}

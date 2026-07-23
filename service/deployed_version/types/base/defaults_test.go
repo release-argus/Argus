@@ -157,7 +157,7 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/AllowInvalidCerts",
 			opt: &Defaults{
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 			},
 			want: false,
 		},
@@ -172,7 +172,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			name: "non-empty/all",
 			opt: &Defaults{
 				Type:              "url",
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 				Method:            http.MethodPost,
 			},
 			want: false,

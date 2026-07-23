@@ -46,12 +46,12 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 		{
 			name:           "failed (failed=true) - does delay by 15s",
 			timeDifference: 15 * time.Second,
-			failed:         test.Ptr(true),
+			failed:         new(true),
 		},
 		{
 			name:           "success (failed=false) - does delay by 2*Interval",
 			timeDifference: 24 * time.Minute,
-			failed:         test.Ptr(false),
+			failed:         new(false),
 		},
 	}
 
