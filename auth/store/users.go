@@ -24,6 +24,7 @@ import (
 
 	"github.com/release-argus/Argus/auth"
 	"github.com/release-argus/Argus/auth/password"
+	"github.com/release-argus/Argus/auth/rbac"
 )
 
 // hashPassword derives a password hash (overridable for tests).
@@ -122,6 +123,83 @@ func (s *Store) UserByID(ctx context.Context, id string) (*auth.User, error) {
 	user.Groups = groups
 
 	return user, nil
+}
+
+// UserWithGrants returns the user, their group names, and every grant those
+// groups carry, in a single query. Grants come back regardless of
+// [auth.User.Enabled], so callers gating on it must check the flag themselves.
+func (s *Store) UserWithGrants(
+	ctx context.Context,
+	id string,
+) (*auth.User, []rbac.Grant, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT u.id, u.username, u.display_name, u.email, u.enabled, u.created_at, u.updated_at,
+		       g.name,
+		       p.resource, p.action, gp.scope_type, gp.scope_ref
+		FROM users u
+		LEFT JOIN user_groups ug       ON ug.user_id  = u.id
+		LEFT JOIN groups g             ON g.id        = ug.group_id
+		LEFT JOIN group_permissions gp ON gp.group_id = ug.group_id
+		LEFT JOIN permissions p        ON p.id        = gp.permission_id
+		WHERE u.id = ?
+		ORDER BY g.name, p.resource, p.action, gp.scope_type, gp.scope_ref;`,
+		id,
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("query user with grants: %w", err)
+	}
+	defer rows.Close()
+
+	var (
+		user   *auth.User
+		groups []string
+		grants []rbac.Grant
+	)
+	for rows.Next() {
+		var (
+			row                                              auth.User
+			groupName, resource, action, scopeType, scopeRef sql.NullString
+		)
+		if err := rows.Scan(
+			&row.ID, &row.Username, &row.DisplayName, &row.Email, &row.Enabled,
+			timeText{&row.CreatedAt}, timeText{&row.UpdatedAt},
+			&groupName,
+			&resource, &action, &scopeType, &scopeRef,
+		); err != nil {
+			return nil, nil, fmt.Errorf("scan user with grants: %w", err)
+		}
+
+		// The user's columns repeat on every joined row.
+		if user == nil {
+			user = &row
+		}
+		// Ordered by name, so a group only ever repeats consecutively.
+		if groupName.Valid && (len(groups) == 0 || groups[len(groups)-1] != groupName.String) {
+			groups = append(groups, groupName.String)
+		}
+		// NULL where the group carries no permissions.
+		if resource.Valid {
+			grants = append(grants, rbac.Grant{
+				Permission: rbac.Permission{
+					Resource: rbac.Resource(resource.String),
+					Action:   rbac.Action(action.String),
+				},
+				Scope: rbac.Scope{
+					Type: rbac.ScopeType(scopeType.String),
+					Ref:  scopeRef.String,
+				},
+			})
+		}
+	}
+	if err := rowsErr(rows); err != nil {
+		return nil, nil, fmt.Errorf("iterate user with grants: %w", err)
+	}
+	if user == nil {
+		return nil, nil, ErrNotFound
+	}
+	user.Groups = groups
+
+	return user, grants, nil
 }
 
 // CreateUser creates a user with the given group memberships.
@@ -455,57 +533,35 @@ func setUserGroups(ctx context.Context, tx *sql.Tx, userID string, groups []stri
 	return nil
 }
 
-// isEnabledAdmin reports whether userID is an enabled member of admin.
-func isEnabledAdmin(ctx context.Context, tx *sql.Tx, userID string) (bool, error) {
-	var count int
+// enabledAdminStatus returns the number of enabled admin members and whether
+// userID is one of them.
+func enabledAdminStatus(
+	ctx context.Context,
+	tx *sql.Tx,
+	userID string,
+) (total int, isMember bool, err error) {
+	var member int
 	if err := tx.QueryRowContext(ctx, `
-		SELECT COUNT(*)
+		SELECT COUNT(*), COALESCE(SUM(u.id = ?), 0)
 		FROM user_groups ug
 		JOIN users u  ON u.id = ug.user_id
 		JOIN groups g ON g.id = ug.group_id
-		WHERE g.name = ? AND g.system = 1
-			AND u.id = ?   AND u.enabled = 1;`,
-		GroupAdmin, userID,
-	).Scan(&count); err != nil {
-		return false, fmt.Errorf("check admin membership: %w", err)
+		WHERE g.name = ? AND g.system = 1 AND u.enabled = 1;`,
+		userID, GroupAdmin,
+	).Scan(&total, &member); err != nil {
+		return 0, false, fmt.Errorf("check admin membership: %w", err)
 	}
 
-	return count > 0, nil
-}
-
-// otherEnabledAdmins counts enabled admin members besides userID.
-func otherEnabledAdmins(ctx context.Context, tx *sql.Tx, userID string) (int, error) {
-	var count int
-	if err := tx.QueryRowContext(ctx, `
-		SELECT COUNT(*)
-		FROM user_groups ug
-		JOIN users u  ON u.id = ug.user_id
-		JOIN groups g ON g.id = ug.group_id
-		WHERE g.name = ? AND g.system = 1
-			AND u.id != ?  AND u.enabled = 1;`,
-		GroupAdmin, userID,
-	).Scan(&count); err != nil {
-		return 0, fmt.Errorf("count other admins: %w", err)
-	}
-
-	return count, nil
+	return total, member > 0, nil
 }
 
 // rejectIfLastAdmin returns [ErrLastAdmin] when userID is the last enabled admin.
 func rejectIfLastAdmin(ctx context.Context, tx *sql.Tx, userID string) error {
-	isAdmin, err := isEnabledAdmin(ctx, tx, userID)
+	total, isMember, err := enabledAdminStatus(ctx, tx, userID)
 	if err != nil {
 		return err
 	}
-	if !isAdmin {
-		return nil
-	}
-
-	others, err := otherEnabledAdmins(ctx, tx, userID)
-	if err != nil {
-		return err
-	}
-	if others == 0 {
+	if isMember && total == 1 {
 		return ErrLastAdmin
 	}
 

@@ -760,6 +760,61 @@ func TestStore_DeleteGroup__notFound(t *testing.T) {
 	}
 }
 
+func TestStore_UserIDsInGroup(t *testing.T) {
+	// GIVEN: groups with two, one, and no members.
+	store := testStore(t)
+	crew := mustCreateGroup(t, store, "crew")
+	empty := mustCreateGroup(t, store, "empty")
+	mustCreateGroup(t, store, "other")
+	userA := mustCreateUser(t, store, "user-a", "", "crew")
+	userB := mustCreateUser(t, store, "user-b", "", "crew", "other")
+	mustCreateUser(t, store, "user-c", "", "other")
+
+	prefix := fmt.Sprintf("%s\nUserIDsInGroup()", packageName)
+
+	// WHEN: the two-member group's users are listed.
+	got, err := store.UserIDsInGroup(t.Context(), crew.ID)
+	if err != nil {
+		t.Fatalf(
+			"%s unexpected error: %v",
+			prefix, err,
+		)
+	}
+
+	// THEN: exactly its members are returned, sorted by ID.
+	want := []string{userA.ID, userB.ID}
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Errorf(
+			"%s members mismatch\ngot:  %v\nwant: %v",
+			prefix, got, want,
+		)
+	}
+
+	// AND: memberless and unknown groups list nobody, without error.
+	noMembersTests := []struct {
+		name    string
+		groupID string
+	}{
+		{name: "memberless", groupID: empty.ID},
+		{name: "unknown", groupID: "no-such-id"},
+	}
+	for _, tc := range noMembersTests {
+		if got, err := store.UserIDsInGroup(t.Context(), tc.groupID); err != nil || got != nil {
+			t.Errorf(
+				"%s %s group\ngot:  %v, err=%v\nwant: no members, no error",
+				prefix, tc.name, got, err,
+			)
+		}
+	}
+
+	// AND: it errors when the table is unreadable.
+	dropTable(t, store, "user_groups")
+	if _, err := store.UserIDsInGroup(t.Context(), crew.ID); err == nil {
+		t.Errorf("%s expected an error after dropping user_groups", prefix)
+	}
+}
+
 func TestStore_GrantsForUser(t *testing.T) {
 	// GIVEN: users spread across groups.
 	store := testStore(t)
@@ -886,7 +941,7 @@ func TestStore_ServiceScopeRefs(t *testing.T) {
 	prefix := fmt.Sprintf("%s\nRename/DeleteServiceScopeRefs()", packageName)
 
 	// WHEN: a service is renamed.
-	if err := store.RenameServiceScopeRefs(
+	if _, err := store.RenameServiceScopeRefs(
 		t.Context(),
 		"old-name",
 		"new-name",
@@ -949,11 +1004,57 @@ func TestStore_ServiceScopeRefs(t *testing.T) {
 
 	// AND: both maintenance calls error once the table is unreadable.
 	dropTable(t, store, "group_permissions")
-	if err := store.RenameServiceScopeRefs(t.Context(), "a", "b"); err == nil {
+	if _, err := store.RenameServiceScopeRefs(t.Context(), "a", "b"); err == nil {
 		t.Errorf("%s rename should error after drop", prefix)
 	}
 	if err := store.DeleteServiceScopeRefs(t.Context(), "a"); err == nil {
 		t.Errorf("%s delete should error after drop", prefix)
+	}
+}
+
+func TestStore_RenameServiceScopeRefs__collision(t *testing.T) {
+	// GIVEN: a group already holding the same service-scoped grant for both the
+	// rename source and the rename target.
+	store := testStore(t)
+	group := mustCreateGroup(t, store,
+		"collide",
+		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "old-name"),
+		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "new-name"),
+	)
+
+	prefix := fmt.Sprintf("%s\nRenameServiceScopeRefs() collision", packageName)
+
+	// WHEN: old-name is renamed onto the existing new-name
+	// (a primary-key collision the UPDATE OR REPLACE must absorb).
+	if _, err := store.RenameServiceScopeRefs(t.Context(), "old-name", "new-name"); err != nil {
+		t.Fatalf(
+			"%s rename failed: %v",
+			prefix, err,
+		)
+	}
+
+	// THEN: the two colliding grants collapse into one.
+	got, err := store.GroupByID(t.Context(), group.ID)
+	if err != nil {
+		t.Fatalf(
+			"%s GroupByID failed: %v",
+			prefix, err,
+		)
+	}
+	if !slices.Contains(
+		got.Grants,
+		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "new-name"),
+	) {
+		t.Errorf(
+			"%s renamed grant should be present\ngot: %+v",
+			prefix, got.Grants,
+		)
+	}
+	if len(got.Grants) != 1 {
+		t.Errorf(
+			"%s colliding grants should collapse to one\ngot: %+v",
+			prefix, got.Grants,
+		)
 	}
 }
 
@@ -1065,5 +1166,165 @@ func TestPermissionIDsByPair__scanError(t *testing.T) {
 	// THEN: the scan failure is surfaced.
 	if err == nil {
 		t.Errorf("%s expected an error, got nil", prefix)
+	}
+}
+
+func TestStore_UndoServiceScopeMove(t *testing.T) {
+	// GIVEN: groups whose grants span the rename source, the rename target, or
+	// both - the last being the collision the rename absorbs.
+	tests := []struct {
+		name   string
+		grants []rbac.Grant
+	}{
+		{
+			name: "moved only",
+			grants: []rbac.Grant{
+				serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "old-name"),
+			},
+		},
+		{
+			name: "held at the target only",
+			grants: []rbac.Grant{
+				serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "new-name"),
+			},
+		},
+		{
+			name: "both, so the rename absorbs one",
+			grants: []rbac.Grant{
+				serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "old-name"),
+				serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "new-name"),
+			},
+		},
+		{
+			name: "an unrelated scope is never touched",
+			grants: []rbac.Grant{
+				serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "old-name"),
+				serviceGrant(rbac.ResourceService, rbac.ActionRead, "elsewhere"),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			store := testStore(t)
+			group := mustCreateGroup(t, store, "scoped", tc.grants...)
+
+			before, err := store.GroupByID(t.Context(), group.ID)
+			if err != nil {
+				t.Fatalf(
+					"%s\nGroupByID failed: %v",
+					packageName, err,
+				)
+			}
+
+			prefix := fmt.Sprintf("%s\nUndoServiceScopeMove()", packageName)
+
+			// WHEN: the rename is applied and then undone.
+			move, err := store.RenameServiceScopeRefs(t.Context(), "old-name", "new-name")
+			if err != nil {
+				t.Fatalf(
+					"%s rename failed: %v",
+					prefix, err,
+				)
+			}
+			if err := store.UndoServiceScopeMove(t.Context(), move); err != nil {
+				t.Fatalf(
+					"%s undo failed: %v",
+					prefix, err,
+				)
+			}
+
+			// AND: the move names the rename it reversed.
+			if got, want := move.From(), "old-name"; got != want {
+				t.Errorf(
+					"%s From() mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+			if got, want := move.To(), "new-name"; got != want {
+				t.Errorf(
+					"%s To() mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+
+			// THEN: every grant is back exactly where it started - nothing lost
+			// to the absorb, and nothing dragged off a scope it already held.
+			got, err := store.GroupByID(t.Context(), group.ID)
+			if err != nil {
+				t.Fatalf(
+					"%s GroupByID failed: %v",
+					prefix, err,
+				)
+			}
+			if len(got.Grants) != len(before.Grants) {
+				t.Fatalf(
+					"%s grant count mismatch\ngot:  %+v\nwant: %+v",
+					prefix, got.Grants, before.Grants,
+				)
+			}
+			for _, want := range before.Grants {
+				if !slices.Contains(got.Grants, want) {
+					t.Errorf(
+						"%s grant not restored: %+v\ngot: %+v",
+						prefix, want, got.Grants,
+					)
+				}
+			}
+		})
+	}
+}
+
+func TestStore_UndoServiceScopeMove__leavesUnmovedGrantsAlone(t *testing.T) {
+	// GIVEN: a group holding a grant scoped to an ID that no rename touches,
+	// and which happens to be the rename's target.
+	store := testStore(t)
+	group := mustCreateGroup(t, store,
+		"bystander",
+		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "target"),
+	)
+
+	prefix := fmt.Sprintf("%s\nUndoServiceScopeMove() bystander", packageName)
+
+	// WHEN: an unrelated service is renamed onto that ID and the move is undone.
+	// The rename matches no rows, so the undo must move nothing.
+	move, err := store.RenameServiceScopeRefs(t.Context(), "absent", "target")
+	if err != nil {
+		t.Fatalf(
+			"%s rename failed: %v",
+			prefix, err,
+		)
+	}
+	if err := store.UndoServiceScopeMove(t.Context(), move); err != nil {
+		t.Fatalf(
+			"%s undo failed: %v",
+			prefix, err,
+		)
+	}
+
+	// THEN: the bystander grant still points at the ID it was granted on -
+	// an undo must never hand a group a scope it was never given.
+	got, err := store.GroupByID(t.Context(), group.ID)
+	if err != nil {
+		t.Fatalf(
+			"%s GroupByID failed: %v",
+			prefix, err,
+		)
+	}
+	want := serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "target")
+	if !slices.Contains(got.Grants, want) {
+		t.Errorf(
+			"%s grant was moved off its own scope\ngot:  %+v\nwant: %+v",
+			prefix, got.Grants, want,
+		)
+	}
+	if slices.Contains(
+		got.Grants,
+		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "absent"),
+	) {
+		t.Errorf(
+			"%s undo granted a scope that was never held\ngot: %+v",
+			prefix, got.Grants,
+		)
 	}
 }

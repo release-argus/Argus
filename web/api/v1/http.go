@@ -16,6 +16,7 @@
 package v1
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"net/http"
@@ -26,6 +27,7 @@ import (
 	"github.com/vearutop/statigz"
 	"github.com/vearutop/statigz/brotli"
 
+	"github.com/release-argus/Argus/auth"
 	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
@@ -252,9 +254,9 @@ func (api *API) SetupWebSocket(hub *Hub, wsRoute *mux.Route) {
 			return
 		}
 
-		// allowedServices limits which services' broadcasts the client
-		// receives (nil = unrestricted).
-		var allowedServices map[string]bool
+		// clAuth identifies the session/user behind the connection
+		// (nil when auth is disabled).
+		var clAuth *clientAuth
 
 		// Session auth: the handshake carries the session cookie.
 		if api.auth != nil {
@@ -268,14 +270,26 @@ func (api *API) SetupWebSocket(hub *Hub, wsRoute *mux.Route) {
 				http.Error(w, errUnauthorised.Error(), http.StatusUnauthorized)
 				return
 			}
-			allowedServices = api.allowedServices(authCtx)
+			sessionHash := auth.HashToken(cookie.Value)
+			clAuth = &clientAuth{
+				userID:             authCtx.User.ID,
+				sessionHash:        sessionHash,
+				readableServices:   api.readableServices(authCtx),
+				actionableServices: api.actionableServices(authCtx),
+				sessionAlive: func() bool {
+					// Bounded so a stalled store can't hang the write pump goroutine.
+					ctx, cancel := context.WithTimeout(context.Background(), writeWait)
+					defer cancel()
+					return api.auth.Sessions.Alive(ctx, sessionHash)
+				},
+			}
 		} else if api.wsTokens != nil && !api.wsTokens.Validate(r.URL.Query().Get("token")) {
 			http.Error(w, errUnauthorised.Error(), http.StatusUnauthorized)
 			return
 		}
 		w.Header().Set("Connection", "keep-alive")
 		defer r.Body.Close()
-		ServeWs(hub, w, r, allowedServices)
+		ServeWs(hub, w, r, clAuth)
 	})
 }
 

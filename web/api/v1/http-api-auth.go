@@ -47,8 +47,9 @@ const (
 // loginLimiter is an in-memory fixed-window rate limiter for failed
 // login attempts, keyed by [loginKey].
 type loginLimiter struct {
-	mu      sync.Mutex
-	windows map[string]*loginWindow
+	mu        sync.Mutex
+	windows   map[string]*loginWindow
+	lastSweep time.Time
 }
 
 // loginWindow counts failed attempts within a [loginLimitWindow] and serialises
@@ -101,9 +102,15 @@ func (l *loginLimiter) lockKey(key string) func() {
 }
 
 // sweepExpired drops windows past the [loginLimitWindow] so the map cannot grow
-// unbounded, but keeps any with in-flight holders.
+// unbounded, but keeps any with in-flight holders. Scans at most once per
+// window and resets an expired window in place.
 // The caller must hold l.mu.
 func (l *loginLimiter) sweepExpired(now time.Time) {
+	if now.Sub(l.lastSweep) < loginLimitWindow {
+		return
+	}
+	l.lastSweep = now
+
 	for key, window := range l.windows {
 		if window.refs == 0 && now.Sub(window.start) >= loginLimitWindow {
 			delete(l.windows, key)
@@ -304,6 +311,8 @@ func (api *API) httpAuthLogout(w http.ResponseWriter, r *http.Request) {
 			failRequest(&w, errors.New("logout failed"), http.StatusInternalServerError)
 			return
 		}
+		// Kick any WebSocket clients still connected under this session.
+		api.kickSessionWebSocketClients(auth.HashToken(cookie.Value))
 	}
 
 	http.SetCookie(w, api.sessionCookie(r, "", -1))
@@ -329,18 +338,20 @@ func (api *API) httpAuthMe(w http.ResponseWriter, r *http.Request) {
 }
 
 // startSession mints a session for authCtx.User and sets the session cookie,
-// reporting false on failure.
+// reporting false on failure. WebSocket clients of any sessions evicted by
+// the per-user cap are kicked.
 func (api *API) startSession(
 	w http.ResponseWriter, r *http.Request,
 	authCtx *auth.Context,
 	logFrom logx.LogFrom,
 ) bool {
-	token, err := api.auth.Sessions.Start(r.Context(), authCtx.User.ID, getIP(r), r.UserAgent())
+	token, evicted, err := api.auth.Sessions.Start(r.Context(), authCtx.User.ID, getIP(r), r.UserAgent())
 	if err != nil {
 		logx.Error(err, logFrom, true)
 		failRequest(&w, errors.New("authentication failed"), http.StatusInternalServerError)
 		return false
 	}
+	api.kickSessionWebSocketClients(evicted...)
 	http.SetCookie(w, api.sessionCookie(r, token, int(api.Config.Settings.AuthSessionLifetime().Seconds())))
 	return true
 }
