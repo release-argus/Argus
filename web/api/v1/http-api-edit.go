@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/release-argus/Argus/auth/rbac"
@@ -789,8 +790,10 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// IDs/tags may have changed.
-	api.kickWebSocketClients()
+	// IDs/tags may have changed what restricted clients may see.
+	if serviceEditAffectsVisibility(oldServiceSummary, newService) {
+		api.kickRestrictedWebSocketClients()
+	}
 
 	newServiceSummary := newService.Summary()
 	// Announce the edit.
@@ -810,6 +813,26 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		},
 		logFrom,
 	)
+}
+
+// serviceEditAffectsVisibility reports whether a service create/edit can
+// change what restricted permitted-service sets should match: creation,
+// a rename, or a tag-set change (plain edits cannot).
+func serviceEditAffectsVisibility(oldService *apitype.ServiceSummary, newService *service.Service) bool {
+	// Create.
+	if oldService == nil {
+		return true
+	}
+	// Rename.
+	if oldService.ID != newService.ID {
+		return true
+	}
+	// Tag-set change.
+	var oldTags []string
+	if oldService.Tags != nil {
+		oldTags = *oldService.Tags
+	}
+	return !slices.Equal(oldTags, newService.Dashboard.Tags)
 }
 
 // httpServiceDelete handles DELETE /api/v1/service/delete: deleting a Service.

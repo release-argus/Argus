@@ -91,24 +91,11 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 		},
 		{
-			name: "UpdateUser/admin-membership check fails",
-			setup: func(t *testing.T, store *Store) {
-				mustCreateUser(t, store, "target", "")
-			},
-			pattern: `AND u.id = ?`,
-			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
-				_, err := store.UpdateUser(t.Context(), user.UserID,
-					UserPatch{Enabled: &disabled})
-				return err
-			},
-		},
-		{
-			name: "UpdateUser/other-admin count fails",
+			name: "UpdateUser/admin-status check fails",
 			setup: func(t *testing.T, store *Store) {
 				mustCreateUser(t, store, "target", "", GroupAdmin)
 			},
-			pattern: `AND u.id != ?`,
+			pattern: `SUM(u.id = ?)`,
 			invoke: func(t *testing.T, store *Store) error {
 				user, _ := store.LocalCredentials(t.Context(), "target")
 				_, err := store.UpdateUser(t.Context(), user.UserID,
@@ -202,22 +189,11 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 		},
 		{
-			name: "DeleteUser/admin-membership check fails",
-			setup: func(t *testing.T, store *Store) {
-				mustCreateUser(t, store, "target", "")
-			},
-			pattern: `AND u.id = ?`,
-			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
-				return store.DeleteUser(t.Context(), user.UserID)
-			},
-		},
-		{
-			name: "DeleteUser/other-admin count fails",
+			name: "DeleteUser/admin-status check fails",
 			setup: func(t *testing.T, store *Store) {
 				mustCreateUser(t, store, "target", "", GroupAdmin)
 			},
-			pattern: `AND u.id != ?`,
+			pattern: `SUM(u.id = ?)`,
 			invoke: func(t *testing.T, store *Store) error {
 				user, _ := store.LocalCredentials(t.Context(), "target")
 				return store.DeleteUser(t.Context(), user.UserID)

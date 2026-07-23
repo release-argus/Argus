@@ -74,6 +74,7 @@ func setupAuth(ctx context.Context, g *errgroup.Group, cfg *config.Config, dbHan
 		session.Config{
 			Lifetime:    cfg.Settings.AuthSessionLifetime(),
 			IdleTimeout: cfg.Settings.AuthSessionIdleTimeout(),
+			MaxPerUser:  cfg.Settings.AuthSessionMaxPerUser(),
 		},
 	)
 	g.Go(func() error {

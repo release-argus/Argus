@@ -41,20 +41,20 @@ func (api *API) httpServiceOrderGet(w http.ResponseWriter, r *http.Request) {
 
 	// Users without global service:read see only the services their scoped
 	// grants allow (possibly none).
-	var allowed map[string]bool
+	var readable map[string]bool
 	if api.auth != nil {
 		if authCtx := authContextFrom(r); authCtx != nil {
-			allowed = api.allowedServices(authCtx)
+			readable = api.readableServices(authCtx)
 		}
 	}
 
 	api.Config.OrderMu.RLock()
 	defer api.Config.OrderMu.RUnlock()
 	order := api.Config.Order
-	if allowed != nil {
-		filtered := make([]string, 0, len(allowed))
+	if readable != nil {
+		filtered := make([]string, 0, len(readable))
 		for _, serviceID := range order {
-			if allowed[serviceID] {
+			if readable[serviceID] {
 				filtered = append(filtered, serviceID)
 			}
 		}

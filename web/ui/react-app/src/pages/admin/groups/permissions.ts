@@ -10,11 +10,11 @@ const DESCRIPTIONS: Partial<Record<`${Resource}:${Action}`, string>> = {
 	'metric:read': 'Scrape Prometheus metrics and read the dashboard counts.',
 	'notify:execute': 'Send test notifications.',
 	'service_action:execute':
-		'Approve or skip a release, and re-run its WebHooks and commands.',
+		"View a service's webhooks and commands, approve or skip releases, and re-run actions.",
 	'service_order:update': 'Reorder the services on the dashboard.',
 	'service:create': 'Add services, and test their lookups before saving.',
 	'service:delete': 'Delete services.',
-	'service:read': 'View services, their versions, and the actions they define.',
+	'service:read': 'View services and their versions.',
 	'service:update':
 		'Edit existing services, including the commands they run on a new release, so this is equivalent to shell access on the Argus host.',
 	'version_refresh:execute':

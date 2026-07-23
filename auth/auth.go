@@ -25,7 +25,7 @@ import (
 	"github.com/release-argus/Argus/auth/rbac"
 )
 
-// ErrInvalidCredentials is returned for every authentication failure.
+// ErrInvalidCredentials is returned for every credential failure.
 var ErrInvalidCredentials = errors.New("invalid credentials")
 
 // Identity is what a Provider returns on successful authentication.

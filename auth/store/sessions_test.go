@@ -19,6 +19,7 @@ package store
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -339,6 +340,74 @@ func TestStore_DeleteExpiredSessions(t *testing.T) {
 	// AND: it errors when the table is unreadable.
 	dropTable(t, store, "sessions")
 	if err := store.DeleteExpiredSessions(t.Context(), now); err == nil {
+		t.Errorf("%s expected an error after dropping sessions", prefix)
+	}
+}
+
+func TestStore_TrimSessionsForUser(t *testing.T) {
+	// GIVEN: a user with sessions of varying activity,
+	// and another user's session older than all of them.
+	store := testStore(t)
+	alpha := mustCreateUser(t, store, "alpha", "")
+	beta := mustCreateUser(t, store, "beta", "")
+	now := timeNow()
+	insert := func(tokenHash, userID string, lastSeenAt time.Time) {
+		t.Helper()
+		session := testSession(tokenHash, userID, now.Add(time.Hour))
+		session.LastSeenAt = lastSeenAt
+		if err := store.InsertSession(t.Context(), session); err != nil {
+			t.Fatalf(
+				"%s\nsetup InsertSession failed: %v",
+				packageName, err,
+			)
+		}
+	}
+	insert("beta-oldest", beta.ID, now.Add(-3*time.Hour))
+	insert("alpha-old", alpha.ID, now.Add(-2*time.Hour))
+	insert("alpha-mid", alpha.ID, now.Add(-time.Hour))
+	insert("alpha-new", alpha.ID, now)
+
+	prefix := fmt.Sprintf("%s\nTrimSessionsForUser()", packageName)
+
+	// WHEN: alpha (3-sessions) is trimmed to their 2 most-recently active sessions.
+	evicted, err := store.TrimSessionsForUser(t.Context(), alpha.ID, 2)
+	if err != nil {
+		t.Fatalf(
+			"%s unexpected error: %v",
+			prefix, err,
+		)
+	}
+
+	// THEN: only alpha's least-recently active session was evicted.
+	if want := []string{"alpha-old"}; !slices.Equal(evicted, want) {
+		t.Errorf(
+			"%s evicted mismatch\ngot:  %v\nwant: %v",
+			prefix, evicted, want,
+		)
+	}
+
+	// AND: the survivors and beta's session (the cap is per-user) remain.
+	for _, tokenHash := range []string{"alpha-mid", "alpha-new", "beta-oldest"} {
+		if _, err := store.SessionByTokenHash(t.Context(), tokenHash); err != nil {
+			t.Errorf(
+				"%s %q should survive\ngot: %v",
+				prefix, tokenHash, err,
+			)
+		}
+	}
+
+	// AND: a below-cap trim evicts nothing.
+	evicted, err = store.TrimSessionsForUser(t.Context(), alpha.ID, 2)
+	if err != nil || evicted != nil {
+		t.Errorf(
+			"%s below-cap trim should evict nothing\ngot:  %v, err=%v",
+			prefix, evicted, err,
+		)
+	}
+
+	// AND: it errors when the table is unreadable.
+	dropTable(t, store, "sessions")
+	if _, err := store.TrimSessionsForUser(t.Context(), alpha.ID, 2); err == nil {
 		t.Errorf("%s expected an error after dropping sessions", prefix)
 	}
 }

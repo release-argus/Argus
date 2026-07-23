@@ -457,38 +457,73 @@ func (api *API) requireAdmin(handler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// allowedServices returns the set of service IDs whose broadcasts the user
+// readableServices returns the set of service IDs whose broadcasts the user
 // may receive, or nil when unrestricted (global service:read).
 // Evaluated once per WebSocket handshake.
-func (api *API) allowedServices(authCtx *auth.Context) map[string]bool {
-	// Global read: unrestricted.
-	if authCtx.Permissions.Allowed(rbac.ResourceService, rbac.ActionRead, nil) {
+func (api *API) readableServices(authCtx *auth.Context) map[string]bool {
+	return api.permittedServices(authCtx, rbac.ResourceService, rbac.ActionRead)
+}
+
+// actionableServices returns the set of service IDs whose WebHook/Command
+// broadcasts the user may receive, or nil when unrestricted
+// (global service_action:execute).
+// Evaluated at the WebSocket handshake.
+func (api *API) actionableServices(authCtx *auth.Context) map[string]bool {
+	return api.permittedServices(authCtx, rbac.ResourceServiceAction, rbac.ActionExecute)
+}
+
+// permittedServices returns the set of service IDs the user holds
+// (resource, action) on, or nil when that grant is global.
+func (api *API) permittedServices(
+	authCtx *auth.Context,
+	resource rbac.Resource,
+	action rbac.Action,
+) map[string]bool {
+	// Global grant: unrestricted.
+	if authCtx.Permissions.Allowed(resource, action, nil) {
 		return nil
 	}
 
 	api.Config.OrderMu.RLock()
 	defer api.Config.OrderMu.RUnlock()
-	allowed := make(map[string]bool, len(api.Config.Order))
+	permitted := make(map[string]bool, len(api.Config.Order))
 	for _, serviceID := range api.Config.Order {
 		target := rbac.Target{ServiceID: serviceID}
 		if svc := api.Config.Service[serviceID]; svc != nil {
 			target.Tags = svc.Dashboard.Tags
 		}
-		if authCtx.Permissions.Allowed(rbac.ResourceService, rbac.ActionRead, &target) {
-			allowed[serviceID] = true
+		if authCtx.Permissions.Allowed(resource, action, &target) {
+			permitted[serviceID] = true
 		}
 	}
-	return allowed
+	return permitted
 }
 
-// kickWebSocketClients forces every WebSocket client to reconnect so their
-// permitted-service sets are re-derived. Call after anything that may change
-// who can see which service - grant/membership edits, service changes.
-func (api *API) kickWebSocketClients() {
+// kickUserWebSocketClients is a nil-safe wrapper around [Hub.KickUserClients]
+// that kicks all the WebSocket clients of userIDs.
+func (api *API) kickUserWebSocketClients(userIDs ...string) {
 	if api.auth == nil || api.hub == nil {
 		return
 	}
-	api.hub.KickClients()
+	api.hub.KickUserClients(userIDs...)
+}
+
+// kickSessionWebSocketClients is a nil-safe wrapper around [Hub.KickSessionClients]
+// that disconnects the WebSocket clients connected under tokenHashes.
+func (api *API) kickSessionWebSocketClients(tokenHashes ...string) {
+	if api.auth == nil || api.hub == nil {
+		return
+	}
+	api.hub.KickSessionClients(tokenHashes...)
+}
+
+// kickRestrictedWebSocketClients is a nil-safe wrapper around [Hub.KickRestrictedClients]
+// that kicks all service-restricted WebSocket clients.
+func (api *API) kickRestrictedWebSocketClients() {
+	if api.auth == nil || api.hub == nil {
+		return
+	}
+	api.hub.KickRestrictedClients()
 }
 
 // serviceTarget extracts the [rbac.Target] from the request's service_id
