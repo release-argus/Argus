@@ -22,20 +22,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/util"
 )
 
 func TestHTTP_HTTPServiceOrderGet(t *testing.T) {
 	// GIVEN: an API and a request for the service order.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestAPI_HTTPServiceOrderGet.yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -105,13 +102,9 @@ func TestHTTP_HTTPServiceOrderGet(t *testing.T) {
 
 func TestHTTP_HTTPServiceOrderSet(t *testing.T) {
 	// GIVEN: an API and a request to set the service order.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestAPI_HTTPServiceOrderSet.yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
-	t.Cleanup(func() {
-		// Give time for save before TempDir clean-up.
-		time.Sleep(2 * config.DebounceDuration)
-	})
 
 	testOrder := []string{"service1", "service2", "service3"}
 	successMessage := `{"message":"order updated"}` + "\n"
@@ -232,7 +225,7 @@ func TestHTTP_HTTPServiceOrderSet(t *testing.T) {
 func TestHTTP_HTTPServiceSummary(t *testing.T) {
 	testSVC := testService(t, "TestHTTP_HTTPServiceSummary", "url", "url", true)
 	// GIVEN: an API and a request for detail of a service.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestAPI_HTTPServiceSummary.yml"
 	api := testAPI(t, file)
 	api.Config.Service[testSVC.ID] = testSVC
 	api.Config.Order = append(api.Config.Order, testSVC.ID)

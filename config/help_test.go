@@ -36,14 +36,30 @@ import (
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
-var packageName = "config"
+var (
+	packageName = "config"
+	testTempDir string // Process-lifetime home of test config files.
+)
 
 func TestMain(m *testing.M) {
 	// Log.
 	logtest.InitLog()
 
+	// Sweep strays from earlier killed runs.
+	strays, _ := filepath.Glob(filepath.Join(os.TempDir(), "argus-config-test*"))
+	for _, stray := range strays {
+		_ = os.RemoveAll(stray)
+	}
+	tempDir, err := os.MkdirTemp("", "argus-config-test")
+	if err != nil {
+		fmt.Printf("%s\ncreate temp dir: %v", packageName, err)
+		os.Exit(1)
+	}
+	testTempDir = tempDir
+
 	// Run other tests.
 	exitCode := m.Run()
+	_ = os.RemoveAll(tempDir)
 
 	if len(logx.ExitCodeChannel()) > 0 {
 		fmt.Printf("%s\nexit code channel not empty", packageName)
@@ -228,7 +244,7 @@ func testServiceURL(t *testing.T, id string) *service.Service {
 				require:
 					regex_content: "{{ version }}-beta"
 					regex_version: "[0-9]+"
-				access_token: `+test.GitHubToken(nil)+`
+				access_token: placeholder
 			deployed_version_lookup:
 				type: url
 				method: GET

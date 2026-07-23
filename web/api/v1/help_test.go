@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -51,6 +52,7 @@ import (
 var (
 	packageName          = "api_v1"
 	secretValueMarshaled string
+	testTempDir          string // Process-lifetime home of test config files.
 )
 
 func TestMain(m *testing.M) {
@@ -65,7 +67,18 @@ func TestMain(m *testing.M) {
 
 	config.DebounceDuration = 500 * time.Millisecond
 	flags := make(map[string]bool)
-	path := "TestWebAPIv1Main.yml"
+	// Sweep strays from earlier killed runs.
+	strays, _ := filepath.Glob(filepath.Join(os.TempDir(), "argus-api-v1-test*"))
+	for _, stray := range strays {
+		_ = os.RemoveAll(stray)
+	}
+	tempDir, err := os.MkdirTemp("", "argus-api-v1-test")
+	if err != nil {
+		fmt.Printf("%s\ncreate temp dir: %v", packageName, err)
+		os.Exit(1)
+	}
+	testTempDir = tempDir
+	path := filepath.Join(tempDir, "TestWebAPIv1Main.yml")
 	testYAML_Argus(path)
 	var cfg config.Config
 	cfg.Load(ctx, g, path, &flags)
@@ -164,10 +177,12 @@ func testLoad(t *testing.T, file string) *config.Config {
 
 func testAPI(t *testing.T, path string) API {
 	t.Helper()
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(testTempDir, path)
+	}
 	testYAML_Argus(path)
 
 	cfg := testLoad(t, path)
-	cfg.HardDefaults.Service.LatestVersion.GitHub.AccessToken = test.GitHubToken(t)
 
 	t.Cleanup(func() {
 		_ = os.RemoveAll(cfg.Settings.Data.DatabaseFile)

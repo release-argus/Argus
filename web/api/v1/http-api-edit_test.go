@@ -31,7 +31,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
@@ -52,7 +51,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to refresh the latest_version of a service.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_LatestVersionRefreshUncreated.yml"
 	api := testAPI(t, file)
 	tests := []struct {
 		name   string
@@ -186,7 +185,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to refresh the deployed_version of a service.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_DeployedVersionRefreshUncreated.yml"
 	api := testAPI(t, file)
 	tests := []struct {
 		name   string
@@ -325,7 +324,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to refresh the latest_version of a service.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_LatestVersionRefresh.yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -700,7 +699,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to refresh the deployed_version of a service.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_DeployedVersionRefresh.yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -1056,7 +1055,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request for detail of a service.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_ServiceDetail.yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -1263,7 +1262,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to parse a template.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_TemplateParse.yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -1432,12 +1431,9 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to create a service.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_ServiceEdit__create.yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
-
-	// Give time for save before TempDir clean-up.
-	t.Cleanup(func() { time.Sleep(2 * config.DebounceDuration) })
 
 	tests := []struct {
 		name      string
@@ -1812,7 +1808,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 func TestHTTP_ServiceEdit__create__concurrentConflict(t *testing.T) {
 	// GIVEN: an API where the op lock for a not-yet-created service ID is already
 	// held by an in-flight operation (e.g. a concurrent create of the same ID).
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_ServiceEdit__create__concurrentConflict.yml"
 	api := testAPI(t, file)
 	const serviceID = "TestHTTP_ServiceEdit_createConflict"
 
@@ -1872,12 +1868,9 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to edit a service.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_ServiceEdit__edit.yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
-
-	// Give time for save before TempDir clean-up.
-	t.Cleanup(func() { time.Sleep(2 * config.DebounceDuration) })
 
 	tests := []struct {
 		name    string
@@ -2296,7 +2289,7 @@ func TestHTTP_ServiceEdit__edit__missingID(t *testing.T) {
 
 func TestHTTP_ServiceEdit__edit__renameToExistingID(t *testing.T) {
 	// GIVEN: an API with two services — one to edit, and one whose ID we rename onto.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_ServiceEdit__edit__renameToExistingID.yml"
 	api := testAPI(t, file)
 
 	const (
@@ -2362,12 +2355,9 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to edit a service.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_ServiceEdit__edit__secrets.yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
-
-	// Give time for save before TempDir clean-up.
-	t.Cleanup(func() { time.Sleep(2 * config.DebounceDuration) })
 
 	tests := []struct {
 		name    string
@@ -2764,7 +2754,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 func TestHTTP_ServiceEdit__edit__waitsForInFlightOp(t *testing.T) {
 	// GIVEN: an API and an absent service whose op lock is held by an in-flight
 	// operation (a refresh, or another edit/delete).
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_ServiceEdit__edit__waitsForInFlightOp.yml"
 	api := testAPI(t, file)
 	const serviceID = "TestHTTP_ServiceEdit_waits-absent"
 
@@ -2825,12 +2815,8 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to delete a service.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_ServiceDelete.yml"
 	api := testAPI(t, file)
-	t.Cleanup(func() {
-		// Give time for save before TempDir clean-up.
-		time.Sleep(2 * config.DebounceDuration)
-	})
 	svc := testService(t, "TestHTTP_ServiceDelete", "url", "url", true)
 	svc.HardDefaults.Status.DatabaseChannel = api.Config.DatabaseChannel
 	_ = api.Config.AddService("", svc)
@@ -2960,7 +2946,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to test a notify.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_NotifyTest.yml"
 	api := testAPI(t, file)
 
 	validNotify := shoutrrrtest.Shoutrrr(t, false, false)
@@ -3376,7 +3362,7 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 	)
 
 	// GIVEN: an API.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_ServiceOpLock__conflict.yml"
 	api := testAPI(t, file)
 
 	tests := map[string]struct {
@@ -3471,16 +3457,12 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 
 func TestHTTP_ServiceDelete__waitsForInFlightOp(t *testing.T) {
 	// GIVEN: an API with a service whose op lock is held by an in-flight operation.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_ServiceDelete__waitsForInFlightOp.yml"
 	api := testAPI(t, file)
 	svc := testService(t, "TestHTTP_ServiceDelete_waits", "url", "url", true)
 	svc.HardDefaults.Status.DatabaseChannel = api.Config.DatabaseChannel
 	_ = api.Config.AddService("", svc)
 	<-api.Config.DatabaseChannel // Drain the addition.
-	t.Cleanup(func() {
-		// Give the post-delete config save time before TempDir cleanup.
-		time.Sleep(2 * config.DebounceDuration)
-	})
 
 	held := api.acquireServiceOp(svc.ID)
 	held.mu.Lock() // In-flight edit/refresh holds the lock.

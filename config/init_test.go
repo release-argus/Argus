@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -184,16 +185,13 @@ func TestConfig_Load(t *testing.T) {
 
 			g, _ := errgroup.WithContext(t.Context())
 			flags := make(map[string]bool)
-			file := filepath.Join(t.TempDir(), "config.yml")
+			file := filepath.Join(testTempDir,
+				"TestLoad_"+strings.ReplaceAll(tc.name, " ", "_")+".yml")
 
 			// Setup YAML file
 			if tc.setupFile != nil {
 				tc.setupFile(file)
 			}
-			t.Cleanup(func() {
-				// Give time for save before TempDir clean-up.
-				time.Sleep(2 * DebounceDuration)
-			})
 
 			// Set environment variables
 			test.SetEnv(t, tc.env)

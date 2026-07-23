@@ -23,13 +23,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/release-argus/Argus/command"
-	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
@@ -50,7 +48,7 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request for the Actions of a Service.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_HTTPServiceGetActions.yml"
 	api := testAPI(t, file)
 	tests := []struct {
 		name      string
@@ -290,12 +288,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request for the Actions of a Service.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_HTTPServiceRunActions.yml"
 	api := testAPI(t, file)
-	if api.Config.Settings.Data.DatabaseFile != "" {
-		// Give time for save before TempDir clean-up.
-		t.Cleanup(func() { time.Sleep(2 * config.DebounceDuration) })
-	}
 	tests := []struct {
 		name          string
 		serviceID     *string

@@ -21,7 +21,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
 
 	"github.com/release-argus/Argus/command"
@@ -44,7 +43,7 @@ func TestHTTP_Config(t *testing.T) {
 	lvCfg := lvtest.PlainDefaultsConfig(t)
 
 	// AND: an API and a request for the config.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_Config.yml"
 	api := testAPI(t, file)
 
 	tests := []struct {
