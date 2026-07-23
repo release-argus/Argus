@@ -21,7 +21,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"sync"
 	"testing"
 
@@ -34,7 +33,7 @@ import (
 func TestHTTP_HTTPWebSocketToken(t *testing.T) {
 	// GIVEN: an API without Basic Auth (wsTokens is nil).
 	prefix := fmt.Sprintf("%q\nAPI.httpWebSocketToken()", packageName)
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_HTTPWebSocketToken.yml"
 	api := testAPI(t, file)
 
 	// WHEN: a request is made for a WebSocket token.
@@ -162,7 +161,7 @@ func TestHTTP_HTTPWebSocketToken__AuthGated(t *testing.T) {
 
 func TestHTTP_HTTPRuntimeInfo(t *testing.T) {
 	// GIVEN: an API and a request for the runtime info.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_HTTPRuntimeInfo.yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 	bodyRegex := test.TrimJSON(`

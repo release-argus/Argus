@@ -18,6 +18,7 @@ package v1
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -29,11 +30,14 @@ func writeFile(path string, data string) {
 }
 
 func testYAML_Argus(path string) {
+	// Keep the DB beside rhe config.
+	dbFile := strings.TrimSuffix(path, filepath.Ext(path)) + ".db"
+
 	data := test.TrimYAML(`
 		defaults:
 			service:
 				latest_version:
-					access_token: ` + test.GitHubToken(nil) + `
+					access_token: ${GITHUB_TOKEN}
 			notify:
 				gotify:
 					options:
@@ -42,7 +46,7 @@ func testYAML_Argus(path string) {
 				desired_status_code: 0
 		settings:
 			data:
-				database_file: test-argus.db
+				database_file: ` + dbFile + `
 			web:
 				listen_port: 0
 		service:

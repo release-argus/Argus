@@ -21,7 +21,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,12 +32,12 @@ import (
 
 func TestHTTP_HTTPFlags(t *testing.T) {
 	// GIVEN: an API and a request for the flag var values.
-	file := filepath.Join(t.TempDir(), "config.yml")
+	file := "TestHTTP_HTTPFlags.yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 	bodyRegex := test.TrimJSON(`
 		{
-			"config.file": "`+file+`",
+			"config.file": "`+api.Config.File+`",
 			"log.level": "`+api.Config.Settings.LogLevel()+`",
 			"log.timestamps": `+strconv.FormatBool(*api.Config.Settings.LogTimestamps())+`,
 			"data.database-file": "`+api.Config.Settings.DataDatabaseFile()+`",
