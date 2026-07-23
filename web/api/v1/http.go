@@ -41,7 +41,7 @@ func (api *API) SetupRoutesAPI() {
 	var openRouter *mux.Router
 	if api.auth != nil {
 		openRouter = api.Router.PathPrefix("/api/v1").Subrouter()
-		openRouter.Use(originCheckMiddleware)
+		openRouter.Use(api.originCheckMiddleware)
 
 		//   POST, log in.
 		openRouter.HandleFunc("/auth/login", api.httpAuthLogin).Methods(http.MethodPost)
@@ -66,7 +66,7 @@ func (api *API) SetupRoutesAPI() {
 
 	// Session/RBAC authentication.
 	if api.auth != nil {
-		v1Router.Use(originCheckMiddleware, api.authMiddleware())
+		v1Router.Use(api.originCheckMiddleware, api.authMiddleware())
 
 		//   GET, the authenticated user and their permissions.
 		v1Router.HandleFunc("/auth/me", api.httpAuthMe).Methods(http.MethodGet)
@@ -244,6 +244,14 @@ func (api *API) DisableRoutes() {
 func (api *API) SetupWebSocket(hub *Hub, wsRoute *mux.Route) {
 	api.hub = hub
 	wsRoute.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Guard the handshake with the same-origin policy
+		// since it sits outside the originCheckMiddleware.
+		if origin := r.Header.Get("Origin"); api.auth != nil && origin != "" &&
+			(origin == "null" || !api.originMatchesHost(r, origin)) {
+			failRequest(&w, errForbidden, http.StatusForbidden)
+			return
+		}
+
 		// allowedServices limits which services' broadcasts the client
 		// receives (nil = unrestricted).
 		var allowedServices map[string]bool
