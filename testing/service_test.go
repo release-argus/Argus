@@ -52,7 +52,7 @@ func TestServiceTest(t *testing.T) {
 			name:        "empty flag",
 			flag:        "",
 			ok:          true,
-			stdoutRegex: test.Ptr("^$"),
+			stdoutRegex: new("^$"),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -68,7 +68,7 @@ func TestServiceTest(t *testing.T) {
 			name:        "unknown service",
 			flag:        "test",
 			ok:          false,
-			stdoutRegex: test.Ptr(`Service "test" could not be found in config.service\sDid you mean one of these\?\s  - argus`),
+			stdoutRegex: new(`Service "test" could not be found in config.service\sDid you mean one of these\?\s  - argus`),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -84,7 +84,7 @@ func TestServiceTest(t *testing.T) {
 			name:        "github service",
 			flag:        "argus",
 			ok:          true,
-			stdoutRegex: test.Ptr(`argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			stdoutRegex: new(`argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -100,7 +100,7 @@ func TestServiceTest(t *testing.T) {
 			name:        "url service type but github owner-repo url",
 			flag:        "argus",
 			ok:          true,
-			stdoutRegex: test.Ptr("unsupported protocol scheme"),
+			stdoutRegex: new("unsupported protocol scheme"),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -117,7 +117,7 @@ func TestServiceTest(t *testing.T) {
 			name:        "url service",
 			flag:        "argus",
 			ok:          true,
-			stdoutRegex: test.Ptr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			stdoutRegex: new(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -133,7 +133,7 @@ func TestServiceTest(t *testing.T) {
 			name: "service with deployed version lookup",
 			flag: "argus",
 			ok:   true,
-			stdoutRegex: test.Ptr(
+			stdoutRegex: new(
 				`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s` +
 					`.*Updated to.*\s` +
 					`.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`,

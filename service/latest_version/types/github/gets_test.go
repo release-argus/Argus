@@ -221,21 +221,21 @@ func TestLookup_UsePreRelease(t *testing.T) {
 	}{
 		{
 			name:             "root overrides all",
-			rootValue:        test.Ptr(false),
-			defaultValue:     test.Ptr(true),
-			hardDefaultValue: test.Ptr(true),
-			want:             test.Ptr(false),
+			rootValue:        new(false),
+			defaultValue:     new(true),
+			hardDefaultValue: new(true),
+			want:             new(false),
 		},
 		{
 			name:             "default overrides hardDefault",
-			defaultValue:     test.Ptr(true),
-			hardDefaultValue: test.Ptr(false),
-			want:             test.Ptr(true),
+			defaultValue:     new(true),
+			hardDefaultValue: new(false),
+			want:             new(true),
 		},
 		{
 			name:             "hardDefault is last resort",
-			hardDefaultValue: test.Ptr(false),
-			want:             test.Ptr(false),
+			hardDefaultValue: new(false),
+			want:             new(false),
 		},
 	}
 
@@ -293,29 +293,29 @@ func TestLookup_UseTagsAPI(t *testing.T) {
 		},
 		{
 			name:          "use_prerelease/false - allowed",
-			usePreRelease: test.Ptr(false),
+			usePreRelease: new(false),
 			want:          true,
 		},
 		{
 			name:          "use_prerelease/true - blocked",
-			usePreRelease: test.Ptr(true),
+			usePreRelease: new(true),
 			want:          false,
 		},
 		{
 			name:          "use_prerelease=false, regex_content=set - blocked",
-			usePreRelease: test.Ptr(false),
+			usePreRelease: new(false),
 			require:       &filter.Require{RegexContent: "some-pattern"},
 			want:          false,
 		},
 		{
 			name:          "use_prerelease=true, regex_content=empty - blocked",
-			usePreRelease: test.Ptr(true),
+			usePreRelease: new(true),
 			require:       &filter.Require{RegexContent: ""},
 			want:          false,
 		},
 		{
 			name:          "use_prerelease=true, regex_content=set - blocked",
-			usePreRelease: test.Ptr(true),
+			usePreRelease: new(true),
 			require:       &filter.Require{RegexContent: "some-pattern"},
 			want:          false,
 		},

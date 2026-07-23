@@ -64,7 +64,7 @@ func TestServices_Track(t *testing.T) {
 			for _, j := range tc.services {
 				(*services)[j] = testService(t, tc.name, j, "url")
 				if len(tc.active) != 0 {
-					(*services)[j].Options.Active = test.Ptr(tc.active[i])
+					(*services)[j].Options.Active = new(tc.active[i])
 				}
 				(*services)[j].Status.SetLatestVersion("", "", false)
 				(*services)[j].Status.SetDeployedVersion("", "", false)

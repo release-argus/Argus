@@ -88,7 +88,7 @@ func TestLookup_Refresh(t *testing.T) {
 			args: args{
 				overrides: []byte(`{"type": "url", "url": "` + test.LookupBare["url_valid"] + `/1.2.4"}`),
 				version: versions{
-					deployedVersion: test.Ptr("1.2.3"),
+					deployedVersion: new("1.2.3"),
 				},
 			},
 			previous: testLookup(t, manual.Type, false, ""),
@@ -112,7 +112,7 @@ func TestLookup_Refresh(t *testing.T) {
 					"url": "` + test.LookupBare["url_valid"] + "/" + url.QueryEscape(`{"foo":"1.2.3-beta"}`) + `",
 					"json": "foo"
 				}`)),
-				semanticVersioning: test.Ptr("false"),
+				semanticVersioning: new("false"),
 			},
 			previous: testLookup(t, web.Type, false, "1.2.2"),
 			errRegex: `^$`,
@@ -131,8 +131,8 @@ func TestLookup_Refresh(t *testing.T) {
 			args: args{
 				ignoreSecretRefs: true,
 				version: versions{
-					latestVersion:            test.Ptr("1.2.2"),
-					deployedVersion:          test.Ptr("0.0.0"),
+					latestVersion:            new("1.2.2"),
+					deployedVersion:          new("0.0.0"),
 					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339),
 				},
 			},
@@ -155,8 +155,8 @@ func TestLookup_Refresh(t *testing.T) {
 					]
 				}`)),
 				version: versions{
-					latestVersion:            test.Ptr("0.0.0"),
-					deployedVersion:          test.Ptr("0.0.0"),
+					latestVersion:            new("0.0.0"),
+					deployedVersion:          new("0.0.0"),
 					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339),
 				},
 			},
@@ -190,8 +190,8 @@ func TestLookup_Refresh(t *testing.T) {
 					]
 				}`)),
 				version: versions{
-					latestVersion:            test.Ptr(""),
-					deployedVersion:          test.Ptr(""),
+					latestVersion:            new(""),
+					deployedVersion:          new(""),
 					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339),
 				},
 			},

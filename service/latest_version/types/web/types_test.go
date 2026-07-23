@@ -232,7 +232,7 @@ func TestLookup_String(t *testing.T) {
 						RegexVersion: "def",
 					},
 				},
-				AllowInvalidCerts: test.Ptr(true),
+				AllowInvalidCerts: new(true),
 				Headers: shared.Headers{
 					{Key: "X-Test-1", Value: "foo"},
 					{Key: "X-Test-2", Value: "bar"},
@@ -343,8 +343,8 @@ func TestLookup_Copy(t *testing.T) {
 				)
 				if err == nil {
 					lv.SetTypeDefaults(
-						&Defaults{AllowInvalidCerts: test.Ptr(true)},
-						&Defaults{AllowInvalidCerts: test.Ptr(false)},
+						&Defaults{AllowInvalidCerts: new(true)},
+						&Defaults{AllowInvalidCerts: new(false)},
 					)
 				}
 
@@ -487,7 +487,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 			},
 			secretRefs: &shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
+					{OldIndex: new(0)},
 				},
 			},
 			want: test.TrimYAML(`
@@ -542,7 +542,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 			},
 			secretRefs: &shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(1)},
+					{OldIndex: new(1)},
 				},
 			},
 			want: test.TrimYAML(`
@@ -592,8 +592,8 @@ func TestLookup_TypeDefaults(t *testing.T) {
 		},
 		{
 			name:         "non-nil, non-nil",
-			defaults:     &Defaults{AllowInvalidCerts: test.Ptr(true)},
-			hardDefaults: &Defaults{AllowInvalidCerts: test.Ptr(false)},
+			defaults:     &Defaults{AllowInvalidCerts: new(true)},
+			hardDefaults: &Defaults{AllowInvalidCerts: new(false)},
 		},
 	}
 

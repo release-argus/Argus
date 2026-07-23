@@ -2014,8 +2014,8 @@ func TestService_GiveSecrets(t *testing.T) {
 			}),
 			webhookTests: webhookTests{
 				oldFails: map[string]*bool{
-					"foo": test.Ptr(false),
-					"bar": test.Ptr(true),
+					"foo": new(false),
+					"bar": new(true),
 				},
 			},
 			secretRefs: secretRefs{},
@@ -2131,8 +2131,8 @@ func TestService_GiveSecrets(t *testing.T) {
 			secretRefs: secretRefs{
 				DeployedVersionLookup: shared.VSecretRef{
 					Headers: []shared.OldIntIndex{
-						{OldIndex: test.Ptr(0)},
-						{OldIndex: test.Ptr(1)},
+						{OldIndex: new(0)},
+						{OldIndex: new(1)},
 					},
 				},
 				Notify: map[string]shared.OldStringIndex{
@@ -2367,10 +2367,10 @@ func TestService_GiveSecrets(t *testing.T) {
 			`),
 			webhookTests: webhookTests{
 				oldFails: map[string]*bool{
-					"test": test.Ptr(true),
+					"test": new(true),
 				},
 				expectedFails: map[string]*bool{
-					"test": test.Ptr(true),
+					"test": new(true),
 				},
 			},
 		},
@@ -2417,7 +2417,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			`),
 			webhookTests: webhookTests{
 				oldFails: map[string]*bool{
-					"test": test.Ptr(true),
+					"test": new(true),
 				},
 			},
 		},
@@ -2464,10 +2464,10 @@ func TestService_GiveSecrets(t *testing.T) {
 			secretRefs: secretRefs{},
 			commandTests: commandTests{
 				oldFails: []*bool{
-					test.Ptr(true),
+					new(true),
 				},
 				expectedFails: []*bool{
-					test.Ptr(true),
+					new(true),
 				},
 			},
 		},
@@ -3129,7 +3129,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
+					{OldIndex: new(0)},
 					{OldIndex: nil},
 				},
 			},
@@ -3204,8 +3204,8 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
-					{OldIndex: test.Ptr(1)},
+					{OldIndex: new(0)},
+					{OldIndex: new(1)},
 				},
 			},
 		},
@@ -3230,7 +3230,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
+					{OldIndex: new(0)},
 					{OldIndex: nil},
 				},
 			},
@@ -3256,7 +3256,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(1)},
+					{OldIndex: new(1)},
 					{OldIndex: nil},
 				},
 			},
@@ -3284,7 +3284,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: nil},
-					{OldIndex: test.Ptr(1)},
+					{OldIndex: new(1)},
 				},
 			},
 		},
@@ -3310,8 +3310,8 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
-					{OldIndex: test.Ptr(1)},
+					{OldIndex: new(0)},
+					{OldIndex: new(1)},
 				},
 			},
 		},
@@ -3566,8 +3566,8 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
-					{OldIndex: test.Ptr(1)},
+					{OldIndex: new(0)},
+					{OldIndex: new(1)},
 				},
 			},
 		},
@@ -3617,7 +3617,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
+					{OldIndex: new(0)},
 				},
 			},
 		},
@@ -3642,7 +3642,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
+					{OldIndex: new(0)},
 					{OldIndex: nil},
 				},
 			},
@@ -3668,7 +3668,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
+					{OldIndex: new(0)},
 					{OldIndex: nil},
 				},
 			},
@@ -3743,8 +3743,8 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
-					{OldIndex: test.Ptr(1)},
+					{OldIndex: new(0)},
+					{OldIndex: new(1)},
 				},
 			},
 		},
@@ -3769,7 +3769,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
+					{OldIndex: new(0)},
 					{OldIndex: nil},
 				},
 			},
@@ -3795,7 +3795,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(1)},
+					{OldIndex: new(1)},
 					{OldIndex: nil},
 				},
 			},
@@ -3823,7 +3823,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: nil},
-					{OldIndex: test.Ptr(1)},
+					{OldIndex: new(1)},
 				},
 			},
 		},
@@ -3849,8 +3849,8 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			},
 			secretRefs: shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
-					{OldIndex: test.Ptr(1)},
+					{OldIndex: new(0)},
+					{OldIndex: new(1)},
 				},
 			},
 		},
@@ -5902,13 +5902,13 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				"foo": {
 					OldIndex: "foo",
 					Headers: []shared.OldIntIndex{
-						{OldIndex: test.Ptr(0)},
+						{OldIndex: new(0)},
 					},
 				},
 				"bar": {
 					OldIndex: "bar",
 					Headers: []shared.OldIntIndex{
-						{OldIndex: test.Ptr(0)},
+						{OldIndex: new(0)},
 					},
 				},
 			},
@@ -6013,13 +6013,13 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				"foo": {
 					OldIndex: "foo",
 					Headers: []shared.OldIntIndex{
-						{OldIndex: test.Ptr(5)}, {OldIndex: test.Ptr(1)},
+						{OldIndex: new(5)}, {OldIndex: new(1)},
 					},
 				},
 				"bar": {
 					OldIndex: "bar",
 					Headers: []shared.OldIntIndex{
-						{OldIndex: test.Ptr(0)}, {OldIndex: test.Ptr(2)},
+						{OldIndex: new(0)}, {OldIndex: new(2)},
 					},
 				},
 			},
@@ -6126,15 +6126,15 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				"foo": {
 					OldIndex: "foo",
 					Headers: []shared.OldIntIndex{
-						{OldIndex: test.Ptr(0)},
-						{OldIndex: test.Ptr(1)},
+						{OldIndex: new(0)},
+						{OldIndex: new(1)},
 					},
 				},
 				"bar": {
 					OldIndex: "bar",
 					Headers: []shared.OldIntIndex{
-						{OldIndex: test.Ptr(0)},
-						{OldIndex: test.Ptr(1)},
+						{OldIndex: new(0)},
+						{OldIndex: new(1)},
 					},
 				},
 			},
@@ -6241,15 +6241,15 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				"bar": {
 					OldIndex: "foo",
 					Headers: []shared.OldIntIndex{
-						{OldIndex: test.Ptr(0)},
-						{OldIndex: test.Ptr(1)},
+						{OldIndex: new(0)},
+						{OldIndex: new(1)},
 					},
 				},
 				"foo": {
 					OldIndex: "bar",
 					Headers: []shared.OldIntIndex{
-						{OldIndex: test.Ptr(0)},
-						{OldIndex: test.Ptr(1)},
+						{OldIndex: new(0)},
+						{OldIndex: new(1)},
 					},
 				},
 			},
@@ -6325,7 +6325,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					&otherServiceStatus,
 					whCfg,
 					nil,
-					test.Ptr("10m"),
+					new("10m"),
 				)
 			}
 

@@ -209,7 +209,7 @@ func TestDefaults_IsZero(t *testing.T) {
 		},
 		{
 			name: "non-empty/URL",
-			data: &Defaults{URL: web.Defaults{AllowInvalidCerts: test.Ptr(true)}},
+			data: &Defaults{URL: web.Defaults{AllowInvalidCerts: new(true)}},
 			want: false,
 		},
 		{
@@ -219,12 +219,12 @@ func TestDefaults_IsZero(t *testing.T) {
 		},
 		{
 			name: "non-empty/UsePreReleaseDeprecated",
-			data: &Defaults{UsePreReleaseDeprecated: test.Ptr(true)},
+			data: &Defaults{UsePreReleaseDeprecated: new(true)},
 			want: false,
 		},
 		{
 			name: "non-empty/AllowInvalidCertsDeprecated",
-			data: &Defaults{AllowInvalidCertsDeprecated: test.Ptr(true)},
+			data: &Defaults{AllowInvalidCertsDeprecated: new(true)},
 			want: false,
 		},
 		{
@@ -239,10 +239,10 @@ func TestDefaults_IsZero(t *testing.T) {
 			data: &Defaults{
 				Type:                        "github",
 				GitHub:                      github.Defaults{AccessToken: "foo"},
-				URL:                         web.Defaults{AllowInvalidCerts: test.Ptr(true)},
+				URL:                         web.Defaults{AllowInvalidCerts: new(true)},
 				AccessTokenDeprecated:       "foo",
-				UsePreReleaseDeprecated:     test.Ptr(true),
-				AllowInvalidCertsDeprecated: test.Ptr(true),
+				UsePreReleaseDeprecated:     new(true),
+				AllowInvalidCertsDeprecated: new(true),
 				RequireDeprecated: &filter.RequireDefaults{
 					Docker: docker.Defaults{Type: "hub"},
 				},
@@ -285,10 +285,10 @@ func TestDefaults_Default(t *testing.T) {
 			},
 		},
 		GitHub: github.Defaults{
-			UsePreRelease: test.Ptr(false),
+			UsePreRelease: new(false),
 		},
 		URL: web.Defaults{
-			AllowInvalidCerts: test.Ptr(false),
+			AllowInvalidCerts: new(false),
 		},
 	}
 
@@ -353,34 +353,34 @@ func TestDefaults_MigrateDeprecated(t *testing.T) {
 		{
 			name: "use_prerelease migrated to github.use_prerelease",
 			input: &Defaults{
-				UsePreReleaseDeprecated: test.Ptr(true),
+				UsePreReleaseDeprecated: new(true),
 			},
-			wantUsePreRelease: test.Ptr(true),
+			wantUsePreRelease: new(true),
 		},
 		{
 			name: "use_prerelease does not override an explicit github.use_prerelease",
 			input: &Defaults{
-				UsePreReleaseDeprecated: test.Ptr(true),
+				UsePreReleaseDeprecated: new(true),
 				GitHub: github.Defaults{
-					UsePreRelease: test.Ptr(false),
+					UsePreRelease: new(false),
 				},
 			},
-			wantUsePreRelease: test.Ptr(false),
+			wantUsePreRelease: new(false),
 		},
 		{
 			name: "allow_invalid_certs migrated to url.allow_invalid_certs",
 			input: &Defaults{
-				AllowInvalidCertsDeprecated: test.Ptr(true),
+				AllowInvalidCertsDeprecated: new(true),
 			},
-			wantAllowInvalidCert: test.Ptr(true),
+			wantAllowInvalidCert: new(true),
 		},
 		{
 			name: "allow_invalid_certs does not override an explicit url.allow_invalid_certs",
 			input: &Defaults{
-				AllowInvalidCertsDeprecated: test.Ptr(true),
-				URL:                         web.Defaults{AllowInvalidCerts: test.Ptr(false)},
+				AllowInvalidCertsDeprecated: new(true),
+				URL:                         web.Defaults{AllowInvalidCerts: new(false)},
 			},
-			wantAllowInvalidCert: test.Ptr(false),
+			wantAllowInvalidCert: new(false),
 		},
 		{
 			name: "require migrated to common.require",
@@ -541,11 +541,11 @@ func TestApplyTypeDefaults(t *testing.T) {
 	cfg := DefaultsConfig{
 		Soft: &Defaults{
 			GitHub: github.Defaults{AccessToken: "soft-token"},
-			URL:    web.Defaults{AllowInvalidCerts: test.Ptr(true)},
+			URL:    web.Defaults{AllowInvalidCerts: new(true)},
 		},
 		Hard: &Defaults{
 			GitHub: github.Defaults{AccessToken: "hard-token"},
-			URL:    web.Defaults{AllowInvalidCerts: test.Ptr(false)},
+			URL:    web.Defaults{AllowInvalidCerts: new(false)},
 		},
 	}
 

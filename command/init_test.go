@@ -82,7 +82,7 @@ func TestNewController(t *testing.T) {
 		},
 		{
 			name:           "non-nil parentInterval",
-			parentInterval: test.Ptr("11m"),
+			parentInterval: new("11m"),
 			command: Commands{
 				{"date", "+%m-%d-%Y"},
 			},
@@ -167,7 +167,7 @@ func TestController_Metrics(t *testing.T) {
 			{"false"},
 		},
 		nil,
-		test.Ptr("11m"),
+		new("11m"),
 	)
 	controller.Failed.Set(1, false)
 	controller.Failed.Set(2, true)
@@ -287,7 +287,7 @@ func TestController_IsRunnable(t *testing.T) {
 			{"false"},
 		},
 		nil,
-		test.Ptr("11m"),
+		new("11m"),
 	)
 	controller.Failed.Set(1, false)
 	controller.Failed.Set(2, true)
@@ -360,7 +360,7 @@ func TestController_NextRunnable(t *testing.T) {
 			{"false"},
 		},
 		nil,
-		test.Ptr("11m"),
+		new("11m"),
 	)
 	controller.Failed.Set(1, false)
 	controller.Failed.Set(2, true)
@@ -445,7 +445,7 @@ func TestController_SetNextRunnable(t *testing.T) {
 			{"false"},
 		},
 		nil,
-		test.Ptr("11m"),
+		new("11m"),
 	)
 	controller.Failed.Set(1, false)
 	controller.Failed.Set(2, true)
@@ -542,7 +542,7 @@ func TestController_SetExecuting(t *testing.T) {
 			{"false"},
 		},
 		nil,
-		test.Ptr("11m"),
+		new("11m"),
 	)
 	controller.Failed.Set(1, false)
 	controller.Failed.Set(2, true)

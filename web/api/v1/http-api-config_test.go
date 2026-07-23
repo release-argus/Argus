@@ -62,7 +62,7 @@ func TestHTTP_Config(t *testing.T) {
 				SettingsBase: config.SettingsBase{
 					Data: config.DataSettings{
 						DatabaseFile: "somewhere.db",
-						Readonly:     test.Ptr(true),
+						Readonly:     new(true),
 					},
 					Web: config.WebSettings{
 						ListenHost:     "127.0.0.1",
@@ -104,10 +104,10 @@ func TestHTTP_Config(t *testing.T) {
 						Type: "github",
 						GitHub: lvgithub.Defaults{
 							AccessToken:   "foo",
-							UsePreRelease: test.Ptr(false),
+							UsePreRelease: new(false),
 						},
 						URL: lvweb.Defaults{
-							AllowInvalidCerts: test.Ptr(true),
+							AllowInvalidCerts: new(true),
 						},
 						Common: lvbase.Defaults{
 							Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
@@ -207,10 +207,10 @@ func TestHTTP_Config(t *testing.T) {
 					LatestVersion: latestver.Defaults{
 						GitHub: lvgithub.Defaults{
 							AccessToken:   "foo",
-							UsePreRelease: test.Ptr(false),
+							UsePreRelease: new(false),
 						},
 						URL: lvweb.Defaults{
-							AllowInvalidCerts: test.Ptr(true),
+							AllowInvalidCerts: new(true),
 						},
 						Common: lvbase.Defaults{
 							Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
@@ -331,10 +331,10 @@ func TestHTTP_Config(t *testing.T) {
 					LatestVersion: latestver.Defaults{
 						GitHub: lvgithub.Defaults{
 							AccessToken:   "foo",
-							UsePreRelease: test.Ptr(false),
+							UsePreRelease: new(false),
 						},
 						URL: lvweb.Defaults{
-							AllowInvalidCerts: test.Ptr(true),
+							AllowInvalidCerts: new(true),
 						},
 						Common: lvbase.Defaults{
 							Require: *test.Must(t, func() (*filter.RequireDefaults, error) {

@@ -292,39 +292,39 @@ func TestWebHook_CheckValues(t *testing.T) {
 		{
 			name:     "invalid type",
 			errRegex: `^type: .*foo.* <invalid>.*$`,
-			whType:   test.Ptr("foo"),
+			whType:   new("foo"),
 		},
 		{
 			name:       "invalid main type",
 			errRegex:   `^$`, // Invalid, but caught in the Defaults CheckValues.
-			whType:     test.Ptr(""),
+			whType:     new(""),
 			whMainType: "bar",
 		},
 		{
 			name:       "mismatching type and main type",
 			errRegex:   `^type: "github" <invalid>.*"gitlab".*$`,
-			whType:     test.Ptr("github"),
+			whType:     new("github"),
 			whMainType: "gitlab",
 		},
 		{
 			name:     "no type",
 			errRegex: `^type: <required>.*$`,
-			whType:   test.Ptr(""),
+			whType:   new(""),
 		},
 		{
 			name:     "invalid url template",
 			errRegex: `^url: .* <invalid>.*$`,
-			url:      test.Ptr("{{ version }"),
+			url:      new("{{ version }"),
 		},
 		{
 			name:     "no url",
 			errRegex: `url: <required>.*$`,
-			url:      test.Ptr(""),
+			url:      new(""),
 		},
 		{
 			name:     "no secret",
 			errRegex: `secret: <required>.*$`,
-			secret:   test.Ptr(""),
+			secret:   new(""),
 		},
 		{
 			name: "valid headers",
@@ -360,9 +360,9 @@ func TestWebHook_CheckValues(t *testing.T) {
 				secret: <required>.*$`,
 			),
 			delay:  "5x",
-			whType: test.Ptr("foo"),
-			url:    test.Ptr(""),
-			secret: test.Ptr(""),
+			whType: new("foo"),
+			url:    new(""),
+			secret: new(""),
 		},
 	}
 

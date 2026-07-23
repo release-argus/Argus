@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/release-argus/Argus/internal/test"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 )
 
@@ -108,13 +107,13 @@ func TestTemplate_String(t *testing.T) {
 		{
 			name:        "invalid django template panic",
 			template:    "-{% 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
-			panicRegex:  test.Ptr("Tag name must be an identifier"),
+			panicRegex:  new("Tag name must be an identifier"),
 			serviceInfo: svcInfo,
 		},
 		{
 			name:        "invalid django template execute panic",
 			template:    "{{ tags.0.bar }}",
-			panicRegex:  test.Ptr("can't access a field by name on type string"),
+			panicRegex:  new("can't access a field by name on type string"),
 			serviceInfo: svcInfo,
 		},
 		{

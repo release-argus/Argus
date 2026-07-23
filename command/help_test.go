@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/internal/logx"
-	"github.com/release-argus/Argus/internal/test"
 	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
@@ -61,6 +60,6 @@ func testController(announceChannel chan []byte) *Controller {
 		svcStatus,
 		Commands{{}, {}},
 		nil,
-		test.Ptr("14m"),
+		new("14m"),
 	)
 }

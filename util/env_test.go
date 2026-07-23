@@ -289,7 +289,7 @@ func TestTryExpandEnv(t *testing.T) {
 			env: map[string]string{
 				"TEST_EXPAND_ENV_FOO_1": "bar",
 			},
-			expected: test.Ptr("bar"),
+			expected: new("bar"),
 		},
 		{
 			name:  "environment variable requires curly brackets",
@@ -306,7 +306,7 @@ func TestTryExpandEnv(t *testing.T) {
 				"TEST_EXPAND_ENV_FOO_3": "hello",
 				"TEST_EXPAND_ENV_BAR_1": "world",
 			},
-			expected: test.Ptr("hello-world"),
+			expected: new("hello-world"),
 		},
 		{
 			name:     "environment variable not set",
@@ -320,7 +320,7 @@ func TestTryExpandEnv(t *testing.T) {
 			env: map[string]string{
 				"TEST_EXPAND_ENV_FOO_5": "value",
 			},
-			expected: test.Ptr("prefix-value-suffix"),
+			expected: new("prefix-value-suffix"),
 		},
 		{
 			name:     "no expansion needed",
@@ -380,13 +380,13 @@ func TestExpandEnvVariables(t *testing.T) {
 		{
 			name:        "empty env var",
 			envVarName:  "EMPTY",
-			envVarValue: test.Ptr(""),
+			envVarValue: new(""),
 			want:        "",
 		},
 		{
 			name:        "non-empty env var",
 			envVarName:  "NON_EMPTY",
-			envVarValue: test.Ptr("bar"),
+			envVarValue: new("bar"),
 			want:        "bar",
 		},
 	}

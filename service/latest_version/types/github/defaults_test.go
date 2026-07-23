@@ -19,8 +19,6 @@ package github
 import (
 	"fmt"
 	"testing"
-
-	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestDefaults_IsZero(t *testing.T) {
@@ -45,7 +43,7 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/UsePreRelease",
 			data: &Defaults{
-				UsePreRelease: test.Ptr(true),
+				UsePreRelease: new(true),
 			},
 			want: false,
 		},
@@ -53,7 +51,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			name: "non-empty/all",
 			data: &Defaults{
 				AccessToken:   "foo",
-				UsePreRelease: test.Ptr(true),
+				UsePreRelease: new(true),
 			},
 			want: false,
 		},
@@ -81,7 +79,7 @@ func TestDefaults_Default(t *testing.T) {
 	// GIVEN: a Defaults.
 	defaults := Defaults{}
 	want := Defaults{
-		UsePreRelease: test.Ptr(false),
+		UsePreRelease: new(false),
 	}
 
 	// WHEN: Default is called.

@@ -283,7 +283,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 	}
 	secretRefs := &shared.VSecretRef{
 		Headers: []shared.OldIntIndex{
-			{OldIndex: test.Ptr(0)},
+			{OldIndex: new(0)},
 		},
 	}
 	l := &testLookup{

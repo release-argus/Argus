@@ -334,7 +334,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 					},
 					Method:            "POST",
 					URL:               "https://example.com",
-					AllowInvalidCerts: test.Ptr(true),
+					AllowInvalidCerts: new(true),
 					BasicAuth: &BasicAuth{
 						Username: "user",
 						Password: "pass",

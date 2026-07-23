@@ -322,7 +322,7 @@ func TestFindShoutrrr(t *testing.T) {
 					),
 				},
 			},
-			foundInRoot: test.Ptr(true),
+			foundInRoot: new(true),
 		},
 		{
 			name:        "matching search of notifier in Service",
@@ -347,7 +347,7 @@ func TestFindShoutrrr(t *testing.T) {
 					)
 				}),
 			},
-			foundInRoot: test.Ptr(false),
+			foundInRoot: new(false),
 		},
 		{
 			name:        "matching search of notifier in Root and a Service",
@@ -383,7 +383,7 @@ func TestFindShoutrrr(t *testing.T) {
 					),
 				},
 			},
-			foundInRoot: test.Ptr(false),
+			foundInRoot: new(false),
 		},
 		{
 			name:        "matching search of Service notifier with incomplete config filled by Defaults",
@@ -427,7 +427,7 @@ func TestFindShoutrrr(t *testing.T) {
 					},
 				},
 			},
-			foundInRoot: test.Ptr(false),
+			foundInRoot: new(false),
 		},
 		{
 			name:        "matching search of Service notifier with incomplete config filled by Root",
@@ -469,7 +469,7 @@ func TestFindShoutrrr(t *testing.T) {
 						}),
 				},
 			},
-			foundInRoot: test.Ptr(false),
+			foundInRoot: new(false),
 		},
 		{
 			name:        "matching search of Service notifier with incomplete config filled by Root and Defaults",
@@ -519,7 +519,7 @@ func TestFindShoutrrr(t *testing.T) {
 					},
 				},
 			},
-			foundInRoot: test.Ptr(false),
+			foundInRoot: new(false),
 		},
 		{
 			name: "matching search of Root notifier with invalid config",
@@ -556,7 +556,7 @@ func TestFindShoutrrr(t *testing.T) {
 						}),
 				},
 			},
-			foundInRoot: test.Ptr(true),
+			foundInRoot: new(true),
 		},
 		{
 			name:        "matching search of Root notifier with incomplete config filled by Defaults",
@@ -605,7 +605,7 @@ func TestFindShoutrrr(t *testing.T) {
 					},
 				},
 			},
-			foundInRoot: test.Ptr(true),
+			foundInRoot: new(true),
 		},
 	}
 

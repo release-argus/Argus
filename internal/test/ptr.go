@@ -20,9 +20,6 @@ import (
 	"fmt"
 )
 
-// Ptr returns a pointer to the given value.
-func Ptr[T any](v T) *T { return &v }
-
 // StringifyPtr returns a string representation of the given pointer.
 func StringifyPtr[T comparable](ptr *T) string {
 	str := "<nil>"

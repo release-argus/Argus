@@ -98,7 +98,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 				lookup:             testLookup(t, "url", false),
 				overrides:          nil,
 				semanticVerDiff:    true,
-				semanticVersioning: test.Ptr("invalid"),
+				semanticVersioning: new("invalid"),
 			},
 			errRegex: test.TrimYAML(`
 				^semantic_versioning:
@@ -112,7 +112,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 				lookup:             testLookup(t, "url", false),
 				overrides:          nil,
 				semanticVerDiff:    true,
-				semanticVersioning: test.Ptr("true"),
+				semanticVersioning: new("true"),
 			},
 			wantStr:  tLookup.String(""),
 			errRegex: `^$`,

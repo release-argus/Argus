@@ -50,7 +50,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "empty flag",
 			flag:        "",
 			ok:          true,
-			stdoutRegex: test.Ptr("^$"),
+			stdoutRegex: new("^$"),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -69,7 +69,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "unknown Notifier",
 			flag:        "something",
 			ok:          false,
-			stdoutRegex: test.Ptr("FATAL: .*Notifier .* could not be found"),
+			stdoutRegex: new("FATAL: .*Notifier .* could not be found"),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -87,7 +87,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "known Service Notifier with invalid Gotify token",
 			flag:        "bar",
 			ok:          false,
-			stdoutRegex: test.Ptr(`Message failed to send with "bar" config\s+.*invalid gotify token`),
+			stdoutRegex: new(`Message failed to send with "bar" config\s+.*invalid gotify token`),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -111,7 +111,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "invalid Gotify token format",
 			flag:        "bar",
 			ok:          false,
-			stdoutRegex: test.Ptr(`invalid gotify token: "abc"`),
+			stdoutRegex: new(`invalid gotify token: "abc"`),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -135,7 +135,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "valid Gotify token format",
 			flag:        "bar",
 			ok:          false,
-			stdoutRegex: test.Ptr(`Message failed to send with.*\s.*server responded`),
+			stdoutRegex: new(`Message failed to send with.*\s.*server responded`),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -159,7 +159,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "shoutrrr from Root",
 			flag:        "baz",
 			ok:          false,
-			stdoutRegex: test.Ptr(`Message failed to send with.*\s.*server responded`),
+			stdoutRegex: new(`Message failed to send with.*\s.*server responded`),
 			services:    service.Services{},
 			mainShoutrrrs: shoutrrr.ShoutrrrsDefaults{
 				"baz": shoutrrr.NewDefaults(
@@ -179,7 +179,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "successful send",
 			flag:        "work",
 			ok:          true,
-			stdoutRegex: test.Ptr(`Message sent successfully with "work" config`),
+			stdoutRegex: new(`Message sent successfully with "work" config`),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`

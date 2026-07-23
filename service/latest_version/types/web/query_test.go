@@ -161,7 +161,7 @@ func TestLookup_GetVersion(t *testing.T) {
 		},
 		{
 			name:            "empty body",
-			bodyOverride:    test.Ptr(""),
+			bodyOverride:    new(""),
 			lookupOverrides: `url_commands: []`,
 			semVer:          true,
 			want: wantVars{
@@ -350,7 +350,7 @@ func TestLookup_GetVersion(t *testing.T) {
 		},
 		{
 			name:         "version fails semver",
-			bodyOverride: test.Ptr("1_0_0"),
+			bodyOverride: new("1_0_0"),
 			lookupOverrides: test.TrimYAML(`
 				url_commands: []
 			`),
@@ -361,7 +361,7 @@ func TestLookup_GetVersion(t *testing.T) {
 		},
 		{
 			name: "semver skips non-semver values",
-			bodyOverride: test.Ptr(`
+			bodyOverride: new(`
 				bad "1_0_0"
 				good "v1.0.0"
 				good "v2.0.0"
@@ -382,7 +382,7 @@ func TestLookup_GetVersion(t *testing.T) {
 		},
 		{
 			name: "mixed semver/non-semver picks same winner regardless of candidate order (order A)",
-			bodyOverride: test.Ptr(`
+			bodyOverride: new(`
 				bad "1_0_0"
 				good "v1.0.0"
 				good "v2.0.0"
@@ -401,7 +401,7 @@ func TestLookup_GetVersion(t *testing.T) {
 		},
 		{
 			name: "mixed semver/non-semver picks same winner regardless of candidate order (order B)",
-			bodyOverride: test.Ptr(`
+			bodyOverride: new(`
 				bad "v3_0_0"
 				good "v2.0.0"
 				bad "1_0_0"
@@ -420,7 +420,7 @@ func TestLookup_GetVersion(t *testing.T) {
 		},
 		{
 			name: "sorts versions when semantic_versioning enabled",
-			bodyOverride: test.Ptr(`
+			bodyOverride: new(`
 				patch for older major "0.4.7"
 				patch for latest major "v1.0.1"
 				latest major "v1.0.0"
@@ -439,7 +439,7 @@ func TestLookup_GetVersion(t *testing.T) {
 		},
 		{
 			name: "does not sort versions when semantic_versioning disabled",
-			bodyOverride: test.Ptr(`
+			bodyOverride: new(`
 				patch for older major "0.4.7"
 				patch for latest major "v1.0.1"
 				latest major "v1.0.0"

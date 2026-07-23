@@ -228,7 +228,7 @@ func TestWebHook_Send(t *testing.T) {
 					webhook.ServiceStatus.SetDeleting()
 				}
 				webhook.Delay = tc.delay
-				webhook.MaxTries = test.Ptr(tc.retries + 1)
+				webhook.MaxTries = new(tc.retries + 1)
 				webhook.SilentFails = &tc.silentFails
 				webhook.Notifiers = Notifiers{Shoutrrr: &tc.notifiers}
 				webhook.ServiceStatus.ServiceInfo.ID = tc.name
@@ -423,7 +423,7 @@ func TestWebHook_Try(t *testing.T) {
 			url:               test.WebHookGitHub["url_invalid"],
 			secret:            test.WebHookGitHub["secret_pass"],
 			whType:            "github",
-			allowInvalidCerts: test.Ptr(true),
+			allowInvalidCerts: new(true),
 			errRegex:          `^$`,
 			stdoutRegex:       `WebHook received`,
 		},
@@ -440,7 +440,7 @@ func TestWebHook_Try(t *testing.T) {
 			url:               test.WebHookGitHub["url_valid"],
 			secret:            test.WebHookGitHub["secret_pass"],
 			whType:            "github",
-			desiredStatusCode: test.Ptr(uint16(404)),
+			desiredStatusCode: new(uint16(404)),
 			errRegex:          `WebHook gave 200, not 404`,
 		},
 	}

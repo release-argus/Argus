@@ -242,8 +242,8 @@ func TestHTTP_Counts(t *testing.T) {
 			}
 
 			metric.ServiceCountCurrent.Reset()
-			metric.ServiceCountCurrentAdd(test.Ptr(true), tc.serviceCountCurrentActive)
-			metric.ServiceCountCurrentAdd(test.Ptr(false), tc.serviceCountCurrentInactive)
+			metric.ServiceCountCurrentAdd(new(true), tc.serviceCountCurrentActive)
+			metric.ServiceCountCurrentAdd(new(false), tc.serviceCountCurrentInactive)
 			t.Cleanup(func() {
 				metric.ServiceCountCurrent.Reset()
 			})

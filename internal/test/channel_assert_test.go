@@ -35,13 +35,13 @@ func TestAssertChannelBool(t *testing.T) {
 	}{
 		{
 			name:        "ok matches want",
-			sendResult:  Ptr(true),
+			sendResult:  new(true),
 			want:        true,
 			expectError: false,
 		},
 		{
 			name:        "ok mismatches want",
-			sendResult:  Ptr(false),
+			sendResult:  new(false),
 			want:        true,
 			expectError: true,
 		},
@@ -61,21 +61,21 @@ func TestAssertChannelBool(t *testing.T) {
 		},
 		{
 			name:         "exitCodeChannel drained on success",
-			sendResult:   Ptr(true),
+			sendResult:   new(true),
 			want:         true,
 			exitCodeMsgs: []string{"1", "2"},
 			expectError:  false,
 		},
 		{
 			name:         "exitCodeChannel drained on fatal",
-			sendResult:   Ptr(false),
+			sendResult:   new(false),
 			want:         true,
 			exitCodeMsgs: []string{"1", "2"},
 			expectError:  true,
 		},
 		{
 			name:                    "releaseStdout called when result!=want",
-			sendResult:              Ptr(false),
+			sendResult:              new(false),
 			want:                    true,
 			provideReleaseStdout:    true,
 			wantReleaseStdoutCalled: true,
@@ -83,7 +83,7 @@ func TestAssertChannelBool(t *testing.T) {
 		},
 		{
 			name:                    "releaseStdout not called when result==want",
-			sendResult:              Ptr(true),
+			sendResult:              new(true),
 			want:                    true,
 			provideReleaseStdout:    true,
 			wantReleaseStdoutCalled: false,

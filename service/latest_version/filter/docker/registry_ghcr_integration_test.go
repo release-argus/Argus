@@ -359,7 +359,7 @@ func TestGHCRAuth_RefreshQueryToken__integration(t *testing.T) {
 			detail: ContainerDetail{
 				Image: "",
 			},
-			tokenAddress: test.Ptr(test.LookupPlain["url_valid"] + "%s"),
+			tokenAddress: new(test.LookupPlain["url_valid"] + "%s"),
 			errRegex:     `^failed to parse ghcr token response`,
 		},
 	}

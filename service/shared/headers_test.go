@@ -120,7 +120,7 @@ func TestHeaders_InheritSecrets(t *testing.T) {
 				{Key: "X-Secret", Value: "SecretValue"},
 			},
 			secretRefs: []OldIntIndex{
-				{OldIndex: test.Ptr(0)},
+				{OldIndex: new(0)},
 			},
 			want: Headers{
 				{Key: "X-Test", Value: "Value1"},
@@ -136,7 +136,7 @@ func TestHeaders_InheritSecrets(t *testing.T) {
 				{Key: "X-Secret", Value: "SecretValue"},
 			},
 			secretRefs: []OldIntIndex{
-				{OldIndex: test.Ptr(0)},
+				{OldIndex: new(0)},
 			},
 			want: Headers{
 				{Key: "X-Test", Value: "SecretValue"},
@@ -179,7 +179,7 @@ func TestHeaders_InheritSecrets(t *testing.T) {
 				{Key: "X-Secret", Value: "SecretValue"},
 			},
 			secretRefs: []OldIntIndex{
-				{OldIndex: test.Ptr(2)},
+				{OldIndex: new(2)},
 			},
 			want: Headers{
 				{Key: "X-Test", Value: util.SecretValue},
@@ -197,9 +197,9 @@ func TestHeaders_InheritSecrets(t *testing.T) {
 				{Key: "X-Secret2", Value: "SecretValue2"},
 			},
 			secretRefs: []OldIntIndex{
-				{OldIndex: test.Ptr(0)},
-				{OldIndex: test.Ptr(1)},
-				{OldIndex: test.Ptr(2)},
+				{OldIndex: new(0)},
+				{OldIndex: new(1)},
+				{OldIndex: new(2)},
 			},
 			want: Headers{
 				{Key: "X-First", Value: "SecretValue1"},
@@ -219,8 +219,8 @@ func TestHeaders_InheritSecrets(t *testing.T) {
 				{Key: "X-Secret2", Value: "SecretValue2"},
 			},
 			secretRefs: []OldIntIndex{
-				{OldIndex: test.Ptr(1)},
-				{OldIndex: test.Ptr(0)},
+				{OldIndex: new(1)},
+				{OldIndex: new(0)},
 			},
 			want: Headers{
 				{Key: "X-First", Value: "SecretValue2"},
@@ -238,8 +238,8 @@ func TestHeaders_InheritSecrets(t *testing.T) {
 				{Key: "X-Secret2", Value: "SecretValue2"},
 			},
 			secretRefs: []OldIntIndex{
-				{OldIndex: test.Ptr(0)},
-				{OldIndex: test.Ptr(1)},
+				{OldIndex: new(0)},
+				{OldIndex: new(1)},
 			},
 			want: Headers{
 				{Key: "X-First", Value: "SecretValue1"},

@@ -44,7 +44,7 @@ func TestIsEqual(t *testing.T) {
 			a: &web.Lookup{
 				Lookup: base.Lookup{
 					Defaults: &base.Defaults{
-						AllowInvalidCerts: test.Ptr(false),
+						AllowInvalidCerts: new(false),
 					},
 				},
 			},
@@ -56,7 +56,7 @@ func TestIsEqual(t *testing.T) {
 			a: &web.Lookup{
 				Lookup: base.Lookup{
 					Defaults: &base.Defaults{
-						AllowInvalidCerts: test.Ptr(false),
+						AllowInvalidCerts: new(false),
 					},
 				},
 			},

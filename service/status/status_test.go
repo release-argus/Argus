@@ -228,24 +228,24 @@ func TestStatus_String(t *testing.T) {
 					Shoutrrr: FailsShoutrrr{
 						failsBase: failsBase{
 							fails: map[string]*bool{
-								"bash": test.Ptr(false),
+								"bash": new(false),
 								"bish": nil,
-								"bosh": test.Ptr(true),
+								"bosh": new(true),
 							},
 						},
 					},
 					Command: FailsCommand{
 						fails: []*bool{
 							nil,
-							test.Ptr(false),
-							test.Ptr(true),
+							new(false),
+							new(true),
 						},
 					},
 					WebHook: FailsWebHook{
 						failsBase: failsBase{
 							fails: map[string]*bool{
 								"bar": nil,
-								"foo": test.Ptr(false),
+								"foo": new(false),
 							},
 						},
 					},
@@ -284,22 +284,22 @@ func TestStatus_String(t *testing.T) {
 						failsBase: failsBase{
 							fails: map[string]*bool{
 								"bish": nil,
-								"bash": test.Ptr(false),
-								"bosh": test.Ptr(true),
+								"bash": new(false),
+								"bosh": new(true),
 							},
 						},
 					},
 					Command: FailsCommand{
 						fails: []*bool{
 							nil,
-							test.Ptr(false),
-							test.Ptr(true),
+							new(false),
+							new(true),
 						},
 					},
 					WebHook: FailsWebHook{
 						failsBase: failsBase{
 							fails: map[string]*bool{
-								"foo": test.Ptr(false),
+								"foo": new(false),
 								"bar": nil,
 							},
 						},

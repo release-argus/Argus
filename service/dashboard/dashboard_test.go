@@ -329,10 +329,10 @@ func TestOptions_IsZero(t *testing.T) {
 		{
 			name: "ignored fields",
 			opt: &Options{
-				iconExpanded:       test.Ptr("foo"),
-				iconNotify:         test.Ptr("bar"),
-				iconLinkToExpanded: test.Ptr("baz"),
-				webURLExpanded:     test.Ptr("qux"),
+				iconExpanded:       new("foo"),
+				iconNotify:         new("bar"),
+				iconLinkToExpanded: new("baz"),
+				webURLExpanded:     new("qux"),
 				Defaults: &Defaults{
 					OptionsBase{
 						Icon: "foo",
@@ -350,7 +350,7 @@ func TestOptions_IsZero(t *testing.T) {
 			name: "non-empty/AutoApprove",
 			opt: &Options{
 				OptionsBase: OptionsBase{
-					AutoApprove: test.Ptr(true),
+					AutoApprove: new(true),
 				},
 			},
 			want: false,
@@ -393,7 +393,7 @@ func TestOptions_IsZero(t *testing.T) {
 			name: "non-empty/all",
 			opt: &Options{
 				OptionsBase: OptionsBase{
-					AutoApprove: test.Ptr(true),
+					AutoApprove: new(true),
 					Icon:        "foo",
 					IconLinkTo:  "bar",
 					WebURL:      "baz",
@@ -438,27 +438,27 @@ func TestOptions_Copy(t *testing.T) {
 			name: "filled",
 			options: &Options{
 				OptionsBase: OptionsBase{
-					AutoApprove: test.Ptr(true),
+					AutoApprove: new(true),
 					Icon:        "icon-url",
 					IconLinkTo:  "icon-link",
 					WebURL:      "web-url",
 				},
-				iconExpanded:       test.Ptr("expanded-icon-url"),
-				iconNotify:         test.Ptr("notify-icon-url"),
-				iconLinkToExpanded: test.Ptr("expanded-icon-link"),
-				webURLExpanded:     test.Ptr("expanded-web-url"),
+				iconExpanded:       new("expanded-icon-url"),
+				iconNotify:         new("notify-icon-url"),
+				iconLinkToExpanded: new("expanded-icon-link"),
+				webURLExpanded:     new("expanded-web-url"),
 			},
 			want: &Options{
 				OptionsBase: OptionsBase{
-					AutoApprove: test.Ptr(true),
+					AutoApprove: new(true),
 					Icon:        "icon-url",
 					IconLinkTo:  "icon-link",
 					WebURL:      "web-url",
 				},
-				iconExpanded:       test.Ptr("expanded-icon-url"),
-				iconNotify:         test.Ptr("notify-icon-url"),
-				iconLinkToExpanded: test.Ptr("expanded-icon-link"),
-				webURLExpanded:     test.Ptr("expanded-web-url"),
+				iconExpanded:       new("expanded-icon-url"),
+				iconNotify:         new("notify-icon-url"),
+				iconLinkToExpanded: new("expanded-icon-link"),
+				webURLExpanded:     new("expanded-web-url"),
 			},
 		},
 		{
@@ -470,7 +470,7 @@ func TestOptions_Copy(t *testing.T) {
 					IconLinkTo:  "",
 					WebURL:      "web-url",
 				},
-				iconExpanded: test.Ptr("hi"),
+				iconExpanded: new("hi"),
 			},
 			want: &Options{
 				OptionsBase: OptionsBase{
@@ -479,7 +479,7 @@ func TestOptions_Copy(t *testing.T) {
 					IconLinkTo:  "",
 					WebURL:      "web-url",
 				},
-				iconExpanded: test.Ptr("hi"),
+				iconExpanded: new("hi"),
 			},
 		},
 	}
@@ -536,20 +536,20 @@ func TestOptions_GetAutoApprove(t *testing.T) {
 		{
 			name:             "root overrides all",
 			want:             true,
-			rootValue:        test.Ptr(true),
-			defaultValue:     test.Ptr(false),
-			hardDefaultValue: test.Ptr(false),
+			rootValue:        new(true),
+			defaultValue:     new(false),
+			hardDefaultValue: new(false),
 		},
 		{
 			name:             "default overrides hardDefault",
 			want:             true,
-			defaultValue:     test.Ptr(true),
-			hardDefaultValue: test.Ptr(false),
+			defaultValue:     new(true),
+			hardDefaultValue: new(false),
 		},
 		{
 			name:             "hardDefault is last resort",
 			want:             true,
-			hardDefaultValue: test.Ptr(true),
+			hardDefaultValue: new(true),
 		},
 	}
 
@@ -592,13 +592,13 @@ func TestOptions_SetFallbackIcon(t *testing.T) {
 			name:              "set new fallback icon",
 			initialIconNotify: nil,
 			newIconNotify:     "new-icon-url",
-			want:              test.Ptr("new-icon-url"),
+			want:              new("new-icon-url"),
 		},
 		{
 			name:              "overwrite existing fallback icon",
-			initialIconNotify: test.Ptr("old-icon-url"),
+			initialIconNotify: new("old-icon-url"),
 			newIconNotify:     "new-icon-url",
-			want:              test.Ptr("new-icon-url"),
+			want:              new("new-icon-url"),
 		},
 	}
 
@@ -635,23 +635,23 @@ func TestOptions_GetIcon(t *testing.T) {
 	}{
 		{
 			name:         "iconExpanded overrides all",
-			iconExpanded: test.Ptr("expanded-icon"),
+			iconExpanded: new("expanded-icon"),
 			icon:         "default-icon",
-			iconNotify:   test.Ptr("notify-icon"),
+			iconNotify:   new("notify-icon"),
 			want:         "expanded-icon",
 		},
 		{
 			name:         "icon overrides iconNotify",
 			iconExpanded: nil,
 			icon:         "default-icon",
-			iconNotify:   test.Ptr("notify-icon"),
+			iconNotify:   new("notify-icon"),
 			want:         "default-icon",
 		},
 		{
 			name:         "iconNotify is last resort",
 			iconExpanded: nil,
 			icon:         "",
-			iconNotify:   test.Ptr("notify-icon"),
+			iconNotify:   new("notify-icon"),
 			want:         "notify-icon",
 		},
 		{
@@ -699,7 +699,7 @@ func TestOptions_GetIconLinkTo(t *testing.T) {
 	}{
 		{
 			name:               "iconLinkToExpanded overrides all",
-			iconLinkToExpanded: test.Ptr("expanded-icon-link"),
+			iconLinkToExpanded: new("expanded-icon-link"),
 			iconLinkTo:         "default-icon-link",
 			want:               "expanded-icon-link",
 		},
@@ -752,7 +752,7 @@ func TestOptions_GetWebURL(t *testing.T) {
 	}{
 		{
 			name:           "webURLExpanded overrides all",
-			webURLExpanded: test.Ptr("expanded-web-url"),
+			webURLExpanded: new("expanded-web-url"),
 			webURL:         "default-web-url",
 			want:           "expanded-web-url",
 		},

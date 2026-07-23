@@ -53,13 +53,13 @@ func TestController_AnnounceCommand(t *testing.T) {
 			name:           "failed does delay by 15s",
 			index:          0,
 			timeDifference: 15 * time.Second,
-			failed:         test.Ptr(true),
+			failed:         new(true),
 		},
 		{
 			name:           "success does delay by 2*Interval",
 			index:          1,
 			timeDifference: 22 * time.Minute,
-			failed:         test.Ptr(false),
+			failed:         new(false),
 		},
 	}
 
@@ -79,7 +79,7 @@ func TestController_AnnounceCommand(t *testing.T) {
 					{"ls", "-lah", "a"},
 				},
 				nil,
-				test.Ptr("11m"),
+				new("11m"),
 			)
 			if !tc.nilChannel {
 				announceChannel := make(chan []byte, 4)

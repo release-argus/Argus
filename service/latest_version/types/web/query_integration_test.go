@@ -197,7 +197,7 @@ func TestLookup_Query(t *testing.T) {
 				require:
 					regex_version: ver([0-9.]+)-unknown
 			`),
-			semanticVersioning: test.Ptr(false),
+			semanticVersioning: new(false),
 			want: wantVars{
 				errRegex: test.TrimYAML(`
 					^no releases were found matching the require fields
@@ -281,7 +281,7 @@ func TestLookup_Query(t *testing.T) {
 					- type: regex
 						regex: ver[0-9.]+
 			`),
-			semanticVersioning: test.Ptr(false),
+			semanticVersioning: new(false),
 			hadStatus: statusVars{
 				latestVersionWant: "ver1.2.2",
 			},

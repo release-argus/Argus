@@ -254,10 +254,10 @@ func TestString(t *testing.T) {
 					nil,
 					base.DefaultsConfig{
 						Soft: &base.Defaults{
-							AllowInvalidCerts: test.Ptr(false),
+							AllowInvalidCerts: new(false),
 						},
 						Hard: &base.Defaults{
-							AllowInvalidCerts: test.Ptr(false),
+							AllowInvalidCerts: new(false),
 						},
 					},
 				)
@@ -654,7 +654,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 			},
 			secretRefs: &shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(0)},
+					{OldIndex: new(0)},
 				},
 			},
 			want: &Lookup{
@@ -708,7 +708,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 			},
 			secretRefs: &shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(1)},
+					{OldIndex: new(1)},
 				},
 			},
 			want: &Lookup{
@@ -732,7 +732,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 			},
 			secretRefs: &shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
-					{OldIndex: test.Ptr(1)},
+					{OldIndex: new(1)},
 				},
 			},
 			want: &Lookup{

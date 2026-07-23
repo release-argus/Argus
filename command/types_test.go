@@ -51,12 +51,12 @@ func TestCommands_Copy(t *testing.T) {
 		},
 		{
 			name:     "empty slice receiver",
-			commands: test.Ptr(Commands{}),
+			commands: new(Commands{}),
 			want:     Commands{},
 		},
 		{
 			name: "non-empty commands shallow-copied",
-			commands: test.Ptr(Commands{
+			commands: new(Commands{
 				Command{"ls", "-la"},
 				Command{"echo", "hi"},
 			}),
@@ -65,7 +65,7 @@ func TestCommands_Copy(t *testing.T) {
 				{"echo", "hi"},
 			},
 
-			mutateOriginalReassignTo: test.Ptr(Command{"changed"}),
+			mutateOriginalReassignTo: new(Command{"changed"}),
 			wantAfterReassignFirst: Commands{
 				{"ls", "-la"},
 				{"echo", "hi"},
@@ -252,8 +252,8 @@ func TestController_CopyFailsFrom(t *testing.T) {
 			from: &Controller{},
 			to:   &Controller{},
 			fromFails: []*bool{
-				test.Ptr(true),
-				test.Ptr(false),
+				new(true),
+				new(false),
 				nil,
 			},
 			toFails: nil,
@@ -271,7 +271,7 @@ func TestController_CopyFailsFrom(t *testing.T) {
 				},
 			},
 			fromFails: []*bool{
-				test.Ptr(true),
+				new(true),
 			},
 			toFails: []*bool{
 				nil,
@@ -296,10 +296,10 @@ func TestController_CopyFailsFrom(t *testing.T) {
 				},
 			},
 			fromFails: []*bool{
-				test.Ptr(true),
+				new(true),
 			},
 			toFails: []*bool{
-				test.Ptr(true),
+				new(true),
 			},
 			fromNextRunnable: []time.Time{
 				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -322,11 +322,11 @@ func TestController_CopyFailsFrom(t *testing.T) {
 				},
 			},
 			fromFails: []*bool{
-				test.Ptr(true),
-				test.Ptr(false),
+				new(true),
+				new(false),
 			},
 			toFails: []*bool{
-				test.Ptr(false),
+				new(false),
 			},
 			fromNextRunnable: []time.Time{
 				time.Date(2022, 2, 2, 0, 0, 0, 0, time.UTC),

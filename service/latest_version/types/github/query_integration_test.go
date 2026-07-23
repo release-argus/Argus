@@ -86,7 +86,7 @@ func TestLookup_Query(t *testing.T) {
 			`),
 			semVer: false,
 			status: statusVars{
-				wantLatestVersion: test.Ptr("ver1.1.1"),
+				wantLatestVersion: new("ver1.1.1"),
 			},
 			want: want{
 				errRegex: `^$`,
@@ -256,7 +256,7 @@ func TestLookup_Query(t *testing.T) {
 			`),
 			status: statusVars{
 				latestVersion:     "1.1.0",
-				wantLatestVersion: test.Ptr("1.1.1"),
+				wantLatestVersion: new("1.1.1"),
 			},
 			semVer: true,
 			want: want{
@@ -274,7 +274,7 @@ func TestLookup_Query(t *testing.T) {
 			`),
 			status: statusVars{
 				latestVersion:     "1.1.1",
-				wantLatestVersion: test.Ptr("1.1.1"),
+				wantLatestVersion: new("1.1.1"),
 			},
 			semVer: true,
 			want: want{
@@ -285,7 +285,7 @@ func TestLookup_Query(t *testing.T) {
 			name:      "repo that uses tags, not releases/has tags",
 			overrides: `url: "release-argus/test"`,
 			status: statusVars{
-				wantLatestVersion: test.Ptr("1.1.1"),
+				wantLatestVersion: new("1.1.1"),
 			},
 			semVer: true,
 			want: want{
@@ -306,7 +306,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name:         "repo that uses tags, not releases/no tags - emptyListETag changed",
 			overrides:    `url: "release-argus/.github"`,
-			overrideETag: test.Ptr(""),
+			overrideETag: new(""),
 			semVer:       true,
 			want: want{
 				errRegex:    `no releases were found`,
@@ -316,7 +316,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name:         "version from 2nd page",
 			overrides:    `url: "release-argus/test-pagination"`,
-			overrideETag: test.Ptr(""),
+			overrideETag: new(""),
 			semVer:       true,
 			want: want{
 				stdoutRegex: `on page 1`,
@@ -464,7 +464,7 @@ func TestLookup_Query__githubETag(t *testing.T) {
 
 			lookup := testLookup(t, false)
 			lookup.URL = "release-argus/test-pagination"
-			lookup.UsePreRelease = test.Ptr(true)
+			lookup.UsePreRelease = new(true)
 			lookup.GetGitHubData().SetETag("foo")
 			lookup.Status.ServiceInfo.ID = tc.name
 			lookup.Require = &filter.Require{

@@ -435,7 +435,7 @@ func TestDecodeService(t *testing.T) {
 			name:     "JSON/invalid/empty ID",
 			format:   "json",
 			data:     `{invalid: json}`,
-			id:       test.Ptr(""),
+			id:       new(""),
 			errRegex: `invalid character`,
 		},
 		{
@@ -517,7 +517,7 @@ func TestDecodeService(t *testing.T) {
 					"url": ["` + test.ArgusGitHubRepo + `"]
 				}
 			}`),
-			id: test.Ptr(""),
+			id: new(""),
 			errRegex: test.TrimYAML(`
 				^latest_version:
 					json: .*unmarshal .* string.*$`,

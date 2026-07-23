@@ -122,12 +122,12 @@ func testSettings(t *testing.T) Settings {
 	return Settings{
 		SettingsBase: SettingsBase{
 			Log: LogSettings{
-				Timestamps: test.Ptr(true),
+				Timestamps: new(true),
 				Level:      "DEBUG",
 			},
 			Data: DataSettings{
 				DatabaseFile: "somewhere.db",
-				Readonly:     test.Ptr(true),
+				Readonly:     new(true),
 			},
 			Web: WebSettings{
 				ListenHost:  "test",
