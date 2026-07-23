@@ -31,55 +31,37 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestGetIP(t *testing.T) {
-	// GIVEN: a request.
+func TestServeWs(t *testing.T) {
 	tests := []struct {
-		name       string
-		headers    map[string]string
-		remoteAddr string
-		want       string
+		name           string
+		dialHeaders    map[string]string
+		wantStatus     int
+		wantRegistered bool
+		wantIP         string
+		wantSendCap    int
 	}{
 		{
-			name: "CF-Connecting-Ip",
-			want: "1.1.1.1",
-			headers: map[string]string{
-				"CF-Connecting-IP": "1.1.1.1",
-				"X-REAL-IP":        "2.2.2.2",
-				"X-FORWARDED-FOR":  "3.3.3.3",
-			},
-			remoteAddr: "4.4.4.4:123",
+			name:           "upgrades and registers client",
+			wantStatus:     http.StatusSwitchingProtocols,
+			wantRegistered: true,
+			wantIP:         "127.0.0.1",
+			wantSendCap:    256,
 		},
 		{
-			name: "X-Real-Ip",
-			want: "2.2.2.2",
-			headers: map[string]string{
-				"X-REAL-IP":       "2.2.2.2",
-				"X-FORWARDED-FOR": "3.3.3.3",
-			},
-			remoteAddr: "4.4.4.4:123",
+			name:           "uses CF-Connecting-Ip",
+			dialHeaders:    map[string]string{"CF-Connecting-IP": "2.2.2.2"},
+			wantStatus:     http.StatusSwitchingProtocols,
+			wantRegistered: true,
+			wantIP:         "2.2.2.2",
+			wantSendCap:    256,
 		},
 		{
-			name: "X-Forwarded-For",
-			headers: map[string]string{
-				"X-FORWARDED-FOR": "3.3.3.3",
-			},
-			remoteAddr: "4.4.4.4:123",
-			want:       "3.3.3.3",
-		},
-		{
-			name:       "RemoteAddr",
-			want:       "4.4.4.4",
-			remoteAddr: "4.4.4.4:123",
-		},
-		{
-			name:       "invalid RemoteAddr/SplitHostPort fail",
-			want:       "",
-			remoteAddr: "1111",
-		},
-		{
-			name:       "invalid RemoteAddr/ParseIP fail",
-			want:       "",
-			remoteAddr: "1111:123",
+			name:           "uses X-Real-Ip",
+			dialHeaders:    map[string]string{"X-Real-Ip": "3.3.3.3"},
+			wantStatus:     http.StatusSwitchingProtocols,
+			wantRegistered: true,
+			wantIP:         "3.3.3.3",
+			wantSendCap:    256,
 		},
 	}
 
@@ -87,36 +69,60 @@ func TestGetIP(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-			for header, val := range tc.headers {
-				req.Header.Set(header, val)
+			// GIVEN: a Hub.
+			hub := NewHub()
+			go hub.Run()
+
+			// AND: a HTTP server with a WebSocket endpoint.
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ServeWs(hub, w, r)
+			}))
+			t.Cleanup(server.Close)
+
+			prefix := fmt.Sprintf("%s\nServeWs()", packageName)
+
+			// WHEN: a WebSocket client connects.
+			wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+			dialHeader := http.Header{}
+			for key, value := range tc.dialHeaders {
+				dialHeader.Set(key, value)
 			}
-			req.RemoteAddr = tc.remoteAddr
+			clientConn, resp, err := websocket.DefaultDialer.Dial(wsURL, dialHeader)
+			if err != nil {
+				t.Fatalf("%s failed to dial WebSocket: %v", prefix, err)
+			}
+			t.Cleanup(func() { _ = clientConn.Close() })
 
-			// WHEN: getIP is called on this request.
-			got := getIP(req)
+			// THEN: the upgrade succeeds.
+			if got, want := resp.StatusCode, tc.wantStatus; got != want {
+				t.Errorf("%s status mismatch\ngot:  %d\nwant: %d", prefix, got, want)
+			}
+			time.Sleep(time.Second)
 
-			prefix := fmt.Sprintf(
-				"%s\ngetIP(%+v)",
-				packageName, req,
-			)
+			// AND: the client is registered on the Hub.
+			registered := hubClientForTest(t, hub)
+			if tc.wantRegistered && registered == nil {
+				t.Fatalf("%s expected a registered client", prefix)
+			}
+			if !tc.wantRegistered && registered != nil {
+				t.Fatalf("%s expected no registered client, got %p", prefix, registered)
+			}
+			if registered == nil {
+				return
+			}
 
-			// THEN: the function returns the correct result.
-			if got != tc.want {
-				t.Errorf(
-					"%s value mismatch\ngot:  %v\nwant: %q",
-					prefix, got, tc.want,
-				)
+			// AND: the client's data is filled correctly.
+			fieldTests := []test.FieldAssertion{
+				{Name: "IP", Got: registered.ip, Want: tc.wantIP, Mode: test.CompareEqual},
+				{Name: "Send capacity", Got: cap(registered.send), Want: tc.wantSendCap, Mode: test.CompareEqual},
+				{Name: "Hub", Got: registered.hub, Want: hub, Mode: test.CompareSamePointer},
+				{Name: "Conn", Got: registered.conn, Want: nil, Mode: test.CompareDifferentPointer},
+			}
+			if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
-}
-
-type wsTestClient struct {
-	client *Client
-	conn   *websocket.Conn
-	peer   *websocket.Conn
-	server *httptest.Server
 }
 
 func setupWSTestClient(t *testing.T) *wsTestClient {
@@ -204,6 +210,127 @@ func (w *wsTestClient) closePeer(t *testing.T, code int) {
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(code, ""),
 	)
+}
+
+func TestServeWs__plain_HTTP(t *testing.T) {
+	// GIVEN: a Hub.
+	hub := NewHub()
+	go hub.Run()
+
+	// AND: a HTTP server with a WebSocket endpoint.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ServeWs(hub, w, r)
+	}))
+	t.Cleanup(server.Close)
+
+	prefix := fmt.Sprintf("%s\nServeWs()", packageName)
+
+	// AND: a plain HTTP request to the WebSocket endpoint.
+	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	rec := httptest.NewRecorder()
+
+	// WHEN: a plain HTTP request is served.
+	ServeWs(hub, rec, req)
+
+	// THEN: the upgrade fails.
+	if got, want := rec.Code, http.StatusBadRequest; got != want {
+		t.Errorf("%s status mismatch\ngot:  %d\nwant: %d", prefix, got, want)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// AND: no client is registered.
+	if registered := hubClientForTest(t, hub); registered != nil {
+		t.Errorf("%s expected no registered client, got %p", prefix, registered)
+	}
+}
+
+func TestGetIP(t *testing.T) {
+	// GIVEN: a request.
+	tests := []struct {
+		name       string
+		headers    map[string]string
+		remoteAddr string
+		want       string
+	}{
+		{
+			name: "CF-Connecting-Ip",
+			want: "1.1.1.1",
+			headers: map[string]string{
+				"CF-Connecting-IP": "1.1.1.1",
+				"X-REAL-IP":        "2.2.2.2",
+				"X-FORWARDED-FOR":  "3.3.3.3",
+			},
+			remoteAddr: "4.4.4.4:123",
+		},
+		{
+			name: "X-Real-Ip",
+			want: "2.2.2.2",
+			headers: map[string]string{
+				"X-REAL-IP":       "2.2.2.2",
+				"X-FORWARDED-FOR": "3.3.3.3",
+			},
+			remoteAddr: "4.4.4.4:123",
+		},
+		{
+			name: "X-Forwarded-For",
+			headers: map[string]string{
+				"X-FORWARDED-FOR": "3.3.3.3",
+			},
+			remoteAddr: "4.4.4.4:123",
+			want:       "3.3.3.3",
+		},
+		{
+			name:       "RemoteAddr",
+			want:       "4.4.4.4",
+			remoteAddr: "4.4.4.4:123",
+		},
+		{
+			name:       "invalid RemoteAddr/SplitHostPort fail",
+			want:       "",
+			remoteAddr: "1111",
+		},
+		{
+			name:       "invalid RemoteAddr/ParseIP fail",
+			want:       "",
+			remoteAddr: "1111:123",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
+			for header, val := range tc.headers {
+				req.Header.Set(header, val)
+			}
+			req.RemoteAddr = tc.remoteAddr
+
+			// WHEN: getIP is called on this request.
+			got := getIP(req)
+
+			prefix := fmt.Sprintf(
+				"%s\ngetIP(%+v)",
+				packageName, req,
+			)
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Errorf(
+					"%s value mismatch\ngot:  %v\nwant: %q",
+					prefix, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+type wsTestClient struct {
+	client *Client
+	conn   *websocket.Conn
+	peer   *websocket.Conn
+	server *httptest.Server
 }
 
 func TestClient_ReadPump__pongHandler(t *testing.T) {
@@ -531,6 +658,81 @@ func TestClient_DrainSendMessages(t *testing.T) {
 	}
 }
 
+func readConnMessages(t *testing.T, conn *websocket.Conn, prefix string, count int) []string {
+	t.Helper()
+
+	got, err := tryReadConnMessages(conn, count)
+	if err != nil {
+		t.Fatalf("%s %v", prefix, err)
+	}
+	return got
+}
+
+func tryReadConnMessages(conn *websocket.Conn, count int) ([]string, error) {
+	received := make([]string, 0, count)
+	for i := range count {
+		if err := conn.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+			return nil, fmt.Errorf("failed to set read deadline: %w", err)
+		}
+		_, message, err := conn.ReadMessage()
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to read message [%d] from WebSocket connection: %w",
+				i, err,
+			)
+		}
+		received = append(received, string(message))
+	}
+	return received, nil
+}
+
+func assertConnMessages(t *testing.T, prefix string, got, want []string) {
+	t.Helper()
+
+	if gotLen, wantLen := len(got), len(want); gotLen != wantLen {
+		t.Errorf("%s message count mismatch\ngot:  %d\nwant: %d", prefix, gotLen, wantLen)
+	}
+	for i, wantMsg := range want {
+		if i >= len(got) {
+			break
+		}
+		if gotMsg := got[i]; gotMsg != wantMsg {
+			t.Errorf(
+				"%s mismatch on message [%d]\ngot:  %q\nwant: %q",
+				prefix, i, gotMsg, wantMsg,
+			)
+		}
+	}
+}
+
+// setupWSHubClient returns a registered client with a running hub.
+func setupWSHubClient(t *testing.T) *wsTestClient {
+	t.Helper()
+
+	// GIVEN: a test client/hub.
+	wsTest := setupWSTestClient(t)
+	t.Cleanup(func() { wsTest.cleanup(t) })
+	go wsTest.client.hub.Run()
+	wsTest.client.hub.register <- wsTest.client
+	time.Sleep(100 * time.Millisecond)
+
+	return wsTest
+}
+
+// waitForClientUnregistered fails if the client is not unregistered from the hub quicker than timeout.
+func waitForClientUnregistered(t *testing.T, hub *Hub, client *Client) {
+	t.Helper()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if !hub.hasClient(client) {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatalf("%s\ntimed out waiting for client to unregister from hub", packageName)
+}
+
 func TestClient_WritePump__messages(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -689,208 +891,6 @@ func TestClient_WritePump__connection(t *testing.T) {
 				)
 			}
 		})
-	}
-}
-
-func readConnMessages(t *testing.T, conn *websocket.Conn, prefix string, count int) []string {
-	t.Helper()
-
-	got, err := tryReadConnMessages(conn, count)
-	if err != nil {
-		t.Fatalf("%s %v", prefix, err)
-	}
-	return got
-}
-
-func tryReadConnMessages(conn *websocket.Conn, count int) ([]string, error) {
-	received := make([]string, 0, count)
-	for i := range count {
-		if err := conn.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
-			return nil, fmt.Errorf("failed to set read deadline: %w", err)
-		}
-		_, message, err := conn.ReadMessage()
-		if err != nil {
-			return nil, fmt.Errorf(
-				"failed to read message [%d] from WebSocket connection: %w",
-				i, err,
-			)
-		}
-		received = append(received, string(message))
-	}
-	return received, nil
-}
-
-func assertConnMessages(t *testing.T, prefix string, got, want []string) {
-	t.Helper()
-
-	if gotLen, wantLen := len(got), len(want); gotLen != wantLen {
-		t.Errorf("%s message count mismatch\ngot:  %d\nwant: %d", prefix, gotLen, wantLen)
-	}
-	for i, wantMsg := range want {
-		if i >= len(got) {
-			break
-		}
-		if gotMsg := got[i]; gotMsg != wantMsg {
-			t.Errorf(
-				"%s mismatch on message [%d]\ngot:  %q\nwant: %q",
-				prefix, i, gotMsg, wantMsg,
-			)
-		}
-	}
-}
-
-// setupWSHubClient returns a registered client with a running hub.
-func setupWSHubClient(t *testing.T) *wsTestClient {
-	t.Helper()
-
-	// GIVEN: a test client/hub.
-	wsTest := setupWSTestClient(t)
-	t.Cleanup(func() { wsTest.cleanup(t) })
-	go wsTest.client.hub.Run()
-	wsTest.client.hub.register <- wsTest.client
-	time.Sleep(100 * time.Millisecond)
-
-	return wsTest
-}
-
-// waitForClientUnregistered fails if the client is not unregistered from the hub quicker than timeout.
-func waitForClientUnregistered(t *testing.T, hub *Hub, client *Client) {
-	t.Helper()
-
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if !hub.hasClient(client) {
-			return
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-	t.Fatalf("%s\ntimed out waiting for client to unregister from hub", packageName)
-}
-
-func TestServeWs(t *testing.T) {
-	tests := []struct {
-		name           string
-		dialHeaders    map[string]string
-		wantStatus     int
-		wantRegistered bool
-		wantIP         string
-		wantSendCap    int
-	}{
-		{
-			name:           "upgrades and registers client",
-			wantStatus:     http.StatusSwitchingProtocols,
-			wantRegistered: true,
-			wantIP:         "127.0.0.1",
-			wantSendCap:    256,
-		},
-		{
-			name:           "uses CF-Connecting-Ip",
-			dialHeaders:    map[string]string{"CF-Connecting-IP": "2.2.2.2"},
-			wantStatus:     http.StatusSwitchingProtocols,
-			wantRegistered: true,
-			wantIP:         "2.2.2.2",
-			wantSendCap:    256,
-		},
-		{
-			name:           "uses X-Real-Ip",
-			dialHeaders:    map[string]string{"X-Real-Ip": "3.3.3.3"},
-			wantStatus:     http.StatusSwitchingProtocols,
-			wantRegistered: true,
-			wantIP:         "3.3.3.3",
-			wantSendCap:    256,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// GIVEN: a Hub.
-			hub := NewHub()
-			go hub.Run()
-
-			// AND: a HTTP server with a WebSocket endpoint.
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				ServeWs(hub, w, r)
-			}))
-			t.Cleanup(server.Close)
-
-			prefix := fmt.Sprintf("%s\nServeWs()", packageName)
-
-			// WHEN: a WebSocket client connects.
-			wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
-			dialHeader := http.Header{}
-			for key, value := range tc.dialHeaders {
-				dialHeader.Set(key, value)
-			}
-			clientConn, resp, err := websocket.DefaultDialer.Dial(wsURL, dialHeader)
-			if err != nil {
-				t.Fatalf("%s failed to dial WebSocket: %v", prefix, err)
-			}
-			t.Cleanup(func() { _ = clientConn.Close() })
-
-			// THEN: the upgrade succeeds.
-			if got, want := resp.StatusCode, tc.wantStatus; got != want {
-				t.Errorf("%s status mismatch\ngot:  %d\nwant: %d", prefix, got, want)
-			}
-			time.Sleep(time.Second)
-
-			// AND: the client is registered on the Hub.
-			registered := hubClientForTest(t, hub)
-			if tc.wantRegistered && registered == nil {
-				t.Fatalf("%s expected a registered client", prefix)
-			}
-			if !tc.wantRegistered && registered != nil {
-				t.Fatalf("%s expected no registered client, got %p", prefix, registered)
-			}
-			if registered == nil {
-				return
-			}
-
-			// AND: the client's data is filled correctly.
-			fieldTests := []test.FieldAssertion{
-				{Name: "IP", Got: registered.ip, Want: tc.wantIP, Mode: test.CompareEqual},
-				{Name: "Send capacity", Got: cap(registered.send), Want: tc.wantSendCap, Mode: test.CompareEqual},
-				{Name: "Hub", Got: registered.hub, Want: hub, Mode: test.CompareSamePointer},
-				{Name: "Conn", Got: registered.conn, Want: nil, Mode: test.CompareDifferentPointer},
-			}
-			if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
-				t.Fatal(testErr)
-			}
-		})
-	}
-}
-
-func TestServeWs__plain_HTTP(t *testing.T) {
-	// GIVEN: a Hub.
-	hub := NewHub()
-	go hub.Run()
-
-	// AND: a HTTP server with a WebSocket endpoint.
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ServeWs(hub, w, r)
-	}))
-	t.Cleanup(server.Close)
-
-	prefix := fmt.Sprintf("%s\nServeWs()", packageName)
-
-	// AND: a plain HTTP request to the WebSocket endpoint.
-	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
-	rec := httptest.NewRecorder()
-
-	// WHEN: a plain HTTP request is served.
-	ServeWs(hub, rec, req)
-
-	// THEN: the upgrade fails.
-	if got, want := rec.Code, http.StatusBadRequest; got != want {
-		t.Errorf("%s status mismatch\ngot:  %d\nwant: %d", prefix, got, want)
-	}
-
-	time.Sleep(100 * time.Millisecond)
-
-	// AND: no client is registered.
-	if registered := hubClientForTest(t, hub); registered != nil {
-		t.Errorf("%s expected no registered client, got %p", prefix, registered)
 	}
 }
 

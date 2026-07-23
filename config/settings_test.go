@@ -30,6 +30,257 @@ import (
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
+func TestSettings_MapEnvToStruct(t *testing.T) {
+	// Unset ARGUS_LOG_LEVEL.
+	argusLogLevelEnvKey := "ARGUS_LOG_LEVEL"
+	argusLogLevel := os.Getenv(argusLogLevelEnvKey)
+	os.Setenv(argusLogLevelEnvKey, "")
+	t.Cleanup(func() {
+		os.Setenv(argusLogLevelEnvKey, argusLogLevel)
+	})
+
+	// GIVEN: vars set for Settings vars.
+	tests := []struct {
+		name                  string
+		env                   map[string]string
+		want                  *Settings
+		stdoutRegex, errRegex string
+		ok                    bool
+	}{
+		{
+			name: "empty vars ignored",
+			env: map[string]string{
+				"ARGUS_LOG_LEVEL": "",
+			},
+			want: &Settings{},
+			ok:   true,
+		},
+		{
+			name: "data.readonly",
+			env: map[string]string{
+				"ARGUS_DATA_READONLY": "true",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Data: DataSettings{
+						Readonly: test.Ptr(true),
+					},
+				},
+			},
+			ok: true,
+		},
+		{
+			name: "log.level",
+			env: map[string]string{
+				"ARGUS_LOG_LEVEL": "ERROR",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Log: LogSettings{
+						Level: "ERROR",
+					},
+				},
+			},
+			ok: true,
+		},
+		{
+			name: "log.timestamps/valid",
+			env: map[string]string{
+				"ARGUS_LOG_TIMESTAMPS": "true",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Log: LogSettings{
+						Timestamps: test.Ptr(true),
+					},
+				},
+			},
+			ok: true,
+		},
+		{
+			name: "log.timestamps/invalid - not a bool",
+			env: map[string]string{
+				"ARGUS_LOG_TIMESTAMPS": "abc",
+			},
+			want: &Settings{},
+			ok:   false,
+			errRegex: test.TrimYAML(`
+				one or more.* environment variables.*
+					ARGUS_LOG_TIMESTAMPS: .*$`,
+			),
+		},
+		{
+			name: "web.listen-host",
+			env: map[string]string{
+				"ARGUS_WEB_LISTEN_HOST": "test",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						ListenHost: "test",
+					},
+				},
+			},
+			ok: true,
+		},
+		{
+			name: "web.listen-port",
+			env: map[string]string{
+				"ARGUS_WEB_LISTEN_PORT": "123",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						ListenPort: "123",
+					},
+				},
+			},
+			ok: true,
+		},
+		{
+			name: "web.cert-file",
+			env: map[string]string{
+				"ARGUS_WEB_CERT_FILE": "cert.test",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						CertFile: "cert.test",
+					},
+				},
+			},
+			ok: false,
+			errRegex: test.TrimYAML(`
+				^hard_defaults:
+					settings:
+						web:
+							cert_file: .*no such file.*$`,
+			),
+		},
+		{
+			name: "web.pkey-file",
+			env: map[string]string{
+				"ARGUS_WEB_PKEY_FILE": "pkey.test",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						KeyFile: "pkey.test",
+					},
+				},
+			},
+			ok: false,
+			errRegex: test.TrimYAML(`
+				^hard_defaults:
+					settings:
+						web:
+							pkey_file: .*no such file.*$`,
+			),
+		},
+		{
+			name: "web.route-prefix",
+			env: map[string]string{
+				"ARGUS_WEB_ROUTE_PREFIX": "prefix",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: "/prefix",
+					},
+				},
+			},
+			ok: true,
+		},
+		{
+			name: "web.basic_auth",
+			env: map[string]string{
+				"ARGUS_WEB_BASIC_AUTH_USERNAME": "user",
+				"ARGUS_WEB_BASIC_AUTH_PASSWORD": "pass",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Username: "user",
+							Password: util.FmtHash(util.GetHash("pass")),
+						},
+					},
+				},
+			},
+			ok: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseStdout := test.CaptureLog(t, logx.Default())
+
+			test.SetEnv(t, tc.env)
+			settings := Settings{}
+
+			errChannel := make(chan error, 1)
+			resultChannel := make(chan bool, 1)
+			// WHEN: MapEnvToStruct is called on it.
+			go func() {
+				err := settings.MapEnvToStruct()
+				errChannel <- err
+				resultChannel <- err == nil
+			}()
+
+			prefix := fmt.Sprintf(
+				"%s\nSettings.MapEnvToStruct(%+v)",
+				packageName, tc.env,
+			)
+
+			// THEN: the ok value is as expected.
+			if err := test.AssertChannelBool(
+				t,
+				tc.ok,
+				resultChannel,
+				logx.ExitCodeChannel(),
+				releaseStdout,
+			); err != nil {
+				t.Fatal(prefix + err.Error())
+			}
+
+			// AND: any stdout error is as expected.
+			stdout := releaseStdout()
+			if !util.RegexCheck(tc.stdoutRegex, stdout) {
+				t.Errorf(
+					"%s stdout mismatch\ngot:  %q\nwant: %q",
+					prefix, stdout, tc.stdoutRegex,
+				)
+			}
+
+			// AND: any returned error is as expected.
+			tc.errRegex = util.ValueOr(tc.errRegex, `^$`)
+			select {
+			case err := <-errChannel:
+				e := errfmt.FormatError(err)
+				if !util.RegexCheck(tc.errRegex, e) {
+					t.Errorf(
+						"%s error mismatch\ngot:  %q\nwant: %q",
+						prefix, e, tc.errRegex,
+					)
+				}
+			default:
+				t.Fatalf("%s error expected but not returned", prefix)
+			}
+
+			// AND: the settings are set to the appropriate env vars.
+			gotStr := settings.String("")
+			wantStr := tc.want.String("")
+			if gotStr != wantStr {
+				t.Errorf(
+					"%s stringified mismatch\ngot:  %v\nwant: %v",
+					prefix, gotStr, wantStr,
+				)
+			}
+		})
+	}
+}
+
 func TestDataSettings_IsZero(t *testing.T) {
 	// GIVEN: a DataSettings struct.
 	tests := []struct {
@@ -129,6 +380,250 @@ func TestLogSettings_IsZero(t *testing.T) {
 		})
 	}
 }
+
+func TestWebSettingsBasicAuth_String(t *testing.T) {
+	// GIVEN: a WebSettingsBasicAuth struct.
+	tests := []struct {
+		name   string
+		auth   *WebSettingsBasicAuth
+		prefix string
+		want   string
+	}{
+		{
+			name:   "nil auth",
+			auth:   nil,
+			prefix: "",
+			want:   "",
+		},
+		{
+			name:   "empty auth",
+			auth:   &WebSettingsBasicAuth{},
+			prefix: "",
+			want:   "{}\n",
+		},
+		{
+			name: "auth with values",
+			auth: &WebSettingsBasicAuth{
+				Username: "user",
+				Password: "pass",
+			},
+			prefix: "",
+			want: test.TrimYAML(`
+				username: user
+				password: pass
+			`),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			test.AssertStringWithPrefixes(
+				t,
+				packageName,
+				tc.auth.String,
+				tc.want,
+			)
+		})
+	}
+}
+
+func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
+	// GIVEN: a WebSettingsBasicAuth struct with some values set.
+	tests := []struct {
+		name                               string
+		env                                map[string]string
+		input                              func() WebSettingsBasicAuth
+		want                               WebSettingsBasicAuth
+		wantUsernameHash, wantPasswordHash string
+	}{
+		{
+			name: "str Username",
+			input: func() WebSettingsBasicAuth {
+				return WebSettingsBasicAuth{
+					Username: "test",
+				}
+			},
+			want: WebSettingsBasicAuth{
+				Username: "test",
+				Password: util.FmtHash(util.GetHash("")),
+			},
+		},
+		{
+			name: "str Web.BasicAuth.Password",
+			input: func() WebSettingsBasicAuth {
+				return WebSettingsBasicAuth{
+					Password: "just a password here",
+				}
+			},
+			want: WebSettingsBasicAuth{
+				Username: "",
+				Password: util.FmtHash(util.GetHash("just a password here")),
+			},
+		},
+		{
+			name: "str Web.BasicAuth.Username and str Web.BasicAuth.Password",
+			input: func() WebSettingsBasicAuth {
+				return WebSettingsBasicAuth{
+					Username: "user",
+					Password: "pass",
+				}
+			},
+			want: WebSettingsBasicAuth{
+				Username: "user",
+				Password: util.FmtHash(util.GetHash("pass")),
+			},
+		},
+		{
+			name: "str env Web.BasicAuth.Username and str env Web.BasicAuth.Password",
+			env: map[string]string{
+				"TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__ONE": "user",
+				"TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__TWO": "pass",
+			},
+			input: func() WebSettingsBasicAuth {
+				return WebSettingsBasicAuth{
+					Username: "${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__ONE}",
+					Password: "${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__TWO}",
+				}
+			},
+			want: WebSettingsBasicAuth{
+				Username: "${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__ONE}",
+				Password: "${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__TWO}",
+			},
+		},
+		{
+			name: "str env partial Web.BasicAuth.Username and str env partial Web.BasicAuth.Password",
+			env: map[string]string{
+				"TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__THREE": "user",
+				"TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__FOUR":  "pass",
+			},
+			input: func() WebSettingsBasicAuth {
+				return WebSettingsBasicAuth{
+					Username: "a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__THREE}",
+					Password: "b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__FOUR}"}
+			},
+			want: WebSettingsBasicAuth{
+				Username: "a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__THREE}",
+				Password: "b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__FOUR}",
+			},
+		},
+		{
+			name: "str env undefined Web.BasicAuth.Username and str env undefined Web.BasicAuth.Password",
+			input: func() WebSettingsBasicAuth {
+				return WebSettingsBasicAuth{
+					Username: "a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}",
+					Password: "b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}"}
+			},
+			want: WebSettingsBasicAuth{
+				Username: "a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}",
+				Password: util.FmtHash(util.GetHash("b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}")),
+			},
+			wantUsernameHash: util.FmtHash(util.GetHash("a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}")),
+			wantPasswordHash: util.FmtHash(util.GetHash("b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}")),
+		},
+		{
+			name: "str Web.BasicAuth.Username and Web.BasicAuth.Password already hashed",
+			input: func() WebSettingsBasicAuth {
+				return WebSettingsBasicAuth{
+					Username: "user",
+					Password: util.FmtHash(util.GetHash("pass")),
+				}
+			},
+			want: WebSettingsBasicAuth{
+				Username: "user",
+				Password: util.FmtHash(util.GetHash("pass")),
+			},
+		},
+		{
+			name: "hashed Web.BasicAuth.Username and str Web.BasicAuth.Password",
+			input: func() WebSettingsBasicAuth {
+				return WebSettingsBasicAuth{
+					Username: "user",
+					Password: "pass",
+				}
+			},
+			want: WebSettingsBasicAuth{
+				Username: "user",
+				Password: util.FmtHash(util.GetHash("pass")),
+			},
+		},
+		{
+			name: "hashed Web.BasicAuth.Username and hashed Web.BasicAuth.Password",
+			input: func() WebSettingsBasicAuth {
+				return WebSettingsBasicAuth{
+					Username: "user",
+					Password: util.FmtHash(util.GetHash("pass")),
+				}
+			},
+			want: WebSettingsBasicAuth{
+				Username: "user",
+				Password: util.FmtHash(util.GetHash("pass")),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			test.SetEnv(t, tc.env)
+
+			had := tc.input()
+
+			// WHEN: CheckValues is called on it.
+			had.CheckValues()
+
+			prefix := fmt.Sprintf("%s\nWebSettings BasicAuth", packageName)
+
+			// THEN: the Settings are converted/removed where necessary.
+			gotStr := had.String("")
+			wantStr := tc.want.String("")
+			if gotStr != wantStr {
+				t.Errorf(
+					"%s stringified mismatch\ngot:  %v\nwant: %v",
+					prefix, gotStr, wantStr,
+				)
+			}
+
+			// AND: the UsernameHash is calculated correctly.
+			want := util.FmtHash(
+				util.GetHash(
+					util.EvalEnvVars(tc.want.Username),
+				),
+			)
+			if tc.wantUsernameHash != "" {
+				want = tc.wantUsernameHash
+			}
+			got := util.FmtHash(had.UsernameHash)
+			if got != want {
+				t.Errorf(
+					"%s Username Hash mismatch\ngot:  %s\nwant: %s",
+					prefix, got, want,
+				)
+			}
+
+			// AND: the PasswordHash is calculated correctly.
+			want = util.FmtHash(
+				util.GetHash(
+					util.EvalEnvVars(tc.want.Password),
+				),
+			)
+			if tc.wantPasswordHash != "" {
+				want = tc.wantPasswordHash
+			}
+			got = util.FmtHash(had.PasswordHash)
+			if got != want {
+				t.Errorf(
+					"%s Password Hash mismatch\ngot:  %s\nwant: %s",
+					prefix, got, want,
+				)
+			}
+		})
+	}
+}
+
+// Settings.
 
 func TestWebSettings_IsZero(t *testing.T) {
 	// GIVEN: a WebSettings struct.
@@ -510,250 +1005,6 @@ func TestWebSettings_CheckValues(t *testing.T) {
 
 // WebSettingsBasicAuth.
 
-func TestWebSettingsBasicAuth_String(t *testing.T) {
-	// GIVEN: a WebSettingsBasicAuth struct.
-	tests := []struct {
-		name   string
-		auth   *WebSettingsBasicAuth
-		prefix string
-		want   string
-	}{
-		{
-			name:   "nil auth",
-			auth:   nil,
-			prefix: "",
-			want:   "",
-		},
-		{
-			name:   "empty auth",
-			auth:   &WebSettingsBasicAuth{},
-			prefix: "",
-			want:   "{}\n",
-		},
-		{
-			name: "auth with values",
-			auth: &WebSettingsBasicAuth{
-				Username: "user",
-				Password: "pass",
-			},
-			prefix: "",
-			want: test.TrimYAML(`
-				username: user
-				password: pass
-			`),
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			test.AssertStringWithPrefixes(
-				t,
-				packageName,
-				tc.auth.String,
-				tc.want,
-			)
-		})
-	}
-}
-
-func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
-	// GIVEN: a WebSettingsBasicAuth struct with some values set.
-	tests := []struct {
-		name                               string
-		env                                map[string]string
-		input                              func() WebSettingsBasicAuth
-		want                               WebSettingsBasicAuth
-		wantUsernameHash, wantPasswordHash string
-	}{
-		{
-			name: "str Username",
-			input: func() WebSettingsBasicAuth {
-				return WebSettingsBasicAuth{
-					Username: "test",
-				}
-			},
-			want: WebSettingsBasicAuth{
-				Username: "test",
-				Password: util.FmtHash(util.GetHash("")),
-			},
-		},
-		{
-			name: "str Web.BasicAuth.Password",
-			input: func() WebSettingsBasicAuth {
-				return WebSettingsBasicAuth{
-					Password: "just a password here",
-				}
-			},
-			want: WebSettingsBasicAuth{
-				Username: "",
-				Password: util.FmtHash(util.GetHash("just a password here")),
-			},
-		},
-		{
-			name: "str Web.BasicAuth.Username and str Web.BasicAuth.Password",
-			input: func() WebSettingsBasicAuth {
-				return WebSettingsBasicAuth{
-					Username: "user",
-					Password: "pass",
-				}
-			},
-			want: WebSettingsBasicAuth{
-				Username: "user",
-				Password: util.FmtHash(util.GetHash("pass")),
-			},
-		},
-		{
-			name: "str env Web.BasicAuth.Username and str env Web.BasicAuth.Password",
-			env: map[string]string{
-				"TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__ONE": "user",
-				"TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__TWO": "pass",
-			},
-			input: func() WebSettingsBasicAuth {
-				return WebSettingsBasicAuth{
-					Username: "${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__ONE}",
-					Password: "${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__TWO}",
-				}
-			},
-			want: WebSettingsBasicAuth{
-				Username: "${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__ONE}",
-				Password: "${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__TWO}",
-			},
-		},
-		{
-			name: "str env partial Web.BasicAuth.Username and str env partial Web.BasicAuth.Password",
-			env: map[string]string{
-				"TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__THREE": "user",
-				"TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__FOUR":  "pass",
-			},
-			input: func() WebSettingsBasicAuth {
-				return WebSettingsBasicAuth{
-					Username: "a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__THREE}",
-					Password: "b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__FOUR}"}
-			},
-			want: WebSettingsBasicAuth{
-				Username: "a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__THREE}",
-				Password: "b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__FOUR}",
-			},
-		},
-		{
-			name: "str env undefined Web.BasicAuth.Username and str env undefined Web.BasicAuth.Password",
-			input: func() WebSettingsBasicAuth {
-				return WebSettingsBasicAuth{
-					Username: "a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}",
-					Password: "b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}"}
-			},
-			want: WebSettingsBasicAuth{
-				Username: "a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}",
-				Password: util.FmtHash(util.GetHash("b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}")),
-			},
-			wantUsernameHash: util.FmtHash(util.GetHash("a${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}")),
-			wantPasswordHash: util.FmtHash(util.GetHash("b${TEST_WEB_SETTINGS_BASIC_AUTH__CHECK_VALUES__UNDEFINED}")),
-		},
-		{
-			name: "str Web.BasicAuth.Username and Web.BasicAuth.Password already hashed",
-			input: func() WebSettingsBasicAuth {
-				return WebSettingsBasicAuth{
-					Username: "user",
-					Password: util.FmtHash(util.GetHash("pass")),
-				}
-			},
-			want: WebSettingsBasicAuth{
-				Username: "user",
-				Password: util.FmtHash(util.GetHash("pass")),
-			},
-		},
-		{
-			name: "hashed Web.BasicAuth.Username and str Web.BasicAuth.Password",
-			input: func() WebSettingsBasicAuth {
-				return WebSettingsBasicAuth{
-					Username: "user",
-					Password: "pass",
-				}
-			},
-			want: WebSettingsBasicAuth{
-				Username: "user",
-				Password: util.FmtHash(util.GetHash("pass")),
-			},
-		},
-		{
-			name: "hashed Web.BasicAuth.Username and hashed Web.BasicAuth.Password",
-			input: func() WebSettingsBasicAuth {
-				return WebSettingsBasicAuth{
-					Username: "user",
-					Password: util.FmtHash(util.GetHash("pass")),
-				}
-			},
-			want: WebSettingsBasicAuth{
-				Username: "user",
-				Password: util.FmtHash(util.GetHash("pass")),
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			test.SetEnv(t, tc.env)
-
-			had := tc.input()
-
-			// WHEN: CheckValues is called on it.
-			had.CheckValues()
-
-			prefix := fmt.Sprintf("%s\nWebSettings BasicAuth", packageName)
-
-			// THEN: the Settings are converted/removed where necessary.
-			gotStr := had.String("")
-			wantStr := tc.want.String("")
-			if gotStr != wantStr {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %v\nwant: %v",
-					prefix, gotStr, wantStr,
-				)
-			}
-
-			// AND: the UsernameHash is calculated correctly.
-			want := util.FmtHash(
-				util.GetHash(
-					util.EvalEnvVars(tc.want.Username),
-				),
-			)
-			if tc.wantUsernameHash != "" {
-				want = tc.wantUsernameHash
-			}
-			got := util.FmtHash(had.UsernameHash)
-			if got != want {
-				t.Errorf(
-					"%s Username Hash mismatch\ngot:  %s\nwant: %s",
-					prefix, got, want,
-				)
-			}
-
-			// AND: the PasswordHash is calculated correctly.
-			want = util.FmtHash(
-				util.GetHash(
-					util.EvalEnvVars(tc.want.Password),
-				),
-			)
-			if tc.wantPasswordHash != "" {
-				want = tc.wantPasswordHash
-			}
-			got = util.FmtHash(had.PasswordHash)
-			if got != want {
-				t.Errorf(
-					"%s Password Hash mismatch\ngot:  %s\nwant: %s",
-					prefix, got, want,
-				)
-			}
-		})
-	}
-}
-
-// Settings.
-
 func TestSettings_IsZero(t *testing.T) {
 	// GIVEN: a Settings struct.
 	tests := []struct {
@@ -837,6 +1088,283 @@ func TestSettings_IsZero(t *testing.T) {
 }
 
 // Settings.
+
+func TestSettings_String(t *testing.T) {
+	// GIVEN: a Settings struct.
+	tests := []struct {
+		name     string
+		settings *Settings
+		prefix   string
+		want     string
+	}{
+		{
+			name:     "nil settings",
+			settings: nil,
+			prefix:   "",
+			want:     "",
+		},
+		{
+			name:     "empty settings",
+			settings: &Settings{},
+			prefix:   "",
+			want:     "{}\n",
+		},
+		{
+			name: "settings",
+			settings: &Settings{
+				SettingsBase: SettingsBase{
+					Log: LogSettings{
+						Level: "INFO",
+					},
+				},
+			},
+			prefix: "",
+			want: test.TrimYAML(`
+				log:
+					level: INFO
+			`),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			test.AssertStringWithPrefixes(
+				t,
+				packageName,
+				tc.settings.String,
+				tc.want,
+			)
+		})
+	}
+}
+
+func TestSettings_NilUndefinedFlags(t *testing.T) {
+	// GIVEN: tests with flags set/unset.
+	var settings Settings
+	tests := []struct {
+		name      string
+		flagSet   bool
+		setStrTo  *string
+		setBoolTo *bool
+	}{
+		{
+			name:      "flag set",
+			flagSet:   true,
+			setStrTo:  test.Ptr("test"),
+			setBoolTo: test.Ptr(true),
+		},
+		{
+			name:      "flag not set",
+			flagSet:   false,
+			setStrTo:  test.Ptr("foo"),
+			setBoolTo: test.Ptr(false),
+		},
+	}
+	flagStr := "log.level"
+	flagBool := "log.timestamps"
+	flagset := map[string]bool{
+		flagStr:  false,
+		flagBool: false,
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
+
+			// WHEN: flags are set/unset and NilUndefinedFlags is called.
+			flagset[flagStr] = tc.flagSet
+			flagset[flagBool] = tc.flagSet
+			LogLevel = tc.setStrTo
+			LogTimestamps = tc.setBoolTo
+			settings.NilUndefinedFlags(&flagset)
+
+			prefix := fmt.Sprintf("%s\nSettings.NilUndefinedFlags()", packageName)
+
+			// THEN: the flags are defined/undefined correctly.
+			gotStr := LogLevel
+			if (tc.flagSet && gotStr == nil) ||
+				(!tc.flagSet && gotStr != nil) {
+				t.Errorf(
+					"%s mismatch on %s - %s:\ngot:  %v\nwant: %s",
+					prefix, flagStr, tc.name,
+					util.DerefOr(gotStr, "<nil>"), *tc.setStrTo,
+				)
+			}
+			gotBool := LogTimestamps
+			if (tc.flagSet && gotBool == nil) ||
+				(!tc.flagSet && gotBool != nil) {
+				t.Errorf(
+					"%s mismatch on %s - %s:\ngot:  %v\nwant: %v",
+					prefix, flagBool, tc.name,
+					gotBool, *tc.setBoolTo,
+				)
+			}
+		})
+	}
+}
+
+func TestSettings_Default(t *testing.T) {
+	// GIVEN: a set of env vars.
+	tests := []struct {
+		name        string
+		env         map[string]string
+		stdoutRegex string
+		ok          bool
+	}{
+		{
+			name:        "no env vars",
+			env:         map[string]string{},
+			stdoutRegex: `^$`,
+			ok:          true,
+		},
+		{
+			name: "valid env var",
+			env: map[string]string{
+				"ARGUS_LOG_TIMESTAMPS": "false",
+			},
+			stdoutRegex: `^$`,
+			ok:          true,
+		},
+		{
+			name: "invalid env var",
+			env: map[string]string{
+				"ARGUS_LOG_TIMESTAMPS": "abc",
+			},
+			stdoutRegex: `^FATAL.*environment variable.*incorrect.*\s.*ARGUS_LOG_TIMESTAMPS.*\s$`,
+			ok:          false,
+		},
+		{
+			name: "web.cert-file that doesn't exist",
+			env: map[string]string{
+				"ARGUS_WEB_CERT_FILE": "cert.test",
+			},
+			stdoutRegex: test.TrimYAML(`
+				^FATAL: hard_defaults:
+					settings:
+						web:
+							cert_file: .*no such file.*`,
+			),
+			ok: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseStdout := test.CaptureLog(t, logx.Default())
+
+			test.SetEnv(t, tc.env)
+			settings := Settings{}
+
+			resultChannel := make(chan bool, 1)
+			// WHEN: Default is called.
+			resultChannel <- settings.Default()
+
+			prefix := fmt.Sprintf("%s\nSettings.Default()", packageName)
+
+			// THEN: the ok value is as expected.
+			if err := test.AssertChannelBool(
+				t,
+				tc.ok,
+				resultChannel,
+				logx.ExitCodeChannel(),
+				releaseStdout,
+			); err != nil {
+				t.Fatal(prefix + err.Error())
+			}
+
+			// AND: any error is as expected.
+			stdout := releaseStdout()
+			if !util.RegexCheck(tc.stdoutRegex, stdout) {
+				t.Errorf(
+					"%s stdout mismatch\ngot:  %q\nwant: %q",
+					prefix, stdout, tc.stdoutRegex,
+				)
+			}
+		})
+	}
+}
+
+func TestSettings_Default__BasicAuthFromFlags(t *testing.T) {
+	// GIVEN: the web.basic-auth.username/password flags may or may not be provided.
+	tests := []struct {
+		name         string
+		usernameFlag *string
+		passwordFlag *string
+		want         *WebSettingsBasicAuth
+	}{
+		{
+			name:         "neither flag provided",
+			usernameFlag: nil,
+			passwordFlag: nil,
+			want:         nil,
+		},
+		{
+			name:         "only username flag provided",
+			usernameFlag: test.Ptr("test-user"),
+			passwordFlag: nil,
+			want: &WebSettingsBasicAuth{
+				Username: "test-user",
+				Password: util.FmtHash(util.GetHash("")),
+			},
+		},
+		{
+			name:         "only password flag provided",
+			usernameFlag: nil,
+			passwordFlag: test.Ptr("test-pass"),
+			want: &WebSettingsBasicAuth{
+				Password: util.FmtHash(util.GetHash("test-pass")),
+			},
+		},
+		{
+			name:         "both flags provided",
+			usernameFlag: test.Ptr("test-user"),
+			passwordFlag: test.Ptr("test-pass"),
+			want: &WebSettingsBasicAuth{
+				Username: "test-user",
+				Password: util.FmtHash(util.GetHash("test-pass")),
+			},
+		},
+	}
+
+	loadMu.Lock() // Protect flag vars.
+	t.Cleanup(loadMu.Unlock)
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're sharing flag vars.
+
+			hadUsername, hadPassword := WebBasicAuthUsername, WebBasicAuthPassword
+			WebBasicAuthUsername, WebBasicAuthPassword = tc.usernameFlag, tc.passwordFlag
+			t.Cleanup(func() {
+				WebBasicAuthUsername, WebBasicAuthPassword = hadUsername, hadPassword
+			})
+
+			settings := Settings{}
+
+			// WHEN: Default is called.
+			settings.Default()
+
+			// THEN: FromFlags.Web.BasicAuth is only populated when a flag was provided.
+			got := settings.FromFlags.Web.BasicAuth
+			switch {
+			case tc.want == nil:
+				if got != nil {
+					t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  %v\nwant: nil",
+						packageName, got)
+				}
+			case got == nil:
+				t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  nil\nwant: %v",
+					packageName, tc.want)
+			case got.Username != tc.want.Username || got.Password != tc.want.Password:
+				t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  %v\nwant: %v",
+					packageName, got, tc.want)
+			}
+		})
+	}
+}
 
 func TestSettings_CheckValues(t *testing.T) {
 	// GIVEN: a Settings struct with some values set.
@@ -1193,534 +1721,6 @@ func TestSettings_CheckValues(t *testing.T) {
 						prefix, got, wantPasswordHash,
 					)
 				}
-			}
-		})
-	}
-}
-
-func TestSettings_MapEnvToStruct(t *testing.T) {
-	// Unset ARGUS_LOG_LEVEL.
-	argusLogLevelEnvKey := "ARGUS_LOG_LEVEL"
-	argusLogLevel := os.Getenv(argusLogLevelEnvKey)
-	os.Setenv(argusLogLevelEnvKey, "")
-	t.Cleanup(func() {
-		os.Setenv(argusLogLevelEnvKey, argusLogLevel)
-	})
-
-	// GIVEN: vars set for Settings vars.
-	tests := []struct {
-		name                  string
-		env                   map[string]string
-		want                  *Settings
-		stdoutRegex, errRegex string
-		ok                    bool
-	}{
-		{
-			name: "empty vars ignored",
-			env: map[string]string{
-				"ARGUS_LOG_LEVEL": "",
-			},
-			want: &Settings{},
-			ok:   true,
-		},
-		{
-			name: "data.readonly",
-			env: map[string]string{
-				"ARGUS_DATA_READONLY": "true",
-			},
-			want: &Settings{
-				SettingsBase: SettingsBase{
-					Data: DataSettings{
-						Readonly: test.Ptr(true),
-					},
-				},
-			},
-			ok: true,
-		},
-		{
-			name: "log.level",
-			env: map[string]string{
-				"ARGUS_LOG_LEVEL": "ERROR",
-			},
-			want: &Settings{
-				SettingsBase: SettingsBase{
-					Log: LogSettings{
-						Level: "ERROR",
-					},
-				},
-			},
-			ok: true,
-		},
-		{
-			name: "log.timestamps/valid",
-			env: map[string]string{
-				"ARGUS_LOG_TIMESTAMPS": "true",
-			},
-			want: &Settings{
-				SettingsBase: SettingsBase{
-					Log: LogSettings{
-						Timestamps: test.Ptr(true),
-					},
-				},
-			},
-			ok: true,
-		},
-		{
-			name: "log.timestamps/invalid - not a bool",
-			env: map[string]string{
-				"ARGUS_LOG_TIMESTAMPS": "abc",
-			},
-			want: &Settings{},
-			ok:   false,
-			errRegex: test.TrimYAML(`
-				one or more.* environment variables.*
-					ARGUS_LOG_TIMESTAMPS: .*$`,
-			),
-		},
-		{
-			name: "web.listen-host",
-			env: map[string]string{
-				"ARGUS_WEB_LISTEN_HOST": "test",
-			},
-			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						ListenHost: "test",
-					},
-				},
-			},
-			ok: true,
-		},
-		{
-			name: "web.listen-port",
-			env: map[string]string{
-				"ARGUS_WEB_LISTEN_PORT": "123",
-			},
-			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						ListenPort: "123",
-					},
-				},
-			},
-			ok: true,
-		},
-		{
-			name: "web.cert-file",
-			env: map[string]string{
-				"ARGUS_WEB_CERT_FILE": "cert.test",
-			},
-			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						CertFile: "cert.test",
-					},
-				},
-			},
-			ok: false,
-			errRegex: test.TrimYAML(`
-				^hard_defaults:
-					settings:
-						web:
-							cert_file: .*no such file.*$`,
-			),
-		},
-		{
-			name: "web.pkey-file",
-			env: map[string]string{
-				"ARGUS_WEB_PKEY_FILE": "pkey.test",
-			},
-			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						KeyFile: "pkey.test",
-					},
-				},
-			},
-			ok: false,
-			errRegex: test.TrimYAML(`
-				^hard_defaults:
-					settings:
-						web:
-							pkey_file: .*no such file.*$`,
-			),
-		},
-		{
-			name: "web.route-prefix",
-			env: map[string]string{
-				"ARGUS_WEB_ROUTE_PREFIX": "prefix",
-			},
-			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						RoutePrefix: "/prefix",
-					},
-				},
-			},
-			ok: true,
-		},
-		{
-			name: "web.basic_auth",
-			env: map[string]string{
-				"ARGUS_WEB_BASIC_AUTH_USERNAME": "user",
-				"ARGUS_WEB_BASIC_AUTH_PASSWORD": "pass",
-			},
-			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						BasicAuth: &WebSettingsBasicAuth{
-							Username: "user",
-							Password: util.FmtHash(util.GetHash("pass")),
-						},
-					},
-				},
-			},
-			ok: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureLog(t, logx.Default())
-
-			test.SetEnv(t, tc.env)
-			settings := Settings{}
-
-			errChannel := make(chan error, 1)
-			resultChannel := make(chan bool, 1)
-			// WHEN: MapEnvToStruct is called on it.
-			go func() {
-				err := settings.MapEnvToStruct()
-				errChannel <- err
-				resultChannel <- err == nil
-			}()
-
-			prefix := fmt.Sprintf(
-				"%s\nSettings.MapEnvToStruct(%+v)",
-				packageName, tc.env,
-			)
-
-			// THEN: the ok value is as expected.
-			if err := test.AssertChannelBool(
-				t,
-				tc.ok,
-				resultChannel,
-				logx.ExitCodeChannel(),
-				releaseStdout,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
-			}
-
-			// AND: any stdout error is as expected.
-			stdout := releaseStdout()
-			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
-			}
-
-			// AND: any returned error is as expected.
-			tc.errRegex = util.ValueOr(tc.errRegex, `^$`)
-			select {
-			case err := <-errChannel:
-				e := errfmt.FormatError(err)
-				if !util.RegexCheck(tc.errRegex, e) {
-					t.Errorf(
-						"%s error mismatch\ngot:  %q\nwant: %q",
-						prefix, e, tc.errRegex,
-					)
-				}
-			default:
-				t.Fatalf("%s error expected but not returned", prefix)
-			}
-
-			// AND: the settings are set to the appropriate env vars.
-			gotStr := settings.String("")
-			wantStr := tc.want.String("")
-			if gotStr != wantStr {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %v\nwant: %v",
-					prefix, gotStr, wantStr,
-				)
-			}
-		})
-	}
-}
-
-func TestSettings_String(t *testing.T) {
-	// GIVEN: a Settings struct.
-	tests := []struct {
-		name     string
-		settings *Settings
-		prefix   string
-		want     string
-	}{
-		{
-			name:     "nil settings",
-			settings: nil,
-			prefix:   "",
-			want:     "",
-		},
-		{
-			name:     "empty settings",
-			settings: &Settings{},
-			prefix:   "",
-			want:     "{}\n",
-		},
-		{
-			name: "settings",
-			settings: &Settings{
-				SettingsBase: SettingsBase{
-					Log: LogSettings{
-						Level: "INFO",
-					},
-				},
-			},
-			prefix: "",
-			want: test.TrimYAML(`
-				log:
-					level: INFO
-			`),
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			test.AssertStringWithPrefixes(
-				t,
-				packageName,
-				tc.settings.String,
-				tc.want,
-			)
-		})
-	}
-}
-
-func TestSettings_NilUndefinedFlags(t *testing.T) {
-	// GIVEN: tests with flags set/unset.
-	var settings Settings
-	tests := []struct {
-		name      string
-		flagSet   bool
-		setStrTo  *string
-		setBoolTo *bool
-	}{
-		{
-			name:      "flag set",
-			flagSet:   true,
-			setStrTo:  test.Ptr("test"),
-			setBoolTo: test.Ptr(true),
-		},
-		{
-			name:      "flag not set",
-			flagSet:   false,
-			setStrTo:  test.Ptr("foo"),
-			setBoolTo: test.Ptr(false),
-		},
-	}
-	flagStr := "log.level"
-	flagBool := "log.timestamps"
-	flagset := map[string]bool{
-		flagStr:  false,
-		flagBool: false,
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
-
-			// WHEN: flags are set/unset and NilUndefinedFlags is called.
-			flagset[flagStr] = tc.flagSet
-			flagset[flagBool] = tc.flagSet
-			LogLevel = tc.setStrTo
-			LogTimestamps = tc.setBoolTo
-			settings.NilUndefinedFlags(&flagset)
-
-			prefix := fmt.Sprintf("%s\nSettings.NilUndefinedFlags()", packageName)
-
-			// THEN: the flags are defined/undefined correctly.
-			gotStr := LogLevel
-			if (tc.flagSet && gotStr == nil) ||
-				(!tc.flagSet && gotStr != nil) {
-				t.Errorf(
-					"%s mismatch on %s - %s:\ngot:  %v\nwant: %s",
-					prefix, flagStr, tc.name,
-					util.DerefOr(gotStr, "<nil>"), *tc.setStrTo,
-				)
-			}
-			gotBool := LogTimestamps
-			if (tc.flagSet && gotBool == nil) ||
-				(!tc.flagSet && gotBool != nil) {
-				t.Errorf(
-					"%s mismatch on %s - %s:\ngot:  %v\nwant: %v",
-					prefix, flagBool, tc.name,
-					gotBool, *tc.setBoolTo,
-				)
-			}
-		})
-	}
-}
-
-func TestSettings_Default(t *testing.T) {
-	// GIVEN: a set of env vars.
-	tests := []struct {
-		name        string
-		env         map[string]string
-		stdoutRegex string
-		ok          bool
-	}{
-		{
-			name:        "no env vars",
-			env:         map[string]string{},
-			stdoutRegex: `^$`,
-			ok:          true,
-		},
-		{
-			name: "valid env var",
-			env: map[string]string{
-				"ARGUS_LOG_TIMESTAMPS": "false",
-			},
-			stdoutRegex: `^$`,
-			ok:          true,
-		},
-		{
-			name: "invalid env var",
-			env: map[string]string{
-				"ARGUS_LOG_TIMESTAMPS": "abc",
-			},
-			stdoutRegex: `^FATAL.*environment variable.*incorrect.*\s.*ARGUS_LOG_TIMESTAMPS.*\s$`,
-			ok:          false,
-		},
-		{
-			name: "web.cert-file that doesn't exist",
-			env: map[string]string{
-				"ARGUS_WEB_CERT_FILE": "cert.test",
-			},
-			stdoutRegex: test.TrimYAML(`
-				^FATAL: hard_defaults:
-					settings:
-						web:
-							cert_file: .*no such file.*`,
-			),
-			ok: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureLog(t, logx.Default())
-
-			test.SetEnv(t, tc.env)
-			settings := Settings{}
-
-			resultChannel := make(chan bool, 1)
-			// WHEN: Default is called.
-			resultChannel <- settings.Default()
-
-			prefix := fmt.Sprintf("%s\nSettings.Default()", packageName)
-
-			// THEN: the ok value is as expected.
-			if err := test.AssertChannelBool(
-				t,
-				tc.ok,
-				resultChannel,
-				logx.ExitCodeChannel(),
-				releaseStdout,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
-			}
-
-			// AND: any error is as expected.
-			stdout := releaseStdout()
-			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
-			}
-		})
-	}
-}
-
-func TestSettings_Default__BasicAuthFromFlags(t *testing.T) {
-	// GIVEN: the web.basic-auth.username/password flags may or may not be provided.
-	tests := []struct {
-		name         string
-		usernameFlag *string
-		passwordFlag *string
-		want         *WebSettingsBasicAuth
-	}{
-		{
-			name:         "neither flag provided",
-			usernameFlag: nil,
-			passwordFlag: nil,
-			want:         nil,
-		},
-		{
-			name:         "only username flag provided",
-			usernameFlag: test.Ptr("test-user"),
-			passwordFlag: nil,
-			want: &WebSettingsBasicAuth{
-				Username: "test-user",
-				Password: util.FmtHash(util.GetHash("")),
-			},
-		},
-		{
-			name:         "only password flag provided",
-			usernameFlag: nil,
-			passwordFlag: test.Ptr("test-pass"),
-			want: &WebSettingsBasicAuth{
-				Password: util.FmtHash(util.GetHash("test-pass")),
-			},
-		},
-		{
-			name:         "both flags provided",
-			usernameFlag: test.Ptr("test-user"),
-			passwordFlag: test.Ptr("test-pass"),
-			want: &WebSettingsBasicAuth{
-				Username: "test-user",
-				Password: util.FmtHash(util.GetHash("test-pass")),
-			},
-		},
-	}
-
-	loadMu.Lock() // Protect flag vars.
-	t.Cleanup(loadMu.Unlock)
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing flag vars.
-
-			hadUsername, hadPassword := WebBasicAuthUsername, WebBasicAuthPassword
-			WebBasicAuthUsername, WebBasicAuthPassword = tc.usernameFlag, tc.passwordFlag
-			t.Cleanup(func() {
-				WebBasicAuthUsername, WebBasicAuthPassword = hadUsername, hadPassword
-			})
-
-			settings := Settings{}
-
-			// WHEN: Default is called.
-			settings.Default()
-
-			// THEN: FromFlags.Web.BasicAuth is only populated when a flag was provided.
-			got := settings.FromFlags.Web.BasicAuth
-			switch {
-			case tc.want == nil:
-				if got != nil {
-					t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  %v\nwant: nil",
-						packageName, got)
-				}
-			case got == nil:
-				t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  nil\nwant: %v",
-					packageName, tc.want)
-			case got.Username != tc.want.Username || got.Password != tc.want.Password:
-				t.Errorf("%s\nSettings.Default() BasicAuth\ngot:  %v\nwant: %v",
-					packageName, got, tc.want)
 			}
 		})
 	}

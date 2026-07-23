@@ -28,6 +28,38 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
+func TestConfig_UnmarshalYAML(t *testing.T) {
+	// GIVEN: a YAML string to unmarshal into a Config.
+	tests := []struct {
+		name     string
+		data     string
+		want     string
+		errRegex string
+	}{}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+
+			if _, _, testErr := test.AssertDecode(
+				t,
+				func(format string, data []byte) (*Config, error) {
+					var zero Config
+					err := decode.Unmarshal(format, data, &zero)
+					return &zero, err
+				},
+				"yaml", tc.data,
+				func(v *Config) string { return decode.ToYAMLString(v, "") },
+				tc.want,
+				tc.errRegex,
+				packageName,
+				"Config",
+			); testErr != nil {
+				t.Error(testErr)
+			}
+		})
+	}
+}
+
 func TestConfig_Unmarshal(t *testing.T) {
 	// GIVEN: a JSON string to unmarshal into a Config.
 	tests := []struct {
@@ -269,38 +301,6 @@ func TestConfig_Unmarshal(t *testing.T) {
 					return &zero, err
 				},
 				tc.format, tc.data,
-				func(v *Config) string { return decode.ToYAMLString(v, "") },
-				tc.want,
-				tc.errRegex,
-				packageName,
-				"Config",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-		})
-	}
-}
-
-func TestConfig_UnmarshalYAML(t *testing.T) {
-	// GIVEN: a YAML string to unmarshal into a Config.
-	tests := []struct {
-		name     string
-		data     string
-		want     string
-		errRegex string
-	}{}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-
-			if _, _, testErr := test.AssertDecode(
-				t,
-				func(format string, data []byte) (*Config, error) {
-					var zero Config
-					err := decode.Unmarshal(format, data, &zero)
-					return &zero, err
-				},
-				"yaml", tc.data,
 				func(v *Config) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,

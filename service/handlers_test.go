@@ -1314,63 +1314,6 @@ func TestService_ShouldRetryAll(t *testing.T) {
 	}
 }
 
-func TestService_UpdateLatestApproved(t *testing.T) {
-	// GIVEN: a Service.
-	tests := []struct {
-		name                 string
-		latestVersion        string
-		startApprovedVersion string
-		wantAnnounces        int
-	}{
-		{
-			name:                 "empty ApprovedVersion does announce",
-			startApprovedVersion: "",
-			latestVersion:        "1.2.3",
-			wantAnnounces:        1,
-		},
-		{
-			name:                 "same ApprovedVersion doesn't announce",
-			startApprovedVersion: "1.2.3",
-			latestVersion:        "1.2.3",
-			wantAnnounces:        0,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			svc := testService(t, tc.name, "url", "url")
-
-			svc.Status.SetLatestVersion(tc.latestVersion, "", false)
-			svc.Status.SetApprovedVersion(tc.startApprovedVersion, false)
-
-			// WHEN: UpdateLatestApproved is called on it.
-			want := svc.Status.LatestVersion()
-			svc.UpdateLatestApproved()
-
-			prefix := fmt.Sprintf("%s\nService.UpdateLatestApproved()", packageName)
-
-			// THEN: ApprovedVersion becomes LatestVersion.
-			got := svc.Status.ApprovedVersion()
-			if got != want {
-				t.Errorf(
-					"%s\nApprovedVersion() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
-			}
-
-			// AND: the correct amount of changes are queued in the channel.
-			if got := len(svc.Status.AnnounceChannel); got != tc.wantAnnounces {
-				t.Errorf(
-					"%s AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
-					prefix, got, tc.wantAnnounces,
-				)
-			}
-		})
-	}
-}
-
 func TestService_UpdatedVersion(t *testing.T) {
 	// GIVEN: a Service.
 	tests := []struct {
@@ -1591,6 +1534,63 @@ func TestService_UpdatedVersion(t *testing.T) {
 			if got := len(svc.Status.AnnounceChannel); got != tc.wantAnnounces {
 				t.Errorf(
 					"%s\nAnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					prefix, got, tc.wantAnnounces,
+				)
+			}
+		})
+	}
+}
+
+func TestService_UpdateLatestApproved(t *testing.T) {
+	// GIVEN: a Service.
+	tests := []struct {
+		name                 string
+		latestVersion        string
+		startApprovedVersion string
+		wantAnnounces        int
+	}{
+		{
+			name:                 "empty ApprovedVersion does announce",
+			startApprovedVersion: "",
+			latestVersion:        "1.2.3",
+			wantAnnounces:        1,
+		},
+		{
+			name:                 "same ApprovedVersion doesn't announce",
+			startApprovedVersion: "1.2.3",
+			latestVersion:        "1.2.3",
+			wantAnnounces:        0,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := testService(t, tc.name, "url", "url")
+
+			svc.Status.SetLatestVersion(tc.latestVersion, "", false)
+			svc.Status.SetApprovedVersion(tc.startApprovedVersion, false)
+
+			// WHEN: UpdateLatestApproved is called on it.
+			want := svc.Status.LatestVersion()
+			svc.UpdateLatestApproved()
+
+			prefix := fmt.Sprintf("%s\nService.UpdateLatestApproved()", packageName)
+
+			// THEN: ApprovedVersion becomes LatestVersion.
+			got := svc.Status.ApprovedVersion()
+			if got != want {
+				t.Errorf(
+					"%s\nApprovedVersion() mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+
+			// AND: the correct amount of changes are queued in the channel.
+			if got := len(svc.Status.AnnounceChannel); got != tc.wantAnnounces {
+				t.Errorf(
+					"%s AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
 					prefix, got, tc.wantAnnounces,
 				)
 			}
