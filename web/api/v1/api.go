@@ -18,6 +18,7 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	"net/netip"
 	"strings"
 	"sync"
 
@@ -35,6 +36,10 @@ type API struct {
 	BaseRouter  *mux.Router
 	Router      *mux.Router
 	RoutePrefix string
+
+	// trustedProxies are the peers whose forwarded headers are trusted
+	// (settings.web.trusted_proxies).
+	trustedProxies []netip.Prefix
 
 	serviceOpMu sync.Mutex // Guards [API.serviceOps].
 	// serviceOps is a per-service-ID operation lock. Create/Edit/Delete take it
@@ -70,10 +75,13 @@ func NewAPI(cfg *config.Config) (*API, *mux.Route) {
 	routePrefix := cfg.Settings.WebRoutePrefix()
 
 	api := &API{
-		Config:      cfg,
-		BaseRouter:  baseRouter,
-		RoutePrefix: routePrefix,
+		Config:         cfg,
+		BaseRouter:     baseRouter,
+		RoutePrefix:    routePrefix,
+		trustedProxies: cfg.Settings.WebTrustedProxies(),
 	}
+	// Resolve each request's client IP before anything logs or limits on it.
+	baseRouter.Use(api.clientIPMiddleware)
 
 	// In cases where routePrefix equals "/", trim to prevent "//".
 	routePrefix = strings.TrimSuffix(routePrefix, "/")

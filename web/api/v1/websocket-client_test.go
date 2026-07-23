@@ -17,9 +17,11 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"testing"
 	"time"
@@ -35,6 +37,7 @@ func TestServeWs(t *testing.T) {
 	tests := []struct {
 		name           string
 		dialHeaders    map[string]string
+		trustPeer      bool // Serve behind clientIPMiddleware trusting the peer.
 		wantStatus     int
 		wantRegistered bool
 		wantIP         string
@@ -48,19 +51,29 @@ func TestServeWs(t *testing.T) {
 			wantSendCap:    256,
 		},
 		{
-			name:           "uses CF-Connecting-Ip",
+			name:           "trusted proxy/uses CF-Connecting-Ip",
 			dialHeaders:    map[string]string{"CF-Connecting-IP": "2.2.2.2"},
+			trustPeer:      true,
 			wantStatus:     http.StatusSwitchingProtocols,
 			wantRegistered: true,
 			wantIP:         "2.2.2.2",
 			wantSendCap:    256,
 		},
 		{
-			name:           "uses X-Real-Ip",
+			name:           "trusted proxy/uses X-Real-Ip",
 			dialHeaders:    map[string]string{"X-Real-Ip": "3.3.3.3"},
+			trustPeer:      true,
 			wantStatus:     http.StatusSwitchingProtocols,
 			wantRegistered: true,
 			wantIP:         "3.3.3.3",
+			wantSendCap:    256,
+		},
+		{
+			name:           "untrusted peer/forwarded headers ignored",
+			dialHeaders:    map[string]string{"CF-Connecting-IP": "2.2.2.2", "X-Real-Ip": "3.3.3.3"},
+			wantStatus:     http.StatusSwitchingProtocols,
+			wantRegistered: true,
+			wantIP:         "127.0.0.1",
 			wantSendCap:    256,
 		},
 	}
@@ -73,10 +86,19 @@ func TestServeWs(t *testing.T) {
 			hub := NewHub()
 			go hub.Run()
 
-			// AND: a HTTP server with a WebSocket endpoint.
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				ServeWs(hub, w, r, nil)
-			}))
+			// AND: a HTTP server with a WebSocket endpoint
+			// (client IPs resolved as the router would).
+			middlewareAPI := &API{}
+			if tc.trustPeer {
+				middlewareAPI.trustedProxies = []netip.Prefix{
+					netip.MustParsePrefix("127.0.0.0/8"),
+					netip.MustParsePrefix("::1/128"),
+				}
+			}
+			server := httptest.NewServer(middlewareAPI.clientIPMiddleware(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					ServeWs(hub, w, r, nil)
+				})))
 			t.Cleanup(server.Close)
 
 			prefix := fmt.Sprintf("%s\nServeWs()", packageName)
@@ -89,19 +111,13 @@ func TestServeWs(t *testing.T) {
 			}
 			clientConn, resp, err := websocket.DefaultDialer.Dial(wsURL, dialHeader)
 			if err != nil {
-				t.Fatalf(
-					"%s failed to dial WebSocket: %v",
-					prefix, err,
-				)
+				t.Fatalf("%s failed to dial WebSocket: %v", prefix, err)
 			}
 			t.Cleanup(func() { _ = clientConn.Close() })
 
 			// THEN: the upgrade succeeds.
 			if got, want := resp.StatusCode, tc.wantStatus; got != want {
-				t.Errorf(
-					"%s status mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
-				)
+				t.Errorf("%s status mismatch\ngot:  %d\nwant: %d", prefix, got, want)
 			}
 			time.Sleep(time.Second)
 
@@ -111,10 +127,7 @@ func TestServeWs(t *testing.T) {
 				t.Fatalf("%s expected a registered client", prefix)
 			}
 			if !tc.wantRegistered && registered != nil {
-				t.Fatalf(
-					"%s expected no registered client, got %p",
-					prefix, registered,
-				)
+				t.Fatalf("%s expected no registered client, got %p", prefix, registered)
 			}
 			if registered == nil {
 				return
@@ -132,6 +145,13 @@ func TestServeWs(t *testing.T) {
 			}
 		})
 	}
+}
+
+type wsTestClient struct {
+	client *Client
+	conn   *websocket.Conn
+	peer   *websocket.Conn
+	server *httptest.Server
 }
 
 func setupWSTestClient(t *testing.T) *wsTestClient {
@@ -243,72 +263,35 @@ func TestServeWs__plain_HTTP(t *testing.T) {
 
 	// THEN: the upgrade fails.
 	if got, want := rec.Code, http.StatusBadRequest; got != want {
-		t.Errorf(
-			"%s status mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
+		t.Errorf("%s status mismatch\ngot:  %d\nwant: %d", prefix, got, want)
 	}
 
 	time.Sleep(100 * time.Millisecond)
 
 	// AND: no client is registered.
 	if registered := hubClientForTest(t, hub); registered != nil {
-		t.Errorf(
-			"%s expected no registered client, got %p",
-			prefix, registered,
-		)
+		t.Errorf("%s expected no registered client, got %p", prefix, registered)
 	}
 }
 
 func TestGetIP(t *testing.T) {
-	// GIVEN: a request.
+	// GIVEN: requests with and without a middleware-resolved IP.
 	tests := []struct {
 		name       string
-		headers    map[string]string
+		contextIP  *string
 		remoteAddr string
 		want       string
 	}{
 		{
-			name: "CF-Connecting-Ip",
-			want: "1.1.1.1",
-			headers: map[string]string{
-				"CF-Connecting-IP": "1.1.1.1",
-				"X-REAL-IP":        "2.2.2.2",
-				"X-FORWARDED-FOR":  "3.3.3.3",
-			},
+			name:       "middleware-resolved IP",
+			contextIP:  new("1.1.1.1"),
 			remoteAddr: "4.4.4.4:123",
+			want:       "1.1.1.1",
 		},
 		{
-			name: "X-Real-Ip",
-			want: "2.2.2.2",
-			headers: map[string]string{
-				"X-REAL-IP":       "2.2.2.2",
-				"X-FORWARDED-FOR": "3.3.3.3",
-			},
+			name:       "no middleware/RemoteAddr fallback",
 			remoteAddr: "4.4.4.4:123",
-		},
-		{
-			name: "X-Forwarded-For",
-			headers: map[string]string{
-				"X-FORWARDED-FOR": "3.3.3.3",
-			},
-			remoteAddr: "4.4.4.4:123",
-			want:       "3.3.3.3",
-		},
-		{
-			name:       "RemoteAddr",
 			want:       "4.4.4.4",
-			remoteAddr: "4.4.4.4:123",
-		},
-		{
-			name:       "invalid RemoteAddr/SplitHostPort fail",
-			want:       "",
-			remoteAddr: "1111",
-		},
-		{
-			name:       "invalid RemoteAddr/ParseIP fail",
-			want:       "",
-			remoteAddr: "1111:123",
 		},
 	}
 
@@ -317,10 +300,11 @@ func TestGetIP(t *testing.T) {
 			t.Parallel()
 
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-			for header, val := range tc.headers {
-				req.Header.Set(header, val)
-			}
 			req.RemoteAddr = tc.remoteAddr
+			if tc.contextIP != nil {
+				req = req.WithContext(
+					context.WithValue(req.Context(), clientIPKey{}, *tc.contextIP))
+			}
 
 			// WHEN: getIP is called on this request.
 			got := getIP(req)
@@ -341,11 +325,204 @@ func TestGetIP(t *testing.T) {
 	}
 }
 
-type wsTestClient struct {
-	client *Client
-	conn   *websocket.Conn
-	peer   *websocket.Conn
-	server *httptest.Server
+func TestAPI_ForwardedIP(t *testing.T) {
+	// GIVEN: a request with proxy headers, and a set of trusted proxies.
+	tests := []struct {
+		name    string
+		trusted []string
+		headers map[string]string
+		want    string
+	}{
+		{
+			name: "X-Forwarded-For/single client",
+			headers: map[string]string{
+				"X-FORWARDED-FOR": "3.3.3.3",
+			},
+			want: "3.3.3.3",
+		},
+		{
+			name:    "X-Forwarded-For/rightmost non-proxy is the client",
+			trusted: []string{"10.0.0.0/8"},
+			headers: map[string]string{
+				"X-FORWARDED-FOR": "3.3.3.3, 10.0.0.5",
+			},
+			want: "3.3.3.3",
+		},
+		{
+			name:    "X-Forwarded-For/spoofed prefix is ignored",
+			trusted: []string{"10.0.0.0/8"},
+			headers: map[string]string{
+				// Attacker prepends 6.6.6.6; the proxy appends the real 3.3.3.3.
+				"X-FORWARDED-FOR": "6.6.6.6, 3.3.3.3, 10.0.0.5",
+			},
+			want: "3.3.3.3",
+		},
+		{
+			name:    "X-Forwarded-For/malformed entry skipped mid-walk",
+			trusted: []string{"10.0.0.0/8"},
+			headers: map[string]string{
+				"X-FORWARDED-FOR": "3.3.3.3, not-an-ip, 10.0.0.5",
+			},
+			want: "3.3.3.3",
+		},
+		{
+			name:    "X-Forwarded-For/multiple distinct trusted proxies",
+			trusted: []string{"10.0.0.0/8", "172.16.0.0/12"},
+			headers: map[string]string{
+				"X-FORWARDED-FOR": "3.3.3.3, 172.16.0.5, 10.0.0.5",
+			},
+			want: "3.3.3.3",
+		},
+		{
+			name: "X-Forwarded-For/IPv6 client",
+			headers: map[string]string{
+				"X-FORWARDED-FOR": "2001:db8::1",
+			},
+			want: "2001:db8::1",
+		},
+		{
+			name: "X-Forwarded-For/takes priority over CF and X-Real-Ip",
+			headers: map[string]string{
+				"CF-Connecting-IP": "1.1.1.1",
+				"X-REAL-IP":        "2.2.2.2",
+				"X-FORWARDED-FOR":  "3.3.3.3",
+			},
+			want: "3.3.3.3",
+		},
+		{
+			name:    "X-Forwarded-For/all entries trusted falls back to CF",
+			trusted: []string{"10.0.0.0/8"},
+			headers: map[string]string{
+				"CF-Connecting-IP": "1.1.1.1",
+				"X-FORWARDED-FOR":  "10.0.0.1, 10.0.0.2",
+			},
+			want: "1.1.1.1",
+		},
+		{
+			name: "fallback/CF-Connecting-Ip when no X-Forwarded-For",
+			headers: map[string]string{
+				"CF-Connecting-IP": "1.1.1.1",
+				"X-REAL-IP":        "2.2.2.2",
+			},
+			want: "1.1.1.1",
+		},
+		{
+			name: "fallback/X-Real-Ip when no X-Forwarded-For or CF",
+			headers: map[string]string{
+				"X-REAL-IP": "2.2.2.2",
+			},
+			want: "2.2.2.2",
+		},
+		{
+			name: "no headers",
+			want: "",
+		},
+		{
+			name: "invalid header values",
+			headers: map[string]string{
+				"CF-Connecting-IP": "not-an-ip",
+				"X-REAL-IP":        "also-not-an-ip",
+				"X-FORWARDED-FOR":  "nope",
+			},
+			want: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND: an API armed with the trusted proxies.
+			proxies := make([]netip.Prefix, 0, len(tc.trusted))
+			for _, p := range tc.trusted {
+				pfx, err := netip.ParsePrefix(p)
+				if err != nil {
+					t.Fatalf(
+						"%s\nparse trusted proxy %q: %v",
+						packageName, p, err,
+					)
+				}
+				proxies = append(proxies, pfx)
+			}
+			api := &API{trustedProxies: proxies}
+
+			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
+			for header, val := range tc.headers {
+				req.Header.Set(header, val)
+			}
+
+			// WHEN: forwardedIP is called on this request.
+			got := api.forwardedIP(req)
+
+			prefix := fmt.Sprintf(
+				"%s\nforwardedIP(%+v)",
+				packageName, req,
+			)
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Errorf(
+					"%s value mismatch\ngot:  %v\nwant: %q",
+					prefix, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestRemoteAddrIP(t *testing.T) {
+	// GIVEN: a request with a RemoteAddr.
+	tests := []struct {
+		name       string
+		remoteAddr string
+		want       string
+	}{
+		{
+			name:       "host:port",
+			remoteAddr: "4.4.4.4:123",
+			want:       "4.4.4.4",
+		},
+		{
+			name:       "bare IP",
+			remoteAddr: "5.5.5.5",
+			want:       "5.5.5.5",
+		},
+		{
+			name:       "invalid/not an IP",
+			remoteAddr: "1111",
+			want:       "",
+		},
+		{
+			name:       "invalid/ParseIP fail",
+			remoteAddr: "1111:123",
+			want:       "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
+			req.RemoteAddr = tc.remoteAddr
+
+			// WHEN: remoteAddrIP is called on this request.
+			got := remoteAddrIP(req)
+
+			prefix := fmt.Sprintf(
+				"%s\nremoteAddrIP(%+v)",
+				packageName, req,
+			)
+
+			// THEN: the function returns the correct result.
+			if got != tc.want {
+				t.Errorf(
+					"%s value mismatch\ngot:  %v\nwant: %q",
+					prefix, got, tc.want,
+				)
+			}
+		})
+	}
 }
 
 func TestClient_ReadPump__pongHandler(t *testing.T) {
@@ -684,10 +861,7 @@ func readConnMessages(t *testing.T, conn *websocket.Conn, prefix string, count i
 
 	got, err := tryReadConnMessages(conn, count)
 	if err != nil {
-		t.Fatalf(
-			"%s %v",
-			prefix, err,
-		)
+		t.Fatalf("%s %v", prefix, err)
 	}
 	return got
 }
@@ -714,10 +888,7 @@ func assertConnMessages(t *testing.T, prefix string, got, want []string) {
 	t.Helper()
 
 	if gotLen, wantLen := len(got), len(want); gotLen != wantLen {
-		t.Errorf(
-			"%s message count mismatch\ngot:  %d\nwant: %d",
-			prefix, gotLen, wantLen,
-		)
+		t.Errorf("%s message count mismatch\ngot:  %d\nwant: %d", prefix, gotLen, wantLen)
 	}
 	for i, wantMsg := range want {
 		if i >= len(got) {

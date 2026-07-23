@@ -20,6 +20,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/netip"
 	"strings"
 	"time"
 
@@ -104,44 +105,57 @@ func (c *Client) mayReceive(serviceID string) bool {
 	return serviceID != "" && c.allowedServices[serviceID]
 }
 
-// getIP returns the client IP from proxy headers or RemoteAddr.
-func getIP(r *http.Request) (ip string) {
-	// Get IP from the CF-Connecting-Ip header.
-	ip = r.Header.Get("CF-Connecting-Ip")
-	netIP := net.ParseIP(ip)
-	if netIP != nil {
-		return
+// getIP returns the client IP resolved by [API.clientIPMiddleware],
+// falling back to RemoteAddr when the middleware has not run.
+func getIP(r *http.Request) string {
+	if ip, ok := r.Context().Value(clientIPKey{}).(string); ok {
+		return ip
 	}
+	return remoteAddrIP(r)
+}
 
-	// Get IP from the X-Real-Ip header.
-	ip = r.Header.Get("X-Real-Ip")
-	netIP = net.ParseIP(ip)
-	if netIP != nil {
-		return
-	}
-
-	// Get IP from X-Forwarded-For header.
-	ips := r.Header.Get("X-Forwarded-For")
-	splitIps := strings.SplitSeq(ips, ",")
-	for ip = range splitIps {
-		netIP := net.ParseIP(ip)
-		if netIP != nil {
-			return
+// forwardedIP returns the real client IP claimed by proxy headers ("" if none).
+// Only call for requests from trusted proxies - the headers are spoofable.
+//
+// X-Forwarded-For is read right-to-left, returning the first address that is
+// not itself a trusted proxy. CF-Connecting-Ip / X-Real-Ip are used as a
+// fallback.
+func (api *API) forwardedIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		for i := len(parts) - 1; i >= 0; i-- {
+			addr, err := netip.ParseAddr(strings.TrimSpace(parts[i]))
+			if err != nil {
+				continue
+			}
+			addr = addr.Unmap()
+			if !api.isTrustedProxy(addr) {
+				return addr.String()
+			}
 		}
 	}
 
-	// Get IP from RemoteAddr.
-	var err error
-	ip, _, err = net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return ""
+	if ip := r.Header.Get("CF-Connecting-Ip"); net.ParseIP(ip) != nil {
+		return ip
 	}
-	netIP = net.ParseIP(ip)
-	if netIP != nil {
-		return
+	if ip := r.Header.Get("X-Real-Ip"); net.ParseIP(ip) != nil {
+		return ip
 	}
 
 	return ""
+}
+
+// remoteAddrIP returns the connection peer's IP ("" if unparseable).
+func remoteAddrIP(r *http.Request) string {
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		// No port (e.g. hand-built test requests).
+		ip = r.RemoteAddr
+	}
+	if net.ParseIP(ip) == nil {
+		return ""
+	}
+	return ip
 }
 
 // readPump drains incoming WebSocket frames and handles connection teardown.

@@ -17,6 +17,7 @@ package v1
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -242,7 +243,7 @@ func (api *API) httpAuthLogout(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.SetCookie(w, api.sessionCookie("", -1))
+	http.SetCookie(w, api.sessionCookie(r, "", -1))
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -273,7 +274,7 @@ func (api *API) startSession(w http.ResponseWriter, r *http.Request, authCtx *au
 		failRequest(&w, errors.New("authentication failed"), http.StatusInternalServerError)
 		return false
 	}
-	http.SetCookie(w, api.sessionCookie(token, int(api.Config.Settings.AuthSessionLifetime().Seconds())))
+	http.SetCookie(w, api.sessionCookie(r, token, int(api.Config.Settings.AuthSessionLifetime().Seconds())))
 	return true
 }
 
@@ -292,18 +293,23 @@ func (api *API) writeAuthMe(
 }
 
 // sessionCookie builds the session cookie (maxAge < 0 clears it).
-func (api *API) sessionCookie(token string, maxAge int) *http.Cookie {
+// Secure when Argus terminates TLS itself, or when a trusted proxy
+// reports the client connection as HTTPS.
+func (api *API) sessionCookie(r *http.Request, token string, maxAge int) *http.Cookie {
 	path := api.RoutePrefix
 	if path == "" {
 		path = "/"
 	}
+	secure := api.Config.Settings.WebCertFile() != "" ||
+		(api.fromTrustedProxy(r) &&
+			strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https"))
 	return &http.Cookie{
 		Name:     authCookieName,
 		Value:    token,
 		Path:     path,
 		MaxAge:   maxAge,
 		HttpOnly: true,
-		Secure:   api.Config.Settings.WebCertFile() != "",
+		Secure:   secure,
 		SameSite: http.SameSiteStrictMode,
 	}
 }

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"slices"
 	"strings"
 	"sync"
@@ -786,9 +787,10 @@ func TestAPI_Auth__sessionCookie(t *testing.T) {
 	prefix := fmt.Sprintf("%s\nsessionCookie", packageName)
 
 	// WHEN: the route prefix is empty.
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", nil)
 	prefixHad := api.RoutePrefix
 	api.RoutePrefix = ""
-	cookie := api.sessionCookie("token", 60)
+	cookie := api.sessionCookie(req, "token", 60)
 	api.RoutePrefix = prefixHad
 	// THEN: the path falls back to "/".
 	if cookie.Path != "/" {
@@ -803,10 +805,29 @@ func TestAPI_Auth__sessionCookie(t *testing.T) {
 
 	// WHEN: TLS is configured.
 	api.Config.Settings.Web.CertFile = "cert.pem"
-	cookie = api.sessionCookie("token", 60)
+	cookie = api.sessionCookie(req, "token", 60)
 	api.Config.Settings.Web.CertFile = ""
 	// THEN: the cookie is Secure.
 	if !cookie.Secure {
 		t.Errorf("%s\nSecure should be on with TLS", prefix)
+	}
+
+	// WHEN: a trusted proxy reports the client connection as HTTPS.
+	trustedHad := api.trustedProxies
+	api.trustedProxies = []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24")}
+	req.Header.Set("X-Forwarded-Proto", "https")
+	cookie = api.sessionCookie(req, "token", 60)
+	// THEN: the cookie is Secure.
+	if !cookie.Secure {
+		t.Errorf("%s\nSecure should be on behind a trusted TLS-terminating proxy", prefix)
+	}
+
+	// WHEN: the same header comes from an untrusted peer.
+	api.trustedProxies = nil
+	cookie = api.sessionCookie(req, "token", 60)
+	api.trustedProxies = trustedHad
+	// THEN: the header is ignored.
+	if cookie.Secure {
+		t.Errorf("%s\nSecure must not trust X-Forwarded-Proto from untrusted peers", prefix)
 	}
 }

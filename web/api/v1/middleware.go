@@ -16,14 +16,63 @@
 package v1
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"net/http"
+	"net/netip"
 
 	"github.com/gorilla/mux"
 
 	"github.com/release-argus/Argus/internal/logx"
 )
+
+// clientIPKey keys the resolved client IP in a request's context.
+type clientIPKey struct{}
+
+// clientIPMiddleware resolves each request's client IP once, honouring
+// forwarded headers only when the peer is a trusted proxy
+// (settings.web.trusted_proxies).
+func (api *API) clientIPMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := remoteAddrIP(r)
+		if api.fromTrustedProxy(r) {
+			if forwarded := api.forwardedIP(r); forwarded != "" {
+				ip = forwarded
+			}
+		}
+
+		next.ServeHTTP(w, r.WithContext(
+			context.WithValue(r.Context(), clientIPKey{}, ip),
+		))
+	})
+}
+
+// fromTrustedProxy reports whether the request's peer is a trusted proxy.
+func (api *API) fromTrustedProxy(r *http.Request) bool {
+	if len(api.trustedProxies) == 0 {
+		return false
+	}
+
+	addr, err := netip.ParseAddr(remoteAddrIP(r))
+	if err != nil {
+		return false
+	}
+	return api.isTrustedProxy(addr)
+}
+
+// isTrustedProxy reports whether addr falls in any configured trusted-proxy range.
+// addr is unmapped before matching so IPv4-in-IPv6 literals compare correctly
+// against IPv4 prefixes.
+func (api *API) isTrustedProxy(addr netip.Addr) bool {
+	addr = addr.Unmap()
+	for _, prefix := range api.trustedProxies {
+		if prefix.Contains(addr) {
+			return true
+		}
+	}
+	return false
+}
 
 // basicAuthMiddleware handles basic authentication with hashed credentials.
 // It rejects unauthorised requests with a 401 and closes the connection.

@@ -48,7 +48,7 @@ func (api *API) SetupRoutesAPI() {
 
 	// Session/RBAC authentication.
 	if api.auth != nil {
-		v1Router.Use(originCheckMiddleware, api.authMiddleware())
+		v1Router.Use(api.originCheckMiddleware, api.authMiddleware())
 
 		//   POST, log in (exempt from the auth middleware).
 		v1Router.HandleFunc("/auth/login", api.httpAuthLogin).Methods(http.MethodPost)

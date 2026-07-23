@@ -256,18 +256,43 @@ func (api *API) contextForUser(ctx context.Context, userID, providerName string)
 }
 
 // originCheckMiddleware rejects requests whose Origin header disagrees with
-// the request Host - CSRF.
-func originCheckMiddleware(next http.Handler) http.Handler {
+// the request Host - CSRF. Trusted proxies may override the host they front
+// via X-Forwarded-Host.
+func (api *API) originCheckMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if origin := r.Header.Get("Origin"); origin != "" && origin != "null" {
-			parsed, err := url.Parse(origin)
-			if err != nil || parsed.Host != r.Host {
+		switch origin := r.Header.Get("Origin"); origin {
+		case "":
+			// No Origin header (same-origin, or non-browser client).
+		case "null":
+			// Opaque origin (sandboxed iframe, data:/file: context) - untrusted
+			// for state-changing requests.
+			if !safeMethod(r.Method) {
+				failRequest(&w, errForbidden, http.StatusForbidden)
+				return
+			}
+		default:
+			host := r.Host
+			if api.fromTrustedProxy(r) {
+				if forwardedHost := r.Header.Get("X-Forwarded-Host"); forwardedHost != "" {
+					host = forwardedHost
+				}
+			}
+			if parsed, err := url.Parse(origin); err != nil || parsed.Host != host {
 				failRequest(&w, errForbidden, http.StatusForbidden)
 				return
 			}
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// safeMethod reports whether method is read-only (no CSRF risk).
+func safeMethod(method string) bool {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return true
+	}
+	return false
 }
 
 // guard wraps handler with a permission check: the authenticated user must
