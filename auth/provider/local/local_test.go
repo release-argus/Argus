@@ -113,6 +113,16 @@ func TestProvider_Authenticate(t *testing.T) {
 			wantErr:  auth.ErrInvalidCredentials,
 		},
 		{
+			name: "external-only user (no password hash)",
+			creds: func(t *testing.T) *auth.Credentials {
+				creds := enabledUser(t)
+				creds.PasswordHash = ""
+				return creds
+			},
+			password: correctPassword,
+			wantErr:  auth.ErrInvalidCredentials,
+		},
+		{
 			name: "malformed stored hash errors",
 			creds: func(t *testing.T) *auth.Credentials {
 				creds := enabledUser(t)
@@ -148,16 +158,17 @@ func TestProvider_Authenticate(t *testing.T) {
 						prefix, err, tc.wantErr,
 					)
 				}
-			}
-			e := errfmt.FormatError(err)
-			if !util.RegexCheck(errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, errRegex,
-				)
-			}
-			if err != nil {
-				return
+			} else {
+				e := errfmt.FormatError(err)
+				if !util.RegexCheck(errRegex, e) {
+					t.Fatalf(
+						"%s error mismatch\ngot:  %q\nwant: %q",
+						prefix, e, errRegex,
+					)
+				}
+				if err != nil {
+					return
+				}
 			}
 
 			// AND: an Identity is returned only on success, with the user's details.

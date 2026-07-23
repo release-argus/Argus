@@ -125,6 +125,7 @@ func (s *Store) UserByID(ctx context.Context, id string) (*auth.User, error) {
 }
 
 // CreateUser creates a user with the given group memberships.
+// passwordHash may be empty for external-only users.
 func (s *Store) CreateUser(
 	ctx context.Context,
 	username, displayName, email, passwordHash string,
@@ -231,7 +232,8 @@ func (s *Store) UpdateUser(ctx context.Context, id string, patch UserPatch) (*au
 }
 
 // DeleteUser removes the user with id and everything hanging off it
-// (memberships, sessions, API tokens), enforcing the rails.
+// (memberships, sessions, external identities, API tokens),
+// enforcing the rails.
 func (s *Store) DeleteUser(ctx context.Context, id string) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
 		var enabled bool

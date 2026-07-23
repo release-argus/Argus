@@ -564,3 +564,33 @@ func TestAPI_HTTPUserDelete(t *testing.T) {
 		)
 	}
 }
+
+func TestAPI_HTTPUserDelete__cascadeFailure(t *testing.T) {
+	// GIVEN: an auth-enabled API with a user to delete.
+	file := "TestAPI_HTTPUserDelete__cascadeFailure.yml"
+	api, deps, dbConn := testAuthServer(t, file)
+	adminCookie := loginCookie(t, api, "admin", "admin-password")
+	victim := createAuthUser(t, deps, "victim", "victim-password")
+
+	prefix := fmt.Sprintf("%s\nhttpUserDelete() cascade", packageName)
+
+	// AND: a table the delete cascade touches is missing.
+	if _, err := dbConn.Exec(`DROP TABLE api_tokens;`); err != nil {
+		t.Fatalf(
+			"%s\nsetup drop failed: %v",
+			prefix, err,
+		)
+	}
+
+	// WHEN: the admin deletes the user.
+	w := serveAuth(api,
+		authedRequest(http.MethodDelete, "/api/v1/users/"+victim.ID, "", adminCookie))
+
+	// THEN: the store failure surfaces as 500.
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf(
+			"%s\ncascade failure\ngot:  %d\nwant: 500",
+			prefix, w.Code,
+		)
+	}
+}

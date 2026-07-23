@@ -202,6 +202,10 @@ func TestStore_CreateUser_And_UserByID(t *testing.T) {
 			groups:   []string{GroupViewer, GroupOperator},
 		},
 		{
+			name:     "external-only user (empty password hash)",
+			username: "external",
+		},
+		{
 			name:       "duplicate username rejected",
 			username:   "taken",
 			presetUser: "taken",

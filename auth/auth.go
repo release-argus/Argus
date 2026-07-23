@@ -58,7 +58,7 @@ type Credentials struct {
 	Username     string // Canonical (stored) username.
 	DisplayName  string // Human-readable name.
 	Email        string // Email address.
-	PasswordHash string // Encoded argon2id hash.
+	PasswordHash string // Encoded argon2id hash; empty for external-only users.
 	Enabled      bool   // Whether the user may log in.
 }
 

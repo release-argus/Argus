@@ -197,13 +197,14 @@ func TestStore_SessionByTokenHash__errors(t *testing.T) {
 						prefix, err, tc.wantErr,
 					)
 				}
-			}
-			e := errfmt.FormatError(err)
-			if !util.RegexCheck(errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, errRegex,
-				)
+			} else {
+				e := errfmt.FormatError(err)
+				if !util.RegexCheck(errRegex, e) {
+					t.Errorf(
+						"%s error mismatch\ngot:  %q\nwant: %q",
+						prefix, e, errRegex,
+					)
+				}
 			}
 		})
 	}
