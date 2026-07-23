@@ -131,3 +131,40 @@ func (s *Store) DeleteExpiredSessions(ctx context.Context, now time.Time) error 
 	}
 	return nil
 }
+
+// TrimSessionsForUser deletes all but the keep most-recently active sessions
+// of userID, returning the token hashes of the sessions deleted.
+func (s *Store) TrimSessionsForUser(ctx context.Context, userID string, keep int) ([]string, error) {
+	var evicted []string
+	if err := s.inTx(ctx, func(tx *sql.Tx) error {
+		rows, err := tx.QueryContext(ctx, `
+			SELECT token_hash
+			FROM sessions
+			WHERE user_id = ?
+			ORDER BY last_seen_at DESC, created_at DESC, rowid DESC
+			LIMIT -1 OFFSET ?;`,
+			userID, keep,
+		)
+		if err != nil {
+			return fmt.Errorf("list sessions over cap: %w", err)
+		}
+		defer rows.Close()
+
+		evicted, err = scanColumn[string](rows, "sessions over cap")
+		if err != nil {
+			return err
+		}
+
+		for _, tokenHash := range evicted {
+			if _, err := tx.ExecContext(ctx,
+				`DELETE FROM sessions WHERE token_hash = ?;`, tokenHash,
+			); err != nil {
+				return fmt.Errorf("delete session over cap: %w", err)
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return evicted, nil
+}

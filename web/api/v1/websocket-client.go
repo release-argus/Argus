@@ -45,9 +45,19 @@ const (
 // pingPeriod is the interval between WebSocket ping frames. Must occur before pongWait.
 var pingPeriod = (pongWait * 9) / 10
 
-// ServeWs upgrades an HTTP connection to WebSocket and registers the client with the hub.
-// allowedServices limits which services' broadcasts the client receives (nil = unrestricted).
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, allowedServices map[string]bool) {
+// clientAuth is the identity resolved at the WebSocket handshake
+// (nil when auth is disabled).
+type clientAuth struct {
+	userID          string          // Owning user.
+	sessionHash     string          // Token hash of the session behind the handshake.
+	allowedServices map[string]bool // Permitted-service set (nil = unrestricted).
+	sessionAlive    func() bool     // Whether the session is still valid.
+}
+
+// ServeWs upgrades a HTTP connection to WebSocket and registers the client
+// with the hub. auth identifies the session/user behind the connection
+// (nil when auth is disabled).
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, auth *clientAuth) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
@@ -56,11 +66,16 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, allowedServices m
 
 	conn.RemoteAddr()
 	client := &Client{
-		hub:             hub,
-		ip:              getIP(r),
-		conn:            conn,
-		send:            make(chan []byte, 256),
-		allowedServices: allowedServices,
+		hub:  hub,
+		ip:   getIP(r),
+		conn: conn,
+		send: make(chan []byte, 256),
+	}
+	if auth != nil {
+		client.userID = auth.userID
+		client.sessionHash = auth.sessionHash
+		client.allowedServices = auth.allowedServices
+		client.sessionAlive = auth.sessionAlive
 	}
 	client.hub.register <- client
 
@@ -90,9 +105,22 @@ type Client struct {
 	// send carries outbound messages from the hub/server to this client.
 	send chan []byte
 
+	// userID is the user behind this connection, for targeted kicks
+	// ("" when auth is disabled).
+	userID string
+
+	// sessionHash is the token hash of the session behind this connection,
+	// for targeted kicks ("" when auth is disabled).
+	sessionHash string
+
 	// allowedServices limits which services' broadcasts this client receives
 	// (nil = unrestricted). Derived from the user's permission grants at handshake.
 	allowedServices map[string]bool
+
+	// sessionAlive reports whether the session behind this connection is
+	// still valid (nil = never checked). Polled on ping ticks so the
+	// connection can't outlive its session.
+	sessionAlive func() bool
 }
 
 // mayReceive reports whether the client may receive a broadcast about serviceID
@@ -287,6 +315,16 @@ func (c *Client) writePump() {
 			c.drainSendMessages()
 
 		case <-ticker.C:
+			if c.sessionAlive != nil && !c.sessionAlive() {
+				logx.Verbose(
+					"Closing the connection (session expired)",
+					logx.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+					true,
+				)
+				//nolint:errcheck // Best-effort close frame; the session is gone.
+				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
 			//#nosec G104 -- Disregard.
 			//nolint:errcheck // ^
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))

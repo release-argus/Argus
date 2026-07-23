@@ -454,6 +454,64 @@ func TestAPI_HTTPUserUpdate(t *testing.T) {
 	}
 }
 
+func TestAPI_HTTPUserUpdate__kicks(t *testing.T) {
+	// GIVEN: an auth-enabled API with WebSocket clients for the admin and a member.
+	file := "TestAPI_HTTPUserUpdate__kicks.yml"
+	api, deps, _ := testAuthServer(t, file)
+	adminCookie := loginCookie(t, api, "admin", "admin-password")
+	member := createAuthUser(t, deps, "member", "member-password", store.GroupOperator)
+	adminID := adminContext(t, api, deps).User.ID
+	connect := wireHub(t, api)
+	adminClient := connect(adminID, "admin-session")
+	memberClient := connect(member.ID, "member-session")
+
+	prefix := fmt.Sprintf("%s\nhttpUserUpdate() kicks", packageName)
+
+	// WHEN: the admin patches only the member's display name.
+	w := serveAuth(api,
+		authedRequest(http.MethodPatch, "/api/v1/users/"+member.ID,
+			`{"display_name":"Renamed"}`,
+			adminCookie,
+		),
+	)
+	if w.Code != http.StatusOK {
+		t.Fatalf(
+			"%s\ndisplay-name patch\ngot:  %d - %s\nwant: 200",
+			prefix, w.Code, w.Body.String(),
+		)
+	}
+
+	// THEN: nobody's grants changed - nobody is kicked.
+	if !api.hub.hasClient(memberClient) || !api.hub.hasClient(adminClient) {
+		t.Errorf(
+			"%s\ndisplay-name-only patch should kick nobody",
+			prefix,
+		)
+	}
+
+	// WHEN: the admin patches the member's groups.
+	w = serveAuth(api,
+		authedRequest(http.MethodPatch, "/api/v1/users/"+member.ID,
+			`{"groups":["viewer"]}`,
+			adminCookie,
+		),
+	)
+	if w.Code != http.StatusOK {
+		t.Fatalf(
+			"%s\ngroups patch\ngot:  %d - %s\nwant: 200",
+			prefix, w.Code, w.Body.String(),
+		)
+	}
+
+	// THEN: only the member's client is kicked, not the editing admin's.
+	if api.hub.hasClient(memberClient) || !api.hub.hasClient(adminClient) {
+		t.Errorf(
+			"%s\ngroups patch should kick exactly the member's clients",
+			prefix,
+		)
+	}
+}
+
 func TestAPI_HTTPUserDelete(t *testing.T) {
 	// GIVEN: an auth-enabled API.
 	file := "TestAPI_HTTPUserDelete.yml"
@@ -561,6 +619,38 @@ func TestAPI_HTTPUserDelete(t *testing.T) {
 		t.Errorf(
 			"%s\ndelete with failing revoke\ngot:  %d\nwant: 204",
 			prefix, recorder.Code,
+		)
+	}
+}
+
+func TestAPI_HTTPUserDelete__kicks(t *testing.T) {
+	// GIVEN: an auth-enabled API with WebSocket clients for the admin and a doomed user.
+	file := "TestAPI_HTTPUserDelete__kicks.yml"
+	api, deps, _ := testAuthServer(t, file)
+	adminCookie := loginCookie(t, api, "admin", "admin-password")
+	doomed := createAuthUser(t, deps, "doomed", "doomed-password")
+	adminID := adminContext(t, api, deps).User.ID
+	connect := wireHub(t, api)
+	adminClient := connect(adminID, "admin-session")
+	doomedClient := connect(doomed.ID, "doomed-session")
+
+	prefix := fmt.Sprintf("%s\nhttpUserDelete() kicks", packageName)
+
+	// WHEN: the admin deletes the user.
+	w := serveAuth(api,
+		authedRequest(http.MethodDelete, "/api/v1/users/"+doomed.ID, "", adminCookie))
+	if w.Code != http.StatusNoContent {
+		t.Fatalf(
+			"%s\ndelete\ngot:  %d - %s\nwant: 204",
+			prefix, w.Code, w.Body.String(),
+		)
+	}
+
+	// THEN: only the deleted user's client is kicked, not the editing admin's.
+	if api.hub.hasClient(doomedClient) || !api.hub.hasClient(adminClient) {
+		t.Errorf(
+			"%s\ndelete should kick exactly the deleted user's clients",
+			prefix,
 		)
 	}
 }

@@ -147,6 +147,52 @@ func TestServeWs(t *testing.T) {
 	}
 }
 
+func TestServeWs__clientAuth(t *testing.T) {
+	// GIVEN: a Hub and a WebSocket endpoint that ties clients to a session.
+	hub := NewHub()
+	go hub.Run()
+	auth := &clientAuth{
+		userID:          "user-a",
+		sessionHash:     "hash-1",
+		allowedServices: map[string]bool{"svc": true},
+		sessionAlive:    func() bool { return true },
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ServeWs(hub, w, r, auth)
+	}))
+	t.Cleanup(server.Close)
+
+	prefix := fmt.Sprintf("%s\nServeWs() clientAuth", packageName)
+
+	// WHEN: a WebSocket client connects.
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("%s failed to dial WebSocket: %v", prefix, err)
+	}
+	t.Cleanup(func() { _ = clientConn.Close() })
+
+	// THEN: the registered client carries the session identity.
+	var registered *Client
+	for i := 0; i < 100 && registered == nil; i++ {
+		time.Sleep(10 * time.Millisecond)
+		registered = hubClientForTest(t, hub)
+	}
+	if registered == nil {
+		t.Fatalf("%s expected a registered client", prefix)
+	}
+	if registered.userID != auth.userID ||
+		registered.sessionHash != auth.sessionHash ||
+		!registered.allowedServices["svc"] ||
+		registered.sessionAlive == nil {
+		t.Errorf(
+			"%s client identity mismatch\ngot:  userID=%q sessionHash=%q allowedServices=%v sessionAlive=%t",
+			prefix, registered.userID, registered.sessionHash,
+			registered.allowedServices, registered.sessionAlive != nil,
+		)
+	}
+}
+
 type wsTestClient struct {
 	client *Client
 	conn   *websocket.Conn
@@ -1005,12 +1051,18 @@ func TestClient_WritePump__connection(t *testing.T) {
 		closeSend           bool
 		closeConnBeforePump bool
 		closeConnAfterPump  bool
+		sessionDead         bool
 		stdoutRegex         string
 	}{
 		{
 			name:        "closes on empty send channel",
 			closeSend:   true,
 			stdoutRegex: `VERBOSE: .*Closing the connection \(writePump\)`,
+		},
+		{
+			name:        "session death closes the connection",
+			sessionDead: true,
+			stdoutRegex: `VERBOSE: .*Closing the connection \(session expired\)`,
 		},
 		{
 			name: "logs write failure when connection closed",
@@ -1041,6 +1093,11 @@ func TestClient_WritePump__connection(t *testing.T) {
 			t.Cleanup(func() { wsTest.cleanup(t) })
 
 			prefix := fmt.Sprintf("%s\nClient.writePump()", packageName)
+
+			// AND: the session behind the client is dead, when testing liveness.
+			if tc.sessionDead {
+				wsTest.client.sessionAlive = func() bool { return false }
+			}
 
 			// AND: the client connection is closed before the writePump starts.
 			if tc.closeConnBeforePump {

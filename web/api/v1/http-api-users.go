@@ -174,8 +174,10 @@ func (api *API) httpUserUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Memberships/enabled state may have changed the user's permissions.
-	api.kickWebSocketClients()
+	// Password/enabled/group changes affect only this user - kick just their clients.
+	if request.Password != nil || request.Enabled != nil || request.Groups != nil {
+		api.kickUserWebSocketClients(userID)
+	}
 
 	api.writeJSON(w, user, logFrom)
 }
@@ -202,7 +204,7 @@ func (api *API) httpUserDelete(w http.ResponseWriter, r *http.Request) {
 		logx.Error(err, logFrom, true)
 	}
 
-	api.kickWebSocketClients()
+	api.kickUserWebSocketClients(userID)
 
 	w.WriteHeader(http.StatusNoContent)
 }

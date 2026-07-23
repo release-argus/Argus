@@ -19,6 +19,7 @@ package local
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/auth"
@@ -322,4 +323,33 @@ func TestProvider_Authenticate__dummy_fallback(t *testing.T) {
 			prefix, *identity,
 		)
 	}
+}
+
+func TestDummyHashFallback__matchesCurrentParams(t *testing.T) {
+	// GIVEN: a hash freshly derived with the current argon2 parameters.
+	real, err := password.Hash("timing")
+	if err != nil {
+		t.Fatalf(
+			"%s\nHash: %v",
+			packageName, err,
+		)
+	}
+
+	// THEN: the dummy fallback uses the same parameters, so unknown-user
+	// verification costs the same as a real user.
+	if got, want := argonParams(dummyHashFallback), argonParams(real); got != want {
+		t.Errorf(
+			"%s\ndummy fallback params %q must match current %q",
+			packageName, got, want,
+		)
+	}
+}
+
+// argonParams returns the "m=..,t=..,p=.." segment of an argon2id encoding.
+func argonParams(encoded string) string {
+	parts := strings.Split(encoded, "$")
+	if len(parts) < 4 {
+		return ""
+	}
+	return parts[3]
 }

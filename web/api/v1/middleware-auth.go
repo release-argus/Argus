@@ -434,14 +434,31 @@ func (api *API) allowedServices(authCtx *auth.Context) map[string]bool {
 	return allowed
 }
 
-// kickWebSocketClients forces every WebSocket client to reconnect so their
-// permitted-service sets are re-derived. Call after anything that may change
-// who can see which service - grant/membership edits, service changes.
-func (api *API) kickWebSocketClients() {
+// kickUserWebSocketClients is a nil-safe wrapper around [Hub.KickUserClients]
+// that kicks all the WebSocket clients of userIDs.
+func (api *API) kickUserWebSocketClients(userIDs ...string) {
 	if api.auth == nil || api.hub == nil {
 		return
 	}
-	api.hub.KickClients()
+	api.hub.KickUserClients(userIDs...)
+}
+
+// kickSessionWebSocketClients is a nil-safe wrapper around [Hub.KickSessionClients]
+// that disconnects the WebSocket clients connected under tokenHashes.
+func (api *API) kickSessionWebSocketClients(tokenHashes ...string) {
+	if api.auth == nil || api.hub == nil {
+		return
+	}
+	api.hub.KickSessionClients(tokenHashes...)
+}
+
+// kickRestrictedWebSocketClients is a nil-safe wrapper around [Hub.KickRestrictedClients]
+// that kicks all service-restricted WebSocket clients.
+func (api *API) kickRestrictedWebSocketClients() {
+	if api.auth == nil || api.hub == nil {
+		return
+	}
+	api.hub.KickRestrictedClients()
 }
 
 // serviceTarget extracts the [rbac.Target] from the request's service_id

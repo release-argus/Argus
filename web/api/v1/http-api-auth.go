@@ -23,6 +23,7 @@ import (
 
 	"github.com/release-argus/Argus/auth"
 	"github.com/release-argus/Argus/auth/provider/local"
+	"github.com/release-argus/Argus/auth/session"
 	"github.com/release-argus/Argus/auth/store"
 	"github.com/release-argus/Argus/internal/logx"
 	apitype "github.com/release-argus/Argus/web/api/types"
@@ -241,6 +242,8 @@ func (api *API) httpAuthLogout(w http.ResponseWriter, r *http.Request) {
 			failRequest(&w, errors.New("logout failed"), http.StatusInternalServerError)
 			return
 		}
+		// Kick any WebSocket clients still connected under this session.
+		api.kickSessionWebSocketClients(session.HashToken(cookie.Value))
 	}
 
 	http.SetCookie(w, api.sessionCookie(r, "", -1))
@@ -266,14 +269,16 @@ func (api *API) httpAuthMe(w http.ResponseWriter, r *http.Request) {
 }
 
 // startSession mints a session for authCtx.User and sets the session cookie,
-// reporting false on failure.
+// reporting false on failure. WebSocket clients of any sessions evicted by
+// the per-user cap are kicked.
 func (api *API) startSession(w http.ResponseWriter, r *http.Request, authCtx *auth.Context, logFrom logx.LogFrom) bool {
-	token, err := api.auth.Sessions.Start(r.Context(), authCtx.User.ID, getIP(r), r.UserAgent())
+	token, evicted, err := api.auth.Sessions.Start(r.Context(), authCtx.User.ID, getIP(r), r.UserAgent())
 	if err != nil {
 		logx.Error(err, logFrom, true)
 		failRequest(&w, errors.New("authentication failed"), http.StatusInternalServerError)
 		return false
 	}
+	api.kickSessionWebSocketClients(evicted...)
 	http.SetCookie(w, api.sessionCookie(r, token, int(api.Config.Settings.AuthSessionLifetime().Seconds())))
 	return true
 }

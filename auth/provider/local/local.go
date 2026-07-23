@@ -120,16 +120,20 @@ func (p *Provider) rehash(ctx context.Context, userID, password string) {
 	}
 }
 
+// dummyHashFallback is used when [hashPassword]'s salt generation fails, so
+// unknown-user verification still costs the same as a real user. Its argon2
+// parameters must match [password]'s current parameters.
+const dummyHashFallback = "$argon2id$v=19$m=65536,t=2,p=1" +
+	"$YXJndXMtZHVtbXktc2FsdA" +
+	"$nNtdTIh5mCNKKKqG756Mkq5CgUWl1Y2SN0wO7J29QEA"
+
 // dummy lazily derives the dummy hash used to equalise verification timing.
 func (p *Provider) dummy() string {
 	p.dummyOnce.Do(func() {
 		// Random throwaway password; only the derivation cost matters.
 		hash, err := hashPassword("argus-dummy-timing-equalisation")
 		if err != nil {
-			// Fall back to a pre-computed encoding of the same password.
-			hash = "$argon2id$v=19$m=19456,t=2,p=1" +
-				"$YXJndXMtZHVtbXktc2FsdA" +
-				"$KDiYCbFMevkzOp1i2Cm+r5GnLpDb8pRU3O7eyIfCTGw"
+			hash = dummyHashFallback
 		}
 		p.dummyHash = hash
 	})

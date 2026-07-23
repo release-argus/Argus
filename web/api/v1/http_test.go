@@ -26,7 +26,11 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/gorilla/websocket"
+
+	"github.com/release-argus/Argus/auth/session"
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/config/decode"
 	config_test "github.com/release-argus/Argus/config/test"
@@ -667,6 +671,51 @@ func TestAPI_SetupWebSocket(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestAPI_SetupWebSocket__sessionAuth(t *testing.T) {
+	// GIVEN: an auth-enabled API wired for session auth, and a logged-in admin.
+	file := "TestAPI_SetupWebSocket__sessionAuth.yml"
+	api, deps, _ := testAuthServer(t, file)
+	cookie := loginCookie(t, api, "admin", "admin-password")
+	adminID := adminContext(t, api, deps).User.ID
+	server := httptest.NewServer(api.BaseRouter)
+	t.Cleanup(server.Close)
+
+	prefix := fmt.Sprintf("%s\nSetupWebSocket() session auth", packageName)
+
+	// WHEN: a WebSocket client connects, carrying the session cookie.
+	wsURL := strings.Replace(server.URL, "http:", "ws:", 1) + "/ws"
+	header := http.Header{"Cookie": {cookie.String()}}
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, header)
+	if err != nil {
+		t.Fatalf("%s failed to dial WebSocket: %v", prefix, err)
+	}
+	t.Cleanup(func() { _ = clientConn.Close() })
+
+	// THEN: the registered client carries the logged-in session's identity,
+	// wired through SetupWebSocket's cookie -> authenticateSession -> clientAuth path.
+	var registered *Client
+	for i := 0; i < 100 && registered == nil; i++ {
+		time.Sleep(10 * time.Millisecond)
+		registered = hubClientForTest(t, api.hub)
+	}
+	if registered == nil {
+		t.Fatalf("%s expected a registered client", prefix)
+	}
+	wantSessionHash := session.HashToken(cookie.Value)
+	if registered.userID != adminID ||
+		registered.sessionHash != wantSessionHash ||
+		registered.sessionAlive == nil || !registered.sessionAlive() {
+		t.Errorf(
+			"%s client identity mismatch\n"+
+				"got:  userID=%q sessionHash=%q sessionAlive=%t\n"+
+				"want: userID=%q sessionHash=%q sessionAlive=true",
+			prefix,
+			registered.userID, registered.sessionHash, registered.sessionAlive == nil || !registered.sessionAlive(),
+			adminID, wantSessionHash,
+		)
 	}
 }
 

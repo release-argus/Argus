@@ -497,6 +497,83 @@ func TestAPI_HTTPGroupUpdate(t *testing.T) {
 	}
 }
 
+func TestAPI_HTTPGroupUpdate__kicks(t *testing.T) {
+	// GIVEN: an auth-enabled API with WebSocket clients for the admin,
+	// a group member, and an outsider.
+	file := "TestAPI_HTTPGroupUpdate__kicks.yml"
+	api, deps, _ := testAuthServer(t, file)
+	adminCookie := loginCookie(t, api, "admin", "admin-password")
+	group, err := deps.Store.CreateGroup(t.Context(), "crew", "", nil)
+	if err != nil {
+		t.Fatalf(
+			"%s\ncreate crew group: %v",
+			packageName, err,
+		)
+	}
+	member := createAuthUser(t, deps, "member", "member-password", "crew")
+	outsider := createAuthUser(t, deps, "outsider", "outsider-password")
+	adminID := adminContext(t, api, deps).User.ID
+	connect := wireHub(t, api)
+	adminClient := connect(adminID, "admin-session")
+	memberClient := connect(member.ID, "member-session")
+	outsiderClient := connect(outsider.ID, "outsider-session")
+
+	prefix := fmt.Sprintf("%s\nhttpGroupUpdate() kicks", packageName)
+
+	// WHEN: only the group's name/description change.
+	w := serveAuth(api,
+		authedRequest(http.MethodPatch, "/api/v1/groups/"+group.ID,
+			`{"name":"crew-renamed","description":"renamed"}`,
+			adminCookie,
+		),
+	)
+	if w.Code != http.StatusOK {
+		t.Fatalf(
+			"%s\nrename patch\ngot:  %d - %s\nwant: 200",
+			prefix, w.Code, w.Body.String(),
+		)
+	}
+
+	// THEN: nobody's grants changed - nobody is kicked.
+	if !api.hub.hasClient(memberClient) ||
+		!api.hub.hasClient(outsiderClient) ||
+		!api.hub.hasClient(adminClient) {
+		t.Errorf(
+			"%s\nrename/description-only patch should kick nobody",
+			prefix,
+		)
+	}
+
+	// WHEN: the group's grants change.
+	w = serveAuth(api,
+		authedRequest(http.MethodPatch, "/api/v1/groups/"+group.ID,
+			test.TrimJSON(`{
+				"permissions": [
+					{"resource": "service", "action": "read", "scope": {"type": "service_tag", "ref": "prod"}}
+				]
+			}`),
+			adminCookie,
+		),
+	)
+	if w.Code != http.StatusOK {
+		t.Fatalf(
+			"%s\ngrants patch\ngot:  %d - %s\nwant: 200",
+			prefix, w.Code, w.Body.String(),
+		)
+	}
+
+	// THEN: only the member's client is kicked - not the outsider's,
+	// nor the editing admin's.
+	if api.hub.hasClient(memberClient) ||
+		!api.hub.hasClient(outsiderClient) ||
+		!api.hub.hasClient(adminClient) {
+		t.Errorf(
+			"%s\ngrants patch should kick exactly the members' clients",
+			prefix,
+		)
+	}
+}
+
 func TestAPI_HTTPGroupDelete(t *testing.T) {
 	// GIVEN: an auth-enabled API.
 	file := "TestAPI_HTTPGroupDelete.yml"
@@ -559,6 +636,51 @@ func TestAPI_HTTPGroupDelete(t *testing.T) {
 		t.Errorf(
 			"%s\ngroup should be deleted\ngot: %v",
 			prefix, err,
+		)
+	}
+}
+
+func TestAPI_HTTPGroupDelete__kicks(t *testing.T) {
+	// GIVEN: an auth-enabled API with WebSocket clients for the admin,
+	// a group member, and an outsider.
+	file := "TestAPI_HTTPGroupDelete__kicks.yml"
+	api, deps, _ := testAuthServer(t, file)
+	adminCookie := loginCookie(t, api, "admin", "admin-password")
+	group, err := deps.Store.CreateGroup(t.Context(), "crew", "", nil)
+	if err != nil {
+		t.Fatalf(
+			"%s\ncreate crew group: %v",
+			packageName, err,
+		)
+	}
+	member := createAuthUser(t, deps, "member", "member-password", "crew")
+	outsider := createAuthUser(t, deps, "outsider", "outsider-password")
+	adminID := adminContext(t, api, deps).User.ID
+	connect := wireHub(t, api)
+	adminClient := connect(adminID, "admin-session")
+	memberClient := connect(member.ID, "member-session")
+	outsiderClient := connect(outsider.ID, "outsider-session")
+
+	prefix := fmt.Sprintf("%s\nhttpGroupDelete() kicks", packageName)
+
+	// WHEN: the admin deletes the group.
+	w := serveAuth(api,
+		authedRequest(http.MethodDelete, "/api/v1/groups/"+group.ID, "", adminCookie))
+	if w.Code != http.StatusNoContent {
+		t.Fatalf(
+			"%s\ndelete\ngot:  %d - %s\nwant: 204",
+			prefix, w.Code, w.Body.String(),
+		)
+	}
+
+	// THEN: only the member's client is kicked (membership captured before
+	// the delete's cascade) - not the outsider's, nor the editing admin's.
+	if api.hub.hasClient(memberClient) ||
+		!api.hub.hasClient(outsiderClient) ||
+		!api.hub.hasClient(adminClient) {
+		t.Errorf(
+			"%s\ndelete should kick exactly the members' clients",
+			prefix,
 		)
 	}
 }

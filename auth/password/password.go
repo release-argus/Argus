@@ -31,7 +31,7 @@ import (
 // Current argon2id parameters.
 const (
 	argonTime    uint32 = 2
-	argonMemory  uint32 = 64 * 1024 // KiB.
+	argonMemory  uint32 = 64 * 1024 // 64MiB.
 	argonThreads uint8  = 1
 	saltLength   uint32 = 16
 	keyLength    uint32 = 32
@@ -50,6 +50,16 @@ var ErrPasswordTooLong = errors.New("password too long")
 // see [rand.Read].
 var randRead = rand.Read
 
+// hashSem caps concurrent argon2id derivations (each uses [argonMemory]) so a login burst cannot exhaust memory.
+var hashSem = make(chan struct{}, 4)
+
+// idKey runs [argon2.IDKey] under the [hashSem] concurrency cap.
+func idKey(password, salt []byte, time, memory uint32, threads uint8, keyLen uint32) []byte {
+	hashSem <- struct{}{}
+	defer func() { <-hashSem }()
+	return argon2.IDKey(password, salt, time, memory, threads, keyLen)
+}
+
 // Hash derives an argon2id hash of password, encoded with its parameters.
 func Hash(password string) (string, error) {
 	if len(password) > maxPasswordLength {
@@ -61,7 +71,7 @@ func Hash(password string) (string, error) {
 		return "", fmt.Errorf("generate salt: %w", err)
 	}
 
-	key := argon2.IDKey(
+	key := idKey(
 		[]byte(password), salt,
 		argonTime, argonMemory, argonThreads, keyLength,
 	)
@@ -87,7 +97,7 @@ func Verify(password, encoded string) (match, needsRehash bool, err error) {
 		return false, false, err
 	}
 
-	computed := argon2.IDKey(
+	computed := idKey(
 		[]byte(password), salt,
 		time, memory, threads, uint32(len(key)),
 	)

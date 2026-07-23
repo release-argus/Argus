@@ -37,10 +37,12 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/dashboard"
 	dvweb "github.com/release-argus/Argus/service/deployed_version/types/web"
 	"github.com/release-argus/Argus/service/shared"
 	svctest "github.com/release-argus/Argus/service/test"
 	"github.com/release-argus/Argus/util"
+	apitype "github.com/release-argus/Argus/web/api/types"
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
@@ -2805,6 +2807,95 @@ func TestHTTP_ServiceEdit__edit__waitsForInFlightOp(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatalf("%s did not complete after the op lock was released", prefix)
+	}
+}
+
+func TestServiceEditAffectsVisibility(t *testing.T) {
+	// GIVEN: old/new service pairs for the kinds of create/edit.
+	summaryFor := func(id string, tags []string) *apitype.ServiceSummary {
+		summary := &apitype.ServiceSummary{ID: id}
+		if len(tags) != 0 {
+			summary.Tags = &tags
+		}
+		return summary
+	}
+	serviceFor := func(id string, tags []string) *service.Service {
+		return &service.Service{
+			ID:        id,
+			Dashboard: dashboard.Options{Tags: tags},
+		}
+	}
+
+	tests := []struct {
+		name       string
+		oldService *apitype.ServiceSummary
+		newService *service.Service
+		want       bool
+	}{
+		{
+			name:       "create",
+			oldService: nil,
+			newService: serviceFor("new", nil),
+			want:       true,
+		},
+		{
+			name:       "edit/rename",
+			oldService: summaryFor("old", nil),
+			newService: serviceFor("new", nil),
+			want:       true,
+		},
+		{
+			name:       "edit/tag added",
+			oldService: summaryFor("svc", nil),
+			newService: serviceFor("svc", []string{"prod"}),
+			want:       true,
+		},
+		{
+			name:       "edit/tag removed",
+			oldService: summaryFor("svc", []string{"prod"}),
+			newService: serviceFor("svc", nil),
+			want:       true,
+		},
+		{
+			name:       "edit/tag swapped",
+			oldService: summaryFor("svc", []string{"prod"}),
+			newService: serviceFor("svc", []string{"staging"}),
+			want:       true,
+		},
+		{
+			name:       "edit/plain - same ID, no tags",
+			oldService: summaryFor("svc", nil),
+			newService: serviceFor("svc", nil),
+			want:       false,
+		},
+		{
+			name:       "edit/plain - same ID, same tags",
+			oldService: summaryFor("svc", []string{"prod", "web"}),
+			newService: serviceFor("svc", []string{"prod", "web"}),
+			want:       false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: visibility impact is checked.
+			got := serviceEditAffectsVisibility(tc.oldService, tc.newService)
+
+			prefix := fmt.Sprintf(
+				"%s\nserviceEditAffectsVisibility()",
+				packageName,
+			)
+
+			// THEN: only creates, renames and tag-set changes report true.
+			if got != tc.want {
+				t.Errorf(
+					"%s mismatch\ngot:  %t\nwant: %t",
+					prefix, got, tc.want,
+				)
+			}
+		})
 	}
 }
 

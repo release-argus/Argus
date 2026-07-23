@@ -34,6 +34,10 @@ import (
 // tokenBytes is the entropy of a session token (256-bit).
 const tokenBytes = 32
 
+// MaxSessionsPerUser caps a user's concurrent sessions; starting a session
+// past the cap evicts their least-recently active one.
+const MaxSessionsPerUser = 10
+
 // touchInterval is how often a session's last-seen time is flushed to the
 // database (activity within the interval only updates the cache).
 const touchInterval = 2 * time.Minute
@@ -58,12 +62,20 @@ type Config struct {
 
 // Store is the slice of the auth store the [Manager] needs.
 type Store interface {
-	InsertSession(ctx context.Context, session store.Session) error                   // InsertSession persists a new session.
-	SessionByTokenHash(ctx context.Context, tokenHash string) (*store.Session, error) // SessionByTokenHash returns the session with tokenHash.
-	TouchSession(ctx context.Context, tokenHash string, lastSeenAt time.Time) error   // TouchSession updates the session's last_seen_at.
-	DeleteSession(ctx context.Context, tokenHash string) error                        // DeleteSession removes the session with tokenHash.
-	DeleteSessionsForUser(ctx context.Context, userID string) error                   // DeleteSessionsForUser removes every session of userID.
-	DeleteExpiredSessions(ctx context.Context, now time.Time) error                   // DeleteExpiredSessions prunes sessions past their absolute expiry.
+	// InsertSession persists a new session.
+	InsertSession(ctx context.Context, session store.Session) error
+	// SessionByTokenHash returns the session with tokenHash.
+	SessionByTokenHash(ctx context.Context, tokenHash string) (*store.Session, error)
+	// TouchSession updates the session's last_seen_at.
+	TouchSession(ctx context.Context, tokenHash string, lastSeenAt time.Time) error
+	// DeleteSession removes the session with tokenHash.
+	DeleteSession(ctx context.Context, tokenHash string) error
+	// DeleteSessionsForUser removes every session of userID.
+	DeleteSessionsForUser(ctx context.Context, userID string) error
+	// DeleteExpiredSessions prunes sessions past their absolute expiry.
+	DeleteExpiredSessions(ctx context.Context, now time.Time) error
+	// TrimSessionsForUser deletes all but the keep most-recently active sessions of userID.
+	TrimSessionsForUser(ctx context.Context, userID string, keep int) ([]string, error)
 }
 
 // Manager mints, validates, and revokes sessions.
@@ -73,6 +85,9 @@ type Manager struct {
 
 	mu    sync.Mutex
 	cache map[string]store.Session // tokenHash -> session.
+	// Bumped on mint/eviction/revoke; guards [Manager.Validate]'s cache-MISS
+	// write-back against resurrecting a concurrently-revoked session.
+	gen uint64
 }
 
 // New creates a Manager persisting via sessionStore, bounded by config.
@@ -84,24 +99,25 @@ func New(sessionStore Store, config Config) *Manager {
 	}
 }
 
-// hashToken derives the storage key of a token.
-func hashToken(token string) string {
+// HashToken derives the storage key of a session token.
+func HashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
 }
 
 // Start mints a session for userID, returning the opaque token to set as
-// the cookie value. Only the token's hash is stored.
-func (m *Manager) Start(ctx context.Context, userID, ip, userAgent string) (string, error) {
+// the cookie value, plus the token hashes of any sessions evicted to keep
+// the user within [MaxSessionsPerUser]. Only the token's hash is stored.
+func (m *Manager) Start(ctx context.Context, userID, ip, userAgent string) (token string, evicted []string, err error) {
 	raw := make([]byte, tokenBytes)
 	if _, err := randRead(raw); err != nil {
-		return "", fmt.Errorf("generate session token: %w", err)
+		return "", nil, fmt.Errorf("generate session token: %w", err)
 	}
-	token := hex.EncodeToString(raw)
+	token = hex.EncodeToString(raw)
 
 	now := timeNow()
 	session := store.Session{
-		TokenHash:  hashToken(token),
+		TokenHash:  HashToken(token),
 		UserID:     userID,
 		CreatedAt:  now,
 		ExpiresAt:  now.Add(m.config.Lifetime),
@@ -111,14 +127,43 @@ func (m *Manager) Start(ctx context.Context, userID, ip, userAgent string) (stri
 	}
 
 	if err := m.store.InsertSession(ctx, session); err != nil {
-		return "", fmt.Errorf("persist session: %w", err)
+		return "", nil, fmt.Errorf("persist session: %w", err)
+	}
+
+	// Enforce the session cap; failures are only logged (retried on the next login).
+	evicted, err = m.store.TrimSessionsForUser(ctx, userID, MaxSessionsPerUser)
+	if err != nil {
+		logx.Error(err, logx.LogFrom{Primary: "session", Secondary: "trim"}, true)
 	}
 
 	m.mu.Lock()
 	m.cache[session.TokenHash] = session
+	for _, tokenHash := range evicted {
+		delete(m.cache, tokenHash)
+	}
+	if len(evicted) > 0 {
+		m.gen++
+	}
 	m.mu.Unlock()
 
-	return token, nil
+	return token, evicted, nil
+}
+
+// expired reports whether session is past its absolute cap or its idle window at now.
+func (m *Manager) expired(session store.Session, now time.Time) bool {
+	return now.After(session.ExpiresAt) ||
+		now.After(session.LastSeenAt.Add(m.config.IdleTimeout))
+}
+
+// evict drops tokenHash from the cache and store, bumping gen so a concurrent
+// cache-MISS write-back cannot resurrect it. The caller must not hold m.mu.
+func (m *Manager) evict(ctx context.Context, tokenHash string) error {
+	m.mu.Lock()
+	delete(m.cache, tokenHash)
+	m.gen++
+	m.mu.Unlock()
+	m.deleteRow(ctx, tokenHash)
+	return ErrInvalidSession
 }
 
 // Validate resolves token to its live session, sliding the idle window.
@@ -128,40 +173,53 @@ func (m *Manager) Validate(ctx context.Context, token string) (*store.Session, e
 	if token == "" {
 		return nil, ErrInvalidSession
 	}
-	tokenHash := hashToken(token)
+	tokenHash := HashToken(token)
+	now := timeNow()
 
 	m.mu.Lock()
 	session, cached := m.cache[tokenHash]
+	if cached {
+		if m.expired(session, now) {
+			m.mu.Unlock()
+			return nil, m.evict(ctx, tokenHash)
+		}
+		flush := now.Sub(session.LastSeenAt) >= touchInterval
+		session.LastSeenAt = now
+		m.cache[tokenHash] = session
+		m.mu.Unlock()
+		if flush {
+			if err := m.store.TouchSession(ctx, tokenHash, now); err != nil {
+				logx.Error(err, logx.LogFrom{Primary: "session", Secondary: "touch"}, true)
+			}
+		}
+		return &session, nil
+	}
+	gen := m.gen
 	m.mu.Unlock()
 
-	// Cache miss.
-	if !cached {
-		fromStore, err := m.store.SessionByTokenHash(ctx, tokenHash)
-		if err != nil {
-			if errors.Is(err, store.ErrNotFound) {
-				return nil, ErrInvalidSession
-			}
-			return nil, fmt.Errorf("load session: %w", err)
+	// Cache miss: load from the store.
+	fromStore, err := m.store.SessionByTokenHash(ctx, tokenHash)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, ErrInvalidSession
 		}
-		session = *fromStore
+		return nil, fmt.Errorf("load session: %w", err)
+	}
+	session = *fromStore
+
+	// Expiry: absolute cap/idle window.
+	if m.expired(session, now) {
+		return nil, m.evict(ctx, tokenHash)
 	}
 
-	// Expiry: absolute cap, then idle window.
-	now := timeNow()
-	if now.After(session.ExpiresAt) ||
-		now.After(session.LastSeenAt.Add(m.config.IdleTimeout)) {
-		m.mu.Lock()
-		delete(m.cache, tokenHash)
-		m.mu.Unlock()
-		m.deleteRow(ctx, tokenHash)
-		return nil, ErrInvalidSession
-	}
-
-	// Slide the idle window: cache immediately, database at most once per touchInterval.
+	// Slide the idle window: cache immediately, database at most once per [touchInterval].
 	flush := now.Sub(session.LastSeenAt) >= touchInterval
 	session.LastSeenAt = now
 	m.mu.Lock()
-	m.cache[tokenHash] = session
+	// Only populate the cache if no revoke/eviction landed during the load.
+	if m.gen == gen {
+		m.cache[tokenHash] = session
+	}
 	m.mu.Unlock()
 	if flush {
 		if err := m.store.TouchSession(ctx, tokenHash, now); err != nil {
@@ -172,12 +230,32 @@ func (m *Manager) Validate(ctx context.Context, token string) (*store.Session, e
 	return &session, nil
 }
 
+// Alive reports whether tokenHash still maps to a live session, without
+// sliding the idle window. Only a missing row reads as dead - store
+// failures read as alive so an outage doesn't disconnect every client.
+func (m *Manager) Alive(ctx context.Context, tokenHash string) bool {
+	m.mu.Lock()
+	session, cached := m.cache[tokenHash]
+	m.mu.Unlock()
+
+	if !cached {
+		fromStore, err := m.store.SessionByTokenHash(ctx, tokenHash)
+		if err != nil {
+			return !errors.Is(err, store.ErrNotFound)
+		}
+		session = *fromStore
+	}
+
+	return !m.expired(session, timeNow())
+}
+
 // Revoke ends the session of token (logout).
 func (m *Manager) Revoke(ctx context.Context, token string) error {
-	tokenHash := hashToken(token)
+	tokenHash := HashToken(token)
 
 	m.mu.Lock()
 	delete(m.cache, tokenHash)
+	m.gen++
 	m.mu.Unlock()
 
 	if err := m.store.DeleteSession(ctx, tokenHash); err != nil {
@@ -195,6 +273,7 @@ func (m *Manager) RevokeUser(ctx context.Context, userID string) error {
 			delete(m.cache, tokenHash)
 		}
 	}
+	m.gen++
 	m.mu.Unlock()
 
 	if err := m.store.DeleteSessionsForUser(ctx, userID); err != nil {
@@ -213,6 +292,7 @@ func (m *Manager) PruneExpired(ctx context.Context) error {
 			delete(m.cache, tokenHash)
 		}
 	}
+	m.gen++
 	m.mu.Unlock()
 
 	if err := m.store.DeleteExpiredSessions(ctx, now); err != nil {

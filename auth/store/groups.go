@@ -102,23 +102,17 @@ func (s *Store) Groups(ctx context.Context) ([]Group, error) {
 	}
 
 	// Attach grants.
-	grants, err := s.db.QueryContext(ctx, `
+	if err := s.queryGrants(ctx, `
 		SELECT gp.group_id, p.resource, p.action, gp.scope_type, gp.scope_ref
 		FROM group_permissions gp
 		JOIN permissions p ON p.id = gp.permission_id
 		ORDER BY p.resource, p.action, gp.scope_type, gp.scope_ref;`,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("list grants: %w", err)
-	}
-	defer grants.Close()
-
-	if err := collectGrants(grants, func(groupID string, grant rbac.Grant) {
-		if i, ok := index[groupID]; ok {
-			groups[i].Grants = append(groups[i].Grants, grant)
-		}
-	}); err != nil {
-		return nil, fmt.Errorf("iterate grants: %w", err)
+		func(groupID string, grant rbac.Grant) {
+			if i, ok := index[groupID]; ok {
+				groups[i].Grants = append(groups[i].Grants, grant)
+			}
+		}); err != nil {
+		return nil, fmt.Errorf("attach grants: %w", err)
 	}
 
 	return groups, nil
@@ -144,23 +138,16 @@ func (s *Store) GroupByID(ctx context.Context, id string) (*Group, error) {
 		return nil, err
 	}
 
-	grants, err := s.db.QueryContext(ctx, `
+	if err := s.queryGrants(ctx, `
 		SELECT gp.group_id, p.resource, p.action, gp.scope_type, gp.scope_ref
 		FROM group_permissions gp
 		JOIN permissions p ON p.id = gp.permission_id
 		WHERE gp.group_id = ?
 		ORDER BY p.resource, p.action, gp.scope_type, gp.scope_ref;`,
-		id,
-	)
-	if err != nil {
+		func(_ string, grant rbac.Grant) {
+			group.Grants = append(group.Grants, grant)
+		}, id); err != nil {
 		return nil, fmt.Errorf("list group's grants: %w", err)
-	}
-	defer grants.Close()
-
-	if err := collectGrants(grants, func(_ string, grant rbac.Grant) {
-		group.Grants = append(group.Grants, grant)
-	}); err != nil {
-		return nil, fmt.Errorf("iterate group's grants: %w", err)
 	}
 
 	return group, nil
@@ -261,10 +248,28 @@ func (s *Store) DeleteGroup(ctx context.Context, id string) error {
 	})
 }
 
+// UserIDsInGroup returns the IDs of the users belonging to the group with id.
+func (s *Store) UserIDsInGroup(ctx context.Context, id string) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT user_id
+		FROM user_groups
+		WHERE group_id = ?
+		ORDER BY user_id;`,
+		id,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list group's users: %w", err)
+	}
+	defer rows.Close()
+
+	return scanColumn[string](rows, "group's users")
+}
+
 // GrantsForUser returns the union of the grants of every group userID
 // belongs to (Disabled users get no grants).
 func (s *Store) GrantsForUser(ctx context.Context, userID string) ([]rbac.Grant, error) {
-	rows, err := s.db.QueryContext(ctx, `
+	var grants []rbac.Grant
+	if err := s.queryGrants(ctx, `
 		SELECT gp.group_id, p.resource, p.action, gp.scope_type, gp.scope_ref
 		FROM user_groups ug
 		JOIN users u              ON u.id = ug.user_id
@@ -272,21 +277,10 @@ func (s *Store) GrantsForUser(ctx context.Context, userID string) ([]rbac.Grant,
 		JOIN permissions p        ON p.id = gp.permission_id
 		WHERE ug.user_id = ? AND u.enabled = 1
 		ORDER BY p.resource, p.action, gp.scope_type, gp.scope_ref;`,
-		userID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("list user's grants: %w", err)
-	}
-	defer rows.Close()
-
-	var grants []rbac.Grant
-	if err := collectGrants(
-		rows,
 		func(_ string, grant rbac.Grant) {
 			grants = append(grants, grant)
-		},
-	); err != nil {
-		return nil, fmt.Errorf("iterate user's grants: %w", err)
+		}, userID); err != nil {
+		return nil, fmt.Errorf("list user's grants: %w", err)
 	}
 
 	return grants, nil
@@ -341,6 +335,21 @@ func groupIDByName(ctx context.Context, tx *sql.Tx, name string) (string, error)
 		return "", fmt.Errorf("look up group %q: %w", name, err)
 	}
 	return id, nil
+}
+
+// queryGrants runs query and invokes fn for each scanned (group_id, grant) row.
+func (s *Store) queryGrants(
+	ctx context.Context,
+	query string,
+	fn func(groupID string, grant rbac.Grant),
+	args ...any,
+) error {
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return err //nolint:wrapcheck // Callers add context.
+	}
+	defer rows.Close()
+	return collectGrants(rows, fn)
 }
 
 // collectGrants scans (group_id, grant) rows, invoking fn for each.

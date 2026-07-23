@@ -534,7 +534,7 @@ func TestAPI_AuthenticateSession(t *testing.T) {
 	api, deps, _ := testAuthServer(t, file)
 	// AND: a live session.
 	adminCtx := adminContext(t, api, deps)
-	token, err := deps.Sessions.Start(
+	token, _, err := deps.Sessions.Start(
 		t.Context(),
 		adminCtx.User.ID,
 		"127.0.0.1",
@@ -1276,38 +1276,68 @@ func TestAPI_AllowedServices(t *testing.T) {
 }
 
 func TestAPI_KickWebSocketClients(t *testing.T) {
-	prefix := fmt.Sprintf("%s\nkickWebSocketClients()", packageName)
+	prefix := fmt.Sprintf("%s\nkick*WebSocketClients()", packageName)
+
+	// kickAll exercises every kick helper against the client's identity.
+	kickAll := func(api *API, client *Client) {
+		api.kickUserWebSocketClients(client.userID)
+		api.kickSessionWebSocketClients(client.sessionHash)
+		api.kickRestrictedWebSocketClients()
+	}
 
 	// GIVEN: an API without auth/hub wiring.
 	file := "TestAPI_KickWebSocketClients.yml"
 	apiValue := testAPI(t, file)
 	apiNoAuth := &apiValue
+	client := &Client{
+		userID:          "user-a",
+		sessionHash:     "hash-1",
+		allowedServices: map[string]bool{"svc": true},
+	}
 	// WHEN/THEN: no auth -> no-op.
-	apiNoAuth.kickWebSocketClients()
+	kickAll(apiNoAuth, client)
 	// AND: API without a hub -> no-op too.
 	apiNoAuth.auth = &AuthDeps{}
-	apiNoAuth.kickWebSocketClients()
-	// AND: API without auth -> no-op too.
+	kickAll(apiNoAuth, client)
+	// AND: API without auth (but a hub) -> no-op too.
 	apiNoAuth.auth = nil
 	apiNoAuth.hub = NewHub()
 	go apiNoAuth.hub.Run()
-	client := &Client{hub: apiNoAuth.hub, send: make(chan []byte, 8)}
+	client.hub = apiNoAuth.hub
+	client.send = make(chan []byte, 8)
 	apiNoAuth.hub.register <- client
-	apiNoAuth.kickWebSocketClients()
+	kickAll(apiNoAuth, client)
 	if !apiNoAuth.hub.hasClient(client) {
 		t.Errorf("%s\nno-auth API should not kick clients", prefix)
 	}
 
-	// GIVEN: API with auth and hub wired, with a connected client.
-	apiWired := &API{auth: &AuthDeps{}, hub: NewHub()}
-	go apiWired.hub.Run()
-	client = &Client{hub: apiWired.hub, send: make(chan []byte, 8)}
-	apiWired.hub.register <- client
-	// WHEN: kickWebSocketClients is called on it.
-	apiWired.kickWebSocketClients()
-	// THEN: the client is kicked.
-	if apiWired.hub.hasClient(client) {
-		t.Errorf("%s\nwired API should kick its clients", prefix)
+	// GIVEN: API with auth and hub wired, with connected clients.
+	apiWired := &API{auth: &AuthDeps{}}
+	newClient := wireHub(t, apiWired)
+
+	// WHEN: a user's clients are kicked.
+	target := newClient("user-a", "hash-1")
+	other := newClient("user-b", "hash-2")
+	apiWired.kickUserWebSocketClients("user-a")
+	// THEN: only that user's client is kicked.
+	if apiWired.hub.hasClient(target) || !apiWired.hub.hasClient(other) {
+		t.Errorf("%s\nwired API should kick exactly user-a's clients", prefix)
+	}
+
+	// WHEN: a session's clients are kicked.
+	target = newClient("user-b", "hash-3")
+	apiWired.kickSessionWebSocketClients("hash-3")
+	// THEN: only that session's client is kicked.
+	if apiWired.hub.hasClient(target) || !apiWired.hub.hasClient(other) {
+		t.Errorf("%s\nwired API should kick exactly hash-3's clients", prefix)
+	}
+
+	// WHEN: the restricted clients are kicked.
+	target = newClient("user-c", "hash-4", map[string]bool{"svc": true})
+	apiWired.kickRestrictedWebSocketClients()
+	// THEN: only the restricted client is kicked.
+	if apiWired.hub.hasClient(target) || !apiWired.hub.hasClient(other) {
+		t.Errorf("%s\nwired API should kick exactly the restricted clients", prefix)
 	}
 }
 

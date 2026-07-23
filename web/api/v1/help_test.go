@@ -446,6 +446,31 @@ func withAuthCtx(r *http.Request, authCtx *auth.Context) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), authCtxKey{}, authCtx))
 }
 
+// wireHub attaches a running Hub to api, returning a connect function that
+// registers a fake WebSocket client with the given user/session identity
+// (and, optionally, an allowed-service restriction).
+func wireHub(t *testing.T, api *API) func(userID, sessionHash string, allowedServices ...map[string]bool) *Client {
+	t.Helper()
+
+	api.hub = NewHub()
+	go api.hub.Run()
+	return func(userID, sessionHash string, allowedServices ...map[string]bool) *Client {
+		var services map[string]bool
+		if len(allowedServices) > 0 {
+			services = allowedServices[0]
+		}
+		client := &Client{
+			hub:             api.hub,
+			send:            make(chan []byte, 8),
+			userID:          userID,
+			sessionHash:     sessionHash,
+			allowedServices: services,
+		}
+		api.hub.register <- client
+		return client
+	}
+}
+
 // failingSessionStore is a [session.Store] whose every method fails.
 type failingSessionStore struct{}
 
@@ -473,4 +498,8 @@ func (failingSessionStore) DeleteSessionsForUser(_ context.Context, _ string) er
 
 func (failingSessionStore) DeleteExpiredSessions(_ context.Context, _ time.Time) error {
 	return errSessionStore
+}
+
+func (failingSessionStore) TrimSessionsForUser(_ context.Context, _ string, _ int) ([]string, error) {
+	return nil, errSessionStore
 }

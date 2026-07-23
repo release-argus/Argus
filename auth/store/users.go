@@ -232,7 +232,7 @@ func (s *Store) UpdateUser(ctx context.Context, id string, patch UserPatch) (*au
 }
 
 // DeleteUser removes the user with id and everything hanging off it
-// (memberships, sessions, external identities, API tokens),
+// (memberships, sessions, API tokens),
 // enforcing the rails.
 func (s *Store) DeleteUser(ctx context.Context, id string) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
@@ -434,64 +434,38 @@ func setUserGroups(ctx context.Context, tx *sql.Tx, userID string, groups []stri
 	return nil
 }
 
-// isEnabledAdmin reports whether userID is an enabled member of admin.
-func isEnabledAdmin(ctx context.Context, tx *sql.Tx, userID string) (bool, error) {
-	var count int
+// enabledAdminStatus returns the number of enabled admin members and whether
+// userID is one of them.
+func enabledAdminStatus(ctx context.Context, tx *sql.Tx, userID string) (total int, isMember bool, err error) {
+	var member int
 	if err := tx.QueryRowContext(ctx, `
-		SELECT COUNT(*)
+		SELECT COUNT(*), COALESCE(SUM(u.id = ?), 0)
 		FROM user_groups ug
 		JOIN users u  ON u.id = ug.user_id
 		JOIN groups g ON g.id = ug.group_id
-		WHERE g.name = ? AND g.system = 1
-			AND u.id = ?   AND u.enabled = 1;`,
-		GroupAdmin, userID,
-	).Scan(&count); err != nil {
-		return false, fmt.Errorf("check admin membership: %w", err)
+		WHERE g.name = ? AND g.system = 1 AND u.enabled = 1;`,
+		userID, GroupAdmin,
+	).Scan(&total, &member); err != nil {
+		return 0, false, fmt.Errorf("check admin membership: %w", err)
 	}
 
-	return count > 0, nil
-}
-
-// otherEnabledAdmins counts enabled admin members besides userID.
-func otherEnabledAdmins(ctx context.Context, tx *sql.Tx, userID string) (int, error) {
-	var count int
-	if err := tx.QueryRowContext(ctx, `
-		SELECT COUNT(*)
-		FROM user_groups ug
-		JOIN users u  ON u.id = ug.user_id
-		JOIN groups g ON g.id = ug.group_id
-		WHERE g.name = ? AND g.system = 1
-			AND u.id != ?  AND u.enabled = 1;`,
-		GroupAdmin, userID,
-	).Scan(&count); err != nil {
-		return 0, fmt.Errorf("count other admins: %w", err)
-	}
-
-	return count, nil
+	return total, member > 0, nil
 }
 
 // rejectIfLastAdmin returns [ErrLastAdmin] when userID is the last enabled admin.
 func rejectIfLastAdmin(ctx context.Context, tx *sql.Tx, userID string) error {
-	isAdmin, err := isEnabledAdmin(ctx, tx, userID)
+	total, isMember, err := enabledAdminStatus(ctx, tx, userID)
 	if err != nil {
 		return err
 	}
-	if !isAdmin {
-		return nil
-	}
-
-	others, err := otherEnabledAdmins(ctx, tx, userID)
-	if err != nil {
-		return err
-	}
-	if others == 0 {
+	if isMember && total == 1 {
 		return ErrLastAdmin
 	}
 
 	return nil
 }
 
-// scanner abstracts [sql.Row]/[sql.Rows] for [scanUser].
+// scanner abstracts [sql.Row]/[sql.Rows] for the scan* helpers.
 type scanner interface {
 	Scan(dest ...any) error
 }

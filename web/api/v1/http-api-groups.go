@@ -124,7 +124,8 @@ func (api *API) httpGroupUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	group, err := api.auth.Store.UpdateGroup(r.Context(), mux.Vars(r)["id"],
+	groupID := mux.Vars(r)["id"]
+	group, err := api.auth.Store.UpdateGroup(r.Context(), groupID,
 		store.GroupPatch{
 			Name:        request.Name,
 			Description: request.Description,
@@ -136,14 +137,17 @@ func (api *API) httpGroupUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Grant changes alter members' permissions.
-	api.kickWebSocketClients()
+	// Grant changes alter the members' permissions.
+	// Renames/description edits alter nobody's (grants key on the group ID).
+	if request.Permissions != nil {
+		api.kickGroupMemberWebSocketClients(r, groupID, logFrom)
+	}
 
 	api.writeJSON(w, group, logFrom)
 }
 
 // httpGroupDelete handles DELETE /api/v1/groups/{id}: removing a group from the
-// DB and all users (kicking all WS sessions).
+// DB and all users (kicking the members' WS clients).
 //
 // Response:
 //
@@ -153,14 +157,33 @@ func (api *API) httpGroupUpdate(w http.ResponseWriter, r *http.Request) {
 //	500 Internal Server Error: on a store failure.
 func (api *API) httpGroupDelete(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpGroupDelete", Secondary: getIP(r)}
+	groupID := mux.Vars(r)["id"]
 
-	if err := api.auth.Store.DeleteGroup(r.Context(), mux.Vars(r)["id"]); err != nil {
+	// Capture the members before the delete cascades away the membership rows.
+	memberIDs, err := api.auth.Store.UserIDsInGroup(r.Context(), groupID)
+	if err != nil {
 		api.failAuthStoreRequest(w, err, logFrom, "delete group")
 		return
 	}
-	api.kickWebSocketClients()
+
+	if err := api.auth.Store.DeleteGroup(r.Context(), groupID); err != nil {
+		api.failAuthStoreRequest(w, err, logFrom, "delete group")
+		return
+	}
+	api.kickUserWebSocketClients(memberIDs...)
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// kickGroupMemberWebSocketClients kicks the WebSocket clients of the
+// members of the group with groupID.
+func (api *API) kickGroupMemberWebSocketClients(r *http.Request, groupID string, logFrom logx.LogFrom) {
+	memberIDs, err := api.auth.Store.UserIDsInGroup(r.Context(), groupID)
+	if err != nil {
+		logx.Error(err, logFrom, true)
+		return
+	}
+	api.kickUserWebSocketClients(memberIDs...)
 }
 
 // httpPermissionCatalogue handles GET /api/v1/permissions: returning the

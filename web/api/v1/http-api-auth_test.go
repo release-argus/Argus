@@ -232,6 +232,51 @@ func TestAPI_AuthLogin__rateLimit(t *testing.T) {
 	}
 }
 
+func TestAPI_AuthLogin__sessionCap(t *testing.T) {
+	// GIVEN: an auth-enabled API whose admin is at the session cap,
+	// with a WebSocket client on their oldest session.
+	file := "TestAPI_AuthLogin__sessionCap.yml"
+	api, deps, _ := testAuthServer(t, file)
+	oldestCookie := loginCookie(t, api, "admin", "admin-password")
+	for range session.MaxSessionsPerUser - 1 {
+		_ = loginCookie(t, api, "admin", "admin-password")
+	}
+	adminID := adminContext(t, api, deps).User.ID
+	connect := wireHub(t, api)
+	oldestClient := connect(adminID, session.HashToken(oldestCookie.Value))
+
+	prefix := fmt.Sprintf("%s\nhttpAuthLogin() at the session cap", packageName)
+
+	// WHEN: the user logs in once more.
+	newestCookie := loginCookie(t, api, "admin", "admin-password")
+
+	// THEN: the oldest session's WebSocket client is kicked with its eviction.
+	if api.hub.hasClient(oldestClient) {
+		t.Errorf(
+			"%s\nthe evicted session's client should be kicked",
+			prefix,
+		)
+	}
+
+	// AND: the evicted session no longer authenticates; the newest does.
+	if w := serveAuth(api,
+		authedRequest(http.MethodGet, "/api/v1/auth/me", "", oldestCookie),
+	); w.Code != http.StatusUnauthorized {
+		t.Errorf(
+			"%s\nevicted session\ngot:  %d\nwant: 401",
+			prefix, w.Code,
+		)
+	}
+	if w := serveAuth(api,
+		authedRequest(http.MethodGet, "/api/v1/auth/me", "", newestCookie),
+	); w.Code != http.StatusOK {
+		t.Errorf(
+			"%s\nnewest session\ngot:  %d\nwant: 200",
+			prefix, w.Code,
+		)
+	}
+}
+
 func TestAPI_Auth__noProviders(t *testing.T) {
 	// GIVEN: an API whose provider registry is empty.
 	file := "TestAPI_Auth__noProviders.yml"
@@ -585,8 +630,6 @@ func TestAPI_AuthSetup__errors(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			file := fmt.Sprintf("TestAPI_AuthSetup__errors_%s.yml",
 				strings.ReplaceAll(tc.name, " ", "_"))
 			api, _, dbConn := testAuthServerPendingSetup(t, file)
@@ -698,6 +741,40 @@ func TestAPI__AuthMe_and_Logout(t *testing.T) {
 		t.Errorf(
 			"%s\nrevoked session status mismatch\ngot:  %d\nwant: %d",
 			prefix, got, want,
+		)
+	}
+}
+
+func TestAPI_AuthLogout__kicks(t *testing.T) {
+	// GIVEN: an auth-enabled API with a WebSocket client on each of a user's
+	// two sessions.
+	file := "TestAPI_AuthLogout__kicks.yml"
+	api, deps, _ := testAuthServer(t, file)
+	cookie := loginCookie(t, api, "admin", "admin-password")
+	otherCookie := loginCookie(t, api, "admin", "admin-password")
+	adminID := adminContext(t, api, deps).User.ID
+	connect := wireHub(t, api)
+	logoutClient := connect(adminID, session.HashToken(cookie.Value))
+	otherClient := connect(adminID, session.HashToken(otherCookie.Value))
+
+	prefix := fmt.Sprintf("%s\nhttpAuthLogout() kicks", packageName)
+
+	// WHEN: the first session logs out.
+	w := serveAuth(api,
+		authedRequest(http.MethodPost, "/api/v1/auth/logout", "", cookie))
+	if w.Code != http.StatusNoContent {
+		t.Fatalf(
+			"%s\nlogout\ngot:  %d - %s\nwant: 204",
+			prefix, w.Code, w.Body.String(),
+		)
+	}
+
+	// THEN: only that session's WebSocket client is kicked - the same user's
+	// other session stays connected.
+	if api.hub.hasClient(logoutClient) || !api.hub.hasClient(otherClient) {
+		t.Errorf(
+			"%s\nlogout should kick exactly the revoked session's clients",
+			prefix,
 		)
 	}
 }

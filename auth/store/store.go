@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package store persists the authentication and authorisation entities
-// (users, groups, permission grants, external identities, sessions) in the
+// (users, groups, permission grants, sessions, API tokens) in the
 // Argus SQLite database, and owns their schema migrations.
 //
 // Deletions cascade explicitly inside transactions rather than relying on
