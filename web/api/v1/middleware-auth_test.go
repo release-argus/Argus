@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"slices"
 	"strings"
 	"testing"
@@ -985,12 +986,88 @@ func TestAPI__auth__permissionChangesApplyImmediately(t *testing.T) {
 	}
 }
 
+func TestAPI_OriginCheckMiddleware__secFetchSite(t *testing.T) {
+	// GIVEN: an auth-enabled API and a logged-in session.
+	file := "TestAPI_OriginCheckMiddleware__secFetchSite.yml"
+	api, _, _ := testAuthServer(t, file)
+	cookie := loginCookie(t, api, "admin", "admin-password")
+
+	tests := []struct {
+		name          string
+		secFetchSite  string
+		origin        string
+		wantForbidden bool
+	}{
+		{
+			name:          "valid/absent - non-browser client",
+			wantForbidden: false,
+		},
+		{
+			name:          "valid/same-origin",
+			secFetchSite:  "same-origin",
+			wantForbidden: false,
+		},
+		{
+			name:          "valid/none - typed into the address bar",
+			secFetchSite:  "none",
+			wantForbidden: false,
+		},
+		{
+			name:          "invalid/cross-site with no Origin",
+			secFetchSite:  "cross-site",
+			wantForbidden: true,
+		},
+		{
+			name:          "invalid/same-site sibling with no Origin",
+			secFetchSite:  "same-site",
+			wantForbidden: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND: a request with the given Sec-Fetch-Site/Origin headers.
+			req := authedRequest(http.MethodGet, "/api/v1/flags", "", cookie)
+			if tc.secFetchSite != "" {
+				req.Header.Set("Sec-Fetch-Site", tc.secFetchSite)
+			}
+			if tc.origin != "" {
+				req.Header.Set("Origin", tc.origin)
+			}
+
+			prefix := fmt.Sprintf(
+				"%s\nAPI.originCheckMiddleware(Sec-Fetch-Site=%q, Origin=%q)",
+				packageName, tc.secFetchSite, tc.origin,
+			)
+
+			// WHEN: the request passes through the middleware.
+			w := serveAuth(api, req)
+
+			// THEN: only the request is forbidden as expected.
+			gotForbidden := w.Code == http.StatusForbidden
+			if gotForbidden != tc.wantForbidden {
+				t.Errorf(
+					"%s\nforbidden mismatch\ngot:  %t (status %d - %s)\nwant: %t",
+					prefix,
+					gotForbidden, w.Code, w.Body.String(),
+					tc.wantForbidden,
+				)
+			}
+		})
+	}
+}
+
 func TestOriginCheckMiddleware(t *testing.T) {
 	// GIVEN: requests with varying Origin headers against host example.com.
 	tests := []struct {
-		name       string
-		origin     string
-		wantStatus int
+		name          string
+		method        string
+		origin        string
+		forwardedHost string
+		trustPeer     bool
+		wantStatus    int
 	}{
 		{
 			name:       "no Origin",
@@ -998,7 +1075,14 @@ func TestOriginCheckMiddleware(t *testing.T) {
 			wantStatus: http.StatusOK,
 		},
 		{
-			name:       "null Origin",
+			name:       "null Origin/state-changing is rejected",
+			method:     http.MethodPost,
+			origin:     "null",
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:       "null Origin/safe method passes",
+			method:     http.MethodGet,
 			origin:     "null",
 			wantStatus: http.StatusOK,
 		},
@@ -1017,22 +1101,51 @@ func TestOriginCheckMiddleware(t *testing.T) {
 			origin:     "::not-a-url::",
 			wantStatus: http.StatusForbidden,
 		},
+		{
+			name:          "trusted proxy/Origin matching X-Forwarded-Host passes",
+			origin:        "https://public.example.net",
+			forwardedHost: "public.example.net",
+			trustPeer:     true,
+			wantStatus:    http.StatusOK,
+		},
+		{
+			name:          "trusted proxy/Origin not matching X-Forwarded-Host is rejected",
+			origin:        "http://evil.example.net",
+			forwardedHost: "public.example.net",
+			trustPeer:     true,
+			wantStatus:    http.StatusForbidden,
+		},
+		{
+			name:          "untrusted peer/X-Forwarded-Host is ignored",
+			origin:        "https://public.example.net",
+			forwardedHost: "public.example.net",
+			wantStatus:    http.StatusForbidden,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			handler := originCheckMiddleware(
+			api := &API{}
+			if tc.trustPeer {
+				// httptest requests arrive from 192.0.2.0/24.
+				api.trustedProxies = []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24")}
+			}
+			handler := api.originCheckMiddleware(
 				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 					w.WriteHeader(http.StatusOK)
 				}),
 			)
 
 			// WHEN: a request carries the Origin header.
-			req := httptest.NewRequest(http.MethodPost, "http://example.com/api/v1/flags", nil)
+			method := util.ValueOr(tc.method, http.MethodPost)
+			req := httptest.NewRequest(method, "http://example.com/api/v1/flags", nil)
 			if tc.origin != "" {
 				req.Header.Set("Origin", tc.origin)
+			}
+			if tc.forwardedHost != "" {
+				req.Header.Set("X-Forwarded-Host", tc.forwardedHost)
 			}
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, req)

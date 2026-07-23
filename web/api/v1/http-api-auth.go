@@ -304,7 +304,7 @@ func (api *API) httpAuthLogout(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.SetCookie(w, api.sessionCookie("", -1))
+	http.SetCookie(w, api.sessionCookie(r, "", -1))
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -335,7 +335,7 @@ func (api *API) startSession(w http.ResponseWriter, r *http.Request, authCtx *au
 		failRequest(&w, errors.New("authentication failed"), http.StatusInternalServerError)
 		return false
 	}
-	http.SetCookie(w, api.sessionCookie(token, int(api.Config.Settings.AuthSessionLifetime().Seconds())))
+	http.SetCookie(w, api.sessionCookie(r, token, int(api.Config.Settings.AuthSessionLifetime().Seconds())))
 	return true
 }
 
@@ -354,10 +354,19 @@ func (api *API) writeAuthMe(
 }
 
 // sessionCookie builds the session cookie (maxAge < 0 clears it).
-func (api *API) sessionCookie(token string, maxAge int) *http.Cookie {
+// Secure when auth.session.secure_cookie says so, else when the request
+// arrived over TLS, or a proxy reports the client connection as HTTPS.
+func (api *API) sessionCookie(r *http.Request, token string, maxAge int) *http.Cookie {
 	path := api.RoutePrefix
 	if path == "" {
 		path = "/"
+	}
+
+	secure := r.TLS != nil ||
+		api.Config.Settings.WebCertFile() != "" ||
+		strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+	if override := api.Config.Settings.AuthSessionSecureCookie(); override != nil {
+		secure = *override
 	}
 	return &http.Cookie{
 		Name:     authCookieName,
@@ -365,7 +374,7 @@ func (api *API) sessionCookie(token string, maxAge int) *http.Cookie {
 		Path:     path,
 		MaxAge:   maxAge,
 		HttpOnly: true,
-		Secure:   api.Config.Settings.WebCertFile() != "",
+		Secure:   secure,
 		SameSite: http.SameSiteStrictMode,
 	}
 }

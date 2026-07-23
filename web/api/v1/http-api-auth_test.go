@@ -33,6 +33,7 @@ import (
 	"github.com/release-argus/Argus/auth/session"
 	"github.com/release-argus/Argus/auth/store"
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
@@ -931,9 +932,10 @@ func TestAPI_Auth__sessionCookie(t *testing.T) {
 	prefix := fmt.Sprintf("%s\nsessionCookie", packageName)
 
 	// WHEN: the route prefix is empty.
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", nil)
 	prefixHad := api.RoutePrefix
 	api.RoutePrefix = ""
-	cookie := api.sessionCookie("token", 60)
+	cookie := api.sessionCookie(req, "token", 60)
 	api.RoutePrefix = prefixHad
 	// THEN: the path falls back to "/".
 	if cookie.Path != "/" {
@@ -948,10 +950,96 @@ func TestAPI_Auth__sessionCookie(t *testing.T) {
 
 	// WHEN: TLS is configured.
 	api.Config.Settings.Web.CertFile = "cert.pem"
-	cookie = api.sessionCookie("token", 60)
+	cookie = api.sessionCookie(req, "token", 60)
 	api.Config.Settings.Web.CertFile = ""
 	// THEN: the cookie is Secure.
 	if !cookie.Secure {
 		t.Errorf("%s\nSecure should be on with TLS", prefix)
+	}
+
+	// WHEN: an untrusted proxy reports the client connection as HTTPS.
+	trustedHad := api.trustedProxies
+	api.trustedProxies = nil
+	req.Header.Set("X-Forwarded-Proto", "https")
+	cookie = api.sessionCookie(req, "token", 60)
+	api.trustedProxies = trustedHad
+
+	// THEN: the cookie is Secure.
+	if !cookie.Secure {
+		t.Errorf("%s\nSecure should be on when a proxy reports HTTPS, trusted or not", prefix)
+	}
+}
+
+func TestAPI_Auth__sessionCookie__secureCookieOverride(t *testing.T) {
+	// GIVEN: an auth-enabled API with no TLS of its own.
+	file := "TestAPI_Auth__sessionCookie__secureCookieOverride.yml"
+	api, _, _ := testAuthServer(t, file)
+	secureOn, secureOff := true, false
+
+	tests := []struct {
+		name                 string
+		secureCookieOverride *bool
+		forwardedProto       string
+		wantSecure           bool
+	}{
+		{
+			name:                 "unset/plain HTTP is Secure=false",
+			secureCookieOverride: nil,
+			wantSecure:           false,
+		},
+		{
+			name:                 "unset/proxied https is Secure=true",
+			secureCookieOverride: nil,
+			forwardedProto:       "https",
+			wantSecure:           true,
+		},
+		{
+			name:                 "forced on/plain http is Secure=true",
+			secureCookieOverride: &secureOn,
+			forwardedProto:       "",
+			wantSecure:           true,
+		},
+		{
+			name:                 "forced on/proxied https is Secure=true",
+			secureCookieOverride: &secureOn,
+			forwardedProto:       "https",
+			wantSecure:           true,
+		},
+		{
+			name:                 "forced off/proxied https is Secure=false",
+			secureCookieOverride: &secureOff,
+			forwardedProto:       "https",
+			wantSecure:           false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're modifying shared vars.
+
+			api.Config.Settings.Auth.Session.SecureCookie = tc.secureCookieOverride
+			t.Cleanup(func() { api.Config.Settings.Auth.Session.SecureCookie = nil })
+
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", nil)
+			if tc.forwardedProto != "" {
+				req.Header.Set("X-Forwarded-Proto", tc.forwardedProto)
+			}
+
+			prefix := fmt.Sprintf(
+				"%s\nsessionCookie secure_cookie (X-Forwarded-Proto: %q, Secure override: %q)",
+				packageName, tc.forwardedProto, test.StringifyPtr(tc.secureCookieOverride),
+			)
+
+			// WHEN: the session cookie is built.
+			cookie := api.sessionCookie(req, "token", 60)
+
+			// THEN: an explicit setting overrides what the request implies.
+			if got, want := cookie.Secure, tc.wantSecure; got != want {
+				t.Errorf(
+					"%s\nSecure mismatch\ngot:  %t\nwant: %t",
+					prefix, got, want,
+				)
+			}
+		})
 	}
 }
