@@ -1579,150 +1579,6 @@ func TestBase_CorrectSelf(t *testing.T) {
 	}
 }
 
-func TestParseHostPort(t *testing.T) {
-	// GIVEN: an address that may contain a scheme, host, and/or port.
-	tests := []struct {
-		name     string
-		input    string
-		wantHost string
-		wantPort string
-	}{
-		{
-			name:     "empty",
-			input:    "",
-			wantHost: "",
-			wantPort: "",
-		},
-		{
-			name:     "bare hostname",
-			input:    "example.com",
-			wantHost: "example.com",
-			wantPort: "",
-		},
-		{
-			name:     "hostname with port, no scheme",
-			input:    "example.com:8080",
-			wantHost: "example.com",
-			wantPort: "8080",
-		},
-		{
-			name:     "scheme and hostname",
-			input:    "https://example.com",
-			wantHost: "example.com",
-			wantPort: "",
-		},
-		{
-			name:     "scheme, hostname, and port",
-			input:    "https://example.com:8443",
-			wantHost: "example.com",
-			wantPort: "8443",
-		},
-		{
-			name:     "scheme, hostname, port, and path",
-			input:    "https://example.com:8443/path",
-			wantHost: "example.com",
-			wantPort: "8443",
-		},
-		{
-			name:     "userinfo is stripped",
-			input:    "user:pass@example.com",
-			wantHost: "example.com",
-			wantPort: "",
-		},
-		{
-			name:     "IPv4 address/bare",
-			input:    "127.0.0.1",
-			wantHost: "127.0.0.1",
-			wantPort: "",
-		},
-		{
-			name:     "IPv4 address/schema, hostname, and port",
-			input:    "https://127.0.0.1:9000",
-			wantHost: "127.0.0.1",
-			wantPort: "9000",
-		},
-		{
-			name:     "IPv6 address/bare",
-			input:    "https://[::1]",
-			wantHost: "::1",
-			wantPort: "",
-		},
-		{
-			name:     "IPv6 address/scheme, hostname, and port",
-			input:    "https://[::1]:8080",
-			wantHost: "::1",
-			wantPort: "8080",
-		},
-		{
-			name:     "port only",
-			input:    ":8080",
-			wantHost: "",
-			wantPort: "8080",
-		},
-		{
-			name:     "trailing colon, no port",
-			input:    "example.com:",
-			wantHost: "example.com",
-			wantPort: "",
-		},
-		{
-			name:     "scheme only",
-			input:    "https://",
-			wantHost: "",
-			wantPort: "",
-		},
-		{
-			name:     "case is preserved",
-			input:    "EXAMPLE.COM",
-			wantHost: "EXAMPLE.COM",
-			wantPort: "",
-		},
-		{
-			name:     "invalid/control character returns input unchanged",
-			input:    "https://\texample.com",
-			wantHost: "https://\texample.com",
-			wantPort: "",
-		},
-		{
-			name:     "invalid/non-numeric port returns input unchanged",
-			input:    "example.com:notaport",
-			wantHost: "example.com:notaport",
-			wantPort: "",
-		},
-		{
-			name:     "leading trailing spaces trimmed/hostname",
-			input:    "  example.com  ",
-			wantHost: "example.com",
-			wantPort: "",
-		},
-		{
-			name:     "leading trailing spaces trimmed/schema, hostname, and port",
-			input:    "  https://example.com:123  ",
-			wantHost: "example.com",
-			wantPort: "123",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN: parseHostPort is called.
-			host, port := parseHostPort(tc.input)
-
-			// THEN: the host and port match the expected values.
-			if host != tc.wantHost || port != tc.wantPort {
-				t.Errorf(
-					"%s\nparseHostPort(%q) mismatch\ngot:  (%q, %q)\nwant: (%q, %q)",
-					packageName, tc.input,
-					host, port,
-					tc.wantHost, tc.wantPort,
-				)
-			}
-		})
-	}
-}
-
 func TestBase_NormaliseParamSelect(t *testing.T) {
 	// GIVEN: a Base and various inputs to normaliseParamSelect.
 	tests := []struct {
@@ -3445,6 +3301,150 @@ func TestBase_ValidateParamSelect(t *testing.T) {
 					"%s Params[%q] mismatch\ngot:  %q\nwant: %q",
 					prefix, key,
 					got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestParseHostPort(t *testing.T) {
+	// GIVEN: an address that may contain a scheme, host, and/or port.
+	tests := []struct {
+		name     string
+		input    string
+		wantHost string
+		wantPort string
+	}{
+		{
+			name:     "empty",
+			input:    "",
+			wantHost: "",
+			wantPort: "",
+		},
+		{
+			name:     "bare hostname",
+			input:    "example.com",
+			wantHost: "example.com",
+			wantPort: "",
+		},
+		{
+			name:     "hostname with port, no scheme",
+			input:    "example.com:8080",
+			wantHost: "example.com",
+			wantPort: "8080",
+		},
+		{
+			name:     "scheme and hostname",
+			input:    "https://example.com",
+			wantHost: "example.com",
+			wantPort: "",
+		},
+		{
+			name:     "scheme, hostname, and port",
+			input:    "https://example.com:8443",
+			wantHost: "example.com",
+			wantPort: "8443",
+		},
+		{
+			name:     "scheme, hostname, port, and path",
+			input:    "https://example.com:8443/path",
+			wantHost: "example.com",
+			wantPort: "8443",
+		},
+		{
+			name:     "userinfo is stripped",
+			input:    "user:pass@example.com",
+			wantHost: "example.com",
+			wantPort: "",
+		},
+		{
+			name:     "IPv4 address/bare",
+			input:    "127.0.0.1",
+			wantHost: "127.0.0.1",
+			wantPort: "",
+		},
+		{
+			name:     "IPv4 address/schema, hostname, and port",
+			input:    "https://127.0.0.1:9000",
+			wantHost: "127.0.0.1",
+			wantPort: "9000",
+		},
+		{
+			name:     "IPv6 address/bare",
+			input:    "https://[::1]",
+			wantHost: "::1",
+			wantPort: "",
+		},
+		{
+			name:     "IPv6 address/scheme, hostname, and port",
+			input:    "https://[::1]:8080",
+			wantHost: "::1",
+			wantPort: "8080",
+		},
+		{
+			name:     "port only",
+			input:    ":8080",
+			wantHost: "",
+			wantPort: "8080",
+		},
+		{
+			name:     "trailing colon, no port",
+			input:    "example.com:",
+			wantHost: "example.com",
+			wantPort: "",
+		},
+		{
+			name:     "scheme only",
+			input:    "https://",
+			wantHost: "",
+			wantPort: "",
+		},
+		{
+			name:     "case is preserved",
+			input:    "EXAMPLE.COM",
+			wantHost: "EXAMPLE.COM",
+			wantPort: "",
+		},
+		{
+			name:     "invalid/control character returns input unchanged",
+			input:    "https://\texample.com",
+			wantHost: "https://\texample.com",
+			wantPort: "",
+		},
+		{
+			name:     "invalid/non-numeric port returns input unchanged",
+			input:    "example.com:notaport",
+			wantHost: "example.com:notaport",
+			wantPort: "",
+		},
+		{
+			name:     "leading trailing spaces trimmed/hostname",
+			input:    "  example.com  ",
+			wantHost: "example.com",
+			wantPort: "",
+		},
+		{
+			name:     "leading trailing spaces trimmed/schema, hostname, and port",
+			input:    "  https://example.com:123  ",
+			wantHost: "example.com",
+			wantPort: "123",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: parseHostPort is called.
+			host, port := parseHostPort(tc.input)
+
+			// THEN: the host and port match the expected values.
+			if host != tc.wantHost || port != tc.wantPort {
+				t.Errorf(
+					"%s\nparseHostPort(%q) mismatch\ngot:  (%q, %q)\nwant: (%q, %q)",
+					packageName, tc.input,
+					host, port,
+					tc.wantHost, tc.wantPort,
 				)
 			}
 		})

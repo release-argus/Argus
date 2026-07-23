@@ -24,6 +24,27 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 )
 
+func TestNewHub(t *testing.T) {
+	// GIVEN: we want a WebSocket Hub.
+
+	// WHEN: we create a new one with NewHub.
+	hub := NewHub()
+
+	prefix := fmt.Sprintf("%s\nNewHub()", packageName)
+
+	// THEN: it returns a Hub with all the channels and maps initialised.
+	fieldTests := []test.FieldAssertion{
+		{Name: "Broadcast", Got: hub.Broadcast, Want: nil, Mode: test.CompareNotEqual},
+		{Name: "register", Got: hub.register, Want: nil, Mode: test.CompareNotEqual},
+		{Name: "unregister", Got: hub.unregister, Want: nil, Mode: test.CompareNotEqual},
+		{Name: "query", Got: hub.query, Want: nil, Mode: test.CompareNotEqual},
+		{Name: "clients", Got: hub.clients, Want: nil, Mode: test.CompareNotEqual},
+	}
+	if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
+		t.Fatal(testErr)
+	}
+}
+
 // hubQuery runs fn against the clients map on the Run goroutine, so a live hub can
 // be read race-free. Requires Run() to be active.
 func hubQuery[T any](h *Hub, fn func(map[*Client]bool) T) T {
@@ -56,27 +77,6 @@ func (h *Hub) clientList() []*Client {
 			return list
 		},
 	)
-}
-
-func TestNewHub(t *testing.T) {
-	// GIVEN: we want a WebSocket Hub.
-
-	// WHEN: we create a new one with NewHub.
-	hub := NewHub()
-
-	prefix := fmt.Sprintf("%s\nNewHub()", packageName)
-
-	// THEN: it returns a Hub with all the channels and maps initialised.
-	fieldTests := []test.FieldAssertion{
-		{Name: "Broadcast", Got: hub.Broadcast, Want: nil, Mode: test.CompareNotEqual},
-		{Name: "register", Got: hub.register, Want: nil, Mode: test.CompareNotEqual},
-		{Name: "unregister", Got: hub.unregister, Want: nil, Mode: test.CompareNotEqual},
-		{Name: "query", Got: hub.query, Want: nil, Mode: test.CompareNotEqual},
-		{Name: "clients", Got: hub.clients, Want: nil, Mode: test.CompareNotEqual},
-	}
-	if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
-		t.Fatal(testErr)
-	}
 }
 
 func TestHub_AddClient(t *testing.T) {
