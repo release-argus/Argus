@@ -1707,10 +1707,10 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			svc := testService(t, tc.name, "url", "url", true)
 			svc.Name = svc.ID
 			tc.wants.serviceYAML = strings.ReplaceAll(tc.wants.serviceYAML, "__name__", tc.name)
-			apiMu.Lock()
+			api.Config.OrderMu.Lock()
 			api.Config.Service[svc.ID] = svc
 			api.Config.Order = append(api.Config.Order, svc.ID)
-			apiMu.Unlock()
+			api.Config.OrderMu.Unlock()
 
 			tc.payload = strings.ReplaceAll(tc.payload, "__name__", tc.name)
 			payload := bytes.NewReader([]byte(tc.payload))
@@ -1760,9 +1760,9 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			if tc.serviceID != "" {
 				serviceID = strings.ReplaceAll(tc.serviceID, "__name__", tc.name)
 			}
-			apiMu.RLock()
+			api.Config.OrderMu.RLock()
 			svc = api.Config.Service[serviceID]
-			apiMu.RUnlock()
+			api.Config.OrderMu.RUnlock()
 			if svc == nil {
 				if tc.wants.latestVersion != tc.wants.deployedVersion &&
 					tc.wants.latestVersion != "" {
@@ -2115,11 +2115,11 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 			serviceID := tc.name
 			tc.wants.serviceYAML = strings.ReplaceAll(tc.wants.serviceYAML, "__name__", serviceID)
 			if tc.svc != nil {
-				apiMu.Lock()
+				api.Config.OrderMu.Lock()
 				tc.svc.ID = serviceID
 				api.Config.Service[tc.svc.ID] = tc.svc
 				api.Config.Order = append(api.Config.Order, tc.svc.ID)
-				apiMu.Unlock()
+				api.Config.OrderMu.Unlock()
 			}
 			tc.payload = strings.ReplaceAll(tc.payload, "__name__", serviceID)
 			tc.payload = test.TrimJSON(tc.payload)
@@ -2169,9 +2169,9 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 			}
 
 			// AND: the service was created.
-			apiMu.RLock()
+			api.Config.OrderMu.RLock()
 			svc := api.Config.Service[serviceID]
-			apiMu.RUnlock()
+			api.Config.OrderMu.RUnlock()
 			if svc == nil {
 				if tc.wants.latestVersion != tc.wants.deployedVersion &&
 					tc.wants.latestVersion != "" {
@@ -2689,10 +2689,10 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 
 			serviceID := tc.svc.ID
 			tc.wants.serviceYAML = strings.ReplaceAll(tc.wants.serviceYAML, "__name__", tc.name)
-			apiMu.Lock()
+			api.Config.OrderMu.Lock()
 			api.Config.Service[serviceID] = tc.svc
 			api.Config.Order = append(api.Config.Order, serviceID)
-			apiMu.Unlock()
+			api.Config.OrderMu.Unlock()
 			tc.payload = strings.ReplaceAll(tc.payload, "__name__", serviceID)
 			tc.payload = test.TrimJSON(tc.payload)
 			payload := bytes.NewReader([]byte(tc.payload))
@@ -2724,9 +2724,9 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 			}
 
 			// AND: the service was created.
-			apiMu.RLock()
+			api.Config.OrderMu.RLock()
 			svc := api.Config.Service[serviceID]
-			apiMu.RUnlock()
+			api.Config.OrderMu.RUnlock()
 			if svc == nil {
 				t.Fatalf(
 					"%s service %q not created",

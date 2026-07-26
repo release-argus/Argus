@@ -169,12 +169,14 @@ func TestHTTP_HTTPServiceOrderSet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're sharing the API.
 
-			api.Config.Order = tc.hadOrder
 			services := make(map[string]*service.Service, len(tc.hadOrder))
 			for _, id := range tc.hadOrder {
 				services[id] = testService(t, id, "url", "url", true)
 			}
+			api.Config.OrderMu.Lock()
+			api.Config.Order = tc.hadOrder
 			api.Config.Service = services
+			api.Config.OrderMu.Unlock()
 
 			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/service/order", strings.NewReader(tc.body))
