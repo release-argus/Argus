@@ -18,6 +18,7 @@ import (
 	"strconv"
 
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -52,6 +53,14 @@ func DecodeServices(
 		if svcRaw == nil {
 			delete(field, id)
 			continue
+		}
+
+		if id == "" {
+			logx.Warn(
+				"Ignoring the service with an empty ID. Give it a name in the config to recover it",
+				logx.LogFrom{Primary: "DecodeServices"},
+				true,
+			)
 		}
 
 		// Create each Service.

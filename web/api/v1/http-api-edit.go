@@ -590,6 +590,12 @@ func (api *API) httpTemplateParse(w http.ResponseWriter, r *http.Request) {
 
 // httpServiceEdit handles creating/editing a Service.
 //
+// The body is a full replacement, not a merge. The payload builds an entirely new
+// Service, so any field it omits is dropped rather than carried over from the
+// existing Service. The previous Service is consulted only to inherit masked
+// secrets (see [service.FromPayload]) and to keep versions where the lookup is
+// unchanged.
+//
 // Method: PUT
 //
 // Query Parameters:
@@ -659,6 +665,17 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		err = fmt.Errorf(
 			`%s %q failed: %w`,
 			reqType, serviceID, err,
+		)
+		logx.Error(err, logFrom, true)
+		failRequest(&w, err, http.StatusBadRequest)
+		return
+	}
+
+	if newService.ID == "" {
+		err := fmt.Errorf(
+			"%s %q failed: %w",
+			reqType, serviceID,
+			&decode.FieldError{Key: "id"},
 		)
 		logx.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)

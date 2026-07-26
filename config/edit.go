@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/release-argus/Argus/config/decode"
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/service"
@@ -27,9 +28,16 @@ import (
 
 // AddService adds or replaces a service and updates ordering, persistence, and tracking.
 func (c *Config) AddService(oldServiceID string, newService *service.Service) error {
+	logFrom := logx.LogFrom{Primary: "AddService"}
+
+	if newService.ID == "" {
+		err := &decode.FieldError{Key: "id"}
+		logx.Error(err, logFrom, true)
+		return err
+	}
+
 	c.OrderMu.Lock()
 	defer c.OrderMu.Unlock()
-	logFrom := logx.LogFrom{Primary: "AddService"}
 
 	// Check a service does not already exist with the new id/name (if the name is changing).
 	if oldServiceID != newService.ID &&
@@ -65,7 +73,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 
 			// Old service being given a new ID.
 		} else {
-			c.RenameService(oldServiceID, newService)
+			c.renameService(oldServiceID, newService)
 		}
 	}
 
@@ -115,18 +123,22 @@ func (c *Config) ServiceWithNameExists(name, oldServiceID string) bool {
 	return false
 }
 
-// RenameService changes a service ID in config, order, and the database.
-func (c *Config) RenameService(oldService string, newService *service.Service) {
+// renameService changes a service ID in config, order, and the database.
+func (c *Config) renameService(oldService string, newService *service.Service) {
 	// Check whether the target service doesn't exist,
 	// or a rename is not required (name is the same),
+	// or the new name is empty,
 	// or a service with this new name already exists.
-	if c.Service[oldService] == nil || oldService == newService.ID || c.Service[newService.ID] != nil {
+	if c.Service[oldService] == nil ||
+		oldService == newService.ID ||
+		newService.ID == "" ||
+		c.Service[newService.ID] != nil {
 		return
 	}
 
 	logx.Info(
 		strconv.Quote(newService.ID),
-		logx.LogFrom{Primary: "RenameService", Secondary: oldService},
+		logx.LogFrom{Primary: "renameService", Secondary: oldService},
 		true,
 	)
 	// Replace the service in the order/config.

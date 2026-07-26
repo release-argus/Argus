@@ -117,6 +117,35 @@ func TestDecodeServices(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
+			name:   "JSON/service with an empty ID is kept",
+			format: "json",
+			data: test.TrimJSON(`{
+				"": {
+					"latest_version": {
+						"type": "github",
+						"url": "owner/repo0"
+					}
+				},
+				"service1": {
+					"latest_version": {
+						"type": "github",
+						"url": "owner/repo"
+					}
+				}
+			}`),
+			want: test.TrimYAML(`
+				'':
+					latest_version:
+						type: github
+						url: owner/repo0
+				service1:
+					latest_version:
+						type: github
+						url: owner/repo
+			`),
+			errRegex: `^$`,
+		},
+		{
 			name:   "JSON/multiple services",
 			format: "json",
 			data: test.TrimJSON(`{
