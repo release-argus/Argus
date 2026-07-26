@@ -49,18 +49,17 @@ func getParam(queryParams url.Values, key string) *string {
 	return &val
 }
 
-// announceEdit broadcasts an EDIT message to all WebSocket clients
-// if the displayed data has changed.
+// announceEdit broadcasts an EDIT message to all WebSocket clients.
+//
+// Only the fields the edit changed are sent; SubType carries the ID the service
+// had before the edit (empty when it was created). An edit that changes nothing
+// the dashboard displays still announces, with no ServiceData, so that clients
+// invalidate their cached config for the service.
 func (api *API) announceEdit(oldData *apitype.ServiceSummary, newData *apitype.ServiceSummary) {
 	serviceChanged := ""
 	if oldData != nil {
 		serviceChanged = oldData.ID
 		newData.RemoveUnchanged(oldData)
-	}
-
-	// Skip if ServiceData ended up empty
-	if newData.IsZero() {
-		return
 	}
 
 	api.sendAnnouncePayload(

@@ -20,7 +20,7 @@ export type ServiceEditResponse = {
 };
 
 export const serviceSummaryReducer = (
-	service?: ServiceSummary,
+	service?: Partial<ServiceSummary>,
 	oldData?: ServiceSummary,
 ): ServiceSummary => {
 	const status = {
