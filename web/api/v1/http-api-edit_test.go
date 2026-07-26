@@ -1462,6 +1462,37 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			},
 		},
 		{
+			name: "no id",
+			payload: test.TrimJSON(`{
+				"latest_version": {
+					"type": "github",
+					"url": "` + test.ArgusGitHubRepo + `"
+				}
+			}`),
+			wants: wants{
+				statusCode: http.StatusBadRequest,
+				bodyRegex: `` +
+					`^{"message":"create .* failed:\\n` +
+					`  id: <required>"}$`,
+			},
+		},
+		{
+			name: "empty id",
+			payload: test.TrimJSON(`{
+				"id": "",
+				"latest_version": {
+					"type": "github",
+					"url": "` + test.ArgusGitHubRepo + `"
+				}
+			}`),
+			wants: wants{
+				statusCode: http.StatusBadRequest,
+				bodyRegex: `` +
+					`^{"message":"create .* failed:\\n` +
+					`  id: <required>"}$`,
+			},
+		},
+		{
 			name: "lv-github",
 			payload: test.TrimJSON(`{
 				"id": "__name__-new",
@@ -2187,6 +2218,79 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestHTTP_ServiceEdit__edit__missingID(t *testing.T) {
+	// GIVEN: an API with a service to edit.
+	file := filepath.Join(t.TempDir(), "config.yml")
+	api := testAPI(t, file)
+
+	const editID = "TestHTTP_ServiceEdit__edit__missingID"
+	svc := testService(t, editID, "url", "url", true)
+	api.Config.Service[svc.ID] = svc
+	wantOrder := []string{"before", editID, "after"}
+	api.Config.Order = slices.Clone(wantOrder)
+
+	// WHEN: an edit is sent with a payload that omits `id`.
+	payload := bytes.NewReader([]byte(test.TrimJSON(`{
+		"options": {
+			"active": false
+		},
+		"latest_version": {
+			"type": "github",
+			"url": "` + test.ArgusGitHubRepo + `"
+		}
+	}`)))
+	params := url.Values{}
+	params.Set("service_id", editID)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/service/config", payload)
+	req.URL.RawQuery = params.Encode()
+	w := httptest.NewRecorder()
+	api.httpServiceEdit(w, req)
+	res := w.Result()
+	t.Cleanup(func() { _ = res.Body.Close() })
+
+	prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (edit)", packageName)
+
+	// THEN: the edit fails with 400.
+	if got, want := res.StatusCode, http.StatusBadRequest; got != want {
+		t.Errorf(
+			"%s status code mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+	// AND: the body says the `id` is required.
+	body, _ := io.ReadAll(res.Body)
+	if got, want := string(body), `failed:\\n  id: <required>"}$`; !util.RegexCheck(want, got) {
+		t.Errorf(
+			"%s body mismatch\ngot:  %q\nwant: %q",
+			prefix, got, want,
+		)
+	}
+
+	// AND: the service being edited is left untouched.
+	if api.Config.Service[editID] != svc {
+		t.Errorf(
+			"%s service %q was modified/removed by a failed edit",
+			prefix, editID,
+		)
+	}
+
+	// AND: no service was created under the empty ID.
+	if got := api.Config.Service[""]; got != nil {
+		t.Errorf(
+			"%s a service was created with an empty ID:\n%s",
+			prefix, got.String(""),
+		)
+	}
+
+	// AND: the Order keeps its entries, with no empty slot.
+	if got := api.Config.Order; !slices.Equal(got, wantOrder) {
+		t.Errorf(
+			"%s Order mismatch\ngot:  %q\nwant: %q",
+			prefix, got, wantOrder,
+		)
 	}
 }
 

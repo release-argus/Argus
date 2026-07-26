@@ -65,6 +65,21 @@ func TestConfig_AddService(t *testing.T) {
 			dbMessages: 2, // 1 for change of ID, 1 for change of versions.
 		},
 		{
+			name:       "Rename to an empty ID",
+			oldService: "bravo",
+			newService: testServiceURL(t, ""),
+			wantOrder:  []string{"alpha", "bravo", "charlie"},
+			added:      false,
+			dbMessages: 0,
+		},
+		{
+			name:       "New service with an empty ID",
+			newService: testServiceURL(t, ""),
+			wantOrder:  []string{"alpha", "bravo", "charlie"},
+			added:      false,
+			dbMessages: 0,
+		},
+		{
 			name:       "ID already exists",
 			newService: testServiceURL(t, "alpha"),
 			wantOrder:  []string{"alpha", "bravo", "charlie"},
@@ -252,27 +267,33 @@ func TestConfig_RenameService(t *testing.T) {
 		noChange, fail bool
 	}{
 		{
-			name:  "Rename service",
+			name:  "new name",
 			oldID: "bravo", newID: "foo",
 			wantOrder: []string{"alpha", "foo", "charlie"},
 			fail:      false,
 		},
 		{
-			name:  "Rename service to same name",
+			name:  "same name",
 			oldID: "bravo", newID: "bravo",
 			wantOrder: []string{"alpha", "bravo", "charlie"},
 			noChange:  true,
 			fail:      false,
 		},
 		{
-			name:  "Rename service that doesn't exist",
+			name:  "service doesn't exist",
 			oldID: "test", newID: "foo",
 			wantOrder: []string{"alpha", "bravo", "charlie"},
 			fail:      true,
 		},
 		{
-			name:  "Rename service to existing name",
+			name:  "existing name",
 			oldID: "bravo", newID: "alpha",
+			wantOrder: []string{"alpha", "bravo", "charlie"},
+			fail:      true,
+		},
+		{
+			name:  "empty name",
+			oldID: "bravo", newID: "",
 			wantOrder: []string{"alpha", "bravo", "charlie"},
 			fail:      true,
 		},
@@ -291,12 +312,12 @@ func TestConfig_RenameService(t *testing.T) {
 			newSVC := testServiceURL(t, tc.newID)
 
 			// WHEN: the service is renamed.
-			cfg.RenameService(tc.oldID, newSVC)
+			cfg.renameService(tc.oldID, newSVC)
 			logMu.Unlock()
 			time.Sleep(time.Second)
 
 			prefix := fmt.Sprintf(
-				"%s\nConfig.RenameService(oldID=%q, newID=%q)",
+				"%s\nConfig.renameService(oldID=%q, newID=%q)",
 				packageName, tc.oldID, tc.newID,
 			)
 
