@@ -82,11 +82,10 @@ export const approvalsQueryCacheUpdater = ({
 
 		case 'EDIT': {
 			const newServiceData = msg.service_data;
-			if (!newServiceData) break;
 
 			// old ID when editing existing service.
 			const oldID = msg.sub_type;
-			const newID = newServiceData.id ?? oldID;
+			const newID = newServiceData?.id ?? oldID;
 			if (!newID) break;
 			const idHasChanged = oldID && oldID !== newID;
 
@@ -158,28 +157,30 @@ export const approvalsQueryCacheUpdater = ({
 			}
 
 			// Upsert summary for newID.
-			queryClient.setQueryData<ServiceSummary>(
-				QUERY_KEYS.SERVICE.SUMMARY_ITEM(newID),
-				(_oldData) => {
-					// Don't trust cached _oldData if we think `newID` is new.
-					const oldDataMerged: ServiceSummary = idHasChanged
-						? {
-								id: newID,
-								...oldData,
-							}
-						: {
-								...oldData,
-								..._oldData,
-								id: newID,
-								status: {
-									...oldData?.status,
-									..._oldData?.status,
-								},
-							};
+			if (newServiceData) {
+				queryClient.setQueryData<ServiceSummary>(
+					QUERY_KEYS.SERVICE.SUMMARY_ITEM(newID),
+					(_oldData) => {
+						// Don't trust cached _oldData if we think `newID` is new.
+						const oldDataMerged: ServiceSummary = idHasChanged
+							? {
+									...oldData,
+									id: newID,
+								}
+							: {
+									...oldData,
+									..._oldData,
+									id: newID,
+									status: {
+										...oldData?.status,
+										..._oldData?.status,
+									},
+								};
 
-					return serviceSummaryReducer(msg.service_data, oldDataMerged);
-				},
-			);
+						return serviceSummaryReducer(newServiceData, oldDataMerged);
+					},
+				);
+			}
 
 			// Ensure ID in order.
 			if (!newOrder.includes(newID)) {

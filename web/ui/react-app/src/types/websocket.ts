@@ -30,8 +30,11 @@ export type WebSocketResponse =
 	| {
 			page: 'APPROVALS';
 			type: 'EDIT';
+			/* The service ID prior to the edit ('' when the service was created). */
 			sub_type?: string;
-			service_data?: ServiceSummary;
+			/* Fields unchanged by the edit are omitted, so `id` is absent unless it
+			   changed - resolve the service from `sub_type` when it is. */
+			service_data?: Partial<ServiceSummary>;
 	  }
 	| {
 			page: 'APPROVALS';

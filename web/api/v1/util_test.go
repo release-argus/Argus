@@ -247,10 +247,7 @@ func TestAPI_AnnounceEdit(t *testing.T) {
 					)
 				}
 			default:
-				// Message not wanted.
-				if tc.wantedServiceData == nil {
-					return
-				}
+				// Every successful edit announces, even when nothing displayed changed.
 				t.Fatalf("%s Announce channel mismatch\ngot:  none\nwant: message", prefix)
 			}
 		})
