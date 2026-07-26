@@ -266,15 +266,34 @@ func TestWebHooks_UnmarshalJSON(t *testing.T) {
 			wantKeys: map[string]string{},
 		},
 		{
-			name: "duplicate ids - last wins",
+			name: "duplicate names rejected",
 			data: test.TrimJSON(`[
 				{"name": "dupe", "type": "github"},
 				{"name": "dupe", "type": "gitlab"}
 			]`),
-			errRegex: `^$`,
-			wantKeys: map[string]string{
-				"dupe": "gitlab",
-			},
+			errRegex: test.TrimYAML(`
+				^webhook\[1\]:
+					name: "dupe" <invalid> \(must be unique\)$`,
+			),
+		},
+		{
+			name: "missing name rejected",
+			data: test.TrimJSON(`[
+				{"name": "a", "type": "github"},
+				{"type": "gitlab"}
+			]`),
+			errRegex: test.TrimYAML(`
+				^webhook\[1\]:
+					name: <required>$`,
+			),
+		},
+		{
+			name: "empty name rejected",
+			data: `[{"name": "", "type": "github"}]`,
+			errRegex: test.TrimYAML(`
+				^webhook\[0\]:
+					name: <required>$`,
+			),
 		},
 		{
 			name:     "invalid JSON",

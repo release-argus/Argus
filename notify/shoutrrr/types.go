@@ -16,6 +16,8 @@
 package shoutrrr
 
 import (
+	"fmt"
+
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
@@ -113,7 +115,7 @@ func (s *Shoutrrrs) MarshalJSON() ([]byte, error) {
 	return decode.Marshal("json", arr) //nolint:wrapcheck
 }
 
-// UnmarshalJSON implements json.Unmarshaler for Shoutrrrs.
+// UnmarshalJSON implements the json.Unmarshaler interface.
 //
 // It supports a JSON array of Shoutrrr entries:
 //
@@ -123,16 +125,34 @@ func (s *Shoutrrrs) MarshalJSON() ([]byte, error) {
 //	]
 //
 // which is converted into a map keyed by each entry's ID field.
+// As that key must identify the entry, a name is required, and must be unique.
 func (s *Shoutrrrs) UnmarshalJSON(data []byte) error {
 	var arr []Shoutrrr
 	if err := decode.Unmarshal("json", data, &arr); err != nil {
 		return err //nolint:wrapcheck
 	}
-	*s = make(Shoutrrrs, len(arr))
 
+	shoutrrrs := make(Shoutrrrs, len(arr))
 	for i := range arr {
-		(*s)[arr[i].ID] = &arr[i]
+		id := arr[i].ID
+		if id == "" || shoutrrrs[id] != nil {
+			err := &decode.FieldError{
+				Key:   "name",
+				Value: id,
+			}
+			if id != "" {
+				err.Description = "must be unique"
+			}
+
+			return &decode.KeyFieldError{
+				Key: fmt.Sprintf("notify[%d]", i),
+				Err: err,
+			}
+		}
+		shoutrrrs[id] = &arr[i]
 	}
+
+	*s = shoutrrrs
 	return nil
 }
 
