@@ -16,6 +16,7 @@
 package webhook
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -129,16 +130,43 @@ func (w *WebHooks) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
+//
+// It supports a JSON array of WebHook entries:
+//
+//	[
+//		{ id: "a", ... },
+//		{ id: "b", ... }
+//	]
+//
+// which is converted into a map keyed by each entry's ID field.
+// As that key must identify the entry, a name is required, and must be unique.
 func (w *WebHooks) UnmarshalJSON(data []byte) error {
 	var arr []WebHook
 	if err := decode.Unmarshal("json", data, &arr); err != nil {
 		return err //nolint:wrapcheck
 	}
-	*w = make(WebHooks, len(arr))
 
+	webhooks := make(WebHooks, len(arr))
 	for i := range arr {
-		(*w)[arr[i].ID] = &arr[i]
+		id := arr[i].ID
+		if id == "" || webhooks[id] != nil {
+			err := &decode.FieldError{
+				Key:   "name",
+				Value: id,
+			}
+			if id != "" {
+				err.Description = "must be unique"
+			}
+
+			return &decode.KeyFieldError{
+				Key: fmt.Sprintf("webhook[%d]", i),
+				Err: err,
+			}
+		}
+		webhooks[id] = &arr[i]
 	}
+
+	*w = webhooks
 	return nil
 }
 

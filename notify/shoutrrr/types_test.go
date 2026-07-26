@@ -142,15 +142,34 @@ func TestShoutrrrs_UnmarshalJSON(t *testing.T) {
 			wantKeys: map[string]string{},
 		},
 		{
-			name: "duplicate ids - last wins",
+			name: "duplicate names rejected",
 			data: test.TrimJSON(`[
 				{"name": "dupe", "type": "slack"},
 				{"name": "dupe", "type": "gotify"}
 			]`),
-			errRegex: `^$`,
-			wantKeys: map[string]string{
-				"dupe": "gotify",
-			},
+			errRegex: test.TrimYAML(`
+				^notify\[1\]:
+					name: "dupe" <invalid> \(must be unique\)$`,
+			),
+		},
+		{
+			name: "missing name rejected",
+			data: test.TrimJSON(`[
+				{"name": "a", "type": "slack"},
+				{"type": "gotify"}
+			]`),
+			errRegex: test.TrimYAML(`
+				^notify\[1\]:
+					name: <required>$`,
+			),
+		},
+		{
+			name: "empty name rejected",
+			data: `[{"name": "", "type": "slack"}]`,
+			errRegex: test.TrimYAML(`
+				^notify\[0\]:
+					name: <required>$`,
+			),
 		},
 		{
 			name:     "invalid JSON",
