@@ -225,13 +225,15 @@ type Settings struct {
 	Data DataSettings `json:"data,omitzero" yaml:"data,omitzero"`
 	Log  LogSettings  `json:"log,omitzero" yaml:"log,omitzero"`
 	Web  WebSettings  `json:"web,omitzero" yaml:"web,omitzero"`
+	Auth AuthSettings `json:"auth,omitzero" yaml:"auth,omitzero"`
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (s *Settings) IsZero() bool {
 	return s.Log.IsZero() &&
 		s.Data.IsZero() &&
-		s.Web.IsZero()
+		s.Web.IsZero() &&
+		s.Auth.IsZero()
 }
 
 // DataSettings contains data settings for the program.
@@ -266,6 +268,7 @@ type WebSettings struct {
 	KeyFile        string   `json:"pkey_file,omitzero" yaml:"pkey_file,omitzero"`               // HTTPS privkey path.
 	RoutePrefix    string   `json:"route_prefix,omitzero" yaml:"route_prefix,omitzero"`         // Web endpoint prefix.
 	DisabledRoutes []string `json:"disabled_routes,omitempty" yaml:"disabled_routes,omitempty"` // Disabled API routes.
+	TrustedProxies []string `json:"trusted_proxies,omitempty" yaml:"trusted_proxies,omitempty"` // Peers whose forwarded headers are honoured.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -275,7 +278,44 @@ func (w WebSettings) IsZero() bool {
 		w.CertFile == "" &&
 		w.KeyFile == "" &&
 		w.RoutePrefix == "" &&
-		len(w.DisabledRoutes) == 0
+		len(w.DisabledRoutes) == 0 &&
+		len(w.TrustedProxies) == 0
+}
+
+// AuthSettings contains the authentication settings for the program.
+type AuthSettings struct {
+	Enabled *bool               `json:"enabled,omitzero" yaml:"enabled,omitzero"` // Enable user/RBAC auth.
+	Session AuthSessionSettings `json:"session,omitzero" yaml:"session,omitzero"` // Session bounds.
+	Local   AuthLocalSettings   `json:"local,omitzero" yaml:"local,omitzero"`     // Local provider.
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (a AuthSettings) IsZero() bool {
+	return a.Enabled == nil &&
+		a.Session.IsZero() &&
+		a.Local.IsZero()
+}
+
+// AuthSessionSettings bounds login session validity.
+type AuthSessionSettings struct {
+	Lifetime    string `json:"lifetime,omitzero" yaml:"lifetime,omitzero"`         // Absolute cap.
+	IdleTimeout string `json:"idle_timeout,omitzero" yaml:"idle_timeout,omitzero"` // Sliding window.
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (a AuthSessionSettings) IsZero() bool {
+	return a.Lifetime == "" &&
+		a.IdleTimeout == ""
+}
+
+// AuthLocalSettings configures the local (username/password) provider.
+type AuthLocalSettings struct {
+	Enabled *bool `json:"enabled,omitzero" yaml:"enabled,omitzero"`
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (a AuthLocalSettings) IsZero() bool {
+	return a.Enabled == nil
 }
 
 // Notifiers is a string map of Notify.

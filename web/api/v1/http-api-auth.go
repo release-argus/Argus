@@ -41,16 +41,20 @@ const (
 )
 
 // loginLimiter is an in-memory fixed-window rate limiter for failed
-// login attempts.
+// login attempts, keyed by client IP.
 type loginLimiter struct {
 	mu      sync.Mutex
 	windows map[string]*loginWindow
 }
 
-// loginWindow counts failed attempts within a [loginLimitWindow].
+// loginWindow counts failed attempts within a [loginLimitWindow] and serialises
+// an IP's in-flight attempts. refs keeps the entry (and its lock) alive past an
+// expired window while an attempt is still running.
 type loginWindow struct {
 	start    time.Time
 	attempts int
+	mu       sync.Mutex // Serialises this IP's check/verify/recordFailure sequence.
+	refs     int        // In-flight [loginLimiter.lockIP] holders.
 }
 
 // newLoginLimiter creates an empty [loginLimiter].
@@ -58,14 +62,53 @@ func newLoginLimiter() *loginLimiter {
 	return &loginLimiter{windows: make(map[string]*loginWindow)}
 }
 
-// sweepExpired drops windows past the [loginLimitWindow] window so the map cannot grow
-// unbounded. The caller must hold l.mu.
+// lockIP serialises in-flight login attempts from ip and returns the unlock
+// function, so an IP's check/verify/recordFailure sequence runs atomically and
+// a concurrent burst cannot slip past the limit; distinct IPs stay concurrent.
+func (l *loginLimiter) lockIP(ip string) func() {
+	l.mu.Lock()
+	window := l.windows[ip]
+	if window == nil {
+		window = &loginWindow{start: timeNow()}
+		l.windows[ip] = window
+	}
+	window.refs++
+	l.mu.Unlock()
+
+	window.mu.Lock()
+	return func() {
+		window.mu.Unlock()
+		l.mu.Lock()
+		window.refs--
+		// Drop the entry once nothing is in flight.
+		if window.refs == 0 && window.attempts == 0 {
+			delete(l.windows, ip)
+		}
+		l.mu.Unlock()
+	}
+}
+
+// sweepExpired drops windows past the [loginLimitWindow] so the map cannot grow
+// unbounded, but keeps any with in-flight holders.
+// The caller must hold l.mu.
 func (l *loginLimiter) sweepExpired(now time.Time) {
-	for k, window := range l.windows {
-		if now.Sub(window.start) >= loginLimitWindow {
-			delete(l.windows, k)
+	for ip, window := range l.windows {
+		if window.refs == 0 && now.Sub(window.start) >= loginLimitWindow {
+			delete(l.windows, ip)
 		}
 	}
+}
+
+// windowFor returns ip's window, resetting it in place when its [loginLimitWindow]
+// has passed.
+// The caller must hold l.mu.
+func (l *loginLimiter) windowFor(ip string, now time.Time) *loginWindow {
+	window := l.windows[ip]
+	if window != nil && now.Sub(window.start) >= loginLimitWindow {
+		window.start = now
+		window.attempts = 0
+	}
+	return window
 }
 
 // check reports whether ip is within the [loginLimitAttempts] limit, without recording an attempt
@@ -77,7 +120,7 @@ func (l *loginLimiter) check(ip string) bool {
 	defer l.mu.Unlock()
 
 	l.sweepExpired(now)
-	window := l.windows[ip]
+	window := l.windowFor(ip, now)
 	return window == nil || window.attempts < loginLimitAttempts
 }
 
@@ -89,7 +132,7 @@ func (l *loginLimiter) recordFailure(ip string) {
 	defer l.mu.Unlock()
 
 	l.sweepExpired(now)
-	if window := l.windows[ip]; window != nil {
+	if window := l.windowFor(ip, now); window != nil {
 		window.attempts++
 		return
 	}
@@ -305,9 +348,13 @@ func (api *API) sessionCookie(r *http.Request, token string, maxAge int) *http.C
 	if path == "" {
 		path = "/"
 	}
+	// Secure when the connection is HTTPS: a configured cert (native TLS), or a
+	// proxy reporting X-Forwarded-Proto=https. Trusting the header here is
+	// fail-safe - over-setting Secure only withholds the cookie over plain HTTP,
+	// it cannot leak it - so it needs no trusted-proxy gate (that gate is
+	// reserved for client-IP resolution, where a spoofed value has consequences).
 	secure := api.Config.Settings.WebCertFile() != "" ||
-		(api.fromTrustedProxy(r) &&
-			strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https"))
+		strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
 	return &http.Cookie{
 		Name:     authCookieName,
 		Value:    token,

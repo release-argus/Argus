@@ -77,12 +77,11 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpServiceOrderSet", Secondary: getIP(r)}
 
 	api.Config.OrderMu.RLock()
-	defer api.Config.OrderMu.RUnlock()
-
-	currentOrder := api.Config.Order
+	maxBody := int64(512 + (128 * len(api.Config.Order)))
+	api.Config.OrderMu.RUnlock()
 
 	// Read the payload.
-	payload := http.MaxBytesReader(w, r.Body, int64(512+(128*len(currentOrder))))
+	payload := http.MaxBytesReader(w, r.Body, maxBody)
 	defer payload.Close()
 	body, err := io.ReadAll(payload)
 	if err != nil {
@@ -100,16 +99,28 @@ func (api *API) httpServiceOrderSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Trim unknown services.
-	trimmedOrder := make([]string, 0, len(newOrder.Order))
+	// Build the new order under write lock so a concurrent add/rename/delete
+	// is not missed from the ordering.
+	api.Config.OrderMu.Lock()
+	seen := make(map[string]bool, len(api.Config.Order))
+	merged := make([]string, 0, len(api.Config.Order))
 	for _, svc := range newOrder.Order {
-		if api.Config.Service[svc] != nil {
-			trimmedOrder = append(trimmedOrder, svc)
+		// Prune duplicates.
+		if !seen[svc] && api.Config.Service[svc] != nil {
+			merged = append(merged, svc)
+			seen[svc] = true
 		}
 	}
+	// Append all services the submission omitted.
+	for _, svc := range api.Config.Order {
+		if !seen[svc] {
+			merged = append(merged, svc)
+			seen[svc] = true
+		}
+	}
+	api.Config.Order = merged
+	api.Config.OrderMu.Unlock()
 
-	// Set the new order.
-	api.Config.Order = trimmedOrder
 	api.writeJSON(
 		w,
 		apitype.Response{

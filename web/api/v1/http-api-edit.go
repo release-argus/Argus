@@ -590,6 +590,18 @@ const (
 	actionEdit   serviceAction = "edit"
 )
 
+// httpServiceCreate handles PUT /api/v1/service/new: creating a Service.
+// Verifies 'service_id' doesn't exist and calls [API.httpServiceEdit].
+func (api *API) httpServiceCreate(w http.ResponseWriter, r *http.Request) {
+	api.httpServiceEdit(w, r, actionCreate)
+}
+
+// httpServiceUpdate handles PUT /api/v1/service/config: editing a Service.
+// Verifies 'service_id' does exist and calls [API.httpServiceEdit].
+func (api *API) httpServiceUpdate(w http.ResponseWriter, r *http.Request) {
+	api.httpServiceEdit(w, r, actionEdit)
+}
+
 // httpServiceEdit handles PUT /api/v1/service/(config|new): creating/editing a
 // Service.
 //
@@ -613,13 +625,30 @@ const (
 //
 //	200 OK: Created/Edited
 //	400 Bad Request: Error message.
-func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
+func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request, reqType serviceAction) {
 	logFrom := logx.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
 	// Service to modify (empty for create new).
 	serviceID := r.URL.Query().Get("service_id")
-	reqType := actionCreate
-	if serviceID != "" {
-		reqType = actionEdit
+
+	switch reqType {
+	case actionCreate:
+		if serviceID != "" {
+			failRequest(
+				&w,
+				errors.New("service_id must be empty to create a service"),
+				http.StatusBadRequest,
+			)
+			return
+		}
+	case actionEdit:
+		if serviceID == "" {
+			failRequest(
+				&w,
+				errors.New("service_id is required to edit a service"),
+				http.StatusBadRequest,
+			)
+			return
+		}
 	}
 
 	// EDIT: wait out any in-flight operations on this service (a refresh, another

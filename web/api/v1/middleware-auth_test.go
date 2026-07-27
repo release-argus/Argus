@@ -834,6 +834,73 @@ func TestAPI__auth_scopedGrants(t *testing.T) {
 	}
 }
 
+func TestAPI__auth__GuardAnyScope(t *testing.T) {
+	// GIVEN: an auth-enabled API.
+	file := "TestAPI_Auth__GuardAnyScope.yml"
+	api, deps, _ := testAuthServer(t, file)
+
+	// AND: a user whose only grant is a single service-scoped service:read.
+	if _, err := deps.Store.CreateGroup(
+		t.Context(),
+		"scoped",
+		"",
+		[]rbac.Grant{
+			{
+				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
+				Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
+			},
+		},
+	); err != nil {
+		t.Fatalf(
+			"%s\ncreate scoped group: %v",
+			packageName, err,
+		)
+	}
+	createAuthUser(t, deps, "scoped-user", "scoped-password", "scoped")
+	// AND: a user with no grants.
+	createAuthUser(t, deps, "loner", "loner-password")
+
+	tests := []struct {
+		name       string
+		username   string
+		password   string
+		wantStatus int
+	}{
+		{
+			name:       "any service:read grant passes the guard",
+			username:   "scoped-user",
+			password:   "scoped-password",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "no service:read grant is forbidden",
+			username:   "loner",
+			password:   "loner-password",
+			wantStatus: http.StatusForbidden,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cookie := loginCookie(t, api, tc.username, tc.password)
+
+			// WHEN: the guardAnyScope-protected /service/defaults route is requested.
+			w := serveAuth(api,
+				authedRequest(http.MethodGet, "/api/v1/service/defaults", "", cookie))
+
+			prefix := fmt.Sprintf("%s\nguardAnyScope", packageName)
+
+			// THEN: the guard's verdict matches expectations.
+			if w.Code != tc.wantStatus {
+				t.Errorf(
+					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
+					prefix, w.Code, w.Body.String(), tc.wantStatus,
+				)
+			}
+		})
+	}
+}
+
 func TestAPI__auth_permissionChangesApplyImmediately(t *testing.T) {
 	// GIVEN: an auth-enabled API.
 	file := "TestAPI__auth_permissionChangesApplyImmediately.yml"
@@ -1104,6 +1171,97 @@ func TestAPI_Guard(t *testing.T) {
 			handler(w, req)
 
 			prefix := fmt.Sprintf("%s\nguard()", packageName)
+
+			// THEN: the response code and handler invocation match expectations.
+			if w.Code != tc.wantStatus {
+				t.Errorf(
+					"%s\nstatus mismatch\ngot:  %d\nwant: %d",
+					prefix, w.Code, tc.wantStatus,
+				)
+			}
+			if called != tc.wantCalled {
+				t.Errorf(
+					"%s\nhandler called mismatch\ngot:  %t\nwant: %t",
+					prefix, called, tc.wantCalled,
+				)
+			}
+		})
+	}
+}
+
+func TestAPI_RequireAdmin(t *testing.T) {
+	// GIVEN: an auth-enabled API.
+	file := "TestAPI_RequireAdmin.yml"
+	api, deps, _ := testAuthServer(t, file)
+
+	// AND: an admin.
+	adminCtx := adminContext(t, api, deps)
+	// AND: a viewer.
+	viewer := createAuthUser(t, deps, "viewer-user", "viewer-password", store.GroupViewer)
+	viewerCtx, err := api.contextForUser(t.Context(), viewer.ID, "local")
+	if err != nil {
+		t.Fatalf(
+			"%s\nviewer context: %v",
+			packageName, err,
+		)
+	}
+
+	tests := []struct {
+		name        string
+		disableAuth bool
+		authCtx     *auth.Context
+		wantStatus  int
+		wantCalled  bool // true if we call the handler being wrapped, false otherwise.
+	}{
+		{
+			name:        "auth disabled/passes",
+			disableAuth: true,
+			wantStatus:  http.StatusOK,
+			wantCalled:  true,
+		},
+		{
+			name:       "auth/no context",
+			wantStatus: http.StatusUnauthorized,
+			wantCalled: false,
+		},
+		{
+			name:       "auth/admin",
+			authCtx:    adminCtx,
+			wantStatus: http.StatusOK,
+			wantCalled: true,
+		},
+		{
+			name:       "auth/non-admin",
+			authCtx:    viewerCtx,
+			wantStatus: http.StatusForbidden,
+			wantCalled: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			testAPI := api
+			if tc.disableAuth {
+				testAPI = &API{}
+			}
+
+			called := false
+			handler := testAPI.requireAdmin(func(w http.ResponseWriter, _ *http.Request) {
+				called = true
+				w.WriteHeader(http.StatusOK)
+			})
+
+			// WHEN: a request hits the guarded handler.
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			if tc.authCtx != nil {
+				req = withAuthCtx(req, tc.authCtx)
+			}
+			w := httptest.NewRecorder()
+			handler(w, req)
+
+			prefix := fmt.Sprintf("%s\nrequireAdmin()", packageName)
 
 			// THEN: the response code and handler invocation match expectations.
 			if w.Code != tc.wantStatus {

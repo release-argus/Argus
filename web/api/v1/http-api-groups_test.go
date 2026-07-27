@@ -23,7 +23,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/release-argus/Argus/auth"
 	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/auth/store"
 	"github.com/release-argus/Argus/config/decode"
@@ -55,56 +54,6 @@ func seededGroupIDs(t *testing.T, deps *AuthDeps) map[string]string {
 		ids[group.Name] = group.ID
 	}
 	return ids
-}
-
-func TestCallerIsAdmin(t *testing.T) {
-	// GIVEN: requests with varying auth contexts.
-	tests := []struct {
-		name    string
-		authCtx *auth.Context
-		want    bool
-	}{
-		{
-			name:    "no auth context",
-			authCtx: nil,
-			want:    false,
-		},
-		{
-			name: "non-admin",
-			authCtx: &auth.Context{
-				User: auth.User{Groups: []string{store.GroupViewer}},
-			},
-			want: false,
-		},
-		{
-			name: "admin",
-			authCtx: &auth.Context{
-				User: auth.User{Groups: []string{store.GroupViewer, store.GroupAdmin}}},
-			want: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/groups", nil)
-			if tc.authCtx != nil {
-				req = withAuthCtx(req, tc.authCtx)
-			}
-
-			// WHEN: the caller's admin membership is checked.
-			got := callerIsAdmin(req)
-
-			// THEN: it matches expectations.
-			if got != tc.want {
-				t.Errorf(
-					"%s\ncallerIsAdmin() mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
-			}
-		})
-	}
 }
 
 func TestAPI_HTTPGroupList(t *testing.T) {

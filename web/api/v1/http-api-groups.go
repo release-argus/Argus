@@ -17,7 +17,6 @@ package v1
 import (
 	"errors"
 	"net/http"
-	"slices"
 
 	"github.com/gorilla/mux"
 
@@ -26,13 +25,6 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
-
-// callerIsAdmin reports whether the request's authenticated user belongs to the
-// admin group.
-func callerIsAdmin(r *http.Request) bool {
-	authCtx := authContextFrom(r)
-	return authCtx != nil && slices.Contains(authCtx.User.Groups, store.GroupAdmin)
-}
 
 // httpGroupList handles GET /api/v1/groups: returning a list of all
 // [store.Group]s (with member counts and grants).

@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/netip"
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -101,6 +101,58 @@ func TestLoginLimiter_check_and_recordFailure(t *testing.T) {
 	now = base.Add(loginLimitWindow + time.Second)
 	if !limiter.check("ip") {
 		t.Errorf("%s\nchecks should resume after the window expires", prefix)
+	}
+}
+
+func TestLoginLimiter__lockIP(t *testing.T) {
+	// GIVEN: a loginLimiter and many concurrent failed attempts from one IP.
+	limiter := newLoginLimiter()
+	base := time.Date(2026, 7, 6, 12, 0, 0, 0, time.UTC)
+	timeNowHad := timeNow
+	timeNow = func() time.Time { return base }
+	t.Cleanup(func() { timeNow = timeNowHad })
+
+	prefix := fmt.Sprintf("%s\nloginLimiter lockIP", packageName)
+
+	// WHEN: each attempt serialises its check/recordFailure per IP.
+	const attempts = 50
+	var passed atomic.Int64
+	var wg sync.WaitGroup
+	for range attempts {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer limiter.lockIP("ip")()
+			if limiter.check("ip") {
+				passed.Add(1)
+				limiter.recordFailure("ip")
+			}
+		}()
+	}
+	wg.Wait()
+
+	// THEN: exactly the allowed number pass the check (no burst bypass).
+	if got := passed.Load(); got != loginLimitAttempts {
+		t.Errorf("%s\nexpected exactly %d attempts to pass under contention, got %d",
+			prefix,
+			loginLimitAttempts,
+			got)
+	}
+
+	// AND: the window's per-IP lock is fully released once no attempts remain.
+	limiter.mu.Lock()
+	window := limiter.windows["ip"]
+	limiter.mu.Unlock()
+	if window == nil {
+		t.Fatalf("%s\nwindow holding the failed-attempt count should persist", prefix)
+	}
+	limiter.mu.Lock()
+	refs := window.refs
+	limiter.mu.Unlock()
+	if refs != 0 {
+		t.Errorf("%s\nper-IP lock should be released (refs 0), got %d",
+			prefix,
+			refs)
 	}
 }
 
@@ -889,22 +941,23 @@ func TestAPI_Auth__sessionCookie(t *testing.T) {
 		t.Errorf("%s\nSecure should be on with TLS", prefix)
 	}
 
-	// WHEN: a trusted proxy reports the client connection as HTTPS.
-	trustedHad := api.trustedProxies
-	api.trustedProxies = []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24")}
+	// WHEN: a proxy reports the client connection as HTTPS.
 	req.Header.Set("X-Forwarded-Proto", "https")
 	cookie = api.sessionCookie(req, "token", 60)
 	// THEN: the cookie is Secure.
 	if !cookie.Secure {
-		t.Errorf("%s\nSecure should be on behind a trusted TLS-terminating proxy", prefix)
+		t.Errorf("%s\nSecure should be on when X-Forwarded-Proto is https", prefix)
 	}
 
-	// WHEN: the same header comes from an untrusted peer.
+	// WHEN: the header arrives without any configured trusted proxies.
+	trustedHad := api.trustedProxies
 	api.trustedProxies = nil
 	cookie = api.sessionCookie(req, "token", 60)
 	api.trustedProxies = trustedHad
-	// THEN: the header is ignored.
-	if cookie.Secure {
-		t.Errorf("%s\nSecure must not trust X-Forwarded-Proto from untrusted peers", prefix)
+	// THEN: Secure is still set - trusting X-Forwarded-Proto for the Secure flag
+	// is fail-safe (it can only withhold the cookie over HTTP, never leak it);
+	// trusted-proxy gating is reserved for client-IP resolution.
+	if !cookie.Secure {
+		t.Errorf("%s\nSecure should track X-Forwarded-Proto regardless of proxy trust (fail-safe)", prefix)
 	}
 }
