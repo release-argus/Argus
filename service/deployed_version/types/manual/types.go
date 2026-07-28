@@ -52,6 +52,9 @@ func (l *Lookup) Copy(svcStatus *status.Status) base.Interface {
 		return nil
 	}
 
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
 	return &Lookup{
 		Lookup:  *l.Lookup.Clone(svcStatus), //nolint:staticcheck
 		Version: l.Version,
@@ -64,5 +67,8 @@ func (l *Lookup) Copy(svcStatus *status.Status) base.Interface {
 
 // String returns a string representation of the receiver.
 func (l *Lookup) String(prefix string) string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
 	return decode.ToYAMLString(l, prefix)
 }
