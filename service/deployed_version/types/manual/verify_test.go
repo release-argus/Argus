@@ -29,28 +29,24 @@ func TestLookup_CheckValues(t *testing.T) {
 	tests := []struct {
 		name               string
 		version            string
-		wantVersion        string
 		semanticVersioning bool
 		errRegex           string
 	}{
 		{
 			name:               "want semantic, valid",
 			version:            "1.2.3",
-			wantVersion:        "1.2.3",
 			semanticVersioning: true,
 			errRegex:           `^$`,
 		},
 		{
 			name:               "want semantic, fail",
 			version:            "1_2_3",
-			wantVersion:        "",
 			semanticVersioning: true,
 			errRegex:           `^failed to convert "[^"]+" to a semantic version`,
 		},
 		{
 			name:               "want non-semantic, valid",
 			version:            "1_2_3",
-			wantVersion:        "1_2_3",
 			semanticVersioning: false,
 			errRegex:           `^$`,
 		},
@@ -81,17 +77,24 @@ func TestLookup_CheckValues(t *testing.T) {
 
 			prefix := fmt.Sprintf("%s\nLookup.CheckValues()", packageName)
 
-			// AND: the version is set as expected.
-			if got := input.Status.DeployedVersion(); got != tc.wantVersion {
+			// AND: CheckValues only validates - it applies nothing.
+			if got := input.Status.DeployedVersion(); got != "" {
 				t.Errorf(
-					"%s .DeployedVersion() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantVersion,
+					"%s should not apply the version\ngot: %q",
+					prefix, got,
 				)
 			}
-			// AND: nothing was broadcast to the Announce channel.
+
+			// AND: nothing was broadcast to the Announce channel, or the Database channel
 			if got, want := len(input.Status.AnnounceChannel), 0; got != want {
 				t.Errorf(
 					"%s Announce channel length mismatch\ngot:  %d\nwant: %d",
+					prefix, got, want,
+				)
+			}
+			if got, want := len(input.Status.DatabaseChannel), 0; got != want {
+				t.Errorf(
+					"%s Database channel length mismatch\ngot:  %d\nwant: %d",
 					prefix, got, want,
 				)
 			}

@@ -21,12 +21,16 @@ import (
 
 // CheckValues validates the fields of the receiver.
 func (l *Lookup) CheckValues() error {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	// Only a semVer configured Version can be invalid.
+	if l.Version == "" || !l.Options.GetSemanticVersioning() {
+		return nil
+	}
+
 	logFrom := logx.LogFrom{Primary: l.GetServiceID()}
+	_, err := l.Options.VerifySemanticVersioning(l.Version, logFrom)
 
-	// Apply/validate the version without broadcasting it.
-	announceChannel := l.Status.AnnounceChannel
-	l.Status.AnnounceChannel = nil
-	defer func() { l.Status.AnnounceChannel = announceChannel }()
-
-	return l.Query(false, logFrom)
+	return err //nolint:wrapcheck
 }

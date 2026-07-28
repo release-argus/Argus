@@ -20,7 +20,6 @@ import (
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
-	dvmanual "github.com/release-argus/Argus/service/deployed_version/types/manual"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
@@ -131,10 +130,8 @@ func ApplyOverrides(
 		)
 	}
 
-	// Keep channels when overriding 'manual' Lookup.
-	if newType != dvmanual.Type {
-		target = target.Copy(svcStatus)
-	}
+	// Copy so that overrides never mutate the live Lookup.
+	target = target.Copy(svcStatus)
 
 	if err := target.ApplyOverrides(format, data); err != nil {
 		return nil, &decode.KeyFieldError{

@@ -39,9 +39,192 @@ func TestLookup_Track(t *testing.T) {
 	}()
 	time.Sleep(10 * time.Millisecond)
 
+	prefix := fmt.Sprintf("%s\nLookup.Track()", packageName)
+
 	// THEN: the function exits straight away.
 	if len(didFinish) == 0 {
-		t.Fatalf("%s\nLookup Track() should have exited immediately", packageName)
+		t.Fatalf("%s should have exited immediately", prefix)
+	}
+
+	// AND: the configured version was applied.
+	if got, want := lookup.Status.DeployedVersion(), "1.2.3"; got != want {
+		t.Errorf(
+			"%s .DeployedVersion() mismatch\ngot:  %q\nwant: %q",
+			prefix, got, want,
+		)
+	}
+}
+
+func TestLookup_ApplyConfiguredVersion(t *testing.T) {
+	// GIVEN: a Lookup with a version set in the config.
+	tests := []struct {
+		name                              string
+		prevVersion, version, wantVersion string
+		optionsOverrides                  string
+		wantDBMessages                    int
+		wantSaves                         int
+	}{
+		{
+			name:           "no version, nothing to apply",
+			prevVersion:    "",
+			version:        "",
+			wantVersion:    "",
+			wantDBMessages: 0,
+			wantSaves:      0,
+		},
+		{
+			name:           "version is applied and persisted",
+			version:        "1.2.3",
+			wantVersion:    "1.2.3",
+			wantDBMessages: 1,
+			wantSaves:      1,
+		},
+		{
+			name:           "version replacing an existing one is persisted",
+			prevVersion:    "1.2.3",
+			version:        "1.2.4",
+			wantVersion:    "1.2.4",
+			wantDBMessages: 1,
+			wantSaves:      1,
+		},
+		{
+			name:        "unchanged version writes nothing",
+			version:     "1.2.3",
+			prevVersion: "1.2.3",
+			wantVersion: "1.2.3",
+			// The Version was still consumed, so the config is saved without it.
+			wantSaves: 1,
+		},
+		{
+			name:        "non-semantic version is not applied",
+			version:     "'1_2_3'",
+			wantVersion: "",
+			wantSaves:   0,
+		},
+		{
+			name:             "non-semantic version applied when semantic versioning is off",
+			version:          "'1_2_3'",
+			optionsOverrides: "semantic_versioning: false",
+			wantVersion:      "1_2_3",
+			wantDBMessages:   1,
+			wantSaves:        1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			prefix := fmt.Sprintf("%s\nLookup.ApplyConfiguredVersion()", packageName)
+
+			dvl := testLookup(t, tc.version)
+			if len(tc.optionsOverrides) != 0 {
+				if err := decode.Unmarshal(
+					"yaml", []byte(tc.optionsOverrides),
+					dvl.Options,
+				); err != nil {
+					t.Fatalf(
+						"%s failed to unmarshal Lookup.Options overrides: %s",
+						prefix, err,
+					)
+				}
+			}
+			oneMinuteAgo := time.Now().Add(-1 * time.Minute).Format(time.RFC3339)
+			dvl.Status.SetDeployedVersion(tc.prevVersion, oneMinuteAgo, false)
+
+			// WHEN: ApplyConfiguredVersion is called on it.
+			dvl.ApplyConfiguredVersion()
+
+			// THEN: the version reaches the Status.
+			if got := dvl.Status.DeployedVersion(); got != tc.wantVersion {
+				t.Errorf(
+					"%s .DeployedVersion() mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.wantVersion,
+				)
+			}
+
+			// AND: the Version is cleared.
+			if dvl.Version != "" {
+				t.Errorf(
+					"%s .Version not cleared\ngot:  %q\nwant: %q",
+					prefix, dvl.Version, "",
+				)
+			}
+
+			// AND: it is persisted to the DB, so that it survives a restart.
+			if got := len(dvl.Status.DatabaseChannel); got != tc.wantDBMessages {
+				t.Errorf(
+					"%s Database message count mismatch\ngot:  %d\nwant: %d",
+					prefix, got, tc.wantDBMessages,
+				)
+			} else if tc.wantDBMessages > 0 {
+				message := <-dvl.Status.DatabaseChannel
+				var gotCell string
+				for _, cell := range message.Cells {
+					if cell.Column == "deployed_version" {
+						gotCell = cell.Value
+					}
+				}
+				if gotCell != tc.wantVersion {
+					t.Errorf(
+						"%s `deployed_version` cell mismatch\ngot:  %q\nwant: %q",
+						prefix, gotCell, tc.wantVersion,
+					)
+				}
+			}
+
+			// AND: it is never announced - the caller broadcasts the change itself.
+			if got := len(dvl.Status.AnnounceChannel); got != 0 {
+				t.Errorf(
+					"%s Announce message count mismatch\ngot:  %d\nwant: %d",
+					prefix, got, 0,
+				)
+			}
+
+			// AND: a save is queued when the Version was consumed, so that the config
+			// file stops declaring it and cannot re-apply it after a restart.
+			if got := len(dvl.Status.SaveChannel); got != tc.wantSaves {
+				t.Errorf(
+					"%s Save message count mismatch\ngot:  %d\nwant: %d",
+					prefix, got, tc.wantSaves,
+				)
+			}
+		})
+	}
+}
+
+func TestLookup_ApplyConfiguredVersion__notRateLimited(t *testing.T) {
+	// GIVEN: a Lookup that has just had its DeployedVersion set.
+	dvl := testLookup(t, "1.2.4")
+	dvl.Status.SetDeployedVersion("1.2.3", "", false)
+
+	// WHEN: ApplyConfiguredVersion is called on it.
+	dvl.ApplyConfiguredVersion()
+
+	prefix := fmt.Sprintf("%s\nLookup.ApplyConfiguredVersion()", packageName)
+
+	// THEN: the rate-limit that guards Query does not apply, so the version is set.
+	if got, want := dvl.Status.DeployedVersion(), "1.2.4"; got != want {
+		t.Errorf(
+			"%s .DeployedVersion() mismatch\ngot:  %q\nwant: %q",
+			prefix, got, want,
+		)
+	}
+
+	// AND: it is persisted to the DB.
+	if got, want := len(dvl.Status.DatabaseChannel), 1; got != want {
+		t.Errorf(
+			"%s Database message count mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
+	}
+
+	// AND: no announces are queued.
+	if got, want := len(dvl.Status.AnnounceChannel), 0; got != want {
+		t.Errorf(
+			"%s Announce message count mismatch\ngot:  %d\nwant: %d",
+			prefix, got, want,
+		)
 	}
 }
 

@@ -132,7 +132,13 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			lookup.HardDefaults = dvCfg.Hard
 
 			// WHEN: HandleNewVersion is called on it.
-			lookup.HandleNewVersion(tc.versions.newVersion, tc.versions.releaseDate, true, logFrom)
+			lookup.HandleNewVersion(
+				tc.versions.newVersion,
+				tc.versions.releaseDate,
+				true,
+				true,
+				logFrom,
+			)
 
 			prefix := fmt.Sprintf(
 				"%s\nLookup.HandleNewVersion(%q,%q)",

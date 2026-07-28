@@ -22,7 +22,11 @@ import (
 )
 
 // HandleNewVersion handles a new version, updating the status, and logging the event.
-func (l *Lookup) HandleNewVersion(version, releaseDate string, writeToDB bool, logFrom logx.LogFrom) {
+func (l *Lookup) HandleNewVersion(
+	version, releaseDate string,
+	writeToDB, announce bool,
+	logFrom logx.LogFrom,
+) {
 	// If the new version is empty, or unchanged, return.
 	if version == "" || version == l.Status.DeployedVersion() {
 		return
@@ -31,11 +35,14 @@ func (l *Lookup) HandleNewVersion(version, releaseDate string, writeToDB bool, l
 	// Set the new Deployed version.
 	l.Status.SetDeployedVersion(version, "", writeToDB)
 
-	// Announce version change to WebSocket clients.
 	logx.Info(
 		fmt.Sprintf("Updated to %q", version),
 		logFrom,
 		true,
 	)
-	l.Status.AnnounceUpdate()
+
+	// Announce the version change to WebSocket clients.
+	if announce {
+		l.Status.AnnounceUpdate()
+	}
 }
