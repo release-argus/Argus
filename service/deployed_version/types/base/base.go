@@ -99,6 +99,11 @@ func (l *Lookup) CheckValues() error {
 	return nil
 }
 
+// ApplyConfiguredVersion is a no-op for lookups that query a source for the version.
+func (l *Lookup) ApplyConfiguredVersion() {
+	// Nothing to apply.
+}
+
 // Query queries the service for the deployed version.
 func (l *Lookup) Query(_ bool, _ logx.LogFrom) error {
 	return errors.New("not implemented")

@@ -33,6 +33,9 @@ type BaseInterface interface {
 	DeleteMetrics(parentLookup Interface)
 	// CheckValues validates the fields of the receiver.
 	CheckValues() (errs error)
+	// ApplyConfiguredVersion applies any version given in the config to the Status,
+	// persisting it without announcing it.
+	ApplyConfiguredVersion()
 
 	// Query the receiver for the deployed version.
 	Query(metrics bool, logFrom logx.LogFrom) (err error)
