@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/internal/test"
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	latestver "github.com/release-argus/Argus/service/latest_version"
@@ -801,6 +802,109 @@ func TestService_CheckValues(t *testing.T) {
 				tc.changed,
 				tc.input.CheckValues,
 			)
+		})
+	}
+}
+
+func TestService_CheckValues__deployed_version__manual(t *testing.T) {
+	svcCfg := plainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
+
+	// GIVEN: a Service with a `manual` deployed_version carrying a version.
+	tests := []struct {
+		name        string
+		version     string
+		errRegex    string
+		wantVersion string
+	}{
+		{
+			name:        "valid version is seeded into the Status",
+			version:     "1.2.3",
+			errRegex:    `^$`,
+			wantVersion: "1.2.3",
+		},
+		{
+			name:        "non-semantic version is rejected, and not seeded",
+			version:     "1_2_3",
+			errRegex:    `failed to convert "1_2_3" to a semantic version`,
+			wantVersion: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+						deployed_version:
+							type: manual
+							version: "`+tc.version+`"
+					`)),
+					"",
+					svcCfg, notifyCfg, whCfg,
+				)
+			})
+
+			// AND: a Status wired to the announce/database channels.
+			svc.Status.AnnounceChannel = make(chan []byte, 8)
+			svc.Status.DatabaseChannel = make(chan dbtype.Message, 8)
+
+			// WHEN: CheckValues is called.
+			_, _ = test.AssertCheckValuesWithErrorAndChanged(
+				t,
+				packageName,
+				tc.errRegex,
+				false,
+				svc.CheckValues,
+			)
+
+			prefix := fmt.Sprintf("%s\nService.CheckValues()", packageName)
+
+			// THEN: it only validates - nothing is applied yet.
+			if got := svc.Status.DeployedVersion(); got != "" {
+				t.Errorf(
+					"%s should not apply the version\ngot: %q",
+					prefix, got,
+				)
+			}
+
+			// WHEN: the configured version is applied (as Track and a service edit do).
+			svc.DeployedVersionLookup.ApplyConfiguredVersion()
+			prefix = fmt.Sprintf("%s\nApplyConfiguredVersion()", packageName)
+
+			// THEN: a valid version reaches the Status, and an invalid one does not.
+			if got := svc.Status.DeployedVersion(); got != tc.wantVersion {
+				t.Errorf(
+					"%s mismatch on Status.DeployedVersion()\ngot:  %q\nwant: %q",
+					prefix, got, tc.wantVersion,
+				)
+			}
+
+			// AND: it is never broadcast.
+			if got := len(svc.Status.AnnounceChannel); got != 0 {
+				t.Errorf(
+					"%s AnnounceChannel message count mismatch\ngot:  %d\nwant: 0",
+					prefix, got,
+				)
+			}
+
+			// AND: a valid version is persisted, so that it survives a restart.
+			wantDBMessages := 0
+			if tc.wantVersion != "" {
+				wantDBMessages = 1
+			}
+			if got := len(svc.Status.DatabaseChannel); got != wantDBMessages {
+				t.Errorf(
+					"%s DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
+					prefix, got, wantDBMessages,
+				)
+			}
 		})
 	}
 }

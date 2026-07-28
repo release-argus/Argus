@@ -86,6 +86,11 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 		serviceStatusHardDefaults.SaveChannel <- true
 	}
 
+	// The edit is committed, so any version given in the config can now be applied.
+	if newService.DeployedVersionLookup != nil {
+		newService.DeployedVersionLookup.ApplyConfiguredVersion()
+	}
+
 	// Update the database if the service is new, or the versions changed.
 	if changedDB {
 		serviceStatusHardDefaults.DatabaseChannel <- dbtype.Message{

@@ -251,6 +251,42 @@ func testServiceURL(t *testing.T, id string) *service.Service {
 	return svc
 }
 
+// testServiceManualDV gives a Service whose `manual` deployed_version carries a
+// pending version.
+func testServiceManualDV(t *testing.T, id, version string) *service.Service {
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig(t)
+
+	svc, err := service.DecodeService(
+		"yaml", []byte(test.TrimYAML(`
+			options:
+				interval: 5s
+				semantic_versioning: true
+			latest_version:
+				type: url
+				url: `+test.LookupBare["url_valid"]+`/v2.2.2
+				url_commands:
+					- type: regex
+						regex: 'v([0-9.]+)'
+			deployed_version:
+				type: manual
+				version: `+version+`
+		`)),
+		id,
+		svcCfg, notifyCfg, whCfg,
+	)
+	if err != nil {
+		t.Fatalf("%s testServiceManualDV(id=%q, version=%q) unexpected error: %v",
+			packageName, id, version, err,
+		)
+	}
+
+	svc.Status.SetLastQueried("")
+	svc.Status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)
+	return svc
+}
+
 func plainDefaults(t *testing.T) (*Defaults, *Defaults) {
 	t.Helper()
 

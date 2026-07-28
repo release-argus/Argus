@@ -1631,6 +1631,27 @@ func TestService_CheckFetches(t *testing.T) {
 			errRegex:            `^$`,
 		},
 		{
+			name: "manual deployed_version is left for AddService to apply",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+						`+lvtest.Lookup(t, "url", false).String("  ")+`
+						deployed_version:
+							type: manual
+							version: 1.2.3
+					`)),
+					id,
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			startLatestVersion:   "foo",
+			wantLatestVersion:    testLV.GetStatus().LatestVersion(),
+			startDeployedVersion: "bar",
+			wantDeployedVersion:  "bar", // Unchanged.
+			errRegex:             `^$`,
+		},
+		{
 			name: "active=false queries neither",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(

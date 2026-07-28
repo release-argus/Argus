@@ -25,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrr_types "github.com/release-argus/Argus/notify/shoutrrr/types"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	dvmanual "github.com/release-argus/Argus/service/deployed_version/types/manual"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/util"
@@ -183,7 +184,7 @@ func (s *Service) CheckFetches() error {
 	}
 
 	// Fetch deployed version.
-	if s.DeployedVersionLookup != nil {
+	if s.DeployedVersionLookup != nil && s.DeployedVersionLookup.GetType() != dvmanual.Type {
 		if err := s.DeployedVersionLookup.Query(
 			false,
 			logFrom,

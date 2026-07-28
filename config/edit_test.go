@@ -27,6 +27,7 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service"
+	dvmanual "github.com/release-argus/Argus/service/deployed_version/types/manual"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -167,6 +168,109 @@ func TestConfig_AddService(t *testing.T) {
 					msg := <-cfg.HardDefaults.Service.Status.DatabaseChannel
 					t.Log(msg)
 				}
+			}
+		})
+	}
+}
+
+func TestConfig_AddService__deployed_version__manual(t *testing.T) {
+	// GIVEN: a Service whose `manual` deployed_version carries a pending version.
+	tests := map[string]struct {
+		version         string
+		wantVersion     string
+		wantDBMessages  int
+		wantDBCellValue string
+	}{
+		"version is applied and persisted": {
+			version:         "1.2.3",
+			wantVersion:     "1.2.3",
+			wantDBMessages:  1,
+			wantDBCellValue: "1.2.3",
+		},
+		"no version, nothing to apply": {
+			version:        "",
+			wantVersion:    "",
+			wantDBMessages: 0,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're sharing global log state.
+			releaseStdout := test.CaptureLog(t, logx.Default())
+			t.Cleanup(func() { _ = releaseStdout() })
+
+			file := filepath.Join(t.TempDir(), "config.yml")
+			testYAML_Edit(file)
+			cfg := testLoadBasic(t, file)
+			newService := testServiceManualDV(t, "test", tc.version)
+
+			// WHEN: AddService is called.
+			loadMu.RLock()
+			err := cfg.AddService("", newService)
+			loadMu.RUnlock()
+
+			prefix := fmt.Sprintf(
+				"%s\nConfig.AddService(type=manual, version=%q)",
+				packageName, tc.version,
+			)
+
+			cfg.OrderMu.RLock()
+			t.Cleanup(func() {
+				cfg.Service["test"].PrepDelete(true)
+				cfg.OrderMu.RUnlock()
+			})
+
+			// THEN: the Service is added.
+			if err != nil {
+				t.Fatalf("%s unexpected error: %v", prefix, err)
+			}
+
+			// AND: the Service kept its `manual` deployed_version.
+			if newService.DeployedVersionLookup == nil {
+				t.Fatalf("%s DeployedVersionLookup is nil - it did not decode", prefix)
+			}
+
+			// AND: the configured version reaches the Status.
+			if got := newService.Status.DeployedVersion(); got != tc.wantVersion {
+				t.Errorf("%s mismatch on Status.DeployedVersion()\ngot:  %q\nwant: %q",
+					prefix, got, tc.wantVersion,
+				)
+			}
+
+			// AND: the pending Version is consumed.
+			if got := newService.DeployedVersionLookup.(*dvmanual.Lookup).Version; got != "" {
+				t.Errorf("%s did not consume the pending version\ngot: %q",
+					prefix, got,
+				)
+			}
+
+			// AND: it is applied silently.
+			if got := len(newService.Status.AnnounceChannel); got != 0 {
+				t.Errorf("%s AnnounceChannel message count mismatch\ngot:  %d\nwant: 0",
+					prefix, got,
+				)
+			}
+
+			// AND: it is persisted to the DB, so that it survives a restart.
+			dbChannel := newService.Status.DatabaseChannel
+			if got := len(dbChannel); got != tc.wantDBMessages {
+				t.Fatalf("%s DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
+					prefix, got, tc.wantDBMessages,
+				)
+			}
+			var gotCell string
+			for range tc.wantDBMessages {
+				for _, cell := range (<-dbChannel).Cells {
+					if cell.Column == "deployed_version" {
+						gotCell = cell.Value
+					}
+				}
+			}
+			if gotCell != tc.wantDBCellValue {
+				t.Errorf("%s mismatch on the `deployed_version` cell sent to the DB\ngot:  %q\nwant: %q",
+					prefix, gotCell, tc.wantDBCellValue,
+				)
 			}
 		})
 	}
