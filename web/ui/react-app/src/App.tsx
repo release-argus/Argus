@@ -1,12 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import type { ReactElement } from 'react';
-import {
-	Navigate,
-	Route,
-	BrowserRouter as Router,
-	Routes,
-} from 'react-router-dom';
+import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router';
 import Header from '@/components/header';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';

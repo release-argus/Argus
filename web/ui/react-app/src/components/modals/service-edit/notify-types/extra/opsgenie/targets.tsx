@@ -63,7 +63,11 @@ const OpsGenieTargets: FC<OpsGenieTargetsProps> = ({
 	}, []);
 
 	// Keep track of the array values so can switch to defaults when unchanged.
-	const fieldValues = useWatch({ name: name }) as OpsGenieTargetsSchema;
+	// Undefined until the path holds a value (on the render that follows an append,
+	// before useWatch has caught up).
+	const fieldValues = useWatch({ name: name }) as
+		| OpsGenieTargetsSchema
+		| undefined;
 	// usingDefaults when fieldValues undefined, or match defaults.
 	const usingDefaults = useMemo(
 		() =>
@@ -131,7 +135,7 @@ const OpsGenieTargets: FC<OpsGenieTargetsProps> = ({
 						key={id}
 						name={`${name}.${index}`}
 						removeMe={
-							fieldValues.length === 1
+							fields.length === 1
 								? removeLast
 								: () => {
 										remove(index);

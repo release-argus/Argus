@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import type { Table, VisibilityState } from '@tanstack/react-table';
 import { type ReactElement, useCallback, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { ApprovalsToolbar } from '@/components/approvals';
 import { ToolbarProvider } from '@/components/approvals/toolbar/toolbar-context';

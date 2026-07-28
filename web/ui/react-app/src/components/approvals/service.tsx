@@ -3,7 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useQuery } from '@tanstack/react-query';
 import { GripVertical, Pencil } from 'lucide-react';
 import { type FC, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import ServiceImage from '@/components/approvals/service-image';
 import ServiceInfo from '@/components/approvals/service-info';
 import { Button } from '@/components/ui/button';
