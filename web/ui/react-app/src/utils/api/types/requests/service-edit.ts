@@ -1,11 +1,13 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { formatRFC3339 } from 'date-fns';
 import { QUERY_KEYS } from '@/lib/query-keys';
+import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version';
 import type {
 	ServiceSummary,
 	ServiceUpdateState,
 	StatusSummaryType,
 } from '@/utils/api/types/config/summary';
+import type { ServiceEditDetailResponse } from '@/utils/api/types/requests/defaults';
 
 export type ServiceEditRequestBuilder = {
 	/* The service ID. */
@@ -55,6 +57,9 @@ export const serviceSummaryReducer = (
  * `status.state` (and stamping `deployed_version_timestamp`) via `serviceSummaryReducer`
  * so 'update available'/'approve'/'skip' UI stays in sync with the new version.
  *
+ * Also patches the cached service detail, as a 'manual' lookup reports the deployed
+ * version as its `version`, and the edit modal seeds the field from that cache.
+ *
  * @param queryClient - The React Query client.
  * @param serviceID - The ID of the service to update.
  * @param version - The new `deployed_version`.
@@ -82,6 +87,18 @@ export const applyDeployedVersionUpdate = (
 				},
 				oldData,
 			),
+	);
+
+	queryClient.setQueryData<ServiceEditDetailResponse>(
+		QUERY_KEYS.SERVICE.EDIT_ITEM(serviceID),
+		(oldData) =>
+			oldData?.deployed_version?.type ===
+			DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value
+				? {
+						...oldData,
+						deployed_version: { ...oldData.deployed_version, version: version },
+					}
+				: oldData,
 	);
 };
 
