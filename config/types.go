@@ -96,10 +96,6 @@ func (c *Config) unmarshal(format string, data []byte) error {
 
 // Decode decodes YAML-encoded data into the receiver.
 func (c *Config) Decode(raw []byte) error {
-	if len(raw) == 0 {
-		return nil
-	}
-
 	databaseChannel := make(chan dbtype.Message, 32)
 	c.DatabaseChannel = databaseChannel
 	c.HardDefaults.Service.Status.DatabaseChannel = c.DatabaseChannel

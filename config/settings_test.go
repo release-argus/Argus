@@ -22,6 +22,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml"
+
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
@@ -844,9 +846,50 @@ func TestSettings_CheckValues(t *testing.T) {
 		input                              *Settings
 		want                               string
 		wantUsernameHash, wantPasswordHash string
+		wantIndent                         uint8
 		ok                                 bool
 		errRegex                           string
 	}{
+		{
+			name: "indentation/0",
+			input: &Settings{
+				Indentation: 0,
+			},
+			want:       "{}\n",
+			wantIndent: yaml.DefaultIndentSpaces,
+		},
+		{
+			name: "indentation/1",
+			input: &Settings{
+				Indentation: 1,
+			},
+			want:       "{}\n",
+			wantIndent: 1,
+		},
+		{
+			name: "indentation/2",
+			input: &Settings{
+				Indentation: 2,
+			},
+			want:       "{}\n",
+			wantIndent: 2,
+		},
+		{
+			name: "indentation/3",
+			input: &Settings{
+				Indentation: 3,
+			},
+			want:       "{}\n",
+			wantIndent: 3,
+		},
+		{
+			name: "indentation/4",
+			input: &Settings{
+				Indentation: 4,
+			},
+			want:       "{}\n",
+			wantIndent: 4,
+		},
 		{
 			name: "BasicAuth/empty",
 			input: &Settings{
@@ -1098,6 +1141,9 @@ func TestSettings_CheckValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			if tc.wantIndent == 0 {
+				tc.wantIndent = yaml.DefaultIndentSpaces
+			}
 			test.SetEnv(t, tc.env)
 
 			_ = test.AssertCheckValuesWithError(
@@ -1109,11 +1155,19 @@ func TestSettings_CheckValues(t *testing.T) {
 
 			prefix := fmt.Sprintf("%s\nSettings.CheckValues()", packageName)
 
-			// THEN: The Settings returned stringifies as expected.
+			// THEN: the Settings returned stringifies as expected.
 			if got := tc.input.String(""); got != tc.want {
 				t.Errorf(
 					"%s stringified mismatch\ngot:  %q\nwant: %q",
 					prefix, got, tc.want,
+				)
+			}
+
+			// AND: the Indentation is min yaml.Default
+			if gotIndent := uint8(tc.input.Indentation); gotIndent != tc.wantIndent {
+				t.Errorf(
+					"%s Indentation mismatch\ngot:  %d\nwant: %d",
+					prefix, gotIndent, tc.wantIndent,
 				)
 			}
 

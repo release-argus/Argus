@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/goccy/go-yaml"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/release-argus/Argus/internal/logx"
@@ -119,6 +120,36 @@ func TestConfig_Load(t *testing.T) {
 			validate: func(t *testing.T, config *Config, stdout string) {
 				if config.Service == nil {
 					t.Errorf("%s got a nil config.Service, want non-nil", prefix)
+				}
+			},
+		},
+		{
+			name:      "Missing file loads with defaults",
+			setupFile: nil,
+			validate: func(t *testing.T, config *Config, stdout string) {
+				// AND: the Service map is initialised (not nil).
+				if config.Service == nil {
+					t.Errorf("%s got a nil config.Service, want non-nil", prefix)
+				}
+				// AND: hard defaults are initialised and given to the defaults.
+				if config.HardDefaults.Service.LatestVersion.Common.Require.Docker.Tag == "" {
+					t.Errorf(
+						"%s did not initialise hardDefaults (Service.LatestVersion.Common.Require.Docker.Tag shouldn't be empty)",
+						prefix,
+					)
+				}
+				if config.Defaults.Service.LatestVersion.Common.Require.Docker.Defaults == nil {
+					t.Errorf(
+						"%s did not give hardDefaults to the defaults (Service.LatestVersion.Common.Require.Docker.Defaults)",
+						prefix,
+					)
+				}
+				// AND: Indentation is defaulted for the first save.
+				if got := config.Settings.Indentation; got != yaml.DefaultIndentSpaces {
+					t.Errorf(
+						"%s Indentation mismatch\ngot:  %d\nwant: %d",
+						prefix, got, yaml.DefaultIndentSpaces,
+					)
 				}
 			},
 		},

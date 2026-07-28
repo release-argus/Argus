@@ -1732,7 +1732,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			wantOk := tc.errRegex == ""
 
 			resultChannel := make(chan bool, 1)
-			// WHEN: CheckValues is called on it.
+			// WHEN: MapEnvToStruct is called on it.
 			go func() { resultChannel <- defaults.MapEnvToStruct() }()
 
 			prefix := fmt.Sprintf("%s\nDefaults.MapEnvToStruct()", packageName)
