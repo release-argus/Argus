@@ -29,6 +29,38 @@ import (
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
+func TestRefresh__overridesRemovingTheLookup(t *testing.T) {
+	// GIVEN: a Lookup, and overrides that remove it.
+	lookup := testLookup(t, "url", false)
+	overrides := []byte("null")
+
+	// WHEN: Refresh is called with those overrides.
+	version, announce, err := Refresh(
+		lookup,
+		overrides,
+		nil,
+		nil,
+		plainDefaultsConfig(t),
+	)
+
+	prefix := fmt.Sprintf("%s\nRefresh()", packageName)
+
+	// THEN: an error is given, rather than a panic on the removed Lookup.
+	e := errfmt.FormatError(err)
+	if wantErrRegex := `removed by overrides`; !util.RegexCheck(wantErrRegex, e) {
+		t.Fatalf("%s error mismatch\ngot:  %q\nwant: %q",
+			prefix, e, wantErrRegex,
+		)
+	}
+
+	// AND: nothing is returned to announce.
+	if version != "" || announce {
+		t.Errorf("%s mismatch on the values returned\ngot:  %q, %t\nwant: %q, %t",
+			prefix, version, announce, "", false,
+		)
+	}
+}
+
 func TestApplyOverridesJSON(t *testing.T) {
 	lvCfg := plainDefaultsConfig(t)
 
