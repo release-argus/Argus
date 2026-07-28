@@ -61,6 +61,11 @@ func Refresh(
 	if err != nil {
 		return "", false, err
 	}
+	// `null` overrides remove the Lookup, leaving nothing to query.
+	if newLookup == nil {
+		return "", false, errors.New("latest_version: removed by overrides")
+	}
+
 	if overrides != nil {
 		newLookup.InheritSecrets(lookup, secretRefs)
 		// Remove channels from Status when using overrides.

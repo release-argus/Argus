@@ -62,6 +62,11 @@ func Refresh(
 	if err != nil {
 		return "", err
 	}
+	// `null` overrides remove the Lookup, leaving nothing to query.
+	if newLookup == nil {
+		return "", errors.New("deployed_version: removed by overrides")
+	}
+
 	// Refreshing an already-`manual` lookup commits the version carried in the overrides.
 	committing := overrides != nil &&
 		newLookup.GetType() == dvmanual.Type && previousType == dvmanual.Type

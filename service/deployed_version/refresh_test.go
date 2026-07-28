@@ -323,6 +323,38 @@ func TestRefresh__previewKeepsLiveStatus(t *testing.T) {
 	}
 }
 
+func TestRefresh__overridesRemovingTheLookup(t *testing.T) {
+	// GIVEN: a Lookup, and overrides that remove it.
+	lookup := testLookup(t, manual.Type, false, "")
+	overrides := []byte("null")
+
+	// WHEN: Refresh is called with those overrides.
+	got, err := Refresh(
+		lookup,
+		lookup.GetType(),
+		overrides,
+		nil,
+		nil,
+	)
+
+	prefix := fmt.Sprintf("%s\nRefresh()", packageName)
+
+	// THEN: an error is returned.
+	e := errfmt.FormatError(err)
+	if wantErrRegex := `removed by overrides`; !util.RegexCheck(wantErrRegex, e) {
+		t.Fatalf("%s error mismatch\ngot:  %q\nwant: %q",
+			prefix, e, wantErrRegex,
+		)
+	}
+
+	// AND: no version is returned.
+	if got != "" {
+		t.Errorf("%s mismatch on version returned\ngot:  %q\nwant: %q",
+			prefix, got, "",
+		)
+	}
+}
+
 func TestApplyOverridesJSON(t *testing.T) {
 	type args struct {
 		lookup             Lookup
