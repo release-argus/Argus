@@ -79,7 +79,7 @@ func Refresh(
 	// Log the lookup in use.
 	if logx.IsLevel("DEBUG") {
 		logx.Debug(
-			fmt.Sprintf("Refreshing with:\n%q", lookup.String("")),
+			fmt.Sprintf("Refreshing with:\n%q", newLookup.String("")),
 			logFrom,
 			true,
 		)
