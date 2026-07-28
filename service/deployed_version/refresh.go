@@ -62,12 +62,19 @@ func Refresh(
 	if err != nil {
 		return "", err
 	}
+	// Refreshing an already-`manual` lookup commits the version carried in the overrides.
+	committing := overrides != nil &&
+		newLookup.GetType() == dvmanual.Type && previousType == dvmanual.Type
+	// Anything else queried with overrides is a preview of an unsaved config change.
+	previewing := usingOverrides && !committing
+
+	// A preview must not reach the live Service, so give it a detached Status.
+	if previewing && newLookup != lookup {
+		newLookup.SetStatus(lookup.GetStatus().Copy(false))
+	}
+
 	if overrides != nil {
 		newLookup.InheritSecrets(lookup, secretRefs)
-		// Remove channels from Status when using overrides (if not manual).
-		if newLookup.GetType() != dvmanual.Type && previousType != dvmanual.Type {
-			newLookup.SetStatus(lookup.GetStatus().Copy(false))
-		}
 		// Check values as they may have changed.
 		if err := newLookup.CheckValues(); err != nil {
 			return "", err //nolint:wrapcheck
@@ -83,8 +90,8 @@ func Refresh(
 		)
 	}
 
-	// Query the lookup.
-	if err := newLookup.Query(!usingOverrides, logFrom); err != nil {
+	// Query the lookup (don't persist previews).
+	if err := newLookup.Query(!previewing, logFrom); err != nil {
 		return "", err //nolint:wrapcheck
 	}
 

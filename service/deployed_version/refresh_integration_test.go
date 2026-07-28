@@ -68,7 +68,7 @@ func TestLookup_Refresh(t *testing.T) {
 				overrides:        []byte(`{`),
 				ignoreSecretRefs: true,
 			},
-			previous: testLookup(t, "manual", false, ""),
+			previous: testLookup(t, manual.Type, false, ""),
 			errRegex: test.TrimYAML(`
 				^deployed_version:
 					[^\s]+ could not find flow.*`,
@@ -79,16 +79,29 @@ func TestLookup_Refresh(t *testing.T) {
 			args: args{
 				overrides: []byte(`{"url": "` + test.LookupBare["url_valid"] + `/1.2.4"}`),
 			},
-			previous: testLookup(t, "url", false, "1.2.3"),
+			previous: testLookup(t, web.Type, false, "1.2.3"),
 			errRegex: `^$`,
 			want:     "1.2.4",
+		},
+		{
+			name: "Change of Type",
+			args: args{
+				overrides: []byte(`{"type": "url", "url": "` + test.LookupBare["url_valid"] + `/1.2.4"}`),
+				version: versions{
+					deployedVersion: test.Ptr("1.2.3"),
+				},
+			},
+			previous: testLookup(t, manual.Type, false, ""),
+			errRegex: `^$`,
+			want:     "1.2.4",
+			announce: 0,
 		},
 		{
 			name: "Removal of URL",
 			args: args{
 				overrides: []byte(`{"url": ""}`),
 			},
-			previous: testLookup(t, "url", false, ""),
+			previous: testLookup(t, web.Type, false, ""),
 			errRegex: `url: <required>`,
 			want:     "",
 		},
@@ -101,7 +114,7 @@ func TestLookup_Refresh(t *testing.T) {
 				}`)),
 				semanticVersioning: test.Ptr("false"),
 			},
-			previous: testLookup(t, "url", false, "1.2.2"),
+			previous: testLookup(t, web.Type, false, "1.2.2"),
 			errRegex: `^$`,
 			want:     "1.2.3-beta",
 		},
@@ -110,7 +123,7 @@ func TestLookup_Refresh(t *testing.T) {
 			args: args{
 				overrides: []byte(`{"allow_invalid_certs": false}`),
 			},
-			previous: testLookup(t, "url", false, ""),
+			previous: testLookup(t, web.Type, false, ""),
 			errRegex: `x509 \(certificate invalid\)`,
 		},
 		{
@@ -123,7 +136,7 @@ func TestLookup_Refresh(t *testing.T) {
 					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339),
 				},
 			},
-			previous: testLookup(t, "url", false, "1.2.3"),
+			previous: testLookup(t, web.Type, false, "1.2.3"),
 			errRegex: `^$`,
 			want:     "1.2.3",
 			announce: 1,
@@ -148,7 +161,7 @@ func TestLookup_Refresh(t *testing.T) {
 				},
 			},
 			previous: test.Must(t, func() (Lookup, error) {
-				l := testLookup(t, "url", false, "")
+				l := testLookup(t, web.Type, false, "")
 				lTyped, _ := l.(*web.Lookup)
 				lTyped.Method = "POST"
 				lTyped.URL = test.LookupWithHeaderAuth["url_valid"]
@@ -183,7 +196,7 @@ func TestLookup_Refresh(t *testing.T) {
 				},
 			},
 			previous: test.Must(t, func() (Lookup, error) {
-				l := testLookup(t, "url", false, "")
+				l := testLookup(t, web.Type, false, "")
 				lTyped, _ := l.(*web.Lookup)
 				lTyped.Method = "POST"
 				lTyped.URL = test.LookupWithHeaderAuth["url_valid"]
@@ -325,6 +338,13 @@ func TestLookup_Refresh(t *testing.T) {
 					t.Errorf(
 						"%s .DeployedVersionTimestamp() value mismatch\ngot:  %q\nwant: %q",
 						prefix, gotDVTS, targetDVTS,
+					)
+				}
+				// AND: neither should the version.
+				if gotDV, targetDV := previousStatus.DeployedVersion(), targetStatus.DeployedVersion(); gotDV != targetDV {
+					t.Errorf(
+						"%s a preview changed .DeployedVersion()\ngot:  %q\nwant: %q",
+						prefix, targetDV, gotDV,
 					)
 				}
 			}
