@@ -74,9 +74,9 @@ func testLookup(t *testing.T, typ string, fail bool, version string) (dv Lookup)
 	dvCfg := plainDefaultsConfig(t)
 
 	switch typ {
-	case "manual":
+	case manual.Type:
 		dv = testManual(t, version)
-	case "url":
+	case web.Type:
 		dv = testWeb(t, fail, version)
 	}
 
@@ -157,9 +157,9 @@ func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
 func getType(lookup Lookup) string {
 	switch lookup.(type) {
 	case *web.Lookup:
-		return "url"
+		return web.Type
 	case *manual.Lookup:
-		return "manual"
+		return manual.Type
 	}
 	return "unknown"
 }
