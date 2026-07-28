@@ -19,7 +19,7 @@ const useServiceForm = <T extends ZodObject>(
 	return useForm<z.infer<T>>({
 		...rest,
 		mode: 'onBlur',
-		resolver: zodResolver(schema) as Resolver<z.infer<T>>,
+		resolver: zodResolver(schema) as unknown as Resolver<z.infer<T>>,
 	});
 };
 

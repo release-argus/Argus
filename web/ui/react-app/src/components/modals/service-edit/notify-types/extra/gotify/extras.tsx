@@ -66,7 +66,7 @@ const Extras: FC<ExtrasProps> = ({
 		);
 	}, []);
 
-	const fieldValues = useWatch({ name }) as GotifyExtrasSchema;
+	const fieldValues = useWatch({ name }) as GotifyExtrasSchema | undefined;
 	const usingDefaults = useMemo(
 		() =>
 			isUsingDefaults({

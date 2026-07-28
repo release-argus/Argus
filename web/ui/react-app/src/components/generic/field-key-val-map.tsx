@@ -63,7 +63,7 @@ const FieldKeyValMap: FC<FieldKeyValMapProps> = ({
 	}, []);
 
 	// Keep track of the array values, so we can use defaults when empty.
-	const fieldValues = useWatch({ name: name }) as Header[];
+	const fieldValues = useWatch({ name: name }) as Header[] | undefined;
 	// Use defaults when fieldValues undefined or the same as the defaults.
 	const usingDefaults = useMemo(
 		() => isUsingDefaults({ arg: fieldValues, defaultValue: defaults }),

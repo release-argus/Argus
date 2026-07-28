@@ -455,7 +455,7 @@ func (s *Shoutrrr) getSender(
 	url := s.BuildURL()
 
 	// Check the URL provides a valid sender.
-	sender, err := shoutrrr.CreateSender(url)
+	sender, err := shoutrrr.CreateSenderWithOptions(types.SenderOptions{}, url)
 	if err != nil {
 		err = fmt.Errorf("failed to create Shoutrrr sender: %w", err)
 		return nil, "", nil, "", err

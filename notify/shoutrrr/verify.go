@@ -26,6 +26,7 @@ import (
 	"time"
 
 	goshoutrrr "github.com/nicholas-fedor/shoutrrr"
+	goshoutrrrTypes "github.com/nicholas-fedor/shoutrrr/pkg/types"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
@@ -144,7 +145,7 @@ func (s *Shoutrrr) CheckValues() (error, bool) {
 	// Exclude matrix since it logs in, so may run into a rate-limit.
 	if len(errs) == 0 && s.GetType() != "matrix" {
 		//#nosec G104 -- Disregard as we are not giving any rawURLs.
-		sender, _ := goshoutrrr.CreateSender()
+		sender, _ := goshoutrrr.CreateSenderWithOptions(goshoutrrrTypes.SenderOptions{})
 		if _, err := sender.Locate(s.BuildURL()); err != nil {
 			errs = append(errs, err)
 		}

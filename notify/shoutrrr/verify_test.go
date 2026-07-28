@@ -51,7 +51,7 @@ func TestShoutrrr_TestSend(t *testing.T) {
 			sType: test.Ptr("somethingUnknown"),
 			errRegex: test.TrimYAML(`
 				^failed to create Shoutrrr sender:
-					creating sender for URLs \[\]:
+					creating sender with options for URLs \[\]:
 						error initializing router services:
 							unknown service: ""
 								unknown service$`,
@@ -1578,7 +1578,6 @@ func TestBase_CorrectSelf(t *testing.T) {
 		})
 	}
 }
-
 
 func TestParseHostPort(t *testing.T) {
 	// GIVEN: an address that may contain a scheme, host, and/or port.
