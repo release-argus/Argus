@@ -14,7 +14,8 @@ import { defineConfig, devices } from '@playwright/test';
  * but they all drive a single shared backend and a dashboard that re-renders on
  * every service add/remove. Running them concurrently makes the stateful flows
  * (modal create/save, the ordering drag) race that churn and time out, so each
- * `-mutating` project below caps itself to one worker.
+ * `-mutating` project below caps itself to one worker AND chains onto the
+ * previous browser's, leaving one mutator against the backend at any moment.
  */
 const SERIAL_SPECS = [
 	'create-service.spec.ts',
@@ -47,13 +48,17 @@ export default defineConfig({
 	/* One project per browser, split into a parallel-safe project and a
 	 * single-worker `-mutating` project. */
 	projects: [
-		...Object.entries(BROWSERS).flatMap(([name, use]) => [
+		...Object.entries(BROWSERS).flatMap(([name, use], i, browsers) => [
 			{
 				name,
 				testIgnore: SERIAL_SPECS,
 				use,
 			},
 			{
+				// Chained onto the previous browser: only one may mutate at a time.
+				...(i > 0 && {
+					dependencies: [`${browsers[i - 1][0]}-mutating`],
+				}),
 				name: `${name}-mutating`,
 				testMatch: SERIAL_SPECS,
 				use,
