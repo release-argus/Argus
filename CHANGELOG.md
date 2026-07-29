@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.33.0](https://github.com/release-argus/Argus/compare/0.32.0...0.33.0) (2026-07-29)
+
+
+### Features
+
+* **config:** create config file on first write if it doesn't exist ([#930](https://github.com/release-argus/Argus/issues/930)) ([28655b1](https://github.com/release-argus/Argus/commit/28655b182706f71bd18868e3cf5bbedce1f050b3))
+
+
+### Bug Fixes
+
+* **api:** reject a service create/edit with no `id` ([83742e5](https://github.com/release-argus/Argus/commit/83742e52a78de2b1bc86fffd0b6f06510658784c))
+* **api:** require a unique name on each notify/webhook ([370948e](https://github.com/release-argus/Argus/commit/370948e0090103b5e0c973091957ead67dc04ede))
+* **dv-manual:** apply the configured version on create/edit ([9ec1338](https://github.com/release-argus/Argus/commit/9ec133895a4c49ca90d45422eea07c4c7512c6c9))
+* **dv-manual:** lock Version reads in `Copy` and `String` ([d5a6d66](https://github.com/release-argus/Argus/commit/d5a6d6652477d7250a93b99a622be721216827b9))
+* **dv-manual:** persist version updates ([6be40d5](https://github.com/release-argus/Argus/commit/6be40d5395d81bdadb9842530287a962cdfd54a5))
+* **latest_version:** migrate deprecated defaults before service decode ([0ee6b1d](https://github.com/release-argus/Argus/commit/0ee6b1dccfb27318f95f165fe91c4bd3c4d19b5e))
+* **ui:** show the new version when reopening a service edit ([97f3fbb](https://github.com/release-argus/Argus/commit/97f3fbb6842a2ed927ac0e23a36704b19673bedd))
+* **version-refresh:** error when overrides remove the lookup ([b8af95e](https://github.com/release-argus/Argus/commit/b8af95e9a9c410c2c8ad700beada9013899b54bf))
+* **web:** announce every service edit, not just displayed changes ([0451e93](https://github.com/release-argus/Argus/commit/0451e9320230b8c3438593104b0749d8bd9ef559))
+
 ## [0.32.0](https://github.com/release-argus/Argus/compare/0.31.1...0.32.0) (2026-07-05)
 
 
