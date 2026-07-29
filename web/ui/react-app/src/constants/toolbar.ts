@@ -67,7 +67,13 @@ export const URL_PARAMS = {
 	VIEW: 'view',
 } as const;
 
-/* Storage key for the visible table columns. */
-export const TABLE_COLUMNS_VISIBLE_STORAGE_KEY = 'tableColumnsVisible';
+/* Storage key for the hidden table columns. */
+export const TABLE_COLUMNS_HIDDEN_STORAGE_KEY = 'tableColumnsHidden';
+/**
+ * Storage key of the superseded 'visible table columns' format.
+ * Hidden columns are stored rather than visible ones so that columns added in a later
+ * release start visible instead of hidden. Removed on load.
+ */
+export const TABLE_COLUMNS_VISIBLE_STORAGE_KEY_LEGACY = 'tableColumnsVisible';
 /* Storage key for the order of table columns. */
 export const TABLE_COLUMNS_ORDER_STORAGE_KEY = 'tableColumnsOrder';

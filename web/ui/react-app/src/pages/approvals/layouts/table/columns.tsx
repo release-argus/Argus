@@ -1,6 +1,8 @@
 import type { HeaderContext } from '@tanstack/react-table';
 import { formatISO9075 } from 'date-fns';
+import ServiceImage from '@/components/approvals/service-image';
 import { ServiceActionRelease } from '@/components/approvals/table/service-action-release';
+import { ServiceID } from '@/components/approvals/table/service-id';
 import { ServiceStatus } from '@/components/approvals/table/service-status';
 import type { ColumnDefWithMeta } from '@/components/ui/data-table';
 import { DataTableColumnHeader } from '@/components/ui/data-table-column-header';
@@ -13,7 +15,24 @@ type HeaderContextWithReset<TData, TValue> = HeaderContext<TData, TValue> & {
 
 export const columns: ColumnDefWithMeta<ServiceSummary>[] = [
 	{
+		accessorKey: 'icon',
+		cell: ({ row }) => (
+			<ServiceImage className="aspect-square size-8" service={row.original} />
+		),
+		enableSorting: false,
+		header: (context: HeaderContextWithReset<ServiceSummary, unknown>) => (
+			<DataTableColumnHeader
+				column={context.column}
+				resetSorting={context.resetSorting}
+				title="Icon"
+			/>
+		),
+		id: 'icon',
+		meta: { hideWhenAllValuesEmpty: true, label: 'Icon' },
+	},
+	{
 		accessorKey: 'id',
+		cell: ({ row }) => <ServiceID row={row} />,
 		enableSorting: true,
 		header: (context: HeaderContextWithReset<ServiceSummary, unknown>) => (
 			<DataTableColumnHeader
@@ -164,3 +183,8 @@ export const columns: ColumnDefWithMeta<ServiceSummary>[] = [
 		meta: { label: 'Actions' },
 	},
 ];
+
+/* The IDs of every known column, in the order they are defined above. */
+export const COLUMN_IDS: string[] = columns
+	.map((col) => col.id ?? ('accessorKey' in col ? String(col.accessorKey) : ''))
+	.filter(Boolean);

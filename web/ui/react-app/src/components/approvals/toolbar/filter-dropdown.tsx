@@ -31,12 +31,14 @@ import {
 	HideValue,
 	type HideValueType,
 	TABLE_COLUMNS_ORDER_STORAGE_KEY,
-	TABLE_COLUMNS_VISIBLE_STORAGE_KEY,
 	toolbarHideOptions,
 } from '@/constants/toolbar';
 import { getServiceSummaries } from '@/hooks/use-services';
-import { resetColumnVisibility } from '@/pages/approvals/layouts/table/column-visibility';
-import { columns } from '@/pages/approvals/layouts/table/columns.tsx';
+import {
+	persistColumnVisibility,
+	resetColumnVisibility,
+} from '@/pages/approvals/layouts/table/column-visibility';
+import { COLUMN_IDS } from '@/pages/approvals/layouts/table/columns.tsx';
 
 type HideOptionKey = (typeof toolbarHideOptions)[number]['key'];
 
@@ -162,25 +164,13 @@ const FilterDropdown: FC = () => {
 		setTableColumnVisibility(visibility);
 
 		// Persist column visibility.
-		localStorage.setItem(
-			TABLE_COLUMNS_VISIBLE_STORAGE_KEY,
-			Object.entries(visibility)
-				.filter(([_, isVisible]) => isVisible)
-				.map(([columnID]) => columnID)
-				.join(','),
-		);
+		persistColumnVisibility(visibility);
 
 		// Reset order.
-		const fallbackOrder = columns
-			.map((c) => c.id)
-			.filter((id): id is string => typeof id === 'string');
-		setTableColumnOrder(fallbackOrder);
+		setTableColumnOrder([...COLUMN_IDS]);
 
 		// Persist column order.
-		localStorage.setItem(
-			TABLE_COLUMNS_ORDER_STORAGE_KEY,
-			fallbackOrder.join(','),
-		);
+		localStorage.setItem(TABLE_COLUMNS_ORDER_STORAGE_KEY, COLUMN_IDS.join(','));
 	}, []);
 
 	const filterButtonTooltip = 'Filter shown services';
