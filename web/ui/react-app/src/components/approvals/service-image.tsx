@@ -42,9 +42,10 @@ const ServiceImage: FC<ServiceImageProps> = ({ service }) => {
 			);
 
 		// Default icon.
-		const ServiceIcon = LATEST_VERSION_LOOKUP_TYPE.GITHUB.value
-			? SiGithub
-			: AppWindow;
+		const ServiceIcon =
+			serviceType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value
+				? SiGithub
+				: AppWindow;
 		return <ServiceIcon className="size-full! object-contain" />;
 	}, [serviceType, icon, loading]);
 
