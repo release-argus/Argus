@@ -1,19 +1,19 @@
+import type { DragEndEvent, SensorOptions } from '@dnd-kit/core';
+import type { SensorDescriptor } from '@dnd-kit/core/dist/sensors/types';
+import type { VisibilityState } from '@tanstack/react-table';
+import { type FC, useCallback, useEffect } from 'react';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
 import { DataTable } from '@/components/ui/data-table';
+import { TABLE_COLUMNS_ORDER_STORAGE_KEY } from '@/constants/toolbar';
+import { mergeColumnOrder } from '@/pages/approvals/layouts/table/column-order';
 import {
-	TABLE_COLUMNS_ORDER_STORAGE_KEY,
-	TABLE_COLUMNS_VISIBLE_STORAGE_KEY,
-} from '@/constants/toolbar';
-import {
+	loadColumnVisibility,
+	persistColumnVisibility,
 	resetColumnVisibility,
 	setAutoHideColumnVisibility,
 } from '@/pages/approvals/layouts/table/column-visibility';
 import { columns } from '@/pages/approvals/layouts/table/columns';
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
-import type { DragEndEvent, SensorOptions } from '@dnd-kit/core';
-import type { SensorDescriptor } from '@dnd-kit/core/dist/sensors/types';
-import type { VisibilityState } from '@tanstack/react-table';
-import { type FC, useCallback, useEffect } from 'react';
 
 type TableLayoutProps = {
 	/* The list of service summaries for the table. */
@@ -111,14 +111,8 @@ export const TableLayout: FC<TableLayoutProps> = ({
 				if (typeof updater !== 'function')
 					setAutoHideColumnVisibility({ data: services, visibility: newValue });
 
-				// persist visible columns.
-				localStorage.setItem(
-					TABLE_COLUMNS_VISIBLE_STORAGE_KEY,
-					Object.entries(newValue)
-						.filter(([_, isVisible]) => isVisible)
-						.map(([columnID]) => columnID)
-						.join(','),
-				);
+				// Persist hidden columns.
+				persistColumnVisibility(newValue);
 
 				resetColumnVisibility({ data: services, visibility: newValue });
 
@@ -133,31 +127,12 @@ export const TableLayout: FC<TableLayoutProps> = ({
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Startup dependency.
 	useEffect(() => {
 		// Column visibility.
-		const storedVisibility = new Set(
-			(localStorage.getItem(TABLE_COLUMNS_VISIBLE_STORAGE_KEY) ?? '')
-				.split(',')
-				.filter(Boolean),
-		);
+		setTableColumnVisibility(loadColumnVisibility());
 
-		// Convert string[] to VisibilityState (full visibility if empty).
-		const visibility = columns.reduce<VisibilityState>((acc, col) => {
-			const id = col.id ?? ('accessorKey' in col ? col.accessorKey : '');
-			if (id) acc[id] = storedVisibility.size ? storedVisibility.has(id) : true;
-			return acc;
-		}, {});
-
-		setTableColumnVisibility(visibility);
-
-		// Column order.
-		const storedOrder = localStorage
-			.getItem(TABLE_COLUMNS_ORDER_STORAGE_KEY)
-			?.split(',')
-			.filter(Boolean);
-		const fallbackOrder = columns
-			.map((c) => c.id)
-			.filter((id): id is string => typeof id === 'string');
-
-		setTableColumnOrder(storedOrder ?? fallbackOrder);
+		// Column order (columns absent from the stored order keep their defined position).
+		const storedOrder =
+			localStorage.getItem(TABLE_COLUMNS_ORDER_STORAGE_KEY)?.split(',') ?? [];
+		setTableColumnOrder(mergeColumnOrder(storedOrder));
 
 		return () => setTableInstance(undefined);
 	}, []);
