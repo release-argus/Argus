@@ -18,6 +18,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const SERIAL_SPECS = [
 	'create-service.spec.ts',
+	'refresh-deployed-versions.spec.ts',
 	'service-actions-dv-manual.spec.ts',
 	'service-ordering.spec.ts',
 	'service-secret-inheritance.spec.ts',
