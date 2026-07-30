@@ -7,6 +7,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { Eye } from 'lucide-react';
 import { type FC, useCallback } from 'react';
+import RefreshDeployedVersionsMenuItem from '@/components/approvals/toolbar/refresh-deployed-versions';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
 import { Button } from '@/components/ui/button';
 import type { ExtraColumnMeta } from '@/components/ui/data-table';
@@ -242,6 +243,11 @@ const FilterDropdown: FC = () => {
 							{option.label}
 						</DropdownMenuCheckboxItem>
 					))}
+				</DropdownMenuGroup>
+				<DropdownMenuSeparator />
+				<DropdownMenuGroup>
+					<DropdownMenuLabel>Actions:</DropdownMenuLabel>
+					<RefreshDeployedVersionsMenuItem />
 				</DropdownMenuGroup>
 				{tableInstance && (
 					<>
