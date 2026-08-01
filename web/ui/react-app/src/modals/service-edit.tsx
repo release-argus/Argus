@@ -155,10 +155,13 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 		schema: schema,
 	});
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: form stable. Reset only once, after schemaData loaded.
+	// Whether the fetched data has been applied to the form.
+	const [dataApplied, setDataApplied] = useState(false);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: form stable.
 	useEffect(() => {
-		if (sID === undefined) return;
-		if (schemaData) form.reset(schemaData);
+		if (schemaData) form.reset(schemaData, { keepDirtyValues: true });
+		if (!loading) setDataApplied(true);
 	}, [sID, loading]);
 	// null if submitting.
 	const [err, setErr] = useState<string | null>('');
@@ -243,7 +246,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 				<form>
 					<DialogContent className="max-h-full w-full max-w-full overflow-y-auto sm:max-w-xl md:max-h-[95%] md:max-w-2xl lg:max-w-4xl">
 						<ServiceEditModalHeader type={serviceID ? 'Edit' : 'Create'} />
-						<EditService loading={loading} />
+						<EditService loading={loading || !dataApplied} />
 						<DialogFooter className="flex flex-col">
 							<div className="flex w-full items-center justify-between">
 								<div>
