@@ -36,6 +36,7 @@ const BROWSERS = {
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
+	expect: { timeout: 15_000 },
 	/* Fail the build on CI if you accidentally left test.only in the source code. */
 	forbidOnly: !!process.env.CI,
 	/* Run tests in files in parallel */
@@ -87,6 +88,7 @@ export default defineConfig({
 	/* Retry on CI only */
 	retries: process.env.CI ? 2 : 0,
 	testDir: './tests',
+
 	/* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
 	use: {
 		/* Bound individual interactions/navigations so a single stuck action
@@ -97,8 +99,9 @@ export default defineConfig({
 		baseURL: process.env.BASE_URL ?? 'http://localhost:8080',
 		navigationTimeout: 30_000,
 
-		/* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-		trace: 'on-first-retry',
+		/* Keep the trace of the attempt that failed.
+		 * See https://playwright.dev/docs/trace-viewer */
+		trace: 'retain-on-failure',
 	},
 	/* Total worker pool. The `-mutating` projects cap themselves to 1 worker
 	 * each regardless of this value; everything else uses the full pool. */

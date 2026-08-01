@@ -94,7 +94,7 @@ test.describe('WebHook actions', () => {
 
 		// AND: an hourglass icon with a "Can resend ..." tooltip indicates when
 		// the WebHook can next be sent.
-		await dialog.locator('[aria-label="Resend timer"]').click();
+		await dialog.locator('[aria-label="Resend timer"]').hover();
 		await expect(page.getByText(/can resend/i).first()).toBeVisible();
 		await screenshot(
 			page,
@@ -183,7 +183,7 @@ test.describe('WebHook actions', () => {
 
 		// AND: an hourglass icon with a "Can resend ..." tooltip indicates when
 		// the WebHook can next be sent.
-		await dialog.locator('[aria-label="Resend timer"]').click();
+		await dialog.locator('[aria-label="Resend timer"]').hover();
 		await expect(page.getByText(/can resend/i).first()).toBeVisible();
 		await screenshot(
 			page,
