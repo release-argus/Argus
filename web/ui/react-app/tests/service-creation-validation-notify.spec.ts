@@ -139,7 +139,9 @@ test.describe('Service creation modal - field validation', () => {
 				await addNotify(section, dialog, 'Gotify');
 
 				// WHEN: an "extra" is added and its namespace switched to "other".
-				await section.getByRole('button', { name: /add new extras/i }).click();
+				await clickViaKeyboard(
+					section.getByRole('button', { name: /add new extras/i }),
+				);
 				await section
 					.locator('#notify\\.0\\.params\\.extras\\.0\\.namespace')
 					.click();
@@ -659,7 +661,9 @@ test.describe('Service creation modal - field validation', () => {
 
 				// WHEN: an action is added (defaults to type "Broadcast", which
 				// requires `label`; "View"/"HTTP").
-				await section.getByRole('button', { name: /add new actions/i }).click();
+				await clickViaKeyboard(
+					section.getByRole('button', { name: /add new actions/i }),
+				);
 
 				const labelInput = section.getByRole('textbox', {
 					name: 'Value field for Label',
@@ -755,7 +759,9 @@ test.describe('Service creation modal - field validation', () => {
 				await addNotify(section, dialog, 'OpsGenie');
 
 				// WHEN: an action is added and left empty.
-				await section.getByRole('button', { name: /add new actions/i }).click();
+				await clickViaKeyboard(
+					section.getByRole('button', { name: /add new actions/i }),
+				);
 				const actionInput = section.locator(
 					'input[name="notify.0.params.actions.0.arg"]',
 				);
@@ -887,9 +893,9 @@ test.describe('Service creation modal - field validation', () => {
 				await addNotify(section, dialog, 'OpsGenie');
 
 				// WHEN: a responder is added and left empty (defaults to type "team").
-				await section
-					.getByRole('button', { name: /add new responders/i })
-					.click();
+				await clickViaKeyboard(
+					section.getByRole('button', { name: /add new responders/i }),
+				);
 				const responderValueInput = section.locator(
 					'input[name="notify.0.params.responders.0.value"]',
 				);

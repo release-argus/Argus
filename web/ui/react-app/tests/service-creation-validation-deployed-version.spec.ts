@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { screenshotsUnder } from './fixtures/service';
 import {
+	clickViaKeyboard,
 	expectError,
 	expectValid,
 	fieldOf,
@@ -151,7 +152,9 @@ test.describe('Service creation modal - field validation', () => {
 			// GIVEN: `deployed_version.type` is "url" with a header row added.
 			await section.locator('#deployed_version\\.type').click();
 			await dialog.getByRole('option', { name: /^url$/i }).click();
-			await section.getByRole('button', { name: /add new headers/i }).click();
+			await clickViaKeyboard(
+				section.getByRole('button', { name: /add new headers/i }),
+			);
 
 			const keyInput = section.locator(
 				'input[name="deployed_version.headers.0.key"]',

@@ -449,6 +449,8 @@ export const createService = async (
 	await page.getByRole('button', { name: /create a service/i }).click();
 	const dialog = page.getByRole('dialog');
 	await expect(dialog).toBeVisible();
+	// The form is disabled until its data has loaded.
+	await expect(dialog.locator('input[name="id"]')).toBeEditable();
 	await dialog.locator('input[name="id"]').fill(id);
 
 	await fillLatestVersion(
@@ -480,9 +482,34 @@ export const createService = async (
 		await fillWebHooks(dialog, options.webhooks);
 	}
 
-	await dialog.locator('#modal-action').click();
-	// The server verifies the lookup via a real network call before
-	// responding, so the modal can take longer than the default 5s to close.
+	// The server verifies the lookup with a real network call before responding,
+	// so this can be slow, and a transient upstream failure (e.g. an i/o timeout
+	// reaching GitHub) is rejected with the modal left open - retry the submit.
+	let lastError = '';
+	try {
+		await expect(async () => {
+			const [response] = await Promise.all([
+				page.waitForResponse(
+					(res) =>
+						res.url().includes('/api/v1/service/new') &&
+						res.request().method() === 'PUT',
+				),
+				dialog.locator('#modal-action').click(),
+			]);
+			lastError = response.ok() ? '' : await response.text();
+			expect(response.ok()).toBeTruthy();
+		}).toPass({ timeout: 90_000 });
+	} catch (err) {
+		// The server rejects a create it cannot verify upstream. A DNS or dial
+		// failure is the environment - skip rather than fail.
+		test.skip(
+			/i\/o timeout|no such host|connection refused|TLS handshake timeout/.test(
+				lastError,
+			),
+			`upstream unreachable: ${lastError}`,
+		);
+		throw err;
+	}
 	await expect(dialog).not.toBeVisible({ timeout: 30_000 });
 };
 

@@ -23,13 +23,15 @@ export const fieldOf = (input: Locator) =>
  */
 export const openCreateServiceModal = async (page: Page) => {
 	await page.goto('/');
-	// Wait for /api/v1/service/order response.
+	// Wait for the service list to render.
 	await expect(page.locator('[data-service-id]').first()).toBeVisible();
 
 	await page.getByRole('button', { name: /toggle edit mode/i }).click();
 	await page.getByRole('button', { name: /create a service/i }).click();
 	const dialog = page.getByRole('dialog');
 	await expect(dialog).toBeVisible();
+	// The form is disabled until its data has loaded.
+	await expect(dialog.locator('input[name="id"]')).toBeEditable();
 	return dialog;
 };
 
@@ -44,9 +46,11 @@ export const openSection = async (dialog: Locator, name: string) => {
 	await dialog
 		.getByRole('button', { name: new RegExp(`^${name}:?$`, 'i') })
 		.click();
-	return dialog
+	const section = dialog
 		.locator('[data-slot="accordion-item"]', { hasText: name })
 		.first();
+	await waitForAccordionAnimations(section);
+	return section;
 };
 
 /**

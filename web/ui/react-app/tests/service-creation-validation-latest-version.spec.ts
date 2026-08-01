@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { screenshotsUnder } from './fixtures/service';
 import {
+	clickViaKeyboard,
 	expectError,
 	expectValid,
 	openCreateServiceModal,
@@ -108,9 +109,9 @@ test.describe('Service creation modal - field validation', () => {
 			// GIVEN: `latest_version.type` is "url" and we've added a url command.
 			await section.locator('#latest_version\\.type').click();
 			await dialog.getByRole('option', { name: /^url$/i }).click();
-			await section
-				.getByRole('button', { name: /add new url command/i })
-				.click();
+			await clickViaKeyboard(
+				section.getByRole('button', { name: /add new url command/i }),
+			);
 
 			const regexInput = section.locator(
 				'input[name="latest_version.url_commands.0.regex"]',
@@ -161,9 +162,9 @@ test.describe('Service creation modal - field validation', () => {
 			// GIVEN: `latest_version.type` is "url" with a url command added.
 			await section.locator('#latest_version\\.type').click();
 			await dialog.getByRole('option', { name: /^url$/i }).click();
-			await section
-				.getByRole('button', { name: /add new url command/i })
-				.click();
+			await clickViaKeyboard(
+				section.getByRole('button', { name: /add new url command/i }),
+			);
 
 			// WHEN: the command type is switched to "Replace".
 			// THEN: its "Replace" (`old`) field is required.
