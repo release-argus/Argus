@@ -141,6 +141,7 @@ export const Item: FC<ItemProps> = ({
 						content={
 							<p>{`Can resend ${formatRelative(new Date(next_runnable), new Date())}`}</p>
 						}
+						contentProps={{ id: `${id}-resend-date` }}
 					>
 						<Hourglass aria-label="Resend timer" className="size-5" />
 					</Tip>
