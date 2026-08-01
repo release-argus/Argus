@@ -21,9 +21,7 @@ const REFRESH_TOAST_OPTS = {
 } as const;
 
 /**
- * Re-queries `deployed_version` (not the rate-limited `latest_version`) for
- * every configured service. Picking this from the dropdown is already a
- * deliberate two-step action, so it skips a separate confirmation step.
+ * Re-queries `deployed_version` for every configured service.
  */
 const RefreshDeployedVersionsMenuItem: FC = () => {
 	const queryClient = useQueryClient();
