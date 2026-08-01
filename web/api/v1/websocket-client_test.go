@@ -246,13 +246,23 @@ func TestClient_ReadPump__disconnects(t *testing.T) {
 			stdoutRegex: `^$`,
 		},
 		{
-			name:          "expected peer close",
+			name:          "expected peer close/normal closure",
+			peerCloseCode: websocket.CloseNormalClosure,
+			stdoutRegex:   `^$`,
+		},
+		{
+			name:          "expected peer close/going away (tab closed)",
 			peerCloseCode: websocket.CloseGoingAway,
 			stdoutRegex:   `^$`,
 		},
 		{
-			name:          "unexpected peer close",
-			peerCloseCode: websocket.CloseNormalClosure,
+			name:          "expected peer close/no status",
+			peerCloseCode: websocket.CloseNoStatusReceived,
+			stdoutRegex:   `^$`,
+		},
+		{
+			name:          "unexpected peer close/abnormal closure",
+			peerCloseCode: websocket.CloseAbnormalClosure,
 			stdoutRegex:   `^ERROR: .*WebSocket.*127.0.0.1.*`,
 		},
 		{
