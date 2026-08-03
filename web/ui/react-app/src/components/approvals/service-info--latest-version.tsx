@@ -29,11 +29,11 @@ const ServiceInfoLatestVersion: FC<ServiceInfoVersionProps> = ({
 		<ServiceInfoVersionItem
 			contentProps={{ side: 'bottom' }}
 			Icon={updateAvailable ? CornerDownRight : undefined}
-			liKey="latest_v"
 			timestamp={latestVersionTimestamp ?? undefined}
 			tipClassName="text-foreground"
 			tooltipLabel="Latest version found"
 			value={latestVersion ?? undefined}
+			versionType="latest"
 		/>
 	);
 };

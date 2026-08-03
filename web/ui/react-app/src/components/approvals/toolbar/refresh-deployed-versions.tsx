@@ -1,11 +1,12 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { LoaderCircle } from 'lucide-react';
 import type { FC } from 'react';
 import { toast } from 'sonner';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { getServiceSummaries } from '@/hooks/use-services';
 import { beautifyGoErrors } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
+import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version';
+import type { ServiceSummary } from '@/utils/api/types/config/summary';
 
 /* Number of `deployed_version` refreshes to run concurrently. */
 const REFRESH_CONCURRENCY = 5;
@@ -21,20 +22,32 @@ const REFRESH_TOAST_OPTS = {
 } as const;
 
 /**
- * Re-queries `deployed_version` for every configured service.
+ * Whether a service's deployed_version has an external source to re-query.
+ *
+ * @param svc - The service summary to check.
+ * @returns True if the service's deployed_version can be re-queried.
  */
-const RefreshDeployedVersionsMenuItem: FC = () => {
-	const queryClient = useQueryClient();
+export const canRefreshDeployedVersion = (svc: ServiceSummary): boolean =>
+	Boolean(svc.deployed_version_type) &&
+	svc.deployed_version_type !== DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value;
 
-	const { mutate: refreshAll, isPending } = useMutation({
+type RefreshDeployedVersionsMenuItemProps = {
+	/* IDs of the services to re-query. */
+	serviceIDs: string[];
+};
+
+/**
+ * Re-queries the `deployed_version` of each of `serviceIDs`.
+ *
+ * @param serviceIDs - IDs of the services to re-query.
+ */
+const RefreshDeployedVersionsMenuItem: FC<
+	RefreshDeployedVersionsMenuItemProps
+> = ({ serviceIDs }) => {
+	const total = serviceIDs.length;
+
+	const { mutate: refreshVisible, isPending } = useMutation({
 		mutationFn: async () => {
-			const serviceIDs = getServiceSummaries(queryClient)
-				.filter((svc) => !svc.loading && svc.deployed_version_type)
-				.map((svc) => svc.id);
-
-			const total = serviceIDs.length;
-			if (total === 0) return { failed: 0, total };
-
 			let completed = 0;
 			let failed = 0;
 			toast.loading(
@@ -50,21 +63,31 @@ const RefreshDeployedVersionsMenuItem: FC = () => {
 				);
 			};
 
-			for (let i = 0; i < serviceIDs.length; i += REFRESH_CONCURRENCY) {
-				const batch = serviceIDs.slice(i, i + REFRESH_CONCURRENCY);
-				const results = await Promise.allSettled(
-					batch.map((serviceID) =>
-						mapRequest('VERSION_REFRESH', {
+			let next = 0;
+			const worker = async () => {
+				while (next < serviceIDs.length) {
+					const serviceID = serviceIDs[next++];
+					try {
+						await mapRequest('VERSION_REFRESH', {
 							dataSemanticVersioning: null,
 							dataTarget: 'deployed_version',
 							original: null,
 							originalSemanticVersioning: null,
-							serviceID,
-						}).finally(reportProgress),
-					),
-				);
-				failed += results.filter((r) => r.status === 'rejected').length;
-			}
+							serviceID: serviceID,
+						});
+					} catch {
+						failed += 1;
+					} finally {
+						reportProgress();
+					}
+				}
+			};
+			await Promise.all(
+				Array.from(
+					{ length: Math.min(REFRESH_CONCURRENCY, serviceIDs.length) },
+					worker,
+				),
+			);
 
 			return { failed, total };
 		},
@@ -75,23 +98,21 @@ const RefreshDeployedVersionsMenuItem: FC = () => {
 			});
 		},
 		onSuccess: ({ failed, total }) => {
-			if (total === 0) {
-				toast.info(
-					'No services with a deployed version to refresh',
-					REFRESH_TOAST_OPTS,
-				);
-				return;
-			}
 			if (failed > 0) {
-				toast.error(
-					`Refreshed deployed versions: ${failed}/${total} failed`,
-					REFRESH_TOAST_OPTS,
-				);
+				toast.error(`Refreshed deployed versions`, {
+					description: (
+						<div className="flex flex-col gap-1">
+							<span>Succeeded: {total - failed}</span>
+							<span>Failed: {failed}</span>
+						</div>
+					),
+					...REFRESH_TOAST_OPTS,
+				});
 			} else {
-				toast.success(
-					`Refreshed deployed version for ${total} service${total === 1 ? '' : 's'}`,
-					REFRESH_TOAST_OPTS,
-				);
+				toast.success(`Refreshed deployed versions`, {
+					description: `Succeeded: ${total}`,
+					...REFRESH_TOAST_OPTS,
+				});
 			}
 		},
 	});
@@ -100,9 +121,9 @@ const RefreshDeployedVersionsMenuItem: FC = () => {
 		<DropdownMenuItem
 			className="cursor-pointer"
 			disabled={isPending}
-			onClick={() => refreshAll()}
+			onClick={() => refreshVisible()}
 		>
-			Refresh all deployed versions
+			Refresh visible deployed versions
 			{isPending && <LoaderCircle className="ml-2 animate-spin" />}
 		</DropdownMenuItem>
 	);

@@ -1,4 +1,8 @@
-import { type QueryClient, useQueries } from '@tanstack/react-query';
+import {
+	type QueryClient,
+	type UseQueryResult,
+	useQueries,
+} from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
 import type {
@@ -6,14 +10,34 @@ import type {
 	ServiceSummary,
 } from '@/utils/api/types/config/summary';
 
+export type UseServicesResult = {
+	/* Service summaries, in dashboard order. */
+	services: ServiceSummary[];
+	/* Whether any service summary is currently fetching. */
+	isFetching: boolean;
+};
+
+/*
+ * Combine the results of multiple service summary queries.
+ */
+const combineServices = (
+	results: UseQueryResult<ServiceSummary>[],
+): UseServicesResult => ({
+	isFetching: results.some((result) => result.isFetching),
+	services: results.flatMap((result) => (result.data ? [result.data] : [])),
+});
+
 /**
  * Fetch service summaries for a list of service IDs.
  *
  * @param order - The list of services to fetch.
- * @returns A React Query response object from `useQueries`.
+ * @returns The summaries, and whether any is still fetching.
  */
-export const useServices = (order?: OrderAPIResponse['order']) =>
+export const useServices = (
+	order?: OrderAPIResponse['order'],
+): UseServicesResult =>
 	useQueries({
+		combine: combineServices,
 		queries: (order ?? []).map((id) => ({
 			placeholderData: { id: id, loading: true },
 			queryFn: () => mapRequest('SERVICE_SUMMARY', { serviceID: id }),

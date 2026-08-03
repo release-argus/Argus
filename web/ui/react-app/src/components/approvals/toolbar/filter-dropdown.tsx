@@ -6,8 +6,10 @@ import {
 } from '@dnd-kit/sortable';
 import { useQueryClient } from '@tanstack/react-query';
 import { Eye } from 'lucide-react';
-import { type FC, useCallback } from 'react';
-import RefreshDeployedVersionsMenuItem from '@/components/approvals/toolbar/refresh-deployed-versions';
+import { type FC, useCallback, useMemo } from 'react';
+import RefreshDeployedVersionsMenuItem, {
+	canRefreshDeployedVersion,
+} from '@/components/approvals/toolbar/refresh-deployed-versions';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
 import { Button } from '@/components/ui/button';
 import type { ExtraColumnMeta } from '@/components/ui/data-table';
@@ -60,8 +62,14 @@ const FilterDropdown: FC = () => {
 		setTableColumnVisibility,
 		tableColumnOrder,
 		setTableColumnOrder,
+		visibleServices,
 	} = useToolbar();
 	const currentHideValues = values.hide;
+	const refreshableServiceIDs = useMemo(
+		() =>
+			visibleServices.filter(canRefreshDeployedVersion).map((svc) => svc.id),
+		[visibleServices],
+	);
 
 	const onDragEnd = (event: DragEndEvent) => {
 		const { active, over } = event;
@@ -234,11 +242,17 @@ const FilterDropdown: FC = () => {
 						</DropdownMenuCheckboxItem>
 					))}
 				</DropdownMenuGroup>
-				<DropdownMenuSeparator />
-				<DropdownMenuGroup>
-					<DropdownMenuLabel>Actions:</DropdownMenuLabel>
-					<RefreshDeployedVersionsMenuItem />
-				</DropdownMenuGroup>
+				{refreshableServiceIDs.length > 0 && (
+					<>
+						<DropdownMenuSeparator />
+						<DropdownMenuGroup>
+							<DropdownMenuLabel>Actions:</DropdownMenuLabel>
+							<RefreshDeployedVersionsMenuItem
+								serviceIDs={refreshableServiceIDs}
+							/>
+						</DropdownMenuGroup>
+					</>
+				)}
 				{tableInstance && (
 					<>
 						<DropdownMenuSeparator />

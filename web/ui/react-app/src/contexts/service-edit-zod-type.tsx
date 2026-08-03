@@ -62,7 +62,7 @@ export const SchemaProvider: FC<SchemaProviderProps> = ({
 }) => {
 	const { data: orderData } = useServiceOrder();
 	const order = orderData?.order ?? [];
-	const services = useServices();
+	const { services } = useServices();
 
 	// Stable key for service IDs.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: orderData covers order.
@@ -75,7 +75,7 @@ export const SchemaProvider: FC<SchemaProviderProps> = ({
 	// biome-ignore lint/correctness/useExhaustiveDependencies: serviceIDs covers orderData.order.
 	const contextValue = useMemo(() => {
 		const serviceNamesSet = new Set(
-			services.map((svc) => svc.data?.name).filter(Boolean) as string[],
+			services.map((svc) => svc.name).filter(Boolean) as string[],
 		);
 
 		const {

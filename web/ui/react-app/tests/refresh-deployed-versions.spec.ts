@@ -85,7 +85,7 @@ test.describe('refresh all deployed versions', () => {
 	test('is reachable the same way regardless of viewport width', async ({
 		page,
 	}) => {
-		await page.setViewportSize({ width: 390, height: 844 });
+		await page.setViewportSize({ height: 844, width: 390 });
 		await page.goto('/');
 
 		await expect(

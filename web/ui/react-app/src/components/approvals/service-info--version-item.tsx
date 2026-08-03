@@ -15,8 +15,8 @@ export type ServiceInfoVersionProps = {
 };
 
 export type ServiceInfoVersionItemProps = {
-	/* Unique key for the list item. */
-	liKey?: string;
+	/* Which of the service's versions this item shows. */
+	versionType: 'deployed' | 'latest';
 
 	/* Icon to display before the version value. */
 	Icon?: LucideIcon;
@@ -36,7 +36,7 @@ export type ServiceInfoVersionItemProps = {
 /**
  * Service version item with an associated icon, value, timestamp and tooltip label.
  *
- * @property liKey - Unique key required for the `<li>` element in the rendered list.
+ * @property versionType - Which of the service's versions this item shows.
  * @property Icon - An optional icon to display alongside the item details.
  * @property value - The version value to be displayed.
  * @property timestamp - Timestamp information for the version.
@@ -45,7 +45,7 @@ export type ServiceInfoVersionItemProps = {
  * @property contentProps - Additional properties to pass to the tooltip content configuration.
  */
 const ServiceInfoVersionItem: FC<ServiceInfoVersionItemProps> = ({
-	liKey,
+	versionType,
 	Icon,
 	value,
 	timestamp,
@@ -56,7 +56,7 @@ const ServiceInfoVersionItem: FC<ServiceInfoVersionItemProps> = ({
 	const tooltipContent = `${tooltipLabel} ${timestamp ? relativeDate(new Date(timestamp)) : 'Unknown'}`;
 
 	return (
-		<li key={liKey}>
+		<li data-version-type={versionType} key={versionType}>
 			<Tip
 				className={cn('flex flex-wrap items-center gap-x-1 p-0', tipClassName)}
 				content={tooltipContent}
