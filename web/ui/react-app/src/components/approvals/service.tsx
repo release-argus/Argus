@@ -66,32 +66,21 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 	const updateStatus = useMemo(() => {
 		const updateAvailable = data?.status?.state === 'AVAILABLE';
 		const updateSkipped = data?.status?.state === 'SKIPPED';
-		const updateWarning = updateAvailable && !updateSkipped;
 
 		return {
-			// Update available when both 'latest' and 'deployed' versions defined, and differ.
 			available: updateAvailable,
-			// className for possible warning state
 			className: cn(
-				updateWarning && [
+				updateAvailable && [
 					'text-foreground',
 					data?.active !== false && 'bg-accent',
 				],
 			),
-			hasActions:
-				(data?.command ?? 0) > 0 ||
-				(data?.webhook ?? 0) > 0 ||
-				updateAvailable ||
-				updateSkipped,
 			// Version not found.
 			not_found:
 				isEmptyOrNull(data?.status?.deployed_version) ||
 				isEmptyOrNull(data?.status?.latest_version) ||
 				isEmptyOrNull(data?.status?.last_queried),
-			// Update available, and 'approved' version is a skip of the 'latest'.
 			skipped: updateSkipped,
-			// 'New' version found (and not skipped).
-			warning: updateWarning,
 		};
 	}, [data]);
 
@@ -110,7 +99,7 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 					: updateStatus.className,
 			)}
 			data-service-id={id}
-			data-update-available={updateStatus.warning && data?.active !== false}
+			data-update-state={data?.status?.state}
 			key={data?.id}
 			ref={setNodeRef}
 			style={dragStyle}

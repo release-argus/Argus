@@ -1,4 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
 import type { Table, VisibilityState } from '@tanstack/react-table';
 import { type ReactElement, useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
@@ -22,6 +21,7 @@ import { GridLayout } from '@/pages/approvals/layouts/grid';
 import { TableLayout } from '@/pages/approvals/layouts/table/table';
 import type { TagsTriType } from '@/types/util';
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
+import { visibleServices as getVisibleServices } from '@/utils/visible-services';
 
 const toolbarDefaults: ApprovalsToolbarOptions = {
 	editMode: false,
@@ -35,7 +35,6 @@ const toolbarDefaults: ApprovalsToolbarOptions = {
  * @returns The 'approvals' page, including a toolbar, and a list of services.
  */
 export const Approvals = (): ReactElement => {
-	const queryClient = useQueryClient();
 	const [searchParams, setSearchParams] = useSearchParams();
 	// Signal for resetting table sorting when order is reset.
 	const [resetSortingSignal, setResetSortingSignal] = useState(0);
@@ -109,64 +108,12 @@ export const Approvals = (): ReactElement => {
 		applyOrder,
 	} = useSortableServices();
 
-	const services = useServices(order);
+	const { services } = useServices(order);
 
-	// Filter the services based on the toolbar options.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: queryClient stable.
-	const filteredServices = useMemo(() => {
-		const {
-			search = '',
-			tags = toolbarDefaults.tags,
-			hide,
-		} = {
-			...toolbarOptions,
-			search: toolbarOptions.search.toLowerCase(),
-		};
-		const filterOnTags = tags.include.length > 0 || tags.exclude.length > 0;
-		const excludeOnly = filterOnTags && tags.include.length === 0;
-
-		return services
-			.filter((svc) => {
-				const service = svc.data;
-				if (!service || service.loading) return true;
-
-				const serviceID = service.id;
-
-				// Filter on 'tags'.
-				//     Have no tags to filter on,
-				//   OR
-				//     The service doesn't have any EXCLUDE tags
-				//       AND
-				//     We are only excluding tags, OR the service has all INCLUDE tags.
-				const hasTags =
-					!filterOnTags ||
-					(!tags.exclude.some((tag) => service.tags?.includes(tag)) &&
-						(excludeOnly ||
-							tags.include.some((tag) => service.tags?.includes(tag))));
-				if (!hasTags) return false;
-
-				// Filter on 'name'.
-				const name = (service.name ?? serviceID).toLowerCase();
-				if (!name.includes(search)) return false;
-
-				// Filter on 'hide' options.
-				const skipped = service.status?.state === 'SKIPPED';
-				const upToDate = service.status?.state === 'UP_TO_DATE';
-				const hideInactiveServices = hide.includes(HideValue.Inactive);
-				return (
-					// hideUpToDate: deployed_version NOT latest_version.
-					(!hide.includes(HideValue.UpToDate) || !upToDate) &&
-					// hideUpdatable: deployed_version IS latest_version AND approved_version NOT a skip of latest_version.
-					(!hide.includes(HideValue.Updatable) || upToDate || skipped) &&
-					// hideSkipped: approved_version NOT a skip of latest_version OR NO approved_version.
-					(!hide.includes(HideValue.Skipped) || !skipped) &&
-					// hideInactive: active NOT false.
-					(!hideInactiveServices || service.active !== false)
-				);
-			})
-			.map((svc) => svc.data)
-			.filter(Boolean) as ServiceSummary[];
-	}, [toolbarOptions, queryClient, services]);
+	const visibleServices = useMemo(
+		() => getVisibleServices(services, toolbarOptions),
+		[services, toolbarOptions],
+	);
 
 	// URL param helpers and context value
 	type URLParam = boolean | number[] | readonly number[] | string | string[];
@@ -297,6 +244,7 @@ export const Approvals = (): ReactElement => {
 				toggleEditMode,
 
 				values: toolbarOptions,
+				visibleServices,
 			}}
 		>
 			<ApprovalsToolbar />
@@ -306,7 +254,7 @@ export const Approvals = (): ReactElement => {
 					handleDragEnd={handleDragEnd}
 					order={order}
 					sensors={sensors}
-					services={filteredServices}
+					services={visibleServices}
 				/>
 			)}
 			{toolbarOptions.view === APPROVALS_TOOLBAR_VIEW.TABLE.value && (
@@ -318,7 +266,7 @@ export const Approvals = (): ReactElement => {
 					resetSorting={resetSorting}
 					resetSortingSignal={resetSortingSignal}
 					sensors={sensors}
-					services={filteredServices}
+					services={visibleServices}
 				/>
 			)}
 		</ToolbarProvider>

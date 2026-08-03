@@ -1,4 +1,9 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import {
+	openDashboardInEditMode,
+	serviceCard,
+	waitForDeployedVersionRefresh,
+} from './dashboard';
 import { bareEndpoint } from './test-endpoints';
 import { openSection } from './validation';
 
@@ -433,9 +438,10 @@ const fillNotify = async (dialog: Locator, notifiers: NotifyOptions[]) => {
 };
 
 /**
- * Creates a service. Defaults to a `url` 'latest version' lookup against the
- * test server's `/bare/1.2.3` endpoint; pass `latestVersion`/`deployedVersion`
- * to exercise other lookup types.
+ * Creates a service and waits for it to appear on the dashboard. Defaults to a
+ * `url` 'latest version' lookup against the test server's `/bare/1.2.3`
+ * endpoint; pass `latestVersion`/`deployedVersion` to exercise other lookup
+ * types.
  *
  * @param page - The dashboard page (edit mode must already be on).
  * @param id - The service ID.
@@ -511,6 +517,9 @@ export const createService = async (
 		throw err;
 	}
 	await expect(dialog).not.toBeVisible({ timeout: 30_000 });
+	await expect(
+		page.getByRole('heading', { exact: true, name: id }),
+	).toBeVisible();
 };
 
 /**
@@ -528,8 +537,9 @@ export const saveDeployedVersionManual = async (
 	serviceID: string,
 	version: string,
 ) => {
-	const serviceCard = page.locator(`[data-service-id="${serviceID}"]`);
-	await serviceCard.getByRole('button', { name: /edit/i }).click();
+	await serviceCard(page, serviceID)
+		.getByRole('button', { name: /edit/i })
+		.click();
 
 	const dialog = page.getByRole('dialog');
 	await expect(dialog).toBeVisible();
@@ -542,11 +552,7 @@ export const saveDeployedVersionManual = async (
 	// - retry the click until it lands outside that window.
 	await expect(async () => {
 		const [response] = await Promise.all([
-			page.waitForResponse(
-				(res) =>
-					res.url().includes('/api/v1/deployed_version/refresh') &&
-					res.request().method() === 'GET',
-			),
+			waitForDeployedVersionRefresh(page),
 			saveButton.click(),
 		]);
 		expect(response.ok()).toBeTruthy();
@@ -564,8 +570,9 @@ export const saveDeployedVersionManual = async (
  * @param serviceID - The ID of the service to delete.
  */
 export const deleteService = async (page: Page, serviceID: string) => {
-	const serviceCard = page.locator(`[data-service-id="${serviceID}"]`);
-	await serviceCard.getByRole('button', { name: /edit/i }).click();
+	await serviceCard(page, serviceID)
+		.getByRole('button', { name: /edit/i })
+		.click();
 
 	const dialog = page.getByRole('dialog');
 	await expect(dialog).toBeVisible();
@@ -579,9 +586,25 @@ export const deleteService = async (page: Page, serviceID: string) => {
 
 	// The card disappears once the delete is broadcast over the WebSocket -
 	// allow extra time under parallel load.
-	await expect(
-		page.locator(`[data-service-id="${serviceID}"]`),
-	).not.toBeVisible({ timeout: 30_000 });
+	await expect(serviceCard(page, serviceID)).not.toBeVisible({
+		timeout: 30_000,
+	});
+};
+
+/**
+ * Registers an `afterEach` deleting every service ID pushed onto the returned
+ * array, so each test only has to record what it creates. Call from inside the
+ * `describe` whose tests share the cleanup.
+ *
+ * @returns The IDs to delete after the current test.
+ */
+export const trackCreatedServices = () => {
+	const serviceIDs: string[] = [];
+	test.afterEach(async ({ page }) => {
+		if (serviceIDs.length) await cleanupServices(page, serviceIDs);
+		serviceIDs.length = 0;
+	});
+	return serviceIDs;
 };
 
 /**
@@ -591,10 +614,9 @@ export const deleteService = async (page: Page, serviceID: string) => {
  * @param serviceIDs - The IDs to remove if present.
  */
 export const cleanupServices = async (page: Page, serviceIDs: string[]) => {
-	await page.goto('/');
-	await page.getByRole('button', { name: /toggle edit mode/i }).click();
+	await openDashboardInEditMode(page);
 	for (const id of serviceIDs) {
-		if (await page.locator(`[data-service-id="${id}"]`).isVisible()) {
+		if (await serviceCard(page, id).isVisible()) {
 			await deleteService(page, id);
 		}
 	}

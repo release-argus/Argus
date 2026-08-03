@@ -29,20 +29,9 @@ export const approvalsQueryCacheUpdater = ({
 	if (msg.page !== 'APPROVALS') return;
 
 	switch (msg.type) {
-		// INIT
 		// ORDER
 		case 'SERVICE': {
 			switch (msg.sub_type) {
-				case 'INIT': {
-					const id = msg?.service_data?.id;
-					if (!id) return;
-
-					queryClient.setQueryData(QUERY_KEYS.SERVICE.SUMMARY_ITEM(id), () => ({
-						...msg.service_data,
-						loading: false,
-					}));
-					break;
-				}
 				case 'ORDER': {
 					if (msg.order === undefined) return;
 

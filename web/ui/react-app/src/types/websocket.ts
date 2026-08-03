@@ -39,9 +39,8 @@ export type WebSocketResponse =
 	| {
 			page: 'APPROVALS';
 			type: 'SERVICE';
-			sub_type: 'INIT' | 'ORDER';
+			sub_type: 'ORDER';
 			order?: string[];
-			service_data?: ServiceSummary;
 	  }
 	| {
 			page: 'APPROVALS';

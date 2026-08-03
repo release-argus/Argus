@@ -29,13 +29,13 @@ const ServiceInfoDeployedVersion: FC<ServiceInfoVersionProps> = ({
 	return (
 		<ServiceInfoVersionItem
 			Icon={hasDeployedVersion ? AtSign : undefined}
-			liKey="deployed_v"
 			timestamp={deployedVersionTimestamp ?? undefined}
 			tipClassName={cn(
 				updateAvailable ? 'text-muted-foreground' : 'text-foreground',
 			)}
 			tooltipLabel="Deployed"
 			value={deployedVersion ?? undefined}
+			versionType="deployed"
 		/>
 	);
 };

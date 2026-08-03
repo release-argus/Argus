@@ -44,6 +44,10 @@ export type ToolbarContextValue = {
 	onSaveOrder: () => Promise<void>;
 	/* Whether the order of the service list has changed */
 	hasOrderChanged: boolean;
+
+	/* Services currently visible under the toolbar filters, in dashboard order.
+	   Includes still-loading placeholders. */
+	visibleServices: ServiceSummary[];
 };
 
 const ToolbarContext = createContext<ToolbarContextValue | null>(null);

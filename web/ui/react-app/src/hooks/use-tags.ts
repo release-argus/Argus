@@ -24,7 +24,9 @@ export type UseTagsResult = {
 export const useTags = (excludeServiceID?: string | null): UseTagsResult => {
 	const { data: orderData, isFetching: isFetchingOrderData } =
 		useServiceOrder();
-	const services = useServices(orderData?.order);
+	const { services, isFetching: isFetchingServices } = useServices(
+		orderData?.order,
+	);
 
 	return useMemo(() => {
 		const tagCounts: Record<string, number> = {};
@@ -32,8 +34,8 @@ export const useTags = (excludeServiceID?: string | null): UseTagsResult => {
 
 		// Retrieve all tags, and a count of usage for each tag.
 		for (const svc of services) {
-			const svcID = svc.data?.id;
-			const svcTags = svc.data?.tags ?? [];
+			const svcID = svc.id;
+			const svcTags = svc.tags ?? [];
 
 			for (const t of svcTags) allTags.add(t);
 
@@ -48,9 +50,8 @@ export const useTags = (excludeServiceID?: string | null): UseTagsResult => {
 		);
 
 		// Loading state if fetching order, or any service still loading.
-		const anyLoading =
-			isFetchingOrderData || services.some((s) => s.isFetching);
+		const anyLoading = isFetchingOrderData || isFetchingServices;
 
 		return { counts: tagCounts, isLoading: anyLoading, tags: sortedTags };
-	}, [excludeServiceID, isFetchingOrderData, services]);
+	}, [excludeServiceID, isFetchingOrderData, isFetchingServices, services]);
 };
