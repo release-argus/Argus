@@ -5,15 +5,15 @@ import { expect, test } from '@playwright/test';
  * It has an icon, an icon link, and a web URL.
  */
 const EXAMPLE_SERVICE = {
-	/* The service ID. */
-	id: 'release-argus/Argus',
-	/* `dashboard.icon`. */
+	/** `dashboard.icon`. */
 	icon:
 		'https://raw.githubusercontent.com/release-argus/Argus/master/web/ui/' +
 		'react-app/public/favicon.svg',
-	/* `dashboard.icon_link_to`. */
+	/** `dashboard.icon_link_to`. */
 	iconLinkTo: 'https://release-argus.io',
-	/* `dashboard.web_url`. */
+	/** The service ID. */
+	id: 'release-argus/Argus',
+	/** `dashboard.web_url`. */
 	webURL: 'https://github.com/release-argus/Argus/blob/master/CHANGELOG.md',
 } as const;
 

@@ -1,11 +1,17 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
+	expectUpdateState,
+	expectVersions,
+	openDashboardInEditMode,
+	serviceCard,
+} from './fixtures/dashboard';
+import {
 	type CreateServiceOptions,
-	cleanupServices,
 	createService,
 	deleteService,
 	LOOKUP_LATEST_VERSION_JSON,
 	screenshot,
+	trackCreatedServices,
 	withProject,
 } from './fixtures/service';
 import {
@@ -13,12 +19,6 @@ import {
 	LOOKUP_BASIC_AUTH,
 	LOOKUP_WITH_HEADER_AUTH,
 } from './fixtures/test-endpoints';
-
-// Creating a service makes a real server-side network call that can exceed the
-// default timeout under load - so triple it.
-test.beforeEach(() => {
-	test.slow();
-});
 
 /**
  * Runs a create -> verify -> refresh -> delete cycle, screenshotting each stage.
@@ -36,8 +36,7 @@ const runCreateServiceTest = async (
 	projectName: string,
 	options?: CreateServiceOptions,
 ) => {
-	await page.goto('/');
-	await page.getByRole('button', { name: /toggle edit mode/i }).click();
+	await openDashboardInEditMode(page);
 	await screenshot(
 		page,
 		`service-create/${baseID}/01-before-create`,
@@ -76,17 +75,12 @@ const runCreateServiceTest = async (
 };
 
 test.describe('Service creation', () => {
-	// Safety net for a test that fails before its own `deleteService` step.
-	let createdID: string | undefined;
-	test.afterEach(async ({ page }) => {
-		if (createdID) await cleanupServices(page, [createdID]);
-		createdID = undefined;
-	});
+	const createdIDs = trackCreatedServices();
 
 	test('latest-version=github', async ({ page }, testInfo) => {
 		const baseID = 'LATEST_VERSION=GITHUB';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 		await runCreateServiceTest(page, id, baseID, testInfo.project.name, {
 			latestVersion: {
 				type: 'github',
@@ -98,7 +92,7 @@ test.describe('Service creation', () => {
 	test('latest-version=url', async ({ page }, testInfo) => {
 		const baseID = 'LATEST_VERSION=URL';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 		await runCreateServiceTest(page, id, baseID, testInfo.project.name, {
 			latestVersion: {
 				type: 'url',
@@ -110,7 +104,7 @@ test.describe('Service creation', () => {
 	test('deployed-version=manual', async ({ page }, testInfo) => {
 		const baseID = 'DEPLOYED_VERSION=MANUAL';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 		await runCreateServiceTest(page, id, baseID, testInfo.project.name, {
 			deployedVersion: {
 				type: 'manual',
@@ -122,7 +116,7 @@ test.describe('Service creation', () => {
 	test('deployed-version=url (JSON)', async ({ page }, testInfo) => {
 		const baseID = 'DEPLOYED_VERSION=URL';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 		await runCreateServiceTest(page, id, baseID, testInfo.project.name, {
 			deployedVersion: {
 				json: 'version',
@@ -135,7 +129,7 @@ test.describe('Service creation', () => {
 	test('deployed-version=url (basic auth)', async ({ page }, testInfo) => {
 		const baseID = 'DEPLOYED_VERSION=URL BASIC-AUTH';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 		await runCreateServiceTest(page, id, baseID, testInfo.project.name, {
 			deployedVersion: {
 				basicAuth: {
@@ -153,7 +147,7 @@ test.describe('Service creation', () => {
 	test('deployed-version=url (header auth)', async ({ page }, testInfo) => {
 		const baseID = 'DEPLOYED_VERSION=URL HEADER-AUTH';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 		await runCreateServiceTest(page, id, baseID, testInfo.project.name, {
 			deployedVersion: {
 				headers: [
@@ -170,22 +164,16 @@ test.describe('Service creation', () => {
 });
 
 test.describe('Service update status', () => {
-	// Safety net for a test that fails before its own `deleteService` step.
-	let createdID: string | undefined;
-	test.afterEach(async ({ page }) => {
-		if (createdID) await cleanupServices(page, [createdID]);
-		createdID = undefined;
-	});
+	const createdIDs = trackCreatedServices();
 
 	test('latest_version === deployed_version (up to date)', async ({
 		page,
 	}, testInfo) => {
 		const baseID = 'UPDATE_STATUS=UP_TO_DATE';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service whose `latest_version` and `deployed_version` lookups
 		// both resolve to the same version (1.2.3).
@@ -193,23 +181,20 @@ test.describe('Service update status', () => {
 			deployedVersion: { type: 'manual', version: '1.2.3' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 
-		const serviceCard = page.locator(`[data-service-id="${id}"]`);
+		const card = serviceCard(page, id);
 
-		// THEN: the "Deployed" version is shown as 1.2.3.
-		await expect(serviceCard.getByText('1.2.3')).toBeVisible();
+		// THEN: the "Deployed" version is shown as 1.2.3, with no separate
+		// "latest version" indicator - it collapses into the deployed item
+		// when the two match.
+		await expectVersions(page, id, { deployed: '1.2.3', latest: null });
 
-		// AND: there is no separate "latest version" indicator for a different
-		// version - only the single (deployed) version value is rendered.
-		await expect(serviceCard.getByText(/^\d+\.\d+\.\d+$/)).toHaveCount(1);
-
-		// AND: the card is not flagged as having an update available.
-		await expect(serviceCard).toHaveAttribute('data-update-available', 'false');
+		// AND: the card reports itself as up to date.
+		await expectUpdateState(page, id, 'UP_TO_DATE');
 
 		// AND: there is no "Skip" button (no update to skip).
 		await expect(
-			serviceCard.getByRole('button', { name: /reject release/i }),
+			card.getByRole('button', { name: /reject release/i }),
 		).not.toBeVisible();
 
 		await screenshot(
@@ -219,15 +204,38 @@ test.describe('Service update status', () => {
 		);
 	});
 
+	test('no deployed_version lookup shows only the latest version', async ({
+		page,
+	}, testInfo) => {
+		const baseID = 'UPDATE_STATUS=NO_DEPLOYED_VERSION';
+		const id = withProject(baseID, testInfo.project.name);
+		createdIDs.push(id);
+
+		await openDashboardInEditMode(page);
+
+		// GIVEN: a service with a `latest_version` lookup, and no
+		// `deployed_version` lookup to track what is actually running.
+		await createService(page, id, {
+			latestVersion: LOOKUP_LATEST_VERSION_JSON,
+		});
+
+		// THEN: only the latest version is shown - with nothing tracking a
+		// deployed version, there is no deployed version item to render.
+		await expectVersions(page, id, { deployed: null, latest: '1.2.3' });
+
+		// AND: the card still reports itself as up to date, as an untracked
+		// deployed_version is taken to be the latest.
+		await expectUpdateState(page, id, 'UP_TO_DATE');
+	});
+
 	test('latest_version !== deployed_version (update available)', async ({
 		page,
 	}, testInfo) => {
 		const baseID = 'UPDATE_STATUS=AVAILABLE';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service whose `latest_version` (1.2.3) and `deployed_version`
 		// (0.0.1) lookups resolve to different versions.
@@ -235,20 +243,18 @@ test.describe('Service update status', () => {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 
-		const serviceCard = page.locator(`[data-service-id="${id}"]`);
-		const skipButton = serviceCard.getByRole('button', {
+		const card = serviceCard(page, id);
+		const skipButton = card.getByRole('button', {
 			name: /reject release/i,
 		});
 
 		// THEN: both the "Latest" (1.2.3) and "Deployed" (0.0.1) versions are
-		// displayed.
-		await expect(serviceCard.getByText('1.2.3')).toBeVisible();
-		await expect(serviceCard.getByText('0.0.1')).toBeVisible();
+		// displayed, each in its own item.
+		await expectVersions(page, id, { deployed: '0.0.1', latest: '1.2.3' });
 
 		// AND: the card is flagged as having an update available.
-		await expect(serviceCard).toHaveAttribute('data-update-available', 'true');
+		await expectUpdateState(page, id, 'AVAILABLE');
 
 		// AND: a "Skip" button is visible.
 		await expect(skipButton).toBeVisible();
@@ -275,8 +281,9 @@ test.describe('Service update status', () => {
 		// THEN: the modal closes.
 		await expect(dialog).not.toBeVisible();
 
-		// AND: the card is no longer flagged as having an update available.
-		await expect(serviceCard).toHaveAttribute('data-update-available', 'false');
+		// AND: the card now reports the release as skipped, rather than merely
+		// 'no update available'.
+		await expectUpdateState(page, id, 'SKIPPED');
 
 		// AND: the "Skip" button is no longer shown.
 		await expect(skipButton).not.toBeVisible();

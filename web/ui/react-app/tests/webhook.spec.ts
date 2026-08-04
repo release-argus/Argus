@@ -1,35 +1,25 @@
 import { expect, test } from '@playwright/test';
+import { openDashboardInEditMode, serviceCard } from './fixtures/dashboard';
 import {
-	cleanupServices,
 	createService,
 	LOOKUP_LATEST_VERSION_JSON,
 	screenshot,
+	trackCreatedServices,
 	withProject,
 } from './fixtures/service';
 import { WEBHOOK_GITHUB } from './fixtures/test-endpoints';
 
-// Both tests create a service and wait on a real WebHook send - each a real
-// network call that can approach the default timeout, so triple it.
-test.beforeEach(() => {
-	test.slow();
-});
-
 test.describe('WebHook actions', () => {
 	// Scoped to this test's ID so its afterEach can't race the other test's
 	// service. IDs are project-suffixed to avoid cross-browser collisions.
-	let createdID: string | undefined;
-	test.afterEach(async ({ page }) => {
-		if (createdID) await cleanupServices(page, [createdID]);
-		createdID = undefined;
-	});
+	const createdIDs = trackCreatedServices();
 
 	test('WebHook send succeeds', async ({ page }, testInfo) => {
 		const baseID = 'WEBHOOK=PASS';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with an update available (latest_version !==
 		// deployed_version) and a WebHook configured with valid credentials.
@@ -44,18 +34,17 @@ test.describe('WebHook actions', () => {
 				},
 			],
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 		await screenshot(
 			page,
 			`webhook/${baseID}/01-after-create`,
 			testInfo.project.name,
 		);
 
-		const serviceCard = page.locator(`[data-service-id="${id}"]`);
+		const card = serviceCard(page, id);
 
 		// WHEN: the user opens the "Resend actions" (visible text "Approve")
 		// modal for the service.
-		await serviceCard.getByRole('button', { name: /approve|resend/i }).click();
+		await card.getByRole('button', { name: /approve|resend/i }).click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible();
 		await screenshot(
@@ -114,10 +103,9 @@ test.describe('WebHook actions', () => {
 	test('WebHook send fails', async ({ page }, testInfo) => {
 		const baseID = 'WEBHOOK=FAIL';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with an update available and a WebHook configured
 		// with an invalid secret and a single try (fail fast).
@@ -133,18 +121,17 @@ test.describe('WebHook actions', () => {
 				},
 			],
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 		await screenshot(
 			page,
 			`webhook/${baseID}/01-after-create`,
 			testInfo.project.name,
 		);
 
-		const serviceCard = page.locator(`[data-service-id="${id}"]`);
+		const card = serviceCard(page, id);
 
 		// WHEN: the user opens the "Resend actions" (visible text "Approve")
 		// modal for the service.
-		await serviceCard.getByRole('button', { name: /approve|resend/i }).click();
+		await card.getByRole('button', { name: /approve|resend/i }).click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible();
 		await screenshot(

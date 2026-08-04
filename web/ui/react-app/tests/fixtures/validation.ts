@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
+import { openDashboardInEditMode } from './dashboard';
 
 // Validation messages for the modal forms.
 export const REQUIRED = 'Required.';
@@ -22,11 +23,8 @@ export const fieldOf = (input: Locator) =>
  * @returns The open modal dialog.
  */
 export const openCreateServiceModal = async (page: Page) => {
-	await page.goto('/');
-	// Wait for the service list to render.
-	await expect(page.locator('[data-service-id]').first()).toBeVisible();
+	await openDashboardInEditMode(page);
 
-	await page.getByRole('button', { name: /toggle edit mode/i }).click();
 	await page.getByRole('button', { name: /create a service/i }).click();
 	const dialog = page.getByRole('dialog');
 	await expect(dialog).toBeVisible();
