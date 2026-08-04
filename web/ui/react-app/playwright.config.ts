@@ -26,6 +26,10 @@ const SERIAL_SPECS = [
 	'webhook.spec.ts',
 ];
 
+/* Every serial spec creates services, and each create blocks on the server
+ * verifying the lookup upstream. */
+const MUTATING_TEST_TIMEOUT = 90_000;
+
 const BROWSERS = {
 	chromium: devices['Desktop Chrome'],
 	firefox: devices['Desktop Firefox'],
@@ -62,6 +66,7 @@ export default defineConfig({
 				}),
 				name: `${name}-mutating`,
 				testMatch: SERIAL_SPECS,
+				timeout: MUTATING_TEST_TIMEOUT,
 				use,
 				/* Mutating specs run one-at-a-time per browser. */
 				workers: 1,
@@ -92,8 +97,7 @@ export default defineConfig({
 	/* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
 	use: {
 		/* Bound individual interactions/navigations so a single stuck action
-		 * fails fast rather than riding out the (tripled, via `test.slow()`)
-		 * test timeout. */
+		 * fails fast rather than riding out the whole test timeout. */
 		actionTimeout: 15_000,
 		/* Base URL to use in actions like `await page.goto('')`. */
 		baseURL: process.env.BASE_URL ?? 'http://localhost:8080',

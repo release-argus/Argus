@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import {
+	DASHBOARD_SHOW_ALL,
 	openDashboardInEditMode,
 	serviceCard,
 	waitForDeployedVersionRefresh,
@@ -21,15 +22,15 @@ export const withProject = (id: string, projectName: string) =>
 	`${id}-${projectName}`;
 
 export type LatestVersionOptions = {
-	/* `latest_version.type` - defaults to 'github'. */
+	/** `latest_version.type` - defaults to 'github'. */
 	type?: 'github' | 'url';
-	/* `latest_version.url` (the GitHub "Repository" or generic "URL" field). */
+	/** `latest_version.url` (the GitHub "Repository" or generic "URL" field). */
 	url: string;
-	/* `latest_version.allow_invalid_certs` - only applicable to type 'url'. */
+	/** `latest_version.allow_invalid_certs` - only applicable to type 'url'. */
 	allowInvalidCerts?: boolean;
-	/* `latest_version.headers` - only applicable to type 'url'. */
+	/** `latest_version.headers` - only applicable to type 'url'. */
 	headers?: KeyVal[];
-	/* `latest_version.url_commands` (only the first command, type 'regex') -
+	/** `latest_version.url_commands` (only the first command, type 'regex') -
 	 * only applicable to type 'url'. Used to extract a version from a
 	 * response body that isn't a bare semver string. */
 	urlCommandRegex?: { regex: string; index?: string };
@@ -37,67 +38,70 @@ export type LatestVersionOptions = {
 
 export type DeployedVersionOptions =
 	| {
-			/* `deployed_version.type` = 'manual'. */
+			/** `deployed_version.type` = 'manual'. */
 			type: 'manual';
-			/* `deployed_version.version`. */
+			/** `deployed_version.version`. */
 			version: string;
 	  }
 	| {
-			/* `deployed_version.type` = 'url'. */
+			/** `deployed_version.type` = 'url'. */
 			type: 'url';
-			/* `deployed_version.url`. */
+			/** `deployed_version.url`. */
 			url: string;
-			/* `deployed_version.method` - defaults to 'GET'. */
+			/** `deployed_version.method` - defaults to 'GET'. */
 			method?: 'GET' | 'POST';
-			/* `deployed_version.allow_invalid_certs`. */
+			/** `deployed_version.allow_invalid_certs`. */
 			allowInvalidCerts?: boolean;
-			/* `deployed_version.basic_auth`. */
+			/** `deployed_version.basic_auth`. */
 			basicAuth?: { username: string; password: string };
-			/* `deployed_version.headers`. */
+			/** `deployed_version.headers`. */
 			headers?: KeyVal[];
-			/* `deployed_version.body` - only sent when `method` is 'POST'. */
+			/** `deployed_version.body` - only sent when `method` is 'POST'. */
 			body?: string;
-			/* `deployed_version.target_header`. */
+			/** `deployed_version.target_header`. */
 			targetHeader?: string;
-			/* `deployed_version.json`. */
+			/** `deployed_version.json`. */
 			json?: string;
-			/* `deployed_version.regex`. */
+			/** `deployed_version.regex`. */
 			regex?: string;
 	  };
 
 export type WebHookOptions = {
-	/* `webhook.X.name`. */
+	/** `webhook.X.name`. */
 	name: string;
-	/* `webhook.X.url`. */
+	/** `webhook.X.url`. */
 	url: string;
-	/* `webhook.X.secret`. */
+	/** `webhook.X.secret`. */
 	secret: string;
-	/* `webhook.X.max_tries`. */
+	/** `webhook.X.max_tries`. */
 	maxTries?: string;
 };
 
-/* A `gotify` notifier. */
+/** A `gotify` notifier. */
 export type NotifyOptions = {
-	/* `notify.X.type` - only 'gotify' is supported here. */
+	/** `notify.X.type` - only 'gotify' is supported here. */
 	type: 'gotify';
-	/* `notify.X.name`. */
+	/** `notify.X.name`. */
 	name: string;
-	/* `notify.X.url_fields.host`. */
+	/** `notify.X.url_fields.host`. */
 	host: string;
-	/* `notify.X.url_fields.path`. */
+	/** `notify.X.url_fields.path`. */
 	path?: string;
-	/* `notify.X.url_fields.token` (the masked secret). */
+	/** `notify.X.url_fields.token` (the masked secret). */
 	token: string;
-	/* `notify.X.params.title`. */
+	/** `notify.X.params.title`. */
 	title?: string;
 };
 
 export type CreateServiceOptions = {
+	/** `name` - a display name distinct from the service ID. */
+	name?: string;
 	latestVersion?: LatestVersionOptions;
 	deployedVersion?: DeployedVersionOptions;
-	/* `options.semantic_versioning` - set to `false` for lookups whose raw
+	/** `options.semantic_versioning` - set to `false` for lookups whose raw
 	 * response isn't a parseable MAJOR.MINOR.PATCH version. */
 	semanticVersioning?: boolean;
+	active?: boolean;
 	notifiers?: NotifyOptions[];
 	webhooks?: WebHookOptions[];
 };
@@ -459,6 +463,13 @@ export const createService = async (
 	await expect(dialog.locator('input[name="id"]')).toBeEditable();
 	await dialog.locator('input[name="id"]').fill(id);
 
+	if (options?.name !== undefined) {
+		await dialog
+			.getByRole('button', { name: /toggle to separate id/i })
+			.click();
+		await dialog.locator('input[name="name"]').fill(options.name);
+	}
+
 	await fillLatestVersion(
 		dialog,
 		options?.latestVersion ?? LOOKUP_LATEST_VERSION_JSON,
@@ -468,16 +479,23 @@ export const createService = async (
 		await fillDeployedVersion(dialog, options.deployedVersion);
 	}
 
-	if (options?.semanticVersioning !== undefined) {
+	if (options?.semanticVersioning !== undefined || options?.active === false) {
 		await dialog.getByRole('button', { name: /^Options:?$/i }).click();
 		const optionsSection = dialog
 			.locator('[data-slot="accordion-item"]', { hasText: 'Options' })
 			.first();
-		await setBooleanWithDefault(
-			optionsSection,
-			'options.semantic_versioning',
-			options.semanticVersioning,
-		);
+
+		if (options.active === false) {
+			await optionsSection.locator('[id="options.active"]').uncheck();
+		}
+
+		if (options.semanticVersioning !== undefined) {
+			await setBooleanWithDefault(
+				optionsSection,
+				'options.semantic_versioning',
+				options.semanticVersioning,
+			);
+		}
 	}
 
 	if (options?.notifiers?.length) {
@@ -517,9 +535,8 @@ export const createService = async (
 		throw err;
 	}
 	await expect(dialog).not.toBeVisible({ timeout: 30_000 });
-	await expect(
-		page.getByRole('heading', { exact: true, name: id }),
-	).toBeVisible();
+	// The card, not the heading - only the grid layout renders a heading.
+	await expect(serviceCard(page, id)).toBeVisible();
 };
 
 /**
@@ -601,8 +618,11 @@ export const deleteService = async (page: Page, serviceID: string) => {
 export const trackCreatedServices = () => {
 	const serviceIDs: string[] = [];
 	test.afterEach(async ({ page }) => {
-		if (serviceIDs.length) await cleanupServices(page, serviceIDs);
-		serviceIDs.length = 0;
+		try {
+			if (serviceIDs.length) await cleanupServices(page, serviceIDs);
+		} finally {
+			serviceIDs.length = 0;
+		}
 	});
 	return serviceIDs;
 };
@@ -614,7 +634,7 @@ export const trackCreatedServices = () => {
  * @param serviceIDs - The IDs to remove if present.
  */
 export const cleanupServices = async (page: Page, serviceIDs: string[]) => {
-	await openDashboardInEditMode(page);
+	await openDashboardInEditMode(page, DASHBOARD_SHOW_ALL);
 	for (const id of serviceIDs) {
 		if (await serviceCard(page, id).isVisible()) {
 			await deleteService(page, id);

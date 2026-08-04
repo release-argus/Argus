@@ -1,26 +1,21 @@
 import { expect, test } from '@playwright/test';
 import {
-	cleanupServices,
+	openDashboardInEditMode,
+	serviceCard,
+	waitForDeployedVersionRefresh,
+} from './fixtures/dashboard';
+import {
 	createService,
 	LOOKUP_LATEST_VERSION_JSON,
 	saveDeployedVersionManual,
 	screenshotsUnder,
+	trackCreatedServices,
 	withProject,
 } from './fixtures/service';
 import { openSection } from './fixtures/validation';
 
-// createService makes a real network call to verify the lookups before the
-// modal closes, so allow extra time.
-test.beforeEach(() => {
-	test.slow();
-});
-
 test.describe('deployed_version=manual approve/skip actions', () => {
-	let createdID: string | undefined;
-	test.afterEach(async ({ page }) => {
-		if (createdID) await cleanupServices(page, [createdID]);
-		createdID = undefined;
-	});
+	const createdIDs = trackCreatedServices();
 
 	test('Approve sets the deployed version and hides the actions', async ({
 		page,
@@ -32,10 +27,9 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 		);
 		const baseID = 'DV=MANUAL, APPROVE';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with a manual deployed_version, an update available,
 		// and no WebHooks/Commands.
@@ -43,24 +37,23 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 
-		const serviceCard = page.locator(`[data-service-id="${id}"]`);
+		const card = serviceCard(page, id);
 
 		// THEN: both the "Skip" and "Approve" actions are shown, and both the
 		// deployed and latest versions are visible.
 		await expect(
-			serviceCard.getByRole('button', { name: 'Reject release' }),
+			card.getByRole('button', { name: 'Reject release' }),
 		).toBeVisible();
 		await expect(
-			serviceCard.getByRole('button', { name: 'Approve release' }),
+			card.getByRole('button', { name: 'Approve release' }),
 		).toBeVisible();
-		await expect(serviceCard.getByText('0.0.1', { exact: true })).toBeVisible();
-		await expect(serviceCard.getByText('1.2.3', { exact: true })).toBeVisible();
-		await shot('01-update-available', serviceCard);
+		await expect(card.getByText('0.0.1', { exact: true })).toBeVisible();
+		await expect(card.getByText('1.2.3', { exact: true })).toBeVisible();
+		await shot('01-update-available', card);
 
 		// WHEN: the user clicks "Approve" and confirms in the resulting modal.
-		const approveButton = serviceCard.getByRole('button', {
+		const approveButton = card.getByRole('button', {
 			name: 'Approve release',
 		});
 		await expect(approveButton).toBeEnabled();
@@ -75,13 +68,9 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 			await approveButton.click();
 			await expect(dialog).toBeVisible();
 			await expect(confirmButton).toHaveText(/^Approve$/i);
-			await shot('02-approve-modal', serviceCard);
+			await shot('02-approve-modal', card);
 			const [response] = await Promise.all([
-				page.waitForResponse(
-					(res) =>
-						res.url().includes('/api/v1/deployed_version/refresh') &&
-						res.request().method() === 'GET',
-				),
+				waitForDeployedVersionRefresh(page),
 				confirmButton.click(),
 			]);
 			expect(response.ok()).toBeTruthy();
@@ -90,19 +79,17 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 
 		// THEN: the deployed version updates to the latest version, and the
 		// "Skip"/"Approve" actions disappear (nothing left to action).
-		await expect(serviceCard.getByText('1.2.3', { exact: true })).toBeVisible();
+		await expect(card.getByText('1.2.3', { exact: true })).toBeVisible();
 		await expect(
-			serviceCard.getByRole('button', { name: 'Reject release' }),
+			card.getByRole('button', { name: 'Reject release' }),
 		).toBeHidden();
 		await expect(
-			serviceCard.getByRole('button', { name: 'Approve release' }),
+			card.getByRole('button', { name: 'Approve release' }),
 		).toBeHidden();
 		// AND: the old deployed version is no longer shown - only the "@" line
 		// for the now-matching deployed/latest version remains.
-		await expect(serviceCard.getByText('0.0.1', { exact: true })).toHaveCount(
-			0,
-		);
-		await shot('03-approved', serviceCard);
+		await expect(card.getByText('0.0.1', { exact: true })).toHaveCount(0);
+		await shot('03-approved', card);
 	});
 
 	test('Skip hides Skip but keeps Approve (as secondary) and both versions displayed', async ({
@@ -115,10 +102,9 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 		);
 		const baseID = 'dv=MANUAL, SKIP';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with a manual deployed_version, an update available,
 		// and no WebHooks/Commands.
@@ -126,24 +112,23 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 
-		const serviceCard = page.locator(`[data-service-id="${id}"]`);
-		const approveButton = serviceCard.getByRole('button', {
+		const card = serviceCard(page, id);
+		const approveButton = card.getByRole('button', {
 			name: 'Approve release',
 		});
 		await expect(
-			serviceCard.getByRole('button', { name: 'Reject release' }),
+			card.getByRole('button', { name: 'Reject release' }),
 		).toBeVisible();
 		// AND: the "Approve" action is shown in its primary (not-yet-skipped) colour.
 		await expect(approveButton).toHaveClass(/bg-primary/);
-		await shot('01-update-available', serviceCard);
+		await shot('01-update-available', card);
 
 		// WHEN: the user clicks "Skip" and confirms in the resulting modal.
-		await serviceCard.getByRole('button', { name: 'Reject release' }).click();
+		await card.getByRole('button', { name: 'Reject release' }).click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible();
-		await shot('02-skip-modal', serviceCard);
+		await shot('02-skip-modal', card);
 
 		const confirmButton = dialog.locator('#modal-action');
 		await expect(confirmButton).toHaveText(/^Skip release$/i);
@@ -154,13 +139,13 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 		// its secondary colour, letting the user override the skip - and the
 		// deployed version AND the (skipped) latest version both remain visible.
 		await expect(
-			serviceCard.getByRole('button', { name: 'Reject release' }),
+			card.getByRole('button', { name: 'Reject release' }),
 		).toBeHidden();
 		await expect(approveButton).toBeVisible();
 		await expect(approveButton).toHaveClass(/bg-secondary/);
-		await expect(serviceCard.getByText('0.0.1', { exact: true })).toBeVisible();
-		await expect(serviceCard.getByText('1.2.3', { exact: true })).toBeVisible();
-		await shot('03-skipped', serviceCard);
+		await expect(card.getByText('0.0.1', { exact: true })).toBeVisible();
+		await expect(card.getByText('1.2.3', { exact: true })).toBeVisible();
+		await shot('03-skipped', card);
 	});
 
 	test('Saving a new deployed version from the edit modal shows the actions', async ({
@@ -173,10 +158,9 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 		);
 		const baseID = 'DV=MANUAL, EDIT-SAVE NEW';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with a manual deployed_version already matching the
 		// latest version (up to date - no actions shown).
@@ -184,16 +168,15 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 			deployedVersion: { type: 'manual', version: '1.2.3' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 
-		const serviceCard = page.locator(`[data-service-id="${id}"]`);
+		const card = serviceCard(page, id);
 		await expect(
-			serviceCard.getByRole('button', { name: 'Reject release' }),
+			card.getByRole('button', { name: 'Reject release' }),
 		).toBeHidden();
 		await expect(
-			serviceCard.getByRole('button', { name: 'Approve release' }),
+			card.getByRole('button', { name: 'Approve release' }),
 		).toBeHidden();
-		await shot('01-up-to-date', serviceCard);
+		await shot('01-up-to-date', card);
 
 		// WHEN: the deployed version is saved to a new version (that isn't the
 		// latest version) via the edit modal's inline 'Save version' action.
@@ -202,14 +185,14 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 		// THEN: the "Skip"/"Approve" actions immediately appear, reflecting the
 		// no-longer-up-to-date state.
 		await expect(
-			serviceCard.getByRole('button', { name: 'Reject release' }),
+			card.getByRole('button', { name: 'Reject release' }),
 		).toBeVisible();
 		await expect(
-			serviceCard.getByRole('button', { name: 'Approve release' }),
+			card.getByRole('button', { name: 'Approve release' }),
 		).toBeVisible();
-		await expect(serviceCard.getByText('9.9.9', { exact: true })).toBeVisible();
-		await expect(serviceCard.getByText('1.2.3', { exact: true })).toBeVisible();
-		await shot('02-actions-shown', serviceCard);
+		await expect(card.getByText('9.9.9', { exact: true })).toBeVisible();
+		await expect(card.getByText('1.2.3', { exact: true })).toBeVisible();
+		await shot('02-actions-shown', card);
 	});
 
 	test('Saving another deployed version that is not the latest version from the edit modal keeps the actions shown', async ({
@@ -222,10 +205,9 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 		);
 		const baseID = 'DV=MANUAL, EDIT-SAVE OTHER';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with a manual deployed_version, an update already
 		// available (deployed != latest), and no WebHooks/Commands.
@@ -233,16 +215,15 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 
-		const serviceCard = page.locator(`[data-service-id="${id}"]`);
+		const card = serviceCard(page, id);
 		await expect(
-			serviceCard.getByRole('button', { name: 'Reject release' }),
+			card.getByRole('button', { name: 'Reject release' }),
 		).toBeVisible();
 		await expect(
-			serviceCard.getByRole('button', { name: 'Approve release' }),
+			card.getByRole('button', { name: 'Approve release' }),
 		).toBeVisible();
-		await shot('01-update-available', serviceCard);
+		await shot('01-update-available', card);
 
 		// WHEN: the deployed version is saved to an older version (a downgrade,
 		// still not the latest version) via the edit modal's inline
@@ -252,17 +233,15 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 		// THEN: the "Skip"/"Approve" actions remain visible, and the displayed
 		// deployed version updates to the new (older) value.
 		await expect(
-			serviceCard.getByRole('button', { name: 'Reject release' }),
+			card.getByRole('button', { name: 'Reject release' }),
 		).toBeVisible();
 		await expect(
-			serviceCard.getByRole('button', { name: 'Approve release' }),
+			card.getByRole('button', { name: 'Approve release' }),
 		).toBeVisible();
-		await expect(serviceCard.getByText('0.0.0', { exact: true })).toBeVisible();
-		await expect(serviceCard.getByText('1.2.3', { exact: true })).toBeVisible();
-		await expect(serviceCard.getByText('0.0.1', { exact: true })).toHaveCount(
-			0,
-		);
-		await shot('02-actions-still-shown', serviceCard);
+		await expect(card.getByText('0.0.0', { exact: true })).toBeVisible();
+		await expect(card.getByText('1.2.3', { exact: true })).toBeVisible();
+		await expect(card.getByText('0.0.1', { exact: true })).toHaveCount(0);
+		await shot('02-actions-still-shown', card);
 	});
 
 	test('Saving to the latest version then to another version in the same edit session updates the actions each time', async ({
@@ -275,10 +254,9 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 		);
 		const baseID = 'DV=MANUAL, EDIT-SAVE LATEST-THEN-OTHER';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with a manual deployed_version, an update already
 		// available (deployed != latest), and no WebHooks/Commands.
@@ -286,20 +264,19 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 
-		const serviceCard = page.locator(`[data-service-id="${id}"]`);
+		const card = serviceCard(page, id);
 		await expect(
-			serviceCard.getByRole('button', { name: 'Reject release' }),
+			card.getByRole('button', { name: 'Reject release' }),
 		).toBeVisible();
 		await expect(
-			serviceCard.getByRole('button', { name: 'Approve release' }),
+			card.getByRole('button', { name: 'Approve release' }),
 		).toBeVisible();
-		await shot('01-update-available', serviceCard);
+		await shot('01-update-available', card);
 
 		// WHEN: within a single edit-modal session, the deployed version is
 		// first saved to the current latest version.
-		await serviceCard.getByRole('button', { name: /edit/i }).click();
+		await card.getByRole('button', { name: /edit/i }).click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible();
 		const section = await openSection(dialog, 'Deployed Version');
@@ -311,11 +288,7 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 			expect(async () => {
 				await versionInput.fill(version);
 				const [response] = await Promise.all([
-					page.waitForResponse(
-						(res) =>
-							res.url().includes('/api/v1/deployed_version/refresh') &&
-							res.request().method() === 'GET',
-					),
+					waitForDeployedVersionRefresh(page),
 					saveButton.click(),
 				]);
 				expect(response.ok()).toBeTruthy();
@@ -324,10 +297,10 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 
 		// THEN: the actions are hidden (up to date).
 		await expect(
-			serviceCard.locator('button[aria-label="Reject release"]'),
+			card.locator('button[aria-label="Reject release"]'),
 		).toBeHidden();
 		await expect(
-			serviceCard.locator('button[aria-label="Approve release"]'),
+			card.locator('button[aria-label="Approve release"]'),
 		).toBeHidden();
 
 		// WHEN: without closing the modal, a different version is saved.
@@ -337,16 +310,14 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 
 		// THEN: the actions reappear.
 		await expect(
-			serviceCard.getByRole('button', { name: 'Reject release' }),
+			card.getByRole('button', { name: 'Reject release' }),
 		).toBeVisible();
 		await expect(
-			serviceCard.getByRole('button', { name: 'Approve release' }),
+			card.getByRole('button', { name: 'Approve release' }),
 		).toBeVisible();
-		await expect(serviceCard.getByText('4.5.6', { exact: true })).toBeVisible();
-		await expect(serviceCard.getByText('1.2.3', { exact: true })).toBeVisible();
-		await expect(serviceCard.getByText('0.0.1', { exact: true })).toHaveCount(
-			0,
-		);
-		await shot('02-actions-shown-again', serviceCard);
+		await expect(card.getByText('4.5.6', { exact: true })).toBeVisible();
+		await expect(card.getByText('1.2.3', { exact: true })).toBeVisible();
+		await expect(card.getByText('0.0.1', { exact: true })).toHaveCount(0);
+		await shot('02-actions-shown-again', card);
 	});
 });

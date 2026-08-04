@@ -1,17 +1,12 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import { openDashboardInEditMode, serviceCard } from './fixtures/dashboard';
 import {
 	type CreateServiceOptions,
-	cleanupServices,
 	createService,
 	screenshot,
+	trackCreatedServices,
 } from './fixtures/service';
 import { bareEndpoint } from './fixtures/test-endpoints';
-
-// Creating a service makes a real server-side network call that can exceed the
-// default timeout under load - so triple it.
-test.beforeEach(() => {
-	test.slow();
-});
 
 /**
  * Reads the current service order from the rendered cards/rows.
@@ -106,16 +101,13 @@ test.describe('Service Ordering', () => {
 		two: `service-2-${projectName}`,
 	});
 
-	test.afterEach(async ({ page }, testInfo) => {
-		const { one, two } = ids(testInfo.project.name);
-		await cleanupServices(page, [one, two]);
-	});
+	const createdIDs = trackCreatedServices();
 
 	test('re-order in grid view', async ({ page }, testInfo) => {
 		const { one, two } = ids(testInfo.project.name);
+		createdIDs.push(one, two);
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 		await createService(page, one, ORDERING_SERVICE_OPTIONS);
 		await createService(page, two, ORDERING_SERVICE_OPTIONS);
 		await screenshot(
@@ -126,12 +118,12 @@ test.describe('Service Ordering', () => {
 
 		await page.getByRole('radio', { name: 'Grid layout' }).click();
 
-		const dragHandle1Grid = page
-			.locator(`[data-service-id="${one}"]`)
-			.getByRole('button', { name: /drag handle/i });
-		const targetCard2Grid = page
-			.locator(`[data-service-id="${two}"]`)
-			.getByRole('button', { name: /drag handle/i });
+		const dragHandle1Grid = serviceCard(page, one).getByRole('button', {
+			name: /drag handle/i,
+		});
+		const targetCard2Grid = serviceCard(page, two).getByRole('button', {
+			name: /drag handle/i,
+		});
 		await expect(dragHandle1Grid).toBeVisible();
 		await expect(targetCard2Grid).toBeVisible();
 		await dragAndDrop(page, dragHandle1Grid, targetCard2Grid);
@@ -164,9 +156,9 @@ test.describe('Service Ordering', () => {
 
 	test('re-order in table view', async ({ page }, testInfo) => {
 		const { one, two } = ids(testInfo.project.name);
+		createdIDs.push(one, two);
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 		await createService(page, one, ORDERING_SERVICE_OPTIONS);
 		await createService(page, two, ORDERING_SERVICE_OPTIONS);
 		await screenshot(
@@ -180,12 +172,12 @@ test.describe('Service Ordering', () => {
 			page.getByRole('radio', { name: 'Table layout' }),
 		).toBeChecked();
 
-		const dragHandle1Table = page
-			.locator(`[data-service-id="${one}"]`)
-			.getByRole('button', { name: /drag handle/i });
-		const targetCard2Table = page
-			.locator(`[data-service-id="${two}"]`)
-			.getByRole('button', { name: /drag handle/i });
+		const dragHandle1Table = serviceCard(page, one).getByRole('button', {
+			name: /drag handle/i,
+		});
+		const targetCard2Table = serviceCard(page, two).getByRole('button', {
+			name: /drag handle/i,
+		});
 		await expect(dragHandle1Table).toBeVisible();
 		await expect(targetCard2Table).toBeVisible();
 		await dragAndDrop(page, dragHandle1Table, targetCard2Table);

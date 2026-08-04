@@ -3,16 +3,23 @@ import { expect, type Page, type Response } from '@playwright/test';
 const DEPLOYED_VERSION_REFRESH_PATH = '/api/v1/deployed_version/refresh';
 
 /**
+ * Dashboard URL with every 'hide' filter off.
+ */
+export const DASHBOARD_SHOW_ALL = '/approvals?hide=';
+
+/**
  * Loads the dashboard and turns edit mode on.
  *
  * @param page - The dashboard page.
+ * @param url - Dashboard URL to load (Default='/').
  */
-export const openDashboardInEditMode = async (page: Page) => {
-	await page.goto('/');
+export const openDashboardInEditMode = async (page: Page, url = '/') => {
+	await page.goto(url);
 	await page.getByRole('button', { name: /toggle edit mode/i }).click();
 	await expect(
 		page.getByRole('button', { name: 'Create a service' }),
 	).toBeVisible();
+	await expect(page.locator('[data-service-id]').first()).toBeVisible();
 };
 
 /**
@@ -25,7 +32,7 @@ export const openDashboardInEditMode = async (page: Page) => {
 export const serviceCard = (page: Page, serviceID: string) =>
 	page.locator(`[data-service-id="${serviceID}"]`);
 
-/* The update states a loaded card reports via `data-update-state`. */
+/** The update states a loaded card reports via `data-update-state`. */
 export type ServiceUpdateStateName = 'AVAILABLE' | 'SKIPPED' | 'UP_TO_DATE';
 
 /**
@@ -43,9 +50,9 @@ const versionItem = (
 	serviceCard(page, serviceID).locator(`[data-version-type="${versionType}"]`);
 
 export type ExpectedVersions = {
-	/* Expected deployed version, or null if that item must not render. */
+	/** Expected deployed version, or null if that item must not render. */
 	deployed: string | null;
-	/* Expected latest version, or null if that item must not render. */
+	/** Expected latest version, or null if that item must not render. */
 	latest: string | null;
 };
 
@@ -65,6 +72,8 @@ export const expectVersions = async (
 	serviceID: string,
 	versions: ExpectedVersions,
 ) => {
+	await expectServiceLoaded(page, serviceID);
+
 	for (const versionType of ['deployed', 'latest'] as const) {
 		const item = versionItem(page, serviceID, versionType);
 		const expected = versions[versionType];

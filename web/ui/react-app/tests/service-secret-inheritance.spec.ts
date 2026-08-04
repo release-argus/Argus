@@ -1,10 +1,11 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import { openDashboardInEditMode, serviceCard } from './fixtures/dashboard';
 import {
-	cleanupServices,
 	createService,
 	LOOKUP_LATEST_VERSION_JSON,
 	screenshot,
 	setBooleanWithDefault,
+	trackCreatedServices,
 	withProject,
 } from './fixtures/service';
 import {
@@ -15,12 +16,6 @@ import {
 } from './fixtures/test-endpoints';
 import { openSection } from './fixtures/validation';
 
-// Each test runs a create -> reload -> edit -> save -> reopen -> exercise-secret
-// cycle, every stage hitting the backend.
-test.beforeEach(() => {
-	test.slow();
-});
-
 /**
  * Opens the edit modal for an existing service (edit mode must already be on).
  *
@@ -29,7 +24,7 @@ test.beforeEach(() => {
  * @returns The open edit dialog.
  */
 const openEditModal = async (page: Page, id: string) => {
-	const card = page.locator(`[data-service-id="${id}"]`);
+	const card = serviceCard(page, id);
 	await expect(card).toBeVisible();
 	await card.getByRole('button', { name: /edit/i }).click();
 	const dialog = page.getByRole('dialog');
@@ -58,22 +53,17 @@ const SECRET_VALUE = '<secret>';
 
 test.describe('Service secret inheritance', () => {
 	// Safety net for a test that fails before its own cleanup.
-	let createdID: string | undefined;
-	test.afterEach(async ({ page }) => {
-		if (createdID) await cleanupServices(page, [createdID]);
-		createdID = undefined;
-	});
+	const createdIDs = trackCreatedServices();
 
 	test('latest_version=url: a masked header secret survives an unrelated edit', async ({
 		page,
 	}, testInfo) => {
 		const baseID = 'SECRET_INHERIT=LATEST_VERSION';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 		const shotDir = `secret-inheritance/${baseID}`;
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service whose latest_version is a header-authenticated URL
 		// lookup - the header *value* is a secret, and the lookup only returns a
@@ -90,9 +80,6 @@ test.describe('Service secret inheritance', () => {
 				url: LOOKUP_WITH_HEADER_AUTH.urlValid,
 			},
 		});
-		await expect(
-			page.getByRole('heading', { exact: true, name: id }),
-		).toBeVisible();
 
 		// AND: the page is reloaded so the edit modal loads the secret from the
 		// backend (where it comes back masked) rather than from create-time state.
@@ -147,11 +134,10 @@ test.describe('Service secret inheritance', () => {
 	}, testInfo) => {
 		const baseID = 'SECRET_INHERIT=DEPLOYED_VERSION';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 		const shotDir = `secret-inheritance/${baseID}`;
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service whose deployed_version is a header-authenticated URL
 		// lookup - the header *value* is a secret, and the lookup only returns a
@@ -168,9 +154,6 @@ test.describe('Service secret inheritance', () => {
 				url: LOOKUP_WITH_HEADER_AUTH.urlValid,
 			},
 		});
-		await expect(
-			page.getByRole('heading', { exact: true, name: id }),
-		).toBeVisible();
 
 		// AND: the page is reloaded so the edit modal loads the secret from the
 		// backend (where it comes back masked) rather than from create-time state.
@@ -225,11 +208,10 @@ test.describe('Service secret inheritance', () => {
 	}, testInfo) => {
 		const baseID = 'SECRET_INHERIT=WEBHOOK';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 		const shotDir = `secret-inheritance/${baseID}`;
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with an update available and a WebHook whose secret is
 		// the one the receiver requires.
@@ -247,7 +229,6 @@ test.describe('Service secret inheritance', () => {
 				},
 			],
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 		await page.reload();
 
 		// WHEN: the service is reopened and its WebHook item expanded.
@@ -278,8 +259,8 @@ test.describe('Service secret inheritance', () => {
 
 		// THEN: sending the WebHook succeeds - only possible if the secret was
 		// inherited on save (a lost/corrupted secret is rejected by the receiver).
-		const serviceCard = page.locator(`[data-service-id="${id}"]`);
-		await serviceCard.getByRole('button', { name: /approve|resend/i }).click();
+		const card = serviceCard(page, id);
+		await card.getByRole('button', { name: /approve|resend/i }).click();
 		const actionDialog = page.getByRole('dialog');
 		await expect(actionDialog).toBeVisible();
 		await actionDialog
@@ -300,11 +281,10 @@ test.describe('Service secret inheritance', () => {
 	}, testInfo) => {
 		const baseID = 'SECRET_INHERIT=NOTIFY';
 		const id = withProject(baseID, testInfo.project.name);
-		createdID = id;
+		createdIDs.push(id);
 		const shotDir = `secret-inheritance/${baseID}`;
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with a Gotify notifier pointed at a real endpoint that
 		// only accepts the configured token.
@@ -320,7 +300,6 @@ test.describe('Service secret inheritance', () => {
 				},
 			],
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 		await page.reload();
 
 		// WHEN: the service is reopened and its Notify item expanded.
@@ -371,11 +350,7 @@ test.describe('Service secret inheritance', () => {
 test.describe('Service secret inheritance on rename', () => {
 	// A failed test may leave the service under either its original or its
 	// renamed id, so clean up every id the test could have created.
-	let createdIDs: string[] = [];
-	test.afterEach(async ({ page }) => {
-		if (createdIDs.length) await cleanupServices(page, createdIDs);
-		createdIDs = [];
-	});
+	const createdIDs = trackCreatedServices();
 
 	test('deployed_version=url basic-auth: lookup secret survives a service rename', async ({
 		page,
@@ -383,11 +358,10 @@ test.describe('Service secret inheritance on rename', () => {
 		const baseID = 'SECRET_RENAME=SERVICE';
 		const id = withProject(baseID, testInfo.project.name);
 		const renamedId = withProject(`${baseID}-RENAMED`, testInfo.project.name);
-		createdIDs = [id, renamedId];
+		createdIDs.push(id, renamedId);
 		const shotDir = `secret-inheritance-rename/${baseID}`;
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service whose deployed_version is a basic-auth URL lookup - the
 		// password is a secret, and the lookup only succeeds when it's correct.
@@ -403,9 +377,6 @@ test.describe('Service secret inheritance on rename', () => {
 			// /basic-auth returns a sentence, not a bare semver - disable semVer.
 			semanticVersioning: false,
 		});
-		await expect(
-			page.getByRole('heading', { exact: true, name: id }),
-		).toBeVisible();
 
 		// AND: the page is reloaded so the edit modal loads the secret masked from
 		// the backend rather than from create-time state.
@@ -443,11 +414,10 @@ test.describe('Service secret inheritance on rename', () => {
 	}, testInfo) => {
 		const baseID = 'SECRET_RENAME=NOTIFY';
 		const id = withProject(baseID, testInfo.project.name);
-		createdIDs = [id];
+		createdIDs.push(id);
 		const shotDir = `secret-inheritance-rename/${baseID}`;
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with a Gotify notifier pointed at a real endpoint that
 		// only accepts the configured token.
@@ -463,7 +433,6 @@ test.describe('Service secret inheritance on rename', () => {
 				},
 			],
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 		await page.reload();
 
 		// WHEN: the service is reopened, the notifier's *name* changed (leaving the
@@ -502,11 +471,10 @@ test.describe('Service secret inheritance on rename', () => {
 	}, testInfo) => {
 		const baseID = 'SECRET_RENAME=WEBHOOK';
 		const id = withProject(baseID, testInfo.project.name);
-		createdIDs = [id];
+		createdIDs.push(id);
 		const shotDir = `secret-inheritance-rename/${baseID}`;
 
-		await page.goto('/');
-		await page.getByRole('button', { name: /toggle edit mode/i }).click();
+		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with an update available and a WebHook whose secret is
 		// the one the receiver requires.
@@ -524,7 +492,6 @@ test.describe('Service secret inheritance on rename', () => {
 				},
 			],
 		});
-		await expect(page.getByRole('heading', { name: id })).toBeVisible();
 		await page.reload();
 
 		// WHEN: the service is reopened, its WebHook item expanded and *renamed*
@@ -542,8 +509,8 @@ test.describe('Service secret inheritance on rename', () => {
 
 		// THEN: sending the WebHook still succeeds - only possible if the secret
 		// was inherited across the rename.
-		const serviceCard = page.locator(`[data-service-id="${id}"]`);
-		await serviceCard.getByRole('button', { name: /approve|resend/i }).click();
+		const card = serviceCard(page, id);
+		await card.getByRole('button', { name: /approve|resend/i }).click();
 		const actionDialog = page.getByRole('dialog');
 		await expect(actionDialog).toBeVisible();
 		await actionDialog
