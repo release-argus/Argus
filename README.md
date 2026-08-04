@@ -7,7 +7,6 @@
 Keeping an eye on releases.
 
 [![GitHub](https://img.shields.io/github/license/release-argus/Argus)](https://github.com/release-argus/Argus/blob/master/LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/release-argus/Argus)](https://goreportcard.com/report/github.com/release-argus/Argus)
 [![GitHub go.mod Go version (subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/release-argus/Argus?filename=go.mod)](https://go.dev/dl/)
 [![GitHub package.json dependency version (subfolder of monorepo)](https://img.shields.io/github/package-json/dependency-version/release-argus/Argus/react?filename=web%2Fui%2Freact-app%2Fpackage.json)](https://reactjs.org/)
 [![Codecov](https://img.shields.io/codecov/c/github/release-argus/Argus)](https://app.codecov.io/gh/release-argus/Argus)
