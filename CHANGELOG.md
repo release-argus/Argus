@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.34.0](https://github.com/release-argus/Argus/compare/0.33.0...0.34.0) (2026-08-04)
+
+
+### Features
+
+* **ui:** add toolbar button to refresh all deployed versions ([#948](https://github.com/release-argus/Argus/issues/948)) ([e55b021](https://github.com/release-argus/Argus/commit/e55b021ccf9f3bb31fbf42559d1e6518c8c4d00f))
+* **ui:** clickable ID and an Icon column in table view ([086819e](https://github.com/release-argus/Argus/commit/086819e7519305dd13a6bfb4908bab93df9c4deb))
+
+
+### Bug Fixes
+
+* **ui:** gate service-edit form editable state on data reset ([2688fef](https://github.com/release-argus/Argus/commit/2688fef0a699530b88dae289f021a57e9c94ac3b))
+* **ui:** pick the fallback dashboard icon from the service lv-type ([7959073](https://github.com/release-argus/Argus/commit/7959073c4a9bae4280c98d4ec2b223578c723399))
+* **ui:** restore resend-date tooltip id for aria-describedby ([2c953f4](https://github.com/release-argus/Argus/commit/2c953f4cf75774882df21f77bd8333aba91e2edd))
+* **ws:** don't log routine tab-close/normal-close events as errors ([dc0e5fa](https://github.com/release-argus/Argus/commit/dc0e5faf059a52802a845f73376c31c5ce82b617))
+
 ## [0.33.0](https://github.com/release-argus/Argus/compare/0.32.0...0.33.0) (2026-07-29)
 
 
