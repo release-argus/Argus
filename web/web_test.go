@@ -39,7 +39,10 @@ func TestWebSocketHandler(t *testing.T) {
 		// WHEN: we attempt to connect.
 		ws, resp, err := websocket.DefaultDialer.Dial(url, nil)
 		if err != nil {
-			t.Fatalf("failed to connect to WebSocket: %v (HTTP status %d)", err, resp.StatusCode)
+			t.Fatalf(
+				"failed to connect to WebSocket: %v (HTTP status %d)",
+				err, resp.StatusCode,
+			)
 		}
 		defer ws.Close()
 
@@ -65,7 +68,7 @@ func TestRun_Error(t *testing.T) {
 	// WHEN: Run is called.
 	errChan := make(chan error, 1)
 	go func() {
-		errChan <- Run(t.Context(), cfg)
+		errChan <- Run(t.Context(), cfg, nil)
 	}()
 
 	prefix := fmt.Sprintf("%s\nRun()", packageName)
@@ -99,7 +102,7 @@ func TestMainWithRoutePrefix(t *testing.T) {
 	// WHEN: the Web UI is started with this Config.
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- Run(ctx, cfg)
+		errCh <- Run(ctx, cfg, nil)
 	}()
 
 	// THEN: Web UI is accessible.
@@ -224,10 +227,10 @@ func TestAccessibleHTTPS(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	router = newWebUI(cfg)
+	router = newWebUI(cfg, nil)
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- Run(ctx, cfg)
+		errCh <- Run(ctx, cfg, nil)
 	}()
 
 	if err := waitForServer(address, time.Second); err != nil {

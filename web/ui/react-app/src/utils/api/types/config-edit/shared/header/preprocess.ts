@@ -1,9 +1,4 @@
-import {
-	type ZodArray,
-	type ZodDefault,
-	type ZodPreprocess,
-	z,
-} from 'zod';
+import { type ZodArray, type ZodDefault, type ZodPreprocess, z } from 'zod';
 import type { Headers } from '@/utils/api/types/config/shared';
 import {
 	headerSchema,

@@ -47,10 +47,28 @@ func NewHub() *Hub {
 	}
 }
 
-// AnnounceMSG is minimal JSON to validate the incoming message.
+// AnnounceMSG is minimal JSON to validate the incoming message and identify
+// which service (if any) it concerns.
 type AnnounceMSG struct {
-	Type      string `json:"type"`
-	ServiceID string `json:"service_id"`
+	Type        string `json:"type"`
+	SubType     string `json:"sub_type"`
+	ServiceID   string `json:"service_id"`
+	ServiceData *struct {
+		ID string `json:"id"`
+	} `json:"service_data"`
+}
+
+// serviceID returns the ID of the service the message concerns
+// ("" for messages not tied to a single service, e.g. the full ordering).
+func (m *AnnounceMSG) serviceID() string {
+	if m.ServiceData != nil && m.ServiceData.ID != "" {
+		return m.ServiceData.ID
+	}
+	// DELETE and EDIT messages carry the service ID as their sub-type.
+	if m.Type == "DELETE" || m.Type == "EDIT" {
+		return m.SubType
+	}
+	return m.ServiceID
 }
 
 // addClient registers client.
@@ -87,9 +105,14 @@ func (h *Hub) broadcast(message []byte) {
 		)
 		return
 	}
+	serviceID := msg.serviceID()
 
 	// Non-blocking send; drop any client whose buffer is full.
 	for client := range h.clients {
+		// Only send messages the client is permitted to see.
+		if !client.mayReceive(serviceID) {
+			continue
+		}
 		select {
 		case client.send <- message:
 		default:
@@ -97,6 +120,59 @@ func (h *Hub) broadcast(message []byte) {
 			delete(h.clients, client)
 		}
 	}
+}
+
+// kickMatching disconnects every client matching match. Kicked clients
+// auto-reconnect, re-deriving their permitted-service sets.
+func (h *Hub) kickMatching(match func(*Client) bool) {
+	h.query <- func(clients map[*Client]bool) {
+		// Runs on the Hub goroutine, so mutating the map is safe.
+		for client := range clients {
+			if match(client) {
+				delete(clients, client)
+				close(client.send)
+			}
+		}
+	}
+}
+
+// KickUserClients disconnects the clients of userIDs. Call after anything
+// that may change those users' grants (membership edits, group grant changes,
+// disable/delete). Clients with no user identity (auth disabled) never match.
+func (h *Hub) KickUserClients(userIDs ...string) {
+	ids := make(map[string]bool, len(userIDs))
+	for _, id := range userIDs {
+		if id != "" {
+			ids[id] = true
+		}
+	}
+	if len(ids) == 0 {
+		return
+	}
+	h.kickMatching(func(c *Client) bool { return ids[c.userID] })
+}
+
+// KickSessionClients disconnects the clients connected under the sessions
+// with tokenHashes. Call after revoking those sessions so a revoked session
+// can't keep an open WebSocket.
+func (h *Hub) KickSessionClients(tokenHashes ...string) {
+	hashes := make(map[string]bool, len(tokenHashes))
+	for _, hash := range tokenHashes {
+		if hash != "" {
+			hashes[hash] = true
+		}
+	}
+	if len(hashes) == 0 {
+		return
+	}
+	h.kickMatching(func(c *Client) bool { return hashes[c.sessionHash] })
+}
+
+// KickRestrictedClients disconnects every client with a restricted
+// permitted-service set. Call after service ID/tag changes, which change
+// what those sets should match; unrestricted clients are unaffected.
+func (h *Hub) KickRestrictedClients() {
+	h.kickMatching(func(c *Client) bool { return c.allowedServices != nil })
 }
 
 // Run starts the Hub. It owns the clients map; all access happens on this goroutine.

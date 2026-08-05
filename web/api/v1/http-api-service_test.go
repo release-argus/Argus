@@ -22,15 +22,19 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/release-argus/Argus/auth/rbac"
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestHTTP_HTTPServiceOrderGet(t *testing.T) {
+func TestAPI_HTTPServiceOrderGet(t *testing.T) {
 	// GIVEN: an API and a request for the service order.
 	file := "TestAPI_HTTPServiceOrderGet.yml"
 	api := testAPI(t, file)
@@ -100,7 +104,116 @@ func TestHTTP_HTTPServiceOrderGet(t *testing.T) {
 	}
 }
 
-func TestHTTP_HTTPServiceOrderSet(t *testing.T) {
+func TestAPI_HTTPServiceOrderGet__filteredByGrants(t *testing.T) {
+	// GIVEN: an auth-enabled API.
+	file := "TestAPI_HTTPServiceOrderGet__filteredByGrants.yml"
+	api, deps, _ := testAuthServer(t, file) // Config holds service "test".
+
+	// AND: users whose grants cover all, some, one, or none of the services.
+	api.Config.OrderMu.Lock()
+	api.Config.Service["middle"] = &service.Service{}
+	api.Config.Service["tagged"] = &service.Service{
+		Dashboard: dashboard.Options{Tags: []string{"prod"}},
+	}
+	api.Config.Order = []string{"test", "middle", "tagged"}
+	api.Config.OrderMu.Unlock()
+
+	for groupName, grants := range map[string][]rbac.Grant{
+		"scoped": {
+			{
+				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
+				Scope:      rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
+			},
+		},
+		"pair": {
+			{
+				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
+				Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
+			},
+			{
+				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
+				Scope:      rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
+			},
+		},
+	} {
+		if _, err := deps.Store.CreateGroup(t.Context(), groupName, "", grants); err != nil {
+			t.Fatalf(
+				"%s\ncreate %q group: %v",
+				packageName, groupName, err,
+			)
+		}
+	}
+	createAuthUser(t, deps, "scoped-user", "scoped-password", "scoped")
+	createAuthUser(t, deps, "pair-user", "pair-password", "pair")
+	createAuthUser(t, deps, "loner", "loner-password")
+
+	tests := []struct {
+		name     string
+		username string
+		password string
+		want     []string
+	}{
+		{
+			name:     "global read sees the full order",
+			username: "admin", password: "admin-password",
+			want: []string{"test", "middle", "tagged"},
+		},
+		{
+			name:     "scoped read sees only permitted services",
+			username: "scoped-user", password: "scoped-password",
+			want: []string{"tagged"},
+		},
+		{
+			name:     "filtering preserves the relative order",
+			username: "pair-user", password: "pair-password",
+			want: []string{"test", "tagged"},
+		},
+		{
+			name:     "no grants sees an empty order",
+			username: "loner", password: "loner-password",
+			want: []string{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cookie := loginCookie(t, api, tc.username, tc.password)
+
+			// WHEN: the service order is fetched.
+			w := serveAuth(
+				api,
+				authedRequest(http.MethodGet, "/api/v1/service/order", "", cookie),
+			)
+
+			prefix := fmt.Sprintf("%s\nGET /service/order", packageName)
+
+			// THEN: it succeeds with the permitted subset, in order.
+			if got, want := w.Code, http.StatusOK; got != want {
+				t.Fatalf(
+					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
+					prefix, got, w.Body.String(), want,
+				)
+			}
+			var response ServiceOrderAPI
+			if err := decode.Unmarshal("json", w.Body.Bytes(), &response); err != nil {
+				t.Fatalf(
+					"%s\nparse response: %v",
+					prefix, err,
+				)
+			}
+			if got := response.Order; !slices.Equal(got, tc.want) {
+				t.Errorf(
+					"%s\norder mismatch\ngot:  %v\nwant: %v",
+					prefix, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestAPI_HTTPServiceOrderSet(t *testing.T) {
 	// GIVEN: an API and a request to set the service order.
 	file := "TestAPI_HTTPServiceOrderSet.yml"
 	api := testAPI(t, file)
@@ -116,27 +229,43 @@ func TestHTTP_HTTPServiceOrderSet(t *testing.T) {
 		bodyRegex           string
 	}{
 		{
-			name:           "valid order",
+			name:           "valid reorder",
 			hadOrder:       testOrder,
-			body:           `{"order":["service1"]}`,
+			body:           `{"order":["service3","service2","service1"]}`,
 			wantStatusCode: http.StatusOK,
-			wantOrder:      []string{"service1"},
+			wantOrder:      []string{"service3", "service2", "service1"},
 			bodyRegex:      successMessage,
 		},
 		{
-			name:           "empty order",
+			name:           "partial submission keeps omitted services",
+			hadOrder:       testOrder,
+			body:           `{"order":["service2"]}`,
+			wantStatusCode: http.StatusOK,
+			wantOrder:      []string{"service2", "service1", "service3"},
+			bodyRegex:      successMessage,
+		},
+		{
+			name:           "duplicates pruned",
+			hadOrder:       testOrder,
+			body:           `{"order":["service2", "service2", "service1", "service3"]}`,
+			wantStatusCode: http.StatusOK,
+			wantOrder:      []string{"service2", "service1", "service3"},
+			bodyRegex:      successMessage,
+		},
+		{
+			name:           "empty submission keeps all services",
 			hadOrder:       testOrder,
 			body:           `{"order":[]}`,
 			wantStatusCode: http.StatusOK,
-			wantOrder:      []string{},
+			wantOrder:      testOrder,
 			bodyRegex:      successMessage,
 		},
 		{
-			name:           "body with no order",
+			name:           "body with no order keeps all services",
 			hadOrder:       testOrder,
 			body:           `{"invalid":"data"}`,
 			wantStatusCode: http.StatusOK,
-			wantOrder:      []string{},
+			wantOrder:      testOrder,
 			bodyRegex:      successMessage,
 		},
 		{
@@ -224,8 +353,8 @@ func TestHTTP_HTTPServiceOrderSet(t *testing.T) {
 	}
 }
 
-func TestHTTP_HTTPServiceSummary(t *testing.T) {
-	testSVC := testService(t, "TestHTTP_HTTPServiceSummary", "url", "url", true)
+func TestAPI_HTTPServiceSummary(t *testing.T) {
+	testSVC := testService(t, "TestAPI_HTTPServiceSummary", "url", "url", true)
 	// GIVEN: an API and a request for detail of a service.
 	file := "TestAPI_HTTPServiceSummary.yml"
 	api := testAPI(t, file)

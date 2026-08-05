@@ -118,12 +118,17 @@ func TestGHCRRegistry_Check(t *testing.T) {
 			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
 
+			prefix := fmt.Sprintf(
+				"%s\nGHCRRegistry.Check(%q)",
+				packageName, tc.version,
+			)
+
 			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf(
-					"%s\nGHCRRegistry.Check() error mismatch\ngot:  %q\nwant: %s",
-					tc.name, e, tc.errRegex,
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
 				)
 			}
 		})
@@ -231,12 +236,17 @@ func TestGHCRRegistry_Check__errors(t *testing.T) {
 			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
 
+			prefix := fmt.Sprintf(
+				"%s\nGHCRRegistry.Check(%q)",
+				packageName, tc.version,
+			)
+
 			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf(
-					"%s\nGHCRRegistry.Check() error mismatch\ngot:  %q\nwant: %s",
-					tc.name, e, tc.errRegex,
+					"%s error mismatch\ngot:  %q\nwant: %s",
+					prefix, e, tc.errRegex,
 				)
 			}
 		})

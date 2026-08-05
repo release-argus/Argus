@@ -1,0 +1,23 @@
+settings:
+  auth:
+    enabled: true
+service:
+  release-argus/Argus:
+    latest_version:
+      type: github
+      url: release-argus/Argus
+    dashboard:
+      icon: https://raw.githubusercontent.com/release-argus/Argus/master/web/ui/react-app/public/favicon.svg
+      icon_link-to: https://release-argus.io
+      web_url: https://github.com/release-argus/Argus/blob/master/CHANGELOG.md
+  e2e-pending-release:
+    latest_version:
+      type: url
+      url: https://valid.release-argus.io/bare/%7B%22version%22%3A%221.2.3%22%7D
+      url_commands:
+        - type: regex
+          regex: '"version":\s*"([\d.]+)"'
+          index: 0
+    deployed_version:
+      type: manual
+      version: 0.0.1

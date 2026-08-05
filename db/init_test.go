@@ -118,7 +118,10 @@ func TestAPI_Get__fail(t *testing.T) {
 				tAPI.initialise()
 				defer tAPI.db.Close()
 				if _, err := tAPI.db.Exec("DROP TABLE status"); err != nil {
-					t.Fatalf("%s\nerror dropping table in setupDB:\n%v", packageName, err)
+					t.Fatalf(
+						"%s\nerror dropping table in setupDB:\n%v",
+						packageName, err,
+					)
 				}
 				if _, err := tAPI.db.Exec(`
 					CREATE TABLE IF NOT EXISTS status (
@@ -130,7 +133,10 @@ func TestAPI_Get__fail(t *testing.T) {
 						approved_version TEXT
 					);`,
 				); err != nil {
-					t.Fatalf("%s\nerror creating table in setupDB:\n%v", packageName, err)
+					t.Fatalf(
+						"%s\nerror creating table in setupDB:\n%v",
+						packageName, err,
+					)
 				}
 				if _, err := tAPI.db.Exec(`
 					INSERT INTO status (
@@ -165,7 +171,10 @@ func TestAPI_Get__fail(t *testing.T) {
 				tAPI.initialise()
 				defer tAPI.db.Close()
 				if _, err := tAPI.db.Exec("ALTER TABLE status DROP COLUMN deployed_version;"); err != nil {
-					t.Fatalf("%s\nerror dropping column in setupDB:\n%v", packageName, err)
+					t.Fatalf(
+						"%s\nerror dropping column in setupDB:\n%v",
+						packageName, err,
+					)
 				}
 				if _, err := tAPI.db.Exec(`
 					INSERT INTO status (
@@ -1248,7 +1257,10 @@ func TestUpdateTypes(t *testing.T) {
 				deployedVersion, deployedVersionTimestamp,
 				approvedVersion,
 			); err != nil {
-				t.Fatalf("%s: failed to insert row: %v", packageName, err)
+				t.Fatalf(
+					"%s: failed to insert row: %v",
+					packageName, err,
+				)
 			}
 
 			// Apply test-specific setup.

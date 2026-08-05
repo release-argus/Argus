@@ -26,7 +26,11 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/gorilla/websocket"
+
+	"github.com/release-argus/Argus/auth/session"
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/config/decode"
 	config_test "github.com/release-argus/Argus/config/test"
@@ -297,11 +301,17 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 						req, err := http.NewRequest(tc.method, target, reqBody)
 						req.URL.RawQuery = tc.queryParams.Encode()
 						if err != nil {
-							t.Fatalf("%s\n%v", packageName, err)
+							t.Fatalf(
+								"%s\n%v",
+								packageName, err,
+							)
 						}
 						resp, err := client.Do(req)
 						if err != nil {
-							t.Fatalf("%s\n%v", packageName, err)
+							t.Fatalf(
+								"%s\n%v",
+								packageName, err,
+							)
 						}
 
 						// Read the response bodyRegex.
@@ -319,13 +329,19 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 
 						// THEN: the status code is as expected.
 						if got := resp.StatusCode; got != tc.wantStatus {
-							t.Errorf("%s - status code mismatch\ngot:  %d\nwant: %d", prefix, got, tc.wantStatus)
+							t.Errorf(
+								"%s - status code mismatch\ngot:  %d\nwant: %d",
+								prefix, got, tc.wantStatus,
+							)
 							fail = true
 						}
 
 						// AND: the body is as expected.
 						if got := string(body); !util.RegexCheck(tc.wantBody, got) {
-							t.Errorf("%s - body mismatch\ngot:  %q\nwant: %q", prefix, got, tc.wantBody)
+							t.Errorf(
+								"%s - body mismatch\ngot:  %q\nwant: %q",
+								prefix, got, tc.wantBody,
+							)
 							fail = true
 						}
 
@@ -339,226 +355,40 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 	}
 }
 
-func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
-	// GIVEN: an API with NodeJS routes.
-	tests := []struct {
-		name        string
-		route       string
-		wantStatus  int
-		wantContent string
-	}{
-		{
-			name:        "approvals route",
-			route:       "/approvals",
-			wantStatus:  http.StatusOK,
-			wantContent: "text/html",
-		},
-		{
-			name:        "config route",
-			route:       "/config",
-			wantStatus:  http.StatusOK,
-			wantContent: "text/html",
-		},
-		{
-			name:        "flags route",
-			route:       "/flags",
-			wantStatus:  http.StatusOK,
-			wantContent: "text/html",
-		},
-		{
-			name:        "status route",
-			route:       "/status",
-			wantStatus:  http.StatusOK,
-			wantContent: "text/html",
-		},
-		{
-			name:        "catch-all route/file not found",
-			route:       "/some/random/path",
-			wantStatus:  http.StatusNotFound,
-			wantContent: "text/plain",
-		},
-		{
-			name:        "catch-all route/file exists",
-			route:       "/robots.txt",
-			wantStatus:  http.StatusOK,
-			wantContent: "text/plain",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			cfg := config_test.BareConfig(t, true)
-			api, _ := NewAPI(cfg)
-			api.SetupRoutesNodeJS()
-			ts := httptest.NewServer(api.Router)
-			t.Cleanup(ts.Close)
-			client := http.Client{}
-
-			// WHEN: a HTTP request is made to this router.
-			req, err := http.NewRequest(http.MethodGet, ts.URL+tc.route, nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			resp, err := client.Do(req)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			prefix := fmt.Sprintf(
-				"%s\nAPI.SetupRoutesNodeJS() %q",
-				packageName, req.URL.Path,
-			)
-
-			// THEN: the status code is as expected.
-			if got := resp.StatusCode; got != tc.wantStatus {
-				t.Errorf("%s status code mismatch\ngot:  %d\nwant: %d", prefix, got, tc.wantStatus)
-			}
-
-			// AND: the content type is as expected.
-			if tc.wantContent != "" {
-				contentType := resp.Header.Get("Content-Type")
-				if !strings.Contains(contentType, tc.wantContent) {
-					t.Errorf("%s Content-Type mismatch\ngot:  %q\nwant: %q", prefix, contentType, tc.wantContent)
-				}
-			}
-		})
-	}
-}
-
-func TestHTTP_SetupRoutesFavicon(t *testing.T) {
-	// GIVEN: an API with/without favicon overrides.
-	tests := []struct {
-		name           string
-		favicon        *config.FaviconSettings
-		urlPNG, urlSVG string
-	}{
-		{
-			name:   "no override",
-			urlPNG: "",
-			urlSVG: "",
-		},
-		{
-			name:   "override png",
-			urlPNG: "https://release-argus.io/demo/apple-touch-icon.png",
-		},
-		{
-			name:   "override svg",
-			urlSVG: "https://release-argus.io/demo/favicon.svg",
-		},
-		{
-			name:   "override png and svg",
-			urlPNG: "https://release-argus.io/demo/apple-touch-icon.png",
-			urlSVG: "https://release-argus.io/demo/favicon.svg",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-
-			cfg := config_test.BareConfig(t, true)
-			cfg.Settings.Web.Favicon = testFaviconSettings(tc.urlPNG, tc.urlSVG)
-			api, _ := NewAPI(cfg)
-			api.SetupRoutesFavicon()
-			ts := httptest.NewServer(api.Router)
-			t.Cleanup(ts.Close)
-			client := http.Client{}
-
-			// WHEN: a HTTP request is made to this router (apple-touch-icon.png).
-			req, err := http.NewRequest(
-				http.MethodGet,
-				ts.URL+"/apple-touch-icon.png",
-				nil,
-			)
-			if err != nil {
-				t.Fatalf("%s\n%v", packageName, err)
-			}
-			resp, err := client.Do(req)
-			if err != nil {
-				t.Fatalf("%s\n%v", packageName, err)
-			}
-
-			prefix := fmt.Sprintf("%s\n/apple-touch-icon.png", packageName)
-
-			// THEN: the status code is as expected.
-			wantStatus := http.StatusNotFound
-			if tc.urlPNG != "" {
-				wantStatus = http.StatusOK
-			}
-			if resp.StatusCode != wantStatus {
-				t.Errorf(
-					"%s - status code mismatch\ngot:  %d\nwant: %d",
-					prefix, resp.StatusCode, wantStatus,
-				)
-			}
-			if got := resp.Request.URL.String(); tc.urlPNG != "" && got != tc.urlPNG {
-				t.Errorf(
-					"%s - redirect mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.urlPNG,
-				)
-			}
-
-			// WHEN: a HTTP request is made to this router (favicon.svg).
-			req, err = http.NewRequest(http.MethodGet, ts.URL+"/favicon.svg", nil)
-			if err != nil {
-				t.Fatalf("%s\n%v", packageName, err)
-			}
-			resp, err = client.Do(req)
-			if err != nil {
-				t.Fatalf("%s\n%v", packageName, err)
-			}
-
-			prefix = fmt.Sprintf("%s\n/favicon.svg", packageName)
-
-			// THEN: the status code is as expected.
-			wantStatus = http.StatusNotFound
-			if tc.urlSVG != "" {
-				wantStatus = http.StatusOK
-			}
-			if resp.StatusCode != wantStatus {
-				t.Errorf(
-					"%s - status code mismatch\ngot:  %d\nwant: %d",
-					prefix, resp.StatusCode, wantStatus,
-				)
-			}
-			if got := resp.Request.URL.String(); tc.urlSVG != "" && got != tc.urlSVG {
-				t.Errorf(
-					"%s - redirect mismatch\ngot:  %s\nwant: %s",
-					prefix, got, tc.urlSVG,
-				)
-			}
-		})
-	}
-}
-
 func TestAPI_SetupWebSocket(t *testing.T) {
-	tests := map[string]struct {
+	tests := []struct {
+		name             string
 		basicAuth        bool
 		staticToken      string // literal '?token=X' value.
 		mintToken        bool   // mint a fresh token from wsTokens and use it.
 		wantUnauthorized bool
 	}{
-		"no basic auth, no token": {
+		{
+			name:             "no basic auth, no token",
 			basicAuth:        false,
 			wantUnauthorized: false,
 		},
-		"basic auth/no token": {
+		{
+			name:             "basic auth/no token",
 			basicAuth:        true,
 			wantUnauthorized: true,
 		},
-		"basic auth/invalid token": {
+		{
+			name:             "basic auth/invalid token",
 			basicAuth:        true,
 			staticToken:      "not-a-real-token",
 			wantUnauthorized: true,
 		},
-		"basic auth/valid token": {
+		{
+			name:             "basic auth/valid token",
 			basicAuth:        true,
 			mintToken:        true,
 			wantUnauthorized: false,
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			// GIVEN: an API with/without Basic Auth configured.
@@ -593,19 +423,19 @@ func TestAPI_SetupWebSocket(t *testing.T) {
 
 			prefix := fmt.Sprintf(
 				"%s\nSetupWebSocket() %s",
-				packageName, name,
+				packageName, tc.name,
 			)
 
 			// THEN: the auth gate behaves as expected.
 			if tc.wantUnauthorized {
 				if resp.StatusCode != http.StatusUnauthorized {
 					t.Errorf(
-						"%s\nstatus code mismatch\ngot:  %d\nwant: %d",
+						"%s status code mismatch\ngot:  %d\nwant: %d",
 						prefix, resp.StatusCode, http.StatusUnauthorized,
 					)
 				}
 			} else if resp.StatusCode == http.StatusUnauthorized {
-				t.Errorf("%s\ngot 401, expected auth to pass", prefix)
+				t.Errorf("%s got 401, expected auth to pass", prefix)
 			}
 
 			// AND: the WWW-Authenticate header is absent (no Basic Auth re-prompt on the WebSocket handshake).
@@ -632,6 +462,51 @@ func TestAPI_SetupWebSocket(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestAPI_SetupWebSocket__sessionAuth(t *testing.T) {
+	// GIVEN: an auth-enabled API wired for session auth, and a logged-in admin.
+	file := "TestAPI_SetupWebSocket__sessionAuth.yml"
+	api, deps, _ := testAuthServer(t, file)
+	cookie := loginCookie(t, api, "admin", "admin-password")
+	adminID := adminContext(t, api, deps).User.ID
+	server := httptest.NewServer(api.BaseRouter)
+	t.Cleanup(server.Close)
+
+	prefix := fmt.Sprintf("%s\nSetupWebSocket() session auth", packageName)
+
+	// WHEN: a WebSocket client connects, carrying the session cookie.
+	wsURL := strings.Replace(server.URL, "http:", "ws:", 1) + "/ws"
+	header := http.Header{"Cookie": {cookie.String()}}
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, header)
+	if err != nil {
+		t.Fatalf("%s failed to dial WebSocket: %v", prefix, err)
+	}
+	t.Cleanup(func() { _ = clientConn.Close() })
+
+	// THEN: the registered client carries the logged-in session's identity,
+	// wired through SetupWebSocket's cookie -> authenticateSession -> clientAuth path.
+	var registered *Client
+	for i := 0; i < 100 && registered == nil; i++ {
+		time.Sleep(10 * time.Millisecond)
+		registered = hubClientForTest(t, api.hub)
+	}
+	if registered == nil {
+		t.Fatalf("%s expected a registered client", prefix)
+	}
+	wantSessionHash := session.HashToken(cookie.Value)
+	if registered.userID != adminID ||
+		registered.sessionHash != wantSessionHash ||
+		registered.sessionAlive == nil || !registered.sessionAlive() {
+		t.Errorf(
+			"%s client identity mismatch\n"+
+				"got:  userID=%q sessionHash=%q sessionAlive=%t\n"+
+				"want: userID=%q sessionHash=%q sessionAlive=true",
+			prefix,
+			registered.userID, registered.sessionHash, registered.sessionAlive == nil || !registered.sessionAlive(),
+			adminID, wantSessionHash,
+		)
 	}
 }
 
@@ -736,7 +611,10 @@ func TestFailRequest(t *testing.T) {
 				gotCode = w.code
 				gotBody = w.body
 			default:
-				t.Fatalf("%s unexpected ResponseWriter type %T", prefix, rw)
+				t.Fatalf(
+					"%s unexpected ResponseWriter type %T",
+					prefix, rw,
+				)
 			}
 
 			// THEN: the status code is as expected.

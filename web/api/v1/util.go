@@ -16,14 +16,21 @@
 package v1
 
 import (
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 
+	"github.com/release-argus/Argus/auth/store"
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 // marshalAnnouncePayload serialises WebSocket announce payloads (overridable for tests).
+// see [decode.Marshal].
 var marshalAnnouncePayload = func(v any) ([]byte, error) {
 	return decode.Marshal("json", v)
 }
@@ -93,6 +100,56 @@ func (api *API) announceOrder() {
 			Order:   &api.Config.Order,
 		},
 	)
+}
+
+// minPasswordLength is the minimum accepted password length.
+const minPasswordLength = 8
+
+// validatePassword reports whether plaintext meets the minimum password policy,
+// returning a user-facing [error] when it does not.
+func validatePassword(plaintext string) error {
+	if len(plaintext) < minPasswordLength {
+		return &decode.ErrField{
+			Key:         "password",
+			Value:       util.ValueUnlessZero(plaintext, "*"),
+			Description: fmt.Sprintf("must be at least %d characters", minPasswordLength),
+		}
+	}
+	return nil
+}
+
+// decodeAuthBody decodes a JSON request body into v,
+// failing the request (and reporting false) on error.
+func (api *API) decodeAuthBody(w http.ResponseWriter, r *http.Request, v any) bool {
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxAuthBodySize))
+	if err != nil {
+		failRequest(&w, fmt.Errorf("read request: %w", err), http.StatusBadRequest)
+		return false
+	}
+	if err := decode.Unmarshal("json", body, v); err != nil {
+		failRequest(&w, fmt.Errorf("parse request: %w", err), http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
+// failAuthStoreRequest maps auth store errors onto HTTP statuses.
+func (api *API) failAuthStoreRequest(w http.ResponseWriter, err error, logFrom logx.LogFrom, action string) {
+	switch {
+	case errors.Is(err, store.ErrNotFound):
+		failRequest(&w, fmt.Errorf("%s failed: not found", action), http.StatusNotFound)
+	case errors.Is(err, store.ErrUsernameTaken),
+		errors.Is(err, store.ErrGroupNameTaken),
+		errors.Is(err, store.ErrUnknownGroup),
+		errors.Is(err, store.ErrInvalidGrant):
+		failRequest(&w, fmt.Errorf("%s failed: %w", action, err), http.StatusBadRequest)
+	case errors.Is(err, store.ErrLastAdmin),
+		errors.Is(err, store.ErrSystemGroup):
+		failRequest(&w, fmt.Errorf("%s failed: %w", action, err), http.StatusConflict)
+	default:
+		logx.Error(err, logFrom, true)
+		failRequest(&w, fmt.Errorf("%s failed", action), http.StatusInternalServerError)
+	}
 }
 
 // ConstantTimeCompare reports whether the arrays x and y have equal contents.

@@ -1,14 +1,12 @@
-const APP_PATHS = ['/approvals', '/status', '/flags', '/config'] as const;
-
 /**
- * @returns The path prefix for this app.
+ * @returns The path prefix this app is served under, read from the `<base
+ * href>` the server writes into index.html - stated by the server rather than
+ * inferred from the URL. Empty when served from the root.
  */
 const getBasename = () => {
-	const normalisedPath = removeTrailingSlash(globalThis.location.pathname);
+	const { pathname } = new URL(document.baseURI);
 
-	if (normalisedPath.length <= 1) return normalisedPath;
-
-	return removeKnownAppPath(normalisedPath) ?? normalisedPath;
+	return removeTrailingSlash(pathname);
 };
 
 /**
@@ -16,15 +14,6 @@ const getBasename = () => {
  */
 const removeTrailingSlash = (str: string): string => {
 	return str.endsWith('/') ? str.slice(0, -1) : str;
-};
-
-/**
- * Removes known app path from the end of the given path if present.
- */
-const removeKnownAppPath = (path: string): string | null => {
-	const matchedPath = APP_PATHS.find((appPath) => path.endsWith(appPath));
-	if (matchedPath) return path.slice(0, path.length - matchedPath.length);
-	return null;
 };
 
 export default getBasename;

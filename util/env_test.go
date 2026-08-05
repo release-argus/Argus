@@ -145,7 +145,10 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 			// THEN: the correct var (or "") is returned.
 			if tc.allDefault {
 				if got != "" {
-					t.Fatalf("%s mismatch\ngot:  %q\nwant: \"\"", packageName, got)
+					t.Fatalf(
+						"%s mismatch\ngot:  %q\nwant: \"\"",
+						packageName, got,
+					)
 				}
 				return
 			}
