@@ -162,8 +162,11 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 			// THEN: the error matches expectation.
 			e := errfmt.FormatError(err)
 			// Registries throttle repeated runs (unauthenticated ECR especially).
-			if util.RegexCheck(`(?i)TOOMANYREQUESTS|too many requests|rate exceeded`, e) {
-				t.Skipf("registry rate-limited:\n%s", e)
+			if util.RegexCheck(`(?i)TOOMANYREQUESTS|rate exceeded|rate limit exceeded`, e) {
+				t.Skipf(
+					"%s registry rate-limited:\n%s",
+					prefix, e,
+				)
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf(
