@@ -206,6 +206,15 @@ const NTFY = ({ name, main }: { name: string; main?: NotifyNtfySchema }) => {
 						type: 'string',
 					}}
 				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.markdown}
+					label="Markdown"
+					name={`${name}.params.markdown`}
+					tooltip={{
+						content: 'Render the message body as Markdown',
+						type: 'string',
+					}}
+				/>
 			</FieldSet>
 		</FieldSet>
 	);
