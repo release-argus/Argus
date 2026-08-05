@@ -103,10 +103,10 @@ export const applyDeployedVersionUpdate = (
 };
 
 export const getServiceUpdateState = (
-	status?: StatusSummaryType,
+	status: StatusSummaryType,
 ): ServiceUpdateState => {
 	// Loading 'status' still.
-	if (status === undefined) return null;
+	if (!status.latest_version && !status.deployed_version) return null;
 
 	// Latest version is deployed.
 	if (status.latest_version === status.deployed_version) return 'UP_TO_DATE';
