@@ -74,7 +74,7 @@ func TestContainerDetail_IsZero(t *testing.T) {
 			if got != tc.want {
 				t.Fatalf(
 					"%s\nContainerDetail.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					tc.name, got, tc.want,
+					packageName, got, tc.want,
 				)
 			}
 		})
@@ -116,7 +116,7 @@ func TestContainerDetailDefaults_IsZero(t *testing.T) {
 			if got != tc.want {
 				t.Fatalf(
 					"%s\nContainerDetailDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					tc.name, got, tc.want,
+					packageName, got, tc.want,
 				)
 			}
 		})
@@ -261,7 +261,7 @@ func TestContainerDetail_GetImage(t *testing.T) {
 			if got != tc.want {
 				t.Fatalf(
 					"%s\nContainerDetail.GetImage() mismatch\ngot:  %q\nwant: %q",
-					tc.name, got, tc.want,
+					packageName, got, tc.want,
 				)
 			}
 		})
@@ -330,7 +330,7 @@ func TestContainerDetail_GetTag(t *testing.T) {
 			if got != tc.want {
 				t.Fatalf(
 					"%s\nContainerDetail.GetTag() mismatch\ngot:  %q\nwant: %q",
-					tc.name, got, tc.want,
+					packageName, got, tc.want,
 				)
 			}
 		})
@@ -374,7 +374,7 @@ func TestContainerDetailDefaults_GetTag(t *testing.T) {
 			if got != tc.want {
 				t.Fatalf(
 					"%s\nContainerDetailDefaults.GetTag() mismatch\ngot:  %q\nwant: %q",
-					tc.name, got, tc.want,
+					packageName, got, tc.want,
 				)
 			}
 		})
