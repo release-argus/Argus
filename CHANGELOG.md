@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.35.0](https://github.com/release-argus/Argus/compare/0.34.0...0.35.0) (2026-08-05)
+
+
+### Features
+
+* **notify-ntfy:** add Markdown toggle ([207fa74](https://github.com/release-argus/Argus/commit/207fa74885cce539fea6ac097173370e1874b2a1))
+* **ui:** refresh deployed versions for visible services only ([aab29f6](https://github.com/release-argus/Argus/commit/aab29f60c5a26c51e377361ee828369a42f3c029))
+
+
+### Bug Fixes
+
+* **api:** guard concurrent service-config access ([fce35ca](https://github.com/release-argus/Argus/commit/fce35caab52a22aa344befd0b0479e18cabb14dd))
+* **ui:** check service name uniqueness against other names ([b421c95](https://github.com/release-argus/Argus/commit/b421c956138f4aec66e840489debd10ee643cbab))
+* **ui:** report no update state until a version resolves ([979139b](https://github.com/release-argus/Argus/commit/979139b3c07485197734031e7c5401fd89aa7500))
+
 ## [0.34.0](https://github.com/release-argus/Argus/compare/0.33.0...0.34.0) (2026-08-04)
 
 
