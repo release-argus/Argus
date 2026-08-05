@@ -65,7 +65,7 @@ func TestECRRegistry_Check(t *testing.T) {
 				},
 			},
 			version:  "latest",
-			errRegex: `^` + test.ArgusDockerECRRepo + `:latest-unknown - (tag not found|\{.*Rate exceeded.*\})$`,
+			errRegex: `^` + test.ArgusDockerECRRepo + `:latest-unknown - tag not found$`,
 		},
 		{
 			name: "unknown image",
@@ -90,12 +90,23 @@ func TestECRRegistry_Check(t *testing.T) {
 			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
 
+			prefix := fmt.Sprintf(
+				"%s\nECRRegistry.Check(%q)",
+				packageName, tc.version,
+			)
+
 			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
+			if util.RegexCheck(`(?i)TOOMANYREQUESTS|rate exceeded`, e) {
+				t.Skipf(
+					"%s registry rate-limited:\n%s",
+					prefix, e,
+				)
+			}
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf(
-					"%s\nECRRegistry.Check() error mismatch\ngot:  %q\nwant: %s",
-					tc.name, e, tc.errRegex,
+					"%s error mismatch\ngot:  %q\nwant: %s",
+					prefix, e, tc.errRegex,
 				)
 			}
 		})
@@ -202,12 +213,17 @@ func TestECRRegistry_Check__errors(t *testing.T) {
 			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
 
+			prefix := fmt.Sprintf(
+				"%s\nECRRegistry.Check(%q)",
+				packageName, tc.version,
+			)
+
 			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf(
-					"%s\nECRRegistry.Check() error mismatch\ngot:  %q\nwant: %s",
-					tc.name, e, tc.errRegex,
+					"%s error mismatch\ngot:  %q\nwant: %s",
+					prefix, e, tc.errRegex,
 				)
 			}
 		})
