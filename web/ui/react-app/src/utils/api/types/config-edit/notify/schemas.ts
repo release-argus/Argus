@@ -439,6 +439,7 @@ export const notifyNtfySchema = notifyBaseSchema.extend({
 			filename: stringDefault,
 			firebase: preprocessBooleanFromString,
 			icon: stringDefault,
+			markdown: preprocessBooleanFromString,
 			priority: NtfyPriorityZodEnum.or(z.literal(nullString)).default(
 				nullString,
 			),
@@ -457,6 +458,7 @@ export const notifyNtfySchema = notifyBaseSchema.extend({
 			filename: '',
 			firebase: null,
 			icon: '',
+			markdown: null,
 			priority: nullString,
 			scheme: nullString,
 			tags: '',
@@ -485,6 +487,7 @@ export const notifyNtfySchemaOutgoing = notifyNtfySchema.extend({
 		cache: preprocessStringFromBoolean,
 		disabletlsverification: preprocessStringFromBoolean,
 		firebase: preprocessStringFromBoolean,
+		markdown: preprocessStringFromBoolean,
 		priority: preprocessStringFromZodEnum(NtfyPriorityZodEnum),
 		scheme: preprocessStringFromZodEnum(NtfySchemeZodEnum),
 	}),

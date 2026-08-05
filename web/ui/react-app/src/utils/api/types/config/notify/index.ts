@@ -253,6 +253,7 @@ export type NotifyNtfy = NotifyBase & {
 		filename?: string;
 		firebase?: string;
 		icon?: string;
+		markdown?: string;
 		priority?: NTFYPriority;
 		scheme?: NTFYScheme;
 		tags?: string;

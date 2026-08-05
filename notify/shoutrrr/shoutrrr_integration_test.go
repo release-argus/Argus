@@ -78,7 +78,7 @@ func TestShoutrrrs_Send(t *testing.T) {
 				"failing":      testShoutrrr(true, false),
 				"also_failing": testShoutrrr(true, false),
 			},
-			errRegex: `^(failed to build request: invalid gotify token.* x 1\s?){2}$`,
+			errRegex: `^(gotify: failed to build request: invalid gotify token.* x 1\s?){2}$`,
 		},
 	}
 
