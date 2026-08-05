@@ -62,7 +62,7 @@ export const SchemaProvider: FC<SchemaProviderProps> = ({
 }) => {
 	const { data: orderData } = useServiceOrder();
 	const order = orderData?.order ?? [];
-	const { services } = useServices();
+	const { services } = useServices(order);
 
 	// Stable key for service IDs.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: orderData covers order.
@@ -106,7 +106,7 @@ export const SchemaProvider: FC<SchemaProviderProps> = ({
 			typeDataDefaults,
 			typeDataDefaultsHollow,
 		};
-	}, [data, otherOptionsData, serviceIDs]);
+	}, [data, otherOptionsData, serviceIDs, services]);
 
 	return <SchemaContext value={contextValue}>{children}</SchemaContext>;
 };
