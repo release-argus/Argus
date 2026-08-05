@@ -11,6 +11,7 @@ import {
 	deleteService,
 	LOOKUP_LATEST_VERSION_JSON,
 	screenshot,
+	screenshotsUnder,
 	trackCreatedServices,
 	withProject,
 } from './fixtures/service';
@@ -19,6 +20,11 @@ import {
 	LOOKUP_BASIC_AUTH,
 	LOOKUP_WITH_HEADER_AUTH,
 } from './fixtures/test-endpoints';
+import {
+	expectError,
+	expectValid,
+	MUST_BE_UNIQUE,
+} from './fixtures/validation';
 
 /**
  * Runs a create -> verify -> refresh -> delete cycle, screenshotting each stage.
@@ -292,5 +298,56 @@ test.describe('Service update status', () => {
 			`service-update-status/${baseID}/03-after-skip`,
 			testInfo.project.name,
 		);
+	});
+});
+
+test.describe('Service name uniqueness', () => {
+	const createdIDs = trackCreatedServices();
+
+	test('a Name already used by another service is flagged as not unique', async ({
+		page,
+	}, testInfo) => {
+		const shot = screenshotsUnder(
+			page,
+			testInfo.project.name,
+			'service-name-uniqueness',
+		);
+		const baseID = 'NAME_UNIQUE=EXISTING';
+		const id = withProject(baseID, testInfo.project.name);
+		const name = withProject(`${baseID}-display`, testInfo.project.name);
+		createdIDs.push(id);
+
+		await openDashboardInEditMode(page);
+
+		// GIVEN: a service whose Name differs from its ID.
+		await createService(page, id, { name });
+
+		// WHEN: a second service is given a unique ID, but that existing Name.
+		await page.getByRole('button', { name: /create a service/i }).click();
+		const dialog = page.getByRole('dialog');
+		await expect(dialog).toBeVisible();
+		const idInput = dialog.locator('input[name="id"]');
+		await expect(idInput).toBeEditable();
+		await idInput.fill(`${id}-second`);
+		await dialog
+			.getByRole('button', { name: /toggle to separate id/i })
+			.click();
+		const nameInput = dialog.locator('input[name="name"]');
+
+		// THEN: the Name is flagged.
+		await expectError(
+			nameInput,
+			name,
+			MUST_BE_UNIQUE,
+			shot,
+			'01-name-duplicate',
+		);
+
+		// WHEN: a Name no other service uses is entered.
+		// THEN: the error clears.
+		await expectValid(nameInput, `${name}-second`, shot, '02-name-unique');
+
+		await dialog.locator('#modal-cancel').click();
+		await expect(dialog).not.toBeVisible();
 	});
 });
