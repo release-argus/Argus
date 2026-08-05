@@ -1012,7 +1012,7 @@ func TestCommonRegistry_GetImageSelf(t *testing.T) {
 			if got != tc.want {
 				t.Errorf(
 					"%s\nCommonRegistry.GetImageSelf() mismatch\ngot:  %q\nwant: %q",
-					tc.name, got, tc.want,
+					packageName, got, tc.want,
 				)
 			}
 		})
@@ -1105,7 +1105,7 @@ func TestCommonRegistry_GetTagSelf(t *testing.T) {
 			if got != tc.want {
 				t.Errorf(
 					"%s\nCommonRegistry.GetTagSelf() mismatch\ngot:  %q\nwant: %q",
-					tc.name, got, tc.want,
+					packageName, got, tc.want,
 				)
 			}
 		})

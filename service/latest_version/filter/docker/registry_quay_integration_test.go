@@ -17,6 +17,7 @@
 package docker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -116,12 +117,17 @@ func TestQuayRegistry_Check(t *testing.T) {
 			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
 
+			prefix := fmt.Sprintf(
+				"%s\nQuayRegistry.Check(%q)",
+				packageName, tc.version,
+			)
+
 			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf(
-					"%s\nQuayRegistry.Check() error mismatch\ngot:  %q\nwant: %q",
-					tc.name, e, tc.errRegex,
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
 				)
 			}
 		})
@@ -198,12 +204,17 @@ func TestQuayRegistry_Check__errors(t *testing.T) {
 			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
 
+			prefix := fmt.Sprintf(
+				"%s\nECRRegistry.Check(%q)",
+				packageName, tc.version,
+			)
+
 			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf(
-					"%s\nQuayRegistry.Check() error mismatch\ngot:  %q\nwant: %q",
-					tc.name, e, tc.errRegex,
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
 				)
 			}
 		})

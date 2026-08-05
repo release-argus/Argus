@@ -100,12 +100,23 @@ func TestHubRegistry_Check(t *testing.T) {
 			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
 
+			prefix := fmt.Sprintf(
+				"%s\nHubRegistry.Check(%q)",
+				packageName, tc.version,
+			)
+
 			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
+			if util.RegexCheck(`(?i)rate limit exceeded`, e) {
+				t.Skipf(
+					"%s registry rate-limited:\n%s",
+					prefix, e,
+				)
+			}
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf(
-					"%s\nHubRegistry.Check() error mismatch\ngot:  %q\nwant: %q",
-					tc.name, e, tc.errRegex,
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
 				)
 			}
 		})
@@ -224,12 +235,17 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
 
+			prefix := fmt.Sprintf(
+				"%s\nHubRegistry.Check(%q)",
+				packageName, tc.version,
+			)
+
 			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf(
-					"%s\nHubRegistry.Check() error mismatch\ngot:  %q\nwant: %q",
-					tc.name, e, tc.errRegex,
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
 				)
 			}
 		})
@@ -377,7 +393,7 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 			errRegex:     `^create docker-hub token request`,
 		},
 		{
-			name: "invalid, expired cert",
+			name: "invalid/expired cert",
 			detail: ContainerDetail{
 				Image: "",
 			},
