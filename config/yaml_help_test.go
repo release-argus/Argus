@@ -212,7 +212,8 @@ func testYAML_SomeNilServices(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		service:
 			a:
 				latest_version:
@@ -234,7 +235,8 @@ func testYAML_NilServiceMap(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder`,
+					github:
+						access_token: placeholder`,
 	)
 
 	writeFile(path, data)
@@ -350,7 +352,8 @@ func testYAML_Ordering_0(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 				options:
 					interval: 123
 					semantic_versioning: false
@@ -404,7 +407,8 @@ func testYAML_Ordering_1_no_services(path string) {
 					interval: 123s
 					semantic_versioning: false
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 				deployed_version: {}
 			notify:
 				gotify:
@@ -431,7 +435,8 @@ func testYAML_Ordering_2_obscure_service_names(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		service:
 			"123":
 				latest_version:
@@ -483,7 +488,8 @@ func testYAML_Ordering_3_empty_line_after_service_line(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		service:
 
 			C:
@@ -510,7 +516,8 @@ func testYAML_Ordering_4_multiple_empty_lines_after_service_line(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		service:
 ` + strings.Repeat("\n", 3) + `
 			P:
@@ -537,7 +544,8 @@ func testYAML_Ordering_5_eof_is_service_line(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		settings:
 		data:
 		database_file: test-ordering_5.db
@@ -553,7 +561,8 @@ func testYAML_Ordering_6_no_services_after_service_line_another_block(path strin
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		service:
 
 		settings:
@@ -569,7 +578,8 @@ func testYAML_Ordering_7_no_services_after_service_line(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		settings:
 			data:
 				database_file: test-ordering_5.db
@@ -587,7 +597,8 @@ func testYAML_Edit(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		service:
 			alpha:
 				name: a
