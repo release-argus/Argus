@@ -30,14 +30,15 @@ func writeFile(path string, data string) {
 }
 
 func testYAML_Argus(path string) {
-	// Keep the DB beside rhe config.
+	// Keep the DB beside the config.
 	dbFile := strings.TrimSuffix(path, filepath.Ext(path)) + ".db"
 
 	data := test.TrimYAML(`
 		defaults:
 			service:
 				latest_version:
-					access_token: ${GITHUB_TOKEN}
+					github:
+						access_token: ${GITHUB_TOKEN}
 			notify:
 				gotify:
 					options:

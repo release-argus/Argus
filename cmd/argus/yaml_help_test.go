@@ -36,7 +36,8 @@ func testYAML_NoServices(path string) {
 					interval: 123s
 					semantic_versioning: false
 				latest_version:
-					access_token: ${GITHUB_TOKEN}
+					github:
+						access_token: ${GITHUB_TOKEN}
 				deployed_version: {}
 
 			notify:
