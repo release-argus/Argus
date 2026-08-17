@@ -95,6 +95,20 @@ define stop_argus
 if [ -f $(1) ]; then kill $$(cat $(1)) 2>/dev/null || true; rm -f $(1); fi
 endef
 
+# require_port_free,<port>: fail unless <port> is free.
+define require_port_free
+i=0; while curl -s -o /dev/null --max-time 2 http://localhost:$(1)/; do \
+	i=$$((i+1)); \
+	if [ $$i -ge 5 ]; then \
+		echo "ERROR: port $(1) is already in use." >&2; \
+		echo "  Playwright would test that instance instead of the fixture." >&2; \
+		echo "  Stop it, or re-run with PLAYWRIGHT_PORT/PLAYWRIGHT_AUTH_PORT set to free ports." >&2; \
+		exit 1; \
+	fi; \
+	sleep 1; \
+done
+endef
+
 .PHONY: playwright-tests-setup
 playwright-tests-setup:
 	@if [ -n "$(FRESH)" ]; then \
