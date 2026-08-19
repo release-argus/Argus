@@ -21,24 +21,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/auth/session"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
 // authHardDefaults returns Settings hard defaults matching Settings.Default().
+// The session block comes from the production defaulter, so the fixture cannot
+// drift from what Settings.Default() actually produces.
 func authHardDefaults() SettingsBase {
-	return SettingsBase{
+	base := SettingsBase{
 		Auth: AuthSettings{
 			Enabled: new(false),
-			Session: AuthSessionSettings{
-				Lifetime:    "720h",
-				IdleTimeout: "168h",
-			},
 			Local: AuthLocalSettings{
 				Enabled: new(true),
 			},
 		},
 	}
+	base.Auth.Session.Default()
+
+	return base
 }
 
 func TestAuthSessionSettings_Default(t *testing.T) {
@@ -156,7 +158,7 @@ func TestAuthSettings_IsZero(t *testing.T) {
 }
 
 func TestAuthSettings_CheckValues(t *testing.T) {
-	// GIVEN: AuthSettings with session durations of varying validity.
+	// GIVEN: AuthSettings with session durations/caps of varying validity.
 	tests := []struct {
 		name     string
 		auth     AuthSettings
@@ -176,6 +178,27 @@ func TestAuthSettings_CheckValues(t *testing.T) {
 				},
 			},
 			errRegex: `^$`,
+		},
+		{
+			name: "valid/positive max_per_user",
+			auth: AuthSettings{
+				Session: AuthSessionSettings{MaxPerUser: new(5)},
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "invalid/zero max_per_user",
+			auth: AuthSettings{
+				Session: AuthSessionSettings{MaxPerUser: new(0)},
+			},
+			errRegex: `max_per_user: "0" <invalid>.*$`,
+		},
+		{
+			name: "invalid/negative max_per_user",
+			auth: AuthSettings{
+				Session: AuthSessionSettings{MaxPerUser: new(-3)},
+			},
+			errRegex: "max_per_user",
 		},
 		{
 			name: "invalid lifetime",
@@ -465,6 +488,7 @@ func TestSettings__authAccessors(t *testing.T) {
 			wantLocalEnabled:       true,
 			wantSessionLifetime:    720 * time.Hour,
 			wantSessionIdleTimeout: 168 * time.Hour,
+			wantSessionMaxPerUser:  session.DefaultMaxSessionsPerUser,
 		},
 		{
 			name: "explicit values",
@@ -494,6 +518,7 @@ func TestSettings__authAccessors(t *testing.T) {
 			wantLocalEnabled:       true,
 			wantSessionLifetime:    720 * time.Hour,
 			wantSessionIdleTimeout: 168 * time.Hour,
+			wantSessionMaxPerUser:  session.DefaultMaxSessionsPerUser,
 		},
 	}
 

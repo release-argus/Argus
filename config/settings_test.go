@@ -19,6 +19,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -218,6 +219,20 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						RoutePrefix: "/prefix",
+					},
+				},
+			},
+			ok: true,
+		},
+		{
+			name: "web.disabled_routes",
+			env: map[string]string{
+				"ARGUS_WEB_DISABLED_ROUTES": "service_delete, notify_test",
+			},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						DisabledRoutes: []string{"service_delete", "notify_test"},
 					},
 				},
 			},
@@ -996,6 +1011,32 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				^cert_file: .*no such file.*
 				pkey_file: .*no such file.*$`,
 			),
+		},
+		{
+			name: "TrustedProxies/valid IP and CIDR",
+			input: &WebSettings{
+				TrustedProxies: []string{"10.0.0.1", "192.168.0.0/16", "::1"},
+			},
+			want: test.TrimYAML(`
+				trusted_proxies:
+					- 10.0.0.1
+					- 192.168.0.0/16
+					- ::1
+			`),
+			ok: true,
+		},
+		{
+			name: "TrustedProxies/invalid entry",
+			input: &WebSettings{
+				TrustedProxies: []string{"10.0.0.1", "not-an-ip"},
+			},
+			want: test.TrimYAML(`
+				trusted_proxies:
+					- 10.0.0.1
+					- not-an-ip
+			`),
+			ok:       false,
+			errRegex: `^trusted_proxies: "not-an-ip" <invalid>.*IP address or CIDR`,
 		},
 	}
 
@@ -2187,6 +2228,139 @@ func TestSettings_GetWebFile__notExist(t *testing.T) {
 				t.Errorf(
 					"%s mismatch when set\ngot:  %q\nwant: %q",
 					prefix, got, file,
+				)
+			}
+		})
+	}
+}
+
+func TestSettings_WebDisabledRoutes(t *testing.T) {
+	// GIVEN: a Settings struct with disabled routes from YAML and/or the
+	// hard defaults (where ARGUS_WEB_DISABLED_ROUTES lands).
+	tests := []struct {
+		name         string
+		values       []string
+		hardDefaults []string
+		want         []string
+	}{
+		{
+			name: "unset",
+			want: nil,
+		},
+		{
+			name:   "explicit values",
+			values: []string{"version", "service_delete"},
+			want:   []string{"version", "service_delete"},
+		},
+		{
+			name:         "hard default fallback",
+			hardDefaults: []string{"service_delete"},
+			want:         []string{"service_delete"},
+		},
+		{
+			name:         "empty, not nil, still falls back",
+			values:       []string{},
+			hardDefaults: []string{"service_delete"},
+			want:         []string{"service_delete"},
+		},
+		{
+			name:         "explicit values override the hard defaults",
+			values:       []string{"version"},
+			hardDefaults: []string{"service_delete"},
+			want:         []string{"version"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			settings := Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{DisabledRoutes: tc.values},
+				},
+				HardDefaults: SettingsBase{
+					Web: WebSettings{DisabledRoutes: tc.hardDefaults},
+				},
+			}
+
+			prefix := fmt.Sprintf("%s\nSettings.WebDisabledRoutes()", packageName)
+
+			// WHEN: the accessor resolves the layered value.
+			got := settings.WebDisabledRoutes()
+
+			// THEN: it matches, so an env-set value is actually reachable.
+			if !slices.Equal(got, tc.want) {
+				t.Errorf(
+					"%s mismatch\ngot:  %v\nwant: %v",
+					prefix, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestSettings_WebTrustedProxies(t *testing.T) {
+	// GIVEN: a Settings struct with some values set.
+	tests := []struct {
+		name         string
+		values       []string
+		hardDefaults []string
+		want         []string
+	}{
+		{
+			name: "unset",
+			want: []string{},
+		},
+		{
+			name:   "explicit values, bare IPs become single-address ranges",
+			values: []string{"10.0.0.1", "192.168.0.0/16", "::1"},
+			want:   []string{"10.0.0.1/32", "192.168.0.0/16", "::1/128"},
+		},
+		{
+			name:         "hard default fallback",
+			hardDefaults: []string{"172.16.0.0/12"},
+			want:         []string{"172.16.0.0/12"},
+		},
+		{
+			name:   "unparseable entries skipped",
+			values: []string{"10.0.0.1", "not-an-ip"},
+			want:   []string{"10.0.0.1/32"},
+		},
+		{
+			name:   "IPv4-mapped IPv6 CIDR rewritten as its IPv4 equivalent",
+			values: []string{"::ffff:10.0.0.0/104"},
+			want:   []string{"10.0.0.0/8"},
+		},
+		{
+			name:   "IPv4-mapped IPv6 CIDR with a prefix shorter than 96 bits is kept as-is",
+			values: []string{"::ffff:10.0.0.0/64"},
+			want:   []string{"::ffff:10.0.0.0/64"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			settings := Settings{}
+			settings.Web.TrustedProxies = tc.values
+			settings.HardDefaults.Web.TrustedProxies = tc.hardDefaults
+
+			// WHEN: WebTrustedProxies is called.
+			got := settings.WebTrustedProxies()
+
+			prefix := fmt.Sprintf("%s\nSettings.WebTrustedProxies()", packageName)
+
+			// THEN: the resolved prefixes match expectations.
+			gotStrs := make([]string, len(got))
+			for i, prefix := range got {
+				gotStrs[i] = prefix.String()
+			}
+			if !slices.Equal(gotStrs, tc.want) {
+				t.Errorf(
+					"%s mismatch\ngot:  %v\nwant: %v",
+					prefix, gotStrs, tc.want,
 				)
 			}
 		})

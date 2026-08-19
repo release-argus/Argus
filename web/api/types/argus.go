@@ -268,6 +268,7 @@ type WebSettings struct {
 	KeyFile        string   `json:"pkey_file,omitzero" yaml:"pkey_file,omitzero"`               // HTTPS privkey path.
 	RoutePrefix    string   `json:"route_prefix,omitzero" yaml:"route_prefix,omitzero"`         // Web endpoint prefix.
 	DisabledRoutes []string `json:"disabled_routes,omitempty" yaml:"disabled_routes,omitempty"` // Disabled API routes.
+	TrustedProxies []string `json:"trusted_proxies,omitempty" yaml:"trusted_proxies,omitempty"` // Peers whose forwarded headers are honoured.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -277,7 +278,8 @@ func (w WebSettings) IsZero() bool {
 		w.CertFile == "" &&
 		w.KeyFile == "" &&
 		w.RoutePrefix == "" &&
-		len(w.DisabledRoutes) == 0
+		len(w.DisabledRoutes) == 0 &&
+		len(w.TrustedProxies) == 0
 }
 
 // AuthSettings contains the authentication settings for the program.
@@ -299,13 +301,15 @@ type AuthSessionSettings struct {
 	Lifetime     string `json:"lifetime,omitzero" yaml:"lifetime,omitzero"`           // Absolute cap.
 	IdleTimeout  string `json:"idle_timeout,omitzero" yaml:"idle_timeout,omitzero"`   // Sliding window.
 	SecureCookie *bool  `json:"secure_cookie,omitzero" yaml:"secure_cookie,omitzero"` // Override the cookie's Secure attribute.
+	MaxPerUser   *int   `json:"max_per_user,omitzero" yaml:"max_per_user,omitzero"`   // Concurrent sessions per user.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (a AuthSessionSettings) IsZero() bool {
 	return a.Lifetime == "" &&
 		a.IdleTimeout == "" &&
-		a.SecureCookie == nil
+		a.SecureCookie == nil &&
+		a.MaxPerUser == nil
 }
 
 // AuthLocalSettings configures the local (username/password) provider.
