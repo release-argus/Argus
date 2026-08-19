@@ -18,14 +18,11 @@ package v1
 import (
 	"context"
 	"errors"
-	"io/fs"
 	"net/http"
 	"slices"
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/vearutop/statigz"
-	"github.com/vearutop/statigz/brotli"
 
 	"github.com/release-argus/Argus/auth"
 	"github.com/release-argus/Argus/auth/rbac"
@@ -34,7 +31,6 @@ import (
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 	apitype "github.com/release-argus/Argus/web/api/types"
-	"github.com/release-argus/Argus/web/ui"
 )
 
 // SetupRoutesAPI sets up the HTTP API routes.
@@ -99,8 +95,10 @@ func (api *API) SetupRoutesAPI() {
 			api.requireAdmin(api.httpPermissionCatalogue)).Methods(http.MethodGet)
 		// API tokens.
 		v1Router.HandleFunc("/tokens", api.httpAPITokenList).Methods(http.MethodGet)
-		v1Router.HandleFunc("/tokens", api.httpAPITokenCreate).Methods(http.MethodPost)
-		v1Router.HandleFunc("/tokens/{id}", api.httpAPITokenDelete).Methods(http.MethodDelete)
+		v1Router.HandleFunc("/tokens",
+			api.requireSessionAuth(api.httpAPITokenCreate)).Methods(http.MethodPost)
+		v1Router.HandleFunc("/tokens/{id}",
+			api.requireSessionAuth(api.httpAPITokenDelete)).Methods(http.MethodDelete)
 	}
 
 	// /config
@@ -161,10 +159,10 @@ func (api *API) SetupRoutesAPI() {
 		api.guard(rbac.ResourceNotify, rbac.ActionExecute, nil, api.httpNotifyTest)).Methods(http.MethodPost)
 	//   PUT, service - update details (disable=service_edit).
 	v1Router.HandleFunc("/service/config",
-		api.guard(rbac.ResourceService, rbac.ActionUpdate, api.serviceTarget, api.httpServiceEdit)).Methods(http.MethodPut)
+		api.guard(rbac.ResourceService, rbac.ActionUpdate, api.serviceTarget, api.httpServiceUpdate)).Methods(http.MethodPut)
 	//   PUT, service - new service (disable=service_create).
 	v1Router.HandleFunc("/service/new",
-		api.guard(rbac.ResourceService, rbac.ActionCreate, nil, api.httpServiceEdit)).Methods(http.MethodPut)
+		api.guard(rbac.ResourceService, rbac.ActionCreate, nil, api.httpServiceCreate)).Methods(http.MethodPut)
 	//   DELETE, service - delete service (disable=service_delete).
 	v1Router.HandleFunc("/service/delete",
 		api.guard(rbac.ResourceService, rbac.ActionDelete, api.serviceTarget, api.httpServiceDelete)).Methods(http.MethodDelete)
@@ -200,8 +198,9 @@ func (api *API) DisableRoutes() {
 		webRoutePrefix + "/api/v1/deployed_version/refresh_uncreated": {name: "dv_refresh_new", method: http.MethodGet},
 		webRoutePrefix + "/api/v1/service/actions":                    {name: "service_actions", method: http.MethodPost},
 	}
+	disabledRoutes := api.Config.Settings.WebDisabledRoutes()
 	for _, r := range routes {
-		r.disabled = slices.Contains(api.Config.Settings.Web.DisabledRoutes, r.name)
+		r.disabled = slices.Contains(disabledRoutes, r.name)
 	}
 
 	_ = api.Router.Walk(func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {
@@ -219,7 +218,6 @@ func (api *API) DisableRoutes() {
 		// Set the new handler for the route.
 		disabledMethod := r.method
 		route.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			disabledMethod := disabledMethod
 			if r.Method == disabledMethod {
 				failRequest(
 					&w,
@@ -312,68 +310,6 @@ func (api *API) GuardMetrics(handler http.Handler) http.Handler {
 		}
 		handler.ServeHTTP(w, r)
 	})
-}
-
-// SetupRoutesNodeJS sets up the HTTP routes to the Node.js files.
-func (api *API) SetupRoutesNodeJS() {
-	nodeRoutes := []string{
-		"/approvals",
-		"/config",
-		"/flags",
-		"/groups",
-		"/login",
-		"/status",
-		"/tokens",
-		"/users",
-	}
-	// Serve the Node.js files.
-	for _, route := range nodeRoutes {
-		prefix := strings.TrimRight(api.RoutePrefix, "/") + route
-		api.Router.Handle(
-			route,
-			http.StripPrefix(
-				prefix,
-				statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding),
-			),
-		)
-	}
-
-	// Favicon override.
-	api.SetupRoutesFavicon()
-
-	// Catch-all for JS, CSS, etc...
-	api.Router.PathPrefix("/").Handler(
-		http.StripPrefix(
-			api.RoutePrefix,
-			statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding),
-		),
-	)
-}
-
-// SetupRoutesFavicon adds any favicon route overrides.
-func (api *API) SetupRoutesFavicon() {
-	if api.Config.Settings.Web.Favicon == nil {
-		return
-	}
-
-	if api.Config.Settings.Web.Favicon.SVG != "" {
-		api.Router.HandleFunc("/favicon.svg", func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(
-				w, r,
-				api.Config.Settings.Web.Favicon.SVG,
-				http.StatusPermanentRedirect,
-			)
-		})
-	}
-	if api.Config.Settings.Web.Favicon.PNG != "" {
-		api.Router.HandleFunc("/apple-touch-icon.png", func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(
-				w, r,
-				api.Config.Settings.Web.Favicon.PNG,
-				http.StatusPermanentRedirect,
-			)
-		})
-	}
 }
 
 // httpVersion handles GET /api/v1/version: serving the Argus build info

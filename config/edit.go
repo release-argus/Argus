@@ -39,9 +39,8 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 	c.OrderMu.Lock()
 	defer c.OrderMu.Unlock()
 
-	// Check a service does not already exist with the new id/name (if the name is changing).
-	if oldServiceID != newService.ID &&
-		(c.Service[newService.ID] != nil || c.ServiceWithNameExists(newService.ID, oldServiceID)) {
+	// Check a service does not already exist with the new ID or name.
+	if c.serviceIDTaken(oldServiceID, newService) {
 		err := fmt.Errorf("service %q already exists", newService.ID)
 		logx.Error(err, logFrom, true)
 		return err
@@ -109,6 +108,31 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 	go c.Service[newService.ID].Track()
 
 	return nil
+}
+
+// serviceIDTaken reports whether another service already holds newService's ID
+// or name. Both are checked against both, since either identifies a service.
+// The caller must hold OrderMu.
+func (c *Config) serviceIDTaken(oldServiceID string, newService *service.Service) bool {
+	for _, id := range [2]string{newService.ID, newService.Name} {
+		// A service always keeps its own ID.
+		if id == "" || id == oldServiceID {
+			continue
+		}
+		if c.Service[id] != nil || c.ServiceWithNameExists(id, oldServiceID) {
+			return true
+		}
+	}
+	return false
+}
+
+// ServiceIDTaken reports whether another service already holds newService's ID
+// or name.
+func (c *Config) ServiceIDTaken(oldServiceID string, newService *service.Service) bool {
+	c.OrderMu.RLock()
+	defer c.OrderMu.RUnlock()
+
+	return c.serviceIDTaken(oldServiceID, newService)
 }
 
 // ServiceWithNameExists reports whether a Service with the given name exists.

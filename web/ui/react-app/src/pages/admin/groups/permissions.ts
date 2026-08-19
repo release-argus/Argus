@@ -18,7 +18,7 @@ const DESCRIPTIONS: Partial<Record<`${Resource}:${Action}`, string>> = {
 	'service:update':
 		'Edit existing services, including the commands they run on a new release.',
 	'version_refresh:execute':
-		'Re-query the latest and deployed versions on demand. Refreshing with overrides can execute commands, so this is equivalent to shell access on the Argus host.',
+		'Re-query the latest and deployed versions on demand. Refreshing with overrides additionally requires service:update.',
 };
 
 /** describePermission returns what the pairing enables ('' when unknown). */

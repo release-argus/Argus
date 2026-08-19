@@ -1421,6 +1421,65 @@ func TestHTTP_TemplateParse(t *testing.T) {
 	}
 }
 
+func TestHTTP_ServiceEdit__routeValidation(t *testing.T) {
+	// GIVEN: an API.
+	file := "TestHTTP_ServiceEdit__routeBinding.yml"
+	api := testAPI(t, file)
+
+	// AND: requests to a handler with invalid serviceID query params.
+	tests := []struct {
+		name          string
+		handler       func(http.ResponseWriter, *http.Request)
+		serviceID     string
+		wantBodyRegex string
+	}{
+		{
+			name:          "create/rejects a service_id (would be an edit)",
+			handler:       api.httpServiceCreate,
+			serviceID:     "existing",
+			wantBodyRegex: "service_id must be empty",
+		},
+		{
+			name:          "update/rejects a missing service_id (would be a create)",
+			handler:       api.httpServiceUpdate,
+			serviceID:     "",
+			wantBodyRegex: "service_id is required",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			target := "/api/v1/service/config"
+			if tc.serviceID != "" {
+				target += "?service_id=" + url.QueryEscape(tc.serviceID)
+			}
+			req := httptest.NewRequest(http.MethodPut, target, strings.NewReader(`{}`))
+			w := httptest.NewRecorder()
+
+			// WHEN: the handler is called.
+			tc.handler(w, req)
+
+			prefix := fmt.Sprintf("%s\nroute binding", packageName)
+
+			// THEN: the request is rejected with 400 before any create/edit work.
+			if got, want := w.Code, http.StatusBadRequest; got != want {
+				t.Fatalf(
+					"%s status mismatch\ngot:  %d - %s\nwant: %d",
+					prefix, got, w.Body.String(), want,
+				)
+			}
+			if got := w.Body.String(); !util.RegexCheck(tc.wantBodyRegex, got) {
+				t.Errorf(
+					"%s body mismatch\ngot:  %q\nwant match: %q",
+					prefix, got, tc.wantBodyRegex,
+				)
+			}
+		})
+	}
+}
+
 func TestHTTP_ServiceEdit__create(t *testing.T) {
 	testSVC := testService(t, "TestHTTP_ServiceEdit_Create", "url", "url", true)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
@@ -1725,7 +1784,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			// WHEN: that HTTP request is sent.
 			w := httptest.NewRecorder()
 			apiMu.Lock()
-			api.httpServiceEdit(w, req)
+			api.httpServiceEdit(w, req, actionCreate)
 			apiMu.Unlock()
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
@@ -1835,7 +1894,7 @@ func TestHTTP_ServiceEdit__create__concurrentConflict(t *testing.T) {
 	}`)))
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/service/new", payload)
 	w := httptest.NewRecorder()
-	api.httpServiceEdit(w, req)
+	api.httpServiceEdit(w, req, actionCreate)
 	res := w.Result()
 	t.Cleanup(func() { _ = res.Body.Close() })
 
@@ -2138,7 +2197,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 			// WHEN: that HTTP request is sent.
 			w := httptest.NewRecorder()
 			apiMu.Lock()
-			api.httpServiceEdit(w, req)
+			api.httpServiceEdit(w, req, actionEdit)
 			apiMu.Unlock()
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
@@ -2243,7 +2302,7 @@ func TestHTTP_ServiceEdit__edit__missingID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/service/config", payload)
 	req.URL.RawQuery = params.Encode()
 	w := httptest.NewRecorder()
-	api.httpServiceEdit(w, req)
+	api.httpServiceEdit(w, req, actionEdit)
 	res := w.Result()
 	t.Cleanup(func() { _ = res.Body.Close() })
 
@@ -2325,7 +2384,7 @@ func TestHTTP_ServiceEdit__edit__renameToExistingID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/service/update", payload)
 	req.URL.RawQuery = params.Encode()
 	w := httptest.NewRecorder()
-	api.httpServiceEdit(w, req)
+	api.httpServiceEdit(w, req, actionEdit)
 	res := w.Result()
 	t.Cleanup(func() { _ = res.Body.Close() })
 
@@ -2406,7 +2465,7 @@ func TestHTTP_ServiceEdit__edit__renameToExistingName(t *testing.T) {
 	}
 }
 
-func TestHTTP_ServiceEdit__edit__restoresGrantsWhenAddServiceFails(t *testing.T) {
+func TestHTTP_ServiceEdit__edit__rejectsAnIDHeldAsAnotherServiceName(t *testing.T) {
 	// GIVEN: an auth-enabled API, a group holding a service-scoped grant, and a
 	// second service named after the ID the first is about to take.
 	file := "TestHTTP_ServiceEdit__edit__restoresGrants.yml"
@@ -2436,8 +2495,8 @@ func TestHTTP_ServiceEdit__edit__restoresGrantsWhenAddServiceFails(t *testing.T)
 		)
 	}
 
-	// WHEN: the edit takes an ID matching the other service's name, so the
-	// handler's pre-check passes but AddService rejects it.
+	// WHEN: the edit takes an ID matching the other service's name - the guard
+	// AddService applies, which the handler now shares.
 	payload := bytes.NewReader([]byte(test.TrimJSON(`{
 		"id": "` + takenName + `",
 		"name": "restore-grants-renamed",
@@ -2464,6 +2523,14 @@ func TestHTTP_ServiceEdit__edit__restoresGrantsWhenAddServiceFails(t *testing.T)
 		t.Fatalf(
 			"%s status code mismatch\ngot:  %d - %s\nwant: %d",
 			prefix, got, w.Body.String(), want,
+		)
+	}
+
+	// AND: it is the handler's pre-check that refused it, so no grant was moved.
+	if got, want := w.Body.String(), "a service with this id or name already exists"; !strings.Contains(got, want) {
+		t.Errorf(
+			"%s should be refused before any grant moves\ngot:  %s\nwant it to contain: %q",
+			prefix, got, want,
 		)
 	}
 
@@ -2853,7 +2920,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 			// WHEN: that HTTP request is sent.
 			w := httptest.NewRecorder()
 			apiMu.Lock()
-			api.httpServiceEdit(w, req)
+			api.httpServiceEdit(w, req, actionEdit)
 			apiMu.Unlock()
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
@@ -2916,7 +2983,7 @@ func TestHTTP_ServiceEdit__edit__waitsForInFlightOp(t *testing.T) {
 	done := make(chan int, 1)
 	go func() {
 		w := httptest.NewRecorder()
-		api.httpServiceEdit(w, req)
+		api.httpServiceEdit(w, req, actionEdit)
 		done <- w.Result().StatusCode
 	}()
 
