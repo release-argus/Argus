@@ -3,6 +3,7 @@ export const SMTP_AUTH = {
 	UNKNOWN: { label: 'Unknown', value: 'Unknown' },
 	NONE: { label: 'None', value: 'None' },
 	PLAIN: { label: 'Plain', value: 'Plain' },
+	LOGIN: { label: 'Login', value: 'Login' },
 	CRAM_MD5: { label: 'CRAM-MD5', value: 'CRAMMD5' },
 	OAUTH2: { label: 'OAuth2', value: 'OAuth2' },
 } as const;

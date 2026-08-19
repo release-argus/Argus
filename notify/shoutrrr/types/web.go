@@ -29,4 +29,5 @@ var CensorableURLFields = []string{
 // CensorableParams are the `params` that should be censored.
 var CensorableParams = []string{
 	"devices",
+	"encryptionkey",
 }
