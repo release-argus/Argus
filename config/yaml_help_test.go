@@ -290,6 +290,9 @@ func testYAML_config_auth(path string) {
 					secure_cookie: true
 				local:
 					enabled: true
+			web:
+				trusted_proxies:
+					- 10.0.0.0/8
 		service:
 			some-service:
 				options: {}

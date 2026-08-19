@@ -18,9 +18,7 @@ package v1
 import (
 	"fmt"
 	"log"
-	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -86,46 +84,6 @@ type Client struct {
 
 	// send carries outbound messages from the hub/server to this client.
 	send chan []byte
-}
-
-// getIP returns the client IP from proxy headers or RemoteAddr.
-func getIP(r *http.Request) (ip string) {
-	// Get IP from the CF-Connecting-Ip header.
-	ip = r.Header.Get("CF-Connecting-Ip")
-	netIP := net.ParseIP(ip)
-	if netIP != nil {
-		return
-	}
-
-	// Get IP from the X-Real-Ip header.
-	ip = r.Header.Get("X-Real-Ip")
-	netIP = net.ParseIP(ip)
-	if netIP != nil {
-		return
-	}
-
-	// Get IP from X-Forwarded-For header.
-	ips := r.Header.Get("X-Forwarded-For")
-	splitIps := strings.SplitSeq(ips, ",")
-	for ip = range splitIps {
-		netIP := net.ParseIP(ip)
-		if netIP != nil {
-			return
-		}
-	}
-
-	// Get IP from RemoteAddr.
-	var err error
-	ip, _, err = net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return ""
-	}
-	netIP = net.ParseIP(ip)
-	if netIP != nil {
-		return
-	}
-
-	return ""
 }
 
 // readPump drains incoming WebSocket frames and handles connection teardown.

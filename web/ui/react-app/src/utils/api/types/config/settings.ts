@@ -14,12 +14,15 @@ export type SettingsWeb = {
 
 	listen_host: string;
 	listen_port: string;
+
+	trusted_proxies?: string[];
 };
 
 export type SettingsAuthSession = {
 	lifetime?: string;
 	idle_timeout?: string;
 	secure_cookie?: boolean;
+	max_per_user?: number;
 };
 
 export type SettingsAuthLocal = {
