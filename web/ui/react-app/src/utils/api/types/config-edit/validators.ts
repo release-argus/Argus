@@ -84,7 +84,7 @@ export const validateURL = ({ arg, ctx, path }: FieldValidatorProps) => {
 };
 
 /* RegEx for a hex string representing a colour */
-const hexStringRegEx = new RegExp(/^[\da-f]{6}$|^$/i);
+const hexColourRegEx = new RegExp(/^[\da-f]{6}$|^$/i);
 
 /**
  * Validates that the input is a valid hexadecimal string.
@@ -94,10 +94,35 @@ const hexStringRegEx = new RegExp(/^[\da-f]{6}$|^$/i);
  * @param path - The path to the input in the object.
  */
 export const validateHexString = ({ arg, ctx, path }: FieldValidatorProps) => {
-	if (arg && typeof arg === 'string' && !hexStringRegEx.exec(arg)) {
+	if (arg && typeof arg === 'string' && !hexColourRegEx.exec(arg)) {
 		ctx.addIssue({
 			code: CUSTOM_ISSUE_CODE,
 			message: 'Invalid hexadecimal. Must be 6 characters, 0-9 and A-F.',
+			path: path,
+		});
+	}
+};
+
+/* RegEx for a 256-bit key as a hex string */
+const hexKeyRegEx = new RegExp(/^[\da-f]{64}$/i);
+
+/**
+ * Validates that the input is a 256-bit key as a hexadecimal string.
+ *
+ * @param arg - The input to validate.
+ * @param ctx - The Zod refinement context.
+ * @param path - The path to the input in the object.
+ */
+export const validateHexKey = ({ arg, ctx, path }: FieldValidatorProps) => {
+	if (
+		arg &&
+		typeof arg === 'string' &&
+		arg !== SecretValue &&
+		!hexKeyRegEx.exec(arg)
+	) {
+		ctx.addIssue({
+			code: CUSTOM_ISSUE_CODE,
+			message: 'Invalid key. Must be 64 characters, 0-9 and A-F.',
 			path: path,
 		});
 	}

@@ -568,11 +568,13 @@ export const notifyPushoverSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
 			devices: stringDefault,
+			encryptionkey: stringDefault,
 			priority: stringDefault,
 			title: stringDefault,
 		})
 		.default({
 			devices: '',
+			encryptionkey: '',
 			priority: '',
 			title: '',
 		}),

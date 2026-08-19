@@ -1795,12 +1795,14 @@ func TestNotify_Censor(t *testing.T) {
 			name: "params",
 			notify: &Notify{
 				Params: map[string]string{
-					"devices": "foo",
+					"devices":       "foo",
+					"encryptionkey": "bar",
 				},
 			},
 			want: &Notify{
 				Params: map[string]string{
-					"devices": util.SecretValue,
+					"devices":       util.SecretValue,
+					"encryptionkey": util.SecretValue,
 				},
 			},
 		},
@@ -1817,7 +1819,8 @@ func TestNotify_Censor(t *testing.T) {
 					"tokenb":   "golf",
 				},
 				Params: map[string]string{
-					"devices": "hotel",
+					"devices":       "hotel",
+					"encryptionkey": "india",
 				},
 			},
 			want: &Notify{
@@ -1831,7 +1834,8 @@ func TestNotify_Censor(t *testing.T) {
 					"tokenb":   util.SecretValue,
 				},
 				Params: map[string]string{
-					"devices": util.SecretValue,
+					"devices":       util.SecretValue,
+					"encryptionkey": util.SecretValue,
 				},
 			},
 		},
@@ -1850,9 +1854,10 @@ func TestNotify_Censor(t *testing.T) {
 					"username": "india",
 				},
 				Params: map[string]string{
-					"devices": "juliette",
-					"rooms":   "kilo",
-					"events":  "lima",
+					"devices":       "juliette",
+					"encryptionkey": "kilo",
+					"rooms":         "lima",
+					"events":        "mike",
 				},
 			},
 			want: &Notify{
@@ -1868,9 +1873,10 @@ func TestNotify_Censor(t *testing.T) {
 					"username": "india",
 				},
 				Params: map[string]string{
-					"devices": util.SecretValue,
-					"rooms":   "kilo",
-					"events":  "lima",
+					"devices":       util.SecretValue,
+					"encryptionkey": util.SecretValue,
+					"rooms":         "lima",
+					"events":        "mike",
 				},
 			},
 		},
