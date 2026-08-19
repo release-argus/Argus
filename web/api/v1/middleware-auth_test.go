@@ -1284,6 +1284,97 @@ func TestAPI_Guard(t *testing.T) {
 	}
 }
 
+func TestAPI_RequireAdmin(t *testing.T) {
+	// GIVEN: an auth-enabled API.
+	file := "TestAPI_RequireAdmin.yml"
+	api, deps, _ := testAuthServer(t, file)
+
+	// AND: an admin.
+	adminCtx := adminContext(t, api, deps)
+	// AND: a viewer.
+	viewer := createAuthUser(t, deps, "viewer-user", "viewer-password", store.GroupViewer)
+	viewerCtx, err := api.contextForUser(t.Context(), viewer.ID, "local")
+	if err != nil {
+		t.Fatalf(
+			"%s\nviewer context: %v",
+			packageName, err,
+		)
+	}
+
+	tests := []struct {
+		name        string
+		disableAuth bool
+		authCtx     *auth.Context
+		wantStatus  int
+		wantCalled  bool // true if we call the handler being wrapped, false otherwise.
+	}{
+		{
+			name:        "auth disabled/passes",
+			disableAuth: true,
+			wantStatus:  http.StatusOK,
+			wantCalled:  true,
+		},
+		{
+			name:       "auth/no context",
+			wantStatus: http.StatusUnauthorized,
+			wantCalled: false,
+		},
+		{
+			name:       "auth/admin",
+			authCtx:    adminCtx,
+			wantStatus: http.StatusOK,
+			wantCalled: true,
+		},
+		{
+			name:       "auth/non-admin",
+			authCtx:    viewerCtx,
+			wantStatus: http.StatusForbidden,
+			wantCalled: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			testAPI := api
+			if tc.disableAuth {
+				testAPI = &API{}
+			}
+
+			called := false
+			handler := testAPI.requireAdmin(func(w http.ResponseWriter, _ *http.Request) {
+				called = true
+				w.WriteHeader(http.StatusOK)
+			})
+
+			// WHEN: a request hits the guarded handler.
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			if tc.authCtx != nil {
+				req = withAuthCtx(req, tc.authCtx)
+			}
+			w := httptest.NewRecorder()
+			handler(w, req)
+
+			prefix := fmt.Sprintf("%s\nrequireAdmin()", packageName)
+
+			// THEN: the response code and handler invocation match expectations.
+			if got, want := w.Code, tc.wantStatus; got != want {
+				t.Errorf(
+					"%s\nstatus mismatch\ngot:  %d\nwant: %d",
+					prefix, got, want,
+				)
+			}
+			if called != tc.wantCalled {
+				t.Errorf(
+					"%s\nhandler called mismatch\ngot:  %t\nwant: %t",
+					prefix, called, tc.wantCalled,
+				)
+			}
+		})
+	}
+}
+
 func TestAPI_ReadableServices(t *testing.T) {
 	// GIVEN: an auth-enabled API with tagged services
 	file := "TestAPI_ReadableServices.yml"

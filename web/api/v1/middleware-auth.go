@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -362,32 +363,17 @@ func (api *API) guard(
 	target func(r *http.Request) *rbac.Target,
 	handler http.HandlerFunc,
 ) http.HandlerFunc {
-	if api.auth == nil {
-		return handler
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		authCtx := authContextFrom(r)
-		if authCtx == nil {
-			failRequest(&w, errUnauthorised, http.StatusUnauthorized)
-			return
-		}
-
+	return api.authGuard(func(authCtx *auth.Context, r *http.Request) bool {
 		var tgt *rbac.Target
 		if target != nil {
 			tgt = target(r)
 		}
-		if !authCtx.Permissions.Allowed(resource, action, tgt) {
-			failRequest(&w, errForbidden, http.StatusForbidden)
-			return
-		}
-
-		handler(w, r)
-	}
+		return authCtx.Permissions.Allowed(resource, action, tgt)
+	}, handler)
 }
 
 // guardReadable wraps handler with a permission check for (resource, action) on
-// the request's service target, and additionally requires service:read on that
+// the request's service target, and additionally requires `service:read` on that
 // same target.
 // When auth is disabled, handler is returned unchanged.
 func (api *API) guardReadable(
@@ -396,26 +382,11 @@ func (api *API) guardReadable(
 	target func(r *http.Request) *rbac.Target,
 	handler http.HandlerFunc,
 ) http.HandlerFunc {
-	if api.auth == nil {
-		return handler
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		authCtx := authContextFrom(r)
-		if authCtx == nil {
-			failRequest(&w, errUnauthorised, http.StatusUnauthorized)
-			return
-		}
-
+	return api.authGuard(func(authCtx *auth.Context, r *http.Request) bool {
 		tgt := target(r)
-		if !authCtx.Permissions.Allowed(resource, action, tgt) ||
-			!authCtx.Permissions.Allowed(rbac.ResourceService, rbac.ActionRead, tgt) {
-			failRequest(&w, errForbidden, http.StatusForbidden)
-			return
-		}
-
-		handler(w, r)
-	}
+		return authCtx.Permissions.Allowed(resource, action, tgt) &&
+			authCtx.Permissions.Allowed(rbac.ResourceService, rbac.ActionRead, tgt)
+	}, handler)
 }
 
 // guardAnyScopeOf wraps handler with a permission check satisfied by a grant of
@@ -436,30 +407,17 @@ func (api *API) guardAnyScopeOf(
 	}, handler)
 }
 
-// requireAdmin wraps handler so only admin-group members reach it.
+// requireAdmin wraps handler so only members of the admin group may reach it.
+// When auth is disabled, handler is returned unchanged.
 func (api *API) requireAdmin(handler http.HandlerFunc) http.HandlerFunc {
-	if api.auth == nil {
-		return handler
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		authCtx := authContextFrom(r)
-		if authCtx == nil {
-			failRequest(&w, errUnauthorised, http.StatusUnauthorized)
-			return
-		}
-		if !callerIsAdmin(r) {
-			failRequest(&w, errForbidden, http.StatusForbidden)
-			return
-		}
-
-		handler(w, r)
-	}
+	return api.authGuard(func(authCtx *auth.Context, _ *http.Request) bool {
+		return slices.Contains(authCtx.User.Groups, store.GroupAdmin)
+	}, handler)
 }
 
 // readableServices returns the set of service IDs whose broadcasts the user
 // may receive, or nil when unrestricted (global service:read).
-// Evaluated once per WebSocket handshake.
+// Evaluated at the WebSocket handshake and on each GET /service/order request.
 func (api *API) readableServices(authCtx *auth.Context) map[string]bool {
 	return api.permittedServices(authCtx, rbac.ResourceService, rbac.ActionRead)
 }

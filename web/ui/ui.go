@@ -26,11 +26,11 @@ import (
 var EmbedFS embed.FS
 
 // GetFS returns the embedded React files.
-func GetFS() fs.FS {
+func GetFS() fs.ReadDirFS {
 	fSys, err := fs.Sub(EmbedFS, "static")
 	if err != nil {
 		panic(err)
 	}
 
-	return fSys
+	return fSys.(fs.ReadDirFS)
 }
