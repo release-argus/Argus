@@ -17,9 +17,11 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"testing"
 	"time"
@@ -35,6 +37,7 @@ func TestServeWs(t *testing.T) {
 	tests := []struct {
 		name           string
 		dialHeaders    map[string]string
+		trustPeer      bool
 		wantStatus     int
 		wantRegistered bool
 		wantIP         string
@@ -48,19 +51,36 @@ func TestServeWs(t *testing.T) {
 			wantSendCap:    256,
 		},
 		{
-			name:           "uses CF-Connecting-Ip",
-			dialHeaders:    map[string]string{"CF-Connecting-IP": "2.2.2.2"},
+			name: "trusted proxy/uses CF-Connecting-Ip",
+			dialHeaders: map[string]string{
+				"CF-Connecting-IP": "2.2.2.2",
+			},
+			trustPeer:      true,
 			wantStatus:     http.StatusSwitchingProtocols,
 			wantRegistered: true,
 			wantIP:         "2.2.2.2",
 			wantSendCap:    256,
 		},
 		{
-			name:           "uses X-Real-Ip",
-			dialHeaders:    map[string]string{"X-Real-Ip": "3.3.3.3"},
+			name: "trusted proxy/uses X-Real-Ip",
+			dialHeaders: map[string]string{
+				"X-Real-Ip": "3.3.3.3",
+			},
+			trustPeer:      true,
 			wantStatus:     http.StatusSwitchingProtocols,
 			wantRegistered: true,
 			wantIP:         "3.3.3.3",
+			wantSendCap:    256,
+		},
+		{
+			name: "untrusted peer/forwarded headers ignored",
+			dialHeaders: map[string]string{
+				"CF-Connecting-IP": "2.2.2.2",
+				"X-Real-Ip":        "3.3.3.3",
+			},
+			wantStatus:     http.StatusSwitchingProtocols,
+			wantRegistered: true,
+			wantIP:         "127.0.0.1",
 			wantSendCap:    256,
 		},
 	}
@@ -74,9 +94,18 @@ func TestServeWs(t *testing.T) {
 			go hub.Run()
 
 			// AND: a HTTP server with a WebSocket endpoint.
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				ServeWs(hub, w, r)
-			}))
+			middlewareAPI := &API{}
+			if tc.trustPeer {
+				middlewareAPI.trustedProxies = []netip.Prefix{
+					netip.MustParsePrefix("127.0.0.0/8"),
+					netip.MustParsePrefix("::1/128"),
+				}
+			}
+			server := httptest.NewServer(middlewareAPI.clientIPMiddleware(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					ServeWs(hub, w, r)
+				}),
+			))
 			t.Cleanup(server.Close)
 
 			prefix := fmt.Sprintf("%s\nServeWs()", packageName)
@@ -246,54 +275,23 @@ func TestServeWs__plain_HTTP(t *testing.T) {
 }
 
 func TestGetIP(t *testing.T) {
-	// GIVEN: a request.
+	// GIVEN: requests with and without a middleware-resolved IP.
 	tests := []struct {
 		name       string
-		headers    map[string]string
+		contextIP  *string
 		remoteAddr string
 		want       string
 	}{
 		{
-			name: "CF-Connecting-Ip",
-			want: "1.1.1.1",
-			headers: map[string]string{
-				"CF-Connecting-IP": "1.1.1.1",
-				"X-REAL-IP":        "2.2.2.2",
-				"X-FORWARDED-FOR":  "3.3.3.3",
-			},
+			name:       "middleware-resolved IP",
+			contextIP:  new("1.1.1.1"),
 			remoteAddr: "4.4.4.4:123",
+			want:       "1.1.1.1",
 		},
 		{
-			name: "X-Real-Ip",
-			want: "2.2.2.2",
-			headers: map[string]string{
-				"X-REAL-IP":       "2.2.2.2",
-				"X-FORWARDED-FOR": "3.3.3.3",
-			},
+			name:       "no middleware. RemoteAddr fallback",
 			remoteAddr: "4.4.4.4:123",
-		},
-		{
-			name: "X-Forwarded-For",
-			headers: map[string]string{
-				"X-FORWARDED-FOR": "3.3.3.3",
-			},
-			remoteAddr: "4.4.4.4:123",
-			want:       "3.3.3.3",
-		},
-		{
-			name:       "RemoteAddr",
 			want:       "4.4.4.4",
-			remoteAddr: "4.4.4.4:123",
-		},
-		{
-			name:       "invalid RemoteAddr/SplitHostPort fail",
-			want:       "",
-			remoteAddr: "1111",
-		},
-		{
-			name:       "invalid RemoteAddr/ParseIP fail",
-			want:       "",
-			remoteAddr: "1111:123",
 		},
 	}
 
@@ -302,10 +300,11 @@ func TestGetIP(t *testing.T) {
 			t.Parallel()
 
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-			for header, val := range tc.headers {
-				req.Header.Set(header, val)
-			}
 			req.RemoteAddr = tc.remoteAddr
+			if tc.contextIP != nil {
+				req = req.WithContext(
+					context.WithValue(req.Context(), clientIPKey{}, *tc.contextIP))
+			}
 
 			// WHEN: getIP is called on this request.
 			got := getIP(req)

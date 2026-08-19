@@ -19,6 +19,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -996,6 +997,32 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				^cert_file: .*no such file.*
 				pkey_file: .*no such file.*$`,
 			),
+		},
+		{
+			name: "TrustedProxies/valid IP and CIDR",
+			input: &WebSettings{
+				TrustedProxies: []string{"10.0.0.1", "192.168.0.0/16", "::1"},
+			},
+			want: test.TrimYAML(`
+				trusted_proxies:
+					- 10.0.0.1
+					- 192.168.0.0/16
+					- ::1
+			`),
+			ok: true,
+		},
+		{
+			name: "TrustedProxies/invalid entry",
+			input: &WebSettings{
+				TrustedProxies: []string{"10.0.0.1", "not-an-ip"},
+			},
+			want: test.TrimYAML(`
+				trusted_proxies:
+					- 10.0.0.1
+					- not-an-ip
+			`),
+			ok:       false,
+			errRegex: `^trusted_proxies: "not-an-ip" <invalid>.*IP address or CIDR`,
 		},
 	}
 
@@ -2187,6 +2214,63 @@ func TestSettings_GetWebFile__notExist(t *testing.T) {
 				t.Errorf(
 					"%s mismatch when set\ngot:  %q\nwant: %q",
 					prefix, got, file,
+				)
+			}
+		})
+	}
+}
+
+func TestSettings_WebTrustedProxies(t *testing.T) {
+	// GIVEN: a Settings struct with some values set.
+	tests := []struct {
+		name         string
+		values       []string
+		hardDefaults []string
+		want         []string
+	}{
+		{
+			name: "unset",
+			want: []string{},
+		},
+		{
+			name:   "explicit values, bare IPs become single-address ranges",
+			values: []string{"10.0.0.1", "192.168.0.0/16", "::1"},
+			want:   []string{"10.0.0.1/32", "192.168.0.0/16", "::1/128"},
+		},
+		{
+			name:         "hard default fallback",
+			hardDefaults: []string{"172.16.0.0/12"},
+			want:         []string{"172.16.0.0/12"},
+		},
+		{
+			name:   "unparseable entries skipped",
+			values: []string{"10.0.0.1", "not-an-ip"},
+			want:   []string{"10.0.0.1/32"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			settings := Settings{}
+			settings.Web.TrustedProxies = tc.values
+			settings.HardDefaults.Web.TrustedProxies = tc.hardDefaults
+
+			// WHEN: WebTrustedProxies is called.
+			got := settings.WebTrustedProxies()
+
+			prefix := fmt.Sprintf("%s\nSettings.WebTrustedProxies()", packageName)
+
+			// THEN: the resolved prefixes match expectations.
+			gotStrs := make([]string, len(got))
+			for i, prefix := range got {
+				gotStrs[i] = prefix.String()
+			}
+			if !slices.Equal(gotStrs, tc.want) {
+				t.Errorf(
+					"%s mismatch\ngot:  %v\nwant: %v",
+					prefix, gotStrs, tc.want,
 				)
 			}
 		})

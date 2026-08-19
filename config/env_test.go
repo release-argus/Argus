@@ -551,7 +551,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			),
 		},
 		{
-			name: "float - unsupported type",
+			name: "float/unsupported type",
 			env: map[string]string{
 				"ARGUS_TEST_FLOAT": "1.23",
 			},
@@ -561,6 +561,70 @@ func TestMapEnvToStruct(t *testing.T) {
 				} `yaml:"test"`
 			}{},
 			errRegex: `unsupported env var kind on ARGUS_TEST_FLOAT: float64`,
+		},
+		{
+			name: "string slice/valid",
+			env: map[string]string{
+				"ARGUS_TEST_SLICE": "alpha,beta",
+			},
+			customStruct: &struct {
+				Test struct {
+					Slice []string `yaml:"slice"`
+				} `yaml:"test"`
+			}{},
+			want: test.TrimYAML(`
+				test:
+					slice:
+						- alpha
+						- beta
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name: "string slice/trims spaces and drops blanks",
+			env: map[string]string{
+				"ARGUS_TEST_SLICE": " alpha , ,beta, ",
+			},
+			customStruct: &struct {
+				Test struct {
+					Slice []string `yaml:"slice"`
+				} `yaml:"test"`
+			}{},
+			want: test.TrimYAML(`
+				test:
+					slice:
+						- alpha
+						- beta
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name: "string slice/empty value gives an empty slice",
+			env: map[string]string{
+				"ARGUS_TEST_SLICE": "",
+			},
+			customStruct: &struct {
+				Test struct {
+					Slice []string `yaml:"slice"`
+				} `yaml:"test"`
+			}{},
+			want: test.TrimYAML(`
+				test:
+					slice: []
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name: "string slice/unsupported element type",
+			env: map[string]string{
+				"ARGUS_TEST_SLICE": "1.23",
+			},
+			customStruct: &struct {
+				Test struct {
+					Slice []float64 `yaml:"slice"`
+				} `yaml:"test"`
+			}{},
+			errRegex: `ARGUS_TEST_SLICE: unsupported slice element kind: float64`,
 		},
 		{
 			name: "inline struct/valid",

@@ -19,6 +19,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/netip"
 	"strings"
 	"time"
 
@@ -340,6 +341,7 @@ type WebSettings struct {
 	KeyFile        string                `json:"pkey_file,omitzero" yaml:"pkey_file,omitzero"`               // HTTPS privkey path.
 	BasicAuth      *WebSettingsBasicAuth `json:"basic_auth,omitzero" yaml:"basic_auth,omitzero"`             // Basic auth creds.
 	DisabledRoutes []string              `json:"disabled_routes,omitempty" yaml:"disabled_routes,omitempty"` // Disabled API routes.
+	TrustedProxies []string              `json:"trusted_proxies,omitempty" yaml:"trusted_proxies,omitempty"` // Proxies (IP/CIDR) whose forwarded headers are trusted.
 	Favicon        *FaviconSettings      `json:"favicon,omitzero" yaml:"favicon,omitzero"`                   // Favicon settings.
 }
 
@@ -352,6 +354,7 @@ func (s WebSettings) IsZero() bool {
 		s.KeyFile == "" &&
 		s.BasicAuth == nil &&
 		len(s.DisabledRoutes) == 0 &&
+		len(s.TrustedProxies) == 0 &&
 		s.Favicon == nil
 }
 
@@ -416,10 +419,53 @@ func (s *WebSettings) CheckValues() error {
 		)
 	}
 
+	// TrustedProxies.
+	for _, proxy := range s.TrustedProxies {
+		if _, err := parseProxyPrefix(proxy); err != nil {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "trusted_proxies",
+					Value:       proxy,
+					Description: "must be an IP address or CIDR range",
+				},
+			)
+		}
+	}
+
 	if len(errs) == 0 {
 		return nil
 	}
 	return errors.Join(errs...)
+}
+
+// parseProxyPrefix parses an IP address or CIDR range into a prefix.
+func parseProxyPrefix(value string) (netip.Prefix, error) {
+	if prefix, err := netip.ParsePrefix(value); err == nil {
+		return unmapPrefix(prefix), nil
+	}
+	addr, err := netip.ParseAddr(value)
+	if err != nil {
+		return netip.Prefix{}, err //nolint:wrapcheck
+	}
+	addr = addr.Unmap()
+	return netip.PrefixFrom(addr, addr.BitLen()), nil
+}
+
+// unmapPrefix rewrites an IPv4-mapped IPv6 prefix (e.g. '::ffff:10.0.0.0/104')
+// as its IPv4 equivalent. Peers are unmapped before matching since
+// [netip.Prefix.Contains] doesn't match across families.
+func unmapPrefix(prefix netip.Prefix) netip.Prefix {
+	addr := prefix.Addr()
+	if !addr.Is4In6() {
+		return prefix
+	}
+
+	bits := prefix.Bits() - (addr.BitLen() - addr.Unmap().BitLen())
+	if bits < 0 {
+		return prefix
+	}
+	return netip.PrefixFrom(addr.Unmap(), bits)
 }
 
 // Settings holds the runtime configuration for the binary.
@@ -773,6 +819,24 @@ func (s *Settings) WebKeyFile() string {
 		s.Web.KeyFile,
 		s.HardDefaults.Web.KeyFile,
 	)
+}
+
+// WebTrustedProxies resolves the reverse proxies whose forwarded headers
+// are trusted. Entries are validated by CheckValues; any that still fail to
+// parse are skipped.
+func (s *Settings) WebTrustedProxies() []netip.Prefix {
+	entries := s.Web.TrustedProxies
+	if len(entries) == 0 {
+		entries = s.HardDefaults.Web.TrustedProxies
+	}
+
+	prefixes := make([]netip.Prefix, 0, len(entries))
+	for _, entry := range entries {
+		if prefix, err := parseProxyPrefix(entry); err == nil {
+			prefixes = append(prefixes, prefix)
+		}
+	}
+	return prefixes
 }
 
 // WebBasicAuthUsernameHash resolves the SHA256 hash of the basic auth username.

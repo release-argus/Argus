@@ -14,6 +14,8 @@ export type SettingsWeb = {
 
 	listen_host: string;
 	listen_port: string;
+
+	trusted_proxies?: string[];
 };
 
 export type SettingsAuthSession = {
