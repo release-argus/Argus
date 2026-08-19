@@ -463,10 +463,11 @@ func TestAPI_Auth__webSocket(t *testing.T) {
 					)
 				}
 			}
-			// AND: an authenticated non-upgrade request fails later, as 400.
-			if !tc.want401 && w.Code == http.StatusUnauthorized {
+			// AND: an authenticated non-upgrade request passes the auth gate and
+			// fails at the WebSocket upgrade instead, as 400.
+			if !tc.want401 && w.Code != http.StatusBadRequest {
 				t.Errorf(
-					"%s\nauthenticated handshake should pass the auth gate\ngot: %d",
+					"%s\nauthenticated non-upgrade handshake should be 400\ngot: %d",
 					prefix, w.Code,
 				)
 			}
@@ -599,7 +600,7 @@ func TestAPI_Auth__serviceScopeHooks__storeFailure(t *testing.T) {
 	req := withAuthCtx(httptest.NewRequest(http.MethodPut,
 		"/api/v1/service/config?service_id=test", strings.NewReader(payload)), authCtx)
 	w := httptest.NewRecorder()
-	api.httpServiceEdit(w, req)
+	api.httpServiceEdit(w, req, actionEdit)
 
 	// THEN: the rename is refused rather than half-applied.
 	if got, want := w.Code, http.StatusInternalServerError; got != want {

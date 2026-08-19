@@ -17,7 +17,6 @@ package v1
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -25,6 +24,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/auth/rbac"
+	"github.com/release-argus/Argus/auth/store"
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/notify/shoutrrr"
@@ -41,10 +41,6 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// scopeRefTimeout bounds the permission-grant cleanup writes that must finish
-// even if the client that triggered them has gone away.
-const scopeRefTimeout = 5 * time.Second
-
 // mayUpdateService reports whether the request's identity holds service:update
 // on the given service id / tags. Always true when auth is disabled.
 func (api *API) mayUpdateService(r *http.Request, serviceID string, tags []string) bool {
@@ -58,46 +54,36 @@ func (api *API) mayUpdateService(r *http.Request, serviceID string, tags []strin
 		authCtx.Permissions.Allowed(rbac.ResourceService, rbac.ActionUpdate, &target)
 }
 
-// restoreServiceGrants moves service-scoped grants back to oldID after the
-// service move they were made for failed. A failure here is only logged.
-func (api *API) restoreServiceGrants(
-	r *http.Request,
-	reqType serviceAction,
-	movedID, oldID string,
-	logFrom logx.LogFrom,
-) {
-	if api.auth == nil || reqType != actionEdit || movedID == oldID {
-		return
+// mayUpdateAnyService reports whether the request's identity holds service:update
+// globally. Always true when auth is disabled.
+func (api *API) mayUpdateAnyService(r *http.Request) bool {
+	if api.auth == nil {
+		return true
 	}
 
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), scopeRefTimeout)
-	defer cancel()
-	if err := api.auth.Store.RenameServiceScopeRefs(ctx, movedID, oldID); err != nil {
-		logx.Error(
-			fmt.Errorf(
-				"could not move the permission grants of %q back to %q: %w",
-				movedID, oldID, err,
-			),
-			logFrom, true)
-	}
+	authCtx := authContextFrom(r)
+	return authCtx != nil &&
+		authCtx.Permissions.Allowed(rbac.ResourceService, rbac.ActionUpdate, nil)
 }
 
 // renameServiceGrants moves service-scoped permission grants from oldID to newID
-// when a service's ID changes. It is a no-op unless auth is enabled and the ID
-// actually changed. It returns false if the move fails.
+// when a service's ID changes. Rows moved and rows merged are returned to
+// restore grants in cases where the service move fails (ok=false).
+// It is a no-op unless auth is enabled and the ID actually changed.
 func (api *API) renameServiceGrants(
 	w http.ResponseWriter, r *http.Request,
 	reqType serviceAction,
 	oldID, newID string,
 	logFrom logx.LogFrom,
-) bool {
-	if api.auth == nil || reqType != actionEdit || newID == oldID {
-		return true
+) (move *store.ServiceScopeMove, ok bool) {
+	if api.auth == nil || reqType != actionEdit || oldID == newID {
+		return nil, true
 	}
 
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), scopeRefTimeout)
+	ctx, cancel := detachedContext(r)
 	defer cancel()
-	if err := api.auth.Store.RenameServiceScopeRefs(ctx, oldID, newID); err != nil {
+	move, err := api.auth.Store.RenameServiceScopeRefs(ctx, oldID, newID)
+	if err != nil {
 		logx.Error(err, logFrom, true)
 		failRequest(&w,
 			fmt.Errorf(
@@ -106,9 +92,32 @@ func (api *API) renameServiceGrants(
 			),
 			http.StatusInternalServerError,
 		)
-		return false
+		return nil, false
 	}
-	return true
+	return move, true
+}
+
+// restoreServiceGrants puts back what renameServiceGrants moved, after the
+// service move it accompanied failed. A failure here is only logged.
+func (api *API) restoreServiceGrants(
+	r *http.Request,
+	move *store.ServiceScopeMove,
+	logFrom logx.LogFrom,
+) {
+	if move == nil {
+		return
+	}
+
+	ctx, cancel := detachedContext(r)
+	defer cancel()
+	if err := api.auth.Store.UndoServiceScopeMove(ctx, move); err != nil {
+		logx.Error(
+			fmt.Errorf(
+				"could not move the permission grants of %q back to %q: %w",
+				move.To(), move.From(), err,
+			),
+			logFrom, true)
+	}
 }
 
 // httpLatestVersionRefreshUncreated handles GET /api/v1/latest_version/refresh_uncreated:
@@ -301,6 +310,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 //
 //	200 OK: JSON object containing the refreshed version and the current UTC datetime.
 //	400 Bad Request: Error message.
+//	403 Forbidden: with 'overrides' set, but no service:update on the service.
 func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpVersionRefresh_Latest", Secondary: getIP(r)}
 	// Service to refresh.
@@ -345,6 +355,11 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 	// SecretRefs.
 	var secretRefs *shared.VSecretRef
 	if overrides != "" {
+		// Require service:update to inherit secrets.
+		if !api.mayUpdateService(r, serviceID, svc.Dashboard.Tags) {
+			failRequest(&w, errForbidden, http.StatusForbidden)
+			return
+		}
 		overrideBytes = []byte(overrides)
 		if err := decode.Unmarshal("json", overrideBytes, &secretRefs); err != nil {
 			logx.Error(err, logFrom, true)
@@ -396,6 +411,7 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 //
 //	200 OK: JSON object containing the refreshed version and the current UTC datetime.
 //	400 Bad Request: Error message.
+//	403 Forbidden: with 'overrides' set, but no service:update on the service.
 func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpVersionRefresh_Deployed", Secondary: getIP(r)}
 	// Service to refresh.
@@ -440,6 +456,11 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 	// SecretRefs.
 	var secretRefs *shared.VSecretRef
 	if overrides != "" {
+		// Require service:update to inherit secrets.
+		if !api.mayUpdateService(r, serviceID, svc.Dashboard.Tags) {
+			failRequest(&w, errForbidden, http.StatusForbidden)
+			return
+		}
 		overrideBytes = []byte(overrides)
 		if err := decode.Unmarshal("json", overrideBytes, &secretRefs); err != nil {
 			logx.Error(err, logFrom, true)
@@ -662,6 +683,20 @@ const (
 	actionEdit   serviceAction = "edit"
 )
 
+// httpServiceCreate handles PUT /api/v1/service/new: creating a Service.
+// Requires an empty 'service_id' and calls [API.httpServiceEdit] (which
+// rejects an id that already exists).
+func (api *API) httpServiceCreate(w http.ResponseWriter, r *http.Request) {
+	api.httpServiceEdit(w, r, actionCreate)
+}
+
+// httpServiceUpdate handles PUT /api/v1/service/config: editing a Service.
+// Requires a 'service_id' and calls [API.httpServiceEdit] (which checks the
+// service exists).
+func (api *API) httpServiceUpdate(w http.ResponseWriter, r *http.Request) {
+	api.httpServiceEdit(w, r, actionEdit)
+}
+
 // httpServiceEdit handles PUT /api/v1/service/(config|new): creating/editing a
 // Service.
 //
@@ -686,13 +721,30 @@ const (
 //	403 Forbidden: The edit would remove the caller's permission to edit the service.
 //	404 Not Found: Unknown service.
 //	500 Internal Server Error: Failed to move the service's permission grants.
-func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
+func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request, reqType serviceAction) {
 	logFrom := logx.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
 	// Service to modify (empty for create new).
 	serviceID := r.URL.Query().Get("service_id")
-	reqType := actionCreate
-	if serviceID != "" {
-		reqType = actionEdit
+
+	switch reqType {
+	case actionCreate:
+		if serviceID != "" {
+			failRequest(
+				&w,
+				errors.New("service_id must be empty to create a service"),
+				http.StatusBadRequest,
+			)
+			return
+		}
+	case actionEdit:
+		if serviceID == "" {
+			failRequest(
+				&w,
+				errors.New("service_id is required to edit a service"),
+				http.StatusBadRequest,
+			)
+			return
+		}
 	}
 
 	// EDIT: wait out any in-flight operations on this service (a refresh, another
@@ -759,22 +811,23 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// EDIT: the edit must not strip the caller's own permission to edit the service.
-	if reqType == actionEdit &&
-		!api.mayUpdateService(r, newService.ID, newService.Dashboard.Tags) &&
-		!api.mayUpdateService(r, serviceID, nil) {
-		failRequest(&w, fmt.Errorf(
-			"edit %q failed, it would remove your own permission to edit this service",
-			serviceID,
-		), http.StatusForbidden)
-		return
+	if reqType == actionEdit {
+		// A service-scoped grant follows a rename, so authority keyed to the
+		// old ID survives one.
+		retainsUpdate := api.mayUpdateService(r, newService.ID, newService.Dashboard.Tags) ||
+			(newService.ID != serviceID && api.mayUpdateService(r, serviceID, nil))
+		if !retainsUpdate {
+			failRequest(&w, fmt.Errorf(
+				"edit %q failed, it would remove your own permission to edit this service",
+				serviceID,
+			), http.StatusForbidden)
+			return
+		}
 	}
 
-	// CREATE/EDIT: service with this ID/Name already exists.
-	api.Config.OrderMu.RLock()
-	nameTaken := (api.Config.Service[newService.ID] != nil && newService.ID != serviceID) ||
-		api.Config.ServiceWithNameExists(newService.Name, serviceID)
-	api.Config.OrderMu.RUnlock()
-	if nameTaken {
+	// CREATE/EDIT: service with this ID/Name already exists. Shares the guard
+	// AddService applies, so a move it would reject never gets part-way through.
+	if api.Config.ServiceIDTaken(serviceID, newService) {
 		failRequest(
 			&w,
 			fmt.Errorf(
@@ -826,13 +879,14 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Rename any service-scoped permission grants before moving the service.
-	if !api.renameServiceGrants(w, r, reqType, serviceID, newService.ID, logFrom) {
+	grantMove, ok := api.renameServiceGrants(w, r, reqType, serviceID, newService.ID, logFrom)
+	if !ok {
 		return
 	}
 
 	// Add the new service to the config.
 	if err := api.Config.AddService(serviceID, newService); err != nil {
-		api.restoreServiceGrants(r, reqType, newService.ID, serviceID, logFrom)
+		api.restoreServiceGrants(r, grantMove, logFrom)
 		err = fmt.Errorf(
 			`%s %q failed: %w`,
 			reqType, util.FirstNonDefault(serviceID, newService.ID),
@@ -932,7 +986,7 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 
 	// Prune service-scoped grants before removing the service.
 	if api.auth != nil {
-		ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), scopeRefTimeout)
+		ctx, cancel := detachedContext(r)
 		defer cancel()
 		if err := api.auth.Store.DeleteServiceScopeRefs(ctx, serviceID); err != nil {
 			logx.Error(err, logFrom, true)
@@ -979,6 +1033,7 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 //
 //	200 OK: JSON object containing the test result.
 //	400 Bad Request: on a missing/malformed body or a failed test send.
+//	403 Forbidden: naming a root notifier, but without global service:update.
 func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
 
@@ -1052,6 +1107,13 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 		},
 		serviceStatus.Dashboard,
 	)
+
+	// Root notifiers hold config-level secrets, so inheriting them needs edit rights.
+	rootName := util.FirstNonDefault(parsedPayload.Name, parsedPayload.NamePrevious)
+	if api.Config.Notify[rootName] != nil && !api.mayUpdateAnyService(r) {
+		failRequest(&w, errForbidden, http.StatusForbidden)
+		return
+	}
 
 	// Apply any overrides.
 	testNotify, err := shoutrrr.FromPayload(

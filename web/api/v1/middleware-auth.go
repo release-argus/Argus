@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -36,6 +37,9 @@ import (
 
 // authCookieName is the session cookie's name.
 const authCookieName = "argus_session"
+
+// providerAPIToken names the pseudo-provider of Bearer API-token requests.
+const providerAPIToken = "api_token"
 
 // errUnauthorised is the uniform 401 message.
 var errUnauthorised = errors.New("unauthorized")
@@ -170,7 +174,7 @@ func (api *API) authenticateAPIToken(
 		}
 	}
 
-	return api.contextForUser(ctx, token.UserID, "api_token")
+	return api.contextForUser(ctx, token.UserID, providerAPIToken)
 }
 
 // authenticateSession resolves a session token to an [auth.Context].
@@ -232,7 +236,7 @@ func (api *API) contextForUser(
 	ctx context.Context,
 	userID, providerName string,
 ) (*auth.Context, error) {
-	user, err := api.auth.Store.UserByID(ctx, userID)
+	user, grants, err := api.auth.Store.UserWithGrants(ctx, userID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			return nil, errUnauthorised
@@ -241,11 +245,6 @@ func (api *API) contextForUser(
 	}
 	if !user.Enabled {
 		return nil, errUnauthorised
-	}
-
-	grants, err := api.auth.Store.GrantsForUser(ctx, userID)
-	if err != nil {
-		return nil, err //nolint:wrapcheck
 	}
 
 	return &auth.Context{
@@ -375,32 +374,17 @@ func (api *API) guard(
 	target func(r *http.Request) *rbac.Target,
 	handler http.HandlerFunc,
 ) http.HandlerFunc {
-	if api.auth == nil {
-		return handler
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		authCtx := authContextFrom(r)
-		if authCtx == nil {
-			failRequest(&w, errUnauthorised, http.StatusUnauthorized)
-			return
-		}
-
+	return api.authGuard(func(authCtx *auth.Context, r *http.Request) bool {
 		var tgt *rbac.Target
 		if target != nil {
 			tgt = target(r)
 		}
-		if !authCtx.Permissions.Allowed(resource, action, tgt) {
-			failRequest(&w, errForbidden, http.StatusForbidden)
-			return
-		}
-
-		handler(w, r)
-	}
+		return authCtx.Permissions.Allowed(resource, action, tgt)
+	}, handler)
 }
 
 // guardReadable wraps handler with a permission check for (resource, action) on
-// the request's service target, and additionally requires service:read on that
+// the request's service target, and additionally requires `service:read` on that
 // same target.
 // When auth is disabled, handler is returned unchanged.
 func (api *API) guardReadable(
@@ -409,26 +393,11 @@ func (api *API) guardReadable(
 	target func(r *http.Request) *rbac.Target,
 	handler http.HandlerFunc,
 ) http.HandlerFunc {
-	if api.auth == nil {
-		return handler
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		authCtx := authContextFrom(r)
-		if authCtx == nil {
-			failRequest(&w, errUnauthorised, http.StatusUnauthorized)
-			return
-		}
-
+	return api.authGuard(func(authCtx *auth.Context, r *http.Request) bool {
 		tgt := target(r)
-		if !authCtx.Permissions.Allowed(resource, action, tgt) ||
-			!authCtx.Permissions.Allowed(rbac.ResourceService, rbac.ActionRead, tgt) {
-			failRequest(&w, errForbidden, http.StatusForbidden)
-			return
-		}
-
-		handler(w, r)
-	}
+		return authCtx.Permissions.Allowed(resource, action, tgt) &&
+			authCtx.Permissions.Allowed(rbac.ResourceService, rbac.ActionRead, tgt)
+	}, handler)
 }
 
 // guardAnyScopeOf wraps handler with a permission check satisfied by a grant of
@@ -449,30 +418,26 @@ func (api *API) guardAnyScopeOf(
 	}, handler)
 }
 
-// requireAdmin wraps handler so only admin-group members reach it.
+// requireAdmin wraps handler so only members of the admin group may reach it.
+// When auth is disabled, handler is returned unchanged.
 func (api *API) requireAdmin(handler http.HandlerFunc) http.HandlerFunc {
-	if api.auth == nil {
-		return handler
-	}
+	return api.authGuard(func(authCtx *auth.Context, _ *http.Request) bool {
+		return slices.Contains(authCtx.User.Groups, store.GroupAdmin)
+	}, handler)
+}
 
-	return func(w http.ResponseWriter, r *http.Request) {
-		authCtx := authContextFrom(r)
-		if authCtx == nil {
-			failRequest(&w, errUnauthorised, http.StatusUnauthorized)
-			return
-		}
-		if !callerIsAdmin(r) {
-			failRequest(&w, errForbidden, http.StatusForbidden)
-			return
-		}
-
-		handler(w, r)
-	}
+// requireSessionAuth wraps handler so API-token requests cannot reach it,
+// preventing a leaked token from minting replacements or revoking its siblings.
+// When auth is disabled, handler is returned unchanged.
+func (api *API) requireSessionAuth(handler http.HandlerFunc) http.HandlerFunc {
+	return api.authGuard(func(authCtx *auth.Context, _ *http.Request) bool {
+		return authCtx.Identity.Provider != providerAPIToken
+	}, handler)
 }
 
 // readableServices returns the set of service IDs whose broadcasts the user
 // may receive, or nil when unrestricted (global service:read).
-// Evaluated once per WebSocket handshake.
+// Evaluated at the WebSocket handshake and on each GET /service/order request.
 func (api *API) readableServices(authCtx *auth.Context) map[string]bool {
 	return api.permittedServices(authCtx, rbac.ResourceService, rbac.ActionRead)
 }

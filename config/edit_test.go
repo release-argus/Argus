@@ -362,6 +362,107 @@ func TestConfig_ServiceWithNameExists(t *testing.T) {
 	}
 }
 
+func TestConfig_serviceIDTaken(t *testing.T) {
+	// GIVEN: a Config holding a named and an unnamed service.
+	config := &Config{
+		Service: map[string]*service.Service{
+			"unnamed": {ID: "unnamed"},
+			"named":   {ID: "named", Name: "alias"},
+		},
+	}
+	tests := []struct {
+		name         string
+		oldServiceID string
+		newService   *service.Service
+		want         bool
+	}{
+		{
+			name:         "create/free id and name",
+			oldServiceID: "",
+			newService:   &service.Service{ID: "fresh", Name: "novel"},
+			want:         false,
+		},
+		{
+			name:         "create/id taken by another id",
+			oldServiceID: "",
+			newService:   &service.Service{ID: "unnamed"},
+			want:         true,
+		},
+		{
+			name:         "create/id taken by another name",
+			oldServiceID: "",
+			newService:   &service.Service{ID: "alias"},
+			want:         true,
+		},
+		{
+			name:         "create/name taken by another name",
+			oldServiceID: "",
+			newService:   &service.Service{ID: "fresh", Name: "alias"},
+			want:         true,
+		},
+		{
+			name:         "create/name taken by another id",
+			oldServiceID: "",
+			newService:   &service.Service{ID: "fresh", Name: "unnamed"},
+			want:         true,
+		},
+		{
+			name:         "edit/keeps its own id",
+			oldServiceID: "named",
+			newService:   &service.Service{ID: "named", Name: "alias"},
+			want:         false,
+		},
+		{
+			name:         "edit/names itself after its own id",
+			oldServiceID: "named",
+			newService:   &service.Service{ID: "named", Name: "named"},
+			want:         false,
+		},
+		{
+			name:         "edit/name taken by another id",
+			oldServiceID: "named",
+			newService:   &service.Service{ID: "named", Name: "unnamed"},
+			want:         true,
+		},
+		{
+			name:         "rename/id taken by another id",
+			oldServiceID: "named",
+			newService:   &service.Service{ID: "unnamed"},
+			want:         true,
+		},
+		{
+			name:         "rename/name taken by another id",
+			oldServiceID: "named",
+			newService:   &service.Service{ID: "fresh", Name: "unnamed"},
+			want:         true,
+		},
+		{
+			name:         "rename/free id and name",
+			oldServiceID: "named",
+			newService:   &service.Service{ID: "fresh", Name: "novel"},
+			want:         false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: serviceIDTaken is called.
+			got := config.serviceIDTaken(tc.oldServiceID, tc.newService)
+
+			// THEN: a collision with any other service ID or name is reported.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nConfig serviceIDTaken(oldID=%q, id=%q, name=%q) result mismatch\ngot:  %t\nwant: %t",
+					packageName, tc.oldServiceID, tc.newService.ID, tc.newService.Name,
+					got, tc.want,
+				)
+			}
+		})
+	}
+}
+
 func TestConfig_RenameService(t *testing.T) {
 	// GIVEN: a service to rename, and a Config to act on.
 	tests := []struct {

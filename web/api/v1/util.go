@@ -16,12 +16,14 @@
 package v1
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/release-argus/Argus/auth/store"
 	"github.com/release-argus/Argus/config/decode"
@@ -45,6 +47,17 @@ func (api *API) sendAnnouncePayload(msg apitype.WebSocketMessage) {
 		return
 	}
 	api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
+}
+
+// detachedWriteTimeout bounds a write made through [detachedContext].
+const detachedWriteTimeout = 5 * time.Second
+
+// detachedContext returns a bounded context that outlives the request's own,
+// for the writes that must still land once the change they follow has been
+// committed - a client that goes away mid-request must not leave the change
+// half-applied.
+func detachedContext(r *http.Request) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(r.Context()), detachedWriteTimeout)
 }
 
 // getParam returns a query parameter value pointer if present, otherwise nil.
@@ -93,12 +106,17 @@ func (api *API) announceDelete(serviceID string) {
 
 // announceOrder broadcasts an ORDER message to all WebSocket clients.
 func (api *API) announceOrder() {
+	api.Config.OrderMu.RLock()
+	order := make([]string, len(api.Config.Order))
+	copy(order, api.Config.Order)
+	api.Config.OrderMu.RUnlock()
+
 	api.sendAnnouncePayload(
 		apitype.WebSocketMessage{
 			Page:    "APPROVALS",
 			Type:    "SERVICE",
 			SubType: "ORDER",
-			Order:   &api.Config.Order,
+			Order:   &order,
 		},
 	)
 }
@@ -133,7 +151,7 @@ func validateFieldLength(key, value string) error {
 	}
 	return &decode.ErrField{
 		Key:         key,
-		Value:       util.ValueUnlessZero(value[:maxFieldLength], "*"),
+		Value:       util.ValueUnlessZero(value, "*"),
 		Description: fmt.Sprintf("must be at most %d characters", maxFieldLength),
 	}
 }
