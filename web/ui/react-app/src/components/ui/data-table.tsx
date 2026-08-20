@@ -1,15 +1,5 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
-import { cn } from '@/lib/utils';
 import {
 	closestCenter,
 	DndContext,
@@ -39,6 +29,16 @@ import {
 	useRef,
 	useState,
 } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 export type ExtraColumnMeta = {
 	/* Hide the column when all values are empty. */

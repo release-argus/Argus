@@ -274,6 +274,14 @@ func TestConfig_Save(t *testing.T) {
 			},
 		},
 		{
+			name: "settings.auth",
+			file: testYAML_config_auth,
+			corrections: map[string]string{
+				"    options: {}\n":   "",
+				"    dashboard: {}\n": "",
+			},
+		},
+		{
 			name: "unreadable file",
 			file: testYAML_Argus,
 			preSaveFunc: func(path string) {
@@ -484,7 +492,10 @@ func TestConfig_Save__indentation(t *testing.T) {
 			}
 			svc := cfg2.Service["awesome"]
 			if svc == nil {
-				t.Fatalf("%s service %q lost on save", prefix, "awesome")
+				t.Fatalf(
+					"%s service %q lost on save",
+					prefix, "awesome",
+				)
 			}
 			if svc.LatestVersion == nil {
 				t.Errorf("%s latest_version lost on save", prefix)
@@ -868,7 +879,10 @@ func TestConfig_ReorderYAML(t *testing.T) {
 			var cfg Config
 			yamlStr := strings.Join(tc.lines, "\n")
 			if err := cfg.Decode([]byte(yamlStr)); err != nil {
-				t.Fatalf("%s\n%s", packageName, errfmt.FormatError(err))
+				t.Fatalf(
+					"%s\n%s",
+					packageName, errfmt.FormatError(err),
+				)
 			}
 			cfg.Order = tc.order
 			cfg.Settings.Indentation = 2

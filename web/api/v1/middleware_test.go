@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"testing"
 
@@ -28,6 +29,92 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 )
+
+func TestAPI_IsTrustedProxy(t *testing.T) {
+	// GIVEN: set of trusted-proxy CIDRs and a request from na address.
+	tests := []struct {
+		name    string
+		trusted []string
+		addr    string
+		want    bool
+	}{
+		{
+			name: "empty trustedProxies/always false",
+			addr: "10.0.0.5",
+			want: false,
+		},
+		{
+			name:    "single CIDR/matching address",
+			trusted: []string{"10.0.0.0/8"},
+			addr:    "10.0.0.5",
+			want:    true,
+		},
+		{
+			name:    "single CIDR/non-matching address",
+			trusted: []string{"10.0.0.0/8"},
+			addr:    "3.3.3.3",
+			want:    false,
+		},
+		{
+			name:    "multiple CIDRs/matches second entry",
+			trusted: []string{"172.16.0.0/12", "10.0.0.0/8"},
+			addr:    "10.0.0.5",
+			want:    true,
+		},
+		{
+			name:    "IPv4-mapped IPv6 address/matches IPv4 CIDR",
+			trusted: []string{"10.0.0.0/8"},
+			addr:    "::ffff:10.0.0.5",
+			want:    true,
+		},
+		{
+			name:    "IPv6 CIDR/matching IPv6 address",
+			trusted: []string{"::1/128"},
+			addr:    "::1",
+			want:    true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND: an API armed with the trusted proxies.
+			proxies := make([]netip.Prefix, 0, len(tc.trusted))
+			for _, p := range tc.trusted {
+				pfx, err := netip.ParsePrefix(p)
+				if err != nil {
+					t.Fatalf(
+						"%s\nparse trusted proxy %q: %v",
+						packageName, p, err,
+					)
+				}
+				proxies = append(proxies, pfx)
+			}
+			api := &API{trustedProxies: proxies}
+
+			addr, err := netip.ParseAddr(tc.addr)
+			if err != nil {
+				t.Fatalf(
+					"%s\nparse addr %q: %v",
+					packageName, tc.addr, err,
+				)
+			}
+
+			// WHEN: isTrustedProxy is called on this address.
+			got := api.isTrustedProxy(addr)
+
+			// THEN: the result matches whether addr falls in a trusted range.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nisTrustedProxy(%s)\ngot:  %t\nwant: %t",
+					packageName, tc.addr,
+					got, tc.want,
+				)
+			}
+		})
+	}
+}
 
 func TestHTTP_BasicAuthMiddleware(t *testing.T) {
 	// GIVEN: an API with/without Basic Auth credentials.

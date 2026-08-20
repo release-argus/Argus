@@ -217,6 +217,10 @@ func mapEnvToStruct(src any, prefix string, envVars []string) error {
 					err = setUintField(field, envValueStr, fieldName, 16)
 				}
 			}
+		case reflect.Slice:
+			if envValueStr, exists := os.LookupEnv(fieldName); exists {
+				err = setStringSliceField(field, envValueStr, fieldName)
+			}
 		case reflect.Map:
 			err = setMapFields(field, fieldName, envVars)
 		case reflect.Struct:
@@ -335,6 +339,47 @@ func setField[T any](
 	return nil
 }
 
+// setStringSliceField assigns a comma-separated string to a string slice field
+// or pointer to one.
+//
+// Values are trimmed and empty entries are discarded.
+//
+// Examples:
+//
+//	"a,b,c"  -> []string{"a", "b", "c"}
+//	"a"      -> []string{"a"}
+//	"a, b,"  -> []string{"a", "b"}
+//	""       -> []string{}
+func setStringSliceField(field reflect.Value, value, envKey string) error {
+	sliceType := field.Type()
+	if sliceType.Kind() == reflect.Pointer {
+		sliceType = sliceType.Elem()
+	}
+	if sliceType.Elem().Kind() != reflect.String {
+		return fmt.Errorf(
+			"%s: unsupported slice element kind: %s",
+			envKey, sliceType.Elem().Kind())
+	}
+
+	parts := strings.Split(value, ",")
+	slice := reflect.MakeSlice(sliceType, 0, len(parts))
+	for _, part := range parts {
+		if part = strings.TrimSpace(part); part != "" {
+			slice = reflect.Append(slice, reflect.ValueOf(part).Convert(sliceType.Elem()))
+		}
+	}
+
+	if field.Kind() == reflect.Pointer {
+		ptr := reflect.New(sliceType)
+		ptr.Elem().Set(slice)
+		field.Set(ptr)
+	} else {
+		field.Set(slice)
+	}
+
+	return nil
+}
+
 // setMapFields maps environment variables with the envKey prefix onto a map field.
 func setMapFields(field reflect.Value, envKey string, envVars []string) error {
 	// Notify maps.
@@ -349,7 +394,6 @@ func setMapFields(field reflect.Value, envKey string, envVars []string) error {
 				// = "max_tries=7"
 				keyValue[0] = strings.ToLower(strings.Replace(keyValue[0], envKey+"_", "", 1))
 
-				// Set value in map.
 				field.SetMapIndex(reflect.ValueOf(keyValue[0]), reflect.ValueOf(keyValue[1]))
 			}
 		}

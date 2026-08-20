@@ -1,3 +1,6 @@
+import type { Column, SortDirection } from '@tanstack/react-table';
+import { ArrowDown, ArrowUp, ChevronsUpDown, EyeOff } from 'lucide-react';
+import { type HTMLAttributes, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
 	DropdownMenu,
@@ -7,9 +10,6 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import type { Column, SortDirection } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ChevronsUpDown, EyeOff } from 'lucide-react';
-import { type HTMLAttributes, useMemo } from 'react';
 
 type SortArrowProps = {
 	/* The direction to sort in. */

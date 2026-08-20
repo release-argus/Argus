@@ -40,7 +40,8 @@ func testYAML_NoServices(path string) {
 					interval: 123s
 					semantic_versioning: false
 				latest_version:
-					access_token: ${GITHUB_TOKEN}
+					github:
+						access_token: ${GITHUB_TOKEN}
 				deployed_version: {}
 
 			notify:
@@ -95,7 +96,8 @@ func testYAML_Argus(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ${GITHUB_TOKEN}
+					github:
+						access_token: ${GITHUB_TOKEN}
 		settings:
 			web:
 				listen_port: 0
@@ -114,7 +116,8 @@ func testYAML_Argus_SomeInactive(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: ${GITHUB_TOKEN}
+					github:
+						access_token: ${GITHUB_TOKEN}
 		settings:
 				web:
 						listen_port: 0

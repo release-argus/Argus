@@ -212,7 +212,8 @@ func testYAML_SomeNilServices(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		service:
 			a:
 				latest_version:
@@ -234,7 +235,8 @@ func testYAML_NilServiceMap(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder`,
+					github:
+						access_token: placeholder`,
 	)
 
 	writeFile(path, data)
@@ -276,9 +278,38 @@ func testYAML_config_small(path string) {
 	writeFile(path, data)
 }
 
+// testYAML_config_auth is for `save.go`
+//
+// a settings.auth block.
+func testYAML_config_auth(path string) {
+	data := test.TrimYAML(`
+		settings:
+			auth:
+				enabled: true
+				session:
+					lifetime: 720h
+					idle_timeout: 168h
+					secure_cookie: true
+				local:
+					enabled: true
+			web:
+				trusted_proxies:
+					- 10.0.0.0/8
+		service:
+			some-service:
+				options: {}
+				latest_version:
+					type: github
+					url: ` + test.ArgusGitHubRepo + `
+				dashboard: {}
+	`)
+
+	writeFile(path, data)
+}
+
 // testYAML_config_indent4 is for `save.go`.
 //
-// A config indented with 4 spaces rather than the marshal-default 2
+// A config indented with 4 spaces rather than the marshal-default 2.
 func testYAML_config_indent4(path string) {
 	data := test.TrimYAML(`
 		notify:
@@ -321,7 +352,8 @@ func testYAML_Ordering_0(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 				options:
 					interval: 123
 					semantic_versioning: false
@@ -375,7 +407,8 @@ func testYAML_Ordering_1_no_services(path string) {
 					interval: 123s
 					semantic_versioning: false
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 				deployed_version: {}
 			notify:
 				gotify:
@@ -402,7 +435,8 @@ func testYAML_Ordering_2_obscure_service_names(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		service:
 			"123":
 				latest_version:
@@ -454,7 +488,8 @@ func testYAML_Ordering_3_empty_line_after_service_line(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		service:
 
 			C:
@@ -481,7 +516,8 @@ func testYAML_Ordering_4_multiple_empty_lines_after_service_line(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		service:
 ` + strings.Repeat("\n", 3) + `
 			P:
@@ -508,7 +544,8 @@ func testYAML_Ordering_5_eof_is_service_line(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		settings:
 		data:
 		database_file: test-ordering_5.db
@@ -524,7 +561,8 @@ func testYAML_Ordering_6_no_services_after_service_line_another_block(path strin
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		service:
 
 		settings:
@@ -540,7 +578,8 @@ func testYAML_Ordering_7_no_services_after_service_line(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		settings:
 			data:
 				database_file: test-ordering_5.db
@@ -558,7 +597,8 @@ func testYAML_Edit(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		service:
 			alpha:
 				name: a

@@ -18,15 +18,22 @@ package v1
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/auth/store"
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -380,6 +387,243 @@ func TestAPI_AnnounceOrder(t *testing.T) {
 			"%s Announce channel mismatch\ngot:  none\nwant: message",
 			prefix,
 		)
+	}
+}
+
+func TestValidatePassword(t *testing.T) {
+	// GIVEN: passwords of varying lengths.
+	tests := []struct {
+		name      string
+		plaintext string
+		errRegex  string
+	}{
+		{
+			name:      "meets the minimum length",
+			plaintext: "12345678",
+			errRegex:  `^$`,
+		},
+		{
+			name:      "longer than the minimum",
+			plaintext: "a-much-longer-password",
+			errRegex:  `^$`,
+		},
+		{
+			name:      "below the minimum length",
+			plaintext: "1234567",
+			errRegex:  `^password: "\*" <invalid> \(must be at least 8 characters\)$`,
+		},
+		{
+			name:      "empty",
+			plaintext: "",
+			errRegex:  `^password: <required> \(must be at least 8 characters\)$`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: validatePassword is called.
+			err := validatePassword(tc.plaintext)
+
+			prefix := fmt.Sprintf(
+				"%s\nvalidatePassword(%q)",
+				packageName, tc.plaintext,
+			)
+
+			// THEN: the error matches expectation.
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
+			}
+		})
+	}
+}
+
+func TestAPI_DecodeAuthBody(t *testing.T) {
+	// GIVEN: request bodies in varying states.
+	type target struct {
+		Name string `json:"name"`
+	}
+	tests := []struct {
+		name       string
+		body       string
+		wantOK     bool
+		wantName   string
+		wantStatus int
+		bodyRegex  string
+	}{
+		{
+			name:     "valid JSON",
+			body:     `{"name":"argus"}`,
+			wantOK:   true,
+			wantName: "argus",
+		},
+		{
+			name:       "malformed JSON",
+			body:       `{"name":`,
+			wantStatus: http.StatusBadRequest,
+			bodyRegex:  `parse request`,
+		},
+		{
+			name:       "body exceeding the size cap",
+			body:       `{"name":"` + strings.Repeat("x", maxAuthBodySize+1) + `"}`,
+			wantStatus: http.StatusBadRequest,
+			bodyRegex:  `read request`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			api := &API{}
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login",
+				strings.NewReader(tc.body))
+			w := httptest.NewRecorder()
+
+			// WHEN: the body is decoded.
+			var got target
+			ok := api.decodeAuthBody(w, req, &got)
+
+			prefix := fmt.Sprintf("%s\ndecodeAuthBody", packageName)
+
+			// THEN: the outcome matches expectation.
+			if ok != tc.wantOK {
+				t.Fatalf(
+					"%s ok mismatch\ngot:  %t\nwant: %t",
+					prefix, ok, tc.wantOK,
+				)
+			}
+			if tc.wantOK {
+				// AND: the target is filled.
+				if got.Name != tc.wantName {
+					t.Errorf(
+						"%s decoded value mismatch\ngot:  %q\nwant: %q",
+						prefix, got.Name, tc.wantName,
+					)
+				}
+				return
+			}
+
+			// AND: the request is failed with the expected status and message.
+			if got, want := w.Code, tc.wantStatus; got != want {
+				t.Errorf(
+					"%s status mismatch\ngot:  %d\nwant: %d",
+					prefix, got, want,
+				)
+			}
+			if !util.RegexCheck(tc.bodyRegex, w.Body.String()) {
+				t.Errorf(
+					"%s body mismatch\ngot:  %q\nwant: %q",
+					prefix, w.Body.String(), tc.bodyRegex,
+				)
+			}
+		})
+	}
+}
+
+func TestAPI_FailAuthStoreRequest(t *testing.T) {
+	// GIVEN: store errors of each classification.
+	tests := []struct {
+		name       string
+		err        error
+		wantStatus int
+		bodyRegex  string
+	}{
+		{
+			name:       "not found",
+			err:        store.ErrNotFound,
+			wantStatus: http.StatusNotFound,
+			bodyRegex:  `"delete failed: not found"`,
+		},
+		{
+			name:       "wrapped not found",
+			err:        fmt.Errorf("load user: %w", store.ErrNotFound),
+			wantStatus: http.StatusNotFound,
+			bodyRegex:  `"delete failed: not found"`,
+		},
+		{
+			name:       "username taken",
+			err:        store.ErrUsernameTaken,
+			wantStatus: http.StatusConflict,
+			bodyRegex:  `delete failed:\\n  username already taken`,
+		},
+		{
+			name:       "group name taken",
+			err:        store.ErrGroupNameTaken,
+			wantStatus: http.StatusConflict,
+			bodyRegex:  `delete failed:\\n  group name already taken`,
+		},
+		{
+			name:       "unknown group",
+			err:        store.ErrUnknownGroup,
+			wantStatus: http.StatusBadRequest,
+			bodyRegex:  `delete failed:\\n  unknown group`,
+		},
+		{
+			name:       "invalid grant",
+			err:        store.ErrInvalidGrant,
+			wantStatus: http.StatusBadRequest,
+			bodyRegex:  `delete failed:\\n  invalid grant`,
+		},
+		{
+			name:       "last admin",
+			err:        store.ErrLastAdmin,
+			wantStatus: http.StatusConflict,
+			bodyRegex:  `delete failed:\\n  cannot delete, disable, or demote the last enabled admin`,
+		},
+		{
+			name:       "system group",
+			err:        store.ErrSystemGroup,
+			wantStatus: http.StatusConflict,
+			bodyRegex:  `delete failed:\\n  system group cannot be modified this way`,
+		},
+		{
+			name:       "infrastructure failure",
+			err:        errors.New("db broke"),
+			wantStatus: http.StatusInternalServerError,
+			bodyRegex:  `"delete failed"`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			api := &API{}
+			w := httptest.NewRecorder()
+
+			// WHEN: the error is mapped onto a response.
+			api.failAuthStoreRequest(w, tc.err,
+				logx.LogFrom{Primary: "TestAPI_FailAuthStoreRequest"}, "delete")
+
+			prefix := fmt.Sprintf("%s\nfailAuthStoreRequest", packageName)
+
+			// THEN: the status and message match expectations.
+			if got, want := w.Code, tc.wantStatus; got != want {
+				t.Errorf(
+					"%s status mismatch\ngot:  %d\nwant: %d",
+					prefix, got, want,
+				)
+			}
+			if !util.RegexCheck(tc.bodyRegex, w.Body.String()) {
+				t.Errorf(
+					"%s body mismatch\ngot:  %q\nwant: %q",
+					prefix, w.Body.String(), tc.bodyRegex,
+				)
+			}
+
+			// AND: internal detail is never leaked on infrastructure failures.
+			if tc.wantStatus == http.StatusInternalServerError &&
+				strings.Contains(w.Body.String(), "db broke") {
+				t.Errorf(
+					"%s internal error detail leaked\ngot:  %q",
+					prefix, w.Body.String(),
+				)
+			}
+		})
 	}
 }
 

@@ -23,7 +23,12 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// httpConfig returns the active configuration with secrets censored.
+// httpConfig handles GET /api/v1/config: returning the active configuration
+// with secrets censored.
+//
+// Response:
+//
+//	200 OK: JSON object containing the censored configuration.
 func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpConfig", Secondary: getIP(r)}
 
@@ -46,6 +51,18 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 			KeyFile:        api.Config.Settings.Web.KeyFile,
 			RoutePrefix:    api.Config.Settings.Web.RoutePrefix,
 			DisabledRoutes: api.Config.Settings.Web.DisabledRoutes,
+			TrustedProxies: api.Config.Settings.Web.TrustedProxies,
+		},
+		Auth: apitype.AuthSettings{
+			Enabled: api.Config.Settings.Auth.Enabled,
+			Session: apitype.AuthSessionSettings{
+				Lifetime:     api.Config.Settings.Auth.Session.Lifetime,
+				IdleTimeout:  api.Config.Settings.Auth.Session.IdleTimeout,
+				SecureCookie: api.Config.Settings.Auth.Session.SecureCookie,
+			},
+			Local: apitype.AuthLocalSettings{
+				Enabled: api.Config.Settings.Auth.Local.Enabled,
+			},
 		},
 	}
 

@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LoaderCircle, Save } from 'lucide-react';
 import { useState } from 'react';
 import { Controller, useFormContext, useWatch } from 'react-hook-form';
-import { toast } from 'sonner';
 import { FieldLabel } from '@/components/generic/field';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Field, FieldGroup } from '@/components/ui/field';

@@ -46,6 +46,8 @@ A demo of Argus can be seen on our website [here](https://release-argus.io/demo)
 ```bash
 $ argus -h
 Usage of /usr/local/bin/argus:
+  -auth.reset-password string
+        Username whose password to reset at startup (a new password is generated and printed to stdout); their sessions are revoked
   -config.check
         Print the fully-parsed config.
   -config.file string

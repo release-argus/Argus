@@ -163,6 +163,11 @@ const Tip = ({
 				</TooltipTrigger>
 				<TooltipContent
 					className={cn(!content && 'hidden', 'max-w-[60vw] text-wrap p-2')}
+					onMouseEnter={() => {
+						if (timeoutRef.current) clearTimeout(timeoutRef.current);
+						openTooltip();
+					}}
+					onMouseLeave={handleMouseLeave}
 					{...contentProps}
 				>
 					<span className="inline-block">{content}</span>

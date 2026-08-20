@@ -33,7 +33,8 @@ func testYAML_Argus(path string) {
 		defaults:
 			service:
 				latest_version:
-					access_token: placeholder
+					github:
+						access_token: placeholder
 		settings:
 			data:
 				database_file: test-web.db

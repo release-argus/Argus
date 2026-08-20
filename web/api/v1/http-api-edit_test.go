@@ -37,10 +37,12 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/dashboard"
 	dvweb "github.com/release-argus/Argus/service/deployed_version/types/web"
 	"github.com/release-argus/Argus/service/shared"
 	svctest "github.com/release-argus/Argus/service/test"
 	"github.com/release-argus/Argus/util"
+	apitype "github.com/release-argus/Argus/web/api/types"
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
@@ -1418,6 +1420,65 @@ func TestHTTP_TemplateParse(t *testing.T) {
 	}
 }
 
+func TestHTTP_ServiceEdit__routeValidation(t *testing.T) {
+	// GIVEN: an API.
+	file := "TestHTTP_ServiceEdit__routeBinding.yml"
+	api := testAPI(t, file)
+
+	// AND: requests to a handler with invalid serviceID query params.
+	tests := []struct {
+		name          string
+		handler       func(http.ResponseWriter, *http.Request)
+		serviceID     string
+		wantBodyRegex string
+	}{
+		{
+			name:          "create/rejects a service_id (would be an edit)",
+			handler:       api.httpServiceCreate,
+			serviceID:     "existing",
+			wantBodyRegex: "service_id must be empty",
+		},
+		{
+			name:          "update/rejects a missing service_id (would be a create)",
+			handler:       api.httpServiceUpdate,
+			serviceID:     "",
+			wantBodyRegex: "service_id is required",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			target := "/api/v1/service/config"
+			if tc.serviceID != "" {
+				target += "?service_id=" + url.QueryEscape(tc.serviceID)
+			}
+			req := httptest.NewRequest(http.MethodPut, target, strings.NewReader(`{}`))
+			w := httptest.NewRecorder()
+
+			// WHEN: the handler is called.
+			tc.handler(w, req)
+
+			prefix := fmt.Sprintf("%s\nroute binding", packageName)
+
+			// THEN: the request is rejected with 400 before any create/edit work.
+			if got, want := w.Code, http.StatusBadRequest; got != want {
+				t.Fatalf(
+					"%s status mismatch\ngot:  %d - %s\nwant: %d",
+					prefix, got, w.Body.String(), want,
+				)
+			}
+			if got := w.Body.String(); !util.RegexCheck(tc.wantBodyRegex, got) {
+				t.Errorf(
+					"%s body mismatch\ngot:  %q\nwant match: %q",
+					prefix, got, tc.wantBodyRegex,
+				)
+			}
+		})
+	}
+}
+
 func TestHTTP_ServiceEdit__create(t *testing.T) {
 	testSVC := testService(t, "TestHTTP_ServiceEdit_Create", "url", "url", true)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
@@ -1722,7 +1783,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			// WHEN: that HTTP request is sent.
 			w := httptest.NewRecorder()
 			apiMu.Lock()
-			api.httpServiceEdit(w, req)
+			api.httpServiceEdit(w, req, actionCreate)
 			apiMu.Unlock()
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
@@ -1832,7 +1893,7 @@ func TestHTTP_ServiceEdit__create__concurrentConflict(t *testing.T) {
 	}`)))
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/service/new", payload)
 	w := httptest.NewRecorder()
-	api.httpServiceEdit(w, req)
+	api.httpServiceEdit(w, req, actionCreate)
 	res := w.Result()
 	t.Cleanup(func() { _ = res.Body.Close() })
 
@@ -2135,7 +2196,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 			// WHEN: that HTTP request is sent.
 			w := httptest.NewRecorder()
 			apiMu.Lock()
-			api.httpServiceEdit(w, req)
+			api.httpServiceEdit(w, req, actionEdit)
 			apiMu.Unlock()
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
@@ -2240,7 +2301,7 @@ func TestHTTP_ServiceEdit__edit__missingID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/service/config", payload)
 	req.URL.RawQuery = params.Encode()
 	w := httptest.NewRecorder()
-	api.httpServiceEdit(w, req)
+	api.httpServiceEdit(w, req, actionEdit)
 	res := w.Result()
 	t.Cleanup(func() { _ = res.Body.Close() })
 
@@ -2322,7 +2383,7 @@ func TestHTTP_ServiceEdit__edit__renameToExistingID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/service/update", payload)
 	req.URL.RawQuery = params.Encode()
 	w := httptest.NewRecorder()
-	api.httpServiceEdit(w, req)
+	api.httpServiceEdit(w, req, actionEdit)
 	res := w.Result()
 	t.Cleanup(func() { _ = res.Body.Close() })
 
@@ -2707,7 +2768,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 			// WHEN: that HTTP request is sent.
 			w := httptest.NewRecorder()
 			apiMu.Lock()
-			api.httpServiceEdit(w, req)
+			api.httpServiceEdit(w, req, actionEdit)
 			apiMu.Unlock()
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
@@ -2770,7 +2831,7 @@ func TestHTTP_ServiceEdit__edit__waitsForInFlightOp(t *testing.T) {
 	done := make(chan int, 1)
 	go func() {
 		w := httptest.NewRecorder()
-		api.httpServiceEdit(w, req)
+		api.httpServiceEdit(w, req, actionEdit)
 		done <- w.Result().StatusCode
 	}()
 
@@ -2805,6 +2866,95 @@ func TestHTTP_ServiceEdit__edit__waitsForInFlightOp(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatalf("%s did not complete after the op lock was released", prefix)
+	}
+}
+
+func TestServiceEditAffectsVisibility(t *testing.T) {
+	// GIVEN: old/new service pairs for the kinds of create/edit.
+	summaryFor := func(id string, tags []string) *apitype.ServiceSummary {
+		summary := &apitype.ServiceSummary{ID: id}
+		if len(tags) != 0 {
+			summary.Tags = &tags
+		}
+		return summary
+	}
+	serviceFor := func(id string, tags []string) *service.Service {
+		return &service.Service{
+			ID:        id,
+			Dashboard: dashboard.Options{Tags: tags},
+		}
+	}
+
+	tests := []struct {
+		name       string
+		oldService *apitype.ServiceSummary
+		newService *service.Service
+		want       bool
+	}{
+		{
+			name:       "create",
+			oldService: nil,
+			newService: serviceFor("new", nil),
+			want:       true,
+		},
+		{
+			name:       "edit/rename",
+			oldService: summaryFor("old", nil),
+			newService: serviceFor("new", nil),
+			want:       true,
+		},
+		{
+			name:       "edit/tag added",
+			oldService: summaryFor("svc", nil),
+			newService: serviceFor("svc", []string{"prod"}),
+			want:       true,
+		},
+		{
+			name:       "edit/tag removed",
+			oldService: summaryFor("svc", []string{"prod"}),
+			newService: serviceFor("svc", nil),
+			want:       true,
+		},
+		{
+			name:       "edit/tag swapped",
+			oldService: summaryFor("svc", []string{"prod"}),
+			newService: serviceFor("svc", []string{"staging"}),
+			want:       true,
+		},
+		{
+			name:       "edit/plain - same ID, no tags",
+			oldService: summaryFor("svc", nil),
+			newService: serviceFor("svc", nil),
+			want:       false,
+		},
+		{
+			name:       "edit/plain - same ID, same tags",
+			oldService: summaryFor("svc", []string{"prod", "web"}),
+			newService: serviceFor("svc", []string{"prod", "web"}),
+			want:       false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: visibility impact is checked.
+			got := serviceEditAffectsVisibility(tc.oldService, tc.newService)
+
+			prefix := fmt.Sprintf(
+				"%s\nserviceEditAffectsVisibility()",
+				packageName,
+			)
+
+			// THEN: only creates, renames and tag-set changes report true.
+			if got != tc.want {
+				t.Errorf(
+					"%s mismatch\ngot:  %t\nwant: %t",
+					prefix, got, tc.want,
+				)
+			}
+		})
 	}
 }
 
@@ -3337,7 +3487,10 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			// AND: the expected message is contained in the bodyRegex.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf("%s unexpected error:\n%v", packageName, err)
+				t.Fatalf(
+					"%s unexpected error:\n%v",
+					packageName, err,
+				)
 			}
 			// Marshal message out of JSON data {"message": text}.
 			var body map[string]string
@@ -3365,31 +3518,36 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 	file := "TestHTTP_ServiceOpLock__conflict.yml"
 	api := testAPI(t, file)
 
-	tests := map[string]struct {
+	tests := []struct {
+		name       string
 		handler    func(http.ResponseWriter, *http.Request)
 		hold       hold
 		statusCode int
 		bodyRegex  string
 	}{
-		"latest-version refresh rejected while an exclusive op is in flight": {
+		{
+			name:       "latest-version refresh rejected while an exclusive op is in flight",
 			handler:    api.httpLatestVersionRefresh,
 			hold:       holdWrite,
 			statusCode: http.StatusConflict,
 			bodyRegex:  `another operation is in progress`,
 		},
-		"latest-version refresh allowed alongside another refresh (shared)": {
+		{
+			name:       "latest-version refresh allowed alongside another refresh (shared)",
 			handler:    api.httpLatestVersionRefresh,
 			hold:       holdRead,
 			statusCode: http.StatusNotFound, // Past the lock, then the absent service.
 			bodyRegex:  `not found`,
 		},
-		"deployed-version refresh rejected while an exclusive op is in flight": {
+		{
+			name:       "deployed-version refresh rejected while an exclusive op is in flight",
 			handler:    api.httpDeployedVersionRefresh,
 			hold:       holdWrite,
 			statusCode: http.StatusConflict,
 			bodyRegex:  `another operation is in progress`,
 		},
-		"deployed-version refresh allowed alongside another refresh (shared)": {
+		{
+			name:       "deployed-version refresh allowed alongside another refresh (shared)",
 			handler:    api.httpDeployedVersionRefresh,
 			hold:       holdRead,
 			statusCode: http.StatusNotFound,
@@ -3397,11 +3555,11 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			serviceID := name
+			serviceID := tc.name
 
 			// GIVEN: the service's op lock is held as described.
 			held := api.acquireServiceOp(serviceID)
