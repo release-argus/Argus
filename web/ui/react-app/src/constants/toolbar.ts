@@ -57,6 +57,28 @@ export const DEFAULT_HIDE_VALUE: HideValueType[] = [
 	HideValue.Inactive,
 ] as const;
 
+/* Timestamps that can be shown at the bottom of the service card. */
+export const CardTimestamp = {
+	Deployed: 'deployed',
+	Queried: 'queried',
+	Released: 'released',
+} as const;
+
+export type CardTimestampType =
+	(typeof CardTimestamp)[keyof typeof CardTimestamp];
+
+/* Card timestamp options for the toolbar. */
+export const toolbarTimestampOptions = [
+	{ key: CardTimestamp.Deployed, label: 'Show deployed' },
+	{ key: CardTimestamp.Released, label: 'Show released' },
+	{ key: CardTimestamp.Queried, label: 'Show queried' },
+] as const;
+
+/* Timestamps shown until the user says otherwise. */
+export const DEFAULT_CARD_TIMESTAMPS: CardTimestampType[] = [
+	CardTimestamp.Queried,
+] as const;
+
 /* Query params for the toolbar. */
 export const URL_PARAMS = {
 	EDIT_MODE: 'editMode',
@@ -77,3 +99,5 @@ export const TABLE_COLUMNS_HIDDEN_STORAGE_KEY = 'tableColumnsHidden';
 export const TABLE_COLUMNS_VISIBLE_STORAGE_KEY_LEGACY = 'tableColumnsVisible';
 /* Storage key for the order of table columns. */
 export const TABLE_COLUMNS_ORDER_STORAGE_KEY = 'tableColumnsOrder';
+/* Storage key for the timestamps shown under each service on a card. */
+export const CARD_TIMESTAMPS_STORAGE_KEY = 'cardTimestamps';

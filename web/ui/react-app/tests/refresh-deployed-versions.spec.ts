@@ -111,6 +111,8 @@ const filterServices = (page: Page, term: string) =>
 const toggleHideOption = async (page: Page, label: string) => {
 	await page.getByRole('button', { name: FILTER_BUTTON_NAME }).click();
 	await page.getByRole('menuitemcheckbox', { name: label }).click();
+	await page.keyboard.press('Escape');
+	await expect(page.getByRole('menu')).toHaveCount(0);
 };
 
 test.describe('refresh visible deployed versions', () => {
@@ -223,10 +225,7 @@ test.describe('refresh visible deployed versions', () => {
 		await expectUpdateState(page, updatableID, 'AVAILABLE');
 
 		// WHEN: 'Hide up to date' removes the up-to-date service from view.
-		await page.getByRole('button', { name: FILTER_BUTTON_NAME }).click();
-		await page
-			.getByRole('menuitemcheckbox', { name: 'Hide up to date' })
-			.click();
+		await toggleHideOption(page, 'Hide up to date');
 		await expect(page.getByRole('heading', { name: upToDateID })).toHaveCount(
 			0,
 		);
@@ -277,8 +276,7 @@ test.describe('refresh visible deployed versions', () => {
 		await expectUpdateState(page, skippedID, 'SKIPPED');
 
 		// WHEN: 'Hide skipped' removes it from view.
-		await page.getByRole('button', { name: FILTER_BUTTON_NAME }).click();
-		await page.getByRole('menuitemcheckbox', { name: 'Hide skipped' }).click();
+		await toggleHideOption(page, 'Hide skipped');
 		await expect(page.getByRole('heading', { name: skippedID })).toHaveCount(0);
 		await expect(
 			page.getByRole('heading', { name: updatableID }),

@@ -1,5 +1,9 @@
 export { default as beautifyGoErrors } from './beautify-go-errors';
 export {
+	loadCardTimestamps,
+	persistCardTimestamps,
+} from './card-timestamps';
+export {
 	containsEndsWith,
 	containsStartsWith,
 } from './diff-objects';
