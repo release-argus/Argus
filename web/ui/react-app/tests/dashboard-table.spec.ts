@@ -68,4 +68,19 @@ test.describe('Dashboard table view', () => {
 		await expect(page.getByRole('table')).toBeVisible();
 		await expect(iconHeader).toBeHidden();
 	});
+
+	test('the card timestamp options are not offered', async ({ page }) => {
+		// GIVEN: timestamps are a grid-only option.
+		const timestampLabels = ['Show deployed', 'Show found', 'Show queried'];
+
+		// WHEN: the filter dropdown is opened in the table view.
+		await page.getByRole('button', { name: 'Filter shown services' }).click();
+		await expect(page.getByRole('menu')).toBeVisible();
+
+		// THEN: none of them are listed.
+		for (const label of timestampLabels)
+			await expect(
+				page.getByRole('menuitemcheckbox', { exact: true, name: label }),
+			).toHaveCount(0);
+	});
 });

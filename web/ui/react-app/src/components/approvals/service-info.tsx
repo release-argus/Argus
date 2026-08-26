@@ -54,19 +54,19 @@ const ServiceInfo: FC<ServiceInfoProps> = ({
 			<small className="flex w-full flex-col gap-1 font-medium text-muted-foreground text-xs leading-none">
 				{cardTimestamps.includes(CardTimestamp.Deployed) &&
 					status?.deployed_version_timestamp && (
-						<span>
+						<span data-timestamp={CardTimestamp.Deployed}>
 							deployed{' '}
 							{relativeDate(new Date(status.deployed_version_timestamp))}
 						</span>
 					)}
 				{cardTimestamps.includes(CardTimestamp.Found) &&
 					status?.latest_version_timestamp && (
-						<span>
+						<span data-timestamp={CardTimestamp.Found}>
 							found {relativeDate(new Date(status.latest_version_timestamp))}
 						</span>
 					)}
 				{cardTimestamps.includes(CardTimestamp.Queried) && (
-					<span>
+					<span data-timestamp={CardTimestamp.Queried}>
 						{status?.last_queried ? (
 							<>queried {relativeDate(new Date(status.last_queried))}</>
 						) : service?.loading ? (
