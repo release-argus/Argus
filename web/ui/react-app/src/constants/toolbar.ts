@@ -60,8 +60,8 @@ export const DEFAULT_HIDE_VALUE: HideValueType[] = [
 /* Timestamps that can be shown at the bottom of the service card. */
 export const CardTimestamp = {
 	Deployed: 'deployed',
+	Found: 'found',
 	Queried: 'queried',
-	Released: 'released',
 } as const;
 
 export type CardTimestampType =
@@ -70,7 +70,7 @@ export type CardTimestampType =
 /* Card timestamp options for the toolbar. */
 export const toolbarTimestampOptions = [
 	{ key: CardTimestamp.Deployed, label: 'Show deployed' },
-	{ key: CardTimestamp.Released, label: 'Show released' },
+	{ key: CardTimestamp.Found, label: 'Show found' },
 	{ key: CardTimestamp.Queried, label: 'Show queried' },
 ] as const;
 

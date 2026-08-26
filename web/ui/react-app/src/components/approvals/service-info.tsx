@@ -59,10 +59,10 @@ const ServiceInfo: FC<ServiceInfoProps> = ({
 							{relativeDate(new Date(status.deployed_version_timestamp))}
 						</span>
 					)}
-				{cardTimestamps.includes(CardTimestamp.Released) &&
+				{cardTimestamps.includes(CardTimestamp.Found) &&
 					status?.latest_version_timestamp && (
 						<span>
-							released {relativeDate(new Date(status.latest_version_timestamp))}
+							found {relativeDate(new Date(status.latest_version_timestamp))}
 						</span>
 					)}
 				{cardTimestamps.includes(CardTimestamp.Queried) && (
