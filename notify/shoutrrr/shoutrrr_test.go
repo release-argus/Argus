@@ -19,7 +19,13 @@ package shoutrrr
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
+
+	goshoutrrr "github.com/nicholas-fedor/shoutrrr"
+	goshoutrrrFormat "github.com/nicholas-fedor/shoutrrr/pkg/format"
+	goshoutrrrSMTP "github.com/nicholas-fedor/shoutrrr/pkg/services/email/smtp"
+	goshoutrrrTypes "github.com/nicholas-fedor/shoutrrr/pkg/types"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
@@ -491,6 +497,39 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
+			name:  "smtp/base + login + port + timeout",
+			sType: "smtp",
+			want:  "smtp://USERNAME:PASSWORD@HOST:587/?fromaddress=FROMADDRESS&toaddresses=TO_ADDRESS1%2CTO_ADDRESS2&timeout=0h0m10s",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"username": "USERNAME",
+				"password": "PASSWORD",
+				"port":     "587",
+			},
+			params: map[string]string{
+				"fromaddress": "FROMADDRESS",
+				"toaddresses": "TO_ADDRESS1,TO_ADDRESS2",
+				"timeout":     "0h0m10s",
+			},
+		},
+		{
+			name:  "smtp/base + login + port + encryption + skiptlsverify",
+			sType: "smtp",
+			want:  "smtp://USERNAME:PASSWORD@HOST:587/?fromaddress=FROMADDRESS&toaddresses=TO_ADDRESS1%2CTO_ADDRESS2&encryption=ImplicitTLS&skiptlsverify=yes",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"username": "USERNAME",
+				"password": "PASSWORD",
+				"port":     "587",
+			},
+			params: map[string]string{
+				"fromaddress":   "FROMADDRESS",
+				"toaddresses":   "TO_ADDRESS1,TO_ADDRESS2",
+				"encryption":    "ImplicitTLS",
+				"skiptlsverify": "yes",
+			},
+		},
+		{
 			name:  "teams/base",
 			sType: "teams",
 			want:  "teams://?host=https%3A%2F%2Fprod-00.westus.logic.azure.com%3A443%2Fworkflows%2Fabc",
@@ -784,6 +823,330 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestShoutrrr_BuildParams__SMTPAuth(t *testing.T) {
+	// GIVEN: Shoutrrrs with an 'auth' Param, of an SMTP and a non-SMTP type.
+	svcInfo := serviceinfo.ServiceInfo{ID: "service_id"}
+	tests := []struct {
+		name     string
+		sType    string
+		auth     string
+		wantKept bool
+	}{
+		{
+			name:  "smtp/'Unknown' is dropped so Shoutrrr keeps its resolved method",
+			sType: "smtp",
+			auth:  "Unknown",
+		},
+		{
+			name:  "smtp/'unknown' is dropped case-insensitively",
+			sType: "smtp",
+			auth:  "uNkNoWn",
+		},
+		{
+			name:     "smtp/an explicit method is kept",
+			sType:    "smtp",
+			auth:     "Plain",
+			wantKept: true,
+		},
+		{
+			name:     "non-smtp/'Unknown' is left alone",
+			sType:    "ntfy",
+			auth:     "Unknown",
+			wantKept: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			shoutrrr := testShoutrrr(false, false)
+			shoutrrr.Type = tc.sType
+			shoutrrr.Main.Type = tc.sType
+			shoutrrr.Params["fromaddress"] = "FROM"
+			shoutrrr.Params["toaddresses"] = "TO"
+			shoutrrr.Params["auth"] = tc.auth
+
+			// WHEN: BuildParams is called.
+			params := *shoutrrr.BuildParams(svcInfo)
+
+			// THEN: 'Unknown' only survives for non-SMTP types.
+			if _, kept := params["auth"]; kept != tc.wantKept {
+				t.Errorf(
+					"%s\nShoutrrr.BuildParams() 'auth' presence mismatch\ngot:  %t\nwant: %t",
+					packageName, kept, tc.wantKept,
+				)
+			}
+
+			if tc.sType != "smtp" {
+				return
+			}
+
+			// AND: applying those Params the way Shoutrrr does at send time
+			// leaves an auth method it can act on.
+			sender, err := goshoutrrr.CreateSenderWithOptions(goshoutrrrTypes.SenderOptions{})
+			if err != nil {
+				t.Fatalf(
+					"%s\nfailed to create the sender\n%v",
+					packageName, err,
+				)
+			}
+			service, err := sender.Locate(shoutrrr.BuildURL())
+			if err != nil {
+				t.Fatalf(
+					"%s\nShoutrrr rejected the built URL\n%v",
+					packageName, err,
+				)
+			}
+			smtpService, ok := service.(*goshoutrrrSMTP.Service)
+			if !ok {
+				t.Fatalf(
+					"%s\nwant a *smtp.Service\ngot: %T",
+					packageName, service,
+				)
+			}
+
+			config := smtpService.Config.Clone()
+			resolver := goshoutrrrFormat.NewPropKeyResolver(&config)
+			if err := resolver.UpdateConfigFromParams(&config, &params); err != nil {
+				t.Fatalf(
+					"%s\nShoutrrr rejected the Params\n%v",
+					packageName, err,
+				)
+			}
+			if got := config.Auth.String(); got == smtpAuthUnknown {
+				t.Errorf(
+					"%s\nauth left unresolved after applying the Params\ngot:  %q\nwant: anything but %q",
+					packageName, got, smtpAuthUnknown,
+				)
+			}
+		})
+	}
+}
+
+// TestShoutrrr_SMTPURLCarriedParams covers the SMTP Params that Argus has to carry
+// in the URL because Shoutrrr will not honour them from the send-params:
+//   - 'timeout' reflects onto a time.Duration field via strconv.ParseInt, so a
+//     duration string errors on the Params path.
+//   - 'encryption'/'skiptlsverify' are read by getClientConnection from the Config
+//     parsed out of the URL, not from the clone the Params are applied to.
+//
+// Drop this test (and the queryParam calls in BuildURL), once Shoutrrr handles
+// both upstream.
+func TestShoutrrr_SMTPURLCarriedParams(t *testing.T) {
+	// GIVEN: Shoutrrrs with a Param that has to reach Shoutrrr through the URL.
+	svcInfo := serviceinfo.ServiceInfo{ID: "service_id"}
+	tests := []struct {
+		name      string
+		sType     string
+		layer     string // "" (the Shoutrrr itself), "main", "defaults" or "hardDefaults".
+		param     string
+		value     string
+		wantKept  bool   // Param survives BuildParams.
+		wantInURL bool   // Param is carried in the URL.
+		want      string // Value Shoutrrr parses out of the URL for this param.
+	}{
+		{
+			name:      "smtp/timeout, moves to the URL",
+			sType:     "smtp",
+			param:     "timeout",
+			value:     "0h0m10s",
+			wantInURL: true,
+			want:      "10s",
+		},
+		{
+			name:      "smtp/timeout, from Main",
+			sType:     "smtp",
+			layer:     "main",
+			param:     "timeout",
+			value:     "0h0m10s",
+			wantInURL: true,
+			want:      "10s",
+		},
+		{
+			name:      "smtp/timeout, from Defaults",
+			sType:     "smtp",
+			layer:     "defaults",
+			param:     "timeout",
+			value:     "0m10s",
+			wantInURL: true,
+			want:      "10s",
+		},
+		{
+			name:      "smtp/timeout, from HardDefaults",
+			sType:     "smtp",
+			layer:     "hardDefaults",
+			param:     "timeout",
+			value:     "10s",
+			wantInURL: true,
+			want:      "10s",
+		},
+		{
+			name:  "smtp/timeout, empty defers to Shoutrrr",
+			sType: "smtp",
+			param: "timeout",
+			value: "",
+			want:  "10s",
+		},
+		{
+			name:     "non-smtp/timeout, left in the Params",
+			sType:    "ntfy",
+			param:    "timeout",
+			value:    "0h0m10s",
+			wantKept: true,
+		},
+		{
+			name:     "non-smtp/timeout, from HardDefaults, left in the Params",
+			sType:    "ntfy",
+			layer:    "hardDefaults",
+			param:    "timeout",
+			value:    "10s",
+			wantKept: true,
+		},
+		{
+			name:      "smtp/encryption, implicit TLS",
+			sType:     "smtp",
+			param:     "encryption",
+			value:     "ImplicitTLS",
+			wantKept:  true,
+			wantInURL: true,
+			want:      "ImplicitTLS",
+		},
+		{
+			name:      "smtp/encryption, explicit TLS",
+			sType:     "smtp",
+			param:     "encryption",
+			value:     "ExplicitTLS",
+			wantKept:  true,
+			wantInURL: true,
+			want:      "ExplicitTLS",
+		},
+		{
+			name:     "smtp/encryption, empty defers to Shoutrrr",
+			sType:    "smtp",
+			param:    "encryption",
+			value:    "",
+			wantKept: true,
+			want:     "Auto",
+		},
+		{
+			name:      "smtp/skiptlsverify, enabled",
+			sType:     "smtp",
+			param:     "skiptlsverify",
+			value:     "yes",
+			wantKept:  true,
+			wantInURL: true,
+			want:      "true",
+		},
+		{
+			name:      "smtp/skiptlsverify, disabled",
+			sType:     "smtp",
+			param:     "skiptlsverify",
+			value:     "no",
+			wantKept:  true,
+			wantInURL: true,
+			want:      "false",
+		},
+		{
+			name:     "smtp/skiptlsverify, empty defers to Shoutrrr",
+			sType:    "smtp",
+			param:    "skiptlsverify",
+			value:    "",
+			wantKept: true,
+			want:     "false",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			shoutrrr := testShoutrrr(false, false)
+			shoutrrr.Type = tc.sType
+			shoutrrr.Main.Type = tc.sType
+			shoutrrr.Params["fromaddress"] = "FROM"
+			shoutrrr.Params["toaddresses"] = "TO"
+			switch tc.layer {
+			case "main":
+				shoutrrr.Main.Params[tc.param] = tc.value
+			case "defaults":
+				shoutrrr.Defaults.Params[tc.param] = tc.value
+			case "hardDefaults":
+				shoutrrr.HardDefaults.Params[tc.param] = tc.value
+			default:
+				shoutrrr.Params[tc.param] = tc.value
+			}
+
+			// WHEN: BuildParams and BuildURL are called.
+			params := *shoutrrr.BuildParams(svcInfo)
+			url := shoutrrr.BuildURL()
+
+			// THEN: only an SMTP 'timeout' is dropped from the Params,
+			// as that is the one Shoutrrr errors on rather than ignores.
+			if _, kept := params[tc.param]; kept != tc.wantKept {
+				t.Errorf(
+					"%s\nShoutrrr.BuildParams() %q presence mismatch\ngot:  %t\nwant: %t",
+					packageName, tc.param, kept, tc.wantKept,
+				)
+			}
+
+			if tc.sType != "smtp" {
+				return
+			}
+
+			// AND: it is carried in the URL when set, and absent when not.
+			if inURL := strings.Contains(url, tc.param+"="); inURL != tc.wantInURL {
+				t.Errorf(
+					"%s\nShoutrrr.BuildURL() %q presence mismatch\ngot:  %t\nwant: %t\nurl:  %q",
+					packageName, tc.param, inURL, tc.wantInURL, url,
+				)
+			}
+
+			// AND: Shoutrrr parses it into the Config that it dials with.
+			sender, err := goshoutrrr.CreateSenderWithOptions(goshoutrrrTypes.SenderOptions{})
+			if err != nil {
+				t.Fatalf("%s\nfailed to create the sender\n%v",
+					packageName, err)
+			}
+			service, err := sender.Locate(url)
+			if err != nil {
+				t.Fatalf("%s\nShoutrrr rejected the built URL %q\n%v",
+					packageName, url, err)
+			}
+			smtpService, ok := service.(*goshoutrrrSMTP.Service)
+			if !ok {
+				t.Fatalf("%s\nwant a *smtp.Service\ngot: %T",
+					packageName, service)
+			}
+
+			if got := smtpParamValue(t, smtpService.Config, tc.param); got != tc.want {
+				t.Errorf(
+					"%s\nShoutrrr parsed %q as\ngot:  %q\nwant: %q\nurl:  %q",
+					packageName, tc.param, got, tc.want, url,
+				)
+			}
+		})
+	}
+}
+
+// smtpParamValue returns the value Shoutrrr parsed for param out of the URL.
+func smtpParamValue(t *testing.T, config *goshoutrrrSMTP.Config, param string) string {
+	t.Helper()
+
+	switch param {
+	case "encryption":
+		return config.Encryption.String()
+	case "skiptlsverify":
+		return fmt.Sprint(config.SkipTLSVerify)
+	case "timeout":
+		return config.Timeout.String()
+	}
+
+	t.Fatalf("%s\nsmtpParamValue: unhandled param %q",
+		packageName, param)
+	return ""
 }
 
 func TestShoutrrr_GetSender(t *testing.T) {

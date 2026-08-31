@@ -121,9 +121,8 @@ const SMTP = ({ name, main }: { name: string; main?: NotifySMTPSchema }) => {
 					defaultVal={defaults?.params?.timeout}
 					label="Timeout"
 					name={`${name}.params.timeout`}
-					required
 					tooltip={{
-						content: 'Timeout for send operations',
+						content: 'Timeout for send operations, e.g. 10s',
 						type: 'string',
 					}}
 				/>

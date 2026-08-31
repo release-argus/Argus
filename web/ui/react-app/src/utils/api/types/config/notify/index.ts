@@ -357,8 +357,10 @@ export type NotifySMTP = NotifyBase & {
 		encryption?: (typeof smtpEncryptionOptions)[number]['value'];
 		fromaddress?: string;
 		fromname?: string;
+		requirestarttls?: string;
 		skiptlsverify?: string;
 		subject?: string;
+		timeout?: string;
 		toaddresses?: string;
 		usehtml?: string;
 		usestarttls?: string;

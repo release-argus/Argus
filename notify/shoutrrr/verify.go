@@ -388,6 +388,13 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 			b.setParam("skiptlsverification", "")
 			changed = true
 		}
+		// Timeout, treat integers as seconds by default.
+		if timeout := b.GetParam("timeout"); timeout != "" {
+			if _, err := strconv.Atoi(timeout); err == nil {
+				b.setParam("timeout", timeout+"s")
+				changed = true
+			}
+		}
 	case "zulip":
 		// BotMail, replace the @ with a %40 - https://containrrr.dev/shoutrrr/v0.5/services/zulip/
 		if botMail := b.getURLField("botmail"); strings.Contains(botMail, "@") {
@@ -587,7 +594,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 			)
 		}
 	case "smtp":
-		// smtp://username:password@host[:port]/?fromaddress=X&toaddresses=Y[&fromname=X]
+		// smtp://username:password@host[:port]/?fromaddress=X&toaddresses=Y[&fromname=X][&timeout=Z][&encryption=E][&skiptlsverify=S]
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
@@ -940,7 +947,7 @@ func (s *Shoutrrr) checkValuesParams() error {
 			)
 		}
 	case "smtp":
-		// smtp://username:password@host[:port]/?fromaddress=X&toaddresses=Y[&fromname=X]
+		// smtp://username:password@host[:port]/?fromaddress=X&toaddresses=Y[&fromname=X][&timeout=Z][&encryption=E][&skiptlsverify=S]
 		if s.GetParam("fromaddress") == "" {
 			errs = append(
 				errs,
@@ -998,6 +1005,24 @@ func (b *Base) checkValuesParams(itemType string) error {
 	// Normalise 'select' params.
 	if e := b.checkValuesParamsSelects(itemType); e != nil {
 		errs = append(errs, e)
+	}
+
+	switch itemType {
+	case "smtp":
+		// Timeout, must be a positive duration.
+		// Zero/negative gives Shoutrrr an already-expired context, failing every send.
+		if timeout := b.GetParam("timeout"); timeout != "" {
+			if d, err := time.ParseDuration(timeout); err != nil || d <= 0 {
+				errs = append(
+					errs,
+					&decode.ErrField{
+						Key:         "timeout",
+						Value:       timeout,
+						Description: "use a positive 'AhBmCs' duration, e.g. '10s'",
+					},
+				)
+			}
+		}
 	}
 
 	// Params.*

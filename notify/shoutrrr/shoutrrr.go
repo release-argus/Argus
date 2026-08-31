@@ -63,17 +63,27 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			query,
 		)
 	case "smtp":
-		// smtp://username:password@host[:port]/?fromaddress=X&toaddresses=Y[&fromname=X]
+		// smtp://username:password@host[:port]/?fromaddress=X&toaddresses=Y[&fromname=X][&timeout=Z][&encryption=E][&skiptlsverify=S]
 		login := s.GetURLField("password")
 		login = s.GetURLField("username") + util.ValueUnlessZero(login, ":"+login)
 		port := s.GetURLField("port")
 		fromAddress := s.GetParam("fromaddress")
 		fromName := s.GetParam("fromname")
 		toAddresses := s.GetParam("toaddresses")
+		// These must travel in the URL rather than the params.
+		//   timeout - Shoutrrr doesn't parse params as durations.
+		//   encryption/skiptlsverify - Shoutrrr dials with the config it parsed from
+		//   the URL, applying the params only to a clone used afterwards.
+		timeout := s.GetParam("timeout")
+		encryption := s.GetParam("encryption")
+		skipTLSVerify := s.GetParam("skiptlsverify")
 		query := buildQuery(
 			queryParam("fromaddress", fromAddress),
 			queryParam("fromname", fromName),
 			queryParam("toaddresses", toAddresses),
+			queryParam("timeout", timeout),
+			queryParam("encryption", encryption),
+			queryParam("skiptlsverify", skipTLSVerify),
 		)
 
 		url = fmt.Sprintf(
@@ -352,6 +362,16 @@ func (s *Shoutrrr) BuildParams(info serviceinfo.ServiceInfo) *types.Params {
 	for key, value := range params {
 		value = util.EvalEnvVars(value)
 		params[key] = util.TemplateString(value, info)
+	}
+
+	if s.GetType() == "smtp" {
+		// timeout is carried in the URL by BuildURL.
+		delete(params, "timeout")
+		// 'Unknown' auth means "no method given" and Shoutrrr
+		// resolves that to Plain/None when it parses the URL.
+		if strings.EqualFold(params["auth"], smtpAuthUnknown) {
+			delete(params, "auth")
+		}
 	}
 
 	return &params

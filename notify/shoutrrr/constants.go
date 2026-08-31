@@ -15,12 +15,16 @@
 // Package shoutrrr provides the shoutrrr notification service to services.
 package shoutrrr
 
+// smtpAuthUnknown is the smtp 'auth' value meaning "no method given".
+// Shoutrrr resolves it to Plain/None while parsing the URL, so it must not be sent as a param.
+const smtpAuthUnknown = "Unknown"
+
 var (
 	barkNtfyParamScheme       = []string{"http", "https"}
 	barkParamSound            = []string{"alarm", "anticipate", "bell", "birdsong", "bloom", "calypso", "chime", "choo", "descent", "electronic", "fanfare", "glass", "gotosleep", "healthnotification", "horn", "ladder", "mailsent", "minuet", "multiwaynotification", "newmail", "newsflash", "noir", "paymentsuccess", "shake", "sherwoodforest", "silence", "spell", "suspense", "telegraph", "tiptoes", "typewriters", "update"}
 	genericParamRequestmethod = []string{"CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT", "TRACE"}
 	ntfyParamPriority         = []string{"min", "low", "default", "high", "max"}
-	smtpParamAuth             = []string{"None", "Unknown", "Plain", "CramMD5", "OAuth2"}
+	smtpParamAuth             = []string{"None", smtpAuthUnknown, "Plain", "CRAMMD5", "OAuth2"}
 	smtpParamEncryption       = []string{"Auto", "ExplicitTLS", "ImplicitTLS", "None"}
 	telegramParamParsemode    = []string{"None", "HTML", "Markdown"}
 	zulipParamType            = []string{"channel", "direct"}
