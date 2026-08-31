@@ -24,6 +24,7 @@ import type {
 	smtpEncryptionOptions,
 } from '@/utils/api/types/config/notify/smtp';
 import type { TelegramParsemode } from '@/utils/api/types/config/notify/telegram';
+import type { ZulipType } from '@/utils/api/types/config/notify/zulip';
 import type { EmptyObject, Headers } from '@/utils/api/types/config/shared';
 
 export type NotifyTypesMap = {
@@ -150,8 +151,11 @@ export type NotifyGotify = NotifyBase & {
 	params?: {
 		date?: string;
 		disabletls?: string;
+		extras?: string;
+		insecureskipverify?: string;
 		priority?: string;
 		title?: string;
+		useheader?: string;
 	};
 };
 
@@ -214,7 +218,9 @@ export type NotifyMatterMost = NotifyBase & {
 		username?: string;
 	};
 	params?: {
+		disabletls?: string;
 		icon?: string;
+		title?: string;
 	};
 };
 
@@ -249,6 +255,7 @@ export type NotifyNtfy = NotifyBase & {
 		cache?: string;
 		click?: string;
 		delay?: string;
+		disabletlsverification?: string;
 		email?: string;
 		filename?: string;
 		firebase?: string;
@@ -405,10 +412,15 @@ export type NotifyZulip = NotifyBase & {
 		botkey?: string;
 		botmail?: string;
 		host?: string;
+		port?: string;
 	};
 	params?: {
+		read_by_sender?: string;
 		stream?: string;
+		title?: string;
+		to?: string;
 		topic?: string;
+		type?: ZulipType;
 	};
 };
 
