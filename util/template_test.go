@@ -18,6 +18,9 @@ package util
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
@@ -30,7 +33,6 @@ func TestTemplate_String(t *testing.T) {
 		name        string
 		template    string
 		serviceInfo serviceinfo.ServiceInfo
-		panicRegex  *string
 		want        string
 	}{
 		{
@@ -105,15 +107,21 @@ func TestTemplate_String(t *testing.T) {
 			serviceInfo: svcInfo,
 		},
 		{
-			name:        "invalid django template panic",
+			name:        "uncompilable/template is returned unchanged",
 			template:    "-{% 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
-			panicRegex:  new("Tag name must be an identifier"),
+			want:        "-{% 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
 			serviceInfo: svcInfo,
 		},
 		{
-			name:        "invalid django template execute panic",
+			name:        "unrenderable/template is returned unchanged",
 			template:    "{{ tags.0.bar }}",
-			panicRegex:  new("can't access a field by name on type string"),
+			want:        "{{ tags.0.bar }}",
+			serviceInfo: svcInfo,
+		},
+		{
+			name:        "unrenderable/a render panic does not escape",
+			template:    "{{ 1/0 }}",
+			want:        "{{ 1/0 }}",
 			serviceInfo: svcInfo,
 		},
 		{
@@ -138,21 +146,6 @@ func TestTemplate_String(t *testing.T) {
 				"%s\nTemplateString(tmpl=%q, info=%+v)",
 				packageName, tc.template, tc.serviceInfo,
 			)
-
-			if tc.panicRegex != nil {
-				// Switch Fatal to panic and disable this panic.
-				defer func() {
-					r := recover()
-
-					rStr := fmt.Sprint(r)
-					if !RegexCheck(*tc.panicRegex, rStr) {
-						t.Errorf(
-							"%s panic mismatch\ngot:  %q\nwant: %q",
-							prefix, rStr, *tc.panicRegex,
-						)
-					}
-				}()
-			}
 
 			// WHEN: TemplateString is called.
 			got := TemplateString(tc.template, tc.serviceInfo)
@@ -205,6 +198,56 @@ func TestCheckTemplate(t *testing.T) {
 					"%s\nCheckTemplate(%q) mismatch\ngot:  %t\nwant: %t",
 					packageName, tc.template,
 					got, tc.pass,
+				)
+			}
+		})
+	}
+}
+
+func TestTemplateString__cannotReadLocalFiles(t *testing.T) {
+	// GIVEN: a readable file holding a secret, and templates that try to pull
+	// it in.
+	dir := t.TempDir()
+	secret := filepath.Join(dir, "secret.txt")
+	const contents = "TOP-SECRET-TOKEN"
+	if err := os.WriteFile(secret, []byte(contents), 0o600); err != nil {
+		t.Fatalf(
+			"%s\nwrite fixture: %v",
+			packageName, err,
+		)
+	}
+
+	tests := []struct {
+		name     string
+		template string
+	}{
+		{name: "denied/include", template: `{% include "` + secret + `" %}`},
+		{name: "denied/extends", template: `{% extends "` + secret + `" %}`},
+		{name: "denied/ssi", template: `{% ssi "` + secret + `" %}`},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			prefix := fmt.Sprintf(
+				"%s\nTemplateString(tmpl=%q)",
+				packageName, tc.template,
+			)
+
+			// WHEN: the template is rendered.
+			got := TemplateString(tc.template, serviceinfo.ServiceInfo{})
+
+			// THEN: the file's contents never reach the output.
+			if strings.Contains(got, contents) {
+				t.Errorf(
+					"%s read a local file\ngot: %q",
+					prefix, got,
+				)
+			}
+			// AND: it degrades to the template rather than erroring out.
+			if got != tc.template {
+				t.Errorf(
+					"%s mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.template,
 				)
 			}
 		})
