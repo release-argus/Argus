@@ -89,6 +89,12 @@ var (
 		"",
 		"Password for basic auth (env_var=ARGUS_WEB_BASIC_AUTH_PASSWORD)",
 	)
+	AuthCreateAdmin = flag.String(
+		"auth.create-admin",
+		"",
+		"Username of the first administrator to create at startup (a password is generated and"+
+			" printed to stdout); only valid before any account exists",
+	)
 	AuthResetPassword = flag.String(
 		"auth.reset-password",
 		"",
@@ -587,6 +593,7 @@ func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 		{"web.route-prefix", &WebRoutePrefix},
 		{"web.basic-auth.username", &WebBasicAuthUsername},
 		{"web.basic-auth.password", &WebBasicAuthPassword},
+		{"auth.create-admin", &AuthCreateAdmin},
 		{"auth.reset-password", &AuthResetPassword},
 	} {
 		if !(*flagset)[f.Flag] {
