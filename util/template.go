@@ -16,6 +16,9 @@
 package util
 
 import (
+	"errors"
+	"fmt"
+	"io"
 	"strings"
 	"sync"
 
@@ -26,8 +29,25 @@ import (
 
 var pongoMu = sync.Mutex{}
 
-// TemplateString applies Django templating to template using service info.
-func TemplateString(template string, info serviceinfo.ServiceInfo) string {
+// errTemplateLoad rejects a template's attempt to read from disk.
+var errTemplateLoad = errors.New("loading templates from disk is not supported")
+
+// denyLoader refuses every template load, so tags that pull in another
+// template ({% include %}, {% extends %}, {% ssi %}) cannot read local files.
+type denyLoader struct{}
+
+func (denyLoader) Abs(_, name string) string { return name }
+
+func (denyLoader) Get(path string) (io.Reader, error) {
+	return nil, fmt.Errorf("%w: %q", errTemplateLoad, path)
+}
+
+// pongoSet compiles every template, with disk access denied.
+var pongoSet = pongo2.NewSet("argus", denyLoader{})
+
+// TemplateString applies Django templating to template using service info,
+// returning template unchanged if it cannot be compiled or rendered.
+func TemplateString(template string, info serviceinfo.ServiceInfo) (rendered string) {
 	// If the string does not represent a Jinja template.
 	if !strings.Contains(template, "{") {
 		return template
@@ -36,10 +56,18 @@ func TemplateString(template string, info serviceinfo.ServiceInfo) string {
 	pongoMu.Lock()
 	defer pongoMu.Unlock()
 
+	// A malformed or unrenderable template yields the string unchanged rather
+	// than taking the process down.
+	defer func() {
+		if r := recover(); r != nil {
+			rendered = template
+		}
+	}()
+
 	// Compile the template.
-	tpl, err := pongo2.FromString(template)
+	tpl, err := pongoSet.FromString(template)
 	if err != nil {
-		panic(err)
+		return template
 	}
 
 	// Render the template.
@@ -59,7 +87,7 @@ func TemplateString(template string, info serviceinfo.ServiceInfo) string {
 		},
 	)
 	if err != nil {
-		panic(err)
+		return template
 	}
 	return result
 }
@@ -70,6 +98,6 @@ func CheckTemplate(template string) bool {
 	pongoMu.Lock()
 	defer pongoMu.Unlock()
 
-	_, err := pongo2.FromString(template)
+	_, err := pongoSet.FromString(template)
 	return err == nil
 }
