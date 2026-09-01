@@ -70,8 +70,10 @@ func saveAuthFlags(t *testing.T) {
 	t.Helper()
 
 	resetPasswordHad := config.AuthResetPassword
+	createAdminHad := config.AuthCreateAdmin
 	t.Cleanup(func() {
 		config.AuthResetPassword = resetPasswordHad
+		config.AuthCreateAdmin = createAdminHad
 	})
 }
 
@@ -86,6 +88,7 @@ func TestSetupAuth(t *testing.T) {
 		enabled           bool
 		localDisabled     bool
 		resetPassword     string // Username for -auth.reset-password.
+		createAdmin       string // Username for -auth.create-admin.
 		closeDB           bool
 		faultPattern      string // Fail statements containing this (post-init).
 		presetUser        bool   // A user already exists (setup completed).
@@ -93,6 +96,7 @@ func TestSetupAuth(t *testing.T) {
 		wantOK            bool
 		wantLocalProvider bool
 		wantResetExit     bool
+		wantAdminExit     bool
 	}{
 		{
 			name:   "auth disabled returns no deps",
@@ -127,24 +131,67 @@ func TestSetupAuth(t *testing.T) {
 			closeDB: true,
 		},
 		{
-			name:          "reset-password flag resets the named user then exits",
+			name:          "reset-password/flag resets the named user then exits",
 			enabled:       true,
 			presetUser:    true,
 			resetPassword: "existing",
 			wantResetExit: true,
 		},
 		{
-			name:          "reset-password for an unknown user fails fatally",
+			name:          "reset-password/flag for an unknown user fails fatally",
 			enabled:       true,
 			presetUser:    true,
 			resetPassword: "ghost",
 		},
 		{
-			name:          "reset-password store failure fails fatally",
+			name:          "reset-password/store failure fails fatally",
 			enabled:       true,
 			presetUser:    true,
 			resetPassword: "existing",
 			faultPattern:  `UPDATE users SET password_hash`,
+		},
+		{
+			name:          "create-admin/creates the first administrator then exits",
+			enabled:       true,
+			createAdmin:   "root",
+			wantAdminExit: true,
+		},
+		{
+			name:          "create-admin/trims the username",
+			enabled:       true,
+			createAdmin:   "  root  ",
+			wantAdminExit: true,
+		},
+		{
+			name:        "create-admin/only whitespace fails fatally",
+			enabled:     true,
+			createAdmin: "   ",
+		},
+		{
+			name:        "create-admin/fails fatally once a user exists",
+			enabled:     true,
+			presetUser:  true,
+			createAdmin: "root",
+		},
+		{
+			name:         "create-admin/store failure fails fatally",
+			enabled:      true,
+			createAdmin:  "root",
+			faultPattern: `INSERT INTO users`,
+		},
+		{
+			name:        "create-admin/auth disabled fails fatally",
+			createAdmin: "root",
+		},
+		{
+			name:          "reset-password/auth disabled fails fatally",
+			resetPassword: "existing",
+		},
+		{
+			name:          "create-admin alongside reset-password fails fatally",
+			enabled:       true,
+			createAdmin:   "root",
+			resetPassword: "existing",
 		},
 	}
 
@@ -152,12 +199,13 @@ func TestSetupAuth(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			saveAuthFlags(t)
 			config.AuthResetPassword = new(tc.resetPassword)
+			config.AuthCreateAdmin = new(tc.createAdmin)
 
-			// Capture the one-shot reset exit instead of ending the test process.
+			// Capture the one-shot exit instead of ending the test process.
 			var resetExitCode *int
-			exitAfterResetHad := exitAfterReset
-			exitAfterReset = func(code int) { resetExitCode = &code }
-			t.Cleanup(func() { exitAfterReset = exitAfterResetHad })
+			exitAfterOneShotHad := exitAfterOneShot
+			exitAfterOneShot = func(code int) { resetExitCode = &code }
+			t.Cleanup(func() { exitAfterOneShot = exitAfterOneShotHad })
 
 			cfg := testAuthConfig(tc.enabled)
 			if tc.localDisabled {
@@ -257,6 +305,69 @@ func TestSetupAuth(t *testing.T) {
 					t.Errorf(
 						"%s reset should have replaced the password hash\ngot: %q",
 						prefix, creds.PasswordHash,
+					)
+				}
+			}
+
+			// AND: the one-shot create flow exits after creating an enabled
+			// administrator, without returning deps (the server never starts).
+			if tc.wantAdminExit {
+				if resetExitCode == nil || *resetExitCode != 0 {
+					t.Errorf(
+						"%s create-admin should exit(0)\ngot: %v",
+						prefix, resetExitCode,
+					)
+				}
+				verifyStore, err := store.New(t.Context(), db)
+				if err != nil {
+					t.Fatalf(
+						"%s verify store: %v",
+						prefix, err,
+					)
+				}
+				// AND: the account is reachable under the trimmed username.
+				username := strings.TrimSpace(tc.createAdmin)
+				creds, err := verifyStore.LocalCredentials(t.Context(), username)
+				if err != nil || creds == nil {
+					t.Fatalf(
+						"%s created admin lookup failed: %v",
+						prefix, err,
+					)
+				}
+				if creds.PasswordHash == "" {
+					t.Errorf("%s created admin has no password hash", prefix)
+				}
+				if !creds.Enabled {
+					t.Errorf("%s created admin should be enabled", prefix)
+				}
+				// AND: it holds admin rights.
+				_, grants, err := verifyStore.UserWithGrants(t.Context(), creds.UserID)
+				if err != nil {
+					t.Fatalf(
+						"%s created admin grants: %v",
+						prefix, err,
+					)
+				}
+				if len(grants) == 0 {
+					t.Errorf("%s created admin should hold the admin group's grants", prefix)
+				}
+			}
+
+			// AND: a refused create-admin leaves no account behind.
+			if tc.enabled && tc.createAdmin != "" && !tc.wantAdminExit {
+				verifyStore, err := store.New(t.Context(), db)
+				if err != nil {
+					t.Fatalf(
+						"%s verify store: %v",
+						prefix, err,
+					)
+				}
+				username := strings.TrimSpace(tc.createAdmin)
+				if creds, err := verifyStore.LocalCredentials(t.Context(), username); err == nil &&
+					creds != nil {
+					t.Errorf(
+						"%s no administrator %q should have been created",
+						prefix, username,
 					)
 				}
 			}

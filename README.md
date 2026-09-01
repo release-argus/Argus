@@ -47,6 +47,8 @@ A demo of Argus can be seen on our website [here](https://release-argus.io/demo)
 ```bash
 $ argus -h
 Usage of /usr/local/bin/argus:
+  -auth.create-admin string
+        Username of the first administrator to create at startup (a password is generated and printed to stdout); only valid before any account exists
   -auth.reset-password string
         Username whose password to reset at startup (a new password is generated and printed to stdout); their sessions are revoked, but their API tokens are unchanged
   -config.check
@@ -106,7 +108,7 @@ settings:
 Notes:
 
 - `settings.auth` and `settings.web.basic_auth` are mutually exclusive.
-- The **first administrator** is created through the UI's first-run setup page, which is reachable without credentials until an account exists. Complete setup before exposing a freshly auth-enabled instance to an untrusted network.
+- The **first administrator** is created through the UI's first-run setup page, which is reachable without credentials until an account exists. Complete setup before exposing a freshly auth-enabled instance to an untrusted network, or create the account up front with `argus -auth.create-admin <username>`. It generates a password, prints it to stdout and exits, so setup is already closed by the time the server accepts connections.
 - API tokens cannot create or revoke API tokens; token management needs a browser session.
 - Locked out? `argus -auth.reset-password <username>` generates a new password, prints it to stdout and revokes that user's sessions (their API tokens are left intact).
 - With auth on, RBAC grants govern access. `/metrics` and `/api/v1/counts` require `metric:read`, so Prometheus scrapers and Heimdall need a token with that permission.

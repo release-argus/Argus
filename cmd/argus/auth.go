@@ -17,8 +17,10 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -43,16 +45,18 @@ var pruneTicker = func() (<-chan time.Time, func()) {
 	return ticker.C, ticker.Stop
 }
 
-// exitAfterReset ends the process after the one-shot -auth.reset-password flow
+// exitAfterOneShot ends the process after a one-shot auth CLI flow
 // (overridable in tests).
-var exitAfterReset = os.Exit
+var exitAfterOneShot = os.Exit
 
 // setupAuth initialises the auth subsystem when auth is enabled:
 // the store (migrations, permission sync, seeded groups), password recovery,
 // the session manager (with periodic pruning), and the provider registry.
-// The first administrator is created through the UI's first-run setup page.
+// The first administrator comes from -auth.create-admin or the UI's first-run
+// setup page.
 // Returns (nil, true) when auth is disabled and (nil, false) after a fatal error.
-// A successful -auth.reset-password exits the process rather than returning.
+// A successful -auth.create-admin/-auth.reset-password exits the process rather
+// than returning.
 func setupAuth(
 	ctx context.Context,
 	g *errgroup.Group,
@@ -70,12 +74,54 @@ func setupAuth(
 			)
 			return nil, false
 		}
+		if config.AuthCreateAdmin != nil && *config.AuthCreateAdmin != "" {
+			logx.Fatal(
+				"auth is not enabled, so -auth.create-admin has nothing to create",
+				logFrom,
+			)
+			return nil, false
+		}
 		return nil, true
 	}
 
 	authStore, err := store.New(ctx, dbHandle)
 	if err != nil {
 		logx.Fatal(err, logFrom)
+		return nil, false
+	}
+
+	// -auth.create-admin <username>: create the first administrator up front,
+	// so first-run setup is not left open to whoever reaches the port first.
+	if config.AuthCreateAdmin != nil && *config.AuthCreateAdmin != "" {
+		if config.AuthResetPassword != nil && *config.AuthResetPassword != "" {
+			logx.Fatal(
+				"-auth.create-admin and -auth.reset-password cannot be used together",
+				logFrom,
+			)
+			return nil, false
+		}
+		username := strings.TrimSpace(*config.AuthCreateAdmin)
+		if username == "" {
+			logx.Fatal("-auth.create-admin needs a username", logFrom)
+			return nil, false
+		}
+		password := util.RandAlphaNumericLower(24)
+		if _, err := authStore.CreateFirstAdmin(ctx, username, "", password); err != nil {
+			if errors.Is(err, store.ErrSetupComplete) {
+				err = fmt.Errorf(
+					"%w: -auth.create-admin only creates the first account,"+
+						" use -auth.reset-password to recover an existing one",
+					err,
+				)
+			}
+			logx.Fatal(err, logFrom)
+			return nil, false
+		}
+		fmt.Printf(
+			"Administrator %q has been created with password: %q\n",
+			username, password,
+		)
+		exitAfterOneShot(0)
 		return nil, false
 	}
 
@@ -92,7 +138,7 @@ func setupAuth(
 			"Password for user %q has been reset to: %q\n",
 			username, password,
 		)
-		exitAfterReset(0)
+		exitAfterOneShot(0)
 		return nil, false
 	}
 
