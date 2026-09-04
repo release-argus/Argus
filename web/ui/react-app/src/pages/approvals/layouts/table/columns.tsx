@@ -1,32 +1,37 @@
-import type { HeaderContext } from '@tanstack/react-table';
+import type { ColumnDef, HeaderContext } from '@tanstack/react-table';
 import { formatISO9075 } from 'date-fns';
 import ServiceImage from '@/components/approvals/service-image';
 import { ServiceActionRelease } from '@/components/approvals/table/service-action-release';
 import { ServiceID } from '@/components/approvals/table/service-id';
 import { ServiceStatus } from '@/components/approvals/table/service-status';
-import type { ColumnDefWithMeta } from '@/components/ui/data-table';
+import type { DataTableFeatures } from '@/components/ui/data-table';
 import { DataTableColumnHeader } from '@/components/ui/data-table-column-header';
 import { relativeDate } from '@/utils';
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
 
-type HeaderContextWithReset<TData, TValue> = HeaderContext<TData, TValue> & {
-	resetSorting?: () => void;
-};
+/**
+ * Builds a column header renderer with sorting and hiding options.
+ *
+ * @param title - The title of the column.
+ */
+const columnHeader =
+	(title: string) =>
+	({ column, table }: HeaderContext<DataTableFeatures, ServiceSummary>) => (
+		<DataTableColumnHeader
+			column={column}
+			resetSorting={table.options.meta?.resetSorting}
+			title={title}
+		/>
+	);
 
-export const columns: ColumnDefWithMeta<ServiceSummary>[] = [
+export const columns: ColumnDef<DataTableFeatures, ServiceSummary>[] = [
 	{
 		accessorKey: 'icon',
 		cell: ({ row }) => (
 			<ServiceImage className="aspect-square size-8" service={row.original} />
 		),
 		enableSorting: false,
-		header: (context: HeaderContextWithReset<ServiceSummary, unknown>) => (
-			<DataTableColumnHeader
-				column={context.column}
-				resetSorting={context.resetSorting}
-				title="Icon"
-			/>
-		),
+		header: columnHeader('Icon'),
 		id: 'icon',
 		meta: { hideWhenAllValuesEmpty: true, label: 'Icon' },
 	},
@@ -34,26 +39,14 @@ export const columns: ColumnDefWithMeta<ServiceSummary>[] = [
 		accessorKey: 'id',
 		cell: ({ row }) => <ServiceID row={row} />,
 		enableSorting: true,
-		header: (context: HeaderContextWithReset<ServiceSummary, unknown>) => (
-			<DataTableColumnHeader
-				column={context.column}
-				resetSorting={context.resetSorting}
-				title="ID"
-			/>
-		),
+		header: columnHeader('ID'),
 		id: 'id',
 		meta: { label: 'ID' },
 	},
 	{
 		accessorKey: 'name',
 		enableSorting: true,
-		header: (context: HeaderContextWithReset<ServiceSummary, unknown>) => (
-			<DataTableColumnHeader
-				column={context.column}
-				resetSorting={context.resetSorting}
-				title="Name"
-			/>
-		),
+		header: columnHeader('Name'),
 		id: 'name',
 		meta: { hideWhenAllValuesEmpty: true, label: 'Name' },
 	},
@@ -65,13 +58,7 @@ export const columns: ColumnDefWithMeta<ServiceSummary>[] = [
 				? row.original.status?.deployed_version
 				: null,
 		enableSorting: true,
-		header: (context: HeaderContextWithReset<ServiceSummary, unknown>) => (
-			<DataTableColumnHeader
-				column={context.column}
-				resetSorting={context.resetSorting}
-				title="Deployed Version"
-			/>
-		),
+		header: columnHeader('Deployed Version'),
 		id: 'deployed_version',
 		meta: { label: 'Deployed Version' },
 	},
@@ -89,26 +76,14 @@ export const columns: ColumnDefWithMeta<ServiceSummary>[] = [
 			</div>
 		),
 		enableSorting: true,
-		header: (context: HeaderContextWithReset<ServiceSummary, unknown>) => (
-			<DataTableColumnHeader
-				column={context.column}
-				resetSorting={context.resetSorting}
-				title="Deployed At"
-			/>
-		),
+		header: columnHeader('Deployed At'),
 		id: 'deployed_version_timestamp',
 		meta: { label: 'Deployed At' },
 	},
 	{
 		accessorFn: (row) => row.status?.latest_version ?? null,
 		enableSorting: true,
-		header: (context: HeaderContextWithReset<ServiceSummary, unknown>) => (
-			<DataTableColumnHeader
-				column={context.column}
-				resetSorting={context.resetSorting}
-				title="Latest Version"
-			/>
-		),
+		header: columnHeader('Latest Version'),
 		id: 'latest_version',
 		meta: { label: 'Latest Version' },
 	},
@@ -124,13 +99,7 @@ export const columns: ColumnDefWithMeta<ServiceSummary>[] = [
 			</div>
 		),
 		enableSorting: true,
-		header: (context: HeaderContextWithReset<ServiceSummary, unknown>) => (
-			<DataTableColumnHeader
-				column={context.column}
-				resetSorting={context.resetSorting}
-				title="Found At"
-			/>
-		),
+		header: columnHeader('Found At'),
 		id: 'latest_version_timestamp',
 		meta: { label: 'Found At' },
 	},
@@ -145,13 +114,7 @@ export const columns: ColumnDefWithMeta<ServiceSummary>[] = [
 		),
 
 		enableSorting: true,
-		header: (context: HeaderContextWithReset<ServiceSummary, unknown>) => (
-			<DataTableColumnHeader
-				column={context.column}
-				resetSorting={context.resetSorting}
-				title="Last Queried"
-			/>
-		),
+		header: columnHeader('Last Queried'),
 		id: 'last_queried',
 		meta: { label: 'Last Queried' },
 	},
@@ -159,26 +122,14 @@ export const columns: ColumnDefWithMeta<ServiceSummary>[] = [
 		accessorFn: (row) => row.status?.state ?? null,
 		cell: ({ row }) => <ServiceStatus row={row} />,
 		enableSorting: true,
-		header: (context: HeaderContextWithReset<ServiceSummary, unknown>) => (
-			<DataTableColumnHeader
-				column={context.column}
-				resetSorting={context.resetSorting}
-				title="State"
-			/>
-		),
+		header: columnHeader('State'),
 		id: 'state',
 		meta: { label: 'State' },
 	},
 	{
 		cell: ({ row }) => <ServiceActionRelease row={row} />,
 		enableSorting: false,
-		header: (context: HeaderContextWithReset<ServiceSummary, unknown>) => (
-			<DataTableColumnHeader
-				column={context.column}
-				resetSorting={context.resetSorting}
-				title="Actions"
-			/>
-		),
+		header: columnHeader('Actions'),
 		id: 'actions',
 		meta: { label: 'Actions' },
 	},

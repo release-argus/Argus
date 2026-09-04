@@ -1,7 +1,8 @@
-import type { Column, SortDirection } from '@tanstack/react-table';
+import type { Column, RowData, SortDirection } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ChevronsUpDown, EyeOff } from 'lucide-react';
 import { type HTMLAttributes, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import type { DataTableFeatures } from '@/components/ui/data-table';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -34,15 +35,17 @@ const SortArrow = ({ sortDirection, canSort }: SortArrowProps) => {
 	return <ChevronsUpDown />;
 };
 
-type DataTableColumnHeaderProps<TData, TValue> =
-	HTMLAttributes<HTMLDivElement> & {
-		/* The column to render the header for. */
-		column: Column<TData, TValue>;
-		/* The title of the column. */
-		title: string;
-		/* Triggers the 'sorting reset' signal to a new value. */
-		resetSorting?: () => void;
-	};
+type DataTableColumnHeaderProps<
+	TData extends RowData,
+	TValue,
+> = HTMLAttributes<HTMLDivElement> & {
+	/* The column to render the header for. */
+	column: Column<DataTableFeatures, TData, TValue>;
+	/* The title of the column. */
+	title: string;
+	/* Triggers the 'sorting reset' signal to a new value. */
+	resetSorting?: () => void;
+};
 
 /**
  * Renders a column header with sorting and hiding options.
@@ -53,7 +56,7 @@ type DataTableColumnHeaderProps<TData, TValue> =
  * @param resetSorting - Triggers the 'sorting reset' signal to a new value, resetting the sorting state of the form.
  * @returns The rendered column header, with sorting and hiding options if applicable.
  */
-export const DataTableColumnHeader = <TData, TValue>({
+export const DataTableColumnHeader = <TData extends RowData, TValue>({
 	column,
 	title,
 	className,

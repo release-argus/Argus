@@ -1,4 +1,4 @@
-import type { VisibilityState } from '@tanstack/react-table';
+import type { ColumnVisibilityState } from '@tanstack/react-table';
 import {
 	TABLE_COLUMNS_HIDDEN_STORAGE_KEY,
 	TABLE_COLUMNS_VISIBLE_STORAGE_KEY_LEGACY,
@@ -9,7 +9,7 @@ import type { ServiceSummary } from '@/utils/api/types/config/summary';
 
 type ColumnVisibilityProps = {
 	/* The current visibility state. */
-	visibility: VisibilityState;
+	visibility: ColumnVisibilityState;
 	/* The table data. */
 	data: ServiceSummary[];
 };
@@ -80,7 +80,7 @@ export const resetColumnVisibility = ({
  *
  * @returns The visibility state of every known column.
  */
-export const loadColumnVisibility = (): VisibilityState => {
+export const loadColumnVisibility = (): ColumnVisibilityState => {
 	localStorage.removeItem(TABLE_COLUMNS_VISIBLE_STORAGE_KEY_LEGACY);
 
 	const hidden = new Set(
@@ -91,7 +91,7 @@ export const loadColumnVisibility = (): VisibilityState => {
 	// Ignore a state that would leave nothing to show.
 	const hideNone = COLUMN_IDS.every((id) => hidden.has(id));
 
-	return COLUMN_IDS.reduce<VisibilityState>((acc, id) => {
+	return COLUMN_IDS.reduce<ColumnVisibilityState>((acc, id) => {
 		acc[id] = hideNone || !hidden.has(id);
 		return acc;
 	}, {});
@@ -102,7 +102,7 @@ export const loadColumnVisibility = (): VisibilityState => {
  *
  * @param visibility - A map of column IDs to their visibility state.
  */
-export const persistColumnVisibility = (visibility: VisibilityState) => {
+export const persistColumnVisibility = (visibility: ColumnVisibilityState) => {
 	localStorage.setItem(
 		TABLE_COLUMNS_HIDDEN_STORAGE_KEY,
 		Object.entries(visibility)
