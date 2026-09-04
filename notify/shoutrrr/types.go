@@ -59,7 +59,7 @@ type Base struct {
 
 // Shoutrrr contains the configuration for a Shoutrrr sender (e.g. Slack).
 type Shoutrrr struct {
-	Base `json:",inline" yaml:",inline"`
+	Base `json:",embed" yaml:",inline"`
 
 	ID string `json:"name,omitzero" yaml:"-"` // ID for this Shoutrrr sender.
 
@@ -76,7 +76,7 @@ type ShoutrrrsDefaults map[string]*Defaults
 
 // Defaults are the default values for Shoutrrr.
 type Defaults struct {
-	Base `json:",inline" yaml:",inline"`
+	Base `json:",embed" yaml:",inline"`
 }
 
 // ############

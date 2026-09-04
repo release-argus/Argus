@@ -36,7 +36,7 @@ var Type = "url"
 
 // Lookup is a web-based lookup type.
 type Lookup struct {
-	base.Lookup `json:",inline" yaml:",inline"`
+	base.Lookup `json:",embed" yaml:",inline"`
 
 	Method            string `json:"method,omitzero" yaml:"method,omitzero"`                           // REQUIRED: HTTP method.
 	URL               string `json:"url,omitzero" yaml:"url,omitzero"`                                 // REQUIRED: url to query.

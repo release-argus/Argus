@@ -491,7 +491,7 @@ func unmapPrefix(prefix netip.Prefix) netip.Prefix {
 
 // Settings holds the runtime configuration for the binary.
 type Settings struct {
-	SettingsBase `json:",inline" yaml:",inline"` // SettingsBase for the binary.
+	SettingsBase `json:",embed" yaml:",inline"` // SettingsBase for the binary.
 
 	FromFlags    SettingsBase `json:"-" yaml:"-"` // Values from flags.
 	HardDefaults SettingsBase `json:"-" yaml:"-"` // Hard defaults.

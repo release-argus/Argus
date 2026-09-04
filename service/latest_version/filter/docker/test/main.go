@@ -49,7 +49,7 @@ func GetDefaultOfDockerType(t *testing.T, dType string, defaults *docker.Default
 
 // MockRegistryDefaults is a minimal RegistryDefaults used in tests.
 type MockRegistryDefaults struct {
-	docker.CommonRegistryDefaults `json:",inline" yaml:",inline"`
+	docker.CommonRegistryDefaults `json:",embed" yaml:",inline"`
 }
 
 // IsZero implements the yaml.IsZeroer interface.

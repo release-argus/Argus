@@ -27,10 +27,10 @@ import (
 
 // Defaults are the default values for DockerCheck.
 type Defaults struct {
-	Type                    string                          `json:"type,omitzero" yaml:"type,omitzero"` // Type of the Docker registry.
-	ContainerDetailDefaults `json:",inline" yaml:",inline"` // Default Tag template.
-	Registry                RegistryDefaultsSet             `json:"registry,omitzero" yaml:"registry,omitzero"` // Registry-specific defaults.
-	Defaults                *Defaults                       `json:"-" yaml:"-"`                                 // Defaults to fall back on.
+	Type                    string                         `json:"type,omitzero" yaml:"type,omitzero"` // Type of the Docker registry.
+	ContainerDetailDefaults `json:",embed" yaml:",inline"` // Default Tag template.
+	Registry                RegistryDefaultsSet            `json:"registry,omitzero" yaml:"registry,omitzero"` // Registry-specific defaults.
+	Defaults                *Defaults                      `json:"-" yaml:"-"`                                 // Defaults to fall back on.
 }
 
 // RegistryDefaultsSet holds per-registry default configuration.

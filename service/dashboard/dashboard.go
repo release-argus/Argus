@@ -36,7 +36,7 @@ type OptionsBase struct {
 
 // Options are options for the Dashboard.
 type Options struct {
-	OptionsBase `json:",inline" yaml:",inline"`
+	OptionsBase `json:",embed" yaml:",inline"`
 
 	iconExpanded       *string  // Icon URL after env var expansion (nil if no env var expansion).
 	iconNotify         *string  // Fallback icon URL from a Notify after env var expansion (nil if we already have an Icon).
@@ -50,7 +50,7 @@ type Options struct {
 
 // OptionsDecode is an unmarshal-only helper for [Options].
 type OptionsDecode struct {
-	OptionsBase `json:",inline" yaml:",inline"`
+	OptionsBase `json:",embed" yaml:",inline"`
 
 	Tags any `json:"tags,omitempty" yaml:"tags,omitempty"`
 }

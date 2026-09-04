@@ -609,7 +609,7 @@ func (r RequireDockerRegistryDefaultsAuth) IsZero() bool {
 // RequireDockerRegistryDefaultsAuthWithUsername are the auth values for a RequireDocker that takes a Username with Token.
 type RequireDockerRegistryDefaultsAuthWithUsername struct {
 	Username                          string `json:"username,omitzero" yaml:"username,omitzero"` // Username to get a new token.
-	RequireDockerRegistryDefaultsAuth `json:",inline" yaml:",inline"`
+	RequireDockerRegistryDefaultsAuth `json:",embed" yaml:",inline"`
 }
 
 // IsZero implements the yaml.IsZeroer interface.

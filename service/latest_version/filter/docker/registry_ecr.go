@@ -49,12 +49,12 @@ type ecrTokenResponse struct {
 
 // ECRRegistryDefaults holds defaults for queries on Amazon ECR Public Gallery registries.
 type ECRRegistryDefaults struct {
-	CommonRegistryDefaults `json:",inline" yaml:",inline"`
+	CommonRegistryDefaults `json:",embed" yaml:",inline"`
 }
 
 // ECRRegistry holds data for queries on an Amazon ECR Public Gallery registry.
 type ECRRegistry struct {
-	CommonRegistry `json:",inline" yaml:",inline"`
+	CommonRegistry `json:",embed" yaml:",inline"`
 }
 
 // #######################
@@ -248,7 +248,7 @@ type ECRAuthDefaults struct {
 
 // ECRAuth holds authentication state for the Amazon ECR Public Gallery.
 type ECRAuth struct {
-	ECRAuthDefaults `json:",inline" yaml:",inline"`
+	ECRAuthDefaults `json:",embed" yaml:",inline"`
 
 	sf singleflight.Group // Deduplicate refreshes.
 }

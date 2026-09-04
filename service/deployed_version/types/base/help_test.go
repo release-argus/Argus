@@ -32,7 +32,7 @@ import (
 var packageName = "dvbase"
 
 type testLookup struct {
-	Lookup `yaml:",inline" json:",inline"`
+	Lookup `yaml:",inline" json:",embed"`
 }
 
 func TestMain(m *testing.M) {
@@ -72,7 +72,7 @@ func plainDefaultsConfig(t *testing.T) DefaultsConfig {
 }
 
 type lookupImpl struct {
-	Lookup `json:",inline" yaml:",inline"`
+	Lookup `json:",embed" yaml:",inline"`
 }
 
 func (l *lookupImpl) ApplyOverrides(string, []byte) error { return nil }

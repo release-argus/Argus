@@ -69,12 +69,12 @@ type WebHooksDefaults map[string]*Defaults
 
 // Defaults are the default values for WebHook.
 type Defaults struct {
-	Base `json:",inline" yaml:",inline"`
+	Base `json:",embed" yaml:",inline"`
 }
 
 // WebHook to send for a new version.
 type WebHook struct {
-	Base `json:",inline" yaml:",inline"`
+	Base `json:",embed" yaml:",inline"`
 
 	ID string `json:"name,omitzero" yaml:"-"` // Unique across the WebHooks.
 
