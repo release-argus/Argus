@@ -48,21 +48,18 @@ const GENERIC = ({
 	// biome-ignore lint/correctness/useExhaustiveDependencies: fallback on first load.
 	useEffect(() => {
 		ensureValue<GenericRequestMethod>({
-			defaultValue: defaults?.params?.requestmethod,
+			defaultValue: defaults?.params?.method,
 			fallback: Object.values(genericRequestMethodOptions)[0].value,
 			getValues,
-			path: `${name}.params.requestmethod`,
+			path: `${name}.params.method`,
 			setValue,
 		});
 	}, [main]);
 
 	const genericRequestMethodOptionsNormalised = useMemo(
 		() =>
-			withDefaultOption(
-				genericRequestMethodOptions,
-				defaults?.params?.requestmethod,
-			),
-		[defaults?.params?.requestmethod],
+			withDefaultOption(genericRequestMethodOptions, defaults?.params?.method),
+		[defaults?.params?.method],
 	);
 
 	return (
@@ -147,7 +144,7 @@ const GENERIC = ({
 				<FieldSelect
 					colSize={{ sm: 4 }}
 					label="Request Method"
-					name={`${name}.params.requestmethod`}
+					name={`${name}.params.method`}
 					options={genericRequestMethodOptionsNormalised}
 					tooltip={{
 						content: 'The HTTP request method',

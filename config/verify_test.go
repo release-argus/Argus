@@ -505,7 +505,7 @@ var configStr = test.TrimYAML(`
 					contenttype: application/json
 					disabletls: 'no'
 					messagekey: message
-					requestmethod: POST
+					method: POST
 					titlekey: title
 			googlechat:
 				type: googlechat
