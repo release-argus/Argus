@@ -7,6 +7,7 @@ import { ToolbarProvider } from '@/components/approvals/toolbar/toolbar-context'
 import {
 	APPROVALS_TOOLBAR_VIEW,
 	type ApprovalsToolbarOptions,
+	type CardTimestampType,
 	DEFAULT_HIDE_VALUE,
 	DEFAULT_VIEW_VALUE,
 	HideValue,
@@ -21,6 +22,10 @@ import { GridLayout } from '@/pages/approvals/layouts/grid';
 import { TableLayout } from '@/pages/approvals/layouts/table/table';
 import type { TagsTriType } from '@/types/util';
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
+import {
+	loadCardTimestamps,
+	persistCardTimestamps,
+} from '@/utils/card-timestamps';
 import { visibleServices as getVisibleServices } from '@/utils/visible-services';
 
 const toolbarDefaults: ApprovalsToolbarOptions = {
@@ -225,9 +230,23 @@ export const Approvals = (): ReactElement => {
 	const [tableColumnVisibility, setTableColumnVisibility] =
 		useState<VisibilityState>({});
 
+	// Timestamps shown at the bottom of the service card..
+	const [cardTimestamps, setCardTimestamps] =
+		useState<CardTimestampType[]>(loadCardTimestamps);
+	const toggleCardTimestamp = useCallback((value: CardTimestampType) => {
+		setCardTimestamps((current) => {
+			const next = current.includes(value)
+				? current.filter((timestamp) => timestamp !== value)
+				: [...current, value];
+			persistCardTimestamps(next);
+			return next;
+		});
+	}, []);
+
 	return (
 		<ToolbarProvider
 			value={{
+				cardTimestamps,
 				hasOrderChanged,
 				onSaveOrder: handleSaveOrder,
 				setHide,
@@ -241,6 +260,7 @@ export const Approvals = (): ReactElement => {
 				tableColumnVisibility,
 
 				tableInstance,
+				toggleCardTimestamp,
 				toggleEditMode,
 
 				values: toolbarOptions,

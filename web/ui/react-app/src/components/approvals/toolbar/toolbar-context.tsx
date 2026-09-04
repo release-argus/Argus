@@ -7,6 +7,7 @@ import {
 } from 'react';
 import type {
 	ApprovalsToolbarOptions,
+	CardTimestampType,
 	ToolbarViewOption,
 } from '@/constants/toolbar';
 import type { TagsTriType } from '@/types/util';
@@ -26,6 +27,11 @@ export type ToolbarContextValue = {
 	setView: (value: ToolbarViewOption) => void;
 	/* Toggles the 'editMode' value in the URL */
 	toggleEditMode: () => void;
+
+	/* Timestamps shown at the bottom of the service card */
+	cardTimestamps: CardTimestampType[];
+	/* Toggles a timestamp shown at the bottom of the service card */
+	toggleCardTimestamp: (value: CardTimestampType) => void;
 
 	/* Tanstack table instance */
 	tableInstance?: Table<ServiceSummary>;

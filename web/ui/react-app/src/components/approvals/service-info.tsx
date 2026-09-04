@@ -2,6 +2,8 @@ import type { FC } from 'react';
 import { ServiceActionRelease } from '@/components/approvals';
 import ServiceInfoDeployedVersion from '@/components/approvals/service-info--deployed-version';
 import ServiceInfoLatestVersion from '@/components/approvals/service-info--latest-version';
+import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
+import { CardTimestamp } from '@/constants/toolbar';
 import { relativeDate } from '@/utils';
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
 
@@ -24,6 +26,9 @@ const ServiceInfo: FC<ServiceInfoProps> = ({
 	updateAvailable,
 	updateSkipped,
 }) => {
+	const { cardTimestamps } = useToolbar();
+	const status = service?.status;
+
 	return (
 		<div className="flex size-full min-h-22 flex-col gap-y-2">
 			<ul className="wrap-anywhere mb-auto flex w-full flex-col gap-1">
@@ -46,13 +51,30 @@ const ServiceInfo: FC<ServiceInfoProps> = ({
 					updateSkipped={updateSkipped}
 				/>
 			)}
-			<small className="w-full items-center font-medium text-muted-foreground text-xs leading-none">
-				{service?.status?.last_queried ? (
-					<>queried {relativeDate(new Date(service?.status.last_queried))}</>
-				) : service?.loading ? (
-					'loading'
-				) : (
-					'no successful queries'
+			<small className="flex w-full flex-col gap-1 font-medium text-muted-foreground text-xs leading-none">
+				{cardTimestamps.includes(CardTimestamp.Deployed) &&
+					status?.deployed_version_timestamp && (
+						<span data-timestamp={CardTimestamp.Deployed}>
+							deployed{' '}
+							{relativeDate(new Date(status.deployed_version_timestamp))}
+						</span>
+					)}
+				{cardTimestamps.includes(CardTimestamp.Found) &&
+					status?.latest_version_timestamp && (
+						<span data-timestamp={CardTimestamp.Found}>
+							found {relativeDate(new Date(status.latest_version_timestamp))}
+						</span>
+					)}
+				{cardTimestamps.includes(CardTimestamp.Queried) && (
+					<span data-timestamp={CardTimestamp.Queried}>
+						{status?.last_queried ? (
+							<>queried {relativeDate(new Date(status.last_queried))}</>
+						) : service?.loading ? (
+							'loading'
+						) : (
+							'no successful queries'
+						)}
+					</span>
 				)}
 			</small>
 		</div>

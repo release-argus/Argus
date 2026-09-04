@@ -1,13 +1,11 @@
-import { formatRelative } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { enGB } from 'date-fns/locale';
 
 /**
- * Returns a relative date string.
+ * Returns how long ago date was, e.g. '20 days ago'.
  *
  * @param date - The date to format.
  */
-const relativeDate = (date: Date) => {
-	const now = new Date();
-	return formatRelative(date, now, { locale: enGB });
-};
+const relativeDate = (date: Date) =>
+	formatDistanceToNow(date, { addSuffix: true, locale: enGB });
 export default relativeDate;

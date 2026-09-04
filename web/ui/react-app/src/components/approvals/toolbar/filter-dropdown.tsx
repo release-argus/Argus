@@ -34,6 +34,7 @@ import {
 	type HideValueType,
 	TABLE_COLUMNS_ORDER_STORAGE_KEY,
 	toolbarHideOptions,
+	toolbarTimestampOptions,
 } from '@/constants/toolbar';
 import { getServiceSummaries } from '@/hooks/use-services';
 import {
@@ -55,6 +56,8 @@ const FilterDropdown: FC = () => {
 	const queryClient = useQueryClient();
 	const {
 		values,
+		cardTimestamps,
+		toggleCardTimestamp,
 		setHide,
 		setView,
 		tableInstance,
@@ -212,7 +215,10 @@ const FilterDropdown: FC = () => {
 							<DropdownMenuCheckboxItem
 								checked={isSelected}
 								key={key}
-								onClick={() => handleHideOptionClick(key)}
+								onClick={(event) => {
+									event.preventDefault();
+									handleHideOptionClick(key);
+								}}
 							>
 								{label}
 							</DropdownMenuCheckboxItem>
@@ -220,11 +226,34 @@ const FilterDropdown: FC = () => {
 					})}
 					<DropdownMenuItem
 						className="cursor-pointer"
-						onClick={handleResetHideFilters}
+						onClick={(event) => {
+							event.preventDefault();
+							handleResetHideFilters();
+						}}
 					>
 						Reset
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
+				{values.view === APPROVALS_TOOLBAR_VIEW.GRID.value && (
+					<>
+						<DropdownMenuSeparator />
+						<DropdownMenuGroup>
+							<DropdownMenuLabel>Timestamps:</DropdownMenuLabel>
+							{toolbarTimestampOptions.map(({ key, label }) => (
+								<DropdownMenuCheckboxItem
+									checked={cardTimestamps.includes(key)}
+									key={key}
+									onClick={(event) => {
+										event.preventDefault();
+										toggleCardTimestamp(key);
+									}}
+								>
+									{label}
+								</DropdownMenuCheckboxItem>
+							))}
+						</DropdownMenuGroup>
+					</>
+				)}
 				<DropdownMenuSeparator className="sm:hidden" />
 				<DropdownMenuGroup className="sm:hidden">
 					<DropdownMenuLabel>Layout:</DropdownMenuLabel>
@@ -261,7 +290,10 @@ const FilterDropdown: FC = () => {
 							{tableColumnOptions}
 							<DropdownMenuItem
 								className="cursor-pointer"
-								onClick={handleResetColumns}
+								onClick={(event) => {
+									event.preventDefault();
+									handleResetColumns();
+								}}
 							>
 								Reset
 							</DropdownMenuItem>
