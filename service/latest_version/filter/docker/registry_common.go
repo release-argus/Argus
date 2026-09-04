@@ -38,9 +38,9 @@ type CommonRegistryDefaults struct {
 
 // CommonRegistry holds shared fields for a registry checkers.
 type CommonRegistry struct {
-	Type            string                          `json:"type,omitzero" yaml:"type,omitzero"` // Type of registry to check.
-	ContainerDetail `json:",inline" yaml:",inline"` // Image/Tag to check.
-	Auth            RegistryAuth                    `json:"auth,omitzero" yaml:"auth,omitzero"` // Auth details.
+	Type            string                         `json:"type,omitzero" yaml:"type,omitzero"` // Type of registry to check.
+	ContainerDetail `json:",embed" yaml:",inline"` // Image/Tag to check.
+	Auth            RegistryAuth                   `json:"auth,omitzero" yaml:"auth,omitzero"` // Auth details.
 
 	// defaults form a fallback chain:
 	//
@@ -53,7 +53,7 @@ type CommonRegistry struct {
 // CommonRegistryDecode is an unmarshal-only helper for [CommonRegistry].
 type CommonRegistryDecode struct {
 	Type            string          `json:"type,omitzero" yaml:"type,omitzero"`
-	ContainerDetail ContainerDetail `json:",inline" yaml:",inline"`
+	ContainerDetail ContainerDetail `json:",embed" yaml:",inline"`
 }
 
 // #######################

@@ -39,12 +39,12 @@ var quayQueryURL = "https://quay.io/api/v1/repository/%s/tag/?onlyActiveTags=tru
 
 // QuayRegistryDefaults holds defaults for queries on Quay registries.
 type QuayRegistryDefaults struct {
-	CommonRegistryDefaults `json:",inline" yaml:",inline"`
+	CommonRegistryDefaults `json:",embed" yaml:",inline"`
 }
 
 // QuayRegistry holds data for queries on a Quay registry.
 type QuayRegistry struct {
-	CommonRegistry `json:",inline" yaml:",inline"`
+	CommonRegistry `json:",embed" yaml:",inline"`
 }
 
 // #######################
@@ -249,7 +249,7 @@ type QuayAuthDefaults struct {
 
 // QuayAuth holds authentication state for Quay.
 type QuayAuth struct {
-	QuayAuthDefaults `json:",inline" yaml:",inline"`
+	QuayAuthDefaults `json:",embed" yaml:",inline"`
 }
 
 // ################

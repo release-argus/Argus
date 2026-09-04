@@ -59,12 +59,12 @@ type hubTokenResponse struct {
 
 // HubRegistryDefaults holds defaults for queries on Docker Hub registries.
 type HubRegistryDefaults struct {
-	CommonRegistryDefaults `json:",inline" yaml:",inline"`
+	CommonRegistryDefaults `json:",embed" yaml:",inline"`
 }
 
 // HubRegistry holds data for queries on a Docker Hub registry.
 type HubRegistry struct {
-	CommonRegistry `json:",inline" yaml:",inline"`
+	CommonRegistry `json:",embed" yaml:",inline"`
 }
 
 // #######################
@@ -274,7 +274,7 @@ type HubAuthDefaults struct {
 
 // HubAuth holds authentication values for queries on Docker Hub.
 type HubAuth struct {
-	HubAuthDefaults `json:",inline" yaml:",inline"`
+	HubAuthDefaults `json:",embed" yaml:",inline"`
 
 	sf singleflight.Group // Deduplicate refreshes.
 }

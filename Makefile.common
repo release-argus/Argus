@@ -43,8 +43,6 @@ commit-prereqs:
 		echo "Please install ncu (npm-check-updates) to update package.json"; \
 	fi
 
-export GOEXPERIMENT = jsonv2
-
 # This rule is used to forward a target like "build" to "common-build". This
 # allows a new "build" target to be defined in a Makefile which includes this
 # one and override "common-build" without override warnings.

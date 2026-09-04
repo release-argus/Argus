@@ -27,8 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/google/uuid"
+	"uuid"
 
 	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/internal/logx"
@@ -56,8 +55,8 @@ const (
 )
 
 // newID mints entity IDs (overridable for tests).
-// see [uuid.NewString].
-var newID = uuid.NewString
+// see [uuid.New].
+var newID = func() string { return uuid.New().String() }
 
 // randRead fills b with cryptographically random bytes (overridable for tests).
 // see [rand.Read].

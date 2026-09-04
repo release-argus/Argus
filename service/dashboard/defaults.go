@@ -25,7 +25,7 @@ type DefaultsConfig struct {
 
 // Defaults are the default values for Options.
 type Defaults struct {
-	OptionsBase `json:",inline" yaml:",inline"`
+	OptionsBase `json:",embed" yaml:",inline"`
 }
 
 // DecodeDefaults creates and returns new [Defaults] from format-encoded data.

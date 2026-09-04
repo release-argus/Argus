@@ -47,7 +47,7 @@ func (b Base) IsZero() bool {
 
 // Defaults are the default values for Options.
 type Defaults struct {
-	Base `json:",inline" yaml:",inline"`
+	Base `json:",embed" yaml:",inline"`
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -67,7 +67,7 @@ func (d *Defaults) Default() {
 
 // Options are the options for a Service, with defaults.
 type Options struct {
-	Base `json:",inline" yaml:",inline"`
+	Base `json:",embed" yaml:",inline"`
 
 	Active *bool `json:"active,omitzero" yaml:"active,omitzero"` // Disable the service.
 

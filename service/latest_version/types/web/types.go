@@ -35,7 +35,7 @@ var Type = "url"
 
 // Lookup is a web-based lookup type.
 type Lookup struct {
-	base.Lookup `json:",inline" yaml:",inline"`
+	base.Lookup `json:",embed" yaml:",inline"`
 
 	AllowInvalidCerts *bool          `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Allow invalid SSL certificates.
 	Headers           shared.Headers `json:"headers,omitempty" yaml:"headers,omitempty"`                       // OPTIONAL: request headers.

@@ -34,7 +34,7 @@ var Type = "github"
 
 // Lookup provides a GitHub-based lookup type.
 type Lookup struct {
-	base.Lookup `json:",inline" yaml:",inline"`
+	base.Lookup `json:",embed" yaml:",inline"`
 
 	AccessToken   string `json:"access_token,omitzero" yaml:"access_token,omitzero"`     // GitHub access token to use.
 	UsePreRelease *bool  `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"` // Whether releases with the prerelease tag should be considered.

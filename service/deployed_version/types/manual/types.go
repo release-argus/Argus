@@ -36,7 +36,7 @@ var Type = "manual"
 
 // Lookup is a web-based lookup type.
 type Lookup struct {
-	base.Lookup `json:",inline" yaml:",inline"`
+	base.Lookup `json:",embed" yaml:",inline"`
 
 	mu      sync.RWMutex // Lock for the Lookup.
 	Version string       `json:"version,omitzero" yaml:"version,omitzero"` // OPTIONAL: Version to initialise with/set to (TODO: remove from YAML).

@@ -71,7 +71,7 @@ type Permission struct {
 
 // Grant is a [Permission] bounded by a [Scope].
 type Grant struct {
-	Permission `json:",inline" yaml:",inline"`
+	Permission `json:",embed" yaml:",inline"`
 	Scope      Scope `json:"scope" yaml:"scope"`
 }
 

@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 }
 
 type testLookup struct {
-	Lookup `yaml:",inline" json:",inline"`
+	Lookup `yaml:",inline" json:",embed"`
 }
 
 // decodeTestLookup returns a new testLookup from a string in a given format (json/yaml).

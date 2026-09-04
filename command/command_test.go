@@ -93,31 +93,36 @@ func TestController_Exec(t *testing.T) {
 		nilController bool
 		commands      Commands
 		err           error
-		stdoutRegex   string
+		stdoutRegexes []string
 		noAnnounce    bool
 	}{
 		{
 			name:          "nil Controller",
 			nilController: true,
-			stdoutRegex:   `^$`,
+			stdoutRegexes: []string{`^$`},
 			noAnnounce:    true,
 		},
 		{
-			name:        "nil Command",
-			stdoutRegex: `^$`,
-			noAnnounce:  true,
+			name:          "nil Command",
+			stdoutRegexes: []string{`^$`},
+			noAnnounce:    true,
 		},
 		{
-			name:        "single Command",
-			stdoutRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`,
+			name:          "single Command",
+			stdoutRegexes: []string{`[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
 			commands: Commands{
 				{"date", "+%m-%d-%Y"},
 			},
 		},
 		{
-			name:        "multiple Commands",
-			err:         fmt.Errorf("exit status 1"),
-			stdoutRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+.*'false'\s.*exit status 1\s+$`,
+			name: "multiple Commands",
+			err:  fmt.Errorf("exit status 1"),
+			stdoutRegexes: []string{
+				`Executing 'date \+%m-%d-%Y'`,
+				`Executing 'false'`,
+				`[0-9]{2}-[0-9]{2}-[0-9]{4}`,
+				`exit status 1`,
+			},
 			commands: Commands{
 				{"date", "+%m-%d-%Y"},
 				{"false"},
@@ -156,11 +161,14 @@ func TestController_Exec(t *testing.T) {
 				)
 			}
 			// 	stdout:
-			if stdout := releaseStdout(); !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Fatalf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
+			stdout := releaseStdout()
+			for _, stdoutRegex := range tc.stdoutRegexes {
+				if !util.RegexCheck(stdoutRegex, stdout) {
+					t.Fatalf(
+						"%s stdout mismatch\ngot:  %q\nwant: %q",
+						prefix, stdout, stdoutRegex,
+					)
+				}
 			}
 			// 	announced:
 			runNumber := 0

@@ -52,12 +52,12 @@ type ghcrTokenResponse struct {
 
 // GHCRRegistryDefaults holds defaults for queries on GHCR registries.
 type GHCRRegistryDefaults struct {
-	CommonRegistryDefaults `json:",inline" yaml:",inline"`
+	CommonRegistryDefaults `json:",embed" yaml:",inline"`
 }
 
 // GHCRRegistry holds data for queries on a GHCR registry.
 type GHCRRegistry struct {
-	CommonRegistry `json:",inline" yaml:",inline"`
+	CommonRegistry `json:",embed" yaml:",inline"`
 }
 
 // #######################
@@ -249,7 +249,7 @@ type GHCRAuthDefaults struct {
 
 // GHCRAuth holds authentication state for GHCR.
 type GHCRAuth struct {
-	GHCRAuthDefaults `json:",inline" yaml:",inline"`
+	GHCRAuthDefaults `json:",embed" yaml:",inline"`
 
 	sf singleflight.Group // Deduplicate refreshes.
 }
