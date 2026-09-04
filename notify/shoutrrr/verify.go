@@ -696,7 +696,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 			)
 		}
 	case "mattermost":
-		// mattermost://[username@]host[:port][/path]/token[/channel]
+		// mattermost://[username@]host[:port]/token[/channel]
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
@@ -788,7 +788,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 			)
 		}
 	case "rocketchat":
-		// rocketchat://[username@]host[:port][/path]/tokenA/tokenB/channel
+		// rocketchat://[username@]host[:port]/tokenA/tokenB/channel
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
