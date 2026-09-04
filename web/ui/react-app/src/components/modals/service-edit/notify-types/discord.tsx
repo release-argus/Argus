@@ -1,6 +1,10 @@
 import { useMemo } from 'react';
 import { BooleanWithDefault } from '@/components/generic';
-import { FieldText, FieldTextWithPreview } from '@/components/generic/field';
+import {
+	FieldColour,
+	FieldText,
+	FieldTextWithPreview,
+} from '@/components/generic/field';
 import {
 	Heading,
 	NotifyOptions,
@@ -82,6 +86,16 @@ const DISCORD = ({
 					name={`${name}.params.avatar`}
 					tooltip={{
 						content: 'Override WebHook avatar with this URL',
+						type: 'string',
+					}}
+				/>
+				<FieldColour
+					colSize={{ sm: 6 }}
+					defaultVal={defaults?.params?.color}
+					label="Color"
+					name={`${name}.params.color`}
+					tooltip={{
+						content: 'Message left-hand border color in hex, e.g. #ffffff',
 						type: 'string',
 					}}
 				/>
