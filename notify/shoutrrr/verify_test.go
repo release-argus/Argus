@@ -1444,6 +1444,39 @@ func TestBase_CorrectSelf(t *testing.T) {
 			renamedVar: true,
 		},
 		{
+			name:      "smtp/timeout, valid duration",
+			sType:     "smtp",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"timeout": "0h0m10s",
+			},
+			want: map[string]string{
+				"timeout": "0h0m10s",
+			},
+		},
+		{
+			name:      "smtp/timeout, integer treated as seconds",
+			sType:     "smtp",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"timeout": "10",
+			},
+			want: map[string]string{
+				"timeout": "10s",
+			},
+		},
+		{
+			name:      "smtp/timeout, invalid left for CheckValues",
+			sType:     "smtp",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"timeout": "abc",
+			},
+			want: map[string]string{
+				"timeout": "abc",
+			},
+		},
+		{
 			name:      "zulip/botmail, not urlEncoded",
 			sType:     "zulip",
 			mapTarget: "url_fields",
@@ -2796,6 +2829,46 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^toaddresses: <required>.*$`,
 		},
 		{
+			name:  "smtp/valid timeout",
+			sType: "smtp",
+			params: map[string]string{
+				"fromaddress": "bash",
+				"toaddresses": "bosh",
+				"timeout":     "0h0m10s",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "smtp/invalid timeout",
+			sType: "smtp",
+			params: map[string]string{
+				"fromaddress": "bash",
+				"toaddresses": "bosh",
+				"timeout":     "abc",
+			},
+			errRegex: `^timeout: "abc" <invalid>.*positive.*duration.*$`,
+		},
+		{
+			name:  "smtp/zero timeout",
+			sType: "smtp",
+			params: map[string]string{
+				"fromaddress": "bash",
+				"toaddresses": "bosh",
+				"timeout":     "0s",
+			},
+			errRegex: `^timeout: "0s" <invalid>.*positive.*duration.*$`,
+		},
+		{
+			name:  "smtp/negative timeout",
+			sType: "smtp",
+			params: map[string]string{
+				"fromaddress": "bash",
+				"toaddresses": "bosh",
+				"timeout":     "-5s",
+			},
+			errRegex: `^timeout: "-5s" <invalid>.*positive.*duration.*$`,
+		},
+		{
 			name:  "smtp/valid",
 			sType: "smtp",
 			params: map[string]string{
@@ -2994,6 +3067,45 @@ func TestBase_CheckValuesParams(t *testing.T) {
 				"auth": "-",
 			},
 			errRegex: `^auth: "-" <invalid>.*OAuth2.*$`,
+		},
+		{
+			name:     "smtp/valid timeout",
+			itemType: "smtp",
+			params: map[string]string{
+				"timeout": "0h0m10s",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:     "smtp/invalid timeout",
+			itemType: "smtp",
+			params: map[string]string{
+				"timeout": "abc",
+			},
+			errRegex: `^timeout: "abc" <invalid>.*positive.*duration.*$`,
+		},
+		{
+			name:     "smtp/zero timeout",
+			itemType: "smtp",
+			params: map[string]string{
+				"timeout": "0s",
+			},
+			errRegex: `^timeout: "0s" <invalid>.*positive.*duration.*$`,
+		},
+		{
+			name:     "smtp/negative timeout",
+			itemType: "smtp",
+			params: map[string]string{
+				"timeout": "-5s",
+			},
+			errRegex: `^timeout: "-5s" <invalid>.*positive.*duration.*$`,
+		},
+		{
+			name: "non-smtp/timeout not checked",
+			params: map[string]string{
+				"timeout": "abc",
+			},
+			errRegex: `^$`,
 		},
 	}
 
@@ -3278,8 +3390,8 @@ func TestBase_ValidateParamSelect(t *testing.T) {
 		{
 			name:     "invalid value returns error and leaves unchanged",
 			value:    "nope",
-			allowed:  []string{"None", "Unknown", "Plain", "CramMD5", "OAuth2"},
-			errRegex: "^" + key + `: "nope" <invalid> .*'CramMD5'.*$`,
+			allowed:  []string{"None", "Unknown", "Plain", "CRAMMD5", "OAuth2"},
+			errRegex: "^" + key + `: "nope" <invalid> .*'CRAMMD5'.*$`,
 			want:     "nope",
 		},
 	}

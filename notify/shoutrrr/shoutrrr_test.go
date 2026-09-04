@@ -19,6 +19,7 @@ package shoutrrr
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -780,6 +781,152 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 					"%s\nShoutrrr.BuildParams(%+v) mismatch\ngot:  %q\nwant: %q",
 					packageName, svcInfo,
 					got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestShoutrrr_BuildParams__SMTPAuth(t *testing.T) {
+	// GIVEN: Shoutrrrs with an 'auth' Param, of an SMTP and a non-SMTP type.
+	svcInfo := serviceinfo.ServiceInfo{ID: "service_id"}
+	tests := []struct {
+		name     string
+		Type     string
+		auth     string
+		wantKept bool
+	}{
+		{
+			name: "smtp/'Unknown' is dropped so Shoutrrr keeps its resolved method",
+			Type: "smtp",
+			auth: "Unknown",
+		},
+		{
+			name: "smtp/'unknown' is dropped case-insensitively",
+			Type: "smtp",
+			auth: "uNkNoWn",
+		},
+		{
+			name:     "smtp/an explicit method is kept",
+			Type:     "smtp",
+			auth:     "Plain",
+			wantKept: true,
+		},
+		{
+			name:     "non-smtp/'Unknown' is left alone",
+			Type:     "ntfy",
+			auth:     "Unknown",
+			wantKept: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			shoutrrr := testShoutrrr(false, false)
+			shoutrrr.Type = tc.Type
+			shoutrrr.Main.Type = tc.Type
+			shoutrrr.Params["fromaddress"] = "FROM"
+			shoutrrr.Params["toaddresses"] = "TO"
+			shoutrrr.Params["auth"] = tc.auth
+
+			// WHEN: BuildParams is called.
+			params := *shoutrrr.BuildParams(svcInfo)
+
+			// THEN: 'Unknown' only survives for non-SMTP types.
+			if _, kept := params["auth"]; kept != tc.wantKept {
+				t.Errorf(
+					"%s\nShoutrrr.BuildParams() 'auth' presence mismatch\ngot:  %t\nwant: %t",
+					packageName, kept, tc.wantKept,
+				)
+			}
+
+		})
+	}
+}
+
+func TestShoutrrr_SMTPSendParams(t *testing.T) {
+	// GIVEN: an SMTP Shoutrrr with a Param that Shoutrrr honours at send time.
+	svcInfo := serviceinfo.ServiceInfo{ID: "service_id"}
+	tests := []struct {
+		name  string
+		layer string // "" (the Shoutrrr itself), "main", "defaults" or "hardDefaults".
+		param string
+		value string
+	}{
+		{
+			name:  "timeout",
+			param: "timeout",
+			value: "0h0m10s",
+		},
+		{
+			name:  "timeout/from Main",
+			layer: "main",
+			param: "timeout",
+			value: "0h0m10s",
+		},
+		{
+			name:  "timeout/from Defaults",
+			layer: "defaults",
+			param: "timeout",
+			value: "0m10s",
+		},
+		{
+			name:  "timeout/from HardDefaults",
+			layer: "hardDefaults",
+			param: "timeout",
+			value: "1m30s",
+		},
+		{
+			name:  "encryption",
+			param: "encryption",
+			value: "ImplicitTLS",
+		},
+		{
+			name:  "skiptlsverify",
+			param: "skiptlsverify",
+			value: "yes",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			shoutrrr := testShoutrrr(false, false)
+			shoutrrr.Type, shoutrrr.Main.Type = "smtp", "smtp"
+			shoutrrr.URLFields = map[string]string{"host": "example.com"}
+			shoutrrr.Params["fromaddress"] = "from@example.com"
+			shoutrrr.Params["toaddresses"] = "to@example.com"
+			switch tc.layer {
+			case "main":
+				shoutrrr.Main.Params[tc.param] = tc.value
+			case "defaults":
+				shoutrrr.Defaults.Params[tc.param] = tc.value
+			case "hardDefaults":
+				shoutrrr.HardDefaults.Params[tc.param] = tc.value
+			default:
+				shoutrrr.Params[tc.param] = tc.value
+			}
+
+			// WHEN: BuildParams and BuildURL are called.
+			params := *shoutrrr.BuildParams(svcInfo)
+			url := shoutrrr.BuildURL()
+
+			// THEN: the Param is left for Shoutrrr to apply at send time.
+			if got := params[tc.param]; got != tc.value {
+				t.Errorf(
+					"%s\nShoutrrr.BuildParams()[%q] mismatch\ngot:  %q\nwant: %q",
+					packageName, tc.param, got, tc.value,
+				)
+			}
+
+			// AND: it is not duplicated into the URL.
+			if strings.Contains(url, tc.param+"=") {
+				t.Errorf(
+					"%s\nShoutrrr.BuildURL() carried %q, which belongs in the Params\nurl: %q",
+					packageName, tc.param, url,
 				)
 			}
 		})
