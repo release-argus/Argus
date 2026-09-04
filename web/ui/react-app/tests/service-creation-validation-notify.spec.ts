@@ -997,7 +997,7 @@ test.describe('Service creation modal - field validation', () => {
 		});
 
 		test.describe('PushOver', () => {
-			test('API token/key and user key are required; priority must be a valid number', async ({
+			test('API token/key and user key are required; priority must be a valid number and encryption key a 64-character hex string', async ({
 				page,
 			}, testInfo) => {
 				const shot = screenshotsUnder(
@@ -1024,6 +1024,14 @@ test.describe('Service creation modal - field validation', () => {
 						slug: 'userkey',
 					}),
 					numeric({ good: '1', input: 'Priority', slug: 'priority' }),
+					{
+						bad: 'abc123',
+						badSlug: 'encryptionkey-invalid-hex',
+						error: 'Invalid key. Must be 64 characters, 0-9 and A-F.',
+						good: '0123456789abcdef'.repeat(4),
+						goodSlug: 'encryptionkey-valid',
+						input: 'Encryption Key',
+					},
 				]);
 			});
 		});

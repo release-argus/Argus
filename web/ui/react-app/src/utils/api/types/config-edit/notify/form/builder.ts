@@ -62,6 +62,7 @@ import {
 import {
 	validateArrayFieldWithSchemas,
 	validateDuration,
+	validateHexKey,
 	validateHexString,
 	validateListUniqueKeys,
 	validateNumberInRange,
@@ -263,6 +264,7 @@ const buildNotifySchema = (
 				{ path: ['url_fields', 'token'], validator: validateRequired },
 				{ path: ['url_fields', 'user'], validator: validateRequired },
 				{ path: ['params', 'priority'], validator: validateNumberString },
+				{ path: ['params', 'encryptionkey'], validator: validateHexKey },
 			]);
 			break;
 		case NOTIFY_TYPE_MAP.ROCKET_CHAT.value:

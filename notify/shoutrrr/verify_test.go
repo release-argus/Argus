@@ -3143,6 +3143,17 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			},
 		},
 		{
+			name:     "smtp/valid auth login",
+			itemType: "smtp",
+			params: map[string]string{
+				"auth": "login",
+			},
+			errRegex: `^$`,
+			wantParam: map[string]string{
+				"auth": "Login",
+			},
+		},
+		{
 			name:     "smtp/invalid auth and encryption aggregated",
 			itemType: "smtp",
 			params: map[string]string{
