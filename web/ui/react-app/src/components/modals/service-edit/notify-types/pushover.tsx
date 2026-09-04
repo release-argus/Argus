@@ -86,6 +86,17 @@ const PUSHOVER = ({
 						type: 'string',
 					}}
 				/>
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.encryptionkey}
+					label="Encryption Key"
+					name={`${name}.params.encryptionkey`}
+					tooltip={{
+						content:
+							'256-bit AES key as 64 hex characters, matching the key set in the Pushover app, to end-to-end encrypt the title and message',
+						type: 'string',
+					}}
+				/>
 			</FieldSet>
 		</FieldSet>
 	);
