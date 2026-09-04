@@ -354,6 +354,11 @@ func (s *Shoutrrr) BuildParams(info serviceinfo.ServiceInfo) *types.Params {
 		params[key] = util.TemplateString(value, info)
 	}
 
+	// 'Unknown' auth means "no method given". Let Shoutrrr handle it.
+	if s.GetType() == "smtp" && strings.EqualFold(params["auth"], smtpAuthUnknown) {
+		delete(params, "auth")
+	}
+
 	return &params
 }
 
