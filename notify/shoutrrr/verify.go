@@ -388,6 +388,13 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 			b.setParam("skiptlsverification", "")
 			changed = true
 		}
+		// Timeout, treat integers as seconds by default.
+		if timeout := b.GetParam("timeout"); timeout != "" {
+			if _, err := strconv.Atoi(timeout); err == nil {
+				b.setParam("timeout", timeout+"s")
+				changed = true
+			}
+		}
 	case "zulip":
 		// BotMail, replace the @ with a %40 - https://containrrr.dev/shoutrrr/v0.5/services/zulip/
 		if botMail := b.getURLField("botmail"); strings.Contains(botMail, "@") {
@@ -998,6 +1005,22 @@ func (b *Base) checkValuesParams(itemType string) error {
 	// Normalise 'select' params.
 	if e := b.checkValuesParamsSelects(itemType); e != nil {
 		errs = append(errs, e)
+	}
+
+	// Timeout, must be a positive duration.
+	if itemType == "smtp" {
+		if timeout := b.GetParam("timeout"); timeout != "" {
+			if d, err := time.ParseDuration(timeout); err != nil || d <= 0 {
+				errs = append(
+					errs,
+					&decode.ErrField{
+						Key:         "timeout",
+						Value:       timeout,
+						Description: "use a positive 'AhBmCs' duration, e.g. '10s'",
+					},
+				)
+			}
+		}
 	}
 
 	// Params.*
