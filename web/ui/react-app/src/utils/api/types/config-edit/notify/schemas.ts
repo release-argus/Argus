@@ -119,6 +119,7 @@ export const notifyDiscordSchema = notifyBaseSchema.extend({
 	params: z
 		.object({
 			avatar: stringDefault,
+			color: stringDefault,
 			splitlines: preprocessBooleanFromString,
 			thread_id: stringDefault,
 			title: stringDefault,
@@ -126,6 +127,7 @@ export const notifyDiscordSchema = notifyBaseSchema.extend({
 		})
 		.default({
 			avatar: '',
+			color: '',
 			splitlines: null,
 			thread_id: '',
 			title: '',
