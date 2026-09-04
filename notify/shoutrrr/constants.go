@@ -19,12 +19,12 @@ package shoutrrr
 const smtpAuthUnknown = "Unknown"
 
 var (
-	barkNtfyParamScheme       = []string{"http", "https"}
-	barkParamSound            = []string{"alarm", "anticipate", "bell", "birdsong", "bloom", "calypso", "chime", "choo", "descent", "electronic", "fanfare", "glass", "gotosleep", "healthnotification", "horn", "ladder", "mailsent", "minuet", "multiwaynotification", "newmail", "newsflash", "noir", "paymentsuccess", "shake", "sherwoodforest", "silence", "spell", "suspense", "telegraph", "tiptoes", "typewriters", "update"}
-	genericParamRequestmethod = []string{"CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT", "TRACE"}
-	ntfyParamPriority         = []string{"min", "low", "default", "high", "max"}
-	smtpParamAuth             = []string{"None", smtpAuthUnknown, "Plain", "Login", "CRAMMD5", "OAuth2"}
-	smtpParamEncryption       = []string{"Auto", "ExplicitTLS", "ImplicitTLS", "None"}
-	telegramParamParsemode    = []string{"None", "HTML", "Markdown"}
-	zulipParamType            = []string{"channel", "direct"}
+	barkNtfyParamScheme    = []string{"http", "https"}
+	barkParamSound         = []string{"alarm", "anticipate", "bell", "birdsong", "bloom", "calypso", "chime", "choo", "descent", "electronic", "fanfare", "glass", "gotosleep", "healthnotification", "horn", "ladder", "mailsent", "minuet", "multiwaynotification", "newmail", "newsflash", "noir", "paymentsuccess", "shake", "sherwoodforest", "silence", "spell", "suspense", "telegraph", "tiptoes", "typewriters", "update"}
+	genericParamMethod     = []string{"CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT", "TRACE"}
+	ntfyParamPriority      = []string{"min", "low", "default", "high", "max"}
+	smtpParamAuth          = []string{"None", smtpAuthUnknown, "Plain", "Login", "CRAMMD5", "OAuth2"}
+	smtpParamEncryption    = []string{"Auto", "ExplicitTLS", "ImplicitTLS", "None"}
+	telegramParamParsemode = []string{"None", "HTML", "Markdown"}
+	zulipParamType         = []string{"channel", "direct"}
 )

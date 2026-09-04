@@ -2535,7 +2535,7 @@ var stringifiedConvertedDefaults = test.TrimJSON(`{
 				"contenttype": "application/json",
 				"disabletls": "no",
 				"messagekey": "message",
-				"requestmethod": "POST",
+				"method": "POST",
 				"titlekey": "title"
 			}
 		},

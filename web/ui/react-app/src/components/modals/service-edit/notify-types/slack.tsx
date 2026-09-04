@@ -82,9 +82,9 @@ const SLACK = ({ name, main }: { name: string; main?: NotifySlackSchema }) => {
 					}}
 				/>
 				<FieldText
-					defaultVal={defaults?.params?.threadts}
+					defaultVal={defaults?.params?.thread_ts}
 					label="Thread TS"
-					name={`${name}.params.threadts`}
+					name={`${name}.params.thread_ts`}
 					tooltip={{
 						content:
 							'TS value of the parent message (to send message as reply in thread)',

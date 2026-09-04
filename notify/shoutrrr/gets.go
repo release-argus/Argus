@@ -114,6 +114,11 @@ func (b *Base) setURLField(key, value string) {
 	b.URLFields[key] = value
 }
 
+// deleteURLField removes key.
+func (b *Base) deleteURLField(key string) {
+	delete(b.URLFields, key)
+}
+
 // GetParam returns the value for key, or an empty string if not present.
 func (b *Base) GetParam(key string) string {
 	return b.Params[key]
@@ -122,4 +127,9 @@ func (b *Base) GetParam(key string) string {
 // setParam sets the value for key.
 func (b *Base) setParam(key, value string) {
 	b.Params[key] = value
+}
+
+// deleteParam removes key.
+func (b *Base) deleteParam(key string) {
+	delete(b.Params, key)
 }

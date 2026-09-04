@@ -156,9 +156,9 @@ export const notifyGenericSchema = notifyBaseSchema.extend({
 			contenttype: stringDefault,
 			disabletls: preprocessBooleanFromString,
 			messagekey: stringDefault,
-			requestmethod: GenericRequestMethodZodEnum.or(
-				z.literal(nullString),
-			).default(nullString),
+			method: GenericRequestMethodZodEnum.or(z.literal(nullString)).default(
+				nullString,
+			),
 			template: stringDefault,
 			title: stringDefault,
 			titlekey: stringDefault,
@@ -167,7 +167,7 @@ export const notifyGenericSchema = notifyBaseSchema.extend({
 			contenttype: '',
 			disabletls: null,
 			messagekey: '',
-			requestmethod: nullString,
+			method: nullString,
 			template: '',
 			title: '',
 			titlekey: '',
@@ -195,7 +195,7 @@ export type NotifyGenericSchema = z.infer<typeof notifyGenericSchema>;
 const notifyGenericSchemaOutgoing = notifyGenericSchema.extend({
 	params: notifyGenericSchema.shape.params.unwrap().extend({
 		disabletls: preprocessStringFromBoolean,
-		requestmethod: preprocessStringFromZodEnum(GenericRequestMethodZodEnum),
+		method: preprocessStringFromZodEnum(GenericRequestMethodZodEnum),
 	}),
 });
 
@@ -621,14 +621,14 @@ export const notifySlackSchema = notifyBaseSchema.extend({
 			botname: stringDefault,
 			color: stringDefault,
 			icon: stringDefault,
-			threadts: stringDefault,
+			thread_ts: stringDefault,
 			title: stringDefault,
 		})
 		.default({
 			botname: '',
 			color: '',
 			icon: '',
-			threadts: '',
+			thread_ts: '',
 			title: '',
 		}),
 	type: z.literal(NOTIFY_TYPE_MAP.SLACK.value),

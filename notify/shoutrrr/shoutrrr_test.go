@@ -846,6 +846,105 @@ func TestShoutrrr_BuildParams__SMTPAuth(t *testing.T) {
 	}
 }
 
+func TestShoutrrr_BuildParams__DeprecatedRenames(t *testing.T) {
+	// GIVEN: Shoutrrrs carrying a deprecated Param, at their own or the Defaults level.
+	svcInfo := serviceinfo.ServiceInfo{ID: "service_id"}
+	tests := []struct {
+		name           string
+		Type           string
+		oldKey, newKey string
+		value          string
+	}{
+		{
+			name:   "discord/threadid",
+			Type:   "discord",
+			oldKey: "threadid",
+			newKey: "thread_id",
+			value:  "1234567890",
+		},
+		{
+			name:   "generic/requestmethod",
+			Type:   "generic",
+			oldKey: "requestmethod",
+			newKey: "method",
+			value:  "PUT",
+		},
+		{
+			name:   "ifttt/usemessageasvalue",
+			Type:   "ifttt",
+			oldKey: "usemessageasvalue",
+			newKey: "messagevalue",
+			value:  "2",
+		},
+		{
+			name:   "ifttt/usetitleasvalue",
+			Type:   "ifttt",
+			oldKey: "usetitleasvalue",
+			newKey: "titlevalue",
+			value:  "1",
+		},
+		{
+			name:   "ntfy/disabletls",
+			Type:   "ntfy",
+			oldKey: "disabletls",
+			newKey: "disabletlsverification",
+			value:  "yes",
+		},
+		{
+			name:   "slack/threadts",
+			Type:   "slack",
+			oldKey: "threadts",
+			newKey: "thread_ts",
+			value:  "1609459200.000001",
+		},
+		{
+			name:   "smtp/skiptlsverification",
+			Type:   "smtp",
+			oldKey: "skiptlsverification",
+			newKey: "skiptlsverify",
+			value:  "yes",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, layer := range []string{"self", "defaults"} {
+				t.Run(layer, func(t *testing.T) {
+					shoutrrr := testShoutrrr(false, false)
+					shoutrrr.Type, shoutrrr.Main.Type = tc.Type, tc.Type
+					target := &shoutrrr.Base
+					if layer == "defaults" {
+						target = &shoutrrr.Defaults.Base
+					}
+					target.Params[tc.oldKey] = tc.value
+
+					// WHEN: correctSelf and BuildParams are called.
+					target.correctSelf(tc.Type)
+					params := *shoutrrr.BuildParams(svcInfo)
+
+					// THEN: the deprecated key is not sent.
+					if _, found := params[tc.oldKey]; found {
+						t.Errorf(
+							"%s\nShoutrrr.BuildParams() still sends the deprecated %q\nparams: %v",
+							packageName, tc.oldKey, params,
+						)
+					}
+
+					// AND: its value arrives under the current key.
+					if got := params[tc.newKey]; got != tc.value {
+						t.Errorf(
+							"%s\nShoutrrr.BuildParams()[%q] mismatch\ngot:  %q\nwant: %q",
+							packageName, tc.newKey, got, tc.value,
+						)
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestShoutrrr_SMTPSendParams(t *testing.T) {
 	// GIVEN: an SMTP Shoutrrr with a Param that Shoutrrr honours at send time.
 	svcInfo := serviceinfo.ServiceInfo{ID: "service_id"}
