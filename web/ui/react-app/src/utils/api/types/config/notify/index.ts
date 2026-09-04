@@ -307,6 +307,7 @@ export type NotifyPushover = NotifyBase & {
 	};
 	params?: {
 		devices?: string;
+		encryptionkey?: string;
 		priority?: string;
 		title?: string;
 	};
