@@ -2,11 +2,12 @@ import type { Row } from '@tanstack/react-table';
 import type { FC } from 'react';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
+import type { DataTableFeatures } from '@/components/ui/data-table';
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
 
 type ServiceIDProps = {
 	/* The row in the table */
-	row: Row<ServiceSummary>;
+	row: Row<DataTableFeatures, ServiceSummary>;
 };
 
 /**

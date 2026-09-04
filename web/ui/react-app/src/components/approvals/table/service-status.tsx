@@ -1,6 +1,7 @@
 import type { Row } from '@tanstack/react-table';
 import { CheckCircle, HelpCircle, MinusCircle, XCircle } from 'lucide-react';
 import type { ComponentType, FC } from 'react';
+import type { DataTableFeatures } from '@/components/ui/data-table';
 import { cn } from '@/lib/utils';
 import type {
 	ServiceSummary,
@@ -9,7 +10,7 @@ import type {
 
 type ServiceStatusProps = {
 	/* The row in the table */
-	row: Row<ServiceSummary>;
+	row: Row<DataTableFeatures, ServiceSummary>;
 };
 
 type StatusMapTypes = { className: string; icon: ComponentType; label: string };

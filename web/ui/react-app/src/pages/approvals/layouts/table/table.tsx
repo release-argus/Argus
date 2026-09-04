@@ -1,9 +1,9 @@
 import type { DragEndEvent, SensorOptions } from '@dnd-kit/core';
 import type { SensorDescriptor } from '@dnd-kit/core/dist/sensors/types';
-import type { VisibilityState } from '@tanstack/react-table';
+import type { ColumnVisibilityState, Row } from '@tanstack/react-table';
 import { type FC, useCallback, useEffect } from 'react';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
-import { DataTable } from '@/components/ui/data-table';
+import { DataTable, type DataTableFeatures } from '@/components/ui/data-table';
 import { TABLE_COLUMNS_ORDER_STORAGE_KEY } from '@/constants/toolbar';
 import { mergeColumnOrder } from '@/pages/approvals/layouts/table/column-order';
 import {
@@ -71,7 +71,7 @@ export const TableLayout: FC<TableLayoutProps> = ({
 
 	// Inactive service colouring.
 	const getRowClassName = useCallback(
-		(row: { original: ServiceSummary }) =>
+		(row: Row<DataTableFeatures, ServiceSummary>) =>
 			row.original?.active === false
 				? 'border-2! border-[var(--muted-foreground)] italic line-through'
 				: undefined,
@@ -101,7 +101,9 @@ export const TableLayout: FC<TableLayoutProps> = ({
 	// biome-ignore lint/correctness/useExhaustiveDependencies: setColumnVisibility stable.
 	const setColumnVisibilityMaster = useCallback(
 		(
-			updater: VisibilityState | ((prev: VisibilityState) => VisibilityState),
+			updater:
+				| ColumnVisibilityState
+				| ((prev: ColumnVisibilityState) => ColumnVisibilityState),
 		) => {
 			setTableColumnVisibility((prev) => {
 				const newValue =
@@ -151,7 +153,7 @@ export const TableLayout: FC<TableLayoutProps> = ({
 					order: order,
 					sensors: sensors,
 				}}
-				getRowClassName={getRowClassName as never}
+				getRowClassName={getRowClassName}
 				noDataMessage="No services."
 				onTableReady={setTableInstance}
 				resetSorting={resetSorting}

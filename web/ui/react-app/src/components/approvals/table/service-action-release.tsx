@@ -3,6 +3,7 @@ import { Pencil } from 'lucide-react';
 import { type FC, useCallback } from 'react';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
 import { Button } from '@/components/ui/button';
+import type { DataTableFeatures } from '@/components/ui/data-table';
 import { useAuth } from '@/contexts/auth';
 import useModal from '@/hooks/use-modal';
 import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version';
@@ -13,7 +14,7 @@ import type {
 
 type ServiceActionReleaseProps = {
 	/* The row in the table */
-	row: Row<ServiceSummary>;
+	row: Row<DataTableFeatures, ServiceSummary>;
 };
 
 /**

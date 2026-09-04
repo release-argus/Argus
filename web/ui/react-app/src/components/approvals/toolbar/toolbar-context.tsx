@@ -1,10 +1,11 @@
-import type { Table, VisibilityState } from '@tanstack/react-table';
+import type { ColumnVisibilityState, Table } from '@tanstack/react-table';
 import {
 	createContext,
 	type Dispatch,
 	type SetStateAction,
 	useContext,
 } from 'react';
+import type { DataTableFeatures } from '@/components/ui/data-table';
 import type {
 	ApprovalsToolbarOptions,
 	CardTimestampType,
@@ -34,17 +35,19 @@ export type ToolbarContextValue = {
 	toggleCardTimestamp: (value: CardTimestampType) => void;
 
 	/* Tanstack table instance */
-	tableInstance?: Table<ServiceSummary>;
+	tableInstance?: Table<DataTableFeatures, ServiceSummary>;
 	/* Function to set the table instance */
-	setTableInstance: (value: Table<ServiceSummary> | undefined) => void;
+	setTableInstance: (
+		value: Table<DataTableFeatures, ServiceSummary> | undefined,
+	) => void;
 	/* Order of columns in the table */
 	tableColumnOrder: string[];
 	/* Sets the order of columns in the table */
 	setTableColumnOrder: Dispatch<SetStateAction<string[]>>;
 	/* Visible columns in the table */
-	tableColumnVisibility: VisibilityState;
+	tableColumnVisibility: ColumnVisibilityState;
 	/* Sets the visibility of a column in the table */
-	setTableColumnVisibility: Dispatch<SetStateAction<VisibilityState>>;
+	setTableColumnVisibility: Dispatch<SetStateAction<ColumnVisibilityState>>;
 
 	/* Saves the current order of the service list */
 	onSaveOrder: () => Promise<void>;

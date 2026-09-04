@@ -11,13 +11,21 @@ import { SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
 	type ColumnDef,
-	flexRender,
-	getCoreRowModel,
-	getSortedRowModel,
+	type ColumnVisibilityState,
+	columnOrderingFeature,
+	columnVisibilityFeature,
+	createSortedRowModel,
+	FlexRender,
+	metaHelper,
 	type Row,
+	type RowData,
+	rowSortingFeature,
 	type SortingState,
-	useReactTable,
-	type VisibilityState,
+	sortFn_alphanumeric,
+	sortFn_text,
+	type Table as TableInstance,
+	tableFeatures,
+	useTable,
 } from '@tanstack/react-table';
 import { GripVertical } from 'lucide-react';
 import {
@@ -48,18 +56,32 @@ export type ExtraColumnMeta = {
 	/* Column label. */
 	label?: string;
 };
-export type ColumnDefWithMeta<TData> = ColumnDef<TData> & {
-	/* Extra column metadata. */
-	meta?: ExtraColumnMeta;
+
+type ExtraTableMeta = {
+	/* Resets the table sorting. */
+	resetSorting?: () => void;
 };
 
-type SortableRowProps<TData> = {
+/* The table features, row models and sort functions this table registers. */
+export const dataTableFeatures = tableFeatures({
+	columnMeta: metaHelper<ExtraColumnMeta>(),
+	columnOrderingFeature,
+	columnVisibilityFeature,
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+	sortFns: { alphanumeric: sortFn_alphanumeric, text: sortFn_text },
+	tableMeta: metaHelper<ExtraTableMeta>(),
+});
+
+export type DataTableFeatures = typeof dataTableFeatures;
+
+type SortableRowProps<TData extends RowData> = {
 	/* React Table row. */
-	row: Row<TData>;
+	row: Row<DataTableFeatures, TData>;
 	/* Function to get the unique ID of a row. */
 	getItemId: (row: TData) => string;
 	/* Function to get extra row CSS class names. */
-	getRowClassName?: (row: Row<TData>) => string | undefined;
+	getRowClassName?: (row: Row<DataTableFeatures, TData>) => string | undefined;
 };
 
 /**
@@ -70,7 +92,7 @@ type SortableRowProps<TData> = {
  * @param enabled - Whether drag-and-drop sorting is enabled.
  * @param getRowClassName - Function to get extra row CSS class names.
  */
-const SortableRow = <TData,>({
+const SortableRow = <TData extends RowData>({
 	row,
 	getItemId,
 	getRowClassName,
@@ -100,7 +122,6 @@ const SortableRow = <TData,>({
 				getRowClassName?.(row),
 			)}
 			data-service-id={id}
-			data-state={row.getIsSelected() && 'selected'}
 			ref={setNodeRef as Ref<HTMLTableRowElement>}
 			style={style}
 		>
@@ -118,7 +139,7 @@ const SortableRow = <TData,>({
 			</TableCell>
 			{row.getVisibleCells().map((cell) => (
 				<TableCell key={cell.id}>
-					{flexRender(cell.column.columnDef.cell, cell.getContext())}
+					<FlexRender cell={cell} />
 				</TableCell>
 			))}
 		</TableRow>
@@ -126,7 +147,7 @@ const SortableRow = <TData,>({
 };
 
 /* Drag and drop properties. */
-type DataTableDndProps<TData> = {
+type DataTableDndProps<TData extends RowData> = {
 	dnd:
 		| {
 				/* Flag to indicate whether drag-and-drop sorting is enabled. */
@@ -147,7 +168,7 @@ type DataTableDndProps<TData> = {
 };
 
 /* Sorting properties that can optionally push sorting upwards. */
-type DataTableSortPushProps<TData> = {
+type DataTableSortPushProps<TData extends RowData> = {
 	sortToOrder:
 		| {
 				/* Flag to indicate whether sorting is enabled */
@@ -186,22 +207,22 @@ type DataTableColumnOrderProps = {
 /* Column visibility properties. */
 type DataTableColumnVisibilityProps = {
 	/* Visible columns */
-	columnVisibility: VisibilityState;
+	columnVisibility: ColumnVisibilityState;
 	/* Sets the visibility of a column */
-	setColumnVisibility: Dispatch<SetStateAction<VisibilityState>>;
+	setColumnVisibility: Dispatch<SetStateAction<ColumnVisibilityState>>;
 };
 
-type DataTableProps<TData> = {
+type DataTableProps<TData extends RowData> = {
 	/* React Table columns. */
-	columns: ColumnDefWithMeta<TData>[];
+	columns: ColumnDef<DataTableFeatures, TData>[];
 	/* React Table data. */
 	data: TData[];
 	/* Function to get extra row CSS class names. */
-	getRowClassName?: (row: Row<TData>) => string | undefined;
+	getRowClassName?: (row: Row<DataTableFeatures, TData>) => string | undefined;
 	/* Message to display when there is no data. */
 	noDataMessage?: string;
 	/* Callback invoked when the table is ready. */
-	onTableReady?: (table: ReturnType<typeof useReactTable<TData>>) => void;
+	onTableReady?: (table: TableInstance<DataTableFeatures, TData>) => void;
 } & DataTableDndProps<TData> &
 	DataTableSortPushProps<TData> &
 	DataTableResetProps &
@@ -225,7 +246,7 @@ type DataTableProps<TData> = {
  * @param columnVisibility - Visible columns.
  * @param setColumnVisibility - Sets the visibility of a column.
  */
-export const DataTable = <TData,>({
+export const DataTable = <TData extends RowData>({
 	columns,
 	data,
 	dnd = { enabled: false },
@@ -258,12 +279,12 @@ export const DataTable = <TData,>({
 		skipNextPush: false,
 	});
 
-	const table = useReactTable({
+	const table = useTable({
 		columns: columns,
 		data: data,
 		enableSorting: sortToOrder.enabled,
-		getCoreRowModel: getCoreRowModel(),
-		getSortedRowModel: getSortedRowModel(),
+		features: dataTableFeatures,
+		meta: { resetSorting: resetSorting },
 		onColumnOrderChange: setColumnOrder,
 		onColumnVisibilityChange: setColumnVisibility,
 		onSortingChange: setSorting,
@@ -311,6 +332,12 @@ export const DataTable = <TData,>({
 
 	const rows = table.getRowModel().rows;
 
+	const getItemId = dnd.enabled
+		? dnd.getItemId
+		: 'getItemId' in sortToOrder
+			? sortToOrder.getItemId
+			: undefined;
+
 	const tableElement = (
 		<Table>
 			<TableHeader>
@@ -322,12 +349,9 @@ export const DataTable = <TData,>({
 							.map((header) => {
 								return (
 									<TableHead key={header.id}>
-										{header.isPlaceholder
-											? null
-											: flexRender(header.column.columnDef.header, {
-													...header.getContext(),
-													resetSorting: resetSorting,
-												})}
+										{header.isPlaceholder ? null : (
+											<FlexRender header={header} />
+										)}
 									</TableHead>
 								);
 							})}
@@ -346,18 +370,13 @@ export const DataTable = <TData,>({
 							/>
 						) : (
 							<TableRow
-								className={cn(
-									'odd:bg-muted/30',
-									getRowClassName?.(row),
-									row.id,
-								)}
-								data-service-id={row.original}
-								data-state={row.getIsSelected() && 'selected'}
+								className={cn('odd:bg-muted/30', getRowClassName?.(row))}
+								data-service-id={getItemId?.(row.original)}
 								key={row.id}
 							>
 								{row.getVisibleCells().map((cell) => (
 									<TableCell key={cell.id}>
-										{flexRender(cell.column.columnDef.cell, cell.getContext())}
+										<FlexRender cell={cell} />
 									</TableCell>
 								))}
 							</TableRow>

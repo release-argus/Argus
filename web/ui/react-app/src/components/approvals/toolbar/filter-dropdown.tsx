@@ -12,7 +12,6 @@ import RefreshDeployedVersionsMenuItem, {
 } from '@/components/approvals/toolbar/refresh-deployed-versions';
 import { useToolbar } from '@/components/approvals/toolbar/toolbar-context';
 import { Button } from '@/components/ui/button';
-import type { ExtraColumnMeta } from '@/components/ui/data-table';
 import { DropdownMenuCheckboxItemSortable } from '@/components/ui/dropdown-checkbox-sortable.tsx';
 import {
 	DropdownMenu,
@@ -101,7 +100,7 @@ const FilterDropdown: FC = () => {
 						?.getAllColumns()
 						.find((c) => c.id === colID);
 					if (!col) return null;
-					const meta = col.columnDef.meta as ExtraColumnMeta | undefined;
+					const meta = col.columnDef.meta;
 
 					return (
 						<DropdownMenuCheckboxItemSortable

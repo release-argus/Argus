@@ -1,9 +1,10 @@
-import type { Table, VisibilityState } from '@tanstack/react-table';
+import type { ColumnVisibilityState, Table } from '@tanstack/react-table';
 import { type ReactElement, useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { ApprovalsToolbar } from '@/components/approvals';
 import { ToolbarProvider } from '@/components/approvals/toolbar/toolbar-context';
+import type { DataTableFeatures } from '@/components/ui/data-table';
 import {
 	APPROVALS_TOOLBAR_VIEW,
 	type ApprovalsToolbarOptions,
@@ -221,14 +222,14 @@ export const Approvals = (): ReactElement => {
 
 	// Table instance for the 'table' view.
 	const [tableInstance, setTableInstance] = useState<
-		Table<ServiceSummary> | undefined
+		Table<DataTableFeatures, ServiceSummary> | undefined
 	>(undefined);
 
 	// Column order for the 'table' view.
 	const [tableColumnOrder, setTableColumnOrder] = useState<string[]>([]);
 	// Column visibility for the 'table' view.
 	const [tableColumnVisibility, setTableColumnVisibility] =
-		useState<VisibilityState>({});
+		useState<ColumnVisibilityState>({});
 
 	// Timestamps shown at the bottom of the service card..
 	const [cardTimestamps, setCardTimestamps] =
