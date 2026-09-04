@@ -298,13 +298,22 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 
 	switch shoutrrrType {
 	case "generic":
+		// Deprecated: requestmethod -> method.
+		if v := b.GetParam("requestmethod"); v != "" {
+			if b.GetParam("method") == "" {
+				logx.Deprecated("Renaming 'notify.generic.params.requestmethod' to 'notify.generic.params.method'")
+				b.setParam("method", v)
+			}
+			b.deleteParam("requestmethod")
+			changed = true
+		}
 		// Deprecated: custom_headers -> headers.
 		if customHeaders := b.getURLField("custom_headers"); customHeaders != "" {
 			if headers := b.getURLField("headers"); headers == "" {
 				logx.Deprecated("Renaming 'notify.generic.url_fields.custom_headers' to 'notify.generic.url_fields.headers'")
 				b.setURLField("headers", customHeaders)
 			}
-			b.setURLField("custom_headers", "")
+			b.deleteURLField("custom_headers")
 			changed = true
 		}
 	case "discord":
@@ -314,7 +323,7 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 				logx.Deprecated("Renaming 'notify.discord.params.threadid' to 'notify.discord.params.thread_id'")
 				b.setParam("thread_id", v)
 			}
-			b.setParam("threadid", "")
+			b.deleteParam("threadid")
 			changed = true
 		}
 	case "ifttt":
@@ -324,7 +333,7 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 				logx.Deprecated("Renaming 'notify.ifttt.params.usemessageasvalue' to 'notify.ifttt.params.messagevalue'")
 				b.setParam("messagevalue", v)
 			}
-			b.setParam("usemessageasvalue", "")
+			b.deleteParam("usemessageasvalue")
 			changed = true
 		}
 		// Deprecated: usetitleasvalue -> titlevalue.
@@ -333,7 +342,7 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 				logx.Deprecated("Renaming 'notify.ifttt.params.usetitleasvalue' to 'notify.ifttt.params.titlevalue'")
 				b.setParam("titlevalue", v)
 			}
-			b.setParam("usetitleasvalue", "")
+			b.deleteParam("usetitleasvalue")
 			changed = true
 		}
 	case "matrix":
@@ -358,10 +367,19 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 				logx.Deprecated("Renaming 'notify.ntfy.params.disabletls' to 'notify.ntfy.params.disabletlsverification'")
 				b.setParam("disabletlsverification", disableTLS)
 			}
-			b.setParam("disabletls", "")
+			b.deleteParam("disabletls")
 			changed = true
 		}
 	case "slack":
+		// Deprecated: threadts -> thread_ts.
+		if v := b.GetParam("threadts"); v != "" {
+			if b.GetParam("thread_ts") == "" {
+				logx.Deprecated("Renaming 'notify.slack.params.threadts' to 'notify.slack.params.thread_ts'")
+				b.setParam("thread_ts", v)
+			}
+			b.deleteParam("threadts")
+			changed = true
+		}
 		// Ensure color is stored as #RRGGBB so BuildURL's queryParam encodes it correctly.
 		// Migrate %23 (old manual encoding) and bare hex to #-prefixed form.
 		if color := b.GetParam("color"); color != "" {
@@ -385,7 +403,7 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 				logx.Deprecated("Renaming 'notify.smtp.params.skiptlsverification' to 'notify.smtp.params.skiptlsverify'")
 				b.setParam("skiptlsverify", v)
 			}
-			b.setParam("skiptlsverification", "")
+			b.deleteParam("skiptlsverification")
 			changed = true
 		}
 		// Timeout, treat integers as seconds by default.
@@ -1056,7 +1074,7 @@ func (b *Base) checkValuesParamsSelects(itemType string) error {
 			errs = append(errs, err)
 		}
 	case "generic":
-		if err := b.validateParamSelect("requestmethod", genericParamRequestmethod); err != nil {
+		if err := b.validateParamSelect("method", genericParamMethod); err != nil {
 			errs = append(errs, err)
 		}
 	case "ntfy":

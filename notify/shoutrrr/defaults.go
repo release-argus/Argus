@@ -198,11 +198,11 @@ func (s *ShoutrrrsDefaults) Default() {
 		notifyDefaultOptions(),
 		nil,
 		map[string]string{
-			"contenttype":   "application/json",
-			"disabletls":    "no",
-			"messagekey":    "message",
-			"requestmethod": http.MethodPost,
-			"titlekey":      "title",
+			"contenttype": "application/json",
+			"disabletls":  "no",
+			"messagekey":  "message",
+			"method":      http.MethodPost,
+			"titlekey":    "title",
 		},
 	)
 	defaults["shoutrrr"] = NewDefaults(

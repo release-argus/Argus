@@ -1073,6 +1073,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 		sType         string
 		mapTarget     string
 		startAs, want map[string]string
+		wantAbsent    []string
 		renamedVar    bool
 	}{
 		{
@@ -1193,6 +1194,9 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"thread_id": "1234567890",
 			},
+			wantAbsent: []string{
+				"threadid",
+			},
 			renamedVar: true,
 		},
 		{
@@ -1206,6 +1210,40 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"thread_id": "9876543210",
 			},
+			wantAbsent: []string{
+				"threadid",
+			},
+			renamedVar: true,
+		},
+		{
+			name:      "generic/requestmethod -> method",
+			sType:     "generic",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"requestmethod": "PUT",
+			},
+			want: map[string]string{
+				"method": "PUT",
+			},
+			wantAbsent: []string{
+				"requestmethod",
+			},
+			renamedVar: true,
+		},
+		{
+			name:      "generic/requestmethod -> method (but method already defined)",
+			sType:     "generic",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"requestmethod": "PUT",
+				"method":        "GET",
+			},
+			want: map[string]string{
+				"method": "GET",
+			},
+			wantAbsent: []string{
+				"requestmethod",
+			},
 			renamedVar: true,
 		},
 		{
@@ -1217,6 +1255,9 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 			want: map[string]string{
 				"headers": `{"foo":"bar"}`,
+			},
+			wantAbsent: []string{
+				"custom_headers",
 			},
 			renamedVar: true,
 		},
@@ -1231,6 +1272,9 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"headers": `{"foo":"baz"}`,
 			},
+			wantAbsent: []string{
+				"custom_headers",
+			},
 			renamedVar: true,
 		},
 		{
@@ -1242,6 +1286,9 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 			want: map[string]string{
 				"messagevalue": "2",
+			},
+			wantAbsent: []string{
+				"usemessageasvalue",
 			},
 			renamedVar: true,
 		},
@@ -1256,6 +1303,9 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"messagevalue": "3",
 			},
+			wantAbsent: []string{
+				"usemessageasvalue",
+			},
 			renamedVar: true,
 		},
 		{
@@ -1267,6 +1317,9 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 			want: map[string]string{
 				"titlevalue": "2",
+			},
+			wantAbsent: []string{
+				"usetitleasvalue",
 			},
 			renamedVar: true,
 		},
@@ -1280,6 +1333,9 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 			want: map[string]string{
 				"titlevalue": "3",
+			},
+			wantAbsent: []string{
+				"usetitleasvalue",
 			},
 			renamedVar: true,
 		},
@@ -1348,6 +1404,9 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"disabletlsverification": "true",
 			},
+			wantAbsent: []string{
+				"disabletls",
+			},
 			renamedVar: true,
 		},
 		{
@@ -1360,6 +1419,9 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 			want: map[string]string{
 				"disabletlsverification": "false",
+			},
+			wantAbsent: []string{
+				"disabletls",
 			},
 			renamedVar: true,
 		},
@@ -1419,6 +1481,37 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
+			name:      "slack/threadts -> thread_ts",
+			sType:     "slack",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"threadts": "1609459200.000001",
+			},
+			want: map[string]string{
+				"thread_ts": "1609459200.000001",
+			},
+			wantAbsent: []string{
+				"threadts",
+			},
+			renamedVar: true,
+		},
+		{
+			name:      "slack/threadts -> thread_ts (but thread_ts already defined)",
+			sType:     "slack",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"threadts":  "1609459200.000001",
+				"thread_ts": "1700000000.000002",
+			},
+			want: map[string]string{
+				"thread_ts": "1700000000.000002",
+			},
+			wantAbsent: []string{
+				"threadts",
+			},
+			renamedVar: true,
+		},
+		{
 			name:      "smtp/skiptlsverification -> skiptlsverify",
 			sType:     "smtp",
 			mapTarget: "params",
@@ -1427,6 +1520,9 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 			want: map[string]string{
 				"skiptlsverify": "true",
+			},
+			wantAbsent: []string{
+				"skiptlsverification",
 			},
 			renamedVar: true,
 		},
@@ -1440,6 +1536,9 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 			want: map[string]string{
 				"skiptlsverify": "false",
+			},
+			wantAbsent: []string{
+				"skiptlsverification",
 			},
 			renamedVar: true,
 		},
@@ -1583,6 +1682,11 @@ func TestBase_CorrectSelf(t *testing.T) {
 				typ := shoutrrr.GetType()
 				shoutrrr.correctSelf(typ)
 
+				prefix := fmt.Sprintf(
+					"%s\nBase.correctSelf(%q)",
+					packageName, typ,
+				)
+
 				for k, v := range tc.want {
 					want := v
 					// root is the only one that gets corrected.
@@ -1595,8 +1699,8 @@ func TestBase_CorrectSelf(t *testing.T) {
 					}
 					if got != want {
 						t.Errorf(
-							"%s\nBase.correctSelf(%q) %s[%q] mismatch\ngot:  %q\nwant: %q",
-							packageName, typ, tc.mapTarget, k,
+							"%s %s[%q] mismatch\ngot:  %q\nwant: %q",
+							prefix, tc.mapTarget, k,
 							got, want,
 						)
 					}
@@ -1606,6 +1710,26 @@ func TestBase_CorrectSelf(t *testing.T) {
 					} else {
 						delete(subTestMap[subTest].Params, k)
 					}
+				}
+
+				// AND: the deprecated key is removed.
+				if subTest == "root" {
+					for _, k := range tc.wantAbsent {
+						_, found := subTestMap[subTest].Params[k]
+						if tc.mapTarget == "url_fields" {
+							_, found = subTestMap[subTest].URLFields[k]
+						}
+						if found {
+							t.Errorf(
+								"%s %s[%q] should have been removed",
+								prefix, tc.mapTarget, k,
+							)
+						}
+					}
+				}
+				for _, k := range tc.wantAbsent {
+					delete(subTestMap[subTest].URLFields, k)
+					delete(subTestMap[subTest].Params, k)
 				}
 			}
 		})
@@ -3178,27 +3302,27 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 		},
 		// generic
 		{
-			name:     "generic/valid requestmethod normalised",
+			name:     "generic/valid method normalised",
 			itemType: "generic",
 			params: map[string]string{
-				"requestmethod": "post",
+				"method": "post",
 			},
 			errRegex: `^$`,
 			wantParam: map[string]string{
-				"requestmethod": "POST",
+				"method": "POST",
 			},
 		},
 		{
-			name:     "generic/invalid requestmethod",
+			name:     "generic/invalid method",
 			itemType: "generic",
 			params: map[string]string{
-				"requestmethod": "FETCH",
+				"method": "FETCH",
 			},
 			errRegex: "^" + test.RegexBracketEscaper.Replace(
 				polymorphic.ErrInvalidType{
-					Key:     "requestmethod",
+					Key:     "method",
 					Value:   "FETCH",
-					Allowed: genericParamRequestmethod,
+					Allowed: genericParamMethod,
 				}.Error(),
 			) + "$",
 		},

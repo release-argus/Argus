@@ -957,6 +957,17 @@ func TestBase_X_URLField(t *testing.T) {
 					got, want,
 				)
 			}
+
+			// WHEN: deleteURLField is called.
+			base.deleteURLField(tc.key)
+
+			// THEN: the key is removed, rather than left with an empty value.
+			if _, found := base.URLFields[tc.key]; found {
+				t.Fatalf(
+					"%s\nShoutrrr.deleteURLField(%q) left the key in place",
+					packageName, tc.key,
+				)
+			}
 		})
 	}
 }
@@ -1027,6 +1038,18 @@ func TestBase_X_Param(t *testing.T) {
 					"%s\nShoutrrr.GetParam(%q) mismatch after setParam(%q):\ngot:  %q\nwant: %q",
 					packageName, tc.key, want,
 					got, want,
+				)
+			}
+
+			// WHEN: deleteParam is called.
+			base.deleteParam(tc.key)
+
+			// THEN: the key is removed, rather than left with an empty value.
+			// Shoutrrr rejects an unknown key and an empty value alike.
+			if _, found := base.Params[tc.key]; found {
+				t.Fatalf(
+					"%s\nShoutrrr.deleteParam(%q) left the key in place",
+					packageName, tc.key,
 				)
 			}
 		})

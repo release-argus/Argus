@@ -1414,11 +1414,11 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 							"token":   "slackToken",
 						},
 						map[string]string{
-							"botname":  "Argus",
-							"color":    "#ff8000",
-							"icon":     ":ghost:",
-							"threadts": "1234567890.123456",
-							"title":    "Argus Slack Notification",
+							"botname":   "Argus",
+							"color":     "#ff8000",
+							"icon":      ":ghost:",
+							"thread_ts": "1234567890.123456",
+							"title":     "Argus Slack Notification",
 						},
 					),
 				},
@@ -2037,7 +2037,7 @@ var hardDefaultsStr = test.TrimYAML(`
 					contenttype: application/json
 					disabletls: 'no'
 					messagekey: message
-					requestmethod: POST
+					method: POST
 					titlekey: title
 			googlechat:
 				type: googlechat

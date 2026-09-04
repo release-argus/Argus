@@ -123,7 +123,7 @@ export type NotifyGeneric = NotifyBase & {
 		contenttype?: string;
 		disabletls?: string;
 		messagekey?: string;
-		requestmethod?: GenericRequestMethod;
+		method?: GenericRequestMethod;
 		template?: string;
 		title?: string;
 		titlekey?: string;
@@ -338,7 +338,7 @@ export type NotifySlack = NotifyBase & {
 		botname?: string;
 		color?: string;
 		icon?: string;
-		threadts?: string;
+		thread_ts?: string;
 		title?: string;
 	};
 };
