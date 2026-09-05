@@ -63,10 +63,8 @@ func decodeTestLookup(
 	t.Helper()
 
 	field := testLookup{
-		Lookup: Lookup{
-			Defaults:     cfg.Soft,
-			HardDefaults: cfg.Hard,
-		},
+		Defaults:     cfg.Soft,
+		HardDefaults: cfg.Hard,
 	}
 
 	// Unmarshal static fields.

@@ -24,7 +24,6 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/shared"
@@ -177,10 +176,8 @@ func TestLookup_Unmarshal(t *testing.T) {
 				t,
 				func(format string, data []byte) (*Lookup, error) {
 					v := Lookup{
-						Lookup: base.Lookup{
-							Defaults:     lvCfg.Soft,
-							HardDefaults: lvCfg.Hard,
-						},
+						Defaults:     lvCfg.Soft,
+						HardDefaults: lvCfg.Hard,
 					}
 					err := decode.Unmarshal(format, data, &v)
 					return &v, err
@@ -222,15 +219,13 @@ func TestLookup_String(t *testing.T) {
 		{
 			name: "filled",
 			lookup: &Lookup{
-				Lookup: base.Lookup{
-					Type: "test",
-					URL:  "https://example.com",
-					URLCommands: filter.URLCommands{
-						{Type: "regex", Regex: "abc"},
-					},
-					Require: &filter.Require{
-						RegexVersion: "def",
-					},
+				Type: "test",
+				URL:  "https://example.com",
+				URLCommands: filter.URLCommands{
+					{Type: "regex", Regex: "abc"},
+				},
+				Require: &filter.Require{
+					RegexVersion: "def",
 				},
 				AllowInvalidCerts: new(true),
 				Headers: shared.Headers{
@@ -465,16 +460,10 @@ func TestLookup_InheritSecrets(t *testing.T) {
 		{
 			name: "secrets to undefined vars",
 			lookup: &Lookup{
-				Lookup: base.Lookup{
-					Require: &filter.Require{
-						Docker: &docker.GHCRRegistry{
-							CommonRegistry: docker.CommonRegistry{
-								Auth: &docker.GHCRAuth{
-									GHCRAuthDefaults: docker.GHCRAuthDefaults{
-										Token: util.SecretValue,
-									},
-								},
-							},
+				Require: &filter.Require{
+					Docker: &docker.GHCRRegistry{
+						Auth: &docker.GHCRAuth{
+							Token: util.SecretValue,
 						},
 					},
 				},
@@ -482,9 +471,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 					{Key: "X-Test", Value: util.SecretValue},
 				},
 			},
-			previous: &Lookup{
-				Lookup: base.Lookup{},
-			},
+			previous: &Lookup{},
 			secretRefs: &shared.VSecretRef{
 				Headers: []shared.OldIntIndex{
 					{OldIndex: new(0)},
@@ -503,16 +490,10 @@ func TestLookup_InheritSecrets(t *testing.T) {
 		{
 			name: "secrets inherited",
 			lookup: &Lookup{
-				Lookup: base.Lookup{
-					Require: &filter.Require{
-						Docker: &docker.GHCRRegistry{
-							CommonRegistry: docker.CommonRegistry{
-								Auth: &docker.GHCRAuth{
-									GHCRAuthDefaults: docker.GHCRAuthDefaults{
-										Token: util.SecretValue,
-									},
-								},
-							},
+				Require: &filter.Require{
+					Docker: &docker.GHCRRegistry{
+						Auth: &docker.GHCRAuth{
+							Token: util.SecretValue,
 						},
 					},
 				},
@@ -521,16 +502,10 @@ func TestLookup_InheritSecrets(t *testing.T) {
 				},
 			},
 			previous: &Lookup{
-				Lookup: base.Lookup{
-					Require: &filter.Require{
-						Docker: &docker.GHCRRegistry{
-							CommonRegistry: docker.CommonRegistry{
-								Auth: &docker.GHCRAuth{
-									GHCRAuthDefaults: docker.GHCRAuthDefaults{
-										Token: "123",
-									},
-								},
-							},
+				Require: &filter.Require{
+					Docker: &docker.GHCRRegistry{
+						Auth: &docker.GHCRAuth{
+							Token: "123",
 						},
 					},
 				},

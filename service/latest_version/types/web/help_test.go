@@ -71,9 +71,7 @@ func testLookup(t *testing.T, failing bool) *Lookup {
 			ID: "web-testLookup",
 		},
 		&dashboard.Options{
-			OptionsBase: dashboard.OptionsBase{
-				WebURL: "https://example.com",
-			},
+			WebURL: "https://example.com",
 		},
 	)
 

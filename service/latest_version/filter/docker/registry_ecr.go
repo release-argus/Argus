@@ -301,11 +301,9 @@ func (a *ECRAuth) Clone() *ECRAuth {
 	}
 
 	return &ECRAuth{
-		ECRAuthDefaults: ECRAuthDefaults{
-			queryToken: a.queryToken,
-			validUntil: a.validUntil,
-			defaults:   a.defaults,
-		},
+		queryToken: a.queryToken,
+		validUntil: a.validUntil,
+		defaults:   a.defaults,
 	}
 }
 

@@ -77,9 +77,7 @@ func TestAPI_Get(t *testing.T) {
 			ID: target,
 		},
 		&dashboard.Options{
-			OptionsBase: dashboard.OptionsBase{
-				WebURL: "https://example.com",
-			},
+			WebURL: "https://example.com",
 		},
 	)
 	want.SetLatestVersion("9.9.9", "2022-01-01T01:01:01Z", false)

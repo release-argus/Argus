@@ -180,10 +180,8 @@ func (s *Store) UserWithGrants(
 		// NULL where the group carries no permissions.
 		if resource.Valid {
 			grants = append(grants, rbac.Grant{
-				Permission: rbac.Permission{
-					Resource: rbac.Resource(resource.String),
-					Action:   rbac.Action(action.String),
-				},
+				Resource: rbac.Resource(resource.String),
+				Action:   rbac.Action(action.String),
 				Scope: rbac.Scope{
 					Type: rbac.ScopeType(scopeType.String),
 					Ref:  scopeRef.String,

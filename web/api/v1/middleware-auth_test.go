@@ -754,20 +754,24 @@ func TestAPI__auth__scopedGrants(t *testing.T) {
 		"",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-				Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionRead,
+				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
 			},
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-				Scope:      rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionRead,
+				Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
 			},
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceVersionRefresh, Action: rbac.ActionExecute},
-				Scope:      rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
+				Resource: rbac.ResourceVersionRefresh,
+				Action:   rbac.ActionExecute,
+				Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
 			},
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceVersionRefresh, Action: rbac.ActionExecute},
-				Scope:      rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "staging"},
+				Resource: rbac.ResourceVersionRefresh,
+				Action:   rbac.ActionExecute,
+				Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "staging"},
 			},
 		},
 	); err != nil {
@@ -844,8 +848,9 @@ func TestAPI__auth__GuardAnyScopeOf(t *testing.T) {
 		"",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionUpdate},
-				Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionUpdate,
+				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
 			},
 		},
 	); err != nil {
@@ -862,8 +867,9 @@ func TestAPI__auth__GuardAnyScopeOf(t *testing.T) {
 		"",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-				Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionRead,
+				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
 			},
 		},
 	); err != nil {
@@ -935,8 +941,9 @@ func TestAPI__auth__permissionChangesApplyImmediately(t *testing.T) {
 		"",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceConfig, Action: rbac.ActionRead},
-				Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+				Resource: rbac.ResourceConfig,
+				Action:   rbac.ActionRead,
+				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
 			},
 		},
 	)
@@ -1176,8 +1183,9 @@ func TestAPI_Guard(t *testing.T) {
 		"",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-				Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionRead,
+				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
 			},
 		},
 	); err != nil {
@@ -1396,12 +1404,14 @@ func TestAPI_ReadableServices(t *testing.T) {
 			name: "full-scoped",
 			grants: []rbac.Grant{
 				{
-					Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-					Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
+					Resource: rbac.ResourceService,
+					Action:   rbac.ActionRead,
+					Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
 				},
 				{
-					Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-					Scope:      rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
+					Resource: rbac.ResourceService,
+					Action:   rbac.ActionRead,
+					Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
 				},
 			},
 		},
@@ -1409,8 +1419,9 @@ func TestAPI_ReadableServices(t *testing.T) {
 			name: "service-scoped",
 			grants: []rbac.Grant{
 				{
-					Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-					Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
+					Resource: rbac.ResourceService,
+					Action:   rbac.ActionRead,
+					Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
 				},
 			},
 		},
@@ -1418,8 +1429,9 @@ func TestAPI_ReadableServices(t *testing.T) {
 			name: "tag-scoped",
 			grants: []rbac.Grant{
 				{
-					Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-					Scope:      rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
+					Resource: rbac.ResourceService,
+					Action:   rbac.ActionRead,
+					Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
 				},
 			},
 		},
@@ -1542,9 +1554,7 @@ func TestAPI_ActionableServices(t *testing.T) {
 			name: "global-actioner",
 			grants: []rbac.Grant{
 				{
-					Permission: rbac.Permission{
-						Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
-					},
+					Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
 					Scope: rbac.Scope{Type: rbac.ScopeGlobal},
 				},
 			},
@@ -1553,9 +1563,7 @@ func TestAPI_ActionableServices(t *testing.T) {
 			name: "scoped-actioner",
 			grants: []rbac.Grant{
 				{
-					Permission: rbac.Permission{
-						Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
-					},
+					Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
 					Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
 				},
 			},
@@ -1564,9 +1572,7 @@ func TestAPI_ActionableServices(t *testing.T) {
 			name: "reader",
 			grants: []rbac.Grant{
 				{
-					Permission: rbac.Permission{
-						Resource: rbac.ResourceService, Action: rbac.ActionRead,
-					},
+					Resource: rbac.ResourceService, Action: rbac.ActionRead,
 					Scope: rbac.Scope{Type: rbac.ScopeGlobal},
 				},
 			},

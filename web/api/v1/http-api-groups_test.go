@@ -37,8 +37,9 @@ import (
 // nonAdminGrants is a valid non-admin grant set.
 func nonAdminGrants() []rbac.Grant {
 	return []rbac.Grant{{
-		Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-		Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+		Resource: rbac.ResourceService,
+		Action:   rbac.ActionRead,
+		Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
 	}}
 }
 

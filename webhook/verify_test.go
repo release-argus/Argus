@@ -92,10 +92,8 @@ func TestWebHooksDefaults_CheckValues(t *testing.T) {
 			name: "custom_headers -> headers",
 			input: &WebHooksDefaults{
 				"a": &Defaults{
-					Base: Base{
-						CustomHeaders: Headers{
-							{Key: "foo", Value: "bar"},
-						},
+					CustomHeaders: Headers{
+						{Key: "foo", Value: "bar"},
 					},
 				},
 			},
@@ -216,13 +214,11 @@ func TestWebHooks_CheckValues(t *testing.T) {
 			input: func() *WebHooks {
 				return &WebHooks{
 					"a": &WebHook{
-						Base: Base{
-							Type:   "github",
-							URL:    "example.com",
-							Secret: "Argus",
-							CustomHeaders: Headers{
-								{Key: "foo", Value: "bar"},
-							},
+						Type:   "github",
+						URL:    "example.com",
+						Secret: "Argus",
+						CustomHeaders: Headers{
+							{Key: "foo", Value: "bar"},
 						},
 					},
 				}
@@ -495,10 +491,8 @@ func TestDefaults_CheckValues(t *testing.T) {
 		{
 			name: "custom_headers -> headers",
 			input: &Defaults{
-				Base: Base{
-					CustomHeaders: Headers{
-						{Key: "foo", Value: "bar"},
-					},
+				CustomHeaders: Headers{
+					{Key: "foo", Value: "bar"},
 				},
 			},
 			changed: true,

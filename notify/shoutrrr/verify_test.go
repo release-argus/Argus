@@ -126,11 +126,9 @@ func TestShoutrrrs_CheckValues(t *testing.T) {
 				"valid": testShoutrrr(false, false),
 				"other": testShoutrrr(false, false),
 				"generic": &Shoutrrr{
-					Base: Base{
-						URLFields: map[string]string{
-							"host":           "example.com",
-							"custom_headers": `{"foo":"bar"}`},
-					},
+					URLFields: map[string]string{
+						"host":           "example.com",
+						"custom_headers": `{"foo":"bar"}`},
 				},
 			},
 			changed: true,
@@ -709,11 +707,9 @@ func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
 				"valid": testDefaults(false, false),
 				"other": testDefaults(false, false),
 				"generic": &Defaults{
-					Base: Base{
-						URLFields: map[string]string{
-							"host":           "example.com",
-							"custom_headers": `{"foo":"bar"}`,
-						},
+					URLFields: map[string]string{
+						"host":           "example.com",
+						"custom_headers": `{"foo":"bar"}`,
 					},
 				},
 			},
@@ -845,19 +841,15 @@ func TestDefaults_CheckValues(t *testing.T) {
 			changed:  false,
 		},
 		{
-			name: "empty Type uses id/valid",
-			input: &Defaults{
-				Base: Base{},
-			},
+			name:     "empty Type uses id/valid",
+			input:    &Defaults{},
 			id:       "gotify",
 			errRegex: `^$`,
 			changed:  false,
 		},
 		{
-			name: "empty Type uses id/invalid",
-			input: &Defaults{
-				Base: Base{},
-			},
+			name:     "empty Type uses id/invalid",
+			input:    &Defaults{},
 			id:       "unknown",
 			errRegex: `^type: "unknown" <invalid>.*$`,
 			changed:  false,
@@ -865,9 +857,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 		{
 			name: "Type set overrides id (both valid)",
 			input: &Defaults{
-				Base: Base{
-					Type: "gotify",
-				},
+				Type: "gotify",
 			},
 			id:       "slack",
 			errRegex: `^$`,
@@ -876,11 +866,9 @@ func TestDefaults_CheckValues(t *testing.T) {
 		{
 			name: "Base error is propagated",
 			input: &Defaults{
-				Base: Base{
-					Type: "slack",
-					Options: map[string]string{
-						"delay": "10x",
-					},
+				Type: "slack",
+				Options: map[string]string{
+					"delay": "10x",
 				},
 			},
 			id: "",
@@ -893,11 +881,9 @@ func TestDefaults_CheckValues(t *testing.T) {
 		{
 			name: "Combines type invalid and base error",
 			input: &Defaults{
-				Base: Base{
-					Type: "invalid",
-					Params: map[string]string{
-						"color": "{{ invalid template }}",
-					},
+				Type: "invalid",
+				Params: map[string]string{
+					"color": "{{ invalid template }}",
 				},
 			},
 			id: "",
@@ -911,14 +897,12 @@ func TestDefaults_CheckValues(t *testing.T) {
 		{
 			name: "both valid, no error",
 			input: &Defaults{
-				Base: Base{
-					Type: "gotify",
-					Options: map[string]string{
-						"delay": "1s",
-					},
-					Params: map[string]string{
-						"message": "release {{ version }}",
-					},
+				Type: "gotify",
+				Options: map[string]string{
+					"delay": "1s",
+				},
+				Params: map[string]string{
+					"message": "release {{ version }}",
 				},
 			},
 			id:       "",
@@ -926,10 +910,8 @@ func TestDefaults_CheckValues(t *testing.T) {
 			changed:  false,
 		},
 		{
-			name: "empty Type and id empty",
-			input: &Defaults{
-				Base: Base{},
-			},
+			name:     "empty Type and id empty",
+			input:    &Defaults{},
 			id:       "",
 			errRegex: `^type: <required>.*$`,
 			changed:  false,
@@ -937,11 +919,9 @@ func TestDefaults_CheckValues(t *testing.T) {
 		{
 			name: "port with colon prefix is corrected",
 			input: &Defaults{
-				Base: Base{
-					Type: "gotify",
-					URLFields: map[string]string{
-						"port": ":123",
-					},
+				Type: "gotify",
+				URLFields: map[string]string{
+					"port": ":123",
 				},
 			},
 			id:       "",

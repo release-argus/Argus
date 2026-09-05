@@ -21,7 +21,6 @@ import (
 
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
 )
 
 func TestLookup_CheckValues(t *testing.T) {
@@ -43,10 +42,8 @@ func TestLookup_CheckValues(t *testing.T) {
 		{
 			name: "Invalid Require",
 			input: &Lookup{
-				Lookup: base.Lookup{
-					Require: &filter.Require{
-						RegexVersion: "[0a",
-					},
+				Require: &filter.Require{
+					RegexVersion: "[0a",
 				},
 			},
 			errRegex: test.TrimYAML(`
@@ -58,12 +55,10 @@ func TestLookup_CheckValues(t *testing.T) {
 		{
 			name: "Invalid URL Commands",
 			input: &Lookup{
-				Lookup: base.Lookup{
-					URLCommands: filter.URLCommands{
-						{Type: "regex", Regex: `[0-9]+`},
-						{Type: "regex", Regex: `[0-9]+`},
-						{Type: "foo"},
-					},
+				URLCommands: filter.URLCommands{
+					{Type: "regex", Regex: `[0-9]+`},
+					{Type: "regex", Regex: `[0-9]+`},
+					{Type: "foo"},
 				},
 			},
 			errRegex: test.TrimYAML(`

@@ -52,10 +52,8 @@ func BareConfig(t *testing.T, nilFlags bool) (cfg *config.Config) {
 
 	cfg = &config.Config{
 		Settings: config.Settings{
-			SettingsBase: config.SettingsBase{
-				Web: config.WebSettings{
-					RoutePrefix: "",
-				},
+			Web: config.WebSettings{
+				RoutePrefix: "",
 			},
 		},
 		Order: []string{},

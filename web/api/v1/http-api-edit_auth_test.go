@@ -62,8 +62,9 @@ func TestAPI__auth__ServiceEdit__preventsSelfLockout(t *testing.T) {
 		"",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionUpdate},
-				Scope:      rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "team-a"},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionUpdate,
+				Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "team-a"},
 			},
 		},
 	); err != nil {
@@ -81,8 +82,9 @@ func TestAPI__auth__ServiceEdit__preventsSelfLockout(t *testing.T) {
 		"",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionUpdate},
-				Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: ownedID},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionUpdate,
+				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: ownedID},
 			},
 		},
 	); err != nil {
@@ -216,8 +218,9 @@ func TestAPI__auth__notifyTestInheritRequiresServiceUpdate(t *testing.T) {
 		"",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceNotify, Action: rbac.ActionExecute},
-				Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+				Resource: rbac.ResourceNotify,
+				Action:   rbac.ActionExecute,
+				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
 			},
 		},
 	); err != nil {
@@ -235,12 +238,14 @@ func TestAPI__auth__notifyTestInheritRequiresServiceUpdate(t *testing.T) {
 		"",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceNotify, Action: rbac.ActionExecute},
-				Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+				Resource: rbac.ResourceNotify,
+				Action:   rbac.ActionExecute,
+				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
 			},
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionUpdate},
-				Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionUpdate,
+				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
 			},
 		},
 	); err != nil {
@@ -325,8 +330,9 @@ func TestAPI__auth__notifyTestRootInheritRequiresGlobalServiceUpdate(t *testing.
 		"",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceNotify, Action: rbac.ActionExecute},
-				Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+				Resource: rbac.ResourceNotify,
+				Action:   rbac.ActionExecute,
+				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
 			},
 		},
 	); err != nil {
@@ -344,12 +350,14 @@ func TestAPI__auth__notifyTestRootInheritRequiresGlobalServiceUpdate(t *testing.
 		"",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceNotify, Action: rbac.ActionExecute},
-				Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+				Resource: rbac.ResourceNotify,
+				Action:   rbac.ActionExecute,
+				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
 			},
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionUpdate},
-				Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionUpdate,
+				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
 			},
 		},
 	); err != nil {
@@ -433,12 +441,14 @@ func TestAPI__auth__versionRefreshOverridesRequireServiceUpdate(t *testing.T) {
 		"",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceVersionRefresh, Action: rbac.ActionExecute},
-				Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
+				Resource: rbac.ResourceVersionRefresh,
+				Action:   rbac.ActionExecute,
+				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
 			},
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-				Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionRead,
+				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
 			},
 		},
 	); err != nil {

@@ -23,7 +23,6 @@ import (
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
 	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
@@ -165,10 +164,8 @@ func TestLookup_Unmarshal(t *testing.T) {
 				t,
 				func(format string, data []byte) (*Lookup, error) {
 					v := Lookup{
-						Lookup: base.Lookup{
-							Defaults:     lvCfg.Soft,
-							HardDefaults: lvCfg.Hard,
-						},
+						Defaults:     lvCfg.Soft,
+						HardDefaults: lvCfg.Hard,
 					}
 					err := decode.Unmarshal(format, data, &v)
 					return &v, err
@@ -307,11 +304,9 @@ func TestLookup_Copy(t *testing.T) {
 					},
 					tagFallback: true,
 				},
-				Lookup: base.Lookup{
-					Status: test.Must(t, func() (*status.Status, error) {
-						return statustest.New("yaml", nil)
-					}),
-				},
+				Status: test.Must(t, func() (*status.Status, error) {
+					return statustest.New("yaml", nil)
+				}),
 			},
 			status: nil,
 		},

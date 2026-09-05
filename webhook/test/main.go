@@ -63,9 +63,7 @@ func WebHook(t *testing.T, failing, selfSignedCert, headers bool) *webhook.WebHo
 			ServiceURL: "https://example.com/service/url",
 		},
 		&dashboard.Options{
-			OptionsBase: dashboard.OptionsBase{
-				WebURL: "https://example.com/web_url",
-			},
+			WebURL: "https://example.com/web_url",
 		},
 	)
 	if selfSignedCert {

@@ -519,28 +519,22 @@ func TestCommonRegistry_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Image",
 			registry: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-				},
+				Image: "test/app",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Tag",
 			registry: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Tag: "1.2.3",
-				},
+				Tag: "1.2.3",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/ContainerDetail",
 			registry: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "1.2.3",
-				},
+				Image: "test/app",
+				Tag:   "1.2.3",
 			},
 			want: false,
 		},
@@ -548,11 +542,9 @@ func TestCommonRegistry_IsZero(t *testing.T) {
 			name: "non-empty/Auth",
 			registry: &CommonRegistry{
 				Auth: &HubAuth{
-					HubAuthDefaults: HubAuthDefaults{
-						Token:      "foo",
-						queryToken: "bar",
-						validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Token:      "foo",
+					queryToken: "bar",
+					validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			want: false,
@@ -560,17 +552,13 @@ func TestCommonRegistry_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			registry: &CommonRegistry{
-				Type: "hub",
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "1.2.3",
-				},
+				Type:  "hub",
+				Image: "test/app",
+				Tag:   "1.2.3",
 				Auth: &HubAuth{
-					HubAuthDefaults: HubAuthDefaults{
-						Token:      "foo",
-						queryToken: "bar",
-						validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Token:      "foo",
+					queryToken: "bar",
+					validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			want: false,
@@ -615,18 +603,14 @@ func TestCommonRegistry_Clone(t *testing.T) {
 		{
 			name: "filled",
 			registry: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: test.ArgusDockerGHCRRepo,
-					Tag:   "1.2.3",
-				},
+				Image: test.ArgusDockerGHCRRepo,
+				Tag:   "1.2.3",
 				Auth: &HubAuth{
-					HubAuthDefaults: HubAuthDefaults{
-						Username:   "u1",
-						Token:      "t1",
-						queryToken: "qT",
-						validUntil: time.Now(),
-						defaults:   &HubAuthDefaults{},
-					},
+					Username:   "u1",
+					Token:      "t1",
+					queryToken: "qT",
+					validUntil: time.Now(),
+					defaults:   &HubAuthDefaults{},
 				},
 			},
 			want: test.TrimYAML(`
@@ -702,29 +686,23 @@ func TestCommonRegistry_String(t *testing.T) {
 		{
 			name: "filled",
 			registry: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "{{ version }}",
-				},
+				Image: "test/app",
+				Tag:   "{{ version }}",
 				Auth: &HubAuth{
-					HubAuthDefaults: HubAuthDefaults{
-						Token:      "_token_",
-						queryToken: "_queryToken_",
-						validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
-						defaults: &HubAuthDefaults{
-							Token:      "_other_token_",
-							queryToken: "_other_queryToken_",
-							validUntil: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
-						},
+					Token:      "_token_",
+					queryToken: "_queryToken_",
+					validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+					defaults: &HubAuthDefaults{
+						Token:      "_other_token_",
+						queryToken: "_other_queryToken_",
+						validUntil: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 					},
 				},
 				defaults: &HubRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						Auth: &HubAuthDefaults{
-							Token:      "_other_token_",
-							queryToken: "_other_queryToken_",
-							validUntil: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
-						},
+					Auth: &HubAuthDefaults{
+						Token:      "_other_token_",
+						queryToken: "_other_queryToken_",
+						validUntil: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 					},
 				},
 			},
@@ -776,30 +754,22 @@ func TestCommonRegistry_Defaults(t *testing.T) {
 			defaults := Defaults{
 				Registry: RegistryDefaultsSet{
 					ECR: &ECRRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &ECRAuthDefaults{},
-						},
+						Auth: &ECRAuthDefaults{},
 					},
 					GHCR: &GHCRRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &HubAuthDefaults{
-								Token: "ghcr-token",
-							},
+						Auth: &HubAuthDefaults{
+							Token: "ghcr-token",
 						},
 					},
 					Hub: &HubRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &HubAuthDefaults{
-								Token:    "hub-token",
-								Username: "hub-username",
-							},
+						Auth: &HubAuthDefaults{
+							Token:    "hub-token",
+							Username: "hub-username",
 						},
 					},
 					Quay: &QuayRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &HubAuthDefaults{
-								Token: "hub-token",
-							},
+						Auth: &HubAuthDefaults{
+							Token: "hub-token",
 						},
 					},
 				},
@@ -864,25 +834,19 @@ func TestCommonRegistry_SetDefaults__unknownType(t *testing.T) {
 	defaults := Defaults{
 		Registry: RegistryDefaultsSet{
 			GHCR: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{
-						Token: "ghcr-token",
-					},
+				Auth: &HubAuthDefaults{
+					Token: "ghcr-token",
 				},
 			},
 			Hub: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{
-						Token:    "hub-token",
-						Username: "hub-username",
-					},
+				Auth: &HubAuthDefaults{
+					Token:    "hub-token",
+					Username: "hub-username",
 				},
 			},
 			Quay: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{
-						Token: "hub-token",
-					},
+				Auth: &HubAuthDefaults{
+					Token: "hub-token",
 				},
 			},
 		},
@@ -993,9 +957,7 @@ func TestCommonRegistry_GetImageSelf(t *testing.T) {
 		{
 			name: "image set",
 			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "image-here",
-				},
+				Image: "image-here",
 			},
 			want: "image-here",
 		},
@@ -1034,9 +996,7 @@ func TestCommonRegistry_GetImage(t *testing.T) {
 		{
 			name: "image set",
 			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-				},
+				Image: "test/app",
 			},
 			want: "test/app",
 		},
@@ -1075,9 +1035,7 @@ func TestCommonRegistry_GetTagSelf(t *testing.T) {
 		{
 			name: "tag set",
 			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Tag: "tag-here",
-				},
+				Tag: "tag-here",
 			},
 			want: "tag-here",
 		},
@@ -1127,9 +1085,7 @@ func TestCommonRegistry_GetTag(t *testing.T) {
 		{
 			name: "Tag from instance",
 			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Tag: "t-instance",
-				},
+				Tag: "t-instance",
 			},
 			want: "t-instance",
 		},
@@ -1222,10 +1178,8 @@ func TestCommonRegistry_CheckValues(t *testing.T) {
 			name:     "image:tag at root",
 			errRegex: `^$`,
 			input: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "1.2.3",
-				},
+				Image:    "test/app",
+				Tag:      "1.2.3",
 				defaults: nil,
 			},
 		},
@@ -1233,10 +1187,8 @@ func TestCommonRegistry_CheckValues(t *testing.T) {
 			name:     "image: missing",
 			errRegex: `^image: <required>.*$`,
 			input: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "",
-					Tag:   "1.2.3",
-				},
+				Image:    "",
+				Tag:      "1.2.3",
 				defaults: nil,
 			},
 		},
@@ -1244,10 +1196,8 @@ func TestCommonRegistry_CheckValues(t *testing.T) {
 			name:     "image: with period in name",
 			errRegex: `^$`,
 			input: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "test/image.io",
-					Tag:   "1.2.3",
-				},
+				Image:    "test/image.io",
+				Tag:      "1.2.3",
 				defaults: nil,
 			},
 		},
@@ -1255,10 +1205,8 @@ func TestCommonRegistry_CheckValues(t *testing.T) {
 			name:     "image: invalid",
 			errRegex: `image: .* <invalid>`,
 			input: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "	test/app",
-					Tag:   "1.2.3",
-				},
+				Image:    "	test/app",
+				Tag:      "1.2.3",
 				defaults: nil,
 			},
 		},
@@ -1266,10 +1214,8 @@ func TestCommonRegistry_CheckValues(t *testing.T) {
 			name:     "tag: missing",
 			errRegex: `^tag: <required>.*$`,
 			input: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "",
-				},
+				Image:    "test/app",
+				Tag:      "",
 				defaults: nil,
 			},
 		},
@@ -1277,10 +1223,8 @@ func TestCommonRegistry_CheckValues(t *testing.T) {
 			name:     "tag: invalid templating",
 			errRegex: `^tag: .* <invalid>.*$`,
 			input: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "{{ version }",
-				},
+				Image:    "test/app",
+				Tag:      "{{ version }",
 				defaults: nil,
 			},
 		},
@@ -1288,10 +1232,8 @@ func TestCommonRegistry_CheckValues(t *testing.T) {
 			name:     "tag: invalid url encoding",
 			errRegex: `^tag: .* <invalid>.*$`,
 			input: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "1.2	.3+",
-				},
+				Image:    "test/app",
+				Tag:      "1.2	.3+",
 				defaults: nil,
 			},
 		},
@@ -1312,14 +1254,10 @@ func TestCommonRegistry_CheckValues(t *testing.T) {
 			name:     "auth err",
 			errRegex: `^token: <required>.*$`,
 			input: &CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "1.2.3",
-				},
+				Image: "test/app",
+				Tag:   "1.2.3",
 				Auth: &HubAuth{
-					HubAuthDefaults: HubAuthDefaults{
-						Username: "someone",
-					},
+					Username: "someone",
 				},
 			},
 		},
@@ -1354,9 +1292,7 @@ func TestCommonRegistry_GetTagForVersion(t *testing.T) {
 		{
 			name: "empty tag",
 			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Tag: "",
-				},
+				Tag: "",
 			},
 			version: "3.2.1",
 			want:    "",
@@ -1364,9 +1300,7 @@ func TestCommonRegistry_GetTagForVersion(t *testing.T) {
 		{
 			name: "plain version",
 			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Tag: "1.2.3",
-				},
+				Tag: "1.2.3",
 			},
 			version: "3.2.1",
 			want:    "1.2.3",
@@ -1374,9 +1308,7 @@ func TestCommonRegistry_GetTagForVersion(t *testing.T) {
 		{
 			name: "version template",
 			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Tag: "{{ version }}.1",
-				},
+				Tag: "{{ version }}.1",
 			},
 			version: "3.2",
 			want:    "3.2.1",
@@ -1435,10 +1367,8 @@ func TestCommonRegistry_ParseBody(t *testing.T) {
 
 	// AND: Container detail.
 	registry := CommonRegistry{
-		ContainerDetail: ContainerDetail{
-			Image: "test/app",
-			Tag:   "ver",
-		},
+		Image: "test/app",
+		Tag:   "ver",
 	}
 
 	for _, tc := range tests {
@@ -1469,19 +1399,15 @@ func TestCommonRegistry_Detail(t *testing.T) {
 		want     ContainerDetail
 	}{
 		{
-			name: "empty",
-			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{},
-			},
-			want: ContainerDetail{},
+			name:     "empty",
+			registry: CommonRegistry{},
+			want:     ContainerDetail{},
 		},
 		{
 			name: "image+tag from root",
 			registry: CommonRegistry{
-				ContainerDetail: ContainerDetail{
-					Image: "foo",
-					Tag:   "bar",
-				},
+				Image: "foo",
+				Tag:   "bar",
 			},
 			want: ContainerDetail{
 				Image: "foo",
@@ -1588,17 +1514,13 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			name: "nil registry to inherit from",
 			registry: CommonRegistry{
 				Auth: &HubAuth{
-					HubAuthDefaults: HubAuthDefaults{
-						Username:   "u",
-						Token:      "t",
-						queryToken: "qt",
-						validUntil: time.Now().UTC().Add(10 * time.Minute),
-					},
+					Username:   "u",
+					Token:      "t",
+					queryToken: "qt",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "{{ latest_version }}",
-				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			from:    nil,
 			inherit: false,
@@ -1607,17 +1529,13 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			name: "nil registry Auth to inherit from",
 			registry: CommonRegistry{
 				Auth: &HubAuth{
-					HubAuthDefaults: HubAuthDefaults{
-						Username:   "u",
-						Token:      "t",
-						queryToken: "qt",
-						validUntil: time.Now().UTC().Add(10 * time.Minute),
-					},
+					Username:   "u",
+					Token:      "t",
+					queryToken: "qt",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "{{ latest_version }}",
-				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			from:    &GHCRRegistry{},
 			inherit: false,
@@ -1626,31 +1544,21 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			name: "inherit from GHCR/same auth",
 			registry: CommonRegistry{
 				Auth: &GHCRAuth{
-					GHCRAuthDefaults: GHCRAuthDefaults{
-						Token:      "t",
-						queryToken: "qt",
-						validUntil: time.Now().UTC().Add(10 * time.Minute),
-					},
+					Token:      "t",
+					queryToken: "qt",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "{{ latest_version }}",
-				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			from: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token:      "t",
-							queryToken: "qt-new",
-							validUntil: time.Now().UTC().Add(10 * time.Minute),
-						},
-					},
-					ContainerDetail: ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ latest_version }}",
-					},
+				Auth: &GHCRAuth{
+					Token:      "t",
+					queryToken: "qt-new",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			inherit: true,
 		},
@@ -1658,31 +1566,21 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			name: "inherit from GHCR/different auth",
 			registry: CommonRegistry{
 				Auth: &GHCRAuth{
-					GHCRAuthDefaults: GHCRAuthDefaults{
-						Token:      "t",
-						queryToken: "qt",
-						validUntil: time.Now().UTC().Add(10 * time.Minute),
-					},
+					Token:      "t",
+					queryToken: "qt",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "{{ latest_version }}",
-				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			from: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token:      "t1",
-							queryToken: "qt-new",
-							validUntil: time.Now().UTC().Add(10 * time.Minute),
-						},
-					},
-					ContainerDetail: ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ latest_version }}",
-					},
+				Auth: &GHCRAuth{
+					Token:      "t1",
+					queryToken: "qt-new",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			inherit: false,
 		},
@@ -1690,33 +1588,23 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			name: "inherit from Hub/same auth",
 			registry: CommonRegistry{
 				Auth: &HubAuth{
-					HubAuthDefaults: HubAuthDefaults{
-						Username:   "u",
-						Token:      "t",
-						queryToken: "qt",
-						validUntil: time.Now().UTC().Add(10 * time.Minute),
-					},
+					Username:   "u",
+					Token:      "t",
+					queryToken: "qt",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "{{ latest_version }}",
-				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			from: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username:   "u",
-							Token:      "t",
-							queryToken: "qt-new",
-							validUntil: time.Now().UTC().Add(10 * time.Minute),
-						},
-					},
-					ContainerDetail: ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ latest_version }}",
-					},
+				Auth: &HubAuth{
+					Username:   "u",
+					Token:      "t",
+					queryToken: "qt-new",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			inherit: true,
 		},
@@ -1724,33 +1612,23 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			name: "inherit from Hub/different auth/different username, same token",
 			registry: CommonRegistry{
 				Auth: &HubAuth{
-					HubAuthDefaults: HubAuthDefaults{
-						Username:   "u",
-						Token:      "t",
-						queryToken: "qt",
-						validUntil: time.Now().UTC().Add(10 * time.Minute),
-					},
+					Username:   "u",
+					Token:      "t",
+					queryToken: "qt",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "{{ latest_version }}",
-				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			from: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username:   "u1",
-							Token:      "t",
-							queryToken: "qt-new",
-							validUntil: time.Now().UTC().Add(10 * time.Minute),
-						},
-					},
-					ContainerDetail: ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ latest_version }}",
-					},
+				Auth: &HubAuth{
+					Username:   "u1",
+					Token:      "t",
+					queryToken: "qt-new",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			inherit: false,
 		},
@@ -1758,33 +1636,23 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			name: "inherit from Hub/different auth/same username, different token",
 			registry: CommonRegistry{
 				Auth: &HubAuth{
-					HubAuthDefaults: HubAuthDefaults{
-						Username:   "u",
-						Token:      "t",
-						queryToken: "qt",
-						validUntil: time.Now().UTC().Add(10 * time.Minute),
-					},
+					Username:   "u",
+					Token:      "t",
+					queryToken: "qt",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "{{ latest_version }}",
-				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			from: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username:   "u",
-							Token:      "t1",
-							queryToken: "qt-new",
-							validUntil: time.Now().UTC().Add(10 * time.Minute),
-						},
-					},
-					ContainerDetail: ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ latest_version }}",
-					},
+				Auth: &HubAuth{
+					Username:   "u",
+					Token:      "t1",
+					queryToken: "qt-new",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			inherit: false,
 		},
@@ -1792,27 +1660,17 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			name: "inherit from Quay, same auth",
 			registry: CommonRegistry{
 				Auth: &QuayAuth{
-					QuayAuthDefaults: QuayAuthDefaults{
-						Token: "t",
-					},
+					Token: "t",
 				},
-				ContainerDetail: ContainerDetail{
-					Image: "test/app",
-					Tag:   "{{ latest_version }}",
-				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			from: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{
-						QuayAuthDefaults: QuayAuthDefaults{
-							Token: "t",
-						},
-					},
-					ContainerDetail: ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ latest_version }}",
-					},
+				Auth: &QuayAuth{
+					Token: "t",
 				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
 			},
 			inherit: false, // We don't use query tokens for Quay.
 		},
@@ -1927,26 +1785,20 @@ func TestCommonRegistry_GetAuth(t *testing.T) {
 		{
 			name: "ghcr auth",
 			auth: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 		},
 		{
 			name: "hub auth",
 			auth: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "123",
-					Token:    "abc",
-				},
+				Username: "123",
+				Token:    "abc",
 			},
 		},
 		{
 			name: "quay auth",
 			auth: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 		},
 		{

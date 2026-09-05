@@ -62,10 +62,8 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				"ARGUS_DATA_READONLY": "true",
 			},
 			want: &Settings{
-				SettingsBase: SettingsBase{
-					Data: DataSettings{
-						Readonly: new(true),
-					},
+				Data: DataSettings{
+					Readonly: new(true),
 				},
 			},
 			ok: true,
@@ -76,11 +74,9 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				"ARGUS_AUTH_SESSION_IDLE_TIMEOUT": "15m",
 			},
 			want: &Settings{
-				SettingsBase: SettingsBase{
-					Auth: AuthSettings{
-						Session: AuthSessionSettings{
-							IdleTimeout: "15m",
-						},
+				Auth: AuthSettings{
+					Session: AuthSessionSettings{
+						IdleTimeout: "15m",
 					},
 				},
 			},
@@ -92,11 +88,9 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				"ARGUS_AUTH_SESSION_LIFETIME": "48h",
 			},
 			want: &Settings{
-				SettingsBase: SettingsBase{
-					Auth: AuthSettings{
-						Session: AuthSessionSettings{
-							Lifetime: "48h",
-						},
+				Auth: AuthSettings{
+					Session: AuthSessionSettings{
+						Lifetime: "48h",
 					},
 				},
 			},
@@ -108,10 +102,8 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				"ARGUS_LOG_LEVEL": "ERROR",
 			},
 			want: &Settings{
-				SettingsBase: SettingsBase{
-					Log: LogSettings{
-						Level: "ERROR",
-					},
+				Log: LogSettings{
+					Level: "ERROR",
 				},
 			},
 			ok: true,
@@ -122,10 +114,8 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				"ARGUS_LOG_TIMESTAMPS": "true",
 			},
 			want: &Settings{
-				SettingsBase: SettingsBase{
-					Log: LogSettings{
-						Timestamps: new(true),
-					},
+				Log: LogSettings{
+					Timestamps: new(true),
 				},
 			},
 			ok: true,
@@ -148,10 +138,8 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				"ARGUS_WEB_LISTEN_HOST": "test",
 			},
 			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						ListenHost: "test",
-					},
+				Web: WebSettings{
+					ListenHost: "test",
 				},
 			},
 			ok: true,
@@ -162,10 +150,8 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				"ARGUS_WEB_LISTEN_PORT": "123",
 			},
 			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						ListenPort: "123",
-					},
+				Web: WebSettings{
+					ListenPort: "123",
 				},
 			},
 			ok: true,
@@ -176,10 +162,8 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				"ARGUS_WEB_CERT_FILE": "cert.test",
 			},
 			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						CertFile: "cert.test",
-					},
+				Web: WebSettings{
+					CertFile: "cert.test",
 				},
 			},
 			ok: false,
@@ -196,10 +180,8 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				"ARGUS_WEB_PKEY_FILE": "pkey.test",
 			},
 			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						KeyFile: "pkey.test",
-					},
+				Web: WebSettings{
+					KeyFile: "pkey.test",
 				},
 			},
 			ok: false,
@@ -216,10 +198,8 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				"ARGUS_WEB_ROUTE_PREFIX": "prefix",
 			},
 			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						RoutePrefix: "/prefix",
-					},
+				Web: WebSettings{
+					RoutePrefix: "/prefix",
 				},
 			},
 			ok: true,
@@ -230,10 +210,8 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				"ARGUS_WEB_DISABLED_ROUTES": "service_delete, notify_test",
 			},
 			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						DisabledRoutes: []string{"service_delete", "notify_test"},
-					},
+				Web: WebSettings{
+					DisabledRoutes: []string{"service_delete", "notify_test"},
 				},
 			},
 			ok: true,
@@ -245,12 +223,10 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				"ARGUS_WEB_BASIC_AUTH_PASSWORD": "pass",
 			},
 			want: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						BasicAuth: &WebSettingsBasicAuth{
-							Username: "user",
-							Password: util.FmtHash(util.GetHash("pass")),
-						},
+				Web: WebSettings{
+					BasicAuth: &WebSettingsBasicAuth{
+						Username: "user",
+						Password: util.FmtHash(util.GetHash("pass")),
 					},
 				},
 			},
@@ -1093,10 +1069,8 @@ func TestSettings_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Log",
 			data: Settings{
-				SettingsBase: SettingsBase{
-					Log: LogSettings{
-						Timestamps: new(true),
-					},
+				Log: LogSettings{
+					Timestamps: new(true),
 				},
 			},
 			want: false,
@@ -1104,10 +1078,8 @@ func TestSettings_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Data",
 			data: Settings{
-				SettingsBase: SettingsBase{
-					Data: DataSettings{
-						DatabaseFile: "db.sqlite",
-					},
+				Data: DataSettings{
+					DatabaseFile: "db.sqlite",
 				},
 			},
 			want: false,
@@ -1115,10 +1087,8 @@ func TestSettings_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Web",
 			data: Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						ListenHost: "0.0.0.0",
-					},
+				Web: WebSettings{
+					ListenHost: "0.0.0.0",
 				},
 			},
 			want: false,
@@ -1126,16 +1096,14 @@ func TestSettings_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			data: Settings{
-				SettingsBase: SettingsBase{
-					Log: LogSettings{
-						Timestamps: new(true),
-					},
-					Data: DataSettings{
-						DatabaseFile: "db.sqlite",
-					},
-					Web: WebSettings{
-						ListenHost: "0.0.0.0",
-					},
+				Log: LogSettings{
+					Timestamps: new(true),
+				},
+				Data: DataSettings{
+					DatabaseFile: "db.sqlite",
+				},
+				Web: WebSettings{
+					ListenHost: "0.0.0.0",
 				},
 			},
 			want: false,
@@ -1185,10 +1153,8 @@ func TestSettings_String(t *testing.T) {
 		{
 			name: "settings",
 			settings: &Settings{
-				SettingsBase: SettingsBase{
-					Log: LogSettings{
-						Level: "INFO",
-					},
+				Log: LogSettings{
+					Level: "INFO",
 				},
 			},
 			prefix: "",
@@ -1350,10 +1316,8 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "BasicAuth/empty",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						BasicAuth: &WebSettingsBasicAuth{},
-					},
+				Web: WebSettings{
+					BasicAuth: &WebSettingsBasicAuth{},
 				},
 			},
 			want: "{}\n",
@@ -1365,12 +1329,10 @@ func TestSettings_CheckValues(t *testing.T) {
 				"TEST_SETTINGS_BASE__CHECK_VALUES__ONE": "ass",
 			},
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						BasicAuth: &WebSettingsBasicAuth{
-							Username: util.FmtHash(util.GetHash("user")),
-							Password: "p${TEST_SETTINGS_BASE__CHECK_VALUES__ONE}",
-						},
+				Web: WebSettings{
+					BasicAuth: &WebSettingsBasicAuth{
+						Username: util.FmtHash(util.GetHash("user")),
+						Password: "p${TEST_SETTINGS_BASE__CHECK_VALUES__ONE}",
 					},
 				},
 			},
@@ -1387,10 +1349,8 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Route prefix/empty",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						RoutePrefix: "",
-					},
+				Web: WebSettings{
+					RoutePrefix: "",
 				},
 			},
 			want: "{}\n",
@@ -1399,10 +1359,8 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Route prefix/no leading /",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						RoutePrefix: "test",
-					},
+				Web: WebSettings{
+					RoutePrefix: "test",
 				},
 			},
 			want: test.TrimYAML(`
@@ -1414,10 +1372,8 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Route prefix/leading /",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						RoutePrefix: "/test",
-					},
+				Web: WebSettings{
+					RoutePrefix: "/test",
 				},
 			},
 			want: test.TrimYAML(`
@@ -1429,10 +1385,8 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Route prefix/multiple leading /",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						RoutePrefix: "///test",
-					},
+				Web: WebSettings{
+					RoutePrefix: "///test",
 				},
 			},
 			want: test.TrimYAML(`
@@ -1444,10 +1398,8 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Route prefix/trailing /",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						RoutePrefix: "/test/",
-					},
+				Web: WebSettings{
+					RoutePrefix: "/test/",
 				},
 			},
 			want: test.TrimYAML(`
@@ -1459,10 +1411,8 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Route prefix/multiple trailing /",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						RoutePrefix: "/test///",
-					},
+				Web: WebSettings{
+					RoutePrefix: "/test///",
 				},
 			},
 			want: test.TrimYAML(`
@@ -1474,10 +1424,8 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Route prefix/only a /",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						RoutePrefix: "/",
-					},
+				Web: WebSettings{
+					RoutePrefix: "/",
 				},
 			},
 			want: test.TrimYAML(`
@@ -1489,10 +1437,8 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Route prefix/only multiple /",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						RoutePrefix: "///",
-					},
+				Web: WebSettings{
+					RoutePrefix: "///",
 				},
 			},
 			want: test.TrimYAML(`
@@ -1504,10 +1450,8 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Favicon/empty",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						Favicon: &FaviconSettings{},
-					},
+				Web: WebSettings{
+					Favicon: &FaviconSettings{},
 				},
 			},
 			want: "{}\n",
@@ -1516,12 +1460,10 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Favicon/full",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						Favicon: &FaviconSettings{
-							SVG: "https://example.com/favicon.svg",
-							PNG: "https://example.com/favicon.png",
-						},
+				Web: WebSettings{
+					Favicon: &FaviconSettings{
+						SVG: "https://example.com/favicon.svg",
+						PNG: "https://example.com/favicon.png",
 					},
 				},
 			},
@@ -1536,10 +1478,8 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Web.CertFile, not found",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						CertFile: "cert.pem",
-					},
+				Web: WebSettings{
+					CertFile: "cert.pem",
 				},
 			},
 			want: test.TrimYAML(`
@@ -1555,10 +1495,8 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Web.KeyFile, not found",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						KeyFile: "privkey.pem",
-					},
+				Web: WebSettings{
+					KeyFile: "privkey.pem",
 				},
 			},
 			want: test.TrimYAML(`
@@ -1574,11 +1512,9 @@ func TestSettings_CheckValues(t *testing.T) {
 		{
 			name: "Web.CertFile + Web.KeyFile, both not found",
 			input: &Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						CertFile: "cert.pem",
-						KeyFile:  "privkey.pem",
-					},
+				Web: WebSettings{
+					CertFile: "cert.pem",
+					KeyFile:  "privkey.pem",
 				},
 			},
 			want: test.TrimYAML(`
@@ -2121,9 +2057,7 @@ func TestSettings_GetBool(t *testing.T) {
 
 func TestSettings_GetWebFile__notExist(t *testing.T) {
 	settings := Settings{
-		SettingsBase: SettingsBase{
-			Log: LogSettings{},
-		},
+		Log: LogSettings{},
 		FromFlags: SettingsBase{
 			Log: LogSettings{},
 		},
@@ -2276,9 +2210,7 @@ func TestSettings_WebDisabledRoutes(t *testing.T) {
 			t.Parallel()
 
 			settings := Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{DisabledRoutes: tc.values},
-				},
+				Web: WebSettings{DisabledRoutes: tc.values},
 				HardDefaults: SettingsBase{
 					Web: WebSettings{DisabledRoutes: tc.hardDefaults},
 				},
@@ -2382,11 +2314,9 @@ func TestSettings_WebBasicAuthUsernameHash(t *testing.T) {
 			name: "set in config",
 			want: "user",
 			had: Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						BasicAuth: &WebSettingsBasicAuth{
-							Username: "user",
-						},
+				Web: WebSettings{
+					BasicAuth: &WebSettingsBasicAuth{
+						Username: "user",
 					},
 				},
 			},
@@ -2452,11 +2382,9 @@ func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
 			name: "set in config",
 			want: "pass",
 			had: Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						BasicAuth: &WebSettingsBasicAuth{
-							Password: "pass",
-						},
+				Web: WebSettings{
+					BasicAuth: &WebSettingsBasicAuth{
+						Password: "pass",
 					},
 				},
 			},
@@ -2478,11 +2406,9 @@ func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
 			name: "set everywhere, use flag",
 			want: "flag",
 			had: Settings{
-				SettingsBase: SettingsBase{
-					Web: WebSettings{
-						BasicAuth: &WebSettingsBasicAuth{
-							Password: "config",
-						},
+				Web: WebSettings{
+					BasicAuth: &WebSettingsBasicAuth{
+						Password: "config",
 					},
 				},
 				FromFlags: SettingsBase{

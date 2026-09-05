@@ -41,13 +41,9 @@ func TestHubRegistry_Check(t *testing.T) {
 		{
 			name: "no auth, known image+tag",
 			registry: HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerHubRepo,
-						Tag:   "{{ version }}",
-					},
-					Auth: &HubAuth{},
-				},
+				Image: test.ArgusDockerHubRepo,
+				Tag:   "{{ version }}",
+				Auth:  &HubAuth{},
 			},
 			version:  "latest",
 			errRegex: `^$`,
@@ -55,18 +51,12 @@ func TestHubRegistry_Check(t *testing.T) {
 		{
 			name: "auth, known image+tag",
 			registry: HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerHubRepo,
-						Tag:   "{{ version }}",
-					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username:   test.DockerHubUsername(t),
-							Token:      test.DockerHubToken(t),
-							queryToken: "123",
-						},
-					},
+				Image: test.ArgusDockerHubRepo,
+				Tag:   "{{ version }}",
+				Auth: &HubAuth{
+					Username:   test.DockerHubUsername(t),
+					Token:      test.DockerHubToken(t),
+					queryToken: "123",
 				},
 			},
 			version:  "latest",
@@ -75,17 +65,11 @@ func TestHubRegistry_Check(t *testing.T) {
 		{
 			name: "auth, unknown image",
 			registry: HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerHubRepo + "-unknown",
-						Tag:   "{{ version }}",
-					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Token:      test.GitHubToken(t),
-							queryToken: "123",
-						},
-					},
+				Image: test.ArgusDockerHubRepo + "-unknown",
+				Tag:   "{{ version }}",
+				Auth: &HubAuth{
+					Token:      test.GitHubToken(t),
+					queryToken: "123",
 				},
 			},
 			version:  "latest",
@@ -137,19 +121,13 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 			name:            "GetQueryToken error, no token (no-op token req fails)",
 			hubTokenAddress: "https://	example.com",
 			registry: HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerHubRepo,
-						Tag:   "{{ version }}",
-					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username:   "test",
-							Token:      "test",
-							queryToken: "test",
-							validUntil: time.Now().UTC().Add(-10 * time.Minute),
-						},
-					},
+				Image: test.ArgusDockerHubRepo,
+				Tag:   "{{ version }}",
+				Auth: &HubAuth{
+					Username:   "test",
+					Token:      "test",
+					queryToken: "test",
+					validUntil: time.Now().UTC().Add(-10 * time.Minute),
 				},
 			},
 			version: "latest",
@@ -163,19 +141,13 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 			name:        "newRequest error, invalid URL",
 			hubQueryURL: "https://	example.com",
 			registry: HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerHubRepo + "-unknown",
-						Tag:   "{{ version }}",
-					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username:   "test",
-							Token:      "test",
-							queryToken: "test",
-							validUntil: time.Now().UTC().Add(10 * time.Minute),
-						},
-					},
+				Image: test.ArgusDockerHubRepo + "-unknown",
+				Tag:   "{{ version }}",
+				Auth: &HubAuth{
+					Username:   "test",
+					Token:      "test",
+					queryToken: "test",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
 			},
 			version: "latest",
@@ -188,19 +160,13 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 			name:        "http.client.Do error, invalid URL TLD",
 			hubQueryURL: "https://example.invalid/%s/%s",
 			registry: HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerHubRepo,
-						Tag:   "{{ version }}",
-					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username:   "test",
-							Token:      "test",
-							queryToken: "test",
-							validUntil: time.Now().UTC().Add(10 * time.Minute),
-						},
-					},
+				Image: test.ArgusDockerHubRepo,
+				Tag:   "{{ version }}",
+				Auth: &HubAuth{
+					Username:   "test",
+					Token:      "test",
+					queryToken: "test",
+					validUntil: time.Now().UTC().Add(10 * time.Minute),
 				},
 			},
 			version: "latest",
@@ -268,10 +234,8 @@ func TestHubAuth_GetQueryToken__integration(t *testing.T) {
 		{
 			name: "valid query token cached",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					queryToken: "query-token",
-					validUntil: time.Now().Add(10 * time.Second),
-				},
+				queryToken: "query-token",
+				validUntil: time.Now().Add(10 * time.Second),
 			},
 			want:     "query-token",
 			errRegex: `^$`,
@@ -279,12 +243,10 @@ func TestHubAuth_GetQueryToken__integration(t *testing.T) {
 		{
 			name: "query token expired, fail fetching invalid image",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username:   "test",
-					Token:      "foo",
-					queryToken: "query-token",
-					validUntil: time.Now().Add(-10 * time.Second),
-				},
+				Username:   "test",
+				Token:      "foo",
+				queryToken: "query-token",
+				validUntil: time.Now().Add(-10 * time.Second),
 			},
 			detail: ContainerDetail{
 				Image: test.ArgusDockerHubRepo + "-unknown",
@@ -438,10 +400,8 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 
 			// AND: a HubAuth to fetch it with.
 			data := &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: tc.username,
-					Token:    tc.token,
-				},
+				Username: tc.username,
+				Token:    tc.token,
 			}
 
 			// WHEN: refreshQueryToken() is called on it.

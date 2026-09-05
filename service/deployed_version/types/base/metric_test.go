@@ -32,9 +32,7 @@ import (
 func TestLookup_Metrics(t *testing.T) {
 	// GIVEN: a Lookup.
 	lookup := lookupImpl{
-		Lookup: Lookup{
-			Type: "test",
-		},
+		Type: "test",
 	}
 	lookup.Status = &status.Status{
 		ServiceInfo: serviceinfo.ServiceInfo{
@@ -150,12 +148,10 @@ func TestLookup_QueryMetrics(t *testing.T) {
 			t.Parallel()
 
 			lookup := lookupImpl{
-				Lookup: Lookup{
-					Type: "test",
-					Status: &status.Status{
-						ServiceInfo: serviceinfo.ServiceInfo{
-							ID: fmt.Sprintf("TestLookup_QueryMetrics__%s", tc.name),
-						},
+				Type: "test",
+				Status: &status.Status{
+					ServiceInfo: serviceinfo.ServiceInfo{
+						ID: fmt.Sprintf("TestLookup_QueryMetrics__%s", tc.name),
 					},
 				},
 			}

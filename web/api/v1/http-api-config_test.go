@@ -59,15 +59,13 @@ func TestHTTP_Config(t *testing.T) {
 		{
 			name: "settings/only",
 			settings: &config.Settings{
-				SettingsBase: config.SettingsBase{
-					Data: config.DataSettings{
-						DatabaseFile: "somewhere.db",
-						Readonly:     new(true),
-					},
-					Web: config.WebSettings{
-						ListenHost:     "127.0.0.1",
-						DisabledRoutes: []string{"version", "websocket"},
-					},
+				Data: config.DataSettings{
+					DatabaseFile: "somewhere.db",
+					Readonly:     new(true),
+				},
+				Web: config.WebSettings{
+					ListenHost:     "127.0.0.1",
+					DisabledRoutes: []string{"version", "websocket"},
 				},
 			},
 			wantBody: `
@@ -87,18 +85,14 @@ func TestHTTP_Config(t *testing.T) {
 		{
 			name: "settings/and defaults/only",
 			settings: &config.Settings{
-				SettingsBase: config.SettingsBase{
-					Web: config.WebSettings{
-						ListenHost: "127.0.0.1",
-					},
+				Web: config.WebSettings{
+					ListenHost: "127.0.0.1",
 				},
 			},
 			defaults: &config.Defaults{
 				Service: service.Defaults{
 					Options: opt.Defaults{
-						Base: opt.Base{
-							Interval: "1h",
-						},
+						Interval: "1h",
 					},
 					LatestVersion: latestver.Defaults{
 						Type: "github",
@@ -191,18 +185,14 @@ func TestHTTP_Config(t *testing.T) {
 		{
 			name: "settings/and defaults/with notify+command+webhook service defaults/only",
 			settings: &config.Settings{
-				SettingsBase: config.SettingsBase{
-					Web: config.WebSettings{
-						ListenHost: "127.0.0.1",
-					},
+				Web: config.WebSettings{
+					ListenHost: "127.0.0.1",
 				},
 			},
 			defaults: &config.Defaults{
 				Service: service.Defaults{
 					Options: opt.Defaults{
-						Base: opt.Base{
-							Interval: "1h",
-						},
+						Interval: "1h",
 					},
 					LatestVersion: latestver.Defaults{
 						GitHub: lvgithub.Defaults{
@@ -315,18 +305,14 @@ func TestHTTP_Config(t *testing.T) {
 		{
 			name: "settings/and defaults/with notify+command+webhook service defaults/and notify",
 			settings: &config.Settings{
-				SettingsBase: config.SettingsBase{
-					Web: config.WebSettings{
-						ListenHost: "127.0.0.1",
-					},
+				Web: config.WebSettings{
+					ListenHost: "127.0.0.1",
 				},
 			},
 			defaults: &config.Defaults{
 				Service: service.Defaults{
 					Options: opt.Defaults{
-						Base: opt.Base{
-							Interval: "1h",
-						},
+						Interval: "1h",
 					},
 					LatestVersion: latestver.Defaults{
 						GitHub: lvgithub.Defaults{

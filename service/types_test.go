@@ -29,11 +29,9 @@ import (
 	dashtest "github.com/release-argus/Argus/service/dashboard/test"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	dvtest "github.com/release-argus/Argus/service/deployed_version/test"
-	dvbase "github.com/release-argus/Argus/service/deployed_version/types/base"
 	dvweb "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	lvtest "github.com/release-argus/Argus/service/latest_version/test"
-	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
@@ -95,10 +93,8 @@ func TestService_Marshal(t *testing.T) {
 			name: "service with latest version (GitHub)",
 			svc: &Service{
 				LatestVersion: &github.Lookup{
-					Lookup: lvbase.Lookup{
-						Type: "github",
-						URL:  test.ArgusGitHubRepo,
-					},
+					Type: "github",
+					URL:  test.ArgusGitHubRepo,
 				},
 			},
 			wantJSON: test.TrimJSON(`{
@@ -118,10 +114,8 @@ func TestService_Marshal(t *testing.T) {
 			name: "service with latest version (URL)",
 			svc: &Service{
 				LatestVersion: &lvweb.Lookup{
-					Lookup: lvbase.Lookup{
-						Type: "url",
-						URL:  "https://example.com",
-					},
+					Type: "url",
+					URL:  "https://example.com",
 				},
 			},
 			wantJSON: test.TrimJSON(`{
@@ -141,10 +135,8 @@ func TestService_Marshal(t *testing.T) {
 			name: "service with deployed version (URL)",
 			svc: &Service{
 				DeployedVersionLookup: &dvweb.Lookup{
-					Lookup: dvbase.Lookup{
-						Type: "url",
-					},
-					URL: "https://example.com",
+					Type: "url",
+					URL:  "https://example.com",
 				},
 			},
 			wantJSON: test.TrimJSON(`{

@@ -314,12 +314,10 @@ func (a *GHCRAuth) Clone() *GHCRAuth {
 	}
 
 	return &GHCRAuth{
-		GHCRAuthDefaults: GHCRAuthDefaults{
-			Token:      a.Token,
-			queryToken: a.queryToken,
-			validUntil: a.validUntil,
-			defaults:   a.defaults,
-		},
+		Token:      a.Token,
+		queryToken: a.queryToken,
+		validUntil: a.validUntil,
+		defaults:   a.defaults,
 	}
 }
 

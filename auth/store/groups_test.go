@@ -77,8 +77,9 @@ func TestStore_CreateGroup_and_GroupByID(t *testing.T) {
 			groupName: "bad-grants",
 			grants: []rbac.Grant{
 				{
-					Permission: rbac.Permission{Resource: "nonsense", Action: "read"},
-					Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+					Resource: "nonsense",
+					Action:   "read",
+					Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
 				},
 			},
 			wantErr: ErrInvalidGrant,
@@ -443,8 +444,10 @@ func TestStore_UpdateGroup(t *testing.T) {
 			name:   "invalid grant rejected",
 			target: customTarget,
 			patch: GroupPatch{Grants: new([]rbac.Grant{
-				{Permission: rbac.Permission{Resource: rbac.Resource("user"), Action: rbac.ActionRead},
-					Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "argus"}},
+				{
+					Resource: rbac.Resource("user"),
+					Action:   rbac.ActionRead,
+					Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "argus"}},
 			})},
 			wantErr: ErrInvalidGrant,
 		},

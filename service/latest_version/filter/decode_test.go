@@ -301,13 +301,9 @@ func TestApplyOverrides(t *testing.T) {
 					RegexContent: "content-v?",
 					RegexVersion: "v?",
 					Docker: &docker.HubRegistry{
-						CommonRegistry: docker.CommonRegistry{
-							Type: "hub",
-							ContainerDetail: docker.ContainerDetail{
-								Image: test.ArgusDockerHubRepo,
-								Tag:   "{{ version }}",
-							},
-						},
+						Type:  "hub",
+						Image: test.ArgusDockerHubRepo,
+						Tag:   "{{ version }}",
 					},
 				},
 			},
@@ -332,13 +328,9 @@ func TestApplyOverrides(t *testing.T) {
 					RegexContent: "content-v?",
 					RegexVersion: "v?",
 					Docker: &docker.HubRegistry{
-						CommonRegistry: docker.CommonRegistry{
-							Type: "hub",
-							ContainerDetail: docker.ContainerDetail{
-								Image: test.ArgusDockerHubRepo,
-								Tag:   "{{ version }}",
-							},
-						},
+						Type:  "hub",
+						Image: test.ArgusDockerHubRepo,
+						Tag:   "{{ version }}",
 					},
 				},
 			},

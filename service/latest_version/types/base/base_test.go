@@ -175,9 +175,7 @@ func TestLookup_GetServiceID(t *testing.T) {
 	// GIVEN: a Lookup with a Status containing a ServiceID.
 	serviceID := "foo"
 	l := &testLookup{
-		Lookup: Lookup{
-			Status: &status.Status{},
-		},
+		Status: &status.Status{},
 	}
 	l.Status.ServiceInfo.ID = serviceID
 
@@ -197,7 +195,7 @@ func TestLookup_GetType(t *testing.T) {
 	// GIVEN: a Lookup with a Type.
 	lookupType := "test"
 	l := &testLookup{
-		Lookup: Lookup{Type: lookupType},
+		Type: lookupType,
 	}
 	want := "-"
 
@@ -217,9 +215,7 @@ func TestLookup_GetOptions(t *testing.T) {
 	// GIVEN: a Lookup with Options.
 	options := &opt.Options{}
 	l := &testLookup{
-		Lookup: Lookup{
-			Options: options,
-		},
+		Options: options,
 	}
 
 	// WHEN: GetOptions is called.
@@ -238,7 +234,7 @@ func TestLookup_GetRequite(t *testing.T) {
 	// GIVEN: a Lookup with Require.
 	require := &filter.Require{}
 	l := &testLookup{
-		Lookup: Lookup{Require: require},
+		Require: require,
 	}
 
 	// WHEN: GetRequire is called.
@@ -257,9 +253,7 @@ func TestLookup_GetStatus(t *testing.T) {
 	// GIVEN: a Lookup with Status.
 	svcStatus := &status.Status{}
 	l := &testLookup{
-		Lookup: Lookup{
-			Status: svcStatus,
-		},
+		Status: svcStatus,
 	}
 
 	// WHEN: GetStatus is called.
@@ -313,7 +307,7 @@ func TestLookup_GetDefaults(t *testing.T) {
 	// GIVEN: a Lookup with Defaults.
 	defaults := &Defaults{}
 	l := &testLookup{
-		Lookup: Lookup{Defaults: defaults},
+		Defaults: defaults,
 	}
 
 	// WHEN: GetDefaults is called.
@@ -332,7 +326,7 @@ func TestLookup_GetHardDefaults(t *testing.T) {
 	// GIVEN: a Lookup with HardDefaults.
 	hardDefaults := &Defaults{}
 	l := &testLookup{
-		Lookup: Lookup{HardDefaults: hardDefaults},
+		HardDefaults: hardDefaults,
 	}
 
 	// WHEN: GetHardDefaults is called.
@@ -641,10 +635,8 @@ func TestLookup_InheritSecrets(t *testing.T) {
 func TestLookup_Query(t *testing.T) {
 	// GIVEN: a Lookup.
 	l := &testLookup{
-		Lookup: Lookup{
-			Type: "test",
-			URL:  "https://example.com",
-		},
+		Type: "test",
+		URL:  "https://example.com",
 	}
 
 	// WHEN: Query is called.

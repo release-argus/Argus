@@ -1160,20 +1160,18 @@ func TestFromPayload(t *testing.T) {
 			},
 			notifyCfg: shoutrrr.Config{
 				Root: shoutrrr.ShoutrrrsDefaults{
-					"alpha":   {Base: shoutrrr.Base{Type: "smtp"}},
-					"bravo":   {Base: shoutrrr.Base{Type: "smtp"}},
-					"charlie": {Base: shoutrrr.Base{Type: "smtp"}},
+					"alpha":   {Type: "smtp"},
+					"bravo":   {Type: "smtp"},
+					"charlie": {Type: "smtp"},
 				},
 				Defaults: shoutrrr.ShoutrrrsDefaults{
 					"smtp": {
-						Base: shoutrrr.Base{
-							URLFields: map[string]string{
-								"host": "example.com",
-							},
-							Params: map[string]string{
-								"fromaddress": "foo@exampke.com",
-								"toaddresses": "bar@exampke.com",
-							},
+						URLFields: map[string]string{
+							"host": "example.com",
+						},
+						Params: map[string]string{
+							"fromaddress": "foo@exampke.com",
+							"toaddresses": "bar@exampke.com",
 						},
 					},
 				},
@@ -1213,10 +1211,8 @@ func TestFromPayload(t *testing.T) {
 			},
 			whCfg: webhook.Config{
 				Defaults: &webhook.Defaults{
-					Base: webhook.Base{
-						URL:    "https://example.com/github",
-						Secret: "something",
-					},
+					URL:    "https://example.com/github",
+					Secret: "something",
 				},
 			},
 			wantFromDefaults: fromDefaults{
@@ -1262,30 +1258,26 @@ func TestFromPayload(t *testing.T) {
 			},
 			notifyCfg: shoutrrr.Config{
 				Root: shoutrrr.ShoutrrrsDefaults{
-					"alpha":   {Base: shoutrrr.Base{Type: "smtp"}},
-					"bravo":   {Base: shoutrrr.Base{Type: "smtp"}},
-					"charlie": {Base: shoutrrr.Base{Type: "smtp"}},
+					"alpha":   {Type: "smtp"},
+					"bravo":   {Type: "smtp"},
+					"charlie": {Type: "smtp"},
 				},
 				Defaults: shoutrrr.ShoutrrrsDefaults{
 					"smtp": {
-						Base: shoutrrr.Base{
-							URLFields: map[string]string{
-								"host": "example.com",
-							},
-							Params: map[string]string{
-								"fromaddress": "foo@exampke.com",
-								"toaddresses": "bar@exampke.com",
-							},
+						URLFields: map[string]string{
+							"host": "example.com",
+						},
+						Params: map[string]string{
+							"fromaddress": "foo@exampke.com",
+							"toaddresses": "bar@exampke.com",
 						},
 					},
 				},
 			},
 			whCfg: webhook.Config{
 				Defaults: &webhook.Defaults{
-					Base: webhook.Base{
-						URL:    "https://example.com/github",
-						Secret: "something",
-					},
+					URL:    "https://example.com/github",
+					Secret: "something",
 				},
 			},
 			wantFromDefaults: fromDefaults{

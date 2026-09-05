@@ -300,13 +300,11 @@ func (d *HubAuth) Clone() *HubAuth {
 	}
 
 	return &HubAuth{
-		HubAuthDefaults: HubAuthDefaults{
-			Username:   d.Username,
-			Token:      d.Token,
-			queryToken: d.queryToken,
-			validUntil: d.validUntil,
-			defaults:   d.defaults,
-		},
+		Username:   d.Username,
+		Token:      d.Token,
+		queryToken: d.queryToken,
+		validUntil: d.validUntil,
+		defaults:   d.defaults,
 	}
 }
 

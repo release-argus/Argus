@@ -87,13 +87,11 @@ func (o *Options) Copy() *Options {
 	}
 
 	return &Options{
-		Base: Base{
-			Interval:           o.Interval,
-			SemanticVersioning: util.ClonePtr(o.SemanticVersioning),
-		},
-		Active:       util.ClonePtr(o.Active),
-		Defaults:     o.Defaults,
-		HardDefaults: o.HardDefaults,
+		Interval:           o.Interval,
+		SemanticVersioning: util.ClonePtr(o.SemanticVersioning),
+		Active:             util.ClonePtr(o.Active),
+		Defaults:           o.Defaults,
+		HardDefaults:       o.HardDefaults,
 	}
 }
 

@@ -30,28 +30,22 @@ var PossibleTypes = []string{
 var RegistryMap = map[string]func() Registry{
 	"ecr": func() Registry {
 		return &ECRRegistry{
-			CommonRegistry: CommonRegistry{
-				Auth: &ECRAuth{},
-			},
+			Auth: &ECRAuth{},
 		}
 	},
 	"ghcr": func() Registry {
 		return &GHCRRegistry{
-			CommonRegistry: CommonRegistry{
-				Auth: &GHCRAuth{},
-			},
+			Auth: &GHCRAuth{},
 		}
 	},
 	"hub": func() Registry {
 		return &HubRegistry{
-			CommonRegistry: CommonRegistry{
-				Auth: &HubAuth{},
-			},
+			Auth: &HubAuth{},
 		}
 	},
 	"quay": func() Registry {
 		return &QuayRegistry{
-			CommonRegistry: CommonRegistry{Auth: &QuayAuth{}},
+			Auth: &QuayAuth{},
 		}
 	},
 }
@@ -63,30 +57,22 @@ var RegistryMapInheritable = polymorphic.ToInheritableMap(RegistryMap)
 var RegistryDefaultsMap = map[string]func() RegistryDefaults{
 	"ecr": func() RegistryDefaults {
 		return &ECRRegistryDefaults{
-			CommonRegistryDefaults: CommonRegistryDefaults{
-				Auth: &ECRAuthDefaults{},
-			},
+			Auth: &ECRAuthDefaults{},
 		}
 	},
 	"ghcr": func() RegistryDefaults {
 		return &GHCRRegistryDefaults{
-			CommonRegistryDefaults: CommonRegistryDefaults{
-				Auth: &GHCRAuthDefaults{},
-			},
+			Auth: &GHCRAuthDefaults{},
 		}
 	},
 	"hub": func() RegistryDefaults {
 		return &HubRegistryDefaults{
-			CommonRegistryDefaults: CommonRegistryDefaults{
-				Auth: &HubAuthDefaults{},
-			},
+			Auth: &HubAuthDefaults{},
 		}
 	},
 	"quay": func() RegistryDefaults {
 		return &QuayRegistryDefaults{
-			CommonRegistryDefaults: CommonRegistryDefaults{
-				Auth: &QuayAuthDefaults{},
-			},
+			Auth: &QuayAuthDefaults{},
 		}
 	},
 }

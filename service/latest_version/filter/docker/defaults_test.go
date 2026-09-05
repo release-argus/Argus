@@ -294,9 +294,7 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 			name: "static fields",
 			defaults: &Defaults{
 				Type: PossibleTypes[0],
-				ContainerDetailDefaults: ContainerDetailDefaults{
-					Tag: "1.2.3",
-				},
+				Tag:  "1.2.3",
 			},
 			want: test.TrimYAML(`
 				type: ` + PossibleTypes[0] + `
@@ -308,27 +306,19 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 			defaults: &Defaults{
 				Registry: RegistryDefaultsSet{
 					GHCR: &GHCRRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &GHCRAuth{
-								GHCRAuthDefaults: GHCRAuthDefaults{
-									Token: "ghcr-token",
-								},
-							},
+						Auth: &GHCRAuth{
+							Token: "ghcr-token",
 						},
 					},
 					Hub: &HubRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &HubAuthDefaults{
-								Username: "hub-username",
-								Token:    "hub-token",
-							},
+						Auth: &HubAuthDefaults{
+							Username: "hub-username",
+							Token:    "hub-token",
 						},
 					},
 					Quay: &QuayRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &QuayAuthDefaults{
-								Token: "quay-token",
-							},
+						Auth: &QuayAuthDefaults{
+							Token: "quay-token",
 						},
 					},
 				},
@@ -351,32 +341,22 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 			name: "filled",
 			defaults: &Defaults{
 				Type: PossibleTypes[0],
-				ContainerDetailDefaults: ContainerDetailDefaults{
-					Tag: "1.2.3",
-				},
+				Tag:  "1.2.3",
 				Registry: RegistryDefaultsSet{
 					GHCR: &GHCRRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &GHCRAuth{
-								GHCRAuthDefaults: GHCRAuthDefaults{
-									Token: "ghcr-token",
-								},
-							},
+						Auth: &GHCRAuth{
+							Token: "ghcr-token",
 						},
 					},
 					Hub: &HubRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &HubAuthDefaults{
-								Username: "hub-username",
-								Token:    "hub-token",
-							},
+						Auth: &HubAuthDefaults{
+							Username: "hub-username",
+							Token:    "hub-token",
 						},
 					},
 					Quay: &QuayRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &QuayAuthDefaults{
-								Token: "quay-token",
-							},
+						Auth: &QuayAuthDefaults{
+							Token: "quay-token",
 						},
 					},
 				},
@@ -466,9 +446,7 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/ContainerDetailDefaults",
 			data: &Defaults{
-				ContainerDetailDefaults: ContainerDetailDefaults{
-					Tag: "a",
-				},
+				Tag: "a",
 			},
 			want: false,
 		},
@@ -477,10 +455,8 @@ func TestDefaults_IsZero(t *testing.T) {
 			data: &Defaults{
 				Registry: RegistryDefaultsSet{
 					GHCR: &GHCRRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &GHCRAuthDefaults{
-								Token: "a",
-							},
+						Auth: &GHCRAuthDefaults{
+							Token: "a",
 						},
 					},
 				},
@@ -528,10 +504,8 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 			name: "non-empty/GHCR",
 			data: &RegistryDefaultsSet{
 				GHCR: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						Auth: &GHCRAuthDefaults{
-							Token: "ghcr-token",
-						},
+					Auth: &GHCRAuthDefaults{
+						Token: "ghcr-token",
 					},
 				},
 			},
@@ -541,10 +515,8 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 			name: "non-empty/Hub",
 			data: &RegistryDefaultsSet{
 				Hub: &HubRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						Auth: &HubAuthDefaults{
-							Token: "hub-token",
-						},
+					Auth: &HubAuthDefaults{
+						Token: "hub-token",
 					},
 				},
 			},
@@ -554,10 +526,8 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 			name: "non-empty/Quay",
 			data: &RegistryDefaultsSet{
 				Quay: &QuayRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						Auth: &QuayAuthDefaults{
-							Token: "quay-token",
-						},
+					Auth: &QuayAuthDefaults{
+						Token: "quay-token",
 					},
 				},
 			},
@@ -567,24 +537,18 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 			name: "non-empty/all",
 			data: &RegistryDefaultsSet{
 				GHCR: &GHCRRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						Auth: &GHCRAuthDefaults{
-							Token: "ghcr-token",
-						},
+					Auth: &GHCRAuthDefaults{
+						Token: "ghcr-token",
 					},
 				},
 				Hub: &HubRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						Auth: &HubAuthDefaults{
-							Token: "hub-token",
-						},
+					Auth: &HubAuthDefaults{
+						Token: "hub-token",
 					},
 				},
 				Quay: &QuayRegistryDefaults{
-					CommonRegistryDefaults: CommonRegistryDefaults{
-						Auth: &QuayAuthDefaults{
-							Token: "quay-token",
-						},
+					Auth: &QuayAuthDefaults{
+						Token: "quay-token",
 					},
 				},
 			},
@@ -635,40 +599,28 @@ func TestDefaults_String(t *testing.T) {
 			name: "filled",
 			rDefaults: &Defaults{
 				Type: "ghcr",
-				ContainerDetailDefaults: ContainerDetailDefaults{
-					Tag: "1.2.3",
-				},
+				Tag:  "1.2.3",
 				Registry: RegistryDefaultsSet{
 					GHCR: &GHCRRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &GHCRAuth{
-								GHCRAuthDefaults: GHCRAuthDefaults{
-									Token: "t1",
-								},
-							},
+						Auth: &GHCRAuth{
+							Token: "t1",
 						},
 					},
 					Hub: &HubRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &HubAuthDefaults{
-								Username: "u1",
-								Token:    "t2",
-							},
+						Auth: &HubAuthDefaults{
+							Username: "u1",
+							Token:    "t2",
 						},
 					},
 					Quay: &QuayRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &QuayAuthDefaults{
-								Token: "t1",
-							},
+						Auth: &QuayAuthDefaults{
+							Token: "t1",
 						},
 					},
 				},
 				Defaults: &Defaults{
 					Type: "ghcr",
-					ContainerDetailDefaults: ContainerDetailDefaults{
-						Tag: "Bar",
-					},
+					Tag:  "Bar",
 				},
 			},
 			want: test.TrimYAML(`
@@ -723,24 +675,16 @@ func TestDefaults_Default(t *testing.T) {
 				Type: "abc",
 				Registry: RegistryDefaultsSet{
 					GHCR: &GHCRRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &GHCRAuthDefaults{},
-						},
+						Auth: &GHCRAuthDefaults{},
 					},
 					Hub: &HubRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &HubAuthDefaults{},
-						},
+						Auth: &HubAuthDefaults{},
 					},
 					Quay: &QuayRegistryDefaults{
-						CommonRegistryDefaults: CommonRegistryDefaults{
-							Auth: &QuayAuthDefaults{},
-						},
+						Auth: &QuayAuthDefaults{},
 					},
 				},
-				ContainerDetailDefaults: ContainerDetailDefaults{
-					Tag: "t",
-				},
+				Tag: "t",
 			},
 		},
 	}

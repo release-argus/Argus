@@ -1191,12 +1191,14 @@ func TestStore_UserWithGrants__matchesTheSeparateQueries(t *testing.T) {
 	store := testStore(t)
 
 	readGlobal := rbac.Grant{
-		Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-		Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+		Resource: rbac.ResourceService,
+		Action:   rbac.ActionRead,
+		Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
 	}
 	updateScoped := rbac.Grant{
-		Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionUpdate},
-		Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "svc-a"},
+		Resource: rbac.ResourceService,
+		Action:   rbac.ActionUpdate,
+		Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "svc-a"},
 	}
 	mustCreateGroup(t, store, "readers", readGlobal)
 	mustCreateGroup(t, store, "editors", updateScoped)
@@ -1336,8 +1338,9 @@ func TestStore_UserWithGrants__errors(t *testing.T) {
 	// GIVEN: a store holding one disabled user with a grant.
 	store := testStore(t)
 	mustCreateGroup(t, store, "readers", rbac.Grant{
-		Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-		Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+		Resource: rbac.ResourceService,
+		Action:   rbac.ActionRead,
+		Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
 	})
 	user := mustCreateUser(t, store, "disabled-user", "", "readers")
 	disabled := false

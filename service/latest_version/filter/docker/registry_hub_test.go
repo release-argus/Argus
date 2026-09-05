@@ -84,9 +84,7 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 			format: "json",
 			data:   `{"auth": []}`,
 			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{},
-				},
+				Auth: &HubAuthDefaults{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -98,9 +96,7 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 			format: "yaml",
 			data:   `auth: []`,
 			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{},
-				},
+				Auth: &HubAuthDefaults{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -127,9 +123,7 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 				}
 			}`),
 			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{},
-				},
+				Auth: &HubAuthDefaults{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -147,9 +141,7 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 					token: tOKEn
 			`),
 			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{},
-				},
+				Auth: &HubAuthDefaults{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -244,9 +236,7 @@ func TestHubRegistry_Unmarshal(t *testing.T) {
 			format: "json",
 			data:   `{"image": []}`,
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{},
-				},
+				Auth: &HubAuth{},
 			},
 			errRegex: `^json: .*unmarshal .*$`,
 		},
@@ -255,9 +245,7 @@ func TestHubRegistry_Unmarshal(t *testing.T) {
 			format: "yaml",
 			data:   `image: []`,
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{},
-				},
+				Auth: &HubAuth{},
 			},
 			errRegex: `^[^\s]+ .*unmarshal .*`,
 		},
@@ -266,9 +254,7 @@ func TestHubRegistry_Unmarshal(t *testing.T) {
 			format: "json",
 			data:   `{"auth": []}`,
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{},
-				},
+				Auth: &HubAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -280,9 +266,7 @@ func TestHubRegistry_Unmarshal(t *testing.T) {
 			format: "yaml",
 			data:   `auth: []`,
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{},
-				},
+				Auth: &HubAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -309,9 +293,7 @@ func TestHubRegistry_Unmarshal(t *testing.T) {
 				}
 			}`),
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{},
-				},
+				Auth: &HubAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -333,9 +315,7 @@ func TestHubRegistry_Unmarshal(t *testing.T) {
 					token: tOKEn
 			`),
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{},
-				},
+				Auth: &HubAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -432,9 +412,7 @@ func TestHubRegistry_ApplyOverrides(t *testing.T) {
 			format: "json",
 			data:   `{"image": []}`,
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{},
-				},
+				Auth: &HubAuth{},
 			},
 			errRegex: `^json: .*unmarshal .*$`,
 		},
@@ -443,9 +421,7 @@ func TestHubRegistry_ApplyOverrides(t *testing.T) {
 			format: "yaml",
 			data:   `image: []`,
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{},
-				},
+				Auth: &HubAuth{},
 			},
 			errRegex: `^[^\s]+ .*unmarshal .*`,
 		},
@@ -454,9 +430,7 @@ func TestHubRegistry_ApplyOverrides(t *testing.T) {
 			format: "json",
 			data:   `{"auth": []}`,
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{},
-				},
+				Auth: &HubAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -468,9 +442,7 @@ func TestHubRegistry_ApplyOverrides(t *testing.T) {
 			format: "yaml",
 			data:   `auth: []`,
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{},
-				},
+				Auth: &HubAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -489,9 +461,7 @@ func TestHubRegistry_ApplyOverrides(t *testing.T) {
 				}
 			}`),
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{},
-				},
+				Auth: &HubAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -513,9 +483,7 @@ func TestHubRegistry_ApplyOverrides(t *testing.T) {
 					token: tOKEn
 			`),
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{},
-				},
+				Auth: &HubAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -537,12 +505,8 @@ func TestHubRegistry_ApplyOverrides(t *testing.T) {
 					token: tOKEn
 			`),
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Token: "abc",
-						},
-					},
+				Auth: &HubAuth{
+					Token: "abc",
 				},
 			},
 			errRegex: `^$`,
@@ -563,15 +527,9 @@ func TestHubRegistry_ApplyOverrides(t *testing.T) {
 					username: hub-username
 			`),
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Token: "abc",
-						},
-					},
+				Image: "i",
+				Auth: &HubAuth{
+					Token: "abc",
 				},
 			},
 			errRegex: `^$`,
@@ -635,10 +593,8 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Username",
 			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{
-						Username: "u",
-					},
+				Auth: &HubAuthDefaults{
+					Username: "u",
 				},
 			},
 			want: false,
@@ -646,10 +602,8 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Token",
 			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{
-						Token: "foo",
-					},
+				Auth: &HubAuthDefaults{
+					Token: "foo",
 				},
 			},
 			want: false,
@@ -657,11 +611,9 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/queryToken and validUntil",
 			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{
-						queryToken: "bar",
-						validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
-					},
+				Auth: &HubAuthDefaults{
+					queryToken: "bar",
+					validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			want: true,
@@ -669,13 +621,11 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			registry: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuthDefaults{
-						Username:   "u",
-						Token:      "foo",
-						queryToken: "bar",
-						validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
-					},
+				Auth: &HubAuthDefaults{
+					Username:   "u",
+					Token:      "foo",
+					queryToken: "bar",
+					validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			want: false,
@@ -720,35 +670,25 @@ func TestHubRegistry_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Type",
 			data: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "abc",
-					Auth: RegistryMap["hub"]().GetAuth(),
-				},
+				Type: "abc",
+				Auth: RegistryMap["hub"]().GetAuth(),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/CommonRegistry",
 			data: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-					Auth: RegistryMap["hub"]().GetAuth(),
-				},
+				Image: "i",
+				Auth:  RegistryMap["hub"]().GetAuth(),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/all",
 			data: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-					Type: "abc",
-					Auth: RegistryMap["hub"]().GetAuth(),
-				},
+				Image: "i",
+				Type:  "abc",
+				Auth:  RegistryMap["hub"]().GetAuth(),
 			},
 			want: false,
 		},
@@ -792,18 +732,12 @@ func TestHubRegistry_Copy(t *testing.T) {
 		{
 			name: "filled",
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i1",
-						Tag:   "t1",
-					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username: "u1",
-							Token:    "t1",
-							defaults: &HubAuthDefaults{},
-						},
-					},
+				Image: "i1",
+				Tag:   "t1",
+				Auth: &HubAuth{
+					Username: "u1",
+					Token:    "t1",
+					defaults: &HubAuthDefaults{},
 				},
 			},
 			want: test.TrimYAML(`
@@ -893,16 +827,12 @@ func TestHubRegistryDefaults_String(t *testing.T) {
 		{
 			name: "filled",
 			data: &HubRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username: "u1",
-							Token:    "token1",
-							defaults: &HubAuthDefaults{
-								Username: "u2",
-								Token:    "token2",
-							},
-						},
+				Auth: &HubAuth{
+					Username: "u1",
+					Token:    "token1",
+					defaults: &HubAuthDefaults{
+						Username: "u2",
+						Token:    "token2",
 					},
 				},
 			},
@@ -948,24 +878,20 @@ func TestHubRegistry_String(t *testing.T) {
 		{
 			name: "filled",
 			data: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "test-hub",
-					ContainerDetail: ContainerDetail{
-						Image: "i1",
-						Tag:   "t1",
-						Defaults: &ContainerDetailDefaults{
-							Tag: "t2",
-						},
+				Type: "test-hub",
+				ContainerDetail: ContainerDetail{
+					Image: "i1",
+					Tag:   "t1",
+					Defaults: &ContainerDetailDefaults{
+						Tag: "t2",
 					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username: "u1",
-							Token:    "token1",
-							defaults: &HubAuthDefaults{
-								Username: "u2",
-								Token:    "token2",
-							},
-						},
+				},
+				Auth: &HubAuth{
+					Username: "u1",
+					Token:    "token1",
+					defaults: &HubAuthDefaults{
+						Username: "u2",
+						Token:    "token2",
 					},
 				},
 			},
@@ -1027,9 +953,7 @@ func TestHubRegistry_GetType(t *testing.T) {
 		{
 			name: "ignore type",
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "hi",
-				},
+				Type: "hi",
 			},
 		},
 	}
@@ -1066,17 +990,11 @@ func TestHubRegistry_CheckValues(t *testing.T) {
 		{
 			name: "valid",
 			input: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-						Tag:   "t",
-					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username: "username",
-							Token:    "token",
-						},
-					},
+				Image: "i",
+				Tag:   "t",
+				Auth: &HubAuth{
+					Username: "username",
+					Token:    "token",
 				},
 			},
 			errRegex: `^$`,
@@ -1084,16 +1002,10 @@ func TestHubRegistry_CheckValues(t *testing.T) {
 		{
 			name: "CommonRegistry: no image",
 			input: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Tag: "t",
-					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username: "username",
-							Token:    "t",
-						},
-					},
+				Tag: "t",
+				Auth: &HubAuth{
+					Username: "username",
+					Token:    "t",
 				},
 			},
 			errRegex: `^image: <required> \([^\)]+\)$`,
@@ -1101,16 +1013,10 @@ func TestHubRegistry_CheckValues(t *testing.T) {
 		{
 			name: "Auth: no token",
 			input: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-						Tag:   "t",
-					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username: "username",
-						},
-					},
+				Image: "i",
+				Tag:   "t",
+				Auth: &HubAuth{
+					Username: "username",
 				},
 			},
 			errRegex: `^token: <required> \([^\)]+\)$`,
@@ -1118,16 +1024,10 @@ func TestHubRegistry_CheckValues(t *testing.T) {
 		{
 			name: "Auth: no username",
 			input: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-						Tag:   "t",
-					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Token: "token",
-						},
-					},
+				Image: "i",
+				Tag:   "t",
+				Auth: &HubAuth{
+					Token: "token",
 				},
 			},
 			errRegex: `^username: <required> \([^\)]+\)$`,
@@ -1135,15 +1035,9 @@ func TestHubRegistry_CheckValues(t *testing.T) {
 		{
 			name: "CommonRegistry err and Auth err",
 			input: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Tag: "t",
-					},
-					Auth: &HubAuth{
-						HubAuthDefaults: HubAuthDefaults{
-							Username: "username",
-						},
-					},
+				Tag: "t",
+				Auth: &HubAuth{
+					Username: "username",
 				},
 			},
 			errRegex: test.TrimYAML(`
@@ -1182,24 +1076,16 @@ func TestHubRegistry_NewRequest(t *testing.T) {
 		{
 			name: "no image or tag",
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "",
-						Tag:   "",
-					},
-				},
+				Image: "",
+				Tag:   "",
 			},
 			errRegex: `^$`,
 		},
 		{
 			name: "have image+tag",
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "123",
-						Tag:   "not-used",
-					},
-				},
+				Image: "123",
+				Tag:   "not-used",
 			},
 			tag:      "foo",
 			errRegex: `^$`,
@@ -1207,12 +1093,8 @@ func TestHubRegistry_NewRequest(t *testing.T) {
 		{
 			name: "tag: invalid",
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "123",
-						Tag:   "not-used",
-					},
-				},
+				Image: "123",
+				Tag:   "not-used",
 			},
 			tag: "	foo",
 			errRegex: test.TrimYAML(`
@@ -1223,12 +1105,8 @@ func TestHubRegistry_NewRequest(t *testing.T) {
 		{
 			name: "image: invalid",
 			registry: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "	123",
-						Tag:   "not-used",
-					},
-				},
+				Image: "	123",
+				Tag:   "not-used",
 			},
 			tag: "foo",
 			errRegex: test.TrimYAML(`
@@ -1348,13 +1226,11 @@ func TestHubAuth_Copy(t *testing.T) {
 		{
 			name: "filled",
 			auth: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username:   "u1",
-					Token:      "t1",
-					queryToken: "qT",
-					validUntil: time.Now(),
-					defaults:   &HubAuthDefaults{},
-				},
+				Username:   "u1",
+				Token:      "t1",
+				queryToken: "qT",
+				validUntil: time.Now(),
+				defaults:   &HubAuthDefaults{},
 			},
 			want: test.TrimYAML(`
 				username: u1
@@ -1578,28 +1454,22 @@ func TestHubAuth_CheckValues(t *testing.T) {
 		{
 			name: "valid",
 			input: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "username",
-					Token:    "token",
-				},
+				Username: "username",
+				Token:    "token",
 			},
 			errRegex: `^$`,
 		},
 		{
 			name: "username, no token",
 			input: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "username",
-				},
+				Username: "username",
 			},
 			errRegex: `^token: <required> \([^\)]+\)$`,
 		},
 		{
 			name: "token, no username",
 			input: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token: "token",
-				},
+				Token: "token",
 			},
 			errRegex: `^username: <required> \([^\)]+\)$`,
 		},
@@ -1639,18 +1509,14 @@ func TestHubAuth_GetUsernameSelf(t *testing.T) {
 		{
 			name: "username",
 			auth: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "u",
-				},
+				Username: "u",
 			},
 			want: "u",
 		},
 		{
 			name: "env vars",
 			auth: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "u-${DOCKER_USERNAME}",
-				},
+				Username: "u-${DOCKER_USERNAME}",
 			},
 			env: map[string]string{
 				"DOCKER_USERNAME": "1",
@@ -1695,20 +1561,16 @@ func TestHubAuth_GetUsername(t *testing.T) {
 		{
 			name: "no defaults",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "root",
-				},
+				Username: "root",
 			},
 			want: "root",
 		},
 		{
 			name: "defaults fallback",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "",
-					defaults: &HubAuthDefaults{
-						Username: "defaults",
-					},
+				Username: "",
+				defaults: &HubAuthDefaults{
+					Username: "defaults",
 				},
 			},
 			want: "defaults",
@@ -1716,11 +1578,9 @@ func TestHubAuth_GetUsername(t *testing.T) {
 		{
 			name: "defaults fallback recursive",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "",
-					defaults: &HubAuthDefaults{
-						Username: "hard-defaults",
-					},
+				Username: "",
+				defaults: &HubAuthDefaults{
+					Username: "hard-defaults",
 				},
 			},
 			want: "hard-defaults",
@@ -1728,11 +1588,9 @@ func TestHubAuth_GetUsername(t *testing.T) {
 		{
 			name: "root Username prioritised",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "root",
-					defaults: &HubAuthDefaults{
-						Username: "defaults",
-					},
+				Username: "root",
+				defaults: &HubAuthDefaults{
+					Username: "defaults",
 				},
 			},
 			want: "root",
@@ -1772,20 +1630,16 @@ func TestHubAuth_GetToken(t *testing.T) {
 		{
 			name: "no defaults",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token: "root",
-				},
+				Token: "root",
 			},
 			want: "root",
 		},
 		{
 			name: "defaults fallback",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token: "",
-					defaults: &HubAuthDefaults{
-						Token: "defaults",
-					},
+				Token: "",
+				defaults: &HubAuthDefaults{
+					Token: "defaults",
 				},
 			},
 			want: "defaults",
@@ -1793,11 +1647,9 @@ func TestHubAuth_GetToken(t *testing.T) {
 		{
 			name: "defaults fallback recursive",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token: "",
-					defaults: &HubAuthDefaults{
-						Token: "hard-defaults",
-					},
+				Token: "",
+				defaults: &HubAuthDefaults{
+					Token: "hard-defaults",
 				},
 			},
 			want: "hard-defaults",
@@ -1805,11 +1657,9 @@ func TestHubAuth_GetToken(t *testing.T) {
 		{
 			name: "root Token prioritised",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token: "root",
-					defaults: &HubAuthDefaults{
-						Token: "defaults",
-					},
+				Token: "root",
+				defaults: &HubAuthDefaults{
+					Token: "defaults",
 				},
 			},
 			want: "root",
@@ -1922,9 +1772,7 @@ func TestHubAuth_GetQueryToken(t *testing.T) {
 		{
 			name: "no query token",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token: "token",
-				},
+				Token: "token",
 			},
 			want:     "",
 			errRegex: `^$`,
@@ -1932,11 +1780,9 @@ func TestHubAuth_GetQueryToken(t *testing.T) {
 		{
 			name: "valid at root",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token:      "token",
-					queryToken: "query-token",
-					validUntil: time.Now().Add(10 * time.Second),
-				},
+				Token:      "token",
+				queryToken: "query-token",
+				validUntil: time.Now().Add(10 * time.Second),
 			},
 			want:     "query-token",
 			errRegex: `^$`,
@@ -1944,15 +1790,13 @@ func TestHubAuth_GetQueryToken(t *testing.T) {
 		{
 			name: "valid at defaults",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
+				Token:      "token",
+				queryToken: "query-token-root",
+				validUntil: time.Now().Add(-10 * time.Second),
+				defaults: &HubAuthDefaults{
 					Token:      "token",
-					queryToken: "query-token-root",
-					validUntil: time.Now().Add(-10 * time.Second),
-					defaults: &HubAuthDefaults{
-						Token:      "token",
-						queryToken: "query-token-defaults",
-						validUntil: time.Now().Add(10 * time.Second),
-					},
+					queryToken: "query-token-defaults",
+					validUntil: time.Now().Add(10 * time.Second),
 				},
 			},
 			want:     "query-token-defaults",
@@ -2009,30 +1853,26 @@ func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
 		{
 			name: "root only",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token:      "token",
-					queryToken: "query-token",
-					validUntil: time.Now().Add(10 * time.Second),
-				},
+				Token:      "token",
+				queryToken: "query-token",
+				validUntil: time.Now().Add(10 * time.Second),
 			},
 			setRootToken: true,
 		},
 		{
 			name: "defaults - hardDefaults ignored",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token:      "token",
+				Token:      "token",
+				queryToken: "query-token",
+				validUntil: time.Now().Add(11 * time.Second),
+				defaults: &HubAuthDefaults{
+					Token:      "token1",
 					queryToken: "query-token",
-					validUntil: time.Now().Add(11 * time.Second),
+					validUntil: time.Now().Add(12 * time.Second),
 					defaults: &HubAuthDefaults{
-						Token:      "token1",
+						Token:      "token2",
 						queryToken: "query-token",
-						validUntil: time.Now().Add(12 * time.Second),
-						defaults: &HubAuthDefaults{
-							Token:      "token2",
-							queryToken: "query-token",
-							validUntil: time.Now().Add(13 * time.Second),
-						},
+						validUntil: time.Now().Add(13 * time.Second),
 					},
 				},
 			},
@@ -2041,19 +1881,17 @@ func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
 		{
 			name: "set in defaults",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
+				Token:      "token",
+				queryToken: "query-token",
+				validUntil: time.Now().Add(11 * time.Second),
+				defaults: &HubAuthDefaults{
 					Token:      "token",
 					queryToken: "query-token",
-					validUntil: time.Now().Add(11 * time.Second),
+					validUntil: time.Now().Add(12 * time.Second),
 					defaults: &HubAuthDefaults{
-						Token:      "token",
+						Token:      "token1",
 						queryToken: "query-token",
-						validUntil: time.Now().Add(12 * time.Second),
-						defaults: &HubAuthDefaults{
-							Token:      "token1",
-							queryToken: "query-token",
-							validUntil: time.Now().Add(13 * time.Second),
-						},
+						validUntil: time.Now().Add(13 * time.Second),
 					},
 				},
 			},
@@ -2063,19 +1901,17 @@ func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
 		{
 			name: "hard defaults ignored if defaults override",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token:      "token",
+				Token:      "token",
+				queryToken: "query-token",
+				validUntil: time.Now().Add(11 * time.Second),
+				defaults: &HubAuthDefaults{
+					Token:      "token1",
 					queryToken: "query-token",
-					validUntil: time.Now().Add(11 * time.Second),
+					validUntil: time.Now().Add(12 * time.Second),
 					defaults: &HubAuthDefaults{
-						Token:      "token1",
+						Token:      "token",
 						queryToken: "query-token",
-						validUntil: time.Now().Add(12 * time.Second),
-						defaults: &HubAuthDefaults{
-							Token:      "token",
-							queryToken: "query-token",
-							validUntil: time.Now().Add(13 * time.Second),
-						},
+						validUntil: time.Now().Add(13 * time.Second),
 					},
 				},
 			},
@@ -2084,19 +1920,17 @@ func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
 		{
 			name: "set in defaults and hard defaults",
 			data: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
+				Token:      "token",
+				queryToken: "query-token",
+				validUntil: time.Now().Add(11 * time.Second),
+				defaults: &HubAuthDefaults{
 					Token:      "token",
 					queryToken: "query-token",
-					validUntil: time.Now().Add(11 * time.Second),
+					validUntil: time.Now().Add(12 * time.Second),
 					defaults: &HubAuthDefaults{
 						Token:      "token",
 						queryToken: "query-token",
-						validUntil: time.Now().Add(12 * time.Second),
-						defaults: &HubAuthDefaults{
-							Token:      "token",
-							queryToken: "query-token",
-							validUntil: time.Now().Add(13 * time.Second),
-						},
+						validUntil: time.Now().Add(13 * time.Second),
 					},
 				},
 			},
@@ -2173,18 +2007,14 @@ func TestHubAuth_Inherit(t *testing.T) {
 		{
 			name: "inherit from HubAuth (src.Token is SecretValue)",
 			auth: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "u",
-					Token:    util.SecretValue,
-				},
+				Username: "u",
+				Token:    util.SecretValue,
 			},
 			from: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username:   "u",
-					Token:      "abc",
-					queryToken: "qt",
-					validUntil: time.Now(),
-				},
+				Username:   "u",
+				Token:      "abc",
+				queryToken: "qt",
+				validUntil: time.Now(),
 			},
 			srcDetail: ContainerDetail{
 				Image: "a",
@@ -2199,18 +2029,14 @@ func TestHubAuth_Inherit(t *testing.T) {
 		{
 			name: "inherit from HubAuth when Details do not match (src.Token is SecretValue)",
 			auth: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "u",
-					Token:    util.SecretValue,
-				},
+				Username: "u",
+				Token:    util.SecretValue,
 			},
 			from: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username:   "u",
-					Token:      "abc",
-					queryToken: "qt",
-					validUntil: time.Now(),
-				},
+				Username:   "u",
+				Token:      "abc",
+				queryToken: "qt",
+				validUntil: time.Now(),
 			},
 			srcDetail: ContainerDetail{
 				Image: "a",
@@ -2225,59 +2051,43 @@ func TestHubAuth_Inherit(t *testing.T) {
 		{
 			name: "do not inherit from HubAuth when src.Username is changed",
 			auth: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "u1",
-					Token:    util.SecretValue,
-				},
+				Username: "u1",
+				Token:    util.SecretValue,
 			},
 			from: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username:   "u",
-					Token:      "abc",
-					queryToken: "qt",
-					validUntil: time.Now(),
-				},
+				Username:   "u",
+				Token:      "abc",
+				queryToken: "qt",
+				validUntil: time.Now(),
 			},
 		},
 		{
 			name: "do not inherit from HubAuth when src.Token is not SecretValue",
 			auth: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token: "foo",
-				},
+				Token: "foo",
 			},
 			from: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token:      "abc",
-					queryToken: "qt",
-					validUntil: time.Now(),
-				},
+				Token:      "abc",
+				queryToken: "qt",
+				validUntil: time.Now(),
 			},
 		},
 		{
 			name: "do not inherit from GHCRAuth",
 			auth: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token: util.SecretValue,
-				},
+				Token: util.SecretValue,
 			},
 			from: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 		},
 		{
 			name: "do not inherit from QuayAuth",
 			auth: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token: util.SecretValue,
-				},
+				Token: util.SecretValue,
 			},
 			from: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 		},
 	}

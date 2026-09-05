@@ -107,10 +107,8 @@ func TestConfig_CheckValues(t *testing.T) {
 			name: "invalid Settings",
 			cfg: &Config{
 				Settings: Settings{
-					SettingsBase: SettingsBase{
-						Web: WebSettings{
-							CertFile: "does_not_exist.pem",
-						},
+					Web: WebSettings{
+						CertFile: "does_not_exist.pem",
 					},
 				},
 			},

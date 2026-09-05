@@ -446,7 +446,7 @@ func TestSettings_CheckValues__auth(t *testing.T) {
 			t.Parallel()
 
 			settings := Settings{
-				SettingsBase: SettingsBase{Auth: tc.auth},
+				Auth:         tc.auth,
 				HardDefaults: authHardDefaults(),
 			}
 			settings.Web.BasicAuth = tc.yamlBasic
@@ -527,7 +527,7 @@ func TestSettings__authAccessors(t *testing.T) {
 			t.Parallel()
 
 			settings := Settings{
-				SettingsBase: SettingsBase{Auth: tc.auth},
+				Auth:         tc.auth,
 				HardDefaults: authHardDefaults(),
 			}
 

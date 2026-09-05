@@ -2485,8 +2485,9 @@ func TestHTTP_ServiceEdit__edit__rejectsAnIDHeldAsAnotherServiceName(t *testing.
 	api.Config.Order = append(api.Config.Order, source.ID, holder.ID)
 
 	group, err := deps.Store.CreateGroup(t.Context(), "scoped", "", []rbac.Grant{{
-		Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-		Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: editID},
+		Resource: rbac.ResourceService,
+		Action:   rbac.ActionRead,
+		Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: editID},
 	}})
 	if err != nil {
 		t.Fatalf(

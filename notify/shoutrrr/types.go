@@ -166,12 +166,10 @@ func New(
 	defaults, hardDefaults *Defaults,
 ) (shoutrrr *Shoutrrr) {
 	shoutrrr = &Shoutrrr{
-		Base: Base{
-			Type:      sType,
-			Options:   options,
-			URLFields: urlFields,
-			Params:    params,
-		},
+		Type:          sType,
+		Options:       options,
+		URLFields:     urlFields,
+		Params:        params,
 		Failed:        failed,
 		ID:            id,
 		ServiceStatus: nil,
@@ -228,12 +226,10 @@ func (s *Shoutrrr) Copy(serviceStatus *status.Status) *Shoutrrr {
 	}
 
 	field := Shoutrrr{
-		Base: Base{
-			Type:      s.Type,
-			Options:   *s.Options.Copy(),
-			URLFields: *s.URLFields.Copy(),
-			Params:    *s.Params.Copy(),
-		},
+		Type:          s.Type,
+		Options:       *s.Options.Copy(),
+		URLFields:     *s.URLFields.Copy(),
+		Params:        *s.Params.Copy(),
 		ID:            s.ID,
 		Failed:        s.Failed.Copy(),
 		ServiceStatus: serviceStatus,

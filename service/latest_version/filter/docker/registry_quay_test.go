@@ -76,9 +76,7 @@ func TestQuayRegistryDefaults_Unmarshal(t *testing.T) {
 			format: "json",
 			data:   `{"auth": []}`,
 			registry: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &QuayAuthDefaults{},
-				},
+				Auth: &QuayAuthDefaults{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -90,9 +88,7 @@ func TestQuayRegistryDefaults_Unmarshal(t *testing.T) {
 			format: "yaml",
 			data:   `auth: []`,
 			registry: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &QuayAuthDefaults{},
-				},
+				Auth: &QuayAuthDefaults{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -119,9 +115,7 @@ func TestQuayRegistryDefaults_Unmarshal(t *testing.T) {
 				}
 			}`),
 			registry: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &QuayAuthDefaults{},
-				},
+				Auth: &QuayAuthDefaults{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -138,9 +132,7 @@ func TestQuayRegistryDefaults_Unmarshal(t *testing.T) {
 					token: tOKEn
 			`),
 			registry: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &QuayAuthDefaults{},
-				},
+				Auth: &QuayAuthDefaults{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -226,9 +218,7 @@ func TestQuayRegistry_Unmarshal(t *testing.T) {
 			format: "json",
 			data:   `{"image": []}`,
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{},
-				},
+				Auth: &QuayAuth{},
 			},
 			errRegex: `^json: .*unmarshal .*$`,
 		},
@@ -237,9 +227,7 @@ func TestQuayRegistry_Unmarshal(t *testing.T) {
 			format: "yaml",
 			data:   `image: []`,
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{},
-				},
+				Auth: &QuayAuth{},
 			},
 			errRegex: `^[^\s]+ .*unmarshal .*`,
 		},
@@ -248,9 +236,7 @@ func TestQuayRegistry_Unmarshal(t *testing.T) {
 			format: "json",
 			data:   `{"auth": []}`,
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{},
-				},
+				Auth: &QuayAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -262,9 +248,7 @@ func TestQuayRegistry_Unmarshal(t *testing.T) {
 			format: "yaml",
 			data:   `auth: []`,
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{},
-				},
+				Auth: &QuayAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -291,9 +275,7 @@ func TestQuayRegistry_Unmarshal(t *testing.T) {
 				}
 			}`),
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{},
-				},
+				Auth: &QuayAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -314,9 +296,7 @@ func TestQuayRegistry_Unmarshal(t *testing.T) {
 					token: tOKEn
 			`),
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{},
-				},
+				Auth: &QuayAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -404,9 +384,7 @@ func TestQuayRegistry_ApplyOverrides(t *testing.T) {
 			format: "json",
 			data:   `{"image": []}`,
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{},
-				},
+				Auth: &QuayAuth{},
 			},
 			errRegex: `^json: .*unmarshal .*$`,
 		},
@@ -415,9 +393,7 @@ func TestQuayRegistry_ApplyOverrides(t *testing.T) {
 			format: "yaml",
 			data:   `image: []`,
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{},
-				},
+				Auth: &QuayAuth{},
 			},
 			errRegex: `^[^\s]+ .*unmarshal .*`,
 		},
@@ -426,9 +402,7 @@ func TestQuayRegistry_ApplyOverrides(t *testing.T) {
 			format: "json",
 			data:   `{"auth": []}`,
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{},
-				},
+				Auth: &QuayAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -440,9 +414,7 @@ func TestQuayRegistry_ApplyOverrides(t *testing.T) {
 			format: "yaml",
 			data:   `auth: []`,
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{},
-				},
+				Auth: &QuayAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -461,9 +433,7 @@ func TestQuayRegistry_ApplyOverrides(t *testing.T) {
 				}
 			}`),
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{},
-				},
+				Auth: &QuayAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -484,9 +454,7 @@ func TestQuayRegistry_ApplyOverrides(t *testing.T) {
 					token: tOKEn
 			`),
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{},
-				},
+				Auth: &QuayAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -507,12 +475,8 @@ func TestQuayRegistry_ApplyOverrides(t *testing.T) {
 					token: tOKEn
 			`),
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &QuayAuth{
-						QuayAuthDefaults: QuayAuthDefaults{
-							Token: "abc",
-						},
-					},
+				Auth: &QuayAuth{
+					Token: "abc",
 				},
 			},
 			errRegex: `^$`,
@@ -532,15 +496,9 @@ func TestQuayRegistry_ApplyOverrides(t *testing.T) {
 					username: quay-username
 			`),
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-					Auth: &QuayAuth{
-						QuayAuthDefaults: QuayAuthDefaults{
-							Token: "abc",
-						},
-					},
+				Image: "i",
+				Auth: &QuayAuth{
+					Token: "abc",
 				},
 			},
 			errRegex: `^$`,
@@ -603,10 +561,8 @@ func TestQuayRegistryDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Token",
 			registry: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &QuayAuthDefaults{
-						Token: "foo",
-					},
+				Auth: &QuayAuthDefaults{
+					Token: "foo",
 				},
 			},
 			want: false,
@@ -614,10 +570,8 @@ func TestQuayRegistryDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			registry: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &QuayAuthDefaults{
-						Token: "foo",
-					},
+				Auth: &QuayAuthDefaults{
+					Token: "foo",
 				},
 			},
 			want: false,
@@ -662,35 +616,25 @@ func TestQuayRegistry_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Type",
 			data: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "abc",
-					Auth: RegistryMap["quay"]().GetAuth(),
-				},
+				Type: "abc",
+				Auth: RegistryMap["quay"]().GetAuth(),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/CommonRegistry",
 			data: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-					Auth: RegistryMap["quay"]().GetAuth(),
-				},
+				Image: "i",
+				Auth:  RegistryMap["quay"]().GetAuth(),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/all",
 			data: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-					Type: "abc",
-					Auth: RegistryMap["quay"]().GetAuth(),
-				},
+				Image: "i",
+				Type:  "abc",
+				Auth:  RegistryMap["quay"]().GetAuth(),
 			},
 			want: false,
 		},
@@ -734,17 +678,11 @@ func TestQuayRegistry_Copy(t *testing.T) {
 		{
 			name: "filled",
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i1",
-						Tag:   "t1",
-					},
-					Auth: &QuayAuth{
-						QuayAuthDefaults: QuayAuthDefaults{
-							Token:    "t1",
-							defaults: &QuayAuthDefaults{},
-						},
-					},
+				Image: "i1",
+				Tag:   "t1",
+				Auth: &QuayAuth{
+					Token:    "t1",
+					defaults: &QuayAuthDefaults{},
 				},
 			},
 			want: test.TrimYAML(`
@@ -830,14 +768,10 @@ func TestQuayRegistryDefaults_String(t *testing.T) {
 		{
 			name: "filled",
 			data: &QuayRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &QuayAuth{
-						QuayAuthDefaults: QuayAuthDefaults{
-							Token: "token1",
-							defaults: &QuayAuthDefaults{
-								Token: "token2",
-							},
-						},
+				Auth: &QuayAuth{
+					Token: "token1",
+					defaults: &QuayAuthDefaults{
+						Token: "token2",
 					},
 				},
 			},
@@ -882,22 +816,18 @@ func TestQuayRegistry_String(t *testing.T) {
 		{
 			name: "filled",
 			data: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "test-quay",
-					ContainerDetail: ContainerDetail{
-						Image: "i1",
-						Tag:   "t1",
-						Defaults: &ContainerDetailDefaults{
-							Tag: "t2",
-						},
+				Type: "test-quay",
+				ContainerDetail: ContainerDetail{
+					Image: "i1",
+					Tag:   "t1",
+					Defaults: &ContainerDetailDefaults{
+						Tag: "t2",
 					},
-					Auth: &QuayAuth{
-						QuayAuthDefaults: QuayAuthDefaults{
-							Token: "token1",
-							defaults: &QuayAuthDefaults{
-								Token: "token2",
-							},
-						},
+				},
+				Auth: &QuayAuth{
+					Token: "token1",
+					defaults: &QuayAuthDefaults{
+						Token: "token2",
 					},
 				},
 			},
@@ -975,24 +905,16 @@ func TestQuayRegistry_NewRequest(t *testing.T) {
 		{
 			name: "no image - tag",
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "",
-						Tag:   "",
-					},
-				},
+				Image: "",
+				Tag:   "",
 			},
 			errRegex: `^$`,
 		},
 		{
 			name: "have image+tag",
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "123",
-						Tag:   "not-used",
-					},
-				},
+				Image: "123",
+				Tag:   "not-used",
 			},
 			tag:      "foo",
 			errRegex: `^$`,
@@ -1000,12 +922,8 @@ func TestQuayRegistry_NewRequest(t *testing.T) {
 		{
 			name: "tag: invalid",
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "123",
-						Tag:   "not-used",
-					},
-				},
+				Image: "123",
+				Tag:   "not-used",
 			},
 			tag: "	foo",
 			errRegex: test.TrimYAML(`
@@ -1016,12 +934,8 @@ func TestQuayRegistry_NewRequest(t *testing.T) {
 		{
 			name: "image: invalid",
 			registry: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "	123",
-						Tag:   "not-used",
-					},
-				},
+				Image: "	123",
+				Tag:   "not-used",
 			},
 			tag: "foo",
 			errRegex: test.TrimYAML(`
@@ -1124,10 +1038,8 @@ func TestQuayAuth_Copy(t *testing.T) {
 		{
 			name: "filled",
 			auth: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token:    "t1",
-					defaults: &QuayAuthDefaults{},
-				},
+				Token:    "t1",
+				defaults: &QuayAuthDefaults{},
 			},
 			want: "token: t1\n",
 		},
@@ -1291,18 +1203,14 @@ func TestQuayAuthDefaults_SetDefaults(t *testing.T) {
 			doesSet:     false,
 		},
 		{
-			name: "doesn't give GHCRAuthDefaults",
-			newDefaults: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{},
-			},
-			doesSet: false,
+			name:        "doesn't give GHCRAuthDefaults",
+			newDefaults: &GHCRAuth{},
+			doesSet:     false,
 		},
 		{
-			name: "doesn't give HubAuthDefaults",
-			newDefaults: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{},
-			},
-			doesSet: false,
+			name:        "doesn't give HubAuthDefaults",
+			newDefaults: &HubAuth{},
+			doesSet:     false,
 		},
 	}
 
@@ -1346,27 +1254,21 @@ func TestQuayAuth_CheckValues(t *testing.T) {
 		{
 			name: "valid",
 			input: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "token",
-				},
+				Token: "token",
 			},
 			errRegex: `^$`,
 		},
 		{
 			name: "token",
 			input: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "token",
-				},
+				Token: "token",
 			},
 			errRegex: `^$`,
 		},
 		{
 			name: "no token",
 			input: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "token",
-				},
+				Token: "token",
 			},
 			errRegex: `^$`,
 		},
@@ -1405,20 +1307,16 @@ func TestQuayAuth_GetToken(t *testing.T) {
 		{
 			name: "no defaults",
 			data: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "root",
-				},
+				Token: "root",
 			},
 			want: "root",
 		},
 		{
 			name: "defaults fallback",
 			data: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "",
-					defaults: &QuayAuthDefaults{
-						Token: "defaults",
-					},
+				Token: "",
+				defaults: &QuayAuthDefaults{
+					Token: "defaults",
 				},
 			},
 			want: "defaults",
@@ -1426,11 +1324,9 @@ func TestQuayAuth_GetToken(t *testing.T) {
 		{
 			name: "defaults fallback recursive",
 			data: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "",
-					defaults: &QuayAuthDefaults{
-						Token: "hard-defaults",
-					},
+				Token: "",
+				defaults: &QuayAuthDefaults{
+					Token: "hard-defaults",
 				},
 			},
 			want: "hard-defaults",
@@ -1438,11 +1334,9 @@ func TestQuayAuth_GetToken(t *testing.T) {
 		{
 			name: "root Token prioritised",
 			data: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "root",
-					defaults: &QuayAuthDefaults{
-						Token: "defaults",
-					},
+				Token: "root",
+				defaults: &QuayAuthDefaults{
+					Token: "defaults",
 				},
 			},
 			want: "root",
@@ -1530,7 +1424,7 @@ func TestQuayAuth_SetQueryToken(t *testing.T) {
 	validUntil := time.Now().Add(10 * time.Second)
 
 	auth := &QuayAuth{
-		QuayAuthDefaults: QuayAuthDefaults{Token: "abc"},
+		Token: "abc",
 	}
 	defaults := &QuayAuthDefaults{Token: "def"}
 
@@ -1564,9 +1458,7 @@ func TestQuayAuth_GetQueryToken(t *testing.T) {
 		{
 			name: "existing token",
 			auth: QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 			want: "abc",
 		},
@@ -1622,56 +1514,40 @@ func TestQuayAuth_Inherit(t *testing.T) {
 		{
 			name: "inherit from QuayAuth (src.Token is SecretValue)",
 			auth: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: util.SecretValue,
-				},
+				Token: util.SecretValue,
 			},
 			from: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 			wantToken: "abc",
 		},
 		{
 			name: "do not inherit from QuayAuth when src.Token is not SecretValue",
 			auth: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "foo",
-				},
+				Token: "foo",
 			},
 			from: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 			wantToken: "foo",
 		},
 		{
 			name: "do not inherit from GHCRAuth",
 			auth: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: util.SecretValue,
-				},
+				Token: util.SecretValue,
 			},
 			from: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 			wantToken: util.SecretValue,
 		},
 		{
 			name: "do not inherit from HubAuth",
 			auth: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: util.SecretValue,
-				},
+				Token: util.SecretValue,
 			},
 			from: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 			wantToken: util.SecretValue,
 		},

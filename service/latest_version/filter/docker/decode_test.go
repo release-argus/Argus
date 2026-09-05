@@ -208,12 +208,8 @@ func TestApplyOverrides(t *testing.T) {
 			format: "json",
 			data:   "",
 			previous: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ version }}",
-					},
-				},
+				Image: "test/app",
+				Tag:   "{{ version }}",
 			},
 			sameAddress: true,
 			errRegex:    `^$`,
@@ -227,12 +223,8 @@ func TestApplyOverrides(t *testing.T) {
 			format: "json",
 			data:   `null`,
 			previous: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ version }}",
-					},
-				},
+				Image: "test/app",
+				Tag:   "{{ version }}",
 			},
 			errRegex: `^$`,
 			want:     "",
@@ -266,13 +258,9 @@ func TestApplyOverrides(t *testing.T) {
 				"tag": "{{ version }}"
 			}`),
 			previous: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "ecr",
-					ContainerDetail: ContainerDetail{
-						Image: "something",
-						Tag:   "else",
-					},
-				},
+				Type:  "ecr",
+				Image: "something",
+				Tag:   "else",
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -290,13 +278,9 @@ func TestApplyOverrides(t *testing.T) {
 				"tag": "{{ version }}"
 			}`),
 			previous: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "ecr",
-					ContainerDetail: ContainerDetail{
-						Image: "something",
-						Tag:   "else",
-					},
-				},
+				Type:  "ecr",
+				Image: "something",
+				Tag:   "else",
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -314,13 +298,9 @@ func TestApplyOverrides(t *testing.T) {
 				"tag": "{{ version }}"
 			}`),
 			previous: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "ecr",
-					ContainerDetail: ContainerDetail{
-						Image: "something",
-						Tag:   "else",
-					},
-				},
+				Type:  "ecr",
+				Image: "something",
+				Tag:   "else",
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -338,13 +318,9 @@ func TestApplyOverrides(t *testing.T) {
 				"tag": "{{ version }}"
 			}`),
 			previous: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "ghcr",
-					ContainerDetail: ContainerDetail{
-						Image: "something",
-						Tag:   "else",
-					},
-				},
+				Type:  "ghcr",
+				Image: "something",
+				Tag:   "else",
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -362,13 +338,9 @@ func TestApplyOverrides(t *testing.T) {
 				"tag": "{{ version }}"
 			}`),
 			previous: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "ghcr",
-					ContainerDetail: ContainerDetail{
-						Image: "something",
-						Tag:   "else",
-					},
-				},
+				Type:  "ghcr",
+				Image: "something",
+				Tag:   "else",
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -386,13 +358,9 @@ func TestApplyOverrides(t *testing.T) {
 				"tag": "{{ version }}"
 			}`),
 			previous: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "ghcr",
-					ContainerDetail: ContainerDetail{
-						Image: "something",
-						Tag:   "else",
-					},
-				},
+				Type:  "ghcr",
+				Image: "something",
+				Tag:   "else",
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -410,13 +378,9 @@ func TestApplyOverrides(t *testing.T) {
 				"tag": "{{ version }}"
 			}`),
 			previous: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "hub",
-					ContainerDetail: ContainerDetail{
-						Image: "something",
-						Tag:   "else",
-					},
-				},
+				Type:  "hub",
+				Image: "something",
+				Tag:   "else",
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -433,13 +397,9 @@ func TestApplyOverrides(t *testing.T) {
 				"image": "test/app-ghcr",
 			}`),
 			previous: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "hub",
-					ContainerDetail: ContainerDetail{
-						Image: "test/app-hub",
-						Tag:   "{{ version }}",
-					},
-				},
+				Type:  "hub",
+				Image: "test/app-hub",
+				Tag:   "{{ version }}",
 			},
 			want: test.TrimYAML(`
 				type: ghcr
@@ -454,13 +414,9 @@ func TestApplyOverrides(t *testing.T) {
 				"image": "test/app-quay",
 			}`),
 			previous: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "hub",
-					ContainerDetail: ContainerDetail{
-						Image: "test/app-hub",
-						Tag:   "{{ version }}",
-					},
-				},
+				Type:  "hub",
+				Image: "test/app-hub",
+				Tag:   "{{ version }}",
 			},
 			want: test.TrimYAML(`
 				type: quay
@@ -476,13 +432,9 @@ func TestApplyOverrides(t *testing.T) {
 				"tag": "{{ version }}"
 			}`),
 			previous: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "quay",
-					ContainerDetail: ContainerDetail{
-						Image: "something",
-						Tag:   "else",
-					},
-				},
+				Type:  "quay",
+				Image: "something",
+				Tag:   "else",
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -499,13 +451,9 @@ func TestApplyOverrides(t *testing.T) {
 				"image": "test/app-ghcr",
 			}`),
 			previous: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "quay",
-					ContainerDetail: ContainerDetail{
-						Image: "test/app-quay",
-						Tag:   "{{ version }}",
-					},
-				},
+				Type:  "quay",
+				Image: "test/app-quay",
+				Tag:   "{{ version }}",
 			},
 			want: test.TrimYAML(`
 				type: ghcr
@@ -520,13 +468,9 @@ func TestApplyOverrides(t *testing.T) {
 				"image": "test/app-hub",
 			}`),
 			previous: &QuayRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "quay",
-					ContainerDetail: ContainerDetail{
-						Image: "test/app-quay",
-						Tag:   "{{ version }}",
-					},
-				},
+				Type:  "quay",
+				Image: "test/app-quay",
+				Tag:   "{{ version }}",
 			},
 			want: test.TrimYAML(`
 				type: hub
@@ -540,13 +484,9 @@ func TestApplyOverrides(t *testing.T) {
 				"image": "test/other"
 			}`),
 			previous: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "hub",
-					ContainerDetail: ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ version }}",
-					},
-				},
+				Type:  "hub",
+				Image: "test/app",
+				Tag:   "{{ version }}",
 			},
 			sameAddress: true,
 			errRegex:    `^$`,
@@ -563,13 +503,9 @@ func TestApplyOverrides(t *testing.T) {
 				"tag": "1.2.3"
 			}`),
 			previous: &HubRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "hub",
-					ContainerDetail: ContainerDetail{
-						Image: "test/app",
-						Tag:   "{{ version }}",
-					},
-				},
+				Type:  "hub",
+				Image: "test/app",
+				Tag:   "{{ version }}",
 			},
 			sameAddress: true,
 			errRegex:    `^$`,

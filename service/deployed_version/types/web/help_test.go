@@ -66,9 +66,7 @@ func testLookup(t *testing.T, failing bool) *Lookup {
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
 	svcDashboard := &dashboard.Options{
-		OptionsBase: dashboard.OptionsBase{
-			WebURL: "https://example.com",
-		},
+		WebURL: "https://example.com",
 	}
 	svcStatus := status.New(
 		announceChannel, databaseChannel, saveChannel,

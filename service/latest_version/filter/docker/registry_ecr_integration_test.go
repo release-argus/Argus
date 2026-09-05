@@ -42,13 +42,9 @@ func TestECRRegistry_Check(t *testing.T) {
 		{
 			name: "anonymous, known image+tag",
 			registry: ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerECRRepo,
-						Tag:   "{{ version }}",
-					},
-					Auth: &ECRAuth{},
-				},
+				Image: test.ArgusDockerECRRepo,
+				Tag:   "{{ version }}",
+				Auth:  &ECRAuth{},
 			},
 			version:  "latest",
 			errRegex: `^$`,
@@ -56,13 +52,9 @@ func TestECRRegistry_Check(t *testing.T) {
 		{
 			name: "known image, unknown tag",
 			registry: ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerECRRepo,
-						Tag:   "{{ version }}-unknown",
-					},
-					Auth: &ECRAuth{},
-				},
+				Image: test.ArgusDockerECRRepo,
+				Tag:   "{{ version }}-unknown",
+				Auth:  &ECRAuth{},
 			},
 			version:  "latest",
 			errRegex: `^` + test.ArgusDockerECRRepo + `:latest-unknown - tag not found$`,
@@ -70,13 +62,9 @@ func TestECRRegistry_Check(t *testing.T) {
 		{
 			name: "unknown image",
 			registry: ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerECRRepo + "-unknown",
-						Tag:   "{{ version }}",
-					},
-					Auth: &ECRAuth{},
-				},
+				Image: test.ArgusDockerECRRepo + "-unknown",
+				Tag:   "{{ version }}",
+				Auth:  &ECRAuth{},
 			},
 			version:  "latest",
 			errRegex: `^` + test.ArgusDockerECRRepo + `-unknown:latest - tag not found$`,
@@ -127,13 +115,9 @@ func TestECRRegistry_Check__errors(t *testing.T) {
 			name:            "GetQueryToken error, invalid token URL",
 			ecrTokenAddress: "https://	example.com",
 			registry: ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerECRRepo,
-						Tag:   "{{ version }}",
-					},
-					Auth: &ECRAuth{},
-				},
+				Image: test.ArgusDockerECRRepo,
+				Tag:   "{{ version }}",
+				Auth:  &ECRAuth{},
 			},
 			version: "latest",
 			errRegex: test.TrimYAML(`
@@ -146,16 +130,10 @@ func TestECRRegistry_Check__errors(t *testing.T) {
 			name:        "newRequest error, invalid query URL",
 			ecrQueryURL: "https://	example.com",
 			registry: ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerECRRepo,
-						Tag:   "{{ version }}",
-					},
-					Auth: &ECRAuth{
-						ECRAuthDefaults: ECRAuthDefaults{
-							queryToken: "test",
-						},
-					},
+				Image: test.ArgusDockerECRRepo,
+				Tag:   "{{ version }}",
+				Auth: &ECRAuth{
+					queryToken: "test",
 				},
 			},
 			version: "latest",
@@ -168,16 +146,10 @@ func TestECRRegistry_Check__errors(t *testing.T) {
 			name:        "http.client.Do error, invalid URL TLD",
 			ecrQueryURL: "https://example.invalid/%s/%s",
 			registry: ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerECRRepo,
-						Tag:   "{{ version }}",
-					},
-					Auth: &ECRAuth{
-						ECRAuthDefaults: ECRAuthDefaults{
-							queryToken: "test",
-						},
-					},
+				Image: test.ArgusDockerECRRepo,
+				Tag:   "{{ version }}",
+				Auth: &ECRAuth{
+					queryToken: "test",
 				},
 			},
 			version: "latest",

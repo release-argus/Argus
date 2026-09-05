@@ -318,9 +318,7 @@ func TestWebHook_SetHeaders(t *testing.T) {
 					ID: serviceID,
 				},
 				&dashboard.Options{
-					OptionsBase: dashboard.OptionsBase{
-						WebURL: url,
-					},
+					WebURL: url,
 				},
 			)
 			webhook.ServiceStatus.SetLatestVersion(latestVersion, "", false)

@@ -86,9 +86,7 @@ func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
 			format: "json",
 			data:   `{"auth": []}`,
 			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -100,9 +98,7 @@ func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
 			format: "yaml",
 			data:   `auth: []`,
 			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -129,9 +125,7 @@ func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
 				}
 			}`),
 			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -148,9 +142,7 @@ func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
 					token: tOKEn
 			`),
 			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -244,9 +236,7 @@ func TestGHCRRegistry_Unmarshal(t *testing.T) {
 			format: "json",
 			data:   `{"image": []}`,
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: `^json: .*unmarshal .*$`,
 		},
@@ -255,9 +245,7 @@ func TestGHCRRegistry_Unmarshal(t *testing.T) {
 			format: "yaml",
 			data:   `image: []`,
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: `^[^\s]+ .*unmarshal .*`,
 		},
@@ -266,9 +254,7 @@ func TestGHCRRegistry_Unmarshal(t *testing.T) {
 			format: "json",
 			data:   `{"auth": []}`,
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -280,9 +266,7 @@ func TestGHCRRegistry_Unmarshal(t *testing.T) {
 			format: "yaml",
 			data:   `auth: []`,
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -309,9 +293,7 @@ func TestGHCRRegistry_Unmarshal(t *testing.T) {
 				}
 			}`),
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -332,9 +314,7 @@ func TestGHCRRegistry_Unmarshal(t *testing.T) {
 					token: tOKEn
 			`),
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -431,9 +411,7 @@ func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
 			format: "json",
 			data:   `{"image": []}`,
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: `^json: .*unmarshal .*$`,
 		},
@@ -442,9 +420,7 @@ func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
 			format: "yaml",
 			data:   `image: []`,
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: `^[^\s]+ .*unmarshal .*`,
 		},
@@ -453,9 +429,7 @@ func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
 			format: "json",
 			data:   `{"auth": []}`,
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -467,9 +441,7 @@ func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
 			format: "yaml",
 			data:   `auth: []`,
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -488,9 +460,7 @@ func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
 				}
 			}`),
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -511,9 +481,7 @@ func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
 					token: tOKEn
 			`),
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{},
-				},
+				Auth: &GHCRAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -534,12 +502,8 @@ func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
 					token: tOKEn
 			`),
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token: "abc",
-						},
-					},
+				Auth: &GHCRAuth{
+					Token: "abc",
 				},
 			},
 			errRegex: `^$`,
@@ -559,15 +523,9 @@ func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
 					username: ghcr-username
 			`),
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token: "abc",
-						},
-					},
+				Image: "i",
+				Auth: &GHCRAuth{
+					Token: "abc",
 				},
 			},
 			errRegex: `^$`,
@@ -630,10 +588,8 @@ func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Token",
 			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &GHCRAuthDefaults{
-						Token: "foo",
-					},
+				Auth: &GHCRAuthDefaults{
+					Token: "foo",
 				},
 			},
 			want: false,
@@ -641,11 +597,9 @@ func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/queryToken and validUntil",
 			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &GHCRAuthDefaults{
-						queryToken: "bar",
-						validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
-					},
+				Auth: &GHCRAuthDefaults{
+					queryToken: "bar",
+					validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			want: true,
@@ -653,14 +607,10 @@ func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			registry: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token:      "foo",
-							queryToken: "bar",
-							validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
-						},
-					},
+				Auth: &GHCRAuth{
+					Token:      "foo",
+					queryToken: "bar",
+					validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			want: false,
@@ -705,34 +655,24 @@ func TestGHCRRegistry_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Type",
 			data: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "abc",
-					Auth: RegistryMap["ghcr"]().GetAuth(),
-				},
+				Type: "abc",
+				Auth: RegistryMap["ghcr"]().GetAuth(),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/ContainerDetail",
 			data: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-				},
+				Image: "i",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/all",
 			data: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-					Type: "abc",
-					Auth: RegistryMap["ghcr"]().GetAuth(),
-				},
+				Image: "i",
+				Type:  "abc",
+				Auth:  RegistryMap["ghcr"]().GetAuth(),
 			},
 			want: false,
 		},
@@ -776,17 +716,11 @@ func TestGHCRRegistry_Copy(t *testing.T) {
 		{
 			name: "filled",
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i1",
-						Tag:   "t1",
-					},
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token:    "t1",
-							defaults: &GHCRAuthDefaults{},
-						},
-					},
+				Image: "i1",
+				Tag:   "t1",
+				Auth: &GHCRAuth{
+					Token:    "t1",
+					defaults: &GHCRAuthDefaults{},
 				},
 			},
 			want: test.TrimYAML(`
@@ -875,14 +809,10 @@ func TestGHCRRegistryDefaults_String(t *testing.T) {
 		{
 			name: "filled",
 			data: &GHCRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token: "token1",
-							defaults: &GHCRAuthDefaults{
-								Token: "token2",
-							},
-						},
+				Auth: &GHCRAuth{
+					Token: "token1",
+					defaults: &GHCRAuthDefaults{
+						Token: "token2",
 					},
 				},
 			},
@@ -927,22 +857,18 @@ func TestGHCRRegistry_String(t *testing.T) {
 		{
 			name: "filled",
 			data: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "test-ghcr",
-					ContainerDetail: ContainerDetail{
-						Image: "i1",
-						Tag:   "t1",
-						Defaults: &ContainerDetailDefaults{
-							Tag: "t2",
-						},
+				Type: "test-ghcr",
+				ContainerDetail: ContainerDetail{
+					Image: "i1",
+					Tag:   "t1",
+					Defaults: &ContainerDetailDefaults{
+						Tag: "t2",
 					},
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token: "token1",
-							defaults: &GHCRAuthDefaults{
-								Token: "token2",
-							},
-						},
+				},
+				Auth: &GHCRAuth{
+					Token: "token1",
+					defaults: &GHCRAuthDefaults{
+						Token: "token2",
 					},
 				},
 			},
@@ -1021,24 +947,16 @@ func TestGHCRRegistry_NewRequest(t *testing.T) {
 		{
 			name: "no image or tag",
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "",
-						Tag:   "",
-					},
-				},
+				Image: "",
+				Tag:   "",
 			},
 			errRegex: `^$`,
 		},
 		{
 			name: "have image+tag",
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "123",
-						Tag:   "not-used",
-					},
-				},
+				Image: "123",
+				Tag:   "not-used",
 			},
 			tag:      "foo",
 			errRegex: `^$`,
@@ -1046,12 +964,8 @@ func TestGHCRRegistry_NewRequest(t *testing.T) {
 		{
 			name: "tag: invalid",
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "123",
-						Tag:   "not-used",
-					},
-				},
+				Image: "123",
+				Tag:   "not-used",
 			},
 			tag: "	foo",
 			errRegex: test.TrimYAML(`
@@ -1062,12 +976,8 @@ func TestGHCRRegistry_NewRequest(t *testing.T) {
 		{
 			name: "image: invalid",
 			registry: &GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "	123",
-						Tag:   "not-used",
-					},
-				},
+				Image: "	123",
+				Tag:   "not-used",
 			},
 			tag: "foo",
 			errRegex: test.TrimYAML(`
@@ -1309,12 +1219,10 @@ func TestGHCRAuth_Copy(t *testing.T) {
 		{
 			name: "filled",
 			auth: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token:      "t1",
-					queryToken: "qT",
-					validUntil: time.Now(),
-					defaults:   &GHCRAuthDefaults{},
-				},
+				Token:      "t1",
+				queryToken: "qT",
+				validUntil: time.Now(),
+				defaults:   &GHCRAuthDefaults{},
 			},
 			want: "token: t1\n",
 		},
@@ -1531,27 +1439,21 @@ func TestGHCRAuth_CheckValues(t *testing.T) {
 		{
 			name: "valid",
 			input: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: "token",
-				},
+				Token: "token",
 			},
 			errRegex: `^$`,
 		},
 		{
 			name: "token",
 			input: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: "token",
-				},
+				Token: "token",
 			},
 			errRegex: `^$`,
 		},
 		{
 			name: "no token",
 			input: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: "token",
-				},
+				Token: "token",
 			},
 			errRegex: `^$`,
 		},
@@ -1584,28 +1486,22 @@ func TestGHCRAuth_GetToken(t *testing.T) {
 	}{
 		{
 			name: "empty",
-			data: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{},
-			},
+			data: &GHCRAuth{},
 			want: "",
 		},
 		{
 			name: "no defaults",
 			data: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: "root",
-				},
+				Token: "root",
 			},
 			want: "root",
 		},
 		{
 			name: "defaults fallback",
 			data: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: "",
-					defaults: &GHCRAuthDefaults{
-						Token: "defaults",
-					},
+				Token: "",
+				defaults: &GHCRAuthDefaults{
+					Token: "defaults",
 				},
 			},
 			want: "defaults",
@@ -1613,13 +1509,11 @@ func TestGHCRAuth_GetToken(t *testing.T) {
 		{
 			name: "defaults fallback recursive",
 			data: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
+				Token: "",
+				defaults: &GHCRAuthDefaults{
 					Token: "",
 					defaults: &GHCRAuthDefaults{
-						Token: "",
-						defaults: &GHCRAuthDefaults{
-							Token: "hard-defaults",
-						},
+						Token: "hard-defaults",
 					},
 				},
 			},
@@ -1628,11 +1522,9 @@ func TestGHCRAuth_GetToken(t *testing.T) {
 		{
 			name: "root Token prioritised",
 			data: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: "root",
-					defaults: &GHCRAuthDefaults{
-						Token: "defaults",
-					},
+				Token: "root",
+				defaults: &GHCRAuthDefaults{
+					Token: "defaults",
 				},
 			},
 			want: "root",
@@ -1792,11 +1684,9 @@ func TestGHCRAuth_GetQueryToken(t *testing.T) {
 		{
 			name: "valid",
 			data: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token:      "token",
-					queryToken: "query-token",
-					validUntil: time.Now().Add(10 * time.Second),
-				},
+				Token:      "token",
+				queryToken: "query-token",
+				validUntil: time.Now().Add(10 * time.Second),
 			},
 			want:     "query-token",
 			errRegex: `^$`,
@@ -1804,15 +1694,13 @@ func TestGHCRAuth_GetQueryToken(t *testing.T) {
 		{
 			name: "expired root refreshed before defaults fallback",
 			data: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
+				Token:      "token",
+				queryToken: "query-token",
+				validUntil: time.Now().Add(-10 * time.Second),
+				defaults: &GHCRAuthDefaults{
 					Token:      "token",
-					queryToken: "query-token",
-					validUntil: time.Now().Add(-10 * time.Second),
-					defaults: &GHCRAuthDefaults{
-						Token:      "token",
-						queryToken: "default-query-token",
-						validUntil: time.Now().Add(10 * time.Second),
-					},
+					queryToken: "default-query-token",
+					validUntil: time.Now().Add(10 * time.Second),
 				},
 			},
 			want:     "query-token",
@@ -1821,11 +1709,9 @@ func TestGHCRAuth_GetQueryToken(t *testing.T) {
 		{
 			name: "expired root refreshed",
 			data: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token:      "token",
-					queryToken: "query-token",
-					validUntil: time.Now().Add(-10 * time.Second),
-				},
+				Token:      "token",
+				queryToken: "query-token",
+				validUntil: time.Now().Add(-10 * time.Second),
 			},
 			want:     "query-token",
 			errRegex: `^$`,
@@ -1879,29 +1765,25 @@ func TestGHCRAuthDefaults_SetQueryToken(t *testing.T) {
 		{
 			name: "root only",
 			data: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token:      "token",
-					queryToken: "query-token",
-					validUntil: time.Now().Add(10 * time.Second),
-				},
+				Token:      "token",
+				queryToken: "query-token",
+				validUntil: time.Now().Add(10 * time.Second),
 			},
 		},
 		{
 			name: "defaults - hardDefaults ignored",
 			data: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
+				Token:      "token",
+				queryToken: "query-token",
+				validUntil: time.Now().Add(11 * time.Second),
+				defaults: &GHCRAuthDefaults{
 					Token:      "token",
 					queryToken: "query-token",
-					validUntil: time.Now().Add(11 * time.Second),
+					validUntil: time.Now().Add(12 * time.Second),
 					defaults: &GHCRAuthDefaults{
 						Token:      "token",
 						queryToken: "query-token",
-						validUntil: time.Now().Add(12 * time.Second),
-						defaults: &GHCRAuthDefaults{
-							Token:      "token",
-							queryToken: "query-token",
-							validUntil: time.Now().Add(13 * time.Second),
-						},
+						validUntil: time.Now().Add(13 * time.Second),
 					},
 				},
 			},
@@ -1957,10 +1839,8 @@ func TestGHCRAuthDefaults_SetQueryToken(t *testing.T) {
 func TestGHCRAuth_RefreshQueryToken__cached(t *testing.T) {
 	// GIVEN: a GHCRAuth with a cached query token that is valid for a while.
 	auth := &GHCRAuth{
-		GHCRAuthDefaults: GHCRAuthDefaults{
-			queryToken: "cached-token",
-			validUntil: time.Now().Add(time.Hour),
-		},
+		queryToken: "cached-token",
+		validUntil: time.Now().Add(time.Hour),
 	}
 	detail := ContainerDetail{Image: test.ArgusDockerGHCRRepo}
 
@@ -2006,16 +1886,12 @@ func TestGHCRAuth_Inherit(t *testing.T) {
 		{
 			name: "inherit from GHCRAuth (src.Token is SecretValue)",
 			auth: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: util.SecretValue,
-				},
+				Token: util.SecretValue,
 			},
 			from: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token:      "abc",
-					queryToken: "qt",
-					validUntil: time.Now(),
-				},
+				Token:      "abc",
+				queryToken: "qt",
+				validUntil: time.Now(),
 			},
 			srcDetail: ContainerDetail{
 				Image: "a",
@@ -2030,16 +1906,12 @@ func TestGHCRAuth_Inherit(t *testing.T) {
 		{
 			name: "inherit from GHCRAuth when Details do not match (src.Token is SecretValue)",
 			auth: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: util.SecretValue,
-				},
+				Token: util.SecretValue,
 			},
 			from: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token:      "abc",
-					queryToken: "qt",
-					validUntil: time.Now(),
-				},
+				Token:      "abc",
+				queryToken: "qt",
+				validUntil: time.Now(),
 			},
 			srcDetail: ContainerDetail{
 				Image: "a",
@@ -2054,42 +1926,30 @@ func TestGHCRAuth_Inherit(t *testing.T) {
 		{
 			name: "do not inherit from GHCRAuth when src.Token is not SecretValue",
 			auth: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: "foo",
-				},
+				Token: "foo",
 			},
 			from: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token:      "abc",
-					queryToken: "qt",
-					validUntil: time.Now(),
-				},
+				Token:      "abc",
+				queryToken: "qt",
+				validUntil: time.Now(),
 			},
 		},
 		{
 			name: "do not inherit from HubAuth",
 			auth: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: util.SecretValue,
-				},
+				Token: util.SecretValue,
 			},
 			from: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 		},
 		{
 			name: "do not inherit from QuayAuth",
 			auth: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: util.SecretValue,
-				},
+				Token: util.SecretValue,
 			},
 			from: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 		},
 	}

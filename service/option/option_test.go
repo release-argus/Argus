@@ -96,28 +96,22 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Interval",
 			defaults: &Defaults{
-				Base: Base{
-					Interval: "10s",
-				},
+				Interval: "10s",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/SemanticVersioning",
 			defaults: &Defaults{
-				Base: Base{
-					SemanticVersioning: new(true),
-				},
+				SemanticVersioning: new(true),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/all",
 			defaults: &Defaults{
-				Base: Base{
-					Interval:           "10s",
-					SemanticVersioning: new(true),
-				},
+				Interval:           "10s",
+				SemanticVersioning: new(true),
 			},
 			want: false,
 		},
@@ -154,10 +148,8 @@ func TestDefaults_Default(t *testing.T) {
 		{
 			name: "non-empty defaults",
 			defaults: &Defaults{
-				Base: Base{
-					Interval:           "1m",
-					SemanticVersioning: new(false),
-				},
+				Interval:           "1m",
+				SemanticVersioning: new(false),
 			},
 		},
 	}
@@ -212,18 +204,14 @@ func TestOptions_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Interval",
 			options: &Options{
-				Base: Base{
-					Interval: "1m",
-				},
+				Interval: "1m",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/SemanticVersioning",
 			options: &Options{
-				Base: Base{
-					SemanticVersioning: new(false),
-				},
+				SemanticVersioning: new(false),
 			},
 			want: false,
 		},
@@ -237,11 +225,9 @@ func TestOptions_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			options: &Options{
-				Active: new(false),
-				Base: Base{
-					Interval:           "1m",
-					SemanticVersioning: new(false),
-				},
+				Active:             new(false),
+				Interval:           "1m",
+				SemanticVersioning: new(false),
 			},
 			want: false,
 		},
@@ -284,13 +270,11 @@ func TestOptions_Copy(t *testing.T) {
 		{
 			name: "options with values",
 			options: &Options{
-				Base: Base{
-					Interval:           "10s",
-					SemanticVersioning: new(true),
-				},
-				Active:       new(true),
-				Defaults:     defaults,
-				HardDefaults: hardDefaults,
+				Interval:           "10s",
+				SemanticVersioning: new(true),
+				Active:             new(true),
+				Defaults:           defaults,
+				HardDefaults:       hardDefaults,
 			},
 		},
 	}

@@ -23,7 +23,6 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
@@ -265,11 +264,9 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			format: "json",
 			data:   `{"require": null}`,
 			previous: &Lookup{
-				Lookup: base.Lookup{
-					URL: "https://example.com",
-					Require: &filter.Require{
-						RegexContent: "v?",
-					},
+				URL: "https://example.com",
+				Require: &filter.Require{
+					RegexContent: "v?",
 				},
 			},
 			want:     "url: https://example.com\n",
@@ -297,10 +294,8 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			format: "json",
 			data:   `{"type": "-"}`,
 			previous: &Lookup{
-				Lookup: base.Lookup{
-					Require: &filter.Require{
-						RegexContent: "v?",
-					},
+				Require: &filter.Require{
+					RegexContent: "v?",
 				},
 			},
 			errRegex: `^$`,
@@ -319,9 +314,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				]
 			}`),
 			previous: &Lookup{
-				Lookup: base.Lookup{
-					Type: "url",
-				},
+				Type: "url",
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -340,7 +333,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				]
 			}`),
 			previous: &Lookup{
-				Lookup: base.Lookup{Type: "url"},
+				Type: "url",
 				Headers: shared.Headers{
 					{Key: "X-Bar", Value: "foo"},
 					{Key: "X-Foo", Value: "bar"},
@@ -359,9 +352,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			format: "json",
 			data:   `{"headers": null}`,
 			previous: &Lookup{
-				Lookup: base.Lookup{
-					Type: "url",
-				},
+				Type: "url",
 				Headers: shared.Headers{
 					{Key: "X-Bar", Value: "foo"},
 					{Key: "X-Foo", Value: "bar"},
@@ -385,10 +376,8 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				}
 			}`),
 			previous: &Lookup{
-				Lookup: base.Lookup{
-					Type: "url",
-					URL:  "https://example.com",
-				},
+				Type:              "url",
+				URL:               "https://example.com",
 				AllowInvalidCerts: new(true),
 				Headers: shared.Headers{
 					{Key: "X-Foo", Value: "bar"},
