@@ -84,9 +84,7 @@ func TestECRRegistryDefaults_Unmarshal(t *testing.T) {
 			format: "json",
 			data:   `{"auth": []}`,
 			registry: &ECRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &ECRAuth{},
-				},
+				Auth: &ECRAuth{},
 			},
 			errRegex: test.TrimYAML(`
 				^auth:
@@ -108,9 +106,7 @@ func TestECRRegistryDefaults_Unmarshal(t *testing.T) {
 				auth: {}
 			`),
 			registry: &ECRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &ECRAuth{},
-				},
+				Auth: &ECRAuth{},
 			},
 			errRegex: `^$`,
 			want:     "{}\n",
@@ -186,9 +182,7 @@ func TestECRRegistry_Unmarshal(t *testing.T) {
 			format: "json",
 			data:   `{"image": []}`,
 			registry: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &ECRAuth{},
-				},
+				Auth: &ECRAuth{},
 			},
 			errRegex: `^json: .*unmarshal .*$`,
 		},
@@ -209,9 +203,7 @@ func TestECRRegistry_Unmarshal(t *testing.T) {
 				"auth": {}
 			}`),
 			registry: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					Auth: &ECRAuth{},
-				},
+				Auth: &ECRAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -285,12 +277,8 @@ func TestECRRegistry_ApplyOverrides(t *testing.T) {
 				tag: t
 			`),
 			registry: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-					Auth: &ECRAuth{},
-				},
+				Image: "i",
+				Auth:  &ECRAuth{},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -350,11 +338,9 @@ func TestECRRegistryDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/queryToken and validUntil",
 			registry: &ECRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &ECRAuthDefaults{
-						queryToken: "abc",
-						validUntil: time.Now().UTC().Add(time.Hour),
-					},
+				Auth: &ECRAuthDefaults{
+					queryToken: "abc",
+					validUntil: time.Now().UTC().Add(time.Hour),
 				},
 			},
 			want: true,
@@ -399,34 +385,24 @@ func TestECRRegistry_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Type",
 			data: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "abc",
-					Auth: RegistryMap["ecr"]().GetAuth(),
-				},
+				Type: "abc",
+				Auth: RegistryMap["ecr"]().GetAuth(),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/ContainerDetail",
 			data: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-				},
+				Image: "i",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/all",
 			data: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i",
-					},
-					Type: "abc",
-					Auth: RegistryMap["ecr"]().GetAuth(),
-				},
+				Image: "i",
+				Type:  "abc",
+				Auth:  RegistryMap["ecr"]().GetAuth(),
 			},
 			want: false,
 		},
@@ -470,18 +446,12 @@ func TestECRRegistry_Copy(t *testing.T) {
 		{
 			name: "filled",
 			registry: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "i1",
-						Tag:   "t1",
-					},
-					Auth: &ECRAuth{
-						ECRAuthDefaults: ECRAuthDefaults{
-							queryToken: "qT",
-							validUntil: time.Now().Add(time.Hour),
-							defaults:   &ECRAuthDefaults{},
-						},
-					},
+				Image: "i1",
+				Tag:   "t1",
+				Auth: &ECRAuth{
+					queryToken: "qT",
+					validUntil: time.Now().Add(time.Hour),
+					defaults:   &ECRAuthDefaults{},
 				},
 			},
 			want: test.TrimYAML(`
@@ -571,11 +541,9 @@ func TestECRRegistryDefaults_String(t *testing.T) {
 		{
 			name: "filled",
 			data: &ECRRegistryDefaults{
-				CommonRegistryDefaults: CommonRegistryDefaults{
-					Auth: &ECRAuthDefaults{
-						queryToken: "qT",
-						validUntil: time.Now().Add(time.Hour),
-					},
+				Auth: &ECRAuthDefaults{
+					queryToken: "qT",
+					validUntil: time.Now().Add(time.Hour),
 				},
 			},
 			want: "{}\n",
@@ -616,18 +584,12 @@ func TestECRRegistry_String(t *testing.T) {
 		{
 			name: "filled",
 			data: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					Type: "test-ecr",
-					ContainerDetail: ContainerDetail{
-						Image: "i1",
-						Tag:   "t1",
-					},
-					Auth: &ECRAuth{
-						ECRAuthDefaults: ECRAuthDefaults{
-							queryToken: "qT",
-							validUntil: time.Now().Add(time.Hour),
-						},
-					},
+				Type:  "test-ecr",
+				Image: "i1",
+				Tag:   "t1",
+				Auth: &ECRAuth{
+					queryToken: "qT",
+					validUntil: time.Now().Add(time.Hour),
 				},
 			},
 			want: test.TrimYAML(`
@@ -703,24 +665,16 @@ func TestECRRegistry_NewRequest(t *testing.T) {
 		{
 			name: "no image or tag",
 			registry: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "",
-						Tag:   "",
-					},
-				},
+				Image: "",
+				Tag:   "",
 			},
 			errRegex: `^$`,
 		},
 		{
 			name: "have image+tag",
 			registry: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "123",
-						Tag:   "not-used",
-					},
-				},
+				Image: "123",
+				Tag:   "not-used",
 			},
 			tag:      "foo",
 			errRegex: `^$`,
@@ -728,12 +682,8 @@ func TestECRRegistry_NewRequest(t *testing.T) {
 		{
 			name: "tag: invalid",
 			registry: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "123",
-						Tag:   "not-used",
-					},
-				},
+				Image: "123",
+				Tag:   "not-used",
 			},
 			tag: "	foo",
 			errRegex: test.TrimYAML(`
@@ -744,12 +694,8 @@ func TestECRRegistry_NewRequest(t *testing.T) {
 		{
 			name: "image: invalid",
 			registry: &ECRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: "	123",
-						Tag:   "not-used",
-					},
-				},
+				Image: "	123",
+				Tag:   "not-used",
 			},
 			tag: "foo",
 			errRegex: test.TrimYAML(`
@@ -927,11 +873,9 @@ func TestECRAuth_Copy(t *testing.T) {
 		{
 			name: "filled",
 			auth: &ECRAuth{
-				ECRAuthDefaults: ECRAuthDefaults{
-					queryToken: "qT",
-					validUntil: time.Now(),
-					defaults:   &ECRAuthDefaults{},
-				},
+				queryToken: "qT",
+				validUntil: time.Now(),
+				defaults:   &ECRAuthDefaults{},
 			},
 			want: "{}\n",
 		},
@@ -1277,21 +1221,17 @@ func TestECRAuth_GetQueryToken__cached(t *testing.T) {
 		{
 			name: "valid on self",
 			data: &ECRAuth{
-				ECRAuthDefaults: ECRAuthDefaults{
-					queryToken: "query-token",
-					validUntil: time.Now().Add(10 * time.Second),
-				},
+				queryToken: "query-token",
+				validUntil: time.Now().Add(10 * time.Second),
 			},
 			want: "query-token",
 		},
 		{
 			name: "valid via defaults chain",
 			data: &ECRAuth{
-				ECRAuthDefaults: ECRAuthDefaults{
-					defaults: &ECRAuthDefaults{
-						queryToken: "default-query-token",
-						validUntil: time.Now().Add(10 * time.Second),
-					},
+				defaults: &ECRAuthDefaults{
+					queryToken: "default-query-token",
+					validUntil: time.Now().Add(10 * time.Second),
 				},
 			},
 			want: "default-query-token",
@@ -1327,9 +1267,7 @@ func TestECRAuth_GetQueryToken__cached(t *testing.T) {
 func TestECRAuthDefaults_SetQueryToken(t *testing.T) {
 	// GIVEN: an ECRAuth with a defaults chain.
 	data := &ECRAuth{
-		ECRAuthDefaults: ECRAuthDefaults{
-			defaults: &ECRAuthDefaults{},
-		},
+		defaults: &ECRAuthDefaults{},
 	}
 
 	queryToken := "new-query-token"
@@ -1358,10 +1296,8 @@ func TestECRAuthDefaults_SetQueryToken(t *testing.T) {
 func TestECRAuth_RefreshQueryToken__cached(t *testing.T) {
 	// GIVEN: an ECRAuth with a cached query token that is valid for a while.
 	auth := &ECRAuth{
-		ECRAuthDefaults: ECRAuthDefaults{
-			queryToken: "cached-token",
-			validUntil: time.Now().Add(time.Hour),
-		},
+		queryToken: "cached-token",
+		validUntil: time.Now().Add(time.Hour),
 	}
 
 	// WHEN: refreshQueryToken is called on it.
@@ -1404,10 +1340,8 @@ func TestECRAuth_Inherit(t *testing.T) {
 			name: "inherit from ECRAuth (tokens are global, images differ)",
 			auth: &ECRAuth{},
 			from: &ECRAuth{
-				ECRAuthDefaults: ECRAuthDefaults{
-					queryToken: "qt",
-					validUntil: time.Now(),
-				},
+				queryToken: "qt",
+				validUntil: time.Now(),
 			},
 			srcDetail: ContainerDetail{Image: "a", Tag: "b"},
 			dstDetail: ContainerDetail{Image: "c", Tag: "d"},
@@ -1417,28 +1351,22 @@ func TestECRAuth_Inherit(t *testing.T) {
 			name: "do not inherit from GHCRAuth",
 			auth: &ECRAuth{},
 			from: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 		},
 		{
 			name: "do not inherit from HubAuth",
 			auth: &ECRAuth{},
 			from: &HubAuth{
-				HubAuthDefaults: HubAuthDefaults{
-					Username: "user",
-					Token:    "abc",
-				},
+				Username: "user",
+				Token:    "abc",
 			},
 		},
 		{
 			name: "do not inherit from QuayAuth",
 			auth: &ECRAuth{},
 			from: &QuayAuth{
-				QuayAuthDefaults: QuayAuthDefaults{
-					Token: "abc",
-				},
+				Token: "abc",
 			},
 		},
 	}

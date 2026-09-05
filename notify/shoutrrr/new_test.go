@@ -47,50 +47,34 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 	serviceNotifiers := &Shoutrrrs{
 		"no_main_no_type": &Shoutrrr{},
 		"no_main_with_type_and_defaults": &Shoutrrr{
-			Base: Base{
-				Type: typeWithDefaults,
-			},
+			Type: typeWithDefaults,
 		},
 		"no_main_with_type_and_no_defaults": &Shoutrrr{
-			Base: Base{
-				Type: typeWithNoDefaults,
-			},
+			Type: typeWithNoDefaults,
 		},
 		"main_no_type": &Shoutrrr{},
 		"main_with_type_and_defaults": &Shoutrrr{
-			Base: Base{
-				Type: typeWithDefaults,
-			},
+			Type: typeWithDefaults,
 		},
 		"main_with_type_and_no_defaults": &Shoutrrr{
-			Base: Base{
-				Type: typeWithNoDefaults,
-			},
+			Type: typeWithNoDefaults,
 		},
 	}
 	mains := ShoutrrrsDefaults{
 		"main_no_type": &Defaults{
-			Base: Base{
-				URLFields: typeWithNoDefaultsURLFields,
-			},
+			URLFields: typeWithNoDefaultsURLFields,
 		},
 		"main_with_type_and_defaults": &Defaults{
-			Base: Base{
-				Type:      typeWithDefaults,
-				URLFields: typeWithDefaultsURLFields,
-			},
+			Type:      typeWithDefaults,
+			URLFields: typeWithDefaultsURLFields,
 		},
 		"main_with_type_and_no_defaults": &Defaults{
-			Base: Base{
-				Type:      typeWithNoDefaults,
-				URLFields: typeWithNoDefaultsURLFields,
-			},
+			Type:      typeWithNoDefaults,
+			URLFields: typeWithNoDefaultsURLFields,
 		},
 		"main_not_on_service_with_defaults": &Defaults{
-			Base: Base{
-				Type:      typeWithDefaults,
-				URLFields: typeWithDefaultsURLFields,
-			},
+			Type:      typeWithDefaults,
+			URLFields: typeWithDefaultsURLFields,
 		},
 	}
 	defaults := ShoutrrrsDefaults{
@@ -158,10 +142,8 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				URLFields:         typeWithNoDefaultsURLFields,
 			},
 			want: &Shoutrrr{
-				Base: Base{
-					Type:      typeWithNoDefaults,
-					URLFields: typeWithNoDefaultsURLFields,
-				},
+				Type:      typeWithNoDefaults,
+				URLFields: typeWithNoDefaultsURLFields,
 			},
 			errRegex: `^$`,
 		},
@@ -182,10 +164,8 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				URLFields:         typeWithNoDefaultsURLFields,
 			},
 			want: &Shoutrrr{
-				Base: Base{
-					Type:      typeWithNoDefaults,
-					URLFields: typeWithNoDefaultsURLFields,
-				},
+				Type:      typeWithNoDefaults,
+				URLFields: typeWithNoDefaultsURLFields,
 			},
 			errRegex: `^$`,
 		},
@@ -198,10 +178,8 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				URLFields:         typeWithDefaultsURLFields,
 			},
 			want: &Shoutrrr{
-				Base: Base{
-					Type:      typeWithDefaults,
-					URLFields: typeWithDefaultsURLFields,
-				},
+				Type:      typeWithDefaults,
+				URLFields: typeWithDefaultsURLFields,
 			},
 			errRegex: `^$`,
 		},
@@ -213,9 +191,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				Type:              typeWithNoDefaults,
 			},
 			want: &Shoutrrr{
-				Base: Base{
-					Type: typeWithNoDefaults,
-				},
+				Type: typeWithNoDefaults,
 			},
 			errRegex: `^$`,
 		},
@@ -235,9 +211,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				Type:              typeWithDefaults,
 			},
 			want: &Shoutrrr{
-				Base: Base{
-					Type: typeWithDefaults,
-				},
+				Type: typeWithDefaults,
 			},
 			errRegex: `^$`,
 		},
@@ -272,10 +246,8 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				URLFields:         typeWithDefaultsURLFields,
 			},
 			want: &Shoutrrr{
-				Base: Base{
-					Type:      typeWithDefaults,
-					URLFields: typeWithDefaultsURLFields,
-				},
+				Type:      typeWithDefaults,
+				URLFields: typeWithDefaultsURLFields,
 			},
 			errRegex: `^$`,
 		},
@@ -287,10 +259,8 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				URLFields:         typeWithNoDefaultsURLFields,
 			},
 			want: &Shoutrrr{
-				Base: Base{
-					Type:      typeWithNoDefaults,
-					URLFields: typeWithNoDefaultsURLFields,
-				},
+				Type:      typeWithNoDefaults,
+				URLFields: typeWithNoDefaultsURLFields,
 			},
 			errRegex: `^$`,
 		},
@@ -301,9 +271,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				Name:              "main_not_on_service_with_defaults",
 			},
 			want: &Shoutrrr{
-				Base: Base{
-					Type: typeWithDefaults,
-				},
+				Type: typeWithDefaults,
 			},
 			errRegex: `^$`,
 		},
@@ -315,9 +283,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				Name:              "main_not_on_service_with_defaults",
 			},
 			want: &Shoutrrr{
-				Base: Base{
-					Type: typeWithDefaults,
-				},
+				Type: typeWithDefaults,
 			},
 			errRegex: `^$`,
 		},
@@ -479,9 +445,7 @@ func TestResolveDefaults(t *testing.T) {
 				"gotify": &Defaults{},
 			},
 			main: &Defaults{
-				Base: Base{
-					Type: "gotify",
-				},
+				Type: "gotify",
 			},
 			wantType:     "gotify",
 			wantMain:     "main",

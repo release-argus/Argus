@@ -161,9 +161,7 @@ func TestDefaults_Default(t *testing.T) {
 		Require: filter.RequireDefaults{
 			Docker: docker.Defaults{
 				Type: "hub",
-				ContainerDetailDefaults: docker.ContainerDetailDefaults{
-					Tag: "{{ version }}",
-				},
+				Tag:  "{{ version }}",
 			},
 		},
 	}

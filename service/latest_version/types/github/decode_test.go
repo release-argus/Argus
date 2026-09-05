@@ -23,7 +23,6 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
 )
@@ -258,11 +257,9 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				format: "json",
 				data:   `{"require": null}`,
 				target: &Lookup{
-					Lookup: base.Lookup{
-						URL: "https://example.com",
-						Require: &filter.Require{
-							RegexContent: "v?",
-						},
+					URL: "https://example.com",
+					Require: &filter.Require{
+						RegexContent: "v?",
 					},
 				},
 			},
@@ -296,10 +293,8 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				"type": "-"
 			}`,
 				target: &Lookup{
-					Lookup: base.Lookup{
-						Require: &filter.Require{
-							RegexContent: "v?",
-						},
+					Require: &filter.Require{
+						RegexContent: "v?",
 					},
 				},
 			},
@@ -316,9 +311,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				format: "json",
 				data:   `{"access_token": "def"}`,
 				target: &Lookup{
-					Lookup: base.Lookup{
-						Type: "github",
-					},
+					Type: "github",
 				},
 			},
 			errRegex: `^$`,
@@ -333,9 +326,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				format: "json",
 				data:   `{"access_token": "def"}`,
 				target: &Lookup{
-					Lookup: base.Lookup{
-						Type: "github",
-					},
+					Type:        "github",
 					AccessToken: "abc",
 				},
 			},
@@ -351,9 +342,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				format: "json",
 				data:   `{"access_token": ""}`,
 				target: &Lookup{
-					Lookup: base.Lookup{
-						Type: "github",
-					},
+					Type:        "github",
 					AccessToken: "abc",
 				},
 			},
@@ -370,10 +359,8 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				"use_prerelease": false
 			}`),
 				target: &Lookup{
-					Lookup: base.Lookup{
-						Type: "github",
-						URL:  "https://example.com",
-					},
+					Type:          "github",
+					URL:           "https://example.com",
 					AccessToken:   "abc",
 					UsePreRelease: new(true),
 				},

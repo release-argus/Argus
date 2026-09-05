@@ -431,8 +431,9 @@ func fullCatalogueGrants() []rbac.Grant {
 	for _, rp := range rbac.Catalogue() {
 		for _, ap := range rp.Actions {
 			grants = append(grants, rbac.Grant{
-				Permission: rbac.Permission{Resource: rp.Resource, Action: ap.Action},
-				Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+				Resource: rp.Resource,
+				Action:   ap.Action,
+				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
 			})
 		}
 	}

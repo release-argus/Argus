@@ -46,23 +46,26 @@ func TestMain(m *testing.M) {
 // globalGrant builds a valid global-scope Grant.
 func globalGrant(resource Resource, action Action) Grant {
 	return Grant{
-		Permission: Permission{Resource: resource, Action: action},
-		Scope:      Scope{Type: ScopeGlobal},
+		Resource: resource,
+		Action:   action,
+		Scope:    Scope{Type: ScopeGlobal},
 	}
 }
 
 // serviceGrant builds a valid service-scope Grant.
 func serviceGrant(resource Resource, action Action, serviceID string) Grant {
 	return Grant{
-		Permission: Permission{Resource: resource, Action: action},
-		Scope:      Scope{Type: ScopeService, Ref: serviceID},
+		Resource: resource,
+		Action:   action,
+		Scope:    Scope{Type: ScopeService, Ref: serviceID},
 	}
 }
 
 // tagGrant builds a valid service_tag-scope Grant.
 func tagGrant(resource Resource, action Action, tag string) Grant {
 	return Grant{
-		Permission: Permission{Resource: resource, Action: action},
-		Scope:      Scope{Type: ScopeServiceTag, Ref: tag},
+		Resource: resource,
+		Action:   action,
+		Scope:    Scope{Type: ScopeServiceTag, Ref: tag},
 	}
 }

@@ -497,9 +497,7 @@ func TestRequire_Init(t *testing.T) {
 
 			svcStatus := status.Status{}
 			svcDashboard := &dashboard.Options{
-				OptionsBase: dashboard.OptionsBase{
-					WebURL: "https://example.com",
-				},
+				WebURL: "https://example.com",
 			}
 			svcStatus.Init(
 				0, 0, 0,

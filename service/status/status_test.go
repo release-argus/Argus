@@ -226,12 +226,10 @@ func TestStatus_String(t *testing.T) {
 			status: &Status{
 				Fails: Fails{
 					Shoutrrr: FailsShoutrrr{
-						failsBase: failsBase{
-							fails: map[string]*bool{
-								"bash": new(false),
-								"bish": nil,
-								"bosh": new(true),
-							},
+						fails: map[string]*bool{
+							"bash": new(false),
+							"bish": nil,
+							"bosh": new(true),
 						},
 					},
 					Command: FailsCommand{
@@ -242,11 +240,9 @@ func TestStatus_String(t *testing.T) {
 						},
 					},
 					WebHook: FailsWebHook{
-						failsBase: failsBase{
-							fails: map[string]*bool{
-								"bar": nil,
-								"foo": new(false),
-							},
+						fails: map[string]*bool{
+							"bar": nil,
+							"foo": new(false),
 						},
 					},
 				},
@@ -281,12 +277,10 @@ func TestStatus_String(t *testing.T) {
 				lastQueried:              "2022-01-01T01:01:01Z",
 				Fails: Fails{
 					Shoutrrr: FailsShoutrrr{
-						failsBase: failsBase{
-							fails: map[string]*bool{
-								"bish": nil,
-								"bash": new(false),
-								"bosh": new(true),
-							},
+						fails: map[string]*bool{
+							"bish": nil,
+							"bash": new(false),
+							"bosh": new(true),
 						},
 					},
 					Command: FailsCommand{
@@ -297,11 +291,9 @@ func TestStatus_String(t *testing.T) {
 						},
 					},
 					WebHook: FailsWebHook{
-						failsBase: failsBase{
-							fails: map[string]*bool{
-								"foo": new(false),
-								"bar": nil,
-							},
+						fails: map[string]*bool{
+							"foo": new(false),
+							"bar": nil,
 						},
 					},
 				},
@@ -410,9 +402,7 @@ func TestStatus_Init(t *testing.T) {
 					Name: tc.name,
 				},
 				&dashboard.Options{
-					OptionsBase: dashboard.OptionsBase{
-						WebURL: tc.webURL,
-					},
+					WebURL: tc.webURL,
 				},
 			)
 
@@ -572,11 +562,9 @@ func TestStatus_RefreshServiceInfo(t *testing.T) {
 		0, 0, 0,
 		ServiceInfo{ID: "refresh-test"},
 		&dashboard.Options{
-			OptionsBase: dashboard.OptionsBase{
-				Icon:       "https://example.com/{{ version }}.png",
-				IconLinkTo: "https://example.com/link/{{ version }}",
-				WebURL:     "https://example.com/{{ version }}",
-			},
+			Icon:       "https://example.com/{{ version }}.png",
+			IconLinkTo: "https://example.com/link/{{ version }}",
+			WebURL:     "https://example.com/{{ version }}",
 		},
 	)
 	status.SetLatestVersion(latestVersion, "", false)
@@ -638,9 +626,7 @@ func TestStatus_GetWebURL(t *testing.T) {
 					ID: tc.name,
 				},
 				&dashboard.Options{
-					OptionsBase: dashboard.OptionsBase{
-						WebURL: tc.webURL,
-					},
+					WebURL: tc.webURL,
 				},
 			)
 			status.SetLatestVersion(latestVersion, "", false)
@@ -887,9 +873,7 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 					"", "",
 					"",
 					&dashboard.Options{
-						OptionsBase: dashboard.OptionsBase{
-							WebURL: "https://example.com",
-						},
+						WebURL: "https://example.com",
 					},
 				)
 				status.Init(
@@ -1073,9 +1057,7 @@ func TestStatus_DeployedVersion(t *testing.T) {
 					tc.hadVersions.LatestVersion, "",
 					"",
 					&dashboard.Options{
-						OptionsBase: dashboard.OptionsBase{
-							WebURL: "https://example.com",
-						},
+						WebURL: "https://example.com",
 					},
 				)
 				status.Init(
@@ -1218,9 +1200,7 @@ func TestStatus_LatestVersion(t *testing.T) {
 					tc.had.version, tc.had.timestamp,
 					lastQueried,
 					&dashboard.Options{
-						OptionsBase: dashboard.OptionsBase{
-							WebURL: "https://example.com",
-						},
+						WebURL: "https://example.com",
 					},
 				)
 				status.Init(

@@ -213,28 +213,20 @@ func convertAndCensorRequireDockerRegistryDefaults(input docker.RegistryDefaults
 	case *docker.GHCRRegistryDefaults:
 		if auth, ok := v.GetAuth().(*docker.GHCRAuthDefaults); ok {
 			return &apitype.RequireDockerRegistryDefaultsToken{
-				RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-					Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
-				},
+				Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
 			}
 		}
 	case *docker.QuayRegistryDefaults:
 		if auth, ok := v.GetAuth().(*docker.QuayAuthDefaults); ok {
 			return &apitype.RequireDockerRegistryDefaultsToken{
-				RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-					Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
-				},
+				Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
 			}
 		}
 	case *docker.HubRegistryDefaults:
 		if auth, ok := v.GetAuth().(*docker.HubAuthDefaults); ok {
 			return &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
-				RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
-					Username: auth.GetUsernameSelf(),
-					RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-						Token: util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
-					},
-				},
+				Username: auth.GetUsernameSelf(),
+				Token:    util.ValueUnlessZero(auth.GetTokenSelf(), util.SecretValue),
 			}
 		}
 	}

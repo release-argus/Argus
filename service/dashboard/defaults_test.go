@@ -172,48 +172,38 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/AutoApprove",
 			opt: &Defaults{
-				OptionsBase: OptionsBase{
-					AutoApprove: new(true),
-				},
+				AutoApprove: new(true),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Icon",
 			opt: &Defaults{
-				OptionsBase: OptionsBase{
-					Icon: "icon-url",
-				},
+				Icon: "icon-url",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/IconLinkTo",
 			opt: &Defaults{
-				OptionsBase: OptionsBase{
-					IconLinkTo: "icon-link",
-				},
+				IconLinkTo: "icon-link",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/WebURL",
 			opt: &Defaults{
-				OptionsBase: OptionsBase{
-					WebURL: "web-url",
-				},
+				WebURL: "web-url",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/all",
 			opt: &Defaults{
-				OptionsBase: OptionsBase{
-					AutoApprove: new(true),
-					Icon:        "icon-url",
-					IconLinkTo:  "icon-link",
-					WebURL:      "web-url",
-				},
+				AutoApprove: new(true),
+				Icon:        "icon-url",
+				IconLinkTo:  "icon-link",
+				WebURL:      "web-url",
 			},
 			want: false,
 		},

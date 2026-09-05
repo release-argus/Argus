@@ -359,9 +359,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			defaults: &Defaults{
 				Service: service.Defaults{
 					Options: opt.Defaults{
-						Base: opt.Base{
-							Interval: "1s",
-						},
+						Interval: "1s",
 					},
 				},
 			},
@@ -372,9 +370,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			defaults: &Defaults{
 				Notify: shoutrrr.ShoutrrrsDefaults{
 					"foo": &shoutrrr.Defaults{
-						Base: shoutrrr.Base{
-							Type: "discord",
-						},
+						Type: "discord",
 					},
 				},
 			},
@@ -384,9 +380,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			name: "non-empty/WebHook",
 			defaults: &Defaults{
 				WebHook: webhook.Defaults{
-					Base: webhook.Base{
-						Type: "github",
-					},
+					Type: "github",
 				},
 			},
 			want: false,
@@ -1900,14 +1894,12 @@ func TestDefaults_CheckValues(t *testing.T) {
 			name: "WebHook changed",
 			input: &Defaults{
 				WebHook: webhook.Defaults{
-					Base: webhook.Base{
-						Type:   "github",
-						URL:    "example.com",
-						Secret: "Argus",
-						// CustomHeaders -> Headers.
-						CustomHeaders: webhook.Headers{
-							{Key: "foo", Value: "bar"},
-						},
+					Type:   "github",
+					URL:    "example.com",
+					Secret: "Argus",
+					// CustomHeaders -> Headers.
+					CustomHeaders: webhook.Headers{
+						{Key: "foo", Value: "bar"},
 					},
 				},
 			},

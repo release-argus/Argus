@@ -304,48 +304,54 @@ func TestGrant_Valid(t *testing.T) {
 		{
 			name: "invalid/permission not in catalogue",
 			grant: Grant{
-				Permission: Permission{Resource: ResourceConfig, Action: ActionDelete},
-				Scope:      Scope{Type: ScopeGlobal},
+				Resource: ResourceConfig,
+				Action:   ActionDelete,
+				Scope:    Scope{Type: ScopeGlobal},
 			},
 			want: false,
 		},
 		{
 			name: "invalid/scope type unsupported by resource (service_order:service-scoped)",
 			grant: Grant{
-				Permission: Permission{Resource: ResourceServiceOrder, Action: ActionUpdate},
-				Scope:      Scope{Type: ScopeService, Ref: "argus"},
+				Resource: ResourceServiceOrder,
+				Action:   ActionUpdate,
+				Scope:    Scope{Type: ScopeService, Ref: "argus"},
 			},
 			want: false,
 		},
 		{
 			name: "invalid/unknown scope type",
 			grant: Grant{
-				Permission: Permission{Resource: ResourceService, Action: ActionRead},
-				Scope:      Scope{Type: ScopeType("unknown")},
+				Resource: ResourceService,
+				Action:   ActionRead,
+				Scope:    Scope{Type: ScopeType("unknown")},
 			},
 			want: false,
 		},
 		{
 			name: "invalid/global grant with a ref",
 			grant: Grant{
-				Permission: Permission{Resource: ResourceService, Action: ActionRead},
-				Scope:      Scope{Type: ScopeGlobal, Ref: "argus"},
+				Resource: ResourceService,
+				Action:   ActionRead,
+				Scope:    Scope{Type: ScopeGlobal, Ref: "argus"},
 			},
 			want: false,
 		},
 		{
 			name: "invalid/service-scoped grant without a ref",
 			grant: Grant{
-				Permission: Permission{Resource: ResourceService, Action: ActionRead},
-				Scope:      Scope{Type: ScopeService},
+				Resource: ResourceService,
+				Action:   ActionRead,
+				Scope:    Scope{Type: ScopeService},
 			},
 			want: false,
 		},
 		{
 			name: "invalid/service_tag-scoped grant without a ref",
 			grant: Grant{
-				Permission: Permission{Resource: ResourceService, Action: ActionRead},
-				Scope:      Scope{Type: ScopeServiceTag},
+				Resource: ResourceService,
+				Action:   ActionRead,
+				Scope:    Scope{Type: ScopeServiceTag},
 			},
 			want: false,
 		},

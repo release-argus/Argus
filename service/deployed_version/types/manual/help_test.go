@@ -80,9 +80,7 @@ func testLookup(t *testing.T, version string) *Lookup {
 			ServiceURL: "https://example.com/service/url",
 		},
 		&dashboard.Options{
-			OptionsBase: dashboard.OptionsBase{
-				WebURL: "https://example.com",
-			},
+			WebURL: "https://example.com",
 		},
 	)
 

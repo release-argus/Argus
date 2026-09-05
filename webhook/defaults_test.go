@@ -27,14 +27,12 @@ func TestDefaults_Default(t *testing.T) {
 	// GIVEN: Defaults and an expected Defaults.
 	defaults := Defaults{}
 	expected := Defaults{
-		Base: Base{
-			Type:              "github",
-			Delay:             "0s",
-			AllowInvalidCerts: new(false),
-			DesiredStatusCode: new(uint16(0)),
-			MaxTries:          new(uint8(3)),
-			SilentFails:       new(false),
-		},
+		Type:              "github",
+		Delay:             "0s",
+		AllowInvalidCerts: new(false),
+		DesiredStatusCode: new(uint16(0)),
+		MaxTries:          new(uint8(3)),
+		SilentFails:       new(false),
 	}
 
 	// WHEN: Default is called.

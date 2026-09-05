@@ -50,9 +50,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			name: "non-empty/Options",
 			opt: &Defaults{
 				Options: opt.Defaults{
-					Base: opt.Base{
-						Interval: "1m",
-					},
+					Interval: "1m",
 				},
 			},
 			want: false,
@@ -115,9 +113,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			name: "non-empty/all",
 			opt: &Defaults{
 				Options: opt.Defaults{
-					Base: opt.Base{
-						Interval: "1m",
-					},
+					Interval: "1m",
 				},
 				LatestVersion: latestver.Defaults{
 					Type: "url",
@@ -542,9 +538,7 @@ func TestDefaults_String(t *testing.T) {
 					},
 					Common: lvbase.Defaults{
 						Options: &opt.Defaults{
-							Base: opt.Base{
-								Interval: "1m",
-							},
+							Interval: "1m",
 						},
 						Require: filter.RequireDefaults{
 							Docker: *test.Must(t, func() (*docker.Defaults, error) {

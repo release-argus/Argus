@@ -349,36 +349,28 @@ func TestOptions_IsZero(t *testing.T) {
 		{
 			name: "non-empty/AutoApprove",
 			opt: &Options{
-				OptionsBase: OptionsBase{
-					AutoApprove: new(true),
-				},
+				AutoApprove: new(true),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Icon",
 			opt: &Options{
-				OptionsBase: OptionsBase{
-					Icon: "foo",
-				},
+				Icon: "foo",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/IconLinkTo",
 			opt: &Options{
-				OptionsBase: OptionsBase{
-					IconLinkTo: "foo",
-				},
+				IconLinkTo: "foo",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/WebURL",
 			opt: &Options{
-				OptionsBase: OptionsBase{
-					WebURL: "foo",
-				},
+				WebURL: "foo",
 			},
 			want: false,
 		},
@@ -392,13 +384,11 @@ func TestOptions_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			opt: &Options{
-				OptionsBase: OptionsBase{
-					AutoApprove: new(true),
-					Icon:        "foo",
-					IconLinkTo:  "bar",
-					WebURL:      "baz",
-				},
-				Tags: []string{"foo"},
+				AutoApprove: new(true),
+				Icon:        "foo",
+				IconLinkTo:  "bar",
+				WebURL:      "baz",
+				Tags:        []string{"foo"},
 			},
 			want: false,
 		},
@@ -437,24 +427,20 @@ func TestOptions_Copy(t *testing.T) {
 		{
 			name: "filled",
 			options: &Options{
-				OptionsBase: OptionsBase{
-					AutoApprove: new(true),
-					Icon:        "icon-url",
-					IconLinkTo:  "icon-link",
-					WebURL:      "web-url",
-				},
+				AutoApprove:        new(true),
+				Icon:               "icon-url",
+				IconLinkTo:         "icon-link",
+				WebURL:             "web-url",
 				iconExpanded:       new("expanded-icon-url"),
 				iconNotify:         new("notify-icon-url"),
 				iconLinkToExpanded: new("expanded-icon-link"),
 				webURLExpanded:     new("expanded-web-url"),
 			},
 			want: &Options{
-				OptionsBase: OptionsBase{
-					AutoApprove: new(true),
-					Icon:        "icon-url",
-					IconLinkTo:  "icon-link",
-					WebURL:      "web-url",
-				},
+				AutoApprove:        new(true),
+				Icon:               "icon-url",
+				IconLinkTo:         "icon-link",
+				WebURL:             "web-url",
 				iconExpanded:       new("expanded-icon-url"),
 				iconNotify:         new("notify-icon-url"),
 				iconLinkToExpanded: new("expanded-icon-link"),
@@ -464,21 +450,17 @@ func TestOptions_Copy(t *testing.T) {
 		{
 			name: "some fields nil",
 			options: &Options{
-				OptionsBase: OptionsBase{
-					AutoApprove: nil,
-					Icon:        "icon-url",
-					IconLinkTo:  "",
-					WebURL:      "web-url",
-				},
+				AutoApprove:  nil,
+				Icon:         "icon-url",
+				IconLinkTo:   "",
+				WebURL:       "web-url",
 				iconExpanded: new("hi"),
 			},
 			want: &Options{
-				OptionsBase: OptionsBase{
-					AutoApprove: nil,
-					Icon:        "icon-url",
-					IconLinkTo:  "",
-					WebURL:      "web-url",
-				},
+				AutoApprove:  nil,
+				Icon:         "icon-url",
+				IconLinkTo:   "",
+				WebURL:       "web-url",
 				iconExpanded: new("hi"),
 			},
 		},
@@ -668,9 +650,7 @@ func TestOptions_GetIcon(t *testing.T) {
 			t.Parallel()
 
 			options := &Options{
-				OptionsBase: OptionsBase{
-					Icon: tc.icon,
-				},
+				Icon:         tc.icon,
 				iconExpanded: tc.iconExpanded,
 				iconNotify:   tc.iconNotify,
 			}
@@ -722,9 +702,7 @@ func TestOptions_GetIconLinkTo(t *testing.T) {
 			t.Parallel()
 
 			options := &Options{
-				OptionsBase: OptionsBase{
-					IconLinkTo: tc.iconLinkTo,
-				},
+				IconLinkTo:         tc.iconLinkTo,
 				iconLinkToExpanded: tc.iconLinkToExpanded,
 			}
 
@@ -775,9 +753,7 @@ func TestOptions_GetWebURL(t *testing.T) {
 			t.Parallel()
 
 			options := &Options{
-				OptionsBase: OptionsBase{
-					WebURL: tc.webURL,
-				},
+				WebURL:         tc.webURL,
 				webURLExpanded: tc.webURLExpanded,
 			}
 
@@ -875,18 +851,14 @@ func TestOptions_CheckValues(t *testing.T) {
 			name:     "invalid web_url template",
 			errRegex: `^web_url: ".*" <invalid>.*$`,
 			input: &Options{
-				OptionsBase: OptionsBase{
-					WebURL: "https://release-argus.io/{{ version }",
-				},
+				WebURL: "https://release-argus.io/{{ version }",
 			},
 		},
 		{
 			name:     "valid web_url template",
 			errRegex: `^$`,
 			input: &Options{
-				OptionsBase: OptionsBase{
-					WebURL: "https://release-argus.io",
-				},
+				WebURL: "https://release-argus.io",
 			},
 		},
 	}

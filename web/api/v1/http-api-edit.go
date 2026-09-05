@@ -1085,9 +1085,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 
 	if serviceStatus == nil {
 		dash := dashboard.Options{
-			OptionsBase: dashboard.OptionsBase{
-				WebURL: parsedPayload.WebURL,
-			},
+			WebURL: parsedPayload.WebURL,
 		}
 		serviceStatus = status.New(
 			nil, nil, nil,

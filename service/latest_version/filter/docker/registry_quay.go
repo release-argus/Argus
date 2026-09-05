@@ -272,10 +272,8 @@ func (a *QuayAuth) Clone() *QuayAuth {
 	}
 
 	return &QuayAuth{
-		QuayAuthDefaults: QuayAuthDefaults{
-			Token:    a.Token,
-			defaults: a.defaults,
-		},
+		Token:    a.Token,
+		defaults: a.defaults,
 	}
 }
 

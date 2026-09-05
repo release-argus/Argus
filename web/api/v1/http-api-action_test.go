@@ -158,9 +158,7 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 					Name: tc.name,
 				},
 				&dashboard.Options{
-					OptionsBase: dashboard.OptionsBase{
-						WebURL: "https://example.com",
-					},
+					WebURL: "https://example.com",
 				},
 			)
 
@@ -314,15 +312,11 @@ func TestHTTP_HTTPServiceGetActions__requiresActionExecute(t *testing.T) {
 		"actioners", "",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{
-					Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
-				},
+				Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
 				Scope: rbac.Scope{Type: rbac.ScopeGlobal},
 			},
 			{
-				Permission: rbac.Permission{
-					Resource: rbac.ResourceService, Action: rbac.ActionRead,
-				},
+				Resource: rbac.ResourceService, Action: rbac.ActionRead,
 				Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "readable"},
 			},
 		},
@@ -340,9 +334,7 @@ func TestHTTP_HTTPServiceGetActions__requiresActionExecute(t *testing.T) {
 		"readers", "",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{
-					Resource: rbac.ResourceService, Action: rbac.ActionRead,
-				},
+				Resource: rbac.ResourceService, Action: rbac.ActionRead,
 				Scope: rbac.Scope{Type: rbac.ScopeGlobal},
 			},
 		},
@@ -991,15 +983,11 @@ func TestHTTP_HTTPServiceRunActions__requiresServiceRead(t *testing.T) {
 		"actioners", "",
 		[]rbac.Grant{
 			{
-				Permission: rbac.Permission{
-					Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
-				},
+				Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
 				Scope: rbac.Scope{Type: rbac.ScopeGlobal},
 			},
 			{
-				Permission: rbac.Permission{
-					Resource: rbac.ResourceService, Action: rbac.ActionRead,
-				},
+				Resource: rbac.ResourceService, Action: rbac.ActionRead,
 				Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "readable"},
 			},
 		},

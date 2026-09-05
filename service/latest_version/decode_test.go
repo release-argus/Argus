@@ -23,7 +23,6 @@ import (
 
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
@@ -525,10 +524,8 @@ func TestApplyOverrides(t *testing.T) {
 				format: "json",
 				data:   `{"type": "-"}`,
 				target: &mockLookup{
-					Lookup: base.Lookup{
-						Require: &filter.Require{
-							RegexContent: "v?",
-						},
+					Require: &filter.Require{
+						RegexContent: "v?",
 					},
 				},
 			},

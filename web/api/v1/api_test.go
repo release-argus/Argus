@@ -76,10 +76,8 @@ func TestNewAPI(t *testing.T) {
 				)
 				cfg := &config.Config{
 					Settings: config.Settings{
-						SettingsBase: config.SettingsBase{
-							Web: config.WebSettings{
-								RoutePrefix: tc.routePrefix,
-							},
+						Web: config.WebSettings{
+							RoutePrefix: tc.routePrefix,
 						},
 					},
 				}

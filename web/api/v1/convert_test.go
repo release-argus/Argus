@@ -120,12 +120,10 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 			input: &config.Defaults{
 				Service: service.Defaults{
 					Dashboard: dashboard.Defaults{
-						OptionsBase: dashboard.OptionsBase{
-							AutoApprove: new(true),
-							Icon:        "https://example.com/icon.png",
-							IconLinkTo:  "https://example.com",
-							WebURL:      "https://example.com/other",
-						},
+						AutoApprove: new(true),
+						Icon:        "https://example.com/icon.png",
+						IconLinkTo:  "https://example.com",
+						WebURL:      "https://example.com/other",
 					},
 				},
 			},
@@ -278,22 +276,14 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 									Tag:  "t",
 									Registry: apitype.RequireDockerRegistriesDefaults{
 										GHCR: &apitype.RequireDockerRegistryDefaultsToken{
-											RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-												Token: util.SecretValue,
-											},
+											Token: util.SecretValue,
 										},
 										Hub: &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
-											RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
-												Username: "something",
-												RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-													Token: util.SecretValue,
-												},
-											},
+											Username: "something",
+											Token:    util.SecretValue,
 										},
 										Quay: &apitype.RequireDockerRegistryDefaultsToken{
-											RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-												Token: util.SecretValue,
-											},
+											Token: util.SecretValue,
 										},
 									},
 								},
@@ -765,9 +755,7 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 				Docker: apitype.RequireDockerDefaults{
 					Registry: apitype.RequireDockerRegistriesDefaults{
 						GHCR: &apitype.RequireDockerRegistryDefaultsToken{
-							RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-								Token: util.SecretValue,
-							},
+							Token: util.SecretValue,
 						},
 					},
 				},
@@ -791,12 +779,8 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 				Docker: apitype.RequireDockerDefaults{
 					Registry: apitype.RequireDockerRegistriesDefaults{
 						Hub: &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
-							RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
-								Username: "something",
-								RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-									Token: util.SecretValue,
-								},
-							},
+							Username: "something",
+							Token:    util.SecretValue,
 						},
 					},
 				},
@@ -820,9 +804,7 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 				Docker: apitype.RequireDockerDefaults{
 					Registry: apitype.RequireDockerRegistriesDefaults{
 						Quay: &apitype.RequireDockerRegistryDefaultsToken{
-							RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-								Token: util.SecretValue,
-							},
+							Token: util.SecretValue,
 						},
 					},
 				},
@@ -858,22 +840,14 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 					Tag:  "t",
 					Registry: apitype.RequireDockerRegistriesDefaults{
 						GHCR: &apitype.RequireDockerRegistryDefaultsToken{
-							RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-								Token: util.SecretValue,
-							},
+							Token: util.SecretValue,
 						},
 						Hub: &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
-							RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
-								Username: "something",
-								RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-									Token: util.SecretValue,
-								},
-							},
+							Username: "something",
+							Token:    util.SecretValue,
 						},
 						Quay: &apitype.RequireDockerRegistryDefaultsToken{
-							RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-								Token: util.SecretValue,
-							},
+							Token: util.SecretValue,
 						},
 					},
 				},
@@ -1115,16 +1089,12 @@ func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
 		{
 			name: "docker/ghcr/converted",
 			input: &docker.GHCRRegistryDefaults{
-				CommonRegistryDefaults: docker.CommonRegistryDefaults{
-					Auth: &docker.GHCRAuthDefaults{
-						Token: "ghcr_X",
-					},
+				Auth: &docker.GHCRAuthDefaults{
+					Token: "ghcr_X",
 				},
 			},
 			want: &apitype.RequireDockerRegistryDefaultsToken{
-				RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-					Token: util.SecretValue,
-				},
+				Token: util.SecretValue,
 			},
 		},
 		{
@@ -1135,20 +1105,14 @@ func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
 		{
 			name: "docker/hub/converted",
 			input: &docker.HubRegistryDefaults{
-				CommonRegistryDefaults: docker.CommonRegistryDefaults{
-					Auth: &docker.HubAuthDefaults{
-						Username: "something",
-						Token:    "ghcr_X",
-					},
+				Auth: &docker.HubAuthDefaults{
+					Username: "something",
+					Token:    "ghcr_X",
 				},
 			},
 			want: &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
-				RequireDockerRegistryDefaultsAuthWithUsername: apitype.RequireDockerRegistryDefaultsAuthWithUsername{
-					Username: "something",
-					RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-						Token: util.SecretValue,
-					},
-				},
+				Username: "something",
+				Token:    util.SecretValue,
 			},
 		},
 		{
@@ -1159,16 +1123,12 @@ func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
 		{
 			name: "docker/quay/converted",
 			input: &docker.QuayRegistryDefaults{
-				CommonRegistryDefaults: docker.CommonRegistryDefaults{
-					Auth: &docker.QuayAuthDefaults{
-						Token: "quay_X",
-					},
+				Auth: &docker.QuayAuthDefaults{
+					Token: "quay_X",
 				},
 			},
 			want: &apitype.RequireDockerRegistryDefaultsToken{
-				RequireDockerRegistryDefaultsAuth: apitype.RequireDockerRegistryDefaultsAuth{
-					Token: util.SecretValue,
-				},
+				Token: util.SecretValue,
 			},
 		},
 	}

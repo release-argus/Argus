@@ -86,10 +86,8 @@ func testConfig(t *testing.T) *Config {
 		File: filepath.Join(dir, "config.yml"),
 		Settings: Settings{
 			Indentation: 4,
-			SettingsBase: SettingsBase{
-				Log: LogSettings{
-					Level: logLevel,
-				},
+			Log: LogSettings{
+				Level: logLevel,
 			},
 		},
 		Notify:  shoutrrr.ShoutrrrsDefaults{},
@@ -120,22 +118,20 @@ func testSettings(t *testing.T) Settings {
 	t.Helper()
 
 	return Settings{
-		SettingsBase: SettingsBase{
-			Log: LogSettings{
-				Timestamps: new(true),
-				Level:      "DEBUG",
-			},
-			Data: DataSettings{
-				DatabaseFile: "somewhere.db",
-				Readonly:     new(true),
-			},
-			Web: WebSettings{
-				ListenHost:  "test",
-				ListenPort:  "123",
-				RoutePrefix: "/something",
-				CertFile:    "../README.md",
-				KeyFile:     "../LICENSE",
-			},
+		Log: LogSettings{
+			Timestamps: new(true),
+			Level:      "DEBUG",
+		},
+		Data: DataSettings{
+			DatabaseFile: "somewhere.db",
+			Readonly:     new(true),
+		},
+		Web: WebSettings{
+			ListenHost:  "test",
+			ListenPort:  "123",
+			RoutePrefix: "/something",
+			CertFile:    "../README.md",
+			KeyFile:     "../LICENSE",
 		},
 	}
 }

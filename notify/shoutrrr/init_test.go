@@ -295,9 +295,7 @@ func TestShoutrrr_Init(t *testing.T) {
 			name: ".Type cleared when it matches Main.Type",
 			id:   "something",
 			main: &Defaults{
-				Base: Base{
-					Type: tShoutrrr.Type,
-				},
+				Type: tShoutrrr.Type,
 			},
 			giveMain:  true,
 			clearType: true,

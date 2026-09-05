@@ -346,19 +346,15 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Type",
 			defaults: &Defaults{
-				Base: Base{
-					Type: "discord",
-				},
+				Type: "discord",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Options",
 			defaults: &Defaults{
-				Base: Base{
-					Options: map[string]string{
-						"delay": "1h",
-					},
+				Options: map[string]string{
+					"delay": "1h",
 				},
 			},
 			want: false,
@@ -366,10 +362,8 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/URLFields",
 			defaults: &Defaults{
-				Base: Base{
-					URLFields: map[string]string{
-						"webhookid": "456",
-					},
+				URLFields: map[string]string{
+					"webhookid": "456",
 				},
 			},
 			want: false,
@@ -377,10 +371,8 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Params",
 			defaults: &Defaults{
-				Base: Base{
-					Params: map[string]string{
-						"title": "argus",
-					},
+				Params: map[string]string{
+					"title": "argus",
 				},
 			},
 			want: false,
@@ -388,17 +380,15 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			defaults: &Defaults{
-				Base: Base{
-					Type: "discord",
-					Options: map[string]string{
-						"delay": "1h",
-					},
-					URLFields: map[string]string{
-						"webhookid": "456",
-					},
-					Params: map[string]string{
-						"title": "argus",
-					},
+				Type: "discord",
+				Options: map[string]string{
+					"delay": "1h",
+				},
+				URLFields: map[string]string{
+					"webhookid": "456",
+				},
+				Params: map[string]string{
+					"title": "argus",
 				},
 			},
 			want: false,
@@ -521,19 +511,15 @@ func TestShoutrrr_IsDefault(t *testing.T) {
 		{
 			name: "non-empty Type",
 			shoutrrr: &Shoutrrr{
-				Base: Base{
-					Type: "discord",
-				},
+				Type: "discord",
 			},
 			want: true,
 		},
 		{
 			name: "non-empty Options",
 			shoutrrr: &Shoutrrr{
-				Base: Base{
-					Options: MapStringStringOmitNull{
-						"delay": "1h",
-					},
+				Options: MapStringStringOmitNull{
+					"delay": "1h",
 				},
 			},
 			want: false,
@@ -541,10 +527,8 @@ func TestShoutrrr_IsDefault(t *testing.T) {
 		{
 			name: "url fields only",
 			shoutrrr: &Shoutrrr{
-				Base: Base{
-					URLFields: MapStringStringOmitNull{
-						"webhookid": "456",
-					},
+				URLFields: MapStringStringOmitNull{
+					"webhookid": "456",
 				},
 			},
 			want: false,
@@ -552,10 +536,8 @@ func TestShoutrrr_IsDefault(t *testing.T) {
 		{
 			name: "non-empty Params",
 			shoutrrr: &Shoutrrr{
-				Base: Base{
-					Params: MapStringStringOmitNull{
-						"title": "argus",
-					},
+				Params: MapStringStringOmitNull{
+					"title": "argus",
 				},
 			},
 			want: false,
@@ -563,17 +545,15 @@ func TestShoutrrr_IsDefault(t *testing.T) {
 		{
 			name: "filled",
 			shoutrrr: &Shoutrrr{
-				Base: Base{
-					Type: "discord",
-					Options: MapStringStringOmitNull{
-						"delay": "1h",
-					},
-					URLFields: MapStringStringOmitNull{
-						"webhookid": "456",
-					},
-					Params: MapStringStringOmitNull{
-						"title": "argus",
-					},
+				Type: "discord",
+				Options: MapStringStringOmitNull{
+					"delay": "1h",
+				},
+				URLFields: MapStringStringOmitNull{
+					"webhookid": "456",
+				},
+				Params: MapStringStringOmitNull{
+					"title": "argus",
 				},
 			},
 			want: false,

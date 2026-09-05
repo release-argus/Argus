@@ -82,9 +82,7 @@ func TestRequire_ExecCommand(t *testing.T) {
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			svcDashboard := &dashboard.Options{
-				OptionsBase: dashboard.OptionsBase{
-					WebURL: "https://example.com",
-				},
+				WebURL: "https://example.com",
 			}
 			require := Require{Command: tc.cmd}
 			require.Status = &status.Status{}

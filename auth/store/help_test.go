@@ -147,16 +147,18 @@ func groupsByName(t *testing.T, store *Store) map[string]Group {
 // globalGrant builds a valid global-scope Grant.
 func globalGrant(resource rbac.Resource, action rbac.Action) rbac.Grant {
 	return rbac.Grant{
-		Permission: rbac.Permission{Resource: resource, Action: action},
-		Scope:      rbac.Scope{Type: rbac.ScopeGlobal},
+		Resource: resource,
+		Action:   action,
+		Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
 	}
 }
 
 // serviceGrant builds a valid service-scope Grant.
 func serviceGrant(resource rbac.Resource, action rbac.Action, serviceID string) rbac.Grant {
 	return rbac.Grant{
-		Permission: rbac.Permission{Resource: resource, Action: action},
-		Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: serviceID},
+		Resource: resource,
+		Action:   action,
+		Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: serviceID},
 	}
 }
 

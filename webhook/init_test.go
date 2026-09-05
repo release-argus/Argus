@@ -183,9 +183,7 @@ func TestWebHook_Init(t *testing.T) {
 			ID: "TestWebHook_Init",
 		},
 		&dashboard.Options{
-			OptionsBase: dashboard.OptionsBase{
-				WebURL: "https://example.com",
-			},
+			WebURL: "https://example.com",
 		},
 	)
 

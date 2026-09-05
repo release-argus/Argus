@@ -23,7 +23,6 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	dashtest "github.com/release-argus/Argus/service/dashboard/test"
-	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
 )
@@ -226,9 +225,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 					"version": "1.2.3"
 				}`),
 				target: &Lookup{
-					Lookup: base.Lookup{
-						Type: "manual",
-					},
+					Type:    "manual",
 					Version: "0.0.0",
 				},
 			},

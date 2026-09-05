@@ -47,11 +47,9 @@ func NewDefaults(
 	saveChannel chan bool,
 ) Defaults {
 	return Defaults{
-		statusBase: statusBase{
-			AnnounceChannel: announceChannel,
-			DatabaseChannel: databaseChannel,
-			SaveChannel:     saveChannel,
-		},
+		AnnounceChannel: announceChannel,
+		DatabaseChannel: databaseChannel,
+		SaveChannel:     saveChannel,
 	}
 }
 
@@ -85,11 +83,9 @@ func New(
 	dashboard *dashboard.Options,
 ) *Status {
 	status := &Status{
-		statusBase: statusBase{
-			AnnounceChannel: announceChannel,
-			DatabaseChannel: databaseChannel,
-			SaveChannel:     saveChannel,
-		},
+		AnnounceChannel: announceChannel,
+		DatabaseChannel: databaseChannel,
+		SaveChannel:     saveChannel,
 		ServiceInfo: serviceinfo.ServiceInfo{
 			ApprovedVersion: av,
 			DeployedVersion: dv,

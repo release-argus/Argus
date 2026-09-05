@@ -45,30 +45,21 @@ func TestNew(t *testing.T) {
 			format:   "json",
 			data:     "",
 			errRegex: `failed to unmarshal`,
-			wants: wants{
-				ServiceInfo:      info.ServiceInfo{},
-				statusTimestamps: statusTimestamps{},
-			},
+			wants:    wants{},
 		},
 		{
 			name:     "JSON/empty object",
 			format:   "json",
 			data:     "{}",
 			errRegex: `^$`,
-			wants: wants{
-				ServiceInfo:      info.ServiceInfo{},
-				statusTimestamps: statusTimestamps{},
-			},
+			wants:    wants{},
 		},
 		{
 			name:     "YAML/empty",
 			format:   "yaml",
 			data:     "",
 			errRegex: `^$`,
-			wants: wants{
-				ServiceInfo:      info.ServiceInfo{},
-				statusTimestamps: statusTimestamps{},
-			},
+			wants:    wants{},
 		},
 		{
 			name:   "JSON/filled",
@@ -82,16 +73,12 @@ func TestNew(t *testing.T) {
 				"last_queried": "2006-03-02T15:04:05Z07:00"
 			}`),
 			wants: wants{
-				ServiceInfo: info.ServiceInfo{
-					ApprovedVersion: "a",
-					DeployedVersion: "d",
-					LatestVersion:   "l",
-				},
-				statusTimestamps: statusTimestamps{
-					DeployedVersionTimestamp: "2006-01-02T15:04:05Z07:00",
-					LatestVersionTimestamp:   "2006-02-02T15:04:05Z07:00",
-					LastQueried:              "2006-03-02T15:04:05Z07:00",
-				},
+				ApprovedVersion:          "a",
+				DeployedVersion:          "d",
+				LatestVersion:            "l",
+				DeployedVersionTimestamp: "2006-01-02T15:04:05Z07:00",
+				LatestVersionTimestamp:   "2006-02-02T15:04:05Z07:00",
+				LastQueried:              "2006-03-02T15:04:05Z07:00",
 			},
 		},
 		{
@@ -106,16 +93,12 @@ func TestNew(t *testing.T) {
 				last_queried: 2006-03-02T15:04:05Z07:00
 			`),
 			wants: wants{
-				ServiceInfo: info.ServiceInfo{
-					ApprovedVersion: "a",
-					DeployedVersion: "d",
-					LatestVersion:   "l",
-				},
-				statusTimestamps: statusTimestamps{
-					DeployedVersionTimestamp: "2006-01-02T15:04:05Z07:00",
-					LatestVersionTimestamp:   "2006-02-02T15:04:05Z07:00",
-					LastQueried:              "2006-03-02T15:04:05Z07:00",
-				},
+				ApprovedVersion:          "a",
+				DeployedVersion:          "d",
+				LatestVersion:            "l",
+				DeployedVersionTimestamp: "2006-01-02T15:04:05Z07:00",
+				LatestVersionTimestamp:   "2006-02-02T15:04:05Z07:00",
+				LastQueried:              "2006-03-02T15:04:05Z07:00",
 			},
 		},
 		{

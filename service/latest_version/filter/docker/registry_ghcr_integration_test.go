@@ -41,13 +41,9 @@ func TestGHCRRegistry_Check(t *testing.T) {
 		{
 			name: "no auth, known image+tag",
 			registry: GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerGHCRRepo,
-						Tag:   "{{ version }}",
-					},
-					Auth: &GHCRAuth{},
-				},
+				Image: test.ArgusDockerGHCRRepo,
+				Tag:   "{{ version }}",
+				Auth:  &GHCRAuth{},
 			},
 			version:  "latest",
 			errRegex: `^$`,
@@ -55,17 +51,11 @@ func TestGHCRRegistry_Check(t *testing.T) {
 		{
 			name: "auth, known image+tag",
 			registry: GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerGHCRRepo,
-						Tag:   "{{ version }}",
-					},
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token:      test.GitHubToken(t),
-							queryToken: test.GitHubTokenEncoded(t),
-						},
-					},
+				Image: test.ArgusDockerGHCRRepo,
+				Tag:   "{{ version }}",
+				Auth: &GHCRAuth{
+					Token:      test.GitHubToken(t),
+					queryToken: test.GitHubTokenEncoded(t),
 				},
 			},
 			version:  "latest",
@@ -74,17 +64,11 @@ func TestGHCRRegistry_Check(t *testing.T) {
 		{
 			name: "auth, known image, unknown tag",
 			registry: GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerGHCRRepo,
-						Tag:   "{{ version }}-unknown",
-					},
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token:      test.GitHubToken(t),
-							queryToken: test.GitHubTokenEncoded(t),
-						},
-					},
+				Image: test.ArgusDockerGHCRRepo,
+				Tag:   "{{ version }}-unknown",
+				Auth: &GHCRAuth{
+					Token:      test.GitHubToken(t),
+					queryToken: test.GitHubTokenEncoded(t),
 				},
 			},
 			version:  "latest",
@@ -93,17 +77,11 @@ func TestGHCRRegistry_Check(t *testing.T) {
 		{
 			name: "auth, unknown image",
 			registry: GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerGHCRRepo + "-unknown",
-						Tag:   "{{ version }}",
-					},
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token:      test.GitHubToken(t),
-							queryToken: test.GitHubTokenEncoded(t),
-						},
-					},
+				Image: test.ArgusDockerGHCRRepo + "-unknown",
+				Tag:   "{{ version }}",
+				Auth: &GHCRAuth{
+					Token:      test.GitHubToken(t),
+					queryToken: test.GitHubTokenEncoded(t),
 				},
 			},
 			version:  "latest",
@@ -149,13 +127,9 @@ func TestGHCRRegistry_Check__errors(t *testing.T) {
 			name:             "GetQueryToken error, no token (no-op token req fails)",
 			ghcrTokenAddress: "https://	example.com",
 			registry: GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerGHCRRepo,
-						Tag:   "{{ version }}",
-					},
-					Auth: &GHCRAuth{},
-				},
+				Image: test.ArgusDockerGHCRRepo,
+				Tag:   "{{ version }}",
+				Auth:  &GHCRAuth{},
 			},
 			version: "latest",
 			errRegex: test.TrimYAML(`
@@ -168,17 +142,11 @@ func TestGHCRRegistry_Check__errors(t *testing.T) {
 			name:         "newRequest error, invalid URL",
 			ghcrQueryURL: "https://	example.com",
 			registry: GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerGHCRRepo + "-unknown",
-						Tag:   "{{ version }}",
-					},
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token:      "test",
-							queryToken: "test",
-						},
-					},
+				Image: test.ArgusDockerGHCRRepo + "-unknown",
+				Tag:   "{{ version }}",
+				Auth: &GHCRAuth{
+					Token:      "test",
+					queryToken: "test",
 				},
 			},
 			version: "latest",
@@ -191,17 +159,11 @@ func TestGHCRRegistry_Check__errors(t *testing.T) {
 			name:         "http.client.Do error, invalid URL TLD",
 			ghcrQueryURL: "https://example.invalid/%s/%s",
 			registry: GHCRRegistry{
-				CommonRegistry: CommonRegistry{
-					ContainerDetail: ContainerDetail{
-						Image: test.ArgusDockerGHCRRepo,
-						Tag:   "{{ version }}",
-					},
-					Auth: &GHCRAuth{
-						GHCRAuthDefaults: GHCRAuthDefaults{
-							Token:      "test",
-							queryToken: "test",
-						},
-					},
+				Image: test.ArgusDockerGHCRRepo,
+				Tag:   "{{ version }}",
+				Auth: &GHCRAuth{
+					Token:      "test",
+					queryToken: "test",
 				},
 			},
 			version: "latest",
@@ -269,10 +231,8 @@ func TestGHCRAuth_GetQueryToken__integration(t *testing.T) {
 		{
 			name: "valid query token cached",
 			data: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					queryToken: "query-token",
-					validUntil: time.Now().Add(10 * time.Second),
-				},
+				queryToken: "query-token",
+				validUntil: time.Now().Add(10 * time.Second),
 			},
 			want:     "query-token",
 			errRegex: `^$`,
@@ -280,10 +240,8 @@ func TestGHCRAuth_GetQueryToken__integration(t *testing.T) {
 		{
 			name: "query token expired, fail fetching invalid image",
 			data: &GHCRAuth{
-				GHCRAuthDefaults: GHCRAuthDefaults{
-					queryToken: "query-token",
-					validUntil: time.Now().Add(-10 * time.Second),
-				},
+				queryToken: "query-token",
+				validUntil: time.Now().Add(-10 * time.Second),
 			},
 			detail: ContainerDetail{
 				Image: test.ArgusDockerGHCRRepo + "-unknown",

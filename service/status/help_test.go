@@ -71,12 +71,10 @@ func testStatus() (status *Status) {
 			ServiceURL: "https://example.com/service/url",
 		},
 		&dashboard.Options{
-			OptionsBase: dashboard.OptionsBase{
-				Icon:       "https://example.com/icon.png",
-				IconLinkTo: "https://example.com/icon-link",
-				WebURL:     "https://example.com",
-			},
-			Tags: []string{"foo", "bar"},
+			Icon:       "https://example.com/icon.png",
+			IconLinkTo: "https://example.com/icon-link",
+			WebURL:     "https://example.com",
+			Tags:       []string{"foo", "bar"},
 		},
 	)
 

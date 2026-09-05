@@ -121,18 +121,21 @@ func TestAPI_HTTPServiceOrderGet__filteredByGrants(t *testing.T) {
 	for groupName, grants := range map[string][]rbac.Grant{
 		"scoped": {
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-				Scope:      rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionRead,
+				Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
 			},
 		},
 		"pair": {
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-				Scope:      rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionRead,
+				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
 			},
 			{
-				Permission: rbac.Permission{Resource: rbac.ResourceService, Action: rbac.ActionRead},
-				Scope:      rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
+				Resource: rbac.ResourceService,
+				Action:   rbac.ActionRead,
+				Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
 			},
 		},
 	} {

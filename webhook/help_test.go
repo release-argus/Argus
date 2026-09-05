@@ -74,9 +74,7 @@ func testWebHook(failing bool, selfSignedCert bool, headers bool) *WebHook {
 			ID: "testWebHook",
 		},
 		&dashboard.Options{
-			OptionsBase: dashboard.OptionsBase{
-				WebURL: "https://example.com",
-			},
+			WebURL: "https://example.com",
 		},
 	)
 	webhook.Failed = &webhook.ServiceStatus.Fails.WebHook

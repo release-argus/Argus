@@ -22,7 +22,6 @@ import (
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
-	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
@@ -248,9 +247,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 					]
 				}`),
 				target: &Lookup{
-					Lookup: base.Lookup{
-						Type: "web",
-					},
+					Type: "web",
 				},
 			},
 			errRegex: `^$`,
@@ -271,9 +268,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 					]
 				}`),
 				target: &Lookup{
-					Lookup: base.Lookup{
-						Type: "web",
-					},
+					Type: "web",
 					Headers: shared.Headers{
 						{Key: "X-Bar", Value: "foo"},
 						{Key: "X-Foo", Value: "bar"},
@@ -294,9 +289,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				format: "json",
 				data:   `{"headers": null}`,
 				target: &Lookup{
-					Lookup: base.Lookup{
-						Type: "web",
-					},
+					Type: "web",
 					Headers: shared.Headers{
 						{Key: "X-Bar", Value: "foo"},
 						{Key: "X-Foo", Value: "bar"},
@@ -329,9 +322,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 					"regex_template": "$0-beta"
 				}`),
 				target: &Lookup{
-					Lookup: base.Lookup{
-						Type: "url",
-					},
+					Type:              "url",
 					Method:            "POST",
 					URL:               "https://example.com",
 					AllowInvalidCerts: new(true),

@@ -42,10 +42,8 @@ func TestIsEqual(t *testing.T) {
 		{
 			name: "defaults ignored",
 			a: &web.Lookup{
-				Lookup: base.Lookup{
-					Defaults: &base.Defaults{
-						AllowInvalidCerts: new(false),
-					},
+				Defaults: &base.Defaults{
+					AllowInvalidCerts: new(false),
 				},
 			},
 			b:    &web.Lookup{},
@@ -54,10 +52,8 @@ func TestIsEqual(t *testing.T) {
 		{
 			name: "hard_defaults ignored",
 			a: &web.Lookup{
-				Lookup: base.Lookup{
-					Defaults: &base.Defaults{
-						AllowInvalidCerts: new(false),
-					},
+				Defaults: &base.Defaults{
+					AllowInvalidCerts: new(false),
 				},
 			},
 			b:    &web.Lookup{},

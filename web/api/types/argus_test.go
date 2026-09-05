@@ -1642,7 +1642,8 @@ func TestNotifiers_Flatten(t *testing.T) {
 				},
 			},
 			want: &[]Notify{
-				{ID: "yankee",
+				{
+					ID: "yankee",
 					URLFields: map[string]string{
 						"path": "charlie",
 					},
@@ -1650,7 +1651,8 @@ func TestNotifiers_Flatten(t *testing.T) {
 						"rooms": "delta",
 					},
 				},
-				{ID: "zulu",
+				{
+					ID: "zulu",
 					URLFields: map[string]string{
 						"port": "alpha",
 					},
@@ -1684,7 +1686,8 @@ func TestNotifiers_Flatten(t *testing.T) {
 				},
 			},
 			want: &[]Notify{
-				{ID: "golf",
+				{
+					ID: "golf",
 					URLFields: map[string]string{
 						"path":   "charlie",
 						"botkey": util.SecretValue,
@@ -1693,7 +1696,8 @@ func TestNotifiers_Flatten(t *testing.T) {
 						"rooms": "delta",
 					},
 				},
-				{ID: "hotel",
+				{
+					ID: "hotel",
 					URLFields: map[string]string{
 						"port":  "alpha",
 						"altid": util.SecretValue,
@@ -2633,22 +2637,14 @@ func TestLatestVersionRequireDefaults_String(t *testing.T) {
 					Type: "ghcr",
 					Registry: RequireDockerRegistriesDefaults{
 						GHCR: &RequireDockerRegistryDefaultsToken{
-							RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-								Token: "tokenForGHCR",
-							},
+							Token: "tokenForGHCR",
 						},
 						Hub: &RequireDockerCheckRegistryDefaultsTokenWithUsername{
-							RequireDockerRegistryDefaultsAuthWithUsername: RequireDockerRegistryDefaultsAuthWithUsername{
-								Username: "userForHub",
-								RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-									Token: "tokenForHub",
-								},
-							},
+							Username: "userForHub",
+							Token:    "tokenForHub",
 						},
 						Quay: &RequireDockerRegistryDefaultsToken{
-							RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-								Token: "tokenForQuay",
-							},
+							Token: "tokenForQuay",
 						},
 					},
 				},
@@ -2716,9 +2712,7 @@ func TestRequireDockerRegistriesDefaults_IsZero(t *testing.T) {
 			name: "non-empty",
 			defaults: RequireDockerRegistriesDefaults{
 				GHCR: &RequireDockerRegistryDefaultsToken{
-					RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-						Token: "token",
-					},
+					Token: "token",
 				},
 			},
 		},
@@ -2788,18 +2782,14 @@ func TestRequireDockerRegistryDefaultsAuthWithUsername_IsZero(t *testing.T) {
 		want     bool
 	}{
 		{
-			name: "empty",
-			defaults: RequireDockerRegistryDefaultsAuthWithUsername{
-				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{},
-			},
-			want: true,
+			name:     "empty",
+			defaults: RequireDockerRegistryDefaultsAuthWithUsername{},
+			want:     true,
 		},
 		{
 			name: "non-empty/Token",
 			defaults: RequireDockerRegistryDefaultsAuthWithUsername{
-				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-					Token: "t",
-				},
+				Token: "t",
 			},
 		},
 		{
@@ -2812,9 +2802,7 @@ func TestRequireDockerRegistryDefaultsAuthWithUsername_IsZero(t *testing.T) {
 			name: "non-empty/all",
 			defaults: RequireDockerRegistryDefaultsAuthWithUsername{
 				Username: "u",
-				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-					Token: "t",
-				},
+				Token:    "t",
 			},
 		},
 	}
@@ -2852,9 +2840,7 @@ func TestRequireDockerRegistryDefaultsToken_IsZero(t *testing.T) {
 		{
 			name: "non-empty/RequireDockerRegistryDefaultsAuth",
 			defaults: RequireDockerRegistryDefaultsToken{
-				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-					Token: "t",
-				},
+				Token: "t",
 			},
 			want: false,
 		},
@@ -2893,9 +2879,7 @@ func TestRequireDockerRegistryDefaultsToken_GetToken(t *testing.T) {
 		{
 			name: "non-empty",
 			defaults: RequireDockerRegistryDefaultsToken{
-				RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-					Token: "t",
-				},
+				Token: "t",
 			},
 			want: "t",
 		},
@@ -2934,12 +2918,8 @@ func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_IsZero(t *testing.T
 		{
 			name: "non-empty/RequireDockerRegistryDefaultsAuthWithUsername",
 			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
-				RequireDockerRegistryDefaultsAuthWithUsername: RequireDockerRegistryDefaultsAuthWithUsername{
-					Username: "u",
-					RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-						Token: "t",
-					},
-				},
+				Username: "u",
+				Token:    "t",
 			},
 			want: false,
 		},
@@ -2978,12 +2958,8 @@ func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_GetToken(t *testing
 		{
 			name: "non-empty",
 			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
-				RequireDockerRegistryDefaultsAuthWithUsername: RequireDockerRegistryDefaultsAuthWithUsername{
-					Username: "u",
-					RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-						Token: "t",
-					},
-				},
+				Username: "u",
+				Token:    "t",
 			},
 			want: "t",
 		},
@@ -3038,9 +3014,7 @@ func TestRequireDockerDefaults_IsZero(t *testing.T) {
 			d: RequireDockerDefaults{
 				Registry: RequireDockerRegistriesDefaults{
 					GHCR: &RequireDockerRegistryDefaultsToken{
-						RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-							Token: "token",
-						},
+						Token: "token",
 					},
 				},
 			},
@@ -3053,9 +3027,7 @@ func TestRequireDockerDefaults_IsZero(t *testing.T) {
 				Tag:  "t",
 				Registry: RequireDockerRegistriesDefaults{
 					GHCR: &RequireDockerRegistryDefaultsToken{
-						RequireDockerRegistryDefaultsAuth: RequireDockerRegistryDefaultsAuth{
-							Token: "token",
-						},
+						Token: "token",
 					},
 				},
 			},
@@ -3346,7 +3318,8 @@ func TestWebHooks_String(t *testing.T) {
 		{
 			name: "single webhook, filled",
 			webhooks: &WebHooks{
-				"0": {ServiceID: "something",
+				"0": {
+					ServiceID:         "something",
 					ID:                "foobar",
 					Type:              "url",
 					URL:               "https://release-argus.io",
@@ -3453,11 +3426,13 @@ func TestWebHooks_Flatten(t *testing.T) {
 				},
 			},
 			want: []*WebHook{
-				{ID: "alpha",
+				{
+					ID:     "alpha",
 					URL:    "https://example.com",
 					Secret: util.SecretValue,
 				},
-				{ID: "bravo",
+				{
+					ID:     "bravo",
 					URL:    "https://example.com/other",
 					Secret: util.SecretValue,
 				},

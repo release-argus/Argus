@@ -68,18 +68,21 @@ func TestNewPermissionSet(t *testing.T) {
 			grants: []Grant{
 				// Unknown scope type.
 				{
-					Permission: Permission{Resource: ResourceService, Action: ActionRead},
-					Scope:      Scope{Type: ScopeType("environment"), Ref: "prod"},
+					Resource: ResourceService,
+					Action:   ActionRead,
+					Scope:    Scope{Type: ScopeType("environment"), Ref: "prod"},
 				},
 				// Unknown resource.
 				{
-					Permission: Permission{Resource: Resource("unknown"), Action: ActionRead},
-					Scope:      Scope{Type: ScopeGlobal},
+					Resource: Resource("unknown"),
+					Action:   ActionRead,
+					Scope:    Scope{Type: ScopeGlobal},
 				},
 				// Scoped grant without a ref.
 				{
-					Permission: Permission{Resource: ResourceService, Action: ActionRead},
-					Scope:      Scope{Type: ScopeService},
+					Resource: ResourceService,
+					Action:   ActionRead,
+					Scope:    Scope{Type: ScopeService},
 				},
 			},
 			wantGlobal:  0,
@@ -247,8 +250,10 @@ func TestPermissionSet_Allowed(t *testing.T) {
 		{
 			name: "malformed grant (unknown scope type) fails closed",
 			grants: []Grant{
-				{Permission: Permission{Resource: ResourceService, Action: ActionRead},
-					Scope: Scope{Type: ScopeType("environment"), Ref: "prod"}},
+				{
+					Resource: ResourceService,
+					Action:   ActionRead,
+					Scope:    Scope{Type: ScopeType("environment"), Ref: "prod"}},
 			},
 			resource: ResourceService, action: ActionRead,
 			target: &Target{ServiceID: "argus", Tags: []string{"prod"}},
@@ -363,8 +368,9 @@ func TestPermissionSet_Allowed__allScopeTypesEnforced(t *testing.T) {
 		t.Run(string(scope), func(t *testing.T) {
 			// AND: a grant at this scope, and a target it should match.
 			grant := Grant{
-				Permission: Permission{Resource: resource, Action: action},
-				Scope:      Scope{Type: scope},
+				Resource: resource,
+				Action:   action,
+				Scope:    Scope{Type: scope},
 			}
 			target := &Target{ServiceID: "svc-1", Tags: []string{"prod"}}
 			switch scope {

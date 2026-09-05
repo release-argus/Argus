@@ -178,11 +178,9 @@ func (o *Options) Copy() *Options {
 	}
 
 	newOptions := &Options{
-		OptionsBase: OptionsBase{
-			Icon:       o.Icon,
-			IconLinkTo: o.IconLinkTo,
-			WebURL:     o.WebURL,
-		},
+		Icon:         o.Icon,
+		IconLinkTo:   o.IconLinkTo,
+		WebURL:       o.WebURL,
 		Tags:         o.Tags,
 		Defaults:     o.Defaults,
 		HardDefaults: o.HardDefaults,

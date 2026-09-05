@@ -69,11 +69,9 @@ func TestLookup_GetServiceID(t *testing.T) {
 	// GIVEN: a Lookup with a Status containing a ServiceID.
 	serviceID := "foo"
 	l := &testLookup{
-		Lookup: Lookup{
-			Status: &status.Status{
-				ServiceInfo: serviceinfo.ServiceInfo{
-					ID: serviceID,
-				},
+		Status: &status.Status{
+			ServiceInfo: serviceinfo.ServiceInfo{
+				ID: serviceID,
 			},
 		},
 	}
@@ -94,9 +92,7 @@ func TestLookup_GetOptions(t *testing.T) {
 	// GIVEN: a Lookup with Options.
 	options := &opt.Options{}
 	l := &testLookup{
-		Lookup: Lookup{
-			Options: options,
-		},
+		Options: options,
 	}
 
 	// WHEN: GetOptions is called.
@@ -115,9 +111,7 @@ func TestLookup_GetStatus(t *testing.T) {
 	// GIVEN: a Lookup with Status.
 	svcStatus := &status.Status{}
 	l := &testLookup{
-		Lookup: Lookup{
-			Status: svcStatus,
-		},
+		Status: svcStatus,
 	}
 
 	// WHEN: GetStatus is called.
@@ -171,7 +165,7 @@ func TestLookup_GetDefaults(t *testing.T) {
 	// GIVEN: a Lookup with Defaults.
 	defaults := &Defaults{}
 	l := &testLookup{
-		Lookup: Lookup{Defaults: defaults},
+		Defaults: defaults,
 	}
 
 	// WHEN: GetDefaults is called.
@@ -190,7 +184,7 @@ func TestLookup_GetHardDefaults(t *testing.T) {
 	// GIVEN: a Lookup with HardDefaults.
 	hardDefaults := &Defaults{}
 	l := &testLookup{
-		Lookup: Lookup{HardDefaults: hardDefaults},
+		HardDefaults: hardDefaults,
 	}
 
 	// WHEN: GetHardDefaults is called.
@@ -257,9 +251,7 @@ func TestLookup_CheckValues(t *testing.T) {
 func TestLookup_Query(t *testing.T) {
 	// GIVEN: a Lookup.
 	l := &testLookup{
-		Lookup: Lookup{
-			Type: "test",
-		},
+		Type: "test",
 	}
 
 	// WHEN: Query is called.
@@ -277,9 +269,7 @@ func TestLookup_Query(t *testing.T) {
 func TestLookup_InheritSecrets(t *testing.T) {
 	// GIVEN: a Lookup and another Lookup to inherit secrets from.
 	otherLookup := &testLookup{
-		Lookup: Lookup{
-			Type: "other",
-		},
+		Type: "other",
 	}
 	secretRefs := &shared.VSecretRef{
 		Headers: []shared.OldIntIndex{
@@ -287,9 +277,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 		},
 	}
 	l := &testLookup{
-		Lookup: Lookup{
-			Type: "test",
-		},
+		Type: "test",
 	}
 	strBefore := decode.ToYAMLString(l, "")
 

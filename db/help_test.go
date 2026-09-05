@@ -80,10 +80,8 @@ func testConfig(t *testing.T) (cfg *config.Config) {
 	saveChannel := make(chan bool, 16)
 	cfg = &config.Config{
 		Settings: config.Settings{
-			SettingsBase: config.SettingsBase{
-				Data: config.DataSettings{
-					DatabaseFile: databaseFile,
-				},
+			Data: config.DataSettings{
+				DatabaseFile: databaseFile,
 			},
 		},
 		Service: service.Services{
@@ -121,9 +119,7 @@ func testConfig(t *testing.T) (cfg *config.Config) {
 			ID:     "foo",
 			Status: status.Status{},
 			Dashboard: dashboard.Options{
-				OptionsBase: dashboard.OptionsBase{
-					WebURL: "https://example.com",
-				},
+				WebURL: "https://example.com",
 			},
 		}
 
@@ -221,9 +217,7 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 			ID: id,
 		},
 		&dashboard.Options{
-			OptionsBase: dashboard.OptionsBase{
-				WebURL: "https://example.com",
-			},
+			WebURL: "https://example.com",
 		},
 	)
 

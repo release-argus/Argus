@@ -192,16 +192,12 @@ func TestWebHooks_MarshalJSON(t *testing.T) {
 			name: "two items",
 			webhooks: &WebHooks{
 				"a": &WebHook{
-					Base: Base{
-						Type: "github",
-					},
-					ID: "a",
+					Type: "github",
+					ID:   "a",
 				},
 				"b": &WebHook{
-					Base: Base{
-						Type: "gitlab",
-					},
-					ID: "b",
+					Type: "gitlab",
+					ID:   "b",
 				},
 			},
 			wantStr: test.TrimJSON(`[
@@ -410,22 +406,16 @@ func testWebHookForCopy(t *testing.T, svcStatus *status.Status, id string) *WebH
 	t.Helper()
 
 	main := &Defaults{
-		Base: Base{
-			Type: "github",
-			URL:  "https://main.example.com",
-		},
+		Type: "github",
+		URL:  "https://main.example.com",
 	}
 	defaults := &Defaults{
-		Base: Base{
-			Type: "github",
-			URL:  "https://defaults.example.com",
-		},
+		Type: "github",
+		URL:  "https://defaults.example.com",
 	}
 	hardDefaults := &Defaults{
-		Base: Base{
-			Type: "github",
-			URL:  "https://hard-defaults.example.com",
-		},
+		Type: "github",
+		URL:  "https://hard-defaults.example.com",
 	}
 
 	notifiers := Notifiers{
@@ -754,9 +744,7 @@ func TestWebHooksDefaults_IsZero(t *testing.T) {
 			name: "non-empty/1 item",
 			defaults: &WebHooksDefaults{
 				"a": &Defaults{
-					Base: Base{
-						Type: "github",
-					},
+					Type: "github",
 				},
 			},
 			want: false,
@@ -765,14 +753,10 @@ func TestWebHooksDefaults_IsZero(t *testing.T) {
 			name: "non-empty/1 item",
 			defaults: &WebHooksDefaults{
 				"a": &Defaults{
-					Base: Base{
-						Type: "github",
-					},
+					Type: "github",
 				},
 				"b": &Defaults{
-					Base: Base{
-						Type: "gitkav",
-					},
+					Type: "gitkav",
 				},
 			},
 			want: false,
@@ -782,9 +766,7 @@ func TestWebHooksDefaults_IsZero(t *testing.T) {
 			defaults: &WebHooksDefaults{
 				"a": &Defaults{},
 				"b": &Defaults{
-					Base: Base{
-						Type: "github",
-					},
+					Type: "github",
 				},
 			},
 			want: false,
@@ -829,38 +811,30 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Type",
 			defaults: &Defaults{
-				Base: Base{
-					Type: "github",
-				},
+				Type: "github",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/URL",
 			defaults: &Defaults{
-				Base: Base{
-					URL: "https://example.com",
-				},
+				URL: "https://example.com",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/AllowInvalidCerts",
 			defaults: &Defaults{
-				Base: Base{
-					AllowInvalidCerts: new(false),
-				},
+				AllowInvalidCerts: new(false),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Headers",
 			defaults: &Defaults{
-				Base: Base{
-					Headers: Headers{
-						{Key: "X-Header", Value: "val"},
-						{Key: "X-Another", Value: "val2"},
-					},
+				Headers: Headers{
+					{Key: "X-Header", Value: "val"},
+					{Key: "X-Another", Value: "val2"},
 				},
 			},
 			want: false,
@@ -868,65 +842,53 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Secret",
 			defaults: &Defaults{
-				Base: Base{
-					Secret: "foobar",
-				},
+				Secret: "foobar",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/DesiredStatusCode",
 			defaults: &Defaults{
-				Base: Base{
-					DesiredStatusCode: new(uint16(200)),
-				},
+				DesiredStatusCode: new(uint16(200)),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Delay",
 			defaults: &Defaults{
-				Base: Base{
-					Delay: "1h2m3s",
-				},
+				Delay: "1h2m3s",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/MaxTries",
 			defaults: &Defaults{
-				Base: Base{
-					MaxTries: new(uint8(4)),
-				},
+				MaxTries: new(uint8(4)),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/SilentFails",
 			defaults: &Defaults{
-				Base: Base{
-					SilentFails: new(true),
-				},
+				SilentFails: new(true),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/all",
 			defaults: &Defaults{
-				Base: Base{
-					Type:              "github",
-					URL:               "https://example.com",
-					AllowInvalidCerts: new(false),
-					Headers: Headers{
-						{Key: "X-Header", Value: "val"},
-						{Key: "X-Another", Value: "val2"},
-					},
-					Secret:            "foobar",
-					DesiredStatusCode: new(uint16(200)),
-					Delay:             "1h2m3s",
-					MaxTries:          new(uint8(4)),
-					SilentFails:       new(true),
+				Type:              "github",
+				URL:               "https://example.com",
+				AllowInvalidCerts: new(false),
+				Headers: Headers{
+					{Key: "X-Header", Value: "val"},
+					{Key: "X-Another", Value: "val2"},
 				},
+				Secret:            "foobar",
+				DesiredStatusCode: new(uint16(200)),
+				Delay:             "1h2m3s",
+				MaxTries:          new(uint8(4)),
+				SilentFails:       new(true),
 			},
 			want: false,
 		},
@@ -1013,38 +975,30 @@ func TestWebHook_IsDefault(t *testing.T) {
 		{
 			name: "non-empty/Type",
 			webhook: &WebHook{
-				Base: Base{
-					Type: "github",
-				},
+				Type: "github",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/URL",
 			webhook: &WebHook{
-				Base: Base{
-					URL: "https://example.com",
-				},
+				URL: "https://example.com",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/AllowInvalidCerts",
 			webhook: &WebHook{
-				Base: Base{
-					AllowInvalidCerts: new(false),
-				},
+				AllowInvalidCerts: new(false),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Headers",
 			webhook: &WebHook{
-				Base: Base{
-					Headers: Headers{
-						{Key: "X-Header", Value: "val"},
-						{Key: "X-Another", Value: "val2"},
-					},
+				Headers: Headers{
+					{Key: "X-Header", Value: "val"},
+					{Key: "X-Another", Value: "val2"},
 				},
 			},
 			want: false,
@@ -1052,65 +1006,53 @@ func TestWebHook_IsDefault(t *testing.T) {
 		{
 			name: "non-empty/Secret",
 			webhook: &WebHook{
-				Base: Base{
-					Secret: "foobar",
-				},
+				Secret: "foobar",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/DesiredStatusCode",
 			webhook: &WebHook{
-				Base: Base{
-					DesiredStatusCode: new(uint16(200)),
-				},
+				DesiredStatusCode: new(uint16(200)),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Delay",
 			webhook: &WebHook{
-				Base: Base{
-					Delay: "1h2m3s",
-				},
+				Delay: "1h2m3s",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/MaxTries",
 			webhook: &WebHook{
-				Base: Base{
-					MaxTries: new(uint8(4)),
-				},
+				MaxTries: new(uint8(4)),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/SilentFails",
 			webhook: &WebHook{
-				Base: Base{
-					SilentFails: new(true),
-				},
+				SilentFails: new(true),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/all",
 			webhook: &WebHook{
-				Base: Base{
-					Type:              "github",
-					URL:               "https://example.com",
-					AllowInvalidCerts: new(false),
-					Headers: Headers{
-						{Key: "X-Header", Value: "val"},
-						{Key: "X-Another", Value: "val2"},
-					},
-					Secret:            "foobar",
-					DesiredStatusCode: new(uint16(200)),
-					Delay:             "1h2m3s",
-					MaxTries:          new(uint8(4)),
-					SilentFails:       new(true),
+				Type:              "github",
+				URL:               "https://example.com",
+				AllowInvalidCerts: new(false),
+				Headers: Headers{
+					{Key: "X-Header", Value: "val"},
+					{Key: "X-Another", Value: "val2"},
 				},
+				Secret:            "foobar",
+				DesiredStatusCode: new(uint16(200)),
+				Delay:             "1h2m3s",
+				MaxTries:          new(uint8(4)),
+				SilentFails:       new(true),
 			},
 			want: false,
 		},

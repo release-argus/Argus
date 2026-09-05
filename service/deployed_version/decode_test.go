@@ -409,7 +409,6 @@ func TestApplyOverrides(t *testing.T) {
 				}`),
 				target: &web.Lookup{
 					Method: "PUT",
-					Lookup: base.Lookup{},
 				},
 			},
 			errRegex: `^$`,
@@ -429,7 +428,6 @@ func TestApplyOverrides(t *testing.T) {
 				}`),
 				target: &web.Lookup{
 					Method: "PUT",
-					Lookup: base.Lookup{},
 				},
 			},
 			errRegex:       `^$`,
