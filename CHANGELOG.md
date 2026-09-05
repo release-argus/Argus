@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.36.0](https://github.com/release-argus/Argus/compare/0.35.0...0.36.0) (2026-09-05)
+
+
+### Features
+
+* **api:** add session/RBAC auth, user management, and WS scoping ([9421169](https://github.com/release-argus/Argus/commit/9421169d776b490ced279f801520fcabe765d478))
+* **auth:** add -auth.create-admin to bootstrap the first admin ([fe20de4](https://github.com/release-argus/Argus/commit/fe20de45bfceb074ad82dcae5416a8ebd09068d9))
+* **auth:** add RBAC, local provider, and auth stores ([453d892](https://github.com/release-argus/Argus/commit/453d892fe500ac8da7cf53d9075aaebff1037e90))
+* **auth:** cap sessions and kick WS clients on grant change ([3ea1a40](https://github.com/release-argus/Argus/commit/3ea1a40d248bf674e076fba7a1fb874e4cc67321))
+* **config:** add settings.auth and password recovery cli flag ([59b25bc](https://github.com/release-argus/Argus/commit/59b25bc71c787a2f9f1f7d4bcf1aebc77a46ec99))
+* **notify:** support smtp AUTH LOGIN and pushover end-to-end encryption ([edd2502](https://github.com/release-argus/Argus/commit/edd250245a9267fd9fc71e100bb05dbf18167efe))
+* **ui:** add login and RBAC-aware admin pages ([323ae45](https://github.com/release-argus/Argus/commit/323ae45f51297bb6158f91f767d2fa3ea07590bf))
+* **ui:** toggle timestamps for release/deployed/queried timestamps ([#984](https://github.com/release-argus/Argus/issues/984)) ([da1c075](https://github.com/release-argus/Argus/commit/da1c0751cc22f415d6bcc7bb75e5f9c13543e897))
+* **web:** resolve the client IP behind trusted proxies ([d00e6c9](https://github.com/release-argus/Argus/commit/d00e6c9543083c3889c7b406777b234b5b2c06f9))
+* **web:** use the forwarded host for CSRF and cookies ([3615c98](https://github.com/release-argus/Argus/commit/3615c988b254ddc24820ce2a4e047962ca75aa98))
+
+
+### Bug Fixes
+
+* **notify:** honour the smtp timeout, TLS and auth params ([80182de](https://github.com/release-argus/Argus/commit/80182de536981a957e40a2c555dab7f9d5aeec03))
+* **notify:** send param names Shoutrrr accepts ([5c3764c](https://github.com/release-argus/Argus/commit/5c3764c21ddfe19ad1fde023e84cd1986153fa1e))
+* **ui:** declare missing params in the notify API types ([124b965](https://github.com/release-argus/Argus/commit/124b9658153e2ae66fe85c0acce9fc4dd82afccb))
+* **util:** deny template loads from disk ([fe6be1f](https://github.com/release-argus/Argus/commit/fe6be1f0e80cbe312fe55eb6bf14c721561c6243))
+
 ## [0.35.0](https://github.com/release-argus/Argus/compare/0.34.0...0.35.0) (2026-08-05)
 
 
