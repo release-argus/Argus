@@ -11,7 +11,7 @@ All notable changes to this project will be documented in this file. See [standa
 * **auth:** add -auth.create-admin to bootstrap the first admin ([fe20de4](https://github.com/release-argus/Argus/commit/fe20de45bfceb074ad82dcae5416a8ebd09068d9))
 * **auth:** add RBAC, local provider, and auth stores ([453d892](https://github.com/release-argus/Argus/commit/453d892fe500ac8da7cf53d9075aaebff1037e90))
 * **auth:** cap sessions and kick WS clients on grant change ([3ea1a40](https://github.com/release-argus/Argus/commit/3ea1a40d248bf674e076fba7a1fb874e4cc67321))
-* **config:** add settings.auth and password recovery cli flag ([59b25bc](https://github.com/release-argus/Argus/commit/59b25bc71c787a2f9f1f7d4bcf1aebc77a46ec99))
+* **config:** add settings.auth and password recovery CLI flag ([59b25bc](https://github.com/release-argus/Argus/commit/59b25bc71c787a2f9f1f7d4bcf1aebc77a46ec99))
 * **notify:** support smtp AUTH LOGIN and pushover end-to-end encryption ([edd2502](https://github.com/release-argus/Argus/commit/edd250245a9267fd9fc71e100bb05dbf18167efe))
 * **ui:** add login and RBAC-aware admin pages ([323ae45](https://github.com/release-argus/Argus/commit/323ae45f51297bb6158f91f767d2fa3ea07590bf))
 * **ui:** toggle timestamps for release/deployed/queried timestamps ([#984](https://github.com/release-argus/Argus/issues/984)) ([da1c075](https://github.com/release-argus/Argus/commit/da1c0751cc22f415d6bcc7bb75e5f9c13543e897))
