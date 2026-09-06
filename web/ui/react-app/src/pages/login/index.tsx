@@ -1,12 +1,8 @@
+import { useQuery } from '@tanstack/react-query';
 import { LoaderCircle, Lock } from 'lucide-react';
-import { type ReactElement, useState } from 'react';
+import { type ReactElement, useEffect, useState } from 'react';
 import { useWatch } from 'react-hook-form';
-import {
-	Navigate,
-	useLocation,
-	useNavigate,
-	useSearchParams,
-} from 'react-router';
+import { Navigate, useLocation, useNavigate } from 'react-router';
 import { z } from 'zod';
 import { AuthCard } from '@/components/auth/auth-card';
 import FieldLabelWithTooltip from '@/components/generic/field-label';
@@ -17,7 +13,9 @@ import { Input } from '@/components/ui/input';
 import { MaskedInput } from '@/components/ui/masked-input';
 import { useAuth } from '@/contexts/auth';
 import useZodForm from '@/hooks/use-zod-form';
+import { QUERY_KEYS } from '@/lib/query-keys';
 import { FirstRunSetup } from '@/pages/login/setup';
+import * as authAPI from '@/utils/api/auth';
 import { getErrorMessage } from '@/utils/errors';
 
 const loginSchema = z.object({
@@ -34,17 +32,34 @@ export const Login = (): ReactElement => {
 	const { status, login } = useAuth();
 	const navigate = useNavigate();
 	const location = useLocation();
-	const [searchParams] = useSearchParams();
 	const [error, setError] = useState<string>();
+
+	const { data: setupState } = useQuery({
+		enabled: status === 'unauthenticated',
+		queryFn: authAPI.fetchSetupState,
+		queryKey: QUERY_KEYS.AUTH.SETUP(),
+		retry: false,
+	});
+	const demo = setupState?.demo;
 
 	const form = useZodForm({
 		defaultValues: {
-			password: searchParams.get('password') ?? '',
-			username: searchParams.get('username') ?? '',
+			password: '',
+			username: '',
 		},
 		schema: loginSchema,
 	});
 	const { username, password } = useWatch({ control: form.control });
+
+	// Demo credentials resolve after the first render, so fill the fields then.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: form stable.
+	useEffect(() => {
+		if (!demo) return;
+		form.reset(
+			{ password: demo.password, username: demo.username },
+			{ keepDirtyValues: true },
+		);
+	}, [demo]);
 
 	// Submitting, or still resolving whether a session already exists.
 	const checkingSession = status === 'loading';
@@ -55,16 +70,6 @@ export const Login = (): ReactElement => {
 	const from =
 		(location.state as { from?: string } | null)?.from ?? '/approvals';
 
-	// Auth off, or already logged in: nothing to do here.
-	if (status === 'auth-disabled' || status === 'authenticated') {
-		return <Navigate replace to={from} />;
-	}
-
-	// No users yet: first-run setup replaces the login form.
-	if (status === 'setup') {
-		return <FirstRunSetup />;
-	}
-
 	const onSubmit = form.handleSubmit(async (values) => {
 		setError(undefined);
 		try {
@@ -74,6 +79,16 @@ export const Login = (): ReactElement => {
 			setError(getErrorMessage(err));
 		}
 	});
+
+	// Auth off, or already logged in: nothing to do here.
+	if (status === 'auth-disabled' || status === 'authenticated') {
+		return <Navigate replace to={from} />;
+	}
+
+	// No users yet: first-run setup replaces the login form.
+	if (status === 'setup') {
+		return <FirstRunSetup />;
+	}
 
 	return (
 		<AuthCard icon={<Lock aria-hidden className="size-5" />} title="Sign in">

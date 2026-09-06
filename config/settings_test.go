@@ -69,6 +69,34 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			ok: true,
 		},
 		{
+			name: "web.demo.username",
+			env: map[string]string{
+				"ARGUS_WEB_DEMO_USERNAME": "demo",
+			},
+			want: &Settings{
+				Web: WebSettings{
+					Demo: &WebSettingsDemo{
+						Username: "demo",
+					},
+				},
+			},
+			ok: true,
+		},
+		{
+			name: "web.demo.password",
+			env: map[string]string{
+				"ARGUS_WEB_DEMO_PASSWORD": "demo",
+			},
+			want: &Settings{
+				Web: WebSettings{
+					Demo: &WebSettingsDemo{
+						Password: "demo",
+					},
+				},
+			},
+			ok: true,
+		},
+		{
 			name: "auth.session.idle_timeout",
 			env: map[string]string{
 				"ARGUS_AUTH_SESSION_IDLE_TIMEOUT": "15m",
@@ -736,6 +764,23 @@ func TestWebSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "Demo/empty",
+			data: WebSettings{
+				Demo: &WebSettingsDemo{},
+			},
+			want: false,
+		},
+		{
+			name: "Demo/non-empty",
+			data: WebSettings{
+				Demo: &WebSettingsDemo{
+					Username: "demo",
+					Password: "demo",
+				},
+			},
+			want: false,
+		},
+		{
 			name: "non-empty/all",
 			data: WebSettings{
 				ListenHost: "0.0.0.0",
@@ -951,6 +996,29 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				favicon:
 					svg: https://example.com/favicon.svg
 					png: https://example.com/favicon.png
+			`),
+			ok: true,
+		},
+		{
+			name: "Demo/empty",
+			input: &WebSettings{
+				Demo: &WebSettingsDemo{},
+			},
+			want: "{}\n",
+			ok:   true,
+		},
+		{
+			name: "Demo/credentials",
+			input: &WebSettings{
+				Demo: &WebSettingsDemo{
+					Username: "demo",
+					Password: "demo",
+				},
+			},
+			want: test.TrimYAML(`
+				demo:
+					username: demo
+					password: demo
 			`),
 			ok: true,
 		},
@@ -2226,6 +2294,136 @@ func TestSettings_WebDisabledRoutes(t *testing.T) {
 				t.Errorf(
 					"%s mismatch\ngot:  %v\nwant: %v",
 					prefix, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestSettings_WebDemo(t *testing.T) {
+	// GIVEN: a Settings struct with demo credentials from YAML and/or hard defaults.
+	tests := []struct {
+		name        string
+		env         map[string]string
+		value       *WebSettingsDemo
+		hardDefault *WebSettingsDemo
+		want        *WebSettingsDemo
+	}{
+		{
+			name: "unset",
+			want: nil,
+		},
+		{
+			name:  "resolved/explicit values",
+			value: &WebSettingsDemo{Username: "demo", Password: "pass"},
+			want:  &WebSettingsDemo{Username: "demo", Password: "pass"},
+		},
+		{
+			name:        "resolved/hard default fallback",
+			hardDefault: &WebSettingsDemo{Username: "demo", Password: "pass"},
+			want:        &WebSettingsDemo{Username: "demo", Password: "pass"},
+		},
+		{
+			name:        "resolved/explicit values override the hard defaults",
+			value:       &WebSettingsDemo{Username: "demo", Password: "pass"},
+			hardDefault: &WebSettingsDemo{Username: "other", Password: "other"},
+			want:        &WebSettingsDemo{Username: "demo", Password: "pass"},
+		},
+		{
+			name:        "resolved/layers merge per-field",
+			value:       &WebSettingsDemo{Username: "demo"},
+			hardDefault: &WebSettingsDemo{Username: "other", Password: "pass"},
+			want:        &WebSettingsDemo{Username: "demo", Password: "pass"},
+		},
+		{
+			name: "env/expanded",
+			env: map[string]string{
+				"TEST_SETTINGS__WEB_DEMO__PASSWORD": "pass",
+			},
+			value: &WebSettingsDemo{
+				Username: "demo",
+				Password: "${TEST_SETTINGS__WEB_DEMO__PASSWORD}",
+			},
+			want: &WebSettingsDemo{Username: "demo", Password: "pass"},
+		},
+		{
+			name: "env/unset expands to its own literal",
+			value: &WebSettingsDemo{
+				Username: "demo",
+				Password: "${TEST_SETTINGS__WEB_DEMO__UNSET}",
+			},
+			want: &WebSettingsDemo{
+				Username: "demo",
+				Password: "${TEST_SETTINGS__WEB_DEMO__UNSET}",
+			},
+		},
+		{
+			name:  "incomplete/empty",
+			value: &WebSettingsDemo{},
+			want:  nil,
+		},
+		{
+			name:  "incomplete/username only",
+			value: &WebSettingsDemo{Username: "demo"},
+			want:  nil,
+		},
+		{
+			name:  "incomplete/password only",
+			value: &WebSettingsDemo{Password: "pass"},
+			want:  nil,
+		},
+		{
+			name:        "incomplete/hard defaults, username only",
+			hardDefault: &WebSettingsDemo{Username: "demo"},
+			want:        nil,
+		},
+		{
+			name:        "incomplete/hard defaults, password only",
+			hardDefault: &WebSettingsDemo{Password: "pass"},
+			want:        nil,
+		},
+		{
+			name: "incomplete/env var expands to empty",
+			env: map[string]string{
+				"TEST_SETTINGS__WEB_DEMO__EMPTY": "",
+			},
+			value: &WebSettingsDemo{
+				Username: "demo",
+				Password: "${TEST_SETTINGS__WEB_DEMO__EMPTY}",
+			},
+			want: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're setting env vars.
+			test.SetEnv(t, tc.env)
+
+			settings := Settings{
+				Web: WebSettings{Demo: tc.value},
+				HardDefaults: SettingsBase{
+					Web: WebSettings{Demo: tc.hardDefault},
+				},
+			}
+
+			// WHEN: the accessor resolves the layered value.
+			got := settings.WebDemo()
+
+			// THEN: the credentials resolve as expected.
+			if got == nil || tc.want == nil {
+				if got != tc.want {
+					t.Fatalf(
+						"%s\nSettings.WebDemo() mismatch\ngot:  %v\nwant: %v",
+						packageName, got, tc.want,
+					)
+				}
+				return
+			}
+			if *got != *tc.want {
+				t.Errorf(
+					"%s\nSettings.WebDemo() mismatch\ngot:  %v\nwant: %v",
+					packageName, *got, *tc.want,
 				)
 			}
 		})

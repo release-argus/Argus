@@ -4,6 +4,7 @@ export const QUERY_KEYS = {
 		GROUPS: () => ['auth', 'groups'],
 		ME: () => ['auth', 'me'],
 		PERMISSIONS: () => ['auth', 'permissions'],
+		SETUP: () => ['auth', 'setup'],
 		TOKENS: () => ['auth', 'tokens'],
 		USERS: () => ['auth', 'users'],
 	},

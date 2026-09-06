@@ -353,6 +353,13 @@ type FaviconSettings struct {
 	PNG string `json:"png,omitzero" yaml:"png,omitzero"`
 }
 
+// WebSettingsDemo holds the credentials a public demo instance prefills its
+// login form with.
+type WebSettingsDemo struct {
+	Username string `json:"username,omitzero" yaml:"username,omitzero"`
+	Password string `json:"password,omitzero" yaml:"password,omitzero"`
+}
+
 // WebSettings holds web server settings for the binary.
 type WebSettings struct {
 	ListenHost     string                `json:"listen_host,omitzero" yaml:"listen_host,omitzero"`           // Web listen host.
@@ -364,6 +371,7 @@ type WebSettings struct {
 	DisabledRoutes []string              `json:"disabled_routes,omitempty" yaml:"disabled_routes,omitempty"` // Disabled API routes.
 	TrustedProxies []string              `json:"trusted_proxies,omitempty" yaml:"trusted_proxies,omitempty"` // Proxies (IP/CIDR) whose forwarded headers are trusted.
 	Favicon        *FaviconSettings      `json:"favicon,omitzero" yaml:"favicon,omitzero"`                   // Favicon settings.
+	Demo           *WebSettingsDemo      `json:"demo,omitzero" yaml:"demo,omitzero"`                         // Credentials a public demo instance prefills its login form with.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -376,7 +384,8 @@ func (s WebSettings) IsZero() bool {
 		s.BasicAuth == nil &&
 		len(s.DisabledRoutes) == 0 &&
 		len(s.TrustedProxies) == 0 &&
-		s.Favicon == nil
+		s.Favicon == nil &&
+		s.Demo == nil
 }
 
 // String returns a string representation of the receiver.
@@ -413,6 +422,14 @@ func (s *WebSettings) CheckValues() error {
 		// Remove the Favicon override if both the SVG and PNG are empty.
 		if s.Favicon.SVG == "" && s.Favicon.PNG == "" {
 			s.Favicon = nil
+		}
+	}
+
+	// Demo.
+	if s.Demo != nil {
+		// Remove the Demo credentials if both the Username and Password are empty.
+		if s.Demo.Username == "" && s.Demo.Password == "" {
+			s.Demo = nil
 		}
 	}
 
@@ -848,6 +865,25 @@ func (s *Settings) WebDisabledRoutes() []string {
 		return s.Web.DisabledRoutes
 	}
 	return s.HardDefaults.Web.DisabledRoutes
+}
+
+// WebDemo resolves the credentials to prefill the login form with,
+// nil unless this is a public demo instance.
+func (s *Settings) WebDemo() *WebSettingsDemo {
+	if s.Web.Demo == nil && s.HardDefaults.Web.Demo == nil {
+		return nil
+	}
+
+	value := util.DerefOrZero(s.Web.Demo)
+	hardDefault := util.DerefOrZero(s.HardDefaults.Web.Demo)
+	demo := WebSettingsDemo{
+		Username: util.FirstNonDefaultWithEnv(value.Username, hardDefault.Username),
+		Password: util.FirstNonDefaultWithEnv(value.Password, hardDefault.Password),
+	}
+	if demo.Username == "" || demo.Password == "" {
+		return nil
+	}
+	return &demo
 }
 
 // WebTrustedProxies resolves the reverse proxies whose forwarded headers

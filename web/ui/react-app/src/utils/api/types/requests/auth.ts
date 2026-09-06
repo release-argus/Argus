@@ -9,9 +9,16 @@ export type LoginRequest = {
 	password: string;
 };
 
-/** GET /auth/setup - whether first-run setup is still pending. */
+/**
+ * GET /auth/setup - whether first-run setup is still pending, and any demo
+ * credentials to prefill the login form with.
+ */
 export type SetupState = {
 	setup_required: boolean;
+	demo?: {
+		username: string;
+		password: string;
+	};
 };
 
 /** POST /auth/setup - the first administrator's account details. */

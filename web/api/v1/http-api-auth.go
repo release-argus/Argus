@@ -214,11 +214,13 @@ func (api *API) httpAuthLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // httpAuthSetupState handles GET /api/v1/auth/setup: first-run setup state
-// (creating the first administrator), reporting whether or not setup is pending.
+// (creating the first administrator), reporting whether or not setup is pending,
+// along with any web.demo credentials for the login form to prefill.
 //
 // Response:
 //
-//	200 OK: JSON reporting whether first-run setup is required.
+//	200 OK: JSON reporting whether first-run setup is required,
+//	        and any demo credentials.
 //	500 Internal Server Error: on a store failure.
 func (api *API) httpAuthSetupState(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpAuthSetupState", Secondary: getIP(r)}
@@ -230,7 +232,15 @@ func (api *API) httpAuthSetupState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.writeJSON(w, apitype.SetupState{SetupRequired: count == 0}, logFrom)
+	state := apitype.SetupState{SetupRequired: count == 0}
+	if demo := api.Config.Settings.WebDemo(); demo != nil {
+		state.Demo = &apitype.DemoCredentials{
+			Username: demo.Username,
+			Password: demo.Password,
+		}
+	}
+
+	api.writeJSON(w, state, logFrom)
 }
 
 // httpAuthSetup handles POST /api/v1/auth/setup: creates the first

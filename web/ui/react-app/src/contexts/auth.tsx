@@ -130,11 +130,15 @@ export const AuthProvider = (props: AuthProviderProps) => {
 			// 401 (or anything else) requires a login to proceed - unless
 			// no users exist yet, in which case first-run setup comes first.
 			let cancelled = false;
-			authAPI
-				.fetchSetupState()
-				.then(({ setup_required }) => {
+			// Through the cache, so the login page's query shares this fetch.
+			queryClient
+				.query({
+					queryFn: authAPI.fetchSetupState,
+					queryKey: QUERY_KEYS.AUTH.SETUP(),
+				})
+				.then((state) => {
 					if (!cancelled)
-						setStatus(setup_required ? 'setup' : 'unauthenticated');
+						setStatus(state.setup_required ? 'setup' : 'unauthenticated');
 				})
 				.catch(() => {
 					if (!cancelled) setStatus('unauthenticated');
