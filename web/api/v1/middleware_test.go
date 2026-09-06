@@ -212,25 +212,36 @@ func TestAPI_ClientIPMiddleware(t *testing.T) {
 func TestHTTP_BasicAuthMiddleware(t *testing.T) {
 	// GIVEN: an API with/without Basic Auth credentials.
 	tests := []struct {
-		name      string
-		basicAuth *config.WebSettingsBasicAuth
-		fail      bool
-		noHeader  bool
+		name                       string
+		basicAuth                  *config.WebSettingsBasicAuth
+		sendUsername, sendPassword string
+		fail                       bool
+		noHeader                   bool
 	}{
 		{
-			name:      "No basic auth",
-			basicAuth: nil,
-			fail:      false,
+			name:         "No basic auth",
+			basicAuth:    nil,
+			sendUsername: "test", sendPassword: "123",
+			fail: false,
 		},
 		{
-			name: "basic auth fail invalid creds",
+			name: "pass",
+			basicAuth: &config.WebSettingsBasicAuth{
+				Username: "test", Password: "123",
+			},
+			sendUsername: "test", sendPassword: "123",
+			fail: false,
+		},
+		{
+			name: "fail/invalid creds",
 			basicAuth: &config.WebSettingsBasicAuth{
 				Username: "test", Password: "1234",
 			},
+			sendUsername: "test", sendPassword: "123",
 			fail: true,
 		},
 		{
-			name: "basic auth fail no Authorization header",
+			name: "fail/no Authorization header",
 			basicAuth: &config.WebSettingsBasicAuth{
 				Username: "test", Password: "1234",
 			},
@@ -238,11 +249,36 @@ func TestHTTP_BasicAuthMiddleware(t *testing.T) {
 			fail:     true,
 		},
 		{
-			name: "basic auth pass",
+			name: "pass/no username configured, empty username sent",
 			basicAuth: &config.WebSettingsBasicAuth{
-				Username: "test", Password: "123",
+				Password: "123",
 			},
+			sendUsername: "", sendPassword: "123",
 			fail: false,
+		},
+		{
+			name: "fail/no username configured, a username sent",
+			basicAuth: &config.WebSettingsBasicAuth{
+				Password: "123",
+			},
+			sendUsername: "test", sendPassword: "123",
+			fail: true,
+		},
+		{
+			name: "pass/no password configured, empty password sent",
+			basicAuth: &config.WebSettingsBasicAuth{
+				Username: "test",
+			},
+			sendUsername: "test", sendPassword: "",
+			fail: false,
+		},
+		{
+			name: "fail/no password configured, a password sent",
+			basicAuth: &config.WebSettingsBasicAuth{
+				Username: "test",
+			},
+			sendUsername: "test", sendPassword: "123",
+			fail: true,
 		},
 	}
 
@@ -273,10 +309,7 @@ func TestHTTP_BasicAuthMiddleware(t *testing.T) {
 				t.Fatal(err)
 			}
 			if !tc.noHeader {
-				req.Header = http.Header{
-					// "test:123"
-					"Authorization": {"Basic dGVzdDoxMjM="},
-				}
+				req.SetBasicAuth(tc.sendUsername, tc.sendPassword)
 			}
 			resp, err := client.Do(req)
 			if err != nil {

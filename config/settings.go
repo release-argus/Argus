@@ -341,7 +341,7 @@ func (b *WebSettingsBasicAuth) CheckValues() {
 	// Password.
 	password := util.EvalEnvVars(b.Password)
 	b.PasswordHash = util.GetHash(password)
-	if password == b.Password {
+	if password == b.Password && b.Password != "" {
 		// Password doesn't include an env var, so hash the config val.
 		b.Password = util.FmtHash(b.PasswordHash)
 	}
@@ -539,6 +539,28 @@ func (s *Settings) CheckValues() error {
 
 	if err := s.SettingsBase.CheckValues(); err != nil {
 		errs = append(errs, err)
+	}
+
+	// Empty credentials let any request through the login they appear to guard.
+	if s.Web.BasicAuth != nil ||
+		s.FromFlags.Web.BasicAuth != nil ||
+		s.HardDefaults.Web.BasicAuth != nil {
+		flags := util.DerefOrZero(s.FromFlags.Web.BasicAuth)
+		config := util.DerefOrZero(s.Web.BasicAuth)
+		hardDefaults := util.DerefOrZero(s.HardDefaults.Web.BasicAuth)
+		if util.FirstNonDefault(flags.Username, config.Username, hardDefaults.Username) == "" &&
+			util.FirstNonDefault(flags.Password, config.Password, hardDefaults.Password) == "" {
+			errs = append(
+				errs,
+				&decode.ErrKeyField{
+					Key: "web",
+					Err: &decode.ErrKeyField{
+						Key: "basic_auth",
+						Err: errors.New("a username and/or a password is required"),
+					},
+				},
+			)
+		}
 	}
 
 	if s.AuthEnabled() {
@@ -913,7 +935,12 @@ func (s *Settings) WebBasicAuthUsernameHash() [32]byte {
 	if s.Web.BasicAuth != nil && s.Web.BasicAuth.Username != "" {
 		return s.Web.BasicAuth.UsernameHash
 	}
-	return s.HardDefaults.Web.BasicAuth.UsernameHash
+	// Username set through an env var.
+	if s.HardDefaults.Web.BasicAuth != nil && s.HardDefaults.Web.BasicAuth.Username != "" {
+		return s.HardDefaults.Web.BasicAuth.UsernameHash
+	}
+	// Unset - an empty username authenticates.
+	return util.GetHash("")
 }
 
 // WebBasicAuthPasswordHash resolves the SHA256 hash of the password.
@@ -926,5 +953,10 @@ func (s *Settings) WebBasicAuthPasswordHash() [32]byte {
 	if s.Web.BasicAuth != nil && s.Web.BasicAuth.Password != "" {
 		return s.Web.BasicAuth.PasswordHash
 	}
-	return s.HardDefaults.Web.BasicAuth.PasswordHash
+	// Password set through an env var.
+	if s.HardDefaults.Web.BasicAuth != nil && s.HardDefaults.Web.BasicAuth.Password != "" {
+		return s.HardDefaults.Web.BasicAuth.PasswordHash
+	}
+	// Unset - an empty password authenticates.
+	return util.GetHash("")
 }
