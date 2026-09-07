@@ -91,7 +91,7 @@ func TestServeWs(t *testing.T) {
 
 			// GIVEN: a Hub.
 			hub := NewHub()
-			go hub.Run()
+			go hub.Run(t.Context())
 
 			// AND: a HTTP server with a WebSocket endpoint.
 			middlewareAPI := &API{}
@@ -166,7 +166,7 @@ func TestServeWs(t *testing.T) {
 func TestServeWs__clientAuth(t *testing.T) {
 	// GIVEN: a Hub and a WebSocket endpoint that ties clients to a session.
 	hub := NewHub()
-	go hub.Run()
+	go hub.Run(t.Context())
 	auth := &clientAuth{
 		userID:             "user-a",
 		sessionHash:        "hash-1",
@@ -311,7 +311,7 @@ func (w *wsTestClient) closePeer(t *testing.T, code int) {
 func TestServeWs__plain_HTTP(t *testing.T) {
 	// GIVEN: a Hub.
 	hub := NewHub()
-	go hub.Run()
+	go hub.Run(t.Context())
 
 	// AND: a HTTP server with a WebSocket endpoint.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -595,6 +595,24 @@ func TestRemoteAddrIP(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestClient__hubless(t *testing.T) {
+	// GIVEN: a client that never reached a Hub.
+	client := &Client{send: make(chan []byte, 8)}
+
+	prefix := fmt.Sprintf("%s\nClient", packageName)
+
+	// WHEN/THEN: it has no Hub to leave, so unregistering returns.
+	client.unregister()
+
+	// AND: no Hub stop to wait on.
+	if got := client.hubDone(); got != nil {
+		t.Errorf(
+			"%s.hubDone() mismatch\ngot:  %v\nwant: nil",
+			prefix, got,
+		)
 	}
 }
 
@@ -989,7 +1007,7 @@ func setupWSHubClient(t *testing.T) *wsTestClient {
 	// GIVEN: a test client/hub.
 	wsTest := setupWSTestClient(t)
 	t.Cleanup(func() { wsTest.cleanup(t) })
-	go wsTest.client.hub.Run()
+	go wsTest.client.hub.Run(t.Context())
 	wsTest.client.hub.register <- wsTest.client
 	time.Sleep(100 * time.Millisecond)
 

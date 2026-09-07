@@ -1698,7 +1698,7 @@ func TestAPI_KickWebSocketClients(t *testing.T) {
 	// AND: API without auth (but a hub) -> no-op too.
 	apiNoAuth.auth = nil
 	apiNoAuth.hub = NewHub()
-	go apiNoAuth.hub.Run()
+	go apiNoAuth.hub.Run(t.Context())
 	client.hub = apiNoAuth.hub
 	client.send = make(chan []byte, 8)
 	apiNoAuth.hub.register <- client

@@ -228,7 +228,7 @@ func TestAccessibleHTTPS(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	router = newWebUI(cfg, nil)
+	router = newWebUI(t.Context(), cfg, nil)
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- Run(ctx, cfg, nil)
@@ -301,7 +301,7 @@ func TestNewWebUI__auth(t *testing.T) {
 			cfg := testConfig(t, filepath.Join(t.TempDir(), "config.yml"))
 
 			// WHEN: the web UI is built.
-			router := newWebUI(cfg, tc.authDeps)
+			router := newWebUI(t.Context(), cfg, tc.authDeps)
 
 			// THEN: the login route is served only when auth is enabled.
 			got := hasRoute(t, router, "/api/v1/auth/login")

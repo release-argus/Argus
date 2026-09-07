@@ -265,11 +265,12 @@ func testFaviconSettings(png string, svg string) *config.FaviconSettings {
 // enabled, backed by an in-memory auth store with NO users yet (first-run
 // setup pending). The returned *sql.DB is the auth store's handle (close to
 // simulate infrastructure failure).
-// routePrefix, when given, serves the API under that prefix.
+// opts mutate the config before the API is built, for settings the router
+// reads at setup (route prefix, demo group).
 func testAuthServerPendingSetup(
 	t *testing.T,
 	path string,
-	routePrefix ...string,
+	opts ...func(*config.Config),
 ) (*API, *AuthDeps, *sql.DB) {
 	t.Helper()
 
@@ -278,8 +279,8 @@ func testAuthServerPendingSetup(
 	}
 	testYAML_Argus(path)
 	cfg := testLoad(t, path)
-	if len(routePrefix) > 0 {
-		cfg.Settings.Web.RoutePrefix = routePrefix[0]
+	for _, opt := range opts {
+		opt(cfg)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(cfg.Settings.DataDatabaseFile()) })
 
@@ -315,7 +316,7 @@ func testAuthServerPendingSetup(
 	api, wsRoute := NewAPI(cfg)
 	api.EnableAuth(deps)
 	hub := NewHub()
-	go hub.Run()
+	go hub.Run(t.Context())
 	api.SetupWebSocket(hub, wsRoute)
 	api.SetupRoutesAPI()
 
@@ -326,15 +327,16 @@ func testAuthServerPendingSetup(
 // backed by an in-memory auth store (bootstrap admin created).
 // The returned *sql.DB is the auth store's handle (close to simulate
 // infrastructure failure).
-// routePrefix, when given, serves the API under that prefix.
+// opts mutate the config before the API is built, for settings the router
+// reads at setup (route prefix, demo group).
 func testAuthServer(
 	t *testing.T,
 	path string,
-	routePrefix ...string,
+	opts ...func(*config.Config),
 ) (*API, *AuthDeps, *sql.DB) {
 	t.Helper()
 
-	api, deps, dbConn := testAuthServerPendingSetup(t, path, routePrefix...)
+	api, deps, dbConn := testAuthServerPendingSetup(t, path, opts...)
 	if _, err := deps.Store.CreateFirstAdmin(
 		t.Context(),
 		"admin",
@@ -378,6 +380,18 @@ func createAuthUser(
 	}
 
 	return user
+}
+
+// withRoutePrefix serves the API under prefix.
+func withRoutePrefix(prefix string) func(*config.Config) {
+	return func(cfg *config.Config) { cfg.Settings.Web.RoutePrefix = prefix }
+}
+
+// withDemoGroup makes the API a demo instance holding group read-only.
+func withDemoGroup(group string) func(*config.Config) {
+	return func(cfg *config.Config) {
+		cfg.Settings.Web.Demo = &config.WebSettingsDemo{Group: group}
+	}
 }
 
 // apiPath returns the "/api/v1"+path route of api, under its route prefix.
@@ -471,7 +485,7 @@ func wireHub(t *testing.T, api *API) func(userID, sessionHash string, readableSe
 	t.Helper()
 
 	api.hub = NewHub()
-	go api.hub.Run()
+	go api.hub.Run(t.Context())
 	return func(userID, sessionHash string, readableServices ...map[string]bool) *Client {
 		var services map[string]bool
 		if len(readableServices) > 0 {

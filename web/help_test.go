@@ -73,7 +73,7 @@ func TestMain(m *testing.M) {
 	defer cancel()
 
 	// WHEN: the Router is fetched for this Config.
-	router = newWebUI(mainCfg, nil)
+	router = newWebUI(ctx, mainCfg, nil)
 	go Run(ctx, mainCfg, nil)
 	url := fmt.Sprintf(
 		"http://%s:%s%s",

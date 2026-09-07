@@ -147,13 +147,34 @@ func (c *Client) mayReceiveActions(serviceID string) bool {
 	return serviceID != "" && c.actionableServices[serviceID]
 }
 
+// unregister removes the client from its Hub, giving up if the Hub has stopped
+// so a shutdown never strands this goroutine.
+func (c *Client) unregister() {
+	if c.hub == nil {
+		return
+	}
+	select {
+	case c.hub.unregister <- c:
+	case <-c.hub.done:
+	}
+}
+
+// hubDone reports when the client's Hub stops. A client without a Hub gets a
+// nil channel, which is never ready.
+func (c *Client) hubDone() <-chan struct{} {
+	if c.hub == nil {
+		return nil
+	}
+	return c.hub.done
+}
+
 // readPump drains incoming WebSocket frames and handles connection teardown.
 //
 // Must run in its own goroutine - concentrating all reads here ensures only
 // one reader operates on the connection at a time.
 func (c *Client) readPump() {
 	defer func() {
-		c.hub.unregister <- c
+		c.unregister()
 		_ = c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
@@ -255,6 +276,9 @@ func (c *Client) writePump() {
 	}()
 	for {
 		select {
+		case <-c.hubDone():
+			return
+
 		case message, ok := <-c.send:
 			//#nosec G104 -- Disregard.
 			//nolint:errcheck // ^

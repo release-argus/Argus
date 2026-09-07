@@ -32,7 +32,7 @@ import (
 // Run starts the web server.
 // authDeps is non-nil only when auth is enabled.
 func Run(ctx context.Context, cfg *config.Config, authDeps *v1.AuthDeps) error {
-	router := newWebUI(cfg, authDeps)
+	router := newWebUI(ctx, cfg, authDeps)
 
 	listenAddress := fmt.Sprintf(
 		"%s:%s",
@@ -93,9 +93,13 @@ func newRouter(cfg *config.Config, hub *v1.Hub, authDeps *v1.AuthDeps) *mux.Rout
 }
 
 // newWebUI sets up everything web-related for Argus.
-func newWebUI(cfg *config.Config, authDeps *v1.AuthDeps) *mux.Router {
+func newWebUI(
+	ctx context.Context,
+	cfg *config.Config,
+	authDeps *v1.AuthDeps,
+) *mux.Router {
 	hub := v1.NewHub()
-	go hub.Run()
+	go hub.Run(ctx)
 	router := newRouter(cfg, hub, authDeps)
 
 	cfg.HardDefaults.Service.Status.AnnounceChannel = hub.Broadcast
