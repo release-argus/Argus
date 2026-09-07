@@ -265,7 +265,12 @@ func testFaviconSettings(png string, svg string) *config.FaviconSettings {
 // enabled, backed by an in-memory auth store with NO users yet (first-run
 // setup pending). The returned *sql.DB is the auth store's handle (close to
 // simulate infrastructure failure).
-func testAuthServerPendingSetup(t *testing.T, path string) (*API, *AuthDeps, *sql.DB) {
+// routePrefix, when given, serves the API under that prefix.
+func testAuthServerPendingSetup(
+	t *testing.T,
+	path string,
+	routePrefix ...string,
+) (*API, *AuthDeps, *sql.DB) {
 	t.Helper()
 
 	if !filepath.IsAbs(path) {
@@ -273,6 +278,9 @@ func testAuthServerPendingSetup(t *testing.T, path string) (*API, *AuthDeps, *sq
 	}
 	testYAML_Argus(path)
 	cfg := testLoad(t, path)
+	if len(routePrefix) > 0 {
+		cfg.Settings.Web.RoutePrefix = routePrefix[0]
+	}
 	t.Cleanup(func() { _ = os.RemoveAll(cfg.Settings.DataDatabaseFile()) })
 
 	dbConn, err := sql.Open("sqlite", ":memory:")
@@ -318,10 +326,15 @@ func testAuthServerPendingSetup(t *testing.T, path string) (*API, *AuthDeps, *sq
 // backed by an in-memory auth store (bootstrap admin created).
 // The returned *sql.DB is the auth store's handle (close to simulate
 // infrastructure failure).
-func testAuthServer(t *testing.T, path string) (*API, *AuthDeps, *sql.DB) {
+// routePrefix, when given, serves the API under that prefix.
+func testAuthServer(
+	t *testing.T,
+	path string,
+	routePrefix ...string,
+) (*API, *AuthDeps, *sql.DB) {
 	t.Helper()
 
-	api, deps, dbConn := testAuthServerPendingSetup(t, path)
+	api, deps, dbConn := testAuthServerPendingSetup(t, path, routePrefix...)
 	if _, err := deps.Store.CreateFirstAdmin(
 		t.Context(),
 		"admin",
@@ -367,6 +380,11 @@ func createAuthUser(
 	return user
 }
 
+// apiPath returns the "/api/v1"+path route of api, under its route prefix.
+func apiPath(api *API, path string) string {
+	return strings.TrimSuffix(api.RoutePrefix, "/") + "/api/v1" + path
+}
+
 // serveAuth routes a request through the API's base router.
 func serveAuth(api *API, r *http.Request) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
@@ -379,8 +397,8 @@ func loginCookie(t *testing.T, api *API, username, plaintext string) *http.Cooki
 	t.Helper()
 
 	body := fmt.Sprintf(`{"username":%q,"password":%q}`, username, plaintext)
-	w := serveAuth(api,
-		httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(body)))
+	w := serveAuth(api, httptest.NewRequest(
+		http.MethodPost, apiPath(api, "/auth/login"), strings.NewReader(body)))
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
 			"%s\nlogin as %q failed\ngot:  %d - %s",

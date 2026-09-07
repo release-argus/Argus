@@ -97,6 +97,20 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			ok: true,
 		},
 		{
+			name: "web.demo.group",
+			env: map[string]string{
+				"ARGUS_WEB_DEMO_GROUP": "demo",
+			},
+			want: &Settings{
+				Web: WebSettings{
+					Demo: &WebSettingsDemo{
+						Group: "demo",
+					},
+				},
+			},
+			ok: true,
+		},
+		{
 			name: "auth.session.idle_timeout",
 			env: map[string]string{
 				"ARGUS_AUTH_SESSION_IDLE_TIMEOUT": "15m",
@@ -776,6 +790,7 @@ func TestWebSettings_IsZero(t *testing.T) {
 				Demo: &WebSettingsDemo{
 					Username: "demo",
 					Password: "demo",
+					Group:    "demo",
 				},
 			},
 			want: false,
@@ -1019,6 +1034,19 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				demo:
 					username: demo
 					password: demo
+			`),
+			ok: true,
+		},
+		{
+			name: "Demo/group only, kept",
+			input: &WebSettings{
+				Demo: &WebSettingsDemo{
+					Group: "demo",
+				},
+			},
+			want: test.TrimYAML(`
+				demo:
+					group: demo
 			`),
 			ok: true,
 		},
@@ -2477,12 +2505,14 @@ func TestSettings_WebDemo(t *testing.T) {
 			settings := Settings{
 				Web: WebSettings{Demo: tc.value},
 				HardDefaults: SettingsBase{
-					Web: WebSettings{Demo: tc.hardDefault},
+					Web: WebSettings{
+						Demo: tc.hardDefault,
+					},
 				},
 			}
 
 			// WHEN: the accessor resolves the layered value.
-			got := settings.WebDemo()
+			got := settings.WebDemoCredentials()
 
 			// THEN: the credentials resolve as expected.
 			if got == nil || tc.want == nil {
@@ -2498,6 +2528,83 @@ func TestSettings_WebDemo(t *testing.T) {
 				t.Errorf(
 					"%s\nSettings.WebDemo() mismatch\ngot:  %v\nwant: %v",
 					packageName, *got, *tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestSettings_WebDemoGroup(t *testing.T) {
+	// GIVEN: a Settings struct with a demo group from YAML and/or hard defaults.
+	tests := []struct {
+		name        string
+		env         map[string]string
+		value       *WebSettingsDemo
+		hardDefault *WebSettingsDemo
+		want        string
+	}{
+		{
+			name: "unset",
+			want: "",
+		},
+		{
+			name:  "resolved/explicit value",
+			value: &WebSettingsDemo{Group: "demo"},
+			want:  "demo",
+		},
+		{
+			name:        "resolved/hard default fallback",
+			hardDefault: &WebSettingsDemo{Group: "demo"},
+			want:        "demo",
+		},
+		{
+			name:        "resolved/explicit value overrides the hard default",
+			value:       &WebSettingsDemo{Group: "demo"},
+			hardDefault: &WebSettingsDemo{Group: "other"},
+			want:        "demo",
+		},
+		{
+			name:  "resolved/group independent of the prefill credentials",
+			value: &WebSettingsDemo{Group: "demo"},
+			want:  "demo",
+		},
+		{
+			name: "env/expanded",
+			env: map[string]string{
+				"TEST_SETTINGS__WEB_DEMO__GROUP": "demo",
+			},
+			value: &WebSettingsDemo{Group: "${TEST_SETTINGS__WEB_DEMO__GROUP}"},
+			want:  "demo",
+		},
+		{
+			name:  "env/unset expands to its own literal",
+			value: &WebSettingsDemo{Group: "${TEST_SETTINGS__WEB_DEMO__UNSET}"},
+			want:  "${TEST_SETTINGS__WEB_DEMO__UNSET}",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're setting env vars.
+			test.SetEnv(t, tc.env)
+
+			settings := Settings{
+				Web: WebSettings{Demo: tc.value},
+				HardDefaults: SettingsBase{
+					Web: WebSettings{
+						Demo: tc.hardDefault,
+					},
+				},
+			}
+
+			// WHEN: the accessor resolves the layered value.
+			got := settings.WebDemoGroup()
+
+			// THEN: the group resolves as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nSettings.WebDemoGroup() mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
 				)
 			}
 		})

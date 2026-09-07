@@ -353,11 +353,12 @@ type FaviconSettings struct {
 	PNG string `json:"png,omitzero" yaml:"png,omitzero"`
 }
 
-// WebSettingsDemo holds the credentials a public demo instance prefills its
-// login form with.
+// WebSettingsDemo holds the public demo instance settings: the credentials
+// its login form prefills, and the group whose members are read-only.
 type WebSettingsDemo struct {
 	Username string `json:"username,omitzero" yaml:"username,omitzero"`
 	Password string `json:"password,omitzero" yaml:"password,omitzero"`
+	Group    string `json:"group,omitzero" yaml:"group,omitzero"`
 }
 
 // WebSettings holds web server settings for the binary.
@@ -427,8 +428,7 @@ func (s *WebSettings) CheckValues() error {
 
 	// Demo.
 	if s.Demo != nil {
-		// Remove the Demo credentials if both the Username and Password are empty.
-		if s.Demo.Username == "" && s.Demo.Password == "" {
+		if s.Demo.Username == "" && s.Demo.Password == "" && s.Demo.Group == "" {
 			s.Demo = nil
 		}
 	}
@@ -889,9 +889,9 @@ func (s *Settings) WebDisabledRoutes() []string {
 	return s.HardDefaults.Web.DisabledRoutes
 }
 
-// WebDemo resolves the credentials to prefill the login form with,
+// WebDemoCredentials resolves the credentials to prefill the login form with,
 // nil unless this is a public demo instance.
-func (s *Settings) WebDemo() *WebSettingsDemo {
+func (s *Settings) WebDemoCredentials() *WebSettingsDemo {
 	if s.Web.Demo == nil && s.HardDefaults.Web.Demo == nil {
 		return nil
 	}
@@ -906,6 +906,14 @@ func (s *Settings) WebDemo() *WebSettingsDemo {
 		return nil
 	}
 	return &demo
+}
+
+// WebDemoGroup resolves the group whose members are held read-only,
+// empty when no such group is configured.
+func (s *Settings) WebDemoGroup() string {
+	value := util.DerefOrZero(s.Web.Demo)
+	hardDefault := util.DerefOrZero(s.HardDefaults.Web.Demo)
+	return util.FirstNonDefaultWithEnv(value.Group, hardDefault.Group)
 }
 
 // WebTrustedProxies resolves the reverse proxies whose forwarded headers

@@ -233,7 +233,7 @@ func (api *API) httpAuthSetupState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	state := apitype.SetupState{SetupRequired: count == 0}
-	if demo := api.Config.Settings.WebDemo(); demo != nil {
+	if demo := api.Config.Settings.WebDemoCredentials(); demo != nil {
 		state.Demo = &apitype.DemoCredentials{
 			Username: demo.Username,
 			Password: demo.Password,

@@ -523,3 +523,79 @@ func (api *API) serviceTarget(r *http.Request) *rbac.Target {
 
 	return &target
 }
+
+// errDemoReadOnly is the 403 message given to a read-only demo user.
+var errDemoReadOnly = errors.New("read-only demo instance")
+
+// demoReadableRoutes are the only routes a demo user may reach, keyed by path
+// (method=GET only).
+func (api *API) demoReadableRoutes() map[string]bool {
+	// Trim suffix to ensure no trailing slash and prevent '//api/v1/...' routes.
+	prefix := strings.TrimSuffix(api.Config.Settings.WebRoutePrefix(), "/")
+	readable := map[string]bool{
+		// The caller's own account, and what the admin pages display.
+		"/auth/me":     true,
+		"/users":       true,
+		"/users/{id}":  true,
+		"/groups":      true,
+		"/groups/{id}": true,
+		"/permissions": true,
+		"/tokens":      true,
+		// Instance-wide reads.
+		"/config":         true,
+		"/status/runtime": true,
+		"/version":        true,
+		"/flags":          true,
+		"/counts":         true,
+		// The WebSocket handshake token.
+		"/ws-token": true,
+		// Per-service reads.
+		"/service/order":    true,
+		"/service/summary":  true,
+		"/service/actions":  true,
+		"/service/config":   true,
+		"/service/defaults": true,
+		"/template":         true,
+	}
+
+	prefixed := make(map[string]bool, len(readable))
+	for path := range readable {
+		prefixed[prefix+"/api/v1"+path] = true
+	}
+	return prefixed
+}
+
+// demoMiddleware holds members of settings.web.demo.group read-only.
+func (api *API) demoMiddleware() mux.MiddlewareFunc {
+	group := api.Config.Settings.WebDemoGroup()
+	readable := api.demoReadableRoutes()
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Anything that changes state, and anything not allow-listed.
+			if !safeMethod(r.Method) || !readable[currentRoutePath(r)] {
+				if authCtx := authContextFrom(r); authCtx != nil &&
+					slices.Contains(authCtx.User.Groups, group) {
+					failRequest(&w, errDemoReadOnly, http.StatusForbidden)
+					return
+				}
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// currentRoutePath returns the path template of the route r matched,
+// empty when it matched none.
+func currentRoutePath(r *http.Request) string {
+	route := mux.CurrentRoute(r)
+	if route == nil {
+		return ""
+	}
+	path, err := route.GetPathTemplate()
+	if err != nil {
+		return ""
+	}
+	return path
+}
