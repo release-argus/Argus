@@ -606,9 +606,9 @@ test.describe('Permission gating', () => {
 			try {
 				await page.goto('/approvals');
 				await page.getByRole('button', { name: 'User menu' }).click();
-				// Tokens are per-user, so everyone keeps them.
+				// Settings are per-user, so everyone keeps them.
 				await expect(
-					page.getByRole('menuitem', { name: 'API Tokens' }),
+					page.getByRole('menuitem', { name: 'Settings' }),
 				).toBeVisible();
 				for (const entry of ['Users', 'Groups']) {
 					await expect

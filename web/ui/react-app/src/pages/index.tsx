@@ -1,3 +1,5 @@
+export { SettingsLayout } from './account/layout';
+export { Account as AccountPage } from './account/profile';
 export { Tokens as TokensPage } from './account/tokens';
 export { Groups as GroupsPage } from './admin/groups';
 export { Users as UsersPage } from './admin/users';

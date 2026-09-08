@@ -28,6 +28,17 @@ export type SetupRequest = {
 	password: string;
 };
 
+/**
+ * PATCH /auth/me - the signed-in user changing their own account. The current
+ * password is always required; omitted fields stay unchanged.
+ */
+export type AccountUpdateRequest = {
+	current_password: string;
+	display_name?: string;
+	email?: string;
+	new_password?: string;
+};
+
 export type UserCreateRequest = {
 	username: string;
 	password: string;

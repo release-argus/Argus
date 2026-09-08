@@ -1,4 +1,4 @@
-import { KeyRound, LogOut, UserCircle, Users } from 'lucide-react';
+import { LogOut, Settings, UserCircle, Users } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
@@ -44,8 +44,8 @@ export const UserMenu = (): ReactElement | null => {
 				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem asChild>
-					<Link to="/account/tokens">
-						<KeyRound aria-hidden /> API Tokens
+					<Link to="/account/profile">
+						<Settings aria-hidden /> Settings
 					</Link>
 				</DropdownMenuItem>
 				{isAdmin && (

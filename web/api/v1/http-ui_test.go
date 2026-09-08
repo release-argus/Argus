@@ -38,6 +38,12 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 		wantContent string
 	}{
 		{
+			name:        "account profile route",
+			route:       "/account/profile",
+			wantStatus:  http.StatusOK,
+			wantContent: "text/html",
+		},
+		{
 			name:        "account tokens route",
 			route:       "/account/tokens",
 			wantStatus:  http.StatusOK,
