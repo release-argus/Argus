@@ -15,7 +15,7 @@ require (
 	github.com/prometheus/client_model v0.6.3
 	github.com/vearutop/statigz v1.5.0
 	golang.org/x/crypto v0.56.0
-	golang.org/x/sync v0.22.0
+	golang.org/x/sync v0.23.0
 	modernc.org/sqlite v1.58.0
 )
 
