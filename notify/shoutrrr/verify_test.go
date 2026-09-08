@@ -468,6 +468,47 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			changed: false,
 		},
 		{
+			name:  "homeassistant/valid",
+			sType: "homeassistant",
+			urlFields: map[string]string{
+				"host":  "homeassistant.example.com",
+				"port":  "8123",
+				"token": "bish",
+			},
+			params: map[string]string{
+				"disabletls": "yes",
+				"service":    "notify.mobile_app_phone",
+			},
+			errRegex: `^$`,
+			changed:  false,
+		},
+		{
+			name:  "homeassistant/host with scheme and port split out",
+			sType: "homeassistant",
+			urlFields: map[string]string{
+				"host":  "http://homeassistant.example.com:8123",
+				"token": "bish",
+			},
+			wantURLFields: map[string]string{
+				"host":  "homeassistant.example.com",
+				"port":  "8123",
+				"token": "bish",
+			},
+			errRegex: `^$`,
+			changed:  true,
+		},
+		{
+			name:  "homeassistant/fail Locate on an out-of-range port",
+			sType: "homeassistant",
+			urlFields: map[string]string{
+				"host":  "homeassistant.example.com",
+				"port":  "99999",
+				"token": "bish",
+			},
+			errRegex: `port is invalid`,
+			changed:  false,
+		},
+		{
 			name:  "gotify/fail CreateSender",
 			sType: "gotify",
 			urlFields: map[string]string{
@@ -2187,6 +2228,52 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
+			name:  "homeassistant/invalid",
+			sType: "homeassistant",
+			errRegex: test.TrimYAML(`
+				^token: <required>.*
+				host: <required>.*$`,
+			),
+		},
+		{
+			name:  "homeassistant/no token",
+			sType: "homeassistant",
+			urlFields: map[string]string{
+				"host": "homeassistant.example.com",
+			},
+			errRegex: `^token: <required>.*$`,
+		},
+		{
+			name:  "homeassistant/no host",
+			sType: "homeassistant",
+			urlFields: map[string]string{
+				"token": "bash",
+			},
+			errRegex: `^host: <required>.*$`,
+		},
+		{
+			name:  "homeassistant/valid",
+			sType: "homeassistant",
+			urlFields: map[string]string{
+				"host":  "homeassistant.example.com",
+				"token": "bash",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "homeassistant/valid with main",
+			sType: "homeassistant",
+			main: NewDefaults(
+				"", nil,
+				map[string]string{
+					"host":  "homeassistant.example.com",
+					"token": "bash",
+				},
+				nil,
+			),
+			errRegex: `^$`,
+		},
+		{
 			name:      "ifttt/no webhookid",
 			sType:     "ifttt",
 			urlFields: map[string]string{},
@@ -2854,6 +2941,51 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 				"a": "release! {{ version }",
 			},
 			errRegex: `^a: "release! {{ version }" <invalid>.*$`,
+		},
+		{
+			name:     "homeassistant/no service",
+			sType:    "homeassistant",
+			errRegex: `^$`,
+		},
+		{
+			name:  "homeassistant/valid service, bare action",
+			sType: "homeassistant",
+			params: map[string]string{
+				"service": "mobile_app_phone",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "homeassistant/valid service, domain.action",
+			sType: "homeassistant",
+			params: map[string]string{
+				"service": "notify.mobile_app_phone",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "homeassistant/invalid service, trailing dot",
+			sType: "homeassistant",
+			params: map[string]string{
+				"service": "notify.",
+			},
+			errRegex: `^service: "notify." <invalid>.*$`,
+		},
+		{
+			name:  "homeassistant/invalid service, path traversal",
+			sType: "homeassistant",
+			params: map[string]string{
+				"service": "../config",
+			},
+			errRegex: `^service: "../config" <invalid>.*$`,
+		},
+		{
+			name:  "homeassistant/invalid service, API path",
+			sType: "homeassistant",
+			params: map[string]string{
+				"service": "/api/events/foo",
+			},
+			errRegex: `^service: "/api/events/foo" <invalid>.*$`,
 		},
 		{
 			name:     "ifttt/no events",

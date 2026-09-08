@@ -2525,6 +2525,19 @@ var stringifiedConvertedDefaults = test.TrimJSON(`{
 				"useheader": "no"
 			}
 		},
+		"homeassistant": {
+			"type": "homeassistant",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"params": {
+				"disabletls": "no",
+				"skiptlsverify": "no",
+				"title": "Argus"
+			}
+		},
 		"ifttt": {
 			"type": "ifttt",
 			"options": {

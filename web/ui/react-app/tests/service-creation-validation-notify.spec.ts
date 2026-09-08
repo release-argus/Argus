@@ -493,6 +493,34 @@ test.describe('Service creation modal - field validation', () => {
 			});
 		});
 
+		test.describe('Home Assistant', () => {
+			test('host and token are required; port must be a valid number', async ({
+				page,
+			}, testInfo) => {
+				const shot = screenshotsUnder(
+					page,
+					testInfo.project.name,
+					'service-creation-validation/notify/homeassistant',
+				);
+				const dialog = await openCreateServiceModal(page);
+				const section = await openSection(dialog, 'Notify:');
+
+				// GIVEN: a new "Home Assistant" notifier is added.
+				await addNotify(section, dialog, 'Home Assistant');
+
+				// WHEN/THEN: each field is blurred bad then valid.
+				await runValidations(section, shot, [
+					required({
+						good: 'homeassistant.local',
+						input: 'Host',
+						slug: 'host',
+					}),
+					numeric({ good: '8123', input: 'Port', slug: 'port' }),
+					required({ good: 'abc123token', input: 'Token', slug: 'token' }),
+				]);
+			});
+		});
+
 		test.describe('IFTTT', () => {
 			test('WebHook ID and events are required', async ({ page }, testInfo) => {
 				const shot = screenshotsUnder(

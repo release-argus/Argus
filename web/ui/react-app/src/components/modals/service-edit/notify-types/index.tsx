@@ -3,6 +3,7 @@ export { default as DISCORD } from './discord';
 export { default as GENERIC } from './generic';
 export { default as GOOGLE_CHAT } from './google_chat';
 export { default as GOTIFY } from './gotify';
+export { default as HOME_ASSISTANT } from './homeassistant';
 export { default as IFTTT } from './ifttt';
 export { default as JOIN } from './join';
 export { default as MATRIX } from './matrix';

@@ -32,6 +32,7 @@ export type NotifyTypesMap = {
 	discord: NotifyDiscord;
 	googlechat: NotifyGoogleChat;
 	gotify: NotifyGotify;
+	homeassistant: NotifyHomeAssistant;
 	ifttt: NotifyIFTTT;
 	join: NotifyJoin;
 	matrix: NotifyMatrix;
@@ -157,6 +158,25 @@ export type NotifyGotify = NotifyBase & {
 		priority?: string;
 		title?: string;
 		useheader?: string;
+	};
+};
+
+/* Home Assistant */
+export type NotifyHomeAssistant = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.HOME_ASSISTANT.value;
+	url_fields?: {
+		host?: string;
+		port?: string;
+		path?: string;
+		token?: string;
+	};
+	params?: {
+		disabletls?: string;
+		nid?: string;
+		service?: string;
+		skiptlsverify?: string;
+		targets?: string;
+		title?: string;
 	};
 };
 

@@ -100,6 +100,26 @@ func (s *Shoutrrr) BuildURL() (url string) {
 		url = s.GetURLField("raw")
 
 		url = "googlechat://" + url
+	case "homeassistant":
+		// homeassistant://token@host[:port][/path]/[?disabletls=yes][&service=X][&skiptlsverify=yes]
+		port := s.GetURLField("port")
+		path := s.GetURLField("path")
+		// Sent in the URL as Shoutrrr resolves them when it parses it,
+		// not when the message is sent.
+		query := buildQuery(
+			queryParam("disabletls", s.GetParam("disabletls")),
+			queryParam("service", s.GetParam("service")),
+			queryParam("skiptlsverify", s.GetParam("skiptlsverify")),
+		)
+
+		url = fmt.Sprintf(
+			"homeassistant://%s@%s%s%s/%s",
+			s.GetURLField("token"),
+			s.GetURLField("host"),
+			util.ValueUnlessZero(port, ":"+port),
+			util.ValueUnlessZero(path, "/"+path),
+			query,
+		)
 	case "ifttt":
 		// ifttt://webhookid/?events=event1,event2
 		url = fmt.Sprintf(
