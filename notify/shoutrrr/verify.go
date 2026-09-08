@@ -653,6 +653,26 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 				},
 			)
 		}
+	case "homeassistant":
+		// homeassistant://token@host[:port][/path]
+		if s.GetURLField("token") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "token",
+					Description: "long-lived access token",
+				},
+			)
+		}
+		if s.GetURLField("host") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "host",
+					Description: "e.g. 'homeassistant.example.com'",
+				},
+			)
+		}
 	case "ifttt":
 		// ifttt://webhookid
 		if s.GetURLField("webhookid") == "" {
@@ -942,6 +962,19 @@ func (s *Shoutrrr) checkValuesParams() error {
 	}
 
 	switch itemType {
+	case "homeassistant":
+		// homeassistant://token@host[:port][/path]/?service=domain.action
+		if service := s.GetParam("service"); service != "" &&
+			!util.RegexCheck(homeAssistantParamService, service) {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "service",
+					Value:       service,
+					Description: "e.g. 'notify.mobile_app_phone'",
+				},
+			)
+		}
 	case "ifttt":
 		// ifttt://webhookid/?events=event1[,event2,...]&value1=value1&value2=value2&value3=value3
 		if s.GetParam("events") == "" {

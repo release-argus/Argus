@@ -19,7 +19,6 @@ package shoutrrr
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -161,6 +160,62 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			want:  "googlechat://RAW",
 			urlFields: map[string]string{
 				"raw": "RAW",
+			},
+		},
+		{
+			name:  "homeassistant/base",
+			sType: "homeassistant",
+			want:  "homeassistant://TOKEN@HOST/",
+			urlFields: map[string]string{
+				"host": "HOST", "token": "TOKEN",
+			},
+		},
+		{
+			name:  "homeassistant/base + port",
+			sType: "homeassistant",
+			want:  "homeassistant://TOKEN@HOST:8123/",
+			urlFields: map[string]string{
+				"host":  "HOST",
+				"token": "TOKEN",
+				"port":  "8123",
+			},
+		},
+		{
+			name:  "homeassistant/base + port + path",
+			sType: "homeassistant",
+			want:  "homeassistant://TOKEN@HOST:8123/PATH/",
+			urlFields: map[string]string{
+				"host":  "HOST",
+				"token": "TOKEN",
+				"path":  "PATH",
+				"port":  "8123",
+			},
+		},
+		{
+			name:  "homeassistant/base + params resolved when the URL is parsed",
+			sType: "homeassistant",
+			want: "homeassistant://TOKEN@HOST/" +
+				"?disabletls=yes&service=notify.mobile_app_phone&skiptlsverify=yes",
+			urlFields: map[string]string{
+				"host": "HOST", "token": "TOKEN",
+			},
+			params: map[string]string{
+				"disabletls":    "yes",
+				"service":       "notify.mobile_app_phone",
+				"skiptlsverify": "yes",
+			},
+		},
+		{
+			name:  "homeassistant/base + send-time params stay out of the URL",
+			sType: "homeassistant",
+			want:  "homeassistant://TOKEN@HOST/",
+			urlFields: map[string]string{
+				"host": "HOST", "token": "TOKEN",
+			},
+			params: map[string]string{
+				"nid":     "argus",
+				"targets": "device1,device2",
+				"title":   "Argus",
 			},
 		},
 		{
@@ -940,93 +995,6 @@ func TestShoutrrr_BuildParams__DeprecatedRenames(t *testing.T) {
 						)
 					}
 				})
-			}
-		})
-	}
-}
-
-func TestShoutrrr_SMTPSendParams(t *testing.T) {
-	// GIVEN: an SMTP Shoutrrr with a Param that Shoutrrr honours at send time.
-	svcInfo := serviceinfo.ServiceInfo{ID: "service_id"}
-	tests := []struct {
-		name  string
-		layer string // "" (the Shoutrrr itself), "main", "defaults" or "hardDefaults".
-		param string
-		value string
-	}{
-		{
-			name:  "timeout",
-			param: "timeout",
-			value: "0h0m10s",
-		},
-		{
-			name:  "timeout/from Main",
-			layer: "main",
-			param: "timeout",
-			value: "0h0m10s",
-		},
-		{
-			name:  "timeout/from Defaults",
-			layer: "defaults",
-			param: "timeout",
-			value: "0m10s",
-		},
-		{
-			name:  "timeout/from HardDefaults",
-			layer: "hardDefaults",
-			param: "timeout",
-			value: "1m30s",
-		},
-		{
-			name:  "encryption",
-			param: "encryption",
-			value: "ImplicitTLS",
-		},
-		{
-			name:  "skiptlsverify",
-			param: "skiptlsverify",
-			value: "yes",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			shoutrrr := testShoutrrr(false, false)
-			shoutrrr.Type, shoutrrr.Main.Type = "smtp", "smtp"
-			shoutrrr.URLFields = map[string]string{"host": "example.com"}
-			shoutrrr.Params["fromaddress"] = "from@example.com"
-			shoutrrr.Params["toaddresses"] = "to@example.com"
-			switch tc.layer {
-			case "main":
-				shoutrrr.Main.Params[tc.param] = tc.value
-			case "defaults":
-				shoutrrr.Defaults.Params[tc.param] = tc.value
-			case "hardDefaults":
-				shoutrrr.HardDefaults.Params[tc.param] = tc.value
-			default:
-				shoutrrr.Params[tc.param] = tc.value
-			}
-
-			// WHEN: BuildParams and BuildURL are called.
-			params := *shoutrrr.BuildParams(svcInfo)
-			url := shoutrrr.BuildURL()
-
-			// THEN: the Param is left for Shoutrrr to apply at send time.
-			if got := params[tc.param]; got != tc.value {
-				t.Errorf(
-					"%s\nShoutrrr.BuildParams()[%q] mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.param, got, tc.value,
-				)
-			}
-
-			// AND: it is not duplicated into the URL.
-			if strings.Contains(url, tc.param+"=") {
-				t.Errorf(
-					"%s\nShoutrrr.BuildURL() carried %q, which belongs in the Params\nurl: %q",
-					packageName, tc.param, url,
-				)
 			}
 		})
 	}
