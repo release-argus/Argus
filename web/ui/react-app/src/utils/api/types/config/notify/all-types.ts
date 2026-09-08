@@ -4,6 +4,7 @@ export const NOTIFY_TYPE_MAP = {
 	GENERIC: { label: 'Generic WebHook', value: 'generic' },
 	GOOGLE_CHAT: { label: 'Google Chat', value: 'googlechat' },
 	GOTIFY: { label: 'Gotify', value: 'gotify' },
+	HOME_ASSISTANT: { label: 'Home Assistant', value: 'homeassistant' },
 	IFTTT: { label: 'IFTTT', value: 'ifttt' },
 	JOIN: { label: 'Join', value: 'join' },
 	MATRIX: { label: 'Matrix', value: 'matrix' },

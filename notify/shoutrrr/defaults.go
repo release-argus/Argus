@@ -77,6 +77,16 @@ func (s *ShoutrrrsDefaults) Default() {
 			"useheader":          "no",
 		},
 	)
+	defaults["homeassistant"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		nil,
+		map[string]string{
+			"disabletls":    "no",
+			"skiptlsverify": "no",
+			"title":         "Argus",
+		},
+	)
 	defaults["ifttt"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),

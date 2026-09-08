@@ -16,6 +16,7 @@ import {
 	notifyGenericSchema,
 	notifyGoogleChatSchema,
 	notifyGotifySchema,
+	notifyHomeAssistantSchema,
 	notifyIFTTTSchema,
 	notifyJoinSchema,
 	notifyMatrixSchema,
@@ -147,6 +148,14 @@ const buildNotifySchema = (
 					validator: [validateArrayFieldWithSchemas],
 				},
 				{ path: ['params', 'priority'], validator: validateNumberString },
+			]);
+			break;
+		case NOTIFY_TYPE_MAP.HOME_ASSISTANT.value:
+			schema = buildSuperRefine(notifyHomeAssistantSchema, mains, defaults, [
+				...defaultValidators,
+				{ path: ['url_fields', 'host'], validator: validateRequired },
+				{ path: ['url_fields', 'port'], validator: validateNumberString },
+				{ path: ['url_fields', 'token'], validator: validateRequired },
 			]);
 			break;
 		case NOTIFY_TYPE_MAP.IFTTT.value:

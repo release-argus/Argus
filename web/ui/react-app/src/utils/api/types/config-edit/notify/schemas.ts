@@ -259,6 +259,51 @@ export const notifyGotifySchemaOutgoing = notifyGotifySchema.extend({
 	}),
 });
 
+/* Home Assistant */
+export const notifyHomeAssistantSchema = notifyBaseSchema.extend({
+	params: z
+		.object({
+			disabletls: preprocessBooleanFromString,
+			nid: stringDefault,
+			service: stringDefault,
+			skiptlsverify: preprocessBooleanFromString,
+			targets: stringDefault,
+			title: stringDefault,
+		})
+		.default({
+			disabletls: null,
+			nid: '',
+			service: '',
+			skiptlsverify: null,
+			targets: '',
+			title: '',
+		}),
+	type: z.literal(NOTIFY_TYPE_MAP.HOME_ASSISTANT.value),
+	url_fields: z
+		.object({
+			host: stringDefault, // Required.
+			path: stringDefault,
+			port: stringDefault,
+			token: stringDefault, // Required.
+		})
+		.default({
+			host: '',
+			path: '',
+			port: '',
+			token: '',
+		}),
+});
+export type NotifyHomeAssistantSchema = z.infer<
+	typeof notifyHomeAssistantSchema
+>;
+export const notifyHomeAssistantSchemaOutgoing =
+	notifyHomeAssistantSchema.extend({
+		params: notifyHomeAssistantSchema.shape.params.unwrap().extend({
+			disabletls: preprocessStringFromBoolean,
+			skiptlsverify: preprocessStringFromBoolean,
+		}),
+	});
+
 /* IFTTT */
 export const notifyIFTTTSchema = notifyBaseSchema.extend({
 	params: z
@@ -822,6 +867,7 @@ export const notifySchemaMap = {
 	generic: notifyGenericSchema,
 	googlechat: notifyGoogleChatSchema,
 	gotify: notifyGotifySchema,
+	homeassistant: notifyHomeAssistantSchema,
 	ifttt: notifyIFTTTSchema,
 	join: notifyJoinSchema,
 	matrix: notifyMatrixSchema,
@@ -845,6 +891,7 @@ export type NotifyTypeSchema = {
 	generic: NotifyGenericSchema;
 	googlechat: NotifyGoogleChatSchema;
 	gotify: NotifyGotifySchema;
+	homeassistant: NotifyHomeAssistantSchema;
 	ifttt: NotifyIFTTTSchema;
 	join: NotifyJoinSchema;
 	matrix: NotifyMatrixSchema;
@@ -888,6 +935,7 @@ export const notifySchemaMapOutgoing = {
 	bark: notifyBarkSchemaOutgoing,
 	discord: notifyDiscordSchemaOutgoing,
 	gotify: notifyGotifySchemaOutgoing,
+	homeassistant: notifyHomeAssistantSchemaOutgoing,
 	ifttt: notifyIFTTTSchemaOutgoing,
 	matrix: notifyMatrixSchemaOutgoing,
 	mattermost: notifyMatterMostSchemaOutgoing,

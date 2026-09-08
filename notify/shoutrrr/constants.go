@@ -1,4 +1,4 @@
-// Copyright [2025] [Argus]
+// Copyright [2026] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +15,13 @@
 // Package shoutrrr provides the shoutrrr notification service to services.
 package shoutrrr
 
-// smtpAuthUnknown is the smtp 'auth' value meaning "no method given".
-const smtpAuthUnknown = "Unknown"
+const (
+	// homeAssistantParamService matches a Home Assistant action, as 'action' or 'domain.action'.
+	homeAssistantParamService = `^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)?$`
+
+	// smtpAuthUnknown is the smtp 'auth' value meaning "no method given".
+	smtpAuthUnknown = "Unknown"
+)
 
 var (
 	barkNtfyParamScheme    = []string{"http", "https"}

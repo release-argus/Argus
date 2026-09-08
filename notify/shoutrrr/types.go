@@ -29,9 +29,9 @@ import (
 
 var (
 	SupportedTypes = []string{
-		"bark", "discord", "smtp", "gotify", "googlechat", "ifttt", "join", "mattermost",
-		"matrix", "notifiarr", "ntfy", "opsgenie", "pushbullet", "pushover", "rocketchat", "slack",
-		"teams", "telegram", "zulip", "generic", "shoutrrr",
+		"bark", "discord", "smtp", "gotify", "googlechat", "homeassistant", "ifttt", "join",
+		"mattermost", "matrix", "notifiarr", "ntfy", "opsgenie", "pushbullet", "pushover",
+		"rocketchat", "slack", "teams", "telegram", "zulip", "generic", "shoutrrr",
 	}
 )
 
