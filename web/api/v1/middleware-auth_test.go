@@ -34,6 +34,7 @@ import (
 	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/auth/session"
 	"github.com/release-argus/Argus/auth/store"
+	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/dashboard"
@@ -1697,7 +1698,7 @@ func TestAPI_KickWebSocketClients(t *testing.T) {
 	// AND: API without auth (but a hub) -> no-op too.
 	apiNoAuth.auth = nil
 	apiNoAuth.hub = NewHub()
-	go apiNoAuth.hub.Run()
+	go apiNoAuth.hub.Run(t.Context())
 	client.hub = apiNoAuth.hub
 	client.send = make(chan []byte, 8)
 	apiNoAuth.hub.register <- client
@@ -1972,5 +1973,335 @@ func TestAPI_SetupRoutesAPI__everyRouteIsGuarded(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// demoGrants are global grants over every resource, so a demo user is refused
+// for their group membership rather than for any missing permission.
+func demoGrants() []rbac.Grant {
+	global := rbac.Scope{Type: rbac.ScopeGlobal}
+	grants := make([]rbac.Grant, 0, 16)
+	for _, rp := range rbac.Catalogue() {
+		for _, ap := range rp.Actions {
+			grants = append(grants, rbac.Grant{
+				Permission: rbac.Permission{Resource: rp.Resource, Action: ap.Action},
+				Scope:      global,
+			})
+		}
+	}
+	return grants
+}
+
+func TestAPI_DemoMiddleware(t *testing.T) {
+	// GIVEN: the reads a demo instance deliberately refuses - each one makes
+	// the instance issue an outbound request - and the routes served without a
+	// session, which the guard never sees. Every other route is expected to
+	// follow from the guard's rule, so a new one that nobody allow-listed
+	// fails here rather than silently breaking the demo.
+	refusedReads := map[string]bool{
+		"/api/v1/latest_version/refresh":             true,
+		"/api/v1/deployed_version/refresh":           true,
+		"/api/v1/latest_version/refresh_uncreated":   true,
+		"/api/v1/deployed_version/refresh_uncreated": true,
+	}
+	openRoutes := map[string]bool{
+		"/api/v1/auth/login":  true,
+		"/api/v1/auth/logout": true,
+		"/api/v1/auth/setup":  true,
+	}
+
+	// The allow-list is keyed by full path, so the prefixed API must resolve
+	// every route to the same verdict as the bare one.
+	servers := []struct {
+		name        string
+		routePrefix string
+	}{
+		{
+			name: "no route prefix",
+		},
+		{
+			name:        "under a route prefix",
+			routePrefix: "/argus",
+		},
+	}
+
+	for _, srv := range servers {
+		t.Run(srv.name, func(t *testing.T) {
+			// AND: a demo instance serving there, and a member of its group.
+			opts := []func(*config.Config){withDemoGroup("demo")}
+			if srv.routePrefix != "" {
+				opts = append(opts, withRoutePrefix(srv.routePrefix))
+			}
+			file := "TestAPI_DemoMiddleware" +
+				strings.ReplaceAll(srv.routePrefix, "/", "_") + ".yml"
+			api, deps, _ := testAuthServer(t, file, opts...)
+			if _, err := deps.Store.CreateGroup(
+				t.Context(), "demo", "", demoGrants(),
+			); err != nil {
+				t.Fatalf(
+					"%s\ncreate demo group: %v",
+					packageName, err,
+				)
+			}
+			createAuthUser(t, deps, "demo-user", "demo-password", "demo")
+			cookie := loginCookie(t, api, "demo-user", "demo-password")
+
+			prefix := strings.TrimSuffix(api.RoutePrefix, "/")
+			if got, want := prefix, srv.routePrefix; got != want {
+				t.Fatalf(
+					"%s\nroute prefix mismatch\ngot:  %q\nwant: %q",
+					packageName, got, want,
+				)
+			}
+
+			// AND: every route the API serves.
+			type route struct {
+				path    string
+				methods []string
+			}
+			var routes []route
+			if err := api.Router.Walk(
+				func(r *mux.Route, _ *mux.Router, _ []*mux.Route) error {
+					path, err := r.GetPathTemplate()
+					if err != nil || !strings.HasPrefix(path, prefix+"/api/v1/") {
+						return nil
+					}
+					methods, err := r.GetMethods()
+					if err != nil || len(methods) == 0 {
+						methods = []string{http.MethodGet}
+					}
+					routes = append(routes, route{path: path, methods: methods})
+					return nil
+				},
+			); err != nil {
+				t.Fatalf(
+					"%s\nWalk() failed: %v",
+					packageName, err,
+				)
+			}
+			if got := len(routes); got < 20 {
+				t.Fatalf(
+					"%s\nWalk() found only %d /api/v1 routes\n%+v",
+					packageName, got, routes,
+				)
+			}
+
+			for _, rt := range routes {
+				for _, method := range rt.methods {
+					t.Run(method+" "+rt.path, func(t *testing.T) {
+						unprefixed := strings.TrimPrefix(rt.path, prefix)
+						// SKIP: no session reaches these, so the guard cannot
+						// apply - and calling logout would end this one.
+						if openRoutes[unprefixed] {
+							t.Skip("served without a session")
+						}
+
+						// A demo user may only read, and only the reads that
+						// cost the instance nothing.
+						wantRefused := !safeMethod(method) || refusedReads[unprefixed]
+
+						// WHEN: the demo user calls the route.
+						target := strings.ReplaceAll(rt.path, "{id}", "no-such-id")
+						w := serveAuth(api, authedRequest(method, target, "{}", cookie))
+
+						// THEN: it is refused, or not, as the rule says.
+						// Nothing else runs: a refusal never reaches a handler,
+						// and the reads left do not change state.
+						if got := isDemoRefusal(w); got != wantRefused {
+							t.Errorf(
+								"%s\ndemo guard for %s %s\nrefused mismatch"+
+									"\ngot:  %t\nwant: %t\n%d - %s",
+								packageName, method, rt.path,
+								got, wantRefused, w.Code, w.Body.String(),
+							)
+						}
+					})
+				}
+			}
+		})
+	}
+}
+
+func TestAPI_DemoMiddleware__disarmed(t *testing.T) {
+	// GIVEN: the ways a state-changing request escapes the demo guard.
+	tests := []struct {
+		name  string
+		group string
+		// Member of "demo" group, whether it is the configured one or not.
+		asMemberOfDemo bool
+	}{
+		{
+			name:           "the caller is not a member",
+			group:          "demo",
+			asMemberOfDemo: false,
+		},
+		{
+			name:           "no group configured",
+			group:          "",
+			asMemberOfDemo: true,
+		},
+		{
+			name:           "another group is configured",
+			group:          "not-the-demo-group",
+			asMemberOfDemo: true,
+		},
+	}
+
+	routes := []struct {
+		name   string
+		method string
+		path   string
+		body   string
+	}{
+		{
+			name:   "service order",
+			method: http.MethodPut,
+			path:   "/service/order",
+			body:   `{"order":["test"]}`,
+		},
+		{
+			name:   "latest_version refresh",
+			method: http.MethodGet,
+			path:   "/latest_version/refresh?service=test",
+		},
+		{
+			name:   "API token create",
+			method: http.MethodPost,
+			path:   "/tokens",
+			body:   `{"name":"token"}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// AND: an API configured that way, with a member and a non-member.
+			file := "TestAPI_DemoMiddleware__disarmed_" + tc.group + ".yml"
+			api, deps, _ := testAuthServer(t, file, withDemoGroup(tc.group))
+			if _, err := deps.Store.CreateGroup(
+				t.Context(), "demo", "", demoGrants(),
+			); err != nil {
+				t.Fatalf(
+					"%s\ncreate demo group: %v",
+					packageName, err,
+				)
+			}
+			createAuthUser(t, deps, "demo-user", "demo-password", "demo")
+
+			cookie := loginCookie(t, api, "admin", "admin-password")
+			if tc.asMemberOfDemo {
+				cookie = loginCookie(t, api, "demo-user", "demo-password")
+			}
+
+			for _, route := range routes {
+				t.Run(route.name, func(t *testing.T) {
+					// WHEN: a state-changing route is called.
+					w := serveAuth(api, authedRequest(
+						route.method, apiPath(api, route.path), route.body, cookie))
+
+					// THEN: the demo guard stays out of the way.
+					if isDemoRefusal(w) {
+						t.Errorf(
+							"%s\ndemo guard refused %s %s\ngot: %d - %s",
+							packageName, route.method, route.path,
+							w.Code, w.Body.String(),
+						)
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestAPI_DemoMiddleware__logoutStillWorks(t *testing.T) {
+	// GIVEN: an auth-enabled API and a logged-in demo user.
+	file := "TestAPI_DemoMiddleware__logoutStillWorks.yml"
+	api, deps, _ := testAuthServer(t, file, withDemoGroup("demo"))
+	if _, err := deps.Store.CreateGroup(
+		t.Context(), "demo", "", demoGrants(),
+	); err != nil {
+		t.Fatalf(
+			"%s\ncreate demo group: %v",
+			packageName, err,
+		)
+	}
+	createAuthUser(t, deps, "demo-user", "demo-password", "demo")
+	cookie := loginCookie(t, api, "demo-user", "demo-password")
+
+	// WHEN: they log out.
+	w := serveAuth(api,
+		authedRequest(http.MethodPost, "/api/v1/auth/logout", "", cookie))
+
+	// THEN: the read-only guard does not hold them in their session.
+	if got, want := w.Code, http.StatusNoContent; got != want {
+		t.Errorf(
+			"%s\nlogout refused for a demo user\ngot:  %d - %s\nwant: %d",
+			packageName, got, w.Body.String(), want,
+		)
+	}
+}
+
+// isDemoRefusal reports whether w is the demo guard's read-only refusal.
+func isDemoRefusal(w *httptest.ResponseRecorder) bool {
+	return w.Code == http.StatusForbidden &&
+		strings.Contains(w.Body.String(), errDemoReadOnly.Error())
+}
+
+func TestCurrentRoutePath(t *testing.T) {
+	// GIVEN: a request matched by a route with a path template, by a route
+	// without one, and by no router at all.
+	tests := []struct {
+		name     string
+		register func(*mux.Router, http.Handler)
+		want     string
+	}{
+		{
+			name: "path/matched route gives its template",
+			register: func(r *mux.Router, h http.Handler) {
+				r.Handle("/api/v1/users/{id}", h)
+			},
+			want: "/api/v1/users/{id}",
+		},
+		{
+			name: "no path/request reached no router",
+			want: "",
+		},
+		{
+			name: "no path/route matched on method alone",
+			register: func(r *mux.Router, h http.Handler) {
+				r.Methods(http.MethodGet).Handler(h)
+			},
+			want: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var got string
+			capture := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				got = currentRoutePath(r)
+			})
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/users/abc", nil)
+
+			// WHEN: the handler asks for the path it matched.
+			if tc.register == nil {
+				capture.ServeHTTP(httptest.NewRecorder(), req)
+			} else {
+				router := mux.NewRouter()
+				tc.register(router, capture)
+				router.ServeHTTP(httptest.NewRecorder(), req)
+			}
+
+			// THEN: only a route with a path template gives one.
+			if got != tc.want {
+				t.Errorf(
+					"%s\ncurrentRoutePath() mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
 	}
 }

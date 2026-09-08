@@ -69,6 +69,48 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			ok: true,
 		},
 		{
+			name: "web.demo.username",
+			env: map[string]string{
+				"ARGUS_WEB_DEMO_USERNAME": "demo",
+			},
+			want: &Settings{
+				Web: WebSettings{
+					Demo: &WebSettingsDemo{
+						Username: "demo",
+					},
+				},
+			},
+			ok: true,
+		},
+		{
+			name: "web.demo.password",
+			env: map[string]string{
+				"ARGUS_WEB_DEMO_PASSWORD": "demo",
+			},
+			want: &Settings{
+				Web: WebSettings{
+					Demo: &WebSettingsDemo{
+						Password: "demo",
+					},
+				},
+			},
+			ok: true,
+		},
+		{
+			name: "web.demo.group",
+			env: map[string]string{
+				"ARGUS_WEB_DEMO_GROUP": "demo",
+			},
+			want: &Settings{
+				Web: WebSettings{
+					Demo: &WebSettingsDemo{
+						Group: "demo",
+					},
+				},
+			},
+			ok: true,
+		},
+		{
 			name: "auth.session.idle_timeout",
 			env: map[string]string{
 				"ARGUS_AUTH_SESSION_IDLE_TIMEOUT": "15m",
@@ -470,7 +512,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			},
 			want: WebSettingsBasicAuth{
 				Username: "test",
-				Password: util.FmtHash(util.GetHash("")),
+				Password: "",
 			},
 		},
 		{
@@ -736,6 +778,24 @@ func TestWebSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "Demo/empty",
+			data: WebSettings{
+				Demo: &WebSettingsDemo{},
+			},
+			want: false,
+		},
+		{
+			name: "Demo/non-empty",
+			data: WebSettings{
+				Demo: &WebSettingsDemo{
+					Username: "demo",
+					Password: "demo",
+					Group:    "demo",
+				},
+			},
+			want: false,
+		},
+		{
 			name: "non-empty/all",
 			data: WebSettings{
 				ListenHost: "0.0.0.0",
@@ -951,6 +1011,42 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				favicon:
 					svg: https://example.com/favicon.svg
 					png: https://example.com/favicon.png
+			`),
+			ok: true,
+		},
+		{
+			name: "Demo/empty",
+			input: &WebSettings{
+				Demo: &WebSettingsDemo{},
+			},
+			want: "{}\n",
+			ok:   true,
+		},
+		{
+			name: "Demo/credentials",
+			input: &WebSettings{
+				Demo: &WebSettingsDemo{
+					Username: "demo",
+					Password: "demo",
+				},
+			},
+			want: test.TrimYAML(`
+				demo:
+					username: demo
+					password: demo
+			`),
+			ok: true,
+		},
+		{
+			name: "Demo/group only, kept",
+			input: &WebSettings{
+				Demo: &WebSettingsDemo{
+					Group: "demo",
+				},
+			},
+			want: test.TrimYAML(`
+				demo:
+					group: demo
 			`),
 			ok: true,
 		},
@@ -1347,6 +1443,80 @@ func TestSettings_CheckValues(t *testing.T) {
 			ok:               true,
 		},
 		{
+			name: "BasicAuth/username without a password",
+			input: &Settings{
+				Web: WebSettings{
+					BasicAuth: &WebSettingsBasicAuth{
+						Username: "user",
+					},
+				},
+			},
+			want: test.TrimYAML(`
+				web:
+					basic_auth:
+						username: user
+			`),
+			ok: true,
+		},
+		{
+			name: "BasicAuth/password without a username",
+			input: &Settings{
+				Web: WebSettings{
+					BasicAuth: &WebSettingsBasicAuth{
+						Password: "pass",
+					},
+				},
+			},
+			want: test.TrimYAML(`
+				web:
+					basic_auth:
+						password: ` + util.FmtHash(util.GetHash("pass")) + `
+			`),
+			ok: true,
+		},
+		{
+			name: "BasicAuth/empty credentials from the flags",
+			input: &Settings{
+				FromFlags: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{},
+					},
+				},
+			},
+			want: "{}\n",
+			errRegex: test.TrimYAML(`
+				^web:
+					basic_auth:
+						a username and\/or a password is required$`,
+			),
+			ok: false,
+		},
+		{
+			name: "BasicAuth/username from the flags, password from the config",
+			input: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Password: "pass",
+						},
+					},
+				},
+				FromFlags: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Username: "user",
+						},
+					},
+				},
+			},
+			want: test.TrimYAML(`
+				web:
+					basic_auth:
+						password: ` + util.FmtHash(util.GetHash("pass")) + `
+			`),
+			ok: true,
+		},
+		{
 			name: "Route prefix/empty",
 			input: &Settings{
 				Web: WebSettings{
@@ -1676,7 +1846,7 @@ func TestSettings_Default__BasicAuthFromFlags(t *testing.T) {
 			passwordFlag: nil,
 			want: &WebSettingsBasicAuth{
 				Username: "test-user",
-				Password: util.FmtHash(util.GetHash("")),
+				Password: "",
 			},
 		},
 		{
@@ -2232,6 +2402,215 @@ func TestSettings_WebDisabledRoutes(t *testing.T) {
 	}
 }
 
+func TestSettings_WebDemo(t *testing.T) {
+	// GIVEN: a Settings struct with demo credentials from YAML and/or hard defaults.
+	tests := []struct {
+		name        string
+		env         map[string]string
+		value       *WebSettingsDemo
+		hardDefault *WebSettingsDemo
+		want        *WebSettingsDemo
+	}{
+		{
+			name: "unset",
+			want: nil,
+		},
+		{
+			name:  "resolved/explicit values",
+			value: &WebSettingsDemo{Username: "demo", Password: "pass"},
+			want:  &WebSettingsDemo{Username: "demo", Password: "pass"},
+		},
+		{
+			name:        "resolved/hard default fallback",
+			hardDefault: &WebSettingsDemo{Username: "demo", Password: "pass"},
+			want:        &WebSettingsDemo{Username: "demo", Password: "pass"},
+		},
+		{
+			name:        "resolved/explicit values override the hard defaults",
+			value:       &WebSettingsDemo{Username: "demo", Password: "pass"},
+			hardDefault: &WebSettingsDemo{Username: "other", Password: "other"},
+			want:        &WebSettingsDemo{Username: "demo", Password: "pass"},
+		},
+		{
+			name:        "resolved/layers merge per-field",
+			value:       &WebSettingsDemo{Username: "demo"},
+			hardDefault: &WebSettingsDemo{Username: "other", Password: "pass"},
+			want:        &WebSettingsDemo{Username: "demo", Password: "pass"},
+		},
+		{
+			name: "env/expanded",
+			env: map[string]string{
+				"TEST_SETTINGS__WEB_DEMO__PASSWORD": "pass",
+			},
+			value: &WebSettingsDemo{
+				Username: "demo",
+				Password: "${TEST_SETTINGS__WEB_DEMO__PASSWORD}",
+			},
+			want: &WebSettingsDemo{Username: "demo", Password: "pass"},
+		},
+		{
+			name: "env/unset expands to its own literal",
+			value: &WebSettingsDemo{
+				Username: "demo",
+				Password: "${TEST_SETTINGS__WEB_DEMO__UNSET}",
+			},
+			want: &WebSettingsDemo{
+				Username: "demo",
+				Password: "${TEST_SETTINGS__WEB_DEMO__UNSET}",
+			},
+		},
+		{
+			name:  "incomplete/empty",
+			value: &WebSettingsDemo{},
+			want:  nil,
+		},
+		{
+			name:  "incomplete/username only",
+			value: &WebSettingsDemo{Username: "demo"},
+			want:  nil,
+		},
+		{
+			name:  "incomplete/password only",
+			value: &WebSettingsDemo{Password: "pass"},
+			want:  nil,
+		},
+		{
+			name:        "incomplete/hard defaults, username only",
+			hardDefault: &WebSettingsDemo{Username: "demo"},
+			want:        nil,
+		},
+		{
+			name:        "incomplete/hard defaults, password only",
+			hardDefault: &WebSettingsDemo{Password: "pass"},
+			want:        nil,
+		},
+		{
+			name: "incomplete/env var expands to empty",
+			env: map[string]string{
+				"TEST_SETTINGS__WEB_DEMO__EMPTY": "",
+			},
+			value: &WebSettingsDemo{
+				Username: "demo",
+				Password: "${TEST_SETTINGS__WEB_DEMO__EMPTY}",
+			},
+			want: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're setting env vars.
+			test.SetEnv(t, tc.env)
+
+			settings := Settings{
+				Web: WebSettings{Demo: tc.value},
+				HardDefaults: SettingsBase{
+					Web: WebSettings{
+						Demo: tc.hardDefault,
+					},
+				},
+			}
+
+			// WHEN: the accessor resolves the layered value.
+			got := settings.WebDemoCredentials()
+
+			// THEN: the credentials resolve as expected.
+			if got == nil || tc.want == nil {
+				if got != tc.want {
+					t.Fatalf(
+						"%s\nSettings.WebDemo() mismatch\ngot:  %v\nwant: %v",
+						packageName, got, tc.want,
+					)
+				}
+				return
+			}
+			if *got != *tc.want {
+				t.Errorf(
+					"%s\nSettings.WebDemo() mismatch\ngot:  %v\nwant: %v",
+					packageName, *got, *tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestSettings_WebDemoGroup(t *testing.T) {
+	// GIVEN: a Settings struct with a demo group from YAML and/or hard defaults.
+	tests := []struct {
+		name        string
+		env         map[string]string
+		value       *WebSettingsDemo
+		hardDefault *WebSettingsDemo
+		want        string
+	}{
+		{
+			name: "unset",
+			want: "",
+		},
+		{
+			name:  "resolved/explicit value",
+			value: &WebSettingsDemo{Group: "demo"},
+			want:  "demo",
+		},
+		{
+			name:        "resolved/hard default fallback",
+			hardDefault: &WebSettingsDemo{Group: "demo"},
+			want:        "demo",
+		},
+		{
+			name:        "resolved/explicit value overrides the hard default",
+			value:       &WebSettingsDemo{Group: "demo"},
+			hardDefault: &WebSettingsDemo{Group: "other"},
+			want:        "demo",
+		},
+		{
+			name:  "resolved/group independent of the prefill credentials",
+			value: &WebSettingsDemo{Group: "demo"},
+			want:  "demo",
+		},
+		{
+			name: "env/expanded",
+			env: map[string]string{
+				"TEST_SETTINGS__WEB_DEMO__GROUP": "demo",
+			},
+			value: &WebSettingsDemo{Group: "${TEST_SETTINGS__WEB_DEMO__GROUP}"},
+			want:  "demo",
+		},
+		{
+			name:  "env/unset expands to its own literal",
+			value: &WebSettingsDemo{Group: "${TEST_SETTINGS__WEB_DEMO__UNSET}"},
+			want:  "${TEST_SETTINGS__WEB_DEMO__UNSET}",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're setting env vars.
+			test.SetEnv(t, tc.env)
+
+			settings := Settings{
+				Web: WebSettings{Demo: tc.value},
+				HardDefaults: SettingsBase{
+					Web: WebSettings{
+						Demo: tc.hardDefault,
+					},
+				},
+			}
+
+			// WHEN: the accessor resolves the layered value.
+			got := settings.WebDemoGroup()
+
+			// THEN: the group resolves as expected.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nSettings.WebDemoGroup() mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
 func TestSettings_WebTrustedProxies(t *testing.T) {
 	// GIVEN: a Settings struct with some values set.
 	tests := []struct {
@@ -2300,19 +2679,18 @@ func TestSettings_WebTrustedProxies(t *testing.T) {
 }
 
 func TestSettings_WebBasicAuthUsernameHash(t *testing.T) {
-	// GIVEN: a Settings struct with some values set.
+	// GIVEN: a Settings struct with a username in none, one, or several layers.
 	tests := []struct {
 		name string
-		want string // The string that was hashed.
 		had  Settings
+		want [32]byte
 	}{
 		{
-			name: "empty",
-			want: "",
+			name: "unset in every layer",
+			want: util.GetHash(""),
 		},
 		{
 			name: "set in config",
-			want: "user",
 			had: Settings{
 				Web: WebSettings{
 					BasicAuth: &WebSettingsBasicAuth{
@@ -2320,10 +2698,10 @@ func TestSettings_WebBasicAuthUsernameHash(t *testing.T) {
 					},
 				},
 			},
+			want: util.GetHash("user"),
 		},
 		{
 			name: "set in flag",
-			want: "user",
 			had: Settings{
 				FromFlags: SettingsBase{
 					Web: WebSettings{
@@ -2333,54 +2711,43 @@ func TestSettings_WebBasicAuthUsernameHash(t *testing.T) {
 					},
 				},
 			},
+			want: util.GetHash("user"),
 		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			want := util.GetHash(tc.want)
-			_ = tc.had.CheckValues()
-			_ = tc.had.FromFlags.CheckValues()
-			// HardDefaults.Web.BasicAuth will never be nil if Basic Auth is in use.
-			tc.had.HardDefaults = SettingsBase{
-				Web: WebSettings{
-					BasicAuth: &WebSettingsBasicAuth{
-						UsernameHash: util.GetHash(""),
-						PasswordHash: util.GetHash(""),
+		{
+			name: "set in hard defaults",
+			had: Settings{
+				HardDefaults: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Username: "env-user",
+						},
 					},
 				},
-			}
-
-			// WHEN: WebBasicAuthUsernameHash is called on it.
-			got := tc.had.WebBasicAuthUsernameHash()
-
-			// THEN: the hash is returned.
-			if got != want {
-				t.Errorf(
-					"%s\nWebBasicAuthUsernameHash() mismatch\ngot:  %s\nwant: %s",
-					packageName, got, want,
-				)
-			}
-		})
-	}
-}
-
-func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
-	// GIVEN: a Settings struct with some values set.
-	tests := []struct {
-		name string
-		want string // The string that was hashed.
-		had  Settings
-	}{
-		{
-			name: "empty",
-			want: "",
+			},
+			want: util.GetHash("env-user"),
 		},
 		{
-			name: "set in config",
-			want: "pass",
+			name: "config has only a password, username from the hard defaults",
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Password: "pass",
+						},
+					},
+				},
+				HardDefaults: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Username: "env-user",
+						},
+					},
+				},
+			},
+			want: util.GetHash("env-user"),
+		},
+		{
+			name: "config has only a password, an empty username authenticates",
 			had: Settings{
 				Web: WebSettings{
 					BasicAuth: &WebSettingsBasicAuth{
@@ -2388,10 +2755,84 @@ func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
 					},
 				},
 			},
+			want: util.GetHash(""),
+		},
+		{
+			name: "set everywhere, use flag",
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Username: "config",
+						},
+					},
+				},
+				FromFlags: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Username: "flag",
+						},
+					},
+				},
+				HardDefaults: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Username: "env-user",
+						},
+					},
+				},
+			},
+			want: util.GetHash("flag"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_ = tc.had.CheckValues()
+			_ = tc.had.FromFlags.CheckValues()
+			_ = tc.had.HardDefaults.CheckValues()
+
+			// WHEN: WebBasicAuthUsernameHash is called on it.
+			got := tc.had.WebBasicAuthUsernameHash()
+
+			// THEN: the layers resolve.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nWebBasicAuthUsernameHash() mismatch\ngot:  %s\nwant: %s",
+					packageName, util.FmtHash(got), util.FmtHash(tc.want),
+				)
+			}
+		})
+	}
+}
+
+func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
+	// GIVEN: a Settings struct with a password in none, one, or several layers.
+	tests := []struct {
+		name string
+		had  Settings
+		want [32]byte
+	}{
+		{
+			name: "unset in every layer",
+			had:  Settings{},
+			want: util.GetHash(""),
+		},
+		{
+			name: "set in config",
+			had: Settings{
+				Web: WebSettings{
+					BasicAuth: &WebSettingsBasicAuth{
+						Password: "pass",
+					},
+				},
+			},
+			want: util.GetHash("pass"),
 		},
 		{
 			name: "set in flag",
-			want: "pass",
 			had: Settings{
 				FromFlags: SettingsBase{
 					Web: WebSettings{
@@ -2401,14 +2842,60 @@ func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
 					},
 				},
 			},
+			want: util.GetHash("pass"),
 		},
 		{
-			name: "set everywhere, use flag",
-			want: "flag",
+			name: "set in the hard defaults",
+			had: Settings{
+				HardDefaults: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Password: "env-pass",
+						},
+					},
+				},
+			},
+			want: util.GetHash("env-pass"),
+		},
+		{
+			name: "flag has only a username, password from the config",
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Password: "pass",
+						},
+					},
+				},
+				FromFlags: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Username: "user",
+						},
+					},
+				},
+			},
+			want: util.GetHash("pass"),
+		},
+		{
+			name: "config has only a username, an empty password authenticates",
 			had: Settings{
 				Web: WebSettings{
 					BasicAuth: &WebSettingsBasicAuth{
-						Password: "config",
+						Username: "user",
+					},
+				},
+			},
+			want: util.GetHash(""),
+		},
+		{
+			name: "set everywhere, use flag",
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Password: "config",
+						},
 					},
 				},
 				FromFlags: SettingsBase{
@@ -2418,7 +2905,15 @@ func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
 						},
 					},
 				},
+				HardDefaults: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Password: "env-pass",
+						},
+					},
+				},
 			},
+			want: util.GetHash("flag"),
 		},
 	}
 
@@ -2426,27 +2921,18 @@ func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			want := util.GetHash(tc.want)
 			_ = tc.had.CheckValues()
 			_ = tc.had.FromFlags.CheckValues()
-			// HardDefaults.Web.BasicAuth will never be nil if Basic Auth is in use.
-			tc.had.HardDefaults = SettingsBase{
-				Web: WebSettings{
-					BasicAuth: &WebSettingsBasicAuth{
-						UsernameHash: util.GetHash(""),
-						PasswordHash: util.GetHash(""),
-					},
-				},
-			}
+			_ = tc.had.HardDefaults.CheckValues()
 
 			// WHEN: WebBasicAuthPasswordHash is called on it.
 			got := tc.had.WebBasicAuthPasswordHash()
 
-			// THEN: the hash is returned.
-			if got != want {
+			// THEN: the layers resolve.
+			if got != tc.want {
 				t.Errorf(
 					"%s\nWebBasicAuthPasswordHash() mismatch\ngot:  %s\nwant: %s",
-					packageName, got, want,
+					packageName, util.FmtHash(got), util.FmtHash(tc.want),
 				)
 			}
 		})

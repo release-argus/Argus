@@ -341,7 +341,7 @@ func (b *WebSettingsBasicAuth) CheckValues() {
 	// Password.
 	password := util.EvalEnvVars(b.Password)
 	b.PasswordHash = util.GetHash(password)
-	if password == b.Password {
+	if password == b.Password && b.Password != "" {
 		// Password doesn't include an env var, so hash the config val.
 		b.Password = util.FmtHash(b.PasswordHash)
 	}
@@ -351,6 +351,14 @@ func (b *WebSettingsBasicAuth) CheckValues() {
 type FaviconSettings struct {
 	SVG string `json:"svg,omitzero" yaml:"svg,omitzero"`
 	PNG string `json:"png,omitzero" yaml:"png,omitzero"`
+}
+
+// WebSettingsDemo holds the public demo instance settings: the credentials
+// its login form prefills, and the group whose members are read-only.
+type WebSettingsDemo struct {
+	Username string `json:"username,omitzero" yaml:"username,omitzero"`
+	Password string `json:"password,omitzero" yaml:"password,omitzero"`
+	Group    string `json:"group,omitzero" yaml:"group,omitzero"`
 }
 
 // WebSettings holds web server settings for the binary.
@@ -364,6 +372,7 @@ type WebSettings struct {
 	DisabledRoutes []string              `json:"disabled_routes,omitempty" yaml:"disabled_routes,omitempty"` // Disabled API routes.
 	TrustedProxies []string              `json:"trusted_proxies,omitempty" yaml:"trusted_proxies,omitempty"` // Proxies (IP/CIDR) whose forwarded headers are trusted.
 	Favicon        *FaviconSettings      `json:"favicon,omitzero" yaml:"favicon,omitzero"`                   // Favicon settings.
+	Demo           *WebSettingsDemo      `json:"demo,omitzero" yaml:"demo,omitzero"`                         // Credentials a public demo instance prefills its login form with.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -376,7 +385,8 @@ func (s WebSettings) IsZero() bool {
 		s.BasicAuth == nil &&
 		len(s.DisabledRoutes) == 0 &&
 		len(s.TrustedProxies) == 0 &&
-		s.Favicon == nil
+		s.Favicon == nil &&
+		s.Demo == nil
 }
 
 // String returns a string representation of the receiver.
@@ -413,6 +423,13 @@ func (s *WebSettings) CheckValues() error {
 		// Remove the Favicon override if both the SVG and PNG are empty.
 		if s.Favicon.SVG == "" && s.Favicon.PNG == "" {
 			s.Favicon = nil
+		}
+	}
+
+	// Demo.
+	if s.Demo != nil {
+		if s.Demo.Username == "" && s.Demo.Password == "" && s.Demo.Group == "" {
+			s.Demo = nil
 		}
 	}
 
@@ -522,6 +539,28 @@ func (s *Settings) CheckValues() error {
 
 	if err := s.SettingsBase.CheckValues(); err != nil {
 		errs = append(errs, err)
+	}
+
+	// Empty credentials let any request through the login they appear to guard.
+	if s.Web.BasicAuth != nil ||
+		s.FromFlags.Web.BasicAuth != nil ||
+		s.HardDefaults.Web.BasicAuth != nil {
+		flags := util.DerefOrZero(s.FromFlags.Web.BasicAuth)
+		config := util.DerefOrZero(s.Web.BasicAuth)
+		hardDefaults := util.DerefOrZero(s.HardDefaults.Web.BasicAuth)
+		if util.FirstNonDefault(flags.Username, config.Username, hardDefaults.Username) == "" &&
+			util.FirstNonDefault(flags.Password, config.Password, hardDefaults.Password) == "" {
+			errs = append(
+				errs,
+				&decode.ErrKeyField{
+					Key: "web",
+					Err: &decode.ErrKeyField{
+						Key: "basic_auth",
+						Err: errors.New("a username and/or a password is required"),
+					},
+				},
+			)
+		}
 	}
 
 	if s.AuthEnabled() {
@@ -850,6 +889,33 @@ func (s *Settings) WebDisabledRoutes() []string {
 	return s.HardDefaults.Web.DisabledRoutes
 }
 
+// WebDemoCredentials resolves the credentials to prefill the login form with,
+// nil unless this is a public demo instance.
+func (s *Settings) WebDemoCredentials() *WebSettingsDemo {
+	if s.Web.Demo == nil && s.HardDefaults.Web.Demo == nil {
+		return nil
+	}
+
+	value := util.DerefOrZero(s.Web.Demo)
+	hardDefault := util.DerefOrZero(s.HardDefaults.Web.Demo)
+	demo := WebSettingsDemo{
+		Username: util.FirstNonDefaultWithEnv(value.Username, hardDefault.Username),
+		Password: util.FirstNonDefaultWithEnv(value.Password, hardDefault.Password),
+	}
+	if demo.Username == "" || demo.Password == "" {
+		return nil
+	}
+	return &demo
+}
+
+// WebDemoGroup resolves the group whose members are held read-only,
+// empty when no such group is configured.
+func (s *Settings) WebDemoGroup() string {
+	value := util.DerefOrZero(s.Web.Demo)
+	hardDefault := util.DerefOrZero(s.HardDefaults.Web.Demo)
+	return util.FirstNonDefaultWithEnv(value.Group, hardDefault.Group)
+}
+
 // WebTrustedProxies resolves the reverse proxies whose forwarded headers
 // are trusted.
 func (s *Settings) WebTrustedProxies() []netip.Prefix {
@@ -877,7 +943,12 @@ func (s *Settings) WebBasicAuthUsernameHash() [32]byte {
 	if s.Web.BasicAuth != nil && s.Web.BasicAuth.Username != "" {
 		return s.Web.BasicAuth.UsernameHash
 	}
-	return s.HardDefaults.Web.BasicAuth.UsernameHash
+	// Username set through an env var.
+	if s.HardDefaults.Web.BasicAuth != nil && s.HardDefaults.Web.BasicAuth.Username != "" {
+		return s.HardDefaults.Web.BasicAuth.UsernameHash
+	}
+	// Unset - an empty username authenticates.
+	return util.GetHash("")
 }
 
 // WebBasicAuthPasswordHash resolves the SHA256 hash of the password.
@@ -890,5 +961,10 @@ func (s *Settings) WebBasicAuthPasswordHash() [32]byte {
 	if s.Web.BasicAuth != nil && s.Web.BasicAuth.Password != "" {
 		return s.Web.BasicAuth.PasswordHash
 	}
-	return s.HardDefaults.Web.BasicAuth.PasswordHash
+	// Password set through an env var.
+	if s.HardDefaults.Web.BasicAuth != nil && s.HardDefaults.Web.BasicAuth.Password != "" {
+		return s.HardDefaults.Web.BasicAuth.PasswordHash
+	}
+	// Unset - an empty password authenticates.
+	return util.GetHash("")
 }

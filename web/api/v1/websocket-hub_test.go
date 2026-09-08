@@ -17,6 +17,7 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -395,7 +396,7 @@ func TestHub_Broadcast__invalid(t *testing.T) {
 func TestHub_Broadcast__readableFiltering(t *testing.T) {
 	// GIVEN: a running hub with an unrestricted and a restricted client.
 	hub := NewHub()
-	go hub.Run()
+	go hub.Run(t.Context())
 
 	unrestricted := &Client{
 		hub:  hub,
@@ -450,7 +451,7 @@ func TestHub_Broadcast__readableFiltering(t *testing.T) {
 func TestHub_Broadcast__actionableFiltering(t *testing.T) {
 	// GIVEN: a running hub with clients of differing service_action grants.
 	hub := NewHub()
-	go hub.Run()
+	go hub.Run(t.Context())
 
 	unrestricted := &Client{
 		hub:  hub,
@@ -624,7 +625,7 @@ func TestHub_KickUserClients(t *testing.T) {
 	// GIVEN: a running hub with clients of several users,
 	// plus one with no user identity (auth disabled).
 	hub := NewHub()
-	go hub.Run()
+	go hub.Run(t.Context())
 	targetTab1 := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-a"}
 	targetTab2 := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-a"}
 	otherUser := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-b"}
@@ -658,7 +659,7 @@ func TestHub_KickSessionClients(t *testing.T) {
 	// GIVEN: a running hub with clients of several sessions,
 	// plus one with no session (auth disabled).
 	hub := NewHub()
-	go hub.Run()
+	go hub.Run(t.Context())
 	target := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-a", sessionHash: "hash-1"}
 	sameUserOtherSession := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-a", sessionHash: "hash-2"}
 	otherUser := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-b", sessionHash: "hash-3"}
@@ -692,7 +693,7 @@ func TestHub_KickSessionClients(t *testing.T) {
 func TestHub_KickRestrictedClients(t *testing.T) {
 	// GIVEN: a running hub with restricted and unrestricted clients.
 	hub := NewHub()
-	go hub.Run()
+	go hub.Run(t.Context())
 	unrestricted := &Client{hub: hub, send: make(chan []byte, 8)}
 	restricted := &Client{hub: hub, send: make(chan []byte, 8), readableServices: map[string]bool{"svc": true}}
 	restrictedToNothing := &Client{hub: hub, send: make(chan []byte, 8), readableServices: map[string]bool{}}
@@ -711,4 +712,60 @@ func TestHub_KickRestrictedClients(t *testing.T) {
 		[]*Client{restricted, restrictedToNothing, actionRestricted},
 		[]*Client{unrestricted},
 	)
+}
+
+func TestHub_Run__stopsWithContext(t *testing.T) {
+	// GIVEN: a running Hub running with a context and a registered client.
+	hub := NewHub()
+	ctx, cancel := context.WithCancel(t.Context())
+	stopped := make(chan struct{})
+	go func() {
+		hub.Run(ctx)
+		close(stopped)
+	}()
+	client := &Client{hub: hub, send: make(chan []byte, 8)}
+	hub.register <- client
+
+	// WHEN: the context is cancelled.
+	cancel()
+
+	// THEN: Run returns.
+	select {
+	case <-stopped:
+	case <-time.After(time.Second):
+		t.Fatalf(
+			"%s\nHub.Run() did not return after its context was cancelled",
+			packageName,
+		)
+	}
+
+	// AND: a client unregistering afterwards is not stranded.
+	unregistered := make(chan struct{})
+	go func() {
+		client.unregister()
+		close(unregistered)
+	}()
+	select {
+	case <-unregistered:
+	case <-time.After(time.Second):
+		t.Errorf(
+			"%s\nClient.unregister() blocked on a stopped Hub",
+			packageName,
+		)
+	}
+
+	// AND: a kick against the stopped Hub returns rather than blocking.
+	kicked := make(chan struct{})
+	go func() {
+		hub.KickUserClients("user-a")
+		close(kicked)
+	}()
+	select {
+	case <-kicked:
+	case <-time.After(time.Second):
+		t.Errorf(
+			"%s\nHub.KickUserClients() blocked on a stopped Hub",
+			packageName,
+		)
+	}
 }

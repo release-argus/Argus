@@ -65,6 +65,9 @@ func (api *API) SetupRoutesAPI() {
 	// Session/RBAC authentication.
 	if api.auth != nil {
 		v1Router.Use(api.originCheckMiddleware, api.authMiddleware())
+		if api.Config.Settings.WebDemoGroup() != "" {
+			v1Router.Use(api.demoMiddleware())
+		}
 
 		//   GET, the authenticated user and their permissions.
 		v1Router.HandleFunc("/auth/me", api.httpAuthMe).Methods(http.MethodGet)

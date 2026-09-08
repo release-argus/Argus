@@ -32,6 +32,7 @@ import (
 	"github.com/release-argus/Argus/auth/provider"
 	"github.com/release-argus/Argus/auth/session"
 	"github.com/release-argus/Argus/auth/store"
+	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
@@ -685,6 +686,37 @@ func TestAPI_AuthSetup(t *testing.T) {
 		t.Errorf("%s\nsetup_required should be true before setup", prefix)
 	}
 
+	// AND: no demo credentials are given out with none configured.
+	if state.Demo != nil {
+		t.Errorf(
+			"%s\ndemo should be nil, unset in the config\ngot: %+v",
+			prefix, state.Demo,
+		)
+	}
+
+	// AND: a demo instance gives out its credentials for the login form to prefill.
+	api.Config.Settings.Web.Demo = &config.WebSettingsDemo{
+		Username: "demo-user",
+		Password: "demo-pass",
+	}
+	w = serveAuth(api,
+		httptest.NewRequest(http.MethodGet, "/api/v1/auth/setup", nil))
+	state = apitype.SetupState{}
+	if err := decode.Unmarshal("json", w.Body.Bytes(), &state); err != nil {
+		t.Fatalf(
+			"%s\nparse demo state: %v",
+			prefix, err,
+		)
+	}
+	want := apitype.DemoCredentials{Username: "demo-user", Password: "demo-pass"}
+	if state.Demo == nil || *state.Demo != want {
+		t.Errorf(
+			"%s\ndemo credentials mismatch\ngot:  %+v\nwant: %+v",
+			prefix, state.Demo, want,
+		)
+	}
+	api.Config.Settings.Web.Demo = nil
+
 	// AND: other endpoints still require authentication.
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/users", nil)
 	if w := serveAuth(api, req); w.Code != http.StatusUnauthorized {
@@ -764,6 +796,7 @@ func TestAPI_AuthSetup(t *testing.T) {
 	// AND: setup now reports complete.
 	w = serveAuth(api,
 		httptest.NewRequest(http.MethodGet, "/api/v1/auth/setup", nil))
+	state = apitype.SetupState{}
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &state); err != nil {
 		t.Fatalf(
 			"%s\nparse state: %v",

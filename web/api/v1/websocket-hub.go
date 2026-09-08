@@ -16,6 +16,8 @@
 package v1
 
 import (
+	"context"
+
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 )
@@ -29,6 +31,7 @@ type Hub struct {
 	register   chan *Client                // Register requests from the clients.
 	unregister chan *Client                // Unregister requests from clients.
 	query      chan func(map[*Client]bool) // Observe clients on the Run goroutine.
+	done       chan struct{}               // Closed when Run returns, so clients never block on a stopped Hub.
 }
 
 // clientCount returns the number of registered clients.
@@ -44,6 +47,7 @@ func NewHub() *Hub {
 		unregister: make(chan *Client),
 		query:      make(chan func(map[*Client]bool)),
 		clients:    make(map[*Client]bool),
+		done:       make(chan struct{}),
 	}
 }
 
@@ -126,7 +130,8 @@ func (h *Hub) broadcast(message []byte) {
 // kickMatching disconnects every client matching match. Kicked clients
 // auto-reconnect, re-deriving their permitted-service sets.
 func (h *Hub) kickMatching(match func(*Client) bool) {
-	h.query <- func(clients map[*Client]bool) {
+	select {
+	case h.query <- func(clients map[*Client]bool) {
 		// Runs on the Hub goroutine, so mutating the map is safe.
 		for client := range clients {
 			if match(client) {
@@ -134,6 +139,8 @@ func (h *Hub) kickMatching(match func(*Client) bool) {
 				close(client.send)
 			}
 		}
+	}:
+	case <-h.done:
 	}
 }
 
@@ -179,10 +186,14 @@ func (h *Hub) KickRestrictedClients() {
 	})
 }
 
-// Run starts the Hub. It owns the clients map; all access happens on this goroutine.
-func (h *Hub) Run() {
+// Run starts the Hub, returning once ctx is done. It owns the clients map;
+// all access happens on this goroutine.
+func (h *Hub) Run(ctx context.Context) {
+	defer close(h.done)
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case client := <-h.register:
 			h.addClient(client)
 		case client := <-h.unregister:

@@ -33,10 +33,19 @@ type AuthMe struct {
 	Permissions []rbac.Grant `json:"permissions"`
 }
 
-// SetupState is the response of GET /api/v1/auth/setup: whether the
-// first-run setup (creating the first administrator) is still pending.
+// SetupState is the response of GET /api/v1/auth/setup: the pre-login state
+// of the instance - whether the first-run setup (creating the first
+// administrator) is still pending, and any demo credentials to prefill.
 type SetupState struct {
-	SetupRequired bool `json:"setup_required"`
+	SetupRequired bool             `json:"setup_required"`
+	Demo          *DemoCredentials `json:"demo,omitzero"`
+}
+
+// DemoCredentials are the credentials a public demo instance prefills its
+// login form with.
+type DemoCredentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 // SetupRequest is the body of POST /api/v1/auth/setup:
