@@ -297,11 +297,6 @@ export const Account = (): ReactElement => {
 							description="Your current password is required to save any change above."
 							title="Confirm changes"
 						/>
-						{errors.root && (
-							<Alert aria-label="Account update error" variant="destructive">
-								<AlertDescription>{errors.root.message}</AlertDescription>
-							</Alert>
-						)}
 						<div className="grid gap-4 sm:grid-cols-2">
 							<Field className="gap-2" data-invalid={!!currentPasswordError}>
 								<FieldLabelWithTooltip
@@ -330,6 +325,11 @@ export const Account = (): ReactElement => {
 								/>
 							</Field>
 						</div>
+						{errors.root && (
+							<Alert aria-label="Account update error" variant="destructive">
+								<AlertDescription>{errors.root.message}</AlertDescription>
+							</Alert>
+						)}
 					</section>
 				</CardContent>
 			</Card>

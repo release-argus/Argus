@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { formatRelative } from 'date-fns';
 import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { toast } from 'sonner';
 import { pluralise } from '@/components/generic/util';
 import { ModalList } from '@/components/modals/action-release/list';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ import useModal from '@/hooks/use-modal';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import reducerActionModal from '@/reducers/action-release';
 import type { WebSocketResponse } from '@/types/websocket';
-import { dateIsAfterNow, isEmptyObject } from '@/utils';
+import { beautifyGoErrors, dateIsAfterNow, isEmptyObject } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
 import type {
 	ActionAPIType,
@@ -28,6 +29,7 @@ import type {
 	WebHookSummaryListType,
 	WebHookSummaryType,
 } from '@/utils/api/types/config/summary';
+import { getErrorMessage } from '@/utils/errors';
 import { isNonEmptyObject } from '@/utils/is-empty';
 
 /**
@@ -81,6 +83,31 @@ const isActionRunnable = (
 	// Runnable if not scheduled for the future,
 	// and either all have succeeded, or this hasn't.
 	return !isScheduledForFuture && allSucceededOrThisFailed;
+};
+
+/* The target of a send, and how it was addressed. */
+type SendVariables = {
+	target: string;
+	serviceID: string;
+	isWebHook: boolean;
+	unspecificTarget: boolean;
+};
+
+/* What a send dispatched as 'sending', so a failure can undo it. */
+type SendContext = {
+	commandData: CommandSummaryListType;
+	serviceID: string;
+	webhookData: WebHookSummaryListType;
+};
+
+/**
+ * @param data - The variables the failed send was given.
+ * @returns The toast title for a send that failed before reaching the server.
+ */
+const sendFailureTitle = (data: SendVariables): string => {
+	if (data.target === 'ARGUS_SKIP') return 'Failed to skip release';
+	if (data.unspecificTarget) return 'Failed to send';
+	return `Failed to send ${data.isWebHook ? 'WebHook' : 'Command'} '${data.target}'`;
 };
 
 /**
@@ -218,18 +245,35 @@ const ActionReleaseModal = () => {
 		};
 	}, [modal.actionType, modal.service.id, modalData]);
 
-	const { mutate } = useMutation({
-		mutationFn: (data: {
-			target: string;
-			serviceID: string;
-			isWebHook: boolean;
-			unspecificTarget: boolean;
-		}) =>
+	const { mutate } = useMutation<
+		null,
+		Error,
+		SendVariables,
+		SendContext | undefined
+	>({
+		mutationFn: (data) =>
 			mapRequest('ACTION_SEND', {
 				serviceID: data.serviceID,
 				target: data.target,
 			}),
-		onMutate: (data) => {
+		onError: (error, data, context) => {
+			// No WebSocket event follows a request that never reached the server,
+			// so the sending state has to be undone here.
+			if (context)
+				setModalData({
+					command_data: context.commandData,
+					page: 'APPROVALS',
+					service_data: { id: context.serviceID },
+					sub_type: 'SEND_FAILED',
+					type: 'ACTION',
+					webhook_data: context.webhookData,
+				});
+
+			toast.error(sendFailureTitle(data), {
+				description: beautifyGoErrors(getErrorMessage(error)),
+			});
+		},
+		onMutate: (data): SendContext | undefined => {
 			if (data.target === 'ARGUS_SKIP') return;
 
 			let commandData: CommandSummaryListType = {};
@@ -247,19 +291,21 @@ const ActionReleaseModal = () => {
 				// Send these commands.
 				for (const [commandID, command] of Object.entries(modalData.commands)) {
 					if (isActionRunnable(command, allSuccessful))
-						commandData[commandID] = {};
+						commandData[commandID] = command;
 				}
 
 				// Send these webhooks.
 				for (const [webhookID, webhook] of Object.entries(modalData.webhooks)) {
 					if (isActionRunnable(webhook, allSuccessful))
-						webhookData[webhookID] = {};
+						webhookData[webhookID] = webhook;
 				}
 				// Targeting specific command/webhook.
 			} else if (data.isWebHook) {
-				webhookData = { [data.target.slice('webhook_'.length)]: {} };
+				const webhookID = data.target.slice('webhook_'.length);
+				webhookData = { [webhookID]: modalData.webhooks[webhookID] ?? {} };
 			} else {
-				commandData = { [data.target.slice('command_'.length)]: {} };
+				const commandID = data.target.slice('command_'.length);
+				commandData = { [commandID]: modalData.commands[commandID] ?? {} };
 			}
 
 			setModalData({
@@ -270,6 +316,8 @@ const ActionReleaseModal = () => {
 				type: 'ACTION',
 				webhook_data: webhookData,
 			});
+
+			return { commandData, serviceID: data.serviceID, webhookData };
 		},
 	});
 
