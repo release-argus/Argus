@@ -5,6 +5,9 @@
   "commitMessageTopic": "{{depName}}",
   "enabledManagers": ["dockerfile", "github-actions", "gomod", "npm"],
   "extends": ["config:best-practices"],
+  "lockFileMaintenance": {
+    "enabled": false
+  },
   "packageRules": [
     {
       "description": "Dockerfile base image updates",
