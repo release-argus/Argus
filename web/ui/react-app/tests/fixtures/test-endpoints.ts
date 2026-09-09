@@ -43,7 +43,7 @@ export const LOOKUP_BASIC_AUTH = {
 	username: 'test',
 };
 
-// WebHook receiver requiring a matching secret.
+// Webhook receiver requiring a matching secret.
 export const WEBHOOK_GITHUB = {
 	secretFail: 'argus-',
 	secretPass: 'argus',

@@ -1,7 +1,7 @@
 export const NOTIFY_TYPE_MAP = {
 	BARK: { label: 'Bark', value: 'bark' },
 	DISCORD: { label: 'Discord', value: 'discord' },
-	GENERIC: { label: 'Generic WebHook', value: 'generic' },
+	GENERIC: { label: 'Generic Webhook', value: 'generic' },
 	GOOGLE_CHAT: { label: 'Google Chat', value: 'googlechat' },
 	GOTIFY: { label: 'Gotify', value: 'gotify' },
 	HOME_ASSISTANT: { label: 'Home Assistant', value: 'homeassistant' },

@@ -33,11 +33,11 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-func TestWebHooks_Send(t *testing.T) {
-	// GIVEN: WebHooks.
+func TestWebhooks_Send(t *testing.T) {
+	// GIVEN: Webhooks.
 	tests := []struct {
 		name                        string
-		webhooks                    *WebHooks
+		webhooks                    *Webhooks
 		stdoutRegex, stdoutRegexAlt string
 		notifiers                   shoutrrr.Shoutrrrs
 		useDelay                    bool
@@ -51,29 +51,29 @@ func TestWebHooks_Send(t *testing.T) {
 		},
 		{
 			name: "2 successful webhooks",
-			webhooks: &WebHooks{
-				"pass": testWebHook(false, false, false),
-				"fail": testWebHook(false, false, false),
+			webhooks: &Webhooks{
+				"pass": testWebhook(false, false, false),
+				"fail": testWebhook(false, false, false),
 			},
-			stdoutRegex:    `WebHook received.*WebHook received`,
+			stdoutRegex:    `Webhook received.*Webhook received`,
 			stdoutRegexAlt: `^$`,
 		},
 		{
 			name: "successful and failing defaults",
-			webhooks: &WebHooks{
-				"pass": testWebHook(false, false, false),
-				"fail": testWebHook(true, false, false),
+			webhooks: &Webhooks{
+				"pass": testWebhook(false, false, false),
+				"fail": testWebhook(true, false, false),
 			},
-			stdoutRegex:    `WebHook received.*failed \d times to send the WebHook`,
-			stdoutRegexAlt: `failed \d times to send the WebHook.*WebHook received`,
+			stdoutRegex:    `Webhook received.*failed \d times to send the Webhook`,
+			stdoutRegexAlt: `failed \d times to send the Webhook.*Webhook received`,
 		},
 		{
 			name: "does apply defaults delay",
-			webhooks: &WebHooks{
-				"pass": testWebHook(false, false, false),
-				"fail": testWebHook(true, false, false),
+			webhooks: &Webhooks{
+				"pass": testWebhook(false, false, false),
+				"fail": testWebhook(true, false, false),
 			},
-			stdoutRegex: `WebHook received.*failed \d times to send the WebHook`,
+			stdoutRegex: `Webhook received.*failed \d times to send the Webhook`,
 			useDelay:    true,
 			delays: map[string]string{
 				"fail": "2s",
@@ -107,7 +107,7 @@ func TestWebHooks_Send(t *testing.T) {
 					// WHEN: try is called on it.
 					tc.webhooks.Send(serviceinfo.ServiceInfo{ID: tc.name}, tc.useDelay)
 
-					prefix := fmt.Sprintf("%s\nWebHooks.Send()", packageName)
+					prefix := fmt.Sprintf("%s\nWebhooks.Send()", packageName)
 
 					// THEN: the logs are expected.
 					stdout := releaseStdout()
@@ -141,8 +141,8 @@ func TestWebHooks_Send(t *testing.T) {
 	}
 }
 
-func TestWebHook_Send(t *testing.T) {
-	// GIVEN: a WebHook.
+func TestWebhook_Send(t *testing.T) {
+	// GIVEN: a Webhook.
 	tests := []struct {
 		name                                                string
 		headers, wouldFail, useDelay, deleting, silentFails bool
@@ -153,24 +153,24 @@ func TestWebHook_Send(t *testing.T) {
 	}{
 		{
 			name:        "successful defaults",
-			stdoutRegex: `WebHook received`,
+			stdoutRegex: `Webhook received`,
 		},
 		{
 			name:        "successful defaults with headers",
-			stdoutRegex: `WebHook received`,
+			stdoutRegex: `Webhook received`,
 			headers:     true,
 		},
 		{
 			name:        "does use delay",
 			useDelay:    true,
 			delay:       "3s",
-			stdoutRegex: `WebHook received`,
+			stdoutRegex: `Webhook received`,
 		},
 		{
 			name:        "no delay",
 			useDelay:    true,
 			delay:       "0s",
-			stdoutRegex: `WebHook received`,
+			stdoutRegex: `Webhook received`,
 		},
 		{
 			name:        "failing defaults",
@@ -187,12 +187,12 @@ func TestWebHook_Send(t *testing.T) {
 			name:        "retries multiple times",
 			wouldFail:   true,
 			retries:     2,
-			stdoutRegex: `(WebHook gave 500.*){2}WebHook received`,
+			stdoutRegex: `(Webhook gave 500.*){2}Webhook received`,
 		},
 		{
 			name:        "does try notifiers on fail",
 			wouldFail:   true,
-			stdoutRegex: `WebHook gave 500.*invalid gotify token`,
+			stdoutRegex: `Webhook gave 500.*invalid gotify token`,
 			notifiers: shoutrrr.Shoutrrrs{
 				"fail": shoutrrrtest.Shoutrrr(t, true, false),
 			},
@@ -201,7 +201,7 @@ func TestWebHook_Send(t *testing.T) {
 			name:        "doesn't try notifiers on fail if silentFails",
 			wouldFail:   true,
 			silentFails: true,
-			stdoutRegex: `WebHook gave 500.*failed \d times to send the WebHook [^-]+-n$`,
+			stdoutRegex: `Webhook gave 500.*failed \d times to send the Webhook [^-]+-n$`,
 			notifiers: shoutrrr.Shoutrrrs{
 				"fail": shoutrrrtest.Shoutrrr(t, true, false),
 			},
@@ -223,7 +223,7 @@ func TestWebHook_Send(t *testing.T) {
 				try++
 				contextDeadlineExceeded = false
 				releaseStdout := test.CaptureLog(t, logx.Default())
-				webhook := testWebHook(tc.wouldFail, false, tc.headers)
+				webhook := testWebhook(tc.wouldFail, false, tc.headers)
 				if tc.deleting {
 					webhook.ServiceStatus.SetDeleting()
 				}
@@ -236,13 +236,13 @@ func TestWebHook_Send(t *testing.T) {
 				if tc.retries > 0 {
 					go func() {
 						fails := testutil.ToFloat64(
-							metric.WebHookResultTotal.WithLabelValues(
+							metric.WebhookResultTotal.WithLabelValues(
 								webhook.ID, metric.ActionResultFail, svcInfo.ID,
 							),
 						)
 						for fails < float64(tc.retries) {
 							fails = testutil.ToFloat64(
-								metric.WebHookResultTotal.WithLabelValues(
+								metric.WebhookResultTotal.WithLabelValues(
 									webhook.ID, metric.ActionResultFail, svcInfo.ID,
 								),
 							)
@@ -262,7 +262,7 @@ func TestWebHook_Send(t *testing.T) {
 				startAt := time.Now()
 				webhook.Send(svcInfo, tc.useDelay)
 
-				prefix := fmt.Sprintf("%s\nWebHook.Send()", packageName)
+				prefix := fmt.Sprintf("%s\nWebhook.Send()", packageName)
 
 				// THEN: the logs are expected.
 				completedAt := time.Now()
@@ -355,7 +355,7 @@ func TestNotifiers_SendWithNotifier(t *testing.T) {
 	}
 }
 
-func TestWebHook_Try(t *testing.T) {
+func TestWebhook_Try(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -371,23 +371,23 @@ func TestWebHook_Try(t *testing.T) {
 	}{
 		{
 			name:        "success on github-style endpoint",
-			url:         test.WebHookGitHub["url_valid"],
-			secret:      test.WebHookGitHub["secret_pass"],
+			url:         test.WebhookGitHub["url_valid"],
+			secret:      test.WebhookGitHub["secret_pass"],
 			whType:      "github",
 			errRegex:    `^$`,
-			stdoutRegex: `WebHook received`,
+			stdoutRegex: `Webhook received`,
 		},
 		{
 			name:     "failure on wrong secret",
-			url:      test.WebHookGitHub["url_valid"],
-			secret:   test.WebHookGitHub["secret_fail"],
+			url:      test.WebhookGitHub["url_valid"],
+			secret:   test.WebhookGitHub["secret_fail"],
 			whType:   "github",
-			errRegex: `WebHook gave 500`,
+			errRegex: `Webhook gave 500`,
 		},
 		{
 			name:   "success with header auth",
 			url:    test.LookupWithHeaderAuth["url_valid"],
-			secret: test.WebHookGitHub["secret_pass"],
+			secret: test.WebhookGitHub["secret_pass"],
 			whType: "github",
 			headers: Headers{
 				{
@@ -396,12 +396,12 @@ func TestWebHook_Try(t *testing.T) {
 				},
 			},
 			errRegex:    `^$`,
-			stdoutRegex: `WebHook received`,
+			stdoutRegex: `Webhook received`,
 		},
 		{
 			name:   "failure with invalid header auth",
 			url:    test.LookupWithHeaderAuth["url_valid"],
-			secret: test.WebHookGitHub["secret_pass"],
+			secret: test.WebhookGitHub["secret_pass"],
 			whType: "github",
 			headers: Headers{
 				{
@@ -409,39 +409,39 @@ func TestWebHook_Try(t *testing.T) {
 					Value: test.LookupWithHeaderAuth["header_value_fail"],
 				},
 			},
-			errRegex: `(?s)WebHook gave 200, not 2XX.*Hook rules were not satisfied`,
+			errRegex: `(?s)Webhook gave 200, not 2XX.*Hook rules were not satisfied`,
 		},
 		{
 			name:     "rejects invalid TLS certificate",
-			url:      test.WebHookGitHub["url_invalid"],
-			secret:   test.WebHookGitHub["secret_pass"],
+			url:      test.WebhookGitHub["url_invalid"],
+			secret:   test.WebhookGitHub["secret_pass"],
 			whType:   "github",
 			errRegex: `(?i)certificate`,
 		},
 		{
 			name:              "allows invalid TLS certificate when configured",
-			url:               test.WebHookGitHub["url_invalid"],
-			secret:            test.WebHookGitHub["secret_pass"],
+			url:               test.WebhookGitHub["url_invalid"],
+			secret:            test.WebhookGitHub["secret_pass"],
 			whType:            "github",
 			allowInvalidCerts: new(true),
 			errRegex:          `^$`,
-			stdoutRegex:       `WebHook received`,
+			stdoutRegex:       `Webhook received`,
 		},
 		{
 			name:        "unsupported webhook type",
-			url:         test.WebHookGitHub["url_valid"],
-			secret:      test.WebHookGitHub["secret_pass"],
+			url:         test.WebhookGitHub["url_valid"],
+			secret:      test.WebhookGitHub["secret_pass"],
 			whType:      "url",
-			errRegex:    `failed to get \*http.request for WebHook`,
-			stdoutRegex: `failed to get \*http.request for WebHook`,
+			errRegex:    `failed to get \*http.request for Webhook`,
+			stdoutRegex: `failed to get \*http.request for Webhook`,
 		},
 		{
 			name:              "wrong desired status code",
-			url:               test.WebHookGitHub["url_valid"],
-			secret:            test.WebHookGitHub["secret_pass"],
+			url:               test.WebhookGitHub["url_valid"],
+			secret:            test.WebhookGitHub["secret_pass"],
 			whType:            "github",
 			desiredStatusCode: new(uint16(404)),
-			errRegex:          `WebHook gave 200, not 404`,
+			errRegex:          `Webhook gave 200, not 404`,
 		},
 	}
 
@@ -457,7 +457,7 @@ func TestWebHook_Try(t *testing.T) {
 
 				releaseStdout := test.CaptureLog(t, logx.Default())
 
-				webhook := testWebHook(false, false, false)
+				webhook := testWebhook(false, false, false)
 				webhook.URL = tc.url
 				webhook.Secret = tc.secret
 				webhook.Type = tc.whType
@@ -480,7 +480,7 @@ func TestWebHook_Try(t *testing.T) {
 				err := webhook.try(logFrom)
 
 				stdout := releaseStdout()
-				prefix := fmt.Sprintf("%s\nWebHook.try()", packageName)
+				prefix := fmt.Sprintf("%s\nWebhook.try()", packageName)
 
 				// THEN: the error matches.
 				gotErr := errfmt.FormatError(err)
@@ -518,8 +518,8 @@ func TestWebHook_Try(t *testing.T) {
 	}
 }
 
-func TestWebHook_ParseTry(t *testing.T) {
-	// GIVEN: a WebHook and parseTry inputs.
+func TestWebhook_ParseTry(t *testing.T) {
+	// GIVEN: a Webhook and parseTry inputs.
 	tests := []struct {
 		name             string
 		tryErr           error
@@ -548,18 +548,18 @@ func TestWebHook_ParseTry(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			webhook := testWebHook(false, false, false)
+			webhook := testWebhook(false, false, false)
 			webhook.ID = tc.name
 			svcID := webhook.ServiceStatus.ServiceInfo.ID
 			webhook.initMetrics()
 
 			hadS := testutil.ToFloat64(
-				metric.WebHookResultTotal.WithLabelValues(
+				metric.WebhookResultTotal.WithLabelValues(
 					webhook.ID, metric.ActionResultSuccess, svcID,
 				),
 			)
 			hadF := testutil.ToFloat64(
-				metric.WebHookResultTotal.WithLabelValues(
+				metric.WebhookResultTotal.WithLabelValues(
 					webhook.ID, metric.ActionResultFail, svcID,
 				),
 			)
@@ -571,18 +571,18 @@ func TestWebHook_ParseTry(t *testing.T) {
 
 			stdout := releaseStdout()
 			prefix := fmt.Sprintf(
-				"%s\nWebHook.parseTry(err=%v, serviceID=%q)",
+				"%s\nWebhook.parseTry(err=%v, serviceID=%q)",
 				packageName, tc.tryErr, svcID,
 			)
 
 			// THEN: Prometheus counters change as expected.
 			gotS := testutil.ToFloat64(
-				metric.WebHookResultTotal.WithLabelValues(
+				metric.WebhookResultTotal.WithLabelValues(
 					webhook.ID, metric.ActionResultSuccess, svcID,
 				),
 			)
 			gotF := testutil.ToFloat64(
-				metric.WebHookResultTotal.WithLabelValues(
+				metric.WebhookResultTotal.WithLabelValues(
 					webhook.ID, metric.ActionResultFail, svcID,
 				),
 			)

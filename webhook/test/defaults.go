@@ -31,7 +31,7 @@ func PlainConfig(t *testing.T) webhook.Config {
 	hardDefaults.Default()
 
 	return webhook.Config{
-		Root:         webhook.WebHooksDefaults{},
+		Root:         webhook.WebhooksDefaults{},
 		Defaults:     defaults,
 		HardDefaults: hardDefaults,
 	}

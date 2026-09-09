@@ -442,7 +442,7 @@ func (api *API) readableServices(authCtx *auth.Context) map[string]bool {
 	return api.permittedServices(authCtx, rbac.ResourceService, rbac.ActionRead)
 }
 
-// actionableServices returns the set of service IDs whose WebHook/Command
+// actionableServices returns the set of service IDs whose Webhook/Command
 // broadcasts the user may receive, or nil when unrestricted
 // (global service_action:execute).
 // Evaluated at the WebSocket handshake.

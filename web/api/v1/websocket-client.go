@@ -116,7 +116,7 @@ type Client struct {
 	// (nil = unrestricted). Derived from the user's permission grants at handshake.
 	readableServices map[string]bool
 
-	// actionableServices limits which services' WebHook/Command broadcasts this
+	// actionableServices limits which services' Webhook/Command broadcasts this
 	// client receives (nil = unrestricted). Derived from the user's
 	// permission grants at handshake.
 	actionableServices map[string]bool
@@ -138,7 +138,7 @@ func (c *Client) mayReceive(serviceID string) bool {
 }
 
 // mayReceiveActions reports whether the client may receive a broadcast
-// carrying serviceID's WebHook/Command content, which service_action:execute
+// carrying serviceID's Webhook/Command content, which service_action:execute
 // gates alongside [Client.mayReceive].
 func (c *Client) mayReceiveActions(serviceID string) bool {
 	if c.actionableServices == nil {

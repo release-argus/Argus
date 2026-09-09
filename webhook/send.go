@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package webhook provides WebHook functionality to services.
+// Package webhook provides Webhook functionality to services.
 package webhook
 
 import (
@@ -31,24 +31,24 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// Send sends each WebHook, optionally applying a delay between them.
-func (w *WebHooks) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
+// Send sends each Webhook, optionally applying a delay between them.
+func (w *Webhooks) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
 	if w == nil {
 		return nil
 	}
 
 	errChan := make(chan error, len(*w))
 	for _, wh := range *w {
-		go func(webhook *WebHook) {
+		go func(webhook *Webhook) {
 			errChan <- webhook.Send(serviceInfo, useDelay)
 		}(wh)
 
-		// Space out WebHook send starts.
+		// Space out Webhook send starts.
 		//#nosec G404 —- sleep does not need cryptographic security.
 		time.Sleep(time.Duration(100+rand.Intn(150)) * time.Millisecond)
 	}
 
-	// Wait for all WebHooks to finish.
+	// Wait for all Webhooks to finish.
 	var errs []error
 	for range *w {
 		if err := <-errChan; err != nil {
@@ -62,13 +62,13 @@ func (w *WebHooks) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) erro
 	return errors.Join(errs...)
 }
 
-// Send attempts to send the WebHook up to MaxTries times until successful.
-func (w *WebHook) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
+// Send attempts to send the Webhook up to MaxTries times until successful.
+func (w *Webhook) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error {
 	logFrom := logx.LogFrom{Primary: w.ID, Secondary: serviceInfo.ID}
 
 	if useDelay && w.GetDelay() != "0s" {
-		// Delay sending the WebHook message by the defined interval.
-		msg := fmt.Sprintf("Sleeping for %s before sending the WebHook", w.GetDelay())
+		// Delay sending the Webhook message by the defined interval.
+		msg := fmt.Sprintf("Sleeping for %s before sending the Webhook", w.GetDelay())
 		logx.Info(msg, logFrom, true)
 		w.SetExecuting(true, true) // disable sending of auto_approved w/ delay.
 		time.Sleep(w.GetDelayDuration())
@@ -95,7 +95,7 @@ func (w *WebHook) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error
 	}
 
 	err := fmt.Errorf(
-		"failed %d times to send the WebHook for %s to %q",
+		"failed %d times to send the Webhook for %s to %q",
 		w.GetMaxTries(), w.ServiceStatus.ServiceInfo.ID, w.ID,
 	)
 	logx.Error(err, logFrom, true)
@@ -105,7 +105,7 @@ func (w *WebHook) Send(serviceInfo serviceinfo.ServiceInfo, useDelay bool) error
 	if !w.GetSilentFails() {
 		//#nosec G104 -- Errors are logged to CLI
 		//nolint:errcheck // ^
-		w.Notifiers.Send("WebHook fail", err.Error(), serviceInfo)
+		w.Notifiers.Send("Webhook fail", err.Error(), serviceInfo)
 	}
 	return errors.Join(sendErrs, err)
 }
@@ -120,11 +120,11 @@ func (n *Notifiers) Send(title, message string, serviceInfo serviceinfo.ServiceI
 	return (*n.Shoutrrr).Send(title, message, serviceInfo, false)
 }
 
-// try makes a single send attempt for the WebHook.
-func (w *WebHook) try(logFrom logx.LogFrom) error {
+// try makes a single send attempt for the Webhook.
+func (w *Webhook) try(logFrom logx.LogFrom) error {
 	req := w.BuildRequest()
 	if req == nil {
-		err := errors.New("failed to get *http.request for WebHook")
+		err := errors.New("failed to get *http.request for Webhook")
 		logx.Error(err, logFrom, true)
 		return err
 	}
@@ -146,14 +146,14 @@ func (w *WebHook) try(logFrom logx.LogFrom) error {
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
-	bodyOkay := checkWebHookBody(string(body))
+	bodyOkay := checkWebhookBody(string(body))
 
 	// SUCCESS!
 	desiredStatusCode := w.GetDesiredStatusCode()
 	if bodyOkay &&
 		(resp.StatusCode == int(desiredStatusCode) ||
 			(desiredStatusCode == 0 && (strconv.Itoa(resp.StatusCode)[:1] == "2"))) {
-		msg := fmt.Sprintf("(%d) WebHook received", resp.StatusCode)
+		msg := fmt.Sprintf("(%d) Webhook received", resp.StatusCode)
 		logx.Info(msg, logFrom, true)
 		return nil
 	}
@@ -166,18 +166,18 @@ func (w *WebHook) try(logFrom logx.LogFrom) error {
 	}
 
 	return fmt.Errorf(
-		"WebHook gave %d, not %s:\n%s\n%s",
+		"Webhook gave %d, not %s:\n%s\n%s",
 		resp.StatusCode, prettyStatusCode,
 		resp.Status, string(body),
 	)
 }
 
 // parseTry updates the Prometheus counter and logs any error from a single send attempt.
-func (w *WebHook) parseTry(err error, serviceID string, logFrom logx.LogFrom) {
+func (w *Webhook) parseTry(err error, serviceID string, logFrom logx.LogFrom) {
 	// SUCCESS!
 	if err == nil {
 		metric.IncPrometheusCounter(
-			metric.WebHookResultTotal,
+			metric.WebhookResultTotal,
 			w.ID,
 			serviceID,
 			"",
@@ -192,7 +192,7 @@ func (w *WebHook) parseTry(err error, serviceID string, logFrom logx.LogFrom) {
 	// FAIL!
 	logx.Error(err, logFrom, true)
 	metric.IncPrometheusCounter(
-		metric.WebHookResultTotal,
+		metric.WebhookResultTotal,
 		w.ID,
 		serviceID,
 		"",
@@ -200,9 +200,9 @@ func (w *WebHook) parseTry(err error, serviceID string, logFrom logx.LogFrom) {
 	)
 }
 
-// checkWebHookBody reports whether the response body is valid for the WebHook.
+// checkWebhookBody reports whether the response body is valid for the Webhook.
 // It returns false if the body contains certain forbidden phrases.
-func checkWebHookBody(body string) (okay bool) {
+func checkWebhookBody(body string) (okay bool) {
 	okay = true
 	if body == "" {
 		return

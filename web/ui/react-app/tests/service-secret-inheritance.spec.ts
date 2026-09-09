@@ -213,7 +213,7 @@ test.describe('Service secret inheritance', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: a service with an update available and a WebHook whose secret is
+		// GIVEN: a service with an update available and a Webhook whose secret is
 		// the one the receiver requires.
 		await createService(page, id, {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
@@ -231,9 +231,9 @@ test.describe('Service secret inheritance', () => {
 		});
 		await page.reload();
 
-		// WHEN: the service is reopened and its WebHook item expanded.
+		// WHEN: the service is reopened and its Webhook item expanded.
 		const dialog = await openEditModal(page, id);
-		const section = await openSection(dialog, 'WebHook');
+		const section = await openSection(dialog, 'Webhook');
 		await section
 			.locator('[data-slot="accordion-trigger"]', { hasText: /^0:/ })
 			.click();
@@ -257,7 +257,7 @@ test.describe('Service secret inheritance', () => {
 		await saveEdit(dialog);
 		await screenshot(page, `${shotDir}/02-after-save`, testInfo.project.name);
 
-		// THEN: sending the WebHook succeeds - only possible if the secret was
+		// THEN: sending the Webhook succeeds - only possible if the secret was
 		// inherited on save (a lost/corrupted secret is rejected by the receiver).
 		const card = serviceCard(page, id);
 		await card.getByRole('button', { name: /approve|resend/i }).click();
@@ -476,7 +476,7 @@ test.describe('Service secret inheritance on rename', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: a service with an update available and a WebHook whose secret is
+		// GIVEN: a service with an update available and a Webhook whose secret is
 		// the one the receiver requires.
 		await createService(page, id, {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
@@ -494,10 +494,10 @@ test.describe('Service secret inheritance on rename', () => {
 		});
 		await page.reload();
 
-		// WHEN: the service is reopened, its WebHook item expanded and *renamed*
+		// WHEN: the service is reopened, its Webhook item expanded and *renamed*
 		// (leaving the masked secret untouched), then saved.
 		const dialog = await openEditModal(page, id);
-		const section = await openSection(dialog, 'WebHook');
+		const section = await openSection(dialog, 'Webhook');
 		await section
 			.locator('[data-slot="accordion-trigger"]', { hasText: /^0:/ })
 			.click();
@@ -507,7 +507,7 @@ test.describe('Service secret inheritance on rename', () => {
 		await saveEdit(dialog);
 		await screenshot(page, `${shotDir}/01-after-rename`, testInfo.project.name);
 
-		// THEN: sending the WebHook still succeeds - only possible if the secret
+		// THEN: sending the Webhook still succeeds - only possible if the secret
 		// was inherited across the rename.
 		const card = serviceCard(page, id);
 		await card.getByRole('button', { name: /approve|resend/i }).click();

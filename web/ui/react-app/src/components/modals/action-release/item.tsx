@@ -82,7 +82,7 @@ type ItemProps = {
 	failed?: boolean;
 	sending: boolean;
 	next_runnable: string;
-	ack: (target: string, isWebHook: boolean) => void;
+	ack: (target: string, isWebhook: boolean) => void;
 };
 
 /**

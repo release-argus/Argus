@@ -92,9 +92,9 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty/WebHook",
+			name: "non-empty/Webhook",
 			opt: &Defaults{
-				WebHook: map[string]struct{}{
+				Webhook: map[string]struct{}{
 					"bar": {},
 				},
 			},
@@ -127,7 +127,7 @@ func TestDefaults_IsZero(t *testing.T) {
 				Command: command.Commands{
 					{"echo", "test"},
 				},
-				WebHook: map[string]struct{}{
+				Webhook: map[string]struct{}{
 					"bar": {},
 				},
 				Dashboard: *test.Must(t, func() (*dashboard.Defaults, error) {

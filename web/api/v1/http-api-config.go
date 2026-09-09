@@ -73,13 +73,13 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 	serviceNotifyDefaults := util.SortedKeys(api.Config.Defaults.Service.Notify)
 	// Defaults.Service.Command.
 	serviceCommandDefaults := convertCommands(api.Config.Defaults.Service.Command)
-	// Defaults.Service.WebHook.
-	serviceWebHookDefaults := util.SortedKeys(api.Config.Defaults.Service.WebHook)
+	// Defaults.Service.Webhook.
+	serviceWebhookDefaults := util.SortedKeys(api.Config.Defaults.Service.Webhook)
 
 	// Defaults.Notify.
 	notifyDefaults := convertAndCensorNotifiersDefaults(api.Config.Defaults.Notify)
-	// Defaults.WebHook.
-	webhookDefaults := convertAndCensorWebHookDefaults(api.Config.Defaults.WebHook)
+	// Defaults.Webhook.
+	webhookDefaults := convertAndCensorWebhookDefaults(api.Config.Defaults.Webhook)
 
 	cfg.Defaults = apitype.Defaults{
 		Service: apitype.ServiceDefaults{
@@ -108,17 +108,17 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 			},
 			Notify:  serviceNotifyDefaults,
 			Command: serviceCommandDefaults,
-			WebHook: serviceWebHookDefaults,
+			Webhook: serviceWebhookDefaults,
 		},
 		Notify:  notifyDefaults,
-		WebHook: webhookDefaults,
+		Webhook: webhookDefaults,
 	}
 
 	// Notify.
 	cfg.Notify = convertAndCensorNotifiersDefaults(api.Config.Notify)
 
-	// WebHook.
-	cfg.WebHook = convertAndCensorWebHooksDefaults(api.Config.WebHook)
+	// Webhook.
+	cfg.Webhook = convertAndCensorWebhooksDefaults(api.Config.Webhook)
 
 	// Service.
 	api.Config.OrderMu.RLock()

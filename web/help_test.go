@@ -188,7 +188,7 @@ func testConfig(t *testing.T, path string) (cfg *config.Config) {
 	// Defaults.
 	defaults, hardDefaults := plainDefaults(t)
 	cfg.Defaults, cfg.HardDefaults = *defaults, *hardDefaults
-	cfg.WebHook = webhook.WebHooksDefaults{}
+	cfg.Webhook = webhook.WebhooksDefaults{}
 	cfg.Notify = shoutrrr.ShoutrrrsDefaults{}
 	svcCfg := service.DefaultsConfig{
 		Soft: &cfg.Defaults.Service,
@@ -205,10 +205,10 @@ func testConfig(t *testing.T, path string) (cfg *config.Config) {
 	// Notify.
 	cfg.Notify = cfg.Defaults.Notify
 
-	// WebHook.
-	whPass := testWebHookDefaults(false)
-	whFail := testWebHookDefaults(true)
-	cfg.WebHook = webhook.WebHooksDefaults{
+	// Webhook.
+	whPass := testWebhookDefaults(false)
+	whFail := testWebhookDefaults(true)
+	cfg.Webhook = webhook.WebhooksDefaults{
 		"pass": whPass,
 		"fail": whFail,
 	}
@@ -267,7 +267,7 @@ func testService(t *testing.T, id string, svcCfg service.DefaultsConfig) *servic
 				webhook:
 					test:
 						type: github
-						url: `+test.WebHookGitHub["url_valid"]+`
+						url: `+test.WebhookGitHub["url_valid"]+`
 						secret: argus
 				dashboard:
 					auto_approve: false
@@ -285,7 +285,7 @@ func testService(t *testing.T, id string, svcCfg service.DefaultsConfig) *servic
 	return svc
 }
 
-func testWebHookDefaults(failing bool) *webhook.Defaults {
+func testWebhookDefaults(failing bool) *webhook.Defaults {
 	secret := "argus"
 	if failing {
 		secret = "notArgus"
@@ -300,7 +300,7 @@ func testWebHookDefaults(failing bool) *webhook.Defaults {
 			secret: `+secret+`
 			silent_fails: false
 			type: github
-			url: `+test.WebHookGitHub["url_valid"]+`
+			url: `+test.WebhookGitHub["url_valid"]+`
 		`)),
 	)
 	return wh

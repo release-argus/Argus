@@ -1,7 +1,7 @@
 import type {
 	CommandSummaryListType,
 	ServiceSummary,
-	WebHookSummaryListType,
+	WebhookSummaryListType,
 } from '@/utils/api/types/config/summary';
 
 export type WebSocketResponse =
@@ -11,7 +11,7 @@ export type WebSocketResponse =
 			sub_type: 'SENDING' | 'SEND_FAILED' | 'REFRESH' | 'RESET';
 			service_data?: ServiceSummary;
 			command_data?: CommandSummaryListType;
-			webhook_data?: WebHookSummaryListType;
+			webhook_data?: WebhookSummaryListType;
 	  }
 	| {
 			page: 'APPROVALS';
@@ -19,7 +19,7 @@ export type WebSocketResponse =
 			sub_type: 'EVENT';
 			service_data: ServiceSummary;
 			command_data?: CommandSummaryListType;
-			webhook_data?: WebHookSummaryListType;
+			webhook_data?: WebhookSummaryListType;
 	  }
 	| {
 			page: 'APPROVALS';

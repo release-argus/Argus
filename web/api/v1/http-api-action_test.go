@@ -55,7 +55,7 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 		name      string
 		serviceID *string
 		commands  command.Commands
-		webhooks  webhook.WebHooks
+		webhooks  webhook.Webhooks
 		wants     wants
 	}{
 		{
@@ -93,15 +93,15 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 		},
 		{
 			name: "known service_id/0 command, 1 webhooks",
-			webhooks: webhook.WebHooks{
-				"fail0": whtest.WebHook(t, true, false, false),
+			webhooks: webhook.Webhooks{
+				"fail0": whtest.Webhook(t, true, false, false),
 			},
 		},
 		{
 			name: "known service_id/0 command, 2 webhooks",
-			webhooks: webhook.WebHooks{
-				"fail0": whtest.WebHook(t, true, false, false),
-				"pass0": whtest.WebHook(t, false, false, false),
+			webhooks: webhook.Webhooks{
+				"fail0": whtest.Webhook(t, true, false, false),
+				"pass0": whtest.Webhook(t, false, false, false),
 			},
 		},
 		{
@@ -110,9 +110,9 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 				testCommand(true),
 				testCommand(false),
 			},
-			webhooks: webhook.WebHooks{
-				"fail0": whtest.WebHook(t, true, false, false),
-				"pass0": whtest.WebHook(t, false, false, false),
+			webhooks: webhook.Webhooks{
+				"fail0": whtest.Webhook(t, true, false, false),
+				"pass0": whtest.Webhook(t, false, false, false),
 			},
 		},
 	}
@@ -139,8 +139,8 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 				new("10m"),
 			)
 
-			svc.WebHook = tc.webhooks
-			svc.WebHook.Init(
+			svc.Webhook = tc.webhooks
+			svc.Webhook.Init(
 				&svc.Status,
 				whCfg,
 				&svc.Notify,
@@ -209,7 +209,7 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 					prefix, gotLen, wantLen, message,
 				)
 			}
-			if gotLen, wantLen := len(gotStruct.WebHook), len(tc.webhooks); gotLen != wantLen {
+			if gotLen, wantLen := len(gotStruct.Webhook), len(tc.webhooks); gotLen != wantLen {
 				t.Fatalf(
 					"%s webhooks count mismatch\ngot:  %d\nwant: %d\nbody: %q",
 					prefix, gotLen, wantLen, message,
@@ -251,12 +251,12 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 			}
 			// Check webhooks.
 			if tc.webhooks != nil {
-				for wh, got := range gotStruct.WebHook {
+				for wh, got := range gotStruct.Webhook {
 					found := false
 					for _, want := range tc.webhooks {
 						if wh == want.ID {
 							found = true
-							if got.Failed != want.ServiceStatus.Fails.WebHook.Get(wh) ||
+							if got.Failed != want.ServiceStatus.Fails.Webhook.Get(wh) ||
 								got.NextRunnable != want.NextRunnable() {
 								t.Fatalf(
 									"%s webhook %q mismatch\ngot:  %+v\nwant: %+v\nbody: %q",
@@ -430,7 +430,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		target        *string
 		commands      command.Commands
 		commandFails  []*bool
-		webhooks      webhook.WebHooks
+		webhooks      webhook.Webhooks
 		webhookFails  map[string]*bool
 		removeDVL     bool
 		latestVersion string
@@ -507,8 +507,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		{
 			name:   "ARGUS_ALL/known service_id with webhook",
 			target: new(ActionAll),
-			webhooks: webhook.WebHooks{
-				"known-service-and-webhook": whtest.WebHook(t, true, false, false),
+			webhooks: webhook.Webhooks{
+				"known-service-and-webhook": whtest.Webhook(t, true, false, false),
 			},
 			wants: wants{
 				statusCode: http.StatusOK,
@@ -517,9 +517,9 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		{
 			name:   "ARGUS_ALL/known service_id with multiple webhooks",
 			target: new(ActionAll),
-			webhooks: webhook.WebHooks{
-				"known-service-and-multiple-webhook-0": whtest.WebHook(t, true, false, false),
-				"known-service-and-multiple-webhook-1": whtest.WebHook(t, true, false, false),
+			webhooks: webhook.Webhooks{
+				"known-service-and-multiple-webhook-0": whtest.Webhook(t, true, false, false),
+				"known-service-and-multiple-webhook-1": whtest.Webhook(t, true, false, false),
 			},
 			wants: wants{
 				statusCode: http.StatusOK,
@@ -542,8 +542,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			commands: command.Commands{
 				{"ls", "-b"},
 			},
-			webhooks: webhook.WebHooks{
-				"known-service-dvl-webhook-0": whtest.WebHook(t, false, false, false),
+			webhooks: webhook.Webhooks{
+				"known-service-dvl-webhook-0": whtest.Webhook(t, false, false, false),
 			},
 			latestVersion: "0.9.0",
 			wants: wants{
@@ -557,8 +557,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			commands: command.Commands{
 				{"ls", "-c"},
 			},
-			webhooks: webhook.WebHooks{
-				"known-service-upgrade-deployed-version-webhook-0": whtest.WebHook(t, false, false, false),
+			webhooks: webhook.Webhooks{
+				"known-service-upgrade-deployed-version-webhook-0": whtest.Webhook(t, false, false, false),
 			},
 			removeDVL:     true,
 			latestVersion: "0.9.0",
@@ -573,8 +573,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			commands: command.Commands{
 				{"ls", "-d"},
 			},
-			webhooks: webhook.WebHooks{
-				"known-service-fail-webhook-0": whtest.WebHook(t, true, false, false),
+			webhooks: webhook.Webhooks{
+				"known-service-fail-webhook-0": whtest.Webhook(t, true, false, false),
 			},
 			wants: wants{
 				statusCode:              http.StatusOK,
@@ -587,8 +587,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			commands: command.Commands{
 				{"fail"},
 			},
-			webhooks: webhook.WebHooks{
-				"known-service-pass-webhook-0": whtest.WebHook(t, false, false, false),
+			webhooks: webhook.Webhooks{
+				"known-service-pass-webhook-0": whtest.Webhook(t, false, false, false),
 			},
 			wants: wants{
 				statusCode:              http.StatusOK,
@@ -604,9 +604,9 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			commandFails: []*bool{
 				new(false),
 			},
-			webhooks: webhook.WebHooks{
-				"will_pass":  whtest.WebHook(t, false, false, false),
-				"would_fail": whtest.WebHook(t, true, false, false),
+			webhooks: webhook.Webhooks{
+				"will_pass":  whtest.Webhook(t, false, false, false),
+				"would_fail": whtest.Webhook(t, true, false, false),
 			},
 			webhookFails: map[string]*bool{
 				"will_pass":  new(true),
@@ -630,8 +630,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				new(false),
 				new(true),
 			},
-			webhooks: webhook.WebHooks{
-				"would_fail": whtest.WebHook(t, true, false, false),
+			webhooks: webhook.Webhooks{
+				"would_fail": whtest.Webhook(t, true, false, false),
 			},
 			webhookFails: map[string]*bool{
 				"would_fail": new(false),
@@ -687,8 +687,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				}
 			}
 
-			svc.WebHook = tc.webhooks
-			svc.WebHook.Init(
+			svc.Webhook = tc.webhooks
+			svc.Webhook.Init(
 				&svc.Status,
 				whCfg,
 				&svc.Notify,
@@ -696,7 +696,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			)
 			if len(tc.webhookFails) != 0 {
 				for key := range tc.webhookFails {
-					svc.WebHook[key].Failed.Set(key, tc.webhookFails[key])
+					svc.Webhook[key].Failed.Set(key, tc.webhookFails[key])
 				}
 			}
 
@@ -900,13 +900,13 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 					}
 					if !receivedForAnAction {
 						for i := range tc.webhooks {
-							if message.WebHookData[i] != nil {
+							if message.WebhookData[i] != nil {
 								receivedForAnAction = true
 								received = append(received, i)
 								t.Logf(
 									"%s FOUND WEBHOOK %q - failed=%s",
 									prefix, i,
-									test.StringifyPtr(message.WebHookData[i].Failed),
+									test.StringifyPtr(message.WebhookData[i].Failed),
 								)
 								break
 							}

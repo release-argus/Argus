@@ -67,7 +67,7 @@ func (c *Config) CheckValues() bool {
 		)
 	}
 	// webhook.
-	webhookErr, webhookChanged := c.WebHook.CheckValues()
+	webhookErr, webhookChanged := c.Webhook.CheckValues()
 	if webhookErr != nil {
 		errs = append(
 			errs,
@@ -115,8 +115,8 @@ func (c *Config) Print(flag *bool) {
 		c.Notify.Print("")
 		fmt.Println()
 	}
-	if len(c.WebHook) > 0 {
-		c.WebHook.Print("")
+	if len(c.Webhook) > 0 {
+		c.Webhook.Print("")
 		fmt.Println()
 	}
 	if len(c.Order) > 0 {

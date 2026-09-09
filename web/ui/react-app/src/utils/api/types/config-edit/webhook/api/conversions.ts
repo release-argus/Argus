@@ -1,10 +1,10 @@
 import { removeEmptyValues } from '@/utils';
 import { applyDefaultsRecursive } from '@/utils/api/types/config-edit/util';
 import {
-	type WebHookSchema,
-	type WebHookSchemaOutgoing,
-	type WebHooksSchema,
-	type WebHooksSchemaOutgoing,
+	type WebhookSchema,
+	type WebhookSchemaOutgoing,
+	type WebhooksSchema,
+	type WebhooksSchemaOutgoing,
 	webhookSchemaMapOutgoingWithDefaults,
 } from '@/utils/api/types/config-edit/webhook/schemas';
 import diffLists from '@/utils/diff-lists';
@@ -18,19 +18,19 @@ import diffLists from '@/utils/diff-lists';
  * @param typeDefaults - Type-specific webhook form data.
  * @returns The API payload with matching defaults removed.
  */
-export const mapWebHooksSchemaToAPIPayload = (
-	data: WebHooksSchema,
-	defaultValue?: WebHooksSchema,
-	mainDefaults?: Record<string, WebHookSchema>,
-	typeDefaults?: WebHookSchema,
-): WebHooksSchemaOutgoing => {
+export const mapWebhooksSchemaToAPIPayload = (
+	data: WebhooksSchema,
+	defaultValue?: WebhooksSchema,
+	mainDefaults?: Record<string, WebhookSchema>,
+	typeDefaults?: WebhookSchema,
+): WebhooksSchemaOutgoing => {
 	const dataMinimised = data.map((item) => {
 		const defaultsForItem = applyDefaultsRecursive(
 			mainDefaults?.[item.name] ?? null,
 			typeDefaults,
 		);
-		const d = mapWebHookSchemaToAPIPayload(item, defaultsForItem);
-		return removeEmptyValues(d) as WebHookSchemaOutgoing;
+		const d = mapWebhookSchemaToAPIPayload(item, defaultsForItem);
+		return removeEmptyValues(d) as WebhookSchemaOutgoing;
 	});
 
 	// Omit if all defaults used and unmodified.
@@ -58,15 +58,15 @@ export const mapWebHooksSchemaToAPIPayload = (
  *
  * @param item - The form schema.
  * @param defaults - The default values to compare against (and omit where used).
- * @returns A `WebHookSchemaOutgoing` representing the `WebHookSchema`.
+ * @returns A `WebhookSchemaOutgoing` representing the `WebhookSchema`.
  */
-export const mapWebHookSchemaToAPIPayload = (
-	item: WebHookSchema,
-	defaults?: WebHookSchema,
-): WebHookSchemaOutgoing => {
+export const mapWebhookSchemaToAPIPayload = (
+	item: WebhookSchema,
+	defaults?: WebhookSchema,
+): WebhookSchemaOutgoing => {
 	const schema = webhookSchemaMapOutgoingWithDefaults(defaults);
 
 	return removeEmptyValues(
-		schema.parse(item) as WebHookSchemaOutgoing,
-	) as WebHookSchemaOutgoing;
+		schema.parse(item) as WebhookSchemaOutgoing,
+	) as WebhookSchemaOutgoing;
 };

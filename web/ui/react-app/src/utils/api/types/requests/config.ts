@@ -30,7 +30,7 @@ const trimConfig = (
 				? trimArray(value as unknown[], `${path}.${key}`)
 				: trimConfig(value as Record<string, unknown>, `${path}.${key}`);
 
-			// Notify/WebHook objects may be empty to reference mains.
+			// Notify/Webhook objects may be empty to reference mains.
 			// e.g. .service.*.notify | .service.*.webhook
 			// e.g. .defaults.service.*.notify | .defaults.service.*.webhook
 			const isKeepPath =

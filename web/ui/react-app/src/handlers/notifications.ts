@@ -101,12 +101,12 @@ export const handleNotifications = (
 			for (const [key, wh] of Object.entries(event.webhook_data ?? [])) {
 				if (wh.failed === false) {
 					toast.success(serviceName, {
-						description: `'${key}' WebHook sent successfully`,
+						description: `'${key}' Webhook sent successfully`,
 						duration: 5000,
 					});
 				} else {
 					toast.error(serviceName, {
-						description: `'${key}' WebHook failed to send`,
+						description: `'${key}' Webhook failed to send`,
 						duration: 5000,
 					});
 				}

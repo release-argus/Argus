@@ -700,7 +700,7 @@ func TestFromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "Give WebHook secrets",
+			name: "Give Webhook secrets",
 			payload: `{
 				"latest_version": {
 					"access_token": "` + util.SecretValue + `",
@@ -759,7 +759,7 @@ func TestFromPayload(t *testing.T) {
 								url: https://example.com/gitlab
 								secret: gitlabSecret
 					`)),
-					"Give WebHook secrets",
+					"Give Webhook secrets",
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
@@ -792,7 +792,7 @@ func TestFromPayload(t *testing.T) {
 								url: https://example.com/gitlab
 								secret: gitlabSecret
 					`)),
-					"Give WebHook secrets",
+					"Give Webhook secrets",
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
@@ -1193,7 +1193,7 @@ func TestFromPayload(t *testing.T) {
 			}),
 		},
 		{
-			name: "WebHookFromDefaults",
+			name: "WebhookFromDefaults",
 			payload: test.TrimJSON(`{
 				"latest_version": {
 					"type": "github",
@@ -1202,7 +1202,7 @@ func TestFromPayload(t *testing.T) {
 			}`),
 			svcCfg: DefaultsConfig{
 				Soft: &Defaults{
-					WebHook: map[string]struct{}{
+					Webhook: map[string]struct{}{
 						"alpha":   {},
 						"bravo":   {},
 						"charlie": {},
@@ -1226,13 +1226,13 @@ func TestFromPayload(t *testing.T) {
 							type: github
 							url: `+test.ArgusGitHubRepo+`
 					`)),
-					"WebHookFromDefaults",
+					"WebhookFromDefaults",
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
 		},
 		{
-			name: "CommandFromDefaults + NotifyFromDefaults + WebHookFromDefaults",
+			name: "CommandFromDefaults + NotifyFromDefaults + WebhookFromDefaults",
 			payload: test.TrimJSON(`{
 				"latest_version": {
 					"type": "github",
@@ -1249,7 +1249,7 @@ func TestFromPayload(t *testing.T) {
 						"bravo":   {},
 						"charlie": {},
 					},
-					WebHook: map[string]struct{}{
+					Webhook: map[string]struct{}{
 						"alpha":   {},
 						"bravo":   {},
 						"charlie": {},
@@ -1330,7 +1330,7 @@ func TestFromPayload(t *testing.T) {
 				tc.oldService.Defaults = svcCfg.Soft
 				tc.oldService.HardDefaults = svcCfg.Hard
 				tc.oldService.Status.Init(
-					len(tc.oldService.Command), len(tc.oldService.Notify), len(tc.oldService.WebHook),
+					len(tc.oldService.Command), len(tc.oldService.Notify), len(tc.oldService.Webhook),
 					status.ServiceInfo{
 						ID:         tc.oldService.ID,
 						Name:       tc.oldService.Name,
@@ -1413,17 +1413,17 @@ func TestFromPayload(t *testing.T) {
 					)
 				}
 			}
-			if svc.WebHookFromDefaults != tc.wantFromDefaults.webhook {
+			if svc.WebhookFromDefaults != tc.wantFromDefaults.webhook {
 				t.Errorf(
-					"%s WebHookFromDefaults mismatch\ngot:  %v\nwant: %v",
-					prefix, svc.WebHookFromDefaults, tc.wantFromDefaults.webhook,
+					"%s WebhookFromDefaults mismatch\ngot:  %v\nwant: %v",
+					prefix, svc.WebhookFromDefaults, tc.wantFromDefaults.webhook,
 				)
-			} else if svc.WebHookFromDefaults {
-				gotKeys := util.SortedKeys(svc.WebHook)
-				wantKeys := util.SortedKeys(tc.svcCfg.Soft.WebHook)
+			} else if svc.WebhookFromDefaults {
+				gotKeys := util.SortedKeys(svc.Webhook)
+				wantKeys := util.SortedKeys(tc.svcCfg.Soft.Webhook)
 				if !util.AreSlicesEqual(gotKeys, wantKeys) {
 					t.Errorf(
-						"%s WebHookFromDefaults=true, WebHook should match defaults:\ngot:  %v\nwant: %v",
+						"%s WebhookFromDefaults=true, Webhook should match defaults:\ngot:  %v\nwant: %v",
 						prefix, gotKeys, wantKeys,
 					)
 				}
@@ -2131,7 +2131,7 @@ func TestService_GiveSecrets(t *testing.T) {
 					"foo": {OldIndex: "foo"},
 					"bar": {OldIndex: "bar"},
 				},
-				WebHook: map[string]shared.WHSecretRef{
+				Webhook: map[string]shared.WHSecretRef{
 					"foo": {OldIndex: "foo"},
 					"bar": {OldIndex: "bar"},
 				},
@@ -2313,7 +2313,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			`),
 		},
 		{
-			name: "WebHook/unchanged retains Failed",
+			name: "Webhook/unchanged retains Failed",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -2345,7 +2345,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				)
 			}),
 			secretRefs: secretRefs{
-				WebHook: map[string]shared.WHSecretRef{
+				Webhook: map[string]shared.WHSecretRef{
 					"test": {OldIndex: "test"},
 				},
 			},
@@ -2367,7 +2367,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			},
 		},
 		{
-			name: "WebHook/changed loses Failed",
+			name: "Webhook/changed loses Failed",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -2518,7 +2518,7 @@ func TestService_GiveSecrets(t *testing.T) {
 					}
 				}
 				for k, v := range tc.webhookTests.oldFails {
-					tc.oldService.Status.Fails.WebHook.Set(k, v)
+					tc.oldService.Status.Fails.Webhook.Set(k, v)
 				}
 			}
 
@@ -2537,16 +2537,16 @@ func TestService_GiveSecrets(t *testing.T) {
 				)
 			}
 
-			if gotService.WebHook != nil {
+			if gotService.Webhook != nil {
 				var expectedWH string
-				for name := range gotService.WebHook {
+				for name := range gotService.Webhook {
 					expectedWH = name
 					break
 				}
 				// Expecting `Failed` to be carried over.
 				for key := range tc.webhookTests.expectedFails {
 					want := tc.webhookTests.expectedFails[key]
-					got := gotService.WebHook[expectedWH].DidFail()
+					got := gotService.Webhook[expectedWH].DidFail()
 					wantStr := test.StringifyPtr(want)
 					gotStr := test.StringifyPtr(got)
 					if gotStr != wantStr {
@@ -5052,7 +5052,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 	for _, tc := range tests {
 		newService := &Service{Notify: tc.notify}
 		newService.Status.Init(
-			len(newService.Command), len(newService.Notify), len(newService.WebHook),
+			len(newService.Command), len(newService.Notify), len(newService.Webhook),
 			status.ServiceInfo{
 				ID: tc.name,
 			},
@@ -5083,21 +5083,21 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 	}
 }
 
-func TestService_GiveSecretsWebHook(t *testing.T) {
+func TestService_GiveSecretsWebhook(t *testing.T) {
 	svcCfg := plainDefaultsConfig(t)
 	notifyCfg := shoutrrrtest.PlainConfig(t)
 	whCfg := whtest.PlainConfig(t)
-	// GIVEN: a WebHookSlice that may have secrets in it referencing those in another WebHookSliceSlice.
+	// GIVEN: a WebhookSlice that may have secrets in it referencing those in another WebhookSliceSlice.
 	tests := []struct {
 		name                  string
-		webhook, otherWebhook webhook.WebHooks
+		webhook, otherWebhook webhook.Webhooks
 		secretRefs            map[string]shared.WHSecretRef
-		want                  webhook.WebHooks
+		want                  webhook.Webhooks
 	}{
 		{
-			name:    "nil/WebHookSlice",
+			name:    "nil/WebhookSlice",
 			webhook: nil,
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5114,8 +5114,8 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			want:       nil,
 		},
 		{
-			name: "nil/otherWebHook",
-			webhook: webhook.WebHooks{
+			name: "nil/otherWebhook",
+			webhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5130,7 +5130,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 			otherWebhook: nil,
 			secretRefs:   map[string]shared.WHSecretRef{},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5146,7 +5146,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "nil/secretRefs",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5159,7 +5159,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5173,7 +5173,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				),
 			},
 			secretRefs: nil,
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5189,7 +5189,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "no secretRefs",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5202,7 +5202,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5216,7 +5216,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				),
 			},
 			secretRefs: map[string]shared.WHSecretRef{},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5232,7 +5232,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "no matching secretRefs",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5245,7 +5245,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5261,7 +5261,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			secretRefs: map[string]shared.WHSecretRef{
 				"bish": {OldIndex: "bash"},
 			},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5277,7 +5277,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "secretRefs/empty index",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5301,7 +5301,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5318,7 +5318,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				"foo": {OldIndex: ""},
 				"bar": {OldIndex: ""},
 			},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5345,7 +5345,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "secretRefs/index that doesn't exist",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5369,7 +5369,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5386,7 +5386,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				"foo": {OldIndex: "bash"},
 				"bar": {OldIndex: ""},
 			},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5413,7 +5413,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "secretRefs/secret",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5437,7 +5437,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5454,7 +5454,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				"foo": {OldIndex: "foo"},
 				"bar": {OldIndex: ""},
 			},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5481,7 +5481,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "secretRefs/secret swap vars",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"bar": webhook.New(
 					nil, nil,
 					"",
@@ -5505,7 +5505,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5533,7 +5533,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				"bar": {OldIndex: "foo"},
 				"foo": {OldIndex: "bar"},
 			},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5560,7 +5560,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "secretRefs/secret swap vars ignores order sent",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"bar": webhook.New(
 					nil, nil,
 					"",
@@ -5584,7 +5584,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5612,7 +5612,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				"bar": {OldIndex: "foo"},
 				"foo": {OldIndex: "bar"},
 			},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil, nil,
 					"",
@@ -5639,7 +5639,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "headers/no secretRefs",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -5669,7 +5669,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -5700,7 +5700,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				),
 			},
 			secretRefs: map[string]shared.WHSecretRef{},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -5733,7 +5733,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "headers/no header secretRefs",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -5763,7 +5763,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -5797,7 +5797,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				"foo": {OldIndex: "foo"},
 				"bar": {OldIndex: "bar"},
 			},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -5830,7 +5830,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "headers/old secrets unwanted",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -5860,7 +5860,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -5904,7 +5904,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					},
 				},
 			},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -5937,7 +5937,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "headers/secretRefs some indices out of range",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -5969,7 +5969,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -6015,7 +6015,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					},
 				},
 			},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -6050,7 +6050,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "headers/use all secrets",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -6082,7 +6082,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -6130,7 +6130,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					},
 				},
 			},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -6165,7 +6165,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		},
 		{
 			name: "headers/secretRefs swap names of webhook",
-			webhook: webhook.WebHooks{
+			webhook: webhook.Webhooks{
 				"bar": webhook.New(
 					nil,
 					webhook.Headers{
@@ -6197,7 +6197,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			otherWebhook: webhook.WebHooks{
+			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
 					nil,
 					webhook.Headers{
@@ -6245,7 +6245,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					},
 				},
 			},
-			want: webhook.WebHooks{
+			want: webhook.Webhooks{
 				"bar": webhook.New(
 					nil,
 					webhook.Headers{
@@ -6321,14 +6321,14 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				)
 			}
 
-			// WHEN: we call giveSecretsWebHook.
-			newService.giveSecretsWebHook(tc.otherWebhook, tc.secretRefs)
+			// WHEN: we call giveSecretsWebhook.
+			newService.giveSecretsWebhook(tc.otherWebhook, tc.secretRefs)
 
-			prefix := fmt.Sprintf("%s\nService.giveSecretsWebHook()", packageName)
+			prefix := fmt.Sprintf("%s\nService.giveSecretsWebhook()", packageName)
 
-			// THEN: we should get a WebHookSlice with the secrets from the other Service.
-			gotWebHook := newService.WebHook
-			if gotStr, wantStr := gotWebHook.String(), tc.want.String(); gotStr != wantStr {
+			// THEN: we should get a WebhookSlice with the secrets from the other Service.
+			gotWebhook := newService.Webhook
+			if gotStr, wantStr := gotWebhook.String(), tc.want.String(); gotStr != wantStr {
 				t.Errorf(
 					"%s secrets weren't passed on\ngot:  %q\nwant: %q",
 					prefix, gotStr, wantStr,

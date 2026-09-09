@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package webhook provides WebHook functionality to services.
+// Package webhook provides Webhook functionality to services.
 package webhook
 
 import (
@@ -64,7 +64,7 @@ func (h *Headers) UnmarshalYAML(data []byte) error {
 	return nil
 }
 
-// GitHub is the WebHook payload to emulate GitHub.
+// GitHub is the Webhook payload to emulate GitHub.
 type GitHub struct {
 	Ref    string `json:"ref"`    // "refs/heads/master".
 	Before string `json:"before"` // "RandAlphaNumericLower(40)".
@@ -72,7 +72,7 @@ type GitHub struct {
 }
 
 // setHeaders applies configured custom headers to req.
-func (w *WebHook) setHeaders(req *http.Request) {
+func (w *Webhook) setHeaders(req *http.Request) {
 	var headers Headers
 	switch {
 	case w.Headers != nil:

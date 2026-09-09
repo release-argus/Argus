@@ -227,7 +227,7 @@ func TestService_Marshal(t *testing.T) {
 			`),
 		},
 		{
-			name: "WebHookFromDefaults",
+			name: "WebhookFromDefaults",
 			svc: test.Must(t, func() (*Service, error) {
 				svc, err := DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -238,13 +238,13 @@ func TestService_Marshal(t *testing.T) {
 							foo:
 							bar:
 					`)),
-					"WebHookFromDefaults",
+					"WebhookFromDefaults",
 					svcCfg, notifyCfg, whCfg,
 				)
 				if err != nil {
 					return nil, err
 				}
-				svc.WebHookFromDefaults = true
+				svc.WebhookFromDefaults = true
 				return svc, nil
 			}),
 			wantJSON: test.TrimJSON(`{
@@ -953,7 +953,7 @@ func TestService_String(t *testing.T) {
 				Command: command.Commands{
 					{"ls", "-la"},
 				},
-				WebHook: webhook.WebHooks{
+				Webhook: webhook.Webhooks{
 					"foo": webhook.New(
 						nil, nil,
 						"",
@@ -1074,7 +1074,7 @@ func TestService_Summary(t *testing.T) {
 				IconLinkTo:          nil,
 				DeployedVersionType: new(""),
 				Command:             nil,
-				WebHook:             nil,
+				Webhook:             nil,
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1367,7 +1367,7 @@ func TestService_Summary(t *testing.T) {
 			}),
 			want: &apitype.ServiceSummary{
 				DeployedVersionType: new(""),
-				WebHook:             new(3),
+				Webhook:             new(3),
 				Status:              &apitype.Status{},
 			},
 		},
@@ -1467,7 +1467,7 @@ func TestService_Summary(t *testing.T) {
 					&svc.Dashboard,
 				)
 				svc.Status.Init(
-					len(svc.Command), len(svc.Notify), len(svc.WebHook),
+					len(svc.Command), len(svc.Notify), len(svc.Webhook),
 					status.ServiceInfo{
 						ID:         svc.ID,
 						Name:       svc.Name,
@@ -1491,7 +1491,7 @@ func TestService_Summary(t *testing.T) {
 				IconLinkTo:          new("https://example.com"),
 				DeployedVersionType: new(dvweb.Type),
 				Command:             new(2),
-				WebHook:             new(3),
+				Webhook:             new(3),
 				Status: &apitype.Status{
 					ApprovedVersion:          "1",
 					DeployedVersion:          "2",
@@ -1528,44 +1528,44 @@ func TestService_UsingDefaults(t *testing.T) {
 	tests := []struct {
 		name                                                            string
 		nilService                                                      bool
-		usingNotifyDefaults, usingCommandDefaults, usingWebHookDefaults bool
+		usingNotifyDefaults, usingCommandDefaults, usingWebhookDefaults bool
 	}{
 		{
 			name:                 "nil Service",
 			nilService:           true,
 			usingNotifyDefaults:  false,
 			usingCommandDefaults: false,
-			usingWebHookDefaults: false,
+			usingWebhookDefaults: false,
 		},
 		{
 			name:                 "using all defaults",
 			usingNotifyDefaults:  true,
 			usingCommandDefaults: true,
-			usingWebHookDefaults: true,
+			usingWebhookDefaults: true,
 		},
 		{
 			name:                 "using no defaults",
 			usingNotifyDefaults:  false,
 			usingCommandDefaults: false,
-			usingWebHookDefaults: false,
+			usingWebhookDefaults: false,
 		},
 		{
 			name:                 "using Notify defaults",
 			usingNotifyDefaults:  true,
 			usingCommandDefaults: false,
-			usingWebHookDefaults: false,
+			usingWebhookDefaults: false,
 		},
 		{
 			name:                 "using Command defaults",
 			usingNotifyDefaults:  false,
 			usingCommandDefaults: true,
-			usingWebHookDefaults: false,
+			usingWebhookDefaults: false,
 		},
 		{
-			name:                 "using WebHook defaults",
+			name:                 "using Webhook defaults",
 			usingNotifyDefaults:  false,
 			usingCommandDefaults: false,
-			usingWebHookDefaults: true,
+			usingWebhookDefaults: true,
 		},
 	}
 
@@ -1578,11 +1578,11 @@ func TestService_UsingDefaults(t *testing.T) {
 				svc = &Service{}
 				svc.NotifyFromDefaults = tc.usingNotifyDefaults
 				svc.CommandFromDefaults = tc.usingCommandDefaults
-				svc.WebHookFromDefaults = tc.usingWebHookDefaults
+				svc.WebhookFromDefaults = tc.usingWebhookDefaults
 			}
 
 			// WHEN: UsingDefaults is called.
-			usingNotifyDefaults, usingCommandDefaults, usingWebHookDefaults := svc.UsingDefaults()
+			usingNotifyDefaults, usingCommandDefaults, usingWebhookDefaults := svc.UsingDefaults()
 
 			prefix := fmt.Sprintf("%s\nService.UsingDefaults()", packageName)
 
@@ -1599,10 +1599,10 @@ func TestService_UsingDefaults(t *testing.T) {
 					prefix, usingCommandDefaults, tc.usingCommandDefaults,
 				)
 			}
-			if tc.usingWebHookDefaults != usingWebHookDefaults {
+			if tc.usingWebhookDefaults != usingWebhookDefaults {
 				t.Errorf(
-					"%s WebHook 'using Defaults' value mismatch\ngot:  %t\nwant: %t",
-					prefix, usingWebHookDefaults, tc.usingWebHookDefaults,
+					"%s Webhook 'using Defaults' value mismatch\ngot:  %t\nwant: %t",
+					prefix, usingWebhookDefaults, tc.usingWebhookDefaults,
 				)
 			}
 		})

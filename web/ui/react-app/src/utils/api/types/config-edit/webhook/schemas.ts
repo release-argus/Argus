@@ -12,7 +12,7 @@ import {
 } from '@/utils/api/types/config-edit/shared/preprocess';
 import { stringWithFallback } from '@/utils/api/types/config-edit/validators';
 
-export const WebHookTypeEnum = z.enum(
+export const WebhookTypeEnum = z.enum(
 	toZodEnumTuple(Object.values(WEBHOOK_TYPE)),
 );
 
@@ -26,19 +26,19 @@ export const webhookSchema = z.object({
 	old_index: z.string().nullable().default(null),
 	secret: stringDefault, // Required.
 	silent_fails: z.boolean().nullable().default(null),
-	type: WebHookTypeEnum,
+	type: WebhookTypeEnum,
 	url: stringDefault, // Required.
 });
-export type WebHookSchema = z.infer<typeof webhookSchema>;
+export type WebhookSchema = z.infer<typeof webhookSchema>;
 export const webhooksSchema = z.array(webhookSchema).default([]);
-export type WebHooksSchema = z.infer<typeof webhooksSchema>;
+export type WebhooksSchema = z.infer<typeof webhooksSchema>;
 
 export const webhookSchemaDefault = webhookSchema.extend({
 	name: stringDefault,
 });
-export type WebHookSchemaDefault = z.infer<typeof webhookSchemaDefault>;
+export type WebhookSchemaDefault = z.infer<typeof webhookSchemaDefault>;
 export const webhooksSchemaDefault = z.array(webhookSchemaDefault).default([]);
-export type WebHooksSchemaDefault = z.infer<typeof webhooksSchemaDefault>;
+export type WebhooksSchemaDefault = z.infer<typeof webhooksSchemaDefault>;
 
 /* API Outgoing requests */
 
@@ -46,13 +46,13 @@ export const webhookSchemaOutgoing = webhookSchema.extend({
 	desired_status_code: preprocessNumberFromString,
 	max_tries: preprocessNumberFromString,
 });
-export type WebHookSchemaOutgoing = z.infer<typeof webhookSchemaOutgoing>;
+export type WebhookSchemaOutgoing = z.infer<typeof webhookSchemaOutgoing>;
 
 export const webhooksSchemaOutgoing = z
 	.array(webhookSchemaOutgoing)
 	.nullable()
 	.default(null);
-export type WebHooksSchemaOutgoing = z.infer<typeof webhooksSchemaOutgoing>;
+export type WebhooksSchemaOutgoing = z.infer<typeof webhooksSchemaOutgoing>;
 
 /**
  * Outgoing schemas that are defaults-aware for list-like fields.
@@ -61,7 +61,7 @@ export type WebHooksSchemaOutgoing = z.infer<typeof webhooksSchemaOutgoing>;
  * preprocessors can null fields that match the defaults.
  */
 export const webhookSchemaMapOutgoingWithDefaults = (
-	defaults?: WebHookSchema,
+	defaults?: WebhookSchema,
 ) => {
 	return webhookSchema.extend({
 		desired_status_code: preprocessNumberFromString,

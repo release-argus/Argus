@@ -38,7 +38,7 @@ type secretRefs struct {
 	LatestVersion         shared.VSecretRef                `json:"latest_version,omitzero"`
 	DeployedVersionLookup shared.VSecretRef                `json:"deployed_version,omitzero"`
 	Notify                map[string]shared.OldStringIndex `json:"notify,omitempty"`
-	WebHook               map[string]shared.WHSecretRef    `json:"webhook,omitempty"`
+	Webhook               map[string]shared.WHSecretRef    `json:"webhook,omitempty"`
 }
 
 type secretRefsIncoming struct {
@@ -46,12 +46,12 @@ type secretRefsIncoming struct {
 	LatestVersion         shared.VSecretRef       `json:"latest_version,omitzero"`
 	DeployedVersionLookup shared.VSecretRef       `json:"deployed_version,omitzero"`
 	Notify                []shared.OldStringIndex `json:"notify,omitempty"`
-	WebHook               []shared.WHSecretRef    `json:"webhook,omitempty"`
+	Webhook               []shared.WHSecretRef    `json:"webhook,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler for oldSecretRefs.
 //
-// The Web API represents Notify and WebHook entries as lists,
+// The Web API represents Notify and Webhook entries as lists,
 // but internally they are stored as maps keyed by each entry's ID field.
 func (o *secretRefs) UnmarshalJSON(data []byte) error {
 	var aux secretRefsIncoming
@@ -71,11 +71,11 @@ func (o *secretRefs) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// Convert WebHook array -> map
-	if aux.WebHook != nil {
-		o.WebHook = make(map[string]shared.WHSecretRef, len(aux.WebHook))
-		for _, wh := range aux.WebHook {
-			o.WebHook[wh.Name] = wh
+	// Convert Webhook array -> map
+	if aux.Webhook != nil {
+		o.Webhook = make(map[string]shared.WHSecretRef, len(aux.Webhook))
+		for _, wh := range aux.Webhook {
+			o.Webhook[wh.Name] = wh
 		}
 	}
 
@@ -211,8 +211,8 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs secretRefs) {
 	s.giveSecretsDeployedVersion(oldService.DeployedVersionLookup, &secretRefs.DeployedVersionLookup)
 	// Notify.
 	s.giveSecretsNotify(oldService.Notify, secretRefs.Notify)
-	// WebHook.
-	s.giveSecretsWebHook(oldService.WebHook, secretRefs.WebHook)
+	// Webhook.
+	s.giveSecretsWebhook(oldService.Webhook, secretRefs.Webhook)
 	// Command.
 	s.CommandController.CopyFailsFrom(oldService.CommandController)
 
@@ -275,36 +275,36 @@ func (s *Service) giveSecretsNotify(oldNotifiers shoutrrr.Shoutrrrs, secretRefs 
 	}
 }
 
-// giveSecretsWebHook copies secrets from oldWebHooks into the receiver's WebHook.
-func (s *Service) giveSecretsWebHook(oldWebHooks webhook.WebHooks, secretRefs map[string]shared.WHSecretRef) {
-	if s.WebHook == nil || oldWebHooks == nil ||
+// giveSecretsWebhook copies secrets from oldWebhooks into the receiver's Webhook.
+func (s *Service) giveSecretsWebhook(oldWebhooks webhook.Webhooks, secretRefs map[string]shared.WHSecretRef) {
+	if s.Webhook == nil || oldWebhooks == nil ||
 		len(secretRefs) == 0 {
 		return
 	}
 
-	for i, wh := range s.WebHook {
-		// {OldIndex: "update", Type: "github", ...} - SecretValue maps values in the 'update' WebHook.
+	for i, wh := range s.Webhook {
+		// {OldIndex: "update", Type: "github", ...} - SecretValue maps values in the 'update' Webhook.
 		// Map SecretValue in `i` to this index.
 		oldIndex := secretRefs[i].OldIndex
-		// Not a reference to an old WebHook?
+		// Not a reference to an old Webhook?
 		if oldIndex == "" {
 			continue
 		}
 		// Reference doesn't exist?.
-		oldWebHook := oldWebHooks[oldIndex]
-		if oldWebHook == nil {
+		oldWebhook := oldWebhooks[oldIndex]
+		if oldWebhook == nil {
 			continue
 		}
 		whSecretRefs := secretRefs[i]
 
 		// secret.
 		if wh.Secret == util.SecretValue {
-			wh.Secret = oldWebHook.Secret
+			wh.Secret = oldWebhook.Secret
 		}
 
 		// headers.
 		// Check we have headers in old and new.
-		if wh.Headers != nil && oldWebHook.Headers != nil ||
+		if wh.Headers != nil && oldWebhook.Headers != nil ||
 			len(whSecretRefs.Headers) != 0 {
 			for headerIndex := range wh.Headers {
 				// Skip if out of range,
@@ -318,20 +318,20 @@ func (s *Service) giveSecretsWebHook(oldWebHooks webhook.WebHooks, secretRefs ma
 				// Map SecretValue in `i.hI` to this index.
 				oldHeaderIndex := whSecretRefs.Headers[headerIndex].OldIndex
 				// Decode header, or not referencing a previous secret.
-				if oldHeaderIndex == nil || len(oldWebHook.Headers) <= *oldHeaderIndex {
+				if oldHeaderIndex == nil || len(oldWebhook.Headers) <= *oldHeaderIndex {
 					continue
 				}
 
 				// Set the new header value to the old one.
-				wh.Headers[headerIndex].Value = oldWebHook.Headers[*oldHeaderIndex].Value
+				wh.Headers[headerIndex].Value = oldWebhook.Headers[*oldHeaderIndex].Value
 			}
 		}
 
 		// failed
-		if oldWebHook.String("") == wh.String("") {
-			wh.SetFail(oldWebHook.DidFail())
+		if oldWebhook.String("") == wh.String("") {
+			wh.SetFail(oldWebhook.DidFail())
 		}
 		// next_runnable
-		wh.SetNextRunnable(oldWebHook.NextRunnable())
+		wh.SetNextRunnable(oldWebhook.NextRunnable())
 	}
 }

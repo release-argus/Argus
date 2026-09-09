@@ -208,7 +208,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 		{
 			name: "censor webhook",
 			input: &config.Defaults{
-				WebHook: *test.Must(t, func() (*webhook.Defaults, error) {
+				Webhook: *test.Must(t, func() (*webhook.Defaults, error) {
 					return webhook.DecodeDefaults(
 						"yaml", []byte(test.TrimYAML(`
 							type: github
@@ -219,7 +219,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 				}),
 			},
 			want: apitype.Defaults{
-				WebHook: apitype.WebHook{
+				Webhook: apitype.Webhook{
 					Type:   "github",
 					URL:    "https://example.com",
 					Secret: util.SecretValue,
@@ -384,7 +384,7 @@ func TestConvertAndCensorService(t *testing.T) {
 				LatestVersion: nil,
 				Command:       apitype.Commands{},
 				Notify:        apitype.Notifiers{},
-				WebHook:       apitype.WebHooks{},
+				Webhook:       apitype.Webhooks{},
 				Dashboard:     apitype.DashboardOptions{},
 			},
 		},
@@ -457,8 +457,8 @@ func TestConvertAndCensorService(t *testing.T) {
 						},
 					},
 				},
-				WebHook: apitype.WebHooks{
-					"test_wh": apitype.WebHook{
+				Webhook: apitype.Webhooks{
+					"test_wh": apitype.Webhook{
 						URL:               "https://example.com",
 						AllowInvalidCerts: new(true),
 						Secret:            util.SecretValue,
@@ -1252,7 +1252,7 @@ func TestConvertURLCommands(t *testing.T) {
 
 			prefix := fmt.Sprintf("%s\nconvertURLCommands()", packageName)
 
-			// THEN: the WebHooks is converted correctly.
+			// THEN: the Webhooks is converted correctly.
 			if got, want := result.String(), tc.want.String(); got != want {
 				t.Errorf(
 					"%s\nconvertURLCommands() mismatch\ngot:  %q\nwant: %q",
@@ -1514,7 +1514,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 
 			prefix := fmt.Sprintf("%s\nconvertAndCensorDeployedVersionLookup", packageName)
 
-			// THEN: the WebHooks is converted correctly.
+			// THEN: the Webhooks is converted correctly.
 			if got, want := result.String(), tc.want.String(); got != want {
 				t.Errorf(
 					"%s mismatch\ngot:  %q\nwant: %q",
@@ -1934,15 +1934,15 @@ func TestConvertCommands(t *testing.T) {
 }
 
 //
-// WebHook.
+// Webhook.
 //
 
-func TestConvertAndCensorWebHooksDefaults(t *testing.T) {
-	// GIVEN: webhook.WebHooksDefaults.
+func TestConvertAndCensorWebhooksDefaults(t *testing.T) {
+	// GIVEN: webhook.WebhooksDefaults.
 	tests := []struct {
 		name  string
-		input webhook.WebHooksDefaults
-		want  apitype.WebHooks
+		input webhook.WebhooksDefaults
+		want  apitype.Webhooks
 	}{
 		{
 			name:  "nil",
@@ -1951,23 +1951,23 @@ func TestConvertAndCensorWebHooksDefaults(t *testing.T) {
 		},
 		{
 			name:  "empty",
-			input: webhook.WebHooksDefaults{},
-			want:  apitype.WebHooks{},
+			input: webhook.WebhooksDefaults{},
+			want:  apitype.Webhooks{},
 		},
 		// {
 		// 	name: "nil and empty elements",
-		// 	input: &webhook.WebHooksDefaults{
+		// 	input: &webhook.WebhooksDefaults{
 		// 		"test":  webhook.Defaults{},
 		// 		"other": nil,
 		// 	},
-		// 	want: &apitype.WebHooks{
+		// 	want: &apitype.Webhooks{
 		// 		"test":  {},
 		// 		"other": nil,
 		// 	},
 		// },
 		{
 			name: "one",
-			input: webhook.WebHooksDefaults{
+			input: webhook.WebhooksDefaults{
 				"test": test.Must(t, func() (*webhook.Defaults, error) {
 					return webhook.DecodeDefaults(
 						"yaml", []byte(test.TrimYAML(`
@@ -1981,7 +1981,7 @@ func TestConvertAndCensorWebHooksDefaults(t *testing.T) {
 					)
 				}),
 			},
-			want: apitype.WebHooks{
+			want: apitype.Webhooks{
 				"test": {
 					Type:   "github",
 					URL:    "https://example.com",
@@ -1994,7 +1994,7 @@ func TestConvertAndCensorWebHooksDefaults(t *testing.T) {
 		},
 		{
 			name: "multiple",
-			input: webhook.WebHooksDefaults{
+			input: webhook.WebhooksDefaults{
 				"test": test.Must(t, func() (*webhook.Defaults, error) {
 					return webhook.DecodeDefaults(
 						"yaml", []byte(test.TrimYAML(`
@@ -2016,7 +2016,7 @@ func TestConvertAndCensorWebHooksDefaults(t *testing.T) {
 					)
 				}),
 			},
-			want: apitype.WebHooks{
+			want: apitype.Webhooks{
 				"test": {
 					Type:   "github",
 					URL:    "https://example.com",
@@ -2039,10 +2039,10 @@ func TestConvertAndCensorWebHooksDefaults(t *testing.T) {
 
 			had := tc.input.String("")
 
-			// WHEN: convertAndCensorWebHooksDefaults is called.
-			result := convertAndCensorWebHooksDefaults(tc.input)
+			// WHEN: convertAndCensorWebhooksDefaults is called.
+			result := convertAndCensorWebhooksDefaults(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorWebHooksDefaults()", packageName)
+			prefix := fmt.Sprintf("%s\nconvertAndCensorWebhooksDefaults()", packageName)
 
 			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
@@ -2063,17 +2063,17 @@ func TestConvertAndCensorWebHooksDefaults(t *testing.T) {
 	}
 }
 
-func TestConvertAndCensorWebHookDefaults(t *testing.T) {
+func TestConvertAndCensorWebhookDefaults(t *testing.T) {
 	// GIVEN: a webhook.Defaults.
 	tests := []struct {
 		name  string
 		input webhook.Defaults
-		want  apitype.WebHook
+		want  apitype.Webhook
 	}{
 		{
 			name:  "empty",
 			input: webhook.Defaults{},
-			want:  apitype.WebHook{},
+			want:  apitype.Webhook{},
 		},
 		{
 			name: "filled",
@@ -2094,7 +2094,7 @@ func TestConvertAndCensorWebHookDefaults(t *testing.T) {
 					`)),
 				)
 			}),
-			want: apitype.WebHook{
+			want: apitype.Webhook{
 				Type:              "github",
 				URL:               "https://example.com",
 				AllowInvalidCerts: new(true),
@@ -2116,10 +2116,10 @@ func TestConvertAndCensorWebHookDefaults(t *testing.T) {
 
 			had := tc.input.String("")
 
-			// WHEN: convertAndCensorWebHookDefaults is called.
-			result := convertAndCensorWebHookDefaults(tc.input)
+			// WHEN: convertAndCensorWebhookDefaults is called.
+			result := convertAndCensorWebhookDefaults(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorWebHookDefaults()", packageName)
+			prefix := fmt.Sprintf("%s\nconvertAndCensorWebhookDefaults()", packageName)
 
 			// THEN: the result should be as expected.
 			if got, want := result.String(""), tc.want.String(""); got != want {
@@ -2140,12 +2140,12 @@ func TestConvertAndCensorWebHookDefaults(t *testing.T) {
 	}
 }
 
-func TestConvertAndCensorWebHooks(t *testing.T) {
-	// GIVEN: webhook.WebHooks.
+func TestConvertAndCensorWebhooks(t *testing.T) {
+	// GIVEN: webhook.Webhooks.
 	tests := []struct {
 		name  string
-		input webhook.WebHooks
-		want  apitype.WebHooks
+		input webhook.Webhooks
+		want  apitype.Webhooks
 	}{
 		{
 			name:  "nil",
@@ -2154,12 +2154,12 @@ func TestConvertAndCensorWebHooks(t *testing.T) {
 		},
 		{
 			name:  "empty",
-			input: webhook.WebHooks{},
-			want:  apitype.WebHooks{},
+			input: webhook.Webhooks{},
+			want:  apitype.Webhooks{},
 		},
 		{
 			name: "one",
-			input: webhook.WebHooks{
+			input: webhook.Webhooks{
 				"test": webhook.New(
 					nil,
 					webhook.Headers{
@@ -2175,7 +2175,7 @@ func TestConvertAndCensorWebHooks(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			want: apitype.WebHooks{
+			want: apitype.Webhooks{
 				"test": {
 					Type:   "github",
 					URL:    "https://example.com",
@@ -2188,7 +2188,7 @@ func TestConvertAndCensorWebHooks(t *testing.T) {
 		},
 		{
 			name: "multiple",
-			input: webhook.WebHooks{
+			input: webhook.Webhooks{
 				"test": webhook.New(
 					nil,
 					webhook.Headers{
@@ -2212,7 +2212,7 @@ func TestConvertAndCensorWebHooks(t *testing.T) {
 					nil, nil, nil,
 				),
 			},
-			want: apitype.WebHooks{
+			want: apitype.Webhooks{
 				"test": {
 					Type:   "github",
 					URL:    "https://example.com",
@@ -2235,10 +2235,10 @@ func TestConvertAndCensorWebHooks(t *testing.T) {
 
 			had := tc.input.String()
 
-			// WHEN: convertAndCensorWebHooks is called.
-			result := convertAndCensorWebHooks(tc.input)
+			// WHEN: convertAndCensorWebhooks is called.
+			result := convertAndCensorWebhooks(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorWebHooks()", packageName)
+			prefix := fmt.Sprintf("%s\nconvertAndCensorWebhooks()", packageName)
 
 			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
@@ -2259,22 +2259,22 @@ func TestConvertAndCensorWebHooks(t *testing.T) {
 	}
 }
 
-func TestConvertAndCensorWebHook(t *testing.T) {
-	// GIVEN: a WebHook.
+func TestConvertAndCensorWebhook(t *testing.T) {
+	// GIVEN: a Webhook.
 	tests := []struct {
 		name  string
-		input *webhook.WebHook
-		want  apitype.WebHook
+		input *webhook.Webhook
+		want  apitype.Webhook
 	}{
 		{
 			name:  "nil",
 			input: nil,
-			want:  apitype.WebHook{},
+			want:  apitype.Webhook{},
 		},
 		{
 			name:  "empty",
-			input: &webhook.WebHook{},
-			want:  apitype.WebHook{},
+			input: &webhook.Webhook{},
+			want:  apitype.Webhook{},
 		},
 		{
 			name: "censor secret",
@@ -2289,7 +2289,7 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 				"", "",
 				nil, nil, nil,
 			),
-			want: apitype.WebHook{
+			want: apitype.Webhook{
 				Secret: util.SecretValue,
 			},
 		},
@@ -2310,7 +2310,7 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 				"", "",
 				nil, nil, nil,
 			),
-			want: apitype.WebHook{
+			want: apitype.Webhook{
 				Headers: []apitype.Header{
 					{Key: "X-Something", Value: util.SecretValue},
 					{Key: "X-Another", Value: util.SecretValue},
@@ -2325,12 +2325,12 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 
 			had := tc.input.String("")
 
-			// WHEN: convertAndCensorWebHook is called on it.
-			result := convertAndCensorWebHook(tc.input)
+			// WHEN: convertAndCensorWebhook is called on it.
+			result := convertAndCensorWebhook(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorWebHook()", packageName)
+			prefix := fmt.Sprintf("%s\nconvertAndCensorWebhook()", packageName)
 
-			// THEN: the WebHook is converted correctly.
+			// THEN: the Webhook is converted correctly.
 			if got, want := result.String(""), tc.want.String(""); got != want {
 				t.Errorf(
 					"%s result mismatch\ngot:  %q\nwant: %q",
@@ -2349,7 +2349,7 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 	}
 }
 
-func TestConvertWebHookHeaders(t *testing.T) {
+func TestConvertWebhookHeaders(t *testing.T) {
 	// GIVEN: a webhook.Headers.
 	tests := []struct {
 		name  string
@@ -2394,11 +2394,11 @@ func TestConvertWebHookHeaders(t *testing.T) {
 
 			had := decode.ToYAMLString(tc.input, "")
 
-			// WHEN: convertWebHookHeaders is called.
-			got := convertWebHookHeaders(tc.input)
+			// WHEN: convertWebhookHeaders is called.
+			got := convertWebhookHeaders(tc.input)
 
 			prefix := fmt.Sprintf(
-				"%s\nconvertWebHookHeaders(%+v)",
+				"%s\nconvertWebhookHeaders(%+v)",
 				packageName, tc.input,
 			)
 

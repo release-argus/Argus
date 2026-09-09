@@ -56,7 +56,7 @@ func TestWebSocketMessage_String(t *testing.T) {
 						NextRunnable: time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC),
 					},
 				},
-				WebHookData: map[string]*WebHookSummary{
+				WebhookData: map[string]*WebhookSummary{
 					"omega": {
 						Failed:       new(true),
 						NextRunnable: time.Date(2020, 2, 2, 0, 0, 0, 0, time.UTC),

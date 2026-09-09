@@ -65,7 +65,7 @@ func assertServiceCopyMutate(t *testing.T, prefix string, svcI, svcJ *Service) {
 		{Name: "DeployedVersionLookup", Got: svcJ.DeployedVersionLookup, Want: svcI.DeployedVersionLookup, Mode: test.CompareDifferentPointer},
 		{Name: "Notify", Got: &svcJ.Notify, Want: &svcI.Notify, Mode: test.CompareDifferentPointer},
 		{Name: "Command", Got: &svcJ.Command, Want: &svcI.Command, Mode: test.CompareDifferentPointer},
-		{Name: "WebHook", Got: &svcJ.WebHook, Want: &svcI.WebHook, Mode: test.CompareDifferentPointer},
+		{Name: "Webhook", Got: &svcJ.Webhook, Want: &svcI.Webhook, Mode: test.CompareDifferentPointer},
 	}
 	if err := test.AssertFields(t, fieldTests, prefix, "pointer"); err != nil {
 		t.Fatal(err)
@@ -231,22 +231,22 @@ func assertServiceCopyMutate(t *testing.T, prefix string, svcI, svcJ *Service) {
 		}
 	}
 
-	// WebHook.
-	webHookKeysI := util.SortedKeys(svcI.WebHook)
-	webHookKeysJ := util.SortedKeys(svcJ.WebHook)
+	// Webhook.
+	webHookKeysI := util.SortedKeys(svcI.Webhook)
+	webHookKeysJ := util.SortedKeys(svcJ.Webhook)
 	if !util.AreSlicesEqual(webHookKeysI, webHookKeysJ) {
 		t.Fatalf(
-			"%s WebHook keys mismatch\ngot:  %v\nwant: %v",
+			"%s Webhook keys mismatch\ngot:  %v\nwant: %v",
 			prefix, webHookKeysJ, webHookKeysI,
 		)
 	}
 	for _, key := range webHookKeysI {
-		hadWebHookValueJ := svcJ.WebHook[key].ID
-		svcI.WebHook[key].ID += "-mutated"
-		if gotJ := svcJ.WebHook[key].ID; gotJ != hadWebHookValueJ {
+		hadWebhookValueJ := svcJ.Webhook[key].ID
+		svcI.Webhook[key].ID += "-mutated"
+		if gotJ := svcJ.Webhook[key].ID; gotJ != hadWebhookValueJ {
 			t.Errorf(
-				"%s WebHook[%q].ID mutation mismatch\ngot:  %q\nwant: %q",
-				prefix, key, gotJ, hadWebHookValueJ,
+				"%s Webhook[%q].ID mutation mismatch\ngot:  %q\nwant: %q",
+				prefix, key, gotJ, hadWebhookValueJ,
 			)
 		}
 	}
@@ -344,16 +344,16 @@ func TestService_Copy(t *testing.T) {
 			}),
 		},
 		{
-			name: "WebHook",
+			name: "Webhook",
 			svc: test.Must(t, func() (*Service, error) {
 				svcStatus, _ := statustest.New("yaml", nil)
 				svc, err := DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						webhook:
 							test:
-						`+whtest.WebHook(t, false, false, true).String("    ")+`
+						`+whtest.Webhook(t, false, false, true).String("    ")+`
 					`)),
-					"WebHook",
+					"Webhook",
 					svcCfg, notifyCfg, whCfg,
 				)
 				if err != nil {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package webhook provides WebHook functionality to services.
+// Package webhook provides Webhook functionality to services.
 package webhook
 
 // Default sets the values of the receiver to their default values.

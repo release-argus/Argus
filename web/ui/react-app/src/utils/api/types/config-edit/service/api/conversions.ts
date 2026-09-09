@@ -8,7 +8,7 @@ import type {
 	ServiceSchemaDefault,
 	ServiceSchemaOutgoing,
 } from '@/utils/api/types/config-edit/service/schemas';
-import { mapWebHooksSchemaToAPIPayload } from '@/utils/api/types/config-edit/webhook/api/conversions';
+import { mapWebhooksSchemaToAPIPayload } from '@/utils/api/types/config-edit/webhook/api/conversions';
 
 /**
  * Converts a `ServiceSchema` object to a `ServiceSchemaOutgoing` object.
@@ -49,7 +49,7 @@ export const mapServiceToAPIRequest = (
 			mainDefaults?.notify,
 			typeDefaults?.notify,
 		),
-		webhook: mapWebHooksSchemaToAPIPayload(
+		webhook: mapWebhooksSchemaToAPIPayload(
 			data.webhook,
 			defaults?.webhook,
 			mainDefaults?.webhook,

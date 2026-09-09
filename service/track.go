@@ -44,7 +44,7 @@ func (s *Services) Track(ordering *[]string, orderMu *sync.RWMutex) {
 	}
 }
 
-// Track monitors the Service for new releases, triggering notifications and WebHooks when found.
+// Track monitors the Service for new releases, triggering notifications and Webhooks when found.
 func (s *Service) Track() {
 	s.initMetrics()
 	// Skip inactive Services.

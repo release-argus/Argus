@@ -26,8 +26,8 @@ import type {
 	ActionAPIType,
 	CommandSummaryListType,
 	CommandSummaryType,
-	WebHookSummaryListType,
-	WebHookSummaryType,
+	WebhookSummaryListType,
+	WebhookSummaryType,
 } from '@/utils/api/types/config/summary';
 import { getErrorMessage } from '@/utils/errors';
 import { isNonEmptyObject } from '@/utils/is-empty';
@@ -48,19 +48,19 @@ const createInitialRecord = (count: number) =>
 /**
  * @param serviceName - The service name.
  * @param sentCommands - Commands that have sent.
- * @param sentWebHooks - WebHooks that have sent.
+ * @param sentWebhooks - Webhooks that have sent.
  * @returns Whether this service is sending any commands or webhooks.
  */
 const isSendingService = (
 	serviceName: string,
 	sentCommands: string[],
-	sentWebHooks: string[],
+	sentWebhooks: string[],
 ) => {
 	const prefixStr = `${serviceName} `;
 	for (const id of sentCommands) {
 		if (id.startsWith(prefixStr)) return true;
 	}
-	for (const id of sentWebHooks) {
+	for (const id of sentWebhooks) {
 		if (id.startsWith(prefixStr)) return true;
 	}
 	return false;
@@ -72,7 +72,7 @@ const isSendingService = (
  * @returns Whether we are past the time this command/webhook is next runnable.
  */
 const isActionRunnable = (
-	item: CommandSummaryType | WebHookSummaryType,
+	item: CommandSummaryType | WebhookSummaryType,
 	allSuccessful: boolean,
 ): boolean => {
 	const isScheduledForFuture =
@@ -89,7 +89,7 @@ const isActionRunnable = (
 type SendVariables = {
 	target: string;
 	serviceID: string;
-	isWebHook: boolean;
+	isWebhook: boolean;
 	unspecificTarget: boolean;
 };
 
@@ -97,7 +97,7 @@ type SendVariables = {
 type SendContext = {
 	commandData: CommandSummaryListType;
 	serviceID: string;
-	webhookData: WebHookSummaryListType;
+	webhookData: WebhookSummaryListType;
 };
 
 /**
@@ -107,7 +107,7 @@ type SendContext = {
 const sendFailureTitle = (data: SendVariables): string => {
 	if (data.target === 'ARGUS_SKIP') return 'Failed to skip release';
 	if (data.unspecificTarget) return 'Failed to send';
-	return `Failed to send ${data.isWebHook ? 'WebHook' : 'Command'} '${data.target}'`;
+	return `Failed to send ${data.isWebhook ? 'Webhook' : 'Command'} '${data.target}'`;
 };
 
 /**
@@ -116,11 +116,11 @@ const sendFailureTitle = (data: SendVariables): string => {
  */
 const ActionReleaseModal = () => {
 	// modal.actionType:
-	//   RESEND             - 0 WebHooks failed. 'Resend' Modal.
-	//   SEND               - Send WebHooks for this new version. 'New release' Modal.
+	//   RESEND             - 0 Webhooks failed. 'Resend' Modal.
+	//   SEND               - Send Webhooks for this new version. 'New release' Modal.
 	//   SKIP | SKIP_NO_WH  - Release not wanted. 'Skip' Modal.
-	//   RETRY              - 1+ WebHooks failed sending. 'Retry' Modal.
-	//   APPROVE_MANUAL - Approve a release for a service with no WebHooks/Commands and a manual deployed_version. 'Approve' Modal.
+	//   RETRY              - 1+ Webhooks failed sending. 'Retry' Modal.
+	//   APPROVE_MANUAL - Approve a release for a service with no Webhooks/Commands and a manual deployed_version. 'Approve' Modal.
 	const { modal, hideModal: hideModalDialog } = useModal();
 	const { mutate: approveManualVersion } = useApproveManualDeployedVersion();
 	const [modalData, setModalData] = useReducer(reducerActionModal, {
@@ -184,10 +184,10 @@ const ActionReleaseModal = () => {
 		const webhookCount = modal.service.webhook ?? 0;
 		const action =
 			commandCount && webhookCount
-				? 'Commands and WebHooks'
+				? 'Commands and Webhooks'
 				: commandCount
 					? 'Commands'
-					: 'WebHooks';
+					: 'Webhooks';
 
 		// Text mappings.
 		const textMap: Record<
@@ -277,9 +277,9 @@ const ActionReleaseModal = () => {
 			if (data.target === 'ARGUS_SKIP') return;
 
 			let commandData: CommandSummaryListType = {};
-			let webhookData: WebHookSummaryListType = {};
+			let webhookData: WebhookSummaryListType = {};
 			if (data.unspecificTarget) {
-				// All Commands/WebHooks have sent successfully.
+				// All Commands/Webhooks have sent successfully.
 				const allSuccessful =
 					Object.keys(modalData.commands).every(
 						(command_id) => modalData.commands[command_id].failed === false,
@@ -300,7 +300,7 @@ const ActionReleaseModal = () => {
 						webhookData[webhookID] = webhook;
 				}
 				// Targeting specific command/webhook.
-			} else if (data.isWebHook) {
+			} else if (data.isWebhook) {
 				const webhookID = data.target.slice('webhook_'.length);
 				webhookData = { [webhookID]: modalData.webhooks[webhookID] ?? {} };
 			} else {
@@ -323,7 +323,7 @@ const ActionReleaseModal = () => {
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: hideModal stable.
 	const onClickAcknowledge = useCallback(
-		(target: string, isWebHook?: boolean) => {
+		(target: string, isWebhook?: boolean) => {
 			const unspecificTarget = [
 				'ARGUS_ALL',
 				'ARGUS_FAILED',
@@ -340,10 +340,10 @@ const ActionReleaseModal = () => {
 			) {
 				let approveTarget = target;
 				if (!unspecificTarget)
-					if (isWebHook) approveTarget = `webhook_${target}`;
+					if (isWebhook) approveTarget = `webhook_${target}`;
 					else approveTarget = `command_${target}`;
 				mutate({
-					isWebHook: isWebHook === true,
+					isWebhook: isWebhook === true,
 					serviceID: modal.service.id,
 					target: approveTarget,
 					unspecificTarget: unspecificTarget,
@@ -355,7 +355,7 @@ const ActionReleaseModal = () => {
 		[modal.service, stats.canSendUnspecific],
 	);
 
-	// Query for the Commands/WebHooks for the service.
+	// Query for the Commands/Webhooks for the service.
 	const { data, isFetching } = useQuery<ActionAPIType>({
 		enabled: modal.actionType !== 'EDIT' && modal.service.id !== '',
 		placeholderData: {
@@ -486,7 +486,7 @@ const ActionReleaseModal = () => {
 				{isNonEmptyObject(data?.webhook) && (
 					<div className="flex flex-col gap-1">
 						<strong>
-							{pluralise('WebHook', Object.keys(data.webhook).length)}:
+							{pluralise('Webhook', Object.keys(data.webhook).length)}:
 						</strong>
 						<ModalList
 							data={modalData.webhooks}

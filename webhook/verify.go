@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package webhook provides WebHook functionality to services.
+// Package webhook provides Webhook functionality to services.
 package webhook
 
 import (
@@ -29,7 +29,7 @@ import (
 )
 
 // CheckValues validates each entry and reports whether any values were modified.
-func (whd *WebHooksDefaults) CheckValues() (error, bool) {
+func (whd *WebhooksDefaults) CheckValues() (error, bool) {
 	if whd == nil {
 		return nil, false
 	}
@@ -58,9 +58,9 @@ func (whd *WebHooksDefaults) CheckValues() (error, bool) {
 	return errors.Join(errs...), false
 }
 
-// CheckValues validates the fields of each [WebHook],
+// CheckValues validates the fields of each [Webhook],
 // returning errors encountered and whether any values were modified.
-func (w *WebHooks) CheckValues() (error, bool) {
+func (w *Webhooks) CheckValues() (error, bool) {
 	if w == nil {
 		return nil, false
 	}
@@ -90,7 +90,7 @@ func (w *WebHooks) CheckValues() (error, bool) {
 
 // CheckValues validates the fields of the receiver,
 // returning errors encountered and whether any values were modified.
-func (w *WebHook) CheckValues() (error, bool) {
+func (w *Webhook) CheckValues() (error, bool) {
 	var errs []error
 
 	// type
@@ -230,8 +230,8 @@ func (b *Base) CheckValues() (error, bool) {
 	return errors.Join(errs...), false
 }
 
-// Print writes the WebHooksDefaults to stdout with the given prefix.
-func (whd *WebHooksDefaults) Print(prefix string) {
+// Print writes the WebhooksDefaults to stdout with the given prefix.
+func (whd *WebhooksDefaults) Print(prefix string) {
 	if whd == nil || len(*whd) == 0 {
 		return
 	}

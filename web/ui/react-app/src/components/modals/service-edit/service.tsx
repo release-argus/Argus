@@ -6,7 +6,7 @@ import EditServiceLatestVersion from '@/components/modals/service-edit/latest-ve
 import EditServiceNotifiers from '@/components/modals/service-edit/notifiers';
 import EditServiceOptions from '@/components/modals/service-edit/options';
 import EditServiceRoot from '@/components/modals/service-edit/root';
-import EditServiceWebHooks from '@/components/modals/service-edit/webhooks';
+import EditServiceWebhooks from '@/components/modals/service-edit/webhooks';
 import { Accordion } from '@/components/ui/accordion';
 
 type EditServiceProps = {
@@ -31,7 +31,7 @@ const EditService: FC<EditServiceProps> = ({ loading }) => {
 					<EditServiceLatestVersion />
 					<EditServiceDeployedVersion />
 					<EditServiceCommands loading={loading} name="command" />
-					<EditServiceWebHooks loading={loading} />
+					<EditServiceWebhooks loading={loading} />
 					<EditServiceNotifiers loading={loading} />
 					<EditServiceDashboard />
 				</Accordion>

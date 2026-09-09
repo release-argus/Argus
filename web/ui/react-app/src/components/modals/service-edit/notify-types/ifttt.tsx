@@ -73,7 +73,7 @@ const IFTTT = ({ name, main }: { name: string; main?: NotifyIFTTTSchema }) => {
 				<FieldText
 					colSize={{ sm: 12 }}
 					defaultVal={defaults?.url_fields?.webhookid}
-					label="WebHook ID"
+					label="Webhook ID"
 					name={`${name}.url_fields.webhookid`}
 					required
 				/>

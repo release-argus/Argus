@@ -17,7 +17,7 @@ type ServiceActionReleaseProps = {
 /**
  * Displays possible actions for service releases.
  * Either approve, resend or skip based on the service's state
- * and the presence of WebHooks or Commands for this service.
+ * and the presence of Webhooks or Commands for this service.
  *
  * @param service - The service to display actions for.
  * @param updateAvailable - Known update available for this service.
@@ -42,9 +42,9 @@ const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 		let actionType: string | null = null;
 		if (service.webhook) {
 			if (service.command) {
-				actionType = 'Commands/WebHooks';
+				actionType = 'Commands/Webhooks';
 			} else {
-				actionType = 'WebHooks';
+				actionType = 'Webhooks';
 			}
 		} else if (service.command) {
 			actionType = 'Commands';

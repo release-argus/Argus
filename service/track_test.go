@@ -208,7 +208,7 @@ func TestService_Track(t *testing.T) {
 					url: ` + test.LookupBare["url_valid"] + `/1.2.2
 				webhook:
 					test:
-						` + test.Indent(whtest.WebHook(t, false, false, false).String(""), 4) + `
+						` + test.Indent(whtest.Webhook(t, false, false, false).String(""), 4) + `
 			`)),
 			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
@@ -226,7 +226,7 @@ func TestService_Track(t *testing.T) {
 					url: ` + test.LookupBare["url_valid"] + `/1.2.2
 				webhook:
 					test:
-						` + test.Indent(whtest.WebHook(t, false, false, false).String(""), 4) + `
+						` + test.Indent(whtest.Webhook(t, false, false, false).String(""), 4) + `
 				dashboard:
 					auto_approve: true
 			`)),
