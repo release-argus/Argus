@@ -56,6 +56,16 @@ type SetupRequest struct {
 	Password    string `json:"password"`
 }
 
+// AccountUpdateRequest is the body of PATCH /api/v1/auth/me: the signed-in
+// user changing their own account. CurrentPassword is always required;
+// nil fields stay unchanged.
+type AccountUpdateRequest struct {
+	CurrentPassword string  `json:"current_password"`
+	DisplayName     *string `json:"display_name,omitzero"`
+	Email           *string `json:"email,omitzero"`
+	NewPassword     *string `json:"new_password,omitzero"`
+}
+
 // UserCreateRequest is the body of POST /api/v1/users.
 type UserCreateRequest struct {
 	Username    string   `json:"username"`

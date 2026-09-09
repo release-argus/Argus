@@ -114,8 +114,8 @@ test.describe('Authentication', () => {
 		for (const [parent, landing] of [
 			['/admin', '/admin/users'],
 			['/admin/', '/admin/users'],
-			['/account', '/account/tokens'],
-			['/account/', '/account/tokens'],
+			['/account', '/account/profile'],
+			['/account/', '/account/profile'],
 		]) {
 			await page.goto(parent);
 			await expect(page, `${parent} lands on ${landing}`).toHaveURL(
