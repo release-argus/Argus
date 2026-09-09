@@ -254,7 +254,9 @@ const ActionReleaseModal = () => {
 		mutationFn: (data) =>
 			mapRequest('ACTION_SEND', {
 				serviceID: data.serviceID,
-				target: data.target,
+				target: data.unspecificTarget
+					? data.target
+					: `${data.isWebhook ? 'webhook' : 'command'}_${data.target}`,
 			}),
 		onError: (error, data, context) => {
 			// No WebSocket event follows a request that never reached the server,
@@ -301,11 +303,9 @@ const ActionReleaseModal = () => {
 				}
 				// Targeting specific command/webhook.
 			} else if (data.isWebhook) {
-				const webhookID = data.target.slice('webhook_'.length);
-				webhookData = { [webhookID]: modalData.webhooks[webhookID] ?? {} };
+				webhookData = { [data.target]: modalData.webhooks[data.target] ?? {} };
 			} else {
-				const commandID = data.target.slice('command_'.length);
-				commandData = { [commandID]: modalData.commands[commandID] ?? {} };
+				commandData = { [data.target]: modalData.commands[data.target] ?? {} };
 			}
 
 			setModalData({
@@ -338,14 +338,10 @@ const ActionReleaseModal = () => {
 					target !== 'ARGUS_SKIP'
 				)
 			) {
-				let approveTarget = target;
-				if (!unspecificTarget)
-					if (isWebhook) approveTarget = `webhook_${target}`;
-					else approveTarget = `command_${target}`;
 				mutate({
 					isWebhook: isWebhook === true,
 					serviceID: modal.service.id,
-					target: approveTarget,
+					target: target,
 					unspecificTarget: unspecificTarget,
 				});
 			}
