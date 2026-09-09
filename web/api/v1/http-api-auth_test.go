@@ -18,6 +18,7 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -1057,6 +1058,660 @@ func TestAPI_AuthLogout__kicks(t *testing.T) {
 			prefix,
 		)
 	}
+}
+
+func TestAPI_AuthMeUpdate__password(t *testing.T) {
+	// GIVEN: an admin with two WebSocket sessions.
+	file := "TestAPI_AuthMeUpdate__password.yml"
+	api, deps, _ := testAuthServer(t, file)
+	cookie := loginCookie(t, api, "admin", "admin-password")
+	otherCookie := loginCookie(t, api, "admin", "admin-password")
+	adminID := adminContext(t, api, deps).User.ID
+	connect := wireHub(t, api)
+	changingClient := connect(adminID, auth.HashToken(cookie.Value))
+	otherClient := connect(adminID, auth.HashToken(otherCookie.Value))
+
+	prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() password", packageName)
+
+	// WHEN: the user sets a new password.
+	w := serveAuth(api, authedRequest(
+		http.MethodPatch, "/api/v1/auth/me",
+		test.TrimJSON(`{
+			"current_password":"admin-password",
+			"new_password":"new-admin-password"
+		}`),
+		cookie,
+	))
+
+	// THEN: the change succeeds, answering with the account.
+	if got, want := w.Code, http.StatusOK; got != want {
+		t.Fatalf(
+			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
+			prefix, got, w.Body.String(), want,
+		)
+	}
+	var me apitype.AuthMe
+	if err := decode.Unmarshal("json", w.Body.Bytes(), &me); err != nil {
+		t.Fatalf(
+			"%s\nparse response: %v",
+			prefix, err,
+		)
+	}
+	if got, want := me.User.Username, "admin"; got != want {
+		t.Errorf(
+			"%s\nresponse user mismatch\ngot:  %q\nwant: %q",
+			prefix, got, want,
+		)
+	}
+
+	// AND: a fresh session cookie is issued.
+	var fresh *http.Cookie
+	for _, c := range w.Result().Cookies() {
+		if c.Name == authCookieName {
+			fresh = c
+		}
+	}
+	if fresh == nil || fresh.Value == "" || fresh.Value == cookie.Value {
+		t.Fatalf(
+			"%s\nshould issue a new session cookie\ngot: %+v",
+			prefix, fresh,
+		)
+	}
+
+	// AND: every session of the user loses its WebSocket clients.
+	if api.hub.hasClient(changingClient) || api.hub.hasClient(otherClient) {
+		t.Errorf(
+			"%s\na password change should kick the user's WebSocket clients",
+			prefix,
+		)
+	}
+
+	// AND: the sessions the change replaced no longer authenticate.
+	for _, stale := range []*http.Cookie{cookie, otherCookie} {
+		w := serveAuth(api,
+			authedRequest(http.MethodGet, "/api/v1/auth/me", "", stale))
+		if got, want := w.Code, http.StatusUnauthorized; got != want {
+			t.Errorf(
+				"%s\nstale session status mismatch\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	}
+
+	// AND: the caller stays signed in on the fresh session.
+	w = serveAuth(api,
+		authedRequest(http.MethodGet, "/api/v1/auth/me", "", fresh))
+	if got, want := w.Code, http.StatusOK; got != want {
+		t.Errorf(
+			"%s\nfresh session status mismatch\ngot:  %d - %s\nwant: %d",
+			prefix, got, w.Body.String(), want,
+		)
+	}
+
+	// AND: only the new password logs in.
+	w = serveAuth(api, httptest.NewRequest(
+		http.MethodPost, "/api/v1/auth/login",
+		strings.NewReader(test.TrimJSON(`{
+			"username":"admin",
+			"password":"admin-password"
+		}`)),
+	))
+	if got, want := w.Code, http.StatusUnauthorized; got != want {
+		t.Errorf(
+			"%s\nold password status mismatch\ngot:  %d - %s\nwant: %d",
+			prefix, got, w.Body.String(), want,
+		)
+	}
+	loginCookie(t, api, "admin", "new-admin-password")
+}
+
+func TestAPI_AuthMeUpdate__profile(t *testing.T) {
+	// GIVEN: the ways a user may patch their own profile fields.
+	const (
+		password = "profile-password"
+		wasName  = "Before"
+		wasEmail = "before@example.com"
+		nowName  = "After"
+		nowEmail = "after@example.com"
+	)
+	tests := []struct {
+		name            string
+		body            string
+		wantDisplayName string
+		wantEmail       string
+	}{
+		{
+			name: "valid/display name only",
+			body: test.TrimJSON(`{
+				"current_password":"profile-password",
+				"display_name":"After"
+			}`),
+			wantDisplayName: nowName,
+			wantEmail:       wasEmail,
+		},
+		{
+			name: "valid/email only",
+			body: test.TrimJSON(`{
+				"current_password":"profile-password",
+				"email":"after@example.com"
+			}`),
+			wantDisplayName: wasName,
+			wantEmail:       nowEmail,
+		},
+		{
+			name: "valid/both at once",
+			body: test.TrimJSON(`{
+				"current_password":"profile-password",
+				"display_name":"After","email":"after@example.com"
+			}`),
+			wantDisplayName: nowName,
+			wantEmail:       nowEmail,
+		},
+		{
+			name: "valid/clearing a field",
+			body: test.TrimJSON(`{
+				"current_password":"profile-password",
+				"display_name":"","email":""
+			}`),
+			wantDisplayName: "",
+			wantEmail:       "",
+		},
+		{
+			name: "valid/no fields, just the password check",
+			body: test.TrimJSON(`{
+				"current_password":"profile-password"
+			}`),
+			wantDisplayName: wasName,
+			wantEmail:       wasEmail,
+		},
+	}
+
+	file := "TestAPI_AuthMeUpdate__profile.yml"
+	api, deps, _ := testAuthServer(t, file)
+
+	for i, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() profile", packageName)
+
+			// AND: an account of their own, with both fields already set.
+			username := fmt.Sprintf("profile-user-%d", i)
+			user := createAuthUser(t, deps, username, password)
+			seedName, seedEmail := wasName, wasEmail
+			if _, err := deps.Store.UpdateUser(t.Context(),
+				user.ID,
+				store.UserPatch{DisplayName: &seedName, Email: &seedEmail},
+			); err != nil {
+				t.Fatalf(
+					"%s\nseed %q: %v",
+					prefix, username, err,
+				)
+			}
+			cookie := loginCookie(t, api, username, password)
+
+			// WHEN: they patch their own account.
+			w := serveAuth(api, authedRequest(
+				http.MethodPatch, "/api/v1/auth/me",
+				tc.body, cookie,
+			))
+
+			// THEN: the response carries the updated account.
+			if got, want := w.Code, http.StatusOK; got != want {
+				t.Fatalf(
+					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
+					prefix, got, w.Body.String(), want,
+				)
+			}
+			var me apitype.AuthMe
+			if err := decode.Unmarshal("json", w.Body.Bytes(), &me); err != nil {
+				t.Fatalf(
+					"%s\nparse response: %v",
+					prefix, err,
+				)
+			}
+			if me.User.DisplayName != tc.wantDisplayName ||
+				me.User.Email != tc.wantEmail {
+				t.Errorf(
+					"%s\nresponse mismatch"+
+						"\ngot:  display_name=%q, email=%q"+
+						"\nwant: display_name=%q, email=%q",
+					prefix,
+					me.User.DisplayName, me.User.Email,
+					tc.wantDisplayName, tc.wantEmail,
+				)
+			}
+
+			// AND: the session is left alone - no password changed,
+			// so nothing to revoke.
+			for _, c := range w.Result().Cookies() {
+				if c.Name == authCookieName {
+					t.Errorf(
+						"%s\nprofile-only update should not re-issue the session"+
+							"\ngot: %+v",
+						prefix, c,
+					)
+				}
+			}
+
+			// AND: the change persisted, readable on the same session.
+			w = serveAuth(api, authedRequest(
+				http.MethodGet, "/api/v1/auth/me",
+				"",
+				cookie,
+			))
+			if got, want := w.Code, http.StatusOK; got != want {
+				t.Fatalf(
+					"%s\nsession after a profile update\ngot:  %d - %s\nwant: %d",
+					prefix, got, w.Body.String(), want,
+				)
+			}
+			me = apitype.AuthMe{}
+			if err := decode.Unmarshal("json", w.Body.Bytes(), &me); err != nil {
+				t.Fatalf(
+					"%s\nparse /auth/me: %v",
+					prefix, err,
+				)
+			}
+			if me.User.DisplayName != tc.wantDisplayName ||
+				me.User.Email != tc.wantEmail {
+				t.Errorf(
+					"%s\npersisted mismatch"+
+						"\ngot:  display_name=%q, email=%q"+
+						"\nwant: display_name=%q, email=%q",
+					prefix,
+					me.User.DisplayName, me.User.Email,
+					tc.wantDisplayName, tc.wantEmail,
+				)
+			}
+
+			// AND: the password is untouched.
+			loginCookie(t, api, username, password)
+		})
+	}
+}
+
+func TestAPI_AuthMeUpdate__refusals(t *testing.T) {
+	// GIVEN: a logged-in admin.
+	file := "TestAPI_AuthMeUpdate__refusals.yml"
+	api, _, _ := testAuthServer(t, file)
+	cookie := loginCookie(t, api, "admin", "admin-password")
+
+	tests := []struct {
+		name        string
+		body        string
+		wantStatus  int
+		wantMessage string // Checked when set - the UI maps errors by message.
+	}{
+		{
+			name:       "invalid/malformed body",
+			body:       `{`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "invalid/over-long display name",
+			body: test.TrimJSON(`{
+				"current_password":"admin-password",
+				"display_name":"` + strings.Repeat("x", maxFieldLength+1) + `"
+			}`),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "invalid/new password too short",
+			body: test.TrimJSON(`{
+				"current_password":"admin-password",
+				"new_password":"short"
+			}`),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			// 400 rather than 401: the session is valid, and a 401 would
+			// log the caller out of the app.
+			name: "invalid/no current password",
+			body: test.TrimJSON(`{
+				"display_name":"Nice Try"
+			}`),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "invalid/wrong current password",
+			body: test.TrimJSON(`{
+				"current_password":"not-my-password",
+				"display_name":"Nice Try"
+			}`),
+			wantStatus:  http.StatusBadRequest,
+			wantMessage: "current password is incorrect",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() refusals", packageName)
+
+			// WHEN: the update is requested.
+			w := serveAuth(api, authedRequest(
+				http.MethodPatch, "/api/v1/auth/me",
+				tc.body,
+				cookie,
+			))
+
+			// THEN: it is refused.
+			if got := w.Code; got != tc.wantStatus {
+				t.Errorf(
+					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
+					prefix, got, w.Body.String(), tc.wantStatus,
+				)
+			}
+
+			// AND: the message as expected.
+			if tc.wantMessage != "" {
+				var body struct {
+					Message string `json:"message"`
+				}
+				if err := decode.Unmarshal("json", w.Body.Bytes(), &body); err != nil {
+					t.Fatalf(
+						"%s\nparse error body: %v",
+						prefix, err,
+					)
+				}
+				if body.Message != tc.wantMessage {
+					t.Errorf(
+						"%s\nmessage mismatch\ngot:  %q\nwant: %q",
+						prefix, body.Message, tc.wantMessage,
+					)
+				}
+			}
+
+			// AND: the account is left alone.
+			w = serveAuth(api, authedRequest(
+				http.MethodGet, "/api/v1/auth/me",
+				"",
+				cookie,
+			))
+			var me apitype.AuthMe
+			if err := decode.Unmarshal("json", w.Body.Bytes(), &me); err != nil {
+				t.Fatalf(
+					"%s\nparse /auth/me: %v",
+					prefix, err,
+				)
+			}
+			if me.User.DisplayName != "Administrator" {
+				t.Errorf(
+					"%s\ndisplay name should be unchanged\ngot:  %q\nwant: %q",
+					prefix, me.User.DisplayName, "Administrator",
+				)
+			}
+			loginCookie(t, api, "admin", "admin-password")
+		})
+	}
+
+	// AND: an unauthenticated request is 401.
+	w := serveAuth(api, httptest.NewRequest(http.MethodPatch, "/api/v1/auth/me",
+		strings.NewReader(test.TrimJSON(`{
+			"current_password":"admin-password","display_name":"Nice Try"}`))))
+	if got, want := w.Code, http.StatusUnauthorized; got != want {
+		t.Errorf(
+			"%s\nunauthenticated account update\ngot:  %d - %s\nwant: %d",
+			packageName, got, w.Body.String(), want,
+		)
+	}
+}
+
+func TestAPI_AuthMeUpdate__failures(t *testing.T) {
+	// GIVEN: the ways an account update can fail beneath the handler.
+	t.Run("invalid/no auth context", func(t *testing.T) {
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		// WHEN: the handler is called without an [auth.Context].
+		w := httptest.NewRecorder()
+		api, _, _ := testAuthServer(t, "TestAPI_AuthMeUpdate__failures_noCtx.yml")
+		api.httpAuthMeUpdate(w, httptest.NewRequest(
+			http.MethodPatch, "/api/v1/auth/me",
+			strings.NewReader(`{}`),
+		))
+
+		// THEN: 401.
+		if got, want := w.Code, http.StatusUnauthorized; got != want {
+			t.Errorf(
+				"%s\nno auth context\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+
+	t.Run("invalid/rate-limited", func(t *testing.T) {
+		// AND: a logged-in admin who has spent the limiter's budget.
+		api, _, _ := testAuthServer(t, "TestAPI_AuthMeUpdate__failures_limit.yml")
+		cookie := loginCookie(t, api, "admin", "admin-password")
+		wrong := test.TrimJSON(`{
+				"current_password":"not-my-password",
+				"display_name":"Nope"
+			}`)
+
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		for i := range loginLimitAttempts {
+			w := serveAuth(api, authedRequest(
+				http.MethodPatch, "/api/v1/auth/me",
+				wrong,
+				cookie,
+			))
+			if got, want := w.Code, http.StatusBadRequest; got != want {
+				t.Fatalf(
+					"%s\nattempt %d\ngot:  %d - %s\nwant: %d",
+					prefix, i+1, got, w.Body.String(), want,
+				)
+			}
+		}
+
+		// WHEN: one more attempt is made.
+		w := serveAuth(api, authedRequest(
+			http.MethodPatch, "/api/v1/auth/me",
+			wrong,
+			cookie,
+		))
+
+		// THEN: it is rate-limited rather than checked.
+		if got, want := w.Code, http.StatusTooManyRequests; got != want {
+			t.Errorf(
+				"%s\nover the limit\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+
+	t.Run("invalid/credential lookup breaks", func(t *testing.T) {
+		// AND: a server whose store is gone.
+		api, deps, dbConn := testAuthServer(t,
+			"TestAPI_AuthMeUpdate__failures_lookup.yml")
+		authCtx := adminContext(t, api, deps)
+		_ = dbConn.Close()
+
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		// WHEN: the current password cannot be looked up.
+		w := httptest.NewRecorder()
+		api.httpAuthMeUpdate(w, withAuthCtx(httptest.NewRequest(
+			http.MethodPatch, "/api/v1/auth/me",
+			strings.NewReader(`{"current_password":"admin-password"}`)),
+			authCtx,
+		))
+
+		// THEN: the infrastructure failure reads as 500, not a bad password.
+		if got, want := w.Code, http.StatusInternalServerError; got != want {
+			t.Errorf(
+				"%s\nlookup failure\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+
+	t.Run("invalid/hashing breaks", func(t *testing.T) {
+		// AND: a logged-in admin, and hashing that fails.
+		api, _, _ := testAuthServer(t, "TestAPI_AuthMeUpdate__failures_hash.yml")
+		cookie := loginCookie(t, api, "admin", "admin-password")
+		hashPasswordHad := hashPassword
+		t.Cleanup(func() { hashPassword = hashPasswordHad })
+		hashPassword = func(_ string) (string, error) {
+			return "", errors.New("hash broke")
+		}
+
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		// WHEN: a new password cannot be hashed.
+		w := serveAuth(api, authedRequest(
+			http.MethodPatch, "/api/v1/auth/me",
+			test.TrimJSON(`{
+				"current_password":"admin-password",
+				"new_password":"new-admin-password"
+			}`),
+			cookie,
+		))
+
+		// THEN: 500.
+		if got, want := w.Code, http.StatusInternalServerError; got != want {
+			t.Errorf(
+				"%s\nhash failure\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+
+	t.Run("invalid/the account vanished", func(t *testing.T) {
+		// AND: a context naming an account the store does not hold.
+		api, deps, _ := testAuthServer(t, "TestAPI_AuthMeUpdate__failures_gone.yml")
+		authCtx := *adminContext(t, api, deps)
+		authCtx.User.ID = "no-such-id"
+
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		// WHEN: the update is applied to it.
+		w := httptest.NewRecorder()
+		api.httpAuthMeUpdate(w,
+			withAuthCtx(httptest.NewRequest(
+				http.MethodPatch, "/api/v1/auth/me",
+				strings.NewReader(test.TrimJSON(`{
+						"current_password":"admin-password",
+						"display_name":"Ghost"
+					}`),
+				)),
+				&authCtx,
+			))
+
+		// THEN: the store failure surfaces as a 404.
+		if got, want := w.Code, http.StatusNotFound; got != want {
+			t.Errorf(
+				"%s\nvanished account\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+
+	t.Run("invalid/sessions break on a password change", func(t *testing.T) {
+		// AND: a server whose session manager fails every call.
+		api, deps, _ := testAuthServer(t,
+			"TestAPI_AuthMeUpdate__failures_sessions.yml")
+		authCtx := adminContext(t, api, deps)
+		deps.Sessions = session.New(
+			failingSessionStore{},
+			session.Config{Lifetime: time.Hour, IdleTimeout: time.Hour},
+		)
+
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		// WHEN: the password changes, so sessions must be revoked and re-minted.
+		w := httptest.NewRecorder()
+		api.httpAuthMeUpdate(w, withAuthCtx(httptest.NewRequest(
+			http.MethodPatch, "/api/v1/auth/me",
+			strings.NewReader(test.TrimJSON(`{
+				"current_password":"admin-password",
+				"new_password":"new-admin-password"
+			}`))),
+			authCtx,
+		))
+
+		// THEN: the failure to re-mint reads as 500.
+		if got, want := w.Code, http.StatusInternalServerError; got != want {
+			t.Errorf(
+				"%s\nsession failure\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+
+	t.Run("invalid/grants unreadable after the update", func(t *testing.T) {
+		// AND: a server whose grants are gone, leaving the update itself fine.
+		api, deps, dbConn := testAuthServer(t,
+			"TestAPI_AuthMeUpdate__failures_grants.yml")
+		authCtx := adminContext(t, api, deps)
+		if _, err := dbConn.Exec(`DROP TABLE permissions;`); err != nil {
+			t.Fatalf(
+				"%s\nsetup drop failed: %v",
+				packageName, err,
+			)
+		}
+
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		// WHEN: the account is re-read for the response.
+		w := httptest.NewRecorder()
+		api.httpAuthMeUpdate(w, withAuthCtx(httptest.NewRequest(
+			http.MethodPatch, "/api/v1/auth/me",
+			strings.NewReader(test.TrimJSON(`{
+				"current_password":"admin-password",
+				"display_name":"Renamed"
+			}`))),
+			authCtx,
+		))
+
+		// THEN: 500.
+		if got, want := w.Code, http.StatusInternalServerError; got != want {
+			t.Errorf(
+				"%s\ngrant failure\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+}
+
+func TestAPI_AuthMeUpdate__bearerRefused(t *testing.T) {
+	// GIVEN: an auth-enabled API and an admin owning an API token.
+	file := "TestAPI_AuthMeUpdate__bearerRefused.yml"
+	api, deps, _ := testAuthServer(t, file)
+	authCtx := adminContext(t, api, deps)
+	plaintext, _, err := deps.Store.CreateAPIToken(
+		t.Context(), authCtx.User.ID, "ci", nil,
+	)
+	if err != nil {
+		t.Fatalf(
+			"%s\nsetup CreateAPIToken failed: %v",
+			packageName, err,
+		)
+	}
+
+	prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() from a token", packageName)
+
+	// WHEN: the token tries to change the owner's password.
+	req := authedRequest(http.MethodPatch, "/api/v1/auth/me",
+		test.TrimJSON(`{
+			"current_password":"admin-password",
+			"new_password":"new-admin-password"
+		}`),
+		nil,
+	)
+	req.Header.Set("Authorization", "Bearer "+plaintext)
+	w := serveAuth(api, req)
+
+	// THEN: the request is refused.
+	if got, want := w.Code, http.StatusForbidden; got != want {
+		t.Errorf(
+			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
+			prefix, got, w.Body.String(), want,
+		)
+	}
+
+	// AND: the password is unchanged.
+	loginCookie(t, api, "admin", "admin-password")
 }
 
 func TestAPI_Auth__sessionExpired(t *testing.T) {

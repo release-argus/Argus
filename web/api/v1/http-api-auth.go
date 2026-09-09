@@ -347,6 +347,118 @@ func (api *API) httpAuthMe(w http.ResponseWriter, r *http.Request) {
 	api.writeAuthMe(w, http.StatusOK, authCtx, logFrom)
 }
 
+// errCurrentPassword is given when an account update fails its
+// current-password check.
+var errCurrentPassword = errors.New("current password is incorrect")
+
+// httpAuthMeUpdate handles PATCH /api/v1/auth/me: the signed-in user changing
+// their own account. Every change is gated on the current password. Setting a
+// new one ends the user's other sessions, then re-issues one for this request,
+// so the caller stays signed in here but nowhere else.
+//
+// Response:
+//
+//	200 OK: JSON of the updated user and their permission grants.
+//	400 Bad Request: on a malformed body, an over-long field, a weak new
+//	                 password, or a wrong current password.
+//	401 Unauthorized: with no authenticated user.
+//	429 Too Many Requests: when this (client IP, username) pair is rate-limited.
+//	500 Internal Server Error: on a hashing, store, or session failure.
+func (api *API) httpAuthMeUpdate(w http.ResponseWriter, r *http.Request) {
+	logFrom := logx.LogFrom{Primary: "httpAuthMeUpdate", Secondary: getIP(r)}
+
+	authCtx := api.authCtxOr401(w, r)
+	if authCtx == nil {
+		return
+	}
+
+	var request apitype.AccountUpdateRequest
+	if !api.decodeAuthBody(w, r, &request) {
+		return
+	}
+	for _, field := range []struct {
+		key   string
+		value *string
+	}{
+		{key: "display_name", value: request.DisplayName},
+		{key: "email", value: request.Email},
+	} {
+		if field.value == nil {
+			continue
+		}
+		if err := validateFieldLength(field.key, *field.value); err != nil {
+			failRequest(&w, err, http.StatusBadRequest)
+			return
+		}
+	}
+	if request.NewPassword != nil {
+		if err := validatePassword(*request.NewPassword); err != nil {
+			failRequest(&w, err, http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Verify the current password, spending the login rate-limiter's budget so
+	// a hijacked session cannot brute-force it.
+	if _, err := api.verifyLocalCredentials(
+		r.Context(), authCtx.User.Username, request.CurrentPassword, getIP(r),
+	); err != nil {
+		switch {
+		case errors.Is(err, errTooManyAttempts):
+			failRequest(&w, errTooManyAttempts, http.StatusTooManyRequests)
+		// 400, not 401: the session is valid, and a 401 would log the caller out.
+		case errors.Is(err, auth.ErrInvalidCredentials):
+			failRequest(&w, errCurrentPassword, http.StatusBadRequest)
+		default:
+			logx.Error(err, logFrom, true)
+			failRequest(&w, errors.New("failed to update account"), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	patch := store.UserPatch{
+		DisplayName: request.DisplayName,
+		Email:       request.Email,
+	}
+	if request.NewPassword != nil {
+		hash, err := hashPassword(*request.NewPassword)
+		if err != nil {
+			logx.Error(err, logFrom, true)
+			failRequest(&w, errors.New("failed to update account"), http.StatusInternalServerError)
+			return
+		}
+		patch.PasswordHash = &hash
+	}
+	if _, err := api.auth.Store.UpdateUser(r.Context(), authCtx.User.ID, patch); err != nil {
+		api.failAuthStoreRequest(w, err, logFrom, "update account")
+		return
+	}
+
+	// A new password invalidates every session of the user, including this one.
+	if request.NewPassword != nil {
+		ctx, cancel := detachedContext(r)
+		defer cancel()
+		if err := api.auth.Sessions.RevokeUser(ctx, authCtx.User.ID); err != nil {
+			logx.Error(err, logFrom, true)
+		}
+		api.kickUserWebSocketClients(authCtx.User.ID)
+
+		if !api.startSession(w, r, authCtx, logFrom) {
+			return
+		}
+	}
+
+	// Re-read the updated account details.
+	updated, err := api.contextForUser(r.Context(), authCtx.User.ID, authCtx.Identity.Provider)
+	if err != nil {
+		logx.Error(err, logFrom, true)
+		failRequest(&w, errors.New("failed to update account"), http.StatusInternalServerError)
+		return
+	}
+
+	api.writeAuthMe(w, http.StatusOK, updated, logFrom)
+}
+
 // startSession mints a session for authCtx.User and sets the session cookie,
 // reporting false on failure. WebSocket clients of any sessions evicted by
 // the per-user cap are kicked.

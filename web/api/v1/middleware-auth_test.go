@@ -1902,6 +1902,7 @@ func TestAPI_SetupRoutesAPI__everyRouteIsGuarded(t *testing.T) {
 		"POST   /api/v1/auth/setup":    true,
 		"POST   /api/v1/auth/logout":   true,
 		"GET    /api/v1/auth/me":       true,
+		"PATCH  /api/v1/auth/me":       true,
 		"GET    /api/v1/tokens":        true,
 		"POST   /api/v1/tokens":        true,
 		"DELETE /api/v1/tokens/{id}":   true,

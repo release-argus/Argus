@@ -8,6 +8,7 @@ import type {
 } from '@/types/auth';
 import { API_BASE } from '@/utils/api/types/api-request';
 import type {
+	AccountUpdateRequest,
 	APITokenCreateRequest,
 	GroupCreateRequest,
 	GroupPatchRequest,
@@ -51,6 +52,13 @@ export const setup = (account: SetupRequest) =>
 		body: JSON.stringify(account),
 		method: 'POST',
 		url: `${API_BASE}/auth/setup`,
+	});
+
+export const updateAccount = (patch: AccountUpdateRequest) =>
+	fetchJSON<AuthMe>({
+		body: JSON.stringify(patch),
+		method: 'PATCH',
+		url: `${API_BASE}/auth/me`,
 	});
 
 // Users.

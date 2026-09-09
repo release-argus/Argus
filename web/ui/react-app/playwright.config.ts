@@ -37,6 +37,7 @@ const MUTATING_TEST_TIMEOUT = 90_000;
  */
 const AUTH_SPECS = [
 	'auth.spec.ts',
+	'auth-account.spec.ts',
 	'auth-permissions.spec.ts',
 	'auth-responsive.spec.ts',
 ];

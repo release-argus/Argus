@@ -71,6 +71,9 @@ func (api *API) SetupRoutesAPI() {
 
 		//   GET, the authenticated user and their permissions.
 		v1Router.HandleFunc("/auth/me", api.httpAuthMe).Methods(http.MethodGet)
+		//   PATCH, change your own account (gated on the current password).
+		v1Router.HandleFunc("/auth/me",
+			api.requireSessionAuth(api.httpAuthMeUpdate)).Methods(http.MethodPatch)
 		// Users - CRUD.
 		v1Router.HandleFunc("/users",
 			api.requireAdmin(api.httpUserList)).Methods(http.MethodGet)
