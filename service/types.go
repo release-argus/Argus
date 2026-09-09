@@ -41,7 +41,7 @@ type DefaultsConfig struct {
 type Services map[string]*Service
 
 // Service is a source to track latest and deployed versions of a service.
-// It also has the ability to run commands, send notifications and send WebHooks on new releases.
+// It also has the ability to run commands, send notifications and send Webhooks on new releases.
 type Service struct {
 	ID                    string             `json:"-" yaml:"-"`                                                 // Key/Name of the Service.
 	Name                  string             `json:"name,omitzero" yaml:"name,omitzero"`                         // Name of the Service.
@@ -57,8 +57,8 @@ type Service struct {
 	Command             command.Commands    `json:"command,omitempty" yaml:"command,omitempty"` // OS Commands to run on new release.
 	CommandFromDefaults bool                `json:"-" yaml:"-"`
 
-	WebHook             webhook.WebHooks `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Service-specific WebHook vars.
-	WebHookFromDefaults bool             `json:"-" yaml:"-"`
+	Webhook             webhook.Webhooks `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Service-specific Webhook vars.
+	WebhookFromDefaults bool             `json:"-" yaml:"-"`
 
 	Dashboard dashboard.Options `json:"dashboard,omitzero" yaml:"dashboard,omitzero"` // Options for the dashboard.
 
@@ -77,7 +77,7 @@ type serviceMarshal struct {
 	DeployedVersionLookup deployedver.Lookup `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"`
 	Notify                shoutrrr.Shoutrrrs `json:"notify,omitempty" yaml:"notify,omitempty"`
 	Command               command.Commands   `json:"command,omitempty" yaml:"command,omitempty"`
-	WebHook               webhook.WebHooks   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
+	Webhook               webhook.Webhooks   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
 	Dashboard             dashboard.Options  `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`
 }
 
@@ -88,7 +88,7 @@ type serviceDecode struct {
 	Options   opt.Options        `json:"options,omitzero" yaml:"options,omitzero"`
 	Notify    shoutrrr.Shoutrrrs `json:"notify,omitempty" yaml:"notify,omitempty"`
 	Command   command.Commands   `json:"command,omitempty" yaml:"command,omitempty"`
-	WebHook   webhook.WebHooks   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
+	Webhook   webhook.Webhooks   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
 	Dashboard dashboard.Options  `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`
 }
 
@@ -119,8 +119,8 @@ func (s *Service) marshalAux() serviceMarshal {
 	if !s.CommandFromDefaults {
 		aux.Command = s.Command
 	}
-	if !s.WebHookFromDefaults {
-		aux.WebHook = s.WebHook
+	if !s.WebhookFromDefaults {
+		aux.Webhook = s.Webhook
 	}
 
 	return aux
@@ -146,7 +146,7 @@ func (s *Service) unmarshal(format string, data []byte) error {
 		Options:   s.Options,
 		Notify:    s.Notify,
 		Command:   s.Command,
-		WebHook:   s.WebHook,
+		Webhook:   s.Webhook,
 		Dashboard: s.Dashboard,
 	}
 
@@ -163,7 +163,7 @@ func (s *Service) unmarshal(format string, data []byte) error {
 	)
 	s.Notify = aux.Notify
 	s.Command = aux.Command
-	s.WebHook = aux.WebHook
+	s.Webhook = aux.Webhook
 	s.Dashboard = aux.Dashboard
 	s.Dashboard.SetDefaults(
 		&s.Defaults.Dashboard,
@@ -308,21 +308,21 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 		commands := len(s.Command)
 		summary.Command = &commands
 	}
-	// WebHook.
-	if len(s.WebHook) != 0 {
-		webhooks := len(s.WebHook)
-		summary.WebHook = &webhooks
+	// Webhook.
+	if len(s.Webhook) != 0 {
+		webhooks := len(s.Webhook)
+		summary.Webhook = &webhooks
 	}
 
 	return summary
 }
 
-// UsingDefaults returns whether the receiver is using the Notifiers/Commands/WebHooks from Defaults.
+// UsingDefaults returns whether the receiver is using the Notifiers/Commands/Webhooks from Defaults.
 func (s *Service) UsingDefaults() (bool, bool, bool) {
 	if s == nil {
 		return false, false, false
 	}
-	return s.NotifyFromDefaults, s.CommandFromDefaults, s.WebHookFromDefaults
+	return s.NotifyFromDefaults, s.CommandFromDefaults, s.WebhookFromDefaults
 }
 
 // GetName returns the [Service.Name] || [Service.ID].

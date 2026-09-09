@@ -58,8 +58,8 @@ func (s *Service) Copy(withChannels bool) *Service {
 		)
 		svc.Command = s.Command.Copy()
 	}
-	// WebHook.
-	svc.WebHook = s.WebHook.Copy(&svc.Status, webhook.Notifiers{Shoutrrr: &svc.Notify})
+	// Webhook.
+	svc.Webhook = s.Webhook.Copy(&svc.Status, webhook.Notifiers{Shoutrrr: &svc.Notify})
 
 	return svc
 }

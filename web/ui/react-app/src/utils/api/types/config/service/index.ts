@@ -7,7 +7,7 @@ import type {
 } from '@/utils/api/types/config/service/latest-version';
 import type { ServiceOptions } from '@/utils/api/types/config/service/options';
 import type { Command } from '@/utils/api/types/config/shared';
-import type { WebHook } from '@/utils/api/types/config/webhook';
+import type { Webhook } from '@/utils/api/types/config/webhook';
 
 export type Services = Record<string, Service>;
 
@@ -30,7 +30,7 @@ export type Service = {
 	latest_version?: LatestVersionLookup;
 	deployed_version?: DeployedVersionLookup;
 	command?: Command[];
-	webhook?: WebHook[];
+	webhook?: Webhook[];
 	notify?: NotifyTypesValues[];
 	dashboard?: ServiceDashboardOptions;
 };

@@ -44,12 +44,12 @@ func TestFailsBase_Init(t *testing.T) {
 
 			var failsCommand FailsCommand
 			var failsShoutrrr FailsShoutrrr
-			var failsWebHook FailsWebHook
+			var failsWebhook FailsWebhook
 
 			// WHEN: we Init.
 			failsCommand.Init(tc.size)
 			failsShoutrrr.Init(tc.size)
-			failsWebHook.Init(tc.size)
+			failsWebhook.Init(tc.size)
 
 			// THEN: the size of the map is as expected.
 			if got := len(failsCommand.fails); got != tc.size {
@@ -65,9 +65,9 @@ func TestFailsBase_Init(t *testing.T) {
 					packageName, tc.size,
 				)
 			}
-			if failsWebHook.fails == nil {
+			if failsWebhook.fails == nil {
 				t.Errorf(
-					"%s\nFailsWebHook.Init(%d) length mismatch\ngot:  nil\n\nwant: non-nil",
+					"%s\nFailsWebhook.Init(%d) length mismatch\ngot:  nil\n\nwant: non-nil",
 					packageName, tc.size,
 				)
 			}
@@ -115,8 +115,8 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 			failsCommand.Init(tc.size)
 			var failsShoutrrr FailsShoutrrr
 			failsShoutrrr.Init(tc.size)
-			var failsWebHook FailsWebHook
-			failsWebHook.Init(tc.size)
+			var failsWebhook FailsWebhook
+			failsWebhook.Init(tc.size)
 			// Ensure they are empty.
 			for i := range tc.setAtArray {
 				got := failsCommand.Get(i)
@@ -137,10 +137,10 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 						got,
 					)
 				}
-				got = failsWebHook.Get(k)
+				got = failsWebhook.Get(k)
 				if got != nil {
 					t.Errorf(
-						"%s\nFailsWebHook, Get(%q) after Init(%d)\ngot:  %v\nwant: nil",
+						"%s\nFailsWebhook, Get(%q) after Init(%d)\ngot:  %v\nwant: nil",
 						packageName, k, tc.size,
 						got,
 					)
@@ -153,7 +153,7 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 			}
 			for k, v := range tc.setAtMap {
 				failsShoutrrr.Set(k, v)
-				failsWebHook.Set(k, v)
+				failsWebhook.Set(k, v)
 			}
 
 			// THEN: the values can be retrieved with Get.
@@ -180,11 +180,11 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 						gotStr, wantStr,
 					)
 				}
-				got = failsWebHook.Get(k)
+				got = failsWebhook.Get(k)
 				gotStr = test.StringifyPtr(got)
 				if got == nil || *got != *v {
 					t.Errorf(
-						"%s\nFailsWebHook, Get(%q) after Set(&%v)\ngot:  %v\nwant: %v",
+						"%s\nFailsWebhook, Get(%q) after Set(&%v)\ngot:  %v\nwant: %v",
 						packageName, k, v,
 						gotStr, wantStr,
 					)
@@ -252,21 +252,21 @@ func TestFailsBase_AllPassed(t *testing.T) {
 			failsCommand.Init(len(tc.fails))
 			var failsShoutrrr FailsShoutrrr
 			failsShoutrrr.Init(len(tc.fails))
-			var failsWebHook FailsWebHook
-			failsWebHook.Init(len(tc.fails))
+			var failsWebhook FailsWebhook
+			failsWebhook.Init(len(tc.fails))
 			for i, v := range tc.fails {
 				if v != nil {
 					failsCommand.Set(i, *v)
 				}
 				iStr := strconv.Itoa(i)
 				failsShoutrrr.Set(iStr, v)
-				failsWebHook.Set(iStr, v)
+				failsWebhook.Set(iStr, v)
 			}
 
 			// WHEN: we call AllPassed.
 			gotC := failsCommand.AllPassed()
 			gotS := failsShoutrrr.AllPassed()
-			gotWH := failsWebHook.AllPassed()
+			gotWH := failsWebhook.AllPassed()
 
 			// THEN: the result is as expected.
 			if gotC != tc.want {
@@ -283,7 +283,7 @@ func TestFailsBase_AllPassed(t *testing.T) {
 			}
 			if gotWH != tc.want {
 				t.Errorf(
-					"%s\nFailsWebHook.AllPassed() mismatch\ngot:  %t\nwant: %t",
+					"%s\nFailsWebhook.AllPassed() mismatch\ngot:  %t\nwant: %t",
 					packageName, gotWH, tc.want,
 				)
 			}
@@ -343,21 +343,21 @@ func TestFailsBase_Reset(t *testing.T) {
 			failsCommand.Init(len(tc.fails))
 			var failsShoutrrr FailsShoutrrr
 			failsShoutrrr.Init(len(tc.fails))
-			var failsWebHook FailsWebHook
-			failsWebHook.Init(len(tc.fails))
+			var failsWebhook FailsWebhook
+			failsWebhook.Init(len(tc.fails))
 			for i, v := range tc.fails {
 				if v != nil {
 					failsCommand.Set(i, *v)
 				}
 				iStr := strconv.Itoa(i)
 				failsShoutrrr.Set(iStr, v)
-				failsWebHook.Set(iStr, v)
+				failsWebhook.Set(iStr, v)
 			}
 
 			// WHEN: we call Reset.
 			failsCommand.Reset()
 			failsShoutrrr.Reset()
-			failsWebHook.Reset()
+			failsWebhook.Reset()
 
 			// THEN: all the indices are reset to nil.
 			for i := range tc.fails {
@@ -376,10 +376,10 @@ func TestFailsBase_Reset(t *testing.T) {
 						packageName, got,
 					)
 				}
-				got = failsWebHook.Get(iStr)
+				got = failsWebhook.Get(iStr)
 				if got != nil {
 					t.Errorf(
-						"%s\nFailsWebHook\ngot:  %v\nwant: nil",
+						"%s\nFailsWebhook\ngot:  %v\nwant: nil",
 						packageName, got,
 					)
 				}
@@ -440,8 +440,8 @@ func TestFailsBase_Length(t *testing.T) {
 			failsCommand.Init(tc.size)
 			var failsShoutrrr FailsShoutrrr
 			failsShoutrrr.Init(tc.size)
-			var failsWebHook FailsWebHook
-			failsWebHook.Init(tc.size)
+			var failsWebhook FailsWebhook
+			failsWebhook.Init(tc.size)
 			// Set the values.
 			for i, v := range tc.setAtArray {
 				if v != nil {
@@ -450,13 +450,13 @@ func TestFailsBase_Length(t *testing.T) {
 			}
 			for k, v := range tc.setAtMap {
 				failsShoutrrr.Set(k, v)
-				failsWebHook.Set(k, v)
+				failsWebhook.Set(k, v)
 			}
 
 			// WHEN: we call Length.
 			lengthC := failsCommand.Length()
 			lengthS := failsShoutrrr.Length()
-			lengthWH := failsWebHook.Length()
+			lengthWH := failsWebhook.Length()
 
 			// THEN: the lengths of the maps are returned.
 			if lengthC != tc.size {
@@ -473,7 +473,7 @@ func TestFailsBase_Length(t *testing.T) {
 			}
 			if lengthWH != len(tc.setAtMap) {
 				t.Errorf(
-					"%s\nFailsWebHook\ngot:  %v\nwant: %v",
+					"%s\nFailsWebhook\ngot:  %v\nwant: %v",
 					packageName, lengthWH, len(tc.setAtMap),
 				)
 			}
@@ -644,9 +644,9 @@ func TestFails_String(t *testing.T) {
 			for k, v := range tc.shoutrrrFails {
 				fails.Shoutrrr.Set(k, v)
 			}
-			fails.WebHook.Init(len(tc.webhookFails))
+			fails.Webhook.Init(len(tc.webhookFails))
 			for k, v := range tc.webhookFails {
-				fails.WebHook.Set(k, v)
+				fails.Webhook.Set(k, v)
 			}
 
 			// WHEN: the Fails are stringified with String.
@@ -663,8 +663,8 @@ func TestFails_String(t *testing.T) {
 	}
 }
 
-func TestFailsWebHook_SetAndGetNextRunnable(t *testing.T) {
-	// GIVEN: a FailsWebHook.
+func TestFailsWebhook_SetAndGetNextRunnable(t *testing.T) {
+	// GIVEN: a FailsWebhook.
 	tests := []struct {
 		name     string
 		size     int
@@ -692,14 +692,14 @@ func TestFailsWebHook_SetAndGetNextRunnable(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var failsWebHook FailsWebHook
-			failsWebHook.Init(tc.size)
+			var failsWebhook FailsWebhook
+			failsWebhook.Init(tc.size)
 			// Ensure they are empty.
 			for k := range tc.setAtMap {
-				got := failsWebHook.Get(k)
+				got := failsWebhook.Get(k)
 				if got != nil {
 					t.Errorf(
-						"%s\nFailsWebHook, NextRunnable after Init\ngot:  %v\nwant: nil",
+						"%s\nFailsWebhook, NextRunnable after Init\ngot:  %v\nwant: nil",
 						packageName, got,
 					)
 				}
@@ -707,15 +707,15 @@ func TestFailsWebHook_SetAndGetNextRunnable(t *testing.T) {
 
 			// WHEN: we Set.
 			for k, v := range tc.setAtMap {
-				failsWebHook.SetNextRunnable(k, v)
+				failsWebhook.SetNextRunnable(k, v)
 			}
 
 			// THEN: the values can be retrieved with Get.
 			for k, v := range tc.setAtMap {
-				got := failsWebHook.NextRunnable(k)
+				got := failsWebhook.NextRunnable(k)
 				if got != v {
 					t.Errorf(
-						"%s\nFailsWebHook, NextRunnable(%q) after SetNextRunnable(%q)\ngot:  %s\nwant: %s",
+						"%s\nFailsWebhook, NextRunnable(%q) after SetNextRunnable(%q)\ngot:  %s\nwant: %s",
 						packageName, k, v,
 						got, v,
 					)
@@ -731,7 +731,7 @@ func TestFails_Copy(t *testing.T) {
 		name                               string
 		fromCommandFails, toCommandFails   []*bool
 		fromShoutrrrFails, toShoutrrrFails map[string]*bool
-		fromWebHookFails, toWebHookFails   map[string]*bool
+		fromWebhookFails, toWebhookFails   map[string]*bool
 	}{
 		{
 			name:              "copy empty fails",
@@ -739,8 +739,8 @@ func TestFails_Copy(t *testing.T) {
 			toCommandFails:    []*bool{},
 			fromShoutrrrFails: map[string]*bool{},
 			toShoutrrrFails:   map[string]*bool{},
-			fromWebHookFails:  map[string]*bool{},
-			toWebHookFails:    map[string]*bool{},
+			fromWebhookFails:  map[string]*bool{},
+			toWebhookFails:    map[string]*bool{},
 		},
 		{
 			name: "copy non-empty fails",
@@ -761,11 +761,11 @@ func TestFails_Copy(t *testing.T) {
 			toShoutrrrFails: map[string]*bool{
 				"baz": new(true),
 			},
-			fromWebHookFails: map[string]*bool{
+			fromWebhookFails: map[string]*bool{
 				"foo": new(true),
 				"bar": new(false),
 			},
-			toWebHookFails: map[string]*bool{
+			toWebhookFails: map[string]*bool{
 				"baz": new(false),
 			},
 		},
@@ -787,11 +787,11 @@ func TestFails_Copy(t *testing.T) {
 			toShoutrrrFails: map[string]*bool{
 				"baz": new(true),
 			},
-			fromWebHookFails: map[string]*bool{
+			fromWebhookFails: map[string]*bool{
 				"foo": new(true),
 				"bar": new(false),
 			},
-			toWebHookFails: map[string]*bool{
+			toWebhookFails: map[string]*bool{
 				"baz": new(false),
 			},
 		},
@@ -816,11 +816,11 @@ func TestFails_Copy(t *testing.T) {
 				"baz":  new(true),
 				"bosh": nil,
 			},
-			fromWebHookFails: map[string]*bool{
+			fromWebhookFails: map[string]*bool{
 				"foo": new(true),
 				"bar": new(false),
 			},
-			toWebHookFails: map[string]*bool{
+			toWebhookFails: map[string]*bool{
 				"baz":  new(false),
 				"bosh": nil,
 			},
@@ -843,9 +843,9 @@ func TestFails_Copy(t *testing.T) {
 			for k, v := range tc.fromShoutrrrFails {
 				from.Shoutrrr.Set(k, v)
 			}
-			from.WebHook.Init(len(tc.fromWebHookFails))
-			for k, v := range tc.fromWebHookFails {
-				from.WebHook.Set(k, v)
+			from.Webhook.Init(len(tc.fromWebhookFails))
+			for k, v := range tc.fromWebhookFails {
+				from.Webhook.Set(k, v)
 			}
 
 			// fails to copy to.
@@ -860,9 +860,9 @@ func TestFails_Copy(t *testing.T) {
 			for k, v := range tc.toShoutrrrFails {
 				to.Shoutrrr.Set(k, v)
 			}
-			to.WebHook.Init(len(tc.toWebHookFails))
-			for k, v := range tc.toWebHookFails {
-				to.WebHook.Set(k, v)
+			to.Webhook.Init(len(tc.toWebhookFails))
+			for k, v := range tc.toWebhookFails {
+				to.Webhook.Set(k, v)
 			}
 
 			// WHEN: we call Copy.
@@ -910,21 +910,21 @@ func TestFails_Copy(t *testing.T) {
 					)
 				}
 			}
-			// WebHook.
-			wantLen = len(from.WebHook.fails)
-			gotLen = len(to.WebHook.fails)
+			// Webhook.
+			wantLen = len(from.Webhook.fails)
+			gotLen = len(to.Webhook.fails)
 			if gotLen > wantLen {
 				t.Errorf(
-					"%s\nWebHook, length mismatch\ngot:  %d\nwant: %d",
+					"%s\nWebhook, length mismatch\ngot:  %d\nwant: %d",
 					packageName, gotLen, wantLen,
 				)
 			}
-			for k, v := range tc.fromWebHookFails {
-				got := test.StringifyPtr(to.WebHook.Get(k))
+			for k, v := range tc.fromWebhookFails {
+				got := test.StringifyPtr(to.Webhook.Get(k))
 				want := test.StringifyPtr(v)
 				if got != want {
 					t.Errorf(
-						"%s\nWebHook[%q]\ngot:  %s\nwant: %s",
+						"%s\nWebhook[%q]\ngot:  %s\nwant: %s",
 						packageName, k,
 						got, want,
 					)
@@ -1006,7 +1006,7 @@ func TestFails_ResetFails(t *testing.T) {
 				fails.Shoutrrr.Init(len(*tc.shoutrrrFails))
 			}
 			if tc.webhookFails != nil {
-				fails.WebHook.Init(len(*tc.webhookFails))
+				fails.Webhook.Init(len(*tc.webhookFails))
 			}
 
 			// WHEN: resetFails is called on it.
@@ -1035,9 +1035,9 @@ func TestFails_ResetFails(t *testing.T) {
 			}
 			if tc.webhookFails != nil {
 				for i := range *tc.webhookFails {
-					if got := fails.WebHook.Get(i); got != nil {
+					if got := fails.Webhook.Get(i); got != nil {
 						t.Errorf(
-							"%s\nStatus.Fails.WebHook.Get(%s) not reset with .resetFails()\ngot:  %t\nwant: nil",
+							"%s\nStatus.Fails.Webhook.Get(%s) not reset with .resetFails()\ngot:  %t\nwant: nil",
 							packageName, i, *got,
 						)
 					}
@@ -1184,7 +1184,7 @@ func TestFailsShoutrrr_Copy(t *testing.T) {
 	}
 }
 
-func TestFailsWebHook_Copy(t *testing.T) {
+func TestFailsWebhook_Copy(t *testing.T) {
 	time2021 := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	time2022 := time.Date(2022, 2, 2, 0, 0, 0, 0, time.UTC)
 	time2023 := time.Date(2023, 3, 3, 0, 0, 0, 0, time.UTC)
@@ -1255,8 +1255,8 @@ func TestFailsWebHook_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// GIVEN: a FailsWebHook.
-			orig := &FailsWebHook{}
+			// GIVEN: a FailsWebhook.
+			orig := &FailsWebhook{}
 			if tc.initOriginal {
 				orig.Init(len(tc.originalFails))
 				for k, v := range tc.originalFails {
@@ -1270,7 +1270,7 @@ func TestFailsWebHook_Copy(t *testing.T) {
 			// WHEN: Copy is called.
 			inputCopy := orig.Copy()
 
-			prefix := fmt.Sprintf("%s\nFailsWebHook.Copy()", packageName)
+			prefix := fmt.Sprintf("%s\nFailsWebhook.Copy()", packageName)
 
 			// THEN: initial state matches.
 			//   Fails

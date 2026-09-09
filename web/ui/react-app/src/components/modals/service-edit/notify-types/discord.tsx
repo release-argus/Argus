@@ -39,7 +39,7 @@ const DISCORD = ({
 				<Heading title="URL Fields" />
 				<FieldText
 					defaultVal={defaults?.url_fields?.webhookid}
-					label="WebHook ID"
+					label="Webhook ID"
 					name={`${name}.url_fields.webhookid`}
 					required
 					tooltip={{
@@ -85,7 +85,7 @@ const DISCORD = ({
 					label="Avatar"
 					name={`${name}.params.avatar`}
 					tooltip={{
-						content: 'Override WebHook avatar with this URL',
+						content: 'Override Webhook avatar with this URL',
 						type: 'string',
 					}}
 				/>
@@ -113,7 +113,7 @@ const DISCORD = ({
 					label="Username"
 					name={`${name}.params.username`}
 					tooltip={{
-						content: 'Override the WebHook username',
+						content: 'Override the Webhook username',
 						type: 'string',
 					}}
 				/>

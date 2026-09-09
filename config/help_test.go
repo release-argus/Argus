@@ -91,10 +91,10 @@ func testConfig(t *testing.T) *Config {
 			},
 		},
 		Notify:  shoutrrr.ShoutrrrsDefaults{},
-		WebHook: webhook.WebHooksDefaults{},
+		Webhook: webhook.WebhooksDefaults{},
 		Defaults: Defaults{
 			Notify:  shoutrrr.ShoutrrrsDefaults{},
-			WebHook: webhook.Defaults{},
+			Webhook: webhook.Defaults{},
 		},
 		HardDefaults: Defaults{
 			Service: service.Defaults{
@@ -103,7 +103,7 @@ func testConfig(t *testing.T) *Config {
 				),
 			},
 			Notify:  shoutrrr.ShoutrrrsDefaults{},
-			WebHook: webhook.Defaults{},
+			Webhook: webhook.Defaults{},
 		},
 		DatabaseChannel: databaseChannel,
 		SaveChannel:     saveChannel,
@@ -308,7 +308,7 @@ func plainDefaults(t *testing.T) (*Defaults, *Defaults) {
 	defaults := &Defaults{
 		Service: *svcCfg.Soft,
 		Notify:  notifyCfg.Defaults,
-		WebHook: *whCfg.Defaults,
+		Webhook: *whCfg.Defaults,
 	}
 
 	hardDefaults, _ := DecodeDefaults("yaml", nil)

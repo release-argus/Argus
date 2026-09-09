@@ -16,7 +16,7 @@ test.describe('Service creation modal - field validation', () => {
 	// These tests never submit, so they're safe to run fully parallel.
 	test.describe.configure({ mode: 'parallel' });
 
-	test.describe('WebHook', () => {
+	test.describe('Webhook', () => {
 		test('name, target URL, and secret are required strings; max tries must be a valid in-range number', async ({
 			page,
 		}, testInfo) => {
@@ -26,7 +26,7 @@ test.describe('Service creation modal - field validation', () => {
 				'service-creation-validation/webhook',
 			);
 			const dialog = await openCreateServiceModal(page);
-			const section = await openSection(dialog, 'WebHook:');
+			const section = await openSection(dialog, 'Webhook:');
 
 			// GIVEN: a new webhook is added.
 			await section.getByRole('button', { name: /add webhook/i }).click();
@@ -73,7 +73,7 @@ test.describe('Service creation modal - field validation', () => {
 				'service-creation-validation/webhook',
 			);
 			const dialog = await openCreateServiceModal(page);
-			const section = await openSection(dialog, 'WebHook:');
+			const section = await openSection(dialog, 'Webhook:');
 
 			// GIVEN: a new webhook is added (defaults to type "github").
 			await section.getByRole('button', { name: /add webhook/i }).click();
@@ -122,11 +122,11 @@ test.describe('Service creation modal - field validation', () => {
 				'service-creation-validation/webhook',
 			);
 			const dialog = await openCreateServiceModal(page);
-			const section = await openSection(dialog, 'WebHook:');
-			const addWebHook = section.getByRole('button', { name: /add webhook/i });
+			const section = await openSection(dialog, 'Webhook:');
+			const addWebhook = section.getByRole('button', { name: /add webhook/i });
 
 			// GIVEN: a first webhook is added, expanded, and named "dup".
-			await addWebHook.click();
+			await addWebhook.click();
 			const header0 = section.locator('[data-slot="accordion-trigger"]', {
 				hasText: /^0:/,
 			});
@@ -143,7 +143,7 @@ test.describe('Service creation modal - field validation', () => {
 			await name0.blur();
 
 			// AND: a second webhook is added and expanded.
-			await addWebHook.click();
+			await addWebhook.click();
 			const header1 = section.locator('[data-slot="accordion-trigger"]', {
 				hasText: /^1:/,
 			});

@@ -559,7 +559,7 @@ func TestConfig_GetDefaults(t *testing.T) {
 
 	prefix := fmt.Sprintf("%s\nConfig.GetDefaults()", packageName)
 
-	// THEN: Notify/WebHook maps are initially empty at the 'name' key.
+	// THEN: Notify/Webhook maps are initially empty at the 'name' key.
 	fieldTests := []test.FieldAssertion{
 		{Name: "Notify.Root (got)", Got: notifyCfg.Root[name], Want: nil, Mode: test.CompareSamePointer},
 		{Name: "Notify.Root (had)", Got: cfg.Notify[name], Want: nil, Mode: test.CompareSamePointer},
@@ -567,8 +567,8 @@ func TestConfig_GetDefaults(t *testing.T) {
 		{Name: "Notify.Defaults (had)", Got: cfg.Defaults.Notify[name], Want: nil, Mode: test.CompareSamePointer},
 		{Name: "Notify.HardDefaults (got)", Got: notifyCfg.HardDefaults[name], Want: nil, Mode: test.CompareSamePointer},
 		{Name: "Notify.HardDefaults (had)", Got: cfg.HardDefaults.Notify[name], Want: nil, Mode: test.CompareSamePointer},
-		{Name: "WebHook.Root (got)", Got: whCfg.Root[name], Want: nil, Mode: test.CompareSamePointer},
-		{Name: "WebHook.Root (had)", Got: cfg.WebHook[name], Want: nil, Mode: test.CompareSamePointer},
+		{Name: "Webhook.Root (got)", Got: whCfg.Root[name], Want: nil, Mode: test.CompareSamePointer},
+		{Name: "Webhook.Root (had)", Got: cfg.Webhook[name], Want: nil, Mode: test.CompareSamePointer},
 	}
 	if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
 		t.Fatal(testErr)
@@ -600,12 +600,12 @@ func TestConfig_GetDefaults(t *testing.T) {
 	}
 
 	// AND: the webhook defaults are as expected.
-	rootWebHook := &webhook.Defaults{}
-	cfg.WebHook[name] = rootWebHook
+	rootWebhook := &webhook.Defaults{}
+	cfg.Webhook[name] = rootWebhook
 	fieldTests = []test.FieldAssertion{
-		{Name: "WebHook.Root", Got: whCfg.Root[name], Want: rootWebHook, Mode: test.CompareSamePointer},
-		{Name: "WebHook.Defaults", Got: whCfg.Defaults, Want: &cfg.Defaults.WebHook, Mode: test.CompareSamePointer},
-		{Name: "WebHook.HardDefaults", Got: whCfg.HardDefaults, Want: &cfg.HardDefaults.WebHook, Mode: test.CompareSamePointer},
+		{Name: "Webhook.Root", Got: whCfg.Root[name], Want: rootWebhook, Mode: test.CompareSamePointer},
+		{Name: "Webhook.Defaults", Got: whCfg.Defaults, Want: &cfg.Defaults.Webhook, Mode: test.CompareSamePointer},
+		{Name: "Webhook.HardDefaults", Got: whCfg.HardDefaults, Want: &cfg.HardDefaults.Webhook, Mode: test.CompareSamePointer},
 	}
 	if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
 		t.Fatal(testErr)

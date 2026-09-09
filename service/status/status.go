@@ -66,7 +66,7 @@ type Status struct {
 	lastQueried              string       // UTC timestamp of latest LatestVersion query.
 	regexMissesContent       uint         // Counter for the number of regex misses on the URL content.
 	regexMissesVersion       uint         // Counter for the number of regex misses on the version.
-	Fails                    Fails        // Track the Notify/WebHook fails.
+	Fails                    Fails        // Track the Notify/Webhook fails.
 	deleting                 bool         // Flag to indicate undergoing deletion.
 }
 
@@ -144,7 +144,7 @@ func (s *Status) Copy(withChannels bool) *Status {
 	}
 
 	newStatus.Init(
-		len(s.Fails.Shoutrrr.fails), newStatus.Fails.Command.Length(), newStatus.Fails.WebHook.Length(),
+		len(s.Fails.Shoutrrr.fails), newStatus.Fails.Command.Length(), newStatus.Fails.Webhook.Length(),
 		ServiceInfo{
 			ID:         s.ServiceInfo.ID,
 			Name:       s.ServiceInfo.Name,
@@ -226,7 +226,7 @@ func (s *Status) Init(
 ) {
 	s.Fails.Command.Init(commands)
 	s.Fails.Shoutrrr.Init(shoutrrrs)
-	s.Fails.WebHook.Init(webhooks)
+	s.Fails.Webhook.Init(webhooks)
 
 	s.ServiceInfo.ID = serviceInfo.ID
 	s.ServiceInfo.Name = util.ValueOr(serviceInfo.Name, serviceInfo.ID)
@@ -430,7 +430,7 @@ func (s *Status) SetDeployedVersion(version, releaseDate string, writeToDB bool)
 	setLatestVersionIsDeployedMetric(newServiceInfo)
 	updateUpdatesCurrentMetric(previousServiceInfo, newServiceInfo)
 
-	// Clear the fail status of WebHooks/Commands.
+	// Clear the fail status of Webhooks/Commands.
 	s.Fails.resetFails()
 
 	// Database.
@@ -490,7 +490,7 @@ func (s *Status) SetLatestVersion(version, releaseDate string, writeToDB bool) {
 	setLatestVersionIsDeployedMetric(newServiceInfo)
 	updateUpdatesCurrentMetric(previousServiceInfo, newServiceInfo)
 
-	// Clear the fail status of WebHooks/Commands.
+	// Clear the fail status of Webhooks/Commands.
 	s.Fails.resetFails()
 
 	// Database.

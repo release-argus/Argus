@@ -147,8 +147,8 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 	}
 }
 
-func TestWebHook_SetHeaders(t *testing.T) {
-	// GIVEN: a WebHook with Headers.
+func TestWebhook_SetHeaders(t *testing.T) {
+	// GIVEN: a Webhook with Headers.
 	latestVersion := "1.2.3"
 	serviceID := "service"
 	tests := []struct {
@@ -304,7 +304,7 @@ func TestWebHook_SetHeaders(t *testing.T) {
 
 			test.SetEnv(t, tc.env)
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-			webhook := WebHook{
+			webhook := Webhook{
 				ServiceStatus: &status.Status{},
 				Main:          &Defaults{},
 				Defaults:      &Defaults{},
@@ -331,7 +331,7 @@ func TestWebHook_SetHeaders(t *testing.T) {
 			webhook.setHeaders(req)
 
 			prefix := fmt.Sprintf(
-				"%s\nWebHook.SetHeaders(%+v)",
+				"%s\nWebhook.SetHeaders(%+v)",
 				packageName, webhook.Headers,
 			)
 
@@ -339,7 +339,7 @@ func TestWebHook_SetHeaders(t *testing.T) {
 			if tc.rootValue == nil && tc.mainValue == nil && tc.defaultValue == nil && tc.hardDefaultValue == nil {
 				if len(req.Header) != 0 {
 					t.Fatalf(
-						"%s WebHook.Headers are nil but request.Headers aren't\ngot: %v",
+						"%s Webhook.Headers are nil but request.Headers aren't\ngot: %v",
 						prefix, req.Header,
 					)
 				}

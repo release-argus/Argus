@@ -23,8 +23,8 @@ Keeping an eye on releases.
 
 </div>
 
-Argus will query websites at a user defined interval for new software releases and then trigger Gotify/Slack/Other notification(s) and/or WebHook(s) when one has been found.
-For example, you could set it to monitor the Argus repo ([release-argus/Argus](https://github.com/release-argus/Argus)). This will query the [GitHub API](https://api.github.com/repos/release-argus/Argus/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style WebHook could be sent that triggers something (like AWX) to update Argus on your server.
+Argus will query websites at a user defined interval for new software releases and then trigger Gotify/Slack/Other notification(s) and/or Webhook(s) when one has been found.
+For example, you could set it to monitor the Argus repo ([release-argus/Argus](https://github.com/release-argus/Argus)). This will query the [GitHub API](https://api.github.com/repos/release-argus/Argus/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style Webhook could be sent that triggers something (like AWX) to update Argus on your server.
 
 ##### Table of Contents
 
@@ -145,4 +145,4 @@ The config can be broken down into 5 key areas. ([Further help](https://release-
 - [settings](https://release-argus.io/docs/config/settings/) - Settings for the Argus server.
 - [service](https://release-argus.io/docs/config/service/) - A dictionary mapping of all the services to monitor as well as what to notify when a new release is found.
 - [notify](https://release-argus.io/docs/config/notify/) - A dictionary mapping of targets for Notify messages.
-- [webhook](https://release-argus.io/docs/config/webhook/) - A dictionary mapping of targets for WebHooks.
+- [webhook](https://release-argus.io/docs/config/webhook/) - A dictionary mapping of targets for Webhooks.

@@ -4,7 +4,7 @@ import type { WebSocketResponse } from '@/types/websocket';
 import type {
 	ActionModalData,
 	CommandSummaryListType,
-	WebHookSummaryListType,
+	WebhookSummaryListType,
 } from '@/utils/api/types/config/summary';
 
 /**
@@ -96,8 +96,8 @@ const reducerActionModal = (
 					const serviceID = action.service_data?.id;
 					const unsend = (
 						sent: string[],
-						items: CommandSummaryListType | WebHookSummaryListType,
-						data?: CommandSummaryListType | WebHookSummaryListType,
+						items: CommandSummaryListType | WebhookSummaryListType,
+						data?: CommandSummaryListType | WebhookSummaryListType,
 					) => {
 						for (const id in data) {
 							const index = sent.indexOf(`${serviceID} ${id}`);
@@ -120,7 +120,7 @@ const reducerActionModal = (
 							newState.sentC.push(`${action.service_data?.id} ${command}`);
 						}
 
-					// WebHooks.
+					// Webhooks.
 					if (action.webhook_data)
 						for (const webhookID in action.webhook_data) {
 							// reset the failed states.

@@ -377,9 +377,9 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty/WebHook",
+			name: "non-empty/Webhook",
 			defaults: &Defaults{
-				WebHook: webhook.Defaults{
+				Webhook: webhook.Defaults{
 					Type: "github",
 				},
 			},
@@ -512,7 +512,7 @@ func TestDefaults_String(t *testing.T) {
 						},
 					),
 				},
-				WebHook: *test.Must(t, func() (*webhook.Defaults, error) {
+				Webhook: *test.Must(t, func() (*webhook.Defaults, error) {
 					return webhook.DecodeDefaults(
 						"yaml", []byte(test.TrimYAML(`
 							allow_invalid_certs: true
@@ -620,8 +620,8 @@ func TestDefaults_Default(t *testing.T) {
 			want: "Argus",
 		},
 		{
-			name: "WebHook.Delay",
-			got:  defaults.WebHook.Delay,
+			name: "Webhook.Delay",
+			got:  defaults.Webhook.Delay,
 			want: "0s",
 		},
 	}
@@ -1583,7 +1583,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_WEBHOOK_URL":                 "https://webhook.example.com",
 			},
 			want: &Defaults{
-				WebHook: *test.Must(t, func() (*webhook.Defaults, error) {
+				Webhook: *test.Must(t, func() (*webhook.Defaults, error) {
 					return webhook.DecodeDefaults(
 						"yaml", []byte(test.TrimYAML(`
 							allow_invalid_certs: false
@@ -1891,9 +1891,9 @@ func TestDefaults_CheckValues(t *testing.T) {
 			changed: false,
 		},
 		{
-			name: "WebHook changed",
+			name: "Webhook changed",
 			input: &Defaults{
-				WebHook: webhook.Defaults{
+				Webhook: webhook.Defaults{
 					Type:   "github",
 					URL:    "example.com",
 					Secret: "Argus",
@@ -1906,9 +1906,9 @@ func TestDefaults_CheckValues(t *testing.T) {
 			changed: true,
 		},
 		{
-			name: "WebHook.Delay",
+			name: "Webhook.Delay",
 			input: &Defaults{
-				WebHook: *test.Must(t, func() (*webhook.Defaults, error) {
+				Webhook: *test.Must(t, func() (*webhook.Defaults, error) {
 					return webhook.DecodeDefaults("yaml", []byte("delay: 10x"))
 				}),
 			},

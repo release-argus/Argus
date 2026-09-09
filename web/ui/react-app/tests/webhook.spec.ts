@@ -37,12 +37,12 @@ const errorToast = (page: Page, text: string) =>
 		hasText: text,
 	});
 
-test.describe('WebHook actions', () => {
+test.describe('Webhook actions', () => {
 	// Scoped to this test's ID so its afterEach can't race the other test's
 	// service. IDs are project-suffixed to avoid cross-browser collisions.
 	const createdIDs = trackCreatedServices();
 
-	test('WebHook send succeeds', async ({ page }, testInfo) => {
+	test('Webhook send succeeds', async ({ page }, testInfo) => {
 		const baseID = 'WEBHOOK=PASS';
 		const id = withProject(baseID, testInfo.project.name);
 		createdIDs.push(id);
@@ -50,7 +50,7 @@ test.describe('WebHook actions', () => {
 		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with an update available (latest_version !==
-		// deployed_version) and a WebHook configured with valid credentials.
+		// deployed_version) and a Webhook configured with valid credentials.
 		await createService(page, id, {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
@@ -81,7 +81,7 @@ test.describe('WebHook actions', () => {
 			testInfo.project.name,
 		);
 
-		// AND: clicks "Send" for the WebHook.
+		// AND: clicks "Send" for the Webhook.
 		const sendButton = dialog.getByRole('button', {
 			exact: true,
 			name: 'Send',
@@ -89,7 +89,7 @@ test.describe('WebHook actions', () => {
 		await expect(sendButton).toBeVisible();
 		await sendButton.click();
 
-		// THEN: the WebHook send succeeds (real network call to
+		// THEN: the Webhook send succeeds (real network call to
 		// valid.release-argus.io - allow extra time).
 		await expect(dialog.locator('[aria-label="Successful"]')).toBeVisible({
 			timeout: 30_000,
@@ -101,7 +101,7 @@ test.describe('WebHook actions', () => {
 		);
 
 		// AND: the send/retry button becomes disabled - sends are blocked until
-		// the WebHook's `next_runnable` time.
+		// the Webhook's `next_runnable` time.
 		const retryButton = dialog.getByRole('button', {
 			exact: true,
 			name: 'Retry',
@@ -110,7 +110,7 @@ test.describe('WebHook actions', () => {
 		await expect(retryButton).toBeDisabled();
 
 		// AND: an hourglass icon with a "Can resend ..." tooltip indicates when
-		// the WebHook can next be sent.
+		// the Webhook can next be sent.
 		await dialog.locator('[aria-label="Resend timer"]').hover();
 		await expect(page.getByText(/can resend/i).first()).toBeVisible();
 		await screenshot(
@@ -128,14 +128,14 @@ test.describe('WebHook actions', () => {
 		await expect(dialog).not.toBeVisible();
 	});
 
-	test('WebHook send fails', async ({ page }, testInfo) => {
+	test('Webhook send fails', async ({ page }, testInfo) => {
 		const baseID = 'WEBHOOK=FAIL';
 		const id = withProject(baseID, testInfo.project.name);
 		createdIDs.push(id);
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: a service with an update available and a WebHook configured
+		// GIVEN: a service with an update available and a Webhook configured
 		// with an invalid secret and a single try (fail fast).
 		await createService(page, id, {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
@@ -177,7 +177,7 @@ test.describe('WebHook actions', () => {
 		// AND: the server refuses sends, as it does for a read-only demo user.
 		await page.route(ACTIONS_ROUTE, refuseSends);
 
-		// WHEN: the user confirms the send for every WebHook.
+		// WHEN: the user confirms the send for every Webhook.
 		await dialog.locator('#modal-action').click();
 
 		// THEN: the modal closes and the refusal is surfaced as a toast.
@@ -194,11 +194,11 @@ test.describe('WebHook actions', () => {
 		await expect(sendButton).toBeEnabled();
 		await expect(dialog.locator('.animate-spin')).toHaveCount(0);
 
-		// WHEN: the user sends the single WebHook, still refused.
+		// WHEN: the user sends the single Webhook, still refused.
 		await sendButton.click();
 
-		// THEN: the refusal names the WebHook, and its spinner stops.
-		const sendOneToast = errorToast(page, 'Failed to send WebHook');
+		// THEN: the refusal names the Webhook, and its spinner stops.
+		const sendOneToast = errorToast(page, 'Failed to send Webhook');
 		await expect(sendOneToast).toBeVisible();
 		await expect(sendOneToast).toContainText('Read-only demo instance.');
 		await expect(dialog.locator('.animate-spin')).toHaveCount(0);
@@ -209,11 +209,11 @@ test.describe('WebHook actions', () => {
 			testInfo.project.name,
 		);
 
-		// WHEN: clicks "Send" for the WebHook, with the server accepting sends again.
+		// WHEN: clicks "Send" for the Webhook, with the server accepting sends again.
 		await page.unroute(ACTIONS_ROUTE, refuseSends);
 		await sendButton.click();
 
-		// THEN: the WebHook send fails (real network call - the receiver
+		// THEN: the Webhook send fails (real network call - the receiver
 		// responds non-2XX for an incorrect secret).
 		await expect(dialog.locator('[aria-label="Failed"]')).toBeVisible({
 			timeout: 30_000,
@@ -225,7 +225,7 @@ test.describe('WebHook actions', () => {
 		);
 
 		// AND: the send/retry button becomes disabled - sends are blocked until
-		// the WebHook's `next_runnable` time.
+		// the Webhook's `next_runnable` time.
 		const retryButton = dialog.getByRole('button', {
 			exact: true,
 			name: 'Retry',
@@ -234,7 +234,7 @@ test.describe('WebHook actions', () => {
 		await expect(retryButton).toBeDisabled();
 
 		// AND: an hourglass icon with a "Can resend ..." tooltip indicates when
-		// the WebHook can next be sent.
+		// the Webhook can next be sent.
 		await dialog.locator('[aria-label="Resend timer"]').hover();
 		await expect(page.getByText(/can resend/i).first()).toBeVisible();
 		await screenshot(

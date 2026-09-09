@@ -567,7 +567,7 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 		LatestVersion:         serviceConfig.LatestVersion,
 		Command:               serviceConfig.Command,
 		Notify:                serviceConfig.Notify.Flatten(),
-		WebHook:               serviceConfig.WebHook.Flatten(),
+		Webhook:               serviceConfig.Webhook.Flatten(),
 		DeployedVersionLookup: serviceConfig.DeployedVersionLookup,
 		Dashboard:             serviceConfig.Dashboard,
 		Status:                serviceConfig.Status,
@@ -592,7 +592,7 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 			HardDefaults: convertAndCensorDefaults(&api.Config.HardDefaults),
 			Defaults:     convertAndCensorDefaults(&api.Config.Defaults),
 			Notify:       convertAndCensorNotifiersDefaults(api.Config.Notify),
-			WebHook:      convertAndCensorWebHooksDefaults(api.Config.WebHook),
+			Webhook:      convertAndCensorWebhooksDefaults(api.Config.Webhook),
 		},
 		logFrom,
 	)

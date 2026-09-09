@@ -14,30 +14,30 @@ import type { OptionType } from '@/components/ui/react-select/custom-components'
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import { isEmptyOrNull } from '@/utils';
 import {
-	isWebHookType,
-	type WebHookType,
+	isWebhookType,
+	type WebhookType,
 	webhookTypeOptions,
 } from '@/utils/api/types/config/webhook';
 
-type EditServiceWebHookProps = {
+type EditServiceWebhookProps = {
 	/* The name of the field in the form. */
 	name: string;
-	/* The function to remove this WebHook. */
+	/* The function to remove this Webhook. */
 	removeMe: () => void;
 
-	/* The 'main' WebHook options. */
+	/* The 'main' Webhook options. */
 	globalOptions: OptionType[];
 };
 
 /**
- * The form fields for a WebHook.
+ * The form fields for a Webhook.
  *
  * @param name - The name of the field in the form.
- * @param removeMe - The function to remove this WebHook.
- * @param globalOptions - The options for the global WebHooks.
- * @returns The form fields for this WebHook.
+ * @param removeMe - The function to remove this Webhook.
+ * @param globalOptions - The options for the global Webhooks.
+ * @returns The form fields for this Webhook.
  */
-const EditServiceWebHook: FC<EditServiceWebHookProps> = ({
+const EditServiceWebhook: FC<EditServiceWebhookProps> = ({
 	name,
 	removeMe,
 
@@ -50,7 +50,7 @@ const EditServiceWebHook: FC<EditServiceWebHookProps> = ({
 	// Main values.
 	const main = mainDataDefaults?.webhook[itemName];
 	// Default values.
-	const itemType = useWatch({ name: `${name}.type` }) as WebHookType;
+	const itemType = useWatch({ name: `${name}.type` }) as WebhookType;
 	const defaults = useMemo(
 		() => main ?? typeDataDefaults?.webhook,
 		[main, typeDataDefaults],
@@ -64,7 +64,7 @@ const EditServiceWebHook: FC<EditServiceWebHookProps> = ({
 		if (main?.type) {
 			setValue(`${name}.type`, main.type);
 			typeChanged = true;
-		} else if (isWebHookType(itemName)) {
+		} else if (isWebhookType(itemName)) {
 			setValue(`${name}.type`, itemName);
 			typeChanged = true;
 		}
@@ -94,7 +94,7 @@ const EditServiceWebHook: FC<EditServiceWebHookProps> = ({
 		<>
 			<ButtonGroup className="w-full">
 				<Button
-					aria-label="Delete this WebHook"
+					aria-label="Delete this Webhook"
 					onClick={removeMe}
 					variant="ghost"
 				>
@@ -113,7 +113,7 @@ const EditServiceWebHook: FC<EditServiceWebHookProps> = ({
 					options={globalOptions}
 					showError={false}
 					tooltip={{
-						content: 'Use this WebHook as a base (`webhook.x` in config root)',
+						content: 'Use this Webhook as a base (`webhook.x` in config root)',
 						type: 'string',
 					}}
 				/>
@@ -123,7 +123,7 @@ const EditServiceWebHook: FC<EditServiceWebHookProps> = ({
 					name={`${name}.type`}
 					options={webhookTypeOptions}
 					tooltip={{
-						content: 'Style of WebHook to emulate',
+						content: 'Style of Webhook to emulate',
 						type: 'string',
 					}}
 				/>
@@ -140,7 +140,7 @@ const EditServiceWebHook: FC<EditServiceWebHookProps> = ({
 					name={`${name}.url`}
 					required
 					tooltip={{
-						content: 'Where to send the WebHook',
+						content: 'Where to send the Webhook',
 						type: 'string',
 					}}
 					type="text"
@@ -165,7 +165,7 @@ const EditServiceWebHook: FC<EditServiceWebHookProps> = ({
 					name={`${name}.desired_status_code`}
 					tooltip={{
 						content:
-							'Treat the WebHook as successful when this status code is received (0=2XX)',
+							'Treat the Webhook as successful when this status code is received (0=2XX)',
 						type: 'string',
 					}}
 				/>
@@ -190,7 +190,7 @@ const EditServiceWebHook: FC<EditServiceWebHookProps> = ({
 					label="Silent fails"
 					name={`${name}.silent_fails`}
 					tooltip={{
-						content: 'Notify if WebHook fails max tries times',
+						content: 'Notify if Webhook fails max tries times',
 						type: 'string',
 					}}
 				/>
@@ -199,4 +199,4 @@ const EditServiceWebHook: FC<EditServiceWebHookProps> = ({
 	);
 };
 
-export default EditServiceWebHook;
+export default EditServiceWebhook;

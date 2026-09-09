@@ -371,7 +371,7 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 			},
 			username:     "u",
 			token:        "t",
-			tokenAddress: new(test.WebHookGitHub["url_valid"] + "/123"),
+			tokenAddress: new(test.WebhookGitHub["url_valid"] + "/123"),
 			errRegex:     `^docker-hub token request failed \(status=404\)`,
 		},
 		{

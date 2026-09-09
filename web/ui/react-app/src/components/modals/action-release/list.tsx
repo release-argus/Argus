@@ -3,7 +3,7 @@ import { Item } from '@/components/modals/action-release/item';
 import type {
 	CommandSummaryListType,
 	ModalType,
-	WebHookSummaryListType,
+	WebhookSummaryListType,
 } from '@/utils/api/types/config/summary';
 
 type ModalListCommandProps = {
@@ -12,14 +12,14 @@ type ModalListCommandProps = {
 	/* The data to render for that type. */
 	data: CommandSummaryListType;
 };
-type ModalListWebHookProps = {
+type ModalListWebhookProps = {
 	/* The type of item to render. */
 	itemType: 'WEBHOOK';
 	/* The data to render for that type. */
-	data: WebHookSummaryListType;
+	data: WebhookSummaryListType;
 };
 
-type ModalListTypeProps = ModalListCommandProps | ModalListWebHookProps;
+type ModalListTypeProps = ModalListCommandProps | ModalListWebhookProps;
 
 type ModalListProps = ModalListTypeProps & {
 	/* Defines the kind of modal to render. */

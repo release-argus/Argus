@@ -66,7 +66,7 @@ export type DeployedVersionOptions =
 			regex?: string;
 	  };
 
-export type WebHookOptions = {
+export type WebhookOptions = {
 	/** `webhook.X.name`. */
 	name: string;
 	/** `webhook.X.url`. */
@@ -103,7 +103,7 @@ export type CreateServiceOptions = {
 	semanticVersioning?: boolean;
 	active?: boolean;
 	notifiers?: NotifyOptions[];
-	webhooks?: WebHookOptions[];
+	webhooks?: WebhookOptions[];
 };
 
 // A `url` latest-version lookup against the JSON fixture, extracting its
@@ -366,10 +366,10 @@ const fillDeployedVersion = async (
  * @param dialog - The modal dialog.
  * @param webhooks - The webhooks to add.
  */
-const fillWebHooks = async (dialog: Locator, webhooks: WebHookOptions[]) => {
-	await dialog.getByRole('button', { name: /^WebHook:?$/i }).click();
+const fillWebhooks = async (dialog: Locator, webhooks: WebhookOptions[]) => {
+	await dialog.getByRole('button', { name: /^Webhook:?$/i }).click();
 	const section = dialog
-		.locator('[data-slot="accordion-item"]', { hasText: 'WebHook' })
+		.locator('[data-slot="accordion-item"]', { hasText: 'Webhook' })
 		.first();
 
 	for (let index = 0; index < webhooks.length; index++) {
@@ -503,7 +503,7 @@ export const createService = async (
 	}
 
 	if (options?.webhooks?.length) {
-		await fillWebHooks(dialog, options.webhooks);
+		await fillWebhooks(dialog, options.webhooks);
 	}
 
 	// The server verifies the lookup with a real network call before responding,

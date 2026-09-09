@@ -152,11 +152,11 @@ var (
 			"type",
 		},
 	)
-	// WebHookResultTotal counts the number of times a WebHook has passed or failed.
-	WebHookResultTotal = promauto.NewCounterVec(
+	// WebhookResultTotal counts the number of times a Webhook has passed or failed.
+	WebhookResultTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "webhook_result_total",
-			Help: "Number of times a WebHook has passed/failed.",
+			Help: "Number of times a Webhook has passed/failed.",
 		},
 		[]string{
 			"id",

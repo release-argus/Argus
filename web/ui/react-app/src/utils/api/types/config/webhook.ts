@@ -4,16 +4,16 @@ export const WEBHOOK_TYPE = {
 	GITHUB: { label: 'GitHub', value: 'github' },
 	GITLAB: { label: 'GitLab', value: 'gitlab' },
 } as const;
-export type WebHookType =
+export type WebhookType =
 	(typeof WEBHOOK_TYPE)[keyof typeof WEBHOOK_TYPE]['value'];
 export const webhookTypeOptions = Object.values(WEBHOOK_TYPE);
-export const isWebHookType = (value?: string | null): value is WebHookType =>
+export const isWebhookType = (value?: string | null): value is WebhookType =>
 	value != null && webhookTypeOptions.some((v) => v.value === value);
 
-export type WebHook = {
+export type Webhook = {
 	name: string;
 
-	type?: WebHookType | null;
+	type?: WebhookType | null;
 	url?: string;
 	allow_invalid_certs?: boolean | null;
 	headers?: Headers;
@@ -24,4 +24,4 @@ export type WebHook = {
 	silent_fails?: boolean;
 };
 
-export type WebHookMap = Record<string, WebHook>;
+export type WebhookMap = Record<string, Webhook>;

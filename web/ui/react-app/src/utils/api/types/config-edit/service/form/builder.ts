@@ -19,7 +19,7 @@ import {
 	REQUIRED_MESSAGE,
 	UNIQUE_MESSAGE,
 } from '@/utils/api/types/config-edit/validators';
-import { buildWebHooksSchemaWithFallbacks } from '@/utils/api/types/config-edit/webhook/form/builder';
+import { buildWebhooksSchemaWithFallbacks } from '@/utils/api/types/config-edit/webhook/form/builder';
 
 /**
  * Builds a schema for the service.
@@ -96,7 +96,7 @@ export const buildServiceSchemaWithFallbacks = (
 		hardDefaults?.service?.command,
 	);
 
-	/* WebHook */
+	/* Webhook */
 	const {
 		schema: webhookSchema,
 		schemaData: webhookSchemaData,
@@ -104,7 +104,7 @@ export const buildServiceSchemaWithFallbacks = (
 		schemaDataMains: webhookMainDataDefaults,
 		schemaDataTypeDefaults: webhookTypeDataDefaults,
 		schemaDataTypeDefaultsHollow: webhookTypeDataDefaultsHollow,
-	} = buildWebHooksSchemaWithFallbacks(
+	} = buildWebhooksSchemaWithFallbacks(
 		data?.webhook,
 		defaults?.service?.webhook,
 		webhook,

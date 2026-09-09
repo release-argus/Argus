@@ -353,7 +353,7 @@ func TestDecodeServices__marshalError(t *testing.T) {
 	}
 	t.Cleanup(func() { marshalServiceRaw = original })
 
-	// AND: Service, Notify and WebHook config defaults.
+	// AND: Service, Notify and Webhook config defaults.
 	svcCfg := plainDefaultsConfig(t)
 	notifyCfg := shoutrrrtest.PlainConfig(t)
 	whCfg := whtest.PlainConfig(t)
@@ -1117,9 +1117,9 @@ func TestApplyOverrides(t *testing.T) {
 							  - ["ls", "-lah"]
 							webhook:
 								"a":
-							`+whtest.WebHook(t, false, true, true).String("    ")+`
+							`+whtest.Webhook(t, false, true, true).String("    ")+`
 								"b":
-							`+whtest.WebHook(t, false, false, true).String("    ")+`
+							`+whtest.Webhook(t, false, false, true).String("    ")+`
 						`)),
 						"latest_version/change fields",
 						svcCfg, notifyCfg, whCfg,
@@ -1145,8 +1145,8 @@ func TestApplyOverrides(t *testing.T) {
 					- - ls
 					  - -lah
 				webhook:
-					a:` + "\n" + whtest.WebHook(t, false, true, true).String("    ") +
-				`					b:` + "\n" + whtest.WebHook(t, false, false, true).String("    "),
+					a:` + "\n" + whtest.Webhook(t, false, true, true).String("    ") +
+				`					b:` + "\n" + whtest.Webhook(t, false, false, true).String("    "),
 			),
 			errRegex: `^$`,
 		},
@@ -1211,9 +1211,9 @@ func TestApplyOverrides(t *testing.T) {
 								- ["docker", "compose", "up"]
 							webhook:
 								"a":
-							`+whtest.WebHook(t, false, true, true).String("    ")+`
+							`+whtest.Webhook(t, false, true, true).String("    ")+`
 								"b":
-							`+whtest.WebHook(t, false, false, true).String("    ")+`
+							`+whtest.Webhook(t, false, false, true).String("    ")+`
 						`)),
 						"deployed_version/change fields",
 						svcCfg, notifyCfg, whCfg,
@@ -1244,8 +1244,8 @@ func TestApplyOverrides(t *testing.T) {
 					  - compose
 					  - up
 				webhook:
-					a:` + "\n" + whtest.WebHook(t, false, true, true).String("    ") +
-				`					b:` + "\n" + whtest.WebHook(t, false, false, true).String("    "),
+					a:` + "\n" + whtest.Webhook(t, false, true, true).String("    ") +
+				`					b:` + "\n" + whtest.Webhook(t, false, false, true).String("    "),
 			),
 			errRegex: `^$`,
 		},

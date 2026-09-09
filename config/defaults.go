@@ -30,12 +30,12 @@ import (
 type Defaults struct {
 	Service service.Defaults           `json:"service,omitzero" yaml:"service,omitzero"`
 	Notify  shoutrrr.ShoutrrrsDefaults `json:"notify,omitempty" yaml:"notify,omitempty"`
-	WebHook webhook.Defaults           `json:"webhook,omitzero" yaml:"webhook,omitzero"`
+	Webhook webhook.Defaults           `json:"webhook,omitzero" yaml:"webhook,omitzero"`
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (d *Defaults) IsZero() bool {
-	return d == nil || (d.Service.IsZero() && d.Notify.IsZero() && d.WebHook.IsZero())
+	return d == nil || (d.Service.IsZero() && d.Notify.IsZero() && d.Webhook.IsZero())
 }
 
 // DecodeDefaults creates and returns new [Defaults] from format-encoded data.
@@ -66,8 +66,8 @@ func (d *Defaults) Default() bool {
 	// Notify defaults.
 	d.Notify.Default()
 
-	// WebHook defaults.
-	d.WebHook.Default()
+	// Webhook defaults.
+	d.Webhook.Default()
 
 	// Overwrite defaults with environment variables.
 	if ok := d.MapEnvToStruct(); !ok {
@@ -141,8 +141,8 @@ func (d *Defaults) CheckValues() (error, bool) {
 			},
 		)
 	}
-	// WebHook.
-	webhookErr, webhookChanged := d.WebHook.CheckValues()
+	// Webhook.
+	webhookErr, webhookChanged := d.Webhook.CheckValues()
 	if webhookErr != nil {
 		errs = append(
 			errs,

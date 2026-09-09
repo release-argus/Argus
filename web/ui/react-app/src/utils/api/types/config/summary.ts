@@ -50,7 +50,7 @@ export type ActionModalData = {
 	service_id: string;
 	sentC: string[];
 	sentWH: string[];
-	webhooks: WebHookSummaryListType;
+	webhooks: WebhookSummaryListType;
 	commands: CommandSummaryListType;
 };
 
@@ -66,7 +66,7 @@ export type StatusSummaryType = {
 	state?: ServiceUpdateState;
 };
 
-export type WebHookSummaryType = {
+export type WebhookSummaryType = {
 	// undefined = unsent/sending.
 	failed?: boolean;
 	next_runnable?: string;
@@ -75,7 +75,7 @@ export type WebHookSummaryType = {
 	loading?: boolean;
 };
 
-export type WebHookSummaryListType = Record<string, WebHookSummaryType>;
+export type WebhookSummaryListType = Record<string, WebhookSummaryType>;
 
 export type CommandSummaryType = {
 	// undefined = unsent/sending.
@@ -90,5 +90,5 @@ export type CommandSummaryListType = Record<string, CommandSummaryType>;
 
 export type ActionAPIType = {
 	command: CommandSummaryListType;
-	webhook: WebHookSummaryListType;
+	webhook: WebhookSummaryListType;
 };

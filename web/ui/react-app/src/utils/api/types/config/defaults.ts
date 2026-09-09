@@ -3,12 +3,12 @@ import type {
 	NotifyTypesMap,
 } from '@/utils/api/types/config/notify';
 import type { ServiceDefault } from '@/utils/api/types/config/service';
-import type { WebHook, WebHookMap } from '@/utils/api/types/config/webhook';
+import type { Webhook, WebhookMap } from '@/utils/api/types/config/webhook';
 
 export type HardDefaults = {
 	service: ServiceDefault;
 	notify: NotifyTypesMap;
-	webhook: WebHook;
+	webhook: Webhook;
 };
 
 export type Defaults = HardDefaults & {
@@ -19,5 +19,5 @@ export type ServiceEditOtherData = {
 	defaults: Defaults;
 	hard_defaults: Defaults;
 	notify: NotifyMap;
-	webhook: WebHookMap;
+	webhook: WebhookMap;
 };

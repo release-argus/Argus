@@ -29,7 +29,7 @@ import (
 type Fails struct {
 	Command  FailsCommand  `json:"-" yaml:"-"` // Command unsent/fail/pass.
 	Shoutrrr FailsShoutrrr `json:"-" yaml:"-"` // Shoutrrr unsent/fail/pass.
-	WebHook  FailsWebHook  `json:"-" yaml:"-"` // WebHook unsent/fail/pass.
+	Webhook  FailsWebhook  `json:"-" yaml:"-"` // Webhook unsent/fail/pass.
 }
 
 // failsBase is the base struct for the Fails structs.
@@ -237,14 +237,14 @@ func (f *FailsShoutrrr) Copy() *FailsShoutrrr {
 	}
 }
 
-// FailsWebHook keeps track of the unsent/fail/pass status of the WebHook sender.
-type FailsWebHook struct {
+// FailsWebhook keeps track of the unsent/fail/pass status of the Webhook sender.
+type FailsWebhook struct {
 	failsBase
 	nextRunnable map[string]time.Time // Map of index to time at which can next run (for staggering).
 }
 
 // Init initialises the internal next runnable map with the given capacity.
-func (f *FailsWebHook) Init(length int) {
+func (f *FailsWebhook) Init(length int) {
 	f.failsBase.Init(length)
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -253,18 +253,18 @@ func (f *FailsWebHook) Init(length int) {
 }
 
 // Copy returns a deep copy of the receiver.
-func (f *FailsWebHook) Copy() *FailsWebHook {
+func (f *FailsWebhook) Copy() *FailsWebhook {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 
-	return &FailsWebHook{
+	return &FailsWebhook{
 		failsBase:    *f.failsBase.Copy(),
 		nextRunnable: util.CopyMap(f.nextRunnable),
 	}
 }
 
 // NextRunnable returns the next time at which the index can be re-run.
-func (f *FailsWebHook) NextRunnable(index string) time.Time {
+func (f *FailsWebhook) NextRunnable(index string) time.Time {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 
@@ -272,7 +272,7 @@ func (f *FailsWebHook) NextRunnable(index string) time.Time {
 }
 
 // SetNextRunnable updates the time at which the given index can be re-run.
-func (f *FailsWebHook) SetNextRunnable(index string, time time.Time) {
+func (f *FailsWebhook) SetNextRunnable(index string, time time.Time) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -298,7 +298,7 @@ func (f *Fails) String(prefix string) string {
 		builder.WriteString(commandStr)
 	}
 
-	if webhookStr := f.WebHook.String(itemPrefix); webhookStr != "" {
+	if webhookStr := f.Webhook.String(itemPrefix); webhookStr != "" {
 		// '<prefix>webhook:\n<commandStr>'
 		builder.WriteString(prefix)
 		builder.WriteString("webhook:\n")
@@ -333,19 +333,19 @@ func (f *Fails) Copy(from *Fails) {
 	f.Shoutrrr.fails = make(map[string]*bool, len(from.Shoutrrr.fails))
 	maps.Copy(f.Shoutrrr.fails, from.Shoutrrr.fails)
 
-	// WebHook.
-	f.WebHook.mu.Lock()
-	defer f.WebHook.mu.Unlock()
-	from.WebHook.mu.RLock()
-	defer from.WebHook.mu.RUnlock()
+	// Webhook.
+	f.Webhook.mu.Lock()
+	defer f.Webhook.mu.Unlock()
+	from.Webhook.mu.RLock()
+	defer from.Webhook.mu.RUnlock()
 
-	f.WebHook.fails = make(map[string]*bool, len(from.WebHook.fails))
-	maps.Copy(f.WebHook.fails, from.WebHook.fails)
+	f.Webhook.fails = make(map[string]*bool, len(from.Webhook.fails))
+	maps.Copy(f.Webhook.fails, from.Webhook.fails)
 }
 
 // resetFails clears command, shoutrrr, and webhook failure tracking.
 func (f *Fails) resetFails() {
 	f.Command.Reset()
 	f.Shoutrrr.Reset()
-	f.WebHook.Reset()
+	f.Webhook.Reset()
 }

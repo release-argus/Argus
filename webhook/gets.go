@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package webhook provides WebHook functionality to services.
+// Package webhook provides Webhook functionality to services.
 package webhook
 
 import (
@@ -24,8 +24,8 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// BuildRequest builds and returns a *http.Request for the WebHook.
-func (w *WebHook) BuildRequest() (req *http.Request) {
+// BuildRequest builds and returns a *http.Request for the Webhook.
+func (w *Webhook) BuildRequest() (req *http.Request) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
@@ -64,7 +64,7 @@ func (w *WebHook) BuildRequest() (req *http.Request) {
 }
 
 // GetAllowInvalidCerts resolves whether invalid HTTPS certs are allowed.
-func (w *WebHook) GetAllowInvalidCerts() bool {
+func (w *Webhook) GetAllowInvalidCerts() bool {
 	return *util.FirstNonNilPtr(
 		w.AllowInvalidCerts,
 		w.Main.AllowInvalidCerts,
@@ -73,8 +73,8 @@ func (w *WebHook) GetAllowInvalidCerts() bool {
 	)
 }
 
-// GetDelay resolves the delay to use before auto-approving the WebHook.
-func (w *WebHook) GetDelay() string {
+// GetDelay resolves the delay to use before auto-approving the Webhook.
+func (w *Webhook) GetDelay() string {
 	return util.FirstNonDefault(
 		w.Delay,
 		w.Main.Delay,
@@ -84,13 +84,13 @@ func (w *WebHook) GetDelay() string {
 }
 
 // GetDelayDuration resolves the auto-approve delay as a time.Duration.
-func (w *WebHook) GetDelayDuration() (duration time.Duration) {
+func (w *Webhook) GetDelayDuration() (duration time.Duration) {
 	duration, _ = time.ParseDuration(w.GetDelay())
 	return duration
 }
 
-// GetDesiredStatusCode resolves the desired status code of WebHook requests.
-func (w *WebHook) GetDesiredStatusCode() uint16 {
+// GetDesiredStatusCode resolves the desired status code of Webhook requests.
+func (w *Webhook) GetDesiredStatusCode() uint16 {
 	return *util.FirstNonNilPtr(
 		w.DesiredStatusCode,
 		w.Main.DesiredStatusCode,
@@ -99,28 +99,28 @@ func (w *WebHook) GetDesiredStatusCode() uint16 {
 	)
 }
 
-// DidFail resolves whether the last send of this WebHook failed.
-func (w *WebHook) DidFail() *bool {
+// DidFail resolves whether the last send of this Webhook failed.
+func (w *Webhook) DidFail() *bool {
 	return w.Failed.Get(w.ID)
 }
 
 // SetFail sets whether the last send attempt failed.
-func (w *WebHook) SetFail(state *bool) {
+func (w *Webhook) SetFail(state *bool) {
 	w.Failed.Set(w.ID, state)
 }
 
-// NextRunnable resolves the time this WebHook can next run.
-func (w *WebHook) NextRunnable() time.Time {
+// NextRunnable resolves the time this Webhook can next run.
+func (w *Webhook) NextRunnable() time.Time {
 	return w.Failed.NextRunnable(w.ID)
 }
 
-// SetNextRunnable sets when the WebHook may run again.
-func (w *WebHook) SetNextRunnable(time time.Time) {
+// SetNextRunnable sets when the Webhook may run again.
+func (w *Webhook) SetNextRunnable(time time.Time) {
 	w.Failed.SetNextRunnable(w.ID, time)
 }
 
 // SetExecuting sets the next-runnable time based on the outcome, optionally adding the send delay or blocking for a pending response.
-func (w *WebHook) SetExecuting(addDelay bool, received bool) {
+func (w *Webhook) SetExecuting(addDelay bool, received bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -149,7 +149,7 @@ func (w *WebHook) SetExecuting(addDelay bool, received bool) {
 }
 
 // GetMaxTries resolves the maximum number of send attempts allowed.
-func (w *WebHook) GetMaxTries() uint8 {
+func (w *Webhook) GetMaxTries() uint8 {
 	return *util.FirstNonNilPtr(
 		w.MaxTries,
 		w.Main.MaxTries,
@@ -158,13 +158,13 @@ func (w *WebHook) GetMaxTries() uint8 {
 	)
 }
 
-// IsRunnable reports whether the WebHook can run now.
-func (w *WebHook) IsRunnable() bool {
+// IsRunnable reports whether the Webhook can run now.
+func (w *Webhook) IsRunnable() bool {
 	return time.Now().UTC().After(w.NextRunnable())
 }
 
-// GetSecret resolves the WebHook secret.
-func (w *WebHook) GetSecret() string {
+// GetSecret resolves the Webhook secret.
+func (w *Webhook) GetSecret() string {
 	return util.FirstNonDefaultWithEnv(
 		w.Secret,
 		w.Main.Secret,
@@ -173,8 +173,8 @@ func (w *WebHook) GetSecret() string {
 	)
 }
 
-// GetSilentFails resolves the flag for whether WebHooks should fail silently or notify.
-func (w *WebHook) GetSilentFails() bool {
+// GetSilentFails resolves the flag for whether Webhooks should fail silently or notify.
+func (w *Webhook) GetSilentFails() bool {
 	return *util.FirstNonNilPtr(
 		w.SilentFails,
 		w.Main.SilentFails,
@@ -183,8 +183,8 @@ func (w *WebHook) GetSilentFails() bool {
 	)
 }
 
-// GetType resolves the type of the WebHook.
-func (w *WebHook) GetType() string {
+// GetType resolves the type of the Webhook.
+func (w *Webhook) GetType() string {
 	return util.FirstNonDefault(
 		w.Type,
 		w.Main.Type,
@@ -193,8 +193,8 @@ func (w *WebHook) GetType() string {
 	)
 }
 
-// GetURL resolves the URL of the WebHook.
-func (w *WebHook) GetURL() (url string) {
+// GetURL resolves the URL of the Webhook.
+func (w *Webhook) GetURL() (url string) {
 	url = strings.Clone(
 		util.FirstNonDefaultWithEnv(
 			w.URL,

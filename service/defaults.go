@@ -33,7 +33,7 @@ type Defaults struct {
 	DeployedVersionLookup deployedver_base.Defaults `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"` // Vars to scrape the Service's current deployed version.
 	Notify                map[string]struct{}       `json:"notify,omitempty" yaml:"notify,omitempty"`                   // Default Notifiers to give a Service.
 	Command               command.Commands          `json:"command,omitempty" yaml:"command,omitempty"`                 // Default Commands to give a Service.
-	WebHook               map[string]struct{}       `json:"webhook,omitempty" yaml:"webhook,omitempty"`                 // Default WebHooks to give a Service.
+	Webhook               map[string]struct{}       `json:"webhook,omitempty" yaml:"webhook,omitempty"`                 // Default Webhooks to give a Service.
 	Dashboard             dashboard.Defaults        `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`               // Dashboard defaults.
 
 	Status status.Defaults `json:"-" yaml:"-"` // Track the Status of this source (version and regex misses).
@@ -46,7 +46,7 @@ func (d Defaults) IsZero() bool {
 		d.DeployedVersionLookup.IsZero() &&
 		len(d.Notify) == 0 &&
 		len(d.Command) == 0 &&
-		len(d.WebHook) == 0 &&
+		len(d.Webhook) == 0 &&
 		d.Dashboard.IsZero()
 }
 
@@ -56,7 +56,7 @@ type DefaultsDecode struct {
 	DeployedVersionLookup deployedver_base.Defaults `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"`
 	Notify                map[string]struct{}       `json:"notify,omitempty" yaml:"notify,omitempty"`
 	Command               command.Commands          `json:"command,omitempty" yaml:"command,omitempty"`
-	WebHook               map[string]struct{}       `json:"webhook,omitempty" yaml:"webhook,omitempty"`
+	Webhook               map[string]struct{}       `json:"webhook,omitempty" yaml:"webhook,omitempty"`
 	Dashboard             dashboard.Defaults        `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`
 }
 
@@ -79,7 +79,7 @@ func (d *Defaults) unmarshal(format string, data []byte) error {
 		DeployedVersionLookup: d.DeployedVersionLookup,
 		Notify:                d.Notify,
 		Command:               d.Command,
-		WebHook:               d.WebHook,
+		Webhook:               d.Webhook,
 		Dashboard:             d.Dashboard,
 	}
 
@@ -91,7 +91,7 @@ func (d *Defaults) unmarshal(format string, data []byte) error {
 	d.DeployedVersionLookup = aux.DeployedVersionLookup
 	d.Notify = aux.Notify
 	d.Command = aux.Command
-	d.WebHook = aux.WebHook
+	d.Webhook = aux.Webhook
 	d.Dashboard = aux.Dashboard
 
 	// LatestVersion.

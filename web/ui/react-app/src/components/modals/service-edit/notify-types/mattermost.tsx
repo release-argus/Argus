@@ -65,7 +65,7 @@ const MATTERMOST = ({
 					name={`${name}.url_fields.token`}
 					required
 					tooltip={{
-						content: 'WebHook token',
+						content: 'Webhook token',
 						type: 'string',
 					}}
 				/>
