@@ -8,7 +8,7 @@ export type WebSocketResponse =
 	| {
 			page: 'APPROVALS';
 			type: 'ACTION';
-			sub_type: 'SENDING' | 'REFRESH' | 'RESET';
+			sub_type: 'SENDING' | 'SEND_FAILED' | 'REFRESH' | 'RESET';
 			service_data?: ServiceSummary;
 			command_data?: CommandSummaryListType;
 			webhook_data?: WebHookSummaryListType;

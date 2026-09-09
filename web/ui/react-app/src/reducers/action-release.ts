@@ -1,7 +1,11 @@
 // noinspection JSUnfilteredForInLoop
 
 import type { WebSocketResponse } from '@/types/websocket';
-import type { ActionModalData } from '@/utils/api/types/config/summary';
+import type {
+	ActionModalData,
+	CommandSummaryListType,
+	WebHookSummaryListType,
+} from '@/utils/api/types/config/summary';
 
 /**
  * A reducer that handles actions on the action modal.
@@ -31,10 +35,10 @@ const reducerActionModal = (
 				if (action.webhook_data)
 					for (const webhookID in action.webhook_data) {
 						// Remove them from the sending list.
-						newState.sentWH.splice(
-							newState.sentWH.indexOf(`${action.service_data.id} ${webhookID}`),
-							1,
+						const index = newState.sentWH.indexOf(
+							`${action.service_data.id} ${webhookID}`,
 						);
+						if (index !== -1) newState.sentWH.splice(index, 1);
 
 						// Record the success/fail (if current service in modal).
 						if (
@@ -50,10 +54,10 @@ const reducerActionModal = (
 				if (action.command_data)
 					for (const command in action.command_data) {
 						// Remove them from the sending list.
-						newState.sentC.splice(
-							newState.sentC.indexOf(`${action.service_data.id} ${command}`),
-							1,
+						const index = newState.sentC.indexOf(
+							`${action.service_data.id} ${command}`,
 						);
+						if (index !== -1) newState.sentC.splice(index, 1);
 
 						// Record the success/fail (if current service in modal).
 						if (
@@ -73,6 +77,7 @@ const reducerActionModal = (
 
 		// REFRESH
 		// RESET
+		// SEND_FAILED
 		// SENDING
 		case 'ACTION':
 			switch (action.sub_type) {
@@ -85,6 +90,25 @@ const reducerActionModal = (
 					newState.commands = {};
 					newState.webhooks = {};
 					break;
+				case 'SEND_FAILED': {
+					// The request never reached the server, so no EVENT will arrive
+					// to clear the sending state - undo it here.
+					const serviceID = action.service_data?.id;
+					const unsend = (
+						sent: string[],
+						items: CommandSummaryListType | WebHookSummaryListType,
+						data?: CommandSummaryListType | WebHookSummaryListType,
+					) => {
+						for (const id in data) {
+							const index = sent.indexOf(`${serviceID} ${id}`);
+							if (index !== -1) sent.splice(index, 1);
+							if (items[id]) items[id] = data[id];
+						}
+					};
+					unsend(newState.sentC, newState.commands, action.command_data);
+					unsend(newState.sentWH, newState.webhooks, action.webhook_data);
+					break;
+				}
 				case 'SENDING':
 					// Commands.
 					if (action.command_data)
