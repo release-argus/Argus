@@ -18,6 +18,7 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -1454,6 +1455,223 @@ func TestAPI_AuthMeUpdate__refusals(t *testing.T) {
 			packageName, got, w.Body.String(), want,
 		)
 	}
+}
+
+func TestAPI_AuthMeUpdate__failures(t *testing.T) {
+	// GIVEN: the ways an account update can fail beneath the handler.
+	t.Run("invalid/no auth context", func(t *testing.T) {
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		// WHEN: the handler is called without an [auth.Context].
+		w := httptest.NewRecorder()
+		api, _, _ := testAuthServer(t, "TestAPI_AuthMeUpdate__failures_noCtx.yml")
+		api.httpAuthMeUpdate(w, httptest.NewRequest(
+			http.MethodPatch, "/api/v1/auth/me",
+			strings.NewReader(`{}`),
+		))
+
+		// THEN: 401.
+		if got, want := w.Code, http.StatusUnauthorized; got != want {
+			t.Errorf(
+				"%s\nno auth context\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+
+	t.Run("invalid/rate-limited", func(t *testing.T) {
+		// AND: a logged-in admin who has spent the limiter's budget.
+		api, _, _ := testAuthServer(t, "TestAPI_AuthMeUpdate__failures_limit.yml")
+		cookie := loginCookie(t, api, "admin", "admin-password")
+		wrong := test.TrimJSON(`{
+				"current_password":"not-my-password",
+				"display_name":"Nope"
+			}`)
+
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		for i := range loginLimitAttempts {
+			w := serveAuth(api, authedRequest(
+				http.MethodPatch, "/api/v1/auth/me",
+				wrong,
+				cookie,
+			))
+			if got, want := w.Code, http.StatusBadRequest; got != want {
+				t.Fatalf(
+					"%s\nattempt %d\ngot:  %d - %s\nwant: %d",
+					prefix, i+1, got, w.Body.String(), want,
+				)
+			}
+		}
+
+		// WHEN: one more attempt is made.
+		w := serveAuth(api, authedRequest(
+			http.MethodPatch, "/api/v1/auth/me",
+			wrong,
+			cookie,
+		))
+
+		// THEN: it is rate-limited rather than checked.
+		if got, want := w.Code, http.StatusTooManyRequests; got != want {
+			t.Errorf(
+				"%s\nover the limit\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+
+	t.Run("invalid/credential lookup breaks", func(t *testing.T) {
+		// AND: a server whose store is gone.
+		api, deps, dbConn := testAuthServer(t,
+			"TestAPI_AuthMeUpdate__failures_lookup.yml")
+		authCtx := adminContext(t, api, deps)
+		_ = dbConn.Close()
+
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		// WHEN: the current password cannot be looked up.
+		w := httptest.NewRecorder()
+		api.httpAuthMeUpdate(w, withAuthCtx(httptest.NewRequest(
+			http.MethodPatch, "/api/v1/auth/me",
+			strings.NewReader(`{"current_password":"admin-password"}`)),
+			authCtx,
+		))
+
+		// THEN: the infrastructure failure reads as 500, not a bad password.
+		if got, want := w.Code, http.StatusInternalServerError; got != want {
+			t.Errorf(
+				"%s\nlookup failure\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+
+	t.Run("invalid/hashing breaks", func(t *testing.T) {
+		// AND: a logged-in admin, and hashing that fails.
+		api, _, _ := testAuthServer(t, "TestAPI_AuthMeUpdate__failures_hash.yml")
+		cookie := loginCookie(t, api, "admin", "admin-password")
+		hashPasswordHad := hashPassword
+		t.Cleanup(func() { hashPassword = hashPasswordHad })
+		hashPassword = func(_ string) (string, error) {
+			return "", errors.New("hash broke")
+		}
+
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		// WHEN: a new password cannot be hashed.
+		w := serveAuth(api, authedRequest(
+			http.MethodPatch, "/api/v1/auth/me",
+			test.TrimJSON(`{
+				"current_password":"admin-password",
+				"new_password":"new-admin-password"
+			}`),
+			cookie,
+		))
+
+		// THEN: 500.
+		if got, want := w.Code, http.StatusInternalServerError; got != want {
+			t.Errorf(
+				"%s\nhash failure\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+
+	t.Run("invalid/the account vanished", func(t *testing.T) {
+		// AND: a context naming an account the store does not hold.
+		api, deps, _ := testAuthServer(t, "TestAPI_AuthMeUpdate__failures_gone.yml")
+		authCtx := *adminContext(t, api, deps)
+		authCtx.User.ID = "no-such-id"
+
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		// WHEN: the update is applied to it.
+		w := httptest.NewRecorder()
+		api.httpAuthMeUpdate(w,
+			withAuthCtx(httptest.NewRequest(
+				http.MethodPatch, "/api/v1/auth/me",
+				strings.NewReader(test.TrimJSON(`{
+						"current_password":"admin-password",
+						"display_name":"Ghost"
+					}`),
+				)),
+				&authCtx,
+			))
+
+		// THEN: the store failure surfaces as a 404.
+		if got, want := w.Code, http.StatusNotFound; got != want {
+			t.Errorf(
+				"%s\nvanished account\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+
+	t.Run("invalid/sessions break on a password change", func(t *testing.T) {
+		// AND: a server whose session manager fails every call.
+		api, deps, _ := testAuthServer(t,
+			"TestAPI_AuthMeUpdate__failures_sessions.yml")
+		authCtx := adminContext(t, api, deps)
+		deps.Sessions = session.New(
+			failingSessionStore{},
+			session.Config{Lifetime: time.Hour, IdleTimeout: time.Hour},
+		)
+
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		// WHEN: the password changes, so sessions must be revoked and re-minted.
+		w := httptest.NewRecorder()
+		api.httpAuthMeUpdate(w, withAuthCtx(httptest.NewRequest(
+			http.MethodPatch, "/api/v1/auth/me",
+			strings.NewReader(test.TrimJSON(`{
+				"current_password":"admin-password",
+				"new_password":"new-admin-password"
+			}`))),
+			authCtx,
+		))
+
+		// THEN: the failure to re-mint reads as 500.
+		if got, want := w.Code, http.StatusInternalServerError; got != want {
+			t.Errorf(
+				"%s\nsession failure\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
+
+	t.Run("invalid/grants unreadable after the update", func(t *testing.T) {
+		// AND: a server whose grants are gone, leaving the update itself fine.
+		api, deps, dbConn := testAuthServer(t,
+			"TestAPI_AuthMeUpdate__failures_grants.yml")
+		authCtx := adminContext(t, api, deps)
+		if _, err := dbConn.Exec(`DROP TABLE permissions;`); err != nil {
+			t.Fatalf(
+				"%s\nsetup drop failed: %v",
+				packageName, err,
+			)
+		}
+
+		prefix := fmt.Sprintf("%s\nhttpAuthMeUpdate() failures", packageName)
+
+		// WHEN: the account is re-read for the response.
+		w := httptest.NewRecorder()
+		api.httpAuthMeUpdate(w, withAuthCtx(httptest.NewRequest(
+			http.MethodPatch, "/api/v1/auth/me",
+			strings.NewReader(test.TrimJSON(`{
+				"current_password":"admin-password",
+				"display_name":"Renamed"
+			}`))),
+			authCtx,
+		))
+
+		// THEN: 500.
+		if got, want := w.Code, http.StatusInternalServerError; got != want {
+			t.Errorf(
+				"%s\ngrant failure\ngot:  %d - %s\nwant: %d",
+				prefix, got, w.Body.String(), want,
+			)
+		}
+	})
 }
 
 func TestAPI_AuthMeUpdate__bearerRefused(t *testing.T) {
