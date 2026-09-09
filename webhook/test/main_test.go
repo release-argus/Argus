@@ -26,7 +26,7 @@ import (
 
 var packageName = "whtest"
 
-func TestWebHook(t *testing.T) {
+func TestWebhook(t *testing.T) {
 	// GIVEN: the failing, self-signed certificate, and custom headers flags.
 	tests := []struct {
 		name                             string
@@ -39,8 +39,8 @@ func TestWebHook(t *testing.T) {
 			failing:         false,
 			selfSignedCert:  false,
 			headers:         false,
-			expectedURL:     test.WebHookGitHub["url_valid"],
-			expectedSecret:  test.WebHookGitHub["secret_pass"],
+			expectedURL:     test.WebhookGitHub["url_valid"],
+			expectedSecret:  test.WebhookGitHub["secret_pass"],
 			expectedHeaders: nil,
 		},
 		{
@@ -49,7 +49,7 @@ func TestWebHook(t *testing.T) {
 			selfSignedCert: false,
 			headers:        true,
 			expectedURL:    test.LookupWithHeaderAuth["url_valid"],
-			expectedSecret: test.WebHookGitHub["secret_pass"],
+			expectedSecret: test.WebhookGitHub["secret_pass"],
 			expectedHeaders: &webhook.Headers{
 				{
 					Key:   test.LookupWithHeaderAuth["header_key"],
@@ -62,8 +62,8 @@ func TestWebHook(t *testing.T) {
 			failing:         false,
 			selfSignedCert:  true,
 			headers:         false,
-			expectedURL:     test.WebHookGitHub["url_invalid"],
-			expectedSecret:  test.WebHookGitHub["secret_pass"],
+			expectedURL:     test.WebhookGitHub["url_invalid"],
+			expectedSecret:  test.WebhookGitHub["secret_pass"],
 			expectedHeaders: nil,
 		},
 		{
@@ -72,7 +72,7 @@ func TestWebHook(t *testing.T) {
 			selfSignedCert: true,
 			headers:        true,
 			expectedURL:    test.LookupWithHeaderAuth["url_invalid"],
-			expectedSecret: test.WebHookGitHub["secret_pass"],
+			expectedSecret: test.WebhookGitHub["secret_pass"],
 			expectedHeaders: &webhook.Headers{
 				{
 					Key:   test.LookupWithHeaderAuth["header_key"],
@@ -85,8 +85,8 @@ func TestWebHook(t *testing.T) {
 			failing:         true,
 			selfSignedCert:  false,
 			headers:         false,
-			expectedURL:     test.WebHookGitHub["url_valid"],
-			expectedSecret:  test.WebHookGitHub["secret_fail"],
+			expectedURL:     test.WebhookGitHub["url_valid"],
+			expectedSecret:  test.WebhookGitHub["secret_fail"],
 			expectedHeaders: nil,
 		},
 		{
@@ -95,7 +95,7 @@ func TestWebHook(t *testing.T) {
 			selfSignedCert: false,
 			headers:        true,
 			expectedURL:    test.LookupWithHeaderAuth["url_valid"],
-			expectedSecret: test.WebHookGitHub["secret_fail"],
+			expectedSecret: test.WebhookGitHub["secret_fail"],
 			expectedHeaders: &webhook.Headers{
 				{
 					Key:   test.LookupWithHeaderAuth["header_key"],
@@ -108,8 +108,8 @@ func TestWebHook(t *testing.T) {
 			failing:         true,
 			selfSignedCert:  true,
 			headers:         false,
-			expectedURL:     test.WebHookGitHub["url_invalid"],
-			expectedSecret:  test.WebHookGitHub["secret_fail"],
+			expectedURL:     test.WebhookGitHub["url_invalid"],
+			expectedSecret:  test.WebhookGitHub["secret_fail"],
 			expectedHeaders: nil,
 		},
 		{
@@ -118,7 +118,7 @@ func TestWebHook(t *testing.T) {
 			selfSignedCert: true,
 			headers:        true,
 			expectedURL:    test.LookupWithHeaderAuth["url_invalid"],
-			expectedSecret: test.WebHookGitHub["secret_fail"],
+			expectedSecret: test.WebhookGitHub["secret_fail"],
 			expectedHeaders: &webhook.Headers{
 				{
 					Key:   test.LookupWithHeaderAuth["header_key"],
@@ -132,8 +132,8 @@ func TestWebHook(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: WebHook is called.
-			result := WebHook(
+			// WHEN: Webhook is called.
+			result := Webhook(
 				t,
 				tc.failing,
 				tc.selfSignedCert,
@@ -141,7 +141,7 @@ func TestWebHook(t *testing.T) {
 			)
 
 			prefix := fmt.Sprintf(
-				"%s\nWebHook(failed=%t, selfSigned=%t, headers=%t)",
+				"%s\nWebhook(failed=%t, selfSigned=%t, headers=%t)",
 				packageName, tc.failing, tc.selfSignedCert, tc.headers,
 			)
 
@@ -292,10 +292,10 @@ func TestWebHook(t *testing.T) {
 
 			// AND: the Secret should be modified if failing is true.
 			if tc.failing {
-				expectedSecret := test.WebHookGitHub["secret_fail"]
+				expectedSecret := test.WebhookGitHub["secret_fail"]
 				if result.Secret != expectedSecret {
 					t.Errorf(
-						"%s Secret mismatch for failing WebHook\ngot:  %q\nwant: %q",
+						"%s Secret mismatch for failing Webhook\ngot:  %q\nwant: %q",
 						prefix, result.Secret, expectedSecret,
 					)
 				}
@@ -305,7 +305,7 @@ func TestWebHook(t *testing.T) {
 			if tc.headers {
 				if result.URL != tc.expectedURL {
 					t.Errorf(
-						"%s URL mismatch for WebHook with Headers\ngot:  %q\nwant: %q",
+						"%s URL mismatch for Webhook with Headers\ngot:  %q\nwant: %q",
 						packageName, result.URL, tc.expectedURL,
 					)
 				}

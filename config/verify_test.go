@@ -56,8 +56,8 @@ func testVerify(t *testing.T) *Config {
 		),
 	}
 
-	cfg.WebHook = webhook.WebHooksDefaults{
-		"test": &cfg.Defaults.WebHook,
+	cfg.Webhook = webhook.WebhooksDefaults{
+		"test": &cfg.Defaults.Webhook,
 	}
 
 	serviceID := "test"
@@ -157,9 +157,9 @@ func TestConfig_CheckValues(t *testing.T) {
 			),
 		},
 		{
-			name: "invalid WebHook",
+			name: "invalid Webhook",
 			cfg: &Config{
-				WebHook: webhook.WebHooksDefaults{
+				Webhook: webhook.WebhooksDefaults{
 					"test": test.Must(t, func() (*webhook.Defaults, error) {
 						return webhook.DecodeDefaults(
 							"yaml", []byte(test.TrimYAML(`

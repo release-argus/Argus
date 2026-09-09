@@ -51,7 +51,7 @@ func TestHTTP_Config(t *testing.T) {
 		settings *config.Settings
 		defaults *config.Defaults
 		notify   *shoutrrr.ShoutrrrsDefaults
-		webhook  *webhook.WebHooksDefaults
+		webhook  *webhook.WebhooksDefaults
 		service  *service.Services
 		order    *[]string
 		wantBody string
@@ -233,7 +233,7 @@ func TestHTTP_Config(t *testing.T) {
 					Command: command.Commands{
 						{"command", "arg1", "arg2"},
 					},
-					WebHook: map[string]struct{}{
+					Webhook: map[string]struct{}{
 						"wh1": {},
 						"wh2": {},
 						"wh3": {},
@@ -353,7 +353,7 @@ func TestHTTP_Config(t *testing.T) {
 					Command: command.Commands{
 						{"command", "arg1", "arg2"},
 					},
-					WebHook: map[string]struct{}{
+					Webhook: map[string]struct{}{
 						"wh1": {},
 						"wh2": {},
 						"wh3": {},
@@ -452,7 +452,7 @@ func TestHTTP_Config(t *testing.T) {
 		},
 		{
 			name: "settings/and defaults/with notify+command+webhook service defaults/and notify and webhook",
-			webhook: &webhook.WebHooksDefaults{
+			webhook: &webhook.WebhooksDefaults{
 				"foo": test.Must(t, func() (*webhook.Defaults, error) {
 					return webhook.DecodeDefaults(
 						"yaml", []byte(test.TrimYAML(`
@@ -706,7 +706,7 @@ func TestHTTP_Config(t *testing.T) {
 	api.Config.Settings = config.Settings{}
 	api.Config.Defaults = config.Defaults{}
 	api.Config.Notify = shoutrrr.ShoutrrrsDefaults{}
-	api.Config.WebHook = webhook.WebHooksDefaults{}
+	api.Config.Webhook = webhook.WebhooksDefaults{}
 	api.Config.Service = service.Services{}
 	api.Config.Order = []string{}
 
@@ -722,7 +722,7 @@ func TestHTTP_Config(t *testing.T) {
 				api.Config.Notify = *tc.notify
 			}
 			if tc.webhook != nil {
-				api.Config.WebHook = *tc.webhook
+				api.Config.Webhook = *tc.webhook
 			}
 			if tc.service != nil {
 				api.Config.Service = *tc.service

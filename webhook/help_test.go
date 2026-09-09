@@ -47,7 +47,7 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testWebHook(failing bool, selfSignedCert bool, headers bool) *WebHook {
+func testWebhook(failing bool, selfSignedCert bool, headers bool) *Webhook {
 	desiredStatusCode := uint16(0)
 	whMaxTries := uint8(1)
 	webhook := New(
@@ -63,7 +63,7 @@ func testWebHook(failing bool, selfSignedCert bool, headers bool) *WebHook {
 		"argus",
 		new(false),
 		"github",
-		test.WebHookGitHub["url_valid"],
+		test.WebhookGitHub["url_valid"],
 		&Defaults{},
 		&Defaults{}, &Defaults{},
 	)
@@ -71,13 +71,13 @@ func testWebHook(failing bool, selfSignedCert bool, headers bool) *WebHook {
 	webhook.ServiceStatus.Init(
 		0, 1, 1,
 		status.ServiceInfo{
-			ID: "testWebHook",
+			ID: "testWebhook",
 		},
 		&dashboard.Options{
 			WebURL: "https://example.com",
 		},
 	)
-	webhook.Failed = &webhook.ServiceStatus.Fails.WebHook
+	webhook.Failed = &webhook.ServiceStatus.Fails.Webhook
 	if selfSignedCert {
 		webhook.URL = strings.Replace(webhook.URL, "valid", "invalid", 1)
 	}
@@ -111,7 +111,7 @@ func testDefaults(failing bool, headers bool) *Defaults {
 			secret: argus
 			silent_fails: false
 			type: github
-			url: `+test.WebHookGitHub["url_valid"]+`
+			url: `+test.WebhookGitHub["url_valid"]+`
 		`)),
 	)
 
@@ -144,7 +144,7 @@ func plainConfig(t *testing.T) Config {
 	hardDefaults.Default()
 
 	return Config{
-		Root:         WebHooksDefaults{},
+		Root:         WebhooksDefaults{},
 		Defaults:     defaults,
 		HardDefaults: hardDefaults,
 	}

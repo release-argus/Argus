@@ -239,7 +239,7 @@ func TestStatus_String(t *testing.T) {
 							new(true),
 						},
 					},
-					WebHook: FailsWebHook{
+					Webhook: FailsWebhook{
 						fails: map[string]*bool{
 							"bar": nil,
 							"foo": new(false),
@@ -290,7 +290,7 @@ func TestStatus_String(t *testing.T) {
 							new(true),
 						},
 					},
-					WebHook: FailsWebHook{
+					Webhook: FailsWebhook{
 						fails: map[string]*bool{
 							"foo": new(false),
 							"bar": nil,
@@ -442,21 +442,21 @@ func TestStatus_Init(t *testing.T) {
 					prefix, got, tc.commands,
 				)
 			}
-			// 	WebHook:
+			// 	Webhook:
 			want = 0
-			if got := status.Fails.WebHook.Length(); got != want {
+			if got := status.Fails.Webhook.Length(); got != want {
 				t.Errorf(
-					"%s .Fails.WebHook initial length mismatch\ngot:  %d\nwant: %d",
+					"%s .Fails.Webhook initial length mismatch\ngot:  %d\nwant: %d",
 					prefix, got, want,
 				)
 			} else {
 				for i := 0; i < tc.webhooks; i++ {
 					failed := false
-					status.Fails.WebHook.Set(fmt.Sprint(i), &failed)
+					status.Fails.Webhook.Set(fmt.Sprint(i), &failed)
 				}
-				if got := status.Fails.WebHook.Length(); got != tc.webhooks {
+				if got := status.Fails.Webhook.Length(); got != tc.webhooks {
 					t.Errorf(
-						"%s .Fails.WebHook capacity mismatch\ngot:  %d\nwant: %d",
+						"%s .Fails.Webhook capacity mismatch\ngot:  %d\nwant: %d",
 						prefix, got, tc.webhooks,
 					)
 				}

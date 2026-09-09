@@ -27,7 +27,7 @@ type WebSocketMessage struct {
 	Order       *[]string                  `json:"order,omitempty"`
 	ServiceData *ServiceSummary            `json:"service_data,omitzero"`
 	CommandData map[string]*CommandSummary `json:"command_data,omitempty"`
-	WebHookData map[string]*WebHookSummary `json:"webhook_data,omitempty"`
+	WebhookData map[string]*WebhookSummary `json:"webhook_data,omitempty"`
 }
 
 // String implements fmt.Stringer and returns a JSON representation.

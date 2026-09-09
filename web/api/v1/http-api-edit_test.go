@@ -2854,8 +2854,8 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 						webhook:
 							test:
 								type: github
-								url: `+test.WebHookGitHub["url_valid"]+`
-								secret: `+test.WebHookGitHub["secret_pass"]+`
+								url: `+test.WebhookGitHub["url_valid"]+`
+								secret: `+test.WebhookGitHub["secret_pass"]+`
 					`)),
 					"webhook",
 					svcCfg,
@@ -2875,7 +2875,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 						"name": "test",
 						"old_index": "test",
 						"type": "github",
-						"url": "` + test.WebHookGitHub["url_valid"] + `",
+						"url": "` + test.WebhookGitHub["url_valid"] + `",
 						"secret": "<secret>"
 					}
 				]
@@ -2890,8 +2890,8 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 					webhook:
 						test:
 							type: github
-							url: ` + test.WebHookGitHub["url_valid"] + `
-							secret: ` + test.WebHookGitHub["secret_pass"] + `
+							url: ` + test.WebhookGitHub["url_valid"] + `
+							secret: ` + test.WebhookGitHub["secret_pass"] + `
 				`),
 			},
 		},

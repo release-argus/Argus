@@ -1,7 +1,7 @@
 import { type FC, useCallback, useEffect, useMemo } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
 import { createOption } from '@/components/generic/field-select-shared';
-import EditServiceWebHook from '@/components/modals/service-edit/webhook';
+import EditServiceWebhook from '@/components/modals/service-edit/webhook';
 import {
 	Accordion,
 	AccordionContent,
@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { isEmptyArray } from '@/utils';
 import { WEBHOOK_TYPE } from '@/utils/api/types/config/webhook';
 
-type EditServiceWebHooksProps = {
+type EditServiceWebhooksProps = {
 	/* Whether the modal is loading. */
 	loading: boolean;
 };
@@ -25,7 +25,7 @@ type EditServiceWebHooksProps = {
  * @param loading - Whether the modal is loading.
  * @returns The form fields for a service's webhooks.
  */
-const EditServiceWebHooks: FC<EditServiceWebHooksProps> = ({ loading }) => {
+const EditServiceWebhooks: FC<EditServiceWebhooksProps> = ({ loading }) => {
 	const id = 'webhook';
 	const {
 		mainDataDefaults,
@@ -42,7 +42,7 @@ const EditServiceWebHooks: FC<EditServiceWebHooksProps> = ({ loading }) => {
 	const defaultsHollow = typeDataDefaultsHollow?.webhook;
 
 	// 'mains' that may be referenced.
-	const globalWebHookOptions = useMemo(
+	const globalWebhookOptions = useMemo(
 		() => [
 			{ label: '--None--', value: '' },
 			...Object.keys(mains ?? []).map((n) => createOption(n)),
@@ -82,13 +82,13 @@ const EditServiceWebHooks: FC<EditServiceWebHooksProps> = ({ loading }) => {
 
 	return (
 		<AccordionItem value={id}>
-			<AccordionTrigger id={id}>WebHook:</AccordionTrigger>
+			<AccordionTrigger id={id}>Webhook:</AccordionTrigger>
 			<AccordionContent className={cn(!isEmptyArray(fields) && 'space-y-4')}>
 				<Accordion className="w-full space-y-2" type="multiple">
 					{fields.map(({ id: _id }, index) => (
 						<AccordionItem key={_id} value={_id}>
-							<EditServiceWebHook
-								globalOptions={globalWebHookOptions}
+							<EditServiceWebhook
+								globalOptions={globalWebhookOptions}
 								key={_id}
 								name={`${id}.${index.toString()}`}
 								removeMe={removeItem(index)}
@@ -102,11 +102,11 @@ const EditServiceWebHooks: FC<EditServiceWebHooksProps> = ({ loading }) => {
 					onClick={addItem}
 					variant="secondary"
 				>
-					Add WebHook
+					Add Webhook
 				</Button>
 			</AccordionContent>
 		</AccordionItem>
 	);
 };
 
-export default EditServiceWebHooks;
+export default EditServiceWebhooks;

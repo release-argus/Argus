@@ -116,7 +116,7 @@ var LookupPlainPOST = map[string]string{
 	"data_fail":   `{"argus":"test-"}`,
 }
 
-// LookupResponseHeader is a lookup for testing WebHooks with versions in their response headers.
+// LookupResponseHeader is a lookup for testing Webhooks with versions in their response headers.
 var LookupResponseHeader = map[string]string{
 	"url_valid":                  ValidCertHTTPS + "/header",
 	"url_invalid":                InvalidCertHTTPS + "/header",
@@ -131,8 +131,8 @@ var LookupJSON = map[string]string{
 	"url_invalid": InvalidCertHTTPS + "/json",
 }
 
-// WebHookGitHub is a lookup for testing WebHooks with versions in their response body.
-var WebHookGitHub = map[string]string{
+// WebhookGitHub is a lookup for testing Webhooks with versions in their response body.
+var WebhookGitHub = map[string]string{
 	"url_valid":   ValidCertHTTPS + "/hooks/github-style",
 	"url_invalid": InvalidCertHTTPS + "/hooks/github-style",
 	"secret_pass": "argus",

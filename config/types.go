@@ -38,7 +38,7 @@ type Config struct {
 	HardDefaults Defaults                   `json:"-" yaml:"-"`                                 // Hardcoded default values for the various parameters.
 	Defaults     Defaults                   `json:"defaults,omitzero" yaml:"defaults,omitzero"` // Default values for the various parameters.
 	Notify       shoutrrr.ShoutrrrsDefaults `json:"notify,omitempty" yaml:"notify,omitempty"`   // Shoutrrr messages to send on a new release.
-	WebHook      webhook.WebHooksDefaults   `json:"webhook,omitempty" yaml:"webhook,omitempty"` // WebHooks to send on a new release.
+	Webhook      webhook.WebhooksDefaults   `json:"webhook,omitempty" yaml:"webhook,omitempty"` // Webhooks to send on a new release.
 
 	OrderMu sync.RWMutex     `json:"-" yaml:"-"`                                 // Mutex for the Order/Service slice.
 	Order   []string         `json:"-" yaml:"-"`                                 // Ordered slice of all Service id's.
@@ -52,7 +52,7 @@ type Config struct {
 type ConfigDecode struct {
 	Settings Settings                   `json:"settings,omitzero" yaml:"settings,omitzero"`
 	Notify   shoutrrr.ShoutrrrsDefaults `json:"notify,omitempty" yaml:"notify,omitempty"`
-	WebHook  webhook.WebHooksDefaults   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
+	Webhook  webhook.WebhooksDefaults   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
 	Defaults Defaults                   `json:"defaults,omitzero" yaml:"defaults,omitzero"`
 }
 
@@ -73,7 +73,7 @@ func (c *Config) unmarshal(format string, data []byte) error {
 	aux := ConfigDecode{
 		Settings: c.Settings,
 		Notify:   c.Notify,
-		WebHook:  c.WebHook,
+		Webhook:  c.Webhook,
 		Defaults: c.Defaults,
 	}
 
@@ -86,9 +86,9 @@ func (c *Config) unmarshal(format string, data []byte) error {
 	if c.Notify == nil {
 		c.Notify = shoutrrr.ShoutrrrsDefaults{}
 	}
-	c.WebHook = aux.WebHook
-	if c.WebHook == nil {
-		c.WebHook = webhook.WebHooksDefaults{}
+	c.Webhook = aux.Webhook
+	if c.Webhook == nil {
+		c.Webhook = webhook.WebhooksDefaults{}
 	}
 	c.Defaults = aux.Defaults
 
@@ -139,7 +139,7 @@ func (c *Config) Decode(raw []byte) error {
 	return nil
 }
 
-// GetDefaults constructs and returns the default configurations for Service, Shoutrrr, and WebHook on the receiver.
+// GetDefaults constructs and returns the default configurations for Service, Shoutrrr, and Webhook on the receiver.
 func (c *Config) GetDefaults() (service.DefaultsConfig, shoutrrr.Config, webhook.Config) {
 	svcDefaults := service.DefaultsConfig{
 		Soft: &c.Defaults.Service,
@@ -151,9 +151,9 @@ func (c *Config) GetDefaults() (service.DefaultsConfig, shoutrrr.Config, webhook
 		HardDefaults: c.HardDefaults.Notify,
 	}
 	webhookDefaults := webhook.Config{
-		Root:         c.WebHook,
-		Defaults:     &c.Defaults.WebHook,
-		HardDefaults: &c.HardDefaults.WebHook,
+		Root:         c.Webhook,
+		Defaults:     &c.Defaults.Webhook,
+		HardDefaults: &c.HardDefaults.Webhook,
 	}
 	return svcDefaults, notifyDefaults, webhookDefaults
 }

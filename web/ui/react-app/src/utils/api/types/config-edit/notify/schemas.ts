@@ -965,7 +965,7 @@ export const notifySchemaMapOutgoingWithDefaults = (
 	defaults: NotifySchemaValues,
 ) => {
 	switch (defaults.type) {
-		// Generic WebHook.
+		// Generic Webhook.
 		case NOTIFY_TYPE_MAP.GENERIC.value:
 			return notifyGenericSchemaOutgoing.extend({
 				url_fields: notifyGenericSchemaOutgoing.shape.url_fields

@@ -76,7 +76,7 @@ func TestServiceEdit_Marshal(t *testing.T) {
 				Command: Commands{
 					{"echo", "hello"},
 				},
-				WebHook: []WebHook{
+				Webhook: []Webhook{
 					{
 						ID:   "wh1",
 						Type: "github",
@@ -162,11 +162,11 @@ func TestServiceEdit_Marshal(t *testing.T) {
 	}
 }
 
-func TestWebHookSummary_Marshal(t *testing.T) {
-	// GIVEN: a WebHookSummary.
+func TestWebhookSummary_Marshal(t *testing.T) {
+	// GIVEN: a WebhookSummary.
 	tests := []struct {
 		name  string
-		input *WebHookSummary
+		input *WebhookSummary
 		want  string
 	}{
 		{
@@ -176,12 +176,12 @@ func TestWebHookSummary_Marshal(t *testing.T) {
 		},
 		{
 			name:  "empty",
-			input: &WebHookSummary{},
+			input: &WebhookSummary{},
 			want:  `{"next_runnable":"0001-01-01T00:00:00Z"}`,
 		},
 		{
 			name: "filled",
-			input: &WebHookSummary{
+			input: &WebhookSummary{
 				Failed:       new(true),
 				NextRunnable: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
@@ -196,19 +196,19 @@ func TestWebHookSummary_Marshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the WebHookSummary is marshaled to JSON.
+			// WHEN: the WebhookSummary is marshaled to JSON.
 			got, err := decode.Marshal("json", tc.input)
 
 			// THEN: the result is as expected.
 			if err != nil {
 				t.Fatalf(
-					"%s\nWebHookSummary marshal errored: %v",
+					"%s\nWebhookSummary marshal errored: %v",
 					packageName, err,
 				)
 			}
 			if string(got) != tc.want {
 				t.Errorf(
-					"%s\nWebHookSummary marshal value mismatch\ngot:  %q\nwant: %q",
+					"%s\nWebhookSummary marshal value mismatch\ngot:  %q\nwant: %q",
 					packageName, got, tc.want,
 				)
 			}
@@ -354,9 +354,9 @@ func TestServiceSummary_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty/WebHook",
+			name: "non-empty/Webhook",
 			data: ServiceSummary{
-				WebHook: new(2),
+				Webhook: new(2),
 			},
 			want: false,
 		},
@@ -389,7 +389,7 @@ func TestServiceSummary_IsZero(t *testing.T) {
 				IconLinkTo:          new("https://example.com/somewhere"),
 				DeployedVersionType: new(dvManualType),
 				Command:             new(1),
-				WebHook:             new(2),
+				Webhook:             new(2),
 				Status: &Status{
 					ApprovedVersion: "1.2.3",
 				},
@@ -441,7 +441,7 @@ func TestServiceSummary_String(t *testing.T) {
 				Name:    new("bar"),
 				Type:    "github",
 				Command: new(1),
-				WebHook: new(2),
+				Webhook: new(2),
 			},
 			want: `
 				{
@@ -465,7 +465,7 @@ func TestServiceSummary_String(t *testing.T) {
 				IconLinkTo:          new("https://release-argus.io"),
 				DeployedVersionType: new(dvManualType),
 				Command:             new(2),
-				WebHook:             new(1),
+				Webhook:             new(1),
 				Status: &Status{
 					ApprovedVersion: "1.2.3",
 				},
@@ -979,32 +979,32 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			name: "webhook added",
 			old:  &ServiceSummary{},
 			new: &ServiceSummary{
-				WebHook: new(1),
+				Webhook: new(1),
 			},
 			want: &ServiceSummary{
-				WebHook: new(1),
+				Webhook: new(1),
 			},
 		},
 		{
 			name: "webhook removed",
 			old: &ServiceSummary{
-				WebHook: new(1),
+				Webhook: new(1),
 			},
 			new: &ServiceSummary{},
 			want: &ServiceSummary{
-				WebHook: new(0),
+				Webhook: new(0),
 			},
 		},
 		{
 			name: "same webhook",
 			old: &ServiceSummary{
-				WebHook: new(1),
+				Webhook: new(1),
 			},
 			new: &ServiceSummary{
-				WebHook: new(1),
+				Webhook: new(1),
 			},
 			want: &ServiceSummary{
-				WebHook: nil,
+				Webhook: nil,
 			},
 		},
 	}
@@ -1019,7 +1019,7 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Give them non-nil Status, Command and WebHook.
+			// Give them non-nil Status, Command and Webhook.
 			if tc.old != nil {
 				initialiseFields(tc.old)
 			}
@@ -1058,7 +1058,7 @@ func TestDefaults_IsZero(t *testing.T) {
 			defaults: Defaults{
 				Service: ServiceDefaults{},
 				Notify:  Notifiers{},
-				WebHook: WebHook{},
+				Webhook: Webhook{},
 			},
 			want: true,
 		},
@@ -1083,9 +1083,9 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty/WebHook",
+			name: "non-empty/Webhook",
 			defaults: Defaults{
-				WebHook: WebHook{
+				Webhook: Webhook{
 					Type: "a",
 				},
 			},
@@ -1102,7 +1102,7 @@ func TestDefaults_IsZero(t *testing.T) {
 						Type: "a",
 					},
 				},
-				WebHook: WebHook{
+				Webhook: Webhook{
 					Type: "a",
 				},
 			},
@@ -1162,7 +1162,7 @@ func TestDefaults_String(t *testing.T) {
 						},
 					},
 				},
-				WebHook: WebHook{
+				Webhook: Webhook{
 					Secret: "bar",
 				},
 			},
@@ -1965,7 +1965,7 @@ func TestService_String(t *testing.T) {
 				Command: Commands{
 					{"echo", "hello"},
 				},
-				WebHook: WebHooks{
+				Webhook: Webhooks{
 					"wh1": {
 						ID:   "wh1",
 						Type: "github",
@@ -2060,7 +2060,7 @@ func TestServiceDefaults_IsZero(t *testing.T) {
 				LatestVersion:         LatestVersionDefaults{},
 				Notify:                []string{},
 				Command:               Commands{},
-				WebHook:               []string{},
+				Webhook:               []string{},
 				DeployedVersionLookup: DeployedVersionLookupDefaults{},
 				Dashboard:             DashboardOptions{},
 			},
@@ -2110,9 +2110,9 @@ func TestServiceDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty/WebHook",
+			name: "non-empty/Webhook",
 			defaults: ServiceDefaults{
-				WebHook: []string{"a"},
+				Webhook: []string{"a"},
 			},
 			want: false,
 		},
@@ -2150,7 +2150,7 @@ func TestServiceDefaults_IsZero(t *testing.T) {
 				Command: Commands{
 					{"ls"},
 				},
-				WebHook: []string{"a"},
+				Webhook: []string{"a"},
 				DeployedVersionLookup: DeployedVersionLookupDefaults{
 					Method: "GET",
 				},
@@ -3298,11 +3298,11 @@ func TestStatus_String(t *testing.T) {
 	}
 }
 
-func TestWebHooks_String(t *testing.T) {
-	// GIVEN: WebHooks.
+func TestWebhooks_String(t *testing.T) {
+	// GIVEN: Webhooks.
 	tests := []struct {
 		name     string
-		webhooks *WebHooks
+		webhooks *Webhooks
 		want     string
 	}{
 		{
@@ -3312,12 +3312,12 @@ func TestWebHooks_String(t *testing.T) {
 		},
 		{
 			name:     "empty",
-			webhooks: &WebHooks{},
+			webhooks: &Webhooks{},
 			want:     "{}",
 		},
 		{
 			name: "single webhook, filled",
-			webhooks: &WebHooks{
+			webhooks: &Webhooks{
 				"0": {
 					ServiceID:         "something",
 					ID:                "foobar",
@@ -3352,7 +3352,7 @@ func TestWebHooks_String(t *testing.T) {
 		},
 		{
 			name: "multiple webhooks",
-			webhooks: &WebHooks{
+			webhooks: &Webhooks{
 				"0": {URL: "bish"},
 				"1": {Secret: "bash"},
 				"2": {Type: "github"},
@@ -3370,14 +3370,14 @@ func TestWebHooks_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the WebHook is stringified with String.
+			// WHEN: the Webhook is stringified with String.
 			got := tc.webhooks.String()
 
 			// THEN: the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf(
-					"%s\nWebHooks.String() value mismatch\ngot:  %q\nwant: %q",
+					"%s\nWebhooks.String() value mismatch\ngot:  %q\nwant: %q",
 					packageName, got, tc.want,
 				)
 			}
@@ -3385,12 +3385,12 @@ func TestWebHooks_String(t *testing.T) {
 	}
 }
 
-func TestWebHooks_Flatten(t *testing.T) {
-	// GIVEN: a WebHook.
+func TestWebhooks_Flatten(t *testing.T) {
+	// GIVEN: a Webhook.
 	tests := []struct {
 		name    string
-		webhook *WebHooks
-		want    []*WebHook
+		webhook *Webhooks
+		want    []*Webhook
 	}{
 		{
 			name:    "nil",
@@ -3399,33 +3399,33 @@ func TestWebHooks_Flatten(t *testing.T) {
 		},
 		{
 			name:    "empty",
-			webhook: &WebHooks{},
-			want:    []*WebHook{},
+			webhook: &Webhooks{},
+			want:    []*Webhook{},
 		},
 		{
 			name: "webhooks ordered",
-			webhook: &WebHooks{
-				"alpha": WebHook{URL: "https://example.com"},
-				"bravo": WebHook{URL: "https://example.com/other"},
+			webhook: &Webhooks{
+				"alpha": Webhook{URL: "https://example.com"},
+				"bravo": Webhook{URL: "https://example.com/other"},
 			},
-			want: []*WebHook{
+			want: []*Webhook{
 				{ID: "alpha", URL: "https://example.com"},
 				{ID: "bravo", URL: "https://example.com/other"},
 			},
 		},
 		{
 			name: "webhooks ordered and censored",
-			webhook: &WebHooks{
-				"alpha": WebHook{
+			webhook: &Webhooks{
+				"alpha": Webhook{
 					URL:    "https://example.com",
 					Secret: "foo",
 				},
-				"bravo": WebHook{
+				"bravo": Webhook{
 					URL:    "https://example.com/other",
 					Secret: "bar",
 				},
 			},
-			want: []*WebHook{
+			want: []*Webhook{
 				{
 					ID:     "alpha",
 					URL:    "https://example.com",
@@ -3452,7 +3452,7 @@ func TestWebHooks_Flatten(t *testing.T) {
 			wantBytes, _ := decode.Marshal("json", tc.want)
 			if gotStr, wantStr := string(gotBytes), string(wantBytes); gotStr != wantStr {
 				t.Errorf(
-					"%s\nWebHooks.Flatten()\ngot:  %q\nwant: %q",
+					"%s\nWebhooks.Flatten()\ngot:  %q\nwant: %q",
 					packageName, gotStr, wantStr,
 				)
 			}
@@ -3460,63 +3460,63 @@ func TestWebHooks_Flatten(t *testing.T) {
 	}
 }
 
-func TestWebHook_IsZero(t *testing.T) {
-	// GIVEN: a WebHook.
+func TestWebhook_IsZero(t *testing.T) {
+	// GIVEN: a Webhook.
 	tests := []struct {
 		name    string
-		webhook WebHook
+		webhook Webhook
 		want    bool
 	}{
 		{
 			name:    "empty",
-			webhook: WebHook{},
+			webhook: Webhook{},
 			want:    true,
 		},
 		{
 			name: "non-empty/ServiceID",
-			webhook: WebHook{
+			webhook: Webhook{
 				ServiceID: "alpha",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/ID",
-			webhook: WebHook{
+			webhook: Webhook{
 				ID: "alpha",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Type",
-			webhook: WebHook{
+			webhook: Webhook{
 				Type: "alpha",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/URL",
-			webhook: WebHook{
+			webhook: Webhook{
 				URL: "alpha",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/AllowInvalidCerts",
-			webhook: WebHook{
+			webhook: Webhook{
 				AllowInvalidCerts: new(true),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Secret",
-			webhook: WebHook{
+			webhook: Webhook{
 				Secret: "alpha",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Headers",
-			webhook: WebHook{
+			webhook: Webhook{
 				Headers: []Header{
 					{
 						Key:   "alpha",
@@ -3528,34 +3528,34 @@ func TestWebHook_IsZero(t *testing.T) {
 		},
 		{
 			name: "non-empty/DesiredStatusCode",
-			webhook: WebHook{
+			webhook: Webhook{
 				DesiredStatusCode: new(uint16(200)),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/Delay",
-			webhook: WebHook{
+			webhook: Webhook{
 				Delay: "2s",
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/MaxTries",
-			webhook: WebHook{
+			webhook: Webhook{
 				MaxTries: new(uint8(2)),
 			},
 			want: false,
 		},
 		{
 			name: "non-empty/SilentFails",
-			webhook: WebHook{
+			webhook: Webhook{
 				SilentFails: new(true),
 			},
 		},
 		{
 			name: "non-empty/all",
-			webhook: WebHook{
+			webhook: Webhook{
 				ServiceID:         "alpha",
 				ID:                "alpha",
 				Type:              "alpha",
@@ -3583,7 +3583,7 @@ func TestWebHook_IsZero(t *testing.T) {
 			// THEN: the result is as expected.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nWebHook.IsZero() value mismatch\ngot:  %v\nwant: %v",
+					"%s\nWebhook.IsZero() value mismatch\ngot:  %v\nwant: %v",
 					packageName, got, tc.want,
 				)
 			}
@@ -3591,11 +3591,11 @@ func TestWebHook_IsZero(t *testing.T) {
 	}
 }
 
-func TestWebHook_String(t *testing.T) {
-	// GIVEN: a WebHook.
+func TestWebhook_String(t *testing.T) {
+	// GIVEN: a Webhook.
 	tests := []struct {
 		name    string
-		webhook *WebHook
+		webhook *Webhook
 		want    string
 	}{
 		{
@@ -3605,12 +3605,12 @@ func TestWebHook_String(t *testing.T) {
 		},
 		{
 			name:    "empty",
-			webhook: &WebHook{},
+			webhook: &Webhook{},
 			want:    "{}\n",
 		},
 		{
 			name: "filled",
-			webhook: &WebHook{
+			webhook: &Webhook{
 				ServiceID:         "something",
 				ID:                "foobar",
 				Type:              "url",
@@ -3656,11 +3656,11 @@ func TestWebHook_String(t *testing.T) {
 	}
 }
 
-func TestWebHook_Censor(t *testing.T) {
-	// GIVEN: a WebHook.
+func TestWebhook_Censor(t *testing.T) {
+	// GIVEN: a Webhook.
 	tests := []struct {
 		name          string
-		webhook, want *WebHook
+		webhook, want *Webhook
 	}{
 		{
 			name:    "nil",
@@ -3669,22 +3669,22 @@ func TestWebHook_Censor(t *testing.T) {
 		},
 		{
 			name: "secret",
-			webhook: &WebHook{
+			webhook: &Webhook{
 				Secret: "shazam",
 			},
-			want: &WebHook{
+			want: &Webhook{
 				Secret: util.SecretValue,
 			},
 		},
 		{
 			name: "headers",
-			webhook: &WebHook{
+			webhook: &Webhook{
 				Headers: []Header{
 					{Key: "X-Header", Value: "something"},
 					{Key: "X-Bing", Value: "Bam"},
 				},
 			},
-			want: &WebHook{
+			want: &Webhook{
 				Headers: []Header{
 					{Key: "X-Header", Value: util.SecretValue},
 					{Key: "X-Bing", Value: util.SecretValue},
@@ -3693,14 +3693,14 @@ func TestWebHook_Censor(t *testing.T) {
 		},
 		{
 			name: "all",
-			webhook: &WebHook{
+			webhook: &Webhook{
 				Secret: "shazam",
 				Headers: []Header{
 					{Key: "X-Header", Value: "something"},
 					{Key: "X-Bing", Value: "Bam"},
 				},
 			},
-			want: &WebHook{
+			want: &Webhook{
 				Secret: util.SecretValue,
 				Headers: []Header{
 					{Key: "X-Header", Value: util.SecretValue},
@@ -3717,9 +3717,9 @@ func TestWebHook_Censor(t *testing.T) {
 			// WHEN: Censor is called on it.
 			tc.webhook.Censor()
 
-			prefix := fmt.Sprintf("%s\nWebHook.Censor()", packageName)
+			prefix := fmt.Sprintf("%s\nWebhook.Censor()", packageName)
 
-			// THEN: nil WebHooks are kept.
+			// THEN: nil Webhooks are kept.
 			if tc.webhook == tc.want {
 				return
 			}

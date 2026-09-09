@@ -28,7 +28,7 @@ import (
 
 // OptionsBase are the base options for the Dashboard.
 type OptionsBase struct {
-	AutoApprove *bool  `json:"auto_approve,omitzero" yaml:"auto_approve,omitzero"` // Default - true = Require approval before sending WebHooks for new releases.
+	AutoApprove *bool  `json:"auto_approve,omitzero" yaml:"auto_approve,omitzero"` // Default - true = Require approval before sending Webhooks for new releases.
 	Icon        string `json:"icon,omitzero" yaml:"icon,omitzero"`                 // Icon URL to use for messages/Web UI.
 	IconLinkTo  string `json:"icon_link_to,omitzero" yaml:"icon_link_to,omitzero"` // URL to redirect Icon clicks to.
 	WebURL      string `json:"web_url,omitzero" yaml:"web_url,omitzero"`           // URL to provide on the Web UI.

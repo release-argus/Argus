@@ -61,8 +61,8 @@ func TestPrometheusCounterVec(t *testing.T) {
 			ordering: []int{0, 3, 1, 2},
 		},
 		{
-			name:     "WebHookResultTotal",
-			metric:   WebHookResultTotal,
+			name:     "WebhookResultTotal",
+			metric:   WebhookResultTotal,
 			args:     []string{"WEBHOOK_ID", "SERVICE_ID", "", "RESULT"},
 			ordering: []int{0, 2, 1},
 		},

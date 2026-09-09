@@ -61,24 +61,24 @@ func (s *Service) HandleCommand(command string) {
 	}
 }
 
-// HandleWebHook finds the specified WebHook on this Service (and sends it if found).
-func (s *Service) HandleWebHook(webhookID string) {
-	if s.WebHook == nil || s.WebHook[webhookID] == nil {
+// HandleWebhook finds the specified Webhook on this Service (and sends it if found).
+func (s *Service) HandleWebhook(webhookID string) {
+	if s.Webhook == nil || s.Webhook[webhookID] == nil {
 		return
 	}
 
 	// Skip if before NextRunnable.
-	if !s.WebHook[webhookID].IsRunnable() {
+	if !s.Webhook[webhookID].IsRunnable() {
 		return
 	}
 
-	// Send the WebHook.
-	if err := s.WebHook[webhookID].Send(s.Status.GetServiceInfo(), false); err == nil {
+	// Send the Webhook.
+	if err := s.Webhook[webhookID].Send(s.Status.GetServiceInfo(), false); err == nil {
 		s.UpdatedVersion(true)
 	}
 }
 
-// HandleUpdateActions runs all Commands and WebHooks for the service if auto_approve is enabled,
+// HandleUpdateActions runs all Commands and Webhooks for the service if auto_approve is enabled,
 // otherwise waits for manual approval via the API.
 func (s *Service) HandleUpdateActions(writeToDB bool) {
 	svcInfo := s.Status.GetServiceInfo()
@@ -87,13 +87,13 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 	//nolint:errcheck
 	go s.Notify.Send("", "", svcInfo, true)
 
-	// Auto-update version for Services without WebHooks/Commands.
-	if len(s.WebHook) == 0 && len(s.Command) == 0 {
+	// Auto-update version for Services without Webhooks/Commands.
+	if len(s.Webhook) == 0 && len(s.Command) == 0 {
 		s.UpdatedVersion(writeToDB)
 		return
 	}
 
-	// Approval required for WebHooks/Commands.
+	// Approval required for Webhooks/Commands.
 	if !s.Dashboard.GetAutoApprove() {
 		logx.Info(
 			"Waiting for approval on the Web UI",
@@ -108,7 +108,7 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 
 	logx.Info(
 		fmt.Sprintf(
-			"Sending WebHooks/Running Commands for %q",
+			"Sending Webhooks/Running Commands for %q",
 			s.Status.LatestVersion(),
 		),
 		logx.LogFrom{Primary: s.ID},
@@ -129,10 +129,10 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 		})
 	}
 
-	// Send the WebHooks.
-	if len(s.WebHook) != 0 {
+	// Send the Webhooks.
+	if len(s.Webhook) != 0 {
 		g.Go(func() error {
-			return s.WebHook.Send(svcInfo, true)
+			return s.Webhook.Send(svcInfo, true)
 		})
 	}
 
@@ -141,31 +141,31 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 	}
 }
 
-// HandleFailedActions re-sends all failed WebHooks and Commands, or re-sends all if all previously succeeded.
+// HandleFailedActions re-sends all failed Webhooks and Commands, or re-sends all if all previously succeeded.
 func (s *Service) HandleFailedActions() {
 	svcInfo := s.Status.GetServiceInfo()
-	errChan := make(chan error, len(s.WebHook)+len(s.Command))
+	errChan := make(chan error, len(s.Webhook)+len(s.Command))
 	errored := false
 
 	retryAll := s.shouldRetryAll()
 
 	potentialErrors := 0
-	// Send the WebHooks.
-	if len(s.WebHook) != 0 {
-		potentialErrors += len(s.WebHook)
-		for key, wh := range s.WebHook {
-			if retryAll || util.DerefOr(s.Status.Fails.WebHook.Get(key), true) {
+	// Send the Webhooks.
+	if len(s.Webhook) != 0 {
+		potentialErrors += len(s.Webhook)
+		for key, wh := range s.Webhook {
+			if retryAll || util.DerefOr(s.Status.Fails.Webhook.Get(key), true) {
 				// Skip if before NextRunnable.
 				if !wh.IsRunnable() {
 					potentialErrors--
 					continue
 				}
 				// Send.
-				go func(w *webhook.WebHook) {
+				go func(w *webhook.Webhook) {
 					err := w.Send(svcInfo, false)
 					errChan <- err
 				}(wh)
-				// Space out WebHooks.
+				// Space out Webhooks.
 				//#nosec G404 -- sleep does not need cryptographic security.
 				time.Sleep(time.Duration(100+rand.Intn(150)) * time.Millisecond)
 			} else {
@@ -210,13 +210,13 @@ func (s *Service) HandleFailedActions() {
 	}
 }
 
-// shouldRetryAll determines whether all WebHooks and Commands should be retried.
-// It returns true if every WebHook has sent successfully and every Command
-// has run successfully. If any WebHook or Command has failed, it returns false.
+// shouldRetryAll determines whether all Webhooks and Commands should be retried.
+// It returns true if every Webhook has sent successfully and every Command
+// has run successfully. If any Webhook or Command has failed, it returns false.
 func (s *Service) shouldRetryAll() bool {
-	// Retry all only if every WebHook has sent successfully.
-	for key := range s.WebHook {
-		if util.DerefOr(s.Status.Fails.WebHook.Get(key), true) {
+	// Retry all only if every Webhook has sent successfully.
+	for key := range s.Webhook {
+		if util.DerefOr(s.Status.Fails.Webhook.Get(key), true) {
 			return false
 		}
 	}
@@ -237,8 +237,8 @@ func (s *Service) UpdatedVersion(writeToDB bool) {
 		return
 	}
 
-	// Check that no WebHooks failed.
-	if !s.Status.Fails.WebHook.AllPassed() {
+	// Check that no Webhooks failed.
+	if !s.Status.Fails.Webhook.AllPassed() {
 		return
 	}
 	// Check that no Commands failed.
@@ -247,8 +247,8 @@ func (s *Service) UpdatedVersion(writeToDB bool) {
 	}
 	// Do not update DeployedVersion to LatestVersion if we have a deployed lookup check.
 	if s.DeployedVersionLookup != nil {
-		if len(s.Command) != 0 || len(s.WebHook) != 0 {
-			// Update ApprovedVersion if Commands/WebHooks may update DeployedVersion.
+		if len(s.Command) != 0 || len(s.Webhook) != 0 {
+			// Update ApprovedVersion if Commands/Webhooks may update DeployedVersion.
 			// (only having `deployed_version`, `command` or `webhook` would only use ApprovedVersion to track skips)
 			// They should have all ran/sent successfully at this point.
 			s.UpdateLatestApproved()

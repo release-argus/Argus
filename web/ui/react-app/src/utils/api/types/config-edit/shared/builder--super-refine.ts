@@ -5,7 +5,7 @@ import {
 	validateFields,
 	validateMainTypeMatch,
 } from '@/utils/api/types/config-edit/validators';
-import type { WebHookSchema } from '@/utils/api/types/config-edit/webhook/schemas';
+import type { WebhookSchema } from '@/utils/api/types/config-edit/webhook/schemas';
 
 /**
  * Builds a superRefine function for a schema.
@@ -15,7 +15,7 @@ import type { WebHookSchema } from '@/utils/api/types/config-edit/webhook/schema
  * @param defaults - Default values for the schema.
  * @param fieldValidations - Field validations for the schema.
  */
-export const buildSuperRefine = <T extends NotifySchemaValues | WebHookSchema>(
+export const buildSuperRefine = <T extends NotifySchemaValues | WebhookSchema>(
 	schema: z.ZodType<T>,
 	mains: Record<string, T>,
 	defaults: T,

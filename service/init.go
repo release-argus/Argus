@@ -65,7 +65,7 @@ func (s *Service) init(
 		serviceURL = s.LatestVersion.ServiceURL()
 	}
 	s.Status.Init(
-		len(s.Command), len(s.Notify), len(s.WebHook),
+		len(s.Command), len(s.Notify), len(s.Webhook),
 		status.ServiceInfo{
 			ID:         s.ID,
 			Name:       s.Name,
@@ -119,16 +119,16 @@ func (s *Service) init(
 		}
 	}
 
-	// WebHook.
-	webhookDefaults := util.FirstNonEmptyMap(s.Defaults.WebHook, s.HardDefaults.WebHook)
-	if s.WebHook == nil && len(webhookDefaults) != 0 {
-		s.WebHook = make(webhook.WebHooks, len(webhookDefaults))
+	// Webhook.
+	webhookDefaults := util.FirstNonEmptyMap(s.Defaults.Webhook, s.HardDefaults.Webhook)
+	if s.Webhook == nil && len(webhookDefaults) != 0 {
+		s.Webhook = make(webhook.Webhooks, len(webhookDefaults))
 		for key := range webhookDefaults {
-			s.WebHook[key] = &webhook.WebHook{}
+			s.Webhook[key] = &webhook.Webhook{}
 		}
-		s.WebHookFromDefaults = true
+		s.WebhookFromDefaults = true
 	}
-	s.WebHook.Init(
+	s.Webhook.Init(
 		&s.Status,
 		whCfg,
 		&s.Notify,
@@ -151,7 +151,7 @@ func (s *Service) initMetrics() {
 	}
 	s.Notify.InitMetrics()
 	s.CommandController.InitMetrics()
-	s.WebHook.InitMetrics()
+	s.Webhook.InitMetrics()
 	s.Status.InitMetrics()
 }
 
@@ -170,6 +170,6 @@ func (s *Service) deleteMetrics() {
 	}
 	s.Notify.DeleteMetrics()
 	s.CommandController.DeleteMetrics()
-	s.WebHook.DeleteMetrics()
+	s.Webhook.DeleteMetrics()
 	s.Status.DeleteMetrics()
 }

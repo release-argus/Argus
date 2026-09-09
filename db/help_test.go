@@ -124,7 +124,7 @@ func testConfig(t *testing.T) (cfg *config.Config) {
 		}
 
 		svc.Status.Init(
-			len(svc.Command), len(svc.Notify), len(svc.WebHook),
+			len(svc.Command), len(svc.Notify), len(svc.Webhook),
 			status.ServiceInfo{
 				ID: svc.ID,
 			},

@@ -65,8 +65,8 @@ func TestConfig_Load(t *testing.T) {
 						Mode: test.CompareEqual,
 					},
 					{
-						Name: "WebHook.Delay",
-						Got:  config.Defaults.WebHook.Delay,
+						Name: "Webhook.Delay",
+						Got:  config.Defaults.Webhook.Delay,
 						Want: "2s",
 						Mode: test.CompareEqual,
 					},

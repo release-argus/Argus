@@ -27,7 +27,7 @@ import (
 )
 
 // httpServiceGetActions handles GET /api/v1/service/actions: returns a list of
-// all Commands/WebHooks attached to a service.
+// all Commands/Webhooks attached to a service.
 //
 // Query parameters:
 //
@@ -35,7 +35,7 @@ import (
 //
 // Response:
 //
-//	200 OK: JSON object containing the service's Commands/WebHooks.
+//	200 OK: JSON object containing the service's Commands/Webhooks.
 //	404 Not Found: on an unknown service.
 func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpServiceActions", Secondary: getIP(r)}
@@ -67,18 +67,18 @@ func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	// WebHooks.
-	webhookSummary := make(map[string]apitype.WebHookSummary, len(svc.WebHook))
-	for key, wh := range svc.WebHook {
-		webhookSummary[key] = apitype.WebHookSummary{
-			Failed:       svc.Status.Fails.WebHook.Get(key),
+	// Webhooks.
+	webhookSummary := make(map[string]apitype.WebhookSummary, len(svc.Webhook))
+	for key, wh := range svc.Webhook {
+		webhookSummary[key] = apitype.WebhookSummary{
+			Failed:       svc.Status.Fails.Webhook.Get(key),
 			NextRunnable: wh.NextRunnable(),
 		}
 	}
 
 	msg := apitype.ActionSummary{
 		Command: commandSummary,
-		WebHook: webhookSummary,
+		Webhook: webhookSummary,
 	}
 
 	api.writeJSON(w, msg, logFrom)
@@ -97,7 +97,7 @@ const (
 )
 
 // httpServiceRunActions handles POST /api/v1/service/actions: approvals/rejections
-// of Commands/WebHooks on the latest version of a service.
+// of Commands/Webhooks on the latest version of a service.
 //
 // Query parameters:
 //
@@ -166,7 +166,7 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if svc.WebHook == nil && svc.Command == nil {
+	if svc.Webhook == nil && svc.Command == nil {
 		logx.Warn(
 			fmt.Sprintf("%q does not have any commands/webhooks to approve", serviceID),
 			logFrom,
@@ -175,7 +175,7 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send the WebHooks.
+	// Send the Webhooks.
 	msg := fmt.Sprintf(
 		"%s %q Release actioned - %q",
 		serviceID,
@@ -196,7 +196,7 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 		go svc.HandleFailedActions()
 	default:
 		if after, ok := strings.CutPrefix(payload.Target, "webhook_"); ok {
-			go svc.HandleWebHook(after)
+			go svc.HandleWebhook(after)
 		} else {
 			go svc.HandleCommand(strings.TrimPrefix(payload.Target, "command_"))
 		}

@@ -32,7 +32,7 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with a manual deployed_version, an update available,
-		// and no WebHooks/Commands.
+		// and no Webhooks/Commands.
 		await createService(page, id, {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
@@ -107,7 +107,7 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with a manual deployed_version, an update available,
-		// and no WebHooks/Commands.
+		// and no Webhooks/Commands.
 		await createService(page, id, {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
@@ -210,7 +210,7 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with a manual deployed_version, an update already
-		// available (deployed != latest), and no WebHooks/Commands.
+		// available (deployed != latest), and no Webhooks/Commands.
 		await createService(page, id, {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
@@ -259,7 +259,7 @@ test.describe('deployed_version=manual approve/skip actions', () => {
 		await openDashboardInEditMode(page);
 
 		// GIVEN: a service with a manual deployed_version, an update already
-		// available (deployed != latest), and no WebHooks/Commands.
+		// available (deployed != latest), and no Webhooks/Commands.
 		await createService(page, id, {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,

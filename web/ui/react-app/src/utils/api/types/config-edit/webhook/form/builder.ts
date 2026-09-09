@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import { isEmptyArray } from '@/utils';
 import {
-	isWebHookType,
-	type WebHook,
-	type WebHookMap,
-	type WebHookType,
+	isWebhookType,
+	type Webhook,
+	type WebhookMap,
+	type WebhookType,
 } from '@/utils/api/types/config/webhook';
 import { buildSuperRefine } from '@/utils/api/types/config-edit/shared/builder--super-refine';
 import {
@@ -22,7 +22,7 @@ import {
 	validateRequired,
 } from '@/utils/api/types/config-edit/validators';
 import {
-	type WebHookSchema,
+	type WebhookSchema,
 	webhookSchema,
 	webhookSchemaDefault,
 } from '@/utils/api/types/config-edit/webhook/schemas';
@@ -33,9 +33,9 @@ import {
  * @param defaults - Default values for a webhook.
  * @param mains - The 'main' webhook objects that may be referenced.
  */
-const buildWebHookSchema = (
-	defaults: WebHookSchema,
-	mains: Record<string, WebHookSchema>,
+const buildWebhookSchema = (
+	defaults: WebhookSchema,
+	mains: Record<string, WebhookSchema>,
 ) => {
 	return buildSuperRefine(webhookSchema, mains, defaults, [
 		{ path: ['desired_status_code'], validator: validateNumberString },
@@ -69,19 +69,19 @@ const buildWebHookSchema = (
  * @param defaults - Default values for a webhook.
  * @param hardDefaults - Hard defaults for a webhook.
  */
-export const buildWebHooksSchemaWithFallbacks = (
-	data?: WebHook[],
+export const buildWebhooksSchemaWithFallbacks = (
+	data?: Webhook[],
 	defaultItems?: string[],
-	mains?: WebHookMap,
-	defaults?: WebHook,
-	hardDefaults?: WebHook,
+	mains?: WebhookMap,
+	defaults?: Webhook,
+	hardDefaults?: Webhook,
 ) => {
 	const path = 'webhook';
-	const combinedDefaults = applyDefaultsRecursive<WebHook>(
+	const combinedDefaults = applyDefaultsRecursive<Webhook>(
 		defaults ?? null,
 		hardDefaults,
 	);
-	const defaultType = isWebHookType(combinedDefaults.type)
+	const defaultType = isWebhookType(combinedDefaults.type)
 		? combinedDefaults.type
 		: undefined;
 
@@ -89,7 +89,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 		const main = mains?.[item.name];
 		const nameLower = item.name.toLowerCase();
 		const itemType =
-			main?.type ?? (isWebHookType(nameLower) ? nameLower : defaultType);
+			main?.type ?? (isWebhookType(nameLower) ? nameLower : defaultType);
 		const itemHeaders = (item?.headers ?? []).map((h, i) => ({
 			...h,
 			old_index: i,
@@ -105,7 +105,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 			fallback: {
 				desired_status_code: '',
 				max_tries: '',
-				type: defaultType as WebHookType,
+				type: defaultType as WebhookType,
 			},
 			path: `${path} (defaults-${item.name})`,
 			schema: webhookSchema,
@@ -116,19 +116,19 @@ export const buildWebHooksSchemaWithFallbacks = (
 		fallback: {
 			desired_status_code: '',
 			max_tries: '',
-			type: defaultType as WebHookType,
+			type: defaultType as WebhookType,
 		},
 		path: `${path} (defaults)`,
 		schema: webhookSchemaDefault,
 	});
 
 	// Default schema data.
-	const schemaDataDefaults: WebHookSchema[] = (defaultItems ?? []).map(
+	const schemaDataDefaults: WebhookSchema[] = (defaultItems ?? []).map(
 		(name) => {
 			const main = mains?.[name];
 			const nameLower = name.toLowerCase();
 			const itemType =
-				main?.type ?? (isWebHookType(nameLower) ? nameLower : defaultType);
+				main?.type ?? (isWebhookType(nameLower) ? nameLower : defaultType);
 			// headers.
 			const headers = isEmptyArray(main?.headers)
 				? schemaDataTypeDefaults.headers
@@ -149,7 +149,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 				fallback: {
 					desired_status_code: '',
 					max_tries: '',
-					type: itemType as WebHookType,
+					type: itemType as WebhookType,
 				},
 				path: `${path} (defaults)`,
 				schema: webhookSchema,
@@ -167,7 +167,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 
 	// Defaults for each main.
 	const schemaDataMains = Object.entries(mains ?? {}).reduce<
-		Record<string, WebHookSchema>
+		Record<string, WebhookSchema>
 	>((acc, [name, main]) => {
 		acc[name] = safeParse({
 			data: applyDefaultsRecursive({ ...main, name: name }, combinedDefaults),
@@ -175,7 +175,7 @@ export const buildWebHooksSchemaWithFallbacks = (
 				desired_status_code: '',
 				max_tries: '',
 				name: name,
-				type: (main.type ?? defaultType) as WebHookType,
+				type: (main.type ?? defaultType) as WebhookType,
 			},
 			path: `${path} (mains-${name}`,
 			schema: webhookSchema,
@@ -184,14 +184,14 @@ export const buildWebHooksSchemaWithFallbacks = (
 	}, {});
 
 	// Schemas.
-	const schema = buildWebHookSchema(schemaDataTypeDefaults, schemaDataMains);
+	const schema = buildWebhookSchema(schemaDataTypeDefaults, schemaDataMains);
 	const schemaFinal = z
 		.array(schema)
 		.default(schemaDataDefaults)
 		.superRefine(superRefineNameUnique);
 
 	// Initial schema data.
-	let schemaData: WebHookSchema[];
+	let schemaData: WebhookSchema[];
 	if (data) {
 		schemaData = safeParse({
 			data: dataDefaulted,

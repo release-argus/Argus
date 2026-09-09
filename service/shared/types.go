@@ -31,7 +31,7 @@ type VSecretRef struct {
 	Headers []OldIntIndex `json:"headers,omitempty"`
 }
 
-// WHSecretRef contains the reference for the WebHook SecretValues.
+// WHSecretRef contains the reference for the Webhook SecretValues.
 type WHSecretRef struct {
 	Name     string        `json:"name,omitzero"`
 	OldIndex string        `json:"old_index,omitzero"`

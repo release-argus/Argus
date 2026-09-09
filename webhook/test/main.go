@@ -26,8 +26,8 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-// WebHook returns a configured WebHook for tests.
-func WebHook(t *testing.T, failing, selfSignedCert, headers bool) *webhook.WebHook {
+// Webhook returns a configured Webhook for tests.
+func Webhook(t *testing.T, failing, selfSignedCert, headers bool) *webhook.Webhook {
 	t.Helper()
 
 	defaults, _ := webhook.DecodeDefaults("yaml", nil)
@@ -45,16 +45,16 @@ func WebHook(t *testing.T, failing, selfSignedCert, headers bool) *webhook.WebHo
 		&whMaxTries,
 		webhook.Notifiers{},
 		new("12m"),
-		test.WebHookGitHub["secret_pass"],
+		test.WebhookGitHub["secret_pass"],
 		new(false),
 		"github",
-		test.WebHookGitHub["url_valid"],
+		test.WebhookGitHub["url_valid"],
 		&webhook.Defaults{},
 		defaults, hardDefaults,
 	)
 	wh.ServiceStatus = &status.Status{}
 	serviceName := "testServiceID"
-	wh.Failed = &wh.ServiceStatus.Fails.WebHook
+	wh.Failed = &wh.ServiceStatus.Fails.Webhook
 	wh.ServiceStatus.Init(
 		0, 1, 1,
 		status.ServiceInfo{
@@ -75,7 +75,7 @@ func WebHook(t *testing.T, failing, selfSignedCert, headers bool) *webhook.WebHo
 		)
 	}
 	if failing {
-		wh.Secret = test.WebHookGitHub["secret_fail"]
+		wh.Secret = test.WebhookGitHub["secret_fail"]
 	}
 	if headers {
 		wh.URL = strings.Replace(
@@ -101,8 +101,8 @@ func WebHook(t *testing.T, failing, selfSignedCert, headers bool) *webhook.WebHo
 		}
 	}
 
-	// WebHooks to InitMetrics.
-	webhooks := webhook.WebHooks{"test": wh}
+	// Webhooks to InitMetrics.
+	webhooks := webhook.Webhooks{"test": wh}
 	webhooks.InitMetrics()
 
 	return wh

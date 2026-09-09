@@ -20,7 +20,7 @@ import (
 	"testing"
 )
 
-func TestCheckWebHookBody(t *testing.T) {
+func TestCheckWebhookBody(t *testing.T) {
 	// GIVEN: a response body.
 	tests := []struct {
 		name string
@@ -58,13 +58,13 @@ func TestCheckWebHookBody(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: checkWebHookBody is called on it.
-			got := checkWebHookBody(tc.body)
+			// WHEN: checkWebhookBody is called on it.
+			got := checkWebhookBody(tc.body)
 
 			// THEN: the function returns the correct result.
 			if got != tc.want {
 				t.Errorf(
-					"%s\ncheckWebHookBody(%q) mismatch\ngot:  %t\nwant: %t",
+					"%s\ncheckWebhookBody(%q) mismatch\ngot:  %t\nwant: %t",
 					packageName, tc.body,
 					got, tc.want,
 				)

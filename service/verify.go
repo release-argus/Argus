@@ -167,7 +167,7 @@ func (s *Service) CheckValues() (error, bool) {
 			},
 		)
 	}
-	webhookErr, webhookChanged := s.WebHook.CheckValues()
+	webhookErr, webhookChanged := s.Webhook.CheckValues()
 	if webhookErr != nil {
 		errs = append(
 			errs,

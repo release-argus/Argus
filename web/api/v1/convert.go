@@ -73,10 +73,10 @@ func convertAndCensorDefaults(input *config.Defaults) apitype.Defaults {
 			},
 			Command: convertCommands(input.Service.Command),
 			Notify:  util.SortedKeys(input.Service.Notify),
-			WebHook: util.SortedKeys(input.Service.WebHook),
+			Webhook: util.SortedKeys(input.Service.Webhook),
 		},
 		Notify:  convertAndCensorNotifiersDefaults(input.Notify),
-		WebHook: convertAndCensorWebHookDefaults(input.WebHook),
+		Webhook: convertAndCensorWebhookDefaults(input.Webhook),
 	}
 
 	return apiDefaults
@@ -111,8 +111,8 @@ func convertAndCensorService(input *service.Service) *apitype.Service {
 	if !input.CommandFromDefaults {
 		apiService.Command = convertCommands(input.Command)
 	}
-	if !input.WebHookFromDefaults {
-		apiService.WebHook = convertAndCensorWebHooks(input.WebHook)
+	if !input.WebhookFromDefaults {
+		apiService.Webhook = convertAndCensorWebhooks(input.Webhook)
 	}
 
 	apiService.Dashboard = apitype.DashboardOptions{
@@ -404,31 +404,31 @@ func convertCommands(input command.Commands) apitype.Commands {
 }
 
 //
-// WebHook.
+// Webhook.
 //
 
-// convertAndCensorWebHooksDefaults converts WebHooksDefaults to API Type, censoring any secrets.
-func convertAndCensorWebHooksDefaults(input webhook.WebHooksDefaults) apitype.WebHooks {
+// convertAndCensorWebhooksDefaults converts WebhooksDefaults to API Type, censoring any secrets.
+func convertAndCensorWebhooksDefaults(input webhook.WebhooksDefaults) apitype.Webhooks {
 	if input == nil {
 		return nil
 	}
 
-	webhooks := make(apitype.WebHooks, len(input))
+	webhooks := make(apitype.Webhooks, len(input))
 	for name, wh := range input {
-		webhooks[name] = convertAndCensorWebHookDefaults(*wh)
+		webhooks[name] = convertAndCensorWebhookDefaults(*wh)
 	}
 
 	return webhooks
 }
 
-// convertAndCensorWebHookDefaults converts Defaults to API type, censoring any secrets.
-func convertAndCensorWebHookDefaults(input webhook.Defaults) apitype.WebHook {
-	apiElement := apitype.WebHook{
+// convertAndCensorWebhookDefaults converts Defaults to API type, censoring any secrets.
+func convertAndCensorWebhookDefaults(input webhook.Defaults) apitype.Webhook {
+	apiElement := apitype.Webhook{
 		Type:              input.Type,
 		URL:               input.URL,
 		AllowInvalidCerts: input.AllowInvalidCerts,
 		Secret:            util.ValueUnlessZero(input.Secret, util.SecretValue),
-		Headers:           convertWebHookHeaders(input.Headers),
+		Headers:           convertWebhookHeaders(input.Headers),
 		DesiredStatusCode: input.DesiredStatusCode,
 		Delay:             input.Delay,
 		MaxTries:          input.MaxTries,
@@ -439,32 +439,32 @@ func convertAndCensorWebHookDefaults(input webhook.Defaults) apitype.WebHook {
 	return apiElement
 }
 
-// convertAndCensorWebHooks converts WebHooks to API Type, censoring any secrets.
-func convertAndCensorWebHooks(input webhook.WebHooks) apitype.WebHooks {
+// convertAndCensorWebhooks converts Webhooks to API Type, censoring any secrets.
+func convertAndCensorWebhooks(input webhook.Webhooks) apitype.Webhooks {
 	if input == nil {
 		return nil
 	}
 
-	webhooks := make(apitype.WebHooks, len(input))
+	webhooks := make(apitype.Webhooks, len(input))
 	for index, wh := range input {
-		webhooks[index] = convertAndCensorWebHook(wh)
+		webhooks[index] = convertAndCensorWebhook(wh)
 	}
 
 	return webhooks
 }
 
-// convertAndCensorWebHook converts WebHook to API type, censoring any secrets.
-func convertAndCensorWebHook(input *webhook.WebHook) apitype.WebHook {
+// convertAndCensorWebhook converts Webhook to API type, censoring any secrets.
+func convertAndCensorWebhook(input *webhook.Webhook) apitype.Webhook {
 	if input == nil {
-		return apitype.WebHook{}
+		return apitype.Webhook{}
 	}
 
-	apiElement := apitype.WebHook{
+	apiElement := apitype.Webhook{
 		Type:              input.Type,
 		URL:               input.URL,
 		AllowInvalidCerts: input.AllowInvalidCerts,
 		Secret:            util.ValueUnlessZero(input.Secret, util.SecretValue),
-		Headers:           convertWebHookHeaders(input.Headers),
+		Headers:           convertWebhookHeaders(input.Headers),
 		DesiredStatusCode: input.DesiredStatusCode,
 		Delay:             input.Delay,
 		MaxTries:          input.MaxTries,
@@ -475,8 +475,8 @@ func convertAndCensorWebHook(input *webhook.WebHook) apitype.WebHook {
 	return apiElement
 }
 
-// convertWebHookHeaders converts WebHook Headers to API type.
-func convertWebHookHeaders(input webhook.Headers) []apitype.Header {
+// convertWebhookHeaders converts Webhook Headers to API type.
+func convertWebhookHeaders(input webhook.Headers) []apitype.Header {
 	if len(input) == 0 {
 		return nil
 	}

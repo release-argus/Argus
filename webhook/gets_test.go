@@ -28,8 +28,8 @@ import (
 	"github.com/release-argus/Argus/service/status"
 )
 
-func TestWebHook_BuildRequest(t *testing.T) {
-	// GIVEN: a WebHook and a HTTP Request.
+func TestWebhook_BuildRequest(t *testing.T) {
+	// GIVEN: a Webhook and a HTTP Request.
 	tests := []struct {
 		name        string
 		webhookType string
@@ -81,7 +81,7 @@ func TestWebHook_BuildRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			webhook := testWebHook(true, false, false)
+			webhook := testWebhook(true, false, false)
 			webhook.Type = tc.webhookType
 			webhook.URL = tc.url
 			webhook.Headers = tc.headers
@@ -89,7 +89,7 @@ func TestWebHook_BuildRequest(t *testing.T) {
 			// WHEN: BuildRequest is called.
 			req := webhook.BuildRequest()
 
-			prefix := fmt.Sprintf("%s\nWebHook.BuildRequest()", packageName)
+			prefix := fmt.Sprintf("%s\nWebhook.BuildRequest()", packageName)
 
 			// THEN: the function returns the correct result.
 			if tc.wantNil {
@@ -143,7 +143,7 @@ func TestWebHook_BuildRequest(t *testing.T) {
 	}
 }
 
-func TestWebHook_BuildRequest__marshalError(t *testing.T) {
+func TestWebhook_BuildRequest__marshalError(t *testing.T) {
 	// GIVEN: a failing marshal function.
 	original := marshalWebhookPayload
 	marshalWebhookPayload = func(v any) ([]byte, error) {
@@ -151,15 +151,15 @@ func TestWebHook_BuildRequest__marshalError(t *testing.T) {
 	}
 	t.Cleanup(func() { marshalWebhookPayload = original })
 
-	// AND: a WebHook.
-	webhook := testWebHook(true, false, false)
+	// AND: a Webhook.
+	webhook := testWebhook(true, false, false)
 	webhook.Type = "github"
 	webhook.URL = test.ArgusGitHubRepo
 
 	// WHEN: BuildRequest is called.
 	req := webhook.BuildRequest()
 
-	prefix := fmt.Sprintf("%s\nWebHook.BuildRequest(marshal error)", packageName)
+	prefix := fmt.Sprintf("%s\nWebhook.BuildRequest(marshal error)", packageName)
 
 	// THEN: the request is nil.
 	if req != nil {
@@ -170,8 +170,8 @@ func TestWebHook_BuildRequest__marshalError(t *testing.T) {
 	}
 }
 
-func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
-	// GIVEN: a WebHook.
+func TestWebhook_GetAllowInvalidCerts(t *testing.T) {
+	// GIVEN: a Webhook.
 	tests := []struct {
 		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue *bool
@@ -209,7 +209,7 @@ func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			webhook := testWebHook(true, false, false)
+			webhook := testWebhook(true, false, false)
 			webhook.AllowInvalidCerts = tc.rootValue
 			webhook.Main.AllowInvalidCerts = tc.mainValue
 			webhook.Defaults.AllowInvalidCerts = tc.defaultValue
@@ -221,7 +221,7 @@ func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
 			// THEN: the function returns the correct result.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nWebHook.GetAllowInvalidCerts() value mismatch\ngot:  %t\nwant: %t",
+					"%s\nWebhook.GetAllowInvalidCerts() value mismatch\ngot:  %t\nwant: %t",
 					packageName, got, tc.want,
 				)
 			}
@@ -229,8 +229,8 @@ func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
 	}
 }
 
-func TestWebHook_GetDelay(t *testing.T) {
-	// GIVEN: a WebHook.
+func TestWebhook_GetDelay(t *testing.T) {
+	// GIVEN: a Webhook.
 	tests := []struct {
 		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue string
@@ -268,7 +268,7 @@ func TestWebHook_GetDelay(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			webhook := testWebHook(true, false, false)
+			webhook := testWebhook(true, false, false)
 			webhook.Delay = tc.rootValue
 			webhook.Main.Delay = tc.mainValue
 			webhook.Defaults.Delay = tc.defaultValue
@@ -280,7 +280,7 @@ func TestWebHook_GetDelay(t *testing.T) {
 			// THEN: the function returns the correct result.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nWebHook.GetDelay() value mismatch\ngot:  %s\nwant: %s",
+					"%s\nWebhook.GetDelay() value mismatch\ngot:  %s\nwant: %s",
 					packageName, got, tc.want,
 				)
 			}
@@ -288,8 +288,8 @@ func TestWebHook_GetDelay(t *testing.T) {
 	}
 }
 
-func TestWebHook_GetDelayDuration(t *testing.T) {
-	// GIVEN: a WebHook.
+func TestWebhook_GetDelayDuration(t *testing.T) {
+	// GIVEN: a Webhook.
 	tests := []struct {
 		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue string
@@ -327,7 +327,7 @@ func TestWebHook_GetDelayDuration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			webhook := testWebHook(true, false, false)
+			webhook := testWebhook(true, false, false)
 			webhook.Delay = tc.rootValue
 			webhook.Main.Delay = tc.mainValue
 			webhook.Defaults.Delay = tc.defaultValue
@@ -339,7 +339,7 @@ func TestWebHook_GetDelayDuration(t *testing.T) {
 			// THEN: the function returns the correct result.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nWebHook.GetDelayDuration() value mismatch\ngot:  %s\nwant: %s",
+					"%s\nWebhook.GetDelayDuration() value mismatch\ngot:  %s\nwant: %s",
 					packageName, got, tc.want,
 				)
 			}
@@ -347,8 +347,8 @@ func TestWebHook_GetDelayDuration(t *testing.T) {
 	}
 }
 
-func TestWebHook_GetDesiredStatusCode(t *testing.T) {
-	// GIVEN: a WebHook.
+func TestWebhook_GetDesiredStatusCode(t *testing.T) {
+	// GIVEN: a Webhook.
 	tests := []struct {
 		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue *uint16
@@ -386,7 +386,7 @@ func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			webhook := testWebHook(true, false, false)
+			webhook := testWebhook(true, false, false)
 			webhook.DesiredStatusCode = tc.rootValue
 			webhook.Main.DesiredStatusCode = tc.mainValue
 			webhook.Defaults.DesiredStatusCode = tc.defaultValue
@@ -398,7 +398,7 @@ func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 			// THEN: the function returns the correct result.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nWebHook.GetDesiredStatusCode() value mismatch\ngot:  %d\nwant: %d",
+					"%s\nWebhook.GetDesiredStatusCode() value mismatch\ngot:  %d\nwant: %d",
 					packageName, got, tc.want,
 				)
 			}
@@ -406,9 +406,9 @@ func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 	}
 }
 
-func TestWebHook_SetAndGetFail(t *testing.T) {
+func TestWebhook_SetAndGetFail(t *testing.T) {
 	whCfg := plainConfig(t)
-	// GIVEN: an initial state, and a new state for the WebHook's failure state.
+	// GIVEN: an initial state, and a new state for the Webhook's failure state.
 	tests := []struct {
 		name         string
 		initialState *bool
@@ -440,7 +440,7 @@ func TestWebHook_SetAndGetFail(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a WebHook with this initial state.
+			// AND: a Webhook with this initial state.
 			svcStatus := status.Status{}
 			svcStatus.Init(
 				0, 0, 1,
@@ -449,7 +449,7 @@ func TestWebHook_SetAndGetFail(t *testing.T) {
 				},
 				&dashboard.Options{},
 			)
-			wh := &WebHook{ID: t.Name()}
+			wh := &Webhook{ID: t.Name()}
 			wh.init(
 				&svcStatus,
 				nil, whCfg, nil,
@@ -465,7 +465,7 @@ func TestWebHook_SetAndGetFail(t *testing.T) {
 			want := test.StringifyPtr(tc.newState)
 			if got := test.StringifyPtr(didFail); got != want {
 				t.Errorf(
-					"%s\nWebHook.DidFail() value mismatch\ngot:  %s\nwant: %s",
+					"%s\nWebhook.DidFail() value mismatch\ngot:  %s\nwant: %s",
 					packageName, got, want,
 				)
 			}
@@ -473,9 +473,9 @@ func TestWebHook_SetAndGetFail(t *testing.T) {
 	}
 }
 
-func TestWebHook_SetAndGetNextRunnable(t *testing.T) {
+func TestWebhook_SetAndGetNextRunnable(t *testing.T) {
 	whCfg := plainConfig(t)
-	// GIVEN: an initial state, and a new state for the WebHook's next runnable time.
+	// GIVEN: an initial state, and a new state for the Webhook's next runnable time.
 	tests := []struct {
 		name         string
 		initialState time.Time
@@ -497,7 +497,7 @@ func TestWebHook_SetAndGetNextRunnable(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a WebHook with this initial state.
+			// AND: a Webhook with this initial state.
 			svcStatus := status.Status{}
 			svcStatus.Init(
 				0, 0, 1,
@@ -506,7 +506,7 @@ func TestWebHook_SetAndGetNextRunnable(t *testing.T) {
 				},
 				&dashboard.Options{},
 			)
-			wh := &WebHook{ID: t.Name()}
+			wh := &Webhook{ID: t.Name()}
 			wh.init(
 				&svcStatus,
 				nil, whCfg, nil,
@@ -521,7 +521,7 @@ func TestWebHook_SetAndGetNextRunnable(t *testing.T) {
 			got := wh.NextRunnable()
 			if got != tc.newState {
 				t.Errorf(
-					"%s\nWebHook.NextRunnable() value mismatch\ngot:  %s\nwant: %s",
+					"%s\nWebhook.NextRunnable() value mismatch\ngot:  %s\nwant: %s",
 					packageName, got, tc.newState,
 				)
 			}
@@ -529,8 +529,8 @@ func TestWebHook_SetAndGetNextRunnable(t *testing.T) {
 	}
 }
 
-func TestWebHook_SetExecuting(t *testing.T) {
-	// GIVEN: a WebHook in different fail states.
+func TestWebhook_SetExecuting(t *testing.T) {
+	// GIVEN: a Webhook in different fail states.
 	tests := []struct {
 		name           string
 		failed         *bool
@@ -584,7 +584,7 @@ func TestWebHook_SetExecuting(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			webhook := testWebHook(true, false, false)
+			webhook := testWebhook(true, false, false)
 			webhook.Failed.Set(webhook.ID, tc.failed)
 			webhook.Delay = tc.delay
 			webhook.MaxTries = new(tc.maxTries)
@@ -600,7 +600,7 @@ func TestWebHook_SetExecuting(t *testing.T) {
 			gotTime := webhook.NextRunnable()
 			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
 				t.Fatalf(
-					"%s\nWebHook.SetExecuting() ran at:\n%s\ngot\n%s\nwant between:\n%s and\n%s",
+					"%s\nWebhook.SetExecuting() ran at:\n%s\ngot\n%s\nwant between:\n%s and\n%s",
 					packageName,
 					now,
 					gotTime,
@@ -611,8 +611,8 @@ func TestWebHook_SetExecuting(t *testing.T) {
 	}
 }
 
-func TestWebHook_GetMaxTries(t *testing.T) {
-	// GIVEN: a WebHook.
+func TestWebhook_GetMaxTries(t *testing.T) {
+	// GIVEN: a Webhook.
 	tests := []struct {
 		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue *uint8
@@ -650,7 +650,7 @@ func TestWebHook_GetMaxTries(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			webhook := testWebHook(true, false, false)
+			webhook := testWebhook(true, false, false)
 			webhook.MaxTries = tc.rootValue
 			webhook.Main.MaxTries = tc.mainValue
 			webhook.Defaults.MaxTries = tc.defaultValue
@@ -662,7 +662,7 @@ func TestWebHook_GetMaxTries(t *testing.T) {
 			// THEN: the function returns the correct result.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nWebHook.GetMaxTries() value mismatch\ngot:  %d\nwant: %d",
+					"%s\nWebhook.GetMaxTries() value mismatch\ngot:  %d\nwant: %d",
 					packageName, got, tc.want,
 				)
 			}
@@ -670,8 +670,8 @@ func TestWebHook_GetMaxTries(t *testing.T) {
 	}
 }
 
-func TestWebHook_IsRunnable(t *testing.T) {
-	// GIVEN: a WebHook with a NextRunnable time.
+func TestWebhook_IsRunnable(t *testing.T) {
+	// GIVEN: a Webhook with a NextRunnable time.
 	tests := []struct {
 		name         string
 		nextRunnable time.Time
@@ -697,7 +697,7 @@ func TestWebHook_IsRunnable(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			webhook := testWebHook(true, false, false)
+			webhook := testWebhook(true, false, false)
 			webhook.Failed.SetNextRunnable(webhook.ID, tc.nextRunnable)
 			time.Sleep(time.Nanosecond)
 
@@ -707,7 +707,7 @@ func TestWebHook_IsRunnable(t *testing.T) {
 			// THEN: the function returns whether the defaults is runnable now.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nWebHook.IsRunnable() mismatch\ngot:  %t\nwant: %t",
+					"%s\nWebhook.IsRunnable() mismatch\ngot:  %t\nwant: %t",
 					packageName, got, tc.want,
 				)
 			}
@@ -715,8 +715,8 @@ func TestWebHook_IsRunnable(t *testing.T) {
 	}
 }
 
-func TestWebHook_GetSecret(t *testing.T) {
-	// GIVEN: a WebHook with Secret in various locations.
+func TestWebhook_GetSecret(t *testing.T) {
+	// GIVEN: a Webhook with Secret in various locations.
 	tests := []struct {
 		name                                                 string
 		env                                                  map[string]string
@@ -787,7 +787,7 @@ func TestWebHook_GetSecret(t *testing.T) {
 			t.Parallel()
 
 			test.SetEnv(t, tc.env)
-			webhook := testWebHook(true, false, false)
+			webhook := testWebhook(true, false, false)
 			webhook.Secret = tc.rootValue
 			webhook.Main.Secret = tc.mainValue
 			webhook.Defaults.Secret = tc.defaultValue
@@ -799,7 +799,7 @@ func TestWebHook_GetSecret(t *testing.T) {
 			// THEN: the function returns the correct secret.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nWebHook.GetSecret() mismatch\ngot:  %q\nwant: %q",
+					"%s\nWebhook.GetSecret() mismatch\ngot:  %q\nwant: %q",
 					packageName, got, tc.want,
 				)
 			}
@@ -807,8 +807,8 @@ func TestWebHook_GetSecret(t *testing.T) {
 	}
 }
 
-func TestWebHook_GetSilentFails(t *testing.T) {
-	// GIVEN: a WebHook with SilentFails in various locations.
+func TestWebhook_GetSilentFails(t *testing.T) {
+	// GIVEN: a Webhook with SilentFails in various locations.
 	tests := []struct {
 		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue *bool
@@ -846,7 +846,7 @@ func TestWebHook_GetSilentFails(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			webhook := testWebHook(true, false, false)
+			webhook := testWebhook(true, false, false)
 			webhook.SilentFails = tc.rootValue
 			webhook.Main.SilentFails = tc.mainValue
 			webhook.Defaults.SilentFails = tc.defaultValue
@@ -858,7 +858,7 @@ func TestWebHook_GetSilentFails(t *testing.T) {
 			// THEN: the function returns the correct boolean.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nWebHook.GetSilentFails() mismatch\ngot:  %t\nwant: %t",
+					"%s\nWebhook.GetSilentFails() mismatch\ngot:  %t\nwant: %t",
 					packageName, got, tc.want,
 				)
 			}
@@ -866,8 +866,8 @@ func TestWebHook_GetSilentFails(t *testing.T) {
 	}
 }
 
-func TestWebHook_GetType(t *testing.T) {
-	// GIVEN: a WebHook with Type in various locations.
+func TestWebhook_GetType(t *testing.T) {
+	// GIVEN: a Webhook with Type in various locations.
 	tests := []struct {
 		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue string
@@ -905,7 +905,7 @@ func TestWebHook_GetType(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			webhook := testWebHook(true, false, false)
+			webhook := testWebhook(true, false, false)
 			webhook.Type = tc.rootValue
 			webhook.Main.Type = tc.mainValue
 			webhook.Defaults.Type = tc.defaultValue
@@ -917,7 +917,7 @@ func TestWebHook_GetType(t *testing.T) {
 			// THEN: the function returns the correct type.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nWebHook.GetType() value mismatch\ngot:  %q\nwant: %q",
+					"%s\nWebhook.GetType() value mismatch\ngot:  %q\nwant: %q",
 					packageName, got, tc.want,
 				)
 			}
@@ -925,8 +925,8 @@ func TestWebHook_GetType(t *testing.T) {
 	}
 }
 
-func TestWebHook_GetURL(t *testing.T) {
-	// GIVEN: a WebHook with urls in various locations.
+func TestWebhook_GetURL(t *testing.T) {
+	// GIVEN: a Webhook with urls in various locations.
 	tests := []struct {
 		name                                                 string
 		env                                                  map[string]string
@@ -1009,7 +1009,7 @@ func TestWebHook_GetURL(t *testing.T) {
 			t.Parallel()
 
 			test.SetEnv(t, tc.env)
-			webhook := testWebHook(true, false, false)
+			webhook := testWebhook(true, false, false)
 			webhook.URL = tc.rootValue
 			webhook.Main.URL = tc.mainValue
 			webhook.Defaults.URL = tc.defaultValue
@@ -1022,7 +1022,7 @@ func TestWebHook_GetURL(t *testing.T) {
 			// THEN: the function returns the url.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nWebHook.GetURL() mismatch\ngot:  %q\nwant: %q",
+					"%s\nWebhook.GetURL() mismatch\ngot:  %q\nwant: %q",
 					packageName, got, tc.want,
 				)
 			}

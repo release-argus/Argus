@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package webhook provides WebHook functionality to services.
+// Package webhook provides Webhook functionality to services.
 package webhook
 
 import (
@@ -21,22 +21,22 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// marshalWebhookPayload serialises WebHook payloads (overridable for tests).
+// marshalWebhookPayload serialises Webhook payloads (overridable for tests).
 // see [decode.Marshal].
 var marshalWebhookPayload = func(v any) ([]byte, error) {
 	return decode.Marshal("json", v)
 }
 
-// AnnounceSend broadcasts the WebHook's send result to all WebSocket clients.
-func (w *WebHook) AnnounceSend() {
+// AnnounceSend broadcasts the Webhook's send result to all WebSocket clients.
+func (w *Webhook) AnnounceSend() {
 	w.SetExecuting(false, false)
-	webhookSummary := make(map[string]*apitype.WebHookSummary)
-	webhookSummary[w.ID] = &apitype.WebHookSummary{
+	webhookSummary := make(map[string]*apitype.WebhookSummary)
+	webhookSummary[w.ID] = &apitype.WebhookSummary{
 		Failed:       w.DidFail(),
 		NextRunnable: w.NextRunnable(),
 	}
 
-	// WebHook pass/fail.
+	// Webhook pass/fail.
 	payloadData, err := marshalWebhookPayload(
 		apitype.WebSocketMessage{
 			Page:    "APPROVALS",
@@ -45,7 +45,7 @@ func (w *WebHook) AnnounceSend() {
 			ServiceData: &apitype.ServiceSummary{
 				ID: w.ServiceStatus.ServiceInfo.ID,
 			},
-			WebHookData: webhookSummary,
+			WebhookData: webhookSummary,
 		},
 	)
 	if err != nil {

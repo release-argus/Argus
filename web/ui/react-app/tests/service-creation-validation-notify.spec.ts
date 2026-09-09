@@ -52,7 +52,7 @@ test.describe('Service creation modal - field validation', () => {
 		});
 
 		test.describe('Discord', () => {
-			test('name, WebHook ID, and token are each required', async ({
+			test('name, Webhook ID, and token are each required', async ({
 				page,
 			}, testInfo) => {
 				const shot = screenshotsUnder(
@@ -69,7 +69,7 @@ test.describe('Service creation modal - field validation', () => {
 				// WHEN/THEN: each field is blurred empty then valid.
 				await runValidations(section, shot, [
 					required({ good: 'my-discord', input: 'Name', slug: 'name' }),
-					required({ good: '123456', input: 'WebHook ID', slug: 'webhookid' }),
+					required({ good: '123456', input: 'Webhook ID', slug: 'webhookid' }),
 					required({ good: 'abcdef', input: 'Token', slug: 'token' }),
 				]);
 			});
@@ -201,8 +201,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Generic WebHook" notifier is added.
-				await addNotify(section, dialog, 'Generic WebHook');
+				// GIVEN: a new "Generic Webhook" notifier is added.
+				await addNotify(section, dialog, 'Generic Webhook');
 
 				// WHEN/THEN: each field is blurred bad then valid.
 				await runValidations(section, shot, [
@@ -226,8 +226,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Generic WebHook" notifier is added.
-				await addNotify(section, dialog, 'Generic WebHook');
+				// GIVEN: a new "Generic Webhook" notifier is added.
+				await addNotify(section, dialog, 'Generic Webhook');
 
 				// WHEN: a header row is added with an empty key and value.
 				await clickViaKeyboard(
@@ -522,7 +522,7 @@ test.describe('Service creation modal - field validation', () => {
 		});
 
 		test.describe('IFTTT', () => {
-			test('WebHook ID and events are required', async ({ page }, testInfo) => {
+			test('Webhook ID and events are required', async ({ page }, testInfo) => {
 				const shot = screenshotsUnder(
 					page,
 					testInfo.project.name,
@@ -536,7 +536,7 @@ test.describe('Service creation modal - field validation', () => {
 
 				// WHEN/THEN: each required field is blurred empty then valid.
 				await runValidations(section, shot, [
-					required({ good: 'abc123', input: 'WebHook ID', slug: 'webhookid' }),
+					required({ good: 'abc123', input: 'Webhook ID', slug: 'webhookid' }),
 					required({ good: 'event1,event2', input: 'Events', slug: 'events' }),
 				]);
 

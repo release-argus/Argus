@@ -231,9 +231,9 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 					cfg := config_test.BareConfig(t, false)
 					// Give values.
 					cfg.Defaults.Default()
-					cfg.WebHook = make(webhook.WebHooksDefaults)
-					cfg.WebHook["test"], _ = webhook.DecodeDefaults("yaml", nil)
-					cfg.WebHook["test"].Default()
+					cfg.Webhook = make(webhook.WebhooksDefaults)
+					cfg.Webhook["test"], _ = webhook.DecodeDefaults("yaml", nil)
+					cfg.Webhook["test"].Default()
 					cfg.Notify = make(map[string]*shoutrrr.Defaults)
 					cfg.Notify["test"] = shoutrrr.NewDefaults(
 						"discord",

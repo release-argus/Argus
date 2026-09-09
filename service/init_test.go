@@ -241,7 +241,7 @@ func TestService_Init(t *testing.T) {
 							- - ls
 						webhook:
 							test:
-						`+whtest.WebHook(t, false, false, false).String(".   ")+`
+						`+whtest.Webhook(t, false, false, false).String(".   ")+`
 					`)),
 					"Init",
 					svcCfg, notifyCfg, whCfg,
@@ -332,7 +332,7 @@ func TestService_Init(t *testing.T) {
 			name: "webhook/from defaults",
 			svc: test.Must(t, func() (*Service, error) {
 				svcCfg := plainDefaultsConfig(t)
-				svcCfg.Soft.WebHook = map[string]struct{}{
+				svcCfg.Soft.Webhook = map[string]struct{}{
 					"bar": {},
 				}
 
@@ -351,7 +351,7 @@ func TestService_Init(t *testing.T) {
 			name: "webhook/not from defaults",
 			svc: test.Must(t, func() (*Service, error) {
 				svcCfg := plainDefaultsConfig(t)
-				svcCfg.Soft.WebHook = map[string]struct{}{
+				svcCfg.Soft.Webhook = map[string]struct{}{
 					"bar": {},
 				}
 
@@ -362,7 +362,7 @@ func TestService_Init(t *testing.T) {
 							url: `+test.ArgusGitHubRepo+`
 						webhook:
 							test:
-						`+whtest.WebHook(t, false, false, false).String(".   ")+`
+						`+whtest.Webhook(t, false, false, false).String(".   ")+`
 					`)),
 					"Init",
 					svcCfg, notifyCfg, whCfg,
@@ -379,7 +379,7 @@ func TestService_Init(t *testing.T) {
 				svcCfg.Soft.Command = command.Commands{
 					{"ls"},
 				}
-				svcCfg.Soft.WebHook = map[string]struct{}{
+				svcCfg.Soft.Webhook = map[string]struct{}{
 					"bar": {},
 				}
 
@@ -419,7 +419,7 @@ func TestService_Init(t *testing.T) {
 			s := tc.svc
 			s.ID = tc.name
 			hadNotify := util.SortedKeys(s.Notify)
-			hadWebHook := util.SortedKeys(s.WebHook)
+			hadWebhook := util.SortedKeys(s.Webhook)
 			hadCommand := make(command.Commands, len(s.Command))
 			copy(hadCommand, s.Command)
 
@@ -438,11 +438,11 @@ func TestService_Init(t *testing.T) {
 			)
 
 			prefix := fmt.Sprintf(
-				"%s\nService.Init(notifyDefaults=%v, WebHookDefaults=%v)",
+				"%s\nService.Init(notifyDefaults=%v, WebhookDefaults=%v)",
 				packageName, notifyCfg, whCfg,
 			)
 
-			// THEN: Mains/Defaults/HardDefaults are handed to each WebHook.
+			// THEN: Mains/Defaults/HardDefaults are handed to each Webhook.
 			hadNotifyLength := len(hadNotify)
 			gotNotifyLength := len(tc.svc.Notify)
 			if gotNotifyLength != 0 {
@@ -529,42 +529,42 @@ func TestService_Init(t *testing.T) {
 				}
 			}
 
-			// THEN: Mains/Defaults/HardDefaults are handed to each WebHook.
-			hadWebHookLength := len(hadWebHook)
-			gotWebHookLength := len(tc.svc.WebHook)
-			if gotWebHookLength != 0 {
-				for i := range tc.svc.WebHook {
-					if tc.svc.WebHook[i].Main == nil {
-						t.Errorf("%s WebHook[%q].Main is nil", prefix, i)
+			// THEN: Mains/Defaults/HardDefaults are handed to each Webhook.
+			hadWebhookLength := len(hadWebhook)
+			gotWebhookLength := len(tc.svc.Webhook)
+			if gotWebhookLength != 0 {
+				for i := range tc.svc.Webhook {
+					if tc.svc.Webhook[i].Main == nil {
+						t.Errorf("%s Webhook[%q].Main is nil", prefix, i)
 					}
-					if tc.svc.WebHook[i].Defaults == nil {
-						t.Errorf("%s WebHook[%q].Defaults is nil", prefix, i)
+					if tc.svc.Webhook[i].Defaults == nil {
+						t.Errorf("%s Webhook[%q].Defaults is nil", prefix, i)
 					}
-					if tc.svc.WebHook[i].HardDefaults == nil {
-						t.Errorf("%s WebHook[%q].HardDefaults is nil", prefix, i)
+					if tc.svc.Webhook[i].HardDefaults == nil {
+						t.Errorf("%s Webhook[%q].HardDefaults is nil", prefix, i)
 					}
 				}
 			}
 
-			// AND: WebHooks are not overridden if non-empty originally.
-			if hadWebHookLength > 0 && gotWebHookLength != hadWebHookLength {
+			// AND: Webhooks are not overridden if non-empty originally.
+			if hadWebhookLength > 0 && gotWebhookLength != hadWebhookLength {
 				t.Fatalf(
-					"%s WebHook length changed\ngot:  %d (%v)\nwant: %d (%v)",
+					"%s Webhook length changed\ngot:  %d (%v)\nwant: %d (%v)",
 					prefix,
-					gotWebHookLength, util.SortedKeys(tc.svc.WebHook),
-					hadWebHookLength, hadWebHook,
+					gotWebhookLength, util.SortedKeys(tc.svc.Webhook),
+					hadWebhookLength, hadWebhook,
 				)
 			}
 
-			// AND: WebHook is set to the default values when empty.
-			wantWebHook := hadWebHook
-			if defaultWebHooks := tc.svc.Defaults.WebHook; defaultWebHooks != nil && hadWebHookLength == 0 {
-				wantWebHook = make([]string, len(defaultWebHooks))
-				wantWebHook = util.SortedKeys(defaultWebHooks)
+			// AND: Webhook is set to the default values when empty.
+			wantWebhook := hadWebhook
+			if defaultWebhooks := tc.svc.Defaults.Webhook; defaultWebhooks != nil && hadWebhookLength == 0 {
+				wantWebhook = make([]string, len(defaultWebhooks))
+				wantWebhook = util.SortedKeys(defaultWebhooks)
 			}
-			for _, i := range wantWebHook {
-				if tc.svc.WebHook[i] == nil {
-					t.Errorf("%s WebHook[%q] is nil", prefix, i)
+			for _, i := range wantWebhook {
+				if tc.svc.Webhook[i] == nil {
+					t.Errorf("%s Webhook[%q] is nil", prefix, i)
 				}
 			}
 			// 	Dashboard
@@ -607,7 +607,7 @@ func TestService_Init(t *testing.T) {
 			fieldTests = []test.FieldAssertion{
 				{Name: "Command", Got: tc.svc.Status.Fails.Command.Length(), Want: len(tc.svc.Command), Mode: test.CompareEqual},
 				{Name: "Shoutrrr", Got: tc.svc.Status.Fails.Shoutrrr.Length(), Want: len(tc.svc.Notify), Mode: test.CompareEqual},
-				{Name: "WebHook", Got: tc.svc.Status.Fails.WebHook.Length(), Want: len(tc.svc.WebHook), Mode: test.CompareEqual},
+				{Name: "Webhook", Got: tc.svc.Status.Fails.Webhook.Length(), Want: len(tc.svc.Webhook), Mode: test.CompareEqual},
 			}
 			if err := test.AssertFields(t, fieldTests, prefix, "Status.ServiceInfo"); err != nil {
 				t.Fatal(err)
@@ -627,7 +627,7 @@ func TestService_InitMetrics_then_ResetMetrics_then_DeleteMetrics(t *testing.T) 
 		nilDeployedVersion bool
 		nilCommand         bool
 		nilNotify          bool
-		nilWebHook         bool
+		nilWebhook         bool
 	}{
 		{
 			name: "all defined",
@@ -645,15 +645,15 @@ func TestService_InitMetrics_then_ResetMetrics_then_DeleteMetrics(t *testing.T) 
 			nilNotify: true,
 		},
 		{
-			name:       "nil WebHook",
-			nilWebHook: true,
+			name:       "nil Webhook",
+			nilWebhook: true,
 		},
 		{
 			name:               "nil all",
 			nilDeployedVersion: true,
 			nilCommand:         true,
 			nilNotify:          true,
-			nilWebHook:         true,
+			nilWebhook:         true,
 		},
 	}
 
@@ -665,7 +665,7 @@ func TestService_InitMetrics_then_ResetMetrics_then_DeleteMetrics(t *testing.T) 
 			for _, active := range activeStates {
 				testCommand := command.Command{"ls"}
 				testNotify := shoutrrrtest.Shoutrrr(t, false, false)
-				testWebHook := whtest.WebHook(t, false, false, false)
+				testWebhook := whtest.Webhook(t, false, false, false)
 				svc := test.Must(t, func() (s *Service, err error) {
 					return DecodeService(
 						"yaml", []byte(test.TrimYAML(`
@@ -681,8 +681,8 @@ func TestService_InitMetrics_then_ResetMetrics_then_DeleteMetrics(t *testing.T) 
 								`+testNotify.ID+`:
 							`+testNotify.String("    ")+`
 							webhook:
-								`+testWebHook.ID+`:
-							`+testWebHook.String("    ")+`
+								`+testWebhook.ID+`:
+							`+testWebhook.String("    ")+`
 						`)),
 						"TestService_InitMetrics_ResetMetrics_DeleteMetrics--"+tc.name,
 						svcCfg,
@@ -708,8 +708,8 @@ func TestService_InitMetrics_then_ResetMetrics_then_DeleteMetrics(t *testing.T) 
 				if tc.nilNotify {
 					svc.Notify = nil
 				}
-				if tc.nilWebHook {
-					svc.WebHook = nil
+				if tc.nilWebhook {
+					svc.Webhook = nil
 				}
 
 				// metrics:
@@ -730,8 +730,8 @@ func TestService_InitMetrics_then_ResetMetrics_then_DeleteMetrics(t *testing.T) 
 					testNotify.ID, metric.ActionResultSuccess, svc.ID, testNotify.GetType(),
 				)
 				// 	webhook_result_total.
-				webhookMetric := metric.WebHookResultTotal.WithLabelValues(
-					testWebHook.ID, metric.ActionResultSuccess, svc.ID,
+				webhookMetric := metric.WebhookResultTotal.WithLabelValues(
+					testWebhook.ID, metric.ActionResultSuccess, svc.ID,
 				)
 				// 	service_count_current.
 				serviceCountCurrentActive := metric.ServiceCountCurrent.WithLabelValues(
@@ -803,7 +803,7 @@ func TestService_InitMetrics_then_ResetMetrics_then_DeleteMetrics(t *testing.T) 
 				}
 				want = oldWant
 				// 	webhook_result_total.
-				if tc.nilWebHook || !active {
+				if tc.nilWebhook || !active {
 					want = 0
 				} else {
 					webhookMetric.Add(want)
@@ -861,8 +861,8 @@ func TestService_InitMetrics_then_ResetMetrics_then_DeleteMetrics(t *testing.T) 
 					testNotify.ID, metric.ActionResultSuccess, svc.ID, testNotify.GetType(),
 				)
 				// 	webhook_result_total.
-				webhookMetric = metric.WebHookResultTotal.WithLabelValues(
-					testWebHook.ID, metric.ActionResultSuccess, svc.ID,
+				webhookMetric = metric.WebhookResultTotal.WithLabelValues(
+					testWebhook.ID, metric.ActionResultSuccess, svc.ID,
 				)
 
 				prefix = fmt.Sprintf("%s\nService.deleteMetrics()", packageName)

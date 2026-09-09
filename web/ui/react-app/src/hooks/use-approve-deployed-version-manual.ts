@@ -14,7 +14,7 @@ export type ApproveManualDeployedVersionVariables = {
 
 /**
  * Approves the latest version for a service with a manual `deployed_version` and no
- * WebHooks/Commands, setting the deployed version to match the latest version.
+ * Webhooks/Commands, setting the deployed version to match the latest version.
  */
 export const useApproveManualDeployedVersion = () => {
 	const queryClient = useQueryClient();

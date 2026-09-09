@@ -37,7 +37,7 @@ type ServiceSummary struct {
 	IconLinkTo          *string   `json:"icon_link_to,omitzero" yaml:"icon_link_to,omitzero"`                   // URL to redirect Icon clicks to.
 	DeployedVersionType *string   `json:"deployed_version_type,omitzero" yaml:"deployed_version_type,omitzero"` // "manual"|"url", empty string if no DeployedVersionLookup.
 	Command             *int      `json:"command,omitzero" yaml:"command,omitzero"`                             // Amount of Commands to send on a new release.
-	WebHook             *int      `json:"webhook,omitzero" yaml:"webhook,omitzero"`                             // Amount of WebHooks to send on a new release.
+	Webhook             *int      `json:"webhook,omitzero" yaml:"webhook,omitzero"`                             // Amount of Webhooks to send on a new release.
 	Status              *Status   `json:"status,omitempty" yaml:"status,omitempty"`                             // Track the Status of this source (version and regex misses).
 	Tags                *[]string `json:"tags,omitzero" yaml:"tags,omitzero"`                                   // Tags for the Service.
 }
@@ -54,7 +54,7 @@ func (s *ServiceSummary) IsZero() bool {
 		s.IconLinkTo == nil &&
 		s.DeployedVersionType == nil &&
 		s.Command == nil &&
-		s.WebHook == nil &&
+		s.Webhook == nil &&
 		s.Status == nil &&
 		s.Tags == nil
 }
@@ -138,20 +138,20 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 
 	// Command.
 	s.Command = nilIfUnchanged(oldData.Command, s.Command)
-	// WebHook.
-	s.WebHook = nilIfUnchanged(oldData.WebHook, s.WebHook)
+	// Webhook.
+	s.Webhook = nilIfUnchanged(oldData.Webhook, s.Webhook)
 }
 
 // ActionSummary is the summary of all Actions for a Service.
 type ActionSummary struct {
 	Command map[string]CommandSummary `json:"command" yaml:"command"` // Summary of all Commands.
-	WebHook map[string]WebHookSummary `json:"webhook" yaml:"webhook"` // Summary of all WebHooks.
+	Webhook map[string]WebhookSummary `json:"webhook" yaml:"webhook"` // Summary of all Webhooks.
 }
 
-// WebHookSummary is the summary of a WebHook.
-type WebHookSummary struct {
-	Failed       *bool     `json:"failed,omitzero" yaml:"failed,omitzero"`                 // Whether this WebHook failed to send successfully for the LatestVersion.
-	NextRunnable time.Time `json:"next_runnable,omitempty" yaml:"next_runnable,omitempty"` // Time the WebHook can next run (for staggering).
+// WebhookSummary is the summary of a Webhook.
+type WebhookSummary struct {
+	Failed       *bool     `json:"failed,omitzero" yaml:"failed,omitzero"`                 // Whether this Webhook failed to send successfully for the LatestVersion.
+	NextRunnable time.Time `json:"next_runnable,omitempty" yaml:"next_runnable,omitempty"` // Time the Webhook can next run (for staggering).
 }
 
 // BuildInfo is information from build time.
@@ -189,14 +189,14 @@ type Flags struct {
 type Defaults struct {
 	Service ServiceDefaults `json:"service,omitzero" yaml:"service,omitzero"`
 	Notify  Notifiers       `json:"notify,omitempty" yaml:"notify,omitempty"`
-	WebHook WebHook         `json:"webhook,omitzero" yaml:"webhook,omitzero"`
+	Webhook Webhook         `json:"webhook,omitzero" yaml:"webhook,omitzero"`
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (d Defaults) IsZero() bool {
 	return d.Service.IsZero() &&
 		len(d.Notify) == 0 &&
-		d.WebHook.IsZero()
+		d.Webhook.IsZero()
 }
 
 // String implements fmt.Stringer and returns a JSON representation.
@@ -215,7 +215,7 @@ type Config struct {
 	HardDefaults Defaults  `json:"hard_defaults,omitzero" yaml:"hard_defaults,omitzero"` // Hard default values.
 	Defaults     Defaults  `json:"defaults,omitzero" yaml:"defaults,omitzero"`           // Default values.
 	Notify       Notifiers `json:"notify,omitempty" yaml:"notify,omitempty"`             // Notify messages to send on a new release.
-	WebHook      WebHooks  `json:"webhook,omitempty" yaml:"webhook,omitempty"`           // WebHooks to send on a new release.
+	Webhook      Webhooks  `json:"webhook,omitempty" yaml:"webhook,omitempty"`           // Webhooks to send on a new release.
 	Service      Services  `json:"service,omitempty" yaml:"service,omitempty"`           // The services to monitor.
 	Order        []string  `json:"order,omitempty" yaml:"order,omitempty"`               // Ordering for the Services in the WebUI.
 }
@@ -404,7 +404,7 @@ type Service struct {
 	LatestVersion         *LatestVersion         `json:"latest_version,omitzero" yaml:"latest_version,omitzero"`     // Latest version lookup for the Service.
 	Notify                Notifiers              `json:"notify,omitempty" yaml:"notify,omitempty"`                   // Service-specific Notify configuration.
 	Command               Commands               `json:"command,omitempty" yaml:"command,omitempty"`                 // CLI Commands to run on new release.
-	WebHook               WebHooks               `json:"webhook,omitempty" yaml:"webhook,omitempty"`                 // Service-specific WebHook configuration.
+	Webhook               Webhooks               `json:"webhook,omitempty" yaml:"webhook,omitempty"`                 // Service-specific Webhook configuration.
 	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"` // Configuration to scrape the Service's current deployed version.
 	Dashboard             DashboardOptions       `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`               // Dashboard options.
 	Status                *Status                `json:"status,omitempty" yaml:"status,omitempty"`                   // Track the Status of this source (version and regex misses).
@@ -425,7 +425,7 @@ type ServiceDefaults struct {
 	LatestVersion         LatestVersionDefaults         `json:"latest_version,omitzero" yaml:"latest_version,omitzero"`     // Latest version lookup for the Service.
 	Notify                []string                      `json:"notify,omitempty" yaml:"notify,omitempty"`                   // Service-specific Notify configuration.
 	Command               Commands                      `json:"command,omitempty" yaml:"command,omitempty"`                 // CLI Commands to run on new release.
-	WebHook               []string                      `json:"webhook,omitempty" yaml:"webhook,omitempty"`                 // Service-specific WebHook configuration.
+	Webhook               []string                      `json:"webhook,omitempty" yaml:"webhook,omitempty"`                 // Service-specific Webhook configuration.
 	DeployedVersionLookup DeployedVersionLookupDefaults `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"` // Configuration to scrape the Service's current deployed version.
 	Dashboard             DashboardOptions              `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`               // Dashboard options.
 }
@@ -437,7 +437,7 @@ func (d ServiceDefaults) IsZero() bool {
 		d.LatestVersion.IsZero() &&
 		len(d.Notify) == 0 &&
 		len(d.Command) == 0 &&
-		len(d.WebHook) == 0 &&
+		len(d.Webhook) == 0 &&
 		d.DeployedVersionLookup.IsZero() &&
 		d.Dashboard.IsZero()
 }
@@ -446,7 +446,7 @@ func (d ServiceDefaults) IsZero() bool {
 type ServiceOptions struct {
 	Active             *bool  `json:"active,omitzero" yaml:"active,omitzero"`                           // Active Service?.
 	Interval           string `json:"interval,omitzero" yaml:"interval,omitzero"`                       // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
-	SemanticVersioning *bool  `json:"semantic_versioning,omitzero" yaml:"semantic_versioning,omitzero"` // Default - true = Version must exceed the previous version to trigger alerts/Commands/WebHooks.
+	SemanticVersioning *bool  `json:"semantic_versioning,omitzero" yaml:"semantic_versioning,omitzero"` // Default - true = Version must exceed the previous version to trigger alerts/Commands/Webhooks.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
@@ -767,25 +767,25 @@ type Command []string
 // Commands is a slice of Command.
 type Commands []Command
 
-// WebHooks is a slice map of WebHook.
-type WebHooks map[string]WebHook
+// Webhooks is a slice map of Webhook.
+type Webhooks map[string]Webhook
 
 // String implements fmt.Stringer and returns a JSON representation.
-func (w *WebHooks) String() string {
+func (w *Webhooks) String() string {
 	if w == nil {
 		return ""
 	}
 	return decode.ToJSONString(w)
 }
 
-// Flatten returns the WebHooks as an ordered flat list.
-func (w *WebHooks) Flatten() []WebHook {
+// Flatten returns the Webhooks as an ordered flat list.
+func (w *Webhooks) Flatten() []Webhook {
 	if w == nil {
 		return nil
 	}
 
 	names := util.SortedKeys(*w)
-	list := make([]WebHook, len(names))
+	list := make([]Webhook, len(names))
 
 	for index, name := range names {
 		list[index] = (*w)[name]
@@ -796,23 +796,23 @@ func (w *WebHooks) Flatten() []WebHook {
 	return list
 }
 
-// WebHook is a WebHook to send.
-type WebHook struct {
-	ServiceID         string   `json:"-" yaml:"-"`                                                       // ID of the service this WebHook belongs to.
-	ID                string   `json:"name,omitzero" yaml:"name,omitzero"`                               // Name of this WebHook.
+// Webhook is a Webhook to send.
+type Webhook struct {
+	ServiceID         string   `json:"-" yaml:"-"`                                                       // ID of the service this Webhook belongs to.
+	ID                string   `json:"name,omitzero" yaml:"name,omitzero"`                               // Name of this Webhook.
 	Type              string   `json:"type,omitzero" yaml:"type,omitzero"`                               // "github"/"url".
 	URL               string   `json:"url,omitzero" yaml:"url,omitzero"`                                 // "https://example.com".
 	AllowInvalidCerts *bool    `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Default - false = Disallows invalid HTTPS certificates.
 	Secret            string   `json:"secret,omitzero" yaml:"secret,omitzero"`                           // "SECRET".
-	Headers           []Header `json:"headers,omitempty" yaml:"headers,omitempty"`                       // Custom Headers for the WebHook.
+	Headers           []Header `json:"headers,omitempty" yaml:"headers,omitempty"`                       // Custom Headers for the Webhook.
 	DesiredStatusCode *uint16  `json:"desired_status_code,omitzero" yaml:"desired_status_code,omitzero"` // e.g. 202.
-	Delay             string   `json:"delay,omitzero" yaml:"delay,omitzero"`                             // The delay before sending the WebHook.
-	MaxTries          *uint8   `json:"max_tries,omitzero" yaml:"max_tries,omitzero"`                     // Number of times to send the WebHook until we receive the desired status code.
-	SilentFails       *bool    `json:"silent_fails,omitzero" yaml:"silent_fails,omitzero"`               // Whether to notify if this WebHook fails MaxTries times.
+	Delay             string   `json:"delay,omitzero" yaml:"delay,omitzero"`                             // The delay before sending the Webhook.
+	MaxTries          *uint8   `json:"max_tries,omitzero" yaml:"max_tries,omitzero"`                     // Number of times to send the Webhook until we receive the desired status code.
+	SilentFails       *bool    `json:"silent_fails,omitzero" yaml:"silent_fails,omitzero"`               // Whether to notify if this Webhook fails MaxTries times.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
-func (w WebHook) IsZero() bool {
+func (w Webhook) IsZero() bool {
 	return w.ServiceID == "" &&
 		w.ID == "" &&
 		w.Type == "" &&
@@ -827,15 +827,15 @@ func (w WebHook) IsZero() bool {
 }
 
 // String returns a string representation of the receiver.
-func (w *WebHook) String(prefix string) string {
+func (w *Webhook) String(prefix string) string {
 	if w == nil {
 		return ""
 	}
 	return decode.ToYAMLString(w, prefix)
 }
 
-// Censor replaces the WebHook's secret and header values with [util.SecretValue].
-func (w *WebHook) Censor() {
+// Censor replaces the Webhook's secret and header values with [util.SecretValue].
+func (w *Webhook) Censor() {
 	if w == nil {
 		return
 	}
@@ -882,7 +882,7 @@ type ServiceEdit struct {
 	LatestVersion         *LatestVersion         `json:"latest_version,omitzero" yaml:"latest_version,omitzero"`     // Latest version lookup for the Service.
 	Notify                []Notify               `json:"notify,omitempty" yaml:"notify,omitempty"`                   // Service-specific Notify vars.
 	Command               Commands               `json:"command,omitempty" yaml:"command,omitempty"`                 // OS Commands to run on new release.
-	WebHook               []WebHook              `json:"webhook,omitempty" yaml:"webhook,omitempty"`                 // Service-specific WebHook vars.
+	Webhook               []Webhook              `json:"webhook,omitempty" yaml:"webhook,omitempty"`                 // Service-specific Webhook vars.
 	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitzero" yaml:"deployed_version,omitzero"` // Deployed version lookup for the Service.
 	Dashboard             DashboardOptions       `json:"dashboard,omitzero" yaml:"dashboard,omitzero"`               // Dashboard options.
 	Status                *Status                `json:"status,omitempty" yaml:"status,omitempty"`                   // Track the Status of this source (version and regex misses).
