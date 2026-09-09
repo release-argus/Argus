@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.37.0](https://github.com/release-argus/Argus/compare/0.36.0...0.37.0) (2026-09-09)
+
+
+### Features
+
+* **auth:** self-service account settings ([#1005](https://github.com/release-argus/Argus/issues/1005)) ([49425c4](https://github.com/release-argus/Argus/commit/49425c423135e7fe06e7afa11bf3774695ce0fe5))
+* **notify:** add Home-Assistant type ([a83d3c3](https://github.com/release-argus/Argus/commit/a83d3c3283356bdf5c22812d0a6884fb4f4d7f32))
+
 ## [0.36.0](https://github.com/release-argus/Argus/compare/0.35.0...0.36.0) (2026-09-05)
 
 
