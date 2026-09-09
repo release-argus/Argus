@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.37.1](https://github.com/release-argus/Argus/compare/0.37.0...0.37.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* **ui:** toast command/webhook send failures instead of spinning forever ([#1007](https://github.com/release-argus/Argus/issues/1007)) ([5393f90](https://github.com/release-argus/Argus/commit/5393f90009200df13cb6983e75153afc1c866e27))
+
 ## [0.37.0](https://github.com/release-argus/Argus/compare/0.36.0...0.37.0) (2026-09-09)
 
 
