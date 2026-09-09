@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, type Route, test } from '@playwright/test';
 import { openDashboardInEditMode, serviceCard } from './fixtures/dashboard';
 import {
 	createService,
@@ -8,6 +8,34 @@ import {
 	withProject,
 } from './fixtures/service';
 import { WEBHOOK_GITHUB } from './fixtures/test-endpoints';
+
+/* The send endpoint, which a read-only instance refuses with a 403. */
+const ACTIONS_ROUTE = '**/api/v1/service/actions*';
+
+/**
+ * Refuses sends the way the demo guard does, leaving reads alone.
+ *
+ * @param route - The intercepted route.
+ */
+const refuseSends = async (route: Route) => {
+	if (route.request().method() !== 'POST') return route.fallback();
+
+	await route.fulfill({
+		body: JSON.stringify({ message: 'Read-only demo instance.' }),
+		contentType: 'application/json; charset=utf-8',
+		status: 403,
+	});
+};
+
+/**
+ * @param page - The page to find the toast on.
+ * @param text - Text the toast must contain.
+ * @returns The error toast containing `text`.
+ */
+const errorToast = (page: Page, text: string) =>
+	page.locator('[data-sonner-toast][data-type="error"]').filter({
+		hasText: text,
+	});
 
 test.describe('WebHook actions', () => {
 	// Scoped to this test's ID so its afterEach can't race the other test's
@@ -140,12 +168,49 @@ test.describe('WebHook actions', () => {
 			testInfo.project.name,
 		);
 
-		// AND: clicks "Send" for the WebHook.
 		const sendButton = dialog.getByRole('button', {
 			exact: true,
 			name: 'Send',
 		});
 		await expect(sendButton).toBeVisible();
+
+		// AND: the server refuses sends, as it does for a read-only demo user.
+		await page.route(ACTIONS_ROUTE, refuseSends);
+
+		// WHEN: the user confirms the send for every WebHook.
+		await dialog.locator('#modal-action').click();
+
+		// THEN: the modal closes and the refusal is surfaced as a toast.
+		await expect(dialog).not.toBeVisible();
+		const sendAllToast = errorToast(page, 'Failed to send');
+		await expect(sendAllToast.first()).toBeVisible();
+		await expect(sendAllToast.first()).toContainText(
+			'Read-only demo instance.',
+		);
+
+		// AND: reopening the modal shows nothing stuck sending.
+		await card.getByRole('button', { name: /approve|resend/i }).click();
+		await expect(dialog).toBeVisible();
+		await expect(sendButton).toBeEnabled();
+		await expect(dialog.locator('.animate-spin')).toHaveCount(0);
+
+		// WHEN: the user sends the single WebHook, still refused.
+		await sendButton.click();
+
+		// THEN: the refusal names the WebHook, and its spinner stops.
+		const sendOneToast = errorToast(page, 'Failed to send WebHook');
+		await expect(sendOneToast).toBeVisible();
+		await expect(sendOneToast).toContainText('Read-only demo instance.');
+		await expect(dialog.locator('.animate-spin')).toHaveCount(0);
+		await expect(sendButton).toBeEnabled();
+		await screenshot(
+			page,
+			`webhook/${baseID}/03-send-refused`,
+			testInfo.project.name,
+		);
+
+		// WHEN: clicks "Send" for the WebHook, with the server accepting sends again.
+		await page.unroute(ACTIONS_ROUTE, refuseSends);
 		await sendButton.click();
 
 		// THEN: the WebHook send fails (real network call - the receiver
@@ -155,7 +220,7 @@ test.describe('WebHook actions', () => {
 		});
 		await screenshot(
 			page,
-			`webhook/${baseID}/03-send-failed`,
+			`webhook/${baseID}/04-send-failed`,
 			testInfo.project.name,
 		);
 
@@ -174,7 +239,7 @@ test.describe('WebHook actions', () => {
 		await expect(page.getByText(/can resend/i).first()).toBeVisible();
 		await screenshot(
 			page,
-			`webhook/${baseID}/04-send-blocked`,
+			`webhook/${baseID}/05-send-blocked`,
 			testInfo.project.name,
 		);
 
