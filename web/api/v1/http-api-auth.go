@@ -15,6 +15,7 @@
 package v1
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -163,7 +164,8 @@ func (l *loginLimiter) recordFailure(key string) {
 //
 // Response:
 //
-//	200 OK: with the user and their permission grants (session cookie set).
+//	200 OK: with the user, their permission grants and any saved dashboard
+//	        preferences (session cookie set).
 //	400 Bad Request: on a malformed or oversized body.
 //	401 Unauthorized: uniformly for any credential failure.
 //	429 Too Many Requests: when this (client IP, username) pair is rate-limited.
@@ -210,7 +212,7 @@ func (api *API) httpAuthLogin(w http.ResponseWriter, r *http.Request) {
 	if !api.startSession(w, r, authCtx, logFrom) {
 		return
 	}
-	api.writeAuthMe(w, http.StatusOK, authCtx, logFrom)
+	api.writeAuthMe(r.Context(), w, http.StatusOK, authCtx, logFrom)
 }
 
 // httpAuthSetupState handles GET /api/v1/auth/setup: first-run setup state
@@ -248,7 +250,8 @@ func (api *API) httpAuthSetupState(w http.ResponseWriter, r *http.Request) {
 //
 // Response:
 //
-//	201 Created: with the user and their grants (session cookie set).
+//	201 Created: with the user, their grants and any saved dashboard
+//	             preferences (session cookie set).
 //	400 Bad Request: on a validation fail.
 //	409 Conflict: once setup has completed.
 //	500 Internal Server Error: on an unexpected internal failure.
@@ -302,7 +305,7 @@ func (api *API) httpAuthSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.writeAuthMe(w, http.StatusCreated, authCtx, logFrom)
+	api.writeAuthMe(r.Context(), w, http.StatusCreated, authCtx, logFrom)
 }
 
 // httpAuthLogout handles POST /api/v1/auth/logout: revokes the session and
@@ -334,8 +337,10 @@ func (api *API) httpAuthLogout(w http.ResponseWriter, r *http.Request) {
 //
 // Response:
 //
-//	200 OK: JSON of the user and their permission grants.
+//	200 OK: JSON of the user, their permission grants and any saved
+//	        dashboard preferences.
 //	401 Unauthorized: with no authenticated user.
+//	500 Internal Server Error: when the preferences cannot be read.
 func (api *API) httpAuthMe(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpAuthMe", Secondary: getIP(r)}
 
@@ -344,7 +349,7 @@ func (api *API) httpAuthMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.writeAuthMe(w, http.StatusOK, authCtx, logFrom)
+	api.writeAuthMeOrFail(r.Context(), w, http.StatusOK, authCtx, logFrom)
 }
 
 // errCurrentPassword is given when an account update fails its
@@ -358,7 +363,8 @@ var errCurrentPassword = errors.New("current password is incorrect")
 //
 // Response:
 //
-//	200 OK: JSON of the updated user and their permission grants.
+//	200 OK: JSON of the updated user, their permission grants and any saved
+//	        dashboard preferences.
 //	400 Bad Request: on a malformed body, an over-long field, a weak new
 //	                 password, or a wrong current password.
 //	401 Unauthorized: with no authenticated user.
@@ -456,7 +462,7 @@ func (api *API) httpAuthMeUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.writeAuthMe(w, http.StatusOK, updated, logFrom)
+	api.writeAuthMeOrFail(r.Context(), w, http.StatusOK, updated, logFrom)
 }
 
 // startSession mints a session for authCtx.User and sets the session cookie,
@@ -478,18 +484,51 @@ func (api *API) startSession(
 	return true
 }
 
-// writeAuthMe writes the authenticated user and their grants - the body shared
-// by /auth/login, /auth/setup and /auth/me.
+// authMe builds the body shared by the '/auth/me'-shaped endpoints.
+func authMe(
+	authCtx *auth.Context,
+	preferences *store.DashboardPreferences,
+) apitype.AuthMe {
+	return apitype.AuthMe{
+		User:        authCtx.User,
+		Permissions: authCtx.Grants,
+		Preferences: preferences,
+	}
+}
+
+// writeAuthMe writes the body shared by /auth/login and /auth/setup, degrading
+// to no preferences (logged) when they cannot be read.
 func (api *API) writeAuthMe(
+	ctx context.Context,
 	w http.ResponseWriter,
 	status int,
 	authCtx *auth.Context,
 	logFrom logx.LogFrom,
 ) {
-	api.writeJSONStatus(w, status,
-		apitype.AuthMe{User: authCtx.User, Permissions: authCtx.Grants},
-		logFrom,
-	)
+	preferences, err := api.auth.Store.PreferencesForUser(ctx, authCtx.User.ID)
+	if err != nil {
+		logx.Error(err, logFrom, true)
+	}
+
+	api.writeJSONStatus(w, status, authMe(authCtx, preferences), logFrom)
+}
+
+// writeAuthMeOrFail writes the same body for GET and PATCH /auth/me, but fails
+// the request when the preferences cannot be read.
+func (api *API) writeAuthMeOrFail(
+	ctx context.Context,
+	w http.ResponseWriter,
+	status int,
+	authCtx *auth.Context,
+	logFrom logx.LogFrom,
+) {
+	preferences, err := api.auth.Store.PreferencesForUser(ctx, authCtx.User.ID)
+	if err != nil {
+		api.failAuthStoreRequest(w, err, logFrom, "read preferences")
+		return
+	}
+
+	api.writeJSONStatus(w, status, authMe(authCtx, preferences), logFrom)
 }
 
 // sessionCookie builds the session cookie (maxAge < 0 clears it).

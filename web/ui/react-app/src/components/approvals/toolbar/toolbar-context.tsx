@@ -9,6 +9,7 @@ import type { DataTableFeatures } from '@/components/ui/data-table';
 import type {
 	ApprovalsToolbarOptions,
 	CardTimestampType,
+	HideValueType,
 	ToolbarViewOption,
 } from '@/constants/toolbar';
 import type { TagsTriType } from '@/types/util';
@@ -24,6 +25,8 @@ export type ToolbarContextValue = {
 	setTags: (value: TagsTriType) => void;
 	/* Sets the 'hide' value in the URL */
 	setHide: (value: number[]) => void;
+	/* The 'hide' filters to fall back to, saved by the user or built in */
+	defaultHide: HideValueType[];
 	/* Sets the 'view' value in the URL */
 	setView: (value: ToolbarViewOption) => void;
 	/* Toggles the 'editMode' value in the URL */

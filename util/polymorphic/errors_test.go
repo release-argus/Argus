@@ -87,3 +87,102 @@ func TestErrInvalidType_Error(t *testing.T) {
 		})
 	}
 }
+
+func TestErrInvalidValues_Error(t *testing.T) {
+	// GIVEN: an ErrInvalidValues.
+	tests := []struct {
+		name     string
+		err      *ErrInvalidValues
+		expected string
+	}{
+		{
+			name: "single value",
+			err: &ErrInvalidValues{
+				Key:     "hide",
+				Values:  []string{"mysql"},
+				Allowed: []string{"postgres", "sqlite", "mysql"},
+			},
+			expected: `hide: "mysql" <invalid> (supported values = ['postgres', 'sqlite', 'mysql'])`,
+		},
+		{
+			name: "values are named in the order given",
+			err: &ErrInvalidValues{
+				Key:     "hide",
+				Values:  []string{"mongo", "cassandra"},
+				Allowed: []string{"postgres", "sqlite"},
+			},
+			expected: `hide: "mongo", "cassandra" <invalid> (supported values = ['postgres', 'sqlite'])`,
+		},
+		{
+			name: "at the cap, every value is named",
+			err: &ErrInvalidValues{
+				Key:     "hide",
+				Values:  []string{"a", "b", "c", "d", "e"},
+				Allowed: []string{"postgres"},
+			},
+			expected: `hide: "a", "b", "c", "d", "e" <invalid> (supported values = ['postgres'])`,
+		},
+		{
+			name: "over the cap, the rest are counted",
+			err: &ErrInvalidValues{
+				Key:     "hide",
+				Values:  []string{"a", "b", "c", "d", "e", "f", "g"},
+				Allowed: []string{"postgres"},
+			},
+			expected: `hide: "a", "b", "c", "d", "e", and 2 more <invalid> (supported values = ['postgres'])`,
+		},
+		{
+			name: "one over the cap",
+			err: &ErrInvalidValues{
+				Key:     "hide",
+				Values:  []string{"a", "b", "c", "d", "e", "f"},
+				Allowed: []string{"postgres"},
+			},
+			expected: `hide: "a", "b", "c", "d", "e", and 1 more <invalid> (supported values = ['postgres'])`,
+		},
+		{
+			name: "empty value stays visible",
+			err: &ErrInvalidValues{
+				Key:     "hide",
+				Values:  []string{""},
+				Allowed: []string{"postgres"},
+			},
+			expected: `hide: "" <invalid> (supported values = ['postgres'])`,
+		},
+		{
+			name: "no values uses 'required' placeholder",
+			err: &ErrInvalidValues{
+				Key:     "hide",
+				Values:  nil,
+				Allowed: []string{"postgres", "sqlite"},
+			},
+			expected: `hide: <required> (supported values = ['postgres', 'sqlite'])`,
+		},
+		{
+			name: "empty allowed list",
+			err: &ErrInvalidValues{
+				Key:     "hide",
+				Values:  []string{"unknown"},
+				Allowed: []string{},
+			},
+			expected: `hide: "unknown" <invalid> (supported values = [''])`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: the error is stringified.
+			got := tc.err.Error()
+
+			// THEN: the error is formatted as expected.
+			if got != tc.expected {
+				t.Fatalf(
+					"%s\nErrInvalidValues stringified mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.expected,
+				)
+			}
+		})
+	}
+}

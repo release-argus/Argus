@@ -92,8 +92,7 @@ func TestNewData(t *testing.T) {
 			eTag:     "",
 			releases: nil,
 			want: &Data{
-				eTag:     startingEmptyListETag,
-				releases: []ghtypes.Release{},
+				eTag: startingEmptyListETag,
 			},
 		},
 		{
@@ -101,8 +100,7 @@ func TestNewData(t *testing.T) {
 			eTag:     "foo",
 			releases: nil,
 			want: &Data{
-				eTag:     "foo",
-				releases: []ghtypes.Release{},
+				eTag: "foo",
 			},
 		},
 		{

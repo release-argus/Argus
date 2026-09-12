@@ -9,14 +9,18 @@ import {
 	APPROVALS_TOOLBAR_VIEW,
 	type ApprovalsToolbarOptions,
 	type CardTimestampType,
+	DEFAULT_CARD_TIMESTAMPS,
 	DEFAULT_HIDE_VALUE,
 	DEFAULT_VIEW_VALUE,
 	HideValue,
 	type HideValueType,
+	hideValuesFromNames,
 	isToolbarViewOption,
+	sortHideValues,
 	type ToolbarViewOption,
 	URL_PARAMS,
 } from '@/constants/toolbar';
+import { useAuth } from '@/contexts/auth';
 import { useServices } from '@/hooks/use-services';
 import { useSortableServices } from '@/hooks/use-sortable-services';
 import { GridLayout } from '@/pages/approvals/layouts/grid';
@@ -29,12 +33,15 @@ import {
 } from '@/utils/card-timestamps';
 import { visibleServices as getVisibleServices } from '@/utils/visible-services';
 
-const toolbarDefaults: ApprovalsToolbarOptions = {
-	editMode: false,
-	hide: DEFAULT_HIDE_VALUE,
+const toolbarFixedDefaults = {
 	search: '',
-	tags: { exclude: [], include: [] },
-	view: DEFAULT_VIEW_VALUE,
+	tags: { exclude: [], include: [] } as TagsTriType,
+};
+
+type DisplayDefaults = {
+	hide: HideValueType[];
+	timestamps: CardTimestampType[];
+	view: ToolbarViewOption;
 };
 
 /**
@@ -45,9 +52,24 @@ export const Approvals = (): ReactElement => {
 	// Signal for resetting table sorting when order is reset.
 	const [resetSortingSignal, setResetSortingSignal] = useState(0);
 
+	const { preferences } = useAuth();
+	const [defaults] = useState<DisplayDefaults>(() => {
+		const savedView = preferences?.view ?? null;
+
+		return {
+			hide: sortHideValues(
+				preferences?.hide
+					? hideValuesFromNames(preferences.hide)
+					: DEFAULT_HIDE_VALUE,
+			),
+			timestamps: preferences?.timestamps ?? [...DEFAULT_CARD_TIMESTAMPS],
+			view: isToolbarViewOption(savedView) ? savedView : DEFAULT_VIEW_VALUE,
+		};
+	});
+
 	const toolbarOptions: ApprovalsToolbarOptions = useMemo(() => {
 		const search =
-			searchParams.get(URL_PARAMS.SEARCH) ?? toolbarDefaults.search;
+			searchParams.get(URL_PARAMS.SEARCH) ?? toolbarFixedDefaults.search;
 
 		// Extract tags from URL.
 		const tagsIncludeQueryParam = searchParams.get(URL_PARAMS.TAGS_INCLUDE);
@@ -60,12 +82,12 @@ export const Approvals = (): ReactElement => {
 							exclude: JSON.parse(tagsExcludeQueryParam ?? '[]') as string[],
 							include: JSON.parse(tagsIncludeQueryParam ?? '[]') as string[],
 						}
-					: toolbarDefaults.tags;
+					: toolbarFixedDefaults.tags;
 		} catch (e) {
 			toast.error('Failed to parse tags from URL', {
 				description: `Error: ${e instanceof Error ? e.message : String(e)}`,
 			});
-			tags = toolbarDefaults.tags;
+			tags = toolbarFixedDefaults.tags;
 		}
 
 		const editMode = searchParams.has(URL_PARAMS.EDIT_MODE);
@@ -74,7 +96,7 @@ export const Approvals = (): ReactElement => {
 		const hideQueryParam = searchParams.get(URL_PARAMS.HIDE);
 		let hide: HideValueType[] = [];
 		if (hideQueryParam === null) {
-			hide = [...toolbarDefaults.hide];
+			hide = [...defaults.hide];
 		} else if (hideQueryParam) {
 			try {
 				const parsedHide: unknown = JSON.parse(hideQueryParam);
@@ -99,10 +121,10 @@ export const Approvals = (): ReactElement => {
 		const rawView = searchParams.get(URL_PARAMS.VIEW);
 		const view: ApprovalsToolbarOptions['view'] = isToolbarViewOption(rawView)
 			? rawView
-			: toolbarDefaults.view;
+			: defaults.view;
 
 		return { editMode, hide, search, tags, view };
-	}, [searchParams]);
+	}, [defaults, searchParams]);
 
 	const {
 		order,
@@ -166,16 +188,20 @@ export const Approvals = (): ReactElement => {
 					updateURLParam(key, value, false);
 					break;
 				case URL_PARAMS.HIDE:
-					updateURLParam(key, value, DEFAULT_HIDE_VALUE);
+					updateURLParam(
+						key,
+						sortHideValues(value as HideValueType[]),
+						defaults.hide,
+					);
 					break;
 				case URL_PARAMS.VIEW:
-					updateURLParam(key, value, DEFAULT_VIEW_VALUE);
+					updateURLParam(key, value, defaults.view);
 					break;
 				default:
 					break;
 			}
 		},
-		[updateURLParam],
+		[defaults, updateURLParam],
 	);
 
 	// Reset service order and table sorting.
@@ -232,8 +258,9 @@ export const Approvals = (): ReactElement => {
 		useState<ColumnVisibilityState>({});
 
 	// Timestamps shown at the bottom of the service card..
-	const [cardTimestamps, setCardTimestamps] =
-		useState<CardTimestampType[]>(loadCardTimestamps);
+	const [cardTimestamps, setCardTimestamps] = useState<CardTimestampType[]>(
+		() => loadCardTimestamps(defaults.timestamps),
+	);
 	const toggleCardTimestamp = useCallback((value: CardTimestampType) => {
 		setCardTimestamps((current) => {
 			const next = current.includes(value)
@@ -248,6 +275,7 @@ export const Approvals = (): ReactElement => {
 		<ToolbarProvider
 			value={{
 				cardTimestamps,
+				defaultHide: defaults.hide,
 				hasOrderChanged,
 				onSaveOrder: handleSaveOrder,
 				setHide,

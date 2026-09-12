@@ -16,6 +16,7 @@ package polymorphic
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -43,8 +44,56 @@ func (e ErrInvalidType) Error() string {
 		valueMsg = fmt.Sprintf("%q <invalid>", e.Value)
 	}
 
+	return invalidMessage(e.Key, valueMsg, e.Allowed)
+}
+
+// ErrInvalidValues is returned when values outside the Allowed values are given
+// for the list-valued Key.
+type ErrInvalidValues struct {
+	Key     string
+	Values  []string
+	Allowed []string
+}
+
+// maxNamedValues caps how many values one error names, so a large body cannot
+// amplify into a far larger error response.
+const maxNamedValues = 5
+
+// Error implements the [error] interface.
+//
+// Output formats:
+//
+// With values:
+//
+//	KEY: "X", "Y" <invalid> (supported values = ['A', 'B', 'C'])
+//
+// With more than [maxNamedValues] values:
+//
+//	KEY: "V", "W", "X", "Y", "Z", and 2 more <invalid> (supported values = ['A', 'B', 'C'])
+//
+// Without values (required):
+//
+//	KEY: <required> (supported values = ['A', 'B', 'C'])
+func (e ErrInvalidValues) Error() string {
+	valueMsg := "<required>"
+	if named := min(len(e.Values), maxNamedValues); named > 0 {
+		parts := make([]string, 0, named+1)
+		for _, value := range e.Values[:named] {
+			parts = append(parts, strconv.Quote(value))
+		}
+		if extra := len(e.Values) - named; extra > 0 {
+			parts = append(parts, fmt.Sprintf("and %d more", extra))
+		}
+		valueMsg = strings.Join(parts, ", ") + " <invalid>"
+	}
+
+	return invalidMessage(e.Key, valueMsg, e.Allowed)
+}
+
+// invalidMessage renders the shared grammar of the invalid-value errors.
+func invalidMessage(key, valueMsg string, allowed []string) string {
 	return fmt.Sprintf(
 		"%s: %s (supported values = ['%s'])",
-		e.Key, valueMsg, strings.Join(e.Allowed, "', '"),
+		key, valueMsg, strings.Join(allowed, "', '"),
 	)
 }

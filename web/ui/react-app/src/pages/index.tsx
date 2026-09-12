@@ -1,3 +1,4 @@
+export { Defaults as AccountDefaultsPage } from './account/defaults';
 export { SettingsLayout } from './account/layout';
 export { Account as AccountPage } from './account/profile';
 export { Tokens as TokensPage } from './account/tokens';

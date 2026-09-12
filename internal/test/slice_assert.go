@@ -31,6 +31,16 @@ func AssertSlicesEqualFunc[T any, U any](
 ) error {
 	t.Helper()
 
+	// nil vs empty (non-nil).
+	if (got == nil) != (want == nil) {
+		msg := "%s %s nil mismatch\ngot:  %v\nwant: %v"
+		if target == "" {
+			msg = "%s%s nil mismatch\ngot:  %v\nwant: %v"
+		}
+
+		return fmt.Errorf(msg, prefix, target, got, want)
+	}
+
 	// Length.
 	if gotLen, wantLen := len(got), len(want); gotLen != wantLen {
 		msg := "%s %s length mismatch\ngot:  %d (%+v)\nwant: %d (%+v)"
@@ -70,4 +80,24 @@ func AssertSlicesEqualFunc[T any, U any](
 		return nil
 	}
 	return errors.Join(errs...)
+}
+
+// AssertSlicesEqual compares two slices of comparable elements, distinguishing
+// unset (nil) from an explicitly empty slice.
+// target names the compared field in any mismatch, e.g. "hide".
+func AssertSlicesEqual[T comparable](
+	t *testing.T,
+	got, want []T,
+	prefix, target string,
+) error {
+	t.Helper()
+
+	return AssertSlicesEqualFunc(
+		t,
+		got,
+		want,
+		func(a, b T) bool { return a == b },
+		prefix,
+		target,
+	)
 }

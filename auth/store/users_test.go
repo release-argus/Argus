@@ -290,8 +290,11 @@ func TestStore_CreateUser_And_UserByID(t *testing.T) {
 			}
 
 			// AND: group memberships match (sorted).
-			wantGroups := append([]string{}, tc.groups...)
-			slices.Sort(wantGroups)
+			var wantGroups []string
+			if len(tc.groups) > 0 {
+				wantGroups = append(wantGroups, tc.groups...)
+				slices.Sort(wantGroups)
+			}
 			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				got.Groups,

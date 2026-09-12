@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package store persists the authentication and authorisation entities
-// (users, groups, permission grants, sessions, API tokens) in the
+// (users, groups, permission grants, sessions, API tokens, preferences) in the
 // Argus SQLite database, and owns their schema migrations.
 //
 // Deletions cascade explicitly inside transactions rather than relying on
@@ -45,6 +45,7 @@ var (
 	ErrSetupComplete     = errors.New("setup already completed")
 	ErrNoPassword        = errors.New("a password is required")
 	ErrTokenLimitReached = errors.New("API token limit reached for this user")
+	ErrInvalidPreference = errors.New("invalid preference value")
 )
 
 // Well-known seeded group names.
@@ -160,6 +161,16 @@ var migrations = []migration{
 		`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id, last_seen_at DESC);`,
 		`CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions (expires_at);`,
 		`CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens (user_id, created_at DESC);`,
+	}},
+	{version: 2, statements: []string{
+		`CREATE TABLE IF NOT EXISTS user_preferences (
+			user_id    TEXT NOT NULL PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+			hide       TEXT,
+			view       TEXT,
+			timestamps TEXT,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NOT NULL
+		);`,
 	}},
 }
 

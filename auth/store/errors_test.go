@@ -512,6 +512,60 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 		},
 
+		// preferences.go
+		{
+			name:    "PreferencesForUser/load fails",
+			pattern: `SELECT hide, view, timestamps`,
+			invoke: func(t *testing.T, store *Store) error {
+				_, err := store.PreferencesForUser(t.Context(), "any")
+				return err
+			},
+		},
+		{
+			name:    "SetPreferences/upsert fails",
+			pattern: `INSERT INTO user_preferences`,
+			invoke: func(t *testing.T, store *Store) error {
+				_, err := store.SetPreferences(t.Context(), "any", DashboardPreferences{
+					View: ViewTable,
+				})
+				return err
+			},
+		},
+		{
+			name:    "SetPreferences/zero set deletes, and that fails",
+			pattern: `DELETE FROM user_preferences WHERE user_id`,
+			invoke: func(t *testing.T, store *Store) error {
+				_, err := store.SetPreferences(t.Context(), "any", DashboardPreferences{})
+				return err
+			},
+		},
+		{
+			name:    "DeletePreferences/delete fails",
+			pattern: `DELETE FROM user_preferences WHERE user_id`,
+			invoke: func(t *testing.T, store *Store) error {
+				return store.DeletePreferences(t.Context(), "any")
+			},
+		},
+		{
+			name: "DeleteUser/preferences cascade fails",
+			setup: func(t *testing.T, store *Store) {
+				mustCreateUser(t, store, "target", "")
+			},
+			pattern: `DELETE FROM user_preferences WHERE user_id`,
+			invoke: func(t *testing.T, store *Store) error {
+				return store.DeleteUser(t.Context(), mustUserID(t, store, "target"))
+			},
+			wantRolledBack: func(t *testing.T, store *Store) {
+				// The cascade runs before the user row is removed.
+				if got := countRows(t, store, "users"); got != 1 {
+					t.Errorf(
+						"%s\nusers row lost to a failed preferences cascade\ngot:  %d\nwant: 1",
+						packageName, got,
+					)
+				}
+			},
+		},
+
 		{
 			name:    "migrate/version read fails",
 			pattern: `SELECT version FROM schema_migrations`,

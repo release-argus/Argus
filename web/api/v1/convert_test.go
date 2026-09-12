@@ -1872,7 +1872,7 @@ func TestConvertCommands(t *testing.T) {
 		{
 			name:  "empty",
 			input: command.Commands{},
-			want:  apitype.Commands{},
+			want:  nil,
 		},
 		{
 			name: "one",
@@ -2364,7 +2364,7 @@ func TestConvertWebhookHeaders(t *testing.T) {
 		{
 			name:  "empty",
 			input: webhook.Headers{},
-			want:  []apitype.Header{},
+			want:  nil,
 		},
 		{
 			name: "one header",

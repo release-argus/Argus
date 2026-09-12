@@ -26,11 +26,14 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-// AuthMe is the response of /auth/login, /auth/setup and /auth/me:
-// the authenticated user and their effective permission grants.
+// AuthMe is the shared response of the /auth/me-shaped endpoints - /auth/login,
+// /auth/setup, GET and PATCH /auth/me, and PUT and DELETE
+// /auth/me/preferences: the authenticated user, their effective permission
+// grants, and any dashboard preferences they have saved.
 type AuthMe struct {
-	User        auth.User    `json:"user"`
-	Permissions []rbac.Grant `json:"permissions"`
+	User        auth.User                   `json:"user"`
+	Permissions []rbac.Grant                `json:"permissions"`
+	Preferences *store.DashboardPreferences `json:"preferences,omitzero"`
 }
 
 // SetupState is the response of GET /api/v1/auth/setup: the pre-login state
@@ -64,6 +67,15 @@ type AccountUpdateRequest struct {
 	DisplayName     *string `json:"display_name,omitzero"`
 	Email           *string `json:"email,omitzero"`
 	NewPassword     *string `json:"new_password,omitzero"`
+}
+
+// PreferencesUpdateRequest is the body of PUT /api/v1/auth/me/preferences: the
+// signed-in user's dashboard preferences. An omitted field inherits the
+// built-in default; an empty list is an explicit "none", e.g. hide nothing.
+type PreferencesUpdateRequest struct {
+	Hide       []string `json:"hide,omitzero"`
+	View       string   `json:"view,omitzero"`
+	Timestamps []string `json:"timestamps,omitzero"`
 }
 
 // UserCreateRequest is the body of POST /api/v1/users.

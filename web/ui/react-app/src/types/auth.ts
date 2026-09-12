@@ -2,6 +2,12 @@
  * Auth types, mirroring the API shapes in `web/api/types/auth.go`.
  */
 
+import type {
+	CardTimestampType,
+	HideName,
+	ToolbarViewOption,
+} from '@/constants/toolbar';
+
 // Single source of truth for the RBAC catalogue, so the zod schema and the
 // types stay in lockstep (mirrors the Go catalogue in auth/rbac).
 export const RESOURCES = [
@@ -54,9 +60,16 @@ export type AuthUser = {
 	updated_at: string;
 };
 
+export type DashboardPreferences = {
+	hide?: HideName[];
+	view?: ToolbarViewOption;
+	timestamps?: CardTimestampType[];
+};
+
 export type AuthMe = {
 	user: AuthUser;
 	permissions: Grant[] | null;
+	preferences?: DashboardPreferences;
 };
 
 export type AuthGroup = {

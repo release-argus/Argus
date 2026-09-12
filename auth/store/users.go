@@ -312,7 +312,7 @@ func (s *Store) UpdateUser(
 }
 
 // DeleteUser removes the user with id and everything hanging off it
-// (memberships, sessions, API tokens), enforcing the rails.
+// (memberships, sessions, API tokens, preferences), enforcing the rails.
 func (s *Store) DeleteUser(ctx context.Context, id string) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
 		var enabled bool
@@ -336,6 +336,7 @@ func (s *Store) DeleteUser(ctx context.Context, id string) error {
 			`DELETE FROM user_groups WHERE user_id = ?;`,
 			`DELETE FROM sessions WHERE user_id = ?;`,
 			`DELETE FROM api_tokens WHERE user_id = ?;`,
+			`DELETE FROM user_preferences WHERE user_id = ?;`,
 			`DELETE FROM users WHERE id = ?;`,
 		} {
 			if _, err := tx.ExecContext(ctx, statement, id); err != nil {
