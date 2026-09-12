@@ -93,7 +93,7 @@ func (p DashboardPreferences) CheckValues() error {
 	}
 
 	if p.View != "" && !slices.Contains(viewNames, p.View) {
-		errs = append(errs, polymorphic.ErrInvalidType{
+		errs = append(errs, polymorphic.ErrInvalidValue{
 			Key:     "view",
 			Value:   p.View,
 			Allowed: viewNames,

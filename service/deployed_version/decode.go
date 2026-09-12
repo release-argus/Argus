@@ -48,7 +48,7 @@ func Decode(
 		ServiceMapInheritable,
 	)
 	if err != nil {
-		var ite *polymorphic.ErrInvalidType
+		var ite *polymorphic.ErrInvalidValue
 		// Override constructor type names.
 		if errors.As(err, &ite) {
 			ite.Allowed = PossibleTypes

@@ -158,7 +158,7 @@ func (d *Defaults) CheckValues() error {
 
 	// Type.
 	if d.Type != "" && !slices.Contains(PossibleTypes, d.Type) {
-		return polymorphic.ErrInvalidType{
+		return polymorphic.ErrInvalidValue{
 			Key:     "type",
 			Value:   d.Type,
 			Allowed: PossibleTypes,

@@ -48,7 +48,7 @@ func (l *Lookup) CheckValues() error {
 	if !slices.Contains(constants.SupportedMethods, method) {
 		errs = append(
 			errs,
-			polymorphic.ErrInvalidType{
+			polymorphic.ErrInvalidValue{
 				Key:     "method",
 				Value:   method,
 				Allowed: constants.SupportedMethods,

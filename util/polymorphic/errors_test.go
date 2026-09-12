@@ -16,16 +16,16 @@ package polymorphic
 
 import "testing"
 
-func TestErrInvalidType_Error(t *testing.T) {
-	// GIVEN: an ErrInvalidType.
+func TestErrInvalidValue_Error(t *testing.T) {
+	// GIVEN: an ErrInvalidValue.
 	tests := []struct {
 		name     string
-		err      *ErrInvalidType
+		err      *ErrInvalidValue
 		expected string
 	}{
 		{
 			name: "value provided with multiple allowed types",
-			err: &ErrInvalidType{
+			err: &ErrInvalidValue{
 				Key:     "type",
 				Value:   "mysql",
 				Allowed: []string{"postgres", "sqlite", "mysql"},
@@ -34,7 +34,7 @@ func TestErrInvalidType_Error(t *testing.T) {
 		},
 		{
 			name: "empty value uses required placeholder",
-			err: &ErrInvalidType{
+			err: &ErrInvalidValue{
 				Key:     "type",
 				Value:   "",
 				Allowed: []string{"postgres", "sqlite"},
@@ -43,7 +43,7 @@ func TestErrInvalidType_Error(t *testing.T) {
 		},
 		{
 			name: "single allowed type",
-			err: &ErrInvalidType{
+			err: &ErrInvalidValue{
 				Key:     "type",
 				Value:   "redis",
 				Allowed: []string{"redis"},
@@ -52,7 +52,7 @@ func TestErrInvalidType_Error(t *testing.T) {
 		},
 		{
 			name: "multiple allowed types preserve order",
-			err: &ErrInvalidType{
+			err: &ErrInvalidValue{
 				Key:     "type",
 				Value:   "mongo",
 				Allowed: []string{"mongo", "cassandra", "dynamodb"},
@@ -61,7 +61,7 @@ func TestErrInvalidType_Error(t *testing.T) {
 		},
 		{
 			name: "empty allowed list",
-			err: &ErrInvalidType{
+			err: &ErrInvalidValue{
 				Key:     "type",
 				Value:   "unknown",
 				Allowed: []string{},
@@ -80,7 +80,7 @@ func TestErrInvalidType_Error(t *testing.T) {
 			// THEN: the error is formatted as expected.
 			if got != tc.expected {
 				t.Fatalf(
-					"%s\nErrInvalidType stringified mismatch\ngot:  %q\nwant: %q",
+					"%s\nErrInvalidValue stringified mismatch\ngot:  %q\nwant: %q",
 					packageName, got, tc.expected,
 				)
 			}

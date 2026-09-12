@@ -98,7 +98,7 @@ func (w *Webhook) CheckValues() (error, bool) {
 	if whType == "" {
 		errs = append(
 			errs,
-			polymorphic.ErrInvalidType{
+			polymorphic.ErrInvalidValue{
 				Key:     "type",
 				Allowed: supportedTypes,
 			},
@@ -170,7 +170,7 @@ func (b *Base) CheckValues() (error, bool) {
 	if b.Type != "" && !slices.Contains(supportedTypes, b.Type) {
 		errs = append(
 			errs,
-			polymorphic.ErrInvalidType{
+			polymorphic.ErrInvalidValue{
 				Key:     "type",
 				Value:   b.Type,
 				Allowed: supportedTypes,

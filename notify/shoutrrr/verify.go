@@ -236,7 +236,7 @@ func (d *Defaults) CheckValues(id string) (error, bool) {
 	if !slices.Contains(SupportedTypes, typeName) {
 		errs = append(
 			errs,
-			polymorphic.ErrInvalidType{
+			polymorphic.ErrInvalidValue{
 				Key:     "type",
 				Value:   typeName,
 				Allowed: SupportedTypes,
@@ -465,7 +465,7 @@ func (s *Shoutrrr) checkValuesType() error {
 
 	// Invalid/Unknown type.
 	if !slices.Contains(SupportedTypes, sType) {
-		return polymorphic.ErrInvalidType{
+		return polymorphic.ErrInvalidValue{
 			Key:     "type",
 			Value:   sType,
 			Allowed: SupportedTypes,
@@ -1152,7 +1152,7 @@ func (b *Base) validateParamSelect(key string, allowed []string) error {
 		return nil
 	}
 
-	return polymorphic.ErrInvalidType{
+	return polymorphic.ErrInvalidValue{
 		Key:     key,
 		Value:   value,
 		Allowed: allowed,

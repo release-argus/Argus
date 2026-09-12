@@ -104,7 +104,7 @@ func (d *Defaults) CheckValues() error {
 	if d.Method != "" && !slices.Contains(constants.SupportedMethods, d.Method) {
 		errs = append(
 			errs,
-			polymorphic.ErrInvalidType{
+			polymorphic.ErrInvalidValue{
 				Key:     "method",
 				Value:   d.Method,
 				Allowed: constants.SupportedMethods,

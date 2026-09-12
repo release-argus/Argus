@@ -20,8 +20,8 @@ import (
 	"strings"
 )
 
-// ErrInvalidType is returned when a value outside the Allowed values is given for the Key.
-type ErrInvalidType struct {
+// ErrInvalidValue is returned when a value outside the Allowed values is given for the Key.
+type ErrInvalidValue struct {
 	Key     string
 	Value   string
 	Allowed []string
@@ -38,7 +38,7 @@ type ErrInvalidType struct {
 // Without value (required):
 //
 //	KEY: <required> (supported values = ['A', 'B', 'C'])
-func (e ErrInvalidType) Error() string {
+func (e ErrInvalidValue) Error() string {
 	valueMsg := "<required>"
 	if e.Value != "" {
 		valueMsg = fmt.Sprintf("%q <invalid>", e.Value)
