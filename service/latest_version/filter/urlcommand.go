@@ -172,7 +172,7 @@ func (s *URLCommands) CheckValues() error {
 // CheckValues validates the fields of the receiver.
 func (c *URLCommand) CheckValues() error {
 	if !slices.Contains(urlCommandTypes, c.Type) {
-		return polymorphic.ErrInvalidType{
+		return polymorphic.ErrInvalidValue{
 			Key:     "type",
 			Value:   c.Type,
 			Allowed: urlCommandTypes,

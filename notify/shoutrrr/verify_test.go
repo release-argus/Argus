@@ -3398,12 +3398,12 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			errRegex: "^" + test.RegexBracketEscaper.Replace(
 				errfmt.FormatError(
 					errors.Join(
-						polymorphic.ErrInvalidType{
+						polymorphic.ErrInvalidValue{
 							Key:     "scheme",
 							Value:   "-",
 							Allowed: barkNtfyParamScheme,
 						},
-						polymorphic.ErrInvalidType{
+						polymorphic.ErrInvalidValue{
 							Key:     "sound",
 							Value:   "nope",
 							Allowed: barkParamSound,
@@ -3431,7 +3431,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 				"method": "FETCH",
 			},
 			errRegex: "^" + test.RegexBracketEscaper.Replace(
-				polymorphic.ErrInvalidType{
+				polymorphic.ErrInvalidValue{
 					Key:     "method",
 					Value:   "FETCH",
 					Allowed: genericParamMethod,
@@ -3462,12 +3462,12 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			errRegex: "^" + test.RegexBracketEscaper.Replace(
 				errfmt.FormatError(
 					errors.Join(
-						polymorphic.ErrInvalidType{
+						polymorphic.ErrInvalidValue{
 							Key:     "priority",
 							Value:   "urgENT",
 							Allowed: ntfyParamPriority,
 						},
-						polymorphic.ErrInvalidType{
+						polymorphic.ErrInvalidValue{
 							Key:     "scheme",
 							Value:   "ftp",
 							Allowed: barkNtfyParamScheme,
@@ -3511,12 +3511,12 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			errRegex: "^" + test.RegexBracketEscaper.Replace(
 				errfmt.FormatError(
 					errors.Join(
-						polymorphic.ErrInvalidType{
+						polymorphic.ErrInvalidValue{
 							Key:     "auth",
 							Value:   "basic",
 							Allowed: smtpParamAuth,
 						},
-						polymorphic.ErrInvalidType{
+						polymorphic.ErrInvalidValue{
 							Key:     "encryption",
 							Value:   "tls1.3",
 							Allowed: smtpParamEncryption,
@@ -3544,7 +3544,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 				"parsemode": "mdx",
 			},
 			errRegex: "^" + test.RegexBracketEscaper.Replace(
-				polymorphic.ErrInvalidType{
+				polymorphic.ErrInvalidValue{
 					Key:     "parsemode",
 					Value:   "mdx",
 					Allowed: telegramParamParsemode,

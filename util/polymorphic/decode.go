@@ -81,7 +81,7 @@ func Construct(
 ) (Inheritable, error) {
 	constructor, ok := constructors[typ]
 	if !ok {
-		return nil, &ErrInvalidType{
+		return nil, &ErrInvalidValue{
 			Key:     "type",
 			Value:   typ,
 			Allowed: util.SortedKeys(constructors),
