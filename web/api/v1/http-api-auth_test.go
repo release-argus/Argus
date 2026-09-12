@@ -310,7 +310,7 @@ func TestLoginLimiter_LockKey(t *testing.T) {
 
 func TestAPI_AuthLogin(t *testing.T) {
 	// GIVEN: an auth-enabled API with an admin and a disabled user.
-	file := "TestAPI_AuthLogin.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	disabledUser := createAuthUser(t, deps, "sleeper", "sleeper-password", store.GroupViewer)
 	if _, err := deps.Store.UpdateUser(t.Context(), disabledUser.ID,
@@ -414,7 +414,7 @@ func TestAPI_AuthLogin(t *testing.T) {
 
 func TestAPI_AuthLogin__perIPRateLimit(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_AuthLogin__perIPRateLimit.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 
 	prefix := fmt.Sprintf("%s\nPOST /auth/login per-IP rate limit", packageName)
@@ -457,7 +457,7 @@ func TestAPI_AuthLogin__perIPRateLimit(t *testing.T) {
 
 func TestAPI_AuthLogin__rateLimit(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_AuthLogin__rateLimit.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 
 	prefix := fmt.Sprintf("%s\nPOST /auth/login rate limit", packageName)
@@ -482,7 +482,7 @@ func TestAPI_AuthLogin__rateLimit(t *testing.T) {
 func TestAPI_AuthLogin__sessionCap(t *testing.T) {
 	// GIVEN: an auth-enabled API whose admin is at the session cap,
 	// with a WebSocket client on their oldest session.
-	file := "TestAPI_AuthLogin__sessionCap.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	oldestCookie := loginCookie(t, api, "admin", "admin-password")
 	for range session.DefaultMaxSessionsPerUser - 1 {
@@ -526,7 +526,7 @@ func TestAPI_AuthLogin__sessionCap(t *testing.T) {
 
 func TestAPI_Auth__noProviders(t *testing.T) {
 	// GIVEN: an API whose provider registry is empty.
-	file := "TestAPI_Auth__noProviders.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	deps.Providers = provider.NewRegistry()
 
@@ -548,7 +548,7 @@ func TestAPI_Auth__noProviders(t *testing.T) {
 
 func TestAPI_Auth__loginEdgeCases(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_Auth__loginEdgeCases.yml"
+	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 
 	prefix := fmt.Sprintf("%s\nlogin edge cases", packageName)
@@ -599,7 +599,7 @@ func TestAPI_Auth__loginEdgeCases(t *testing.T) {
 
 func TestAPI_Auth__sessionManagerFailures(t *testing.T) {
 	// GIVEN: an API whose session manager persists to a broken store.
-	file := "TestAPI_Auth__sessionManagerFailures.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
@@ -660,7 +660,7 @@ func TestAPI_Auth__sessionManagerFailures(t *testing.T) {
 
 func TestAPI_AuthSetup(t *testing.T) {
 	// GIVEN: an auth-enabled API with no users yet (first-run setup pending).
-	file := "TestAPI_AuthSetup.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServerPendingSetup(t, file)
 
 	prefix := fmt.Sprintf("%s\nfirst-run setup", packageName)
@@ -828,7 +828,7 @@ func TestAPI_AuthSetup(t *testing.T) {
 
 func TestAPI_AuthSetup__concurrent(t *testing.T) {
 	// GIVEN: first-run setup pending.
-	file := "TestAPI_AuthSetup__concurrent.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServerPendingSetup(t, file)
 
 	prefix := fmt.Sprintf("%s\nconcurrent /auth/setup", packageName)
@@ -911,8 +911,7 @@ func TestAPI_AuthSetup__errors(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			file := fmt.Sprintf("TestAPI_AuthSetup__errors_%s.yml",
-				strings.ReplaceAll(tc.name, " ", "_"))
+			file := strings.ReplaceAll(t.Name(), "/", "_") + ".yml"
 			api, _, dbConn := testAuthServerPendingSetup(t, file)
 			if tc.closeDB {
 				_ = dbConn.Close()
@@ -954,7 +953,7 @@ func TestAPI_AuthSetup__errors(t *testing.T) {
 
 func TestAPI__AuthMe_and_Logout(t *testing.T) {
 	// GIVEN: a logged-in admin.
-	file := "TestAPI_AuthMe_And_Logout.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
@@ -1029,7 +1028,7 @@ func TestAPI__AuthMe_and_Logout(t *testing.T) {
 func TestAPI_AuthLogout__kicks(t *testing.T) {
 	// GIVEN: an auth-enabled API with a WebSocket client on each of a user's
 	// two sessions.
-	file := "TestAPI_AuthLogout__kicks.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 	otherCookie := loginCookie(t, api, "admin", "admin-password")
@@ -1062,7 +1061,7 @@ func TestAPI_AuthLogout__kicks(t *testing.T) {
 
 func TestAPI_AuthMeUpdate__password(t *testing.T) {
 	// GIVEN: an admin with two WebSocket sessions.
-	file := "TestAPI_AuthMeUpdate__password.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 	otherCookie := loginCookie(t, api, "admin", "admin-password")
@@ -1226,7 +1225,7 @@ func TestAPI_AuthMeUpdate__profile(t *testing.T) {
 		},
 	}
 
-	file := "TestAPI_AuthMeUpdate__profile.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
 	for i, tc := range tests {
@@ -1332,7 +1331,7 @@ func TestAPI_AuthMeUpdate__profile(t *testing.T) {
 
 func TestAPI_AuthMeUpdate__refusals(t *testing.T) {
 	// GIVEN: a logged-in admin.
-	file := "TestAPI_AuthMeUpdate__refusals.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
@@ -1676,7 +1675,7 @@ func TestAPI_AuthMeUpdate__failures(t *testing.T) {
 
 func TestAPI_AuthMeUpdate__bearerRefused(t *testing.T) {
 	// GIVEN: an auth-enabled API and an admin owning an API token.
-	file := "TestAPI_AuthMeUpdate__bearerRefused.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	authCtx := adminContext(t, api, deps)
 	plaintext, _, err := deps.Store.CreateAPIToken(
@@ -1716,7 +1715,7 @@ func TestAPI_AuthMeUpdate__bearerRefused(t *testing.T) {
 
 func TestAPI_Auth__sessionExpired(t *testing.T) {
 	// GIVEN: a server whose sessions are already past their lifetime.
-	file := "TestAPI_Auth__sessionExpired.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	deps.Sessions = session.New(
 		deps.Store,
@@ -1754,7 +1753,7 @@ func TestAPI_Auth__sessionExpired(t *testing.T) {
 
 func TestAPI_Auth__directHandlerBranches(t *testing.T) {
 	// GIVEN: handlers invoked directly with crafted contexts.
-	file := "TestAPI_Auth__directHandlerBranches.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	authCtx := adminContext(t, api, deps)
 
@@ -1793,7 +1792,7 @@ func TestAPI_Auth__directHandlerBranches(t *testing.T) {
 
 func TestAPI_Auth__sessionCookie(t *testing.T) {
 	// GIVEN: APIs with differing prefix/TLS settings.
-	file := "TestAPI_Auth__sessionCookie.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 
 	prefix := fmt.Sprintf("%s\nsessionCookie", packageName)
@@ -1839,7 +1838,7 @@ func TestAPI_Auth__sessionCookie(t *testing.T) {
 
 func TestAPI_Auth__sessionCookie__secureCookieOverride(t *testing.T) {
 	// GIVEN: an auth-enabled API with no TLS of its own.
-	file := "TestAPI_Auth__sessionCookie__secureCookieOverride.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	secureOn, secureOff := true, false
 

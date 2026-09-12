@@ -36,7 +36,7 @@ func TestLookup_Metrics(t *testing.T) {
 	}
 	lookup.Status = &status.Status{
 		ServiceInfo: serviceinfo.ServiceInfo{
-			ID: "TestLookup_Metrics",
+			ID: t.Name(),
 		},
 	}
 

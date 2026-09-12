@@ -158,7 +158,7 @@ func TestController_Metrics(t *testing.T) {
 	controller := NewController(
 		&status.Status{
 			ServiceInfo: serviceinfo.ServiceInfo{
-				ID: "TestController_Metrics",
+				ID: t.Name(),
 			},
 		},
 		Commands{

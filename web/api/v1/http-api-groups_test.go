@@ -63,7 +63,7 @@ func seededGroupIDs(t *testing.T, deps *AuthDeps) map[string]string {
 
 func TestAPI_HTTPGroupList(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPGroupList.yml"
+	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	// AND: a logged-in admin.
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -114,7 +114,7 @@ func TestAPI_HTTPGroupList(t *testing.T) {
 
 func TestAPI_HTTPGroupCreate(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPGroupCreate.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	// AND: a logged-in admin, and a logged-in non-admin.
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -239,7 +239,7 @@ func TestAPI_HTTPGroupCreate(t *testing.T) {
 
 func TestAPI_HTTPGroupCreate__nameBounds(t *testing.T) {
 	// GIVEN: an auth-enabled API and an admin session.
-	file := "TestAPI_HTTPGroupCreate__nameBounds.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 
@@ -334,7 +334,7 @@ func TestAPI_HTTPGroupCreate__nameBounds(t *testing.T) {
 
 func TestAPI_HTTPGroupGet(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPGroupGet.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	// AND: a logged-in admin and a target group.
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -389,7 +389,7 @@ func TestAPI_HTTPGroupGet(t *testing.T) {
 
 func TestAPI_HTTPGroupUpdate(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPGroupUpdate.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	// AND: a logged-in admin.
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -577,7 +577,7 @@ func TestAPI_HTTPGroupUpdate(t *testing.T) {
 func TestAPI_HTTPGroupUpdate__kicks(t *testing.T) {
 	// GIVEN: an auth-enabled API with WebSocket clients for the admin,
 	// a group member, and an outsider.
-	file := "TestAPI_HTTPGroupUpdate__kicks.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	group, err := deps.Store.CreateGroup(t.Context(), "crew", "", nil)
@@ -653,7 +653,7 @@ func TestAPI_HTTPGroupUpdate__kicks(t *testing.T) {
 
 func TestAPI_HTTPGroupDelete(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPGroupDelete.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	// AND: a logged-in admin and a target group.
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -720,7 +720,7 @@ func TestAPI_HTTPGroupDelete(t *testing.T) {
 func TestAPI_HTTPGroupDelete__kicks(t *testing.T) {
 	// GIVEN: an auth-enabled API with WebSocket clients for the admin,
 	// a group member, and an outsider.
-	file := "TestAPI_HTTPGroupDelete__kicks.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	group, err := deps.Store.CreateGroup(t.Context(), "crew", "", nil)
@@ -764,7 +764,7 @@ func TestAPI_HTTPGroupDelete__kicks(t *testing.T) {
 
 func TestAPI_HTTPGroupDelete__membershipLookupFailure(t *testing.T) {
 	// GIVEN: an auth-enabled API whose membership table has gone away.
-	file := "TestAPI_HTTPGroupDelete__membershipLookupFailure.yml"
+	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	authCtx := adminContext(t, api, deps)
 	target, err := deps.Store.CreateGroup(t.Context(), "doomed", "", nil)
@@ -799,7 +799,7 @@ func TestAPI_HTTPGroupDelete__membershipLookupFailure(t *testing.T) {
 func TestAPI_HTTPGroupUpdate__kickLookupFailure(t *testing.T) {
 	// GIVEN: an auth-enabled API on a store whose membership listing fails
 	// whist the group update itself still succeeds.
-	file := "TestAPI_HTTPGroupUpdate__kickLookupFailure.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	authCtx := adminContext(t, api, deps)
 
@@ -840,7 +840,7 @@ func TestAPI_HTTPGroupUpdate__kickLookupFailure(t *testing.T) {
 
 func TestAPI_HTTPPermissionCatalogue(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPPermissionCatalogue.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	// AND: a logged-in admin and viewer.
 	adminCookie := loginCookie(t, api, "admin", "admin-password")

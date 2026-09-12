@@ -467,7 +467,7 @@ func TestAPI_SetupWebSocket(t *testing.T) {
 
 func TestAPI_SetupWebSocket__originCheck(t *testing.T) {
 	// GIVEN: an auth-enabled API, and a logged-in admin.
-	file := "TestAPI_SetupWebSocket__originCheck.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 	server := httptest.NewServer(api.BaseRouter)
@@ -580,7 +580,7 @@ func TestAPI_SetupWebSocket__originUncheckedWithoutAuth(t *testing.T) {
 
 func TestAPI_SetupWebSocket__sessionAuth(t *testing.T) {
 	// GIVEN: an auth-enabled API wired for session auth, and a logged-in admin.
-	file := "TestAPI_SetupWebSocket__sessionAuth.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 	adminID := adminContext(t, api, deps).User.ID

@@ -136,7 +136,7 @@ func TestService_Track(t *testing.T) {
 	notifyCfg := shoutrrrtest.PlainConfig(t)
 	whCfg := whtest.PlainConfig(t)
 
-	testURLService := testService(t, "TestService_Track", "url", "url")
+	testURLService := testService(t, t.Name(), "url", "url")
 	_, _ = testURLService.LatestVersion.Query(false, logx.LogFrom{})
 	testURLLatestVersion := testURLService.Status.LatestVersion()
 

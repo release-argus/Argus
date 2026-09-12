@@ -94,7 +94,7 @@ func TestAuthContextFrom(t *testing.T) {
 
 func TestAPI_AuthMiddleware(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_AuthMiddleware.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
@@ -256,7 +256,7 @@ func TestAPI_AuthCtxOr401(t *testing.T) {
 
 func TestAPI_Authenticate(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_Authenticate.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	// AND: a session cookie and API token.
 	cookie := loginCookie(t, api, "admin", "admin-password")
@@ -427,7 +427,7 @@ func TestBearerToken(t *testing.T) {
 
 func TestAPI_AuthenticateAPIToken(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_AuthenticateAPIToken.yml"
+	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	// AND: a live token.
 	adminCtx := adminContext(t, api, deps)
@@ -528,7 +528,7 @@ func TestAPI_AuthenticateAPIToken(t *testing.T) {
 
 func TestAPI_AuthenticateSession(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_AuthenticateSession.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	// AND: a live session.
 	adminCtx := adminContext(t, api, deps)
@@ -588,7 +588,7 @@ func TestAPI_AuthenticateSession(t *testing.T) {
 
 func TestAPI_VerifyLocalCredentials(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_VerifyLocalCredentials.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
 	prefix := fmt.Sprintf("%s\nverifyLocalCredentials()", packageName)
@@ -654,7 +654,7 @@ func TestAPI_VerifyLocalCredentials(t *testing.T) {
 
 func TestAPI_ContextForUser(t *testing.T) {
 	// GIVEN: an auth-enabled API with enabled and disabled users.
-	file := "TestAPI_ContextForUser.yml"
+	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	adminCtx := adminContext(t, api, deps)
 	sleeper := createAuthUser(t, deps, "sleeper", "sleeper-password")
@@ -736,7 +736,7 @@ func TestAPI_ContextForUser(t *testing.T) {
 
 func TestAPI__auth__scopedGrants(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_Auth__ScopedGrants.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	api.Config.OrderMu.Lock()
 	api.Config.Service["tagged"] = &service.Service{
@@ -838,7 +838,7 @@ func TestAPI__auth__scopedGrants(t *testing.T) {
 
 func TestAPI__auth__GuardAnyScopeOf(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_Auth__GuardAnyScopeOf.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
 	// AND: a user whose only grant is a single service-scoped service:update -
@@ -932,7 +932,7 @@ func TestAPI__auth__GuardAnyScopeOf(t *testing.T) {
 
 func TestAPI__auth__permissionChangesApplyImmediately(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI__auth__permissionChangesApplyImmediately.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
 	// AND: a logged-in user in a group with grants.
@@ -997,7 +997,7 @@ func TestAPI__auth__permissionChangesApplyImmediately(t *testing.T) {
 
 func TestAPI_OriginCheckMiddleware__secFetchSite(t *testing.T) {
 	// GIVEN: an auth-enabled API and a logged-in session.
-	file := "TestAPI_OriginCheckMiddleware__secFetchSite.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
@@ -1174,7 +1174,7 @@ func TestOriginCheckMiddleware(t *testing.T) {
 
 func TestAPI_Guard(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_Guard.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	// AND: an admin.
 	adminCtx := adminContext(t, api, deps)
@@ -1295,7 +1295,7 @@ func TestAPI_Guard(t *testing.T) {
 
 func TestAPI_RequireAdmin(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_RequireAdmin.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
 	// AND: an admin.
@@ -1386,7 +1386,7 @@ func TestAPI_RequireAdmin(t *testing.T) {
 
 func TestAPI_ReadableServices(t *testing.T) {
 	// GIVEN: an auth-enabled API with tagged services
-	file := "TestAPI_ReadableServices.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	api.Config.OrderMu.Lock()
 	api.Config.Service["test"] = &service.Service{}
@@ -1543,7 +1543,7 @@ func TestAPI_ReadableServices(t *testing.T) {
 
 func TestAPI_ActionableServices(t *testing.T) {
 	// GIVEN: an auth-enabled API with a service.
-	file := "TestAPI_ActionableServices.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
 	// AND: users of differing service_action:execute scopes.
@@ -1682,7 +1682,7 @@ func TestAPI_KickWebSocketClients(t *testing.T) {
 	}
 
 	// GIVEN: an API without auth/hub wiring.
-	file := "TestAPI_KickWebSocketClients.yml"
+	file := t.Name() + ".yml"
 	apiValue := testAPI(t, file)
 	apiNoAuth := &apiValue
 	client := &Client{
@@ -1739,7 +1739,7 @@ func TestAPI_KickWebSocketClients(t *testing.T) {
 
 func TestAPI_ServiceTarget(t *testing.T) {
 	// GIVEN: an auth-enabled API whose config holds a tagged service.
-	file := "TestAPI_ServiceTarget.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	api.Config.OrderMu.Lock()
 	api.Config.Service["tagged"] = &service.Service{
@@ -1808,7 +1808,7 @@ func TestAPI_ServiceTarget(t *testing.T) {
 
 func TestAPI_SetupRoutesAPI__openRoutesSkipAuthentication(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_SetupRoutesAPI__openRoutesSkipAuthentication.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 
 	// AND: the routes that answer without a session, and ones that must not.
@@ -1889,7 +1889,7 @@ func TestAPI_SetupRoutesAPI__openRoutesSkipAuthentication(t *testing.T) {
 
 func TestAPI_SetupRoutesAPI__everyRouteIsGuarded(t *testing.T) {
 	// GIVEN: an auth-enabled API, and a user with zero grants.
-	file := "TestAPI_SetupRoutesAPI__everyRouteIsGuarded.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	createAuthUser(t, deps, "loner", "loner-password")
 	cookie := loginCookie(t, api, "loner", "loner-password")
@@ -2035,8 +2035,7 @@ func TestAPI_DemoMiddleware(t *testing.T) {
 			if srv.routePrefix != "" {
 				opts = append(opts, withRoutePrefix(srv.routePrefix))
 			}
-			file := "TestAPI_DemoMiddleware" +
-				strings.ReplaceAll(srv.routePrefix, "/", "_") + ".yml"
+			file := strings.ReplaceAll(t.Name(), "/", "_") + ".yml"
 			api, deps, _ := testAuthServer(t, file, opts...)
 			if _, err := deps.Store.CreateGroup(
 				t.Context(), "demo", "", demoGrants(),
@@ -2180,7 +2179,7 @@ func TestAPI_DemoMiddleware__disarmed(t *testing.T) {
 			t.Parallel()
 
 			// AND: an API configured that way, with a member and a non-member.
-			file := "TestAPI_DemoMiddleware__disarmed_" + tc.group + ".yml"
+			file := strings.ReplaceAll(t.Name(), "/", "_") + ".yml"
 			api, deps, _ := testAuthServer(t, file, withDemoGroup(tc.group))
 			if _, err := deps.Store.CreateGroup(
 				t.Context(), "demo", "", demoGrants(),
@@ -2219,7 +2218,7 @@ func TestAPI_DemoMiddleware__disarmed(t *testing.T) {
 
 func TestAPI_DemoMiddleware__logoutStillWorks(t *testing.T) {
 	// GIVEN: an auth-enabled API and a logged-in demo user.
-	file := "TestAPI_DemoMiddleware__logoutStillWorks.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file, withDemoGroup("demo"))
 	if _, err := deps.Store.CreateGroup(
 		t.Context(), "demo", "", demoGrants(),

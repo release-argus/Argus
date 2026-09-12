@@ -25,7 +25,7 @@ import (
 )
 
 func TestAssertSlicesEqualFunc(t *testing.T) {
-	prefix := "TestAssertSlicesEqualFunc"
+	prefix := t.Name()
 	targetToUse := "target"
 	// GIVEN: two slices to compare.
 	tests := []struct {
@@ -139,7 +139,7 @@ func TestAssertSlicesEqualFunc(t *testing.T) {
 }
 
 func TestAssertSlicesEqual(t *testing.T) {
-	prefix := "TestAssertSlicesEqual"
+	prefix := t.Name()
 	targetToUse := "target"
 	// GIVEN: two slices of comparable elements to compare.
 	tests := []struct {
@@ -241,7 +241,7 @@ func TestAssertSlicesEqual(t *testing.T) {
 }
 
 func TestAssertSlicesEqual__otherComparableTypes(t *testing.T) {
-	prefix := "TestAssertSlicesEqual__otherComparableTypes"
+	prefix := t.Name()
 	// GIVEN: slices of types other than string.
 	tests := []struct {
 		name     string

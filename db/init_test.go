@@ -56,7 +56,7 @@ func TestAPI_Get(t *testing.T) {
 
 	// THEN: the cell was changed in the DB.
 	otherCfg := testConfig(t)
-	otherCfg.Settings.Data.DatabaseFile = "TestAPI_Get-copy.db"
+	otherCfg.Settings.Data.DatabaseFile = t.Name() + "-copy.db"
 	bytesRead, err := os.ReadFile(cfg.Settings.Data.DatabaseFile)
 	if err != nil {
 		t.Fatalf("%s\n%v", packageName, err)

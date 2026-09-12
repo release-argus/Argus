@@ -54,7 +54,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to refresh the latest_version of a service.
-	file := "TestHTTP_LatestVersionRefreshUncreated.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	tests := []struct {
 		name   string
@@ -188,7 +188,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to refresh the deployed_version of a service.
-	file := "TestHTTP_DeployedVersionRefreshUncreated.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	tests := []struct {
 		name   string
@@ -327,7 +327,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to refresh the latest_version of a service.
-	file := "TestHTTP_LatestVersionRefresh.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -702,7 +702,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to refresh the deployed_version of a service.
-	file := "TestHTTP_DeployedVersionRefresh.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -1058,7 +1058,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request for detail of a service.
-	file := "TestHTTP_ServiceDetail.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -1265,11 +1265,11 @@ func TestHTTP_TemplateParse(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to parse a template.
-	file := "TestHTTP_TemplateParse.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
-	testSVC := testService(t, "TestHTTP_TemplateParse", "url", "url", true)
+	testSVC := testService(t, t.Name(), "url", "url", true)
 	apiMu.Lock()
 	api.Config.Service[testSVC.ID] = testSVC
 	apiMu.Unlock()
@@ -1423,7 +1423,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 
 func TestHTTP_ServiceEdit__routeValidation(t *testing.T) {
 	// GIVEN: an API.
-	file := "TestHTTP_ServiceEdit__routeBinding.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 
 	// AND: requests to a handler with invalid serviceID query params.
@@ -1493,7 +1493,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to create a service.
-	file := "TestHTTP_ServiceEdit__create.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -1870,7 +1870,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 func TestHTTP_ServiceEdit__create__concurrentConflict(t *testing.T) {
 	// GIVEN: an API where the op lock for a not-yet-created service ID is already
 	// held by an in-flight operation (e.g. a concurrent create of the same ID).
-	file := "TestHTTP_ServiceEdit__create__concurrentConflict.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	const serviceID = "TestHTTP_ServiceEdit_createConflict"
 
@@ -1930,7 +1930,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to edit a service.
-	file := "TestHTTP_ServiceEdit__edit.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -2351,7 +2351,7 @@ func TestHTTP_ServiceEdit__edit__missingID(t *testing.T) {
 
 func TestHTTP_ServiceEdit__edit__renameToExistingID(t *testing.T) {
 	// GIVEN: an API with two services - one to edit, and one whose ID we rename to.
-	file := "TestHTTP_ServiceEdit__edit__renameToExistingID.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 
 	const (
@@ -2409,7 +2409,7 @@ func TestHTTP_ServiceEdit__edit__renameToExistingID(t *testing.T) {
 
 func TestHTTP_ServiceEdit__edit__renameToExistingName(t *testing.T) {
 	// GIVEN: an API with two services - one to edit, and one whose Name we rename another ID to.
-	file := "TestHTTP_ServiceEdit__edit__renameToExistingName.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 
 	const (
@@ -2468,7 +2468,7 @@ func TestHTTP_ServiceEdit__edit__renameToExistingName(t *testing.T) {
 func TestHTTP_ServiceEdit__edit__rejectsAnIDHeldAsAnotherServiceName(t *testing.T) {
 	// GIVEN: an auth-enabled API, a group holding a service-scoped grant, and a
 	// second service named after the ID the first is about to take.
-	file := "TestHTTP_ServiceEdit__edit__restoresGrants.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
 	const (
@@ -2569,7 +2569,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to edit a service.
-	file := "TestHTTP_ServiceEdit__edit__secrets.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -2968,7 +2968,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 func TestHTTP_ServiceEdit__edit__waitsForInFlightOp(t *testing.T) {
 	// GIVEN: an API and an absent service whose op lock is held by an in-flight
 	// operation (a refresh, or another edit/delete).
-	file := "TestHTTP_ServiceEdit__edit__waitsForInFlightOp.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	const serviceID = "TestHTTP_ServiceEdit_waits-absent"
 
@@ -3118,9 +3118,9 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to delete a service.
-	file := "TestHTTP_ServiceDelete.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
-	svc := testService(t, "TestHTTP_ServiceDelete", "url", "url", true)
+	svc := testService(t, t.Name(), "url", "url", true)
 	svc.HardDefaults.Status.DatabaseChannel = api.Config.DatabaseChannel
 	_ = api.Config.AddService("", svc)
 	// Drain db from the Service addition.
@@ -3249,7 +3249,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request to test a notify.
-	file := "TestHTTP_NotifyTest.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 
 	validNotify := shoutrrrtest.Shoutrrr(t, false, false)
@@ -3668,7 +3668,7 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 	)
 
 	// GIVEN: an API.
-	file := "TestHTTP_ServiceOpLock__conflict.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 
 	tests := []struct {
@@ -3768,7 +3768,7 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 
 func TestHTTP_ServiceDelete__waitsForInFlightOp(t *testing.T) {
 	// GIVEN: an API with a service whose op lock is held by an in-flight operation.
-	file := "TestHTTP_ServiceDelete__waitsForInFlightOp.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	svc := testService(t, "TestHTTP_ServiceDelete_waits", "url", "url", true)
 	svc.HardDefaults.Status.DatabaseChannel = api.Config.DatabaseChannel

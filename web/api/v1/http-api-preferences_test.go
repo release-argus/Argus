@@ -48,8 +48,7 @@ func decodeAuthMe(t *testing.T, prefix string, body []byte) apitype.AuthMe {
 
 func TestAPI_AuthMePreferences__roundTrip(t *testing.T) {
 	// GIVEN: an auth-enabled API and a signed-in admin.
-	file := "TestAPI_AuthMePreferences__roundTrip.yml"
-	api, _, _ := testAuthServer(t, file)
+	api, _, _ := testAuthServer(t, t.Name()+".yml")
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
 	prefix := fmt.Sprintf("%s\nhttpAuthMePreferences()", packageName)
@@ -168,8 +167,7 @@ func TestAPI_AuthMePreferences__roundTrip(t *testing.T) {
 
 func TestAPI_AuthMePreferencesUpdate(t *testing.T) {
 	// GIVEN: an auth-enabled API and a signed-in admin.
-	file := "TestAPI_AuthMePreferencesUpdate.yml"
-	api, _, _ := testAuthServer(t, file)
+	api, _, _ := testAuthServer(t, t.Name()+".yml")
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
 	tests := []struct {
@@ -280,8 +278,7 @@ func TestAPI_AuthMePreferencesUpdate(t *testing.T) {
 
 func TestAPI_AuthMePreferences__perUser(t *testing.T) {
 	// GIVEN: an auth-enabled API with two signed-in users.
-	file := "TestAPI_AuthMePreferences__perUser.yml"
-	api, deps, _ := testAuthServer(t, file)
+	api, deps, _ := testAuthServer(t, t.Name()+".yml")
 	createAuthUser(t, deps, "other", "other-password")
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	otherCookie := loginCookie(t, api, "other", "other-password")
@@ -318,8 +315,7 @@ func TestAPI_AuthMePreferences__perUser(t *testing.T) {
 
 func TestAPI_AuthMePreferencesUpdate__bearerRefused(t *testing.T) {
 	// GIVEN: an auth-enabled API and an admin owning an API token.
-	file := "TestAPI_AuthMePreferencesUpdate__bearerRefused.yml"
-	api, deps, _ := testAuthServer(t, file)
+	api, deps, _ := testAuthServer(t, t.Name()+".yml")
 	authCtx := adminContext(t, api, deps)
 	plaintext, _, err := deps.Store.CreateAPIToken(
 		t.Context(), authCtx.User.ID, "ci", nil,
@@ -353,8 +349,7 @@ func TestAPI_AuthMePreferencesUpdate__bearerRefused(t *testing.T) {
 
 func TestAPI_AuthMePreferences__explicitEmpty(t *testing.T) {
 	// GIVEN: an auth-enabled API and a signed-in admin.
-	file := "TestAPI_AuthMePreferences__explicitEmpty.yml"
-	api, _, _ := testAuthServer(t, file)
+	api, _, _ := testAuthServer(t, t.Name()+".yml")
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
 	prefix := fmt.Sprintf("%s\nhttpAuthMePreferences() explicit none", packageName)
@@ -410,8 +405,7 @@ func TestAPI_AuthMePreferences__explicitEmpty(t *testing.T) {
 
 func TestAPI_AuthMePreferences__unauthenticatedAndBrokenStore(t *testing.T) {
 	// GIVEN: an auth-enabled API, an admin, and a handle on its database.
-	file := "TestAPI_AuthMePreferences__unauthenticatedAndBrokenStore.yml"
-	api, deps, dbConn := testAuthServer(t, file)
+	api, deps, dbConn := testAuthServer(t, t.Name()+".yml")
 	authCtx := adminContext(t, api, deps)
 
 	prefix := fmt.Sprintf("%s\nhttpAuthMePreferences() failure paths", packageName)
@@ -467,8 +461,7 @@ func TestAPI_AuthMePreferences__unauthenticatedAndBrokenStore(t *testing.T) {
 
 func TestAPI_AuthMePreferences__partialSaveInherits(t *testing.T) {
 	// GIVEN: an auth-enabled API and a signed-in admin.
-	file := "TestAPI_AuthMePreferences__partialSaveInherits.yml"
-	api, _, _ := testAuthServer(t, file)
+	api, _, _ := testAuthServer(t, t.Name()+".yml")
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
 	// WHEN: only the filters are saved.
@@ -517,8 +510,7 @@ func TestAPI_AuthMePreferences__partialSaveInherits(t *testing.T) {
 
 func TestAPI_AuthMe__preferencesReadFails(t *testing.T) {
 	// GIVEN: an auth-enabled API and an admin with saved preferences.
-	file := "TestAPI_AuthMe__preferencesReadFails.yml"
-	api, deps, dbConn := testAuthServer(t, file)
+	api, deps, dbConn := testAuthServer(t, t.Name()+".yml")
 	authCtx := adminContext(t, api, deps)
 	prefs := store.DashboardPreferences{View: store.ViewTable}
 	if _, err := deps.Store.SetPreferences(t.Context(), authCtx.User.ID, prefs); err != nil {

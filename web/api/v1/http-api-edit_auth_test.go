@@ -28,7 +28,7 @@ import (
 
 func TestAPI__auth__ServiceEdit__preventsSelfLockout(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI__auth__ServiceEdit__preventsSelfLockout.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	const editID = "retag-me"
 	const outOfScopeID = "team-b-svc"
@@ -208,7 +208,7 @@ func TestAPI__auth__ServiceEdit__preventsSelfLockout(t *testing.T) {
 
 func TestAPI__auth__notifyTestInheritRequiresServiceUpdate(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI__Auth__NotifyTestInherit.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
 	// AND: a user holding notify:execute but no service:update.
@@ -312,7 +312,7 @@ func TestAPI__auth__notifyTestInheritRequiresServiceUpdate(t *testing.T) {
 
 func TestAPI__auth__notifyTestRootInheritRequiresGlobalServiceUpdate(t *testing.T) {
 	// GIVEN: an auth-enabled API with a root notifier holding a secret.
-	file := "TestAPI__Auth__NotifyTestRootInherit.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	api.Config.Notify = shoutrrr.ShoutrrrsDefaults{
 		"root-gotify": shoutrrr.NewDefaults(
@@ -431,7 +431,7 @@ func TestAPI__auth__notifyTestRootInheritRequiresGlobalServiceUpdate(t *testing.
 
 func TestAPI__auth__versionRefreshOverridesRequireServiceUpdate(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI__auth__versionRefreshOverridesRequireServiceUpdate.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
 	// AND: a user able to refresh and read "test", but not update it.

@@ -49,7 +49,7 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request for the Actions of a Service.
-	file := "TestHTTP_HTTPServiceGetActions.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	tests := []struct {
 		name      string
@@ -283,7 +283,7 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 func TestHTTP_HTTPServiceGetActions__requiresActionExecute(t *testing.T) {
 	// GIVEN: an auth-enabled API with two services, only one of which a
 	// scope-limited user can read.
-	file := "TestHTTP_HTTPServiceGetActions__requiresActionExecute.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
 	for _, serviceID := range []string{"readable", "hidden"} {
@@ -420,7 +420,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 	}
 
 	// GIVEN: an API and a request for the Actions of a Service.
-	file := "TestHTTP_HTTPServiceRunActions.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	tests := []struct {
 		name          string
@@ -951,7 +951,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 func TestHTTP_HTTPServiceRunActions__requiresServiceRead(t *testing.T) {
 	// GIVEN: an auth-enabled API with two services, only one of which a
 	// scope-limited user can read.
-	file := "TestHTTP_HTTPServiceRunActions__requiresServiceRead.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
 	for _, serviceID := range []string{"readable", "hidden"} {
