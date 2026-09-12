@@ -1897,17 +1897,19 @@ func TestAPI_SetupRoutesAPI__everyRouteIsGuarded(t *testing.T) {
 	// selfServiceRoutes are the routes that answer a grantless session and filter
 	// to the caller's own account and grants.
 	selfServiceRoutes := map[string]bool{
-		"POST   /api/v1/auth/login":    true,
-		"GET    /api/v1/auth/setup":    true,
-		"POST   /api/v1/auth/setup":    true,
-		"POST   /api/v1/auth/logout":   true,
-		"GET    /api/v1/auth/me":       true,
-		"PATCH  /api/v1/auth/me":       true,
-		"GET    /api/v1/tokens":        true,
-		"POST   /api/v1/tokens":        true,
-		"DELETE /api/v1/tokens/{id}":   true,
-		"GET    /api/v1/ws-token":      true,
-		"GET    /api/v1/service/order": true,
+		"POST   /api/v1/auth/login":          true,
+		"GET    /api/v1/auth/setup":          true,
+		"POST   /api/v1/auth/setup":          true,
+		"POST   /api/v1/auth/logout":         true,
+		"GET    /api/v1/auth/me":             true,
+		"PATCH  /api/v1/auth/me":             true,
+		"PUT    /api/v1/auth/me/preferences": true,
+		"DELETE /api/v1/auth/me/preferences": true,
+		"GET    /api/v1/tokens":              true,
+		"POST   /api/v1/tokens":              true,
+		"DELETE /api/v1/tokens/{id}":         true,
+		"GET    /api/v1/ws-token":            true,
+		"GET    /api/v1/service/order":       true,
 	}
 	const methodLen = 6
 

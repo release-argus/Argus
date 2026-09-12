@@ -51,6 +51,14 @@ func TestNew(t *testing.T) {
 		)
 	}
 
+	// AND: the preferences table exists, holding nothing yet.
+	if got := countRows(t, store, "user_preferences"); got != 0 {
+		t.Errorf(
+			"%s user_preferences row count mismatch\ngot:  %d\nwant: 0",
+			prefix, got,
+		)
+	}
+
 	// AND: the three groups are seeded (admin protected; the rest not).
 	groups, err := store.Groups(t.Context())
 	if err != nil {
@@ -895,6 +903,12 @@ func TestMigrate__hotQueriesUseAnIndex(t *testing.T) {
 			args:      []any{"user"},
 			wantIndex: "idx_api_tokens_user_id",
 		},
+		{
+			name:      "user_preferences/load a user's preferences",
+			query:     `SELECT hide, view, timestamps FROM user_preferences WHERE user_id = ?;`,
+			args:      []any{"user"},
+			wantIndex: "sqlite_autoindex_user_preferences_1",
+		},
 	}
 
 	for _, tc := range tests {
@@ -942,7 +956,8 @@ func TestMigrate__hotQueriesUseAnIndex(t *testing.T) {
 				)
 			}
 			if strings.Contains(plan, "SCAN sessions") ||
-				strings.Contains(plan, "SCAN api_tokens") {
+				strings.Contains(plan, "SCAN api_tokens") ||
+				strings.Contains(plan, "SCAN user_preferences") {
 				t.Errorf(
 					"%s\nfull table scan\nquery: %s\ngot plan:\n%s",
 					prefix, tc.query, plan,

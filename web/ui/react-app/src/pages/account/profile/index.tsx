@@ -11,11 +11,11 @@ import { Field, FieldDescription, FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { TextOrLoading } from '@/components/ui/loading-ellipsis';
 import { MaskedInput } from '@/components/ui/masked-input';
-import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/auth';
 import usePasswordMismatch from '@/hooks/use-password-mismatch';
 import useZodForm from '@/hooks/use-zod-form';
 import { QUERY_KEYS } from '@/lib/query-keys';
+import { GroupHeading, GroupRule } from '@/pages/account/group';
 import {
 	type AccountFormValues,
 	accountSchema,
@@ -66,25 +66,6 @@ const formFor = (user?: AuthUser): AccountFormValues => ({
 	email: user?.email ?? '',
 	password: '',
 });
-
-type GroupHeadingProps = {
-	title: string;
-	description: string;
-};
-
-const GroupHeading = ({ title, description }: GroupHeadingProps) => (
-	<div className="grid gap-1">
-		<h3 className="font-semibold text-base">{title}</h3>
-		<p className="text-muted-foreground text-sm">{description}</p>
-	</div>
-);
-
-/** Divides the card's groups. */
-const GroupRule = () => (
-	<div className="-mx-4">
-		<Separator />
-	</div>
-);
 
 /**
  * The signed-in user's own account details. Every change is confirmed with
@@ -160,7 +141,8 @@ export const Account = (): ReactElement => {
 		<form
 			className="flex flex-col gap-6"
 			onSubmit={form.handleSubmit((values) => {
-				if (passwordsMismatch) return;
+				if (passwordsMismatch || save.isPending || !changed || !currentPassword)
+					return;
 				form.clearErrors('root');
 				save.mutate(values);
 			})}
@@ -335,13 +317,17 @@ export const Account = (): ReactElement => {
 			</Card>
 
 			{/* Left, not right: the toaster occupies the bottom-right corner. */}
-			{changed && (
-				<div className="flex">
-					<Button disabled={save.isPending || !currentPassword} type="submit">
-						<TextOrLoading loading={save.isPending} text="Save changes" />
-					</Button>
-				</div>
-			)}
+			{/* aria-disabled rather than disabled: disabling a focused button blurs
+			    it, so the keyboard user would lose their place on every save. */}
+			<div className="flex">
+				<Button
+					aria-disabled={save.isPending || !changed || !currentPassword}
+					className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
+					type="submit"
+				>
+					<TextOrLoading loading={save.isPending} text="Save changes" />
+				</Button>
+			</div>
 		</form>
 	);
 };

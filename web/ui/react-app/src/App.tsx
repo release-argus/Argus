@@ -23,6 +23,7 @@ import { WebSocketProvider } from '@/contexts/websocket';
 import { notifyUnauthorised } from '@/lib/auth-events';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import {
+	AccountDefaultsPage,
 	AccountPage,
 	ApprovalsPage,
 	ConfigPage,
@@ -104,6 +105,7 @@ const ProtectedApp = (): ReactElement => {
 								<Route element={<SettingsLayout />}>
 									<Route element={<Navigate replace to="profile" />} index />
 									<Route element={<AccountPage />} path="profile" />
+									<Route element={<AccountDefaultsPage />} path="defaults" />
 									<Route element={<TokensPage />} path="tokens" />
 								</Route>
 							</Route>

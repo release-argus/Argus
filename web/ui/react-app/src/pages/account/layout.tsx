@@ -1,4 +1,9 @@
-import { ChevronDown, KeyRound, UserCircle } from 'lucide-react';
+import {
+	ChevronDown,
+	KeyRound,
+	SlidersHorizontal,
+	UserCircle,
+} from 'lucide-react';
 import type { ReactElement } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { Button } from '@/components/ui/button';
@@ -12,6 +17,7 @@ import { cn } from '@/lib/utils';
 
 const SECTIONS = [
 	{ icon: UserCircle, label: 'Account', to: '/account/profile' },
+	{ icon: SlidersHorizontal, label: 'Defaults', to: '/account/defaults' },
 	{ icon: KeyRound, label: 'API Tokens', to: '/account/tokens' },
 ];
 

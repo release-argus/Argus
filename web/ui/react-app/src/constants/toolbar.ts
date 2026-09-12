@@ -44,13 +44,52 @@ export const ACTIVE_HIDE_VALUES: HideValueType[] = [
 	HideValue.Skipped,
 ] as const;
 
-/* Hide option filters for the toolbar. */
+/* Hide option filters for the toolbar. `key` is also how the API names them. */
 export const toolbarHideOptions = [
-	{ key: 'upToDate', label: 'Hide up to date', value: HideValue.UpToDate },
+	{ key: 'up_to_date', label: 'Hide up to date', value: HideValue.UpToDate },
 	{ key: 'updatable', label: 'Hide updatable', value: HideValue.Updatable },
 	{ key: 'skipped', label: 'Hide skipped', value: HideValue.Skipped },
 	{ key: 'inactive', label: 'Hide inactive', value: HideValue.Inactive },
 ] as const;
+
+export type HideName = (typeof toolbarHideOptions)[number]['key'];
+
+/**
+ * Maps the API's hide names onto the values the dashboard filters by.
+ *
+ * @param names - The hide names to map.
+ * @returns Their values.
+ */
+export const hideValuesFromNames = (
+	names: readonly string[],
+): HideValueType[] =>
+	toolbarHideOptions
+		.filter(({ key }) => names.includes(key))
+		.map(({ value }) => value);
+
+/**
+ * Sorts hide values into a fixed order, so one built by toggling can be
+ * compared against one built from the defaults.
+ *
+ * @param values - The hide values to sort.
+ * @returns The values, in ascending order.
+ */
+export const sortHideValues = (
+	values: readonly HideValueType[],
+): HideValueType[] => [...values].sort((a, b) => a - b);
+
+/**
+ * Maps the dashboard's hide values onto the names the API uses.
+ *
+ * @param values - The hide values to map.
+ * @returns Their names, in a fixed order.
+ */
+export const hideNamesFromValues = (
+	values: readonly HideValueType[],
+): HideName[] =>
+	toolbarHideOptions
+		.filter(({ value }) => values.includes(value))
+		.map(({ key }) => key);
 
 /* Default hide value filters for the toolbar. */
 export const DEFAULT_HIDE_VALUE: HideValueType[] = [

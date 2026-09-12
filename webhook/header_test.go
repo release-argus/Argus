@@ -42,7 +42,7 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 			name:     "empty",
 			data:     "",
 			errRegex: `^$`,
-			expected: Headers{},
+			expected: nil,
 		},
 		{
 			name:     "single map Header",

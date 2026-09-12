@@ -71,8 +71,8 @@ func TestHeaders_Copy(t *testing.T) {
 
 			prefix := fmt.Sprintf("%s\nHeaders.Copy()", packageName)
 
-			// THEN: Copy on nil returns nil.
-			if tc.headers == nil {
+			// THEN: Copy on nil (or on an empty set) returns nil.
+			if tc.headers == nil || len(*tc.headers) == 0 {
 				if got != nil {
 					t.Errorf("%s result mismatch\ngot:  non-nil\nwant: nil", prefix)
 				}

@@ -208,7 +208,8 @@ func (api *API) failAuthStoreRequest(
 	case errors.Is(err, store.ErrNotFound):
 		failRequest(&w, fmt.Errorf("%s failed: not found", action), http.StatusNotFound)
 	case errors.Is(err, store.ErrUnknownGroup),
-		errors.Is(err, store.ErrInvalidGrant):
+		errors.Is(err, store.ErrInvalidGrant),
+		errors.Is(err, store.ErrInvalidPreference):
 		failRequest(&w, fmt.Errorf("%s failed: %w", action, err), http.StatusBadRequest)
 	case errors.Is(err, store.ErrUsernameTaken),
 		errors.Is(err, store.ErrGroupNameTaken),

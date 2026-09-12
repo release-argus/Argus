@@ -13,6 +13,7 @@ import type {
 	GroupCreateRequest,
 	GroupPatchRequest,
 	LoginRequest,
+	PreferencesUpdateRequest,
 	SetupRequest,
 	SetupState,
 	UserCreateRequest,
@@ -59,6 +60,20 @@ export const updateAccount = (patch: AccountUpdateRequest) =>
 		body: JSON.stringify(patch),
 		method: 'PATCH',
 		url: `${API_BASE}/auth/me`,
+	});
+
+// Dashboard preferences of the signed-in user.
+export const updatePreferences = (preferences: PreferencesUpdateRequest) =>
+	fetchJSON<AuthMe>({
+		body: JSON.stringify(preferences),
+		method: 'PUT',
+		url: `${API_BASE}/auth/me/preferences`,
+	});
+
+export const resetPreferences = () =>
+	fetchJSON<AuthMe>({
+		method: 'DELETE',
+		url: `${API_BASE}/auth/me/preferences`,
 	});
 
 // Users.

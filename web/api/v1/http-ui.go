@@ -29,6 +29,7 @@ import (
 func (api *API) SetupRoutesNodeJS() {
 	nodeRoutes := []string{
 		"/account",
+		"/account/defaults",
 		"/account/profile",
 		"/account/tokens",
 		"/admin",

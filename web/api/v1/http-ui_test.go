@@ -50,6 +50,12 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 			wantContent: "text/html",
 		},
 		{
+			name:        "account defaults route",
+			route:       "/account/defaults",
+			wantStatus:  http.StatusOK,
+			wantContent: "text/html",
+		},
+		{
 			name:        "admin users route",
 			route:       "/admin/users",
 			wantStatus:  http.StatusOK,

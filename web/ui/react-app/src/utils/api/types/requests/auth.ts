@@ -2,6 +2,11 @@
  * Auth API request payloads. Entity/response shapes live in `@/types/auth`.
  */
 
+import type {
+	CardTimestampType,
+	HideName,
+	ToolbarViewOption,
+} from '@/constants/toolbar';
 import type { Grant } from '@/types/auth';
 
 export type LoginRequest = {
@@ -70,4 +75,15 @@ export type GroupPatchRequest = {
 export type APITokenCreateRequest = {
 	name: string;
 	expires_in?: string;
+};
+
+/**
+ * PUT /auth/me/preferences - the signed-in user's dashboard preferences. An
+ * omitted field inherits the built-in default; an empty list is an explicit
+ * none.
+ */
+export type PreferencesUpdateRequest = {
+	hide?: HideName[];
+	view?: ToolbarViewOption;
+	timestamps?: CardTimestampType[];
 };

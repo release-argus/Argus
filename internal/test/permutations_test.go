@@ -31,7 +31,7 @@ func TestPermutations(t *testing.T) {
 		{
 			name:  "empty",
 			input: []int{},
-			want:  [][]int{},
+			want:  nil,
 		},
 		{
 			name:  "single",

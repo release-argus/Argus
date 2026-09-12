@@ -16,6 +16,7 @@ import {
 	type Action,
 	ADMIN_GROUP,
 	type AuthMe,
+	type DashboardPreferences,
 	type Grant,
 	type Resource,
 } from '@/types/auth';
@@ -44,6 +45,8 @@ type PermissionTarget = {
 type AuthContextProps = {
 	status: AuthStatus;
 	user?: AuthMe['user'];
+	/** The user's saved dashboard preferences, if they have any. */
+	preferences?: DashboardPreferences;
 	permissions: Grant[];
 	/** Whether the user belongs to the admin group. */
 	isAdmin: boolean;
@@ -262,6 +265,7 @@ export const AuthProvider = (props: AuthProviderProps) => {
 			login,
 			logout,
 			permissions,
+			preferences: me?.preferences,
 			setup,
 			status,
 			user: me?.user,

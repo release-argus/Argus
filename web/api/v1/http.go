@@ -74,6 +74,12 @@ func (api *API) SetupRoutesAPI() {
 		//   PATCH, change your own account (gated on the current password).
 		v1Router.HandleFunc("/auth/me",
 			api.requireSessionAuth(api.httpAuthMeUpdate)).Methods(http.MethodPatch)
+		//   PUT, replace the dashboard display defaults of the authenticated user.
+		v1Router.HandleFunc("/auth/me/preferences",
+			api.requireSessionAuth(api.httpAuthMePreferencesUpdate)).Methods(http.MethodPut)
+		//   DELETE, back to the built-in display defaults for the authenticated user.
+		v1Router.HandleFunc("/auth/me/preferences",
+			api.requireSessionAuth(api.httpAuthMePreferencesDelete)).Methods(http.MethodDelete)
 		// Users - CRUD.
 		v1Router.HandleFunc("/users",
 			api.requireAdmin(api.httpUserList)).Methods(http.MethodGet)

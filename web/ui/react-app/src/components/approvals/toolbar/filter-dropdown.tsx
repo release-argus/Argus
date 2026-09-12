@@ -28,7 +28,6 @@ import {
 	ACTIVE_HIDE_VALUES,
 	APPROVALS_TOOLBAR_VIEW,
 	approvalsToolbarViewOptions,
-	DEFAULT_HIDE_VALUE,
 	HideValue,
 	type HideValueType,
 	TABLE_COLUMNS_ORDER_STORAGE_KEY,
@@ -49,13 +48,14 @@ type HideOptionKey = (typeof toolbarHideOptions)[number]['key'];
  *
  * A dropdown component for toggling visibility filters on services.
  * It lists all `HIDE_OPTIONS`, allowing users to show or hide specific statuses,
- * and includes a reset option to restore default visibility (`DEFAULT_HIDE_VALUE`).
+ * and includes a reset option to restore the default visibility.
  */
 const FilterDropdown: FC = () => {
 	const queryClient = useQueryClient();
 	const {
 		values,
 		cardTimestamps,
+		defaultHide,
 		toggleCardTimestamp,
 		setHide,
 		setView,
@@ -159,8 +159,8 @@ const FilterDropdown: FC = () => {
 	);
 
 	const handleResetHideFilters = useCallback(() => {
-		setHide(DEFAULT_HIDE_VALUE);
-	}, [setHide]);
+		setHide(defaultHide);
+	}, [defaultHide, setHide]);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: queryClient stable.
 	const handleResetColumns = useCallback(() => {
@@ -230,7 +230,7 @@ const FilterDropdown: FC = () => {
 							handleResetHideFilters();
 						}}
 					>
-						Reset
+						Reset filters
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
 				{values.view === APPROVALS_TOOLBAR_VIEW.GRID.value && (
@@ -294,7 +294,7 @@ const FilterDropdown: FC = () => {
 									handleResetColumns();
 								}}
 							>
-								Reset
+								Reset columns
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 					</>
