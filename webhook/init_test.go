@@ -180,7 +180,7 @@ func TestWebhook_Init(t *testing.T) {
 	svcStatus.Init(
 		0, 0, 1,
 		status.ServiceInfo{
-			ID: "TestWebhook_Init",
+			ID: t.Name(),
 		},
 		&dashboard.Options{
 			WebURL: "https://example.com",

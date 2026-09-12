@@ -36,7 +36,7 @@ import (
 
 func TestAPI_HTTPServiceOrderGet(t *testing.T) {
 	// GIVEN: an API and a request for the service order.
-	file := "TestAPI_HTTPServiceOrderGet.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -106,7 +106,7 @@ func TestAPI_HTTPServiceOrderGet(t *testing.T) {
 
 func TestAPI_HTTPServiceOrderGet__filteredByGrants(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPServiceOrderGet__filteredByGrants.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file) // Config holds service "test".
 
 	// AND: users whose grants cover all, some, one, or none of the services.
@@ -218,7 +218,7 @@ func TestAPI_HTTPServiceOrderGet__filteredByGrants(t *testing.T) {
 
 func TestAPI_HTTPServiceOrderSet(t *testing.T) {
 	// GIVEN: an API and a request to set the service order.
-	file := "TestAPI_HTTPServiceOrderSet.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 
@@ -365,9 +365,9 @@ func TestAPI_HTTPServiceOrderSet(t *testing.T) {
 }
 
 func TestAPI_HTTPServiceSummary(t *testing.T) {
-	testSVC := testService(t, "TestAPI_HTTPServiceSummary", "url", "url", true)
+	testSVC := testService(t, t.Name(), "url", "url", true)
 	// GIVEN: an API and a request for detail of a service.
-	file := "TestAPI_HTTPServiceSummary.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	api.Config.Service[testSVC.ID] = testSVC
 	api.Config.Order = append(api.Config.Order, testSVC.ID)

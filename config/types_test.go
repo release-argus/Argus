@@ -549,7 +549,7 @@ func TestConfig_Decode__serviceExtractError(t *testing.T) {
 }
 
 func TestConfig_GetDefaults(t *testing.T) {
-	name := "TestConfig_GetDefaults"
+	name := t.Name()
 
 	// GIVEN: a Config.
 	cfg := testConfig(t)

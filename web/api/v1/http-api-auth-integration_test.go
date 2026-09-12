@@ -29,7 +29,7 @@ import (
 
 func TestAPI_Auth__RBAC(t *testing.T) {
 	// GIVEN: users in groups of differing power.
-	file := "TestAPI_Auth__RBAC.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	createAuthUser(t, deps, "viewer", "viewer-password", store.GroupViewer)
 	createAuthUser(t, deps, "loner", "loner-password") // No groups.
@@ -158,7 +158,7 @@ func TestAPI_Auth__RBAC(t *testing.T) {
 
 func TestAPI_Auth__infrastructureFailures(t *testing.T) {
 	// GIVEN: a logged-in admin whose auth store then breaks.
-	file := "TestAPI_Auth__infrastructureFailures.yml"
+	file := t.Name() + ".yml"
 	api, _, dbConn := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
@@ -192,7 +192,7 @@ func TestAPI_Auth__infrastructureFailures(t *testing.T) {
 
 func TestAPI_Auth__disabledMidSession(t *testing.T) {
 	// GIVEN: a logged-in user who is then disabled behind the API's back.
-	file := "TestAPI_Auth__disabledMidSession.yml"
+	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	createAuthUser(t, deps, "victim", "victim-password", store.GroupViewer)
 	cookie := loginCookie(t, api, "victim", "victim-password")
@@ -220,7 +220,7 @@ func TestAPI_Auth__disabledMidSession(t *testing.T) {
 
 func TestAPI_Auth__originCheck(t *testing.T) {
 	// GIVEN: a logged-in admin.
-	file := "TestAPI_Auth__originCheck.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
@@ -261,7 +261,7 @@ func TestAPI_Auth__originCheck(t *testing.T) {
 
 func TestAPI_Auth__guardDisabled(t *testing.T) {
 	// GIVEN: an API without auth enabled.
-	file := "TestAPI_Auth__guardDisabled.yml"
+	file := t.Name() + ".yml"
 	apiValue := testAPI(t, file)
 	api := &apiValue
 
@@ -300,7 +300,7 @@ func TestAPI_Auth__guardDisabled(t *testing.T) {
 
 func TestAPI_Auth__tokenFallbackMetrics(t *testing.T) {
 	// GIVEN: an auth-enabled API, a guarded metrics handler, and an API token.
-	file := "TestAPI_Auth__tokenFallbackMetrics.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	adminCtx := adminContext(t, api, deps)
 	token, _, err := deps.Store.CreateAPIToken(t.Context(), adminCtx.User.ID, "scrape", nil)
@@ -372,7 +372,7 @@ func TestAPI_Auth__tokenFallbackMetrics(t *testing.T) {
 
 func TestAPI_Auth__guardMetricsErrors(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_Auth__guardMetricsErrors.yml"
+	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	// AND: a user with no grants.
 	loner := createAuthUser(t, deps, "loner", "loner-password")
@@ -428,7 +428,7 @@ func TestAPI_Auth__guardMetricsErrors(t *testing.T) {
 
 func TestAPI_Auth__webSocket(t *testing.T) {
 	// GIVEN: an auth-enabled API with a logged-in admin.
-	file := "TestAPI_Auth__webSocket.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
@@ -478,7 +478,7 @@ func TestAPI_Auth__webSocket(t *testing.T) {
 func TestAPI_Auth__serviceScopeHooks(t *testing.T) {
 	// GIVEN: an auth-enabled API whose config holds the fixture service
 	// "test", and a group with a grant scoped to it.
-	file := "TestAPI_Auth__serviceScopeHooks.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	group, err := deps.Store.CreateGroup(t.Context(), "scoped", "", []rbac.Grant{
@@ -572,7 +572,7 @@ func TestAPI_Auth__serviceScopeHooks__storeFailure(t *testing.T) {
 	// directly (bypassing the middleware, which would fail first).
 	// Grant maintenance runs before config changes, so a store failure must
 	// abort the request rather than leave grants and services out of step.
-	file := "TestAPI_Auth__serviceScopeHooks__storeFailure.yml"
+	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	authCtx := adminContext(t, api, deps)
 	if _, err := dbConn.Exec(`DROP TABLE group_permissions;`); err != nil {

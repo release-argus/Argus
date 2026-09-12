@@ -155,7 +155,7 @@ func TestString(t *testing.T) {
 		time.Now().Add(-time.Minute).UTC().Format(time.RFC3339),
 		false,
 	)
-	lookup.Status.ServiceInfo.ID = "TestString"
+	lookup.Status.ServiceInfo.ID = t.Name()
 	tests := []struct {
 		name   string
 		lookup *Lookup

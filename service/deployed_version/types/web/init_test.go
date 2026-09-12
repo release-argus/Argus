@@ -72,7 +72,7 @@ func TestLookup_Metrics(t *testing.T) {
 		{
 			name:        "non-nil",
 			lookup:      testLookup(t, false),
-			serviceID:   "TestLookup_Metrics",
+			serviceID:   t.Name(),
 			wantMetrics: true,
 		},
 	}

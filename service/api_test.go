@@ -1513,7 +1513,7 @@ func TestService_CheckFetches(t *testing.T) {
 	svcCfg := plainDefaultsConfig(t)
 	notifyCfg := shoutrrrtest.PlainConfig(t)
 	whCfg := whtest.PlainConfig(t)
-	id := "TestService_CheckFetches"
+	id := t.Name()
 
 	// GIVEN: a Service.
 	testLV := lvtest.Lookup(t, "url", false)
@@ -1723,7 +1723,7 @@ func TestService_GiveSecrets(t *testing.T) {
 	svcCfg := plainDefaultsConfig(t)
 	notifyCfg := shoutrrrtest.PlainConfig(t)
 	whCfg := whtest.PlainConfig(t)
-	id := "TestService_GiveSecrets"
+	id := t.Name()
 
 	type statusTests struct {
 		oldLatestVersion, expectedLatestVersion                       string

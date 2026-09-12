@@ -32,7 +32,7 @@ func TestAPI_HTTPAPITokenList(t *testing.T) {
 	prefix := fmt.Sprintf("%s\nhttpAPITokenList()", packageName)
 
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPAPITokenList.yml"
+	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	// AND: a logged-in admin (owning a token).
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -118,7 +118,7 @@ func TestAPI_HTTPAPITokenList(t *testing.T) {
 
 func TestAPI_HTTPAPITokenCreate(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPAPITokenCreate.yml"
+	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	// AND: a logged-in admin.
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -294,7 +294,7 @@ func TestAPI_HTTPAPITokenCreate(t *testing.T) {
 
 func TestAPI_HTTPAPITokenDelete(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPAPITokenDelete.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	// AND: a logged-in admin (owning a token).
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -372,7 +372,7 @@ func TestAPI_HTTPAPITokenDelete(t *testing.T) {
 
 func TestAPI_HTTPAPIToken__bearerCannotManageTokens(t *testing.T) {
 	// GIVEN: an auth-enabled API and an admin owning a plaintext API token.
-	file := "TestAPI_HTTPAPIToken__bearerCannotManageTokens.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	authCtx := adminContext(t, api, deps)
 	plaintext, token, err := deps.Store.CreateAPIToken(

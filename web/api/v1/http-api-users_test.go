@@ -36,7 +36,7 @@ import (
 
 func TestAPI_HTTPUserList(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPUserList.yml"
+	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	// AND: a logged-in admin and a second user.
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -88,7 +88,7 @@ func TestAPI_HTTPUserList(t *testing.T) {
 
 func TestAPI_HTTPUserCreate(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPUserCreate.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	// AND: a logged-in admin.
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -219,7 +219,7 @@ func TestAPI_HTTPUserCreate(t *testing.T) {
 
 func TestAPI_HTTPUserCreate__fieldBounds(t *testing.T) {
 	// GIVEN: an auth-enabled API and an admin session.
-	file := "TestAPI_HTTPUserCreate__fieldBounds.yml"
+	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 
@@ -314,7 +314,7 @@ func TestAPI_HTTPUserCreate__fieldBounds(t *testing.T) {
 
 func TestAPI_HTTPUserGet(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPUserGet.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	// AND: a logged-in admin and a target user.
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -362,7 +362,7 @@ func TestAPI_HTTPUserGet(t *testing.T) {
 
 func TestAPI_HTTPUserUpdate(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPUserUpdate.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	// AND: a logged-in admin and logged-in target users.
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -566,7 +566,7 @@ func TestAPI_HTTPUserUpdate(t *testing.T) {
 
 func TestAPI_HTTPUserUpdate__kicks(t *testing.T) {
 	// GIVEN: an auth-enabled API with WebSocket clients for the admin and a member.
-	file := "TestAPI_HTTPUserUpdate__kicks.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	member := createAuthUser(t, deps, "member", "member-password", store.GroupOperator)
@@ -624,7 +624,7 @@ func TestAPI_HTTPUserUpdate__kicks(t *testing.T) {
 
 func TestAPI_HTTPUserDelete(t *testing.T) {
 	// GIVEN: an auth-enabled API.
-	file := "TestAPI_HTTPUserDelete.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	// AND: a logged-in admin, viewer, and targets.
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -735,7 +735,7 @@ func TestAPI_HTTPUserDelete(t *testing.T) {
 
 func TestAPI_HTTPUserDelete__kicks(t *testing.T) {
 	// GIVEN: an auth-enabled API with WebSocket clients for the admin and a doomed user.
-	file := "TestAPI_HTTPUserDelete__kicks.yml"
+	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	doomed := createAuthUser(t, deps, "doomed", "doomed-password")
@@ -767,7 +767,7 @@ func TestAPI_HTTPUserDelete__kicks(t *testing.T) {
 
 func TestAPI_HTTPUserDelete__cascadeFailure(t *testing.T) {
 	// GIVEN: an auth-enabled API with a user to delete.
-	file := "TestAPI_HTTPUserDelete__cascadeFailure.yml"
+	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	victim := createAuthUser(t, deps, "victim", "victim-password")

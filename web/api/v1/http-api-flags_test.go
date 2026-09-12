@@ -32,7 +32,7 @@ import (
 
 func TestHTTP_HTTPFlags(t *testing.T) {
 	// GIVEN: an API and a request for the flag var values.
-	file := "TestHTTP_HTTPFlags.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 	bodyRegex := test.TrimJSON(`

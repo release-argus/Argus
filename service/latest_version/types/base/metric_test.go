@@ -33,7 +33,7 @@ func TestLookup_Metrics(t *testing.T) {
 		Type: "test",
 	}
 	lookup.Status = &status.Status{}
-	lookup.Status.ServiceInfo.ID = "TestLookup_Metrics"
+	lookup.Status.ServiceInfo.ID = t.Name()
 
 	// WHEN: the Prometheus metrics are initialised with initMetrics.
 	hadC := testutil.CollectAndCount(metric.LatestVersionQueryResultTotal)

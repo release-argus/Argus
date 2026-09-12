@@ -43,7 +43,7 @@ func TestHTTP_Config(t *testing.T) {
 	lvCfg := lvtest.PlainDefaultsConfig(t)
 
 	// AND: an API and a request for the config.
-	file := "TestHTTP_Config.yml"
+	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 
 	tests := []struct {

@@ -490,7 +490,7 @@ func TestAssertApplyOverrides_AddressMatch(t *testing.T) {
 func TestTestStruct_Foo(t *testing.T) {
 	// GIVEN: a testStruct with a String.
 	v := testStruct{
-		String: "TestTestStruct_Foo",
+		String: t.Name(),
 	}
 	// WHEN: Foo is called.
 	got := v.Foo()
