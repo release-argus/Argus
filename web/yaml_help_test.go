@@ -25,7 +25,9 @@ import (
 
 func writeFile(path string, data string) {
 	data = strings.TrimPrefix(data, "\n")
-	_ = os.WriteFile(path, []byte(data), 0644)
+	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
+		panic(err)
+	}
 }
 
 func testYAML_Argus(path string) {
