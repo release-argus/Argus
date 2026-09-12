@@ -2,20 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.38.0](https://github.com/release-argus/Argus/compare/0.37.1...0.38.0) (2026-09-12)
+
+
+### Features
+
+* **auth:** per-user dashboard display defaults ([554ed23](https://github.com/release-argus/Argus/commit/554ed230d76cfb93b82e92522b907817f4109918))
+
 ## [0.37.1](https://github.com/release-argus/Argus/compare/0.37.0...0.37.1) (2026-09-09)
 
 
 ### Bug Fixes
 
-* **ui:** toast command/webhook send failures instead of spinning forever ([#1007](https://github.com/release-argus/Argus/issues/1007)) ([5393f90](https://github.com/release-argus/Argus/commit/5393f90009200df13cb6983e75153afc1c866e27))
+* **ui:** toast command/webhook send failures instead of spinning forever ([#1007](https://github.com/release-argus/Argus/issues/1007)) ([faf50e8](https://github.com/release-argus/Argus/commit/faf50e87f6c98528ddeb67c32d3ad054546736da))
 
 ## [0.37.0](https://github.com/release-argus/Argus/compare/0.36.0...0.37.0) (2026-09-09)
 
 
 ### Features
 
-* **auth:** self-service account settings ([#1005](https://github.com/release-argus/Argus/issues/1005)) ([49425c4](https://github.com/release-argus/Argus/commit/49425c423135e7fe06e7afa11bf3774695ce0fe5))
-* **notify:** add Home-Assistant type ([a83d3c3](https://github.com/release-argus/Argus/commit/a83d3c3283356bdf5c22812d0a6884fb4f4d7f32))
+* **auth:** self-service account settings ([#1005](https://github.com/release-argus/Argus/issues/1005)) ([ccdfa33](https://github.com/release-argus/Argus/commit/ccdfa33ca907e854c4fb9ac96d168426fd5017bc))
+* **notify:** add Home-Assistant type ([74db42e](https://github.com/release-argus/Argus/commit/74db42e23e5b9a1b88fb622b3fc474b09b48470e))
 
 ## [0.36.0](https://github.com/release-argus/Argus/compare/0.35.0...0.36.0) (2026-09-05)
 
