@@ -23,7 +23,7 @@ import (
 
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
-	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
@@ -148,12 +148,12 @@ func TestRequire_RegexCheckContent(t *testing.T) {
 	}
 }
 
-func TestRequire_RegexCheckContentGitHub(t *testing.T) {
+func TestRequire_RegexCheckContentForge(t *testing.T) {
 	// GIVEN: a Require.
 	tests := []struct {
 		name                  string
 		require               *Require
-		body                  []ghtypes.Asset
+		body                  []forgetypes.Asset
 		wantReleaseDate       string
 		stdoutRegex, errRegex string
 	}{
@@ -176,7 +176,7 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 			},
 			stdoutRegex: `^(DEBUG:.*\s){3}$`, // 3: name+browser_download_url for darwin, name for linux.
 			errRegex:    `^$`,
-			body: []ghtypes.Asset{
+			body: []forgetypes.Asset{
 				{Name: "argus-1.2.3.darwin-amd64", CreatedAt: "2020-01-01T00:00:00Z"},
 				{Name: "argus-1.2.3.linux-amd64", CreatedAt: "2021-01-01T00:00:00Z"},
 				{Name: "argus-1.2.3.windows-amd64", CreatedAt: "2022-01-01T00:00:00Z"},
@@ -190,7 +190,7 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 			},
 			stdoutRegex: `^(DEBUG:.*\s){6}INFO: regex.*not matched on content.*\s$`, // 6: name+browser_download_url for darwin/linux/windows.
 			errRegex:    `^regex .* not matched on content.*$`,
-			body: []ghtypes.Asset{
+			body: []forgetypes.Asset{
 				{Name: "argus-1.2.3.darwin-amd64"},
 				{Name: "argus-1.2.3.linux-arm64"},
 				{Name: "argus-1.2.3.windows-amd64"},
@@ -203,7 +203,7 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 			},
 			stdoutRegex: `^DEBUG:.*\s$`,
 			errRegex:    `^$`,
-			body: []ghtypes.Asset{
+			body: []forgetypes.Asset{
 				{Name: "argus-1.2.3.linux-amd64", CreatedAt: ""},
 			},
 			wantReleaseDate: "",
@@ -220,7 +220,7 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 				$`,
 			),
 			errRegex: `^$`,
-			body: []ghtypes.Asset{
+			body: []forgetypes.Asset{
 				{Name: "argus-1.2.3.linux-amd64", CreatedAt: "tomorrow"},
 			},
 			wantReleaseDate: "",
@@ -238,10 +238,14 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 			v := "0.1.1-beta"
 
 			// WHEN: RegexCheckContent is called on it.
-			releaseDate, err := tc.require.RegexCheckContentGitHub(v, tc.body, logx.LogFrom{})
+			releaseDate, err := tc.require.RegexCheckContentForge(
+				v,
+				tc.body,
+				logx.LogFrom{},
+			)
 
 			prefix := fmt.Sprintf(
-				"%s\nRequire.RegexCheckContentGitHub(version=%q, body=%v)",
+				"%s\nRequire.RegexCheckContentForge(version=%q, body=%v)",
 				packageName, v, tc.body,
 			)
 

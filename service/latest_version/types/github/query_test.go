@@ -33,7 +33,7 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/polymorphic"
 )
@@ -486,7 +486,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 	tests := []struct {
 		name             string
 		overrides        string
-		releaseOverrides *ghtypes.Release
+		releaseOverrides *forgetypes.Release
 		want             wants
 	}{
 		{
@@ -498,7 +498,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 		},
 		{
 			name: "no requirements - use semantic version",
-			releaseOverrides: &ghtypes.Release{
+			releaseOverrides: &forgetypes.Release{
 				TagName:         "v1.0.0",
 				SemanticVersion: semver.MustParse("v1.0.0"),
 				PublishedAt:     "2021-01-01T00:00:00Z",
@@ -511,7 +511,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 		},
 		{
 			name: "invalid timestamp",
-			releaseOverrides: &ghtypes.Release{
+			releaseOverrides: &forgetypes.Release{
 				TagName:     "v1.0.0",
 				PublishedAt: "invalid",
 			},
@@ -539,7 +539,7 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 				require:
 					regex_version: "[0-9.]+"
 			`),
-			releaseOverrides: &ghtypes.Release{
+			releaseOverrides: &forgetypes.Release{
 				TagName:     "v1.0.0",
 				PublishedAt: "invalid",
 			},
@@ -742,7 +742,7 @@ func TestLookup_GetVersion(t *testing.T) {
 		name            string
 		bodyOverride    *string
 		lookupOverrides string
-		hadReleases     []ghtypes.Release
+		hadReleases     []forgetypes.Release
 		want            want
 	}{
 		{
@@ -961,7 +961,7 @@ func TestLookup_SetReleases(t *testing.T) {
 				t,
 				gotReleases,
 				testBodyObject,
-				func(gotRelease ghtypes.Release, wantRelease ghtypes.Release) bool {
+				func(gotRelease forgetypes.Release, wantRelease forgetypes.Release) bool {
 					// Asset counts match.
 					if len(gotRelease.Assets) != len(wantRelease.Assets) {
 						return false
