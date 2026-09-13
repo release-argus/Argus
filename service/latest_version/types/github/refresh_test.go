@@ -27,7 +27,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 	filtertest "github.com/release-argus/Argus/service/latest_version/filter/test"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
-	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -56,7 +56,7 @@ func checkDockerToken(
 func TestLookup_InheritSecrets(t *testing.T) {
 	testData := newData(
 		"etag",
-		&[]ghtypes.Release{
+		&[]forgetypes.Release{
 			{URL: "foo"},
 			{URL: "bar"},
 		},

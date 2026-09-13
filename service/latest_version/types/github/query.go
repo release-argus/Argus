@@ -29,7 +29,8 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/httpx"
 	"github.com/release-argus/Argus/internal/logx"
-	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	"github.com/release-argus/Argus/service/latest_version/types/forge"
+	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -346,7 +347,7 @@ func (l *Lookup) handleStatusForbidden(body []byte, logFrom logx.LogFrom) ([]byt
 //
 // 429 when too many requests made within a short period.
 func (l *Lookup) handleStatusTooManyRequests(body []byte, logFrom logx.LogFrom) ([]byte, int, error) {
-	var message ghtypes.Message
+	var message forgetypes.Message
 	if err := decode.Unmarshal("json", body, &message); err != nil {
 		err = fmt.Errorf("unmarshal of GitHub API data failed: %w", err)
 		logx.Error(err, logFrom, true)
@@ -358,65 +359,8 @@ func (l *Lookup) handleStatusTooManyRequests(body []byte, logFrom logx.LogFrom) 
 
 // releaseMeetsRequirements verifies that the `release` meets the requirements of the receiver
 // and returns the version and its release date if it does.
-func (l *Lookup) releaseMeetsRequirements(release ghtypes.Release, logFrom logx.LogFrom) (string, string, error) {
-	version := release.TagName
-	if release.SemanticVersion != nil {
-		version = release.SemanticVersion.String()
-	}
-	releaseDate := release.PublishedAt
-
-	// Verify the date is in RFC3339 format.
-	if _, err := time.Parse(time.RFC3339, releaseDate); err != nil {
-		logx.Warn(
-			fmt.Errorf(
-				"ignoring release date of %q for version %q on %q as it's not in RFC3339 format: %w",
-				releaseDate, version, l.GetServiceID(), err,
-			),
-			logFrom, releaseDate != "",
-		)
-		releaseDate = ""
-	}
-
-	// No `Require` filters; return the version and release date.
-	if l.Require == nil {
-		return version, releaseDate, nil
-	}
-
-	// Check all `Require` filters for this version.
-	// Version RegEx.
-	if err := l.Require.RegexCheckVersion(version, logFrom); err != nil {
-		return "", "", err //nolint:wrapcheck
-	}
-
-	// Content RegEx (on assets of release).
-	if assetReleaseDate, err := l.Require.RegexCheckContentGitHub(version, release.Assets, logFrom); err != nil {
-		return "", "", err //nolint:wrapcheck
-	} else if assetReleaseDate != "" {
-		releaseDate = assetReleaseDate
-	}
-
-	// If the Command didn't return successfully.
-	if err := l.Require.ExecCommand(version, logFrom); err != nil {
-		return "", "", err //nolint:wrapcheck
-	}
-
-	// If the Docker tag doesn't exist.
-	if err := l.Require.DockerTagCheck(version); err != nil {
-		logx.Warn(err, logFrom, true)
-		return "", "", err //nolint:wrapcheck
-		// else if the tag does exist (and we did search for one).
-	} else if l.Require.Docker != nil {
-		logx.Info(
-			fmt.Sprintf(
-				`found %s container "%s:%s"`,
-				l.Require.Docker.GetType(), l.Require.Docker.GetImage(), l.Require.Docker.GetTagForVersion(version),
-			),
-			logFrom,
-			true,
-		)
-	}
-
-	return version, releaseDate, nil
+func (l *Lookup) releaseMeetsRequirements(release forgetypes.Release, logFrom logx.LogFrom) (string, string, error) {
+	return forge.ReleaseMeetsRequirements(release, l.Require, l.GetServiceID(), logFrom) //nolint:wrapcheck
 }
 
 // getVersion returns the version and date of the matching asset/release from `body`

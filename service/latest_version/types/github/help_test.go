@@ -28,7 +28,7 @@ import (
 	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
-	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
@@ -61,7 +61,7 @@ var testBody = []byte(
 		}
 	]`),
 )
-var testBodyObject []ghtypes.Release
+var testBodyObject []forgetypes.Release
 
 func TestMain(m *testing.M) {
 	// Log.
@@ -88,14 +88,14 @@ func TestMain(m *testing.M) {
 // newData returns a new Data.
 func newData(
 	eTag string,
-	releases *[]ghtypes.Release,
+	releases *[]forgetypes.Release,
 ) *Data {
 	// ETag - https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests.
 	if eTag == "" {
 		eTag = getEmptyListETag()
 	}
 	// Releases.
-	var releasesDeref []ghtypes.Release
+	var releasesDeref []forgetypes.Release
 	if releases != nil {
 		releasesDeref = *releases
 	}

@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
-	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 )
 
 var emptyListETagTestMu = sync.Mutex{}
@@ -84,7 +84,7 @@ func TestNewData(t *testing.T) {
 	tests := []struct {
 		name     string
 		eTag     string
-		releases *[]ghtypes.Release
+		releases *[]forgetypes.Release
 		want     *Data
 	}{
 		{
@@ -106,12 +106,12 @@ func TestNewData(t *testing.T) {
 		{
 			name: "no eTag but releases",
 			eTag: "",
-			releases: &[]ghtypes.Release{
+			releases: &[]forgetypes.Release{
 				{TagName: "bar"},
 			},
 			want: &Data{
 				eTag: startingEmptyListETag,
-				releases: []ghtypes.Release{
+				releases: []forgetypes.Release{
 					{TagName: "bar"},
 				},
 			},
@@ -119,12 +119,12 @@ func TestNewData(t *testing.T) {
 		{
 			name: "eTag and releases",
 			eTag: "zing",
-			releases: &[]ghtypes.Release{
+			releases: &[]forgetypes.Release{
 				{TagName: "zap"},
 			},
 			want: &Data{
 				eTag: "zing",
-				releases: []ghtypes.Release{
+				releases: []forgetypes.Release{
 					{TagName: "zap"},
 				},
 			},
@@ -154,7 +154,7 @@ func TestNewData(t *testing.T) {
 				t,
 				got.releases,
 				tc.want.releases,
-				func(a, b ghtypes.Release) bool { return a.String() == b.String() },
+				func(a, b forgetypes.Release) bool { return a.String() == b.String() },
 				prefix,
 				"Data.releases",
 			); err != nil {
@@ -185,7 +185,7 @@ func TestData_String(t *testing.T) {
 			name: "filled",
 			githubData: &Data{
 				eTag: "argus",
-				releases: []ghtypes.Release{
+				releases: []forgetypes.Release{
 					{URL: "https://example.com/1.2.3"},
 					{URL: "https://example.com/3.2.1", PreRelease: true},
 				},
@@ -342,7 +342,7 @@ func TestData_Releases(t *testing.T) {
 	}
 
 	// WHEN: the releases are changed.
-	newReleases := []ghtypes.Release{
+	newReleases := []forgetypes.Release{
 		{TagName: "foo"},
 		{TagName: "bar"},
 	}
@@ -354,7 +354,7 @@ func TestData_Releases(t *testing.T) {
 		t,
 		got,
 		newReleases,
-		func(a, b ghtypes.Release) bool { return a.String() == b.String() },
+		func(a, b forgetypes.Release) bool { return a.String() == b.String() },
 		fmt.Sprintf("%s\nData.Releases", packageName),
 		"",
 	); err != nil {
@@ -377,7 +377,7 @@ func TestData_HasReleases(t *testing.T) {
 		{
 			name: "1 release",
 			gd: &Data{
-				releases: []ghtypes.Release{
+				releases: []forgetypes.Release{
 					{TagName: "foo"},
 				},
 			},
@@ -386,7 +386,7 @@ func TestData_HasReleases(t *testing.T) {
 		{
 			name: "multiple releases",
 			gd: &Data{
-				releases: []ghtypes.Release{
+				releases: []forgetypes.Release{
 					{TagName: "foo"},
 					{TagName: "bar"},
 				},
@@ -427,7 +427,7 @@ func TestData_Copy(t *testing.T) {
 			name: "filled",
 			gd: &Data{
 				eTag: "foo",
-				releases: []ghtypes.Release{
+				releases: []forgetypes.Release{
 					{TagName: "bar"},
 				},
 			},
@@ -452,7 +452,7 @@ func TestData_Copy(t *testing.T) {
 				t,
 				got.releases,
 				tc.gd.releases,
-				func(a, b ghtypes.Release) bool { return a.String() == b.String() },
+				func(a, b forgetypes.Release) bool { return a.String() == b.String() },
 				fmt.Sprintf("%s\nData.Copy()", packageName),
 				".releases",
 			); err != nil {
@@ -477,7 +477,7 @@ func TestData_CopyFrom(t *testing.T) {
 			name: "filled",
 			gd: &Data{
 				eTag: "foo",
-				releases: []ghtypes.Release{
+				releases: []forgetypes.Release{
 					{TagName: "bar"},
 				},
 			},
@@ -486,13 +486,13 @@ func TestData_CopyFrom(t *testing.T) {
 			name: "filled with data to overwrite",
 			fresh: &Data{
 				eTag: "fizz",
-				releases: []ghtypes.Release{
+				releases: []forgetypes.Release{
 					{TagName: "bang"},
 				},
 			},
 			gd: &Data{
 				eTag: "foo",
-				releases: []ghtypes.Release{
+				releases: []forgetypes.Release{
 					{TagName: "bar"},
 				},
 			},
@@ -521,7 +521,7 @@ func TestData_CopyFrom(t *testing.T) {
 				t,
 				tc.fresh.releases,
 				tc.gd.releases,
-				func(a, b ghtypes.Release) bool { return a.String() == b.String() },
+				func(a, b forgetypes.Release) bool { return a.String() == b.String() },
 				fmt.Sprintf(
 					"%s\nCopyFrom(%v)",
 					packageName, tc.gd,
