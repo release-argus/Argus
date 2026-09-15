@@ -16,6 +16,7 @@
 package deployedver
 
 import (
+	dvcommand "github.com/release-argus/Argus/service/deployed_version/types/command"
 	dvmanual "github.com/release-argus/Argus/service/deployed_version/types/manual"
 	dvweb "github.com/release-argus/Argus/service/deployed_version/types/web"
 	"github.com/release-argus/Argus/util/polymorphic"
@@ -23,15 +24,17 @@ import (
 
 // PossibleTypes for the deployed_version Lookup.
 var PossibleTypes = []string{
+	dvcommand.Type,
 	dvmanual.Type,
 	dvweb.Type,
 }
 
 // ServiceMap maps a service type to a Lookup constructor.
 var ServiceMap = map[string]func() Lookup{
-	dvweb.Type:    func() Lookup { return &dvweb.Lookup{} },
-	"web":         func() Lookup { return &dvweb.Lookup{} },
-	dvmanual.Type: func() Lookup { return &dvmanual.Lookup{} },
+	dvcommand.Type: func() Lookup { return &dvcommand.Lookup{} },
+	dvweb.Type:     func() Lookup { return &dvweb.Lookup{} },
+	"web":          func() Lookup { return &dvweb.Lookup{} },
+	dvmanual.Type:  func() Lookup { return &dvmanual.Lookup{} },
 }
 
 // ServiceMapInheritable is [ServiceMap] wrapped for polymorphic inheritance decoding.

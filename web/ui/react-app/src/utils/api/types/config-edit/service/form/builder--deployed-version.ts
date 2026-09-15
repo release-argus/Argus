@@ -6,6 +6,7 @@ import {
 	type DeployedVersionLookupURL,
 } from '@/utils/api/types/config/service/deployed-version';
 import {
+	deployedVersionCommandSchema,
 	type deployedVersionLookupSchema,
 	deployedVersionLookupSchemaDefault,
 	deployedVersionManualSchema,
@@ -50,6 +51,9 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 	// Manual schema.
 	const dvManualSchema = deployedVersionManualSchema;
 
+	// Command schema.
+	const dvCommandSchema = deployedVersionCommandSchema;
+
 	// URL schema.
 	const {
 		schema: headersSchema,
@@ -87,8 +91,13 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 			// template_toggle starts true if `regex_template` not empty.
 			template_toggle: data.template_toggle || !!data.regex_template,
 		})),
+		deployedVersionCommandSchema,
 	]);
-	const schema = z.discriminatedUnion('type', [dvManualSchema, dvURLSchema]);
+	const schema = z.discriminatedUnion('type', [
+		dvManualSchema,
+		dvURLSchema,
+		dvCommandSchema,
+	]);
 
 	// Initial type.
 	const schemaDataType = isDeployedVersionType(data?.type)
