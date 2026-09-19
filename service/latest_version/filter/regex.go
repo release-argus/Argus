@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/internal/logx"
-	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
 )
@@ -116,11 +116,11 @@ func (r *Require) RegexCheckContent(
 	return r.regexCheckContentFail(version, logFrom)
 }
 
-// RegexCheckContentGitHub returns the release date from the first GitHub asset matching RegexContent
+// RegexCheckContentForge returns the release date from the first forge asset matching RegexContent
 // with version templated, or an error if none match.
-func (r *Require) RegexCheckContentGitHub(
+func (r *Require) RegexCheckContentForge(
 	version string,
-	assets []ghtypes.Asset,
+	assets []forgetypes.Asset,
 	logFrom logx.LogFrom,
 ) (string, error) {
 	if r == nil || r.RegexContent == "" {

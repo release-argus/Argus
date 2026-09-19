@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package types provides types for the GitHub API.
+// Package types provides the release types returned by git forge APIs.
 package types
 
 import (
@@ -21,7 +21,7 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 )
 
-// Release is the format of a Release on api.github.com/repos/OWNER/REPO/releases.
+// Release is the format of a Release on a forge's /repos/OWNER/REPO/releases endpoint.
 type Release struct {
 	URL             string          `json:"url,omitzero"`
 	AssetsURL       string          `json:"assets_url,omitzero"`
@@ -41,12 +41,7 @@ func (r *Release) String() string {
 	return decode.ToJSONString(r)
 }
 
-// ReleaseSort sorts releases by SemanticVersion in descending order.
-func ReleaseSort(a, b Release) bool {
-	return a.SemanticVersion.LessThan(b.SemanticVersion)
-}
-
-// Asset is the format of an Asset on api.github.com/repos/OWNER/REPO/releases.
+// Asset is the format of an Asset on a forge's /repos/OWNER/REPO/releases endpoint.
 type Asset struct {
 	URL                string `json:"url,omitzero"`
 	ID                 uint   `json:"id"`
@@ -63,7 +58,7 @@ func (a *Asset) String() string {
 	return decode.ToJSONString(a)
 }
 
-// Message is the format of a Message from a GitHub API response.
+// Message is the format of a Message from a forge API response.
 type Message struct {
 	Message string `json:"message,omitzero"`
 }

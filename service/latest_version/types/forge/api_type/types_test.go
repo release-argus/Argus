@@ -24,14 +24,14 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 )
 
-var packageName = "latestver_ghtypes"
+var packageName = "latestver_forgetypes"
 
 func TestRelease_String(t *testing.T) {
+	// GIVEN: a Release.
 	tests := []struct {
-		name                     string
-		release                  *Release
-		release_semantic_version string
-		want                     string
+		name    string
+		release *Release
+		want    string
 	}{
 		{
 			name:    "nil",
@@ -91,8 +91,8 @@ func TestRelease_String(t *testing.T) {
 						BrowserDownloadURL: "https://example.com/download",
 					},
 				},
+				SemanticVersion: semver.MustParse("1.2.3"),
 			},
-			release_semantic_version: "1.2.3",
 			want: `
 				{
 					"url": "https://example.com",
@@ -115,15 +115,11 @@ func TestRelease_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.want = test.TrimJSON(tc.want)
-			if tc.release_semantic_version != "" {
-				tc.release.SemanticVersion, _ = semver.NewVersion(tc.release_semantic_version)
-			}
-
 			// WHEN: the Release is stringified with String.
 			got := tc.release.String()
 
 			// THEN: the result is as expected.
+			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf(
 					"%s\nRelease.String() value mismatch\ngot:  %q\nwant: %q",
@@ -134,65 +130,8 @@ func TestRelease_String(t *testing.T) {
 	}
 }
 
-func TestReleaseSort(t *testing.T) {
-	// GIVEN: two releases to compare.
-	tests := []struct {
-		name string
-		a, b Release
-		want bool
-	}{
-		{
-			name: "a < b",
-			a:    Release{SemanticVersion: semver.MustParse("1.0.0")},
-			b:    Release{SemanticVersion: semver.MustParse("1.1.0")},
-			want: true,
-		},
-		{
-			name: "a > b",
-			a:    Release{SemanticVersion: semver.MustParse("2.0.0")},
-			b:    Release{SemanticVersion: semver.MustParse("1.9.9")},
-			want: false,
-		},
-		{
-			name: "a == b",
-			a:    Release{SemanticVersion: semver.MustParse("1.2.3")},
-			b:    Release{SemanticVersion: semver.MustParse("1.2.3")},
-			want: false, // LessThan returns false when equal.
-		},
-		{
-			name: "pre-release vs release",
-			a:    Release{SemanticVersion: semver.MustParse("1.2.3-alpha")},
-			b:    Release{SemanticVersion: semver.MustParse("1.2.3")},
-			want: true, // pre-release < release.
-		},
-		{
-			name: "complex versions",
-			a:    Release{SemanticVersion: semver.MustParse("1.2.3+build1")},
-			b:    Release{SemanticVersion: semver.MustParse("1.2.3+build2")},
-			want: false, // build metadata ignored in ordering.
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN: we compare the releases.
-			got := ReleaseSort(tc.a, tc.b)
-
-			// THEN: we get the expected result.
-			if got != tc.want {
-				t.Errorf(
-					"%s\nReleaseSort(a=%q, b=%q) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.a.SemanticVersion, tc.b.SemanticVersion,
-					got, tc.want,
-				)
-			}
-		})
-	}
-}
-
 func TestAsset_String(t *testing.T) {
+	// GIVEN: an Asset.
 	tests := []struct {
 		name  string
 		asset *Asset
@@ -211,7 +150,10 @@ func TestAsset_String(t *testing.T) {
 		{
 			name: "filled",
 			asset: &Asset{
-				ID: 1, Name: "test", URL: "https://example.com", BrowserDownloadURL: "https://example.com/download",
+				ID:                 1,
+				Name:               "test",
+				URL:                "https://example.com",
+				BrowserDownloadURL: "https://example.com/download",
 			},
 			want: `
 				{
@@ -227,12 +169,11 @@ func TestAsset_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.want = test.TrimJSON(tc.want)
-
 			// WHEN: the Asset is stringified with String.
 			got := tc.asset.String()
 
 			// THEN: the result is as expected.
+			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf(
 					"%s\nAsset.String() value mismatch\ngot:  %q\nwant: %q",

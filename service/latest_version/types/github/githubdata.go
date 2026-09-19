@@ -21,7 +21,7 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
-	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -62,17 +62,17 @@ func SetEmptyListETag(accessToken string) {
 // Data contains the information used and retrieved during GitHub requests,
 // including the eTag, associated releases, and the usage state of the "/tags" endpoint.
 type Data struct {
-	mu          sync.RWMutex      // Mutex to protect the Data.
-	eTag        string            // GitHub ETag for conditional requests https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requestsl.
-	perPage     int               // Number of releases per page.
-	releases    []ghtypes.Release // Store Releases tied to an ETag.
-	tagFallback bool              // Whether we have fallen back to using /tags instead of /releases.
+	mu          sync.RWMutex         // Mutex to protect the Data.
+	eTag        string               // GitHub ETag for conditional requests https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requestsl.
+	perPage     int                  // Number of releases per page.
+	releases    []forgetypes.Release // Store Releases tied to an ETag.
+	tagFallback bool                 // Whether we have fallen back to using /tags instead of /releases.
 }
 
 // DataJSON is the JSON representation of cached GitHub release data.
 type DataJSON struct {
-	ETag     string            `json:"etag,omitzero"`
-	Releases []ghtypes.Release `json:"releases,omitempty"`
+	ETag     string               `json:"etag,omitzero"`
+	Releases []forgetypes.Release `json:"releases,omitempty"`
 }
 
 // String implements fmt.Stringer and returns a JSON representation.
@@ -146,7 +146,7 @@ func (g *Data) PerPage() int {
 }
 
 // SetReleases of the Data.
-func (g *Data) SetReleases(releases []ghtypes.Release) {
+func (g *Data) SetReleases(releases []forgetypes.Release) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -154,7 +154,7 @@ func (g *Data) SetReleases(releases []ghtypes.Release) {
 }
 
 // Releases stored in the Data.
-func (g *Data) Releases() []ghtypes.Release {
+func (g *Data) Releases() []forgetypes.Release {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 

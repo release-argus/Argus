@@ -26,7 +26,7 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	ghtypes "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
+	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
@@ -35,14 +35,14 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 	// GIVEN: a bunch of releases.
 	tests := []struct {
 		name                               string
-		releases                           []ghtypes.Release
+		releases                           []forgetypes.Release
 		semanticVersioning, usePreReleases bool
 		urlCommands                        *filter.URLCommands
 		want                               []string
 	}{
 		{
 			name: "use Name if no TagName (tags vs releases API)",
-			releases: []ghtypes.Release{
+			releases: []forgetypes.Release{
 				{Name: "0.99.0"},
 				{Name: "0.3.0"},
 				{Name: "0.0.1"},
@@ -52,7 +52,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 		{
 			name:           "handle leading v's",
 			usePreReleases: true,
-			releases: []ghtypes.Release{
+			releases: []forgetypes.Release{
 				{TagName: "0.99.0"},
 				{TagName: "v0.3.0"},
 				{TagName: "0.0.1"},
@@ -62,7 +62,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 		{
 			name:           "keep pre-releases",
 			usePreReleases: true,
-			releases: []ghtypes.Release{
+			releases: []forgetypes.Release{
 				{TagName: "0.99.0"},
 				{TagName: "0.3.0", PreRelease: true},
 				{TagName: "0.0.1"},
@@ -71,7 +71,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 		{
 			name:           "exclude pre-releases",
 			usePreReleases: false,
-			releases: []ghtypes.Release{
+			releases: []forgetypes.Release{
 				{TagName: "0.99.0"},
 				{TagName: "0.3.0", PreRelease: true},
 				{TagName: "0.0.1"},
@@ -82,7 +82,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 			name:               "exclude non-semantic",
 			usePreReleases:     true,
 			semanticVersioning: true,
-			releases: []ghtypes.Release{
+			releases: []forgetypes.Release{
 				{TagName: "0.99.0"},
 				{TagName: "0.3.0", PreRelease: true},
 				{TagName: "version 0.2.0", PreRelease: true},
@@ -93,7 +93,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 		{
 			name:           "keep pre-release non-semantic",
 			usePreReleases: true,
-			releases: []ghtypes.Release{
+			releases: []forgetypes.Release{
 				{TagName: "0.99.0"},
 				{TagName: "0.3.0", PreRelease: true},
 				{TagName: "v0.2.0", PreRelease: true},
@@ -104,7 +104,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 		{
 			name:           "exclude pre-release non-semantic",
 			usePreReleases: false,
-			releases: []ghtypes.Release{
+			releases: []forgetypes.Release{
 				{TagName: "0.99.0"},
 				{TagName: "0.3.0", PreRelease: true},
 				{TagName: "v0.2.0", PreRelease: true},
@@ -117,7 +117,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 			name:               "does sort releases",
 			usePreReleases:     true,
 			semanticVersioning: true,
-			releases: []ghtypes.Release{
+			releases: []forgetypes.Release{
 				{TagName: "0.0.0"},
 				{TagName: "0.3.0", PreRelease: true},
 				{TagName: "0.2.0", PreRelease: true},
@@ -130,7 +130,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 			name:               "filter releases with failed urlCommand",
 			usePreReleases:     false,
 			semanticVersioning: true,
-			releases: []ghtypes.Release{
+			releases: []forgetypes.Release{
 				{TagName: "0.0.0"},
 				{TagName: "0.3.0", PreRelease: true},
 				{TagName: "0.2.0", PreRelease: true},
@@ -165,7 +165,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 				t,
 				filteredReleases,
 				tc.want,
-				func(a ghtypes.Release, b string) bool { return a.TagName == b },
+				func(a forgetypes.Release, b string) bool { return a.TagName == b },
 				fmt.Sprintf("%s\nLookup.filterGitHubReleases()", packageName),
 				"",
 			); err != nil {
