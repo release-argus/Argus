@@ -639,6 +639,15 @@ func TestService_Track(t *testing.T) {
 				}
 				time.Sleep(50 * time.Millisecond)
 			}
+			// Wait for the expected messages.
+			for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); {
+				if len(svc.Status.AnnounceChannel) >= tc.wantAnnounces &&
+					len(svc.Status.DatabaseChannel) >= tc.wantDatabaseMessages {
+					break
+				}
+				time.Sleep(50 * time.Millisecond)
+			}
+			// Catch any unexpected extra message.
 			time.Sleep(1000 * time.Millisecond)
 
 			prefix := fmt.Sprintf("%s\nService.Track()", packageName)
