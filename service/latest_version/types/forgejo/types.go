@@ -20,6 +20,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
 	"github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 // #############
@@ -37,8 +38,10 @@ var Type = "forgejo"
 type Lookup struct {
 	base.Lookup `json:",embed" yaml:",inline"`
 
-	Host          string `json:"host,omitzero" yaml:"host,omitzero"`                     // Instance to query, e.g. "https://codeberg.org".
-	UsePreRelease *bool  `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"` // Whether releases with the prerelease tag should be considered.
+	Host              string `json:"host,omitzero" yaml:"host,omitzero"`                               // Instance to query, e.g. "https://codeberg.org".
+	AccessToken       string `json:"access_token,omitzero" yaml:"access_token,omitzero"`               // Access token to send to Host.
+	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Default - false = Disallows invalid HTTPS certificates.
+	UsePreRelease     *bool  `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"`           // Whether releases with the prerelease tag should be considered.
 
 	typeDefaults     *Defaults // Forgejo-specific Defaults.
 	typeHardDefaults *Defaults // Forgejo-specific Hard Defaults.
@@ -52,13 +55,17 @@ type lookupMarshal struct {
 	URLCommands filter.URLCommands `json:"url_commands,omitempty" yaml:"url_commands,omitempty"`
 	Require     *filter.Require    `json:"require,omitzero" yaml:"require,omitzero"`
 
-	UsePreRelease *bool `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"`
+	AccessToken       string `json:"access_token,omitzero" yaml:"access_token,omitzero"`
+	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"`
+	UsePreRelease     *bool  `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"`
 }
 
 // LookupDecode is an unmarshal-only helper for [Lookup].
 type LookupDecode struct {
-	Host          string `json:"host,omitzero" yaml:"host,omitzero"`
-	UsePreRelease *bool  `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"`
+	Host              string `json:"host,omitzero" yaml:"host,omitzero"`
+	AccessToken       string `json:"access_token,omitzero" yaml:"access_token,omitzero"`
+	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"`
+	UsePreRelease     *bool  `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"`
 }
 
 // ############
@@ -78,12 +85,14 @@ func (l *Lookup) MarshalYAML() (any, error) {
 // marshalAux converts the Lookup to its marshal-only helper representation.
 func (l *Lookup) marshalAux() lookupMarshal {
 	return lookupMarshal{
-		Type:          l.Type,
-		Host:          l.Host,
-		URL:           l.URL,
-		URLCommands:   l.URLCommands,
-		Require:       l.Require,
-		UsePreRelease: l.UsePreRelease,
+		Type:              l.Type,
+		Host:              l.Host,
+		URL:               l.URL,
+		URLCommands:       l.URLCommands,
+		Require:           l.Require,
+		AccessToken:       l.AccessToken,
+		AllowInvalidCerts: l.AllowInvalidCerts,
+		UsePreRelease:     l.UsePreRelease,
 	}
 }
 
@@ -106,8 +115,10 @@ func (l *Lookup) unmarshal(format string, data []byte) error {
 	}
 
 	aux := LookupDecode{
-		Host:          l.Host,
-		UsePreRelease: l.UsePreRelease,
+		Host:              l.Host,
+		AccessToken:       l.AccessToken,
+		AllowInvalidCerts: l.AllowInvalidCerts,
+		UsePreRelease:     l.UsePreRelease,
 	}
 
 	// Unmarshal in the given format.
@@ -115,6 +126,8 @@ func (l *Lookup) unmarshal(format string, data []byte) error {
 		return err //nolint:wrapcheck
 	}
 	l.Host = aux.Host
+	l.AccessToken = aux.AccessToken
+	l.AllowInvalidCerts = aux.AllowInvalidCerts
 	l.UsePreRelease = aux.UsePreRelease
 
 	// Require.
@@ -151,18 +164,14 @@ func (l *Lookup) Clone(svcStatus *status.Status) *Lookup {
 		return nil
 	}
 
-	var usePreRelease *bool
-	if l.UsePreRelease != nil {
-		value := *l.UsePreRelease
-		usePreRelease = &value
-	}
-
 	return &Lookup{
-		Lookup:           *l.Lookup.Clone(svcStatus), //nolint:staticcheck
-		Host:             l.Host,
-		UsePreRelease:    usePreRelease,
-		typeDefaults:     l.typeDefaults,
-		typeHardDefaults: l.typeHardDefaults,
+		Lookup:            *l.Lookup.Clone(svcStatus), //nolint:staticcheck
+		Host:              l.Host,
+		AccessToken:       l.AccessToken,
+		AllowInvalidCerts: util.ClonePtr(l.AllowInvalidCerts),
+		UsePreRelease:     util.ClonePtr(l.UsePreRelease),
+		typeDefaults:      l.typeDefaults,
+		typeHardDefaults:  l.typeHardDefaults,
 	}
 }
 

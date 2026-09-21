@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package github provides a github-based lookup type.
-package github
+package forgejo
 
 import (
 	"github.com/release-argus/Argus/service/latest_version/types/base"
@@ -21,22 +20,17 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// InheritSecrets inherits a referenced access token and GitHub data from
-// fromLookup when querying the same repository, then delegates to the base.
+// InheritSecrets inherits a referenced access token from fromLookup when the
+// host is unchanged, then delegates to the base.
 func (l *Lookup) InheritSecrets(fromLookup base.BaseInterface, secretRefs *shared.VSecretRef) {
-	oldGitHubLookup, sameType := fromLookup.(*Lookup)
-
-	// AccessToken
 	if l.AccessToken == util.SecretValue {
 		l.AccessToken = ""
-		if sameType {
-			l.AccessToken = oldGitHubLookup.AccessToken
-		}
-	}
 
-	// Querying the same GitHub repo, and the ETag differs.
-	if sameType && l.URL == oldGitHubLookup.URL && l.data.ETag() != oldGitHubLookup.data.ETag() {
-		l.data.CopyFrom(&oldGitHubLookup.data)
+		// Resolved, so that a name and the URL it names are one instance.
+		if oldLookup, ok := fromLookup.(*Lookup); ok &&
+			canonicalHost(l.resolveHost()) == canonicalHost(oldLookup.resolveHost()) {
+			l.AccessToken = oldLookup.AccessToken
+		}
 	}
 
 	l.Lookup.InheritSecrets(fromLookup, secretRefs)

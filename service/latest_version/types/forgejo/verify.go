@@ -78,19 +78,11 @@ func (l *Lookup) hostProblem() string {
 		return "surrounded by whitespace"
 	}
 
-	parsed, err := l.parseHost()
-	if err != nil {
-		return "not a valid URL"
+	// A name only labels an instance, however it is spelled, so an entry without
+	// a URL addresses nothing.
+	if url, named := l.namedInstance(); named && url == "" {
+		return "names an instance with no url"
 	}
 
-	switch {
-	case parsed.Scheme != "http" && parsed.Scheme != "https":
-		return "scheme must be http or https"
-	case parsed.Hostname() == "":
-		return "no hostname"
-	case strings.HasSuffix(parsed.Path, "/"):
-		return "trailing '/'"
-	}
-
-	return ""
+	return urlProblem(util.EvalEnvVars(l.resolveHost()))
 }

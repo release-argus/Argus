@@ -72,19 +72,21 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			data: test.TrimJSON(`{
 				"host": "example.com",
 				"url": "owner/repo",
+				"allow_invalid_certs": true,
 				"use_prerelease": false
 			}`),
 			errRegex: `^$`,
 			want: test.TrimYAML(`
 				host: example.com
 				url: owner/repo
+				allow_invalid_certs: true
 				use_prerelease: false
 			`),
 		},
 		{
 			name:     "JSON/invalid data types",
 			format:   "json",
-			data:     `{"use_prerelease": "true"}`,
+			data:     `{"allow_invalid_certs": "true"}`,
 			errRegex: `^json: .*unmarshal.*$`,
 			want:     "type: url\n",
 		},
@@ -94,6 +96,8 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			data: test.TrimYAML(`
 				host: example.com
 				url: owner/repo
+				access_token: foo
+				allow_invalid_certs: true
 				use_prerelease: false
 				url_commands:
 					- type: regex
@@ -110,6 +114,8 @@ func TestLookup_DecodeSelf(t *testing.T) {
 						regex: .*
 				require:
 					regex_content: .*
+				access_token: foo
+				allow_invalid_certs: true
 				use_prerelease: false
 			`),
 		},
@@ -384,6 +390,50 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			`),
 		},
 		{
+			name: "AccessToken added",
+			args: Args{
+				format: "json",
+				data:   `{"access_token": "def"}`,
+				target: &Lookup{
+					Type: "forgejo",
+				},
+			},
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: forgejo
+				access_token: def
+			`),
+		},
+		{
+			name: "AccessToken changed",
+			args: Args{
+				format: "json",
+				data:   `{"access_token": "def"}`,
+				target: &Lookup{
+					Type:        "forgejo",
+					AccessToken: "abc",
+				},
+			},
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: forgejo
+				access_token: def
+			`),
+		},
+		{
+			name: "AccessToken removed",
+			args: Args{
+				format: "json",
+				data:   `{"access_token": ""}`,
+				target: &Lookup{
+					Type:        "forgejo",
+					AccessToken: "abc",
+				},
+			},
+			errRegex: `^$`,
+			want:     "type: forgejo\n",
+		},
+		{
 			name: "Host added",
 			args: Args{
 				format: "json",
@@ -439,13 +489,17 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 					"type": "forgejo",
 					"host": "https://gitea.com",
 					"url": "other/repo",
+					"access_token": "def",
+					"allow_invalid_certs": true,
 					"use_prerelease": false
 				}`),
 				target: &Lookup{
-					Type:          "forgejo",
-					Host:          "https://codeberg.org",
-					URL:           "owner/repo",
-					UsePreRelease: new(true),
+					Type:              "forgejo",
+					Host:              "https://codeberg.org",
+					URL:               "owner/repo",
+					AccessToken:       "abc",
+					AllowInvalidCerts: new(false),
+					UsePreRelease:     new(true),
 				},
 			},
 			errRegex: `^$`,
@@ -453,6 +507,8 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				type: forgejo
 				host: https://gitea.com
 				url: other/repo
+				access_token: def
+				allow_invalid_certs: true
 				use_prerelease: false
 			`),
 		},

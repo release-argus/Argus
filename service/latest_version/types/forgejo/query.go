@@ -196,7 +196,7 @@ func (l *Lookup) httpRequest(endpoint string, page int, logFrom logx.LogFrom) ([
 		return nil, 0, err
 	}
 
-	resp, body, err := getResponse(req, logFrom)
+	resp, body, err := l.getResponse(req, logFrom)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -215,7 +215,7 @@ func (l *Lookup) createRequest(endpoint string, page int, logFrom logx.LogFrom) 
 	return l.requestFor(address, logFrom)
 }
 
-// requestFor returns a HTTP GET request for `address`.
+// requestFor returns an authenticated HTTP GET request for `address`.
 func (l *Lookup) requestFor(address string, logFrom logx.LogFrom) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodGet, address, nil)
 	if err != nil {
@@ -227,13 +227,22 @@ func (l *Lookup) requestFor(address string, logFrom logx.LogFrom) (*http.Request
 		return nil, err
 	}
 
+	if accessToken := l.accessToken(); accessToken != "" {
+		req.Header.Set("Authorization", "token "+accessToken)
+	}
+
 	return req, nil
 }
 
 // getResponse makes the request and returns the response, response body, and any errors encountered.
-func getResponse(req *http.Request, logFrom logx.LogFrom) (*http.Response, []byte, error) {
+func (l *Lookup) getResponse(req *http.Request, logFrom logx.LogFrom) (*http.Response, []byte, error) {
+	client := httpx.Client
+	if l.allowInvalidCerts() {
+		client = httpx.InsecureClient
+	}
+
 	// Make the request.
-	resp, err := httpx.Client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		logx.Error(err, logFrom, true)
 		return nil, nil, err //nolint:wrapcheck
@@ -328,11 +337,12 @@ func isRateLimited(resp *http.Response) bool {
 
 // handleRateLimited processes a rate-limited response.
 func handleRateLimited(resp *http.Response, logFrom logx.LogFrom) ([]byte, int, error) {
-	err := fmt.Errorf("rate limit reached for %s", resp.Request.URL.Host)
+	note := unauthenticatedNote(resp)
+	err := fmt.Errorf("rate limit reached for %s%s", resp.Request.URL.Host, note)
 	if retryAfter := resp.Header.Get("Retry-After"); retryAfter != "" {
 		err = fmt.Errorf(
-			"rate limit reached for %s - retry after %s",
-			resp.Request.URL.Host, retryAfter,
+			"rate limit reached for %s - retry after %s%s",
+			resp.Request.URL.Host, retryAfter, note,
 		)
 	}
 	logx.Warn(err, logFrom, true)
@@ -343,12 +353,21 @@ func handleRateLimited(resp *http.Response, logFrom logx.LogFrom) ([]byte, int, 
 // handleStatusUnauthorized processes a 401/403 status code response.
 func handleStatusUnauthorized(resp *http.Response, logFrom logx.LogFrom) ([]byte, int, error) {
 	err := fmt.Errorf(
-		"authentication failed for %s (%d)",
-		resp.Request.URL.Host, resp.StatusCode,
+		"authentication failed for %s (%d)%s",
+		resp.Request.URL.Host, resp.StatusCode, unauthenticatedNote(resp),
 	)
 	logx.Error(err, logFrom, true)
 
 	return nil, 0, err
+}
+
+// unauthenticatedNote names the absent credential, where it would explain the response.
+func unauthenticatedNote(resp *http.Response) string {
+	if resp.Request.Header.Get("Authorization") != "" {
+		return ""
+	}
+
+	return " - no access_token was sent"
 }
 
 // getNextPage returns the next page number from the Link header.

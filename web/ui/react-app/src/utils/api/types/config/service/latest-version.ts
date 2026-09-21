@@ -27,13 +27,20 @@ export type LatestVersionLookupBase = {
 export type LatestVersionLookupCommonDefaults = {
 	require?: LatestVersionRequireDefaults;
 };
-// Forgejo-specific defaults.
+// Defaults for a single Forgejo instance.
+export type LatestVersionLookupForgejoHostDefaults = {
+	url?: string;
+	access_token?: string;
+	allow_invalid_certs?: boolean | null;
+};
+// Forgejo defaults applying to every instance.
 export type LatestVersionLookupForgejoCommonDefaults = {
 	use_prerelease?: boolean;
 };
-// Forgejo-specific defaults.
+// Forgejo-specific defaults, with instances keyed by a friendly name.
 export type LatestVersionLookupForgejoDefaults = {
 	common?: LatestVersionLookupForgejoCommonDefaults;
+	host?: Record<string, LatestVersionLookupForgejoHostDefaults>;
 };
 // GitHub-specific defaults.
 export type LatestVersionLookupGitHubDefaults = {
@@ -189,6 +196,8 @@ export type LatestVersionRequireDefaults = LatestVersionRequire & {
 export type LatestVersionLookupForgejo = LatestVersionLookupBase & {
 	type: typeof LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value | null;
 	host?: string;
+	access_token?: string;
+	allow_invalid_certs?: boolean;
 	use_prerelease?: boolean;
 };
 

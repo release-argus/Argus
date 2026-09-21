@@ -42,6 +42,8 @@ func (l *Lookup) DecodeSelf(format string, data []byte) error {
 
 	l.Lookup = newL.Lookup
 	l.Host = newL.Host
+	l.AccessToken = newL.AccessToken
+	l.AllowInvalidCerts = newL.AllowInvalidCerts
 	l.UsePreRelease = newL.UsePreRelease
 
 	return nil

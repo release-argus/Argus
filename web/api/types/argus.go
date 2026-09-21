@@ -527,12 +527,14 @@ func (l LatestVersionCommonDefaults) IsZero() bool {
 
 // LatestVersionForgejoDefaults are Forgejo-specific default values for a LatestVersion.
 type LatestVersionForgejoDefaults struct {
-	Common LatestVersionForgejoCommonDefaults `json:"common,omitzero" yaml:"common,omitzero"` // Defaults shared by every instance.
+	Common LatestVersionForgejoCommonDefaults          `json:"common,omitzero" yaml:"common,omitzero"` // Defaults shared by every instance.
+	Host   map[string]LatestVersionForgejoHostDefaults `json:"host,omitempty" yaml:"host,omitempty"`   // Per-instance defaults, keyed by a friendly name.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (l LatestVersionForgejoDefaults) IsZero() bool {
-	return l.Common.IsZero()
+	return l.Common.IsZero() &&
+		len(l.Host) == 0
 }
 
 // LatestVersionForgejoCommonDefaults are the Forgejo default values that apply to every instance.
@@ -543,6 +545,20 @@ type LatestVersionForgejoCommonDefaults struct {
 // IsZero implements the yaml.IsZeroer interface.
 func (l LatestVersionForgejoCommonDefaults) IsZero() bool {
 	return l.UsePreRelease == nil
+}
+
+// LatestVersionForgejoHostDefaults are the default values for a single forge instance.
+type LatestVersionForgejoHostDefaults struct {
+	URL               string `json:"url,omitzero" yaml:"url,omitzero"`                                 // Instance to query, e.g. "https://codeberg.org".
+	AccessToken       string `json:"access_token,omitzero" yaml:"access_token,omitzero"`               // Access token to send to this instance.
+	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Default - false = Disallows invalid HTTPS certificates.
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (l LatestVersionForgejoHostDefaults) IsZero() bool {
+	return l.URL == "" &&
+		l.AccessToken == "" &&
+		l.AllowInvalidCerts == nil
 }
 
 // LatestVersionGitHubDefaults are GitHub-specific default values for a LatestVersion.

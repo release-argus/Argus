@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"path"
 	"slices"
 	"strings"
@@ -37,11 +38,20 @@ import (
 func TestLookup_Query(t *testing.T) {
 	// GIVEN: an instance responding in a particular way, and a service configured against it.
 	tests := []struct {
-		name        string
-		endpoints   map[string]forgeEndpoint
-		lookupYAML  string
-		wantVersion string
-		errRegex    string
+		name         string
+		endpoints    map[string]forgeEndpoint
+		tls          bool
+		requiredAuth string // Answer 401 to any request not carrying this.
+		defaults     map[string]HostDefaults
+		hostSuffix   string
+		hostNamed    bool // address the instance by its defaults name.
+		noHost       bool // on the Lookup.
+		closeServer  bool // Stop the instance before querying.
+		metrics      bool // Record Prometheus metrics for the query.
+		lookupYAML   string
+		wantVersion  string
+		wantPaths    []string // Distinct API paths requested.
+		errRegex     string
 	}{
 		{
 			name: "valid/the highest non-prerelease version is reported",
@@ -49,6 +59,7 @@ func TestLookup_Query(t *testing.T) {
 				endpointReleases: {body: releasesBody},
 			},
 			lookupYAML:  `url: Release-Argus/Argus`,
+			metrics:     true,
 			wantVersion: "0.17.4",
 			errRegex:    `^$`,
 		},
@@ -173,7 +184,7 @@ func TestLookup_Query(t *testing.T) {
 				},
 			},
 			lookupYAML: `url: owner/repo`,
-			errRegex:   `^authentication failed for 127\.0\.0\.1:\d+ \(401\)$`,
+			errRegex:   `^authentication failed for 127\.0\.0\.1:\d+ \(401\) - no access_token was sent$`,
 		},
 		{
 			name: "invalid/403 without rate-limit headers",
@@ -184,7 +195,7 @@ func TestLookup_Query(t *testing.T) {
 				},
 			},
 			lookupYAML: `url: owner/repo`,
-			errRegex:   `^authentication failed for 127\.0\.0\.1:\d+ \(403\)$`,
+			errRegex:   `^authentication failed for 127\.0\.0\.1:\d+ \(403\) - no access_token was sent$`,
 		},
 		{
 			name: "invalid/403 with rate-limit headers",
@@ -196,7 +207,7 @@ func TestLookup_Query(t *testing.T) {
 				},
 			},
 			lookupYAML: `url: owner/repo`,
-			errRegex:   `^rate limit reached for 127\.0\.0\.1:\d+$`,
+			errRegex:   `^rate limit reached for 127\.0\.0\.1:\d+ - no access_token was sent$`,
 		},
 		{
 			name: "invalid/429",
@@ -207,7 +218,7 @@ func TestLookup_Query(t *testing.T) {
 				},
 			},
 			lookupYAML: `url: owner/repo`,
-			errRegex:   `^rate limit reached for 127\.0\.0\.1:\d+$`,
+			errRegex:   `^rate limit reached for 127\.0\.0\.1:\d+ - no access_token was sent$`,
 		},
 		{
 			name: "invalid/429 with a retry window",
@@ -219,10 +230,10 @@ func TestLookup_Query(t *testing.T) {
 				},
 			},
 			lookupYAML: `url: owner/repo`,
-			errRegex:   `^rate limit reached for 127\.0\.0\.1:\d+ - retry after 120$`,
+			errRegex:   `^rate limit reached for 127\.0\.0\.1:\d+ - retry after 120 - no access_token was sent$`,
 		},
 		{
-			name: "invalid/an unmapped status code is reported with its body",
+			name: "invalid/unmapped status code is reported with its body",
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {
 					status: http.StatusInternalServerError,
@@ -233,12 +244,81 @@ func TestLookup_Query(t *testing.T) {
 			errRegex:   `^unknown status code 500\nproxy error$`,
 		},
 		{
-			name: "invalid/a body that is not a release list",
+			name: "invalid/body that is not a release list",
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {body: `<!DOCTYPE html><html><body>not the API</body></html>`},
 			},
 			lookupYAML: `url: owner/repo`,
 			errRegex:   `release data failed to parse`,
+		},
+		{
+			name: "valid/service's own token passes",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {body: releasesBody},
+			},
+			requiredAuth: "token host-token",
+			lookupYAML: `
+				url: owner/repo
+				access_token: host-token`,
+			wantVersion: "0.17.4",
+			errRegex:    `^$`,
+		},
+		{
+			name: "valid/token from the named host entry passes",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {body: releasesBody},
+			},
+			requiredAuth: "token host-token",
+			defaults:     map[string]HostDefaults{"Fixture": {URL: hostPlaceholder, AccessToken: "host-token"}},
+			hostNamed:    true,
+			lookupYAML:   `url: owner/repo`,
+			wantVersion:  "0.17.4",
+			errRegex:     `^$`,
+		},
+		{
+			name: "invalid/token bound to another host is not sent",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {body: releasesBody},
+			},
+			requiredAuth: "token host-token",
+			defaults: map[string]HostDefaults{
+				"https://forge.example.com": {URL: "https://forge.example.com", AccessToken: "host-token"},
+			},
+			lookupYAML: `url: owner/repo`,
+			errRegex:   `^authentication failed for 127\.0\.0\.1:\d+ \(401\) - no access_token was sent$`,
+		},
+		{
+			name: "valid/host entry relaxes certificate trust for this instance",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {body: releasesBody},
+			},
+			tls:         true,
+			defaults:    map[string]HostDefaults{"Fixture": {URL: hostPlaceholder, AllowInvalidCerts: new(true)}},
+			hostNamed:   true,
+			lookupYAML:  `url: owner/repo`,
+			wantVersion: "0.17.4",
+			errRegex:    `^$`,
+		},
+		{
+			name: "invalid/untrusted certificate is rejected",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {body: releasesBody},
+			},
+			tls:        true,
+			lookupYAML: `url: owner/repo`,
+			errRegex:   `certificate|x509`,
+		},
+		{
+			name: "invalid/certificate trust relaxed for another host does not apply here",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {body: releasesBody},
+			},
+			tls: true,
+			defaults: map[string]HostDefaults{
+				"https://forge.example.com": {AllowInvalidCerts: new(true)},
+			},
+			lookupYAML: `url: owner/repo`,
+			errRegex:   `certificate|x509`,
 		},
 		{
 			name: "invalid/no release matches the url_commands",
@@ -250,18 +330,60 @@ func TestLookup_Query(t *testing.T) {
 			lookupYAML: `url: owner/repo`,
 			errRegex:   `^no releases were found matching the url_commands on page 1 of the API response$`,
 		},
+		{
+			name: "valid/an instance served under a sub-path prefixes the API path",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {body: releasesBody},
+			},
+			hostSuffix:  "/git",
+			lookupYAML:  `url: owner/repo`,
+			wantVersion: "0.17.4",
+			wantPaths:   []string{"/git/api/v1/repos/owner/repo/" + endpointReleases},
+			errRegex:    `^$`,
+		},
+		{
+			name:       "invalid/no host to build a request URL from",
+			noHost:     true,
+			lookupYAML: `url: owner/repo`,
+			errRegex:   `no Host in request URL`,
+		},
+		{
+			name: "invalid/an instance that is not listening",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {body: releasesBody},
+			},
+			closeServer: true,
+			lookupYAML:  `url: owner/repo`,
+			errRegex:    `connection refused|connect: `,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			server := newForgeServer(t, tc.endpoints)
-			lookupYAML := "host: " + server.URL + "\n" + test.TrimYAML(tc.lookupYAML)
+			start := httptest.NewServer
+			if tc.tls {
+				start = httptest.NewTLSServer
+			}
+			server := startForgeServer(t,
+				&forgeServer{endpoints: tc.endpoints, requireAuth: tc.requiredAuth},
+				start)
+			if tc.closeServer {
+				server.Close()
+			}
+
+			lookupYAML := test.TrimYAML(tc.lookupYAML)
+			if tc.hostNamed {
+				lookupYAML = "host: Fixture\n" + lookupYAML
+			} else if !tc.noHost {
+				lookupYAML = "host: " + server.URL + tc.hostSuffix + "\n" + lookupYAML
+			}
 			lookup := testLookup(t, lookupYAML)
+			setHostDefaults(lookup, hostKeyedAt(tc.defaults, server.URL), nil)
 
 			// WHEN: it is queried.
-			_, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()})
+			_, err := lookup.Query(tc.metrics, logx.LogFrom{Primary: t.Name()})
 
 			prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
 
@@ -280,6 +402,22 @@ func TestLookup_Query(t *testing.T) {
 					"%s version mismatch\ngot:  %q\nwant: %q",
 					prefix, got, tc.wantVersion,
 				)
+			}
+
+			// AND: the API paths requested are as expected.
+			if tc.wantPaths != nil {
+				var paths []string
+				for _, request := range server.requests() {
+					if len(paths) == 0 || paths[len(paths)-1] != request.path {
+						paths = append(paths, request.path)
+					}
+				}
+				if !slices.Equal(paths, tc.wantPaths) {
+					t.Fatalf(
+						"%s requested paths mismatch\ngot:  %v\nwant: %v",
+						prefix, paths, tc.wantPaths,
+					)
+				}
 			}
 		})
 	}
@@ -397,41 +535,6 @@ func TestLookup_Query__CachesNothingBetweenQueries(t *testing.T) {
 			"%s\nLookup.Query() reused a cached response\ngot:  %d requests\nwant: more than %d",
 			packageName, got, afterFirst,
 		)
-	}
-}
-
-func TestLookup_Query__SubPathInstance(t *testing.T) {
-	// GIVEN: an instance served under a sub-path.
-	server := newForgeServer(t, map[string]forgeEndpoint{
-		endpointReleases: {body: releasesBody},
-	})
-	lookup := testLookup(t, "host: "+server.URL+"/git\nurl: owner/repo")
-
-	// WHEN: it is queried.
-	if _, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()}); err != nil {
-		t.Fatalf(
-			"%s\nLookup.Query() unexpected error: %v",
-			packageName, err,
-		)
-	}
-
-	// THEN: the version is reported.
-	if got, want := lookup.Status.LatestVersion(), "0.17.4"; got != want {
-		t.Fatalf(
-			"%s\nLookup.Query() version mismatch\ngot:  %q\nwant: %q",
-			packageName, got, want,
-		)
-	}
-
-	// AND: the sub-path prefixed the API path.
-	const want = "/git/api/v1/repos/owner/repo/" + endpointReleases
-	for _, request := range server.requests() {
-		if request.path != want {
-			t.Fatalf(
-				"%s\nLookup.Query() path mismatch\ngot:  %q\nwant: %q",
-				packageName, request.path, want,
-			)
-		}
 	}
 }
 
@@ -620,72 +723,6 @@ func TestGetNextPage(t *testing.T) {
 	}
 }
 
-func TestLookup_Query__UnvalidatedHost(t *testing.T) {
-	// GIVEN: a Lookup whose host wouldn't pass CheckValues.
-	lookup := testLookup(t, `url: owner/repo`)
-
-	// WHEN: it is queried.
-	_, err := lookup.Query(true, logx.LogFrom{Primary: t.Name()})
-
-	// THEN: the request errors.
-	e := errfmt.FormatError(err)
-	if wantRe := `no Host in request URL`; !util.RegexCheck(wantRe, e) {
-		t.Fatalf(
-			"%s\nLookup.Query() error mismatch\ngot:  %q\nwant: %q",
-			packageName, e, wantRe,
-		)
-	}
-}
-
-func TestLookup_Query__UnreachableInstance(t *testing.T) {
-	// GIVEN: an instance that is not listening.
-	server := newForgeServer(t, map[string]forgeEndpoint{
-		endpointReleases: {body: releasesBody},
-	})
-	host := server.URL
-	server.Close()
-
-	lookup := testLookup(t, "host: "+host+"\nurl: owner/repo")
-
-	// WHEN: it is queried.
-	_, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()})
-
-	// THEN: the transport error is reported.
-	e := errfmt.FormatError(err)
-	if !util.RegexCheck(`connection refused|connect: `, e) {
-		t.Fatalf(
-			"%s\nLookup.Query() error mismatch\ngot:  %q\nwant: a connection error",
-			packageName, e,
-		)
-	}
-}
-
-func TestLookup_Query__RejectsAnUntrustedCertificate(t *testing.T) {
-	// GIVEN: an instance presenting a certificate no client trusts.
-	server := newForgeServerTLS(t, map[string]forgeEndpoint{
-		endpointReleases: {body: releasesBody},
-	})
-	lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
-
-	// WHEN: it is queried.
-	_, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()})
-
-	// THEN: the query fails on the certificate, and no version is reported.
-	e := errfmt.FormatError(err)
-	if !util.RegexCheck(`certificate|x509`, e) {
-		t.Fatalf(
-			"%s\nLookup.Query() error mismatch\ngot:  %q\nwant: a certificate error",
-			packageName, e,
-		)
-	}
-	if got := lookup.Status.LatestVersion(); got != "" {
-		t.Fatalf(
-			"%s\nLookup.Query() reported %q over an untrusted connection",
-			packageName, got,
-		)
-	}
-}
-
 func TestEndpointYieldedNothing(t *testing.T) {
 	// GIVEN: an error from an endpoint.
 	tests := []struct {
@@ -864,7 +901,13 @@ func TestIsRateLimited(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			response := newResponse(t, "https://codeberg.org", tc.status, tc.headers, "")
+			response := newResponse(t,
+				"https://codeberg.org",
+				tc.status,
+				tc.headers,
+				"",
+				"",
+			)
 
 			// WHEN: isRateLimited is called on it.
 			got := isRateLimited(response)
@@ -888,13 +931,14 @@ func TestHandleResponse(t *testing.T) {
 		status       int
 		headers      map[string]string
 		body         string
+		accessToken  string
 		page         int
 		wantBody     string
 		wantNextPage int
 		errRegex     string
 	}{
 		{
-			name:     "200 returns the body",
+			name:     "200/returns the body",
 			status:   http.StatusOK,
 			body:     releasesBody,
 			page:     1,
@@ -902,21 +946,21 @@ func TestHandleResponse(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:     "200 with an empty first page is nothing to filter",
+			name:     "200/empty first page is nothing to filter",
 			status:   http.StatusOK,
 			body:     emptyListNewline,
 			page:     1,
 			errRegex: `^empty list$`,
 		},
 		{
-			name:     "200 on page 0",
+			name:     "200/page 0",
 			status:   http.StatusOK,
 			body:     emptyListCompact,
 			page:     0,
 			errRegex: `^empty list$`,
 		},
 		{
-			name:     "200 with an empty later page is returned, not reported as nothing",
+			name:     "200/empty later page is returned, not reported as nothing",
 			status:   http.StatusOK,
 			body:     emptyListNewline,
 			page:     2,
@@ -924,7 +968,7 @@ func TestHandleResponse(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "200 takes the next page from the Link header",
+			name:   "200/takes the next page from the Link header",
 			status: http.StatusOK,
 			headers: map[string]string{
 				"Link": `<https://codeberg.org/api/v1/repos/o/r/releases?limit=50&page=2>; rel="next"`,
@@ -936,48 +980,66 @@ func TestHandleResponse(t *testing.T) {
 			errRegex:     `^$`,
 		},
 		{
-			name:     "404 is the ambiguous not-found",
+			name:     "404/ambiguous not-found",
 			status:   http.StatusNotFound,
 			body:     `{"message":"The target couldn't be found."}`,
 			page:     1,
 			errRegex: `^not found$`,
 		},
 		{
-			name:     "401 is an authentication failure",
+			name:        "401/authentication failure",
+			status:      http.StatusUnauthorized,
+			accessToken: "a-token",
+			page:        1,
+			errRegex:    `^authentication failed for codeberg.org \(401\)$`,
+		},
+		{
+			name:     "401/unauthenticated query names the absent credential",
 			status:   http.StatusUnauthorized,
 			page:     1,
-			errRegex: `^authentication failed for codeberg.org \(401\)$`,
+			errRegex: `^authentication failed for codeberg.org \(401\) - no access_token was sent$`,
 		},
 		{
-			name:     "403 with no limiter headers is an authentication failure",
-			status:   http.StatusForbidden,
-			page:     1,
-			errRegex: `^authentication failed for codeberg.org \(403\)$`,
+			name:        "403/no limiter headers is an authentication failure",
+			status:      http.StatusForbidden,
+			accessToken: "a-token",
+			page:        1,
+			errRegex:    `^authentication failed for codeberg.org \(403\)$`,
 		},
 		{
-			name:     "403 announcing a limiter is a rate limit",
-			status:   http.StatusForbidden,
-			headers:  map[string]string{"RateLimit": `"baseline";r=0;t=600`},
-			page:     1,
-			errRegex: `^rate limit reached for codeberg.org$`,
+			name:        "403/announcing a limiter is a rate limit",
+			status:      http.StatusForbidden,
+			headers:     map[string]string{"RateLimit": `"baseline";r=0;t=600`},
+			accessToken: "a-token",
+			page:        1,
+			errRegex:    `^rate limit reached for codeberg.org$`,
 		},
 		{
-			name:     "429 is a rate limit",
+			name:        "429/rate limit",
+			status:      http.StatusTooManyRequests,
+			body:        `<!DOCTYPE html>`,
+			accessToken: "a-token",
+			page:        1,
+			errRegex:    `^rate limit reached for codeberg.org$`,
+		},
+		{
+			name:        "429/retry window named",
+			status:      http.StatusTooManyRequests,
+			headers:     map[string]string{"Retry-After": "120"},
+			body:        `<!DOCTYPE html>`,
+			accessToken: "a-token",
+			page:        1,
+			errRegex:    `^rate limit reached for codeberg.org - retry after 120$`,
+		},
+		{
+			name:     "429/unauthenticated query names the absent credential",
 			status:   http.StatusTooManyRequests,
 			body:     `<!DOCTYPE html>`,
 			page:     1,
-			errRegex: `^rate limit reached for codeberg.org$`,
+			errRegex: `^rate limit reached for codeberg.org - no access_token was sent$`,
 		},
 		{
-			name:     "429 with a retry window names it",
-			status:   http.StatusTooManyRequests,
-			headers:  map[string]string{"Retry-After": "120"},
-			body:     `<!DOCTYPE html>`,
-			page:     1,
-			errRegex: `^rate limit reached for codeberg.org - retry after 120$`,
-		},
-		{
-			name:     "an unmapped status is reported with its body",
+			name:     "unmapped status reported with its body",
 			status:   http.StatusInternalServerError,
 			body:     "proxy error",
 			page:     1,
@@ -991,7 +1053,11 @@ func TestHandleResponse(t *testing.T) {
 
 			response := newResponse(t,
 				"https://codeberg.org/api/v1/repos/o/r/releases",
-				tc.status, tc.headers, tc.body)
+				tc.status,
+				tc.headers,
+				tc.body,
+				tc.accessToken,
+			)
 
 			// WHEN: handleResponse is called.
 			body, nextPage, err := handleResponse(
@@ -1241,12 +1307,15 @@ func TestLookup_GetVersion(t *testing.T) {
 func TestLookup_CreateRequest(t *testing.T) {
 	// GIVEN: a Lookup, an endpoint and a page.
 	tests := []struct {
-		name     string
-		host     string
-		endpoint string
-		page     int
-		wantURL  string
-		errRegex string
+		name         string
+		host         string
+		serviceToken string
+		defaults     map[string]HostDefaults
+		endpoint     string
+		page         int
+		wantURL      string
+		wantAuth     string
+		errRegex     string
 	}{
 		{
 			name:     "releases, first page",
@@ -1265,12 +1334,52 @@ func TestLookup_CreateRequest(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:     "an unvalidated host still builds an address", // CheckValues validates.
+			name:     "unvalidated host still builds an address", // CheckValues validates the host.
 			host:     "",
 			endpoint: endpointReleases,
 			page:     1,
 			wantURL:  "https:///api/v1/repos/owner/repo/releases?limit=50",
 			errRegex: `^$`,
+		},
+		{
+			name:         "service's own token is sent",
+			host:         "https://codeberg.org",
+			serviceToken: "service-token",
+			endpoint:     endpointReleases,
+			page:         1,
+			wantURL:      "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
+			wantAuth:     "token service-token",
+			errRegex:     `^$`,
+		},
+		{
+			name: "token from the matching host entry is sent",
+			host: "https://codeberg.org",
+			defaults: map[string]HostDefaults{
+				"https://codeberg.org": {URL: "https://codeberg.org", AccessToken: "defaults-token"},
+			},
+			endpoint: endpointReleases,
+			page:     1,
+			wantURL:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
+			wantAuth: "token defaults-token",
+			errRegex: `^$`,
+		},
+		{
+			name: "host matching no entry is sent no credential",
+			host: "https://codeberg.org",
+			defaults: map[string]HostDefaults{
+				"https://forge.example.com": {URL: "https://forge.example.com", AccessToken: "defaults-token"},
+			},
+			endpoint: endpointReleases,
+			page:     1,
+			wantURL:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
+			errRegex: `^$`,
+		},
+		{
+			name:     "a host no address can be built from", // CheckValues rejects it first.
+			host:     "https://codeberg.org/%zz",
+			endpoint: endpointReleases,
+			page:     1,
+			errRegex: `^invalid host "[^"]+":\n\s+parse "[^"]+":\n\s+invalid URL escape "%zz"$`,
 		},
 	}
 
@@ -1278,14 +1387,25 @@ func TestLookup_CreateRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := Lookup{Host: tc.host}
+			lookup := Lookup{
+				Host:        tc.host,
+				AccessToken: tc.serviceToken,
+			}
 			lookup.URL = "owner/repo"
+			lookup.SetTypeDefaults(
+				&Defaults{Host: tc.defaults},
+				&Defaults{},
+			)
 
 			// WHEN: createRequest is called.
-			request, err := lookup.createRequest(tc.endpoint, tc.page, logx.LogFrom{Primary: t.Name()})
+			request, err := lookup.createRequest(
+				tc.endpoint,
+				tc.page,
+				logx.LogFrom{Primary: t.Name()},
+			)
 
 			prefix := fmt.Sprintf(
-				"%s\nLookup.createRequest(%q, %d)",
+				"%s\nLookup.createRequest(endpoint=%q, page=%d)",
 				packageName, tc.endpoint, tc.page,
 			)
 
@@ -1315,6 +1435,14 @@ func TestLookup_CreateRequest(t *testing.T) {
 				)
 			}
 
+			// AND: it carries the credential bound to the host, if any.
+			if got := request.Header.Get("Authorization"); got != tc.wantAuth {
+				t.Fatalf(
+					"%s Authorization mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.wantAuth,
+				)
+			}
+
 			// AND: it carries no conditional-request header.
 			for _, header := range []string{"If-None-Match", "If-Modified-Since"} {
 				if got := request.Header.Get(header); got != "" {
@@ -1328,7 +1456,90 @@ func TestLookup_CreateRequest(t *testing.T) {
 	}
 }
 
-func TestGetResponse(t *testing.T) {
+func TestLookup_RequestFor(t *testing.T) {
+	// GIVEN: an address, which [Lookup.createRequest] has already assembled.
+	tests := []struct {
+		name         string
+		address      string
+		serviceToken string
+		wantAuth     string
+		errRegex     string
+	}{
+		{
+			name:     "valid address",
+			address:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
+			errRegex: `^$`,
+		},
+		{
+			name:         "the access token is sent",
+			address:      "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
+			serviceToken: "service-token",
+			wantAuth:     "token service-token",
+			errRegex:     `^$`,
+		},
+		{
+			name:    "an address no request can be built for",
+			address: "invalid://\ttest",
+			errRegex: test.TrimYAML(`
+				^failed creating http request for .*`,
+			),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := Lookup{AccessToken: tc.serviceToken}
+			lookup.SetTypeDefaults(&Defaults{}, &Defaults{})
+
+			// WHEN: requestFor is called.
+			request, err := lookup.requestFor(
+				tc.address,
+				logx.LogFrom{Primary: t.Name()},
+			)
+
+			prefix := fmt.Sprintf(
+				"%s\nLookup.requestFor(%q)",
+				packageName, tc.address,
+			)
+
+			// THEN: any error is as expected.
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
+			}
+			if tc.errRegex != `^$` {
+				return
+			}
+
+			// AND: it is a GET for that address, with authentication as expected.
+			if request.Method != http.MethodGet {
+				t.Fatalf(
+					"%s method mismatch\ngot:  %q\nwant: %q",
+					prefix, request.Method, http.MethodGet,
+				)
+			}
+			if got := request.URL.String(); got != tc.address {
+				t.Fatalf(
+					"%s address mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.address,
+				)
+			}
+			if got := request.Header.Get("Authorization"); got != tc.wantAuth {
+				t.Fatalf(
+					"%s Authorization header mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.wantAuth,
+				)
+			}
+		})
+	}
+}
+
+func TestLookup_GetResponse(t *testing.T) {
 	// GIVEN: an instance, and a request for one of its endpoints.
 	t.Run("valid/the response and its body come back", func(t *testing.T) {
 		t.Parallel()
@@ -1348,10 +1559,10 @@ func TestGetResponse(t *testing.T) {
 		}
 
 		// WHEN: getResponse is called.
-		response, body, err := getResponse(request, logFrom)
+		response, body, err := lookup.getResponse(request, logFrom)
 		if err != nil {
 			t.Fatalf(
-				"%s\ngetResponse() unexpected error: %v",
+				"%s\nLookup.getResponse() unexpected error: %v",
 				packageName, err,
 			)
 		}
@@ -1359,13 +1570,13 @@ func TestGetResponse(t *testing.T) {
 		// THEN: the status and body are as served.
 		if response.StatusCode != http.StatusOK {
 			t.Fatalf(
-				"%s\ngetResponse() status mismatch\ngot:  %d\nwant: %d",
+				"%s\nLookup.getResponse() status mismatch\ngot:  %d\nwant: %d",
 				packageName, response.StatusCode, http.StatusOK,
 			)
 		}
 		if string(body) != releasesBody {
 			t.Fatalf(
-				"%s\ngetResponse() body mismatch\ngot:  %q\nwant: %q",
+				"%s\nLookup.getResponse() body mismatch\ngot:  %q\nwant: %q",
 				packageName, string(body), releasesBody,
 			)
 		}
@@ -1390,82 +1601,20 @@ func TestGetResponse(t *testing.T) {
 		}
 
 		// WHEN: getResponse is called.
-		response, body, err := getResponse(request, logFrom)
+		response, body, err := lookup.getResponse(request, logFrom)
 
 		// THEN: the transport error comes back, with nothing else.
 		e := errfmt.FormatError(err)
 		if !util.RegexCheck(`connection refused|connect: `, e) {
 			t.Fatalf(
-				"%s\ngetResponse() error mismatch\ngot:  %q\nwant: a connection error",
+				"%s\nLookup.getResponse() error mismatch\ngot:  %q\nwant: a connection error",
 				packageName, e,
 			)
 		}
 		if response != nil || body != nil {
-			t.Fatalf("%s\ngetResponse() returned a response or body alongside its error", packageName)
+			t.Fatalf("%s\nLookup.getResponse() returned a response or body alongside its error", packageName)
 		}
 	})
-}
-
-func TestLookup_RequestFor(t *testing.T) {
-	// GIVEN: an address, which [Lookup.createRequest] has already assembled.
-	tests := []struct {
-		name     string
-		address  string
-		errRegex string
-	}{
-		{
-			name:     "valid address",
-			address:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
-			errRegex: `^$`,
-		},
-		{
-			name:     "an address no request can be built for",
-			address:  "invalid://\ttest",
-			errRegex: `^failed creating http request for .*$`,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			var lookup Lookup
-
-			// WHEN: requestFor is called.
-			request, err := lookup.requestFor(tc.address, logx.LogFrom{Primary: t.Name()})
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.requestFor(%q)",
-				packageName, tc.address,
-			)
-
-			// THEN: any error is as expected.
-			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
-			}
-			if tc.errRegex != `^$` {
-				return
-			}
-
-			// AND: it is a GET for that address.
-			if request.Method != http.MethodGet {
-				t.Fatalf(
-					"%s method mismatch\ngot:  %q\nwant: %q",
-					prefix, request.Method, http.MethodGet,
-				)
-			}
-			if got := request.URL.String(); got != tc.address {
-				t.Fatalf(
-					"%s address mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.address,
-				)
-			}
-		})
-	}
 }
 
 func TestLookup_HTTPRequest(t *testing.T) {
@@ -1473,6 +1622,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 	tests := []struct {
 		name         string
 		endpoints    map[string]forgeEndpoint
+		host         string // Fixture override.
 		endpoint     string
 		page         int
 		wantBody     string
@@ -1516,6 +1666,14 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			page:      1,
 			errRegex:  `^not found$`,
 		},
+		{
+			name:      "invalid/a host no request can be built for",
+			endpoints: map[string]forgeEndpoint{},
+			host:      "https://codeberg.org/%zz",
+			endpoint:  endpointReleases,
+			page:      1,
+			errRegex:  `^invalid host "[^"]+":\n\s+parse "[^"]+":\n\s+invalid URL escape "%zz"$`,
+		},
 	}
 
 	for _, tc := range tests {
@@ -1523,7 +1681,11 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			t.Parallel()
 
 			server := newForgeServer(t, tc.endpoints)
-			lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
+			host := server.URL
+			if tc.host != "" {
+				host = tc.host
+			}
+			lookup := testLookup(t, "host: "+host+"\nurl: owner/repo")
 
 			// WHEN: httpRequest is called.
 			body, nextPage, err := lookup.httpRequest(
@@ -1559,6 +1721,40 @@ func TestLookup_HTTPRequest(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestLookup_GetResponse__ReadError(t *testing.T) {
+	// GIVEN: a server that closes the connection without sending the body it promised.
+	server := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Length", "10")
+			w.WriteHeader(http.StatusOK)
+			conn, _, _ := w.(http.Hijacker).Hijack()
+			conn.Close()
+		}),
+	)
+	t.Cleanup(server.Close)
+
+	// AND: a request for it.
+	request, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	if err != nil {
+		t.Fatalf(
+			"%s\ncould not create request: %v",
+			packageName, err,
+		)
+	}
+
+	// WHEN: getResponse is called with it.
+	lookup := Lookup{}
+	_, _, err = lookup.getResponse(request, logx.LogFrom{Primary: t.Name()})
+
+	// THEN: the read failure is given.
+	if err == nil {
+		t.Fatalf(
+			"%s\nLookup.getResponse() expected an error reading the body, got none",
+			packageName,
+		)
 	}
 }
 
@@ -1689,11 +1885,13 @@ func TestLookup_QueryPage(t *testing.T) {
 func TestLookup_QueryEndpoint(t *testing.T) {
 	// GIVEN: an instance whose pages must be walked.
 	tests := []struct {
-		name       string
-		endpoints  map[string]forgeEndpoint
-		endpoint   string
-		wantLatest string
-		errRegex   string
+		name           string
+		endpoints      map[string]forgeEndpoint
+		latestVersion  string // Already known to the service.
+		endpoint       string
+		wantNewVersion bool
+		wantLatest     string
+		errRegex       string
 	}{
 		{
 			name: "a version on the first page",
@@ -1703,6 +1901,17 @@ func TestLookup_QueryEndpoint(t *testing.T) {
 			endpoint:   endpointReleases,
 			wantLatest: "0.17.4",
 			errRegex:   `^$`,
+		},
+		{
+			name: "a newer version on the first page",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {body: releasesBody},
+			},
+			latestVersion:  "0.0.1",
+			endpoint:       endpointReleases,
+			wantNewVersion: true,
+			wantLatest:     "0.17.4",
+			errRegex:       `^$`,
 		},
 		{
 			name: "a version only on a later page",
@@ -1777,9 +1986,12 @@ func TestLookup_QueryEndpoint(t *testing.T) {
 
 			server := newForgeServer(t, tc.endpoints)
 			lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
+			if tc.latestVersion != "" {
+				lookup.Status.SetLatestVersion(tc.latestVersion, "", false)
+			}
 
 			// WHEN: queryEndpoint is called.
-			_, err := lookup.queryEndpoint(tc.endpoint, logx.LogFrom{Primary: t.Name()})
+			newVersion, err := lookup.queryEndpoint(tc.endpoint, logx.LogFrom{Primary: t.Name()})
 
 			prefix := fmt.Sprintf(
 				"%s\nLookup.queryEndpoint(%q)",
@@ -1792,6 +2004,14 @@ func TestLookup_QueryEndpoint(t *testing.T) {
 				t.Fatalf(
 					"%s error mismatch\ngot:  %q\nwant: %q",
 					prefix, e, tc.errRegex,
+				)
+			}
+
+			// AND: whether the version is new to the service is as expected.
+			if newVersion != tc.wantNewVersion {
+				t.Fatalf(
+					"%s new version mismatch\ngot:  %t\nwant: %t",
+					prefix, newVersion, tc.wantNewVersion,
 				)
 			}
 
@@ -1858,7 +2078,7 @@ func TestLookup_Query__EndpointFallback(t *testing.T) {
 			},
 			lookupYAML:    `url: owner/repo`,
 			wantRequested: []string{endpointReleases},
-			errRegex:      `^rate limit reached for 127\.0\.0\.1:\d+$`,
+			errRegex:      `^rate limit reached for 127\.0\.0\.1:\d+ - no access_token was sent$`,
 		},
 	}
 

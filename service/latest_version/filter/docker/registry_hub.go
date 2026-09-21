@@ -172,7 +172,7 @@ func (r *HubRegistry) Copy() Registry {
 	}
 
 	return &HubRegistry{
-		CommonRegistry: *r.CommonRegistry.Clone(), //nolint:staticcheck,
+		CommonRegistry: *r.CommonRegistry.Clone(), //nolint:staticcheck
 	}
 }
 

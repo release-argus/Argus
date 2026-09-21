@@ -81,7 +81,6 @@ func (l *Lookup) query(writeToDB bool, logFrom logx.LogFrom) error {
 // httpRequest makes a HTTP GET request to the URL and returns the body.
 func (l *Lookup) httpRequest(logFrom logx.LogFrom) ([]byte, error) {
 	client := httpx.Client
-	// HTTPS insecure skip verify.
 	if l.allowInvalidCerts() {
 		client = httpx.InsecureClient
 	}

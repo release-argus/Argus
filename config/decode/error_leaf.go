@@ -63,3 +63,30 @@ func (e *ErrField) Error() string {
 
 	return builder.String()
 }
+
+// ErrKey represents an error with a key itself, rather than with its value.
+type ErrKey struct {
+	Key         string
+	Description string
+}
+
+// Error implements the [error] interface.
+//
+// Output formats:
+//
+//	KEY: <invalid>
+//	KEY: <invalid> (DESCRIPTION)
+func (e *ErrKey) Error() string {
+	var builder strings.Builder
+
+	builder.WriteString(e.Key)
+	builder.WriteString(": <invalid>")
+
+	if e.Description != "" {
+		builder.WriteString(" (")
+		builder.WriteString(e.Description)
+		builder.WriteString(")")
+	}
+
+	return builder.String()
+}

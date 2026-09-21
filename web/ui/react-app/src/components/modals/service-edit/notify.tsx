@@ -5,6 +5,7 @@ import { FieldSelect, FieldText } from '@/components/generic/field';
 import RenderNotify from '@/components/modals/service-edit/notify-types/render';
 import TestNotify from '@/components/modals/service-edit/test-notify';
 import { getServiceURL } from '@/components/modals/service-edit/util';
+import { resolveForgeHost } from '@/components/modals/service-edit/util/service-url';
 import { AccordionContent, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
@@ -12,7 +13,10 @@ import type { OptionType } from '@/components/ui/react-select/custom-components'
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import { isEmptyOrNull } from '@/utils';
 import { notifyTypeOptions } from '@/utils/api/types/config/notify/all-types';
-import type { LatestVersionLookupType } from '@/utils/api/types/config/service/latest-version';
+import {
+	LATEST_VERSION_LOOKUP_TYPE,
+	type LatestVersionLookupType,
+} from '@/utils/api/types/config/service/latest-version';
 import {
 	isNotifyType,
 	type NotifySchemaKeys,
@@ -67,6 +71,10 @@ const Notify: FC<NotifyProps> = ({
 	const lvHost = useWatch({ name: 'latest_version.host' }) as
 		| string
 		| undefined;
+	// A host may name a configured instance, so the link needs them to resolve it.
+	const forgejoHosts =
+		typeDataDefaults?.latest_version?.[LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value]
+			?.hosts;
 	const webURL = useWatch({ name: 'dashboard.web_url' }) as string | undefined;
 
 	// Sync type with main.
@@ -106,9 +114,13 @@ const Notify: FC<NotifyProps> = ({
 	const serviceURL = useMemo(
 		() =>
 			(lvURL?.match(/\//g) ?? []).length === 1
-				? getServiceURL(lvType, lvURL ?? '', lvHost)
+				? getServiceURL(
+						lvType,
+						lvURL ?? '',
+						resolveForgeHost(lvHost ?? '', forgejoHosts),
+					)
 				: lvURL,
-		[lvType, lvURL, lvHost],
+		[lvType, lvURL, lvHost, forgejoHosts],
 	);
 
 	// Reset values to their original when type reverted.

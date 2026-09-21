@@ -167,7 +167,7 @@ func (r *GHCRRegistry) Copy() Registry {
 	}
 
 	return &GHCRRegistry{
-		CommonRegistry: *r.CommonRegistry.Clone(), //nolint:staticcheck,
+		CommonRegistry: *r.CommonRegistry.Clone(), //nolint:staticcheck
 	}
 }
 

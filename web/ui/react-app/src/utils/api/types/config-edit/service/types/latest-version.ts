@@ -226,6 +226,8 @@ export const latestVersionLookupSchemaBase = z.object({
 
 export const latestVersionLookupSchemaForgejo =
 	latestVersionLookupSchemaBase.extend({
+		access_token: stringDefault,
+		allow_invalid_certs: z.boolean().nullable().default(null),
 		host: stringDefault,
 		type: z.literal(LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value),
 		url: stringDefault,
@@ -263,12 +265,25 @@ export const isLatestVersionType = (
 	value != null &&
 	latestVersionLookupTypeOptions.some((v) => v.value === value);
 
+/* Forgejo instances, keyed by a friendly name. */
+export const latestVersionLookupForgejoHostsSchema = z
+	.record(
+		z.string(),
+		z.object({
+			url: stringDefault,
+			access_token: stringDefault,
+			allow_invalid_certs: z.boolean().nullable().default(null),
+		}),
+	)
+	.optional();
+
 export const latestVersionLookupSchemaDefault = z
 	.object({
 		access_token: stringDefault,
 		allow_invalid_certs: z.boolean().nullable().optional(),
 		headers: headersSchema.optional(),
 		host: stringDefault.optional(),
+		hosts: latestVersionLookupForgejoHostsSchema,
 		require: latestVersionRequireSchemaDefaults.optional(),
 		type: LatestVersionTypeEnum.nullable().optional(),
 		url_commands: urlCommandsSchema.optional(),

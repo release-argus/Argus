@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { urlCommandsTrimArray } from '@/components/modals/service-edit/util';
+import { resolveForgeHost } from '@/components/modals/service-edit/util/service-url';
 import type { NonNull } from '@/types/util';
 import {
 	type DockerFilter,
@@ -10,6 +11,8 @@ import {
 	type LatestVersionLookup,
 	type LatestVersionLookupDefaults,
 	type LatestVersionLookupForgejo,
+	type LatestVersionLookupForgejoCommonDefaults,
+	type LatestVersionLookupForgejoHostDefaults,
 	type LatestVersionLookupGitHub,
 	type LatestVersionLookupType,
 	type LatestVersionLookupURL,
@@ -348,6 +351,20 @@ export const buildLatestVersionRequireSchemaWithFallbacks = (
 };
 
 /**
+ * Per-type defaults as the form holds them.
+ *
+ * Forgejo nests its defaults, so its entry is the flattened shape the form builds;
+ * every other type carries the API shape unchanged.
+ */
+type FlattenedTypeDefaults = {
+	[T in LatestVersionLookupType]: T extends typeof LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value
+		? LatestVersionLookupForgejoCommonDefaults & {
+				hosts?: Record<string, LatestVersionLookupForgejoHostDefaults>;
+			}
+		: LatestVersionLookupDefaults[T];
+};
+
+/**
  * Builds a schema for the 'latest version' lookup.
  *
  * @param data - The current value from the API.
@@ -389,7 +406,7 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 
 	const buildTypeDefaults = <T extends LatestVersionLookupType>(
 		type: T,
-		typeDefaults: Record<string, unknown> | undefined,
+		typeDefaults: FlattenedTypeDefaults[T] | undefined,
 	) =>
 		safeParse({
 			data: {
@@ -407,10 +424,14 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 
 	const schemaDataTypeDefaults = {
 		// Forgejo nests its defaults - flatten 'common' to sit beside the other
-		// types' fields.
+		// types' fields, and keep the instances under 'hosts' so the map does not
+		// collide with a service's own 'host'.
 		[LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value]: buildTypeDefaults(
 			LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value,
-			{ ...combinedDefaults.forgejo?.common },
+			{
+				...combinedDefaults.forgejo?.common,
+				hosts: combinedDefaults.forgejo?.host,
+			},
 		),
 		[LATEST_VERSION_LOOKUP_TYPE.GITHUB.value]: buildTypeDefaults(
 			LATEST_VERSION_LOOKUP_TYPE.GITHUB.value,
@@ -442,7 +463,14 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 			...sharedSchemas,
 			host: stringDefault.superRefine((arg, ctx) => {
 				validateRequired({ arg: arg, ctx: ctx });
-				validateForgeHost({ arg: arg, ctx: ctx });
+				// A host may name a configured instance, so validate what it resolves to.
+				validateForgeHost({
+					arg:
+						typeof arg === 'string'
+							? resolveForgeHost(arg, combinedDefaults.forgejo?.host)
+							: arg,
+					ctx: ctx,
+				});
 			}),
 			url: stringDefault.superRefine((arg, ctx) => {
 				validateRequired({ arg: arg, ctx: ctx });
@@ -480,6 +508,10 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 	if (schemaDataType === LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value) {
 		const typedLatestVersion = (data ?? {}) as LatestVersionLookupForgejo;
 		(fallbackData as LatestVersionLookupForgejo).host = typedLatestVersion.host;
+		(fallbackData as LatestVersionLookupForgejo).access_token =
+			typedLatestVersion.access_token;
+		(fallbackData as LatestVersionLookupForgejo).allow_invalid_certs =
+			typedLatestVersion.allow_invalid_certs;
 		(fallbackData as LatestVersionLookupForgejo).use_prerelease =
 			typedLatestVersion.use_prerelease;
 	} else if (schemaDataType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value) {

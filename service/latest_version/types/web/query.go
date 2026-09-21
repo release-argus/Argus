@@ -69,7 +69,6 @@ func (l *Lookup) query(logFrom logx.LogFrom) (bool, error) {
 // httpRequest makes a HTTP GET request to the URL and returns the body.
 func (l *Lookup) httpRequest(logFrom logx.LogFrom) ([]byte, error) {
 	client := httpx.Client
-	// HTTPS insecure skip verify.
 	if l.allowInvalidCerts() {
 		client = httpx.InsecureClient
 	}

@@ -85,3 +85,53 @@ func TestErrField_Error(t *testing.T) {
 		})
 	}
 }
+
+func TestErrKey_Error(t *testing.T) {
+	// GIVEN: an ErrKey.
+	tests := []struct {
+		name     string
+		err      ErrKey
+		expected string
+	}{
+		{
+			name: "key",
+			err: ErrKey{
+				Key: "testKey",
+			},
+			expected: `testKey: <invalid>`,
+		},
+		{
+			name: "key + description",
+			err: ErrKey{
+				Key:         "testKey",
+				Description: "not a valid URL",
+			},
+			expected: `testKey: <invalid> (not a valid URL)`,
+		},
+		{
+			name: "key that is a URL + description",
+			err: ErrKey{
+				Key:         "https://codeberg.org/",
+				Description: "trailing '/'",
+			},
+			expected: `https://codeberg.org/: <invalid> (trailing '/')`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: the error is stringified.
+			got := tc.err.Error()
+
+			// THEN: the error is formatted as expected.
+			if got != tc.expected {
+				t.Fatalf(
+					"%s\nstringified ErrKey mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.expected,
+				)
+			}
+		})
+	}
+}

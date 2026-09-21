@@ -16,6 +16,8 @@
 package latestver
 
 import (
+	"errors"
+
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/service/latest_version/filter"
@@ -126,7 +128,23 @@ func (d *Defaults) MigrateDeprecated() {
 
 // CheckValues validates the fields of the receiver.
 func (d *Defaults) CheckValues() error {
-	return d.Common.CheckValues() //nolint:wrapcheck
+	var errs []error
+
+	if err := d.Common.CheckValues(); err != nil {
+		errs = append(errs, err)
+	}
+	if err := d.Forgejo.CheckValues(); err != nil {
+		errs = append(errs,
+			&decode.ErrKeyField{
+				Key: "forgejo",
+				Err: err,
+			})
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return errors.Join(errs...)
 }
 
 // applyTypeDefaults assigns the cfg's per-type Soft/Hard defaults onto

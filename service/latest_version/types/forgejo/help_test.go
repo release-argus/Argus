@@ -129,6 +129,9 @@ type forgeServer struct {
 	// the feature disabled.
 	endpoints map[string]forgeEndpoint
 
+	// requireAuth, when set, is the Authorization every request must carry.
+	requireAuth string
+
 	mu       sync.Mutex
 	received []recordedRequest
 }
@@ -137,25 +140,17 @@ type forgeServer struct {
 func newForgeServer(t *testing.T, endpoints map[string]forgeEndpoint) *forgeServer {
 	t.Helper()
 
-	return startForgeServer(t, endpoints, httptest.NewServer)
+	return startForgeServer(t, &forgeServer{endpoints: endpoints}, httptest.NewServer)
 }
 
-// newForgeServerTLS is [newForgeServer] over HTTPS, presenting a certificate no client trusts.
-func newForgeServerTLS(t *testing.T, endpoints map[string]forgeEndpoint) *forgeServer {
-	t.Helper()
-
-	return startForgeServer(t, endpoints, httptest.NewTLSServer)
-}
-
-// startForgeServer starts a fixture serving `endpoints`.
+// startForgeServer starts `server`.
 func startForgeServer(
 	t *testing.T,
-	endpoints map[string]forgeEndpoint,
+	server *forgeServer,
 	start func(http.Handler) *httptest.Server,
 ) *forgeServer {
 	t.Helper()
 
-	server := &forgeServer{endpoints: endpoints}
 	server.Server = start(http.HandlerFunc(server.serve))
 	t.Cleanup(server.Close)
 
@@ -171,6 +166,12 @@ func (s *forgeServer) serve(w http.ResponseWriter, r *http.Request) {
 		header: r.Header.Clone(),
 	})
 	s.mu.Unlock()
+
+	if s.requireAuth != "" && r.Header.Get("Authorization") != s.requireAuth {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"message":"token does not have at least one of required scope(s)"}`))
+		return
+	}
 
 	endpoint, known := s.endpoints[path.Base(r.URL.Path)]
 	if !known {
@@ -296,6 +297,7 @@ func newResponse(
 	status int,
 	headers map[string]string,
 	body string,
+	accessToken string,
 ) *http.Response {
 	t.Helper()
 
@@ -305,6 +307,9 @@ func newResponse(
 			"%s\nfailed to build the request: %v",
 			packageName, err,
 		)
+	}
+	if accessToken != "" {
+		request.Header.Set("Authorization", "token "+accessToken)
 	}
 
 	response := &http.Response{
@@ -318,4 +323,30 @@ func newResponse(
 	}
 
 	return response
+}
+
+// setHostDefaults layers host-keyed defaults onto a [Lookup].
+func setHostDefaults(lookup *Lookup, defaults, hardDefaults map[string]HostDefaults) {
+	typeDefaults, typeHardDefaults := lookup.GetTypeDefaults()
+	typeDefaults.Host = defaults
+	typeHardDefaults.Host = hardDefaults
+}
+
+// hostPlaceholder stands in for a fixture's URL, which is only known once it has started.
+const hostPlaceholder = "HOST"
+
+// hostKeyedAt rewrites the [hostPlaceholder] in each entry's URL to `url`, so a
+// fixture can name an instance whose address is only known once it has started.
+func hostKeyedAt(hosts map[string]HostDefaults, url string) map[string]HostDefaults {
+	if hosts == nil {
+		return nil
+	}
+
+	keyed := make(map[string]HostDefaults, len(hosts))
+	for name, entry := range hosts {
+		entry.URL = strings.Replace(entry.URL, hostPlaceholder, url, 1)
+		keyed[name] = entry
+	}
+
+	return keyed
 }

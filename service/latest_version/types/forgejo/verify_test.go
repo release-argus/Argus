@@ -32,6 +32,7 @@ func TestLookup_CheckValues(t *testing.T) {
 	tests := []struct {
 		name       string
 		lookupYAML string
+		defaults   map[string]HostDefaults
 		errRegex   string
 	}{
 		{
@@ -145,10 +146,42 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: `^url: "  owner/repo  " <invalid> \(e\.g\. owner/repo\)$`,
 		},
 		{
+			name: "invalid/require from the base Lookup",
+			lookupYAML: `
+				host: https://codeberg.org
+				url: owner/repo
+				require:
+					regex_content: "[0-"`,
+			errRegex: test.TrimYAML(`
+				^require:
+					regex_content: "\[0-" <invalid> .*$`,
+			),
+		},
+		{
 			name: "invalid/host and url both unusable",
 			lookupYAML: `
 				url: Argus`,
 			errRegex: `^host: <required> .*\nurl: "Argus" <invalid> .*$`,
+		},
+		{
+			name: "valid/host names an instance, the defaults give a URL",
+			lookupYAML: `
+				host: Codeberg
+				url: owner/repo`,
+			defaults: map[string]HostDefaults{
+				"Codeberg": {URL: "https://codeberg.org"},
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "invalid/host names an instance with no URL, however the name is spelt",
+			lookupYAML: `
+				host: https://forgejo.example.com
+				url: owner/repo`,
+			defaults: map[string]HostDefaults{
+				"https://forgejo.example.com": {AccessToken: "fj-token"},
+			},
+			errRegex: `^host: "https://forgejo.example.com" <invalid> \(names an instance with no url\)$`,
 		},
 	}
 
@@ -167,6 +200,10 @@ func TestLookup_CheckValues(t *testing.T) {
 					packageName, err,
 				)
 			}
+			lookup.SetTypeDefaults(
+				&Defaults{Host: tc.defaults},
+				&Defaults{},
+			)
 			hadHost, hadURL := lookup.Host, lookup.URL
 
 			// WHEN: CheckValues is called.
@@ -257,9 +294,10 @@ func TestLookup_CheckValues__TrimsTrailingSlash(t *testing.T) {
 func TestLookup_HostProblem(t *testing.T) {
 	// GIVEN: a host spelling.
 	tests := []struct {
-		name string
-		host string
-		want string
+		name  string
+		host  string
+		hosts map[string]HostDefaults
+		want  string
 	}{
 		{
 			name: "ok/scheme and host",
@@ -312,14 +350,38 @@ func TestLookup_HostProblem(t *testing.T) {
 			want: "no hostname",
 		},
 		{
-			name: "problem/trailing slash from an env var",
+			name: "ok/trailing slash from an env var, which is trimmed at request time",
 			host: "${ARGUS_TEST_FORGEJO_SLASHED}",
-			want: "trailing '/'",
+			want: "",
 		},
 		{
-			name: "problem/unparsable",
+			name: "problem/unparseable",
 			host: "https://exa mple.com",
 			want: "not a valid URL",
+		},
+		{
+			name: "problem/names an instance with no URL, however the name is spelt",
+			host: "https://forgejo.example.com",
+			hosts: map[string]HostDefaults{
+				"https://forgejo.example.com": {AccessToken: "fj-token"},
+			},
+			want: "names an instance with no url",
+		},
+		{
+			name: "ok/names an instance, and the entry gives the URL",
+			host: "Codeberg",
+			hosts: map[string]HostDefaults{
+				"Codeberg": {URL: "https://codeberg.org"},
+			},
+			want: "",
+		},
+		{
+			name: "problem/the URL the named entry gives is unusable",
+			host: "Codeberg",
+			hosts: map[string]HostDefaults{
+				"Codeberg": {URL: "ftp://codeberg.org"},
+			},
+			want: "scheme must be http or https",
 		},
 	}
 
@@ -328,6 +390,10 @@ func TestLookup_HostProblem(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			lookup := Lookup{Host: tc.host}
+			lookup.SetTypeDefaults(
+				&Defaults{Host: tc.hosts},
+				&Defaults{},
+			)
 
 			// WHEN: hostProblem is called.
 			got := lookup.hostProblem()

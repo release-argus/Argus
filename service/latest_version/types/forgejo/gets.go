@@ -40,6 +40,78 @@ func (l *Lookup) ServiceURL() string {
 	}).String()
 }
 
+// resolveHost returns the instance URL [Lookup.Host] addresses.
+//
+// Host may name a defaults entry or be a URL itself; a name wins, so every
+// consumer must resolve through here rather than reading Host directly.
+func (l *Lookup) resolveHost() string {
+	if url, named := l.namedInstance(); named && url != "" {
+		return url
+	}
+
+	return l.Host
+}
+
+// namedInstance reports whether Host names a defaults entry, and the URL that
+// entry gives the instance.
+func (l *Lookup) namedInstance() (url string, named bool) {
+	for _, defaults := range []*Defaults{l.typeDefaults, l.typeHardDefaults} {
+		entry, matched := defaults.hostEntry(l.Host)
+		if !matched {
+			continue
+		}
+		named = true
+		if entry.URL != "" {
+			return entry.URL, true
+		}
+	}
+
+	return
+}
+
+// hostDefaults resolves the defaults for the configured host.
+func (l *Lookup) hostDefaults() (resolved HostDefaults) {
+	for _, defaults := range []*Defaults{l.typeDefaults, l.typeHardDefaults} {
+		entry, matched := defaults.hostEntry(l.Host)
+		if !matched {
+			continue
+		}
+
+		if resolved.URL == "" {
+			resolved.URL = entry.URL
+		}
+		if resolved.AccessToken == "" {
+			resolved.AccessToken = entry.AccessToken
+		}
+		if resolved.AllowInvalidCerts == nil {
+			resolved.AllowInvalidCerts = entry.AllowInvalidCerts
+		}
+	}
+
+	return
+}
+
+// accessToken resolves the access token to send to the configured host.
+//
+// A host matching no entry is never sent a credential.
+func (l *Lookup) accessToken() string {
+	if l.AccessToken != "" {
+		return util.EvalEnvVars(l.AccessToken)
+	}
+
+	return util.EvalEnvVars(l.hostDefaults().AccessToken)
+}
+
+// allowInvalidCerts resolves whether invalid HTTPS certificates are allowed for
+// the configured host.
+func (l *Lookup) allowInvalidCerts() bool {
+	if l.AllowInvalidCerts != nil {
+		return *l.AllowInvalidCerts
+	}
+
+	return util.DerefOrZero(l.hostDefaults().AllowInvalidCerts)
+}
+
 // usePreRelease resolves whether to consider PreReleases for new versions.
 func (l *Lookup) usePreRelease() bool {
 	return *util.FirstNonDefault(
