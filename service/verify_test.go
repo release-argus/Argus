@@ -180,9 +180,10 @@ func TestDefaults_CheckValues(t *testing.T) {
 			},
 			errRegex: test.TrimYAML(`
 				^latest_version:
-					require:
-						docker:
-							type: "[^"]+" <invalid>`,
+					common:
+						require:
+							docker:
+								type: "[^"]+" <invalid>`,
 			),
 		},
 		{
@@ -206,9 +207,10 @@ func TestDefaults_CheckValues(t *testing.T) {
 				^options:
 					interval: "[^"]+" <invalid>.*
 				latest_version:
-					require:
-						docker:
-							type: "[^"]+" <invalid>.*$`,
+					common:
+						require:
+							docker:
+								type: "[^"]+" <invalid>.*$`,
 			),
 		},
 	}

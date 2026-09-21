@@ -132,7 +132,11 @@ func (d *Defaults) CheckValues() error {
 	var errs []error
 
 	if err := d.Common.CheckValues(); err != nil {
-		errs = append(errs, err)
+		errs = append(errs,
+			&decode.ErrKeyField{
+				Key: "common",
+				Err: err,
+			})
 	}
 	if err := d.Forgejo.CheckValues(); err != nil {
 		errs = append(errs,

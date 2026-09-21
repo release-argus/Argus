@@ -769,11 +769,11 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 	unmodifiedDefaults.Default()
 	// GIVEN: Defaults and a bunch of env vars.
 	tests := []struct {
-		name       string
-		env        map[string]string
-		envCleanup []string
-		want       *Defaults
-		errRegex   string
+		name        string
+		env         map[string]string
+		envCleanup  []string
+		want        *Defaults
+		stdoutRegex string
 	}{
 		{
 			name: "empty vars ignored",
@@ -814,7 +814,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99 something",
 				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": "true",
 			},
-			errRegex: `ARGUS_SERVICE_OPTIONS_INTERVAL: "[^"]+" <invalid>`,
+			stdoutRegex: `ARGUS_SERVICE_OPTIONS_INTERVAL: "[^"]+" <invalid>`,
 		},
 		{
 			name: "service.options/invalid bool - semantic version",
@@ -822,7 +822,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99",
 				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": "foo",
 			},
-			errRegex: `ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING: "foo" <invalid>`,
+			stdoutRegex: `ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING: "foo" <invalid>`,
 		},
 		{
 			name: "service.latest_version/valid",
@@ -981,7 +981,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_USERNAME": "usernameForDockerHub",
 				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_AUTH_TOKEN":   "tokenForQuay",
 			},
-			errRegex: test.TrimYAML(`ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE: "foo" <invalid> .+`),
+			stdoutRegex: test.TrimYAML(`ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE: "foo" <invalid> .+`),
 		},
 		{
 			name: "service.latest_version/invalid bool/allow_invalid_certs",
@@ -990,7 +990,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS": "bar",
 				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE":   "true",
 			},
-			errRegex: `ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS: "bar" <invalid>`,
+			stdoutRegex: `ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS: "bar" <invalid>`,
 		},
 		{
 			name: "service.latest_version/invalid bool/use_prerelease",
@@ -999,7 +999,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS": "true",
 				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE":   "bop",
 			},
-			errRegex: `ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE: "bop" <invalid>`,
+			stdoutRegex: `ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE: "bop" <invalid>`,
 		},
 		{
 			name: "service.deployed_version/valid",
@@ -1019,7 +1019,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			env: map[string]string{
 				"ARGUS_SERVICE_DEPLOYED_VERSION_ALLOW_INVALID_CERTS": "bang",
 			},
-			errRegex: `ARGUS_SERVICE_DEPLOYED_VERSION_ALLOW_INVALID_CERTS: "bang" <invalid>`,
+			stdoutRegex: `ARGUS_SERVICE_DEPLOYED_VERSION_ALLOW_INVALID_CERTS: "bang" <invalid>`,
 		},
 		{
 			name: "service.dashboard/valid",
@@ -1039,7 +1039,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			env: map[string]string{
 				"ARGUS_SERVICE_DASHBOARD_AUTO_APPROVE": "zap",
 			},
-			errRegex: `ARGUS_SERVICE_DASHBOARD_AUTO_APPROVE: "zap" <invalid>`,
+			stdoutRegex: `ARGUS_SERVICE_DASHBOARD_AUTO_APPROVE: "zap" <invalid>`,
 		},
 		{
 			name: "notify.discord/valid",
@@ -1105,7 +1105,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 					),
 				},
 			},
-			errRegex: `ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY: "foo" <invalid> .+`,
+			stdoutRegex: `ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY: "foo" <invalid> .+`,
 		},
 		{
 			name: "notify.gotify",
@@ -1704,42 +1704,42 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			env: map[string]string{
 				"ARGUS_WEBHOOK_TYPE": "pizza",
 			},
-			errRegex: `ARGUS_WEBHOOK_TYPE: "pizza" <invalid>`,
+			stdoutRegex: `ARGUS_WEBHOOK_TYPE: "pizza" <invalid>`,
 		},
 		{
 			name: "webhook/invalid time.duration, delay",
 			env: map[string]string{
 				"ARGUS_WEBHOOK_DELAY": "pasta",
 			},
-			errRegex: `ARGUS_WEBHOOK_DELAY: "[^"]+" <invalid>`,
+			stdoutRegex: `ARGUS_WEBHOOK_DELAY: "[^"]+" <invalid>`,
 		},
 		{
 			name: "webhook/invalid uint, max_tries",
 			env: map[string]string{
 				"ARGUS_WEBHOOK_MAX_TRIES": "-1",
 			},
-			errRegex: `ARGUS_WEBHOOK_MAX_TRIES: "-1" <invalid>`,
+			stdoutRegex: `ARGUS_WEBHOOK_MAX_TRIES: "-1" <invalid>`,
 		},
 		{
 			name: "webhook/invalid bool/allow_invalid_certs",
 			env: map[string]string{
 				"ARGUS_WEBHOOK_ALLOW_INVALID_CERTS": "foo",
 			},
-			errRegex: `ARGUS_WEBHOOK_ALLOW_INVALID_CERTS: "foo" <invalid>`,
+			stdoutRegex: `ARGUS_WEBHOOK_ALLOW_INVALID_CERTS: "foo" <invalid>`,
 		},
 		{
 			name: "webhook/invalid int, desired_status_code",
 			env: map[string]string{
 				"ARGUS_WEBHOOK_DESIRED_STATUS_CODE": "okay",
 			},
-			errRegex: `ARGUS_WEBHOOK_DESIRED_STATUS_CODE: "okay" <invalid>`,
+			stdoutRegex: `ARGUS_WEBHOOK_DESIRED_STATUS_CODE: "okay" <invalid>`,
 		},
 		{
 			name: "webhook/invalid bool/silent_fails",
 			env: map[string]string{
 				"ARGUS_WEBHOOK_SILENT_FAILS": "bar",
 			},
-			errRegex: `ARGUS_WEBHOOK_SILENT_FAILS: "bar" <invalid>`,
+			stdoutRegex: `ARGUS_WEBHOOK_SILENT_FAILS: "bar" <invalid>`,
 		},
 		{
 			name: "multiple fails",
@@ -1751,7 +1751,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_WEBHOOK_TYPE":                                      "pizza",
 				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE": "pizza",
 			},
-			errRegex: test.TrimYAML(`
+			stdoutRegex: test.TrimYAML(`
 				ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE: "pizza" <invalid> .+
 				ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY: "foo" <invalid> .+
 				ARGUS_NOTIFY_SLACK_OPTIONS_DELAY: "bar" <invalid> .+
@@ -1796,23 +1796,22 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				tc.want = &Defaults{
 					Notify: shoutrrr.ShoutrrrsDefaults{},
 				}
-			} else {
-				if tc.want.Notify != nil {
-					defaults.Notify = shoutrrr.ShoutrrrsDefaults{}
-					for notifyType := range unmodifiedDefaults.Notify {
-						defaults.Notify[notifyType] = shoutrrr.NewDefaults(
+			}
+			if tc.want.Notify != nil {
+				defaults.Notify = shoutrrr.ShoutrrrsDefaults{}
+				for notifyType := range unmodifiedDefaults.Notify {
+					defaults.Notify[notifyType] = shoutrrr.NewDefaults(
+						"",
+						nil, nil, nil,
+					)
+
+					defaults.Notify[notifyType].InitMaps()
+					if tc.want.Notify[notifyType] == nil {
+						tc.want.Notify[notifyType] = shoutrrr.NewDefaults(
 							"",
 							nil, nil, nil,
 						)
-
-						defaults.Notify[notifyType].InitMaps()
-						if tc.want.Notify[notifyType] == nil {
-							tc.want.Notify[notifyType] = shoutrrr.NewDefaults(
-								"",
-								nil, nil, nil,
-							)
-							tc.want.Notify[notifyType].InitMaps()
-						}
+						tc.want.Notify[notifyType].InitMaps()
 					}
 				}
 			}
@@ -1824,7 +1823,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
 			test.SetEnv(t, tc.env)
-			wantOk := tc.errRegex == ""
+			wantOk := tc.stdoutRegex == ""
 
 			resultChannel := make(chan bool, 1)
 			// WHEN: MapEnvToStruct is called on it.
@@ -1845,14 +1844,14 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 
 			// AND: any error is as expected.
 			stdout := releaseStdout()
+			if !util.RegexCheck(tc.stdoutRegex, stdout) {
+				t.Errorf(
+					"%s stdout mismatch\ngot:  %q\nwant: %q",
+					prefix, stdout, tc.stdoutRegex,
+				)
+			}
 			if !wantOk {
 				return
-			}
-			if !util.RegexCheck(tc.errRegex, stdout) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.errRegex,
-				)
 			}
 
 			// AND: the defaults are set to the appropriate env vars.
@@ -1914,9 +1913,10 @@ func TestDefaults_CheckValues(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^service:
 					latest_version:
-						require:
-							docker:
-								type: "pizza" <invalid>.*$`,
+						common:
+							require:
+								docker:
+									type: "pizza" <invalid>.*$`,
 			),
 			changed: false,
 		},
@@ -1970,9 +1970,10 @@ func TestDefaults_CheckValues(t *testing.T) {
 					options:
 						interval: "10x" <invalid>.*
 					latest_version:
-						require:
-							docker:
-								type: "pizza" <invalid>.*$`,
+						common:
+							require:
+								docker:
+									type: "pizza" <invalid>.*$`,
 			),
 			changed: false,
 		},
