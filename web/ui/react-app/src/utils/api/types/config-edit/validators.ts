@@ -17,24 +17,25 @@ export const CUSTOM_ISSUE_CODE = 'custom';
 export const SECRET_VALUE = '<secret>';
 export const REQUIRED_MESSAGE = 'Required.';
 export const NUMBER_REQUIRED_MESSAGE = 'Number required.';
-export const INVALID_GITHUB_REPO_MESSAGE = 'Invalid GitHub repository.';
+export const INVALID_REPOSITORY_MESSAGE = 'Invalid repository.';
+export const INVALID_HOST_MESSAGE = 'Invalid host.';
 export const INVALID_URL_MESSAGE =
 	"Invalid URL (Must start with 'http://' or 'https://').";
 export const UNIQUE_MESSAGE = 'Must be unique.';
 
-const GITHUB_REPO_REGEX = /^[a-zA-Z0-9-_.]+\/[a-zA-Z0-9-_.]+$/;
+const REPO_PATH_REGEX = /^[a-zA-Z0-9-_.]+\/[a-zA-Z0-9-_.]+$/;
 /**
- * Validates that the input is a valid GitHub repository.
+ * Validates that the input is an 'owner/repo' path.
  *
  * @param arg - The input to validate.
  * @param ctx - The Zod refinement context.
  * @param path - The path to the input in the object.
  */
-export const validateGitHubRepo = ({ arg, ctx, path }: FieldValidatorProps) => {
-	if (!GITHUB_REPO_REGEX.test(arg as string)) {
+export const validateRepoPath = ({ arg, ctx, path }: FieldValidatorProps) => {
+	if (!REPO_PATH_REGEX.test(arg as string)) {
 		ctx.addIssue({
 			code: CUSTOM_ISSUE_CODE,
-			message: INVALID_GITHUB_REPO_MESSAGE,
+			message: INVALID_REPOSITORY_MESSAGE,
 			path: path,
 		});
 	}
@@ -78,6 +79,48 @@ export const validateURL = ({ arg, ctx, path }: FieldValidatorProps) => {
 			code: CUSTOM_ISSUE_CODE,
 			message: INVALID_URL_MESSAGE,
 			path,
+		});
+	}
+};
+
+/**
+ * Checks whether the input addresses a git forge instance.
+ *
+ * Accepts a scheme, host, port and path, any of which may be omitted - the scheme
+ * defaults to HTTPS, and the port by scheme.
+ *
+ * @param arg - The input to validate.
+ * @returns `true` if the input is a valid host, `false` otherwise.
+ */
+export const isValidForgeHost = (arg: unknown) => {
+	if (typeof arg !== 'string') return false;
+
+	if (arg === '' || arg !== arg.trim()) return false;
+
+	try {
+		const url = new URL(arg.includes('://') ? arg : `https://${arg}`);
+		return (
+			SUPPORTED_URL_PROTOCOLS.includes(url.protocol as SupportedURLProtocol) &&
+			url.hostname !== ''
+		);
+	} catch {
+		return false;
+	}
+};
+
+/**
+ * Validates that the input addresses a git forge instance.
+ *
+ * @param arg - The input to validate.
+ * @param ctx - The Zod refinement context.
+ * @param path - The path to the input in the object.
+ */
+export const validateForgeHost = ({ arg, ctx, path }: FieldValidatorProps) => {
+	if (!isValidForgeHost(arg)) {
+		ctx.addIssue({
+			code: CUSTOM_ISSUE_CODE,
+			message: INVALID_HOST_MESSAGE,
+			path: path,
 		});
 	}
 };

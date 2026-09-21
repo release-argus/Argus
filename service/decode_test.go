@@ -615,7 +615,7 @@ func TestDecodeService(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^"__name__":
 					latest_version:
-						type: "unsupported" <invalid> .*\['github', 'url'\].*$`,
+						type: "unsupported" <invalid> .*\['forgejo', 'github', 'url'\].*$`,
 			),
 		},
 		{
@@ -630,7 +630,7 @@ func TestDecodeService(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^"__name__":
 					latest_version:
-						type: <required> .*\['github', 'url'\].*$`,
+						type: <required> .*\['forgejo', 'github', 'url'\].*$`,
 			),
 		},
 		{

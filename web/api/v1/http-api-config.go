@@ -98,6 +98,11 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 				Common: apitype.LatestVersionCommonDefaults{
 					Require: serviceLatestVersionRequireDefaults,
 				},
+				Forgejo: apitype.LatestVersionForgejoDefaults{
+					Common: apitype.LatestVersionForgejoCommonDefaults{
+						UsePreRelease: api.Config.Defaults.Service.LatestVersion.Forgejo.Common.UsePreRelease,
+					},
+				},
 				GitHub: apitype.LatestVersionGitHubDefaults{
 					AccessToken:   util.ValueUnlessZero(api.Config.Defaults.Service.LatestVersion.GitHub.AccessToken, util.SecretValue),
 					UsePreRelease: api.Config.Defaults.Service.LatestVersion.GitHub.UsePreRelease,

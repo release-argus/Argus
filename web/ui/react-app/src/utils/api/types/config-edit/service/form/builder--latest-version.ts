@@ -9,6 +9,7 @@ import {
 	LATEST_VERSION_LOOKUP_TYPE,
 	type LatestVersionLookup,
 	type LatestVersionLookupDefaults,
+	type LatestVersionLookupForgejo,
 	type LatestVersionLookupGitHub,
 	type LatestVersionLookupType,
 	type LatestVersionLookupURL,
@@ -26,6 +27,7 @@ import {
 	latestVersionLookupRequireDockerTypeSchemaAmazonECR,
 	latestVersionLookupRequireDockerTypeSchemaDockerHub,
 	latestVersionLookupSchemaDefault,
+	latestVersionLookupSchemaForgejo,
 	latestVersionLookupSchemaGitHub,
 	latestVersionLookupSchemaURL,
 	latestVersionRequireSchema,
@@ -45,7 +47,8 @@ import {
 	REQUIRED_MESSAGE,
 	regexStringWithFallback,
 	safeParseListWithSchemas,
-	validateGitHubRepo,
+	validateForgeHost,
+	validateRepoPath,
 	validateRequired,
 	validateURL,
 } from '@/utils/api/types/config-edit/validators';
@@ -386,7 +389,7 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 
 	const buildTypeDefaults = <T extends LatestVersionLookupType>(
 		type: T,
-		typeDefaults: LatestVersionLookupDefaults[T],
+		typeDefaults: Record<string, unknown> | undefined,
 	) =>
 		safeParse({
 			data: {
@@ -403,6 +406,12 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 		});
 
 	const schemaDataTypeDefaults = {
+		// Forgejo nests its defaults - flatten 'common' to sit beside the other
+		// types' fields.
+		[LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value]: buildTypeDefaults(
+			LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value,
+			{ ...combinedDefaults.forgejo?.common },
+		),
 		[LATEST_VERSION_LOOKUP_TYPE.GITHUB.value]: buildTypeDefaults(
 			LATEST_VERSION_LOOKUP_TYPE.GITHUB.value,
 			combinedDefaults.github,
@@ -421,6 +430,7 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 
 	// Latest version schema.
 	const schemaRaw = z.discriminatedUnion('type', [
+		latestVersionLookupSchemaForgejo.extend(sharedSchemas),
 		latestVersionLookupSchemaGitHub.extend(sharedSchemas),
 		latestVersionLookupSchemaURL.extend({
 			...sharedSchemas,
@@ -428,11 +438,22 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 		}),
 	]);
 	const schema = z.discriminatedUnion('type', [
+		latestVersionLookupSchemaForgejo.extend({
+			...sharedSchemas,
+			host: stringDefault.superRefine((arg, ctx) => {
+				validateRequired({ arg: arg, ctx: ctx });
+				validateForgeHost({ arg: arg, ctx: ctx });
+			}),
+			url: stringDefault.superRefine((arg, ctx) => {
+				validateRequired({ arg: arg, ctx: ctx });
+				validateRepoPath({ arg: arg, ctx: ctx });
+			}),
+		}),
 		latestVersionLookupSchemaGitHub.extend({
 			...sharedSchemas,
 			url: stringDefault.superRefine((arg, ctx) => {
 				validateRequired({ arg: arg, ctx: ctx });
-				validateGitHubRepo({ arg: arg, ctx: ctx });
+				validateRepoPath({ arg: arg, ctx: ctx });
 			}),
 		}),
 		latestVersionLookupSchemaURL.extend({
@@ -456,7 +477,12 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 		url_commands: urlCommandsSchemaData,
 	};
 	// Type-specific schema data.
-	if (schemaDataType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value) {
+	if (schemaDataType === LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value) {
+		const typedLatestVersion = (data ?? {}) as LatestVersionLookupForgejo;
+		(fallbackData as LatestVersionLookupForgejo).host = typedLatestVersion.host;
+		(fallbackData as LatestVersionLookupForgejo).use_prerelease =
+			typedLatestVersion.use_prerelease;
+	} else if (schemaDataType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value) {
 		const typedLatestVersion = (data ?? {}) as LatestVersionLookupGitHub;
 		(fallbackData as LatestVersionLookupGitHub).use_prerelease =
 			typedLatestVersion.use_prerelease;

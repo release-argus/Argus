@@ -762,9 +762,11 @@ func TestFilterReleases(t *testing.T) {
 			// WHEN: FilterReleases is called on them.
 			got := FilterReleases(
 				tc.releases,
-				tc.urlCommands,
-				tc.semanticVersioning,
-				tc.usePreReleases,
+				FilterOptions{
+					URLCommands:        tc.urlCommands,
+					SemanticVersioning: tc.semanticVersioning,
+					UsePreReleases:     tc.usePreReleases,
+				},
 				logx.LogFrom{Primary: t.Name()},
 			)
 

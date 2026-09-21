@@ -120,12 +120,17 @@ func TestLookup_URL(t *testing.T) {
 		want        string
 	}{
 		{
-			name: "Repo",
+			name: "Repo escaping/a repo cannot climb out of the /repos prefix",
+			url:  "../..",
+			want: "https://api.github.com/repos/%2E%2E/%2E%2E/releases",
+		},
+		{
+			name: "Repo/releases",
 			url:  test.ArgusGitHubRepo,
 			want: "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/releases",
 		},
 		{
-			name:        "Repo with tag fallback",
+			name:        "Repo/tags",
 			url:         test.ArgusGitHubRepo,
 			tagFallback: true,
 			want:        "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/tags",
@@ -136,19 +141,19 @@ func TestLookup_URL(t *testing.T) {
 			want: "https://api.github.com/repos/" + test.ArgusGitHubRepo,
 		},
 		{
-			name: "Repo with page 1",
+			name: "Repo/page 1",
 			url:  test.ArgusGitHubRepo,
 			page: 1,
 			want: "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/releases",
 		},
 		{
-			name: "Repo with page >1",
+			name: "Repo/page >1",
 			url:  test.ArgusGitHubRepo,
 			page: 2,
 			want: "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/releases?page=2",
 		},
 		{
-			name:    "Repo with per_page",
+			name:    "Repo/per_page",
 			url:     test.ArgusGitHubRepo,
 			perPage: 2,
 			want: fmt.Sprintf(
@@ -157,7 +162,7 @@ func TestLookup_URL(t *testing.T) {
 			),
 		},
 		{
-			name:    "Repo with page >1 and per_page",
+			name:    "Repo/page >1 and per_page",
 			url:     test.ArgusGitHubRepo,
 			page:    2,
 			perPage: 4,
@@ -167,14 +172,14 @@ func TestLookup_URL(t *testing.T) {
 			),
 		},
 		{
-			name:        "Repo with tag fallback and page >1",
+			name:        "Repo/tag fallback and page >1",
 			url:         test.ArgusGitHubRepo,
 			tagFallback: true,
 			page:        3,
 			want:        "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/tags?page=3",
 		},
 		{
-			name:        "Repo with tag fallback, page >1, and per_page",
+			name:        "Repo/tag fallback, page >1, and per_page",
 			url:         test.ArgusGitHubRepo,
 			tagFallback: true,
 			page:        3,
@@ -243,10 +248,11 @@ func TestLookup_UsePreRelease(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(t, false)
-			lookup.UsePreRelease = tc.rootValue
-			lookup.typeDefaults.UsePreRelease = tc.defaultValue
-			lookup.typeHardDefaults.UsePreRelease = tc.hardDefaultValue
+			lookup := &Lookup{UsePreRelease: tc.rootValue}
+			lookup.SetTypeDefaults(
+				&Defaults{UsePreRelease: tc.defaultValue},
+				&Defaults{UsePreRelease: tc.hardDefaultValue},
+			)
 
 			// WHEN: usePreRelease is called.
 			result := lookup.usePreRelease()

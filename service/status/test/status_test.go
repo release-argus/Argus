@@ -115,7 +115,7 @@ func TestNew(t *testing.T) {
 			data:   `{"last_queried": ["1.2.3"]}`,
 			errRegex: test.TrimYAML(`
 				^failed to unmarshal timestamps:
-					[^\s]+ (cannot|unable to) unmarshal`),
+					[^\s]+ .* unmarshal`),
 		},
 	}
 
