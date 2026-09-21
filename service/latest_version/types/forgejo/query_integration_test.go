@@ -198,6 +198,14 @@ func TestLookup_Query__Integration(t *testing.T) {
 			errRegex:    `^$`,
 		},
 		{
+			name: "releases disabled/with the fallback suppressed, the error names both causes",
+			host: testInstanceHost,
+			repo: repoReleasesOff,
+			// A content filter rules tags out - they carry no release assets.
+			lookupOverrides: "require:\n  regex_content: 'xxxx'",
+			errRegex:        `^repository not found, or its releases are disabled$`,
+		},
+		{
 			name:     "nothing to find/no releases nor tags doesn't give missing-repository claim",
 			host:     testInstanceHost,
 			repo:     repoNothing,
@@ -216,7 +224,19 @@ func TestLookup_Query__Integration(t *testing.T) {
 			lookupOverrides: "use_prerelease: true",
 			wantVersion:     true,
 			wantPreRelease:  true,
-			errRegex:        `^no releases were found matching the url_commands on page 1 of the API response$`,
+			errRegex:        `^$`,
+		},
+		{
+			name: "certificate trust/queried host allows invalid certificates",
+			host: testInstanceHostBadCert,
+			repo: repoHappy,
+			defaults: map[string]HostDefaults{
+				testInstanceHostBadCert: {
+					AllowInvalidCerts: new(true),
+				},
+			},
+			wantVersion: true,
+			errRegex:    `^$`,
 		},
 		{
 			name:     "certificate trust/no host allows them",
@@ -250,11 +270,19 @@ func TestLookup_Query__Integration(t *testing.T) {
 
 					lookup := testLookup(t, test.TrimYAML(`
 						host: `+target.host+`
-						url: `+target.repo),
-					)
+						url: `+target.repo+`
+						`+tc.lookupOverrides))
+
+					defaults := tc.defaults
 					if tc.useToken {
-						lookup.AccessToken = test.ForgejoToken(t)
+						defaults = map[string]HostDefaults{
+							target.host: {
+								URL:         target.host,
+								AccessToken: test.ForgejoToken(t),
+							},
+						}
 					}
+					setHostDefaults(lookup, defaults, nil)
 
 					// WHEN: it is queried.
 					_, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()})
