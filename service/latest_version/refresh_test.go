@@ -190,7 +190,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			},
 			errRegex: test.TrimYAML(`
 				latest_version:
-					type: "newType" <invalid> \(supported values = \['github', 'url'\]\)$`,
+					type: "newType" <invalid> \(supported values = \['forgejo', 'github', 'url'\]\)$`,
 			),
 		},
 		{

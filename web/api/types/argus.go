@@ -31,7 +31,7 @@ type ServiceSummary struct {
 	Name                *string   `json:"name,omitzero" yaml:"name,omitzero"`                                   // Name for this Service.
 	Active              *bool     `json:"active,omitzero" yaml:"active,omitzero"`                               // Active Service?
 	Comment             *string   `json:"comment,omitzero" yaml:"comment,omitzero"`                             // Comment on the Service.
-	Type                string    `json:"type,omitzero" yaml:"type,omitzero"`                                   // "github"|"URL".
+	Type                string    `json:"type,omitzero" yaml:"type,omitzero"`                                   // "forgejo"|"github"|"url".
 	WebURL              *string   `json:"url,omitzero" yaml:"url,omitzero"`                                     // URL to provide on the Web UI.
 	Icon                *string   `json:"icon,omitzero" yaml:"icon,omitzero"`                                   // Service.Dashboard.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon.
 	IconLinkTo          *string   `json:"icon_link_to,omitzero" yaml:"icon_link_to,omitzero"`                   // URL to redirect Icon clicks to.
@@ -476,11 +476,12 @@ func (d DashboardOptions) IsZero() bool {
 
 // LatestVersion lookup of the service.
 type LatestVersion struct {
-	Type              string                `json:"type,omitzero" yaml:"type,omitzero"`                               // Service Type, github/url.
+	Type              string                `json:"type,omitzero" yaml:"type,omitzero"`                               // Service Type, forgejo/github/url.
+	Host              string                `json:"host,omitzero" yaml:"host,omitzero"`                               // Forgejo instance to query.
 	URL               string                `json:"url,omitzero" yaml:"url,omitzero"`                                 // URL to query.
 	AccessToken       string                `json:"access_token,omitzero" yaml:"access_token,omitzero"`               // GitHub access token to use.
 	AllowInvalidCerts *bool                 `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Default - false = Disallows invalid HTTPS certificates.
-	UsePreRelease     *bool                 `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"`           // Whether to use GitHub prereleases.
+	UsePreRelease     *bool                 `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"`           // Whether to use prereleases.
 	URLCommands       URLCommands           `json:"url_commands,omitempty" yaml:"url_commands,omitempty"`             // Commands to filter the release from the URL request.
 	Headers           []Header              `json:"headers,omitempty" yaml:"headers,omitempty"`                       // Request Headers.
 	Require           *LatestVersionRequire `json:"require,omitzero" yaml:"require,omitzero"`                         // Requirements before treating a release as valid.
@@ -498,16 +499,18 @@ func (r *LatestVersion) String() string {
 // every registered type live under 'common', and fields specific to a single type
 // live under that type's own key.
 type LatestVersionDefaults struct {
-	Type   string                      `json:"type,omitzero" yaml:"type,omitzero"` // "github" | "url".
-	Common LatestVersionCommonDefaults `json:"common,omitzero" yaml:"common,omitzero"`
-	GitHub LatestVersionGitHubDefaults `json:"github,omitzero" yaml:"github,omitzero"`
-	URL    LatestVersionURLDefaults    `json:"url,omitzero" yaml:"url,omitzero"`
+	Type    string                       `json:"type,omitzero" yaml:"type,omitzero"` // "forgejo" | "github" | "url".
+	Common  LatestVersionCommonDefaults  `json:"common,omitzero" yaml:"common,omitzero"`
+	Forgejo LatestVersionForgejoDefaults `json:"forgejo,omitzero" yaml:"forgejo,omitzero"`
+	GitHub  LatestVersionGitHubDefaults  `json:"github,omitzero" yaml:"github,omitzero"`
+	URL     LatestVersionURLDefaults     `json:"url,omitzero" yaml:"url,omitzero"`
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (l LatestVersionDefaults) IsZero() bool {
 	return l.Type == "" &&
 		l.Common.IsZero() &&
+		l.Forgejo.IsZero() &&
 		l.GitHub.IsZero() &&
 		l.URL.IsZero()
 }
@@ -522,10 +525,30 @@ func (l LatestVersionCommonDefaults) IsZero() bool {
 	return l.Require == nil || l.Require.IsZero()
 }
 
+// LatestVersionForgejoDefaults are Forgejo-specific default values for a LatestVersion.
+type LatestVersionForgejoDefaults struct {
+	Common LatestVersionForgejoCommonDefaults `json:"common,omitzero" yaml:"common,omitzero"` // Defaults shared by every instance.
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (l LatestVersionForgejoDefaults) IsZero() bool {
+	return l.Common.IsZero()
+}
+
+// LatestVersionForgejoCommonDefaults are the Forgejo default values that apply to every instance.
+type LatestVersionForgejoCommonDefaults struct {
+	UsePreRelease *bool `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"` // Whether to use prereleases.
+}
+
+// IsZero implements the yaml.IsZeroer interface.
+func (l LatestVersionForgejoCommonDefaults) IsZero() bool {
+	return l.UsePreRelease == nil
+}
+
 // LatestVersionGitHubDefaults are GitHub-specific default values for a LatestVersion.
 type LatestVersionGitHubDefaults struct {
 	AccessToken   string `json:"access_token,omitzero" yaml:"access_token,omitzero"`     // GitHub access token to use.
-	UsePreRelease *bool  `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"` // Whether to use GitHub prereleases.
+	UsePreRelease *bool  `json:"use_prerelease,omitzero" yaml:"use_prerelease,omitzero"` // Whether to use prereleases.
 }
 
 // IsZero implements the yaml.IsZeroer interface.

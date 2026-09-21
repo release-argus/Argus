@@ -3,6 +3,7 @@ import { type FC, useMemo } from 'react';
 import type { ColSize } from '@/components/generic/field-shared';
 import FieldTextWithButton from '@/components/generic/field-text-with-button';
 import type { TooltipWithAriaProps } from '@/components/generic/tooltip';
+import { getServiceURL } from '@/components/modals/service-edit/util';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import {
 	LATEST_VERSION_LOOKUP_TYPE,
@@ -14,17 +15,21 @@ import {
 	type NullString,
 	nullString,
 } from '@/utils/api/types/config-edit/shared/null-string';
+import { isValidForgeHost } from '@/utils/api/types/config-edit/validators';
 
 const typeConfig = {
+	forgejo: {
+		buttonAriaLabel: 'Open repository',
+		isURL: false,
+		label: 'Repository',
+	},
 	github: {
-		buttonAriaLabel: 'Open GitHub repository',
-		getLink: (value: string) => `https://github.com/${value}`,
+		buttonAriaLabel: 'Open repository',
 		isURL: false,
 		label: 'Repository',
 	},
 	url: {
 		buttonAriaLabel: 'Open URL',
-		getLink: (value: string) => value,
 		isURL: true,
 		label: 'URL',
 	},
@@ -45,6 +50,8 @@ type BaseProps = {
 type VersionWithLinkProps = BaseProps & {
 	/* The tooltip on the field label. */
 	tooltip: TooltipWithAriaProps;
+	/* The instance the repository is hosted on (Forgejo only). */
+	host?: string;
 };
 
 /**
@@ -53,6 +60,7 @@ type VersionWithLinkProps = BaseProps & {
  * @param name - The name of the field in the form.
  * @param type - The 'type' of version field.
  * @param required - Whether the field is required.
+ * @param host - The instance the repository is hosted on (Forgejo only).
  * @param tooltip - The tooltip on the field label.
  * @param tooltip.type - 'string' | 'element'.
  * @param tooltip.side - The wide to render the tooltip content.
@@ -67,13 +75,14 @@ const VersionWithLink: FC<VersionWithLinkProps> = ({
 	name,
 	type,
 	required,
+	host,
 	tooltip,
 	colSize,
 }) => {
 	const { schemaDataDefaults } = useSchemaContext();
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: schemaDataDefaults stable.
-	const config = useMemo(() => {
+	const resolvedType = useMemo(() => {
 		const key = name.split('.')[0] as keyof typeof schemaDataDefaults;
 		const keyDefaults =
 			schemaDataDefaults?.[key as keyof typeof schemaDataDefaults];
@@ -85,20 +94,30 @@ const VersionWithLink: FC<VersionWithLinkProps> = ({
 			typedKeyDefaults = keyDefaults as DeployedVersionURLSchema;
 		}
 
-		return typeConfig[
+		return (
 			(type === nullString ? typedKeyDefaults.type : type) ??
-				LATEST_VERSION_LOOKUP_TYPE.GITHUB.value
-		];
+			LATEST_VERSION_LOOKUP_TYPE.GITHUB.value
+		);
 	}, [name, type]);
+	const config = typeConfig[resolvedType];
+
+	// A forge repository is only addressable once the instance is known.
+	const hasDestination =
+		resolvedType !== LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value ||
+		isValidForgeHost(host);
 
 	return (
 		<FieldTextWithButton
-			button={{
-				ariaLabel: config.buttonAriaLabel,
-				href: config.getLink,
-				Icon: Link,
-				kind: 'link',
-			}}
+			button={
+				hasDestination
+					? {
+							ariaLabel: config.buttonAriaLabel,
+							href: (value: string) => getServiceURL(resolvedType, value, host),
+							Icon: Link,
+							kind: 'link',
+						}
+					: undefined
+			}
 			colSize={colSize}
 			label={config.label}
 			name={name}

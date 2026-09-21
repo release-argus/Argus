@@ -23,9 +23,11 @@ export const withProject = (id: string, projectName: string) =>
 
 export type LatestVersionOptions = {
 	/** `latest_version.type` - defaults to 'github'. */
-	type?: 'github' | 'url';
-	/** `latest_version.url` (the GitHub "Repository" or generic "URL" field). */
+	type?: 'forgejo' | 'github' | 'url';
+	/** `latest_version.url` (the forge "Repository" or generic "URL" field). */
 	url: string;
+	/** `latest_version.host` - only applicable to type 'forgejo'. */
+	host?: string;
 	/** `latest_version.allow_invalid_certs` - only applicable to type 'url'. */
 	allowInvalidCerts?: boolean;
 	/** `latest_version.headers` - only applicable to type 'url'. */
@@ -243,10 +245,15 @@ const fillLatestVersion = async (
 		.getByRole('option', { name: new RegExp(`^${type}$`, 'i') })
 		.click();
 
-	if (type === 'github') {
+	if (type === 'forgejo' || type === 'github') {
 		await section
 			.getByRole('textbox', { name: /repository/i })
 			.fill(options.url);
+		if (type === 'forgejo') {
+			await section
+				.getByRole('textbox', { name: /^Value field for Host$/i })
+				.fill(options.host ?? '');
+		}
 		return;
 	}
 

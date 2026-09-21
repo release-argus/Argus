@@ -2403,6 +2403,52 @@ func TestLatestVersion_String(t *testing.T) {
 	}
 }
 
+func TestLatestVersionForgejoDefaults_IsZero(t *testing.T) {
+	// GIVEN: LatestVersionForgejoDefaults.
+	tests := []struct {
+		name     string
+		defaults LatestVersionForgejoDefaults
+		want     bool
+	}{
+		{
+			name:     "empty",
+			defaults: LatestVersionForgejoDefaults{},
+			want:     true,
+		},
+		{
+			name: "non-empty/UsePreRelease=true",
+			defaults: LatestVersionForgejoDefaults{
+				Common: LatestVersionForgejoCommonDefaults{UsePreRelease: new(true)},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/UsePreRelease=false",
+			defaults: LatestVersionForgejoDefaults{
+				Common: LatestVersionForgejoCommonDefaults{UsePreRelease: new(false)},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: it reports whether anything is set.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nLatestVersionForgejoDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
 func TestLatestVersionDefaults_IsZero(t *testing.T) {
 	// GIVEN: LatestVersionDefaults.
 	tests := []struct {
@@ -2419,6 +2465,15 @@ func TestLatestVersionDefaults_IsZero(t *testing.T) {
 			name: "non-empty/Type",
 			defaults: LatestVersionDefaults{
 				Type: "github",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Forgejo.UsePreRelease",
+			defaults: LatestVersionDefaults{
+				Forgejo: LatestVersionForgejoDefaults{
+					Common: LatestVersionForgejoCommonDefaults{UsePreRelease: new(false)},
+				},
 			},
 			want: false,
 		},

@@ -1989,6 +1989,9 @@ var hardDefaultsStr = test.TrimYAML(`
 						docker:
 							type: hub
 							tag: '{{ version }}'
+				forgejo:
+					common:
+						use_prerelease: false
 				github:
 					use_prerelease: false
 				url:

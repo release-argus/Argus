@@ -37,11 +37,9 @@ var envVarRegex = regexp.MustCompile(`\${([a-zA-Z]\w*)}`)
 
 // EvalEnvVars evaluates environment variables in the string.
 func EvalEnvVars(input string) string {
-	// May contain an environment variable.
 	if strings.Contains(input, "${") {
 		return envVarRegex.ReplaceAllStringFunc(input, expandEnvVariables)
 	}
-	// No environment variables.
 	return input
 }
 

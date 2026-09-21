@@ -25,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 )
@@ -203,6 +204,11 @@ func TestDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "non-empty/Forgejo",
+			data: &Defaults{Forgejo: forgejo.Defaults{Common: forgejo.CommonDefaults{UsePreRelease: new(true)}}},
+			want: false,
+		},
+		{
 			name: "non-empty/GitHub",
 			data: &Defaults{GitHub: github.Defaults{AccessToken: "foo"}},
 			want: false,
@@ -281,6 +287,9 @@ func TestDefaults_Default(t *testing.T) {
 					Tag:  "{{ version }}",
 				},
 			},
+		},
+		Forgejo: forgejo.Defaults{
+			Common: forgejo.CommonDefaults{UsePreRelease: new(false)},
 		},
 		GitHub: github.Defaults{
 			UsePreRelease: new(false),
@@ -538,14 +547,39 @@ func TestApplyTypeDefaults(t *testing.T) {
 	// GIVEN: a DefaultsConfig.
 	cfg := DefaultsConfig{
 		Soft: &Defaults{
-			GitHub: github.Defaults{AccessToken: "soft-token"},
-			URL:    web.Defaults{AllowInvalidCerts: new(true)},
+			Forgejo: forgejo.Defaults{Common: forgejo.CommonDefaults{UsePreRelease: new(true)}},
+			GitHub:  github.Defaults{AccessToken: "soft-token"},
+			URL:     web.Defaults{AllowInvalidCerts: new(true)},
 		},
 		Hard: &Defaults{
-			GitHub: github.Defaults{AccessToken: "hard-token"},
-			URL:    web.Defaults{AllowInvalidCerts: new(false)},
+			Forgejo: forgejo.Defaults{Common: forgejo.CommonDefaults{UsePreRelease: new(false)}},
+			GitHub:  github.Defaults{AccessToken: "hard-token"},
+			URL:     web.Defaults{AllowInvalidCerts: new(false)},
 		},
 	}
+
+	t.Run("forgejo.Lookup gets the Forgejo-specific defaults", func(t *testing.T) {
+		// AND: a Lookup of type forgejo.Lookup.
+		lookup := &forgejo.Lookup{}
+
+		// WHEN: applyTypeDefaults is called.
+		applyTypeDefaults(lookup, cfg)
+
+		// THEN: the receiver's type defaults point at the given Forgejo defaults.
+		gotSoft, gotHard := lookup.GetTypeDefaults()
+		if gotSoft != &cfg.Soft.Forgejo {
+			t.Errorf(
+				"%s\napplyTypeDefaults() Soft pointer mismatch\ngot:  %p\nwant: %p",
+				packageName, gotSoft, &cfg.Soft.Forgejo,
+			)
+		}
+		if gotHard != &cfg.Hard.Forgejo {
+			t.Errorf(
+				"%s\napplyTypeDefaults() Hard pointer mismatch\ngot:  %p\nwant: %p",
+				packageName, gotHard, &cfg.Hard.Forgejo,
+			)
+		}
+	})
 
 	t.Run("github.Lookup gets the GitHub-specific defaults", func(t *testing.T) {
 		// AND: a Lookup of type github.Lookup.
