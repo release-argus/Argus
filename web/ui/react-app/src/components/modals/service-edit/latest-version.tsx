@@ -31,6 +31,7 @@ import {
  */
 const EditServiceLatestVersion = () => {
 	const name = 'latest_version';
+	const hostFieldName = `${name}.host`;
 	const urlFieldName = `${name}.url`;
 	const { getFieldState, getValues, setValue, trigger } = useFormContext();
 	const { schemaData, schemaDataDefaults, typeDataDefaults } =
@@ -40,7 +41,7 @@ const EditServiceLatestVersion = () => {
 		name: `${name}.type`,
 	}) as LatestVersionLookupType;
 	const forgejoHost = useWatch({
-		name: `${name}.host`,
+		name: hostFieldName,
 	}) as string | undefined;
 
 	// Validate 'name' when the type changes if we have a 'name' value.
@@ -59,14 +60,45 @@ const EditServiceLatestVersion = () => {
 			? (saved as LatestVersionLookupForgejo)
 			: undefined;
 
-	// The defaults that `host` in the form addresses, if any.
+	// The instances the defaults configure, labelled '<name> (<url>)' - or by
+	// name alone when it is the URL of the instance.
+	const hostOptions = useMemo(() => {
+		const hosts = typeDefaults?.hosts ?? {};
+		return Object.keys(hosts)
+			.sort((a, b) => a.localeCompare(b))
+			.map((name) => {
+				const url = hosts[name]?.url;
+				return {
+					label:
+						url && canonicalForgeHost(url) !== canonicalForgeHost(name)
+							? `${name} (${url})`
+							: name,
+					value: name,
+				};
+			});
+	}, [typeDefaults]);
+
+	// Forgejo, default the host to previous || first default.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: setValue stable.
+	useEffect(() => {
+		if (latestVersionType !== LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value) return;
+		if (forgejoHost || hostOptions.length === 0) return;
+
+		setValue(
+			hostFieldName,
+			(schemaData?.latest_version.type ===
+				LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value &&
+				schemaData?.latest_version.host) ||
+				hostOptions[0].value,
+		);
+	}, [latestVersionType, forgejoHost, hostOptions]);
+
 	const hostDefaults = useMemo(() => {
 		const hosts = typeDefaults?.hosts;
-		const wanted = canonicalForgeHost(forgejoHost);
-		if (!hosts || wanted === '') return undefined;
+		if (!hosts || !forgejoHost) return undefined;
 
 		return Object.entries(hosts).find(
-			([host]) => canonicalForgeHost(host) === wanted,
+			([instance]) => instance.toLowerCase() === forgejoHost.toLowerCase(),
 		)?.[1];
 	}, [forgejoHost, typeDefaults]);
 
@@ -77,7 +109,9 @@ const EditServiceLatestVersion = () => {
 	const tokenUntouched = !getFieldState(tokenField, formState).isDirty;
 	const certsUntouched = !getFieldState(certsField, formState).isDirty;
 
-	const forgejoInstance = `${latestVersionType}|${canonicalForgeHost(forgejoHost)}`;
+	const forgejoInstance = `${latestVersionType}|${canonicalForgeHost(
+		hostDefaults?.url ?? forgejoHost,
+	)}`;
 	const previousInstance = useRef<string | null>(null);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: setValue stable, saved values read on change.
 	useEffect(() => {
@@ -143,7 +177,7 @@ const EditServiceLatestVersion = () => {
 				/>
 				<VersionWithLink
 					colSize={{ sm: 8, xs: 8 }}
-					host={forgejoHost}
+					host={hostDefaults?.url ?? forgejoHost}
 					name={urlFieldName}
 					required
 					tooltip={{
@@ -154,14 +188,16 @@ const EditServiceLatestVersion = () => {
 				/>
 				{latestVersionType === LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value ? (
 					<>
-						<FieldText
+						<FieldSelect
 							colSize={{ sm: 12 }}
+							creatable
 							key="host"
 							label="Host"
-							name={`${name}.host`}
+							name={hostFieldName}
+							options={hostOptions}
 							required
 							tooltip={{
-								content: 'Forgejo instance to query, e.g. https://codeberg.org',
+								content: 'Forgejo instance to query',
 								type: 'string',
 							}}
 						/>

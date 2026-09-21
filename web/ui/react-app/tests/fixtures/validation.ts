@@ -118,6 +118,31 @@ export const valueInputFor = (section: Locator, label: string) =>
 	section.getByRole('textbox', { name: `Value field for ${label}` });
 
 /**
+ * The "Select option for <label>" combobox within `section` (the input of a
+ * `FieldSelect`).
+ *
+ * @param section - The accordion section to search within.
+ * @param label - The field label, e.g. 'Host'.
+ * @returns The combobox locator.
+ */
+export const selectInputFor = (section: Locator, label: string) =>
+	section.getByRole('combobox', { name: `Select option for ${label}` });
+
+/**
+ * Picks `value` in a creatable select, creating the option when `value` is not
+ * one it offers.
+ *
+ * @param select - The select's combobox input.
+ * @param value - The value to pick.
+ */
+export const selectOrCreate = async (select: Locator, value: string) => {
+	await select.click();
+	await select.fill(value);
+	await select.press('Enter');
+	await select.blur();
+};
+
+/**
  * Fills `input`, blurs it, asserts the field is invalid with `error`, then
  * screenshots it as `name`.
  *

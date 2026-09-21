@@ -19,7 +19,11 @@ import {
 	NOTIFY_GOTIFY,
 	WEBHOOK_GITHUB,
 } from './fixtures/test-endpoints';
-import { openSection } from './fixtures/validation';
+import {
+	openSection,
+	selectInputFor,
+	selectOrCreate,
+} from './fixtures/validation';
 
 /**
  * Opens the edit modal for an existing service (edit mode must already be on).
@@ -160,9 +164,7 @@ test.describe('Service secret inheritance', () => {
 		// WHEN: the service is reopened for editing.
 		const dialog = await openEditModal(page, id);
 		const section = await openSection(dialog, 'Latest Version');
-		const hostInput = section.getByRole('textbox', {
-			name: /^Value field for Host$/i,
-		});
+		const hostInput = selectInputFor(section, 'Host');
 		const tokenInput = section.getByRole('textbox', {
 			name: /^Value field for Access Token$/i,
 		});
@@ -180,8 +182,7 @@ test.describe('Service secret inheritance', () => {
 		);
 
 		// WHEN: the host is changed to a different instance.
-		await hostInput.fill('https://git.example.com');
-		await hostInput.blur();
+		await selectOrCreate(hostInput, 'https://git.example.com');
 
 		// THEN: the credential is cleared immediately, and so is the trust
 		// relaxation.
@@ -190,8 +191,7 @@ test.describe('Service secret inheritance', () => {
 		await screenshot(page, `${shotDir}/02-host-changed`, testInfo.project.name);
 
 		// WHEN: the host is spelled differently, but still addresses the original.
-		await hostInput.fill('CODEBERG.org:443/');
-		await hostInput.blur();
+		await selectOrCreate(hostInput, 'CODEBERG.org:443/');
 
 		// THEN: both are restored.
 		await expect(tokenInput).toHaveValue(SECRET_VALUE);

@@ -4,6 +4,7 @@ import type { MultiValue, SingleValue } from 'react-select';
 import FieldLabelWithTooltip, {
 	type FieldLabelSize,
 } from '@/components/generic/field-label';
+import { createOption } from '@/components/generic/field-select-shared';
 import {
 	type ColSize,
 	getColSpanClasses,
@@ -79,6 +80,7 @@ type FormSelectProps<IsMulti extends boolean = false> = BaseProps<IsMulti> & {
  * @param tooltip.delayDuration - Time before rendering the tooltip.
  *
  * @param isMulti - Whether the select field should allow multiple values.
+ * @param creatable - Whether the select field should allow creating new options.
  * @param isClearable - Whether the select field should have a clear button.
  * @param isSearchable - Whether the select field should accept input to filter the available option.
  *
@@ -98,6 +100,7 @@ const FieldSelect = <IsMulti extends boolean = false>({
 	tooltip,
 
 	isMulti,
+	creatable,
 	isClearable,
 	isSearchable,
 
@@ -113,66 +116,75 @@ const FieldSelect = <IsMulti extends boolean = false>({
 			<Controller
 				control={control}
 				name={name}
-				render={({ field, fieldState }) => (
-					<Field
-						data-invalid={fieldState.invalid && showError}
-						orientation="vertical"
-					>
-						{label && (
-							<FieldLabelWithTooltip
-								htmlFor={name}
-								required={required}
-								size={labelSize}
-								text={label}
-								tooltip={tooltip}
-							/>
-						)}
-						<Select
-							{...field}
-							aria-describedby={cn(tooltip && `${name}-tooltip`)}
-							aria-invalid={fieldState.invalid && showError}
-							aria-label={`Select option${isMulti ? 's' : ''} for ${label ?? name}`}
-							id={name}
-							isClearable={isClearable}
-							isMulti={isMulti}
-							isSearchable={options.length > 5 || isSearchable}
-							menuShouldScrollIntoView
-							onChange={(newValue, actionMeta) => {
-								let result = onChange?.(newValue, actionMeta);
-								if (result === false) return;
+				render={({ field, fieldState }) => {
+					const typedOption =
+						creatable && field.value
+							? createOption(field.value as string)
+							: null;
+					const unmatchedOption = creatable ? typedOption : options?.[0];
 
-								result = result ?? newValue;
-								if (Array.isArray(result)) {
-									// Multi-select case.
-									field.onChange(
-										result.map((option: OptionType) => option.value),
-									);
-								} else if (result === null) {
-									// Clear case.
-									field.onChange([]);
-								} else {
-									// Single-select case.
-									field.onChange((result as OptionType).value);
+					return (
+						<Field
+							data-invalid={fieldState.invalid && showError}
+							orientation="vertical"
+						>
+							{label && (
+								<FieldLabelWithTooltip
+									htmlFor={name}
+									required={required}
+									size={labelSize}
+									text={label}
+									tooltip={tooltip}
+								/>
+							)}
+							<Select
+								{...field}
+								aria-describedby={cn(tooltip && `${name}-tooltip`)}
+								aria-invalid={fieldState.invalid && showError}
+								aria-label={`Select option${isMulti ? 's' : ''} for ${label ?? name}`}
+								id={name}
+								isClearable={isClearable}
+								isCreatable={creatable}
+								isMulti={isMulti}
+								isSearchable={creatable || options.length > 5 || isSearchable}
+								menuShouldScrollIntoView
+								onChange={(newValue, actionMeta) => {
+									let result = onChange?.(newValue, actionMeta);
+									if (result === false) return;
+
+									result = result ?? newValue;
+									if (Array.isArray(result)) {
+										// Multi-select case.
+										field.onChange(
+											result.map((option: OptionType) => option.value),
+										);
+									} else if (result === null) {
+										// Clear case.
+										field.onChange([]);
+									} else {
+										// Single-select case.
+										field.onChange((result as OptionType).value);
+									}
+								}}
+								options={options}
+								// styles={customStyles}
+								value={
+									isMulti
+										? options.filter((option) =>
+												(
+													field.value as OptionType['value'][] | undefined
+												)?.includes(option.value),
+											)
+										: (options.find((option) => field.value === option.value) ??
+											unmatchedOption)
 								}
-							}}
-							options={options}
-							// styles={customStyles}
-							value={
-								isMulti
-									? options.filter((option) =>
-											(
-												field.value as OptionType['value'][] | undefined
-											)?.includes(option.value),
-										)
-									: (options.find((option) => field.value === option.value) ??
-										options?.[0])
-							}
-						/>
-						{fieldState.invalid && showError && (
-							<FieldError errors={[fieldState.error]} />
-						)}
-					</Field>
-				)}
+							/>
+							{fieldState.invalid && showError && (
+								<FieldError errors={[fieldState.error]} />
+							)}
+						</Field>
+					);
+				}}
 			/>
 		</FieldGroup>
 	);
