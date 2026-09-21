@@ -67,8 +67,11 @@ func TestMain(m *testing.M) {
 	// Log.
 	logtest.InitLog()
 
-	SetEmptyListETag(test.GitHubToken(nil))
-	initialEmptyListETag = getEmptyListETag()
+	// Leave the ETag at default when missing the GITHUB_TOKEN.
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		SetEmptyListETag(token)
+		initialEmptyListETag = getEmptyListETag()
+	}
 
 	// Unmarshal testBody.
 	_ = decode.Unmarshal("json", testBody, &testBodyObject)

@@ -157,7 +157,7 @@ func plainDefaultsConfig(t *testing.T) DefaultsConfig {
 	defaults.Common.Options = optDefaults
 	hardDefaults, _ := DecodeDefaults("yaml", nil)
 	hardDefaults.Default()
-	hardDefaults.GitHub.AccessToken = test.GitHubToken(nil)
+	hardDefaults.GitHub.AccessToken = test.GitHubToken(t)
 	hardDefaults.Common.Options = optHardDefaults
 
 	defaults.Common.Require.SetDefaults(&hardDefaults.Common.Require)

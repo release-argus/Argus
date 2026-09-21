@@ -18,18 +18,33 @@ package test
 
 import (
 	"encoding/base64"
-	"fmt"
 	"os"
 	"testing"
 )
 
-func get(t *testing.T, key string) string {
-	if t != nil {
-		t.Helper()
-	}
+// requireSecretsEnv is set by CI when the test secrets are expected to be
+// present, turning a missing secret into a failure instead of a skip.
+const requireSecretsEnv = "ARGUS_TEST_REQUIRE_SECRETS"
+
+// tSkipper is the subset of [testing.T] wanted by [requireSecret].
+type tSkipper interface {
+	Helper()
+	Fatalf(format string, args ...any)
+	Skipf(format string, args ...any)
+}
+
+// requireSecret returns the value of key, skipping the test when it is unset.
+func requireSecret(t tSkipper, key string) string {
+	t.Helper()
 	v := os.Getenv(key)
 	if v == "" {
-		panic(fmt.Sprintf("missing required env var: %s", key))
+		if os.Getenv(requireSecretsEnv) == "true" {
+			t.Fatalf(
+				"%s is not set, but %s is true",
+				key, requireSecretsEnv,
+			)
+		}
+		t.Skipf("%s is not set", key)
 	}
 	return v
 }
@@ -58,23 +73,28 @@ var ArgusDockerHubRepo = "releaseargus/argus"
 // Quay Repo for Argus.
 var ArgusDockerQuayRepo = "argus-io/argus"
 
+// DockerHubUsername returns the Docker Hub username, skipping the test if unset.
 func DockerHubUsername(t *testing.T) string {
 	t.Helper()
-	return get(t, "DOCKER_HUB_USERNAME")
+	return requireSecret(t, "DOCKER_HUB_USERNAME")
 }
+
+// DockerHubToken returns the Docker Hub token, skipping the test if unset.
 func DockerHubToken(t *testing.T) string {
 	t.Helper()
-	return get(t, "DOCKER_HUB_TOKEN")
+	return requireSecret(t, "DOCKER_HUB_TOKEN")
 }
+
+// DockerQuayToken returns the Quay token, skipping the test if unset.
 func DockerQuayToken(t *testing.T) string {
 	t.Helper()
-	return get(t, "DOCKER_QUAY_TOKEN")
+	return requireSecret(t, "DOCKER_QUAY_TOKEN")
 }
+
+// GitHubToken returns the GitHub token, skipping the test if unset.
 func GitHubToken(t *testing.T) string {
-	if t != nil {
-		t.Helper()
-	}
-	return get(t, "GITHUB_TOKEN")
+	t.Helper()
+	return requireSecret(t, "GITHUB_TOKEN")
 }
 
 // GitHubTokenEncoded is the base64-encoded GitHub token for GHCR queries.
