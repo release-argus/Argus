@@ -30,13 +30,7 @@ const apiPageSize = 50
 
 // parseHost resolves the Host of the receiver to the root URL of the instance.
 func (l *Lookup) parseHost() (*url.URL, error) {
-	// Scheme defaults to HTTPS, and the port defaults by scheme.
-	address := util.EvalEnvVars(l.Host)
-	if !strings.Contains(address, "://") {
-		address = "https://" + address
-	}
-
-	parsed, err := url.Parse(address)
+	parsed, err := parseInstanceURL(util.EvalEnvVars(l.resolveHost()))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"invalid host %q: %w",
@@ -44,11 +38,51 @@ func (l *Lookup) parseHost() (*url.URL, error) {
 		)
 	}
 
+	return parsed, nil
+}
+
+// parseInstanceURL parses an instance address to the root URL of the instance.
+func parseInstanceURL(address string) (*url.URL, error) {
+	if !strings.Contains(address, "://") {
+		address = "https://" + address
+	}
+
+	parsed, err := url.Parse(address)
+	if err != nil {
+		return nil, err //nolint:wrapcheck
+	}
+
 	return &url.URL{
 		Scheme: parsed.Scheme,
 		Host:   parsed.Host,
-		Path:   parsed.Path,
+		Path:   strings.TrimRight(parsed.Path, "/"),
 	}, nil
+}
+
+// urlProblem returns what to tell the user about an instance URL, or an empty
+// string when it is usable.
+func urlProblem(address string) string {
+	parsed, err := parseInstanceURL(address)
+	if err != nil {
+		return "not a valid URL"
+	}
+
+	switch {
+	case parsed.Scheme != "http" && parsed.Scheme != "https":
+		return "scheme must be http or https"
+	case parsed.Hostname() == "":
+		return "no hostname"
+	}
+
+	return ""
+}
+
+// isPlaintext reports whether a credential sent to address would cross the
+// network unencrypted.
+func isPlaintext(address string) bool {
+	parsed, err := parseInstanceURL(address)
+
+	return err == nil && parsed.Scheme == "http"
 }
 
 // apiURL returns the instance's API URL for `endpoint`, requesting `page`.

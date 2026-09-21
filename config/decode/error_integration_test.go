@@ -111,6 +111,27 @@ func TestErrField__formatError(t *testing.T) {
 			),
 		},
 		{
+			name: "ErrKeyField wrapping joined ErrKey's",
+			err: &ErrKeyField{
+				Key: "host",
+				Err: errors.Join(
+					&ErrKey{
+						Key:         "Codeberg",
+						Description: "already used, names are case-insensitive",
+					},
+					&ErrKey{
+						Key:         "codeBERG",
+						Description: "already used, names are case-insensitive",
+					},
+				),
+			},
+			want: test.TrimYAML(`
+				host:
+				  Codeberg: <invalid> (already used, names are case-insensitive)
+				  codeBERG: <invalid> (already used, names are case-insensitive)`,
+			),
+		},
+		{
 			name: "joined ErrKeyField's wrapping joined ErrField's",
 			err: errors.Join(
 				&ErrKeyField{

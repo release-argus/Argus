@@ -29,7 +29,7 @@ import (
 )
 
 func TestLookup_DecodeSelf(t *testing.T) {
-	dvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig(t)
 	optCfg := opttest.PlainDefaultsConfig(t)
 
 	// GIVEN: data in a given format to Decode into an existing Lookup.
@@ -72,19 +72,21 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			data: test.TrimJSON(`{
 				"host": "example.com",
 				"url": "owner/repo",
+				"allow_invalid_certs": true,
 				"use_prerelease": false
 			}`),
 			errRegex: `^$`,
 			want: test.TrimYAML(`
 				host: example.com
 				url: owner/repo
+				allow_invalid_certs: true
 				use_prerelease: false
 			`),
 		},
 		{
 			name:     "JSON/invalid data types",
 			format:   "json",
-			data:     `{"use_prerelease": "true"}`,
+			data:     `{"allow_invalid_certs": "true"}`,
 			errRegex: `^json: .*unmarshal.*$`,
 			want:     "type: url\n",
 		},
@@ -94,6 +96,8 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			data: test.TrimYAML(`
 				host: example.com
 				url: owner/repo
+				access_token: foo
+				allow_invalid_certs: true
 				use_prerelease: false
 				url_commands:
 					- type: regex
@@ -110,6 +114,8 @@ func TestLookup_DecodeSelf(t *testing.T) {
 						regex: .*
 				require:
 					regex_content: .*
+				access_token: foo
+				allow_invalid_certs: true
 				use_prerelease: false
 			`),
 		},
@@ -126,7 +132,7 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			lookup.Init(
 				options,
 				svcStatus,
-				dvCfg,
+				lvCfg,
 			)
 
 			// WHEN: DecodeSelf is called.
@@ -159,8 +165,8 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			fieldTests := []test.FieldAssertion{
 				{Name: "Options", Got: lookup.Options, Want: options, Mode: test.CompareSamePointer},
 				{Name: "Status", Got: lookup.Status, Want: svcStatus, Mode: test.CompareSamePointer},
-				{Name: "Defaults", Got: lookup.Defaults, Want: dvCfg.Soft, Mode: test.CompareSamePointer},
-				{Name: "HardDefaults", Got: lookup.HardDefaults, Want: dvCfg.Hard, Mode: test.CompareSamePointer},
+				{Name: "Defaults", Got: lookup.Defaults, Want: lvCfg.Soft, Mode: test.CompareSamePointer},
+				{Name: "HardDefaults", Got: lookup.HardDefaults, Want: lvCfg.Hard, Mode: test.CompareSamePointer},
 			}
 			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
 				t.Fatal(err)
@@ -384,6 +390,50 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			`),
 		},
 		{
+			name: "AccessToken added",
+			args: Args{
+				format: "json",
+				data:   `{"access_token": "def"}`,
+				target: &Lookup{
+					Type: "forgejo",
+				},
+			},
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: forgejo
+				access_token: def
+			`),
+		},
+		{
+			name: "AccessToken changed",
+			args: Args{
+				format: "json",
+				data:   `{"access_token": "def"}`,
+				target: &Lookup{
+					Type:        "forgejo",
+					AccessToken: "abc",
+				},
+			},
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: forgejo
+				access_token: def
+			`),
+		},
+		{
+			name: "AccessToken removed",
+			args: Args{
+				format: "json",
+				data:   `{"access_token": ""}`,
+				target: &Lookup{
+					Type:        "forgejo",
+					AccessToken: "abc",
+				},
+			},
+			errRegex: `^$`,
+			want:     "type: forgejo\n",
+		},
+		{
 			name: "Host added",
 			args: Args{
 				format: "json",
@@ -439,13 +489,17 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 					"type": "forgejo",
 					"host": "https://gitea.com",
 					"url": "other/repo",
+					"access_token": "def",
+					"allow_invalid_certs": true,
 					"use_prerelease": false
 				}`),
 				target: &Lookup{
-					Type:          "forgejo",
-					Host:          "https://codeberg.org",
-					URL:           "owner/repo",
-					UsePreRelease: new(true),
+					Type:              "forgejo",
+					Host:              "https://codeberg.org",
+					URL:               "owner/repo",
+					AccessToken:       "abc",
+					AllowInvalidCerts: new(false),
+					UsePreRelease:     new(true),
 				},
 			},
 			errRegex: `^$`,
@@ -453,6 +507,8 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				type: forgejo
 				host: https://gitea.com
 				url: other/repo
+				access_token: def
+				allow_invalid_certs: true
 				use_prerelease: false
 			`),
 		},
