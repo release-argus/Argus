@@ -267,7 +267,7 @@ func testService(t *testing.T, id string, svcCfg service.DefaultsConfig) *servic
 				webhook:
 					test:
 						type: github
-						url: `+test.WebhookGitHub["url_valid"]+`
+						url: `+test.WebhookGitHub.URLValid+`
 						secret: argus
 				dashboard:
 					auto_approve: false
@@ -300,7 +300,7 @@ func testWebhookDefaults(failing bool) *webhook.Defaults {
 			secret: `+secret+`
 			silent_fails: false
 			type: github
-			url: `+test.WebhookGitHub["url_valid"]+`
+			url: `+test.WebhookGitHub.URLValid+`
 		`)),
 	)
 	return wh

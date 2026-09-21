@@ -488,7 +488,7 @@ func TestFromPayload(t *testing.T) {
 			payload: `{
 				"deployed_version": {
 					"type": "url",
-					"url": "` + test.LookupPlain["url_valid"] + `",
+					"url": "` + test.LookupPlain.URLValid + `",
 					"basic_auth": {
 						"password": "` + util.SecretValue + `"
 					},
@@ -506,7 +506,7 @@ func TestFromPayload(t *testing.T) {
 					"yaml", []byte(test.TrimYAML(`
 						deployed_version:
 							type: url
-							url: `+test.LookupPlain["url_valid"]+`
+							url: `+test.LookupPlain.URLValid+`
 							basic_auth:
 								password: aPassword
 							headers:
@@ -817,7 +817,7 @@ func TestFromPayload(t *testing.T) {
 					}
 				},
 				"deployed_version": {
-					"url": "` + test.LookupWithHeaderAuth["url_valid"] + `",
+					"url": "` + test.LookupWithHeaderAuth.URLValid + `",
 					"basic_auth": {
 						"password": "` + util.SecretValue + `"
 					},
@@ -937,7 +937,7 @@ func TestFromPayload(t *testing.T) {
 										token: anotherToken
 
 						deployed_version:
-							url: `+test.LookupWithHeaderAuth["url_valid"]+`
+							url: `+test.LookupWithHeaderAuth.URLValid+`
 							basic_auth:
 								password: aPassword
 							headers:

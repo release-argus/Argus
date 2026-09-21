@@ -95,63 +95,130 @@ var ValidCertHTTPS = "https://" + ValidCertNoProtocol
 // InvalidCertHTTPS is a URL with an invalid TLS certificate, using the HTTPS protocol.
 var InvalidCertHTTPS = "https://" + InvalidCertNoProtocol
 
+// Endpoint is a valid/invalid URL pair for a test endpoint.
+type Endpoint struct {
+	URLValid   string
+	URLInvalid string
+}
+
 // LookupBare is a lookup that gives the next path segment as the version
 // (add /1.2.3 to the URL to get version 1.2.3).
-var LookupBare = map[string]string{
-	"url_valid":   ValidCertHTTPS + "/bare",
-	"url_invalid": InvalidCertHTTPS + "/bare",
+var LookupBare = Endpoint{
+	URLValid:   ValidCertHTTPS + "/bare",
+	URLInvalid: InvalidCertHTTPS + "/bare",
 }
 
 // LookupPlain is a lookup that gives a plain text response with versions in the body.
-var LookupPlain = map[string]string{
-	"url_valid":   ValidCertHTTPS + "/plain",
-	"url_invalid": InvalidCertHTTPS + "/plain",
+var LookupPlain = Endpoint{
+	URLValid:   ValidCertHTTPS + "/plain",
+	URLInvalid: InvalidCertHTTPS + "/plain",
+}
+
+// plainPOSTEndpoint is an Endpoint that requires a POST request with a body.
+type plainPOSTEndpoint struct {
+	Endpoint
+	DataPass string
+	DataFail string
 }
 
 // LookupPlainPOST is a lookup that gives a plain text response with versions in the body, and requires a POST request.
-var LookupPlainPOST = map[string]string{
-	"url_valid":   ValidCertHTTPS + "/plain_post",
-	"url_invalid": InvalidCertHTTPS + "/plain_post",
-	"data_pass":   `{"argus":"test"}`,
-	"data_fail":   `{"argus":"test-"}`,
+var LookupPlainPOST = plainPOSTEndpoint{
+	URLValid:   ValidCertHTTPS + "/plain_post",
+	URLInvalid: InvalidCertHTTPS + "/plain_post",
+	DataPass:   `{"argus":"test"}`,
+	DataFail:   `{"argus":"test-"}`,
+}
+
+// responseHeaderEndpoint is an Endpoint that returns the version in a response header.
+type responseHeaderEndpoint struct {
+	Endpoint
+	HeaderKeyPass          string
+	HeaderKeyPassMixedCase string
+	HeaderKeyFail          string
 }
 
 // LookupResponseHeader is a lookup for testing Webhooks with versions in their response headers.
-var LookupResponseHeader = map[string]string{
-	"url_valid":                  ValidCertHTTPS + "/header",
-	"url_invalid":                InvalidCertHTTPS + "/header",
-	"header_key_pass":            "X-Version-Here",
-	"header_key_pass_mixed_case": "x-VeRSioN-HERe",
-	"header_key_fail":            "X-Version-Foo",
+var LookupResponseHeader = responseHeaderEndpoint{
+	URLValid:               ValidCertHTTPS + "/header",
+	URLInvalid:             InvalidCertHTTPS + "/header",
+	HeaderKeyPass:          "X-Version-Here",
+	HeaderKeyPassMixedCase: "x-VeRSioN-HERe",
+	HeaderKeyFail:          "X-Version-Foo",
 }
 
 // LookupJSON is a lookup that gives a JSON response with versions in the body.
-var LookupJSON = map[string]string{
-	"url_valid":   ValidCertHTTPS + "/json",
-	"url_invalid": InvalidCertHTTPS + "/json",
+var LookupJSON = Endpoint{
+	URLValid:   ValidCertHTTPS + "/json",
+	URLInvalid: InvalidCertHTTPS + "/json",
+}
+
+// webhookEndpoint is an Endpoint that verifies a signed Webhook payload.
+type webhookEndpoint struct {
+	Endpoint
+	SecretPass string
+	SecretFail string
 }
 
 // WebhookGitHub is a lookup for testing Webhooks with versions in their response body.
-var WebhookGitHub = map[string]string{
-	"url_valid":   ValidCertHTTPS + "/hooks/github-style",
-	"url_invalid": InvalidCertHTTPS + "/hooks/github-style",
-	"secret_pass": "argus",
-	"secret_fail": "argus-",
+var WebhookGitHub = webhookEndpoint{
+	URLValid:   ValidCertHTTPS + "/hooks/github-style",
+	URLInvalid: InvalidCertHTTPS + "/hooks/github-style",
+	SecretPass: "argus",
+	SecretFail: "argus-",
+}
+
+// headerAuthEndpoint is an Endpoint that requires a header for authentication.
+type headerAuthEndpoint struct {
+	Endpoint
+	HeaderKey       string
+	HeaderValuePass string
+	HeaderValueFail string
 }
 
 // LookupWithHeaderAuth is a lookup for testing lookups that require header authentication.
-var LookupWithHeaderAuth = map[string]string{
-	"url_valid":         ValidCertHTTPS + "/hooks/single-header",
-	"url_invalid":       InvalidCertHTTPS + "/hooks/single-header",
-	"header_key":        "X-Test",
-	"header_value_pass": "secret",
-	"header_value_fail": "secret-",
+var LookupWithHeaderAuth = headerAuthEndpoint{
+	URLValid:        ValidCertHTTPS + "/hooks/single-header",
+	URLInvalid:      InvalidCertHTTPS + "/hooks/single-header",
+	HeaderKey:       "X-Test",
+	HeaderValuePass: "secret",
+	HeaderValueFail: "secret-",
+}
+
+// basicAuthEndpoint is an Endpoint that requires basic authentication.
+type basicAuthEndpoint struct {
+	Endpoint
+	Username string
+	Password string
 }
 
 // LookupWithBasicAuth is a lookup for testing lookups that require basic authentication.
-var LookupWithBasicAuth = map[string]string{
-	"url_valid":   ValidCertHTTPS + "/basic-auth",
-	"url_invalid": InvalidCertHTTPS + "/basic-auth",
-	"username":    "test",
-	"password":    "123",
+var LookupWithBasicAuth = basicAuthEndpoint{
+	URLValid:   ValidCertHTTPS + "/basic-auth",
+	URLInvalid: InvalidCertHTTPS + "/basic-auth",
+	Username:   "test",
+	Password:   "123",
+}
+
+// gotifyEndpoint is a Gotify server reachable over both the valid and invalid cert domains.
+type gotifyEndpoint struct {
+	HostValid   string
+	HostInvalid string
+	Path        string
+	// TokenPass is accepted by the server.
+	TokenPass string
+	// TokenRejected is well-formed, but unknown to the server, so it is rejected with a 401.
+	TokenRejected string
+	// TokenMalformed is rejected by Shoutrrr before any request is made.
+	TokenMalformed string
+}
+
+// NotifyGotify is the Gotify endpoint used by the Shoutrrr tests.
+var NotifyGotify = gotifyEndpoint{
+	HostValid:   ValidCertNoProtocol,
+	HostInvalid: InvalidCertNoProtocol,
+	Path:        "gotify",
+	TokenPass:   ShoutrrrGotifyToken(),
+	// trunk-ignore(gitleaks/generic-api-key)
+	TokenRejected:  "AGdjFCZugzJGhEG",
+	TokenMalformed: "invalid",
 }

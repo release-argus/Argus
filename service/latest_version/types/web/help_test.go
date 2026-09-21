@@ -77,7 +77,7 @@ func testLookup(t *testing.T, failing bool) *Lookup {
 
 	lookup, _ := Decode(
 		"yaml", []byte(test.TrimYAML(`
-			url: `+test.LookupPlain["url_invalid"]+`
+			url: `+test.LookupPlain.URLInvalid+`
 			url_commands:
 				- type: regex
 					regex: 'ver([0-9.]+)'

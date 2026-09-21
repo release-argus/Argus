@@ -923,7 +923,7 @@ func TestService_String(t *testing.T) {
 						"yaml", []byte(test.TrimYAML(`
 							type: url
 							method: GET
-							url: `+test.LookupPlain["url_valid"]+`
+							url: `+test.LookupPlain.URLValid+`
 							basic_auth:
 								username: user
 								password: pass
@@ -1001,7 +1001,7 @@ func TestService_String(t *testing.T) {
 				deployed_version:
 					type: url
 					method: GET
-					url: ` + test.LookupPlain["url_valid"] + `
+					url: ` + test.LookupPlain.URLValid + `
 					basic_auth:
 						username: user
 						password: pass
@@ -1413,7 +1413,7 @@ func TestService_Summary(t *testing.T) {
 						deployed_version:
 							type: url
 							method: GET
-							url: `+test.LookupPlain["url_valid"]+`
+							url: `+test.LookupPlain.URLValid+`
 							json: version
 
 						notify:

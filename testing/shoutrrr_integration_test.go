@@ -99,8 +99,8 @@ func TestNotifyTest(t *testing.T) {
 									options:
 										max_tries: 1
 									url_fields:
-										host: `+test.ValidCertNoProtocol+`
-										token: invalid
+										host: `+test.NotifyGotify.HostValid+`
+										token: `+test.NotifyGotify.TokenMalformed+`
 								baz: {}
 					`)),
 					svcCfg, notifyCfg, whCfg,
@@ -123,7 +123,7 @@ func TestNotifyTest(t *testing.T) {
 									options:
 										max_tries: 1
 									url_fields:
-										host: `+test.ValidCertNoProtocol+`
+										host: `+test.NotifyGotify.HostValid+`
 										token: abc
 								baz: {}
 					`)),
@@ -147,8 +147,9 @@ func TestNotifyTest(t *testing.T) {
 									options:
 										max_tries: 1
 									url_fields:
-										host: `+test.ValidCertNoProtocol+`
-										token: AGdjFCZugzJGhEG
+										host: `+test.NotifyGotify.HostValid+`
+										path: `+test.NotifyGotify.Path+`
+										token: `+test.NotifyGotify.TokenRejected+`
 								baz: {}
 					`)),
 					svcCfg, notifyCfg, whCfg,
@@ -168,8 +169,9 @@ func TestNotifyTest(t *testing.T) {
 						"max_tries": "1",
 					},
 					map[string]string{
-						"host":  test.ValidCertNoProtocol,
-						"token": "AGdjFCZugzJGhEG",
+						"host":  test.NotifyGotify.HostValid,
+						"path":  test.NotifyGotify.Path,
+						"token": test.NotifyGotify.TokenRejected,
 					},
 					map[string]string{},
 				),
@@ -191,9 +193,9 @@ func TestNotifyTest(t *testing.T) {
 									options:
 										max_tries: 1
 									url_fields:
-										host: `+test.ValidCertNoProtocol+`
-										path: /gotify
-										token: `+test.ShoutrrrGotifyToken()+`
+										host: `+test.NotifyGotify.HostValid+`
+										path: `+test.NotifyGotify.Path+`
+										token: `+test.NotifyGotify.TokenPass+`
 								baz: {}
 					`)),
 					svcCfg, notifyCfg, whCfg,

@@ -186,7 +186,7 @@ func TestHTTP_Counts(t *testing.T) {
 				id: test
 				latest_version:
 					type: url
-					url: ` + test.LookupPlain["url_valid"] + `
+					url: ` + test.LookupPlain.URLValid + `
 			`))
 			serviceTotal := tc.serviceCountCurrentActive + tc.serviceCountCurrentInactive
 			api.Config = &config.Config{}
