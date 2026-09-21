@@ -243,10 +243,11 @@ func TestLookup_UsePreRelease(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(t, false)
-			lookup.UsePreRelease = tc.rootValue
-			lookup.typeDefaults.UsePreRelease = tc.defaultValue
-			lookup.typeHardDefaults.UsePreRelease = tc.hardDefaultValue
+			lookup := &Lookup{UsePreRelease: tc.rootValue}
+			lookup.SetTypeDefaults(
+				&Defaults{UsePreRelease: tc.defaultValue},
+				&Defaults{UsePreRelease: tc.hardDefaultValue},
+			)
 
 			// WHEN: usePreRelease is called.
 			result := lookup.usePreRelease()

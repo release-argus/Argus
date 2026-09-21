@@ -14,7 +14,8 @@
 
 //go:build unit
 
-package github
+// Package forgejo provides a Forgejo-based lookup type.
+package forgejo
 
 import (
 	"fmt"
@@ -28,7 +29,7 @@ import (
 )
 
 func TestLookup_DecodeSelf(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	dvCfg := plainDefaultsConfig(t)
 	optCfg := opttest.PlainDefaultsConfig(t)
 
 	// GIVEN: data in a given format to Decode into an existing Lookup.
@@ -41,16 +42,16 @@ func TestLookup_DecodeSelf(t *testing.T) {
 		{
 			name:     "JSON/empty",
 			format:   "json",
-			data:     "",
-			want:     "{}\n",
+			data:     ``,
 			errRegex: `^$`,
+			want:     "{}\n",
 		},
 		{
 			name:     "JSON/empty object",
 			format:   "json",
-			data:     "{}",
-			want:     "{}\n",
+			data:     `{}`,
 			errRegex: `^$`,
+			want:     "{}\n",
 		},
 		{
 			name:     "YAML/empty",
@@ -60,85 +61,55 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			want:     "{}\n",
 		},
 		{
-			name:   "invalid payload causes decode error",
-			format: "json",
-			data:   `{`,
-			errRegex: test.TrimYAML(`
-				^extract "require":
-					[^\s]+ unexpected EOF`,
-			),
+			name:     "JSON/invalid payload decode error",
+			format:   "json",
+			data:     `{`,
+			errRegex: `unexpected`,
 		},
 		{
-			name:   "valid payload, no require",
+			name:   "JSON/valid payload, no require",
 			format: "json",
 			data: test.TrimJSON(`{
-				"type": "github",
-				"allow_invalid_certs": true,
-				"access_token": "abc",
+				"host": "example.com",
+				"url": "owner/repo",
 				"use_prerelease": false
 			}`),
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				type: github
-				access_token: abc
+				host: example.com
+				url: owner/repo
 				use_prerelease: false
 			`),
 		},
 		{
-			name:     "invalid data types",
+			name:     "JSON/invalid data types",
 			format:   "json",
 			data:     `{"use_prerelease": "true"}`,
 			errRegex: `^json: .*unmarshal.*$`,
 			want:     "type: url\n",
 		},
 		{
-			name:   "require extraction, invalid type",
-			format: "json",
-			data: test.TrimJSON(`{
-				"type": "github",
-				"require": 123
-			}`),
-			errRegex: test.TrimYAML(`
-				^require:
-					extract "docker":
-						json: .*unmarshal.* number.*$`,
-			),
-		},
-		{
-			name:   "valid require block",
-			format: "json",
-			data: test.TrimJSON(`{
-				"type":"github",
-				"require": {
-					"regex_content": "v?"
-				}
-			}`),
-			errRegex: `^$`,
-			want: test.TrimYAML(`
-				type: github
+			name:   "YAML/filled",
+			format: "yaml",
+			data: test.TrimYAML(`
+				host: example.com
+				url: owner/repo
+				use_prerelease: false
+				url_commands:
+					- type: regex
+						regex: '.*'
 				require:
-					regex_content: v?
+					regex_content: '.*'
 			`),
-		},
-		{
-			name:   "filled",
-			format: "json",
-			data: test.TrimJSON(`{
-				"type": "github",
-				"url": "https://example.com",
-				"access_token": "abc",
-				"use_prerelease": false,
-				"require": {
-					"regex_version": "v?"
-				}
-			}`),
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				type: github
-				url: https://example.com
+				host: example.com
+				url: owner/repo
+				url_commands:
+					- type: regex
+						regex: .*
 				require:
-					regex_version: v?
-				access_token: abc
+					regex_content: .*
 				use_prerelease: false
 			`),
 		},
@@ -155,18 +126,18 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			lookup.Init(
 				options,
 				svcStatus,
-				lvCfg,
+				dvCfg,
 			)
 
 			// WHEN: DecodeSelf is called.
-			decoded, _, testErr := test.AssertDecode(
+			lookup, err, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*Lookup, error) {
 					err := lookup.DecodeSelf(format, data)
 					return lookup, err
 				},
 				tc.format, tc.data,
-				func(lv *Lookup) string { return decode.ToYAMLString(lv, "") },
+				func(v *Lookup) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
 				packageName,
@@ -175,24 +146,132 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			if testErr != nil {
 				t.Fatal(testErr)
 			}
-			if decoded == nil {
+			if err != nil || lookup == nil {
 				return
 			}
 
 			prefix := fmt.Sprintf(
 				"%s\nLookup.DecodeSelf(format=%q, data=%q)",
-				tc.format, tc.format, tc.data,
+				packageName, tc.format, tc.data,
 			)
 
-			// THEN: pointers are set as expected.
+			// AND: Pointers are handed out to it correctly.
 			fieldTests := []test.FieldAssertion{
-				{Name: "Options", Got: decoded.Options, Want: options, Mode: test.CompareSamePointer},
-				{Name: "Status", Got: decoded.Status, Want: svcStatus, Mode: test.CompareSamePointer},
-				{Name: "Defaults", Got: decoded.Defaults, Want: lvCfg.Soft, Mode: test.CompareSamePointer},
-				{Name: "HardDefaults", Got: decoded.HardDefaults, Want: lvCfg.Hard, Mode: test.CompareSamePointer},
+				{Name: "Options", Got: lookup.Options, Want: options, Mode: test.CompareSamePointer},
+				{Name: "Status", Got: lookup.Status, Want: svcStatus, Mode: test.CompareSamePointer},
+				{Name: "Defaults", Got: lookup.Defaults, Want: dvCfg.Soft, Mode: test.CompareSamePointer},
+				{Name: "HardDefaults", Got: lookup.HardDefaults, Want: dvCfg.Hard, Mode: test.CompareSamePointer},
 			}
 			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
 				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestDecode(t *testing.T) {
+	// GIVEN: a Lookup in YAML/JSON.
+	tests := []struct {
+		name         string
+		format, data string
+		want         string
+		errRegex     string
+	}{
+		{
+			name:     "valid/YAML/empty",
+			format:   "yaml",
+			data:     "",
+			errRegex: `^$`,
+		},
+		{
+			name:   "valid/YAML/host and repository",
+			format: "yaml",
+			data: test.TrimYAML(`
+				host: https://codeberg.org
+				url: owner/repo`,
+			),
+			want: test.TrimYAML(`
+				host: https://codeberg.org
+				url: owner/repo
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name:   "valid/YAML/use_prerelease",
+			format: "yaml",
+			data: test.TrimYAML(`
+				host: https://codeberg.org
+				url: owner/repo
+				use_prerelease: true
+			`),
+			want: test.TrimYAML(`
+				host: https://codeberg.org
+				url: owner/repo
+				use_prerelease: true
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name:     "valid/YAML/no host",
+			format:   "yaml",
+			data:     `url: owner/repo`,
+			want:     "url: owner/repo\n",
+			errRegex: `^$`,
+		},
+		{
+			name:     "invalid/YAML/not a mapping",
+			format:   "yaml",
+			data:     `- host: https://codeberg.org`,
+			errRegex: `sequence was used where mapping is expected`,
+		},
+		{
+			name:   "invalid/YAML/type mismatch",
+			format: "yaml",
+			data: test.TrimYAML(`
+				host: https://codeberg.org
+				url: owner/repo
+				use_prerelease: [true]
+			`),
+			errRegex: `cannot unmarshal .*UsePreRelease`,
+		},
+		{
+			name:   "valid/JSON",
+			format: "json",
+			data: test.TrimJSON(`{
+				"host": "https://codeberg.org",
+				"url": "owner/repo",
+				"use_prerelease": true
+			}`),
+			want: test.TrimYAML(`
+				host: https://codeberg.org
+				url: owner/repo
+				use_prerelease: true
+			`),
+			errRegex: `^$`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			if _, _, testErr := test.AssertDecode(
+				t,
+				func(format string, data []byte) (*Lookup, error) {
+					return Decode(
+						format, data,
+						nil, nil,
+						plainDefaultsConfig(t),
+					)
+				},
+				tc.format, tc.data,
+				func(v *Lookup) string { return v.String("") },
+				tc.want,
+				tc.errRegex,
+				packageName,
+				"Decode",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
@@ -258,13 +337,13 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				format: "json",
 				data:   `{"require": null}`,
 				target: &Lookup{
-					URL: "https://example.com",
+					URL: "owner/repo",
 					Require: &filter.Require{
 						RegexContent: "v?",
 					},
 				},
 			},
-			want:     "url: https://example.com\n",
+			want:     "url: owner/repo\n",
 			errRegex: `^$`,
 		},
 		{
@@ -272,7 +351,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
-				"type":"url",
+				"type": "forgejo",
 				"require": {
 					"regex_content": "v?"
 				}
@@ -281,7 +360,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				type: url
+				type: forgejo
 				require:
 					regex_content: v?
 			`),
@@ -305,69 +384,75 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			`),
 		},
 		{
-			name: "AccessToken added",
+			name: "Host added",
 			args: Args{
 				format: "json",
-				data:   `{"access_token": "def"}`,
+				data:   `{"host": "https://codeberg.org"}`,
 				target: &Lookup{
-					Type: "github",
+					Type: "forgejo",
 				},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				type: github
-				access_token: def
+				type: forgejo
+				host: https://codeberg.org
 			`),
 		},
 		{
-			name: "AccessToken changed",
+			name: "Host changed",
 			args: Args{
 				format: "json",
-				data:   `{"access_token": "def"}`,
+				data:   `{"host": "https://gitea.com"}`,
 				target: &Lookup{
-					Type:        "github",
-					AccessToken: "abc",
+					Type:          "forgejo",
+					Host:          "https://codeberg.org",
+					URL:           "owner/repo",
+					UsePreRelease: new(true),
 				},
 			},
 			errRegex: `^$`,
 			want: test.TrimYAML(`
-				type: github
-				access_token: def
+				type: forgejo
+				host: https://gitea.com
+				url: owner/repo
+				use_prerelease: true
 			`),
 		},
 		{
-			name: "AccessToken removed",
+			name: "Host removed",
 			args: Args{
 				format: "json",
-				data:   `{"access_token": ""}`,
+				data:   `{"host": ""}`,
 				target: &Lookup{
-					Type:        "github",
-					AccessToken: "abc",
+					Type: "forgejo",
+					Host: "https://codeberg.org",
 				},
 			},
-			want: "type: github\n",
+			errRegex: `^$`,
+			want:     "type: forgejo\n",
 		},
 		{
 			name: "filled",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
-					"type": "github",
-					"url": "https://release-argus",
-					"access_token": "def",
+					"type": "forgejo",
+					"host": "https://gitea.com",
+					"url": "other/repo",
 					"use_prerelease": false
 				}`),
 				target: &Lookup{
-					Type:          "github",
-					URL:           "https://example.com",
-					AccessToken:   "abc",
+					Type:          "forgejo",
+					Host:          "https://codeberg.org",
+					URL:           "owner/repo",
 					UsePreRelease: new(true),
 				},
 			},
+			errRegex: `^$`,
 			want: test.TrimYAML(`
-				type: github
-				url: https://release-argus
-				access_token: def
+				type: forgejo
+				host: https://gitea.com
+				url: other/repo
 				use_prerelease: false
 			`),
 		},

@@ -278,6 +278,41 @@ func testYAML_config_small(path string) {
 	writeFile(path, data)
 }
 
+// testYAML_config_forgejo is for `save.go`
+//
+// a forgejo service whose host is spelt in a form canonicalisation would rewrite.
+func testYAML_config_forgejo(path string) {
+	data := test.TrimYAML(`
+		settings:
+			data: {}
+			web: {}
+		service:
+			bare-host:
+				options: {}
+				latest_version:
+					type: forgejo
+					host: codeberg.org
+					url: owner/repo
+				dashboard: {}
+			uppercase-scheme-and-default-port:
+				options: {}
+				latest_version:
+					type: forgejo
+					host: HTTPS://codeberg.org:443
+					url: owner/repo
+				dashboard: {}
+			sub-path:
+				options: {}
+				latest_version:
+					type: forgejo
+					host: http://forge.example.com:3000/git
+					url: owner/repo
+				dashboard: {}
+	`)
+
+	writeFile(path, data)
+}
+
 // testYAML_config_auth is for `save.go`
 //
 // a settings.auth block.

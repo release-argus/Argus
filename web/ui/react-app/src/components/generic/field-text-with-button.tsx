@@ -73,8 +73,8 @@ export type FieldButton = {
 export type FieldTextWithButtonProps = BaseProps & {
 	/* The tooltip on the field label. */
 	tooltip?: TooltipWithAriaProps;
-	/* Field button configuration. */
-	button: FieldButton;
+	/* Field button configuration. Omit to render the field without a button. */
+	button?: FieldButton;
 };
 
 /**

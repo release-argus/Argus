@@ -20,6 +20,7 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 )
@@ -34,11 +35,12 @@ type DefaultsConfig struct {
 // type live under 'common', and fields specific to a single type live under that
 // type's own key.
 type Defaults struct {
-	Type string `json:"type,omitzero" yaml:"type,omitzero"` // "github" | "url".
+	Type string `json:"type,omitzero" yaml:"type,omitzero"` // "forgejo" | "github" | "url".
 
-	Common base.Defaults   `json:"common,omitzero" yaml:"common,omitzero"`
-	GitHub github.Defaults `json:"github,omitzero" yaml:"github,omitzero"`
-	URL    web.Defaults    `json:"url,omitzero" yaml:"url,omitzero"`
+	Common  base.Defaults    `json:"common,omitzero" yaml:"common,omitzero"`
+	Forgejo forgejo.Defaults `json:"forgejo,omitzero" yaml:"forgejo,omitzero"`
+	GitHub  github.Defaults  `json:"github,omitzero" yaml:"github,omitzero"`
+	URL     web.Defaults     `json:"url,omitzero" yaml:"url,omitzero"`
 
 	// Deprecated: moved to 'github.access_token'.
 	AccessTokenDeprecated string `json:"access_token,omitzero" yaml:"access_token,omitzero"`
@@ -68,6 +70,7 @@ func DecodeDefaults(format string, data []byte) (*Defaults, error) {
 func (d Defaults) IsZero() bool {
 	return d.Type == "" &&
 		d.Common.IsZero() &&
+		d.Forgejo.IsZero() &&
 		d.GitHub.IsZero() &&
 		d.URL.IsZero() &&
 		d.AccessTokenDeprecated == "" &&
@@ -80,6 +83,7 @@ func (d Defaults) IsZero() bool {
 func (d *Defaults) Default() {
 	d.Type = "github"
 	d.Common.Default()
+	d.Forgejo.Default()
 	d.GitHub.Default()
 	d.URL.Default()
 }
@@ -129,6 +133,8 @@ func (d *Defaults) CheckValues() error {
 // lookup, based on its concrete type. It is a no-op for unregistered types.
 func applyTypeDefaults(lookup Lookup, cfg DefaultsConfig) {
 	switch v := lookup.(type) {
+	case *forgejo.Lookup:
+		v.SetTypeDefaults(&cfg.Soft.Forgejo, &cfg.Hard.Forgejo)
 	case *github.Lookup:
 		v.SetTypeDefaults(&cfg.Soft.GitHub, &cfg.Hard.GitHub)
 	case *web.Lookup:

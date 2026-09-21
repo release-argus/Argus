@@ -2,6 +2,7 @@ import type { Command, Headers } from '@/utils/api/types/config/shared';
 import type { NullString } from '@/utils/api/types/config-edit/shared/null-string';
 
 export const LATEST_VERSION_LOOKUP_TYPE = {
+	FORGEJO: { label: 'Forgejo', value: 'forgejo' },
 	GITHUB: { label: 'GitHub', value: 'github' },
 	URL: { label: 'URL', value: 'url' },
 } as const;
@@ -12,6 +13,7 @@ export const latestVersionLookupTypeOptions = Object.values(
 );
 
 export type LatestVersionLookup =
+	| LatestVersionLookupForgejo
 	| LatestVersionLookupGitHub
 	| LatestVersionLookupURL;
 
@@ -24,6 +26,14 @@ export type LatestVersionLookupBase = {
 // Fields common to latest_version types.
 export type LatestVersionLookupCommonDefaults = {
 	require?: LatestVersionRequireDefaults;
+};
+// Forgejo-specific defaults.
+export type LatestVersionLookupForgejoCommonDefaults = {
+	use_prerelease?: boolean;
+};
+// Forgejo-specific defaults.
+export type LatestVersionLookupForgejoDefaults = {
+	common?: LatestVersionLookupForgejoCommonDefaults;
 };
 // GitHub-specific defaults.
 export type LatestVersionLookupGitHubDefaults = {
@@ -38,6 +48,7 @@ export type LatestVersionLookupURLDefaults = {
 export type LatestVersionLookupDefaults = {
 	type?: LatestVersionLookupType | null;
 	common?: LatestVersionLookupCommonDefaults;
+	forgejo?: LatestVersionLookupForgejoDefaults;
 	github?: LatestVersionLookupGitHubDefaults;
 	url?: LatestVersionLookupURLDefaults;
 };
@@ -172,6 +183,13 @@ export type LatestVersionRequire = {
 };
 export type LatestVersionRequireDefaults = LatestVersionRequire & {
 	docker?: RequireDockerFilterDefaults;
+};
+
+/* Type: forgejo */
+export type LatestVersionLookupForgejo = LatestVersionLookupBase & {
+	type: typeof LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value | null;
+	host?: string;
+	use_prerelease?: boolean;
 };
 
 /* Type: github */

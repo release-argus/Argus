@@ -28,7 +28,7 @@ import (
 
 // Lookup is the base struct for an [Interface].
 type Lookup struct {
-	Type        string             `json:"type,omitzero" yaml:"type,omitzero"`                   // "github" | "url".
+	Type        string             `json:"type,omitzero" yaml:"type,omitzero"`                   // "forgejo" | "github" | "url".
 	URL         string             `json:"url,omitzero" yaml:"url,omitzero"`                     // "owner/repo" or "https://github.com/owner/repo".
 	URLCommands filter.URLCommands `json:"url_commands,omitempty" yaml:"url_commands,omitempty"` // Commands to filter the release from the URL request.
 	Require     *filter.Require    `json:"require,omitzero" yaml:"require,omitzero"`             // Options to require before considering a release valid.

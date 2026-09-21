@@ -42,7 +42,7 @@ test.describe('Service creation modal - field validation', () => {
 			await expectError(
 				repoInput,
 				'not-a-repo',
-				'Invalid GitHub repository.',
+				'Invalid repository.',
 				shot,
 				'02-github-repo-invalid',
 			);
@@ -55,6 +55,135 @@ test.describe('Service creation modal - field validation', () => {
 				shot,
 				'03-github-repo-valid',
 			);
+		});
+
+		test('type=forgejo - reveals a host field, and both it and the repository are validated', async ({
+			page,
+		}, testInfo) => {
+			const shot = screenshotsUnder(
+				page,
+				testInfo.project.name,
+				'service-creation-validation/latest-version',
+			);
+			const dialog = await openCreateServiceModal(page);
+			const section = await openSection(dialog, 'Latest Version');
+
+			// GIVEN: `latest_version.type` is set to "forgejo".
+			await section.locator('#latest_version\\.type').click();
+			await dialog.getByRole('option', { name: /^forgejo$/i }).click();
+
+			// THEN: a "Host" field is revealed.
+			const hostInput = section.getByRole('textbox', {
+				name: /^Value field for Host$/i,
+			});
+			await expect(hostInput).toBeVisible();
+
+			// GIVEN: the "Host" field is focused and blurred.
+			// THEN: a "Required." error is shown.
+			await expectError(
+				hostInput,
+				undefined,
+				'Required.',
+				shot,
+				'01-forgejo-host-empty',
+			);
+
+			// WHEN: a value that cannot address an instance is entered.
+			// THEN: an error is shown.
+			await expectError(
+				hostInput,
+				'ftp://codeberg.org',
+				'Invalid host.',
+				shot,
+				'02-forgejo-host-invalid',
+			);
+
+			// WHEN: a host padded with whitespace is entered.
+			// THEN: an error is shown.
+			await expectError(
+				hostInput,
+				'  https://codeberg.org  ',
+				'Invalid host.',
+				shot,
+				'03-forgejo-host-whitespace',
+			);
+
+			// WHEN: a host is entered without a scheme.
+			// THEN: the error clears.
+			await expectValid(
+				hostInput,
+				'codeberg.org',
+				shot,
+				'04-forgejo-host-bare-valid',
+			);
+
+			const repoInput = section.getByRole('textbox', { name: /repository/i });
+
+			// WHEN: the repository is given as a full address rather than owner/repo.
+			// THEN: an error is shown.
+			await expectError(
+				repoInput,
+				'https://codeberg.org/forgejo/forgejo',
+				'Invalid repository.',
+				shot,
+				'05-forgejo-repo-invalid',
+			);
+
+			// WHEN: a valid "owner/repo" value is entered.
+			// THEN: the error clears.
+			await expectValid(
+				repoInput,
+				'forgejo/forgejo',
+				shot,
+				'06-forgejo-repo-valid',
+			);
+		});
+
+		test('type=forgejo - the repository link is built from the host, normalised', async ({
+			page,
+		}, testInfo) => {
+			const shot = screenshotsUnder(
+				page,
+				testInfo.project.name,
+				'service-creation-validation/latest-version',
+			);
+			const dialog = await openCreateServiceModal(page);
+			const section = await openSection(dialog, 'Latest Version');
+
+			// GIVEN: a forgejo service with a repository entered.
+			await section.locator('#latest_version\\.type').click();
+			await dialog.getByRole('option', { name: /^forgejo$/i }).click();
+
+			const hostInput = section.getByRole('textbox', {
+				name: /^Value field for Host$/i,
+			});
+			const repoInput = section.getByRole('textbox', { name: /repository/i });
+			const repoLink = section.getByRole('link', { name: /open repository/i });
+
+			await repoInput.fill('owner/repo');
+			await repoInput.blur();
+
+			// THEN: no link is offered without a host.
+			await expect(repoLink).toHaveCount(0);
+
+			// WHEN: a host is entered without a scheme.
+			// THEN: the link defaults it to HTTPS.
+			await hostInput.fill('codeberg.org');
+			await hostInput.blur();
+			await expect(repoLink).toHaveAttribute(
+				'href',
+				'https://codeberg.org/owner/repo',
+			);
+
+			// WHEN: a host is entered with a sub-path and a trailing slash.
+			// THEN: the trailing slash is dropped, and the repository follows the sub-path.
+			await hostInput.fill('https://example.com/git/');
+			await hostInput.blur();
+			await expect(repoLink).toHaveAttribute(
+				'href',
+				'https://example.com/git/owner/repo',
+			);
+			await shot('01-forgejo-repo-link', repoInput);
 		});
 
 		test('type=url - URL is required and must start with http(s)://', async ({

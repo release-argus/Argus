@@ -414,7 +414,7 @@ func (l *Lookup) handleNewVersion(
 	version, releaseDate, latestVersion string,
 	logFrom logx.LogFrom,
 ) (bool, error) {
-	// Verify that the version has changed (GitHub may have just omitted the tag for some reason).
+	// Confirm that the version has changed.
 	if checkNumber == 0 {
 		msg := fmt.Sprintf(
 			"Possibly found a new version (From %q to %q). Checking again",

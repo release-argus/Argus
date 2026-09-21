@@ -4,6 +4,7 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { FieldSelect, FieldText } from '@/components/generic/field';
 import RenderNotify from '@/components/modals/service-edit/notify-types/render';
 import TestNotify from '@/components/modals/service-edit/test-notify';
+import { getServiceURL } from '@/components/modals/service-edit/util';
 import { AccordionContent, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
@@ -11,10 +12,7 @@ import type { OptionType } from '@/components/ui/react-select/custom-components'
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import { isEmptyOrNull } from '@/utils';
 import { notifyTypeOptions } from '@/utils/api/types/config/notify/all-types';
-import {
-	LATEST_VERSION_LOOKUP_TYPE,
-	type LatestVersionLookupType,
-} from '@/utils/api/types/config/service/latest-version';
+import type { LatestVersionLookupType } from '@/utils/api/types/config/service/latest-version';
 import {
 	isNotifyType,
 	type NotifySchemaKeys,
@@ -66,6 +64,9 @@ const Notify: FC<NotifyProps> = ({
 		name: 'latest_version.type',
 	}) as LatestVersionLookupType;
 	const lvURL = useWatch({ name: 'latest_version.url' }) as string | undefined;
+	const lvHost = useWatch({ name: 'latest_version.host' }) as
+		| string
+		| undefined;
 	const webURL = useWatch({ name: 'dashboard.web_url' }) as string | undefined;
 
 	// Sync type with main.
@@ -101,11 +102,14 @@ const Notify: FC<NotifyProps> = ({
 		() => originals?.find((o) => o.old_index === itemName),
 		[itemName, originals],
 	);
-	const serviceURL =
-		lvType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value &&
-		(lvURL?.match(/\//g) ?? []).length === 1
-			? `https://github.com/${lvURL ?? ''}`
-			: lvURL;
+	// Only an 'owner/repo' needs its instance prefixing - anything else is already a URL.
+	const serviceURL = useMemo(
+		() =>
+			(lvURL?.match(/\//g) ?? []).length === 1
+				? getServiceURL(lvType, lvURL ?? '', lvHost)
+				: lvURL,
+		[lvType, lvURL, lvHost],
+	);
 
 	// Reset values to their original when type reverted.
 	const onChangeNotifyType = useCallback(

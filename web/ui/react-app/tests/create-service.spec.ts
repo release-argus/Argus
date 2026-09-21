@@ -83,6 +83,19 @@ const runCreateServiceTest = async (
 test.describe('Service creation', () => {
 	const createdIDs = trackCreatedServices();
 
+	test('latest-version=forgejo', async ({ page }, testInfo) => {
+		const baseID = 'LATEST_VERSION=FORGEJO';
+		const id = withProject(baseID, testInfo.project.name);
+		createdIDs.push(id);
+		await runCreateServiceTest(page, id, baseID, testInfo.project.name, {
+			latestVersion: {
+				host: 'https://codeberg.org',
+				type: 'forgejo',
+				url: 'forgejo/forgejo',
+			},
+		});
+	});
+
 	test('latest-version=github', async ({ page }, testInfo) => {
 		const baseID = 'LATEST_VERSION=GITHUB';
 		const id = withProject(baseID, testInfo.project.name);

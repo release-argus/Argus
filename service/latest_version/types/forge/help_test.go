@@ -45,8 +45,8 @@ var testBody = []byte(
 			"prerelease":true,
 			"published_at":"2000-01-02T03:04:05Z",
 			"assets":[
-				{"id": 9,"name":"Argus-0.18.0.linux-amd64","created_at":"2001-01-02T03:04:05Z","browser_download_url":"https://forge.example.com/Release-Argus/Argus/releases/download/0.18.0/Argus-0.18.0.linux-amd64"},
-				{"id": 5,"name":"Argus-0.18.0.linux-arm64","created_at":"2002-01-02T03:04:05Z","browser_download_url":"https://forge.example.com/Release-Argus/Argus/releases/download/0.18.0/Argus-0.18.0.linux-arm64"}
+				{"id": 9,"name":"Argus-0.18.0.linux-amd64","created_at":"2001-01-02T03:04:05Z","browser_download_url":"https://forge.example.com/owner/repo/releases/download/0.18.0/Argus-0.18.0.linux-amd64"},
+				{"id": 5,"name":"Argus-0.18.0.linux-arm64","created_at":"2002-01-02T03:04:05Z","browser_download_url":"https://forge.example.com/owner/repo/releases/download/0.18.0/Argus-0.18.0.linux-arm64"}
 			]
 		},
 		{
@@ -55,7 +55,7 @@ var testBody = []byte(
 			"prerelease":false,
 			"published_at":"1998-07-06T05:04:03Z",
 			"assets":[
-				{"id": 3,"name":"Argus-0.17.4.linux-amd64","created_at":"1999-08-07T06:05:04Z","browser_download_url":"https://forge.example.com/Release-Argus/Argus/releases/download/0.17.4/Argus-0.17.4.linux-amd64"}
+				{"id": 3,"name":"Argus-0.17.4.linux-amd64","created_at":"1999-08-07T06:05:04Z","browser_download_url":"https://forge.example.com/owner/repo/releases/download/0.17.4/Argus-0.17.4.linux-amd64"}
 			]
 		}
 	]`),

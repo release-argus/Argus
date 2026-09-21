@@ -26,6 +26,7 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
+	"github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
 	"github.com/release-argus/Argus/util"
@@ -54,6 +55,11 @@ func convertAndCensorDefaults(input *config.Defaults) apitype.Defaults {
 				Type: input.Service.LatestVersion.Type,
 				Common: apitype.LatestVersionCommonDefaults{
 					Require: convertAndCensorLatestVersionRequireDefaults(&input.Service.LatestVersion.Common.Require),
+				},
+				Forgejo: apitype.LatestVersionForgejoDefaults{
+					Common: apitype.LatestVersionForgejoCommonDefaults{
+						UsePreRelease: input.Service.LatestVersion.Forgejo.Common.UsePreRelease,
+					},
 				},
 				GitHub: apitype.LatestVersionGitHubDefaults{
 					AccessToken:   util.ValueUnlessZero(input.Service.LatestVersion.GitHub.AccessToken, util.SecretValue),
@@ -137,6 +143,15 @@ func convertAndCensorLatestVersion(input latestver.Lookup) *apitype.LatestVersio
 	}
 
 	switch lv := input.(type) {
+	case *forgejo.Lookup:
+		return &apitype.LatestVersion{
+			Type:          lv.Type,
+			URL:           lv.URL,
+			Host:          lv.Host,
+			UsePreRelease: lv.UsePreRelease,
+			URLCommands:   convertURLCommands(lv.URLCommands),
+			Require:       convertAndCensorLatestVersionRequire(lv.Require),
+		}
 	case *github.Lookup:
 		return &apitype.LatestVersion{
 			Type:          lv.Type,

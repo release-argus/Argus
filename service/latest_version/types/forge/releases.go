@@ -37,35 +37,40 @@ func UnmarshalReleases(body []byte) ([]forgetypes.Release, error) {
 	return releases, nil
 }
 
+// FilterOptions are the settings [FilterReleases] filters against.
+type FilterOptions struct {
+	URLCommands        filter.URLCommands
+	SemanticVersioning bool
+	UsePreReleases     bool
+}
+
 // FilterReleases filters releases based on the following:
-//   - urlCommands.
-//   - Non-semantic versions (if semanticVersioning).
-//   - Pre-releases (if not usePreReleases).
+//   - opts.URLCommands.
+//   - Non-semantic versions (if opts.SemanticVersioning).
+//   - Pre-releases (if not opts.UsePreReleases).
 //
-// Returns the filtered list, sorted in descending order (if semanticVersioning).
+// Returns the filtered list, sorted in descending order (if opts.SemanticVersioning).
 func FilterReleases(
 	releases []forgetypes.Release,
-	urlCommands filter.URLCommands,
-	semanticVersioning bool,
-	usePreReleases bool,
+	opts FilterOptions,
 	logFrom logx.LogFrom,
 ) []forgetypes.Release {
 	filteredReleases := make([]forgetypes.Release, 0, len(releases))
 
 	for _, release := range releases {
-		if release.PreRelease && !usePreReleases {
+		if release.PreRelease && !opts.UsePreReleases {
 			continue
 		}
 
 		tag := util.FirstNonDefault(release.TagName, release.Name)
-		tagName, err := urlCommands.Run(tag, logFrom)
+		tagName, err := opts.URLCommands.Run(tag, logFrom)
 		if err != nil || len(tagName) == 0 {
 			continue
 		}
 
 		release.TagName = tagName[0]
 
-		if semanticVersioning {
+		if opts.SemanticVersioning {
 			semVer, err := semver.NewVersion(tagName[0])
 			if err != nil {
 				continue
@@ -76,7 +81,7 @@ func FilterReleases(
 		filteredReleases = append(filteredReleases, release)
 	}
 
-	if semanticVersioning {
+	if opts.SemanticVersioning {
 		sort.Slice(filteredReleases, func(i, j int) bool {
 			return releaseSortsBefore(filteredReleases[i], filteredReleases[j])
 		})

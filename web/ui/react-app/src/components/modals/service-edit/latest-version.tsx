@@ -35,6 +35,9 @@ const EditServiceLatestVersion = () => {
 	const latestVersionType = useWatch({
 		name: `${name}.type`,
 	}) as LatestVersionLookupType;
+	const forgejoHost = useWatch({
+		name: `${name}.host`,
+	}) as string | undefined;
 
 	// Validate 'name' when the type changes if we have a 'name' value.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: getValues stable.
@@ -52,9 +55,14 @@ const EditServiceLatestVersion = () => {
 	);
 
 	const urlTooltipText =
-		latestVersionType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value
-			? 'GitHub repository to query for the latest release version'
-			: 'URL to query for the latest version';
+		{
+			[LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value]:
+				'Repository to query for the latest release version, e.g. Release-Argus/Argus',
+			[LATEST_VERSION_LOOKUP_TYPE.GITHUB.value]:
+				'Repository to query for the latest release version, e.g. release-argus/Argus',
+			[LATEST_VERSION_LOOKUP_TYPE.URL.value]:
+				'URL to query for the latest version',
+		}[latestVersionType] ?? 'URL to query for the latest version';
 
 	return (
 		<AccordionItem value={name}>
@@ -68,6 +76,7 @@ const EditServiceLatestVersion = () => {
 				/>
 				<VersionWithLink
 					colSize={{ sm: 8, xs: 8 }}
+					host={forgejoHost}
 					name={urlFieldName}
 					required
 					tooltip={{
@@ -76,7 +85,31 @@ const EditServiceLatestVersion = () => {
 					}}
 					type={latestVersionType}
 				/>
-				{latestVersionType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value ? (
+				{latestVersionType === LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value ? (
+					<>
+						<FieldText
+							colSize={{ sm: 12 }}
+							key="host"
+							label="Host"
+							name={`${name}.host`}
+							required
+							tooltip={{
+								content: 'Forgejo instance to query, e.g. https://codeberg.org',
+								type: 'string',
+							}}
+						/>
+						<BooleanWithDefault
+							defaultValue={typeDefaults?.use_prerelease}
+							label="Use pre-releases"
+							name={`${name}.use_prerelease`}
+							tooltip={{
+								content:
+									"Include releases marked 'Pre-release' in the latest version check",
+								type: 'string',
+							}}
+						/>
+					</>
+				) : latestVersionType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value ? (
 					<>
 						<FieldText
 							colSize={{ sm: 12 }}

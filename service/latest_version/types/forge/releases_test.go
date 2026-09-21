@@ -85,7 +85,7 @@ func TestUnmarshalReleases(t *testing.T) {
 		{
 			name:     "invalid/object rather than a list",
 			body:     `{"tag_name":"1.2.3"}`,
-			errRegex: `cannot unmarshal`,
+			errRegex: `^json: .* unmarshal JSON object`,
 		},
 	}
 
@@ -290,9 +290,11 @@ func TestFilterReleases(t *testing.T) {
 			// WHEN: FilterReleases is called on them.
 			got := FilterReleases(
 				tc.releases,
-				tc.urlCommands,
-				tc.semanticVersioning,
-				tc.usePreReleases,
+				FilterOptions{
+					URLCommands:        tc.urlCommands,
+					SemanticVersioning: tc.semanticVersioning,
+					UsePreReleases:     tc.usePreReleases,
+				},
 				logx.LogFrom{Primary: t.Name()},
 			)
 

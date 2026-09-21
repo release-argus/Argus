@@ -40,6 +40,7 @@ import (
 	dockertest "github.com/release-argus/Argus/service/latest_version/filter/docker/test"
 	lvtest "github.com/release-argus/Argus/service/latest_version/test"
 	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
+	lvforgejo "github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	lvgithub "github.com/release-argus/Argus/service/latest_version/types/github"
 	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
@@ -531,6 +532,44 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 			name:  "nil",
 			input: nil,
 			want:  nil,
+		},
+		{
+			name:  "forgejo/bare",
+			input: &lvforgejo.Lookup{},
+			want:  &apitype.LatestVersion{},
+		},
+		{
+			name: "forgejo/filled",
+			input: test.Must(t, func() (latestver.Lookup, error) {
+				return latestver.Decode(
+					"yaml", []byte(test.TrimYAML(`
+						type: forgejo
+						host: HTTPS://CodeBerg.org
+						url: owner/repo
+						use_prerelease: true
+						url_commands:
+							- type: regex
+								regex: ([0-9.]+)
+						require:
+							regex_content: .*
+					`)),
+					nil,
+					nil,
+					lvCfg,
+				)
+			}),
+			want: &apitype.LatestVersion{
+				Type:          "forgejo",
+				Host:          "HTTPS://CodeBerg.org",
+				URL:           "owner/repo",
+				UsePreRelease: new(true),
+				URLCommands: apitype.URLCommands{
+					{Type: "regex", Regex: `([0-9.]+)`},
+				},
+				Require: &apitype.LatestVersionRequire{
+					RegexContent: ".*",
+				},
+			},
 		},
 		{
 			name:  "github/bare",
@@ -2439,6 +2478,11 @@ var stringifiedConvertedDefaults = test.TrimJSON(`{
 						"type": "hub",
 						"tag": "{{ version }}"
 					}
+				}
+			},
+			"forgejo": {
+				"common": {
+					"use_prerelease": false
 				}
 			},
 			"github": {
