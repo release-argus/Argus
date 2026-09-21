@@ -32,34 +32,32 @@ import (
 func TestClient_Get__certValidation(t *testing.T) {
 	// GIVEN: a HTTP client, and a url to query.
 	tests := []struct {
-		name     string
-		client   *http.Client
-		urlKey   string
-		errRegex string
+		name        string
+		client      *http.Client
+		invalidCert bool
+		errRegex    string
 	}{
 		{
 			name:     "Client accepts valid certificate",
 			client:   Client,
-			urlKey:   "url_valid",
 			errRegex: `^$`,
 		},
 		{
-			name:     "Client rejects invalid certificate",
-			client:   Client,
-			urlKey:   "url_invalid",
-			errRegex: `x509`,
+			name:        "Client rejects invalid certificate",
+			client:      Client,
+			invalidCert: true,
+			errRegex:    `x509`,
 		},
 		{
 			name:     "InsecureClient accepts valid certificate",
 			client:   InsecureClient,
-			urlKey:   "url_valid",
 			errRegex: `^$`,
 		},
 		{
-			name:     "InsecureClient accepts invalid certificate",
-			client:   InsecureClient,
-			urlKey:   "url_invalid",
-			errRegex: `^$`,
+			name:        "InsecureClient accepts invalid certificate",
+			client:      InsecureClient,
+			invalidCert: true,
+			errRegex:    `^$`,
 		},
 	}
 
@@ -67,7 +65,10 @@ func TestClient_Get__certValidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			url := test.LookupPlain[tc.urlKey]
+			url := test.LookupPlain.URLValid
+			if tc.invalidCert {
+				url = test.LookupPlain.URLInvalid
+			}
 
 			try := 0
 			for {

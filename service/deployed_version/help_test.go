@@ -123,7 +123,7 @@ func testWeb(t *testing.T, fail bool, version string) Lookup {
 		"yaml", []byte(test.TrimYAML(`
 			type: url
 			method: GET
-			url: `+test.LookupBare["url_invalid"]+`/`+version+`
+			url: `+test.LookupBare.URLInvalid+`/`+version+`
 			allow_invalid_certs: `+fmt.Sprint(!fail)+`
 		`)),
 		opttest.Options(t),

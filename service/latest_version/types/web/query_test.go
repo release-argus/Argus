@@ -66,10 +66,10 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			name: "headers/pass",
 			overrides: test.TrimYAML(`
 				method: POST
-				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
+				url: ` + test.LookupWithHeaderAuth.URLValid + `
 				headers:
-					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
-						value: ` + test.LookupWithHeaderAuth["header_value_pass"] + `
+					- key: ` + test.LookupWithHeaderAuth.HeaderKey + `
+						value: ` + test.LookupWithHeaderAuth.HeaderValuePass + `
 			`),
 			bodyRegex: `^[\d.]+$`,
 			errRegex:  `^$`,
@@ -78,10 +78,10 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			name: "headers/fail",
 			overrides: test.TrimYAML(`
 				method: POST
-				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
+				url: ` + test.LookupWithHeaderAuth.URLValid + `
 				headers:
-					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
-						value: ` + test.LookupWithHeaderAuth["header_value_fail"] + `
+					- key: ` + test.LookupWithHeaderAuth.HeaderKey + `
+						value: ` + test.LookupWithHeaderAuth.HeaderValueFail + `
 			`),
 			bodyRegex: `Hook rules were not satisfied\.`,
 			errRegex:  `^$`,

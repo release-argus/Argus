@@ -66,7 +66,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "query that gets a non-semantic version",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_valid"] + `
+				url: ` + test.LookupPlain.URLValid + `
 				url_commands:
 					- type: regex
 					  regex: ver[0-9.]+
@@ -78,7 +78,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "query on self-signed https works when allowed",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_invalid"] + `
+				url: ` + test.LookupPlain.URLInvalid + `
 				url_commands:
 					- type: regex
 					  regex: ver([0-9.]+)
@@ -91,7 +91,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "query on self-signed https fails when not allowed",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_invalid"] + `
+				url: ` + test.LookupPlain.URLInvalid + `
 				url_commands:
 					- type: regex
 					  regex: ver([0-9.]+)

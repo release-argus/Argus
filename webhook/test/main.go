@@ -45,10 +45,10 @@ func Webhook(t *testing.T, failing, selfSignedCert, headers bool) *webhook.Webho
 		&whMaxTries,
 		webhook.Notifiers{},
 		new("12m"),
-		test.WebhookGitHub["secret_pass"],
+		test.WebhookGitHub.SecretPass,
 		new(false),
 		"github",
-		test.WebhookGitHub["url_valid"],
+		test.WebhookGitHub.URLValid,
 		&webhook.Defaults{},
 		defaults, hardDefaults,
 	)
@@ -75,7 +75,7 @@ func Webhook(t *testing.T, failing, selfSignedCert, headers bool) *webhook.Webho
 		)
 	}
 	if failing {
-		wh.Secret = test.WebhookGitHub["secret_fail"]
+		wh.Secret = test.WebhookGitHub.SecretFail
 	}
 	if headers {
 		wh.URL = strings.Replace(
@@ -87,15 +87,15 @@ func Webhook(t *testing.T, failing, selfSignedCert, headers bool) *webhook.Webho
 		if failing {
 			wh.Headers = webhook.Headers{
 				{
-					Key:   test.LookupWithHeaderAuth["header_key"],
-					Value: test.LookupWithHeaderAuth["header_value_fail"],
+					Key:   test.LookupWithHeaderAuth.HeaderKey,
+					Value: test.LookupWithHeaderAuth.HeaderValueFail,
 				},
 			}
 		} else {
 			wh.Headers = webhook.Headers{
 				{
-					Key:   test.LookupWithHeaderAuth["header_key"],
-					Value: test.LookupWithHeaderAuth["header_value_pass"],
+					Key:   test.LookupWithHeaderAuth.HeaderKey,
+					Value: test.LookupWithHeaderAuth.HeaderValuePass,
 				},
 			}
 		}
