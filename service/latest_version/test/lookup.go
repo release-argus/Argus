@@ -27,6 +27,9 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
+	lvforgejo "github.com/release-argus/Argus/service/latest_version/types/forgejo"
+	lvgithub "github.com/release-argus/Argus/service/latest_version/types/github"
+	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
 	statustest "github.com/release-argus/Argus/service/status/test"
@@ -50,16 +53,34 @@ func (f *MockLookup) GetRequire() *filter.Require                 { return f.Req
 func (f *MockLookup) SetRequire(r *filter.Require)                { f.Require = r }
 func (f *MockLookup) String(prefix string) string                 { return decode.ToYAMLString(f, prefix) }
 
-// Lookup decodes and validates a latest version lookup of the given type for tests.
-func Lookup(t *testing.T, typ string, fail bool) (lv latestver.Lookup) {
+// testingT is the fragments of [testing.T] the type guard needs.
+type testingT interface {
+	Helper()
+	Fatalf(format string, args ...any)
+}
+
+// lookupBuilder returns the fixture builder for a lookup type, or nil after
+// reporting a type no fixture builds.
+func lookupBuilder(t testingT, typ string) func(*testing.T, bool) latestver.Lookup {
 	t.Helper()
 
 	switch typ {
-	case "github":
-		lv = testGitHub(t, fail)
-	case "url":
-		lv = testWeb(t, fail)
+	case lvforgejo.Type:
+		return testForgejo
+	case lvgithub.Type:
+		return testGitHub
+	case lvweb.Type:
+		return testWeb
 	}
+
+	t.Fatalf("lvtest.Lookup: unsupported type %q", typ)
+	return nil
+}
+
+func Lookup(t *testing.T, typ string, fail bool) (lv latestver.Lookup) {
+	t.Helper()
+
+	lv = lookupBuilder(t, typ)(t, fail)
 
 	lv.GetStatus().ServiceInfo.ID = "TEST_LV"
 
@@ -70,6 +91,31 @@ func Lookup(t *testing.T, typ string, fail bool) (lv latestver.Lookup) {
 			typ, fail, err,
 		)
 	}
+
+	return lv
+}
+
+// testForgejo builds a Forgejo latest version lookup for tests.
+func testForgejo(t *testing.T, fail bool) latestver.Lookup {
+	t.Helper()
+
+	repo := "argus/releases-happy"
+	if fail {
+		repo = "argus/no-such-repository"
+	}
+
+	svcStatus, _ := statustest.New("yaml", nil)
+
+	lv, _ := latestver.Decode(
+		"yaml", []byte(test.TrimYAML(`
+			type: forgejo
+			host: `+test.ValidCertHTTPS+`/forgejo
+			url: `+repo+`
+		`)),
+		opttest.Options(t),
+		svcStatus,
+		PlainDefaultsConfig(t),
+	)
 
 	return lv
 }
@@ -111,7 +157,7 @@ func testWeb(t *testing.T, fail bool) latestver.Lookup {
 	lv, _ := latestver.Decode(
 		"yaml", []byte(test.TrimYAML(`
 			type: url
-			url: `+test.LookupBare["url_invalid"]+`/1.2.3
+			url: `+test.LookupBare.URLInvalid+`/1.2.3
 			allow_invalid_certs: `+fmt.Sprint(!fail)+`
 		`)),
 		opttest.Options(t),

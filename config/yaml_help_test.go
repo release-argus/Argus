@@ -672,7 +672,7 @@ func testYAML_Edit(path string) {
 				name: a
 				latest_version:
 					type: url
-					url: ` + test.LookupPlain["url_valid"] + `
+					url: ` + test.LookupPlain.URLValid + `
 					url_commands:
 					- type: regex
 						regex: v(.*)
@@ -680,7 +680,7 @@ func testYAML_Edit(path string) {
 				name: b
 				latest_version:
 					type: url
-					url: ` + test.LookupPlain["url_valid"] + `
+					url: ` + test.LookupPlain.URLValid + `
 					url_commands:
 					- type: regex
 						regex: ([0-9.]+)
@@ -688,7 +688,7 @@ func testYAML_Edit(path string) {
 				name: c
 				latest_version:
 					type: url
-					url: ` + test.LookupPlain["url_valid"] + `
+					url: ` + test.LookupPlain.URLValid + `
 					url_commands:
 					- type: regex
 						regex: v?([0-9.]+)

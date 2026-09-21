@@ -190,7 +190,7 @@ func TestService_Track(t *testing.T) {
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
-					url: ` + test.LookupBare["url_valid"] + `/1.2.2
+					url: ` + test.LookupBare.URLValid + `/1.2.2
 			`)),
 			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
@@ -205,7 +205,7 @@ func TestService_Track(t *testing.T) {
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
-					url: ` + test.LookupBare["url_valid"] + `/1.2.2
+					url: ` + test.LookupBare.URLValid + `/1.2.2
 				webhook:
 					test:
 						` + test.Indent(whtest.Webhook(t, false, false, false).String(""), 4) + `
@@ -223,7 +223,7 @@ func TestService_Track(t *testing.T) {
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
-					url: ` + test.LookupBare["url_valid"] + `/1.2.2
+					url: ` + test.LookupBare.URLValid + `/1.2.2
 				webhook:
 					test:
 						` + test.Indent(whtest.Webhook(t, false, false, false).String(""), 4) + `
@@ -245,7 +245,7 @@ func TestService_Track(t *testing.T) {
 				options:
 					semantic_versioning: true
 				latest_version:
-					url: ` + test.LookupBare["url_valid"] + `/1.2.0
+					url: ` + test.LookupBare.URLValid + `/1.2.0
 			`)),
 			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
@@ -260,7 +260,7 @@ func TestService_Track(t *testing.T) {
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
-					url: ` + test.LookupBare["url_invalid"] + `/1.2.1
+					url: ` + test.LookupBare.URLInvalid + `/1.2.1
 					allow_invalid_certs: false
 					require: null
 			`)),
@@ -277,7 +277,7 @@ func TestService_Track(t *testing.T) {
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
-					url: ` + test.LookupBare["url_invalid"] + `/1.2.1
+					url: ` + test.LookupBare.URLInvalid + `/1.2.1
 					allow_invalid_certs: true
 					require: null
 			`)),
@@ -294,7 +294,7 @@ func TestService_Track(t *testing.T) {
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
-					url: ` + test.LookupBare["url_valid"] + `/1.2.1
+					url: ` + test.LookupBare.URLValid + `/1.2.1
 					allow_invalid_certs: false
 			`)),
 			livenessMetric: metric.LatestVersionQueryResultSuccess,
@@ -374,7 +374,7 @@ func TestService_Track(t *testing.T) {
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				latest_version:
-					url: ` + test.LookupBare["url_valid"] + `/v1.2.2
+					url: ` + test.LookupBare.URLValid + `/v1.2.2
 			`)),
 			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
@@ -391,7 +391,7 @@ func TestService_Track(t *testing.T) {
 				options:
 					semantic_versioning: false
 				latest_version:
-					url: ` + test.LookupBare["url_valid"] + `/v1.2.2
+					url: ` + test.LookupBare.URLValid + `/v1.2.2
 			`)),
 			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
@@ -428,7 +428,7 @@ func TestService_Track(t *testing.T) {
 				options:
 					semantic_versioning: true
 				latest_version:
-					url: ` + test.LookupBare["url_valid"] + `/ver1.2.3
+					url: ` + test.LookupBare.URLValid + `/ver1.2.3
 					url_commands:
 						- type: regex
 							regex: 'ver[0-9.]+'
@@ -448,7 +448,7 @@ func TestService_Track(t *testing.T) {
 				options:
 					semantic_versioning: true
 				latest_version:
-					url: ` + test.LookupBare["url_valid"] + `/1.2.2
+					url: ` + test.LookupBare.URLValid + `/1.2.2
 			`)),
 			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
@@ -463,7 +463,7 @@ func TestService_Track(t *testing.T) {
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				deployed_version:
-					url: ` + test.LookupBare["url_valid"] + `/1.2.4
+					url: ` + test.LookupBare.URLValid + `/1.2.4
 			`)),
 			keepDeployedLookup: true,
 			livenessMetric:     metric.LatestVersionQueryResultSuccess,
@@ -479,7 +479,7 @@ func TestService_Track(t *testing.T) {
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				deployed_version:
-					url: ` + test.LookupBare["url_valid"] + `/3.2.1
+					url: ` + test.LookupBare.URLValid + `/3.2.1
 			`)),
 			keepDeployedLookup:   true,
 			ignoreLivenessMetric: true, // Ignore as DeployedVersionLookup may be done before.

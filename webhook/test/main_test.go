@@ -39,8 +39,8 @@ func TestWebhook(t *testing.T) {
 			failing:         false,
 			selfSignedCert:  false,
 			headers:         false,
-			expectedURL:     test.WebhookGitHub["url_valid"],
-			expectedSecret:  test.WebhookGitHub["secret_pass"],
+			expectedURL:     test.WebhookGitHub.URLValid,
+			expectedSecret:  test.WebhookGitHub.SecretPass,
 			expectedHeaders: nil,
 		},
 		{
@@ -48,12 +48,12 @@ func TestWebhook(t *testing.T) {
 			failing:        false,
 			selfSignedCert: false,
 			headers:        true,
-			expectedURL:    test.LookupWithHeaderAuth["url_valid"],
-			expectedSecret: test.WebhookGitHub["secret_pass"],
+			expectedURL:    test.LookupWithHeaderAuth.URLValid,
+			expectedSecret: test.WebhookGitHub.SecretPass,
 			expectedHeaders: &webhook.Headers{
 				{
-					Key:   test.LookupWithHeaderAuth["header_key"],
-					Value: test.LookupWithHeaderAuth["header_value_pass"],
+					Key:   test.LookupWithHeaderAuth.HeaderKey,
+					Value: test.LookupWithHeaderAuth.HeaderValuePass,
 				},
 			},
 		},
@@ -62,8 +62,8 @@ func TestWebhook(t *testing.T) {
 			failing:         false,
 			selfSignedCert:  true,
 			headers:         false,
-			expectedURL:     test.WebhookGitHub["url_invalid"],
-			expectedSecret:  test.WebhookGitHub["secret_pass"],
+			expectedURL:     test.WebhookGitHub.URLInvalid,
+			expectedSecret:  test.WebhookGitHub.SecretPass,
 			expectedHeaders: nil,
 		},
 		{
@@ -71,12 +71,12 @@ func TestWebhook(t *testing.T) {
 			failing:        false,
 			selfSignedCert: true,
 			headers:        true,
-			expectedURL:    test.LookupWithHeaderAuth["url_invalid"],
-			expectedSecret: test.WebhookGitHub["secret_pass"],
+			expectedURL:    test.LookupWithHeaderAuth.URLInvalid,
+			expectedSecret: test.WebhookGitHub.SecretPass,
 			expectedHeaders: &webhook.Headers{
 				{
-					Key:   test.LookupWithHeaderAuth["header_key"],
-					Value: test.LookupWithHeaderAuth["header_value_pass"],
+					Key:   test.LookupWithHeaderAuth.HeaderKey,
+					Value: test.LookupWithHeaderAuth.HeaderValuePass,
 				},
 			},
 		},
@@ -85,8 +85,8 @@ func TestWebhook(t *testing.T) {
 			failing:         true,
 			selfSignedCert:  false,
 			headers:         false,
-			expectedURL:     test.WebhookGitHub["url_valid"],
-			expectedSecret:  test.WebhookGitHub["secret_fail"],
+			expectedURL:     test.WebhookGitHub.URLValid,
+			expectedSecret:  test.WebhookGitHub.SecretFail,
 			expectedHeaders: nil,
 		},
 		{
@@ -94,12 +94,12 @@ func TestWebhook(t *testing.T) {
 			failing:        true,
 			selfSignedCert: false,
 			headers:        true,
-			expectedURL:    test.LookupWithHeaderAuth["url_valid"],
-			expectedSecret: test.WebhookGitHub["secret_fail"],
+			expectedURL:    test.LookupWithHeaderAuth.URLValid,
+			expectedSecret: test.WebhookGitHub.SecretFail,
 			expectedHeaders: &webhook.Headers{
 				{
-					Key:   test.LookupWithHeaderAuth["header_key"],
-					Value: test.LookupWithHeaderAuth["header_value_fail"],
+					Key:   test.LookupWithHeaderAuth.HeaderKey,
+					Value: test.LookupWithHeaderAuth.HeaderValueFail,
 				},
 			},
 		},
@@ -108,8 +108,8 @@ func TestWebhook(t *testing.T) {
 			failing:         true,
 			selfSignedCert:  true,
 			headers:         false,
-			expectedURL:     test.WebhookGitHub["url_invalid"],
-			expectedSecret:  test.WebhookGitHub["secret_fail"],
+			expectedURL:     test.WebhookGitHub.URLInvalid,
+			expectedSecret:  test.WebhookGitHub.SecretFail,
 			expectedHeaders: nil,
 		},
 		{
@@ -117,12 +117,12 @@ func TestWebhook(t *testing.T) {
 			failing:        true,
 			selfSignedCert: true,
 			headers:        true,
-			expectedURL:    test.LookupWithHeaderAuth["url_invalid"],
-			expectedSecret: test.WebhookGitHub["secret_fail"],
+			expectedURL:    test.LookupWithHeaderAuth.URLInvalid,
+			expectedSecret: test.WebhookGitHub.SecretFail,
 			expectedHeaders: &webhook.Headers{
 				{
-					Key:   test.LookupWithHeaderAuth["header_key"],
-					Value: test.LookupWithHeaderAuth["header_value_fail"],
+					Key:   test.LookupWithHeaderAuth.HeaderKey,
+					Value: test.LookupWithHeaderAuth.HeaderValueFail,
 				},
 			},
 		},
@@ -292,7 +292,7 @@ func TestWebhook(t *testing.T) {
 
 			// AND: the Secret should be modified if failing is true.
 			if tc.failing {
-				expectedSecret := test.WebhookGitHub["secret_fail"]
+				expectedSecret := test.WebhookGitHub.SecretFail
 				if result.Secret != expectedSecret {
 					t.Errorf(
 						"%s Secret mismatch for failing Webhook\ngot:  %q\nwant: %q",

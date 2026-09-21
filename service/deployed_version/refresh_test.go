@@ -405,7 +405,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 			name: "overrides/valid",
 			args: args{
 				lookup:             testLookup(t, web.Type, false, ""),
-				overrides:          []byte(`{"url": "` + test.LookupJSON["url_valid"] + `"}`),
+				overrides:          []byte(`{"url": "` + test.LookupJSON.URLValid + `"}`),
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},

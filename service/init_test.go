@@ -403,7 +403,7 @@ func TestService_Init(t *testing.T) {
 					"yaml", []byte(test.TrimYAML(`
 						deployed_version:
 							type: url
-							url: `+test.LookupPlain["url_valid"]+`
+							url: `+test.LookupPlain.URLValid+`
 					`)),
 					"Init",
 					svcCfg, notifyCfg, whCfg,

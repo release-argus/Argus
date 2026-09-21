@@ -57,13 +57,13 @@ func TestShoutrrr(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			wantToken := test.ShoutrrrGotifyToken()
+			wantToken := test.NotifyGotify.TokenPass
 			if tc.failing {
-				wantToken = "invalid"
+				wantToken = test.NotifyGotify.TokenMalformed
 			}
-			wantHost := test.ValidCertNoProtocol
+			wantHost := test.NotifyGotify.HostValid
 			if tc.selfSignedCert {
-				wantHost = test.InvalidCertNoProtocol
+				wantHost = test.NotifyGotify.HostInvalid
 			}
 
 			// WHEN: Shoutrrr is called.

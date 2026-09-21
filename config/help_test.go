@@ -233,7 +233,7 @@ func testServiceURL(t *testing.T, id string) *service.Service {
 				semantic_versioning: true
 			latest_version:
 				type: url
-				url: `+test.LookupPlain["url_valid"]+`
+				url: `+test.LookupPlain.URLValid+`
 				url_commands:
 					- type: regex
 						regex: 'v([0-9.]+)'
@@ -244,7 +244,7 @@ func testServiceURL(t *testing.T, id string) *service.Service {
 			deployed_version_lookup:
 				type: url
 				method: GET
-				url: `+test.LookupJSON["url_valid"]+`
+				url: `+test.LookupJSON.URLValid+`
 				json: version
 			dashboard:
 				auto_approve: false
@@ -277,7 +277,7 @@ func testServiceManualDV(t *testing.T, id, version string) *service.Service {
 				semantic_versioning: true
 			latest_version:
 				type: url
-				url: `+test.LookupBare["url_valid"]+`/v2.2.2
+				url: `+test.LookupBare.URLValid+`/v2.2.2
 				url_commands:
 					- type: regex
 						regex: 'v([0-9.]+)'

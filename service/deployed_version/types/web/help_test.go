@@ -87,7 +87,7 @@ func testLookup(t *testing.T, failing bool) *Lookup {
 	lookup, _ := Decode(
 		"yaml", []byte(test.TrimYAML(`
 			method: GET
-			url:    `+test.LookupJSON["url_invalid"]+`
+			url:    `+test.LookupJSON.URLInvalid+`
 			json:   version
 		`)),
 		options,
