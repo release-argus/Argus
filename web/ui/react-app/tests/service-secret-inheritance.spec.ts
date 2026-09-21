@@ -19,7 +19,19 @@ import {
 	NOTIFY_GOTIFY,
 	WEBHOOK_GITHUB,
 } from './fixtures/test-endpoints';
-import { openSection } from './fixtures/validation';
+import {
+	openSection,
+	selectInputFor,
+	selectOrCreate,
+} from './fixtures/validation';
+
+// Instances in `tests/fixtures/noauth-config.yml`, and the private repository they
+// reach. `argus/private-releases` answers 404 without a token, so a resolved version
+// proves the credential survived the save.
+const FORGEJO_HOST_WITH_TOKEN = 'Project';
+const FORGEJO_HOST_UNMATCHED = 'https://valid.release-argus.io:443/forgejo';
+const FORGEJO_PRIVATE_REPO = 'argus/private-releases';
+const FORGEJO_PRIVATE_VERSION = '0.2.0';
 
 /**
  * Opens the edit modal for an existing service (edit mode must already be on).
@@ -49,6 +61,20 @@ const saveEdit = async (dialog: Locator) => {
 	await expect(confirm).toBeEnabled();
 	await confirm.click();
 	await expect(dialog).not.toBeVisible({ timeout: 30_000 });
+};
+
+/**
+ * Picks a `latest_version.type`.
+ *
+ * @param section - The open 'Latest Version' section.
+ * @param dialog - The open edit dialog, which hosts the option list.
+ * @param type - The type to select.
+ */
+const selectType = async (section: Locator, dialog: Locator, type: string) => {
+	await section.locator('#latest_version\\.type').click();
+	await dialog
+		.getByRole('option', { name: new RegExp(`^${type}$`, 'i') })
+		.click();
 };
 
 test.describe('Service secret inheritance', () => {
@@ -137,7 +163,6 @@ test.describe('Service secret inheritance', () => {
 		createdIDs.push(id);
 		const shotDir = `secret-inheritance/${baseID}`;
 
-		// 'Hide inactive' off, so the inactive service below renders once created.
 		await openDashboardInEditMode(page, DASHBOARD_SHOW_ALL);
 
 		// GIVEN: an inactive forgejo service with an access token and relaxed
@@ -160,9 +185,7 @@ test.describe('Service secret inheritance', () => {
 		// WHEN: the service is reopened for editing.
 		const dialog = await openEditModal(page, id);
 		const section = await openSection(dialog, 'Latest Version');
-		const hostInput = section.getByRole('textbox', {
-			name: /^Value field for Host$/i,
-		});
+		const hostInput = selectInputFor(section, 'Host');
 		const tokenInput = section.getByRole('textbox', {
 			name: /^Value field for Access Token$/i,
 		});
@@ -180,8 +203,7 @@ test.describe('Service secret inheritance', () => {
 		);
 
 		// WHEN: the host is changed to a different instance.
-		await hostInput.fill('https://git.example.com');
-		await hostInput.blur();
+		await selectOrCreate(hostInput, 'https://git.example.com');
 
 		// THEN: the credential is cleared immediately, and so is the trust
 		// relaxation.
@@ -190,8 +212,7 @@ test.describe('Service secret inheritance', () => {
 		await screenshot(page, `${shotDir}/02-host-changed`, testInfo.project.name);
 
 		// WHEN: the host is spelled differently, but still addresses the original.
-		await hostInput.fill('CODEBERG.org:443/');
-		await hostInput.blur();
+		await selectOrCreate(hostInput, 'CODEBERG.org:443/');
 
 		// THEN: neither returns - a spelling identifies the instance, as two
 		// configured instances may share a URL while holding different tokens.
@@ -212,6 +233,201 @@ test.describe('Service secret inheritance', () => {
 		await screenshot(
 			page,
 			`${shotDir}/04-host-reverted`,
+			testInfo.project.name,
+		);
+	});
+
+	test('latest_version: a github token survives a round-trip through type=forgejo', async ({
+		page,
+	}, testInfo) => {
+		const baseID = 'SECRET_INHERIT=LATEST_VERSION_TYPE_ROUNDTRIP';
+		const id = withProject(baseID, testInfo.project.name);
+		createdIDs.push(id);
+		const shotDir = `secret-inheritance/${baseID}`;
+
+		await openDashboardInEditMode(page, DASHBOARD_SHOW_ALL);
+
+		// GIVEN: an inactive github service with an access token.
+		await createService(page, id, {
+			active: false,
+			latestVersion: {
+				accessToken: 'dummy-e2e-token',
+				type: 'github',
+				url: 'release-argus/Argus',
+			},
+		});
+
+		// AND: the page is reloaded so the edit modal loads the token from the
+		// backend.
+		await page.reload();
+
+		// WHEN: the service is reopened for editing.
+		const dialog = await openEditModal(page, id);
+		const section = await openSection(dialog, 'Latest Version');
+		const tokenInput = section.getByRole('textbox', {
+			name: /^Value field for Access Token$/i,
+		});
+
+		// THEN: the stored token is shown masked.
+		await expect(tokenInput).toHaveValue(SECRET_VALUE);
+		await screenshot(
+			page,
+			`${shotDir}/01-secret-masked`,
+			testInfo.project.name,
+		);
+
+		// WHEN: the type is switched to forgejo, which shares the Access Token field.
+		await selectType(section, dialog, 'forgejo');
+
+		// THEN: the github credential is not offered to the Forgejo instance.
+		await expect(tokenInput).toHaveValue('');
+		await screenshot(
+			page,
+			`${shotDir}/02-forgejo-cleared`,
+			testInfo.project.name,
+		);
+
+		// WHEN: the type is switched back to github.
+		await selectType(section, dialog, 'github');
+
+		// THEN: the stored token is offered again, masked rather than blanked.
+		await expect(tokenInput).toHaveValue(SECRET_VALUE);
+		await screenshot(
+			page,
+			`${shotDir}/03-github-restored`,
+			testInfo.project.name,
+		);
+
+		// WHEN: an unrelated field is edited and the service saved.
+		await section
+			.getByRole('textbox', { name: /repository/i })
+			.fill('release-argus/argus');
+		await saveEdit(dialog);
+
+		// THEN: reopening still shows a stored token - the round-trip kept it.
+		const reopened = await openEditModal(page, id);
+		const reopenedSection = await openSection(reopened, 'Latest Version');
+		await expect(
+			reopenedSection.getByRole('textbox', {
+				name: /^Value field for Access Token$/i,
+			}),
+		).toHaveValue(SECRET_VALUE);
+		await screenshot(
+			page,
+			`${shotDir}/04-token-persisted`,
+			testInfo.project.name,
+		);
+	});
+
+	test('latest_version=forgejo: a configured host name is not matched by URL', async ({
+		page,
+	}, testInfo) => {
+		const baseID = 'SECRET_INHERIT=LATEST_VERSION_FORGEJO_HOST_SPELLING';
+		const id = withProject(baseID, testInfo.project.name);
+		createdIDs.push(id);
+		const shotDir = `secret-inheritance/${baseID}`;
+
+		await openDashboardInEditMode(page, DASHBOARD_SHOW_ALL);
+
+		// GIVEN: an inactive forgejo service saved against the 'Forge' defaults
+		// entry by name, with its own access token.
+		await createService(page, id, {
+			active: false,
+			latestVersion: {
+				accessToken: 'dummy-e2e-token',
+				host: 'Forge',
+				type: 'forgejo',
+				url: 'forgejo/forgejo',
+			},
+		});
+		await page.reload();
+
+		// WHEN: the service is reopened for editing.
+		const dialog = await openEditModal(page, id);
+		const section = await openSection(dialog, 'Latest Version');
+		const hostInput = selectInputFor(section, 'Host');
+		const tokenInput = section.getByRole('textbox', {
+			name: /^Value field for Access Token$/i,
+		});
+
+		// THEN: the stored token is shown masked.
+		await expect(tokenInput).toHaveValue(SECRET_VALUE);
+		await screenshot(
+			page,
+			`${shotDir}/01-secret-masked`,
+			testInfo.project.name,
+		);
+
+		// WHEN: a genuinely different instance is picked.
+		await selectOrCreate(hostInput, 'https://git.example.com');
+
+		// THEN: the credential is cleared.
+		await expect(tokenInput).toHaveValue('');
+		await screenshot(page, `${shotDir}/02-host-changed`, testInfo.project.name);
+
+		// WHEN: the original instance is typed with an explicit port - a new spelling.
+		await selectOrCreate(hostInput, 'forge.example.com:443');
+
+		// THEN: it is not recognised as the same instance, so the token remains absent.
+		await expect(tokenInput).toHaveValue('');
+		await screenshot(
+			page,
+			`${shotDir}/03-host-respelled`,
+			testInfo.project.name,
+		);
+
+		// WHEN: the original instance is picked by name.
+		await selectOrCreate(hostInput, 'Forge');
+
+		// THEN: it is recognised as the same instance, so the token returns.
+		await expect(tokenInput).toHaveValue(SECRET_VALUE);
+		await screenshot(
+			page,
+			`${shotDir}/04-host-restored`,
+			testInfo.project.name,
+		);
+	});
+
+	test('latest_version: allow_invalid_certs survives a round-trip through type=forgejo', async ({
+		page,
+	}, testInfo) => {
+		const baseID = 'SECRET_INHERIT=LATEST_VERSION_CERTS_ROUNDTRIP';
+		const id = withProject(baseID, testInfo.project.name);
+		createdIDs.push(id);
+		const shotDir = `secret-inheritance/${baseID}`;
+
+		await openDashboardInEditMode(page, DASHBOARD_SHOW_ALL);
+
+		// GIVEN: an inactive url service that relaxes certificate trust.
+		await createService(page, id, {
+			active: false,
+			latestVersion: {
+				...LOOKUP_LATEST_VERSION_JSON,
+				allowInvalidCerts: true,
+			},
+		});
+		await page.reload();
+
+		// WHEN: the service is reopened for editing.
+		const dialog = await openEditModal(page, id);
+		const section = await openSection(dialog, 'Latest Version');
+		const certToggle = section
+			.locator('[aria-labelledby="latest_version.allow_invalid_certs-label"]')
+			.getByRole('radio', { checked: true });
+
+		// THEN: the stored trust setting is shown.
+		await expect(certToggle).toHaveText(/^Yes$/);
+		await screenshot(page, `${shotDir}/01-certs-stored`, testInfo.project.name);
+
+		// WHEN: the type is switched to forgejo, which shares the field, and back.
+		await selectType(section, dialog, 'forgejo');
+		await selectType(section, dialog, 'url');
+
+		// THEN: the stored setting returns rather than falling back to the default.
+		await expect(certToggle).toHaveText(/^Yes$/);
+		await screenshot(
+			page,
+			`${shotDir}/02-certs-restored`,
 			testInfo.project.name,
 		);
 	});
@@ -429,6 +645,141 @@ test.describe('Service secret inheritance', () => {
 		await screenshot(
 			page,
 			`${shotDir}/03-test-succeeded`,
+			testInfo.project.name,
+		);
+	});
+
+	test('latest_version=forgejo: an inherited host token survives a save', async ({
+		page,
+	}, testInfo) => {
+		test.skip(
+			!process.env.ARGUS_TEST_FORGEJO_TOKEN,
+			'ARGUS_TEST_FORGEJO_TOKEN is not set',
+		);
+
+		const baseID = 'SECRET_INHERIT=FORGEJO_HOST_TOKEN';
+		const id = withProject(baseID, testInfo.project.name);
+		createdIDs.push(id);
+		const shotDir = `secret-inheritance/${baseID}`;
+
+		await openDashboardInEditMode(page, DASHBOARD_SHOW_ALL);
+
+		// GIVEN: an inactive forgejo service on a host whose defaults hold the token,
+		// tracking a repository that answers 404 without it.
+		await createService(page, id, {
+			active: false,
+			latestVersion: {
+				host: FORGEJO_HOST_WITH_TOKEN,
+				type: 'forgejo',
+				url: FORGEJO_PRIVATE_REPO,
+			},
+		});
+
+		// AND: the page is reloaded so the edit modal loads from the backend.
+		await page.reload();
+
+		// WHEN: an unrelated field is changed and the service saved, the service
+		// never holding a token of its own.
+		const dialog = await openEditModal(page, id);
+		const section = await openSection(dialog, 'Latest Version');
+		await expect(
+			section.getByRole('textbox', { name: /^Value field for Access Token$/i }),
+		).toHaveValue('');
+		await setBooleanWithDefault(
+			section,
+			'latest_version.use_prerelease',
+			false,
+		);
+		await saveEdit(dialog);
+		await screenshot(page, `${shotDir}/01-after-save`, testInfo.project.name);
+
+		// THEN: reopening and refreshing still resolves a version - only possible if
+		// the host's token is still inherited by the saved service.
+		const reopened = await openEditModal(page, id);
+		const reopenedSection = await openSection(reopened, 'Latest Version');
+		await reopenedSection
+			.getByRole('button', { name: /refresh the version/i })
+			.click();
+		await expect(
+			reopenedSection.getByText('Failed to refresh:'),
+		).not.toBeVisible();
+		await expect(
+			reopenedSection.getByText(`Latest version: ${FORGEJO_PRIVATE_VERSION}`),
+		).toBeVisible({ timeout: 30_000 });
+		await screenshot(
+			page,
+			`${shotDir}/02-refresh-succeeded`,
+			testInfo.project.name,
+		);
+	});
+
+	test('latest_version=forgejo: a masked token is restored on save, not stored literally', async ({
+		page,
+	}, testInfo) => {
+		const token = process.env.ARGUS_TEST_FORGEJO_TOKEN;
+		test.skip(!token, 'ARGUS_TEST_FORGEJO_TOKEN is not set');
+
+		const baseID = 'SECRET_INHERIT=FORGEJO_OWN_TOKEN';
+		const id = withProject(baseID, testInfo.project.name);
+		createdIDs.push(id);
+		const shotDir = `secret-inheritance/${baseID}`;
+
+		await openDashboardInEditMode(page, DASHBOARD_SHOW_ALL);
+
+		// GIVEN: an inactive forgejo service carrying its own token, on a host whose
+		// defaults hold none - so the service's token is the only credential.
+		await createService(page, id, {
+			active: false,
+			latestVersion: {
+				accessToken: token,
+				host: FORGEJO_HOST_UNMATCHED,
+				type: 'forgejo',
+				url: FORGEJO_PRIVATE_REPO,
+			},
+		});
+
+		// AND: the page is reloaded so the edit modal loads the token from the
+		// backend, where it comes back masked.
+		await page.reload();
+
+		// WHEN: the service is reopened, the stored token is shown masked.
+		const dialog = await openEditModal(page, id);
+		const section = await openSection(dialog, 'Latest Version');
+		await expect(
+			section.getByRole('textbox', { name: /^Value field for Access Token$/i }),
+		).toHaveValue(SECRET_VALUE);
+		await screenshot(
+			page,
+			`${shotDir}/01-secret-masked`,
+			testInfo.project.name,
+		);
+
+		// AND: an unrelated field is changed and the service saved, so the form
+		// submits the mask rather than the real token.
+		await setBooleanWithDefault(
+			section,
+			'latest_version.use_prerelease',
+			false,
+		);
+		await saveEdit(dialog);
+		await screenshot(page, `${shotDir}/02-after-save`, testInfo.project.name);
+
+		// THEN: reopening and refreshing resolves a version - impossible if the mask
+		// had been stored literally, since the repository 404s without a real token.
+		const reopened = await openEditModal(page, id);
+		const reopenedSection = await openSection(reopened, 'Latest Version');
+		await reopenedSection
+			.getByRole('button', { name: /refresh the version/i })
+			.click();
+		await expect(
+			reopenedSection.getByText('Failed to refresh:'),
+		).not.toBeVisible();
+		await expect(
+			reopenedSection.getByText(`Latest version: ${FORGEJO_PRIVATE_VERSION}`),
+		).toBeVisible({ timeout: 30_000 });
+		await screenshot(
+			page,
+			`${shotDir}/03-refresh-succeeded`,
 			testInfo.project.name,
 		);
 	});
