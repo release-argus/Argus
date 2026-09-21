@@ -450,12 +450,15 @@ func convertToEnvErrors(errs error) error {
 			currentIndent = indent
 		} else {
 			value := valueRegex.FindStringSubmatch(line)
+			var errStr string
+			if value == nil {
+				errStr = ": " + strings.TrimSpace(line)
+			} else {
+				errStr = fmt.Sprintf("_%s: %s", strings.ToUpper(value[1]), value[2])
+			}
 			newErrs = append(
 				newErrs,
-				errors.New(
-					strings.Join(basePrefix, "_")+
-						fmt.Sprintf("_%s: %s", strings.ToUpper(value[1]), value[2]),
-				),
+				errors.New(strings.Join(basePrefix, "_")+errStr),
 			)
 		}
 	}
