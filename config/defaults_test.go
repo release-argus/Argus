@@ -846,7 +846,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "service.latest_version.forgejo/type-wide field, host entries untouched",
+			name: "service.latest_version.forgejo/common field, instances untouched",
 			env: map[string]string{
 				"ARGUS_SERVICE_LATEST_VERSION_FORGEJO_COMMON_USE_PRERELEASE": "true",
 			},
@@ -855,6 +855,82 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 					LatestVersion: latestver.Defaults{
 						Forgejo: lvforgejo.Defaults{
 							Common: lvforgejo.CommonDefaults{UsePreRelease: new(true)},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "service.latest_version.forgejo/instances from named variables",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_FORGEJO_COMMON_USE_PRERELEASE":         "true",
+				"ARGUS_SERVICE_LATEST_VERSION_FORGEJO_HOST_CODEBERG_URL":             "https://codeberg.org",
+				"ARGUS_SERVICE_LATEST_VERSION_FORGEJO_HOST_CODEBERG_ACCESS_TOKEN":    "cb-token",
+				"ARGUS_SERVICE_LATEST_VERSION_FORGEJO_HOST_WORK_URL":                 "git.example.com:8443/forge",
+				"ARGUS_SERVICE_LATEST_VERSION_FORGEJO_HOST_WORK_ALLOW_INVALID_CERTS": "true",
+			},
+			want: &Defaults{
+				Service: service.Defaults{
+					LatestVersion: latestver.Defaults{
+						Forgejo: lvforgejo.Defaults{
+							Common: lvforgejo.CommonDefaults{UsePreRelease: new(true)},
+							Host: map[string]lvforgejo.HostDefaults{
+								"codeberg": {URL: "https://codeberg.org", AccessToken: "cb-token"},
+								"work":     {URL: "git.example.com:8443/forge", AllowInvalidCerts: new(true)},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "service.latest_version.forgejo/an instance may name only a token",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_FORGEJO_HOST_WORK_ACCESS_TOKEN": "work-token",
+			},
+			want: &Defaults{
+				Service: service.Defaults{
+					LatestVersion: latestver.Defaults{
+						Forgejo: lvforgejo.Defaults{
+							Host: map[string]lvforgejo.HostDefaults{
+								"work": {AccessToken: "work-token"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "service.latest_version.forgejo/two spellings name one instance",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_FORGEJO_HOST_WORK_URL": "https://git.example.com",
+				"ARGUS_SERVICE_LATEST_VERSION_FORGEJO_HOST_work_URL": "https://other.example.com",
+			},
+			want: &Defaults{
+				Service: service.Defaults{
+					LatestVersion: latestver.Defaults{
+						Forgejo: lvforgejo.Defaults{
+							Host: map[string]lvforgejo.HostDefaults{
+								"work": {URL: "https://git.example.com"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "service.latest_version.forgejo/an unrecognised field is ignored",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_FORGEJO_HOST_WORK_URL":      "https://git.example.com",
+				"ARGUS_SERVICE_LATEST_VERSION_FORGEJO_HOST_WORK_USERNAME": "someone",
+			},
+			want: &Defaults{
+				Service: service.Defaults{
+					LatestVersion: latestver.Defaults{
+						Forgejo: lvforgejo.Defaults{
+							Host: map[string]lvforgejo.HostDefaults{
+								"work": {URL: "https://git.example.com"},
+							},
 						},
 					},
 				},
@@ -1871,10 +1947,11 @@ func TestDefaults_CheckValues(t *testing.T) {
 	var defaults Defaults
 	defaults.Default()
 	tests := []struct {
-		name     string
-		input    *Defaults
-		errRegex string
-		changed  bool
+		name         string
+		input        *Defaults
+		errRegex     string
+		changed      bool
+		wireDefaults bool
 	}{
 		{
 			name: "Service.Interval",
@@ -1917,6 +1994,30 @@ func TestDefaults_CheckValues(t *testing.T) {
 							require:
 								docker:
 									type: "pizza" <invalid>.*$`,
+			),
+			changed: false,
+		},
+		{
+			name: "Service.LatestVersion.Forgejo/an instance no layer addresses",
+			input: &Defaults{
+				Service: service.Defaults{
+					LatestVersion: latestver.Defaults{
+						Forgejo: lvforgejo.Defaults{
+							Host: map[string]lvforgejo.HostDefaults{
+								"Codeberg": {AccessToken: "dummy-token"},
+							},
+						},
+					},
+				},
+			},
+			wireDefaults: true,
+			errRegex: test.TrimYAML(`
+				^service:
+					latest_version:
+						forgejo:
+							host:
+								Codeberg:
+									url: <required> \(e\.g\. https://codeberg\.org\)$`,
 			),
 			changed: false,
 		},
@@ -2049,6 +2150,12 @@ func TestDefaults_CheckValues(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
+			if tc.wireDefaults {
+				var hardDefaults Defaults
+				hardDefaults.Default()
+				tc.input.SetDefaults(&hardDefaults)
+			}
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,

@@ -24,6 +24,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -401,15 +402,34 @@ func setMapFields(field reflect.Value, envKey string, envVars []string) error {
 		return nil
 	}
 
+	// Entries for maps.
+	addNamedEntries(field, envKey, envVars)
+
 	var errs []error
+	// A value-typed element indexes as an unaddressable copy, so recurse into an
+	// addressable one and write it back.
+	valueElem := field.Type().Elem().Kind() != reflect.Pointer
+
 	// Recurse into map.
 	for _, key := range field.MapKeys() {
+		entry := field.MapIndex(key)
+		if valueElem {
+			addressable := reflect.New(field.Type().Elem())
+			addressable.Elem().Set(entry)
+			entry = addressable
+		}
+
 		if err := mapEnvToStruct(
-			field.MapIndex(key).Interface(),
+			entry.Interface(),
 			envKey+"_"+strings.ToUpper(key.String()),
 			envVars,
 		); err != nil {
 			errs = append(errs, err)
+			continue
+		}
+
+		if valueElem {
+			field.SetMapIndex(key, entry.Elem())
 		}
 	}
 
@@ -417,6 +437,104 @@ func setMapFields(field reflect.Value, envKey string, envVars []string) error {
 		return errors.Join(errs...)
 	}
 	return nil
+}
+
+// addNamedEntries adds an empty entry for every key that 'ENVKEY_<KEY>_<FIELD>'
+// variables name and the map does not yet hold.
+//
+// The key is whatever precedes a field the element type declares, so it may
+// itself contain underscores. Keys are lower-cased, as the variables that fill
+// them are matched case-insensitively.
+func addNamedEntries(field reflect.Value, envKey string, envVars []string) {
+	elemType := field.Type().Elem()
+	structType := elemType
+	if structType.Kind() == reflect.Pointer {
+		structType = structType.Elem()
+	}
+	if structType.Kind() != reflect.Struct {
+		return
+	}
+
+	fields := mapElemFields(structType, "")
+	if len(fields) == 0 {
+		return
+	}
+
+	held := make(map[string]bool, field.Len())
+	for _, key := range field.MapKeys() {
+		held[strings.ToUpper(key.String())] = true
+	}
+
+	for _, key := range mapEntryKeys(envKey, fields, envVars) {
+		if held[strings.ToUpper(key)] {
+			continue
+		}
+		if field.IsNil() {
+			field.Set(reflect.MakeMap(field.Type()))
+		}
+
+		entry := reflect.New(structType)
+		if elemType.Kind() != reflect.Pointer {
+			entry = entry.Elem()
+		}
+		field.SetMapIndex(reflect.ValueOf(key), entry)
+	}
+}
+
+// mapElemFields returns the variable-name suffixes elemType accepts.
+func mapElemFields(elemType reflect.Type, prefix string) []string {
+	var fields []string
+	for i := range elemType.NumField() {
+		name := strings.Split(elemType.Field(i).Tag.Get("yaml"), ",")[0]
+		if name == "" || name == "-" {
+			continue
+		}
+		name = prefix + strings.ToUpper(name)
+
+		fieldType := elemType.Field(i).Type
+		if fieldType.Kind() == reflect.Pointer {
+			fieldType = fieldType.Elem()
+		}
+		if fieldType.Kind() == reflect.Struct {
+			fields = append(fields, mapElemFields(fieldType, name+"_")...)
+			continue
+		}
+		fields = append(fields, name)
+	}
+
+	return fields
+}
+
+// mapEntryKeys returns the map keys named under envKey, sorted.
+func mapEntryKeys(envKey string, fields, envVars []string) []string {
+	envKey += "_"
+	seen := make(map[string]bool, len(envVars))
+	var keys []string
+	for _, envVar := range envVars {
+		name, _, _ := strings.Cut(envVar, "=")
+		suffix, ok := strings.CutPrefix(name, envKey)
+		if !ok {
+			continue
+		}
+
+		// Longest match wins, so a key may end with a field's name.
+		key := ""
+		for _, field := range fields {
+			if trimmed, found := strings.CutSuffix(suffix, "_"+field); found &&
+				trimmed != "" && len(trimmed) < len(suffix)-len(key) {
+				key = trimmed
+			}
+		}
+		key = strings.ToLower(key)
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+
+	return keys
 }
 
 // convertToEnvErrors converts the YAML struct errors to environment variable errors.
