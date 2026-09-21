@@ -241,6 +241,17 @@ func TestMigrateDeprecatedEnvVarPrefixes(t *testing.T) {
 	}
 }
 
+// testMapEntry exercises map-of-struct env mapping: a nested struct, a pointer
+// field, and a field the environment cannot name.
+type testMapEntry struct {
+	URL  string `yaml:"url,omitzero"`
+	Auth struct {
+		Token    string `yaml:"token,omitzero"`
+		Insecure *bool  `yaml:"insecure,omitzero"`
+	} `yaml:"auth,omitzero"`
+	Internal int `yaml:"-"`
+}
+
 func TestMapEnvToStruct(t *testing.T) {
 	// GIVEN: a struct and a bunch of env vars.
 	tests := []struct {
@@ -685,7 +696,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			errRegex: `^ARGUS_TEST_INLINE_INT: "foo" <invalid>.*$`,
 		},
 		{
-			name: "map - error",
+			name: "map/error",
 			env: map[string]string{
 				"ARGUS_MAP_FOO_BOOL": "maybe",
 			},
@@ -701,6 +712,268 @@ func TestMapEnvToStruct(t *testing.T) {
 				},
 			},
 			errRegex: `ARGUS_MAP_FOO_BOOL: "maybe" <invalid>`,
+		},
+		{
+			name: "map/value-typed struct elements are written back",
+			env: map[string]string{
+				"ARGUS_MAP_FOO_STRING": "bar",
+				"ARGUS_MAP_FOO_BOOL":   "true",
+			},
+			customStruct: &struct {
+				Map map[string]struct {
+					String string `yaml:"string"`
+					Bool   *bool  `yaml:"bool"`
+				} `yaml:"map"`
+			}{
+				Map: map[string]struct {
+					String string `yaml:"string"`
+					Bool   *bool  `yaml:"bool"`
+				}{
+					"foo": {},
+				},
+			},
+			want: test.TrimYAML(`
+				map:
+					foo:
+						string: bar
+						bool: true
+			`),
+		},
+		{
+			name: "map/pointer-typed struct elements are written back",
+			env: map[string]string{
+				"ARGUS_MAP_FOO_STRING": "bar",
+			},
+			customStruct: &struct {
+				Map map[string]*struct {
+					String string `yaml:"string"`
+				} `yaml:"map"`
+			}{
+				Map: map[string]*struct {
+					String string `yaml:"string"`
+				}{
+					"foo": {},
+				},
+			},
+			want: test.TrimYAML(`
+				map:
+					foo:
+						string: bar
+			`),
+		},
+		{
+			name: "map/the key is matched case-insensitively against the env var",
+			env: map[string]string{
+				"ARGUS_MAP_CODEBERG_STRING": "bar",
+			},
+			customStruct: &struct {
+				Map map[string]struct {
+					String string `yaml:"string"`
+				} `yaml:"map"`
+			}{
+				Map: map[string]struct {
+					String string `yaml:"string"`
+				}{
+					"codeberg": {},
+				},
+			},
+			want: test.TrimYAML(`
+				map:
+					codeberg:
+						string: bar
+			`),
+		},
+		{
+			name: "map of pointers/entries are created from their variables",
+			env: map[string]string{
+				"ARGUS_MAP_ABSENT_STRING": "bar",
+			},
+			customStruct: &struct {
+				Map map[string]*struct {
+					String string `yaml:"string"`
+				} `yaml:"map"`
+			}{
+				Map: map[string]*struct {
+					String string `yaml:"string"`
+				}{
+					"present": {},
+				},
+			},
+			want: test.TrimYAML(`
+				map:
+					absent:
+						string: bar
+					present:
+						string: ''
+			`),
+		},
+		{
+			name: "map of structs/entries are created from their variables",
+			env: map[string]string{
+				"ARGUS_TEST_HOST_CODEBERG_URL":          "https://codeberg.org",
+				"ARGUS_TEST_HOST_CODEBERG_AUTH_TOKEN":   "cb-token",
+				"ARGUS_TEST_HOST_MY_WORK_URL":           "https://git.example.com",
+				"ARGUS_TEST_HOST_MY_WORK_AUTH_INSECURE": "true",
+			},
+			customStruct: &struct {
+				Test struct {
+					Host map[string]testMapEntry `yaml:"host,omitempty"`
+				} `yaml:"test"`
+			}{},
+			want: test.TrimYAML(`
+				test:
+					host:
+						codeberg:
+							url: https://codeberg.org
+							auth:
+								token: cb-token
+						my_work:
+							url: https://git.example.com
+							auth:
+								insecure: true
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name: "map of structs/an existing entry is extended, not replaced",
+			env: map[string]string{
+				"ARGUS_TEST_HOST_CODEBERG_AUTH_TOKEN": "cb-token",
+			},
+			customStruct: func() any {
+				custom := &struct {
+					Test struct {
+						Host map[string]testMapEntry `yaml:"host,omitempty"`
+					} `yaml:"test"`
+				}{}
+				custom.Test.Host = map[string]testMapEntry{
+					"CODEBERG": {URL: "https://codeberg.org"},
+				}
+				return custom
+			}(),
+			want: test.TrimYAML(`
+				test:
+					host:
+						CODEBERG:
+							url: https://codeberg.org
+							auth:
+								token: cb-token
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name: "map of structs/an entry the map already spells differently is not duplicated",
+			env: map[string]string{
+				"ARGUS_TEST_HOST_CODEBERG_AUTH_TOKEN": "cb-token",
+			},
+			customStruct: func() any {
+				custom := &struct {
+					Test struct {
+						Host map[string]testMapEntry `yaml:"host,omitempty"`
+					} `yaml:"test"`
+				}{}
+				custom.Test.Host = map[string]testMapEntry{
+					"Codeberg": {URL: "https://codeberg.org"},
+				}
+				return custom
+			}(),
+			want: test.TrimYAML(`
+				test:
+					host:
+						Codeberg:
+							url: https://codeberg.org
+							auth:
+								token: cb-token
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name: "map of pointers/an error from an entry is reported",
+			env: map[string]string{
+				"ARGUS_TEST_HOST_CODEBERG_AUTH_INSECURE": "bop",
+			},
+			customStruct: func() any {
+				custom := &struct {
+					Test struct {
+						Host map[string]*testMapEntry `yaml:"host,omitempty"`
+					} `yaml:"test"`
+				}{}
+				custom.Test.Host = map[string]*testMapEntry{"CODEBERG": {}}
+				return custom
+			}(),
+			errRegex: `^ARGUS_TEST_HOST_CODEBERG_AUTH_INSECURE: "bop" <invalid> `,
+		},
+		{
+			name: "map of structs/a variable naming no known field creates nothing",
+			env: map[string]string{
+				"ARGUS_TEST_HOST_CODEBERG_USERNAME": "someone",
+			},
+			customStruct: &struct {
+				Test struct {
+					Host map[string]testMapEntry `yaml:"host,omitempty"`
+				} `yaml:"test"`
+			}{},
+			want:     "test: {}\n",
+			errRegex: `^$`,
+		},
+		{
+			name: "map of structs/a map key with no fields creates nothing",
+			env: map[string]string{
+				"ARGUS_TEST_HOST_CODEBERG": "anything",
+			},
+			customStruct: &struct {
+				Test struct {
+					Host map[string]struct{} `yaml:"host,omitempty"`
+				} `yaml:"test"`
+			}{},
+			want:     "test: {}\n",
+			errRegex: `^$`,
+		},
+		{
+			name: "map of structs/an invalid value is reported",
+			env: map[string]string{
+				"ARGUS_TEST_HOST_CODEBERG_URL":           "https://codeberg.org",
+				"ARGUS_TEST_HOST_CODEBERG_AUTH_INSECURE": "bop",
+			},
+			customStruct: &struct {
+				Test struct {
+					Host map[string]testMapEntry `yaml:"host,omitempty"`
+				} `yaml:"test"`
+			}{},
+			errRegex: `^ARGUS_TEST_HOST_CODEBERG_AUTH_INSECURE: "bop" <invalid> `,
+		},
+		{
+			name: "map/nested value-typed struct elements are written back",
+			env: map[string]string{
+				"ARGUS_MAP_FOO_INNER_BAR_STRING": "baz",
+			},
+			customStruct: &struct {
+				Map map[string]struct {
+					Inner map[string]struct {
+						String string `yaml:"string"`
+					} `yaml:"inner"`
+				} `yaml:"map"`
+			}{
+				Map: map[string]struct {
+					Inner map[string]struct {
+						String string `yaml:"string"`
+					} `yaml:"inner"`
+				}{
+					"foo": {
+						Inner: map[string]struct {
+							String string `yaml:"string"`
+						}{
+							"bar": {},
+						},
+					},
+				},
+			},
+			want: test.TrimYAML(`
+				map:
+					foo:
+						inner:
+							bar:
+								string: baz
+			`),
 		},
 		{
 			name: "struct that was nil - error",
