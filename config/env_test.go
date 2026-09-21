@@ -1024,6 +1024,18 @@ func TestConvertToEnvErrors(t *testing.T) {
 				errors.New(`ARGUS_WEBHOOK_DELAY: "10y" <invalid>`),
 			),
 		},
+		{
+			name: "a line naming no field is kept whole",
+			input: errors.New(test.TrimYAML(`
+				service:
+					latest_version:
+						forgejo:
+							host:
+								something
+			`)),
+			want: errors.New(
+				`ARGUS_SERVICE_LATEST_VERSION_FORGEJO_HOST: something`),
+		},
 	}
 
 	for _, tc := range tests {
