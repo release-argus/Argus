@@ -31,6 +31,9 @@ import (
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
+// dummyGitHubToken stands in for a real token where no request is made.
+const dummyGitHubToken = "dummy-github-token"
+
 var packageName = "service"
 
 func TestMain(m *testing.M) {
@@ -98,7 +101,7 @@ func plainDefaultsConfig(t *testing.T) DefaultsConfig {
 	defaults := Defaults{}
 	hardDefaults := Defaults{}
 	hardDefaults.Default()
-	hardDefaults.LatestVersion.GitHub.AccessToken = test.GitHubToken(nil)
+	hardDefaults.LatestVersion.GitHub.AccessToken = dummyGitHubToken
 
 	defaults.SetDefaults(&hardDefaults)
 	return DefaultsConfig{

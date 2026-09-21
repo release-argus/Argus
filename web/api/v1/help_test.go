@@ -59,6 +59,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// dummyGitHubToken stands in for a real token where no request is made.
+const dummyGitHubToken = "dummy-github-token"
+
 var (
 	packageName          = "api_v1"
 	secretValueMarshaled string
@@ -157,7 +160,7 @@ func plainDefaults(t *testing.T) (*config.Defaults, *config.Defaults) {
 	}
 	hardDefaults := config.Defaults{}
 	hardDefaults.Default()
-	hardDefaults.Service.LatestVersion.GitHub.AccessToken = test.GitHubToken(t)
+	hardDefaults.Service.LatestVersion.GitHub.AccessToken = dummyGitHubToken
 	defaults.SetDefaults(&hardDefaults)
 
 	return &defaults, &hardDefaults

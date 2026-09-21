@@ -34,6 +34,9 @@ import (
 	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
+// dummyGitHubToken stands in for a real token where no request is made.
+const dummyGitHubToken = "dummy-github-token"
+
 var packageName = "latestver"
 
 func TestMain(m *testing.M) {
@@ -157,7 +160,7 @@ func plainDefaultsConfig(t *testing.T) DefaultsConfig {
 	defaults.Common.Options = optDefaults
 	hardDefaults, _ := DecodeDefaults("yaml", nil)
 	hardDefaults.Default()
-	hardDefaults.GitHub.AccessToken = test.GitHubToken(nil)
+	hardDefaults.GitHub.AccessToken = dummyGitHubToken
 	hardDefaults.Common.Options = optHardDefaults
 
 	defaults.Common.Require.SetDefaults(&hardDefaults.Common.Require)
