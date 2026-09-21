@@ -69,6 +69,8 @@ func TestLookup_InheritSecrets(t *testing.T) {
 		typeChanged        bool
 		overrides          string
 		inheritData        bool
+		accessToken        string // Token the edit carries, when not masked.
+		maskAccessToken    bool
 		inheritAccessToken bool
 		inheritRequire     bool
 	}{
@@ -86,6 +88,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 			name:               "don't inherit Data as URL changed",
 			overrides:          "url: something-else",
 			inheritData:        false,
+			maskAccessToken:    true,
 			inheritAccessToken: true,
 			inheritRequire:     true,
 		},
@@ -108,6 +111,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 						type: ` + docker.PossibleTypes[len(docker.PossibleTypes)-1] + `
 			`),
 			inheritData:        false,
+			maskAccessToken:    true,
 			inheritAccessToken: true,
 			inheritRequire:     false,
 		},
@@ -115,6 +119,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 			name:               "inherit Require, not Data",
 			overrides:          `url: something-else`,
 			inheritData:        false,
+			maskAccessToken:    true,
 			inheritAccessToken: true,
 			inheritRequire:     true,
 		},
@@ -122,7 +127,27 @@ func TestLookup_InheritSecrets(t *testing.T) {
 			name:               "inherit all",
 			inheritData:        true,
 			inheritRequire:     true,
+			maskAccessToken:    true,
 			inheritAccessToken: true,
+		},
+		{
+			name:            "a masked token cannot be inherited from another type",
+			typeChanged:     true,
+			overrides:       "type: something-else",
+			maskAccessToken: true,
+			inheritRequire:  true,
+		},
+		{
+			name:           "a new token is kept",
+			overrides:      "url: something-else",
+			accessToken:    "new-token",
+			inheritRequire: true,
+		},
+		{
+			name:           "an emptied token is kept empty",
+			accessToken:    "",
+			inheritData:    true,
+			inheritRequire: true,
 		},
 	}
 
@@ -174,7 +199,8 @@ func TestLookup_InheritSecrets(t *testing.T) {
 			if fl, ok := fromLookup.(*Lookup); ok {
 				fl.AccessToken = inheritableAccessToken
 			}
-			if tc.inheritAccessToken {
+			lookup.AccessToken = tc.accessToken
+			if tc.maskAccessToken {
 				lookup.AccessToken = util.SecretValue
 			}
 
@@ -207,14 +233,19 @@ func TestLookup_InheritSecrets(t *testing.T) {
 				)
 			}
 
-			// AND: the access token is copied when expected.
-			if tc.inheritAccessToken {
-				if got, want := lookup.AccessToken, inheritableAccessToken; got != want {
-					t.Errorf(
-						"%s AccessToken not copied over\ngot:  %q\nwant: %q",
-						prefix, got, want,
-					)
+			// AND: a masked token resolves to the stored one, or to nothing; any other value is kept.
+			wantAccessToken := tc.accessToken
+			if tc.maskAccessToken {
+				wantAccessToken = ""
+				if tc.inheritAccessToken {
+					wantAccessToken = inheritableAccessToken
 				}
+			}
+			if got := lookup.AccessToken; got != wantAccessToken {
+				t.Errorf(
+					"%s AccessToken mismatch\ngot:  %q\nwant: %q",
+					prefix, got, wantAccessToken,
+				)
 			}
 
 			// AND: the Require is copied when expected.

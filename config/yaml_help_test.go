@@ -313,6 +313,39 @@ func testYAML_config_forgejo(path string) {
 	writeFile(path, data)
 }
 
+// testYAML_config_forgejo_defaults is for `save.go`
+//
+// host-keyed forgejo defaults, and nothing else under that type.
+func testYAML_config_forgejo_defaults(path string) {
+	data := test.TrimYAML(`
+		settings:
+			data: {}
+			web: {}
+		defaults:
+			service:
+				latest_version:
+					forgejo:
+						host:
+							Codeberg:
+								url: codeberg.org
+								access_token: dummy-codeberg-token
+							Internal:
+								url: https://forge.example.com:3000/git
+								access_token: dummy-internal-token
+								allow_invalid_certs: true
+		service:
+			bare-host:
+				options: {}
+				latest_version:
+					type: forgejo
+					host: codeberg.org
+					url: owner/repo
+				dashboard: {}
+	`)
+
+	writeFile(path, data)
+}
+
 // testYAML_config_auth is for `save.go`
 //
 // a settings.auth block.

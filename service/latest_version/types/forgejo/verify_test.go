@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	statustest "github.com/release-argus/Argus/service/status/test"
 	"github.com/release-argus/Argus/util"
@@ -35,6 +36,7 @@ func TestLookup_CheckValues(t *testing.T) {
 	tests := []struct {
 		name       string
 		lookupYAML string
+		defaults   map[string]HostDefaults
 		errRegex   string
 	}{
 		{
@@ -204,10 +206,50 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: `^url: "  owner/repo  " <invalid> \(e\.g\. owner/repo\)$`,
 		},
 		{
+			name: "invalid/require from the base Lookup",
+			lookupYAML: `
+				host: https://codeberg.org
+				url: owner/repo
+				require:
+					regex_content: "[0-"`,
+			errRegex: test.TrimYAML(`
+				^require:
+					regex_content: "\[0-" <invalid> .*$`,
+			),
+		},
+		{
 			name: "invalid/host and url both unusable",
 			lookupYAML: `
 				url: Argus`,
 			errRegex: `^host: <required> .*\nurl: "Argus" <invalid> .*$`,
+		},
+		{
+			name: "valid/host names an instance, the defaults give a URL",
+			lookupYAML: `
+				host: Codeberg
+				url: owner/repo`,
+			defaults: map[string]HostDefaults{
+				"Codeberg": {URL: "https://codeberg.org"},
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "valid/a token on an http host, which only warns",
+			lookupYAML: `
+				host: http://git.example.com
+				url: owner/repo
+				access_token: fj-token`,
+			errRegex: `^$`,
+		},
+		{
+			name: "invalid/host names an instance with no URL, however the name is spelt",
+			lookupYAML: `
+				host: https://forgejo.example.com
+				url: owner/repo`,
+			defaults: map[string]HostDefaults{
+				"https://forgejo.example.com": {AccessToken: "fj-token"},
+			},
+			errRegex: `^host: "https://forgejo.example.com" <invalid> \(names an instance with no url\)$`,
 		},
 	}
 
@@ -228,6 +270,10 @@ func TestLookup_CheckValues(t *testing.T) {
 					packageName, err,
 				)
 			}
+			lookup.SetTypeDefaults(
+				&Defaults{Host: tc.defaults},
+				&Defaults{},
+			)
 			hadHost, hadURL := lookup.Host, lookup.URL
 
 			// WHEN: CheckValues is called.
@@ -253,6 +299,83 @@ func TestLookup_CheckValues(t *testing.T) {
 				t.Fatalf(
 					"%s\nLookup.CheckValues() rewrote what the user wrote\ngot:  host=%q, url=%q\nwant: host=%q, url=%q",
 					packageName, lookup.Host, lookup.URL, hadHost, hadURL,
+				)
+			}
+		})
+	}
+}
+
+func TestLookup_CheckValues__warnsOnPlaintextToken(t *testing.T) {
+	// GIVEN: a Lookup with a token, on an http and on an https host.
+	tests := []struct {
+		name     string
+		host     string
+		token    string
+		wantWarn bool
+	}{
+		{
+			name:     "host=http, token warns",
+			host:     "http://git.example.com",
+			token:    "fj-token",
+			wantWarn: true,
+		},
+		{
+			name:     "host=https, quiet with token",
+			host:     "https://git.example.com",
+			token:    "fj-token",
+			wantWarn: false,
+		},
+		{
+			name:     "host=http, no token is quiet",
+			host:     "http://git.example.com",
+			wantWarn: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			releaseStdout := test.CaptureLog(t, logx.Default())
+
+			svcStatus, _ := statustest.New("yaml", []byte(`id: "`+t.Name()+`"`))
+			lookup, err := Decode(
+				"yaml", []byte(test.TrimYAML(`
+					host: `+tc.host+`
+					url: owner/repo
+					access_token: `+tc.token)),
+				nil,
+				svcStatus,
+				plainDefaultsConfig(t),
+			)
+			if err != nil {
+				t.Fatalf(
+					"%s\nfailed to decode Lookup: %v",
+					packageName, err,
+				)
+			}
+			lookup.SetTypeDefaults(&Defaults{}, &Defaults{})
+
+			// WHEN: CheckValues is called.
+			err = lookup.CheckValues()
+
+			prefix := fmt.Sprintf("%s\nLookup.CheckValues()", packageName)
+
+			// THEN: the plaintext-credential warning is logged only when expected.
+			logged := releaseStdout()
+			if gotWarn := strings.Contains(
+				logged, "access_token will be sent unencrypted",
+			); gotWarn != tc.wantWarn {
+				t.Fatalf(
+					"%s warn mismatch\ngot:  %t\nwant: %t\nlog:  %q",
+					prefix, gotWarn, tc.wantWarn, logged,
+				)
+			}
+
+			// AND: no error is returned.
+			if err != nil {
+				t.Fatalf(
+					"%s unexpected error: %v",
+					prefix, err,
 				)
 			}
 		})
@@ -318,9 +441,10 @@ func TestLookup_CheckValues__TrimsTrailingSlash(t *testing.T) {
 func TestLookup_HostProblem(t *testing.T) {
 	// GIVEN: a host spelling.
 	tests := []struct {
-		name string
-		host string
-		want string
+		name  string
+		host  string
+		hosts map[string]HostDefaults
+		want  string
 	}{
 		{
 			name: "ok/scheme and host",
@@ -373,14 +497,38 @@ func TestLookup_HostProblem(t *testing.T) {
 			want: "no hostname",
 		},
 		{
-			name: "problem/trailing slash from an env var",
+			name: "ok/trailing slash from an env var, which is trimmed at request time",
 			host: "${ARGUS_TEST_FORGEJO_SLASHED}",
-			want: "trailing '/'",
+			want: "",
 		},
 		{
-			name: "problem/unparsable",
+			name: "problem/unparseable",
 			host: "https://exa mple.com",
 			want: "not a valid URL",
+		},
+		{
+			name: "problem/names an instance with no URL, however the name is spelt",
+			host: "https://forgejo.example.com",
+			hosts: map[string]HostDefaults{
+				"https://forgejo.example.com": {AccessToken: "fj-token"},
+			},
+			want: "names an instance with no url",
+		},
+		{
+			name: "ok/names an instance, and the entry gives the URL",
+			host: "Codeberg",
+			hosts: map[string]HostDefaults{
+				"Codeberg": {URL: "https://codeberg.org"},
+			},
+			want: "",
+		},
+		{
+			name: "problem/the URL the named entry gives is unusable",
+			host: "Codeberg",
+			hosts: map[string]HostDefaults{
+				"Codeberg": {URL: "ftp://codeberg.org"},
+			},
+			want: "scheme must be http or https",
 		},
 	}
 
@@ -389,6 +537,10 @@ func TestLookup_HostProblem(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			lookup := Lookup{Host: tc.host}
+			lookup.SetTypeDefaults(
+				&Defaults{Host: tc.hosts},
+				&Defaults{},
+			)
 
 			// WHEN: hostProblem is called.
 			got := lookup.hostProblem()

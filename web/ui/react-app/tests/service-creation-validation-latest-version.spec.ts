@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { screenshotsUnder } from './fixtures/service';
+import { SECRET_VALUE, screenshotsUnder } from './fixtures/service';
 import {
 	clickViaKeyboard,
 	expectError,
@@ -184,6 +184,106 @@ test.describe('Service creation modal - field validation', () => {
 				'https://example.com/git/owner/repo',
 			);
 			await shot('01-forgejo-repo-link', repoInput);
+		});
+
+		test('type=forgejo - a token typed here survives the host being set', async ({
+			page,
+		}, testInfo) => {
+			const shot = screenshotsUnder(
+				page,
+				testInfo.project.name,
+				'service-creation-validation/latest-version',
+			);
+			const dialog = await openCreateServiceModal(page);
+			const section = await openSection(dialog, 'Latest Version');
+
+			// GIVEN: a forgejo lookup in the create form.
+			await section.locator('#latest_version\\.type').click();
+			await dialog.getByRole('option', { name: /^forgejo$/i }).click();
+
+			const hostInput = section.getByRole('textbox', {
+				name: /^Value field for Host$/i,
+			});
+			const tokenInput = section.getByRole('textbox', {
+				name: /^Value field for Access Token$/i,
+			});
+
+			// AND: an access token is entered before any host.
+			await tokenInput.fill('dummy-e2e-token');
+			await tokenInput.blur();
+			await shot('01-forgejo-token-entered', tokenInput);
+
+			// WHEN: the host it was meant for is set afterwards.
+			await hostInput.fill('codeberg.org');
+			await hostInput.blur();
+
+			// THEN: the token is kept.
+			await expect(tokenInput).toHaveValue('dummy-e2e-token');
+			await shot('02-forgejo-token-kept', tokenInput);
+
+			// WHEN: the host is changed to a different instance.
+			await hostInput.fill('git.example.com');
+			await hostInput.blur();
+
+			// THEN: it is still kept.
+			await expect(tokenInput).toHaveValue('dummy-e2e-token');
+			await shot('03-forgejo-token-still-kept', tokenInput);
+		});
+
+		test('type=forgejo - a configured host offers its defaults, matched canonically', async ({
+			page,
+		}, testInfo) => {
+			const shot = screenshotsUnder(
+				page,
+				testInfo.project.name,
+				'service-creation-validation/latest-version',
+			);
+			const dialog = await openCreateServiceModal(page);
+			const section = await openSection(dialog, 'Latest Version');
+
+			// GIVEN: a forgejo lookup, with host defaults configured for two instances.
+			await section.locator('#latest_version\\.type').click();
+			await dialog.getByRole('option', { name: /^forgejo$/i }).click();
+
+			const hostInput = section.getByRole('textbox', {
+				name: /^Value field for Host$/i,
+			});
+			const tokenInput = section.getByRole('textbox', {
+				name: /^Value field for Access Token$/i,
+			});
+			// The inherited allow_invalid_certs boolean shows only as the Default option's
+			// icon colour.
+			const certsDefaultIcon = section
+				.locator('[aria-labelledby="latest_version.allow_invalid_certs-label"]')
+				.getByRole('radio', { name: /^Default:?$/ })
+				.locator('svg');
+
+			// WHEN: a host the defaults spell differently is entered.
+			await hostInput.fill('forge.example.com');
+			await hostInput.blur();
+
+			// THEN: that entry is still matched, offering its token as the placeholder.
+			await expect(tokenInput).toHaveAttribute('placeholder', SECRET_VALUE);
+			// AND: its allow_invalid_certs=false shows as the default.
+			await expect(certsDefaultIcon).toHaveClass(/text-destructive/);
+			await shot('04-forgejo-host-defaults-inherited', section);
+
+			// WHEN: the host addresses the other configured instance.
+			await hostInput.fill('git.internal.example');
+			await hostInput.blur();
+
+			// THEN: that entry's defaults apply instead - allow_invalid_certs=true.
+			await expect(tokenInput).toHaveAttribute('placeholder', SECRET_VALUE);
+			await expect(certsDefaultIcon).toHaveClass(/text-success/);
+			await shot('05-forgejo-host-defaults-swapped', section);
+
+			// WHEN: the host has no defaults entry.
+			await hostInput.fill('git.example.com');
+			await hostInput.blur();
+
+			// THEN: nothing is inherited, so no default is offered.
+			await expect(tokenInput).not.toHaveAttribute('placeholder');
+			await shot('06-forgejo-host-defaults-absent', section);
 		});
 
 		test('type=url - URL is required and must start with http(s)://', async ({

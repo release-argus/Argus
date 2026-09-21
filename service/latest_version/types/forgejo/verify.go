@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/service/latest_version/types/forge"
 	"github.com/release-argus/Argus/util"
 )
@@ -36,6 +37,14 @@ func (l *Lookup) CheckValues() error {
 				Value:       l.Host,
 				Description: problem,
 			})
+	}
+
+	if l.accessToken() != "" && isPlaintext(util.EvalEnvVars(l.resolveHost())) {
+		logx.Warn(
+			"access_token will be sent unencrypted, as the host uses http",
+			logx.LogFrom{Primary: "latest_version", Secondary: l.GetServiceID()},
+			true,
+		)
 	}
 
 	if !forge.IsOwnerRepo(util.EvalEnvVars(l.URL)) {
@@ -68,19 +77,11 @@ func (l *Lookup) hostProblem() string {
 		return "surrounded by whitespace"
 	}
 
-	parsed, err := l.parseHost()
-	if err != nil {
-		return "not a valid URL"
+	// A name only labels an instance, however it is spelled, so an entry without
+	// a URL addresses nothing.
+	if url, named := l.namedInstance(); named && url == "" {
+		return "names an instance with no url"
 	}
 
-	switch {
-	case parsed.Scheme != "http" && parsed.Scheme != "https":
-		return "scheme must be http or https"
-	case parsed.Hostname() == "":
-		return "no hostname"
-	case strings.HasSuffix(parsed.Path, "/"):
-		return "trailing '/'"
-	}
-
-	return ""
+	return urlProblem(util.EvalEnvVars(l.resolveHost()))
 }

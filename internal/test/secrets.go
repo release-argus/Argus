@@ -70,6 +70,12 @@ func DockerQuayToken(t *testing.T) string {
 	t.Helper()
 	return get(t, "DOCKER_QUAY_TOKEN")
 }
+
+func ForgejoToken(t *testing.T) string {
+	t.Helper()
+	return get(t, "ARGUS_TEST_FORGEJO_TOKEN")
+}
+
 func GitHubToken(t *testing.T) string {
 	if t != nil {
 		t.Helper()

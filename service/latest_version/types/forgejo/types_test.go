@@ -28,6 +28,10 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
+	opt "github.com/release-argus/Argus/service/option"
+	opttest "github.com/release-argus/Argus/service/option/test"
+	"github.com/release-argus/Argus/service/status"
+	statustest "github.com/release-argus/Argus/service/status/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
@@ -268,92 +272,150 @@ func TestLookup_String(t *testing.T) {
 	}
 }
 
-func TestLookup_Clone(t *testing.T) {
-	// GIVEN: a Lookup.
-	lookup := testLookup(t, `
-		type: forgejo
-		host: https://codeberg.org
-		url: owner/repo
-		use_prerelease: true`,
-	)
-
-	// WHEN: it is cloned.
-	got := lookup.Clone(lookup.Status)
-
-	// THEN: the clone matches.
-	if g, w := got.String(""), lookup.String(""); g != w {
-		t.Fatalf(
-			"%s\nLookup.Clone() mismatch\ngot:  %q\nwant: %q",
-			packageName, g, w,
-		)
-	}
-
-	// AND: use_prerelease is a copy, not the same pointer.
-	if got.UsePreRelease == lookup.UsePreRelease {
-		t.Fatalf("%s\nLookup.Clone() shares the use_prerelease pointer", packageName)
-	}
-
-	// AND: changing the clone leaves the original unchanged.
-	got.Host = "https://gitea.com"
-	if want := "https://codeberg.org"; lookup.Host != want {
-		t.Fatalf(
-			"%s\nLookup.Clone() shares the host\ngot:  %q\nwant: %q",
-			packageName, lookup.Host, want,
-		)
-	}
-}
-
-func TestLookup_Clone__Nil(t *testing.T) {
-	// GIVEN: a nil Lookup.
-	var lookup *Lookup
-
-	// WHEN: it is cloned/copied.
-	// THEN: nothing comes back, and nothing panics.
-	if got := lookup.Clone(nil); got != nil {
-		t.Fatalf(
-			"%s\nLookup.Clone() on nil mismatch\ngot:  %v\nwant: nil",
-			packageName, got,
-		)
-	}
-	if got := lookup.Copy(nil); got != nil {
-		t.Fatalf(
-			"%s\nLookup.Copy() on nil mismatch\ngot:  %v\nwant: nil",
-			packageName, got,
-		)
-	}
-}
-
 func TestLookup_Copy(t *testing.T) {
+	lvCfg := plainDefaultsConfig(t)
+	optCfg := opttest.PlainDefaultsConfig(t)
+
 	// GIVEN: a Lookup.
-	lookup := testLookup(t, `
-		type: forgejo
-		host: https://codeberg.org
-		url: owner/repo
-		use_prerelease: true`,
-	)
-
-	// WHEN: it is copied as a base.Interface.
-	got := lookup.Copy(lookup.Status)
-
-	// THEN: the copy matches, and is a distinct Lookup.
-	if g, w := got.String(""), lookup.String(""); g != w {
-		t.Fatalf(
-			"%s\nLookup.Copy() mismatch\ngot:  %q\nwant: %q",
-			packageName, g, w,
-		)
+	tests := []struct {
+		name   string
+		lookup *Lookup
+		status *status.Status
+	}{
+		{
+			name:   "nil",
+			lookup: nil,
+			status: nil,
+		},
+		{
+			name: "filled",
+			lookup: test.Must(t, func() (*Lookup, error) {
+				svcStatus, _ := statustest.New("yaml", nil)
+				return Decode(
+					"yaml", []byte(test.TrimYAML(`
+						type: test
+						host: https://codeberg.org
+						url: owner/repo
+						access_token: dummy-copy-token
+						allow_invalid_certs: true
+						use_prerelease: true
+					`)),
+					test.Must(t, func() (*opt.Options, error) {
+						return opt.Decode(
+							"yaml", []byte(test.TrimYAML(`
+								active: false
+								interval: 2s
+								semantic_versioning: false
+							`)),
+							optCfg,
+						)
+					}),
+					svcStatus,
+					lvCfg,
+				)
+			}),
+			status: test.Must(t, func() (*status.Status, error) {
+				return statustest.New("yaml", nil)
+			}),
+		},
 	}
-	copied, ok := got.(*Lookup)
-	if !ok {
-		t.Fatalf(
-			"%s\nLookup.Copy() type mismatch\ngot:  %T\nwant: *Lookup",
-			packageName, got,
-		)
-	}
-	if copied == lookup {
-		t.Fatalf(
-			"%s\nLookup.Copy() returned the receiver rather than a copy",
-			packageName,
-		)
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			wantStr := decode.ToYAMLString(tc.lookup, "")
+
+			// WHEN: Copy() is called on it.
+			gotInterface := tc.lookup.Copy(tc.status)
+
+			prefix := fmt.Sprintf(
+				"%s\nLookup.Copy(status=%p)",
+				packageName, tc.status,
+			)
+
+			// THEN: if nil was copied, we get nil.
+			if tc.lookup == nil {
+				if gotInterface != nil {
+					t.Errorf(
+						"%s of nil mismatch\ngot:  %v\nwant: nil",
+						prefix, gotInterface,
+					)
+				}
+				return
+			}
+
+			// AND: the copy is non-nil.
+			if gotInterface == nil {
+				t.Fatalf("%s got nil want non-nil", prefix)
+			}
+
+			// AND: the copy is distinct.
+			if gotInterface == tc.lookup {
+				t.Fatalf(
+					"%s should return a distinct copy\ngot:  %p\nwant: %p",
+					prefix, gotInterface, tc.lookup,
+				)
+			}
+
+			// AND: the type is unchanged.
+			got, ok := gotInterface.(*Lookup)
+			if !ok {
+				t.Fatalf(
+					"%s type shouldn't have changed\ngot:  %T\nwant: Lookup",
+					prefix, gotInterface,
+				)
+			}
+
+			// AND: the copy unmarshals the same.
+			if gotStr := got.String(""); gotStr != wantStr {
+				t.Fatalf(
+					"%s stringified mismatch\ngot:  %q\nwant: %q",
+					prefix, gotStr, wantStr,
+				)
+			}
+
+			// AND: the fields are copied as expected.
+			err := []test.FieldAssertion{
+				{Name: "Type", Got: got.Type, Want: tc.lookup.Type, Mode: test.CompareEqual},
+				{Name: "URL", Got: got.URL, Want: tc.lookup.URL, Mode: test.CompareEqual},
+				{Name: "URLCommands", Got: &got.URLCommands, Want: &tc.lookup.URLCommands, Mode: test.CompareDifferentPointer},
+			}
+			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
+			}
+
+			// AND: copied pointers should be value-equal and non-aliased.
+			err = []test.FieldAssertion{
+				{Name: "AllowInvalidCerts", Got: got.AllowInvalidCerts, Want: tc.lookup.AllowInvalidCerts, Mode: test.CompareDifferentPointer},
+				{Name: "Require", Got: got.Require, Want: tc.lookup.Require, Mode: test.CompareDifferentPointer},
+				{Name: "Options", Got: got.Options, Want: tc.lookup.Options, Mode: test.CompareDifferentPointer},
+				{Name: "Status", Got: got.Status, Want: tc.lookup.Status, Mode: test.CompareDifferentPointer},
+			}
+			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
+			}
+
+			// AND: the non-Base fields are copied as expected.
+			err = []test.FieldAssertion{
+				{Name: "AccessToken", Got: got.AccessToken, Want: tc.lookup.AccessToken, Mode: test.CompareEqual},
+				{Name: "UsePreRelease", Got: got.UsePreRelease, Want: tc.lookup.UsePreRelease, Mode: test.CompareDifferentPointer},
+			}
+			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
+			}
+
+			// AND: defaults pointers are shared.
+			err = []test.FieldAssertion{
+				{Name: "Defaults", Got: got.Defaults, Want: tc.lookup.Defaults, Mode: test.CompareSamePointer},
+				{Name: "HardDefaults", Got: got.HardDefaults, Want: tc.lookup.HardDefaults, Mode: test.CompareSamePointer},
+				{Name: "typeDefaults", Got: got.typeDefaults, Want: tc.lookup.typeDefaults, Mode: test.CompareSamePointer},
+				{Name: "typeHardDefaults", Got: got.typeHardDefaults, Want: tc.lookup.typeHardDefaults, Mode: test.CompareSamePointer},
+			}
+			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
+			}
+		})
 	}
 }
 
