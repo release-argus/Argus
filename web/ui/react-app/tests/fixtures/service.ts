@@ -6,7 +6,7 @@ import {
 	waitForDeployedVersionRefresh,
 } from './dashboard';
 import { bareEndpoint } from './test-endpoints';
-import { openSection } from './validation';
+import { openSection, selectInputFor, selectOrCreate } from './validation';
 
 export type KeyVal = { key: string; value: string };
 
@@ -256,10 +256,8 @@ const fillLatestVersion = async (
 		await section
 			.getByRole('textbox', { name: /repository/i })
 			.fill(options.url);
-		if (type === 'forgejo') {
-			await section
-				.getByRole('textbox', { name: /^Value field for Host$/i })
-				.fill(options.host ?? '');
+		if (type === 'forgejo' && options.host !== undefined) {
+			await selectOrCreate(selectInputFor(section, 'Host'), options.host);
 		}
 		if (options.accessToken !== undefined) {
 			await section
