@@ -284,10 +284,13 @@ func (c *URLCommand) run(versions []string, logFrom logx.LogFrom) ([]string, err
 		var msg string
 		switch c.Type {
 		case "split":
-			msg = fmt.Sprintf(
-				"Splitting on %q with index %d",
-				c.Text, c.Index,
-			)
+			msg = fmt.Sprintf("Splitting on %q", c.Text)
+			if c.Index != nil {
+				msg = fmt.Sprintf(
+					"%s with index %d",
+					msg, *c.Index,
+				)
+			}
 			versions, err = c.split(i, versions, logFrom)
 		case "replace":
 			msg = fmt.Sprintf(
