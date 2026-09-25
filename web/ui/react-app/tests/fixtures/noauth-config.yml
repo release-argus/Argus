@@ -1,3 +1,19 @@
+defaults:
+  service:
+    latest_version:
+      forgejo:
+        host:
+          Forge:
+            url: FORGE.example.com:443/
+            access_token: dummy-forge-token
+            allow_invalid_certs: false
+          Internal:
+            url: https://git.internal.example
+            access_token: dummy-internal-token
+            allow_invalid_certs: true
+          https://forgejo.example.com:
+            url: https://forgejo.example.com
+            access_token: dummy-url-named-token
 service:
   release-argus/Argus:
     latest_version:

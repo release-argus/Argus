@@ -278,6 +278,74 @@ func testYAML_config_small(path string) {
 	writeFile(path, data)
 }
 
+// testYAML_config_forgejo is for `save.go`
+//
+// a forgejo service whose host is spelt in a form canonicalisation would rewrite.
+func testYAML_config_forgejo(path string) {
+	data := test.TrimYAML(`
+		settings:
+			data: {}
+			web: {}
+		service:
+			bare-host:
+				options: {}
+				latest_version:
+					type: forgejo
+					host: codeberg.org
+					url: owner/repo
+				dashboard: {}
+			uppercase-scheme-and-default-port:
+				options: {}
+				latest_version:
+					type: forgejo
+					host: HTTPS://codeberg.org:443
+					url: owner/repo
+				dashboard: {}
+			sub-path:
+				options: {}
+				latest_version:
+					type: forgejo
+					host: http://forge.example.com:3000/git
+					url: owner/repo
+				dashboard: {}
+	`)
+
+	writeFile(path, data)
+}
+
+// testYAML_config_forgejo_defaults is for `save.go`
+//
+// host-keyed forgejo defaults, and nothing else under that type.
+func testYAML_config_forgejo_defaults(path string) {
+	data := test.TrimYAML(`
+		settings:
+			data: {}
+			web: {}
+		defaults:
+			service:
+				latest_version:
+					forgejo:
+						host:
+							Codeberg:
+								url: codeberg.org
+								access_token: dummy-codeberg-token
+							Internal:
+								url: https://forge.example.com:3000/git
+								access_token: dummy-internal-token
+								allow_invalid_certs: true
+		service:
+			bare-host:
+				options: {}
+				latest_version:
+					type: forgejo
+					host: codeberg.org
+					url: owner/repo
+				dashboard: {}
+	`)
+
+	writeFile(path, data)
+}
+
 // testYAML_config_auth is for `save.go`
 //
 // a settings.auth block.
@@ -604,7 +672,7 @@ func testYAML_Edit(path string) {
 				name: a
 				latest_version:
 					type: url
-					url: ` + test.LookupPlain["url_valid"] + `
+					url: ` + test.LookupPlain.URLValid + `
 					url_commands:
 					- type: regex
 						regex: v(.*)
@@ -612,7 +680,7 @@ func testYAML_Edit(path string) {
 				name: b
 				latest_version:
 					type: url
-					url: ` + test.LookupPlain["url_valid"] + `
+					url: ` + test.LookupPlain.URLValid + `
 					url_commands:
 					- type: regex
 						regex: ([0-9.]+)
@@ -620,7 +688,7 @@ func testYAML_Edit(path string) {
 				name: c
 				latest_version:
 					type: url
-					url: ` + test.LookupPlain["url_valid"] + `
+					url: ` + test.LookupPlain.URLValid + `
 					url_commands:
 					- type: regex
 						regex: v?([0-9.]+)

@@ -206,6 +206,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 		format, data string
 		target       *Lookup
 	}
+	// GIVEN: a decoded Lookup, and overrides to apply to it.
 	tests := []struct {
 		name     string
 		args     Args
@@ -289,9 +290,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			name: "previous require inherited",
 			args: Args{
 				format: "json",
-				data: `{
-				"type": "-"
-			}`,
+				data:   `{"type": "-"}`,
 				target: &Lookup{
 					Require: &filter.Require{
 						RegexContent: "v?",
@@ -353,11 +352,11 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
-				"type": "github",
-				"url": "https://release-argus",
-				"access_token": "def",
-				"use_prerelease": false
-			}`),
+					"type": "github",
+					"url": "https://release-argus",
+					"access_token": "def",
+					"use_prerelease": false
+				}`),
 				target: &Lookup{
 					Type:          "github",
 					URL:           "https://example.com",
@@ -382,10 +381,6 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			options := opttest.PlainOptions(t, optCfg)
 			svcStatus := &status.Status{}
 			tc.args.target.Init(options, svcStatus, lvCfg)
-			// Default want to the unchanged stringified struct.
-			if tc.want == "" {
-				tc.want = decode.ToYAMLString(tc.args.target, "")
-			}
 			// Default want to the stringified struct.
 			if tc.want == "" {
 				tc.want = decode.ToYAMLString(tc.args.target, "")

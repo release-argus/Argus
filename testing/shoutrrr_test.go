@@ -200,9 +200,9 @@ func TestFindShoutrrr(t *testing.T) {
 										options:
 											max_tries: 1
 										url_fields:
-											host: `+test.ValidCertNoProtocol+`
-											path: /gotify
-											token: `+test.ShoutrrrGotifyToken()+`
+											host: `+test.NotifyGotify.HostValid+`
+											path: `+test.NotifyGotify.Path+`
+											token: `+test.NotifyGotify.TokenPass+`
 									baz: {}
 						`)),
 						svcCfg, notifyCfg, whCfg,

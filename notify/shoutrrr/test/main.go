@@ -17,7 +17,6 @@
 package test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -28,9 +27,9 @@ import (
 
 // Shoutrrr returns a shoutrrr instance for testing.
 func Shoutrrr(t *testing.T, failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
-	url := test.ValidCertNoProtocol
+	host := test.NotifyGotify.HostValid
 	if selfSignedCert {
-		url = strings.Replace(url, "valid", "invalid", 1)
+		host = test.NotifyGotify.HostInvalid
 	}
 	s := shoutrrr.New(
 		nil,
@@ -40,9 +39,9 @@ func Shoutrrr(t *testing.T, failing bool, selfSignedCert bool) *shoutrrr.Shoutrr
 			"max_tries": "1",
 		},
 		map[string]string{
-			"host":  url,
-			"path":  "/gotify",
-			"token": test.ShoutrrrGotifyToken(),
+			"host":  host,
+			"path":  test.NotifyGotify.Path,
+			"token": test.NotifyGotify.TokenPass,
 		},
 		map[string]string{
 			"title": "A Title!",
@@ -80,7 +79,7 @@ func Shoutrrr(t *testing.T, failing bool, selfSignedCert bool) *shoutrrr.Shoutrr
 	s.Failed = &s.ServiceStatus.Fails.Shoutrrr
 
 	if failing {
-		s.URLFields["token"] = "invalid"
+		s.URLFields["token"] = test.NotifyGotify.TokenMalformed
 	}
 	return s
 }

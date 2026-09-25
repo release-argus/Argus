@@ -2403,6 +2403,120 @@ func TestLatestVersion_String(t *testing.T) {
 	}
 }
 
+func TestLatestVersionForgejoDefaults_IsZero(t *testing.T) {
+	// GIVEN: LatestVersionForgejoDefaults.
+	tests := []struct {
+		name     string
+		defaults LatestVersionForgejoDefaults
+		want     bool
+	}{
+		{
+			name:     "empty",
+			defaults: LatestVersionForgejoDefaults{},
+			want:     true,
+		},
+		{
+			name:     "non-empty/UsePreRelease=true",
+			defaults: LatestVersionForgejoDefaults{Common: LatestVersionForgejoCommonDefaults{UsePreRelease: new(true)}},
+			want:     false,
+		},
+		{
+			name:     "non-empty/UsePreRelease=false",
+			defaults: LatestVersionForgejoDefaults{Common: LatestVersionForgejoCommonDefaults{UsePreRelease: new(false)}},
+			want:     false,
+		},
+		{
+			name: "non-empty/Hosts only",
+			defaults: LatestVersionForgejoDefaults{
+				Host: map[string]LatestVersionForgejoHostDefaults{
+					"codeberg.org": {AccessToken: util.SecretValue},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "empty/an empty Hosts map",
+			defaults: LatestVersionForgejoDefaults{
+				Host: map[string]LatestVersionForgejoHostDefaults{},
+			},
+			want: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: it reports whether anything is set.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nLatestVersionForgejoDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestLatestVersionForgejoHostDefaults_IsZero(t *testing.T) {
+	// GIVEN: LatestVersionForgejoHostDefaults.
+	tests := []struct {
+		name     string
+		defaults LatestVersionForgejoHostDefaults
+		want     bool
+	}{
+		{
+			name:     "empty",
+			defaults: LatestVersionForgejoHostDefaults{},
+			want:     true,
+		},
+		{
+			name: "non-empty/URL",
+			defaults: LatestVersionForgejoHostDefaults{
+				URL: "https://codeberg.org",
+			},
+		},
+		{
+			name: "non-empty/AccessToken",
+			defaults: LatestVersionForgejoHostDefaults{
+				AccessToken: util.SecretValue,
+			},
+		},
+		{
+			name: "non-empty/AllowInvalidCerts=true",
+			defaults: LatestVersionForgejoHostDefaults{
+				AllowInvalidCerts: new(true),
+			},
+		},
+		{
+			name: "non-empty/AllowInvalidCerts=false",
+			defaults: LatestVersionForgejoHostDefaults{
+				AllowInvalidCerts: new(false),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: IsZero is called on it.
+			got := tc.defaults.IsZero()
+
+			// THEN: it reports whether anything is set.
+			if got != tc.want {
+				t.Errorf(
+					"%s\nLatestVersionForgejoHostDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
+					packageName, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
 func TestLatestVersionDefaults_IsZero(t *testing.T) {
 	// GIVEN: LatestVersionDefaults.
 	tests := []struct {
@@ -2419,6 +2533,13 @@ func TestLatestVersionDefaults_IsZero(t *testing.T) {
 			name: "non-empty/Type",
 			defaults: LatestVersionDefaults{
 				Type: "github",
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Forgejo.UsePreRelease",
+			defaults: LatestVersionDefaults{
+				Forgejo: LatestVersionForgejoDefaults{Common: LatestVersionForgejoCommonDefaults{UsePreRelease: new(false)}},
 			},
 			want: false,
 		},

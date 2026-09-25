@@ -16,6 +16,7 @@
 package latestver
 
 import (
+	lvforgejo "github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	lvgithub "github.com/release-argus/Argus/service/latest_version/types/github"
 	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
 	"github.com/release-argus/Argus/util/polymorphic"
@@ -23,15 +24,17 @@ import (
 
 // PossibleTypes for the latest_version Lookup.
 var PossibleTypes = []string{
+	lvforgejo.Type,
 	lvgithub.Type,
 	lvweb.Type,
 }
 
 // ServiceMap maps a service type to a Lookup constructor.
 var ServiceMap = map[string]func() Lookup{
-	lvgithub.Type: func() Lookup { return &lvgithub.Lookup{} },
-	lvweb.Type:    func() Lookup { return &lvweb.Lookup{} },
-	"web":         func() Lookup { return &lvweb.Lookup{} },
+	lvforgejo.Type: func() Lookup { return &lvforgejo.Lookup{} },
+	lvgithub.Type:  func() Lookup { return &lvgithub.Lookup{} },
+	lvweb.Type:     func() Lookup { return &lvweb.Lookup{} },
+	"web":          func() Lookup { return &lvweb.Lookup{} },
 }
 
 // ServiceMapInheritable is [ServiceMap] wrapped for polymorphic inheritance decoding.

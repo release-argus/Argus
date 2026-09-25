@@ -72,12 +72,12 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 		{
 			name: "invalid JSON",
 			params: map[string]string{
-				"overrides": `"type": "url", "url": "` + test.LookupPlain["url_valid"] + `"}`,
+				"overrides": `"type": "url", "url": "` + test.LookupPlain.URLValid + `"}`,
 			},
 			wants: wants{
 				bodyRegex: `` +
 					`^{"message":"latest_version:\\n` +
-					`  .*(cannot|unable to) unmarshal[^"]+"}$`,
+					`  .* unmarshal[^"]+"}$`,
 				statusCode: http.StatusBadRequest,
 			},
 		},
@@ -96,7 +96,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"type":         "url",
-					"url":          "` + test.LookupPlain["url_valid"] + `",
+					"url":          "` + test.LookupPlain.URLValid + `",
 					"url_commands": "[{\"type\": \"regex\"}]"
 				}`),
 			},
@@ -110,7 +110,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"type":         "url",
-					"url":          "` + test.LookupPlain["url_valid"] + `",
+					"url":          "` + test.LookupPlain.URLValid + `",
 					"url_commands": "[{\"type\": \"regex\", \"regex\": \"stable version: \\\"v?([0-9.]+)\\\"\"}]"
 				}`),
 			},
@@ -124,7 +124,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"type":         "url",
-					"url":          "` + test.LookupPlain["url_invalid"] + `",
+					"url":          "` + test.LookupPlain.URLInvalid + `",
 					"url_commands": "[{\"type\": \"regex\", \"regex\": \"stable version: \\\"v?([0-9.]+)\\\"\"}]"
 				}`),
 			},
@@ -206,12 +206,12 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 		{
 			name: "invalid JSON",
 			params: map[string]string{
-				"overrides": `"type": "url", "url": "` + test.LookupPlain["url_valid"] + `"}`,
+				"overrides": `"type": "url", "url": "` + test.LookupPlain.URLValid + `"}`,
 			},
 			wants: wants{
 				bodyRegex: `` +
 					`^{"message":"deployed_version:\\n` +
-					`  .*(cannot|unable to) unmarshal[^"]+"}$`,
+					`  .* unmarshal[^"]+"}$`,
 				statusCode: http.StatusBadRequest,
 			},
 		},
@@ -230,7 +230,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"type":  "url",
-					"url":   "` + test.LookupPlain["url_valid"] + `",
+					"url":   "` + test.LookupPlain.URLValid + `",
 					"regex": "stable version: \"v?([0-9.+)\""
 				}`),
 			},
@@ -244,7 +244,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"type":  "url",
-					"url":   "` + test.LookupPlain["url_valid"] + `",
+					"url":   "` + test.LookupPlain.URLValid + `",
 					"regex": "stable version: \"v?([0-9.]+)\""
 				}`),
 			},
@@ -258,7 +258,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"type":  "url",
-					"url":   "` + test.LookupPlain["url_invalid"] + `",
+					"url":   "` + test.LookupPlain.URLInvalid + `",
 					"regex": "stable version: \"v?([0-9.]+)\""
 				}`),
 			},
@@ -349,7 +349,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						latest_version:
 							type: url
-							url: `+test.LookupBare["url_valid"]+`/ver1.2.3
+							url: `+test.LookupBare.URLValid+`/ver1.2.3
 					`)),
 					"__name__",
 					svcCfg, notifyCfg, whCfg,
@@ -376,7 +376,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						latest_version:
 							type: url
-							url: `+test.LookupBare["url_valid"]+`/ver1.2.3
+							url: `+test.LookupBare.URLValid+`/ver1.2.3
 					`)),
 					"__name__",
 					svcCfg, notifyCfg, whCfg,
@@ -401,7 +401,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						latest_version:
 							type: url
-							url: `+test.LookupBare["url_valid"]+`/ver1.2.3
+							url: `+test.LookupBare.URLValid+`/ver1.2.3
 					`)),
 					"__name__",
 					svcCfg, notifyCfg, whCfg,
@@ -428,7 +428,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						latest_version:
 							type: url
-							url: `+test.LookupBare["url_valid"]+`/ver1.2.3
+							url: `+test.LookupBare.URLValid+`/ver1.2.3
 					`)),
 					"__name__",
 					svcCfg, notifyCfg, whCfg,
@@ -457,7 +457,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						latest_version:
 							type: url
-							url: `+test.LookupBare["url_valid"]+`/v1.2.3-beta
+							url: `+test.LookupBare.URLValid+`/v1.2.3-beta
 							url_commands:
 								- type: regex
 								  regex: "v([0-9.]+-beta)"
@@ -524,7 +524,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				"overrides": test.TrimJSON(`{
 						"headers": [
 							{
-								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+								"key": "` + test.LookupWithHeaderAuth.HeaderKey + `",
 								"value": "` + util.SecretValue + `",
 								"old_index": 0
 							}
@@ -540,10 +540,10 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						latest_version:
 							type: url
-							url: `+test.LookupWithHeaderAuth["url_valid"]+`
+							url: `+test.LookupWithHeaderAuth.URLValid+`
 							headers:
-								- key: `+test.LookupWithHeaderAuth["header_key"]+`
-									value: `+test.LookupWithHeaderAuth["header_value_pass"]+`
+								- key: `+test.LookupWithHeaderAuth.HeaderKey+`
+									value: `+test.LookupWithHeaderAuth.HeaderValuePass+`
 					`)),
 					"__name__",
 					svcCfg, notifyCfg, whCfg,
@@ -561,7 +561,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				"overrides": test.TrimJSON(`{
 						"headers": [
 							{
-								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+								"key": "` + test.LookupWithHeaderAuth.HeaderKey + `",
 								"value": "` + util.SecretValue + `",
 								"old_index": [0]
 							}
@@ -577,10 +577,10 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						latest_version:
 							type: url
-							url: `+test.LookupWithHeaderAuth["url_valid"]+`
+							url: `+test.LookupWithHeaderAuth.URLValid+`
 							headers:
-								- key: `+test.LookupWithHeaderAuth["header_key"]+`
-									value: `+test.LookupWithHeaderAuth["header_value_pass"]+`
+								- key: `+test.LookupWithHeaderAuth.HeaderKey+`
+									value: `+test.LookupWithHeaderAuth.HeaderValuePass+`
 					`)),
 					"__name__",
 					svcCfg, notifyCfg, whCfg,
@@ -720,7 +720,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"type":                "url",
-					"url":                 "` + test.LookupBare["url_invalid"] + "/" + url.QueryEscape(`{"foo":"ver1.2.3-beta"}`) + `",
+					"url":                 "` + test.LookupBare.URLInvalid + "/" + url.QueryEscape(`{"foo":"ver1.2.3-beta"}`) + `",
 					"json":                "foo",
 					"allow_invalid_certs": true
 				}`),
@@ -750,7 +750,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						deployed_version:
 							type: url
-							url: `+test.LookupBare["url_valid"]+`/ver1.2.3
+							url: `+test.LookupBare.URLValid+`/ver1.2.3
 					`)),
 					"__name__",
 					svcCfg, notifyCfg, whCfg,
@@ -780,7 +780,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						deployed_version:
 							type: url
-							url: `+test.LookupBare["url_valid"]+`/ver1.2.3
+							url: `+test.LookupBare.URLValid+`/ver1.2.3
 					`)),
 					"__name__",
 					svcCfg, notifyCfg, whCfg,
@@ -805,7 +805,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						deployed_version:
 							type: url
-							url: `+test.LookupBare["url_valid"]+`/ver1.2.3
+							url: `+test.LookupBare.URLValid+`/ver1.2.3
 					`)),
 					"__name__",
 					svcCfg, notifyCfg, whCfg,
@@ -831,7 +831,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						deployed_version:
 							type: url
-							url: `+test.LookupBare["url_valid"]+"/"+url.QueryEscape(`{"foo":"ver1.2.3-beta","bar":"ver1.2.3-beta"}`)+`
+							url: `+test.LookupBare.URLValid+"/"+url.QueryEscape(`{"foo":"ver1.2.3-beta","bar":"ver1.2.3-beta"}`)+`
 							json: foo
 					`)),
 					"__name__",
@@ -861,7 +861,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"overrides": `{
 					"type": "url",
 					"method": "GET",
-					"url": "` + test.LookupJSON["url_valid"] + `",
+					"url": "` + test.LookupJSON.URLValid + `",
 					"json": "x.y"
 				}`,
 			},
@@ -907,9 +907,9 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			svc: test.Must(t, func() (*service.Service, error) {
 				base := testService(t, "TestHTTP_LatestVersionRefresh", "url", "url", false)
 				if dv, ok := base.DeployedVersionLookup.(*dvweb.Lookup); ok {
-					dv.URL = test.LookupWithHeaderAuth["url_valid"]
+					dv.URL = test.LookupWithHeaderAuth.URLValid
 					dv.Headers = shared.Headers{
-						{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]},
+						{Key: test.LookupWithHeaderAuth.HeaderKey, Value: test.LookupWithHeaderAuth.HeaderValuePass},
 					}
 				}
 				return base, nil
@@ -918,7 +918,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"overrides": test.TrimJSON(`{
 						"headers": [
 							{
-								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+								"key": "` + test.LookupWithHeaderAuth.HeaderKey + `",
 								"value": "` + util.SecretValue + `",
 								"old_index": 0
 							}
@@ -936,9 +936,9 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			svc: test.Must(t, func() (*service.Service, error) {
 				base := testService(t, "TestHTTP_LatestVersionRefresh", "url", "url", false)
 				if dv, ok := base.DeployedVersionLookup.(*dvweb.Lookup); ok {
-					dv.URL = test.LookupWithHeaderAuth["url_valid"]
+					dv.URL = test.LookupWithHeaderAuth.URLValid
 					dv.Headers = shared.Headers{
-						{Key: test.LookupWithHeaderAuth["header_key"], Value: test.LookupWithHeaderAuth["header_value_pass"]},
+						{Key: test.LookupWithHeaderAuth.HeaderKey, Value: test.LookupWithHeaderAuth.HeaderValuePass},
 					}
 				}
 				return base, nil
@@ -947,7 +947,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				"overrides": test.TrimJSON(`{
 						"headers": [
 							{
-								"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+								"key": "` + test.LookupWithHeaderAuth.HeaderKey + `",
 								"value": "` + util.SecretValue + `",
 								"old_index": [0]
 							}
@@ -1082,7 +1082,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 							url: `+test.ArgusGitHubRepo+`
 						deployed_version:
 							type: url
-							url: `+test.LookupBare["url_valid"]+`/ver1.2.3
+							url: `+test.LookupBare.URLValid+`/ver1.2.3
 					`)),
 					"__name__",
 					svcCfg, notifyCfg, whCfg,
@@ -1101,7 +1101,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 					},
 					"deployed_version": {
 						"type": "url",
-						"url": "` + test.LookupBare["url_valid"] + `/ver1.2.3"
+						"url": "` + test.LookupBare.URLValid + `/ver1.2.3"
 					}
 				}`),
 				statusCode: http.StatusOK,
@@ -1606,7 +1606,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 				},
 				"latest_version": {
 					"type": "url",
-					"url": "` + test.LookupBare["url_invalid"] + "/" + url.QueryEscape(`versions here: "ver1.2.3", release=1.2.3.exe`) + `",
+					"url": "` + test.LookupBare.URLInvalid + "/" + url.QueryEscape(`versions here: "ver1.2.3", release=1.2.3.exe`) + `",
 					"url_commands": [
 						{
 							"type": "regex",
@@ -1631,7 +1631,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 						semantic_versioning: false
 					latest_version:
 						type: url
-						url: ` + test.LookupBare["url_invalid"] + "/" + url.QueryEscape(`versions here: "ver1.2.3", release=1.2.3.exe`) + `
+						url: ` + test.LookupBare.URLInvalid + "/" + url.QueryEscape(`versions here: "ver1.2.3", release=1.2.3.exe`) + `
 						url_commands:
 							- type: regex
 								regex: v?([0-9.]+)
@@ -1682,7 +1682,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 					"deployed_version": {
 						"type": "url",
 						"method": "GET",
-						"url": "` + test.LookupBare["url_invalid"] + "/" + url.QueryEscape(`{"foo":"1.2.3-beta"}`) + `",
+						"url": "` + test.LookupBare.URLInvalid + "/" + url.QueryEscape(`{"foo":"1.2.3-beta"}`) + `",
 						"allow_invalid_certs": true,
 						"json": "foo",
 						"regex": "v?(\\d+)\\.(\\d+)\\.(\\d+)",
@@ -1701,7 +1701,7 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 					deployed_version:
 						type: url
 						method: GET
-						url: ` + test.LookupBare["url_invalid"] + "/" + url.QueryEscape(`{"foo":"1.2.3-beta"}`) + `
+						url: ` + test.LookupBare.URLInvalid + "/" + url.QueryEscape(`{"foo":"1.2.3-beta"}`) + `
 						allow_invalid_certs: true
 						json: foo
 						regex: 'v?(\d+)\.(\d+)\.(\d+)'
@@ -1954,7 +1954,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 				bodyRegex: `` +
 					`^{"message":"edit .* failed:\\n` +
 					`  unmarshal service payload:\\n` +
-					`    json: (cannot|unable to) unmarshal[^"]+"}`,
+					`    json: .* unmarshal[^"]+"}`,
 			},
 		},
 		{
@@ -1979,7 +1979,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 										token: def
 						deployed_version:
 							type: url
-							url: `+test.LookupBare["url_valid"]+`/1.2.3
+							url: `+test.LookupBare.URLValid+`/1.2.3
 						notify:
 							discord: {}
 						webhook:
@@ -1999,7 +1999,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 					},
 					"latest_version": {
 						"type": "url",
-						"url":  "` + test.LookupBare["url_valid"] + `/version is v1.2.3",
+						"url":  "` + test.LookupBare.URLValid + `/version is v1.2.3",
 						"allow_invalid_certs": true,
 						"url_commands": [
 							{
@@ -2019,7 +2019,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 						interval: 99m
 					latest_version:
 						type: url
-						url: ` + test.LookupBare["url_valid"] + `/version is v1.2.3
+						url: ` + test.LookupBare.URLValid + `/version is v1.2.3
 						url_commands:
 							- type: regex
 								regex: v?([0-9.]+)
@@ -2049,7 +2049,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 										token: def
 						deployed_version:
 							type: url
-							url: `+test.LookupBare["url_invalid"]+`/v1.2.3
+							url: `+test.LookupBare.URLInvalid+`/v1.2.3
 							allow_invalid_certs: true
 							regex: v?([0-9.]+)
 						notify:
@@ -2071,7 +2071,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 					},
 					"deployed_version": {
 						"type": "url",
-						"url":  "` + test.LookupBare["url_invalid"] + `/v1.2.3",
+						"url":  "` + test.LookupBare.URLInvalid + `/v1.2.3",
 						"allow_invalid_certs": true,
 						"regex": "v?([0-9.]+)"
 					}
@@ -2086,7 +2086,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 						interval: 99m
 					deployed_version:
 						type: url
-						url: ` + test.LookupBare["url_invalid"] + `/v1.2.3
+						url: ` + test.LookupBare.URLInvalid + `/v1.2.3
 						allow_invalid_certs: true
 						regex: v?([0-9.]+)
 				`),
@@ -2099,7 +2099,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 				{
 					"latest_version": {
 						"type": "url",
-						"url":  "` + test.LookupPlain["url_valid"] + `",
+						"url":  "` + test.LookupPlain.URLValid + `",
 						"url_commands": [
 							{
 								"type": "regex",
@@ -2124,7 +2124,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 					"id": "__name__",
 					"latest_version": {
 						"type": "url",
-						"url":  "` + test.LookupPlain["url_valid"] + `",
+						"url":  "` + test.LookupPlain.URLValid + `",
 						"url_commands": [
 							{
 								"type": "regex",
@@ -2153,7 +2153,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 					"id": "__name__",
 					"deployed_version": {
 						"type": "url",
-						"url":  "` + test.LookupPlain["url_valid"] + `",
+						"url":  "` + test.LookupPlain.URLValid + `",
 						"regex": "stable version: \"v-([0-9.]+)\""
 					},
 					"options": {
@@ -2710,7 +2710,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 				"comment": "foo",
 				"latest_version": {
 					"type": "url",
-					"url": "` + test.LookupPlain["url_valid"] + `",
+					"url": "` + test.LookupPlain.URLValid + `",
 					"url_commands": [
 						{"type": "regex", "regex": "\"(\\d+\\.\\d+\\.\\d+)\""}
 					],
@@ -2728,7 +2728,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 					comment: foo
 					latest_version:
 						type: url
-						url: ` + test.LookupPlain["url_valid"] + `
+						url: ` + test.LookupPlain.URLValid + `
 						url_commands:
 							- type: regex
 								regex: '"(\d+\.\d+\.\d+)"'
@@ -2751,8 +2751,8 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 						deployed_version:
 							type: url
 							method: POST
-							url: `+test.LookupPlainPOST["url_valid"]+`
-							body: '`+test.LookupPlainPOST["data_pass"]+`'
+							url: `+test.LookupPlainPOST.URLValid+`
+							body: '`+test.LookupPlainPOST.DataPass+`'
 							regex: ver([0-9.]+)
 					`)),
 					"dv-url",
@@ -2768,8 +2768,8 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 				"deployed_version": {
 					"type": "url",
 					"method": "POST",
-					"url": "` + test.LookupPlainPOST["url_valid"] + `",
-					"body": "` + strings.ReplaceAll(test.LookupPlainPOST["data_pass"], `"`, `\"`) + `",
+					"url": "` + test.LookupPlainPOST.URLValid + `",
+					"body": "` + strings.ReplaceAll(test.LookupPlainPOST.DataPass, `"`, `\"`) + `",
 					"regex": "ver([0-9.]+)"
 				}
 			}`),
@@ -2781,8 +2781,8 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 					deployed_version:
 						type: url
 						method: POST
-						url: ` + test.LookupPlainPOST["url_valid"] + `
-						body: '` + test.LookupPlainPOST["data_pass"] + `'
+						url: ` + test.LookupPlainPOST.URLValid + `
+						body: '` + test.LookupPlainPOST.DataPass + `'
 						regex: ver([0-9.]+)
 				`),
 			},
@@ -2854,8 +2854,8 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 						webhook:
 							test:
 								type: github
-								url: `+test.WebhookGitHub["url_valid"]+`
-								secret: `+test.WebhookGitHub["secret_pass"]+`
+								url: `+test.WebhookGitHub.URLValid+`
+								secret: `+test.WebhookGitHub.SecretPass+`
 					`)),
 					"webhook",
 					svcCfg,
@@ -2875,7 +2875,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 						"name": "test",
 						"old_index": "test",
 						"type": "github",
-						"url": "` + test.WebhookGitHub["url_valid"] + `",
+						"url": "` + test.WebhookGitHub.URLValid + `",
 						"secret": "<secret>"
 					}
 				]
@@ -2890,8 +2890,8 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 					webhook:
 						test:
 							type: github
-							url: ` + test.WebhookGitHub["url_valid"] + `
-							secret: ` + test.WebhookGitHub["secret_pass"] + `
+							url: ` + test.WebhookGitHub.URLValid + `
+							secret: ` + test.WebhookGitHub.SecretPass + `
 				`),
 			},
 		},

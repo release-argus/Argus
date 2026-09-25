@@ -80,11 +80,13 @@ const EditServiceLatestVersionRequire = () => {
 	const latestVersionType = useWatch({
 		name: 'latest_version.type',
 	}) as NonNullable<LatestVersionLookupType>;
+	const hasReleaseAssets =
+		latestVersionType === LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value ||
+		latestVersionType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value;
 	const tooltipRegexContent: TooltipWithAriaProps = {
-		content:
-			latestVersionType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value
-				? 'Release assets must contain a match'
-				: 'Webpage must contain a match',
+		content: hasReleaseAssets
+			? 'Release assets must contain a match'
+			: 'Webpage must contain a match',
 		type: 'string',
 	};
 	const hasContainer =

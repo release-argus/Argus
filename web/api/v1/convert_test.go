@@ -40,6 +40,7 @@ import (
 	dockertest "github.com/release-argus/Argus/service/latest_version/filter/docker/test"
 	lvtest "github.com/release-argus/Argus/service/latest_version/test"
 	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
+	lvforgejo "github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	lvgithub "github.com/release-argus/Argus/service/latest_version/types/github"
 	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
@@ -293,6 +294,55 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "censor service.latest_version.forgejo",
+			input: &config.Defaults{
+				Service: service.Defaults{
+					LatestVersion: latestver.Defaults{
+						Forgejo: lvforgejo.Defaults{
+							Common: lvforgejo.CommonDefaults{UsePreRelease: new(true)},
+							Host: map[string]lvforgejo.HostDefaults{
+								"codeberg.org": {
+									AccessToken: "dummy-codeberg-token",
+								},
+								"https://git.example.com/forge": {
+									AccessToken:       "dummy-internal-token",
+									AllowInvalidCerts: new(true),
+								},
+								"https://forge.example.com": {
+									AllowInvalidCerts: new(false),
+								},
+							},
+						},
+					},
+				},
+			},
+			want: apitype.Defaults{
+				Service: apitype.ServiceDefaults{
+					LatestVersion: apitype.LatestVersionDefaults{
+						Common: apitype.LatestVersionCommonDefaults{
+							Require: &apitype.LatestVersionRequireDefaults{},
+						},
+						Forgejo: apitype.LatestVersionForgejoDefaults{
+							Common: apitype.LatestVersionForgejoCommonDefaults{UsePreRelease: new(true)},
+							Host: map[string]apitype.LatestVersionForgejoHostDefaults{
+								"codeberg.org": {
+									AccessToken: util.SecretValue,
+								},
+								"https://git.example.com/forge": {
+									AccessToken:       util.SecretValue,
+									AllowInvalidCerts: new(true),
+								},
+								"https://forge.example.com": {
+									AllowInvalidCerts: new(false),
+								},
+							},
+						},
+					},
+					Command: apitype.Commands{},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -519,6 +569,436 @@ func TestConvertAndCensorService(t *testing.T) {
 // Latest Version.
 //
 
+func TestConvertAndCensorLatestVersionForgejoHosts(t *testing.T) {
+	// GIVEN: host-keyed Forgejo defaults.
+	tests := []struct {
+		name  string
+		input map[string]lvforgejo.HostDefaults
+		want  map[string]apitype.LatestVersionForgejoHostDefaults
+	}{
+		{
+			name:  "empty/nil",
+			input: nil,
+			want:  nil,
+		},
+		{
+			name:  "empty/no entries",
+			input: map[string]lvforgejo.HostDefaults{},
+			want:  nil,
+		},
+		{
+			name: "empty/an entry holding nothing",
+			input: map[string]lvforgejo.HostDefaults{
+				"codeberg.org": {},
+			},
+			want: map[string]apitype.LatestVersionForgejoHostDefaults{
+				"codeberg.org": {},
+			},
+		},
+		{
+			name: "url/passed through alongside a censored token",
+			input: map[string]lvforgejo.HostDefaults{
+				"Codeberg": {
+					URL:         "https://codeberg.org",
+					AccessToken: "dummy-codeberg-token",
+				},
+			},
+			want: map[string]apitype.LatestVersionForgejoHostDefaults{
+				"Codeberg": {
+					URL:         "https://codeberg.org",
+					AccessToken: util.SecretValue,
+				},
+			},
+		},
+		{
+			name: "url/passed through on an entry with no token",
+			input: map[string]lvforgejo.HostDefaults{
+				"Codeberg": {
+					URL: "https://codeberg.org",
+				},
+			},
+			want: map[string]apitype.LatestVersionForgejoHostDefaults{
+				"Codeberg": {
+					URL: "https://codeberg.org",
+				},
+			},
+		},
+		{
+			name: "censor/an access token is censored",
+			input: map[string]lvforgejo.HostDefaults{
+				"codeberg.org": {
+					AccessToken: "dummy-codeberg-token",
+				},
+			},
+			want: map[string]apitype.LatestVersionForgejoHostDefaults{
+				"codeberg.org": {
+					AccessToken: util.SecretValue,
+				},
+			},
+		},
+		{
+			name: "censor/an entry with no token gets no placeholder",
+			input: map[string]lvforgejo.HostDefaults{
+				"codeberg.org": {
+					AllowInvalidCerts: new(true),
+				},
+			},
+			want: map[string]apitype.LatestVersionForgejoHostDefaults{
+				"codeberg.org": {
+					AllowInvalidCerts: new(true),
+				},
+			},
+		},
+		{
+			name: "censor/every entry is censored, not just the first",
+			input: map[string]lvforgejo.HostDefaults{
+				"codeberg.org": {
+					AccessToken: "dummy-codeberg-token",
+				},
+				"https://git.internal.corp": {
+					AccessToken: "dummy-internal-token",
+				},
+				"https://forge.example.com": {
+					AccessToken: "dummy-forge-token",
+				},
+			},
+			want: map[string]apitype.LatestVersionForgejoHostDefaults{
+				"codeberg.org": {
+					AccessToken: util.SecretValue,
+				},
+				"https://git.internal.corp": {
+					AccessToken: util.SecretValue,
+				},
+				"https://forge.example.com": {
+					AccessToken: util.SecretValue,
+				},
+			},
+		},
+		{
+			name: "certificate trust/allow_invalid_certs=true is passed through",
+			input: map[string]lvforgejo.HostDefaults{
+				"https://git.internal.corp": {AllowInvalidCerts: new(true)},
+			},
+			want: map[string]apitype.LatestVersionForgejoHostDefaults{
+				"https://git.internal.corp": {
+					AllowInvalidCerts: new(true),
+				},
+			},
+		},
+		{
+			// Distinct from unset, which resolves to the next layer.
+			name: "certificate trust/allow_invalid_certs=false is passed through, not dropped",
+			input: map[string]lvforgejo.HostDefaults{
+				"https://git.internal.corp": {
+					AllowInvalidCerts: new(false),
+				},
+			},
+			want: map[string]apitype.LatestVersionForgejoHostDefaults{
+				"https://git.internal.corp": {
+					AllowInvalidCerts: new(false),
+				},
+			},
+		},
+		{
+			name: "filled",
+			input: map[string]lvforgejo.HostDefaults{
+				"https://git.internal.corp/forge": {
+					AccessToken:       "dummy-internal-token",
+					AllowInvalidCerts: new(true),
+				},
+			},
+			want: map[string]apitype.LatestVersionForgejoHostDefaults{
+				"https://git.internal.corp/forge": {
+					AccessToken:       util.SecretValue,
+					AllowInvalidCerts: new(true),
+				},
+			},
+		},
+		{
+			name: "host keys/passed through verbatim, not canonicalised",
+			input: map[string]lvforgejo.HostDefaults{
+				"CODEBERG.org:443/": {
+					AccessToken: "dummy-one",
+				},
+				"http://forge.example.com:8080/Git": {
+					AccessToken: "dummy-two",
+				},
+			},
+			want: map[string]apitype.LatestVersionForgejoHostDefaults{
+				"CODEBERG.org:443/": {
+					AccessToken: util.SecretValue,
+				},
+				"http://forge.example.com:8080/Git": {
+					AccessToken: util.SecretValue,
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			had := decode.ToYAMLString(tc.input, "")
+
+			// WHEN: convertAndCensorLatestVersionForgejoHosts is called.
+			result := convertAndCensorLatestVersionForgejoHosts(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertAndCensorLatestVersionForgejoHosts()", packageName)
+
+			// THEN: the result is as expected.
+			got := decode.ToYAMLString(result, "")
+			want := decode.ToYAMLString(tc.want, "")
+			if got != want {
+				t.Errorf(
+					"%s mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := decode.ToYAMLString(tc.input, ""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
+				)
+			}
+		})
+	}
+}
+
+func TestConvertAndCensorLatestVersionDefaults(t *testing.T) {
+	// GIVEN: a latestver.Defaults.
+	tests := []struct {
+		name  string
+		input *latestver.Defaults
+		want  apitype.LatestVersionDefaults
+	}{
+		{
+			name:  "bare",
+			input: &latestver.Defaults{},
+			want: apitype.LatestVersionDefaults{
+				Common: apitype.LatestVersionCommonDefaults{
+					Require: &apitype.LatestVersionRequireDefaults{},
+				},
+			},
+		},
+		{
+			name: "type/passed through",
+			input: &latestver.Defaults{
+				Type: "forgejo",
+			},
+			want: apitype.LatestVersionDefaults{
+				Type: "forgejo",
+				Common: apitype.LatestVersionCommonDefaults{
+					Require: &apitype.LatestVersionRequireDefaults{},
+				},
+			},
+		},
+		{
+			name: "common/require is carried through",
+			input: &latestver.Defaults{
+				Common: lvbase.Defaults{
+					Require: *test.Must(t, func() (*filter.RequireDefaults, error) {
+						return filter.DecodeDefaults(
+							"yaml", []byte(test.TrimYAML(`
+								docker:
+									type: hub
+									tag: t
+							`)),
+						)
+					}),
+				},
+			},
+			want: apitype.LatestVersionDefaults{
+				Common: apitype.LatestVersionCommonDefaults{
+					Require: &apitype.LatestVersionRequireDefaults{
+						Docker: apitype.RequireDockerDefaults{
+							Type: "hub",
+							Tag:  "t",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "forgejo/common is carried through",
+			input: &latestver.Defaults{
+				Forgejo: lvforgejo.Defaults{
+					Common: lvforgejo.CommonDefaults{
+						UsePreRelease: new(true),
+					},
+				},
+			},
+			want: apitype.LatestVersionDefaults{
+				Common: apitype.LatestVersionCommonDefaults{
+					Require: &apitype.LatestVersionRequireDefaults{},
+				},
+				Forgejo: apitype.LatestVersionForgejoDefaults{
+					Common: apitype.LatestVersionForgejoCommonDefaults{
+						UsePreRelease: new(true),
+					},
+				},
+			},
+		},
+		{
+			name: "forgejo/an instance token is censored, its url is not",
+			input: &latestver.Defaults{
+				Forgejo: lvforgejo.Defaults{
+					Host: map[string]lvforgejo.HostDefaults{
+						"Codeberg": {
+							URL:               "https://codeberg.org",
+							AccessToken:       "dummy-codeberg-token",
+							AllowInvalidCerts: new(true),
+						},
+					},
+				},
+			},
+			want: apitype.LatestVersionDefaults{
+				Common: apitype.LatestVersionCommonDefaults{
+					Require: &apitype.LatestVersionRequireDefaults{},
+				},
+				Forgejo: apitype.LatestVersionForgejoDefaults{
+					Host: map[string]apitype.LatestVersionForgejoHostDefaults{
+						"Codeberg": {
+							URL:               "https://codeberg.org",
+							AccessToken:       util.SecretValue,
+							AllowInvalidCerts: new(true),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "github/an access token is censored",
+			input: &latestver.Defaults{
+				GitHub: lvgithub.Defaults{
+					AccessToken:   "dummy-github-token",
+					UsePreRelease: new(false),
+				},
+			},
+			want: apitype.LatestVersionDefaults{
+				Common: apitype.LatestVersionCommonDefaults{
+					Require: &apitype.LatestVersionRequireDefaults{},
+				},
+				GitHub: apitype.LatestVersionGitHubDefaults{
+					AccessToken:   util.SecretValue,
+					UsePreRelease: new(false),
+				},
+			},
+		},
+		{
+			name: "github/no access token gets no placeholder",
+			input: &latestver.Defaults{
+				GitHub: lvgithub.Defaults{
+					UsePreRelease: new(true),
+				},
+			},
+			want: apitype.LatestVersionDefaults{
+				Common: apitype.LatestVersionCommonDefaults{
+					Require: &apitype.LatestVersionRequireDefaults{},
+				},
+				GitHub: apitype.LatestVersionGitHubDefaults{
+					UsePreRelease: new(true),
+				},
+			},
+		},
+		{
+			name: "url/allow_invalid_certs is carried through",
+			input: &latestver.Defaults{
+				URL: lvweb.Defaults{
+					AllowInvalidCerts: new(true),
+				},
+			},
+			want: apitype.LatestVersionDefaults{
+				Common: apitype.LatestVersionCommonDefaults{
+					Require: &apitype.LatestVersionRequireDefaults{},
+				},
+				URL: apitype.LatestVersionURLDefaults{
+					AllowInvalidCerts: new(true),
+				},
+			},
+		},
+		{
+			name: "every type at once",
+			input: &latestver.Defaults{
+				Type: "forgejo",
+				Forgejo: lvforgejo.Defaults{
+					Common: lvforgejo.CommonDefaults{
+						UsePreRelease: new(true),
+					},
+					Host: map[string]lvforgejo.HostDefaults{
+						"Codeberg": {
+							URL:         "https://codeberg.org",
+							AccessToken: "dummy-codeberg-token",
+						},
+					},
+				},
+				GitHub: lvgithub.Defaults{
+					AccessToken: "dummy-github-token",
+				},
+				URL: lvweb.Defaults{
+					AllowInvalidCerts: new(false),
+				},
+			},
+			want: apitype.LatestVersionDefaults{
+				Type: "forgejo",
+				Common: apitype.LatestVersionCommonDefaults{
+					Require: &apitype.LatestVersionRequireDefaults{},
+				},
+				Forgejo: apitype.LatestVersionForgejoDefaults{
+					Common: apitype.LatestVersionForgejoCommonDefaults{
+						UsePreRelease: new(true),
+					},
+					Host: map[string]apitype.LatestVersionForgejoHostDefaults{
+						"Codeberg": {
+							URL:         "https://codeberg.org",
+							AccessToken: util.SecretValue,
+						},
+					},
+				},
+				GitHub: apitype.LatestVersionGitHubDefaults{
+					AccessToken: util.SecretValue,
+				},
+				URL: apitype.LatestVersionURLDefaults{
+					AllowInvalidCerts: new(false),
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			had := decode.ToYAMLString(tc.input, "")
+
+			// WHEN: convertAndCensorLatestVersionDefaults is called.
+			result := convertAndCensorLatestVersionDefaults(tc.input)
+
+			prefix := fmt.Sprintf("%s\nconvertAndCensorLatestVersionDefaults()", packageName)
+
+			// THEN: the result is as expected.
+			got := decode.ToYAMLString(result, "")
+			want := decode.ToYAMLString(tc.want, "")
+			if got != want {
+				t.Errorf(
+					"%s mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+
+			// AND: the original input is unchanged.
+			if got := decode.ToYAMLString(tc.input, ""); got != had {
+				t.Errorf(
+					"%s changed original input\ngot:  %q\nwant: %q",
+					prefix, got, had,
+				)
+			}
+		})
+	}
+}
+
 func TestConvertAndCensorLatestVersion(t *testing.T) {
 	lvCfg := lvtest.PlainDefaultsConfig(t)
 	// GIVEN: a latestver.Lookup.
@@ -531,6 +1011,48 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 			name:  "nil",
 			input: nil,
 			want:  nil,
+		},
+		{
+			name:  "forgejo/bare",
+			input: &lvforgejo.Lookup{},
+			want:  &apitype.LatestVersion{},
+		},
+		{
+			name: "forgejo/filled",
+			input: test.Must(t, func() (latestver.Lookup, error) {
+				return latestver.Decode(
+					"yaml", []byte(test.TrimYAML(`
+						type: forgejo
+						host: HTTPS://CodeBerg.org
+						url: owner/repo
+						access_token: dummy-token
+						allow_invalid_certs: true
+						use_prerelease: true
+						url_commands:
+							- type: regex
+								regex: ([0-9.]+)
+						require:
+							regex_content: .*
+					`)),
+					nil,
+					nil,
+					lvCfg,
+				)
+			}),
+			want: &apitype.LatestVersion{
+				Type:              "forgejo",
+				Host:              "HTTPS://CodeBerg.org",
+				URL:               "owner/repo",
+				AccessToken:       util.SecretValue,
+				AllowInvalidCerts: new(true),
+				UsePreRelease:     new(true),
+				URLCommands: apitype.URLCommands{
+					{Type: "regex", Regex: `([0-9.]+)`},
+				},
+				Require: &apitype.LatestVersionRequire{
+					RegexContent: ".*",
+				},
+			},
 		},
 		{
 			name:  "github/bare",
@@ -2439,6 +2961,11 @@ var stringifiedConvertedDefaults = test.TrimJSON(`{
 						"type": "hub",
 						"tag": "{{ version }}"
 					}
+				}
+			},
+			"forgejo": {
+				"common": {
+					"use_prerelease": false
 				}
 			},
 			"github": {

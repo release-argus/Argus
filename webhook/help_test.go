@@ -63,7 +63,7 @@ func testWebhook(failing bool, selfSignedCert bool, headers bool) *Webhook {
 		"argus",
 		new(false),
 		"github",
-		test.WebhookGitHub["url_valid"],
+		test.WebhookGitHub.URLValid,
 		&Defaults{},
 		&Defaults{}, &Defaults{},
 	)
@@ -111,7 +111,7 @@ func testDefaults(failing bool, headers bool) *Defaults {
 			secret: argus
 			silent_fails: false
 			type: github
-			url: `+test.WebhookGitHub["url_valid"]+`
+			url: `+test.WebhookGitHub.URLValid+`
 		`)),
 	)
 

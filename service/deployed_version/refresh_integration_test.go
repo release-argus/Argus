@@ -77,7 +77,7 @@ func TestLookup_Refresh(t *testing.T) {
 		{
 			name: "Change of URL",
 			args: args{
-				overrides: []byte(`{"url": "` + test.LookupBare["url_valid"] + `/1.2.4"}`),
+				overrides: []byte(`{"url": "` + test.LookupBare.URLValid + `/1.2.4"}`),
 			},
 			previous: testLookup(t, web.Type, false, "1.2.3"),
 			errRegex: `^$`,
@@ -86,7 +86,7 @@ func TestLookup_Refresh(t *testing.T) {
 		{
 			name: "Change of Type",
 			args: args{
-				overrides: []byte(`{"type": "url", "url": "` + test.LookupBare["url_valid"] + `/1.2.4"}`),
+				overrides: []byte(`{"type": "url", "url": "` + test.LookupBare.URLValid + `/1.2.4"}`),
 				version: versions{
 					deployedVersion: new("1.2.3"),
 				},
@@ -109,7 +109,7 @@ func TestLookup_Refresh(t *testing.T) {
 			name: "Change of a few vars",
 			args: args{
 				overrides: []byte(test.TrimJSON(`{
-					"url": "` + test.LookupBare["url_valid"] + "/" + url.QueryEscape(`{"foo":"1.2.3-beta"}`) + `",
+					"url": "` + test.LookupBare.URLValid + "/" + url.QueryEscape(`{"foo":"1.2.3-beta"}`) + `",
 					"json": "foo"
 				}`)),
 				semanticVersioning: new("false"),
@@ -145,10 +145,10 @@ func TestLookup_Refresh(t *testing.T) {
 			name: "InheritSecrets inherits header secrets",
 			args: args{
 				overrides: []byte(test.TrimJSON(`{
-					"url": "` + test.LookupWithHeaderAuth["url_valid"] + `",
+					"url": "` + test.LookupWithHeaderAuth.URLValid + `",
 					"headers": [
 						{
-							"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
+							"key": "` + test.LookupWithHeaderAuth.HeaderKey + `",
 							"value": "` + util.SecretValue + `",
 							"old_index": 0
 						}
@@ -164,11 +164,11 @@ func TestLookup_Refresh(t *testing.T) {
 				l := testLookup(t, web.Type, false, "")
 				lTyped, _ := l.(*web.Lookup)
 				lTyped.Method = "POST"
-				lTyped.URL = test.LookupWithHeaderAuth["url_valid"]
+				lTyped.URL = test.LookupWithHeaderAuth.URLValid
 				lTyped.Headers = shared.Headers{
 					{
-						Key:   test.LookupWithHeaderAuth["header_key"],
-						Value: test.LookupWithHeaderAuth["header_value_pass"],
+						Key:   test.LookupWithHeaderAuth.HeaderKey,
+						Value: test.LookupWithHeaderAuth.HeaderValuePass,
 					},
 				}
 				return lTyped, nil
@@ -183,8 +183,8 @@ func TestLookup_Refresh(t *testing.T) {
 				overrides: []byte(test.TrimJSON(`{
 					"headers": [
 						{
-							"key": "` + test.LookupWithHeaderAuth["header_key"] + `",
-							"value": "` + test.LookupWithHeaderAuth["header_value_fail"] + `",
+							"key": "` + test.LookupWithHeaderAuth.HeaderKey + `",
+							"value": "` + test.LookupWithHeaderAuth.HeaderValueFail + `",
 							"old_index": 0
 						}
 					]
@@ -199,11 +199,11 @@ func TestLookup_Refresh(t *testing.T) {
 				l := testLookup(t, web.Type, false, "")
 				lTyped, _ := l.(*web.Lookup)
 				lTyped.Method = "POST"
-				lTyped.URL = test.LookupWithHeaderAuth["url_valid"]
+				lTyped.URL = test.LookupWithHeaderAuth.URLValid
 				lTyped.Headers = shared.Headers{
 					{
-						Key:   test.LookupWithHeaderAuth["header_key"],
-						Value: test.LookupWithHeaderAuth["header_value_pass"],
+						Key:   test.LookupWithHeaderAuth.HeaderKey,
+						Value: test.LookupWithHeaderAuth.HeaderValuePass,
 					},
 				}
 				return lTyped, nil

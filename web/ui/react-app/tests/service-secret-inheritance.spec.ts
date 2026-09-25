@@ -1,8 +1,13 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { openDashboardInEditMode, serviceCard } from './fixtures/dashboard';
+import {
+	DASHBOARD_SHOW_ALL,
+	openDashboardInEditMode,
+	serviceCard,
+} from './fixtures/dashboard';
 import {
 	createService,
 	LOOKUP_LATEST_VERSION_JSON,
+	SECRET_VALUE,
 	screenshot,
 	setBooleanWithDefault,
 	trackCreatedServices,
@@ -14,7 +19,11 @@ import {
 	NOTIFY_GOTIFY,
 	WEBHOOK_GITHUB,
 } from './fixtures/test-endpoints';
-import { openSection } from './fixtures/validation';
+import {
+	openSection,
+	selectInputFor,
+	selectOrCreate,
+} from './fixtures/validation';
 
 /**
  * Opens the edit modal for an existing service (edit mode must already be on).
@@ -45,11 +54,6 @@ const saveEdit = async (dialog: Locator) => {
 	await confirm.click();
 	await expect(dialog).not.toBeVisible({ timeout: 30_000 });
 };
-
-// The masked placeholder the API returns in place of any stored secret. When
-// it round-trips on save without being re-entered, the backend inherits the
-// prior real value.
-const SECRET_VALUE = '<secret>';
 
 test.describe('Service secret inheritance', () => {
 	// Safety net for a test that fails before its own cleanup.
@@ -125,6 +129,76 @@ test.describe('Service secret inheritance', () => {
 		await screenshot(
 			page,
 			`${shotDir}/03-refresh-succeeded`,
+			testInfo.project.name,
+		);
+	});
+
+	test('latest_version=forgejo: changing the host clears the access token, reverting restores it', async ({
+		page,
+	}, testInfo) => {
+		const baseID = 'SECRET_INHERIT=LATEST_VERSION_FORGEJO_HOST';
+		const id = withProject(baseID, testInfo.project.name);
+		createdIDs.push(id);
+		const shotDir = `secret-inheritance/${baseID}`;
+
+		// 'Hide inactive' off, so the inactive service below renders once created.
+		await openDashboardInEditMode(page, DASHBOARD_SHOW_ALL);
+
+		// GIVEN: an inactive forgejo service with an access token and relaxed
+		// certificate trust.
+		await createService(page, id, {
+			active: false,
+			latestVersion: {
+				accessToken: 'dummy-e2e-token',
+				allowInvalidCerts: true,
+				host: 'https://codeberg.org',
+				type: 'forgejo',
+				url: 'forgejo/forgejo',
+			},
+		});
+
+		// AND: the page is reloaded so the edit modal loads the token from the
+		// backend.
+		await page.reload();
+
+		// WHEN: the service is reopened for editing.
+		const dialog = await openEditModal(page, id);
+		const section = await openSection(dialog, 'Latest Version');
+		const hostInput = selectInputFor(section, 'Host');
+		const tokenInput = section.getByRole('textbox', {
+			name: /^Value field for Access Token$/i,
+		});
+		const certToggle = section
+			.locator('[aria-labelledby="latest_version.allow_invalid_certs-label"]')
+			.getByRole('radio', { checked: true });
+
+		// THEN: the stored token is shown masked, and the trust setting is as stored.
+		await expect(tokenInput).toHaveValue(SECRET_VALUE);
+		await expect(certToggle).toHaveText(/^Yes$/);
+		await screenshot(
+			page,
+			`${shotDir}/01-secret-masked`,
+			testInfo.project.name,
+		);
+
+		// WHEN: the host is changed to a different instance.
+		await selectOrCreate(hostInput, 'https://git.example.com');
+
+		// THEN: the credential is cleared immediately, and so is the trust
+		// relaxation.
+		await expect(tokenInput).toHaveValue('');
+		await expect(certToggle).toHaveText(/^Default:?$/);
+		await screenshot(page, `${shotDir}/02-host-changed`, testInfo.project.name);
+
+		// WHEN: the host is spelled differently, but still addresses the original.
+		await selectOrCreate(hostInput, 'CODEBERG.org:443/');
+
+		// THEN: both are restored.
+		await expect(tokenInput).toHaveValue(SECRET_VALUE);
+		await expect(certToggle).toHaveText(/^Yes$/);
+		await screenshot(
+			page,
+			`${shotDir}/03-host-reverted`,
 			testInfo.project.name,
 		);
 	});

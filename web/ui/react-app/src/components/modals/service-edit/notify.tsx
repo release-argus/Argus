@@ -4,6 +4,8 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { FieldSelect, FieldText } from '@/components/generic/field';
 import RenderNotify from '@/components/modals/service-edit/notify-types/render';
 import TestNotify from '@/components/modals/service-edit/test-notify';
+import { getServiceURL } from '@/components/modals/service-edit/util';
+import { resolveForgeHost } from '@/components/modals/service-edit/util/service-url';
 import { AccordionContent, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
@@ -66,6 +68,13 @@ const Notify: FC<NotifyProps> = ({
 		name: 'latest_version.type',
 	}) as LatestVersionLookupType;
 	const lvURL = useWatch({ name: 'latest_version.url' }) as string | undefined;
+	const lvHost = useWatch({ name: 'latest_version.host' }) as
+		| string
+		| undefined;
+	// A host may name a configured instance, so the link needs them to resolve it.
+	const forgejoHosts =
+		typeDataDefaults?.latest_version?.[LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value]
+			?.hosts;
 	const webURL = useWatch({ name: 'dashboard.web_url' }) as string | undefined;
 
 	// Sync type with main.
@@ -101,11 +110,18 @@ const Notify: FC<NotifyProps> = ({
 		() => originals?.find((o) => o.old_index === itemName),
 		[itemName, originals],
 	);
-	const serviceURL =
-		lvType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value &&
-		(lvURL?.match(/\//g) ?? []).length === 1
-			? `https://github.com/${lvURL ?? ''}`
-			: lvURL;
+	// Only an 'owner/repo' needs its instance prefixing - anything else is already a URL.
+	const serviceURL = useMemo(
+		() =>
+			(lvURL?.match(/\//g) ?? []).length === 1
+				? getServiceURL(
+						lvType,
+						lvURL ?? '',
+						resolveForgeHost(lvHost ?? '', forgejoHosts),
+					)
+				: lvURL,
+		[lvType, lvURL, lvHost, forgejoHosts],
+	);
 
 	// Reset values to their original when type reverted.
 	const onChangeNotifyType = useCallback(

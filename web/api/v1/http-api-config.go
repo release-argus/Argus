@@ -67,8 +67,6 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// Defaults.Service.LatestVersion.Common.Require.
-	serviceLatestVersionRequireDefaults := convertAndCensorLatestVersionRequireDefaults(&api.Config.Defaults.Service.LatestVersion.Common.Require)
 	// Defaults.Service.Notify.
 	serviceNotifyDefaults := util.SortedKeys(api.Config.Defaults.Service.Notify)
 	// Defaults.Service.Command.
@@ -93,22 +91,10 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 			Dashboard: apitype.DashboardOptions{
 				AutoApprove: api.Config.Defaults.Service.Dashboard.AutoApprove,
 			},
-			LatestVersion: apitype.LatestVersionDefaults{
-				Type: api.Config.Defaults.Service.LatestVersion.Type,
-				Common: apitype.LatestVersionCommonDefaults{
-					Require: serviceLatestVersionRequireDefaults,
-				},
-				GitHub: apitype.LatestVersionGitHubDefaults{
-					AccessToken:   util.ValueUnlessZero(api.Config.Defaults.Service.LatestVersion.GitHub.AccessToken, util.SecretValue),
-					UsePreRelease: api.Config.Defaults.Service.LatestVersion.GitHub.UsePreRelease,
-				},
-				URL: apitype.LatestVersionURLDefaults{
-					AllowInvalidCerts: api.Config.Defaults.Service.LatestVersion.URL.AllowInvalidCerts,
-				},
-			},
-			Notify:  serviceNotifyDefaults,
-			Command: serviceCommandDefaults,
-			Webhook: serviceWebhookDefaults,
+			LatestVersion: convertAndCensorLatestVersionDefaults(&api.Config.Defaults.Service.LatestVersion),
+			Notify:        serviceNotifyDefaults,
+			Command:       serviceCommandDefaults,
+			Webhook:       serviceWebhookDefaults,
 		},
 		Notify:  notifyDefaults,
 		Webhook: webhookDefaults,

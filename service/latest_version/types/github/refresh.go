@@ -21,20 +21,22 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// InheritSecrets copies the access token and GitHub data from fromLookup when querying the same repository,
-// then delegates to the base.
+// InheritSecrets inherits a referenced access token and GitHub data from
+// fromLookup when querying the same repository, then delegates to the base.
 func (l *Lookup) InheritSecrets(fromLookup base.BaseInterface, secretRefs *shared.VSecretRef) {
-	// Check whether inheriting from a GitHub Lookup.
-	if oldGitHubLookup, ok := fromLookup.(*Lookup); ok {
-		// AccessToken
-		if l.AccessToken == util.SecretValue {
+	oldGitHubLookup, sameType := fromLookup.(*Lookup)
+
+	// AccessToken
+	if l.AccessToken == util.SecretValue {
+		l.AccessToken = ""
+		if sameType {
 			l.AccessToken = oldGitHubLookup.AccessToken
 		}
-		// Querying the same GitHub repo, and the ETag differs.
-		if l.URL == oldGitHubLookup.URL && l.data.ETag() != oldGitHubLookup.data.ETag() {
-			// Inherit the GitHub data.
-			l.data.CopyFrom(&oldGitHubLookup.data)
-		}
+	}
+
+	// Querying the same GitHub repo, and the ETag differs.
+	if sameType && l.URL == oldGitHubLookup.URL && l.data.ETag() != oldGitHubLookup.data.ETag() {
+		l.data.CopyFrom(&oldGitHubLookup.data)
 	}
 
 	l.Lookup.InheritSecrets(fromLookup, secretRefs)

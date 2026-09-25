@@ -33,6 +33,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
+	lvforgejo "github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
@@ -254,6 +255,89 @@ func TestDefaults_Unmarshal(t *testing.T) {
 							foo: bar
 				webhook:
 					allow_invalid_certs: false
+			`),
+		},
+		{
+			name:   "YAML/forgejo, filled",
+			format: "yaml",
+			data: test.TrimYAML(`
+				service:
+					latest_version:
+						forgejo:
+							common:
+								use_prerelease: true
+							host:
+								Codeberg:
+									url: codeberg.org
+									access_token: dummy-codeberg-token
+								Work:
+									url: https://git.example.com/forge
+									allow_invalid_certs: true
+			`),
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				service:
+					latest_version:
+						forgejo:
+							common:
+								use_prerelease: true
+							host:
+								Codeberg:
+									url: codeberg.org
+									access_token: dummy-codeberg-token
+								Work:
+									url: https://git.example.com/forge
+									allow_invalid_certs: true
+			`),
+		},
+		{
+			name:   "YAML/forgejo, two instances for the same host",
+			format: "yaml",
+			data: test.TrimYAML(`
+				service:
+					latest_version:
+						forgejo:
+							host:
+								Codeberg:
+									url: codeberg.org
+									access_token: dummy-one
+								Mirror:
+									url: https://codeberg.org
+									access_token: dummy-two
+			`),
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				service:
+					latest_version:
+						forgejo:
+							host:
+								Codeberg:
+									url: codeberg.org
+									access_token: dummy-one
+								Mirror:
+									url: https://codeberg.org
+									access_token: dummy-two
+			`),
+		},
+		{
+			name:   "YAML/forgejo, an instance named by its URL",
+			format: "yaml",
+			data: test.TrimYAML(`
+				service:
+					latest_version:
+						forgejo:
+							host:
+								https://forgejo.example.com:
+									access_token: dummy-forgejo-token
+			`),
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				service:
+					latest_version:
+						forgejo:
+							host:
+								https://forgejo.example.com:
+									access_token: dummy-forgejo-token
 			`),
 		},
 		{
@@ -754,6 +838,21 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 						},
 						URL: web.Defaults{
 							AllowInvalidCerts: new(true),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "service.latest_version.forgejo/type-wide field, host entries untouched",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_FORGEJO_COMMON_USE_PRERELEASE": "true",
+			},
+			want: &Defaults{
+				Service: service.Defaults{
+					LatestVersion: latestver.Defaults{
+						Forgejo: lvforgejo.Defaults{
+							Common: lvforgejo.CommonDefaults{UsePreRelease: new(true)},
 						},
 					},
 				},
@@ -1820,6 +1919,30 @@ func TestDefaults_CheckValues(t *testing.T) {
 			changed: false,
 		},
 		{
+			name: "Service.LatestVersion.Forgejo/two names differing only by case",
+			input: &Defaults{
+				Service: service.Defaults{
+					LatestVersion: latestver.Defaults{
+						Forgejo: lvforgejo.Defaults{
+							Host: map[string]lvforgejo.HostDefaults{
+								"Codeberg": {URL: "codeberg.org", AccessToken: "dummy-one"},
+								"codeberg": {URL: "https://git.example.com", AccessToken: "dummy-two"},
+							},
+						},
+					},
+				},
+			},
+			errRegex: test.TrimYAML(`
+				^service:
+					latest_version:
+						forgejo:
+							host:
+								Codeberg: <invalid> \(already used, names are case-insensitive\)
+								codeberg: <invalid> \(already used, names are case-insensitive\).*$`,
+			),
+			changed: false,
+		},
+		{
 			name: "Service.Interval + Service.DeployedVersionLookup.Regex",
 			input: &Defaults{
 				Service: service.Defaults{
@@ -1989,6 +2112,9 @@ var hardDefaultsStr = test.TrimYAML(`
 						docker:
 							type: hub
 							tag: '{{ version }}'
+				forgejo:
+					common:
+						use_prerelease: false
 				github:
 					use_prerelease: false
 				url:

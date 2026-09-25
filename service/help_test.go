@@ -98,7 +98,7 @@ func plainDefaultsConfig(t *testing.T) DefaultsConfig {
 	defaults := Defaults{}
 	hardDefaults := Defaults{}
 	hardDefaults.Default()
-	hardDefaults.LatestVersion.GitHub.AccessToken = test.GitHubToken(nil)
+	hardDefaults.LatestVersion.GitHub.AccessToken = test.GitHubToken(t)
 
 	defaults.SetDefaults(&hardDefaults)
 	return DefaultsConfig{

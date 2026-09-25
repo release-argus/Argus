@@ -18,78 +18,125 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 )
 
-func TestGet(t *testing.T) {
-	// GIVEN: an env var to fetch.
+// abortSecretT stands in for the [runtime.Goexit] that t.Fatalf/t.Skipf perform.
+type abortSecretT struct{}
+
+// fakeSecretT records what requireSecret reports, aborting as [testing.T] does.
+type fakeSecretT struct {
+	fatalf string
+	skipf  string
+}
+
+func (f *fakeSecretT) Helper() {}
+
+func (f *fakeSecretT) Fatalf(format string, args ...any) {
+	f.fatalf = fmt.Sprintf(format, args...)
+	panic(abortSecretT{})
+}
+
+func (f *fakeSecretT) Skipf(format string, args ...any) {
+	f.skipf = fmt.Sprintf(format, args...)
+	panic(abortSecretT{})
+}
+
+// callRequireSecret calls [requireSecret], recovering the abort that a report triggers.
+func callRequireSecret(t *fakeSecretT, key string) (value string, aborted bool) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		if _, ok := r.(abortSecretT); !ok {
+			panic(r)
+		}
+		aborted = true
+	}()
+
+	return requireSecret(t, key), false
+}
+
+func TestRequireSecret(t *testing.T) {
+	// GIVEN: a secret env var, and the flag that makes a missing one fatal.
+	key := "ARGUS_TEST_REQUIRE_SECRET_VALUE"
 	tests := []struct {
-		name     string
-		envKey   string
-		envValue *string
-		panic    bool
+		name       string
+		value      string
+		require    string
+		want       string
+		wantFatalf string
+		wantSkipf  string
 	}{
 		{
-			name:     "env var set",
-			envKey:   "ARGUS_TEST_GET_VALUE",
-			envValue: new("hello"),
-			panic:    false,
+			name:  "set/returns the value",
+			value: "hello",
+			want:  "hello",
 		},
 		{
-			name:     "empty env var set",
-			envKey:   "ARGUS_TEST_GET_EMPTY",
-			envValue: new(""),
-			panic:    true,
+			name:    "set/returns the value, even when secrets are required",
+			value:   "hello",
+			require: "true",
+			want:    "hello",
 		},
 		{
-			name:     "env var not set",
-			envKey:   "ARGUS_TEST_GET_UNSET",
-			envValue: nil,
-			panic:    true,
+			name:      "unset/skips",
+			wantSkipf: fmt.Sprintf("%s is not set", key),
+		},
+		{
+			name:      "unset/skips when secrets are not required",
+			require:   "false",
+			wantSkipf: fmt.Sprintf("%s is not set", key),
+		},
+		{
+			name:    "unset/fails when secrets are required",
+			require: "true",
+			wantFatalf: fmt.Sprintf(
+				"%s is not set, but %s is true",
+				key, requireSecretsEnv,
+			),
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel() - Cannot run in parallel since we're manipulating the environment.
 
-			// AND: that env var is set.
-			if tc.envValue != nil {
-				os.Setenv(tc.envKey, *tc.envValue)
-				t.Cleanup(func() { os.Unsetenv(tc.envKey) })
-			}
+			// AND: the env is set.
+			SetEnv(t, map[string]string{
+				key:               tc.value,
+				requireSecretsEnv: tc.require,
+			})
+			fake := &fakeSecretT{}
 
-			prefix := fmt.Sprintf(
-				"%s\nget(%q)",
-				packageName, tc.envKey,
-			)
+			// WHEN: requireSecret is called on it.
+			got, aborted := callRequireSecret(fake, key)
 
-			defer func() {
-				if recover() != nil && !tc.panic {
-					t.Fatalf(
-						"%s unexpected panic when %q env var set to %q",
-						prefix, tc.envKey, *tc.envValue,
+			// THEN: the value is returned, or the test is skipped/failed.
+			for _, check := range []struct {
+				name, got, want string
+			}{
+				{name: "value", got: got, want: tc.want},
+				{name: "Fatalf", got: fake.fatalf, want: tc.wantFatalf},
+				{name: "Skipf", got: fake.skipf, want: tc.wantSkipf},
+			} {
+				if check.got != check.want {
+					t.Errorf(
+						"%s\nrequireSecret(%q) %s mismatch\ngot:  %q\nwant: %q",
+						packageName, key, check.name,
+						check.got, check.want,
 					)
 				}
-			}()
-
-			// WHEN: get is called on it.
-			got := get(t, tc.envKey)
-
-			// THEN: it doesn't reach this if a panic is expected.
-			if tc.panic {
-				t.Fatalf(
-					"%s expected panic when %q env var not set",
-					prefix, tc.envKey,
-				)
 			}
 
-			// AND: the expected value is returned.
-			if got != *tc.envValue {
-				t.Fatalf(
-					"%s mismatch\ngot:  %q\nwant:  %q",
-					prefix, got, *tc.envValue,
+			// AND: reporting ends the test.
+			wantAborted := tc.wantFatalf != "" || tc.wantSkipf != ""
+			if aborted != wantAborted {
+				t.Errorf(
+					"%s\nrequireSecret(%q) aborted mismatch\ngot:  %t\nwant: %t",
+					packageName, key,
+					aborted, wantAborted,
 				)
 			}
 		})

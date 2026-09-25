@@ -1,4 +1,4 @@
-import { SiGithub } from '@icons-pack/react-simple-icons';
+import { SiForgejo, SiGithub } from '@icons-pack/react-simple-icons';
 import { AppWindow, LoaderCircle } from 'lucide-react';
 import { type FC, useMemo } from 'react';
 import { useDelayedRender } from '@/hooks/use-delayed-render';
@@ -47,9 +47,10 @@ const ServiceImage: FC<ServiceImageProps> = ({ service, className }) => {
 
 		// Default icon.
 		const ServiceIcon =
-			serviceType === LATEST_VERSION_LOOKUP_TYPE.GITHUB.value
-				? SiGithub
-				: AppWindow;
+			{
+				[LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value]: SiForgejo,
+				[LATEST_VERSION_LOOKUP_TYPE.GITHUB.value]: SiGithub,
+			}[serviceType as string] ?? AppWindow;
 		return <ServiceIcon className="size-full! object-contain" />;
 	}, [serviceType, icon, loading]);
 

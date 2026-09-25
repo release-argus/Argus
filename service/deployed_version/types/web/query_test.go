@@ -67,7 +67,7 @@ func TestLookup_Track(t *testing.T) {
 			wantLatestVersion:   plainNonSemanticVersionAsSemantic,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
-				URL:   test.LookupPlain["url_valid"],
+				URL:   test.LookupPlain.URLValid,
 				Regex: `non-semantic: "ver([^"]+)`,
 			},
 			semanticVersioning:   true,
@@ -80,7 +80,7 @@ func TestLookup_Track(t *testing.T) {
 			wantLatestVersion:   jsonBarVersion,
 			wantDeployedVersion: jsonBarVersion,
 			lookup: &Lookup{
-				URL:  test.LookupJSON["url_valid"],
+				URL:  test.LookupJSON.URLValid,
 				JSON: "bar",
 			},
 			semanticVersioning:   true,
@@ -92,7 +92,7 @@ func TestLookup_Track(t *testing.T) {
 			wantLatestVersion:   "3.2.1",
 			wantDeployedVersion: "3.2.1",
 			lookup: &Lookup{
-				URL:  test.LookupJSON["url_valid"],
+				URL:  test.LookupJSON.URLValid,
 				JSON: "foo.bar.version",
 			},
 			semanticVersioning:   true,
@@ -103,7 +103,7 @@ func TestLookup_Track(t *testing.T) {
 			name:                "reject non-semantic versions",
 			wantDeployedVersion: "",
 			lookup: &Lookup{
-				URL:   test.LookupPlain["url_valid"],
+				URL:   test.LookupPlain.URLValid,
 				Regex: `non-semantic: ("[^"]+)`,
 			},
 			semanticVersioning:   true,
@@ -116,7 +116,7 @@ func TestLookup_Track(t *testing.T) {
 			wantLatestVersion:   plainNonSemanticVersion,
 			wantDeployedVersion: plainNonSemanticVersion,
 			lookup: &Lookup{
-				URL:   test.LookupPlain["url_valid"],
+				URL:   test.LookupPlain.URLValid,
 				Regex: `non-semantic: "([^"]+)`,
 			},
 			semanticVersioning:   false,
@@ -133,7 +133,7 @@ func TestLookup_Track(t *testing.T) {
 				Password: "123",
 			},
 			lookup: &Lookup{
-				URL:   test.LookupWithBasicAuth["url_valid"],
+				URL:   test.LookupWithBasicAuth.URLValid,
 				Regex: `non-semantic: "ver([^"]+)`,
 			},
 			semanticVersioning:   true,
@@ -154,7 +154,7 @@ func TestLookup_Track(t *testing.T) {
 				Password: "1${TEST_LOOKUP__DV_TRACK_TWO}",
 			},
 			lookup: &Lookup{
-				URL:   test.LookupWithBasicAuth["url_valid"],
+				URL:   test.LookupWithBasicAuth.URLValid,
 				Regex: `non-semantic: "ver([^"]+)`,
 			},
 			semanticVersioning:   true,
@@ -167,7 +167,7 @@ func TestLookup_Track(t *testing.T) {
 			wantLatestVersion:   plainNonSemanticVersionAsSemantic,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
-				URL:   test.LookupPlain["url_invalid"],
+				URL:   test.LookupPlain.URLInvalid,
 				Regex: `non-semantic: "ver([^"]+)`,
 			},
 			allowInvalidCerts:    true,
@@ -181,7 +181,7 @@ func TestLookup_Track(t *testing.T) {
 			wantLatestVersion:   "",
 			wantDeployedVersion: "",
 			lookup: &Lookup{
-				URL:   test.LookupPlain["url_invalid"],
+				URL:   test.LookupPlain.URLInvalid,
 				Regex: `non-semantic: "ver([^"]+)`,
 			},
 			allowInvalidCerts:    false,
@@ -196,7 +196,7 @@ func TestLookup_Track(t *testing.T) {
 			startDeployedVersion: plainStableVersion,
 			wantDeployedVersion:  plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
-				URL:   test.LookupPlain["url_valid"],
+				URL:   test.LookupPlain.URLValid,
 				Regex: `non-semantic: "ver([^"]+)`,
 			},
 			semanticVersioning:   true,
@@ -210,7 +210,7 @@ func TestLookup_Track(t *testing.T) {
 			startDeployedVersion: "1.2.3",
 			wantDeployedVersion:  plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
-				URL:   test.LookupPlain["url_valid"],
+				URL:   test.LookupPlain.URLValid,
 				Regex: `non-semantic: "ver([^"]+)`,
 			},
 			semanticVersioning:   true,
@@ -223,7 +223,7 @@ func TestLookup_Track(t *testing.T) {
 			wantLatestVersion:   plainStableVersion,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
-				URL:  test.LookupJSON["url_valid"],
+				URL:  test.LookupJSON.URLValid,
 				JSON: "bar",
 			},
 			semanticVersioning:   true,
@@ -236,7 +236,7 @@ func TestLookup_Track(t *testing.T) {
 			wantLatestVersion:   "1.2.3",
 			wantDeployedVersion: jsonBarVersion,
 			lookup: &Lookup{
-				URL:  test.LookupJSON["url_valid"],
+				URL:  test.LookupJSON.URLValid,
 				JSON: "bar",
 			},
 			semanticVersioning:   true,
@@ -249,7 +249,7 @@ func TestLookup_Track(t *testing.T) {
 			wantLatestVersion:   "",
 			wantDeployedVersion: jsonBarVersion,
 			lookup: &Lookup{
-				URL:  test.LookupJSON["url_valid"],
+				URL:  test.LookupJSON.URLValid,
 				JSON: "bar",
 			},
 			semanticVersioning:   true,
@@ -260,7 +260,7 @@ func TestLookup_Track(t *testing.T) {
 			name:     "deleting service stops track",
 			deleting: true,
 			lookup: &Lookup{
-				URL:  test.LookupJSON["url_valid"],
+				URL:  test.LookupJSON.URLValid,
 				JSON: "bar",
 			},
 			startLatestVersion:   "",
@@ -406,7 +406,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "JSON/lookup value that doesn't exist",
 			overrides: test.TrimYAML(`
-				url:  ` + test.LookupJSON["url_valid"] + `
+				url:  ` + test.LookupJSON.URLValid + `
 				json: something
 			`),
 			errRegex: `failed to find value for \"[^"]+\" in `,
@@ -414,7 +414,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "URL that doesn't resolve to JSON",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_valid"] + `
+				url: ` + test.LookupPlain.URLValid + `
 				json: something
 			`),
 			errRegex: `failed to unmarshal`,
@@ -423,8 +423,8 @@ func TestLookup_Query(t *testing.T) {
 			name: "POST/success",
 			overrides: test.TrimYAML(`
 				method: POST
-				url: ` + test.LookupPlainPOST["url_valid"] + `
-				body: '` + test.LookupPlainPOST["data_pass"] + `'
+				url: ` + test.LookupPlainPOST.URLValid + `
+				body: '` + test.LookupPlainPOST.DataPass + `'
 				regex: ver([0-9.]+)
 			`),
 			wantVersion: "[0-9.]+",
@@ -434,15 +434,15 @@ func TestLookup_Query(t *testing.T) {
 			name: "POST/fail, invalid body",
 			overrides: test.TrimYAML(`
 				method: POST
-				url: ` + test.LookupPlainPOST["url_valid"] + `
-				body: '` + test.LookupPlainPOST["data_fail"] + `'
+				url: ` + test.LookupPlainPOST.URLValid + `
+				body: '` + test.LookupPlainPOST.DataFail + `'
 			`),
 			errRegex: `non-2XX response code`,
 		},
 		{
 			name: "passing regex",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_valid"] + `
+				url: ` + test.LookupPlain.URLValid + `
 				regex: 'version: "([^"]+)'
 			`),
 			optionsOverrides: `semantic_versioning: false`,
@@ -452,7 +452,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "url from env",
 			env: map[string]string{
-				"TEST_LOOKUP__DV_QUERY_ONE": test.LookupPlain["url_valid"],
+				"TEST_LOOKUP__DV_QUERY_ONE": test.LookupPlain.URLValid,
 			},
 			overrides: test.TrimYAML(`
 				url: ${TEST_LOOKUP__DV_QUERY_ONE}
@@ -476,7 +476,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "passing regex with no capture group",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_valid"] + `
+				url: ` + test.LookupPlain.URLValid + `
 				regex: '[0-9.]+'
 			`),
 			optionsOverrides: `semantic_versioning: false`,
@@ -486,7 +486,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "regex with template",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_valid"] + `
+				url: ` + test.LookupPlain.URLValid + `
 				regex: '(stable).*(version).*"([\d.]+).*(and)'
 				regex_template: '$2 $1 $4, $3'
 			`),
@@ -497,7 +497,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "failing regex",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_valid"] + `
+				url: ` + test.LookupPlain.URLValid + `
 				regex: '^bishBashBosh$'
 			`),
 			errRegex: `regex .* didn't return any matches on`,
@@ -505,7 +505,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "handle non-semantic (only major) version",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_valid"] + `
+				url: ` + test.LookupPlain.URLValid + `
 				regex: '(\d+)'
 			`),
 			optionsOverrides: `semantic_versioning: false`,
@@ -513,7 +513,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "want semantic versioning but get non-semantic version",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_valid"] + `
+				url: ` + test.LookupPlain.URLValid + `
 				regex: 'non-semantic: "([^"]+)'
 			`),
 			optionsOverrides: `semantic_versioning: true`,
@@ -522,7 +522,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "allow non-semantic version",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_valid"] + `
+				url: ` + test.LookupPlain.URLValid + `
 				regex: 'non-semantic: "([^"]+)'
 			`),
 			optionsOverrides: `semantic_versioning: false`,
@@ -531,7 +531,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "valid semantic version",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupJSON["url_valid"] + `
+				url: ` + test.LookupJSON.URLValid + `
 				json: bar
 			`),
 			wantVersion: `^[0-9.]+\.[0-9.]+\.[0-9.]+$`,
@@ -557,8 +557,8 @@ func TestLookup_Query(t *testing.T) {
 			name: "version from header/pass, exact casing",
 			overrides: test.TrimYAML(`
 				method: GET
-				url: ` + test.LookupResponseHeader["url_valid"] + `
-				target_header: ` + test.LookupResponseHeader["header_key_pass"] + `
+				url: ` + test.LookupResponseHeader.URLValid + `
+				target_header: ` + test.LookupResponseHeader.HeaderKeyPass + `
 			`),
 			wantVersion: `^\d+\.\d+\.\d+$`,
 			errRegex:    `^$`,
@@ -567,8 +567,8 @@ func TestLookup_Query(t *testing.T) {
 			name: "version from header/pass, mixed casing",
 			overrides: test.TrimYAML(`
 				method: GET
-				url: ` + test.LookupResponseHeader["url_valid"] + `
-				target_header: ` + test.LookupResponseHeader["header_key_pass_mixed_case"] + `
+				url: ` + test.LookupResponseHeader.URLValid + `
+				target_header: ` + test.LookupResponseHeader.HeaderKeyPassMixedCase + `
 			`),
 			wantVersion: `^\d+\.\d+\.\d+$`,
 			errRegex:    `^$`,
@@ -577,8 +577,8 @@ func TestLookup_Query(t *testing.T) {
 			name: "version from header/fail",
 			overrides: test.TrimYAML(`
 				method: GET
-				url: ` + test.LookupResponseHeader["url_valid"] + `
-				target_header: ` + test.LookupResponseHeader["header_key_fail"] + `
+				url: ` + test.LookupResponseHeader.URLValid + `
+				target_header: ` + test.LookupResponseHeader.HeaderKeyFail + `
 			`),
 			errRegex: `^target header "[^"]+" not found$`,
 		},
@@ -842,13 +842,13 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		},
 		{
 			name:      "url/valid",
-			overrides: `url: ` + test.LookupPlain["url_valid"],
+			overrides: `url: ` + test.LookupPlain.URLValid,
 			errRegex:  `^$`,
 		},
 		{
 			name: "url/from env",
 			env: map[string]string{
-				"TEST_LOOKUP__DV_HTTP_REQUEST_ONE": test.LookupPlain["url_valid"],
+				"TEST_LOOKUP__DV_HTTP_REQUEST_ONE": test.LookupPlain.URLValid,
 			},
 			overrides: `url: ${TEST_LOOKUP__DV_HTTP_REQUEST_ONE}`,
 			errRegex:  `^$`,
@@ -873,10 +873,10 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			name: "headers/pass",
 			overrides: test.TrimYAML(`
 				method: POST
-				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
+				url: ` + test.LookupWithHeaderAuth.URLValid + `
 				headers:
-					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
-						value: ` + test.LookupWithHeaderAuth["header_value_pass"] + `
+					- key: ` + test.LookupWithHeaderAuth.HeaderKey + `
+						value: ` + test.LookupWithHeaderAuth.HeaderValuePass + `
 			`),
 			bodyRegex: `^[\d.]+$`,
 			errRegex:  `^$`,
@@ -885,10 +885,10 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			name: "headers/fail",
 			overrides: test.TrimYAML(`
 				method: POST
-				url: ` + test.LookupWithHeaderAuth["url_valid"] + `
+				url: ` + test.LookupWithHeaderAuth.URLValid + `
 				headers:
-					- key: ` + test.LookupWithHeaderAuth["header_key"] + `
-						value: ` + test.LookupWithHeaderAuth["header_value_fail"] + `
+					- key: ` + test.LookupWithHeaderAuth.HeaderKey + `
+						value: ` + test.LookupWithHeaderAuth.HeaderValueFail + `
 			`),
 			bodyRegex: `Hook rules were not satisfied\.`,
 			errRegex:  `^$`,
@@ -896,27 +896,27 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		{
 			name: "basic auth/pass",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupWithBasicAuth["url_valid"] + `
+				url: ` + test.LookupWithBasicAuth.URLValid + `
 				basic_auth:
-					username: ` + test.LookupWithBasicAuth["username"] + `
-					password: ` + test.LookupWithBasicAuth["password"] + `
+					username: ` + test.LookupWithBasicAuth.Username + `
+					password: ` + test.LookupWithBasicAuth.Password + `
 			`),
 			errRegex: `^$`,
 		},
 		{
 			name: "basic auth/fail",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupWithBasicAuth["url_valid"] + `
+				url: ` + test.LookupWithBasicAuth.URLValid + `
 				basic_auth:
-					username: ` + test.LookupWithBasicAuth["username"] + `
-					password: ` + test.LookupWithBasicAuth["password"] + `-
+					username: ` + test.LookupWithBasicAuth.Username + `
+					password: ` + test.LookupWithBasicAuth.Password + `-
 			`),
 			errRegex: `non-2XX response code: 401`,
 		},
 		{
 			name: "self-signed cert/pass",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_invalid"] + `
+				url: ` + test.LookupPlain.URLInvalid + `
 				allow_invalid_certs: true
 			`),
 			errRegex: `^$`,
@@ -924,7 +924,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		{
 			name: "self-signed cert/fail",
 			overrides: test.TrimYAML(`
-				url: ` + test.LookupPlain["url_invalid"] + `
+				url: ` + test.LookupPlain.URLInvalid + `
 				allow_invalid_certs: false
 			`),
 			errRegex: `x509 \(certificate invalid\)`,

@@ -6,9 +6,14 @@ import {
 	waitForDeployedVersionRefresh,
 } from './dashboard';
 import { bareEndpoint } from './test-endpoints';
-import { openSection } from './validation';
+import { openSection, selectInputFor, selectOrCreate } from './validation';
 
 export type KeyVal = { key: string; value: string };
+
+// The masked placeholder the API returns in place of any stored secret. When it
+// round-trips on save without being re-entered, the backend inherits the prior
+// real value.
+export const SECRET_VALUE = '<secret>';
 
 /**
  * Appends the browser project's name to a base ID so browser tests never
@@ -23,10 +28,14 @@ export const withProject = (id: string, projectName: string) =>
 
 export type LatestVersionOptions = {
 	/** `latest_version.type` - defaults to 'github'. */
-	type?: 'github' | 'url';
-	/** `latest_version.url` (the GitHub "Repository" or generic "URL" field). */
+	type?: 'forgejo' | 'github' | 'url';
+	/** `latest_version.url` (the forge "Repository" or generic "URL" field). */
 	url: string;
-	/** `latest_version.allow_invalid_certs` - only applicable to type 'url'. */
+	/** `latest_version.host` - only applicable to type 'forgejo'. */
+	host?: string;
+	/** `latest_version.access_token` - not applicable to type 'url'. */
+	accessToken?: string;
+	/** `latest_version.allow_invalid_certs` - not applicable to type 'github'. */
 	allowInvalidCerts?: boolean;
 	/** `latest_version.headers` - only applicable to type 'url'. */
 	headers?: KeyVal[];
@@ -243,10 +252,25 @@ const fillLatestVersion = async (
 		.getByRole('option', { name: new RegExp(`^${type}$`, 'i') })
 		.click();
 
-	if (type === 'github') {
+	if (type === 'forgejo' || type === 'github') {
 		await section
 			.getByRole('textbox', { name: /repository/i })
 			.fill(options.url);
+		if (type === 'forgejo' && options.host !== undefined) {
+			await selectOrCreate(selectInputFor(section, 'Host'), options.host);
+		}
+		if (options.accessToken !== undefined) {
+			await section
+				.getByRole('textbox', { name: /^Value field for Access Token$/i })
+				.fill(options.accessToken);
+		}
+		if (type === 'forgejo' && options.allowInvalidCerts !== undefined) {
+			await setBooleanWithDefault(
+				section,
+				'latest_version.allow_invalid_certs',
+				options.allowInvalidCerts,
+			);
+		}
 		return;
 	}
 

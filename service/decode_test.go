@@ -164,7 +164,7 @@ func TestDecodeServices(t *testing.T) {
 					"deployed_version": {
 						"type": "url",
 						"method": "GET",
-						"url": "` + test.LookupPlain["url_valid"] + `"
+						"url": "` + test.LookupPlain.URLValid + `"
 					}
 				}
 			}`),
@@ -181,7 +181,7 @@ func TestDecodeServices(t *testing.T) {
 					deployed_version:
 						type: url
 						method: GET
-						url: ` + test.LookupPlain["url_valid"] + `
+						url: ` + test.LookupPlain.URLValid + `
 			`),
 			errRegex: `^$`,
 		},
@@ -201,7 +201,7 @@ func TestDecodeServices(t *testing.T) {
 					deployed_version:
 						type: url
 						method: GET
-						url: ` + test.LookupPlain["url_valid"] + `
+						url: ` + test.LookupPlain.URLValid + `
 			`),
 			want: test.TrimYAML(`
 				service1:
@@ -216,7 +216,7 @@ func TestDecodeServices(t *testing.T) {
 					deployed_version:
 						type: url
 						method: GET
-						url: ` + test.LookupPlain["url_valid"] + `
+						url: ` + test.LookupPlain.URLValid + `
 			`),
 			errRegex: `^$`,
 		},
@@ -615,7 +615,7 @@ func TestDecodeService(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^"__name__":
 					latest_version:
-						type: "unsupported" <invalid> .*\['github', 'url'\].*$`,
+						type: "unsupported" <invalid> .*\['forgejo', 'github', 'url'\].*$`,
 			),
 		},
 		{
@@ -630,7 +630,7 @@ func TestDecodeService(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^"__name__":
 					latest_version:
-						type: <required> .*\['github', 'url'\].*$`,
+						type: <required> .*\['forgejo', 'github', 'url'\].*$`,
 			),
 		},
 		{
@@ -661,7 +661,7 @@ func TestDecodeService(t *testing.T) {
 				"deployed_version": {
 					"type": "url",
 					"method": "GET",
-					"url": "` + test.LookupPlain["url_valid"] + `"
+					"url": "` + test.LookupPlain.URLValid + `"
 				}
 			}`),
 			want: test.TrimYAML(`
@@ -863,14 +863,14 @@ func TestDecodeService(t *testing.T) {
 			data: test.TrimJSON(`{
 				"latest_version": {
 					"type": "url",
-					"url": "` + test.LookupPlain["url_valid"] + `"
+					"url": "` + test.LookupPlain.URLValid + `"
 				}
 			}`),
 			errRegex: `^$`,
 			want: test.TrimYAML(`
 				latest_version:
 					type: url
-					url: ` + test.LookupPlain["url_valid"] + `
+					url: ` + test.LookupPlain.URLValid + `
 			`),
 		},
 		{

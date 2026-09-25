@@ -274,6 +274,24 @@ func TestConfig_Save(t *testing.T) {
 			},
 		},
 		{
+			name: "Forgejo hosts are unchanged by save",
+			file: testYAML_config_forgejo,
+			corrections: map[string]string{
+				"settings:\n  data: {}\n  web: {}\n": "",
+				"    options: {}\n":                  "",
+				"    dashboard: {}\n":                "",
+			},
+		},
+		{
+			name: "Forgejo host defaults survive a save",
+			file: testYAML_config_forgejo_defaults,
+			corrections: map[string]string{
+				"settings:\n  data: {}\n  web: {}\n": "",
+				"    options: {}\n":                  "",
+				"    dashboard: {}\n":                "",
+			},
+		},
+		{
 			name: "settings.auth",
 			file: testYAML_config_auth,
 			corrections: map[string]string{

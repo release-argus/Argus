@@ -93,7 +93,14 @@ const Select = <
 		[],
 	);
 
-	const { value, onChange, options = [], components = {}, ...rest } = props;
+	const {
+		value,
+		onBlur,
+		onChange,
+		options = [],
+		components = {},
+		...rest
+	} = props;
 
 	const id = useId();
 	const Component = isCreatable ? CreatableSelectComponent : SelectComponent;
@@ -116,7 +123,10 @@ const Select = <
 			unstyled
 			value={value}
 			{...rest}
-			onBlur={onBlurWorkaround}
+			onBlur={(event) => {
+				onBlurWorkaround(event);
+				onBlur?.(event);
+			}}
 		/>
 	);
 };

@@ -42,6 +42,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
+	lvforgejo "github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	lvgithub "github.com/release-argus/Argus/service/latest_version/types/github"
 	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
 	"github.com/release-argus/Argus/service/shared"
@@ -487,7 +488,7 @@ func TestFromPayload(t *testing.T) {
 			payload: `{
 				"deployed_version": {
 					"type": "url",
-					"url": "` + test.LookupPlain["url_valid"] + `",
+					"url": "` + test.LookupPlain.URLValid + `",
 					"basic_auth": {
 						"password": "` + util.SecretValue + `"
 					},
@@ -505,7 +506,7 @@ func TestFromPayload(t *testing.T) {
 					"yaml", []byte(test.TrimYAML(`
 						deployed_version:
 							type: url
-							url: `+test.LookupPlain["url_valid"]+`
+							url: `+test.LookupPlain.URLValid+`
 							basic_auth:
 								password: aPassword
 							headers:
@@ -816,7 +817,7 @@ func TestFromPayload(t *testing.T) {
 					}
 				},
 				"deployed_version": {
-					"url": "` + test.LookupWithHeaderAuth["url_valid"] + `",
+					"url": "` + test.LookupWithHeaderAuth.URLValid + `",
 					"basic_auth": {
 						"password": "` + util.SecretValue + `"
 					},
@@ -936,7 +937,7 @@ func TestFromPayload(t *testing.T) {
 										token: anotherToken
 
 						deployed_version:
-							url: `+test.LookupWithHeaderAuth["url_valid"]+`
+							url: `+test.LookupWithHeaderAuth.URLValid+`
 							basic_auth:
 								password: aPassword
 							headers:
@@ -3307,6 +3308,48 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "forgejo/a masked token on the same host is inherited",
+			latestVersion: &lvforgejo.Lookup{
+				Host:        "CODEBERG.org:443/",
+				AccessToken: util.SecretValue,
+			},
+			otherLV: &lvforgejo.Lookup{
+				Host:        "https://codeberg.org",
+				AccessToken: "stored-token",
+			},
+			expected: &lvforgejo.Lookup{
+				Host:        "CODEBERG.org:443/",
+				AccessToken: "stored-token",
+			},
+		},
+		{
+			name: "forgejo/a masked token on a changed host is cleared",
+			latestVersion: &lvforgejo.Lookup{
+				Host:        "https://git.example.com",
+				AccessToken: util.SecretValue,
+			},
+			otherLV: &lvforgejo.Lookup{
+				Host:        "https://codeberg.org",
+				AccessToken: "stored-token",
+			},
+			expected: &lvforgejo.Lookup{
+				Host: "https://git.example.com",
+			},
+		},
+		{
+			name: "forgejo/placeholder to a default is cleared",
+			latestVersion: &lvforgejo.Lookup{
+				Host:        "https://codeberg.org",
+				AccessToken: util.SecretValue,
+			},
+			otherLV: &lvforgejo.Lookup{
+				Host: "https://codeberg.org",
+			},
+			expected: &lvforgejo.Lookup{
+				Host: "https://codeberg.org",
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -3324,7 +3367,19 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			// THEN: we should get a Service with the secrets from the other Service.
 			gotLV := newService.LatestVersion
 
-			// Only GitHub types have AccessTokens.
+			// Forgejo resolves its masked token against the stored value, but only
+			// when both address the same instance.
+			if gotLatestVersion, ok := gotLV.(*lvforgejo.Lookup); ok {
+				expectedLatestVersion, _ := tc.expected.(*lvforgejo.Lookup)
+				if gotLatestVersion.AccessToken != expectedLatestVersion.AccessToken {
+					t.Errorf(
+						"%s .AccessToken mismatch\ngot:  %q\nwant: %q",
+						prefix, gotLatestVersion.AccessToken, expectedLatestVersion.AccessToken,
+					)
+				}
+			}
+
+			// GitHub types have AccessTokens too.
 			if gotLatestVersion, ok := gotLV.(*lvgithub.Lookup); ok {
 				if hadLatestVersion, ok := tc.latestVersion.(*lvgithub.Lookup); ok {
 					gotAccessToken := gotLatestVersion.AccessToken
@@ -3346,11 +3401,15 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 				gotRequire = gotLatestVersion.GetRequire()
 			} else if gotLatestVersion, ok := gotLV.(*lvweb.Lookup); ok {
 				gotRequire = gotLatestVersion.GetRequire()
+			} else if gotLatestVersion, ok := gotLV.(*lvforgejo.Lookup); ok {
+				gotRequire = gotLatestVersion.GetRequire()
 			}
 			// 	Expected:
 			if expectedLatestVersion, ok := tc.expected.(*lvgithub.Lookup); ok {
 				expectedRequire = expectedLatestVersion.GetRequire()
 			} else if expectedLatestVersion, ok := tc.expected.(*lvweb.Lookup); ok {
+				expectedRequire = expectedLatestVersion.GetRequire()
+			} else if expectedLatestVersion, ok := tc.expected.(*lvforgejo.Lookup); ok {
 				expectedRequire = expectedLatestVersion.GetRequire()
 			}
 			// newService has a nil Require, but want non-nil.

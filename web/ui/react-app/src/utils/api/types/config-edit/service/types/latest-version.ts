@@ -224,7 +224,15 @@ export const latestVersionLookupSchemaBase = z.object({
 	url_commands: urlCommandsSchema,
 });
 
-/* Require assets from GitHub. */
+export const latestVersionLookupSchemaForgejo =
+	latestVersionLookupSchemaBase.extend({
+		access_token: stringDefault,
+		allow_invalid_certs: z.boolean().nullable().default(null),
+		host: stringDefault,
+		type: z.literal(LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value),
+		url: stringDefault,
+		use_prerelease: z.boolean().nullable().default(null),
+	});
 export const latestVersionLookupSchemaGitHub =
 	latestVersionLookupSchemaBase.extend({
 		access_token: stringDefault,
@@ -233,7 +241,6 @@ export const latestVersionLookupSchemaGitHub =
 		url: stringDefault,
 		use_prerelease: z.boolean().nullable().default(null),
 	});
-/* Require assets from the web page. */
 export const latestVersionLookupSchemaURL =
 	latestVersionLookupSchemaBase.extend({
 		allow_invalid_certs: z.boolean().nullable().default(null),
@@ -243,6 +250,7 @@ export const latestVersionLookupSchemaURL =
 	});
 
 export const latestVersionLookupSchema = z.discriminatedUnion('type', [
+	latestVersionLookupSchemaForgejo,
 	latestVersionLookupSchemaGitHub,
 	latestVersionLookupSchemaURL,
 ]);
@@ -257,11 +265,25 @@ export const isLatestVersionType = (
 	value != null &&
 	latestVersionLookupTypeOptions.some((v) => v.value === value);
 
+/* Forgejo instances, keyed by a friendly name. */
+export const latestVersionLookupForgejoHostsSchema = z
+	.record(
+		z.string(),
+		z.object({
+			url: stringDefault,
+			access_token: stringDefault,
+			allow_invalid_certs: z.boolean().nullable().default(null),
+		}),
+	)
+	.optional();
+
 export const latestVersionLookupSchemaDefault = z
 	.object({
 		access_token: stringDefault,
 		allow_invalid_certs: z.boolean().nullable().optional(),
 		headers: headersSchema.optional(),
+		host: stringDefault.optional(),
+		hosts: latestVersionLookupForgejoHostsSchema,
 		require: latestVersionRequireSchemaDefaults.optional(),
 		type: LatestVersionTypeEnum.nullable().optional(),
 		url_commands: urlCommandsSchema.optional(),
@@ -273,6 +295,9 @@ export type LatestVersionLookupSchemaDefault = z.infer<
 >;
 
 export const latestVersionLookupSchemaOutgoing = z.discriminatedUnion('type', [
+	latestVersionLookupSchemaForgejo.extend({
+		url_commands: urlCommandsSchemaOutgoing,
+	}),
 	latestVersionLookupSchemaGitHub.extend({
 		url_commands: urlCommandsSchemaOutgoing,
 	}),

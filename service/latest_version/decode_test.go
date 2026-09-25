@@ -91,7 +91,7 @@ func TestDecode(t *testing.T) {
 			data:   `{"type":"url-5"}`,
 			errRegex: test.TrimYAML(`
 				^latest_version:
-					type: "url-5" <invalid> \(supported values = \['github', 'url'\]\)$`,
+					type: "url-5" <invalid> \(supported values = \['forgejo', 'github', 'url'\]\)$`,
 			),
 		},
 		{

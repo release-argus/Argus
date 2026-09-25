@@ -26,6 +26,7 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
+	"github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
 	"github.com/release-argus/Argus/util"
@@ -50,19 +51,7 @@ func convertAndCensorDefaults(input *config.Defaults) apitype.Defaults {
 				Interval:           input.Service.Options.Interval,
 				SemanticVersioning: input.Service.Options.SemanticVersioning,
 			},
-			LatestVersion: apitype.LatestVersionDefaults{
-				Type: input.Service.LatestVersion.Type,
-				Common: apitype.LatestVersionCommonDefaults{
-					Require: convertAndCensorLatestVersionRequireDefaults(&input.Service.LatestVersion.Common.Require),
-				},
-				GitHub: apitype.LatestVersionGitHubDefaults{
-					AccessToken:   util.ValueUnlessZero(input.Service.LatestVersion.GitHub.AccessToken, util.SecretValue),
-					UsePreRelease: input.Service.LatestVersion.GitHub.UsePreRelease,
-				},
-				URL: apitype.LatestVersionURLDefaults{
-					AllowInvalidCerts: input.Service.LatestVersion.URL.AllowInvalidCerts,
-				},
-			},
+			LatestVersion: convertAndCensorLatestVersionDefaults(&input.Service.LatestVersion),
 			DeployedVersionLookup: apitype.DeployedVersionLookupDefaults{
 				Type:              input.Service.DeployedVersionLookup.Type,
 				AllowInvalidCerts: input.Service.DeployedVersionLookup.AllowInvalidCerts,
@@ -126,6 +115,53 @@ func convertAndCensorService(input *service.Service) *apitype.Service {
 	return &apiService
 }
 
+// convertAndCensorLatestVersionForgejoHosts converts host-keyed Forgejo defaults to
+// API Type, censoring each token.
+func convertAndCensorLatestVersionForgejoHosts(
+	input map[string]forgejo.HostDefaults,
+) map[string]apitype.LatestVersionForgejoHostDefaults {
+	if len(input) == 0 {
+		return nil
+	}
+
+	hosts := make(map[string]apitype.LatestVersionForgejoHostDefaults, len(input))
+	for host, entry := range input {
+		hosts[host] = apitype.LatestVersionForgejoHostDefaults{
+			URL:               entry.URL,
+			AccessToken:       util.ValueUnlessZero(entry.AccessToken, util.SecretValue),
+			AllowInvalidCerts: entry.AllowInvalidCerts,
+		}
+	}
+
+	return hosts
+}
+
+// convertAndCensorLatestVersionDefaults converts latest_version defaults to API Type,
+// censoring any secrets.
+func convertAndCensorLatestVersionDefaults(
+	input *latestver.Defaults,
+) apitype.LatestVersionDefaults {
+	return apitype.LatestVersionDefaults{
+		Type: input.Type,
+		Common: apitype.LatestVersionCommonDefaults{
+			Require: convertAndCensorLatestVersionRequireDefaults(&input.Common.Require),
+		},
+		Forgejo: apitype.LatestVersionForgejoDefaults{
+			Common: apitype.LatestVersionForgejoCommonDefaults{
+				UsePreRelease: input.Forgejo.Common.UsePreRelease,
+			},
+			Host: convertAndCensorLatestVersionForgejoHosts(input.Forgejo.Host),
+		},
+		GitHub: apitype.LatestVersionGitHubDefaults{
+			AccessToken:   util.ValueUnlessZero(input.GitHub.AccessToken, util.SecretValue),
+			UsePreRelease: input.GitHub.UsePreRelease,
+		},
+		URL: apitype.LatestVersionURLDefaults{
+			AllowInvalidCerts: input.URL.AllowInvalidCerts,
+		},
+	}
+}
+
 //
 // Latest Version.
 //
@@ -137,6 +173,17 @@ func convertAndCensorLatestVersion(input latestver.Lookup) *apitype.LatestVersio
 	}
 
 	switch lv := input.(type) {
+	case *forgejo.Lookup:
+		return &apitype.LatestVersion{
+			Type:              lv.Type,
+			URL:               lv.URL,
+			Host:              lv.Host,
+			AccessToken:       util.ValueUnlessZero(lv.AccessToken, util.SecretValue),
+			AllowInvalidCerts: lv.AllowInvalidCerts,
+			UsePreRelease:     lv.UsePreRelease,
+			URLCommands:       convertURLCommands(lv.URLCommands),
+			Require:           convertAndCensorLatestVersionRequire(lv.Require),
+		}
 	case *github.Lookup:
 		return &apitype.LatestVersion{
 			Type:          lv.Type,

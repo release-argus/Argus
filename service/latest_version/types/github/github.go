@@ -30,9 +30,11 @@ import (
 func (l *Lookup) filterGitHubReleases(logFrom logx.LogFrom) []forgetypes.Release {
 	return forge.FilterReleases(
 		l.data.Releases(),
-		l.URLCommands,
-		l.Options.GetSemanticVersioning(),
-		l.usePreRelease(),
+		forge.FilterOptions{
+			URLCommands:        l.URLCommands,
+			SemanticVersioning: l.Options.GetSemanticVersioning(),
+			UsePreReleases:     l.usePreRelease(),
+		},
 		logFrom,
 	)
 }
