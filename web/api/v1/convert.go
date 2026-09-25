@@ -21,6 +21,7 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	dvcommand "github.com/release-argus/Argus/service/deployed_version/types/command"
 	dvmanual "github.com/release-argus/Argus/service/deployed_version/types/manual"
 	dvweb "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
@@ -329,6 +330,12 @@ func convertAndCensorDeployedVersionLookup(input deployedver.Lookup) *apitype.De
 		}
 
 		return &apiDVL
+	case *dvcommand.Lookup:
+		return &apitype.DeployedVersionLookup{
+			Type:    input.GetType(),
+			Command: dvl.Command,
+			Regex:   dvl.Regex,
+		}
 	case *dvmanual.Lookup:
 		return &apitype.DeployedVersionLookup{
 			Type:    input.GetType(),

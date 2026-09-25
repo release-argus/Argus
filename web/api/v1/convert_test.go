@@ -1442,6 +1442,29 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			},
 		},
 		{
+			name: "command/filled",
+			input: test.Must(t, func() (deployedver.Lookup, error) {
+				return deployedver.Decode(
+					"yaml", []byte(test.TrimYAML(`
+						type: command
+						command:
+							- ssh
+							- root@192.168.0.51
+							- pct exec 102 -- netbird version
+						regex: ([0-9]+\.[0-9]+\.[0-9]+)$
+					`)),
+					nil,
+					&status.Status{},
+					dvCfg,
+				)
+			}),
+			want: &apitype.DeployedVersionLookup{
+				Type:    "command",
+				Command: []string{"ssh", "root@192.168.0.51", "pct exec 102 -- netbird version"},
+				Regex:   `([0-9]+\.[0-9]+\.[0-9]+)$`,
+			},
+		},
+		{
 			name: "manual/filled",
 			input: test.Must(t, func() (deployedver.Lookup, error) {
 				dvStatus := status.New(

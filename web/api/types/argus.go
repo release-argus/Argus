@@ -679,10 +679,13 @@ func (d DeployedVersionLookupDefaults) IsZero() bool {
 
 // DeployedVersionLookup of the service.
 type DeployedVersionLookup struct {
-	Type string `json:"type,omitzero" yaml:"type,omitzero"` // Service Type, url/manual.
+	Type string `json:"type,omitzero" yaml:"type,omitzero"` // Service Type, command/manual/url.
 
 	// manual
 	Version string `json:"version,omitzero" yaml:"version,omitzero"` // Deployed version.
+
+	// command
+	Command []string `json:"command,omitempty" yaml:"command,omitempty"` // Command (argv) to run to get the deployed version.
 
 	// url
 	Method            string                 `json:"method,omitzero" yaml:"method,omitzero"`                           // HTTP method.
