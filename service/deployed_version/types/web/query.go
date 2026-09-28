@@ -18,7 +18,6 @@ package web
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -148,7 +147,7 @@ func (l *Lookup) httpRequest(logFrom logx.LogFrom) ([]byte, error) {
 	}
 
 	// Return the body.
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 50<<20)) // Limit to 50 MiB.
+	body, err := httpx.ReadBody(resp.Body)
 	logx.Error(err, logFrom, err != nil)
 	return body, err //nolint:wrapcheck
 }
