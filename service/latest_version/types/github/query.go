@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -163,7 +162,7 @@ func (l *Lookup) getResponse(req *http.Request, logFrom logx.LogFrom) (*http.Res
 
 	// Read the response body.
 	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 50<<20)) // Limit to 50 MiB.
+	body, err := httpx.ReadBody(resp.Body)
 	if err != nil {
 		logx.Error(err, logFrom, true)
 		return nil, nil, err //nolint:wrapcheck
