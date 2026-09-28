@@ -214,7 +214,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name:       "200 OK/use_prerelease blocks tag fallback on empty list",
+			name:       "200 OK/use_prerelease doesn't block tag fallback on empty list",
 			statusCode: http.StatusOK,
 			body:       []byte(`[]`),
 			lookupSetup: func(l *Lookup) {
@@ -222,8 +222,8 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 			want: wants{
 				nilBody:     false,
-				nextPage:    0,
-				tagFallback: false,
+				nextPage:    2,
+				tagFallback: true,
 				errRegex:    `^$`,
 			},
 		},
@@ -242,15 +242,15 @@ func TestLookup_HandleResponse(t *testing.T) {
 			},
 		},
 		{
-			name:       "304 Not Modified/use_prerelease blocks tag fallback",
+			name:       "304 Not Modified/use_prerelease doesn't block tag fallback",
 			statusCode: http.StatusNotModified,
 			lookupSetup: func(l *Lookup) {
 				l.UsePreRelease = new(true)
 			},
 			want: wants{
-				nilBody:     true,
-				nextPage:    0,
-				tagFallback: false,
+				nilBody:     false,
+				nextPage:    2,
+				tagFallback: true,
 				errRegex:    `^$`,
 			},
 		},

@@ -20,23 +20,29 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/service/latest_version/types/forge"
+	"github.com/release-argus/Argus/util"
 )
 
 // CheckValues validates the fields of the receiver.
 func (l *Lookup) CheckValues() error {
 	var errs []error
-	if l.URL == "" {
+
+	// Convert full URL to just `owner/repo`.
+	if strings.Count(l.URL, "/") > 1 {
+		parts := strings.Split(l.URL, "/")
+		l.URL = strings.Join(parts[len(parts)-2:], "/")
+	}
+
+	if !forge.IsOwnerRepo(util.EvalEnvVars(l.URL)) {
 		errs = append(
 			errs,
 			&decode.ErrField{
 				Key:         "url",
+				Value:       l.URL,
 				Description: "e.g. release-argus/Argus",
 			},
 		)
-		// Convert full URL to just `owner/repo`.
-	} else if strings.Count(l.URL, "/") > 1 {
-		parts := strings.Split(l.URL, "/")
-		l.URL = strings.Join(parts[len(parts)-2:], "/")
 	}
 
 	if baseErrs := l.Lookup.CheckValues(); baseErrs != nil {

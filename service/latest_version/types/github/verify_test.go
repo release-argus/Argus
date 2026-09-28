@@ -26,6 +26,8 @@ import (
 
 func TestLookup_CheckValues(t *testing.T) {
 	// GIVEN: a Lookup.
+	t.Setenv("ARGUS_TEST_LV_GITHUB_OWNER", "release-argus")
+	t.Setenv("ARGUS_TEST_LV_GITHUB_REPO", "Argus")
 	type args struct {
 		url         *string
 		require     *filter.Require
@@ -54,6 +56,62 @@ func TestLookup_CheckValues(t *testing.T) {
 			wantURL:  &test.ArgusGitHubRepo,
 			args: args{
 				url: new("https://github.com/" + test.ArgusGitHubRepo),
+			},
+		},
+		{
+			name:     "invalid/url escapes the repos prefix with dot segments",
+			errRegex: `^url: "\.\./\.\." <invalid> \(e\.g\. release-argus/Argus\)$`,
+			wantURL:  new("../.."),
+			args: args{
+				url: new("../.."),
+			},
+		},
+		{
+			name:     "invalid/url owner is a dot segment",
+			errRegex: `^url: "\.\./admin" <invalid> \(e\.g\. release-argus/Argus\)$`,
+			wantURL:  new("../admin"),
+			args: args{
+				url: new("../admin"),
+			},
+		},
+		{
+			name:     "invalid/url carries a query, which would redirect the request",
+			errRegex: `^url: "owner/repo\?ref=main" <invalid> \(e\.g\. release-argus/Argus\)$`,
+			wantURL:  new("owner/repo?ref=main"),
+			args: args{
+				url: new("owner/repo?ref=main"),
+			},
+		},
+		{
+			name:     "invalid/a full url with a trailing slash leaves no repo",
+			errRegex: `^url: "Argus/" <invalid> \(e\.g\. release-argus/Argus\)$`,
+			wantURL:  new("Argus/"),
+			args: args{
+				url: new("https://github.com/" + test.ArgusGitHubRepo + "/"),
+			},
+		},
+		{
+			name:     "valid/url with dots, dashes and underscores",
+			errRegex: `^$`,
+			wantURL:  new("my-org.io/some_repo.v2"),
+			args: args{
+				url: new("my-org.io/some_repo.v2"),
+			},
+		},
+		{
+			name:     "valid/url from env vars",
+			errRegex: `^$`,
+			wantURL:  new("${ARGUS_TEST_LV_GITHUB_OWNER}/${ARGUS_TEST_LV_GITHUB_REPO}"),
+			args: args{
+				url: new("${ARGUS_TEST_LV_GITHUB_OWNER}/${ARGUS_TEST_LV_GITHUB_REPO}"),
+			},
+		},
+		{
+			name:     "invalid/url from an env var that expands to a bad repo",
+			errRegex: `^url: "\${ARGUS_TEST_LV_GITHUB_OWNER}/a b" <invalid> \(e\.g\. release-argus/Argus\)$`,
+			wantURL:  new("${ARGUS_TEST_LV_GITHUB_OWNER}/a b"),
+			args: args{
+				url: new("${ARGUS_TEST_LV_GITHUB_OWNER}/a b"),
 			},
 		},
 		{
