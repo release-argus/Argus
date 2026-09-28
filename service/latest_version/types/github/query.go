@@ -200,7 +200,10 @@ func (l *Lookup) handleResponse(resp *http.Response, body []byte, logFrom logx.L
 	}
 
 	// Unknown status code.
-	err := fmt.Errorf("unknown status code %d\n%s", resp.StatusCode, string(body))
+	err := fmt.Errorf(
+		"unknown status code %d%s",
+		resp.StatusCode, forge.BodyExcerpt(body),
+	)
 	logx.Error(err, logFrom, true)
 	return nil, 0, err
 }
@@ -401,6 +404,11 @@ func (l *Lookup) setReleases(body []byte) error {
 	if err != nil {
 		return err
 	}
+
+	if l.data.TagFallback() {
+		forge.MarkPreReleaseTags(releases)
+	}
+
 	// Store unfiltered releases to support filter changes without a refetch.
 	l.data.SetReleases(releases)
 	return nil

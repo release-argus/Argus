@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/release-argus/Argus/service/latest_version/types/forge"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -49,7 +50,7 @@ func (l *Lookup) url(page int) string {
 	}
 	base := fmt.Sprintf(
 		"https://api.github.com/repos/%s/%s",
-		rawURL, apiTarget,
+		forge.EscapedOwnerRepo(rawURL), apiTarget,
 	)
 
 	params := make([]string, 0, 2)
@@ -76,11 +77,10 @@ func (l *Lookup) usePreRelease() bool {
 
 // useTagsAPI returns whether the /tags API may be used as a fallback.
 //
-// Cannot use /tags when:
-//   - filtering out pre-releases (tags have no pre-release labeling)
-//   - filtering on regex_content (tags have no release assets to match against)
+// Cannot use /tags when filtering on regex_content - tags have no release assets to
+// match against.
 func (l *Lookup) useTagsAPI() bool {
-	return !l.usePreRelease() && (l.Require == nil || l.Require.RegexContent == "")
+	return l.Require == nil || l.Require.RegexContent == ""
 }
 
 // ServiceURL translates possible `owner/repo` URLs, adding the github.com/ prefix.

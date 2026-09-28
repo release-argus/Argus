@@ -297,27 +297,9 @@ func TestLookup_UseTagsAPI(t *testing.T) {
 			want:          true,
 		},
 		{
-			name:          "use_prerelease/true - blocked",
+			name:          "use_prerelease/true - allowed, as tag names carry the label",
 			usePreRelease: new(true),
-			want:          false,
-		},
-		{
-			name:          "use_prerelease=false, regex_content=set - blocked",
-			usePreRelease: new(false),
-			require:       &filter.Require{RegexContent: "some-pattern"},
-			want:          false,
-		},
-		{
-			name:          "use_prerelease=true, regex_content=empty - blocked",
-			usePreRelease: new(true),
-			require:       &filter.Require{RegexContent: ""},
-			want:          false,
-		},
-		{
-			name:          "use_prerelease=true, regex_content=set - blocked",
-			usePreRelease: new(true),
-			require:       &filter.Require{RegexContent: "some-pattern"},
-			want:          false,
+			want:          true,
 		},
 	}
 
