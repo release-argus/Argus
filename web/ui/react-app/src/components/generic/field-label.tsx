@@ -72,12 +72,8 @@ const FieldLabelWithTooltip: FC<FieldLabelProps> = ({
 	tooltip,
 }) => {
 	return (
-		<FieldLabel
-			className={cn(fieldLabelVariants({ size }))}
-			htmlFor={htmlFor}
-			id={id}
-		>
-			{text}
+		<FieldLabel className={cn(fieldLabelVariants({ size }))} htmlFor={htmlFor}>
+			{id ? <span id={id}>{text}</span> : text}
 			{required && <RequiredMark />}
 			{tooltip && (
 				<HelpTooltip id={htmlFor && `${htmlFor}-tooltip`} {...tooltip} />

@@ -82,6 +82,7 @@ const BooleanWithDefault: FC<BooleanWithDefaultProps> = ({
 						{label && (
 							<FieldLabelWithTooltip
 								htmlFor={name}
+								id={`${name}-label`}
 								text={label}
 								tooltip={tooltip}
 							/>
@@ -115,6 +116,7 @@ const BooleanWithDefault: FC<BooleanWithDefaultProps> = ({
 
 							<ToggleGroupItem
 								className="border-l!"
+								data-default-value={String(!!defaultValue)}
 								value={optionsDefault.value}
 							>
 								<p>{optionsDefault.text}</p>
