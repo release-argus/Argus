@@ -119,10 +119,10 @@ func TestMockLookup_String(t *testing.T) {
 func TestLookupBuilder(t *testing.T) {
 	// GIVEN: a lookup type name.
 	tests := []struct {
-		name      string
-		typ       string
-		wantBuild bool
-		wantErrs  []string
+		name       string
+		typ        string
+		wantBuild  bool
+		wantFatals []string
 	}{
 		{
 			name:      "valid/forgejo",
@@ -140,9 +140,9 @@ func TestLookupBuilder(t *testing.T) {
 			wantBuild: true,
 		},
 		{
-			name:     "invalid/unknown type",
-			typ:      "something",
-			wantErrs: []string{`lvtest.Lookup: unsupported type "something"`},
+			name:       "invalid/unknown type",
+			typ:        "something",
+			wantFatals: []string{`lvtest.Lookup: unsupported type "something"`},
 		},
 	}
 
@@ -150,10 +150,10 @@ func TestLookupBuilder(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var fakeT test.FakeT
+			var fT test.FakeT
 
 			// WHEN: lookupBuilder is asked for that type's builder.
-			got := lookupBuilder(&fakeT, tc.typ)
+			got := lookupBuilder(&fT, tc.typ)
 
 			prefix := fmt.Sprintf(
 				"%s\nlookupBuilder(type=%q)",
@@ -169,10 +169,10 @@ func TestLookupBuilder(t *testing.T) {
 			}
 
 			// AND: only unsupported types are reported.
-			if !slices.Equal(fakeT.Errors, tc.wantErrs) {
+			if !slices.Equal(fT.Fatals, tc.wantFatals) {
 				t.Fatalf(
 					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, fakeT.Errors, tc.wantErrs,
+					prefix, fT.Fatals, tc.wantFatals,
 				)
 			}
 		})

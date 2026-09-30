@@ -17,7 +17,6 @@
 package test
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -254,60 +253,6 @@ key2: value2
 			}
 		})
 	}
-}
-
-func TestFakeT(t *testing.T) {
-	// GIVEN: a FakeT.
-	var fakeT FakeT
-	fakeT.Helper()
-	if len(fakeT.Errors) != 0 {
-		t.Fatalf("%s\nfakeT should be empty", packageName)
-	}
-
-	// WHEN: Errorf is called.
-	format, arg1 := "hello %s", "world"
-	fakeT.Errorf(format, arg1)
-
-	prefix := fmt.Sprintf(
-		"%s\nFakeT.Errorf(format=%q, arg=%q)",
-		packageName, format, arg1,
-	)
-
-	// THEN: the error is recorded.
-	if len(fakeT.Errors) != 1 {
-		t.Fatalf("%s should give fakeT an error", prefix)
-	}
-	want := fmt.Sprintf(format, arg1)
-	if got := fakeT.Errors[0]; got != want {
-		t.Fatalf(
-			"%s format mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
-	}
-
-	// WHEN: Error is called.
-	arg2 := "again"
-	fakeT.Fatalf(format, arg2)
-
-	prefix = fmt.Sprintf(
-		"%s\nFakeT.Fatalf(format=%q, arg=%q)",
-		packageName, format, arg2,
-	)
-
-	// THEN: the error is recorded.
-	if len(fakeT.Errors) != 2 {
-		t.Fatalf("%s should have given fakeT another error", prefix)
-	}
-	want = fmt.Sprintf(format, arg2)
-	if got := fakeT.Errors[1]; got != want {
-		t.Fatalf(
-			"%s Fatalf mismatch\ngot:  %q\nwant: %q",
-			packageName, fakeT.Errors[1], "hello again",
-		)
-	}
-
-	// No-op.
-	fakeT.Helper()
 }
 
 func TestAddPrefix(t *testing.T) {

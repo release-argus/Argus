@@ -107,10 +107,10 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			ft := &FakeT{}
+			fT := &FakeT{}
 			// WHEN: AssertCheckValuesWithErrorAndChanged is called.
 			_, _ = AssertCheckValuesWithErrorAndChanged(
-				ft,
+				fT,
 				packageName,
 				tc.errRegex,
 				tc.wantChanged,
@@ -118,11 +118,11 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 			)
 
 			// THEN: It errors when expected.
-			gotErr := len(ft.Errors) != 0
+			gotErr := len(fT.Errors)+len(fT.Fatals) != 0
 			if gotErr != tc.wantErr {
 				t.Errorf(
 					"%s\nAssertCheckValuesWithErrorAndChanged() checkValues didn't pass/fail as expected\ngot  fail: %v\nwant fail: %t",
-					packageName, ft.Errors, tc.wantErr,
+					packageName, fT.Errors, tc.wantErr,
 				)
 			}
 		})
@@ -165,22 +165,22 @@ func TestAssertCheckValuesWithError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			ft := &FakeT{}
+			fT := &FakeT{}
 			// WHEN: AssertCheckValuesWithError is called.
 			_ = AssertCheckValuesWithError(
-				ft,
+				fT,
 				packageName,
 				tc.errRegex,
 				tc.checkValues,
 			)
 
-			gotErr := len(ft.Errors) != 0
+			gotErr := len(fT.Errors)+len(fT.Fatals) != 0
 
 			// THEN: it errors when expected.
 			if gotErr != tc.wantErr {
 				t.Errorf(
 					"%s\nAssertCheckValuesWithError() checkValues didn't pass/fail as expected\ngot  fail: %v\nwant fail: %t",
-					packageName, ft.Errors, tc.wantErr,
+					packageName, fT.Errors, tc.wantErr,
 				)
 			}
 		})

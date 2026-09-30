@@ -32,7 +32,7 @@ import (
 //
 // THEN: 'error' matches the supplied regex and 'changed' flag matches expectation.
 func AssertCheckValuesWithErrorAndChanged(
-	t tLogger,
+	t TB,
 	packageName string,
 	wantErrRegex string,
 	wantChanged bool,
@@ -90,7 +90,7 @@ func AssertCheckValuesWithErrorAndChanged(
 //
 // THEN: error matches prefixed regex.
 func AssertCheckValuesWithError(
-	t tLogger,
+	t TB,
 	packageName string,
 	wantErrRegex string,
 	checkValues func() error,

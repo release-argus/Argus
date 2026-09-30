@@ -26,15 +26,8 @@ import (
 // present, turning a missing secret into a failure instead of a skip.
 const requireSecretsEnv = "ARGUS_TEST_REQUIRE_SECRETS"
 
-// tSkipper is the subset of [testing.T] wanted by [requireSecret].
-type tSkipper interface {
-	Helper()
-	Fatalf(format string, args ...any)
-	Skipf(format string, args ...any)
-}
-
 // requireSecret returns the value of key, skipping the test when it is unset.
-func requireSecret(t tSkipper, key string) string {
+func requireSecret(t TB, key string) string {
 	t.Helper()
 	v := os.Getenv(key)
 	if v == "" {

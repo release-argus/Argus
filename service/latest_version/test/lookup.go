@@ -53,15 +53,9 @@ func (f *MockLookup) GetRequire() *filter.Require                 { return f.Req
 func (f *MockLookup) SetRequire(r *filter.Require)                { f.Require = r }
 func (f *MockLookup) String(prefix string) string                 { return decode.ToYAMLString(f, prefix) }
 
-// testingT is the fragments of [testing.T] the type guard needs.
-type testingT interface {
-	Helper()
-	Fatalf(format string, args ...any)
-}
-
 // lookupBuilder returns the fixture builder for a lookup type, or nil after
 // reporting a type no fixture builds.
-func lookupBuilder(t testingT, typ string) func(*testing.T, bool) latestver.Lookup {
+func lookupBuilder(t test.TB, typ string) func(*testing.T, bool) latestver.Lookup {
 	t.Helper()
 
 	switch typ {
