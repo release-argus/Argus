@@ -1323,7 +1323,6 @@ func TestLookup_GetVersion(t *testing.T) {
 		name            string
 		lookupYAML      string
 		body            string
-		endpoint        string
 		page            int
 		wantVersion     string
 		wantReleaseDate string
@@ -1354,7 +1353,7 @@ func TestLookup_GetVersion(t *testing.T) {
 			errRegex:        `^$`,
 		},
 		{
-			name: "a tag has no published_at",
+			name: "tags/a tag has no published_at",
 			lookupYAML: `
 				host: https://codeberg.org
 				url: owner/repo`,
@@ -1362,6 +1361,29 @@ func TestLookup_GetVersion(t *testing.T) {
 			page: 1,
 
 			wantVersion: "0.12.1",
+			errRegex:    `^$`,
+		},
+		{
+			name: "tags/a semver-prerelease tag name is excluded",
+			lookupYAML: `
+				host: https://codeberg.org
+				url: owner/repo`,
+			body: preReleaseTagsBody,
+			page: 1,
+
+			wantVersion: "0.12.1",
+			errRegex:    `^$`,
+		},
+		{
+			name: "tags/a semver-prerelease tag name is kept when opted into",
+			lookupYAML: `
+				host: https://codeberg.org
+				url: owner/repo
+				use_prerelease: true`,
+			body: preReleaseTagsBody,
+			page: 1,
+
+			wantVersion: "0.13.0-rc1",
 			errRegex:    `^$`,
 		},
 		{
@@ -1401,11 +1423,9 @@ func TestLookup_GetVersion(t *testing.T) {
 
 			lookup := testLookup(t, tc.lookupYAML)
 
-			endpoint := util.FirstNonDefault(tc.endpoint, endpointReleases)
-
 			// WHEN: getVersion is called on the body.
 			version, releaseDate, err := lookup.getVersion(
-				[]byte(tc.body), endpoint, tc.page,
+				[]byte(tc.body), tc.page,
 				logx.LogFrom{Primary: t.Name()},
 			)
 

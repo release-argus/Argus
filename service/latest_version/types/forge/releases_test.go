@@ -497,92 +497,6 @@ func TestBodyExcerpt(t *testing.T) {
 	}
 }
 
-func TestMarkPreReleaseTags(t *testing.T) {
-	// GIVEN: releases from a tags endpoint (which have no dedicated pre-release marker).
-	tests := []struct {
-		name     string
-		releases []forgetypes.Release
-		want     []bool
-	}{
-		{
-			name: "labelled/semver pre-release names",
-			releases: []forgetypes.Release{
-				{Name: "0.13.0-rc1"},
-				{Name: "v2.0.0-beta.2"},
-				{Name: "1.0.0-alpha"},
-			},
-			want: []bool{true, true, true},
-		},
-		{
-			name: "unlabelled/stable names",
-			releases: []forgetypes.Release{
-				{Name: "0.12.1"},
-				{Name: "v1.9.0"},
-			},
-			want: []bool{false, false},
-		},
-		{
-			name: "labelled/MAJOR.BINE-PRERELEASE is still matched",
-			releases: []forgetypes.Release{
-				{Name: "2.0-beta"},
-			},
-			want: []bool{true},
-		},
-		{
-			name: "unlabelled/not semver-shaped skipped",
-			releases: []forgetypes.Release{
-				{Name: "nightly"},
-				{Name: "1.2.3rc1"},
-			},
-			want: []bool{false, false},
-		},
-		{
-			name: "labelled/TagName wins over Name",
-			releases: []forgetypes.Release{
-				{TagName: "3.0.0-rc1", Name: "3.0.0"},
-			},
-			want: []bool{true},
-		},
-		{
-			name: "unchanged/already-flagged stays flagged",
-			releases: []forgetypes.Release{
-				{Name: "0.12.1", PreRelease: true},
-			},
-			want: []bool{true},
-		},
-		{
-			name:     "unchanged/no releases",
-			releases: []forgetypes.Release{},
-			want:     []bool{},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			releases := tc.releases
-
-			// WHEN: MarkPreReleaseTags is called with them.
-			MarkPreReleaseTags(releases)
-
-			prefix := fmt.Sprintf("%s\nMarkPreReleaseTags() PreRelease", packageName)
-
-			// THEN: only the semver-shaped pre-release names are flagged.
-			if testErr := test.AssertSlicesEqualFunc(
-				t,
-				releases,
-				tc.want,
-				func(a forgetypes.Release, b bool) bool { return a.PreRelease == b },
-				prefix,
-				"Release",
-			); testErr != nil {
-				t.Fatal(testErr)
-			}
-		})
-	}
-}
-
 func TestFilterReleases(t *testing.T) {
 	// GIVEN: a set of releases and the settings to filter them with.
 	tests := []struct {
@@ -622,14 +536,13 @@ func TestFilterReleases(t *testing.T) {
 			},
 		},
 		{
-			name:           "semver pre-release tag whose flag is unset stays a release despite use_prereleases=false",
+			name:           "semver pre-release tag is excluded even where its flag is unset",
 			usePreReleases: false,
 			releases: []forgetypes.Release{
 				{TagName: "v2.0.0-rc1"},
 				{TagName: "v1.9.0"},
 			},
 			want: []string{
-				"v2.0.0-rc1",
 				"v1.9.0",
 			},
 		},
@@ -785,6 +698,127 @@ func TestFilterReleases(t *testing.T) {
 				"",
 			); err != nil {
 				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestFilterReleases__PreReleaseFromTag(t *testing.T) {
+	// GIVEN: releases whose tag names may carry a semantic-version pre-release label.
+	tests := []struct {
+		name           string
+		releases       []forgetypes.Release
+		urlCommands    filter.URLCommands
+		usePreReleases bool
+		noSemVer       bool
+		want           []string
+	}{
+		{
+			name: "a platform suffix survives url_commands",
+			releases: []forgetypes.Release{
+				{Name: "1.2.3-linux"},
+				{Name: "1.2.2"},
+			},
+			urlCommands: filter.URLCommands{{Type: "regex", Regex: `^([0-9.]+)`}},
+			want:        []string{"1.2.3", "1.2.2"},
+		},
+		{
+			name: "a prefixed pre-release is caught once the prefix is stripped",
+			releases: []forgetypes.Release{
+				{Name: "release-1.2.3-rc1"},
+				{Name: "release-1.2.2"},
+			},
+			urlCommands: filter.URLCommands{{Type: "regex", Regex: `release-(.+)`}},
+			want:        []string{"1.2.2"},
+		},
+		{
+			name: "a genuine pre-release with no url_commands is dropped",
+			releases: []forgetypes.Release{
+				{Name: "0.13.0-rc1"},
+				{Name: "0.12.1"},
+			},
+			want: []string{"0.12.1"},
+		},
+		{
+			name: "kept when pre-releases are wanted",
+			releases: []forgetypes.Release{
+				{Name: "0.13.0-rc1"},
+				{Name: "0.12.1"},
+			},
+			usePreReleases: true,
+			want:           []string{"0.13.0-rc1", "0.12.1"},
+		},
+		{
+			name: "build metadata is not a pre-release",
+			releases: []forgetypes.Release{
+				{Name: "1.2.3+build5"},
+			},
+			want: []string{"1.2.3+build5"},
+		},
+		{
+			name: "a tag that is not semver-shaped stays stable",
+			releases: []forgetypes.Release{
+				{Name: "1.2.3rc1"},
+				{Name: "nightly"},
+			},
+			noSemVer: true,
+			want:     []string{"1.2.3rc1", "nightly"},
+		},
+		{
+			name: "TagName wins over Name",
+			releases: []forgetypes.Release{
+				{TagName: "3.0.0-rc1", Name: "3.0.0"},
+			},
+			want: []string{},
+		},
+		{
+			name: "the tag names a pre-release even where the forge's flag is unset",
+			releases: []forgetypes.Release{
+				{TagName: "1.0.0-rc1", PreRelease: false},
+				{TagName: "0.9.0"},
+			},
+			want: []string{"0.9.0"},
+		},
+		{
+			name: "a flag the forge set to true is honoured",
+			releases: []forgetypes.Release{
+				{TagName: "1.0.0-rc1", PreRelease: true},
+				{TagName: "0.9.0"},
+			},
+			want: []string{"0.9.0"},
+		},
+		{
+			name:     "derive/no releases",
+			releases: []forgetypes.Release{},
+			want:     []string{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: FilterReleases is called with them.
+			got := FilterReleases(
+				tc.releases,
+				FilterOptions{
+					URLCommands:        tc.urlCommands,
+					SemanticVersioning: !tc.noSemVer,
+					UsePreReleases:     tc.usePreReleases,
+				},
+				logx.LogFrom{Primary: t.Name()},
+			)
+
+			// THEN: only the tags that name a pre-release are dropped.
+			if testErr := test.AssertSlicesEqualFunc(
+				t,
+				got,
+				tc.want,
+				func(a forgetypes.Release, b string) bool { return a.TagName == b },
+				fmt.Sprintf("%s\nFilterReleases() TagName", packageName),
+				"Release",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}

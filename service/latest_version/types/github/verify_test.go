@@ -18,6 +18,7 @@
 package github
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -26,8 +27,9 @@ import (
 
 func TestLookup_CheckValues(t *testing.T) {
 	// GIVEN: a Lookup.
-	t.Setenv("ARGUS_TEST_LV_GITHUB_OWNER", "release-argus")
-	t.Setenv("ARGUS_TEST_LV_GITHUB_REPO", "Argus")
+	ghRepoParts := strings.Split(test.ArgusGitHubRepo, "/")
+	t.Setenv("ARGUS_TEST_LV_GITHUB_OWNER", ghRepoParts[0])
+	t.Setenv("ARGUS_TEST_LV_GITHUB_REPO", ghRepoParts[1])
 	type args struct {
 		url         *string
 		require     *filter.Require
