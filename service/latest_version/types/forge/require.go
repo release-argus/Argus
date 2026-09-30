@@ -88,3 +88,25 @@ func ReleaseMeetsRequirements(
 
 	return version, releaseDate, nil
 }
+
+// FirstReleaseMeetingRequirements returns the first release of `releases` that meets
+// `require`, or the failure of the first release that did not.
+func FirstReleaseMeetingRequirements(
+	releases []forgetypes.Release,
+	require *filter.Require,
+	serviceID string,
+	logFrom logx.LogFrom,
+) (string, string, error) {
+	var firstErr error
+	for _, release := range releases {
+		version, releaseDate, err := ReleaseMeetsRequirements(release, require, serviceID, logFrom)
+		if err == nil {
+			return version, releaseDate, nil
+		}
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	return "", "", fmt.Errorf("no releases were found matching the require fields %w", firstErr)
+}

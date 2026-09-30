@@ -46,3 +46,16 @@ func (l *Lookup) HandleNewVersion(version, releaseDate string, logFrom logx.LogF
 	logx.Info(msg, logFrom, true)
 	return true, nil
 }
+
+// HandleNoVersionChange handles a re-check that found the same version, announcing the query.
+func (l *Lookup) HandleNoVersionChange(checkNumber int, version string, logFrom logx.LogFrom) {
+	if checkNumber == 1 {
+		logx.Verbose(
+			fmt.Sprintf("Staying on %q as that's the latest version in the second check", version),
+			logFrom,
+			true,
+		)
+	}
+
+	l.Status.AnnounceQuery()
+}

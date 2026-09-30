@@ -664,59 +664,6 @@ func TestIsEmptyJSONList(t *testing.T) {
 	}
 }
 
-func TestGetNextPage(t *testing.T) {
-	// GIVEN: a Link header.
-	tests := []struct {
-		name string
-		link string
-		want int
-	}{
-		{
-			name: "next and last",
-			link: `<https://codeberg.org/api/v1/repos/o/r/releases?limit=50&page=2>; rel="next",` +
-				`<https://codeberg.org/api/v1/repos/o/r/releases?limit=50&page=4>; rel="last"`,
-			want: 2,
-		},
-		{
-			name: "prev, next, last and first",
-			link: `<https://codeberg.org/api/v1/repos/o/r/releases?page=2>; rel="prev",` +
-				`<https://codeberg.org/api/v1/repos/o/r/releases?page=4>; rel="next",` +
-				`<https://codeberg.org/api/v1/repos/o/r/releases?page=9>; rel="last",` +
-				`<https://codeberg.org/api/v1/repos/o/r/releases?page=1>; rel="first"`,
-			want: 4,
-		},
-		{
-			name: "last page, no next link",
-			link: `<https://codeberg.org/api/v1/repos/o/r/releases?page=1>; rel="first",` +
-				`<https://codeberg.org/api/v1/repos/o/r/releases?page=3>; rel="prev"`,
-			want: 0,
-		},
-		{
-			name: "no header",
-			link: "",
-			want: 0,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN: getNextPage is called on it.
-			got := getNextPage(tc.link)
-
-			// THEN: the next page number is as expected.
-			if got != tc.want {
-				t.Fatalf(
-					"%s\ngetNextPage(%q) mismatch\ngot:  %d\nwant: %d",
-					packageName, tc.link,
-					got, tc.want,
-				)
-			}
-		})
-	}
-}
-
 func TestEndpointYieldedNothing(t *testing.T) {
 	// GIVEN: an error from an endpoint.
 	tests := []struct {
@@ -2451,58 +2398,4 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			)
 		}
 	})
-}
-
-func TestLookup_HandleNoVersionChange(t *testing.T) {
-	// GIVEN: a service already on the version just found.
-	tests := []struct {
-		name        string
-		checkNumber int
-	}{
-		{
-			name:        "the first check",
-			checkNumber: 0,
-		},
-		{
-			name:        "the second check, which also logs that it is staying put",
-			checkNumber: 1,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			lookup := testLookup(t, test.TrimYAML(`
-				host: https://codeberg.org
-				url: owner/repo`))
-			lookup.Status.SetLatestVersion("1.2.3", "", false)
-			// Drain what setting the version announced.
-			for len(lookup.Status.AnnounceChannel) > 0 {
-				<-lookup.Status.AnnounceChannel
-			}
-
-			// WHEN: handleNoVersionChange is called.
-			lookup.handleNoVersionChange(tc.checkNumber, "1.2.3", logx.LogFrom{Primary: t.Name()})
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.handleNoVersionChange(%d)",
-				packageName, tc.checkNumber,
-			)
-
-			// THEN: the query is announced, and the version is left alone.
-			if got := len(lookup.Status.AnnounceChannel); got != 1 {
-				t.Fatalf(
-					"%s announcement count mismatch\ngot:  %d\nwant: 1",
-					prefix, got,
-				)
-			}
-			if got, want := lookup.Status.LatestVersion(), "1.2.3"; got != want {
-				t.Fatalf(
-					"%s latest version mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
-			}
-		})
-	}
 }

@@ -20,8 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -107,7 +105,7 @@ func (l *Lookup) queryPage(
 	}
 
 	// Inherit version.
-	l.handleNoVersionChange(checkNumber, version, logFrom)
+	l.HandleNoVersionChange(checkNumber, version, logFrom)
 	return false, 0, nil
 }
 
@@ -243,35 +241,8 @@ func (l *Lookup) handleStatusOK(resp *http.Response, body []byte, logFrom logx.L
 		logx.Verbose(msg, logFrom, true)
 	}
 
-	nextPage := getNextPage(resp.Header.Get("Link"))
+	nextPage := forge.NextPage(resp.Header.Get("Link"))
 	return body, nextPage, nil
-}
-
-// getNextPage returns the next page number from the Link header.
-//
-// Example:
-//
-//	<https://api.github.com/repositories/OWNER/REPO/releases?page=1>; rel="prev",
-//	<https://api.github.com/repositories/OWNER/REPO/releases?page=3>; rel="next",
-//	<https://api.github.com/repositories/OWNER/REPO/releases?page=5>; rel="last",
-//	<https://api.github.com/repositories/OWNER/REPO/releases?page=1>; rel="first"
-//
-// Output:
-//
-//	3
-//
-// If the Link header does not include a next page link, it returns 0.
-func getNextPage(linkHeader string) int {
-	// <https://api.github.com/repositories/OWNER/REPO/releases?page=3>; rel="next",
-	re := regexp.MustCompile(`<[^>]+page=(\d+)[^>]*>;\s*rel="next"`)
-
-	if matches := re.FindStringSubmatch(linkHeader); matches != nil {
-		pageNumStr := matches[1]
-		pageNum, _ := strconv.Atoi(pageNumStr) // Ignore as it is \d+.
-		return pageNum
-	}
-
-	return 0 // No next page found
 }
 
 // handleStatusNotModified processes a 304 status code response
@@ -359,12 +330,6 @@ func (l *Lookup) handleStatusTooManyRequests(body []byte, logFrom logx.LogFrom) 
 	return nil, 0, fmt.Errorf("too many requests made to GitHub - %q", message.Message)
 }
 
-// releaseMeetsRequirements verifies that the `release` meets the requirements of the receiver
-// and returns the version and its release date if it does.
-func (l *Lookup) releaseMeetsRequirements(release forgetypes.Release, logFrom logx.LogFrom) (string, string, error) {
-	return forge.ReleaseMeetsRequirements(release, l.Require, l.GetServiceID(), logFrom) //nolint:wrapcheck
-}
-
 // getVersion returns the version and date of the matching asset/release from `body`
 // that matches the URLCommands, and Regex requirements.
 func (l *Lookup) getVersion(body []byte, page int, logFrom logx.LogFrom) (string, string, error) {
@@ -386,16 +351,9 @@ func (l *Lookup) getVersion(body []byte, page int, logFrom logx.LogFrom) (string
 	}
 
 	// Check all releases for the one meeting requirements.
-	var firstErr error
-	for _, release := range filteredReleases {
-		if v, rd, err := l.releaseMeetsRequirements(release, logFrom); err == nil {
-			return v, rd, nil
-		} else if firstErr == nil {
-			firstErr = err
-		}
-	}
-
-	return "", "", fmt.Errorf("no releases were found matching the require fields %w", firstErr)
+	return forge.FirstReleaseMeetingRequirements( //nolint:wrapcheck
+		filteredReleases, l.Require, l.GetServiceID(), logFrom,
+	)
 }
 
 // setReleases processes and stores the provided GitHub releases data.
@@ -434,17 +392,4 @@ func (l *Lookup) handleNewVersion(
 	l.data.ResetPerPage()
 
 	return l.HandleNewVersion(version, releaseDate, logFrom) //nolint:wrapcheck
-}
-
-// handleNoVersionChange processes the case of no new versions found.
-func (l *Lookup) handleNoVersionChange(checkNumber int, version string, logFrom logx.LogFrom) {
-	if checkNumber == 1 {
-		logx.Verbose(
-			fmt.Sprintf("Staying on %q as that's the latest version in the second check", version),
-			logFrom,
-			true,
-		)
-	}
-
-	l.Status.AnnounceQuery()
 }

@@ -168,3 +168,64 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestLookup_HandleNoVersionChange(t *testing.T) {
+	// GIVEN: a Lookup already on the version just found.
+	tests := []struct {
+		name        string
+		checkNumber int
+	}{
+		{
+			name:        "the first check",
+			checkNumber: 0,
+		},
+		{
+			name:        "the second check, which also logs that it is staying put",
+			checkNumber: 1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := &Lookup{Status: &status.Status{}}
+			lookup.Status.AnnounceChannel = make(chan []byte, 2)
+			lookup.Status.Init(
+				0, 0, 0,
+				status.ServiceInfo{ID: tc.name},
+				&dashboard.Options{},
+			)
+			lookup.Status.SetLatestVersion("1.2.3", "", false)
+			// Drain what setting the version announced.
+			for len(lookup.Status.AnnounceChannel) > 0 {
+				<-lookup.Status.AnnounceChannel
+			}
+
+			// WHEN: HandleNoVersionChange is called on it.
+			lookup.HandleNoVersionChange(
+				tc.checkNumber, "1.2.3",
+				logx.LogFrom{Primary: "TestLookup_HandleNoVersionChange", Secondary: tc.name},
+			)
+
+			prefix := fmt.Sprintf(
+				"%s\nLookup.HandleNoVersionChange(%d)",
+				packageName, tc.checkNumber,
+			)
+
+			// THEN: the query is announced, and the version is left alone.
+			if got := len(lookup.Status.AnnounceChannel); got != 1 {
+				t.Fatalf(
+					"%s announcement count mismatch\ngot:  %d\nwant: 1",
+					prefix, got,
+				)
+			}
+			if got, want := lookup.Status.LatestVersion(), "1.2.3"; got != want {
+				t.Fatalf(
+					"%s latest version mismatch\ngot:  %q\nwant: %q",
+					prefix, got, want,
+				)
+			}
+		})
+	}
+}

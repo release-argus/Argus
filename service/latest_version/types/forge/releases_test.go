@@ -884,3 +884,56 @@ func TestReleaseSortsBefore(t *testing.T) {
 		})
 	}
 }
+
+func TestNextPage(t *testing.T) {
+	// GIVEN: a Link header.
+	tests := []struct {
+		name string
+		link string
+		want int
+	}{
+		{
+			name: "next and last",
+			link: `<https://api.example.com/repos/o/r/releases?limit=50&page=2>; rel="next",` +
+				`<https://api.example.com/repos/o/r/releases?limit=50&page=4>; rel="last"`,
+			want: 2,
+		},
+		{
+			name: "prev, next, last and first",
+			link: `<https://api.example.com/repos/o/r/releases?page=2>; rel="prev",` +
+				`<https://api.example.com/repos/o/r/releases?page=4>; rel="next",` +
+				`<https://api.example.com/repos/o/r/releases?page=9>; rel="last",` +
+				`<https://api.example.com/repos/o/r/releases?page=1>; rel="first"`,
+			want: 4,
+		},
+		{
+			name: "last page, no next",
+			link: `<https://api.example.com/repos/o/r/releases?page=1>; rel="first",` +
+				`<https://api.example.com/repos/o/r/releases?page=3>; rel="prev"`,
+			want: 0,
+		},
+		{
+			name: "no header",
+			link: "",
+			want: 0,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN: getNextPage is called on it.
+			got := NextPage(tc.link)
+
+			// THEN: the next page number is as expected.
+			if got != tc.want {
+				t.Fatalf(
+					"%s\nNextPage(%q) mismatch\ngot:  %d\nwant: %d",
+					packageName, tc.link,
+					got, tc.want,
+				)
+			}
+		})
+	}
+}

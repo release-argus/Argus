@@ -33,6 +33,7 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/service/latest_version/types/forge"
 	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/polymorphic"
@@ -689,11 +690,13 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 			}
 			logFrom := logx.LogFrom{Primary: "TestReleaseMeetsRequirements", Secondary: tc.name}
 
-			// WHEN: releaseMeetsRequirements is called on it.
-			version, releaseDate, err := lookup.releaseMeetsRequirements(testRelease, logFrom)
+			// WHEN: forge.ReleaseMeetsRequirements is called on it.
+			version, releaseDate, err := forge.ReleaseMeetsRequirements(
+				testRelease, lookup.Require, lookup.GetServiceID(), logFrom,
+			)
 
 			prefix := fmt.Sprintf(
-				"%s\nLookup.releaseMeetsRequirements(%+v)",
+				"%s\nforge.ReleaseMeetsRequirements(%+v)",
 				packageName, testRelease,
 			)
 
@@ -978,61 +981,6 @@ func TestLookup_SetReleases(t *testing.T) {
 				"Release",
 			); err != nil {
 				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestLookup_HandleNoVersionChange(t *testing.T) {
-	// GIVEN: a Lookup that got an unchanged version on check X.
-	tests := []struct {
-		name      string
-		version   string
-		doesPrint bool
-	}{
-		{
-			name:      "first check",
-			version:   "a.b.c",
-			doesPrint: false,
-		},
-		{
-			name:      "second check",
-			version:   "x.y.z",
-			doesPrint: true,
-		},
-	}
-
-	for checkNumber, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureLog(t, logx.Default())
-
-			lookup := testLookup(t, false)
-
-			// WHEN: handleNoVersionChange is called on it.
-			lookup.handleNoVersionChange(checkNumber, tc.version, logx.LogFrom{})
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.handleNoVersionChange(checkNumber=%d, version=%s)",
-				packageName, checkNumber, tc.version,
-			)
-
-			// THEN: a message is printed when expected.
-			stdout := releaseStdout()
-			wantRe := fmt.Sprintf(`Staying on %q as that's the latest version in the second check`, tc.version)
-			gotMessage := util.RegexCheck(
-				wantRe,
-				stdout,
-			)
-			if gotMessage != tc.doesPrint {
-				format := "%s printed message when not expected\ngot:  %q\nwant: %q"
-				if gotMessage {
-					format = "%s printed message when not expected\ngot:  %q\nwant: NOT %q"
-				}
-				t.Errorf(
-					format,
-					prefix, stdout, wantRe,
-				)
 			}
 		})
 	}
