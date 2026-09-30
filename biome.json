@@ -1,12 +1,18 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.6/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.5.11/schema.json",
 	"assist": {
 		"actions": {
 			"source": {
 				"organizeImports": {
 					"level": "on",
 					"options": {
-						"groups": [":NODE:", ":PACKAGE:", ":PATH:", ":ALIAS:", "@/**"],
+						"groups": [
+							":NODE:",
+							":PACKAGE:",
+							":PATH:",
+							":ALIAS:",
+							"@/**"
+						],
 						"identifierOrder": "natural"
 					}
 				},
@@ -38,9 +44,13 @@
 	},
 	"linter": {
 		"enabled": true,
-		"includes": ["**", "!dist", "!node_modules"],
+		"includes": [
+			"**",
+			"!dist",
+			"!node_modules"
+		],
 		"rules": {
-			"recommended": true,
+			"preset": "recommended",
 			"style": {
 				"useImportType": "error"
 			}
@@ -48,7 +58,9 @@
 	},
 	"overrides": [
 		{
-			"includes": ["**/*.{ts,tsx}"],
+			"includes": [
+				"**/*.{ts,tsx}"
+			],
 			"linter": {
 				"rules": {
 					"complexity": {
@@ -151,7 +163,7 @@
 	],
 	"vcs": {
 		"clientKind": "git",
-		"enabled": false,
-		"useIgnoreFile": false
+		"enabled": true,
+		"useIgnoreFile": true
 	}
 }
