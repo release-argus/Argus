@@ -106,20 +106,6 @@ func BodyExcerpt(body []byte) string {
 	return "\n" + excerpt
 }
 
-// MarkPreReleaseTags flags every release whose tag name carries a semantic-version
-// pre-release label.
-//
-// A tag that is not semver-shaped ("nightly", "1.2.3rc1") cannot be recognised and
-// stays a stable release.
-func MarkPreReleaseTags(releases []forgetypes.Release) {
-	for i := range releases {
-		tag := util.FirstNonDefault(releases[i].TagName, releases[i].Name)
-		if semVer, err := semver.NewVersion(tag); err == nil && semVer.Prerelease() != "" {
-			releases[i].PreRelease = true
-		}
-	}
-}
-
 // FilterOptions are the settings [FilterReleases] filters against.
 type FilterOptions struct {
 	URLCommands        filter.URLCommands
@@ -130,9 +116,12 @@ type FilterOptions struct {
 // FilterReleases filters releases based on the following:
 //   - opts.URLCommands.
 //   - Non-semantic versions (if opts.SemanticVersioning).
-//   - Pre-releases (if not opts.UsePreReleases).
+//   - Pre-releases (if not opts.UsePreReleases), based on either the forge's
+//     pre-release flag or a semantic-version pre-release identifier in the
+//     transformed tag.
 //
-// Returns the filtered list, sorted in descending order (if opts.SemanticVersioning).
+// Returns the filtered list, sorted in descending semantic-version order
+// (if opts.SemanticVersioning).
 func FilterReleases(
 	releases []forgetypes.Release,
 	opts FilterOptions,
@@ -152,6 +141,14 @@ func FilterReleases(
 		}
 
 		release.TagName = tagName[0]
+		if !release.PreRelease {
+			if semVer, err := semver.NewVersion(tagName[0]); err == nil && semVer.Prerelease() != "" {
+				release.PreRelease = true
+			}
+		}
+		if release.PreRelease && !opts.UsePreReleases {
+			continue
+		}
 
 		if opts.SemanticVersioning {
 			semVer, err := semver.NewVersion(tagName[0])

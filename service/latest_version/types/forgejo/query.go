@@ -154,7 +154,7 @@ func (l *Lookup) queryPage(
 		return false, 0, err
 	}
 
-	version, releaseDate, err := l.getVersion(body, endpoint, page, logFrom)
+	version, releaseDate, err := l.getVersion(body, page, logFrom)
 	if err != nil {
 		logx.Error(err, logFrom, true)
 		if nextPage == 0 {
@@ -415,17 +415,12 @@ func getNextPage(linkHeader string) int {
 // that matches the URLCommands, and RegEx requirements.
 func (l *Lookup) getVersion(
 	body []byte,
-	endpoint string,
 	page int,
 	logFrom logx.LogFrom,
 ) (string, string, error) {
 	releases, err := forge.UnmarshalReleases(body)
 	if err != nil {
 		return "", "", fmt.Errorf("release data failed to parse: %w", err)
-	}
-
-	if endpoint == endpointTags {
-		forge.MarkPreReleaseTags(releases)
 	}
 
 	filteredReleases := l.filterReleases(releases, logFrom)

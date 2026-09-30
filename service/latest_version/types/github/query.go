@@ -405,10 +405,6 @@ func (l *Lookup) setReleases(body []byte) error {
 		return err
 	}
 
-	if l.data.TagFallback() {
-		forge.MarkPreReleaseTags(releases)
-	}
-
 	// Store unfiltered releases to support filter changes without a refetch.
 	l.data.SetReleases(releases)
 	return nil
