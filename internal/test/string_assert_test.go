@@ -48,14 +48,14 @@ func TestAssertStringWithPrefixes(t *testing.T) {
 			t.Helper()
 
 			// WHEN: AssertStringWithPrefixes is called.
-			var fakeT FakeT
+			var fT FakeT
 			AssertStringWithPrefixes(
-				&fakeT,
+				&fT,
 				"pkg",
 				tc.stringify,
 				tc.want,
 			)
-			didFail := len(fakeT.Errors) != 0
+			didFail := len(fT.Errors)+len(fT.Fatals) != 0
 
 			if tc.shouldFail != didFail {
 				t.Errorf(

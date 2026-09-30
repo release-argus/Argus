@@ -17,7 +17,6 @@
 package test
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 )
@@ -52,28 +51,6 @@ func TrimJSON(str string) string {
 // TrimYAML removes unnecessary whitespace from a YAML string and converts leading tabs to spaces.
 func TrimYAML(str string) string {
 	return normaliseLeadingWhitespace(str, "\n")
-}
-
-type tLogger interface {
-	Errorf(format string, args ...any)
-	Fatalf(format string, args ...any)
-	Helper()
-}
-
-type FakeT struct {
-	Errors []string
-}
-
-func (f *FakeT) Errorf(format string, args ...any) {
-	f.Errors = append(f.Errors, fmt.Sprintf(format, args...))
-}
-
-func (f *FakeT) Fatalf(format string, args ...any) {
-	f.Errors = append(f.Errors, fmt.Sprintf(format, args...))
-}
-
-func (f *FakeT) Helper() {
-	// No-op.
 }
 
 // addPrefix adds the given prefix to each line of the input string.

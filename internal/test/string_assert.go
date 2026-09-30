@@ -25,7 +25,7 @@ package test
 //
 // THEN: the rendered output must match exactly for each prefix.
 func AssertStringWithPrefixes(
-	t tLogger,
+	t TB,
 	packageName string,
 	stringify func(prefix string) string,
 	want string,

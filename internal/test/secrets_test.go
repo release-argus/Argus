@@ -18,45 +18,9 @@ package test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
-
-// abortSecretT stands in for the [runtime.Goexit] that t.Fatalf/t.Skipf perform.
-type abortSecretT struct{}
-
-// fakeSecretT records what requireSecret reports, aborting as [testing.T] does.
-type fakeSecretT struct {
-	fatalf string
-	skipf  string
-}
-
-func (f *fakeSecretT) Helper() {}
-
-func (f *fakeSecretT) Fatalf(format string, args ...any) {
-	f.fatalf = fmt.Sprintf(format, args...)
-	panic(abortSecretT{})
-}
-
-func (f *fakeSecretT) Skipf(format string, args ...any) {
-	f.skipf = fmt.Sprintf(format, args...)
-	panic(abortSecretT{})
-}
-
-// callRequireSecret calls [requireSecret], recovering the abort that a report triggers.
-func callRequireSecret(t *fakeSecretT, key string) (value string, aborted bool) {
-	defer func() {
-		r := recover()
-		if r == nil {
-			return
-		}
-		if _, ok := r.(abortSecretT); !ok {
-			panic(r)
-		}
-		aborted = true
-	}()
-
-	return requireSecret(t, key), false
-}
 
 func TestRequireSecret(t *testing.T) {
 	// GIVEN: a secret env var, and the flag that makes a missing one fatal.
@@ -108,18 +72,19 @@ func TestRequireSecret(t *testing.T) {
 				key:               tc.value,
 				requireSecretsEnv: tc.require,
 			})
-			fake := &fakeSecretT{}
+			fT := &FakeT{Abort: true}
 
 			// WHEN: requireSecret is called on it.
-			got, aborted := callRequireSecret(fake, key)
+			var got string
+			aborted := fT.Aborted(func() { got = requireSecret(fT, key) })
 
 			// THEN: the value is returned, or the test is skipped/failed.
 			for _, check := range []struct {
 				name, got, want string
 			}{
 				{name: "value", got: got, want: tc.want},
-				{name: "Fatalf", got: fake.fatalf, want: tc.wantFatalf},
-				{name: "Skipf", got: fake.skipf, want: tc.wantSkipf},
+				{name: "Fatalf", got: strings.Join(fT.Fatals, "\n"), want: tc.wantFatalf},
+				{name: "Skipf", got: strings.Join(fT.Skips, "\n"), want: tc.wantSkipf},
 			} {
 				if check.got != check.want {
 					t.Errorf(
