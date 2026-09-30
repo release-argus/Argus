@@ -183,7 +183,7 @@ func (l *Lookup) queryPage(
 	}
 
 	// Inherit version.
-	l.handleNoVersionChange(checkNumber, version, logFrom)
+	l.HandleNoVersionChange(checkNumber, version, logFrom)
 	return false, 0, nil
 }
 
@@ -305,7 +305,7 @@ func handleStatusOK(resp *http.Response, body []byte, page int) ([]byte, int, er
 		return nil, 0, errNoneFound
 	}
 
-	return body, getNextPage(resp.Header.Get("Link")), nil
+	return body, forge.NextPage(resp.Header.Get("Link")), nil
 }
 
 // isEmptyJSONList reports whether body holds an empty JSON list.
@@ -388,29 +388,6 @@ func unauthenticatedNote(resp *http.Response) string {
 	return " - no access_token was sent"
 }
 
-// getNextPage returns the next page number from the Link header.
-//
-// Example:
-//
-//	<https://codeberg.org/api/v1/repos/OWNER/REPO/releases?limit=50&page=2>; rel="next",
-//	<https://codeberg.org/api/v1/repos/OWNER/REPO/releases?limit=50&page=3>; rel="last"
-//
-// Output:
-//
-//	2
-//
-// If the Link header does not include a next page link, it returns 0.
-func getNextPage(linkHeader string) int {
-	re := regexp.MustCompile(`<[^>]+page=(\d+)[^>]*>;\s*rel="next"`)
-
-	if matches := re.FindStringSubmatch(linkHeader); matches != nil {
-		pageNum, _ := strconv.Atoi(matches[1])
-		return pageNum
-	}
-
-	return 0 // No next page found.
-}
-
 // getVersion returns the version and date of the matching asset/release from `body`
 // that matches the URLCommands, and RegEx requirements.
 func (l *Lookup) getVersion(
@@ -431,18 +408,9 @@ func (l *Lookup) getVersion(
 		)
 	}
 
-	var firstErr error
-	for _, release := range filteredReleases {
-		v, rd, err := forge.ReleaseMeetsRequirements(release, l.Require, l.GetServiceID(), logFrom)
-		if err == nil {
-			return v, rd, nil
-		}
-		if firstErr == nil {
-			firstErr = err
-		}
-	}
-
-	return "", "", fmt.Errorf("no releases were found matching the require fields %w", firstErr)
+	return forge.FirstReleaseMeetingRequirements( //nolint:wrapcheck
+		filteredReleases, l.Require, l.GetServiceID(), logFrom,
+	)
 }
 
 // filterReleases filters `releases` against the URLCommands, semantic-versioning and
@@ -487,17 +455,4 @@ func (l *Lookup) handleNewVersion(
 	}
 
 	return l.HandleNewVersion(version, releaseDate, logFrom) //nolint:wrapcheck
-}
-
-// handleNoVersionChange processes the case of no new versions found on a re-check.
-func (l *Lookup) handleNoVersionChange(checkNumber int, version string, logFrom logx.LogFrom) {
-	if checkNumber == 1 {
-		logx.Verbose(
-			fmt.Sprintf("Staying on %q as that's the latest version in the second check", version),
-			logFrom,
-			true,
-		)
-	}
-
-	l.Status.AnnounceQuery()
 }

@@ -223,3 +223,97 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 		})
 	}
 }
+
+func TestFirstReleaseMeetingRequirements(t *testing.T) {
+	// GIVEN: releases in the order they would be filtered into, and requirements.
+	tests := []struct {
+		name        string
+		requireYAML string
+		releases    []forgetypes.Release
+		wantVersion string
+		wantDate    string
+		errRegex    string
+	}{
+		{
+			name: "first release taken when nothing is required",
+			releases: []forgetypes.Release{
+				{TagName: "1.2.3", PublishedAt: "2021-01-01T00:00:00Z"},
+				{TagName: "1.2.2", PublishedAt: "2020-01-01T00:00:00Z"},
+			},
+			wantVersion: "1.2.3",
+			wantDate:    "2021-01-01T00:00:00Z",
+			errRegex:    `^$`,
+		},
+		{
+			name: "first release meeting the requirements is taken (not the first release)",
+			requireYAML: `
+				regex_version: '^1\.2\.2$'`,
+			releases: []forgetypes.Release{
+				{TagName: "1.2.3", PublishedAt: "2021-01-01T00:00:00Z"},
+				{TagName: "1.2.2", PublishedAt: "2020-01-01T00:00:00Z"},
+			},
+			wantVersion: "1.2.2",
+			wantDate:    "2020-01-01T00:00:00Z",
+			errRegex:    `^$`,
+		},
+		{
+			name: "failure of the first release is reported when none qualify",
+			requireYAML: `
+				regex_version: '^9\.'`,
+			releases: []forgetypes.Release{
+				{TagName: "1.2.3", PublishedAt: "2021-01-01T00:00:00Z"},
+				{TagName: "1.2.2", PublishedAt: "2020-01-01T00:00:00Z"},
+			},
+			errRegex: `(?s)^no releases were found matching the require fields.*1\.2\.3`,
+		},
+		{
+			name:     "no releases",
+			releases: []forgetypes.Release{},
+			errRegex: `^no releases were found matching the require fields`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			require := testRequire(t, tc.requireYAML)
+
+			// WHEN: FirstReleaseMeetingRequirements is called on them.
+			version, releaseDate, err := FirstReleaseMeetingRequirements(
+				tc.releases,
+				require,
+				"forge-test",
+				logx.LogFrom{Primary: t.Name()},
+			)
+
+			prefix := fmt.Sprintf(
+				"%s\nFirstReleaseMeetingRequirements(%d releases)",
+				packageName, len(tc.releases),
+			)
+
+			// THEN: any error is as expected.
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
+			}
+
+			// AND: the release taken is as expected.
+			if version != tc.wantVersion {
+				t.Fatalf(
+					"%s version mismatch\ngot:  %q\nwant: %q",
+					prefix, version, tc.wantVersion,
+				)
+			}
+			if releaseDate != tc.wantDate {
+				t.Fatalf(
+					"%s release date mismatch\ngot:  %q\nwant: %q",
+					prefix, releaseDate, tc.wantDate,
+				)
+			}
+		})
+	}
+}

@@ -19,6 +19,7 @@ import (
 	"net/url"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -176,4 +177,20 @@ func FilterReleases(
 // Both releases must have a parsed SemanticVersion.
 func releaseSortsBefore(a, b forgetypes.Release) bool {
 	return a.SemanticVersion.GreaterThan(b.SemanticVersion)
+}
+
+// nextPageLink matches the page number of a Link header's "next" relation, e.g.
+// <https://api.example.com/repos/OWNER/REPO/releases?page=3>; rel="next".
+var nextPageLink = regexp.MustCompile(`<[^>]+page=(\d+)[^>]*>;\s*rel="next"`)
+
+// NextPage returns the page number the Link header's "next" relation addresses,
+// or 0 when there is none.
+func NextPage(linkHeader string) int {
+	matches := nextPageLink.FindStringSubmatch(linkHeader)
+	if matches == nil {
+		return 0
+	}
+
+	pageNum, _ := strconv.Atoi(matches[1])
+	return pageNum
 }
