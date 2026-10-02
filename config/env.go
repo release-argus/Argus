@@ -383,11 +383,11 @@ func setStringSliceField(field reflect.Value, value, envKey string) error {
 
 // setMapFields maps environment variables with the envKey prefix onto a map field.
 func setMapFields(field reflect.Value, envKey string, envVars []string) error {
-	// Notify maps.
-	if strings.HasPrefix(envKey, "ARGUS_NOTIFY_") {
+	// A string-valued map has no fields to delimit its keys, so the rest of the
+	// variable's name is the key.
+	if field.Type().Elem().Kind() == reflect.String {
 		for _, envVar := range envVars {
 			if strings.HasPrefix(envVar, envKey) {
-				// Get key and value.
 				keyValue := strings.SplitN(envVar, "=", 2)
 
 				// Remove fieldName from key (get key of map).
@@ -395,6 +395,9 @@ func setMapFields(field reflect.Value, envKey string, envVars []string) error {
 				// = "max_tries=7"
 				keyValue[0] = strings.ToLower(strings.Replace(keyValue[0], envKey+"_", "", 1))
 
+				if field.IsNil() {
+					field.Set(reflect.MakeMap(field.Type()))
+				}
 				field.SetMapIndex(reflect.ValueOf(keyValue[0]), reflect.ValueOf(keyValue[1]))
 			}
 		}
