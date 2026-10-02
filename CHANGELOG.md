@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.39.0](https://github.com/release-argus/Argus/compare/0.38.0...0.39.0) (2026-10-02)
+
+
+### Features
+
+* **latest_version:** add `forgejo` type ([6d26d7b](https://github.com/release-argus/Argus/commit/6d26d7bac31a444ea59efba1eec0b6f110d0c3f2))
+* **lv-forgejo:** add `access_token` and `allow_invalid_certs` ([d7eda86](https://github.com/release-argus/Argus/commit/d7eda86e7d838fdab1ed1ba5078e016ded642c80))
+* **lv-forgejo:** host defaults from environment variables ([44c1992](https://github.com/release-argus/Argus/commit/44c19921208d898543c0b72a50e340ceee33d81b))
+* **ui:** offer default 'forgejo' instances in a select dropdown ([945f2bf](https://github.com/release-argus/Argus/commit/945f2bf73762d5e71ad0e143b818052437cf6185))
+
+
+### Bug Fixes
+
+* **config:** don't panic on an error line naming no field ([f46d7a0](https://github.com/release-argus/Argus/commit/f46d7a052997fbee224a6240564320ae3a4b7590))
+* **httpx:** report an oversized response body instead of truncating it ([9a0332b](https://github.com/release-argus/Argus/commit/9a0332b76d6bdef54fcddea8db67e94a5e42e1ef))
+* **latest_version:** name the 'common' level in defaults errors ([6c35066](https://github.com/release-argus/Argus/commit/6c35066a056232d171a292875694611496dd6605))
+* **lv-github:** validate repo, escape paths, derive prerelease from tags ([80f75b5](https://github.com/release-argus/Argus/commit/80f75b54354afe995b72a3929cab2e3c82b2c7f8))
+* **ui:** give boolean-with-default groups an accessible name ([4a56b1c](https://github.com/release-argus/Argus/commit/4a56b1c10d2ca741269f41f9a3730e552dfb2ebc))
+
 ## [0.38.0](https://github.com/release-argus/Argus/compare/0.37.1...0.38.0) (2026-09-12)
 
 
