@@ -481,10 +481,10 @@ func TestLookup_Query__Integration_ReleasesEndpoint(t *testing.T) {
 			}
 
 			// THEN: the response carries no ETag.
-			if eTag := response.Header.Get("ETag"); eTag != "" {
+			if etag := response.Header.Get("ETag"); etag != "" {
 				t.Fatalf(
 					"%s\n%s issued an ETag %q - conditional requests may now be worth having",
-					packageName, target.host, eTag,
+					packageName, target.host, etag,
 				)
 			}
 

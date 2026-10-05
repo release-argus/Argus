@@ -17,53 +17,27 @@ package github
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/release-argus/Argus/config/decode"
-	"github.com/release-argus/Argus/internal/logx"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
 	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	"github.com/release-argus/Argus/util"
 )
 
 var (
-	emptyListETagMu sync.RWMutex
-	emptyListETag   = `"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"`
-	defaultPerPage  = 30
+	emptyListETag  atomic.Pointer[string]
+	defaultPerPage = 30
 )
 
-// SetEmptyListETag finds the ETag for an empty list query on the GitHub API
-// and sets it to be used as the initial ETag for Data.
-func SetEmptyListETag(accessToken string) {
-	var defaults, hardDefaults base.Defaults
-	hardDefaults.Default()
-	lookup, _ := Decode(
-		"yaml", []byte("url: release-argus/.github"),
-		nil,
-		nil,
-		base.DefaultsConfig{
-			Soft: &defaults,
-			Hard: &hardDefaults,
-		},
-	)
-	var typeHardDefaults Defaults
-	typeHardDefaults.Default()
-	lookup.SetTypeDefaults(&Defaults{}, &typeHardDefaults)
-	lookup.AccessToken = accessToken
-
-	// Fallback to /tags to stop the /tags fallback query if on /releases.
-	lookup.data.SetTagFallback()
-	//#nosec G104 -- Disregard.
-	//nolint:errcheck // ^
-	_, _, _ = lookup.httpRequest(1, logx.LogFrom{Primary: "SetEmptyListETag"})
-
-	setEmptyListETag(lookup.data.ETag())
+func init() {
+	setEmptyListETag("")
 }
 
 // Data contains the information used and retrieved during GitHub requests,
-// including the eTag, associated releases, and the usage state of the "/tags" endpoint.
+// including the ETag, associated releases, and the usage state of the "/tags" endpoint.
 type Data struct {
 	mu          sync.RWMutex         // Mutex to protect the Data.
-	eTag        string               // GitHub ETag for conditional requests https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requestsl.
+	etag        string               // GitHub ETag for conditional requests https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests.
 	perPage     int                  // Number of releases per page.
 	releases    []forgetypes.Release // Store Releases tied to an ETag.
 	tagFallback bool                 // Whether we have fallen back to using /tags instead of /releases.
@@ -110,7 +84,7 @@ func (g *Data) SetETag(etag string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	g.eTag = etag
+	g.etag = etag
 }
 
 // ETag value of the Data.
@@ -118,7 +92,7 @@ func (g *Data) ETag() string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	return g.eTag
+	return g.etag
 }
 
 // SetPerPage of the Data.
@@ -175,7 +149,7 @@ func (g *Data) Copy() *Data {
 	defer g.mu.Unlock()
 
 	return &Data{
-		eTag:        g.eTag,
+		etag:        g.etag,
 		perPage:     g.perPage,
 		releases:    g.releases,
 		tagFallback: g.tagFallback,
@@ -189,23 +163,17 @@ func (g *Data) CopyFrom(from *Data) {
 	from.mu.RLock()
 	defer from.mu.RUnlock()
 
-	g.eTag = from.eTag
+	g.etag = from.etag
 	g.releases = from.releases
 	g.tagFallback = from.tagFallback
 }
 
 // setEmptyListETag sets the ETag for an empty list query on the GitHub API.
-func setEmptyListETag(eTag string) {
-	emptyListETagMu.Lock()
-	defer emptyListETagMu.Unlock()
-
-	emptyListETag = eTag
+func setEmptyListETag(etag string) {
+	emptyListETag.Store(&etag)
 }
 
 // getEmptyListETag returns the ETag for an empty list query on the GitHub API.
 func getEmptyListETag() string {
-	emptyListETagMu.RLock()
-	defer emptyListETagMu.RUnlock()
-
-	return emptyListETag
+	return *emptyListETag.Load()
 }

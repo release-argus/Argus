@@ -20,110 +20,96 @@ package github
 import (
 	"fmt"
 	"math/rand"
-	"sync"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
 	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 )
 
-var emptyListETagTestMu = sync.Mutex{}
-
-func TestSetEmptyListETag(t *testing.T) {
-	// GIVEN: emptyListETag is set to the incorrect value.
-	emptyListETagTestMu.Lock()
-	t.Cleanup(emptyListETagTestMu.Unlock)
-	incorrectValue := "foo"
-	setEmptyListETag(incorrectValue)
-
-	// WHEN: SetEmptyListETag is called.
-	SetEmptyListETag(test.GitHubToken(t))
-
-	prefix := fmt.Sprintf("%s\nSetEmptyListETag(val)", packageName)
-
-	// THEN: the emptyListETag is set.
-	got := getEmptyListETag()
-	if incorrectValue == got {
-		t.Errorf(
-			"%s didn't change emptyListETag from getEmptyListETag()\ngot:  %q\nwant: %q",
-			prefix, got, emptyListETag,
-		)
-	}
-	if got != initialEmptyListETag {
-		t.Errorf(
-			"%s changed empty list ETag incorrectly\ngot:  %q\nwant: %q",
-			prefix, got, initialEmptyListETag,
-		)
-	}
-}
-
 func TestGetEmptyListETag(t *testing.T) {
-	// GIVEN: emptyListETag exists.
-	emptyListETagTestMu.Lock()
-	t.Cleanup(emptyListETagTestMu.Unlock)
-	emptyListETagMu.RLock()
-	t.Cleanup(emptyListETagMu.RUnlock)
+	// GIVEN: ETags an empty list query answered with.
+	tests := []struct {
+		name string
+		etag string
+	}{
+		{
+			name: "weak",
+			etag: `W/"abc"`,
+		},
+		{
+			name: "strong",
+			etag: `"abc"`,
+		},
+		{
+			name: "empty",
+			etag: "",
+		},
+	}
 
-	// WHEN: getEmptyListETag is called.
-	got := getEmptyListETag()
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - the empty-list ETag is package-wide state.
 
-	// THEN: the emptyListETag is returned.
-	if emptyListETag != got {
-		t.Errorf(
-			"%s\ngetEmptyListETag() mismatch\ngot:  %q\nwant: %q",
-			packageName, got, emptyListETag,
-		)
+			// WHEN: one is remembered.
+			setEmptyListETag(tc.etag)
+
+			// THEN: it is what is read back.
+			if got := getEmptyListETag(); got != tc.etag {
+				t.Errorf(
+					"%s\ngetEmptyListETag() mismatch\ngot:  %q\nwant: %q",
+					packageName, got, tc.etag,
+				)
+			}
+		})
 	}
 }
 
 func TestNewData(t *testing.T) {
-	emptyListETagTestMu.Lock()
-	t.Cleanup(emptyListETagTestMu.Unlock)
 	startingEmptyListETag := getEmptyListETag()
-	// GIVEN: a Data is wanted with/without an eTag/releases.
+	// GIVEN: a Data is wanted with/without an ETag/releases.
 	tests := []struct {
 		name     string
-		eTag     string
+		etag     string
 		releases *[]forgetypes.Release
 		want     *Data
 	}{
 		{
-			name:     "no eTag or releases",
-			eTag:     "",
+			name:     "no ETag or releases",
+			etag:     "",
 			releases: nil,
 			want: &Data{
-				eTag: startingEmptyListETag,
+				etag: startingEmptyListETag,
 			},
 		},
 		{
-			name:     "eTag but no releases",
-			eTag:     "foo",
+			name:     "ETag but no releases",
+			etag:     "foo",
 			releases: nil,
 			want: &Data{
-				eTag: "foo",
+				etag: "foo",
 			},
 		},
 		{
-			name: "no eTag but releases",
-			eTag: "",
+			name: "no ETag but releases",
+			etag: "",
 			releases: &[]forgetypes.Release{
 				{TagName: "bar"},
 			},
 			want: &Data{
-				eTag: startingEmptyListETag,
+				etag: startingEmptyListETag,
 				releases: []forgetypes.Release{
 					{TagName: "bar"},
 				},
 			},
 		},
 		{
-			name: "eTag and releases",
-			eTag: "zing",
+			name: "ETag and releases",
+			etag: "zing",
 			releases: &[]forgetypes.Release{
 				{TagName: "zap"},
 			},
 			want: &Data{
-				eTag: "zing",
+				etag: "zing",
 				releases: []forgetypes.Release{
 					{TagName: "zap"},
 				},
@@ -136,18 +122,18 @@ func TestNewData(t *testing.T) {
 			t.Parallel()
 
 			// WHEN: newData is called.
-			got := newData(tc.eTag, tc.releases)
+			got := newData(tc.etag, tc.releases)
 
 			prefix := fmt.Sprintf(
-				"%s\nnewData(eTag=%q, releases=%v)",
-				packageName, tc.eTag, tc.releases,
+				"%s\nnewData(etag=%q, releases=%v)",
+				packageName, tc.etag, tc.releases,
 			)
 
 			// THEN: the correct Data is returned.
-			if got.eTag != tc.want.eTag {
+			if got.etag != tc.want.etag {
 				t.Errorf(
-					"%s eTag mismatch\ngot %q\nwant: %q",
-					prefix, got.eTag, tc.want.eTag,
+					"%s ETag mismatch\ngot %q\nwant: %q",
+					prefix, got.etag, tc.want.etag,
 				)
 			}
 			if err := test.AssertSlicesEqualFunc(
@@ -184,7 +170,7 @@ func TestData_String(t *testing.T) {
 		{
 			name: "filled",
 			githubData: &Data{
-				eTag: "argus",
+				etag: "argus",
 				releases: []forgetypes.Release{
 					{URL: "https://example.com/1.2.3"},
 					{URL: "https://example.com/3.2.1", PreRelease: true},
@@ -260,7 +246,7 @@ func TestData_ETag(t *testing.T) {
 	got := testData.ETag()
 
 	// THEN: the releases are returned.
-	want := testData.eTag
+	want := testData.etag
 	if got != want {
 		t.Errorf(
 			"%s\nfresh Data.ETag() mismatch\ngot:  %q\nwant: %q",
@@ -426,7 +412,7 @@ func TestData_Copy(t *testing.T) {
 		{
 			name: "filled",
 			gd: &Data{
-				eTag: "foo",
+				etag: "foo",
 				releases: []forgetypes.Release{
 					{TagName: "bar"},
 				},
@@ -442,10 +428,10 @@ func TestData_Copy(t *testing.T) {
 			got := tc.gd.Copy()
 
 			// THEN: the correct Data is returned.
-			if got.eTag != tc.gd.eTag {
+			if got.etag != tc.gd.etag {
 				t.Errorf(
-					"%s\nData.Copy() .eTag mismatch\ngot:  %q\nwant: %q",
-					packageName, got.eTag, tc.gd.eTag,
+					"%s\nData.Copy() .etag mismatch\ngot:  %q\nwant: %q",
+					packageName, got.etag, tc.gd.etag,
 				)
 			}
 			if err := test.AssertSlicesEqualFunc(
@@ -476,7 +462,7 @@ func TestData_CopyFrom(t *testing.T) {
 		{
 			name: "filled",
 			gd: &Data{
-				eTag: "foo",
+				etag: "foo",
 				releases: []forgetypes.Release{
 					{TagName: "bar"},
 				},
@@ -485,13 +471,13 @@ func TestData_CopyFrom(t *testing.T) {
 		{
 			name: "filled with data to overwrite",
 			fresh: &Data{
-				eTag: "fizz",
+				etag: "fizz",
 				releases: []forgetypes.Release{
 					{TagName: "bang"},
 				},
 			},
 			gd: &Data{
-				eTag: "foo",
+				etag: "foo",
 				releases: []forgetypes.Release{
 					{TagName: "bar"},
 				},
@@ -511,10 +497,10 @@ func TestData_CopyFrom(t *testing.T) {
 			tc.fresh.CopyFrom(tc.gd)
 
 			// THEN: the correct Data is returned.
-			if tc.fresh.eTag != tc.gd.eTag {
+			if tc.fresh.etag != tc.gd.etag {
 				t.Errorf(
-					"%s\nData.CopyFrom() .eTag mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.fresh.eTag, tc.gd.eTag,
+					"%s\nData.CopyFrom() .etag mismatch\ngot:  %q\nwant: %q",
+					packageName, tc.fresh.etag, tc.gd.etag,
 				)
 			}
 			if err := test.AssertSlicesEqualFunc(

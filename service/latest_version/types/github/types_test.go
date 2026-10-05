@@ -297,7 +297,7 @@ func TestLookup_Copy(t *testing.T) {
 			name: "data",
 			lookup: &Lookup{
 				data: Data{
-					eTag:    "foo",
+					etag:    "foo",
 					perPage: 1,
 					releases: []forgetypes.Release{
 						{URL: "example.com"},
@@ -340,7 +340,7 @@ func TestLookup_Copy(t *testing.T) {
 				)
 				if err == nil {
 					lv.data = Data{
-						eTag:    "foo",
+						etag:    "foo",
 						perPage: 1,
 						releases: []forgetypes.Release{
 							{URL: "example.com"},

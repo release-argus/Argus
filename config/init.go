@@ -24,8 +24,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/release-argus/Argus/internal/logx"
-	"github.com/release-argus/Argus/service/latest_version/types/github"
-	"github.com/release-argus/Argus/util"
 )
 
 // Load reads and decodes the config file, then starts the save handler.
@@ -71,13 +69,6 @@ func (c *Config) Load(
 	}
 
 	c.GetOrder(data)
-
-	// Default Empty List ETag as it depends on default access_token.
-	accessTokenDefault := util.FirstNonDefaultWithEnv(
-		c.Defaults.Service.LatestVersion.GitHub.AccessToken,
-		c.HardDefaults.Service.LatestVersion.GitHub.AccessToken,
-	)
-	github.SetEmptyListETag(accessTokenDefault)
 
 	// SaveHandler that listens for calls to save config changes.
 	g.Go(func() error {
