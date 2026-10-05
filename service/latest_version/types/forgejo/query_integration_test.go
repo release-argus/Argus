@@ -160,7 +160,7 @@ func integrationTargets(host, repo string) []integrationTarget {
 	return targets
 }
 
-func TestLookup_Query__Integration(t *testing.T) {
+func TestLookup_Query__integration(t *testing.T) {
 	// GIVEN: a repository on a live instance, and the outcome it must produce.
 	tests := []struct {
 		name            string
@@ -321,7 +321,7 @@ func TestLookup_Query__Integration(t *testing.T) {
 	}
 }
 
-func TestLookup_Query__Integration_HighestVersionWins(t *testing.T) {
+func TestLookup_Query__integration__highestVersionWins(t *testing.T) {
 	// GIVEN: a repository on a live instance.
 	tests := []struct {
 		name               string
@@ -451,7 +451,7 @@ func TestLookup_Query__Integration_HighestVersionWins(t *testing.T) {
 	}
 }
 
-func TestLookup_Query__Integration_ReleasesEndpoint(t *testing.T) {
+func TestLookup_Query__integration__releasesEndpoint(t *testing.T) {
 	// GIVEN: a repository on a public instance.
 	for _, target := range integrationTargets("", "") {
 		t.Run(target.name, func(t *testing.T) {
@@ -525,7 +525,7 @@ func TestLookup_Query__Integration_ReleasesEndpoint(t *testing.T) {
 	}
 }
 
-func TestLookup_Query__Integration_PaginatesPastThePageSizeCap(t *testing.T) {
+func TestLookup_Query__integration__paginatesPastThePageSizeCap(t *testing.T) {
 	// GIVEN: the public instances, at least one of which holds more releases than a page can.
 	logFrom := logx.LogFrom{Primary: t.Name()}
 	var paginated bool
@@ -616,5 +616,56 @@ func TestLookup_Query__Integration_PaginatesPastThePageSizeCap(t *testing.T) {
 			"%s\nno target held more than %d releases - pagination went untested",
 			packageName, apiPageSize,
 		)
+	}
+}
+
+func TestLookup_Query__integration__dockerTag(t *testing.T) {
+	// GIVEN: a require.docker naming a tag that does, and does not, exist.
+	tests := []struct {
+		name     string
+		tag      string
+		errRegex string
+	}{
+		{
+			name:     "found",
+			tag:      "{{ version }}",
+			errRegex: `^$`,
+		},
+		{
+			name:     "not found",
+			tag:      "x{{ version }}",
+			errRegex: `release-argus\/argus:x[0-9.]+ - .*tag not found`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := testLookup(t, test.TrimYAML(`
+				host: `+testInstanceHost+`
+				url: `+repoTagsOnly+`
+				require:
+					docker:
+						type: ghcr
+						image: `+test.ArgusDockerGHCRRepo+`
+						tag: "`+tc.tag+`"
+						token: `+test.DockerHubToken(t)+`
+			`))
+
+			// WHEN: it is queried.
+			_, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()})
+
+			prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
+
+			// THEN: any error is as expected.
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
+			}
+		})
 	}
 }
