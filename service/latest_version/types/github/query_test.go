@@ -45,7 +45,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		name     string
 		failing  bool
 		url      string
-		eTag     *string
+		etag     *string
 		nextPage int
 		errRegex string
 	}{
@@ -78,7 +78,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		{
 			name:     "repo that uses tags, not releases/update EmptyListETag if 200 on empty list",
 			url:      "release-argus/.github",
-			eTag:     new(""),
+			etag:     new(""),
 			errRegex: `^$`,
 		},
 	}
@@ -89,8 +89,8 @@ func TestLookup_HTTPRequest(t *testing.T) {
 
 			lookup := testLookup(t, false)
 			lookup.URL = tc.url
-			if tc.eTag != nil {
-				lookup.data.eTag = *tc.eTag
+			if tc.etag != nil {
+				lookup.data.etag = *tc.etag
 			}
 
 			// WHEN: httpRequest is called on it.

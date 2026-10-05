@@ -189,9 +189,9 @@ func TestLookup_InheritSecrets(t *testing.T) {
 
 			inheritableETag := "foo"
 			if fl, ok := fromLookup.(*Lookup); ok {
-				fl.data.eTag = inheritableETag
+				fl.data.etag = inheritableETag
 			}
-			lookup.data.eTag = ""
+			lookup.data.etag = ""
 			hadETag := lookup.data.ETag()
 			wantQueryToken, wantValidUntil := fromRequire.Docker.GetAuth().GetQueryTokenSelf()
 

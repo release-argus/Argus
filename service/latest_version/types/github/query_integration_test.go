@@ -35,7 +35,7 @@ func TestLookup_Query(t *testing.T) {
 	tLookup := testLookup(t, false)
 	tLookup.URL = "release-argus/.github"
 	_, _ = tLookup.Query(false, logx.LogFrom{})
-	emptyReleasesETag := tLookup.data.eTag
+	emptyReleasesETag := tLookup.data.etag
 
 	type statusVars struct {
 		deployedVersion   string
@@ -367,7 +367,7 @@ func TestLookup_Query(t *testing.T) {
 				)
 				// Clear ETag/Releases if URL changed.
 				if tc.overrideETag != nil {
-					lookup.data.eTag = *tc.overrideETag
+					lookup.data.etag = *tc.overrideETag
 				}
 
 				// WHEN: Query is called on it.
@@ -418,7 +418,7 @@ func TestLookup_Query__githubETag(t *testing.T) {
 	tests := []struct {
 		name                               string
 		attempts                           int
-		eTagChanged, eTagUnchangedUseCache int
+		etagChanged, etagUnchangedUseCache int
 		initialRequireRegexVersion         string
 		urlCommands                        filter.URLCommands
 		errRegex                           string
@@ -427,15 +427,15 @@ func TestLookup_Query__githubETag(t *testing.T) {
 		{
 			name:                  "three requests only uses 1 api limit",
 			attempts:              3,
-			eTagChanged:           1,
-			eTagUnchangedUseCache: 3, // 2 attempts + 1 recheck.
+			etagChanged:           1,
+			etagUnchangedUseCache: 3, // 2 attempts + 1 recheck.
 			errRegex:              `^$`,
 		},
 		{
 			name:                       "if initial request fails filter, cached results will be used",
 			attempts:                   3,
-			eTagChanged:                3, // page1+2, page1.
-			eTagUnchangedUseCache:      2, // 1 last attempt + 1 recheck.
+			etagChanged:                3, // page1+2, page1.
+			etagUnchangedUseCache:      2, // 1 last attempt + 1 recheck.
 			initialRequireRegexVersion: `^FOO$`,
 			errRegex: test.TrimYAML(`
 				^no releases were found matching the require field.*
@@ -445,8 +445,8 @@ func TestLookup_Query__githubETag(t *testing.T) {
 		{
 			name:                  "invalid url_commands will catch no versions",
 			attempts:              2,
-			eTagChanged:           4, // page1+2, page1+2.
-			eTagUnchangedUseCache: 0, // 0 recheck.
+			etagChanged:           4, // page1+2, page1+2.
+			etagUnchangedUseCache: 0, // 0 recheck.
 			urlCommands: filter.URLCommands{
 				{Type: "regex", Regex: `^FOO$`},
 			},
@@ -504,17 +504,17 @@ func TestLookup_Query__githubETag(t *testing.T) {
 				)
 			}
 			gotETagChanged := strings.Count(stdout, "new ETag")
-			if gotETagChanged != tc.eTagChanged {
+			if gotETagChanged != tc.etagChanged {
 				t.Errorf(
 					"%s unexpected ETag produced\ngot:  %d\nwant: %d\nstdout: %q",
-					prefix, gotETagChanged, tc.eTagChanged, stdout,
+					prefix, gotETagChanged, tc.etagChanged, stdout,
 				)
 			}
 			gotETagUnchangedUseCache := strings.Count(stdout, "Using cached releases")
-			if gotETagUnchangedUseCache != tc.eTagUnchangedUseCache {
+			if gotETagUnchangedUseCache != tc.etagUnchangedUseCache {
 				t.Errorf(
 					"%s ETag unchanged use cache count mismatch\ngot:  %d\nwant: %d\nstdout: %q",
-					prefix, gotETagUnchangedUseCache, tc.eTagUnchangedUseCache, stdout,
+					prefix, gotETagUnchangedUseCache, tc.etagUnchangedUseCache, stdout,
 				)
 			}
 		})

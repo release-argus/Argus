@@ -90,12 +90,12 @@ func TestMain(m *testing.M) {
 
 // newData returns a new Data.
 func newData(
-	eTag string,
+	etag string,
 	releases *[]forgetypes.Release,
 ) *Data {
 	// ETag - https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests.
-	if eTag == "" {
-		eTag = getEmptyListETag()
+	if etag == "" {
+		etag = getEmptyListETag()
 	}
 	// Releases.
 	var releasesDeref []forgetypes.Release
@@ -104,7 +104,7 @@ func newData(
 	}
 
 	return &Data{
-		eTag:     eTag,
+		etag:     etag,
 		releases: releasesDeref,
 	}
 }
