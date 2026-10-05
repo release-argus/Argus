@@ -184,7 +184,7 @@ func TestLookup_UnmarshalGitHubReleasesBody(t *testing.T) {
 	}{
 		{
 			name: "invalid JSON",
-			body: strings.Repeat("something something something", 100),
+			body: strings.Repeat("something ", 300),
 			errRegex: test.TrimYAML(`
 				^unmarshal .* failed:
 					jsontext:

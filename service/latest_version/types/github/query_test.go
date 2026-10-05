@@ -19,67 +19,137 @@ package github
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"testing"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
-	"github.com/release-argus/Argus/util/errfmt"
 
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/service/latest_version/types/base"
 	"github.com/release-argus/Argus/service/latest_version/types/forge"
 	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 	"github.com/release-argus/Argus/util/polymorphic"
 )
 
-func TestLookup_HTTPRequest(t *testing.T) {
-	// GIVEN: a Lookup.
+var nonSemanticBody = test.TrimJSON(`[
+	{
+		"tag_name":"ver1.1.1",
+		"name":"ver1.1.1",
+		"prerelease":false,
+		"published_at":"2024-04-27T10:50:00Z",
+		"assets":[
+			{"id": 3,"name":"Argus-ver1.1.1.linux-amd64","created_at":"2024-04-27T10:50:53Z","browser_download_url":"https://example.com/Argus-ver1.1.1.linux-amd64"}
+		]
+	}
+]`)
+
+func TestLookup_Query__hermetic(t *testing.T) {
+	// GIVEN: a Lookup, and the releases its API serves.
 	tests := []struct {
-		name     string
-		failing  bool
-		url      string
-		etag     *string
-		nextPage int
-		errRegex string
+		name        string
+		endpoints   map[string]githubEndpoint
+		requireAuth string // Authorization the API required.
+		overrides   string
+		semVer      bool
+		wantVersion string
+		errRegex    string
 	}{
 		{
-			name:     "invalid url",
-			url:      "invalid://	test",
-			errRegex: `invalid control character in URL`,
+			name:      "invalid/a URL that cannot be parsed",
+			overrides: "url: 'release-argus\tArgus'",
+			errRegex:  `invalid control character in URL`,
 		},
 		{
-			name:     "unknown url",
-			url:      "https://release-argus.invalid-tld",
-			errRegex: `no such host`,
+			name: "valid/the newest stable release is reported",
+			endpoints: map[string]githubEndpoint{
+				"releases": {Body: string(testBody)},
+			},
+			semVer:      true,
+			wantVersion: "0.17.4",
+			errRegex:    `^$`,
 		},
 		{
-			name:     "valid url",
-			url:      test.ArgusGitHubRepo,
-			errRegex: `^$`,
-			nextPage: 2,
+			name: "invalid/a non-semantic version is rejected when semver is required",
+			endpoints: map[string]githubEndpoint{
+				"releases": {Body: nonSemanticBody},
+			},
+			overrides: test.TrimYAML(`
+				url_commands:
+					- type: regex
+						regex: 'ver[0-9.]+'
+			`),
+			semVer:   true,
+			errRegex: `no releases were found matching the url_commands`,
 		},
 		{
-			name:     "repo that uses tags, not releases/has tags",
-			url:      "release-argus/test",
-			errRegex: `^$`,
+			name: "valid/a non-semantic version is kept when semver is not required",
+			endpoints: map[string]githubEndpoint{
+				"releases": {Body: nonSemanticBody},
+			},
+			overrides: test.TrimYAML(`
+				url_commands:
+					- type: regex
+						regex: 'ver[0-9.]+'
+			`),
+			semVer:      false,
+			wantVersion: "ver1.1.1",
+			errRegex:    `^$`,
 		},
 		{
-			name:     "repo that uses tags, not releases/no tags",
-			url:      "release-argus/.github",
-			errRegex: `^$`,
+			name: "invalid/require.regex_content matches no asset",
+			endpoints: map[string]githubEndpoint{
+				"releases": {Body: string(testBody)},
+			},
+			overrides: test.TrimYAML(`
+				require:
+					regex_content: "argus[0-9]+.exe"
+			`),
+			semVer: true,
+			errRegex: test.TrimYAML(`
+				^no releases were found matching the require field.*
+					regex "[^"]+" not matched on content for version "[^"]+"$`,
+			),
 		},
 		{
-			name:     "repo that uses tags, not releases/update EmptyListETag if 200 on empty list",
-			url:      "release-argus/.github",
-			etag:     new(""),
-			errRegex: `^$`,
+			name: "valid/require.regex_content matches an asset of the version",
+			endpoints: map[string]githubEndpoint{
+				"releases": {Body: string(testBody)},
+			},
+			overrides: test.TrimYAML(`
+				require:
+					regex_content: "{{ version }}.linux-amd64"
+			`),
+			semVer:      true,
+			wantVersion: "0.17.4",
+			errRegex:    `^$`,
+		},
+		{
+			name: "valid/the access_token is sent as a Bearer token",
+			endpoints: map[string]githubEndpoint{
+				"releases": {Body: string(testBody)},
+			},
+			requireAuth: "Bearer foo",
+			overrides:   "access_token: foo",
+			semVer:      true,
+			wantVersion: "0.17.4",
+			errRegex:    `^$`,
+		},
+		{
+			name: "invalid/a credential the API will not accept",
+			endpoints: map[string]githubEndpoint{
+				"releases": {Body: string(testBody)},
+			},
+			requireAuth: "Bearer wanted",
+			overrides:   "access_token: foo",
+			semVer:      true,
+			errRegex:    `github access token is invalid`,
 		},
 	}
 
@@ -88,21 +158,241 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup(t, false)
+			lookup.Status.ServiceInfo.ID = tc.name
+			if err := lookup.ApplyOverrides("yaml", []byte(tc.overrides)); err != nil {
+				t.Fatalf(
+					"%s\nfailed to unmarshal Lookup overrides: %v",
+					packageName, err,
+				)
+			}
+			lookup.Options.SemanticVersioning = &tc.semVer
+
+			server := startGitHubServer(t, &githubServer{
+				Endpoints:   tc.endpoints,
+				RequireAuth: tc.requireAuth,
+			})
+			lookup.apiRoot = server.URL
+			lookup.Init(
+				lookup.Options,
+				lookup.Status,
+				base.DefaultsConfig{
+					Soft: lookup.Defaults,
+					Hard: lookup.HardDefaults,
+				},
+			)
+
+			// WHEN: Query is called on it.
+			_, err := lookup.Query(true, logx.LogFrom{Primary: t.Name()})
+
+			prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
+
+			// THEN: any error is as expected.
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
+			}
+
+			// AND: the version reported is as expected.
+			if got := lookup.Status.LatestVersion(); got != tc.wantVersion {
+				t.Errorf(
+					"%s version mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.wantVersion,
+				)
+			}
+		})
+	}
+}
+
+func TestLookup_Query__eTagReusesTheCache(t *testing.T) {
+	// GIVEN: no empty-list ETag has been learnt yet, so the first request below is
+	// unconditional.
+	hadETag := getEmptyListETag()
+	t.Cleanup(func() { setEmptyListETag(hadETag) })
+	setEmptyListETag("")
+
+	// AND: an API that answers matching ETag requests with 304.
+	server := newGitHubServer(t, map[string]githubEndpoint{
+		"releases": {Body: string(testBody), ETag: `W/"unchanged"`},
+	})
+
+	lookup := testLookup(t, false)
+	lookup.apiRoot = server.URL
+	lookup.Status.ServiceInfo.ID = t.Name()
+
+	prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
+
+	// WHEN: it is queried three times.
+	for attempt := 1; attempt <= 3; attempt++ {
+		if _, err := lookup.Query(true, logx.LogFrom{Primary: t.Name()}); err != nil {
+			t.Fatalf(
+				"%s attempt %d gave an unexpected error: %v",
+				prefix, attempt, errfmt.FormatError(err),
+			)
+		}
+
+		// THEN: the version is reported every time, cached or not.
+		if got, want := lookup.Status.LatestVersion(), "0.17.4"; got != want {
+			t.Fatalf(
+				"%s attempt %d version mismatch\ngot:  %q\nwant: %q",
+				prefix, attempt,
+				got, want,
+			)
+		}
+	}
+
+	// AND: only the first request was unconditional, so the body was served once. Every
+	// later request carried the ETag the API gave, and was answered 304.
+	requests := server.Requests()
+	if len(requests) < 3 {
+		t.Fatalf(
+			"%s made %d request(s)\n%v\nwant: at least one per query (3)",
+			prefix, len(requests), requests,
+		)
+	}
+	if got, want := server.NotModifiedCount(), len(requests)-1; got != want {
+		t.Errorf(
+			"%s the body should be served once, every later request answered 304\ngot:  %d 304(s) of %d request(s)\nwant: %d",
+			prefix, got, len(requests), want,
+		)
+	}
+	if got, want := requests[0].Header.Get("If-None-Match"), ""; got != want {
+		t.Errorf(
+			"%s the first request should carry no ETag to ask against\ngot:  %q\nwant: %q",
+			prefix, got, want,
+		)
+	}
+	for _, request := range requests[1:] {
+		if got, want := request.Header.Get("If-None-Match"), `"unchanged"`; got != want {
+			t.Errorf(
+				"%s a later request was not conditional\ngot:  %q\nwant: %q",
+				prefix, got, want,
+			)
+		}
+	}
+}
+
+func TestLookup_HTTPRequest(t *testing.T) {
+	// GIVEN: a Lookup, and the API it queries.
+	//
+	// An empty list on page one teaches the package-wide empty-list ETag, so these
+	// cases share state and cannot run in parallel.
+	hadETag := getEmptyListETag()
+	t.Cleanup(func() { setEmptyListETag(hadETag) })
+
+	tests := []struct {
+		name         string
+		endpoints    map[string]githubEndpoint
+		closedAPI    bool // Address an API that is not listening.
+		url          string
+		etag         *string
+		regexContent string // Blocks the tag fallback.
+		nextPage     int
+		wantPaths    []string
+		wantETagSet  string
+		errRegex     string
+	}{
+		{
+			name:     "invalid/a URL that cannot be parsed",
+			url:      "invalid://\ttest",
+			errRegex: `invalid control character in URL`,
+		},
+		{
+			name:      "invalid/an API that is not listening",
+			closedAPI: true,
+			url:       "release-argus/Argus",
+			errRegex:  `connection refused|connect: `,
+		},
+		{
+			name:      "invalid/a repository the API cannot see",
+			endpoints: map[string]githubEndpoint{},
+			url:       "release-argus/no-such-repo",
+			errRegex:  `Not Found`,
+		},
+		{
+			name: "valid/releases, with another page to come",
+			endpoints: map[string]githubEndpoint{
+				"releases": {Pages: []string{string(testBody), string(testBody)}},
+			},
+			url:       "release-argus/Argus",
+			nextPage:  2,
+			wantPaths: []string{"/repos/release-argus/Argus/releases"},
+			errRegex:  `^$`,
+		},
+		{
+			name: "valid/no releases falls back to tags",
+			endpoints: map[string]githubEndpoint{
+				"releases": {Body: "[]"},
+				"tags":     {Body: string(testBody)},
+			},
+			url: "release-argus/test",
+			wantPaths: []string{
+				"/repos/release-argus/test/releases",
+				"/repos/release-argus/test/tags",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "valid/neither releases nor tags published",
+			endpoints: map[string]githubEndpoint{
+				"releases": {Body: "[]"},
+				"tags":     {Body: "[]"},
+			},
+			url: "release-argus/.github",
+			wantPaths: []string{
+				"/repos/release-argus/.github/releases",
+				"/repos/release-argus/.github/tags",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "valid/an empty list on page one teaches its ETag",
+			endpoints: map[string]githubEndpoint{
+				"releases": {Body: "[]", ETag: `W/"learnt-etag"`},
+			},
+			url:          "release-argus/.github",
+			etag:         new(""),
+			regexContent: "argus",
+			wantETagSet:  `"learnt-etag"`,
+			errRegex:     `^$`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Parallel() - the empty-list ETag is package-wide state.
+
+			lookup := testLookup(t, false)
 			lookup.URL = tc.url
+			if tc.regexContent != "" {
+				lookup.Require = &filter.Require{RegexContent: tc.regexContent}
+			}
 			if tc.etag != nil {
 				lookup.data.etag = *tc.etag
 			}
 
+			server := newGitHubServer(t, tc.endpoints)
+			lookup.apiRoot = server.URL
+			if tc.closedAPI {
+				server.Close()
+			}
+
 			// WHEN: httpRequest is called on it.
-			_, nextPage, err := lookup.httpRequest(1, logx.LogFrom{})
+			_, nextPage, err := lookup.httpRequest(1, logx.LogFrom{Primary: t.Name()})
+
+			prefix := fmt.Sprintf(
+				"%s\nLookup.httpRequest(%q)",
+				packageName, tc.url,
+			)
 
 			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s\nLookup.httpRequest(%q) error mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.url,
-					e, tc.errRegex,
+				t.Fatalf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
 				)
 			}
 			if e != "" {
@@ -112,10 +402,35 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			// AND: the nextPage is as expected.
 			if nextPage != tc.nextPage {
 				t.Errorf(
-					"%s\nLookup.httpRequest(%q) nextPage value mismatch\ngot:  %d\nwant: %d",
-					packageName, tc.url,
-					nextPage, tc.nextPage,
+					"%s nextPage mismatch\ngot:  %d\nwant: %d",
+					prefix, nextPage, tc.nextPage,
 				)
+			}
+
+			// AND: the paths requested are as expected.
+			if tc.wantPaths != nil {
+				var paths []string
+				for _, request := range server.Requests() {
+					if len(paths) == 0 || paths[len(paths)-1] != request.Path {
+						paths = append(paths, request.Path)
+					}
+				}
+				if !slices.Equal(paths, tc.wantPaths) {
+					t.Errorf(
+						"%s requested paths mismatch\ngot:  %v\nwant: %v",
+						prefix, paths, tc.wantPaths,
+					)
+				}
+			}
+
+			// AND: an empty list's ETag is remembered for next time.
+			if tc.wantETagSet != "" {
+				if got := getEmptyListETag(); got != tc.wantETagSet {
+					t.Errorf(
+						"%s empty-list ETag mismatch\ngot:  %q\nwant: %q",
+						prefix, got, tc.wantETagSet,
+					)
+				}
 			}
 		})
 	}
@@ -154,7 +469,6 @@ func TestGetResponse_ReadError(t *testing.T) {
 }
 
 func TestLookup_HandleResponse(t *testing.T) {
-	githubClientConnErr := `\/tags": http2: client conn could not be established`
 	type wants struct {
 		nilBody          bool
 		nextPage         int
@@ -163,8 +477,8 @@ func TestLookup_HandleResponse(t *testing.T) {
 		errRegex         string
 	}
 	type conditions struct {
-		hadReleases           bool
-		hadDefaultAccessToken bool
+		hadReleases bool
+		accessToken string // "unset" | "default", or anything else for a non-default token.
 	}
 
 	// GIVEN: a HTTP Response and an accompanying body.
@@ -177,9 +491,23 @@ func TestLookup_HandleResponse(t *testing.T) {
 		want        wants
 	}{
 		{
-			name: "200 OK/EmptyListETag set if default access_token",
+			name: "200 OK/EmptyListETag set if no access_token",
 			conditions: conditions{
-				hadDefaultAccessToken: true,
+				accessToken: "unset",
+			},
+			statusCode: http.StatusOK,
+			body:       []byte(`[]`),
+			want: wants{
+				nextPage:         2,
+				setEmptyListETag: true,
+				tagFallback:      true,
+				errRegex:         `^$`,
+			},
+		},
+		{
+			name: "200 OK/EmptyListETag set if the access_token spells the default",
+			conditions: conditions{
+				accessToken: "default",
 			},
 			statusCode: http.StatusOK,
 			body:       []byte(`[]`),
@@ -193,7 +521,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 		{
 			name: "200 OK/EmptyListETag not set if non-default access_token",
 			conditions: conditions{
-				hadDefaultAccessToken: false,
+				accessToken: "",
 			},
 			statusCode: http.StatusOK,
 			body:       []byte(`[]`),
@@ -377,97 +705,88 @@ func TestLookup_HandleResponse(t *testing.T) {
 
 			prefix := fmt.Sprintf("%s\nLookup.handleResponse()", packageName)
 
-			// Retry up-to 3 times if we get a client conn error on GitHub requests.
-			for try := range 3 {
-				t.Logf(
-					"%s - attempt %d\n",
-					prefix, try+1,
+			server := newGitHubServer(t, map[string]githubEndpoint{
+				"tags": {Pages: []string{string(testBody), string(testBody)}},
+			})
+
+			lookup := testLookup(t, false)
+			lookup.apiRoot = server.URL
+			resp := &http.Response{
+				StatusCode: tc.statusCode,
+				Header:     http.Header{},
+				Request: &http.Request{
+					URL: &url.URL{},
+				},
+			}
+			hadETag := tc.name
+			resp.Header.Add("ETag", hadETag)
+			if tc.conditions.hadReleases {
+				lookup.data.releases = testBodyObject
+			}
+			lookup.typeDefaults.AccessToken = ""
+			lookup.typeHardDefaults.AccessToken = "default-token"
+			switch tc.conditions.accessToken {
+			case "unset":
+				lookup.AccessToken = ""
+			case "default":
+				lookup.AccessToken = "default-token"
+			default:
+				lookup.AccessToken = "service-token"
+			}
+			if tc.lookupSetup != nil {
+				tc.lookupSetup(lookup)
+			}
+
+			logFrom := logx.LogFrom{Primary: "TestHandleResponse", Secondary: tc.name}
+
+			// WHEN: handleResponse is called on it.
+			gotBody, nextPage, err := lookup.handleResponse(resp, tc.body, logFrom)
+
+			e := errfmt.FormatError(err)
+
+			// THEN: any error is as expected.
+			if !util.RegexCheck(tc.want.errRegex, e) {
+				t.Errorf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, tc.want.errRegex, e,
 				)
+			}
 
-				lookup := testLookup(t, false)
-				resp := &http.Response{
-					StatusCode: tc.statusCode,
-					Header:     http.Header{},
-					Request: &http.Request{
-						URL: &url.URL{},
-					},
-				}
-				hadETag := tc.name
-				resp.Header.Add("ETag", hadETag)
-				if tc.conditions.hadReleases {
-					lookup.data.releases = testBodyObject
-				}
-				lookup.AccessToken = lookup.accessToken()
-				if !tc.conditions.hadDefaultAccessToken {
-					lookup.typeDefaults.AccessToken = ""
-					lookup.typeHardDefaults.AccessToken = "Something"
-				}
-				if tc.lookupSetup != nil {
-					tc.lookupSetup(lookup)
-				}
+			// AND: the body returned is as expected.
+			if tc.want.nilBody && len(gotBody) != 0 {
+				t.Errorf(
+					"%s body mismatch\ngot:  %q\nwant: nil",
+					prefix, string(tc.body),
+				)
+			} else if !tc.want.nilBody && len(gotBody) == 0 {
+				t.Errorf("%s body mismatch\ngot:  nil\nwant: non-nil", prefix)
+			}
 
-				logFrom := logx.LogFrom{Primary: "TestHandleResponse", Secondary: tc.name}
+			// AND: the new EmptyListETag is as expected.
+			emptyListETag := getEmptyListETag()
+			if tc.want.setEmptyListETag && emptyListETag != hadETag {
+				t.Errorf(
+					"%s didn't set empty list ETag\ngot:  %q\nwant: %q",
+					prefix, hadETag, emptyListETag,
+				)
+			} else if !tc.want.setEmptyListETag && emptyListETag == hadETag {
+				t.Errorf("%s empty list ETag should not have been set", prefix)
+			}
 
-				// WHEN: handleResponse is called on it.
-				gotBody, nextPage, err := lookup.handleResponse(resp, tc.body, logFrom)
+			// AND: the nextPage is as expected.
+			if nextPage != tc.want.nextPage {
+				t.Errorf(
+					"%s nextPage mismatch\ngot:  %d\nwant: %d",
+					prefix, nextPage, tc.want.nextPage,
+				)
+			}
 
-				// GitHub actions regularly fail /tags with:
-				//   'Get "https://api.github.com/repos/.../tags": http2: client conn could not be established'
-				e := errfmt.FormatError(err)
-				if util.RegexCheck(githubClientConnErr, e) {
-					t.Logf(
-						"%s retrying... %q\n",
-						prefix, e,
-					)
-					time.Sleep(time.Duration(rand.Intn(25)) * time.Millisecond)
-					continue
-				}
-
-				// THEN: any error is as expected.
-				if !util.RegexCheck(tc.want.errRegex, e) {
-					t.Errorf(
-						"%s error mismatch\ngot:  %q\nwant: %q",
-						prefix, tc.want.errRegex, e,
-					)
-				}
-
-				// AND: the body returned is as expected.
-				if tc.want.nilBody && len(gotBody) != 0 {
-					t.Errorf(
-						"%s body mismatch\ngot:  %q\nwant: nil",
-						prefix, string(tc.body),
-					)
-				} else if !tc.want.nilBody && len(gotBody) == 0 {
-					t.Errorf("%s body mismatch\ngot:  nil\nwant: non-nil", prefix)
-				}
-
-				// AND: the new EmptyListETag is as expected.
-				emptyListETag := getEmptyListETag()
-				if tc.want.setEmptyListETag && emptyListETag != hadETag {
-					t.Errorf(
-						"%s didn't set empty list ETag\ngot:  %q\nwant: %q",
-						prefix, hadETag, emptyListETag,
-					)
-				} else if !tc.want.setEmptyListETag && emptyListETag == hadETag {
-					t.Errorf("%s empty list ETag should not have been set", prefix)
-				}
-
-				// AND: the nextPage is as expected.
-				if nextPage != tc.want.nextPage {
-					t.Errorf(
-						"%s nextPage mismatch\ngot:  %d\nwant: %d",
-						prefix, nextPage, tc.want.nextPage,
-					)
-				}
-
-				// AND: TagFallback is as expected.
-				if got := lookup.data.TagFallback(); got != tc.want.tagFallback {
-					t.Errorf(
-						"%s TagFallback mismatch\ngot:  %t\nwant: %t",
-						prefix, got, tc.want.tagFallback,
-					)
-				}
-				break
+			// AND: TagFallback is as expected.
+			if got := lookup.data.TagFallback(); got != tc.want.tagFallback {
+				t.Errorf(
+					"%s TagFallback mismatch\ngot:  %t\nwant: %t",
+					prefix, got, tc.want.tagFallback,
+				)
 			}
 		})
 	}
@@ -611,42 +930,6 @@ func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
 					^command failed:
 						exit status 1$`,
 				),
-			},
-		},
-		{
-			name: "docker tag/found",
-			overrides: test.TrimYAML(`
-				require:
-					regex_version: "[0-9.]+"
-					regex_content: "(?i)argus.*amd64"
-					command: ["true"]
-					docker:
-						type: ghcr
-						image: ` + test.ArgusDockerGHCRRepo + `
-						tag: "{{ version }}"
-						token: ` + test.DockerHubToken(t) + `
-			`),
-			want: wants{
-				version:     defaultRelease.TagName,
-				releaseDate: defaultRelease.Assets[0].CreatedAt,
-				errRegex:    `^$`,
-			},
-		},
-		{
-			name: "docker tag/not found",
-			overrides: test.TrimYAML(`
-				require:
-					regex_version: "[0-9.]+"
-					regex_content: "(?i)argus.*amd64"
-					command: ["true"]
-					docker:
-						type: ghcr
-						image: "` + test.ArgusDockerGHCRRepo + `"
-						tag: "x{{ version }}"
-						token: ` + test.DockerHubToken(t) + `
-			`),
-			want: wants{
-				errRegex: `release-argus\/argus:x[0-9.]+ - .*tag not found`,
 			},
 		},
 	}
@@ -985,3 +1268,6 @@ func TestLookup_SetReleases(t *testing.T) {
 		})
 	}
 }
+
+// nonSemanticBody is a release whose tag only yields a version once
+// url_commands have run.

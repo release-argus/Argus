@@ -27,7 +27,8 @@ import (
 	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 )
 
-// These assert the shape of the GitHub API, so that an API change is reported here.
+// The tests below assert the shape of the GitHub API, so an API change fails here rather
+// than in the unit tests.
 
 // getAPI returns the response and body of a GET against the live API.
 func getAPI(t *testing.T, path string, header http.Header) (*http.Response, string) {
@@ -49,7 +50,7 @@ func getAPI(t *testing.T, path string, header http.Header) (*http.Response, stri
 
 	response, err := httpx.Client.Do(request)
 	if err != nil {
-		t.Skipf(
+		test.SkipUnlessRequired(t,
 			"%s\nGitHub unreachable for %q: %v",
 			packageName, path, err,
 		)
@@ -84,6 +85,8 @@ func getList(t *testing.T, path string) []forgetypes.Release {
 }
 
 func TestAPIContract__emptyListIsTwoBytes(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN: a repository that publishes no tags.
 	// WHEN: its tags are listed.
 	_, body := getAPI(t, "/repos/release-argus/.github/tags", nil)
@@ -98,6 +101,8 @@ func TestAPIContract__emptyListIsTwoBytes(t *testing.T) {
 }
 
 func TestAPIContract__tagsCarryANameNotATagName(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN: a repository that publishes tags.
 	// WHEN: its tags are listed.
 	tags := getList(t, "/repos/release-argus/Argus/tags?per_page=5")
@@ -120,6 +125,8 @@ func TestAPIContract__tagsCarryANameNotATagName(t *testing.T) {
 }
 
 func TestAPIContract__theLatestReleaseHasAMatchingTag(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN: a repository that publishes both releases and tags.
 	// WHEN: both lists are read.
 	releases := getList(t, "/repos/release-argus/Argus/releases?per_page=1")
@@ -154,6 +161,8 @@ func TestAPIContract__theLatestReleaseHasAMatchingTag(t *testing.T) {
 }
 
 func TestAPIContract__listCarriesAnETag(t *testing.T) {
+	t.Parallel()
+
 	// WHEN: any list is requested.
 	response, _ := getAPI(t, "/repos/release-argus/.github/tags", nil)
 
@@ -174,11 +183,16 @@ func TestAPIContract__listCarriesAnETag(t *testing.T) {
 }
 
 func TestAPIContract__matchingETagGives304(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN: the ETag of a list already held.
 	response, _ := getAPI(t, "/repos/release-argus/.github/tags", nil)
 	etag := response.Header.Get("ETag")
 	if etag == "" {
-		t.Skipf("%s\nno ETag to make a conditional request with", packageName)
+		test.SkipUnlessRequired(t,
+			"%s\nno ETag to make a conditional request with",
+			packageName,
+		)
 	}
 
 	// WHEN: it is asked for again, conditionally with this ETag.
@@ -186,7 +200,7 @@ func TestAPIContract__matchingETagGives304(t *testing.T) {
 	header.Set("If-None-Match", etag)
 	conditional, body := getAPI(t, "/repos/release-argus/.github/tags", header)
 
-	// THEN: nothing is sent back, and it costs no rate limit.
+	// THEN: it is a 304 with no body.
 	wantStatusCode := http.StatusNotModified
 	if got := conditional.StatusCode; got != wantStatusCode {
 		t.Errorf(
@@ -203,6 +217,8 @@ func TestAPIContract__matchingETagGives304(t *testing.T) {
 }
 
 func TestAPIContract__nextPageIsNamedInALinkHeader(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN: a repository with more releases than one page holds.
 	// WHEN: the first page is requested.
 	response, _ := getAPI(t, "/repos/release-argus/Argus/releases?per_page=1", nil)
@@ -218,6 +234,8 @@ func TestAPIContract__nextPageIsNamedInALinkHeader(t *testing.T) {
 }
 
 func TestAPIContract__unknownRepositoryGives404(t *testing.T) {
+	t.Parallel()
+
 	// WHEN: a repository that cannot be seen is requested.
 	response, body := getAPI(t, "/repos/release-argus/no-such-repository-exists/releases", nil)
 
@@ -239,18 +257,26 @@ func TestAPIContract__unknownRepositoryGives404(t *testing.T) {
 }
 
 func TestAPIContract__badCredentialGives401(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN: a token the API will not accept.
 	request, err := http.NewRequest(
 		http.MethodGet, defaultAPIRoot+"/repos/release-argus/Argus/releases", nil)
 	if err != nil {
-		t.Fatalf("%s\ncould not build a request: %v", packageName, err)
+		t.Fatalf(
+			"%s\ncould not build a request: %v",
+			packageName, err,
+		)
 	}
 	request.Header.Set("Authorization", "Bearer not-a-real-token")
 
 	// WHEN: it is sent.
 	response, err := httpx.Client.Do(request)
 	if err != nil {
-		t.Skipf("%s\nGitHub unreachable: %v", packageName, err)
+		test.SkipUnlessRequired(t,
+			"%s\nGitHub unreachable: %v",
+			packageName, err,
+		)
 	}
 	t.Cleanup(func() { _ = response.Body.Close() })
 	body, _ := httpx.ReadBody(response.Body)
@@ -265,7 +291,7 @@ func TestAPIContract__badCredentialGives401(t *testing.T) {
 	}
 	if got, want := string(body), "Bad credentials"; !strings.Contains(got, want) {
 		t.Errorf(
-			"%s\nthe %d body no longer names bad repository credentials as expected\ngot:  %q\nwant: %q",
+			"%s\nthe %d body no longer names bad credentials as expected\ngot:  %q\nwant: %q",
 			packageName, wantStatusCode,
 			got, want,
 		)

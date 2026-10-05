@@ -29,9 +29,14 @@ var (
 	defaultPerPage = 30
 )
 
+// Start empty, so that a Lookup asks unconditionally until a query learns the ETag.
 func init() {
 	setEmptyListETag("")
 }
+
+// defaultAPIRoot is the GitHub API root. A [Lookup] may override it with its
+// own apiRoot.
+const defaultAPIRoot = "https://api.github.com"
 
 // Data contains the information used and retrieved during GitHub requests,
 // including the ETag, associated releases, and the usage state of the "/tags" endpoint.
