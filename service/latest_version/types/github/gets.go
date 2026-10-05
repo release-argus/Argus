@@ -37,6 +37,11 @@ func (l *Lookup) accessToken() string {
 	)
 }
 
+// apiRootOrDefault returns the API root this Lookup queries.
+func (l *Lookup) apiRootOrDefault() string {
+	return util.ValueOr(l.apiRoot, defaultAPIRoot)
+}
+
 // url returns a GitHub API URL for the repository.
 func (l *Lookup) url(page int) string {
 	rawURL := util.EvalEnvVars(l.URL)
@@ -49,8 +54,8 @@ func (l *Lookup) url(page int) string {
 		apiTarget = "tags"
 	}
 	base := fmt.Sprintf(
-		"https://api.github.com/repos/%s/%s",
-		forge.EscapedOwnerRepo(rawURL), apiTarget,
+		"%s/repos/%s/%s",
+		l.apiRootOrDefault(), forge.EscapedOwnerRepo(rawURL), apiTarget,
 	)
 
 	params := make([]string, 0, 2)

@@ -42,6 +42,17 @@ func requireSecret(t TB, key string) string {
 	return v
 }
 
+// SkipUnlessRequired skips the test, or fails it when CI expects the secrets to
+// be present.
+func SkipUnlessRequired(t TB, format string, args ...any) {
+	t.Helper()
+
+	if os.Getenv(requireSecretsEnv) == "true" {
+		t.Fatalf(format, args...)
+	}
+	t.Skipf(format, args...)
+}
+
 // ShoutrrrGotifyToken returns the token for the Gotify test.
 func ShoutrrrGotifyToken() (token string) {
 	token = os.Getenv("ARGUS_TEST_GOTIFY_TOKEN")

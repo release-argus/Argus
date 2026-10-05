@@ -250,11 +250,12 @@ func TestLookup_InheritSecrets(t *testing.T) {
 
 			// AND: the Require is copied when expected.
 			if tc.inheritRequire {
-				if lookup.Require == nil {
+				switch {
+				case lookup.Require == nil:
 					t.Errorf("%s Require not copied over\ngot:  nil\nwant: non-nil", prefix)
-				} else if lookup.Require.Docker == nil {
+				case lookup.Require.Docker == nil:
 					t.Errorf("%s Require.Docker not copied over\ngot:  nil\nwant: non-nil", prefix)
-				} else {
+				default:
 					gotQueryToken, gotValidUntil := lookup.Require.Docker.GetAuth().GetQueryTokenSelf()
 					checkDockerToken(
 						t,

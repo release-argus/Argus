@@ -414,8 +414,7 @@ func TestAssertApplyOverrides_AddressMatch(t *testing.T) {
 			t.Parallel()
 
 			format := "yaml"
-			var v tStruct
-			v = &testStruct{}
+			var v tStruct = &testStruct{}
 
 			// WHEN: AssertApplyOverrides is called.
 			overridden, overridesErr, testErr := AssertApplyOverrides(

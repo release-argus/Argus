@@ -43,6 +43,8 @@ type Lookup struct {
 
 	typeDefaults     *Defaults // GitHub-specific Defaults.
 	typeHardDefaults *Defaults // GitHub-specific Hard Defaults.
+
+	apiRoot string // Overrides the API this Lookup queries. Empty uses [defaultAPIRoot].
 }
 
 // LookupDecode is an unmarshal-only helper for [Lookup].
@@ -133,6 +135,7 @@ func (l *Lookup) Clone(svcStatus *status.Status) *Lookup {
 		data:             *l.data.Copy(),
 		typeDefaults:     l.typeDefaults,
 		typeHardDefaults: l.typeHardDefaults,
+		apiRoot:          l.apiRoot,
 	}
 }
 

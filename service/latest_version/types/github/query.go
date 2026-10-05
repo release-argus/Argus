@@ -219,7 +219,7 @@ func (l *Lookup) handleStatusOK(resp *http.Response, body []byte, logFrom logx.L
 		defaultAccessToken := util.FirstNonDefaultWithEnv(l.typeDefaults.AccessToken, l.typeHardDefaults.AccessToken)
 		firstPage := !strings.HasPrefix(resp.Request.URL.RawQuery, "page=")
 		// Update the default empty list ETag if we used the default access_token.
-		if firstPage && (l.AccessToken == "" || l.accessToken() == defaultAccessToken) {
+		if firstPage && (l.AccessToken == "" || l.AccessToken == defaultAccessToken) {
 			setEmptyListETag(newETag)
 		}
 
