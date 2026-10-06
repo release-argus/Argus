@@ -50,7 +50,7 @@
     "@babel/plugin-syntax-jsx": "8.0.1",
     "@babel/preset-react": "8.0.1",
     "@babel/preset-typescript": "8.0.1",
-    "@biomejs/biome": "2.5.14",
+    "@biomejs/biome": "2.5.15",
     "@playwright/test": "1.63.0",
     "@tanstack/react-query-devtools": "5.104.0",
     "@types/node": "26.6.3",
