@@ -257,7 +257,7 @@ func TestLookup_Query(t *testing.T) {
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {Body: releasesBody},
 			},
-			requiredAuth: "token host-token",
+			requiredAuth: "Bearer host-token",
 			lookupYAML: `
 				url: owner/repo
 				access_token: host-token`,
@@ -269,7 +269,7 @@ func TestLookup_Query(t *testing.T) {
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {Body: releasesBody},
 			},
-			requiredAuth: "token host-token",
+			requiredAuth: "Bearer host-token",
 			defaults:     map[string]HostDefaults{"Fixture": {URL: hostPlaceholder, AccessToken: "host-token"}},
 			hostNamed:    true,
 			lookupYAML:   `url: owner/repo`,
@@ -281,7 +281,7 @@ func TestLookup_Query(t *testing.T) {
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {Body: releasesBody},
 			},
-			requiredAuth: "token host-token",
+			requiredAuth: "Bearer host-token",
 			defaults: map[string]HostDefaults{
 				"https://forge.example.com": {URL: "https://forge.example.com", AccessToken: "host-token"},
 			},
@@ -1452,7 +1452,7 @@ func TestLookup_CreateRequest(t *testing.T) {
 			endpoint:     endpointReleases,
 			page:         1,
 			wantURL:      "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
-			wantAuth:     "token service-token",
+			wantAuth:     "Bearer service-token",
 			errRegex:     `^$`,
 		},
 		{
@@ -1464,7 +1464,7 @@ func TestLookup_CreateRequest(t *testing.T) {
 			endpoint: endpointReleases,
 			page:     1,
 			wantURL:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
-			wantAuth: "token defaults-token",
+			wantAuth: "Bearer defaults-token",
 			errRegex: `^$`,
 		},
 		{
@@ -1578,7 +1578,7 @@ func TestLookup_RequestFor(t *testing.T) {
 			name:         "the access token is sent",
 			address:      "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
 			serviceToken: "service-token",
-			wantAuth:     "token service-token",
+			wantAuth:     "Bearer service-token",
 			errRegex:     `^$`,
 		},
 		{
