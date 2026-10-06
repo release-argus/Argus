@@ -10,7 +10,7 @@ import {
 import { headersSchema } from '@/utils/api/types/config-edit/shared/header/preprocess';
 import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import { stringDefault } from '@/utils/api/types/config-edit/shared/preprocess';
-import { regexStringWithFallback } from '@/utils/api/types/config-edit/validators';
+import { regexStringWithFallback, REQUIRED_MESSAGE } from '@/utils/api/types/config-edit/validators';
 
 /* Type: manual */
 
@@ -73,10 +73,30 @@ const deployedVersionURLSchemaDefault = deployedVersionURLSchema.extend({
 	url: stringDefault,
 });
 
+/* Type: command */
+
+export const deployedVersionCommandSchema = z.object({
+	command: z
+		.array(z.string().min(1, REQUIRED_MESSAGE).default(''))
+		.min(1, REQUIRED_MESSAGE),
+	regex: regexStringWithFallback(false),
+	type: z.literal(DEPLOYED_VERSION_LOOKUP_TYPE.COMMAND.value),
+});
+export type DeployedVersionCommandSchema = z.infer<
+	typeof deployedVersionCommandSchema
+>;
+
+const deployedVersionCommandSchemaDefault = z.object({
+	command: z.array(stringDefault).default([]),
+	regex: stringDefault,
+	type: z.literal(DEPLOYED_VERSION_LOOKUP_TYPE.COMMAND.value),
+});
+
 /* All */
 export const deployedVersionLookupSchema = z.discriminatedUnion('type', [
 	deployedVersionManualSchema,
 	deployedVersionURLSchema,
+	deployedVersionCommandSchema,
 ]);
 
 export type DeployedVersionLookupSchema = z.infer<
@@ -92,6 +112,7 @@ export const isDeployedVersionType = (
 export const deployedVersionLookupSchemaDefault = z.discriminatedUnion('type', [
 	deployedVersionManualSchemaDefault,
 	deployedVersionURLSchemaDefault,
+	deployedVersionCommandSchemaDefault,
 ]);
 export type DeployedVersionLookupSchemaDefault = z.infer<
 	typeof deployedVersionLookupSchemaDefault
