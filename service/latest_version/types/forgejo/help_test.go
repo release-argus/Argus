@@ -221,7 +221,7 @@ func newResponse(
 		)
 	}
 	if accessToken != "" {
-		request.Header.Set("Authorization", "token "+accessToken)
+		request.Header.Set("Authorization", "Bearer "+accessToken)
 	}
 
 	response := &http.Response{

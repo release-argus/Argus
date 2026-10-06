@@ -227,7 +227,7 @@ func (l *Lookup) requestFor(address string, logFrom logx.LogFrom) (*http.Request
 	}
 
 	if accessToken := l.accessToken(); accessToken != "" {
-		req.Header.Set("Authorization", "token "+accessToken)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 	}
 
 	return req, nil

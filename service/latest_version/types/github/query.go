@@ -138,7 +138,7 @@ func (l *Lookup) createRequest(page int, logFrom logx.LogFrom) (*http.Request, e
 
 	// Access Token.
 	if accessToken := l.accessToken(); accessToken != "" {
-		req.Header.Set("Authorization", "token "+accessToken)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 	}
 	// Conditional requests - https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api?apiVersion=2022-11-28#use-conditional-requests-if-appropriate.
 	if etag := l.data.ETag(); etag != "" {
