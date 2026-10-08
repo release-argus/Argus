@@ -31,6 +31,7 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/types/forge"
 	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
+	forgetest "github.com/release-argus/Argus/service/latest_version/types/forge/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
@@ -56,7 +57,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "valid/the highest non-prerelease version is reported",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
 			lookupYAML:  `url: Release-Argus/Argus`,
 			metrics:     true,
@@ -67,7 +68,7 @@ func TestLookup_Query(t *testing.T) {
 			name: "valid/the highest semantic version wins, not the most recently published",
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {
-					body: test.TrimJSON(`[
+					Body: test.TrimJSON(`[
 						{"tag_name":"1.0.0","prerelease":false,"published_at":"2000-01-01T00:00:00Z"},
 						{"tag_name":"0.9.9","prerelease":false,"published_at":"2000-01-02T00:00:00Z"}
 					]`),
@@ -80,8 +81,8 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "valid/tags fallback, on the newline-terminated empty-list encoding",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListNewline},
-				endpointTags:     {body: tagsBody},
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: tagsBody},
 			},
 			lookupYAML:  `url: owner/repo`,
 			wantVersion: "0.12.1",
@@ -90,8 +91,8 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "valid/tags fallback, on the compact empty-list encoding",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListCompact},
-				endpointTags:     {body: tagsBody},
+				endpointReleases: {Body: emptyListCompact},
+				endpointTags:     {Body: tagsBody},
 			},
 			lookupYAML:  `url: owner/repo`,
 			wantVersion: "0.12.1",
@@ -100,7 +101,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "valid/releases disabled (404), tags fallback",
 			endpoints: map[string]forgeEndpoint{
-				endpointTags: {body: tagsBody},
+				endpointTags: {Body: tagsBody},
 			},
 			lookupYAML:  `url: owner/repo`,
 			wantVersion: "0.12.1",
@@ -109,7 +110,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "valid/url_commands filter the tag",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: test.TrimJSON(`[
+				endpointReleases: {Body: test.TrimJSON(`[
 					{"tag_name":"release-1.2.3","prerelease":false,"published_at":"2026-01-01T00:00:00Z"}
 				]`)},
 			},
@@ -124,7 +125,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "valid/require regex_version narrows the release taken",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: test.TrimJSON(`[
+				endpointReleases: {Body: test.TrimJSON(`[
 					{"tag_name":"2.0.0","prerelease":false,"published_at":"2026-02-01T00:00:00Z"},
 					{"tag_name":"1.9.0","prerelease":false,"published_at":"2026-01-01T00:00:00Z"}
 				]`)},
@@ -139,8 +140,8 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "invalid/no releases nor tags",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListNewline},
-				endpointTags:     {body: emptyListNewline},
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: emptyListNewline},
 			},
 			lookupYAML: `url: owner/repo`,
 			errRegex:   `^no releases or tags were found$`,
@@ -148,7 +149,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "invalid/releases empty, tags 404",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListNewline},
+				endpointReleases: {Body: emptyListNewline},
 			},
 			lookupYAML: `url: owner/repo`,
 			errRegex:   `^no releases were found, and the repository's tags are disabled$`,
@@ -156,7 +157,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "invalid/releases 404, tags empty",
 			endpoints: map[string]forgeEndpoint{
-				endpointTags: {body: emptyListCompact},
+				endpointTags: {Body: emptyListCompact},
 			},
 			lookupYAML: `url: owner/repo`,
 			errRegex:   `^no tags were found, and the repository's releases are disabled$`,
@@ -179,8 +180,8 @@ func TestLookup_Query(t *testing.T) {
 			name: "invalid/401",
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {
-					status: http.StatusUnauthorized,
-					body:   `{"message":"token is required"}`,
+					Status: http.StatusUnauthorized,
+					Body:   `{"message":"token is required"}`,
 				},
 			},
 			lookupYAML: `url: owner/repo`,
@@ -190,8 +191,8 @@ func TestLookup_Query(t *testing.T) {
 			name: "invalid/403 without rate-limit headers",
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {
-					status: http.StatusForbidden,
-					body:   `{"message":"forbidden"}`,
+					Status: http.StatusForbidden,
+					Body:   `{"message":"forbidden"}`,
 				},
 			},
 			lookupYAML: `url: owner/repo`,
@@ -201,9 +202,9 @@ func TestLookup_Query(t *testing.T) {
 			name: "invalid/403 with rate-limit headers",
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {
-					status:  http.StatusForbidden,
-					headers: map[string]string{"RateLimit": `"baseline";r=0;t=600`},
-					body:    `{"message":"forbidden"}`,
+					Status:  http.StatusForbidden,
+					Headers: map[string]string{"RateLimit": `"baseline";r=0;t=600`},
+					Body:    `{"message":"forbidden"}`,
 				},
 			},
 			lookupYAML: `url: owner/repo`,
@@ -213,8 +214,8 @@ func TestLookup_Query(t *testing.T) {
 			name: "invalid/429",
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {
-					status: http.StatusTooManyRequests,
-					body:   `<!DOCTYPE html><html class="codeberg-design"><body>Too many requests</body></html>`,
+					Status: http.StatusTooManyRequests,
+					Body:   `<!DOCTYPE html><html class="codeberg-design"><body>Too many requests</body></html>`,
 				},
 			},
 			lookupYAML: `url: owner/repo`,
@@ -224,9 +225,9 @@ func TestLookup_Query(t *testing.T) {
 			name: "invalid/429 with a retry window",
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {
-					status:  http.StatusTooManyRequests,
-					headers: map[string]string{"Retry-After": "120"},
-					body:    `<!DOCTYPE html><html><body>Too many requests</body></html>`,
+					Status:  http.StatusTooManyRequests,
+					Headers: map[string]string{"Retry-After": "120"},
+					Body:    `<!DOCTYPE html><html><body>Too many requests</body></html>`,
 				},
 			},
 			lookupYAML: `url: owner/repo`,
@@ -236,8 +237,8 @@ func TestLookup_Query(t *testing.T) {
 			name: "invalid/unmapped status code is reported with its body",
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {
-					status: http.StatusInternalServerError,
-					body:   "proxy error",
+					Status: http.StatusInternalServerError,
+					Body:   "proxy error",
 				},
 			},
 			lookupYAML: `url: owner/repo`,
@@ -246,7 +247,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "invalid/body that is not a release list",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: `<!DOCTYPE html><html><body>not the API</body></html>`},
+				endpointReleases: {Body: `<!DOCTYPE html><html><body>not the API</body></html>`},
 			},
 			lookupYAML: `url: owner/repo`,
 			errRegex:   `release data failed to parse`,
@@ -254,9 +255,9 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "valid/service's own token passes",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
-			requiredAuth: "token host-token",
+			requiredAuth: "Bearer host-token",
 			lookupYAML: `
 				url: owner/repo
 				access_token: host-token`,
@@ -266,9 +267,9 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "valid/token from the named host entry passes",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
-			requiredAuth: "token host-token",
+			requiredAuth: "Bearer host-token",
 			defaults:     map[string]HostDefaults{"Fixture": {URL: hostPlaceholder, AccessToken: "host-token"}},
 			hostNamed:    true,
 			lookupYAML:   `url: owner/repo`,
@@ -278,9 +279,9 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "invalid/token bound to another host is not sent",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
-			requiredAuth: "token host-token",
+			requiredAuth: "Bearer host-token",
 			defaults: map[string]HostDefaults{
 				"https://forge.example.com": {URL: "https://forge.example.com", AccessToken: "host-token"},
 			},
@@ -290,7 +291,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "valid/host entry relaxes certificate trust for this instance",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
 			tls:         true,
 			defaults:    map[string]HostDefaults{"Fixture": {URL: hostPlaceholder, AllowInvalidCerts: new(true)}},
@@ -302,7 +303,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "invalid/untrusted certificate is rejected",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
 			tls:        true,
 			lookupYAML: `url: owner/repo`,
@@ -311,7 +312,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "invalid/certificate trust relaxed for another host does not apply here",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
 			tls: true,
 			defaults: map[string]HostDefaults{
@@ -323,7 +324,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "invalid/no release matches the url_commands",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: test.TrimJSON(`[
+				endpointReleases: {Body: test.TrimJSON(`[
 					{"tag_name":"not-a-version","prerelease":false,"published_at":"2026-01-01T00:00:00Z"}
 				]`)},
 			},
@@ -333,7 +334,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "valid/an instance served under a sub-path prefixes the API path",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
 			hostSuffix:  "/git",
 			lookupYAML:  `url: owner/repo`,
@@ -350,7 +351,7 @@ func TestLookup_Query(t *testing.T) {
 		{
 			name: "invalid/an instance that is not listening",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
 			closeServer: true,
 			lookupYAML:  `url: owner/repo`,
@@ -367,7 +368,7 @@ func TestLookup_Query(t *testing.T) {
 				start = httptest.NewTLSServer
 			}
 			server := startForgeServer(t,
-				&forgeServer{endpoints: tc.endpoints, requireAuth: tc.requiredAuth},
+				&forgeServer{Endpoints: tc.endpoints, RequireAuth: tc.requiredAuth},
 				start)
 			if tc.closeServer {
 				server.Close()
@@ -407,9 +408,9 @@ func TestLookup_Query(t *testing.T) {
 			// AND: the API paths requested are as expected.
 			if tc.wantPaths != nil {
 				var paths []string
-				for _, request := range server.requests() {
-					if len(paths) == 0 || paths[len(paths)-1] != request.path {
-						paths = append(paths, request.path)
+				for _, request := range server.Requests() {
+					if len(paths) == 0 || paths[len(paths)-1] != request.Path {
+						paths = append(paths, request.Path)
 					}
 				}
 				if !slices.Equal(paths, tc.wantPaths) {
@@ -434,7 +435,7 @@ func TestLookup_Query__Paginates(t *testing.T) {
 		{
 			name: "releases",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {pages: []string{
+				endpointReleases: {Pages: []string{
 					test.TrimJSON(`[{"tag_name":"not-a-version","prerelease":false}]`),
 					test.TrimJSON(`[{"tag_name":"1.2.3","prerelease":false}]`),
 				}},
@@ -445,8 +446,8 @@ func TestLookup_Query__Paginates(t *testing.T) {
 		{
 			name: "tags, after falling back to them",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListNewline},
-				endpointTags: {pages: []string{
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags: {Pages: []string{
 					test.TrimJSON(`[{"name":"not-a-version"}]`),
 					test.TrimJSON(`[{"name":"3.2.1"}]`),
 				}},
@@ -482,9 +483,9 @@ func TestLookup_Query__Paginates(t *testing.T) {
 			}
 
 			// AND: page 2 was asked for by number, from the endpoint the version was on.
-			requests := server.requests()
-			if !slices.ContainsFunc(requests, func(r recordedRequest) bool {
-				return r.query.Get("page") == "2" && strings.HasSuffix(r.path, "/"+tc.wantOn)
+			requests := server.Requests()
+			if !slices.ContainsFunc(requests, func(r forgetest.RecordedRequest) bool {
+				return r.Query.Get("page") == "2" && strings.HasSuffix(r.Path, "/"+tc.wantOn)
 			}) {
 				t.Fatalf(
 					"%s never requested page 2 of /%s\ngot:  %+v",
@@ -494,10 +495,10 @@ func TestLookup_Query__Paginates(t *testing.T) {
 
 			// AND: the page size used the forge's own parameter name, at its cap.
 			for _, request := range requests {
-				if got, want := request.query.Get("limit"), fmt.Sprint(apiPageSize); got != want {
+				if got, want := request.Query.Get("limit"), fmt.Sprint(apiPageSize); got != want {
 					t.Fatalf(
 						"%s limit mismatch on %s\ngot:  %q\nwant: %q",
-						prefix, request.path, got, want,
+						prefix, request.Path, got, want,
 					)
 				}
 			}
@@ -508,7 +509,7 @@ func TestLookup_Query__Paginates(t *testing.T) {
 func TestLookup_Query__CachesNothingBetweenQueries(t *testing.T) {
 	// GIVEN: an instance serving releases.
 	server := newForgeServer(t, map[string]forgeEndpoint{
-		endpointReleases: {body: releasesBody},
+		endpointReleases: {Body: releasesBody},
 	})
 	lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
 	logFrom := logx.LogFrom{Primary: t.Name()}
@@ -520,7 +521,7 @@ func TestLookup_Query__CachesNothingBetweenQueries(t *testing.T) {
 			packageName, err,
 		)
 	}
-	afterFirst := len(server.requests())
+	afterFirst := len(server.Requests())
 
 	if _, err := lookup.Query(false, logFrom); err != nil {
 		t.Fatalf(
@@ -530,7 +531,7 @@ func TestLookup_Query__CachesNothingBetweenQueries(t *testing.T) {
 	}
 
 	// THEN: the second query went to the instance rather than reusing a cached response.
-	if got := len(server.requests()); got <= afterFirst {
+	if got := len(server.Requests()); got <= afterFirst {
 		t.Fatalf(
 			"%s\nLookup.Query() reused a cached response\ngot:  %d requests\nwant: more than %d",
 			packageName, got, afterFirst,
@@ -558,8 +559,8 @@ func TestLookup_Query__NoTagsFallback(t *testing.T) {
 			t.Parallel()
 
 			server := newForgeServer(t, map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListNewline},
-				endpointTags:     {body: tagsBody},
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: tagsBody},
 			})
 			lookupYAML := "host: " + server.URL + "\n" + test.TrimYAML(tc.lookupYAML)
 			lookup := testLookup(t, lookupYAML)
@@ -579,11 +580,11 @@ func TestLookup_Query__NoTagsFallback(t *testing.T) {
 			}
 
 			// AND: /tags was never requested.
-			for _, request := range server.requests() {
-				if strings.HasSuffix(request.path, "/"+endpointTags) {
+			for _, request := range server.Requests() {
+				if strings.HasSuffix(request.Path, "/"+endpointTags) {
 					t.Fatalf(
 						"%s requested /%s, which cannot satisfy the filters\ngot:  %q",
-						prefix, endpointTags, request.path,
+						prefix, endpointTags, request.Path,
 					)
 				}
 			}
@@ -1451,7 +1452,7 @@ func TestLookup_CreateRequest(t *testing.T) {
 			endpoint:     endpointReleases,
 			page:         1,
 			wantURL:      "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
-			wantAuth:     "token service-token",
+			wantAuth:     "Bearer service-token",
 			errRegex:     `^$`,
 		},
 		{
@@ -1463,7 +1464,7 @@ func TestLookup_CreateRequest(t *testing.T) {
 			endpoint: endpointReleases,
 			page:     1,
 			wantURL:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
-			wantAuth: "token defaults-token",
+			wantAuth: "Bearer defaults-token",
 			errRegex: `^$`,
 		},
 		{
@@ -1577,7 +1578,7 @@ func TestLookup_RequestFor(t *testing.T) {
 			name:         "the access token is sent",
 			address:      "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
 			serviceToken: "service-token",
-			wantAuth:     "token service-token",
+			wantAuth:     "Bearer service-token",
 			errRegex:     `^$`,
 		},
 		{
@@ -1648,7 +1649,7 @@ func TestLookup_GetResponse(t *testing.T) {
 		t.Parallel()
 
 		server := newForgeServer(t, map[string]forgeEndpoint{
-			endpointReleases: {body: releasesBody},
+			endpointReleases: {Body: releasesBody},
 		})
 		lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
 		logFrom := logx.LogFrom{Primary: t.Name()}
@@ -1735,7 +1736,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		{
 			name: "valid/a page of releases",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
 			endpoint: endpointReleases,
 			page:     1,
@@ -1745,7 +1746,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		{
 			name: "valid/a paginated page advertises the next",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {pages: []string{releasesBody, tagsBody}},
+				endpointReleases: {Pages: []string{releasesBody, tagsBody}},
 			},
 			endpoint:     endpointReleases,
 			page:         1,
@@ -1756,7 +1757,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		{
 			name: "invalid/an empty first page",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListNewline},
+				endpointReleases: {Body: emptyListNewline},
 			},
 			endpoint: endpointReleases,
 			page:     1,
@@ -1888,7 +1889,7 @@ func TestLookup_QueryPage(t *testing.T) {
 		{
 			name: "a first version is recorded, but is not announced as new",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
 			page:       1,
 			wantLatest: "0.17.4",
@@ -1897,7 +1898,7 @@ func TestLookup_QueryPage(t *testing.T) {
 		{
 			name: "a version replacing an older one is new",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
 			page:           1,
 			latestVersion:  "0.1.0",
@@ -1908,7 +1909,7 @@ func TestLookup_QueryPage(t *testing.T) {
 		{
 			name: "an unchanged version is neither new nor an error",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
 			page:          1,
 			latestVersion: "0.17.4",
@@ -1918,7 +1919,7 @@ func TestLookup_QueryPage(t *testing.T) {
 		{
 			name: "no version on this page, but another page to try",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {pages: []string{
+				endpointReleases: {Pages: []string{
 					`[{"tag_name":"not-a-version","prerelease":false}]`,
 					releasesBody,
 				}},
@@ -1930,7 +1931,7 @@ func TestLookup_QueryPage(t *testing.T) {
 		{
 			name: "no version and no further page is an error",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: `[{"tag_name":"not-a-version","prerelease":false}]`},
+				endpointReleases: {Body: `[{"tag_name":"not-a-version","prerelease":false}]`},
 			},
 			page:     1,
 			errRegex: `^no releases were found matching the url_commands on page 1 of the API response$`,
@@ -1994,9 +1995,9 @@ func TestLookup_QueryPage(t *testing.T) {
 			}
 
 			// AND: it asked for the endpoint it was handed.
-			if requests := server.requests(); len(requests) != 0 {
+			if requests := server.Requests(); len(requests) != 0 {
 				wantPath := "/api/v1/repos/owner/repo/" + endpointReleases
-				if got := requests[0].path; got != wantPath {
+				if got := requests[0].Path; got != wantPath {
 					t.Errorf(
 						"%s requested the wrong path\ngot:  %q\nwant: %q",
 						prefix, got, wantPath,
@@ -2021,7 +2022,7 @@ func TestLookup_QueryEndpoint(t *testing.T) {
 		{
 			name: "a version on the first page",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
 			endpoint:   endpointReleases,
 			wantLatest: "0.17.4",
@@ -2030,7 +2031,7 @@ func TestLookup_QueryEndpoint(t *testing.T) {
 		{
 			name: "a newer version on the first page",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
+				endpointReleases: {Body: releasesBody},
 			},
 			latestVersion:  "0.0.1",
 			endpoint:       endpointReleases,
@@ -2041,7 +2042,7 @@ func TestLookup_QueryEndpoint(t *testing.T) {
 		{
 			name: "a version only on a later page",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {pages: []string{
+				endpointReleases: {Pages: []string{
 					`[{"tag_name":"not-a-version","prerelease":false}]`,
 					`[{"tag_name":"nor-this","prerelease":false}]`,
 					`[{"tag_name":"3.2.1","prerelease":false,"published_at":"2026-01-01T00:00:00Z"}]`,
@@ -2054,7 +2055,7 @@ func TestLookup_QueryEndpoint(t *testing.T) {
 		{
 			name: "the tags endpoint is walked",
 			endpoints: map[string]forgeEndpoint{
-				endpointTags: {body: tagsBody},
+				endpointTags: {Body: tagsBody},
 			},
 			endpoint:   endpointTags,
 			wantLatest: "0.12.1",
@@ -2063,7 +2064,7 @@ func TestLookup_QueryEndpoint(t *testing.T) {
 		{
 			name: "an empty list stops the walk with nothing to filter",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListCompact},
+				endpointReleases: {Body: emptyListCompact},
 			},
 			endpoint: endpointReleases,
 			errRegex: `^empty list$`,
@@ -2071,7 +2072,7 @@ func TestLookup_QueryEndpoint(t *testing.T) {
 		{
 			name: "pages that never yield a version end in an error",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {pages: []string{
+				endpointReleases: {Pages: []string{
 					`[{"tag_name":"not-a-version","prerelease":false}]`,
 					`[{"tag_name":"nor-this","prerelease":false}]`,
 				}},
@@ -2083,8 +2084,8 @@ func TestLookup_QueryEndpoint(t *testing.T) {
 			name: "a next page that does not advance is refused",
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {
-					body: `[{"tag_name":"not-a-version","prerelease":false}]`,
-					headers: map[string]string{
+					Body: `[{"tag_name":"not-a-version","prerelease":false}]`,
+					Headers: map[string]string{
 						"Link": `<https://root-url.example.com/api/v1/repos/o/r/releases?page=1>; rel="next"`,
 					},
 				},
@@ -2096,8 +2097,8 @@ func TestLookup_QueryEndpoint(t *testing.T) {
 			name: "an endless walk stops at the page cap",
 			endpoints: map[string]forgeEndpoint{
 				endpointReleases: {
-					body:    `[{"tag_name":"not-a-version","prerelease":false}]`,
-					endless: true,
+					Body:    `[{"tag_name":"not-a-version","prerelease":false}]`,
+					Endless: true,
 				},
 			},
 			endpoint: endpointReleases,
@@ -2164,8 +2165,8 @@ func TestLookup_Query__EndpointFallback(t *testing.T) {
 		{
 			name: "releases answer, so tags are never asked for",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: releasesBody},
-				endpointTags:     {body: tagsBody},
+				endpointReleases: {Body: releasesBody},
+				endpointTags:     {Body: tagsBody},
 			},
 			lookupYAML:    `url: owner/repo`,
 			wantRequested: []string{endpointReleases},
@@ -2175,8 +2176,8 @@ func TestLookup_Query__EndpointFallback(t *testing.T) {
 		{
 			name: "an empty releases list falls through to tags",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListNewline},
-				endpointTags:     {body: tagsBody},
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: tagsBody},
 			},
 			lookupYAML:    `url: owner/repo`,
 			wantRequested: []string{endpointReleases, endpointTags},
@@ -2186,8 +2187,8 @@ func TestLookup_Query__EndpointFallback(t *testing.T) {
 		{
 			name: "filters that tags cannot satisfy stop the fallback",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListNewline},
-				endpointTags:     {body: tagsBody},
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: tagsBody},
 			},
 			lookupYAML: `
 				url: owner/repo
@@ -2199,8 +2200,8 @@ func TestLookup_Query__EndpointFallback(t *testing.T) {
 		{
 			name: "wanting prereleases doesn't stop the tags fallback",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListNewline},
-				endpointTags:     {body: tagsBody},
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: tagsBody},
 			},
 			lookupYAML: `
 				url: owner/repo
@@ -2212,8 +2213,8 @@ func TestLookup_Query__EndpointFallback(t *testing.T) {
 		{
 			name: "a pre-release tag is excluded by default as its name labels it",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListNewline},
-				endpointTags:     {body: preReleaseTagsBody},
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: preReleaseTagsBody},
 			},
 			lookupYAML:    `url: owner/repo`,
 			wantRequested: []string{endpointReleases, endpointTags},
@@ -2223,8 +2224,8 @@ func TestLookup_Query__EndpointFallback(t *testing.T) {
 		{
 			name: "a pre-release tag is taken when prereleases are wanted",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {body: emptyListNewline},
-				endpointTags:     {body: preReleaseTagsBody},
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: preReleaseTagsBody},
 			},
 			lookupYAML: `
 				url: owner/repo
@@ -2236,8 +2237,8 @@ func TestLookup_Query__EndpointFallback(t *testing.T) {
 		{
 			name: "a rate limit stops the fallback",
 			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {status: http.StatusTooManyRequests, body: "<!DOCTYPE html>"},
-				endpointTags:     {body: tagsBody},
+				endpointReleases: {Status: http.StatusTooManyRequests, Body: "<!DOCTYPE html>"},
+				endpointTags:     {Body: tagsBody},
 			},
 			lookupYAML:    `url: owner/repo`,
 			wantRequested: []string{endpointReleases},
@@ -2277,8 +2278,8 @@ func TestLookup_Query__EndpointFallback(t *testing.T) {
 
 			// AND: only the expected endpoints were asked for.
 			var requested []string
-			for _, request := range server.requests() {
-				endpoint := path.Base(request.path)
+			for _, request := range server.Requests() {
+				endpoint := path.Base(request.Path)
 				if len(requested) == 0 || requested[len(requested)-1] != endpoint {
 					requested = append(requested, endpoint)
 				}
@@ -2299,7 +2300,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 		t.Parallel()
 
 		server := newForgeServer(t, map[string]forgeEndpoint{
-			endpointReleases: {body: releasesBody},
+			endpointReleases: {Body: releasesBody},
 		})
 		lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
 
@@ -2318,7 +2319,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 		}
 
 		// THEN: it asked the instance again before recording the version.
-		if got := len(server.requests()); got != 1 {
+		if got := len(server.Requests()); got != 1 {
 			t.Fatalf(
 				"%s\nLookup.handleNewVersion() request count mismatch\ngot:  %d\nwant: 1",
 				packageName, got,

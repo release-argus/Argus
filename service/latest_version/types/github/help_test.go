@@ -19,6 +19,7 @@ package github
 
 import (
 	"fmt"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -29,6 +30,7 @@ import (
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
 	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
+	forgetest "github.com/release-argus/Argus/service/latest_version/types/forge/test"
 	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
@@ -36,7 +38,6 @@ import (
 )
 
 var packageName = "latestver_github"
-var initialEmptyListETag string
 var testBody = []byte(
 	test.TrimJSON(`[
 		{
@@ -67,12 +68,6 @@ func TestMain(m *testing.M) {
 	// Log.
 	logtest.InitLog()
 
-	// Leave the ETag at default when missing the GITHUB_TOKEN.
-	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
-		SetEmptyListETag(token)
-		initialEmptyListETag = getEmptyListETag()
-	}
-
 	// Unmarshal testBody.
 	_ = decode.Unmarshal("json", testBody, &testBodyObject)
 
@@ -90,12 +85,12 @@ func TestMain(m *testing.M) {
 
 // newData returns a new Data.
 func newData(
-	eTag string,
+	etag string,
 	releases *[]forgetypes.Release,
 ) *Data {
 	// ETag - https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests.
-	if eTag == "" {
-		eTag = getEmptyListETag()
+	if etag == "" {
+		etag = getEmptyListETag()
 	}
 	// Releases.
 	var releasesDeref []forgetypes.Release
@@ -104,7 +99,7 @@ func newData(
 	}
 
 	return &Data{
-		eTag:     eTag,
+		etag:     etag,
 		releases: releasesDeref,
 	}
 }
@@ -142,9 +137,7 @@ func testLookup(t *testing.T, failing bool) *Lookup {
 		lvCfg,
 	)
 
-	typeHardDefaults := &Defaults{
-		AccessToken: test.GitHubToken(t),
-	}
+	typeHardDefaults := &Defaults{}
 	typeHardDefaults.Default()
 	lookup.SetTypeDefaults(&Defaults{}, typeHardDefaults)
 
@@ -175,4 +168,27 @@ func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
 		Soft: defaults,
 		Hard: hardDefaults,
 	}
+}
+
+// githubEndpoint is one endpoint's reply, shared with the other forges.
+type githubEndpoint = forgetest.Endpoint
+
+// githubServer is a fixture standing in for the GitHub API.
+type githubServer = forgetest.Server
+
+// newGitHubServer starts a fixture serving `endpoints`.
+func newGitHubServer(t *testing.T, endpoints map[string]githubEndpoint) *githubServer {
+	t.Helper()
+
+	return startGitHubServer(t, &githubServer{Endpoints: endpoints})
+}
+
+// startGitHubServer starts `server`, giving it the replies the GitHub API gives.
+func startGitHubServer(t *testing.T, server *githubServer) *githubServer {
+	t.Helper()
+
+	server.UnauthorizedBody = `{"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}`
+	server.NotFoundBody = `{"message":"Not Found","documentation_url":"https://docs.github.com/rest"}`
+
+	return forgetest.Start(t, server, httptest.NewServer)
 }

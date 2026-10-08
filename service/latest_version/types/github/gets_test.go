@@ -19,6 +19,7 @@ package github
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -259,10 +260,10 @@ func TestLookup_UsePreRelease(t *testing.T) {
 
 			// THEN: the expected value is returned.
 			wantStr := test.StringifyPtr(tc.want)
-			if got := fmt.Sprint(result); got != wantStr {
+			if got := strconv.FormatBool(result); got != wantStr {
 				t.Errorf(
 					"%s\nLookup.usePreRelease() mismatch\ngot:  %q\nwant: %q",
-					packageName, wantStr, got,
+					packageName, got, wantStr,
 				)
 			}
 		})

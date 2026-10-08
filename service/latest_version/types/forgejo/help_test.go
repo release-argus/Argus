@@ -22,18 +22,15 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
-	"path"
-	"strconv"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
+	forgetest "github.com/release-argus/Argus/service/latest_version/types/forge/test"
 	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	statustest "github.com/release-argus/Argus/service/status/test"
@@ -107,48 +104,19 @@ func TestMain(m *testing.M) {
 }
 
 // forgeEndpoint is one endpoint's reply.
-//
-// With `pages` set, the endpoint paginates: page N serves pages[N-1], and every page but the
-// last advertises the next through a Link header.
-type forgeEndpoint struct {
-	status  int               // Response status code. Defaults to 200.
-	headers map[string]string // Extra response headers.
-	body    string            // Response body, when not paginating.
-	pages   []string          // One body per page.
-	endless bool              // Serve `body` on every page, always naming a next page.
-}
-
-// recordedRequest is a request the fixture server received.
-type recordedRequest struct {
-	path   string
-	query  url.Values
-	header http.Header
-}
+type forgeEndpoint = forgetest.Endpoint
 
 // forgeServer is a fixture standing in for a Forgejo instance.
-type forgeServer struct {
-	*httptest.Server
-
-	// endpoints maps the last path segment ("releases"/"tags") to its reply. An unmapped
-	// segment gets the 404 a real instance gives for a missing repository, or for one with
-	// the feature disabled.
-	endpoints map[string]forgeEndpoint
-
-	// requireAuth, when set, is the Authorization every request must carry.
-	requireAuth string
-
-	mu       sync.Mutex
-	received []recordedRequest
-}
+type forgeServer = forgetest.Server
 
 // newForgeServer starts a fixture serving `endpoints`.
 func newForgeServer(t *testing.T, endpoints map[string]forgeEndpoint) *forgeServer {
 	t.Helper()
 
-	return startForgeServer(t, &forgeServer{endpoints: endpoints}, httptest.NewServer)
+	return startForgeServer(t, &forgeServer{Endpoints: endpoints}, httptest.NewServer)
 }
 
-// startForgeServer starts `server`.
+// startForgeServer starts `server`, giving it the replies a Forgejo instance gives.
 func startForgeServer(
 	t *testing.T,
 	server *forgeServer,
@@ -156,77 +124,25 @@ func startForgeServer(
 ) *forgeServer {
 	t.Helper()
 
-	server.Server = start(http.HandlerFunc(server.serve))
-	t.Cleanup(server.Close)
+	server.UnauthorizedBody = `{"message":"token does not have at least one of required scope(s)"}`
+	server.NotFoundBody = `{"message":"The target couldn't be found.","url":"https://forge.example.com/api/swagger","errors":[]}`
+	server.EmptyPageBody = emptyListNewline
+	server.NextPageLink = forgeNextPageLink
 
-	return server
+	return forgetest.Start(t, server, start)
 }
 
-// serve replies to a request for one of the configured endpoints.
-func (s *forgeServer) serve(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	s.received = append(s.received, recordedRequest{
-		path:   r.URL.Path,
-		query:  r.URL.Query(),
-		header: r.Header.Clone(),
-	})
-	s.mu.Unlock()
-
-	if s.requireAuth != "" && r.Header.Get("Authorization") != s.requireAuth {
-		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = w.Write([]byte(`{"message":"token does not have at least one of required scope(s)"}`))
-		return
+// forgeNextPageLink returns a Link header for a paginated list, as a Forgejo instance would.
+func forgeNextPageLink(_ *http.Request, next, last int) string {
+	const root = "https://root-url.example.com/api/v1/repos/o/r/x"
+	if last <= 0 {
+		return fmt.Sprintf(`<%s?limit=50&page=%d>; rel="next"`, root, next)
 	}
 
-	endpoint, known := s.endpoints[path.Base(r.URL.Path)]
-	if !known {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte(`{"message":"The target couldn't be found.","url":"https://forge.example.com/api/swagger","errors":[]}`))
-		return
-	}
-
-	body := endpoint.body
-	if endpoint.endless || len(endpoint.pages) > 0 {
-		page := 1
-		if raw := r.URL.Query().Get("page"); raw != "" {
-			page, _ = strconv.Atoi(raw)
-		}
-
-		switch {
-		case endpoint.endless:
-			w.Header().Set("Link", fmt.Sprintf(
-				`<https://root-url.example.com/api/v1/repos/o/r/x?limit=50&page=%d>; rel="next"`,
-				page+1,
-			))
-		case page < 1 || page > len(endpoint.pages):
-			body = emptyListNewline
-		default:
-			body = endpoint.pages[page-1]
-			if page < len(endpoint.pages) {
-				w.Header().Set("Link", fmt.Sprintf(
-					`<https://root-url.example.com/api/v1/repos/o/r/x?limit=50&page=%d>; rel="next",`+
-						`<https://root-url.example.com/api/v1/repos/o/r/x?limit=50&page=%d>; rel="last"`,
-					page+1, len(endpoint.pages),
-				))
-			}
-		}
-	}
-
-	for key, value := range endpoint.headers {
-		w.Header().Set(key, value)
-	}
-	if endpoint.status != 0 {
-		w.WriteHeader(endpoint.status)
-	}
-	_, _ = w.Write([]byte(body))
-}
-
-// requests returns the requests the server received.
-func (s *forgeServer) requests() []recordedRequest {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return append([]recordedRequest(nil), s.received...)
+	return fmt.Sprintf(
+		`<%s?limit=50&page=%d>; rel="next",`+`<%s?limit=50&page=%d>; rel="last"`,
+		root, next, root, last,
+	)
 }
 
 // testLookup returns a Lookup decoded from `lookupYAML`.
@@ -305,7 +221,7 @@ func newResponse(
 		)
 	}
 	if accessToken != "" {
-		request.Header.Set("Authorization", "token "+accessToken)
+		request.Header.Set("Authorization", "Bearer "+accessToken)
 	}
 
 	response := &http.Response{

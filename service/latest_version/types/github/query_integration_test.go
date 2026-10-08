@@ -31,11 +31,12 @@ import (
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
-func TestLookup_Query(t *testing.T) {
+func TestLookup_Query__integration(t *testing.T) {
 	tLookup := testLookup(t, false)
+	tLookup.typeHardDefaults.AccessToken = test.GitHubToken(t)
 	tLookup.URL = "release-argus/.github"
 	_, _ = tLookup.Query(false, logx.LogFrom{})
-	emptyReleasesETag := tLookup.data.eTag
+	emptyReleasesETag := tLookup.data.etag
 
 	type statusVars struct {
 		deployedVersion   string
@@ -343,6 +344,7 @@ func TestLookup_Query(t *testing.T) {
 				try++
 				temporaryFailureInNameResolution = false
 				lookup := testLookup(t, false)
+				lookup.typeHardDefaults.AccessToken = test.GitHubToken(t)
 				if strings.Contains(tc.overrides, "access_token: null") {
 					lookup.typeHardDefaults.AccessToken = ""
 				}
@@ -367,7 +369,7 @@ func TestLookup_Query(t *testing.T) {
 				)
 				// Clear ETag/Releases if URL changed.
 				if tc.overrideETag != nil {
-					lookup.data.eTag = *tc.overrideETag
+					lookup.data.etag = *tc.overrideETag
 				}
 
 				// WHEN: Query is called on it.
@@ -413,12 +415,12 @@ func TestLookup_Query(t *testing.T) {
 	}
 }
 
-func TestLookup_Query__githubETag(t *testing.T) {
+func TestLookup_Query__integration__githubETag(t *testing.T) {
 	// GIVEN: a Lookup.
 	tests := []struct {
 		name                               string
 		attempts                           int
-		eTagChanged, eTagUnchangedUseCache int
+		etagChanged, etagUnchangedUseCache int
 		initialRequireRegexVersion         string
 		urlCommands                        filter.URLCommands
 		errRegex                           string
@@ -427,15 +429,15 @@ func TestLookup_Query__githubETag(t *testing.T) {
 		{
 			name:                  "three requests only uses 1 api limit",
 			attempts:              3,
-			eTagChanged:           1,
-			eTagUnchangedUseCache: 3, // 2 attempts + 1 recheck.
+			etagChanged:           1,
+			etagUnchangedUseCache: 3, // 2 attempts + 1 recheck.
 			errRegex:              `^$`,
 		},
 		{
 			name:                       "if initial request fails filter, cached results will be used",
 			attempts:                   3,
-			eTagChanged:                3, // page1+2, page1.
-			eTagUnchangedUseCache:      2, // 1 last attempt + 1 recheck.
+			etagChanged:                3, // page1+2, page1.
+			etagUnchangedUseCache:      2, // 1 last attempt + 1 recheck.
 			initialRequireRegexVersion: `^FOO$`,
 			errRegex: test.TrimYAML(`
 				^no releases were found matching the require field.*
@@ -445,8 +447,8 @@ func TestLookup_Query__githubETag(t *testing.T) {
 		{
 			name:                  "invalid url_commands will catch no versions",
 			attempts:              2,
-			eTagChanged:           4, // page1+2, page1+2.
-			eTagUnchangedUseCache: 0, // 0 recheck.
+			etagChanged:           4, // page1+2, page1+2.
+			etagUnchangedUseCache: 0, // 0 recheck.
 			urlCommands: filter.URLCommands{
 				{Type: "regex", Regex: `^FOO$`},
 			},
@@ -463,6 +465,7 @@ func TestLookup_Query__githubETag(t *testing.T) {
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			lookup := testLookup(t, false)
+			lookup.typeHardDefaults.AccessToken = test.GitHubToken(t)
 			lookup.URL = "release-argus/test-pagination"
 			lookup.UsePreRelease = new(true)
 			lookup.GetGitHubData().SetETag("foo")
@@ -504,17 +507,88 @@ func TestLookup_Query__githubETag(t *testing.T) {
 				)
 			}
 			gotETagChanged := strings.Count(stdout, "new ETag")
-			if gotETagChanged != tc.eTagChanged {
+			if gotETagChanged != tc.etagChanged {
 				t.Errorf(
 					"%s unexpected ETag produced\ngot:  %d\nwant: %d\nstdout: %q",
-					prefix, gotETagChanged, tc.eTagChanged, stdout,
+					prefix, gotETagChanged, tc.etagChanged, stdout,
 				)
 			}
 			gotETagUnchangedUseCache := strings.Count(stdout, "Using cached releases")
-			if gotETagUnchangedUseCache != tc.eTagUnchangedUseCache {
+			if gotETagUnchangedUseCache != tc.etagUnchangedUseCache {
 				t.Errorf(
 					"%s ETag unchanged use cache count mismatch\ngot:  %d\nwant: %d\nstdout: %q",
-					prefix, gotETagUnchangedUseCache, tc.eTagUnchangedUseCache, stdout,
+					prefix, gotETagUnchangedUseCache, tc.etagUnchangedUseCache, stdout,
+				)
+			}
+		})
+	}
+}
+
+func TestLookup_Query__integration__dockerTag(t *testing.T) {
+	// GIVEN: a require.docker naming a tag that does, and does not, exist.
+	tests := []struct {
+		name             string
+		tag              string
+		wantVersionRegex string
+		errRegex         string
+	}{
+		{
+			name:             "found",
+			tag:              "{{ version }}",
+			wantVersionRegex: `^[0-9]+\.[0-9]+\.[0-9]+$`,
+			errRegex:         `^$`,
+		},
+		{
+			name:             "not found",
+			tag:              "x{{ version }}",
+			wantVersionRegex: `^$`,
+			errRegex:         `release-argus\/argus:x[0-9.]+ - .*tag not found`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			overrides := test.TrimYAML(`
+				require:
+					regex_version: "[0-9.]+"
+					regex_content: "(?i)argus.*amd64"
+					docker:
+						type: ghcr
+						image: ` + test.ArgusDockerGHCRRepo + `
+						tag: "` + tc.tag + `"
+						token: ` + test.DockerHubToken(t) + `
+			`)
+
+			lookup := testLookup(t, false)
+			lookup.typeHardDefaults.AccessToken = test.GitHubToken(t)
+			if err := lookup.ApplyOverrides("yaml", []byte(overrides)); err != nil {
+				t.Fatalf(
+					"%s\nfailed to unmarshal Lookup overrides: %v",
+					packageName, err,
+				)
+			}
+
+			// WHEN: it is queried.
+			_, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()})
+
+			prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
+
+			// THEN: any error is as expected.
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf(
+					"%s error mismatch\ngot:  %q\nwant: %q",
+					prefix, e, tc.errRegex,
+				)
+			}
+
+			// AND: the version reported is as expected.
+			if got := lookup.Status.LatestVersion(); !util.RegexCheck(tc.wantVersionRegex, got) {
+				t.Errorf(
+					"%s version mismatch\ngot:  %q\nwant: %q",
+					prefix, got, tc.wantVersionRegex,
 				)
 			}
 		})

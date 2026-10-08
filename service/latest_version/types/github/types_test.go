@@ -168,7 +168,7 @@ func TestLookup_Unmarshal(t *testing.T) {
 						HardDefaults: lvCfg.Hard,
 					}
 					err := decode.Unmarshal(format, data, &v)
-					return &v, err
+					return &v, err //nolint:wrapcheck
 				},
 				tc.format, tc.data,
 				func(t *Lookup) string { return t.String("") },
@@ -296,8 +296,9 @@ func TestLookup_Copy(t *testing.T) {
 		{
 			name: "data",
 			lookup: &Lookup{
+				apiRoot: "http://127.0.0.1:1/api",
 				data: Data{
-					eTag:    "foo",
+					etag:    "foo",
 					perPage: 1,
 					releases: []forgetypes.Release{
 						{URL: "example.com"},
@@ -340,7 +341,7 @@ func TestLookup_Copy(t *testing.T) {
 				)
 				if err == nil {
 					lv.data = Data{
-						eTag:    "foo",
+						etag:    "foo",
 						perPage: 1,
 						releases: []forgetypes.Release{
 							{URL: "example.com"},
@@ -420,6 +421,7 @@ func TestLookup_Copy(t *testing.T) {
 			err := []test.FieldAssertion{
 				{Name: "Type", Got: got.Type, Want: tc.lookup.Type, Mode: test.CompareEqual},
 				{Name: "URL", Got: got.URL, Want: tc.lookup.URL, Mode: test.CompareEqual},
+				{Name: "apiRoot", Got: got.apiRoot, Want: tc.lookup.apiRoot, Mode: test.CompareEqual},
 				{Name: "URLCommands", Got: &got.URLCommands, Want: &tc.lookup.URLCommands, Mode: test.CompareDifferentPointer},
 			}
 			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
@@ -491,7 +493,7 @@ func TestLookup_TypeDefaults(t *testing.T) {
 			// WHEN: SetTypeDefaults is called.
 			lookup.SetTypeDefaults(tc.defaults, tc.hardDefaults)
 
-			prefix := fmt.Sprintf("%s\nLookup.GetTypeDefaults()", packageName)
+			prefix := packageName + "\nLookup.GetTypeDefaults()"
 
 			// THEN: GetTypeDefaults returns the exact pointers that were set.
 			gotDefaults, gotHardDefaults := lookup.GetTypeDefaults()
