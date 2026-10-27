@@ -271,7 +271,9 @@ func (s *URLCommands) Run(text string, logFrom logx.LogFrom) ([]string, error) {
 func (c *URLCommand) run(versions []string, logFrom logx.LogFrom) ([]string, error) {
 	var err error
 
-	for i, version := range versions {
+	for i := 0; i < len(versions); {
+		version := versions[i]
+		count := len(versions)
 		// Iterate through the commands to filter the text.
 		if logx.IsLevel("DEBUG") {
 			logx.Debug(
@@ -319,6 +321,9 @@ func (c *URLCommand) run(versions []string, logFrom logx.LogFrom) ([]string, err
 			)
 			logx.Debug(msg, logFrom, true)
 		}
+
+		// Skip past the versions this command produced.
+		i += len(versions) - count + 1
 	}
 	return versions, nil
 }

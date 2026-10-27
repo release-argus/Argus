@@ -986,6 +986,37 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     []string{"a", "b", "c", "d"},
 		},
 		{
+			name: "expanded versions/split each",
+			text: "a-b c-d",
+			urlCommands: &URLCommands{
+				{Type: "split", Text: " "},
+				{Type: "split", Text: "-"},
+			},
+			errRegex: `^$`,
+			want:     []string{"a", "b", "c", "d"},
+		},
+		{
+			name: "expanded versions/regex each",
+			text: "ab cd",
+			urlCommands: &URLCommands{
+				{Type: "split", Text: " "},
+				{Type: "regex", Regex: `([a-z])`},
+			},
+			errRegex: `^$`,
+			want:     []string{"a", "b", "c", "d"},
+		},
+		{
+			name: "expanded versions/replace each",
+			text: "a-a b-a",
+			urlCommands: &URLCommands{
+				{Type: "split", Text: " "},
+				{Type: "split", Text: "-"},
+				{Type: "replace", Old: "a", New: "z"},
+			},
+			errRegex: `^$`,
+			want:     []string{"z", "z", "b", "z"},
+		},
+		{
 			name: "all types",
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: new(1)},
