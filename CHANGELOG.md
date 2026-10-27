@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.39.1](https://github.com/release-argus/Argus/compare/0.39.0...0.39.1) (2026-10-27)
+
+
+### Bug Fixes
+
+* **url-commands:** don't skip versions after one expands ([a8ba3bb](https://github.com/release-argus/Argus/commit/a8ba3bb29669daa88d5d64b78f1bd4b89a270480))
+* **url-commands:** reject out-of-range negative indices ([0526fdc](https://github.com/release-argus/Argus/commit/0526fdc85387c5f2ac22d5c4e33792cc90799043))
+
 ## [0.39.0](https://github.com/release-argus/Argus/compare/0.38.0...0.39.0) (2026-10-02)
 
 
