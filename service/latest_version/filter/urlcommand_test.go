@@ -779,7 +779,7 @@ func TestURLCommands_GetVersions(t *testing.T) {
 			},
 			text:         testText,
 			wantVersions: nil,
-			errRegex:     `split .* returned \d elements on "[^']+", but the index wants element number \d`,
+			errRegex:     `split .* returned \d elements on "[^']+", index -?\d is out of range`,
 		},
 		{
 			name: "all types",
@@ -883,8 +883,26 @@ func TestURLCommands_Run(t *testing.T) {
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: new(2)},
 			},
-			errRegex: `regex .* returned \d elements on "[^']+", but the index wants element number \d`,
+			errRegex: `regex .* returned \d elements on "[^']+", index -?\d is out of range`,
 			want:     nil,
+		},
+		{
+			name: "regex/negative index out of bounds",
+			text: "abc123",
+			urlCommands: &URLCommands{
+				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: new(-2)},
+			},
+			errRegex: `regex .* returned 1 elements on "[^']+", index -2 is out of range`,
+			want:     nil,
+		},
+		{
+			name: "regex/index applies to each version",
+			urlCommands: &URLCommands{
+				{Type: "split", Text: "-"},
+				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: new(0)},
+			},
+			errRegex: `^$`,
+			want:     []string{"abc", "def"},
 		},
 		{
 			name: "regex/with template",
@@ -947,7 +965,15 @@ func TestURLCommands_Run(t *testing.T) {
 			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: new(2)},
 			},
-			errRegex: `split .* returned \d elements on "[^']+", but the index wants element number \d`,
+			errRegex: `split .* returned \d elements on "[^']+", index -?\d is out of range`,
+			want:     nil,
+		},
+		{
+			name: "split/negative index out of bounds",
+			urlCommands: &URLCommands{
+				{Type: "split", Text: "-", Index: new(-3)},
+			},
+			errRegex: `split .* returned 2 elements on "[^']+", index -3 is out of range`,
 			want:     nil,
 		},
 		{
@@ -1097,7 +1123,49 @@ func TestURLCommand_Regex(t *testing.T) {
 			},
 			want: wants{
 				versions: &[]string{},
-				errRegex: `^regex .* returned \d elements on .* but the index wants element number \d`,
+				errRegex: `^regex .* returned \d elements on .* index -?\d is out of range`,
+			},
+		},
+		{
+			name: "negative index out of range",
+			command: URLCommand{
+				Type:  "regex",
+				Regex: `([a-z]+)[0-9]+`,
+				Index: new(-3),
+			},
+			args: args{
+				versions: []string{
+					"abc123-def456",
+				},
+				versionIndex: 0,
+			},
+			want: wants{
+				versions: &[]string{},
+				errRegex: `^regex .* returned 2 elements on .* index -3 is out of range`,
+			},
+		},
+		{
+			name: "index replaces version at versionIndex",
+			command: URLCommand{
+				Type:  "regex",
+				Regex: `([a-z]+)[0-9]+`,
+				Index: new(0),
+			},
+			args: args{
+				versions: []string{
+					"abc123",
+					"def456",
+					"ghi789",
+				},
+				versionIndex: 1,
+			},
+			want: wants{
+				versions: &[]string{
+					"abc123",
+					"def",
+					"ghi789",
+				},
+				errRegex: `^$`,
 			},
 		},
 		{
@@ -1316,7 +1384,7 @@ func TestURLCommand_Split(t *testing.T) {
 		want    wants
 	}{
 		{
-			name: "split with index",
+			name: "positive index",
 			command: URLCommand{
 				Type:  "split",
 				Text:  "-",
@@ -1336,7 +1404,7 @@ func TestURLCommand_Split(t *testing.T) {
 			},
 		},
 		{
-			name: "split with negative index",
+			name: "negative index",
 			command: URLCommand{
 				Type:  "split",
 				Text:  "-",
@@ -1356,7 +1424,7 @@ func TestURLCommand_Split(t *testing.T) {
 			},
 		},
 		{
-			name: "split with no index",
+			name: "no index",
 			command: URLCommand{
 				Type: "split",
 				Text: "-",
@@ -1375,7 +1443,7 @@ func TestURLCommand_Split(t *testing.T) {
 			},
 		},
 		{
-			name: "split index out of bounds",
+			name: "index out of bounds",
 			command: URLCommand{
 				Type:  "split",
 				Text:  "-",
@@ -1389,11 +1457,29 @@ func TestURLCommand_Split(t *testing.T) {
 			},
 			want: wants{
 				versions: &[]string{},
-				errRegex: `split .* returned \d elements on "[^']+", but the index wants element number \d`,
+				errRegex: `split .* returned \d elements on "[^']+", index -?\d is out of range`,
 			},
 		},
 		{
-			name: "split on unknown text",
+			name: "negative index out of bounds",
+			command: URLCommand{
+				Type:  "split",
+				Text:  "-",
+				Index: new(-4),
+			},
+			args: args{
+				versions: []string{
+					"abc-def-ghi",
+				},
+				versionIndex: 0,
+			},
+			want: wants{
+				versions: &[]string{},
+				errRegex: `split .* returned 3 elements on "[^']+", index -4 is out of range`,
+			},
+		},
+		{
+			name: "unmatched text",
 			command: URLCommand{
 				Type:  "split",
 				Text:  "_",
