@@ -14,7 +14,7 @@
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
-    "@hookform/resolvers": "^5.9.1",
+    "@hookform/resolvers": "^7.0.0",
     "@icons-pack/react-simple-icons": "^13.15.1",
     "@radix-ui/react-collapsible": "^1.1.20",
     "@radix-ui/react-icons": "^1.3.2",
