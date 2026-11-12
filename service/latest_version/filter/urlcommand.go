@@ -271,7 +271,9 @@ func (s *URLCommands) Run(text string, logFrom logx.LogFrom) ([]string, error) {
 func (c *URLCommand) run(versions []string, logFrom logx.LogFrom) ([]string, error) {
 	var err error
 
-	for i, version := range versions {
+	for i := 0; i < len(versions); {
+		version := versions[i]
+		count := len(versions)
 		// Iterate through the commands to filter the text.
 		if logx.IsLevel("DEBUG") {
 			logx.Debug(
@@ -319,6 +321,9 @@ func (c *URLCommand) run(versions []string, logFrom logx.LogFrom) ([]string, err
 			)
 			logx.Debug(msg, logFrom, true)
 		}
+
+		// Skip past the versions this command produced.
+		i += len(versions) - count + 1
 	}
 	return versions, nil
 }
@@ -348,16 +353,16 @@ func (c *URLCommand) regex(versionIndex int, versions []string, logFrom logx.Log
 		}
 
 		// Index out of range.
-		if (len(matches) - index) < 1 {
+		if index < 0 || index >= len(matches) {
 			err := fmt.Errorf(
-				"%s (%s) returned %d elements on %q, but the index wants element number %d",
-				c.Type, c.Regex, len(matches), version, index+1,
+				"%s (%s) returned %d elements on %q, index %d is out of range",
+				c.Type, c.Regex, len(matches), version, *c.Index,
 			)
 			logx.Warn(err, logFrom, true)
 			return nil, err
 		}
 
-		versions[len(versions)-1] = util.RegexTemplate(matches[index], c.Template)
+		versions[versionIndex] = util.RegexTemplate(matches[index], c.Template)
 		return versions, nil
 	}
 
@@ -391,10 +396,10 @@ func (c *URLCommand) split(versionIndex int, versions []string, logFrom logx.Log
 		index = len(texts) + index
 	}
 
-	if (len(texts) - index) < 1 {
+	if index < 0 || index >= len(texts) {
 		err := fmt.Errorf(
-			"%s (%q) returned %d elements on %q, but the index wants element number %d",
-			c.Type, c.Text, len(texts), versions[versionIndex], index+1,
+			"%s (%q) returned %d elements on %q, index %d is out of range",
+			c.Type, c.Text, len(texts), versions[versionIndex], *c.Index,
 		)
 		logx.Warn(err, logFrom, true)
 
