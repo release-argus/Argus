@@ -142,20 +142,19 @@ func FilterReleases(
 		}
 
 		release.TagName = tagName[0]
-		if !release.PreRelease {
-			if semVer, err := semver.NewVersion(tagName[0]); err == nil && semVer.Prerelease() != "" {
-				release.PreRelease = true
-			}
-		}
-		if release.PreRelease && !opts.UsePreReleases {
-			continue
-		}
-
 		if opts.SemanticVersioning {
-			semVer, err := semver.NewVersion(tagName[0])
+			semVer, err := semver.NewVersion(release.TagName)
 			if err != nil {
 				continue
 			}
+
+			if semVer.Prerelease() != "" {
+				release.PreRelease = true
+				if !opts.UsePreReleases {
+					continue
+				}
+			}
+
 			release.SemanticVersion = semVer
 		}
 
