@@ -18,7 +18,6 @@
 package forgejo
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/util"
@@ -26,7 +25,6 @@ import (
 )
 
 func TestLookup_ParseHost(t *testing.T) {
-	// GIVEN: a host spelling.
 	tests := []struct {
 		name     string
 		host     string
@@ -96,39 +94,23 @@ func TestLookup_ParseHost(t *testing.T) {
 
 			lookup := Lookup{Host: tc.host}
 
-			// WHEN: parseHost is called.
 			got, err := lookup.parseHost()
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup{host: %q}.parseHost()",
-				packageName, tc.host,
-			)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if tc.errRegex != "^$" {
+			if err != nil {
 				return
 			}
 
-			// AND: the instance URL is as expected.
-			if got.String() != tc.want {
-				t.Fatalf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+			if g, w := got.String(), tc.want; g != w {
+				t.Fatalf("URL.String() mismatch\ngot:  %q\nwant: %q", g, w)
 			}
 		})
 	}
 }
 
 func TestParseInstanceURL(t *testing.T) {
-	// GIVEN: an instance address.
 	tests := []struct {
 		name     string
 		address  string
@@ -188,39 +170,23 @@ func TestParseInstanceURL(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: parseInstanceURL is called with it.
 			got, err := parseInstanceURL(tc.address)
-
-			prefix := fmt.Sprintf(
-				"%s\nparseInstanceURL(%q)",
-				packageName, tc.address,
-			)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: the root URL of the instance is returned.
 			if got.String() != tc.want {
-				t.Fatalf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got.String(), tc.want,
-				)
+				t.Fatalf("URL.String() mismatch\ngot:  %q\nwant: %q", got.String(), tc.want)
 			}
 		})
 	}
 }
 
 func TestURLProblem(t *testing.T) {
-	// GIVEN: an instance URL.
 	tests := []struct {
 		name    string
 		address string
@@ -242,7 +208,7 @@ func TestURLProblem(t *testing.T) {
 			want:    "",
 		},
 		{
-			name:    "ok/scheme. host. port, sub-path",
+			name:    "ok/scheme, host, port and sub-path",
 			address: "https://forge.example.com:3000/git",
 			want:    "",
 		},
@@ -282,22 +248,16 @@ func TestURLProblem(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: urlProblem is called with it.
 			got := urlProblem(tc.address)
 
-			// THEN: it names what is wrong, or nothing at all.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nurlProblem(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.address, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestIsPlaintext(t *testing.T) {
-	// GIVEN: an instance address a credential would be sent to.
 	tests := []struct {
 		name    string
 		address string
@@ -349,22 +309,16 @@ func TestIsPlaintext(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: isPlaintext is called with it.
 			got := isPlaintext(tc.address)
 
-			// THEN: only an http scheme counts as plaintext.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nisPlaintext(%q) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.address, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLookup_APIURL(t *testing.T) {
-	// GIVEN: a host, a repository, and a page to request.
 	tests := []struct {
 		name     string
 		host     string
@@ -487,45 +441,22 @@ func TestLookup_APIURL(t *testing.T) {
 				URL:  tc.url,
 			}
 
-			// WHEN: apiURL is called for the releases endpoint.
 			got, err := lookup.apiURL(endpointReleases, tc.page)
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup{host: %q, url: %q}.apiURL(endpoint: %q, page: %d)",
-				packageName, tc.host, tc.url, endpointReleases, tc.page,
-			)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: the address is as expected.
 			if got != tc.want {
-				t.Fatalf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Fatalf("URL mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: the Host was not modified.
 			if lookup.Host != tc.host {
-				t.Fatalf(
-					"%s mutated the Host var\ngot:  %q\nwant: %q",
-					prefix, lookup.Host, tc.host,
-				)
+				t.Fatalf("Lookup.Host mismatch\ngot:  %q\nwant: %q", lookup.Host, tc.host)
 			}
 
-			// AND: the URL was not modified.
 			if lookup.URL != tc.url {
-				t.Fatalf(
-					"%s mutated the URL var\ngot:  %q\nwant: %q",
-					prefix, lookup.URL, tc.url,
-				)
+				t.Fatalf("Lookup.URL mismatch\ngot:  %q\nwant: %q", lookup.URL, tc.url)
 			}
 		})
 	}

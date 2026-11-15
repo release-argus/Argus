@@ -73,7 +73,7 @@ func (f *mockLookup) String(prefix string) string                 { return decod
 func testLookup(t *testing.T, typ string, fail bool) (lv Lookup) {
 	t.Helper()
 
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
 
 	switch typ {
 	case "github":
@@ -103,7 +103,7 @@ func testLookup(t *testing.T, typ string, fail bool) (lv Lookup) {
 func testGitHub(t *testing.T, fail bool) Lookup {
 	t.Helper()
 
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
 	accessToken := test.GitHubToken(t)
 	if fail {
 		accessToken = "invalid"
@@ -130,7 +130,7 @@ func testGitHub(t *testing.T, fail bool) Lookup {
 func testWeb(t *testing.T, fail bool) Lookup {
 	t.Helper()
 
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
 
 	svcStatus, _ := statustest.New("yaml", nil)
 	lv, err := Decode(
@@ -151,10 +151,8 @@ func testWeb(t *testing.T, fail bool) Lookup {
 }
 
 // plainDefaultsConfig returns plain defaults and hardDefaults with a dummy GitHub token.
-func plainDefaultsConfig(t *testing.T) DefaultsConfig {
-	t.Helper()
-
-	optCfg := opttest.PlainDefaultsConfig(t)
+func plainDefaultsConfig() DefaultsConfig {
+	optCfg := opttest.PlainDefaultsConfig()
 
 	defaults, _ := DecodeDefaults("yaml", nil)
 	defaults.Common.Options = optCfg.Soft

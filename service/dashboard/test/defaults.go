@@ -16,15 +16,11 @@
 package test
 
 import (
-	"testing"
-
 	"github.com/release-argus/Argus/service/dashboard"
 )
 
 // PlainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func PlainDefaultsConfig(t *testing.T) dashboard.DefaultsConfig {
-	t.Helper()
-
+func PlainDefaultsConfig() dashboard.DefaultsConfig {
 	defaults, _ := dashboard.DecodeDefaults("yaml", nil)
 	hardDefaults, _ := dashboard.DecodeDefaults("yaml", nil)
 	hardDefaults.Default()

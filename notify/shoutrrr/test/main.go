@@ -17,8 +17,6 @@
 package test
 
 import (
-	"testing"
-
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service/status"
@@ -26,7 +24,7 @@ import (
 )
 
 // Shoutrrr returns a shoutrrr instance for testing.
-func Shoutrrr(t *testing.T, failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
+func Shoutrrr(failing, selfSignedCert bool) *shoutrrr.Shoutrrr {
 	host := test.NotifyGotify.HostValid
 	if selfSignedCert {
 		host = test.NotifyGotify.HostInvalid

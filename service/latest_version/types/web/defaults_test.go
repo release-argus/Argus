@@ -18,10 +18,11 @@ package web
 
 import (
 	"testing"
+
+	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name string
 		data *Defaults
@@ -45,35 +46,28 @@ func TestDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called.
 			got := tc.data.IsZero()
 
-			// THEN: the result is expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN: a Defaults.
 	defaults := Defaults{}
 	want := Defaults{
 		AllowInvalidCerts: new(false),
 	}
 
-	// WHEN: Default is called.
 	defaults.Default()
 
-	// THEN: it should set the defaults as expected.
 	if defaults.AllowInvalidCerts == nil || *defaults.AllowInvalidCerts != *want.AllowInvalidCerts {
 		t.Errorf(
-			"%s\nDefaults.Default() AllowInvalidCerts mismatch\ngot:  %v\nwant: %v",
-			packageName, defaults.AllowInvalidCerts, want.AllowInvalidCerts,
+			"Defaults.AllowInvalidCerts mismatch\ngot:  %s\nwant: %s",
+			test.StringifyPtr(defaults.AllowInvalidCerts),
+			test.StringifyPtr(want.AllowInvalidCerts),
 		)
 	}
 }

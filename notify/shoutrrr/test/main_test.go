@@ -62,7 +62,7 @@ func TestShoutrrr(t *testing.T) {
 				wantHost = test.NotifyGotify.HostInvalid
 			}
 
-			got := Shoutrrr(t, tc.failing, tc.selfSignedCert)
+			got := Shoutrrr(tc.failing, tc.selfSignedCert)
 
 			fieldTests := []test.FieldAssertion{
 				{Name: "URLFields", Got: got.URLFields, Mode: test.CompareNotNil},

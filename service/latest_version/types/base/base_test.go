@@ -105,7 +105,7 @@ func TestLookup_IsZero(t *testing.T) {
 }
 
 func TestLookup_Init(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
 
 	options := &opt.Options{}
 	svcStatus := &status.Status{}
@@ -289,7 +289,7 @@ func TestLookup_ServiceURL(t *testing.T) {
 }
 
 func TestLookup_CheckValues(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
 
 	tests := []struct {
 		name     string
@@ -396,7 +396,7 @@ func checkDockerToken(
 }
 
 func TestLookup_InheritSecrets(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
 
 	tests := []struct {
 		name               string

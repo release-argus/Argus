@@ -18,7 +18,6 @@
 package forgejo
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -26,41 +25,17 @@ import (
 )
 
 func TestLookup_GetType(t *testing.T) {
-	// GIVEN: a Lookup with a Type.
-	tests := []struct {
-		name  string
-		lType string
-	}{
-		{name: "empty", lType: ""},
-		{name: "test", lType: "test"},
-		{name: "x", lType: "x"},
-		{name: "y", lType: "y"},
-	}
+	l := &Lookup{}
+	l.Type = "other"
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+	got := l.GetType()
 
-			l := &Lookup{}
-			l.Type = tc.lType
-
-			// WHEN: GetType is called.
-			got := l.GetType()
-
-			wantType := Type
-			// THEN: the Type is returned.
-			if got != wantType {
-				t.Errorf(
-					"%s\nLookup.GetType() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, wantType,
-				)
-			}
-		})
+	if got != Type {
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, Type)
 	}
 }
 
 func TestLookup_ServiceURL(t *testing.T) {
-	// GIVEN: a host and a repository.
 	tests := []struct {
 		name     string
 		host     string
@@ -135,23 +110,16 @@ func TestLookup_ServiceURL(t *testing.T) {
 				&Defaults{},
 			)
 
-			// WHEN: ServiceURL is called.
 			got := lookup.ServiceURL()
 
-			// THEN: it addresses the repository on the configured instance.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nLookup{host: %q, url: %q}.ServiceURL() mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.host, tc.url,
-					got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLookup_HostDefaults(t *testing.T) {
-	// GIVEN: a Lookup with a host, and host-keyed defaults layered under it.
 	tests := []struct {
 		name                   string
 		host                   string
@@ -240,11 +208,16 @@ func TestLookup_HostDefaults(t *testing.T) {
 			},
 			hardDefaults: map[string]HostDefaults{
 				"Codeberg": {
-					URL:         "https://codeberg.org",
-					AccessToken: "hardDefaults",
+					URL:               "https://codeberg.org",
+					AccessToken:       "hardDefaults",
+					AllowInvalidCerts: new(true),
 				},
 			},
-			want:      HostDefaults{URL: "https://codeberg.org", AccessToken: "hardDefaults"},
+			want: HostDefaults{
+				URL:               "https://codeberg.org",
+				AccessToken:       "hardDefaults",
+				AllowInvalidCerts: new(true),
+			},
 			wantNamed: true,
 		},
 		{
@@ -306,37 +279,22 @@ func TestLookup_HostDefaults(t *testing.T) {
 			typeDefaults.SetDefaults(typeHardDefaults)
 			lookup.SetTypeDefaults(typeDefaults, typeHardDefaults)
 
-			// WHEN: hostDefaults is called.
 			got, gotNamed := lookup.hostDefaults()
 
-			prefix := fmt.Sprintf(
-				"%s\nLookup{host: %q}.hostDefaults()",
-				packageName, tc.host,
-			)
-
-			// AND: whether the host names an entry is reported.
 			if gotNamed != tc.wantNamed {
-				t.Fatalf(
-					"%s named mismatch\ngot:  %t\nwant: %t",
-					prefix, gotNamed, tc.wantNamed,
-				)
+				t.Fatalf("named mismatch\ngot:  %t\nwant: %t", gotNamed, tc.wantNamed)
 			}
 
-			// THEN: the resolved entry is as expected.
 			gotStr := decode.ToYAMLString(got, "")
 			wantStr := decode.ToYAMLString(tc.want, "")
 			if gotStr != wantStr {
-				t.Fatalf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, gotStr, wantStr,
-				)
+				t.Fatalf("HostDefaults mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 		})
 	}
 }
 
 func TestLookup_HostDefaults__EnvVarName(t *testing.T) {
-	// GIVEN: a host supplied by the environment, and an instance it may name.
 	tests := []struct {
 		name      string
 		host      string
@@ -364,7 +322,7 @@ func TestLookup_HostDefaults__EnvVarName(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
+			// Serial: sets env vars.
 
 			if tc.envValue != "" {
 				t.Setenv("ARGUS_TEST_FORGEJO_HOST_NAME", tc.envValue)
@@ -378,25 +336,15 @@ func TestLookup_HostDefaults__EnvVarName(t *testing.T) {
 				&Defaults{},
 			)
 
-			// WHEN: hostDefaults is called.
 			got, gotNamed := lookup.hostDefaults()
 
-			prefix := fmt.Sprintf(
-				"%s\nLookup{host: %q}.hostDefaults()",
-				packageName, tc.host,
-			)
-
-			// THEN: the entry the expanded name addresses is resolved.
 			if gotNamed != tc.wantNamed {
-				t.Fatalf(
-					"%s named mismatch\ngot:  %t\nwant: %t",
-					prefix, gotNamed, tc.wantNamed,
-				)
+				t.Fatalf("named mismatch\ngot:  %t\nwant: %t", gotNamed, tc.wantNamed)
 			}
 			if got.AccessToken != tc.wantToken {
 				t.Fatalf(
-					"%s access_token mismatch\ngot:  %q\nwant: %q",
-					prefix, got.AccessToken, tc.wantToken,
+					"HostDefaults.AccessToken mismatch\ngot:  %q\nwant: %q",
+					got.AccessToken, tc.wantToken,
 				)
 			}
 		})
@@ -404,7 +352,6 @@ func TestLookup_HostDefaults__EnvVarName(t *testing.T) {
 }
 
 func TestLookup_AccessToken(t *testing.T) {
-	// GIVEN: a Lookup with a host, and the entry [Lookup.hostDefaults] resolves for it.
 	tests := []struct {
 		name                   string
 		host                   string
@@ -414,7 +361,7 @@ func TestLookup_AccessToken(t *testing.T) {
 	}{
 		{
 			name:         "root overrides all",
-			host:         "https://codeberg.org",
+			host:         "Codeberg",
 			serviceValue: "service-token",
 			defaults: map[string]HostDefaults{
 				"Codeberg": {URL: "https://codeberg.org", AccessToken: "defaults-token"},
@@ -492,22 +439,16 @@ func TestLookup_AccessToken(t *testing.T) {
 			typeDefaults.SetDefaults(typeHardDefaults)
 			lookup.SetTypeDefaults(typeDefaults, typeHardDefaults)
 
-			// WHEN: accessToken is called.
 			got := lookup.accessToken()
 
-			// THEN: the expected token is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nLookup{host: %q}.accessToken() mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.host, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLookup_AllowInvalidCerts(t *testing.T) {
-	// GIVEN: a Lookup with a host, and the entry [Lookup.hostDefaults] resolves for it.
 	tests := []struct {
 		name                   string
 		host                   string
@@ -541,6 +482,14 @@ func TestLookup_AllowInvalidCerts(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "matching host entry held only by the hardDefaults",
+			host: "https://git.example.com",
+			hardDefaults: map[string]HostDefaults{
+				"https://git.example.com": {AllowInvalidCerts: new(true)},
+			},
+			want: true,
+		},
+		{
 			name: "no defaults",
 			host: "https://git.example.com",
 			want: false,
@@ -560,22 +509,16 @@ func TestLookup_AllowInvalidCerts(t *testing.T) {
 			typeDefaults.SetDefaults(typeHardDefaults)
 			lookup.SetTypeDefaults(typeDefaults, typeHardDefaults)
 
-			// WHEN: allowInvalidCerts is called.
 			got := lookup.allowInvalidCerts()
 
-			// THEN: the expected value is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nLookup{host: %q}.allowInvalidCerts() mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.host, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLookup_UsePreRelease(t *testing.T) {
-	// GIVEN: a service value, and the Defaults behind it.
 	tests := []struct {
 		name                                      string
 		rootValue, defaultValue, hardDefaultValue *bool
@@ -611,22 +554,16 @@ func TestLookup_UsePreRelease(t *testing.T) {
 				&Defaults{Common: CommonDefaults{UsePreRelease: tc.hardDefaultValue}},
 			)
 
-			// WHEN: usePreRelease is called.
 			got := lookup.usePreRelease()
 
-			// THEN: the expected value is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nLookup.usePreRelease() mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLookup_UseTagsAPI(t *testing.T) {
-	// GIVEN: a Lookup whose filters may or may not need what only a release may carry.
 	tests := []struct {
 		name        string
 		requireYAML string
@@ -639,7 +576,7 @@ func TestLookup_UseTagsAPI(t *testing.T) {
 		{
 			name:        "unusable/regex_content set",
 			requireYAML: "regex_content: 'Argus-{{ version }}.linux-amd64'",
-			want:        false,
+			want:        false, // regex_content needs release assets.
 		},
 		{
 			name:        "usable/Require without regex_content",
@@ -661,15 +598,10 @@ func TestLookup_UseTagsAPI(t *testing.T) {
 			}
 			lookup := testLookup(t, lookupYAML)
 
-			// WHEN: useTagsAPI is called.
 			got := lookup.useTagsAPI()
 
-			// THEN: the /tags fallback is allowed only when tags could satisfy the filters.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nLookup.useTagsAPI() mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}

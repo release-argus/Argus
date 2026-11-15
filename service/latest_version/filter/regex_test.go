@@ -17,8 +17,6 @@
 package filter
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/logx"
@@ -30,7 +28,6 @@ import (
 )
 
 func TestRequire_RegexCheckVersion(t *testing.T) {
-	// GIVEN: a Require.
 	tests := []struct {
 		name     string
 		require  *Require
@@ -69,26 +66,17 @@ func TestRequire_RegexCheckVersion(t *testing.T) {
 			if tc.require != nil {
 				tc.require.Status = &status.Status{}
 			}
-			v := "0.1.1-beta"
 
-			// WHEN: RegexCheckVersion is called on it.
-			err := tc.require.RegexCheckVersion(v, logx.LogFrom{})
-
-			// THEN: the decode is what we expect.
+			err := tc.require.RegexCheckVersion("0.1.1-beta", logx.LogFrom{})
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s\nRequire.RegexCheckVersion(%q) error mismatch\ngot:  %q\nwant: %q",
-					packageName, v,
-					e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestRequire_RegexCheckContent(t *testing.T) {
-	// GIVEN: a Require.
 	tests := []struct {
 		name     string
 		require  *Require
@@ -130,26 +118,17 @@ func TestRequire_RegexCheckContent(t *testing.T) {
 			if tc.require != nil {
 				tc.require.Status = &status.Status{}
 			}
-			v := "0.1.1-beta"
 
-			// WHEN: RegexCheckContent is called on it.
-			err := tc.require.RegexCheckContent(v, tc.body, logx.LogFrom{})
-
-			// THEN: the decode is what we expect.
+			err := tc.require.RegexCheckContent("0.1.1-beta", tc.body, logx.LogFrom{})
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s\nRequire.RegexCheckContent(version=%q, body=%q) error mismatch\ngot:  %q\nwant: %q",
-					packageName, v, tc.body,
-					e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestRequire_RegexCheckContentForge(t *testing.T) {
-	// GIVEN: a Require.
 	tests := []struct {
 		name                  string
 		require               *Require
@@ -174,7 +153,8 @@ func TestRequire_RegexCheckContentForge(t *testing.T) {
 			require: &Require{
 				RegexContent: `argus-[0-9.]+.linux-amd64`,
 			},
-			stdoutRegex: `^(DEBUG:.*\s){3}$`, // 3: name+browser_download_url for darwin, name for linux.
+			// 3: name+browser_download_url for darwin, name for linux.
+			stdoutRegex: `^(DEBUG:.*\s){3}$`,
 			errRegex:    `^$`,
 			body: []forgetypes.Asset{
 				{Name: "argus-1.2.3.darwin-amd64", CreatedAt: "2020-01-01T00:00:00Z"},
@@ -188,7 +168,8 @@ func TestRequire_RegexCheckContentForge(t *testing.T) {
 			require: &Require{
 				RegexContent: `argus-[0-9.]+.linux-amd64`,
 			},
-			stdoutRegex: `^(DEBUG:.*\s){6}INFO: regex.*not matched on content.*\s$`, // 6: name+browser_download_url for darwin/linux/windows.
+			// 6: name+browser_download_url for darwin/linux/windows.
+			stdoutRegex: `^(DEBUG:.*\s){6}INFO: regex.*not matched on content.*\s$`,
 			errRegex:    `^regex .* not matched on content.*$`,
 			body: []forgetypes.Asset{
 				{Name: "argus-1.2.3.darwin-amd64"},
@@ -229,54 +210,34 @@ func TestRequire_RegexCheckContentForge(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			if tc.require != nil {
 				tc.require.Status = &status.Status{}
 			}
-			v := "0.1.1-beta"
 
-			// WHEN: RegexCheckContent is called on it.
 			releaseDate, err := tc.require.RegexCheckContentForge(
-				v,
+				"0.1.1-beta",
 				tc.body,
 				logx.LogFrom{},
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\nRequire.RegexCheckContentForge(version=%q, body=%v)",
-				packageName, v, tc.body,
-			)
-
-			// THEN: the decode is what we expect.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: the release date is what we expect.
 			if releaseDate != tc.wantReleaseDate {
 				t.Errorf(
-					"%s releaseDate mismatch\ngot:  %q\nwant: %q",
-					prefix, releaseDate, tc.wantReleaseDate,
+					"releaseDate mismatch\ngot:  %q\nwant: %q",
+					releaseDate, tc.wantReleaseDate,
 				)
 			}
 
-			// AND: any log output is as expected.
 			stdout := releaseStdout()
-			// stdout finishes.
-			if tc.stdoutRegex != "" {
-				tc.stdoutRegex = strings.ReplaceAll(tc.stdoutRegex, "__name__", tc.name)
-				if !util.RegexCheck(tc.stdoutRegex, stdout) {
-					t.Errorf(
-						"%s stdout mismatch\ngot:  %q\nwant: %q",
-						prefix, stdout, tc.stdoutRegex,
-					)
-				}
+			if !util.RegexCheck(tc.stdoutRegex, stdout) {
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 			}
 		})
 	}

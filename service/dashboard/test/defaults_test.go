@@ -19,7 +19,7 @@ package test
 import "testing"
 
 func TestPlainDefaultsConfig(t *testing.T) {
-	dashCfg := PlainDefaultsConfig(t)
+	dashCfg := PlainDefaultsConfig()
 
 	if dashCfg.Soft == nil {
 		t.Error("DefaultsConfig.Soft mismatch\ngot:  nil\nwant: non-nil")

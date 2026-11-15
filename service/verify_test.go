@@ -223,7 +223,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 func TestServices_CheckValues(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name     string
@@ -436,7 +436,7 @@ func TestServices_CheckValues__nil(t *testing.T) {
 func TestService_CheckValues(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name     string
@@ -620,7 +620,7 @@ func TestService_CheckValues(t *testing.T) {
 		{
 			name: "options + latest_version + deployed_version + notify + command + webhook err",
 			input: test.Must(t, func() (*Service, error) {
-				whCfgOverride := whtest.PlainConfig(t)
+				whCfgOverride := whtest.PlainConfig()
 				whCfgOverride.HardDefaults.Type = ""
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -789,7 +789,7 @@ func TestService_CheckValues(t *testing.T) {
 func TestService_CheckValues__deployed_version__manual(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name        string

@@ -32,8 +32,8 @@ import (
 )
 
 func TestDecode(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
-	optCfg := opttest.PlainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
+	optCfg := opttest.PlainDefaultsConfig()
 
 	tests := []struct {
 		name         string
@@ -342,7 +342,7 @@ func (b *BadInheritable) DecodeSelf(format string, data []byte) error     { retu
 func (b *BadInheritable) ApplyOverrides(format string, data []byte) error { return nil }
 
 func TestDecode_TypeAssertionFailure(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
 
 	orig := ServiceMapInheritable
 	t.Cleanup(func() { ServiceMapInheritable = orig })
@@ -369,8 +369,8 @@ func TestDecode_TypeAssertionFailure(t *testing.T) {
 }
 
 func TestApplyOverrides(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
-	optCfg := opttest.PlainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
+	optCfg := opttest.PlainDefaultsConfig()
 
 	type Args struct {
 		format, data string

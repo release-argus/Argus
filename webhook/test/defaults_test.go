@@ -23,7 +23,7 @@ import (
 )
 
 func TestPlainConfig(t *testing.T) {
-	whCfg := PlainConfig(t)
+	whCfg := PlainConfig()
 
 	fieldTests := []test.FieldAssertion{
 		{Name: "Root", Got: whCfg.Root, Mode: test.CompareNotNil},

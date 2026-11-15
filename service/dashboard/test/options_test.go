@@ -21,7 +21,7 @@ import (
 )
 
 func TestPlainOptions(t *testing.T) {
-	got := PlainOptions(t)
+	got := PlainOptions()
 
 	if got == nil {
 		t.Error("mismatch\ngot:  nil\nwant: non-nil")

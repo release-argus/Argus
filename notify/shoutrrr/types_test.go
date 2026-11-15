@@ -322,8 +322,8 @@ func TestShoutrrrs_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			origStatus := newTestStatus(t, tc.name, 2)
-			copyStatus := newTestStatus(t, tc.name, 2)
+			origStatus := newTestStatus(tc.name, 2)
+			copyStatus := newTestStatus(tc.name, 2)
 
 			var orig Shoutrrrs
 			switch tc.wantLen {
@@ -500,8 +500,8 @@ func TestShoutrrr_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			origStatus := newTestStatus(t, tc.name, 2)
-			copyStatus := newTestStatus(t, tc.name, 2)
+			origStatus := newTestStatus(tc.name, 2)
+			copyStatus := newTestStatus(tc.name, 2)
 
 			var orig *Shoutrrr
 			if !tc.wantNil {

@@ -187,7 +187,7 @@ func TestWebhook_Send(t *testing.T) {
 			stdoutRegex: `Webhook gave 500.*invalid gotify token`,
 			errRegex:    `failed 1 times to send the Webhook for .* to ".*"$`,
 			notifiers: shoutrrr.Shoutrrrs{
-				"fail": shoutrrrtest.Shoutrrr(t, true, false),
+				"fail": shoutrrrtest.Shoutrrr(true, false),
 			},
 		},
 		{
@@ -197,7 +197,7 @@ func TestWebhook_Send(t *testing.T) {
 			stdoutRegex: `Webhook gave 500.*failed \d times to send the Webhook [^-]+-n$`,
 			errRegex:    `failed 1 times to send the Webhook for .* to ".*"$`,
 			notifiers: shoutrrr.Shoutrrrs{
-				"fail": shoutrrrtest.Shoutrrr(t, true, false),
+				"fail": shoutrrrtest.Shoutrrr(true, false),
 			},
 		},
 		{
@@ -303,14 +303,14 @@ func TestNotifiers_Send(t *testing.T) {
 			name:     "successful",
 			errRegex: `^$`,
 			shoutrrrNotifiers: &shoutrrr.Shoutrrrs{
-				"pass": shoutrrrtest.Shoutrrr(t, false, false),
+				"pass": shoutrrrtest.Shoutrrr(false, false),
 			},
 		},
 		{
 			name:     "failing",
 			errRegex: `invalid gotify token`,
 			shoutrrrNotifiers: &shoutrrr.Shoutrrrs{
-				"fail": shoutrrrtest.Shoutrrr(t, true, false),
+				"fail": shoutrrrtest.Shoutrrr(true, false),
 			},
 		},
 	}

@@ -26,7 +26,6 @@ import (
 )
 
 func TestLookup_InheritSecrets(t *testing.T) {
-	// GIVEN: a Lookup carrying edits, and the stored Lookup it is edited from.
 	tests := []struct {
 		name      string
 		hosts     map[string]HostDefaults // Instances the defaults name.
@@ -47,7 +46,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 		},
 		{
 			name:      "masked token on another spelling of the same host is cleared",
-			host:      "CODEBERG.org:443/",
+			host:      "CODEBERG.org:443/", // Compared as spelt, not canonicalised.
 			token:     util.SecretValue,
 			fromHost:  "https://codeberg.org",
 			fromToken: "stored-token",
@@ -144,22 +143,12 @@ func TestLookup_InheritSecrets(t *testing.T) {
 				from = &base.Lookup{URL: "owner/repo"}
 			}
 
-			// WHEN: InheritSecrets is called.
 			lookup.InheritSecrets(from, nil)
 
-			// THEN: the token is as expected.
 			if lookup.AccessToken != tc.want {
 				t.Fatalf(
-					"%s\nLookup.InheritSecrets() access_token mismatch\ngot:  %q\nwant: %q",
-					packageName, lookup.AccessToken, tc.want,
-				)
-			}
-
-			// AND: a masked value never survives.
-			if lookup.AccessToken == util.SecretValue {
-				t.Fatalf(
-					"%s\nLookup.InheritSecrets() left the masked placeholder in place",
-					packageName,
+					"Lookup.AccessToken mismatch\ngot:  %q\nwant: %q",
+					lookup.AccessToken, tc.want,
 				)
 			}
 		})

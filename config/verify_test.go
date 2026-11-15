@@ -41,7 +41,7 @@ func testVerify(t *testing.T) *Config {
 
 	cfg.Order = []string{"test"}
 
-	defaults, hardDefaults := plainDefaults(t)
+	defaults, hardDefaults := plainDefaults()
 	cfg.Defaults = *defaults
 	cfg.Defaults.Default()
 	cfg.HardDefaults = *hardDefaults
@@ -88,9 +88,9 @@ func TestConfig_CheckValues(t *testing.T) {
 	nilUndefinedFlags(t, &Settings{})
 	loadMu.Unlock()
 
-	svcCfg := svctest.PlainDefaultsConfig(t)
+	svcCfg := svctest.PlainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name     string

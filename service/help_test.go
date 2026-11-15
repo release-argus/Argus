@@ -52,7 +52,7 @@ func testService(t *testing.T, id string, lvType, dvType string) *Service {
 
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	svc := test.Must(t, func() (*Service, error) {
 		return DecodeService(

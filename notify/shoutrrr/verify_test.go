@@ -231,7 +231,7 @@ func TestShoutrrrs_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			if tc.input != nil {
-				tc.input.Init(newTestStatus(t, tc.name, len(*tc.input)), plainConfig())
+				tc.input.Init(newTestStatus(tc.name, len(*tc.input)), plainConfig())
 			}
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
@@ -1713,7 +1713,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 					make(map[string]string),
 				),
 			)
-			serviceStatus := newTestStatus(t, tc.name, 1)
+			serviceStatus := newTestStatus(tc.name, 1)
 			shoutrrr.Init(
 				serviceStatus,
 				shoutrrr.Main, shoutrrr.Defaults, shoutrrr.HardDefaults,
@@ -1918,7 +1918,7 @@ func TestShoutrrr_CheckValuesType(t *testing.T) {
 			input := testShoutrrr(false, false)
 			input.Type = tc.sType
 			input.Init(
-				newTestStatus(t, tc.name, 1),
+				newTestStatus(tc.name, 1),
 				tc.main,
 				&Defaults{}, &Defaults{},
 			)
@@ -2896,7 +2896,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			input.Type = tc.sType
 			input.URLFields = tc.urlFields
 			input.Init(
-				newTestStatus(t, tc.name, 1),
+				newTestStatus(tc.name, 1),
 				tc.main,
 				&Defaults{}, &Defaults{},
 			)
@@ -3234,7 +3234,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			input.Params = tc.params
 			input.URLFields = tc.urlFields
 			input.Init(
-				newTestStatus(t, tc.name, 1),
+				newTestStatus(tc.name, 1),
 				tc.main,
 				&Defaults{}, &Defaults{},
 			)

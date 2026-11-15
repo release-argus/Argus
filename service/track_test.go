@@ -125,7 +125,7 @@ func TestServices_Track(t *testing.T) {
 func TestService_Track(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	testURLService := testService(t, t.Name(), "url", "url")
 	if _, err := testURLService.LatestVersion.Query(false, logx.LogFrom{}); err != nil {
@@ -200,7 +200,7 @@ func TestService_Track(t *testing.T) {
 					url: ` + test.LookupBare.URLValid + `/1.2.2
 				webhook:
 					test:
-						` + test.Indent(whtest.Webhook(t, false, false, false).String(""), 4) + `
+						` + test.Indent(whtest.Webhook(false, false, false).String(""), 4) + `
 			`)),
 			livenessMetric: metric.LatestVersionQueryResultSuccess,
 			versions: versions{
@@ -218,7 +218,7 @@ func TestService_Track(t *testing.T) {
 					url: ` + test.LookupBare.URLValid + `/1.2.2
 				webhook:
 					test:
-						` + test.Indent(whtest.Webhook(t, false, false, false).String(""), 4) + `
+						` + test.Indent(whtest.Webhook(false, false, false).String(""), 4) + `
 				dashboard:
 					auto_approve: true
 			`)),

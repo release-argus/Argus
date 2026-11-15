@@ -24,7 +24,7 @@ import (
 )
 
 func TestIsEqual(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
 
 	tests := []struct {
 		name string

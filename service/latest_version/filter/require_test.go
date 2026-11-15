@@ -153,7 +153,7 @@ func TestRequire_IsZero(t *testing.T) {
 }
 
 func TestRequire_String(t *testing.T) {
-	defaults, _ := plainDefaults(t)
+	defaults, _ := plainDefaults()
 
 	tests := []struct {
 		name    string
@@ -474,7 +474,7 @@ func TestRequire_DockerTagCheck__unit(t *testing.T) {
 }
 
 func TestRequire_Init(t *testing.T) {
-	defaults, _ := plainDefaults(t)
+	defaults, _ := plainDefaults()
 
 	tests := []struct {
 		name            string
@@ -562,11 +562,7 @@ func TestRequire_Init(t *testing.T) {
 				return
 			}
 
-			expectedDefaults, err := dockertest.GetDefaultOfDockerType(
-				t,
-				tc.req.Docker.GetType(),
-				&defaults.Docker,
-			)
+			expectedDefaults, err := dockertest.GetDefaultOfDockerType(tc.req.Docker.GetType(), &defaults.Docker)
 			if err != nil {
 				t.Fatalf("dockertest.GetDefaultOfDockerType() failed: %v", err)
 			}
@@ -760,7 +756,7 @@ func TestRequire_CheckValues(t *testing.T) {
 }
 
 func TestRequire_Inherit(t *testing.T) {
-	defaults, _ := plainDefaults(t)
+	defaults, _ := plainDefaults()
 	fromQueryToken := "from-query-token"
 	fromValidUntil := time.Date(2100, 1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -987,7 +983,7 @@ func TestRequire_Inherit(t *testing.T) {
 }
 
 func TestRequire_RemoveUnusedRequireDocker(t *testing.T) {
-	defaults, _ := plainDefaults(t)
+	defaults, _ := plainDefaults()
 
 	tests := []struct {
 		name    string

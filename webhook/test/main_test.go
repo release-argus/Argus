@@ -129,12 +129,7 @@ func TestWebhook(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := Webhook(
-				t,
-				tc.failing,
-				tc.selfSignedCert,
-				tc.headers,
-			)
+			result := Webhook(tc.failing, tc.selfSignedCert, tc.headers)
 
 			if testErr := test.AssertSlicesEqual(
 				t,

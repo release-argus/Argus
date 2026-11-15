@@ -182,7 +182,7 @@ func TestDefaults_SetDefaults(t *testing.T) {
 }
 
 func TestDefaults_CheckValues(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
 
 	tests := []struct {
 		name     string

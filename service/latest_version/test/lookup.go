@@ -106,7 +106,7 @@ func testForgejo(t *testing.T, fail bool) latestver.Lookup {
 		`)),
 		opttest.Options(t),
 		svcStatus,
-		PlainDefaultsConfig(t),
+		PlainDefaultsConfig(),
 	)
 	if err != nil {
 		t.Fatalf("latestver.Decode() failed: %v", err)
@@ -119,7 +119,7 @@ func testForgejo(t *testing.T, fail bool) latestver.Lookup {
 func testGitHub(t *testing.T, fail bool) latestver.Lookup {
 	t.Helper()
 
-	lvCfg := PlainDefaultsConfig(t)
+	lvCfg := PlainDefaultsConfig()
 	accessToken := test.GitHubToken(t)
 	if fail {
 		accessToken = "invalid"
@@ -148,7 +148,7 @@ func testGitHub(t *testing.T, fail bool) latestver.Lookup {
 func testWeb(t *testing.T, fail bool) latestver.Lookup {
 	t.Helper()
 
-	lvCfg := PlainDefaultsConfig(t)
+	lvCfg := PlainDefaultsConfig()
 
 	svcStatus, _ := statustest.New("yaml", nil)
 

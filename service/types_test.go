@@ -45,7 +45,7 @@ import (
 func TestService_Marshal(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name               string
@@ -823,8 +823,8 @@ func TestService_UnmarshalDeployedVersion(t *testing.T) {
 }
 
 func TestService_String(t *testing.T) {
-	dashCfg := dashtest.PlainDefaultsConfig(t)
-	lvCfg := lvtest.PlainDefaultsConfig(t)
+	dashCfg := dashtest.PlainDefaultsConfig()
+	lvCfg := lvtest.PlainDefaultsConfig()
 	dvCfg := dvtest.PlainDefaultsConfig()
 
 	tests := []struct {
@@ -995,7 +995,7 @@ func TestService_String(t *testing.T) {
 func TestService_Summary(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name string

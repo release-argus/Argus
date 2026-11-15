@@ -340,9 +340,7 @@ func TestWebhooks_UnmarshalJSON(t *testing.T) {
 }
 
 // testCopyStatus returns a Status with Webhook fails initialised.
-func testCopyStatus(t *testing.T) *status.Status {
-	t.Helper()
-
+func testCopyStatus() *status.Status {
 	svcStatus, _ := statustest.New("yaml", nil)
 	svcStatus.Fails.Webhook.Init(2)
 
@@ -415,7 +413,7 @@ func TestWebhooks_Copy(t *testing.T) {
 		{
 			name: "copies each entry",
 			webhooks: func() *Webhooks {
-				origStatus := testCopyStatus(t)
+				origStatus := testCopyStatus()
 				wh := Webhooks{
 					"foo": testWebhookForCopy(origStatus, "foo"),
 					"bar": testWebhookForCopy(origStatus, "bar"),
@@ -427,7 +425,7 @@ func TestWebhooks_Copy(t *testing.T) {
 		{
 			name: "reassigning original map entry does not affect copy",
 			webhooks: func() *Webhooks {
-				origStatus := testCopyStatus(t)
+				origStatus := testCopyStatus()
 				wh := Webhooks{
 					"foo": testWebhookForCopy(origStatus, "foo"),
 				}
@@ -442,7 +440,7 @@ func TestWebhooks_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			copyStatus := testCopyStatus(t)
+			copyStatus := testCopyStatus()
 			copyNotifiers := Notifiers{Shoutrrr: &shoutrrr.Shoutrrrs{}}
 
 			got := tc.webhooks.Copy(copyStatus, copyNotifiers)
@@ -483,7 +481,7 @@ func TestWebhooks_Copy(t *testing.T) {
 			}
 
 			if tc.reassignOriginalKey != "" {
-				newStatus := testCopyStatus(t)
+				newStatus := testCopyStatus()
 				replacement := testWebhookForCopy(newStatus, "replacement")
 				orig[tc.reassignOriginalKey] = replacement
 				if got[tc.reassignOriginalKey] == replacement {
@@ -517,8 +515,8 @@ func TestWebhook_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			origStatus := testCopyStatus(t)
-			copyStatus := testCopyStatus(t)
+			origStatus := testCopyStatus()
+			copyStatus := testCopyStatus()
 
 			copyNotifiers := Notifiers{Shoutrrr: &shoutrrr.Shoutrrrs{}}
 

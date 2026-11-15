@@ -28,8 +28,8 @@ import (
 )
 
 func TestLookup_Copy(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
-	optCfg := opttest.PlainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
+	optCfg := opttest.PlainDefaultsConfig()
 
 	tests := []struct {
 		name   string

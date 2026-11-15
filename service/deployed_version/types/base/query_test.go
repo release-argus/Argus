@@ -28,7 +28,7 @@ import (
 
 func TestLookup_HandleNewVersion(t *testing.T) {
 	dvCfg := plainDefaultsConfig()
-	optCfg := opttest.PlainDefaultsConfig(t)
+	optCfg := opttest.PlainDefaultsConfig()
 
 	type versions struct {
 		initialLatestVersion, initialDeployedVersion string
@@ -110,7 +110,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			)
 			lookup.Status.SetLatestVersion(tc.versions.initialLatestVersion, "", false)
 			lookup.Status.SetDeployedVersion(tc.versions.initialDeployedVersion, "", false)
-			lookup.Options = opttest.PlainOptions(t, optCfg)
+			lookup.Options = opttest.PlainOptions(optCfg)
 			lookup.Defaults = dvCfg.Soft
 			lookup.HardDefaults = dvCfg.Hard
 

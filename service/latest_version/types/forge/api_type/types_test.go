@@ -24,10 +24,7 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 )
 
-var packageName = "latestver_forgetypes"
-
 func TestRelease_String(t *testing.T) {
-	// GIVEN: a Release.
 	tests := []struct {
 		name    string
 		release *Release
@@ -41,7 +38,7 @@ func TestRelease_String(t *testing.T) {
 		{
 			name:    "empty",
 			release: &Release{},
-			want:    `{"prerelease": false}`,
+			want:    `{"prerelease": false}`, // Only prerelease is kept when zero.
 		},
 		{
 			name: "only assets",
@@ -115,23 +112,17 @@ func TestRelease_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the Release is stringified with String.
 			got := tc.release.String()
 
-			// THEN: the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf(
-					"%s\nRelease.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("Release.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestAsset_String(t *testing.T) {
-	// GIVEN: an Asset.
 	tests := []struct {
 		name  string
 		asset *Asset
@@ -145,7 +136,7 @@ func TestAsset_String(t *testing.T) {
 		{
 			name:  "empty",
 			asset: &Asset{},
-			want:  `{"id": 0}`,
+			want:  `{"id": 0}`, // Only id is kept when zero.
 		},
 		{
 			name: "filled",
@@ -169,16 +160,11 @@ func TestAsset_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the Asset is stringified with String.
 			got := tc.asset.String()
 
-			// THEN: the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf(
-					"%s\nAsset.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("Asset.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

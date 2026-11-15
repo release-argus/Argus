@@ -29,17 +29,16 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	logtest "github.com/release-argus/Argus/internal/test/log"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
+	lvbasetest "github.com/release-argus/Argus/service/latest_version/types/base/test"
 	forgetest "github.com/release-argus/Argus/service/latest_version/types/forge/test"
 	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
-var packageName = "latestver_forgejo"
-
 // releasesBody is a /releases response in the shape a forge returns, trimmed to the
-// fields Argus reads. 0.17.4 is the highest stable semantic version, and was published before 0.18.0-rc1.
+// fields Argus reads. 0.17.4 is the highest stable semantic version, and was published
+// before 0.18.0-rc1.
 var releasesBody = test.TrimJSON(`[
 	{
 		"tag_name":"0.16.9",
@@ -88,18 +87,15 @@ const (
 )
 
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -109,14 +105,14 @@ type forgeEndpoint = forgetest.Endpoint
 // forgeServer is a fixture standing in for a Forgejo instance.
 type forgeServer = forgetest.Server
 
-// newForgeServer starts a fixture serving `endpoints`.
+// newForgeServer starts a fixture serving endpoints.
 func newForgeServer(t *testing.T, endpoints map[string]forgeEndpoint) *forgeServer {
 	t.Helper()
 
 	return startForgeServer(t, &forgeServer{Endpoints: endpoints}, httptest.NewServer)
 }
 
-// startForgeServer starts `server`, giving it the replies a Forgejo instance gives.
+// startForgeServer starts server, giving it the replies a Forgejo instance gives.
 func startForgeServer(
 	t *testing.T,
 	server *forgeServer,
@@ -140,24 +136,22 @@ func forgeNextPageLink(_ *http.Request, next, last int) string {
 	}
 
 	return fmt.Sprintf(
-		`<%s?limit=50&page=%d>; rel="next",`+`<%s?limit=50&page=%d>; rel="last"`,
+		`<%s?limit=50&page=%d>; rel="next", <%s?limit=50&page=%d>; rel="last"`,
 		root, next, root, last,
 	)
 }
 
-// testLookup returns a Lookup decoded from `lookupYAML`.
+// testLookup returns a [Lookup] decoded from lookupYAML.
 func testLookup(t *testing.T, lookupYAML string) *Lookup {
 	t.Helper()
 
-	// Options.
-	options, _ := opt.Decode(
-		"yaml", nil,
-		opttest.PlainDefaultsConfig(t),
-	)
-	// Status.
-	svcStatus, _ := statustest.New("yaml", []byte(`id: forgejo-testLookup`))
+	options, _ := opt.Decode("yaml", nil, opttest.PlainDefaultsConfig())
+	svcStatus, err := statustest.New("yaml", []byte(`id: forgejo-testLookup`))
+	if err != nil {
+		t.Fatalf("statustest.New() failed: %v", err)
+	}
 
-	lookupCfg := plainDefaultsConfig(t)
+	lookupCfg := lvbasetest.PlainDefaultsConfig()
 	lookup, err := Decode(
 		"yaml", []byte(test.TrimYAML(lookupYAML)),
 		options,
@@ -165,10 +159,7 @@ func testLookup(t *testing.T, lookupYAML string) *Lookup {
 		lookupCfg,
 	)
 	if err != nil {
-		t.Fatalf(
-			"%s\nfailed to decode Lookup: %v",
-			packageName, err,
-		)
+		t.Fatalf("Decode() failed: %v", err)
 	}
 	lookup.Init(options, svcStatus, lookupCfg)
 
@@ -179,29 +170,7 @@ func testLookup(t *testing.T, lookupYAML string) *Lookup {
 	return lookup
 }
 
-// plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
-	t.Helper()
-
-	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults.Default()
-
-	defaults, _ := base.DecodeDefaults("yaml", nil)
-	defaults.Options = optDefaults
-	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
-	hardDefaults.Default()
-	hardDefaults.Options = optHardDefaults
-
-	defaults.Require.SetDefaults(&hardDefaults.Require)
-
-	return base.DefaultsConfig{
-		Soft: defaults,
-		Hard: hardDefaults,
-	}
-}
-
-// newResponse builds a response to a GET request for `address` for the
+// newResponse builds a response to a GET request for address for the
 // status-map tests.
 func newResponse(
 	t *testing.T,
@@ -215,10 +184,7 @@ func newResponse(
 
 	request, err := http.NewRequest(http.MethodGet, address, nil)
 	if err != nil {
-		t.Fatalf(
-			"%s\nfailed to build the request: %v",
-			packageName, err,
-		)
+		t.Fatalf("http.NewRequest() failed: %v", err)
 	}
 	if accessToken != "" {
 		request.Header.Set("Authorization", "Bearer "+accessToken)
@@ -247,7 +213,7 @@ func setHostDefaults(lookup *Lookup, defaults, hardDefaults map[string]HostDefau
 // hostPlaceholder stands in for a fixture's URL, which is only known once it has started.
 const hostPlaceholder = "HOST"
 
-// hostKeyedAt rewrites the [hostPlaceholder] in each entry's URL to `url`, so a
+// hostKeyedAt rewrites the [hostPlaceholder] in each entry's URL to url, so a
 // fixture can name an instance whose address is only known once it has started.
 func hostKeyedAt(hosts map[string]HostDefaults, url string) map[string]HostDefaults {
 	if hosts == nil {

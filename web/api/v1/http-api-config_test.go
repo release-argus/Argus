@@ -38,7 +38,7 @@ import (
 )
 
 func TestHTTP_Config(t *testing.T) {
-	lvCfg := lvtest.PlainDefaultsConfig(t)
+	lvCfg := lvtest.PlainDefaultsConfig()
 
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)

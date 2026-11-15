@@ -12,18 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit || integration
+//go:build unit
 
 package dashboard
 
-import "testing"
-
-var packageName = "service.dashboard"
-
 // plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig(t *testing.T) DefaultsConfig {
-	t.Helper()
-
+func plainDefaultsConfig() DefaultsConfig {
 	defaults, _ := DecodeDefaults("yaml", nil)
 	hardDefaults, _ := DecodeDefaults("yaml", nil)
 	hardDefaults.Default()

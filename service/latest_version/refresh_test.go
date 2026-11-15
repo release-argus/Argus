@@ -36,7 +36,7 @@ func TestRefresh__overridesRemovingTheLookup(t *testing.T) {
 		[]byte("null"),
 		nil,
 		nil,
-		plainDefaultsConfig(t),
+		plainDefaultsConfig(),
 	)
 
 	// An error, not a panic on the removed Lookup.
@@ -55,7 +55,7 @@ func TestRefresh__overridesRemovingTheLookup(t *testing.T) {
 }
 
 func TestApplyOverridesJSON(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
 
 	tLookupInterface := testLookup(t, "url", false)
 	tLookup := tLookupInterface.(*web.Lookup)

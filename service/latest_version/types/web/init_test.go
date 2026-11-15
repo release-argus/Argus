@@ -29,7 +29,7 @@ import (
 )
 
 func TestLookup_Init(t *testing.T) {
-	lvCfg := lvbasetest.PlainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig()
 
 	type want struct {
 		requireHasDockerDefaults bool
@@ -149,11 +149,7 @@ func TestLookup_Init(t *testing.T) {
 			}
 
 			if l.Require != nil && l.Require.Docker != nil {
-				wantDefaults, err := dockertest.GetDefaultOfDockerType(
-					t,
-					l.Require.Docker.GetType(),
-					&lvCfg.Soft.Require.Docker,
-				)
+				wantDefaults, err := dockertest.GetDefaultOfDockerType(l.Require.Docker.GetType(), &lvCfg.Soft.Require.Docker)
 				if err != nil {
 					t.Fatalf("dockertest.GetDefaultOfDockerType() failed: %v", err)
 				}

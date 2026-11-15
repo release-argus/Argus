@@ -221,7 +221,7 @@ func testConfig(t *testing.T, path string) (cfg *config.Config) {
 
 func testService(t *testing.T, id string, svcCfg service.DefaultsConfig) *service.Service {
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	// Service.
 	svc := test.Must(t, func() (*service.Service, error) {
@@ -263,7 +263,7 @@ func testService(t *testing.T, id string, svcCfg service.DefaultsConfig) *servic
 					- ["ls", "-lah"]
 				notify:
 					test:
-				`+shoutrrrtest.Shoutrrr(t, false, false).String("    ")+`
+				`+shoutrrrtest.Shoutrrr(false, false).String("    ")+`
 				webhook:
 					test:
 						type: github

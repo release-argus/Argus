@@ -18,7 +18,6 @@
 package forge
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
@@ -39,7 +38,6 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 
 	defaultRelease := testBodyObject[0]
 
-	// GIVEN: a release and the requirements it is checked against.
 	tests := []struct {
 		name            string
 		requireYAML     string
@@ -183,41 +181,25 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 			require := testRequire(t, tc.requireYAML)
 			logFrom := logx.LogFrom{Primary: t.Name()}
 
-			// WHEN: ReleaseMeetsRequirements is called on it.
 			version, releaseDate, err := ReleaseMeetsRequirements(
 				*release,
 				require,
 				"forge-test",
 				logFrom,
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\nReleaseMeetsRequirements(%+v)",
-				packageName, release,
-			)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.want.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.want.errRegex)
 			}
 
-			// AND: the version is as expected.
 			if version != tc.want.version {
-				t.Errorf(
-					"%s version mismatch\ngot:  %q\nwant: %q",
-					prefix, version, tc.want.version,
-				)
+				t.Errorf("version mismatch\ngot:  %q\nwant: %q", version, tc.want.version)
 			}
 
-			// AND: the release date is as expected.
 			if releaseDate != tc.want.releaseDate {
 				t.Errorf(
-					"%s release date mismatch\ngot:  %q\nwant: %q",
-					prefix, releaseDate, tc.want.releaseDate,
+					"releaseDate mismatch\ngot:  %q\nwant: %q",
+					releaseDate, tc.want.releaseDate,
 				)
 			}
 		})
@@ -225,7 +207,6 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 }
 
 func TestFirstReleaseMeetingRequirements(t *testing.T) {
-	// GIVEN: releases in the order they would be filtered into, and requirements.
 	tests := []struct {
 		name        string
 		requireYAML string
@@ -279,40 +260,22 @@ func TestFirstReleaseMeetingRequirements(t *testing.T) {
 
 			require := testRequire(t, tc.requireYAML)
 
-			// WHEN: FirstReleaseMeetingRequirements is called on them.
 			version, releaseDate, err := FirstReleaseMeetingRequirements(
 				tc.releases,
 				require,
 				"forge-test",
 				logx.LogFrom{Primary: t.Name()},
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\nFirstReleaseMeetingRequirements(%d releases)",
-				packageName, len(tc.releases),
-			)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: the release taken is as expected.
 			if version != tc.wantVersion {
-				t.Fatalf(
-					"%s version mismatch\ngot:  %q\nwant: %q",
-					prefix, version, tc.wantVersion,
-				)
+				t.Fatalf("version mismatch\ngot:  %q\nwant: %q", version, tc.wantVersion)
 			}
 			if releaseDate != tc.wantDate {
-				t.Fatalf(
-					"%s release date mismatch\ngot:  %q\nwant: %q",
-					prefix, releaseDate, tc.wantDate,
-				)
+				t.Fatalf("releaseDate mismatch\ngot:  %q\nwant: %q", releaseDate, tc.wantDate)
 			}
 		})
 	}

@@ -191,7 +191,7 @@ func TestOptions_Unmarshal(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
-	dashCfg := plainDefaultsConfig(t)
+	dashCfg := plainDefaultsConfig()
 
 	tests := []struct {
 		name         string

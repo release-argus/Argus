@@ -17,7 +17,6 @@
 package filter
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/command"
@@ -31,7 +30,6 @@ import (
 )
 
 func TestRequire_ExecCommand(t *testing.T) {
-	// GIVEN: a Require with a Command.
 	tests := []struct {
 		name        string
 		cmd         command.Command
@@ -78,7 +76,8 @@ func TestRequire_ExecCommand(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout and sharing log resultChannel.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			svcDashboard := &dashboard.Options{
@@ -97,30 +96,15 @@ func TestRequire_ExecCommand(t *testing.T) {
 				require.Status.ServiceInfo = *tc.sInfo
 			}
 
-			// WHEN: ApplyTemplate is called on the Command.
 			err := require.ExecCommand(tc.version, logx.LogFrom{})
-
-			prefix := fmt.Sprintf(
-				"%s\nRequire ExecCommand(%q)",
-				packageName, require.Command,
-			)
-
-			// THEN: the decode errors as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: the stdout is expected.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Fatalf(
-					"%s stdout mismatch\nwant: %q\ngot:  %q",
-					prefix, tc.stdoutRegex, stdout,
-				)
+				t.Fatalf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 			}
 		})
 	}

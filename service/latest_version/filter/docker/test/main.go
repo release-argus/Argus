@@ -19,15 +19,12 @@ package test
 
 import (
 	"fmt"
-	"testing"
 
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 )
 
 // GetDefaultOfDockerType returns the registry defaults for dType from defaults.
-func GetDefaultOfDockerType(t *testing.T, dType string, defaults *docker.Defaults) (docker.RegistryDefaults, error) {
-	t.Helper()
-
+func GetDefaultOfDockerType(dType string, defaults *docker.Defaults) (docker.RegistryDefaults, error) {
 	switch dType {
 	case "ecr":
 		return defaults.Registry.ECR, nil

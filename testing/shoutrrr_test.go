@@ -31,9 +31,9 @@ import (
 )
 
 func TestFindShoutrrr(t *testing.T) {
-	svcCfg := svctest.PlainDefaultsConfig(t)
+	svcCfg := svctest.PlainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name        string
@@ -512,9 +512,9 @@ func TestFindShoutrrr(t *testing.T) {
 }
 
 func TestGetAllShoutrrrNames(t *testing.T) {
-	svcCfg := svctest.PlainDefaultsConfig(t)
+	svcCfg := svctest.PlainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name          string

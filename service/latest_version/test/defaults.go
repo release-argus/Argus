@@ -18,8 +18,6 @@
 package test
 
 import (
-	"testing"
-
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	opttest "github.com/release-argus/Argus/service/option/test"
 )
@@ -28,10 +26,8 @@ import (
 const dummyGitHubToken = "dummy-github-token"
 
 // PlainDefaultsConfig returns plain defaults and hardDefaults with a dummy GitHub token.
-func PlainDefaultsConfig(t *testing.T) latestver.DefaultsConfig {
-	t.Helper()
-
-	optCfg := opttest.PlainDefaultsConfig(t)
+func PlainDefaultsConfig() latestver.DefaultsConfig {
+	optCfg := opttest.PlainDefaultsConfig()
 
 	defaults, _ := latestver.DecodeDefaults("yaml", nil)
 	defaults.Common.Options = optCfg.Soft

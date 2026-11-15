@@ -109,9 +109,9 @@ func releaseEqual(a, b forgetypes.Release) bool {
 func testLookup(t *testing.T) *Lookup {
 	t.Helper()
 
-	lvCfg := lvbasetest.PlainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig()
 
-	options := opttest.PlainOptions(t, opttest.PlainDefaultsConfig(t))
+	options := opttest.PlainOptions(opttest.PlainDefaultsConfig())
 	svcStatus, _ := statustest.New("yaml", nil)
 	svcStatus.Init(
 		0, 0, 0,

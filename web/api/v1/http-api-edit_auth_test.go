@@ -392,7 +392,7 @@ func TestAPI__auth__versionRefreshOverridesRequireServiceUpdate(t *testing.T) {
 					url: `+versionServer.URL+`
 			`)),
 			"test",
-			svctest.PlainDefaultsConfig(t), shoutrrrtest.PlainConfig(), whtest.PlainConfig(t),
+			svctest.PlainDefaultsConfig(), shoutrrrtest.PlainConfig(), whtest.PlainConfig(),
 		)
 	})
 	api.Config.OrderMu.Lock()

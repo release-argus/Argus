@@ -206,7 +206,7 @@ func TestLookup_Unmarshal(t *testing.T) {
 
 func TestString(t *testing.T) {
 	dvCfg := plainDefaultsConfig()
-	optCfg := opttest.PlainDefaultsConfig(t)
+	optCfg := opttest.PlainDefaultsConfig()
 
 	tests := []struct {
 		name   string
@@ -326,7 +326,7 @@ func TestString(t *testing.T) {
 
 func TestLookup_Copy(t *testing.T) {
 	dvCfg := plainDefaultsConfig()
-	optCfg := opttest.PlainDefaultsConfig(t)
+	optCfg := opttest.PlainDefaultsConfig()
 
 	tests := []struct {
 		name   string

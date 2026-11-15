@@ -19,7 +19,7 @@ package test
 import "testing"
 
 func TestPlainDefaultsConfig(t *testing.T) {
-	svcCfg := PlainDefaultsConfig(t)
+	svcCfg := PlainDefaultsConfig()
 
 	if svcCfg.Soft == nil {
 		t.Error("DefaultsConfig.Soft mismatch\ngot:  nil\nwant: non-nil")

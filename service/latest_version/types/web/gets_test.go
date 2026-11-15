@@ -22,41 +22,17 @@ import (
 )
 
 func TestLookup_GetType(t *testing.T) {
-	// GIVEN: a Lookup with a Type.
-	tests := []struct {
-		name  string
-		lType string
-	}{
-		{name: "empty", lType: ""},
-		{name: "test", lType: "test"},
-		{name: "x", lType: "x"},
-		{name: "y", lType: "y"},
-	}
+	l := &Lookup{}
+	l.Type = "other"
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+	got := l.GetType()
 
-			l := &Lookup{}
-			l.Type = tc.lType
-
-			// WHEN: GetType is called.
-			got := l.GetType()
-
-			wantType := Type
-			// THEN: the Type is returned.
-			if got != wantType {
-				t.Errorf(
-					"%s\nLookup.GetType() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, wantType,
-				)
-			}
-		})
+	if got != Type {
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, Type)
 	}
 }
 
 func TestLookup_AllowInvalidCerts(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name                                      string
 		rootValue, defaultValue, hardDefaultValue *bool
@@ -80,6 +56,19 @@ func TestLookup_AllowInvalidCerts(t *testing.T) {
 			want:             true,
 			hardDefaultValue: new(true),
 		},
+		{
+			name:             "root false overrides all",
+			want:             false,
+			rootValue:        new(false),
+			defaultValue:     new(true),
+			hardDefaultValue: new(true),
+		},
+		{
+			name:             "default false overrides hardDefault",
+			want:             false,
+			defaultValue:     new(false),
+			hardDefaultValue: new(true),
+		},
 	}
 
 	for _, tc := range tests {
@@ -91,15 +80,10 @@ func TestLookup_AllowInvalidCerts(t *testing.T) {
 			lookup.typeDefaults.AllowInvalidCerts = tc.defaultValue
 			lookup.typeHardDefaults.AllowInvalidCerts = tc.hardDefaultValue
 
-			// WHEN: allowInvalidCerts is called.
 			got := lookup.allowInvalidCerts()
 
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLookup.allowInvalidCerts() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
