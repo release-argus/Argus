@@ -17,12 +17,12 @@
 package rbac
 
 import (
-	"fmt"
 	"testing"
+
+	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestNewPermissionSet(t *testing.T) {
-	// GIVEN: grant slices of varying validity.
 	tests := []struct {
 		name        string
 		grants      []Grant
@@ -67,23 +67,11 @@ func TestNewPermissionSet(t *testing.T) {
 			name: "malformed grants are skipped (fail closed)",
 			grants: []Grant{
 				// Unknown scope type.
-				{
-					Resource: ResourceService,
-					Action:   ActionRead,
-					Scope:    Scope{Type: ScopeType("environment"), Ref: "prod"},
-				},
+				{Resource: ResourceService, Action: ActionRead, Scope: Scope{Type: ScopeType("environment"), Ref: "prod"}},
 				// Unknown resource.
-				{
-					Resource: Resource("unknown"),
-					Action:   ActionRead,
-					Scope:    Scope{Type: ScopeGlobal},
-				},
+				{Resource: Resource("unknown"), Action: ActionRead, Scope: Scope{Type: ScopeGlobal}},
 				// Scoped grant without a ref.
-				{
-					Resource: ResourceService,
-					Action:   ActionRead,
-					Scope:    Scope{Type: ScopeService},
-				},
+				{Resource: ResourceService, Action: ActionRead, Scope: Scope{Type: ScopeService}},
 			},
 			wantGlobal:  0,
 			wantService: 0,
@@ -95,36 +83,20 @@ func TestNewPermissionSet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: NewPermissionSet is called.
 			ps := NewPermissionSet(tc.grants)
 
-			prefix := fmt.Sprintf("%s\nNewPermissionSet()", packageName)
-
-			// THEN: only valid grants were indexed, into their scope's index.
-			if len(ps.global) != tc.wantGlobal {
-				t.Errorf(
-					"%s global index size mismatch\ngot:  %d\nwant: %d",
-					prefix, len(ps.global), tc.wantGlobal,
-				)
-			}
-			if len(ps.services) != tc.wantService {
-				t.Errorf(
-					"%s service index size mismatch\ngot:  %d\nwant: %d",
-					prefix, len(ps.services), tc.wantService,
-				)
-			}
-			if len(ps.tags) != tc.wantTag {
-				t.Errorf(
-					"%s tag index size mismatch\ngot:  %d\nwant: %d",
-					prefix, len(ps.tags), tc.wantTag,
-				)
+			if testErr := test.AssertFields(t, []test.FieldAssertion{
+				{Name: "len(PermissionSet.global)", Got: len(ps.global), Want: tc.wantGlobal, Mode: test.CompareEqual},
+				{Name: "len(PermissionSet.services)", Got: len(ps.services), Want: tc.wantService, Mode: test.CompareEqual},
+				{Name: "len(PermissionSet.tags)", Got: len(ps.tags), Want: tc.wantTag, Mode: test.CompareEqual},
+			}, ""); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
 }
 
 func TestPermissionSet_Allowed(t *testing.T) {
-	// GIVEN: PermissionSets built from grants, and evaluation targets.
 	tests := []struct {
 		name     string
 		grants   []Grant
@@ -250,10 +222,7 @@ func TestPermissionSet_Allowed(t *testing.T) {
 		{
 			name: "malformed grant (unknown scope type) fails closed",
 			grants: []Grant{
-				{
-					Resource: ResourceService,
-					Action:   ActionRead,
-					Scope:    Scope{Type: ScopeType("environment"), Ref: "prod"}},
+				{Resource: ResourceService, Action: ActionRead, Scope: Scope{Type: ScopeType("environment"), Ref: "prod"}},
 			},
 			resource: ResourceService, action: ActionRead,
 			target: &Target{ServiceID: "argus", Tags: []string{"prod"}},
@@ -267,45 +236,26 @@ func TestPermissionSet_Allowed(t *testing.T) {
 
 			ps := NewPermissionSet(tc.grants)
 
-			// WHEN: Allowed is called.
 			got := ps.Allowed(tc.resource, tc.action, tc.target)
 
-			prefix := fmt.Sprintf(
-				"%s\nPermissionSet.Allowed(resource=%q, action=%q, target=%q)",
-				packageName, tc.resource, tc.action, tc.target,
-			)
-
-			// THEN: the result matches expectations.
 			if got != tc.want {
-				t.Errorf(
-					"%s result mismatch\ngot:  %t\nwant: %t",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestPermissionSet_Allowed__nil(t *testing.T) {
-	// GIVEN: a nil PermissionSet.
 	var ps *PermissionSet
 
-	// WHEN: Allowed is called on it.
 	got := ps.Allowed(ResourceService, ActionRead, nil)
 
-	prefix := fmt.Sprintf("%s\n(*PermissionSet)(nil).Allowed()", packageName)
-
-	// THEN: it denies rather than panicking.
 	if got {
-		t.Errorf(
-			"%s nil PermissionSet should deny\ngot:  %t\nwant: false",
-			prefix, got,
-		)
+		t.Errorf("mismatch\ngot:  %t\nwant: false", got)
 	}
 }
 
 func TestPermissionSet_Allowed__determinism(t *testing.T) {
-	// GIVEN: the same grants in different orders, with duplicates.
 	base := []Grant{
 		globalGrant(ResourceService, ActionRead),
 		serviceGrant(ResourceService, ActionUpdate, "argus"),
@@ -319,59 +269,54 @@ func TestPermissionSet_Allowed__determinism(t *testing.T) {
 	withDuplicates := append(append([]Grant{}, base...), base...)
 
 	checks := []struct {
+		name     string
 		resource Resource
 		action   Action
 		target   *Target
 	}{
-		{ResourceService, ActionRead, nil},
-		{ResourceService, ActionUpdate, &Target{ServiceID: "argus"}},
-		{ResourceService, ActionUpdate, &Target{ServiceID: "other"}},
-		{ResourceServiceAction, ActionExecute, &Target{ServiceID: "x", Tags: []string{"prod"}}},
-		{ResourceVersionRefresh, ActionExecute, &Target{ServiceID: "other"}},
-		{ResourceVersionRefresh, ActionExecute, &Target{ServiceID: "argus"}},
+		{"service:read/no target", ResourceService, ActionRead, nil},
+		{"service:update/argus", ResourceService, ActionUpdate, &Target{ServiceID: "argus"}},
+		{"service:update/other", ResourceService, ActionUpdate, &Target{ServiceID: "other"}},
+		{"service_action:execute/prod tag", ResourceServiceAction, ActionExecute, &Target{ServiceID: "x", Tags: []string{"prod"}}},
+		{"version_refresh:execute/other", ResourceVersionRefresh, ActionExecute, &Target{ServiceID: "other"}},
+		{"version_refresh:execute/argus", ResourceVersionRefresh, ActionExecute, &Target{ServiceID: "argus"}},
 	}
 
 	psBase := NewPermissionSet(base)
 	psReversed := NewPermissionSet(reversed)
 	psDuplicated := NewPermissionSet(withDuplicates)
 
-	prefix := fmt.Sprintf("%s\nPermissionSet.Allowed() determinism", packageName)
-
-	// WHEN: the same evaluations run against each ordering.
 	for _, check := range checks {
-		want := psBase.Allowed(check.resource, check.action, check.target)
+		t.Run(check.name, func(t *testing.T) {
+			t.Parallel()
 
-		// THEN: grant order and duplication never change the outcome.
-		if got := psReversed.Allowed(check.resource, check.action, check.target); got != want {
-			t.Errorf(
-				"%s reversed grant order changed the outcome for (%q, %q)\ngot:  %t\nwant: %t",
-				prefix, check.resource, check.action, got, want,
-			)
-		}
-		if got := psDuplicated.Allowed(check.resource, check.action, check.target); got != want {
-			t.Errorf(
-				"%s duplicated grants changed the outcome for (%q, %q)\ngot:  %t\nwant: %t",
-				prefix, check.resource, check.action, got, want,
-			)
-		}
+			want := psBase.Allowed(check.resource, check.action, check.target)
+
+			if got := psReversed.Allowed(check.resource, check.action, check.target); got != want {
+				t.Errorf(
+					"reversed: PermissionSet.Allowed() mismatch\ngot:  %t\nwant: %t",
+					got, want,
+				)
+			}
+			if got := psDuplicated.Allowed(check.resource, check.action, check.target); got != want {
+				t.Errorf(
+					"duplicated: PermissionSet.Allowed() mismatch\ngot:  %t\nwant: %t",
+					got, want,
+				)
+			}
+		})
 	}
 }
 
-// TestPermissionSet__allScopeTypesEnforced guards against a new [ScopeType]
+// TestPermissionSet_Allowed__allScopeTypesEnforced guards against a new [ScopeType]
 // being added to [allScopes] without a matching case in [NewPermissionSet] and
 // [PermissionSet.Allowed], which would silently make grants at that scope unenforceable.
 func TestPermissionSet_Allowed__allScopeTypesEnforced(t *testing.T) {
-	// GIVEN: a resource/action valid at every scope.
 	const resource, action = ResourceService, ActionRead
 
 	for _, scope := range allScopes {
 		t.Run(string(scope), func(t *testing.T) {
-			// AND: a grant at this scope, and a target it should match.
-			grant := Grant{
-				Resource: resource,
-				Action:   action,
-				Scope:    Scope{Type: scope},
-			}
+			grant := Grant{Resource: resource, Action: action, Scope: Scope{Type: scope}}
 			target := &Target{ServiceID: "svc-1", Tags: []string{"prod"}}
 			switch scope {
 			case ScopeService:
@@ -380,20 +325,14 @@ func TestPermissionSet_Allowed__allScopeTypesEnforced(t *testing.T) {
 				grant.Scope.Ref = target.Tags[0]
 			}
 
-			// WHEN: the grant is indexed and evaluated against a matching target.
-			// THEN: the scope is enforced.
 			if !NewPermissionSet([]Grant{grant}).Allowed(resource, action, target) {
-				t.Errorf(
-					"%s\nscope %q is in allScopes but not enforced by NewPermissionSet/Allowed",
-					packageName, scope,
-				)
+				t.Error("PermissionSet.Allowed() mismatch\ngot:  false\nwant: true")
 			}
 		})
 	}
 }
 
 func TestPermissionSet_Allowed__boundaryConditions(t *testing.T) {
-	// GIVEN: grants covering precedence, duplication, case sensitivity, and action isolation.
 	tests := []struct {
 		name     string
 		grants   []Grant
@@ -458,27 +397,16 @@ func TestPermissionSet_Allowed__boundaryConditions(t *testing.T) {
 
 			ps := NewPermissionSet(tc.grants)
 
-			// WHEN: Allowed is called.
 			got := ps.Allowed(tc.resource, tc.action, tc.target)
 
-			prefix := fmt.Sprintf(
-				"%s\nPermissionSet.Allowed(%q, %q) edge case",
-				packageName, tc.resource, tc.action,
-			)
-
-			// THEN: the result matches expectations.
 			if got != tc.want {
-				t.Errorf(
-					"%s result mismatch\ngot:  %t\nwant: %t",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestPermissionSet_AllowedAnyScope(t *testing.T) {
-	// GIVEN: PermissionSets built from grants of differing scopes.
 	tests := []struct {
 		name     string
 		grants   []Grant
@@ -530,39 +458,21 @@ func TestPermissionSet_AllowedAnyScope(t *testing.T) {
 
 			ps := NewPermissionSet(tc.grants)
 
-			// WHEN: AllowedAnyScope is called.
 			got := ps.AllowedAnyScope(tc.resource, tc.action)
 
-			prefix := fmt.Sprintf(
-				"%s\nPermissionSet.AllowedAnyScope(%q, %q)",
-				packageName, tc.resource, tc.action,
-			)
-
-			// THEN: the result matches expectations.
 			if got != tc.want {
-				t.Errorf(
-					"%s result mismatch\ngot:  %t\nwant: %t",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestPermissionSet_AllowedAnyScope__nil(t *testing.T) {
-	// GIVEN: a nil PermissionSet.
 	var ps *PermissionSet
 
-	// WHEN: AllowedAnyScope is called on it.
 	got := ps.AllowedAnyScope(ResourceService, ActionRead)
 
-	prefix := fmt.Sprintf("%s\n(*PermissionSet)(nil).AllowedAnyScope()", packageName)
-
-	// THEN: it denies rather than panicking.
 	if got {
-		t.Errorf(
-			"%s nil PermissionSet should deny\ngot:  %t\nwant: false",
-			prefix, got,
-		)
+		t.Errorf("mismatch\ngot:  %t\nwant: false", got)
 	}
 }

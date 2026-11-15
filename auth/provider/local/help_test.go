@@ -31,21 +31,16 @@ import (
 	logtest "github.com/release-argus/Argus/internal/test/log"
 )
 
-var packageName = "auth_provider_local"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -77,10 +72,7 @@ func mustHash(t *testing.T, plaintext string) string {
 
 	hash, err := password.Hash(plaintext)
 	if err != nil {
-		t.Fatalf(
-			"%s\nsetup Hash failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("password.Hash() failed: %v", err)
 	}
 	return hash
 }
