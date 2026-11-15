@@ -30,21 +30,16 @@ import (
 	logtest "github.com/release-argus/Argus/internal/test/log"
 )
 
-var packageName = "auth_session"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -92,9 +87,7 @@ type fakeStore struct {
 }
 
 // dropFromCache forgets tokenHash, so the next Validate loads from the store.
-func dropFromCache(t *testing.T, manager *Manager, tokenHash string) {
-	t.Helper()
-
+func dropFromCache(manager *Manager, tokenHash string) {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
@@ -233,9 +226,7 @@ func testConfig() Config {
 }
 
 // genOf reads the Manager's cache generation under its lock.
-func genOf(t *testing.T, manager *Manager) uint64 {
-	t.Helper()
-
+func genOf(manager *Manager) uint64 {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
 
@@ -248,10 +239,7 @@ func mustStartFor(t *testing.T, manager *Manager, userID string) string {
 
 	token, _, err := manager.Start(t.Context(), userID, "127.0.0.1", "go-test")
 	if err != nil {
-		t.Fatalf(
-			"%s Start(%q) failed: %v",
-			packageName, userID, err,
-		)
+		t.Fatalf("Manager.Start(%q) failed: %v", userID, err)
 	}
 	return token
 }

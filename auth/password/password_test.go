@@ -26,6 +26,7 @@ import (
 
 	"golang.org/x/crypto/argon2"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
@@ -49,24 +50,18 @@ func legacyHash(
 }
 
 func TestHash(t *testing.T) {
-	// GIVEN: a password.
 	plaintext := "s3cret-p4ssw0rd"
 
-	prefix := fmt.Sprintf("%s\nHash(%q)", packageName, plaintext)
-
-	// WHEN: Hash is called twice.
 	first, errFirst := Hash(plaintext)
 	second, errSecond := Hash(plaintext)
 
-	// THEN: both calls succeed.
-	if errFirst != nil || errSecond != nil {
-		t.Fatalf(
-			"%s unexpected errors\nfirst:  %v\nsecond: %v",
-			prefix, errFirst, errSecond,
-		)
+	if errFirst != nil {
+		t.Fatalf("first: Hash() failed: %v", errFirst)
+	}
+	if errSecond != nil {
+		t.Fatalf("second: Hash() failed: %v", errSecond)
 	}
 
-	// AND: the encoding carries the current parameters.
 	wantPrefix := fmt.Sprintf(
 		"$argon2id$v=%d$m=%d,t=%d,p=%d$",
 		argon2.Version, argonMemory, argonTime, argonThreads,
@@ -77,93 +72,65 @@ func TestHash(t *testing.T) {
 		{"first", first},
 		{"second", second},
 	} {
-		if !strings.HasPrefix(tc.hash, wantPrefix) {
-			t.Errorf(
-				"%s encoding prefix mismatch (%s hash)\ngot:  %q\nwant: %q",
-				prefix, tc.name, tc.hash, wantPrefix,
-			)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			if !strings.HasPrefix(tc.hash, wantPrefix) {
+				t.Errorf("prefix mismatch\ngot:  %q\nwant: %q", tc.hash, wantPrefix)
+			}
+
+			match, needsRehash, err := Verify(plaintext, tc.hash)
+			if err != nil || !match || needsRehash {
+				t.Errorf(
+					"Verify() mismatch\n"+
+						"got:  match=%t, needsRehash=%t, err=%v\n"+
+						"want: match=true, needsRehash=false, err=nil",
+					match, needsRehash, err,
+				)
+			}
+		})
 	}
 
-	// AND: salts are random, so the hashes differ.
+	// Salts are random, so the hashes differ.
 	if first == second {
-		t.Errorf(
-			"%s two hashes of the same password should differ (random salt)\ngot the same: %q",
-			prefix, first,
-		)
-	}
-
-	// AND: the hash verifies against the original password.
-	for _, tc := range []struct {
-		name, hash string
-	}{
-		{"first", first},
-		{"second", second},
-	} {
-		match, needsRehash, err := Verify(plaintext, tc.hash)
-		if err != nil || !match || needsRehash {
-			t.Errorf(
-				"%s Verify(%s) mismatch\ngot:  match=%t, needsRehash=%t, err=%v\nwant: match=true, needsRehash=false, err=nil",
-				prefix, tc.name, match, needsRehash, err,
-			)
-		}
+		t.Errorf("second: hash mismatch\ngot:  %q\nwant: NOT %q", second, first)
 	}
 }
 
 func TestHash__randRead_error(t *testing.T) {
-	// GIVEN: a failing random source.
 	wantErr := errors.New("rand broke")
 	randReadHad := randRead
 	randRead = func(_ []byte) (int, error) { return 0, wantErr }
 	t.Cleanup(func() { randRead = randReadHad })
 
-	prefix := fmt.Sprintf("%s\nHash() with failing rand", packageName)
-
-	// WHEN: Hash is called.
 	_, err := Hash("anything")
 
-	// THEN: the error is surfaced.
 	if !errors.Is(err, wantErr) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %v\nwant: %v",
-			prefix, err, wantErr,
-		)
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, wantErr)
 	}
 }
 
 func TestHash__tooLong(t *testing.T) {
-	// GIVEN: a password over the length cap.
 	tooLong := strings.Repeat("a", maxPasswordLength+1)
 
-	prefix := fmt.Sprintf("%s\nHash() with an over-long password", packageName)
-
-	// WHEN: Hash is called.
 	_, err := Hash(tooLong)
 
-	// THEN: it is rejected, and Verify treats it as a non-match.
 	if !errors.Is(err, ErrPasswordTooLong) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %v\nwant: %v",
-			prefix, err, ErrPasswordTooLong,
-		)
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, ErrPasswordTooLong)
 	}
 	if match, _, err := Verify(tooLong, "$argon2id$anything"); match || err != nil {
 		t.Errorf(
-			"%s Verify(too long) should be a clean non-match\ngot:  match=%t, err=%v\nwant: match=false, err=nil",
-			prefix, match, err,
+			"Verify(too-long) mismatch\ngot:  match=%t, err=%v\nwant: match=false, err=nil",
+			match, err,
 		)
 	}
 }
 
 func TestVerify(t *testing.T) {
-	// GIVEN: hashes of a known password in various states.
 	plaintext := "correct horse battery staple"
 	current, err := Hash(plaintext)
 	if err != nil {
-		t.Fatalf(
-			"%s\nsetup Hash failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Hash() failed: %v", err)
 	}
 
 	tests := []struct {
@@ -178,17 +145,20 @@ func TestVerify(t *testing.T) {
 			name:     "empty password",
 			password: "",
 			encoded:  current,
+			errRegex: `^$`,
 		},
 		{
 			name:     "wrong password",
 			password: "incorrect",
 			encoded:  current,
+			errRegex: `^$`,
 		},
 		{
 			name:      "correct password/current params",
 			password:  plaintext,
 			encoded:   current,
 			wantMatch: true,
+			errRegex:  `^$`,
 		},
 		{
 			name:     "correct password/outdated memory param",
@@ -202,6 +172,7 @@ func TestVerify(t *testing.T) {
 			),
 			wantMatch:       true,
 			wantNeedsRehash: true,
+			errRegex:        `^$`,
 		},
 		{
 			name:     "correct password/outdated time param",
@@ -215,6 +186,7 @@ func TestVerify(t *testing.T) {
 			),
 			wantMatch:       true,
 			wantNeedsRehash: true,
+			errRegex:        `^$`,
 		},
 		{
 			name:     "correct password/outdated thread param",
@@ -227,6 +199,7 @@ func TestVerify(t *testing.T) {
 			),
 			wantMatch:       true,
 			wantNeedsRehash: true,
+			errRegex:        `^$`,
 		},
 		{
 			name:     "correct password/outdated key length",
@@ -239,6 +212,7 @@ func TestVerify(t *testing.T) {
 			),
 			wantMatch:       true,
 			wantNeedsRehash: true,
+			errRegex:        `^$`,
 		},
 		{
 			name:     "wrong password/outdated params",
@@ -251,6 +225,7 @@ func TestVerify(t *testing.T) {
 				keyLength,
 			),
 			wantNeedsRehash: true,
+			errRegex:        `^$`,
 		},
 		{
 			name:     "malformed/empty",
@@ -286,13 +261,13 @@ func TestVerify(t *testing.T) {
 			name:     "malformed/bad salt base64",
 			password: plaintext,
 			encoded:  "$argon2id$v=19$m=19456,t=1,p=2$!!!$a2V5",
-			errRegex: `^malformed password hash\n\s*illegal base64 data`,
+			errRegex: `^malformed password hash\nillegal base64 data`,
 		},
 		{
 			name:     "malformed/bad key base64",
 			password: plaintext,
 			encoded:  "$argon2id$v=19$m=19456,t=1,p=2$c2FsdA$!!!",
-			errRegex: `^malformed password hash\n\s*illegal base64 data`,
+			errRegex: `^malformed password hash\nillegal base64 data`,
 		},
 	}
 
@@ -300,43 +275,23 @@ func TestVerify(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Verify is called.
 			match, needsRehash, err := Verify(tc.password, tc.encoded)
-
-			prefix := fmt.Sprintf(
-				"%s\nVerify(password=%q, encoded=%q)",
-				packageName, tc.password, tc.encoded,
-			)
-
-			// THEN: errors match expectations.
-			errRegex := util.ValueOr(tc.errRegex, `^$`)
 			e := errfmt.FormatError(err)
-			if !util.RegexCheck(errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, errRegex,
-				)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil && !errors.Is(err, ErrMalformedHash) {
-				t.Errorf(
-					"%s error should wrap ErrMalformedHash\ngot: %v",
-					prefix, err,
-				)
+				t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, ErrMalformedHash)
 			}
 
-			// AND: match matches expectations.
 			if match != tc.wantMatch {
-				t.Errorf(
-					"%s match mismatch\ngot:  %t\nwant: %t",
-					prefix, match, tc.wantMatch,
-				)
+				t.Errorf("match mismatch\ngot:  %t\nwant: %t", match, tc.wantMatch)
 			}
 
-			// AND: needsRehash matches expectations.
 			if needsRehash != tc.wantNeedsRehash {
 				t.Errorf(
-					"%s needsRehash mismatch\ngot:  %t\nwant: %t",
-					prefix, needsRehash, tc.wantNeedsRehash,
+					"needsRehash mismatch\ngot:  %t\nwant: %t",
+					needsRehash, tc.wantNeedsRehash,
 				)
 			}
 		})
@@ -357,7 +312,6 @@ func encodeParts(
 }
 
 func TestDecodeHash(t *testing.T) {
-	// GIVEN: an encoded argon2id hash string.
 	b64 := base64.RawStdEncoding.EncodeToString
 	salt := bytes.Repeat([]byte("S"), int(saltLength))
 	key := bytes.Repeat([]byte("K"), int(keyLength))
@@ -412,6 +366,7 @@ func TestDecodeHash(t *testing.T) {
 			wantThreads: argonThreads,
 			wantSalt:    salt,
 			wantKey:     key,
+			errRegex:    `^$`,
 		},
 		{
 			name: "valid/older version",
@@ -424,6 +379,7 @@ func TestDecodeHash(t *testing.T) {
 			wantThreads: argonThreads,
 			wantSalt:    salt,
 			wantKey:     key,
+			errRegex:    `^$`,
 		},
 		{
 			name: "valid/zeroed parameters are not validated",
@@ -432,6 +388,7 @@ func TestDecodeHash(t *testing.T) {
 			),
 			wantSalt: salt,
 			wantKey:  key,
+			errRegex: `^$`,
 		},
 		{
 			name: "invalid/salt empty",
@@ -445,7 +402,7 @@ func TestDecodeHash(t *testing.T) {
 			encoded: encodeParts(
 				argon2.Version, argonMemory, argonTime, argonThreads, "!!!", b64(key),
 			),
-			errRegex: `^malformed password hash\n\s*illegal base64 data`,
+			errRegex: `^malformed password hash\nillegal base64 data`,
 		},
 		{
 			name: "invalid/salt too short",
@@ -466,7 +423,7 @@ func TestDecodeHash(t *testing.T) {
 			encoded: encodeParts(
 				argon2.Version, argonMemory, argonTime, argonThreads, b64(salt), "!!!",
 			),
-			errRegex: `^malformed password hash\n\s*illegal base64 data`,
+			errRegex: `^malformed password hash\nillegal base64 data`,
 		},
 		{
 			name: "invalid/key too short",
@@ -486,6 +443,7 @@ func TestDecodeHash(t *testing.T) {
 			wantThreads: argonThreads,
 			wantSalt:    minSalt,
 			wantKey:     minKey,
+			errRegex:    `^$`,
 		},
 		{
 			name: "valid/salt and key over the expected length",
@@ -498,6 +456,7 @@ func TestDecodeHash(t *testing.T) {
 			wantThreads: argonThreads,
 			wantSalt:    longSalt,
 			wantKey:     longKey,
+			errRegex:    `^$`,
 		},
 		{
 			name: "valid/maximum threads",
@@ -510,6 +469,7 @@ func TestDecodeHash(t *testing.T) {
 			wantThreads: 255,
 			wantSalt:    salt,
 			wantKey:     key,
+			errRegex:    `^$`,
 		},
 		{
 			name:     "invalid/threads overflows uint8",
@@ -562,78 +522,32 @@ func TestDecodeHash(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: decodeHash is called.
 			version, memory, time, threads, gotSalt, gotKey, err := decodeHash(tc.encoded)
-
-			prefix := fmt.Sprintf(
-				"%s\ndecodeHash(%q)",
-				packageName, tc.encoded,
-			)
-
-			// THEN: errors match expectations.
-			errRegex := tc.errRegex
-			if errRegex == "" {
-				errRegex = `^$`
-			}
 			e := errfmt.FormatError(err)
-			if !util.RegexCheck(errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, errRegex,
-				)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: all errors wrap [ErrMalformedHash].
 			if err != nil && !errors.Is(err, ErrMalformedHash) {
-				t.Errorf(
-					"%s error should wrap ErrMalformedHash\ngot: %v",
-					prefix, err,
-				)
+				t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, ErrMalformedHash)
 			}
 
-			// AND: the parsed parameters match expectations (all zeroed on error).
-			if version != tc.wantVersion {
-				t.Errorf(
-					"%s version mismatch\ngot:  %d\nwant: %d",
-					prefix, version, tc.wantVersion,
-				)
+			fieldTests := []test.FieldAssertion{
+				{Name: "version", Got: version, Want: tc.wantVersion, Mode: test.CompareEqual},
+				{Name: "memory", Got: memory, Want: tc.wantMemory, Mode: test.CompareEqual},
+				{Name: "time", Got: time, Want: tc.wantTime, Mode: test.CompareEqual},
+				{Name: "threads", Got: threads, Want: tc.wantThreads, Mode: test.CompareEqual},
+				{Name: "salt", Got: gotSalt, Want: tc.wantSalt, Mode: test.CompareEqual},
+				{Name: "key", Got: gotKey, Want: tc.wantKey, Mode: test.CompareEqual},
 			}
-			if memory != tc.wantMemory {
-				t.Errorf(
-					"%s memory mismatch\ngot:  %d\nwant: %d",
-					prefix, memory, tc.wantMemory,
-				)
-			}
-			if time != tc.wantTime {
-				t.Errorf(
-					"%s time mismatch\ngot:  %d\nwant: %d",
-					prefix, time, tc.wantTime,
-				)
-			}
-			if threads != tc.wantThreads {
-				t.Errorf(
-					"%s threads mismatch\ngot:  %d\nwant: %d",
-					prefix, threads, tc.wantThreads,
-				)
-			}
-			if !bytes.Equal(gotSalt, tc.wantSalt) {
-				t.Errorf(
-					"%s salt mismatch\ngot:  %v\nwant: %v",
-					prefix, gotSalt, tc.wantSalt,
-				)
-			}
-			if !bytes.Equal(gotKey, tc.wantKey) {
-				t.Errorf(
-					"%s key mismatch\ngot:  %v\nwant: %v",
-					prefix, gotKey, tc.wantKey,
-				)
+			if testErr := test.AssertFields(t, fieldTests, ""); testErr != nil {
+				t.Error(testErr)
 			}
 
-			// AND: no salt/key is returned alongside an error.
 			if err != nil && (gotSalt != nil || gotKey != nil) {
 				t.Errorf(
-					"%s salt/key should be nil on error\ngot: salt=%v, key=%v",
-					prefix, gotSalt, gotKey,
+					"salt/key mismatch\ngot:  salt=%#v, key=%#v\nwant: salt=nil, key=nil",
+					gotSalt, gotKey,
 				)
 			}
 		})
@@ -641,44 +555,31 @@ func TestDecodeHash(t *testing.T) {
 }
 
 func TestDecodeHash__hashRoundTrip(t *testing.T) {
-	// GIVEN: an encoding produced by Hash.
 	encoded, err := Hash("round-trip")
 	if err != nil {
-		t.Fatalf(
-			"%s\nsetup Hash failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Hash() failed: %v", err)
 	}
 
-	prefix := fmt.Sprintf("%s\ndecodeHash(%q)", packageName, encoded)
-
-	// WHEN: decodeHash is called on it.
 	version, memory, time, threads, salt, key, err := decodeHash(encoded)
-
-	// THEN: it parses back to the parameters Hash used.
 	if err != nil {
-		t.Fatalf(
-			"%s unexpected error\ngot: %v",
-			prefix, err,
-		)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if version != argon2.Version ||
 		memory != argonMemory ||
 		time != argonTime ||
 		threads != argonThreads {
 		t.Errorf(
-			"%s parameter mismatch\ngot:  v=%d, m=%d, t=%d, p=%d\nwant: v=%d, m=%d, t=%d, p=%d",
-			prefix,
+			"parameter mismatch\ngot:  v=%d, m=%d, t=%d, p=%d\nwant: v=%d, m=%d, t=%d, p=%d",
 			version, memory, time, threads,
 			argon2.Version, argonMemory, argonTime, argonThreads,
 		)
 	}
 
-	// AND: the salt and key are the configured lengths.
 	if uint32(len(salt)) != saltLength || uint32(len(key)) != keyLength {
 		t.Errorf(
-			"%s length mismatch\ngot:  len(salt)=%d, len(key)=%d\nwant: len(salt)=%d, len(key)=%d",
-			prefix, len(salt), len(key), saltLength, keyLength,
+			"length mismatch\ngot:  len(salt)=%d, len(key)=%d\nwant: len(salt)=%d, len(key)=%d",
+			len(salt), len(key),
+			saltLength, keyLength,
 		)
 	}
 }

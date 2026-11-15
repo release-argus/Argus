@@ -18,36 +18,27 @@ package local
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/auth"
 	"github.com/release-argus/Argus/auth/password"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestProvider_Name(t *testing.T) {
-	// GIVEN: a local Provider.
 	provider := New(&mockStore{})
 
-	// WHEN: Name is called.
 	got := provider.Name()
 
-	prefix := fmt.Sprintf("%s\nProvider.Name()", packageName)
-
-	// THEN: it returns the package's provider name.
 	if got != Name {
-		t.Errorf(
-			"%s result mismatch\ngot:  %q\nwant: %q",
-			prefix, got, Name,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, Name)
 	}
 }
 
 func TestProvider_Authenticate(t *testing.T) {
-	// GIVEN: user stores in various states.
 	correctPassword := "correct-password"
 
 	enabledUser := func(t *testing.T) *auth.Credentials {
@@ -89,6 +80,7 @@ func TestProvider_Authenticate(t *testing.T) {
 			creds:    func(_ *testing.T) *auth.Credentials { return nil },
 			password: correctPassword,
 			wantErr:  auth.ErrInvalidCredentials,
+			errRegex: `^invalid credentials$`,
 		},
 		{
 			name:     "store error is propagated, not masked",
@@ -102,6 +94,7 @@ func TestProvider_Authenticate(t *testing.T) {
 			creds:    enabledUser,
 			password: "incorrect",
 			wantErr:  auth.ErrInvalidCredentials,
+			errRegex: `^invalid credentials$`,
 		},
 		{
 			name: "disabled user with correct password",
@@ -112,6 +105,7 @@ func TestProvider_Authenticate(t *testing.T) {
 			},
 			password: correctPassword,
 			wantErr:  auth.ErrInvalidCredentials,
+			errRegex: `^invalid credentials$`,
 		},
 		{
 			name: "malformed stored hash is a credential failure",
@@ -122,6 +116,7 @@ func TestProvider_Authenticate(t *testing.T) {
 			},
 			password: correctPassword,
 			wantErr:  auth.ErrInvalidCredentials,
+			errRegex: `^invalid credentials$`,
 		},
 	}
 
@@ -132,71 +127,41 @@ func TestProvider_Authenticate(t *testing.T) {
 			store := &mockStore{creds: tc.creds(t), err: tc.storeErr}
 			provider := New(store)
 
-			// WHEN: Authenticate is called.
 			identity, err := provider.Authenticate(t.Context(), "argus", tc.password)
-
-			prefix := fmt.Sprintf(
-				"%s\nProvider.Authenticate(password=%q)",
-				packageName, tc.password,
-			)
-
-			// THEN: errors match expectations.
-			errRegex := util.ValueOr(tc.errRegex, `^$`)
-			if tc.wantErr != nil {
-				if !errors.Is(err, tc.wantErr) {
-					t.Fatalf(
-						"%s error mismatch\ngot:  %v\nwant: %v",
-						prefix, err, tc.wantErr,
-					)
-				}
-			} else {
-				e := errfmt.FormatError(err)
-				if !util.RegexCheck(errRegex, e) {
-					t.Fatalf(
-						"%s error mismatch\ngot:  %q\nwant: %q",
-						prefix, e, errRegex,
-					)
-				}
-				if err != nil {
-					return
-				}
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+			if tc.wantErr != nil && !errors.Is(err, tc.wantErr) {
+				t.Fatalf("error type mismatch\ngot:  %v\nwant: %v", err, tc.wantErr)
 			}
 
-			// AND: an Identity is returned only on success, with the user's details.
 			if tc.wantIdentity {
 				if identity == nil {
-					t.Fatalf("%s expected an Identity, got nil", prefix)
+					t.Fatal("identity mismatch\ngot:  nil\nwant: non-nil")
 				}
-				if identity.Provider != wantIdentity.Provider ||
-					identity.Subject != wantIdentity.Subject ||
-					identity.Username != wantIdentity.Username ||
-					identity.DisplayName != wantIdentity.DisplayName ||
-					identity.Email != wantIdentity.Email {
-					t.Errorf(
-						"%s Identity mismatch\ngot:  %+v\nwant: %+v",
-						prefix, *identity, wantIdentity,
-					)
+				if testErr := test.AssertFields(t, []test.FieldAssertion{
+					{Name: "Provider", Got: identity.Provider, Want: wantIdentity.Provider, Mode: test.CompareEqual},
+					{Name: "Subject", Got: identity.Subject, Want: wantIdentity.Subject, Mode: test.CompareEqual},
+					{Name: "Username", Got: identity.Username, Want: wantIdentity.Username, Mode: test.CompareEqual},
+					{Name: "DisplayName", Got: identity.DisplayName, Want: wantIdentity.DisplayName, Mode: test.CompareEqual},
+					{Name: "Email", Got: identity.Email, Want: wantIdentity.Email, Mode: test.CompareEqual},
+				}, "Identity"); testErr != nil {
+					t.Error(testErr)
 				}
 			} else if identity != nil {
-				t.Errorf(
-					"%s expected no Identity\ngot: %+v",
-					prefix, *identity,
-				)
+				t.Errorf("identity mismatch\ngot:  Subject=%q\nwant: nil", identity.Subject)
 			}
 
-			// AND: no rehash happened in any of these states.
+			// Every hash here is current, or the login fails.
 			if store.updateCalls != 0 {
-				t.Errorf(
-					"%s unexpected UpdatePasswordHash calls: %d",
-					prefix, store.updateCalls,
-				)
+				t.Errorf("mockStore.updateCalls mismatch\ngot:  %d\nwant: 0", store.updateCalls)
 			}
 		})
 	}
 }
 
 func TestProvider_Authenticate__rehash(t *testing.T) {
-	// GIVEN: a user whose stored hash uses outdated parameters.
 	tests := []struct {
 		name       string
 		hashErr    bool  // Make re-hashing fail.
@@ -220,7 +185,7 @@ func TestProvider_Authenticate__rehash(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're modifying shared vars.
+			// Serial: swaps hashPassword.
 
 			store := &mockStore{
 				creds: &auth.Credentials{
@@ -241,43 +206,35 @@ func TestProvider_Authenticate__rehash(t *testing.T) {
 				t.Cleanup(func() { hashPassword = hashPasswordHad })
 			}
 
-			// WHEN: the user authenticates with the correct password.
 			identity, err := provider.Authenticate(t.Context(), "argus", "old-params")
-
-			prefix := fmt.Sprintf(
-				"%s\nProvider.Authenticate() rehash",
-				packageName,
-			)
-
-			// THEN: the login succeeds regardless of rehash outcome.
-			if err != nil || identity == nil {
-				t.Fatalf(
-					"%s login should succeed\ngot:  identity=%v, err=%v",
-					prefix, identity, err,
-				)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if identity == nil {
+				t.Fatal("identity mismatch\ngot:  nil\nwant: non-nil")
 			}
 
-			// AND: the hash was (or was not) re-persisted as expected.
 			if (store.updateCalls > 0) != tc.wantUpdate {
 				t.Fatalf(
-					"%s UpdatePasswordHash calls mismatch\ngot:  %d\nwantUpdate: %t",
-					prefix, store.updateCalls, tc.wantUpdate,
+					"mockStore.updateCalls > 0 mismatch\ngot:  %t (updateCalls=%d)\nwant: %t",
+					store.updateCalls > 0, store.updateCalls, tc.wantUpdate,
 				)
 			}
 
-			// AND: any persisted hash is a current-parameter hash of the password.
 			if tc.wantUpdate && tc.updateErr == nil {
 				if store.updatedID != "uuid-1" {
 					t.Errorf(
-						"%s updated userID mismatch\ngot:  %q\nwant: %q",
-						prefix, store.updatedID, "uuid-1",
+						"mockStore.updatedID mismatch\ngot:  %q\nwant: %q",
+						store.updatedID, "uuid-1",
 					)
 				}
 				match, needsRehash, err := password.Verify("old-params", store.updatedHash)
 				if err != nil || !match || needsRehash {
 					t.Errorf(
-						"%s persisted hash should be a current-parameter hash of the password\ngot:  match=%t, needsRehash=%t, err=%v",
-						prefix, match, needsRehash, err,
+						"password.Verify() mismatch\n"+
+							"got:  match=%t, needsRehash=%t, err=%v\n"+
+							"want: match=true, needsRehash=false, err=nil",
+						match, needsRehash, err,
 					)
 				}
 			}
@@ -286,7 +243,7 @@ func TestProvider_Authenticate__rehash(t *testing.T) {
 }
 
 func TestProvider_Authenticate__verifyError(t *testing.T) {
-	// GIVEN: verification fails for a reason other than a malformed hash.
+	// Fails for a reason other than a malformed hash.
 	wantErr := errors.New("verify broke")
 	verifyPasswordHad := verifyPassword
 	verifyPassword = func(_, _ string) (bool, bool, error) {
@@ -303,34 +260,21 @@ func TestProvider_Authenticate__verifyError(t *testing.T) {
 		},
 	})
 
-	// WHEN: the user authenticates.
 	identity, err := provider.Authenticate(t.Context(), "argus", "correct-password")
 
-	prefix := fmt.Sprintf("%s\nProvider.Authenticate() verify error", packageName)
-
-	// THEN: the failure is surfaced rather than reported as bad credentials.
 	if !errors.Is(err, wantErr) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %v\nwant: %v",
-			prefix, err, wantErr,
-		)
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, wantErr)
 	}
 	if errors.Is(err, auth.ErrInvalidCredentials) {
-		t.Errorf(
-			"%s should not mask the failure as invalid credentials\ngot: %v",
-			prefix, err,
-		)
+		t.Errorf("error type mismatch\ngot:  %v\nwant: NOT %v", err, auth.ErrInvalidCredentials)
 	}
 	if identity != nil {
-		t.Errorf(
-			"%s expected no Identity\ngot: %+v",
-			prefix, *identity,
-		)
+		t.Errorf("identity mismatch\ngot:  Subject=%q\nwant: nil", identity.Subject)
 	}
 }
 
 func TestProvider_Authenticate__dummy_fallback(t *testing.T) {
-	// GIVEN: hashing is broken, so the lazy dummy hash falls back to its constant.
+	// Hashing is broken, so the lazy dummy hash falls back to its constant.
 	hashPasswordHad := hashPassword
 	hashPassword = func(_ string) (string, error) {
 		return "", errors.New("hash broke")
@@ -339,43 +283,25 @@ func TestProvider_Authenticate__dummy_fallback(t *testing.T) {
 
 	provider := New(&mockStore{})
 
-	// WHEN: an unknown user authenticates.
 	identity, err := provider.Authenticate(t.Context(), "ghost", "password")
 
-	prefix := fmt.Sprintf("%s\nProvider.Authenticate() dummy fallback", packageName)
-
-	// THEN: the pre-computed fallback hash still yields a rejection.
 	if !errors.Is(err, auth.ErrInvalidCredentials) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %v\nwant: %v",
-			prefix, err, auth.ErrInvalidCredentials,
-		)
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, auth.ErrInvalidCredentials)
 	}
 	if identity != nil {
-		t.Errorf(
-			"%s expected no Identity\ngot: %+v",
-			prefix, *identity,
-		)
+		t.Errorf("identity mismatch\ngot:  Subject=%q\nwant: nil", identity.Subject)
 	}
 }
 
 func TestDummyHashFallback__matchesCurrentParams(t *testing.T) {
-	// GIVEN: a hash freshly derived with the current argon2 parameters.
-	real, err := password.Hash("timing")
+	current, err := password.Hash("timing")
 	if err != nil {
-		t.Fatalf(
-			"%s\npassword.Hash: %v",
-			packageName, err,
-		)
+		t.Fatalf("password.Hash() failed: %v", err)
 	}
 
-	// THEN: the dummy fallback uses the same parameters, so unknown-user
-	// verification costs the same as a real user.
-	if got, want := argonParams(dummyHashFallback), argonParams(real); got != want {
-		t.Errorf(
-			"%s\ndummy fallback params %q must match current %q",
-			packageName, got, want,
-		)
+	// Equal parameters make an unknown user cost as much to verify as a real one.
+	if got, want := argonParams(dummyHashFallback), argonParams(current); got != want {
+		t.Errorf("argonParams(dummyHashFallback) mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 

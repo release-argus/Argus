@@ -19,12 +19,10 @@ package auth
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"testing"
 )
 
 func TestHashToken(t *testing.T) {
-	// GIVEN: tokens to hash.
 	tests := []struct {
 		name   string
 		token  string
@@ -59,45 +57,27 @@ func TestHashToken(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf(
-				"%s\nHashToken(%q)",
-				packageName, tc.token,
-			)
-
-			// WHEN: the token is hashed.
 			got := HashToken(tc.token)
 
-			// THEN: it is the hex-encoded SHA-256 of the token.
 			sum := sha256.Sum256([]byte(tc.token))
 			if want := hex.EncodeToString(sum[:]); got != want {
-				t.Errorf(
-					"%s hash mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("hash mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: it is a fixed 64-character hex string (32 bytes).
 			if len(got) != sha256.Size*2 {
-				t.Errorf(
-					"%s length mismatch\ngot:  %d\nwant: %d",
-					prefix, len(got), sha256.Size*2,
-				)
+				t.Errorf("len(hash) mismatch\ngot:  %d\nwant: %d", len(got), sha256.Size*2)
 			}
 
-			// AND: hashing is deterministic for the same input.
-			if tc.sameAs != "" && got != HashToken(tc.sameAs) {
-				t.Errorf(
-					"%s should hash equal to %q",
-					prefix, tc.sameAs,
-				)
+			if tc.sameAs != "" {
+				if want := HashToken(tc.sameAs); got != want {
+					t.Errorf("sameAs: hash mismatch\ngot:  %q\nwant: %q", got, want)
+				}
 			}
 
-			// AND: distinct inputs hash to distinct values.
-			if tc.diffTo != "" && got == HashToken(tc.diffTo) {
-				t.Errorf(
-					"%s should not hash equal to %q",
-					prefix, tc.diffTo,
-				)
+			if tc.diffTo != "" {
+				if other := HashToken(tc.diffTo); got == other {
+					t.Errorf("diffTo: hash mismatch\ngot:  %q\nwant: NOT %q", got, other)
+				}
 			}
 		})
 	}

@@ -27,21 +27,16 @@ import (
 	logtest "github.com/release-argus/Argus/internal/test/log"
 )
 
-var packageName = "auth_provider"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
