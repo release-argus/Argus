@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"slices"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -84,8 +85,8 @@ func getIP(r *http.Request) string {
 func (api *API) forwardedIP(r *http.Request) string {
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		parts := strings.Split(xff, ",")
-		for i := len(parts) - 1; i >= 0; i-- {
-			addr, err := netip.ParseAddr(strings.TrimSpace(parts[i]))
+		for _, part := range slices.Backward(parts) {
+			addr, err := netip.ParseAddr(strings.TrimSpace(part))
 			if err != nil {
 				continue
 			}

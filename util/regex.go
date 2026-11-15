@@ -18,6 +18,7 @@ package util
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
@@ -44,9 +45,9 @@ func RegexTemplate(regexMatches []string, template string) string {
 	// Replace placeholders with matched groups in reverse order
 	// (to prevent replacing '$10' with '$1').
 	result := template
-	for i := len(regexMatches) - 1; i >= 0; i-- {
+	for i, regexMatch := range slices.Backward(regexMatches) {
 		placeholder := fmt.Sprintf("$%d", i)
-		result = strings.ReplaceAll(result, placeholder, regexMatches[i])
+		result = strings.ReplaceAll(result, placeholder, regexMatch)
 	}
 
 	return result
